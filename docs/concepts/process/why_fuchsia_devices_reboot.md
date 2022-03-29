@@ -63,7 +63,7 @@ A software watchdog timer may reboot the device if someone sets one up.
 If a device loses power for a short period of time, like when a user unplugs a
 device and rapidly plugs it back in, it may be unable to determine that the
 reboot was cold and will consider the reboot a result of a brief power loss. It
-is important to note that there is _not_ a quantitative measure of what brief is
+is important to note that there is *not* a quantitative measure of what brief is
 and is hardware dependent.
 
 ### User request
@@ -99,7 +99,8 @@ determines it has failed in an unrecoverable manner, the device reboots.
 
 ### Sysmgr failure
 
-If the system manager for legacy components (sysmgr) crashes, the device reboots.
+If the system manager for legacy components (sysmgr) crashes, the device
+reboots.
 
 ### Critical component failure
 
@@ -138,7 +139,7 @@ Fuchsia exposes the reason a device last (re)booted through
 [FIDL](/sdk/fidl/fuchsia.feedback/last_reboot_info.fidl) and tracks it on Cobalt
 and the crash server.
 
-Reboot reason                | __FIDL__                      | __Cobalt event__           | __Crash signature__
+Reboot reason                | **FIDL**                      | **Cobalt event**           | **Crash signature**
 :--------------------------- | :---------------------------- | :------------------------- | :------------------
 Kernel panic                 | `KERNEL_PANIC`                | `KernelPanic`              | `fuchsia-kernel-panic`
 System running out of memory | `SYSTEM_OUT_OF_MEMORY`        | `SystemOutOfMemory`        | `fuchsia-oom`
@@ -151,7 +152,7 @@ User request                 | `USER_REQUEST`                | `UserRequest`    
 System update                | `SYSTEM_UPDATE`               | `SystemUpdate`             | N/A\*
 Retry system update          | `RETRY_SYSTEM_UPDATE`         | `RetrySystemUpdate`        | `fuchsia-retry-system-update`
 ZBI swap                     | `ZBI_SWAP`                    | `ZbiSwap`                  | N/A\*
-High temperature             | `HIGH_TEMPERATURE`            | `HighTemperature`          | N/A\*
+High temperature             | `HIGH_TEMPERATURE`            | `HighTemperature`          | `fuchsia-high-temperature-reboot`
 Session failure              | `SESSION_FAILURE`             | `SessionFailure`           | `fuchsia-session-failure`
 Sysmgr failure               | `SYSMGR_FAILURE`              | `SysmgrFailure`            | `fuchsia-sysmgr-failure`
 Critical component failure   | `CRITICAL_COMPONENT_FAILURE`  | `CriticalComponentFailure` | `fuchsia-critical-component-failure`

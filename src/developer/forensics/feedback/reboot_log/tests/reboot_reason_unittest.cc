@@ -153,9 +153,12 @@ TEST(RebootReasonTest, SystemUpdate) {
 TEST(RebootReasonTest, HighTemperature) {
   const auto reason = RebootReason::kHighTemperature;
 
-  EXPECT_FALSE(IsCrash(reason));
-  EXPECT_FALSE(IsFatal(reason));
+  EXPECT_TRUE(IsCrash(reason));
+  EXPECT_TRUE(IsFatal(reason));
   EXPECT_EQ(ToCobaltLastRebootReason(reason), cobalt::LastRebootReason::kHighTemperature);
+  EXPECT_EQ(ToCrashSignature(reason), "fuchsia-reboot-high-temperature");
+  EXPECT_EQ(ToCrashSignature(reason, "unused"), "fuchsia-reboot-high-temperature");
+  EXPECT_EQ(ToCrashProgramName(reason), "system");
   EXPECT_EQ(ToFidlRebootReason(reason), fuchsia::feedback::RebootReason::HIGH_TEMPERATURE);
 }
 

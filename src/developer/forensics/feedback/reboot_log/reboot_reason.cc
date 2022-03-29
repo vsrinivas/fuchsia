@@ -69,12 +69,12 @@ bool IsCrash(const RebootReason reason) {
     case RebootReason::kSysmgrFailure:
     case RebootReason::kCriticalComponentFailure:
     case RebootReason::kRetrySystemUpdate:
+    case RebootReason::kHighTemperature:
     case RebootReason::kGenericGraceful:
       return true;
     case RebootReason::kUserRequest:
     case RebootReason::kSystemUpdate:
     case RebootReason::kZbiSwap:
-    case RebootReason::kHighTemperature:
     case RebootReason::kCold:
     case RebootReason::kFdr:
       return false;
@@ -94,12 +94,12 @@ bool IsFatal(const RebootReason reason) {
     case RebootReason::kSysmgrFailure:
     case RebootReason::kCriticalComponentFailure:
     case RebootReason::kRetrySystemUpdate:
+    case RebootReason::kHighTemperature:
     case RebootReason::kGenericGraceful:
       return true;
     case RebootReason::kUserRequest:
     case RebootReason::kSystemUpdate:
     case RebootReason::kZbiSwap:
-    case RebootReason::kHighTemperature:
     case RebootReason::kCold:
     case RebootReason::kSessionFailure:
     case RebootReason::kFdr:
@@ -209,10 +209,11 @@ std::string ToCrashSignature(const RebootReason reason,
       return "fuchsia-retry-system-update";
     case RebootReason::kGenericGraceful:
       return "fuchsia-undetermined-userspace-reboot";
+    case RebootReason::kHighTemperature:
+      return "fuchsia-reboot-high-temperature";
     case RebootReason::kUserRequest:
     case RebootReason::kSystemUpdate:
     case RebootReason::kZbiSwap:
-    case RebootReason::kHighTemperature:
     case RebootReason::kCold:
     case RebootReason::kFdr:
       FX_LOGS(FATAL) << "Not expecting a crash for reboot reason: " << ToString(reason);
@@ -237,12 +238,12 @@ std::string ToCrashProgramName(const RebootReason reason) {
     case RebootReason::kSysmgrFailure:
     case RebootReason::kCriticalComponentFailure:
     case RebootReason::kRetrySystemUpdate:
+    case RebootReason::kHighTemperature:
     case RebootReason::kGenericGraceful:
       return "system";
     case RebootReason::kUserRequest:
     case RebootReason::kSystemUpdate:
     case RebootReason::kZbiSwap:
-    case RebootReason::kHighTemperature:
     case RebootReason::kCold:
     case RebootReason::kFdr:
       FX_LOGS(FATAL) << "Not expecting a program name request for reboot reason: "

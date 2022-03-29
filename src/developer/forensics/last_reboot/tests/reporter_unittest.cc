@@ -367,11 +367,6 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, GracefulReporterTest,
                                  "ZBI SWAP",
                                  cobalt::LastRebootReason::kZbiSwap,
                              },
-                             {
-                                 "HighTemperature",
-                                 "HIGH TEMPERATURE",
-                                 cobalt::LastRebootReason::kHighTemperature,
-                             },
                          })),
                          [](const testing::TestParamInfo<GracefulRebootTestParam>& info) {
                            return info.param.test_name;
@@ -461,6 +456,15 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, GracefulWithCrashReporterTest,
                                  "fuchsia-retry-system-update",
                                  zx::msec(65487494),
                                  cobalt::LastRebootReason::kRetrySystemUpdate,
+                                 true,
+                             },
+                             {
+                                 "HighTemperature",
+                                 "HIGH TEMPERATURE",
+                                 "FINAL REBOOT REASON (HIGH TEMPERATURE)",
+                                 "fuchsia-reboot-high-temperature",
+                                 zx::msec(65487494),
+                                 cobalt::LastRebootReason::kHighTemperature,
                                  true,
                              },
                              {
