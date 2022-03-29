@@ -11,9 +11,16 @@ use {
 };
 
 /// Static service configuration options.
-#[derive(Debug, Default, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Config {
     blobfs: Mode,
+    enable: bool,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self { blobfs: Mode::default(), enable: true }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
@@ -34,9 +41,13 @@ impl Config {
         &self.blobfs
     }
 
+    pub fn enable(&self) -> bool {
+        self.enable
+    }
+
     #[cfg(test)]
     pub fn builder() -> tests::ConfigBuilder {
-        tests::ConfigBuilder
+        tests::ConfigBuilder::new()
     }
 
     pub fn load_from_config_data_or_default() -> Config {
@@ -54,17 +65,23 @@ impl Config {
         })
     }
 
+    fn enable_default() -> bool {
+        true
+    }
+
     fn load(r: impl Read) -> Result<Config, ConfigLoadError> {
         #[derive(Debug, Deserialize)]
         #[serde(deny_unknown_fields)]
         pub struct ParseConfig {
             #[serde(default = "Mode::default")]
             blobfs: Mode,
+            #[serde(default = "Config::enable_default")]
+            enable: bool,
         }
 
         let parse_config = serde_json::from_reader::<_, ParseConfig>(r)?;
 
-        Ok(Config { blobfs: parse_config.blobfs })
+        Ok(Config { blobfs: parse_config.blobfs, enable: parse_config.enable })
     }
 }
 
@@ -79,19 +96,27 @@ pub(crate) mod tests {
 
     use {super::*, assert_matches::assert_matches, serde_json::json};
 
-    pub struct ConfigBuilder;
-    impl ConfigBuilder {
-        pub fn blobfs(self, mode: Mode) -> ConfigBuilderWithBlobfs {
-            ConfigBuilderWithBlobfs { blobfs: mode }
-        }
-    }
-
-    pub struct ConfigBuilderWithBlobfs {
+    #[derive(Default)]
+    pub struct ConfigBuilder {
         blobfs: Mode,
+        enable: bool,
     }
-    impl ConfigBuilderWithBlobfs {
+    impl ConfigBuilder {
+        pub fn new() -> Self {
+            ConfigBuilder { blobfs: Default::default(), enable: true }
+        }
+        pub fn blobfs(mut self, mode: Mode) -> Self {
+            self.blobfs = mode;
+            self
+        }
+
+        pub fn enabled(mut self, enabled: bool) -> Self {
+            self.enable = enabled;
+            self
+        }
+
         pub fn build(self) -> Config {
-            Config { blobfs: self.blobfs }
+            Config { blobfs: self.blobfs, enable: self.enable }
         }
     }
 
@@ -107,11 +132,20 @@ pub(crate) mod tests {
         for (name, val) in
             [("ignore", Mode::Ignore), ("reboot_on_failure", Mode::RebootOnFailure)].iter()
         {
+            // Verify that setting enable explicitly works...
+            verify_load(
+                json!({
+                    "blobfs": name,
+                    "enable": false,
+                }),
+                Config::builder().blobfs(val.clone()).enabled(false).build(),
+            );
+            // ... and that leaving it unset defaults to true.
             verify_load(
                 json!({
                     "blobfs": name,
                 }),
-                Config::builder().blobfs(val.clone()).build(),
+                Config::builder().blobfs(val.clone()).enabled(true).build(),
             );
         }
     }

@@ -44,17 +44,20 @@ pub async fn put_metadata_in_happy_state(
     node: &finspect::Node,
     config: &Config,
 ) -> Result<(), MetadataError> {
-    let engine = PolicyEngine::build(boot_manager).await.map_err(MetadataError::Policy)?;
     let mut unblocker = Some(unblocker);
-    if let Some(current_config) =
-        engine.should_verify_and_commit().map_err(MetadataError::Policy)?
-    {
-        // At this point, the FIDL server should start responding to requests so that clients can
-        // find out that the health verification is underway.
-        unblocker = unblock_fidl_server(unblocker)?;
-        let res = do_health_verification(blobfs_verifier, node).await;
-        let () = PolicyEngine::apply_config(res, config).map_err(MetadataError::Verify)?;
-        let () = do_commit(boot_manager, current_config).await.map_err(MetadataError::Commit)?;
+    if config.enable() {
+        let engine = PolicyEngine::build(boot_manager).await.map_err(MetadataError::Policy)?;
+        if let Some(current_config) =
+            engine.should_verify_and_commit().map_err(MetadataError::Policy)?
+        {
+            // At this point, the FIDL server should start responding to requests so that clients can
+            // find out that the health verification is underway.
+            unblocker = unblock_fidl_server(unblocker)?;
+            let res = do_health_verification(blobfs_verifier, node).await;
+            let () = PolicyEngine::apply_config(res, config).map_err(MetadataError::Verify)?;
+            let () =
+                do_commit(boot_manager, current_config).await.map_err(MetadataError::Commit)?;
+        }
     }
 
     // Tell the rest of the system we are now committed.
@@ -85,6 +88,7 @@ mod tests {
         super::errors::{VerifyError, VerifyFailureReason},
         super::*,
         crate::config::Mode,
+        ::fidl::endpoints::create_proxy,
         assert_matches::assert_matches,
         configuration::Configuration,
         fasync::OnSignals,
@@ -183,6 +187,38 @@ mod tests {
         .unwrap();
 
         assert_eq!(paver.take_events(), vec![PaverEvent::QueryCurrentConfiguration]);
+        assert_eq!(
+            p_external.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST),
+            Ok(zx::Signals::USER_0)
+        );
+        assert_eq!(unblocker_recv.await, Ok(()));
+        assert_eq!(blobfs_verifier_call_count.load(Ordering::SeqCst), 0);
+    }
+
+    /// When we're disabled, we should not update metadata.
+    /// However, the FIDL server should still be unblocked.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_does_not_change_metadata_when_disabled() {
+        // We shouldn't even attempt to talk to the paver when disabled, so a proxy with the remote
+        // end closed should work fine.
+        let boot_manager_proxy =
+            create_proxy::<paver::BootManagerMarker>().expect("Creating proxy succeeds").0;
+        let (p_internal, p_external) = EventPair::create().unwrap();
+        let (unblocker, unblocker_recv) = oneshot::channel();
+        let (blobfs_verifier, blobfs_verifier_call_count) =
+            success_blobfs_verifier_and_call_count();
+
+        put_metadata_in_happy_state(
+            &boot_manager_proxy,
+            &p_internal,
+            unblocker,
+            &blobfs_verifier,
+            &finspect::Node::default(),
+            &Config::builder().enabled(false).build(),
+        )
+        .await
+        .unwrap();
+
         assert_eq!(
             p_external.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST),
             Ok(zx::Signals::USER_0)

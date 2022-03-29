@@ -13,15 +13,26 @@ import("//build/config.gni")
 #     Whether to ignore or reboot_on_failure when the blobfs verification fails.
 #     Type: string
 #     Possible values: ignore | reboot_on_failure
+#   enable (optional)
+#     If false, completely disable the system-update-committer.
+#     Type: bool
+#     Default: true
 template("system_update_committer_config") {
   cfg = {
     forward_variables_from(invoker, [ "blobfs" ])
     assert(defined(blobfs), "blobfs must be defined")
     assert(blobfs == "reboot_on_failure" || blobfs == "ignore",
            "value must be reboot_on_failure or ignore")
+    enable = true
+    if (defined(invoker.enable)) {
+      assert(invoker.enable == true || invoker.enable == false,
+             "value must be true or false")
+      enable = invoker.enable
+    }
   }
 
-  config_path = "$target_gen_dir/system_update_committer_config.json"
+  config_path =
+      "$target_gen_dir/system_update_committer_config_$target_name.json"
 
   write_file(config_path, cfg, "json")
 

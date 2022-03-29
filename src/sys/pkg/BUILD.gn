@@ -44,7 +44,11 @@ group("recovery-core") {
   public_deps = [
     "bin/pkg-cache",
     "bin/pkg-resolver",
+
+    # system-update-committer is a dependency of pkg-cache, but we don't want to do any verification
+    # in recovery mode, so we completely disable it.
     "bin/system-update-committer",
+    "bin/system-update-committer:disable",
   ]
 }
 

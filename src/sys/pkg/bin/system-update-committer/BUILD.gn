@@ -84,6 +84,11 @@ system_update_committer_config("enable_reboot_on_verification_failure") {
   blobfs = "reboot_on_failure"
 }
 
+system_update_committer_config("disable") {
+  blobfs = "ignore"
+  enable = false
+}
+
 group("tests") {
   testonly = true
   public_deps = [ ":system-update-committer-tests" ]
