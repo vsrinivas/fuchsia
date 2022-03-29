@@ -1165,6 +1165,43 @@ static bool vmo_lookup_test() {
   END_TEST;
 }
 
+static bool vmo_lookup_slice_test() {
+  BEGIN_TEST;
+
+  AutoVmScannerDisable scanner_disable;
+
+  constexpr size_t kAllocSize = PAGE_SIZE * 16;
+  constexpr size_t kCommitOffset = PAGE_SIZE * 4;
+  constexpr size_t kSliceOffset = PAGE_SIZE;
+  constexpr size_t kSliceSize = kAllocSize - kSliceOffset;
+  fbl::RefPtr<VmObjectPaged> vmo;
+  ASSERT_OK(VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, kAllocSize, &vmo));
+  ASSERT_TRUE(vmo);
+
+  // Commit a page in the vmo.
+  ASSERT_OK(vmo->CommitRange(kCommitOffset, PAGE_SIZE));
+
+  // Create a slice that is offset slightly.
+  fbl::RefPtr<VmObject> slice;
+  ASSERT_OK(vmo->CreateChildSlice(kSliceOffset, kSliceSize, false, &slice));
+  ASSERT_TRUE(slice);
+
+  // Query the slice and validate we see one page at the offset relative to us, not the parent it is
+  // committed in.
+  uint64_t offset_seen = UINT64_MAX;
+
+  auto lookup_fn = [&offset_seen](size_t offset, paddr_t pa) {
+    ASSERT(offset_seen == UINT64_MAX);
+    offset_seen = offset;
+    return ZX_ERR_NEXT;
+  };
+  EXPECT_OK(slice->Lookup(0, kSliceSize, lookup_fn));
+
+  EXPECT_EQ(offset_seen, kCommitOffset - kSliceOffset);
+
+  END_TEST;
+}
+
 static bool vmo_lookup_clone_test() {
   BEGIN_TEST;
 
@@ -3384,6 +3421,7 @@ VM_UNITTEST(vmo_double_remap_test)
 VM_UNITTEST(vmo_read_write_smoke_test)
 VM_UNITTEST(vmo_cache_test)
 VM_UNITTEST(vmo_lookup_test)
+VM_UNITTEST(vmo_lookup_slice_test)
 VM_UNITTEST(vmo_lookup_clone_test)
 VM_UNITTEST(vmo_clone_removes_write_test)
 VM_UNITTEST(vmo_zero_scan_test)

@@ -345,7 +345,9 @@ class VmObject : public VmHierarchyBase,
   // execute lookup_fn on a given range of physical addresses within the vmo. Only pages that are
   // present and writable in this VMO will be enumerated. Any copy-on-write pages in our parent
   // will not be enumerated. The physical addresses given to the lookup_fn should not be retained in
-  // any way unless the range has also been pinned by the caller.
+  // any way unless the range has also been pinned by the caller. Offsets provided will be in
+  // relation to the object being queried, even if pages are actually from a parent object where
+  // this is a slice.
   // Ranges of length zero are considered invalid and will return ZX_ERR_INVALID_ARGS. The lookup_fn
   // can terminate iteration early by returning ZX_ERR_STOP.
   using LookupFunction =

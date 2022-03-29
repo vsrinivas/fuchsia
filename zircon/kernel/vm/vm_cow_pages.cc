@@ -3568,7 +3568,13 @@ zx_status_t VmCowPages::LookupLocked(uint64_t offset, uint64_t len,
     AssertHeld(parent_->lock_ref());
     // Slices are always hung off a non-slice parent, so we know we only need to walk up one level.
     DEBUG_ASSERT(!parent_->is_slice_locked());
-    return parent_->LookupLocked(offset + parent_offset_, len, ktl::move(lookup_fn));
+    return parent_->LookupLocked(
+        offset + parent_offset_, len,
+        [&lookup_fn, parent_offset = parent_offset_](uint64_t offset, paddr_t pa) {
+          // Need to undo the parent_offset before forwarding to the lookup_fn, who is ignorant of
+          // slices.
+          return lookup_fn(offset - parent_offset, pa);
+        });
   }
 
   const uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
