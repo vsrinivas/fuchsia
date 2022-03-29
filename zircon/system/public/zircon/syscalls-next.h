@@ -58,8 +58,12 @@ typedef struct zx_vmo_dirty_range {
   uint64_t offset;
   uint64_t length;
   // Any options applicable to the range.
+  // ZX_VMO_DIRTY_RANGE_IS_ZERO indicates that the range contains all zeros.
   uint64_t options;
 } zx_vmo_dirty_range_t;
+
+// options flags for zx_vmo_dirty_range_t
+#define ZX_VMO_DIRTY_RANGE_IS_ZERO ((uint64_t)1u)
 
 // ====== End of pager writeback support ====== //
 

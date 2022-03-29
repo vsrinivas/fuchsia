@@ -4067,8 +4067,8 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
       start_offset, end_offset);
 }
 
-zx_status_t VmCowPages::EnumerateDirtyRangesLocked(
-    uint64_t offset, uint64_t len, DirtyRangeEnumerateFunction&& dirty_range_fn) const {
+zx_status_t VmCowPages::EnumerateDirtyRangesLocked(uint64_t offset, uint64_t len,
+                                                   DirtyRangeEnumerateFunction&& dirty_range_fn) {
   canary_.Assert();
 
   // Dirty pages are only tracked if the page source preserves content.
@@ -4080,35 +4080,138 @@ zx_status_t VmCowPages::EnumerateDirtyRangesLocked(
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  uint64_t start_offset = ROUNDDOWN(offset, PAGE_SIZE);
-  uint64_t end_offset = ROUNDUP(offset + len, PAGE_SIZE);
+  const uint64_t start_offset = ROUNDDOWN(offset, PAGE_SIZE);
+  const uint64_t end_offset = ROUNDUP(offset + len, PAGE_SIZE);
 
-  return page_list_.ForEveryPageAndContiguousRunInRange(
-      [](const VmPageOrMarker* p, uint64_t off) {
-        // Enumerate both AwaitingClean and Dirty pages, i.e. anything that is not Clean.
-        // AwaitingClean pages are "dirty" too for the purposes of this enumeration, since their
-        // modified contents are still in the process of being written back.
-        if (p->IsPage()) {
+  // If supply_zero_offset_ falls in the range being enumerated, try to advance supply_zero_offset_
+  // over any pages that might have been committed immediately after it. This gives us the
+  // opportunity to coalesce committed pages across supply_zero_offset_ into a single dirty range.
+  //
+  // Cap the amount of work by only considering advancing supply_zero_offset_ until end_offset. We
+  // will be iterating over the range [start_offset, end_offset) to enumerate dirty ranges anyway,
+  // so attempting to advance supply_zero_offset_ within this range still keeps the order of work
+  // performed in this call the same.
+  if (supply_zero_offset_ >= start_offset && supply_zero_offset_ < end_offset) {
+    uint64_t new_zero_offset = supply_zero_offset_;
+    zx_status_t status = page_list_.ForEveryPageAndGapInRange(
+        [&new_zero_offset](const VmPageOrMarker* p, uint64_t off) {
+          ASSERT(p->IsPage());
+          ASSERT(is_page_dirty(p->Page()));
+          DEBUG_ASSERT(!pmm_is_loaned(p->Page()));
+          new_zero_offset += PAGE_SIZE;
+          return ZX_ERR_NEXT;
+        },
+        [](uint64_t start, uint64_t end) {
+          // Bail if we found a gap.
+          return ZX_ERR_STOP;
+        },
+        supply_zero_offset_, end_offset);
+    // We don't expect a failure from the traversal.
+    ASSERT(status == ZX_OK);
+
+    // Advance supply_zero_offset_.
+    supply_zero_offset_ = new_zero_offset;
+  }
+
+  // First consider the portion of the range that ends before supply_zero_offset_.
+  // We don't have a range to consider here if offset was greater than supply_zero_offset_.
+  if (start_offset < supply_zero_offset_) {
+    const uint64_t end = ktl::min(supply_zero_offset_, end_offset);
+    zx_status_t status = page_list_.ForEveryPageAndContiguousRunInRange(
+        [](const VmPageOrMarker* p, uint64_t off) {
+          // Enumerate both AwaitingClean and Dirty pages, i.e. anything that is not Clean.
+          // AwaitingClean pages are "dirty" too for the purposes of this enumeration, since their
+          // modified contents are still in the process of being written back.
+          if (p->IsPage()) {
+            vm_page_t* page = p->Page();
+            DEBUG_ASSERT(is_page_dirty_tracked(page));
+            DEBUG_ASSERT(is_page_clean(page) || !pmm_is_loaned(page));
+            return !is_page_clean(page);
+          }
+          return false;
+        },
+        [](const VmPageOrMarker* p, uint64_t off) {
+          DEBUG_ASSERT(p->IsPage());
           vm_page_t* page = p->Page();
           DEBUG_ASSERT(is_page_dirty_tracked(page));
-          DEBUG_ASSERT(is_page_clean(page) || !pmm_is_loaned(page));
-          return !is_page_clean(page);
-        }
-        return false;
-      },
-      [](const VmPageOrMarker* p, uint64_t off) {
-        DEBUG_ASSERT(p->IsPage());
-        vm_page_t* page = p->Page();
-        DEBUG_ASSERT(is_page_dirty_tracked(page));
-        DEBUG_ASSERT(!is_page_clean(page));
-        DEBUG_ASSERT(!pmm_is_loaned(page));
-        DEBUG_ASSERT(page->object.get_page_offset() == off);
-        return ZX_ERR_NEXT;
-      },
-      [&dirty_range_fn](uint64_t start, uint64_t end) {
-        return dirty_range_fn(start, end - start);
-      },
-      start_offset, end_offset);
+          DEBUG_ASSERT(!is_page_clean(page));
+          DEBUG_ASSERT(!pmm_is_loaned(page));
+          DEBUG_ASSERT(page->object.get_page_offset() == off);
+          return ZX_ERR_NEXT;
+        },
+        [&dirty_range_fn](uint64_t start, uint64_t end) {
+          return dirty_range_fn(start, end - start, /*range_is_zero=*/false);
+        },
+        start_offset, end);
+
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
+  // Now consider the portion of the range that starts at/after supply_zero_offset_. All pages
+  // beyond supply_zero_offset_ must be reported Dirty so that they can be written back. Gaps must
+  // be reported as zero so that writing them back may be optimized.
+  // [offset, offset + len) might have fallen entirely before supply_zero_offset_, in which case we
+  // have no remaining portion to consider here.
+  if (supply_zero_offset_ < end_offset) {
+    const uint64_t start = ktl::max(start_offset, supply_zero_offset_);
+
+    // Counters to track a potential run of committed pages.
+    uint64_t committed_start = start;
+    uint64_t committed_len = 0;
+
+    zx_status_t status = page_list_.ForEveryPageAndGapInRange(
+        [&committed_start, &committed_len](const VmPageOrMarker* p, uint64_t off) {
+          // We can only find Dirty pages beyond supply_zero_offset_. There can be no markers as
+          // they represent Clean zero pages.
+          ASSERT(p->IsPage());
+          ASSERT(is_page_dirty(p->Page()));
+          DEBUG_ASSERT(!pmm_is_loaned(p->Page()));
+
+          // Start a run of committed pages if we are not tracking one yet.
+          if (committed_len == 0) {
+            committed_start = off;
+          }
+          // Add this page to the committed run and proceed to the next one.
+          DEBUG_ASSERT(committed_start + committed_len == off);
+          committed_len += PAGE_SIZE;
+          return ZX_ERR_NEXT;
+        },
+        [&committed_start, &committed_len, &dirty_range_fn](uint64_t start, uint64_t end) {
+          // If we were tracking a committed run, process it first.
+          if (committed_len > 0) {
+            // This gap should immediately follow the previous run of committed pages.
+            DEBUG_ASSERT(committed_start + committed_len == start);
+            zx_status_t status =
+                dirty_range_fn(committed_start, committed_len, /*range_is_zero=*/false);
+            // Only proceed to the next range if the return status indicates we can.
+            if (status != ZX_ERR_NEXT) {
+              return status;
+            }
+            // Reset committed_len for tracking another committed run later.
+            committed_len = 0;
+          }
+
+          // Process this gap now. Indicate that this range is zero.
+          return dirty_range_fn(start, end - start, /*range_is_zero=*/true);
+        },
+        start, end_offset);
+
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    // Process any last remaining committed run.
+    if (committed_len > 0) {
+      status = dirty_range_fn(committed_start, committed_len, /*range_is_zero=*/false);
+      if (status != ZX_ERR_STOP && status != ZX_ERR_NEXT) {
+        return status;
+      }
+    }
+  }
+
+  return ZX_OK;
 }
 
 zx_status_t VmCowPages::WritebackBeginLocked(uint64_t offset, uint64_t len) {
@@ -4127,6 +4230,15 @@ zx_status_t VmCowPages::WritebackBeginLocked(uint64_t offset, uint64_t len) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  // TODO(rashaeqbal): Do not process beyond supply_zero_offset_ until we can advance
+  // supply_zero_offset_ on writeback. We cannot have any non-Dirty pages beyond supply_zero_offset_
+  // yet.
+  if (offset >= supply_zero_offset_) {
+    return ZX_OK;
+  }
+
+  const uint64_t start = offset;
+  const uint64_t end = ktl::min(offset + len, supply_zero_offset_);
   zx_status_t status = page_list_.ForEveryPageInRange(
       [](auto* p, uint64_t off) {
         // Transition pages from Dirty to AwaitingClean.
@@ -4140,7 +4252,7 @@ zx_status_t VmCowPages::WritebackBeginLocked(uint64_t offset, uint64_t len) {
         }
         return ZX_ERR_NEXT;
       },
-      offset, offset + len);
+      start, end);
 
   if (status != ZX_OK) {
     return status;
@@ -4151,7 +4263,7 @@ zx_status_t VmCowPages::WritebackBeginLocked(uint64_t offset, uint64_t len) {
   // than the Dirty pages found in the page list traversal above, but we choose to do this once for
   // the entire range instead of per page; pages in the AwaitingClean and Clean states will already
   // have their write permission removed, so this is a no-op for them.
-  RangeChangeUpdateLocked(offset, len, RangeChangeOp::RemoveWrite);
+  RangeChangeUpdateLocked(start, end - start, RangeChangeOp::RemoveWrite);
 
   return ZX_OK;
 }
@@ -4172,6 +4284,13 @@ zx_status_t VmCowPages::WritebackEndLocked(uint64_t offset, uint64_t len) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  // TODO(rashaeqbal): Do not process beyond supply_zero_offset_ until we can advance
+  // supply_zero_offset_ on writeback. We cannot have any non-Dirty pages beyond supply_zero_offset_
+  // yet.
+  if (offset >= supply_zero_offset_) {
+    return ZX_OK;
+  }
+
   return page_list_.ForEveryPageInRange(
       [this](auto* p, uint64_t off) {
         // Transition pages from AwaitingClean to Clean.
@@ -4187,7 +4306,7 @@ zx_status_t VmCowPages::WritebackEndLocked(uint64_t offset, uint64_t len) {
         }
         return ZX_ERR_NEXT;
       },
-      offset, offset + len);
+      offset, ktl::min(offset + len, supply_zero_offset_));
 }
 
 const VmCowPages* VmCowPages::GetRootLocked() const {

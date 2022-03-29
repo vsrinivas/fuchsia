@@ -591,7 +591,8 @@ bool UserPager::VerifyDirtyRangesHelper(Vmo* paged_vmo,
       if (ranges_buf[i].offset !=
               dirty_ranges_to_verify[verify_index].offset * zx_system_get_page_size() ||
           ranges_buf[i].length !=
-              dirty_ranges_to_verify[verify_index].length * zx_system_get_page_size()) {
+              dirty_ranges_to_verify[verify_index].length * zx_system_get_page_size() ||
+          ranges_buf[i].options != dirty_ranges_to_verify[verify_index].options) {
         fprintf(stderr, "mismatch in queried range\n");
         return false;
       }

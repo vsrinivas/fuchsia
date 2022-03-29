@@ -189,7 +189,8 @@ zx_status_t PagerDispatcher::QueryDirtyRanges(VmAspace* current_aspace, fbl::Ref
 
   // Enumeration function that will be invoked on each dirty range found.
   VmObject::DirtyRangeEnumerateFunction copy_to_buffer = [&info](uint64_t range_offset,
-                                                                 uint64_t range_len) {
+                                                                 uint64_t range_len,
+                                                                 bool range_is_zero) {
     // No more space in the buffer.
     if ((info.index + 1) * sizeof(zx_vmo_dirty_range_t) > info.buffer_size) {
       // If we were not asked to compute the total, we can end termination early as there is
@@ -207,7 +208,7 @@ zx_status_t PagerDispatcher::QueryDirtyRanges(VmAspace* current_aspace, fbl::Ref
     memset(&dirty_range, 0, sizeof(dirty_range));
     dirty_range.offset = range_offset;
     dirty_range.length = range_len;
-    dirty_range.options = 0u;
+    dirty_range.options = range_is_zero ? ZX_VMO_DIRTY_RANGE_IS_ZERO : 0u;
 
     UserCopyCaptureFaultsResult copy_result =
         info.buffer.element_offset(info.index).copy_to_user_capture_faults(dirty_range);

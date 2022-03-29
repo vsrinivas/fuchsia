@@ -311,7 +311,7 @@ class VmCowPages final
   using DirtyRangeEnumerateFunction = VmObject::DirtyRangeEnumerateFunction;
   // See VmObject::EnumerateDirtyRanges
   zx_status_t EnumerateDirtyRangesLocked(uint64_t offset, uint64_t len,
-                                         DirtyRangeEnumerateFunction&& dirty_range_fn) const
+                                         DirtyRangeEnumerateFunction&& dirty_range_fn)
       TA_REQ(lock_);
 
   // See VmObject::WritebackBegin

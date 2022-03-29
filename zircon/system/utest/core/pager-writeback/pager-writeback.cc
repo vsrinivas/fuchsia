@@ -1957,7 +1957,11 @@ TEST(PagerWriteback, ResizeDirtyRequest) {
   // Verify the contents again.
   memset(expected.data() + 4 * zx_system_get_page_size(), 0xbb, zx_system_get_page_size());
   ASSERT_TRUE(check_buffer_data(vmo, 0, 6, expected.data(), true));
-  // TODO(rashaeqbal): Also verify dirty ranges once gaps past the zero offset are reported dirty.
+
+  // Verify dirty ranges.
+  zx_vmo_dirty_range_t ranges[] = {
+      {1, 2, 0}, {3, 1, ZX_VMO_DIRTY_RANGE_IS_ZERO}, {4, 1, 0}, {5, 1, ZX_VMO_DIRTY_RANGE_IS_ZERO}};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, ranges, sizeof(ranges) / sizeof(zx_vmo_dirty_range_t)));
 
   // Resize up again, and try writing to the entire VMO at once.
   ASSERT_TRUE(vmo->Resize(8));
@@ -1996,6 +2000,49 @@ TEST(PagerWriteback, ResizeDirtyRequest) {
   // Verify that all the pages are dirty.
   range = {.offset = 0, .length = 8};
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+}
+
+// Tests that writeback on a resized VMO works as expected.
+TEST(PagerWriteback, ResizeWriteback) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, ZX_VMO_RESIZABLE, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  // Resize the VMO up.
+  ASSERT_TRUE(vmo->Resize(3));
+
+  // Write to the first and the last page, leaving a gap in between.
+  uint8_t data[zx_system_get_page_size()];
+  memset(data, 0xaa, sizeof(data));
+  ASSERT_OK(vmo->vmo().write(&data[0], 0, sizeof(data)));
+  ASSERT_OK(vmo->vmo().write(&data[0], 2 * zx_system_get_page_size(), sizeof(data)));
+
+  // Verify VMO contents.
+  std::vector<uint8_t> expected(3 * zx_system_get_page_size(), 0xaa);
+  memset(expected.data() + zx_system_get_page_size(), 0, zx_system_get_page_size());
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 3, expected.data(), true));
+
+  // Verify that all the pages are dirty.
+  zx_vmo_dirty_range_t ranges_before[] = {{0, 1, 0}, {1, 1, ZX_VMO_DIRTY_RANGE_IS_ZERO}, {2, 1, 0}};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, ranges_before,
+                                      sizeof(ranges_before) / sizeof(zx_vmo_dirty_range_t)));
+
+  // Attempt to writeback all the pages.
+  ASSERT_TRUE(pager.WritebackBeginPages(vmo, 0, 3));
+  ASSERT_TRUE(pager.WritebackEndPages(vmo, 0, 3));
+
+  // We should only have been able to clean page 0.
+  // TODO(rashaeqbal): Temporary restriction that will be lifted once writeback beyond
+  // supply_zero_offset_ is supported.
+  zx_vmo_dirty_range_t ranges_after[] = {{1, 1, ZX_VMO_DIRTY_RANGE_IS_ZERO}, {2, 1, 0}};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, ranges_after,
+                                      sizeof(ranges_after) / sizeof(zx_vmo_dirty_range_t)));
+
+  // Verify VMO contents.
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 3, expected.data(), true));
 }
 
 }  // namespace pager_tests

@@ -408,15 +408,16 @@ class VmObject : public VmHierarchyBase,
   // Dirties pages in the vmo in the range [offset, offset + len).
   virtual zx_status_t DirtyPages(uint64_t offset, uint64_t len) { return ZX_ERR_NOT_SUPPORTED; }
 
-  using DirtyRangeEnumerateFunction =
-      fit::inline_function<zx_status_t(uint64_t range_offset, uint64_t range_len)>;
-  // Enumerates dirty ranges in the range [offset, offset + len) in ascending order, and calls
-  // |dirty_range_fn| on each range (spanning [range_offset, range_offset + range_len)).
-  // |dirty_range_fn| can return ZX_ERR_NEXT to continue with the enumeration, ZX_ERR_STOP to
-  // terminate the enumeration successfully, and any other error code to terminate the enumeration
-  // early with that error code.
+  using DirtyRangeEnumerateFunction = fit::inline_function<zx_status_t(
+      uint64_t range_offset, uint64_t range_len, bool range_is_zero)>;
+  // Enumerates dirty ranges in the range [offset, offset + len) in ascending order, updating any
+  // relevant VMO internal state required to perform the enumeration, and calls |dirty_range_fn| on
+  // each dirty range (spanning [range_offset, range_offset + range_len) where |range_is_zero|
+  // indicates whether the range is all zeros). |dirty_range_fn| can return ZX_ERR_NEXT to continue
+  // with the enumeration, ZX_ERR_STOP to terminate the enumeration successfully, and any other
+  // error code to terminate the enumeration early with that error code.
   virtual zx_status_t EnumerateDirtyRanges(uint64_t offset, uint64_t len,
-                                           DirtyRangeEnumerateFunction&& dirty_range_fn) const {
+                                           DirtyRangeEnumerateFunction&& dirty_range_fn) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
