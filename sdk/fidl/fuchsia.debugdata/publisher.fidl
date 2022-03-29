@@ -20,8 +20,8 @@ protocol Publisher {
     /// runtimes use this to deliver large binary trace results. In such cases,
     /// the client can resize the VMO and should use the `vmo_token` handle to
     /// signal when the VMO is ready for processing by the recipient.  The
-    /// receiver will not process the VMO until the `vmo_token` handle is
-    /// closed. Therefore, the client should retain the `vmo_token` handle until
+    /// receiver will not process the VMO until the peer of `vmo_token` handle
+    /// is closed. Therefore, the client should retain the peer handle until
     /// it has completed all writes to the VMO.
     Publish(resource struct {
         data_sink string:fuchsia.io.MAX_NAME_LENGTH;
