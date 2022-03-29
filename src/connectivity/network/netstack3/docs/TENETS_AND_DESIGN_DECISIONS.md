@@ -211,6 +211,45 @@ This is not an issue because for both source and destination address selection:
 The decision to not include a prefix length for an interface's IPv6 address
 state is captured by `fuchsia.net/InterfaceAddress`.
 
+## Expose state deltas through events dispatched from Core
+
+Changes to stack state are exposed through atomic events, which are issued as
+close to the internal state change as possible. Events are descriptive enough
+that reconstruction of state is possible from observing all events and to
+support FIDL APIs such as [`fuchsia.net.interfaces/Watcher`].
+
+No other side effects besides state-keeping are allowed in event handlers -
+those are not meant as callbacks. The API is named in a way to discourage usage
+as callbacks: `on_event(&mut self, event: T)`.
+
+Core calls event handlers through context traits from within critical sections
+to guarantee ordering. Bindings will typically write these events into
+order-preserving channels and can reconstruct up-to-date state in order to serve
+it over FIDL at a later time, while no longer holding locks. Justifying the
+decision to use this pattern:
+
+* Bindings can keep track of state to serve over FIDL without having to
+  acquire locks to read it.
+* All exposed state goes through a single API as opposed to a split hypothetical
+  *getter* vs *observer* APIs to satisfy out-of-stack watchers and hanging-gets.
+* Exposing events from within the critical sections guarantees the state is
+  always constructible if written to an ordering-guaranteeing channel. The
+  alternative of issuing all events from Bindings is not really viable because:
+  * To guarantee linearity, Bindings would always have to call into Core with
+    locks held or within the same thread to avoid invalid state being observed
+    from the event handler's perspective; those are undesirable.
+  * Core can't really be entirely side-effect free from a state-keeping
+    perspective. We *do* want to reduce side effects, but things like DAD or,
+    notably, neighbor reachability states - both of which are observable over
+    FIDL - belong in Core.
+
+At the moment of writing, this pattern is applicable to the state-watching
+present in `fuchsia.net.interfaces/Watcher`,
+`fuchsia.net.interfaces.admin/AddressStateProvider`,
+`fuchsia.net.neighbor/EntryIterator`, and a hypothetical
+`fuchsia.net.routes/Watcher`.
+
+[`fuchsia.net.interfaces/Watcher`]: https://fuchsia.dev/reference/fidl/fuchsia.net.interfaces?hl=en#Watcher
 [DAD implementation]: https://fuchsia-review.googlesource.com/c/fuchsia/+/648202
 [Originally in Netstack3]: https://cs.opensource.google/fuchsia/fuchsia/+/07b825aab40438237b2c47239786aae08c179139:src/connectivity/network/netstack3/
 [subnet-router anycast address]: https://datatracker.ietf.org/doc/html/rfc4291#section-2.6.1
