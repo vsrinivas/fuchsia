@@ -35,7 +35,6 @@ group("all") {
     "//garnet/packages/prod:far",
     "//garnet/packages/prod:hwstress",
     "//garnet/packages/prod:insntrace",
-    "//garnet/packages/prod:network-speed-test",
     "//garnet/packages/prod:run",
     "//garnet/packages/prod:sbase",
     "//garnet/packages/prod:scenic",
@@ -208,11 +207,6 @@ group("insntrace") {
     "//garnet/bin/insntrace",
     "//garnet/bin/insntrace:host_insntrace_print",
   ]
-}
-
-group("network-speed-test") {
-  testonly = true
-  public_deps = [ "//src/connectivity/network/tools/network-speed-test" ]
 }
 
 group("run") {

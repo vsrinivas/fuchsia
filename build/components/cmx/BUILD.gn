@@ -212,8 +212,6 @@ group("cmx_allowlist") {
     "//src/connectivity/network/tests/external_network:*",
     "//src/connectivity/network/tests/getifaddrs:*",
     "//src/connectivity/network/tests/integration/ip_forward:*",
-    "//src/connectivity/network/tools/network-speed-test:*",
-    "//src/connectivity/network/tools/network-speed-test/integration:*",
     "//src/connectivity/network/tools/sockscripter:*",
     "//src/connectivity/network/tun/network-tun:*",
     "//src/connectivity/openthread/ot-stack:*",
