@@ -3,8 +3,8 @@
 ### Scenic View
 
 A UI client that wishes to vend user-visible content must place it in a Scenic
-View, which is a [Session](scenic.md#sessions)-based
-[resource](scenic.md#resources), local to that client. No resource can be
+View, which is a [Session](/docs/concepts/ui/scenic/index.md#sessions)-based
+[resource](/docs/concepts/ui/scenic/index.md#resources), local to that client. No resource can be
 directly referenced outside the scope of their owning Scenic Session.
 
 ### ViewRef refers to a Scenic View

@@ -133,4 +133,4 @@ Accessibility tests live in
 [a11yfocus]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=78637
 [highlights]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=78639
 [tts]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=78642
-[scenic]: /docs/development/graphics/scenic/concepts/scenic.md
+[scenic]: /docs/concepts/ui/scenic/index.md

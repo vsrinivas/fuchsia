@@ -91,7 +91,7 @@ examples assume that clients using the API have listeners registered for the
 that `session` is an initialized Scenic
 [Session](/sdk/fidl/fuchsia.ui.scenic/session.fidl)
 channel. For examples of how to set up scenic, see
-[Scenic examples](scenic.md#examples-of-using-scenic).
+[Scenic examples](/docs/concepts/ui/scenic/index.md#examples-of-using-scenic).
 
 ### Example 1 {#example1}
 
@@ -308,3 +308,5 @@ void OnFramePresented(FramePresentedInfo info) {
 
 
 ```
+
+[scenic]: /docs/concepts/ui/scenic/index.md

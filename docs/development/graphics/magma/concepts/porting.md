@@ -309,7 +309,7 @@ the system driver using the Zircon DDK.
 [vkreadback]: /src/graphics/tests/vkreadback
 [hardwareunit]: /src/graphics/drivers/msd-arm-mali/tests/integration/run_unit_tests.cc
 [vulkanheader]: https://fuchsia.googlesource.com/third_party/Vulkan-Headers/+/refs/heads/master/include/vulkan/vulkan_fuchsia.h
-[scenic]: /docs/development/graphics/scenic/concepts/scenic.md
+[scenic]: /docs/concepts/ui/scenic/index.md
 [msd-arm-mali]: /src/graphics/drivers/msd-arm-mali
 [aml-gpu]: /src/graphics/drivers/aml-gpu
 [msd-intel-gen]: /src/graphics/drivers/msd-intel-gen

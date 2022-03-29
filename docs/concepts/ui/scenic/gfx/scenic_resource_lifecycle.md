@@ -15,7 +15,7 @@ the scene graph can keep Resources added to it alive, with the key exception of
 the View resource  -- which is solely held onto via the client's ResourceMap.
 
 This follows a simple embedded-embeddee client pair, and assumes the clients
-have set up all [necessary resources](scenic.md#scenic-resource-graph) to add
+have set up all [necessary resources](/docs/concepts/ui/scenic/index.md#scenic-resource-graph) to add
 Nodes and Views to the global, retained scene graph.
 
 > Note: the code shown below is typically handled by the UI C++ SDK wrappers. All

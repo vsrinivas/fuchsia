@@ -736,8 +736,8 @@ future but was deemed too heavyweight for the current use-cases.
 
 [HID]: http://www.freebsddiary.org/APC/usb_hid_usages.php
 [views]: /docs/development/graphics/scenic/concepts/view_ref.md
-[scenic]: /docs/development/graphics/scenic/concepts/scenic.md
-[scenegraph]: /docs/development/graphics/scenic/concepts/scenic.md#scenes
+[scenic]: /docs/concepts/ui/scenic/index.md
+[scenegraph]: /docs/concepts/ui/scenic/index.md#scenes
 [viewref]: /docs/development/graphics/scenic/concepts/view_ref.md
 [focuschain]: /docs/development/graphics/scenic/concepts/focus_chain.md
 [latencyreference]: https://www-user.tu-chemnitz.de/~attig/Attig-Rauh-Franke-Krems_2017_LatencyGuidelines.pdf

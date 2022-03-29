@@ -6,5 +6,5 @@ These services include:
 
 ## Scenic, the Fuchsia graphics engine
 
-Scenic ([doc](/docs/development/graphics/scenic/concepts/scenic.md)) provides a retained-mode scene graph that allows graphical objects from multiple processes to be composed and rendered within a unified lighting environment.
+Scenic ([doc](/docs/concepts/ui/scenic/index.md)) provides a retained-mode scene graph that allows graphical objects from multiple processes to be composed and rendered within a unified lighting environment.
 
