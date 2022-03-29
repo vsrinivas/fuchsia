@@ -4,6 +4,7 @@
 
 #include "src/lib/fidl_codec/printer.h"
 
+#include <fuchsia/io/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 #include <sys/stat.h>
 #include <zircon/syscalls/exception.h>
@@ -20,11 +21,11 @@
 
 namespace fidl_codec {
 
-constexpr uint32_t MODE_TYPE_DIRECTORY = 0x4000;
-constexpr uint32_t MODE_TYPE_BLOCK_DEVICE = 0x6000;
-constexpr uint32_t MODE_TYPE_FILE = 0x8000;
-constexpr uint32_t MODE_TYPE_SOCKET = 0xC000;
-constexpr uint32_t MODE_TYPE_SERVICE = 0x10000;
+using fuchsia::io::MODE_TYPE_BLOCK_DEVICE;
+using fuchsia::io::MODE_TYPE_DIRECTORY;
+using fuchsia::io::MODE_TYPE_FILE;
+using fuchsia::io::MODE_TYPE_SERVICE;
+using fuchsia::io::MODE_TYPE_SOCKET;
 
 constexpr int kCharactersPerByte = 2;
 

@@ -5,8 +5,10 @@
 #ifndef SRC_LIB_FIDL_CODEC_FIDL_CODEC_TEST_H_
 #define SRC_LIB_FIDL_CODEC_FIDL_CODEC_TEST_H_
 
-#include <fuchsia/sys/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
+#include <gtest/gtest.h>
 #include <sdk/lib/fidl/cpp/binding.h>
 
 #include "src/lib/fidl_codec/library_loader.h"
