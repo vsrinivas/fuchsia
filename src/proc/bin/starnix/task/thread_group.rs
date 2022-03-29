@@ -240,7 +240,7 @@ mod test {
     use crate::testing::*;
     use std::ffi::CString;
 
-    #[test]
+    #[::fuchsia::test]
     fn test_long_name() {
         let (_kernel, current_task) = create_kernel_and_task();
         let bytes = [1; sys::ZX_MAX_NAME_LEN];
@@ -253,7 +253,7 @@ mod test {
         assert_eq!(current_task.thread_group.process.get_name(), Ok(expected_name));
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_max_length_name() {
         let (_kernel, current_task) = create_kernel_and_task();
         let bytes = [1; sys::ZX_MAX_NAME_LEN - 1];
@@ -263,7 +263,7 @@ mod test {
         assert_eq!(current_task.thread_group.process.get_name(), Ok(name));
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_short_name() {
         let (_kernel, current_task) = create_kernel_and_task();
         let bytes = [1; sys::ZX_MAX_NAME_LEN - 10];
@@ -273,7 +273,7 @@ mod test {
         assert_eq!(current_task.thread_group.process.get_name(), Ok(name));
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_setsid() {
         let (_kernel, current_task) = create_kernel_and_task();
         assert_eq!(current_task.thread_group.setsid(), error!(EPERM));
@@ -296,7 +296,7 @@ mod test {
         assert_eq!(child_task.thread_group.job_control.read().sid, child_task.get_pid());
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_setgpid() {
         let (_kernel, current_task) = create_kernel_and_task();
         assert_eq!(current_task.thread_group.setsid(), error!(EPERM));

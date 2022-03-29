@@ -65,7 +65,7 @@ pub fn itimerspec_from_deadline_interval(deadline: zx::Time, interval: zx::Durat
 mod test {
     use super::*;
 
-    #[test]
+    #[::fuchsia::test]
     fn test_itimerspec() {
         let deadline = zx::Time::from_nanos(2 * NANOS_PER_SECOND + 50);
         let interval = zx::Duration::from_nanos(1000);
@@ -75,14 +75,14 @@ mod test {
         assert_eq!(time_spec.it_interval.tv_nsec, 1000);
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_time_from_timespec() {
         let time_spec = timespec { tv_sec: 100, tv_nsec: 100 };
         let time = time_from_timespec(time_spec).expect("failed to create time from time spec");
         assert_eq!(time.into_nanos(), 100 * NANOS_PER_SECOND + 100);
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_invalid_time_from_timespec() {
         let time_spec = timespec { tv_sec: 100, tv_nsec: NANOS_PER_SECOND * 2 };
         assert_eq!(time_from_timespec(time_spec), Err(EINVAL));

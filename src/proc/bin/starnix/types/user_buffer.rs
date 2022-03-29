@@ -66,7 +66,7 @@ impl<'a> UserBufferIterator<'a> {
 mod tests {
     use super::*;
 
-    #[test]
+    #[::fuchsia::test]
     fn test_get_total_length_overflow() {
         let buffers = vec![
             UserBuffer { address: UserAddress::from_ptr(0x20), length: usize::MAX - 10 },
@@ -88,7 +88,7 @@ mod tests {
         assert!(UserBuffer::get_total_length(&buffers).is_err());
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_user_buffer_iterator() {
         let buffers = vec![
             UserBuffer { address: UserAddress::from_ptr(0x20), length: 7 },

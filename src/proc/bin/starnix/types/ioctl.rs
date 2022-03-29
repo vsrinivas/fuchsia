@@ -67,7 +67,7 @@ mod tests {
         (number >> _IOC_SIZESHIFT) & _IOC_SIZEMASK
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_encode() {
         let encoded = encode_ioctl(7, 9);
         assert_eq!(decode_ioctl_dir(encoded), _IOC_NONE);
@@ -76,7 +76,7 @@ mod tests {
         assert_eq!(decode_ioctl_size(encoded), 0);
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_encode_read() {
         let encoded = encode_ioctl_read::<u32>(1, 7);
         assert_eq!(decode_ioctl_dir(encoded), _IOC_READ);
@@ -85,7 +85,7 @@ mod tests {
         assert_eq!(decode_ioctl_size(encoded), std::mem::size_of::<u32>() as u32);
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_encode_write() {
         let encoded = encode_ioctl_write::<u64>(2, 8);
         assert_eq!(decode_ioctl_dir(encoded), _IOC_WRITE);
@@ -94,7 +94,7 @@ mod tests {
         assert_eq!(decode_ioctl_size(encoded), std::mem::size_of::<u64>() as u32);
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_encode_write_read() {
         let encoded = encode_ioctl_write_read::<u32>(2, 8);
         assert_eq!(decode_ioctl_dir(encoded), _IOC_WRITE | _IOC_READ);
@@ -103,7 +103,7 @@ mod tests {
         assert_eq!(decode_ioctl_size(encoded), std::mem::size_of::<u32>() as u32);
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_encode_ioctl_request() {
         let encoded = encode_ioctl_write_read::<u32>(2, 8);
         let request = IoctlRequest::new(encoded);

@@ -307,12 +307,11 @@ mod tests {
     use crate::fs::pipe::new_pipe;
     use crate::fs::FdEvents;
     use crate::types::UserBuffer;
-    use fuchsia_async as fasync;
     use std::sync::atomic::{AtomicU64, Ordering};
 
     use crate::testing::*;
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_epoll_read_ready() {
         static WRITE_COUNT: AtomicU64 = AtomicU64::new(0);
         const EVENT_DATA: u64 = 42;
@@ -464,7 +463,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_cancel_after_notify() {
         let (kernel, current_task) = create_kernel_and_task();
         let event = new_eventfd(&kernel, 0, EventFdType::Counter, true);

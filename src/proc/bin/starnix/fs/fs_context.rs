@@ -102,13 +102,11 @@ impl FsContext {
 
 #[cfg(test)]
 mod test {
-    use fuchsia_async as fasync;
-
     use super::*;
     use crate::fs::tmpfs::TmpFs;
     use crate::testing::*;
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_umask() {
         let fs = FsContext::new(TmpFs::new());
 
@@ -118,7 +116,7 @@ mod test {
         assert_eq!(FileMode::from_bits(0o20), fs.set_umask(FileMode::from_bits(0o11)));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_chdir() {
         let (_kernel, current_task) = create_kernel_and_task_with_pkgfs();
 

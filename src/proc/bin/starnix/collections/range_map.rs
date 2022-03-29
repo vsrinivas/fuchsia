@@ -307,7 +307,7 @@ where
 mod test {
     use super::*;
 
-    #[test]
+    #[::fuchsia::test]
     fn test_empty() {
         let mut map = RangeMap::<u32, i32>::new();
 
@@ -317,7 +317,7 @@ mod test {
         map.remove(&(34..10));
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_insert_into_empty() {
         let mut map = RangeMap::<u32, i32>::new();
 
@@ -331,7 +331,7 @@ mod test {
         assert!(map.get(&34).is_none());
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_iter() {
         let mut map = RangeMap::<u32, i32>::new();
 
@@ -355,7 +355,7 @@ mod test {
         assert_eq!(iter.next(), None);
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_remove_overlapping_edge() {
         let mut map = RangeMap::<u32, i32>::new();
 
@@ -368,7 +368,7 @@ mod test {
         assert_eq!((&(11..33), &-14), map.get(&12).unwrap());
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_remove_middle_splits_range() {
         let mut map = RangeMap::<u32, i32>::new();
 
@@ -379,7 +379,7 @@ mod test {
         assert_eq!((&(18..34), &-14), map.get(&20).unwrap());
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_remove_upper_half_of_split_range_leaves_lower_range() {
         let mut map = RangeMap::<u32, i32>::new();
 
@@ -392,7 +392,7 @@ mod test {
         assert_eq!((&(10..15), &-14), map.get(&12).unwrap());
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_range_map_overlapping_insert() {
         let mut map = RangeMap::<u32, i32>::new();
 
@@ -407,7 +407,7 @@ mod test {
         assert_eq!((&(6..8), &-44), map.get(&7).unwrap());
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_intersect_single() {
         let mut map = RangeMap::<u32, i32>::new();
 
@@ -433,7 +433,7 @@ mod test {
         assert_eq!(iter.next(), None);
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_intersect_multiple() {
         let mut map = RangeMap::<u32, i32>::new();
 
@@ -453,7 +453,7 @@ mod test {
         assert_eq!(iter.next(), None);
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_intersect_no_gaps() {
         let mut map = RangeMap::<u32, i32>::new();
 

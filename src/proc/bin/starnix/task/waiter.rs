@@ -387,7 +387,6 @@ mod tests {
     use crate::fs::{new_eventfd, EventFdType};
     use crate::mm::PAGE_SIZE;
     use crate::types::UserBuffer;
-    use fuchsia_async as fasync;
     use std::sync::atomic::AtomicU64;
 
     use crate::testing::*;
@@ -395,7 +394,7 @@ mod tests {
     static INIT_VAL: u64 = 0;
     static FINAL_VAL: u64 = 42;
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_async_wait_exec() {
         static COUNTER: AtomicU64 = AtomicU64::new(INIT_VAL);
         static WRITE_COUNT: AtomicU64 = AtomicU64::new(0);
@@ -441,7 +440,7 @@ mod tests {
         assert_eq!(*&read_mem_valid, test_string.as_bytes());
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_async_wait_cancel() {
         for do_cancel in [true, false] {
             let (kernel, current_task) = create_kernel_and_task();
@@ -474,7 +473,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_wait_queue() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mut queue = WaitQueue::default();
@@ -503,7 +502,7 @@ mod tests {
         assert!(waiter2.wait_until(&current_task, zx::Time::ZERO).is_err());
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_wait_queue_mask() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mut queue = WaitQueue::default();

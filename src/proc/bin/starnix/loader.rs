@@ -460,12 +460,10 @@ fn parse_debug_addr(elf: &LoadedElf) -> Option<UserAddress> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use assert_matches::assert_matches;
-    use fuchsia_async as fasync;
-
     use crate::testing::*;
+    use assert_matches::assert_matches;
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_trivial_initial_stack() {
         let stack_vmo = zx::Vmo::create(0x4000).expect("VMO creation should succeed.");
         let stack_base = UserAddress::from_ptr(0x3000_0000);
@@ -514,14 +512,14 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_load_hello_starnix() {
         let (_kernel, mut current_task) = create_kernel_and_task_with_pkgfs();
         exec_hello_starnix(&mut current_task).expect("failed to load executable");
         assert!(current_task.mm.get_mapping_count() > 0);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_snapshot_hello_starnix() {
         let (kernel, mut current_task) = create_kernel_and_task_with_pkgfs();
         exec_hello_starnix(&mut current_task).expect("failed to load executable");
@@ -532,7 +530,7 @@ mod tests {
         assert_eq!(current_task.mm.get_mapping_count(), current2.mm.get_mapping_count());
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_parse_interpreter_line() {
         assert_matches!(parse_interpreter_line(b"#!"), Err(_));
         assert_matches!(parse_interpreter_line(b"#!\n"), Err(_));

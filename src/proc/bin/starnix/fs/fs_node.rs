@@ -459,7 +459,7 @@ mod tests {
     use super::*;
     use crate::testing::*;
 
-    #[test]
+    #[::fuchsia::test]
     fn open_device_file() {
         let (_kernel, current_task) = create_kernel_and_task();
 
@@ -489,7 +489,7 @@ mod tests {
         assert_eq!(&[0; CONTENT_LEN], content);
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn node_info_is_reflected_in_stat() {
         let (_kernel, current_task) = create_kernel_and_task();
 

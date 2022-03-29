@@ -892,9 +892,8 @@ impl cmp::Eq for Task {}
 mod test {
     use super::*;
     use crate::testing::*;
-    use fuchsia_async as fasync;
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_tid_allocation() {
         let (kernel, current_task) = create_kernel_and_task();
 
@@ -908,7 +907,7 @@ mod test {
         assert!(pids.get_task(3).is_none());
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_clone_pid_and_parent_pid() {
         let (_kernel, current_task) = create_kernel_and_task();
         let thread = current_task

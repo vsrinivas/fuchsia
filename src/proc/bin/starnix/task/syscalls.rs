@@ -489,15 +489,12 @@ pub fn sys_setsid(current_task: &mut CurrentTask) -> Result<pid_t, Errno> {
 
 #[cfg(test)]
 mod tests {
-    use std::u64;
-
     use super::*;
-    use fuchsia_async as fasync;
-
     use crate::mm::syscalls::sys_munmap;
     use crate::testing::*;
+    use std::u64;
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_prctl_set_vma_anon_name() {
         let (_kernel, current_task) = create_kernel_and_task();
 
@@ -527,7 +524,7 @@ mod tests {
         assert_eq!(error!(EFAULT), current_task.mm.get_mapping_name(mapped_address + 24u64));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_prctl_get_set_dumpable() {
         let (_kernel, current_task) = create_kernel_and_task();
 
@@ -550,7 +547,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_sys_getsid() {
         let (kernel, current_task) = create_kernel_and_task();
 
@@ -567,7 +564,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_get_affinity_size() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
@@ -575,7 +572,7 @@ mod tests {
         assert_eq!(sys_sched_getaffinity(&current_task, 1, 1, mapped_address), Err(EINVAL));
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_set_affinity_size() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);

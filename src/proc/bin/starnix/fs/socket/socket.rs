@@ -845,7 +845,7 @@ mod tests {
     use super::*;
     use crate::testing::*;
 
-    #[test]
+    #[::fuchsia::test]
     fn test_read_write_kernel() {
         let (_kernel, current_task) = create_kernel_and_task();
         let socket = Socket::new(SocketDomain::Unix, SocketType::Stream);
@@ -877,7 +877,7 @@ mod tests {
         assert_eq!(FdEvents::POLLHUP, server_socket.query_events());
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_dgram_socket() {
         let (_kernel, current_task) = create_kernel_and_task();
         let bind_address = SocketAddress::Unix(b"dgram_test".to_vec());

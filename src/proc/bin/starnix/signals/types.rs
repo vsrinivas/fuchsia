@@ -210,7 +210,7 @@ mod test {
     use super::*;
     use std::convert::TryFrom;
 
-    #[test]
+    #[::fuchsia::test]
     fn test_signal() {
         assert!(Signal::try_from(UncheckedSignal::from(0)).is_err());
         assert!(Signal::try_from(UncheckedSignal::from(1)).is_ok());
@@ -227,7 +227,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_siginfo_bytes() {
         let mut sigchld_bytes =
             vec![17, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 123, 0, 0, 0, 200, 1, 0, 0, 2];

@@ -194,7 +194,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_stuff() -> Result<(), Errno> {
         let (kern, current_task) = create_kernel_and_task();
         let address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);

@@ -515,12 +515,10 @@ impl FileOps for RemotePipeObject {
 #[cfg(test)]
 mod test {
     use super::*;
-    use fidl::endpoints::Proxy;
-    use fidl_fuchsia_io as fio;
-    use fuchsia_async as fasync;
-
     use crate::mm::PAGE_SIZE;
     use crate::testing::*;
+    use fidl::endpoints::Proxy;
+    use fidl_fuchsia_io as fio;
 
     #[::fuchsia::test]
     async fn test_tree() -> Result<(), anyhow::Error> {
@@ -545,7 +543,7 @@ mod test {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_blocking_io() -> Result<(), anyhow::Error> {
         let (kernel, current_task) = create_kernel_and_task();
 

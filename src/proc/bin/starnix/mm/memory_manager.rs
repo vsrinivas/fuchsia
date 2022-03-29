@@ -1465,12 +1465,10 @@ impl FileOps for ProcStatFile {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fuchsia_async as fasync;
+    use crate::testing::*;
     use itertools::assert_equal;
 
-    use crate::testing::*;
-
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_brk() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
@@ -1528,7 +1526,7 @@ mod tests {
         assert_eq!(range5.end, addr5 + *PAGE_SIZE);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_mm_exec() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
@@ -1560,7 +1558,7 @@ mod tests {
         assert_eq!(mapped_addr, mapped_addr2);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_get_contiguous_mappings_at() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
@@ -1654,7 +1652,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_read_each() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
@@ -1698,7 +1696,7 @@ mod tests {
         assert_eq!(read_count, 1);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_read_all() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
@@ -1728,7 +1726,7 @@ mod tests {
         assert_eq!(Ok(37), mm.read_all(&iovec, &mut buffer));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_write_each() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
@@ -1770,7 +1768,7 @@ mod tests {
         assert_eq!(&written[64..76], &data[25..37]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_write_all() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
@@ -1803,7 +1801,7 @@ mod tests {
         assert_eq!(Ok(37), mm.write_all(&iovec, &data[..42]));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_read_write_crossing_mappings() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
@@ -1826,7 +1824,7 @@ mod tests {
         assert_eq!(&data, &data_readback);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_read_write_errors() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
@@ -1853,7 +1851,7 @@ mod tests {
         mm.read_memory(unmapped_addr, &mut vec![]).expect("failed to read no data");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_read_c_string() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
@@ -1893,7 +1891,7 @@ mod tests {
 
     /// Maps two pages, then unmaps the first page.
     /// The second page should be re-mapped with a new child COW VMO.
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_unmap_beginning() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
@@ -1932,7 +1930,7 @@ mod tests {
 
     /// Maps two pages, then unmaps the second page.
     /// The first page's VMO should be shrunk.
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_unmap_end() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
@@ -1972,7 +1970,7 @@ mod tests {
     /// Maps three pages, then unmaps the middle page.
     /// The last page should be re-mapped with a new COW child VMO.
     /// The first page's VMO should be shrunk,
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_unmap_middle() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
@@ -2018,7 +2016,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_read_write_objects() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
@@ -2034,7 +2032,7 @@ mod tests {
         assert_eq!(items_written, items_read);
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_read_write_objects_null() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;

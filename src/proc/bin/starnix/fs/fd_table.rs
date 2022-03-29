@@ -149,7 +149,7 @@ mod test {
     use crate::fs::fuchsia::SyslogFile;
     use crate::task::*;
 
-    #[test]
+    #[::fuchsia::test]
     fn test_fd_table_install() {
         let kern = Kernel::new_for_testing();
         let files = FdTable::new();
@@ -165,7 +165,7 @@ mod test {
         assert_eq!(files.get(FdNumber::from_raw(fd1.raw() + 1)).map(|_| ()), error!(EBADF));
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_fd_table_fork() {
         let kern = Kernel::new_for_testing();
         let files = FdTable::new();
@@ -187,7 +187,7 @@ mod test {
         assert_ne!(FdFlags::CLOEXEC, forked.get_fd_flags(fd0).unwrap());
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_fd_table_exec() {
         let kern = Kernel::new_for_testing();
         let files = FdTable::new();
@@ -207,7 +207,7 @@ mod test {
         assert!(files.get(fd1).is_ok());
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_fd_table_pack_values() {
         let kern = Kernel::new_for_testing();
         let files = FdTable::new();

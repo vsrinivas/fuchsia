@@ -53,7 +53,7 @@ impl OpenFlags {
 mod tests {
     use super::*;
 
-    #[test]
+    #[::fuchsia::test]
     fn test_access() {
         let read_only = OpenFlags::from_bits_truncate(uapi::O_RDONLY);
         assert!(read_only.can_read());

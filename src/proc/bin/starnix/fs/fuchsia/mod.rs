@@ -29,12 +29,12 @@ pub fn create_file_from_handle(kern: &Kernel, handle: zx::Handle) -> Result<File
 mod test {
     use super::*;
 
-    #[test]
+    #[::fuchsia::test]
     fn test_create_from_invalid_handle() {
         assert!(create_file_from_handle(&Kernel::new_for_testing(), zx::Handle::invalid()).is_err());
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_create_pipe_from_handle() {
         let kern = Kernel::new_for_testing();
         let (left_handle, right_handle) =

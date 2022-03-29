@@ -22,7 +22,7 @@ impl<K: Ord + Copy> RangeExt for Range<K> {
 mod tests {
     use super::*;
 
-    #[test]
+    #[::fuchsia::test]
     fn no_intersection() {
         let a = 1..3;
         let b = 3..5;
@@ -30,7 +30,7 @@ mod tests {
         assert!(b.intersect(&a).is_empty());
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn partial_intersection() {
         let a = 1..3;
         let b = 2..5;
@@ -38,7 +38,7 @@ mod tests {
         assert_eq!(b.intersect(&a), (2..3));
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn full_intersection() {
         let a = 1..4;
         let b = 2..3;

@@ -96,16 +96,13 @@ impl FsNodeOps for TmpfsDirectory {
 #[cfg(test)]
 mod test {
     use super::*;
-
-    use fuchsia_async as fasync;
+    use crate::mm::*;
+    use crate::testing::*;
     use fuchsia_zircon as zx;
     use std::sync::Arc;
     use zerocopy::AsBytes;
 
-    use crate::mm::*;
-    use crate::testing::*;
-
-    #[test]
+    #[::fuchsia::test]
     fn test_tmpfs() {
         let fs = TmpFs::new();
         let root = fs.root();
@@ -117,7 +114,7 @@ mod test {
         assert!(names.iter().eq([b"etc", b"usr"].iter()));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_write_read() {
         let (_kernel, current_task) = create_kernel_and_task();
 
@@ -163,7 +160,7 @@ mod test {
         assert_eq!(test_bytes, &*read_vec);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_read_past_eof() {
         let (_kernel, current_task) = create_kernel_and_task();
 
@@ -198,7 +195,7 @@ mod test {
         assert_eq!(result, 0);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_permissions() {
         let (_kernel, current_task) = create_kernel_and_task();
 
@@ -227,7 +224,7 @@ mod test {
         assert_eq!(0, file.write(&current_task, &[]).expect("failed to write"));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_persistence() {
         let fs = TmpFs::new();
         {

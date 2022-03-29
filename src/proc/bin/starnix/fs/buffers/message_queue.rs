@@ -320,7 +320,7 @@ mod tests {
     use super::*;
 
     /// Tests that a write followed by a read returns the written message.
-    #[test]
+    #[::fuchsia::test]
     fn test_read_write() {
         let mut message_queue = MessageQueue::new(usize::MAX);
         let bytes: Vec<u8> = vec![1, 2, 3];
@@ -332,7 +332,7 @@ mod tests {
     }
 
     /// Tests that ancillary data does not contribute to the message queue length.
-    #[test]
+    #[::fuchsia::test]
     fn test_control_len() {
         let mut message_queue = MessageQueue::new(usize::MAX);
         let bytes: Vec<u8> = vec![1, 2, 3];
@@ -345,7 +345,7 @@ mod tests {
     }
 
     /// Tests that multiple writes followed by multiple reads return the data in the correct order.
-    #[test]
+    #[::fuchsia::test]
     fn test_read_write_multiple() {
         let mut message_queue = MessageQueue::new(usize::MAX);
         let first_bytes: Vec<u8> = vec![1, 2, 3];

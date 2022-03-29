@@ -441,7 +441,7 @@ mod tests {
         Ok(file)
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn opening_ptmx_creates_pts() -> Result<(), anyhow::Error> {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
@@ -453,7 +453,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn closing_ptmx_closes_pts() -> Result<(), anyhow::Error> {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
@@ -465,7 +465,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn pts_are_reused() -> Result<(), anyhow::Error> {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
@@ -488,7 +488,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn opening_inexistant_replica_fails() -> Result<(), anyhow::Error> {
         let (kernel, _task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
@@ -502,7 +502,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn deleting_pts_nodes_do_not_crash() -> Result<(), anyhow::Error> {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
@@ -517,7 +517,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_unknown_ioctl() -> Result<(), anyhow::Error> {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
@@ -537,7 +537,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_tiocgptn_ioctl() -> Result<(), anyhow::Error> {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
@@ -553,7 +553,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_new_terminal_is_locked() -> Result<(), anyhow::Error> {
         let (kernel, _task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
@@ -570,7 +570,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_lock_ioctls() -> Result<(), anyhow::Error> {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
@@ -592,7 +592,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_ptmx_blksize() -> Result<(), anyhow::Error> {
         let (kernel, _task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);

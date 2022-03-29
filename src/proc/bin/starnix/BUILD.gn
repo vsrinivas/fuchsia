@@ -256,6 +256,12 @@ if (target_cpu == "x64") {
       ":starnix_runner_bin_test",
       "//src/proc/examples/hello_starnix:bin",
     ]
+    test_specs = {
+      log_settings = {
+        # Tests exercise failure cases, so ERROR logs are expected.
+        max_severity = "ERROR"
+      }
+    }
   }
 }
 

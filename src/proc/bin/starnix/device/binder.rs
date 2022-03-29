@@ -1443,7 +1443,7 @@ mod tests {
     const BASE_ADDR: UserAddress = UserAddress::from(0x0000000000000100);
     const VMO_LENGTH: usize = 4096;
 
-    #[test]
+    #[fuchsia::test]
     fn handle_tests() {
         assert_matches!(Handle::from(0), Handle::SpecialServiceManager);
         assert_matches!(Handle::from(1), Handle::Object { index: 0 });
@@ -1451,7 +1451,7 @@ mod tests {
         assert_matches!(Handle::from(99), Handle::Object { index: 98 });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn handle_0_fails_when_context_manager_is_not_set() {
         let driver = BinderDriver::new();
         let binder_proc = driver.find_or_register_process(1);
@@ -1463,7 +1463,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn handle_0_succeeds_when_context_manager_is_set() {
         let driver = BinderDriver::new();
         let context_manager = driver.find_or_register_process(1);
@@ -1476,7 +1476,7 @@ mod tests {
         assert!(Arc::ptr_eq(&context_manager, &owning_proc));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn fail_to_retrieve_non_existing_handle() {
         let driver = BinderDriver::new();
         let binder_proc = driver.find_or_register_process(1);
@@ -1488,7 +1488,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn retrieve_existing_handle() {
         let driver = BinderDriver::new();
         let proc_1 = driver.find_or_register_process(1);
@@ -1508,7 +1508,7 @@ mod tests {
         assert!(Arc::ptr_eq(&proc_1, &owning_proc));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn shared_memory_allocation_fails_with_invalid_offsets_length() {
         let vmo = zx::Vmo::create(VMO_LENGTH as u64).expect("failed to create VMO");
         let mut shared_memory =
@@ -1516,7 +1516,7 @@ mod tests {
         shared_memory.allocate_buffer(3, 1).expect_err("offsets_length should be multiple of 8");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn shared_memory_allocation_aligns_offsets_buffer() {
         let vmo = zx::Vmo::create(VMO_LENGTH as u64).expect("failed to create VMO");
         let mut shared_memory =
@@ -1537,7 +1537,7 @@ mod tests {
         assert_eq!(offsets_buf.len(), OFFSETS_COUNT);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn shared_memory_allocation_buffers_correctly_write_through() {
         let vmo = zx::Vmo::create(VMO_LENGTH as u64).expect("failed to create VMO");
         let mut shared_memory =
@@ -1567,7 +1567,7 @@ mod tests {
         assert!(data.iter().all(|b| *b == OFFSETS_FILL));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn shared_memory_allocates_multiple_buffers() {
         let vmo = zx::Vmo::create(VMO_LENGTH as u64).expect("failed to create VMO");
         let mut shared_memory =
@@ -1609,7 +1609,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn shared_memory_too_large_allocation_fails() {
         let vmo = zx::Vmo::create(VMO_LENGTH as u64).expect("failed to create VMO");
         let mut shared_memory =
@@ -1708,7 +1708,7 @@ mod tests {
         assert_eq!(&buffer[..], offsets_data.as_bytes());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn transaction_translate_binder_leaving_process() {
         let driver = BinderDriver::new();
         let sender = driver.find_or_register_process(1);
@@ -1759,7 +1759,7 @@ mod tests {
         assert_eq!(proxy.object, binder_object);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn transaction_translate_binder_handle_entering_owning_process() {
         let driver = BinderDriver::new();
         let sender = driver.find_or_register_process(1);
@@ -1804,7 +1804,7 @@ mod tests {
         assert_eq!(&expected_transaction_data, &transaction_data);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn transaction_translate_binder_handle_passed_between_non_owning_processes() {
         let driver = BinderDriver::new();
         let sender = driver.find_or_register_process(1);

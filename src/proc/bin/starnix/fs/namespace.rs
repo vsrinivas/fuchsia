@@ -469,7 +469,7 @@ mod test {
     use crate::fs::tmpfs::TmpFs;
     use crate::testing::*;
 
-    #[test]
+    #[::fuchsia::test]
     fn test_namespace() -> anyhow::Result<()> {
         let (_kernel, current_task) = create_kernel_and_task();
         let root_fs = TmpFs::new();
@@ -504,7 +504,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_mount_does_not_upgrade() -> anyhow::Result<()> {
         let (_kernel, current_task) = create_kernel_and_task();
         let root_fs = TmpFs::new();
@@ -540,7 +540,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_path() -> anyhow::Result<()> {
         let (_kernel, current_task) = create_kernel_and_task();
         let root_fs = TmpFs::new();
@@ -574,7 +574,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_shadowing() -> anyhow::Result<()> {
         let (_kernel, current_task) = create_kernel_and_task();
         let root_fs = TmpFs::new();
@@ -602,7 +602,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_unlink_mounted_directory() -> anyhow::Result<()> {
         let (_kernel, current_task) = create_kernel_and_task();
         let root_fs = TmpFs::new();
@@ -620,7 +620,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_trim_trailing_slashes() {
         assert_eq!(b"", trim_trailing_slashes(b""));
         assert_eq!(b"", trim_trailing_slashes(b"/"));

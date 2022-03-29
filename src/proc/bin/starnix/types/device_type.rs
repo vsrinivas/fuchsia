@@ -53,7 +53,7 @@ impl DeviceType {
 mod tests {
     use super::*;
 
-    #[test]
+    #[::fuchsia::test]
     fn test_device_type() {
         let dev = DeviceType::new(21, 17);
         assert_eq!(dev.major(), 21);

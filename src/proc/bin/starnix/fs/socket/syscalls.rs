@@ -789,7 +789,7 @@ mod tests {
     use super::*;
     use crate::testing::*;
 
-    #[test]
+    #[::fuchsia::test]
     fn test_socketpair_invalid_arguments() {
         let (_kernel, current_task) = create_kernel_and_task();
         assert_eq!(
@@ -824,7 +824,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_generate_autobind_address() {
         let address = generate_autobind_address();
         assert_eq!(address.len(), 6);

@@ -1239,15 +1239,12 @@ pub fn sys_flock(
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
-    use fuchsia_async as fasync;
-    use std::sync::Arc;
-
     use crate::mm::PAGE_SIZE;
     use crate::testing::*;
+    use std::sync::Arc;
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_sys_lseek() -> Result<(), Errno> {
         let (_kernel, current_task) = create_kernel_and_task_with_pkgfs();
         let fd = FdNumber::from_raw(10);
@@ -1274,7 +1271,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_sys_dup() -> Result<(), Errno> {
         let (_kernel, current_task) = create_kernel_and_task_with_pkgfs();
         let file_handle = current_task.open_file(b"data/testfile.txt", OpenFlags::RDONLY)?;
@@ -1290,7 +1287,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_sys_dup3() -> Result<(), Errno> {
         let (_kernel, current_task) = create_kernel_and_task_with_pkgfs();
         let file_handle = current_task.open_file(b"data/testfile.txt", OpenFlags::RDONLY)?;
@@ -1321,7 +1318,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_sys_open_cloexec() -> Result<(), Errno> {
         let (_kernel, current_task) = create_kernel_and_task_with_pkgfs();
         let path_addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
@@ -1338,7 +1335,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_sys_epoll() -> Result<(), Errno> {
         let (_kernel, current_task) = create_kernel_and_task_with_pkgfs();
 
@@ -1348,7 +1345,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[::fuchsia::test]
     async fn test_fstat_tmp_file() {
         let (_kernel, current_task) = create_kernel_and_task_with_pkgfs();
 

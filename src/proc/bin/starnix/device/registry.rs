@@ -178,7 +178,7 @@ mod tests {
     use super::*;
     use crate::fs::FsNodeOps;
 
-    #[test]
+    #[::fuchsia::test]
     fn registry_fails_to_add_duplicate_device() {
         let mut registry = DeviceRegistry::new();
         registry.register_chrdev_static_id(DevNull).expect("registers once");
@@ -193,7 +193,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn registry_opens_device() {
         let mut registry = DeviceRegistry::new();
         registry.register_chrdev_static_id(DevNull).unwrap();
@@ -216,7 +216,7 @@ mod tests {
             .expect("opens device");
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn test_dynamic_misc() {
         let mut registry = DeviceRegistry::new();
         let device_type = registry.register_misc_chrdev(DevNull).unwrap();
@@ -228,7 +228,7 @@ mod tests {
             .expect("opens device");
     }
 
-    #[test]
+    #[::fuchsia::test]
     fn registry_opens_default_device() {
         let mut registry = DeviceRegistry::new();
         registry.register_default_chrdev(DevNull, 1).unwrap();

@@ -117,6 +117,12 @@ If you set the log level to `TRACE` (e.g.,  `fx log --severity TRACE --select "c
 
 ## Testing
 
+### Writing in-process unit tests
+
+Decorate your test function with the `#[::fuchsia::test]` macro instead of the standard `#[test]`
+macro. `#[::fuchsia::test]` will initialize logging so that failing tests can be debugged more
+easily.
+
 ### Running the in-process unit tests
 
 Starnix also has in-process unit tests that can interact with its internals
