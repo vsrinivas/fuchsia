@@ -14,6 +14,7 @@ mod aarch64;
         target_feature = "fma",
     ),
     all(target_arch = "aarch64", target_feature = "neon"),
+    all(target_arch = "wasm32", target_feature = "simd128"),
 )))]
 mod auto;
 #[cfg(all(
@@ -23,6 +24,8 @@ mod auto;
     target_feature = "fma"
 ))]
 mod avx;
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+mod wasm32;
 
 #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
 pub use aarch64::*;
@@ -34,6 +37,7 @@ pub use aarch64::*;
         target_feature = "fma",
     ),
     all(target_arch = "aarch64", target_feature = "neon"),
+    all(target_arch = "wasm32", target_feature = "simd128"),
 )))]
 pub use auto::*;
 #[cfg(all(
@@ -43,6 +47,8 @@ pub use auto::*;
     target_feature = "fma",
 ))]
 pub use avx::*;
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+pub use wasm32::*;
 
 pub trait Simd {
     const LANES: usize;
