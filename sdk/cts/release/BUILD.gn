@@ -3,10 +3,12 @@
 # found in the LICENSE file.
 
 import("//sdk/cts/build/compatibility_test_suite.gni")
+import("//sdk/cts/build/cts_signature_tests.gni")
 
 group("tests") {
   testonly = true
   deps = [
+    ":canary_signature_tests($host_toolchain)",
     ":canary_tests",
     ":current_milestone_tests",
   ]
@@ -18,4 +20,15 @@ compatibility_test_suite("canary_tests") {
 
 compatibility_test_suite("current_milestone_tests") {
   path = "//prebuilt/cts/current_milestone/$host_platform/cts"
+}
+
+if (is_host) {
+  cts_signature_tests("canary_signature_tests") {
+    old_cts_path = "//prebuilt/cts/canary/$host_platform/cts"
+    new_cts_path = "$root_build_dir/cts"
+    deps = [
+      "//sdk/cts:plasa($target_toolchain)",
+      "//sdk/cts:plasa_manifest($target_toolchain)",
+    ]
+  }
 }
