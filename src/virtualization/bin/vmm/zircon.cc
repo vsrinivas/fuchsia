@@ -191,7 +191,7 @@ static zx_status_t build_data_zbi(const fuchsia::virtualization::GuestConfig& cf
     }
   }
 
-  std::vector<zbi_mem_range_t> zbi_ranges = ZbiMemoryRanges(guest_mem, phys_mem.size(), dev_mem);
+  std::vector<zbi_mem_range_t> zbi_ranges = ZbiMemoryRanges(dev_mem, guest_mem);
   status = LogIfZbiError(
       image.Append(zbi_header_t{.type = ZBI_TYPE_MEM_CONFIG}, zbitl::AsBytes(zbi_ranges)),
       "Failed to append memory configuration");

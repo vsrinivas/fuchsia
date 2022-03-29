@@ -7,8 +7,8 @@
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <zircon/boot/image.h>
 
-std::vector<zbi_mem_range_t> ZbiMemoryRanges(const std::vector<GuestMemoryRegion>& guest_mem,
-                                             size_t mem_size, const DevMem& dev_mem) {
+std::vector<zbi_mem_range_t> ZbiMemoryRanges(const DevMem& dev_mem,
+                                             const std::vector<GuestMemoryRegion>& guest_mem) {
   std::vector<zbi_mem_range_t> ranges;
   auto yield = [&](zx_gpaddr_t addr, size_t size) {
     ranges.emplace_back(zbi_mem_range_t{
@@ -21,6 +21,10 @@ std::vector<zbi_mem_range_t> ZbiMemoryRanges(const std::vector<GuestMemoryRegion
   for (const GuestMemoryRegion& mem : guest_mem) {
     dev_mem.YieldInverseRange(mem.base, mem.size, yield);
   }
+
+  // Guest memory is ordered and non-overlapping, so the end of the final memory region is the
+  // total guest memory size.
+  const uint64_t mem_size = guest_mem.back().base + guest_mem.back().size;
 
   // Zircon only supports a limited number of peripheral ranges so for any
   // dev_mem ranges that are not in the RAM range we will build a single

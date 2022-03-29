@@ -11,13 +11,88 @@
 #include <zircon/threads.h>
 
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/virtualization/bin/vmm/pci.h"
 #include "src/virtualization/bin/vmm/sysinfo.h"
 
+namespace {
+
 #if __aarch64__
-static constexpr uint8_t kSpiBase = 32;
+constexpr uint8_t kSpiBase = 32;
 #endif
 
-static constexpr uint32_t trap_kind(TrapType type) {
+constexpr GuestMemoryRegion RestrictUntilEnd(zx_gpaddr_t start) {
+  return {start, kGuestMemoryAllRemainingRange};
+}
+
+#if __x86_64__
+constexpr uint64_t kOneKibibyte = 1ul << 10;
+constexpr uint64_t kOneMebibyte = 1ul << 20;
+constexpr uint64_t kOneGibibyte = 1ul << 30;
+
+constexpr GuestMemoryRegion RestrictRegion(zx_gpaddr_t start, zx_gpaddr_t end) {
+  return {start, end - start};
+}
+#endif
+
+// Ranges to avoid allocating guest memory in. These regions must not overlap and must be
+// sorted by increasing base address. These requirements are enforced by a static_assert
+// below.
+constexpr std::array kRestrictedRegions = {
+#if __aarch64__
+    // For ARM PCI devices are mapped in at a relatively high address, so it's reasonable to just
+    // block off the rest of guest memory.
+    RestrictUntilEnd(std::min(kDevicePhysBase, kFirstDynamicDeviceAddr)),
+#elif __x86_64__
+    // Reserve regions in the first MiB for use by the BIOS.
+    RestrictRegion(0x0, 32 * kOneKibibyte),
+    RestrictRegion(512 * kOneKibibyte, kOneMebibyte),
+    // For x86 PCI devices are mapped in somewhere below 4 GiB, and the range extends to 4 GiB.
+    RestrictRegion(kDevicePhysBase, 4 * kOneGibibyte),
+    // Dynamic devices are mapped in at a very high address, so everything beyond that point
+    // can be blocked off.
+    RestrictUntilEnd(kFirstDynamicDeviceAddr),
+#endif
+};
+
+constexpr bool CheckForOverlappingRestrictedRegions() {
+  auto overlaps = [](const GuestMemoryRegion& first, const GuestMemoryRegion& second) -> bool {
+    const auto& begin = std::min(first, second, GuestMemoryRegion::CompareMinByBase);
+    const auto& end = std::max(first, second, GuestMemoryRegion::CompareMinByBase);
+    return begin.base + begin.size >= end.base;
+  };
+
+  for (auto curr = kRestrictedRegions.begin(); curr != kRestrictedRegions.end(); curr++) {
+    for (auto next = std::next(curr); next != kRestrictedRegions.end(); next++) {
+      if (overlaps(*curr, *next)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+// Compile time check that no regions overlap in kRestrictedRegions. If adding a region that
+// overlaps with another, just merge them into one larger region.
+static_assert(CheckForOverlappingRestrictedRegions());
+
+constexpr bool CheckRestrictedRegionsAreSorted() {
+  for (auto curr = kRestrictedRegions.begin(); curr != kRestrictedRegions.end(); curr++) {
+    if (std::next(curr) == kRestrictedRegions.end()) {
+      break;
+    }
+    if (!GuestMemoryRegion::CompareMinByBase(*curr, *std::next(curr))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+// Compile time check that regions in kRestrictedRegions are sorted by increasing base address.
+static_assert(CheckRestrictedRegionsAreSorted());
+
+constexpr uint32_t trap_kind(TrapType type) {
   switch (type) {
     case TrapType::MMIO_SYNC:
       return ZX_GUEST_TRAP_MEM;
@@ -30,6 +105,8 @@ static constexpr uint32_t trap_kind(TrapType type) {
       return 0;
   }
 }
+
+}  // namespace
 
 // Static.
 uint64_t Guest::GetPageAlignedGuestMemory(uint64_t guest_memory) {
@@ -47,12 +124,59 @@ uint64_t Guest::GetPageAlignedGuestMemory(uint64_t guest_memory) {
 }
 
 // Static.
-void Guest::GenerateGuestMemoryRegions(uint64_t guest_memory,
+bool Guest::GenerateGuestMemoryRegions(uint64_t guest_memory,
                                        std::vector<GuestMemoryRegion>* regions) {
-  // There will only be one guest memory region during this refactoring. This matches the current
-  // behavior used by the now deprecated memory specification logic.
-  // TODO(fxb/94972): Calculate accurate guest memory regions.
-  regions->push_back({.base = 0x0, .size = guest_memory});
+  // Special case where there's no restrictions. Currently this isn't true for any production
+  // architecture due to the need to assign dynamic device addresses.
+  if (kRestrictedRegions.empty()) {
+    regions->push_back({.base = 0x0, .size = guest_memory});
+    return true;
+  }
+
+  bool first_region = true;
+  GuestMemoryRegion current_region;
+  auto restriction = kRestrictedRegions.begin();
+  auto next_range = [&]() -> bool {
+    if (first_region) {
+      first_region = false;
+      if (restriction->base != 0) {
+        current_region = {0x0, restriction->base};
+        return true;
+      }
+    }
+
+    if (restriction->size == kGuestMemoryAllRemainingRange) {
+      return false;  // No remaining valid guest memory regions.
+    }
+
+    // The current unrestricted region extends from the end of the current restriction to the
+    // start of the next restriction, or if this is the last restriction it extends to a very
+    // large number.
+    zx_gpaddr_t unrestricted_base_address = restriction->base + restriction->size;
+    uint64_t unrestricted_size = std::next(restriction) == kRestrictedRegions.end()
+                                     ? kGuestMemoryAllRemainingRange - unrestricted_base_address
+                                     : std::next(restriction)->base - unrestricted_base_address;
+
+    current_region = {unrestricted_base_address, unrestricted_size};
+    restriction++;
+    return true;
+  };
+
+  uint64_t mem_required = guest_memory;
+  while (mem_required > 0) {
+    if (!next_range()) {
+      FX_LOGS(ERROR) << "Unable to allocate enough guest memory due to guest memory restrictions. "
+                        "Managed to allocate "
+                     << guest_memory - mem_required << " of " << guest_memory << " bytes";
+      return false;
+    }
+
+    uint64_t mem_used = std::min(current_region.size, mem_required);
+    regions->push_back({current_region.base, mem_used});
+    mem_required -= mem_used;
+  }
+
+  return true;
 }
 
 zx_status_t Guest::Init(uint64_t guest_memory) {
@@ -72,18 +196,14 @@ zx_status_t Guest::Init(uint64_t guest_memory) {
   guest_memory = Guest::GetPageAlignedGuestMemory(guest_memory);
 
   // Generate guest memory regions, avoiding device memory.
-  Guest::GenerateGuestMemoryRegions(guest_memory, &memory_regions_);
+  if (!Guest::GenerateGuestMemoryRegions(guest_memory, &memory_regions_)) {
+    FX_PLOGS(ERROR, ZX_ERR_INVALID_ARGS) << "Failed to place guest memory avoiding device memory "
+                                            "ranges. Try requesting less memory.";
+  }
 
   // The VMO is sized to include any device regions inclusive of the guest memory ranges so that
   // there will always be a valid offset for any guest memory address.
   uint64_t vmo_size = memory_regions_.back().base + memory_regions_.back().size;
-  if (vmo_size > kFirstDynamicDeviceAddr) {
-    // Avoid a collision between static and dynamic address assignment.
-    FX_PLOGS(ERROR, ZX_ERR_INVALID_ARGS)
-        << "Requested guest memory with inclusive device regions must be less than "
-        << kFirstDynamicDeviceAddr;
-    return ZX_ERR_INVALID_ARGS;
-  }
 
   zx::vmo vmo;
   status = zx::vmo::create(vmo_size, 0, &vmo);
@@ -104,14 +224,23 @@ zx_status_t Guest::Init(uint64_t guest_memory) {
     return status;
   }
 
-  for (const GuestMemoryRegion& region : memory_regions_) {
+  std::vector<GuestMemoryRegion> vmar_regions = memory_regions_;
+#if __x86_64__
+  // x86 has reserved memory from 0 to 32KiB, and 512KiB to 1MiB. While we will not allocate guest
+  // memory in those regions, we still want to map these regions into the guest VMAR as they are
+  // not devices and we do not wish to trap on them.
+  vmar_regions.push_back({0, 32 * kOneKibibyte});
+  vmar_regions.push_back({512 * kOneKibibyte, 512 * kOneKibibyte});
+#endif
+
+  for (const GuestMemoryRegion& region : vmar_regions) {
     zx_gpaddr_t addr;
     status = vmar_.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE | ZX_VM_SPECIFIC |
                            ZX_VM_REQUIRE_NON_RESIZABLE,
                        region.base, vmo, region.base, region.size, &addr);
     if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to map guest physical memory region " << region.size << "@"
-                              << region.base;
+      FX_PLOGS(ERROR, status) << "Failed to map guest physical memory region " << region.base
+                              << " - " << region.base + region.size;
       return status;
     }
   }

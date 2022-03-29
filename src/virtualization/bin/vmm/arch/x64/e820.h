@@ -22,11 +22,12 @@ class E820Map {
   /*
    * Create a new E820 map
    *
-   * @param pmem_size Size of physical memory. The E820 map will contain as much
-   *  RAM regions as can fit in the defined physical memory that do not
-   *  collide with the provided dev_mem regions.
+   * @param dev_mem Reserved device memory. Guest memory has already been selected to not
+   *  overlap with these regions.
+   *
+   * @param guest_mem Guest memory regions.
    */
-  E820Map(size_t mem_size, const DevMem &dev_mem);
+  E820Map(const DevMem& dev_mem, const std::vector<GuestMemoryRegion>& guest_mem);
 
   void AddReservedRegion(zx_gpaddr_t addr, size_t size) {
     entries_.emplace_back(E820Entry{addr, size, E820Type::kReserved});
@@ -34,7 +35,7 @@ class E820Map {
 
   size_t size() const { return entries_.size(); }
 
-  void copy(E820Entry *dest) { std::copy(entries_.begin(), entries_.end(), dest); }
+  void copy(E820Entry* dest) { std::copy(entries_.begin(), entries_.end(), dest); }
 
  private:
   std::vector<E820Entry> entries_;

@@ -265,6 +265,7 @@ static zx_status_t read_boot_params(const PhysMem& phys_mem, uintptr_t* guest_ip
 }
 
 static zx_status_t write_boot_params(const PhysMem& phys_mem, const DevMem& dev_mem,
+                                     const std::vector<GuestMemoryRegion>& guest_mem,
                                      const std::string& cmdline, fbl::unique_fd dtb_overlay_fd,
                                      const size_t ramdisk_size) {
   // Set type of bootloader.
@@ -310,10 +311,7 @@ static zx_status_t write_boot_params(const PhysMem& phys_mem, const DevMem& dev_
 
 #if __x86_64__
   // Setup e820 memory map.
-  E820Map e820_map(phys_mem.size(), dev_mem);
-  for (const auto& range : dev_mem) {
-    e820_map.AddReservedRegion(range.addr, range.size);
-  }
+  E820Map e820_map(dev_mem, guest_mem);
   size_t e820_entries = e820_map.size();
   if (e820_entries > kMaxE820Entries) {
     FX_LOGS(ERROR) << "Not enough space for e820 memory map";
@@ -548,7 +546,8 @@ zx_status_t setup_linux(fuchsia::virtualization::GuestConfig* cfg, const PhysMem
     if (status != ZX_OK) {
       return status;
     }
-    status = write_boot_params(phys_mem, dev_mem, cmdline, std::move(dtb_overlay_fd), ramdisk_size);
+    status = write_boot_params(phys_mem, dev_mem, guest_mem, cmdline, std::move(dtb_overlay_fd),
+                               ramdisk_size);
     if (status != ZX_OK) {
       return status;
     }

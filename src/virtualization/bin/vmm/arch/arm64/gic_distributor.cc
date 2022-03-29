@@ -37,11 +37,11 @@ static constexpr uint32_t kGicdIrouteIRMMask = 1u << 31;
 // See ARM DDI 0487B.b, Table D4-25 for the maximum IPA range that can be used.
 
 // GIC v2 distributor memory range.
-static constexpr uint64_t kGicv2DistributorPhysBase      = 0x800000000;
+static constexpr uint64_t kGicv2DistributorPhysBase      = kDevicePhysBase;
 static constexpr uint64_t kGicv2DistributorSize          = 0x1000;
 
 // GIC v3 distributor memory range.
-static constexpr uint64_t kGicv3DistributorPhysBase      = 0x800000000;
+static constexpr uint64_t kGicv3DistributorPhysBase      = kDevicePhysBase;
 static constexpr uint64_t kGicv3DistributorSize          = 0x10000;
 
 // GIC v3 Redistributor memory range.

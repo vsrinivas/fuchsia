@@ -17,9 +17,9 @@ namespace {
 
 // clang-format off
 
-static constexpr uint64_t kAddr32kb     = 0x0000000000008000;
-static constexpr uint64_t kAddr512kb    = 0x0000000000080000;
-static constexpr uint64_t kAddr1mb      = 0x0000000000100000;
+constexpr uint64_t kAddr32kb     = 0x0000000000008000;
+constexpr uint64_t kAddr512kb    = 0x0000000000080000;
+constexpr uint64_t kAddr1mb      = 0x0000000000100000;
 
 // clang-format on
 
@@ -45,20 +45,22 @@ void Append(std::vector<Format>& ranges, uint64_t addr, uint64_t size, Type type
 }
 
 template <typename Format>
-void Append(std::vector<Format>& ranges, size_t mem_size, const DevMem& dev_mem) {
+void AppendSpecialRegions(std::vector<Format>& ranges) {
   // 0 to 32kb is reserved.
   Append<Format>(ranges, 0, kAddr32kb, Type::kReserved);
-  // 32kb to to 512kb is available (for Linux's real mode trampoline).
-  Append<Format>(ranges, kAddr32kb, kAddr512kb - kAddr32kb, Type::kRam);
   // 512kb to 1mb is reserved.
   Append<Format>(ranges, kAddr512kb, kAddr1mb - kAddr512kb, Type::kReserved);
+}
 
-  if (mem_size > kAddr1mb) {
-    // 1mb to mem_size is available.
-    dev_mem.YieldInverseRange(kAddr1mb, mem_size - kAddr1mb,
-                              [&ranges](zx_gpaddr_t addr, size_t size) {
-                                Append<Format>(ranges, addr, size, Type::kRam);
-                              });
+template <typename Format>
+void Append(std::vector<Format>& ranges, const DevMem& dev_mem,
+            const std::vector<GuestMemoryRegion>& guest_mem) {
+  // The first 1 MiB has special reserved regions for x86, although we do not treat them as
+  // regular device memory and trap on them. These reserved ranges are used by the guest BIOS.
+  AppendSpecialRegions(ranges);
+
+  for (const GuestMemoryRegion& mem : guest_mem) {
+    Append<Format>(ranges, mem.base, mem.size, Type::kRam);
   }
 
   for (const auto& range : dev_mem) {
@@ -68,17 +70,16 @@ void Append(std::vector<Format>& ranges, size_t mem_size, const DevMem& dev_mem)
 
 }  // namespace
 
-E820Map::E820Map(size_t mem_size, const DevMem& dev_mem) {
-  Append<E820Entry>(entries_, mem_size, dev_mem);
+E820Map::E820Map(const DevMem& dev_mem, const std::vector<GuestMemoryRegion>& guest_mem) {
+  Append<E820Entry>(entries_, dev_mem, guest_mem);
 }
 
 #ifdef __Fuchsia__
 
-std::vector<zbi_mem_range_t> ZbiMemoryRanges(const std::vector<GuestMemoryRegion>& guest_mem,
-                                             size_t mem_size, const DevMem& dev_mem) {
-  // TODO(fxb/94972): Use guest memory regions to reserve ranges.
+std::vector<zbi_mem_range_t> ZbiMemoryRanges(const DevMem& dev_mem,
+                                             const std::vector<GuestMemoryRegion>& guest_mem) {
   std::vector<zbi_mem_range_t> ranges;
-  Append<zbi_mem_range_t>(ranges, mem_size, dev_mem);
+  Append<zbi_mem_range_t>(ranges, dev_mem, guest_mem);
   return ranges;
 }
 

@@ -13,6 +13,17 @@
 
 class Guest;
 
+// The physical address where the VMM starts placing memory mapped devices such as PCI devices. For
+// x86 this is colloquially referred to as the "PCI hole", and for ARM64 this is the start of the
+// GIC.
+#if __aarch64__
+constexpr uint64_t kDevicePhysBase = 0x800000000;
+#elif __x86_64__
+constexpr uint64_t kDevicePhysBase = 0xf8000000;
+#else
+#error Unknown architecture.
+#endif
+
 struct IoValue {
   uint8_t access_size;
   union {

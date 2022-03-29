@@ -22,6 +22,10 @@
 // allocator that starts fairly high in the guest physical address space.
 constexpr zx_gpaddr_t kFirstDynamicDeviceAddr = 0xb00000000;
 
+// Arbitrarily large number used when restricting guest memory ranges. If a restricted range
+// has this size, it means "restrict from the base address until +INF".
+constexpr uint64_t kGuestMemoryAllRemainingRange = 1ul << 52;
+
 enum class TrapType {
   MMIO_SYNC = 0,
   MMIO_BELL = 1,
@@ -33,6 +37,11 @@ struct GuestMemoryRegion {
   zx_gpaddr_t base;
   // Size of a region of guest physical address space in bytes.
   uint64_t size;
+
+  constexpr static bool CompareMinByBase(const GuestMemoryRegion& lhs,
+                                         const GuestMemoryRegion& rhs) {
+    return lhs.base < rhs.base;
+  }
 };
 
 class Guest {
@@ -71,7 +80,7 @@ class Guest {
   static uint64_t GetPageAlignedGuestMemory(uint64_t guest_memory);
 
   // Generates guest memory regions with total size |guest_memory|, avoiding any device memory.
-  static void GenerateGuestMemoryRegions(uint64_t guest_memory,
+  static bool GenerateGuestMemoryRegions(uint64_t guest_memory,
                                          std::vector<GuestMemoryRegion>* regions);
 
   const IoMappingList& mappings() const { return mappings_; }
