@@ -11,11 +11,17 @@ source_set("cpp") {
   public_configs = [ ":wlan_drivers_components_cpp_config" ]
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.network.device:fuchsia.hardware.network.device_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.network.mac:fuchsia.hardware.network.mac_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
     "//sdk/lib/stdcompat",
+    "//src/lib/ddk",
+    "//zircon/system/ulib/zircon-internal",
   ]
   sources = [
     "cpp/frame.cc",
     "cpp/frame_container.cc",
+    "cpp/network_device.cc",
+    "cpp/network_port.cc",
     "cpp/priority_queue.cc",
   ]
 }

@@ -9,10 +9,14 @@ test("components_test") {
     "frame_container_test.cc",
     "frame_storage_test.cc",
     "frame_test.cc",
+    "network_device_test.cc",
+    "network_port_test.cc",
     "priority_queue_test.cc",
   ]
   deps = [
     "//src/connectivity/wlan/drivers/lib/components:cpp",
+    "//src/devices/testing/mock-ddk",
+    "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/zxtest:zxtest",
   ]
 }
