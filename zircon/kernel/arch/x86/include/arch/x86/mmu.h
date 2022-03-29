@@ -85,8 +85,6 @@
 #define X86_KERNEL_KASAN_RW_PT_FLAGS (X86_MMU_PG_G | X86_MMU_PG_RW | X86_MMU_PG_P)
 #define X86_KERNEL_KASAN_PD_FLAGS (X86_MMU_PG_RW | X86_MMU_PG_P)
 
-#define X86_PAGING_LEVELS 4
-
 #define MMU_GUEST_SIZE_SHIFT 48
 
 /* page fault error code flags */

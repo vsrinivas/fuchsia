@@ -97,6 +97,9 @@ config("kernel") {
     # <arch/x86/page_tables/page_tables.h> has #include <hwreg/bitfields.h>.
     "//zircon/system/ulib/hwreg/include",
 
+    # <arch/x86/page_tables/page_tables.h> has #include <page_tables/x86/constants.h>.
+    "//zircon/system/ulib/page_tables/include",
+
     # <arch/x86/idle_states.h> has #include <ktl/atomic.h>.
     "//zircon/kernel/lib/ktl/include",
 

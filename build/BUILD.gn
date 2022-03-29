@@ -292,6 +292,7 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/system/ulib/mock-function/*",
     "//zircon/system/ulib/mtd/*",
     "//zircon/system/ulib/nand-redundant-storage/*",
+    "//zircon/system/ulib/page_tables/*",
     "//zircon/system/ulib/perftest/*",
     "//zircon/system/ulib/pretty/*",
     "//zircon/system/ulib/processargs/*",
