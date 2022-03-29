@@ -284,9 +284,11 @@ It's ok to not list temporary files as outputs so long as the same action that
 creates the temporary files also deletes them before returning.
 
 Temporary files should be saved under `target_out_dir` or `target_gen_dir`.
-Use of global temporary storage such as `/tmp`, or any reads and writes outside
-of the checkout or output directories, is discouraged because it's less
-portable and more difficult to troubleshoot.
+Use of global temporary storage such as `/tmp` or `$TMPDIR`, or any reads and
+writes outside of the checkout or output directories, is discouraged because
+it can make troubleshooting of build failures more difficult as files may need
+to be recovered from other places in the filesystem to indicate what went
+wrong.
 
 ### Creating and deleting temporary directories
 
