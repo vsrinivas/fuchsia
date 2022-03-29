@@ -586,7 +586,7 @@ class VmCounter final : public VmEnumerator {
 
 zx_status_t VmAspace::GetMemoryUsage(vm_usage_t* usage) {
   VmCounter vc;
-  if (!EnumerateChildren(&vc)) {
+  if (EnumerateChildren(&vc) != ZX_OK) {
     *usage = {};
     return ZX_ERR_INTERNAL;
   }
@@ -644,16 +644,19 @@ class RestartableVmEnumerator {
     faults_ = 0;
     visited_ = 0;
 
-    // EnumerateChildren only fails if copying to the user hit a fault. We redo the copy outside
-    // of the enumeration so that we're not holding the aspace lock. If it still fails then we
-    // consider it an error, otherwise we restart the enumeration skipping any entries with a
+    // EnumerateChildren only fails if copying to the user hit a fault, or the aspace itself has
+    // been destroyed. If the aspace got destroyed this is fatal and we propagate that error,
+    // otherwise as long as the user copy failed (i.e. we got ZX_ERR_CANCELED) we redo the copy
+    // outside of the enumeration so that we're not holding the aspace lock. If it still fails then
+    // we consider it an error, otherwise we restart the enumeration skipping any entries with a
     // virtual address in the segment we already processed. A segment is represented by an address
     // and a depth pair, as vmars/mappings can exist at the same base address due to them being
     // hierarchical, but they will have a higher depth.
     Enumerator enumerator{this};
-    while (!target->EnumerateChildren(&enumerator)) {
+    zx_status_t result;
+    while ((result = target->EnumerateChildren(&enumerator)) == ZX_ERR_CANCELED) {
       DEBUG_ASSERT(nelem_ < max_);
-      zx_status_t result = WriteEntry(entry_, nelem_);
+      result = WriteEntry(entry_, nelem_);
       if (result != ZX_OK) {
         return result;
       }
@@ -665,7 +668,7 @@ class RestartableVmEnumerator {
     // first order.
     DEBUG_ASSERT(faults_ > 0 || visited_ + FirstEntry == available_);
 
-    return ZX_OK;
+    return result;
   }
 
   size_t nelem() const { return nelem_; }

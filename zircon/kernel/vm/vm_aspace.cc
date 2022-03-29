@@ -643,18 +643,18 @@ void VmAspace::DumpLocked(bool verbose) const {
   }
 }
 
-bool VmAspace::EnumerateChildren(VmEnumerator* ve) {
+zx_status_t VmAspace::EnumerateChildren(VmEnumerator* ve) {
   canary_.Assert();
   DEBUG_ASSERT(ve != nullptr);
   Guard<Mutex> guard{&lock_};
   if (root_vmar_ == nullptr || aspace_destroyed_) {
     // Aspace hasn't been initialized or has already been destroyed.
-    return true;
+    return ZX_ERR_BAD_STATE;
   }
   DEBUG_ASSERT(root_vmar_->IsAliveLocked());
   AssertHeld(root_vmar_->lock_ref());
   if (!ve->OnVmAddressRegion(root_vmar_.get(), 0)) {
-    return false;
+    return ZX_ERR_CANCELED;
   }
   return root_vmar_->EnumerateChildrenLocked(ve);
 }
@@ -771,7 +771,8 @@ void VmAspace::MarkAsLatencySensitive() {
     };
     Enumerator enumerator;
     AssertHeld(root_vmar_->lock_ref());
-    root_vmar_->EnumerateChildrenLocked(&enumerator);
+    __UNUSED zx_status_t result = root_vmar_->EnumerateChildrenLocked(&enumerator);
+    DEBUG_ASSERT(result == ZX_OK);
   }
 }
 

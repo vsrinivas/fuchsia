@@ -579,7 +579,7 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
 
   // Used to implement VmAspace::EnumerateChildren.
   // |aspace_->lock()| must be held.
-  bool EnumerateChildrenLocked(VmEnumerator* ve) TA_REQ(lock());
+  zx_status_t EnumerateChildrenLocked(VmEnumerator* ve) TA_REQ(lock());
 
   friend class VmMapping;
   template <VmAddressRegionEnumeratorType>
@@ -629,8 +629,8 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
       TA_REQ(lock());
 
   template <typename ON_VMAR, typename ON_MAPPING>
-  bool EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t max_addr, ON_VMAR on_vmar,
-                                       ON_MAPPING on_mapping) TA_REQ(lock());
+  zx_status_t EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t max_addr, ON_VMAR on_vmar,
+                                              ON_MAPPING on_mapping) TA_REQ(lock());
 
   RegionList<VmAddressRegionOrMapping> subregions_ TA_GUARDED(lock());
 

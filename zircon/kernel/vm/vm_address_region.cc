@@ -466,8 +466,9 @@ ktl::optional<vaddr_t> VmAddressRegion::CheckGapLocked(VmAddressRegionOrMapping*
 }
 
 template <typename ON_VMAR, typename ON_MAPPING>
-bool VmAddressRegion::EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t max_addr,
-                                                      ON_VMAR on_vmar, ON_MAPPING on_mapping) {
+zx_status_t VmAddressRegion::EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t max_addr,
+                                                             ON_VMAR on_vmar,
+                                                             ON_MAPPING on_mapping) {
   canary_.Assert();
 
   VmAddressRegionEnumerator<VmAddressRegionEnumeratorType::UnpausableVmarOrMapping> enumerator(
@@ -483,21 +484,21 @@ bool VmAddressRegion::EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t 
       DEBUG_ASSERT(mapping != nullptr);
       AssertHeld(mapping->lock_ref());
       if (!on_mapping(mapping, this, result->depth)) {
-        return false;
+        return ZX_ERR_CANCELED;
       }
     } else {
       VmAddressRegion* vmar = curr->as_vm_address_region().get();
       DEBUG_ASSERT(vmar != nullptr);
       AssertHeld(vmar->lock_ref());
       if (!on_vmar(vmar, result->depth)) {
-        return false;
+        return ZX_ERR_CANCELED;
       }
     }
   }
-  return true;
+  return ZX_OK;
 }
 
-bool VmAddressRegion::EnumerateChildrenLocked(VmEnumerator* ve) {
+zx_status_t VmAddressRegion::EnumerateChildrenLocked(VmEnumerator* ve) {
   canary_.Assert();
   DEBUG_ASSERT(ve != nullptr);
 

@@ -105,8 +105,10 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
 
   // Traverses the VM tree rooted at this node, in depth-first pre-order. If
   // any methods of |ve| return false, the traversal stops and this method
-  // returns false. Returns true otherwise.
-  bool EnumerateChildren(VmEnumerator* ve);
+  // returns ZX_ERR_CANCELED. If the aspace is destroyed or otherwise not
+  // enumerable this returns ZX_ERR_BAD_STATE, otherwise ZX_OK is returned if
+  // traversal completes successfully.
+  zx_status_t EnumerateChildren(VmEnumerator* ve);
 
   // A collection of memory usage counts.
   struct vm_usage_t {
