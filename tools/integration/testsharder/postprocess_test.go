@@ -829,8 +829,8 @@ func TestWithTargetDuration(t *testing.T) {
 		// shards should have roughly similar timeouts because they have the
 		// same expected duration (one runs 1 5-minute test, the other runs 5
 		// 1-minute tests).
-		minTimeout := 20 * time.Minute
-		maxTimeout := 30 * time.Minute
+		minTimeout := 15 * time.Minute
+		maxTimeout := 25 * time.Minute
 		for _, shard := range actual {
 			timeout := time.Duration(shard.TimeoutSecs) * time.Second
 			if timeout < minTimeout {
@@ -1030,25 +1030,25 @@ func TestComputeShardTimeout(t *testing.T) {
 			name:      "average duration, average tests",
 			duration:  10 * time.Minute,
 			testCount: 250,
-			want:      "43m20s",
+			want:      "38m20s",
 		},
 		{
 			name:      "short duration, many tests",
 			duration:  time.Minute,
 			testCount: 1000,
-			want:      "50m20s",
+			want:      "45m20s",
 		},
 		{
 			name:      "short duration, few tests",
 			duration:  10 * time.Second,
 			testCount: 3,
-			want:      "15m26s",
+			want:      "10m26s",
 		},
 		{
 			name:      "long duration, few tests",
 			duration:  time.Hour,
 			testCount: 2,
-			want:      "2h15m4s",
+			want:      "2h10m4s",
 		},
 	}
 	for _, tc := range tests {

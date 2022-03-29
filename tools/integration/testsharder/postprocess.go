@@ -544,7 +544,7 @@ func computeShardTimeout(s subshard) time.Duration {
 	perTestMultiplier := time.Duration(2)
 	// Conservative estimated overhead for the shard independent of how many
 	// tests the shard runs.
-	shardOverhead := 15 * time.Minute
+	shardOverhead := 10 * time.Minute
 	// Conservative estimate of the overhead for running each test.
 	perTestOverhead := time.Second
 
