@@ -789,9 +789,9 @@ zx_status_t Controller::AddDisplay(std::unique_ptr<DisplayDevice> display) {
 
 void Controller::CallOnDisplaysChanged(DisplayDevice** added, size_t added_count, uint64_t* removed,
                                        size_t removed_count) {
+  added_display_args_t added_args[added_count];
+  added_display_info_t added_info[added_count];
   size_t added_actual;
-  added_display_args_t added_args[std::min(static_cast<size_t>(1), added_count)];
-  added_display_info_t added_info[std::min(static_cast<size_t>(1), added_count)];
   for (unsigned i = 0; i < added_count; i++) {
     added_args[i].display_id = added[i]->id();
     added_args[i].edid_present = true;
