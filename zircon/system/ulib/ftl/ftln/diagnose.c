@@ -50,30 +50,23 @@ bool PartialPageWritesWithFix(FTLN ftl) {
   return found_ppw_fix;
 }
 
-// Create a reverse mapping from the map pages to find virtual pages that share
-// a physical page.
+// Ensures that all mapped vpns point to a physical page that is designated as that vpn.
 bool PrematureBlockRecycle(FTLN ftl) {
-  uint32_t phys_pages = ftl->num_pages;
-  uint32_t* reverse_mapping = malloc(sizeof(uint32_t) * phys_pages);
-
-  // UINT32_MAX is used as the placeholder for unmapped entries in the ftl,
-  // doing the same here.
-  memset(reverse_mapping, 0xff, sizeof(uint32_t) * phys_pages);
-
   bool overlap = false;
   for (uint32_t vpn = 0; vpn < ftl->num_vpages; ++vpn) {
     uint32_t ppn;
     if (FtlnMapGetPpn(ftl, vpn, &ppn) < 0 || ppn == UINT32_MAX) {
       continue;
     }
-    if (reverse_mapping[ppn] != UINT32_MAX) {
-      overlap = true;
+    if (ndmReadSpare(ppn, ftl->spare_buf, ftl->ndm) < 0) {
+      fprintf(stderr, "Failed to read spare for ppn %u\n", ppn);
       break;
     }
-    reverse_mapping[ppn] = vpn;
+    if (GET_SA_VPN(ftl->spare_buf) != vpn) {
+      overlap = true;
+    }
   }
 
-  free(reverse_mapping);
   return overlap;
 }
 
@@ -116,7 +109,8 @@ char* FtlnDiagnoseIssues(FTLN ftl) {
       },
       {
           &PrematureBlockRecycle,
-          "Two vpages share a physical page. Premature Block Recycles occured. fxbug.dev/87653\n",
+          "A vpage points to a physical page which contains a different vpage. Premature Block "
+          "Recycles occurred. fxbug.dev/87653\n",
           false,
       },
       {
