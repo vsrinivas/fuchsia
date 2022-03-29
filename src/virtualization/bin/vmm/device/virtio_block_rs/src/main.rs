@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod backend;
+mod block_device;
 mod file_backend;
 #[cfg(test)]
 mod memory_backend;
@@ -10,6 +11,7 @@ mod wire;
 
 use {
     crate::backend::*,
+    crate::block_device::*,
     crate::file_backend::FileBackend,
     anyhow::{anyhow, Context},
     fidl::endpoints::RequestStream,
@@ -19,6 +21,7 @@ use {
     fuchsia_syslog::{self as syslog},
     fuchsia_zircon as zx,
     futures::{StreamExt, TryStreamExt},
+    virtio_device::chain::ReadableChain,
 };
 
 fn create_backend(
@@ -49,10 +52,10 @@ async fn run_virtio_block(
     let (device_builder, guest_mem) = machina_virtio_device::from_start_info(start_info)?;
 
     let backend = create_backend(format, client)?;
-    let device_attrs = backend.get_attrs().await?;
+    let block_device = BlockDevice::new(backend).await?;
     responder.send(
-        device_attrs.capacity.to_bytes().unwrap(),
-        device_attrs.block_size.unwrap_or(wire::VIRTIO_BLOCK_SECTOR_SIZE as u32),
+        block_device.attrs().capacity.to_bytes().unwrap(),
+        block_device.attrs().block_size.unwrap_or(wire::VIRTIO_BLOCK_SECTOR_SIZE as u32),
     )?;
 
     // Complete the setup of queues and get a device.
@@ -67,10 +70,17 @@ async fn run_virtio_block(
     .context("Failed to initialize device.")?;
 
     // Initialize all queues.
-    let _request_stream = device.take_stream(wire::VIRTIO_BLOCK_REQUEST_QUEUE)?;
+    let request_stream = device.take_stream(wire::VIRTIO_BLOCK_REQUEST_QUEUE)?;
     ready_responder.send()?;
 
-    // TODO(fxbug.dev/95529): Read and process descriptors from the request queue.
+    futures::try_join!(request_stream.map(|chain| Ok(chain)).try_for_each_concurrent(None, {
+        let guest_mem = &guest_mem;
+        let block_device = &block_device;
+        move |chain| async move {
+            block_device.process_chain(ReadableChain::new(chain, guest_mem)).await
+        }
+    }))?;
+
     Ok(())
 }
 

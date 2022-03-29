@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxbug.dev/95529): Remove once the consuming CLs land.
-#![allow(dead_code)]
-
 use {crate::wire, anyhow::Error, async_trait::async_trait, virtio_device::mem::DeviceRange};
 
 /// Represents a 512 byte sector.
@@ -12,6 +9,12 @@ use {crate::wire, anyhow::Error, async_trait::async_trait, virtio_device::mem::D
 pub struct Sector(u64);
 
 impl Sector {
+    /// The largest sector value that can be represented in bytes using `u64`.
+    #[cfg(test)]
+    pub const MAX: Self = Self(
+        (u64::MAX - (u64::MAX % wire::VIRTIO_BLOCK_SECTOR_SIZE)) / wire::VIRTIO_BLOCK_SECTOR_SIZE,
+    );
+
     /// Constructs a sector from a raw numeric value.
     pub fn from_raw_sector(sector: u64) -> Self {
         Self(sector)
@@ -31,6 +34,7 @@ impl Sector {
     }
 
     /// Return the raw numeric sector number.
+    #[cfg(test)]
     pub fn to_raw(&self) -> u64 {
         self.0
     }

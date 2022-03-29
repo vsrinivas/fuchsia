@@ -17,6 +17,7 @@ rustc_binary("virtio_block_bin") {
 
   sources = [
     "src/backend.rs",
+    "src/block_device.rs",
     "src/file_backend.rs",
     "src/main.rs",
     "src/memory_backend.rs",
@@ -44,7 +45,10 @@ rustc_binary("virtio_block_bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:thiserror",
   ]
+
+  test_deps = [ "//third_party/rust_crates:tempfile" ]
 }
 
 fuchsia_unittest_package("virtio_block_rs_unittests") {
