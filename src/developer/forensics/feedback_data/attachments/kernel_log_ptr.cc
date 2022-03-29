@@ -17,8 +17,8 @@ namespace feedback_data {
 
 ::fpromise::promise<AttachmentValue> CollectKernelLog(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    fit::Timeout timeout) {
-  std::unique_ptr<BootLog> boot_log = std::make_unique<BootLog>(dispatcher, services);
+    fit::Timeout timeout, RedactorBase* redactor) {
+  std::unique_ptr<BootLog> boot_log = std::make_unique<BootLog>(dispatcher, services, redactor);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
   // function parameters is undefined.
@@ -27,8 +27,9 @@ namespace feedback_data {
                                               /*args=*/std::move(boot_log));
 }
 
-BootLog::BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services)
-    : log_ptr_(dispatcher, services) {}
+BootLog::BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+                 RedactorBase* redactor)
+    : log_ptr_(dispatcher, services), redactor_(redactor) {}
 
 ::fpromise::promise<AttachmentValue> BootLog::GetLog(fit::Timeout timeout) {
   log_ptr_->Get([this](zx::debuglog log) {
@@ -47,10 +48,11 @@ BootLog::BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDir
       }
       record->data[record->datalen] = 0;
 
+      std::string data(record->data);
       kernel_log += fxl::StringPrintf("[%05d.%03d] %05" PRIu64 ".%05" PRIu64 "> %s\n",
                                       static_cast<int>(record->timestamp / 1000000000ULL),
                                       static_cast<int>((record->timestamp / 1000000ULL) % 1000ULL),
-                                      record->pid, record->tid, record->data);
+                                      record->pid, record->tid, redactor_->Redact(data).c_str());
     }
 
     if (kernel_log.empty()) {
@@ -59,7 +61,7 @@ BootLog::BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDir
       return;
     }
 
-    log_ptr_.CompleteOk(kernel_log);
+    log_ptr_.CompleteOk(redactor_->Redact(kernel_log));
   });
 
   return log_ptr_.WaitForDone(std::move(timeout))

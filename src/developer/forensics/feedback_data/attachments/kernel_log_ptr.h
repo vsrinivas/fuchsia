@@ -15,6 +15,7 @@
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/utils/fidl/oneshot_ptr.h"
 #include "src/developer/forensics/utils/fit/timeout.h"
+#include "src/developer/forensics/utils/redact/redactor.h"
 #include "src/lib/fxl/macros.h"
 
 namespace forensics {
@@ -24,7 +25,7 @@ namespace feedback_data {
 // |services|.
 ::fpromise::promise<AttachmentValue> CollectKernelLog(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    fit::Timeout timeout);
+    fit::Timeout timeout, RedactorBase* redactor);
 
 // Wraps around fuchsia::boot::ReadOnlyLogPtr to handle establishing the
 // connection, losing the connection, waiting for the callback, enforcing a
@@ -33,12 +34,14 @@ namespace feedback_data {
 // GetLog() is expected to be called only once.
 class BootLog {
  public:
-  BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
+  BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+          RedactorBase* redactor);
 
   ::fpromise::promise<AttachmentValue> GetLog(fit::Timeout timeout);
 
  private:
   fidl::OneShotPtr<fuchsia::boot::ReadOnlyLog, std::string> log_ptr_;
+  RedactorBase* redactor_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BootLog);
 };

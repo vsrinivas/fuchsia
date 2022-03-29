@@ -8,6 +8,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/test_loop_fixture.h>
+#include <lib/inspect/cpp/vmo/types.h>
 #include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
@@ -33,17 +34,22 @@ class CollectKernelLogTest : public gtest::TestWithEnvironmentFixture {
  public:
   CollectKernelLogTest() : executor_(dispatcher()) {}
 
-  void SetUp() override { environment_services_ = sys::ServiceDirectory::CreateFromNamespace(); }
+  void SetUp() override {
+    environment_services_ = sys::ServiceDirectory::CreateFromNamespace();
+    redactor_ = std::unique_ptr<RedactorBase>(new IdentityRedactor(inspect::BoolProperty()));
+  }
+
+  void SetRedactor(std::unique_ptr<RedactorBase> redactor) { redactor_ = std::move(redactor); }
 
   ::fpromise::result<AttachmentValue> GetKernelLog(const zx::duration timeout = zx::sec(10)) {
     ::fpromise::result<AttachmentValue> result;
     bool done = false;
-    executor_.schedule_task(
-        CollectKernelLog(dispatcher(), environment_services_, fit::Timeout(timeout))
-            .then([&result, &done](::fpromise::result<AttachmentValue>& res) {
-              result = std::move(res);
-              done = true;
-            }));
+    executor_.schedule_task(CollectKernelLog(dispatcher(), environment_services_,
+                                             fit::Timeout(timeout), redactor_.get())
+                                .then([&result, &done](::fpromise::result<AttachmentValue>& res) {
+                                  result = std::move(res);
+                                  done = true;
+                                }));
     RunLoopUntil([&done] { return done; });
     return result;
   }
@@ -51,6 +57,7 @@ class CollectKernelLogTest : public gtest::TestWithEnvironmentFixture {
  protected:
   std::shared_ptr<sys::ServiceDirectory> environment_services_;
   async::Executor executor_;
+  std::unique_ptr<RedactorBase> redactor_;
 };
 
 void SendToKernelLog(const std::string& str) {
@@ -98,6 +105,33 @@ TEST_F(CollectKernelLogTest, Succeed_TwoRetrievals) {
 
   ASSERT_TRUE(second_logs.HasValue());
   EXPECT_THAT(second_logs.Value(), testing::HasSubstr(output));
+}
+
+class SimpleRedactor : public RedactorBase {
+ public:
+  SimpleRedactor() : RedactorBase(inspect::BoolProperty()) {}
+
+  std::string& Redact(std::string& text) override {
+    text = "<REDACTED>";
+    return text;
+  }
+
+  std::string UnredactedCanary() const override { return ""; }
+  std::string RedactedCanary() const override { return ""; }
+};
+
+TEST_F(CollectKernelLogTest, Succeed_Redacts) {
+  SetRedactor(std::make_unique<SimpleRedactor>());
+  const std::string output(
+      fxl::StringPrintf("<<GetLogTest_Succeed_BasicCase: %zu>>", zx_clock_get_monotonic()));
+  SendToKernelLog(output);
+
+  ::fpromise::result<AttachmentValue> result = GetKernelLog();
+  ASSERT_TRUE(result.is_ok());
+  AttachmentValue logs = result.take_value();
+
+  ASSERT_TRUE(logs.HasValue());
+  EXPECT_THAT(logs.Value(), testing::HasSubstr("<REDACTED>"));
 }
 
 }  // namespace

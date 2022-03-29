@@ -178,7 +178,8 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
                                                                      const zx::duration timeout) {
   if (key == kAttachmentLogKernel) {
     return CollectKernelLog(dispatcher_, services_,
-                            MakeCobaltTimeout(cobalt::TimedOutData::kKernelLog, timeout));
+                            MakeCobaltTimeout(cobalt::TimedOutData::kKernelLog, timeout),
+                            redactor_);
   } else if (key == kAttachmentLogSystem) {
     return CollectSystemLog(dispatcher_, services_,
                             MakeCobaltTimeout(cobalt::TimedOutData::kSystemLog, timeout),
