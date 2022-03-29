@@ -73,7 +73,6 @@ if (is_host) {
         [ "go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/reboot_test" ]
     environments = [ disabled_env ]
     deps = [ ":system_tests_lib" ]
-    non_go_deps = [ "//src/testing/sl4f" ]
   }
 
   go_test("system_tests_tracking") {
@@ -82,7 +81,6 @@ if (is_host) {
     ]
     environments = [ disabled_env ]
     deps = [ ":system_tests_lib" ]
-    non_go_deps = [ "//src/testing/sl4f" ]
   }
 
   go_test("system_tests_upgrade") {
@@ -90,7 +88,6 @@ if (is_host) {
         [ "go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/upgrade_test" ]
     environments = [ disabled_env ]
     deps = [ ":system_tests_lib" ]
-    non_go_deps = [ "//src/testing/sl4f" ]
   }
 }
 
@@ -176,5 +173,6 @@ group("tests") {
     ":nuc-release-upgrade($host_toolchain)",
     ":nuc-release-upgrade-longevity($host_toolchain)",
     ":system_tests",
+    "//src/testing/sl4f",
   ]
 }
