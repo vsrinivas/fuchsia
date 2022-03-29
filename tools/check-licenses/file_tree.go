@@ -232,9 +232,10 @@ func (ft *FileTree) getFileIterator() <-chan *File {
 	return ch
 }
 
-func isSkippable(config *Config, path string, entry os.DirEntry) (bool, error) {
+func isSkippable(config *Config, absPath string, entry os.DirEntry) (bool, error) {
 	for _, skipFile := range config.SkipFiles {
-		if strings.ToLower(entry.Name()) == skipFile || strings.ToLower(path) == skipFile {
+		skipFile = filepath.Join(config.BaseDir, skipFile)
+		if strings.ToLower(entry.Name()) == skipFile || strings.ToLower(absPath) == skipFile {
 			return true, nil
 		}
 	}
@@ -255,7 +256,8 @@ func isSkippable(config *Config, path string, entry os.DirEntry) (bool, error) {
 	sep := string(filepath.Separator)
 	skippable := false
 	for _, skipDir := range config.SkipDirs {
-		if skipDir == path || strings.HasPrefix(path, skipDir+sep) {
+		skipDir = filepath.Join(config.BaseDir, skipDir)
+		if skipDir == absPath || strings.HasPrefix(absPath, skipDir+sep) {
 			skippable = true
 			break
 		}
@@ -265,9 +267,10 @@ func isSkippable(config *Config, path string, entry os.DirEntry) (bool, error) {
 	}
 
 	for _, keepDir := range config.DontSkipDirs {
-		if keepDir == path ||
-			strings.HasPrefix(path, keepDir+sep) ||
-			strings.HasPrefix(keepDir, path+sep) {
+		keepDir = filepath.Join(config.BaseDir, keepDir)
+		if keepDir == absPath ||
+			strings.HasPrefix(absPath, keepDir+sep) ||
+			strings.HasPrefix(keepDir, absPath+sep) {
 			return false, nil
 		}
 	}

@@ -1,31 +1,31 @@
 {
-	"name": "root",
-	"path": "{root}",
-	"strict analysis": true,
-	"children": [
-		{
-			"name": "stop",
-			"path": "{root}/stop",
-			"strict analysis": false,
-			"children": [
-				{
-					"name": "subdir",
-					"path": "{root}/stop/subdir",
-					"strict analysis": false
-				}
-			]
-		},
-		{
-			"name": "stop2",
-			"path": "{root}/stop2",
-			"strict analysis": true,
-			"children": [
-				{
-					"name": "subdir",
-					"path": "{root}/stop2/subdir",
-					"strict analysis": true
-				}
-			]
-		}
-        ]
+    "name": "root",
+    "path": "{absRoot}",
+    "strict analysis": true,
+    "children": [
+        {
+            "name": "stop",
+            "path": "{root}/stop",
+            "strict analysis": false,
+            "children": [
+                {
+                    "name": "subdir",
+                    "path": "{root}/stop/subdir",
+                    "strict analysis": false
+                }
+            ]
+        },
+        {
+            "name": "stop2",
+            "path": "{root}/stop2",
+            "strict analysis": true,
+            "children": [
+                {
+                    "name": "subdir",
+                    "path": "{root}/stop2/subdir",
+                    "strict analysis": true
+                }
+            ]
+        }
+    ]
 }

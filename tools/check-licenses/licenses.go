@@ -29,7 +29,7 @@ func NewLicenses(ctx context.Context, config *Config) (*Licenses, error) {
 	defer trace.StartRegion(ctx, "NewLicenses").End()
 
 	l := &Licenses{}
-	err := filepath.Walk(config.LicensePatternDir,
+	err := filepath.Walk(filepath.Join(config.BaseDir, config.LicensePatternDir),
 		func(path string, info os.FileInfo, err error) error {
 			if info.IsDir() {
 				return nil

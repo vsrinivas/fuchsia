@@ -1,4 +1,4 @@
 {
-	"name": "root",
-	"path": "{root}"
+    "name": "root",
+    "path": "{absRoot}"
 }

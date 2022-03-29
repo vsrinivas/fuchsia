@@ -72,17 +72,19 @@ func loadFileAndReplace(path string, replacements map[string]string) (string, er
 
 func setupFileTreeTestDir(name string, t *testing.T) (*FileTree, *FileTree) {
 	// Find the right testdata directory for this test.
-	testDir, err := filepath.Abs(filepath.Join(*testDataDir, "filetree", name))
+	testDir := filepath.Join(*testDataDir, "filetree", name)
+
+	// The filetree will be called on the subdirectory named "root".
+	root := filepath.Join(testDir, "root")
+	absRoot, err := filepath.Abs(root)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// The filetree will be called on the subdirectory named "root".
-	root := filepath.Join(testDir, "root")
-
 	// want.json contains variables that need to be replaced before it can be used.
 	replacements := map[string]string{
-		"{root}": root,
+		"{root}":    root,
+		"{absRoot}": absRoot,
 	}
 
 	path := filepath.Join(testDir, "want.json")

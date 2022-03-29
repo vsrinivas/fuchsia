@@ -8,5 +8,4 @@ shift 1
 readonly tool="$1"
 shift 1
 
-cd "${dir}"
-"${tool}" $*
+"${tool}" --base_dir ${dir} $*
