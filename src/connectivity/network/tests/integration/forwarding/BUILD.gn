@@ -1,0 +1,26 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_test.gni")
+
+rustc_test("forwarding") {
+  output_name = "netstack_forwarding_integration_test"
+  deps = [
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//sdk/fidl/fuchsia.net.interfaces.admin:fuchsia.net.interfaces.admin-rustc",
+    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
+    "//src/connectivity/lib/net-declare",
+    "//src/connectivity/network/testing/netemul/rust:lib",
+    "//src/connectivity/network/tests/integration/common:netstack_testing_common",
+    "//src/connectivity/network/tests/integration/macros:netstack_testing_macros",
+    "//src/lib/fuchsia-async",
+    "//src/lib/network/fidl_fuchsia_net_ext",
+    "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
+    "//third_party/rust_crates:futures-util",
+    "//third_party/rust_crates:test-case",
+  ]
+  configs -= [ "//build/config/rust:allow_unused_results" ]
+  sources = [ "src/lib.rs" ]
+}
