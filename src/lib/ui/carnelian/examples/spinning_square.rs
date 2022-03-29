@@ -15,7 +15,7 @@ use carnelian::{
         LayerGroup,
     },
     App, AppAssistant, AppAssistantPtr, AppSender, AssistantCreatorFunc, Coord, LocalBoxFuture,
-    Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+    MessageTarget, Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::{point2, size2, vec2, Angle, Transform2D};
 use fidl::endpoints::{ProtocolMarker, RequestStream};
@@ -237,9 +237,12 @@ impl SpinningSquareViewAssistant {
 
     fn toggle_rounded(&mut self) {
         if let Some(scene_details) = self.scene_details.as_mut() {
-            scene_details
-                .scene
-                .send_message(&scene_details.square, Box::new(ToggleRoundedMessage {}));
+            // since we have the scene, we could call send_message directly,
+            // but this lets us demonstrate facet-targeted messages.
+            self.app_sender.queue_message(
+                MessageTarget::Facet(self.view_key, scene_details.square),
+                Box::new(ToggleRoundedMessage {}),
+            );
             self.app_sender.request_render(self.view_key);
         }
     }

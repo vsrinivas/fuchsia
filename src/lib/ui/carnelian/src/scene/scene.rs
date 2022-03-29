@@ -192,9 +192,10 @@ impl Scene {
     }
 
     /// Add a facet to the scene, returning its ID.
-    pub fn add_facet(&mut self, facet: FacetPtr) -> FacetId {
+    pub fn add_facet(&mut self, mut facet: FacetPtr) -> FacetId {
         assert_eq!(self.options.mutable, true);
         let facet_id = FacetId::new(&mut self.id_generator);
+        facet.associate_facet_id(facet_id);
         self.facets
             .insert(facet_id, FacetEntry { facet, location: Point::zero(), size: Size::zero() });
         self.facet_order.push(facet_id);
@@ -701,11 +702,12 @@ impl SceneBuilder {
 
     fn push_facet(
         &mut self,
-        facet: FacetPtr,
+        mut facet: FacetPtr,
         location: Point,
         member_data: Option<GroupMemberData>,
     ) -> FacetId {
         let facet_id = self.allocate_facet_id();
+        facet.associate_facet_id(facet_id);
         self.facets.insert(facet_id.clone(), FacetEntry { facet, location, size: Size::zero() });
         if let Some(group_id) = self.group_stack.last() {
             self.groups.add_facet_to_group(facet_id, *group_id, member_data);

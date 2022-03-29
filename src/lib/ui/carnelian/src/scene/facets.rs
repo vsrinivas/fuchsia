@@ -76,6 +76,11 @@ pub struct SetCornerRadiusMessage {
 /// The Facet trait is used to create composable units of rendering, sizing and
 /// message handling.
 pub trait Facet {
+    #[allow(unused)]
+    /// Optional method for facets that wish to send themselves messages using
+    /// an AppSender that they were passed during creation.
+    fn associate_facet_id(&mut self, facet_id: FacetId) {}
+
     /// Called by the scene on facets when it is time for them to update their contents.
     /// Facets can add, remove or change layers in the layer group. Those layers will be
     /// combined with all the other facet layers in the scene and added to a render

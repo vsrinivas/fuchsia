@@ -8,11 +8,11 @@ use crate::{
     input::{self, UserInputMessage},
     message::Message,
     render::Context,
-    scene::scene::Scene,
+    scene::{facets::FacetId, scene::Scene},
     view::strategies::base::ViewStrategyPtr,
     MessageTarget,
 };
-use anyhow::Error;
+use anyhow::{ensure, Error};
 use euclid::size2;
 use fuchsia_framebuffer::ImageId;
 use fuchsia_scenic::View;
@@ -591,6 +591,16 @@ impl ViewController {
     /// forwarded to the view assistant.
     pub fn send_message(&mut self, msg: Message) {
         self.assistant.handle_message(msg);
+    }
+
+    /// This method sends an arbitrary message to this view to be
+    /// forwarded to the view assistant.
+    pub fn send_facet_message(&mut self, facet_id: FacetId, msg: Message) -> Result<(), Error> {
+        let scene = self.assistant.get_scene(self.physical_size);
+        ensure!(scene.is_some(), "send_facet_message called on view not providing a scene");
+        let scene = scene.unwrap();
+        scene.send_message(&facet_id, msg);
+        Ok(())
     }
 
     pub(crate) fn image_freed(&mut self, image_id: u64, collection_id: u32) {

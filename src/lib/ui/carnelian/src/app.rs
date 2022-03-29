@@ -8,6 +8,7 @@ use crate::{
     geometry::Size,
     input::{DeviceId, UserInputMessage},
     message::Message,
+    scene::facets::FacetId,
     view::{
         strategies::base::ViewStrategyParams, ViewAssistantPtr, ViewController, ViewKey,
         USE_FIRST_VIEW,
@@ -192,6 +193,7 @@ pub(crate) const FIRST_VIEW_KEY: ViewKey = 100;
 
 #[derive(Debug, Clone, Copy)]
 pub enum MessageTarget {
+    Facet(ViewKey, FacetId),
     View(ViewKey),
     Application,
 }
@@ -483,6 +485,10 @@ impl App {
                 self.image_freed(view_id, image_id, collection_id)
             }
             MessageInternal::TargetedMessage(target, message) => match target {
+                MessageTarget::Facet(view_id, facet_id) => {
+                    let view = self.get_view(view_id).context("TargetedMessage")?;
+                    view.send_facet_message(facet_id, message).context("TargetedMessage")?;
+                }
                 MessageTarget::View(view_id) => {
                     let view = self.get_view(view_id).context("TargetedMessage")?;
                     view.send_message(message);
