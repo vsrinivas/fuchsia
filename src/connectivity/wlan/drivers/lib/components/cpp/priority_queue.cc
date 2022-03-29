@@ -3,6 +3,8 @@
 
 #include "src/connectivity/wlan/drivers/lib/components/cpp/include/wlan/drivers/components/priority_queue.h"
 
+#include <optional>
+
 namespace wlan::drivers::components {
 
 bool PriorityQueue::push(Frame&& frame) {
@@ -67,4 +69,49 @@ cpp20::span<Frame> PriorityQueue::pop(size_t count, uint8_t allowed_priorities) 
   return cpp20::span<Frame>(outgoing_);
 }
 
+// Pop any number of frames that match |predicate|. Frames will be evaluated, popped and returned in
+// priority order. |predicate| will be called for each frame and if |predicate| returns true then
+// the frame will be poppped. This is a slow operation and should not be used in a regular data
+// path, only for rare cases where specific frames need to be popped or removed. Note that just as
+// for pop the frames returned from this method must be consumed before the next call to pop or
+// pop_if. See pop for more details.
+cpp20::span<Frame> PriorityQueue::pop_if(std::function<bool(const Frame&)>&& predicate) {
+  outgoing_.clear();
+
+  for (uint8_t priority = max_priority_; priority <= max_priority_; --priority) {
+    auto& queue = queues_[priority];
+    std::optional<int64_t> start_erase;
+    for (int64_t i = 0; i < static_cast<int64_t>(queue.size()); ++i) {
+      if (predicate(queue[i])) {
+        outgoing_.emplace_back(std::move(queue[i]));
+        if (!start_erase.has_value()) {
+          // We are starting a new erase sequence.
+          start_erase = i;
+        }
+      } else if (start_erase.has_value()) {
+        // We've ended an erase sequence, erase all the way from start_erase up to (but not
+        // including) i.
+        queue.erase(queue.begin() + start_erase.value(), queue.begin() + i);
+        // Reduce the total size of the priority queue.
+        current_queue_depth_ -= i - start_erase.value();
+        // Start erase now points to the same frame as i used to point to. Since we already
+        // evaluated the frame i used to point to we set i to start_erase so that it will be
+        // increased in the next loop iteration.
+        i = start_erase.value();
+        start_erase.reset();
+      }
+    }
+    if (start_erase.has_value()) {
+      // Reduce the total size of the priority queue, do this before the erase since we need the
+      // size of the queue before it's being reduced.
+      current_queue_depth_ -= queue.size() - start_erase.value();
+      // An erase sequence was started but never finished, erase everything until the end.
+      queue.erase(queue.begin() + start_erase.value(), queue.end());
+    }
+    if (queue.empty() && priority == max_priority_ && max_priority_ > 0) {
+      --max_priority_;
+    }
+  }
+  return cpp20::span<Frame>(outgoing_);
+}
 }  // namespace wlan::drivers::components

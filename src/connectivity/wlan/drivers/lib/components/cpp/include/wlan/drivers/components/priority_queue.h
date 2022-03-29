@@ -11,6 +11,7 @@
 
 #include <array>
 #include <deque>
+#include <functional>
 
 #include "frame.h"
 #include "frame_container.h"
@@ -34,10 +35,18 @@ class PriorityQueue {
   // indicating which priorities are allowed to be popped from. Each bit index corresponds to a
   // priority value. The number of frames returned may be less than |count| if there are not enough
   // frames available. Note that the returned span of frames reference frames that are stored in the
-  // queue. Each call to Pop will invalidate the span returned from a previous call to Pop. Make
-  // sure to consume all frames from one call before calling Pop again. Pushing frames onto the
-  // queue will NOT invalidate the returned span of frames.
+  // queue. Each call to pop or pop_if will invalidate the span returned from a previous call to pop
+  // or pop_if. Make sure to consume all frames from one pop/pop_if before calling pop/pop_if again.
+  // Pushing frames onto the queue will NOT invalidate the returned span of frames.
   cpp20::span<Frame> pop(size_t count, uint8_t allowed_priorities);
+
+  // Pop any number of frames that match |predicate|. Frames will be evaluated, popped and returned
+  // in priority order. |predicate| will be called for each frame and if |predicate| returns true
+  // then the frame will be poppped. This is a slow operation and should not be used in a regular
+  // data path, only for rare cases where specific frames need to be popped or removed.
+  // Note that just as for pop the frames returned from this method must be consumed before the next
+  // call to pop or pop_if. See pop for more details.
+  cpp20::span<Frame> pop_if(std::function<bool(const Frame&)>&& predicate);
 
   // Return the total number of frames in the queue that match the allowed priorities given. This is
   // represented as a bit field where each bit index corresponds to a priority value.

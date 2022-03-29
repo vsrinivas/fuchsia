@@ -313,4 +313,91 @@ TEST_F(PopulatedQueueTestFixture, PopWithLimitedPriorities) {
   }
 }
 
+TEST(PriorityQueueTest, PopIfMatchesPriority) {
+  PriorityQueue queue(kQueueDepth);
+  constexpr uint8_t kPopWithPriority = 3;
+
+  queue.push(CreateTestFrame(kPopWithPriority));
+  queue.push(CreateTestFrame(1u));
+  queue.push(CreateTestFrame(kPopWithPriority));
+  queue.push(CreateTestFrame(kPopWithPriority));
+  queue.push(CreateTestFrame(4u));
+  queue.push(CreateTestFrame(2u));
+  queue.push(CreateTestFrame(kPopWithPriority));
+  queue.push(CreateTestFrame(5u));
+  queue.push(CreateTestFrame(kPopWithPriority));
+
+  const size_t queue_size = queue.size();
+
+  cpp20::span<Frame> frames =
+      queue.pop_if([](const Frame& frame) { return frame.Priority() == kPopWithPriority; });
+  ASSERT_EQ(frames.size(), 5u);
+  EXPECT_EQ(queue.size(), queue_size - frames.size());
+
+  for (const auto& frame : frames) {
+    EXPECT_EQ(frame.Priority(), kPopWithPriority);
+  }
+
+  // Now attempt to pop frames with the same priority that we popped using pop_if, there should be
+  // none.
+  ASSERT_TRUE(queue.pop(100u, 1 << kPopWithPriority).empty());
+}
+
+TEST(PriorityQueueTest, PopIfEveryOtherFrame) {
+  PriorityQueue queue(kQueueDepth);
+
+  // Insert frames with varying priority, insert them in priority order so that it will be easier to
+  // reason about how they will be popped. Higher priorities will be popped first.
+  queue.push(CreateTestFrame(7u));
+  queue.push(CreateTestFrame(7u));
+  queue.push(CreateTestFrame(6u));
+  queue.push(CreateTestFrame(5u));
+  queue.push(CreateTestFrame(5u));
+  queue.push(CreateTestFrame(4u));
+  queue.push(CreateTestFrame(3u));
+  queue.push(CreateTestFrame(2u));
+  queue.push(CreateTestFrame(1u));
+
+  const size_t queue_size = queue.size();
+
+  size_t counter = 0;
+  cpp20::span<Frame> frames = queue.pop_if([&](const Frame& frame) { return counter++ % 2 == 0; });
+  ASSERT_EQ(counter, queue_size);
+  ASSERT_EQ(frames.size(), 5u);
+  EXPECT_EQ(queue.size(), queue_size - frames.size());
+
+  // Based on the insertions above we should get every other frame starting from the first.
+  EXPECT_EQ(frames[0].Priority(), 7u);
+  EXPECT_EQ(frames[1].Priority(), 6u);
+  EXPECT_EQ(frames[2].Priority(), 5u);
+  EXPECT_EQ(frames[3].Priority(), 3u);
+  EXPECT_EQ(frames[4].Priority(), 1u);
+}
+
+TEST(PriorityQueueTest, PopIfEverything) {
+  PriorityQueue queue(kQueueDepth);
+
+  // Insert frames with varying priority, insert them in priority order so that it will be easier to
+  // reason about how they will be popped. Higher priorities will be popped first.
+  queue.push(CreateTestFrame(7u));
+  queue.push(CreateTestFrame(7u));
+  queue.push(CreateTestFrame(6u));
+  queue.push(CreateTestFrame(5u));
+  queue.push(CreateTestFrame(5u));
+
+  const size_t queue_size = queue.size();
+
+  cpp20::span<Frame> frames = queue.pop_if([](const Frame& frame) { return true; });
+
+  ASSERT_EQ(queue_size, frames.size());
+  EXPECT_TRUE(queue.empty());
+
+  // Based on the insertions above we should get every frame in order of priority.
+  EXPECT_EQ(frames[0].Priority(), 7u);
+  EXPECT_EQ(frames[1].Priority(), 7u);
+  EXPECT_EQ(frames[2].Priority(), 6u);
+  EXPECT_EQ(frames[3].Priority(), 5u);
+  EXPECT_EQ(frames[4].Priority(), 5u);
+}
+
 }  // namespace
