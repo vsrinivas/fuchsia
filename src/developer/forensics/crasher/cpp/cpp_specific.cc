@@ -33,8 +33,8 @@ extern "C" int llcpp_channel_overflow() {
   fidl::WireClient<fuchsia_feedback::CrashReporter> client(std::move(endpoints->client),
                                                            loop.dispatcher());
   while (true) {
-    client->File(fuchsia_feedback::wire::CrashReport(),
-                 [](fidl::WireUnownedResult<fuchsia_feedback::CrashReporter::File> &) {});
+    client->File(fuchsia_feedback::wire::CrashReport())
+        .ThenExactlyOnce([](fidl::WireUnownedResult<fuchsia_feedback::CrashReporter::File> &) {});
   }
 
   loop.Run();
