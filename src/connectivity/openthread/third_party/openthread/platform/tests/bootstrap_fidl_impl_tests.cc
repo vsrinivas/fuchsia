@@ -132,13 +132,15 @@ TEST_F(BootstrapThreadImplTest, ImportSettingsHappy) {
   // Make the call from client side and ensure callback gets called:
   EXPECT_TRUE(client_bound());
   bool called = false;
-  bootstrap_client()->ImportSettings(
-      std::move(buffer),
-      [&called](fidl::WireUnownedResult<fuchsia_lowpan_bootstrap::Thread::ImportSettings>& result) {
-        EXPECT_TRUE(result.ok());
-        EXPECT_EQ(result.status(), ZX_OK);
-        called = true;
-      });
+  bootstrap_client()
+      ->ImportSettings(std::move(buffer))
+      .ThenExactlyOnce(
+          [&called](
+              fidl::WireUnownedResult<fuchsia_lowpan_bootstrap::Thread::ImportSettings>& result) {
+            EXPECT_TRUE(result.ok());
+            EXPECT_EQ(result.status(), ZX_OK);
+            called = true;
+          });
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
@@ -173,15 +175,16 @@ TEST_F(BootstrapThreadImplTest, ImportSettingsFailUnreadable) {
   // Make the call from client side:
   EXPECT_TRUE(client_bound());
   bool errored = false;
-  bootstrap_client()->ImportSettings(
-      std::move(buffer),
-      [&errored](
-          fidl::WireUnownedResult<fuchsia_lowpan_bootstrap::Thread::ImportSettings>& result) {
-        // Confirm that the call failed:
-        ASSERT_EQ(result.status(), ZX_ERR_IO);
-        ASSERT_EQ(result.reason(), fidl::Reason::kPeerClosed);
-        errored = true;
-      });
+  bootstrap_client()
+      ->ImportSettings(std::move(buffer))
+      .ThenExactlyOnce(
+          [&errored](
+              fidl::WireUnownedResult<fuchsia_lowpan_bootstrap::Thread::ImportSettings>& result) {
+            // Confirm that the call failed:
+            ASSERT_EQ(result.status(), ZX_ERR_IO);
+            ASSERT_EQ(result.reason(), fidl::Reason::kPeerClosed);
+            errored = true;
+          });
 
   RunLoopUntilIdle();
   EXPECT_TRUE(errored);
@@ -208,15 +211,16 @@ TEST_F(BootstrapThreadImplTest, ImportSettingsFailNonWritable) {
   // Make the call from client side:
   EXPECT_TRUE(client_bound());
   bool errored = false;
-  bootstrap_client()->ImportSettings(
-      std::move(buffer),
-      [&errored](
-          fidl::WireUnownedResult<fuchsia_lowpan_bootstrap::Thread::ImportSettings>& result) {
-        // Confirm that the call failed:
-        ASSERT_EQ(result.status(), ZX_ERR_IO);
-        ASSERT_EQ(result.reason(), fidl::Reason::kPeerClosed);
-        errored = true;
-      });
+  bootstrap_client()
+      ->ImportSettings(std::move(buffer))
+      .ThenExactlyOnce(
+          [&errored](
+              fidl::WireUnownedResult<fuchsia_lowpan_bootstrap::Thread::ImportSettings>& result) {
+            // Confirm that the call failed:
+            ASSERT_EQ(result.status(), ZX_ERR_IO);
+            ASSERT_EQ(result.reason(), fidl::Reason::kPeerClosed);
+            errored = true;
+          });
 
   RunLoopUntilIdle();
   EXPECT_TRUE(errored);
