@@ -17,26 +17,18 @@ async fn list() {
     let hub_path = PathBuf::from("/hub");
     let hub_dir = Directory::from_namespace(hub_path).unwrap();
 
-    let list::Component { name, moniker, is_cmx, is_running, url, children, ancestors: _ancestors } =
-        list::Component::parse(
-            "test_root".to_string(),
-            AbsoluteMoniker::parse_str("/test").unwrap(),
-            hub_dir,
-        )
-        .await
-        .unwrap();
+    let list::Component { name, is_cmx, is_running, url, children, ancestors: _ancestors } =
+        list::Component::parse("test_root".to_string(), hub_dir).await.unwrap();
 
     assert!(!is_cmx);
     assert!(is_running);
     assert_eq!(name, "test_root");
-    assert_eq!(moniker.to_string(), "/test");
     assert!(Regex::new(URL_REGEX).unwrap().is_match(&url));
     assert_eq!(children.len(), 1);
 
-    let list::Component { name, moniker, is_cmx, is_running, url, children, ancestors: _ancestors } =
+    let list::Component { name, is_cmx, is_running, url, children, ancestors: _ancestors } =
         children.get(0).unwrap();
     assert_eq!(name, "foo");
-    assert_eq!(moniker.to_string(), "/test/foo");
     assert!(!is_running);
     assert!(!is_cmx);
     assert_eq!(url, "#meta/foo.cm");

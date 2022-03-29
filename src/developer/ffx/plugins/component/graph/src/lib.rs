@@ -12,7 +12,6 @@ use {
     ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
     fuchsia_zircon_status::Status,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     url::Url,
 };
 
@@ -41,7 +40,7 @@ static GRAPHVIZ_END: &str = "}";
 async fn try_get_component_list(hub_dir: Directory) -> Result<Component> {
     let mut attempt_number = 1;
     loop {
-        match Component::parse("/".to_string(), AbsoluteMoniker::root(), hub_dir.clone()?).await {
+        match Component::parse("/".to_string(), hub_dir.clone()?).await {
             Ok(component) => return Ok(component),
             Err(e) => {
                 if attempt_number > NUM_COMPONENT_LIST_ATTEMPTS {
@@ -185,7 +184,6 @@ mod test {
     fn component_for_test() -> Component {
         Component {
             name: "/".to_owned(),
-            moniker: AbsoluteMoniker::root(),
             is_cmx: false,
             url: "".to_owned(),
             is_running: false,
@@ -193,7 +191,6 @@ mod test {
             children: vec![
                 Component {
                     name: "appmgr".to_owned(),
-                    moniker: AbsoluteMoniker::parse_str("/appmgr").unwrap(),
                     is_cmx: false,
                     url: "".to_owned(),
                     is_running: true,
@@ -201,7 +198,6 @@ mod test {
                     children: vec![
                         Component {
                             name: "foo.cmx".to_owned(),
-                            moniker: AbsoluteMoniker::parse_str("/appmgr/foo.cmx").unwrap(),
                             is_cmx: true,
                             url: "".to_owned(),
                             is_running: true,
@@ -210,7 +206,6 @@ mod test {
                         },
                         Component {
                             name: "bar.cmx".to_owned(),
-                            moniker: AbsoluteMoniker::parse_str("/appmgr/bar.cmx").unwrap(),
                             is_cmx: true,
                             url: "".to_owned(),
                             is_running: true,
@@ -221,7 +216,6 @@ mod test {
                 },
                 Component {
                     name: "sys".to_owned(),
-                    moniker: AbsoluteMoniker::parse_str("/sys").unwrap(),
                     is_cmx: false,
                     url: "".to_owned(),
                     is_running: false,
@@ -229,7 +223,6 @@ mod test {
                     children: vec![
                         Component {
                             name: "baz".to_owned(),
-                            moniker: AbsoluteMoniker::parse_str("/sys/baz").unwrap(),
                             is_cmx: false,
                             url: "".to_owned(),
                             is_running: true,
@@ -238,14 +231,12 @@ mod test {
                         },
                         Component {
                             name: "fuzz".to_owned(),
-                            moniker: AbsoluteMoniker::parse_str("/sys/fuzz").unwrap(),
                             is_cmx: false,
                             url: "".to_owned(),
                             is_running: false,
                             ancestors: vec!["/".to_owned(), "sys".to_owned()],
                             children: vec![Component {
                                 name: "hello".to_owned(),
-                                moniker: AbsoluteMoniker::parse_str("/sys/fuzz/hello").unwrap(),
                                 is_cmx: false,
                                 url: "".to_owned(),
                                 is_running: false,

@@ -13,7 +13,6 @@ ffx_plugin("ffx_component_graph") {
     "//src/developer/ffx/plugins/component/common:ffx_component",
     "//src/lib/component_hub",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
-    "//src/sys/lib/moniker",
     "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:url",
   ]

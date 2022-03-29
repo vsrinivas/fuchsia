@@ -18,7 +18,6 @@ use fuchsia_syslog::macros::fx_log_info;
 use fuchsia_syslog::macros::*;
 use futures::StreamExt;
 use lazy_static::lazy_static;
-use moniker::{AbsoluteMoniker, AbsoluteMonikerBase};
 use serde_json::{from_value, Value};
 
 lazy_static! {
@@ -163,7 +162,7 @@ impl ComponentFacade {
         fx_log_info!("List running Component under appmgr in ComponentSearch Facade",);
         // let hub_path = PathBuf::from("/hub-v2");
         let hub_dir = Directory::from_namespace("/hub-v2").unwrap();
-        match ListComponent::parse("/".to_string(), AbsoluteMoniker::root(), hub_dir).await {
+        match ListComponent::parse("/".to_string(), hub_dir).await {
             Ok(component) => Ok(self.filter(&component, ListFilter::Running)),
             Err(e) => Err(e),
         }

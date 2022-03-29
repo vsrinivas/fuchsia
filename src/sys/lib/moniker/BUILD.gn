@@ -20,7 +20,6 @@ rustc_library("moniker") {
     "//src/sys/lib/moniker/*",
     "//src/sys/lib/routing/*",
     "//src/sys/test_manager/*",
-    "//src/testing/sl4f/*",
     "//tools/component_id_index/*",
     "//tools/lib/cm_fidl_analyzer/*",
   ]
