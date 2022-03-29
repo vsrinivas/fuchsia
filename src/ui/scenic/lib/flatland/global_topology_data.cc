@@ -29,13 +29,6 @@ std::optional<zx_koid_t> GetViewRefKoid(
   return utils::ExtractKoid(*kv->second);
 }
 
-// Account for floating point rounding errors.
-bool RectFContainsPoint(const fuchsia::math::RectF& rect, float x, float y) {
-  constexpr float kEpsilon = 1e-3f;
-  return rect.x - kEpsilon <= x && x <= rect.x + rect.width + kEpsilon && rect.y - kEpsilon <= y &&
-         y <= rect.y + rect.height + kEpsilon;
-}
-
 std::optional<size_t> GetViewRefIndex(
     zx_koid_t view_ref_koid, const std::vector<flatland::TransformHandle>& transforms,
     const std::unordered_map<flatland::TransformHandle,
@@ -58,7 +51,7 @@ std::optional<size_t> GetViewRefIndex(
 
 // Returns the last index (exclusive) of the subtree rooted at |start|.
 //
-// Prerequisite: |start| was returned from `GetStartFromTopologyVector()`
+// Prerequisite: |start| was returned from `GetViewRefIndex()`
 size_t GetSubtreeEndIndex(size_t start, const std::vector<flatland::TransformHandle>& transforms,
                           const std::vector<size_t>& parent_indices) {
   FX_DCHECK(start < transforms.size()) << "precondition";
@@ -316,6 +309,7 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
 
 view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
     const GlobalTopologyData& data, const std::unordered_set<zx_koid_t>& unconnected_view_refs,
+    const std::vector<TransformClipRegion>& global_clip_regions,
     const std::unordered_map<TransformHandle, TransformHandle>& child_view_watcher_mapping) {
   // Find the first node with a ViewRef set. This is the root of the ViewTree.
   size_t root_index = 0;
@@ -399,8 +393,13 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
   // it's safe to call from any thread.
   hit_tester = [transforms = data.topology_vector, view_refs = data.view_refs,
                 parent_indices = data.parent_indices, hit_regions = data.hit_regions,
-                children_vector = data.child_counts, root_transforms = data.root_transforms](
-                   zx_koid_t start_node, glm::vec2 world_point, bool is_semantic_hit_test) {
+                global_clip_regions, children_vector = data.child_counts,
+                root_transforms = data.root_transforms](zx_koid_t start_node, glm::vec2 world_point,
+                                                        bool is_semantic_hit_test) {
+    FX_DCHECK(transforms.size() == parent_indices.size());
+    FX_DCHECK(transforms.size() == global_clip_regions.size());
+    FX_DCHECK(transforms.size() == children_vector.size());
+
     size_t start = 0, end = 0;
     if (auto result = GetViewRefIndex(start_node, transforms, view_refs)) {
       start = *result;
@@ -420,14 +419,20 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
       FX_DCHECK(root_transforms.find(transform) != root_transforms.end());
       const auto& root_transform = root_transforms.at(transform);
 
+      const auto clip_region = utils::ConvertRectToRectF(global_clip_regions[i]);
+
       if (const auto local_root = view_refs.find(root_transform); local_root != view_refs.end()) {
         if (const auto hit_region_vec = hit_regions.find(transform);
             hit_region_vec != hit_regions.end()) {
           for (const auto& region : hit_region_vec->second) {
-            const auto rect = region.region;
+            const auto hit_region = region.region;
 
             // TODO(fxbug.dev/92476): Handle semantic invisibility.
-            if (RectFContainsPoint(rect, x, y)) {
+
+            // Instead of clipping the hit region with the clip region, simply check if the hit
+            // point is in both.
+            if (utils::RectFContainsPoint(hit_region, x, y) &&
+                utils::RectFContainsPoint(clip_region, x, y)) {
               hits.push_back(utils::ExtractKoid(*(local_root->second)));
               break;
             }

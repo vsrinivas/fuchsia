@@ -114,4 +114,17 @@ fuchsia::sysmem::AllocatorSyncPtr CreateSysmemAllocatorSyncPtr(
   return sysmem_allocator;
 }
 
+bool RectFContainsPoint(const fuchsia::math::RectF& rect, float x, float y) {
+  constexpr float kEpsilon = 1e-3f;
+  return rect.x - kEpsilon <= x && x <= rect.x + rect.width + kEpsilon && rect.y - kEpsilon <= y &&
+         y <= rect.y + rect.height + kEpsilon;
+}
+
+fuchsia::math::RectF ConvertRectToRectF(const fuchsia::math::Rect& rect) {
+  return {.x = static_cast<float>(rect.x),
+          .y = static_cast<float>(rect.y),
+          .width = static_cast<float>(rect.width),
+          .height = static_cast<float>(rect.height)};
+}
+
 }  // namespace utils

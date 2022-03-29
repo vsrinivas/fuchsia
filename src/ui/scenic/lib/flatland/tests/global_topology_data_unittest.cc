@@ -16,6 +16,8 @@
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
+#include <glm/gtc/constants.hpp>
+#include <glm/gtc/matrix_access.hpp>
 #include <glm/gtx/matrix_transform_2d.hpp>
 
 using flatland::TransformGraph;
@@ -65,10 +67,10 @@ view_tree::SubtreeHitTester GenerateHitTester(
       flatland::ComputeGlobalMatrices(gtd.topology_vector, gtd.parent_indices, uber_structs);
   const auto global_clip_regions = ComputeGlobalTransformClipRegions(
       gtd.topology_vector, gtd.parent_indices, matrix_vector, uber_structs);
-  gtd.hit_regions = ComputeGlobalHitRegions(gtd.topology_vector, gtd.parent_indices, matrix_vector,
-                                            global_clip_regions, uber_structs);
+  gtd.hit_regions =
+      ComputeGlobalHitRegions(gtd.topology_vector, gtd.parent_indices, matrix_vector, uber_structs);
   auto snapshot = GlobalTopologyData::GenerateViewTreeSnapshot(
-      gtd, UberStructSystem::ExtractViewRefKoids(uber_structs),
+      gtd, UberStructSystem::ExtractViewRefKoids(uber_structs), global_clip_regions,
       child_parent_viewport_watcher_mapping);
   auto& [root_koid, view_tree, unconnected_views, hit_tester, tree_boundaries] = snapshot;
   return std::move(hit_tester);
@@ -747,18 +749,20 @@ TEST(GlobalTopologyDataTest, HitTest_StartNodeTest) {
   }
 }
 
-//  This test features a 2x1 parent view, with a 1x1 child view.
+//  This test features a 10x5 parent view, with a 6x2 child view.
 //
-//  The child view is translated 1 pixel to the right, so hits from (0,0) to (1,1) should be
-//  received only by the parent, and hits from (1,1) to (2,1) should be received by child and
-//  parent.
-// -------------------
-// |P       |P/C     |
-// |        |        |
-// |        |        |
-// |        |        |
-// -------------------
-TEST(GlobalTopologyDataTest, HitTest_TranslatedChildView) {
+//  The below image is to scale.
+// ------------
+// |(Parent)  |
+// |          |
+// |       CCCCCC
+// |       CCCCCC
+// |          |
+// ------------
+//
+// The child has an infinite hit region defined, but it should only receive hits from (7,2) to
+// (10,4), as the child is clipped by its and its parent's clip boundaries.
+TEST(GlobalTopologyDataTest, HitTest_ClippedChild) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
@@ -768,8 +772,11 @@ TEST(GlobalTopologyDataTest, HitTest_TranslatedChildView) {
   auto [control_ref2, view_ref_child] = scenic::ViewRefPair::New();
   const zx_koid_t view_ref_parent_koid = utils::ExtractKoid(view_ref_parent);
   const zx_koid_t view_ref_child_koid = utils::ExtractKoid(view_ref_child);
-  const uint32_t kParentWidth = 2, kChildWidth = 1;
-  const uint32_t kHeight = 1;
+  const uint32_t kParentWidth = 10, kParentHeight = 5;
+  const uint32_t kChildWidth = 6, kChildHeight = 2;
+  const uint32_t kChildClippedWidth = 3;
+
+  const uint32_t kChildOriginX = 7, kChildOriginY = 2;
 
   const TransformHandle view_ref_parent_root_transform = {1, 0};
   const TransformHandle view_ref_child_root_transform = {2, 0};
@@ -783,10 +790,11 @@ TEST(GlobalTopologyDataTest, HitTest_TranslatedChildView) {
     uber_struct->local_topology = vectors[0];
     uber_struct->view_ref =
         std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref_parent));
-    TransformClipRegion clip_region = {.x = 0, .y = 0, .width = kParentWidth, .height = kHeight};
+    TransformClipRegion clip_region = {
+        .x = 0, .y = 0, .width = kParentWidth, .height = kParentHeight};
     uber_struct->local_clip_regions[view_ref_parent_root_transform] = std::move(clip_region);
     uber_struct->local_hit_regions_map[view_ref_parent_root_transform] = {
-        {.region = {0, 0, kParentWidth, kHeight}}};
+        {.region = {0, 0, kParentWidth, kParentHeight}}};
 
     uber_structs[vectors[0][0].handle.GetInstanceId()] = std::move(uber_struct);
   }
@@ -797,12 +805,22 @@ TEST(GlobalTopologyDataTest, HitTest_TranslatedChildView) {
     uber_struct->local_topology = vectors[1];
     uber_struct->view_ref =
         std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref_child));
+    // Create a maximal hit region so that the clip regions are what must be respected.
     uber_struct->local_hit_regions_map[view_ref_child_root_transform] = {
-        {.region = {0, 0, kChildWidth, kHeight}}};
+        {.region = {0, 0, FLT_MAX, FLT_MAX}}};
 
-    // Translate the child 1px to the right.
-    uber_struct->local_matrices[view_ref_child_root_transform] =
-        glm::translate(glm::mat3(), {1, 0});
+    // Apply operations on the child to move it into position.
+    glm::mat3 child_matrix = glm::mat3();
+    child_matrix = glm::translate(child_matrix, {kChildOriginX, kChildOriginY});
+    child_matrix = glm::scale(child_matrix, {1, 1});
+    // TODO(fxbug.dev/95710): Replace this with a 90 or 270 degree orientation.
+    child_matrix = glm::rotate(child_matrix, 0.f);
+
+    uber_struct->local_matrices[view_ref_child_root_transform] = child_matrix;
+
+    TransformClipRegion clip_region = {
+        .x = 0, .y = 0, .width = kChildWidth, .height = kChildHeight};
+    uber_struct->local_clip_regions[view_ref_child_root_transform] = std::move(clip_region);
 
     uber_structs[vectors[1][0].handle.GetInstanceId()] = std::move(uber_struct);
   }
@@ -810,16 +828,152 @@ TEST(GlobalTopologyDataTest, HitTest_TranslatedChildView) {
   MakeLink(links, 2);  // 0:2 - 2:0
   auto hit_tester = GenerateHitTester(uber_structs, links, kLinkInstanceId, {1, 0}, {});
 
-  {
-    auto result = hit_tester(view_ref_parent_koid, {0, 0}, true);
-    EXPECT_EQ(result.hits.size(), 1u);
-    EXPECT_EQ(result.hits[0], view_ref_parent_koid);
+  for (float x = 0; x <= 2 * static_cast<float>(kParentWidth); x += 0.1) {
+    for (float y = 0; y <= 2 * static_cast<float>(kParentHeight); y += 0.1) {
+      auto result = hit_tester(view_ref_parent_koid, {x, y}, true);
+
+      if (utils::RectFContainsPoint(
+              {kChildOriginX, kChildOriginY, kChildClippedWidth, kChildHeight}, x, y)) {
+        // There should be two hit regions, child on top.
+        ASSERT_EQ(result.hits.size(), 2u) << "x,y: " << x << ", " << y;
+        EXPECT_EQ(result.hits[0], view_ref_child_koid);
+      } else if (utils::RectFContainsPoint({0, 0, kParentWidth, kParentHeight}, x, y)) {
+        // There should be one hit region, the parent's.
+        EXPECT_EQ(result.hits.size(), 1u) << "x,y: " << x << ", " << y;
+      } else {
+        // We are outside of both the parent and child.
+        EXPECT_EQ(result.hits.size(), 0u) << "x,y: " << x << ", " << y;
+      }
+    }
   }
+}
+
+// Overview
+//
+// Test for clip regions that should *not* impact a given hit test. This includes:
+// - clips from a view's sibling transforms
+// - clips from a view's children transforms
+//
+//
+// Topology
+//
+// This test contains a parent view with children transforms, as well as a child view. The children
+// transforms and child view will set minimal clip regions, which should not affect the parent's
+// hits.
+//
+// Inside the parent view, a transform's hits should not be affected by its siblings' clip regions.
+//
+//
+// Geometry
+//
+// The parent, P0, is the entire 10x10 grid. P0 is the view, and P1 and P2 are child transforms in
+// it.
+//
+// P0 has two children in its local topology, P1 and P2, depicted below. P1 is the top 10x5 of the
+// grid, and P2 is a subset of P1, comprising the top-right 5x2 region of both P0 and P1.
+//
+// P0 has a child view C, which is the bottom 10x5.
+//
+// ------------------
+// |P1     |P2      |
+// |       |--------|
+// |                |
+// |                |
+// ------------------
+// |C               |
+// |                |
+// |                |
+// |                |
+// ------------------
+//
+//
+// Expectations
+//
+// Regardless of its children's clip regions, P0 should always receive a hit because P0's default
+// hit region is placed on the root transform, and thus not affected by clip boundaries on child
+// transforms.
+//
+// C should always receive a hit when the hit is in the bottom half of the view, since P1 and P2 are
+// not C's ancestors and therefore their clip regions should not impact C whatsoever.
+TEST(GlobalTopologyDataTest, HitTest_NonRelevantClipRegions) {
+  UberStruct::InstanceMap uber_structs;
+  GlobalTopologyData::LinkTopologyMap links;
+
+  const auto link_2 = GetLinkHandle(2);
+
+  auto [control_ref1, view_ref_parent] = scenic::ViewRefPair::New();
+  auto [control_ref2, view_ref_child] = scenic::ViewRefPair::New();
+  const zx_koid_t view_ref_parent_koid = utils::ExtractKoid(view_ref_parent);
+  const zx_koid_t view_ref_child_koid = utils::ExtractKoid(view_ref_child);
+
+  const TransformClipRegion P0_clip = {.x = 0, .y = 0, .width = 10, .height = 10};
+  const TransformClipRegion P1_clip = {.x = 0, .y = 0, .width = 10, .height = 5};
+  const TransformClipRegion P2_clip = {.x = 5, .y = 0, .width = 5, .height = 2};
+  const TransformClipRegion C_clip = {.x = 0, .y = 5, .width = 10, .height = 5};
+
+  const TransformHandle view_ref_parent_root_transform = {1, 0};
+  const TransformHandle view_ref_child_root_transform = {2, 0};
+  const TransformGraph::TopologyVector vectors[] = {
+      {{{1, 0}, 3}, {{1, 1}, 0}, {{1, 2}, 0}, {link_2, 0}},  // 1:0 - 1:1
+                                                             //   \ \
+                                                             //    \  1:2
+                                                             //     \
+                                                             //       0:2
+                                                             //
+      {{{2, 0}, 0}}};                                        // 2:0
+
+  // Create the parent uber struct.
   {
-    auto result = hit_tester(view_ref_parent_koid, {1.1, 0}, true);
-    EXPECT_EQ(result.hits.size(), 2u);
-    EXPECT_EQ(result.hits[0], view_ref_child_koid);
-    EXPECT_EQ(result.hits[1], view_ref_parent_koid);
+    auto uber_struct = std::make_unique<UberStruct>();
+    uber_struct->local_topology = vectors[0];
+    uber_struct->view_ref =
+        std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref_parent));
+
+    // Set up all clip regions.
+    uber_struct->local_clip_regions[view_ref_parent_root_transform] = std::move(P0_clip);
+    uber_struct->local_clip_regions[{1, 1}] = std::move(P1_clip);
+    uber_struct->local_clip_regions[{1, 2}] = std::move(P2_clip);
+
+    // Define maximal hit region on P0.
+    uber_struct->local_hit_regions_map[view_ref_parent_root_transform] = {
+        {.region = {0, 0, FLT_MAX, FLT_MAX}}};
+
+    uber_structs[vectors[0][0].handle.GetInstanceId()] = std::move(uber_struct);
+  }
+
+  // Create the child uber struct.
+  {
+    auto uber_struct = std::make_unique<UberStruct>();
+    uber_struct->local_topology = vectors[1];
+    uber_struct->view_ref =
+        std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref_child));
+    // Create a maximal hit region so that the clip regions are what must be respected.
+    uber_struct->local_hit_regions_map[view_ref_child_root_transform] = {
+        {.region = {0, 0, FLT_MAX, FLT_MAX}}};
+
+    uber_struct->local_clip_regions[view_ref_child_root_transform] = std::move(C_clip);
+
+    uber_structs[vectors[1][0].handle.GetInstanceId()] = std::move(uber_struct);
+  }
+
+  MakeLink(links, 2);  // 0:2 - 2:0
+  auto hit_tester = GenerateHitTester(uber_structs, links, kLinkInstanceId, {1, 0}, {});
+
+  for (float x = 0; x <= static_cast<float>(P0_clip.width); x += 0.1) {
+    for (float y = 0; y <= static_cast<float>(P0_clip.height); y += 0.1) {
+      auto result = hit_tester(view_ref_parent_koid, {x, y}, true);
+
+      // The last (parent) elem should *always* exist, regardless of the child's clip bounds.
+      ASSERT_GE(result.hits.size(), 1u);
+      EXPECT_EQ(result.hits.back(), view_ref_parent_koid);
+
+      // If we are in the child, the clip regions of the parent's siblings should not affect it.
+      if (utils::RectFContainsPoint(utils::ConvertRectToRectF(C_clip), x, y)) {
+        // There should be two hit regions, child on top.
+        ASSERT_EQ(result.hits.size(), 2u);
+        EXPECT_EQ(result.hits[0], view_ref_child_koid);
+      }
+    }
   }
 }
 
@@ -891,8 +1045,12 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
   // Since the global topology is only 2 instances, we should only see two views: the root and the
   // child, one a child of the other.
   {
+    const auto matrix_vector =
+        flatland::ComputeGlobalMatrices(gtd.topology_vector, gtd.parent_indices, uber_structs);
+    const auto global_clip_regions = ComputeGlobalTransformClipRegions(
+        gtd.topology_vector, gtd.parent_indices, matrix_vector, uber_structs);
     auto snapshot = GlobalTopologyData::GenerateViewTreeSnapshot(
-        gtd, UberStructSystem::ExtractViewRefKoids(uber_structs),
+        gtd, UberStructSystem::ExtractViewRefKoids(uber_structs), global_clip_regions,
         child_parent_viewport_watcher_mapping);
     auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = snapshot;
     EXPECT_EQ(root, view_ref1_koid);

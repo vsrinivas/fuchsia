@@ -25,6 +25,8 @@ executable("unittests") {
     "uber_struct_system_unittest.cc",
   ]
 
+  public_deps = [ "//third_party/glm" ]
+
   deps = [
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp/testing:unit",

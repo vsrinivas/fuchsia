@@ -330,9 +330,7 @@ GlobalTransformClipRegionVector ComputeGlobalTransformClipRegions(
 GlobalHitRegionsMap ComputeGlobalHitRegions(
     const GlobalTopologyData::TopologyVector& global_topology,
     const GlobalTopologyData::ParentIndexVector& parent_indices,
-    const GlobalMatrixVector& matrix_vector,
-    const GlobalTransformClipRegionVector& global_clip_regions,
-    const UberStruct::InstanceMap& uber_structs) {
+    const GlobalMatrixVector& matrix_vector, const UberStruct::InstanceMap& uber_structs) {
   FX_DCHECK(global_topology.size() == parent_indices.size());
   FX_DCHECK(global_topology.size() == matrix_vector.size());
 
@@ -350,12 +348,9 @@ GlobalHitRegionsMap ComputeGlobalHitRegions(
     if (regions_vec_kv != uber_struct_kv->second->local_hit_regions_map.end()) {
       for (auto& local_hit_region : regions_vec_kv->second) {
         auto local_rect = local_hit_region.region;
-        auto global_clip = global_clip_regions[i];
 
         // Calculate the global position of the current hit region.
         auto global_rect = MatrixMultiplyRectF(matrix_vector[i], local_rect);
-
-        // TODO(fxbug.dev/82678) Hit regions should be clipped according to their view boundaries.
 
         global_hit_regions[handle].push_back({global_rect, local_hit_region.hit_test});
       }

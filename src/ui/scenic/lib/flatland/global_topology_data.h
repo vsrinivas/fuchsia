@@ -83,6 +83,7 @@ struct GlobalTopologyData {
 
   static view_tree::SubtreeSnapshot GenerateViewTreeSnapshot(
       const GlobalTopologyData& data, const std::unordered_set<zx_koid_t>& unconnected_view_refs,
+      const std::vector<TransformClipRegion>& global_clip_regions,
       // Set from |LinkSystem::GetChildViewWatcherToParentViewportWatcherMapping|. Used to get the
       // parent viewport watcher handle for a child view watcher handle to fetch its clip region
       // from |clip_regions|.

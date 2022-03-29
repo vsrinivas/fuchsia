@@ -67,9 +67,7 @@ GlobalTransformClipRegionVector ComputeGlobalTransformClipRegions(
 GlobalHitRegionsMap ComputeGlobalHitRegions(
     const GlobalTopologyData::TopologyVector& global_topology,
     const GlobalTopologyData::ParentIndexVector& parent_indices,
-    const GlobalMatrixVector& matrix_vector,
-    const GlobalTransformClipRegionVector& global_clip_regions,
-    const UberStruct::InstanceMap& uber_structs);
+    const GlobalMatrixVector& matrix_vector, const UberStruct::InstanceMap& uber_structs);
 
 // The list of global rectangles for a particular global topology. Each entry is the global
 // rectangle (i.e. relative to the root TransformHandle) of the transform in the corresponding

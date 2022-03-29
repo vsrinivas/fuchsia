@@ -51,6 +51,12 @@ bool IsEventSignalled(const zx::event& event, zx_signals_t signal);
 fuchsia::sysmem::AllocatorSyncPtr CreateSysmemAllocatorSyncPtr(
     const std::string& debug_name_suffix = std::string());
 
+// Accounts for floating point rounding errors.
+bool RectFContainsPoint(const fuchsia::math::RectF& rect, float x, float y);
+
+// Convenience function
+fuchsia::math::RectF ConvertRectToRectF(const fuchsia::math::Rect& rect);
+
 }  // namespace utils
 
 #endif  // SRC_UI_SCENIC_LIB_UTILS_HELPERS_H_
