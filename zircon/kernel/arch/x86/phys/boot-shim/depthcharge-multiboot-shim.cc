@@ -88,9 +88,10 @@ bool AppendDepthChargeItems(LegacyBootShim& shim, TrampolineBoot::Zbi& zbi,
                       zbi.Append(header, payload));
   };
 
-  auto cleanup = fit::defer([&shim]() { shim.input_zbi().ignore_error(); });
-
-  for (auto it = shim.input_zbi().begin(); it != kernel_item; ++it) {
+  // Any unhandled path should have no errors.
+  auto& input_zbi = shim.input_zbi();
+  auto cleanup = fit::defer([&input_zbi]() { ZX_ASSERT(input_zbi.take_error().is_ok()); });
+  for (auto it = input_zbi.begin(); it != kernel_item && it != input_zbi.end(); ++it) {
     auto [header, payload] = *it;
     switch (header->type) {
       case kLegacyBootdataDebugUart: {
@@ -144,28 +145,23 @@ bool AppendDepthChargeItems(LegacyBootShim& shim, TrampolineBoot::Zbi& zbi,
         break;
     }
   }
-
-  return true;
+  cleanup.cancel();
+  return shim.Check("ZBI iteration error while appending depthcharge zbi items.", zbi.take_error());
 }
 
 // The old depthcharge code prepends its items before the kernel rather than
 // appending them as the protocol requires.
 bool LoadDepthchargeZbi(LegacyBootShim& shim, TrampolineBoot& boot) {
-  auto kernel_item = shim.input_zbi().begin();
-  while (true) {
-    if (kernel_item == shim.input_zbi().end()) {
-      printf("%s: No kernel item in ZBI!\n", ProgramName());
-      return false;
-    }
-    if (kernel_item->header->type == arch::kZbiBootKernelType) {
-      break;
-    }
-    ++kernel_item;
+  auto& input_zbi = shim.input_zbi();
+  auto kernel_item = input_zbi.find(arch::kZbiBootKernelType);
+  if (shim.Check("ZBI Iteration error.", input_zbi.take_error()); kernel_item == input_zbi.end()) {
+    printf("%s: No kernel item in the ZBI!.", ProgramName());
+    return false;
   }
 
   uint32_t early_items_size = kernel_item.item_offset() - sizeof(zbi_header_t);
 
-  return shim.Check("Not a bootable ZBI", boot.Init(shim.input_zbi(), kernel_item)) &&
+  return shim.Check("Not a bootable ZBI", boot.Init(input_zbi, kernel_item)) &&
          shim.Check("Failed to load ZBI", boot.Load(shim.size_bytes() + early_items_size)) &&
          shim.Check("Failed to append boot loader items to data ZBI",
                     shim.AppendItems(boot.DataZbi())) &&

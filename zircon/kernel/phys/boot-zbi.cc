@@ -100,6 +100,8 @@ fitx::result<BootZbi::Error> BootZbi::Init(InputZbi arg_zbi) {
     switch (header->type) {
       case arch::kZbiBootKernelType: {
         kernel_item_ = it;
+        // Valid kernel_item implies no iteration error.
+        zbi_.ignore_error();
         return InitKernelFromItem();
       }
 
@@ -136,7 +138,8 @@ fitx::result<BootZbi::Error> BootZbi::Init(InputZbi arg_zbi, InputZbi::iterator 
     }
     ++kernel_item_;
   }
-
+  // Valid kernel_item implies no error.
+  zbi_.ignore_error();
   return InitKernelFromItem();
 }
 
