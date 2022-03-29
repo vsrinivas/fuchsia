@@ -938,19 +938,19 @@ This toolchain is expected to support both Fuchsia targets and the host.
 From //build/toolchain/zircon/clang.gni:11
 
 ### clippy_cause_failure
-Makes clippy targets fail to build when any deny lints are found
+Makes clippy targets fail to build when any "deny" lints are found
 
 **Current value (from the default):** `false`
 
-From //build/rust/config.gni:62
+From //build/rust/config.gni:58
 
 ### clippy_warn
-By default clippy is set to allow all lints, this flag will change it to
-warn on all. Note: setting lint levels in source takes precedence over this.
+Set the lint level for all clippy lints to "warn".
+Note: setting lint levels in source takes precedence over this.
 
 **Current value (from the default):** `false`
 
-From //build/rust/config.gni:59
+From //build/rust/config.gni:55
 
 ### cobalt_environment
 Selects the Cobalt environment to send data to. Choices:
@@ -2045,14 +2045,6 @@ used for host tools.  If this is "", then a standard prebuilt is used.
 **Current value (from the default):** `""`
 
 From //build/toolchain/zircon/gcc.gni:15
-
-### generate_clippy
-Enables generation of corresponding clippy targets for all `rustc_binary`,
-`rustc_library`, and `rustc_test` targets.
-
-**Current value (from the default):** `true`
-
-From //build/rust/config.gni:55
 
 ### generate_plasa_artifacts
 If set, causes the plasa artifacts to be generated.  Not all builds need to
@@ -3810,7 +3802,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"-hgFZdM6KdKdZFqdeJILjg1iwY_iBdeE3t8tWFvScmwC"`
+**Current value (from the default):** `"q_xVzG_aAeFHN0Or_AjOFEhHYgPcBO2oddE7mWbNkyIC"`
 
 From //build/rust/config.gni:30
 
