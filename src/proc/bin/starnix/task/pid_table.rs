@@ -42,6 +42,10 @@ impl PidTable {
         self.get_entry(pid).and_then(|entry| entry.task.as_ref()).and_then(|task| task.upgrade())
     }
 
+    pub fn get_thread_group(&self, pid: pid_t) -> Option<Arc<ThreadGroup>> {
+        self.get_entry(pid).and_then(|entry| entry.group.as_ref()).and_then(|group| group.upgrade())
+    }
+
     pub fn get_process_group(&self, pid: pid_t) -> Option<&ProcessGroup> {
         self.get_entry(pid).and_then(|entry| entry.process_group.as_ref())
     }
@@ -63,31 +67,31 @@ impl PidTable {
         let entry = self.get_entry_mut(task.id);
         assert!(entry.task.is_none());
         self.get_entry_mut(task.id).task = Some(Arc::downgrade(task));
-        self.register_job_control(task.id, &task.job_control.read());
     }
 
     pub fn add_thread_group(&mut self, thread_group: &Arc<ThreadGroup>) {
         let entry = self.get_entry_mut(thread_group.leader);
         assert!(entry.group.is_none());
         entry.group = Some(Arc::downgrade(thread_group));
+        self.register_job_control(thread_group.leader, &thread_group.job_control.read());
     }
 
     pub fn set_job_control(&mut self, pid: pid_t, job_control: &ShellJobControl) {
-        let task = self.get_task(pid).unwrap();
-        self.cleanup_job_control(pid, &task.as_ref().job_control.read());
+        let group = self.get_thread_group(pid).unwrap();
+        self.cleanup_job_control(pid, &group.as_ref().job_control.read());
         self.register_job_control(pid, job_control);
     }
 
     pub fn remove_task(&mut self, pid: pid_t) {
         let entry = self.get_entry_mut(pid);
-        let task = entry.task.take().unwrap().upgrade();
-        self.cleanup_job_control(pid, &task.unwrap().job_control.read());
+        assert!(entry.task.is_some());
+        entry.task = None;
     }
 
     pub fn remove_thread_group(&mut self, pid: pid_t) {
         let entry = self.get_entry_mut(pid);
-        assert!(entry.group.is_some());
-        entry.group = None;
+        let group = entry.group.take().unwrap().upgrade();
+        self.cleanup_job_control(pid, &group.unwrap().job_control.read());
     }
 
     /// Returns the task ids for all the currently running tasks.

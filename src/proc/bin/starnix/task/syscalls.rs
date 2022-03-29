@@ -105,15 +105,15 @@ fn get_task_or_current(current_task: &CurrentTask, pid: pid_t) -> Result<Arc<Tas
 }
 
 pub fn sys_getsid(current_task: &CurrentTask, pid: pid_t) -> Result<pid_t, Errno> {
-    Ok(get_task_or_current(current_task, pid)?.job_control.read().sid)
+    Ok(get_task_or_current(current_task, pid)?.thread_group.job_control.read().sid)
 }
 
 pub fn sys_getpgrp(current_task: &CurrentTask) -> Result<pid_t, Errno> {
-    Ok(current_task.job_control.read().pgid)
+    Ok(current_task.thread_group.job_control.read().pgid)
 }
 
 pub fn sys_getpgid(current_task: &CurrentTask, pid: pid_t) -> Result<pid_t, Errno> {
-    Ok(get_task_or_current(current_task, pid)?.job_control.read().pgid)
+    Ok(get_task_or_current(current_task, pid)?.thread_group.job_control.read().pgid)
 }
 
 pub fn sys_setpgid(
@@ -122,7 +122,7 @@ pub fn sys_setpgid(
     pgid: pid_t,
 ) -> Result<SyscallResult, Errno> {
     let task = get_task_or_current(current_task, pid)?;
-    current_task.setpgid(&task, pgid)?;
+    current_task.thread_group.setpgid(&task, pgid)?;
     Ok(SUCCESS)
 }
 
@@ -483,7 +483,7 @@ pub fn sys_getgroups(
 }
 
 pub fn sys_setsid(current_task: &mut CurrentTask) -> Result<pid_t, Errno> {
-    current_task.setsid()?;
+    current_task.thread_group.setsid()?;
     Ok(current_task.get_pid())
 }
 

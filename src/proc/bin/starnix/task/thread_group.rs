@@ -9,6 +9,7 @@ use std::collections::HashSet;
 use std::ffi::CStr;
 use std::sync::Arc;
 
+use crate::auth::ShellJobControl;
 use crate::signals::*;
 use crate::task::*;
 use crate::types::*;
@@ -35,6 +36,9 @@ pub struct ThreadGroup {
     /// The tasks in the thread group.
     pub tasks: RwLock<HashSet<pid_t>>,
 
+    /// The IDs used to perform shell job control.
+    pub job_control: RwLock<ShellJobControl>,
+
     /// The itimers for this thread group.
     pub itimers: RwLock<[itimerval; 3]>,
 
@@ -44,6 +48,8 @@ pub struct ThreadGroup {
     pub child_exit_waiters: Mutex<WaitQueue>,
 
     terminating: Mutex<bool>,
+
+    pub did_exec: RwLock<bool>,
 }
 
 impl PartialEq for ThreadGroup {
@@ -53,7 +59,12 @@ impl PartialEq for ThreadGroup {
 }
 
 impl ThreadGroup {
-    pub fn new(kernel: Arc<Kernel>, process: zx::Process, leader: pid_t) -> ThreadGroup {
+    pub fn new(
+        kernel: Arc<Kernel>,
+        process: zx::Process,
+        leader: pid_t,
+        job_control: ShellJobControl,
+    ) -> ThreadGroup {
         let mut tasks = HashSet::new();
         tasks.insert(leader);
 
@@ -61,11 +72,13 @@ impl ThreadGroup {
             kernel,
             process,
             leader,
+            job_control: RwLock::new(job_control),
             tasks: RwLock::new(tasks),
             itimers: Default::default(),
             zombie_leader: Mutex::new(None),
             child_exit_waiters: Mutex::default(),
             terminating: Mutex::new(false),
+            did_exec: RwLock::new(false),
         }
     }
 
@@ -97,6 +110,72 @@ impl ThreadGroup {
         }
         let mut tasks = self.tasks.write();
         tasks.insert(task.id);
+        Ok(())
+    }
+
+    pub fn setsid(&self) -> Result<(), Errno> {
+        let mut pids = self.kernel.pids.write();
+        if !pids.get_process_group(self.leader).is_none() {
+            return error!(EPERM);
+        }
+        let job_control = ShellJobControl { sid: self.leader, pgid: self.leader };
+        pids.set_job_control(self.leader, &job_control);
+        *self.job_control.write() = job_control;
+        Ok(())
+    }
+
+    pub fn setpgid(&self, target: &Task, pgid: pid_t) -> Result<(), Errno> {
+        // The target process must be either the current process of a child of the current process
+        let target_thread_group = &target.thread_group;
+        if target_thread_group.leader != self.leader && target.parent != self.leader {
+            return error!(ESRCH);
+        }
+
+        // If the target process is a child of the current task, it must not have executed one of the exec
+        // function. Keep target_did_exec lock until the end of this function to prevent a race.
+        let target_did_exec;
+        if target.parent == self.leader {
+            target_did_exec = target_thread_group.did_exec.read();
+            if *target_did_exec {
+                return error!(EACCES);
+            }
+        }
+
+        let mut pids = self.kernel.pids.write();
+        let sid;
+        let target_pgid;
+        {
+            let current_job_control = self.job_control.read();
+            let target_job_control = target_thread_group.job_control.read();
+
+            // The target process must not be a session leader and must be in the same session as the current process.
+            if target_thread_group.leader == target_job_control.sid
+                || current_job_control.sid != target_job_control.sid
+            {
+                return error!(EPERM);
+            }
+
+            target_pgid = if pgid == 0 { target_thread_group.leader } else { pgid };
+            if target_pgid < 0 {
+                return error!(EINVAL);
+            }
+
+            // If pgid is not equal to the target process id, the associated process group must exist
+            // and be in the same session as the target process.
+            if target_pgid != target_thread_group.leader {
+                let process_group = pids.get_process_group(target_pgid).ok_or(EPERM)?;
+                if process_group.sid != target_job_control.sid {
+                    return error!(EPERM);
+                }
+            }
+
+            sid = target_job_control.sid;
+        }
+
+        let new_job_control = ShellJobControl { sid: sid, pgid: target_pgid };
+        pids.set_job_control(target.id, &new_job_control);
+        *target_thread_group.job_control.write() = new_job_control;
+
         Ok(())
     }
 
@@ -157,14 +236,12 @@ impl ThreadGroup {
 
 #[cfg(test)]
 mod test {
-    use fuchsia_async as fasync;
-
     use super::*;
     use crate::testing::*;
     use std::ffi::CString;
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_long_name() {
+    #[test]
+    fn test_long_name() {
         let (_kernel, current_task) = create_kernel_and_task();
         let bytes = [1; sys::ZX_MAX_NAME_LEN];
         let name = CString::new(bytes).unwrap();
@@ -176,8 +253,8 @@ mod test {
         assert_eq!(current_task.thread_group.process.get_name(), Ok(expected_name));
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_max_length_name() {
+    #[test]
+    fn test_max_length_name() {
         let (_kernel, current_task) = create_kernel_and_task();
         let bytes = [1; sys::ZX_MAX_NAME_LEN - 1];
         let name = CString::new(bytes).unwrap();
@@ -186,13 +263,95 @@ mod test {
         assert_eq!(current_task.thread_group.process.get_name(), Ok(name));
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_short_name() {
+    #[test]
+    fn test_short_name() {
         let (_kernel, current_task) = create_kernel_and_task();
         let bytes = [1; sys::ZX_MAX_NAME_LEN - 10];
         let name = CString::new(bytes).unwrap();
 
         assert!(current_task.thread_group.set_name(&name).is_ok());
         assert_eq!(current_task.thread_group.process.get_name(), Ok(name));
+    }
+
+    #[test]
+    fn test_setsid() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        assert_eq!(current_task.thread_group.setsid(), error!(EPERM));
+
+        let child_task = current_task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+        // Set an exit code to not panic when task is dropped and moved to the zombie state.
+        *child_task.exit_code.lock() = Some(0);
+        assert_eq!(
+            current_task.thread_group.job_control.read().sid,
+            child_task.thread_group.job_control.read().sid
+        );
+
+        assert_eq!(child_task.thread_group.setsid(), Ok(()));
+        assert_eq!(child_task.thread_group.job_control.read().sid, child_task.get_pid());
+    }
+
+    #[test]
+    fn test_setgpid() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        assert_eq!(current_task.thread_group.setsid(), error!(EPERM));
+
+        let child_task1 = current_task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+        *child_task1.exit_code.lock() = Some(0);
+        let child_task2 = current_task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+        *child_task2.exit_code.lock() = Some(0);
+        let execd_child_task = current_task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+        *execd_child_task.exit_code.lock() = Some(0);
+        *execd_child_task.thread_group.did_exec.write() = true;
+        let other_session_child_task = current_task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+        *other_session_child_task.exit_code.lock() = Some(0);
+        assert_eq!(other_session_child_task.thread_group.setsid(), Ok(()));
+
+        assert_eq!(child_task1.thread_group.setpgid(&current_task, 0), error!(ESRCH));
+        assert_eq!(current_task.thread_group.setpgid(&execd_child_task, 0), error!(EACCES));
+        assert_eq!(current_task.thread_group.setpgid(&current_task, 0), error!(EPERM));
+        assert_eq!(current_task.thread_group.setpgid(&other_session_child_task, 0), error!(EPERM));
+        assert_eq!(current_task.thread_group.setpgid(&child_task1, -1), error!(EINVAL));
+        assert_eq!(current_task.thread_group.setpgid(&child_task1, 255), error!(EPERM));
+        assert_eq!(
+            current_task.thread_group.setpgid(&child_task1, other_session_child_task.id),
+            error!(EPERM)
+        );
+
+        assert_eq!(child_task1.thread_group.setpgid(&child_task1, 0), Ok(()));
+        assert_eq!(child_task1.thread_group.job_control.read().sid, current_task.id);
+        assert_eq!(child_task1.thread_group.job_control.read().pgid, child_task1.id);
+
+        assert_eq!(current_task.thread_group.setpgid(&child_task2, child_task1.id), Ok(()));
+        assert_eq!(child_task2.thread_group.job_control.read().pgid, child_task1.id);
     }
 }

@@ -101,9 +101,6 @@ pub struct Task {
     /// The namespace for abstract AF_UNIX sockets for this task.
     pub abstract_socket_namespace: Arc<AbstractSocketNamespace>,
 
-    /// The IDs used to perform shell job control.
-    pub job_control: RwLock<ShellJobControl>,
-
     // See https://man7.org/linux/man-pages/man2/set_tid_address.2.html
     pub clear_child_tid: Mutex<UserRef<pid_t>>,
 
@@ -122,8 +119,6 @@ pub struct Task {
 
     /// Child tasks that have exited, but not yet been waited for.
     pub zombie_children: Mutex<Vec<ZombieTask>>,
-
-    pub did_exec: RwLock<bool>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -181,7 +176,6 @@ impl Task {
         signal_actions: Arc<SignalActions>,
         creds: Credentials,
         abstract_socket_namespace: Arc<AbstractSocketNamespace>,
-        jc: ShellJobControl,
         exit_signal: Option<Signal>,
     ) -> CurrentTask {
         CurrentTask::new(Task {
@@ -197,14 +191,12 @@ impl Task {
             fs,
             creds: RwLock::new(creds),
             abstract_socket_namespace,
-            job_control: RwLock::new(jc),
             clear_child_tid: Mutex::new(UserRef::default()),
             signal_actions,
             signals: Default::default(),
             exit_signal,
             exit_code: Mutex::new(None),
             zombie_children: Mutex::new(vec![]),
-            did_exec: RwLock::new(false),
         })
     }
 
@@ -220,7 +212,12 @@ impl Task {
         let mut pids = kernel.pids.write();
         let pid = pids.allocate_pid();
 
-        let (thread, thread_group, mm) = create_zircon_process(kernel, pid, &initial_name)?;
+        let (thread, thread_group, mm) = create_zircon_process(
+            kernel,
+            pid,
+            ShellJobControl { sid: pid, pgid: pid },
+            &initial_name,
+        )?;
 
         let task = Self::new(
             pid,
@@ -235,7 +232,6 @@ impl Task {
             SignalActions::default(),
             Credentials::default(),
             Arc::clone(&kernel.default_abstract_socket_namespace),
-            ShellJobControl { sid: pid, pgid: pid },
             None,
         );
 
@@ -315,7 +311,7 @@ impl Task {
         let (thread, thread_group, mm) = if clone_thread {
             create_zircon_thread(self)?
         } else {
-            create_zircon_process(kernel, pid, &comm)?
+            create_zircon_process(kernel, pid, self.thread_group.job_control.read().clone(), &comm)?
         };
 
         let parent_pid = if clone_thread { self.parent } else { self.id };
@@ -333,7 +329,6 @@ impl Task {
             signal_actions,
             self.creds.read().clone(),
             self.abstract_socket_namespace.clone(),
-            self.job_control.read().clone(),
             child_exit_signal,
         );
         pids.add_task(&child.task);
@@ -500,72 +495,6 @@ impl Task {
 
     fn remove_child(&self, pid: pid_t) {
         self.children.write().remove(&pid);
-    }
-
-    pub fn setsid(&self) -> Result<(), Errno> {
-        let pid = self.get_pid();
-        let mut pids = self.thread_group.kernel.pids.write();
-        if !pids.get_process_group(pid).is_none() {
-            return error!(EPERM);
-        }
-        let job_control = ShellJobControl { sid: pid, pgid: pid };
-        pids.set_job_control(pid, &job_control);
-        *self.job_control.write() = job_control;
-        Ok(())
-    }
-
-    pub fn setpgid(&self, target: &Task, pgid: pid_t) -> Result<(), Errno> {
-        // The target task must be either the current task of a child of the current task
-        if target != self && target.parent != self.get_pid() {
-            return error!(ESRCH);
-        }
-
-        // If the target task is a child of the current task, it must not have executed one of the exec
-        // function. Keep target_did_exec lock until the end of this function to prevent a race.
-        let target_did_exec;
-        if target.parent == self.get_pid() {
-            target_did_exec = target.did_exec.read();
-            if *target_did_exec {
-                return error!(EACCES);
-            }
-        }
-
-        let mut pids = self.thread_group.kernel.pids.write();
-        let sid;
-        let target_pgid;
-        {
-            let current_job_control = self.job_control.read();
-            let target_job_control = target.job_control.read();
-
-            // The target task must not be a session leader and must be in the same session as the current task.
-            if target.id == target_job_control.sid
-                || current_job_control.sid != target_job_control.sid
-            {
-                return error!(EPERM);
-            }
-
-            target_pgid = if pgid == 0 { target.get_pid() } else { pgid };
-            if target_pgid < 0 {
-                return error!(EINVAL);
-            }
-
-            // If pgid is not equal to the target process id, the associated process group must exist
-            // and be in the same session as the target process.
-            if target_pgid != target.id {
-                let process_group = pids.get_process_group(target_pgid).ok_or(EPERM)?;
-                if process_group.sid != target_job_control.sid {
-                    return error!(EPERM);
-                }
-            }
-
-            sid = target_job_control.sid;
-        }
-
-        let new_job_control = ShellJobControl { sid: sid, pgid: target_pgid };
-        pids.set_job_control(target.id, &new_job_control);
-        *target.job_control.write() = new_job_control;
-
-        Ok(())
     }
 }
 
@@ -869,7 +798,6 @@ impl CurrentTask {
     ) -> Result<(), Errno> {
         let executable = self.open_file(path.to_bytes(), OpenFlags::RDONLY)?;
         let resolved_elf = resolve_executable(self, executable, path.clone(), argv, environ)?;
-        *self.did_exec.write() = true;
         if let Err(err) = self.finish_exec(path, resolved_elf) {
             // TODO(tbodt): Replace this panic with a log and force a SIGSEGV.
             panic!("{:?} unrecoverable error in exec: {}", self, err);
@@ -912,6 +840,7 @@ impl CurrentTask {
         // TODO: The termination signal is reset to SIGCHLD.
 
         self.thread_group.set_name(&path)?;
+        *self.thread_group.did_exec.write() = true;
 
         // Get the basename of the path, which will be used as the name displayed with
         // `prtcl(PR_GET_NAME)` and `/proc/self/stat`
@@ -1007,81 +936,5 @@ mod test {
         assert_ne!(current_task.get_pid(), child_task.get_pid());
         assert_ne!(current_task.get_tid(), child_task.get_tid());
         assert_eq!(current_task.get_pid(), child_task.parent);
-    }
-
-    #[test]
-    fn test_setsid() {
-        let (_kernel, current_task) = create_kernel_and_task();
-        assert_eq!(current_task.setsid(), error!(EPERM));
-
-        let child_task = current_task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
-        // Set an exit code to not panic when task is dropped and moved to the zombie state.
-        *child_task.exit_code.lock() = Some(0);
-        assert_eq!(current_task.job_control.read().sid, child_task.job_control.read().sid);
-
-        assert_eq!(child_task.setsid(), Ok(()));
-        assert_eq!(child_task.job_control.read().sid, child_task.get_pid());
-    }
-
-    #[test]
-    fn test_setgpid() {
-        let (_kernel, current_task) = create_kernel_and_task();
-        assert_eq!(current_task.setsid(), error!(EPERM));
-
-        let child_task1 = current_task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
-        *child_task1.exit_code.lock() = Some(0);
-        let child_task2 = current_task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
-        *child_task2.exit_code.lock() = Some(0);
-        let execd_child_task = current_task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
-        *execd_child_task.exit_code.lock() = Some(0);
-        *execd_child_task.did_exec.write() = true;
-        let other_session_child_task = current_task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
-        *other_session_child_task.exit_code.lock() = Some(0);
-        assert_eq!(other_session_child_task.setsid(), Ok(()));
-
-        assert_eq!(child_task1.setpgid(&current_task, 0), error!(ESRCH));
-        assert_eq!(current_task.setpgid(&execd_child_task, 0), error!(EACCES));
-        assert_eq!(current_task.setpgid(&current_task, 0), error!(EPERM));
-        assert_eq!(current_task.setpgid(&other_session_child_task, 0), error!(EPERM));
-        assert_eq!(current_task.setpgid(&child_task1, -1), error!(EINVAL));
-        assert_eq!(current_task.setpgid(&child_task1, 255), error!(EPERM));
-        assert_eq!(current_task.setpgid(&child_task1, other_session_child_task.id), error!(EPERM));
-
-        assert_eq!(child_task1.setpgid(&child_task1, 0), Ok(()));
-        assert_eq!(child_task1.job_control.read().sid, current_task.id);
-        assert_eq!(child_task1.job_control.read().pgid, child_task1.id);
-
-        assert_eq!(current_task.setpgid(&child_task2, child_task1.id), Ok(()));
-        assert_eq!(child_task2.job_control.read().pgid, child_task1.id);
     }
 }
