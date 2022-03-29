@@ -62,14 +62,19 @@ struct percpu {
   // Each cpu maintains a DpcQueue.
   DpcQueue dpc_queue;
 
-  // Page state counts are percpu because they change frequently and we don't want to pay for
-  // synchronization, including atomic load/add/subtract.
+  // Page state counts are percpu because they change frequently and we don't want to pay for either
+  // heavy synchronization, or transferring the counters between CPUs a lot. Using percpu relaxed
+  // atomics we minimize the need for synchronization (no locks, interrupt or preemption disabling
+  // needed), and avoid cache line bouncing the counters around different CPUs.
   //
   // While it's OK for an observer to temporarily see incorrect values, the counts need to
   // eventually quiesce. It's important that we don't "drop" changes and that the values don't
   // drift over time.
   //
-  // When modifying, use |WithCurrentPreemptDisable|.
+  // When modifying it is not necessary to disable preemption, and can just use
+  // percpu::GetCurrent()| and then modify the counts. In the unlikely event a CPU migration happens
+  // this does not effect correctness, and paying for the rare cache line transfer is preferable to
+  // consistently paying to avoid migration.
   //
   // When reading, use |ForEachPreemptDisable|. Although it is not possible to guarantee a
   // consistent snapshot of these counters, it should be good enough for diagnostic uses.

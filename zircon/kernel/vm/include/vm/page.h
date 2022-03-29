@@ -375,13 +375,10 @@ struct vm_page {
     const vm_page_state old_state = state();
     ktl::atomic_ref<vm_page_state>(state_priv).store(new_state, ktl::memory_order_relaxed);
 
-    // By only modifying the counters for the current CPU with preemption disabled, we can ensure
-    // the values are not modified concurrently. See comment at the definition of |vm_page_counts|.
-    percpu::WithCurrentPreemptDisable([&old_state, &new_state](percpu* p) {
-      // Be sure to not block, else we lose the protection provided by disabling preemption.
-      p->vm_page_counts.by_state[VmPageStateIndex(old_state)] -= 1;
-      p->vm_page_counts.by_state[VmPageStateIndex(new_state)] += 1;
-    });
+    // See comment at percpu::vm_page_counts
+    auto& p = percpu::GetCurrent();
+    p.vm_page_counts.by_state[VmPageStateIndex(old_state)] -= 1;
+    p.vm_page_counts.by_state[VmPageStateIndex(new_state)] += 1;
   }
 
   // Return the approximate number of pages in state |state|.

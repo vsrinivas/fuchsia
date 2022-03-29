@@ -6,6 +6,7 @@
 #ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_STATE_H_
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_STATE_H_
 
+#include <lib/relaxed_atomic.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -32,7 +33,8 @@ static inline constexpr size_t VmPageStateIndex(vm_page_state state) {
 }
 
 typedef struct vm_page_counts {
-  int64_t by_state[VmPageStateIndex(vm_page_state::COUNT_)];
+  // See comment in percpu::vm_page_counts for why we used a RelaxedAtomic.
+  RelaxedAtomic<int64_t> by_state[VmPageStateIndex(vm_page_state::COUNT_)];
 } vm_page_counts_t;
 
 // Returns a string description of |state|.
