@@ -33,7 +33,6 @@ sdk_static_library("ddk") {
     "include/lib/ddk/hw/reg.h",
     "include/lib/ddk/io-buffer.h",
     "include/lib/ddk/metadata.h",
-    "include/lib/ddk/mmio-buffer.h",
     "include/lib/ddk/phys-iter.h",
     "include/lib/ddk/protodefs.h",
     "include/lib/ddk/trace/event.h",
@@ -48,7 +47,6 @@ sdk_static_library("ddk") {
   sources = [
     "io-buffer.c",
     "macros.h",
-    "mmio-buffer.c",
     "phys-iter.c",
   ]
 
@@ -60,7 +58,6 @@ sdk_static_library("ddk") {
     "//sdk/lib/driver_runtime",
     "//zircon/system/ulib/async:async",
     "//zircon/system/ulib/ddk-platform-defs",
-    "//zircon/system/ulib/mmio-ptr",
     "//zircon/system/ulib/syslog:syslog-headers",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",

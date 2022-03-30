@@ -7,7 +7,7 @@
 
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/ddk/io-buffer.h>
-#include <lib/ddk/mmio-buffer.h>
+#include <lib/mmio/mmio-buffer.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 

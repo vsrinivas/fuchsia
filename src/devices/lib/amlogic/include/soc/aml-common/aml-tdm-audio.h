@@ -6,12 +6,12 @@
 #define SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_TDM_AUDIO_H_
 
 #include <assert.h>
-#include <fbl/macros.h>
 #include <lib/mmio/mmio.h>
 
 #include <memory>
 #include <utility>
 
+#include <fbl/macros.h>
 #include <soc/aml-common/aml-audio-regs.h>
 #include <soc/aml-common/aml-audio.h>
 

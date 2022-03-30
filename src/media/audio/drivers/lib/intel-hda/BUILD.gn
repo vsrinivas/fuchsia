@@ -36,6 +36,7 @@ zx_library("intel-hda") {
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/edid",
+    "//zircon/system/ulib/mmio-ptr",
     "//zircon/system/ulib/zx",
   ]
   deps = [

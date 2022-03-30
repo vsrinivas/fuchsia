@@ -11,8 +11,8 @@
 #include <lib/ddk/driver.h>
 #include <lib/ddk/hw/reg.h>
 #include <lib/ddk/io-buffer.h>
-#include <lib/ddk/mmio-buffer.h>
 #include <lib/device-protocol/pci.h>
+#include <lib/mmio/mmio-buffer.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

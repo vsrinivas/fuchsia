@@ -7,8 +7,8 @@
 
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
-#include <lib/device-protocol/pdev.h>
 #include <lib/ddk/hw/reg.h>
+#include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 

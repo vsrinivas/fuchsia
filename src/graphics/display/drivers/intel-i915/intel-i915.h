@@ -10,7 +10,6 @@
 #include <fuchsia/hardware/intelgpucore/cpp/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
-#include <lib/ddk/mmio-buffer.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/mmio/mmio.h>
 #include <lib/pci/hw.h>

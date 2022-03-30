@@ -40,6 +40,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-config.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
+#include "zircon/compiler.h"
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dbg-cfg.h"
 #endif
@@ -52,6 +53,8 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dbg-tlv.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
+
+__BEGIN_CDECLS
 
 /**
  * DOC: Transport layer - what is it ?
@@ -1166,5 +1169,7 @@ void iwl_trans_unref(struct iwl_trans* trans);
 /* PCI */
 int __must_check iwl_pci_register_driver(void);
 void iwl_pci_unregister_driver(void);
+
+__END_CDECLS
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_TRANS_H_

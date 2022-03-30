@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_AML_TSENSOR_H_
 #define SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_AML_TSENSOR_H_
 
-#include <fbl/macros.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/device-protocol/platform-device.h>
@@ -17,6 +16,7 @@
 #include <optional>
 
 #include <ddktl/device.h>
+#include <fbl/macros.h>
 
 namespace thermal {
 

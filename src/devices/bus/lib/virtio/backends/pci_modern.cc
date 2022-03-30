@@ -7,7 +7,7 @@
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/hw/reg.h>
-#include <lib/ddk/mmio-buffer.h>
+#include <lib/mmio/mmio-buffer.h>
 
 #include <cstdint>
 

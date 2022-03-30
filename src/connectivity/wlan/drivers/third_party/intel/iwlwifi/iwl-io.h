@@ -35,10 +35,14 @@
 #include <zircon/time.h>
 #include <zircon/types.h>
 
+#include "zircon/compiler.h"
+
 #if 0  // NEEDS_PORTING
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-devtrace.h"
 #endif  // NEEDS_PORTING
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+
+__BEGIN_CDECLS
 
 void iwl_write8(struct iwl_trans* trans, uint32_t ofs, uint8_t val);
 void iwl_write32(struct iwl_trans* trans, uint32_t ofs, uint32_t val);
@@ -76,5 +80,7 @@ void iwl_force_nmi(struct iwl_trans* trans);
 
 /* Error handling */
 int iwl_dump_fh(struct iwl_trans* trans, char** buf);
+
+__END_CDECLS
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_IO_H_

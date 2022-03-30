@@ -6,7 +6,7 @@
 #define SRC_DEVICES_BLOCK_DRIVERS_AHCI_PORT_H_
 
 #include <lib/ddk/io-buffer.h>
-#include <lib/ddk/mmio-buffer.h>
+#include <lib/mmio/mmio-buffer.h>
 #include <threads.h>
 #include <zircon/types.h>
 

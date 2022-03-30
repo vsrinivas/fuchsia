@@ -5,16 +5,38 @@
 #ifndef SRC_DEVICES_LIB_MMIO_INCLUDE_LIB_MMIO_MMIO_BUFFER_H_
 #define SRC_DEVICES_LIB_MMIO_INCLUDE_LIB_MMIO_MMIO_BUFFER_H_
 
-#include <lib/ddk/mmio-buffer.h>
 #include <lib/mmio-ptr/mmio-ptr.h>
 #include <lib/mmio/mmio-internal.h>
 #include <lib/mmio/mmio-pinned-buffer.h>
+#include <zircon/assert.h>
+#include <zircon/process.h>
+
+__BEGIN_CDECLS
+
+// Takes raw mmio resources, and maps it into address space. |offset| is the
+// offset from the beginning of |vmo| where the mmio region begins. |size|
+// specifies the size of the mmio region. |offset| + |size| must be less than
+// or equal to the size of |vmo|.
+// Always consumes |vmo|, including in error cases.
+zx_status_t mmio_buffer_init(mmio_buffer_t* buffer, zx_off_t offset, size_t size, zx_handle_t vmo,
+                             uint32_t cache_policy);
+
+// Takes a physical region, and maps it into address space. |base| and |size|
+// must be page aligned.
+// Callee retains ownership of |resource|.
+zx_status_t mmio_buffer_init_physical(mmio_buffer_t* buffer, zx_paddr_t base, size_t size,
+                                      zx_handle_t resource, uint32_t cache_policy);
+
+// Unmaps the mmio region.
+void mmio_buffer_release(mmio_buffer_t* buffer);
+
+__END_CDECLS
+
+#ifdef __cplusplus
+
 #include <lib/zx/bti.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
-#include <string.h>
-#include <zircon/assert.h>
-#include <zircon/process.h>
 
 #include <optional>
 #include <utility>
@@ -249,5 +271,7 @@ class MmioBuffer {
 };
 
 }  // namespace fdf
+
+#endif
 
 #endif  // SRC_DEVICES_LIB_MMIO_INCLUDE_LIB_MMIO_MMIO_BUFFER_H_

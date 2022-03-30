@@ -10,7 +10,6 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/hw/reg.h>
 #include <lib/ddk/io-buffer.h>
-#include <lib/ddk/mmio-buffer.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>

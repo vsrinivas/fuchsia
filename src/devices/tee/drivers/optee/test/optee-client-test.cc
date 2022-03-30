@@ -11,12 +11,12 @@
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/ddk/mmio-buffer.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake-object/object.h>
 #include <lib/fake-resource/resource.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/server.h>
+#include <lib/mmio/mmio-buffer.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/bti.h>
 #include <stdlib.h>

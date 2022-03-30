@@ -6,7 +6,6 @@
 
 #include <endian.h>
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
-#include <lib/ddk/mmio-buffer.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/status.h>
 #include <stdio.h>

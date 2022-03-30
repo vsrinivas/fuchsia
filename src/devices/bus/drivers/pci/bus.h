@@ -8,7 +8,6 @@
 #include <fuchsia/hardware/pciroot/c/banjo.h>
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/ddk/device.h>
-#include <lib/ddk/mmio-buffer.h>
 #include <lib/inspect/cpp/inspector.h>
 #include <lib/mmio/mmio.h>
 #include <lib/stdcompat/span.h>

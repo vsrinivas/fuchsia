@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/ddk/mmio-buffer.h>
+#include <lib/mmio/mmio-buffer.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>

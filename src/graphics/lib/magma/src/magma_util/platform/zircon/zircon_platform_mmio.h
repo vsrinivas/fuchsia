@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/ddk/mmio-buffer.h>
+#include <lib/mmio/mmio-buffer.h>
 
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"

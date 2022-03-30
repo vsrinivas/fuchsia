@@ -8,8 +8,8 @@
 #include <fuchsia/hardware/pciroot/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
-#include <lib/ddk/mmio-buffer.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/mmio/mmio.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zx/time.h>
 #include <zircon/hw/pci.h>

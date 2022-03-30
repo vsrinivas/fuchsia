@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <lib/ddk/debug.h>
-#include <lib/ddk/mmio-buffer.h>
 #include <lib/ddk/hw/reg.h>
+#include <lib/mmio/mmio-buffer.h>
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>

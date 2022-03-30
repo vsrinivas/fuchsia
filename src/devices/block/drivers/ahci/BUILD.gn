@@ -53,6 +53,7 @@ test("ahci-unittest-bin") {
   deps = [
     ":shared",
     "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
+    "//src/devices/lib/mmio",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/no_ddk",
     "//src/lib/ddk",

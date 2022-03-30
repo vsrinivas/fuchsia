@@ -33,9 +33,8 @@
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/commands.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
 }
-
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/align.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/irq.h"

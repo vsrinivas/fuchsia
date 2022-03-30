@@ -5,9 +5,7 @@
 #ifndef SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_LEGACY_AML_CPUFREQ_H_
 #define SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_LEGACY_AML_CPUFREQ_H_
 
-#include <fbl/macros.h>
 #include <fuchsia/hardware/clock/cpp/banjo.h>
-#include <lib/ddk/mmio-buffer.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
@@ -15,6 +13,7 @@
 
 #include <optional>
 
+#include <fbl/macros.h>
 #include <hwreg/mmio.h>
 #include <soc/aml-common/aml-thermal.h>
 #include <soc/aml-s905d2/s905d2-hiu.h>

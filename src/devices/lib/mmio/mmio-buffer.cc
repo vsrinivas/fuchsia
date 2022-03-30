@@ -2,15 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/ddk/driver.h>
-#include <lib/ddk/mmio-buffer.h>
+#include <lib/mmio/mmio-buffer.h>
 #include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
-#include "macros.h"
+#define MMIO_ROUNDUP(a, b)      \
+  ({                            \
+    const __typeof(a) _a = (a); \
+    const __typeof(b) _b = (b); \
+    ((_a + _b - 1) / _b * _b);  \
+  })
+#define MMIO_ROUNDDOWN(a, b)    \
+  ({                            \
+    const __typeof(a) _a = (a); \
+    const __typeof(b) _b = (b); \
+    _a - (_a % _b);             \
+  })
 
 zx_status_t mmio_buffer_init(mmio_buffer_t* buffer, zx_off_t offset, size_t size, zx_handle_t vmo,
                              uint32_t cache_policy) {
@@ -45,9 +55,9 @@ zx_status_t mmio_buffer_init(mmio_buffer_t* buffer, zx_off_t offset, size_t size
   }
 
   uintptr_t vaddr;
-  const size_t vmo_offset = DDK_ROUNDDOWN(offset, zx_system_get_page_size());
+  const size_t vmo_offset = MMIO_ROUNDDOWN(offset, zx_system_get_page_size());
   const size_t page_offset = offset - vmo_offset;
-  const size_t vmo_size = DDK_ROUNDUP(size + page_offset, zx_system_get_page_size());
+  const size_t vmo_size = MMIO_ROUNDUP(size + page_offset, zx_system_get_page_size());
 
   status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE, 0,
                        vmo, vmo_offset, vmo_size, &vaddr);
@@ -88,9 +98,9 @@ zx_status_t mmio_buffer_pin(mmio_buffer_t* buffer, zx_handle_t bti, mmio_pinned_
   zx_paddr_t paddr;
   zx_handle_t pmt;
   const uint32_t options = ZX_BTI_PERM_WRITE | ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS;
-  const size_t vmo_offset = DDK_ROUNDDOWN(buffer->offset, zx_system_get_page_size());
+  const size_t vmo_offset = MMIO_ROUNDDOWN(buffer->offset, zx_system_get_page_size());
   const size_t page_offset = buffer->offset - vmo_offset;
-  const size_t vmo_size = DDK_ROUNDUP(buffer->size + page_offset, zx_system_get_page_size());
+  const size_t vmo_size = MMIO_ROUNDUP(buffer->size + page_offset, zx_system_get_page_size());
 
   zx_status_t status = zx_bti_pin(bti, options, buffer->vmo, vmo_offset, vmo_size, &paddr, 1, &pmt);
   if (status != ZX_OK) {

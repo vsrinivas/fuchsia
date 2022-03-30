@@ -25,6 +25,7 @@ source_set("pcie") {
   ]
   public_deps = [
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
+    "//src/devices/lib/mmio",
     "//zircon/system/public",
   ]
   friend =

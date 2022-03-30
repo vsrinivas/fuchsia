@@ -22,7 +22,7 @@
 #include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <fuchsia/hardware/wlan/softmac/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
-#include <lib/ddk/mmio-buffer.h>
+#include <lib/mmio/mmio-buffer.h>
 
 #include "ce.h"
 #include "hw.h"

@@ -6,8 +6,8 @@
 #define SRC_DEVICES_LIB_MMIO_INCLUDE_LIB_MMIO_MMIO_VIEW_H_
 
 #include <lib/mmio-ptr/mmio-ptr.h>
-#include <lib/mmio/mmio-internal.h>
 #include <lib/mmio/mmio-buffer.h>
+#include <lib/mmio/mmio-internal.h>
 #include <zircon/assert.h>
 
 namespace fdf {

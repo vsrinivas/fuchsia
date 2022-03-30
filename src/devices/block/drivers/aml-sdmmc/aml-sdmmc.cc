@@ -13,13 +13,13 @@
 #include <lib/ddk/hw/reg.h>
 #include <lib/ddk/io-buffer.h>
 #include <lib/ddk/metadata.h>
-#include <lib/ddk/mmio-buffer.h>
 #include <lib/ddk/phys-iter.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fit/defer.h>
 #include <lib/fzl/pinned-vmo.h>
+#include <lib/mmio/mmio.h>
 #include <lib/sdmmc/hw.h>
 #include <lib/sync/completion.h>
 #include <stdint.h>

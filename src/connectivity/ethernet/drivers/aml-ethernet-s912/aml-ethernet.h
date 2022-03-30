@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/macros.h>
 #include <fuchsia/hardware/ethernet/board/cpp/banjo.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <lib/ddk/device.h>
@@ -14,6 +13,7 @@
 #include <optional>
 
 #include <ddktl/device.h>
+#include <fbl/macros.h>
 
 namespace eth {
 

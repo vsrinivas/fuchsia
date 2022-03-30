@@ -4,6 +4,7 @@
 
 #include "dwc2.h"
 
+#include <lib/ddk/hw/arch_ops.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/sync/completion.h>

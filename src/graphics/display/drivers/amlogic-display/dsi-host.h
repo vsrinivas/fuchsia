@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_DSI_HOST_H_
-#define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_DSI_HOST_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_DSI_HOST_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_DSI_HOST_H_
 
 #include <fuchsia/hardware/dsiimpl/cpp/banjo.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
@@ -18,10 +18,10 @@
 #include <ddktl/device.h>
 #include <hwreg/mmio.h>
 
-#include "mipi-phy.h"
 #include "common.h"
 #include "hhi-regs.h"
 #include "lcd.h"
+#include "mipi-phy.h"
 #include "vpu-regs.h"
 
 namespace amlogic_display {
@@ -78,4 +78,4 @@ class DsiHost {
 
 }  // namespace amlogic_display
 
-#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_DSI_HOST_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_DSI_HOST_H_

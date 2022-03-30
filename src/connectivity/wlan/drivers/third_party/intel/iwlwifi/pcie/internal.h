@@ -37,7 +37,7 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_INTERNAL_H_
 
 #include <fuchsia/hardware/pci/c/banjo.h>
-#include <lib/ddk/mmio-buffer.h>
+#include <lib/mmio/mmio-buffer.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
 #include <zircon/listnode.h>
@@ -54,6 +54,9 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/irq.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
+#include "zircon/compiler.h"
+
+__BEGIN_CDECLS
 
 /* We need 2 entries for the TX command and header, and another one might
  * be needed for potential data in the SKB's head. The remaining ones can
@@ -681,17 +684,17 @@ void iwl_pcie_gen2_update_byte_tbl(struct iwl_trans_pcie* trans_pcie, struct iwl
                                    uint16_t byte_cnt, int num_tbs);
 
 static inline uint16_t iwl_pcie_tfd_tb_get_len(struct iwl_trans* trans, void* _tfd, uint8_t idx) {
-    if (trans->cfg->use_tfh) {
-      struct iwl_tfh_tfd* tfd = (struct iwl_tfh_tfd*)_tfd;
-      struct iwl_tfh_tb* tb = &tfd->tbs[idx];
+  if (trans->cfg->use_tfh) {
+    struct iwl_tfh_tfd* tfd = (struct iwl_tfh_tfd*)_tfd;
+    struct iwl_tfh_tb* tb = &tfd->tbs[idx];
 
-      return le16_to_cpu(tb->tb_len);
-    } else {
-      struct iwl_tfd* tfd = (struct iwl_tfd*)_tfd;
-      struct iwl_tfd_tb* tb = &tfd->tbs[idx];
+    return le16_to_cpu(tb->tb_len);
+  } else {
+    struct iwl_tfd* tfd = (struct iwl_tfd*)_tfd;
+    struct iwl_tfd_tb* tb = &tfd->tbs[idx];
 
-      return le16_to_cpu(tb->hi_n_len) >> 4;
-    }
+    return le16_to_cpu(tb->hi_n_len) >> 4;
+  }
 }
 
 /*****************************************************
@@ -1030,5 +1033,7 @@ void iwl_pcie_gen2_txq_unmap(struct iwl_trans* trans, int txq_id);
 void iwl_pcie_gen2_tx_free(struct iwl_trans* trans);
 void iwl_pcie_gen2_tx_stop(struct iwl_trans* trans);
 #endif  // NEEDS_PORTING
+
+__END_CDECLS
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_INTERNAL_H_

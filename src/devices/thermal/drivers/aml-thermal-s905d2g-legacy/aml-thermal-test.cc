@@ -6,7 +6,6 @@
 
 #include <fuchsia/hardware/pwm/cpp/banjo-mock.h>
 #include <lib/ddk/device.h>
-#include <lib/ddk/mmio-buffer.h>
 #include <lib/mmio/mmio.h>
 #include <stdint.h>
 #include <zircon/assert.h>

@@ -6,8 +6,8 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
-#include <lib/ddk/mmio-buffer.h>
 #include <lib/device-protocol/pci.h>
+#include <lib/mmio/mmio-buffer.h>
 #include <zircon/errors.h>
 #include <zircon/pixelformat.h>
 #include <zircon/process.h>

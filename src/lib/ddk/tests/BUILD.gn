@@ -11,21 +11,12 @@ group("tests") {
 }
 
 test("ddk-unittest") {
-  output_name = "ddk-unittest-test"
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
   sources = [
     "binding-test.cc",
-    "mmio-buffer-test.cc",
     "phys-iter-test.cc",
   ]
   deps = [
     "//sdk/lib/fdio",
-    "//src/devices/lib/mmio",
     "//src/lib/ddk",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
