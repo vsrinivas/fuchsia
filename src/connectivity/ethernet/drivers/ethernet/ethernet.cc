@@ -589,6 +589,9 @@ void EthDev::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& complet
   if (edev0_->info_.features & ETHERNET_FEATURE_SYNTH) {
     info.features |= fuchsia_hardware_ethernet::wire::Features::kSynthetic;
   }
+  if (edev0_->info_.features & ETHERNET_FEATURE_WLAN_AP) {
+    info.features |= fuchsia_hardware_ethernet::wire::Features::kWlanAp;
+  }
   info.mtu = edev0_->info_.mtu;
 
   completer.Reply(info);

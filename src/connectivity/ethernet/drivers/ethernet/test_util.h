@@ -32,6 +32,7 @@ class FakeEthernetImplProtocol
   zx_status_t EthernetImplQuery(uint32_t options, ethernet_info_t* info) {
     info->netbuf_size = sizeof(ethernet_netbuf_t);
     info->mtu = 1500;
+    info->features = features_;
     memcpy(info->mac, mac_, sizeof(info->mac));
     return ZX_OK;
   }
@@ -89,6 +90,8 @@ class FakeEthernetImplProtocol
     return true;
   }
 
+  void SetFeatures(uint32_t features) { features_ = features; }
+
   bool TestQueueTx() const { return queue_tx_called_; }
 
   bool TestRecv() {
@@ -113,11 +116,16 @@ class FakeEthernetImplProtocol
   int32_t promiscuous_ = -1;
   bool queue_tx_called_ = false;
   fit::function<void()> set_param_callback_;
+  uint32_t features_ = 0;
 };
 
 class EthernetTester : public fake_ddk::Bind {
  public:
   EthernetTester() : fake_ddk::Bind() { SetProtocol(ZX_PROTOCOL_ETHERNET_IMPL, ethernet_.proto()); }
+  explicit EthernetTester(FakeEthernetImplProtocol ethernet)
+      : fake_ddk::Bind(), ethernet_(std::move(ethernet)) {
+    SetProtocol(ZX_PROTOCOL_ETHERNET_IMPL, ethernet_.proto());
+  }
 
   fake_ddk::Bind& ddk() { return *this; }
   FakeEthernetImplProtocol& ethmac() { return ethernet_; }

@@ -45,14 +45,11 @@ class EthDev0ForTest : public eth::EthDev0 {
 
 class EthernetDeviceTest {
  public:
-  EthernetDeviceTest() : tester() {
-    edev0 = std::make_unique<EthDev0ForTest>(fake_ddk::kFakeParent);
-    ASSERT_OK(edev0->AddDevice());
-
-    edev = fbl::MakeRefCounted<eth::EthDev>(fake_ddk::kFakeParent, edev0.get());
-    zx_device_t* out;
-    ASSERT_OK(edev->AddDevice(&out));
+  explicit EthernetDeviceTest(FakeEthernetImplProtocol ethernet) : tester(std::move(ethernet)) {
+    Initialize();
   }
+
+  EthernetDeviceTest() { Initialize(); }
 
   ~EthernetDeviceTest() { edev0->DestroyAllEthDev(); }
 
@@ -95,6 +92,15 @@ class EthernetDeviceTest {
   fbl::RefPtr<eth::EthDev> edev;
 
  private:
+  void Initialize() {
+    edev0 = std::make_unique<EthDev0ForTest>(fake_ddk::kFakeParent);
+    ASSERT_OK(edev0->AddDevice());
+
+    edev = fbl::MakeRefCounted<eth::EthDev>(fake_ddk::kFakeParent, edev0.get());
+    zx_device_t* out;
+    ASSERT_OK(edev->AddDevice(&out));
+  }
+
   zx::fifo tx_fifo_;
   zx::fifo rx_fifo_;
   uint32_t rx_fifo_depth_;
@@ -394,5 +400,49 @@ TEST(EthernetTest, ReentrantParamTest) {
   ASSERT_TRUE(set_param_called);
   test.tester.ethmac().SetOnSetParamCallback(nullptr);
 }
+
+class EthernetGetFeaturesTest
+    : public zxtest::TestWithParam<std::pair<uint32_t, fuchsia_hardware_ethernet::wire::Features>> {
+};
+
+TEST_P(EthernetGetFeaturesTest, BanjoToFIDLTest) {
+  const auto [banjo_features, fidl_features] = GetParam();
+
+  FakeEthernetImplProtocol ethernet_impl;
+  ethernet_impl.SetFeatures(banjo_features);
+
+  EthernetDeviceTest test(std::move(ethernet_impl));
+  test.tester.ethmac().SetFeatures(banjo_features);
+  auto result = test.FidlClient()->GetInfo();
+  ASSERT_OK(result.status());
+  EXPECT_EQ(result->info.features, fidl_features);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    EthernetTests, EthernetGetFeaturesTest,
+    zxtest::Values(
+        std::make_tuple(0u, fuchsia_hardware_ethernet::wire::Features()),
+        std::make_tuple(ETHERNET_FEATURE_WLAN, fuchsia_hardware_ethernet::wire::Features::kWlan),
+        std::make_tuple(ETHERNET_FEATURE_SYNTH,
+                        fuchsia_hardware_ethernet::wire::Features::kSynthetic),
+        std::make_tuple(ETHERNET_FEATURE_WLAN | ETHERNET_FEATURE_SYNTH,
+                        fuchsia_hardware_ethernet::wire::Features::kWlan |
+                            fuchsia_hardware_ethernet::wire::Features::kSynthetic),
+        std::make_tuple(ETHERNET_FEATURE_WLAN_AP,
+                        fuchsia_hardware_ethernet::wire::Features::kWlanAp),
+        std::make_tuple(ETHERNET_FEATURE_WLAN | ETHERNET_FEATURE_WLAN_AP,
+                        fuchsia_hardware_ethernet::wire::Features::kWlan |
+                            fuchsia_hardware_ethernet::wire::Features::kWlanAp),
+        std::make_tuple(ETHERNET_FEATURE_SYNTH | ETHERNET_FEATURE_WLAN_AP,
+                        fuchsia_hardware_ethernet::wire::Features::kSynthetic |
+                            fuchsia_hardware_ethernet::wire::Features::kWlanAp),
+        std::make_tuple(ETHERNET_FEATURE_WLAN | ETHERNET_FEATURE_SYNTH | ETHERNET_FEATURE_WLAN_AP,
+                        fuchsia_hardware_ethernet::wire::Features::kWlan |
+                            fuchsia_hardware_ethernet::wire::Features::kSynthetic |
+                            fuchsia_hardware_ethernet::wire::Features::kWlanAp),
+        std::make_tuple(std::numeric_limits<uint32_t>::max(),
+                        fuchsia_hardware_ethernet::wire::Features::kWlan |
+                            fuchsia_hardware_ethernet::wire::Features::kSynthetic |
+                            fuchsia_hardware_ethernet::wire::Features::kWlanAp)));
 
 }  // namespace ethernet_testing
