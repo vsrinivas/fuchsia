@@ -296,7 +296,7 @@ TEST_F(DwarfExprEvalTest, AddrxAndConstx) {
 
   // The value of the .debug_addr entry referenced by the variable.
   constexpr uint64_t kAddr = 0x12345678;
-  module_symbols->AddDebugAddrEntry(kAddrBase + kOffset, kAddr);
+  module_symbols->AddDebugAddrEntry(kAddrBase, kOffset, kAddr);
 
   // The variable our expression will be associated with. This variable doesn't have to actually
   // have a type or the location expression we're using, it just needs to reference the compilation
@@ -313,7 +313,8 @@ TEST_F(DwarfExprEvalTest, AddrxAndConstx) {
   // The "addrx" expression should read the kAddr value from the .debug_addr table at the location
   // we set up, and then relocate it relative to the module's base address.
   DoEvalTest(addrx_expr, true, DwarfExprEval::Completion::kSync, kModuleBase + kAddr,
-             DwarfExprEval::ResultType::kPointer, "DW_OP_addrx(8, with addr_base=12)");
+             DwarfExprEval::ResultType::kPointer,
+             "DW_OP_addrx(8, with addr_base=0xc) -> rel=0x12345678, abs=0x8a345678");
 
   // Same test with "constx". This is the same except the resulting address is not relocated from
   // the module base.
@@ -322,12 +323,14 @@ TEST_F(DwarfExprEvalTest, AddrxAndConstx) {
   // reading of the spec.
   DwarfExpr constx_expr({llvm::dwarf::DW_OP_constx, kOffset}, UncachedLazySymbol::MakeUnsafe(var));
   DoEvalTest(constx_expr, true, DwarfExprEval::Completion::kSync, kAddr,
-             DwarfExprEval::ResultType::kValue, "DW_OP_constx(8, with addr_base=12)");
+             DwarfExprEval::ResultType::kValue,
+             "DW_OP_constx(8, with addr_base=0xc) -> 0x12345678");
 
   // Same test with an invalid address offset.
   DwarfExpr invalid_expr({llvm::dwarf::DW_OP_constx, 16}, UncachedLazySymbol::MakeUnsafe(var));
   DoEvalTest(invalid_expr, false, DwarfExprEval::Completion::kSync, 0,
-             DwarfExprEval::ResultType::kPointer, "DW_OP_constx(16, with addr_base=12)");
+             DwarfExprEval::ResultType::kPointer,
+             "ERROR: \"Unable to read .debug_addr section to evaluate expression.\"");
 }
 
 TEST_F(DwarfExprEvalTest, Breg) {

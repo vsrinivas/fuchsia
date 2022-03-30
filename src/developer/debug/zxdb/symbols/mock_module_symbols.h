@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_MOCK_MODULE_SYMBOLS_H_
 
 #include <map>
+#include <utility>
 
 #include "src/developer/debug/zxdb/symbols/index.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols.h"
@@ -45,7 +46,7 @@ class MockModuleSymbols : public ModuleSymbols {
   void AddFileName(const std::string& file_name);
 
   // Adds a canned result for the query for the given offset in .debug_addr.
-  void AddDebugAddrEntry(uint64_t offset, uint64_t value);
+  void AddDebugAddrEntry(uint64_t addr_base, uint64_t index, uint64_t value);
 
   // Provides writable access to the index for tests to insert data. To hook up symbols, add them to
   // the index and call AddSymbolRef() with the same SymbolRef and the symbol you want it to resolve
@@ -73,7 +74,7 @@ class MockModuleSymbols : public ModuleSymbols {
   const Index& GetIndex() const override;
   LazySymbol IndexSymbolRefToSymbol(const IndexNode::SymbolRef&) const override;
   bool HasBinary() const override;
-  std::optional<uint64_t> GetDebugAddrEntry(uint64_t offset) const override;
+  std::optional<uint64_t> GetDebugAddrEntry(uint64_t addr_base, uint64_t index) const override;
 
  protected:
   // This class is derived from so these are protected.
@@ -103,7 +104,8 @@ class MockModuleSymbols : public ModuleSymbols {
 
   std::vector<std::string> files_;
 
-  std::map<uint64_t, uint64_t> debug_addr_entries_;
+  // The key is the (addr_base, index) associated with GetDebugAddrEntry().
+  std::map<std::pair<uint64_t, uint64_t>, uint64_t> debug_addr_entries_;
 };
 
 }  // namespace zxdb

@@ -40,8 +40,8 @@ void MockModuleSymbols::AddSymbolRef(const IndexNode::SymbolRef& die, fxl::RefPt
 
 void MockModuleSymbols::AddFileName(const std::string& file_name) { files_.push_back(file_name); }
 
-void MockModuleSymbols::AddDebugAddrEntry(uint64_t offset, uint64_t value) {
-  debug_addr_entries_[offset] = value;
+void MockModuleSymbols::AddDebugAddrEntry(uint64_t addr_base, uint64_t index, uint64_t value) {
+  debug_addr_entries_[std::make_pair(addr_base, index)] = value;
 }
 
 ModuleSymbolStatus MockModuleSymbols::GetStatus() const {
@@ -133,8 +133,10 @@ LazySymbol MockModuleSymbols::IndexSymbolRefToSymbol(const IndexNode::SymbolRef&
 
 bool MockModuleSymbols::HasBinary() const { return false; }
 
-std::optional<uint64_t> MockModuleSymbols::GetDebugAddrEntry(uint64_t offset) const {
-  if (auto found = debug_addr_entries_.find(offset); found != debug_addr_entries_.end())
+std::optional<uint64_t> MockModuleSymbols::GetDebugAddrEntry(uint64_t addr_base,
+                                                             uint64_t index) const {
+  if (auto found = debug_addr_entries_.find(std::make_pair(addr_base, index));
+      found != debug_addr_entries_.end())
     return found->second;
   return std::nullopt;
 }

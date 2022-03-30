@@ -161,9 +161,18 @@ fxl::RefPtr<DwarfUnit> DwarfBinaryImpl::FromLLVMUnit(llvm::DWARFUnit* llvm_unit)
   return found->second;
 }
 
-std::optional<uint64_t> DwarfBinaryImpl::GetDebugAddrEntry(uint64_t offset) const {
+std::optional<uint64_t> DwarfBinaryImpl::GetDebugAddrEntry(uint64_t addr_base,
+                                                           uint64_t index) const {
   const llvm::DWARFObject& object = context_->getDWARFObj();
   llvm::StringRef string_ref = object.getAddrSection().Data;
+
+  // From the DWARF 5 spec: "The DW_AT_addr_base attribute points to the first entry following the
+  // header. The entries are indexed sequentially from this base entry, starting from 0. So the
+  // addr_base is a byte offset, but the index is an index into the address table from there.
+  //
+  // Here we assume the addresses are always 64 bits. The address table header that precedes the
+  // array has this size as a field which we need to consult if we support non-64 bit platforms.
+  uint64_t offset = addr_base + (index * kTargetPointerSize);
 
   if (offset > std::numeric_limits<uint64_t>::max() - kTargetPointerSize ||
       string_ref.size() < offset + kTargetPointerSize)

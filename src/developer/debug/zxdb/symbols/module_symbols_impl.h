@@ -64,7 +64,7 @@ class ModuleSymbolsImpl final : public ModuleSymbols {
   const Index& GetIndex() const override;
   LazySymbol IndexSymbolRefToSymbol(const IndexNode::SymbolRef&) const override;
   bool HasBinary() const override;
-  std::optional<uint64_t> GetDebugAddrEntry(uint64_t offset) const override;
+  std::optional<uint64_t> GetDebugAddrEntry(uint64_t addr_base, uint64_t index) const override;
 
  private:
   FRIEND_MAKE_REF_COUNTED(ModuleSymbolsImpl);
