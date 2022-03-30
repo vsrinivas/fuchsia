@@ -9,6 +9,7 @@ use std::ffi::CStr;
 use std::sync::Arc;
 
 use crate::device::{DeviceMode, DeviceRegistry};
+use crate::fs::socket::SocketAddress;
 use crate::fs::{FileOps, FileSystemHandle, FsNode};
 use crate::task::*;
 use crate::types::{DeviceType, Errno, OpenFlags};
@@ -28,7 +29,7 @@ pub struct Kernel {
     /// Rather than use this default namespace, abstract socket addresses
     /// should be looked up in the AbstractSocketNamespace on each Task
     /// object because some Task objects might have a non-default namespace.
-    pub default_abstract_socket_namespace: Arc<AbstractSocketNamespace>,
+    pub default_abstract_socket_namespace: Arc<AbstractUnixSocketNamespace>,
 
     /// The kernel command line. Shows up in /proc/cmdline.
     pub cmdline: Vec<u8>,
@@ -62,13 +63,14 @@ pub struct Kernel {
 
 impl Kernel {
     pub fn new(name: &CStr) -> Result<Kernel, zx::Status> {
+        let unix_address_maker = Box::new(|x: Vec<u8>| -> SocketAddress { SocketAddress::Unix(x) });
         let job = fuchsia_runtime::job_default().create_child_job()?;
         job.set_name(&name)?;
 
         Ok(Kernel {
             job,
             pids: RwLock::new(PidTable::new()),
-            default_abstract_socket_namespace: AbstractSocketNamespace::new(),
+            default_abstract_socket_namespace: AbstractUnixSocketNamespace::new(unix_address_maker),
             cmdline: Vec::new(),
             anon_fs: OnceCell::new(),
             pipe_fs: OnceCell::new(),

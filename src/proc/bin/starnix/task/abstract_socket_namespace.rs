@@ -17,20 +17,28 @@ use crate::types::*;
 /// holds the bindings to abstract addresses.
 ///
 /// See "abstract" in https://man7.org/linux/man-pages/man7/unix.7.html
-pub struct AbstractSocketNamespace {
-    table: Mutex<HashMap<Vec<u8>, Weak<Socket>>>,
+pub struct AbstractSocketNamespace<K> {
+    table: Mutex<HashMap<K, Weak<Socket>>>,
+    address_maker: Box<dyn Fn(K) -> SocketAddress + Send + Sync>,
 }
 
-impl AbstractSocketNamespace {
-    pub fn new() -> Arc<AbstractSocketNamespace> {
-        Arc::new(AbstractSocketNamespace { table: Mutex::new(HashMap::new()) })
+pub type AbstractUnixSocketNamespace = AbstractSocketNamespace<Vec<u8>>;
+
+impl<K> AbstractSocketNamespace<K>
+where
+    K: std::cmp::Eq + std::hash::Hash + Clone,
+{
+    pub fn new(
+        address_maker: Box<dyn Fn(K) -> SocketAddress + Send + Sync>,
+    ) -> Arc<AbstractSocketNamespace<K>> {
+        Arc::new(AbstractSocketNamespace::<K> { table: Mutex::new(HashMap::new()), address_maker })
     }
 
-    pub fn bind(&self, address: Vec<u8>, socket: &SocketHandle) -> Result<(), Errno> {
+    pub fn bind(&self, address: K, socket: &SocketHandle) -> Result<(), Errno> {
         let mut table = self.table.lock();
         match table.entry(address.clone()) {
             Entry::Vacant(entry) => {
-                socket.bind(SocketAddress::Unix(address))?;
+                socket.bind((self.address_maker)(address))?;
                 entry.insert(Arc::downgrade(socket));
             }
             Entry::Occupied(mut entry) => {
@@ -38,14 +46,14 @@ impl AbstractSocketNamespace {
                 if occupant.is_some() {
                     return error!(EADDRINUSE);
                 }
-                socket.bind(SocketAddress::Unix(address))?;
+                socket.bind((self.address_maker)(address))?;
                 entry.insert(Arc::downgrade(socket));
             }
         }
         Ok(())
     }
 
-    pub fn lookup(&self, address: &[u8]) -> Result<SocketHandle, Errno> {
+    pub fn lookup(&self, address: &K) -> Result<SocketHandle, Errno> {
         let table = self.table.lock();
         table.get(address).and_then(|weak| weak.upgrade()).ok_or_else(|| errno!(ECONNREFUSED))
     }

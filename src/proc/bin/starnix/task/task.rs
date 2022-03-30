@@ -99,7 +99,7 @@ pub struct Task {
     pub creds: RwLock<Credentials>,
 
     /// The namespace for abstract AF_UNIX sockets for this task.
-    pub abstract_socket_namespace: Arc<AbstractSocketNamespace>,
+    pub abstract_socket_namespace: Arc<AbstractUnixSocketNamespace>,
 
     // See https://man7.org/linux/man-pages/man2/set_tid_address.2.html
     pub clear_child_tid: Mutex<UserRef<pid_t>>,
@@ -171,7 +171,7 @@ impl Task {
         mm: Arc<MemoryManager>,
         fs: Arc<FsContext>,
         creds: Credentials,
-        abstract_socket_namespace: Arc<AbstractSocketNamespace>,
+        abstract_socket_namespace: Arc<AbstractUnixSocketNamespace>,
         exit_signal: Option<Signal>,
     ) -> CurrentTask {
         CurrentTask::new(Task {
