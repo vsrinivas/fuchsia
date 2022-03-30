@@ -47,7 +47,8 @@ corner.
 OS" and confirm the newly installed version.
 
 ## Put your device into developer mode
-***WARNING: This will erase any state stored locally on your Chromebook***
+
+Caution: This will erase any state stored locally on your Chromebook.
 
 1. Power off the Chromebook.
 2. Go into Recovery Mode.
@@ -100,7 +101,7 @@ that warns that the OS will not be verified. Ctrl+D will cause the device to
 skip the timeout and boot from its default source. Ctrl+U will skip the timeout
 and boot the device from USB.
 
-## Configuring boot source from Fuchsia
+### Configuring boot source from Fuchsia
 
 Fuchsia has an equivalent to `crossystem` called `cros_nvtool`.
 You can run `cros_nvtool set dev_boot_default <usb|disk>` to modify the default boot source of
