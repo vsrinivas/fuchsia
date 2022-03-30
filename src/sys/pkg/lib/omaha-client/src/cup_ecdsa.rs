@@ -131,27 +131,27 @@ pub trait Cupv2Verifier {
 }
 
 // Default Cupv2Handler.
-pub struct StandardCupv2Handler {
+pub struct StandardCupv2Handler<'a> {
     /// Device-wide map from public key ID# to public key. Should be ingested at
     /// startup. This map should never be empty.
-    parameters_by_id: HashMap<PublicKeyId, PublicKey>,
+    parameters_by_id: HashMap<PublicKeyId, &'a PublicKey>,
     latest_public_key_id: PublicKeyId,
 }
 
-impl StandardCupv2Handler {
+impl<'a> StandardCupv2Handler<'a> {
     /// Constructor for the standard CUPv2 handler.
-    pub fn new(public_keys: PublicKeys) -> Self {
+    pub fn new(public_keys: &'a PublicKeys) -> Self {
         Self {
             parameters_by_id: std::iter::once(&public_keys.latest)
                 .chain(&public_keys.historical)
-                .map(|k| (k.id, k.key))
+                .map(|k| (k.id, &k.key))
                 .collect(),
             latest_public_key_id: public_keys.latest.id,
         }
     }
 }
 
-impl Cupv2RequestHandler for StandardCupv2Handler {
+impl<'a> Cupv2RequestHandler for StandardCupv2Handler<'a> {
     fn decorate_request(
         &self,
         request: &mut impl CupRequest,
@@ -231,7 +231,7 @@ impl Cupv2RequestHandler for StandardCupv2Handler {
     }
 }
 
-impl Cupv2Verifier for StandardCupv2Handler {
+impl<'a> Cupv2Verifier for StandardCupv2Handler<'a> {
     fn verify_response_with_signature(
         &self,
         ecdsa_signature: DerSignature,
@@ -260,18 +260,6 @@ mod tests {
     use signature::rand_core::OsRng;
     use std::convert::TryInto;
 
-    impl CupRequest for Intermediate {
-        fn get_uri(&self) -> &str {
-            &self.uri
-        }
-        fn set_uri(&mut self, uri: String) {
-            self.uri = uri;
-        }
-        fn get_serialized_body(&self) -> serde_json::Result<Vec<u8>> {
-            self.serialize_body()
-        }
-    }
-
     // For testing only, it is useful to compute equality for CupVerificationError enums.
     impl PartialEq for CupVerificationError {
         fn eq(&self, other: &Self) -> bool {
@@ -287,14 +275,11 @@ mod tests {
         }
     }
 
-    fn make_standard_cup_handler_for_test(
-        public_key_id: PublicKeyId,
-        public_key: PublicKey,
-    ) -> StandardCupv2Handler {
-        StandardCupv2Handler::new(PublicKeys {
+    fn make_public_keys_for_test(public_key_id: PublicKeyId, public_key: PublicKey) -> PublicKeys {
+        PublicKeys {
             latest: PublicKeyAndId { id: public_key_id, key: public_key },
             historical: vec![],
-        })
+        }
     }
 
     fn make_expected_signature_for_test(
@@ -330,7 +315,8 @@ mod tests {
     fn test_standard_cup_handler_decorate() -> Result<(), anyhow::Error> {
         let (_, public_key) = make_keys_for_test();
         let public_key_id: PublicKeyId = 42.try_into()?;
-        let cup_handler = make_standard_cup_handler_for_test(public_key_id, public_key);
+        let public_keys = make_public_keys_for_test(public_key_id, public_key);
+        let cup_handler = StandardCupv2Handler::new(&public_keys);
 
         let mut intermediate = make_standard_intermediate_for_test(Request::default());
 
@@ -356,7 +342,8 @@ mod tests {
     fn test_verify_response_missing_etag_header() -> Result<(), anyhow::Error> {
         let (_, public_key) = make_keys_for_test();
         let public_key_id: PublicKeyId = 12345.try_into()?;
-        let cup_handler = make_standard_cup_handler_for_test(public_key_id, public_key);
+        let public_keys = make_public_keys_for_test(public_key_id, public_key);
+        let cup_handler = StandardCupv2Handler::new(&public_keys);
 
         let mut intermediate = make_standard_intermediate_for_test(Request::default());
         let request_metadata = cup_handler.decorate_request(&mut intermediate)?;
@@ -376,7 +363,8 @@ mod tests {
     fn test_verify_response_malformed_etag_header() -> Result<(), anyhow::Error> {
         let (_, public_key) = make_keys_for_test();
         let public_key_id: PublicKeyId = 12345.try_into()?;
-        let cup_handler = make_standard_cup_handler_for_test(public_key_id, public_key);
+        let public_keys = make_public_keys_for_test(public_key_id, public_key);
+        let cup_handler = StandardCupv2Handler::new(&public_keys);
 
         let mut intermediate = make_standard_intermediate_for_test(Request::default());
         let request_metadata = cup_handler.decorate_request(&mut intermediate)?;
@@ -400,7 +388,8 @@ mod tests {
         let correct_public_key_id: PublicKeyId = 24682468.try_into()?;
         let wrong_public_key_id: PublicKeyId = 12341234.try_into()?;
 
-        let cup_handler = make_standard_cup_handler_for_test(correct_public_key_id, public_key);
+        let public_keys = make_public_keys_for_test(correct_public_key_id, public_key);
+        let cup_handler = StandardCupv2Handler::new(&public_keys);
         let mut intermediate = make_standard_intermediate_for_test(Request::default());
         let request_metadata = cup_handler.decorate_request(&mut intermediate)?;
         let expected_request_metadata = RequestMetadata {
@@ -517,10 +506,11 @@ mod tests {
         let public_key_id_a: PublicKeyId = 24682468.try_into()?;
         let response_body_a = "foo";
 
-        let mut cup_handler = StandardCupv2Handler::new(PublicKeys {
+        let public_keys = PublicKeys {
             latest: PublicKeyAndId { id: public_key_id_a, key: public_key_a },
             historical: vec![],
-        });
+        };
+        let mut cup_handler = StandardCupv2Handler::new(&public_keys);
         let (request_metadata_hash_a, response_a) = make_verify_response_arguments(
             &cup_handler,
             public_key_id_a,
@@ -538,10 +528,11 @@ mod tests {
         let response_body_b = "bar";
 
         // and redefine the cuphandler with new keys and knowledge of historical keys.
-        cup_handler = StandardCupv2Handler::new(PublicKeys {
+        let public_keys = PublicKeys {
             latest: PublicKeyAndId { id: public_key_id_b, key: public_key_b },
             historical: vec![PublicKeyAndId { id: public_key_id_a, key: public_key_a }],
-        });
+        };
+        cup_handler = StandardCupv2Handler::new(&public_keys);
 
         let (request_metadata_hash_b, response_b) = make_verify_response_arguments(
             &cup_handler,

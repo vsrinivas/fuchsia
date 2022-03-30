@@ -8,6 +8,7 @@ mod tests;
 use crate::{
     common::{App, UserCounting},
     configuration::Config,
+    cup_ecdsa::{CupDecorationError, CupRequest, Cupv2RequestHandler, StandardCupv2Handler},
     protocol::{
         request::{
             Event, InstallSource, Ping, Request, RequestWrapper, UpdateCheck, GUID, HEADER_APP_ID,
@@ -33,6 +34,9 @@ pub enum Error {
 
     #[error("Http error performing update check")]
     Http(#[from] http::Error),
+
+    #[error("Error decorating outgoing request with CUPv2 parameters")]
+    Cup(#[from] CupDecorationError),
 }
 
 /// The builder's own Result type.
@@ -52,6 +56,9 @@ pub struct RequestParams {
     /// If true, the request should set the "updatedisabled" property for all apps in the update
     /// check request.
     pub disable_updates: bool,
+
+    /// if true, the request will be decorated with CUPv2 query parameters. Defaults to false.
+    pub cup_sign_requests: bool,
 }
 
 /// The AppEntry holds the data for the app whose request is currently being constructed.  An app
@@ -142,6 +149,11 @@ pub struct RequestBuilder<'a> {
 
     request_id: Option<GUID>,
     session_id: Option<GUID>,
+
+    // A handler for decorating outgoing requests with CUPv2 query parameters.
+    // Only instantiated if (a) |config| contains omaha_public_keys and (b)
+    // |params| has cup_sign_requests set to True.
+    cup_handler: Option<StandardCupv2Handler<'a>>,
 }
 
 /// The RequestBuilder is a stateful builder for protocol::request::Request objects.  After being
@@ -168,6 +180,10 @@ impl<'a> RequestBuilder<'a> {
             app_entries: Vec::new(),
             request_id: None,
             session_id: None,
+            cup_handler: match (config.omaha_public_keys.as_ref(), params.cup_sign_requests) {
+                (Some(k), true) => Some(StandardCupv2Handler::new(k)),
+                _ => None,
+            },
         }
     }
 
@@ -238,13 +254,13 @@ impl<'a> RequestBuilder<'a> {
     ///
     /// Note that the builder is not consumed in the process, and can be used afterward.
     pub fn build(&self) -> Result<http::Request<hyper::Body>> {
-        let intermediate = self.build_intermediate();
+        let intermediate = self.build_intermediate()?;
         info!("Building Request: {}", intermediate);
         intermediate.into()
     }
 
     /// Helper function that constructs the request body from the builder.
-    fn build_intermediate(&self) -> Intermediate {
+    fn build_intermediate(&self) -> Result<Intermediate> {
         let mut headers = vec![
             // Set the content-type to be JSON.
             (http::header::CONTENT_TYPE.as_str(), "application/json".to_string()),
@@ -268,7 +284,7 @@ impl<'a> RequestBuilder<'a> {
 
         let apps = self.app_entries.iter().cloned().map(ProtocolApp::from).collect();
 
-        Intermediate {
+        let mut intermediate = Intermediate {
             uri: self.config.service_url.clone(),
             headers,
             body: RequestWrapper {
@@ -284,7 +300,13 @@ impl<'a> RequestBuilder<'a> {
                     apps,
                 },
             },
+        };
+        if let Some(handler) = self.cup_handler.as_ref() {
+            // TODO: Pass this metadata along and store it for validation when
+            // response is received.
+            let _request_metadata = handler.decorate_request(&mut intermediate)?;
         }
+        Ok(intermediate)
     }
 }
 
@@ -334,5 +356,17 @@ impl From<Intermediate> for Result<http::Request<hyper::Body>> {
 
         let request = builder.body(intermediate.serialize_body()?.into())?;
         Ok(request)
+    }
+}
+
+impl CupRequest for Intermediate {
+    fn get_uri(&self) -> &str {
+        &self.uri
+    }
+    fn set_uri(&mut self, uri: String) {
+        self.uri = uri;
+    }
+    fn get_serialized_body(&self) -> serde_json::Result<Vec<u8>> {
+        self.serialize_body()
     }
 }

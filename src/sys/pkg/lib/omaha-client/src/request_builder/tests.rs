@@ -13,6 +13,7 @@ use crate::{
 use futures::executor::block_on;
 use pretty_assertions::assert_eq;
 use serde_json::json;
+use url::Url;
 
 /// Test that a simple request's fields are all correct:
 ///
@@ -26,8 +27,8 @@ fn test_simple_request() {
         &config,
         &RequestParams {
             source: InstallSource::OnDemand,
-            use_configured_proxies: false,
-            disable_updates: false,
+            cup_sign_requests: true,
+            ..RequestParams::default()
         },
     )
     .add_update_check(
@@ -38,7 +39,8 @@ fn test_simple_request() {
     )
     .session_id(GUID::from_u128(1))
     .request_id(GUID::from_u128(2))
-    .build_intermediate();
+    .build_intermediate()
+    .unwrap();
 
     // Assert that all the request fields are accurate (this is in their order of declaration)
     let request = intermediate.body.request;
@@ -72,6 +74,13 @@ fn test_simple_request() {
     assert!(headers.contains(&(HEADER_UPDATER_NAME, config.updater.name)));
     assert!(headers.contains(&(HEADER_APP_ID, "app id".to_string())));
     assert!(headers.contains(&(HEADER_INTERACTIVITY, "fg".to_string())));
+
+    // Assert that the cup2key query parameter was set, since
+    // |cup_sign_requests| is true.
+    let parsed_uri = Url::parse(&intermediate.uri).unwrap();
+    let mut query_pairs = parsed_uri.query_pairs();
+    assert_eq!(query_pairs.next().unwrap().0, "cup2key");
+    assert_eq!(query_pairs.next(), None);
 }
 
 /// Test that a request sets the updatedisabled field when configured to do so.
@@ -83,8 +92,8 @@ fn test_updates_disabled_request() {
         &config,
         &RequestParams {
             source: InstallSource::OnDemand,
-            use_configured_proxies: false,
             disable_updates: true,
+            ..RequestParams::default()
         },
     )
     .add_update_check(
@@ -98,7 +107,8 @@ fn test_updates_disabled_request() {
     )
     .session_id(GUID::from_u128(1))
     .request_id(GUID::from_u128(2))
-    .build_intermediate();
+    .build_intermediate()
+    .unwrap();
 
     // Assert that all the request fields are accurate (this is in their order of declaration)
     let request = intermediate.body.request;
@@ -137,14 +147,11 @@ fn test_app_includes_extras() {
 
     let intermediate = RequestBuilder::new(
         &config,
-        &RequestParams {
-            source: InstallSource::OnDemand,
-            use_configured_proxies: false,
-            disable_updates: false,
-        },
+        &RequestParams { source: InstallSource::OnDemand, ..RequestParams::default() },
     )
     .add_update_check(&App::builder("app id", [5, 6, 7, 8]).with_extra("key", "value").build())
-    .build_intermediate();
+    .build_intermediate()
+    .unwrap();
     let request = intermediate.body.request;
 
     // Validate that the App was added, with the expected extra fields
@@ -164,11 +171,7 @@ fn test_single_request() {
 
     let (parts, body) = RequestBuilder::new(
         &config,
-        &RequestParams {
-            source: InstallSource::OnDemand,
-            use_configured_proxies: false,
-            disable_updates: false,
-        },
+        &RequestParams { source: InstallSource::OnDemand, ..RequestParams::default() },
     )
     .add_update_check(
         &App::builder("app id", [5, 6, 7, 8]).with_cohort(Cohort::new("some-channel")).build(),
@@ -231,11 +234,7 @@ fn test_simple_ping() {
 
     let intermediate = RequestBuilder::new(
         &config,
-        &RequestParams {
-            source: InstallSource::ScheduledTask,
-            use_configured_proxies: false,
-            disable_updates: false,
-        },
+        &RequestParams { source: InstallSource::ScheduledTask, ..RequestParams::default() },
     )
     .add_ping(
         &App::builder("ping app id", [6, 7, 8, 9])
@@ -243,7 +242,8 @@ fn test_simple_ping() {
             .with_user_counting(UserCounting::ClientRegulatedByDate(Some(34)))
             .build(),
     )
-    .build_intermediate();
+    .build_intermediate()
+    .unwrap();
 
     // Validate that the App was added, with it's cohort
     let app = &intermediate.body.request.apps[0];
@@ -273,11 +273,7 @@ fn test_simple_event() {
 
     let request = RequestBuilder::new(
         &config,
-        &RequestParams {
-            source: InstallSource::ScheduledTask,
-            use_configured_proxies: false,
-            disable_updates: false,
-        },
+        &RequestParams { source: InstallSource::ScheduledTask, ..RequestParams::default() },
     )
     .add_event(
         &App::builder("event app id", [6, 7, 8, 9])
@@ -291,6 +287,7 @@ fn test_simple_event() {
         },
     )
     .build_intermediate()
+    .unwrap()
     .body
     .request;
 
@@ -318,11 +315,7 @@ fn test_multiple_events() {
     // Make the call to the RequestBuilder that is being tested.
     let request = RequestBuilder::new(
         &config,
-        &RequestParams {
-            source: InstallSource::ScheduledTask,
-            use_configured_proxies: false,
-            disable_updates: false,
-        },
+        &RequestParams { source: InstallSource::ScheduledTask, ..RequestParams::default() },
     )
     .add_event(
         &app_1,
@@ -343,6 +336,7 @@ fn test_multiple_events() {
         },
     )
     .build_intermediate()
+    .unwrap()
     .body
     .request;
 
@@ -388,16 +382,13 @@ fn test_ping_added_to_first_app_update_entry() {
     // Now make the call to the RequestBuilder that is being tested.
     let request = RequestBuilder::new(
         &config,
-        &RequestParams {
-            source: InstallSource::ScheduledTask,
-            use_configured_proxies: false,
-            disable_updates: false,
-        },
+        &RequestParams { source: InstallSource::ScheduledTask, ..RequestParams::default() },
     )
     .add_update_check(&app_1)
     .add_update_check(&app_2)
     .add_ping(&app_1)
     .build_intermediate()
+    .unwrap()
     .body
     .request;
 
@@ -442,17 +433,13 @@ fn test_ping_added_to_second_app_update_entry() {
     // Now make the call to the RequestBuilder that is being tested.
     let builder = RequestBuilder::new(
         &config,
-        &RequestParams {
-            source: InstallSource::ScheduledTask,
-            use_configured_proxies: false,
-            disable_updates: false,
-        },
+        &RequestParams { source: InstallSource::ScheduledTask, ..RequestParams::default() },
     )
     .add_update_check(&app_1)
     .add_update_check(&app_2)
     .add_ping(&app_2);
 
-    let request = builder.build_intermediate().body.request;
+    let request = builder.build_intermediate().unwrap().body.request;
 
     // Validate that the resultant request is correct.
 
@@ -494,11 +481,7 @@ fn test_event_added_to_first_app_update_entry() {
     // Now make the call to the RequestBuilder that is being tested.
     let request = RequestBuilder::new(
         &config,
-        &RequestParams {
-            source: InstallSource::ScheduledTask,
-            use_configured_proxies: false,
-            disable_updates: false,
-        },
+        &RequestParams { source: InstallSource::ScheduledTask, ..RequestParams::default() },
     )
     .add_update_check(&app_1)
     .add_update_check(&app_2)
@@ -512,6 +495,7 @@ fn test_event_added_to_first_app_update_entry() {
         },
     )
     .build_intermediate()
+    .unwrap()
     .body
     .request;
 
@@ -554,11 +538,7 @@ fn test_event_added_to_second_app_update_entry() {
     // Now make the call to the RequestBuilder that is being tested.
     let builder = RequestBuilder::new(
         &config,
-        &RequestParams {
-            source: InstallSource::ScheduledTask,
-            use_configured_proxies: false,
-            disable_updates: false,
-        },
+        &RequestParams { source: InstallSource::ScheduledTask, ..RequestParams::default() },
     )
     .add_update_check(&app_1)
     .add_update_check(&app_2)
@@ -572,7 +552,7 @@ fn test_event_added_to_second_app_update_entry() {
         },
     );
 
-    let request = builder.build_intermediate().body.request;
+    let request = builder.build_intermediate().unwrap().body.request;
 
     // There should only be the two entries.
     assert_eq!(request.apps.len(), 2);

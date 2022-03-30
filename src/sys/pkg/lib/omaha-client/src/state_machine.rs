@@ -6,6 +6,7 @@ use crate::{
     app_set::{AppSet, AppSetExt as _},
     common::{App, CheckOptions, CheckTiming},
     configuration::Config,
+    cup_ecdsa::CupDecorationError,
     http_request::{self, HttpRequest},
     installer::{AppInstallResult, Installer, Plan},
     metrics::{ClockType, Metrics, MetricsReporter, UpdateCheckFailureReason},
@@ -121,6 +122,9 @@ pub enum OmahaRequestError {
     #[error("Error building update check HTTP request")]
     HttpBuilder(#[from] http::Error),
 
+    #[error("Error decorating outgoing request with CUPv2 parameters")]
+    Cup(#[from] CupDecorationError),
+
     // TODO: This still contains hyper user error which should be split out.
     #[error("HTTP transport error performing update check")]
     HttpTransport(#[from] http_request::Error),
@@ -134,6 +138,7 @@ impl From<request_builder::Error> for OmahaRequestError {
         match err {
             request_builder::Error::Json(e) => OmahaRequestError::Json(e),
             request_builder::Error::Http(e) => OmahaRequestError::HttpBuilder(e),
+            request_builder::Error::Cup(e) => OmahaRequestError::Cup(e),
         }
     }
 }
@@ -627,9 +632,9 @@ where
                             UpdateCheckFailureReason::Omaha
                         }
                         UpdateCheckError::OmahaRequest(request_error) => match request_error {
-                            OmahaRequestError::Json(_) | OmahaRequestError::HttpBuilder(_) => {
-                                UpdateCheckFailureReason::Internal
-                            }
+                            OmahaRequestError::Json(_)
+                            | OmahaRequestError::HttpBuilder(_)
+                            | OmahaRequestError::Cup(_) => UpdateCheckFailureReason::Internal,
                             OmahaRequestError::HttpTransport(_)
                             | OmahaRequestError::HttpStatus(_) => UpdateCheckFailureReason::Network,
                         },
@@ -755,6 +760,11 @@ where
                 }
                 Err(OmahaRequestError::HttpBuilder(e)) => {
                     error!("Unable to construct HTTP request! {:?}", e);
+                    Self::yield_state(State::ErrorCheckingForUpdate, co).await;
+                    break Err(UpdateCheckError::OmahaRequest(e.into()));
+                }
+                Err(OmahaRequestError::Cup(e)) => {
+                    error!("Unable to decorate HTTP request with CUPv2 parameters! {:?}", e);
                     Self::yield_state(State::ErrorCheckingForUpdate, co).await;
                     break Err(UpdateCheckError::OmahaRequest(e.into()));
                 }
@@ -1157,6 +1167,7 @@ where
             source: InstallSource::ScheduledTask,
             use_configured_proxies: true,
             disable_updates: false,
+            cup_sign_requests: false,
         };
         let config = self.config.clone();
         let mut request_builder = RequestBuilder::new(&config, &request_params);

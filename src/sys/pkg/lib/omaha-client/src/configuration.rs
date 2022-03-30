@@ -38,9 +38,22 @@ pub struct Config {
 pub mod test_support {
 
     use super::*;
+    use crate::cup_ecdsa::{PublicKeyAndId, PublicKeys};
+    use p256::ecdsa::{SigningKey, VerifyingKey};
+    use signature::rand_core::OsRng;
+    use std::convert::TryInto;
 
     /// Handy generator for an updater configuration.  Used to reduce test boilerplate.
     pub fn config_generator() -> Config {
+        let signing_key = SigningKey::random(&mut OsRng);
+        let omaha_public_keys = PublicKeys {
+            latest: PublicKeyAndId {
+                id: 42.try_into().unwrap(),
+                key: VerifyingKey::from(&signing_key),
+            },
+            historical: vec![],
+        };
+
         Config {
             updater: Updater { name: "updater".to_string(), version: Version::from([1, 2, 3, 4]) },
             os: OS {
@@ -50,7 +63,7 @@ pub mod test_support {
                 arch: "test_arch".to_string(),
             },
             service_url: "http://example.com/".to_string(),
-            omaha_public_keys: None,
+            omaha_public_keys: Some(omaha_public_keys),
         }
     }
 }
