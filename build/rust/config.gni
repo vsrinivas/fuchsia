@@ -7,8 +7,6 @@ import("//build/config/compiler.gni")
 import("//build/config/sysroot.gni")
 import("//build/fidl/toolchain.gni")
 
-default_rust_sysroot = "//prebuilt/third_party/rust/${host_platform}"
-
 default_rustc_prefix = "//prebuilt/third_party/rust/${host_platform}/bin"
 
 _rustc_version = read_file(
@@ -35,10 +33,6 @@ declare_args() {
   # e.g., clang_version_description = read_file("$_rustc_lib_dir/VERSION")
   rustc_version_description = ""
 
-  # Sets a custom base directory for where rust tooling
-  # looks for the standard library
-  rust_sysroot = default_rust_sysroot
-
   # Sets the default LTO type for rustc bulids.
   rust_lto = ""
 
@@ -56,6 +50,13 @@ declare_args() {
 
   # Makes clippy targets fail to build when any "deny" lints are found
   clippy_cause_failure = false
+}
+
+# Separate declare_args blocks to use the value of rustc_prefix from previous one.
+declare_args() {
+  # Sets a custom base directory for where rust tooling
+  # looks for the standard library
+  rust_sysroot = get_path_info(rustc_prefix, "dir")
 }
 
 if (rustc_prefix == default_rustc_prefix &&
