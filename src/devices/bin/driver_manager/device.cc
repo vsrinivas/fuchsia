@@ -506,7 +506,7 @@ void Device::SendUnbind(UnbindCompletion& completion) {
   }
   VLOGF(1, "Unbinding device %p '%s'", this, name_.data());
   set_state(Device::State::kUnbinding);
-  device_controller()->Unbind(
+  device_controller()->Unbind().ThenExactlyOnce(
       [dev = fbl::RefPtr(this)](
           fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::Unbind>& result) {
         if (!result.ok()) {
@@ -528,7 +528,7 @@ void Device::SendCompleteRemove(RemoveCompletion& completion) {
   }
   VLOGF(1, "Completing removal of device %p '%s'", this, name_.data());
   set_state(Device::State::kUnbinding);
-  device_controller()->CompleteRemoval(
+  device_controller()->CompleteRemoval().ThenExactlyOnce(
       [dev = fbl::RefPtr(this)](
           fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::CompleteRemoval>&
               result) {

@@ -217,9 +217,9 @@ zx_status_t BindDriverToDevice(const fbl::RefPtr<Device>& dev, const char* libna
     return status;
   }
   dev->flags |= DEV_CTX_BOUND;
-  dev->device_controller()->BindDriver(
-      fidl::StringView::FromExternal(libname, strlen(libname)), std::move(vmo),
-      [dev](fidl::WireUnownedResult<fdm::DeviceController::BindDriver>& result) {
+  dev->device_controller()
+      ->BindDriver(fidl::StringView::FromExternal(libname, strlen(libname)), std::move(vmo))
+      .ThenExactlyOnce([dev](fidl::WireUnownedResult<fdm::DeviceController::BindDriver>& result) {
         if (!result.ok()) {
           LOGF(ERROR, "Failed to bind driver '%s': %s", dev->name().data(), result.status_string());
           dev->flags &= (~DEV_CTX_BOUND);
@@ -354,32 +354,34 @@ void Coordinator::RegisterWithPowerManager(
     fidl::ClientEnd<fdm::SystemStateTransition> system_state_transition,
     fidl::ClientEnd<fio::Directory> devfs, RegisterWithPowerManagerCompletion completion) {
   power_manager_client_.Bind(std::move(power_manager), dispatcher_);
-  power_manager_client_->Register(
-      std::move(system_state_transition), std::move(devfs),
-      [this, completion = std::move(completion)](
-          fidl::WireUnownedResult<fpm::DriverManagerRegistration::Register>& result) mutable {
-        if (!result.ok()) {
-          LOGF(INFO, "Failed to register with power_manager: %s\n",
-               result.error().FormatDescription().c_str());
-          completion(result.status());
-          return;
-        }
+  power_manager_client_->Register(std::move(system_state_transition), std::move(devfs))
+      .ThenExactlyOnce(
+          [this, completion = std::move(completion)](
+              fidl::WireUnownedResult<fpm::DriverManagerRegistration::Register>& result) mutable {
+            if (!result.ok()) {
+              // In this branch, `this` could be invalidated.
+              // We cannot use any member variable or member function.
+              LOGF(INFO, "Failed to register with power_manager: %s\n",
+                   result.error().FormatDescription().c_str());
+              completion(result.status());
+              return;
+            }
 
-        if (result->result.is_err()) {
-          fpm::wire::RegistrationError err = result->result.err();
-          if (err == fpm::wire::RegistrationError::kInvalidHandle) {
-            LOGF(ERROR, "Failed to register with power_manager. Invalid handle.\n");
-            completion(ZX_ERR_BAD_HANDLE);
-            return;
-          }
-          LOGF(ERROR, "Failed to register with power_manager\n");
-          completion(ZX_ERR_INTERNAL);
-          return;
-        }
-        LOGF(INFO, "Registered with power manager successfully");
-        set_power_manager_registered(true);
-        completion(ZX_OK);
-      });
+            if (result->result.is_err()) {
+              fpm::wire::RegistrationError err = result->result.err();
+              if (err == fpm::wire::RegistrationError::kInvalidHandle) {
+                LOGF(ERROR, "Failed to register with power_manager. Invalid handle.\n");
+                completion(ZX_ERR_BAD_HANDLE);
+                return;
+              }
+              LOGF(ERROR, "Failed to register with power_manager\n");
+              completion(ZX_ERR_INTERNAL);
+              return;
+            }
+            LOGF(INFO, "Registered with power manager successfully");
+            set_power_manager_registered(true);
+            completion(ZX_OK);
+          });
 }
 
 const Driver* Coordinator::LibnameToDriver(std::string_view libname) const {

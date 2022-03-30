@@ -1025,7 +1025,8 @@ zx::status<> DriverRunner::CreateComponent(std::string name, Collection collecti
               .name = fidl::StringView::FromExternal(name),
               .collection = CollectionName(collection),
           };
-          realm_->OpenExposedDir(child_ref, std::move(exposed_dir), std::move(open_callback));
+          realm_->OpenExposedDir(child_ref, std::move(exposed_dir))
+              .ThenExactlyOnce(std::move(open_callback));
         }
       };
   realm_

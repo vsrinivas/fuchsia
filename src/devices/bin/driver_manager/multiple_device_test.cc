@@ -535,22 +535,22 @@ TEST_F(MultipleDeviceTestCase, DevfsUnsupportedAPICheck) {
   {
     zx::channel s, c;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &s, &c));
-    client->Link("", std::move(s), "", UnsupportedEpitaphMatcher());
+    client->Link("", std::move(s), "").ThenExactlyOnce(UnsupportedEpitaphMatcher());
   }
   {
     zx::event e;
     fuchsia_io::wire::Directory2RenameResult x;
     ASSERT_EQ(ZX_OK, zx::event::create(0, &e));
-    client->Rename("", std::move(e), "",
-                   [](fidl::WireUnownedResult<fuchsia_io::Directory::Rename>& ret) {
-                     ASSERT_OK(ret.status());
-                     ASSERT_TRUE(ret->result.is_err());
-                     ASSERT_EQ(ret->result.err(), ZX_ERR_NOT_SUPPORTED);
-                   });
+    client->Rename("", std::move(e), "")
+        .ThenExactlyOnce([](fidl::WireUnownedResult<fuchsia_io::Directory::Rename>& ret) {
+          ASSERT_OK(ret.status());
+          ASSERT_TRUE(ret->result.is_err());
+          ASSERT_EQ(ret->result.err(), ZX_ERR_NOT_SUPPORTED);
+        });
   }
-  client->GetToken(UnsupportedEpitaphMatcher());
-  client->SetAttr({}, {}, UnsupportedEpitaphMatcher());
-  client->Sync(UnsupportedErrorMatcher());
+  client->GetToken().ThenExactlyOnce(UnsupportedEpitaphMatcher());
+  client->SetAttr({}, {}).ThenExactlyOnce(UnsupportedEpitaphMatcher());
+  client->Sync().ThenExactlyOnce(UnsupportedErrorMatcher());
 
   coordinator_loop()->RunUntilIdle();
 }
