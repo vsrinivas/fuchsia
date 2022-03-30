@@ -6,6 +6,7 @@
                     "prebuilt\/third_party\/ffmpeg\/.*"
                 ],
                 "patterns": [
+                    "ffmpeg_project.lic",
                     "zstdlib.lic"
                 ],
                 "notes": []

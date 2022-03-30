@@ -3,11 +3,10 @@
         "allowlists": [
             {
                 "paths": [
-                    "prebuilt\/third_party\/goma\/.*"
+                    "third_party\/mesa\/.*"
                 ],
                 "patterns": [
-                    "cryptsoft.lic",
-                    "llvm_project3.lic"
+                    "khronos.lic"
                 ],
                 "notes": []
             }
