@@ -78,7 +78,6 @@ TEST(Conformance, {{ .Name }}_EncodeFailure) {
 	{{- if .HandleDefs }}
 	const auto handle_defs = {{ .HandleDefs }};
 	{{- end }}
-	const std::vector<zx_handle_t> handle_defs;
 	{{ .ValueBuild }}
 	auto obj = {{ .ValueVar }};
 	conformance_utils::EncodeFailure(
@@ -252,7 +251,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 		if gidlir.ContainsUnknownField(encodeFailure.Value) {
 			continue
 		}
-		valueBuild, valueVar := buildValue(encodeFailure.Value, decl, handleReprDisposition)
+		valueBuild, valueVar := buildValue(encodeFailure.Value, decl, handleReprRaw)
 		fuchsiaOnly := decl.IsResourceType() || len(encodeFailure.HandleDefs) > 0
 		for _, wireFormat := range supportedWireFormats {
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{

@@ -25,6 +25,15 @@ type VectorOfHandles = resource struct {
     v vector<handle>;
 };
 
+type VectorOfUpTo2Handles = resource struct {
+    v vector<handle>:2;
+};
+
+type ShortStringThenHandle = resource struct {
+    s string:1;
+    h handle;
+};
+
 type VectorOfOptionalHandles = resource struct {
     v vector<handle:optional>;
 };

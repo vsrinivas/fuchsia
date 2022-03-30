@@ -156,6 +156,37 @@ success("VectorOfHandles") {
     },
 }
 
+// Handles inside the vector should be closed even if the vector itself
+// has a constraint error.
+encode_failure("TooManyHandlesInVector") {
+    // TODO(96626): Should close handles in some constraint violation cases.
+    bindings_denylist = [llcpp, hlcpp, go, rust, cpp, dart],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+    },
+    value = VectorOfUpTo2Handles{
+        v: [#2, #0, #1],
+    },
+    err = COUNT_EXCEEDS_LIMIT,
+}
+
+// Handle members coming after the string should be closed even if the string
+// has a constraint error.
+encode_failure("UnrelatedConstraintErrorBeforeHandle") {
+    // TODO(96626): Should close handles in some constraint violation cases.
+    bindings_denylist = [hlcpp, go, rust, cpp, dart],
+    handle_defs = {
+        #0 = event(),
+    },
+    value = ShortStringThenHandle{
+        s: "long",
+        h: #0,
+    },
+    err = STRING_TOO_LONG,
+}
+
 success("VectorOfOptionalHandles") {
     // TODO(fxbug.dev/88707) Fix on C. (Unknown failure reason).
     bindings_denylist = [c],
