@@ -615,7 +615,7 @@ std::vector<std::string> Index::FindFileMatches(std::string_view name) const {
   FileNameIndex::const_iterator iter = file_name_index_.lower_bound(name_last_comp);
   while (iter != file_name_index_.end() && iter->first == name_last_comp) {
     const auto& pair = *iter->second;
-    if (PathContainsFromRight(pair.first, name))
+    if (PathEndsWith(pair.first, name))
       result.push_back(pair.first);
     ++iter;
   }
@@ -627,7 +627,7 @@ std::vector<std::string> Index::FindFilePrefixes(const std::string& prefix) cons
   std::vector<std::string> result;
 
   auto found = file_name_index_.lower_bound(prefix);
-  while (found != file_name_index_.end() && StringBeginsWith(found->first, prefix)) {
+  while (found != file_name_index_.end() && StringStartsWith(found->first, prefix)) {
     result.push_back(std::string(found->first));
     ++found;
   }

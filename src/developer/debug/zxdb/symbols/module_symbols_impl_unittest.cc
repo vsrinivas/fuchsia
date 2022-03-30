@@ -220,6 +220,12 @@ TEST(ModuleSymbols, ResolveLineInputLocation) {
   EXPECT_EQ(file_name, locations[0].file_line().file());
   EXPECT_EQ("/build_dir", locations[0].file_line().comp_dir());
 
+  // Absolute path should be supported.
+  locations = setup.symbols()->ResolveInputLocation(
+      symbol_context, InputLocation(FileLine("/build_dir/" + file_name, 27)), options);
+  ASSERT_EQ(1u, locations.size());
+  EXPECT_EQ(addrs[0].address(), locations[0].address());
+
   // Line 26 is a comment line, looking it up should get the following line.
   addrs = setup.symbols()->ResolveInputLocation(symbol_context,
                                                 InputLocation(FileLine(file_name, 26)), options);

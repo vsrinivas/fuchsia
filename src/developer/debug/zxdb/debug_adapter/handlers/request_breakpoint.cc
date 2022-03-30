@@ -16,11 +16,9 @@ std::string GetFile(const dap::Source& source) {
     // TODO: Add support for reference once SourceRequest is supported
   }
 
+  // "path" is an absolute path.
   if (source.path.has_value()) {
-    // Parse the file name from the path
-    auto path = source.path.value();
-    auto filename = path.substr(path.find_last_of("/\\") + 1);
-    return filename;
+    return source.path.value();
   }
 
   if (source.name.has_value()) {

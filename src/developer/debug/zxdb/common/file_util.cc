@@ -22,7 +22,7 @@ std::string_view ExtractLastFileComponent(std::string_view path) {
 
 bool IsPathAbsolute(const std::string& path) { return !path.empty() && path[0] == '/'; }
 
-bool PathContainsFromRight(std::string_view path, std::string_view right_query) {
+bool PathEndsWith(std::string_view path, std::string_view right_query) {
   return StringEndsWith(path, right_query) &&
          (path.size() == right_query.size() || path[path.size() - right_query.size() - 1] == '/');
 }
@@ -53,6 +53,42 @@ std::time_t GetFileModificationTime(const std::string& path) {
     return 0;
 
   return std::chrono::duration_cast<std::chrono::seconds>(last_write.time_since_epoch()).count();
+}
+
+bool PathStartsWith(const std::filesystem::path& path, const std::filesystem::path& base) {
+  // Only absolute paths can be compared.
+  if (!path.is_absolute() || !base.is_absolute())
+    return false;
+  auto path_it = path.begin();
+  for (const auto& ancestor : base) {
+    if (path_it == path.end())
+      return false;
+    if (ancestor != *path_it)
+      return false;
+    path_it++;
+  }
+  return true;
+}
+
+std::filesystem::path PathRelativeTo(const std::filesystem::path& path,
+                                     const std::filesystem::path& base) {
+  FX_CHECK(path.is_absolute() && base.is_absolute());
+  auto base_it = base.begin();
+  auto path_it = path.begin();
+  while (base_it != base.end() && path_it != path.end() && *base_it == *path_it) {
+    base_it++;
+    path_it++;
+  }
+  std::filesystem::path res;
+  while (base_it != base.end()) {
+    res.append("..");
+    base_it++;
+  }
+  while (path_it != path.end()) {
+    res.append(path_it->string());
+    path_it++;
+  }
+  return res;
 }
 
 }  // namespace zxdb

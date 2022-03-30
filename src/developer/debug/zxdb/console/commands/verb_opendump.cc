@@ -72,7 +72,7 @@ void DoCompleteOpenDump(const Command& cmd, const std::string& prefix,
   for (const auto& item : std::filesystem::directory_iterator(path, ec)) {
     auto found = std::string(item.path().filename());
 
-    if (!StringBeginsWith(found, filename))
+    if (!StringStartsWith(found, filename))
       continue;
 
     auto completion = prefix + found.substr(filename.size());

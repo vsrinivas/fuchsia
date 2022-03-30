@@ -10,9 +10,6 @@
 
 namespace zxdb {
 
-// Check if a path starts with another path.
-bool PathStartsWith(const std::filesystem::path& path, const std::filesystem::path& ancestor);
-
 // A cache directory automatically removes least recently used files when its size exceeds the
 // maximum size. More sophisticated features could be added in the future.
 class CacheDir {

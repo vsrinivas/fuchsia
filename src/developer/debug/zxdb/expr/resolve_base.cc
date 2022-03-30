@@ -132,14 +132,14 @@ fxl::RefPtr<DataMember> GetVtableMember(const Collection* coll) {
     if (!member)
       continue;
 
-    if (member->artificial() && StringBeginsWith(member->GetAssignedName(), kVtableMemberPrefix))
+    if (member->artificial() && StringStartsWith(member->GetAssignedName(), kVtableMemberPrefix))
       return RefPtrTo(member);
   }
   return fxl::RefPtr<DataMember>();
 }
 
 std::string TypeNameForVtableSymbolName(const std::string& sym_name) {
-  if (!StringBeginsWith(sym_name, kVtableSymbolNamePrefix))
+  if (!StringStartsWith(sym_name, kVtableSymbolNamePrefix))
     return std::string();
   return sym_name.substr(std::size(kVtableSymbolNamePrefix) - 1);  // Trim the prefix w/o the null.
 }

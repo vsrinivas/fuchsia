@@ -57,7 +57,7 @@ TEST_F(RequestBreakpointTest, UpdateBreakpoints) {
   auto got = response.get();
   EXPECT_EQ(got.error, false);
   EXPECT_EQ(got.response.breakpoints.size(), req.breakpoints.value().size());
-  EXPECT_EQ(context().GetBreakpointsForSource(req.source.name.value())->size(),
+  EXPECT_EQ(context().GetBreakpointsForSource(req.source.path.value())->size(),
             req.breakpoints.value().size());
 
   // Remove a breakpoint and send request again. Old breakpoints should be replaced with the new
@@ -73,7 +73,7 @@ TEST_F(RequestBreakpointTest, UpdateBreakpoints) {
   EXPECT_EQ(got.response.breakpoints.size(), req.breakpoints.value().size());
   EXPECT_EQ(got.response.breakpoints[0].line.value(), req.lines.value()[0]);
   EXPECT_EQ(got.response.breakpoints[1].line.value(), req.lines.value()[1]);
-  EXPECT_EQ(context().GetBreakpointsForSource(req.source.name.value())->size(),
+  EXPECT_EQ(context().GetBreakpointsForSource(req.source.path.value())->size(),
             req.breakpoints.value().size());
 }
 

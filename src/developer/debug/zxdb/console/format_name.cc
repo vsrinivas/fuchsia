@@ -46,7 +46,7 @@ bool FormatClangLambda(const Function* function, OutputBuffer* out) {
     out->Append("λ");
     return true;
   } else if (coll && coll->tag() == DwarfTag::kStructureType &&
-             StringBeginsWith(coll->GetAssignedName(), "<lambda(")) {
+             StringStartsWith(coll->GetAssignedName(), "<lambda(")) {
     // GCC-style.
     out->Append("λ");
     return true;
@@ -58,7 +58,7 @@ bool FormatRustClosure(const Function* function, OutputBuffer* out) {
   // Rust closures currently look like
   // "fuchsia_async::executor::{{impl}}::run_singlethreaded::{{closure}}<()>"
   // The function "assigned name" will be just the last component.
-  if (!StringBeginsWith(function->GetAssignedName(), "{{closure}}"))
+  if (!StringStartsWith(function->GetAssignedName(), "{{closure}}"))
     return false;
 
   // As with the Clang lambda above, this assumes the file/line or function enclosing the original
@@ -131,7 +131,7 @@ bool NeedsEscaping(const std::string& name) {
   // Assume anything with "operator" doesn't need escaping. We could actually parse the operator
   // declaration to make sure it's valid. But this only needs to deal with names the compiler
   // actually generates and not escaping something in the UI isn't a huge deal if we're wrong.
-  if (StringBeginsWith(name, "operator"))
+  if (StringStartsWith(name, "operator"))
     return false;
 
   return true;

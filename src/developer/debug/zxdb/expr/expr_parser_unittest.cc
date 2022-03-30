@@ -22,9 +22,9 @@ FoundName TestLookupName(const ParsedIdentifier& ident, const FindNameOptions& o
   const ParsedIdentifierComponent& comp = ident.components().back();
   const std::string& name = comp.name();
 
-  if (opts.find_namespaces && StringBeginsWith(name, "Namespace"))
+  if (opts.find_namespaces && StringStartsWith(name, "Namespace"))
     return FoundName(FoundName::kNamespace, ident.GetFullName());
-  if (opts.find_types && StringBeginsWith(name, "Type")) {
+  if (opts.find_types && StringStartsWith(name, "Type")) {
     // Make up a random class to go with the type.
     auto type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
     type->set_assigned_name("Type");
@@ -34,7 +34,7 @@ FoundName TestLookupName(const ParsedIdentifier& ident, const FindNameOptions& o
     // necessary.
     return FoundName(std::move(type));
   }
-  if (opts.find_templates && StringBeginsWith(name, "Template")) {
+  if (opts.find_templates && StringStartsWith(name, "Template")) {
     if (comp.has_template()) {
       // Assume templates with arguments are types.
       auto collection = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);

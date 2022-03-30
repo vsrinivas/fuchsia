@@ -6,9 +6,11 @@
 #define SRC_DEVELOPER_DEBUG_ZXDB_COMMON_FILE_UTIL_H_
 
 #include <ctime>
+#include <filesystem>
 #include <string>
 #include <string_view>
 
+// TODO: modernize this file using std::filesystem.
 namespace zxdb {
 
 // Extracts the substring into the given file path of the last path component (the stuff following
@@ -28,7 +30,7 @@ bool IsPathAbsolute(const std::string& path);
 //   path = "foo.cc", right_query = "foo.cc" => TRUE
 //   path = "bar/foo.cc", right_query = "foo.cc" => TRUE
 //   path = "foo.cc", right_query = "o.cc" => FALSE
-bool PathContainsFromRight(std::string_view path, std::string_view right_query);
+bool PathEndsWith(std::string_view path, std::string_view right_query);
 
 // Concatenates the two path components with a slash in between them. "first" can end with a slash
 // or not. The second component shouldn't begin with a slash.
@@ -40,6 +42,13 @@ std::string NormalizePath(const std::string& path);
 
 // Returns the modification time of the given file, or 0 if it could not be determined.
 std::time_t GetFileModificationTime(const std::string& path);
+
+// Check if a path starts with another path. Return false if either one is relative.
+bool PathStartsWith(const std::filesystem::path& path, const std::filesystem::path& base);
+
+// Compute the relative path from base. Both inputs must be absolute.
+std::filesystem::path PathRelativeTo(const std::filesystem::path& path,
+                                     const std::filesystem::path& base);
 
 }  // namespace zxdb
 

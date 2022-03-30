@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "lib/syslog/cpp/macros.h"
+#include "src/developer/debug/zxdb/common/file_util.h"
 
 #if defined(__APPLE__)
 #define st_atim st_atimespec
@@ -27,18 +28,6 @@ namespace {
 uint64_t TsToNs(const timespec& ts) { return ts.tv_sec * 1000000000 + ts.tv_nsec; }
 
 }  // namespace
-
-bool PathStartsWith(const std::filesystem::path& path, const std::filesystem::path& ancestor) {
-  auto path_it = path.begin();
-  for (auto ancestor_it = ancestor.begin(); ancestor_it != ancestor.end(); ancestor_it++) {
-    if (path_it == path.end())
-      return false;
-    if (*ancestor_it != *path_it)
-      return false;
-    path_it++;
-  }
-  return true;
-}
 
 CacheDir::CacheDir(std::filesystem::path dir, uint64_t max_size_bytes)
     : cache_dir_(std::move(dir)), max_size_(max_size_bytes) {

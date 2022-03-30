@@ -75,7 +75,7 @@ bool OptionsRequiresIndex(const FindNameOptions& options) {
 bool NameMatches(const FindNameOptions& options, const std::string& name,
                  const std::string& looking_for) {
   if (options.how == FindNameOptions::kPrefix)
-    return StringBeginsWith(name, looking_for);
+    return StringStartsWith(name, looking_for);
   return name == looking_for;
 }
 
@@ -333,7 +333,7 @@ VisitResult FindInIndexLevel(const FindNameOptions& options, const ModuleSymbols
       auto found = current_node->types().lower_bound(prefix);
       // Note: need StringBeginsWith rather than NameMatches since we always want to do a prefix
       // search rather than applying the current prefix/exact mode from the options.
-      if (found != current_node->types().end() && StringBeginsWith(found->first, prefix)) {
+      if (found != current_node->types().end() && StringStartsWith(found->first, prefix)) {
         results->emplace_back(FoundName::kTemplate, looking_for.GetFullName());
         if (results->size() >= options.max_results)
           return VisitResult::kDone;  // Don't need to look for anything else.

@@ -72,7 +72,7 @@ bool PrettyFrameGlob::Matches(const Location& loc) const {
     return false;  // Can't match something with no symbols.
 
   if (file_) {
-    if (!PathContainsFromRight(loc.file_line().file(), *file_))
+    if (!PathEndsWith(loc.file_line().file(), *file_))
       return false;
   }
 

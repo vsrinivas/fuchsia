@@ -260,17 +260,11 @@ LineDetails ModuleSymbolsImpl::LineDetailsForAddress(const SymbolContext& symbol
     line_table->getFileNameByIndex(rows[first_row_index].File, "",
                                    llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
                                    file_name);
-    compilation_dir = unit->GetCompilationDir();
-  }
-
-  if (!build_dir_.empty()) {
-    compilation_dir = build_dir_;
-  }
-
-  if (rows[first_row_index].Line == 0) {
-    // Line 0 entries get no file name nor compilation dir to avoid a FileLine assert.
-    file_name.clear();
-    compilation_dir.clear();
+    if (!build_dir_.empty()) {
+      compilation_dir = build_dir_;
+    } else {
+      compilation_dir = unit->GetCompilationDir();
+    }
   }
 
   LineDetails result(
@@ -295,6 +289,11 @@ LineDetails ModuleSymbolsImpl::LineDetailsForAddress(const SymbolContext& symbol
 }
 
 std::vector<std::string> ModuleSymbolsImpl::FindFileMatches(std::string_view name) const {
+  // If both build_dir_ and name are absolute, convert it to a relative path against build_dir_
+  // because the paths in the index are relative.
+  if (!build_dir_.empty() && build_dir_[0] == '/' && name[0] == '/') {
+    return index_.FindFileMatches(PathRelativeTo(name, build_dir_).string());
+  }
   return index_.FindFileMatches(name);
 }
 

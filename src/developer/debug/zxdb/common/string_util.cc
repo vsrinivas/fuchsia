@@ -27,7 +27,7 @@ std::string DoToHexString(uint64_t value, int digits, bool include_prefix) {
 
 }  // namespace
 
-bool StringBeginsWith(std::string_view str, std::string_view begins_with) {
+bool StringStartsWith(std::string_view str, std::string_view begins_with) {
   if (begins_with.size() > str.size())
     return false;
 

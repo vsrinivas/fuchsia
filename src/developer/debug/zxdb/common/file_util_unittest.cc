@@ -26,15 +26,16 @@ TEST(FileUtil, IsPathAbsolute) {
   EXPECT_FALSE(IsPathAbsolute("./foo/bar"));
 }
 
-TEST(FileUtil, PathContainsFromRight) {
-  EXPECT_TRUE(PathContainsFromRight("", ""));
-  EXPECT_TRUE(PathContainsFromRight("foo.cc", "foo.cc"));
-  EXPECT_TRUE(PathContainsFromRight("/foo.cc", "foo.cc"));
-  EXPECT_TRUE(PathContainsFromRight("bar/foo.cc", "foo.cc"));
-  EXPECT_TRUE(PathContainsFromRight("bar/foo.cc", "bar/foo.cc"));
+TEST(FileUtil, PathEndsWith) {
+  EXPECT_TRUE(PathEndsWith("", ""));
+  EXPECT_TRUE(PathEndsWith("foo.cc", "foo.cc"));
+  EXPECT_TRUE(PathEndsWith("/foo.cc", "foo.cc"));
+  EXPECT_TRUE(PathEndsWith("bar/foo.cc", "foo.cc"));
+  EXPECT_TRUE(PathEndsWith("bar/foo.cc", "bar/foo.cc"));
 
-  EXPECT_FALSE(PathContainsFromRight("bar/foo.cc", "FOO.CC"));
-  EXPECT_FALSE(PathContainsFromRight("bar/foo.cc", "o.cc"));
+  EXPECT_FALSE(PathEndsWith("bar/foo.cc", "FOO.CC"));
+  EXPECT_FALSE(PathEndsWith("bar/foo.cc", "o.cc"));
+  EXPECT_FALSE(PathEndsWith("bar/foo.cc", "r/foo.cc"));
 }
 
 TEST(FileUtil, CatPathComponents) {
@@ -77,6 +78,23 @@ TEST(FileUtil, GetFileModificationTime) {
   // EXPECT_NEAR accepts double rather than int.
   EXPECT_GT(modification_time, now - 10);
   EXPECT_LT(modification_time, now + 10);
+}
+
+TEST(FileUtil, PathStartsWith) {
+  EXPECT_TRUE(PathStartsWith("/abc", "/abc"));
+  EXPECT_TRUE(PathStartsWith("/abc", "/"));
+  EXPECT_TRUE(PathStartsWith("/abc/def", "/abc"));
+
+  EXPECT_FALSE(PathStartsWith("/abc", "/a"));
+  EXPECT_FALSE(PathStartsWith("/", ""));
+  EXPECT_FALSE(PathStartsWith("", ""));
+}
+
+TEST(FileUtil, PathRelativeTo) {
+  EXPECT_EQ("", PathRelativeTo("/abc/def", "/abc/def"));
+  EXPECT_EQ("def", PathRelativeTo("/abc/def", "/abc"));
+  EXPECT_EQ("..", PathRelativeTo("/abc", "/abc/def"));
+  EXPECT_EQ("../def", PathRelativeTo("/abc/def", "/abc/ghi"));
 }
 
 }  // namespace zxdb

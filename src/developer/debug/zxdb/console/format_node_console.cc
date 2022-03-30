@@ -191,7 +191,7 @@ void AppendRustCollectionName(const FormatNode* node, const RecursiveState& stat
   }
 
   // Special-case "Vec" with the macro that's normally used and omit the type.
-  if (StringBeginsWith(node->type(), "alloc::vec::Vec<")) {
+  if (StringStartsWith(node->type(), "alloc::vec::Vec<")) {
     out->Append("vec!");
     return;
   }
