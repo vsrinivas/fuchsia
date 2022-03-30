@@ -66,7 +66,7 @@ correct package manager for your machine.
 
      builtin cd $DEV_ROOT/infra && \
      jiri init && \
-     jiri import -overwrite -name=fuchsia/prebuilt infra \
+     jiri import -overwrite -name=fuchsia/manifest infra \
          https://fuchsia.googlesource.com/manifest && \
      jiri update \
    )
