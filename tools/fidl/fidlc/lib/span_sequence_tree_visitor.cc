@@ -404,9 +404,18 @@ void SpanSequenceTreeVisitor::OnAttributeArg(const std::unique_ptr<raw::Attribut
   const auto visiting = Visiting(this, VisitorKind::kAttributeArg);
   const auto builder = SpanBuilder<AtomicSpanSequence>(this, *element);
 
-  // Since the name member of the Attribute is not passed in as a raw AST node, but rather as a
-  // string, it will be processed as the prelude to the value member's TokenSpanSequence.
-  TreeVisitor::OnConstant(element->value);
+  if (element->maybe_name != nullptr) {
+    OnIdentifier(element->maybe_name);
+    // IngestToken() puts a trailing space after "=" tokens because that's
+    // usually what we want, but for attribute arguments we don't want it.
+    auto postscript = IngestUpToAndIncludingTokenKind(Token::Kind::kEqual);
+    if (postscript.has_value()) {
+      building_.top().push_back(std::move(postscript.value()));
+      auto as_atomic = static_cast<AtomicSpanSequence*>(building_.top().back().get());
+      as_atomic->GetLastChild()->SetTrailingSpace(false);
+    }
+  }
+  OnConstant(element->value);
 }
 
 void SpanSequenceTreeVisitor::OnAttribute(const std::unique_ptr<raw::Attribute>& element) {
@@ -449,7 +458,7 @@ void SpanSequenceTreeVisitor::OnAttribute(const std::unique_ptr<raw::Attribute>&
       building_.top().push_back(std::move(postscript.value()));
 
     arg_builder.emplace(this, *arg);
-    TreeVisitor::OnAttributeArg(arg);
+    OnAttributeArg(arg);
   }
 
   // Make sure to delete the last argument, so that its destructor is called and it is properly

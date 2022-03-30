@@ -171,7 +171,7 @@ TEST(NewFormatterTests, AttributesFormatted) {
   std::string unformatted = R"FIDL(
 @attr_without_args
 @attr_with_one_arg("abcdefghijklmnopqr")
-@attr_with_two_args(a = true, b = "abc")
+@attr_with_two_args(a=true, b="abc")
 library foo.bar;
 )FIDL";
 
@@ -179,7 +179,7 @@ library foo.bar;
   std::string formatted = R"FIDL(
 @attr_without_args
 @attr_with_one_arg("abcdefghijklmnopqr")
-@attr_with_two_args(a = true, b = "abc")
+@attr_with_two_args(a=true, b="abc")
 library foo.bar;
 )FIDL";
 
@@ -210,7 +210,7 @@ TEST(NewFormatterTests, AttributesOverflow) {
   std::string unformatted = R"FIDL(
 @attr_without_args_abcdefghijklmnopqrstuv
 @attr_with_one_arg("abcdefghijklmnopqrs")
-@attr_with_two_args(a = true, b = "abcd")
+@attr_with_two_args(a=true, b="abcd", c="wxyz")
 library foo.bar;
 )FIDL";
 
@@ -220,8 +220,9 @@ library foo.bar;
 @attr_with_one_arg(
         "abcdefghijklmnopqrs")
 @attr_with_two_args(
-        a = true,
-        b = "abcd")
+        a=true,
+        b="abcd",
+        c="wxyz")
 library foo.bar;
 )FIDL";
 

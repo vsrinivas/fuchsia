@@ -61,9 +61,10 @@ void Ordinal64::Accept(TreeVisitor* visitor) const { SourceElementMark sem(visit
 
 void AttributeArg::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
-  if (value) {
-    visitor->OnConstant(value);
+  if (maybe_name != nullptr) {
+    visitor->OnIdentifier(maybe_name);
   }
+  visitor->OnConstant(value);
 }
 
 void Attribute::Accept(TreeVisitor* visitor) const {

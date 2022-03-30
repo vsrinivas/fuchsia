@@ -138,7 +138,7 @@
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",
         "line": 17,
-        "column": 31,
+        "column": 39,
         "length": 31
       },
       "maybe_attributes": [
@@ -161,7 +161,7 @@
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",
                 "line": 17,
-                "column": 24,
+                "column": 32,
                 "length": 5
               }
             }
@@ -169,7 +169,7 @@
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",
             "line": 17,
-            "column": 5,
+            "column": 13,
             "length": 25
           }
         }
