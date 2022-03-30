@@ -16,6 +16,7 @@ library fuchsia.sys2;
 /// Note: The component manager is the only intended direct client of this
 /// interface.
 @discoverable
+@deprecated("Use fuchsia.component.resolution.Resolver instead")
 protocol ComponentResolver {
     /// Resolves a component with the given URL.
     ///
