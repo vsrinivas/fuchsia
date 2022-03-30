@@ -13,36 +13,31 @@
  * @brief  Graphics drawing library
  */
 #include <assert.h>
+#include <lib/arch/cache.h>
 #include <lib/gfx/surface.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 
-#define GFX_LOG(ctx, fmt, ...)                                     \
-  do {                                                             \
-    (ctx)->log("[%s:%d] " fmt, __FILE__, __LINE__, ##__VA_ARGS__); \
-  } while (0)
-
-#define GFX_ASSERT_MSG(ctx, cond, fmt, ...)                           \
-  do {                                                                \
-    if (!(cond)) {                                                    \
-      (ctx)->panic("[%s:%d]" fmt, __FILE__, __LINE__, ##__VA_ARGS__); \
-    }                                                                 \
-  } while (0)
-
-#define GFX_ASSERT(ctx, cond)                                                    \
-  do {                                                                           \
-    if (!(cond)) {                                                               \
-      (ctx)->panic("[%s:%d] failed assertion: " #cond "\n", __FILE__, __LINE__); \
-    }                                                                            \
-  } while (0)
+#define LOCAL_TRACE 0
 
 namespace gfx {
 
 namespace {
+
+void Printf(const char* fmt, ...) {
+  if (LOCAL_TRACE) {
+    va_list args;
+    va_start(args, fmt);
+    vprintf(fmt, args);
+    va_end(args);
+  }
+}
 
 struct Rgb888 {
   Rgb888() = default;
@@ -144,8 +139,7 @@ void CopyRectangle(Surface* surface, uint32_t x, uint32_t y, uint32_t width, uin
  */
 void FillRectangle(Surface* surface, uint32_t x, uint32_t y, uint32_t width, uint32_t height,
                    uint32_t color) {
-  GFX_LOG(surface->ctx, "surface %p, x %u y %u w %u h %u c %u\n", surface, x, y, width, height,
-          color);
+  Printf("surface %p, x %u y %u w %u h %u c %u\n", surface, x, y, width, height, color);
   // trim
   if (unlikely(x >= surface->width))
     return;
@@ -326,7 +320,7 @@ static uint32_t alpha32_add_ignore_destalpha(uint32_t dest, uint32_t src) {
   csrc[2] = (src >> 0) & 0xff;
 
   //    if (srca > 0)
-  //        printf("s %d %d %d d %d %d %d a %d ai %d\n", csrc[0], csrc[1], csrc[2], cdest[0],
+  //        Printf("s %d %d %d d %d %d %d a %d ai %d\n", csrc[0], csrc[1], csrc[2], cdest[0],
   //        cdest[1], cdest[2], srca, srcainv);
 
   uint32_t cres[3];
@@ -349,9 +343,8 @@ void Blend(Surface* target, Surface* source, uint32_t destx, uint32_t desty) {
 
 void Blend(Surface* target, Surface* source, uint32_t srcx, uint32_t srcy, uint32_t width,
            uint32_t height, uint32_t destx, uint32_t desty) {
-  const Context* ctx = source->ctx;
-  GFX_ASSERT(ctx, target->format == source->format);
-  GFX_LOG(ctx, "target %p, source %p, destx %u, desty %u\n", target, source, destx, desty);
+  ZX_ASSERT(target->format == source->format);
+  Printf("target %p, source %p, destx %u, desty %u\n", target, source, destx, desty);
 
   if (destx >= target->width)
     return;
@@ -381,8 +374,8 @@ void Blend(Surface* target, Surface* source, uint32_t srcx, uint32_t srcy, uint3
     uint32_t dest_stride_diff = target->stride - width;
     uint32_t source_stride_diff = source->stride - width;
 
-    GFX_LOG(ctx, "w %u h %u dstride %u sstride %u\n", width, height, dest_stride_diff,
-            source_stride_diff);
+    Printf("w %u h %u dstride %u sstride %u\n", width, height, dest_stride_diff,
+           source_stride_diff);
 
     uint32_t i, j;
     for (i = 0; i < height; i++) {
@@ -402,8 +395,8 @@ void Blend(Surface* target, Surface* source, uint32_t srcx, uint32_t srcy, uint3
     uint32_t dest_stride_diff = target->stride - width;
     uint32_t source_stride_diff = source->stride - width;
 
-    GFX_LOG(ctx, "w %u h %u dstride %u sstride %u\n", width, height, dest_stride_diff,
-            source_stride_diff);
+    Printf("w %u h %u dstride %u sstride %u\n", width, height, dest_stride_diff,
+           source_stride_diff);
 
     uint32_t i, j;
     for (i = 0; i < height; i++) {
@@ -425,8 +418,8 @@ void Blend(Surface* target, Surface* source, uint32_t srcx, uint32_t srcy, uint3
     uint32_t dest_stride_diff = target->stride - width;
     uint32_t source_stride_diff = source->stride - width;
 
-    GFX_LOG(ctx, "w %u h %u dstride %u sstride %u\n", width, height, dest_stride_diff,
-            source_stride_diff);
+    Printf("w %u h %u dstride %u sstride %u\n", width, height, dest_stride_diff,
+           source_stride_diff);
 
     uint32_t i, j;
     for (i = 0; i < height; i++) {
@@ -446,8 +439,8 @@ void Blend(Surface* target, Surface* source, uint32_t srcx, uint32_t srcy, uint3
     uint32_t dest_stride_diff = target->stride - width;
     uint32_t source_stride_diff = source->stride - width;
 
-    GFX_LOG(ctx, "w %u h %u dstride %u sstride %u\n", width, height, dest_stride_diff,
-            source_stride_diff);
+    Printf("w %u h %u dstride %u sstride %u\n", width, height, dest_stride_diff,
+           source_stride_diff);
 
     uint32_t i, j;
     for (i = 0; i < height; i++) {
@@ -469,8 +462,8 @@ void Blend(Surface* target, Surface* source, uint32_t srcx, uint32_t srcy, uint3
     uint32_t dest_stride_diff = target->stride - width;
     uint32_t source_stride_diff = source->stride - width;
 
-    GFX_LOG(ctx, "w %u h %u dstride %u sstride %u\n", width, height, dest_stride_diff,
-            source_stride_diff);
+    Printf("w %u h %u dstride %u sstride %u\n", width, height, dest_stride_diff,
+           source_stride_diff);
 
     uint32_t i, j;
     for (i = 0; i < height; i++) {
@@ -489,8 +482,8 @@ void Blend(Surface* target, Surface* source, uint32_t srcx, uint32_t srcy, uint3
     uint32_t dest_stride_diff = target->stride - width;
     uint32_t source_stride_diff = source->stride - width;
 
-    GFX_LOG(ctx, "w %u h %u dstride %u sstride %u\n", width, height, dest_stride_diff,
-            source_stride_diff);
+    Printf("w %u h %u dstride %u sstride %u\n", width, height, dest_stride_diff,
+           source_stride_diff);
 
     uint32_t i, j;
     for (i = 0; i < height; i++) {
@@ -503,9 +496,8 @@ void Blend(Surface* target, Surface* source, uint32_t srcx, uint32_t srcy, uint3
       src += source_stride_diff;
     }
   } else {
-    GFX_ASSERT_MSG(ctx, false,
-                   "Blend: unimplemented colorspace combination (source %u target %u)\n",
-                   source->format, target->format);
+    ZX_PANIC("Blend: unimplemented colorspace combination (source %u target %u)\n", source->format,
+             target->format);
   }
 }
 
@@ -564,7 +556,8 @@ void CopyLines(Surface* dst, Surface* src, uint32_t srcy, uint32_t dsty, uint32_
  */
 void Flush(Surface* surface) {
   if (surface->flags & GFX_FLAG_FLUSH_CPU_CACHE)
-    surface->ctx->flush_cache(surface->ptr, surface->len);
+    arch::GlobalCacheConsistencyContext{}.SyncRange(reinterpret_cast<uintptr_t>(surface->ptr),
+                                                    surface->len);
 
   if (surface->Flush)
     surface->Flush(0, surface->height - 1);
@@ -587,8 +580,9 @@ void Flush(Surface* surface, uint32_t start, uint32_t end) {
 
   if (surface->flags & GFX_FLAG_FLUSH_CPU_CACHE) {
     uint32_t runlen = surface->stride * surface->pixelsize;
-    surface->ctx->flush_cache(reinterpret_cast<uint8_t*>(surface->ptr) + start * runlen,
-                              (end - start + 1) * runlen);
+    arch::GlobalCacheConsistencyContext{}.SyncRange(
+        reinterpret_cast<uintptr_t>(surface->ptr) + start * runlen,  //
+        static_cast<size_t>((end - start + 1) * runlen));
   }
 
   if (surface->Flush)
@@ -598,12 +592,11 @@ void Flush(Surface* surface, uint32_t start, uint32_t end) {
 /**
  * @brief  Create a new graphics surface object
  */
-Surface* CreateSurfaceWithContext(void* ptr, const Context* ctx, uint32_t width, uint32_t height,
-                                  uint32_t stride, gfx_format format, uint32_t flags) {
+Surface* CreateSurface(void* ptr, uint32_t width, uint32_t height, uint32_t stride,
+                       gfx_format format, uint32_t flags) {
   Surface* surface = static_cast<Surface*>(calloc(1, sizeof(*surface)));
   if (surface == NULL)
     return NULL;
-  surface->ctx = ctx;
   if (InitSurface(surface, ptr, width, height, stride, format, flags)) {
     free(surface);
     return NULL;
@@ -682,7 +675,7 @@ zx_status_t InitSurface(Surface* surface, void* ptr, uint32_t width, uint32_t he
       surface->len = (surface->height * surface->stride * surface->pixelsize);
       break;
     default:
-      GFX_LOG(surface->ctx, "invalid graphics format\n");
+      Printf("invalid graphics format\n");
       return ZX_ERR_INVALID_ARGS;
   }
 
@@ -692,7 +685,7 @@ zx_status_t InitSurface(Surface* surface, void* ptr, uint32_t width, uint32_t he
     if (ptr == NULL) {
       return ZX_ERR_NO_MEMORY;
     }
-    GFX_ASSERT(surface->ctx, ptr);
+    ZX_ASSERT(ptr);
     surface->flags |= GFX_FLAG_FREE_ON_DESTROY;
   }
   surface->ptr = ptr;

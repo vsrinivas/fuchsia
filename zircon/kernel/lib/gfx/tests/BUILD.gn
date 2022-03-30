@@ -9,19 +9,9 @@ group("tests") {
   deps = [ ":gfx-fuzzers" ]
 }
 
-source_set("test-surface") {
-  testonly = true
-  public = [ "test-surface.h" ]
-  sources = [ "test-surface.cc" ]
-  deps = [ "//zircon/kernel/lib/gfx" ]
-}
-
 fuzzer("surface-fuzzer") {
   sources = [ "surface-fuzzer.cc" ]
-  deps = [
-    ":test-surface",
-    "//zircon/kernel/lib/gfx",
-  ]
+  deps = [ "//zircon/kernel/lib/gfx" ]
 }
 
 fuzzers_package("gfx-fuzzers") {
