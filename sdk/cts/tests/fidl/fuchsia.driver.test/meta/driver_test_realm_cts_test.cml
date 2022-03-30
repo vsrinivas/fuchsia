@@ -49,4 +49,7 @@
             to: [ "#driver_test_realm" ],
         },
     ],
+    facets: {
+        "fuchsia.test": { type: "cts" },
+    },
 }

@@ -33,9 +33,6 @@ cts_fuchsia_component("component") {
 cts_fuchsia_test_package("driver_test_realm_cts_test") {
   package_name = "driver_test_realm_cts_test"
   test_components = [ ":component" ]
-
-  # TODO(fxb/87160) Add this back to CQ once it passes.
-  internal_only_skip_on_cq = true
 }
 
 cts_copy_to_sdk("build") {
