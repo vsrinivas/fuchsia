@@ -58,18 +58,14 @@ action("convert_size_limits_to_size_budgets") {
 
 # Path to a generated file enumerating runtime dependencies of the
 # size budget verification tool.
-#
-# There are two levels of hermetic input generation.
-# The 1st level contains the list of manifests in a given budget.
-# The 2nd level contains the list of blobs in addition to the manifests.
-
 _blobfs_hermetic_inputs = "${_output_dir}/verify_size_budget_blobfs.hi"
+_blobfs_hermetic_inputs_target =
+    "create_verify_size_budget_blobfs_hermetic_inputs"
 
-python_action("create_verify_size_budget_blobfs_hermetic_inputs") {
+python_hermetic_inputs_action(_blobfs_hermetic_inputs_target) {
   binary_label = "//build/images/assembly:check_size_hermetic_inputs"
   inputs = [ _size_budgets_blobfs_file ]
   outputs = [ _blobfs_hermetic_inputs ]
-  hermetic_deps = false
   deps = [ ":convert_size_limits_to_size_budgets" ]
   testonly = true
   args = [
@@ -86,7 +82,7 @@ ffx_action("verify_size_budget_blobfs") {
     ":convert_size_limits_to_size_budgets",
     "//build/images/fuchsia:fuchsia_assembly",
   ]
-  hermetic_inputs_target = ":create_verify_size_budget_blobfs_hermetic_inputs"
+  hermetic_inputs_target = ":${_blobfs_hermetic_inputs_target}"
   hermetic_inputs_file = _blobfs_hermetic_inputs
   inputs = [
     _size_budgets_blobfs_file,
@@ -111,12 +107,13 @@ ffx_action("verify_size_budget_blobfs") {
 }
 
 _non_blobfs_hermetic_inputs = "${_output_dir}/verify_size_budget_non_blobfs.hi"
+_non_blobfs_hermetic_inputs_target =
+    "create_verify_size_budget_non_blobfs_hermetic_inputs"
 
-python_action("create_verify_size_budget_non_blobfs_hermetic_inputs") {
+python_hermetic_inputs_action(_non_blobfs_hermetic_inputs_target) {
   binary_label = "//build/images/assembly:check_size_hermetic_inputs"
   inputs = [ _size_budgets_non_blobfs_file ]
   outputs = [ _non_blobfs_hermetic_inputs ]
-  hermetic_deps = false
   deps = [
     ":convert_size_limits_to_size_budgets",
     "//build/images/fuchsia:update",
@@ -136,8 +133,7 @@ ffx_action("verify_size_budget_non_blobfs") {
     ":convert_size_limits_to_size_budgets",
     "//build/images/fuchsia:update",
   ]
-  hermetic_inputs_target =
-      ":create_verify_size_budget_non_blobfs_hermetic_inputs"
+  hermetic_inputs_target = ":${_non_blobfs_hermetic_inputs_target}"
   hermetic_inputs_file = _non_blobfs_hermetic_inputs
   inputs = [
     _size_budgets_non_blobfs_file,
