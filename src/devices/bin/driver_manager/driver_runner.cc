@@ -62,6 +62,8 @@ std::optional<R> VisitOffer(fdecl::wire::Offer& offer, F apply) {
       return apply(offer.resolver());
     case fdecl::wire::Offer::Tag::kEvent:
       return apply(offer.event());
+    case fdecl::wire::Offer::Tag::kEventStream:
+      return apply(offer.event_stream());
     case fdecl::wire::Offer::Tag::kUnknown:
       return {};
   }

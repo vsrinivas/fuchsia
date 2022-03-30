@@ -1465,6 +1465,47 @@ impl<'a> ValidationContext<'a> {
                     }
                 }
             }
+            fdecl::Expose::EventStream(e) => {
+                let decl = "ExposeEventStream";
+                self.validate_expose_fields(
+                    decl,
+                    AllowableIds::One,
+                    CollectionSource::Deny,
+                    e.source.as_ref(),
+                    e.source_name.as_ref(),
+                    e.target_name.as_ref(),
+                    e.target.as_ref(),
+                    prev_target_ids,
+                );
+                // Exposing to framework from framework should never be valid.
+                if e.target == Some(fdecl::Ref::Framework(fdecl::FrameworkRef {})) {
+                    self.errors.push(Error::invalid_field("ExposeEventStream", "target"));
+                }
+                if let Some(scope) = &e.scope {
+                    if scope.is_empty() {
+                        self.errors.push(Error::invalid_field(decl, "scope"));
+                    }
+                    for value in scope {
+                        match value {
+                            fdecl::Ref::Child(child) => {
+                                self.validate_child_ref("ExposeEventStream", "scope", &child);
+                            }
+                            fdecl::Ref::Collection(child) => {
+                                self.validate_collection_ref("ExposeEventStream", "scope", &child);
+                            }
+                            _ => {
+                                self.errors
+                                    .push(Error::invalid_field("ExposeEventStream", "scope"));
+                            }
+                        }
+                    }
+                }
+                if e.source == Some(fdecl::Ref::Framework(fdecl::FrameworkRef {}))
+                    && e.scope == None
+                {
+                    self.errors.push(Error::invalid_field(decl, "source"));
+                }
+            }
             _ => {
                 self.errors.push(Error::invalid_field("Component", "expose"));
             }
@@ -1804,6 +1845,9 @@ impl<'a> ValidationContext<'a> {
             fdecl::Offer::Event(e) => {
                 self.validate_event_offer_fields(e, offer_type);
             }
+            fdecl::Offer::EventStream(e) => {
+                self.validate_event_stream_offer_fields(e, offer_type);
+            }
             _ => {
                 self.errors.push(Error::invalid_field("Component", "offer"));
             }
@@ -1922,6 +1966,87 @@ impl<'a> ValidationContext<'a> {
                 }
             }
         }
+    }
+
+    fn validate_event_stream_offer_fields(
+        &mut self,
+        event_stream: &'a fdecl::OfferEventStream,
+        offer_type: OfferType,
+    ) {
+        let decl = "OfferEventStream";
+        check_name(event_stream.source_name.as_ref(), decl, "source_name", &mut self.errors);
+        if event_stream.target == Some(fdecl::Ref::Framework(fdecl::FrameworkRef {})) {
+            // Expose to framework from framework is never valid.
+            self.errors.push(Error::invalid_field("OfferEventStream", "target"));
+        }
+        let source_name =
+            event_stream.source_name.as_ref().map(|value| value.as_str()).unwrap_or("");
+        match (&event_stream.filter, source_name, &event_stream.source) {
+            (Some(_), "capability_requested", _) | (Some(_), "directory_ready", _) => {}
+            (Some(_), _, Some(fdecl::Ref::Framework(_))) => {
+                self.errors.push(Error::invalid_field(decl, "filter"));
+            }
+            _ => {}
+        }
+        if let Some(scope) = &event_stream.scope {
+            if scope.is_empty() {
+                self.errors.push(Error::invalid_field(decl, "scope"));
+            }
+            for value in scope {
+                match value {
+                    fdecl::Ref::Child(child) => {
+                        self.validate_child_ref("OfferEventStream", "scope", &child);
+                    }
+                    fdecl::Ref::Collection(collection) => {
+                        self.validate_collection_ref("OfferEventStream", "scope", &collection);
+                    }
+                    _ => {
+                        self.errors.push(Error::invalid_field("OfferEventStream", "scope"));
+                    }
+                }
+            }
+        }
+        // Only parent, framework, and child are valid.
+        match event_stream.source {
+            Some(fdecl::Ref::Parent(_)) => {}
+            Some(fdecl::Ref::Framework(_)) => {}
+            Some(fdecl::Ref::Child(_)) => {}
+            Some(_) => {
+                self.errors.push(Error::invalid_field(decl, "source"));
+            }
+            None => {
+                self.errors.push(Error::missing_field(decl, "source"));
+            }
+        };
+
+        match offer_type {
+            OfferType::Static => {
+                let target_id = self.validate_offer_target(&event_stream.target, decl, "target");
+                if let (Some(target_id), Some(target_name)) =
+                    (target_id, event_stream.target_name.as_ref())
+                {
+                    // Assuming the target_name is valid, ensure the target_name isn't already used.
+                    if let Some(_) = self
+                        .target_ids
+                        .entry(target_id)
+                        .or_insert(HashMap::new())
+                        .insert(target_name, AllowableIds::One)
+                    {
+                        self.errors.push(Error::duplicate_field(
+                            decl,
+                            "target_name",
+                            target_name as &str,
+                        ));
+                    }
+                }
+            }
+            OfferType::Dynamic => {
+                if event_stream.target.is_some() {
+                    self.errors.push(Error::extraneous_field(decl, "target"));
+                }
+            }
+        }
+        check_name(event_stream.target_name.as_ref(), decl, "target_name", &mut self.errors);
     }
 
     fn validate_event_offer_fields(&mut self, event: &'a fdecl::OfferEvent, offer_type: OfferType) {
@@ -3561,6 +3686,576 @@ mod tests {
             result = Err(ErrorList::new(vec![
                 Error::missing_field("UseEventStream", "subscriptions"),
                 Error::empty_field("UseEventStream", "subscriptions"),
+            ])),
+        },
+        test_validate_event_stream_offer_valid_decls => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.offers = Some(vec![
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("stopped".to_string()),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        target_name: Some("stopped".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("started".to_string()),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        target_name: Some("started".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("diagnostics_ready".to_string()),
+                        source: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test".to_string(), collection: None})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        target_name: Some("diagnostics_ready".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                ]);
+                decl.children = Some(vec![fdecl::Child{
+                    name: Some("test".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/logger#meta/logger.cm".to_string()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    on_terminate: None,
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                },
+                fdecl::Child{
+                    name: Some("test2".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/fake_component#meta/fake_component.cm".to_string()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    on_terminate: None,
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                }
+                ]);
+                decl
+            },
+            result = Ok(()),
+        },
+        test_validate_event_stream_offer_to_framework_invalid => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.offers = Some(vec![
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("stopped".to_string()),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                        target: Some(fdecl::Ref::Framework(fdecl::FrameworkRef{})),
+                        target_name: Some("stopped".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("started".to_string()),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        target_name: Some("started".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("diagnostics_ready".to_string()),
+                        source: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test".to_string(), collection: None})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        target_name: Some("diagnostics_ready".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                ]);
+                decl.children = Some(vec![fdecl::Child{
+                    name: Some("test".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/logger#meta/logger.cm".to_string()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    on_terminate: None,
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                },
+                fdecl::Child{
+                    name: Some("test2".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/fake_component#meta/fake_component.cm".to_string()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    on_terminate: None,
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                }
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::InvalidField(DeclField { decl: "OfferEventStream".to_string(), field: "target".to_string() }),
+                Error::InvalidField(DeclField { decl: "OfferEventStream".to_string(), field: "target".to_string() }),
+            ])),
+        },
+        test_validate_event_stream_offer_to_scope_zero_length_invalid => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.offers = Some(vec![
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("started".to_string()),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        scope: Some(vec![]),
+                        target_name: Some("started".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("diagnostics_ready".to_string()),
+                        source: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test".to_string(), collection: None})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        target_name: Some("diagnostics_ready".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                ]);
+                decl.children = Some(vec![fdecl::Child{
+                    name: Some("test".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/logger#meta/logger.cm".to_string()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    on_terminate: None,
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                },
+                fdecl::Child{
+                    name: Some("test2".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/fake_component#meta/fake_component.cm".to_string()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    on_terminate: None,
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                }
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::InvalidField(DeclField { decl: "OfferEventStream".to_string(), field: "scope".to_string() }),
+            ])),
+        },
+        test_validate_event_stream_offer_to_scope_framework_invalid => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.offers = Some(vec![
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("started".to_string()),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        scope: Some(vec![fdecl::Ref::Framework(fdecl::FrameworkRef{})]),
+                        target_name: Some("started".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("diagnostics_ready".to_string()),
+                        source: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test".to_string(), collection: None})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        target_name: Some("diagnostics_ready".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                ]);
+                decl.children = Some(vec![fdecl::Child{
+                    name: Some("test".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/logger#meta/logger.cm".to_string()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    on_terminate: None,
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                },
+                fdecl::Child{
+                    name: Some("test2".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/fake_component#meta/fake_component.cm".to_string()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    on_terminate: None,
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                }
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::InvalidField(DeclField { decl: "OfferEventStream".to_string(), field: "scope".to_string() }),
+            ])),
+        },
+        test_validate_event_stream_offer_to_scope_valid => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.offers = Some(vec![
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("started".to_string()),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        scope: Some(vec![fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})]),
+                        target_name: Some("started".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("diagnostics_ready".to_string()),
+                        source: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test".to_string(), collection: None})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        target_name: Some("diagnostics_ready".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                ]);
+                decl.children = Some(vec![fdecl::Child{
+                    name: Some("test".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/logger#meta/logger.cm".to_string()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    on_terminate: None,
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                },
+                fdecl::Child{
+                    name: Some("test2".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/fake_component#meta/fake_component.cm".to_string()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    on_terminate: None,
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                }
+                ]);
+                decl
+            },
+            result = Ok(()),
+        },
+        test_validate_event_stream_offer_to_scope_with_capability_requested => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.offers = Some(vec![
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("capability_requested".to_string()),
+                        filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        scope: Some(vec![fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})]),
+                        target_name: Some("started".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("directory_ready".to_string()),
+                        filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
+                        source: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test".to_string(), collection: None})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        target_name: Some("diagnostics_ready".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                ]);
+                decl.children = Some(vec![fdecl::Child{
+                    name: Some("test".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/logger#meta/logger.cm".to_string()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    on_terminate: None,
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                },
+                fdecl::Child{
+                    name: Some("test2".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/fake_component#meta/fake_component.cm".to_string()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    on_terminate: None,
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                }
+                ]);
+                decl
+            },
+            result = Ok(()),
+        },
+        test_validate_event_stream_offer_to_scope_with_invalid_capability_name => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.offers = Some(vec![
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("some_invalid_capability".to_string()),
+                        filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
+                        source: Some(fdecl::Ref::Framework(fdecl::FrameworkRef{})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        scope: Some(vec![fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})]),
+                        target_name: Some("started".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("directory_ready".to_string()),
+                        filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
+                        source: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test".to_string(), collection: None})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        target_name: Some("diagnostics_ready".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                ]);
+                decl.children = Some(vec![fdecl::Child{
+                    name: Some("test".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/logger#meta/logger.cm".to_string()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    on_terminate: None,
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                },
+                fdecl::Child{
+                    name: Some("test2".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/fake_component#meta/fake_component.cm".to_string()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    on_terminate: None,
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                }
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::InvalidField(DeclField { decl: "OfferEventStream".to_string(), field: "filter".to_string() }),
+            ])),
+        },
+        test_validate_event_stream_offer_with_no_source_name_invalid => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.offers = Some(vec![
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: None,
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        scope: Some(vec![fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})]),
+                        target_name: Some("started".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("diagnostics_ready".to_string()),
+                        source: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test".to_string(), collection: None})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        target_name: Some("diagnostics_ready".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                ]);
+                decl.children = Some(vec![fdecl::Child{
+                    name: Some("test".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/logger#meta/logger.cm".to_string()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    on_terminate: None,
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                },
+                fdecl::Child{
+                    name: Some("test2".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/fake_component#meta/fake_component.cm".to_string()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    on_terminate: None,
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                }
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::MissingField(DeclField { decl: "OfferEventStream".to_string(), field: "source_name".to_string() }),
+            ])),
+        },
+        test_validate_event_stream_offer_duplicate_target => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.offers = Some(vec![
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("stopped".to_string()),
+                        source: Some(fdecl::Ref::Framework(fdecl::FrameworkRef{})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        target_name: Some("stopped".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("started".to_string()),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        target_name: Some("started".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("started".to_string()),
+                        source: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test".to_string(), collection: None})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        target_name: Some("started".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                ]);
+                decl.children = Some(vec![fdecl::Child{
+                    name: Some("test".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/logger#meta/logger.cm".to_string()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    on_terminate: None,
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                },
+                fdecl::Child{
+                    name: Some("test2".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/fake_component#meta/fake_component.cm".to_string()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    on_terminate: None,
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                }
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::DuplicateField(DeclField { decl: "OfferEventStream".to_string(), field: "target_name".to_string() }, "started".to_string()),
+            ])),
+        },
+        test_validate_event_stream_offer_invalid_source => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.offers = Some(vec![
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("stopped".to_string()),
+                        source: Some(fdecl::Ref::Framework(fdecl::FrameworkRef{})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        target_name: Some("stopped".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("started".to_string()),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        target_name: Some("started".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("diagnostics_ready".to_string()),
+                        source: Some(fdecl::Ref::Debug(fdecl::DebugRef{})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        target_name: Some("diagnostics_ready".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                ]);
+                decl.children = Some(vec![fdecl::Child{
+                    name: Some("test".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/logger#meta/logger.cm".to_string()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    on_terminate: None,
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                },
+                fdecl::Child{
+                    name: Some("test2".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/fake_component#meta/fake_component.cm".to_string()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    on_terminate: None,
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                }
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::InvalidField(DeclField { decl: "OfferEventStream".to_string(), field: "source".to_string() }),
+            ])),
+        },
+
+        test_validate_event_stream_offer_missing_source => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.offers = Some(vec![
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("stopped".to_string()),
+                        source: Some(fdecl::Ref::Framework(fdecl::FrameworkRef{})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        target_name: Some("stopped".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("started".to_string()),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        target_name: Some("started".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                    fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                        source_name: Some("diagnostics_ready".to_string()),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test2".to_string(), collection: None})),
+                        target_name: Some("diagnostics_ready".to_string()),
+                        ..fdecl::OfferEventStream::EMPTY
+                    }),
+                ]);
+                decl.children = Some(vec![fdecl::Child{
+                    name: Some("test".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/logger#meta/logger.cm".to_string()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    on_terminate: None,
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                },
+                fdecl::Child{
+                    name: Some("test2".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/fake_component#meta/fake_component.cm".to_string()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    on_terminate: None,
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                }
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::MissingField(DeclField { decl: "OfferEventStream".to_string(), field: "source".to_string() }),
+            ])),
+        },
+
+        test_validate_event_stream_expose_to_framework_from_framework_invalid => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.exposes = Some(vec![
+                    fdecl::Expose::EventStream(fdecl::ExposeEventStream {
+                        source_name: Some("stopped".to_string()),
+                        source: Some(fdecl::Ref::Framework(fdecl::FrameworkRef{})),
+                        target: Some(fdecl::Ref::Framework(fdecl::FrameworkRef{})),
+                        target_name: Some("stopped".to_string()),
+                        ..fdecl::ExposeEventStream::EMPTY
+                    }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::InvalidField(DeclField { decl: "ExposeEventStream".to_string(), field: "target".to_string() }),
+                Error::InvalidField(DeclField { decl: "ExposeEventStream".to_string(), field: "target".to_string() }),
+                Error::InvalidField(DeclField { decl: "ExposeEventStream".to_string(), field: "source".to_string() }),
+            ])),
+        },
+        test_validate_event_stream_expose_to_framework_from_other_invalid => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.exposes = Some(vec![
+                    fdecl::Expose::EventStream(fdecl::ExposeEventStream {
+                        source_name: Some("stopped".to_string()),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                        target: Some(fdecl::Ref::Framework(fdecl::FrameworkRef{})),
+                        target_name: Some("stopped".to_string()),
+                        ..fdecl::ExposeEventStream::EMPTY
+                    }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::InvalidField(DeclField { decl: "ExposeEventStream".to_string(), field: "source".to_string() }),
+                Error::InvalidField(DeclField { decl: "ExposeEventStream".to_string(), field: "target".to_string() }),
+                Error::InvalidField(DeclField { decl: "ExposeEventStream".to_string(), field: "target".to_string() }),
+            ])),
+        },
+        test_validate_event_stream_scope_must_be_non_empty => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.exposes = Some(vec![
+                    fdecl::Expose::EventStream(fdecl::ExposeEventStream {
+                        source_name: Some("stopped".to_string()),
+                        source: Some(fdecl::Ref::Child(fdecl::ChildRef{name: "test".to_string(), collection: None})),
+                        target: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                        scope: Some(vec![]),
+                        target_name: Some("stopped".to_string()),
+                        ..fdecl::ExposeEventStream::EMPTY
+                    }),
+                ]);
+                decl.children = Some(vec![fdecl::Child{
+                    name: Some("test".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/logger#meta/logger.cm".to_string()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    on_terminate: None,
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::InvalidField(DeclField { decl: "ExposeEventStream".to_string(), field: "scope".to_string() }),
             ])),
         },
         test_validate_event_stream_must_have_target_path => {

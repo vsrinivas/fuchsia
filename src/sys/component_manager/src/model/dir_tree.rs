@@ -103,7 +103,10 @@ impl DirTree {
         // Event and EventStream capabilities are used by the framework itself and not given to
         // components directly.
         match use_ {
-            cm_rust::UseDecl::Event(_) | cm_rust::UseDecl::EventStreamDeprecated(_) => return,
+            // TODO(fxbug.dev/81980): Add the event stream protocol to the directory tree.
+            cm_rust::UseDecl::Event(_)
+            | cm_rust::UseDecl::EventStreamDeprecated(_)
+            | cm_rust::UseDecl::EventStream(_) => return,
             _ => {}
         }
 
@@ -131,8 +134,10 @@ impl DirTree {
             cm_rust::ExposeDecl::Directory(d) => {
                 format!("/{}", d.target_name).parse().expect("couldn't parse name as path")
             }
-            cm_rust::ExposeDecl::Runner(_) | cm_rust::ExposeDecl::Resolver(_) => {
-                // Runners and resolvers do not add directory entries.
+            cm_rust::ExposeDecl::Runner(_)
+            | cm_rust::ExposeDecl::Resolver(_)
+            | cm_rust::ExposeDecl::EventStream(_) => {
+                // Runners, resolvers, and event streams do not add directory entries.
                 return;
             }
         };

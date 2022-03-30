@@ -354,6 +354,12 @@ impl CapabilityId {
                         .collect()),
                 },
             };
+        } else if let Some(event_stream) = clause.event_stream() {
+            return Ok(Self::events_from(Self::get_one_or_many_names(
+                event_stream,
+                alias,
+                clause.capability_type(),
+            )?));
         }
 
         // Unsupported capability type.
@@ -2090,6 +2096,12 @@ pub struct Expose {
     /// (`directory` only) the relative path of a subdirectory within the source directory
     /// capability to route.
     pub subdir: Option<RelativePath>,
+
+    /// event stream
+    pub event_stream: Option<OneOrMany<Name>>,
+
+    /// Scope of event_stream
+    pub scope: Option<OneOrMany<EventScope>>,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Clone)]
@@ -2109,6 +2121,8 @@ pub struct Offer {
     pub subdir: Option<RelativePath>,
     pub dependency: Option<DependencyType>,
     pub filter: Option<Map<String, Value>>,
+    pub event_stream: Option<OneOrMany<Name>>,
+    pub scope: Option<OneOrMany<EventScope>>,
 }
 
 /// Example:
@@ -2285,6 +2299,8 @@ impl CapabilityClause for Capability {
             "resolver"
         } else if self.event.is_some() {
             "event"
+        } else if self.event_stream.is_some() {
+            "event_stream"
         } else {
             panic!("Missing capability name")
         }
@@ -2293,7 +2309,16 @@ impl CapabilityClause for Capability {
         "capability"
     }
     fn supported(&self) -> &[&'static str] {
-        &["service", "protocol", "directory", "storage", "runner", "resolver", "event"]
+        &[
+            "service",
+            "protocol",
+            "directory",
+            "storage",
+            "runner",
+            "resolver",
+            "event",
+            "event_stream",
+        ]
     }
 }
 
@@ -2508,7 +2533,7 @@ impl CapabilityClause for Expose {
         None
     }
     fn event_stream(&self) -> Option<OneOrMany<Name>> {
-        None
+        self.event_stream.clone()
     }
     fn capability_type(&self) -> &'static str {
         if self.service.is_some() {
@@ -2521,6 +2546,8 @@ impl CapabilityClause for Expose {
             "runner"
         } else if self.resolver.is_some() {
             "resolver"
+        } else if self.event_stream.is_some() {
+            "event_stream"
         } else {
             panic!("Missing capability name")
         }
@@ -2529,7 +2556,7 @@ impl CapabilityClause for Expose {
         "expose"
     }
     fn supported(&self) -> &[&'static str] {
-        &["service", "protocol", "directory", "runner", "resolver"]
+        &["service", "protocol", "directory", "runner", "resolver", "event_stream"]
     }
 }
 
@@ -2586,7 +2613,7 @@ impl CapabilityClause for Offer {
         self.event.clone()
     }
     fn event_stream(&self) -> Option<OneOrMany<Name>> {
-        None
+        self.event_stream.clone()
     }
     fn event_stream_deprecated(&self) -> Option<Name> {
         None
@@ -2606,6 +2633,8 @@ impl CapabilityClause for Offer {
             "resolver"
         } else if self.event.is_some() {
             "event"
+        } else if self.event_stream.is_some() {
+            "event_stream"
         } else {
             panic!("Missing capability name")
         }
@@ -2614,7 +2643,16 @@ impl CapabilityClause for Offer {
         "offer"
     }
     fn supported(&self) -> &[&'static str] {
-        &["service", "protocol", "directory", "storage", "runner", "resolver", "event"]
+        &[
+            "service",
+            "protocol",
+            "directory",
+            "storage",
+            "runner",
+            "resolver",
+            "event",
+            "event_stream",
+        ]
     }
 }
 
@@ -2872,6 +2910,8 @@ mod tests {
             subdir: None,
             dependency: None,
             filter: None,
+            event_stream: None,
+            scope: None,
         }
     }
 

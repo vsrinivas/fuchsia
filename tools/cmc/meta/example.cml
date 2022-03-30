@@ -132,6 +132,21 @@
             as: "stopped-logger",
             to: "#logger",
         },
+        {
+            event_stream: "directory_ready",
+            from: "parent",
+            to: "#logger",
+            filter: { name: "diagnostics" },
+        },
+        {
+            event_stream: [
+                "started",
+                "stopped",
+            ],
+            from: "parent",
+            to: "#logger",
+            scope: [ "#logger" ],
+        },
     ],
     expose: [
         {
@@ -149,6 +164,15 @@
             from: "self",
             to: "parent",
             subdir: "blob",
+        },
+        {
+            event_stream: [
+                "started",
+                "stopped",
+            ],
+            from: "framework",
+            to: "parent",
+            scope: [ "#logger" ],
         },
     ],
     environments: [

@@ -422,6 +422,8 @@ One and only one of the capability type keys (`protocol`, `directory`, `service`
   the exposed directory capability.
 - `subdir`: (_optional `string`_) (`directory` only) the relative path of a subdirectory within the source directory
   capability to route.
+- `event_stream`: (_optional `string or array of strings`_) event stream
+- `scope`: (_optional `string or array of strings`_) Scope of event_stream
 Example:
 
 ```json5

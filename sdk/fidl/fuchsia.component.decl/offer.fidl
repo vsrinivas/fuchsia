@@ -17,6 +17,7 @@ type Offer = flexible union {
     5: runner OfferRunner;
     6: resolver OfferResolver;
     7: event OfferEvent;
+    8: event_stream OfferEventStream;
 };
 
 /// Describes the type of dependency implied by the capability.
@@ -189,4 +190,30 @@ type OfferEvent = table {
     /// Filter for the event. The structure of the filter depends on the event type. May be absent
     /// for some events.
     5: filter fuchsia.data.Dictionary;
+};
+
+/// Declares an event stream offered by a component.
+type OfferEventStream = table {
+    /// The provider of the event stream. Must be `parent`, `framework` or a child.
+    1: source Ref;
+
+    /// Name of the event being offered.
+    2: source_name name;
+
+    /// When an event is offered from framework, the scope is required and allows
+    /// one to define the child (or array of children) which the event is about.
+    /// When the event is offered from parent, the scope can be used to downscope
+    /// the event to a certain child scope, otherwise the event will carry the
+    /// scope coming from the parent.
+    3: scope vector<Ref>:MAX;
+
+    /// The destination to which the event stream is offered.
+    4: target Ref;
+
+    /// Name under which the event stream is being offered.
+    5: target_name name;
+
+    /// Filter for the event stream. Only present for DirectoryReady events
+    /// and CapabilityRequested events
+    6: filter fuchsia.data.Dictionary;
 };

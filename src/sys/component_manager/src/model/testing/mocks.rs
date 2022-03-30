@@ -109,6 +109,7 @@ impl From<ExposeDecl> for CapabilityType {
             ExposeDecl::Directory(_) => CapabilityType::Directory,
             ExposeDecl::Runner(_) => CapabilityType::Runner,
             ExposeDecl::Resolver(_) => CapabilityType::Resolver,
+            ExposeDecl::EventStream(_) => CapabilityType::EventStream,
         }
     }
 }

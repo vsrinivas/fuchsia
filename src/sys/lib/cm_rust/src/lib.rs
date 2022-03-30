@@ -334,6 +334,19 @@ pub enum OfferDecl {
     Runner(OfferRunnerDecl),
     Resolver(OfferResolverDecl),
     Event(OfferEventDecl),
+    EventStream(OfferEventStreamDecl),
+}
+
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fdecl::OfferEventStream")]
+pub struct OfferEventStreamDecl {
+    pub source: OfferSource,
+    pub scope: Option<Vec<EventScope>>,
+    pub filter: Option<HashMap<String, DictionaryValue>>,
+    pub source_name: CapabilityName,
+    pub target: OfferTarget,
+    pub target_name: CapabilityName,
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -431,6 +444,7 @@ impl SourceName for OfferDecl {
             OfferDecl::Runner(o) => o.source_name(),
             OfferDecl::Resolver(o) => o.source_name(),
             OfferDecl::Event(o) => o.source_name(),
+            OfferDecl::EventStream(o) => o.source_name(),
         }
     }
 }
@@ -445,6 +459,7 @@ impl OfferDeclCommon for OfferDecl {
             OfferDecl::Runner(o) => o.target_name(),
             OfferDecl::Resolver(o) => o.target_name(),
             OfferDecl::Event(o) => o.target_name(),
+            OfferDecl::EventStream(o) => o.target_name(),
         }
     }
 
@@ -457,6 +472,7 @@ impl OfferDeclCommon for OfferDecl {
             OfferDecl::Runner(o) => o.target(),
             OfferDecl::Resolver(o) => o.target(),
             OfferDecl::Event(o) => o.target(),
+            OfferDecl::EventStream(o) => o.target(),
         }
     }
 
@@ -469,6 +485,7 @@ impl OfferDeclCommon for OfferDecl {
             OfferDecl::Runner(o) => o.source(),
             OfferDecl::Resolver(o) => o.source(),
             OfferDecl::Event(o) => o.source(),
+            OfferDecl::EventStream(o) => o.source(),
         }
     }
 }
@@ -486,6 +503,7 @@ pub enum ExposeDecl {
     Directory(ExposeDirectoryDecl),
     Runner(ExposeRunnerDecl),
     Resolver(ExposeResolverDecl),
+    EventStream(ExposeEventStreamDecl),
 }
 
 impl SourceName for ExposeDecl {
@@ -496,6 +514,7 @@ impl SourceName for ExposeDecl {
             Self::Directory(e) => e.source_name(),
             Self::Runner(e) => e.source_name(),
             Self::Resolver(e) => e.source_name(),
+            Self::EventStream(e) => e.source_name(),
         }
     }
 }
@@ -508,6 +527,7 @@ impl ExposeDeclCommon for ExposeDecl {
             Self::Directory(e) => e.source(),
             Self::Runner(e) => e.source(),
             Self::Resolver(e) => e.source(),
+            Self::EventStream(e) => e.source(),
         }
     }
 
@@ -518,6 +538,7 @@ impl ExposeDeclCommon for ExposeDecl {
             Self::Directory(e) => e.target(),
             Self::Runner(e) => e.target(),
             Self::Resolver(e) => e.target(),
+            Self::EventStream(e) => e.target(),
         }
     }
 
@@ -528,6 +549,7 @@ impl ExposeDeclCommon for ExposeDecl {
             Self::Directory(e) => e.target_name(),
             Self::Runner(e) => e.target_name(),
             Self::Resolver(e) => e.target_name(),
+            Self::EventStream(e) => e.target_name(),
         }
     }
 }
@@ -592,6 +614,17 @@ pub struct ExposeResolverDecl {
     pub source_name: CapabilityName,
     pub target: ExposeTarget,
     pub target_name: CapabilityName,
+}
+
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[derive(FidlDecl, ExposeDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fdecl::ExposeEventStream")]
+pub struct ExposeEventStreamDecl {
+    pub source: ExposeSource,
+    pub source_name: CapabilityName,
+    pub target: ExposeTarget,
+    pub target_name: CapabilityName,
+    pub scope: Option<Vec<EventScope>>,
 }
 
 #[cfg_attr(
@@ -1461,6 +1494,7 @@ impl From<&ExposeDecl> for CapabilityTypeName {
             ExposeDecl::Directory(_) => Self::Directory,
             ExposeDecl::Runner(_) => Self::Runner,
             ExposeDecl::Resolver(_) => Self::Resolver,
+            ExposeDecl::EventStream(_) => Self::EventStream,
         }
     }
 }
@@ -2167,6 +2201,16 @@ mod tests {
                         target: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                         ..fdecl::ExposeService::EMPTY
                     }),
+                    fdecl::Expose::EventStream (
+                        fdecl::ExposeEventStream {
+                            source: Some(fdecl::Ref::Self_(fdecl::SelfRef{})),
+                            source_name: Some("diagnostics_ready".to_string()),
+                            target: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                            scope: Some(vec![fdecl::Ref::Child(fdecl::ChildRef{name: "netstack".to_string(), collection: None})]),
+                            target_name: Some("diagnostics_ready".to_string()),
+                            ..fdecl::ExposeEventStream::EMPTY
+                        }
+                    )
                 ]),
                 offers: Some(vec![
                     fdecl::Offer::Protocol(fdecl::OfferProtocol {
@@ -2272,6 +2316,16 @@ mod tests {
                         target_name: Some("mynetstack".to_string()),
                         ..fdecl::OfferService::EMPTY
                     }),
+                    fdecl::Offer::EventStream (
+                        fdecl::OfferEventStream {
+                            source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                            source_name: Some("diagnostics_ready".to_string()),
+                            target: Some(fdecl::Ref::Child(fdecl::ChildRef {name: "netstack".to_string(), collection: None})),
+                            scope: Some(vec![fdecl::Ref::Child(fdecl::ChildRef{name: "netstack".to_string(), collection: None})]),
+                            target_name: Some("diagnostics_ready".to_string()),
+                            ..fdecl::OfferEventStream::EMPTY
+                        }
+                    )
                 ]),
                 capabilities: Some(vec![
                     fdecl::Capability::Service(fdecl::Service {
@@ -2532,6 +2586,15 @@ mod tests {
                             target_name: "mynetstack".try_into().unwrap(),
                             target: ExposeTarget::Parent,
                         }),
+                        ExposeDecl::EventStream (
+                            ExposeEventStreamDecl {
+                                source: ExposeSource::Self_,
+                                source_name: CapabilityName::from("diagnostics_ready".to_string()),
+                                target: ExposeTarget::Parent,
+                                scope: Some(vec![EventScope::Child(ChildRef{ name: "netstack".to_string(), collection: None})]),
+                                target_name: CapabilityName::from("diagnostics_ready".to_string()),
+                            }
+                        )
                     ],
                     offers: vec![
                         OfferDecl::Protocol(OfferProtocolDecl {
@@ -2589,6 +2652,16 @@ mod tests {
                             target: OfferTarget::static_child("echo".to_string()),
                             target_name: "mynetstack".try_into().unwrap(),
                         }),
+                        OfferDecl::EventStream (
+                            OfferEventStreamDecl {
+                                source: OfferSource::Parent,
+                                source_name: CapabilityName::from("diagnostics_ready".to_string()),
+                                target: OfferTarget::Child(ChildRef{name: "netstack".to_string(), collection: None}),
+                                scope: Some(vec![EventScope::Child(ChildRef{ name: "netstack".to_string(), collection: None})]),
+                                target_name: CapabilityName::from("diagnostics_ready".to_string()),
+                                filter: None,
+                            }
+                        )
                     ],
                     capabilities: vec![
                         CapabilityDecl::Service(ServiceDecl {

@@ -691,6 +691,32 @@ impl<'a> ValidationContext<'a> {
                 }
             }
         }
+        if let Some(event_stream) = &expose.event_stream {
+            if event_stream.iter().len() > 1 && expose.r#as.is_some() {
+                return Err(Error::validate(format!("as cannot be used with multiple events")));
+            }
+            if let Some(cml::ExposeToRef::Framework) = &expose.to {
+                return Err(Error::validate(format!("cannot expose an event_stream to framework")));
+            }
+            for from in expose.from.iter() {
+                if from == &cml::ExposeFromRef::Self_ {
+                    return Err(Error::validate(format!("Cannot expose event_streams from self")));
+                }
+            }
+            if let Some(scopes) = &expose.scope {
+                for scope in scopes {
+                    match scope {
+                        cml::EventScope::Named(name) => {
+                            if !self.all_children.contains_key(name)
+                                && !self.all_collections.contains(name)
+                            {
+                                return Err(Error::validate(format!("event_stream scope {} did not match a component or collection in this .cml file.", name.as_str())));
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         // Ensure we haven't already exposed an entity of the same name.
         let capability_ids = cml::CapabilityId::from_offer_expose(expose)?;
@@ -745,6 +771,21 @@ impl<'a> ValidationContext<'a> {
                            protocol
                        )));
                     }
+                }
+            }
+        }
+        if let Some(stream) = offer.event_stream.as_ref() {
+            if stream.iter().len() > 1 && offer.r#as.is_some() {
+                return Err(Error::validate(format!("as cannot be used with multiple events")));
+            }
+            for from in &offer.from {
+                match from {
+                    cml::OfferFromRef::Self_ => {
+                        return Err(Error::validate(format!(
+                            "cannot offer an event_stream from self"
+                        )));
+                    }
+                    _ => {}
                 }
             }
         }
@@ -833,10 +874,45 @@ impl<'a> ValidationContext<'a> {
         }
 
         // Ensure that only events can have filter.
-        match (&offer.event, &offer.filter) {
-            (None, Some(_)) => Err(Error::validate("\"filter\" can only be used with \"event\"")),
+        match (&offer.event, &offer.event_stream, &offer.filter) {
+            (None, None, Some(_)) => Err(Error::validate(
+                "\"filter\" can only be used with \"event\" or \"event_stream\"",
+            )),
+            (None, Some(OneOrMany::Many(_)), Some(_)) => {
+                Err(Error::validate("\"filter\" cannot be used with multiple events."))
+            }
+
             _ => Ok(()),
         }?;
+
+        if let Some(event_stream) = &offer.event_stream {
+            for from in &offer.from {
+                match (from, &offer.filter) {
+                    (cml::OfferFromRef::Framework, Some(_)) => {
+                        for event in event_stream {
+                            match event.as_str() {
+                                "capability_requested"=>{},
+                                "directory_ready"=>{},
+                                _=>{
+                                   return Err(Error::validate("\"filter\" can only be used when offering \"capability_requested\" or \"directory_ready\" from framework."))
+                                }
+                            }
+                        }
+                    }
+                    (cml::OfferFromRef::Framework, None) => {
+                        for event in event_stream {
+                            match event.as_str() {
+                                "capability_requested" | "directory_ready"=>{
+                                    return Err(Error::validate("\"filter\" must be specified if \"capability_requested\" or \"directory_ready\" are offered from framework"))
+                                },
+                                _=>{},
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
 
         // Validate every target of this offer.
         let target_cap_ids = cml::CapabilityId::from_offer_expose(offer)?;
@@ -1659,6 +1735,173 @@ mod tests {
                 ]
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"from\" should be present with \"event\""
+        ),
+        test_cml_expose_event_stream_multiple_as(
+            json!({
+                "expose": [
+                    {
+                        "event_stream": ["started", "stopped"],
+                        "from" : "framework",
+                        "as": "something"
+                    },
+                ]
+            }),
+            Err(Error::Validate { err, .. }) if &err == "as cannot be used with multiple events"
+        ),
+        test_cml_offer_event_stream_multiple_filter(
+            json!({
+                "offer": [
+                    {
+                        "event_stream": ["started", "stopped"],
+                        "from" : "framework",
+                        "filter": {"data": "something"},
+                        "to": "#something"
+                    },
+                ]
+            }),
+            Err(Error::Validate { err, .. }) if &err == "\"filter\" cannot be used with multiple events."
+        ),
+        test_cml_offer_event_stream_capability_requested_not_from_framework(
+            json!({
+                "offer": [
+                    {
+                        "event_stream": ["capability_requested", "stopped"],
+                        "from" : "parent",
+                        "to": "#something"
+                    },
+                ]
+            }),
+            Err(Error::Validate { err, .. }) if &err == "\"#something\" is an \"offer\" target but it does not appear in \"children\" or \"collections\""
+        ),
+        test_cml_offer_event_stream_capability_requested_no_filter(
+            json!({
+                "offer": [
+                    {
+                        "event_stream": ["capability_requested", "stopped"],
+                        "from" : "framework",
+                        "to": "#something"
+                     },
+                ]
+            }),
+            Err(Error::Validate { err, .. }) if &err == "\"filter\" must be specified if \"capability_requested\" or \"directory_ready\" are offered from framework"
+        ),
+        test_cml_offer_event_stream_directory_ready_no_filter(
+            json!({
+                "offer": [
+                    {
+                        "event_stream": ["directory_ready", "stopped"],
+                        "from" : "framework",
+                        "to": "#something"
+                    },
+                ]
+            }),
+            Err(Error::Validate { err, .. }) if &err == "\"filter\" must be specified if \"capability_requested\" or \"directory_ready\" are offered from framework"
+        ),
+        test_cml_offer_event_stream_capability_requested_bad_filter(
+            json!({
+                "offer": [
+                    {
+                        "event_stream": "stopped",
+                        "from" : "framework",
+                        "to": "#something",
+                        "filter": {
+                            "data": "something"
+                        }
+                    },
+                ]
+            }),
+            Err(Error::Validate { err, .. }) if &err == "\"filter\" can only be used when offering \"capability_requested\" or \"directory_ready\" from framework."
+        ),
+        test_cml_offer_event_stream_capability_requested_with_filter(
+            json!({
+                "offer": [
+                    {
+                        "event_stream": "capability_requested",
+                        "from" : "framework",
+                        "to": "#something",
+                        "filter": {"data": "something"}
+                    },
+                ]
+            }),
+            Err(Error::Validate { err, .. }) if &err == "\"#something\" is an \"offer\" target but it does not appear in \"children\" or \"collections\""
+        ),
+        test_cml_offer_event_stream_directory_ready_with_filter(
+            json!({
+                "offer": [
+                    {
+                        "event_stream": "directory_ready",
+                        "from" : "framework",
+                        "to": "#something",
+                        "filter": {"data": "something"}
+                    },
+                ]
+            }),
+            Err(Error::Validate { err, .. }) if &err == "\"#something\" is an \"offer\" target but it does not appear in \"children\" or \"collections\""
+        ),
+        test_cml_offer_event_stream_multiple_as(
+            json!({
+                "offer": [
+                    {
+                        "event_stream": ["started", "stopped"],
+                        "from" : "framework",
+                        "to": "#self",
+                        "as": "something"
+                    },
+                ]
+            }),
+            Err(Error::Validate { err, .. }) if &err == "as cannot be used with multiple events"
+        ),
+        test_cml_expose_event_stream_from_self(
+            json!({
+                "expose": [
+                    { "event_stream": ["started", "stopped"], "from" : "self" },
+                ]
+            }),
+            Err(Error::Validate { err, .. }) if &err == "Cannot expose event_streams from self"
+        ),
+        test_cml_offer_event_stream_from_self(
+            json!({
+                "offer": [
+                    { "event_stream": ["started", "stopped"], "from" : "self", "to": "#self" },
+                ]
+            }),
+            Err(Error::Validate { err, .. }) if &err == "cannot offer an event_stream from self"
+        ),
+        test_cml_offer_event_stream_from_anything_else(
+            json!({
+                "offer": [
+                    {
+                        "event_stream": ["started", "stopped"],
+                        "from" : "framework",
+                        "to": "#self"
+                    },
+                ]
+            }),
+            Err(Error::Validate { err, .. }) if &err == "\"#self\" is an \"offer\" target but it does not appear in \"children\" or \"collections\""
+        ),
+        test_cml_expose_event_stream_to_framework(
+            json!({
+                "expose": [
+                    {
+                        "event_stream": ["started", "stopped"],
+                        "from" : "self",
+                        "to": "framework"
+                    },
+                ]
+            }),
+            Err(Error::Validate { err, .. }) if &err == "cannot expose an event_stream to framework"
+        ),
+        test_cml_expose_event_stream_scope_invalid_component(
+            json!({
+                "expose": [
+                    {
+                        "event_stream": ["started", "stopped"],
+                        "from" : "framework",
+                        "scope":["#invalid_component"]
+                    },
+                ]
+            }),
+            Err(Error::Validate { err, .. }) if &err == "event_stream scope invalid_component did not match a component or collection in this .cml file."
         ),
         test_cml_use_event_stream_duplicate(
             json!({
@@ -3483,7 +3726,7 @@ mod tests {
                     },
                 ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"filter\" can only be used with \"event\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"filter\" can only be used with \"event\" or \"event_stream\""
         ),
 
         // children
@@ -4053,7 +4296,7 @@ mod tests {
                     },
                 ]
             }),
-            Err(Error::Validate { err, .. }) if &err == "`capability` declaration is missing a capability keyword, one of: \"service\", \"protocol\", \"directory\", \"storage\", \"runner\", \"resolver\", \"event\""
+            Err(Error::Validate { err, .. }) if &err == "`capability` declaration is missing a capability keyword, one of: \"service\", \"protocol\", \"directory\", \"storage\", \"runner\", \"resolver\", \"event\", \"event_stream\""
         ),
         test_cml_resolver_missing_path(
             json!({

@@ -38,7 +38,7 @@ pub fn compile(
         exposes: document
             .expose
             .as_ref()
-            .map(|e| translate_expose(e, &all_capability_names, &all_collections))
+            .map(|e| translate_expose(e, &all_capability_names, &all_collections, &all_children))
             .transpose()?,
         offers: document
             .offer
@@ -361,6 +361,7 @@ fn translate_expose(
     expose_in: &Vec<Expose>,
     all_capability_names: &HashSet<Name>,
     all_collections: &HashSet<&Name>,
+    all_children: &HashSet<&Name>,
 ) -> Result<Vec<fdecl::Expose>, Error> {
     let mut out_exposes = vec![];
     for expose in expose_in.iter() {
@@ -443,6 +444,39 @@ fn translate_expose(
                     target: Some(clone_ref(&target)?),
                     target_name: Some(target_name.into()),
                     ..fdecl::ExposeResolver::EMPTY
+                }))
+            }
+        } else if let Some(n) = expose.event_stream() {
+            let source = extract_single_expose_source(expose, None)?;
+            let source_names = n.to_vec();
+            let target_names = all_target_capability_names(expose, expose)
+                .ok_or_else(|| Error::internal("no capability"))?;
+            for (source_name, target_name) in source_names.into_iter().zip(target_names.into_iter())
+            {
+                let scopes = match expose.scope.clone() {
+                    Some(value) => Some(annotate_type::<Vec<EventScope>>(value.into())),
+                    None => None,
+                };
+                out_exposes.push(fdecl::Expose::EventStream(fdecl::ExposeEventStream {
+                    source: Some(clone_ref(&source)?),
+                    source_name: Some(source_name.clone().into()),
+                    target: Some(clone_ref(&target)?),
+                    target_name: Some(target_name.into()),
+                    scope: match scopes {
+                        Some(values) => {
+                            let mut output = vec![];
+                            for value in &values {
+                                output.push(translate_child_or_collection_ref(
+                                    value.into(),
+                                    &all_children,
+                                    &all_collections,
+                                )?);
+                            }
+                            Some(output)
+                        }
+                        None => None,
+                    },
+                    ..fdecl::ExposeEventStream::EMPTY
                 }))
             }
         } else {
@@ -601,11 +635,52 @@ fn translate_offer(
                     target_name: Some(target_name.into()),
                     // We have already validated that none will be present if we were using many
                     // events.
+                    filter: match &offer.filter {
+                        Some(dict) => Some(dictionary_from_map(dict.clone())?),
+                        None => None,
+                    },
+                    ..fdecl::OfferEvent::EMPTY
+                }));
+            }
+        } else if let Some(n) = offer.event_stream() {
+            let entries = extract_offer_sources_and_targets(
+                offer,
+                n,
+                all_capability_names,
+                all_children,
+                all_collections,
+            )?;
+            for (source, source_name, target, target_name) in entries {
+                let scopes = match offer.scope.clone() {
+                    Some(value) => Some(annotate_type::<Vec<EventScope>>(value.into())),
+                    None => None,
+                };
+                out_offers.push(fdecl::Offer::EventStream(fdecl::OfferEventStream {
+                    source: Some(source),
+                    source_name: Some(source_name.into()),
+                    target: Some(target),
+                    target_name: Some(target_name.into()),
+                    // We have already validated that none will be present if we were using many
+                    // events.
                     filter: match offer.filter.clone() {
                         Some(dict) => Some(dictionary_from_map(dict)?),
                         None => None,
                     },
-                    ..fdecl::OfferEvent::EMPTY
+                    scope: match scopes {
+                        Some(values) => {
+                            let mut output = vec![];
+                            for value in &values {
+                                output.push(translate_child_or_collection_ref(
+                                    value.into(),
+                                    &all_children,
+                                    &all_collections,
+                                )?);
+                            }
+                            Some(output)
+                        }
+                        None => None,
+                    },
+                    ..fdecl::OfferEventStream::EMPTY
                 }));
             }
         } else {
@@ -1224,6 +1299,8 @@ where
         } else if let Some(n) = in_obj.resolver() {
             Some(n.clone())
         } else if let Some(n) = in_obj.event() {
+            Some(n.clone())
+        } else if let Some(n) = in_obj.event_stream() {
             Some(n.clone())
         } else {
             None
@@ -1869,7 +1946,7 @@ mod tests {
                         source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
                         target_path: Some("/svc/fuchsia.component.EventStream".to_string()),
                         ..fdecl::UseEventStream::EMPTY
-                    }),
+                    })
                 ]),
                 collections:Some(vec![
                     fdecl::Collection{
@@ -1935,6 +2012,17 @@ mod tests {
                     { "runner": [ "runner_a", "runner_b" ], "from": "#logger" },
                     { "resolver": "my_resolver", "from": "#logger", "to": "parent", "as": "pkg_resolver" },
                     { "resolver": [ "resolver_a", "resolver_b" ], "from": "#logger" },
+                    {
+                        "event_stream": ["started", "stopped"],
+                        "from": "#logger",
+                        "to": "parent",
+                    },
+                    {
+                        "event_stream": "running",
+                        "as": "running_stream",
+                        "from": "#logger",
+                        "to": "parent",
+                    },
                 ],
                 "capabilities": [
                     { "protocol": "A" },
@@ -2131,6 +2219,42 @@ mod tests {
                             ..fdecl::ExposeResolver::EMPTY
                         }
                     ),
+                    fdecl::Expose::EventStream (
+                        fdecl::ExposeEventStream {
+                            source: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("started".to_string()),
+                            target: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                            target_name: Some("started".to_string()),
+                            ..fdecl::ExposeEventStream::EMPTY
+                        }
+                    ),
+                    fdecl::Expose::EventStream (
+                        fdecl::ExposeEventStream {
+                            source: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("stopped".to_string()),
+                            target: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                            target_name: Some("stopped".to_string()),
+                            ..fdecl::ExposeEventStream::EMPTY
+                        }
+                    ),
+                    fdecl::Expose::EventStream (
+                        fdecl::ExposeEventStream {
+                            source: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("running".to_string()),
+                            target: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                            target_name: Some("running_stream".to_string()),
+                            ..fdecl::ExposeEventStream::EMPTY
+                        }
+                    ),
                 ]),
                 offers: None,
                 capabilities: Some(vec![
@@ -2300,6 +2424,21 @@ mod tests {
                         "resolver": [ "resolver_a", "resolver_b" ],
                         "from": "parent",
                         "to": "#netstack",
+                    },
+                    {
+                        "event_stream": [
+                            "running",
+                            "started",
+                        ],
+                        "from": "parent",
+                        "to": "#netstack",
+                    },
+                    {
+                        "event_stream": "stopped",
+                        "from": "parent",
+                        "to": "#netstack",
+                        "as": "some_other_event",
+                        "filter": { "name": "diagnostics" }
                     },
                 ],
                 "children": [
@@ -2674,6 +2813,57 @@ mod tests {
                             })),
                             target_name: Some("resolver_b".to_string()),
                             ..fdecl::OfferResolver::EMPTY
+                        }
+                    ),
+                    fdecl::Offer::EventStream (
+                        fdecl::OfferEventStream {
+                            source_name: Some("running".to_string()),
+                            source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                            target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("running".to_string()),
+                            ..fdecl::OfferEventStream::EMPTY
+                        }
+                    ),
+                    fdecl::Offer::EventStream (
+                        fdecl::OfferEventStream {
+                            source_name: Some("started".to_string()),
+                            source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                            target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("started".to_string()),
+                            ..fdecl::OfferEventStream::EMPTY
+                        }
+                    ),
+                    fdecl::Offer::EventStream (
+                        fdecl::OfferEventStream {
+                            source_name: Some("stopped".to_string()),
+                            source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                            target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            filter: Some(fdata::Dictionary {
+                                entries: Some(vec![
+                                    fdata::DictionaryEntry {
+                                        key: "name".to_string(),
+                                        value: Some(
+                                            Box::new(
+                                                fdata::DictionaryValue::Str(
+                                                    "diagnostics".to_string()
+                                                )
+                                            )
+                                        ),
+                                    },
+                                ]),
+                                ..fdata::Dictionary::EMPTY
+                            }),
+                            target_name: Some("some_other_event".to_string()),
+                            ..fdecl::OfferEventStream::EMPTY
                         }
                     ),
                 ]),

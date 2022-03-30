@@ -581,6 +581,10 @@ fn get_dependency_from_offer(
             // Events aren't tracked as dependencies for shutdown.
             None
         }
+        OfferDecl::EventStream(_) => {
+            // Event streams aren't tracked as dependencies for shutdown.
+            None
+        }
     }
 }
 

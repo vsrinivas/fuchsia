@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
+use fdata::{Dictionary, DictionaryEntry, DictionaryValue};
 use fidl::encoding::decode_persistent;
 use fidl_fuchsia_component_decl::*;
 use fidl_fuchsia_data as fdata;
@@ -207,6 +208,28 @@ fn main() {
                 subdir: Some("blob".to_string()),
                 ..ExposeDirectory::EMPTY
             }),
+            Expose::EventStream(ExposeEventStream {
+                source: Some(Ref::Framework(FrameworkRef {})),
+                source_name: Some("started".to_string()),
+                target: Some(Ref::Parent(ParentRef {})),
+                scope: Some(vec![Ref::Child(ChildRef {
+                    name: "logger".to_string(),
+                    collection: None,
+                })]),
+                target_name: Some("started".to_string()),
+                ..ExposeEventStream::EMPTY
+            }),
+            Expose::EventStream(ExposeEventStream {
+                source: Some(Ref::Framework(FrameworkRef {})),
+                source_name: Some("stopped".to_string()),
+                target: Some(Ref::Parent(ParentRef {})),
+                scope: Some(vec![Ref::Child(ChildRef {
+                    name: "logger".to_string(),
+                    collection: None,
+                })]),
+                target_name: Some("stopped".to_string()),
+                ..ExposeEventStream::EMPTY
+            }),
         ];
         let offers = vec![
             Offer::Service(OfferService {
@@ -231,6 +254,42 @@ fn main() {
                 target_name: Some("stopped-logger".to_string()),
                 filter: None,
                 ..OfferEvent::EMPTY
+            }),
+            Offer::EventStream(OfferEventStream {
+                source_name: Some("directory_ready".to_string()),
+                source: Some(Ref::Parent(ParentRef {})),
+                target: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
+                filter: Some(Dictionary {
+                    entries: Some(vec![DictionaryEntry {
+                        key: "name".to_string(),
+                        value: Some(Box::new(DictionaryValue::Str("diagnostics".to_string()))),
+                    }]),
+                    ..Dictionary::EMPTY
+                }),
+                target_name: Some("directory_ready".to_string()),
+                ..OfferEventStream::EMPTY
+            }),
+            Offer::EventStream(OfferEventStream {
+                source_name: Some("started".to_string()),
+                source: Some(Ref::Parent(ParentRef {})),
+                target: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
+                scope: Some(vec![Ref::Child(ChildRef {
+                    name: "logger".to_string(),
+                    collection: None,
+                })]),
+                target_name: Some("started".to_string()),
+                ..OfferEventStream::EMPTY
+            }),
+            Offer::EventStream(OfferEventStream {
+                source_name: Some("stopped".to_string()),
+                source: Some(Ref::Parent(ParentRef {})),
+                target: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
+                scope: Some(vec![Ref::Child(ChildRef {
+                    name: "logger".to_string(),
+                    collection: None,
+                })]),
+                target_name: Some("stopped".to_string()),
+                ..OfferEventStream::EMPTY
             }),
         ];
         let capabilities = vec![

@@ -35,11 +35,14 @@ rustc_binary("cmc") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:valico",
     "//tools/lib/cml",
+
+    # TODO: Obfuscated deps, move back to test_deps to re-obfuscate before uploading
+    "//third_party/rust_crates:assert_matches",
   ]
 
   non_rust_deps = [ ":cmc_test_schemas" ]
 
-  test_deps = [ "//third_party/rust_crates:assert_matches" ]
+  test_deps = []
 
   sources = [
     "src/compile.rs",
