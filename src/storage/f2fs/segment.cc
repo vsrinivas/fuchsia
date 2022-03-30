@@ -1541,7 +1541,6 @@ void SegmentManager::InitFreeSegmap() {
 void SegmentManager::InitDirtySegmap() {
   uint32_t segno = 0, offset = 0;
   uint16_t valid_blocks;
-  int full_block_cnt = 0, dirty_block_cnt = 0;
 
   while (segno < TotalSegs()) {
     /* find dirty segment based on free segmap */
@@ -1551,12 +1550,10 @@ void SegmentManager::InitDirtySegmap() {
     offset = segno + 1;
     valid_blocks = static_cast<uint16_t>(GetValidBlocks(segno, 0));
     if (valid_blocks >= superblock_info_->GetBlocksPerSeg() || !valid_blocks) {
-      ++full_block_cnt;
       continue;
     }
     std::lock_guard seglist_lock(dirty_info_->seglist_lock);
     LocateDirtySegment(segno, DirtyType::kDirty);
-    ++dirty_block_cnt;
   }
 }
 

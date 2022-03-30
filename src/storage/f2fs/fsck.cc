@@ -574,7 +574,6 @@ zx_status_t FsckWorker::CheckDentries(uint32_t &child_count, uint32_t &child_fil
                                       const int last_block, const uint8_t *dentry_bitmap,
                                       const DirEntry *dentries, const uint8_t (*filename)[kNameLen],
                                       const int max_entries) {
-  int num_entries = 0;
   uint32_t hash_code;
   FileType ftype;
 
@@ -618,14 +617,8 @@ zx_status_t FsckWorker::CheckDentries(uint32_t &child_count, uint32_t &child_fil
     }
 
     i += (name.length() + kDentrySlotLen - 1) / kDentrySlotLen;
-    ++num_entries;
     ++child_files;
   }
-#if 0  // TODO: implement debug level
-  // TODO: DBG (1)
-  printf("[%3d] Dentry Block [0x%x] Done : dentries:%d in %d slots (len:%d)\n\n",
-         fsck->dentry_depth, blk_addr, num_entries, kNrDentryInBlock, kMaxNameLen);
-#endif
 
   --fsck_.dentry_depth;
   return ZX_OK;
@@ -2036,7 +2029,6 @@ zx_status_t FsckWorker::BuildSegmentManager() {
 }
 
 void FsckWorker::BuildSitAreaBitmap() {
-  uint32_t free_segs = 0;
   uint32_t vblocks = 0;
 
   sit_area_bitmap_size_ = segment_manager_->GetMainSegmentsCount() * kSitVBlockMapSize;
@@ -2062,19 +2054,11 @@ void FsckWorker::BuildSitAreaBitmap() {
           superblock_info_.GetCheckpoint().cur_node_segno[2] == segno ||
           superblock_info_.GetCheckpoint().cur_data_segno[2] == segno) {
         continue;
-      } else {
-        ++free_segs;
       }
     } else {
       ZX_ASSERT(segment_entry.valid_blocks <= 512);
     }
   }
-
-#if 0  // TODO: implement debug level
-  // TODO: DBG (1)
-  printf("Blocks [0x%x : %d] Free Segs [0x%x : %d]\n\n", sum_vblocks, sum_vblocks, free_segs,
-         free_segs);
-#endif
 }
 
 zx::status<RawNatEntry> FsckWorker::LookupNatInJournal(nid_t nid) {
