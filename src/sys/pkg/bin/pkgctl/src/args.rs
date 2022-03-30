@@ -101,7 +101,7 @@ pub enum RepoConfigFormat {
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "file")]
-/// Add a respository config from a local file, in JSON format, which contains the different repository metadata and URLs.
+/// Add a repository config from a local file, in JSON format, which contains the different repository metadata and URLs.
 pub struct RepoAddFileCommand {
     /// persist TUF metadata for repositories provided to the RepoManager.
     #[argh(switch, short = 'p')]
@@ -117,14 +117,14 @@ pub struct RepoAddFileCommand {
     /// name of the source (a name from the URL will be derived if not provided).
     #[argh(option, short = 'n')]
     pub name: Option<String>,
-    /// respository config file, in JSON format, which contains the different repository metadata and URLs.
+    /// repository config file, in JSON format, which contains the different repository metadata and URLs.
     #[argh(positional)]
     pub file: PathBuf,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "url")]
-/// Add a respository config via http, in JSON format, which contains the different repository metadata and URLs.
+/// Add a repository config via http, in JSON format, which contains the different repository metadata and URLs.
 pub struct RepoAddUrlCommand {
     /// persist TUF metadata for repositories provided to the RepoManager.
     #[argh(switch, short = 'p')]
@@ -140,7 +140,7 @@ pub struct RepoAddUrlCommand {
     /// name of the source (a name from the URL will be derived if not provided).
     #[argh(option, short = 'n')]
     pub name: Option<String>,
-    /// http(s) URL pointing to a respository config file, in JSON format, which contains the different repository metadata and URLs.
+    /// http(s) URL pointing to a repository config file, in JSON format, which contains the different repository metadata and URLs.
     #[argh(positional)]
     pub repo_url: String,
 }
