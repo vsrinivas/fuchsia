@@ -7,13 +7,17 @@
 #ifndef ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_SIMPLE_TEXT_OUTPUT_H_
 #define ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_SIMPLE_TEXT_OUTPUT_H_
 
+#include <zircon/compiler.h>
+
 #include <efi/types.h>
+
+__BEGIN_CDECLS
 
 #define EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_GUID                                       \
   {                                                                                \
     0x387477c2, 0x69c7, 0x11d2, { 0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b } \
   }
-extern efi_guid SimpleTextOutputProtocol;
+extern const efi_guid SimpleTextOutputProtocol;
 
 typedef struct {
   int32_t MaxMode;
@@ -141,5 +145,7 @@ typedef struct efi_simple_text_output_protocol {
 
   simple_text_output_mode* Mode;
 } efi_simple_text_output_protocol;
+
+__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_SIMPLE_TEXT_OUTPUT_H_

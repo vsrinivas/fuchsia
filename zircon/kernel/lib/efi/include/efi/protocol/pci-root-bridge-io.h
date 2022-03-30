@@ -7,14 +7,18 @@
 #ifndef ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_PCI_ROOT_BRIDGE_IO_H_
 #define ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_PCI_ROOT_BRIDGE_IO_H_
 
+#include <zircon/compiler.h>
+
 #include <efi/boot-services.h>
 #include <efi/types.h>
+
+__BEGIN_CDECLS
 
 #define EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_GUID                                       \
   {                                                                                \
     0x2f707ebb, 0x4a1a, 0x11D4, { 0x9a, 0x38, 0x00, 0x90, 0x27, 0x3f, 0xc1, 0x4d } \
   }
-extern efi_guid PciRootBridgeIoProtocol;
+extern const efi_guid PciRootBridgeIoProtocol;
 
 typedef enum {
   EfiPciWidthUint8,
@@ -113,5 +117,7 @@ typedef struct efi_pci_root_bridge_io_protocol {
 
   uint32_t SegmentNumber;
 } efi_pci_root_bridge_io_protocol;
+
+__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_PCI_ROOT_BRIDGE_IO_H_

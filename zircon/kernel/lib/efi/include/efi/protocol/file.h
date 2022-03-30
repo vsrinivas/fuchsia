@@ -7,9 +7,13 @@
 #ifndef ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_FILE_H_
 #define ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_FILE_H_
 
+#include <zircon/compiler.h>
+
 #include <efi/boot-services.h>
 #include <efi/runtime-services.h>
 #include <efi/types.h>
+
+__BEGIN_CDECLS
 
 #define EFI_FILE_PROTOCOL_REVISION 0x00010000
 #define EFI_FILE_PROTOCOL_REVISION2 0x00020000
@@ -38,7 +42,7 @@ typedef struct {
   {                                                                                \
     0x09576e92, 0x6d3f, 0x11d2, { 0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b } \
   }
-extern efi_guid FileInfoGuid;
+extern const efi_guid FileInfoGuid;
 
 typedef struct {
   uint64_t Size;
@@ -55,7 +59,7 @@ typedef struct {
   {                                                                                \
     0x09576e93, 0x6d3f, 0x11d2, { 0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b } \
   }
-extern efi_guid FileSystemInfoGuid;
+extern const efi_guid FileSystemInfoGuid;
 
 typedef struct {
   uint64_t Size;
@@ -84,10 +88,10 @@ typedef struct efi_file_protocol {
 
   efi_status (*SetPosition)(struct efi_file_protocol* self, uint64_t position) EFIAPI;
 
-  efi_status (*GetInfo)(struct efi_file_protocol* self, efi_guid* info_type, size_t* buf_size,
+  efi_status (*GetInfo)(struct efi_file_protocol* self, const efi_guid* info_type, size_t* buf_size,
                         void* buf) EFIAPI;
 
-  efi_status (*SetInfo)(struct efi_file_protocol* self, efi_guid* info_type, size_t buf_size,
+  efi_status (*SetInfo)(struct efi_file_protocol* self, const efi_guid* info_type, size_t buf_size,
                         void* buf) EFIAPI;
 
   efi_status (*Flush)(struct efi_file_protocol* self) EFIAPI;
@@ -102,5 +106,7 @@ typedef struct efi_file_protocol {
 
   efi_status (*FlushEx)(struct efi_file_protocol* self, efi_file_io_token* token) EFIAPI;
 } efi_file_protocol;
+
+__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_FILE_H_

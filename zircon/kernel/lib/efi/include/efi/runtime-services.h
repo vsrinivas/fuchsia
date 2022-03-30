@@ -7,8 +7,12 @@
 #ifndef ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_RUNTIME_SERVICES_H_
 #define ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_RUNTIME_SERVICES_H_
 
+#include <zircon/compiler.h>
+
 #include <efi/boot-services.h>
 #include <efi/types.h>
+
+__BEGIN_CDECLS
 
 #define EFI_RUNTIME_SERVICES_SIGNATURE 0x56524553544e5552
 #define EFI_RUNTIME_SERVICES_REVISION EFI_SPECIFICATION_VERSION
@@ -153,5 +157,7 @@ typedef struct {
                                   uint64_t* remaining_var_storage_size,
                                   uint64_t* max_var_size) EFIAPI;
 } efi_runtime_services;
+
+__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_RUNTIME_SERVICES_H_

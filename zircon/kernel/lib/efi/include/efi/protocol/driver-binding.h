@@ -7,14 +7,18 @@
 #ifndef ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_DRIVER_BINDING_H_
 #define ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_DRIVER_BINDING_H_
 
+#include <zircon/compiler.h>
+
 #include <efi/protocol/device-path.h>
 #include <efi/types.h>
+
+__BEGIN_CDECLS
 
 #define EFI_DRIVER_BINDING_PROTOCOL_GUID                                           \
   {                                                                                \
     0x18a031ab, 0xb443, 0x4d1a, { 0xa5, 0xc0, 0x0c, 0x09, 0x26, 0x1e, 0x9f, 0x71 } \
   }
-extern efi_guid DriverBindingProtocol;
+extern const efi_guid DriverBindingProtocol;
 
 typedef struct efi_driver_binding_protocol {
   efi_status (*Supported)(struct efi_driver_binding_protocol* self, efi_handle controller_handle,
@@ -30,5 +34,7 @@ typedef struct efi_driver_binding_protocol {
   efi_handle ImageHandle;
   efi_handle DriverBindingHandle;
 } efi_driver_binding_protocol;
+
+__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_DRIVER_BINDING_H_

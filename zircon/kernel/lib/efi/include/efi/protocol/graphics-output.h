@@ -7,13 +7,17 @@
 #ifndef ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_GRAPHICS_OUTPUT_H_
 #define ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_GRAPHICS_OUTPUT_H_
 
+#include <zircon/compiler.h>
+
 #include <efi/types.h>
+
+__BEGIN_CDECLS
 
 #define EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID                                          \
   {                                                                                \
     0x9042a9de, 0x23dc, 0x4a38, { 0x96, 0xfb, 0x7a, 0xde, 0xd0, 0x80, 0x51, 0x6a } \
   }
-extern efi_guid GraphicsOutputProtocol;
+extern const efi_guid GraphicsOutputProtocol;
 
 typedef struct {
   uint32_t RedMask;
@@ -76,5 +80,7 @@ typedef struct efi_graphics_output_protocol {
 
   efi_graphics_output_mode* Mode;
 } efi_graphics_output_protocol;
+
+__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_GRAPHICS_OUTPUT_H_

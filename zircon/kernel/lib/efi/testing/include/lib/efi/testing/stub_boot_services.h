@@ -76,23 +76,23 @@ class StubBootServices {
   virtual efi_status CloseEvent(efi_event event) { return EFI_UNSUPPORTED; }
   virtual efi_status CheckEvent(efi_event event) { return EFI_UNSUPPORTED; }
 
-  //   efi_status (*InstallProtocolInterface)(efi_handle* handle, efi_guid* protocol,
+  //   efi_status (*InstallProtocolInterface)(efi_handle* handle, const efi_guid* protocol,
   //                                          efi_interface_type intf_type, void* intf);
-  //   efi_status (*ReinstallProtocolInterface)(efi_handle hadle, efi_guid* protocol,
+  //   efi_status (*ReinstallProtocolInterface)(efi_handle hadle, const efi_guid* protocol,
   //                                            void* old_intf, void* new_intf);
-  //   efi_status (*UninstallProtocolInterface)(efi_handle handle, efi_guid* protocol, void* intf);
-  //   efi_status (*HandleProtocol)(efi_handle handle, efi_guid* protocol, void** intf);
-  //   efi_status (*RegisterProtocolNotify)(efi_guid* protocol, efi_event event,
+  //   efi_status (*UninstallProtocolInterface)(efi_handle handle, const efi_guid* protocol, void*
+  //   intf); efi_status (*HandleProtocol)(efi_handle handle, const efi_guid* protocol, void**
+  //   intf); efi_status (*RegisterProtocolNotify)(const efi_guid* protocol, efi_event event,
   //                                        void** registration);
 
-  virtual efi_status LocateHandle(efi_locate_search_type search_type, efi_guid* protocol,
+  virtual efi_status LocateHandle(efi_locate_search_type search_type, const efi_guid* protocol,
                                   void* search_key, size_t* buf_size, efi_handle* buf) {
     return EFI_UNSUPPORTED;
   }
 
-  //   efi_status (*LocateDevicePath)(efi_guid* protocol, efi_device_path_protocol** path,
+  //   efi_status (*LocateDevicePath)(const efi_guid* protocol, efi_device_path_protocol** path,
   //                                  efi_handle* device);
-  //   efi_status (*InstallConfigurationTable)(efi_guid* guid, void* table);
+  //   efi_status (*InstallConfigurationTable)(const efi_guid* guid, void* table);
   //   efi_status (*LoadImage)(bool boot_policy, efi_handle parent_image_handle,
   //                           efi_device_path_protocol* path, void* src, size_t src_size,
   //                           efi_handle* image_handle);
@@ -113,28 +113,29 @@ class StubBootServices {
   //                                      efi_handle driver_image_handle,
   //                                      efi_handle child_handle);
 
-  virtual efi_status OpenProtocol(efi_handle handle, efi_guid* protocol, void** intf,
+  virtual efi_status OpenProtocol(efi_handle handle, const efi_guid* protocol, void** intf,
                                   efi_handle agent_handle, efi_handle controller_handle,
                                   uint32_t attributes) {
     return EFI_UNSUPPORTED;
   }
-  virtual efi_status CloseProtocol(efi_handle handle, efi_guid* protocol, efi_handle agent_handle,
-                                   efi_handle controller_handle) {
+  virtual efi_status CloseProtocol(efi_handle handle, const efi_guid* protocol,
+                                   efi_handle agent_handle, efi_handle controller_handle) {
     return EFI_UNSUPPORTED;
   }
 
-  //   efi_status (*OpenProtocolInformation)(efi_handle handle, efi_guid* protocol,
+  //   efi_status (*OpenProtocolInformation)(efi_handle handle, const efi_guid* protocol,
   //                                         efi_open_protocol_information_entry** entry_buf,
   //                                         size_t* entry_count);
   //   efi_status (*ProtocolsPerHandle)(efi_handle handle, efi_guid*** protocol_buf,
   //                                    size_t* protocol_buf_count);
 
-  virtual efi_status LocateHandleBuffer(efi_locate_search_type search_type, efi_guid* protocol,
-                                        void* search_key, size_t* num_handles, efi_handle** buf) {
+  virtual efi_status LocateHandleBuffer(efi_locate_search_type search_type,
+                                        const efi_guid* protocol, void* search_key,
+                                        size_t* num_handles, efi_handle** buf) {
     return EFI_UNSUPPORTED;
   }
 
-  virtual efi_status LocateProtocol(efi_guid* protocol, void* registration, void** intf) {
+  virtual efi_status LocateProtocol(const efi_guid* protocol, void* registration, void** intf) {
     return EFI_UNSUPPORTED;
   }
 
@@ -182,23 +183,23 @@ class MockBootServices : public StubBootServices {
   MOCK_METHOD(efi_status, CheckEvent, (efi_event event), (override));
 
   MOCK_METHOD(efi_status, LocateHandle,
-              (efi_locate_search_type search_type, efi_guid* protocol, void* search_key,
+              (efi_locate_search_type search_type, const efi_guid* protocol, void* search_key,
                size_t* buf_size, efi_handle* buf),
               (override));
   MOCK_METHOD(efi_status, OpenProtocol,
-              (efi_handle handle, efi_guid* protocol, void** intf, efi_handle agent_handle,
+              (efi_handle handle, const efi_guid* protocol, void** intf, efi_handle agent_handle,
                efi_handle controller_handle, uint32_t attributes),
               (override));
   MOCK_METHOD(efi_status, CloseProtocol,
-              (efi_handle handle, efi_guid* protocol, efi_handle agent_handle,
+              (efi_handle handle, const efi_guid* protocol, efi_handle agent_handle,
                efi_handle controller_handle),
               (override));
   MOCK_METHOD(efi_status, LocateHandleBuffer,
-              (efi_locate_search_type search_type, efi_guid* protocol, void* search_key,
+              (efi_locate_search_type search_type, const efi_guid* protocol, void* search_key,
                size_t* num_handles, efi_handle** buf),
               (override));
-  MOCK_METHOD(efi_status, LocateProtocol, (efi_guid * protocol, void* registration, void** intf),
-              (override));
+  MOCK_METHOD(efi_status, LocateProtocol,
+              (const efi_guid* protocol, void* registration, void** intf), (override));
 
   // Registers an expectation for protocol opening and closing.
   //

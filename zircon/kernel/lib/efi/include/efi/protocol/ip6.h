@@ -6,8 +6,11 @@
 #define ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_IP6_H_
 
 #include <stdbool.h>
+#include <zircon/compiler.h>
 
 #include <efi/types.h>
+
+__BEGIN_CDECLS
 
 typedef struct {
   uint8_t DefaultProtocol;
@@ -71,5 +74,7 @@ typedef struct {
   uint32_t IcmpTypeCount;
   efi_ip6_icmp_type* IcmpTypeList;
 } efi_ip6_mode_data;
+
+__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_IP6_H_

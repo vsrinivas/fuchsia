@@ -9,6 +9,9 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
+
+__BEGIN_CDECLS
 
 // Attribute to emit an error if a function is called.
 #if __has_attribute(unavailable)
@@ -185,5 +188,7 @@ typedef enum { TimerCancel, TimerPeriodic, TimerRelative } efi_timer_delay;
 #ifndef __cplusplus
 typedef unsigned short char16_t;
 #endif
+
+__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_TYPES_H_

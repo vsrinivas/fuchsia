@@ -40,7 +40,7 @@ TEST(StubBootServices, AllocateAndFreePool) {
 const efi_handle kTestHandle = reinterpret_cast<efi_handle>(0x10);
 
 TEST(MockBootServices, ExpectProtocol) {
-  efi_guid guid = EFI_BLOCK_IO_PROTOCOL_GUID;
+  constexpr efi_guid guid = EFI_BLOCK_IO_PROTOCOL_GUID;
   efi_block_io_protocol protocol;
 
   MockBootServices mock;
@@ -54,7 +54,7 @@ TEST(MockBootServices, ExpectProtocol) {
 }
 
 TEST(MockBootServices, ExpectOpenProtocol) {
-  efi_guid guid = EFI_BLOCK_IO_PROTOCOL_GUID;
+  constexpr efi_guid guid = EFI_BLOCK_IO_PROTOCOL_GUID;
   efi_block_io_protocol protocol;
 
   MockBootServices mock;
@@ -67,7 +67,7 @@ TEST(MockBootServices, ExpectOpenProtocol) {
 }
 
 TEST(MockBootServices, ExpectCloseProtocol) {
-  efi_guid guid = EFI_BLOCK_IO_PROTOCOL_GUID;
+  constexpr efi_guid guid = EFI_BLOCK_IO_PROTOCOL_GUID;
 
   MockBootServices mock;
   mock.ExpectCloseProtocol(kTestHandle, guid);
@@ -76,7 +76,7 @@ TEST(MockBootServices, ExpectCloseProtocol) {
 }
 
 TEST(StubBootServices, LocateProtocol) {
-  efi_guid protocol_guid = EFI_BLOCK_IO_PROTOCOL_GUID;
+  constexpr efi_guid protocol_guid = EFI_BLOCK_IO_PROTOCOL_GUID;
   void* protocol = nullptr;
 
   MockBootServices mock;

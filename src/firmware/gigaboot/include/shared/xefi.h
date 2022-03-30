@@ -45,8 +45,8 @@ int xefi_cmp_guid(efi_guid* guid1, efi_guid* guid2);
 
 // Convenience wrappers for Open/Close protocol for use by
 // UEFI app code that's not a driver model participant
-efi_status xefi_open_protocol(efi_handle h, efi_guid* guid, void** ifc);
-efi_status xefi_close_protocol(efi_handle h, efi_guid* guid);
+efi_status xefi_open_protocol(efi_handle h, const efi_guid* guid, void** ifc);
+efi_status xefi_close_protocol(efi_handle h, const efi_guid* guid);
 
 efi_file_protocol* xefi_open_file(const char16_t* filename);
 void* xefi_read_file(efi_file_protocol* file, size_t* _sz, size_t front_bytes);
@@ -58,8 +58,7 @@ efi_status xefi_find_pci_mmio(efi_boot_services* bs, uint8_t cls, uint8_t sub, u
 efi_status xefi_get_load_options(size_t* load_options_size, void** load_options);
 
 // GUIDs
-extern efi_guid SimpleFileSystemProtocol;
-extern efi_guid FileInfoGUID;
+extern const efi_guid FileInfoGUID;
 
 typedef struct {
   efi_handle img;

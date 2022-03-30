@@ -8,14 +8,17 @@
 #define ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_SIMPLE_NETWORK_H_
 
 #include <stdbool.h>
+#include <zircon/compiler.h>
 
 #include <efi/types.h>
+
+__BEGIN_CDECLS
 
 #define EFI_SIMPLE_NETWORK_PROTOCOL_GUID                                           \
   {                                                                                \
     0xa19832b9, 0xac25, 0x11d3, { 0x9a, 0x2d, 0x00, 0x90, 0x27, 0x3f, 0xc1, 0x4d } \
   }
-extern efi_guid SimpleNetworkProtocol;
+extern const efi_guid SimpleNetworkProtocol;
 
 #define EFI_SIMPLE_NETWORK_PROTOCOL_REVISION 0x00010000
 
@@ -133,5 +136,7 @@ typedef struct efi_simple_network_protocol {
   efi_event WaitForPacket;
   efi_simple_network_mode* Mode;
 } efi_simple_network_protocol;
+
+__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_SIMPLE_NETWORK_H_

@@ -7,13 +7,17 @@
 #ifndef ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_SIMPLE_TEXT_INPUT_H_
 #define ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_SIMPLE_TEXT_INPUT_H_
 
+#include <zircon/compiler.h>
+
 #include <efi/types.h>
+
+__BEGIN_CDECLS
 
 #define EFI_SIMPLE_TEXT_INPUT_PROTOCOL_GUID                                        \
   {                                                                                \
     0x387477c1, 0x69c7, 0x11d2, { 0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b } \
   }
-extern efi_guid SimpleTextInputProtocol;
+extern const efi_guid SimpleTextInputProtocol;
 
 typedef struct {
   uint16_t ScanCode;
@@ -29,5 +33,7 @@ typedef struct efi_simple_text_input_protocol {
 
   efi_event WaitForKey;
 } efi_simple_text_input_protocol;
+
+__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_SIMPLE_TEXT_INPUT_H_

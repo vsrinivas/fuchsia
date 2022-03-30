@@ -7,13 +7,17 @@
 #ifndef ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_SERIAL_IO_H_
 #define ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_SERIAL_IO_H_
 
+#include <zircon/compiler.h>
+
 #include <efi/types.h>
+
+__BEGIN_CDECLS
 
 #define EFI_SERIAL_IO_PROTOCOL_GUID                                                \
   {                                                                                \
     0xBB25CF6F, 0xF1D4, 0x11D2, { 0x9a, 0x0c, 0x00, 0x90, 0x27, 0x3f, 0xc1, 0xfd } \
   }
-extern efi_guid SerialIoProtocol;
+extern const efi_guid SerialIoProtocol;
 
 #define EFI_SERIAL_TERMINAL_DEVICE_TYPE_GUID                                       \
   {                                                                                \
@@ -83,5 +87,7 @@ typedef struct efi_serial_io_protocol {
   serial_io_mode* Mode;
   const struct elf_guid* DeviceTypeGuid;  // Revision 1.1
 } efi_serial_io_protocol;
+
+__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_SERIAL_IO_H_

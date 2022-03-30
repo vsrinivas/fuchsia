@@ -8,12 +8,15 @@
 #define ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_BOOT_SERVICES_H_
 
 #include <stdbool.h>
+#include <zircon/compiler.h>
 
 #include <efi/protocol/device-path.h>
 #include <efi/types.h>
 
 #define EFI_BOOT_SERVICES_SIGNATURE 0x56524553544f4f42
 #define EFI_BOOT_SERVICES_REVISION EFI_SPECIFICATION_VERSION
+
+__BEGIN_CDECLS
 
 typedef size_t efi_tpl;
 
@@ -115,29 +118,29 @@ typedef struct {
 
   efi_status (*CheckEvent)(efi_event event) EFIAPI;
 
-  efi_status (*InstallProtocolInterface)(efi_handle* handle, efi_guid* protocol,
+  efi_status (*InstallProtocolInterface)(efi_handle* handle, const efi_guid* protocol,
                                          efi_interface_type intf_type, void* intf) EFIAPI;
 
-  efi_status (*ReinstallProtocolInterface)(efi_handle hadle, efi_guid* protocol, void* old_intf,
-                                           void* new_intf) EFIAPI;
+  efi_status (*ReinstallProtocolInterface)(efi_handle hadle, const efi_guid* protocol,
+                                           void* old_intf, void* new_intf) EFIAPI;
 
-  efi_status (*UninstallProtocolInterface)(efi_handle handle, efi_guid* protocol,
+  efi_status (*UninstallProtocolInterface)(efi_handle handle, const efi_guid* protocol,
                                            void* intf) EFIAPI;
 
-  efi_status (*HandleProtocol)(efi_handle handle, efi_guid* protocol, void** intf) EFIAPI;
+  efi_status (*HandleProtocol)(efi_handle handle, const efi_guid* protocol, void** intf) EFIAPI;
 
   void* Reserved;
 
-  efi_status (*RegisterProtocolNotify)(efi_guid* protocol, efi_event event,
+  efi_status (*RegisterProtocolNotify)(const efi_guid* protocol, efi_event event,
                                        void** registration) EFIAPI;
 
-  efi_status (*LocateHandle)(efi_locate_search_type search_type, efi_guid* protocol,
+  efi_status (*LocateHandle)(efi_locate_search_type search_type, const efi_guid* protocol,
                              void* search_key, size_t* buf_size, efi_handle* buf) EFIAPI;
 
-  efi_status (*LocateDevicePath)(efi_guid* protocol, efi_device_path_protocol** path,
+  efi_status (*LocateDevicePath)(const efi_guid* protocol, efi_device_path_protocol** path,
                                  efi_handle* device) EFIAPI;
 
-  efi_status (*InstallConfigurationTable)(efi_guid* guid, void* table) EFIAPI;
+  efi_status (*InstallConfigurationTable)(const efi_guid* guid, void* table) EFIAPI;
 
   efi_status (*LoadImage)(bool boot_policy, efi_handle parent_image_handle,
                           efi_device_path_protocol* path, void* src, size_t src_size,
@@ -166,24 +169,24 @@ typedef struct {
   efi_status (*DisconnectController)(efi_handle controller_handle, efi_handle driver_image_handle,
                                      efi_handle child_handle) EFIAPI;
 
-  efi_status (*OpenProtocol)(efi_handle handle, efi_guid* protocol, void** intf,
+  efi_status (*OpenProtocol)(efi_handle handle, const efi_guid* protocol, void** intf,
                              efi_handle agent_handle, efi_handle controller_handle,
                              uint32_t attributes) EFIAPI;
 
-  efi_status (*CloseProtocol)(efi_handle handle, efi_guid* protocol, efi_handle agent_handle,
+  efi_status (*CloseProtocol)(efi_handle handle, const efi_guid* protocol, efi_handle agent_handle,
                               efi_handle controller_handle) EFIAPI;
 
-  efi_status (*OpenProtocolInformation)(efi_handle handle, efi_guid* protocol,
+  efi_status (*OpenProtocolInformation)(efi_handle handle, const efi_guid* protocol,
                                         efi_open_protocol_information_entry** entry_buf,
                                         size_t* entry_count) EFIAPI;
 
   efi_status (*ProtocolsPerHandle)(efi_handle handle, efi_guid*** protocol_buf,
                                    size_t* protocol_buf_count) EFIAPI;
 
-  efi_status (*LocateHandleBuffer)(efi_locate_search_type search_type, efi_guid* protocol,
+  efi_status (*LocateHandleBuffer)(efi_locate_search_type search_type, const efi_guid* protocol,
                                    void* search_key, size_t* num_handles, efi_handle** buf) EFIAPI;
 
-  efi_status (*LocateProtocol)(efi_guid* protocol, void* registration, void** intf) EFIAPI;
+  efi_status (*LocateProtocol)(const efi_guid* protocol, void* registration, void** intf) EFIAPI;
 
   efi_status (*InstallMultipleProtocolInterfaces)(efi_handle* handle, ...) EFIAPI;
 
@@ -199,5 +202,7 @@ typedef struct {
                               const void* notify_ctx, const efi_guid* event_group,
                               efi_event* event) EFIAPI;
 } efi_boot_services;
+
+__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_BOOT_SERVICES_H_

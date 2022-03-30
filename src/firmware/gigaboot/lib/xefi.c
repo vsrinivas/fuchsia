@@ -166,11 +166,11 @@ char16_t* xefi_handle_to_str(efi_handle h) {
   return str;
 }
 
-efi_status xefi_open_protocol(efi_handle h, efi_guid* guid, void** ifc) {
+efi_status xefi_open_protocol(efi_handle h, const efi_guid* guid, void** ifc) {
   return gBS->OpenProtocol(h, guid, ifc, gImg, NULL, EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
 }
 
-efi_status xefi_close_protocol(efi_handle h, efi_guid* guid) {
+efi_status xefi_close_protocol(efi_handle h, const efi_guid* guid) {
   return gBS->CloseProtocol(h, guid, gImg, NULL);
 }
 

@@ -7,16 +7,20 @@
 #ifndef ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_DISK_IO_H_
 #define ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_DISK_IO_H_
 
+#include <zircon/compiler.h>
+
 #include <efi/boot-services.h>
 #include <efi/runtime-services.h>
 #include <efi/types.h>
+
+__BEGIN_CDECLS
 
 #define EFI_DISK_IO_PROTOCOL_GUID                                                  \
   {                                                                                \
     0xCE345171, 0xBA0B, 0x11d2, { 0x8e, 0x4F, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b } \
   }
 
-extern efi_guid DiskIoProtocol;
+extern const efi_guid DiskIoProtocol;
 
 #define EFI_DISK_IO_PROTOCOL_REVISION 0x00010000
 
@@ -29,5 +33,7 @@ struct efi_disk_io_protocol {
   efi_status (*WriteDisk)(efi_disk_io_protocol* self, uint32_t MediaId, uint64_t Offset,
                           uint64_t BufferSize, const void* Buffer) EFIAPI;
 };
+
+__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_DISK_IO_H_

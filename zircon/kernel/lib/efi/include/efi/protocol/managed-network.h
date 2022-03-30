@@ -7,15 +7,19 @@
 #ifndef ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_MANAGED_NETWORK_H_
 #define ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_MANAGED_NETWORK_H_
 
+#include <zircon/compiler.h>
+
 #include <efi/protocol/simple-network.h>
 #include <efi/runtime-services.h>
 #include <efi/types.h>
+
+__BEGIN_CDECLS
 
 #define EFI_MANAGED_NETWORK_PROTOCOL_GUID                                          \
   {                                                                                \
     0x7ab33a91, 0xace5, 0x4326, { 0xb5, 0x72, 0xe7, 0xee, 0x33, 0xd3, 0x9f, 0x16 } \
   }
-extern efi_guid ManagedNetworkProtocol;
+extern const efi_guid ManagedNetworkProtocol;
 
 typedef struct {
   efi_time Timestamp;
@@ -96,5 +100,7 @@ typedef struct efi_managed_network_protocol {
 
   efi_status (*Poll)(struct efi_managed_network_protocol* self) EFIAPI;
 } efi_managed_network_protocol;
+
+__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_MANAGED_NETWORK_H_

@@ -30,7 +30,6 @@ if (is_efi_toolchain) {
 source_set("shared") {
   sources = [
     "cmdline.c",
-    "efi/guids.c",
     "loadfile.c",
     "xefi.c",
   ]

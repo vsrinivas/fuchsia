@@ -13,7 +13,7 @@ zx_library("efi") {
     "//zircon/system/ulib/zbitl/*",
   ]
 
-  sources = []
+  sources = [ "guids.c" ]
 
   sdk = "source"
   sdk_headers = [
