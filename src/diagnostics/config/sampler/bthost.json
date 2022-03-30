@@ -115,7 +115,7 @@
             ],
             "metric_id": 10,
             "metric_type": "Occurrence",
-            "selector": "bootstrap/driver_manager:root/bt-host/adapter/peer_cache/metrics/bredr:bound_failure_events"
+            "selector": "bootstrap/driver_manager:root/bt-host/adapter/peer_cache/metrics/bredr:bond_failure_events"
         },
         {
             "event_codes": [
@@ -151,7 +151,7 @@
             ],
             "metric_id": 10,
             "metric_type": "Occurrence",
-            "selector": "bootstrap/driver_manager:root/bt-host/adapter/peer_cache/metrics/le:bound_failure_events"
+            "selector": "bootstrap/driver_manager:root/bt-host/adapter/peer_cache/metrics/le:bond_failure_events"
         },
         {
             "event_codes": [
