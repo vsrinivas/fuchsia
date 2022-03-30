@@ -15,6 +15,7 @@
 #include <variant>
 
 #include <ddktl/device.h>
+#include <fbl/auto_lock.h>
 
 #include "fbl/auto_lock.h"
 
@@ -59,7 +60,11 @@ zx_status_t FakePipe::GoldfishPipeSetEvent(int32_t id, zx::event pipe_event) {
   return ZX_OK;
 }
 
-void FakePipe::GoldfishPipeDestroy(int32_t id) { pipe_cmd_buffer_.reset(); }
+void FakePipe::GoldfishPipeDestroy(int32_t id) {
+  fbl::AutoLock lock(&lock_);
+
+  pipe_cmd_buffer_.reset();
+}
 
 void FakePipe::GoldfishPipeOpen(int32_t id) {
   auto mapping = MapCmdBuffer();
@@ -101,6 +106,7 @@ void FakePipe::GoldfishPipeExec(int32_t id) {
         }
         cmd_buffer->rw_params.consumed_size += size;
       } else if (phy_addr >= kPinnedVmoPaddr) {
+        fbl::AutoLock lock(&lock_);
         size_t num_vmos = 0u;
         fake_bti_get_pinned_vmos(bti_->get(), nullptr, 0u, &num_vmos);
         std::vector<fake_bti_pinned_vmo_info_t> pinned_vmos(num_vmos);
@@ -166,6 +172,8 @@ void FakePipe::GoldfishPipeExec(int32_t id) {
 }
 
 zx_status_t FakePipe::GoldfishPipeGetBti(zx::bti* out_bti) {
+  fbl::AutoLock lock(&lock_);
+
   zx_status_t status = fake_bti_create_with_paddrs(kFakeBtiPaddrs.data(), kFakeBtiPaddrs.size(),
                                                    out_bti->reset_and_get_address());
   if (status == ZX_OK) {
@@ -181,6 +189,8 @@ zx_status_t FakePipe::GoldfishPipeRegisterSysmemHeap(uint64_t heap, zx::channel 
 }
 
 zx_status_t FakePipe::SetUpPipeDevice() {
+  fbl::AutoLock lock(&lock_);
+
   zx_status_t status;
   if (!pipe_io_buffer_.is_valid()) {
     status = PrepareIoBuffer();
@@ -191,13 +201,17 @@ zx_status_t FakePipe::SetUpPipeDevice() {
   return ZX_OK;
 }
 
-fzl::VmoMapper FakePipe::MapCmdBuffer() const {
+fzl::VmoMapper FakePipe::MapCmdBuffer() {
+  fbl::AutoLock lock(&lock_);
+
   fzl::VmoMapper mapping;
   mapping.Map(pipe_cmd_buffer_, 0, sizeof(pipe_cmd_buffer_t), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   return mapping;
 }
 
 fzl::VmoMapper FakePipe::MapIoBuffer() {
+  fbl::AutoLock lock(&lock_);
+
   if (!pipe_io_buffer_.is_valid()) {
     PrepareIoBuffer();
   }

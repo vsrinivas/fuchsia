@@ -48,7 +48,7 @@ class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> 
 
   zx_status_t SetUpPipeDevice();
   // Map command buffer to a memory address so that tests can access.
-  fzl::VmoMapper MapCmdBuffer() const;
+  fzl::VmoMapper MapCmdBuffer();
   // Map IO buffer to a memory address so that tests can access. Wsill create a
   // new IO buffer if there is none available.
   fzl::VmoMapper MapIoBuffer();
@@ -59,14 +59,16 @@ class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> 
   const std::vector<std::vector<uint8_t>>& io_buffer_contents() const;
 
  private:
-  zx_status_t PrepareIoBuffer();
+  zx_status_t PrepareIoBuffer() TA_REQ(lock_);
+
+  fbl::Mutex lock_;
 
   goldfish_pipe_protocol_t proto_;
-  zx::unowned_bti bti_;
+  zx::unowned_bti bti_ TA_GUARDED(lock_);
 
   static constexpr int32_t kPipeId = 1;
-  zx::vmo pipe_cmd_buffer_ = zx::vmo();
-  zx::vmo pipe_io_buffer_ = zx::vmo();
+  zx::vmo pipe_cmd_buffer_ TA_GUARDED(lock_) = zx::vmo();
+  zx::vmo pipe_io_buffer_ TA_GUARDED(lock_) = zx::vmo();
   size_t io_buffer_size_;
 
   zx::event pipe_event_;
@@ -77,8 +79,6 @@ class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> 
   fit::function<void(const std::vector<uint8_t>&)> on_cmd_write_;
   std::vector<std::vector<uint8_t>> io_buffer_contents_;
   std::queue<std::vector<uint8_t>> bytes_to_read_ TA_GUARDED(lock_);
-
-  fbl::Mutex lock_;
 };
 
 }  // namespace testing
