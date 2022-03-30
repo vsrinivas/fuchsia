@@ -1,0 +1,28 @@
+{
+    include: [ "//sdk/lib/syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/thermal_test_control",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.thermal.ClientStateConnector",
+                "fuchsia.thermal.Controller",
+                "test.thermal.ClientStateControl",
+                "test.thermal.Control",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.thermal.ClientStateConnector",
+                "fuchsia.thermal.Controller",
+                "test.thermal.ClientStateControl",
+                "test.thermal.Control",
+            ],
+            from: "self",
+        },
+    ],
+}

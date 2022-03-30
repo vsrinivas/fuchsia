@@ -9,6 +9,13 @@ fuchsia_package_with_single_component("thermal-test-control") {
   deps = [ ":thermal_test_control_bin" ]
 }
 
+fuchsia_component("thermal-test-control-v2") {
+  testonly = true
+  component_name = "thermal_test_control"
+  manifest = "meta/thermal_test_control.cml"
+  deps = [ ":thermal_test_control_bin" ]
+}
+
 executable("thermal_test_control_bin") {
   output_name = "thermal_test_control"
   sources = [
