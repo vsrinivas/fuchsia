@@ -323,7 +323,7 @@ func TestRunNinja(t *testing.T) {
 				buildDir:  filepath.Join(t.TempDir(), "out"),
 				jobCount:  23, // Arbitrary but distinctive value.
 			}
-			msg, gotActionData, err := runNinja(ctx, r, []string{"foo", "bar"}, false, nil)
+			msg, gotActionData, err := runNinja(ctx, r, []string{}, []string{"foo", "bar"}, false, nil)
 			if tc.fail {
 				if !errors.Is(err, errSubprocessFailure) {
 					t.Fatalf("Expected a subprocess failure error but got: %s", err)
@@ -380,7 +380,7 @@ ninja explain: obj/build/foo is dirty`),
 
 	explainSink := new(strings.Builder)
 
-	if _, _, err := runNinja(ctx, r, []string{"foo", "bar"}, true /* explain */, explainSink); err != nil {
+	if _, _, err := runNinja(ctx, r, []string{}, []string{"foo", "bar"}, true /* explain */, explainSink); err != nil {
 		t.Fatalf("runNinja failed: %s", err)
 	}
 

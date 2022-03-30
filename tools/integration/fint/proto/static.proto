@@ -166,4 +166,7 @@ message Static {
 
   // Which language-specific lint targets to include.
   LintTargets include_lint_targets = 35;
+
+  // Extra args to pass to ninja.
+  repeated string ninja_args = 36;
 }

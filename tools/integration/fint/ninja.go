@@ -279,6 +279,7 @@ func (p *ninjaParser) failureMessage() string {
 func runNinja(
 	ctx context.Context,
 	r ninjaRunner,
+	ninjaArgs []string,
 	targets []string,
 	explain bool,
 	explainSink io.Writer,
@@ -302,7 +303,7 @@ func runNinja(
 		stdout, stderr := stripNinjaExplain(streams.Stdout(ctx)), stripNinjaExplain(streams.Stderr(ctx))
 		err := r.run(
 			ctx,
-			targets,
+			append(ninjaArgs, targets...),
 			// Ninja writes "ninja: ..." logs to stderr, but step logs like
 			// "[1/12345] ..." to stdout. The parser should consider both of
 			// these kinds of logs. In theory stdout and stderr should be
