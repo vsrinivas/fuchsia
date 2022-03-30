@@ -39,11 +39,8 @@ const (
 )
 
 type addressStateProviderCollection struct {
-	nicid tcpip.NICID
-	mu    struct {
-		sync.Mutex
-		providers map[tcpip.Address]*adminAddressStateProviderImpl
-	}
+	nicid     tcpip.NICID
+	providers map[tcpip.Address]*adminAddressStateProviderImpl
 }
 
 // Called when DAD completes.
@@ -51,7 +48,7 @@ type addressStateProviderCollection struct {
 // Note that `online` must not change when calling this function (`ifState.mu`
 // must be held).
 func (pc *addressStateProviderCollection) onDuplicateAddressDetectionCompleteLocked(nicid tcpip.NICID, addr tcpip.Address, online, success bool) {
-	pi, ok := pc.mu.providers[addr]
+	pi, ok := pc.providers[addr]
 	if !ok {
 		return
 	}
@@ -67,27 +64,21 @@ func (pc *addressStateProviderCollection) onDuplicateAddressDetectionCompleteLoc
 			pi.setStateLocked(admin.AddressAssignmentStateAssigned)
 		}
 	} else {
-		delete(pc.mu.providers, addr)
+		delete(pc.providers, addr)
 		pi.onRemoveLocked(admin.AddressRemovalReasonDadFailed)
 	}
 }
 
-func (pc *addressStateProviderCollection) onAddressRemove(addr tcpip.Address) {
-	pc.mu.Lock()
-	defer pc.mu.Unlock()
-
-	if pi, ok := pc.mu.providers[addr]; ok {
-		delete(pc.mu.providers, addr)
+func (pc *addressStateProviderCollection) onAddressRemoveLocked(addr tcpip.Address) {
+	if pi, ok := pc.providers[addr]; ok {
+		delete(pc.providers, addr)
 		pi.onRemove(admin.AddressRemovalReasonUserRemoved)
 	}
 }
 
-func (pc *addressStateProviderCollection) onInterfaceRemove() {
-	pc.mu.Lock()
-	defer pc.mu.Unlock()
-
-	for addr, pi := range pc.mu.providers {
-		delete(pc.mu.providers, addr)
+func (pc *addressStateProviderCollection) onInterfaceRemoveLocked() {
+	for addr, pi := range pc.providers {
+		delete(pc.providers, addr)
 		pi.onRemove(admin.AddressRemovalReasonInterfaceRemoved)
 	}
 }
@@ -96,7 +87,7 @@ func (pc *addressStateProviderCollection) onInterfaceRemove() {
 // Note that this function should be called while holding a lock which prevents
 // `online` from mutating.
 func (pc *addressStateProviderCollection) onInterfaceOnlineChangeLocked(online bool) {
-	for _, pi := range pc.mu.providers {
+	for _, pi := range pc.providers {
 		pi.setInitialState(online)
 	}
 }
@@ -384,43 +375,22 @@ func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Interfa
 			return admin.AddressRemovalReasonInvalid
 		}
 
-		// NB: Must lock `ifState.mu` and then `addressStateProviderCollection.mu`
-		// to prevent interface online changes (which acquire the same locks in
-		// the same order) from interposing a modification to address assignment
-		// state before the `impl` is inserted into the collection.
-		//
-		// `ifState.mu` is released as soon as possible to avoid deadlock issues.
-		online := func() bool {
-			ifs.mu.Lock()
-			defer ifs.mu.Unlock()
+		ifs.mu.Lock()
+		defer ifs.mu.Unlock()
+		online := ifs.IsUpLocked()
 
-			ifs.addressStateProviders.mu.Lock()
-			return ifs.IsUpLocked()
-		}()
-		defer ifs.addressStateProviders.mu.Unlock()
-
-		if _, ok := ifs.addressStateProviders.mu.providers[addr]; ok {
+		if _, ok := ifs.mu.addressStateProviders.providers[addr]; ok {
 			return admin.AddressRemovalReasonAlreadyAssigned
 		}
 
-		status := ci.ns.addInterfaceAddress(ci.nicid, protocolAddr, false /* addRoute */, properties)
-		_ = syslog.DebugTf(addressStateProviderName, "addInterfaceAddress(%d, %+v, false) = %s", ci.nicid, protocolAddr, status)
-		switch status {
-		case zx.ErrOk:
-			impl.mu.state = initialAddressAssignmentState(protocolAddr, online)
-			_ = syslog.DebugTf(addressStateProviderName, "initial state for %+v: %s", protocolAddr, impl.mu.state)
-			ifs.addressStateProviders.mu.providers[addr] = impl
-			return 0
-		case zx.ErrInvalidArgs:
-			return admin.AddressRemovalReasonInvalid
-		case zx.ErrNotFound:
-			return admin.AddressRemovalReasonInterfaceRemoved
-		case zx.ErrAlreadyExists:
-			return admin.AddressRemovalReasonAlreadyAssigned
-		default:
-			panic(fmt.Errorf("unexpected internal AddAddress error %s", status))
-			return admin.AddressRemovalReasonUserRemoved
+		if ok, status := ifs.addAddressLocked(protocolAddr, properties); !ok {
+			return status
 		}
+		impl.mu.state = initialAddressAssignmentState(protocolAddr, online)
+		_ = syslog.DebugTf(addressStateProviderName, "initial state for %s: %s", protocolAddr.AddressWithPrefix, impl.mu.state)
+		ifs.mu.addressStateProviders.providers[addr] = impl
+
+		return 0
 	}(); reason != 0 {
 		if err := impl.mu.eventProxy.OnAddressRemoved(reason); err != nil {
 			var zxError *zx.Error
@@ -443,8 +413,8 @@ func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Interfa
 		})
 
 		if pi := func() *adminAddressStateProviderImpl {
-			ifs.addressStateProviders.mu.Lock()
-			defer ifs.addressStateProviders.mu.Unlock()
+			ifs.mu.Lock()
+			defer ifs.mu.Unlock()
 
 			// The impl may have already been removed due to address removal.
 			// Removing the address will also attempt to delete from
@@ -453,8 +423,8 @@ func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Interfa
 			// with address removal only if this impl is the one stored in the map.
 			// A new address state provider may have won the race here and could be
 			// trying to assign the address again.
-			if pi, ok := ifs.addressStateProviders.mu.providers[addr]; ok && pi == impl {
-				delete(ifs.addressStateProviders.mu.providers, addr)
+			if pi, ok := ifs.mu.addressStateProviders.providers[addr]; ok && pi == impl {
+				delete(ifs.mu.addressStateProviders.providers, addr)
 				return pi
 			}
 			return nil
@@ -468,9 +438,12 @@ func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Interfa
 				// provider collection and delete the impl out of it if found. The lock
 				// on the collection must not be held at this point to prevent the
 				// deadlock.
-				if status := ci.ns.removeInterfaceAddress(ci.nicid, pi.protocolAddr, false /* removeRoute */); status != zx.ErrOk && status != zx.ErrNotFound {
-					// If address has already been removed, don't consider it an error.
-					_ = syslog.ErrorTf(addressStateProviderName, "failed to remove address %s on channel closure: %s", addr, status)
+				switch status := ifs.removeAddress(pi.protocolAddr); status {
+				case zx.ErrOk, zx.ErrNotFound:
+				case zx.ErrBadState:
+					_ = syslog.WarnTf(addressStateProviderName, "interface %d removed when trying to remove address %s upon channel closure: %s", ci.nicid, addr, status)
+				default:
+					panic(fmt.Sprintf("unknown error trying to remove address %s upon channel closure: %s", addr, status))
 				}
 			}
 		}
@@ -480,7 +453,11 @@ func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Interfa
 
 func (ci *adminControlImpl) RemoveAddress(_ fidl.Context, address net.InterfaceAddress) (admin.ControlRemoveAddressResult, error) {
 	protocolAddr := interfaceAddressToProtocolAddress(address)
-	switch zxErr := ci.ns.removeInterfaceAddress(ci.nicid, protocolAddr, false /* removeRoute */); zxErr {
+	nicInfo, ok := ci.ns.stack.NICInfo()[ci.nicid]
+	if !ok {
+		panic(fmt.Sprintf("NIC %d not found when removing %s", ci.nicid, protocolAddr.AddressWithPrefix))
+	}
+	switch zxErr := nicInfo.Context.(*ifState).removeAddress(protocolAddr); zxErr {
 	case zx.ErrOk:
 		return admin.ControlRemoveAddressResultWithResponse(admin.ControlRemoveAddressResponse{DidRemove: true}), nil
 	case zx.ErrNotFound:

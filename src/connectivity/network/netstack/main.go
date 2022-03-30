@@ -329,26 +329,49 @@ func Main() {
 
 	f := filter.New(stk)
 
+	interfaceEventChan := make(chan interfaceEvent)
+	watcherChan := make(chan interfaces.WatcherWithCtxInterfaceRequest)
+	go interfaceWatcherEventLoop(interfaceEventChan, watcherChan)
 	ns := &Netstack{
+		interfaceEventChan: interfaceEventChan,
 		dnsConfig:          dns.MakeServersConfig(stk.Clock()),
 		stack:              stk,
 		stats:              stats{Stats: stk.Stats()},
 		nicRemovedHandlers: []NICRemovedHandler{&ndpDisp.dynamicAddressSourceTracker, f},
 	}
 
-	ns.interfaceWatchers.mu.watchers = make(map[*interfaceWatcherImpl]struct{})
-	ns.interfaceWatchers.mu.lastObserved = make(map[tcpip.NICID]interfaces.Properties)
-
 	nudDisp.ns = ns
 	ndpDisp.ns = ns
 	ndpDisp.dynamicAddressSourceTracker.init(ns)
-	ndpDisp.start(ctx)
 
 	filter.AddOutgoingService(appCtx, f)
 
-	if err := ns.addLoopback(); err != nil {
-		syslog.Fatalf("loopback: %s", err)
+	{
+		if err := ns.addLoopback(); err != nil {
+			syslog.Fatalf("loopback: %s", err)
+		}
+		// Handle all of the already-enqueued NDP events so that DAD
+		// completion for ::1 is observed. This ensures that clients
+		// to the interface watcher are guaranteed to observe ::1 in
+		// the Existing event rather than as a separate Changed event.
+		for {
+			event := func() ndpEvent {
+				ndpDisp.mu.Lock()
+				defer ndpDisp.mu.Unlock()
+
+				if len(ndpDisp.mu.events) == 0 {
+					return nil
+				}
+				return ndpDisp.mu.events[0]
+			}()
+			if event == nil {
+				break
+			}
+			ndpDisp.handleEvent(event)
+		}
 	}
+
+	ndpDisp.start(ctx)
 
 	dnsWatchers := newDnsServerWatcherCollection(ns.dnsConfig.GetServersCacheAndChannel)
 
@@ -546,7 +569,7 @@ func Main() {
 	}
 
 	{
-		stub := interfaces.StateWithCtxStub{Impl: &interfaceStateImpl{ns: ns}}
+		stub := interfaces.StateWithCtxStub{Impl: &interfaceStateImpl{watcherChan: watcherChan}}
 		appCtx.OutgoingService.AddService(
 			interfaces.StateName,
 			func(ctx context.Context, c zx.Channel) error {

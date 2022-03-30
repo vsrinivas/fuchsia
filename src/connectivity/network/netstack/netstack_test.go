@@ -25,7 +25,6 @@ import (
 	"fidl/fuchsia/io"
 	"fidl/fuchsia/logger"
 	fidlnet "fidl/fuchsia/net"
-	"fidl/fuchsia/net/interfaces"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
 
@@ -100,21 +99,27 @@ func TestDelRouteErrors(t *testing.T) {
 		NIC:         ifs.nicid,
 	}
 
-	// Deleting a route we never added should result in an error.
-	if err := ns.DelRoute(rt); err != routes.ErrNoSuchRoute {
-		t.Errorf("got DelRoute(%s) = %v, want = %s", rt, err, routes.ErrNoSuchRoute)
+	// Deleting a route we never added should return no routes deleted.
+	if got := ns.DelRoute(rt); len(got) != 0 {
+		t.Errorf("DelRoute(%s) = %#v not empty", rt, got)
 	}
 
 	if err := ns.AddRoute(rt, metricNotSet, false); err != nil {
 		t.Fatalf("AddRoute(%s, metricNotSet, false): %s", rt, err)
 	}
 	// Deleting a route we added should not result in an error.
-	if err := ns.DelRoute(rt); err != nil {
-		t.Fatalf("got DelRoute(%s) = %s, want = nil", rt, err)
+	want := routes.ExtendedRoute{
+		Route:                 rt,
+		Prf:                   routes.MediumPreference,
+		Metric:                metricNotSet,
+		MetricTracksInterface: true,
 	}
-	// Deleting a route we just deleted should result in an error.
-	if err := ns.DelRoute(rt); err != routes.ErrNoSuchRoute {
-		t.Errorf("got DelRoute(%s) = %v, want = %s", rt, err, routes.ErrNoSuchRoute)
+	if diff := cmp.Diff(ns.DelRoute(rt), []routes.ExtendedRoute{want}); diff != "" {
+		t.Fatalf("DelRoute(%s): -got +want %s", rt, diff)
+	}
+	// Deleting a route we just deleted should result in no routes actually deleted.
+	if got := ns.DelRoute(rt); len(got) != 0 {
+		t.Errorf("DelRoute(%s) = %#v not empty", rt, got)
 	}
 }
 
@@ -1056,8 +1061,9 @@ type noopNicRemovedHandler struct{}
 func (*noopNicRemovedHandler) RemovedNIC(tcpip.NICID) {}
 
 type netstackTestOptions struct {
-	nicRemovedHandler NICRemovedHandler
-	ndpDisp           ipv6.NDPDispatcher
+	nicRemovedHandler  NICRemovedHandler
+	ndpDisp            ipv6.NDPDispatcher
+	interfaceEventChan chan<- interfaceEvent
 }
 
 func newNetstack(t *testing.T, options netstackTestOptions) (*Netstack, *faketime.ManualClock) {
@@ -1080,6 +1086,15 @@ func newNetstack(t *testing.T, options netstackTestOptions) (*Netstack, *faketim
 		Clock: clock,
 	})
 
+	interfaceEventChan := options.interfaceEventChan
+	if interfaceEventChan == nil {
+		ch := make(chan interfaceEvent)
+		go func() {
+			for range ch {
+			}
+		}()
+		interfaceEventChan = ch
+	}
 	ns := &Netstack{
 		stack: stk,
 		// Required initialization because adding/removing interfaces interacts with
@@ -1092,13 +1107,12 @@ func newNetstack(t *testing.T, options netstackTestOptions) (*Netstack, *faketim
 			return &noopNicRemovedHandler{}
 
 		}()},
+		interfaceEventChan: interfaceEventChan,
 	}
 	if ndpDisp, ok := options.ndpDisp.(*ndpDispatcher); ok {
 		ndpDisp.ns = ns
 		ndpDisp.dynamicAddressSourceTracker.init(ns)
 	}
-	ns.interfaceWatchers.mu.watchers = make(map[*interfaceWatcherImpl]struct{})
-	ns.interfaceWatchers.mu.lastObserved = make(map[tcpip.NICID]interfaces.Properties)
 
 	t.Cleanup(func() {
 		for _, nic := range ns.stack.NICInfo() {
@@ -1314,8 +1328,12 @@ func TestAddRouteParameterValidation(t *testing.T) {
 	ifState := addNoopEndpoint(t, ns, "")
 	t.Cleanup(ifState.RemoveByUser)
 
-	if status := ns.addInterfaceAddress(ifState.nicid, addr, true /* addRoute */, tcpipstack.AddressProperties{}); status != zx.ErrOk {
-		t.Fatalf("ns.addInterfaceAddress(%d, %s, true, {}) = %s", ifState.nicid, addr.AddressWithPrefix, status)
+	if ok, reason := ifState.addAddress(addr, tcpipstack.AddressProperties{}); !ok {
+		t.Fatalf("ifState.addAddress(%s, {}): %s", addr.AddressWithPrefix, reason)
+	}
+	route := addressWithPrefixRoute(ifState.nicid, addr.AddressWithPrefix)
+	if err := ns.AddRoute(route, metricNotSet /* dynamic */, false); err != nil {
+		t.Fatalf("ns.AddRoute(%s, 0, false): %s", route, err)
 	}
 
 	tests := []struct {
@@ -1500,7 +1518,7 @@ func TestDHCPAcquired(t *testing.T) {
 
 			// Update the DHCP address to the given test values and verify it took
 			// effect.
-			ifState.dhcpAcquired(test.oldAddr, test.newAddr, test.config)
+			ifState.dhcpAcquired(context.Background(), test.oldAddr, test.newAddr, test.config)
 
 			if diff := cmp.Diff(ifState.dns.mu.servers, test.config.DNS); diff != "" {
 				t.Errorf("ifState.mu.dnsServers mismatch (-want +got):\n%s", diff)
@@ -1533,7 +1551,7 @@ func TestDHCPAcquired(t *testing.T) {
 
 			// Remove the address and verify everything is cleaned up correctly.
 			remAddr := test.newAddr
-			ifState.dhcpAcquired(remAddr, tcpip.AddressWithPrefix{}, dhcp.Config{})
+			ifState.dhcpAcquired(context.Background(), remAddr, tcpip.AddressWithPrefix{}, dhcp.Config{})
 
 			if diff := cmp.Diff(ifState.dns.mu.servers, ifState.dns.mu.servers[:0]); diff != "" {
 				t.Errorf("ifState.mu.dnsServers mismatch (-want +got):\n%s", diff)

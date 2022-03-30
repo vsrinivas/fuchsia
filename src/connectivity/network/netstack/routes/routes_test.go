@@ -383,7 +383,9 @@ func TestDelRoute(t *testing.T) {
 			}
 			for _, d := range tc.order {
 				toDel := testRouteTable[d]
-				tb.DelRoute(toDel.Route)
+				// Don't assert that a route is actually removed since there are test
+				// cases which remove the same route multiple times.
+				_ = tb.DelRoute(toDel.Route)
 				validRoutes[d] = false
 			}
 			tableGot := tb.GetExtendedRouteTable()

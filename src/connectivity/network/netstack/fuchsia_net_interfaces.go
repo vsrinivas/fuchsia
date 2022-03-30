@@ -16,8 +16,6 @@ import (
 	"syscall/zx"
 	"syscall/zx/fidl"
 
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
@@ -27,91 +25,35 @@ import (
 	"fidl/fuchsia/net/interfaces"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
-	"gvisor.dev/gvisor/pkg/tcpip/header"
-	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
-	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
-	tcpipstack "gvisor.dev/gvisor/pkg/tcpip/stack"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 const watcherProtocolName = "fuchsia.net.interfaces/Watcher"
 
-// addressPatch is a patch to the address data exposed by upstream interface
-// data. This type provides a mechanism by which clients of onPropertiesChange
-// can extend the data exposed by fuchsia.net.interfaces beyond what is
-// available in the upstream interface representation. At the the time of this
-// writing, there is only need for an extension to Address data; should more
-// general extensions be needed, a properties patch type which composes this
-// type may be called for.
-type addressPatch struct {
-	addr       tcpip.AddressWithPrefix
-	validUntil time.Time
+func makeInterfacesAddress(ifAddr net.InterfaceAddress, validUntil int64) interfaces.Address {
+	var a interfaces.Address
+	a.SetValue(ifAddr)
+	a.SetValidUntil(validUntil)
+	return a
 }
 
-func makeInterfacesAddress(protocolAddr tcpip.ProtocolAddress, validUntil time.Time) interfaces.Address {
-	var addr interfaces.Address
-	addr.SetValue(func() net.InterfaceAddress {
-		switch protocolAddr.Protocol {
-		case ipv4.ProtocolNumber:
-			if len(protocolAddr.AddressWithPrefix.Address) == header.IPv4AddressSize {
-				var addr net.Ipv4Address
-				copy(addr.Addr[:], protocolAddr.AddressWithPrefix.Address)
-				return net.InterfaceAddressWithIpv4(net.Ipv4AddressWithPrefix{
-					Addr:      addr,
-					PrefixLen: uint8(protocolAddr.AddressWithPrefix.PrefixLen),
-				})
-			}
-		case ipv6.ProtocolNumber:
-			if len(protocolAddr.AddressWithPrefix.Address) == header.IPv6AddressSize {
-				var addr net.Ipv6Address
-				copy(addr.Addr[:], protocolAddr.AddressWithPrefix.Address)
-				return net.InterfaceAddressWithIpv6(addr)
-			}
-		}
-		panic(fmt.Sprintf("cannot convert to %T: %#v", net.InterfaceAddress{}, protocolAddr))
-	}())
-	addr.SetAddr(net.Subnet{
-		Addr:      fidlconv.ToNetIpAddress(protocolAddr.AddressWithPrefix.Address),
-		PrefixLen: uint8(protocolAddr.AddressWithPrefix.PrefixLen),
-	})
-	addr.SetValidUntil(validUntil.MonotonicNano())
-	return addr
-}
-
-func interfaceProperties(nicInfo tcpipstack.NICInfo, hasDefaultIPv4Route, hasDefaultIPv6Route bool, addressPatches []addressPatch) interfaces.Properties {
+func initialProperties(ifs *ifState, name string) interfaces.Properties {
 	var p interfaces.Properties
-	ifs := nicInfo.Context.(*ifState)
-	p.SetId(uint64(ifs.nicid))
-	p.SetName(nicInfo.Name)
-	p.SetHasDefaultIpv4Route(hasDefaultIPv4Route)
-	p.SetHasDefaultIpv6Route(hasDefaultIPv6Route)
 
-	if ifs.endpoint.Capabilities()&tcpipstack.CapabilityLoopback != 0 {
+	p.SetId(uint64(ifs.nicid))
+	p.SetName(name)
+	if ifs.endpoint.Capabilities()&stack.CapabilityLoopback != 0 {
 		p.SetDeviceClass(interfaces.DeviceClassWithLoopback(interfaces.Empty{}))
 	} else if ifs.controller != nil {
 		p.SetDeviceClass(interfaces.DeviceClassWithDevice(ifs.controller.DeviceClass()))
 	} else {
-		panic(fmt.Sprintf("can't extract DeviceClass from non-loopback NIC %d(%s) with nil controller", ifs.nicid, nicInfo.Name))
+		panic(fmt.Sprintf("can't extract DeviceClass from non-loopback NIC %d(%s) with nil controller", ifs.nicid, name))
 	}
 
-	ifs.mu.Lock()
-	p.SetOnline(ifs.IsUpLocked())
-	ifs.mu.Unlock()
-
-	var addrs []interfaces.Address
-	for _, a := range nicInfo.ProtocolAddresses {
-		addr := makeInterfacesAddress(a, time.Monotonic(int64(zx.TimensecInfinite)))
-		for _, p := range addressPatches {
-			if p.addr == a.AddressWithPrefix {
-				addr.SetValidUntil(p.validUntil.MonotonicNano())
-				break
-			}
-		}
-		addrs = append(addrs, addr)
-	}
-	sort.Slice(addrs, func(i, j int) bool {
-		return cmpInterfaceAddress(addrs[i].GetValue(), addrs[j].GetValue()) <= 0
-	})
-	p.SetAddresses(addrs)
+	p.SetOnline(false)
+	p.SetHasDefaultIpv4Route(false)
+	p.SetHasDefaultIpv6Route(false)
+	p.SetAddresses([]interfaces.Address{})
 
 	return p
 }
@@ -133,7 +75,7 @@ const maxInterfaceWatcherQueueLen = 128
 func (wi *interfaceWatcherImpl) onEvent(e interfaces.Event) {
 	wi.mu.Lock()
 	if len(wi.mu.queue) >= maxInterfaceWatcherQueueLen {
-		_ = syslog.WarnTf(watcherProtocolName, "too many unconsumed events (client may not be calling Watch as frequently as possible): %d, max: %d", len(wi.mu.queue), maxInterfaceWatcherQueueLen)
+		_ = syslog.ErrorTf(watcherProtocolName, "too many unconsumed events (client may not be calling Watch as frequently as possible): %d, max: %d", len(wi.mu.queue), maxInterfaceWatcherQueueLen)
 		wi.cancelServe()
 	} else {
 		wi.mu.queue = append(wi.mu.queue, e)
@@ -175,47 +117,6 @@ func cmpInterfaceAddress(ifAddr1 net.InterfaceAddress, ifAddr2 net.InterfaceAddr
 	return 0
 }
 
-func emptyInterfaceProperties(p interfaces.Properties) bool {
-	return !(p.HasId() || p.HasAddresses() || p.HasOnline() || p.HasDeviceClass() || p.HasHasDefaultIpv4Route() || p.HasHasDefaultIpv6Route())
-}
-
-// Diff two interface properties. The return value will have no fields present
-// if there is no difference. The return value may contain references to fields
-// in p2.
-func diffInterfaceProperties(p1, p2 interfaces.Properties) interfaces.Properties {
-	var diff interfaces.Properties
-	if p1.GetOnline() != p2.GetOnline() {
-		diff.SetOnline(p2.GetOnline())
-	}
-	if p1.GetHasDefaultIpv4Route() != p2.GetHasDefaultIpv4Route() {
-		diff.SetHasDefaultIpv4Route(p2.GetHasDefaultIpv4Route())
-	}
-	if p1.GetHasDefaultIpv6Route() != p2.GetHasDefaultIpv6Route() {
-		diff.SetHasDefaultIpv6Route(p2.GetHasDefaultIpv6Route())
-	}
-	if func() bool {
-		if len(p2.GetAddresses()) != len(p1.GetAddresses()) {
-			return true
-		}
-		for i, addr := range p1.GetAddresses() {
-			p2Addr := p2.GetAddresses()[i]
-			if cmpInterfaceAddress(addr.GetValue(), p2Addr.GetValue()) != 0 {
-				return true
-			}
-			if addr.GetValidUntil() != p2Addr.GetValidUntil() {
-				return true
-			}
-		}
-		return false
-	}() {
-		diff.SetAddresses(p2.GetAddresses())
-	}
-	if !emptyInterfaceProperties(diff) {
-		diff.SetId(p2.GetId())
-	}
-	return diff
-}
-
 func (wi *interfaceWatcherImpl) Watch(ctx fidl.Context) (interfaces.Event, error) {
 	wi.mu.Lock()
 	defer wi.mu.Unlock()
@@ -250,178 +151,301 @@ func (wi *interfaceWatcherImpl) Watch(ctx fidl.Context) (interfaces.Event, error
 	}
 }
 
-type interfaceWatcherCollection struct {
-	mu struct {
-		sync.Mutex
-		lastObserved map[tcpip.NICID]interfaces.Properties
-		watchers     map[*interfaceWatcherImpl]struct{}
-	}
-}
-
-func (wc *interfaceWatcherCollection) onPropertiesChangeLocked(nicid tcpip.NICID, nicInfo tcpipstack.NICInfo, addressPatches []addressPatch) {
-	if properties, ok := wc.mu.lastObserved[nicid]; ok {
-		newProperties := interfaceProperties(nicInfo, properties.GetHasDefaultIpv4Route(), properties.GetHasDefaultIpv6Route(), addressPatches)
-		if diff := diffInterfaceProperties(properties, newProperties); !emptyInterfaceProperties(diff) {
-			wc.mu.lastObserved[nicid] = newProperties
-			for w := range wc.mu.watchers {
-				w.onEvent(interfaces.EventWithChanged(diff))
-			}
-		}
-	} else {
-		_ = syslog.WarnTf(watcherProtocolName, "onPropertiesChange called regarding unknown interface %d", nicid)
-	}
-}
-
-// onAddressAdd is called when an address is added.
-//
-// If performed, DAD must have completed successfully before calling this function, as the
-// presence of an address indicates to clients that the address can be used.
-func (wc *interfaceWatcherCollection) onAddressAdd(nicid tcpip.NICID, protocolAddr tcpip.ProtocolAddress, validUntil time.Time) {
-	wc.mu.Lock()
-	defer wc.mu.Unlock()
-
-	properties, ok := wc.mu.lastObserved[nicid]
-	if !ok {
-		_ = syslog.Warnf("onAddressAdd(%d, %+v, %s): NIC no longer exists", nicid, protocolAddr, validUntil)
-		return
-	}
-
-	if addrs, changed := func() ([]interfaces.Address, bool) {
-		if !properties.HasAddresses() {
-			return nil, true
-		} else {
-			addrs := properties.GetAddresses()
-			for _, a := range addrs {
-				foundProtocolAddr := interfaceAddressToProtocolAddress(a.GetValue())
-				if foundProtocolAddr == protocolAddr {
-					_ = syslog.Warnf("onAddressAdd(%d, %+v, %s): address %+v already exists", nicid, protocolAddr, validUntil, foundProtocolAddr)
-					return nil, false
-				}
-			}
-			return addrs, true
-		}
-	}(); changed {
-		addrs = append(addrs, makeInterfacesAddress(protocolAddr, validUntil))
-		sort.Slice(addrs, func(i, j int) bool {
-			return cmpInterfaceAddress(addrs[i].GetValue(), addrs[j].GetValue()) <= 0
-		})
-		properties.SetAddresses(addrs)
-		wc.mu.lastObserved[nicid] = properties
-
-		var diff interfaces.Properties
-		diff.SetId(uint64(nicid))
-		diff.SetAddresses(addrs)
-
-		for w := range wc.mu.watchers {
-			w.onEvent(interfaces.EventWithChanged(diff))
-		}
-	}
-}
-
-func (wc *interfaceWatcherCollection) onDefaultRouteChangeLocked(routes []routes.ExtendedRoute) {
-	v4DefaultRoute := make(map[tcpip.NICID]struct{})
-	v6DefaultRoute := make(map[tcpip.NICID]struct{})
-	for _, er := range routes {
-		if er.Enabled {
-			if er.Route.Destination.Equal(header.IPv4EmptySubnet) {
-				v4DefaultRoute[er.Route.NIC] = struct{}{}
-			} else if er.Route.Destination.Equal(header.IPv6EmptySubnet) {
-				v6DefaultRoute[er.Route.NIC] = struct{}{}
-			}
-		}
-	}
-
-	for nicid, properties := range wc.mu.lastObserved {
-		var diff interfaces.Properties
-		diff.SetId(uint64(nicid))
-		if _, ok := v4DefaultRoute[nicid]; ok != properties.GetHasDefaultIpv4Route() {
-			properties.SetHasDefaultIpv4Route(ok)
-			diff.SetHasDefaultIpv4Route(ok)
-		}
-		if _, ok := v6DefaultRoute[nicid]; ok != properties.GetHasDefaultIpv6Route() {
-			properties.SetHasDefaultIpv6Route(ok)
-			diff.SetHasDefaultIpv6Route(ok)
-		}
-		if diff.HasHasDefaultIpv4Route() || diff.HasHasDefaultIpv6Route() {
-			wc.mu.lastObserved[nicid] = properties
-			for w := range wc.mu.watchers {
-				w.onEvent(interfaces.EventWithChanged(diff))
-			}
-		}
-	}
-}
-
-func (wc *interfaceWatcherCollection) onInterfaceAddLocked(nicid tcpip.NICID, nicInfo tcpipstack.NICInfo, routes []routes.ExtendedRoute) {
-	if properties, ok := wc.mu.lastObserved[nicid]; ok {
-		_ = syslog.WarnTf(watcherProtocolName, "interface added but already known: %+v", properties)
-		return
-	}
-
-	var hasDefaultIpv4Route, hasDefaultIpv6Route bool
-	for _, er := range routes {
-		if er.Enabled && er.Route.NIC == nicid {
-			hasDefaultIpv4Route = hasDefaultIpv4Route || er.Route.Destination.Equal(header.IPv4EmptySubnet)
-			hasDefaultIpv6Route = hasDefaultIpv6Route || er.Route.Destination.Equal(header.IPv6EmptySubnet)
-		}
-	}
-
-	properties := interfaceProperties(nicInfo, hasDefaultIpv4Route, hasDefaultIpv6Route, nil)
-	wc.mu.lastObserved[nicid] = properties
-	for w := range wc.mu.watchers {
-		w.onEvent(interfaces.EventWithAdded(properties))
-	}
-}
-
-func (c *interfaceWatcherCollection) onInterfaceRemove(nicid tcpip.NICID) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if _, ok := c.mu.lastObserved[nicid]; !ok {
-		_ = syslog.WarnTf(watcherProtocolName, "unknown interface removed")
-		return
-	}
-	delete(c.mu.lastObserved, nicid)
-	for w := range c.mu.watchers {
-		w.onEvent(interfaces.EventWithRemoved(uint64(nicid)))
-	}
-}
-
 var _ interfaces.StateWithCtx = (*interfaceStateImpl)(nil)
 
 type interfaceStateImpl struct {
-	ns *Netstack
+	watcherChan chan<- interfaces.WatcherWithCtxInterfaceRequest
 }
 
 func (si *interfaceStateImpl) GetWatcher(_ fidl.Context, _ interfaces.WatcherOptions, watcher interfaces.WatcherWithCtxInterfaceRequest) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	impl := interfaceWatcherImpl{
-		ready:       make(chan struct{}, 1),
-		cancelServe: cancel,
-	}
-	impl.mu.queue = make([]interfaces.Event, 0, maxInterfaceWatcherQueueLen)
-
-	si.ns.interfaceWatchers.mu.Lock()
-
-	for _, properties := range si.ns.interfaceWatchers.mu.lastObserved {
-		impl.mu.queue = append(impl.mu.queue, interfaces.EventWithExisting(properties))
-	}
-	impl.mu.queue = append(impl.mu.queue, interfaces.EventWithIdle(interfaces.Empty{}))
-
-	si.ns.interfaceWatchers.mu.watchers[&impl] = struct{}{}
-	si.ns.interfaceWatchers.mu.Unlock()
-
-	go func() {
-		component.Serve(ctx, &interfaces.WatcherWithCtxStub{Impl: &impl}, watcher.Channel, component.ServeOptions{
-			Concurrent: true,
-			OnError: func(err error) {
-				_ = syslog.WarnTf(watcherProtocolName, "%s", err)
-			},
-		})
-
-		si.ns.interfaceWatchers.mu.Lock()
-		delete(si.ns.interfaceWatchers.mu.watchers, &impl)
-		si.ns.interfaceWatchers.mu.Unlock()
-	}()
-
+	si.watcherChan <- watcher
 	return nil
+}
+
+type interfaceEvent interface {
+	isInterfaceEvent()
+}
+
+type interfaceAdded interfaces.Properties
+
+var _ interfaceEvent = (*interfaceAdded)(nil)
+
+func (interfaceAdded) isInterfaceEvent() {}
+
+type interfaceRemoved tcpip.NICID
+
+var _ interfaceEvent = (*interfaceRemoved)(nil)
+
+func (interfaceRemoved) isInterfaceEvent() {}
+
+type onlineChanged struct {
+	nicid  tcpip.NICID
+	online bool
+}
+
+var _ interfaceEvent = (*onlineChanged)(nil)
+
+func (onlineChanged) isInterfaceEvent() {}
+
+type defaultRouteChanged struct {
+	nicid               tcpip.NICID
+	hasDefaultIPv4Route *bool
+	hasDefaultIPv6Route *bool
+}
+
+var _ interfaceEvent = (*defaultRouteChanged)(nil)
+
+func (defaultRouteChanged) isInterfaceEvent() {}
+
+type addressAdded struct {
+	nicid  tcpip.NICID
+	subnet net.Subnet
+}
+
+var _ interfaceEvent = (*addressAdded)(nil)
+
+func (addressAdded) isInterfaceEvent() {}
+
+type addressRemoved struct {
+	nicid  tcpip.NICID
+	subnet net.Subnet
+	strict bool
+}
+
+var _ interfaceEvent = (*addressRemoved)(nil)
+
+func (addressRemoved) isInterfaceEvent() {}
+
+type validUntilChanged struct {
+	nicid      tcpip.NICID
+	address    net.InterfaceAddress
+	validUntil time.Time
+}
+
+var _ interfaceEvent = (*validUntilChanged)(nil)
+
+func (validUntilChanged) isInterfaceEvent() {}
+
+func subnetToInterfaceAddress(subnet net.Subnet) net.InterfaceAddress {
+	switch tag := subnet.Addr.Which(); tag {
+	case net.IpAddressIpv4:
+		var v4 net.Ipv4Address
+		copy(v4.Addr[:], subnet.Addr.Ipv4.Addr[:])
+		return net.InterfaceAddressWithIpv4(net.Ipv4AddressWithPrefix{
+			Addr:      v4,
+			PrefixLen: subnet.PrefixLen,
+		})
+	case net.IpAddressIpv6:
+		var v6 net.Ipv6Address
+		copy(v6.Addr[:], subnet.Addr.Ipv6.Addr[:])
+		return net.InterfaceAddressWithIpv6(v6)
+	default:
+		panic(fmt.Sprintf("unknown fuchsia.net/IpAddress tag: %d", tag))
+	}
+}
+
+func interfaceWatcherEventLoop(eventChan <-chan interfaceEvent, watcherChan <-chan interfaces.WatcherWithCtxInterfaceRequest) {
+	watchers := make(map[*interfaceWatcherImpl]struct{})
+	propertiesMap := make(map[tcpip.NICID]interfaces.Properties)
+	watcherClosedChan := make(chan *interfaceWatcherImpl)
+
+	for {
+		select {
+		case e := <-eventChan:
+			switch event := e.(type) {
+			case interfaceAdded:
+				added := interfaces.Properties(event)
+				if !added.HasId() {
+					panic(fmt.Sprintf("interface added event with no ID: %#v", event))
+				}
+				nicid := tcpip.NICID(added.GetId())
+				if properties, ok := propertiesMap[nicid]; ok {
+					panic(fmt.Sprintf("interface %#v already exists but duplicate added event received: %#v", properties, event))
+				}
+				propertiesMap[nicid] = added
+				for w := range watchers {
+					w.onEvent(interfaces.EventWithAdded(added))
+				}
+			case interfaceRemoved:
+				removed := tcpip.NICID(event)
+				if _, ok := propertiesMap[removed]; !ok {
+					panic(fmt.Sprintf("unknown interface NIC=%d removed", removed))
+					continue
+				}
+				delete(propertiesMap, removed)
+				for w := range watchers {
+					w.onEvent(interfaces.EventWithRemoved(uint64(removed)))
+				}
+			case defaultRouteChanged:
+				properties, ok := propertiesMap[event.nicid]
+				// TODO(https://fxbug.dev/95468): Change to panic once interface properties
+				// are guaranteed to not change after an interface is removed.
+				if !ok {
+					_ = syslog.WarnTf(watcherProtocolName, "default route changed event for unknown interface: %#v", event)
+					break
+				}
+				// TODO(https://fxbug.dev/95574): Once these events are only emitted when
+				// the presence of a default route has actually changed, panic if the event
+				// disagrees with our view of the world.
+				var changes interfaces.Properties
+				if event.hasDefaultIPv4Route != nil && properties.GetHasDefaultIpv4Route() != *event.hasDefaultIPv4Route {
+					properties.SetHasDefaultIpv4Route(*event.hasDefaultIPv4Route)
+					changes.SetHasDefaultIpv4Route(*event.hasDefaultIPv4Route)
+				}
+				if event.hasDefaultIPv6Route != nil && properties.GetHasDefaultIpv6Route() != *event.hasDefaultIPv6Route {
+					properties.SetHasDefaultIpv6Route(*event.hasDefaultIPv6Route)
+					changes.SetHasDefaultIpv6Route(*event.hasDefaultIPv6Route)
+				}
+				if changes.HasHasDefaultIpv4Route() || changes.HasHasDefaultIpv6Route() {
+					propertiesMap[event.nicid] = properties
+					changes.SetId(uint64(event.nicid))
+					for w := range watchers {
+						w.onEvent(interfaces.EventWithChanged(changes))
+					}
+				}
+			case onlineChanged:
+				properties, ok := propertiesMap[event.nicid]
+				// TODO(https://fxbug.dev/95468): Change to panic once interface properties
+				// are guaranteed to not change after an interface is removed.
+				if !ok {
+					_ = syslog.WarnTf(watcherProtocolName, "online changed event for unknown interface: %#v", event)
+					break
+				}
+				if event.online == properties.GetOnline() {
+					// This assertion is possible because the event is always emitted under a
+					// lock (so cannot race against itself), and the event is only emitted when
+					// there is an actual change to the boolean value.
+					panic(fmt.Sprintf("online changed event for interface with properties %#v with no actual change", properties))
+				}
+
+				properties.SetOnline(event.online)
+				propertiesMap[event.nicid] = properties
+
+				var changes interfaces.Properties
+				changes.SetId(uint64(event.nicid))
+				changes.SetOnline(event.online)
+				for w := range watchers {
+					w.onEvent(interfaces.EventWithChanged(changes))
+				}
+			case addressAdded:
+				properties, ok := propertiesMap[event.nicid]
+				// TODO(https://fxbug.dev/95468): Change to panic once interface properties
+				// are guaranteed to not change after an interface is removed.
+				if !ok {
+					_ = syslog.WarnTf(watcherProtocolName, "address added event for unknown interface: %#v", event)
+					break
+				}
+				addresses := properties.GetAddresses()
+				ifAddr := subnetToInterfaceAddress(event.subnet)
+				i := sort.Search(len(addresses), func(i int) bool {
+					diff := cmpInterfaceAddress(ifAddr, addresses[i].GetValue())
+					if diff == 0 {
+						panic(fmt.Sprintf("duplicate address added event: %#v", event))
+					}
+					return diff < 0
+				})
+				addresses = append(addresses, interfaces.Address{})
+				copy(addresses[i+1:], addresses[i:])
+				newAddr := &addresses[i]
+				newAddr.SetAddr(event.subnet)
+				newAddr.SetValue(ifAddr)
+				newAddr.SetValidUntil(int64(zx.TimensecInfinite))
+				properties.SetAddresses(addresses)
+				propertiesMap[event.nicid] = properties
+
+				var changes interfaces.Properties
+				changes.SetId(uint64(event.nicid))
+				changes.SetAddresses(append([]interfaces.Address(nil), addresses...))
+				for w := range watchers {
+					w.onEvent(interfaces.EventWithChanged(changes))
+				}
+			case addressRemoved:
+				properties, ok := propertiesMap[event.nicid]
+				// TODO(https://fxbug.dev/95468): Change to panic once interface properties
+				// are guaranteed to not change after an interface is removed.
+				if !ok {
+					_ = syslog.WarnTf(watcherProtocolName, "address removed event for unknown interface: %#v", event)
+					break
+				}
+				addresses := properties.GetAddresses()
+				ifAddr := subnetToInterfaceAddress(event.subnet)
+				i := sort.Search(len(addresses), func(i int) bool {
+					return cmpInterfaceAddress(ifAddr, addresses[i].GetValue()) <= 0
+				})
+				if i == len(addresses) || cmpInterfaceAddress(ifAddr, addresses[i].GetValue()) != 0 {
+					if event.strict {
+						panic(fmt.Sprintf("address removed event for non-existent address: %#v", event))
+					} else {
+						_ = syslog.WarnTf(watcherProtocolName, "address removed event for non-existent address: %#v", event)
+						break
+					}
+				}
+				addresses = append(addresses[:i], addresses[i+1:]...)
+				properties.SetAddresses(addresses)
+				propertiesMap[event.nicid] = properties
+
+				var changes interfaces.Properties
+				changes.SetId(uint64(event.nicid))
+				changes.SetAddresses(append([]interfaces.Address(nil), addresses...))
+				for w := range watchers {
+					w.onEvent(interfaces.EventWithChanged(changes))
+				}
+			case validUntilChanged:
+				properties, ok := propertiesMap[event.nicid]
+				// TODO(https://fxbug.dev/95468): Change to panic once interface properties
+				// are guaranteed to not change after an interface is removed.
+				if !ok {
+					_ = syslog.WarnTf(watcherProtocolName, "address validUntil changed event for unknown interface: %#v", event)
+					break
+				}
+				addresses := properties.GetAddresses()
+				i := sort.Search(len(addresses), func(i int) bool {
+					return cmpInterfaceAddress(event.address, addresses[i].GetValue()) <= 0
+				})
+				if i == len(addresses) || cmpInterfaceAddress(event.address, addresses[i].GetValue()) != 0 {
+					// TODO(https://fxbug.dev/96130): Change this to panic once DHCPv4 client
+					// is guaranteed to not send this event if the address is missing.
+					_ = syslog.ErrorTf(watcherProtocolName, "validUntil changed event for non-existent address: %#v", event)
+				}
+
+				if time.Monotonic(addresses[i].GetValidUntil()) != event.validUntil {
+					addresses[i].SetValidUntil(event.validUntil.MonotonicNano())
+
+					var changes interfaces.Properties
+					changes.SetId(uint64(event.nicid))
+					changes.SetAddresses(append([]interfaces.Address(nil), addresses...))
+					for w := range watchers {
+						w.onEvent(interfaces.EventWithChanged(changes))
+					}
+				}
+			}
+		case watcher := <-watcherChan:
+			ctx, cancel := context.WithCancel(context.Background())
+			impl := interfaceWatcherImpl{
+				ready:       make(chan struct{}, 1),
+				cancelServe: cancel,
+			}
+			impl.mu.queue = make([]interfaces.Event, 0, maxInterfaceWatcherQueueLen)
+
+			for _, properties := range propertiesMap {
+				impl.mu.queue = append(impl.mu.queue, interfaces.EventWithExisting(properties))
+			}
+			impl.mu.queue = append(impl.mu.queue, interfaces.EventWithIdle(interfaces.Empty{}))
+
+			watchers[&impl] = struct{}{}
+
+			go func() {
+				component.Serve(ctx, &interfaces.WatcherWithCtxStub{Impl: &impl}, watcher.Channel, component.ServeOptions{
+					Concurrent: true,
+					OnError: func(err error) {
+						_ = syslog.WarnTf(watcherProtocolName, "%s", err)
+					},
+				})
+
+				watcherClosedChan <- &impl
+			}()
+		case watcherClosed := <-watcherClosedChan:
+			delete(watchers, watcherClosed)
+		}
+	}
 }

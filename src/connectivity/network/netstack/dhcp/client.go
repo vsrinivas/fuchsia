@@ -54,7 +54,7 @@ func defaultRenewTime(leaseLength Seconds) Seconds { return leaseLength / 2 }
 // Based on RFC 2131 Sec. 4.4.5, this defaults to (0.875 * duration_of_lease).
 func defaultRebindTime(leaseLength Seconds) Seconds { return (leaseLength * 875) / 1000 }
 
-type AcquiredFunc func(lost, acquired tcpip.AddressWithPrefix, cfg Config)
+type AcquiredFunc func(ctx context.Context, lost, acquired tcpip.AddressWithPrefix, cfg Config)
 
 // Client is a DHCP client.
 type Client struct {
@@ -223,10 +223,10 @@ func (c *Client) StateRecentHistory() []util.LogEntry {
 	return c.stateRecentHistory.BuildLogs()
 }
 
-// Run runs the DHCP client.
+// Run runs the DHCP client, returning the address assigned when it is stopped.
 //
 // The function periodically searches for a new IP address.
-func (c *Client) Run(ctx context.Context) {
+func (c *Client) Run(ctx context.Context) (rtn tcpip.AddressWithPrefix) {
 	info := c.Info()
 
 	nicName := c.stack.FindNICNameFromID(info.NICID)
@@ -241,7 +241,7 @@ func (c *Client) Run(ctx context.Context) {
 	defer func() { <-c.sem }()
 	defer func() {
 		_ = syslog.InfoTf(tag, "%s: client is stopping, cleaning up", nicName)
-		c.cleanup(&info, nicName, true /* release */)
+		rtn = c.cleanup(&info, nicName, true /* release */)
 	}()
 
 	for {
@@ -274,16 +274,16 @@ func (c *Client) Run(ctx context.Context) {
 				panic(fmt.Sprintf("unexpected state before acquire: %s", s))
 			}
 
-			ctx, cancel := c.contextWithTimeout(ctx, acquisitionTimeout)
+			ctxAcquire, cancel := c.contextWithTimeout(ctx, acquisitionTimeout)
 			defer cancel()
 
-			cfg, err := c.acquire(ctx, c, nicName, &info)
+			cfg, err := c.acquire(ctxAcquire, c, nicName, &info)
 			if err != nil {
 				return err
 			}
 			if cfg.Declined {
 				c.stats.ReacquireAfterNAK.Increment()
-				c.cleanup(&info, nicName, false /* release */)
+				c.lost(ctx, c.cleanup(&info, nicName, false /* release */))
 				return nil
 			}
 
@@ -424,7 +424,7 @@ func (c *Client) Run(ctx context.Context) {
 				}
 			}
 
-			c.assign(&info, info.Acquired, cfg, txnStart)
+			c.assign(ctx, &info, info.Acquired, cfg, txnStart)
 
 			return nil
 		}(); err != nil {
@@ -486,7 +486,7 @@ func (c *Client) Run(ctx context.Context) {
 
 		if info.State != initSelecting && next == initSelecting {
 			_ = syslog.WarnTf(tag, "%s: lease time expired, cleaning up", nicName)
-			c.cleanup(&info, nicName, true /* release */)
+			c.lost(ctx, c.cleanup(&info, nicName, true /* release */))
 		}
 
 		info.State = next
@@ -496,11 +496,22 @@ func (c *Client) Run(ctx context.Context) {
 	}
 }
 
-func (c *Client) assign(info *Info, acquired tcpip.AddressWithPrefix, config Config, now time.Time) {
-	c.updateInfo(info, acquired, config, now, bound)
+func (c *Client) acquired(ctx context.Context, lost, acquired tcpip.AddressWithPrefix, config Config) {
+	if fn := c.acquiredFunc; fn != nil {
+		fn(ctx, lost, acquired, config)
+	}
 }
 
-func (c *Client) updateInfo(info *Info, acquired tcpip.AddressWithPrefix, config Config, now time.Time, state dhcpClientState) {
+func (c *Client) lost(ctx context.Context, lost tcpip.AddressWithPrefix) {
+	c.acquired(ctx, lost, tcpip.AddressWithPrefix{}, Config{})
+}
+
+func (c *Client) assign(ctx context.Context, info *Info, acquired tcpip.AddressWithPrefix, config Config, now time.Time) {
+	prevAssigned := c.updateInfo(info, acquired, config, now, bound)
+	c.acquired(ctx, prevAssigned, acquired, config)
+}
+
+func (c *Client) updateInfo(info *Info, acquired tcpip.AddressWithPrefix, config Config, now time.Time, state dhcpClientState) tcpip.AddressWithPrefix {
 	config.UpdatedAt = now
 	prevAssigned := info.Assigned
 	info.Assigned = acquired
@@ -510,12 +521,10 @@ func (c *Client) updateInfo(info *Info, acquired tcpip.AddressWithPrefix, config
 	info.Config = config
 	info.State = state
 	c.StoreInfo(info)
-	if fn := c.acquiredFunc; fn != nil {
-		fn(prevAssigned, acquired, config)
-	}
+	return prevAssigned
 }
 
-func (c *Client) cleanup(info *Info, nicName string, release bool) {
+func (c *Client) cleanup(info *Info, nicName string, release bool) tcpip.AddressWithPrefix {
 	if release && info.Assigned != (tcpip.AddressWithPrefix{}) {
 		if err := func() error {
 			// As per RFC 2131 section 4.4.1,
@@ -553,7 +562,7 @@ func (c *Client) cleanup(info *Info, nicName string, release bool) {
 		}
 	}
 
-	c.updateInfo(info, tcpip.AddressWithPrefix{}, Config{}, time.Time{}, info.State)
+	return c.updateInfo(info, tcpip.AddressWithPrefix{}, Config{}, time.Time{}, info.State)
 }
 
 const maxBackoff = 64 * time.Second

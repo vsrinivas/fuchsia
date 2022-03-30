@@ -129,10 +129,8 @@ func (rt ExtendedRouteTable) String() string {
 // RouteTable implements a sorted list of extended routes that is used to build
 // the Netstack lib route table.
 type RouteTable struct {
-	mu struct {
-		sync.Mutex
-		routes ExtendedRouteTable
-	}
+	sync.Mutex
+	routes ExtendedRouteTable
 }
 
 // For debugging.
@@ -140,30 +138,39 @@ func (rt *RouteTable) dumpLocked() {
 	if rt == nil {
 		syslog.VLogTf(syslog.TraceVerbosity, tag, "Current Route Table:<nil>")
 	} else {
-		syslog.VLogTf(syslog.TraceVerbosity, tag, "Current Route Table:\n%s", rt.mu.routes)
+		syslog.VLogTf(syslog.TraceVerbosity, tag, "Current Route Table:\n%s", rt.routes)
 	}
+}
+
+// HasDefaultRoutes returns whether an interface has default IPv4/IPv6 routes.
+func (rt *RouteTable) HasDefaultRouteLocked(nicid tcpip.NICID) (bool, bool) {
+	var v4, v6 bool
+	for _, er := range rt.routes {
+		if er.Route.NIC == nicid && er.Enabled {
+			if er.Route.Destination.Equal(header.IPv4EmptySubnet) {
+				v4 = true
+			} else if er.Route.Destination.Equal(header.IPv6EmptySubnet) {
+				v6 = true
+			}
+		}
+	}
+	return v4, v6
 }
 
 // For testing.
 func (rt *RouteTable) Set(r []ExtendedRoute) {
-	rt.mu.Lock()
-	defer rt.mu.Unlock()
-	rt.mu.routes = append([]ExtendedRoute(nil), r...)
+	rt.Lock()
+	defer rt.Unlock()
+	rt.routes = append([]ExtendedRoute(nil), r...)
 }
 
-// AddRoute inserts the given route to the table in a sorted fashion. If the
-// route already exists, it simply updates that route's preference, metric,
-// dynamic, and enabled fields.
-func (rt *RouteTable) AddRoute(route tcpip.Route, prf Preference, metric Metric, tracksInterface bool, dynamic bool, enabled bool) {
+func (rt *RouteTable) AddRouteLocked(route tcpip.Route, prf Preference, metric Metric, tracksInterface bool, dynamic bool, enabled bool) {
 	syslog.VLogTf(syslog.DebugVerbosity, tag, "RouteTable:Adding route %s with prf=%d metric=%d, trackIf=%t, dynamic=%t, enabled=%t", route, prf, metric, tracksInterface, dynamic, enabled)
 
-	rt.mu.Lock()
-	defer rt.mu.Unlock()
-
 	// First check if the route already exists, and remove it.
-	for i, er := range rt.mu.routes {
+	for i, er := range rt.routes {
 		if er.Route == route {
-			rt.mu.routes = append(rt.mu.routes[:i], rt.mu.routes[i+1:]...)
+			rt.routes = append(rt.routes[:i], rt.routes[i+1:]...)
 			break
 		}
 	}
@@ -179,8 +186,8 @@ func (rt *RouteTable) AddRoute(route tcpip.Route, prf Preference, metric Metric,
 
 	// Find the target position for the new route in the table so it remains
 	// sorted. Initialized to point to the end of the table.
-	targetIdx := len(rt.mu.routes)
-	for i, er := range rt.mu.routes {
+	targetIdx := len(rt.routes)
+	for i, er := range rt.routes {
 		if Less(&newEr, &er) {
 			targetIdx = i
 			break
@@ -188,70 +195,88 @@ func (rt *RouteTable) AddRoute(route tcpip.Route, prf Preference, metric Metric,
 	}
 	// Extend the table by adding the new route at the end, then move it into its
 	// proper place.
-	rt.mu.routes = append(rt.mu.routes, newEr)
-	if targetIdx < len(rt.mu.routes)-1 {
-		copy(rt.mu.routes[targetIdx+1:], rt.mu.routes[targetIdx:])
-		rt.mu.routes[targetIdx] = newEr
+	rt.routes = append(rt.routes, newEr)
+	if targetIdx < len(rt.routes)-1 {
+		copy(rt.routes[targetIdx+1:], rt.routes[targetIdx:])
+		rt.routes[targetIdx] = newEr
 	}
 
 	rt.dumpLocked()
 }
 
-// DelRoute removes the given route from the route table.
-func (rt *RouteTable) DelRoute(route tcpip.Route) error {
+// AddRoute inserts the given route to the table in a sorted fashion. If the
+// route already exists, it simply updates that route's preference, metric,
+// dynamic, and enabled fields.
+func (rt *RouteTable) AddRoute(route tcpip.Route, prf Preference, metric Metric, tracksInterface bool, dynamic bool, enabled bool) {
+	rt.Lock()
+	defer rt.Unlock()
+
+	rt.AddRouteLocked(route, prf, metric, tracksInterface, dynamic, enabled)
+}
+
+func (rt *RouteTable) DelRouteLocked(route tcpip.Route) []ExtendedRoute {
 	syslog.VLogTf(syslog.DebugVerbosity, tag, "RouteTable:Deleting route %s", route)
 
-	rt.mu.Lock()
-	defer rt.mu.Unlock()
-
-	routeDeleted := false
-	oldTable := rt.mu.routes
-	rt.mu.routes = oldTable[:0]
+	var routesDeleted []ExtendedRoute
+	oldTable := rt.routes
+	rt.routes = oldTable[:0]
 	for _, er := range oldTable {
-		// Match all fields that are non-zero.
-		if er.Route.Destination == route.Destination {
-			if route.NIC == 0 || route.NIC == er.Route.NIC {
-				if len(route.Gateway) == 0 || route.Gateway == er.Route.Gateway {
-					routeDeleted = true
-					continue
-				}
+		if er.Route.Destination == route.Destination && er.Route.NIC == route.NIC {
+			// Match any route if Gateway is empty.
+			if len(route.Gateway) == 0 || er.Route.Gateway == route.Gateway {
+				routesDeleted = append(routesDeleted, er)
+				continue
 			}
 		}
 		// Not matched, remains in the route table.
-		rt.mu.routes = append(rt.mu.routes, er)
+		rt.routes = append(rt.routes, er)
 	}
 
-	if !routeDeleted {
-		return ErrNoSuchRoute
+	if len(routesDeleted) == 0 {
+		return nil
 	}
 
 	rt.dumpLocked()
-	return nil
+	return routesDeleted
+}
+
+// DelRoute removes matching routes from the route table, returning them.
+func (rt *RouteTable) DelRoute(route tcpip.Route) []ExtendedRoute {
+	rt.Lock()
+	defer rt.Unlock()
+
+	return rt.DelRouteLocked(route)
 }
 
 // GetExtendedRouteTable returns a copy of the current extended route table.
 func (rt *RouteTable) GetExtendedRouteTable() ExtendedRouteTable {
-	rt.mu.Lock()
-	defer rt.mu.Unlock()
+	rt.Lock()
+	defer rt.Unlock()
 
 	rt.dumpLocked()
 
-	return append([]ExtendedRoute(nil), rt.mu.routes...)
+	return append([]ExtendedRoute(nil), rt.routes...)
 }
 
 // UpdateStack updates stack with the current route table.
-func (rt *RouteTable) UpdateStack(stack *stack.Stack) {
-	rt.mu.Lock()
-	t := make([]tcpip.Route, 0, len(rt.mu.routes))
-	for _, er := range rt.mu.routes {
+func (rt *RouteTable) UpdateStackLocked(stack *stack.Stack) {
+	t := make([]tcpip.Route, 0, len(rt.routes))
+	for _, er := range rt.routes {
 		if er.Enabled {
 			t = append(t, er.Route)
 		}
 	}
 	stack.SetRouteTable(t)
-	rt.mu.Unlock()
 
 	_ = syslog.VLogTf(syslog.DebugVerbosity, tag, "UpdateStack route table: %+v", t)
+}
+
+// UpdateStack updates stack with the current route table.
+func (rt *RouteTable) UpdateStack(stack *stack.Stack) {
+	rt.Lock()
+	defer rt.Unlock()
+
+	rt.UpdateStackLocked(stack)
 }
 
 // UpdateMetricByInterface changes the metric for all routes that track a
@@ -259,12 +284,12 @@ func (rt *RouteTable) UpdateStack(stack *stack.Stack) {
 func (rt *RouteTable) UpdateMetricByInterface(nicid tcpip.NICID, metric Metric) {
 	syslog.VLogf(syslog.DebugVerbosity, "RouteTable:Update route table on nic-%d metric change to %d", nicid, metric)
 
-	rt.mu.Lock()
-	defer rt.mu.Unlock()
+	rt.Lock()
+	defer rt.Unlock()
 
-	for i, er := range rt.mu.routes {
+	for i, er := range rt.routes {
 		if er.Route.NIC == nicid && er.MetricTracksInterface {
-			rt.mu.routes[i].Metric = metric
+			rt.routes[i].Metric = metric
 		}
 	}
 
@@ -273,15 +298,11 @@ func (rt *RouteTable) UpdateMetricByInterface(nicid tcpip.NICID, metric Metric) 
 	rt.dumpLocked()
 }
 
-// UpdateRoutesByInterface applies an action to the routes pointing to an interface.
-func (rt *RouteTable) UpdateRoutesByInterface(nicid tcpip.NICID, action Action) {
+func (rt *RouteTable) UpdateRoutesByInterfaceLocked(nicid tcpip.NICID, action Action) {
 	syslog.VLogTf(syslog.DebugVerbosity, tag, "RouteTable:Update route table for routes to nic-%d with action:%d", nicid, action)
 
-	rt.mu.Lock()
-	defer rt.mu.Unlock()
-
-	oldTable := rt.mu.routes
-	rt.mu.routes = oldTable[:0]
+	oldTable := rt.routes
+	rt.routes = oldTable[:0]
 	for _, er := range oldTable {
 		if er.Route.NIC == nicid {
 			switch action {
@@ -302,7 +323,7 @@ func (rt *RouteTable) UpdateRoutesByInterface(nicid tcpip.NICID, action Action) 
 			}
 		}
 		// Keep.
-		rt.mu.routes = append(rt.mu.routes, er)
+		rt.routes = append(rt.routes, er)
 	}
 
 	rt.sortRouteTableLocked()
@@ -310,13 +331,21 @@ func (rt *RouteTable) UpdateRoutesByInterface(nicid tcpip.NICID, action Action) 
 	rt.dumpLocked()
 }
 
+// UpdateRoutesByInterface applies an action to the routes pointing to an interface.
+func (rt *RouteTable) UpdateRoutesByInterface(nicid tcpip.NICID, action Action) {
+	rt.Lock()
+	defer rt.Unlock()
+
+	rt.UpdateRoutesByInterfaceLocked(nicid, action)
+}
+
 // FindNIC returns the NIC-ID that the given address is routed on. This requires
 // an exact route match, i.e. no default route.
 func (rt *RouteTable) FindNIC(addr tcpip.Address) (tcpip.NICID, error) {
-	rt.mu.Lock()
-	defer rt.mu.Unlock()
+	rt.Lock()
+	defer rt.Unlock()
 
-	for _, er := range rt.mu.routes {
+	for _, er := range rt.routes {
 		// Ignore default routes.
 		if util.IsAny(er.Route.Destination.ID()) {
 			continue
@@ -329,8 +358,8 @@ func (rt *RouteTable) FindNIC(addr tcpip.Address) (tcpip.NICID, error) {
 }
 
 func (rt *RouteTable) sortRouteTableLocked() {
-	sort.SliceStable(rt.mu.routes, func(i, j int) bool {
-		return Less(&rt.mu.routes[i], &rt.mu.routes[j])
+	sort.SliceStable(rt.routes, func(i, j int) bool {
+		return Less(&rt.routes[i], &rt.routes[j])
 	})
 }
 

@@ -12,11 +12,11 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"runtime"
 	"syscall/zx"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
 
@@ -30,88 +30,9 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
-func TestDiffInterfaceProperties(t *testing.T) {
-	var addr1 interfaces.Address
-	addr1.SetValue(fidlnet.InterfaceAddressWithIpv4(fidlnet.Ipv4AddressWithPrefix{
-		Addr:      fidlnet.Ipv4Address{Addr: [4]uint8{192, 168, 0, 1}},
-		PrefixLen: 16,
-	}))
-	var addr2 interfaces.Address
-	addr1.SetValue(fidlnet.InterfaceAddressWithIpv4(fidlnet.Ipv4AddressWithPrefix{
-		Addr:      fidlnet.Ipv4Address{Addr: [4]uint8{192, 168, 0, 2}},
-		PrefixLen: 16,
-	}))
-
-	var p interfaces.Properties
-	p.SetId(1)
-	p.SetAddresses([]interfaces.Address{addr1})
-	p.SetOnline(false)
-	p.SetHasDefaultIpv4Route(true)
-	p.SetHasDefaultIpv6Route(false)
-
-	var diff interfaces.Properties
-	diff.SetId(1)
-
-	online := p
-	online.SetOnline(true)
-	onlineDiff := diff
-	onlineDiff.SetOnline(true)
-
-	defaultRouteAdded := p
-	defaultRouteAdded.SetHasDefaultIpv6Route(true)
-	defaultRouteAddedDiff := diff
-	defaultRouteAddedDiff.SetHasDefaultIpv6Route(true)
-
-	defaultRouteRemoved := p
-	defaultRouteRemoved.SetHasDefaultIpv4Route(false)
-	defaultRouteRemovedDiff := diff
-	defaultRouteRemovedDiff.SetHasDefaultIpv4Route(false)
-
-	addressRemoved := p
-	addressRemoved.SetAddresses(nil)
-	addressRemovedDiff := diff
-	addressRemovedDiff.SetAddresses(nil)
-
-	addressAdded := p
-	addressAdded.SetAddresses([]interfaces.Address{addr1, addr2})
-	addressAddedDiff := diff
-	addressAddedDiff.SetAddresses([]interfaces.Address{addr1, addr2})
-
-	addressChanged := p
-	addressChanged.SetAddresses([]interfaces.Address{addr2})
-	addressChangedDiff := diff
-	addressChangedDiff.SetAddresses([]interfaces.Address{addr2})
-
-	for _, tc := range []struct {
-		name     string
-		before   interfaces.Properties
-		after    interfaces.Properties
-		wantDiff interfaces.Properties
-	}{
-		{"Online", p, online, onlineDiff},
-		{"DefaultRouteAdded", p, defaultRouteAdded, defaultRouteAddedDiff},
-		{"DefaultRouteRemoved", p, defaultRouteRemoved, defaultRouteRemovedDiff},
-		{"AddressRemoved", p, addressRemoved, addressRemovedDiff},
-		{"AddressAdded", p, addressAdded, addressAddedDiff},
-		{"AddressChanged", p, addressChanged, addressChangedDiff},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			gotDiff := diffInterfaceProperties(tc.before, tc.after)
-			if diff := cmp.Diff(tc.wantDiff, gotDiff, cmpopts.IgnoreTypes(struct{}{}), cmpopts.EquateEmpty()); diff != "" {
-				t.Fatalf("(-want +got)\n%s", diff)
-			}
-		})
-	}
-}
-
-type watchResult struct {
-	event interfaces.Event
-	err   error
-}
-
 func assertWatchResult(gotEvent interfaces.Event, gotErr error, wantEvent interfaces.Event) error {
 	if gotErr != nil {
-		return fmt.Errorf("Watch failed: %s", gotErr)
+		return fmt.Errorf("Watch failed: %w", gotErr)
 	}
 	if diff := cmp.Diff(wantEvent, gotEvent, cmpopts.IgnoreTypes(struct{}{}), cmpopts.EquateEmpty()); diff != "" {
 		return fmt.Errorf("(-want +got)\n%s", diff)
@@ -119,24 +40,16 @@ func assertWatchResult(gotEvent interfaces.Event, gotErr error, wantEvent interf
 	return nil
 }
 
-func wantInterfaceProperties(ns *Netstack, nicid tcpip.NICID) interfaces.Properties {
-	var hasDefaultIpv4Route, hasDefaultIpv6Route bool
-	for _, er := range ns.GetExtendedRouteTable() {
-		if er.Enabled && er.Route.NIC == nicid {
-			if er.Route.Destination.Equal(header.IPv4EmptySubnet) {
-				hasDefaultIpv4Route = true
-			} else if er.Route.Destination.Equal(header.IPv6EmptySubnet) {
-				hasDefaultIpv6Route = true
-			}
-		}
-	}
-	return interfaceProperties(ns.stack.NICInfo()[nicid], hasDefaultIpv4Route, hasDefaultIpv6Route, nil)
+type watchResult struct {
+	event interfaces.Event
+	err   error
 }
 
-func TestInterfacesWatcherDisallowMultiplePending(t *testing.T) {
-	ns, _ := newNetstack(t, netstackTestOptions{})
-	si := &interfaceStateImpl{ns: ns}
+type watcherHelper struct {
+	*interfaces.WatcherWithCtxInterface
+}
 
+func initWatcher(t *testing.T, si *interfaceStateImpl) watcherHelper {
 	request, watcher, err := interfaces.NewWatcherWithCtxInterfaceRequest()
 	if err != nil {
 		t.Fatalf("failed to create Watcher protocol channel pair: %s", err)
@@ -144,10 +57,46 @@ func TestInterfacesWatcherDisallowMultiplePending(t *testing.T) {
 	if err := si.GetWatcher(context.Background(), interfaces.WatcherOptions{}, request); err != nil {
 		t.Fatalf("failed to call GetWatcher: %s", err)
 	}
-	event, err := watcher.Watch(context.Background())
-	if err := assertWatchResult(event, err, interfaces.EventWithIdle(interfaces.Empty{})); err != nil {
+	return watcherHelper{
+		WatcherWithCtxInterface: watcher,
+	}
+}
+
+func (w *watcherHelper) expectIdleEvent(t *testing.T) {
+	w.expectEvent(t, interfaces.EventWithIdle(interfaces.Empty{}))
+}
+
+func (w *watcherHelper) expectEvent(t *testing.T, want interfaces.Event) {
+	event, err := w.Watch(context.Background())
+	if err := assertWatchResult(event, err, want); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func (w *watcherHelper) blockingWatch(t *testing.T, ch chan watchResult) {
+	go func() {
+		event, err := w.Watch(context.Background())
+		ch <- watchResult{
+			event: event,
+			err:   err,
+		}
+	}()
+	select {
+	case got := <-ch:
+		t.Fatalf("Watch did not block and completed with: %#v", got)
+	case <-time.After(50 * time.Millisecond):
+	}
+}
+
+func TestInterfacesWatcherDisallowMultiplePending(t *testing.T) {
+	eventChan := make(chan interfaceEvent)
+	watcherChan := make(chan interfaces.WatcherWithCtxInterfaceRequest)
+
+	go interfaceWatcherEventLoop(eventChan, watcherChan)
+	si := &interfaceStateImpl{watcherChan: watcherChan}
+
+	watcher := initWatcher(t, si)
+	watcher.expectIdleEvent(t)
 
 	var wg sync.WaitGroup
 	defer wg.Wait()
@@ -166,113 +115,69 @@ func TestInterfacesWatcherDisallowMultiplePending(t *testing.T) {
 	}
 }
 
-func TestInterfacesWatcher(t *testing.T) {
-	ns, _ := newNetstack(t, netstackTestOptions{})
-	ni := &netstackImpl{ns: ns}
-	si := &interfaceStateImpl{ns: ns}
+func TestInterfacesWatcherExisting(t *testing.T) {
+	eventChan := make(chan interfaceEvent)
+	watcherChan := make(chan interfaces.WatcherWithCtxInterfaceRequest)
 
-	nicid := func() tcpip.NICID {
-		ifs := addNoopEndpoint(t, ns, "")
-		t.Cleanup(ifs.RemoveByUser)
-		return ifs.nicid
+	go interfaceWatcherEventLoop(eventChan, watcherChan)
+	ns, _ := newNetstack(t, netstackTestOptions{interfaceEventChan: eventChan})
+	si := &interfaceStateImpl{watcherChan: watcherChan}
+
+	ifs := addNoopEndpoint(t, ns, "")
+
+	watcher := initWatcher(t, si)
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			t.Fatalf("failed to close watcher: %s", err)
+		}
 	}()
+
+	watcher.expectEvent(t, interfaces.EventWithExisting(initialProperties(ifs, ns.name(ifs.nicid))))
+	watcher.expectIdleEvent(t)
+}
+
+func TestInterfacesWatcher(t *testing.T) {
+	eventChan := make(chan interfaceEvent)
+	watcherChan := make(chan interfaces.WatcherWithCtxInterfaceRequest)
+
+	go interfaceWatcherEventLoop(eventChan, watcherChan)
+	ns, _ := newNetstack(t, netstackTestOptions{interfaceEventChan: eventChan})
+	si := &interfaceStateImpl{watcherChan: watcherChan}
 
 	// The first watcher will always block, while the second watcher should never block.
-	initWatcher := func() *interfaces.WatcherWithCtxInterface {
-		request, watcher, err := interfaces.NewWatcherWithCtxInterfaceRequest()
-		if err != nil {
-			t.Fatalf("failed to create Watcher protocol channel pair: %s", err)
-		}
-		if err := si.GetWatcher(context.Background(), interfaces.WatcherOptions{}, request); err != nil {
-			t.Fatalf("failed to call GetWatcher: %s", err)
-		}
-		event, err := watcher.Watch(context.Background())
-		if err := assertWatchResult(event, err, interfaces.EventWithExisting(wantInterfaceProperties(ns, nicid))); err != nil {
-			t.Fatal(err)
-		}
-		event, err = watcher.Watch(context.Background())
-		if err := assertWatchResult(event, err, interfaces.EventWithIdle(interfaces.Empty{})); err != nil {
-			t.Fatal(err)
-		}
-		return watcher
-	}
-	blockingWatcher, nonBlockingWatcher := initWatcher(), initWatcher()
-
+	blockingWatcher, nonBlockingWatcher := initWatcher(t, si), initWatcher(t, si)
 	ch := make(chan watchResult)
-	blockingWatch := func() {
-		go func() {
-			event, err := blockingWatcher.Watch(context.Background())
-			ch <- watchResult{
-				event: event,
-				err:   err,
-			}
-		}()
-		select {
-		case got := <-ch:
-			t.Fatalf("WatchServers did not block and completed with: %+v", got)
-		case <-time.After(50 * time.Millisecond):
-		}
-	}
-
 	defer func() {
-		getSize := func() int {
-			ns.interfaceWatchers.mu.Lock()
-			defer ns.interfaceWatchers.mu.Unlock()
-			return len(ns.interfaceWatchers.mu.watchers)
-		}
-
-		blockingWatch()
-
-		before := getSize()
-
-		if err := blockingWatcher.Close(); err != nil {
-			t.Errorf("failed to close blocking Watcher client proxy: %s", err)
-		}
-
-		func() {
-			got, want := <-ch, zx.ErrCanceled
-			switch err := got.err.(type) {
-			case nil:
-				t.Errorf("got Watch() = (%#v, %v), want = (_, %s)", got.event, got.err, want)
-			case *zx.Error:
-				if err.Status == want {
-					return
-				}
-			}
-			t.Errorf("got Watch() = (_, %s), want = (_, %s)", got.err, want)
-		}()
-		close(ch)
-
-		// The handler should terminate after the client channel closes.
-		for getSize() != before-1 {
-			runtime.Gosched()
-		}
-
+		// NB: The blocking watcher closed at the end of the test instead of deferred as
+		// additional assertions are made with it.
 		if err := nonBlockingWatcher.Close(); err != nil {
-			t.Errorf("failed to close non-blocking Watcher client proxy: %s", err)
+			t.Fatalf("failed to close non-blocking watcher: %s", err)
 		}
+		close(ch)
 	}()
 
-	blockingWatch()
+	blockingWatcher.expectIdleEvent(t)
+	nonBlockingWatcher.expectIdleEvent(t)
+
+	blockingWatcher.blockingWatch(t, ch)
 
 	// Add an interface.
 	ifs := addNoopEndpoint(t, ns, "")
 
 	verifyWatchResults := func(t *testing.T, wantEvent interfaces.Event) {
 		t.Helper()
+
+		nonBlockingWatcher.expectEvent(t, wantEvent)
+
 		got := <-ch
-		event, err := nonBlockingWatcher.Watch(context.Background())
 		if err := assertWatchResult(got.event, got.err, wantEvent); err != nil {
 			t.Fatalf("blocked watch failed: %s", err)
 		}
-		if err := assertWatchResult(event, err, wantEvent); err != nil {
-			t.Fatalf("non-blocked watch failed: %s", err)
-		}
 	}
-	verifyWatchResults(t, interfaces.EventWithAdded(wantInterfaceProperties(ns, ifs.nicid)))
+	verifyWatchResults(t, interfaces.EventWithAdded(initialProperties(ifs, ns.name(ifs.nicid))))
 
 	// Set interface up.
-	blockingWatch()
+	blockingWatcher.blockingWatch(t, ch)
 	if err := ifs.Up(); err != nil {
 		t.Fatalf("failed to set interface up: %s", err)
 	}
@@ -283,7 +188,7 @@ func TestInterfacesWatcher(t *testing.T) {
 	verifyWatchResults(t, interfaces.EventWithChanged(online))
 
 	// Add an address.
-	blockingWatch()
+	blockingWatcher.blockingWatch(t, ch)
 	protocolAddr := tcpip.ProtocolAddress{
 		Protocol: header.IPv4ProtocolNumber,
 		AddressWithPrefix: tcpip.AddressWithPrefix{
@@ -291,17 +196,22 @@ func TestInterfacesWatcher(t *testing.T) {
 			PrefixLen: 16,
 		},
 	}
-	if status := ni.ns.addInterfaceAddress(ifs.nicid, protocolAddr, false /* addRoute */, stack.AddressProperties{}); status != zx.ErrOk {
-		t.Fatalf("addInterfaceAddress(%d, %#v, false, {}): %s", ifs.nicid, protocolAddr, status)
+	if ok, reason := ifs.addAddress(protocolAddr, stack.AddressProperties{}); !ok {
+		t.Fatalf("ifs.addAddress(%s, {}): %s", protocolAddr.AddressWithPrefix, reason)
 	}
-	addressAdded := id
-	properties := wantInterfaceProperties(ns, ifs.nicid)
-	addressAdded.SetAddresses(properties.GetAddresses())
-	verifyWatchResults(t, interfaces.EventWithChanged(addressAdded))
+	{
+		addressAdded := id
+		var address interfaces.Address
+		address.SetAddr(fidlconv.ToNetSubnet(protocolAddr.AddressWithPrefix))
+		address.SetValue(subnetToInterfaceAddress(address.GetAddr()))
+		address.SetValidUntil(int64(zx.TimensecInfinite))
+		addressAdded.SetAddresses([]interfaces.Address{address})
+		verifyWatchResults(t, interfaces.EventWithChanged(addressAdded))
+	}
 
 	// Add a default route.
-	blockingWatch()
-	r := defaultV4Route(ifs.nicid, tcpip.Address(net.IPv4(192, 168, 0, 2).To4()))
+	blockingWatcher.blockingWatch(t, ch)
+	r := defaultV4Route(ifs.nicid, "\x01\x02\x03\x05")
 	if err := ns.AddRoute(r, metricNotSet, false); err != nil {
 		t.Fatalf("failed to add default route: %s", err)
 	}
@@ -310,31 +220,28 @@ func TestInterfacesWatcher(t *testing.T) {
 	verifyWatchResults(t, interfaces.EventWithChanged(defaultIpv4RouteAdded))
 
 	// Remove the default route.
-	blockingWatch()
-	if err := ns.DelRoute(r); err != nil {
-		t.Fatalf("failed to delete default route: %s", err)
-	}
+	blockingWatcher.blockingWatch(t, ch)
+	_ = ns.DelRoute(r)
 	defaultIpv4RouteRemoved := id
 	defaultIpv4RouteRemoved.SetHasDefaultIpv4Route(false)
 	verifyWatchResults(t, interfaces.EventWithChanged(defaultIpv4RouteRemoved))
 
 	// Remove an address.
-	blockingWatch()
-	if status := ni.ns.removeInterfaceAddress(ifs.nicid, protocolAddr, false /* removeRoute */); status != zx.ErrOk {
-		t.Fatalf("removeInterfaceAddress(%d, %#v, false): %s", ifs.nicid, protocolAddr, status)
+	blockingWatcher.blockingWatch(t, ch)
+	if zxStatus := ifs.removeAddress(protocolAddr); zxStatus != zx.ErrOk {
+		t.Fatalf("ifs.removeAddress(%s): %s", protocolAddr.AddressWithPrefix, zxStatus)
 	}
 	addressRemoved := id
-	properties = wantInterfaceProperties(ns, ifs.nicid)
-	addressRemoved.SetAddresses(properties.GetAddresses())
+	addressRemoved.SetAddresses([]interfaces.Address{})
 	verifyWatchResults(t, interfaces.EventWithChanged(addressRemoved))
 
 	// DHCP Acquired on the interface.
-	blockingWatch()
+	blockingWatcher.blockingWatch(t, ch)
 	addr := fidlnet.Ipv4Address{Addr: [4]uint8{192, 168, 0, 4}}
 	acquiredAddr := tcpip.AddressWithPrefix{Address: tcpip.Address(addr.Addr[:]), PrefixLen: 24}
 	leaseLength := dhcp.Seconds(10)
 	initUpdatedAt := time.Monotonic(42)
-	ifs.dhcpAcquired(tcpip.AddressWithPrefix{}, acquiredAddr, dhcp.Config{UpdatedAt: initUpdatedAt, LeaseLength: leaseLength})
+	ifs.dhcpAcquired(context.Background(), tcpip.AddressWithPrefix{}, acquiredAddr, dhcp.Config{UpdatedAt: initUpdatedAt, LeaseLength: leaseLength})
 	dhcpAddressAdded := id
 	var address interfaces.Address
 	address.SetValue(fidlnet.InterfaceAddressWithIpv4(fidlnet.Ipv4AddressWithPrefix{
@@ -345,36 +252,37 @@ func TestInterfacesWatcher(t *testing.T) {
 		Addr:      fidlnet.IpAddressWithIpv4(addr),
 		PrefixLen: uint8(acquiredAddr.PrefixLen),
 	})
-	address.SetValidUntil(initUpdatedAt.Add(leaseLength.Duration()).MonotonicNano())
+	address.SetValidUntil(int64(zx.TimensecInfinite))
 	dhcpAddressAdded.SetAddresses([]interfaces.Address{address})
 	verifyWatchResults(t, interfaces.EventWithChanged(dhcpAddressAdded))
 
+	address.SetValidUntil(initUpdatedAt.Add(leaseLength.Duration()).MonotonicNano())
+	dhcpValidUntil := id
+	dhcpValidUntil.SetAddresses([]interfaces.Address{address})
+	blockingWatcher.expectEvent(t, interfaces.EventWithChanged(dhcpValidUntil))
+	nonBlockingWatcher.expectEvent(t, interfaces.EventWithChanged(dhcpValidUntil))
+
 	// DHCP Acquired with same valid_until does not produce event.
-	ifs.dhcpAcquired(acquiredAddr, acquiredAddr, dhcp.Config{UpdatedAt: initUpdatedAt, LeaseLength: leaseLength})
-	blockingWatch()
-	select {
-	case <-ch:
-		t.Fatalf("dhcp acquired triggered a diff-less watcher event")
-	case <-time.After(2 * time.Millisecond):
-	}
+	ifs.dhcpAcquired(context.Background(), acquiredAddr, acquiredAddr, dhcp.Config{UpdatedAt: initUpdatedAt, LeaseLength: leaseLength})
+	blockingWatcher.blockingWatch(t, ch)
 
 	// DHCP Acquired with different valid_until.
 	updatedAt := time.Monotonic(100)
-	ifs.dhcpAcquired(acquiredAddr, acquiredAddr, dhcp.Config{UpdatedAt: updatedAt, LeaseLength: leaseLength})
+	ifs.dhcpAcquired(context.Background(), acquiredAddr, acquiredAddr, dhcp.Config{UpdatedAt: updatedAt, LeaseLength: leaseLength})
 	dhcpAddressRenewed := id
 	address.SetValidUntil(updatedAt.Add(leaseLength.Duration()).MonotonicNano())
 	dhcpAddressRenewed.SetAddresses([]interfaces.Address{address})
 	verifyWatchResults(t, interfaces.EventWithChanged(dhcpAddressRenewed))
 
 	// DHCP Acquired on empty address signaling end of lease.
-	blockingWatch()
-	ifs.dhcpAcquired(acquiredAddr, tcpip.AddressWithPrefix{}, dhcp.Config{})
+	blockingWatcher.blockingWatch(t, ch)
+	ifs.dhcpAcquired(context.Background(), acquiredAddr, tcpip.AddressWithPrefix{}, dhcp.Config{})
 	dhcpExpired := id
 	dhcpExpired.SetAddresses([]interfaces.Address{})
 	verifyWatchResults(t, interfaces.EventWithChanged(dhcpExpired))
 
 	// Set interface down.
-	blockingWatch()
+	blockingWatcher.blockingWatch(t, ch)
 	if err := ifs.Down(); err != nil {
 		t.Fatalf("failed to set interface down: %s", err)
 	}
@@ -383,7 +291,22 @@ func TestInterfacesWatcher(t *testing.T) {
 	verifyWatchResults(t, interfaces.EventWithChanged(offline))
 
 	// Remove the interface.
-	blockingWatch()
+	blockingWatcher.blockingWatch(t, ch)
 	ifs.RemoveByUser()
 	verifyWatchResults(t, interfaces.EventWithRemoved(uint64(ifs.nicid)))
+
+	blockingWatcher.blockingWatch(t, ch)
+	if err := blockingWatcher.Close(); err != nil {
+		t.Errorf("failed to close blocking Watcher client proxy: %s", err)
+	}
+
+	got, want := <-ch, zx.ErrCanceled
+	switch err := got.err.(type) {
+	case *zx.Error:
+		if err.Status != want {
+			t.Fatalf("unexpected zxStatus; got: %s, want: %s", err.Status, want)
+		}
+	default:
+		t.Fatalf("unexpected return value from Watch resolved due to channel closure; got: %#v, want: %s", got, want)
+	}
 }

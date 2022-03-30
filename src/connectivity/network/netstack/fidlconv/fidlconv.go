@@ -61,6 +61,13 @@ func ToNetIpAddress(addr tcpip.Address) net.IpAddress {
 	}
 }
 
+func ToNetSubnet(addressWithPrefix tcpip.AddressWithPrefix) net.Subnet {
+	return net.Subnet{
+		Addr:      ToNetIpAddress(addressWithPrefix.Address),
+		PrefixLen: uint8(addressWithPrefix.PrefixLen),
+	}
+}
+
 func ToNetMacAddress(addr tcpip.LinkAddress) net.MacAddress {
 	if len(addr) != header.EthernetAddressSize {
 		panic(fmt.Sprintf("invalid link address length = %d: %x", len(addr), addr))

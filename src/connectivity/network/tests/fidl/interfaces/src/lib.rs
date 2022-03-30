@@ -582,6 +582,155 @@ async fn test_close_data_race<E: netemul::Endpoint>(name: &str) {
     }
 }
 
+/// Tests that toggling interface enabled repeatedly results in every change
+/// in the boolean value being observable.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_watcher_online_edges() {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox
+        .create_netstack_realm::<Netstack2, _>("watcher_online_edges")
+        .expect("create netstack realm");
+
+    let interface_state = realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .expect("connect to protocol");
+    let event_stream = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+        .expect("event stream from state")
+        .map(|r| r.expect("watcher error"))
+        .fuse();
+    futures::pin_mut!(event_stream);
+
+    // Consume the watcher until we see the idle event.
+    let existing = fidl_fuchsia_net_interfaces_ext::existing(
+        event_stream.by_ref().map(std::result::Result::<_, fidl::Error>::Ok),
+        HashMap::new(),
+    )
+    .await
+    .expect("existing");
+    // Only loopback should exist.
+    assert_eq!(existing.len(), 1, "unexpected interfaces in existing: {:?}", existing);
+
+    let ep = sandbox
+        // We don't need to run variants for this test, all we care about is
+        // the Netstack race. Use NetworkDevice because it's lighter weight.
+        .create_endpoint::<netemul::NetworkDevice, _>("ep")
+        .await
+        .expect("create fixed ep")
+        .into_interface_in_realm(&realm)
+        .await
+        .expect("install in realm");
+    let iface_id = ep.id();
+    assert_matches::assert_matches!(
+        event_stream.select_next_some().await,
+        fidl_fuchsia_net_interfaces::Event::Added(fidl_fuchsia_net_interfaces::Properties {
+            id: Some(id),
+            online: Some(false),
+            ..
+        }) => id == iface_id
+    );
+    // NB: Need to set link up and ensure that Netstack has observed link-up
+    // (by also enabling the interface and observing that online changes
+    // to true); otherwise enabling/disabling the interface may not change
+    // interface online as we'd expect.
+    ep.set_link_up(true).await.expect("bring link up");
+    assert!(ep.control().enable().await.expect("send enable").expect("enable"));
+    assert_matches::assert_matches!(
+        event_stream.select_next_some().await,
+        fidl_fuchsia_net_interfaces::Event::Changed(fidl_fuchsia_net_interfaces::Properties {
+            id: Some(id),
+            online: Some(true),
+            ..
+        }) => id == iface_id
+    );
+
+    // Future which concurrently enables and disables the interface a set
+    // number of iterations.  Note that the raciness is intentional: the
+    // interface may be enabled/disabled less than the number of iterations.
+    let toggle_online_fut = {
+        const ITERATIONS: usize = 100;
+        let enable_fut = futures::stream::iter(std::iter::repeat(()).take(ITERATIONS)).fold(
+            (ep, 0),
+            |(ep, change_count), ()| async move {
+                if ep.control().enable().await.expect("send enable").expect("enable") {
+                    (ep, change_count + 1)
+                } else {
+                    (ep, change_count)
+                }
+            },
+        );
+        let disable_fut = {
+            let debug_interfaces = realm
+                .connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()
+                .expect("connect to protocol");
+            let (control, server) =
+                fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::ControlMarker>()
+                    .expect("create Control");
+            debug_interfaces.get_admin(iface_id, server).expect("send get_admin");
+            futures::stream::iter(std::iter::repeat(()).take(ITERATIONS)).fold(
+                0,
+                move |change_count, ()| {
+                    control.disable().map(move |r| {
+                        change_count
+                            + if r.expect("send disable").expect("disable") { 1 } else { 0 }
+                    })
+                },
+            )
+        };
+        futures::future::join(enable_fut, disable_fut).map(|((ep, enable_count), disable_count)| {
+            // Removes the interface.
+            std::mem::drop(ep);
+            (enable_count, disable_count)
+        })
+    };
+
+    // Future which consumes interface watcher events and tallies number of
+    // offline->online edges (and vice versa).
+    let watcher_fut = event_stream
+        .take_while(|e| {
+            futures::future::ready(match e {
+                fidl_fuchsia_net_interfaces::Event::Removed(removed_id) => *removed_id != iface_id,
+                fidl_fuchsia_net_interfaces::Event::Added(_)
+                | fidl_fuchsia_net_interfaces::Event::Existing(_)
+                | fidl_fuchsia_net_interfaces::Event::Changed(_)
+                | fidl_fuchsia_net_interfaces::Event::Idle(fidl_fuchsia_net_interfaces::Empty) => {
+                    true
+                }
+            })
+        })
+        .fold((0, 0, true), |(enable_count, disable_count, online_prev), event| {
+            let online_next = assert_matches::assert_matches!(
+                event,
+                fidl_fuchsia_net_interfaces::Event::Changed(
+                    fidl_fuchsia_net_interfaces::Properties {
+                        id: Some(id),
+                        online,
+                        ..
+                    },
+                ) if id == iface_id => online
+            );
+            futures::future::ready(match online_next {
+                None => (enable_count, disable_count, online_prev),
+                Some(online_next) => match (online_prev, online_next) {
+                    (false, true) => (enable_count + 1, disable_count, online_next),
+                    (true, false) => (enable_count, disable_count + 1, online_next),
+                    (prev, next) => {
+                        panic!(
+                            "online changed event with no change: prev = {}, next = {}",
+                            prev, next
+                        )
+                    }
+                },
+            })
+        });
+
+    let ((want_enable_count, want_disable_count), (got_enable_count, got_disable_count, online)) =
+        futures::future::join(toggle_online_fut, watcher_fut).await;
+    assert_eq!((got_enable_count, got_disable_count), (want_enable_count, want_disable_count));
+    // Since we started with the interface being online, if we end on offline
+    // then there must have been one more disable than enable.
+    assert_eq!(got_disable_count, if !online { got_enable_count + 1 } else { got_enable_count });
+}
+
 /// Tests that competing interface change events are reported by
 /// fuchsia.net.interfaces/Watcher in the correct order.
 #[fuchsia_async::run_singlethreaded(test)]
@@ -592,6 +741,9 @@ async fn test_watcher_race() {
         .expect("create netstack realm");
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .expect("connect to protocol");
+    let debug_interfaces = realm
+        .connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()
         .expect("connect to protocol");
     for _ in 0..100 {
         let (watcher, server) =
@@ -612,11 +764,18 @@ async fn test_watcher_race() {
             .expect("install in realm");
 
         const IF_ADDR: fidl_fuchsia_net::InterfaceAddress = fidl_if_addr!("192.168.0.1/24");
+        let control_add_address = {
+            let (control, server_end) =
+                fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
+                    .expect("create endpoints");
+            debug_interfaces.get_admin(ep.id(), server_end).expect("send get_admin");
+            control
+        };
 
-        // Bring the link up, enable the interface, and add an IP address
-        // "non-sequentially" (as much as possible) to cause races in Netstack
-        // when reporting events.
-        let ((), (), ()) = futures::future::join3(
+        // Bring the link up, enable the interface, add an IP address,
+        // and a default route for the address "non-sequentially" (as much
+        // as possible) to cause races in Netstack when reporting events.
+        let ((), (), (), ()) = futures::future::join4(
             ep.set_link_up(true).map(|r| r.expect("bring link up")),
             async {
                 let did_enable = ep.control().enable().await.expect("send enable").expect("enable");
@@ -624,7 +783,7 @@ async fn test_watcher_race() {
             },
             async {
                 let address_state_provider = interfaces::add_address_wait_assigned(
-                    ep.control(),
+                    &control_add_address,
                     IF_ADDR,
                     fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
                 )
@@ -632,100 +791,145 @@ async fn test_watcher_race() {
                 .expect("add address");
                 let () = address_state_provider.detach().expect("detach address lifetime");
             },
+            ep.add_subnet_route(fidl_subnet!("0.0.0.0/0")).map(|r| r.expect("add default route")),
         )
         .await;
 
         let id = ep.id();
-        let () = futures::stream::unfold(
-            (watcher, false, false, false),
-            |(watcher, present, up, has_addr)| async move {
-                let event = watcher.watch().await.expect("watch");
+        let () =
+            futures::stream::unfold(
+                (watcher, false, false, false, false),
+                |(watcher, present, up, has_addr, has_default_ipv4_route)| async move {
+                    let event = watcher.watch().await.expect("watch");
 
-                let (mut new_present, mut new_up, mut new_has_addr) = (present, up, has_addr);
-                match event {
-                    fidl_fuchsia_net_interfaces::Event::Added(properties)
-                    | fidl_fuchsia_net_interfaces::Event::Existing(properties) => {
-                        if properties.id == Some(id) {
-                            assert!(!present, "duplicate added/existing event");
-                            new_present = true;
-                            new_up = properties
-                                .online
-                                .expect("added/existing event missing online property");
-                            new_has_addr = properties
-                                .addresses
-                                .expect("added/existing event missing addresses property")
-                                .iter()
-                                .any(
-                                    |fidl_fuchsia_net_interfaces::Address {
-                                         value,
-                                         valid_until: _,
-                                         ..
-                                     }| value == &Some(IF_ADDR),
-                                );
-                        }
-                    }
-                    fidl_fuchsia_net_interfaces::Event::Changed(properties) => {
-                        if properties.id == Some(id) {
-                            assert!(
-                                present,
-                                "property change event before added or existing event"
-                            );
-                            if let Some(online) = properties.online {
-                                new_up = online;
-                            }
-                            if let Some(addresses) = properties.addresses {
-                                new_has_addr = addresses.iter().any(
-                                    |fidl_fuchsia_net_interfaces::Address {
-                                         value,
-                                         valid_until: _,
-                                         ..
-                                     }| value == &Some(IF_ADDR),
+                    let (
+                        mut new_present,
+                        mut new_up,
+                        mut new_has_addr,
+                        mut new_has_default_ipv4_route,
+                    ) = (present, up, has_addr, has_default_ipv4_route);
+                    match event {
+                        fidl_fuchsia_net_interfaces::Event::Added(properties)
+                        | fidl_fuchsia_net_interfaces::Event::Existing(properties) => {
+                            if properties.id == Some(id) {
+                                assert!(!present, "duplicate added/existing event");
+                                new_present = true;
+                                new_up = properties
+                                    .online
+                                    .expect("added/existing event missing online property");
+                                new_has_addr = properties
+                                    .addresses
+                                    .expect("added/existing event missing addresses property")
+                                    .iter()
+                                    .any(
+                                        |fidl_fuchsia_net_interfaces::Address {
+                                             value,
+                                             valid_until: _,
+                                             ..
+                                         }| {
+                                            value == &Some(IF_ADDR)
+                                        },
+                                    );
+                                new_has_default_ipv4_route = properties
+                                    .has_default_ipv4_route
+                                    .expect(
+                                    "added/existing event missing has_default_ipv4_route property",
                                 );
                             }
                         }
-                    }
-                    fidl_fuchsia_net_interfaces::Event::Removed(removed_id) => {
-                        if removed_id == id {
-                            assert!(present, "removed event before added or existing");
-                            new_present = false;
+                        fidl_fuchsia_net_interfaces::Event::Changed(
+                            fidl_fuchsia_net_interfaces::Properties {
+                                id: changed_id,
+                                online,
+                                addresses,
+                                has_default_ipv4_route,
+                                name: _,
+                                device_class: _,
+                                has_default_ipv6_route: _,
+                                ..
+                            },
+                        ) => {
+                            if changed_id == Some(id) {
+                                assert!(
+                                    present,
+                                    "property change event before added or existing event"
+                                );
+                                if let Some(online) = online {
+                                    new_up = online;
+                                }
+                                if let Some(addresses) = addresses {
+                                    new_has_addr = addresses.iter().any(
+                                        |fidl_fuchsia_net_interfaces::Address {
+                                             value,
+                                             valid_until: _,
+                                             ..
+                                         }| {
+                                            value == &Some(IF_ADDR)
+                                        },
+                                    );
+                                }
+                                if let Some(has_default_ipv4_route) = has_default_ipv4_route {
+                                    new_has_default_ipv4_route = has_default_ipv4_route;
+                                }
+                            }
                         }
+                        fidl_fuchsia_net_interfaces::Event::Removed(removed_id) => {
+                            if removed_id == id {
+                                assert!(present, "removed event before added or existing");
+                                new_present = false;
+                            }
+                        }
+                        _ => {}
                     }
-                    _ => {}
-                }
-                println!(
-                    "Observed interfaces, previous state = ({}, {}, {}), new state = ({}, {}, {})",
-                    present, up, has_addr, new_present, new_up, new_has_addr
-                );
+                    println!(
+                        "Observed interfaces, previous = ({}, {}, {}, {}), new = ({}, {}, {}, {})",
+                        present,
+                        up,
+                        has_addr,
+                        has_default_ipv4_route,
+                        new_present,
+                        new_up,
+                        new_has_addr,
+                        new_has_default_ipv4_route
+                    );
 
-                // Verify that none of the observed states can be seen as
-                // "undone" by bad event ordering in Netstack. We don't care
-                // about the order in which we see the events since we're
-                // intentionally racing some things, only that nothing tracks
-                // back.
+                    // Verify that none of the observed states can be seen as
+                    // "undone" by bad event ordering in Netstack. We don't care
+                    // about the order in which we see the events since we're
+                    // intentionally racing some things, only that nothing tracks
+                    // back.
 
-                if present {
                     // Device should not disappear.
-                    assert!(new_present, "out of order events, device disappeared");
-                }
-                if up {
+                    assert!(!present || new_present, "out of order events, device disappeared");
                     // Device should not go offline.
-                    assert!(new_up, "out of order events, device went offline");
-                }
-                if has_addr {
+                    assert!(!up || new_up, "out of order events, device went offline");
                     // Address should not disappear.
-                    assert!(new_has_addr, "out of order events, address disappeared");
-                }
-                if new_present && new_up && new_has_addr {
-                    // We got everything we wanted, end the stream.
-                    None
-                } else {
-                    // Continue folding with the new state.
-                    Some(((), (watcher, new_present, new_up, new_has_addr)))
-                }
-            },
-        )
-        .collect()
-        .await;
+                    assert!(!has_addr || new_has_addr, "out of order events, address disappeared");
+                    // Default route should not disappear.
+                    assert!(
+                        !has_default_ipv4_route || new_has_default_ipv4_route,
+                        "out of order events, default IPv4 route disappeared"
+                    );
+                    if new_present && new_up && new_has_addr && new_has_default_ipv4_route {
+                        // We got everything we wanted, end the stream.
+                        None
+                    } else {
+                        // Continue folding with the new state.
+                        Some((
+                            (),
+                            (
+                                watcher,
+                                new_present,
+                                new_up,
+                                new_has_addr,
+                                new_has_default_ipv4_route,
+                            ),
+                        ))
+                    }
+                },
+            )
+            .collect()
+            .await;
     }
 }
 

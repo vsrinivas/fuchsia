@@ -21,6 +21,7 @@ import (
 
 	fidlethernet "fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/net"
+	"fidl/fuchsia/net/interfaces/admin"
 	"fidl/fuchsia/net/name"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
@@ -92,28 +93,59 @@ func (ns *Netstack) disableInterface(id uint64) stack.StackDisableInterfaceDepre
 }
 
 func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackAddInterfaceAddressDeprecatedResult {
-	var result stack.StackAddInterfaceAddressDeprecatedResult
-
 	protocolAddr := fidlconv.ToTCPIPProtocolAddress(ifAddr)
 	if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {
-		result.SetErr(stack.ErrorInvalidArgs)
-		return result
+		return stack.StackAddInterfaceAddressDeprecatedResultWithErr(stack.ErrorInvalidArgs)
 	}
 
-	switch status := ns.addInterfaceAddress(tcpip.NICID(id), protocolAddr, true /* addRoute */, tcpipstack.AddressProperties{}); status {
-	case zx.ErrOk:
-		result.SetResponse(stack.StackAddInterfaceAddressDeprecatedResponse{})
-		return result
-	case zx.ErrNotFound:
-		result.SetErr(stack.ErrorNotFound)
-		return result
-	case zx.ErrAlreadyExists:
-		_ = syslog.Warnf("(*Netstack).addInterfaceAddr(%s) failed (NIC %d): %s", protocolAddr.AddressWithPrefix, id, status)
-		result.SetErr(stack.ErrorAlreadyExists)
-		return result
-	default:
-		panic(fmt.Sprintf("NIC %d: failed to add address %s: %s", id, protocolAddr.AddressWithPrefix, status))
+	_ = syslog.Infof("NIC %d: adding IP %s with subnet route", id, protocolAddr.AddressWithPrefix)
+
+	nicid := tcpip.NICID(id)
+	info, ok := ns.stack.NICInfo()[nicid]
+	if !ok {
+		return stack.StackAddInterfaceAddressDeprecatedResultWithErr(stack.ErrorNotFound)
 	}
+	ifs := info.Context.(*ifState)
+	for _, candidate := range info.ProtocolAddresses {
+		if protocolAddr.AddressWithPrefix.Address == candidate.AddressWithPrefix.Address {
+			if protocolAddr.AddressWithPrefix.PrefixLen == candidate.AddressWithPrefix.PrefixLen {
+				return stack.StackAddInterfaceAddressDeprecatedResultWithErr(stack.ErrorAlreadyExists)
+			}
+			// Same address but different prefix. Remove the address and re-add it
+			// with the new prefix (below).
+			switch err := ifs.removeAddress(protocolAddr); err {
+			case zx.ErrOk:
+			case zx.ErrBadState:
+				return stack.StackAddInterfaceAddressDeprecatedResultWithErr(stack.ErrorNotFound)
+			case zx.ErrNotFound:
+				// We lost a race, the address was already removed.
+			default:
+				panic(fmt.Sprintf("NIC %d: failed to remove address %s: %s", nicid, protocolAddr.AddressWithPrefix, err))
+			}
+			break
+		}
+	}
+
+	if ok, reason := ifs.addAddress(protocolAddr, tcpipstack.AddressProperties{}); !ok {
+		switch reason {
+		case admin.AddressRemovalReasonAlreadyAssigned:
+			return stack.StackAddInterfaceAddressDeprecatedResultWithErr(stack.ErrorAlreadyExists)
+		case admin.AddressRemovalReasonInterfaceRemoved:
+			return stack.StackAddInterfaceAddressDeprecatedResultWithErr(stack.ErrorNotFound)
+		default:
+			panic(fmt.Sprintf("NIC %d: ifs.addAddress(%s, {}) unexpected removal reason: %s", nicid, protocolAddr.AddressWithPrefix, reason))
+		}
+	}
+
+	route := addressWithPrefixRoute(nicid, protocolAddr.AddressWithPrefix)
+	_ = syslog.Infof("creating subnet route %s with metric=<not-set>, dynamic=false", route)
+	if err := ns.AddRoute(route, metricNotSet, false /* dynamic */); err != nil {
+		if !errors.Is(err, routes.ErrNoSuchNIC) {
+			panic(fmt.Sprintf("NIC %d: failed to add subnet route %s: %s", nicid, route, err))
+		}
+		return stack.StackAddInterfaceAddressDeprecatedResultWithErr(stack.ErrorNotFound)
+	}
+	return stack.StackAddInterfaceAddressDeprecatedResultWithResponse(stack.StackAddInterfaceAddressDeprecatedResponse{})
 }
 
 func (ns *Netstack) delInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackDelInterfaceAddressDeprecatedResult {
@@ -122,10 +154,22 @@ func (ns *Netstack) delInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackDe
 		return stack.StackDelInterfaceAddressDeprecatedResultWithErr(stack.ErrorInvalidArgs)
 	}
 
-	switch status := ns.removeInterfaceAddress(tcpip.NICID(id), protocolAddr, true /* removeRoute */); status {
+	nicid := tcpip.NICID(id)
+	route := addressWithPrefixRoute(nicid, protocolAddr.AddressWithPrefix)
+	_ = syslog.Infof("removing subnet route %s", route)
+	if routesDeleted := ns.DelRoute(route); len(routesDeleted) == 0 {
+		// The route might have been removed by user action. Continue.
+	}
+
+	info, ok := ns.stack.NICInfo()[nicid]
+	if !ok {
+		return stack.StackDelInterfaceAddressDeprecatedResultWithErr(stack.ErrorNotFound)
+	}
+	ifs := info.Context.(*ifState)
+	switch status := ifs.removeAddress(protocolAddr); status {
 	case zx.ErrOk:
 		return stack.StackDelInterfaceAddressDeprecatedResultWithResponse(stack.StackDelInterfaceAddressDeprecatedResponse{})
-	case zx.ErrNotFound:
+	case zx.ErrBadState, zx.ErrNotFound:
 		return stack.StackDelInterfaceAddressDeprecatedResultWithErr(stack.ErrorNotFound)
 	default:
 		_ = syslog.Errorf("(*Netstack).delInterfaceAddr(%s) failed (NIC %d): %s", protocolAddr.AddressWithPrefix, id, status)
@@ -197,25 +241,15 @@ func (ns *Netstack) addForwardingEntry(entry stack.ForwardingEntry) stack.StackA
 }
 
 func (ns *Netstack) delForwardingEntry(entry stack.ForwardingEntry) stack.StackDelForwardingEntryResult {
-	var result stack.StackDelForwardingEntryResult
-
 	if !validateSubnet(entry.Subnet) {
-		result.SetErr(stack.ErrorInvalidArgs)
-		return result
+		return stack.StackDelForwardingEntryResultWithErr(stack.ErrorInvalidArgs)
 	}
 
 	route := fidlconv.ForwardingEntryToTCPIPRoute(entry)
-	if err := ns.DelRoute(route); err != nil {
-		if errors.Is(err, routes.ErrNoSuchRoute) {
-			result.SetErr(stack.ErrorNotFound)
-		} else {
-			_ = syslog.Errorf("deleting route %s from route table failed: %s", route, err)
-			result.SetErr(stack.ErrorInternal)
-		}
-		return result
+	if routesDeleted := ns.DelRoute(route); len(routesDeleted) == 0 {
+		return stack.StackDelForwardingEntryResultWithErr(stack.ErrorNotFound)
 	}
-	result.SetResponse(stack.StackDelForwardingEntryResponse{})
-	return result
+	return stack.StackDelForwardingEntryResultWithResponse(stack.StackDelForwardingEntryResponse{})
 }
 
 func (ni *stackImpl) AddEthernetInterface(_ fidl.Context, topologicalPath string, device fidlethernet.DeviceWithCtxInterface) (stack.StackAddEthernetInterfaceResult, error) {

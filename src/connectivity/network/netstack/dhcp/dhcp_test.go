@@ -753,14 +753,19 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 				}
 			}()
 
-			c.acquiredFunc = func(lost, acquired tcpip.AddressWithPrefix, _ Config) {
+			c.acquiredFunc = func(_ context.Context, lost, acquired tcpip.AddressWithPrefix, _ Config) {
 				removeLostAddAcquired(t, clientStack, lost, acquired)
 			}
 
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				c.Run(ctx)
+				if got, want := c.Run(ctx), (tcpip.AddressWithPrefix{
+					Address:   defaultClientAddrs[0],
+					PrefixLen: defaultServerCfg.SubnetMask.Prefix(),
+				}); got != want {
+					t.Errorf("got c.Run(_): %s, want: %s", got, want)
+				}
 			}()
 
 			<-clientTransitionsDone
@@ -1630,7 +1635,7 @@ func TestStateTransition(t *testing.T) {
 			count := 0
 			var curAddr tcpip.AddressWithPrefix
 			addrCh := make(chan tcpip.AddressWithPrefix)
-			c.acquiredFunc = func(lost, acquired tcpip.AddressWithPrefix, _ Config) {
+			c.acquiredFunc = func(ctx context.Context, lost, acquired tcpip.AddressWithPrefix, _ Config) {
 				if lost != curAddr {
 					t.Fatalf("aquisition %d: curAddr=%s, lost=%s", count, curAddr, lost)
 				}
@@ -1648,11 +1653,12 @@ func TestStateTransition(t *testing.T) {
 
 			wg.Add(1)
 			go func() {
+				defer wg.Done()
 				// Avoid waiting for ARP on sending DHCPRELEASE.
 				s.AddStaticNeighbor(testNICID, header.IPv4ProtocolNumber, c.Info().Config.ServerAddress, tcpip.LinkAddress([]byte{0, 1, 2, 3, 4, 5}))
 
-				c.Run(ctx)
-				wg.Done()
+				lost := c.Run(ctx)
+				c.acquiredFunc(ctx, lost, tcpip.AddressWithPrefix{}, Config{})
 			}()
 
 			wantAddr := <-addrCh
@@ -1724,6 +1730,10 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 	// cancellation in following acquisitions. This makes sure the client is stuck
 	// in init selecting state after lease expiration.
 	firstAcquisition := true
+	acquiredAddr := tcpip.AddressWithPrefix{
+		Address:   "\xc0\xa8\x03\x02",
+		PrefixLen: 24,
+	}
 	c.acquire = func(ctx context.Context, _ *Client, _ string, info *Info) (Config, error) {
 		if !firstAcquisition {
 			// Simulates a timeout using the deadline from context.
@@ -1731,10 +1741,7 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 			return Config{}, fmt.Errorf("fake test timeout error: %w", ctx.Err())
 		}
 		firstAcquisition = false
-		info.Acquired = tcpip.AddressWithPrefix{
-			Address:   "\xc0\xa8\x03\x02",
-			PrefixLen: 24,
-		}
+		info.Acquired = acquiredAddr
 		return Config{LeaseLength: leaseLength}, nil
 	}
 
@@ -1775,14 +1782,13 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 		}
 	}()
 
-	var curAddr tcpip.AddressWithPrefix
 	addrCh := make(chan tcpip.AddressWithPrefix)
-	c.acquiredFunc = func(lost, acquired tcpip.AddressWithPrefix, _ Config) {
+	c.acquiredFunc = func(ctx context.Context, _, acquired tcpip.AddressWithPrefix, _ Config) {
 		// Respond to context cancellation to avoid deadlock when enclosing test
 		// times out.
 		select {
 		case <-ctx.Done():
-		case addrCh <- curAddr:
+		case addrCh <- acquired:
 		}
 	}
 
@@ -1792,11 +1798,15 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 		// Avoid waiting for ARP on sending DHCPRELEASE.
 		s.AddStaticNeighbor(testNICID, header.IPv4ProtocolNumber, c.Info().Config.ServerAddress, tcpip.LinkAddress([]byte{0, 1, 2, 3, 4, 5}))
 
-		c.Run(ctx)
+		if got, want := c.Run(ctx), (tcpip.AddressWithPrefix{}); got != want {
+			t.Errorf("got c.Run(_): %s, want: %s", got, want)
+		}
+		c.acquiredFunc(ctx, tcpip.AddressWithPrefix{}, tcpip.AddressWithPrefix{}, Config{})
 	}()
 
-	gotAddr := <-addrCh
-	t.Logf("got first address: %s", gotAddr)
+	if gotAddr, wantAddr := <-addrCh, acquiredAddr; gotAddr != wantAddr {
+		t.Fatalf("unexpected acquired address: got = %s, want = %s", gotAddr, wantAddr)
+	}
 
 	initCountAfterFirstAcquisition := c.stats.InitAcquire.Value()
 	// The first address is always acquired through init selecting state.
@@ -1959,12 +1969,13 @@ func TestClientRestartIPHeader(t *testing.T) {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 
-			c.acquiredFunc = func(lost, acquired tcpip.AddressWithPrefix, _ Config) {
+			c.acquiredFunc = func(_ context.Context, lost, acquired tcpip.AddressWithPrefix, _ Config) {
 				removeLostAddAcquired(t, clientStack, lost, acquired)
 				cancel()
 			}
 
-			c.Run(ctx)
+			lost := c.Run(ctx)
+			c.acquiredFunc(ctx, lost, tcpip.AddressWithPrefix{}, Config{})
 		}()
 	}
 	close(packets)
@@ -2076,7 +2087,9 @@ func TestDecline(t *testing.T) {
 
 	wg.Add(1)
 	go func() {
-		c.Run(ctx)
+		if got, want := c.Run(ctx), (tcpip.AddressWithPrefix{}); got != want {
+			t.Errorf("got c.Run(_): %s, want: %s", got, want)
+		}
 		wg.Done()
 	}()
 
@@ -2172,7 +2185,7 @@ func TestClientRestartLeaseTime(t *testing.T) {
 	c.now = func() time.Time { return time.Monotonic((1234 * time.Second.Nanoseconds()) + 5678) }
 
 	acquiredDone := make(chan struct{})
-	c.acquiredFunc = func(lost, acquired tcpip.AddressWithPrefix, _ Config) {
+	c.acquiredFunc = func(_ context.Context, lost, acquired tcpip.AddressWithPrefix, _ Config) {
 		removeLostAddAcquired(t, clientStack, lost, acquired)
 		acquiredDone <- struct{}{}
 	}
@@ -2221,7 +2234,8 @@ func TestClientRestartLeaseTime(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			c.Run(clientCtx)
+			lost := c.Run(clientCtx)
+			c.acquiredFunc(clientCtx, lost, tcpip.AddressWithPrefix{}, Config{})
 		}()
 		<-acquiredDone
 
@@ -2267,7 +2281,8 @@ func TestClientRestartLeaseTime(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			c.Run(clientCtx)
+			lost := c.Run(clientCtx)
+			c.acquiredFunc(clientCtx, lost, tcpip.AddressWithPrefix{}, Config{})
 		}()
 		<-acquiredDone
 
@@ -2289,7 +2304,7 @@ func TestClientUpdateInfo(t *testing.T) {
 	offeredAt := time.Monotonic(100)
 	renewTime := defaultRenewTime(defaultLeaseLength)
 	rebindTime := defaultRebindTime(defaultLeaseLength)
-	c.acquiredFunc = func(old, acq tcpip.AddressWithPrefix, cfg Config) {
+	c.acquiredFunc = func(_ context.Context, old, acq tcpip.AddressWithPrefix, cfg Config) {
 		if want := (tcpip.AddressWithPrefix{}); old != want {
 			t.Errorf("old=%s, want=%s", old, want)
 		}

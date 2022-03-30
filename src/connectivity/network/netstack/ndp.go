@@ -9,7 +9,6 @@ package netstack
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -387,192 +386,216 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 	go func() {
 		n.sem <- struct{}{}
 		defer func() { <-n.sem }()
-		done := ctx.Done()
 
 		_ = syslog.InfoTf(ndpSyslogTagName, "started worker goroutine")
 
 		for {
-			var event ndpEvent
-			for {
-				// Has ctx been cancelled?
-				if err := ctx.Err(); err != nil {
-					_ = syslog.InfoTf(ndpSyslogTagName, "stopping worker goroutine; ctx.Err(): %s", err)
-					return
-				}
-
-				// Get the next event from the queue, but do not remove the event from
-				// the queue yet. The event will be removed from the queue once it has
-				// been handled. This is to avoid a race condition in tests where
-				// waiting for the queue to empty can block indefinitely if the queue is
-				// already empty.
-				//
-				// This is safe because the worker goroutine will be the only goroutine
-				// handling events and popping from the queue. Other goroutines will
-				// only push to the queue.
-				n.mu.Lock()
-				if len(n.mu.events) > 0 {
-					event = n.mu.events[0]
-				}
-				n.mu.Unlock()
-
-				if event != nil {
-					break
-				}
-
-				// No NDP events to handle. Wait for an NDP or ctx cancellation event to
-				// handle.
-				select {
-				case <-done:
-					_ = syslog.InfoTf(ndpSyslogTagName, "stopping worker goroutine; ctx.Err(): %s", ctx.Err())
-					return
-				case <-n.notifyCh:
-					continue
-				}
+			event := n.readEvent(ctx)
+			if event == nil {
+				return
 			}
-
-			// Handle the event.
-			switch event := event.(type) {
-			case *ndpDuplicateAddressDetectionEvent:
-				success, completed := func() (bool, bool) {
-					switch result := event.result.(type) {
-					case *stack.DADSucceeded:
-						_ = syslog.InfoTf(ndpSyslogTagName, "DAD resolved for %s on nicID (%d), sending interface changed event...", event.addr, event.nicID)
-						return true, true
-					case *stack.DADError:
-						logFn := syslog.ErrorTf
-						if _, ok := result.Err.(*tcpip.ErrClosedForSend); ok {
-							logFn = syslog.WarnTf
-						}
-						_ = logFn(ndpSyslogTagName, "DAD for %s on nicID (%d) encountered error = %s, sending interface changed event...", event.addr, event.nicID, result.Err)
-						return false, true
-					case *stack.DADAborted:
-						_ = syslog.WarnTf(ndpSyslogTagName, "DAD for %s on nicID (%d) aborted, sending interface changed event...", event.addr, event.nicID)
-						// Do not trigger on DAD complete because DAD was actually aborted.
-						// The link online change handler will update the address assignment
-						// state accordingly.
-						return false, false
-					case *stack.DADDupAddrDetected:
-						_ = syslog.WarnTf(ndpSyslogTagName, "DAD found %s holding %s on nicID (%d), sending interface changed event...", result.HolderLinkAddress, event.addr, event.nicID)
-						return false, true
-					default:
-						panic(fmt.Sprintf("unhandled DAD result variant %#v", result))
-					}
-				}()
-				if completed {
-					n.ns.onDuplicateAddressDetectionComplete(event.nicID, event.addr, success)
-				}
-				n.ns.onPropertiesChange(event.nicID, nil)
-
-			case *ndpDiscoveredOffLinkRouteEvent:
-				rt := tcpip.Route{Destination: event.dest, Gateway: event.router, NIC: event.nicID}
-				_ = syslog.InfoTf(ndpSyslogTagName, "discovered an off-link route to [%s] through [%s] on nicID (%d) with preference=%s: [%s]", event.dest, event.router, event.nicID, event.prf, rt)
-
-				var prf routes.Preference
-				switch event.prf {
-				case header.LowRoutePreference:
-					prf = routes.LowPreference
-				case header.MediumRoutePreference:
-					prf = routes.MediumPreference
-				case header.HighRoutePreference:
-					prf = routes.HighPreference
-				default:
-					panic(fmt.Sprintf("unhandled NDP route preference = %s", event.prf))
-				}
-
-				// rt is added as a 'static' route because Netstack will remove dynamic
-				// routes on DHCPv4 changes. See
-				// staticRouteAvoidingLifeCycleHooks for more details.
-				if err := n.ns.addRouteWithPreference(rt, prf, metricNotSet, staticRouteAvoidingLifeCycleHooks); err != nil {
-					_ = syslog.ErrorTf(ndpSyslogTagName, "failed to add the route [%s] with preference=%s for the discovered off-link route to [%s] through [%s] on nicID (%d): %s", rt, event.prf, event.dest, event.router, event.nicID, err)
-				}
-
-			case *ndpInvalidatedOffLinkRouteEvent:
-				rt := tcpip.Route{Destination: event.dest, Gateway: event.router, NIC: event.nicID}
-				_ = syslog.InfoTf(ndpSyslogTagName, "invalidating an off-link route to [%s] through [%s] on nicID (%d), removing the default route to it: [%s]", event.dest, event.router, event.nicID, rt)
-				// If the route does not exist, we do not consider that an error as it
-				// may have been removed by the user.
-				if err := n.ns.DelRoute(rt); err != nil && !errors.Is(err, routes.ErrNoSuchRoute) {
-					_ = syslog.ErrorTf(ndpSyslogTagName, "failed to remove the route [%s] for the discovered off-link route to [%s] through [%s] on nicID (%d): %s", rt, event.dest, event.router, event.nicID, err)
-				}
-
-			case *ndpDiscoveredPrefixEvent:
-				nicID, prefix := event.nicID, event.prefix
-				rt := onLinkV6Route(nicID, prefix)
-				_ = syslog.InfoTf(ndpSyslogTagName, "discovered an on-link prefix (%s) on nicID (%d), adding an on-link route to it: [%s]", prefix, nicID, rt)
-				// rt is added as a 'static' route because Netstack will remove dynamic
-				// routes on DHCPv4 changes. See
-				// staticRouteAvoidingLifeCycleHooks for more details.
-				if err := n.ns.AddRoute(rt, metricNotSet, staticRouteAvoidingLifeCycleHooks); err != nil {
-					_ = syslog.ErrorTf(ndpSyslogTagName, "failed to add the on-link route [%s] for the discovered on-link prefix (%s) on nicID (%d): %s", rt, prefix, nicID, err)
-				}
-
-			case *ndpInvalidatedPrefixEvent:
-				nicID, prefix := event.nicID, event.prefix
-				rt := onLinkV6Route(nicID, prefix)
-				_ = syslog.InfoTf(ndpSyslogTagName, "invalidating an on-link prefix (%s) from nicID (%d), removing the on-link route to it: [%s]", prefix, nicID, rt)
-				// If the route does not exist, we do not consider that an error as it
-				// may have been removed by the user.
-				if err := n.ns.DelRoute(rt); err != nil && !errors.Is(err, routes.ErrNoSuchRoute) {
-					_ = syslog.ErrorTf(ndpSyslogTagName, "failed to remove the on-link route [%s] for the invalidated on-link prefix (%s) on nicID (%d): %s", rt, prefix, nicID, err)
-				}
-
-			case *ndpGeneratedAutoGenAddrEvent:
-				nicID, addrWithPrefix := event.nicID, event.addrWithPrefix
-				_ = syslog.InfoTf(ndpSyslogTagName, "added an auto-generated address (%s) on nicID (%d)", addrWithPrefix, nicID)
-
-			case *ndpInvalidatedAutoGenAddrEvent:
-				nicID, addrWithPrefix := event.nicID, event.addrWithPrefix
-				_ = syslog.InfoTf(ndpSyslogTagName, "invalidated an auto-generated address (%s) on nicID (%d), sending interface changed event...", addrWithPrefix, nicID)
-				n.ns.onPropertiesChange(event.nicID, nil)
-
-			case *ndpRecursiveDNSServerEvent:
-				nicID, addrs, lifetime := event.nicID, event.addrs, event.lifetime
-				_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "updating expiring DNS servers (%s) on nicID (%d) with lifetime (%s)...", addrs, nicID, lifetime)
-				servers := make([]tcpip.FullAddress, 0, len(addrs))
-				for _, a := range addrs {
-					// The default DNS port will be used since the Port field is
-					// unspecified here.
-					servers = append(servers, tcpip.FullAddress{Addr: a, NIC: nicID})
-				}
-
-				// lifetime should never be greater than header.NDPInfiniteLifetime.
-				if lifetime > header.NDPInfiniteLifetime {
-					panic(fmt.Sprintf("ndp: got recursive DNS server event with lifetime (%s) greater than infinite lifetime (%s) on nicID (%d) with addrs (%s)", lifetime, header.NDPInfiniteLifetime, nicID, addrs))
-				}
-
-				if lifetime == header.NDPInfiniteLifetime {
-					// A lifetime value less than 0 implies infinite lifetime to the DNS
-					// client.
-					lifetime = -1
-				}
-
-				n.ns.dnsConfig.UpdateNdpServers(servers, lifetime)
-
-			default:
-				panic(fmt.Sprintf("unrecognized event type: %T", event))
-			}
-
-			// Remove the event we just handled from the queue. If the queue is empty
-			// after popping, then we know that all events in the queue (before taking
-			// the lock) have been handled.
-			n.mu.Lock()
-			n.mu.events[0] = nil
-			n.mu.events = n.mu.events[1:]
-			eventsLeft := len(n.mu.events)
-			n.mu.Unlock()
-
-			// Signal tests that are waiting for the event queue to be empty. We
-			// signal after handling the last event so that when the test wakes up,
-			// the test can safely assume that all events in the queue (up to this
-			// notification) have been handled.
-			if eventsLeft == 0 {
-				select {
-				case n.testNotifyCh <- struct{}{}:
-				default:
-				}
-			}
+			n.handleEvent(event)
 		}
 	}()
+}
+
+// readEvent reads an NDP event.
+func (n *ndpDispatcher) readEvent(ctx context.Context) ndpEvent {
+	for {
+		// Has ctx been cancelled?
+		if err := ctx.Err(); err != nil {
+			_ = syslog.InfoTf(ndpSyslogTagName, "stopping worker goroutine; ctx.Err(): %s", err)
+			return nil
+		}
+
+		// Get the next event from the queue, but do not remove the event from
+		// the queue yet. The event will be removed from the queue once it has
+		// been handled. This is to avoid a race condition in tests where
+		// waiting for the queue to empty can block indefinitely if the queue is
+		// already empty.
+		//
+		// This is safe because the worker goroutine will be the only goroutine
+		// handling events and popping from the queue. Other goroutines will
+		// only push to the queue.
+		if event := func() ndpEvent {
+			n.mu.Lock()
+			defer n.mu.Unlock()
+
+			if len(n.mu.events) == 0 {
+				return nil
+			}
+			return n.mu.events[0]
+		}(); event != nil {
+			return event
+		}
+
+		// No NDP events to handle. Wait for an NDP or ctx cancellation event to
+		// handle.
+		select {
+		case <-ctx.Done():
+			_ = syslog.InfoTf(ndpSyslogTagName, "stopping worker goroutine; ctx.Err(): %s", ctx.Err())
+			return nil
+		case <-n.notifyCh:
+			continue
+		}
+	}
+}
+
+// handleEvent handles an NDP event.
+func (n *ndpDispatcher) handleEvent(event ndpEvent) {
+	// Handle the event.
+	switch event := event.(type) {
+	case *ndpDuplicateAddressDetectionEvent:
+		success, completed := func() (bool, bool) {
+			switch result := event.result.(type) {
+			case *stack.DADSucceeded:
+				_ = syslog.InfoTf(ndpSyslogTagName, "DAD resolved for %s on nicID (%d), sending address added event...", event.addr, event.nicID)
+				if nicInfo, ok := n.ns.stack.NICInfo()[event.nicID]; ok {
+					ifs := nicInfo.Context.(*ifState)
+					ifs.mu.Lock()
+					n.ns.onAddressAddLocked(event.nicID, tcpip.AddressWithPrefix{
+						Address:   event.addr,
+						PrefixLen: 8 * header.IPv6AddressSize,
+					})
+					ifs.mu.Unlock()
+				}
+				return true, true
+			case *stack.DADError:
+				logFn := syslog.ErrorTf
+				if _, ok := result.Err.(*tcpip.ErrClosedForSend); ok {
+					logFn = syslog.WarnTf
+				}
+				_ = logFn(ndpSyslogTagName, "DAD for %s on nicID (%d) encountered error = %s", event.addr, event.nicID, result.Err)
+				return false, true
+			case *stack.DADAborted:
+				_ = syslog.WarnTf(ndpSyslogTagName, "DAD for %s on nicID (%d) aborted", event.addr, event.nicID)
+				// Do not trigger on DAD complete because DAD was actually aborted.
+				// The link online change handler will update the address assignment
+				// state accordingly.
+				return false, false
+			case *stack.DADDupAddrDetected:
+				_ = syslog.WarnTf(ndpSyslogTagName, "DAD found %s holding %s on nicID (%d)", result.HolderLinkAddress, event.addr, event.nicID)
+				return false, true
+			default:
+				panic(fmt.Sprintf("unhandled DAD result variant %#v", result))
+			}
+		}()
+		if completed {
+			n.ns.onDuplicateAddressDetectionComplete(event.nicID, event.addr, success)
+		}
+
+	case *ndpDiscoveredOffLinkRouteEvent:
+		rt := tcpip.Route{Destination: event.dest, Gateway: event.router, NIC: event.nicID}
+		_ = syslog.InfoTf(ndpSyslogTagName, "discovered an off-link route to [%s] through [%s] on nicID (%d) with preference=%s: [%s]", event.dest, event.router, event.nicID, event.prf, rt)
+
+		var prf routes.Preference
+		switch event.prf {
+		case header.LowRoutePreference:
+			prf = routes.LowPreference
+		case header.MediumRoutePreference:
+			prf = routes.MediumPreference
+		case header.HighRoutePreference:
+			prf = routes.HighPreference
+		default:
+			panic(fmt.Sprintf("unhandled NDP route preference = %s", event.prf))
+		}
+
+		// rt is added as a 'static' route because Netstack will remove dynamic
+		// routes on DHCPv4 changes. See
+		// staticRouteAvoidingLifeCycleHooks for more details.
+		if err := n.ns.addRouteWithPreference(rt, prf, metricNotSet, staticRouteAvoidingLifeCycleHooks); err != nil {
+			_ = syslog.ErrorTf(ndpSyslogTagName, "failed to add the route [%s] with preference=%s for the discovered off-link route to [%s] through [%s] on nicID (%d): %s", rt, event.prf, event.dest, event.router, event.nicID, err)
+		}
+
+	case *ndpInvalidatedOffLinkRouteEvent:
+		rt := tcpip.Route{Destination: event.dest, Gateway: event.router, NIC: event.nicID}
+		_ = syslog.InfoTf(ndpSyslogTagName, "invalidating an off-link route to [%s] through [%s] on nicID (%d), removing the default route to it: [%s]", event.dest, event.router, event.nicID, rt)
+		// If the route does not exist, we do not consider that an error as it
+		// may have been removed by the user.
+		_ = n.ns.DelRoute(rt)
+
+	case *ndpDiscoveredPrefixEvent:
+		nicID, prefix := event.nicID, event.prefix
+		rt := onLinkV6Route(nicID, prefix)
+		_ = syslog.InfoTf(ndpSyslogTagName, "discovered an on-link prefix (%s) on nicID (%d), adding an on-link route to it: [%s]", prefix, nicID, rt)
+		// rt is added as a 'static' route because Netstack will remove dynamic
+		// routes on DHCPv4 changes. See
+		// staticRouteAvoidingLifeCycleHooks for more details.
+		if err := n.ns.AddRoute(rt, metricNotSet, staticRouteAvoidingLifeCycleHooks); err != nil {
+			_ = syslog.ErrorTf(ndpSyslogTagName, "failed to add the on-link route [%s] for the discovered on-link prefix (%s) on nicID (%d): %s", rt, prefix, nicID, err)
+		}
+
+	case *ndpInvalidatedPrefixEvent:
+		nicID, prefix := event.nicID, event.prefix
+		rt := onLinkV6Route(nicID, prefix)
+		_ = syslog.InfoTf(ndpSyslogTagName, "invalidating an on-link prefix (%s) from nicID (%d), removing the on-link route to it: [%s]", prefix, nicID, rt)
+		// If the route does not exist, we do not consider that an error as it
+		// may have been removed by the user.
+		_ = n.ns.DelRoute(rt)
+
+	case *ndpGeneratedAutoGenAddrEvent:
+		nicID, addrWithPrefix := event.nicID, event.addrWithPrefix
+		_ = syslog.InfoTf(ndpSyslogTagName, "added an auto-generated address (%s) on nicID (%d)", addrWithPrefix, nicID)
+
+	case *ndpInvalidatedAutoGenAddrEvent:
+		nicID, addrWithPrefix := event.nicID, event.addrWithPrefix
+		_ = syslog.InfoTf(ndpSyslogTagName, "invalidated an auto-generated address (%s) on nicID (%d), sending interface changed event...", addrWithPrefix, nicID)
+		if nicInfo, ok := n.ns.stack.NICInfo()[event.nicID]; ok {
+			ifs := nicInfo.Context.(*ifState)
+			ifs.mu.Lock()
+			// TODO(https://fxbug.dev/95578): Remove strict parameter once it is
+			// guaranteed that getting here means that the auto-generated address was
+			// fully assigned and then removed.
+			n.ns.onAddressRemoveLocked(event.nicID, addrWithPrefix, false /* strict */)
+			ifs.mu.Unlock()
+		}
+
+	case *ndpRecursiveDNSServerEvent:
+		nicID, addrs, lifetime := event.nicID, event.addrs, event.lifetime
+		_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "updating expiring DNS servers (%s) on nicID (%d) with lifetime (%s)...", addrs, nicID, lifetime)
+		servers := make([]tcpip.FullAddress, 0, len(addrs))
+		for _, a := range addrs {
+			// The default DNS port will be used since the Port field is
+			// unspecified here.
+			servers = append(servers, tcpip.FullAddress{Addr: a, NIC: nicID})
+		}
+
+		// lifetime should never be greater than header.NDPInfiniteLifetime.
+		if lifetime > header.NDPInfiniteLifetime {
+			panic(fmt.Sprintf("ndp: got recursive DNS server event with lifetime (%s) greater than infinite lifetime (%s) on nicID (%d) with addrs (%s)", lifetime, header.NDPInfiniteLifetime, nicID, addrs))
+		}
+
+		if lifetime == header.NDPInfiniteLifetime {
+			// A lifetime value less than 0 implies infinite lifetime to the DNS
+			// client.
+			lifetime = -1
+		}
+
+		n.ns.dnsConfig.UpdateNdpServers(servers, lifetime)
+
+	default:
+		panic(fmt.Sprintf("unrecognized event type: %T", event))
+	}
+
+	// Remove the event we just handled from the queue. If the queue is empty
+	// after popping, then we know that all events in the queue (before taking
+	// the lock) have been handled.
+	n.mu.Lock()
+	n.mu.events[0] = nil
+	n.mu.events = n.mu.events[1:]
+	eventsLeft := len(n.mu.events)
+	n.mu.Unlock()
+
+	// Signal tests that are waiting for the event queue to be empty. We
+	// signal after handling the last event so that when the test wakes up,
+	// the test can safely assume that all events in the queue (up to this
+	// notification) have been handled.
+	if eventsLeft == 0 {
+		select {
+		case n.testNotifyCh <- struct{}{}:
+		default:
+		}
+	}
 }
 
 // newNDPDispatcher returns a new ndpDispatcher that allows 1 worker goroutine

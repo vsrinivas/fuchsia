@@ -9,13 +9,13 @@ package netstack
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"syscall/zx"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/bridge"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
@@ -26,6 +26,7 @@ import (
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	fidlethernet "fidl/fuchsia/hardware/ethernet"
+	fidlnet "fidl/fuchsia/net"
 	"fidl/fuchsia/net/interfaces/admin"
 	"fidl/fuchsia/netstack"
 
@@ -132,7 +133,7 @@ type NICRemovedHandler interface {
 type Netstack struct {
 	dnsConfig dns.ServersConfig
 
-	interfaceWatchers interfaceWatcherCollection
+	interfaceEventChan chan<- interfaceEvent
 
 	stack      *stack.Stack
 	routeTable routes.RouteTable
@@ -161,24 +162,36 @@ type ifState struct {
 	// Non-nil iff the underlying link status can be observed.
 	observer link.Observer
 	nicid    tcpip.NICID
+	// TODO(https://fxbug.dev/96478): This lock is unnecessary in that we would
+	// rather reuse `ifState.mu` if not for the fact that mutexes cannot be used
+	// with select. Consolidate and remove this lock.
+	// Lock for DHCP client's access to ifState.
+	//
+	// Must write to this channel before acquiring ifState.mu on all paths that
+	// may cancel the DHCP client. Before the DHCP client needs to hold
+	// ifState.mu, it will select on this channel and its context done
+	// channel, and only proceed if it is able to write to the channel.
+	dhcpLock chan struct{}
 	mu       struct {
 		sync.RWMutex
-		adminUp, linkOnline bool
+		adminUp, linkOnline, removed bool
 		// metric is used by default for routes that originate from this NIC.
 		metric routes.Metric
 		dhcp   struct {
 			*dhcp.Client
 			// running must not be nil.
 			running func() bool
-			// cancel must not be nil.
-			cancel context.CancelFunc
+			// cancelLocked must not be nil.
+			//
+			// ifState.mu must be locked before calling this function.
+			cancelLocked context.CancelFunc
 			// Used to restart the DHCP client when we go from down to up.
 			enabled bool
 		}
+		addressStateProviders addressStateProviderCollection
 	}
 
-	adminControls         adminControlCollection
-	addressStateProviders addressStateProviderCollection
+	adminControls adminControlCollection
 
 	dns struct {
 		mu struct {
@@ -250,82 +263,148 @@ func (ns *Netstack) name(nicid tcpip.NICID) string {
 	return name
 }
 
+func (ns *Netstack) fillRouteNIC(r tcpip.Route) (tcpip.Route, error) {
+	// If we don't have an interface set, find it using the gateway address.
+	if r.NIC == 0 {
+		nic, err := ns.routeTable.FindNIC(r.Gateway)
+		if err != nil {
+			return tcpip.Route{}, fmt.Errorf("error finding NIC for gateway %s: %w", r.Gateway, err)
+		}
+		r.NIC = nic
+	}
+	return r, nil
+}
+
 // AddRoute adds a single route to the route table in a sorted fashion.
 func (ns *Netstack) AddRoute(r tcpip.Route, metric routes.Metric, dynamic bool) error {
-	return ns.AddRoutes([]tcpip.Route{r}, metric, dynamic)
+	r, err := ns.fillRouteNIC(r)
+	if err != nil {
+		return err
+	}
+	return ns.AddRoutes(r.NIC, []tcpip.Route{r}, metric, dynamic)
 }
 
 func (ns *Netstack) addRouteWithPreference(r tcpip.Route, prf routes.Preference, metric routes.Metric, dynamic bool) error {
-	return ns.addRoutesWithPreference([]tcpip.Route{r}, prf, metric, dynamic)
+	r, err := ns.fillRouteNIC(r)
+	if err != nil {
+		return err
+	}
+	return ns.addRoutesWithPreference(r.NIC, []tcpip.Route{r}, prf, metric, dynamic)
 }
 
 // AddRoutes adds one or more routes to the route table in a sorted
 // fashion.
 //
 // The routes will be added with the default (medium) medium preference value.
-func (ns *Netstack) AddRoutes(rs []tcpip.Route, metric routes.Metric, dynamic bool) error {
-	return ns.addRoutesWithPreference(rs, routes.MediumPreference, metric, dynamic)
+// All routes in `rs` will have their NICID rewritten to `nicid`.
+func (ns *Netstack) AddRoutes(nicid tcpip.NICID, rs []tcpip.Route, metric routes.Metric, dynamic bool) error {
+	return ns.addRoutesWithPreference(nicid, rs, routes.MediumPreference, metric, dynamic)
 }
 
-func (ns *Netstack) addRoutesWithPreference(rs []tcpip.Route, prf routes.Preference, metric routes.Metric, dynamic bool) error {
+// addRoutesWithPreference adds routes for the same interface to the route table
+// with a configurable preference value.
+//
+// All routes in `rs` will have their NICID rewritten to `nicid`.
+func (ns *Netstack) addRoutesWithPreference(nicid tcpip.NICID, rs []tcpip.Route, prf routes.Preference, metric routes.Metric, dynamic bool) error {
+	nicInfo, ok := ns.stack.NICInfo()[nicid]
+	if !ok {
+		return fmt.Errorf("error getting nicInfo for NIC %d, not in map: %w", nicid, routes.ErrNoSuchNIC)
+	}
+	ifs := nicInfo.Context.(*ifState)
+
+	ifs.mu.Lock()
+	defer ifs.mu.Unlock()
+
+	ifs.addRoutesWithPreferenceLocked(rs, prf, metric, dynamic)
+	return nil
+}
+
+func (ifs *ifState) addRoutesWithPreferenceLocked(rs []tcpip.Route, prf routes.Preference, metric routes.Metric, dynamic bool) {
 	metricTracksInterface := false
 	if metric == metricNotSet {
 		metricTracksInterface = true
 	}
 
-	_ = syslog.Infof("adding routes [%s] prf=%d metric=%d dynamic=%t", rs, prf, metric, dynamic)
+	enabled := ifs.IsUpLocked()
+	if metricTracksInterface {
+		metric = ifs.mu.metric
+	}
 
-	var defaultRouteAdded bool
+	ifs.ns.routeTable.Lock()
+	defer ifs.ns.routeTable.Unlock()
+
 	for _, r := range rs {
-		// If we don't have an interface set, find it using the gateway address.
-		if r.NIC == 0 {
-			nic, err := ns.routeTable.FindNIC(r.Gateway)
-			if err != nil {
-				return fmt.Errorf("error finding NIC for gateway %s: %w", r.Gateway, err)
+		r.NIC = ifs.nicid
+
+		ifs.ns.routeTable.AddRouteLocked(r, prf, metric, metricTracksInterface, dynamic, enabled)
+		_ = syslog.Infof("adding route [%s] prf=%d metric=%d dynamic=%t", r, prf, metric, dynamic)
+
+		if enabled {
+			if r.Destination.Equal(header.IPv4EmptySubnet) {
+				ifs.ns.onDefaultIPv4RouteChangeLocked(r.NIC, true /* hasDefaultRoute */)
+			} else if r.Destination.Equal(header.IPv6EmptySubnet) {
+				ifs.ns.onDefaultIPv6RouteChangeLocked(r.NIC, true /* hasDefaultRoute */)
 			}
-			r.NIC = nic
-		}
-
-		nicInfo, ok := ns.stack.NICInfo()[r.NIC]
-		if !ok {
-			return fmt.Errorf("error getting nicInfo for NIC %d, not in map: %w", r.NIC, routes.ErrNoSuchNIC)
-		}
-
-		ifs := nicInfo.Context.(*ifState)
-
-		ifs.mu.Lock()
-		enabled := ifs.IsUpLocked()
-
-		if metricTracksInterface {
-			metric = ifs.mu.metric
-		}
-
-		ns.routeTable.AddRoute(r, prf, metric, metricTracksInterface, dynamic, enabled)
-		ifs.mu.Unlock()
-
-		if util.IsAny(r.Destination.ID()) && enabled {
-			defaultRouteAdded = true
 		}
 	}
-	ns.routeTable.UpdateStack(ns.stack)
-	if defaultRouteAdded {
-		ns.onDefaultRouteChange()
-	}
-	return nil
+	ifs.ns.routeTable.UpdateStackLocked(ifs.ns.stack)
 }
 
-// DelRoute deletes a single route from the route table.
-func (ns *Netstack) DelRoute(r tcpip.Route) error {
-	_ = syslog.Infof("deleting route %s", r)
-	if err := ns.routeTable.DelRoute(r); err != nil {
-		return err
+// delRouteLocked deletes routes from a single interface identified by `r.NIC`.
+//
+// The `ifState` of the interface identified by `r.NIC` must be locked for the
+// duration of this function.
+func (ns *Netstack) delRouteLocked(r tcpip.Route) []routes.ExtendedRoute {
+	ns.routeTable.Lock()
+	defer ns.routeTable.Unlock()
+
+	routesDeleted := ns.routeTable.DelRouteLocked(r)
+	if len(routesDeleted) == 0 {
+		return nil
 	}
 
-	ns.routeTable.UpdateStack(ns.stack)
-	if util.IsAny(r.Destination.ID()) {
-		ns.onDefaultRouteChange()
+	for _, er := range routesDeleted {
+		if er.Enabled {
+			if er.Route.Destination.Equal(header.IPv4EmptySubnet) {
+				ns.onDefaultIPv4RouteChangeLocked(er.Route.NIC, false /* hasDefaultRoute */)
+			} else if er.Route.Destination.Equal(header.IPv6EmptySubnet) {
+				ns.onDefaultIPv6RouteChangeLocked(er.Route.NIC, false /* hasDefaultRoute */)
+			}
+		}
 	}
-	return nil
+
+	ns.routeTable.UpdateStackLocked(ns.stack)
+	return routesDeleted
+}
+
+// DelRoute deletes all routes matching r from the route table.
+func (ns *Netstack) DelRoute(r tcpip.Route) []routes.ExtendedRoute {
+	_ = syslog.Infof("deleting route %s", r)
+
+	nicInfoMap := ns.stack.NICInfo()
+
+	delRoute := func(nicInfo stack.NICInfo, r tcpip.Route) []routes.ExtendedRoute {
+		ifs := nicInfo.Context.(*ifState)
+		ifs.mu.Lock()
+		defer ifs.mu.Unlock()
+
+		return ns.delRouteLocked(r)
+	}
+
+	if r.NIC == 0 {
+		var routesDeleted []routes.ExtendedRoute
+		for nicid, nicInfo := range nicInfoMap {
+			r.NIC = nicid
+			routesDeleted = append(routesDeleted, delRoute(nicInfo, r)...)
+		}
+		return routesDeleted
+	} else {
+		nicInfo, ok := nicInfoMap[r.NIC]
+		if !ok {
+			return nil
+		}
+		return delRoute(nicInfo, r)
+	}
 }
 
 // GetExtendedRouteTable returns a copy of the current extended route table.
@@ -335,144 +414,170 @@ func (ns *Netstack) GetExtendedRouteTable() []routes.ExtendedRoute {
 
 // UpdateRoutesByInterface applies update actions to the routes for a
 // given interface.
-func (ns *Netstack) UpdateRoutesByInterface(nicid tcpip.NICID, action routes.Action) {
-	ns.routeTable.UpdateRoutesByInterface(nicid, action)
-	ns.routeTable.UpdateStack(ns.stack)
-	// TODO(https://fxbug.dev/82590): Avoid spawning the goroutine by not
-	// computing all interface properties and just sending the default route
-	// changes.
-	//
-	// ifState may be locked here, so run the default route change handler in a
-	// goroutine to prevent deadlock.
-	go ns.onDefaultRouteChange()
+func (ns *Netstack) UpdateRoutesByInterfaceLocked(nicid tcpip.NICID, action routes.Action) {
+	ns.routeTable.Lock()
+	defer ns.routeTable.Unlock()
+
+	ns.routeTable.UpdateRoutesByInterfaceLocked(nicid, action)
+
+	hasDefaultIPv4Route, hasDefaultIPv6Route := ns.routeTable.HasDefaultRouteLocked(nicid)
+	ns.onDefaultRouteChangeLocked(nicid, hasDefaultIPv4Route, hasDefaultIPv6Route)
+
+	ns.routeTable.UpdateStackLocked(ns.stack)
 }
 
-func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress, removeRoute bool) zx.Status {
-	_ = syslog.Infof("removing static IP %+v from NIC %d, removeRoute=%t", addr, nic, removeRoute)
+func (ifs *ifState) removeAddressLocked(protocolAddr tcpip.ProtocolAddress) zx.Status {
+	_ = syslog.Infof("NIC %d: removing IP %s", ifs.nicid, protocolAddr.AddressWithPrefix)
 
-	if removeRoute {
-		route := addressWithPrefixRoute(nic, addr.AddressWithPrefix)
-		_ = syslog.Infof("removing subnet route %s", route)
-		if err := ns.DelRoute(route); err == routes.ErrNoSuchRoute {
-			// The route might have been removed by user action. Continue.
-		} else if err != nil {
-			panic(fmt.Sprintf("unexpected error deleting route: %s", err))
-		}
-	}
-
-	switch err := ns.stack.RemoveAddress(nic, addr.AddressWithPrefix.Address); err.(type) {
+	switch err := ifs.ns.stack.RemoveAddress(ifs.nicid, protocolAddr.AddressWithPrefix.Address); err.(type) {
 	case nil:
 	case *tcpip.ErrUnknownNICID:
-		_ = syslog.Warnf("stack.RemoveAddress(%d, %+v): NIC not found", nic, addr)
-		return zx.ErrNotFound
+		_ = syslog.Warnf("stack.RemoveAddress(%d, %s): NIC not found", ifs.nicid, protocolAddr.AddressWithPrefix)
+		return zx.ErrBadState
 	case *tcpip.ErrBadLocalAddress:
 		return zx.ErrNotFound
 	default:
-		panic(fmt.Sprintf("stack.RemoveAddress(%d, %+v) = %s", nic, addr, err))
+		panic(fmt.Sprintf("stack.RemoveAddress(%d, %s) = %s", ifs.nicid, protocolAddr.AddressWithPrefix, err))
 	}
 
-	ns.onPropertiesChange(nic, nil)
-	// If the interface cannot be found, then all address state providers would
-	// have been shut down anyway.
-	if nicInfo, ok := ns.stack.NICInfo()[nic]; ok {
-		nicInfo.Context.(*ifState).addressStateProviders.onAddressRemove(addr.AddressWithPrefix.Address)
-	}
+	ifs.ns.onAddressRemoveLocked(ifs.nicid, protocolAddr.AddressWithPrefix, true /* strict */)
+	ifs.mu.addressStateProviders.onAddressRemoveLocked(protocolAddr.AddressWithPrefix.Address)
 	return zx.ErrOk
 }
 
-// addInterfaceAddress adds `addr` to `nic`, returning `zx.ErrOk` if successful.
-//
-// TODO(https://fxbug.dev/21222): Change this function to return
-// `admin.AddressRemovalReason` when we no longer need it for
-// `fuchsia.net.stack/Stack` or `fuchsia.netstack/Netstack`.
-func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress, addRoute bool, properties stack.AddressProperties) zx.Status {
-	_ = syslog.Infof("adding static IP %s to NIC %d, addRoute=%t", addr.AddressWithPrefix, nic, addRoute)
+func (ifs *ifState) removeAddress(protocolAddr tcpip.ProtocolAddress) zx.Status {
+	ifs.mu.Lock()
+	defer ifs.mu.Unlock()
 
-	if info, ok := ns.stack.NICInfo()[nic]; ok {
-		for _, candidate := range info.ProtocolAddresses {
-			if addr.AddressWithPrefix.Address == candidate.AddressWithPrefix.Address {
-				if addr.AddressWithPrefix.PrefixLen == candidate.AddressWithPrefix.PrefixLen {
-					return zx.ErrAlreadyExists
-				}
-				// Same address but different prefix. Remove the address and re-add it
-				// with the new prefix (below).
-				switch err := ns.stack.RemoveAddress(nic, addr.AddressWithPrefix.Address); err.(type) {
-				case nil:
-				case *tcpip.ErrUnknownNICID:
-					return zx.ErrNotFound
-				case *tcpip.ErrBadLocalAddress:
-					// We lost a race, the address was already removed.
-				default:
-					panic(fmt.Sprintf("NIC %d: failed to remove address %s: %s", nic, addr.AddressWithPrefix, err))
-				}
-				break
-			}
-		}
-	}
+	return ifs.removeAddressLocked(protocolAddr)
+}
 
-	switch err := ns.stack.AddProtocolAddress(nic, addr, properties); err.(type) {
+func (ifs *ifState) addAddressLocked(protocolAddr tcpip.ProtocolAddress, properties stack.AddressProperties) (bool, admin.AddressRemovalReason) {
+	_ = syslog.Infof("NIC %d: adding address %s", ifs.nicid, protocolAddr.AddressWithPrefix)
+
+	switch err := ifs.ns.stack.AddProtocolAddress(ifs.nicid, protocolAddr, properties); err.(type) {
 	case nil:
-	case *tcpip.ErrUnknownNICID:
-		return zx.ErrNotFound
-	case *tcpip.ErrDuplicateAddress:
-		return zx.ErrAlreadyExists
-	default:
-		panic(fmt.Sprintf("NIC %d: failed to add address %s: %s", nic, addr.AddressWithPrefix, err))
-	}
-
-	if addRoute {
-		route := addressWithPrefixRoute(nic, addr.AddressWithPrefix)
-		_ = syslog.Infof("creating subnet route %s with metric=<not-set>, dynamic=false", route)
-		if err := ns.AddRoute(route, metricNotSet, false); err != nil {
-			if !errors.Is(err, routes.ErrNoSuchNIC) {
-				panic(fmt.Sprintf("NIC %d: failed to add subnet route %s: %s", nic, route, err))
-			}
-			return zx.ErrNotFound
+		switch protocolAddr.Protocol {
+		case header.IPv4ProtocolNumber:
+			ifs.ns.onAddressAddLocked(ifs.nicid, protocolAddr.AddressWithPrefix)
+		// TODO(https://fxbug.dev/82045): This assumes that DAD is
+		// always enabled, and relies on the DAD completion callback to
+		// unblock hanging gets waiting for interface address changes.
+		case header.IPv6ProtocolNumber:
+		default:
+			panic(fmt.Sprintf("address not IPv4 nor IPv6: %#v", protocolAddr))
 		}
-	}
-
-	switch addr.Protocol {
-	case header.IPv4ProtocolNumber:
-		ns.interfaceWatchers.onAddressAdd(nic, addr, zxtime.Monotonic(int64(zx.TimensecInfinite)))
-	// TODO(https://fxbug.dev/82045): This assumes that DAD is always enabled, and relies on the DAD
-	// completion callback to unblock hanging gets waiting for interface address changes.
-	case header.IPv6ProtocolNumber:
+		return true, 0
+	case *tcpip.ErrUnknownNICID:
+		return false, admin.AddressRemovalReasonInterfaceRemoved
+	case *tcpip.ErrDuplicateAddress:
+		return false, admin.AddressRemovalReasonAlreadyAssigned
 	default:
+		panic(fmt.Sprintf("stack.AddProtocolAddress(%d, %s, %#v) unexpected error: %s", ifs.nicid, protocolAddr.AddressWithPrefix, properties, err))
 	}
-	return zx.ErrOk
 }
 
-func (ns *Netstack) onInterfaceAdd(nicid tcpip.NICID) {
-	ns.interfaceWatchers.mu.Lock()
-	defer ns.interfaceWatchers.mu.Unlock()
+func (ifs *ifState) addAddress(protocolAddr tcpip.ProtocolAddress, properties stack.AddressProperties) (bool, admin.AddressRemovalReason) {
+	ifs.mu.Lock()
+	defer ifs.mu.Unlock()
 
-	nicInfo, ok := ns.stack.NICInfo()[nicid]
-	if !ok {
-		_ = syslog.Warnf("onInterfaceAdd(%d): NIC cannot be found", nicid)
-		return
-	}
-
-	ns.interfaceWatchers.onInterfaceAddLocked(nicid, nicInfo, ns.GetExtendedRouteTable())
+	return ifs.addAddressLocked(protocolAddr, properties)
 }
 
-func (ns *Netstack) onPropertiesChange(nicid tcpip.NICID, addressPatches []addressPatch) {
-	ns.interfaceWatchers.mu.Lock()
-	defer ns.interfaceWatchers.mu.Unlock()
-
-	nicInfo, ok := ns.stack.NICInfo()[nicid]
-	if !ok {
-		_ = syslog.Warnf("onPropertiesChange(%d, %+v): interface cannot be found", nicid, addressPatches)
-		return
-	}
-
-	ns.interfaceWatchers.onPropertiesChangeLocked(nicid, nicInfo, addressPatches)
+// onInterfaceAddLocked must be called with `ifs.mu` locked.
+func (ns *Netstack) onInterfaceAddLocked(ifs *ifState, name string) {
+	ns.interfaceEventChan <- interfaceAdded(initialProperties(ifs, name))
 }
 
-func (ns *Netstack) onDefaultRouteChange() {
-	ns.interfaceWatchers.mu.Lock()
-	defer ns.interfaceWatchers.mu.Unlock()
+// onInterfaceRemoveLocked must be called with `ifState.mu` of the interface
+// identified by `nicid` locked.
+func (ns *Netstack) onInterfaceRemoveLocked(nicid tcpip.NICID) {
+	ns.interfaceEventChan <- interfaceRemoved(nicid)
+}
 
-	ns.interfaceWatchers.onDefaultRouteChangeLocked(ns.GetExtendedRouteTable())
+// onOnlineChangeLocked must be called with `ifState.mu` of the interface
+// identified by `nicid` locked.
+func (ns *Netstack) onOnlineChangeLocked(nicid tcpip.NICID, online bool) {
+	ns.interfaceEventChan <- onlineChanged{
+		nicid:  nicid,
+		online: online,
+	}
+}
+
+// onDefaultIPv4RouteChangeLocked must be called with the `ifState.mu` of the
+// interface identified by `nicid` and the route table locked (in that order)
+// to avoid races against other route changes.
+func (ns *Netstack) onDefaultIPv4RouteChangeLocked(nicid tcpip.NICID, hasDefaultRoute bool) {
+	ns.interfaceEventChan <- defaultRouteChanged{
+		nicid:               nicid,
+		hasDefaultIPv4Route: &hasDefaultRoute,
+	}
+}
+
+// onDefaultIPv6RouteChangeLocked must be called with the `ifState.mu` of the
+// interface identified by `nicid` and the route table locked (in that order)
+// to avoid races against other route changes.
+func (ns *Netstack) onDefaultIPv6RouteChangeLocked(nicid tcpip.NICID, hasDefaultRoute bool) {
+	ns.interfaceEventChan <- defaultRouteChanged{
+		nicid:               nicid,
+		hasDefaultIPv6Route: &hasDefaultRoute,
+	}
+}
+
+// onDefaultRouteChangeLocked must be called with the `ifState.mu` of the
+// interface identified by `nicid` and the route table locked (in that order)
+// to avoid races against other route changes.
+func (ns *Netstack) onDefaultRouteChangeLocked(nicid tcpip.NICID, hasDefaultIPv4Route bool, hasDefaultIPv6Route bool) {
+	ns.interfaceEventChan <- defaultRouteChanged{
+		nicid:               nicid,
+		hasDefaultIPv4Route: &hasDefaultIPv4Route,
+		hasDefaultIPv6Route: &hasDefaultIPv6Route,
+	}
+}
+
+func toNetInterfaceAddress(protocolAddr tcpip.ProtocolAddress) fidlnet.InterfaceAddress {
+	var ifAddr fidlnet.InterfaceAddress
+	switch protocolAddr.Protocol {
+	case header.IPv4ProtocolNumber:
+		var v4 fidlnet.Ipv4Address
+		copy(v4.Addr[:], protocolAddr.AddressWithPrefix.Address)
+		ifAddr.SetIpv4(fidlnet.Ipv4AddressWithPrefix{
+			PrefixLen: uint8(protocolAddr.AddressWithPrefix.PrefixLen),
+			Addr:      v4,
+		})
+	case header.IPv6ProtocolNumber:
+		var v6 fidlnet.Ipv6Address
+		copy(v6.Addr[:], protocolAddr.AddressWithPrefix.Address)
+		ifAddr.SetIpv6(v6)
+	default:
+		panic(fmt.Sprintf("protocol address %#v is not IPv4 or IPv6", protocolAddr))
+	}
+	return ifAddr
+}
+
+func (ns *Netstack) onAddressAddLocked(nicid tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix) {
+	ns.interfaceEventChan <- addressAdded{
+		nicid:  nicid,
+		subnet: fidlconv.ToNetSubnet(addrWithPrefix),
+	}
+}
+
+// TODO(https://fxbug.dev/95578): Remove `strict` parameter once we can always
+// enforce strictness.
+func (ns *Netstack) onAddressRemoveLocked(nicid tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix, strict bool) {
+	ns.interfaceEventChan <- addressRemoved{
+		nicid:  nicid,
+		subnet: fidlconv.ToNetSubnet(addrWithPrefix),
+		strict: strict,
+	}
+}
+
+func (ns *Netstack) onAddressValidUntilChangeLocked(nicid tcpip.NICID, protocolAddr tcpip.ProtocolAddress, validUntil zxtime.Time) {
+	ns.interfaceEventChan <- validUntilChanged{
+		nicid:      nicid,
+		address:    toNetInterfaceAddress(protocolAddr),
+		validUntil: validUntil,
+	}
 }
 
 // Called when DAD completes with either success or failure.
@@ -498,15 +603,10 @@ func (ifs *ifState) onDuplicateAddressDetectionComplete(addr tcpip.Address, succ
 	// and then `addressStateProviderCollection.mu` here to prevent
 	// interface online change concurrently attempting to mutate the
 	// address assignment state.
-	online := func() bool {
-		ifs.mu.Lock()
-		defer ifs.mu.Unlock()
+	ifs.mu.Lock()
+	defer ifs.mu.Unlock()
 
-		ifs.addressStateProviders.mu.Lock()
-		return ifs.IsUpLocked()
-	}()
-	defer ifs.addressStateProviders.mu.Unlock()
-	ifs.addressStateProviders.onDuplicateAddressDetectionCompleteLocked(ifs.nicid, addr, online, success)
+	ifs.mu.addressStateProviders.onDuplicateAddressDetectionCompleteLocked(ifs.nicid, addr, ifs.IsUpLocked(), success)
 }
 
 func (ifs *ifState) updateMetric(metric routes.Metric) {
@@ -515,31 +615,55 @@ func (ifs *ifState) updateMetric(metric routes.Metric) {
 	ifs.mu.Unlock()
 }
 
-func (ifs *ifState) dhcpAcquired(lost, acquired tcpip.AddressWithPrefix, config dhcp.Config) {
+func (ifs *ifState) dhcpLostLocked(lost tcpip.AddressWithPrefix) {
+	name := ifs.ns.name(ifs.nicid)
+
+	switch status := ifs.removeAddressLocked(tcpip.ProtocolAddress{
+		AddressWithPrefix: lost,
+		Protocol:          header.IPv4ProtocolNumber,
+	}); status {
+	case zx.ErrOk:
+		_ = syslog.Infof("NIC %s: removed DHCP address %s", name, lost)
+	case zx.ErrNotFound:
+		_ = syslog.Warnf("NIC %s: DHCP address %s to be removed not found", name, lost)
+	case zx.ErrBadState:
+		_ = syslog.Warnf("NIC %s: NIC not found when removing DHCP address %s", name, lost)
+	default:
+		panic(fmt.Sprintf("NIC %s: unexpected error removing DHCP address %s: %s", name, lost, status))
+	}
+
+	// Remove the dynamic routes for this interface.
+	ifs.ns.UpdateRoutesByInterfaceLocked(ifs.nicid, routes.ActionDeleteDynamic)
+}
+
+func (ifs *ifState) dhcpAcquired(ctx context.Context, lost, acquired tcpip.AddressWithPrefix, config dhcp.Config) {
+	select {
+	case <-ctx.Done():
+		return
+	case ifs.dhcpLock <- struct{}{}:
+		defer func() {
+			_ = <-ifs.dhcpLock
+		}()
+	}
+
+	ifs.mu.Lock()
+	defer ifs.mu.Unlock()
+
 	name := ifs.ns.name(ifs.nicid)
 
 	if lost == acquired {
 		_ = syslog.Infof("NIC %s: DHCP renewed address %s for %s", name, acquired, config.LeaseLength)
 	} else {
 		if lost != (tcpip.AddressWithPrefix{}) {
-			if err := ifs.ns.stack.RemoveAddress(ifs.nicid, lost.Address); err != nil {
-				_ = syslog.Errorf("NIC %s: failed to remove DHCP address %s: %s", name, lost, err)
-			} else {
-				_ = syslog.Infof("NIC %s: removed DHCP address %s", name, lost)
-			}
-
-			// Remove the dynamic routes for this interface.
-			ifs.ns.UpdateRoutesByInterface(ifs.nicid, routes.ActionDeleteDynamic)
+			ifs.dhcpLostLocked(lost)
 		}
 
 		if acquired != (tcpip.AddressWithPrefix{}) {
-			if err := ifs.ns.stack.AddProtocolAddress(ifs.nicid, tcpip.ProtocolAddress{
+			if ok, reason := ifs.addAddressLocked(tcpip.ProtocolAddress{
 				Protocol:          ipv4.ProtocolNumber,
 				AddressWithPrefix: acquired,
-			}, stack.AddressProperties{
-				PEB: stack.CanBePrimaryEndpoint,
-			}); err != nil {
-				_ = syslog.Errorf("NIC %s: failed to add DHCP acquired address %s: %s", name, acquired, err)
+			}, stack.AddressProperties{}); !ok {
+				_ = syslog.Errorf("NIC %s: failed to add DHCP acquired address %s: %s", name, acquired, reason)
 			} else {
 				_ = syslog.Infof("NIC %s: DHCP acquired address %s for %s", name, acquired, config.LeaseLength)
 
@@ -559,29 +683,18 @@ func (ifs *ifState) dhcpAcquired(lost, acquired tcpip.AddressWithPrefix, config 
 				}
 				_ = syslog.Infof("adding routes %s with metric=<not-set> dynamic=true", rs)
 
-				if err := ifs.ns.AddRoutes(rs, metricNotSet, true /* dynamic */); err != nil {
-					_ = syslog.Infof("error adding routes for DHCP: %s", err)
-				}
+				ifs.addRoutesWithPreferenceLocked(rs, routes.MediumPreference, metricNotSet, true /* dynamic */)
 			}
 		}
 	}
 
-	// Patch the address data exposed by fuchsia.net.interfaces with a validUntil
-	// value derived from the DHCP configuration.
-	patches := []addressPatch{
-		{
-			addr:       acquired,
-			validUntil: config.UpdatedAt.Add(config.LeaseLength.Duration()),
-		},
+	if acquired != (tcpip.AddressWithPrefix{}) {
+		protocolAddr := tcpip.ProtocolAddress{
+			Protocol:          header.IPv4ProtocolNumber,
+			AddressWithPrefix: acquired,
+		}
+		ifs.ns.onAddressValidUntilChangeLocked(ifs.nicid, protocolAddr, config.UpdatedAt.Add(config.LeaseLength.Duration()))
 	}
-	// TODO(https://fxbug.dev/82590): Avoid spawning this goroutine by sending
-	// the delta of the address property change only instead of computing the
-	// delta of all properties, which requires acquiring `ifState.mu`.
-	//
-	// Dispatch interface change handlers on another goroutine to prevent a
-	// deadlock while holding ifState.mu since dhcpAcquired is called on
-	// cancellation.
-	go ifs.ns.onPropertiesChange(ifs.nicid, patches)
 
 	if updated := ifs.setDNSServers(config.DNS); updated {
 		_ = syslog.Infof("NIC %s: set DNS servers: %s", name, config.DNS)
@@ -615,10 +728,14 @@ func (ifs *ifState) setDNSServers(servers []tcpip.Address) bool {
 // Takes the ifState lock.
 func (ifs *ifState) setDHCPStatus(name string, enabled bool) {
 	_ = syslog.VLogf(syslog.DebugVerbosity, "NIC %s: setDHCPStatus = %t", name, enabled)
+	ifs.dhcpLock <- struct{}{}
 	ifs.mu.Lock()
-	defer ifs.mu.Unlock()
+	defer func() {
+		ifs.mu.Unlock()
+		<-ifs.dhcpLock
+	}()
 	ifs.mu.dhcp.enabled = enabled
-	ifs.mu.dhcp.cancel()
+	ifs.mu.dhcp.cancelLocked()
 	if ifs.mu.dhcp.enabled && ifs.IsUpLocked() {
 		ifs.runDHCPLocked(name)
 	}
@@ -629,19 +746,22 @@ func (ifs *ifState) setDHCPStatus(name string, enabled bool) {
 func (ifs *ifState) runDHCPLocked(name string) {
 	_ = syslog.Infof("NIC %s: run DHCP", name)
 	ctx, cancel := context.WithCancel(context.Background())
-	var wg sync.WaitGroup
-	ifs.mu.dhcp.cancel = func() {
+
+	completeCh := make(chan tcpip.AddressWithPrefix)
+	ifs.mu.dhcp.cancelLocked = func() {
 		cancel()
-		wg.Wait()
+		if addr := <-completeCh; addr != (tcpip.AddressWithPrefix{}) {
+			// Remove this address and cleanup routes.
+			ifs.dhcpLostLocked(addr)
+		}
 	}
 	ifs.mu.dhcp.running = func() bool {
 		return ctx.Err() == nil
 	}
 	if c := ifs.mu.dhcp.Client; c != nil {
-		wg.Add(1)
 		go func() {
-			c.Run(ctx)
-			wg.Done()
+			completeCh <- c.Run(ctx)
+			close(completeCh)
 		}()
 	} else {
 		panic(fmt.Sprintf("nil DHCP client on interface %s", name))
@@ -657,7 +777,7 @@ func (ifs *ifState) dhcpEnabled() bool {
 func (ifs *ifState) onDownLocked(name string, closed bool) {
 	// Stop DHCP, this triggers the removal of all dynamically obtained configuration (IP, routes,
 	// DNS servers).
-	ifs.mu.dhcp.cancel()
+	ifs.mu.dhcp.cancelLocked()
 
 	// Remove DNS servers through ifs.
 	ifs.ns.dnsConfig.RemoveAllServersWithNIC(ifs.nicid)
@@ -665,16 +785,14 @@ func (ifs *ifState) onDownLocked(name string, closed bool) {
 
 	if closed {
 		// The interface is removed, force all of its routes to be removed.
-		ifs.ns.UpdateRoutesByInterface(ifs.nicid, routes.ActionDeleteAll)
+		ifs.ns.UpdateRoutesByInterfaceLocked(ifs.nicid, routes.ActionDeleteAll)
 	} else {
 		// The interface is down, disable static routes (dynamic ones are handled
 		// by the cancelled DHCP server).
-		ifs.ns.UpdateRoutesByInterface(ifs.nicid, routes.ActionDisableStatic)
+		ifs.ns.UpdateRoutesByInterfaceLocked(ifs.nicid, routes.ActionDisableStatic)
 	}
 
-	if err := ifs.ns.DelRoute(ipv6LinkLocalOnLinkRoute(ifs.nicid)); err != nil && err != routes.ErrNoSuchRoute {
-		_ = syslog.Errorf("error deleting link-local on-link route for nicID (%d): %s", ifs.nicid, err)
-	}
+	_ = ifs.ns.delRouteLocked(ipv6LinkLocalOnLinkRoute(ifs.nicid))
 
 	if closed {
 		switch err := ifs.ns.stack.RemoveNIC(ifs.nicid); err.(type) {
@@ -705,6 +823,9 @@ func (ifs *ifState) onDownLocked(name string, closed bool) {
 			}
 			bridgedIfs.mu.Unlock()
 		}
+
+		ifs.ns.onInterfaceRemoveLocked(ifs.nicid)
+		ifs.mu.addressStateProviders.onInterfaceRemoveLocked()
 	} else {
 		if err := ifs.ns.stack.DisableNIC(ifs.nicid); err != nil {
 			_ = syslog.Errorf("error disabling NIC %s in stack.Stack: %s", name, err)
@@ -740,9 +861,9 @@ func (ifs *ifState) stateChangeLocked(name string, adminUp, linkOnline bool) boo
 			)
 
 			// Re-enable static routes out this interface.
-			ifs.ns.UpdateRoutesByInterface(ifs.nicid, routes.ActionEnableStatic)
+			ifs.ns.UpdateRoutesByInterfaceLocked(ifs.nicid, routes.ActionEnableStatic)
 			if ifs.mu.dhcp.enabled {
-				ifs.mu.dhcp.cancel()
+				ifs.mu.dhcp.cancelLocked()
 				ifs.runDHCPLocked(name)
 			}
 
@@ -759,7 +880,7 @@ func (ifs *ifState) stateChangeLocked(name string, adminUp, linkOnline bool) boo
 			)
 			ifs.ns.routeTable.UpdateStack(ifs.ns.stack)
 		} else {
-			ifs.onDownLocked(name, false)
+			ifs.onDownLocked(name, false /* closed */)
 		}
 	}
 
@@ -772,74 +893,61 @@ func (ifs *ifState) stateChangeLocked(name string, adminUp, linkOnline bool) boo
 func (ifs *ifState) onLinkOnlineChanged(linkOnline bool) {
 	name := ifs.ns.name(ifs.nicid)
 
-	if func() bool {
-		after, changed := func() (bool, bool) {
-			ifs.mu.Lock()
-			defer func() {
-				ifs.addressStateProviders.mu.Lock()
-				ifs.mu.Unlock()
-			}()
+	ifs.dhcpLock <- struct{}{}
+	ifs.mu.Lock()
+	defer func() {
+		ifs.mu.Unlock()
+		<-ifs.dhcpLock
+	}()
 
-			changed := ifs.stateChangeLocked(name, ifs.mu.adminUp, linkOnline)
-			_ = syslog.Infof("NIC %s: observed linkOnline=%t when adminUp=%t, interfacesChanged=%t", name, linkOnline, ifs.mu.adminUp, changed)
-			return ifs.IsUpLocked(), changed
-		}()
-		defer ifs.addressStateProviders.mu.Unlock()
-
-		ifs.addressStateProviders.onInterfaceOnlineChangeLocked(after)
-		return changed
-	}() {
-		ifs.ns.onPropertiesChange(ifs.nicid, nil)
+	changed := ifs.stateChangeLocked(name, ifs.mu.adminUp, linkOnline)
+	_ = syslog.Infof("NIC %s: observed linkOnline=%t when adminUp=%t, interfacesChanged=%t", name, linkOnline, ifs.mu.adminUp, changed)
+	if changed {
+		ifs.ns.onOnlineChangeLocked(ifs.nicid, ifs.IsUpLocked())
 	}
+
+	ifs.mu.addressStateProviders.onInterfaceOnlineChangeLocked(ifs.IsUpLocked())
 }
 
 func (ifs *ifState) setState(enabled bool) (bool, error) {
 	name := ifs.ns.name(ifs.nicid)
 
-	wasEnabled, changed, err := func() (bool, bool, error) {
-		wasEnabled, isUpAfter, changed, err := func() (bool, bool, bool, error) {
-			ifs.mu.Lock()
-			defer func() {
-				ifs.addressStateProviders.mu.Lock()
-				ifs.mu.Unlock()
-			}()
-
-			wasEnabled := ifs.mu.adminUp
-			if wasEnabled == enabled {
-				return wasEnabled, ifs.IsUpLocked(), false, nil
-			}
-
-			if controller := ifs.controller; controller != nil {
-				fn := controller.Down
-				if enabled {
-					fn = controller.Up
-				}
-				if err := fn(); err != nil {
-					return wasEnabled, false, false, err
-				}
-			}
-
-			changed := ifs.stateChangeLocked(name, enabled, ifs.LinkOnlineLocked())
-			_ = syslog.Infof("NIC %s: set adminUp=%t when linkOnline=%t, interfacesChanged=%t", name, ifs.mu.adminUp, ifs.LinkOnlineLocked(), changed)
-
-			return wasEnabled, ifs.IsUpLocked(), changed, nil
+	wasEnabled, err := func() (bool, error) {
+		ifs.dhcpLock <- struct{}{}
+		ifs.mu.Lock()
+		defer func() {
+			ifs.mu.Unlock()
+			<-ifs.dhcpLock
 		}()
-		defer ifs.addressStateProviders.mu.Unlock()
 
-		if err != nil {
-			return wasEnabled, false, err
+		wasEnabled := ifs.mu.adminUp
+		if wasEnabled == enabled {
+			return wasEnabled, nil
 		}
 
-		ifs.addressStateProviders.onInterfaceOnlineChangeLocked(isUpAfter)
-		return wasEnabled, changed, nil
+		if controller := ifs.controller; controller != nil {
+			fn := controller.Down
+			if enabled {
+				fn = controller.Up
+			}
+			if err := fn(); err != nil {
+				return wasEnabled, err
+			}
+		}
+
+		changed := ifs.stateChangeLocked(name, enabled, ifs.LinkOnlineLocked())
+		_ = syslog.Infof("NIC %s: set adminUp=%t when linkOnline=%t, interfacesChanged=%t", name, ifs.mu.adminUp, ifs.LinkOnlineLocked(), changed)
+
+		if changed {
+			ifs.ns.onOnlineChangeLocked(ifs.nicid, ifs.IsUpLocked())
+		}
+
+		ifs.mu.addressStateProviders.onInterfaceOnlineChangeLocked(ifs.IsUpLocked())
+		return wasEnabled, nil
 	}()
 	if err != nil {
 		_ = syslog.Infof("NIC %s: setting adminUp=%t failed: %s", name, enabled, err)
 		return wasEnabled, err
-	}
-
-	if changed {
-		ifs.ns.onPropertiesChange(ifs.nicid, nil)
 	}
 
 	return wasEnabled, nil
@@ -864,6 +972,19 @@ func (ifs *ifState) RemoveByLinkClose() {
 }
 
 func (ifs *ifState) remove(reason admin.InterfaceRemovedReason) {
+	// Cannot hold `ifs.mu` across detaching and waiting for endpoint cleanup as
+	// link status changes blocks endpoint cleanup and will attempt to acquire
+	// `ifs.mu`.
+	if func() bool {
+		ifs.mu.Lock()
+		defer ifs.mu.Unlock()
+		removed := ifs.mu.removed
+		ifs.mu.removed = true
+		return removed
+	}() {
+		return
+	}
+
 	name := ifs.ns.name(ifs.nicid)
 
 	_ = syslog.Infof("NIC %s: removing, reason=%s", name, reason)
@@ -879,14 +1000,16 @@ func (ifs *ifState) remove(reason admin.InterfaceRemovedReason) {
 	ifs.endpoint.Wait()
 	_ = syslog.Infof("NIC %s: endpoint cleanup done", name)
 
+	ifs.dhcpLock <- struct{}{}
 	ifs.mu.Lock()
+	defer func() {
+		ifs.mu.Unlock()
+		<-ifs.dhcpLock
+	}()
+
 	ifs.onDownLocked(name, true /* closed */)
-	ifs.mu.Unlock()
 
 	_ = syslog.Infof("NIC %s: removed", name)
-
-	ifs.ns.interfaceWatchers.onInterfaceRemove(ifs.nicid)
-	ifs.addressStateProviders.onInterfaceRemove()
 }
 
 var nameProviderErrorLogged uint32 = 0
@@ -941,19 +1064,20 @@ func (ns *Netstack) addLoopback() error {
 		},
 	}
 	ipv4LoopbackRoute := addressWithPrefixRoute(nicid, ipv4LoopbackProtocolAddress.AddressWithPrefix)
-	if err := ns.stack.AddProtocolAddress(nicid, ipv4LoopbackProtocolAddress, stack.AddressProperties{}); err != nil {
-		return fmt.Errorf("AddProtocolAddress(%d, %#v, {}): %s", nicid, ipv4LoopbackProtocolAddress, err)
+	if ok, reason := ifs.addAddress(ipv4LoopbackProtocolAddress, stack.AddressProperties{}); !ok {
+		return fmt.Errorf("ifs.addAddress(%d, %s): %s", nicid, ipv4LoopbackProtocolAddress.AddressWithPrefix, reason)
 	}
 
 	ipv6LoopbackProtocolAddress := tcpip.ProtocolAddress{
 		Protocol:          ipv6.ProtocolNumber,
 		AddressWithPrefix: ipv6Loopback.WithPrefix(),
 	}
-	if err := ns.stack.AddProtocolAddress(nicid, ipv6LoopbackProtocolAddress, stack.AddressProperties{}); err != nil {
-		return fmt.Errorf("AddProtocolAddress(%d, %#v, {}): %s", nicid, ipv6LoopbackProtocolAddress, err)
+	if ok, reason := ifs.addAddress(ipv6LoopbackProtocolAddress, stack.AddressProperties{}); !ok {
+		return fmt.Errorf("ifs.addAddress(%d, %s): %s", nicid, ipv6LoopbackProtocolAddress.AddressWithPrefix, reason)
 	}
 
-	if err := ns.AddRoutes(
+	ifs.mu.Lock()
+	ifs.addRoutesWithPreferenceLocked(
 		[]tcpip.Route{
 			ipv4LoopbackRoute,
 			{
@@ -961,11 +1085,11 @@ func (ns *Netstack) addLoopback() error {
 				NIC:         nicid,
 			},
 		},
+		routes.MediumPreference,
 		metricNotSet, /* use interface metric */
 		false,        /* dynamic */
-	); err != nil {
-		return fmt.Errorf("loopback: adding routes failed: %w", err)
-	}
+	)
+	ifs.mu.Unlock()
 
 	if err := ifs.Up(); err != nil {
 		return err
@@ -1075,8 +1199,9 @@ func (ns *Netstack) addEndpoint(
 		controller: controller,
 		observer:   observer,
 	}
+	ifs.dhcpLock = make(chan struct{}, 1)
 	ifs.adminControls.mu.controls = make(map[*adminControlImpl]struct{})
-	ifs.addressStateProviders.mu.providers = make(map[tcpip.Address]*adminAddressStateProviderImpl)
+	ifs.mu.addressStateProviders.providers = make(map[tcpip.Address]*adminAddressStateProviderImpl)
 	if observer != nil {
 		observer.SetOnLinkClosed(ifs.RemoveByLinkClose)
 		observer.SetOnLinkOnlineChanged(ifs.onLinkOnlineChanged)
@@ -1084,7 +1209,7 @@ func (ns *Netstack) addEndpoint(
 
 	ifs.mu.metric = metric
 	ifs.mu.dhcp.running = func() bool { return false }
-	ifs.mu.dhcp.cancel = func() {}
+	ifs.mu.dhcp.cancelLocked = func() {}
 
 	ns.mu.Lock()
 	ifs.nicid = ns.mu.countNIC + 1
@@ -1100,6 +1225,9 @@ func (ns *Netstack) addEndpoint(
 	ep = ifs.bridgeable
 	ifs.endpoint = ep
 
+	ifs.mu.Lock()
+	defer ifs.mu.Unlock()
+
 	if err := ns.stack.CreateNICWithOptions(ifs.nicid, ep, stack.NICOptions{Name: name, Context: ifs, Disabled: true}); err != nil {
 		return nil, fmt.Errorf("NIC %s: could not create NIC: %w", name, WrapTcpIpError(err))
 	}
@@ -1108,12 +1236,10 @@ func (ns *Netstack) addEndpoint(
 
 	if linkAddr := ep.LinkAddress(); len(linkAddr) > 0 {
 		dhcpClient := dhcp.NewClient(ns.stack, ifs.nicid, linkAddr, dhcpAcquisition, dhcpBackoff, dhcpRetransmission, ifs.dhcpAcquired)
-		ifs.mu.Lock()
 		ifs.mu.dhcp.Client = dhcpClient
-		ifs.mu.Unlock()
 	}
 
-	ns.onInterfaceAdd(ifs.nicid)
+	ns.onInterfaceAddLocked(ifs, name)
 
 	return ifs, nil
 }
