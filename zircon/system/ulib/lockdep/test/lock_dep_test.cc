@@ -112,7 +112,7 @@ TEST(LockDep, GuardMoveSemantics) {
 }
 
 TEST(LockDep, SingletonLockGuard) {
-  static int guarded_var TA_GUARDED(SingletonLock::Get()) = 0;
+  [[maybe_unused]] static int guarded_var TA_GUARDED(SingletonLock::Get()) = 0;
   EXPECT_FALSE(SingletonLock::Get()->lock().acquired);
 
   // Take the lock, and ensure it was actually acquired.
@@ -133,7 +133,7 @@ TEST(LockDep, SingletonLockGuard) {
 }
 
 TEST(LockDep, SingletonLockAssertHeld) {
-  static int guarded_var TA_GUARDED(SingletonLock::Get()) = 0;
+  [[maybe_unused]] static int guarded_var TA_GUARDED(SingletonLock::Get()) = 0;
   EXPECT_FALSE(SingletonLock::Get()->lock().acquired);
 
   // Take the lock in a way the Clang can't detect.
@@ -156,8 +156,8 @@ FakeMutex global_lock;
 LOCK_DEP_SINGLETON_LOCK_WRAPPER(WrappedGlobalLock, global_lock);
 
 TEST(LockDep, WrappedGlobalLockGuard) {
-  static int guarded_var TA_GUARDED(WrappedGlobalLock::Get()) = 0;
-  static int guarded_raw_var TA_GUARDED(global_lock) = 0;
+  [[maybe_unused]] static int guarded_var TA_GUARDED(WrappedGlobalLock::Get()) = 0;
+  [[maybe_unused]] static int guarded_raw_var TA_GUARDED(global_lock) = 0;
   EXPECT_FALSE(WrappedGlobalLock::Get()->lock().acquired);
 
   // Take the lock, and ensure it was actually acquired.
@@ -180,8 +180,8 @@ TEST(LockDep, WrappedGlobalLockGuard) {
 }
 
 TEST(LockDep, WrappedGlobalLockAssertHeld) {
-  static int guarded_var TA_GUARDED(WrappedGlobalLock::Get()) = 0;
-  static int guarded_raw_var TA_GUARDED(global_lock) = 0;
+  [[maybe_unused]] static int guarded_var TA_GUARDED(WrappedGlobalLock::Get()) = 0;
+  [[maybe_unused]] static int guarded_raw_var TA_GUARDED(global_lock) = 0;
   EXPECT_FALSE(WrappedGlobalLock::Get()->lock().acquired);
 
   // Take the lock in a way the Clang can't detect.
