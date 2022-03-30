@@ -54,6 +54,18 @@ as a [lutex](#lutex).
 The performance of the system overall is quite sensitive to the performance of
 futexes.
 
+## Galaxy
+
+The term "galaxy" refers to the [Starnix runner](#starnix-runner) bundled with a particular
+system image and configuration. For example, the `stardroid` galaxy is a starnix runner instance
+configured to run binaries using an Android system image.
+
+
+## gVisor
+
+*gVisor* is an implementation of the [Linux UAPI](#linux-uapi) in Go. See
+[https://github.com/google/gvisor](https://github.com/google/gvisor).
+
 ## Handle
 
 A *handle* is a numerical value that a Fuchsia process can use to refer to a
@@ -69,11 +81,6 @@ Instead, they need to issue Linux [system calls](#system-call) to instruct the
 A *handle table* is a mapping between [handles](#handle) and [Zircon](#zircon)
 kernel objects. The Zircon kernel maintains a separate handle table for each
 Fuchsia process.
-
-## gVisor
-
-*gVisor* is an implementation of the [Linux UAPI](#linux-uapi) in Go. See
-[https://github.com/google/gvisor](https://github.com/google/gvisor).
 
 ## Linux binary
 
