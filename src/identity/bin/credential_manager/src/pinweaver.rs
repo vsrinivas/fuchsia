@@ -51,6 +51,25 @@ pub trait PinWeaverProtocol {
         h_aux: Vec<Hash>,
         cred_metadata: CredentialMetadata,
     ) -> Result<fcr50::TryAuthResponse, CredentialError>;
+
+    /// Retrieves the set of replay logs starting from the specified root hash.
+    /// If Found: Returns all log entries including and starting from the
+    /// operation specified by the root hash parameter.
+    /// If Not Found: Returns all known log entries.
+    async fn get_log(&self, root_hash: &mut Hash) -> Result<Vec<fcr50::LogEntry>, CredentialError>;
+
+    /// Applies a TryAuth operation replay log by modifying the credential
+    /// metadata based on the state of the replay log.
+    /// This will step forward any credential metadata for the appropriate
+    /// label, whether or not it matches the exact state in history.
+    /// On Success: Returns the updated leaf hmac and credential metadata.
+    /// On Failure: Returns an error.
+    async fn log_replay(
+        &self,
+        root_hash: Hash,
+        h_aux: Vec<Hash>,
+        cred_metadata: CredentialMetadata,
+    ) -> Result<fcr50::LogReplayResponse, CredentialError>;
 }
 
 pub struct PinWeaver {
@@ -146,6 +165,41 @@ impl PinWeaverProtocol for PinWeaver {
         let response = self
             .proxy
             .try_auth(try_auth_params)
+            .await
+            .map_err(|_| CredentialError::InternalError)?
+            .map_err(|_| CredentialError::InternalError)?;
+        Ok(response)
+    }
+
+    /// Simply inserts the |root_hash| into the |get_log| method and
+    /// returns the resulting vector of |LogEntry|.
+    async fn get_log(&self, root_hash: &mut Hash) -> Result<Vec<fcr50::LogEntry>, CredentialError> {
+        let response = self
+            .proxy
+            .get_log(root_hash)
+            .await
+            .map_err(|_| CredentialError::InternalError)?
+            .map_err(|_| CredentialError::InternalError)?;
+        Ok(response)
+    }
+
+    /// Simply inserts the |root_hash|, |h_aux| and |cred_metadata| and
+    /// inserts it into the |LogReplayRequest|.
+    async fn log_replay(
+        &self,
+        root_hash: Hash,
+        h_aux: Vec<Hash>,
+        cred_metadata: CredentialMetadata,
+    ) -> Result<fcr50::LogReplayResponse, CredentialError> {
+        let log_replay_params = fcr50::LogReplayParams {
+            root_hash: Some(root_hash),
+            h_aux: Some(h_aux),
+            cred_metadata: Some(cred_metadata),
+            ..fcr50::LogReplayParams::EMPTY
+        };
+        let response = self
+            .proxy
+            .log_replay(log_replay_params)
             .await
             .map_err(|_| CredentialError::InternalError)?
             .map_err(|_| CredentialError::InternalError)?;
