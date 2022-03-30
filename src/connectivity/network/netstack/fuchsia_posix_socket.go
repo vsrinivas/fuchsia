@@ -3203,11 +3203,7 @@ func (sp *providerImpl) GetInterfaceAddresses(fidl.Context) ([]socket.InterfaceA
 		resultInfo.SetId(uint64(id))
 		resultInfo.SetName(info.Name)
 		resultInfo.SetAddresses(addrs)
-
-		// gVisor assumes interfaces are always up, which is not the case on Fuchsia,
-		// so overwrite it with Fuchsia's interface state.
 		resultInfo.SetInterfaceFlags(nicInfoFlagsToFIDL(info))
-
 		resultInfos = append(resultInfos, resultInfo)
 	}
 
