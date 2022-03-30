@@ -36,6 +36,7 @@ __END_CDECLS
 
 #include <lib/zx/bti.h>
 #include <lib/zx/resource.h>
+#include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 
 #include <optional>
@@ -88,6 +89,26 @@ class MmioBuffer {
     return status;
   }
 
+  static zx::status<MmioBuffer> Create(zx_off_t offset, size_t size, zx::vmo vmo,
+                                       uint32_t cache_policy) {
+    mmio_buffer_t mmio;
+    zx_status_t status = mmio_buffer_init(&mmio, offset, size, vmo.release(), cache_policy);
+    if (status != ZX_OK) {
+      return zx::error(status);
+    }
+    return zx::ok(MmioBuffer(mmio));
+  }
+
+  static zx::status<MmioBuffer> Create(zx_paddr_t base, size_t size, const zx::resource& resource,
+                                       uint32_t cache_policy) {
+    mmio_buffer_t mmio;
+    zx_status_t status = mmio_buffer_init_physical(&mmio, base, size, resource.get(), cache_policy);
+    if (status != ZX_OK) {
+      return zx::error(status);
+    }
+    return zx::ok(MmioBuffer(mmio));
+  }
+
   void reset() {
     mmio_buffer_release(&mmio_);
     memset(&mmio_, 0, sizeof(mmio_));
@@ -105,6 +126,15 @@ class MmioBuffer {
       *pinned_buffer = MmioPinnedBuffer(pinned);
     }
     return status;
+  }
+
+  zx::status<MmioPinnedBuffer> Pin(const zx::bti& bti) {
+    mmio_pinned_buffer_t pinned;
+    zx_status_t status = mmio_buffer_pin(&mmio_, bti.get(), &pinned);
+    if (status != ZX_OK) {
+      return zx::error(status);
+    }
+    return zx::ok(MmioPinnedBuffer(pinned));
   }
 
   // Provides a slice view into the mmio.
