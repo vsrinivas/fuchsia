@@ -316,7 +316,7 @@ int vfprintf(FILE *out, const char *fmt, va_list ap) {
         if (flags & LONGLONGFLAG)
           *(long long *)ptr = chars_written;
         else if (flags & LONGFLAG)
-          *(long *)ptr = chars_written;
+          *(long *)ptr = (long)chars_written;
         else if (flags & HALFHALFFLAG)
           *(signed char *)ptr = (signed char)chars_written;
         else if (flags & HALFFLAG)

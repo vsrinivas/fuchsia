@@ -56,6 +56,7 @@
  * MODULE_DEPS += \
  *         lib/unittest   \
  */
+#include <inttypes.h>
 #include <lib/special-sections/special-sections.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -114,72 +115,76 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
  * The parameter after |term| is an optional message (const char*) to be printed
  * if the check fails.
  */
-#define UTCHECK_EQ(expected, actual, term, ...)                                                    \
-  do {                                                                                             \
-    const AUTO_TYPE_VAR(expected) _e = (expected);                                                 \
-    const AUTO_TYPE_VAR(actual) _a = (actual);                                                     \
-    if (_e != _a) {                                                                                \
-      UNITTEST_FAIL_TRACEF(EXPECTED_STRING                                                         \
-                           "%s (%ld), "                                                            \
-                           "actual %s (%ld)\n",                                                    \
-                           unittest_get_msg(__VA_ARGS__), #expected, (long)_e, #actual, (long)_a); \
-      unittest_fails();                                                                            \
-      if (term) {                                                                                  \
-        return false;                                                                              \
-      }                                                                                            \
-      all_ok = false;                                                                              \
-    }                                                                                              \
+#define UTCHECK_EQ(expected, actual, term, ...)                                             \
+  do {                                                                                      \
+    const AUTO_TYPE_VAR(expected) _e = (expected);                                          \
+    const AUTO_TYPE_VAR(actual) _a = (actual);                                              \
+    if (_e != _a) {                                                                         \
+      UNITTEST_FAIL_TRACEF(EXPECTED_STRING "%s (%" PRIdPTR                                  \
+                                           "), "                                            \
+                                           "actual %s (%" PRIdPTR ")\n",                    \
+                           unittest_get_msg(__VA_ARGS__), #expected, (intptr_t)_e, #actual, \
+                           (intptr_t)_a);                                                   \
+      unittest_fails();                                                                     \
+      if (term) {                                                                           \
+        return false;                                                                       \
+      }                                                                                     \
+      all_ok = false;                                                                       \
+    }                                                                                       \
   } while (0)
 
-#define UTCHECK_NE(expected, actual, term, ...)                                                    \
-  do {                                                                                             \
-    const AUTO_TYPE_VAR(expected) _e = (expected);                                                 \
-    const AUTO_TYPE_VAR(actual) _a = (actual);                                                     \
-    if (_e == (_a)) {                                                                              \
-      UNITTEST_FAIL_TRACEF(EXPECTED_STRING                                                         \
-                           "%s (%ld), %s"                                                          \
-                           " to differ, but they are the same %ld\n",                              \
-                           unittest_get_msg(__VA_ARGS__), #expected, (long)_e, #actual, (long)_a); \
-      unittest_fails();                                                                            \
-      if (term) {                                                                                  \
-        return false;                                                                              \
-      }                                                                                            \
-      all_ok = false;                                                                              \
-    }                                                                                              \
+#define UTCHECK_NE(expected, actual, term, ...)                                                \
+  do {                                                                                         \
+    const AUTO_TYPE_VAR(expected) _e = (expected);                                             \
+    const AUTO_TYPE_VAR(actual) _a = (actual);                                                 \
+    if (_e == (_a)) {                                                                          \
+      UNITTEST_FAIL_TRACEF(EXPECTED_STRING "%s (%" PRIdPTR                                     \
+                                           "), %s"                                             \
+                                           " to differ, but they are the same %" PRIdPTR "\n", \
+                           unittest_get_msg(__VA_ARGS__), #expected, (intptr_t)_e, #actual,    \
+                           (intptr_t)_a);                                                      \
+      unittest_fails();                                                                        \
+      if (term) {                                                                              \
+        return false;                                                                          \
+      }                                                                                        \
+      all_ok = false;                                                                          \
+    }                                                                                          \
   } while (0)
 
-#define UTCHECK_LE(expected, actual, term, ...)                                                    \
-  do {                                                                                             \
-    const AUTO_TYPE_VAR(expected) _e = (expected);                                                 \
-    const AUTO_TYPE_VAR(actual) _a = (actual);                                                     \
-    if (_e > _a) {                                                                                 \
-      UNITTEST_FAIL_TRACEF(EXPECTED_STRING                                                         \
-                           "%s (%ld) to be"                                                        \
-                           " less-than-or-equal-to actual %s (%ld)\n",                             \
-                           unittest_get_msg(__VA_ARGS__), #expected, (long)_e, #actual, (long)_a); \
-      unittest_fails();                                                                            \
-      if (term) {                                                                                  \
-        return false;                                                                              \
-      }                                                                                            \
-      all_ok = false;                                                                              \
-    }                                                                                              \
+#define UTCHECK_LE(expected, actual, term, ...)                                                 \
+  do {                                                                                          \
+    const AUTO_TYPE_VAR(expected) _e = (expected);                                              \
+    const AUTO_TYPE_VAR(actual) _a = (actual);                                                  \
+    if (_e > _a) {                                                                              \
+      UNITTEST_FAIL_TRACEF(EXPECTED_STRING "%s (%" PRIdPTR                                      \
+                                           ") to be"                                            \
+                                           " less-than-or-equal-to actual %s (%" PRIdPTR ")\n", \
+                           unittest_get_msg(__VA_ARGS__), #expected, (intptr_t)_e, #actual,     \
+                           (intptr_t)_a);                                                       \
+      unittest_fails();                                                                         \
+      if (term) {                                                                               \
+        return false;                                                                           \
+      }                                                                                         \
+      all_ok = false;                                                                           \
+    }                                                                                           \
   } while (0)
 
-#define UTCHECK_LT(expected, actual, term, ...)                                                    \
-  do {                                                                                             \
-    const AUTO_TYPE_VAR(expected) _e = (expected);                                                 \
-    const AUTO_TYPE_VAR(actual) _a = (actual);                                                     \
-    if (_e >= _a) {                                                                                \
-      UNITTEST_FAIL_TRACEF(EXPECTED_STRING                                                         \
-                           "%s (%ld) to be"                                                        \
-                           " less-than actual %s (%ld)\n",                                         \
-                           unittest_get_msg(__VA_ARGS__), #expected, (long)_e, #actual, (long)_a); \
-      unittest_fails();                                                                            \
-      if (term) {                                                                                  \
-        return false;                                                                              \
-      }                                                                                            \
-      all_ok = false;                                                                              \
-    }                                                                                              \
+#define UTCHECK_LT(expected, actual, term, ...)                                             \
+  do {                                                                                      \
+    const AUTO_TYPE_VAR(expected) _e = (expected);                                          \
+    const AUTO_TYPE_VAR(actual) _a = (actual);                                              \
+    if (_e >= _a) {                                                                         \
+      UNITTEST_FAIL_TRACEF(EXPECTED_STRING "%s (%" PRIdPTR                                  \
+                                           ") to be"                                        \
+                                           " less-than actual %s (%" PRIdPTR ")\n",         \
+                           unittest_get_msg(__VA_ARGS__), #expected, (intptr_t)_e, #actual, \
+                           (intptr_t)_a);                                                   \
+      unittest_fails();                                                                     \
+      if (term) {                                                                           \
+        return false;                                                                       \
+      }                                                                                     \
+      all_ok = false;                                                                       \
+    }                                                                                       \
   } while (0)
 
 #define UTCHECK_GE(expected, actual, term, ...)                                                    \
@@ -187,10 +192,11 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
     const AUTO_TYPE_VAR(expected) _e = (expected);                                                 \
     const AUTO_TYPE_VAR(actual) _a = (actual);                                                     \
     if (_e < _a) {                                                                                 \
-      UNITTEST_FAIL_TRACEF(EXPECTED_STRING                                                         \
-                           "%s (%ld) to be"                                                        \
-                           " greater-than-or-equal-to actual %s (%ld)\n",                          \
-                           unittest_get_msg(__VA_ARGS__), #expected, (long)_e, #actual, (long)_a); \
+      UNITTEST_FAIL_TRACEF(EXPECTED_STRING "%s (%" PRIdPTR                                         \
+                                           ") to be"                                               \
+                                           " greater-than-or-equal-to actual %s (%" PRIdPTR ")\n", \
+                           unittest_get_msg(__VA_ARGS__), #expected, (intptr_t)_e, #actual,        \
+                           (intptr_t)_a);                                                          \
       unittest_fails();                                                                            \
       if (term) {                                                                                  \
         return false;                                                                              \
@@ -199,21 +205,22 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
     }                                                                                              \
   } while (0)
 
-#define UTCHECK_GT(expected, actual, term, ...)                                                    \
-  do {                                                                                             \
-    const AUTO_TYPE_VAR(expected) _e = (expected);                                                 \
-    const AUTO_TYPE_VAR(actual) _a = (actual);                                                     \
-    if (_e <= _a) {                                                                                \
-      UNITTEST_FAIL_TRACEF(EXPECTED_STRING                                                         \
-                           "%s (%ld) to be"                                                        \
-                           " greater-than actual %s (%ld)\n",                                      \
-                           unittest_get_msg(__VA_ARGS__), #expected, (long)_e, #actual, (long)_a); \
-      unittest_fails();                                                                            \
-      if (term) {                                                                                  \
-        return false;                                                                              \
-      }                                                                                            \
-      all_ok = false;                                                                              \
-    }                                                                                              \
+#define UTCHECK_GT(expected, actual, term, ...)                                             \
+  do {                                                                                      \
+    const AUTO_TYPE_VAR(expected) _e = (expected);                                          \
+    const AUTO_TYPE_VAR(actual) _a = (actual);                                              \
+    if (_e <= _a) {                                                                         \
+      UNITTEST_FAIL_TRACEF(EXPECTED_STRING "%s (%" PRIdPTR                                  \
+                                           ") to be"                                        \
+                                           " greater-than actual %s (%" PRIdPTR ")\n",      \
+                           unittest_get_msg(__VA_ARGS__), #expected, (intptr_t)_e, #actual, \
+                           (intptr_t)_a);                                                   \
+      unittest_fails();                                                                     \
+      if (term) {                                                                           \
+        return false;                                                                       \
+      }                                                                                     \
+      all_ok = false;                                                                       \
+    }                                                                                       \
   } while (0)
 
 #define UTCHECK_TRUE(actual, term, ...)                                                \
