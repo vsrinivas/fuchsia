@@ -1225,17 +1225,6 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
                                const uint64_t* displays_removed, size_t removed_count) {
   ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
 
-  size_t actual_removed_count = 0;
-  size_t actual_added_count = 0;
-
-  for (unsigned i = 0; i < removed_count; i++) {
-    // TODO(stevensd): Delayed removal can cause conflicts if the driver reuses
-    // display ids. Move display id generation into the core driver.
-    if (configs_.find(displays_removed[i]).IsValid()) {
-      actual_removed_count++;
-    }
-  }
-
   controller_->AssertMtxAliasHeld(controller_->mtx());
   for (unsigned i = 0; i < added_count; i++) {
     fbl::AllocChecker ac;
@@ -1264,7 +1253,6 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
       zxlogf(WARNING, "No config when adding display");
       continue;
     }
-    actual_added_count++;
 
     config->current_.display_id = config->id;
     config->current_.layer_list = nullptr;
