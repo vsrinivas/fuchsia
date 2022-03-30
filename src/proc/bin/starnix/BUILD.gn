@@ -102,6 +102,7 @@ if (target_cpu == "x64") {
       "device/mem.rs",
       "device/mod.rs",
       "device/registry.rs",
+      "device/terminal.rs",
       "device/wayland/bridge_client.rs",
       "device/wayland/buffer_collection_file.rs",
       "device/wayland/dma_buf_file.rs",

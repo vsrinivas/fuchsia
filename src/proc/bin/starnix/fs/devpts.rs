@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use parking_lot::{Mutex, RwLock};
-use std::collections::{BTreeSet, HashMap};
-use std::sync::{Arc, Weak};
+use std::sync::Arc;
 
+use crate::device::terminal::*;
 use crate::device::DeviceOps;
 use crate::device::WithStaticDeviceId;
 use crate::fs::tmpfs::*;
@@ -19,18 +18,32 @@ const DEVPTS_FIRST_MAJOR: u32 = 136;
 const DEVPTS_MAJOR_COUNT: u32 = 4;
 // The device identifier is encoded through the major and minor device identifier of the
 // device. Each major identifier can contain 256 pts replicas.
-const DEVPTS_COUNT: u32 = 4 * 256;
+pub const DEVPTS_COUNT: u32 = DEVPTS_MAJOR_COUNT * 256;
 // The block size of the node in the devpts file system. Value has been taken from
 // https://github.com/google/gvisor/blob/master/test/syscalls/linux/pty.cc
 const BLOCK_SIZE: i64 = 1024;
 
-// Construct the DeviceType associated with the given pts replicas.
-fn get_device_type_for_pts(id: u32) -> DeviceType {
-    DeviceType::new(DEVPTS_FIRST_MAJOR + id / 256, id % 256)
-}
-
 pub fn dev_pts_fs(kernel: &Kernel) -> &FileSystemHandle {
     kernel.dev_pts_fs.get_or_init(|| init_devpts(kernel))
+}
+
+pub fn create_pts_node(fs: &FileSystemHandle, id: u32) -> Result<(), Errno> {
+    let device_type = get_device_type_for_pts(id);
+    let pts = fs.root().create_node(
+        id.to_string().as_bytes(),
+        FileMode::IFCHR | FileMode::from_bits(0o666),
+        device_type,
+    )?;
+    pts.node.info_write().blksize = BLOCK_SIZE;
+    Ok(())
+}
+
+pub fn unlink_ptr_node_if_exists(fs: &FileSystemHandle, id: u32) -> Result<(), Errno> {
+    let pts_filename = id.to_string();
+    match fs.root().unlink(pts_filename.as_bytes(), UnlinkKind::NonDirectory) {
+        Err(e) if e == ENOENT => Ok(()),
+        other => other,
+    }
 }
 
 fn init_devpts(kernel: &Kernel) -> FileSystemHandle {
@@ -59,73 +72,9 @@ fn init_devpts(kernel: &Kernel) -> FileSystemHandle {
     fs
 }
 
-struct TTYState {
-    fs: FileSystemHandle,
-    terminals: RwLock<HashMap<u32, Weak<Terminal>>>,
-    pts_ids_set: Mutex<PtsIdsSet>,
-}
-
-impl TTYState {
-    pub fn new(fs: FileSystemHandle) -> Self {
-        Self {
-            fs,
-            terminals: RwLock::new(HashMap::new()),
-            pts_ids_set: Mutex::new(PtsIdsSet::new(DEVPTS_COUNT)),
-        }
-    }
-
-    pub fn get_next_terminal(self: &Arc<Self>) -> Result<Arc<Terminal>, Errno> {
-        let id = self.pts_ids_set.lock().get()?;
-        let device_type = get_device_type_for_pts(id);
-        let terminal = Arc::new(Terminal::new(self.clone(), id));
-
-        let pts = self.fs.root().create_node(
-            id.to_string().as_bytes(),
-            FileMode::IFCHR | FileMode::from_bits(0o666),
-            device_type,
-        )?;
-        pts.node.info_write().blksize = BLOCK_SIZE;
-
-        self.terminals.write().insert(id, Arc::downgrade(&terminal));
-        Ok(terminal)
-    }
-
-    pub fn release_terminal(&self, id: u32) -> Result<(), Errno> {
-        let pts_filename = id.to_string();
-        match self.fs.root().unlink(pts_filename.as_bytes(), UnlinkKind::NonDirectory) {
-            Ok(_) => Ok(()),
-            Err(e) => {
-                if e.value() == ENOENT.value() {
-                    tracing::warn!("Unable to delete pts id {}.", id);
-                    Ok(())
-                } else {
-                    Err(e)
-                }
-            }
-        }?;
-
-        self.pts_ids_set.lock().release(id);
-        self.terminals.write().remove(&id);
-        Ok(())
-    }
-}
-
-struct Terminal {
-    state: Arc<TTYState>,
-    id: u32,
-    locked: RwLock<bool>,
-}
-
-impl Terminal {
-    pub fn new(state: Arc<TTYState>, id: u32) -> Self {
-        Self { state, id, locked: RwLock::new(true) }
-    }
-}
-
-impl Drop for Terminal {
-    fn drop(&mut self) {
-        self.state.release_terminal(self.id).unwrap()
-    }
+// Construct the DeviceType associated with the given pts replicas.
+fn get_device_type_for_pts(id: u32) -> DeviceType {
+    DeviceType::new(DEVPTS_FIRST_MAJOR + id / 256, id % 256)
 }
 
 struct DevPtmx {
@@ -365,41 +314,6 @@ impl FileOps for DevPtsFile {
         _user_addr: UserAddress,
     ) -> Result<SyscallResult, Errno> {
         error!(EOPNOTSUPP)
-    }
-}
-
-struct PtsIdsSet {
-    pts_count: u32,
-    next_id: u32,
-    reclaimed_ids: BTreeSet<u32>,
-}
-
-impl PtsIdsSet {
-    pub fn new(pts_count: u32) -> Self {
-        Self { pts_count, next_id: 0, reclaimed_ids: BTreeSet::new() }
-    }
-
-    pub fn release(&mut self, id: u32) {
-        assert!(self.reclaimed_ids.insert(id))
-    }
-
-    pub fn get(&mut self) -> Result<u32, Errno> {
-        match self.reclaimed_ids.iter().next() {
-            Some(e) => {
-                let value = e.clone();
-                self.reclaimed_ids.remove(&value);
-                Ok(value)
-            }
-            None => {
-                if self.next_id < self.pts_count {
-                    let id = self.next_id;
-                    self.next_id += 1;
-                    Ok(id)
-                } else {
-                    error!(ENOSPC)
-                }
-            }
-        }
     }
 }
 
