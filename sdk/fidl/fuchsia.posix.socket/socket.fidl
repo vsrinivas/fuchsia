@@ -937,12 +937,7 @@ type InterfaceAddresses = table {
     1: id uint64;
     /// Name of the interface.
     2: name fuchsia.net.interfaces.name;
-    /// Contains the interface flags, as returned by the SIOCGIFFLAGS ioctl
-    /// operation.
-    ///
-    /// TODO(https://fxbug.dev/64758): remove this once all clients are transitioned to
-    /// use more strongly-typed `interface_flags`.
-    3: flags uint32;
+    3: reserved;
     /// All addresses currently assigned to the interface.
     4: addresses vector<fuchsia.net.Subnet>:MAX;
     /// Contains the interface flags, as returned by the SIOCGIFFLAGS ioctl
