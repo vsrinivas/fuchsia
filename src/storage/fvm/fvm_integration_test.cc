@@ -792,12 +792,9 @@ TEST_F(FvmTest, TestVPartitionExtendSparse) {
   fbl::unique_fd fd = fvm_device();
   ASSERT_TRUE(fd);
 
-  size_t slices_left = UsableSlicesCount(kBlockSize * kBlockCount, kSliceSize);
-
   alloc_req_t request;
   memset(&request, 0, sizeof(request));
   request.slice_count = 1;
-  slices_left--;
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
   memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
@@ -988,7 +985,6 @@ TEST_F(FvmTest, TestVPartitionSplit) {
   auto volume_info_or = fs_management::FvmQuery(fd.get());
   ASSERT_EQ(volume_info_or.status_value(), ZX_OK);
   size_t slice_size = volume_info_or->slice_size;
-  size_t slices_left = UsableSlicesCount(kBlockSize * kBlockCount, kSliceSize);
 
   // Allocate one VPart
   alloc_req_t request;
@@ -1002,7 +998,6 @@ TEST_F(FvmTest, TestVPartitionSplit) {
       fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
   ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
   fbl::unique_fd vp_fd = *std::move(vp_fd_or);
-  slices_left--;
 
   fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
