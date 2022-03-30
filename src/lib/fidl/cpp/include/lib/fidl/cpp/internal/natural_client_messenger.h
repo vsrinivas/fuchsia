@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_INTERNAL_NATURAL_CLIENT_MESSENGER_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_INTERNAL_NATURAL_CLIENT_MESSENGER_H_
 
+#include <lib/fidl/llcpp/internal/transport.h>
 #include <zircon/fidl.h>
 
 namespace fidl {
@@ -34,12 +35,13 @@ class NaturalClientMessenger {
   // If error happens during sending, notifies |context| of the error.
   //
   // Otherwise, |context| ownership is passed to |ClientBase|.
-  void TwoWay(fidl::OutgoingMessage message, fidl::internal::ResponseContext* context) const;
+  void TwoWay(fidl::OutgoingMessage message, fidl::internal::ResponseContext* context,
+              fidl::WriteOptions write_options = {}) const;
 
   // Sends a one way message.
   //
   // Any send-time errors are propagated via the return value.
-  fidl::Status OneWay(fidl::OutgoingMessage message) const;
+  fidl::Status OneWay(fidl::OutgoingMessage message, fidl::WriteOptions write_options = {}) const;
 
  private:
   // The client messaging implementation.

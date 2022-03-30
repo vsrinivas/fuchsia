@@ -104,12 +104,15 @@ class NaturalDecoder final {
 
         zx_handle_t& body_handle = body_.handles()[handle_index_];
 
-        const char* error;
-        zx_status_t status = body_.transport_vtable_->encoding_configuration->decode_process_handle(
-            &body_handle, attr, handle_index_, body_.message_.handle_metadata, &error);
-        if (status != ZX_OK) {
-          SetError(error);
-          return;
+        if (body_.transport_vtable_->encoding_configuration->decode_process_handle) {
+          const char* error;
+          zx_status_t status =
+              body_.transport_vtable_->encoding_configuration->decode_process_handle(
+                  &body_handle, attr, handle_index_, body_.message_.handle_metadata, &error);
+          if (status != ZX_OK) {
+            SetError(error);
+            return;
+          }
         }
 
         *value = body_handle;

@@ -18,6 +18,7 @@ namespace internal {
 template <typename FidlMethod>
 ResponseContext* MakeResponseContext(uint64_t ordinal,
                                      ::fidl::ClientCallback<FidlMethod> callback) {
+  using ResultType = typename FidlMethod::Protocol::Transport::template Result<FidlMethod>;
   using CallbackType = ::fidl::ClientCallback<FidlMethod>;
 
   class ResponseContext final : public ::fidl::internal::ResponseContext {
@@ -41,7 +42,7 @@ ResponseContext* MakeResponseContext(uint64_t ordinal,
 
       // Check transport error.
       if (!result.ok()) {
-        ::fidl::Result<FidlMethod> error = ::fitx::error(result.error());
+        ResultType error = ::fitx::error(result.error());
         callback_(error);
         return cpp17::nullopt;
       }
@@ -58,14 +59,14 @@ ResponseContext* MakeResponseContext(uint64_t ordinal,
       // Check decoding error.
       if (decoded.is_error()) {
         ::fidl::UnbindInfo unbind_info = ::fidl::UnbindInfo(decoded.error_value());
-        ::fidl::Result<FidlMethod> error = ::fitx::error(decoded.error_value());
+        ResultType error = ::fitx::error(decoded.error_value());
         callback_(error);
         return unbind_info;
       }
 
       if constexpr (IsAbsentBody) {
         // Absent body.
-        ::fidl::Result<FidlMethod> value = ::fitx::success();
+        ResultType value = ::fitx::success();
         callback_(value);
       } else {
         NaturalResponse response =
@@ -73,21 +74,21 @@ ResponseContext* MakeResponseContext(uint64_t ordinal,
         if constexpr (HasApplicationError) {
           // Fold application error.
           if (response.is_error()) {
-            ::fidl::Result<FidlMethod> error = response.take_error();
+            ResultType error = response.take_error();
             callback_(error);
           } else {
             ZX_DEBUG_ASSERT(response.is_ok());
             if constexpr (::fidl::internal::NaturalMethodTypes<FidlMethod>::IsEmptyStructPayload) {
               // Omit empty structs.
-              ::fidl::Result<FidlMethod> value = ::fitx::success();
+              ResultType value = ::fitx::success();
               callback_(value);
             } else {
-              ::fidl::Result<FidlMethod> value = response.take_value();
+              ResultType value = response.take_value();
               callback_(value);
             }
           }
         } else {
-          ::fidl::Result<FidlMethod> value = ::fitx::ok(std::move(response));
+          ResultType value = ::fitx::ok(std::move(response));
           callback_(value);
         }
       }

@@ -5,8 +5,10 @@
 namespace test_protocols {
 [[maybe_unused]] constexpr inline uint64_t
     kHandleRightsProtocol_NoResponseMethod_Ordinal = 1155044649514904573lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kHandleRightsProtocol_ResponseMethod_Ordinal = 5956276128041940295lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kHandleRightsProtocol_AnEvent_Ordinal = 476727631355490611lu;
 
@@ -207,24 +209,31 @@ namespace test_protocols {
 [[maybe_unused]] constexpr inline uint64_t
     kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal =
         5413654872775949227lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal =
         1631193469798418024lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal =
         9037369643591427517lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal =
         7326057319832554103lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal =
         2877322062572412767lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal =
         6417226585456833969lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal =
         5397663296507358806lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kWithAndWithoutRequestResponse_OnWithResponse_Ordinal =
         5811598563493228968lu;
@@ -709,8 +718,10 @@ void fidl::Server<::test_protocols::WithAndWithoutRequestResponse>::
 namespace test_protocols {
 [[maybe_unused]] constexpr inline uint64_t kTransitional_Request_Ordinal =
     5849263021838298888lu;
+
 [[maybe_unused]] constexpr inline uint64_t kTransitional_OneWay_Ordinal =
     4336658926562441191lu;
+
 [[maybe_unused]] constexpr inline uint64_t kTransitional_Event_Ordinal =
     8507647465196374081lu;
 
@@ -983,8 +994,10 @@ void fidl::Server<::test_protocols::MethodWithUnion>::dispatch_message(
 namespace test_protocols {
 [[maybe_unused]] constexpr inline uint64_t
     kWithProtocolEnds_ClientEnds_Ordinal = 5870448041025163330lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kWithProtocolEnds_ServerEnds_Ordinal = 8115535094437022259lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kWithProtocolEnds_StructContainingEnds_Ordinal = 4076866772260025813lu;
 
@@ -1306,10 +1319,13 @@ void fidl::Server<::test_protocols::ManyParameters>::dispatch_message(
 namespace test_protocols {
 [[maybe_unused]] constexpr inline uint64_t
     kWithErrorSyntax_ResponseAsStruct_Ordinal = 268248568430741139lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kWithErrorSyntax_ErrorAsPrimitive_Ordinal = 6930994461233198567lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kWithErrorSyntax_ErrorAsEnum_Ordinal = 5491891352371277635lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kWithErrorSyntax_HandleInResult_Ordinal = 1371676333068455103lu;
 
@@ -1643,12 +1659,16 @@ void fidl::Server<::test_protocols::DiscoverableProtocol>::dispatch_message(
 namespace test_protocols {
 [[maybe_unused]] constexpr inline uint64_t kChannelProtocol_MethodA_Ordinal =
     3155008840945527714lu;
+
 [[maybe_unused]] constexpr inline uint64_t kChannelProtocol_EventA_Ordinal =
     2220452875311597006lu;
+
 [[maybe_unused]] constexpr inline uint64_t kChannelProtocol_MethodB_Ordinal =
     8903004957800778182lu;
+
 [[maybe_unused]] constexpr inline uint64_t kChannelProtocol_TakeHandle_Ordinal =
     591935489944717925lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kChannelProtocol_MutateSocket_Ordinal = 7411742788430590287lu;
 

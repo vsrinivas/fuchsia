@@ -437,6 +437,18 @@ void IncomingMessage::CloseHandles() && {
   ReleaseHandles();
 }
 
+IncomingMessage IncomingMessage::SkipTransactionHeader() {
+  ZX_ASSERT(is_transactional());
+  fidl_handle_t* handles = message_.handles;
+  fidl_handle_metadata_t* handle_metadata = message_.handle_metadata;
+  uint32_t handle_actual = message_.num_handles;
+  ReleaseHandles();
+  return IncomingMessage(transport_vtable_, bytes() + sizeof(fidl_message_header_t),
+                         byte_actual() - static_cast<uint32_t>(sizeof(fidl_message_header_t)),
+                         handles, handle_metadata, handle_actual,
+                         ::fidl::IncomingMessage::kSkipMessageHeaderValidation);
+}
+
 void IncomingMessage::Decode(const fidl_type_t* message_type,
                              std::unique_ptr<uint8_t[]>* out_transformed_buffer) {
   ZX_ASSERT(is_transactional_);

@@ -46,3 +46,115 @@ class {{ .WireWeakAsyncBufferClientImpl }} final : public {{ .WireWeakOnewayBuff
 
   {{- EndifFuchsia -}}
 {{- end }}
+
+
+{{- define "Protocol:Client:driver/NaturalMessagingHeader" }}
+{{- IfdefFuchsia -}}
+
+{{- range .TwoWayMethods }}
+
+{{- template "Method:Response:NaturalMessagingHeader" . }}
+
+{{- EnsureNamespace "" }}
+template <>
+class {{ .NaturalResult }} final : public {{ .NaturalResultBase }} {
+ public:
+  using {{ .NaturalResultBase }}::result;
+};
+{{ end }}
+
+{{- EnsureNamespace "" }}
+template<>
+class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+
+  {{- range .TwoWayMethods }}
+  {{- .Docs }}
+  void {{ .Name }}({{ template "Method:ClientAsyncRequestArgumentsWithResult:Helper" . }}) const;
+{{ "" }}
+  {{- end }}
+
+  {{- range .OneWayMethods }}
+  {{- .Docs }}
+  ::fitx::result<::fidl::Error> {{ .Name }}(
+      {{- template "Method:ClientRequestArgumentsOneWay:Helper" . }}) const;
+{{ "" }}
+  {{- end }}
+};
+
+{{- EndifFuchsia -}}
+{{- end }}
+
+
+
+{{- define "Protocol:Client:driver/NaturalMessagingSource" }}
+{{- IfdefFuchsia }}
+
+{{- range .TwoWayMethods }}
+
+{{- template "Method:Response:NaturalMessagingSource" . }}
+
+{{- EnsureNamespace "" }}
+void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
+    {{- template "Method:ClientAsyncRequestArgumentsWithResult:Helper" . }}) const {
+  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::DriverTransport> _encoder{ {{ .OrdinalName }} };
+
+  auto response_context = ::fidl::internal::MakeResponseContext<{{ .Marker }}>({{ .OrdinalName }}, std::move(_callback));
+
+  auto _arena = fdf::Arena::Create(0, "");
+  if (!_arena.is_ok()) {
+    return messenger().TwoWay(
+      ::fidl::OutgoingMessage(
+        ::fidl::Status::TransportError(_arena.status_value(), ::fdf::internal::kFailedToCreateDriverArena)),
+      response_context);
+  }
+
+  ::fidl::WriteOptions _options = {
+    .outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena->get()),
+  };
+  ::fidl::OutgoingMessage _msg = ::fidl::internal::EncodeTransactionalMessage(
+      _encoder {{- if .HasRequestPayload }},
+      {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request)){{ end }});
+  return messenger().TwoWay(
+      ::fdf::internal::MoveToArena(_msg, *_arena),
+      response_context,
+      std::move(_options)
+  );
+}
+
+{{ end }}
+
+{{- range .OneWayMethods }}
+
+{{- EnsureNamespace "" }}
+::fitx::result<::fidl::Error>
+{{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
+    {{- template "Method:ClientRequestArgumentsOneWay:Helper" . }}) const {
+  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::DriverTransport> _encoder{ {{ .OrdinalName }} };
+
+  auto _arena = fdf::Arena::Create(0, "");
+  if (!_arena.is_ok()) {
+    return ::fidl::internal::ToFitxResult(
+      ::fidl::Status::TransportError(_arena.status_value(), ::fdf::internal::kFailedToCreateDriverArena));
+  }
+
+  ::fidl::WriteOptions _options = {
+    .outgoing_transport_context = 
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena->get()),
+  };
+  ::fidl::OutgoingMessage _msg = ::fidl::internal::EncodeTransactionalMessage(
+      _encoder {{- if .HasRequestPayload }},
+      {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request)){{ end }});
+  ::fidl::Status status = messenger().OneWay(
+      ::fdf::internal::MoveToArena(_msg, *_arena),
+      std::move(_options));
+  return ::fidl::internal::ToFitxResult(status);
+}
+{{ end }}
+
+
+
+{{- EndifFuchsia }}
+{{- end }}

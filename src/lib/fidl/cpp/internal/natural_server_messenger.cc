@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_server_messenger.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/transaction.h>

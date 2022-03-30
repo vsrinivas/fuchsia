@@ -5,52 +5,76 @@
 namespace test_protocollayouts {
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_OneWayAnonComposed_Ordinal = 467706262354916833lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_TwoWayAnonComposed_Ordinal = 1634702755099390832lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_TwoWayAnonComposedWithError_Ordinal = 3374101322700362141lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_OnAnonComposed_Ordinal = 9198778981238868491lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_OnAnonComposedWithError_Ordinal = 712214127111113275lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_OneWayNamedComposed_Ordinal = 6735359826241449560lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_TwoWayNamedComposed_Ordinal = 1110122450485917712lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_TwoWayNamedComposedWithError_Ordinal = 3520341666774118271lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_OnNamedComposed_Ordinal = 6802961197456477674lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_OnNamedComposedWithError_Ordinal = 7488207288618998795lu;
+
 [[maybe_unused]] constexpr inline uint64_t kMainProtocol_OneWayImport_Ordinal =
     374039999976906043lu;
+
 [[maybe_unused]] constexpr inline uint64_t kMainProtocol_TwoWayImport_Ordinal =
     3167860988423964164lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_TwoWayImportWithError_Ordinal = 4837028007581646602lu;
+
 [[maybe_unused]] constexpr inline uint64_t kMainProtocol_OnImport_Ordinal =
     6584793811321990352lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_OnImportWithError_Ordinal = 1123803631971094487lu;
+
 [[maybe_unused]] constexpr inline uint64_t kMainProtocol_OneWayLocal_Ordinal =
     6085941264859402051lu;
+
 [[maybe_unused]] constexpr inline uint64_t kMainProtocol_TwoWayLocal_Ordinal =
     7763901300032164763lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_TwoWayLocalWithError_Ordinal = 5609487496960056151lu;
+
 [[maybe_unused]] constexpr inline uint64_t kMainProtocol_OnLocal_Ordinal =
     4199259762307646332lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_OnLocalWithError_Ordinal = 8767483445230259748lu;
+
 [[maybe_unused]] constexpr inline uint64_t kMainProtocol_OneWayAnon_Ordinal =
     4203317713771984620lu;
+
 [[maybe_unused]] constexpr inline uint64_t kMainProtocol_TwoWayAnon_Ordinal =
     7435080039097281487lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_TwoWayAnonWithError_Ordinal = 7770394869745610225lu;
+
 [[maybe_unused]] constexpr inline uint64_t kMainProtocol_OnAnon_Ordinal =
     7275479350674227467lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_OnAnonWithError_Ordinal = 3672186790919812761lu;
 

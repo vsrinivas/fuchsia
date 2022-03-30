@@ -5,6 +5,7 @@
 namespace test_doccomments {
 [[maybe_unused]] constexpr inline uint64_t kInterface_Method_Ordinal =
     5017051197196532121lu;
+
 [[maybe_unused]] constexpr inline uint64_t kInterface_OnEvent_Ordinal =
     28780186509098736lu;
 

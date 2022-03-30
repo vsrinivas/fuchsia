@@ -1,1 +1,51 @@
 #include <fidl/test.drivertwoway/cpp/driver/natural_messaging.h>
+namespace test_drivertwoway {
+[[maybe_unused]] constexpr inline uint64_t kTwoWay_Add_Ordinal =
+    989730524426044687lu;
+#ifdef __Fuchsia__
+}  // namespace test_drivertwoway
+void fidl::internal::NaturalClientImpl<::test_drivertwoway::TwoWay>::Add(
+    ::fidl::Request<::test_drivertwoway::TwoWay::Add> request,
+    ::fidl::ClientCallback<::test_drivertwoway::TwoWay::Add>&& _callback)
+    const {
+  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::DriverTransport>
+      _encoder{::test_drivertwoway::kTwoWay_Add_Ordinal};
+
+  auto response_context =
+      ::fidl::internal::MakeResponseContext<::test_drivertwoway::TwoWay::Add>(
+          ::test_drivertwoway::kTwoWay_Add_Ordinal, std::move(_callback));
+
+  auto _arena = fdf::Arena::Create(0, "");
+  if (!_arena.is_ok()) {
+    return messenger().TwoWay(
+        ::fidl::OutgoingMessage(::fidl::Status::TransportError(
+            _arena.status_value(),
+            ::fdf::internal::kFailedToCreateDriverArena)),
+        response_context);
+  }
+
+  ::fidl::WriteOptions _options = {
+      .outgoing_transport_context =
+          ::fidl::internal::OutgoingTransportContext::Create<
+              ::fidl::internal::DriverTransport>(_arena->get()),
+  };
+  ::fidl::OutgoingMessage _msg = ::fidl::internal::EncodeTransactionalMessage(
+      _encoder, ::fidl::internal::NaturalMessageConverter<
+                    ::fidl::Request<::test_drivertwoway::TwoWay::Add>>::
+                    IntoDomainObject(std::move(request)));
+  return messenger().TwoWay(::fdf::internal::MoveToArena(_msg, *_arena),
+                            response_context, std::move(_options));
+}
+
+namespace test_drivertwoway {
+#endif  // __Fuchsia__
+}  // namespace test_drivertwoway
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    NaturalEventDispatcher<::test_drivertwoway::TwoWay>::DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__

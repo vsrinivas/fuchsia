@@ -7,7 +7,6 @@
 #include <fidl/test.versions/cpp/wire_messaging.h>
 #include <lib/fidl/cpp/channel.h>
 #include <lib/fidl/cpp/client.h>
-#include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/internal/natural_server_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>

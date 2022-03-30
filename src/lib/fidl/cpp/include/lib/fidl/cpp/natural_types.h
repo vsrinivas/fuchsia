@@ -6,7 +6,6 @@
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_TYPES_H_
 
 #include <lib/fidl/coding.h>
-#include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_types.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/llcpp/message.h>

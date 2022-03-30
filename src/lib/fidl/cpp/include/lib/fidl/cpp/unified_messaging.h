@@ -5,7 +5,6 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_UNIFIED_MESSAGING_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_UNIFIED_MESSAGING_H_
 
-#include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_base.h>
 #include <lib/fidl/cpp/internal/natural_types.h>
 #include <lib/fidl/cpp/natural_encoder.h>
@@ -77,7 +76,7 @@ static auto DecodeTransactionalMessage(::fidl::IncomingMessage&& message)
   constexpr bool kHasPayload = !std::is_same_v<Payload, cpp17::nullopt_t>;
   const fidl_message_header& header = *message.header();
   auto metadata = ::fidl::internal::WireFormatMetadata::FromTransactionalHeader(header);
-  fidl::IncomingMessage body_message = ::fidl::internal::SkipTransactionHeader(std::move(message));
+  fidl::IncomingMessage body_message = message.SkipTransactionHeader();
 
   if constexpr (kHasPayload) {
     // Delegate into the decode logic of the payload.
@@ -86,9 +85,7 @@ static auto DecodeTransactionalMessage(::fidl::IncomingMessage&& message)
       return ::fitx::result<::fidl::Error, Payload>(decode_result.take_error());
     }
     return ::fitx::result<::fidl::Error, Payload>(::fitx::ok(std::move(decode_result.value())));
-  }
-
-  if constexpr (!kHasPayload) {
+  } else {
     if (body_message.byte_actual() > 0) {
       return ::fitx::result<::fidl::Error>(::fitx::error(
           ::fidl::Status::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorNotAllBytesConsumed)));
@@ -109,9 +106,9 @@ static auto DecodeTransactionalMessage(::fidl::IncomingMessage&& message)
 // To reducing branching in generated code, |payload| may be |std::nullopt|, in
 // which case the message will be encoded without a payload (header-only
 // messages).
-template <typename Payload = const cpp17::nullopt_t&>
+template <typename Transport, typename Payload = const cpp17::nullopt_t&>
 fidl::OutgoingMessage EncodeTransactionalMessage(
-    ::fidl::internal::NaturalMessageEncoder<fidl::internal::ChannelTransport>& encoder,
+    ::fidl::internal::NaturalMessageEncoder<Transport>& encoder,
     Payload&& payload = cpp17::nullopt) {
   // When the caller omits the |payload| argument, it will default to
   // |cpp17::nullopt|, which is of type |cpp17::nullopt_t|.

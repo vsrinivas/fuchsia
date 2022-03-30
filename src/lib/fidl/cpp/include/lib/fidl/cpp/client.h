@@ -16,7 +16,8 @@ namespace fidl {
 
 //
 // Note: when updating the documentation below, please make similar updates to
-// the one in //zircon/system/ulib/fidl/include/lib/fidl/llcpp/client.h.
+// the one in //zircon/system/ulib/fidl/include/lib/fidl/llcpp/client.h and
+// //sdk/lib/fidl_driver/include/lib/fidl_driver/natural_client.h.
 //
 // The interface documentation on |fidl::Client| is largely identical to those
 // on |fidl::WireClient|, after removing the "wire" portion from comments.

@@ -14,7 +14,8 @@ namespace fidl {
 
 //
 // Note: when updating the documentation below, please make similar updates to
-// the one in //src/lib/fidl/cpp/include/lib/fidl/cpp/client.h.
+// the one in //src/lib/fidl/cpp/include/lib/fidl/cpp/client.h and
+// sdk/lib/fidl_driver/include/lib/fidl_driver/natural_client.h.
 //
 
 // |WireClient| is a client for sending and receiving FIDL wire messages, that

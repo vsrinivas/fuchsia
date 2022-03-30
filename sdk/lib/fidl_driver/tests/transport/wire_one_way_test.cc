@@ -33,7 +33,7 @@ struct TestServer : public fdf::WireServer<test_transport::OneWayTest> {
   fdf_arena_t* fdf_request_arena;
 };
 
-TEST(DriverTransport, OneWayVector) {
+TEST(DriverTransport, WireOneWayVector) {
   fidl_driver_testing::ScopedFakeDriver driver;
 
   auto dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED);

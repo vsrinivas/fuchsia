@@ -13,23 +13,31 @@ namespace fidl::internal {
 
 template <typename T, typename Constraint>
 struct NaturalCodingTraits<::fdf::ServerEnd<T>, Constraint> {
-  static void Encode(NaturalEncoder* encoder, ::fdf::ServerEnd<T>* value, size_t offset) {
-    static_assert(!std::is_same_v<T, T>, "Not implemented");
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(NaturalEncoder* encoder, ::fdf::ServerEnd<T>* value, size_t offset,
+                     size_t recursion_depth) {
+    ZX_PANIC("Not implemented");
   }
 
-  static void Decode(NaturalDecoder* decoder, ::fdf::ServerEnd<T>* value, size_t offset) {
-    static_assert(!std::is_same_v<T, T>, "Not implemented");
+  static void Decode(NaturalDecoder* decoder, ::fdf::ServerEnd<T>* value, size_t offset,
+                     size_t recursion_depth) {
+    ZX_PANIC("Not implemented");
   }
 };
 
 template <typename T, typename Constraint>
 struct NaturalCodingTraits<::fdf::ClientEnd<T>, Constraint> {
-  static void Encode(NaturalEncoder* encoder, ::fdf::ClientEnd<T>* value, size_t offset) {
-    static_assert(!std::is_same_v<T, T>, "Not implemented");
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(NaturalEncoder* encoder, ::fdf::ClientEnd<T>* value, size_t offset,
+                     size_t recursion_depth) {
+    ZX_PANIC("Not implemented");
   }
 
-  static void Decode(NaturalDecoder* decoder, ::fdf::ClientEnd<T>* value, size_t offset) {
-    static_assert(!std::is_same_v<T, T>, "Not implemented");
+  static void Decode(NaturalDecoder* decoder, ::fdf::ClientEnd<T>* value, size_t offset,
+                     size_t recursion_depth) {
+    ZX_PANIC("Not implemented");
   }
 };
 

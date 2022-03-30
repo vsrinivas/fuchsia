@@ -5,14 +5,19 @@
 namespace test_unknowninteractions {
 [[maybe_unused]] constexpr inline uint64_t kExample_StrictOneWay_Ordinal =
     2276912608357927194lu;
+
 [[maybe_unused]] constexpr inline uint64_t kExample_FlexibleOneWay_Ordinal =
     2309537410782500280lu;
+
 [[maybe_unused]] constexpr inline uint64_t kExample_StrictTwoWay_Ordinal =
     4530909159434307973lu;
+
 [[maybe_unused]] constexpr inline uint64_t kExample_FlexibleTwoWay_Ordinal =
     9070032238358100524lu;
+
 [[maybe_unused]] constexpr inline uint64_t kExample_StrictEvent_Ordinal =
     2942732192976592869lu;
+
 [[maybe_unused]] constexpr inline uint64_t kExample_FlexibleEvent_Ordinal =
     2065245206460174394lu;
 

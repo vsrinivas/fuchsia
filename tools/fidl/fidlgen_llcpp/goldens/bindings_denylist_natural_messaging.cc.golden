@@ -206,6 +206,7 @@ void fidl::Server<::test_bindingsdenylist::OnlyCppAndDeps>::dispatch_message(
 namespace test_bindingsdenylist {
 [[maybe_unused]] constexpr inline uint64_t
     kImportsSameNameContext_Unattributed_Ordinal = 475191379775102607lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal =
         2914965219653596920lu;
@@ -332,12 +333,16 @@ void fidl::Server<::test_bindingsdenylist::ImportsSameNameContext>::
 namespace test_bindingsdenylist {
 [[maybe_unused]] constexpr inline uint64_t
     kDenyEachBinding_OnlyDenyDart_Ordinal = 8446571910689294295lu;
+
 [[maybe_unused]] constexpr inline uint64_t kDenyEachBinding_OnlyDenyGo_Ordinal =
     7311125300308839833lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal = 2184115815603862302lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kDenyEachBinding_OnlyDenyRust_Ordinal = 3719805222870932662lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kDenyEachBinding_OnlyDenySyzkaller_Ordinal = 2319043834522757514lu;
 

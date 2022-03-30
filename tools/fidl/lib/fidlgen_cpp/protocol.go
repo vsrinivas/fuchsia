@@ -94,7 +94,7 @@ var (
 	NaturalResponse         = fidlNs.member("Response")
 	NaturalEvent            = fidlNs.member("Event")
 	NaturalAnyErrorIn       = fidlNs.member("AnyErrorIn")
-	NaturalResult           = fidlNs.member("Result")
+	NaturalResult           = transportNs.member("Result")
 	MessageTraits           = internalNs.member("MessageTraits")
 	MessageBase             = internalNs.member("MessageBase")
 	NaturalMessageConverter = internalNs.member("NaturalMessageConverter ")
@@ -105,7 +105,7 @@ var (
 	NaturalClientCallbackTraits   = internalNs.member("ClientCallbackTraits")
 	NaturalClientCallback         = fidlNs.member("ClientCallback")
 	NaturalClientResponseCallback = fidlNs.member("ClientResponseCallback")
-	NaturalAsyncEventHandler      = fidlNs.member("AsyncEventHandler")
+	NaturalAsyncEventHandler      = transportNs.member("AsyncEventHandler")
 
 	// NaturalEventHandlerInterface is shared between sync and async event handling.
 	NaturalEventHandlerInterface = internalNs.member("NaturalEventHandlerInterface")

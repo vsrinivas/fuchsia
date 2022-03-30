@@ -12,8 +12,8 @@
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/sync_call.h>
-#include <lib/fidl_driver/cpp/client.h>
 #include <lib/fidl_driver/cpp/server.h>
+#include <lib/fidl_driver/cpp/wire_client.h>
 
 #endif  // __Fuchsia__
 

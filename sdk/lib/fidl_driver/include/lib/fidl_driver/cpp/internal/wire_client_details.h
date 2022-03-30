@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_INTERNAL_CLIENT_DETAILS_H_
-#define LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_INTERNAL_CLIENT_DETAILS_H_
+#ifndef LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_INTERNAL_WIRE_CLIENT_DETAILS_H_
+#define LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_INTERNAL_WIRE_CLIENT_DETAILS_H_
 
 #include <lib/fdf/cpp/arena.h>
 #include <lib/fidl/llcpp/client_base.h>
@@ -47,4 +47,4 @@ AnyIncomingEventDispatcher MakeAnyEventDispatcher(
 }
 }  // namespace fidl::internal
 
-#endif  // LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_INTERNAL_CLIENT_DETAILS_H_
+#endif  // LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_INTERNAL_WIRE_CLIENT_DETAILS_H_

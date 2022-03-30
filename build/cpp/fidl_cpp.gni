@@ -492,7 +492,7 @@ template("fidl_cpp_family") {
     },
 
     {
-      layer = "driver"  # AKA: wire_driver_messaging
+      layer = "driver_wire"  # AKA: wire_driver_messaging
       headers = [
         "fidl/$library_name/cpp/driver/wire.h",
         "fidl/$library_name/cpp/driver/wire_messaging.h",
@@ -500,6 +500,17 @@ template("fidl_cpp_family") {
       sources = [ "fidl/$library_name/cpp/driver/wire_messaging.cc" ]
       public_deps = [ "//sdk/lib/fidl_driver" ]
       layer_deps = [ "wire_types" ]
+    },
+
+    {
+      layer = "driver"  # AKA: driver_messaging
+      headers = [ "fidl/$library_name/cpp/driver/natural_messaging.h" ]
+      sources = [ "fidl/$library_name/cpp/driver/natural_messaging.cc" ]
+      public_deps = [ "//sdk/lib/fidl_driver:fidl_driver_natural" ]
+      layer_deps = [
+        "driver_wire",
+        "natural_types",
+      ]
     },
   ]
 

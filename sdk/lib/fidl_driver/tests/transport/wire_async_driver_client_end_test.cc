@@ -24,7 +24,7 @@ class TestServer : public fdf::WireServer<test_transport::SendDriverClientEndTes
   }
 };
 
-TEST(DriverTransport, SendDriverClientEnd) {
+TEST(DriverTransport, WireSendDriverClientEnd) {
   fidl_driver_testing::ScopedFakeDriver driver;
 
   auto dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED);

@@ -483,6 +483,10 @@ class IncomingMessage : public ::fidl::Status {
   // This consumes the |IncomingMessage|.
   void CloseHandles() &&;
 
+  // Consumes self and returns a new IncomingMessage with the transaction
+  // header bytes skipped.
+  IncomingMessage SkipTransactionHeader();
+
  private:
   explicit IncomingMessage(const ::fidl::Status& failure);
   IncomingMessage(const internal::TransportVTable* transport_vtable, uint8_t* bytes,

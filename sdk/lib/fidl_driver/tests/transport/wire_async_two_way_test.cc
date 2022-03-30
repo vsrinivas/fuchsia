@@ -38,7 +38,7 @@ struct TestServer : public fdf::WireServer<test_transport::TwoWayTest> {
   fdf::Arena fdf_response_arena;
 };
 
-TEST(DriverTransport, TwoWayAsync) {
+TEST(DriverTransport, WireTwoWayAsync) {
   fidl_driver_testing::ScopedFakeDriver driver;
 
   auto dispatcher = fdf::Dispatcher::Create(0);
@@ -82,7 +82,7 @@ TEST(DriverTransport, TwoWayAsync) {
   ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
 }
 
-TEST(DriverTransport, TwoWayAsyncShared) {
+TEST(DriverTransport, WireTwoWayAsyncShared) {
   fidl_driver_testing::ScopedFakeDriver driver;
 
   auto dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED);

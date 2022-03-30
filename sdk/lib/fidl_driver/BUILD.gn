@@ -6,18 +6,9 @@ config("include") {
   include_dirs = [ "include" ]
 }
 
-source_set("fidl_driver") {
-  sources = [
-    "include/lib/fidl_driver/cpp/client.h",
-    "include/lib/fidl_driver/cpp/internal/client_details.h",
-    "include/lib/fidl_driver/cpp/internal/server_details.h",
-    "include/lib/fidl_driver/cpp/server.h",
-    "include/lib/fidl_driver/cpp/sync_call.h",
-    "include/lib/fidl_driver/cpp/transport.h",
-    "include/lib/fidl_driver/cpp/wire_messaging.h",
-    "include/lib/fidl_driver/cpp/wire_types.h",
-    "transport.cc",
-  ]
+source_set("fidl_driver_common") {
+  public = [ "include/lib/fidl_driver/cpp/transport.h" ]
+  sources = [ "transport.cc" ]
   public_configs = [ ":include" ]
   public_deps = [
     "//sdk/lib/driver_runtime",
@@ -26,15 +17,37 @@ source_set("fidl_driver") {
   ]
 }
 
-source_set("fidl_driver_natural") {
-  sources = [
-    "include/lib/fidl_driver/cpp/natural_messaging.h",
-    "include/lib/fidl_driver/cpp/natural_types.h",
-    "include/lib/fidl_driver/cpp/transport.h",
-    "transport.cc",
+source_set("fidl_driver") {
+  public = [
+    "include/lib/fidl_driver/cpp/internal/server_details.h",
+    "include/lib/fidl_driver/cpp/internal/wire_client_details.h",
+    "include/lib/fidl_driver/cpp/server.h",
+    "include/lib/fidl_driver/cpp/sync_call.h",
+    "include/lib/fidl_driver/cpp/wire_client.h",
+    "include/lib/fidl_driver/cpp/wire_messaging.h",
+    "include/lib/fidl_driver/cpp/wire_types.h",
   ]
   public_configs = [ ":include" ]
   public_deps = [
+    ":fidl_driver_common",
+    "//sdk/lib/driver_runtime",
+    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
+  ]
+}
+
+source_set("fidl_driver_natural") {
+  public = [
+    "include/lib/fidl_driver/cpp/internal/natural_client_details.h",
+    "include/lib/fidl_driver/cpp/internal/wire_client_details.h",
+    "include/lib/fidl_driver/cpp/natural_client.h",
+    "include/lib/fidl_driver/cpp/natural_messaging.h",
+    "include/lib/fidl_driver/cpp/natural_types.h",
+  ]
+  sources = [ "natural_messaging.cc" ]
+  public_configs = [ ":include" ]
+  public_deps = [
+    ":fidl_driver_common",
     "//sdk/lib/driver_runtime",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//src/lib/fidl/cpp",

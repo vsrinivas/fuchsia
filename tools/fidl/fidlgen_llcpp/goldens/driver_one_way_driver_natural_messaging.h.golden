@@ -3,9 +3,81 @@
 #pragma once
 
 #include <fidl/test.driveroneway/cpp/markers.h>
-#include <fidl/test.driveroneway/cpp/wire_types.h>
+#include <fidl/test.driveroneway/cpp/natural_types.h>
 #include <lib/fidl_driver/cpp/natural_messaging.h>
 
 #ifdef __Fuchsia__
 
+#endif  // __Fuchsia__
+
+namespace test_driveroneway {
+__LOCAL extern "C" const fidl_type_t test_driveroneway_OneWaySendRequestTable;
+
+#ifdef __Fuchsia__
+}  // namespace test_driveroneway
+template <>
+class ::fidl::internal::NaturalClientImpl<::test_driveroneway::OneWay> final
+    : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  ::fitx::result<::fidl::Error> Send(
+      ::fidl::Request<::test_driveroneway::OneWay::Send> request) const;
+};
+namespace test_driveroneway {
+#endif  // __Fuchsia__
+}  // namespace test_driveroneway
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<
+    ::test_driveroneway::OneWay> {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+};
+
+template <>
+class ::fdf::AsyncEventHandler<::test_driveroneway::OneWay>
+    : public ::fidl::internal::NaturalEventHandlerInterface<
+          ::test_driveroneway::OneWay>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<::test_driveroneway::OneWay>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fdf::AsyncEventHandler<::test_driveroneway::OneWay>> {
+ public:
+  explicit NaturalEventDispatcher(
+      ::fdf::AsyncEventHandler<::test_driveroneway::OneWay>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::Request<::test_driveroneway::OneWay::Send> final
+    : public ::test_driveroneway::OneWaySendRequest {
+ public:
+  using ::test_driveroneway::OneWaySendRequest::OneWaySendRequest;
+  Request(::test_driveroneway::OneWaySendRequest v)
+      : ::test_driveroneway::OneWaySendRequest(std::move(v)) {}
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Request<::test_driveroneway::OneWay::Send>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_driveroneway::OneWaySendRequest;
+};
 #endif  // __Fuchsia__

@@ -46,7 +46,7 @@ struct TestServer : public fdf::WireServer<test_transport::TwoWayTest> {
   libsync::Completion* destroyed_;
 };
 
-TEST(DriverTransport, TwoWaySync) {
+TEST(DriverTransport, WireTwoWaySync) {
   fidl_driver_testing::ScopedFakeDriver driver;
 
   auto client_dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS);

@@ -28,6 +28,8 @@ template <typename Protocol>
 class ServerBindingRef;
 template <typename FidlMethod>
 class WireUnownedResult;
+template <typename FidlMethod>
+class Result;
 
 namespace internal {
 
@@ -44,6 +46,8 @@ struct ChannelTransport {
   using ServerBindingRef = fidl::ServerBindingRef<Protocol>;
   template <typename FidlMethod>
   using WireUnownedResult = fidl::WireUnownedResult<FidlMethod>;
+  template <typename FidlMethod>
+  using Result = fidl::Result<FidlMethod>;
   using HandleMetadata = fidl_channel_handle_metadata_t;
   using IncomingTransportContextType = struct {};
   using OutgoingTransportContextType = struct {};

@@ -21,7 +21,7 @@ struct {{ .ProtocolDetails }} {
 {{- define "Protocol:Details:NaturalMessagingSource" }}
 
 {{- range .Methods }}
-{{- EnsureNamespace .OrdinalName }}
+{{ EnsureNamespace .OrdinalName }}
 [[maybe_unused]]
 constexpr inline uint64_t {{ .OrdinalName.Name }} = {{ .Ordinal }}lu;
 {{- end }}

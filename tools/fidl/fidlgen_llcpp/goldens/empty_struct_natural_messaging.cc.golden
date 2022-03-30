@@ -5,8 +5,10 @@
 namespace test_emptystruct {
 [[maybe_unused]] constexpr inline uint64_t kEmptyProtocol_Send_Ordinal =
     1378773277029173000lu;
+
 [[maybe_unused]] constexpr inline uint64_t kEmptyProtocol_Receive_Ordinal =
     2301564782476583487lu;
+
 [[maybe_unused]] constexpr inline uint64_t
     kEmptyProtocol_SendAndReceive_Ordinal = 534401212734647530lu;
 

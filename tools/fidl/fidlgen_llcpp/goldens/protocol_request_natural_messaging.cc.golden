@@ -5,10 +5,13 @@
 namespace test_protocolrequest {
 [[maybe_unused]] constexpr inline uint64_t kParent_GetChild_Ordinal =
     881818649151440699lu;
+
 [[maybe_unused]] constexpr inline uint64_t kParent_GetChildRequest_Ordinal =
     1096855814967598201lu;
+
 [[maybe_unused]] constexpr inline uint64_t kParent_TakeChild_Ordinal =
     4470101341872267920lu;
+
 [[maybe_unused]] constexpr inline uint64_t kParent_TakeChildRequest_Ordinal =
     2333981071306416007lu;
 

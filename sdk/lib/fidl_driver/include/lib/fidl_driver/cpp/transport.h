@@ -22,6 +22,8 @@ template <typename Protocol>
 class ServerBindingRef;
 template <typename FidlMethod>
 class WireUnownedResult;
+template <typename FidlMethod>
+class Result;
 }  // namespace fdf
 
 namespace fidl {
@@ -45,6 +47,8 @@ struct DriverTransport {
   using ServerBindingRef = fdf::ServerBindingRef<Protocol>;
   template <typename FidlMethod>
   using WireUnownedResult = fdf::WireUnownedResult<FidlMethod>;
+  template <typename FidlMethod>
+  using Result = fdf::Result<FidlMethod>;
 
   static constexpr bool TransportProvidesReadBuffer = true;
 

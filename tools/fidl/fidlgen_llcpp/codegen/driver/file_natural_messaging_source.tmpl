@@ -14,6 +14,20 @@
 
 #include <{{ .Library | Filename "driver/NaturalMessagingHeader" }}>
 
+{{- range .Decls }}
+{{- if Eq .Kind Kinds.Protocol }}{{ $protocol := . }}
+{{- range $transport, $_ := .Transports }}
+{{- if eq $transport "Driver" -}}
+{{- template "Protocol:Details:NaturalMessagingSource" $protocol }}
+{{- template "Protocol:Client:driver/NaturalMessagingSource" $protocol }}
+{{- template "Protocol:EventHandler:NaturalMessagingSource" $protocol }}
+{{- range $protocol.ClientMethods }}
+  {{- template "Method:Request:NaturalMessagingSource" . }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
 
 {{ UnsetTransport -}}
 {{ EndOfFile }}
