@@ -839,6 +839,149 @@ void magma_unmap_buffer_gpu_enc(void *self , magma_connection_t connection, magm
 
 }
 
+magma_status_t magma_execute_command_enc(void *self , magma_connection_t connection, uint32_t context_id, magma_command_descriptor* descriptor)
+{
+	ENCODER_DEBUG_LOG("magma_execute_command(connection:%lu, context_id:%u, descriptor:%p)", connection, context_id, descriptor);
+	AEMU_SCOPED_TRACE("magma_execute_command encode");
+
+	magma_encoder_context_t *ctx = (magma_encoder_context_t *)self;
+	IOStream *stream = ctx->m_stream;
+	ChecksumCalculator *checksumCalculator = ctx->m_checksumCalculator;
+	bool useChecksum = checksumCalculator->getVersion() > 0;
+
+	const unsigned int __size_descriptor =  magma_enc_util::size_command_descriptor(descriptor);
+	 unsigned char *ptr;
+	 unsigned char *buf;
+	 const size_t sizeWithoutChecksum = 8 + 8 + 4 + __size_descriptor + 1*4;
+	 const size_t checksumSize = checksumCalculator->checksumByteSize();
+	 const size_t totalSize = sizeWithoutChecksum + checksumSize;
+	buf = stream->alloc(totalSize);
+	ptr = buf;
+	int tmp = OP_magma_execute_command;memcpy(ptr, &tmp, 4); ptr += 4;
+	memcpy(ptr, &totalSize, 4);  ptr += 4;
+
+		memcpy(ptr, &connection, 8); ptr += 8;
+		memcpy(ptr, &context_id, 4); ptr += 4;
+	memcpy(ptr, &__size_descriptor, 4); ptr += 4;
+	 magma_enc_util::pack_command_descriptor(ptr, connection, context_id, descriptor);ptr += __size_descriptor;
+
+	if (useChecksum) checksumCalculator->addBuffer(buf, ptr-buf);
+	if (useChecksum) checksumCalculator->writeChecksum(ptr, checksumSize); ptr += checksumSize;
+
+
+	magma_status_t retval;
+	stream->readback(&retval, 4);
+	if (useChecksum) checksumCalculator->addBuffer(&retval, 4);
+	if (useChecksum) {
+		unsigned char *checksumBufPtr = NULL;
+		unsigned char checksumBuf[ChecksumCalculator::kMaxChecksumSize];
+		if (checksumSize > 0) checksumBufPtr = &checksumBuf[0];
+		stream->readback(checksumBufPtr, checksumSize);
+		if (!checksumCalculator->validate(checksumBufPtr, checksumSize)) {
+			ALOGE("magma_execute_command: GL communication error, please report this issue to b.android.com.\n");
+			abort();
+		}
+	}
+	return retval;
+}
+
+magma_handle_t magma_get_notification_channel_handle_enc(void *self , magma_connection_t connection)
+{
+	ENCODER_DEBUG_LOG("magma_get_notification_channel_handle(connection:%lu)", connection);
+	AEMU_SCOPED_TRACE("magma_get_notification_channel_handle encode");
+
+	magma_encoder_context_t *ctx = (magma_encoder_context_t *)self;
+	IOStream *stream = ctx->m_stream;
+	ChecksumCalculator *checksumCalculator = ctx->m_checksumCalculator;
+	bool useChecksum = checksumCalculator->getVersion() > 0;
+
+	 unsigned char *ptr;
+	 unsigned char *buf;
+	 const size_t sizeWithoutChecksum = 8 + 8;
+	 const size_t checksumSize = checksumCalculator->checksumByteSize();
+	 const size_t totalSize = sizeWithoutChecksum + checksumSize;
+	buf = stream->alloc(totalSize);
+	ptr = buf;
+	int tmp = OP_magma_get_notification_channel_handle;memcpy(ptr, &tmp, 4); ptr += 4;
+	memcpy(ptr, &totalSize, 4);  ptr += 4;
+
+		memcpy(ptr, &connection, 8); ptr += 8;
+
+	if (useChecksum) checksumCalculator->addBuffer(buf, ptr-buf);
+	if (useChecksum) checksumCalculator->writeChecksum(ptr, checksumSize); ptr += checksumSize;
+
+
+	magma_handle_t retval;
+	stream->readback(&retval, 4);
+	if (useChecksum) checksumCalculator->addBuffer(&retval, 4);
+	if (useChecksum) {
+		unsigned char *checksumBufPtr = NULL;
+		unsigned char checksumBuf[ChecksumCalculator::kMaxChecksumSize];
+		if (checksumSize > 0) checksumBufPtr = &checksumBuf[0];
+		stream->readback(checksumBufPtr, checksumSize);
+		if (!checksumCalculator->validate(checksumBufPtr, checksumSize)) {
+			ALOGE("magma_get_notification_channel_handle: GL communication error, please report this issue to b.android.com.\n");
+			abort();
+		}
+	}
+	return retval;
+}
+
+magma_status_t magma_read_notification_channel2_enc(void *self , magma_connection_t connection, void* buffer, uint64_t buffer_size, uint64_t* buffer_size_out, magma_bool_t* more_data_out)
+{
+	ENCODER_DEBUG_LOG("magma_read_notification_channel2(connection:%lu, buffer:%p, buffer_size:%lu, buffer_size_out:%p, more_data_out:%p)", connection, buffer, buffer_size, buffer_size_out, more_data_out);
+	AEMU_SCOPED_TRACE("magma_read_notification_channel2 encode");
+
+	magma_encoder_context_t *ctx = (magma_encoder_context_t *)self;
+	IOStream *stream = ctx->m_stream;
+	ChecksumCalculator *checksumCalculator = ctx->m_checksumCalculator;
+	bool useChecksum = checksumCalculator->getVersion() > 0;
+
+	const unsigned int __size_buffer =  buffer_size;
+	const unsigned int __size_buffer_size_out =  sizeof(uint64_t);
+	const unsigned int __size_more_data_out =  sizeof(magma_bool_t);
+	 unsigned char *ptr;
+	 unsigned char *buf;
+	 const size_t sizeWithoutChecksum = 8 + 8 + 0 + 8 + 0 + 0 + 3*4;
+	 const size_t checksumSize = checksumCalculator->checksumByteSize();
+	 const size_t totalSize = sizeWithoutChecksum + checksumSize;
+	buf = stream->alloc(totalSize);
+	ptr = buf;
+	int tmp = OP_magma_read_notification_channel2;memcpy(ptr, &tmp, 4); ptr += 4;
+	memcpy(ptr, &totalSize, 4);  ptr += 4;
+
+		memcpy(ptr, &connection, 8); ptr += 8;
+	memcpy(ptr, &__size_buffer, 4); ptr += 4;
+		memcpy(ptr, &buffer_size, 8); ptr += 8;
+	memcpy(ptr, &__size_buffer_size_out, 4); ptr += 4;
+	memcpy(ptr, &__size_more_data_out, 4); ptr += 4;
+
+	if (useChecksum) checksumCalculator->addBuffer(buf, ptr-buf);
+	if (useChecksum) checksumCalculator->writeChecksum(ptr, checksumSize); ptr += checksumSize;
+
+	stream->readback(buffer, __size_buffer);
+	if (useChecksum) checksumCalculator->addBuffer(buffer, __size_buffer);
+	stream->readback(buffer_size_out, __size_buffer_size_out);
+	if (useChecksum) checksumCalculator->addBuffer(buffer_size_out, __size_buffer_size_out);
+	stream->readback(more_data_out, __size_more_data_out);
+	if (useChecksum) checksumCalculator->addBuffer(more_data_out, __size_more_data_out);
+
+	magma_status_t retval;
+	stream->readback(&retval, 4);
+	if (useChecksum) checksumCalculator->addBuffer(&retval, 4);
+	if (useChecksum) {
+		unsigned char *checksumBufPtr = NULL;
+		unsigned char checksumBuf[ChecksumCalculator::kMaxChecksumSize];
+		if (checksumSize > 0) checksumBufPtr = &checksumBuf[0];
+		stream->readback(checksumBufPtr, checksumSize);
+		if (!checksumCalculator->validate(checksumBufPtr, checksumSize)) {
+			ALOGE("magma_read_notification_channel2: GL communication error, please report this issue to b.android.com.\n");
+			abort();
+		}
+	}
+	return retval;
+}
+
 }  // namespace
 
 magma_encoder_context_t::magma_encoder_context_t(IOStream *stream, ChecksumCalculator *checksumCalculator)
@@ -867,5 +1010,8 @@ magma_encoder_context_t::magma_encoder_context_t(IOStream *stream, ChecksumCalcu
 	this->magma_release_context = &magma_release_context_enc;
 	this->magma_map_buffer_gpu = &magma_map_buffer_gpu_enc;
 	this->magma_unmap_buffer_gpu = &magma_unmap_buffer_gpu_enc;
+	this->magma_execute_command = &magma_execute_command_enc;
+	this->magma_get_notification_channel_handle = &magma_get_notification_channel_handle_enc;
+	this->magma_read_notification_channel2 = &magma_read_notification_channel2_enc;
 }
 

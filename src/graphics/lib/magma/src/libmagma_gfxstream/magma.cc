@@ -333,11 +333,6 @@ void encoderLog(const char* format, ...) {
 // Stubs
 extern "C" {
 
-magma_status_t magma_execute_command(magma_connection_t connection, uint32_t context_id,
-                                     struct magma_command_descriptor* descriptor) {
-  return MAGMA_STATUS_UNIMPLEMENTED;
-}
-
 magma_status_t magma_execute_immediate_commands2(
     magma_connection_t connection, uint32_t context_id, uint64_t command_count,
     struct magma_inline_command_buffer* command_buffers) {
@@ -365,8 +360,6 @@ magma_status_t magma_import_semaphore(magma_connection_t connection,
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
 
-magma_handle_t magma_get_notification_channel_handle(magma_connection_t connection) { return 0; }
-
 magma_status_t magma_virt_create_image(magma_connection_t connection,
                                        magma_image_create_info_t* create_info,
                                        magma_buffer_t* image_out) {
@@ -380,12 +373,6 @@ magma_status_t magma_virt_get_image_info(magma_connection_t connection, magma_bu
 
 magma_status_t magma_buffer_range_op(magma_connection_t connection, magma_buffer_t buffer,
                                      uint32_t options, uint64_t start_offset, uint64_t length) {
-  return MAGMA_STATUS_UNIMPLEMENTED;
-}
-
-magma_status_t magma_read_notification_channel2(magma_connection_t connection, void* buffer,
-                                                uint64_t buffer_size, uint64_t* buffer_size_out,
-                                                magma_bool_t* more_data_out) {
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
 

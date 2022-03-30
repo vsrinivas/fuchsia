@@ -33,6 +33,9 @@ typedef magma_status_t (magma_APIENTRY *magma_create_context_client_proc_t) (voi
 typedef void (magma_APIENTRY *magma_release_context_client_proc_t) (void * ctx, magma_connection_t, uint32_t);
 typedef magma_status_t (magma_APIENTRY *magma_map_buffer_gpu_client_proc_t) (void * ctx, magma_connection_t, magma_buffer_t, uint64_t, uint64_t, uint64_t, uint64_t);
 typedef void (magma_APIENTRY *magma_unmap_buffer_gpu_client_proc_t) (void * ctx, magma_connection_t, magma_buffer_t, uint64_t);
+typedef magma_status_t (magma_APIENTRY *magma_execute_command_client_proc_t) (void * ctx, magma_connection_t, uint32_t, magma_command_descriptor*);
+typedef magma_handle_t (magma_APIENTRY *magma_get_notification_channel_handle_client_proc_t) (void * ctx, magma_connection_t);
+typedef magma_status_t (magma_APIENTRY *magma_read_notification_channel2_client_proc_t) (void * ctx, magma_connection_t, void*, uint64_t, uint64_t*, magma_bool_t*);
 
 
 #endif

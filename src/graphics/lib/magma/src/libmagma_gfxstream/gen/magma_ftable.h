@@ -29,6 +29,9 @@ static const struct _magma_funcs_by_name {
 	{"magma_release_context", (void*)magma_release_context},
 	{"magma_map_buffer_gpu", (void*)magma_map_buffer_gpu},
 	{"magma_unmap_buffer_gpu", (void*)magma_unmap_buffer_gpu},
+	{"magma_execute_command", (void*)magma_execute_command},
+	{"magma_get_notification_channel_handle", (void*)magma_get_notification_channel_handle},
+	{"magma_read_notification_channel2", (void*)magma_read_notification_channel2},
 };
 static const int magma_num_funcs = sizeof(magma_funcs_by_name) / sizeof(struct _magma_funcs_by_name);
 

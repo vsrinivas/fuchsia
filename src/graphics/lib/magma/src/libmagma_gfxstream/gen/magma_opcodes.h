@@ -24,7 +24,10 @@
 #define OP_magma_release_context 					100018
 #define OP_magma_map_buffer_gpu 					100019
 #define OP_magma_unmap_buffer_gpu 					100020
-#define OP_last 					100021
+#define OP_magma_execute_command 					100021
+#define OP_magma_get_notification_channel_handle 					100022
+#define OP_magma_read_notification_channel2 					100023
+#define OP_last 					100024
 
 
 #endif

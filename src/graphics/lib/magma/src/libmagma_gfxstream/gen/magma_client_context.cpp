@@ -31,6 +31,9 @@ int magma_client_context_t::initDispatchByName(void *(*getProc)(const char *, vo
 	magma_release_context = (magma_release_context_client_proc_t) getProc("magma_release_context", userData);
 	magma_map_buffer_gpu = (magma_map_buffer_gpu_client_proc_t) getProc("magma_map_buffer_gpu", userData);
 	magma_unmap_buffer_gpu = (magma_unmap_buffer_gpu_client_proc_t) getProc("magma_unmap_buffer_gpu", userData);
+	magma_execute_command = (magma_execute_command_client_proc_t) getProc("magma_execute_command", userData);
+	magma_get_notification_channel_handle = (magma_get_notification_channel_handle_client_proc_t) getProc("magma_get_notification_channel_handle", userData);
+	magma_read_notification_channel2 = (magma_read_notification_channel2_client_proc_t) getProc("magma_read_notification_channel2", userData);
 	return 0;
 }
 

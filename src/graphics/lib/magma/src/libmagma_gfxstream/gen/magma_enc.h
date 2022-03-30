@@ -10,6 +10,7 @@
 
 
 #include <stdint.h>
+#include "magma_enc_util.h"
 
 struct magma_encoder_context_t : public magma_client_context_t {
 

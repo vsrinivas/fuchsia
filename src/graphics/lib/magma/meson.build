@@ -12,6 +12,7 @@ inc_configuration = include_directories(['.', 'src'])
 inc_magma = include_directories('include/magma')
 inc_platform = include_directories('src/magma_util/platform')
 inc_magma_util = include_directories('src/magma_util')
+inc_libmagma_gfxstream = include_directories('src/libmagma_gfxstream')
 inc_msd_intel_gen = include_directories('../../drivers/msd-intel-gen/include')
 
 # Generate virtio_magma.h in the proper location
@@ -46,6 +47,7 @@ libmagma_linux = static_library(
 if get_option('with_gfxstream')
   files_libmagma_gfxstream = files(
     'src/libmagma_gfxstream/magma.cc',
+    'src/libmagma_gfxstream/magma_enc_util.cc',
     'src/libmagma_gfxstream/gen/magma_enc.cpp',
     'src/libmagma_gfxstream/gen/magma_entry.cpp',
     'src/libmagma_gfxstream/gen/magma_client_context.cpp',
@@ -64,7 +66,7 @@ if get_option('with_gfxstream')
     ],
     c_args: c_args,
     include_directories : [inc_top, inc_configuration, inc_magma,
-                          inc_platform, inc_magma_util],
+                          inc_platform, inc_magma_util, inc_libmagma_gfxstream],
     dependencies: [gfxstream_dep, thread_dep, drm_dep, dl_dep]
   )
 

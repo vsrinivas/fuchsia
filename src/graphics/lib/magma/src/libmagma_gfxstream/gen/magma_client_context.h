@@ -31,6 +31,9 @@ struct magma_client_context_t {
 	magma_release_context_client_proc_t magma_release_context;
 	magma_map_buffer_gpu_client_proc_t magma_map_buffer_gpu;
 	magma_unmap_buffer_gpu_client_proc_t magma_unmap_buffer_gpu;
+	magma_execute_command_client_proc_t magma_execute_command;
+	magma_get_notification_channel_handle_client_proc_t magma_get_notification_channel_handle;
+	magma_read_notification_channel2_client_proc_t magma_read_notification_channel2;
 	virtual ~magma_client_context_t() {}
 
 	typedef magma_client_context_t *CONTEXT_ACCESSOR_TYPE(void);

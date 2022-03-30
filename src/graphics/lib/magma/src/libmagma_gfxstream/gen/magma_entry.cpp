@@ -26,6 +26,9 @@ extern "C" {
 	void magma_release_context(magma_connection_t connection, uint32_t context_id);
 	magma_status_t magma_map_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer, uint64_t page_offset, uint64_t page_count, uint64_t gpu_va, uint64_t map_flags);
 	void magma_unmap_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer, uint64_t gpu_va);
+	magma_status_t magma_execute_command(magma_connection_t connection, uint32_t context_id, magma_command_descriptor* descriptor);
+	magma_handle_t magma_get_notification_channel_handle(magma_connection_t connection);
+	magma_status_t magma_read_notification_channel2(magma_connection_t connection, void* buffer, uint64_t buffer_size, uint64_t* buffer_size_out, magma_bool_t* more_data_out);
 };
 
 #ifndef GET_CONTEXT
@@ -158,5 +161,23 @@ void magma_unmap_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer
 {
 	GET_CONTEXT;
 	ctx->magma_unmap_buffer_gpu(ctx, connection, buffer, gpu_va);
+}
+
+magma_status_t magma_execute_command(magma_connection_t connection, uint32_t context_id, magma_command_descriptor* descriptor)
+{
+	GET_CONTEXT;
+	return ctx->magma_execute_command(ctx, connection, context_id, descriptor);
+}
+
+magma_handle_t magma_get_notification_channel_handle(magma_connection_t connection)
+{
+	GET_CONTEXT;
+	return ctx->magma_get_notification_channel_handle(ctx, connection);
+}
+
+magma_status_t magma_read_notification_channel2(magma_connection_t connection, void* buffer, uint64_t buffer_size, uint64_t* buffer_size_out, magma_bool_t* more_data_out)
+{
+	GET_CONTEXT;
+	return ctx->magma_read_notification_channel2(ctx, connection, buffer, buffer_size, buffer_size_out, more_data_out);
 }
 
