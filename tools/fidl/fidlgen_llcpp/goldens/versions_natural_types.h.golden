@@ -207,7 +207,7 @@ class Struct {
   static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
-constexpr uint32_t Const = 0u;
+constexpr uint32_t kConst = 0u;
 
 }  // namespace test_versions
 namespace fidl {

@@ -354,7 +354,7 @@ func TestConstantContext(t *testing.T) {
 		constantContext.transform(parseIdent("fidl.test/foo")),
 		nameVariants{
 			HLCPP:   makeName("fidl::test::foo"),
-			Unified: makeName("fidl_test::foo"),
+			Unified: makeName("fidl_test::kFoo"),
 			Wire:    makeName("fidl_test::wire::kFoo"),
 		})
 
@@ -362,7 +362,7 @@ func TestConstantContext(t *testing.T) {
 		constantContext.transform(parseIdent("fidl.test/FOO_BAR")),
 		nameVariants{
 			HLCPP:   makeName("fidl::test::FOO_BAR"),
-			Unified: makeName("fidl_test::FOO_BAR"),
+			Unified: makeName("fidl_test::kFooBar"),
 			Wire:    makeName("fidl_test::wire::kFooBar"),
 		})
 
@@ -378,7 +378,7 @@ func TestConstantContext(t *testing.T) {
 		constantContext.transform(parseIdent("fidl.test/switch")),
 		nameVariants{
 			HLCPP:   makeName("fidl::test::switch_"),
-			Unified: makeName("fidl_test::switch_"),
+			Unified: makeName("fidl_test::kSwitch"),
 			Wire:    makeName("fidl_test::wire::kSwitch"),
 		})
 }

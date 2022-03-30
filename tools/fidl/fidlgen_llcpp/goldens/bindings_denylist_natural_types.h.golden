@@ -1929,7 +1929,7 @@ class DenyEachBindingOnlyDenyDartRequest {
   static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
-constexpr uint32_t AllBindings = 0u;
+constexpr uint32_t kAllBindings = 0u;
 
 }  // namespace test_bindingsdenylist
 namespace fidl {

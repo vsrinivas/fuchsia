@@ -143,7 +143,7 @@ var (
 		NameContext: fidlgen.NewNameContext(),
 		transforms: declarationTransforms{
 			hlcpp:   simpleDeclarationTransform(hlcppNamespace, nil),
-			unified: simpleDeclarationTransform(unifiedNamespace, nil),
+			unified: simpleDeclarationTransform(unifiedNamespace, fidlgen.ConstNameToKCamelCase),
 			wire:    simpleDeclarationTransform(wireNamespace, fidlgen.ConstNameToKCamelCase),
 		},
 	}

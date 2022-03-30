@@ -366,7 +366,7 @@ class ExampleProtocolMethodRequest {
   static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
-constexpr uint32_t EXAMPLE_CONST = 0u;
+constexpr uint32_t kExampleConst = 0u;
 
 }  // namespace test_placementofattributes
 namespace fidl {

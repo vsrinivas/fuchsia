@@ -16,13 +16,13 @@
 
 namespace test_bitsconstants {
 
-constexpr ::test_bitsconstants::BitsType Const3 =
+constexpr ::test_bitsconstants::BitsType kConst3 =
     static_cast<::test_bitsconstants::BitsType>(131);
 
-constexpr ::test_bitsconstants::BitsType Const2 =
+constexpr ::test_bitsconstants::BitsType kConst2 =
     static_cast<::test_bitsconstants::BitsType>(129);
 
-constexpr ::test_bitsconstants::BitsType Const1 =
+constexpr ::test_bitsconstants::BitsType kConst1 =
     ::test_bitsconstants::BitsType::kA;
 
 }  // namespace test_bitsconstants

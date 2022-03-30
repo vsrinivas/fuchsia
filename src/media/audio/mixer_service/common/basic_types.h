@@ -20,7 +20,7 @@ using ThreadId = uint64_t;
 using GainStageId = uint64_t;
 
 // This ID shall not be used.
-constexpr uint64_t kInvalidId = fuchsia_audio_mixer::INVALID_ID;
+constexpr uint64_t kInvalidId = fuchsia_audio_mixer::kInvalidId;
 
 // This ID is used by the GlobalTaskQueue to mean "any thread allowed".
 constexpr uint64_t kAnyThreadId = std::numeric_limits<uint64_t>::max();

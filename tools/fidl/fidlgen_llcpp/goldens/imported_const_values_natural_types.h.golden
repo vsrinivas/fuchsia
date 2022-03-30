@@ -72,10 +72,10 @@ class MyStruct {
   static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
-constexpr ::test_dependent::MyEnum ENUM_MEMBER =
+constexpr ::test_dependent::MyEnum kEnumMember =
     ::test_dependent::MyEnum::kMember;
 
-constexpr ::test_dependent::MyBits BITS_MEMBER =
+constexpr ::test_dependent::MyBits kBitsMember =
     ::test_dependent::MyBits::kMember;
 
 }  // namespace test_importedconstvalues

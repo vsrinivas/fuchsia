@@ -327,7 +327,7 @@ class FlexibleUnion {
 /// const comment #1
 ///
 /// const comment #3
-constexpr int32_t C = 4u;
+constexpr int32_t kC = 4u;
 
 }  // namespace test_doccomments
 namespace fidl {

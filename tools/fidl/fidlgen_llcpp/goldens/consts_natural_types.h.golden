@@ -16,41 +16,41 @@
 
 namespace test_consts {
 
-extern const char* USERNAME;
+extern const char* kUsername;
 
-constexpr uint32_t POPULATION_USA_2018 = 330000000u;
+constexpr uint32_t kPopulationUsa2018 = 330000000u;
 
-constexpr int8_t OFFSET = -33;
+constexpr int8_t kOffset = -33;
 
-constexpr float MIN_TEMP = -273.15f;
+constexpr float kMinTemp = -273.15f;
 
-constexpr uint64_t FUCHSIA = 4054509061583223046u;
+constexpr uint64_t kFuchsia = 4054509061583223046u;
 
-constexpr ::test_consts::EnumType enumVal = ::test_consts::EnumType::kValue;
+constexpr ::test_consts::EnumType kEnumVal = ::test_consts::EnumType::kValue;
 
-constexpr ::test_consts::EnumType enumTrue = ::test_consts::EnumType::kTrue;
+constexpr ::test_consts::EnumType kEnumTrue = ::test_consts::EnumType::kTrue;
 
-constexpr int32_t enumPrimitiveVal = ::test_consts::EnumType::kValue;
+constexpr int32_t kEnumPrimitiveVal = ::test_consts::EnumType::kValue;
 
-constexpr int32_t enumPrimitiveTrue = ::test_consts::EnumType::kTrue;
+constexpr int32_t kEnumPrimitiveTrue = ::test_consts::EnumType::kTrue;
 
-constexpr bool ENABLED_FLAG = true;
+constexpr bool kEnabledFlag = true;
 
-constexpr uint64_t DIAMOND = 1746410393481133080u;
+constexpr uint64_t kDiamond = 1746410393481133080u;
 
-constexpr double CONVERSION_FACTOR = 1.41421;
+constexpr double kConversionFactor = 1.41421;
 
-constexpr ::test_consts::BitsType bitsVal = ::test_consts::BitsType::kValue;
+constexpr ::test_consts::BitsType kBitsVal = ::test_consts::BitsType::kValue;
 
-constexpr ::test_consts::BitsType bitsTrue = ::test_consts::BitsType::kTrue;
+constexpr ::test_consts::BitsType kBitsTrue = ::test_consts::BitsType::kTrue;
 
-constexpr uint32_t bitsPrimitiveVal = ::test_consts::BitsType::kValue;
+constexpr uint32_t kBitsPrimitiveVal = ::test_consts::BitsType::kValue;
 
-constexpr uint32_t bitsPrimitiveTrue = ::test_consts::BitsType::kTrue;
+constexpr uint32_t kBitsPrimitiveTrue = ::test_consts::BitsType::kTrue;
 
-constexpr uint16_t ANSWER_IN_BINARY = 42u;
+constexpr uint16_t kAnswerInBinary = 42u;
 
-constexpr uint16_t ANSWER = 42u;
+constexpr uint16_t kAnswer = 42u;
 
 }  // namespace test_consts
 namespace fidl {
