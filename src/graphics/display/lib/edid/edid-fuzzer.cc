@@ -20,7 +20,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   }
 
   // Use a static variable to introduce optimization-preventing side-effects.
-  static size_t count = 0;
+  [[maybe_unused]] static size_t count = 0;
   count += edid.is_hdmi() ? 0 : 1;
   for (auto it = edid::timing_iterator(&edid); it.is_valid(); ++it) {
     count++;
