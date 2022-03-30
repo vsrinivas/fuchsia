@@ -23,7 +23,7 @@ use url::Url;
 fn test_simple_request() {
     let config = config_generator();
 
-    let intermediate = RequestBuilder::new(
+    let (intermediate, _request_metadata) = RequestBuilder::new(
         &config,
         &RequestParams {
             source: InstallSource::OnDemand,
@@ -88,7 +88,7 @@ fn test_simple_request() {
 fn test_updates_disabled_request() {
     let config = config_generator();
 
-    let intermediate = RequestBuilder::new(
+    let (intermediate, _request_metadata) = RequestBuilder::new(
         &config,
         &RequestParams {
             source: InstallSource::OnDemand,
@@ -145,7 +145,7 @@ fn test_updates_disabled_request() {
 fn test_app_includes_extras() {
     let config = config_generator();
 
-    let intermediate = RequestBuilder::new(
+    let (intermediate, _request_metadata) = RequestBuilder::new(
         &config,
         &RequestParams { source: InstallSource::OnDemand, ..RequestParams::default() },
     )
@@ -169,7 +169,7 @@ fn test_app_includes_extras() {
 fn test_single_request() {
     let config = config_generator();
 
-    let (parts, body) = RequestBuilder::new(
+    let (http_request, _request_metadata) = RequestBuilder::new(
         &config,
         &RequestParams { source: InstallSource::OnDemand, ..RequestParams::default() },
     )
@@ -177,8 +177,8 @@ fn test_single_request() {
         &App::builder("app id", [5, 6, 7, 8]).with_cohort(Cohort::new("some-channel")).build(),
     )
     .build()
-    .unwrap()
-    .into_parts();
+    .unwrap();
+    let (parts, body) = http_request.into_parts();
 
     // Assert that the HTTP method and uri are accurate
     assert_eq!(http::Method::POST, parts.method);
@@ -232,7 +232,7 @@ fn test_single_request() {
 fn test_simple_ping() {
     let config = config_generator();
 
-    let intermediate = RequestBuilder::new(
+    let (intermediate, _request_metadata) = RequestBuilder::new(
         &config,
         &RequestParams { source: InstallSource::ScheduledTask, ..RequestParams::default() },
     )
@@ -271,7 +271,7 @@ fn test_simple_ping() {
 fn test_simple_event() {
     let config = config_generator();
 
-    let request = RequestBuilder::new(
+    let (http_request, _request_metadata) = RequestBuilder::new(
         &config,
         &RequestParams { source: InstallSource::ScheduledTask, ..RequestParams::default() },
     )
@@ -287,9 +287,9 @@ fn test_simple_event() {
         },
     )
     .build_intermediate()
-    .unwrap()
-    .body
-    .request;
+    .unwrap();
+
+    let request = http_request.body.request;
 
     let app = &request.apps[0];
     assert_eq!(app.id, "event app id");
@@ -313,7 +313,7 @@ fn test_multiple_events() {
         .build();
 
     // Make the call to the RequestBuilder that is being tested.
-    let request = RequestBuilder::new(
+    let (http_request, _request_metadata) = RequestBuilder::new(
         &config,
         &RequestParams { source: InstallSource::ScheduledTask, ..RequestParams::default() },
     )
@@ -336,9 +336,9 @@ fn test_multiple_events() {
         },
     )
     .build_intermediate()
-    .unwrap()
-    .body
-    .request;
+    .unwrap();
+
+    let request = http_request.body.request;
 
     // Validate that the resultant Request has the right fields and events
 
@@ -380,7 +380,7 @@ fn test_ping_added_to_first_app_update_entry() {
         .build();
 
     // Now make the call to the RequestBuilder that is being tested.
-    let request = RequestBuilder::new(
+    let (http_request, _request_metadata) = RequestBuilder::new(
         &config,
         &RequestParams { source: InstallSource::ScheduledTask, ..RequestParams::default() },
     )
@@ -388,9 +388,8 @@ fn test_ping_added_to_first_app_update_entry() {
     .add_update_check(&app_2)
     .add_ping(&app_1)
     .build_intermediate()
-    .unwrap()
-    .body
-    .request;
+    .unwrap();
+    let request = http_request.body.request;
 
     // Validate the resultant Request is correct.
 
@@ -439,7 +438,8 @@ fn test_ping_added_to_second_app_update_entry() {
     .add_update_check(&app_2)
     .add_ping(&app_2);
 
-    let request = builder.build_intermediate().unwrap().body.request;
+    let (http_request, _request_metadata) = builder.build_intermediate().unwrap();
+    let request = http_request.body.request;
 
     // Validate that the resultant request is correct.
 
@@ -479,7 +479,7 @@ fn test_event_added_to_first_app_update_entry() {
         .build();
 
     // Now make the call to the RequestBuilder that is being tested.
-    let request = RequestBuilder::new(
+    let (http_request, _request_metadata) = RequestBuilder::new(
         &config,
         &RequestParams { source: InstallSource::ScheduledTask, ..RequestParams::default() },
     )
@@ -495,9 +495,9 @@ fn test_event_added_to_first_app_update_entry() {
         },
     )
     .build_intermediate()
-    .unwrap()
-    .body
-    .request;
+    .unwrap();
+
+    let request = http_request.body.request;
 
     // There should only be the two entries.
     assert_eq!(request.apps.len(), 2);
@@ -552,7 +552,8 @@ fn test_event_added_to_second_app_update_entry() {
         },
     );
 
-    let request = builder.build_intermediate().unwrap().body.request;
+    let (http_request, _request_metadata) = builder.build_intermediate().unwrap();
+    let request = http_request.body.request;
 
     // There should only be the two entries.
     assert_eq!(request.apps.len(), 2);

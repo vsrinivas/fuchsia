@@ -8,7 +8,9 @@ mod tests;
 use crate::{
     common::{App, UserCounting},
     configuration::Config,
-    cup_ecdsa::{CupDecorationError, CupRequest, Cupv2RequestHandler, StandardCupv2Handler},
+    cup_ecdsa::{
+        CupDecorationError, CupRequest, Cupv2RequestHandler, RequestMetadata, StandardCupv2Handler,
+    },
     protocol::{
         request::{
             Event, InstallSource, Ping, Request, RequestWrapper, UpdateCheck, GUID, HEADER_APP_ID,
@@ -253,14 +255,14 @@ impl<'a> RequestBuilder<'a> {
     /// This function constructs the protocol::request::Request object from this Builder.
     ///
     /// Note that the builder is not consumed in the process, and can be used afterward.
-    pub fn build(&self) -> Result<http::Request<hyper::Body>> {
-        let intermediate = self.build_intermediate()?;
+    pub fn build(&self) -> Result<(http::Request<hyper::Body>, Option<RequestMetadata>)> {
+        let (intermediate, request_metadata) = self.build_intermediate()?;
         info!("Building Request: {}", intermediate);
-        intermediate.into()
+        Ok((Into::<Result<http::Request<hyper::Body>>>::into(intermediate)?, request_metadata))
     }
 
     /// Helper function that constructs the request body from the builder.
-    fn build_intermediate(&self) -> Result<Intermediate> {
+    fn build_intermediate(&self) -> Result<(Intermediate, Option<RequestMetadata>)> {
         let mut headers = vec![
             // Set the content-type to be JSON.
             (http::header::CONTENT_TYPE.as_str(), "application/json".to_string()),
@@ -301,12 +303,13 @@ impl<'a> RequestBuilder<'a> {
                 },
             },
         };
-        if let Some(handler) = self.cup_handler.as_ref() {
-            // TODO: Pass this metadata along and store it for validation when
-            // response is received.
-            let _request_metadata = handler.decorate_request(&mut intermediate)?;
-        }
-        Ok(intermediate)
+
+        let request_metadata = match self.cup_handler.as_ref() {
+            Some(handler) => Some(handler.decorate_request(&mut intermediate)?),
+            None => None,
+        };
+
+        Ok((intermediate, request_metadata))
     }
 }
 

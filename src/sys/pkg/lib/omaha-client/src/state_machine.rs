@@ -1227,8 +1227,11 @@ where
         builder: &RequestBuilder<'a>,
         co: &mut async_generator::Yield<StateMachineEvent>,
     ) -> Result<(Parts, Vec<u8>), OmahaRequestError> {
-        let (parts, body) =
-            Self::make_request(&mut self.http, builder.build()?).await?.into_parts();
+        let (request, _request_metadata) = builder.build()?;
+        let (parts, body) = Self::make_request(&mut self.http, request).await?.into_parts();
+
+        // TODO: here, use request metadata to validate CUPv2 response.
+
         // Clients MUST respect this header even if paired with non-successful HTTP response code.
         let server_dictated_poll_interval = parts.headers.get(X_RETRY_AFTER).and_then(|header| {
             match header
@@ -1480,7 +1483,7 @@ mod tests {
     // Assert that the last request made to |http| is equal to the request built by
     // |request_builder|.
     async fn assert_request<'a>(http: &MockHttpRequest, request_builder: RequestBuilder<'a>) {
-        let request = request_builder.build().unwrap();
+        let (request, _request_metadata) = request_builder.build().unwrap();
         let body = hyper::body::to_bytes(request).await.unwrap();
         // Compare string instead of Vec<u8> for easier debugging.
         let body_str = String::from_utf8_lossy(&body);
