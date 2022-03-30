@@ -26,6 +26,36 @@ const String v2EchoClientUrl = '#meta/echo_client.cm';
 const String v1EchoServerUrl =
     'fuchsia-pkg://fuchsia.com/dart_realm_builder_unittests#meta/echo_server.cmx';
 const String v2EchoServerUrl = '#meta/echo_server.cm';
+const String v2EchoServerWithBinderUrl = '#meta/echo_server_with_binder.cm';
+
+void checkCommonExceptions(Exception err, StackTrace stacktrace) {
+  if (err is fidl.MethodException<fcomponent.Error>) {
+    late final String errorName;
+    for (final name in fcomponent.Error.$valuesMap.keys) {
+      if (err.value == fcomponent.Error.$valuesMap[name]) {
+        errorName = name;
+        break;
+      }
+    }
+    log.warning('fidl.$err: fuchsia.component.Error.$errorName');
+  } else if (err is fidl.MethodException<fctest.RealmBuilderError2>) {
+    late final String errorName;
+    for (final name in fctest.RealmBuilderError2.$valuesMap.keys) {
+      if (err.value == fctest.RealmBuilderError2.$valuesMap[name]) {
+        errorName = name;
+        break;
+      }
+    }
+    log.warning('fidl.$err: fuchsia.component.test.Error.$errorName');
+  } else if (err is fidl.MethodException) {
+    log.warning('fidl.MethodException<${err.value.runtimeType}>($err)');
+  } else if (err is fidl.FidlError) {
+    log.warning('fidl.${err.runtimeType}($err), FidlErrorCode: ${err.code}');
+  } else {
+    log.warning('caught exception: ${err.runtimeType}($err)');
+  }
+  log.warning('stacktrace (if available)...\n${stacktrace.toString()}');
+}
 
 void main() {
   setupLogger(name: 'fuchsia-component-test-dart-tests');
@@ -35,31 +65,44 @@ void main() {
       test('RealmBuilder.create()', () async {
         final builder = await RealmBuilder.create();
         expect(
-            builder.addChild(
-                'v2EchoServer', v2EchoServerUrl, ChildOptions()..eager()),
-            completes);
+          builder.addChild(
+            'v2EchoServer',
+            v2EchoServerUrl,
+            ChildOptions()..eager(),
+          ),
+          completes,
+        );
       });
 
       test('RealmBuilder with legacy (CFv1) child', () async {
         final builder = await RealmBuilder.create();
         expect(
-            builder.addLegacyChild(
-                'v1EchoServer', v1EchoServerUrl, ChildOptions()),
-            completes);
+          builder.addLegacyChild(
+            'v1EchoServer',
+            v1EchoServerUrl,
+            ChildOptions(),
+          ),
+          completes,
+        );
       });
 
       test('RealmBuilder from Component decl', () async {
         final builder = await RealmBuilder.create();
         final decl = fdecl.Component();
         expect(
-            builder.addChildFromDecl('componentFromDecl', decl, ChildOptions()),
-            completes);
+          builder.addChildFromDecl(
+            'componentFromDecl',
+            decl,
+            ChildOptions(),
+          ),
+          completes,
+        );
       });
     });
 
     group('basic RealmBuilder tests', () {
       test('protocol and directory capabilities', () async {
-        RealmInstance? realmInstance;
+        late final RealmInstance? realmInstance;
         try {
           final builder = await RealmBuilder.create();
 
@@ -70,7 +113,6 @@ void main() {
 
           await builder.addRoute(Route()
             ..capability(DirectoryCapability('hub')..rights = fio.rStarDir)
-            ..capability(DirectoryCapability('tmp')..rights = fio.rStarDir)
             ..from(Ref.framework())
             ..to(Ref.parent()));
 
@@ -94,31 +136,14 @@ void main() {
 
           expect(testString, reply);
 
-          final lifecycleController = await realmInstance.root
-              .connectToProtocolInDirPath(
-                  fsys2.LifecycleControllerProxy(), 'hub/debug');
-          await lifecycleController.stop('./v2EchoServer', true);
-        } on fidl.MethodException<fcomponent.Error> catch (err, stacktrace) {
-          late final String errorName;
-          for (final name in fcomponent.Error.$valuesMap.keys) {
-            if (err.value == fcomponent.Error.$valuesMap[name]) {
-              errorName = name;
-              break;
-            }
-          }
-          log.warning(
-            'fidl.$err: fuchsia.component.Error.$errorName, '
-            'stacktrace if any... \n$stacktrace',
+          final lifecycleController =
+              await realmInstance.root.connectToProtocolInDirPath(
+            fsys2.LifecycleControllerProxy(),
+            'hub/debug',
           );
-          rethrow;
-        } on fidl.FidlError catch (err, stacktrace) {
-          log.warning(
-              'fidl.${err.runtimeType}($err), FidlErrorCode: ${err.code}, '
-              'stacktrace: ${stacktrace.toString()}');
-          rethrow;
+          await lifecycleController.stop('./v2EchoServer', true);
         } on Exception catch (err, stacktrace) {
-          log.warning('caught exception: ${err.runtimeType}($err), '
-              'stacktrace: ${stacktrace.toString()}');
+          checkCommonExceptions(err, stacktrace);
           rethrow;
         } finally {
           if (realmInstance != null) {
@@ -128,7 +153,7 @@ void main() {
       });
 
       test('connectRequestToNamedProtocol', () async {
-        RealmInstance? realmInstance;
+        late final RealmInstance? realmInstance;
         try {
           final builder = await RealmBuilder.create();
 
@@ -166,7 +191,7 @@ void main() {
       });
 
       test('connectToProtocol using legacy component', () async {
-        RealmInstance? realmInstance;
+        late final RealmInstance? realmInstance;
         try {
           final builder = await RealmBuilder.create();
 
@@ -202,7 +227,7 @@ void main() {
     });
 
     test('connect to child in subrealm', () async {
-      RealmInstance? realmInstance;
+      late final RealmInstance? realmInstance;
       try {
         const subRealmName = 'sub_realm';
 
@@ -263,7 +288,7 @@ void main() {
     // The code to open the Storage capability seems viable, once there is a
     // way to route the StorageCapability to a Dart component of this test.
     // test('storage', () async {
-    //   RealmInstance? realmInstance;
+    //   late final RealmInstance? realmInstance;
     //   try {
     //     final builder = await RealmBuilder.create();
 
@@ -388,49 +413,203 @@ void main() {
       });
     });
 
-    group('Start test component', () {
-      test('start by binding', () async {
+    test('replace realm decl', () async {
+      try {
+        final builder = await RealmBuilder.create();
+        var origRootDecl = await builder.getRealmDecl();
+        expect(origRootDecl, fdecl.Component());
+        // TODO(fxbug.dev/96610): FIDL Table bindings for Dart declare fields
+        // `final` and the default fdecl.Component sets children to null. Since
+        // the above `expect()` guarantees the Component is equal to the default
+        // constructor result, we don't have to copy fields from the original,
+        // in THIS case. But we need a way to modify Dart FIDL Table bindings.
+        final rootDecl = fdecl.Component(
+          children: [],
+        );
+        rootDecl.children!.add(fdecl.Child(
+          name: 'example-child',
+          url: 'example://url',
+          startup: fdecl.StartupMode.eager,
+        ));
+        await builder.replaceRealmDecl(rootDecl);
+        expect(rootDecl, await builder.getRealmDecl());
+      } on Exception catch (err, stacktrace) {
+        checkCommonExceptions(err, stacktrace);
+        rethrow;
+      }
+    });
+
+    test('replace component decl', () async {
+      final eventStreamBinding = fsys2.EventStreamBinding();
+      late final RealmInstance? realmInstance;
+      try {
         final builder = await RealmBuilder.create();
 
-        /*childRef=*/ await builder.addChild('v2EchoServer', v2EchoServerUrl);
+        const echoServerName = 'v2EchoServer';
+
+        final v2EchoServer = await builder.addChild(
+          echoServerName,
+          v2EchoServerUrl,
+        );
+
+        var decl = await builder.getComponentDecl(v2EchoServer);
+
+        decl.exposes!.add(
+          fdecl.Expose.withProtocol(
+            fdecl.ExposeProtocol(
+              source: fdecl.Ref.withSelf(fdecl.SelfRef()),
+              sourceName: fecho.Echo.$serviceName,
+              target: fdecl.Ref.withParent(fdecl.ParentRef()),
+              targetName: 'renamedEchoService',
+            ),
+          ),
+        );
+
+        await builder.replaceComponentDecl(v2EchoServer, decl);
+
+        // Route logging to child
+        await builder.addRoute(Route()
+          ..capability(ProtocolCapability(flogger.LogSink.$serviceName))
+          ..from(Ref.parent())
+          ..to(Ref.child(v2EchoServer)));
 
         await builder.addRoute(Route()
-          ..capability(DirectoryCapability('hub')..rights = fio.rStarDir)
+          ..capability(ProtocolCapability('renamedEchoService'))
+          ..from(Ref.child(v2EchoServer))
+          ..to(Ref.parent()));
+
+        // Start the realmInstance. The EchoServer is not "eager", so it should
+        // not start automatically.
+        realmInstance = await builder.build();
+
+        final echo = await realmInstance.root.connectToProtocolAtPath(
+          fecho.EchoProxy(),
+          'renamedEchoService',
+        );
+        const testString = 'ECHO...Echo...echo...(echo)...';
+
+        final reply = await echo.echoString(testString);
+
+        expect(testString, reply);
+      } on Exception catch (err, stacktrace) {
+        checkCommonExceptions(err, stacktrace);
+        rethrow;
+      } finally {
+        if (realmInstance != null) {
+          await realmInstance.root.close();
+        }
+        eventStreamBinding.close();
+      }
+    });
+
+    test('start by binding', () async {
+      final eventStreamBinding = fsys2.EventStreamBinding();
+      late final RealmInstance? realmInstance;
+      late final String? serverMoniker;
+      try {
+        final builder = await RealmBuilder.create();
+
+        const serverName = 'v2Server';
+        const serverBinder = 'serverBinder';
+
+        // This test leverages the `echo_server` binary, with an augmented
+        // component manifest that exposes `fuchsia.component.Binder`. The
+        // `echo_server` will automatically start if a client connects to its
+        // `Echo` service, but this test doesn't do that. It leverages the fact
+        // that the component will launch and execute a loop waiting for
+        // requests, which can make the state easier to bug if the event does
+        // not arrive, or if a future iteration of the test adds a step to
+        // stop the component (via the LifecycleController) and wait for the
+        // "stopped" event.
+        final v2Server = await builder.addChild(
+          serverName,
+          v2EchoServerWithBinderUrl,
+        );
+
+        // Route logging to child
+        await builder.addRoute(Route()
+          ..capability(ProtocolCapability(flogger.LogSink.$serviceName))
+          ..from(Ref.parent())
+          ..to(Ref.child(v2Server)));
+
+        // Route the child's Binder service to parent, so the test can connect
+        // to it to start the child.
+        await builder.addRoute(Route()
+          ..capability(ProtocolCapability(fcomponent.Binder.$serviceName,
+              as: serverBinder))
+          ..from(Ref.child(v2Server))
+          ..to(Ref.parent()));
+
+        // Route the framework's EventSource so the test can await the server's
+        // "started" and "stopped" events.
+        await builder.addRoute(Route()
+          ..capability(ProtocolCapability(fsys2.EventSource.$serviceName))
           ..from(Ref.framework())
           ..to(Ref.parent()));
 
-        final realmInstance = await builder.build();
+        // Connect to the framework's EventSource.
+        final eventSource = fsys2.EventSourceProxy();
+        await (services.Incoming.fromSvcPath()..connectToService(eventSource))
+            .close();
+
+        // Register callbacks for started and stopped events, and complete a
+        // Future when called.
+        final completeWaitForStart = Completer();
+        final eventStreamClientEnd = eventStreamBinding.wrap(
+          OnEvent(
+            started: (String moniker) {
+              if (moniker == serverMoniker) {
+                log.info('start completed for $moniker');
+                completeWaitForStart.complete();
+              }
+            },
+          ),
+        );
+
+        // Subscribe to "started" events
+        await eventSource.subscribe(
+          [
+            fsys2.EventSubscription(eventName: 'started'),
+          ],
+          eventStreamClientEnd,
+        );
+
+        // Start the realmInstance. The child component (the server) is not
+        // "eager", so it should not start automatically.
+        realmInstance = await builder.build();
         final scopedInstance = realmInstance.root;
+        serverMoniker = './${scopedInstance.collectionName}:'
+            '${scopedInstance.childName}/$serverName';
 
-        final lifecycleController =
-            await scopedInstance.connectToProtocolInDirPath(
-                fsys2.LifecycleControllerProxy(), 'hub/debug');
+        // Start the server
+        /*serverBinder=*/ await scopedInstance.connectToProtocolAtPath(
+          fcomponent.BinderProxy(),
+          serverBinder,
+        );
 
-        var caught = false;
-        try {
-          await lifecycleController.stop(
-              './${scopedInstance.collectionName}:${scopedInstance.childName}',
-              true);
-        } on fidl.MethodException<fcomponent.Error> catch (err) {
-          expect(err.value, fcomponent.Error.instanceNotFound);
-          caught = true;
-        } finally {
-          expect(caught, true);
+        log.info('connected to server Binder; waiting for start event');
+
+        // Wait for the server "started" event
+        await completeWaitForStart.future;
+
+        log.info('got start');
+
+        // Note, since this test abruptly stopped the child component, a
+        // non-zero (error) status is likely.
+      } on Exception catch (err, stacktrace) {
+        checkCommonExceptions(err, stacktrace);
+        rethrow;
+      } finally {
+        if (realmInstance != null) {
+          await realmInstance.root.close();
         }
-
-        /*binderProxy=*/ scopedInstance.connectToBinder();
-
-        // Note that since Fuchsia doesn't yet have EventMatcher API bindings
-        // for Dart, there is no easy way to block and wait until the component
-        // starts (without using it), so the test can't reliably call stop here.
-
-        expect(scopedInstance.close(), completes);
-      });
+        eventStreamBinding.close();
+      }
     });
 
     test('route echo between two v2 components', () async {
       final eventStreamBinding = fsys2.EventStreamBinding();
-      RealmInstance? realmInstance;
+      late final RealmInstance? realmInstance;
       try {
         final builder = await RealmBuilder.create();
 
@@ -476,14 +655,34 @@ void main() {
         // the event client stops.
         final completeWaitForStop = Completer<int>();
         final eventStreamClientEnd = eventStreamBinding.wrap(
-          OnEvent.stopped((String moniker, int status) {
+          OnEvent(stopped: (String moniker, int status) {
+            // Since EchoClient is [eager()], it may start and stop before the
+            // async [builder.build()] completes. [realmInstance.root.childName]
+            // would not be known before this stopped event is received, so
+            // [endsWith()] is the best solution here.
             if (moniker.endsWith('/$echoClientName')) {
               completeWaitForStop.complete(status);
             }
           }),
         );
 
-        // Subscribe for `stopped` events.
+        // Subscribe for "stopped" events.
+        //
+        // NOTE: This requires the test CML include a `use` for the subscribed
+        // event type(s), for example:
+        //
+        // ```cml
+        //   use: [
+        //     { protocol: "fuchsia.sys2.EventSource" },
+        //     {
+        //         event: [
+        //             "started",
+        //             "stopped",
+        //         ],
+        //         from: "framework",
+        //     },
+        //   ],
+        // ```
         await eventSource.subscribe(
           [fsys2.EventSubscription(eventName: 'stopped')],
           eventStreamClientEnd,
@@ -495,47 +694,12 @@ void main() {
         // Wait for the client to stop, and check for a successful exit status.
         final stoppedStatus = await completeWaitForStop.future;
         expect(stoppedStatus, 0);
-      } on fidl.MethodException<fcomponent.Error> catch (err, stacktrace) {
-        late final String errorName;
-        for (final name in fcomponent.Error.$valuesMap.keys) {
-          if (err.value == fcomponent.Error.$valuesMap[name]) {
-            errorName = name;
-            break;
-          }
-        }
-        log.warning(
-          'fidl.$err: fuchsia.component.Error.$errorName, '
-          'stacktrace if any... \n$stacktrace',
-        );
-        rethrow;
-      } on fidl
-          .MethodException<fctest.RealmBuilderError2> catch (err, stacktrace) {
-        late final String errorName;
-        for (final name in fctest.RealmBuilderError2.$valuesMap.keys) {
-          if (err.value == fctest.RealmBuilderError2.$valuesMap[name]) {
-            errorName = name;
-            break;
-          }
-        }
-        log.warning(
-          'fidl.$err: fuchsia.component.Error.$errorName, '
-          'stacktrace if any... \n$stacktrace',
-        );
-        rethrow;
-      } on fidl.FidlError catch (err, stacktrace) {
-        log.warning(
-            'fidl.${err.runtimeType}($err), FidlErrorCode: ${err.code}, '
-            'stacktrace: ${stacktrace.toString()}');
-        rethrow;
       } on Exception catch (err, stacktrace) {
-        log.warning('caught exception: ${err.runtimeType}($err), '
-            'stacktrace: ${stacktrace.toString()}');
+        checkCommonExceptions(err, stacktrace);
         rethrow;
       } finally {
-        log.info('finally!');
         if (realmInstance != null) {
           await realmInstance.root.close();
-          log.info('realmInstance.root closed');
         }
         eventStreamBinding.close();
       }

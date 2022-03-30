@@ -8,6 +8,7 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:fidl/fidl.dart' as fidl;
 import 'package:fidl_fuchsia_component/fidl_async.dart' as fcomponent;
+import 'package:fidl_fuchsia_component_config/fidl_async.dart' as fconfig;
 import 'package:fidl_fuchsia_component_decl/fidl_async.dart' as fdecl;
 import 'package:fidl_fuchsia_component_test/fidl_async.dart' as ftest;
 import 'package:fidl_fuchsia_io/fidl_async.dart' as fio;
@@ -227,8 +228,8 @@ class ScopedInstance {
   /// goes out of scope).
   ///
   /// This will ensure that the message goes out to the realm.
-  Future<void> close() async {
-    await _realm.destroyChild(fdecl.ChildRef(
+  Future<void> close() {
+    return _realm.destroyChild(fdecl.ChildRef(
       name: childName,
       collection: collectionName,
     ));
@@ -599,41 +600,75 @@ class ServiceCapability extends Capability {
 /// Wraps an [onEvent()] closure in a [fuchsia.sys2.EventStream] implementation
 /// for binding.
 class OnEvent extends fsys2.EventStream {
-  final Future<void> Function(fsys2.Event event) _callback;
+  final Future<void> Function(OnEvent self, fsys2.Event event) _callback;
+
+  final Future<void> Function(fsys2.Event event)? _onEventCallback;
+
+  final void Function(String moniker)? _started;
+  final void Function(String moniker, int stoppedStatus)? _stopped;
+
+  /// Constructs an EventStream listener that responds to an incoming event
+  /// (via [onEvent()]) by matching the event type to any of one or more
+  /// given callbacks. Events with missing (null) values for any required
+  /// callback parameters are ignored. For example, the [stopped] callback
+  /// will only be called for events of [fsys2.EventType.stopped] if both the
+  /// [moniker] and [stoppedStatus] are non-null.)
+  OnEvent({
+    void Function(String moniker)? started,
+    void Function(String moniker, int stoppedStatus)? stopped,
+  })  : _onEventCallback = null,
+        _started = started,
+        _stopped = stopped,
+        _callback = _handleTypedEventCallbacks;
 
   /// Constructs an EventStream listener with the given [onEvent()] callback.
-  OnEvent(this._callback);
+  OnEvent.callback(Future<void> Function(fsys2.Event event) callback)
+      : _onEventCallback = callback,
+        _started = null,
+        _stopped = null,
+        _callback = _handleOnEventCallback;
 
-  /// Constructs an EventStream listener with an [onEvent()] callback that calls
-  /// the given closure only for [EventType.started]. If [moniker] is null, the
-  /// event is ignored.
-  OnEvent.started(void Function(String moniker) callback)
-      : this((fsys2.Event event) async {
-          if (event.header?.eventType == fsys2.EventType.started) {
-            String? moniker = event.header?.moniker;
-            if (moniker != null) {
-              callback(moniker);
-            }
-          }
-        });
+  static Future<void> _handleOnEventCallback(
+    OnEvent self,
+    fsys2.Event event,
+  ) {
+    return self._onEventCallback!(event);
+  }
 
-  /// Constructs an EventStream listener with an [onEvent()] callback that calls
-  /// the given closure only for [EventType.stopped]. If either [moniker] or
-  /// [stopped.status] are null, the event is ignored.
-  OnEvent.stopped(void Function(String moniker, int stoppedStatus) callback)
-      : this((fsys2.Event event) async {
-          if (event.header?.eventType == fsys2.EventType.stopped) {
-            String? moniker = event.header?.moniker;
-            int? status = event.eventResult?.payload?.stopped?.status;
-            if (moniker != null && status != null) {
-              callback(moniker, status);
-            }
+  static Future<void> _handleTypedEventCallbacks(
+    OnEvent self,
+    fsys2.Event event,
+  ) async {
+    self._callTypedEventHandlers(event);
+  }
+
+  void _callTypedEventHandlers(fsys2.Event event) {
+    String? moniker = event.header?.moniker;
+    if (moniker == null) {
+      return;
+    }
+    switch (event.header?.eventType) {
+      case fsys2.EventType.started:
+        if (_started != null) {
+          _started!(moniker);
+        }
+        break;
+
+      case fsys2.EventType.stopped:
+        if (_stopped != null) {
+          int? stoppedStatus = event.eventResult?.payload?.stopped?.status;
+          if (stoppedStatus != null) {
+            _stopped!(moniker, stoppedStatus);
           }
-        });
+        }
+        break;
+    }
+    return;
+  }
 
   @override
-  Future<void> onEvent(fsys2.Event event) async {
-    await _callback(event);
+  Future<void> onEvent(fsys2.Event event) {
+    return _callback(this, event);
   }
 }
 
@@ -755,6 +790,41 @@ class SubRealmBuilder {
       (options ?? ChildOptions()).toFidlType(),
     );
     return ChildRef(name, realmPath);
+  }
+
+  /// Returns a copy the decl for a child in this realm
+  Future<fdecl.Component> getComponentDecl(ChildRef childRef) {
+    childRef.checkScope(realmPath);
+    return realm.getComponentDecl(childRef.name);
+  }
+
+  /// Replaces the decl for a child of this realm
+  Future<void> replaceComponentDecl(
+    ChildRef childRef,
+    fdecl.Component decl,
+  ) {
+    childRef.checkScope(realmPath);
+    return realm.replaceComponentDecl(childRef.name, decl);
+  }
+
+  /// Returns a copy the decl for a child in this realm
+  Future<fdecl.Component> getRealmDecl() {
+    return realm.getRealmDecl();
+  }
+
+  /// Replaces the decl for this realm
+  Future<void> replaceRealmDecl(fdecl.Component decl) {
+    return realm.replaceRealmDecl(decl);
+  }
+
+  /// Replaces a value of a given configuration field
+  Future<void> replaceConfigValue(
+    ChildRef childRef,
+    String key,
+    fconfig.ValueSpec value,
+  ) {
+    childRef.checkScope(realmPath);
+    return realm.replaceConfigValue(childRef.name, key, value);
   }
 
   /// Adds a route between components within the realm
@@ -898,9 +968,43 @@ class RealmBuilder {
     );
   }
 
+  /// Returns a copy the decl for a child in this realm
+  Future<fdecl.Component> getComponentDecl(ChildRef childRef) {
+    return rootRealm.getComponentDecl(childRef);
+  }
+
+  /// Replaces the decl for a child of this realm
+  Future<void> replaceComponentDecl(
+    ChildRef childRef,
+    fdecl.Component decl,
+  ) {
+    return rootRealm.replaceComponentDecl(childRef, decl);
+  }
+
+  /// Returns a copy the decl for a child in this realm
+  Future<fdecl.Component> getRealmDecl() {
+    return rootRealm.getRealmDecl();
+  }
+
+  /// Replaces the decl for this realm
+  Future<void> replaceRealmDecl(
+    fdecl.Component decl,
+  ) {
+    return rootRealm.replaceRealmDecl(decl);
+  }
+
+  /// Replaces a value of a given configuration field
+  Future<void> replaceConfigValue(
+    ChildRef childRef,
+    String key,
+    fconfig.ValueSpec value,
+  ) {
+    return rootRealm.replaceConfigValue(childRef, key, value);
+  }
+
   /// Adds a route between components within the realm
-  Future<void> addRoute(Route route) async {
-    await rootRealm.addRoute(route);
+  Future<void> addRoute(Route route) {
+    return rootRealm.addRoute(route);
   }
 
   /// Returns the [RealmInstance] so the test can interact with its child

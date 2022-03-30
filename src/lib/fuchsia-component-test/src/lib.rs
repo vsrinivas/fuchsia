@@ -1274,7 +1274,7 @@ impl SubRealmBuilder {
         Ok(self.realm_proxy.get_realm_decl().await??.fidl_into_native())
     }
 
-    /// Replaces the decl for a child of this realm
+    /// Replaces the decl for this realm
     pub async fn replace_realm_decl(&self, decl: cm_rust::ComponentDecl) -> Result<(), Error> {
         self.realm_proxy.replace_realm_decl(decl.native_into_fidl()).await?.map_err(Into::into)
     }
