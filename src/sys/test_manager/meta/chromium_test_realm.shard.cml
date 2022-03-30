@@ -24,6 +24,8 @@
         {
             protocol: [
                 "fuchsia.media.ProfileProvider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.vulkan.loader.Loader",
 
                 // TODO: add any other required capabilities
             ],
