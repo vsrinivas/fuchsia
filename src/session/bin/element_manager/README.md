@@ -22,7 +22,7 @@ component manifest.
 
 Once available, session manifests should instead include
 `element_manager.shard.cml`. Related monorail issue:
-[fxbug.dev/68107](fxbug.dev/68107)
+[fxbug.dev/68107](https://fxbug.dev/68107).
 
 ```
 {
