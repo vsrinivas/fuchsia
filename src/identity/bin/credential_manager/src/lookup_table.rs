@@ -12,6 +12,11 @@ use {
     thiserror::Error,
 };
 
+#[cfg(test)]
+use mockall::{automock, predicate::*};
+
+/// The directory where the lookup table data is stored.
+pub const LOOKUP_TABLE_PATH: &str = "/data/creds";
 const STAGEDFILE_PREFIX: &str = "temp-";
 
 // Contents in a LookupTable are versioned.
@@ -19,9 +24,9 @@ type Version = u64;
 
 // Read results consist of the contents and the latest version.
 #[derive(Debug)]
-struct ReadResult {
-    bytes: Vec<u8>,
-    version: Version,
+pub struct ReadResult {
+    pub bytes: Vec<u8>,
+    pub version: Version,
 }
 
 #[derive(Error, Debug)]
@@ -44,8 +49,9 @@ pub enum LookupTableError {
     Unknown,
 }
 
+#[cfg_attr(test, automock)]
 #[async_trait]
-trait LookupTable {
+pub trait LookupTable {
     /// Writes |data| to a versioned entry for |label|.
     async fn write(&mut self, label: &Label, data: Vec<u8>) -> Result<(), LookupTableError>;
     /// Reads the latest versioned entry for |label| and returns the result.
@@ -55,6 +61,10 @@ trait LookupTable {
     /// Deleting a |label that has no associated values will return a NotFound
     /// error.
     async fn delete(&mut self, label: &Label) -> Result<(), LookupTableError>;
+    /// Resets the entire lookup table deleting all of the credentials. This
+    /// is used if the hash_tree enters an unrecoverable state usually
+    /// due to a power outage.
+    async fn reset(&mut self) -> Result<(), Vec<LookupTableError>>;
 }
 
 /// Implements |LookupTable| with a persistent directory backing it.
@@ -63,7 +73,7 @@ trait LookupTable {
 /// each version of the label.
 /// Upon initialization, the same directory should be provided in order to
 /// allow for persistence across initialization.
-struct PersistentLookupTable {
+pub struct PersistentLookupTable {
     dir_proxy: fio::DirectoryProxy,
 }
 
@@ -231,11 +241,38 @@ impl LookupTable for PersistentLookupTable {
             },
         )
     }
+
+    async fn reset(&mut self) -> Result<(), Vec<LookupTableError>> {
+        let dir_result = files_async::readdir(&self.dir_proxy).await;
+        let dir_entries =
+            dir_result.map_err(|err| vec![LookupTableError::ReaddirError(err.into())])?;
+        let mut failures = Vec::new();
+        for entry in dir_entries.iter() {
+            if let Err(e) = files_async::remove_dir_recursive(&self.dir_proxy, &entry.name)
+                .await
+                .map_err(|e| match e {
+                    files_async::Error::Fidl(_, fidl_err) => LookupTableError::FidlError(fidl_err),
+                    files_async::Error::Unlink(status) => LookupTableError::UnlinkError(status),
+                    _ => LookupTableError::Unknown,
+                })
+            {
+                failures.push(e);
+            }
+        }
+        if failures.is_empty() {
+            Ok(())
+        } else {
+            Err(failures)
+        }
+    }
 }
 
 #[cfg(test)]
 mod test {
-    use {super::*, crate::label_generator::TEST_LABEL, tempfile::TempDir};
+    use {
+        super::*, crate::label_generator::TEST_LABEL, assert_matches::assert_matches,
+        tempfile::TempDir,
+    };
 
     #[fuchsia::test]
     async fn test_read_before_write() {
@@ -459,5 +496,20 @@ mod test {
         plt.write(&TEST_LABEL, b"foo bar".to_vec()).await.unwrap();
         let content = plt.read(&TEST_LABEL).await.unwrap();
         assert_eq!(content.bytes, b"foo bar".to_vec());
+    }
+
+    #[fuchsia::test]
+    async fn test_reset() {
+        let tmp_dir = TempDir::new().unwrap();
+        let dir = io_util::open_directory_in_namespace(
+            tmp_dir.path().to_str().unwrap(),
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        )
+        .expect("could not open temp dir");
+        let mut plt = PersistentLookupTable::new(dir);
+        plt.write(&TEST_LABEL, b"foo bar".to_vec()).await.unwrap();
+        plt.read(&TEST_LABEL).await.unwrap();
+        plt.reset().await.unwrap();
+        assert_matches!(plt.read(&TEST_LABEL).await, Err(LookupTableError::NotFound));
     }
 }

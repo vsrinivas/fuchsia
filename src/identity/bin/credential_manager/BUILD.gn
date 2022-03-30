@@ -15,6 +15,7 @@ rustc_binary("bin") {
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.identity.credential:fuchsia.identity.credential-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.tpm.cr50:fuchsia.tpm.cr50-rustc",
     "//src/identity/lib/identity_common",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
@@ -26,11 +27,17 @@ rustc_binary("bin") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_cbor",
     "//third_party/rust_crates:sha2",
     "//third_party/rust_crates:thiserror",
   ]
 
-  test_deps = [ "//third_party/rust_crates:tempfile" ]
+  test_deps = [
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:mockall",
+    "//third_party/rust_crates:tempfile",
+  ]
 
   sources = [
     "src/credential_manager.rs",
@@ -38,6 +45,7 @@ rustc_binary("bin") {
     "src/label_generator.rs",
     "src/lookup_table.rs",
     "src/main.rs",
+    "src/pinweaver.rs",
   ]
 }
 

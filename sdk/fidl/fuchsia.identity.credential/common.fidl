@@ -40,4 +40,9 @@ type CredentialError = flexible enum : uint32 {
     // the implementation of a new feature is not complete. The request should
     // not be retried.
     UNSUPPORTED_OPERATION = 6;
+    // An invalid delay schedule was provided.
+    INVALID_DELAY_SCHEDULE = 7;
+    // An internal error occured that can't be fixed by the caller. For
+    // instance failure to communicate with the cr50.
+    INTERNAL_ERROR = 8;
 };

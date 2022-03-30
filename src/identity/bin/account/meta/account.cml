@@ -43,6 +43,11 @@
             from: "parent",
             to: "#password_authenticator",
         },
+        {
+            storage: "data",
+            from: "parent",
+            to: "#credential_manager",
+        },
     ],
     expose: [
         {

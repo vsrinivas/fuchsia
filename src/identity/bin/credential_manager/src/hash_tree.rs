@@ -1,12 +1,16 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#![allow(dead_code)]
 
 use {
     crate::label_generator::{BitstringLabelGenerator, Label},
     anyhow::{anyhow, Error},
+    log::error,
+    serde::{Deserialize, Serialize},
+    serde_cbor,
     sha2::{Digest, Sha256},
+    std::collections::VecDeque,
+    std::fs::File,
     thiserror::Error,
 };
 
@@ -22,6 +26,15 @@ type SiblingHashes = Vec<Option<Hash>>;
 /// hash is [0u8; 32].
 const DEFAULT_EMPTY_HASH: &[u8; 32] = &[0; 32];
 
+/// Default Label Length
+pub const LABEL_LENGTH: u8 = 14;
+/// Number of children per node.
+pub const CHILDREN_PER_NODE: u8 = 4;
+/// Default bits per level in the hash tree.
+pub const BITS_PER_LEVEL: u8 = 2;
+/// Default height of the hash tree.
+pub const TREE_HEIGHT: u8 = LABEL_LENGTH / BITS_PER_LEVEL;
+
 #[derive(Error, Debug)]
 pub enum HashTreeError {
     #[error("no available leaf nodes")]
@@ -30,10 +43,17 @@ pub enum HashTreeError {
     UnknownLeafLabel,
     #[error("found label but is for a non-leaf node")]
     NonLeafLabel,
+    #[allow(dead_code)]
     #[error("invalid tree")]
     InvalidTree { leaf_label: Label, tree_height: u8, children_per_node: u8 },
     #[error(transparent)]
     InvalidInput(#[from] anyhow::Error),
+    #[error("no available file")]
+    DataStoreNotFound,
+    #[error("unable to deserialize tree")]
+    DeserializationFailed,
+    #[error("unable to serialize tree")]
+    SerializationFailed,
 }
 
 /// A HashTree is a representation of a Merkle Tree where each of the leaf
@@ -42,10 +62,11 @@ pub enum HashTreeError {
 /// This allows the HashTree to have the property that the hash of the root can
 /// be used to verify the integrity of any of the inner or leaf nodes.
 #[derive(Debug)]
-struct HashTree {
+pub struct HashTree {
     height: u8,
     children_per_node: u8,
     root: Node,
+    #[allow(dead_code)]
     label_gen: BitstringLabelGenerator,
 }
 
@@ -54,20 +75,21 @@ impl HashTree {
     /// Hash Tree in which leaves will hold hash values. There will be
     /// `children_per_node^(height-1)` total leaves in which it is possible to
     /// store hashes.
-    fn new(height: u8, children_per_node: u8) -> Result<Self, HashTreeError> {
-        if height < 2 || children_per_node < 1 {
+    pub fn new(height: u8, children_per_node: u8) -> Result<Self, HashTreeError> {
+        if height < 1 || children_per_node < 1 {
             return Err(HashTreeError::InvalidInput(anyhow!(
                 "invalid height or children_per_node"
             )));
         }
         let label_gen = BitstringLabelGenerator::new(height, children_per_node)?;
-        let root = Node::new(label_gen.root(), children_per_node, height - 1, &label_gen)?;
+        let root = Node::new(label_gen.root(), children_per_node, height, &label_gen)?;
         let hash_tree = Self { height, children_per_node, root, label_gen };
         Ok(hash_tree)
     }
 
     /// Returns the root hash of the tree.
-    fn get_root_hash<'a>(&'a self) -> Result<&'a Hash, HashTreeError> {
+    #[allow(dead_code)]
+    pub fn get_root_hash<'a>(&'a self) -> Result<&'a Hash, HashTreeError> {
         Ok(&self.root.hash.as_ref().unwrap_or(DEFAULT_EMPTY_HASH))
     }
 
@@ -75,7 +97,7 @@ impl HashTree {
     /// This should be used prior to update_leaf_hash when inserting a new leaf
     /// metadata, as the label (and its auxiliary hashes) are required for CR50
     /// to calculate the updated root.
-    fn get_free_leaf_label(&self) -> Result<Label, HashTreeError> {
+    pub fn get_free_leaf_label(&self) -> Result<Label, HashTreeError> {
         match self.root.get_free_leaf_label() {
             GetFreeLeafOutcome::NoLeafNodes => Err(HashTreeError::NoLeafNodes),
             GetFreeLeafOutcome::OnLeafPath(leaf_label) => Ok(leaf_label),
@@ -91,7 +113,6 @@ impl HashTree {
     /// the calculated hash should be. This is necessary because we don't have
     /// knowledge of _where_ the leaf-path child is, and the order of children
     /// in the calculation of the parent hash is important.
-    /// TODO(arkay): Update this to output hashes as CR50 expects them.
     fn get_auxiliary_hashes(&self, label: &Label) -> Result<Vec<SiblingHashes>, HashTreeError> {
         match self.root.find_siblings(label) {
             FindSiblingsOutcome::LeafFound(aux_hashes) => Ok(aux_hashes),
@@ -100,12 +121,22 @@ impl HashTree {
         }
     }
 
+    /// Returns the sibling hashes along the path from leaf -> root.
+    /// Returns a single list of hashes which are required by the `cr50_agent`
+    /// `InsertLeaf` method.
+    pub fn get_auxiliary_hashes_flattened(
+        &self,
+        label: &Label,
+    ) -> Result<Vec<Hash>, HashTreeError> {
+        Ok(self.get_auxiliary_hashes(label)?.into_iter().flatten().filter_map(|e| e).collect())
+    }
+
     /// Returns the metadata hash associated with this label, or returns an
     /// error if a matching leaf node is not found.
     /// If the leaf_label is associated with an unused/empty leaf, the metadata
     /// hash returned with be all 0s, as per the default expectations for unused
     /// leaves.
-    fn get_leaf_hash(&self, label: &Label) -> Result<&Hash, HashTreeError> {
+    pub fn get_leaf_hash(&self, label: &Label) -> Result<&Hash, HashTreeError> {
         match self.root.read_leaf(label) {
             ReadLeafOutcome::LeafFound(hash) => Ok(hash),
             ReadLeafOutcome::NonLeafNodeFound => Err(HashTreeError::NonLeafLabel),
@@ -115,7 +146,11 @@ impl HashTree {
 
     /// Updates the metadata hash associated with this label, or returns an
     /// error if a matching leaf node is not found.
-    fn update_leaf_hash(&mut self, label: &Label, metadata: Hash) -> Result<bool, HashTreeError> {
+    pub fn update_leaf_hash(
+        &mut self,
+        label: &Label,
+        metadata: Hash,
+    ) -> Result<bool, HashTreeError> {
         match self.root.write_leaf(label, &Some(metadata)) {
             WriteLeafOutcome::LeafUpdated => Ok(true),
             WriteLeafOutcome::NonLeafNodeFound => Err(HashTreeError::NonLeafLabel),
@@ -125,7 +160,7 @@ impl HashTree {
 
     /// Deletes the metadata hash associated with this label, or returns an
     /// error if a matching leaf node is not found.
-    fn delete_leaf(&mut self, label: &Label) -> Result<(), HashTreeError> {
+    pub fn delete_leaf(&mut self, label: &Label) -> Result<(), HashTreeError> {
         match self.root.write_leaf(label, &None) {
             WriteLeafOutcome::LeafUpdated => Ok(()),
             WriteLeafOutcome::NonLeafNodeFound => Err(HashTreeError::NonLeafLabel),
@@ -134,26 +169,94 @@ impl HashTree {
     }
 
     /// Clears all leaves from a tree and reinstantiates the tree's structure.
-    fn reset(&mut self) -> Result<(), HashTreeError> {
+    #[allow(dead_code)]
+    pub fn reset(&mut self) -> Result<(), HashTreeError> {
         // Resetting a tree should be as simple as dropping the reference to
         // the root node, which will cause it and its subtree to be cleaned up.
-        self.root = Node::new(
-            self.label_gen.root(),
-            self.children_per_node,
-            self.height - 1,
-            &self.label_gen,
-        )?;
+        self.root =
+            Node::new(self.label_gen.root(), self.children_per_node, self.height, &self.label_gen)?;
         Ok(())
     }
 
     /// Verifies the tree by ensuring that all inner nodes' hashes are
     /// equivalent to the hash of their child nodes.
-    fn verify_tree(&self) -> Result<(), HashTreeError> {
+    #[allow(dead_code)]
+    pub fn verify_tree(&self) -> Result<(), HashTreeError> {
         self.root.verify().map_err(|label| HashTreeError::InvalidTree {
             leaf_label: label,
             tree_height: self.height,
             children_per_node: self.children_per_node,
         })
+    }
+
+    /// Returns a list of all populated leaf nodes in the merkle tree. This
+    /// combined with just the `height` and `children_per_node` is enough
+    /// to reconstruct the entire tree.
+    fn sparse_leaf_nodes(&self) -> Vec<(Label, Hash)> {
+        let mut dfs_stack: VecDeque<&Node> = VecDeque::new();
+        // Reversed so we preserve ordering left to right.
+        for child in self.root.children.iter().rev() {
+            dfs_stack.push_front(&child);
+        }
+        let mut sparse_leaf_nodes = Vec::new();
+        while let Some(node) = dfs_stack.pop_front() {
+            if node.is_leaf() {
+                // Only add leaf nodes if they have a hash value.
+                if let Some(hash) = node.hash {
+                    sparse_leaf_nodes.push((node.label.clone(), hash.clone()));
+                }
+            } else {
+                for child in node.children.iter().rev() {
+                    dfs_stack.push_front(&child);
+                }
+            }
+        }
+        sparse_leaf_nodes
+    }
+
+    /// Attempts to deserialize the HashTree from the supplied path.
+    /// If no file does not exist or is corrupted an error is returned.
+    pub fn load(path: &str) -> Result<HashTree, HashTreeError> {
+        let file = File::open(path).map_err(|_| HashTreeError::DataStoreNotFound)?;
+        let format: StoreHashTree =
+            serde_cbor::from_reader(file).map_err(|_| HashTreeError::SerializationFailed)?;
+        let mut hash_tree = HashTree::new(format.height, format.children_per_node)?;
+        for (label, hash) in format.sparse_leaf_nodes {
+            hash_tree.update_leaf_hash(&label, hash)?;
+        }
+        Ok(hash_tree)
+    }
+
+    /// Attempts to store the HashTree at the supplied path.
+    /// This function only fails if it fails to serialize or write the data.
+    pub fn store(&self, path: &str) -> Result<(), HashTreeError> {
+        let file = File::create(path).map_err(|_| HashTreeError::DataStoreNotFound)?;
+        let format = StoreHashTree::from(self);
+        serde_cbor::to_writer(file, &format).map_err(|_| HashTreeError::DeserializationFailed)
+    }
+}
+
+/// The total HashTree including intermediate nodes is not required to persist
+/// the state of a HashTree. From just the height, children_per_node and the
+/// set of (label,hash) pairs where the hash is not 0 is required to fully
+/// reconstruct the tree. This saves space on disk and reduces the
+/// serialization time. This is important because the longer we spend syncing
+/// the tree to disk the larger the opportunity is for the tree to become
+/// out of sync.
+#[derive(Debug, Serialize, Deserialize)]
+struct StoreHashTree {
+    pub height: u8,
+    pub children_per_node: u8,
+    pub sparse_leaf_nodes: Vec<(Label, Hash)>,
+}
+
+impl From<&HashTree> for StoreHashTree {
+    fn from(hash_tree: &HashTree) -> Self {
+        Self {
+            height: hash_tree.height,
+            children_per_node: hash_tree.children_per_node,
+            sparse_leaf_nodes: hash_tree.sparse_leaf_nodes(),
+        }
     }
 }
 
@@ -387,6 +490,7 @@ impl Node {
 
     /// Returns Ok(()) if the tree is valid, otherwise, returns Err(label)
     /// where label is the label of the first node with an mismatched hash.
+    #[allow(dead_code)]
     fn verify(&self) -> Result<(), Label> {
         // Leaf nodes store a hash supplied by the user and are always valid.
         if self.is_leaf() {
@@ -414,12 +518,10 @@ impl Node {
 mod test {
     use super::*;
     use crate::label_generator::BAD_LABEL;
+    use tempfile::TempDir;
 
     fn create_tree(height: u8, children_per_node: u8) -> (HashTree, u8) {
-        (
-            HashTree::new(height, children_per_node).unwrap(),
-            children_per_node.pow((height - 1).into()),
-        )
+        (HashTree::new(height, children_per_node).unwrap(), children_per_node.pow((height).into()))
     }
 
     #[test]
@@ -438,7 +540,7 @@ mod test {
 
     #[test]
     fn test_tree_bad_height() {
-        assert!(HashTree::new(1, 2).is_err());
+        assert!(HashTree::new(0, 2).is_err());
     }
 
     #[test]
@@ -449,7 +551,7 @@ mod test {
     #[test]
     fn test_large_tree() {
         // This tree can hold 64 leaves.
-        let (mut tree, max_leaves) = create_tree(4, 4);
+        let (mut tree, max_leaves) = create_tree(3, 4);
         assert!(tree.verify_tree().is_ok());
 
         for i in 1..=max_leaves {
@@ -463,7 +565,7 @@ mod test {
     #[test]
     fn test_tree_not_enough_leaves() {
         // This tree can hold 8 leaves.
-        let (mut tree, max_leaves) = create_tree(4, 2);
+        let (mut tree, max_leaves) = create_tree(3, 2);
         assert!(tree.verify_tree().is_ok());
         assert_eq!(max_leaves, 8);
 
@@ -691,5 +793,55 @@ mod test {
             next_hash = hasher.finalize().into();
         }
         assert_eq!(next_hash, *tree.get_root_hash().unwrap());
+    }
+
+    #[test]
+    fn test_tree_sparse_leaf_nodes() {
+        let (mut tree, _) = create_tree(3, 3);
+        let num_inserts: usize = 10;
+        let mut expected = Vec::new();
+        for i in 0..num_inserts {
+            let node_label = tree.get_free_leaf_label().unwrap();
+            println!("{}", node_label.value());
+            tree.update_leaf_hash(&node_label, [i as u8; 32]).unwrap();
+            expected.push((node_label.clone(), [i as u8; 32]));
+        }
+        assert_eq!(tree.sparse_leaf_nodes(), expected);
+    }
+
+    #[test]
+    fn test_tree_store_golden() {
+        let (mut tree, _) = create_tree(3, 3);
+        let node_label = tree.get_free_leaf_label().unwrap();
+        let hash = [1; 32];
+        tree.update_leaf_hash(&node_label, hash.clone()).unwrap();
+        let tmp_dir = TempDir::new().unwrap();
+        let path = tmp_dir.path().join("hash_tree");
+        tree.store(path.to_str().unwrap()).expect("could not store tree");
+        let serialized_output = std::fs::read(path.to_str().unwrap()).unwrap();
+        assert_eq!(
+            serialized_output,
+            [
+                163, 102, 104, 101, 105, 103, 104, 116, 3, 113, 99, 104, 105, 108, 100, 114, 101,
+                110, 95, 112, 101, 114, 95, 110, 111, 100, 101, 3, 113, 115, 112, 97, 114, 115,
+                101, 95, 108, 101, 97, 102, 95, 110, 111, 100, 101, 115, 129, 130, 162, 101, 118,
+                97, 108, 117, 101, 0, 102, 108, 101, 110, 103, 116, 104, 6, 152, 32, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+            ]
+        );
+    }
+
+    #[test]
+    fn test_tree_store_and_load() {
+        let (mut tree, _) = create_tree(3, 3);
+        assert!(tree.verify_tree().is_ok());
+        let node_label = tree.get_free_leaf_label().unwrap();
+        let hash = [1; 32];
+        tree.update_leaf_hash(&node_label, hash.clone()).unwrap();
+        let tmp_dir = TempDir::new().unwrap();
+        let path = tmp_dir.path().join("hash_tree");
+        tree.store(path.to_str().unwrap()).expect("could not store tree");
+        let loaded_tree = HashTree::load(path.to_str().unwrap()).unwrap();
+        assert_eq!(loaded_tree.get_leaf_hash(&node_label).expect("hash node"), &hash);
     }
 }

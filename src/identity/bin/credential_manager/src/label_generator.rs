@@ -3,20 +3,29 @@
 // found in the LICENSE file.
 #![allow(dead_code)]
 
-use {anyhow::anyhow, anyhow::Error};
+use anyhow::{anyhow, Error};
+use serde::{Deserialize, Serialize};
 
 /// A unique identifier for a node in a hash tree.
 /// A label is defined by its value, length, and bits_per_level.
 /// Just |value| is not sufficient, because the root's length is 0 and thus the
 /// understood value is also 0. Because children are 0-indexed, then all nodes
 /// on the left-most branch of the root will have the value 0.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct Label {
     value: u64,
     length: u8,
 }
 
 impl Label {
+    pub fn leaf_label(value: u64, length: u8) -> Self {
+        Self { value, length }
+    }
+
+    pub fn value(&self) -> u64 {
+        self.value
+    }
+
     /// Returns a String that represents this Label as a directory name.
     pub fn into_dir_name(&self) -> String {
         // TODO(arkay): Double check if a particular format is required.
@@ -26,7 +35,7 @@ impl Label {
 
 /// Generates Labels for a HashTree.
 /// Labels are bitstring representations of position of the node in the tree.
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct BitstringLabelGenerator {
     height: u8,
     children_per_node: u8,
@@ -47,7 +56,7 @@ fn bits_to_hold_children(n: u8) -> Result<u8, Error> {
 impl BitstringLabelGenerator {
     /// Construct a new BitstringLabelGenerator.
     pub fn new(height: u8, children_per_node: u8) -> Result<Self, Error> {
-        if height < 2 || children_per_node < 2 {
+        if height < 1 || children_per_node < 2 {
             return Err(anyhow!(
                 "invalid height {} or children_per_node {}",
                 height,
@@ -65,7 +74,7 @@ impl BitstringLabelGenerator {
         // This is necessary because the HashTree implementation in chromium does
         // not actually hold the leaf nodes, whereas HashTree does, and thus
         // the heights of the tree might be interpreted differently.
-        let leaf_length = (height - 1) * bits_per_level;
+        let leaf_length = height * bits_per_level;
 
         Ok(Self { leaf_length, bits_per_level, children_per_node, height })
     }
@@ -110,7 +119,7 @@ mod test {
 
     #[test]
     fn test_bad_inputs() {
-        assert!(BitstringLabelGenerator::new(1, 4).is_err());
+        assert!(BitstringLabelGenerator::new(0, 4).is_err());
         assert!(BitstringLabelGenerator::new(4, 0).is_err());
     }
 
@@ -118,7 +127,7 @@ mod test {
     fn test_bitstring_label_generator_binary_tree() -> Result<(), Error> {
         let label_gen = BitstringLabelGenerator::new(4, 2)?;
         assert_eq!(label_gen.bits_per_level, 1);
-        assert_eq!(label_gen.leaf_length, 3);
+        assert_eq!(label_gen.leaf_length, 4);
         let root = label_gen.root();
         // Root node
         assert_label_value_and_length!(root, 0, 0);
@@ -160,7 +169,7 @@ mod test {
     fn test_bitstring_label_generator_3_ary_tree() -> Result<(), Error> {
         let label_gen = BitstringLabelGenerator::new(3, 3)?;
         assert_eq!(label_gen.bits_per_level, 2);
-        assert_eq!(label_gen.leaf_length, 4);
+        assert_eq!(label_gen.leaf_length, 6);
         let root = label_gen.root();
         // Root node
         assert_label_value_and_length!(root, 0, 0);
@@ -197,7 +206,7 @@ mod test {
     fn test_bitstring_label_generator_4_ary_tree() -> Result<(), Error> {
         let label_gen = BitstringLabelGenerator::new(3, 4)?;
         assert_eq!(label_gen.bits_per_level, 2);
-        assert_eq!(label_gen.leaf_length, 4);
+        assert_eq!(label_gen.leaf_length, 6);
         let root = label_gen.root();
         // Root node
         assert_label_value_and_length!(root, 0, 0);
@@ -257,7 +266,7 @@ mod test {
 
     #[test]
     fn test_child_of_leaf_label() -> Result<(), Error> {
-        let label_gen = BitstringLabelGenerator::new(2, 2)?;
+        let label_gen = BitstringLabelGenerator::new(1, 2)?;
         let root = label_gen.root();
         assert_label_value_and_length!(root, 0, 0);
         let child_0 = label_gen.child_label(&root, 0)?;
