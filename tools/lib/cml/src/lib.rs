@@ -826,14 +826,14 @@ impl Right {
 /// Where string values are expected, a list of valid values is generally documented.
 /// The following string value types are reused and must follow specific rules.
 ///
-/// # String types
+/// ## String types
 ///
-/// ## Names {#names}
+/// ### Names {#names}
 ///
 /// Both capabilities and a component's children are named. A name string must consist of one or
 /// more of the following characters: `a-z`, `0-9`, `_`, `.`, `-`.
 ///
-/// ## References {#references}
+/// ### References {#references}
 ///
 /// A reference string takes the form of `#<name>`, where `<name>` refers to the name of a child:
 ///
