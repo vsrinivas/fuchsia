@@ -10,8 +10,8 @@ toc:
   path: /docs/development/hardware/architecture_support.md
 - title: "Install Fuchsia on a device"
   path: /docs/development/hardware/paving.md
-- title: "Install Fuchsia on Pixelbook"
-  path: /docs/development/hardware/pixelbook.md
+- title: "Install Fuchsia on a Chromebook"
+  path: /docs/development/hardware/chromebook.md
 - title: "Install Fuchsia on Intel NUC"
   path: /docs/development/hardware/intel_nuc.md
 - title: "Configure remote management for Intel NUC"

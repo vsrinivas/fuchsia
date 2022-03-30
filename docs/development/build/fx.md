@@ -316,7 +316,7 @@ To enter Zedboot on an x64 target, first produce a Zedboot USB key using
 system, execute `fx list-usb-disks`). Remove the USB key after completion,
 insert it to the target device, and reboot the target device, selecting "Boot
 from USB" from the boot options, or in the device BIOS. There are additional
-instructions for preparing a [Pixelbook](/docs/development/hardware/pixelbook.md).
+instructions for preparing a [Chromebook](/docs/development/hardware/chromebook.md).
 
 ### What is Paving? {#what-is-paving}
 

@@ -1,16 +1,40 @@
-# Install Fuchsia on Pixelbook
+# Install Fuchsia on a Chromebook
+
+## Supported Chromebooks
+
+These Chromebooks are used regularly by developers and should be stable.
+
+* Google Pixelbook Go (_atlas_)
+
+### Formerly supported Chromebooks
+
+These Chromebooks are supported on a best-effort basis, and are not regularly tested.
+
+* Google Pixelbook (_eve_)
+
+### Other ChromeOS devices
+
+Other x86-based ChromeOS devices may or may not work. ARM-based ChromeOS devices will not work out of the box.
 
 ## Prerequisites
-Ensure that you have a chromebook build for Fuchsia. Note that Chromebook is now a
-distinct board configuration from other x64 devices. See [Paving](/docs/development/hardware/paving.md#building) for
-more information.
+Ensure that you have a `chromebook-x64` build for Fuchsia.
+
+1.  Complete the [Download the Fuchsia source code][get-fuchsia-source]
+    guide.
+2.  As part of [Configure and Build Fuchsia][build-fuchsia], set your build
+    configuration to use the following Chromebook product:
+
+    ```posix-terminal
+    fx set workstation.chromebook-x64 --release
+    ```
+
 
 ## Update ChromeOS
 
-If your Pixelbook has never been booted, it is best to boot it normally to check
+If your Chromebook has never been booted, it is best to boot it normally to check
 for any critical updates, as follows:
 
-1. Boot the Pixelbook normally. Opening the lid usually powers on the device.
+1. Boot the Chromebook normally. Opening the lid usually powers on the device.
 If this doesn't work, the power button is on the left side of the device, near
 the front of the wrist rest.
 2. Tap the "Let's go" button.
@@ -20,12 +44,12 @@ the front of the wrist rest.
 6. After rebooting from any updates, tap 'Browse as Guest' in the lower left
 corner.
 7. From the browser UI, go into "Settings->About Chrome OS" or "Help->About Chrome
-OS" and confirm the version is &gt;=62.
+OS" and confirm the newly installed version.
 
 ## Put your device into developer mode
-***WARNING: This will erase any state stored locally on your Pixelbook***
+***WARNING: This will erase any state stored locally on your Chromebook***
 
-1. Power off the Pixelbook.
+1. Power off the Chromebook.
 2. Go into Recovery Mode.
 Hold down Esc+Refresh (first and third buttons on the top row of the keyboard).
 Then press the Power button (bottom left side of the device).
@@ -45,23 +69,26 @@ complete. You can now jump to Step #2 in the "Boot from USB" section.
 30 seconds later the boot will continue. Wait for the Welcome or Login screen
 to load. **Ignore** any link for "Enable debugging features".
 3. Press Ctrl+Alt+Refresh/F3 to enter a command shell. If pressing this key
-combination has no effect, try rebooting the Pixelbook once more.
+combination has no effect, try rebooting the Chromebook once more.
 4. Enter 'chronos' as the user with a blank password
 5. Enable USB booting by running `sudo crossystem dev_boot_usb=1`
-6. (optional) Default to USB booting by running `sudo crossystem dev_default_boot=usb`.
-7. Plug the USB drive into the Pixelbook.
+6. _(optional)_ Default to USB booting by running `sudo crossystem dev_default_boot=usb`.
+7. Plug the USB drive into the Chromebook.
 8. Reboot by typing `sudo reboot`
 9. On the "OS verification is OFF" screen press Ctrl+U to bypass the timeout and
 boot from USB immediately. (See [Tips and Tricks](#tips-and-tricks) for other
 short circuit options)
 
 The USB drive is only needed for booting when you want to re-pave or otherwise
-netboot the device. If you didn't make USB booting the default (Step #6), you
-will need to press Ctrl+U at the grey 'warning OS-not verified' screen to boot
-from USB when you power on your device. If the device tries to boot from USB,
-either because that is the default or you pressed Ctrl+U, and the device fails
-to boot from USB you'll hear a fairly loud &lt;BEEP&gt;. Note that ChromeOS
-bootloader USB enumeration during boot has been observed to be slow. If you're
+netboot the device.
+
+If you didn't make USB booting the default (Step #6), you will need to press Ctrl+U
+at the grey 'warning OS-not verified' screen to boot from USB when you power on your device.
+
+If the device tries to boot from USB, either because that is the default or you
+pressed Ctrl+U, and the device fails to boot from USB you'll hear a fairly loud &lt;BEEP&gt;.
+
+Note that ChromeOS bootloader USB enumeration during boot has been observed to be slow. If you're
 having trouble booting from USB, it may be helpful to remove other USB devices
 until the device is through the bootloader and also avoid using a USB hub.
 
@@ -72,6 +99,12 @@ buttons. To shortcut this you can press Ctrl+D or Ctrl+U when on the grey screen
 that warns that the OS will not be verified. Ctrl+D will cause the device to
 skip the timeout and boot from its default source. Ctrl+U will skip the timeout
 and boot the device from USB.
+
+## Configuring boot source from Fuchsia
+
+Fuchsia has an equivalent to `crossystem` called `cros_nvtool`.
+You can run `cros_nvtool set dev_boot_default <usb|disk>` to modify the default boot source of
+the system to USB or disk, respectively.
 
 ### Going back to ChromeOS
 
@@ -151,7 +184,11 @@ kernel partitions is an extension of that device.
 7. When the ChromeOS bootloader appears, press Space to re-enable
 OS Verification. Your device will reboot. This time, it will display
 a message with "Your system is repairing itself. Please wait". This operation
-will take around 5 minutes, after which the PixelBook will reboot one final
+will take around 5 minutes, after which the Chromebook will reboot one final
 time. The device will reboot to the initial setup screen.
 
 To go back to the Fuchsia kernel, just re-pave the device.
+
+[get-fuchsia-source]: /docs/get-started/get_fuchsia_source.md
+[build-fuchsia]: /docs/get-started/build_fuchsia.md
+
