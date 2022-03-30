@@ -941,14 +941,12 @@ static const struct iwl_pci_device_id iwl_devices[] = {
 
 zx_status_t iwl_pci_find_device_id(uint16_t device_id, uint16_t subsystem_device_id,
                                    const struct iwl_pci_device_id** out_device) {
-  const struct iwl_pci_device_id* device = iwl_devices;
   for (size_t i = 0; i != ARRAY_SIZE(iwl_devices); ++i) {
     if (iwl_devices[i].device_id == device_id &&
         iwl_devices[i].subsystem_device_id == subsystem_device_id) {
       *out_device = &iwl_devices[i];
       return ZX_OK;
     }
-    device++;
   }
   return ZX_ERR_NOT_FOUND;
 }
