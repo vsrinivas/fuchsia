@@ -31,7 +31,11 @@
         {{#if (eq runtime.console "monitor")}}
             "-monitor",
             "stdio",
+            "-serial",
+            "none",
         {{else}}
+            "-monitor",
+            "none",
             {{#if (eq runtime.console "none")}}
                 "-serial",
                 "none",
@@ -110,6 +114,11 @@
                 "virtio-net-pci,vectors=8,netdev=net0,mac={{runtime.mac_address}}",
             {{/if}}
         {{/if}}
+        {{#if runtime.headless}}
+            "-nographic",
+        {{/if}}
+        "-parallel",
+        "none",
         {{! TODO(fxbug.dev/90005): These last few items were hard-coded into
             device_launcher, but need to be reevaluated as part of the template
             here. }}
