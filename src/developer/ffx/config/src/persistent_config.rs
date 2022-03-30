@@ -5,7 +5,7 @@
 use {
     crate::priority_config::Priority,
     crate::{ConfigLevel, ConfigQuery},
-    anyhow::{bail, Result},
+    anyhow::{bail, Context as _, Result},
     serde_json::Value,
     std::{
         fmt,
@@ -32,18 +32,16 @@ impl Persistent {
     }
 
     fn save_config<W: Write>(file: Option<W>, value: &Option<Value>) -> Result<()> {
-        if value.is_none() {
-            // No reason to throw an error.
-            return Ok(());
-        }
-        if file.is_none() {
-            // If no option is supplied, just move on to the next - assume user doesn't want to
-            // save this level.
-            return Ok(());
-        }
-        match serde_json::to_writer_pretty(file.unwrap(), value.as_ref().unwrap()) {
-            Err(e) => bail!("could not write config file: {}", e),
-            Ok(_) => Ok(()),
+        match (value.as_ref(), file) {
+            (Some(v), Some(mut f)) => {
+                serde_json::to_writer_pretty(&mut f, v).context("writing config file")?;
+                f.flush().map_err(Into::into)
+            }
+            (_, _) => {
+                // If either value or file are None, then return Ok(()). File being none will
+                // presume the user doesn't want to save at this level.
+                Ok(())
+            }
         }
     }
 
