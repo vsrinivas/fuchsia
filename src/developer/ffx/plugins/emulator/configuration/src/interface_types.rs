@@ -191,6 +191,10 @@ pub struct RuntimeConfig {
     /// instance on the host.
     pub name: String,
 
+    /// Whether or not the emulator should reuse a previous instance's image files.
+    #[serde(default)]
+    pub reuse: bool,
+
     /// Maximum amount of time to wait on the emulator health check to succeed before returning
     /// control to the user.
     pub startup_timeout: Duration,

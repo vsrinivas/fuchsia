@@ -114,6 +114,13 @@ pub struct StartCommand {
     #[argh(positional)]
     pub product_bundle: Option<String>,
 
+    /// reuse a persistent emulator's state when starting up. If an emulator with the same name as
+    /// this instance has been previously started and then stopped without cleanup, this instance
+    /// will reuse the images from the previous instance. If no previous instance is found, or if
+    /// the old instance is still running, the new emulator will not attempt to start.
+    #[argh(switch)]
+    pub reuse: bool,
+
     /// the maximum time (in seconds) to wait on an emulator to boot before returning control
     /// to the user. A value of 0 will skip the check entirely. Default is 60 seconds. This
     /// can be overridden with `ffx config set emu.start.timeout <seconds>`.

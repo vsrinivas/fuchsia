@@ -40,6 +40,7 @@ impl EmulatorEngine for QemuEngine {
                 &self.emulator_configuration.runtime.name,
                 &self.emulator_configuration.guest,
                 &self.emulator_configuration.device,
+                self.emulator_configuration.runtime.reuse,
                 &self.ffx_config,
             )
             .await

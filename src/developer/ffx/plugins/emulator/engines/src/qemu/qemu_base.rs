@@ -63,6 +63,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         instance_name: &str,
         guest_config: &GuestConfig,
         device_config: &DeviceConfig,
+        reuse: bool,
         config: &FfxConfigWrapper,
     ) -> Result<GuestConfig> {
         let mut updated_guest = guest_config.clone();
@@ -77,7 +78,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
             .file_name()
             .ok_or(anyhow!("cannot read kernel file name '{:?}'", guest_config.kernel_image));
         let kernel_path = instance_root.join(kernel_name?);
-        if kernel_path.exists() {
+        if kernel_path.exists() && reuse {
             log::debug!("Using existing file for {:?}", kernel_path.file_name().unwrap());
         } else {
             fs::copy(&guest_config.kernel_image, &kernel_path).expect("cannot stage kernel file");
@@ -86,7 +87,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         let zbi_path = instance_root
             .join(guest_config.zbi_image.file_name().ok_or(anyhow!("cannot read zbi file name"))?);
 
-        if zbi_path.exists() {
+        if zbi_path.exists() && reuse {
             log::debug!("Using existing file for {:?}", zbi_path.file_name().unwrap());
         } else {
             // Add the authorized public keys to the zbi image to enable SSH access to
@@ -100,7 +101,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
             Some(src_fvm) => {
                 let fvm_path = instance_root
                     .join(src_fvm.file_name().ok_or(anyhow!("cannot read fvm file name"))?);
-                if fvm_path.exists() {
+                if fvm_path.exists() && reuse {
                     log::debug!("Using existing file for {:?}", fvm_path.file_name().unwrap());
                 } else {
                     fs::copy(src_fvm, &fvm_path).expect("cannot stage fvm file");
@@ -386,11 +387,13 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
 
 #[cfg(test)]
 mod tests {
+    use std::io::Read;
+
     use super::*;
     use async_trait::async_trait;
     use ffx_emulator_config::EngineType;
     use serde::Serialize;
-    use tempfile::tempdir;
+    use tempfile::{tempdir, TempDir};
 
     #[derive(Serialize)]
     struct TestEngine {}
@@ -432,27 +435,42 @@ mod tests {
     }
     impl SerializingEngine for TestEngine {}
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_staging() {
-        let temp = tempdir().expect("cannot get tempdir");
+    const ORIGINAL: &str = "THIS_STRING";
+    const UPDATED: &str = "THAT_VALUE*";
+
+    fn setup(
+        config: &mut FfxConfigWrapper,
+        guest: &mut GuestConfig,
+        temp: &TempDir,
+    ) -> Result<PathBuf> {
         let root = temp.path();
 
-        let engine = TestEngine {};
-
-        let instance_name = "test-instance";
-        let mut guest = GuestConfig::default();
-        let device = DeviceConfig::default();
-        let mut config = FfxConfigWrapper::new();
-
         let kernel_path = root.join("kernel");
-        let _kernel_file = fs::File::create(&kernel_path).expect("cannot create test kernel file.");
         let zbi_path = root.join("zbi");
-        let _zbi_file = fs::File::create(&zbi_path).expect("cannot create test zbi file.");
         let fvm_path = root.join("fvm");
-        let _fvm_file = fs::File::create(&fvm_path).expect("cannot create test fvm file.");
+
+        let _ = fs::File::options()
+            .write(true)
+            .create(true)
+            .open(&kernel_path)
+            .context("cannot create test kernel file")?;
+        let _ = fs::File::options()
+            .write(true)
+            .create(true)
+            .open(&zbi_path)
+            .context("cannot create test zbi file")?;
+        let _ = fs::File::options()
+            .write(true)
+            .create(true)
+            .open(&fvm_path)
+            .context("cannot create test fvm file")?;
+
         let auth_keys_path = root.join("authorized_keys");
-        let _auth_keys_file =
-            fs::File::create(&auth_keys_path).expect("cannot create test auth keys file.");
+        let _ = fs::File::options()
+            .write(true)
+            .create(true)
+            .open(&auth_keys_path)
+            .context("cannot create test auth keys file.")?;
 
         config.overrides.insert(config::FVM_HOST_TOOL, "echo".to_string());
         config.overrides.insert(config::ZBI_HOST_TOOL, "echo".to_string());
@@ -463,11 +481,43 @@ mod tests {
         guest.zbi_image = zbi_path;
         guest.fvm_image = Some(fvm_path);
 
-        let updated = engine.stage_image_files(instance_name, &guest, &device, &config).await;
+        Ok(PathBuf::from(root))
+    }
+
+    fn write_to(path: &PathBuf, value: &str) -> Result<()> {
+        println!("Writing {} to {}", value, path.display());
+        let mut file = File::options()
+            .write(true)
+            .open(path)
+            .context(format!("cannot open existing file for write: {}", path.display()))?;
+        File::write(&mut file, value.as_bytes())
+            .context(format!("cannot write buffer to file: {}", path.display()))?;
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_staging_no_reuse() -> Result<()> {
+        let temp = tempdir().context("cannot get tempdir")?;
+        let mut config = FfxConfigWrapper::new();
+        let instance_name = "test-instance";
+        let mut guest = GuestConfig::default();
+        let device = DeviceConfig::default();
+        let engine = TestEngine {};
+
+        let root = setup(&mut config, &mut guest, &temp)?;
+
+        write_to(&guest.kernel_image, &ORIGINAL)
+            .context("cannot write original value to kernel file")?;
+        write_to(&guest.fvm_image.as_ref().unwrap(), &ORIGINAL)
+            .context("cannot write original value to fvm file")?;
+
+        let updated =
+            engine.stage_image_files(instance_name, &guest, &device, false, &config).await;
 
         assert!(updated.is_ok(), "expected OK got {:?}", updated.unwrap_err());
 
-        let actual = updated.expect("cannot get update guest config");
+        let actual = updated.context("cannot get updated guest config")?;
         let expected = GuestConfig {
             kernel_image: root.join(instance_name).join("kernel"),
             zbi_image: root.join(instance_name).join("zbi"),
@@ -475,5 +525,115 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(actual, expected);
+
+        // Test no reuse when old files exist. The original files should be overwritten.
+        write_to(&guest.kernel_image, &UPDATED)
+            .context("cannot write updated value to kernel file")?;
+        write_to(&guest.fvm_image.as_ref().unwrap(), &UPDATED)
+            .context("cannot write updated value to fvm file")?;
+
+        let updated =
+            engine.stage_image_files(instance_name, &guest, &device, false, &config).await;
+
+        assert!(updated.is_ok(), "expected OK got {:?}", updated.unwrap_err());
+
+        let actual = updated.context("cannot get updated guest config, reuse")?;
+        let expected = GuestConfig {
+            kernel_image: root.join(instance_name).join("kernel"),
+            zbi_image: root.join(instance_name).join("zbi"),
+            fvm_image: Some(root.join(instance_name).join("fvm")),
+            ..Default::default()
+        };
+        assert_eq!(actual, expected);
+
+        println!("Reading contents from {}", actual.kernel_image.display());
+        println!("Reading contents from {}", actual.fvm_image.as_ref().unwrap().display());
+        let mut kernel = File::open(&actual.kernel_image)
+            .context("cannot open overwritten kernel file for read")?;
+        let mut fvm = File::open(&actual.fvm_image.unwrap())
+            .context("cannot open overwritten fvm file for read")?;
+
+        let mut kernel_contents = String::new();
+        let mut fvm_contents = String::new();
+
+        kernel
+            .read_to_string(&mut kernel_contents)
+            .context("cannot read contents of reused kernel file")?;
+        fvm.read_to_string(&mut fvm_contents).context("cannot read contents of reused fvm file")?;
+
+        assert_eq!(kernel_contents, UPDATED);
+        assert_eq!(fvm_contents, UPDATED);
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_staging_with_reuse() -> Result<()> {
+        let temp = tempdir().context("cannot get tempdir")?;
+        let mut config = FfxConfigWrapper::new();
+        let instance_name = "test-instance";
+        let mut guest = GuestConfig::default();
+        let device = DeviceConfig::default();
+        let engine = TestEngine {};
+
+        let root = setup(&mut config, &mut guest, &temp)?;
+
+        // This checks if --reuse is true, but the directory isn't there to reuse; should succeed.
+        write_to(&guest.kernel_image, &ORIGINAL)
+            .context("cannot write original value to kernel file")?;
+        write_to(&guest.fvm_image.as_ref().unwrap(), &ORIGINAL)
+            .context("cannot write original value to fvm file")?;
+
+        let updated = engine.stage_image_files(instance_name, &guest, &device, true, &config).await;
+
+        assert!(updated.is_ok(), "expected OK got {:?}", updated.unwrap_err());
+
+        let actual = updated.context("cannot get updated guest config")?;
+        let expected = GuestConfig {
+            kernel_image: root.join(instance_name).join("kernel"),
+            zbi_image: root.join(instance_name).join("zbi"),
+            fvm_image: Some(root.join(instance_name).join("fvm")),
+            ..Default::default()
+        };
+        assert_eq!(actual, expected);
+
+        // Test reuse. Note that the ZBI file isn't actually copied in the test, since we replace
+        // the ZBI tool with an "echo" command.
+        write_to(&guest.kernel_image, &UPDATED)
+            .context("cannot write updated value to kernel file")?;
+        write_to(&guest.fvm_image.as_ref().unwrap(), &UPDATED)
+            .context("cannot write updated value to fvm file")?;
+
+        let updated = engine.stage_image_files(instance_name, &guest, &device, true, &config).await;
+
+        assert!(updated.is_ok(), "expected OK got {:?}", updated.unwrap_err());
+
+        let actual = updated.context("cannot get updated guest config, reuse")?;
+        let expected = GuestConfig {
+            kernel_image: root.join(instance_name).join("kernel"),
+            zbi_image: root.join(instance_name).join("zbi"),
+            fvm_image: Some(root.join(instance_name).join("fvm")),
+            ..Default::default()
+        };
+        assert_eq!(actual, expected);
+
+        println!("Reading contents from {}", actual.kernel_image.display());
+        let mut kernel =
+            File::open(&actual.kernel_image).context("cannot open reused kernel file for read")?;
+        let mut fvm = File::open(&actual.fvm_image.unwrap())
+            .context("cannot open reused fvm file for read")?;
+
+        let mut kernel_contents = String::new();
+        let mut fvm_contents = String::new();
+
+        kernel
+            .read_to_string(&mut kernel_contents)
+            .context("cannot read contents of reused kernel file")?;
+        fvm.read_to_string(&mut fvm_contents).context("cannot read contents of reused fvm file")?;
+
+        assert_eq!(kernel_contents, ORIGINAL);
+        assert_eq!(fvm_contents, ORIGINAL);
+
+        Ok(())
     }
 }

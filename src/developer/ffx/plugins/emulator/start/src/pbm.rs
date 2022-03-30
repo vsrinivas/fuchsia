@@ -116,6 +116,7 @@ async fn apply_command_line_options(
     emu_config.runtime.startup_timeout = Duration::from_secs(cmd.startup_timeout().await?);
     emu_config.runtime.hidpi_scaling = cmd.hidpi_scaling;
     emu_config.runtime.name = cmd.name.clone();
+    emu_config.runtime.reuse = cmd.reuse;
 
     // Collapsing multiple binary options into related fields.
     if cmd.console {
