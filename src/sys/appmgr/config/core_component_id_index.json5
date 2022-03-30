@@ -16,6 +16,26 @@
             moniker: "/core/account/password_authenticator",
         },
         {
+            instance_id: "ee4b67bc694a8b1f502d0d73377c4e0b7a7a102470fc6abb7b1bb25a38bcda01",
+            appmgr_moniker: {
+                url: "fuchsia-pkg://fuchsia.com/linux_runner#meta/linux_runner.cmx",
+                realm_path: [
+                    "app",
+                    "sys",
+                ],
+            },
+        },
+        {
+            instance_id: "325b7490f2c61039b4e3e0c7a413c0197e18b1e6f83d1ba69b47790f18223432",
+            appmgr_moniker: {
+                url: "fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core.cmx",
+                realm_path: [
+                    "app",
+                    "sys",
+                ],
+            },
+        },
+        {
             instance_id: "e5ef2bbe9dd2b7cee87beac5e06cece13fe6f9c154b1f00abec155e6c6c9fa62",
             appmgr_moniker: {
                 url: "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx",
