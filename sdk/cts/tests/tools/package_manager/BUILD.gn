@@ -24,7 +24,7 @@ cts_dart_test("package_manager_test") {
   ]
 
   non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
-  args = [ "--data-dir=" + rebase_path(_shared_out_dir) ]
+  args = [ "--data-dir=" + rebase_path(_shared_out_dir, root_build_dir) ]
 
   # Runs on "main" builders (try and ci) in QEMU environments, but only on x64,
   # as we don't currently support Dart on arm64 hosts.
