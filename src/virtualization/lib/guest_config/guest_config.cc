@@ -30,7 +30,7 @@ using fuchsia::virtualization::GuestConfig;
 // on the devices we test against.
 constexpr uint64_t kDefaultMemory = 1ul << 30;
 #else
-constexpr uint64_t kDefaultMemory = 3584ul << 20;
+constexpr uint64_t kDefaultMemory = 1ul << 32;
 #endif
 
 // This is a locally administered MAC address (first byte 0x02) mixed with the

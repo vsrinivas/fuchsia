@@ -17,11 +17,11 @@ use {
     std::io::{self, Write},
 };
 
+#[cfg(target_arch = "x86_64")]
+const DEFAULT_GUEST_MEM_SIZE: u64 = 1 << 32;
+
 // Reduce the default maximum memory usage on ARM64, due to the lack of memory
 // on the devices we test against.
-#[cfg(target_arch = "x86_64")]
-const DEFAULT_GUEST_MEM_SIZE: u64 = 3584 << 20;
-
 #[cfg(target_arch = "aarch64")]
 const DEFAULT_GUEST_MEM_SIZE: u64 = 1 << 30;
 
