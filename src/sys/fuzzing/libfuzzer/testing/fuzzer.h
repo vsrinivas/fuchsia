@@ -31,40 +31,17 @@ class TestFuzzer {
   TestFuzzer();
   ~TestFuzzer() = default;
 
-  using MallocHook = void (*)(const volatile void*, size_t);
-  void set_malloc_hook(MallocHook malloc_hook) { malloc_hook_ = malloc_hook; }
-
-  using DeathCallback = void (*)();
-  void set_death_callback(DeathCallback death_callback) { death_callback_ = death_callback; }
-
-  // Implementation of |LLVMFuzzerInitialize|.
-  int Initialize(int* argc, char*** argv);
-
   // Implementation of |LLVMFuzzerTestOneInput|.
   int TestOneInput(const uint8_t* data, size_t size);
 
-  // Implementation of |__lsan_do_recoverable_leak_check|.
-  int DoRecoverableLeakCheck();
-
-  // Implementation of |__sanitizer_acquire_crash_state|.
-  int AcquireCrashState();
-
  private:
   // Triggers various error conditions.
-  void BadMalloc();
   void Crash();
-  void Death();
   void OOM();
   void Timeout();
 
   fidl::test::AsyncLoopForTest loop_;
   ExecutorPtr executor_;
-  FakeModule module_;
-  MallocHook malloc_hook_ = nullptr;
-  DeathCallback death_callback_ = nullptr;
-  bool has_leak_ = false;
-  std::atomic<bool> crash_state_acquired_ = false;
-
   AsyncEventPair eventpair_;
   SharedMemory test_input_buffer_;
   SharedMemory feedback_buffer_;

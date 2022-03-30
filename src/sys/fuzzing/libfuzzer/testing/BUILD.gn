@@ -53,9 +53,11 @@ executable("fuzzer") {
   deps = [
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/sys/fuzzing/common/testing:sanitizer",
     "//zircon/system/ulib/zx",
   ]
   configs += [ ":libfuzzer" ]
+  exclude_toolchain_tags = [ "instrumented" ]
 }
 
 executable("relay") {

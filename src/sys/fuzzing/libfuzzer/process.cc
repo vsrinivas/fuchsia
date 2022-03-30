@@ -154,8 +154,7 @@ ZxPromise<std::string> Process::ReadLine(int fd) {
   ZxBridge<> bridge;
   auto& stream = streams_[fd];
   return AwaitPrevious(fd, std::move(bridge.consumer))
-      .and_then([&stream, ready = ZxFuture<>(),
-                 verbose = verbose_](Context& context) mutable -> ZxResult<std::string> {
+      .and_then([&stream, ready = ZxFuture<>()](Context& context) mutable -> ZxResult<std::string> {
         auto fd = stream.fd;
         auto* buf = stream.buf.get();
         if (fd < 0 || !buf) {
@@ -224,9 +223,6 @@ ZxPromise<std::string> Process::ReadLine(int fd) {
             // File descriptor is closed; just return whatever's left.
             std::string line(stream.start, stream.end - stream.start);
             stream.start = stream.end;
-            if (verbose) {
-              std::cerr << line << std::endl;
-            }
             return fpromise::ok(std::move(line));
           }
           if (bytes_read == 0) {
@@ -237,8 +233,17 @@ ZxPromise<std::string> Process::ReadLine(int fd) {
           ready = nullptr;
         }
       })
-      .inspect([completer = std::move(bridge.completer)](
-                   const ZxResult<std::string>& result) mutable { completer.complete_ok(); })
+      .inspect([completer = std::move(bridge.completer),
+                verbose = verbose_](const ZxResult<std::string>& result) mutable {
+        if (result.is_error()) {
+          completer.complete_error(result.error());
+          return;
+        }
+        if (verbose) {
+          std::cerr << result.value() << std::endl;
+        }
+        completer.complete_ok();
+      })
       .wrap_with(scope_);
 }
 

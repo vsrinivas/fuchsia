@@ -32,3 +32,19 @@ source_set("testing") {
     "//zircon/system/ulib/sync",
   ]
 }
+
+# Test executables which use this source_set (in place of a real sanitizer runtime) must include
+# `exclude_toolchain_tags = [ "instrumented" ]`.
+source_set("sanitizer") {
+  testonly = true
+  sources = [
+    "sanitizer.cc",
+    "sanitizer.h",
+  ]
+  deps = [
+    ":testing",
+    "..:common",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl",
+  ]
+}
