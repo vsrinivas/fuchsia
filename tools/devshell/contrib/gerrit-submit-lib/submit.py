@@ -228,7 +228,7 @@ def submit_changes(
     server: GerritServer,
     changes: List[Change],
     num_retries: int = 0
-) -> None:
+) -> bool:
   # Strip out merged changes.
   changes = [cl for cl in changes if cl.status != ChangeStatus.MERGED]
 
@@ -274,7 +274,7 @@ def submit_changes(
           print(ansi.yellow("  CL failed in CQ. Retrying..."))
         else:
           print(ansi.red("  CL failed in CQ. Aborting."))
-          return
+          return False
         num_attempts += 1
         server.set_cq_state(cl.change_id, 2)
 
@@ -284,6 +284,8 @@ def submit_changes(
 
     # Did we fail?
     print(ansi.green("  Submitted!"))
+
+  return True
 
 
 def parse_args() -> Any:
@@ -418,13 +420,22 @@ def main() -> int:
   # Ensure we can submit the chain.
   ensure_changes_submittable(changes, abort_on_unresolved_comments=not args.ignore_comments)
 
-  # Submit the changes.
-  if not args.dry_run:
-    if args.batch or should_continue():
-      submit_changes(util.Clock(), server, changes, num_retries=args.num_retries)
-      print()
-      print('All changes submitted.')
+  # Stop here on dry-run.
+  if args.dry_run:
+    return 0
 
+  # Ask user to confirm.
+  if not args.batch and not should_continue():
+    return 0
+
+  # Submit the changes.
+  success = submit_changes(util.Clock(), server, changes, num_retries=args.num_retries)
+  if not success:
+    return 1
+
+  # Success
+  print()
+  print('All changes submitted.')
   return 0
 
 

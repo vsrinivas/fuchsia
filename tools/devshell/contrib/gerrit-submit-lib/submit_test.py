@@ -78,7 +78,8 @@ class TestSubmit(unittest.TestCase):
 
     def test_submit_cls_empty(self) -> None:
         server = mock.Mock(spec=submit.GerritServer)
-        submit.submit_changes(util.FakeClock(), server, [])
+        success = submit.submit_changes(util.FakeClock(), server, [])
+        assert success
 
     def test_submit_cls_single(self) -> None:
         server = mock.Mock(spec=submit.GerritServer)
@@ -95,10 +96,11 @@ class TestSubmit(unittest.TestCase):
             # Submitted.
             submit.Change('42', {'status': 'MERGED'}),
         ]
-        submit.submit_changes(
+        success = submit.submit_changes(
             util.FakeClock(),
             server, [submit.Change('42', {'submittable': True})],
             num_retries=2)
+        assert success
 
         # Should have added to CQ twice.
         server.set_cq_state.assert_called_with('42', 2)
@@ -116,10 +118,11 @@ class TestSubmit(unittest.TestCase):
             # And again. We should give up.
             submit.Change('42', {}),
         ]
-        submit.submit_changes(
+        success = submit.submit_changes(
             util.FakeClock(),
             server, [submit.Change('42', {'submittable': True})],
             num_retries=2)
+        assert not success
 
         # Should have added to CQ twice.
         server.set_cq_state.assert_called_with('42', 2)
