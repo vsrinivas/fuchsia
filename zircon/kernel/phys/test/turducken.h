@@ -93,11 +93,14 @@ class TurduckenTestBase {
   // Boot the ZBI set up by Load() and possibly modified thereafter.
   [[noreturn]] void Boot();
 
+  void set_kernel_load_address(uint64_t load_address) { kernel_load_address_ = load_address; }
+
  private:
   arch::EarlyTicks entry_ticks_;
   Zbi boot_zbi_;
   Allocation loaded_;
   uint32_t embedded_type_;
+  ktl::optional<uint64_t> kernel_load_address_;
 };
 
 // The TestMain in the library calls TurduckenTest::Main.

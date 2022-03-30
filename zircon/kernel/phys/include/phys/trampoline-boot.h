@@ -7,38 +7,49 @@
 #ifndef ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_TRAMPOLINE_BOOT_H_
 #define ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_TRAMPOLINE_BOOT_H_
 
+#include <zircon/assert.h>
+
 #include <ktl/optional.h>
 #include <phys/boot-zbi.h>
 
 class TrampolineBoot : public BootZbi {
  public:
-  // This is the physical address that the legacy ZBI kernel must be loaded at.
-  static constexpr uint64_t kFixedLoadAddress = 1 << 20;
+  // Legacy x86 ZBI provide absolute offset, while newer ones use a relative offset.
+  static constexpr uint64_t kLegacyLoadAddress = 1 << 20;
 
-  using BootZbi::BootZbi;
+  using BootZbi::Error;
 
-  // In the legacy fixed-address format, the entry address is always above 1M.
-  // In the new format, it's an offset and in practice it's never > 1M.  So
-  // this is a safe-enough heuristic to distinguish the new from the old.
-  bool Relocating() const { return KernelHeader()->entry > kFixedLoadAddress; }
+  // Inits a default constructed object. Just like |BootZbi::*| but performs additional
+  // initialization depending on the zbi format. (Fixed or position independent entry address).
+  fitx::result<Error> Init(InputZbi zbi);
+  fitx::result<Error> Init(InputZbi zbi, InputZbi::iterator kernel_item);
 
-  uint64_t KernelEntryAddress() const {
-    return Relocating() ? KernelHeader()->entry : BootZbi::KernelEntryAddress();
-  }
+  uint64_t KernelEntryAddress() const { return kernel_entry_address_; }
 
   bool MustRelocateDataZbi() const {
-    return Relocating() && FixedKernelOverlapsData(kFixedLoadAddress);
+    return kernel_load_address_ && FixedKernelOverlapsData(kernel_load_address_.value());
   }
 
-  fitx::result<Error> Load(uint32_t extra_data_capacity = 0);
+  fitx::result<Error> Load(uint32_t extra_data_capacity = 0,
+                           ktl::optional<uint64_t> kernel_load_address = ktl::nullopt);
 
   [[noreturn]] void Boot(ktl::optional<void*> argument = {});
 
  private:
   class Trampoline;
 
+  void set_kernel_load_address(uint64_t load_address) {
+    kernel_load_address_ = load_address;
+    kernel_entry_address_ = load_address + KernelHeader()->entry;
+  }
+
   void LogFixedAddresses() const;
 
+  // Must be called after BootZbi::Init and before Load.
+  void SetKernelAddresses();
+
+  ktl::optional<uint64_t> kernel_load_address_;
+  uint64_t kernel_entry_address_ = 0;
   Trampoline* trampoline_ = nullptr;
 };
 

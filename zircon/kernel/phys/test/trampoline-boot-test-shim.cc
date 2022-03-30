@@ -78,8 +78,8 @@ int TurduckenTest::Main(Zbi::iterator kernel_item) {
     }
   }
 
-  // TODO(fxbug.dev/88583): Temporary until trampoline boot is parametrized.
-  load_address = TrampolineBoot::kFixedLoadAddress;
+  // Temporary until trampoline boot is parametrized.
+  load_address = 2 * TrampolineBoot::kLegacyLoadAddress;
   // Accommodate for snprintf writing a null terminator, instead of truncating the string.
   // Hex string: 16
   // 0x prefix: 2
@@ -88,6 +88,7 @@ int TurduckenTest::Main(Zbi::iterator kernel_item) {
   uint32_t cmdline_item_length =
       ZBI_ALIGN(static_cast<uint32_t>(sizeof(zbi_header_t)) + load_address_str_length);
 
+  set_kernel_load_address(load_address);
   Load(kernel_item, kernel_item, boot_zbi().end(), cmdline_item_length);
 
   // Append the new option.
