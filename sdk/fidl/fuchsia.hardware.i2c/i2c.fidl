@@ -73,4 +73,15 @@ protocol Device2 {
     }) -> (struct {
         read_segments_data vector<vector<uint8>:MAX_TRANSFER_SIZE>:MAX_COUNT_SEGMENTS;
     }) error zx.status;
+
+    /// Temporary method to enable soft transition to uint32 for read_segments_length.
+    // TODO(fxbug.dev/96293): Finish soft transition and remove this.
+    @transitional
+    Transfer2(struct {
+        segments_is_write vector<bool>:MAX_COUNT_SEGMENTS;
+        write_segments_data vector<vector<uint8>:MAX_TRANSFER_SIZE>:MAX_COUNT_SEGMENTS;
+        read_segments_length vector<uint32>:MAX_COUNT_SEGMENTS;
+    }) -> (struct {
+        read_segments_data vector<vector<uint8>:MAX_TRANSFER_SIZE>:MAX_COUNT_SEGMENTS;
+    }) error zx.status;
 };
