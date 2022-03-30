@@ -122,7 +122,11 @@ class BootZbi {
 
   uint64_t DataLoadAddress() const { return reinterpret_cast<uint64_t>(data_.storage().data()); }
 
-  uint64_t DataLoadSize() { return static_cast<uint64_t>(data_.size_bytes()); }
+  uint64_t DataLoadSize() const {
+    // Load size does not necessarily match the underlying storage size, hence a copy of the view is
+    // required in order to get around non-constness of |Zbi::size_bytes|.
+    return static_cast<uint64_t>((Zbi(data_).size_bytes()));
+  }
 
  protected:
   void LogAddresses();
