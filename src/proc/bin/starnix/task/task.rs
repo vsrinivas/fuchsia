@@ -894,7 +894,7 @@ mod test {
     use crate::testing::*;
 
     #[::fuchsia::test]
-    async fn test_tid_allocation() {
+    fn test_tid_allocation() {
         let (kernel, current_task) = create_kernel_and_task();
 
         assert_eq!(current_task.get_tid(), 1);

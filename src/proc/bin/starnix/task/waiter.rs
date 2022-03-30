@@ -386,16 +386,15 @@ mod tests {
     use crate::fs::FdEvents;
     use crate::fs::{new_eventfd, EventFdType};
     use crate::mm::PAGE_SIZE;
+    use crate::testing::*;
     use crate::types::UserBuffer;
     use std::sync::atomic::AtomicU64;
-
-    use crate::testing::*;
 
     static INIT_VAL: u64 = 0;
     static FINAL_VAL: u64 = 42;
 
     #[::fuchsia::test]
-    async fn test_async_wait_exec() {
+    fn test_async_wait_exec() {
         static COUNTER: AtomicU64 = AtomicU64::new(INIT_VAL);
         static WRITE_COUNT: AtomicU64 = AtomicU64::new(0);
 

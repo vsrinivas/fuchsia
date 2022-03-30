@@ -312,7 +312,7 @@ mod tests {
     use crate::testing::*;
 
     #[::fuchsia::test]
-    async fn test_epoll_read_ready() {
+    fn test_epoll_read_ready() {
         static WRITE_COUNT: AtomicU64 = AtomicU64::new(0);
         const EVENT_DATA: u64 = 42;
 

@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{anyhow, Error};
-use fidl::endpoints::Proxy;
+use anyhow::{anyhow, Context, Error};
 use fidl_fuchsia_io as fio;
-use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
 use serde::Deserialize;
 use std::ffi::CString;
 use std::sync::Arc;
@@ -116,13 +115,10 @@ pub fn create_galaxy(
     let galaxy_args: Arguments =
         serde_json::from_str(&std::fs::read_to_string(CONFIGURATION_FILE_PATH)?)?;
 
-    let chan: fasync::Channel = io_util::open_directory_in_namespace(
-        COMPONENT_PKG_PATH,
-        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_EXECUTABLE,
-    )?
-    .into_channel()
-    .map_err(|_| anyhow!("Failed to open pkg"))?;
-    let pkg_dir_proxy = fio::DirectorySynchronousProxy::new(chan.into_zx_channel());
+    let (server, client) = zx::Channel::create().context("failed to create channel pair")?;
+    fdio::open(COMPONENT_PKG_PATH, fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, server)
+        .context("failed to open /pkg")?;
+    let pkg_dir_proxy = fio::DirectorySynchronousProxy::new(client);
     let mut kernel = Kernel::new(&galaxy_args.name)?;
     kernel.cmdline = galaxy_args.kernel_cmdline.as_bytes().to_vec();
     *kernel.outgoing_dir.lock() = outgoing_dir.take().map(|server_end| server_end.into_channel());

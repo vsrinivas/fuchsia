@@ -1469,7 +1469,7 @@ mod tests {
     use itertools::assert_equal;
 
     #[::fuchsia::test]
-    async fn test_brk() {
+    fn test_brk() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
 
@@ -1527,7 +1527,7 @@ mod tests {
     }
 
     #[::fuchsia::test]
-    async fn test_mm_exec() {
+    fn test_mm_exec() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
 
@@ -1559,7 +1559,7 @@ mod tests {
     }
 
     #[::fuchsia::test]
-    async fn test_get_contiguous_mappings_at() {
+    fn test_get_contiguous_mappings_at() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
 
@@ -1653,7 +1653,7 @@ mod tests {
     }
 
     #[::fuchsia::test]
-    async fn test_read_each() {
+    fn test_read_each() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
 
@@ -1697,7 +1697,7 @@ mod tests {
     }
 
     #[::fuchsia::test]
-    async fn test_read_all() {
+    fn test_read_all() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
 
@@ -1727,7 +1727,7 @@ mod tests {
     }
 
     #[::fuchsia::test]
-    async fn test_write_each() {
+    fn test_write_each() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
 
@@ -1769,7 +1769,7 @@ mod tests {
     }
 
     #[::fuchsia::test]
-    async fn test_write_all() {
+    fn test_write_all() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
 
@@ -1802,7 +1802,7 @@ mod tests {
     }
 
     #[::fuchsia::test]
-    async fn test_read_write_crossing_mappings() {
+    fn test_read_write_crossing_mappings() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
 
@@ -1825,7 +1825,7 @@ mod tests {
     }
 
     #[::fuchsia::test]
-    async fn test_read_write_errors() {
+    fn test_read_write_errors() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
 
@@ -1852,7 +1852,7 @@ mod tests {
     }
 
     #[::fuchsia::test]
-    async fn test_read_c_string() {
+    fn test_read_c_string() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
 
@@ -1892,7 +1892,7 @@ mod tests {
     /// Maps two pages, then unmaps the first page.
     /// The second page should be re-mapped with a new child COW VMO.
     #[::fuchsia::test]
-    async fn test_unmap_beginning() {
+    fn test_unmap_beginning() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
 
@@ -1931,7 +1931,7 @@ mod tests {
     /// Maps two pages, then unmaps the second page.
     /// The first page's VMO should be shrunk.
     #[::fuchsia::test]
-    async fn test_unmap_end() {
+    fn test_unmap_end() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
 
@@ -1971,7 +1971,7 @@ mod tests {
     /// The last page should be re-mapped with a new COW child VMO.
     /// The first page's VMO should be shrunk,
     #[::fuchsia::test]
-    async fn test_unmap_middle() {
+    fn test_unmap_middle() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
 

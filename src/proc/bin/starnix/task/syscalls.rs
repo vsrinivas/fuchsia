@@ -495,7 +495,7 @@ mod tests {
     use std::u64;
 
     #[::fuchsia::test]
-    async fn test_prctl_set_vma_anon_name() {
+    fn test_prctl_set_vma_anon_name() {
         let (_kernel, current_task) = create_kernel_and_task();
 
         let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
@@ -525,7 +525,7 @@ mod tests {
     }
 
     #[::fuchsia::test]
-    async fn test_prctl_get_set_dumpable() {
+    fn test_prctl_get_set_dumpable() {
         let (_kernel, current_task) = create_kernel_and_task();
 
         assert_eq!(
@@ -548,7 +548,7 @@ mod tests {
     }
 
     #[::fuchsia::test]
-    async fn test_sys_getsid() {
+    fn test_sys_getsid() {
         let (kernel, current_task) = create_kernel_and_task();
 
         assert_eq!(

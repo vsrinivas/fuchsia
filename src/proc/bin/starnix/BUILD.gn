@@ -27,7 +27,6 @@ if (target_cpu == "x64") {
 
     source_root = "main.rs"
     deps = [
-      "//garnet/lib/rust/io_util",
       "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
       "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
       "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
@@ -85,7 +84,6 @@ if (target_cpu == "x64") {
     ]
 
     test_deps = [
-      "//garnet/lib/rust/io_util",
       "//third_party/rust_crates:assert_matches",
       "//third_party/rust_crates:itertools",
     ]

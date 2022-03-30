@@ -1624,7 +1624,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn copy_transaction_data_between_processes() {
+    fn copy_transaction_data_between_processes() {
         let (_kernel, task1) = create_kernel_and_task();
         let driver = BinderDriver::new();
 

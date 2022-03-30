@@ -115,7 +115,7 @@ mod test {
     }
 
     #[::fuchsia::test]
-    async fn test_write_read() {
+    fn test_write_read() {
         let (_kernel, current_task) = create_kernel_and_task();
 
         let test_mem_size = 0x10000;
@@ -161,7 +161,7 @@ mod test {
     }
 
     #[::fuchsia::test]
-    async fn test_read_past_eof() {
+    fn test_read_past_eof() {
         let (_kernel, current_task) = create_kernel_and_task();
 
         // Open an empty file
@@ -196,7 +196,7 @@ mod test {
     }
 
     #[::fuchsia::test]
-    async fn test_permissions() {
+    fn test_permissions() {
         let (_kernel, current_task) = create_kernel_and_task();
 
         let path = b"test.bin";
@@ -225,7 +225,7 @@ mod test {
     }
 
     #[::fuchsia::test]
-    async fn test_persistence() {
+    fn test_persistence() {
         let fs = TmpFs::new();
         {
             let root = fs.root();

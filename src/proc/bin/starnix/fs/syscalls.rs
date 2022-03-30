@@ -1245,7 +1245,7 @@ mod tests {
     use std::sync::Arc;
 
     #[::fuchsia::test]
-    async fn test_sys_lseek() -> Result<(), Errno> {
+    fn test_sys_lseek() -> Result<(), Errno> {
         let (_kernel, current_task) = create_kernel_and_task_with_pkgfs();
         let fd = FdNumber::from_raw(10);
         let file_handle = current_task.open_file(b"data/testfile.txt", OpenFlags::RDONLY)?;
@@ -1272,7 +1272,7 @@ mod tests {
     }
 
     #[::fuchsia::test]
-    async fn test_sys_dup() -> Result<(), Errno> {
+    fn test_sys_dup() -> Result<(), Errno> {
         let (_kernel, current_task) = create_kernel_and_task_with_pkgfs();
         let file_handle = current_task.open_file(b"data/testfile.txt", OpenFlags::RDONLY)?;
         let files = &current_task.files;
@@ -1288,7 +1288,7 @@ mod tests {
     }
 
     #[::fuchsia::test]
-    async fn test_sys_dup3() -> Result<(), Errno> {
+    fn test_sys_dup3() -> Result<(), Errno> {
         let (_kernel, current_task) = create_kernel_and_task_with_pkgfs();
         let file_handle = current_task.open_file(b"data/testfile.txt", OpenFlags::RDONLY)?;
         let files = &current_task.files;
@@ -1319,7 +1319,7 @@ mod tests {
     }
 
     #[::fuchsia::test]
-    async fn test_sys_open_cloexec() -> Result<(), Errno> {
+    fn test_sys_open_cloexec() -> Result<(), Errno> {
         let (_kernel, current_task) = create_kernel_and_task_with_pkgfs();
         let path_addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
         let path = b"data/testfile.txt\0";
@@ -1336,7 +1336,7 @@ mod tests {
     }
 
     #[::fuchsia::test]
-    async fn test_sys_epoll() -> Result<(), Errno> {
+    fn test_sys_epoll() -> Result<(), Errno> {
         let (_kernel, current_task) = create_kernel_and_task_with_pkgfs();
 
         let epoll_fd = sys_epoll_create1(&current_task, 0).expect("sys_epoll_create1 failed");
@@ -1346,7 +1346,7 @@ mod tests {
     }
 
     #[::fuchsia::test]
-    async fn test_fstat_tmp_file() {
+    fn test_fstat_tmp_file() {
         let (_kernel, current_task) = create_kernel_and_task_with_pkgfs();
 
         // Create the file that will be used to stat.

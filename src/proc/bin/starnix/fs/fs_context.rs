@@ -111,7 +111,7 @@ mod test {
     use crate::testing::*;
 
     #[::fuchsia::test]
-    async fn test_umask() {
+    fn test_umask() {
         let fs = FsContext::new(TmpFs::new());
 
         assert_eq!(FileMode::from_bits(0o22), fs.set_umask(FileMode::from_bits(0o3020)));
@@ -121,7 +121,7 @@ mod test {
     }
 
     #[::fuchsia::test]
-    async fn test_chdir() {
+    fn test_chdir() {
         let (_kernel, current_task) = create_kernel_and_task_with_pkgfs();
 
         assert_eq!(b"/".to_vec(), current_task.fs.cwd().path());
