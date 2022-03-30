@@ -6,6 +6,9 @@
                     "third_party\/icu\/.*"
                 ],
                 "patterns": [
+                    "ctsai.lic",
+                    "mit5.lic",
+                    "nara.lic",
                     "unicode.lic"
                 ],
                 "notes": []

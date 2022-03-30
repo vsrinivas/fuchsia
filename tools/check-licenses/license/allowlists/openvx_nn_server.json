@@ -6,6 +6,7 @@
                     "prebuilt\/openvx_nn_server\/.*"
                 ],
                 "patterns": [
+                    "vivante.lic",
                     "google_authored.lic"
                 ],
                 "notes": []

@@ -3,11 +3,13 @@
         "allowlists": [
             {
                 "paths": [
-                    "prebuilt\/third_party\/goma\/.*"
+                    "prebuilt\/third_party\/rust\/.*"
                 ],
                 "patterns": [
                     "cryptsoft.lic",
-                    "llvm_project3.lic"
+                    "rust_project.lic",
+                    "gnu4.lic",
+                    "lgpl_full.lic"
                 ],
                 "notes": []
             }

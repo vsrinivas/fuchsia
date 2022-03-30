@@ -3,11 +3,10 @@
         "allowlists": [
             {
                 "paths": [
-                    "prebuilt\/third_party\/goma\/.*"
+                    "prebuilt\/third_party\/android\/.*"
                 ],
                 "patterns": [
-                    "cryptsoft.lic",
-                    "llvm_project3.lic"
+                    "cryptsoft.lic"
                 ],
                 "notes": []
             }

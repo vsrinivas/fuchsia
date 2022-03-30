@@ -3,11 +3,11 @@
         "allowlists": [
             {
                 "paths": [
-                    "prebuilt\/third_party\/goma\/.*"
+                    "third_party\/scudo\/.*"
                 ],
                 "patterns": [
-                    "cryptsoft.lic",
-                    "llvm_project3.lic"
+                    "llvm_project3.lic",
+                    "apache_llvm_full.lic"
                 ],
                 "notes": []
             }

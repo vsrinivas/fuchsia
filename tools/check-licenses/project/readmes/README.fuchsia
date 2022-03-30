@@ -5,3 +5,4 @@ License:
 License File: LICENSE
 Description:
 Local Modifications:
+check-licenses: file format: copyright_header

@@ -3,11 +3,10 @@
         "allowlists": [
             {
                 "paths": [
-                    "prebuilt\/third_party\/goma\/.*"
+                    "third_party\/glslang\/.*"
                 ],
                 "patterns": [
-                    "cryptsoft.lic",
-                    "llvm_project3.lic"
+                    "gpl3.lic"
                 ],
                 "notes": []
             }
