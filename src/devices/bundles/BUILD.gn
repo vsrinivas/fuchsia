@@ -173,3 +173,10 @@ group("debugging") {
     "//src/devices/nand/drivers/broker:nand-broker",
   ]
 }
+
+# This is a group of tools that drivers and driver authors use.
+# It is included in //bundles:tools.
+group("tools") {
+  testonly = true
+  deps = [ "//sdk/lib/driver_test_realm:package" ]
+}
