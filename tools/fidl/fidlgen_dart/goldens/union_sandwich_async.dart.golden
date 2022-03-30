@@ -39,79 +39,6 @@ import 'package:zircon/zircon.dart' as $zircon;
 // ignore_for_file: avoid_unused_constructor_parameters
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
-enum UnionSize8Alignment4Tag {
-  variant, // 0x1
-}
-
-const Map<int, UnionSize8Alignment4Tag> _UnionSize8Alignment4Tag_map = {
-  1: UnionSize8Alignment4Tag.variant,
-};
-
-class UnionSize8Alignment4 extends $fidl.Union {
-  const UnionSize8Alignment4.withVariant(int value)
-      : _ordinal = 1,
-        _data = value;
-
-  UnionSize8Alignment4._(int ordinal, Object data)
-      : _ordinal = ordinal,
-        _data = data;
-
-  final int _ordinal;
-  final _data;
-
-  UnionSize8Alignment4Tag get $tag => _UnionSize8Alignment4Tag_map[_ordinal]!;
-
-  int? get variant {
-    if (_ordinal != 1) {
-      return null;
-    }
-    return _data;
-  }
-
-  $fidl.UnknownRawData? get $unknownData {
-    switch (_ordinal) {
-      case 1:
-        return null;
-      default:
-        return _data;
-    }
-  }
-
-  @override
-  int get $ordinal => _ordinal;
-
-  @override
-  Object get $data => _data;
-
-  static UnionSize8Alignment4 _ctor(int ordinal, Object data) {
-    return UnionSize8Alignment4._(ordinal, data);
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.UnionType<UnionSize8Alignment4> kUnionSize8Alignment4_Type =
-    $fidl.UnionType<UnionSize8Alignment4>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.Uint32Type(),
-  },
-  ctor: UnionSize8Alignment4._ctor,
-  flexible: false,
-  resource: false,
-);
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<UnionSize8Alignment4>
-    kUnionSize8Alignment4_OptType =
-    $fidl.NullableUnionType<UnionSize8Alignment4>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.Uint32Type(),
-  },
-  ctor: UnionSize8Alignment4._ctor,
-  flexible: false,
-  resource: false,
-);
-
 enum UnionSize12Alignment4Tag {
   variant, // 0x1
 }
@@ -335,90 +262,78 @@ const $fidl.NullableUnionType<UnionSize36Alignment4>
   resource: false,
 );
 
-class SandwichUnionSize8Alignment4 extends $fidl.Struct {
-  const SandwichUnionSize8Alignment4({
-    required this.before,
-    required this.union,
-    required this.after,
-  });
-  SandwichUnionSize8Alignment4.clone(
-    SandwichUnionSize8Alignment4 $orig, {
-    int? before,
-    UnionSize8Alignment4? union,
-    int? after,
-  }) : this(
-          before: before ?? $orig.before,
-          union: union ?? $orig.union,
-          after: after ?? $orig.after,
-        );
+enum UnionSize8Alignment4Tag {
+  variant, // 0x1
+}
 
-  final int before;
-  final UnionSize8Alignment4 union;
-  final int after;
+const Map<int, UnionSize8Alignment4Tag> _UnionSize8Alignment4Tag_map = {
+  1: UnionSize8Alignment4Tag.variant,
+};
 
-  @override
-  List<Object?> get $fields {
-    return <Object?>[
-      before,
-      union,
-      after,
-    ];
+class UnionSize8Alignment4 extends $fidl.Union {
+  const UnionSize8Alignment4.withVariant(int value)
+      : _ordinal = 1,
+        _data = value;
+
+  UnionSize8Alignment4._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  UnionSize8Alignment4Tag get $tag => _UnionSize8Alignment4Tag_map[_ordinal]!;
+
+  int? get variant {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
   }
 
-  static const $fieldType0 = $fidl.Uint32Type();
-  static const $fieldType1 = kUnionSize8Alignment4_Type;
-  static const $fieldType2 = $fidl.Uint32Type();
-
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, before, $offset + 0, $depth);
-        $fieldType1.encode($encoder, union, $offset + 8, $depth);
-        $fieldType2.encode($encoder, after, $offset + 32, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, before, $offset + 0, $depth);
-        $fieldType1.encode($encoder, union, $offset + 8, $depth);
-        $fieldType2.encode($encoder, after, $offset + 24, $depth);
-        break;
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+        return null;
       default:
-        throw $fidl.FidlError('unknown wire format');
+        return _data;
     }
   }
 
-  static SandwichUnionSize8Alignment4 _structDecode(
-      $fidl.Decoder $decoder, int $offset, int $depth) {
-    switch ($decoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 4, 4);
-        $decoder.checkPadding($offset + 36, 4);
-        return SandwichUnionSize8Alignment4(
-            before: $fieldType0.decode($decoder, $offset + 0, $depth),
-            union: $fieldType1.decode($decoder, $offset + 8, $depth),
-            after: $fieldType2.decode($decoder, $offset + 32, $depth));
-      case $fidl.WireFormat.v2:
-        $decoder.checkPadding($offset + 4, 4);
+  @override
+  int get $ordinal => _ordinal;
 
-        $decoder.checkPadding($offset + 28, 4);
-        return SandwichUnionSize8Alignment4(
-            before: $fieldType0.decode($decoder, $offset + 0, $depth),
-            union: $fieldType1.decode($decoder, $offset + 8, $depth),
-            after: $fieldType2.decode($decoder, $offset + 24, $depth));
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+  @override
+  Object get $data => _data;
+
+  static UnionSize8Alignment4 _ctor(int ordinal, Object data) {
+    return UnionSize8Alignment4._(ordinal, data);
   }
 }
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.StructType<SandwichUnionSize8Alignment4>
-    kSandwichUnionSize8Alignment4_Type =
-    $fidl.StructType<SandwichUnionSize8Alignment4>(
-        inlineSizeV1: 40,
-        inlineSizeV2: 32,
-        structDecode: SandwichUnionSize8Alignment4._structDecode);
+const $fidl.UnionType<UnionSize8Alignment4> kUnionSize8Alignment4_Type =
+    $fidl.UnionType<UnionSize8Alignment4>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Uint32Type(),
+  },
+  ctor: UnionSize8Alignment4._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<UnionSize8Alignment4>
+    kUnionSize8Alignment4_OptType =
+    $fidl.NullableUnionType<UnionSize8Alignment4>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Uint32Type(),
+  },
+  ctor: UnionSize8Alignment4._ctor,
+  flexible: false,
+  resource: false,
+);
 
 class SandwichUnionSize12Alignment4 extends $fidl.Struct {
   const SandwichUnionSize12Alignment4({
@@ -504,75 +419,6 @@ const $fidl.StructType<SandwichUnionSize12Alignment4>
         inlineSizeV1: 40,
         inlineSizeV2: 32,
         structDecode: SandwichUnionSize12Alignment4._structDecode);
-
-class StructSize16Alignment8 extends $fidl.Struct {
-  const StructSize16Alignment8({
-    required this.f1,
-    required this.f2,
-  });
-  StructSize16Alignment8.clone(
-    StructSize16Alignment8 $orig, {
-    int? f1,
-    int? f2,
-  }) : this(
-          f1: f1 ?? $orig.f1,
-          f2: f2 ?? $orig.f2,
-        );
-
-  final int f1;
-  final int f2;
-
-  @override
-  List<Object?> get $fields {
-    return <Object?>[
-      f1,
-      f2,
-    ];
-  }
-
-  static const $fieldType0 = $fidl.Uint64Type();
-  static const $fieldType1 = $fidl.Uint64Type();
-
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, f1, $offset + 0, $depth);
-        $fieldType1.encode($encoder, f2, $offset + 8, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, f1, $offset + 0, $depth);
-        $fieldType1.encode($encoder, f2, $offset + 8, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-
-  static StructSize16Alignment8 _structDecode(
-      $fidl.Decoder $decoder, int $offset, int $depth) {
-    switch ($decoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        return StructSize16Alignment8(
-            f1: $fieldType0.decode($decoder, $offset + 0, $depth),
-            f2: $fieldType1.decode($decoder, $offset + 8, $depth));
-      case $fidl.WireFormat.v2:
-        return StructSize16Alignment8(
-            f1: $fieldType0.decode($decoder, $offset + 0, $depth),
-            f2: $fieldType1.decode($decoder, $offset + 8, $depth));
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.StructType<StructSize16Alignment8> kStructSize16Alignment8_Type =
-    $fidl.StructType<StructSize16Alignment8>(
-        inlineSizeV1: 16,
-        inlineSizeV2: 16,
-        structDecode: StructSize16Alignment8._structDecode);
 
 class SandwichUnionSize24Alignment8 extends $fidl.Struct {
   const SandwichUnionSize24Alignment8({
@@ -743,3 +589,157 @@ const $fidl.StructType<SandwichUnionSize36Alignment4>
         inlineSizeV1: 40,
         inlineSizeV2: 32,
         structDecode: SandwichUnionSize36Alignment4._structDecode);
+
+class SandwichUnionSize8Alignment4 extends $fidl.Struct {
+  const SandwichUnionSize8Alignment4({
+    required this.before,
+    required this.union,
+    required this.after,
+  });
+  SandwichUnionSize8Alignment4.clone(
+    SandwichUnionSize8Alignment4 $orig, {
+    int? before,
+    UnionSize8Alignment4? union,
+    int? after,
+  }) : this(
+          before: before ?? $orig.before,
+          union: union ?? $orig.union,
+          after: after ?? $orig.after,
+        );
+
+  final int before;
+  final UnionSize8Alignment4 union;
+  final int after;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      before,
+      union,
+      after,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint32Type();
+  static const $fieldType1 = kUnionSize8Alignment4_Type;
+  static const $fieldType2 = $fidl.Uint32Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, before, $offset + 0, $depth);
+        $fieldType1.encode($encoder, union, $offset + 8, $depth);
+        $fieldType2.encode($encoder, after, $offset + 32, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, before, $offset + 0, $depth);
+        $fieldType1.encode($encoder, union, $offset + 8, $depth);
+        $fieldType2.encode($encoder, after, $offset + 24, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  static SandwichUnionSize8Alignment4 _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 4, 4);
+        $decoder.checkPadding($offset + 36, 4);
+        return SandwichUnionSize8Alignment4(
+            before: $fieldType0.decode($decoder, $offset + 0, $depth),
+            union: $fieldType1.decode($decoder, $offset + 8, $depth),
+            after: $fieldType2.decode($decoder, $offset + 32, $depth));
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 4, 4);
+
+        $decoder.checkPadding($offset + 28, 4);
+        return SandwichUnionSize8Alignment4(
+            before: $fieldType0.decode($decoder, $offset + 0, $depth),
+            union: $fieldType1.decode($decoder, $offset + 8, $depth),
+            after: $fieldType2.decode($decoder, $offset + 24, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<SandwichUnionSize8Alignment4>
+    kSandwichUnionSize8Alignment4_Type =
+    $fidl.StructType<SandwichUnionSize8Alignment4>(
+        inlineSizeV1: 40,
+        inlineSizeV2: 32,
+        structDecode: SandwichUnionSize8Alignment4._structDecode);
+
+class StructSize16Alignment8 extends $fidl.Struct {
+  const StructSize16Alignment8({
+    required this.f1,
+    required this.f2,
+  });
+  StructSize16Alignment8.clone(
+    StructSize16Alignment8 $orig, {
+    int? f1,
+    int? f2,
+  }) : this(
+          f1: f1 ?? $orig.f1,
+          f2: f2 ?? $orig.f2,
+        );
+
+  final int f1;
+  final int f2;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      f1,
+      f2,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint64Type();
+  static const $fieldType1 = $fidl.Uint64Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, f1, $offset + 0, $depth);
+        $fieldType1.encode($encoder, f2, $offset + 8, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, f1, $offset + 0, $depth);
+        $fieldType1.encode($encoder, f2, $offset + 8, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  static StructSize16Alignment8 _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return StructSize16Alignment8(
+            f1: $fieldType0.decode($decoder, $offset + 0, $depth),
+            f2: $fieldType1.decode($decoder, $offset + 8, $depth));
+      case $fidl.WireFormat.v2:
+        return StructSize16Alignment8(
+            f1: $fieldType0.decode($decoder, $offset + 0, $depth),
+            f2: $fieldType1.decode($decoder, $offset + 8, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<StructSize16Alignment8> kStructSize16Alignment8_Type =
+    $fidl.StructType<StructSize16Alignment8>(
+        inlineSizeV1: 16,
+        inlineSizeV2: 16,
+        structDecode: StructSize16Alignment8._structDecode);

@@ -27,43 +27,47 @@ use {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(C)]
-pub struct Int8Int32 {
-    pub a: i8,
-    pub b: i32,
+pub struct ArrayInt16Int8 {
+    pub arr: [Int16Int8; 3],
 }
 
-impl fidl::encoding::Persistable for Int8Int32 {}
+impl fidl::encoding::Persistable for ArrayInt16Int8 {}
 
 fidl_struct_copy! {
-  name: Int8Int32,
+  name: ArrayInt16Int8,
   members: [
-    a {
-      ty: i8,
+    arr {
+      ty: [Int16Int8; 3],
       offset_v1: 0,
       offset_v2: 0,
-    },
-    b {
-      ty: i32,
-      offset_v1: 4,
-      offset_v2: 4,
     },
   ],
   padding_v1: [
   {
       ty: u64,
       offset: 0,
-      mask: 0x00000000ffffff00u64,
+      mask: 0xff000000ff000000u64,
+  },
+  {
+      ty: u32,
+      offset: 8,
+      mask: 0xff000000u32,
   },],
   padding_v2: [
   {
       ty: u64,
       offset: 0,
-      mask: 0x00000000ffffff00u64,
+      mask: 0xff000000ff000000u64,
+  },
+  {
+      ty: u32,
+      offset: 8,
+      mask: 0xff000000u32,
   },],
-  size_v1: 8,
-  size_v2: 8,
-  align_v1: 4,
-  align_v2: 4,
+  size_v1: 12,
+  size_v2: 12,
+  align_v1: 2,
+  align_v2: 2,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -109,47 +113,85 @@ fidl_struct_copy! {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(C)]
-pub struct ArrayInt16Int8 {
-    pub arr: [Int16Int8; 3],
+pub struct Int8Int32 {
+    pub a: i8,
+    pub b: i32,
 }
 
-impl fidl::encoding::Persistable for ArrayInt16Int8 {}
+impl fidl::encoding::Persistable for Int8Int32 {}
 
 fidl_struct_copy! {
-  name: ArrayInt16Int8,
+  name: Int8Int32,
   members: [
-    arr {
-      ty: [Int16Int8; 3],
+    a {
+      ty: i8,
       offset_v1: 0,
       offset_v2: 0,
+    },
+    b {
+      ty: i32,
+      offset_v1: 4,
+      offset_v2: 4,
     },
   ],
   padding_v1: [
   {
       ty: u64,
       offset: 0,
-      mask: 0xff000000ff000000u64,
-  },
-  {
-      ty: u32,
-      offset: 8,
-      mask: 0xff000000u32,
+      mask: 0x00000000ffffff00u64,
   },],
   padding_v2: [
   {
       ty: u64,
       offset: 0,
-      mask: 0xff000000ff000000u64,
-  },
-  {
-      ty: u32,
-      offset: 8,
-      mask: 0xff000000u32,
+      mask: 0x00000000ffffff00u64,
   },],
-  size_v1: 12,
-  size_v2: 12,
-  align_v1: 2,
-  align_v2: 2,
+  size_v1: 8,
+  size_v2: 8,
+  align_v1: 4,
+  align_v2: 4,
+}
+
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct NonInlineStructTestStruct {
+    pub element: Option<Box<Int16Int8>>,
+    pub h: fidl::Handle,
+}
+
+fidl_struct! {
+  name: NonInlineStructTestStruct,
+  members: [
+    element {
+      ty: Option<Box<Int16Int8>>,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+    h {
+      ty: fidl::Handle,
+      offset_v1: 8,
+      offset_v2: 8,
+      handle_metadata: {
+        handle_subtype: fidl::ObjectType::NONE,
+        handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
+      },
+    },
+  ],
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 8,
+      mask: 0xffffffff00000000u64,
+  },],
+  padding_v2: [
+  {
+      ty: u64,
+      offset: 8,
+      mask: 0xffffffff00000000u64,
+  },],
+  size_v1: 16,
+  size_v2: 16,
+  align_v1: 8,
+  align_v2: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -217,48 +259,6 @@ fidl_struct_copy! {
   size_v2: 24,
   align_v1: 4,
   align_v2: 4,
-}
-
-#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct NonInlineStructTestStruct {
-    pub element: Option<Box<Int16Int8>>,
-    pub h: fidl::Handle,
-}
-
-fidl_struct! {
-  name: NonInlineStructTestStruct,
-  members: [
-    element {
-      ty: Option<Box<Int16Int8>>,
-      offset_v1: 0,
-      offset_v2: 0,
-    },
-    h {
-      ty: fidl::Handle,
-      offset_v1: 8,
-      offset_v2: 8,
-      handle_metadata: {
-        handle_subtype: fidl::ObjectType::NONE,
-        handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
-      },
-    },
-  ],
-  padding_v1: [
-  {
-      ty: u64,
-      offset: 8,
-      mask: 0xffffffff00000000u64,
-  },],
-  padding_v2: [
-  {
-      ty: u64,
-      offset: 8,
-      mask: 0xffffffff00000000u64,
-  },],
-  size_v1: 16,
-  size_v2: 16,
-  align_v1: 8,
-  align_v2: 8,
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]

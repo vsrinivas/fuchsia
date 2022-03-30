@@ -4,6 +4,82 @@
   "library_dependencies": [],
   "bits_declarations": [
     {
+      "name": "test.bits/FlexibleBits",
+      "naming_context": [
+        "FlexibleBits"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bits.test.fidl",
+        "line": 15,
+        "column": 6,
+        "length": 12
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint64",
+        "type_shape_v1": {
+          "inline_size": 8,
+          "alignment": 8,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 8,
+          "alignment": 8,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "mask": "9223372036854775809",
+      "members": [
+        {
+          "name": "SMALLEST",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bits.test.fidl",
+            "line": 16,
+            "column": 5,
+            "length": 8
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "1",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          }
+        },
+        {
+          "name": "BIGGEST",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bits.test.fidl",
+            "line": 17,
+            "column": 5,
+            "length": 7
+          },
+          "value": {
+            "kind": "literal",
+            "value": "9223372036854775808",
+            "expression": "0x8000000000000000",
+            "literal": {
+              "kind": "numeric",
+              "value": "9223372036854775808",
+              "expression": "0x8000000000000000"
+            }
+          }
+        }
+      ],
+      "strict": false
+    },
+    {
       "name": "test.bits/MyBits",
       "naming_context": [
         "MyBits"
@@ -173,82 +249,6 @@
         }
       ],
       "strict": true
-    },
-    {
-      "name": "test.bits/FlexibleBits",
-      "naming_context": [
-        "FlexibleBits"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bits.test.fidl",
-        "line": 15,
-        "column": 6,
-        "length": 12
-      },
-      "type": {
-        "kind": "primitive",
-        "subtype": "uint64",
-        "type_shape_v1": {
-          "inline_size": 8,
-          "alignment": 8,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        },
-        "type_shape_v2": {
-          "inline_size": 8,
-          "alignment": 8,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        }
-      },
-      "mask": "9223372036854775809",
-      "members": [
-        {
-          "name": "SMALLEST",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bits.test.fidl",
-            "line": 16,
-            "column": 5,
-            "length": 8
-          },
-          "value": {
-            "kind": "literal",
-            "value": "1",
-            "expression": "1",
-            "literal": {
-              "kind": "numeric",
-              "value": "1",
-              "expression": "1"
-            }
-          }
-        },
-        {
-          "name": "BIGGEST",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bits.test.fidl",
-            "line": 17,
-            "column": 5,
-            "length": 7
-          },
-          "value": {
-            "kind": "literal",
-            "value": "9223372036854775808",
-            "expression": "0x8000000000000000",
-            "literal": {
-              "kind": "numeric",
-              "value": "9223372036854775808",
-              "expression": "0x8000000000000000"
-            }
-          }
-        }
-      ],
-      "strict": false
     }
   ],
   "const_declarations": [],
@@ -267,8 +267,8 @@
     "test.bits/FlexibleBits"
   ],
   "declarations": {
+    "test.bits/FlexibleBits": "bits",
     "test.bits/MyBits": "bits",
-    "test.bits/StrictBits": "bits",
-    "test.bits/FlexibleBits": "bits"
+    "test.bits/StrictBits": "bits"
   }
 }

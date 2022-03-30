@@ -40,128 +40,6 @@ import 'package:zircon/zircon.dart' as $zircon;
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
 // first: ($fidl.InterfaceRequest<Parent> request)
-const int _kParent_First_Ordinal = 0x3723835775b3455b;
-const $fidl.MethodType _kParent_First_Type = $fidl.MethodType(
-  request: <$fidl.MemberType>[
-    $fidl.MemberType<$fidl.InterfaceRequest<Parent>>(
-        type: $fidl.InterfaceRequestType<Parent>(), offsetV1: 0, offsetV2: 0),
-  ],
-  response: [],
-  name: r"Parent.First",
-  requestInlineSizeV1: 4,
-  requestInlineSizeV2: 4,
-  responseInlineSizeV1: 0,
-  responseInlineSizeV2: 0,
-);
-
-abstract class Parent {
-  $fidl.ServiceData? get $serviceData => ParentData();
-  $async.Future<void> first($fidl.InterfaceRequest<Parent> request);
-}
-
-// TODO: Remove ServiceData for non-service
-class ParentData implements $fidl.ServiceData<Parent> {
-  const ParentData();
-
-  @override
-  String getName() {
-    return "";
-  }
-
-  @override
-  $fidl.AsyncBinding getBinding() {
-    return ParentBinding();
-  }
-}
-
-class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
-  ParentProxy()
-      : super($fidl.AsyncProxyController<Parent>($interfaceName: r'Parent')) {
-    ctrl.onResponse = _handleResponse;
-  }
-  @override
-  Null get $serviceData => null;
-
-  void _handleEvent($fidl.IncomingMessage $message) {
-    switch ($message.ordinal) {
-      default:
-        ctrl.proxyError(
-            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
-        break;
-    }
-  }
-
-  void _handleResponse($fidl.IncomingMessage $message) {
-    final int $txid = $message.txid;
-    if ($txid == 0) {
-      _handleEvent($message);
-      return;
-    }
-    final $async.Completer? $completer = ctrl.getCompleter($txid);
-    if ($completer == null) {
-      $message.closeHandles();
-      return;
-    }
-    switch ($message.ordinal) {
-      default:
-        ctrl.proxyError(
-            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
-        break;
-    }
-  }
-
-  @override
-  $async.Future<void> first($fidl.InterfaceRequest<Parent> request) {
-    if (!ctrl.isBound) {
-      return $async.Future.error(
-          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
-          StackTrace.current);
-    }
-
-    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kParent_First_Ordinal, 0);
-    final List<$fidl.MemberType> $types = _kParent_First_Type.request!;
-    $fidl.encodeMessageWithCallback(
-        $encoder, _kParent_First_Type.requestInlineSize($encoder.wireFormat),
-        () {
-      $types[0].encode($encoder, request, $fidl.kMessageHeaderSize, 1);
-    });
-    return $async.Future.sync(() {
-      ctrl.sendMessage($encoder.message);
-    });
-  }
-}
-
-class ParentBinding extends $fidl.AsyncBinding<Parent> {
-  ParentBinding() : super(r"Parent");
-
-  @override
-  void handleMessage(
-      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
-    switch ($message.ordinal) {
-      case _kParent_First_Ordinal:
-        final String _name = _kParent_First_Type.name;
-        $fidl.performWithExceptionHandling(_name, () {
-          final List<$fidl.MemberType> $types = _kParent_First_Type.request!;
-          // ignore: prefer_const_declarations
-          final _impl = impl!;
-          final $async.Future<void> $future = $fidl
-              .decodeMessageWithCallback<$async.Future<void>>($message,
-                  _kParent_First_Type.requestInlineSize($message.wireFormat),
-                  ($fidl.Decoder decoder) {
-            return _impl.first(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
-            );
-          });
-        }, close);
-        break;
-      default:
-        throw $fidl.FidlError(r'Unexpected message name for ParentBinding');
-    }
-  }
-}
-
-// first: ($fidl.InterfaceRequest<Parent> request)
 const int _kChild_First_Ordinal = 0x3723835775b3455b;
 const $fidl.MethodType _kChild_First_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
@@ -331,6 +209,128 @@ class ChildBinding extends $fidl.AsyncBinding<Child> {
         break;
       default:
         throw $fidl.FidlError(r'Unexpected message name for ChildBinding');
+    }
+  }
+}
+
+// first: ($fidl.InterfaceRequest<Parent> request)
+const int _kParent_First_Ordinal = 0x3723835775b3455b;
+const $fidl.MethodType _kParent_First_Type = $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<$fidl.InterfaceRequest<Parent>>(
+        type: $fidl.InterfaceRequestType<Parent>(), offsetV1: 0, offsetV2: 0),
+  ],
+  response: [],
+  name: r"Parent.First",
+  requestInlineSizeV1: 4,
+  requestInlineSizeV2: 4,
+  responseInlineSizeV1: 0,
+  responseInlineSizeV2: 0,
+);
+
+abstract class Parent {
+  $fidl.ServiceData? get $serviceData => ParentData();
+  $async.Future<void> first($fidl.InterfaceRequest<Parent> request);
+}
+
+// TODO: Remove ServiceData for non-service
+class ParentData implements $fidl.ServiceData<Parent> {
+  const ParentData();
+
+  @override
+  String getName() {
+    return "";
+  }
+
+  @override
+  $fidl.AsyncBinding getBinding() {
+    return ParentBinding();
+  }
+}
+
+class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
+  ParentProxy()
+      : super($fidl.AsyncProxyController<Parent>($interfaceName: r'Parent')) {
+    ctrl.onResponse = _handleResponse;
+  }
+  @override
+  Null get $serviceData => null;
+
+  void _handleEvent($fidl.IncomingMessage $message) {
+    switch ($message.ordinal) {
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        break;
+    }
+  }
+
+  void _handleResponse($fidl.IncomingMessage $message) {
+    final int $txid = $message.txid;
+    if ($txid == 0) {
+      _handleEvent($message);
+      return;
+    }
+    final $async.Completer? $completer = ctrl.getCompleter($txid);
+    if ($completer == null) {
+      $message.closeHandles();
+      return;
+    }
+    switch ($message.ordinal) {
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        break;
+    }
+  }
+
+  @override
+  $async.Future<void> first($fidl.InterfaceRequest<Parent> request) {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(_kParent_First_Ordinal, 0);
+    final List<$fidl.MemberType> $types = _kParent_First_Type.request!;
+    $fidl.encodeMessageWithCallback(
+        $encoder, _kParent_First_Type.requestInlineSize($encoder.wireFormat),
+        () {
+      $types[0].encode($encoder, request, $fidl.kMessageHeaderSize, 1);
+    });
+    return $async.Future.sync(() {
+      ctrl.sendMessage($encoder.message);
+    });
+  }
+}
+
+class ParentBinding extends $fidl.AsyncBinding<Parent> {
+  ParentBinding() : super(r"Parent");
+
+  @override
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
+    switch ($message.ordinal) {
+      case _kParent_First_Ordinal:
+        final String _name = _kParent_First_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types = _kParent_First_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>($message,
+                  _kParent_First_Type.requestInlineSize($message.wireFormat),
+                  ($fidl.Decoder decoder) {
+            return _impl.first(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          });
+        }, close);
+        break;
+      default:
+        throw $fidl.FidlError(r'Unexpected message name for ParentBinding');
     }
   }
 }

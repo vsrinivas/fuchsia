@@ -23,6 +23,8 @@ import './fidl_async.dart';
 // ignore_for_file: library_prefixes
 // ignore_for_file: unused_shown_name
 
+class Allowed$TestBase extends Allowed {}
+
 class DenyEachBinding$TestBase extends DenyEachBinding {
   @override
   $async.Future<int> onlyDenyCpp(bool a) {
@@ -64,8 +66,6 @@ class DenyEachBinding$TestBase extends DenyEachBinding {
         StackTrace.current);
   }
 }
-
-class Allowed$TestBase extends Allowed {}
 
 class ImportsSameNameContext$TestBase extends ImportsSameNameContext {
   @override

@@ -22,6 +22,145 @@ import './fidl_async.dart';
 // ignore_for_file: library_prefixes
 // ignore_for_file: unused_shown_name
 
+class ChannelProtocol$TestBase extends ChannelProtocol {
+  @override
+  $async.Future<void> methodA(int a, int b) {
+    return $async.Future.error(
+        UnimplementedError(
+            r'methodA not implemented on ChannelProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Stream<ChannelProtocol$EventA$Response> get eventA {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'eventA not implemented on ChannelProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Future<int> methodB(int a, int b) {
+    return $async.Future.error(
+        UnimplementedError(
+            r'methodB not implemented on ChannelProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<void> takeHandle($zircon.Handle h) {
+    return $async.Future.error(
+        UnimplementedError(
+            r'takeHandle not implemented on ChannelProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<$zircon.Socket> mutateSocket($zircon.Socket a) {
+    return $async.Future.error(
+        UnimplementedError(
+            r'mutateSocket not implemented on ChannelProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+}
+
+class DiscoverableProtocol$TestBase extends DiscoverableProtocol {
+  @override
+  $async.Future<void> method() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'method not implemented on DiscoverableProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+}
+
+class HandleRightsProtocol$TestBase extends HandleRightsProtocol {
+  @override
+  $async.Future<void> noResponseMethod($zircon.Socket h) {
+    return $async.Future.error(
+        UnimplementedError(
+            r'noResponseMethod not implemented on HandleRightsProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<$zircon.Socket> responseMethod($zircon.Socket h) {
+    return $async.Future.error(
+        UnimplementedError(
+            r'responseMethod not implemented on HandleRightsProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Stream<$zircon.Socket> get anEvent {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'anEvent not implemented on HandleRightsProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+}
+
+class ManyParameters$TestBase extends ManyParameters {
+  @override
+  $async.Future<void> fifteen(
+      bool p1,
+      bool p2,
+      bool p3,
+      bool p4,
+      bool p5,
+      bool p6,
+      bool p7,
+      bool p8,
+      bool p9,
+      bool p10,
+      bool p11,
+      bool p12,
+      bool p13,
+      bool p14,
+      bool p15) {
+    return $async.Future.error(
+        UnimplementedError(
+            r'fifteen not implemented on ManyParameters test base. Please implement.'),
+        StackTrace.current);
+  }
+}
+
+class MethodWithUnion$TestBase extends MethodWithUnion {
+  @override
+  $async.Future<void> unionMethod(TheUnion u) {
+    return $async.Future.error(
+        UnimplementedError(
+            r'unionMethod not implemented on MethodWithUnion test base. Please implement.'),
+        StackTrace.current);
+  }
+}
+
+class Transitional$TestBase extends Transitional {
+  @override
+  $async.Future<int> request(int x) {
+    return $async.Future.error(
+        UnimplementedError(
+            r'request not implemented on Transitional test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<void> oneWay(int x) {
+    return $async.Future.error(
+        UnimplementedError(
+            r'oneWay not implemented on Transitional test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Stream<int> get event {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'event not implemented on Transitional test base. Please implement.'),
+        StackTrace.current));
+  }
+}
+
 class WithAndWithoutRequestResponse$TestBase
     extends WithAndWithoutRequestResponse {
   @override
@@ -123,110 +262,6 @@ class WithErrorSyntax$TestBase extends WithErrorSyntax {
   }
 }
 
-class ChannelProtocol$TestBase extends ChannelProtocol {
-  @override
-  $async.Future<void> methodA(int a, int b) {
-    return $async.Future.error(
-        UnimplementedError(
-            r'methodA not implemented on ChannelProtocol test base. Please implement.'),
-        StackTrace.current);
-  }
-
-  @override
-  $async.Stream<ChannelProtocol$EventA$Response> get eventA {
-    return $async.Stream.fromFuture($async.Future.error(
-        UnimplementedError(
-            r'eventA not implemented on ChannelProtocol test base. Please implement.'),
-        StackTrace.current));
-  }
-
-  @override
-  $async.Future<int> methodB(int a, int b) {
-    return $async.Future.error(
-        UnimplementedError(
-            r'methodB not implemented on ChannelProtocol test base. Please implement.'),
-        StackTrace.current);
-  }
-
-  @override
-  $async.Future<void> takeHandle($zircon.Handle h) {
-    return $async.Future.error(
-        UnimplementedError(
-            r'takeHandle not implemented on ChannelProtocol test base. Please implement.'),
-        StackTrace.current);
-  }
-
-  @override
-  $async.Future<$zircon.Socket> mutateSocket($zircon.Socket a) {
-    return $async.Future.error(
-        UnimplementedError(
-            r'mutateSocket not implemented on ChannelProtocol test base. Please implement.'),
-        StackTrace.current);
-  }
-}
-
-class Transitional$TestBase extends Transitional {
-  @override
-  $async.Future<int> request(int x) {
-    return $async.Future.error(
-        UnimplementedError(
-            r'request not implemented on Transitional test base. Please implement.'),
-        StackTrace.current);
-  }
-
-  @override
-  $async.Future<void> oneWay(int x) {
-    return $async.Future.error(
-        UnimplementedError(
-            r'oneWay not implemented on Transitional test base. Please implement.'),
-        StackTrace.current);
-  }
-
-  @override
-  $async.Stream<int> get event {
-    return $async.Stream.fromFuture($async.Future.error(
-        UnimplementedError(
-            r'event not implemented on Transitional test base. Please implement.'),
-        StackTrace.current));
-  }
-}
-
-class DiscoverableProtocol$TestBase extends DiscoverableProtocol {
-  @override
-  $async.Future<void> method() {
-    return $async.Future.error(
-        UnimplementedError(
-            r'method not implemented on DiscoverableProtocol test base. Please implement.'),
-        StackTrace.current);
-  }
-}
-
-class HandleRightsProtocol$TestBase extends HandleRightsProtocol {
-  @override
-  $async.Future<void> noResponseMethod($zircon.Socket h) {
-    return $async.Future.error(
-        UnimplementedError(
-            r'noResponseMethod not implemented on HandleRightsProtocol test base. Please implement.'),
-        StackTrace.current);
-  }
-
-  @override
-  $async.Future<$zircon.Socket> responseMethod($zircon.Socket h) {
-    return $async.Future.error(
-        UnimplementedError(
-            r'responseMethod not implemented on HandleRightsProtocol test base. Please implement.'),
-        StackTrace.current);
-  }
-
-  @override
-  $async.Stream<$zircon.Socket> get anEvent {
-    return $async.Stream.fromFuture($async.Future.error(
-        UnimplementedError(
-            r'anEvent not implemented on HandleRightsProtocol test base. Please implement.'),
-        StackTrace.current));
-  }
-}
-
 class WithProtocolEnds$TestBase extends WithProtocolEnds {
   @override
   $async.Future<$fidl.InterfaceHandle<DiscoverableProtocol>?> clientEnds(
@@ -251,41 +286,6 @@ class WithProtocolEnds$TestBase extends WithProtocolEnds {
     return $async.Future.error(
         UnimplementedError(
             r'structContainingEnds not implemented on WithProtocolEnds test base. Please implement.'),
-        StackTrace.current);
-  }
-}
-
-class ManyParameters$TestBase extends ManyParameters {
-  @override
-  $async.Future<void> fifteen(
-      bool p1,
-      bool p2,
-      bool p3,
-      bool p4,
-      bool p5,
-      bool p6,
-      bool p7,
-      bool p8,
-      bool p9,
-      bool p10,
-      bool p11,
-      bool p12,
-      bool p13,
-      bool p14,
-      bool p15) {
-    return $async.Future.error(
-        UnimplementedError(
-            r'fifteen not implemented on ManyParameters test base. Please implement.'),
-        StackTrace.current);
-  }
-}
-
-class MethodWithUnion$TestBase extends MethodWithUnion {
-  @override
-  $async.Future<void> unionMethod(TheUnion u) {
-    return $async.Future.error(
-        UnimplementedError(
-            r'unionMethod not implemented on MethodWithUnion test base. Please implement.'),
         StackTrace.current);
   }
 }

@@ -25,36 +25,6 @@ use {
     futures::future::{self, MaybeDone, TryFutureExt},
 };
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct Simple {
-    pub f1: u8,
-    pub f2: bool,
-}
-
-impl fidl::encoding::Persistable for Simple {}
-
-fidl_struct! {
-  name: Simple,
-  members: [
-    f1 {
-      ty: u8,
-      offset_v1: 0,
-      offset_v2: 0,
-    },
-    f2 {
-      ty: bool,
-      offset_v1: 1,
-      offset_v2: 1,
-    },
-  ],
-  padding_v1: [],
-  padding_v2: [],
-  size_v1: 2,
-  size_v2: 2,
-  align_v1: 1,
-  align_v2: 1,
-}
-
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct BasicStruct {
     pub x: u32,
@@ -93,4 +63,34 @@ fidl_struct! {
   size_v2: 24,
   align_v1: 8,
   align_v2: 8,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct Simple {
+    pub f1: u8,
+    pub f2: bool,
+}
+
+impl fidl::encoding::Persistable for Simple {}
+
+fidl_struct! {
+  name: Simple,
+  members: [
+    f1 {
+      ty: u8,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+    f2 {
+      ty: bool,
+      offset_v1: 1,
+      offset_v2: 1,
+    },
+  ],
+  padding_v1: [],
+  padding_v2: [],
+  size_v1: 2,
+  size_v2: 2,
+  align_v1: 1,
+  align_v2: 1,
 }

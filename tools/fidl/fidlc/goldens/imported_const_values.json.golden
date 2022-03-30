@@ -8,13 +8,10 @@
         "test.dependent/MyBits": {
           "kind": "bits"
         },
-        "test.dependent/MY_STRING": {
-          "kind": "const"
-        },
         "test.dependent/MY_ALIASED_STRING": {
           "kind": "const"
         },
-        "test.dependent/MY_TRUE": {
+        "test.dependent/MY_BYTE": {
           "kind": "const"
         },
         "test.dependent/MY_FALSE": {
@@ -26,9 +23,6 @@
         "test.dependent/MY_FLOAT64": {
           "kind": "const"
         },
-        "test.dependent/MY_INT8": {
-          "kind": "const"
-        },
         "test.dependent/MY_INT16": {
           "kind": "const"
         },
@@ -38,7 +32,13 @@
         "test.dependent/MY_INT64": {
           "kind": "const"
         },
-        "test.dependent/MY_UINT8": {
+        "test.dependent/MY_INT8": {
+          "kind": "const"
+        },
+        "test.dependent/MY_STRING": {
+          "kind": "const"
+        },
+        "test.dependent/MY_TRUE": {
           "kind": "const"
         },
         "test.dependent/MY_UINT16": {
@@ -50,7 +50,7 @@
         "test.dependent/MY_UINT64": {
           "kind": "const"
         },
-        "test.dependent/MY_BYTE": {
+        "test.dependent/MY_UINT8": {
           "kind": "const"
         },
         "test.dependent/MyEnum": {
@@ -100,44 +100,6 @@
         "value": "1",
         "expression": "test.dependent.MyBits.MEMBER",
         "identifier": "test.dependent/MyBits.MEMBER"
-      }
-    },
-    {
-      "name": "test.importedconstvalues/ENUM_MEMBER",
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
-        "line": 12,
-        "column": 7,
-        "length": 11
-      },
-      "type": {
-        "kind": "identifier",
-        "identifier": "test.dependent/MyEnum",
-        "nullable": false,
-        "type_shape_v1": {
-          "inline_size": 1,
-          "alignment": 1,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        },
-        "type_shape_v2": {
-          "inline_size": 1,
-          "alignment": 1,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        }
-      },
-      "value": {
-        "kind": "identifier",
-        "value": "1",
-        "expression": "test.dependent.MyEnum.MEMBER",
-        "identifier": "test.dependent/MyEnum.MEMBER"
       }
     },
     {
@@ -208,6 +170,44 @@
         "value": "1",
         "expression": "test.dependent.MyBits.MEMBER",
         "identifier": "test.dependent/MyBits.MEMBER"
+      }
+    },
+    {
+      "name": "test.importedconstvalues/ENUM_MEMBER",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+        "line": 12,
+        "column": 7,
+        "length": 11
+      },
+      "type": {
+        "kind": "identifier",
+        "identifier": "test.dependent/MyEnum",
+        "nullable": false,
+        "type_shape_v1": {
+          "inline_size": 1,
+          "alignment": 1,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 1,
+          "alignment": 1,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "identifier",
+        "value": "1",
+        "expression": "test.dependent.MyEnum.MEMBER",
+        "identifier": "test.dependent/MyEnum.MEMBER"
       }
     },
     {
@@ -442,8 +442,8 @@
   ],
   "declarations": {
     "test.importedconstvalues/BITS_MEMBER": "const",
-    "test.importedconstvalues/ENUM_MEMBER": "const",
     "test.importedconstvalues/BITS_MEMBER_PRIMITIVE": "const",
+    "test.importedconstvalues/ENUM_MEMBER": "const",
     "test.importedconstvalues/ENUM_MEMBER_PRIMITIVE": "const",
     "test.importedconstvalues/MyStruct": "struct"
   }

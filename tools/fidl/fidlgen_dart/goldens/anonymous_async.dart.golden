@@ -39,6 +39,59 @@ import 'package:zircon/zircon.dart' as $zircon;
 // ignore_for_file: avoid_unused_constructor_parameters
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
+class Op extends $fidl.Enum {
+  static final Map<int, Op> _values = {
+    0x1: add,
+    0x2: mul,
+    0x3: div,
+  };
+  factory Op(int _v) {
+    if (!_values.containsKey(_v)) {
+      _values[_v] = Op._(_v, true);
+    }
+    return _values[_v]!;
+  }
+  static const Op add = Op._(0x1, false);
+  static const Op mul = Op._(0x2, false);
+  static const Op div = Op._(0x3, false);
+
+  /// Default unknown placeholder.
+  static const Op $unknown = Op._(0xffffffff, true);
+
+  const Op._(this.$value, this._isUnknown);
+
+  @override
+  final int $value;
+
+  final bool _isUnknown;
+
+  static const Map<String, Op> $valuesMap = {
+    r'add': add,
+    r'mul': mul,
+    r'div': div,
+  };
+
+  static const List<Op> $values = [
+    add,
+    mul,
+    div,
+  ];
+
+  static Op? $valueOf(String name) => $valuesMap[name];
+
+  @override
+  bool isUnknown() {
+    return _isUnknown;
+  }
+
+  static Op _ctor(int v) => Op(v);
+}
+
+const $fidl.EnumType<Op> kOp_Type = $fidl.EnumType<Op>(
+    type: $fidl.Uint32Type(),
+    values: {0x1: null, 0x2: null, 0x3: null},
+    ctor: Op._ctor);
+
 class SomeProtocolSomeMethodError extends $fidl.Enum {
   static final Map<int, SomeProtocolSomeMethodError> _values = {
     0x1: errorOne,
@@ -93,59 +146,6 @@ const $fidl.EnumType<SomeProtocolSomeMethodError>
         type: $fidl.Uint32Type(),
         values: {0x1: null, 0x2: null},
         ctor: SomeProtocolSomeMethodError._ctor);
-
-class Op extends $fidl.Enum {
-  static final Map<int, Op> _values = {
-    0x1: add,
-    0x2: mul,
-    0x3: div,
-  };
-  factory Op(int _v) {
-    if (!_values.containsKey(_v)) {
-      _values[_v] = Op._(_v, true);
-    }
-    return _values[_v]!;
-  }
-  static const Op add = Op._(0x1, false);
-  static const Op mul = Op._(0x2, false);
-  static const Op div = Op._(0x3, false);
-
-  /// Default unknown placeholder.
-  static const Op $unknown = Op._(0xffffffff, true);
-
-  const Op._(this.$value, this._isUnknown);
-
-  @override
-  final int $value;
-
-  final bool _isUnknown;
-
-  static const Map<String, Op> $valuesMap = {
-    r'add': add,
-    r'mul': mul,
-    r'div': div,
-  };
-
-  static const List<Op> $values = [
-    add,
-    mul,
-    div,
-  ];
-
-  static Op? $valueOf(String name) => $valuesMap[name];
-
-  @override
-  bool isUnknown() {
-    return _isUnknown;
-  }
-
-  static Op _ctor(int v) => Op(v);
-}
-
-const $fidl.EnumType<Op> kOp_Type = $fidl.EnumType<Op>(
-    type: $fidl.Uint32Type(),
-    values: {0x1: null, 0x2: null, 0x3: null},
-    ctor: Op._ctor);
 
 class BitsMember extends $fidl.Bits {
   factory BitsMember(int _v) {
@@ -229,175 +229,6 @@ class Flags extends $fidl.Bits {
 
 const $fidl.BitsType<Flags> kFlags_Type =
     $fidl.BitsType<Flags>(type: $fidl.Uint16Type(), ctor: Flags._ctor);
-
-enum UnionMemberTag {
-  $unknown,
-  unionData, // 0x2
-}
-
-const Map<int, UnionMemberTag> _UnionMemberTag_map = {
-  2: UnionMemberTag.unionData,
-};
-
-class UnionMember extends $fidl.Union {
-  const UnionMember.withUnionData(int value)
-      : _ordinal = 2,
-        _data = value;
-  const UnionMember.with$UnknownData(this._ordinal, $fidl.UnknownRawData data)
-      : _data = data;
-
-  UnionMember._(int ordinal, Object data)
-      : _ordinal = ordinal,
-        _data = data;
-
-  final int _ordinal;
-  final _data;
-
-  UnionMemberTag get $tag =>
-      _UnionMemberTag_map[_ordinal] ?? UnionMemberTag.$unknown;
-
-  int? get unionData {
-    if (_ordinal != 2) {
-      return null;
-    }
-    return _data;
-  }
-
-  $fidl.UnknownRawData? get $unknownData {
-    switch (_ordinal) {
-      case 2:
-        return null;
-      default:
-        return _data;
-    }
-  }
-
-  @override
-  int get $ordinal => _ordinal;
-
-  @override
-  Object get $data => _data;
-
-  static UnionMember _ctor(int ordinal, Object data) {
-    return UnionMember._(ordinal, data);
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.UnionType<UnionMember> kUnionMember_Type =
-    $fidl.UnionType<UnionMember>(
-  members: <int, $fidl.FidlType>{
-    2: $fidl.Uint8Type(),
-  },
-  ctor: UnionMember._ctor,
-  flexible: true,
-  resource: false,
-);
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<UnionMember> kUnionMember_OptType =
-    $fidl.NullableUnionType<UnionMember>(
-  members: <int, $fidl.FidlType>{
-    2: $fidl.Uint8Type(),
-  },
-  ctor: UnionMember._ctor,
-  flexible: true,
-  resource: false,
-);
-
-enum SomeProtocolSomeMethodResultTag {
-  response, // 0x1
-  err, // 0x2
-}
-
-const Map<int, SomeProtocolSomeMethodResultTag>
-    _SomeProtocolSomeMethodResultTag_map = {
-  1: SomeProtocolSomeMethodResultTag.response,
-  2: SomeProtocolSomeMethodResultTag.err,
-};
-
-class SomeProtocolSomeMethodResult extends $fidl.Union {
-  const SomeProtocolSomeMethodResult.withResponse(
-      SomeProtocolSomeMethodResponse value)
-      : _ordinal = 1,
-        _data = value;
-
-  const SomeProtocolSomeMethodResult.withErr(SomeProtocolSomeMethodError value)
-      : _ordinal = 2,
-        _data = value;
-
-  SomeProtocolSomeMethodResult._(int ordinal, Object data)
-      : _ordinal = ordinal,
-        _data = data;
-
-  final int _ordinal;
-  final _data;
-
-  SomeProtocolSomeMethodResultTag get $tag =>
-      _SomeProtocolSomeMethodResultTag_map[_ordinal]!;
-
-  SomeProtocolSomeMethodResponse? get response {
-    if (_ordinal != 1) {
-      return null;
-    }
-    return _data;
-  }
-
-  SomeProtocolSomeMethodError? get err {
-    if (_ordinal != 2) {
-      return null;
-    }
-    return _data;
-  }
-
-  $fidl.UnknownRawData? get $unknownData {
-    switch (_ordinal) {
-      case 1:
-      case 2:
-        return null;
-      default:
-        return _data;
-    }
-  }
-
-  @override
-  int get $ordinal => _ordinal;
-
-  @override
-  Object get $data => _data;
-
-  static SomeProtocolSomeMethodResult _ctor(int ordinal, Object data) {
-    return SomeProtocolSomeMethodResult._(ordinal, data);
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.UnionType<SomeProtocolSomeMethodResult>
-    kSomeProtocol_SomeMethod_Result_Type =
-    $fidl.UnionType<SomeProtocolSomeMethodResult>(
-  members: <int, $fidl.FidlType>{
-    1: kSomeProtocol_SomeMethod_Response_Type,
-    2: kSomeProtocol_SomeMethod_Error_Type,
-  },
-  ctor: SomeProtocolSomeMethodResult._ctor,
-  flexible: false,
-  resource: false,
-);
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<SomeProtocolSomeMethodResult>
-    kSomeProtocol_SomeMethod_Result_OptType =
-    $fidl.NullableUnionType<SomeProtocolSomeMethodResult>(
-  members: <int, $fidl.FidlType>{
-    1: kSomeProtocol_SomeMethod_Response_Type,
-    2: kSomeProtocol_SomeMethod_Error_Type,
-  },
-  ctor: SomeProtocolSomeMethodResult._ctor,
-  flexible: false,
-  resource: false,
-);
 
 enum ExpressionTag {
   $unknown,
@@ -507,121 +338,174 @@ const $fidl.NullableUnionType<Expression> kExpression_OptType =
   resource: false,
 );
 
-class TableData extends $fidl.Struct {
-  const TableData({
-    required this.data,
-  });
-  TableData.clone(
-    TableData $orig, {
-    int? data,
-  }) : this(
-          data: data ?? $orig.data,
-        );
+enum SomeProtocolSomeMethodResultTag {
+  response, // 0x1
+  err, // 0x2
+}
 
-  final int data;
+const Map<int, SomeProtocolSomeMethodResultTag>
+    _SomeProtocolSomeMethodResultTag_map = {
+  1: SomeProtocolSomeMethodResultTag.response,
+  2: SomeProtocolSomeMethodResultTag.err,
+};
 
-  @override
-  List<Object?> get $fields {
-    return <Object?>[
-      data,
-    ];
+class SomeProtocolSomeMethodResult extends $fidl.Union {
+  const SomeProtocolSomeMethodResult.withResponse(
+      SomeProtocolSomeMethodResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const SomeProtocolSomeMethodResult.withErr(SomeProtocolSomeMethodError value)
+      : _ordinal = 2,
+        _data = value;
+
+  SomeProtocolSomeMethodResult._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  SomeProtocolSomeMethodResultTag get $tag =>
+      _SomeProtocolSomeMethodResultTag_map[_ordinal]!;
+
+  SomeProtocolSomeMethodResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
   }
 
-  static const $fieldType0 = $fidl.Uint8Type();
+  SomeProtocolSomeMethodError? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
 
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, data, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, data, $offset + 0, $depth);
-        break;
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
       default:
-        throw $fidl.FidlError('unknown wire format');
+        return _data;
     }
   }
 
-  static TableData _structDecode(
-      $fidl.Decoder $decoder, int $offset, int $depth) {
-    switch ($decoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        return TableData(
-            data: $fieldType0.decode($decoder, $offset + 0, $depth));
-      case $fidl.WireFormat.v2:
-        return TableData(
-            data: $fieldType0.decode($decoder, $offset + 0, $depth));
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static SomeProtocolSomeMethodResult _ctor(int ordinal, Object data) {
+    return SomeProtocolSomeMethodResult._(ordinal, data);
   }
 }
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.StructType<TableData> kTableData_Type = $fidl.StructType<TableData>(
-    inlineSizeV1: 1, inlineSizeV2: 1, structDecode: TableData._structDecode);
+const $fidl.UnionType<SomeProtocolSomeMethodResult>
+    kSomeProtocol_SomeMethod_Result_Type =
+    $fidl.UnionType<SomeProtocolSomeMethodResult>(
+  members: <int, $fidl.FidlType>{
+    1: kSomeProtocol_SomeMethod_Response_Type,
+    2: kSomeProtocol_SomeMethod_Error_Type,
+  },
+  ctor: SomeProtocolSomeMethodResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<SomeProtocolSomeMethodResult>
+    kSomeProtocol_SomeMethod_Result_OptType =
+    $fidl.NullableUnionType<SomeProtocolSomeMethodResult>(
+  members: <int, $fidl.FidlType>{
+    1: kSomeProtocol_SomeMethod_Response_Type,
+    2: kSomeProtocol_SomeMethod_Error_Type,
+  },
+  ctor: SomeProtocolSomeMethodResult._ctor,
+  flexible: false,
+  resource: false,
+);
 
-class SomeProtocolSomeMethodResponse extends $fidl.Struct {
-  const SomeProtocolSomeMethodResponse({
-    required this.bitsMember,
-  });
-  SomeProtocolSomeMethodResponse.clone(
-    SomeProtocolSomeMethodResponse $orig, {
-    BitsMember? bitsMember,
-  }) : this(
-          bitsMember: bitsMember ?? $orig.bitsMember,
-        );
+enum UnionMemberTag {
+  $unknown,
+  unionData, // 0x2
+}
 
-  final BitsMember bitsMember;
+const Map<int, UnionMemberTag> _UnionMemberTag_map = {
+  2: UnionMemberTag.unionData,
+};
 
-  @override
-  List<Object?> get $fields {
-    return <Object?>[
-      bitsMember,
-    ];
+class UnionMember extends $fidl.Union {
+  const UnionMember.withUnionData(int value)
+      : _ordinal = 2,
+        _data = value;
+  const UnionMember.with$UnknownData(this._ordinal, $fidl.UnknownRawData data)
+      : _data = data;
+
+  UnionMember._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  UnionMemberTag get $tag =>
+      _UnionMemberTag_map[_ordinal] ?? UnionMemberTag.$unknown;
+
+  int? get unionData {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
   }
 
-  static const $fieldType0 = kBitsMember_Type;
-
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, bitsMember, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, bitsMember, $offset + 0, $depth);
-        break;
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 2:
+        return null;
       default:
-        throw $fidl.FidlError('unknown wire format');
+        return _data;
     }
   }
 
-  static SomeProtocolSomeMethodResponse _structDecode(
-      $fidl.Decoder $decoder, int $offset, int $depth) {
-    switch ($decoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        return SomeProtocolSomeMethodResponse(
-            bitsMember: $fieldType0.decode($decoder, $offset + 0, $depth));
-      case $fidl.WireFormat.v2:
-        return SomeProtocolSomeMethodResponse(
-            bitsMember: $fieldType0.decode($decoder, $offset + 0, $depth));
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static UnionMember _ctor(int ordinal, Object data) {
+    return UnionMember._(ordinal, data);
   }
 }
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.StructType<SomeProtocolSomeMethodResponse>
-    kSomeProtocol_SomeMethod_Response_Type =
-    $fidl.StructType<SomeProtocolSomeMethodResponse>(
-        inlineSizeV1: 4,
-        inlineSizeV2: 4,
-        structDecode: SomeProtocolSomeMethodResponse._structDecode);
+const $fidl.UnionType<UnionMember> kUnionMember_Type =
+    $fidl.UnionType<UnionMember>(
+  members: <int, $fidl.FidlType>{
+    2: $fidl.Uint8Type(),
+  },
+  ctor: UnionMember._ctor,
+  flexible: true,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<UnionMember> kUnionMember_OptType =
+    $fidl.NullableUnionType<UnionMember>(
+  members: <int, $fidl.FidlType>{
+    2: $fidl.Uint8Type(),
+  },
+  ctor: UnionMember._ctor,
+  flexible: true,
+  resource: false,
+);
 
 class OverrideTest extends $fidl.Struct {
   const OverrideTest({
@@ -714,53 +598,121 @@ const $fidl.StructType<OverrideTest> kOverrideTest_Type =
         inlineSizeV2: 40,
         structDecode: OverrideTest._structDecode);
 
-class TableMember extends $fidl.Table {
-  const TableMember({
-    this.$unknownData,
-    this.tableData,
+class SomeProtocolSomeMethodResponse extends $fidl.Struct {
+  const SomeProtocolSomeMethodResponse({
+    required this.bitsMember,
   });
+  SomeProtocolSomeMethodResponse.clone(
+    SomeProtocolSomeMethodResponse $orig, {
+    BitsMember? bitsMember,
+  }) : this(
+          bitsMember: bitsMember ?? $orig.bitsMember,
+        );
 
-  TableMember._(Map<int, dynamic> argv, this.$unknownData)
-      : tableData = argv[2];
+  final BitsMember bitsMember;
 
   @override
-  final Map<int, $fidl.UnknownRawData>? $unknownData;
-  final List<TableData>? tableData;
+  List<Object?> get $fields {
+    return <Object?>[
+      bitsMember,
+    ];
+  }
+
+  static const $fieldType0 = kBitsMember_Type;
 
   @override
-  dynamic $field(int index) {
-    switch (index) {
-      case 1:
-        return tableData;
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, bitsMember, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, bitsMember, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
     }
-    return null;
   }
 
-  @override
-  Map<int, dynamic> get $fields {
-    return {
-      2: tableData,
-    };
+  static SomeProtocolSomeMethodResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return SomeProtocolSomeMethodResponse(
+            bitsMember: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return SomeProtocolSomeMethodResponse(
+            bitsMember: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
-
-  static TableMember _ctor(Map<int, dynamic> argv,
-          [Map<int, $fidl.UnknownRawData>? unknownData]) =>
-      TableMember._(argv, unknownData);
 }
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.TableType<TableMember> kTableMember_Type =
-    $fidl.TableType<TableMember>(
-  inlineSize: 16,
-  members: [
-    null,
-    $fidl.VectorType<TableData, List<TableData>>(
-        element: kTableData_Type, maybeElementCount: 10),
-  ],
-  ctor: TableMember._ctor,
-  resource: false,
-);
+const $fidl.StructType<SomeProtocolSomeMethodResponse>
+    kSomeProtocol_SomeMethod_Response_Type =
+    $fidl.StructType<SomeProtocolSomeMethodResponse>(
+        inlineSizeV1: 4,
+        inlineSizeV2: 4,
+        structDecode: SomeProtocolSomeMethodResponse._structDecode);
+
+class TableData extends $fidl.Struct {
+  const TableData({
+    required this.data,
+  });
+  TableData.clone(
+    TableData $orig, {
+    int? data,
+  }) : this(
+          data: data ?? $orig.data,
+        );
+
+  final int data;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      data,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint8Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, data, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, data, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  static TableData _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return TableData(
+            data: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return TableData(
+            data: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<TableData> kTableData_Type = $fidl.StructType<TableData>(
+    inlineSizeV1: 1, inlineSizeV2: 1, structDecode: TableData._structDecode);
 
 class FunctionApplication extends $fidl.Table {
   const FunctionApplication({
@@ -821,6 +773,54 @@ const $fidl.TableType<FunctionApplication> kFunctionApplication_Type =
     kFlags_Type,
   ],
   ctor: FunctionApplication._ctor,
+  resource: false,
+);
+
+class TableMember extends $fidl.Table {
+  const TableMember({
+    this.$unknownData,
+    this.tableData,
+  });
+
+  TableMember._(Map<int, dynamic> argv, this.$unknownData)
+      : tableData = argv[2];
+
+  @override
+  final Map<int, $fidl.UnknownRawData>? $unknownData;
+  final List<TableData>? tableData;
+
+  @override
+  dynamic $field(int index) {
+    switch (index) {
+      case 1:
+        return tableData;
+    }
+    return null;
+  }
+
+  @override
+  Map<int, dynamic> get $fields {
+    return {
+      2: tableData,
+    };
+  }
+
+  static TableMember _ctor(Map<int, dynamic> argv,
+          [Map<int, $fidl.UnknownRawData>? unknownData]) =>
+      TableMember._(argv, unknownData);
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.TableType<TableMember> kTableMember_Type =
+    $fidl.TableType<TableMember>(
+  inlineSize: 16,
+  members: [
+    null,
+    $fidl.VectorType<TableData, List<TableData>>(
+        element: kTableData_Type, maybeElementCount: 10),
+  ],
+  ctor: TableMember._ctor,
   resource: false,
 );
 

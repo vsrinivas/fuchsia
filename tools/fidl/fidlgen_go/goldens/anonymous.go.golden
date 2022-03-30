@@ -7,49 +7,6 @@ import (
 	_bindings "syscall/zx/fidl"
 )
 
-var _ _bindings.Enum = SomeProtocolSomeMethodError(0)
-
-type SomeProtocolSomeMethodError uint32
-
-const (
-	SomeProtocolSomeMethodErrorErrorOne SomeProtocolSomeMethodError = 1
-	SomeProtocolSomeMethodErrorErrorTwo SomeProtocolSomeMethodError = 2
-
-	// SomeProtocolSomeMethodError_Unknown is the default unknown placeholder.
-	SomeProtocolSomeMethodError_Unknown SomeProtocolSomeMethodError = 0xffffffff
-)
-
-func (_ SomeProtocolSomeMethodError) I_EnumValues() []SomeProtocolSomeMethodError {
-	return []SomeProtocolSomeMethodError{
-		SomeProtocolSomeMethodErrorErrorOne,
-		SomeProtocolSomeMethodErrorErrorTwo,
-	}
-}
-
-func (_ SomeProtocolSomeMethodError) I_EnumIsStrict() bool {
-	return false
-}
-
-func (x SomeProtocolSomeMethodError) IsUnknown() bool {
-	switch x {
-	case 1:
-		return false
-	case 2:
-		return false
-	}
-	return true
-}
-
-func (x SomeProtocolSomeMethodError) String() string {
-	switch x {
-	case 1:
-		return "ErrorOne"
-	case 2:
-		return "ErrorTwo"
-	}
-	return "Unknown"
-}
-
 var _ _bindings.Enum = Op(0)
 
 type Op uint32
@@ -95,6 +52,49 @@ func (x Op) String() string {
 		return "Mul"
 	case 3:
 		return "Div"
+	}
+	return "Unknown"
+}
+
+var _ _bindings.Enum = SomeProtocolSomeMethodError(0)
+
+type SomeProtocolSomeMethodError uint32
+
+const (
+	SomeProtocolSomeMethodErrorErrorOne SomeProtocolSomeMethodError = 1
+	SomeProtocolSomeMethodErrorErrorTwo SomeProtocolSomeMethodError = 2
+
+	// SomeProtocolSomeMethodError_Unknown is the default unknown placeholder.
+	SomeProtocolSomeMethodError_Unknown SomeProtocolSomeMethodError = 0xffffffff
+)
+
+func (_ SomeProtocolSomeMethodError) I_EnumValues() []SomeProtocolSomeMethodError {
+	return []SomeProtocolSomeMethodError{
+		SomeProtocolSomeMethodErrorErrorOne,
+		SomeProtocolSomeMethodErrorErrorTwo,
+	}
+}
+
+func (_ SomeProtocolSomeMethodError) I_EnumIsStrict() bool {
+	return false
+}
+
+func (x SomeProtocolSomeMethodError) IsUnknown() bool {
+	switch x {
+	case 1:
+		return false
+	case 2:
+		return false
+	}
+	return true
+}
+
+func (x SomeProtocolSomeMethodError) String() string {
+	switch x {
+	case 1:
+		return "ErrorOne"
+	case 2:
+		return "ErrorTwo"
 	}
 	return "Unknown"
 }
@@ -212,15 +212,17 @@ func (x Flags) String() string {
 	return buf.String()
 }
 
-type TableData struct {
-	_    struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
-	Data uint8    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+type OverrideTest struct {
+	_     struct{}    `fidl:"s" fidl_size_v1:"56" fidl_alignment_v1:"8" fidl_size_v2:"40" fidl_alignment_v2:"8"`
+	Op    Op          `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	Left  *Expression `fidl_offset_v1:"8" fidl_offset_v2:"8"`
+	Right *Expression `fidl_offset_v1:"32" fidl_offset_v2:"24"`
 }
 
-var _mTableData = _bindings.CreateLazyMarshaler(TableData{})
+var _mOverrideTest = _bindings.CreateLazyMarshaler(OverrideTest{})
 
-func (msg *TableData) Marshaler() _bindings.Marshaler {
-	return _mTableData
+func (msg *OverrideTest) Marshaler() _bindings.Marshaler {
+	return _mOverrideTest
 }
 
 type SomeProtocolSomeMethodResponse struct {
@@ -234,17 +236,15 @@ func (msg *SomeProtocolSomeMethodResponse) Marshaler() _bindings.Marshaler {
 	return _mSomeProtocolSomeMethodResponse
 }
 
-type OverrideTest struct {
-	_     struct{}    `fidl:"s" fidl_size_v1:"56" fidl_alignment_v1:"8" fidl_size_v2:"40" fidl_alignment_v2:"8"`
-	Op    Op          `fidl_offset_v1:"0" fidl_offset_v2:"0"`
-	Left  *Expression `fidl_offset_v1:"8" fidl_offset_v2:"8"`
-	Right *Expression `fidl_offset_v1:"32" fidl_offset_v2:"24"`
+type TableData struct {
+	_    struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+	Data uint8    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
 }
 
-var _mOverrideTest = _bindings.CreateLazyMarshaler(OverrideTest{})
+var _mTableData = _bindings.CreateLazyMarshaler(TableData{})
 
-func (msg *OverrideTest) Marshaler() _bindings.Marshaler {
-	return _mOverrideTest
+func (msg *TableData) Marshaler() _bindings.Marshaler {
+	return _mTableData
 }
 
 type someProtocolWithCtxSomeMethodRequest struct {
@@ -268,126 +268,6 @@ var _msomeProtocolWithCtxSomeMethodResponse = _bindings.CreateLazyMarshaler(some
 
 func (msg *someProtocolWithCtxSomeMethodResponse) Marshaler() _bindings.Marshaler {
 	return _msomeProtocolWithCtxSomeMethodResponse
-}
-
-type I_unionMemberTag uint64
-
-const (
-	UnionMember_unknownData = 0 // 0x00000000
-	UnionMemberUnionData    = 2 // 0x00000002
-)
-
-type UnionMember struct {
-	I_unionMemberTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
-	I_unknownData    interface{}
-	UnionData        uint8 `fidl_ordinal:"2"`
-}
-
-var _mUnionMember = _bindings.CreateLazyMarshaler(UnionMember{})
-
-func (msg *UnionMember) Marshaler() _bindings.Marshaler {
-	return _mUnionMember
-}
-
-func (_m *UnionMember) reset() {
-	switch _m.I_unionMemberTag {
-	case 2:
-		var _zeroed uint8
-		_m.UnionData = _zeroed
-	default:
-		var _zeroed interface{}
-		_m.I_unknownData = _zeroed
-	}
-}
-
-func (_m *UnionMember) Which() I_unionMemberTag {
-	switch _m.I_unionMemberTag {
-	case 2:
-		return UnionMemberUnionData
-	default:
-		return UnionMember_unknownData
-	}
-}
-
-func (_m *UnionMember) Ordinal() uint64 {
-	return uint64(_m.I_unionMemberTag)
-}
-
-func (_m *UnionMember) SetUnionData(unionData uint8) {
-	_m.reset()
-	_m.I_unionMemberTag = UnionMemberUnionData
-	_m.UnionData = unionData
-}
-
-func UnionMemberWithUnionData(unionData uint8) UnionMember {
-	var _u UnionMember
-	_u.SetUnionData(unionData)
-	return _u
-}
-func (_m *UnionMember) GetUnknownData() _bindings.UnknownData {
-	return _m.I_unknownData.(_bindings.UnknownData)
-}
-
-type I_someProtocolSomeMethodResultTag uint64
-
-const (
-	SomeProtocolSomeMethodResultResponse = 1 // 0x00000001
-	SomeProtocolSomeMethodResultErr      = 2 // 0x00000002
-)
-
-type SomeProtocolSomeMethodResult struct {
-	I_someProtocolSomeMethodResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
-	Response                          SomeProtocolSomeMethodResponse `fidl_ordinal:"1"`
-	Err                               SomeProtocolSomeMethodError    `fidl_ordinal:"2"`
-}
-
-var _mSomeProtocolSomeMethodResult = _bindings.CreateLazyMarshaler(SomeProtocolSomeMethodResult{})
-
-func (msg *SomeProtocolSomeMethodResult) Marshaler() _bindings.Marshaler {
-	return _mSomeProtocolSomeMethodResult
-}
-
-func (_m *SomeProtocolSomeMethodResult) reset() {
-	switch _m.I_someProtocolSomeMethodResultTag {
-	case 1:
-		var _zeroed SomeProtocolSomeMethodResponse
-		_m.Response = _zeroed
-	case 2:
-		var _zeroed SomeProtocolSomeMethodError
-		_m.Err = _zeroed
-	}
-}
-
-func (_m *SomeProtocolSomeMethodResult) Which() I_someProtocolSomeMethodResultTag {
-	return _m.I_someProtocolSomeMethodResultTag
-}
-
-func (_m *SomeProtocolSomeMethodResult) Ordinal() uint64 {
-	return uint64(_m.I_someProtocolSomeMethodResultTag)
-}
-
-func (_m *SomeProtocolSomeMethodResult) SetResponse(response SomeProtocolSomeMethodResponse) {
-	_m.reset()
-	_m.I_someProtocolSomeMethodResultTag = SomeProtocolSomeMethodResultResponse
-	_m.Response = response
-}
-
-func SomeProtocolSomeMethodResultWithResponse(response SomeProtocolSomeMethodResponse) SomeProtocolSomeMethodResult {
-	var _u SomeProtocolSomeMethodResult
-	_u.SetResponse(response)
-	return _u
-}
-
-func (_m *SomeProtocolSomeMethodResult) SetErr(err SomeProtocolSomeMethodError) {
-	_m.reset()
-	_m.I_someProtocolSomeMethodResultTag = SomeProtocolSomeMethodResultErr
-	_m.Err = err
-}
-
-func SomeProtocolSomeMethodResultWithErr(err SomeProtocolSomeMethodError) SomeProtocolSomeMethodResult {
-	var _u SomeProtocolSomeMethodResult
-	_u.SetErr(err)
-	return _u
 }
 
 type I_expressionTag uint64
@@ -486,49 +366,124 @@ func (_m *Expression) GetUnknownData() _bindings.UnknownData {
 	return _m.I_unknownData.(_bindings.UnknownData)
 }
 
-type TableMember struct {
-	_                struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
-	I_unknownData    interface{}
-	TableData        []TableData `fidl_bounds:"10" fidl_ordinal:"2"`
-	TableDataPresent bool
+type I_someProtocolSomeMethodResultTag uint64
+
+const (
+	SomeProtocolSomeMethodResultResponse = 1 // 0x00000001
+	SomeProtocolSomeMethodResultErr      = 2 // 0x00000002
+)
+
+type SomeProtocolSomeMethodResult struct {
+	I_someProtocolSomeMethodResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                          SomeProtocolSomeMethodResponse `fidl_ordinal:"1"`
+	Err                               SomeProtocolSomeMethodError    `fidl_ordinal:"2"`
 }
 
-var _mTableMember = _bindings.CreateLazyMarshaler(TableMember{})
+var _mSomeProtocolSomeMethodResult = _bindings.CreateLazyMarshaler(SomeProtocolSomeMethodResult{})
 
-func (msg *TableMember) Marshaler() _bindings.Marshaler {
-	return _mTableMember
+func (msg *SomeProtocolSomeMethodResult) Marshaler() _bindings.Marshaler {
+	return _mSomeProtocolSomeMethodResult
 }
 
-func (u *TableMember) SetTableData(tableData []TableData) {
-	u.TableData = tableData
-	u.TableDataPresent = true
-}
-
-func (u *TableMember) GetTableData() []TableData {
-	return u.TableData
-}
-
-func (u *TableMember) GetTableDataWithDefault(_default []TableData) []TableData {
-	if !u.HasTableData() {
-		return _default
+func (_m *SomeProtocolSomeMethodResult) reset() {
+	switch _m.I_someProtocolSomeMethodResultTag {
+	case 1:
+		var _zeroed SomeProtocolSomeMethodResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed SomeProtocolSomeMethodError
+		_m.Err = _zeroed
 	}
-	return u.TableData
 }
 
-func (u *TableMember) HasTableData() bool {
-	return u.TableDataPresent
+func (_m *SomeProtocolSomeMethodResult) Which() I_someProtocolSomeMethodResultTag {
+	return _m.I_someProtocolSomeMethodResultTag
 }
 
-func (u *TableMember) ClearTableData() {
-	u.TableDataPresent = false
+func (_m *SomeProtocolSomeMethodResult) Ordinal() uint64 {
+	return uint64(_m.I_someProtocolSomeMethodResultTag)
 }
 
-func (u *TableMember) HasUnknownData() bool {
-	return u.I_unknownData != nil
+func (_m *SomeProtocolSomeMethodResult) SetResponse(response SomeProtocolSomeMethodResponse) {
+	_m.reset()
+	_m.I_someProtocolSomeMethodResultTag = SomeProtocolSomeMethodResultResponse
+	_m.Response = response
 }
 
-func (u *TableMember) GetUnknownData() map[uint64]_bindings.UnknownData {
-	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
+func SomeProtocolSomeMethodResultWithResponse(response SomeProtocolSomeMethodResponse) SomeProtocolSomeMethodResult {
+	var _u SomeProtocolSomeMethodResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (_m *SomeProtocolSomeMethodResult) SetErr(err SomeProtocolSomeMethodError) {
+	_m.reset()
+	_m.I_someProtocolSomeMethodResultTag = SomeProtocolSomeMethodResultErr
+	_m.Err = err
+}
+
+func SomeProtocolSomeMethodResultWithErr(err SomeProtocolSomeMethodError) SomeProtocolSomeMethodResult {
+	var _u SomeProtocolSomeMethodResult
+	_u.SetErr(err)
+	return _u
+}
+
+type I_unionMemberTag uint64
+
+const (
+	UnionMember_unknownData = 0 // 0x00000000
+	UnionMemberUnionData    = 2 // 0x00000002
+)
+
+type UnionMember struct {
+	I_unionMemberTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_unknownData    interface{}
+	UnionData        uint8 `fidl_ordinal:"2"`
+}
+
+var _mUnionMember = _bindings.CreateLazyMarshaler(UnionMember{})
+
+func (msg *UnionMember) Marshaler() _bindings.Marshaler {
+	return _mUnionMember
+}
+
+func (_m *UnionMember) reset() {
+	switch _m.I_unionMemberTag {
+	case 2:
+		var _zeroed uint8
+		_m.UnionData = _zeroed
+	default:
+		var _zeroed interface{}
+		_m.I_unknownData = _zeroed
+	}
+}
+
+func (_m *UnionMember) Which() I_unionMemberTag {
+	switch _m.I_unionMemberTag {
+	case 2:
+		return UnionMemberUnionData
+	default:
+		return UnionMember_unknownData
+	}
+}
+
+func (_m *UnionMember) Ordinal() uint64 {
+	return uint64(_m.I_unionMemberTag)
+}
+
+func (_m *UnionMember) SetUnionData(unionData uint8) {
+	_m.reset()
+	_m.I_unionMemberTag = UnionMemberUnionData
+	_m.UnionData = unionData
+}
+
+func UnionMemberWithUnionData(unionData uint8) UnionMember {
+	var _u UnionMember
+	_u.SetUnionData(unionData)
+	return _u
+}
+func (_m *UnionMember) GetUnknownData() _bindings.UnknownData {
+	return _m.I_unknownData.(_bindings.UnknownData)
 }
 
 type FunctionApplication struct {
@@ -625,6 +580,51 @@ func (u *FunctionApplication) HasUnknownData() bool {
 }
 
 func (u *FunctionApplication) GetUnknownData() map[uint64]_bindings.UnknownData {
+	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
+}
+
+type TableMember struct {
+	_                struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_unknownData    interface{}
+	TableData        []TableData `fidl_bounds:"10" fidl_ordinal:"2"`
+	TableDataPresent bool
+}
+
+var _mTableMember = _bindings.CreateLazyMarshaler(TableMember{})
+
+func (msg *TableMember) Marshaler() _bindings.Marshaler {
+	return _mTableMember
+}
+
+func (u *TableMember) SetTableData(tableData []TableData) {
+	u.TableData = tableData
+	u.TableDataPresent = true
+}
+
+func (u *TableMember) GetTableData() []TableData {
+	return u.TableData
+}
+
+func (u *TableMember) GetTableDataWithDefault(_default []TableData) []TableData {
+	if !u.HasTableData() {
+		return _default
+	}
+	return u.TableData
+}
+
+func (u *TableMember) HasTableData() bool {
+	return u.TableDataPresent
+}
+
+func (u *TableMember) ClearTableData() {
+	u.TableDataPresent = false
+}
+
+func (u *TableMember) HasUnknownData() bool {
+	return u.I_unknownData != nil
+}
+
+func (u *TableMember) GetUnknownData() map[uint64]_bindings.UnknownData {
 	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
 }
 

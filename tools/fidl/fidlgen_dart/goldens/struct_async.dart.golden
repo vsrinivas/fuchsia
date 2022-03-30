@@ -39,71 +39,6 @@ import 'package:zircon/zircon.dart' as $zircon;
 // ignore_for_file: avoid_unused_constructor_parameters
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
-class Simple extends $fidl.Struct {
-  const Simple({
-    required this.f1,
-    required this.f2,
-  });
-  Simple.clone(
-    Simple $orig, {
-    int? f1,
-    bool? f2,
-  }) : this(
-          f1: f1 ?? $orig.f1,
-          f2: f2 ?? $orig.f2,
-        );
-
-  final int f1;
-  final bool f2;
-
-  @override
-  List<Object?> get $fields {
-    return <Object?>[
-      f1,
-      f2,
-    ];
-  }
-
-  static const $fieldType0 = $fidl.Uint8Type();
-  static const $fieldType1 = $fidl.BoolType();
-
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, f1, $offset + 0, $depth);
-        $fieldType1.encode($encoder, f2, $offset + 1, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, f1, $offset + 0, $depth);
-        $fieldType1.encode($encoder, f2, $offset + 1, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-
-  static Simple _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
-    switch ($decoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        return Simple(
-            f1: $fieldType0.decode($decoder, $offset + 0, $depth),
-            f2: $fieldType1.decode($decoder, $offset + 1, $depth));
-      case $fidl.WireFormat.v2:
-        return Simple(
-            f1: $fieldType0.decode($decoder, $offset + 0, $depth),
-            f2: $fieldType1.decode($decoder, $offset + 1, $depth));
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.StructType<Simple> kSimple_Type = $fidl.StructType<Simple>(
-    inlineSizeV1: 2, inlineSizeV2: 2, structDecode: Simple._structDecode);
-
 class BasicStruct extends $fidl.Struct {
   const BasicStruct({
     required this.x,
@@ -174,3 +109,68 @@ const $fidl.StructType<BasicStruct> kBasicStruct_Type =
         inlineSizeV1: 24,
         inlineSizeV2: 24,
         structDecode: BasicStruct._structDecode);
+
+class Simple extends $fidl.Struct {
+  const Simple({
+    required this.f1,
+    required this.f2,
+  });
+  Simple.clone(
+    Simple $orig, {
+    int? f1,
+    bool? f2,
+  }) : this(
+          f1: f1 ?? $orig.f1,
+          f2: f2 ?? $orig.f2,
+        );
+
+  final int f1;
+  final bool f2;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      f1,
+      f2,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint8Type();
+  static const $fieldType1 = $fidl.BoolType();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, f1, $offset + 0, $depth);
+        $fieldType1.encode($encoder, f2, $offset + 1, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, f1, $offset + 0, $depth);
+        $fieldType1.encode($encoder, f2, $offset + 1, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  static Simple _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return Simple(
+            f1: $fieldType0.decode($decoder, $offset + 0, $depth),
+            f2: $fieldType1.decode($decoder, $offset + 1, $depth));
+      case $fidl.WireFormat.v2:
+        return Simple(
+            f1: $fieldType0.decode($decoder, $offset + 0, $depth),
+            f2: $fieldType1.decode($decoder, $offset + 1, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<Simple> kSimple_Type = $fidl.StructType<Simple>(
+    inlineSizeV1: 2, inlineSizeV2: 2, structDecode: Simple._structDecode);

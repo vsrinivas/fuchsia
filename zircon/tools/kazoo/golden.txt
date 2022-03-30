@@ -47,6 +47,12 @@ typedef uint32_t zx_rights_t;
 
 #define ZX_RIGHT_ALL ((zx_rights_t)0x801fffffu)
 
+// Profile Info Type -----------------------------------------------------------
+
+typedef uint32_t zx_profile_info_type_t;
+
+#define ZX_PROFILE_INFO_TYPE_ZX_PROFILE_INFO_SCHEDULER ((zx_profile_info_type_t)0x1u)
+
 // Clock -----------------------------------------------------------------------
 
 typedef uint32_t zx_clock_t;
@@ -54,12 +60,6 @@ typedef uint32_t zx_clock_t;
 #define ZX_CLOCK_MONOTONIC ((zx_clock_t)0x0u)
 #define ZX_CLOCK_UTC ((zx_clock_t)0x1u)
 #define ZX_CLOCK_THREAD ((zx_clock_t)0x2u)
-
-// Profile Info Type -----------------------------------------------------------
-
-typedef uint32_t zx_profile_info_type_t;
-
-#define ZX_PROFILE_INFO_TYPE_ZX_PROFILE_INFO_SCHEDULER ((zx_profile_info_type_t)0x1u)
 
 // Stream Seek Origin ----------------------------------------------------------
 
@@ -69,39 +69,39 @@ typedef uint32_t zx_stream_seek_origin_t;
 #define ZX_STREAM_SEEK_ORIGIN_CURRENT ((zx_stream_seek_origin_t)0x1u)
 #define ZX_STREAM_SEEK_ORIGIN_END ((zx_stream_seek_origin_t)0x2u)
 
-typedef uint32_t zx_handle_op_t;
-
 typedef int32_t zx_futex_t;
+
+typedef uint32_t zx_handle_op_t;
 
 typedef uint32_t zx_vm_option_t;
 
-typedef int32_t zx_status_t;
-
-typedef int64_t zx_time_t;
-
 typedef int64_t zx_duration_t;
 
-typedef int64_t zx_ticks_t;
+typedef uint64_t zx_gpaddr_t;
 
 typedef uint64_t zx_koid_t;
 
-typedef uint64_t zx_vaddr_t;
+typedef uint64_t zx_off_t;
 
 typedef uint64_t zx_paddr_t;
 
 typedef uint32_t zx_paddr32_t;
 
-typedef uint64_t zx_gpaddr_t;
-
-typedef uint64_t zx_off_t;
-
 typedef uint32_t zx_procarg_t;
 
 typedef uint32_t zx_signals_t;
 
-typedef uint64_t zx_usize_t;
+typedef int32_t zx_status_t;
+
+typedef int64_t zx_ticks_t;
+
+typedef int64_t zx_time_t;
 
 typedef uint64_t zx_uintptr_t;
+
+typedef uint64_t zx_usize_t;
+
+typedef uint64_t zx_vaddr_t;
 
 __END_CDECLS
 

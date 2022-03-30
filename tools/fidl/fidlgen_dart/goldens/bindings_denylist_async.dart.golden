@@ -974,6 +974,75 @@ const $fidl.StructType<OnlyAppearsInImportingLibrary>
         inlineSizeV2: 1,
         structDecode: OnlyAppearsInImportingLibrary._structDecode);
 
+abstract class Allowed {
+  $fidl.ServiceData? get $serviceData => AllowedData();
+}
+
+// TODO: Remove ServiceData for non-service
+class AllowedData implements $fidl.ServiceData<Allowed> {
+  const AllowedData();
+
+  @override
+  String getName() {
+    return "";
+  }
+
+  @override
+  $fidl.AsyncBinding getBinding() {
+    return AllowedBinding();
+  }
+}
+
+class AllowedProxy extends $fidl.AsyncProxy<Allowed> implements Allowed {
+  AllowedProxy()
+      : super($fidl.AsyncProxyController<Allowed>($interfaceName: r'Allowed')) {
+    ctrl.onResponse = _handleResponse;
+  }
+  @override
+  Null get $serviceData => null;
+
+  void _handleEvent($fidl.IncomingMessage $message) {
+    switch ($message.ordinal) {
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        break;
+    }
+  }
+
+  void _handleResponse($fidl.IncomingMessage $message) {
+    final int $txid = $message.txid;
+    if ($txid == 0) {
+      _handleEvent($message);
+      return;
+    }
+    final $async.Completer? $completer = ctrl.getCompleter($txid);
+    if ($completer == null) {
+      $message.closeHandles();
+      return;
+    }
+    switch ($message.ordinal) {
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        break;
+    }
+  }
+}
+
+class AllowedBinding extends $fidl.AsyncBinding<Allowed> {
+  AllowedBinding() : super(r"Allowed");
+
+  @override
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
+    switch ($message.ordinal) {
+      default:
+        throw $fidl.FidlError(r'Unexpected message name for AllowedBinding');
+    }
+  }
+}
+
 // onlyDenyCpp: (bool a) -> (int b)
 const int _kDenyEachBinding_OnlyDenyCpp_Ordinal = 0x290bad96051b1b92;
 const $fidl.MethodType _kDenyEachBinding_OnlyDenyCpp_Type = $fidl.MethodType(
@@ -1580,75 +1649,6 @@ class DenyEachBindingBinding extends $fidl.AsyncBinding<DenyEachBinding> {
       default:
         throw $fidl.FidlError(
             r'Unexpected message name for DenyEachBindingBinding');
-    }
-  }
-}
-
-abstract class Allowed {
-  $fidl.ServiceData? get $serviceData => AllowedData();
-}
-
-// TODO: Remove ServiceData for non-service
-class AllowedData implements $fidl.ServiceData<Allowed> {
-  const AllowedData();
-
-  @override
-  String getName() {
-    return "";
-  }
-
-  @override
-  $fidl.AsyncBinding getBinding() {
-    return AllowedBinding();
-  }
-}
-
-class AllowedProxy extends $fidl.AsyncProxy<Allowed> implements Allowed {
-  AllowedProxy()
-      : super($fidl.AsyncProxyController<Allowed>($interfaceName: r'Allowed')) {
-    ctrl.onResponse = _handleResponse;
-  }
-  @override
-  Null get $serviceData => null;
-
-  void _handleEvent($fidl.IncomingMessage $message) {
-    switch ($message.ordinal) {
-      default:
-        ctrl.proxyError(
-            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
-        break;
-    }
-  }
-
-  void _handleResponse($fidl.IncomingMessage $message) {
-    final int $txid = $message.txid;
-    if ($txid == 0) {
-      _handleEvent($message);
-      return;
-    }
-    final $async.Completer? $completer = ctrl.getCompleter($txid);
-    if ($completer == null) {
-      $message.closeHandles();
-      return;
-    }
-    switch ($message.ordinal) {
-      default:
-        ctrl.proxyError(
-            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
-        break;
-    }
-  }
-}
-
-class AllowedBinding extends $fidl.AsyncBinding<Allowed> {
-  AllowedBinding() : super(r"Allowed");
-
-  @override
-  void handleMessage(
-      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
-    switch ($message.ordinal) {
-      default:
-        throw $fidl.FidlError(r'Unexpected message name for AllowedBinding');
     }
   }
 }

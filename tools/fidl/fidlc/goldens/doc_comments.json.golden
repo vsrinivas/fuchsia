@@ -37,181 +37,6 @@
   "library_dependencies": [],
   "bits_declarations": [
     {
-      "name": "test.doccomments/MyStrictBits",
-      "naming_context": [
-        "MyStrictBits"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-        "line": 9,
-        "column": 6,
-        "length": 12
-      },
-      "maybe_attributes": [
-        {
-          "name": "doc",
-          "arguments": [
-            {
-              "name": "value",
-              "type": "string",
-              "value": {
-                "kind": "literal",
-                "value": " strict bits comment #1\n\n strict bits comment #2\n",
-                "expression": "/// strict bits comment #1\n///\n/// strict bits comment #2",
-                "literal": {
-                  "kind": "string",
-                  "value": " strict bits comment #1\n\n strict bits comment #2\n",
-                  "expression": "/// strict bits comment #1\n///\n/// strict bits comment #2"
-                }
-              },
-              "location": {
-                "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-                "line": 6,
-                "column": 1,
-                "length": 57
-              }
-            }
-          ],
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-            "line": 6,
-            "column": 1,
-            "length": 57
-          }
-        }
-      ],
-      "type": {
-        "kind": "primitive",
-        "subtype": "uint32",
-        "type_shape_v1": {
-          "inline_size": 4,
-          "alignment": 4,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        },
-        "type_shape_v2": {
-          "inline_size": 4,
-          "alignment": 4,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        }
-      },
-      "mask": "3",
-      "members": [
-        {
-          "name": "MY_FIRST_BIT",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-            "line": 13,
-            "column": 5,
-            "length": 12
-          },
-          "value": {
-            "kind": "literal",
-            "value": "1",
-            "expression": "1",
-            "literal": {
-              "kind": "numeric",
-              "value": "1",
-              "expression": "1"
-            }
-          },
-          "maybe_attributes": [
-            {
-              "name": "doc",
-              "arguments": [
-                {
-                  "name": "value",
-                  "type": "string",
-                  "value": {
-                    "kind": "literal",
-                    "value": " MY_FIRST_BIT member comment #1\n\n MY_FIRST_BIT member comment #3\n",
-                    "expression": "/// MY_FIRST_BIT member comment #1\n    ///\n    /// MY_FIRST_BIT member comment #3",
-                    "literal": {
-                      "kind": "string",
-                      "value": " MY_FIRST_BIT member comment #1\n\n MY_FIRST_BIT member comment #3\n",
-                      "expression": "/// MY_FIRST_BIT member comment #1\n    ///\n    /// MY_FIRST_BIT member comment #3"
-                    }
-                  },
-                  "location": {
-                    "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-                    "line": 10,
-                    "column": 5,
-                    "length": 81
-                  }
-                }
-              ],
-              "location": {
-                "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-                "line": 10,
-                "column": 5,
-                "length": 81
-              }
-            }
-          ]
-        },
-        {
-          "name": "MY_OTHER_BIT",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-            "line": 17,
-            "column": 5,
-            "length": 12
-          },
-          "value": {
-            "kind": "literal",
-            "value": "2",
-            "expression": "2",
-            "literal": {
-              "kind": "numeric",
-              "value": "2",
-              "expression": "2"
-            }
-          },
-          "maybe_attributes": [
-            {
-              "name": "doc",
-              "arguments": [
-                {
-                  "name": "value",
-                  "type": "string",
-                  "value": {
-                    "kind": "literal",
-                    "value": " MY_OTHER_BIT member comment #1\n\n MY_OTHER_BIT member comment #3\n",
-                    "expression": "/// MY_OTHER_BIT member comment #1\n    ///\n    /// MY_OTHER_BIT member comment #3",
-                    "literal": {
-                      "kind": "string",
-                      "value": " MY_OTHER_BIT member comment #1\n\n MY_OTHER_BIT member comment #3\n",
-                      "expression": "/// MY_OTHER_BIT member comment #1\n    ///\n    /// MY_OTHER_BIT member comment #3"
-                    }
-                  },
-                  "location": {
-                    "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-                    "line": 14,
-                    "column": 5,
-                    "length": 81
-                  }
-                }
-              ],
-              "location": {
-                "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-                "line": 14,
-                "column": 5,
-                "length": 81
-              }
-            }
-          ]
-        }
-      ],
-      "strict": true
-    },
-    {
       "name": "test.doccomments/MyFlexibleBits",
       "naming_context": [
         "MyFlexibleBits"
@@ -385,6 +210,181 @@
         }
       ],
       "strict": false
+    },
+    {
+      "name": "test.doccomments/MyStrictBits",
+      "naming_context": [
+        "MyStrictBits"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+        "line": 9,
+        "column": 6,
+        "length": 12
+      },
+      "maybe_attributes": [
+        {
+          "name": "doc",
+          "arguments": [
+            {
+              "name": "value",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": " strict bits comment #1\n\n strict bits comment #2\n",
+                "expression": "/// strict bits comment #1\n///\n/// strict bits comment #2",
+                "literal": {
+                  "kind": "string",
+                  "value": " strict bits comment #1\n\n strict bits comment #2\n",
+                  "expression": "/// strict bits comment #1\n///\n/// strict bits comment #2"
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+                "line": 6,
+                "column": 1,
+                "length": 57
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+            "line": 6,
+            "column": 1,
+            "length": 57
+          }
+        }
+      ],
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32",
+        "type_shape_v1": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "mask": "3",
+      "members": [
+        {
+          "name": "MY_FIRST_BIT",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+            "line": 13,
+            "column": 5,
+            "length": 12
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "1",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          },
+          "maybe_attributes": [
+            {
+              "name": "doc",
+              "arguments": [
+                {
+                  "name": "value",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": " MY_FIRST_BIT member comment #1\n\n MY_FIRST_BIT member comment #3\n",
+                    "expression": "/// MY_FIRST_BIT member comment #1\n    ///\n    /// MY_FIRST_BIT member comment #3",
+                    "literal": {
+                      "kind": "string",
+                      "value": " MY_FIRST_BIT member comment #1\n\n MY_FIRST_BIT member comment #3\n",
+                      "expression": "/// MY_FIRST_BIT member comment #1\n    ///\n    /// MY_FIRST_BIT member comment #3"
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+                    "line": 10,
+                    "column": 5,
+                    "length": 81
+                  }
+                }
+              ],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+                "line": 10,
+                "column": 5,
+                "length": 81
+              }
+            }
+          ]
+        },
+        {
+          "name": "MY_OTHER_BIT",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+            "line": 17,
+            "column": 5,
+            "length": 12
+          },
+          "value": {
+            "kind": "literal",
+            "value": "2",
+            "expression": "2",
+            "literal": {
+              "kind": "numeric",
+              "value": "2",
+              "expression": "2"
+            }
+          },
+          "maybe_attributes": [
+            {
+              "name": "doc",
+              "arguments": [
+                {
+                  "name": "value",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": " MY_OTHER_BIT member comment #1\n\n MY_OTHER_BIT member comment #3\n",
+                    "expression": "/// MY_OTHER_BIT member comment #1\n    ///\n    /// MY_OTHER_BIT member comment #3",
+                    "literal": {
+                      "kind": "string",
+                      "value": " MY_OTHER_BIT member comment #1\n\n MY_OTHER_BIT member comment #3\n",
+                      "expression": "/// MY_OTHER_BIT member comment #1\n    ///\n    /// MY_OTHER_BIT member comment #3"
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+                    "line": 14,
+                    "column": 5,
+                    "length": 81
+                  }
+                }
+              ],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+                "line": 14,
+                "column": 5,
+                "length": 81
+              }
+            }
+          ]
+        }
+      ],
+      "strict": true
     }
   ],
   "const_declarations": [
@@ -464,159 +464,6 @@
     }
   ],
   "enum_declarations": [
-    {
-      "name": "test.doccomments/MyStrictEnum",
-      "naming_context": [
-        "MyStrictEnum"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-        "line": 42,
-        "column": 6,
-        "length": 12
-      },
-      "maybe_attributes": [
-        {
-          "name": "doc",
-          "arguments": [
-            {
-              "name": "value",
-              "type": "string",
-              "value": {
-                "kind": "literal",
-                "value": " strict enum comment #1.\n\n strict enum comment #2.\n",
-                "expression": "/// strict enum comment #1.\n///\n/// strict enum comment #2.",
-                "literal": {
-                  "kind": "string",
-                  "value": " strict enum comment #1.\n\n strict enum comment #2.\n",
-                  "expression": "/// strict enum comment #1.\n///\n/// strict enum comment #2."
-                }
-              },
-              "location": {
-                "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-                "line": 39,
-                "column": 1,
-                "length": 59
-              }
-            }
-          ],
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-            "line": 39,
-            "column": 1,
-            "length": 59
-          }
-        }
-      ],
-      "type": "uint32",
-      "members": [
-        {
-          "name": "FOO",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-            "line": 46,
-            "column": 5,
-            "length": 3
-          },
-          "value": {
-            "kind": "literal",
-            "value": "1",
-            "expression": "1",
-            "literal": {
-              "kind": "numeric",
-              "value": "1",
-              "expression": "1"
-            }
-          },
-          "maybe_attributes": [
-            {
-              "name": "doc",
-              "arguments": [
-                {
-                  "name": "value",
-                  "type": "string",
-                  "value": {
-                    "kind": "literal",
-                    "value": " FOO member comment #1\n\n FOO member comment #3\n",
-                    "expression": "/// FOO member comment #1\n    ///\n    /// FOO member comment #3",
-                    "literal": {
-                      "kind": "string",
-                      "value": " FOO member comment #1\n\n FOO member comment #3\n",
-                      "expression": "/// FOO member comment #1\n    ///\n    /// FOO member comment #3"
-                    }
-                  },
-                  "location": {
-                    "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-                    "line": 43,
-                    "column": 5,
-                    "length": 63
-                  }
-                }
-              ],
-              "location": {
-                "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-                "line": 43,
-                "column": 5,
-                "length": 63
-              }
-            }
-          ]
-        },
-        {
-          "name": "BAR",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-            "line": 51,
-            "column": 5,
-            "length": 3
-          },
-          "value": {
-            "kind": "literal",
-            "value": "2",
-            "expression": "2",
-            "literal": {
-              "kind": "numeric",
-              "value": "2",
-              "expression": "2"
-            }
-          },
-          "maybe_attributes": [
-            {
-              "name": "doc",
-              "arguments": [
-                {
-                  "name": "value",
-                  "type": "string",
-                  "value": {
-                    "kind": "literal",
-                    "value": " BAR member comment #1\n\n BAR member comment #3\n",
-                    "expression": "/// BAR member comment #1\n    ///\n    /// BAR member comment #3",
-                    "literal": {
-                      "kind": "string",
-                      "value": " BAR member comment #1\n\n BAR member comment #3\n",
-                      "expression": "/// BAR member comment #1\n    ///\n    /// BAR member comment #3"
-                    }
-                  },
-                  "location": {
-                    "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-                    "line": 47,
-                    "column": 5,
-                    "length": 63
-                  }
-                }
-              ],
-              "location": {
-                "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-                "line": 47,
-                "column": 5,
-                "length": 63
-              }
-            }
-          ]
-        }
-      ],
-      "strict": true
-    },
     {
       "name": "test.doccomments/MyFlexibleEnum",
       "naming_context": [
@@ -770,6 +617,159 @@
       ],
       "strict": false,
       "maybe_unknown_value": 4294967295
+    },
+    {
+      "name": "test.doccomments/MyStrictEnum",
+      "naming_context": [
+        "MyStrictEnum"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+        "line": 42,
+        "column": 6,
+        "length": 12
+      },
+      "maybe_attributes": [
+        {
+          "name": "doc",
+          "arguments": [
+            {
+              "name": "value",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": " strict enum comment #1.\n\n strict enum comment #2.\n",
+                "expression": "/// strict enum comment #1.\n///\n/// strict enum comment #2.",
+                "literal": {
+                  "kind": "string",
+                  "value": " strict enum comment #1.\n\n strict enum comment #2.\n",
+                  "expression": "/// strict enum comment #1.\n///\n/// strict enum comment #2."
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+                "line": 39,
+                "column": 1,
+                "length": 59
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+            "line": 39,
+            "column": 1,
+            "length": 59
+          }
+        }
+      ],
+      "type": "uint32",
+      "members": [
+        {
+          "name": "FOO",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+            "line": 46,
+            "column": 5,
+            "length": 3
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "1",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          },
+          "maybe_attributes": [
+            {
+              "name": "doc",
+              "arguments": [
+                {
+                  "name": "value",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": " FOO member comment #1\n\n FOO member comment #3\n",
+                    "expression": "/// FOO member comment #1\n    ///\n    /// FOO member comment #3",
+                    "literal": {
+                      "kind": "string",
+                      "value": " FOO member comment #1\n\n FOO member comment #3\n",
+                      "expression": "/// FOO member comment #1\n    ///\n    /// FOO member comment #3"
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+                    "line": 43,
+                    "column": 5,
+                    "length": 63
+                  }
+                }
+              ],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+                "line": 43,
+                "column": 5,
+                "length": 63
+              }
+            }
+          ]
+        },
+        {
+          "name": "BAR",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+            "line": 51,
+            "column": 5,
+            "length": 3
+          },
+          "value": {
+            "kind": "literal",
+            "value": "2",
+            "expression": "2",
+            "literal": {
+              "kind": "numeric",
+              "value": "2",
+              "expression": "2"
+            }
+          },
+          "maybe_attributes": [
+            {
+              "name": "doc",
+              "arguments": [
+                {
+                  "name": "value",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": " BAR member comment #1\n\n BAR member comment #3\n",
+                    "expression": "/// BAR member comment #1\n    ///\n    /// BAR member comment #3",
+                    "literal": {
+                      "kind": "string",
+                      "value": " BAR member comment #1\n\n BAR member comment #3\n",
+                      "expression": "/// BAR member comment #1\n    ///\n    /// BAR member comment #3"
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+                    "line": 47,
+                    "column": 5,
+                    "length": 63
+                  }
+                }
+              ],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+                "line": 47,
+                "column": 5,
+                "length": 63
+              }
+            }
+          ]
+        }
+      ],
+      "strict": true
     }
   ],
   "experimental_resource_declarations": [],
@@ -1304,139 +1304,6 @@
   ],
   "union_declarations": [
     {
-      "name": "test.doccomments/StrictUnion",
-      "naming_context": [
-        "StrictUnion"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-        "line": 82,
-        "column": 6,
-        "length": 11
-      },
-      "maybe_attributes": [
-        {
-          "name": "doc",
-          "arguments": [
-            {
-              "name": "value",
-              "type": "string",
-              "value": {
-                "kind": "literal",
-                "value": " strict union comment #1\n\n strict union comment #3\n",
-                "expression": "/// strict union comment #1\n///\n/// strict union comment #3",
-                "literal": {
-                  "kind": "string",
-                  "value": " strict union comment #1\n\n strict union comment #3\n",
-                  "expression": "/// strict union comment #1\n///\n/// strict union comment #3"
-                }
-              },
-              "location": {
-                "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-                "line": 79,
-                "column": 1,
-                "length": 59
-              }
-            }
-          ],
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-            "line": 79,
-            "column": 1,
-            "length": 59
-          }
-        }
-      ],
-      "members": [
-        {
-          "ordinal": 1,
-          "reserved": false,
-          "name": "Field",
-          "type": {
-            "kind": "primitive",
-            "subtype": "int32",
-            "type_shape_v1": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-            "line": 86,
-            "column": 8,
-            "length": 5
-          },
-          "maybe_attributes": [
-            {
-              "name": "doc",
-              "arguments": [
-                {
-                  "name": "value",
-                  "type": "string",
-                  "value": {
-                    "kind": "literal",
-                    "value": " union member comment #1\n\n union member comment #3\n",
-                    "expression": "/// union member comment #1\n    ///\n    /// union member comment #3",
-                    "literal": {
-                      "kind": "string",
-                      "value": " union member comment #1\n\n union member comment #3\n",
-                      "expression": "/// union member comment #1\n    ///\n    /// union member comment #3"
-                    }
-                  },
-                  "location": {
-                    "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-                    "line": 83,
-                    "column": 5,
-                    "length": 67
-                  }
-                }
-              ],
-              "location": {
-                "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
-                "line": 83,
-                "column": 5,
-                "length": 67
-              }
-            }
-          ]
-        }
-      ],
-      "strict": true,
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 24,
-        "alignment": 8,
-        "depth": 1,
-        "max_handles": 0,
-        "max_out_of_line": 8,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 1,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      }
-    },
-    {
       "name": "test.doccomments/FlexibleUnion",
       "naming_context": [
         "FlexibleUnion"
@@ -1568,6 +1435,139 @@
         "has_padding": true,
         "has_flexible_envelope": true
       }
+    },
+    {
+      "name": "test.doccomments/StrictUnion",
+      "naming_context": [
+        "StrictUnion"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+        "line": 82,
+        "column": 6,
+        "length": 11
+      },
+      "maybe_attributes": [
+        {
+          "name": "doc",
+          "arguments": [
+            {
+              "name": "value",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": " strict union comment #1\n\n strict union comment #3\n",
+                "expression": "/// strict union comment #1\n///\n/// strict union comment #3",
+                "literal": {
+                  "kind": "string",
+                  "value": " strict union comment #1\n\n strict union comment #3\n",
+                  "expression": "/// strict union comment #1\n///\n/// strict union comment #3"
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+                "line": 79,
+                "column": 1,
+                "length": 59
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+            "line": 79,
+            "column": 1,
+            "length": 59
+          }
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "Field",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+            "line": 86,
+            "column": 8,
+            "length": 5
+          },
+          "maybe_attributes": [
+            {
+              "name": "doc",
+              "arguments": [
+                {
+                  "name": "value",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": " union member comment #1\n\n union member comment #3\n",
+                    "expression": "/// union member comment #1\n    ///\n    /// union member comment #3",
+                    "literal": {
+                      "kind": "string",
+                      "value": " union member comment #1\n\n union member comment #3\n",
+                      "expression": "/// union member comment #1\n    ///\n    /// union member comment #3"
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+                    "line": 83,
+                    "column": 5,
+                    "length": 67
+                  }
+                }
+              ],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+                "line": 83,
+                "column": 5,
+                "length": 67
+              }
+            }
+          ]
+        }
+      ],
+      "strict": true,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
     }
   ],
   "type_alias_declarations": [],
@@ -1585,16 +1585,16 @@
     "test.doccomments/C"
   ],
   "declarations": {
-    "test.doccomments/MyStrictBits": "bits",
     "test.doccomments/MyFlexibleBits": "bits",
+    "test.doccomments/MyStrictBits": "bits",
     "test.doccomments/C": "const",
-    "test.doccomments/MyStrictEnum": "enum",
     "test.doccomments/MyFlexibleEnum": "enum",
+    "test.doccomments/MyStrictEnum": "enum",
     "test.doccomments/Interface": "interface",
     "test.doccomments/Service": "service",
     "test.doccomments/Struct": "struct",
     "test.doccomments/Table": "table",
-    "test.doccomments/StrictUnion": "union",
-    "test.doccomments/FlexibleUnion": "union"
+    "test.doccomments/FlexibleUnion": "union",
+    "test.doccomments/StrictUnion": "union"
   }
 }

@@ -92,6 +92,120 @@ pub type MainProtocolOnAnonWithErrorResultHandleWrapper =
     std::result::Result<(MainProtocolOnAnonWithErrorResponse,), u32>;
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum LocalUnionPayload {
+    B(bool),
+    #[deprecated = "Use `LocalUnionPayload::unknown()` to construct and `LocalUnionPayloadUnknown!()` to exhaustively match."]
+    #[doc(hidden)]
+    __Unknown {
+        ordinal: u64,
+        bytes: Vec<u8>,
+    },
+}
+/// Pattern that matches an unknown `LocalUnionPayload` member.
+#[macro_export]
+macro_rules! LocalUnionPayloadUnknown {
+    () => {
+        _
+    };
+}
+
+impl LocalUnionPayload {
+    #[inline]
+    pub fn unknown(ordinal: u64, bytes: Vec<u8>) -> Self {
+        #[allow(deprecated)]
+        Self::__Unknown { ordinal, bytes }
+    }
+
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { ordinal, bytes } => Err((ordinal, bytes)),
+            _ => Ok(self),
+        }
+    }
+
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { .. } => true,
+            _ => false,
+        }
+    }
+}
+
+impl fidl::encoding::Persistable for LocalUnionPayload {}
+
+fidl_union! {
+    name: LocalUnionPayload,
+    members: [
+        B {
+            ty: bool,
+            ordinal: 1,
+        },
+    ],
+    value_unknown_member: __Unknown,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum MainProtocolOnAnonRequest {
+    B(bool),
+    #[deprecated = "Use `MainProtocolOnAnonRequest::unknown()` to construct and `MainProtocolOnAnonRequestUnknown!()` to exhaustively match."]
+    #[doc(hidden)]
+    __Unknown {
+        ordinal: u64,
+        bytes: Vec<u8>,
+    },
+}
+/// Pattern that matches an unknown `MainProtocolOnAnonRequest` member.
+#[macro_export]
+macro_rules! MainProtocolOnAnonRequestUnknown {
+    () => {
+        _
+    };
+}
+
+impl MainProtocolOnAnonRequest {
+    #[inline]
+    pub fn unknown(ordinal: u64, bytes: Vec<u8>) -> Self {
+        #[allow(deprecated)]
+        Self::__Unknown { ordinal, bytes }
+    }
+
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { ordinal, bytes } => Err((ordinal, bytes)),
+            _ => Ok(self),
+        }
+    }
+
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { .. } => true,
+            _ => false,
+        }
+    }
+}
+
+impl fidl::encoding::Persistable for MainProtocolOnAnonRequest {}
+
+fidl_union! {
+    name: MainProtocolOnAnonRequest,
+    members: [
+        B {
+            ty: bool,
+            ordinal: 1,
+        },
+    ],
+    value_unknown_member: __Unknown,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum MainProtocolTwoWayAnonRequest {
     B(bool),
     #[deprecated = "Use `MainProtocolTwoWayAnonRequest::unknown()` to construct and `MainProtocolTwoWayAnonRequestUnknown!()` to exhaustively match."]
@@ -206,117 +320,33 @@ fidl_union! {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum MainProtocolOnAnonRequest {
-    B(bool),
-    #[deprecated = "Use `MainProtocolOnAnonRequest::unknown()` to construct and `MainProtocolOnAnonRequestUnknown!()` to exhaustively match."]
+pub struct LocalTablePayload {
+    pub a: Option<u16>,
+    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
+    /// map from ordinals to raw data. The `Some` case is always nonempty.
+    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
+    #[deprecated = "Use `..LocalTablePayload::EMPTY` to construct and `..` to match."]
     #[doc(hidden)]
-    __Unknown {
-        ordinal: u64,
-        bytes: Vec<u8>,
-    },
-}
-/// Pattern that matches an unknown `MainProtocolOnAnonRequest` member.
-#[macro_export]
-macro_rules! MainProtocolOnAnonRequestUnknown {
-    () => {
-        _
-    };
+    pub __non_exhaustive: (),
 }
 
-impl MainProtocolOnAnonRequest {
-    #[inline]
-    pub fn unknown(ordinal: u64, bytes: Vec<u8>) -> Self {
-        #[allow(deprecated)]
-        Self::__Unknown { ordinal, bytes }
-    }
-
-    #[inline]
-    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
-        match self {
-            #[allow(deprecated)]
-            Self::__Unknown { ordinal, bytes } => Err((ordinal, bytes)),
-            _ => Ok(self),
-        }
-    }
-
-    #[inline]
-    pub fn is_unknown(&self) -> bool {
-        match self {
-            #[allow(deprecated)]
-            Self::__Unknown { .. } => true,
-            _ => false,
-        }
-    }
+impl LocalTablePayload {
+    /// An empty table with every field set to `None`.
+    #[allow(deprecated)]
+    pub const EMPTY: Self = Self { a: None, unknown_data: None, __non_exhaustive: () };
 }
 
-impl fidl::encoding::Persistable for MainProtocolOnAnonRequest {}
+impl fidl::encoding::Persistable for LocalTablePayload {}
 
-fidl_union! {
-    name: MainProtocolOnAnonRequest,
+fidl_table! {
+    name: LocalTablePayload,
     members: [
-        B {
-            ty: bool,
+        a {
+            ty: u16,
             ordinal: 1,
         },
     ],
-    value_unknown_member: __Unknown,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum LocalUnionPayload {
-    B(bool),
-    #[deprecated = "Use `LocalUnionPayload::unknown()` to construct and `LocalUnionPayloadUnknown!()` to exhaustively match."]
-    #[doc(hidden)]
-    __Unknown {
-        ordinal: u64,
-        bytes: Vec<u8>,
-    },
-}
-/// Pattern that matches an unknown `LocalUnionPayload` member.
-#[macro_export]
-macro_rules! LocalUnionPayloadUnknown {
-    () => {
-        _
-    };
-}
-
-impl LocalUnionPayload {
-    #[inline]
-    pub fn unknown(ordinal: u64, bytes: Vec<u8>) -> Self {
-        #[allow(deprecated)]
-        Self::__Unknown { ordinal, bytes }
-    }
-
-    #[inline]
-    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
-        match self {
-            #[allow(deprecated)]
-            Self::__Unknown { ordinal, bytes } => Err((ordinal, bytes)),
-            _ => Ok(self),
-        }
-    }
-
-    #[inline]
-    pub fn is_unknown(&self) -> bool {
-        match self {
-            #[allow(deprecated)]
-            Self::__Unknown { .. } => true,
-            _ => false,
-        }
-    }
-}
-
-impl fidl::encoding::Persistable for LocalUnionPayload {}
-
-fidl_union! {
-    name: LocalUnionPayload,
-    members: [
-        B {
-            ty: bool,
-            ordinal: 1,
-        },
-    ],
-    value_unknown_member: __Unknown,
+    value_unknown_member: unknown_data,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -430,36 +460,6 @@ impl fidl::encoding::Persistable for MainProtocolOnAnonWithErrorResponse {}
 
 fidl_table! {
     name: MainProtocolOnAnonWithErrorResponse,
-    members: [
-        a {
-            ty: u16,
-            ordinal: 1,
-        },
-    ],
-    value_unknown_member: unknown_data,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct LocalTablePayload {
-    pub a: Option<u16>,
-    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
-    /// map from ordinals to raw data. The `Some` case is always nonempty.
-    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
-    #[deprecated = "Use `..LocalTablePayload::EMPTY` to construct and `..` to match."]
-    #[doc(hidden)]
-    pub __non_exhaustive: (),
-}
-
-impl LocalTablePayload {
-    /// An empty table with every field set to `None`.
-    #[allow(deprecated)]
-    pub const EMPTY: Self = Self { a: None, unknown_data: None, __non_exhaustive: () };
-}
-
-impl fidl::encoding::Persistable for LocalTablePayload {}
-
-fidl_table! {
-    name: LocalTablePayload,
     members: [
         a {
             ty: u16,

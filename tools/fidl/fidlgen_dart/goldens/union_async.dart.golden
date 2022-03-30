@@ -39,43 +39,47 @@ import 'package:zircon/zircon.dart' as $zircon;
 // ignore_for_file: avoid_unused_constructor_parameters
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
-enum PizzaOrPastaTag {
-  pizza, // 0x1
-  pasta, // 0x2
+enum ExplicitFooTag {
+  $unknown,
+  s, // 0x2
+  i, // 0x1
 }
 
-const Map<int, PizzaOrPastaTag> _PizzaOrPastaTag_map = {
-  1: PizzaOrPastaTag.pizza,
-  2: PizzaOrPastaTag.pasta,
+const Map<int, ExplicitFooTag> _ExplicitFooTag_map = {
+  2: ExplicitFooTag.s,
+  1: ExplicitFooTag.i,
 };
 
-class PizzaOrPasta extends $fidl.Union {
-  const PizzaOrPasta.withPizza(Pizza value)
-      : _ordinal = 1,
-        _data = value;
-
-  const PizzaOrPasta.withPasta(Pasta value)
+class ExplicitFoo extends $fidl.Union {
+  const ExplicitFoo.withS(String value)
       : _ordinal = 2,
         _data = value;
 
-  PizzaOrPasta._(int ordinal, Object data)
+  const ExplicitFoo.withI(int value)
+      : _ordinal = 1,
+        _data = value;
+  const ExplicitFoo.with$UnknownData(this._ordinal, $fidl.UnknownRawData data)
+      : _data = data;
+
+  ExplicitFoo._(int ordinal, Object data)
       : _ordinal = ordinal,
         _data = data;
 
   final int _ordinal;
   final _data;
 
-  PizzaOrPastaTag get $tag => _PizzaOrPastaTag_map[_ordinal]!;
+  ExplicitFooTag get $tag =>
+      _ExplicitFooTag_map[_ordinal] ?? ExplicitFooTag.$unknown;
 
-  Pizza? get pizza {
-    if (_ordinal != 1) {
+  String? get s {
+    if (_ordinal != 2) {
       return null;
     }
     return _data;
   }
 
-  Pasta? get pasta {
-    if (_ordinal != 2) {
+  int? get i {
+    if (_ordinal != 1) {
       return null;
     }
     return _data;
@@ -83,8 +87,8 @@ class PizzaOrPasta extends $fidl.Union {
 
   $fidl.UnknownRawData? get $unknownData {
     switch (_ordinal) {
-      case 1:
       case 2:
+      case 1:
         return null;
       default:
         return _data;
@@ -97,33 +101,33 @@ class PizzaOrPasta extends $fidl.Union {
   @override
   Object get $data => _data;
 
-  static PizzaOrPasta _ctor(int ordinal, Object data) {
-    return PizzaOrPasta._(ordinal, data);
+  static ExplicitFoo _ctor(int ordinal, Object data) {
+    return ExplicitFoo._(ordinal, data);
   }
 }
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.UnionType<PizzaOrPasta> kPizzaOrPasta_Type =
-    $fidl.UnionType<PizzaOrPasta>(
+const $fidl.UnionType<ExplicitFoo> kExplicitFoo_Type =
+    $fidl.UnionType<ExplicitFoo>(
   members: <int, $fidl.FidlType>{
-    1: kPizza_Type,
-    2: kPasta_Type,
+    2: $fidl.StringType(maybeElementCount: null),
+    1: $fidl.Int32Type(),
   },
-  ctor: PizzaOrPasta._ctor,
-  flexible: false,
+  ctor: ExplicitFoo._ctor,
+  flexible: true,
   resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<PizzaOrPasta> kPizzaOrPasta_OptType =
-    $fidl.NullableUnionType<PizzaOrPasta>(
+const $fidl.NullableUnionType<ExplicitFoo> kExplicitFoo_OptType =
+    $fidl.NullableUnionType<ExplicitFoo>(
   members: <int, $fidl.FidlType>{
-    1: kPizza_Type,
-    2: kPasta_Type,
+    2: $fidl.StringType(maybeElementCount: null),
+    1: $fidl.Int32Type(),
   },
-  ctor: PizzaOrPasta._ctor,
-  flexible: false,
+  ctor: ExplicitFoo._ctor,
+  flexible: true,
   resource: false,
 );
 
@@ -213,6 +217,439 @@ const $fidl.NullableUnionType<ExplicitPizzaOrPasta>
   },
   ctor: ExplicitPizzaOrPasta._ctor,
   flexible: false,
+  resource: false,
+);
+
+enum ExplicitStrictFooTag {
+  s, // 0x3
+  i, // 0x2
+}
+
+const Map<int, ExplicitStrictFooTag> _ExplicitStrictFooTag_map = {
+  3: ExplicitStrictFooTag.s,
+  2: ExplicitStrictFooTag.i,
+};
+
+class ExplicitStrictFoo extends $fidl.Union {
+  const ExplicitStrictFoo.withS(String value)
+      : _ordinal = 3,
+        _data = value;
+
+  const ExplicitStrictFoo.withI(int value)
+      : _ordinal = 2,
+        _data = value;
+
+  ExplicitStrictFoo._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  ExplicitStrictFooTag get $tag => _ExplicitStrictFooTag_map[_ordinal]!;
+
+  String? get s {
+    if (_ordinal != 3) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get i {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 3:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static ExplicitStrictFoo _ctor(int ordinal, Object data) {
+    return ExplicitStrictFoo._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<ExplicitStrictFoo> kExplicitStrictFoo_Type =
+    $fidl.UnionType<ExplicitStrictFoo>(
+  members: <int, $fidl.FidlType>{
+    3: $fidl.StringType(maybeElementCount: null),
+    2: $fidl.Int32Type(),
+  },
+  ctor: ExplicitStrictFoo._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<ExplicitStrictFoo> kExplicitStrictFoo_OptType =
+    $fidl.NullableUnionType<ExplicitStrictFoo>(
+  members: <int, $fidl.FidlType>{
+    3: $fidl.StringType(maybeElementCount: null),
+    2: $fidl.Int32Type(),
+  },
+  ctor: ExplicitStrictFoo._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum ExplicitUnionTag {
+  primitive, // 0x1
+  stringNeedsConstructor, // 0x3
+}
+
+const Map<int, ExplicitUnionTag> _ExplicitUnionTag_map = {
+  1: ExplicitUnionTag.primitive,
+  3: ExplicitUnionTag.stringNeedsConstructor,
+};
+
+class ExplicitUnion extends $fidl.Union {
+  const ExplicitUnion.withPrimitive(int value)
+      : _ordinal = 1,
+        _data = value;
+
+  const ExplicitUnion.withStringNeedsConstructor(String value)
+      : _ordinal = 3,
+        _data = value;
+
+  ExplicitUnion._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  ExplicitUnionTag get $tag => _ExplicitUnionTag_map[_ordinal]!;
+
+  int? get primitive {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  String? get stringNeedsConstructor {
+    if (_ordinal != 3) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 3:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static ExplicitUnion _ctor(int ordinal, Object data) {
+    return ExplicitUnion._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<ExplicitUnion> kExplicitUnion_Type =
+    $fidl.UnionType<ExplicitUnion>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Int32Type(),
+    3: $fidl.StringType(maybeElementCount: null),
+  },
+  ctor: ExplicitUnion._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<ExplicitUnion> kExplicitUnion_OptType =
+    $fidl.NullableUnionType<ExplicitUnion>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Int32Type(),
+    3: $fidl.StringType(maybeElementCount: null),
+  },
+  ctor: ExplicitUnion._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum ExplicitXUnionTag {
+  $unknown,
+  i, // 0x1
+  f, // 0x4
+}
+
+const Map<int, ExplicitXUnionTag> _ExplicitXUnionTag_map = {
+  1: ExplicitXUnionTag.i,
+  4: ExplicitXUnionTag.f,
+};
+
+class ExplicitXUnion extends $fidl.Union {
+  const ExplicitXUnion.withI(int value)
+      : _ordinal = 1,
+        _data = value;
+
+  const ExplicitXUnion.withF(double value)
+      : _ordinal = 4,
+        _data = value;
+  const ExplicitXUnion.with$UnknownData(
+      this._ordinal, $fidl.UnknownRawData data)
+      : _data = data;
+
+  ExplicitXUnion._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  ExplicitXUnionTag get $tag =>
+      _ExplicitXUnionTag_map[_ordinal] ?? ExplicitXUnionTag.$unknown;
+
+  int? get i {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  double? get f {
+    if (_ordinal != 4) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 4:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static ExplicitXUnion _ctor(int ordinal, Object data) {
+    return ExplicitXUnion._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<ExplicitXUnion> kExplicitXUnion_Type =
+    $fidl.UnionType<ExplicitXUnion>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Int64Type(),
+    4: $fidl.Float32Type(),
+  },
+  ctor: ExplicitXUnion._ctor,
+  flexible: true,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<ExplicitXUnion> kExplicitXUnion_OptType =
+    $fidl.NullableUnionType<ExplicitXUnion>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Int64Type(),
+    4: $fidl.Float32Type(),
+  },
+  ctor: ExplicitXUnion._ctor,
+  flexible: true,
+  resource: false,
+);
+
+enum FieldCollisionTag {
+  fieldCollisionTag, // 0x1
+}
+
+const Map<int, FieldCollisionTag> _FieldCollisionTag_map = {
+  1: FieldCollisionTag.fieldCollisionTag,
+};
+
+class FieldCollision extends $fidl.Union {
+  const FieldCollision.withFieldCollisionTag(int value)
+      : _ordinal = 1,
+        _data = value;
+
+  FieldCollision._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  FieldCollisionTag get $tag => _FieldCollisionTag_map[_ordinal]!;
+
+  int? get fieldCollisionTag {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static FieldCollision _ctor(int ordinal, Object data) {
+    return FieldCollision._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<FieldCollision> kFieldCollision_Type =
+    $fidl.UnionType<FieldCollision>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Int32Type(),
+  },
+  ctor: FieldCollision._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<FieldCollision> kFieldCollision_OptType =
+    $fidl.NullableUnionType<FieldCollision>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Int32Type(),
+  },
+  ctor: FieldCollision._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum FlexibleFooTag {
+  $unknown,
+  s, // 0x1
+  i, // 0x2
+}
+
+const Map<int, FlexibleFooTag> _FlexibleFooTag_map = {
+  1: FlexibleFooTag.s,
+  2: FlexibleFooTag.i,
+};
+
+class FlexibleFoo extends $fidl.Union {
+  const FlexibleFoo.withS(String value)
+      : _ordinal = 1,
+        _data = value;
+
+  const FlexibleFoo.withI(int value)
+      : _ordinal = 2,
+        _data = value;
+  const FlexibleFoo.with$UnknownData(this._ordinal, $fidl.UnknownRawData data)
+      : _data = data;
+
+  FlexibleFoo._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  FlexibleFooTag get $tag =>
+      _FlexibleFooTag_map[_ordinal] ?? FlexibleFooTag.$unknown;
+
+  String? get s {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get i {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static FlexibleFoo _ctor(int ordinal, Object data) {
+    return FlexibleFoo._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<FlexibleFoo> kFlexibleFoo_Type =
+    $fidl.UnionType<FlexibleFoo>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.StringType(maybeElementCount: null),
+    2: $fidl.Int32Type(),
+  },
+  ctor: FlexibleFoo._ctor,
+  flexible: true,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<FlexibleFoo> kFlexibleFoo_OptType =
+    $fidl.NullableUnionType<FlexibleFoo>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.StringType(maybeElementCount: null),
+    2: $fidl.Int32Type(),
+  },
+  ctor: FlexibleFoo._ctor,
+  flexible: true,
   resource: false,
 );
 
@@ -308,201 +745,6 @@ const $fidl.NullableUnionType<FlexiblePizzaOrPasta>
   },
   ctor: FlexiblePizzaOrPasta._ctor,
   flexible: true,
-  resource: false,
-);
-
-enum StrictPizzaOrPastaTag {
-  pizza, // 0x1
-  pasta, // 0x2
-}
-
-const Map<int, StrictPizzaOrPastaTag> _StrictPizzaOrPastaTag_map = {
-  1: StrictPizzaOrPastaTag.pizza,
-  2: StrictPizzaOrPastaTag.pasta,
-};
-
-class StrictPizzaOrPasta extends $fidl.Union {
-  const StrictPizzaOrPasta.withPizza(Pizza value)
-      : _ordinal = 1,
-        _data = value;
-
-  const StrictPizzaOrPasta.withPasta(Pasta value)
-      : _ordinal = 2,
-        _data = value;
-
-  StrictPizzaOrPasta._(int ordinal, Object data)
-      : _ordinal = ordinal,
-        _data = data;
-
-  final int _ordinal;
-  final _data;
-
-  StrictPizzaOrPastaTag get $tag => _StrictPizzaOrPastaTag_map[_ordinal]!;
-
-  Pizza? get pizza {
-    if (_ordinal != 1) {
-      return null;
-    }
-    return _data;
-  }
-
-  Pasta? get pasta {
-    if (_ordinal != 2) {
-      return null;
-    }
-    return _data;
-  }
-
-  $fidl.UnknownRawData? get $unknownData {
-    switch (_ordinal) {
-      case 1:
-      case 2:
-        return null;
-      default:
-        return _data;
-    }
-  }
-
-  @override
-  int get $ordinal => _ordinal;
-
-  @override
-  Object get $data => _data;
-
-  static StrictPizzaOrPasta _ctor(int ordinal, Object data) {
-    return StrictPizzaOrPasta._(ordinal, data);
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.UnionType<StrictPizzaOrPasta> kStrictPizzaOrPasta_Type =
-    $fidl.UnionType<StrictPizzaOrPasta>(
-  members: <int, $fidl.FidlType>{
-    1: kPizza_Type,
-    2: kPasta_Type,
-  },
-  ctor: StrictPizzaOrPasta._ctor,
-  flexible: false,
-  resource: false,
-);
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<StrictPizzaOrPasta> kStrictPizzaOrPasta_OptType =
-    $fidl.NullableUnionType<StrictPizzaOrPasta>(
-  members: <int, $fidl.FidlType>{
-    1: kPizza_Type,
-    2: kPasta_Type,
-  },
-  ctor: StrictPizzaOrPasta._ctor,
-  flexible: false,
-  resource: false,
-);
-
-enum UnionTag {
-  primitive, // 0x1
-  stringNeedsConstructor, // 0x2
-  vectorStringAlsoNeedsConstructor, // 0x3
-}
-
-const Map<int, UnionTag> _UnionTag_map = {
-  1: UnionTag.primitive,
-  2: UnionTag.stringNeedsConstructor,
-  3: UnionTag.vectorStringAlsoNeedsConstructor,
-};
-
-class Union extends $fidl.Union {
-  const Union.withPrimitive(int value)
-      : _ordinal = 1,
-        _data = value;
-
-  const Union.withStringNeedsConstructor(String value)
-      : _ordinal = 2,
-        _data = value;
-
-  const Union.withVectorStringAlsoNeedsConstructor(List<String> value)
-      : _ordinal = 3,
-        _data = value;
-
-  Union._(int ordinal, Object data)
-      : _ordinal = ordinal,
-        _data = data;
-
-  final int _ordinal;
-  final _data;
-
-  UnionTag get $tag => _UnionTag_map[_ordinal]!;
-
-  int? get primitive {
-    if (_ordinal != 1) {
-      return null;
-    }
-    return _data;
-  }
-
-  String? get stringNeedsConstructor {
-    if (_ordinal != 2) {
-      return null;
-    }
-    return _data;
-  }
-
-  List<String>? get vectorStringAlsoNeedsConstructor {
-    if (_ordinal != 3) {
-      return null;
-    }
-    return _data;
-  }
-
-  $fidl.UnknownRawData? get $unknownData {
-    switch (_ordinal) {
-      case 1:
-      case 2:
-      case 3:
-        return null;
-      default:
-        return _data;
-    }
-  }
-
-  @override
-  int get $ordinal => _ordinal;
-
-  @override
-  Object get $data => _data;
-
-  static Union _ctor(int ordinal, Object data) {
-    return Union._(ordinal, data);
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.UnionType<Union> kUnion_Type = $fidl.UnionType<Union>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.Int32Type(),
-    2: $fidl.StringType(maybeElementCount: null),
-    3: $fidl.VectorType<String, List<String>>(
-        element: $fidl.StringType(maybeElementCount: null),
-        maybeElementCount: null),
-  },
-  ctor: Union._ctor,
-  flexible: false,
-  resource: false,
-);
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<Union> kUnion_OptType =
-    $fidl.NullableUnionType<Union>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.Int32Type(),
-    2: $fidl.StringType(maybeElementCount: null),
-    3: $fidl.VectorType<String, List<String>>(
-        element: $fidl.StringType(maybeElementCount: null),
-        maybeElementCount: null),
-  },
-  ctor: Union._ctor,
-  flexible: false,
   resource: false,
 );
 
@@ -614,814 +856,6 @@ const $fidl.NullableUnionType<FlexibleUnion> kFlexibleUnion_OptType =
         maybeElementCount: null),
   },
   ctor: FlexibleUnion._ctor,
-  flexible: true,
-  resource: false,
-);
-
-enum StrictUnionTag {
-  primitive, // 0x1
-  stringNeedsConstructor, // 0x2
-  vectorStringAlsoNeedsConstructor, // 0x3
-}
-
-const Map<int, StrictUnionTag> _StrictUnionTag_map = {
-  1: StrictUnionTag.primitive,
-  2: StrictUnionTag.stringNeedsConstructor,
-  3: StrictUnionTag.vectorStringAlsoNeedsConstructor,
-};
-
-class StrictUnion extends $fidl.Union {
-  const StrictUnion.withPrimitive(int value)
-      : _ordinal = 1,
-        _data = value;
-
-  const StrictUnion.withStringNeedsConstructor(String value)
-      : _ordinal = 2,
-        _data = value;
-
-  const StrictUnion.withVectorStringAlsoNeedsConstructor(List<String> value)
-      : _ordinal = 3,
-        _data = value;
-
-  StrictUnion._(int ordinal, Object data)
-      : _ordinal = ordinal,
-        _data = data;
-
-  final int _ordinal;
-  final _data;
-
-  StrictUnionTag get $tag => _StrictUnionTag_map[_ordinal]!;
-
-  int? get primitive {
-    if (_ordinal != 1) {
-      return null;
-    }
-    return _data;
-  }
-
-  String? get stringNeedsConstructor {
-    if (_ordinal != 2) {
-      return null;
-    }
-    return _data;
-  }
-
-  List<String>? get vectorStringAlsoNeedsConstructor {
-    if (_ordinal != 3) {
-      return null;
-    }
-    return _data;
-  }
-
-  $fidl.UnknownRawData? get $unknownData {
-    switch (_ordinal) {
-      case 1:
-      case 2:
-      case 3:
-        return null;
-      default:
-        return _data;
-    }
-  }
-
-  @override
-  int get $ordinal => _ordinal;
-
-  @override
-  Object get $data => _data;
-
-  static StrictUnion _ctor(int ordinal, Object data) {
-    return StrictUnion._(ordinal, data);
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.UnionType<StrictUnion> kStrictUnion_Type =
-    $fidl.UnionType<StrictUnion>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.Int32Type(),
-    2: $fidl.StringType(maybeElementCount: null),
-    3: $fidl.VectorType<String, List<String>>(
-        element: $fidl.StringType(maybeElementCount: null),
-        maybeElementCount: null),
-  },
-  ctor: StrictUnion._ctor,
-  flexible: false,
-  resource: false,
-);
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<StrictUnion> kStrictUnion_OptType =
-    $fidl.NullableUnionType<StrictUnion>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.Int32Type(),
-    2: $fidl.StringType(maybeElementCount: null),
-    3: $fidl.VectorType<String, List<String>>(
-        element: $fidl.StringType(maybeElementCount: null),
-        maybeElementCount: null),
-  },
-  ctor: StrictUnion._ctor,
-  flexible: false,
-  resource: false,
-);
-
-enum FieldCollisionTag {
-  fieldCollisionTag, // 0x1
-}
-
-const Map<int, FieldCollisionTag> _FieldCollisionTag_map = {
-  1: FieldCollisionTag.fieldCollisionTag,
-};
-
-class FieldCollision extends $fidl.Union {
-  const FieldCollision.withFieldCollisionTag(int value)
-      : _ordinal = 1,
-        _data = value;
-
-  FieldCollision._(int ordinal, Object data)
-      : _ordinal = ordinal,
-        _data = data;
-
-  final int _ordinal;
-  final _data;
-
-  FieldCollisionTag get $tag => _FieldCollisionTag_map[_ordinal]!;
-
-  int? get fieldCollisionTag {
-    if (_ordinal != 1) {
-      return null;
-    }
-    return _data;
-  }
-
-  $fidl.UnknownRawData? get $unknownData {
-    switch (_ordinal) {
-      case 1:
-        return null;
-      default:
-        return _data;
-    }
-  }
-
-  @override
-  int get $ordinal => _ordinal;
-
-  @override
-  Object get $data => _data;
-
-  static FieldCollision _ctor(int ordinal, Object data) {
-    return FieldCollision._(ordinal, data);
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.UnionType<FieldCollision> kFieldCollision_Type =
-    $fidl.UnionType<FieldCollision>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.Int32Type(),
-  },
-  ctor: FieldCollision._ctor,
-  flexible: false,
-  resource: false,
-);
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<FieldCollision> kFieldCollision_OptType =
-    $fidl.NullableUnionType<FieldCollision>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.Int32Type(),
-  },
-  ctor: FieldCollision._ctor,
-  flexible: false,
-  resource: false,
-);
-
-enum ExplicitUnionTag {
-  primitive, // 0x1
-  stringNeedsConstructor, // 0x3
-}
-
-const Map<int, ExplicitUnionTag> _ExplicitUnionTag_map = {
-  1: ExplicitUnionTag.primitive,
-  3: ExplicitUnionTag.stringNeedsConstructor,
-};
-
-class ExplicitUnion extends $fidl.Union {
-  const ExplicitUnion.withPrimitive(int value)
-      : _ordinal = 1,
-        _data = value;
-
-  const ExplicitUnion.withStringNeedsConstructor(String value)
-      : _ordinal = 3,
-        _data = value;
-
-  ExplicitUnion._(int ordinal, Object data)
-      : _ordinal = ordinal,
-        _data = data;
-
-  final int _ordinal;
-  final _data;
-
-  ExplicitUnionTag get $tag => _ExplicitUnionTag_map[_ordinal]!;
-
-  int? get primitive {
-    if (_ordinal != 1) {
-      return null;
-    }
-    return _data;
-  }
-
-  String? get stringNeedsConstructor {
-    if (_ordinal != 3) {
-      return null;
-    }
-    return _data;
-  }
-
-  $fidl.UnknownRawData? get $unknownData {
-    switch (_ordinal) {
-      case 1:
-      case 3:
-        return null;
-      default:
-        return _data;
-    }
-  }
-
-  @override
-  int get $ordinal => _ordinal;
-
-  @override
-  Object get $data => _data;
-
-  static ExplicitUnion _ctor(int ordinal, Object data) {
-    return ExplicitUnion._(ordinal, data);
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.UnionType<ExplicitUnion> kExplicitUnion_Type =
-    $fidl.UnionType<ExplicitUnion>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.Int32Type(),
-    3: $fidl.StringType(maybeElementCount: null),
-  },
-  ctor: ExplicitUnion._ctor,
-  flexible: false,
-  resource: false,
-);
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<ExplicitUnion> kExplicitUnion_OptType =
-    $fidl.NullableUnionType<ExplicitUnion>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.Int32Type(),
-    3: $fidl.StringType(maybeElementCount: null),
-  },
-  ctor: ExplicitUnion._ctor,
-  flexible: false,
-  resource: false,
-);
-
-enum ReverseOrdinalUnionTag {
-  second, // 0x2
-  first, // 0x1
-}
-
-const Map<int, ReverseOrdinalUnionTag> _ReverseOrdinalUnionTag_map = {
-  2: ReverseOrdinalUnionTag.second,
-  1: ReverseOrdinalUnionTag.first,
-};
-
-class ReverseOrdinalUnion extends $fidl.Union {
-  const ReverseOrdinalUnion.withSecond(int value)
-      : _ordinal = 2,
-        _data = value;
-
-  const ReverseOrdinalUnion.withFirst(int value)
-      : _ordinal = 1,
-        _data = value;
-
-  ReverseOrdinalUnion._(int ordinal, Object data)
-      : _ordinal = ordinal,
-        _data = data;
-
-  final int _ordinal;
-  final _data;
-
-  ReverseOrdinalUnionTag get $tag => _ReverseOrdinalUnionTag_map[_ordinal]!;
-
-  int? get second {
-    if (_ordinal != 2) {
-      return null;
-    }
-    return _data;
-  }
-
-  int? get first {
-    if (_ordinal != 1) {
-      return null;
-    }
-    return _data;
-  }
-
-  $fidl.UnknownRawData? get $unknownData {
-    switch (_ordinal) {
-      case 2:
-      case 1:
-        return null;
-      default:
-        return _data;
-    }
-  }
-
-  @override
-  int get $ordinal => _ordinal;
-
-  @override
-  Object get $data => _data;
-
-  static ReverseOrdinalUnion _ctor(int ordinal, Object data) {
-    return ReverseOrdinalUnion._(ordinal, data);
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.UnionType<ReverseOrdinalUnion> kReverseOrdinalUnion_Type =
-    $fidl.UnionType<ReverseOrdinalUnion>(
-  members: <int, $fidl.FidlType>{
-    2: $fidl.Uint32Type(),
-    1: $fidl.Uint32Type(),
-  },
-  ctor: ReverseOrdinalUnion._ctor,
-  flexible: false,
-  resource: false,
-);
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<ReverseOrdinalUnion>
-    kReverseOrdinalUnion_OptType = $fidl.NullableUnionType<ReverseOrdinalUnion>(
-  members: <int, $fidl.FidlType>{
-    2: $fidl.Uint32Type(),
-    1: $fidl.Uint32Type(),
-  },
-  ctor: ReverseOrdinalUnion._ctor,
-  flexible: false,
-  resource: false,
-);
-
-enum FlexibleFooTag {
-  $unknown,
-  s, // 0x1
-  i, // 0x2
-}
-
-const Map<int, FlexibleFooTag> _FlexibleFooTag_map = {
-  1: FlexibleFooTag.s,
-  2: FlexibleFooTag.i,
-};
-
-class FlexibleFoo extends $fidl.Union {
-  const FlexibleFoo.withS(String value)
-      : _ordinal = 1,
-        _data = value;
-
-  const FlexibleFoo.withI(int value)
-      : _ordinal = 2,
-        _data = value;
-  const FlexibleFoo.with$UnknownData(this._ordinal, $fidl.UnknownRawData data)
-      : _data = data;
-
-  FlexibleFoo._(int ordinal, Object data)
-      : _ordinal = ordinal,
-        _data = data;
-
-  final int _ordinal;
-  final _data;
-
-  FlexibleFooTag get $tag =>
-      _FlexibleFooTag_map[_ordinal] ?? FlexibleFooTag.$unknown;
-
-  String? get s {
-    if (_ordinal != 1) {
-      return null;
-    }
-    return _data;
-  }
-
-  int? get i {
-    if (_ordinal != 2) {
-      return null;
-    }
-    return _data;
-  }
-
-  $fidl.UnknownRawData? get $unknownData {
-    switch (_ordinal) {
-      case 1:
-      case 2:
-        return null;
-      default:
-        return _data;
-    }
-  }
-
-  @override
-  int get $ordinal => _ordinal;
-
-  @override
-  Object get $data => _data;
-
-  static FlexibleFoo _ctor(int ordinal, Object data) {
-    return FlexibleFoo._(ordinal, data);
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.UnionType<FlexibleFoo> kFlexibleFoo_Type =
-    $fidl.UnionType<FlexibleFoo>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.StringType(maybeElementCount: null),
-    2: $fidl.Int32Type(),
-  },
-  ctor: FlexibleFoo._ctor,
-  flexible: true,
-  resource: false,
-);
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<FlexibleFoo> kFlexibleFoo_OptType =
-    $fidl.NullableUnionType<FlexibleFoo>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.StringType(maybeElementCount: null),
-    2: $fidl.Int32Type(),
-  },
-  ctor: FlexibleFoo._ctor,
-  flexible: true,
-  resource: false,
-);
-
-enum StrictFooTag {
-  s, // 0x1
-  i, // 0x2
-}
-
-const Map<int, StrictFooTag> _StrictFooTag_map = {
-  1: StrictFooTag.s,
-  2: StrictFooTag.i,
-};
-
-class StrictFoo extends $fidl.Union {
-  const StrictFoo.withS(String value)
-      : _ordinal = 1,
-        _data = value;
-
-  const StrictFoo.withI(int value)
-      : _ordinal = 2,
-        _data = value;
-
-  StrictFoo._(int ordinal, Object data)
-      : _ordinal = ordinal,
-        _data = data;
-
-  final int _ordinal;
-  final _data;
-
-  StrictFooTag get $tag => _StrictFooTag_map[_ordinal]!;
-
-  String? get s {
-    if (_ordinal != 1) {
-      return null;
-    }
-    return _data;
-  }
-
-  int? get i {
-    if (_ordinal != 2) {
-      return null;
-    }
-    return _data;
-  }
-
-  $fidl.UnknownRawData? get $unknownData {
-    switch (_ordinal) {
-      case 1:
-      case 2:
-        return null;
-      default:
-        return _data;
-    }
-  }
-
-  @override
-  int get $ordinal => _ordinal;
-
-  @override
-  Object get $data => _data;
-
-  static StrictFoo _ctor(int ordinal, Object data) {
-    return StrictFoo._(ordinal, data);
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.UnionType<StrictFoo> kStrictFoo_Type = $fidl.UnionType<StrictFoo>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.StringType(maybeElementCount: null),
-    2: $fidl.Int32Type(),
-  },
-  ctor: StrictFoo._ctor,
-  flexible: false,
-  resource: false,
-);
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<StrictFoo> kStrictFoo_OptType =
-    $fidl.NullableUnionType<StrictFoo>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.StringType(maybeElementCount: null),
-    2: $fidl.Int32Type(),
-  },
-  ctor: StrictFoo._ctor,
-  flexible: false,
-  resource: false,
-);
-
-enum ExplicitFooTag {
-  $unknown,
-  s, // 0x2
-  i, // 0x1
-}
-
-const Map<int, ExplicitFooTag> _ExplicitFooTag_map = {
-  2: ExplicitFooTag.s,
-  1: ExplicitFooTag.i,
-};
-
-class ExplicitFoo extends $fidl.Union {
-  const ExplicitFoo.withS(String value)
-      : _ordinal = 2,
-        _data = value;
-
-  const ExplicitFoo.withI(int value)
-      : _ordinal = 1,
-        _data = value;
-  const ExplicitFoo.with$UnknownData(this._ordinal, $fidl.UnknownRawData data)
-      : _data = data;
-
-  ExplicitFoo._(int ordinal, Object data)
-      : _ordinal = ordinal,
-        _data = data;
-
-  final int _ordinal;
-  final _data;
-
-  ExplicitFooTag get $tag =>
-      _ExplicitFooTag_map[_ordinal] ?? ExplicitFooTag.$unknown;
-
-  String? get s {
-    if (_ordinal != 2) {
-      return null;
-    }
-    return _data;
-  }
-
-  int? get i {
-    if (_ordinal != 1) {
-      return null;
-    }
-    return _data;
-  }
-
-  $fidl.UnknownRawData? get $unknownData {
-    switch (_ordinal) {
-      case 2:
-      case 1:
-        return null;
-      default:
-        return _data;
-    }
-  }
-
-  @override
-  int get $ordinal => _ordinal;
-
-  @override
-  Object get $data => _data;
-
-  static ExplicitFoo _ctor(int ordinal, Object data) {
-    return ExplicitFoo._(ordinal, data);
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.UnionType<ExplicitFoo> kExplicitFoo_Type =
-    $fidl.UnionType<ExplicitFoo>(
-  members: <int, $fidl.FidlType>{
-    2: $fidl.StringType(maybeElementCount: null),
-    1: $fidl.Int32Type(),
-  },
-  ctor: ExplicitFoo._ctor,
-  flexible: true,
-  resource: false,
-);
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<ExplicitFoo> kExplicitFoo_OptType =
-    $fidl.NullableUnionType<ExplicitFoo>(
-  members: <int, $fidl.FidlType>{
-    2: $fidl.StringType(maybeElementCount: null),
-    1: $fidl.Int32Type(),
-  },
-  ctor: ExplicitFoo._ctor,
-  flexible: true,
-  resource: false,
-);
-
-enum ExplicitStrictFooTag {
-  s, // 0x3
-  i, // 0x2
-}
-
-const Map<int, ExplicitStrictFooTag> _ExplicitStrictFooTag_map = {
-  3: ExplicitStrictFooTag.s,
-  2: ExplicitStrictFooTag.i,
-};
-
-class ExplicitStrictFoo extends $fidl.Union {
-  const ExplicitStrictFoo.withS(String value)
-      : _ordinal = 3,
-        _data = value;
-
-  const ExplicitStrictFoo.withI(int value)
-      : _ordinal = 2,
-        _data = value;
-
-  ExplicitStrictFoo._(int ordinal, Object data)
-      : _ordinal = ordinal,
-        _data = data;
-
-  final int _ordinal;
-  final _data;
-
-  ExplicitStrictFooTag get $tag => _ExplicitStrictFooTag_map[_ordinal]!;
-
-  String? get s {
-    if (_ordinal != 3) {
-      return null;
-    }
-    return _data;
-  }
-
-  int? get i {
-    if (_ordinal != 2) {
-      return null;
-    }
-    return _data;
-  }
-
-  $fidl.UnknownRawData? get $unknownData {
-    switch (_ordinal) {
-      case 3:
-      case 2:
-        return null;
-      default:
-        return _data;
-    }
-  }
-
-  @override
-  int get $ordinal => _ordinal;
-
-  @override
-  Object get $data => _data;
-
-  static ExplicitStrictFoo _ctor(int ordinal, Object data) {
-    return ExplicitStrictFoo._(ordinal, data);
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.UnionType<ExplicitStrictFoo> kExplicitStrictFoo_Type =
-    $fidl.UnionType<ExplicitStrictFoo>(
-  members: <int, $fidl.FidlType>{
-    3: $fidl.StringType(maybeElementCount: null),
-    2: $fidl.Int32Type(),
-  },
-  ctor: ExplicitStrictFoo._ctor,
-  flexible: false,
-  resource: false,
-);
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<ExplicitStrictFoo> kExplicitStrictFoo_OptType =
-    $fidl.NullableUnionType<ExplicitStrictFoo>(
-  members: <int, $fidl.FidlType>{
-    3: $fidl.StringType(maybeElementCount: null),
-    2: $fidl.Int32Type(),
-  },
-  ctor: ExplicitStrictFoo._ctor,
-  flexible: false,
-  resource: false,
-);
-
-enum OlderSimpleUnionTag {
-  $unknown,
-  i, // 0x1
-  f, // 0x2
-}
-
-const Map<int, OlderSimpleUnionTag> _OlderSimpleUnionTag_map = {
-  1: OlderSimpleUnionTag.i,
-  2: OlderSimpleUnionTag.f,
-};
-
-class OlderSimpleUnion extends $fidl.Union {
-  const OlderSimpleUnion.withI(int value)
-      : _ordinal = 1,
-        _data = value;
-
-  const OlderSimpleUnion.withF(double value)
-      : _ordinal = 2,
-        _data = value;
-  const OlderSimpleUnion.with$UnknownData(
-      this._ordinal, $fidl.UnknownRawData data)
-      : _data = data;
-
-  OlderSimpleUnion._(int ordinal, Object data)
-      : _ordinal = ordinal,
-        _data = data;
-
-  final int _ordinal;
-  final _data;
-
-  OlderSimpleUnionTag get $tag =>
-      _OlderSimpleUnionTag_map[_ordinal] ?? OlderSimpleUnionTag.$unknown;
-
-  int? get i {
-    if (_ordinal != 1) {
-      return null;
-    }
-    return _data;
-  }
-
-  double? get f {
-    if (_ordinal != 2) {
-      return null;
-    }
-    return _data;
-  }
-
-  $fidl.UnknownRawData? get $unknownData {
-    switch (_ordinal) {
-      case 1:
-      case 2:
-        return null;
-      default:
-        return _data;
-    }
-  }
-
-  @override
-  int get $ordinal => _ordinal;
-
-  @override
-  Object get $data => _data;
-
-  static OlderSimpleUnion _ctor(int ordinal, Object data) {
-    return OlderSimpleUnion._(ordinal, data);
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.UnionType<OlderSimpleUnion> kOlderSimpleUnion_Type =
-    $fidl.UnionType<OlderSimpleUnion>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.Int64Type(),
-    2: $fidl.Float32Type(),
-  },
-  ctor: OlderSimpleUnion._ctor,
-  flexible: true,
-  resource: false,
-);
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<OlderSimpleUnion> kOlderSimpleUnion_OptType =
-    $fidl.NullableUnionType<OlderSimpleUnion>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.Int64Type(),
-    2: $fidl.Float32Type(),
-  },
-  ctor: OlderSimpleUnion._ctor,
   flexible: true,
   resource: false,
 );
@@ -1539,6 +973,524 @@ const $fidl.NullableUnionType<NewerSimpleUnion> kNewerSimpleUnion_OptType =
   resource: false,
 );
 
+enum OlderSimpleUnionTag {
+  $unknown,
+  i, // 0x1
+  f, // 0x2
+}
+
+const Map<int, OlderSimpleUnionTag> _OlderSimpleUnionTag_map = {
+  1: OlderSimpleUnionTag.i,
+  2: OlderSimpleUnionTag.f,
+};
+
+class OlderSimpleUnion extends $fidl.Union {
+  const OlderSimpleUnion.withI(int value)
+      : _ordinal = 1,
+        _data = value;
+
+  const OlderSimpleUnion.withF(double value)
+      : _ordinal = 2,
+        _data = value;
+  const OlderSimpleUnion.with$UnknownData(
+      this._ordinal, $fidl.UnknownRawData data)
+      : _data = data;
+
+  OlderSimpleUnion._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  OlderSimpleUnionTag get $tag =>
+      _OlderSimpleUnionTag_map[_ordinal] ?? OlderSimpleUnionTag.$unknown;
+
+  int? get i {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  double? get f {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static OlderSimpleUnion _ctor(int ordinal, Object data) {
+    return OlderSimpleUnion._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<OlderSimpleUnion> kOlderSimpleUnion_Type =
+    $fidl.UnionType<OlderSimpleUnion>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Int64Type(),
+    2: $fidl.Float32Type(),
+  },
+  ctor: OlderSimpleUnion._ctor,
+  flexible: true,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<OlderSimpleUnion> kOlderSimpleUnion_OptType =
+    $fidl.NullableUnionType<OlderSimpleUnion>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Int64Type(),
+    2: $fidl.Float32Type(),
+  },
+  ctor: OlderSimpleUnion._ctor,
+  flexible: true,
+  resource: false,
+);
+
+enum PizzaOrPastaTag {
+  pizza, // 0x1
+  pasta, // 0x2
+}
+
+const Map<int, PizzaOrPastaTag> _PizzaOrPastaTag_map = {
+  1: PizzaOrPastaTag.pizza,
+  2: PizzaOrPastaTag.pasta,
+};
+
+class PizzaOrPasta extends $fidl.Union {
+  const PizzaOrPasta.withPizza(Pizza value)
+      : _ordinal = 1,
+        _data = value;
+
+  const PizzaOrPasta.withPasta(Pasta value)
+      : _ordinal = 2,
+        _data = value;
+
+  PizzaOrPasta._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  PizzaOrPastaTag get $tag => _PizzaOrPastaTag_map[_ordinal]!;
+
+  Pizza? get pizza {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  Pasta? get pasta {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static PizzaOrPasta _ctor(int ordinal, Object data) {
+    return PizzaOrPasta._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<PizzaOrPasta> kPizzaOrPasta_Type =
+    $fidl.UnionType<PizzaOrPasta>(
+  members: <int, $fidl.FidlType>{
+    1: kPizza_Type,
+    2: kPasta_Type,
+  },
+  ctor: PizzaOrPasta._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<PizzaOrPasta> kPizzaOrPasta_OptType =
+    $fidl.NullableUnionType<PizzaOrPasta>(
+  members: <int, $fidl.FidlType>{
+    1: kPizza_Type,
+    2: kPasta_Type,
+  },
+  ctor: PizzaOrPasta._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum ReverseOrdinalUnionTag {
+  second, // 0x2
+  first, // 0x1
+}
+
+const Map<int, ReverseOrdinalUnionTag> _ReverseOrdinalUnionTag_map = {
+  2: ReverseOrdinalUnionTag.second,
+  1: ReverseOrdinalUnionTag.first,
+};
+
+class ReverseOrdinalUnion extends $fidl.Union {
+  const ReverseOrdinalUnion.withSecond(int value)
+      : _ordinal = 2,
+        _data = value;
+
+  const ReverseOrdinalUnion.withFirst(int value)
+      : _ordinal = 1,
+        _data = value;
+
+  ReverseOrdinalUnion._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  ReverseOrdinalUnionTag get $tag => _ReverseOrdinalUnionTag_map[_ordinal]!;
+
+  int? get second {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get first {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 2:
+      case 1:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static ReverseOrdinalUnion _ctor(int ordinal, Object data) {
+    return ReverseOrdinalUnion._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<ReverseOrdinalUnion> kReverseOrdinalUnion_Type =
+    $fidl.UnionType<ReverseOrdinalUnion>(
+  members: <int, $fidl.FidlType>{
+    2: $fidl.Uint32Type(),
+    1: $fidl.Uint32Type(),
+  },
+  ctor: ReverseOrdinalUnion._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<ReverseOrdinalUnion>
+    kReverseOrdinalUnion_OptType = $fidl.NullableUnionType<ReverseOrdinalUnion>(
+  members: <int, $fidl.FidlType>{
+    2: $fidl.Uint32Type(),
+    1: $fidl.Uint32Type(),
+  },
+  ctor: ReverseOrdinalUnion._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum StrictBoundedXUnionTag {
+  v, // 0x1
+}
+
+const Map<int, StrictBoundedXUnionTag> _StrictBoundedXUnionTag_map = {
+  1: StrictBoundedXUnionTag.v,
+};
+
+class StrictBoundedXUnion extends $fidl.Union {
+  const StrictBoundedXUnion.withV(Uint8List value)
+      : _ordinal = 1,
+        _data = value;
+
+  StrictBoundedXUnion._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  StrictBoundedXUnionTag get $tag => _StrictBoundedXUnionTag_map[_ordinal]!;
+
+  Uint8List? get v {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static StrictBoundedXUnion _ctor(int ordinal, Object data) {
+    return StrictBoundedXUnion._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<StrictBoundedXUnion> kStrictBoundedXUnion_Type =
+    $fidl.UnionType<StrictBoundedXUnion>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.VectorType<int, Uint8List>(
+        element: $fidl.Uint8Type(), maybeElementCount: 10),
+  },
+  ctor: StrictBoundedXUnion._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<StrictBoundedXUnion>
+    kStrictBoundedXUnion_OptType = $fidl.NullableUnionType<StrictBoundedXUnion>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.VectorType<int, Uint8List>(
+        element: $fidl.Uint8Type(), maybeElementCount: 10),
+  },
+  ctor: StrictBoundedXUnion._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum StrictFooTag {
+  s, // 0x1
+  i, // 0x2
+}
+
+const Map<int, StrictFooTag> _StrictFooTag_map = {
+  1: StrictFooTag.s,
+  2: StrictFooTag.i,
+};
+
+class StrictFoo extends $fidl.Union {
+  const StrictFoo.withS(String value)
+      : _ordinal = 1,
+        _data = value;
+
+  const StrictFoo.withI(int value)
+      : _ordinal = 2,
+        _data = value;
+
+  StrictFoo._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  StrictFooTag get $tag => _StrictFooTag_map[_ordinal]!;
+
+  String? get s {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get i {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static StrictFoo _ctor(int ordinal, Object data) {
+    return StrictFoo._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<StrictFoo> kStrictFoo_Type = $fidl.UnionType<StrictFoo>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.StringType(maybeElementCount: null),
+    2: $fidl.Int32Type(),
+  },
+  ctor: StrictFoo._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<StrictFoo> kStrictFoo_OptType =
+    $fidl.NullableUnionType<StrictFoo>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.StringType(maybeElementCount: null),
+    2: $fidl.Int32Type(),
+  },
+  ctor: StrictFoo._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum StrictPizzaOrPastaTag {
+  pizza, // 0x1
+  pasta, // 0x2
+}
+
+const Map<int, StrictPizzaOrPastaTag> _StrictPizzaOrPastaTag_map = {
+  1: StrictPizzaOrPastaTag.pizza,
+  2: StrictPizzaOrPastaTag.pasta,
+};
+
+class StrictPizzaOrPasta extends $fidl.Union {
+  const StrictPizzaOrPasta.withPizza(Pizza value)
+      : _ordinal = 1,
+        _data = value;
+
+  const StrictPizzaOrPasta.withPasta(Pasta value)
+      : _ordinal = 2,
+        _data = value;
+
+  StrictPizzaOrPasta._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  StrictPizzaOrPastaTag get $tag => _StrictPizzaOrPastaTag_map[_ordinal]!;
+
+  Pizza? get pizza {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  Pasta? get pasta {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static StrictPizzaOrPasta _ctor(int ordinal, Object data) {
+    return StrictPizzaOrPasta._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<StrictPizzaOrPasta> kStrictPizzaOrPasta_Type =
+    $fidl.UnionType<StrictPizzaOrPasta>(
+  members: <int, $fidl.FidlType>{
+    1: kPizza_Type,
+    2: kPasta_Type,
+  },
+  ctor: StrictPizzaOrPasta._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<StrictPizzaOrPasta> kStrictPizzaOrPasta_OptType =
+    $fidl.NullableUnionType<StrictPizzaOrPasta>(
+  members: <int, $fidl.FidlType>{
+    1: kPizza_Type,
+    2: kPasta_Type,
+  },
+  ctor: StrictPizzaOrPasta._ctor,
+  flexible: false,
+  resource: false,
+);
+
 enum StrictSimpleXUnionTag {
   i, // 0x1
   f, // 0x2
@@ -1643,6 +1595,298 @@ const $fidl.NullableUnionType<StrictSimpleXUnion> kStrictSimpleXUnion_OptType =
   resource: false,
 );
 
+enum StrictUnionTag {
+  primitive, // 0x1
+  stringNeedsConstructor, // 0x2
+  vectorStringAlsoNeedsConstructor, // 0x3
+}
+
+const Map<int, StrictUnionTag> _StrictUnionTag_map = {
+  1: StrictUnionTag.primitive,
+  2: StrictUnionTag.stringNeedsConstructor,
+  3: StrictUnionTag.vectorStringAlsoNeedsConstructor,
+};
+
+class StrictUnion extends $fidl.Union {
+  const StrictUnion.withPrimitive(int value)
+      : _ordinal = 1,
+        _data = value;
+
+  const StrictUnion.withStringNeedsConstructor(String value)
+      : _ordinal = 2,
+        _data = value;
+
+  const StrictUnion.withVectorStringAlsoNeedsConstructor(List<String> value)
+      : _ordinal = 3,
+        _data = value;
+
+  StrictUnion._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  StrictUnionTag get $tag => _StrictUnionTag_map[_ordinal]!;
+
+  int? get primitive {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  String? get stringNeedsConstructor {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  List<String>? get vectorStringAlsoNeedsConstructor {
+    if (_ordinal != 3) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+      case 3:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static StrictUnion _ctor(int ordinal, Object data) {
+    return StrictUnion._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<StrictUnion> kStrictUnion_Type =
+    $fidl.UnionType<StrictUnion>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Int32Type(),
+    2: $fidl.StringType(maybeElementCount: null),
+    3: $fidl.VectorType<String, List<String>>(
+        element: $fidl.StringType(maybeElementCount: null),
+        maybeElementCount: null),
+  },
+  ctor: StrictUnion._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<StrictUnion> kStrictUnion_OptType =
+    $fidl.NullableUnionType<StrictUnion>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Int32Type(),
+    2: $fidl.StringType(maybeElementCount: null),
+    3: $fidl.VectorType<String, List<String>>(
+        element: $fidl.StringType(maybeElementCount: null),
+        maybeElementCount: null),
+  },
+  ctor: StrictUnion._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum UnionTag {
+  primitive, // 0x1
+  stringNeedsConstructor, // 0x2
+  vectorStringAlsoNeedsConstructor, // 0x3
+}
+
+const Map<int, UnionTag> _UnionTag_map = {
+  1: UnionTag.primitive,
+  2: UnionTag.stringNeedsConstructor,
+  3: UnionTag.vectorStringAlsoNeedsConstructor,
+};
+
+class Union extends $fidl.Union {
+  const Union.withPrimitive(int value)
+      : _ordinal = 1,
+        _data = value;
+
+  const Union.withStringNeedsConstructor(String value)
+      : _ordinal = 2,
+        _data = value;
+
+  const Union.withVectorStringAlsoNeedsConstructor(List<String> value)
+      : _ordinal = 3,
+        _data = value;
+
+  Union._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  UnionTag get $tag => _UnionTag_map[_ordinal]!;
+
+  int? get primitive {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  String? get stringNeedsConstructor {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  List<String>? get vectorStringAlsoNeedsConstructor {
+    if (_ordinal != 3) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+      case 3:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static Union _ctor(int ordinal, Object data) {
+    return Union._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<Union> kUnion_Type = $fidl.UnionType<Union>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Int32Type(),
+    2: $fidl.StringType(maybeElementCount: null),
+    3: $fidl.VectorType<String, List<String>>(
+        element: $fidl.StringType(maybeElementCount: null),
+        maybeElementCount: null),
+  },
+  ctor: Union._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<Union> kUnion_OptType =
+    $fidl.NullableUnionType<Union>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Int32Type(),
+    2: $fidl.StringType(maybeElementCount: null),
+    3: $fidl.VectorType<String, List<String>>(
+        element: $fidl.StringType(maybeElementCount: null),
+        maybeElementCount: null),
+  },
+  ctor: Union._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum UnionWithAttributesTag {
+  $unknown,
+  x, // 0x1
+}
+
+const Map<int, UnionWithAttributesTag> _UnionWithAttributesTag_map = {
+  1: UnionWithAttributesTag.x,
+};
+
+class UnionWithAttributes extends $fidl.Union {
+  const UnionWithAttributes.withX(int value)
+      : _ordinal = 1,
+        _data = value;
+  const UnionWithAttributes.with$UnknownData(
+      this._ordinal, $fidl.UnknownRawData data)
+      : _data = data;
+
+  UnionWithAttributes._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  UnionWithAttributesTag get $tag =>
+      _UnionWithAttributesTag_map[_ordinal] ?? UnionWithAttributesTag.$unknown;
+
+  int? get x {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static UnionWithAttributes _ctor(int ordinal, Object data) {
+    return UnionWithAttributes._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<UnionWithAttributes> kUnionWithAttributes_Type =
+    $fidl.UnionType<UnionWithAttributes>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Int64Type(),
+  },
+  ctor: UnionWithAttributes._ctor,
+  flexible: true,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<UnionWithAttributes>
+    kUnionWithAttributes_OptType = $fidl.NullableUnionType<UnionWithAttributes>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Int64Type(),
+  },
+  ctor: UnionWithAttributes._ctor,
+  flexible: true,
+  resource: false,
+);
+
 enum XUnionContainingEmptyStructTag {
   $unknown,
   empty, // 0x1
@@ -1724,296 +1968,52 @@ const $fidl.NullableUnionType<XUnionContainingEmptyStruct>
   resource: false,
 );
 
-enum StrictBoundedXUnionTag {
-  v, // 0x1
-}
-
-const Map<int, StrictBoundedXUnionTag> _StrictBoundedXUnionTag_map = {
-  1: StrictBoundedXUnionTag.v,
-};
-
-class StrictBoundedXUnion extends $fidl.Union {
-  const StrictBoundedXUnion.withV(Uint8List value)
-      : _ordinal = 1,
-        _data = value;
-
-  StrictBoundedXUnion._(int ordinal, Object data)
-      : _ordinal = ordinal,
-        _data = data;
-
-  final int _ordinal;
-  final _data;
-
-  StrictBoundedXUnionTag get $tag => _StrictBoundedXUnionTag_map[_ordinal]!;
-
-  Uint8List? get v {
-    if (_ordinal != 1) {
-      return null;
-    }
-    return _data;
-  }
-
-  $fidl.UnknownRawData? get $unknownData {
-    switch (_ordinal) {
-      case 1:
-        return null;
-      default:
-        return _data;
-    }
-  }
-
-  @override
-  int get $ordinal => _ordinal;
-
-  @override
-  Object get $data => _data;
-
-  static StrictBoundedXUnion _ctor(int ordinal, Object data) {
-    return StrictBoundedXUnion._(ordinal, data);
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.UnionType<StrictBoundedXUnion> kStrictBoundedXUnion_Type =
-    $fidl.UnionType<StrictBoundedXUnion>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.VectorType<int, Uint8List>(
-        element: $fidl.Uint8Type(), maybeElementCount: 10),
-  },
-  ctor: StrictBoundedXUnion._ctor,
-  flexible: false,
-  resource: false,
-);
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<StrictBoundedXUnion>
-    kStrictBoundedXUnion_OptType = $fidl.NullableUnionType<StrictBoundedXUnion>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.VectorType<int, Uint8List>(
-        element: $fidl.Uint8Type(), maybeElementCount: 10),
-  },
-  ctor: StrictBoundedXUnion._ctor,
-  flexible: false,
-  resource: false,
-);
-
-enum ExplicitXUnionTag {
-  $unknown,
-  i, // 0x1
-  f, // 0x4
-}
-
-const Map<int, ExplicitXUnionTag> _ExplicitXUnionTag_map = {
-  1: ExplicitXUnionTag.i,
-  4: ExplicitXUnionTag.f,
-};
-
-class ExplicitXUnion extends $fidl.Union {
-  const ExplicitXUnion.withI(int value)
-      : _ordinal = 1,
-        _data = value;
-
-  const ExplicitXUnion.withF(double value)
-      : _ordinal = 4,
-        _data = value;
-  const ExplicitXUnion.with$UnknownData(
-      this._ordinal, $fidl.UnknownRawData data)
-      : _data = data;
-
-  ExplicitXUnion._(int ordinal, Object data)
-      : _ordinal = ordinal,
-        _data = data;
-
-  final int _ordinal;
-  final _data;
-
-  ExplicitXUnionTag get $tag =>
-      _ExplicitXUnionTag_map[_ordinal] ?? ExplicitXUnionTag.$unknown;
-
-  int? get i {
-    if (_ordinal != 1) {
-      return null;
-    }
-    return _data;
-  }
-
-  double? get f {
-    if (_ordinal != 4) {
-      return null;
-    }
-    return _data;
-  }
-
-  $fidl.UnknownRawData? get $unknownData {
-    switch (_ordinal) {
-      case 1:
-      case 4:
-        return null;
-      default:
-        return _data;
-    }
-  }
-
-  @override
-  int get $ordinal => _ordinal;
-
-  @override
-  Object get $data => _data;
-
-  static ExplicitXUnion _ctor(int ordinal, Object data) {
-    return ExplicitXUnion._(ordinal, data);
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.UnionType<ExplicitXUnion> kExplicitXUnion_Type =
-    $fidl.UnionType<ExplicitXUnion>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.Int64Type(),
-    4: $fidl.Float32Type(),
-  },
-  ctor: ExplicitXUnion._ctor,
-  flexible: true,
-  resource: false,
-);
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<ExplicitXUnion> kExplicitXUnion_OptType =
-    $fidl.NullableUnionType<ExplicitXUnion>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.Int64Type(),
-    4: $fidl.Float32Type(),
-  },
-  ctor: ExplicitXUnion._ctor,
-  flexible: true,
-  resource: false,
-);
-
-enum UnionWithAttributesTag {
-  $unknown,
-  x, // 0x1
-}
-
-const Map<int, UnionWithAttributesTag> _UnionWithAttributesTag_map = {
-  1: UnionWithAttributesTag.x,
-};
-
-class UnionWithAttributes extends $fidl.Union {
-  const UnionWithAttributes.withX(int value)
-      : _ordinal = 1,
-        _data = value;
-  const UnionWithAttributes.with$UnknownData(
-      this._ordinal, $fidl.UnknownRawData data)
-      : _data = data;
-
-  UnionWithAttributes._(int ordinal, Object data)
-      : _ordinal = ordinal,
-        _data = data;
-
-  final int _ordinal;
-  final _data;
-
-  UnionWithAttributesTag get $tag =>
-      _UnionWithAttributesTag_map[_ordinal] ?? UnionWithAttributesTag.$unknown;
-
-  int? get x {
-    if (_ordinal != 1) {
-      return null;
-    }
-    return _data;
-  }
-
-  $fidl.UnknownRawData? get $unknownData {
-    switch (_ordinal) {
-      case 1:
-        return null;
-      default:
-        return _data;
-    }
-  }
-
-  @override
-  int get $ordinal => _ordinal;
-
-  @override
-  Object get $data => _data;
-
-  static UnionWithAttributes _ctor(int ordinal, Object data) {
-    return UnionWithAttributes._(ordinal, data);
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.UnionType<UnionWithAttributes> kUnionWithAttributes_Type =
-    $fidl.UnionType<UnionWithAttributes>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.Int64Type(),
-  },
-  ctor: UnionWithAttributes._ctor,
-  flexible: true,
-  resource: false,
-);
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<UnionWithAttributes>
-    kUnionWithAttributes_OptType = $fidl.NullableUnionType<UnionWithAttributes>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.Int64Type(),
-  },
-  ctor: UnionWithAttributes._ctor,
-  flexible: true,
-  resource: false,
-);
-
-class Pizza extends $fidl.Struct {
-  const Pizza({
-    required this.toppings,
+class Empty extends $fidl.Struct {
+  const Empty({
+    this.reserved: 0x0,
   });
-  Pizza.clone(
-    Pizza $orig, {
-    List<String>? toppings,
+  Empty.clone(
+    Empty $orig, {
+    int? reserved,
   }) : this(
-          toppings: toppings ?? $orig.toppings,
+          reserved: reserved ?? $orig.reserved,
         );
 
-  final List<String> toppings;
+  final int reserved;
 
   @override
   List<Object?> get $fields {
     return <Object?>[
-      toppings,
+      reserved,
     ];
   }
 
-  static const $fieldType0 = $fidl.VectorType<String, List<String>>(
-      element: $fidl.StringType(maybeElementCount: 16),
-      maybeElementCount: null);
+  static const $fieldType0 = $fidl.Uint8Type();
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
     switch ($encoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, toppings, $offset + 0, $depth);
+        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
         break;
       case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, toppings, $offset + 0, $depth);
+        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
         break;
       default:
         throw $fidl.FidlError('unknown wire format');
     }
   }
 
-  static Pizza _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
+  static Empty _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return Pizza(
-            toppings: $fieldType0.decode($decoder, $offset + 0, $depth));
+        $decoder.checkPadding($offset + 0, 1);
+        return Empty(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
-        return Pizza(
-            toppings: $fieldType0.decode($decoder, $offset + 0, $depth));
+        $decoder.checkPadding($offset + 0, 1);
+        return Empty(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
       default:
         throw $fidl.FidlError('unknown wire format');
     }
@@ -2022,61 +2022,8 @@ class Pizza extends $fidl.Struct {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.StructType<Pizza> kPizza_Type = $fidl.StructType<Pizza>(
-    inlineSizeV1: 16, inlineSizeV2: 16, structDecode: Pizza._structDecode);
-
-class Pasta extends $fidl.Struct {
-  const Pasta({
-    required this.sauce,
-  });
-  Pasta.clone(
-    Pasta $orig, {
-    String? sauce,
-  }) : this(
-          sauce: sauce ?? $orig.sauce,
-        );
-
-  final String sauce;
-
-  @override
-  List<Object?> get $fields {
-    return <Object?>[
-      sauce,
-    ];
-  }
-
-  static const $fieldType0 = $fidl.StringType(maybeElementCount: 16);
-
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, sauce, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, sauce, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-
-  static Pasta _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
-    switch ($decoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        return Pasta(sauce: $fieldType0.decode($decoder, $offset + 0, $depth));
-      case $fidl.WireFormat.v2:
-        return Pasta(sauce: $fieldType0.decode($decoder, $offset + 0, $depth));
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.StructType<Pasta> kPasta_Type = $fidl.StructType<Pasta>(
-    inlineSizeV1: 16, inlineSizeV2: 16, structDecode: Pasta._structDecode);
+const $fidl.StructType<Empty> kEmpty_Type = $fidl.StructType<Empty>(
+    inlineSizeV1: 1, inlineSizeV2: 1, structDecode: Empty._structDecode);
 
 class NullableUnionStruct extends $fidl.Struct {
   const NullableUnionStruct({
@@ -2144,52 +2091,48 @@ const $fidl.StructType<NullableUnionStruct> kNullableUnionStruct_Type =
         inlineSizeV2: 16,
         structDecode: NullableUnionStruct._structDecode);
 
-class Empty extends $fidl.Struct {
-  const Empty({
-    this.reserved: 0x0,
+class Pasta extends $fidl.Struct {
+  const Pasta({
+    required this.sauce,
   });
-  Empty.clone(
-    Empty $orig, {
-    int? reserved,
+  Pasta.clone(
+    Pasta $orig, {
+    String? sauce,
   }) : this(
-          reserved: reserved ?? $orig.reserved,
+          sauce: sauce ?? $orig.sauce,
         );
 
-  final int reserved;
+  final String sauce;
 
   @override
   List<Object?> get $fields {
     return <Object?>[
-      reserved,
+      sauce,
     ];
   }
 
-  static const $fieldType0 = $fidl.Uint8Type();
+  static const $fieldType0 = $fidl.StringType(maybeElementCount: 16);
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
     switch ($encoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+        $fieldType0.encode($encoder, sauce, $offset + 0, $depth);
         break;
       case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+        $fieldType0.encode($encoder, sauce, $offset + 0, $depth);
         break;
       default:
         throw $fidl.FidlError('unknown wire format');
     }
   }
 
-  static Empty _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
+  static Pasta _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 0, 1);
-        return Empty(
-            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+        return Pasta(sauce: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
-        $decoder.checkPadding($offset + 0, 1);
-        return Empty(
-            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+        return Pasta(sauce: $fieldType0.decode($decoder, $offset + 0, $depth));
       default:
         throw $fidl.FidlError('unknown wire format');
     }
@@ -2198,8 +2141,65 @@ class Empty extends $fidl.Struct {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.StructType<Empty> kEmpty_Type = $fidl.StructType<Empty>(
-    inlineSizeV1: 1, inlineSizeV2: 1, structDecode: Empty._structDecode);
+const $fidl.StructType<Pasta> kPasta_Type = $fidl.StructType<Pasta>(
+    inlineSizeV1: 16, inlineSizeV2: 16, structDecode: Pasta._structDecode);
+
+class Pizza extends $fidl.Struct {
+  const Pizza({
+    required this.toppings,
+  });
+  Pizza.clone(
+    Pizza $orig, {
+    List<String>? toppings,
+  }) : this(
+          toppings: toppings ?? $orig.toppings,
+        );
+
+  final List<String> toppings;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      toppings,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.VectorType<String, List<String>>(
+      element: $fidl.StringType(maybeElementCount: 16),
+      maybeElementCount: null);
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, toppings, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, toppings, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  static Pizza _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return Pizza(
+            toppings: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return Pizza(
+            toppings: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<Pizza> kPizza_Type = $fidl.StructType<Pizza>(
+    inlineSizeV1: 16, inlineSizeV2: 16, structDecode: Pizza._structDecode);
 
 class StructWithNullableXUnion extends $fidl.Struct {
   const StructWithNullableXUnion({

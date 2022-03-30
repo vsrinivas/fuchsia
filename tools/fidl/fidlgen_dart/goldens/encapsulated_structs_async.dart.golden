@@ -40,63 +40,52 @@ import 'package:fidl_zx/fidl_async.dart' as lib$zx;
 // ignore_for_file: avoid_unused_constructor_parameters
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
-class Int8Int32 extends $fidl.Struct {
-  const Int8Int32({
-    required this.a,
-    required this.b,
+class ArrayInt16Int8 extends $fidl.Struct {
+  const ArrayInt16Int8({
+    required this.arr,
   });
-  Int8Int32.clone(
-    Int8Int32 $orig, {
-    int? a,
-    int? b,
+  ArrayInt16Int8.clone(
+    ArrayInt16Int8 $orig, {
+    List<Int16Int8>? arr,
   }) : this(
-          a: a ?? $orig.a,
-          b: b ?? $orig.b,
+          arr: arr ?? $orig.arr,
         );
 
-  final int a;
-  final int b;
+  final List<Int16Int8> arr;
 
   @override
   List<Object?> get $fields {
     return <Object?>[
-      a,
-      b,
+      arr,
     ];
   }
 
-  static const $fieldType0 = $fidl.Int8Type();
-  static const $fieldType1 = $fidl.Int32Type();
+  static const $fieldType0 = $fidl.ArrayType<Int16Int8, List<Int16Int8>>(
+      element: kInt16Int8_Type, elementCount: 3);
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
     switch ($encoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 4, $depth);
+        $fieldType0.encode($encoder, arr, $offset + 0, $depth);
         break;
       case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 4, $depth);
+        $fieldType0.encode($encoder, arr, $offset + 0, $depth);
         break;
       default:
         throw $fidl.FidlError('unknown wire format');
     }
   }
 
-  static Int8Int32 _structDecode(
+  static ArrayInt16Int8 _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 1, 3);
-        return Int8Int32(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 4, $depth));
+        return ArrayInt16Int8(
+            arr: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
-        $decoder.checkPadding($offset + 1, 3);
-        return Int8Int32(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 4, $depth));
+        return ArrayInt16Int8(
+            arr: $fieldType0.decode($decoder, $offset + 0, $depth));
       default:
         throw $fidl.FidlError('unknown wire format');
     }
@@ -105,8 +94,11 @@ class Int8Int32 extends $fidl.Struct {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.StructType<Int8Int32> kInt8Int32_Type = $fidl.StructType<Int8Int32>(
-    inlineSizeV1: 8, inlineSizeV2: 8, structDecode: Int8Int32._structDecode);
+const $fidl.StructType<ArrayInt16Int8> kArrayInt16Int8_Type =
+    $fidl.StructType<ArrayInt16Int8>(
+        inlineSizeV1: 12,
+        inlineSizeV2: 12,
+        structDecode: ArrayInt16Int8._structDecode);
 
 class Int16Int8 extends $fidl.Struct {
   const Int16Int8({
@@ -176,52 +168,63 @@ class Int16Int8 extends $fidl.Struct {
 const $fidl.StructType<Int16Int8> kInt16Int8_Type = $fidl.StructType<Int16Int8>(
     inlineSizeV1: 4, inlineSizeV2: 4, structDecode: Int16Int8._structDecode);
 
-class ArrayInt16Int8 extends $fidl.Struct {
-  const ArrayInt16Int8({
-    required this.arr,
+class Int8Int32 extends $fidl.Struct {
+  const Int8Int32({
+    required this.a,
+    required this.b,
   });
-  ArrayInt16Int8.clone(
-    ArrayInt16Int8 $orig, {
-    List<Int16Int8>? arr,
+  Int8Int32.clone(
+    Int8Int32 $orig, {
+    int? a,
+    int? b,
   }) : this(
-          arr: arr ?? $orig.arr,
+          a: a ?? $orig.a,
+          b: b ?? $orig.b,
         );
 
-  final List<Int16Int8> arr;
+  final int a;
+  final int b;
 
   @override
   List<Object?> get $fields {
     return <Object?>[
-      arr,
+      a,
+      b,
     ];
   }
 
-  static const $fieldType0 = $fidl.ArrayType<Int16Int8, List<Int16Int8>>(
-      element: kInt16Int8_Type, elementCount: 3);
+  static const $fieldType0 = $fidl.Int8Type();
+  static const $fieldType1 = $fidl.Int32Type();
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
     switch ($encoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, arr, $offset + 0, $depth);
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 4, $depth);
         break;
       case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, arr, $offset + 0, $depth);
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 4, $depth);
         break;
       default:
         throw $fidl.FidlError('unknown wire format');
     }
   }
 
-  static ArrayInt16Int8 _structDecode(
+  static Int8Int32 _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return ArrayInt16Int8(
-            arr: $fieldType0.decode($decoder, $offset + 0, $depth));
+        $decoder.checkPadding($offset + 1, 3);
+        return Int8Int32(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 4, $depth));
       case $fidl.WireFormat.v2:
-        return ArrayInt16Int8(
-            arr: $fieldType0.decode($decoder, $offset + 0, $depth));
+        $decoder.checkPadding($offset + 1, 3);
+        return Int8Int32(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 4, $depth));
       default:
         throw $fidl.FidlError('unknown wire format');
     }
@@ -230,90 +233,8 @@ class ArrayInt16Int8 extends $fidl.Struct {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.StructType<ArrayInt16Int8> kArrayInt16Int8_Type =
-    $fidl.StructType<ArrayInt16Int8>(
-        inlineSizeV1: 12,
-        inlineSizeV2: 12,
-        structDecode: ArrayInt16Int8._structDecode);
-
-class StructPaddingTestStruct extends $fidl.Struct {
-  const StructPaddingTestStruct({
-    required this.trailing,
-    required this.inner,
-    required this.array,
-  });
-  StructPaddingTestStruct.clone(
-    StructPaddingTestStruct $orig, {
-    Int16Int8? trailing,
-    Int8Int32? inner,
-    ArrayInt16Int8? array,
-  }) : this(
-          trailing: trailing ?? $orig.trailing,
-          inner: inner ?? $orig.inner,
-          array: array ?? $orig.array,
-        );
-
-  final Int16Int8 trailing;
-  final Int8Int32 inner;
-  final ArrayInt16Int8 array;
-
-  @override
-  List<Object?> get $fields {
-    return <Object?>[
-      trailing,
-      inner,
-      array,
-    ];
-  }
-
-  static const $fieldType0 = kInt16Int8_Type;
-  static const $fieldType1 = kInt8Int32_Type;
-  static const $fieldType2 = kArrayInt16Int8_Type;
-
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, trailing, $offset + 0, $depth);
-        $fieldType1.encode($encoder, inner, $offset + 4, $depth);
-        $fieldType2.encode($encoder, array, $offset + 12, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, trailing, $offset + 0, $depth);
-        $fieldType1.encode($encoder, inner, $offset + 4, $depth);
-        $fieldType2.encode($encoder, array, $offset + 12, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-
-  static StructPaddingTestStruct _structDecode(
-      $fidl.Decoder $decoder, int $offset, int $depth) {
-    switch ($decoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        return StructPaddingTestStruct(
-            trailing: $fieldType0.decode($decoder, $offset + 0, $depth),
-            inner: $fieldType1.decode($decoder, $offset + 4, $depth),
-            array: $fieldType2.decode($decoder, $offset + 12, $depth));
-      case $fidl.WireFormat.v2:
-        return StructPaddingTestStruct(
-            trailing: $fieldType0.decode($decoder, $offset + 0, $depth),
-            inner: $fieldType1.decode($decoder, $offset + 4, $depth),
-            array: $fieldType2.decode($decoder, $offset + 12, $depth));
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.StructType<StructPaddingTestStruct> kStructPaddingTestStruct_Type =
-    $fidl.StructType<StructPaddingTestStruct>(
-        inlineSizeV1: 24,
-        inlineSizeV2: 24,
-        structDecode: StructPaddingTestStruct._structDecode);
+const $fidl.StructType<Int8Int32> kInt8Int32_Type = $fidl.StructType<Int8Int32>(
+    inlineSizeV1: 8, inlineSizeV2: 8, structDecode: Int8Int32._structDecode);
 
 class NonInlineStructTestStruct extends $fidl.Struct {
   const NonInlineStructTestStruct({
@@ -396,6 +317,85 @@ const $fidl.StructType<NonInlineStructTestStruct>
         inlineSizeV1: 16,
         inlineSizeV2: 16,
         structDecode: NonInlineStructTestStruct._structDecode);
+
+class StructPaddingTestStruct extends $fidl.Struct {
+  const StructPaddingTestStruct({
+    required this.trailing,
+    required this.inner,
+    required this.array,
+  });
+  StructPaddingTestStruct.clone(
+    StructPaddingTestStruct $orig, {
+    Int16Int8? trailing,
+    Int8Int32? inner,
+    ArrayInt16Int8? array,
+  }) : this(
+          trailing: trailing ?? $orig.trailing,
+          inner: inner ?? $orig.inner,
+          array: array ?? $orig.array,
+        );
+
+  final Int16Int8 trailing;
+  final Int8Int32 inner;
+  final ArrayInt16Int8 array;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      trailing,
+      inner,
+      array,
+    ];
+  }
+
+  static const $fieldType0 = kInt16Int8_Type;
+  static const $fieldType1 = kInt8Int32_Type;
+  static const $fieldType2 = kArrayInt16Int8_Type;
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, trailing, $offset + 0, $depth);
+        $fieldType1.encode($encoder, inner, $offset + 4, $depth);
+        $fieldType2.encode($encoder, array, $offset + 12, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, trailing, $offset + 0, $depth);
+        $fieldType1.encode($encoder, inner, $offset + 4, $depth);
+        $fieldType2.encode($encoder, array, $offset + 12, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  static StructPaddingTestStruct _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return StructPaddingTestStruct(
+            trailing: $fieldType0.decode($decoder, $offset + 0, $depth),
+            inner: $fieldType1.decode($decoder, $offset + 4, $depth),
+            array: $fieldType2.decode($decoder, $offset + 12, $depth));
+      case $fidl.WireFormat.v2:
+        return StructPaddingTestStruct(
+            trailing: $fieldType0.decode($decoder, $offset + 0, $depth),
+            inner: $fieldType1.decode($decoder, $offset + 4, $depth),
+            array: $fieldType2.decode($decoder, $offset + 12, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<StructPaddingTestStruct> kStructPaddingTestStruct_Type =
+    $fidl.StructType<StructPaddingTestStruct>(
+        inlineSizeV1: 24,
+        inlineSizeV2: 24,
+        structDecode: StructPaddingTestStruct._structDecode);
 
 class TopLevelStruct extends $fidl.Struct {
   const TopLevelStruct({

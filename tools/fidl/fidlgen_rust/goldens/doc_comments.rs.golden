@@ -27,42 +27,6 @@ use {
 
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 bitflags! {
-    /// strict bits comment #1
-    ///
-    /// strict bits comment #2
-    pub struct MyStrictBits: u32 {
-        /// MY_FIRST_BIT member comment #1
-        ///
-        /// MY_FIRST_BIT member comment #3
-        const MY_FIRST_BIT = 1;
-        /// MY_OTHER_BIT member comment #1
-        ///
-        /// MY_OTHER_BIT member comment #3
-        const MY_OTHER_BIT = 2;
-    }
-}
-
-impl MyStrictBits {
-    #[deprecated = "Strict bits should not use `has_unknown_bits`"]
-    #[inline(always)]
-    pub fn has_unknown_bits(&self) -> bool {
-        false
-    }
-
-    #[deprecated = "Strict bits should not use `get_unknown_bits`"]
-    #[inline(always)]
-    pub fn get_unknown_bits(&self) -> u32 {
-        0
-    }
-}
-
-fidl_bits! {
-    name: MyStrictBits,
-    prim_ty: u32,
-    strict: true,
-}
-
-bitflags! {
     /// flexible bits comment #1
     ///
     /// flexible bits comment #2
@@ -101,61 +65,46 @@ fidl_bits! {
     flexible: true,
 }
 
+bitflags! {
+    /// strict bits comment #1
+    ///
+    /// strict bits comment #2
+    pub struct MyStrictBits: u32 {
+        /// MY_FIRST_BIT member comment #1
+        ///
+        /// MY_FIRST_BIT member comment #3
+        const MY_FIRST_BIT = 1;
+        /// MY_OTHER_BIT member comment #1
+        ///
+        /// MY_OTHER_BIT member comment #3
+        const MY_OTHER_BIT = 2;
+    }
+}
+
+impl MyStrictBits {
+    #[deprecated = "Strict bits should not use `has_unknown_bits`"]
+    #[inline(always)]
+    pub fn has_unknown_bits(&self) -> bool {
+        false
+    }
+
+    #[deprecated = "Strict bits should not use `get_unknown_bits`"]
+    #[inline(always)]
+    pub fn get_unknown_bits(&self) -> u32 {
+        0
+    }
+}
+
+fidl_bits! {
+    name: MyStrictBits,
+    prim_ty: u32,
+    strict: true,
+}
+
 /// const comment #1
 ///
 /// const comment #3
 pub const C: i32 = 4;
-
-/// strict enum comment #1.
-///
-/// strict enum comment #2.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[repr(u32)]
-pub enum MyStrictEnum {
-    /// FOO member comment #1
-    ///
-    /// FOO member comment #3
-    Foo = 1,
-    /// BAR member comment #1
-    ///
-    /// BAR member comment #3
-    Bar = 2,
-}
-
-impl MyStrictEnum {
-    #[inline]
-    pub fn from_primitive(prim: u32) -> Option<Self> {
-        match prim {
-            1 => Some(Self::Foo),
-            2 => Some(Self::Bar),
-            _ => None,
-        }
-    }
-
-    #[inline]
-    pub const fn into_primitive(self) -> u32 {
-        self as u32
-    }
-
-    #[deprecated = "Strict enums should not use `validate`"]
-    #[inline]
-    pub fn validate(self) -> std::result::Result<Self, u32> {
-        Ok(self)
-    }
-
-    #[deprecated = "Strict enums should not use `is_unknown`"]
-    #[inline]
-    pub fn is_unknown(&self) -> bool {
-        false
-    }
-}
-
-fidl_enum! {
-    name: MyStrictEnum,
-    prim_ty: u32,
-    strict: true,
-    min_member: Foo,
-}
 
 /// flexible enum comment #1.
 ///
@@ -240,41 +189,55 @@ fidl_enum! {
     flexible: true,
 }
 
-/// strict union comment #1
+/// strict enum comment #1.
 ///
-/// strict union comment #3
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub enum StrictUnion {
-    /// union member comment #1
+/// strict enum comment #2.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(u32)]
+pub enum MyStrictEnum {
+    /// FOO member comment #1
     ///
-    /// union member comment #3
-    Field(i32),
+    /// FOO member comment #3
+    Foo = 1,
+    /// BAR member comment #1
+    ///
+    /// BAR member comment #3
+    Bar = 2,
 }
 
-impl StrictUnion {
-    #[deprecated = "Strict unions should not use `validate`"]
+impl MyStrictEnum {
     #[inline]
-    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+    pub fn from_primitive(prim: u32) -> Option<Self> {
+        match prim {
+            1 => Some(Self::Foo),
+            2 => Some(Self::Bar),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub const fn into_primitive(self) -> u32 {
+        self as u32
+    }
+
+    #[deprecated = "Strict enums should not use `validate`"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, u32> {
         Ok(self)
     }
 
-    #[deprecated = "Strict unions should not use `is_unknown`"]
+    #[deprecated = "Strict enums should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
         false
     }
 }
 
-impl fidl::encoding::Persistable for StrictUnion {}
-
-fidl_union! {
-    name: StrictUnion,
-    members: [
-        Field {
-            ty: i32,
-            ordinal: 1,
-        },
-    ],
+fidl_enum! {
+    name: MyStrictEnum,
+    prim_ty: u32,
+    strict: true,
+    min_member: Foo,
 }
 
 /// flexible union comment #1
@@ -335,6 +298,43 @@ fidl_union! {
         },
     ],
     value_unknown_member: __Unknown,
+}
+
+/// strict union comment #1
+///
+/// strict union comment #3
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum StrictUnion {
+    /// union member comment #1
+    ///
+    /// union member comment #3
+    Field(i32),
+}
+
+impl StrictUnion {
+    #[deprecated = "Strict unions should not use `validate`"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict unions should not use `is_unknown`"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+impl fidl::encoding::Persistable for StrictUnion {}
+
+fidl_union! {
+    name: StrictUnion,
+    members: [
+        Field {
+            ty: i32,
+            ordinal: 1,
+        },
+    ],
 }
 
 /// struct comment #1

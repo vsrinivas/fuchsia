@@ -44,63 +44,6 @@ import 'package:zircon/zircon.dart' as $zircon;
 /// const comment #3
 const int c = 0x4;
 
-/// strict enum comment #1.
-///
-/// strict enum comment #2.
-class MyStrictEnum extends $fidl.Enum {
-  static const Map<int, MyStrictEnum> _values = {
-    0x1: foo,
-    0x2: bar,
-  };
-  factory MyStrictEnum(int _v) {
-    if (!_values.containsKey(_v)) {
-      throw $fidl.FidlError('Invalid strict enum value: $_v',
-          $fidl.FidlErrorCode.fidlInvalidEnumValue);
-    }
-    return _values[_v]!;
-  }
-
-  /// FOO member comment #1
-  ///
-  /// FOO member comment #3
-  static const MyStrictEnum foo = MyStrictEnum._(0x1);
-
-  /// BAR member comment #1
-  ///
-  /// BAR member comment #3
-  static const MyStrictEnum bar = MyStrictEnum._(0x2);
-
-  const MyStrictEnum._(this.$value);
-
-  @override
-  final int $value;
-
-  static const Map<String, MyStrictEnum> $valuesMap = {
-    r'foo': foo,
-    r'bar': bar,
-  };
-
-  static const List<MyStrictEnum> $values = [
-    foo,
-    bar,
-  ];
-
-  static MyStrictEnum? $valueOf(String name) => $valuesMap[name];
-
-  @override
-  bool isUnknown() {
-    return false;
-  }
-
-  static MyStrictEnum _ctor(int v) => MyStrictEnum(v);
-}
-
-const $fidl.EnumType<MyStrictEnum> kMyStrictEnum_Type =
-    $fidl.EnumType<MyStrictEnum>(
-        type: $fidl.Uint32Type(),
-        values: {0x1: null, 0x2: null},
-        ctor: MyStrictEnum._ctor);
-
 /// flexible enum comment #1.
 ///
 /// flexible enum comment #2.
@@ -162,6 +105,117 @@ const $fidl.EnumType<MyFlexibleEnum> kMyFlexibleEnum_Type =
         values: {0x1: null, 0x2: null},
         ctor: MyFlexibleEnum._ctor);
 
+/// strict enum comment #1.
+///
+/// strict enum comment #2.
+class MyStrictEnum extends $fidl.Enum {
+  static const Map<int, MyStrictEnum> _values = {
+    0x1: foo,
+    0x2: bar,
+  };
+  factory MyStrictEnum(int _v) {
+    if (!_values.containsKey(_v)) {
+      throw $fidl.FidlError('Invalid strict enum value: $_v',
+          $fidl.FidlErrorCode.fidlInvalidEnumValue);
+    }
+    return _values[_v]!;
+  }
+
+  /// FOO member comment #1
+  ///
+  /// FOO member comment #3
+  static const MyStrictEnum foo = MyStrictEnum._(0x1);
+
+  /// BAR member comment #1
+  ///
+  /// BAR member comment #3
+  static const MyStrictEnum bar = MyStrictEnum._(0x2);
+
+  const MyStrictEnum._(this.$value);
+
+  @override
+  final int $value;
+
+  static const Map<String, MyStrictEnum> $valuesMap = {
+    r'foo': foo,
+    r'bar': bar,
+  };
+
+  static const List<MyStrictEnum> $values = [
+    foo,
+    bar,
+  ];
+
+  static MyStrictEnum? $valueOf(String name) => $valuesMap[name];
+
+  @override
+  bool isUnknown() {
+    return false;
+  }
+
+  static MyStrictEnum _ctor(int v) => MyStrictEnum(v);
+}
+
+const $fidl.EnumType<MyStrictEnum> kMyStrictEnum_Type =
+    $fidl.EnumType<MyStrictEnum>(
+        type: $fidl.Uint32Type(),
+        values: {0x1: null, 0x2: null},
+        ctor: MyStrictEnum._ctor);
+
+/// flexible bits comment #1
+///
+/// flexible bits comment #2
+class MyFlexibleBits extends $fidl.Bits {
+  factory MyFlexibleBits(int _v) {
+    return MyFlexibleBits._(_v);
+  }
+
+  /// MY_FIRST_BIT member comment #1
+  ///
+  /// MY_FIRST_BIT member comment #3
+  static const MyFlexibleBits myFirstBit = MyFlexibleBits._(0x1);
+
+  /// MY_OTHER_BIT member comment #1
+  ///
+  /// MY_OTHER_BIT member comment #3
+  static const MyFlexibleBits myOtherBit = MyFlexibleBits._(0x2);
+  static const MyFlexibleBits $none = MyFlexibleBits._(0);
+  static const MyFlexibleBits $mask = MyFlexibleBits._(0x3);
+
+  const MyFlexibleBits._(this.$value);
+
+  MyFlexibleBits operator |(MyFlexibleBits other) {
+    return MyFlexibleBits._($value | other.$value);
+  }
+
+  MyFlexibleBits operator &(MyFlexibleBits other) {
+    return MyFlexibleBits._($value & other.$value);
+  }
+
+  MyFlexibleBits operator ~() {
+    return MyFlexibleBits._(~$value & $mask.$value);
+  }
+
+  @override
+  final int $value;
+
+  @override
+  bool hasUnknownBits() {
+    return getUnknownBits() != 0;
+  }
+
+  @override
+  int getUnknownBits() {
+    return $value & ~$mask.$value;
+  }
+
+  static MyFlexibleBits _ctor(int v) => MyFlexibleBits(v);
+}
+
+const $fidl.BitsType<MyFlexibleBits> kMyFlexibleBits_Type =
+    $fidl.BitsType<MyFlexibleBits>(
+        type: $fidl.Uint32Type(), ctor: MyFlexibleBits._ctor);
+
 /// strict bits comment #1
 ///
 /// strict bits comment #2
@@ -219,135 +273,6 @@ class MyStrictBits extends $fidl.Bits {
 const $fidl.BitsType<MyStrictBits> kMyStrictBits_Type =
     $fidl.BitsType<MyStrictBits>(
         type: $fidl.Uint32Type(), ctor: MyStrictBits._ctor);
-
-/// flexible bits comment #1
-///
-/// flexible bits comment #2
-class MyFlexibleBits extends $fidl.Bits {
-  factory MyFlexibleBits(int _v) {
-    return MyFlexibleBits._(_v);
-  }
-
-  /// MY_FIRST_BIT member comment #1
-  ///
-  /// MY_FIRST_BIT member comment #3
-  static const MyFlexibleBits myFirstBit = MyFlexibleBits._(0x1);
-
-  /// MY_OTHER_BIT member comment #1
-  ///
-  /// MY_OTHER_BIT member comment #3
-  static const MyFlexibleBits myOtherBit = MyFlexibleBits._(0x2);
-  static const MyFlexibleBits $none = MyFlexibleBits._(0);
-  static const MyFlexibleBits $mask = MyFlexibleBits._(0x3);
-
-  const MyFlexibleBits._(this.$value);
-
-  MyFlexibleBits operator |(MyFlexibleBits other) {
-    return MyFlexibleBits._($value | other.$value);
-  }
-
-  MyFlexibleBits operator &(MyFlexibleBits other) {
-    return MyFlexibleBits._($value & other.$value);
-  }
-
-  MyFlexibleBits operator ~() {
-    return MyFlexibleBits._(~$value & $mask.$value);
-  }
-
-  @override
-  final int $value;
-
-  @override
-  bool hasUnknownBits() {
-    return getUnknownBits() != 0;
-  }
-
-  @override
-  int getUnknownBits() {
-    return $value & ~$mask.$value;
-  }
-
-  static MyFlexibleBits _ctor(int v) => MyFlexibleBits(v);
-}
-
-const $fidl.BitsType<MyFlexibleBits> kMyFlexibleBits_Type =
-    $fidl.BitsType<MyFlexibleBits>(
-        type: $fidl.Uint32Type(), ctor: MyFlexibleBits._ctor);
-
-enum StrictUnionTag {
-  field, // 0x1
-}
-
-const Map<int, StrictUnionTag> _StrictUnionTag_map = {
-  1: StrictUnionTag.field,
-};
-
-/// strict union comment #1
-///
-/// strict union comment #3
-class StrictUnion extends $fidl.Union {
-  const StrictUnion.withField(int value)
-      : _ordinal = 1,
-        _data = value;
-
-  StrictUnion._(int ordinal, Object data)
-      : _ordinal = ordinal,
-        _data = data;
-
-  final int _ordinal;
-  final _data;
-
-  StrictUnionTag get $tag => _StrictUnionTag_map[_ordinal]!;
-
-  int? get field {
-    if (_ordinal != 1) {
-      return null;
-    }
-    return _data;
-  }
-
-  $fidl.UnknownRawData? get $unknownData {
-    switch (_ordinal) {
-      case 1:
-        return null;
-      default:
-        return _data;
-    }
-  }
-
-  @override
-  int get $ordinal => _ordinal;
-
-  @override
-  Object get $data => _data;
-
-  static StrictUnion _ctor(int ordinal, Object data) {
-    return StrictUnion._(ordinal, data);
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.UnionType<StrictUnion> kStrictUnion_Type =
-    $fidl.UnionType<StrictUnion>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.Int32Type(),
-  },
-  ctor: StrictUnion._ctor,
-  flexible: false,
-  resource: false,
-);
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<StrictUnion> kStrictUnion_OptType =
-    $fidl.NullableUnionType<StrictUnion>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.Int32Type(),
-  },
-  ctor: StrictUnion._ctor,
-  flexible: false,
-  resource: false,
-);
 
 enum FlexibleUnionTag {
   $unknown,
@@ -425,6 +350,81 @@ const $fidl.NullableUnionType<FlexibleUnion> kFlexibleUnion_OptType =
   },
   ctor: FlexibleUnion._ctor,
   flexible: true,
+  resource: false,
+);
+
+enum StrictUnionTag {
+  field, // 0x1
+}
+
+const Map<int, StrictUnionTag> _StrictUnionTag_map = {
+  1: StrictUnionTag.field,
+};
+
+/// strict union comment #1
+///
+/// strict union comment #3
+class StrictUnion extends $fidl.Union {
+  const StrictUnion.withField(int value)
+      : _ordinal = 1,
+        _data = value;
+
+  StrictUnion._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  StrictUnionTag get $tag => _StrictUnionTag_map[_ordinal]!;
+
+  int? get field {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static StrictUnion _ctor(int ordinal, Object data) {
+    return StrictUnion._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<StrictUnion> kStrictUnion_Type =
+    $fidl.UnionType<StrictUnion>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Int32Type(),
+  },
+  ctor: StrictUnion._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<StrictUnion> kStrictUnion_OptType =
+    $fidl.NullableUnionType<StrictUnion>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Int32Type(),
+  },
+  ctor: StrictUnion._ctor,
+  flexible: false,
   resource: false,
 );
 

@@ -14,67 +14,6 @@ test_padding_Padding1ByteEndOutOfLine {
 test_padding_Padding1ByteEndHandles {
        void void
 } [packed]
-test_padding_Padding2ByteEndInLine {
-       a int32
-       b int16
-} [packed]
-test_padding_Padding2ByteEndOutOfLine {
-       void void
-} [packed]
-test_padding_Padding2ByteEndHandles {
-       void void
-} [packed]
-test_padding_Padding3ByteEndInLine {
-       a int32
-       b int8
-} [packed]
-test_padding_Padding3ByteEndOutOfLine {
-       void void
-} [packed]
-test_padding_Padding3ByteEndHandles {
-       void void
-} [packed]
-test_padding_Padding4ByteEndInLine {
-       a int64
-       b int32
-} [packed]
-test_padding_Padding4ByteEndOutOfLine {
-       void void
-} [packed]
-test_padding_Padding4ByteEndHandles {
-       void void
-} [packed]
-test_padding_Padding5ByteEndInLine {
-       a int64
-       b int16
-       c int8
-} [packed]
-test_padding_Padding5ByteEndOutOfLine {
-       void void
-} [packed]
-test_padding_Padding5ByteEndHandles {
-       void void
-} [packed]
-test_padding_Padding6ByteEndInLine {
-       a int64
-       b int16
-} [packed]
-test_padding_Padding6ByteEndOutOfLine {
-       void void
-} [packed]
-test_padding_Padding6ByteEndHandles {
-       void void
-} [packed]
-test_padding_Padding7ByteEndInLine {
-       a int64
-       b int8
-} [packed]
-test_padding_Padding7ByteEndOutOfLine {
-       void void
-} [packed]
-test_padding_Padding7ByteEndHandles {
-       void void
-} [packed]
 test_padding_Padding1ByteMiddleInLine {
        a int8
        b int16
@@ -83,6 +22,27 @@ test_padding_Padding1ByteMiddleOutOfLine {
        void void
 } [packed]
 test_padding_Padding1ByteMiddleHandles {
+       void void
+} [packed]
+test_padding_Padding2ByteAlignmentLength6InLine {
+       a int8
+       b int16
+       c int8
+} [packed]
+test_padding_Padding2ByteAlignmentLength6OutOfLine {
+       void void
+} [packed]
+test_padding_Padding2ByteAlignmentLength6Handles {
+       void void
+} [packed]
+test_padding_Padding2ByteEndInLine {
+       a int32
+       b int16
+} [packed]
+test_padding_Padding2ByteEndOutOfLine {
+       void void
+} [packed]
+test_padding_Padding2ByteEndHandles {
        void void
 } [packed]
 test_padding_Padding2ByteMiddleInLine {
@@ -95,6 +55,16 @@ test_padding_Padding2ByteMiddleOutOfLine {
 test_padding_Padding2ByteMiddleHandles {
        void void
 } [packed]
+test_padding_Padding3ByteEndInLine {
+       a int32
+       b int8
+} [packed]
+test_padding_Padding3ByteEndOutOfLine {
+       void void
+} [packed]
+test_padding_Padding3ByteEndHandles {
+       void void
+} [packed]
 test_padding_Padding3ByteMiddleInLine {
        a int8
        b int32
@@ -103,47 +73,6 @@ test_padding_Padding3ByteMiddleOutOfLine {
        void void
 } [packed]
 test_padding_Padding3ByteMiddleHandles {
-       void void
-} [packed]
-test_padding_Padding4ByteMiddleInLine {
-       a int32
-       b int64
-} [packed]
-test_padding_Padding4ByteMiddleOutOfLine {
-       void void
-} [packed]
-test_padding_Padding4ByteMiddleHandles {
-       void void
-} [packed]
-test_padding_Padding5ByteMiddleInLine {
-       a int16
-       b int8
-       c int64
-} [packed]
-test_padding_Padding5ByteMiddleOutOfLine {
-       void void
-} [packed]
-test_padding_Padding5ByteMiddleHandles {
-       void void
-} [packed]
-test_padding_Padding6ByteMiddleInLine {
-       a int16
-       b int64
-} [packed]
-test_padding_Padding6ByteMiddleOutOfLine {
-       void void
-} [packed]
-test_padding_Padding6ByteMiddleHandles {
-       void void
-} [packed]
-test_padding_Padding7ByteMiddleInLine {
-       a int8
-       b int64
-} [packed]
-test_padding_Padding7ByteMiddleOutOfLine {
-       void void
-} [packed]
-test_padding_Padding7ByteMiddleHandles {
        void void
 } [packed]
 test_padding_Padding4ByteAlignmentLength12InLine {
@@ -158,15 +87,86 @@ test_padding_Padding4ByteAlignmentLength12OutOfLine {
 test_padding_Padding4ByteAlignmentLength12Handles {
        void void
 } [packed]
-test_padding_Padding2ByteAlignmentLength6InLine {
-       a int8
+test_padding_Padding4ByteEndInLine {
+       a int64
+       b int32
+} [packed]
+test_padding_Padding4ByteEndOutOfLine {
+       void void
+} [packed]
+test_padding_Padding4ByteEndHandles {
+       void void
+} [packed]
+test_padding_Padding4ByteMiddleInLine {
+       a int32
+       b int64
+} [packed]
+test_padding_Padding4ByteMiddleOutOfLine {
+       void void
+} [packed]
+test_padding_Padding4ByteMiddleHandles {
+       void void
+} [packed]
+test_padding_Padding5ByteEndInLine {
+       a int64
        b int16
        c int8
 } [packed]
-test_padding_Padding2ByteAlignmentLength6OutOfLine {
+test_padding_Padding5ByteEndOutOfLine {
        void void
 } [packed]
-test_padding_Padding2ByteAlignmentLength6Handles {
+test_padding_Padding5ByteEndHandles {
+       void void
+} [packed]
+test_padding_Padding5ByteMiddleInLine {
+       a int16
+       b int8
+       c int64
+} [packed]
+test_padding_Padding5ByteMiddleOutOfLine {
+       void void
+} [packed]
+test_padding_Padding5ByteMiddleHandles {
+       void void
+} [packed]
+test_padding_Padding6ByteEndInLine {
+       a int64
+       b int16
+} [packed]
+test_padding_Padding6ByteEndOutOfLine {
+       void void
+} [packed]
+test_padding_Padding6ByteEndHandles {
+       void void
+} [packed]
+test_padding_Padding6ByteMiddleInLine {
+       a int16
+       b int64
+} [packed]
+test_padding_Padding6ByteMiddleOutOfLine {
+       void void
+} [packed]
+test_padding_Padding6ByteMiddleHandles {
+       void void
+} [packed]
+test_padding_Padding7ByteEndInLine {
+       a int64
+       b int8
+} [packed]
+test_padding_Padding7ByteEndOutOfLine {
+       void void
+} [packed]
+test_padding_Padding7ByteEndHandles {
+       void void
+} [packed]
+test_padding_Padding7ByteMiddleInLine {
+       a int8
+       b int64
+} [packed]
+test_padding_Padding7ByteMiddleOutOfLine {
+       void void
+} [packed]
+test_padding_Padding7ByteMiddleHandles {
        void void
 } [packed]
 

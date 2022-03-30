@@ -8,24 +8,24 @@ import (
 )
 
 const (
-	EnabledFlag       bool     = true
-	Offset            int8     = -33
 	Answer            uint16   = 42
 	AnswerInBinary    uint16   = 42
-	PopulationUsa2018 uint32   = 330000000
-	Diamond           uint64   = 1746410393481133080
-	Fuchsia           uint64   = 4054509061583223046
-	Username          string   = "\"squeenze\""
-	MinTemp           float32  = -273.15
 	ConversionFactor  float64  = 1.41421
-	EnumVal           EnumType = EnumTypeValue
-	EnumPrimitiveVal  int32    = EnumTypeValue
-	EnumTrue          EnumType = EnumTypeTrue
-	EnumPrimitiveTrue int32    = EnumTypeTrue
-	BitsVal           BitsType = BitsTypeValue
+	Diamond           uint64   = 1746410393481133080
+	EnabledFlag       bool     = true
+	Fuchsia           uint64   = 4054509061583223046
+	MinTemp           float32  = -273.15
+	Offset            int8     = -33
+	PopulationUsa2018 uint32   = 330000000
+	Username          string   = "\"squeenze\""
+	BitsPrimitiveTrue uint32   = BitsTypeTrue
 	BitsPrimitiveVal  uint32   = BitsTypeValue
 	BitsTrue          BitsType = BitsTypeTrue
-	BitsPrimitiveTrue uint32   = BitsTypeTrue
+	BitsVal           BitsType = BitsTypeValue
+	EnumPrimitiveTrue int32    = EnumTypeTrue
+	EnumPrimitiveVal  int32    = EnumTypeValue
+	EnumTrue          EnumType = EnumTypeTrue
+	EnumVal           EnumType = EnumTypeValue
 )
 
 var _ _bindings.Enum = EnumType(0)

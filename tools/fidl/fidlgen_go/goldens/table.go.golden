@@ -25,119 +25,22 @@ func (u *EmptyTable) GetUnknownData() map[uint64]_bindings.UnknownData {
 	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
 }
 
-type SimpleTable struct {
+type ExtensionTable struct {
 	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData interface{}
-	X             int64 `fidl_ordinal:"1"`
-	XPresent      bool
-	Y             int64 `fidl_ordinal:"5"`
-	YPresent      bool
 }
 
-var _mSimpleTable = _bindings.CreateLazyMarshaler(SimpleTable{})
+var _mExtensionTable = _bindings.CreateLazyMarshaler(ExtensionTable{})
 
-func (msg *SimpleTable) Marshaler() _bindings.Marshaler {
-	return _mSimpleTable
+func (msg *ExtensionTable) Marshaler() _bindings.Marshaler {
+	return _mExtensionTable
 }
 
-func (u *SimpleTable) SetX(x int64) {
-	u.X = x
-	u.XPresent = true
-}
-
-func (u *SimpleTable) GetX() int64 {
-	return u.X
-}
-
-func (u *SimpleTable) GetXWithDefault(_default int64) int64 {
-	if !u.HasX() {
-		return _default
-	}
-	return u.X
-}
-
-func (u *SimpleTable) HasX() bool {
-	return u.XPresent
-}
-
-func (u *SimpleTable) ClearX() {
-	u.XPresent = false
-}
-
-func (u *SimpleTable) SetY(y int64) {
-	u.Y = y
-	u.YPresent = true
-}
-
-func (u *SimpleTable) GetY() int64 {
-	return u.Y
-}
-
-func (u *SimpleTable) GetYWithDefault(_default int64) int64 {
-	if !u.HasY() {
-		return _default
-	}
-	return u.Y
-}
-
-func (u *SimpleTable) HasY() bool {
-	return u.YPresent
-}
-
-func (u *SimpleTable) ClearY() {
-	u.YPresent = false
-}
-
-func (u *SimpleTable) HasUnknownData() bool {
+func (u *ExtensionTable) HasUnknownData() bool {
 	return u.I_unknownData != nil
 }
 
-func (u *SimpleTable) GetUnknownData() map[uint64]_bindings.UnknownData {
-	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
-}
-
-type OlderSimpleTable struct {
-	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
-	I_unknownData interface{}
-	X             int64 `fidl_ordinal:"1"`
-	XPresent      bool
-}
-
-var _mOlderSimpleTable = _bindings.CreateLazyMarshaler(OlderSimpleTable{})
-
-func (msg *OlderSimpleTable) Marshaler() _bindings.Marshaler {
-	return _mOlderSimpleTable
-}
-
-func (u *OlderSimpleTable) SetX(x int64) {
-	u.X = x
-	u.XPresent = true
-}
-
-func (u *OlderSimpleTable) GetX() int64 {
-	return u.X
-}
-
-func (u *OlderSimpleTable) GetXWithDefault(_default int64) int64 {
-	if !u.HasX() {
-		return _default
-	}
-	return u.X
-}
-
-func (u *OlderSimpleTable) HasX() bool {
-	return u.XPresent
-}
-
-func (u *OlderSimpleTable) ClearX() {
-	u.XPresent = false
-}
-
-func (u *OlderSimpleTable) HasUnknownData() bool {
-	return u.I_unknownData != nil
-}
-
-func (u *OlderSimpleTable) GetUnknownData() map[uint64]_bindings.UnknownData {
+func (u *ExtensionTable) GetUnknownData() map[uint64]_bindings.UnknownData {
 	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
 }
 
@@ -238,6 +141,51 @@ func (u *NewerSimpleTable) GetUnknownData() map[uint64]_bindings.UnknownData {
 	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
 }
 
+type OlderSimpleTable struct {
+	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_unknownData interface{}
+	X             int64 `fidl_ordinal:"1"`
+	XPresent      bool
+}
+
+var _mOlderSimpleTable = _bindings.CreateLazyMarshaler(OlderSimpleTable{})
+
+func (msg *OlderSimpleTable) Marshaler() _bindings.Marshaler {
+	return _mOlderSimpleTable
+}
+
+func (u *OlderSimpleTable) SetX(x int64) {
+	u.X = x
+	u.XPresent = true
+}
+
+func (u *OlderSimpleTable) GetX() int64 {
+	return u.X
+}
+
+func (u *OlderSimpleTable) GetXWithDefault(_default int64) int64 {
+	if !u.HasX() {
+		return _default
+	}
+	return u.X
+}
+
+func (u *OlderSimpleTable) HasX() bool {
+	return u.XPresent
+}
+
+func (u *OlderSimpleTable) ClearX() {
+	u.XPresent = false
+}
+
+func (u *OlderSimpleTable) HasUnknownData() bool {
+	return u.I_unknownData != nil
+}
+
+func (u *OlderSimpleTable) GetUnknownData() map[uint64]_bindings.UnknownData {
+	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
+}
+
 type ReverseOrdinalTable struct {
 	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData interface{}
@@ -335,67 +283,74 @@ func (u *ReverseOrdinalTable) GetUnknownData() map[uint64]_bindings.UnknownData 
 	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
 }
 
-type TableWithAttributes struct {
+type SimpleTable struct {
 	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData interface{}
 	X             int64 `fidl_ordinal:"1"`
 	XPresent      bool
+	Y             int64 `fidl_ordinal:"5"`
+	YPresent      bool
 }
 
-var _mTableWithAttributes = _bindings.CreateLazyMarshaler(TableWithAttributes{})
+var _mSimpleTable = _bindings.CreateLazyMarshaler(SimpleTable{})
 
-func (msg *TableWithAttributes) Marshaler() _bindings.Marshaler {
-	return _mTableWithAttributes
+func (msg *SimpleTable) Marshaler() _bindings.Marshaler {
+	return _mSimpleTable
 }
 
-func (u *TableWithAttributes) SetX(x int64) {
+func (u *SimpleTable) SetX(x int64) {
 	u.X = x
 	u.XPresent = true
 }
 
-func (u *TableWithAttributes) GetX() int64 {
+func (u *SimpleTable) GetX() int64 {
 	return u.X
 }
 
-func (u *TableWithAttributes) GetXWithDefault(_default int64) int64 {
+func (u *SimpleTable) GetXWithDefault(_default int64) int64 {
 	if !u.HasX() {
 		return _default
 	}
 	return u.X
 }
 
-func (u *TableWithAttributes) HasX() bool {
+func (u *SimpleTable) HasX() bool {
 	return u.XPresent
 }
 
-func (u *TableWithAttributes) ClearX() {
+func (u *SimpleTable) ClearX() {
 	u.XPresent = false
 }
 
-func (u *TableWithAttributes) HasUnknownData() bool {
+func (u *SimpleTable) SetY(y int64) {
+	u.Y = y
+	u.YPresent = true
+}
+
+func (u *SimpleTable) GetY() int64 {
+	return u.Y
+}
+
+func (u *SimpleTable) GetYWithDefault(_default int64) int64 {
+	if !u.HasY() {
+		return _default
+	}
+	return u.Y
+}
+
+func (u *SimpleTable) HasY() bool {
+	return u.YPresent
+}
+
+func (u *SimpleTable) ClearY() {
+	u.YPresent = false
+}
+
+func (u *SimpleTable) HasUnknownData() bool {
 	return u.I_unknownData != nil
 }
 
-func (u *TableWithAttributes) GetUnknownData() map[uint64]_bindings.UnknownData {
-	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
-}
-
-type ExtensionTable struct {
-	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
-	I_unknownData interface{}
-}
-
-var _mExtensionTable = _bindings.CreateLazyMarshaler(ExtensionTable{})
-
-func (msg *ExtensionTable) Marshaler() _bindings.Marshaler {
-	return _mExtensionTable
-}
-
-func (u *ExtensionTable) HasUnknownData() bool {
-	return u.I_unknownData != nil
-}
-
-func (u *ExtensionTable) GetUnknownData() map[uint64]_bindings.UnknownData {
+func (u *SimpleTable) GetUnknownData() map[uint64]_bindings.UnknownData {
 	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
 }
 
@@ -2079,5 +2034,50 @@ func (u *SixtyFourOrdinalTable) HasUnknownData() bool {
 }
 
 func (u *SixtyFourOrdinalTable) GetUnknownData() map[uint64]_bindings.UnknownData {
+	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
+}
+
+type TableWithAttributes struct {
+	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_unknownData interface{}
+	X             int64 `fidl_ordinal:"1"`
+	XPresent      bool
+}
+
+var _mTableWithAttributes = _bindings.CreateLazyMarshaler(TableWithAttributes{})
+
+func (msg *TableWithAttributes) Marshaler() _bindings.Marshaler {
+	return _mTableWithAttributes
+}
+
+func (u *TableWithAttributes) SetX(x int64) {
+	u.X = x
+	u.XPresent = true
+}
+
+func (u *TableWithAttributes) GetX() int64 {
+	return u.X
+}
+
+func (u *TableWithAttributes) GetXWithDefault(_default int64) int64 {
+	if !u.HasX() {
+		return _default
+	}
+	return u.X
+}
+
+func (u *TableWithAttributes) HasX() bool {
+	return u.XPresent
+}
+
+func (u *TableWithAttributes) ClearX() {
+	u.XPresent = false
+}
+
+func (u *TableWithAttributes) HasUnknownData() bool {
+	return u.I_unknownData != nil
+}
+
+func (u *TableWithAttributes) GetUnknownData() map[uint64]_bindings.UnknownData {
 	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
 }

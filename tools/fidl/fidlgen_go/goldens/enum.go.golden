@@ -6,43 +6,29 @@ import (
 	_bindings "syscall/zx/fidl"
 )
 
-var _ _bindings.Enum = MyStrictEnum(0)
+var _ _bindings.Enum = MyEmptyFlexibleEnum(0)
 
-type MyStrictEnum uint32
+type MyEmptyFlexibleEnum uint32
 
 const (
-	MyStrictEnumFoo MyStrictEnum = 1
-	MyStrictEnumBar MyStrictEnum = 2
+
+	// MyEmptyFlexibleEnum_Unknown is the default unknown placeholder.
+	MyEmptyFlexibleEnum_Unknown MyEmptyFlexibleEnum = 0xffffffff
 )
 
-func (_ MyStrictEnum) I_EnumValues() []MyStrictEnum {
-	return []MyStrictEnum{
-		MyStrictEnumFoo,
-		MyStrictEnumBar,
-	}
+func (_ MyEmptyFlexibleEnum) I_EnumValues() []MyEmptyFlexibleEnum {
+	return []MyEmptyFlexibleEnum{}
 }
 
-func (_ MyStrictEnum) I_EnumIsStrict() bool {
+func (_ MyEmptyFlexibleEnum) I_EnumIsStrict() bool {
+	return false
+}
+
+func (x MyEmptyFlexibleEnum) IsUnknown() bool {
 	return true
 }
 
-func (x MyStrictEnum) IsUnknown() bool {
-	switch x {
-	case 1:
-		return false
-	case 2:
-		return false
-	}
-	return true
-}
-
-func (x MyStrictEnum) String() string {
-	switch x {
-	case 1:
-		return "Foo"
-	case 2:
-		return "Bar"
-	}
+func (x MyEmptyFlexibleEnum) String() string {
 	return "Unknown"
 }
 
@@ -136,28 +122,42 @@ func (x MyFlexibleEnumWithCustomUnknown) String() string {
 	return "Unknown"
 }
 
-var _ _bindings.Enum = MyEmptyFlexibleEnum(0)
+var _ _bindings.Enum = MyStrictEnum(0)
 
-type MyEmptyFlexibleEnum uint32
+type MyStrictEnum uint32
 
 const (
-
-	// MyEmptyFlexibleEnum_Unknown is the default unknown placeholder.
-	MyEmptyFlexibleEnum_Unknown MyEmptyFlexibleEnum = 0xffffffff
+	MyStrictEnumFoo MyStrictEnum = 1
+	MyStrictEnumBar MyStrictEnum = 2
 )
 
-func (_ MyEmptyFlexibleEnum) I_EnumValues() []MyEmptyFlexibleEnum {
-	return []MyEmptyFlexibleEnum{}
+func (_ MyStrictEnum) I_EnumValues() []MyStrictEnum {
+	return []MyStrictEnum{
+		MyStrictEnumFoo,
+		MyStrictEnumBar,
+	}
 }
 
-func (_ MyEmptyFlexibleEnum) I_EnumIsStrict() bool {
-	return false
-}
-
-func (x MyEmptyFlexibleEnum) IsUnknown() bool {
+func (_ MyStrictEnum) I_EnumIsStrict() bool {
 	return true
 }
 
-func (x MyEmptyFlexibleEnum) String() string {
+func (x MyStrictEnum) IsUnknown() bool {
+	switch x {
+	case 1:
+		return false
+	case 2:
+		return false
+	}
+	return true
+}
+
+func (x MyStrictEnum) String() string {
+	switch x {
+	case 1:
+		return "Foo"
+	case 2:
+		return "Bar"
+	}
 	return "Unknown"
 }

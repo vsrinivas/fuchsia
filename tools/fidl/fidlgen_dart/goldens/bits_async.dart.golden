@@ -39,6 +39,49 @@ import 'package:zircon/zircon.dart' as $zircon;
 // ignore_for_file: avoid_unused_constructor_parameters
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
+class FlexibleBits extends $fidl.Bits {
+  factory FlexibleBits(int _v) {
+    return FlexibleBits._(_v);
+  }
+  static const FlexibleBits smallest = FlexibleBits._(0x1);
+  static const FlexibleBits biggest = FlexibleBits._(0x8000000000000000);
+  static const FlexibleBits $none = FlexibleBits._(0);
+  static const FlexibleBits $mask = FlexibleBits._(0x8000000000000001);
+
+  const FlexibleBits._(this.$value);
+
+  FlexibleBits operator |(FlexibleBits other) {
+    return FlexibleBits._($value | other.$value);
+  }
+
+  FlexibleBits operator &(FlexibleBits other) {
+    return FlexibleBits._($value & other.$value);
+  }
+
+  FlexibleBits operator ~() {
+    return FlexibleBits._(~$value & $mask.$value);
+  }
+
+  @override
+  final int $value;
+
+  @override
+  bool hasUnknownBits() {
+    return getUnknownBits() != 0;
+  }
+
+  @override
+  int getUnknownBits() {
+    return $value & ~$mask.$value;
+  }
+
+  static FlexibleBits _ctor(int v) => FlexibleBits(v);
+}
+
+const $fidl.BitsType<FlexibleBits> kFlexibleBits_Type =
+    $fidl.BitsType<FlexibleBits>(
+        type: $fidl.Uint64Type(), ctor: FlexibleBits._ctor);
+
 class MyBits extends $fidl.Bits {
   factory MyBits(int _v) {
     if ((_v & ~$mask.$value) != 0) {
@@ -131,46 +174,3 @@ class StrictBits extends $fidl.Bits {
 
 const $fidl.BitsType<StrictBits> kStrictBits_Type = $fidl.BitsType<StrictBits>(
     type: $fidl.Uint64Type(), ctor: StrictBits._ctor);
-
-class FlexibleBits extends $fidl.Bits {
-  factory FlexibleBits(int _v) {
-    return FlexibleBits._(_v);
-  }
-  static const FlexibleBits smallest = FlexibleBits._(0x1);
-  static const FlexibleBits biggest = FlexibleBits._(0x8000000000000000);
-  static const FlexibleBits $none = FlexibleBits._(0);
-  static const FlexibleBits $mask = FlexibleBits._(0x8000000000000001);
-
-  const FlexibleBits._(this.$value);
-
-  FlexibleBits operator |(FlexibleBits other) {
-    return FlexibleBits._($value | other.$value);
-  }
-
-  FlexibleBits operator &(FlexibleBits other) {
-    return FlexibleBits._($value & other.$value);
-  }
-
-  FlexibleBits operator ~() {
-    return FlexibleBits._(~$value & $mask.$value);
-  }
-
-  @override
-  final int $value;
-
-  @override
-  bool hasUnknownBits() {
-    return getUnknownBits() != 0;
-  }
-
-  @override
-  int getUnknownBits() {
-    return $value & ~$mask.$value;
-  }
-
-  static FlexibleBits _ctor(int v) => FlexibleBits(v);
-}
-
-const $fidl.BitsType<FlexibleBits> kFlexibleBits_Type =
-    $fidl.BitsType<FlexibleBits>(
-        type: $fidl.Uint64Type(), ctor: FlexibleBits._ctor);

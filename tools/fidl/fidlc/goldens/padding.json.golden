@@ -121,6 +121,267 @@
       }
     },
     {
+      "name": "test.padding/Padding1ByteMiddle",
+      "naming_context": [
+        "Padding1ByteMiddle"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "line": 46,
+        "column": 6,
+        "length": 18
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint8",
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "line": 47,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 1
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 1
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint16",
+            "type_shape_v1": {
+              "inline_size": 2,
+              "alignment": 2,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 2,
+              "alignment": 2,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "line": 49,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 2,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 2,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 4,
+        "alignment": 2,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 4,
+        "alignment": 2,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.padding/Padding2ByteAlignmentLength6",
+      "naming_context": [
+        "Padding2ByteAlignmentLength6"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "line": 102,
+        "column": 6,
+        "length": 28
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint8",
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "line": 104,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 1
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 1
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint16",
+            "type_shape_v1": {
+              "inline_size": 2,
+              "alignment": 2,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 2,
+              "alignment": 2,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "line": 106,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 2,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 2,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint8",
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "c",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "line": 108,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 4,
+            "padding": 1
+          },
+          "field_shape_v2": {
+            "offset": 4,
+            "padding": 1
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 6,
+        "alignment": 2,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 6,
+        "alignment": 2,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
       "name": "test.padding/Padding2ByteEnd",
       "naming_context": [
         "Padding2ByteEnd"
@@ -208,6 +469,117 @@
           "field_shape_v2": {
             "offset": 4,
             "padding": 2
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 8,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.padding/Padding2ByteMiddle",
+      "naming_context": [
+        "Padding2ByteMiddle"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "line": 52,
+        "column": 6,
+        "length": 18
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint16",
+            "type_shape_v1": {
+              "inline_size": 2,
+              "alignment": 2,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 2,
+              "alignment": 2,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "line": 53,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 2
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 2
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "line": 55,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 4,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 4,
+            "padding": 0
           }
         }
       ],
@@ -343,711 +715,6 @@
       }
     },
     {
-      "name": "test.padding/Padding4ByteEnd",
-      "naming_context": [
-        "Padding4ByteEnd"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 21,
-        "column": 6,
-        "length": 15
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint64",
-            "type_shape_v1": {
-              "inline_size": 8,
-              "alignment": 8,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 8,
-              "alignment": 8,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "a",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 22,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        },
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint32",
-            "type_shape_v1": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "b",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 23,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 8,
-            "padding": 4
-          },
-          "field_shape_v2": {
-            "offset": 8,
-            "padding": 4
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.padding/Padding5ByteEnd",
-      "naming_context": [
-        "Padding5ByteEnd"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 27,
-        "column": 6,
-        "length": 15
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint64",
-            "type_shape_v1": {
-              "inline_size": 8,
-              "alignment": 8,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 8,
-              "alignment": 8,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "a",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 28,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        },
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint16",
-            "type_shape_v1": {
-              "inline_size": 2,
-              "alignment": 2,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 2,
-              "alignment": 2,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "b",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 29,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 8,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 8,
-            "padding": 0
-          }
-        },
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint8",
-            "type_shape_v1": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "c",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 30,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 10,
-            "padding": 5
-          },
-          "field_shape_v2": {
-            "offset": 10,
-            "padding": 5
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.padding/Padding6ByteEnd",
-      "naming_context": [
-        "Padding6ByteEnd"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 34,
-        "column": 6,
-        "length": 15
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint64",
-            "type_shape_v1": {
-              "inline_size": 8,
-              "alignment": 8,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 8,
-              "alignment": 8,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "a",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 35,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        },
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint16",
-            "type_shape_v1": {
-              "inline_size": 2,
-              "alignment": 2,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 2,
-              "alignment": 2,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "b",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 36,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 8,
-            "padding": 6
-          },
-          "field_shape_v2": {
-            "offset": 8,
-            "padding": 6
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.padding/Padding7ByteEnd",
-      "naming_context": [
-        "Padding7ByteEnd"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 40,
-        "column": 6,
-        "length": 15
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint64",
-            "type_shape_v1": {
-              "inline_size": 8,
-              "alignment": 8,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 8,
-              "alignment": 8,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "a",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 41,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        },
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint8",
-            "type_shape_v1": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "b",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 42,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 8,
-            "padding": 7
-          },
-          "field_shape_v2": {
-            "offset": 8,
-            "padding": 7
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.padding/Padding1ByteMiddle",
-      "naming_context": [
-        "Padding1ByteMiddle"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 46,
-        "column": 6,
-        "length": 18
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint8",
-            "type_shape_v1": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "a",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 47,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 1
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 1
-          }
-        },
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint16",
-            "type_shape_v1": {
-              "inline_size": 2,
-              "alignment": 2,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 2,
-              "alignment": 2,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "b",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 49,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 2,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 2,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 4,
-        "alignment": 2,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 4,
-        "alignment": 2,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.padding/Padding2ByteMiddle",
-      "naming_context": [
-        "Padding2ByteMiddle"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 52,
-        "column": 6,
-        "length": 18
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint16",
-            "type_shape_v1": {
-              "inline_size": 2,
-              "alignment": 2,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 2,
-              "alignment": 2,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "a",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 53,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 2
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 2
-          }
-        },
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint32",
-            "type_shape_v1": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "b",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 55,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 4,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 4,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 8,
-        "alignment": 4,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 8,
-        "alignment": 4,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      }
-    },
-    {
       "name": "test.padding/Padding3ByteMiddle",
       "naming_context": [
         "Padding3ByteMiddle"
@@ -1151,489 +818,6 @@
       "type_shape_v2": {
         "inline_size": 8,
         "alignment": 4,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.padding/Padding4ByteMiddle",
-      "naming_context": [
-        "Padding4ByteMiddle"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 64,
-        "column": 6,
-        "length": 18
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint32",
-            "type_shape_v1": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "a",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 65,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 4
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 4
-          }
-        },
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint64",
-            "type_shape_v1": {
-              "inline_size": 8,
-              "alignment": 8,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 8,
-              "alignment": 8,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "b",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 67,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 8,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 8,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.padding/Padding5ByteMiddle",
-      "naming_context": [
-        "Padding5ByteMiddle"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 70,
-        "column": 6,
-        "length": 18
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint16",
-            "type_shape_v1": {
-              "inline_size": 2,
-              "alignment": 2,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 2,
-              "alignment": 2,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "a",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 71,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        },
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint8",
-            "type_shape_v1": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "b",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 72,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 2,
-            "padding": 5
-          },
-          "field_shape_v2": {
-            "offset": 2,
-            "padding": 5
-          }
-        },
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint64",
-            "type_shape_v1": {
-              "inline_size": 8,
-              "alignment": 8,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 8,
-              "alignment": 8,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "c",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 74,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 8,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 8,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.padding/Padding6ByteMiddle",
-      "naming_context": [
-        "Padding6ByteMiddle"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 77,
-        "column": 6,
-        "length": 18
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint16",
-            "type_shape_v1": {
-              "inline_size": 2,
-              "alignment": 2,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 2,
-              "alignment": 2,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "a",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 78,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 6
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 6
-          }
-        },
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint64",
-            "type_shape_v1": {
-              "inline_size": 8,
-              "alignment": 8,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 8,
-              "alignment": 8,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "b",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 80,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 8,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 8,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.padding/Padding7ByteMiddle",
-      "naming_context": [
-        "Padding7ByteMiddle"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 83,
-        "column": 6,
-        "length": 18
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint8",
-            "type_shape_v1": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "a",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 84,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 7
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 7
-          }
-        },
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint64",
-            "type_shape_v1": {
-              "inline_size": 8,
-              "alignment": 8,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 8,
-              "alignment": 8,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "b",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 86,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 8,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 8,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 16,
-        "alignment": 8,
         "depth": 0,
         "max_handles": 0,
         "max_out_of_line": 0,
@@ -1831,24 +1015,24 @@
       }
     },
     {
-      "name": "test.padding/Padding2ByteAlignmentLength6",
+      "name": "test.padding/Padding4ByteEnd",
       "naming_context": [
-        "Padding2ByteAlignmentLength6"
+        "Padding4ByteEnd"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 102,
+        "line": 21,
         "column": 6,
-        "length": 28
+        "length": 15
       },
       "members": [
         {
           "type": {
             "kind": "primitive",
-            "subtype": "uint8",
+            "subtype": "uint64",
             "type_shape_v1": {
-              "inline_size": 1,
-              "alignment": 1,
+              "inline_size": 8,
+              "alignment": 8,
               "depth": 0,
               "max_handles": 0,
               "max_out_of_line": 0,
@@ -1856,8 +1040,8 @@
               "has_flexible_envelope": false
             },
             "type_shape_v2": {
-              "inline_size": 1,
-              "alignment": 1,
+              "inline_size": 8,
+              "alignment": 8,
               "depth": 0,
               "max_handles": 0,
               "max_out_of_line": 0,
@@ -1868,17 +1052,239 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 104,
+            "line": 22,
             "column": 5,
             "length": 1
           },
           "field_shape_v1": {
             "offset": 0,
-            "padding": 1
+            "padding": 0
           },
           "field_shape_v2": {
             "offset": 0,
-            "padding": 1
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "line": 23,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 4
+          },
+          "field_shape_v2": {
+            "offset": 8,
+            "padding": 4
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.padding/Padding4ByteMiddle",
+      "naming_context": [
+        "Padding4ByteMiddle"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "line": 64,
+        "column": 6,
+        "length": 18
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "line": 65,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 4
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 4
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint64",
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "line": 67,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 8,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.padding/Padding5ByteEnd",
+      "naming_context": [
+        "Padding5ByteEnd"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "line": 27,
+        "column": 6,
+        "length": 15
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint64",
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "line": 28,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
           }
         },
         {
@@ -1907,16 +1313,16 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 106,
+            "line": 29,
             "column": 5,
             "length": 1
           },
           "field_shape_v1": {
-            "offset": 2,
+            "offset": 8,
             "padding": 0
           },
           "field_shape_v2": {
-            "offset": 2,
+            "offset": 8,
             "padding": 0
           }
         },
@@ -1946,24 +1352,24 @@
           "name": "c",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 108,
+            "line": 30,
             "column": 5,
             "length": 1
           },
           "field_shape_v1": {
-            "offset": 4,
-            "padding": 1
+            "offset": 10,
+            "padding": 5
           },
           "field_shape_v2": {
-            "offset": 4,
-            "padding": 1
+            "offset": 10,
+            "padding": 5
           }
         }
       ],
       "resource": false,
       "type_shape_v1": {
-        "inline_size": 6,
-        "alignment": 2,
+        "inline_size": 16,
+        "alignment": 8,
         "depth": 0,
         "max_handles": 0,
         "max_out_of_line": 0,
@@ -1971,8 +1377,602 @@
         "has_flexible_envelope": false
       },
       "type_shape_v2": {
-        "inline_size": 6,
-        "alignment": 2,
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.padding/Padding5ByteMiddle",
+      "naming_context": [
+        "Padding5ByteMiddle"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "line": 70,
+        "column": 6,
+        "length": 18
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint16",
+            "type_shape_v1": {
+              "inline_size": 2,
+              "alignment": 2,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 2,
+              "alignment": 2,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "line": 71,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint8",
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "line": 72,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 2,
+            "padding": 5
+          },
+          "field_shape_v2": {
+            "offset": 2,
+            "padding": 5
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint64",
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "c",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "line": 74,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 8,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.padding/Padding6ByteEnd",
+      "naming_context": [
+        "Padding6ByteEnd"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "line": 34,
+        "column": 6,
+        "length": 15
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint64",
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "line": 35,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint16",
+            "type_shape_v1": {
+              "inline_size": 2,
+              "alignment": 2,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 2,
+              "alignment": 2,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "line": 36,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 6
+          },
+          "field_shape_v2": {
+            "offset": 8,
+            "padding": 6
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.padding/Padding6ByteMiddle",
+      "naming_context": [
+        "Padding6ByteMiddle"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "line": 77,
+        "column": 6,
+        "length": 18
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint16",
+            "type_shape_v1": {
+              "inline_size": 2,
+              "alignment": 2,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 2,
+              "alignment": 2,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "line": 78,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 6
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 6
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint64",
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "line": 80,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 8,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.padding/Padding7ByteEnd",
+      "naming_context": [
+        "Padding7ByteEnd"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "line": 40,
+        "column": 6,
+        "length": 15
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint64",
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "line": 41,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint8",
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "line": 42,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 7
+          },
+          "field_shape_v2": {
+            "offset": 8,
+            "padding": 7
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.padding/Padding7ByteMiddle",
+      "naming_context": [
+        "Padding7ByteMiddle"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "line": 83,
+        "column": 6,
+        "length": 18
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint8",
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "line": 84,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 7
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 7
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint64",
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "line": 86,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 8,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
         "depth": 0,
         "max_handles": 0,
         "max_out_of_line": 0,
@@ -2005,20 +2005,20 @@
   ],
   "declarations": {
     "test.padding/Padding1ByteEnd": "struct",
-    "test.padding/Padding2ByteEnd": "struct",
-    "test.padding/Padding3ByteEnd": "struct",
-    "test.padding/Padding4ByteEnd": "struct",
-    "test.padding/Padding5ByteEnd": "struct",
-    "test.padding/Padding6ByteEnd": "struct",
-    "test.padding/Padding7ByteEnd": "struct",
     "test.padding/Padding1ByteMiddle": "struct",
+    "test.padding/Padding2ByteAlignmentLength6": "struct",
+    "test.padding/Padding2ByteEnd": "struct",
     "test.padding/Padding2ByteMiddle": "struct",
+    "test.padding/Padding3ByteEnd": "struct",
     "test.padding/Padding3ByteMiddle": "struct",
-    "test.padding/Padding4ByteMiddle": "struct",
-    "test.padding/Padding5ByteMiddle": "struct",
-    "test.padding/Padding6ByteMiddle": "struct",
-    "test.padding/Padding7ByteMiddle": "struct",
     "test.padding/Padding4ByteAlignmentLength12": "struct",
-    "test.padding/Padding2ByteAlignmentLength6": "struct"
+    "test.padding/Padding4ByteEnd": "struct",
+    "test.padding/Padding4ByteMiddle": "struct",
+    "test.padding/Padding5ByteEnd": "struct",
+    "test.padding/Padding5ByteMiddle": "struct",
+    "test.padding/Padding6ByteEnd": "struct",
+    "test.padding/Padding6ByteMiddle": "struct",
+    "test.padding/Padding7ByteEnd": "struct",
+    "test.padding/Padding7ByteMiddle": "struct"
   }
 }

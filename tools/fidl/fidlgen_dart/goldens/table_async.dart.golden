@@ -76,104 +76,40 @@ const $fidl.TableType<EmptyTable> kEmptyTable_Type =
   resource: false,
 );
 
-class SimpleTable extends $fidl.Table {
-  const SimpleTable({
+class ExtensionTable extends $fidl.Table {
+  const ExtensionTable({
     this.$unknownData,
-    this.x,
-    this.y,
   });
 
-  SimpleTable._(Map<int, dynamic> argv, this.$unknownData)
-      : x = argv[1],
-        y = argv[5];
+  ExtensionTable._(Map<int, dynamic> argv, this.$unknownData);
 
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;
-  final int? x;
-  final int? y;
 
   @override
   dynamic $field(int index) {
     switch (index) {
-      case 0:
-        return x;
-      case 4:
-        return y;
     }
     return null;
   }
 
   @override
   Map<int, dynamic> get $fields {
-    return {
-      1: x,
-      5: y,
-    };
+    return {};
   }
 
-  static SimpleTable _ctor(Map<int, dynamic> argv,
+  static ExtensionTable _ctor(Map<int, dynamic> argv,
           [Map<int, $fidl.UnknownRawData>? unknownData]) =>
-      SimpleTable._(argv, unknownData);
+      ExtensionTable._(argv, unknownData);
 }
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.TableType<SimpleTable> kSimpleTable_Type =
-    $fidl.TableType<SimpleTable>(
+const $fidl.TableType<ExtensionTable> kExtensionTable_Type =
+    $fidl.TableType<ExtensionTable>(
   inlineSize: 16,
-  members: [
-    $fidl.Int64Type(),
-    null,
-    null,
-    null,
-    $fidl.Int64Type(),
-  ],
-  ctor: SimpleTable._ctor,
-  resource: false,
-);
-
-class OlderSimpleTable extends $fidl.Table {
-  const OlderSimpleTable({
-    this.$unknownData,
-    this.x,
-  });
-
-  OlderSimpleTable._(Map<int, dynamic> argv, this.$unknownData) : x = argv[1];
-
-  @override
-  final Map<int, $fidl.UnknownRawData>? $unknownData;
-  final int? x;
-
-  @override
-  dynamic $field(int index) {
-    switch (index) {
-      case 0:
-        return x;
-    }
-    return null;
-  }
-
-  @override
-  Map<int, dynamic> get $fields {
-    return {
-      1: x,
-    };
-  }
-
-  static OlderSimpleTable _ctor(Map<int, dynamic> argv,
-          [Map<int, $fidl.UnknownRawData>? unknownData]) =>
-      OlderSimpleTable._(argv, unknownData);
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.TableType<OlderSimpleTable> kOlderSimpleTable_Type =
-    $fidl.TableType<OlderSimpleTable>(
-  inlineSize: 16,
-  members: [
-    $fidl.Int64Type(),
-  ],
-  ctor: OlderSimpleTable._ctor,
+  members: [],
+  ctor: ExtensionTable._ctor,
   resource: false,
 );
 
@@ -240,6 +176,51 @@ const $fidl.TableType<NewerSimpleTable> kNewerSimpleTable_Type =
   resource: false,
 );
 
+class OlderSimpleTable extends $fidl.Table {
+  const OlderSimpleTable({
+    this.$unknownData,
+    this.x,
+  });
+
+  OlderSimpleTable._(Map<int, dynamic> argv, this.$unknownData) : x = argv[1];
+
+  @override
+  final Map<int, $fidl.UnknownRawData>? $unknownData;
+  final int? x;
+
+  @override
+  dynamic $field(int index) {
+    switch (index) {
+      case 0:
+        return x;
+    }
+    return null;
+  }
+
+  @override
+  Map<int, dynamic> get $fields {
+    return {
+      1: x,
+    };
+  }
+
+  static OlderSimpleTable _ctor(Map<int, dynamic> argv,
+          [Map<int, $fidl.UnknownRawData>? unknownData]) =>
+      OlderSimpleTable._(argv, unknownData);
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.TableType<OlderSimpleTable> kOlderSimpleTable_Type =
+    $fidl.TableType<OlderSimpleTable>(
+  inlineSize: 16,
+  members: [
+    $fidl.Int64Type(),
+  ],
+  ctor: OlderSimpleTable._ctor,
+  resource: false,
+);
+
 class ReverseOrdinalTable extends $fidl.Table {
   const ReverseOrdinalTable({
     this.$unknownData,
@@ -300,24 +281,29 @@ const $fidl.TableType<ReverseOrdinalTable> kReverseOrdinalTable_Type =
   resource: false,
 );
 
-class TableWithAttributes extends $fidl.Table {
-  const TableWithAttributes({
+class SimpleTable extends $fidl.Table {
+  const SimpleTable({
     this.$unknownData,
     this.x,
+    this.y,
   });
 
-  TableWithAttributes._(Map<int, dynamic> argv, this.$unknownData)
-      : x = argv[1];
+  SimpleTable._(Map<int, dynamic> argv, this.$unknownData)
+      : x = argv[1],
+        y = argv[5];
 
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;
   final int? x;
+  final int? y;
 
   @override
   dynamic $field(int index) {
     switch (index) {
       case 0:
         return x;
+      case 4:
+        return y;
     }
     return null;
   }
@@ -326,60 +312,28 @@ class TableWithAttributes extends $fidl.Table {
   Map<int, dynamic> get $fields {
     return {
       1: x,
+      5: y,
     };
   }
 
-  static TableWithAttributes _ctor(Map<int, dynamic> argv,
+  static SimpleTable _ctor(Map<int, dynamic> argv,
           [Map<int, $fidl.UnknownRawData>? unknownData]) =>
-      TableWithAttributes._(argv, unknownData);
+      SimpleTable._(argv, unknownData);
 }
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.TableType<TableWithAttributes> kTableWithAttributes_Type =
-    $fidl.TableType<TableWithAttributes>(
+const $fidl.TableType<SimpleTable> kSimpleTable_Type =
+    $fidl.TableType<SimpleTable>(
   inlineSize: 16,
   members: [
     $fidl.Int64Type(),
+    null,
+    null,
+    null,
+    $fidl.Int64Type(),
   ],
-  ctor: TableWithAttributes._ctor,
-  resource: false,
-);
-
-class ExtensionTable extends $fidl.Table {
-  const ExtensionTable({
-    this.$unknownData,
-  });
-
-  ExtensionTable._(Map<int, dynamic> argv, this.$unknownData);
-
-  @override
-  final Map<int, $fidl.UnknownRawData>? $unknownData;
-
-  @override
-  dynamic $field(int index) {
-    switch (index) {
-    }
-    return null;
-  }
-
-  @override
-  Map<int, dynamic> get $fields {
-    return {};
-  }
-
-  static ExtensionTable _ctor(Map<int, dynamic> argv,
-          [Map<int, $fidl.UnknownRawData>? unknownData]) =>
-      ExtensionTable._(argv, unknownData);
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.TableType<ExtensionTable> kExtensionTable_Type =
-    $fidl.TableType<ExtensionTable>(
-  inlineSize: 16,
-  members: [],
-  ctor: ExtensionTable._ctor,
+  ctor: SimpleTable._ctor,
   resource: false,
 );
 
@@ -867,5 +821,51 @@ const $fidl.TableType<SixtyFourOrdinalTable> kSixtyFourOrdinalTable_Type =
     kExtensionTable_Type,
   ],
   ctor: SixtyFourOrdinalTable._ctor,
+  resource: false,
+);
+
+class TableWithAttributes extends $fidl.Table {
+  const TableWithAttributes({
+    this.$unknownData,
+    this.x,
+  });
+
+  TableWithAttributes._(Map<int, dynamic> argv, this.$unknownData)
+      : x = argv[1];
+
+  @override
+  final Map<int, $fidl.UnknownRawData>? $unknownData;
+  final int? x;
+
+  @override
+  dynamic $field(int index) {
+    switch (index) {
+      case 0:
+        return x;
+    }
+    return null;
+  }
+
+  @override
+  Map<int, dynamic> get $fields {
+    return {
+      1: x,
+    };
+  }
+
+  static TableWithAttributes _ctor(Map<int, dynamic> argv,
+          [Map<int, $fidl.UnknownRawData>? unknownData]) =>
+      TableWithAttributes._(argv, unknownData);
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.TableType<TableWithAttributes> kTableWithAttributes_Type =
+    $fidl.TableType<TableWithAttributes>(
+  inlineSize: 16,
+  members: [
+    $fidl.Int64Type(),
+  ],
+  ctor: TableWithAttributes._ctor,
   resource: false,
 );

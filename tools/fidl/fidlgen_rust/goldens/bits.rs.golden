@@ -26,6 +26,36 @@ use {
 };
 
 bitflags! {
+    pub struct FlexibleBits: u64 {
+        const SMALLEST = 1;
+        const BIGGEST = 9223372036854775808;
+    }
+}
+
+impl FlexibleBits {
+    #[inline(always)]
+    pub fn from_bits_allow_unknown(bits: u64) -> Self {
+        unsafe { Self::from_bits_unchecked(bits) }
+    }
+
+    #[inline(always)]
+    pub fn has_unknown_bits(&self) -> bool {
+        self.get_unknown_bits() != 0
+    }
+
+    #[inline(always)]
+    pub fn get_unknown_bits(&self) -> u64 {
+        self.bits & !Self::all().bits
+    }
+}
+
+fidl_bits! {
+    name: FlexibleBits,
+    prim_ty: u64,
+    flexible: true,
+}
+
+bitflags! {
     pub struct MyBits: u32 {
         const MY_FIRST_BIT = 1;
         const MY_OTHER_BIT = 2;
@@ -78,34 +108,4 @@ fidl_bits! {
     name: StrictBits,
     prim_ty: u64,
     strict: true,
-}
-
-bitflags! {
-    pub struct FlexibleBits: u64 {
-        const SMALLEST = 1;
-        const BIGGEST = 9223372036854775808;
-    }
-}
-
-impl FlexibleBits {
-    #[inline(always)]
-    pub fn from_bits_allow_unknown(bits: u64) -> Self {
-        unsafe { Self::from_bits_unchecked(bits) }
-    }
-
-    #[inline(always)]
-    pub fn has_unknown_bits(&self) -> bool {
-        self.get_unknown_bits() != 0
-    }
-
-    #[inline(always)]
-    pub fn get_unknown_bits(&self) -> u64 {
-        self.bits & !Self::all().bits
-    }
-}
-
-fidl_bits! {
-    name: FlexibleBits,
-    prim_ty: u64,
-    flexible: true,
 }

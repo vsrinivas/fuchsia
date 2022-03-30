@@ -5,10 +5,10 @@
     {
       "name": "test.dependent",
       "declarations": {
-        "test.dependent/ContainsDenied": {
+        "test.dependent/ContainsAllowed": {
           "kind": "interface"
         },
-        "test.dependent/ContainsAllowed": {
+        "test.dependent/ContainsDenied": {
           "kind": "interface"
         },
         "test.dependent/ContainsDeniedAlwaysDeniedRequest": {
@@ -263,12 +263,162 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "test.bindingsdenylist/OnlyLibfuzzerAndDeps",
+      "name": "test.bindingsdenylist/Allowed",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 37,
+        "line": 112,
         "column": 10,
-        "length": 20
+        "length": 7
+      },
+      "composed_protocols": [],
+      "methods": [
+        {
+          "ordinal": 3826178105137551123,
+          "name": "Denied",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 114,
+            "column": 5,
+            "length": 6
+          },
+          "has_request": true,
+          "maybe_attributes": [
+            {
+              "name": "bindings_denylist",
+              "arguments": [
+                {
+                  "name": "value",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller",
+                    "expression": "\"cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller",
+                      "expression": "\"cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+                    "line": 113,
+                    "column": 24,
+                    "length": 57
+                  }
+                }
+              ],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+                "line": 113,
+                "column": 5,
+                "length": 77
+              }
+            }
+          ],
+          "has_response": true,
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "test.bindingsdenylist/AllowedDeniedTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 3,
+              "max_handles": 0,
+              "max_out_of_line": 80,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 3,
+              "max_handles": 0,
+              "max_out_of_line": 48,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            }
+          },
+          "is_composed": false,
+          "has_error": true,
+          "maybe_response_result_type": {
+            "kind": "identifier",
+            "identifier": "test.bindingsdenylist/Allowed_Denied_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 3,
+              "max_handles": 0,
+              "max_out_of_line": 80,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 3,
+              "max_handles": 0,
+              "max_out_of_line": 48,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            }
+          },
+          "maybe_response_success_type": {
+            "kind": "identifier",
+            "identifier": "test.bindingsdenylist/Allowed_Denied_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 48,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 32,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            },
+            "type_shape_v2": {
+              "inline_size": 40,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            }
+          },
+          "maybe_response_err_type": {
+            "kind": "primitive",
+            "subtype": "uint32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "test.bindingsdenylist/ContainsAllowed",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 144,
+        "column": 10,
+        "length": 15
       },
       "maybe_attributes": [
         {
@@ -279,91 +429,114 @@
               "type": "string",
               "value": {
                 "kind": "literal",
-                "value": "cpp, dart, go, rust, syzkaller",
-                "expression": "\"cpp, dart, go, rust, syzkaller\"",
+                "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller",
+                "expression": "\"cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller\"",
                 "literal": {
                   "kind": "string",
-                  "value": "cpp, dart, go, rust, syzkaller",
-                  "expression": "\"cpp, dart, go, rust, syzkaller\""
+                  "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller",
+                  "expression": "\"cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller\""
                 }
               },
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                "line": 36,
+                "line": 143,
                 "column": 20,
-                "length": 32
+                "length": 57
               }
             }
           ],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 36,
+            "line": 143,
             "column": 1,
-            "length": 52
+            "length": 77
+          }
+        }
+      ],
+      "composed_protocols": [],
+      "methods": []
+    },
+    {
+      "name": "test.bindingsdenylist/Denied",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 98,
+        "column": 10,
+        "length": 6
+      },
+      "maybe_attributes": [
+        {
+          "name": "bindings_denylist",
+          "arguments": [
+            {
+              "name": "value",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller",
+                "expression": "\"cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller",
+                  "expression": "\"cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+                "line": 97,
+                "column": 20,
+                "length": 57
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 97,
+            "column": 1,
+            "length": 77
           }
         }
       ],
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 2342407566057198902,
-          "name": "LibfuzzerNeedsNonemptyProtocol",
+          "ordinal": 5338181991150205725,
+          "name": "ShouldNeverAppearInAnyBinding",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 38,
+            "line": 99,
             "column": 5,
-            "length": 30
+            "length": 29
           },
           "has_request": true,
-          "has_response": true,
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "test.bindingsdenylist/DeniedShouldNeverAppearInAnyBindingRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 48,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 32,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            },
+            "type_shape_v2": {
+              "inline_size": 40,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            }
+          },
+          "has_response": false,
           "is_composed": false,
           "has_error": false
         }
       ]
-    },
-    {
-      "name": "test.bindingsdenylist/OnlyCppAndDeps",
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 44,
-        "column": 10,
-        "length": 14
-      },
-      "maybe_attributes": [
-        {
-          "name": "bindings_denylist",
-          "arguments": [
-            {
-              "name": "value",
-              "type": "string",
-              "value": {
-                "kind": "literal",
-                "value": "dart, go, libfuzzer, rust, syzkaller",
-                "expression": "\"dart, go, libfuzzer, rust, syzkaller\"",
-                "literal": {
-                  "kind": "string",
-                  "value": "dart, go, libfuzzer, rust, syzkaller",
-                  "expression": "\"dart, go, libfuzzer, rust, syzkaller\""
-                }
-              },
-              "location": {
-                "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                "line": 43,
-                "column": 20,
-                "length": 38
-              }
-            }
-          ],
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 43,
-            "column": 1,
-            "length": 58
-          }
-        }
-      ],
-      "composed_protocols": [],
-      "methods": []
     },
     {
       "name": "test.bindingsdenylist/DenyEachBinding",
@@ -1344,282 +1517,6 @@
       ]
     },
     {
-      "name": "test.bindingsdenylist/Denied",
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 98,
-        "column": 10,
-        "length": 6
-      },
-      "maybe_attributes": [
-        {
-          "name": "bindings_denylist",
-          "arguments": [
-            {
-              "name": "value",
-              "type": "string",
-              "value": {
-                "kind": "literal",
-                "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller",
-                "expression": "\"cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller\"",
-                "literal": {
-                  "kind": "string",
-                  "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller",
-                  "expression": "\"cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller\""
-                }
-              },
-              "location": {
-                "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                "line": 97,
-                "column": 20,
-                "length": 57
-              }
-            }
-          ],
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 97,
-            "column": 1,
-            "length": 77
-          }
-        }
-      ],
-      "composed_protocols": [],
-      "methods": [
-        {
-          "ordinal": 5338181991150205725,
-          "name": "ShouldNeverAppearInAnyBinding",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 99,
-            "column": 5,
-            "length": 29
-          },
-          "has_request": true,
-          "maybe_request_payload": {
-            "kind": "identifier",
-            "identifier": "test.bindingsdenylist/DeniedShouldNeverAppearInAnyBindingRequest",
-            "nullable": false,
-            "type_shape_v1": {
-              "inline_size": 48,
-              "alignment": 8,
-              "depth": 2,
-              "max_handles": 0,
-              "max_out_of_line": 32,
-              "has_padding": true,
-              "has_flexible_envelope": true
-            },
-            "type_shape_v2": {
-              "inline_size": 40,
-              "alignment": 8,
-              "depth": 2,
-              "max_handles": 0,
-              "max_out_of_line": 8,
-              "has_padding": true,
-              "has_flexible_envelope": true
-            }
-          },
-          "has_response": false,
-          "is_composed": false,
-          "has_error": false
-        }
-      ]
-    },
-    {
-      "name": "test.bindingsdenylist/Allowed",
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 112,
-        "column": 10,
-        "length": 7
-      },
-      "composed_protocols": [],
-      "methods": [
-        {
-          "ordinal": 3826178105137551123,
-          "name": "Denied",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 114,
-            "column": 5,
-            "length": 6
-          },
-          "has_request": true,
-          "maybe_attributes": [
-            {
-              "name": "bindings_denylist",
-              "arguments": [
-                {
-                  "name": "value",
-                  "type": "string",
-                  "value": {
-                    "kind": "literal",
-                    "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller",
-                    "expression": "\"cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller\"",
-                    "literal": {
-                      "kind": "string",
-                      "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller",
-                      "expression": "\"cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller\""
-                    }
-                  },
-                  "location": {
-                    "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                    "line": 113,
-                    "column": 24,
-                    "length": 57
-                  }
-                }
-              ],
-              "location": {
-                "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                "line": 113,
-                "column": 5,
-                "length": 77
-              }
-            }
-          ],
-          "has_response": true,
-          "maybe_response_payload": {
-            "kind": "identifier",
-            "identifier": "test.bindingsdenylist/AllowedDeniedTopResponse",
-            "nullable": false,
-            "type_shape_v1": {
-              "inline_size": 24,
-              "alignment": 8,
-              "depth": 3,
-              "max_handles": 0,
-              "max_out_of_line": 80,
-              "has_padding": true,
-              "has_flexible_envelope": true
-            },
-            "type_shape_v2": {
-              "inline_size": 16,
-              "alignment": 8,
-              "depth": 3,
-              "max_handles": 0,
-              "max_out_of_line": 48,
-              "has_padding": true,
-              "has_flexible_envelope": true
-            }
-          },
-          "is_composed": false,
-          "has_error": true,
-          "maybe_response_result_type": {
-            "kind": "identifier",
-            "identifier": "test.bindingsdenylist/Allowed_Denied_Result",
-            "nullable": false,
-            "type_shape_v1": {
-              "inline_size": 24,
-              "alignment": 8,
-              "depth": 3,
-              "max_handles": 0,
-              "max_out_of_line": 80,
-              "has_padding": true,
-              "has_flexible_envelope": true
-            },
-            "type_shape_v2": {
-              "inline_size": 16,
-              "alignment": 8,
-              "depth": 3,
-              "max_handles": 0,
-              "max_out_of_line": 48,
-              "has_padding": true,
-              "has_flexible_envelope": true
-            }
-          },
-          "maybe_response_success_type": {
-            "kind": "identifier",
-            "identifier": "test.bindingsdenylist/Allowed_Denied_Response",
-            "nullable": false,
-            "type_shape_v1": {
-              "inline_size": 48,
-              "alignment": 8,
-              "depth": 2,
-              "max_handles": 0,
-              "max_out_of_line": 32,
-              "has_padding": true,
-              "has_flexible_envelope": true
-            },
-            "type_shape_v2": {
-              "inline_size": 40,
-              "alignment": 8,
-              "depth": 2,
-              "max_handles": 0,
-              "max_out_of_line": 8,
-              "has_padding": true,
-              "has_flexible_envelope": true
-            }
-          },
-          "maybe_response_err_type": {
-            "kind": "primitive",
-            "subtype": "uint32",
-            "type_shape_v1": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "test.bindingsdenylist/ContainsAllowed",
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 144,
-        "column": 10,
-        "length": 15
-      },
-      "maybe_attributes": [
-        {
-          "name": "bindings_denylist",
-          "arguments": [
-            {
-              "name": "value",
-              "type": "string",
-              "value": {
-                "kind": "literal",
-                "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller",
-                "expression": "\"cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller\"",
-                "literal": {
-                  "kind": "string",
-                  "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller",
-                  "expression": "\"cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller\""
-                }
-              },
-              "location": {
-                "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                "line": 143,
-                "column": 20,
-                "length": 57
-              }
-            }
-          ],
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 143,
-            "column": 1,
-            "length": 77
-          }
-        }
-      ],
-      "composed_protocols": [],
-      "methods": []
-    },
-    {
       "name": "test.bindingsdenylist/ImportsSameNameContext",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
@@ -1747,6 +1644,109 @@
           "has_error": false
         }
       ]
+    },
+    {
+      "name": "test.bindingsdenylist/OnlyCppAndDeps",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 44,
+        "column": 10,
+        "length": 14
+      },
+      "maybe_attributes": [
+        {
+          "name": "bindings_denylist",
+          "arguments": [
+            {
+              "name": "value",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "dart, go, libfuzzer, rust, syzkaller",
+                "expression": "\"dart, go, libfuzzer, rust, syzkaller\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "dart, go, libfuzzer, rust, syzkaller",
+                  "expression": "\"dart, go, libfuzzer, rust, syzkaller\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+                "line": 43,
+                "column": 20,
+                "length": 38
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 43,
+            "column": 1,
+            "length": 58
+          }
+        }
+      ],
+      "composed_protocols": [],
+      "methods": []
+    },
+    {
+      "name": "test.bindingsdenylist/OnlyLibfuzzerAndDeps",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 37,
+        "column": 10,
+        "length": 20
+      },
+      "maybe_attributes": [
+        {
+          "name": "bindings_denylist",
+          "arguments": [
+            {
+              "name": "value",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "cpp, dart, go, rust, syzkaller",
+                "expression": "\"cpp, dart, go, rust, syzkaller\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "cpp, dart, go, rust, syzkaller",
+                  "expression": "\"cpp, dart, go, rust, syzkaller\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+                "line": 36,
+                "column": 20,
+                "length": 32
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 36,
+            "column": 1,
+            "length": 52
+          }
+        }
+      ],
+      "composed_protocols": [],
+      "methods": [
+        {
+          "ordinal": 2342407566057198902,
+          "name": "LibfuzzerNeedsNonemptyProtocol",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 38,
+            "column": 5,
+            "length": 30
+          },
+          "has_request": true,
+          "has_response": true,
+          "is_composed": false,
+          "has_error": false
+        }
+      ]
     }
   ],
   "service_declarations": [
@@ -1796,1631 +1796,49 @@
   ],
   "struct_declarations": [
     {
-      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenyCppRequest",
-      "naming_context": [
-        "DenyEachBinding",
-        "OnlyDenyCpp",
-        "Request"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 53,
-        "column": 17,
-        "length": 30
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "bool",
-            "type_shape_v1": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "a",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 54,
-            "column": 9,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 1,
-        "alignment": 1,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 1,
-        "alignment": 1,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/DenyEachBinding_OnlyDenyCpp_Response",
-      "naming_context": [
-        "DenyEachBinding",
-        "OnlyDenyCpp",
-        "Response",
-        "result",
-        "response"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 55,
-        "column": 12,
-        "length": 31
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "int32",
-            "type_shape_v1": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "b",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 56,
-            "column": 9,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 4,
-        "alignment": 4,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 4,
-        "alignment": 4,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenyCppTopResponse",
-      "naming_context": [
-        "DenyEachBinding",
-        "OnlyDenyCpp",
-        "Response"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 55,
-        "column": 11,
-        "length": 33
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "identifier",
-            "identifier": "test.bindingsdenylist/DenyEachBinding_OnlyDenyCpp_Result",
-            "nullable": false,
-            "type_shape_v1": {
-              "inline_size": 24,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 8,
-              "has_padding": true,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 16,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": true,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "result",
-          "location": {
-            "filename": "generated",
-            "line": 3,
-            "column": 1,
-            "length": 6
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 24,
-        "alignment": 8,
-        "depth": 1,
-        "max_handles": 0,
-        "max_out_of_line": 8,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 1,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenyDartRequest",
-      "naming_context": [
-        "DenyEachBinding",
-        "OnlyDenyDart",
-        "Request"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 60,
-        "column": 18,
-        "length": 30
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "bool",
-            "type_shape_v1": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "a",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 61,
-            "column": 9,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 1,
-        "alignment": 1,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 1,
-        "alignment": 1,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/DenyEachBinding_OnlyDenyDart_Response",
-      "naming_context": [
-        "DenyEachBinding",
-        "OnlyDenyDart",
-        "Response",
-        "result",
-        "response"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 62,
-        "column": 12,
-        "length": 31
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "int32",
-            "type_shape_v1": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "b",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 63,
-            "column": 9,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 4,
-        "alignment": 4,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 4,
-        "alignment": 4,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenyDartTopResponse",
-      "naming_context": [
-        "DenyEachBinding",
-        "OnlyDenyDart",
-        "Response"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 62,
-        "column": 11,
-        "length": 33
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "identifier",
-            "identifier": "test.bindingsdenylist/DenyEachBinding_OnlyDenyDart_Result",
-            "nullable": false,
-            "type_shape_v1": {
-              "inline_size": 24,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 8,
-              "has_padding": true,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 16,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": true,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "result",
-          "location": {
-            "filename": "generated",
-            "line": 8,
-            "column": 1,
-            "length": 6
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 24,
-        "alignment": 8,
-        "depth": 1,
-        "max_handles": 0,
-        "max_out_of_line": 8,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 1,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenyGoRequest",
-      "naming_context": [
-        "DenyEachBinding",
-        "OnlyDenyGo",
-        "Request"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 67,
-        "column": 16,
-        "length": 30
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "bool",
-            "type_shape_v1": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "a",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 68,
-            "column": 9,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 1,
-        "alignment": 1,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 1,
-        "alignment": 1,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/DenyEachBinding_OnlyDenyGo_Response",
-      "naming_context": [
-        "DenyEachBinding",
-        "OnlyDenyGo",
-        "Response",
-        "result",
-        "response"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 69,
-        "column": 12,
-        "length": 31
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "int32",
-            "type_shape_v1": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "b",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 70,
-            "column": 9,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 4,
-        "alignment": 4,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 4,
-        "alignment": 4,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenyGoTopResponse",
-      "naming_context": [
-        "DenyEachBinding",
-        "OnlyDenyGo",
-        "Response"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 69,
-        "column": 11,
-        "length": 33
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "identifier",
-            "identifier": "test.bindingsdenylist/DenyEachBinding_OnlyDenyGo_Result",
-            "nullable": false,
-            "type_shape_v1": {
-              "inline_size": 24,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 8,
-              "has_padding": true,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 16,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": true,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "result",
-          "location": {
-            "filename": "generated",
-            "line": 13,
-            "column": 1,
-            "length": 6
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 24,
-        "alignment": 8,
-        "depth": 1,
-        "max_handles": 0,
-        "max_out_of_line": 8,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 1,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenyLibfuzzerRequest",
-      "naming_context": [
-        "DenyEachBinding",
-        "OnlyDenyLibfuzzer",
-        "Request"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 74,
-        "column": 23,
-        "length": 30
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "bool",
-            "type_shape_v1": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "a",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 75,
-            "column": 9,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 1,
-        "alignment": 1,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 1,
-        "alignment": 1,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/DenyEachBinding_OnlyDenyLibfuzzer_Response",
-      "naming_context": [
-        "DenyEachBinding",
-        "OnlyDenyLibfuzzer",
-        "Response",
-        "result",
-        "response"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 76,
-        "column": 12,
-        "length": 31
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "int32",
-            "type_shape_v1": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "b",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 77,
-            "column": 9,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 4,
-        "alignment": 4,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 4,
-        "alignment": 4,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenyLibfuzzerTopResponse",
-      "naming_context": [
-        "DenyEachBinding",
-        "OnlyDenyLibfuzzer",
-        "Response"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 76,
-        "column": 11,
-        "length": 33
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "identifier",
-            "identifier": "test.bindingsdenylist/DenyEachBinding_OnlyDenyLibfuzzer_Result",
-            "nullable": false,
-            "type_shape_v1": {
-              "inline_size": 24,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 8,
-              "has_padding": true,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 16,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": true,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "result",
-          "location": {
-            "filename": "generated",
-            "line": 18,
-            "column": 1,
-            "length": 6
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 24,
-        "alignment": 8,
-        "depth": 1,
-        "max_handles": 0,
-        "max_out_of_line": 8,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 1,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenyRustRequest",
-      "naming_context": [
-        "DenyEachBinding",
-        "OnlyDenyRust",
-        "Request"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 81,
-        "column": 18,
-        "length": 30
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "bool",
-            "type_shape_v1": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "a",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 82,
-            "column": 9,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 1,
-        "alignment": 1,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 1,
-        "alignment": 1,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/DenyEachBinding_OnlyDenyRust_Response",
-      "naming_context": [
-        "DenyEachBinding",
-        "OnlyDenyRust",
-        "Response",
-        "result",
-        "response"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 83,
-        "column": 12,
-        "length": 31
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "int32",
-            "type_shape_v1": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "b",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 84,
-            "column": 9,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 4,
-        "alignment": 4,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 4,
-        "alignment": 4,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenyRustTopResponse",
-      "naming_context": [
-        "DenyEachBinding",
-        "OnlyDenyRust",
-        "Response"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 83,
-        "column": 11,
-        "length": 33
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "identifier",
-            "identifier": "test.bindingsdenylist/DenyEachBinding_OnlyDenyRust_Result",
-            "nullable": false,
-            "type_shape_v1": {
-              "inline_size": 24,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 8,
-              "has_padding": true,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 16,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": true,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "result",
-          "location": {
-            "filename": "generated",
-            "line": 23,
-            "column": 1,
-            "length": 6
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 24,
-        "alignment": 8,
-        "depth": 1,
-        "max_handles": 0,
-        "max_out_of_line": 8,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 1,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenySyzkallerRequest",
-      "naming_context": [
-        "DenyEachBinding",
-        "OnlyDenySyzkaller",
-        "Request"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 88,
-        "column": 23,
-        "length": 30
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "bool",
-            "type_shape_v1": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "a",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 89,
-            "column": 9,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 1,
-        "alignment": 1,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 1,
-        "alignment": 1,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/DenyEachBinding_OnlyDenySyzkaller_Response",
-      "naming_context": [
-        "DenyEachBinding",
-        "OnlyDenySyzkaller",
-        "Response",
-        "result",
-        "response"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 90,
-        "column": 12,
-        "length": 31
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "int32",
-            "type_shape_v1": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "b",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 91,
-            "column": 9,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 4,
-        "alignment": 4,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 4,
-        "alignment": 4,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenySyzkallerTopResponse",
-      "naming_context": [
-        "DenyEachBinding",
-        "OnlyDenySyzkaller",
-        "Response"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 90,
-        "column": 11,
-        "length": 33
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "identifier",
-            "identifier": "test.bindingsdenylist/DenyEachBinding_OnlyDenySyzkaller_Result",
-            "nullable": false,
-            "type_shape_v1": {
-              "inline_size": 24,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 8,
-              "has_padding": true,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 16,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": true,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "result",
-          "location": {
-            "filename": "generated",
-            "line": 28,
-            "column": 1,
-            "length": 6
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 24,
-        "alignment": 8,
-        "depth": 1,
-        "max_handles": 0,
-        "max_out_of_line": 8,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 1,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/ShouldNeverAppearInAnyBinding1",
-      "naming_context": [
-        "Denied",
-        "ShouldNeverAppearInAnyBinding",
-        "Request",
-        "should_never_appear_in_any_binding_1"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 100,
-        "column": 46,
-        "length": 38
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "bool",
-            "type_shape_v1": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "a",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 101,
-            "column": 13,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 1,
-        "alignment": 1,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 1,
-        "alignment": 1,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/DeniedShouldNeverAppearInAnyBindingRequest",
-      "naming_context": [
-        "Denied",
-        "ShouldNeverAppearInAnyBinding",
-        "Request"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 99,
-        "column": 35,
-        "length": 282
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "identifier",
-            "identifier": "test.bindingsdenylist/ShouldNeverAppearInAnyBinding1",
-            "nullable": false,
-            "type_shape_v1": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "should_never_appear_in_any_binding_1",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 100,
-            "column": 9,
-            "length": 36
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 7
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 7
-          }
-        },
-        {
-          "type": {
-            "kind": "identifier",
-            "identifier": "test.bindingsdenylist/ShouldNeverAppearInAnyBinding2",
-            "nullable": false,
-            "type_shape_v1": {
-              "inline_size": 16,
-              "alignment": 8,
-              "depth": 2,
-              "max_handles": 0,
-              "max_out_of_line": 24,
-              "has_padding": true,
-              "has_flexible_envelope": true
-            },
-            "type_shape_v2": {
-              "inline_size": 16,
-              "alignment": 8,
-              "depth": 2,
-              "max_handles": 0,
-              "max_out_of_line": 8,
-              "has_padding": true,
-              "has_flexible_envelope": true
-            }
-          },
-          "name": "should_never_appear_in_any_binding_2",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 103,
-            "column": 9,
-            "length": 36
-          },
-          "field_shape_v1": {
-            "offset": 8,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 8,
-            "padding": 0
-          }
-        },
-        {
-          "type": {
-            "kind": "identifier",
-            "identifier": "test.bindingsdenylist/ShouldNeverAppearInAnyBinding3",
-            "nullable": false,
-            "type_shape_v1": {
-              "inline_size": 24,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 8,
-              "has_padding": true,
-              "has_flexible_envelope": true
-            },
-            "type_shape_v2": {
-              "inline_size": 16,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": true,
-              "has_flexible_envelope": true
-            }
-          },
-          "name": "should_never_appear_in_any_binding_3",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 106,
-            "column": 9,
-            "length": 36
-          },
-          "field_shape_v1": {
-            "offset": 24,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 24,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 48,
-        "alignment": 8,
-        "depth": 2,
-        "max_handles": 0,
-        "max_out_of_line": 32,
-        "has_padding": true,
-        "has_flexible_envelope": true
-      },
-      "type_shape_v2": {
-        "inline_size": 40,
-        "alignment": 8,
-        "depth": 2,
-        "max_handles": 0,
-        "max_out_of_line": 8,
-        "has_padding": true,
-        "has_flexible_envelope": true
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/ShouldNeverAppearInAnyBinding4",
+      "name": "test.bindingsdenylist/AllowedDeniedTopResponse",
       "naming_context": [
         "Allowed",
         "Denied",
-        "Response",
-        "result",
-        "response",
-        "should_never_appear_in_any_binding_4"
+        "Response"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 115,
-        "column": 46,
-        "length": 38
+        "line": 114,
+        "column": 17,
+        "length": 284
       },
       "members": [
         {
           "type": {
-            "kind": "primitive",
-            "subtype": "bool",
+            "kind": "identifier",
+            "identifier": "test.bindingsdenylist/Allowed_Denied_Result",
+            "nullable": false,
             "type_shape_v1": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 3,
               "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
+              "max_out_of_line": 80,
+              "has_padding": true,
+              "has_flexible_envelope": true
             },
             "type_shape_v2": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 3,
               "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
+              "max_out_of_line": 48,
+              "has_padding": true,
+              "has_flexible_envelope": true
             }
           },
-          "name": "a",
+          "name": "result",
           "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 116,
-            "column": 13,
-            "length": 1
+            "filename": "generated",
+            "line": 33,
+            "column": 1,
+            "length": 6
           },
           "field_shape_v1": {
             "offset": 0,
@@ -3434,22 +1852,22 @@
       ],
       "resource": false,
       "type_shape_v1": {
-        "inline_size": 1,
-        "alignment": 1,
-        "depth": 0,
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 3,
         "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
+        "max_out_of_line": 80,
+        "has_padding": true,
+        "has_flexible_envelope": true
       },
       "type_shape_v2": {
-        "inline_size": 1,
-        "alignment": 1,
-        "depth": 0,
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 3,
         "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
+        "max_out_of_line": 48,
+        "has_padding": true,
+        "has_flexible_envelope": true
       }
     },
     {
@@ -3607,219 +2025,6 @@
         "max_out_of_line": 8,
         "has_padding": true,
         "has_flexible_envelope": true
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/AllowedDeniedTopResponse",
-      "naming_context": [
-        "Allowed",
-        "Denied",
-        "Response"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 114,
-        "column": 17,
-        "length": 284
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "identifier",
-            "identifier": "test.bindingsdenylist/Allowed_Denied_Result",
-            "nullable": false,
-            "type_shape_v1": {
-              "inline_size": 24,
-              "alignment": 8,
-              "depth": 3,
-              "max_handles": 0,
-              "max_out_of_line": 80,
-              "has_padding": true,
-              "has_flexible_envelope": true
-            },
-            "type_shape_v2": {
-              "inline_size": 16,
-              "alignment": 8,
-              "depth": 3,
-              "max_handles": 0,
-              "max_out_of_line": 48,
-              "has_padding": true,
-              "has_flexible_envelope": true
-            }
-          },
-          "name": "result",
-          "location": {
-            "filename": "generated",
-            "line": 33,
-            "column": 1,
-            "length": 6
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 24,
-        "alignment": 8,
-        "depth": 3,
-        "max_handles": 0,
-        "max_out_of_line": 80,
-        "has_padding": true,
-        "has_flexible_envelope": true
-      },
-      "type_shape_v2": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 3,
-        "max_handles": 0,
-        "max_out_of_line": 48,
-        "has_padding": true,
-        "has_flexible_envelope": true
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/OnlyGo",
-      "naming_context": [
-        "OnlyGo"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 24,
-        "column": 6,
-        "length": 6
-      },
-      "maybe_attributes": [
-        {
-          "name": "bindings_denylist",
-          "arguments": [
-            {
-              "name": "value",
-              "type": "string",
-              "value": {
-                "kind": "literal",
-                "value": "cpp, dart, hlcpp, libfuzzer, llcpp, rust, syzkaller",
-                "expression": "\"cpp, dart, hlcpp, libfuzzer, llcpp, rust, syzkaller\"",
-                "literal": {
-                  "kind": "string",
-                  "value": "cpp, dart, hlcpp, libfuzzer, llcpp, rust, syzkaller",
-                  "expression": "\"cpp, dart, hlcpp, libfuzzer, llcpp, rust, syzkaller\""
-                }
-              },
-              "location": {
-                "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                "line": 23,
-                "column": 20,
-                "length": 53
-              }
-            }
-          ],
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 23,
-            "column": 1,
-            "length": 73
-          }
-        }
-      ],
-      "members": [],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 1,
-        "alignment": 1,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 1,
-        "alignment": 1,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/ShouldNeverAppearInAnyBinding7",
-      "naming_context": [
-        "DeniedAnonymous",
-        "should_never_appear_in_any_binding_7"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 129,
-        "column": 42,
-        "length": 30
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "bool",
-            "type_shape_v1": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 1,
-              "alignment": 1,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "a",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 130,
-            "column": 9,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        }
-      ],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 1,
-        "alignment": 1,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 1,
-        "alignment": 1,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
       }
     },
     {
@@ -4009,6 +2214,1511 @@
       }
     },
     {
+      "name": "test.bindingsdenylist/DeniedShouldNeverAppearInAnyBindingRequest",
+      "naming_context": [
+        "Denied",
+        "ShouldNeverAppearInAnyBinding",
+        "Request"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 99,
+        "column": 35,
+        "length": 282
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.bindingsdenylist/ShouldNeverAppearInAnyBinding1",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "should_never_appear_in_any_binding_1",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 100,
+            "column": 9,
+            "length": 36
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 7
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 7
+          }
+        },
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.bindingsdenylist/ShouldNeverAppearInAnyBinding2",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 24,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            }
+          },
+          "name": "should_never_appear_in_any_binding_2",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 103,
+            "column": 9,
+            "length": 36
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 8,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.bindingsdenylist/ShouldNeverAppearInAnyBinding3",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            }
+          },
+          "name": "should_never_appear_in_any_binding_3",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 106,
+            "column": 9,
+            "length": 36
+          },
+          "field_shape_v1": {
+            "offset": 24,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 24,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 48,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 32,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v2": {
+        "inline_size": 40,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      }
+    },
+    {
+      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenyCppRequest",
+      "naming_context": [
+        "DenyEachBinding",
+        "OnlyDenyCpp",
+        "Request"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 53,
+        "column": 17,
+        "length": 30
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "bool",
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 54,
+            "column": 9,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenyCppTopResponse",
+      "naming_context": [
+        "DenyEachBinding",
+        "OnlyDenyCpp",
+        "Response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 55,
+        "column": 11,
+        "length": 33
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.bindingsdenylist/DenyEachBinding_OnlyDenyCpp_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 3,
+            "column": 1,
+            "length": 6
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenyDartRequest",
+      "naming_context": [
+        "DenyEachBinding",
+        "OnlyDenyDart",
+        "Request"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 60,
+        "column": 18,
+        "length": 30
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "bool",
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 61,
+            "column": 9,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenyDartTopResponse",
+      "naming_context": [
+        "DenyEachBinding",
+        "OnlyDenyDart",
+        "Response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 62,
+        "column": 11,
+        "length": 33
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.bindingsdenylist/DenyEachBinding_OnlyDenyDart_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 8,
+            "column": 1,
+            "length": 6
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenyGoRequest",
+      "naming_context": [
+        "DenyEachBinding",
+        "OnlyDenyGo",
+        "Request"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 67,
+        "column": 16,
+        "length": 30
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "bool",
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 68,
+            "column": 9,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenyGoTopResponse",
+      "naming_context": [
+        "DenyEachBinding",
+        "OnlyDenyGo",
+        "Response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 69,
+        "column": 11,
+        "length": 33
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.bindingsdenylist/DenyEachBinding_OnlyDenyGo_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 13,
+            "column": 1,
+            "length": 6
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenyLibfuzzerRequest",
+      "naming_context": [
+        "DenyEachBinding",
+        "OnlyDenyLibfuzzer",
+        "Request"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 74,
+        "column": 23,
+        "length": 30
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "bool",
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 75,
+            "column": 9,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenyLibfuzzerTopResponse",
+      "naming_context": [
+        "DenyEachBinding",
+        "OnlyDenyLibfuzzer",
+        "Response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 76,
+        "column": 11,
+        "length": 33
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.bindingsdenylist/DenyEachBinding_OnlyDenyLibfuzzer_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 18,
+            "column": 1,
+            "length": 6
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenyRustRequest",
+      "naming_context": [
+        "DenyEachBinding",
+        "OnlyDenyRust",
+        "Request"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 81,
+        "column": 18,
+        "length": 30
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "bool",
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 82,
+            "column": 9,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenyRustTopResponse",
+      "naming_context": [
+        "DenyEachBinding",
+        "OnlyDenyRust",
+        "Response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 83,
+        "column": 11,
+        "length": 33
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.bindingsdenylist/DenyEachBinding_OnlyDenyRust_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 23,
+            "column": 1,
+            "length": 6
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenySyzkallerRequest",
+      "naming_context": [
+        "DenyEachBinding",
+        "OnlyDenySyzkaller",
+        "Request"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 88,
+        "column": 23,
+        "length": 30
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "bool",
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 89,
+            "column": 9,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.bindingsdenylist/DenyEachBindingOnlyDenySyzkallerTopResponse",
+      "naming_context": [
+        "DenyEachBinding",
+        "OnlyDenySyzkaller",
+        "Response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 90,
+        "column": 11,
+        "length": 33
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.bindingsdenylist/DenyEachBinding_OnlyDenySyzkaller_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 28,
+            "column": 1,
+            "length": 6
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.bindingsdenylist/DenyEachBinding_OnlyDenyCpp_Response",
+      "naming_context": [
+        "DenyEachBinding",
+        "OnlyDenyCpp",
+        "Response",
+        "result",
+        "response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 55,
+        "column": 12,
+        "length": 31
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 56,
+            "column": 9,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.bindingsdenylist/DenyEachBinding_OnlyDenyDart_Response",
+      "naming_context": [
+        "DenyEachBinding",
+        "OnlyDenyDart",
+        "Response",
+        "result",
+        "response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 62,
+        "column": 12,
+        "length": 31
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 63,
+            "column": 9,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.bindingsdenylist/DenyEachBinding_OnlyDenyGo_Response",
+      "naming_context": [
+        "DenyEachBinding",
+        "OnlyDenyGo",
+        "Response",
+        "result",
+        "response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 69,
+        "column": 12,
+        "length": 31
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 70,
+            "column": 9,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.bindingsdenylist/DenyEachBinding_OnlyDenyLibfuzzer_Response",
+      "naming_context": [
+        "DenyEachBinding",
+        "OnlyDenyLibfuzzer",
+        "Response",
+        "result",
+        "response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 76,
+        "column": 12,
+        "length": 31
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 77,
+            "column": 9,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.bindingsdenylist/DenyEachBinding_OnlyDenyRust_Response",
+      "naming_context": [
+        "DenyEachBinding",
+        "OnlyDenyRust",
+        "Response",
+        "result",
+        "response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 83,
+        "column": 12,
+        "length": 31
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 84,
+            "column": 9,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.bindingsdenylist/DenyEachBinding_OnlyDenySyzkaller_Response",
+      "naming_context": [
+        "DenyEachBinding",
+        "OnlyDenySyzkaller",
+        "Response",
+        "result",
+        "response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 90,
+        "column": 12,
+        "length": 31
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 91,
+            "column": 9,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
       "name": "test.bindingsdenylist/MemberOnlyAppearsInImportingLibrary",
       "naming_context": [
         "OnlyAppearsInImportingLibrary",
@@ -4153,6 +3863,296 @@
         "has_padding": false,
         "has_flexible_envelope": false
       }
+    },
+    {
+      "name": "test.bindingsdenylist/OnlyGo",
+      "naming_context": [
+        "OnlyGo"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 24,
+        "column": 6,
+        "length": 6
+      },
+      "maybe_attributes": [
+        {
+          "name": "bindings_denylist",
+          "arguments": [
+            {
+              "name": "value",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "cpp, dart, hlcpp, libfuzzer, llcpp, rust, syzkaller",
+                "expression": "\"cpp, dart, hlcpp, libfuzzer, llcpp, rust, syzkaller\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "cpp, dart, hlcpp, libfuzzer, llcpp, rust, syzkaller",
+                  "expression": "\"cpp, dart, hlcpp, libfuzzer, llcpp, rust, syzkaller\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+                "line": 23,
+                "column": 20,
+                "length": 53
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 23,
+            "column": 1,
+            "length": 73
+          }
+        }
+      ],
+      "members": [],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.bindingsdenylist/ShouldNeverAppearInAnyBinding1",
+      "naming_context": [
+        "Denied",
+        "ShouldNeverAppearInAnyBinding",
+        "Request",
+        "should_never_appear_in_any_binding_1"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 100,
+        "column": 46,
+        "length": 38
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "bool",
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 101,
+            "column": 13,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.bindingsdenylist/ShouldNeverAppearInAnyBinding4",
+      "naming_context": [
+        "Allowed",
+        "Denied",
+        "Response",
+        "result",
+        "response",
+        "should_never_appear_in_any_binding_4"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 115,
+        "column": 46,
+        "length": 38
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "bool",
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 116,
+            "column": 13,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.bindingsdenylist/ShouldNeverAppearInAnyBinding7",
+      "naming_context": [
+        "DeniedAnonymous",
+        "should_never_appear_in_any_binding_7"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 129,
+        "column": 42,
+        "length": 30
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "bool",
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 130,
+            "column": 9,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
     }
   ],
   "external_struct_declarations": [
@@ -4233,6 +4233,72 @@
     }
   ],
   "table_declarations": [
+    {
+      "name": "test.bindingsdenylist/OnlyRust",
+      "naming_context": [
+        "OnlyRust"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 27,
+        "column": 6,
+        "length": 8
+      },
+      "maybe_attributes": [
+        {
+          "name": "bindings_denylist",
+          "arguments": [
+            {
+              "name": "value",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, syzkaller",
+                "expression": "\"cpp, dart, go, hlcpp, libfuzzer, llcpp, syzkaller\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, syzkaller",
+                  "expression": "\"cpp, dart, go, hlcpp, libfuzzer, llcpp, syzkaller\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+                "line": 26,
+                "column": 20,
+                "length": 51
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 26,
+            "column": 1,
+            "length": 71
+          }
+        }
+      ],
+      "members": [],
+      "strict": false,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": true
+      }
+    },
     {
       "name": "test.bindingsdenylist/ShouldNeverAppearInAnyBinding2",
       "naming_context": [
@@ -4376,72 +4442,6 @@
       }
     },
     {
-      "name": "test.bindingsdenylist/OnlyRust",
-      "naming_context": [
-        "OnlyRust"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 27,
-        "column": 6,
-        "length": 8
-      },
-      "maybe_attributes": [
-        {
-          "name": "bindings_denylist",
-          "arguments": [
-            {
-              "name": "value",
-              "type": "string",
-              "value": {
-                "kind": "literal",
-                "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, syzkaller",
-                "expression": "\"cpp, dart, go, hlcpp, libfuzzer, llcpp, syzkaller\"",
-                "literal": {
-                  "kind": "string",
-                  "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, syzkaller",
-                  "expression": "\"cpp, dart, go, hlcpp, libfuzzer, llcpp, syzkaller\""
-                }
-              },
-              "location": {
-                "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                "line": 26,
-                "column": 20,
-                "length": 51
-              }
-            }
-          ],
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 26,
-            "column": 1,
-            "length": 71
-          }
-        }
-      ],
-      "members": [],
-      "strict": false,
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 1,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": true
-      },
-      "type_shape_v2": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 1,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": true
-      }
-    },
-    {
       "name": "test.bindingsdenylist/ShouldNeverAppearInAnyBinding8",
       "naming_context": [
         "DeniedAnonymous",
@@ -4511,6 +4511,116 @@
     }
   ],
   "union_declarations": [
+    {
+      "name": "test.bindingsdenylist/Allowed_Denied_Result",
+      "naming_context": [
+        "Allowed",
+        "Denied",
+        "Response",
+        "result"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 114,
+        "column": 17,
+        "length": 284
+      },
+      "maybe_attributes": [
+        {
+          "name": "result",
+          "arguments": []
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "response",
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.bindingsdenylist/Allowed_Denied_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 48,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 32,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            },
+            "type_shape_v2": {
+              "inline_size": 40,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 34,
+            "column": 1,
+            "length": 8
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": false,
+          "name": "err",
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 35,
+            "column": 1,
+            "length": 3
+          }
+        }
+      ],
+      "strict": true,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 3,
+        "max_handles": 0,
+        "max_out_of_line": 80,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 3,
+        "max_handles": 0,
+        "max_out_of_line": 48,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      }
+    },
     {
       "name": "test.bindingsdenylist/DenyEachBinding_OnlyDenyCpp_Result",
       "naming_context": [
@@ -5172,6 +5282,106 @@
       }
     },
     {
+      "name": "test.bindingsdenylist/OnlyLlcpp",
+      "naming_context": [
+        "OnlyLlcpp"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "line": 30,
+        "column": 6,
+        "length": 9
+      },
+      "maybe_attributes": [
+        {
+          "name": "bindings_denylist",
+          "arguments": [
+            {
+              "name": "value",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "cpp, dart, go, hlcpp, libfuzzer, rust, syzkaller",
+                "expression": "\"cpp, dart, go, hlcpp, libfuzzer, rust, syzkaller\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "cpp, dart, go, hlcpp, libfuzzer, rust, syzkaller",
+                  "expression": "\"cpp, dart, go, hlcpp, libfuzzer, rust, syzkaller\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+                "line": 29,
+                "column": 20,
+                "length": 50
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 29,
+            "column": 1,
+            "length": 70
+          }
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "x",
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "line": 31,
+            "column": 8,
+            "length": 1
+          }
+        }
+      ],
+      "strict": true,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
       "name": "test.bindingsdenylist/ShouldNeverAppearInAnyBinding3",
       "naming_context": [
         "Denied",
@@ -5314,216 +5524,6 @@
       }
     },
     {
-      "name": "test.bindingsdenylist/Allowed_Denied_Result",
-      "naming_context": [
-        "Allowed",
-        "Denied",
-        "Response",
-        "result"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 114,
-        "column": 17,
-        "length": 284
-      },
-      "maybe_attributes": [
-        {
-          "name": "result",
-          "arguments": []
-        }
-      ],
-      "members": [
-        {
-          "ordinal": 1,
-          "reserved": false,
-          "name": "response",
-          "type": {
-            "kind": "identifier",
-            "identifier": "test.bindingsdenylist/Allowed_Denied_Response",
-            "nullable": false,
-            "type_shape_v1": {
-              "inline_size": 48,
-              "alignment": 8,
-              "depth": 2,
-              "max_handles": 0,
-              "max_out_of_line": 32,
-              "has_padding": true,
-              "has_flexible_envelope": true
-            },
-            "type_shape_v2": {
-              "inline_size": 40,
-              "alignment": 8,
-              "depth": 2,
-              "max_handles": 0,
-              "max_out_of_line": 8,
-              "has_padding": true,
-              "has_flexible_envelope": true
-            }
-          },
-          "location": {
-            "filename": "generated",
-            "line": 34,
-            "column": 1,
-            "length": 8
-          }
-        },
-        {
-          "ordinal": 2,
-          "reserved": false,
-          "name": "err",
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint32",
-            "type_shape_v1": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "location": {
-            "filename": "generated",
-            "line": 35,
-            "column": 1,
-            "length": 3
-          }
-        }
-      ],
-      "strict": true,
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 24,
-        "alignment": 8,
-        "depth": 3,
-        "max_handles": 0,
-        "max_out_of_line": 80,
-        "has_padding": true,
-        "has_flexible_envelope": true
-      },
-      "type_shape_v2": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 3,
-        "max_handles": 0,
-        "max_out_of_line": 48,
-        "has_padding": true,
-        "has_flexible_envelope": true
-      }
-    },
-    {
-      "name": "test.bindingsdenylist/OnlyLlcpp",
-      "naming_context": [
-        "OnlyLlcpp"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 30,
-        "column": 6,
-        "length": 9
-      },
-      "maybe_attributes": [
-        {
-          "name": "bindings_denylist",
-          "arguments": [
-            {
-              "name": "value",
-              "type": "string",
-              "value": {
-                "kind": "literal",
-                "value": "cpp, dart, go, hlcpp, libfuzzer, rust, syzkaller",
-                "expression": "\"cpp, dart, go, hlcpp, libfuzzer, rust, syzkaller\"",
-                "literal": {
-                  "kind": "string",
-                  "value": "cpp, dart, go, hlcpp, libfuzzer, rust, syzkaller",
-                  "expression": "\"cpp, dart, go, hlcpp, libfuzzer, rust, syzkaller\""
-                }
-              },
-              "location": {
-                "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                "line": 29,
-                "column": 20,
-                "length": 50
-              }
-            }
-          ],
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 29,
-            "column": 1,
-            "length": 70
-          }
-        }
-      ],
-      "members": [
-        {
-          "ordinal": 1,
-          "reserved": false,
-          "name": "x",
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint32",
-            "type_shape_v1": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 31,
-            "column": 8,
-            "length": 1
-          }
-        }
-      ],
-      "strict": true,
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 24,
-        "alignment": 8,
-        "depth": 1,
-        "max_handles": 0,
-        "max_out_of_line": 8,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 1,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      }
-    },
-    {
       "name": "test.bindingsdenylist/ShouldNeverAppearInAnyBinding9",
       "naming_context": [
         "DeniedAnonymous",
@@ -5653,56 +5653,56 @@
     "test.bindingsdenylist/OnlySyzkaller": "bits",
     "test.bindingsdenylist/AllBindings": "const",
     "test.bindingsdenylist/OnlyDart": "enum",
-    "test.bindingsdenylist/OnlyLibfuzzerAndDeps": "interface",
-    "test.bindingsdenylist/OnlyCppAndDeps": "interface",
-    "test.bindingsdenylist/DenyEachBinding": "interface",
-    "test.bindingsdenylist/Denied": "interface",
     "test.bindingsdenylist/Allowed": "interface",
     "test.bindingsdenylist/ContainsAllowed": "interface",
+    "test.bindingsdenylist/Denied": "interface",
+    "test.bindingsdenylist/DenyEachBinding": "interface",
     "test.bindingsdenylist/ImportsSameNameContext": "interface",
+    "test.bindingsdenylist/OnlyCppAndDeps": "interface",
+    "test.bindingsdenylist/OnlyLibfuzzerAndDeps": "interface",
     "test.bindingsdenylist/OnlyHlcpp": "service",
+    "test.bindingsdenylist/AllowedDeniedTopResponse": "struct",
+    "test.bindingsdenylist/Allowed_Denied_Response": "struct",
+    "test.bindingsdenylist/DeniedAnonymous": "struct",
+    "test.bindingsdenylist/DeniedShouldNeverAppearInAnyBindingRequest": "struct",
     "test.bindingsdenylist/DenyEachBindingOnlyDenyCppRequest": "struct",
-    "test.bindingsdenylist/DenyEachBinding_OnlyDenyCpp_Response": "struct",
     "test.bindingsdenylist/DenyEachBindingOnlyDenyCppTopResponse": "struct",
     "test.bindingsdenylist/DenyEachBindingOnlyDenyDartRequest": "struct",
-    "test.bindingsdenylist/DenyEachBinding_OnlyDenyDart_Response": "struct",
     "test.bindingsdenylist/DenyEachBindingOnlyDenyDartTopResponse": "struct",
     "test.bindingsdenylist/DenyEachBindingOnlyDenyGoRequest": "struct",
-    "test.bindingsdenylist/DenyEachBinding_OnlyDenyGo_Response": "struct",
     "test.bindingsdenylist/DenyEachBindingOnlyDenyGoTopResponse": "struct",
     "test.bindingsdenylist/DenyEachBindingOnlyDenyLibfuzzerRequest": "struct",
-    "test.bindingsdenylist/DenyEachBinding_OnlyDenyLibfuzzer_Response": "struct",
     "test.bindingsdenylist/DenyEachBindingOnlyDenyLibfuzzerTopResponse": "struct",
     "test.bindingsdenylist/DenyEachBindingOnlyDenyRustRequest": "struct",
-    "test.bindingsdenylist/DenyEachBinding_OnlyDenyRust_Response": "struct",
     "test.bindingsdenylist/DenyEachBindingOnlyDenyRustTopResponse": "struct",
     "test.bindingsdenylist/DenyEachBindingOnlyDenySyzkallerRequest": "struct",
-    "test.bindingsdenylist/DenyEachBinding_OnlyDenySyzkaller_Response": "struct",
     "test.bindingsdenylist/DenyEachBindingOnlyDenySyzkallerTopResponse": "struct",
-    "test.bindingsdenylist/ShouldNeverAppearInAnyBinding1": "struct",
-    "test.bindingsdenylist/DeniedShouldNeverAppearInAnyBindingRequest": "struct",
-    "test.bindingsdenylist/ShouldNeverAppearInAnyBinding4": "struct",
-    "test.bindingsdenylist/Allowed_Denied_Response": "struct",
-    "test.bindingsdenylist/AllowedDeniedTopResponse": "struct",
-    "test.bindingsdenylist/OnlyGo": "struct",
-    "test.bindingsdenylist/ShouldNeverAppearInAnyBinding7": "struct",
-    "test.bindingsdenylist/DeniedAnonymous": "struct",
+    "test.bindingsdenylist/DenyEachBinding_OnlyDenyCpp_Response": "struct",
+    "test.bindingsdenylist/DenyEachBinding_OnlyDenyDart_Response": "struct",
+    "test.bindingsdenylist/DenyEachBinding_OnlyDenyGo_Response": "struct",
+    "test.bindingsdenylist/DenyEachBinding_OnlyDenyLibfuzzer_Response": "struct",
+    "test.bindingsdenylist/DenyEachBinding_OnlyDenyRust_Response": "struct",
+    "test.bindingsdenylist/DenyEachBinding_OnlyDenySyzkaller_Response": "struct",
     "test.bindingsdenylist/MemberOnlyAppearsInImportingLibrary": "struct",
     "test.bindingsdenylist/OnlyAppearsInImportingLibrary": "struct",
+    "test.bindingsdenylist/OnlyGo": "struct",
+    "test.bindingsdenylist/ShouldNeverAppearInAnyBinding1": "struct",
+    "test.bindingsdenylist/ShouldNeverAppearInAnyBinding4": "struct",
+    "test.bindingsdenylist/ShouldNeverAppearInAnyBinding7": "struct",
+    "test.bindingsdenylist/OnlyRust": "table",
     "test.bindingsdenylist/ShouldNeverAppearInAnyBinding2": "table",
     "test.bindingsdenylist/ShouldNeverAppearInAnyBinding5": "table",
-    "test.bindingsdenylist/OnlyRust": "table",
     "test.bindingsdenylist/ShouldNeverAppearInAnyBinding8": "table",
+    "test.bindingsdenylist/Allowed_Denied_Result": "union",
     "test.bindingsdenylist/DenyEachBinding_OnlyDenyCpp_Result": "union",
     "test.bindingsdenylist/DenyEachBinding_OnlyDenyDart_Result": "union",
     "test.bindingsdenylist/DenyEachBinding_OnlyDenyGo_Result": "union",
     "test.bindingsdenylist/DenyEachBinding_OnlyDenyLibfuzzer_Result": "union",
     "test.bindingsdenylist/DenyEachBinding_OnlyDenyRust_Result": "union",
     "test.bindingsdenylist/DenyEachBinding_OnlyDenySyzkaller_Result": "union",
+    "test.bindingsdenylist/OnlyLlcpp": "union",
     "test.bindingsdenylist/ShouldNeverAppearInAnyBinding3": "union",
     "test.bindingsdenylist/ShouldNeverAppearInAnyBinding6": "union",
-    "test.bindingsdenylist/Allowed_Denied_Result": "union",
-    "test.bindingsdenylist/OnlyLlcpp": "union",
     "test.bindingsdenylist/ShouldNeverAppearInAnyBinding9": "union"
   }
 }

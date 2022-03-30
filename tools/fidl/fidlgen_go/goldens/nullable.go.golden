@@ -7,26 +7,15 @@ import (
 	_bindings "syscall/zx/fidl"
 )
 
-type StructWithNullableString struct {
-	_   struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	Val *string  `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_bounds:""`
+type Int32Wrapper struct {
+	_   struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
+	Val int32    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
 }
 
-var _mStructWithNullableString = _bindings.CreateLazyMarshaler(StructWithNullableString{})
+var _mInt32Wrapper = _bindings.CreateLazyMarshaler(Int32Wrapper{})
 
-func (msg *StructWithNullableString) Marshaler() _bindings.Marshaler {
-	return _mStructWithNullableString
-}
-
-type StructWithNullableVector struct {
-	_   struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	Val *[]int32 `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_bounds:""`
-}
-
-var _mStructWithNullableVector = _bindings.CreateLazyMarshaler(StructWithNullableVector{})
-
-func (msg *StructWithNullableVector) Marshaler() _bindings.Marshaler {
-	return _mStructWithNullableVector
+func (msg *Int32Wrapper) Marshaler() _bindings.Marshaler {
+	return _mInt32Wrapper
 }
 
 type StructWithNullableHandle struct {
@@ -62,15 +51,15 @@ func (msg *StructWithNullableRequest) Marshaler() _bindings.Marshaler {
 	return _mStructWithNullableRequest
 }
 
-type Int32Wrapper struct {
-	_   struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
-	Val int32    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+type StructWithNullableString struct {
+	_   struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Val *string  `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_bounds:""`
 }
 
-var _mInt32Wrapper = _bindings.CreateLazyMarshaler(Int32Wrapper{})
+var _mStructWithNullableString = _bindings.CreateLazyMarshaler(StructWithNullableString{})
 
-func (msg *Int32Wrapper) Marshaler() _bindings.Marshaler {
-	return _mInt32Wrapper
+func (msg *StructWithNullableString) Marshaler() _bindings.Marshaler {
+	return _mStructWithNullableString
 }
 
 type StructWithNullableStruct struct {
@@ -93,6 +82,17 @@ var _mStructWithNullableUnion = _bindings.CreateLazyMarshaler(StructWithNullable
 
 func (msg *StructWithNullableUnion) Marshaler() _bindings.Marshaler {
 	return _mStructWithNullableUnion
+}
+
+type StructWithNullableVector struct {
+	_   struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Val *[]int32 `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_bounds:""`
+}
+
+var _mStructWithNullableVector = _bindings.CreateLazyMarshaler(StructWithNullableVector{})
+
+func (msg *StructWithNullableVector) Marshaler() _bindings.Marshaler {
+	return _mStructWithNullableVector
 }
 
 type simpleProtocolWithCtxAddRequest struct {

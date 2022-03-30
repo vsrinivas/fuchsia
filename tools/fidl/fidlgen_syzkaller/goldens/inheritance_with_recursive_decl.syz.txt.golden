@@ -6,22 +6,6 @@
 include <test/inheritancewithrecursivedecl/c/fidl.h>
 
 
-test_inheritancewithrecursivedecl_ParentFirstRequest {
-       hdr fidl_message_header[3973163707930985819]
-       request flags[fidl_handle_presence, int32]
-} [packed]
-test_inheritancewithrecursivedecl_ParentFirstRequestHandles {
-       request zx_chan_test_inheritancewithrecursivedecl_Parent_server
-} [packed]
-
-resource zx_chan_test_inheritancewithrecursivedecl_Parent_client[zx_chan]
-resource zx_chan_test_inheritancewithrecursivedecl_Parent_server[zx_chan]
-
-zx_channel_create$test_inheritancewithrecursivedecl_Parent(options const[0], out0 ptr[out, zx_chan_test_inheritancewithrecursivedecl_Parent_client], out1 ptr[out, zx_chan_test_inheritancewithrecursivedecl_Parent_server])
-fdio_service_connect$test_inheritancewithrecursivedecl_Parent(path ptr[in, string["/svc/"]], handle zx_chan_test_inheritancewithrecursivedecl_Parent_server)
-zx_channel_write$test_inheritancewithrecursivedecl_ParentFirst(handle zx_chan_test_inheritancewithrecursivedecl_Parent_client, options const[0], bytes ptr[in, test_inheritancewithrecursivedecl_ParentFirstRequest], num_bytes bytesize[bytes], handles ptr[in, test_inheritancewithrecursivedecl_ParentFirstRequestHandles], num_handles bytesize[handles])
-
-
 test_inheritancewithrecursivedecl_ChildFirstRequest {
        hdr fidl_message_header[3973163707930985819]
        request flags[fidl_handle_presence, int32]
@@ -44,4 +28,20 @@ zx_channel_create$test_inheritancewithrecursivedecl_Child(options const[0], out0
 fdio_service_connect$test_inheritancewithrecursivedecl_Child(path ptr[in, string["/svc/"]], handle zx_chan_test_inheritancewithrecursivedecl_Child_server)
 zx_channel_write$test_inheritancewithrecursivedecl_ChildFirst(handle zx_chan_test_inheritancewithrecursivedecl_Child_client, options const[0], bytes ptr[in, test_inheritancewithrecursivedecl_ChildFirstRequest], num_bytes bytesize[bytes], handles ptr[in, test_inheritancewithrecursivedecl_ChildFirstRequestHandles], num_handles bytesize[handles])
 zx_channel_write$test_inheritancewithrecursivedecl_ChildSecond(handle zx_chan_test_inheritancewithrecursivedecl_Child_client, options const[0], bytes ptr[in, test_inheritancewithrecursivedecl_ChildSecondRequest], num_bytes bytesize[bytes], handles ptr[in, test_inheritancewithrecursivedecl_ChildSecondRequestHandles], num_handles bytesize[handles])
+
+
+test_inheritancewithrecursivedecl_ParentFirstRequest {
+       hdr fidl_message_header[3973163707930985819]
+       request flags[fidl_handle_presence, int32]
+} [packed]
+test_inheritancewithrecursivedecl_ParentFirstRequestHandles {
+       request zx_chan_test_inheritancewithrecursivedecl_Parent_server
+} [packed]
+
+resource zx_chan_test_inheritancewithrecursivedecl_Parent_client[zx_chan]
+resource zx_chan_test_inheritancewithrecursivedecl_Parent_server[zx_chan]
+
+zx_channel_create$test_inheritancewithrecursivedecl_Parent(options const[0], out0 ptr[out, zx_chan_test_inheritancewithrecursivedecl_Parent_client], out1 ptr[out, zx_chan_test_inheritancewithrecursivedecl_Parent_server])
+fdio_service_connect$test_inheritancewithrecursivedecl_Parent(path ptr[in, string["/svc/"]], handle zx_chan_test_inheritancewithrecursivedecl_Parent_server)
+zx_channel_write$test_inheritancewithrecursivedecl_ParentFirst(handle zx_chan_test_inheritancewithrecursivedecl_Parent_client, options const[0], bytes ptr[in, test_inheritancewithrecursivedecl_ParentFirstRequest], num_bytes bytesize[bytes], handles ptr[in, test_inheritancewithrecursivedecl_ParentFirstRequestHandles], num_handles bytesize[handles])
 

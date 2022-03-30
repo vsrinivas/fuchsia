@@ -8,16 +8,10 @@
         "zx/rights": {
           "kind": "bits"
         },
-        "zx/RIGHTS_BASIC": {
+        "zx/CHANNEL_MAX_MSG_BYTES": {
           "kind": "const"
         },
-        "zx/RIGHTS_IO": {
-          "kind": "const"
-        },
-        "zx/RIGHTS_PROPERTY": {
-          "kind": "const"
-        },
-        "zx/RIGHTS_POLICY": {
+        "zx/CHANNEL_MAX_MSG_HANDLES": {
           "kind": "const"
         },
         "zx/DEFAULT_CHANNEL_RIGHTS": {
@@ -26,16 +20,22 @@
         "zx/DEFAULT_EVENT_RIGHTS": {
           "kind": "const"
         },
-        "zx/CHANNEL_MAX_MSG_BYTES": {
-          "kind": "const"
-        },
-        "zx/CHANNEL_MAX_MSG_HANDLES": {
+        "zx/MAX_CPUS": {
           "kind": "const"
         },
         "zx/MAX_NAME_LEN": {
           "kind": "const"
         },
-        "zx/MAX_CPUS": {
+        "zx/RIGHTS_BASIC": {
+          "kind": "const"
+        },
+        "zx/RIGHTS_IO": {
+          "kind": "const"
+        },
+        "zx/RIGHTS_POLICY": {
+          "kind": "const"
+        },
+        "zx/RIGHTS_PROPERTY": {
           "kind": "const"
         },
         "zx/obj_type": {
@@ -44,22 +44,16 @@
         "zx/handle": {
           "kind": "experimental_resource"
         },
-        "zx/status": {
-          "kind": "type_alias"
-        },
-        "zx/time": {
-          "kind": "type_alias"
-        },
         "zx/duration": {
           "kind": "type_alias"
         },
-        "zx/ticks": {
+        "zx/gpaddr": {
           "kind": "type_alias"
         },
         "zx/koid": {
           "kind": "type_alias"
         },
-        "zx/vaddr": {
+        "zx/off": {
           "kind": "type_alias"
         },
         "zx/paddr": {
@@ -68,16 +62,22 @@
         "zx/paddr32": {
           "kind": "type_alias"
         },
-        "zx/gpaddr": {
-          "kind": "type_alias"
-        },
-        "zx/off": {
-          "kind": "type_alias"
-        },
         "zx/procarg": {
           "kind": "type_alias"
         },
         "zx/signals": {
+          "kind": "type_alias"
+        },
+        "zx/status": {
+          "kind": "type_alias"
+        },
+        "zx/ticks": {
+          "kind": "type_alias"
+        },
+        "zx/time": {
+          "kind": "type_alias"
+        },
+        "zx/vaddr": {
           "kind": "type_alias"
         }
       }
@@ -91,100 +91,84 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "test.encapsulatedstructs/Int8Int32",
+      "name": "test.encapsulatedstructs/ArrayInt16Int8",
       "naming_context": [
-        "Int8Int32"
+        "ArrayInt16Int8"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-        "line": 5,
+        "line": 17,
         "column": 6,
-        "length": 9
+        "length": 14
       },
       "members": [
         {
           "type": {
-            "kind": "primitive",
-            "subtype": "int8",
+            "kind": "array",
+            "element_type": {
+              "kind": "identifier",
+              "identifier": "test.encapsulatedstructs/Int16Int8",
+              "nullable": false,
+              "type_shape_v1": {
+                "inline_size": 4,
+                "alignment": 2,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": true,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 4,
+                "alignment": 2,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": true,
+                "has_flexible_envelope": false
+              }
+            },
+            "element_count": 3,
             "type_shape_v1": {
-              "inline_size": 1,
-              "alignment": 1,
+              "inline_size": 12,
+              "alignment": 2,
               "depth": 0,
               "max_handles": 0,
               "max_out_of_line": 0,
-              "has_padding": false,
+              "has_padding": true,
               "has_flexible_envelope": false
             },
             "type_shape_v2": {
-              "inline_size": 1,
-              "alignment": 1,
+              "inline_size": 12,
+              "alignment": 2,
               "depth": 0,
               "max_handles": 0,
               "max_out_of_line": 0,
-              "has_padding": false,
+              "has_padding": true,
               "has_flexible_envelope": false
             }
           },
-          "name": "a",
+          "name": "arr",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-            "line": 6,
+            "line": 18,
             "column": 5,
-            "length": 1
+            "length": 3
           },
           "field_shape_v1": {
             "offset": 0,
-            "padding": 3
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 3
-          }
-        },
-        {
-          "type": {
-            "kind": "primitive",
-            "subtype": "int32",
-            "type_shape_v1": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "b",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-            "line": 8,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 4,
             "padding": 0
           },
           "field_shape_v2": {
-            "offset": 4,
+            "offset": 0,
             "padding": 0
           }
         }
       ],
       "resource": false,
       "type_shape_v1": {
-        "inline_size": 8,
-        "alignment": 4,
+        "inline_size": 12,
+        "alignment": 2,
         "depth": 0,
         "max_handles": 0,
         "max_out_of_line": 0,
@@ -192,8 +176,8 @@
         "has_flexible_envelope": false
       },
       "type_shape_v2": {
-        "inline_size": 8,
-        "alignment": 4,
+        "inline_size": 12,
+        "alignment": 2,
         "depth": 0,
         "max_handles": 0,
         "max_out_of_line": 0,
@@ -313,69 +297,158 @@
       }
     },
     {
-      "name": "test.encapsulatedstructs/ArrayInt16Int8",
+      "name": "test.encapsulatedstructs/Int8Int32",
       "naming_context": [
-        "ArrayInt16Int8"
+        "Int8Int32"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-        "line": 17,
+        "line": 5,
         "column": 6,
-        "length": 14
+        "length": 9
       },
       "members": [
         {
           "type": {
-            "kind": "array",
-            "element_type": {
-              "kind": "identifier",
-              "identifier": "test.encapsulatedstructs/Int16Int8",
-              "nullable": false,
-              "type_shape_v1": {
-                "inline_size": 4,
-                "alignment": 2,
-                "depth": 0,
-                "max_handles": 0,
-                "max_out_of_line": 0,
-                "has_padding": true,
-                "has_flexible_envelope": false
-              },
-              "type_shape_v2": {
-                "inline_size": 4,
-                "alignment": 2,
-                "depth": 0,
-                "max_handles": 0,
-                "max_out_of_line": 0,
-                "has_padding": true,
-                "has_flexible_envelope": false
-              }
-            },
-            "element_count": 3,
+            "kind": "primitive",
+            "subtype": "int8",
             "type_shape_v1": {
-              "inline_size": 12,
-              "alignment": 2,
+              "inline_size": 1,
+              "alignment": 1,
               "depth": 0,
               "max_handles": 0,
               "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
+            "line": 6,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 3
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 3
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
+            "line": 8,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 4,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 4,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 8,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.encapsulatedstructs/NonInlineStructTestStruct",
+      "naming_context": [
+        "NonInlineStructTestStruct"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
+        "line": 33,
+        "column": 6,
+        "length": 25
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.encapsulatedstructs/Int16Int8",
+            "nullable": true,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
               "has_padding": true,
               "has_flexible_envelope": false
             },
             "type_shape_v2": {
-              "inline_size": 12,
-              "alignment": 2,
-              "depth": 0,
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 1,
               "max_handles": 0,
-              "max_out_of_line": 0,
+              "max_out_of_line": 8,
               "has_padding": true,
               "has_flexible_envelope": false
             }
           },
-          "name": "arr",
+          "name": "element",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-            "line": 18,
+            "line": 34,
             "column": 5,
-            "length": 3
+            "length": 7
           },
           "field_shape_v1": {
             "offset": 0,
@@ -385,24 +458,66 @@
             "offset": 0,
             "padding": 0
           }
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "obj_type": 0,
+            "subtype": "handle",
+            "rights": 2147483648,
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "h",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
+            "line": 35,
+            "column": 5,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 4
+          },
+          "field_shape_v2": {
+            "offset": 8,
+            "padding": 4
+          }
         }
       ],
-      "resource": false,
+      "resource": true,
       "type_shape_v1": {
-        "inline_size": 12,
-        "alignment": 2,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 1,
+        "max_out_of_line": 8,
         "has_padding": true,
         "has_flexible_envelope": false
       },
       "type_shape_v2": {
-        "inline_size": 12,
-        "alignment": 2,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 1,
+        "max_out_of_line": 8,
         "has_padding": true,
         "has_flexible_envelope": false
       }
@@ -561,121 +676,6 @@
       }
     },
     {
-      "name": "test.encapsulatedstructs/NonInlineStructTestStruct",
-      "naming_context": [
-        "NonInlineStructTestStruct"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-        "line": 33,
-        "column": 6,
-        "length": 25
-      },
-      "members": [
-        {
-          "type": {
-            "kind": "identifier",
-            "identifier": "test.encapsulatedstructs/Int16Int8",
-            "nullable": true,
-            "type_shape_v1": {
-              "inline_size": 8,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 8,
-              "has_padding": true,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 8,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 8,
-              "has_padding": true,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "element",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-            "line": 34,
-            "column": 5,
-            "length": 7
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 0
-          }
-        },
-        {
-          "type": {
-            "kind": "handle",
-            "obj_type": 0,
-            "subtype": "handle",
-            "rights": 2147483648,
-            "nullable": false,
-            "type_shape_v1": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 1,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 1,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "h",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-            "line": 35,
-            "column": 5,
-            "length": 1
-          },
-          "field_shape_v1": {
-            "offset": 8,
-            "padding": 4
-          },
-          "field_shape_v2": {
-            "offset": 8,
-            "padding": 4
-          }
-        }
-      ],
-      "resource": true,
-      "type_shape_v1": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 1,
-        "max_handles": 1,
-        "max_out_of_line": 8,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 1,
-        "max_handles": 1,
-        "max_out_of_line": 8,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      }
-    },
-    {
       "name": "test.encapsulatedstructs/TopLevelStruct",
       "naming_context": [
         "TopLevelStruct"
@@ -802,11 +802,11 @@
     "test.encapsulatedstructs/TopLevelStruct"
   ],
   "declarations": {
-    "test.encapsulatedstructs/Int8Int32": "struct",
-    "test.encapsulatedstructs/Int16Int8": "struct",
     "test.encapsulatedstructs/ArrayInt16Int8": "struct",
-    "test.encapsulatedstructs/StructPaddingTestStruct": "struct",
+    "test.encapsulatedstructs/Int16Int8": "struct",
+    "test.encapsulatedstructs/Int8Int32": "struct",
     "test.encapsulatedstructs/NonInlineStructTestStruct": "struct",
+    "test.encapsulatedstructs/StructPaddingTestStruct": "struct",
     "test.encapsulatedstructs/TopLevelStruct": "struct"
   }
 }

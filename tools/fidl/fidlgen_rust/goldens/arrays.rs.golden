@@ -26,37 +26,6 @@ use {
 };
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub enum UnionSmallArray {
-    A([u32; 2]),
-}
-
-impl UnionSmallArray {
-    #[deprecated = "Strict unions should not use `validate`"]
-    #[inline]
-    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
-        Ok(self)
-    }
-
-    #[deprecated = "Strict unions should not use `is_unknown`"]
-    #[inline]
-    pub fn is_unknown(&self) -> bool {
-        false
-    }
-}
-
-impl fidl::encoding::Persistable for UnionSmallArray {}
-
-fidl_union! {
-    name: UnionSmallArray,
-    members: [
-        A {
-            ty: [u32; 2],
-            ordinal: 1,
-        },
-    ],
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum UnionLargeArray {
     A([u32; 100]),
 }
@@ -87,31 +56,35 @@ fidl_union! {
     ],
 }
 
-#[derive(
-    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
-)]
-#[repr(C)]
-pub struct StructSmallArray {
-    pub a: [u32; 2],
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum UnionSmallArray {
+    A([u32; 2]),
 }
 
-impl fidl::encoding::Persistable for StructSmallArray {}
+impl UnionSmallArray {
+    #[deprecated = "Strict unions should not use `validate`"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        Ok(self)
+    }
 
-fidl_struct_copy! {
-  name: StructSmallArray,
-  members: [
-    a {
-      ty: [u32; 2],
-      offset_v1: 0,
-      offset_v2: 0,
-    },
-  ],
-  padding_v1: [],
-  padding_v2: [],
-  size_v1: 8,
-  size_v2: 8,
-  align_v1: 4,
-  align_v2: 4,
+    #[deprecated = "Strict unions should not use `is_unknown`"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+impl fidl::encoding::Persistable for UnionSmallArray {}
+
+fidl_union! {
+    name: UnionSmallArray,
+    members: [
+        A {
+            ty: [u32; 2],
+            ordinal: 1,
+        },
+    ],
 }
 
 #[derive(
@@ -141,34 +114,31 @@ fidl_struct_copy! {
   align_v2: 4,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct TableSmallArray {
-    pub a: Option<[u32; 2]>,
-    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
-    /// map from ordinals to raw data. The `Some` case is always nonempty.
-    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
-    #[deprecated = "Use `..TableSmallArray::EMPTY` to construct and `..` to match."]
-    #[doc(hidden)]
-    pub __non_exhaustive: (),
+#[derive(
+    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
+)]
+#[repr(C)]
+pub struct StructSmallArray {
+    pub a: [u32; 2],
 }
 
-impl TableSmallArray {
-    /// An empty table with every field set to `None`.
-    #[allow(deprecated)]
-    pub const EMPTY: Self = Self { a: None, unknown_data: None, __non_exhaustive: () };
-}
+impl fidl::encoding::Persistable for StructSmallArray {}
 
-impl fidl::encoding::Persistable for TableSmallArray {}
-
-fidl_table! {
-    name: TableSmallArray,
-    members: [
-        a {
-            ty: [u32; 2],
-            ordinal: 1,
-        },
-    ],
-    value_unknown_member: unknown_data,
+fidl_struct_copy! {
+  name: StructSmallArray,
+  members: [
+    a {
+      ty: [u32; 2],
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+  ],
+  padding_v1: [],
+  padding_v2: [],
+  size_v1: 8,
+  size_v2: 8,
+  align_v1: 4,
+  align_v2: 4,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -195,6 +165,36 @@ fidl_table! {
     members: [
         a {
             ty: [u32; 100],
+            ordinal: 1,
+        },
+    ],
+    value_unknown_member: unknown_data,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TableSmallArray {
+    pub a: Option<[u32; 2]>,
+    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
+    /// map from ordinals to raw data. The `Some` case is always nonempty.
+    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
+    #[deprecated = "Use `..TableSmallArray::EMPTY` to construct and `..` to match."]
+    #[doc(hidden)]
+    pub __non_exhaustive: (),
+}
+
+impl TableSmallArray {
+    /// An empty table with every field set to `None`.
+    #[allow(deprecated)]
+    pub const EMPTY: Self = Self { a: None, unknown_data: None, __non_exhaustive: () };
+}
+
+impl fidl::encoding::Persistable for TableSmallArray {}
+
+fidl_table! {
+    name: TableSmallArray,
+    members: [
+        a {
+            ty: [u32; 2],
             ordinal: 1,
         },
     ],

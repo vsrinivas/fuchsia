@@ -52,41 +52,41 @@ fidl_bits! {
     strict: true,
 }
 
-pub const ENABLED_FLAG: bool = true;
-
-pub const OFFSET: i8 = -33;
-
 pub const ANSWER: u16 = 42;
 
 pub const ANSWER_IN_BINARY: u16 = 42;
 
-pub const POPULATION_USA_2018: u32 = 330000000;
+pub const CONVERSION_FACTOR: f64 = 1.41421;
 
 pub const DIAMOND: u64 = 1746410393481133080;
 
-pub const FUCHSIA: u64 = 4054509061583223046;
+pub const ENABLED_FLAG: bool = true;
 
-pub const USERNAME: &str = r###""squeenze""###;
+pub const FUCHSIA: u64 = 4054509061583223046;
 
 pub const MIN_TEMP: f32 = -273.15;
 
-pub const CONVERSION_FACTOR: f64 = 1.41421;
+pub const OFFSET: i8 = -33;
 
-pub const ENUM_VAL: EnumType = EnumType::Value;
+pub const POPULATION_USA_2018: u32 = 330000000;
 
-pub const ENUM_PRIMITIVE_VAL: i32 = EnumType::Value.into_primitive();
+pub const USERNAME: &str = r###""squeenze""###;
 
-pub const ENUM_TRUE: EnumType = EnumType::True_;
-
-pub const ENUM_PRIMITIVE_TRUE: i32 = EnumType::True_.into_primitive();
-
-pub const BITS_VAL: BitsType = BitsType::VALUE;
+pub const BITS_PRIMITIVE_TRUE: u32 = BitsType::TRUE_.bits();
 
 pub const BITS_PRIMITIVE_VAL: u32 = BitsType::VALUE.bits();
 
 pub const BITS_TRUE: BitsType = BitsType::TRUE_;
 
-pub const BITS_PRIMITIVE_TRUE: u32 = BitsType::TRUE_.bits();
+pub const BITS_VAL: BitsType = BitsType::VALUE;
+
+pub const ENUM_PRIMITIVE_TRUE: i32 = EnumType::True_.into_primitive();
+
+pub const ENUM_PRIMITIVE_VAL: i32 = EnumType::Value.into_primitive();
+
+pub const ENUM_TRUE: EnumType = EnumType::True_;
+
+pub const ENUM_VAL: EnumType = EnumType::Value;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(i32)]

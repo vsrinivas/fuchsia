@@ -4,6 +4,63 @@
   "library_dependencies": [],
   "bits_declarations": [
     {
+      "name": "test.constants/Bits",
+      "naming_context": [
+        "Bits"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+        "line": 37,
+        "column": 6,
+        "length": 4
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32",
+        "type_shape_v1": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "mask": "8",
+      "members": [
+        {
+          "name": "B",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+            "line": 38,
+            "column": 5,
+            "length": 1
+          },
+          "value": {
+            "kind": "literal",
+            "value": "8",
+            "expression": "0x8",
+            "literal": {
+              "kind": "numeric",
+              "value": "8",
+              "expression": "0x8"
+            }
+          }
+        }
+      ],
+      "strict": true
+    },
+    {
       "name": "test.constants/BitsType",
       "naming_context": [
         "BitsType"
@@ -97,241 +154,20 @@
         }
       ],
       "strict": true
-    },
-    {
-      "name": "test.constants/Bits",
-      "naming_context": [
-        "Bits"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
-        "line": 37,
-        "column": 6,
-        "length": 4
-      },
-      "type": {
-        "kind": "primitive",
-        "subtype": "uint32",
-        "type_shape_v1": {
-          "inline_size": 4,
-          "alignment": 4,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        },
-        "type_shape_v2": {
-          "inline_size": 4,
-          "alignment": 4,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        }
-      },
-      "mask": "8",
-      "members": [
-        {
-          "name": "B",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
-            "line": 38,
-            "column": 5,
-            "length": 1
-          },
-          "value": {
-            "kind": "literal",
-            "value": "8",
-            "expression": "0x8",
-            "literal": {
-              "kind": "numeric",
-              "value": "8",
-              "expression": "0x8"
-            }
-          }
-        }
-      ],
-      "strict": true
     }
   ],
   "const_declarations": [
     {
-      "name": "test.constants/UINT8",
+      "name": "test.constants/BOOL",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
-        "line": 3,
-        "column": 7,
-        "length": 5
-      },
-      "type": {
-        "kind": "primitive",
-        "subtype": "uint8",
-        "type_shape_v1": {
-          "inline_size": 1,
-          "alignment": 1,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        },
-        "type_shape_v2": {
-          "inline_size": 1,
-          "alignment": 1,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        }
-      },
-      "value": {
-        "kind": "literal",
-        "value": "4",
-        "expression": "0b100",
-        "literal": {
-          "kind": "numeric",
-          "value": "4",
-          "expression": "0b100"
-        }
-      }
-    },
-    {
-      "name": "test.constants/UINT16",
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
-        "line": 4,
-        "column": 7,
-        "length": 6
-      },
-      "type": {
-        "kind": "primitive",
-        "subtype": "uint16",
-        "type_shape_v1": {
-          "inline_size": 2,
-          "alignment": 2,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        },
-        "type_shape_v2": {
-          "inline_size": 2,
-          "alignment": 2,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        }
-      },
-      "value": {
-        "kind": "literal",
-        "value": "4",
-        "expression": "0b100",
-        "literal": {
-          "kind": "numeric",
-          "value": "4",
-          "expression": "0b100"
-        }
-      }
-    },
-    {
-      "name": "test.constants/UINT32",
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
-        "line": 5,
-        "column": 7,
-        "length": 6
-      },
-      "type": {
-        "kind": "primitive",
-        "subtype": "uint32",
-        "type_shape_v1": {
-          "inline_size": 4,
-          "alignment": 4,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        },
-        "type_shape_v2": {
-          "inline_size": 4,
-          "alignment": 4,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        }
-      },
-      "value": {
-        "kind": "literal",
-        "value": "4",
-        "expression": "0b100",
-        "literal": {
-          "kind": "numeric",
-          "value": "4",
-          "expression": "0b100"
-        }
-      }
-    },
-    {
-      "name": "test.constants/UINT64",
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
-        "line": 6,
-        "column": 7,
-        "length": 6
-      },
-      "type": {
-        "kind": "primitive",
-        "subtype": "uint64",
-        "type_shape_v1": {
-          "inline_size": 8,
-          "alignment": 8,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        },
-        "type_shape_v2": {
-          "inline_size": 8,
-          "alignment": 8,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        }
-      },
-      "value": {
-        "kind": "literal",
-        "value": "4",
-        "expression": "0b100",
-        "literal": {
-          "kind": "numeric",
-          "value": "4",
-          "expression": "0b100"
-        }
-      }
-    },
-    {
-      "name": "test.constants/INT8",
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
-        "line": 7,
+        "line": 13,
         "column": 7,
         "length": 4
       },
       "type": {
         "kind": "primitive",
-        "subtype": "int8",
+        "subtype": "bool",
         "type_shape_v1": {
           "inline_size": 1,
           "alignment": 1,
@@ -353,12 +189,94 @@
       },
       "value": {
         "kind": "literal",
-        "value": "4",
-        "expression": "0b100",
+        "value": "true",
+        "expression": "true",
+        "literal": {
+          "kind": "bool",
+          "value": "true",
+          "expression": "true"
+        }
+      }
+    },
+    {
+      "name": "test.constants/FLOAT32",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+        "line": 11,
+        "column": 7,
+        "length": 7
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "float32",
+        "type_shape_v1": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "literal",
+        "value": "3.14159",
+        "expression": "3.14159",
         "literal": {
           "kind": "numeric",
-          "value": "4",
-          "expression": "0b100"
+          "value": "3.14159",
+          "expression": "3.14159"
+        }
+      }
+    },
+    {
+      "name": "test.constants/FLOAT64",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+        "line": 12,
+        "column": 7,
+        "length": 7
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "float64",
+        "type_shape_v1": {
+          "inline_size": 8,
+          "alignment": 8,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 8,
+          "alignment": 8,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "literal",
+        "value": "3.14159",
+        "expression": "3.14159",
+        "literal": {
+          "kind": "numeric",
+          "value": "3.14159",
+          "expression": "3.14159"
         }
       }
     },
@@ -486,98 +404,16 @@
       }
     },
     {
-      "name": "test.constants/FLOAT32",
+      "name": "test.constants/INT8",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
-        "line": 11,
-        "column": 7,
-        "length": 7
-      },
-      "type": {
-        "kind": "primitive",
-        "subtype": "float32",
-        "type_shape_v1": {
-          "inline_size": 4,
-          "alignment": 4,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        },
-        "type_shape_v2": {
-          "inline_size": 4,
-          "alignment": 4,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        }
-      },
-      "value": {
-        "kind": "literal",
-        "value": "3.14159",
-        "expression": "3.14159",
-        "literal": {
-          "kind": "numeric",
-          "value": "3.14159",
-          "expression": "3.14159"
-        }
-      }
-    },
-    {
-      "name": "test.constants/FLOAT64",
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
-        "line": 12,
-        "column": 7,
-        "length": 7
-      },
-      "type": {
-        "kind": "primitive",
-        "subtype": "float64",
-        "type_shape_v1": {
-          "inline_size": 8,
-          "alignment": 8,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        },
-        "type_shape_v2": {
-          "inline_size": 8,
-          "alignment": 8,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        }
-      },
-      "value": {
-        "kind": "literal",
-        "value": "3.14159",
-        "expression": "3.14159",
-        "literal": {
-          "kind": "numeric",
-          "value": "3.14159",
-          "expression": "3.14159"
-        }
-      }
-    },
-    {
-      "name": "test.constants/BOOL",
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
-        "line": 13,
+        "line": 7,
         "column": 7,
         "length": 4
       },
       "type": {
         "kind": "primitive",
-        "subtype": "bool",
+        "subtype": "int8",
         "type_shape_v1": {
           "inline_size": 1,
           "alignment": 1,
@@ -599,12 +435,12 @@
       },
       "value": {
         "kind": "literal",
-        "value": "true",
-        "expression": "true",
+        "value": "4",
+        "expression": "0b100",
         "literal": {
-          "kind": "bool",
-          "value": "true",
-          "expression": "true"
+          "kind": "numeric",
+          "value": "4",
+          "expression": "0b100"
         }
       }
     },
@@ -650,17 +486,57 @@
       }
     },
     {
-      "name": "test.constants/enumVal",
+      "name": "test.constants/UINT16",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
-        "line": 19,
+        "line": 4,
         "column": 7,
-        "length": 7
+        "length": 6
       },
       "type": {
-        "kind": "identifier",
-        "identifier": "test.constants/EnumType",
-        "nullable": false,
+        "kind": "primitive",
+        "subtype": "uint16",
+        "type_shape_v1": {
+          "inline_size": 2,
+          "alignment": 2,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 2,
+          "alignment": 2,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "literal",
+        "value": "4",
+        "expression": "0b100",
+        "literal": {
+          "kind": "numeric",
+          "value": "4",
+          "expression": "0b100"
+        }
+      }
+    },
+    {
+      "name": "test.constants/UINT32",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+        "line": 5,
+        "column": 7,
+        "length": 6
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32",
         "type_shape_v1": {
           "inline_size": 4,
           "alignment": 4,
@@ -681,17 +557,103 @@
         }
       },
       "value": {
-        "kind": "identifier",
-        "value": "1",
-        "expression": "EnumType.VALUE",
-        "identifier": "test.constants/EnumType.VALUE"
+        "kind": "literal",
+        "value": "4",
+        "expression": "0b100",
+        "literal": {
+          "kind": "numeric",
+          "value": "4",
+          "expression": "0b100"
+        }
       }
     },
     {
-      "name": "test.constants/enumPrimitiveVal",
+      "name": "test.constants/UINT64",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
-        "line": 20,
+        "line": 6,
+        "column": 7,
+        "length": 6
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint64",
+        "type_shape_v1": {
+          "inline_size": 8,
+          "alignment": 8,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 8,
+          "alignment": 8,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "literal",
+        "value": "4",
+        "expression": "0b100",
+        "literal": {
+          "kind": "numeric",
+          "value": "4",
+          "expression": "0b100"
+        }
+      }
+    },
+    {
+      "name": "test.constants/UINT8",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+        "line": 3,
+        "column": 7,
+        "length": 5
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint8",
+        "type_shape_v1": {
+          "inline_size": 1,
+          "alignment": 1,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 1,
+          "alignment": 1,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "literal",
+        "value": "4",
+        "expression": "0b100",
+        "literal": {
+          "kind": "numeric",
+          "value": "4",
+          "expression": "0b100"
+        }
+      }
+    },
+    {
+      "name": "test.constants/bitsPrimitiveVal",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+        "line": 28,
         "column": 7,
         "length": 16
       },
@@ -720,8 +682,8 @@
       "value": {
         "kind": "identifier",
         "value": "1",
-        "expression": "EnumType.VALUE",
-        "identifier": "test.constants/EnumType.VALUE"
+        "expression": "BitsType.VALUE",
+        "identifier": "test.constants/BitsType.VALUE"
       }
     },
     {
@@ -763,10 +725,10 @@
       }
     },
     {
-      "name": "test.constants/bitsPrimitiveVal",
+      "name": "test.constants/enumPrimitiveVal",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
-        "line": 28,
+        "line": 20,
         "column": 7,
         "length": 16
       },
@@ -795,8 +757,46 @@
       "value": {
         "kind": "identifier",
         "value": "1",
-        "expression": "BitsType.VALUE",
-        "identifier": "test.constants/BitsType.VALUE"
+        "expression": "EnumType.VALUE",
+        "identifier": "test.constants/EnumType.VALUE"
+      }
+    },
+    {
+      "name": "test.constants/enumVal",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+        "line": 19,
+        "column": 7,
+        "length": 7
+      },
+      "type": {
+        "kind": "identifier",
+        "identifier": "test.constants/EnumType",
+        "nullable": false,
+        "type_shape_v1": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "identifier",
+        "value": "1",
+        "expression": "EnumType.VALUE",
+        "identifier": "test.constants/EnumType.VALUE"
       }
     },
     {
@@ -875,41 +875,6 @@
   ],
   "enum_declarations": [
     {
-      "name": "test.constants/EnumType",
-      "naming_context": [
-        "EnumType"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
-        "line": 16,
-        "column": 6,
-        "length": 8
-      },
-      "type": "int32",
-      "members": [
-        {
-          "name": "VALUE",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
-            "line": 17,
-            "column": 5,
-            "length": 5
-          },
-          "value": {
-            "kind": "literal",
-            "value": "1",
-            "expression": "1",
-            "literal": {
-              "kind": "numeric",
-              "value": "1",
-              "expression": "1"
-            }
-          }
-        }
-      ],
-      "strict": true
-    },
-    {
       "name": "test.constants/Enum",
       "naming_context": [
         "Enum"
@@ -938,6 +903,41 @@
               "kind": "numeric",
               "value": "170",
               "expression": "0b10101010"
+            }
+          }
+        }
+      ],
+      "strict": true
+    },
+    {
+      "name": "test.constants/EnumType",
+      "naming_context": [
+        "EnumType"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+        "line": 16,
+        "column": 6,
+        "length": 8
+      },
+      "type": "int32",
+      "members": [
+        {
+          "name": "VALUE",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+            "line": 17,
+            "column": 5,
+            "length": 5
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "1",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
             }
           }
         }
@@ -1252,28 +1252,28 @@
     "test.constants/BOOL"
   ],
   "declarations": {
-    "test.constants/BitsType": "bits",
     "test.constants/Bits": "bits",
-    "test.constants/UINT8": "const",
-    "test.constants/UINT16": "const",
-    "test.constants/UINT32": "const",
-    "test.constants/UINT64": "const",
-    "test.constants/INT8": "const",
+    "test.constants/BitsType": "bits",
+    "test.constants/BOOL": "const",
+    "test.constants/FLOAT32": "const",
+    "test.constants/FLOAT64": "const",
     "test.constants/INT16": "const",
     "test.constants/INT32": "const",
     "test.constants/INT64": "const",
-    "test.constants/FLOAT32": "const",
-    "test.constants/FLOAT64": "const",
-    "test.constants/BOOL": "const",
+    "test.constants/INT8": "const",
     "test.constants/STRING": "const",
-    "test.constants/enumVal": "const",
-    "test.constants/enumPrimitiveVal": "const",
-    "test.constants/bitsVal": "const",
+    "test.constants/UINT16": "const",
+    "test.constants/UINT32": "const",
+    "test.constants/UINT64": "const",
+    "test.constants/UINT8": "const",
     "test.constants/bitsPrimitiveVal": "const",
+    "test.constants/bitsVal": "const",
+    "test.constants/enumPrimitiveVal": "const",
+    "test.constants/enumVal": "const",
     "test.constants/orResult": "const",
     "test.constants/orResultPrimitiveVal": "const",
-    "test.constants/EnumType": "enum",
     "test.constants/Enum": "enum",
+    "test.constants/EnumType": "enum",
     "test.constants/Struct": "struct"
   }
 }

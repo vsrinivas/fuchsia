@@ -63,52 +63,31 @@ fidl_union! {
     ],
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct StructWithNullableString {
-    pub val: Option<String>,
+#[derive(
+    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
+)]
+#[repr(C)]
+pub struct Int32Wrapper {
+    pub val: i32,
 }
 
-impl fidl::encoding::Persistable for StructWithNullableString {}
+impl fidl::encoding::Persistable for Int32Wrapper {}
 
-fidl_struct! {
-  name: StructWithNullableString,
+fidl_struct_copy! {
+  name: Int32Wrapper,
   members: [
     val {
-      ty: Option<String>,
+      ty: i32,
       offset_v1: 0,
       offset_v2: 0,
     },
   ],
   padding_v1: [],
   padding_v2: [],
-  size_v1: 16,
-  size_v2: 16,
-  align_v1: 8,
-  align_v2: 8,
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct StructWithNullableVector {
-    pub val: Option<Vec<i32>>,
-}
-
-impl fidl::encoding::Persistable for StructWithNullableVector {}
-
-fidl_struct! {
-  name: StructWithNullableVector,
-  members: [
-    val {
-      ty: Option<Vec<i32>>,
-      offset_v1: 0,
-      offset_v2: 0,
-    },
-  ],
-  padding_v1: [],
-  padding_v2: [],
-  size_v1: 16,
-  size_v2: 16,
-  align_v1: 8,
-  align_v2: 8,
+  size_v1: 4,
+  size_v2: 4,
+  align_v1: 4,
+  align_v2: 4,
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -189,31 +168,28 @@ fidl_struct! {
   align_v2: 4,
 }
 
-#[derive(
-    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
-)]
-#[repr(C)]
-pub struct Int32Wrapper {
-    pub val: i32,
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct StructWithNullableString {
+    pub val: Option<String>,
 }
 
-impl fidl::encoding::Persistable for Int32Wrapper {}
+impl fidl::encoding::Persistable for StructWithNullableString {}
 
-fidl_struct_copy! {
-  name: Int32Wrapper,
+fidl_struct! {
+  name: StructWithNullableString,
   members: [
     val {
-      ty: i32,
+      ty: Option<String>,
       offset_v1: 0,
       offset_v2: 0,
     },
   ],
   padding_v1: [],
   padding_v2: [],
-  size_v1: 4,
-  size_v2: 4,
-  align_v1: 4,
-  align_v2: 4,
+  size_v1: 16,
+  size_v2: 16,
+  align_v1: 8,
+  align_v2: 8,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -259,6 +235,30 @@ fidl_struct! {
   padding_v1: [],
   padding_v2: [],
   size_v1: 24,
+  size_v2: 16,
+  align_v1: 8,
+  align_v2: 8,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct StructWithNullableVector {
+    pub val: Option<Vec<i32>>,
+}
+
+impl fidl::encoding::Persistable for StructWithNullableVector {}
+
+fidl_struct! {
+  name: StructWithNullableVector,
+  members: [
+    val {
+      ty: Option<Vec<i32>>,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+  ],
+  padding_v1: [],
+  padding_v2: [],
+  size_v1: 16,
   size_v2: 16,
   align_v1: 8,
   align_v2: 8,

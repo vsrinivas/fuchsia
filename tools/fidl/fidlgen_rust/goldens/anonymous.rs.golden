@@ -87,80 +87,6 @@ fidl_bits! {
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[non_exhaustive]
-pub enum SomeProtocolSomeMethodError {
-    ErrorOne,
-    ErrorTwo,
-    #[deprecated = "Use `SomeProtocolSomeMethodError::unknown()` to construct and `SomeProtocolSomeMethodErrorUnknown!()` to exhaustively match."]
-    #[doc(hidden)]
-    __Unknown(u32),
-}
-/// Pattern that matches an unknown `SomeProtocolSomeMethodError` member.
-#[macro_export]
-macro_rules! SomeProtocolSomeMethodErrorUnknown {
-    () => {
-        _
-    };
-}
-
-impl SomeProtocolSomeMethodError {
-    #[inline]
-    pub fn from_primitive(prim: u32) -> Option<Self> {
-        match prim {
-            1 => Some(Self::ErrorOne),
-            2 => Some(Self::ErrorTwo),
-            _ => None,
-        }
-    }
-
-    #[inline]
-    pub fn from_primitive_allow_unknown(prim: u32) -> Self {
-        match prim {
-            1 => Self::ErrorOne,
-            2 => Self::ErrorTwo,
-            #[allow(deprecated)]
-            x => Self::__Unknown(x),
-        }
-    }
-
-    #[inline]
-    pub fn unknown() -> Self {
-        #[allow(deprecated)]
-        Self::__Unknown(0xffffffff)
-    }
-
-    #[inline]
-    pub const fn into_primitive(self) -> u32 {
-        match self {
-            Self::ErrorOne => 1,
-            Self::ErrorTwo => 2,
-            #[allow(deprecated)]
-            Self::__Unknown(x) => x,
-        }
-    }
-
-    #[inline]
-    pub fn validate(self) -> std::result::Result<Self, u32> {
-        match self {
-            #[allow(deprecated)]
-            Self::__Unknown(x) => Err(x),
-            _ => Ok(self),
-        }
-    }
-
-    #[inline]
-    pub fn is_unknown(&self) -> bool {
-        self.validate().is_err()
-    }
-}
-
-fidl_enum! {
-    name: SomeProtocolSomeMethodError,
-    prim_ty: u32,
-    flexible: true,
-}
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[non_exhaustive]
 pub enum Op {
     Add,
     Mul,
@@ -237,6 +163,80 @@ fidl_enum! {
     flexible: true,
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[non_exhaustive]
+pub enum SomeProtocolSomeMethodError {
+    ErrorOne,
+    ErrorTwo,
+    #[deprecated = "Use `SomeProtocolSomeMethodError::unknown()` to construct and `SomeProtocolSomeMethodErrorUnknown!()` to exhaustively match."]
+    #[doc(hidden)]
+    __Unknown(u32),
+}
+/// Pattern that matches an unknown `SomeProtocolSomeMethodError` member.
+#[macro_export]
+macro_rules! SomeProtocolSomeMethodErrorUnknown {
+    () => {
+        _
+    };
+}
+
+impl SomeProtocolSomeMethodError {
+    #[inline]
+    pub fn from_primitive(prim: u32) -> Option<Self> {
+        match prim {
+            1 => Some(Self::ErrorOne),
+            2 => Some(Self::ErrorTwo),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn from_primitive_allow_unknown(prim: u32) -> Self {
+        match prim {
+            1 => Self::ErrorOne,
+            2 => Self::ErrorTwo,
+            #[allow(deprecated)]
+            x => Self::__Unknown(x),
+        }
+    }
+
+    #[inline]
+    pub fn unknown() -> Self {
+        #[allow(deprecated)]
+        Self::__Unknown(0xffffffff)
+    }
+
+    #[inline]
+    pub const fn into_primitive(self) -> u32 {
+        match self {
+            Self::ErrorOne => 1,
+            Self::ErrorTwo => 2,
+            #[allow(deprecated)]
+            Self::__Unknown(x) => x,
+        }
+    }
+
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, u32> {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown(x) => Err(x),
+            _ => Ok(self),
+        }
+    }
+
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        self.validate().is_err()
+    }
+}
+
+fidl_enum! {
+    name: SomeProtocolSomeMethodError,
+    prim_ty: u32,
+    flexible: true,
+}
+
 pub type SomeProtocolSomeMethodResult =
     std::result::Result<(BitsMember), SomeProtocolSomeMethodError>;
 
@@ -247,63 +247,6 @@ pub type SomeProtocolSomeMethodResult =
 #[doc(hidden)]
 pub type SomeProtocolSomeMethodResultHandleWrapper =
     std::result::Result<(BitsMember,), SomeProtocolSomeMethodError>;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum UnionMember {
-    UnionData(u8),
-    #[deprecated = "Use `UnionMember::unknown()` to construct and `UnionMemberUnknown!()` to exhaustively match."]
-    #[doc(hidden)]
-    __Unknown {
-        ordinal: u64,
-        bytes: Vec<u8>,
-    },
-}
-/// Pattern that matches an unknown `UnionMember` member.
-#[macro_export]
-macro_rules! UnionMemberUnknown {
-    () => {
-        _
-    };
-}
-
-impl UnionMember {
-    #[inline]
-    pub fn unknown(ordinal: u64, bytes: Vec<u8>) -> Self {
-        #[allow(deprecated)]
-        Self::__Unknown { ordinal, bytes }
-    }
-
-    #[inline]
-    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
-        match self {
-            #[allow(deprecated)]
-            Self::__Unknown { ordinal, bytes } => Err((ordinal, bytes)),
-            _ => Ok(self),
-        }
-    }
-
-    #[inline]
-    pub fn is_unknown(&self) -> bool {
-        match self {
-            #[allow(deprecated)]
-            Self::__Unknown { .. } => true,
-            _ => false,
-        }
-    }
-}
-
-impl fidl::encoding::Persistable for UnionMember {}
-
-fidl_union! {
-    name: UnionMember,
-    members: [
-        UnionData {
-            ty: u8,
-            ordinal: 2,
-        },
-    ],
-    value_unknown_member: __Unknown,
-}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
@@ -372,31 +315,61 @@ fidl_union! {
     value_unknown_member: __Unknown,
 }
 
-#[derive(
-    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
-)]
-#[repr(C)]
-pub struct TableData {
-    pub data: u8,
+#[derive(Debug, Clone, PartialEq)]
+pub enum UnionMember {
+    UnionData(u8),
+    #[deprecated = "Use `UnionMember::unknown()` to construct and `UnionMemberUnknown!()` to exhaustively match."]
+    #[doc(hidden)]
+    __Unknown {
+        ordinal: u64,
+        bytes: Vec<u8>,
+    },
+}
+/// Pattern that matches an unknown `UnionMember` member.
+#[macro_export]
+macro_rules! UnionMemberUnknown {
+    () => {
+        _
+    };
 }
 
-impl fidl::encoding::Persistable for TableData {}
+impl UnionMember {
+    #[inline]
+    pub fn unknown(ordinal: u64, bytes: Vec<u8>) -> Self {
+        #[allow(deprecated)]
+        Self::__Unknown { ordinal, bytes }
+    }
 
-fidl_struct_copy! {
-  name: TableData,
-  members: [
-    data {
-      ty: u8,
-      offset_v1: 0,
-      offset_v2: 0,
-    },
-  ],
-  padding_v1: [],
-  padding_v2: [],
-  size_v1: 1,
-  size_v2: 1,
-  align_v1: 1,
-  align_v2: 1,
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { ordinal, bytes } => Err((ordinal, bytes)),
+            _ => Ok(self),
+        }
+    }
+
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { .. } => true,
+            _ => false,
+        }
+    }
+}
+
+impl fidl::encoding::Persistable for UnionMember {}
+
+fidl_union! {
+    name: UnionMember,
+    members: [
+        UnionData {
+            ty: u8,
+            ordinal: 2,
+        },
+    ],
+    value_unknown_member: __Unknown,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -445,34 +418,31 @@ fidl_struct! {
   align_v2: 8,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct TableMember {
-    pub table_data: Option<Vec<TableData>>,
-    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
-    /// map from ordinals to raw data. The `Some` case is always nonempty.
-    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
-    #[deprecated = "Use `..TableMember::EMPTY` to construct and `..` to match."]
-    #[doc(hidden)]
-    pub __non_exhaustive: (),
+#[derive(
+    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
+)]
+#[repr(C)]
+pub struct TableData {
+    pub data: u8,
 }
 
-impl TableMember {
-    /// An empty table with every field set to `None`.
-    #[allow(deprecated)]
-    pub const EMPTY: Self = Self { table_data: None, unknown_data: None, __non_exhaustive: () };
-}
+impl fidl::encoding::Persistable for TableData {}
 
-impl fidl::encoding::Persistable for TableMember {}
-
-fidl_table! {
-    name: TableMember,
-    members: [
-        table_data {
-            ty: Vec<TableData>,
-            ordinal: 2,
-        },
-    ],
-    value_unknown_member: unknown_data,
+fidl_struct_copy! {
+  name: TableData,
+  members: [
+    data {
+      ty: u8,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+  ],
+  padding_v1: [],
+  padding_v2: [],
+  size_v1: 1,
+  size_v2: 1,
+  align_v1: 1,
+  align_v2: 1,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -511,6 +481,36 @@ fidl_table! {
         flags {
             ty: Flags,
             ordinal: 4,
+        },
+    ],
+    value_unknown_member: unknown_data,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TableMember {
+    pub table_data: Option<Vec<TableData>>,
+    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
+    /// map from ordinals to raw data. The `Some` case is always nonempty.
+    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
+    #[deprecated = "Use `..TableMember::EMPTY` to construct and `..` to match."]
+    #[doc(hidden)]
+    pub __non_exhaustive: (),
+}
+
+impl TableMember {
+    /// An empty table with every field set to `None`.
+    #[allow(deprecated)]
+    pub const EMPTY: Self = Self { table_data: None, unknown_data: None, __non_exhaustive: () };
+}
+
+impl fidl::encoding::Persistable for TableMember {}
+
+fidl_table! {
+    name: TableMember,
+    members: [
+        table_data {
+            ty: Vec<TableData>,
+            ordinal: 2,
         },
     ],
     value_unknown_member: unknown_data,

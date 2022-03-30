@@ -33,299 +33,6 @@ wrap_handle_metadata!(
 );
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct ParentMarker;
-
-impl fidl::endpoints::ProtocolMarker for ParentMarker {
-    type Proxy = ParentProxy;
-    type RequestStream = ParentRequestStream;
-    const DEBUG_NAME: &'static str = "(anonymous) Parent";
-}
-
-pub trait ParentProxyInterface: Send + Sync {
-    fn r#first(&self, request: fidl::endpoints::ServerEnd<ParentMarker>)
-        -> Result<(), fidl::Error>;
-}
-
-#[derive(Debug)]
-#[cfg(target_os = "fuchsia")]
-pub struct ParentSynchronousProxy {
-    client: fidl::client::sync::Client,
-}
-
-#[cfg(target_os = "fuchsia")]
-impl ParentSynchronousProxy {
-    pub fn new(channel: fidl::Channel) -> Self {
-        let protocol_name = <ParentMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME;
-        Self { client: fidl::client::sync::Client::new(channel, protocol_name) }
-    }
-
-    pub fn into_channel(self) -> fidl::Channel {
-        self.client.into_channel()
-    }
-
-    /// Waits until an event arrives and returns it. It is safe for other
-    /// threads to make concurrent requests while waiting for an event.
-    pub fn wait_for_event(&self, deadline: zx::Time) -> Result<ParentEvent, fidl::Error> {
-        ParentEvent::decode(self.client.wait_for_event(deadline)?)
-    }
-    pub fn r#first(
-        &self,
-        mut request: fidl::endpoints::ServerEnd<ParentMarker>,
-    ) -> Result<(), fidl::Error> {
-        self.client.send(
-            &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
-                fidl::endpoints::ServerEnd<ParentMarker>,
-            >(request),),
-            0x3723835775b3455b,
-            fidl::encoding::DynamicFlags::empty(),
-        )
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ParentProxy {
-    client: fidl::client::Client,
-}
-
-impl fidl::endpoints::Proxy for ParentProxy {
-    type Protocol = ParentMarker;
-
-    fn from_channel(inner: fidl::AsyncChannel) -> Self {
-        Self::new(inner)
-    }
-
-    fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
-        self.client.into_channel().map_err(|client| Self { client })
-    }
-
-    fn as_channel(&self) -> &::fidl::AsyncChannel {
-        self.client.as_channel()
-    }
-}
-
-impl ParentProxy {
-    /// Create a new Proxy for Parent
-    pub fn new(channel: fidl::AsyncChannel) -> Self {
-        let protocol_name = <ParentMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME;
-        Self { client: fidl::client::Client::new(channel, protocol_name) }
-    }
-
-    /// Get a Stream of events from the remote end of the Parent protocol
-    ///
-    /// # Panics
-    ///
-    /// Panics if the event stream was already taken.
-    pub fn take_event_stream(&self) -> ParentEventStream {
-        ParentEventStream { event_receiver: self.client.take_event_receiver() }
-    }
-    pub fn r#first(
-        &self,
-        mut request: fidl::endpoints::ServerEnd<ParentMarker>,
-    ) -> Result<(), fidl::Error> {
-        ParentProxyInterface::r#first(self, request)
-    }
-}
-
-impl ParentProxyInterface for ParentProxy {
-    fn r#first(
-        &self,
-        mut request: fidl::endpoints::ServerEnd<ParentMarker>,
-    ) -> Result<(), fidl::Error> {
-        self.client.send(
-            &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
-                fidl::endpoints::ServerEnd<ParentMarker>,
-            >(request)),
-            0x3723835775b3455b,
-            fidl::encoding::DynamicFlags::empty(),
-        )
-    }
-}
-
-pub struct ParentEventStream {
-    event_receiver: fidl::client::EventReceiver,
-}
-
-impl std::marker::Unpin for ParentEventStream {}
-
-impl futures::stream::FusedStream for ParentEventStream {
-    fn is_terminated(&self) -> bool {
-        self.event_receiver.is_terminated()
-    }
-}
-
-impl futures::Stream for ParentEventStream {
-    type Item = Result<ParentEvent, fidl::Error>;
-
-    fn poll_next(
-        mut self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Option<Self::Item>> {
-        let buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
-            &mut self.event_receiver,
-            cx
-        )?) {
-            Some(buf) => buf,
-            None => return std::task::Poll::Ready(None),
-        };
-
-        std::task::Poll::Ready(Some(ParentEvent::decode(buf)))
-    }
-}
-
-#[derive(Debug)]
-pub enum ParentEvent {}
-
-impl ParentEvent {
-    fn decode(mut buf: fidl::MessageBufEtc) -> Result<ParentEvent, fidl::Error> {
-        let (bytes, _handles) = buf.split_mut();
-        let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-
-        match tx_header.ordinal() {
-            _ => Err(fidl::Error::UnknownOrdinal {
-                ordinal: tx_header.ordinal(),
-                protocol_name: <ParentMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
-            }),
-        }
-    }
-}
-
-/// A Stream of incoming requests for Parent
-pub struct ParentRequestStream {
-    inner: std::sync::Arc<fidl::ServeInner>,
-    is_terminated: bool,
-}
-
-impl std::marker::Unpin for ParentRequestStream {}
-
-impl futures::stream::FusedStream for ParentRequestStream {
-    fn is_terminated(&self) -> bool {
-        self.is_terminated
-    }
-}
-
-impl fidl::endpoints::RequestStream for ParentRequestStream {
-    type Protocol = ParentMarker;
-    type ControlHandle = ParentControlHandle;
-
-    fn from_channel(channel: fidl::AsyncChannel) -> Self {
-        Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
-    }
-
-    fn control_handle(&self) -> Self::ControlHandle {
-        ParentControlHandle { inner: self.inner.clone() }
-    }
-
-    fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
-        (self.inner, self.is_terminated)
-    }
-
-    fn from_inner(inner: std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
-        Self { inner, is_terminated }
-    }
-}
-
-impl futures::Stream for ParentRequestStream {
-    type Item = Result<ParentRequest, fidl::Error>;
-
-    fn poll_next(
-        mut self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Option<Self::Item>> {
-        let this = &mut *self;
-        if this.inner.poll_shutdown(cx) {
-            this.is_terminated = true;
-            return std::task::Poll::Ready(None);
-        }
-        if this.is_terminated {
-            panic!("polled ParentRequestStream after completion");
-        }
-        fidl::encoding::with_tls_decode_buf(|bytes, handles| {
-            match this.inner.channel().read_etc(cx, bytes, handles) {
-                std::task::Poll::Ready(Ok(())) => {}
-                std::task::Poll::Pending => return std::task::Poll::Pending,
-                std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
-                    this.is_terminated = true;
-                    return std::task::Poll::Ready(None);
-                }
-                std::task::Poll::Ready(Err(e)) => {
-                    return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e))))
-                }
-            }
-
-            // A message has been received from the channel
-            let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-            if !header.is_compatible() {
-                return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(
-                    header.magic_number(),
-                ))));
-            }
-
-            std::task::Poll::Ready(Some(match header.ordinal() {
-                0x3723835775b3455b => {
-                    let mut req: (
-                        HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT<
-                            fidl::endpoints::ServerEnd<ParentMarker>,
-                        >,
-                    ) = fidl::encoding::Decodable::new_empty();
-                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.inheritancewithrecursivedecl/ParentFirstRequest");
-                    fidl::trace_blob!("fidl:blob", "decode", bytes);
-                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
-                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
-                    let control_handle = ParentControlHandle { inner: this.inner.clone() };
-
-                    Ok(ParentRequest::First { request: req.0.into_inner(), control_handle })
-                }
-                _ => Err(fidl::Error::UnknownOrdinal {
-                    ordinal: header.ordinal(),
-                    protocol_name: <ParentMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
-                }),
-            }))
-        })
-    }
-}
-#[derive(Debug)]
-pub enum ParentRequest {
-    First { request: fidl::endpoints::ServerEnd<ParentMarker>, control_handle: ParentControlHandle },
-}
-
-impl ParentRequest {
-    #[allow(irrefutable_let_patterns)]
-    pub fn into_first(
-        self,
-    ) -> Option<(fidl::endpoints::ServerEnd<ParentMarker>, ParentControlHandle)> {
-        if let ParentRequest::First { request, control_handle } = self {
-            Some((request, control_handle))
-        } else {
-            None
-        }
-    }
-
-    /// Name of the method defined in FIDL
-    pub fn method_name(&self) -> &'static str {
-        match *self {
-            ParentRequest::First { .. } => "first",
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ParentControlHandle {
-    inner: std::sync::Arc<fidl::ServeInner>,
-}
-
-impl fidl::endpoints::ControlHandle for ParentControlHandle {
-    fn shutdown(&self) {
-        self.inner.shutdown()
-    }
-
-    fn shutdown_with_epitaph(&self, status: zx_status::Status) {
-        self.inner.shutdown_with_epitaph(status)
-    }
-}
-
-impl ParentControlHandle {}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ChildMarker;
 
 impl fidl::endpoints::ProtocolMarker for ChildMarker {
@@ -678,3 +385,296 @@ impl fidl::endpoints::ControlHandle for ChildControlHandle {
 }
 
 impl ChildControlHandle {}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct ParentMarker;
+
+impl fidl::endpoints::ProtocolMarker for ParentMarker {
+    type Proxy = ParentProxy;
+    type RequestStream = ParentRequestStream;
+    const DEBUG_NAME: &'static str = "(anonymous) Parent";
+}
+
+pub trait ParentProxyInterface: Send + Sync {
+    fn r#first(&self, request: fidl::endpoints::ServerEnd<ParentMarker>)
+        -> Result<(), fidl::Error>;
+}
+
+#[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
+pub struct ParentSynchronousProxy {
+    client: fidl::client::sync::Client,
+}
+
+#[cfg(target_os = "fuchsia")]
+impl ParentSynchronousProxy {
+    pub fn new(channel: fidl::Channel) -> Self {
+        let protocol_name = <ParentMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME;
+        Self { client: fidl::client::sync::Client::new(channel, protocol_name) }
+    }
+
+    pub fn into_channel(self) -> fidl::Channel {
+        self.client.into_channel()
+    }
+
+    /// Waits until an event arrives and returns it. It is safe for other
+    /// threads to make concurrent requests while waiting for an event.
+    pub fn wait_for_event(&self, deadline: zx::Time) -> Result<ParentEvent, fidl::Error> {
+        ParentEvent::decode(self.client.wait_for_event(deadline)?)
+    }
+    pub fn r#first(
+        &self,
+        mut request: fidl::endpoints::ServerEnd<ParentMarker>,
+    ) -> Result<(), fidl::Error> {
+        self.client.send(
+            &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
+                fidl::endpoints::ServerEnd<ParentMarker>,
+            >(request),),
+            0x3723835775b3455b,
+            fidl::encoding::DynamicFlags::empty(),
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ParentProxy {
+    client: fidl::client::Client,
+}
+
+impl fidl::endpoints::Proxy for ParentProxy {
+    type Protocol = ParentMarker;
+
+    fn from_channel(inner: fidl::AsyncChannel) -> Self {
+        Self::new(inner)
+    }
+
+    fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
+        self.client.into_channel().map_err(|client| Self { client })
+    }
+
+    fn as_channel(&self) -> &::fidl::AsyncChannel {
+        self.client.as_channel()
+    }
+}
+
+impl ParentProxy {
+    /// Create a new Proxy for Parent
+    pub fn new(channel: fidl::AsyncChannel) -> Self {
+        let protocol_name = <ParentMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME;
+        Self { client: fidl::client::Client::new(channel, protocol_name) }
+    }
+
+    /// Get a Stream of events from the remote end of the Parent protocol
+    ///
+    /// # Panics
+    ///
+    /// Panics if the event stream was already taken.
+    pub fn take_event_stream(&self) -> ParentEventStream {
+        ParentEventStream { event_receiver: self.client.take_event_receiver() }
+    }
+    pub fn r#first(
+        &self,
+        mut request: fidl::endpoints::ServerEnd<ParentMarker>,
+    ) -> Result<(), fidl::Error> {
+        ParentProxyInterface::r#first(self, request)
+    }
+}
+
+impl ParentProxyInterface for ParentProxy {
+    fn r#first(
+        &self,
+        mut request: fidl::endpoints::ServerEnd<ParentMarker>,
+    ) -> Result<(), fidl::Error> {
+        self.client.send(
+            &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
+                fidl::endpoints::ServerEnd<ParentMarker>,
+            >(request)),
+            0x3723835775b3455b,
+            fidl::encoding::DynamicFlags::empty(),
+        )
+    }
+}
+
+pub struct ParentEventStream {
+    event_receiver: fidl::client::EventReceiver,
+}
+
+impl std::marker::Unpin for ParentEventStream {}
+
+impl futures::stream::FusedStream for ParentEventStream {
+    fn is_terminated(&self) -> bool {
+        self.event_receiver.is_terminated()
+    }
+}
+
+impl futures::Stream for ParentEventStream {
+    type Item = Result<ParentEvent, fidl::Error>;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
+            &mut self.event_receiver,
+            cx
+        )?) {
+            Some(buf) => buf,
+            None => return std::task::Poll::Ready(None),
+        };
+
+        std::task::Poll::Ready(Some(ParentEvent::decode(buf)))
+    }
+}
+
+#[derive(Debug)]
+pub enum ParentEvent {}
+
+impl ParentEvent {
+    fn decode(mut buf: fidl::MessageBufEtc) -> Result<ParentEvent, fidl::Error> {
+        let (bytes, _handles) = buf.split_mut();
+        let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+        match tx_header.ordinal() {
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: tx_header.ordinal(),
+                protocol_name: <ParentMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
+            }),
+        }
+    }
+}
+
+/// A Stream of incoming requests for Parent
+pub struct ParentRequestStream {
+    inner: std::sync::Arc<fidl::ServeInner>,
+    is_terminated: bool,
+}
+
+impl std::marker::Unpin for ParentRequestStream {}
+
+impl futures::stream::FusedStream for ParentRequestStream {
+    fn is_terminated(&self) -> bool {
+        self.is_terminated
+    }
+}
+
+impl fidl::endpoints::RequestStream for ParentRequestStream {
+    type Protocol = ParentMarker;
+    type ControlHandle = ParentControlHandle;
+
+    fn from_channel(channel: fidl::AsyncChannel) -> Self {
+        Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    }
+
+    fn control_handle(&self) -> Self::ControlHandle {
+        ParentControlHandle { inner: self.inner.clone() }
+    }
+
+    fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+        (self.inner, self.is_terminated)
+    }
+
+    fn from_inner(inner: std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+        Self { inner, is_terminated }
+    }
+}
+
+impl futures::Stream for ParentRequestStream {
+    type Item = Result<ParentRequest, fidl::Error>;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let this = &mut *self;
+        if this.inner.poll_shutdown(cx) {
+            this.is_terminated = true;
+            return std::task::Poll::Ready(None);
+        }
+        if this.is_terminated {
+            panic!("polled ParentRequestStream after completion");
+        }
+        fidl::encoding::with_tls_decode_buf(|bytes, handles| {
+            match this.inner.channel().read_etc(cx, bytes, handles) {
+                std::task::Poll::Ready(Ok(())) => {}
+                std::task::Poll::Pending => return std::task::Poll::Pending,
+                std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
+                    this.is_terminated = true;
+                    return std::task::Poll::Ready(None);
+                }
+                std::task::Poll::Ready(Err(e)) => {
+                    return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e))))
+                }
+            }
+
+            // A message has been received from the channel
+            let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+            if !header.is_compatible() {
+                return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(
+                    header.magic_number(),
+                ))));
+            }
+
+            std::task::Poll::Ready(Some(match header.ordinal() {
+                0x3723835775b3455b => {
+                    let mut req: (
+                        HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT<
+                            fidl::endpoints::ServerEnd<ParentMarker>,
+                        >,
+                    ) = fidl::encoding::Decodable::new_empty();
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.inheritancewithrecursivedecl/ParentFirstRequest");
+                    fidl::trace_blob!("fidl:blob", "decode", bytes);
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+                    let control_handle = ParentControlHandle { inner: this.inner.clone() };
+
+                    Ok(ParentRequest::First { request: req.0.into_inner(), control_handle })
+                }
+                _ => Err(fidl::Error::UnknownOrdinal {
+                    ordinal: header.ordinal(),
+                    protocol_name: <ParentMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
+                }),
+            }))
+        })
+    }
+}
+#[derive(Debug)]
+pub enum ParentRequest {
+    First { request: fidl::endpoints::ServerEnd<ParentMarker>, control_handle: ParentControlHandle },
+}
+
+impl ParentRequest {
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_first(
+        self,
+    ) -> Option<(fidl::endpoints::ServerEnd<ParentMarker>, ParentControlHandle)> {
+        if let ParentRequest::First { request, control_handle } = self {
+            Some((request, control_handle))
+        } else {
+            None
+        }
+    }
+
+    /// Name of the method defined in FIDL
+    pub fn method_name(&self) -> &'static str {
+        match *self {
+            ParentRequest::First { .. } => "first",
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ParentControlHandle {
+    inner: std::sync::Arc<fidl::ServeInner>,
+}
+
+impl fidl::endpoints::ControlHandle for ParentControlHandle {
+    fn shutdown(&self) {
+        self.inner.shutdown()
+    }
+
+    fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+        self.inner.shutdown_with_epitaph(status)
+    }
+}
+
+impl ParentControlHandle {}

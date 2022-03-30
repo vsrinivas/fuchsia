@@ -39,80 +39,6 @@ import 'package:zircon/zircon.dart' as $zircon;
 // ignore_for_file: avoid_unused_constructor_parameters
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
-enum UnionSmallArrayTag {
-  a, // 0x1
-}
-
-const Map<int, UnionSmallArrayTag> _UnionSmallArrayTag_map = {
-  1: UnionSmallArrayTag.a,
-};
-
-class UnionSmallArray extends $fidl.Union {
-  const UnionSmallArray.withA(Uint32List value)
-      : _ordinal = 1,
-        _data = value;
-
-  UnionSmallArray._(int ordinal, Object data)
-      : _ordinal = ordinal,
-        _data = data;
-
-  final int _ordinal;
-  final _data;
-
-  UnionSmallArrayTag get $tag => _UnionSmallArrayTag_map[_ordinal]!;
-
-  Uint32List? get a {
-    if (_ordinal != 1) {
-      return null;
-    }
-    return _data;
-  }
-
-  $fidl.UnknownRawData? get $unknownData {
-    switch (_ordinal) {
-      case 1:
-        return null;
-      default:
-        return _data;
-    }
-  }
-
-  @override
-  int get $ordinal => _ordinal;
-
-  @override
-  Object get $data => _data;
-
-  static UnionSmallArray _ctor(int ordinal, Object data) {
-    return UnionSmallArray._(ordinal, data);
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.UnionType<UnionSmallArray> kUnionSmallArray_Type =
-    $fidl.UnionType<UnionSmallArray>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.ArrayType<int, Uint32List>(
-        element: $fidl.Uint32Type(), elementCount: 2),
-  },
-  ctor: UnionSmallArray._ctor,
-  flexible: false,
-  resource: false,
-);
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<UnionSmallArray> kUnionSmallArray_OptType =
-    $fidl.NullableUnionType<UnionSmallArray>(
-  members: <int, $fidl.FidlType>{
-    1: $fidl.ArrayType<int, Uint32List>(
-        element: $fidl.Uint32Type(), elementCount: 2),
-  },
-  ctor: UnionSmallArray._ctor,
-  flexible: false,
-  resource: false,
-);
-
 enum UnionLargeArrayTag {
   a, // 0x1
 }
@@ -187,65 +113,79 @@ const $fidl.NullableUnionType<UnionLargeArray> kUnionLargeArray_OptType =
   resource: false,
 );
 
-class StructSmallArray extends $fidl.Struct {
-  const StructSmallArray({
-    required this.a,
-  });
-  StructSmallArray.clone(
-    StructSmallArray $orig, {
-    Uint32List? a,
-  }) : this(
-          a: a ?? $orig.a,
-        );
+enum UnionSmallArrayTag {
+  a, // 0x1
+}
 
-  final Uint32List a;
+const Map<int, UnionSmallArrayTag> _UnionSmallArrayTag_map = {
+  1: UnionSmallArrayTag.a,
+};
 
-  @override
-  List<Object?> get $fields {
-    return <Object?>[
-      a,
-    ];
+class UnionSmallArray extends $fidl.Union {
+  const UnionSmallArray.withA(Uint32List value)
+      : _ordinal = 1,
+        _data = value;
+
+  UnionSmallArray._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  UnionSmallArrayTag get $tag => _UnionSmallArrayTag_map[_ordinal]!;
+
+  Uint32List? get a {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
   }
 
-  static const $fieldType0 = $fidl.ArrayType<int, Uint32List>(
-      element: $fidl.Uint32Type(), elementCount: 2);
-
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        break;
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+        return null;
       default:
-        throw $fidl.FidlError('unknown wire format');
+        return _data;
     }
   }
 
-  static StructSmallArray _structDecode(
-      $fidl.Decoder $decoder, int $offset, int $depth) {
-    switch ($decoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        return StructSmallArray(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth));
-      case $fidl.WireFormat.v2:
-        return StructSmallArray(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth));
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static UnionSmallArray _ctor(int ordinal, Object data) {
+    return UnionSmallArray._(ordinal, data);
   }
 }
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.StructType<StructSmallArray> kStructSmallArray_Type =
-    $fidl.StructType<StructSmallArray>(
-        inlineSizeV1: 8,
-        inlineSizeV2: 8,
-        structDecode: StructSmallArray._structDecode);
+const $fidl.UnionType<UnionSmallArray> kUnionSmallArray_Type =
+    $fidl.UnionType<UnionSmallArray>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.ArrayType<int, Uint32List>(
+        element: $fidl.Uint32Type(), elementCount: 2),
+  },
+  ctor: UnionSmallArray._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<UnionSmallArray> kUnionSmallArray_OptType =
+    $fidl.NullableUnionType<UnionSmallArray>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.ArrayType<int, Uint32List>(
+        element: $fidl.Uint32Type(), elementCount: 2),
+  },
+  ctor: UnionSmallArray._ctor,
+  flexible: false,
+  resource: false,
+);
 
 class StructLargeArray extends $fidl.Struct {
   const StructLargeArray({
@@ -307,51 +247,65 @@ const $fidl.StructType<StructLargeArray> kStructLargeArray_Type =
         inlineSizeV2: 400,
         structDecode: StructLargeArray._structDecode);
 
-class TableSmallArray extends $fidl.Table {
-  const TableSmallArray({
-    this.$unknownData,
-    this.a,
+class StructSmallArray extends $fidl.Struct {
+  const StructSmallArray({
+    required this.a,
   });
+  StructSmallArray.clone(
+    StructSmallArray $orig, {
+    Uint32List? a,
+  }) : this(
+          a: a ?? $orig.a,
+        );
 
-  TableSmallArray._(Map<int, dynamic> argv, this.$unknownData) : a = argv[1];
+  final Uint32List a;
 
   @override
-  final Map<int, $fidl.UnknownRawData>? $unknownData;
-  final Uint32List? a;
+  List<Object?> get $fields {
+    return <Object?>[
+      a,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.ArrayType<int, Uint32List>(
+      element: $fidl.Uint32Type(), elementCount: 2);
 
   @override
-  dynamic $field(int index) {
-    switch (index) {
-      case 0:
-        return a;
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
     }
-    return null;
   }
 
-  @override
-  Map<int, dynamic> get $fields {
-    return {
-      1: a,
-    };
+  static StructSmallArray _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return StructSmallArray(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return StructSmallArray(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
-
-  static TableSmallArray _ctor(Map<int, dynamic> argv,
-          [Map<int, $fidl.UnknownRawData>? unknownData]) =>
-      TableSmallArray._(argv, unknownData);
 }
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.TableType<TableSmallArray> kTableSmallArray_Type =
-    $fidl.TableType<TableSmallArray>(
-  inlineSize: 16,
-  members: [
-    $fidl.ArrayType<int, Uint32List>(
-        element: $fidl.Uint32Type(), elementCount: 2),
-  ],
-  ctor: TableSmallArray._ctor,
-  resource: false,
-);
+const $fidl.StructType<StructSmallArray> kStructSmallArray_Type =
+    $fidl.StructType<StructSmallArray>(
+        inlineSizeV1: 8,
+        inlineSizeV2: 8,
+        structDecode: StructSmallArray._structDecode);
 
 class TableLargeArray extends $fidl.Table {
   const TableLargeArray({
@@ -396,5 +350,51 @@ const $fidl.TableType<TableLargeArray> kTableLargeArray_Type =
         element: $fidl.Uint32Type(), elementCount: 100),
   ],
   ctor: TableLargeArray._ctor,
+  resource: false,
+);
+
+class TableSmallArray extends $fidl.Table {
+  const TableSmallArray({
+    this.$unknownData,
+    this.a,
+  });
+
+  TableSmallArray._(Map<int, dynamic> argv, this.$unknownData) : a = argv[1];
+
+  @override
+  final Map<int, $fidl.UnknownRawData>? $unknownData;
+  final Uint32List? a;
+
+  @override
+  dynamic $field(int index) {
+    switch (index) {
+      case 0:
+        return a;
+    }
+    return null;
+  }
+
+  @override
+  Map<int, dynamic> get $fields {
+    return {
+      1: a,
+    };
+  }
+
+  static TableSmallArray _ctor(Map<int, dynamic> argv,
+          [Map<int, $fidl.UnknownRawData>? unknownData]) =>
+      TableSmallArray._(argv, unknownData);
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.TableType<TableSmallArray> kTableSmallArray_Type =
+    $fidl.TableType<TableSmallArray>(
+  inlineSize: 16,
+  members: [
+    $fidl.ArrayType<int, Uint32List>(
+        element: $fidl.Uint32Type(), elementCount: 2),
+  ],
+  ctor: TableSmallArray._ctor,
   resource: false,
 );

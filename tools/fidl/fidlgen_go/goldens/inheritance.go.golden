@@ -6,28 +6,6 @@ import (
 	_bindings "syscall/zx/fidl"
 )
 
-type superWithCtxFooRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	S string   `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_bounds:""`
-}
-
-var _msuperWithCtxFooRequest = _bindings.CreateLazyMarshaler(superWithCtxFooRequest{})
-
-func (msg *superWithCtxFooRequest) Marshaler() _bindings.Marshaler {
-	return _msuperWithCtxFooRequest
-}
-
-type superWithCtxFooResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
-	Y int64    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
-}
-
-var _msuperWithCtxFooResponse = _bindings.CreateLazyMarshaler(superWithCtxFooResponse{})
-
-func (msg *superWithCtxFooResponse) Marshaler() _bindings.Marshaler {
-	return _msuperWithCtxFooResponse
-}
-
 type subWithCtxFooRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
 	S string   `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_bounds:""`
@@ -50,55 +28,27 @@ func (msg *subWithCtxFooResponse) Marshaler() _bindings.Marshaler {
 	return _msubWithCtxFooResponse
 }
 
-const (
-	SuperFooOrdinal uint64 = 0x68a61c2a230db8b8
-)
-
-type SuperWithCtxInterface _bindings.ChannelProxy
-
-func (p *SuperWithCtxInterface) Foo(ctx_ _bindings.Context, s string) (int64, error) {
-	req_ := &superWithCtxFooRequest{S: s}
-	resp_ := &superWithCtxFooResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(SuperFooOrdinal, req_, resp_)
-	return (*resp_).Y, err_
+type superWithCtxFooRequest struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	S string   `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_bounds:""`
 }
 
-type SuperWithCtx interface {
-	Foo(ctx_ _bindings.Context, s string) (int64, error)
+var _msuperWithCtxFooRequest = _bindings.CreateLazyMarshaler(superWithCtxFooRequest{})
+
+func (msg *superWithCtxFooRequest) Marshaler() _bindings.Marshaler {
+	return _msuperWithCtxFooRequest
 }
 
-type SuperWithCtxTransitionalBase struct{}
-
-type SuperWithCtxInterfaceRequest _bindings.InterfaceRequest
-
-func NewSuperWithCtxInterfaceRequest() (SuperWithCtxInterfaceRequest, *SuperWithCtxInterface, error) {
-	req, cli, err := _bindings.NewInterfaceRequest()
-	return SuperWithCtxInterfaceRequest(req), (*SuperWithCtxInterface)(cli), err
+type superWithCtxFooResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	Y int64    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
 }
 
-type SuperWithCtxStub struct {
-	Impl SuperWithCtx
-}
+var _msuperWithCtxFooResponse = _bindings.CreateLazyMarshaler(superWithCtxFooResponse{})
 
-func (s_ *SuperWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
-	switch args_.Ordinal {
-	case SuperFooOrdinal:
-		in_ := &superWithCtxFooRequest{}
-		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
-		if !ok {
-			return nil, false, _bindings.ErrMissingMarshalerContext
-		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
-			return nil, false, err_
-		}
-		y, err_ := s_.Impl.Foo(args_.Ctx, (*in_).S)
-		out_ := &superWithCtxFooResponse{Y: y}
-		return out_, true, err_
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
+func (msg *superWithCtxFooResponse) Marshaler() _bindings.Marshaler {
+	return _msuperWithCtxFooResponse
 }
-
-type SuperEventProxy _bindings.ChannelProxy
 
 const (
 	SubFooOrdinal uint64 = 0x68a61c2a230db8b8
@@ -149,3 +99,53 @@ func (s_ *SubWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Mess
 }
 
 type SubEventProxy _bindings.ChannelProxy
+
+const (
+	SuperFooOrdinal uint64 = 0x68a61c2a230db8b8
+)
+
+type SuperWithCtxInterface _bindings.ChannelProxy
+
+func (p *SuperWithCtxInterface) Foo(ctx_ _bindings.Context, s string) (int64, error) {
+	req_ := &superWithCtxFooRequest{S: s}
+	resp_ := &superWithCtxFooResponse{}
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(SuperFooOrdinal, req_, resp_)
+	return (*resp_).Y, err_
+}
+
+type SuperWithCtx interface {
+	Foo(ctx_ _bindings.Context, s string) (int64, error)
+}
+
+type SuperWithCtxTransitionalBase struct{}
+
+type SuperWithCtxInterfaceRequest _bindings.InterfaceRequest
+
+func NewSuperWithCtxInterfaceRequest() (SuperWithCtxInterfaceRequest, *SuperWithCtxInterface, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return SuperWithCtxInterfaceRequest(req), (*SuperWithCtxInterface)(cli), err
+}
+
+type SuperWithCtxStub struct {
+	Impl SuperWithCtx
+}
+
+func (s_ *SuperWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	switch args_.Ordinal {
+	case SuperFooOrdinal:
+		in_ := &superWithCtxFooRequest{}
+		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+		if !ok {
+			return nil, false, _bindings.ErrMissingMarshalerContext
+		}
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
+			return nil, false, err_
+		}
+		y, err_ := s_.Impl.Foo(args_.Ctx, (*in_).S)
+		out_ := &superWithCtxFooResponse{Y: y}
+		return out_, true, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
+type SuperEventProxy _bindings.ChannelProxy

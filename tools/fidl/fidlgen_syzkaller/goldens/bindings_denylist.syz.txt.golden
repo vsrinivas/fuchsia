@@ -120,6 +120,14 @@ test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResultHandles [
 ][varlen]
 
 
+
+resource zx_chan_test_bindingsdenylist_Allowed_client[zx_chan]
+resource zx_chan_test_bindingsdenylist_Allowed_server[zx_chan]
+
+zx_channel_create$test_bindingsdenylist_Allowed(options const[0], out0 ptr[out, zx_chan_test_bindingsdenylist_Allowed_client], out1 ptr[out, zx_chan_test_bindingsdenylist_Allowed_server])
+fdio_service_connect$test_bindingsdenylist_Allowed(path ptr[in, string["/svc/"]], handle zx_chan_test_bindingsdenylist_Allowed_server)
+
+
 test_bindingsdenylist_DenyEachBindingOnlyDenyCppRequest {
        hdr fidl_message_header[2957648440141224850]
        a int8
@@ -206,14 +214,6 @@ zx_channel_call$test_bindingsdenylist_DenyEachBindingOnlyDenyDart(handle zx_chan
 zx_channel_call$test_bindingsdenylist_DenyEachBindingOnlyDenyGo(handle zx_chan_test_bindingsdenylist_DenyEachBinding_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequest, test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_call$test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzer(handle zx_chan_test_bindingsdenylist_DenyEachBinding_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequest, test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_call$test_bindingsdenylist_DenyEachBindingOnlyDenyRust(handle zx_chan_test_bindingsdenylist_DenyEachBinding_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequest, test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
-
-
-
-resource zx_chan_test_bindingsdenylist_Allowed_client[zx_chan]
-resource zx_chan_test_bindingsdenylist_Allowed_server[zx_chan]
-
-zx_channel_create$test_bindingsdenylist_Allowed(options const[0], out0 ptr[out, zx_chan_test_bindingsdenylist_Allowed_client], out1 ptr[out, zx_chan_test_bindingsdenylist_Allowed_server])
-fdio_service_connect$test_bindingsdenylist_Allowed(path ptr[in, string["/svc/"]], handle zx_chan_test_bindingsdenylist_Allowed_server)
 
 
 test_bindingsdenylist_ImportsSameNameContextUnattributedRequest {

@@ -183,42 +183,6 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "test.unknowninteractions/Example_FlexibleTwoWay_Response",
-      "naming_context": [
-        "Example",
-        "FlexibleTwoWay",
-        "Response",
-        "result",
-        "response"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions/example.test.fidl",
-        "line": 12,
-        "column": 35,
-        "length": 9
-      },
-      "members": [],
-      "resource": false,
-      "type_shape_v1": {
-        "inline_size": 1,
-        "alignment": 1,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 1,
-        "alignment": 1,
-        "depth": 0,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false
-      }
-    },
-    {
       "name": "test.unknowninteractions/ExampleFlexibleTwoWayTopResponse",
       "naming_context": [
         "Example",
@@ -290,6 +254,42 @@
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/Example_FlexibleTwoWay_Response",
+      "naming_context": [
+        "Example",
+        "FlexibleTwoWay",
+        "Response",
+        "result",
+        "response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions/example.test.fidl",
+        "line": 12,
+        "column": 35,
+        "length": 9
+      },
+      "members": [],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
         "has_flexible_envelope": false
       }
     }
@@ -427,8 +427,8 @@
   ],
   "declarations": {
     "test.unknowninteractions/Example": "interface",
-    "test.unknowninteractions/Example_FlexibleTwoWay_Response": "struct",
     "test.unknowninteractions/ExampleFlexibleTwoWayTopResponse": "struct",
+    "test.unknowninteractions/Example_FlexibleTwoWay_Response": "struct",
     "test.unknowninteractions/Example_FlexibleTwoWay_Result": "union"
   }
 }

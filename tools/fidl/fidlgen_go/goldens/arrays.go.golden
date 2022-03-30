@@ -6,17 +6,6 @@ import (
 	_bindings "syscall/zx/fidl"
 )
 
-type StructSmallArray struct {
-	_ struct{}  `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"4" fidl_size_v2:"8" fidl_alignment_v2:"4"`
-	A [2]uint32 `fidl_offset_v1:"0" fidl_offset_v2:"0"`
-}
-
-var _mStructSmallArray = _bindings.CreateLazyMarshaler(StructSmallArray{})
-
-func (msg *StructSmallArray) Marshaler() _bindings.Marshaler {
-	return _mStructSmallArray
-}
-
 type StructLargeArray struct {
 	_ struct{}    `fidl:"s" fidl_size_v1:"400" fidl_alignment_v1:"4" fidl_size_v2:"400" fidl_alignment_v2:"4"`
 	A [100]uint32 `fidl_offset_v1:"0" fidl_offset_v2:"0"`
@@ -28,49 +17,15 @@ func (msg *StructLargeArray) Marshaler() _bindings.Marshaler {
 	return _mStructLargeArray
 }
 
-type I_unionSmallArrayTag uint64
-
-const (
-	UnionSmallArrayA = 1 // 0x00000001
-)
-
-type UnionSmallArray struct {
-	I_unionSmallArrayTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
-	A                    [2]uint32 `fidl_ordinal:"1"`
+type StructSmallArray struct {
+	_ struct{}  `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"4" fidl_size_v2:"8" fidl_alignment_v2:"4"`
+	A [2]uint32 `fidl_offset_v1:"0" fidl_offset_v2:"0"`
 }
 
-var _mUnionSmallArray = _bindings.CreateLazyMarshaler(UnionSmallArray{})
+var _mStructSmallArray = _bindings.CreateLazyMarshaler(StructSmallArray{})
 
-func (msg *UnionSmallArray) Marshaler() _bindings.Marshaler {
-	return _mUnionSmallArray
-}
-
-func (_m *UnionSmallArray) reset() {
-	switch _m.I_unionSmallArrayTag {
-	case 1:
-		var _zeroed [2]uint32
-		_m.A = _zeroed
-	}
-}
-
-func (_m *UnionSmallArray) Which() I_unionSmallArrayTag {
-	return _m.I_unionSmallArrayTag
-}
-
-func (_m *UnionSmallArray) Ordinal() uint64 {
-	return uint64(_m.I_unionSmallArrayTag)
-}
-
-func (_m *UnionSmallArray) SetA(a [2]uint32) {
-	_m.reset()
-	_m.I_unionSmallArrayTag = UnionSmallArrayA
-	_m.A = a
-}
-
-func UnionSmallArrayWithA(a [2]uint32) UnionSmallArray {
-	var _u UnionSmallArray
-	_u.SetA(a)
-	return _u
+func (msg *StructSmallArray) Marshaler() _bindings.Marshaler {
+	return _mStructSmallArray
 }
 
 type I_unionLargeArrayTag uint64
@@ -118,49 +73,49 @@ func UnionLargeArrayWithA(a [100]uint32) UnionLargeArray {
 	return _u
 }
 
-type TableSmallArray struct {
-	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
-	I_unknownData interface{}
-	A             [2]uint32 `fidl_ordinal:"1"`
-	APresent      bool
+type I_unionSmallArrayTag uint64
+
+const (
+	UnionSmallArrayA = 1 // 0x00000001
+)
+
+type UnionSmallArray struct {
+	I_unionSmallArrayTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	A                    [2]uint32 `fidl_ordinal:"1"`
 }
 
-var _mTableSmallArray = _bindings.CreateLazyMarshaler(TableSmallArray{})
+var _mUnionSmallArray = _bindings.CreateLazyMarshaler(UnionSmallArray{})
 
-func (msg *TableSmallArray) Marshaler() _bindings.Marshaler {
-	return _mTableSmallArray
+func (msg *UnionSmallArray) Marshaler() _bindings.Marshaler {
+	return _mUnionSmallArray
 }
 
-func (u *TableSmallArray) SetA(a [2]uint32) {
-	u.A = a
-	u.APresent = true
-}
-
-func (u *TableSmallArray) GetA() [2]uint32 {
-	return u.A
-}
-
-func (u *TableSmallArray) GetAWithDefault(_default [2]uint32) [2]uint32 {
-	if !u.HasA() {
-		return _default
+func (_m *UnionSmallArray) reset() {
+	switch _m.I_unionSmallArrayTag {
+	case 1:
+		var _zeroed [2]uint32
+		_m.A = _zeroed
 	}
-	return u.A
 }
 
-func (u *TableSmallArray) HasA() bool {
-	return u.APresent
+func (_m *UnionSmallArray) Which() I_unionSmallArrayTag {
+	return _m.I_unionSmallArrayTag
 }
 
-func (u *TableSmallArray) ClearA() {
-	u.APresent = false
+func (_m *UnionSmallArray) Ordinal() uint64 {
+	return uint64(_m.I_unionSmallArrayTag)
 }
 
-func (u *TableSmallArray) HasUnknownData() bool {
-	return u.I_unknownData != nil
+func (_m *UnionSmallArray) SetA(a [2]uint32) {
+	_m.reset()
+	_m.I_unionSmallArrayTag = UnionSmallArrayA
+	_m.A = a
 }
 
-func (u *TableSmallArray) GetUnknownData() map[uint64]_bindings.UnknownData {
-	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
+func UnionSmallArrayWithA(a [2]uint32) UnionSmallArray {
+	var _u UnionSmallArray
+	_u.SetA(a)
+	return _u
 }
 
 type TableLargeArray struct {
@@ -205,5 +160,50 @@ func (u *TableLargeArray) HasUnknownData() bool {
 }
 
 func (u *TableLargeArray) GetUnknownData() map[uint64]_bindings.UnknownData {
+	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
+}
+
+type TableSmallArray struct {
+	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_unknownData interface{}
+	A             [2]uint32 `fidl_ordinal:"1"`
+	APresent      bool
+}
+
+var _mTableSmallArray = _bindings.CreateLazyMarshaler(TableSmallArray{})
+
+func (msg *TableSmallArray) Marshaler() _bindings.Marshaler {
+	return _mTableSmallArray
+}
+
+func (u *TableSmallArray) SetA(a [2]uint32) {
+	u.A = a
+	u.APresent = true
+}
+
+func (u *TableSmallArray) GetA() [2]uint32 {
+	return u.A
+}
+
+func (u *TableSmallArray) GetAWithDefault(_default [2]uint32) [2]uint32 {
+	if !u.HasA() {
+		return _default
+	}
+	return u.A
+}
+
+func (u *TableSmallArray) HasA() bool {
+	return u.APresent
+}
+
+func (u *TableSmallArray) ClearA() {
+	u.APresent = false
+}
+
+func (u *TableSmallArray) HasUnknownData() bool {
+	return u.I_unknownData != nil
+}
+
+func (u *TableSmallArray) GetUnknownData() map[uint64]_bindings.UnknownData {
 	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
 }

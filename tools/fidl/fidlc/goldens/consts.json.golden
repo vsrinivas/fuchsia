@@ -82,88 +82,6 @@
   ],
   "const_declarations": [
     {
-      "name": "test.consts/ENABLED_FLAG",
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 3,
-        "column": 7,
-        "length": 12
-      },
-      "type": {
-        "kind": "primitive",
-        "subtype": "bool",
-        "type_shape_v1": {
-          "inline_size": 1,
-          "alignment": 1,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        },
-        "type_shape_v2": {
-          "inline_size": 1,
-          "alignment": 1,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        }
-      },
-      "value": {
-        "kind": "literal",
-        "value": "true",
-        "expression": "true",
-        "literal": {
-          "kind": "bool",
-          "value": "true",
-          "expression": "true"
-        }
-      }
-    },
-    {
-      "name": "test.consts/OFFSET",
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 4,
-        "column": 7,
-        "length": 6
-      },
-      "type": {
-        "kind": "primitive",
-        "subtype": "int8",
-        "type_shape_v1": {
-          "inline_size": 1,
-          "alignment": 1,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        },
-        "type_shape_v2": {
-          "inline_size": 1,
-          "alignment": 1,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        }
-      },
-      "value": {
-        "kind": "literal",
-        "value": "-33",
-        "expression": "-33",
-        "literal": {
-          "kind": "numeric",
-          "value": "-33",
-          "expression": "-33"
-        }
-      }
-    },
-    {
       "name": "test.consts/ANSWER",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
@@ -246,19 +164,19 @@
       }
     },
     {
-      "name": "test.consts/POPULATION_USA_2018",
+      "name": "test.consts/CONVERSION_FACTOR",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 7,
+        "line": 12,
         "column": 7,
-        "length": 19
+        "length": 17
       },
       "type": {
         "kind": "primitive",
-        "subtype": "uint32",
+        "subtype": "float64",
         "type_shape_v1": {
-          "inline_size": 4,
-          "alignment": 4,
+          "inline_size": 8,
+          "alignment": 8,
           "depth": 0,
           "max_handles": 0,
           "max_out_of_line": 0,
@@ -266,8 +184,8 @@
           "has_flexible_envelope": false
         },
         "type_shape_v2": {
-          "inline_size": 4,
-          "alignment": 4,
+          "inline_size": 8,
+          "alignment": 8,
           "depth": 0,
           "max_handles": 0,
           "max_out_of_line": 0,
@@ -277,12 +195,12 @@
       },
       "value": {
         "kind": "literal",
-        "value": "330000000",
-        "expression": "330000000",
+        "value": "1.41421",
+        "expression": "1.41421358",
         "literal": {
           "kind": "numeric",
-          "value": "330000000",
-          "expression": "330000000"
+          "value": "1.41421",
+          "expression": "1.41421358"
         }
       }
     },
@@ -328,6 +246,47 @@
       }
     },
     {
+      "name": "test.consts/ENABLED_FLAG",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
+        "line": 3,
+        "column": 7,
+        "length": 12
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "bool",
+        "type_shape_v1": {
+          "inline_size": 1,
+          "alignment": 1,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 1,
+          "alignment": 1,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "literal",
+        "value": "true",
+        "expression": "true",
+        "literal": {
+          "kind": "bool",
+          "value": "true",
+          "expression": "true"
+        }
+      }
+    },
+    {
       "name": "test.consts/FUCHSIA",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
@@ -365,47 +324,6 @@
           "kind": "numeric",
           "value": "4054509061583223046",
           "expression": "4054509061583223046"
-        }
-      }
-    },
-    {
-      "name": "test.consts/USERNAME",
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 10,
-        "column": 7,
-        "length": 8
-      },
-      "type": {
-        "kind": "string",
-        "nullable": false,
-        "type_shape_v1": {
-          "inline_size": 16,
-          "alignment": 8,
-          "depth": 1,
-          "max_handles": 0,
-          "max_out_of_line": 4294967295,
-          "has_padding": true,
-          "has_flexible_envelope": false
-        },
-        "type_shape_v2": {
-          "inline_size": 16,
-          "alignment": 8,
-          "depth": 1,
-          "max_handles": 0,
-          "max_out_of_line": 4294967295,
-          "has_padding": true,
-          "has_flexible_envelope": false
-        }
-      },
-      "value": {
-        "kind": "literal",
-        "value": "\"squeenze\"",
-        "expression": "\"\\\"squeenze\\\"\"",
-        "literal": {
-          "kind": "string",
-          "value": "\"squeenze\"",
-          "expression": "\"\\\"squeenze\\\"\""
         }
       }
     },
@@ -451,19 +369,19 @@
       }
     },
     {
-      "name": "test.consts/CONVERSION_FACTOR",
+      "name": "test.consts/OFFSET",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 12,
+        "line": 4,
         "column": 7,
-        "length": 17
+        "length": 6
       },
       "type": {
         "kind": "primitive",
-        "subtype": "float64",
+        "subtype": "int8",
         "type_shape_v1": {
-          "inline_size": 8,
-          "alignment": 8,
+          "inline_size": 1,
+          "alignment": 1,
           "depth": 0,
           "max_handles": 0,
           "max_out_of_line": 0,
@@ -471,8 +389,8 @@
           "has_flexible_envelope": false
         },
         "type_shape_v2": {
-          "inline_size": 8,
-          "alignment": 8,
+          "inline_size": 1,
+          "alignment": 1,
           "depth": 0,
           "max_handles": 0,
           "max_out_of_line": 0,
@@ -482,64 +400,26 @@
       },
       "value": {
         "kind": "literal",
-        "value": "1.41421",
-        "expression": "1.41421358",
+        "value": "-33",
+        "expression": "-33",
         "literal": {
           "kind": "numeric",
-          "value": "1.41421",
-          "expression": "1.41421358"
+          "value": "-33",
+          "expression": "-33"
         }
       }
     },
     {
-      "name": "test.consts/enumVal",
+      "name": "test.consts/POPULATION_USA_2018",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 18,
+        "line": 7,
         "column": 7,
-        "length": 7
-      },
-      "type": {
-        "kind": "identifier",
-        "identifier": "test.consts/EnumType",
-        "nullable": false,
-        "type_shape_v1": {
-          "inline_size": 4,
-          "alignment": 4,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        },
-        "type_shape_v2": {
-          "inline_size": 4,
-          "alignment": 4,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        }
-      },
-      "value": {
-        "kind": "identifier",
-        "value": "1",
-        "expression": "EnumType.VALUE",
-        "identifier": "test.consts/EnumType.VALUE"
-      }
-    },
-    {
-      "name": "test.consts/enumPrimitiveVal",
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 19,
-        "column": 7,
-        "length": 16
+        "length": 19
       },
       "type": {
         "kind": "primitive",
-        "subtype": "int32",
+        "subtype": "uint32",
         "type_shape_v1": {
           "inline_size": 4,
           "alignment": 4,
@@ -560,61 +440,68 @@
         }
       },
       "value": {
-        "kind": "identifier",
-        "value": "1",
-        "expression": "EnumType.VALUE",
-        "identifier": "test.consts/EnumType.VALUE"
+        "kind": "literal",
+        "value": "330000000",
+        "expression": "330000000",
+        "literal": {
+          "kind": "numeric",
+          "value": "330000000",
+          "expression": "330000000"
+        }
       }
     },
     {
-      "name": "test.consts/enumTrue",
+      "name": "test.consts/USERNAME",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 20,
+        "line": 10,
         "column": 7,
         "length": 8
       },
       "type": {
-        "kind": "identifier",
-        "identifier": "test.consts/EnumType",
+        "kind": "string",
         "nullable": false,
         "type_shape_v1": {
-          "inline_size": 4,
-          "alignment": 4,
-          "depth": 0,
+          "inline_size": 16,
+          "alignment": 8,
+          "depth": 1,
           "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
+          "max_out_of_line": 4294967295,
+          "has_padding": true,
           "has_flexible_envelope": false
         },
         "type_shape_v2": {
-          "inline_size": 4,
-          "alignment": 4,
-          "depth": 0,
+          "inline_size": 16,
+          "alignment": 8,
+          "depth": 1,
           "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
+          "max_out_of_line": 4294967295,
+          "has_padding": true,
           "has_flexible_envelope": false
         }
       },
       "value": {
-        "kind": "identifier",
-        "value": "2",
-        "expression": "EnumType.true",
-        "identifier": "test.consts/EnumType.true"
+        "kind": "literal",
+        "value": "\"squeenze\"",
+        "expression": "\"\\\"squeenze\\\"\"",
+        "literal": {
+          "kind": "string",
+          "value": "\"squeenze\"",
+          "expression": "\"\\\"squeenze\\\"\""
+        }
       }
     },
     {
-      "name": "test.consts/enumPrimitiveTrue",
+      "name": "test.consts/bitsPrimitiveTrue",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 21,
+        "line": 30,
         "column": 7,
         "length": 17
       },
       "type": {
         "kind": "primitive",
-        "subtype": "int32",
+        "subtype": "uint32",
         "type_shape_v1": {
           "inline_size": 4,
           "alignment": 4,
@@ -637,46 +524,8 @@
       "value": {
         "kind": "identifier",
         "value": "2",
-        "expression": "EnumType.true",
-        "identifier": "test.consts/EnumType.true"
-      }
-    },
-    {
-      "name": "test.consts/bitsVal",
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 27,
-        "column": 7,
-        "length": 7
-      },
-      "type": {
-        "kind": "identifier",
-        "identifier": "test.consts/BitsType",
-        "nullable": false,
-        "type_shape_v1": {
-          "inline_size": 4,
-          "alignment": 4,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        },
-        "type_shape_v2": {
-          "inline_size": 4,
-          "alignment": 4,
-          "depth": 0,
-          "max_handles": 0,
-          "max_out_of_line": 0,
-          "has_padding": false,
-          "has_flexible_envelope": false
-        }
-      },
-      "value": {
-        "kind": "identifier",
-        "value": "1",
-        "expression": "BitsType.VALUE",
-        "identifier": "test.consts/BitsType.VALUE"
+        "expression": "BitsType.true",
+        "identifier": "test.consts/BitsType.true"
       }
     },
     {
@@ -755,16 +604,54 @@
       }
     },
     {
-      "name": "test.consts/bitsPrimitiveTrue",
+      "name": "test.consts/bitsVal",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 30,
+        "line": 27,
+        "column": 7,
+        "length": 7
+      },
+      "type": {
+        "kind": "identifier",
+        "identifier": "test.consts/BitsType",
+        "nullable": false,
+        "type_shape_v1": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "identifier",
+        "value": "1",
+        "expression": "BitsType.VALUE",
+        "identifier": "test.consts/BitsType.VALUE"
+      }
+    },
+    {
+      "name": "test.consts/enumPrimitiveTrue",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
+        "line": 21,
         "column": 7,
         "length": 17
       },
       "type": {
         "kind": "primitive",
-        "subtype": "uint32",
+        "subtype": "int32",
         "type_shape_v1": {
           "inline_size": 4,
           "alignment": 4,
@@ -787,8 +674,121 @@
       "value": {
         "kind": "identifier",
         "value": "2",
-        "expression": "BitsType.true",
-        "identifier": "test.consts/BitsType.true"
+        "expression": "EnumType.true",
+        "identifier": "test.consts/EnumType.true"
+      }
+    },
+    {
+      "name": "test.consts/enumPrimitiveVal",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
+        "line": 19,
+        "column": 7,
+        "length": 16
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "int32",
+        "type_shape_v1": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "identifier",
+        "value": "1",
+        "expression": "EnumType.VALUE",
+        "identifier": "test.consts/EnumType.VALUE"
+      }
+    },
+    {
+      "name": "test.consts/enumTrue",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
+        "line": 20,
+        "column": 7,
+        "length": 8
+      },
+      "type": {
+        "kind": "identifier",
+        "identifier": "test.consts/EnumType",
+        "nullable": false,
+        "type_shape_v1": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "identifier",
+        "value": "2",
+        "expression": "EnumType.true",
+        "identifier": "test.consts/EnumType.true"
+      }
+    },
+    {
+      "name": "test.consts/enumVal",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
+        "line": 18,
+        "column": 7,
+        "length": 7
+      },
+      "type": {
+        "kind": "identifier",
+        "identifier": "test.consts/EnumType",
+        "nullable": false,
+        "type_shape_v1": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "identifier",
+        "value": "1",
+        "expression": "EnumType.VALUE",
+        "identifier": "test.consts/EnumType.VALUE"
       }
     }
   ],
@@ -880,24 +880,24 @@
   ],
   "declarations": {
     "test.consts/BitsType": "bits",
-    "test.consts/ENABLED_FLAG": "const",
-    "test.consts/OFFSET": "const",
     "test.consts/ANSWER": "const",
     "test.consts/ANSWER_IN_BINARY": "const",
-    "test.consts/POPULATION_USA_2018": "const",
-    "test.consts/DIAMOND": "const",
-    "test.consts/FUCHSIA": "const",
-    "test.consts/USERNAME": "const",
-    "test.consts/MIN_TEMP": "const",
     "test.consts/CONVERSION_FACTOR": "const",
-    "test.consts/enumVal": "const",
-    "test.consts/enumPrimitiveVal": "const",
-    "test.consts/enumTrue": "const",
-    "test.consts/enumPrimitiveTrue": "const",
-    "test.consts/bitsVal": "const",
+    "test.consts/DIAMOND": "const",
+    "test.consts/ENABLED_FLAG": "const",
+    "test.consts/FUCHSIA": "const",
+    "test.consts/MIN_TEMP": "const",
+    "test.consts/OFFSET": "const",
+    "test.consts/POPULATION_USA_2018": "const",
+    "test.consts/USERNAME": "const",
+    "test.consts/bitsPrimitiveTrue": "const",
     "test.consts/bitsPrimitiveVal": "const",
     "test.consts/bitsTrue": "const",
-    "test.consts/bitsPrimitiveTrue": "const",
+    "test.consts/bitsVal": "const",
+    "test.consts/enumPrimitiveTrue": "const",
+    "test.consts/enumPrimitiveVal": "const",
+    "test.consts/enumTrue": "const",
+    "test.consts/enumVal": "const",
     "test.consts/EnumType": "enum"
   }
 }

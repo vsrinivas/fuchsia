@@ -41,38 +41,38 @@ import 'package:fidl_test_protocolpayloads_imported/fidl_async.dart'
 // ignore_for_file: avoid_unused_constructor_parameters
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
-enum MainProtocolTwoWayLocalWithErrorResultTag {
+enum MainProtocolOnAnonWithErrorResultTag {
   response, // 0x1
   err, // 0x2
 }
 
-const Map<int, MainProtocolTwoWayLocalWithErrorResultTag>
-    _MainProtocolTwoWayLocalWithErrorResultTag_map = {
-  1: MainProtocolTwoWayLocalWithErrorResultTag.response,
-  2: MainProtocolTwoWayLocalWithErrorResultTag.err,
+const Map<int, MainProtocolOnAnonWithErrorResultTag>
+    _MainProtocolOnAnonWithErrorResultTag_map = {
+  1: MainProtocolOnAnonWithErrorResultTag.response,
+  2: MainProtocolOnAnonWithErrorResultTag.err,
 };
 
-class MainProtocolTwoWayLocalWithErrorResult extends $fidl.Union {
-  const MainProtocolTwoWayLocalWithErrorResult.withResponse(
-      LocalStructPayload value)
+class MainProtocolOnAnonWithErrorResult extends $fidl.Union {
+  const MainProtocolOnAnonWithErrorResult.withResponse(
+      MainProtocolOnAnonWithErrorResponse value)
       : _ordinal = 1,
         _data = value;
 
-  const MainProtocolTwoWayLocalWithErrorResult.withErr(int value)
+  const MainProtocolOnAnonWithErrorResult.withErr(int value)
       : _ordinal = 2,
         _data = value;
 
-  MainProtocolTwoWayLocalWithErrorResult._(int ordinal, Object data)
+  MainProtocolOnAnonWithErrorResult._(int ordinal, Object data)
       : _ordinal = ordinal,
         _data = data;
 
   final int _ordinal;
   final _data;
 
-  MainProtocolTwoWayLocalWithErrorResultTag get $tag =>
-      _MainProtocolTwoWayLocalWithErrorResultTag_map[_ordinal]!;
+  MainProtocolOnAnonWithErrorResultTag get $tag =>
+      _MainProtocolOnAnonWithErrorResultTag_map[_ordinal]!;
 
-  LocalStructPayload? get response {
+  MainProtocolOnAnonWithErrorResponse? get response {
     if (_ordinal != 1) {
       return null;
     }
@@ -102,35 +102,127 @@ class MainProtocolTwoWayLocalWithErrorResult extends $fidl.Union {
   @override
   Object get $data => _data;
 
-  static MainProtocolTwoWayLocalWithErrorResult _ctor(
-      int ordinal, Object data) {
-    return MainProtocolTwoWayLocalWithErrorResult._(ordinal, data);
+  static MainProtocolOnAnonWithErrorResult _ctor(int ordinal, Object data) {
+    return MainProtocolOnAnonWithErrorResult._(ordinal, data);
   }
 }
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.UnionType<MainProtocolTwoWayLocalWithErrorResult>
-    kMainProtocol_TwoWayLocalWithError_Result_Type =
-    $fidl.UnionType<MainProtocolTwoWayLocalWithErrorResult>(
+const $fidl.UnionType<MainProtocolOnAnonWithErrorResult>
+    kMainProtocol_OnAnonWithError_Result_Type =
+    $fidl.UnionType<MainProtocolOnAnonWithErrorResult>(
   members: <int, $fidl.FidlType>{
-    1: kLocalStructPayload_Type,
+    1: kMainProtocol_OnAnonWithError_Response_Type,
     2: $fidl.Uint32Type(),
   },
-  ctor: MainProtocolTwoWayLocalWithErrorResult._ctor,
+  ctor: MainProtocolOnAnonWithErrorResult._ctor,
   flexible: false,
   resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<MainProtocolTwoWayLocalWithErrorResult>
-    kMainProtocol_TwoWayLocalWithError_Result_OptType =
-    $fidl.NullableUnionType<MainProtocolTwoWayLocalWithErrorResult>(
+const $fidl.NullableUnionType<MainProtocolOnAnonWithErrorResult>
+    kMainProtocol_OnAnonWithError_Result_OptType =
+    $fidl.NullableUnionType<MainProtocolOnAnonWithErrorResult>(
   members: <int, $fidl.FidlType>{
-    1: kLocalStructPayload_Type,
+    1: kMainProtocol_OnAnonWithError_Response_Type,
     2: $fidl.Uint32Type(),
   },
-  ctor: MainProtocolTwoWayLocalWithErrorResult._ctor,
+  ctor: MainProtocolOnAnonWithErrorResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum MainProtocolOnImportWithErrorResultTag {
+  response, // 0x1
+  err, // 0x2
+}
+
+const Map<int, MainProtocolOnImportWithErrorResultTag>
+    _MainProtocolOnImportWithErrorResultTag_map = {
+  1: MainProtocolOnImportWithErrorResultTag.response,
+  2: MainProtocolOnImportWithErrorResultTag.err,
+};
+
+class MainProtocolOnImportWithErrorResult extends $fidl.Union {
+  const MainProtocolOnImportWithErrorResult.withResponse(
+      lib$test_protocolpayloads_imported.ImportStructPayload value)
+      : _ordinal = 1,
+        _data = value;
+
+  const MainProtocolOnImportWithErrorResult.withErr(int value)
+      : _ordinal = 2,
+        _data = value;
+
+  MainProtocolOnImportWithErrorResult._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  MainProtocolOnImportWithErrorResultTag get $tag =>
+      _MainProtocolOnImportWithErrorResultTag_map[_ordinal]!;
+
+  lib$test_protocolpayloads_imported.ImportStructPayload? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static MainProtocolOnImportWithErrorResult _ctor(int ordinal, Object data) {
+    return MainProtocolOnImportWithErrorResult._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<MainProtocolOnImportWithErrorResult>
+    kMainProtocol_OnImportWithError_Result_Type =
+    $fidl.UnionType<MainProtocolOnImportWithErrorResult>(
+  members: <int, $fidl.FidlType>{
+    1: lib$test_protocolpayloads_imported.kImportStructPayload_Type,
+    2: $fidl.Uint32Type(),
+  },
+  ctor: MainProtocolOnImportWithErrorResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<MainProtocolOnImportWithErrorResult>
+    kMainProtocol_OnImportWithError_Result_OptType =
+    $fidl.NullableUnionType<MainProtocolOnImportWithErrorResult>(
+  members: <int, $fidl.FidlType>{
+    1: lib$test_protocolpayloads_imported.kImportStructPayload_Type,
+    2: $fidl.Uint32Type(),
+  },
+  ctor: MainProtocolOnImportWithErrorResult._ctor,
   flexible: false,
   resource: false,
 );
@@ -224,6 +316,99 @@ const $fidl.NullableUnionType<MainProtocolOnLocalWithErrorResult>
     2: $fidl.Uint32Type(),
   },
   ctor: MainProtocolOnLocalWithErrorResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum MainProtocolTwoWayAnonWithErrorResultTag {
+  response, // 0x1
+  err, // 0x2
+}
+
+const Map<int, MainProtocolTwoWayAnonWithErrorResultTag>
+    _MainProtocolTwoWayAnonWithErrorResultTag_map = {
+  1: MainProtocolTwoWayAnonWithErrorResultTag.response,
+  2: MainProtocolTwoWayAnonWithErrorResultTag.err,
+};
+
+class MainProtocolTwoWayAnonWithErrorResult extends $fidl.Union {
+  const MainProtocolTwoWayAnonWithErrorResult.withResponse(
+      MainProtocolTwoWayAnonWithErrorResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const MainProtocolTwoWayAnonWithErrorResult.withErr(int value)
+      : _ordinal = 2,
+        _data = value;
+
+  MainProtocolTwoWayAnonWithErrorResult._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  MainProtocolTwoWayAnonWithErrorResultTag get $tag =>
+      _MainProtocolTwoWayAnonWithErrorResultTag_map[_ordinal]!;
+
+  MainProtocolTwoWayAnonWithErrorResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static MainProtocolTwoWayAnonWithErrorResult _ctor(int ordinal, Object data) {
+    return MainProtocolTwoWayAnonWithErrorResult._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<MainProtocolTwoWayAnonWithErrorResult>
+    kMainProtocol_TwoWayAnonWithError_Result_Type =
+    $fidl.UnionType<MainProtocolTwoWayAnonWithErrorResult>(
+  members: <int, $fidl.FidlType>{
+    1: kMainProtocol_TwoWayAnonWithError_Response_Type,
+    2: $fidl.Uint32Type(),
+  },
+  ctor: MainProtocolTwoWayAnonWithErrorResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<MainProtocolTwoWayAnonWithErrorResult>
+    kMainProtocol_TwoWayAnonWithError_Result_OptType =
+    $fidl.NullableUnionType<MainProtocolTwoWayAnonWithErrorResult>(
+  members: <int, $fidl.FidlType>{
+    1: kMainProtocol_TwoWayAnonWithError_Response_Type,
+    2: $fidl.Uint32Type(),
+  },
+  ctor: MainProtocolTwoWayAnonWithErrorResult._ctor,
   flexible: false,
   resource: false,
 );
@@ -322,38 +507,38 @@ const $fidl.NullableUnionType<MainProtocolTwoWayImportWithErrorResult>
   resource: false,
 );
 
-enum MainProtocolOnImportWithErrorResultTag {
+enum MainProtocolTwoWayLocalWithErrorResultTag {
   response, // 0x1
   err, // 0x2
 }
 
-const Map<int, MainProtocolOnImportWithErrorResultTag>
-    _MainProtocolOnImportWithErrorResultTag_map = {
-  1: MainProtocolOnImportWithErrorResultTag.response,
-  2: MainProtocolOnImportWithErrorResultTag.err,
+const Map<int, MainProtocolTwoWayLocalWithErrorResultTag>
+    _MainProtocolTwoWayLocalWithErrorResultTag_map = {
+  1: MainProtocolTwoWayLocalWithErrorResultTag.response,
+  2: MainProtocolTwoWayLocalWithErrorResultTag.err,
 };
 
-class MainProtocolOnImportWithErrorResult extends $fidl.Union {
-  const MainProtocolOnImportWithErrorResult.withResponse(
-      lib$test_protocolpayloads_imported.ImportStructPayload value)
+class MainProtocolTwoWayLocalWithErrorResult extends $fidl.Union {
+  const MainProtocolTwoWayLocalWithErrorResult.withResponse(
+      LocalStructPayload value)
       : _ordinal = 1,
         _data = value;
 
-  const MainProtocolOnImportWithErrorResult.withErr(int value)
+  const MainProtocolTwoWayLocalWithErrorResult.withErr(int value)
       : _ordinal = 2,
         _data = value;
 
-  MainProtocolOnImportWithErrorResult._(int ordinal, Object data)
+  MainProtocolTwoWayLocalWithErrorResult._(int ordinal, Object data)
       : _ordinal = ordinal,
         _data = data;
 
   final int _ordinal;
   final _data;
 
-  MainProtocolOnImportWithErrorResultTag get $tag =>
-      _MainProtocolOnImportWithErrorResultTag_map[_ordinal]!;
+  MainProtocolTwoWayLocalWithErrorResultTag get $tag =>
+      _MainProtocolTwoWayLocalWithErrorResultTag_map[_ordinal]!;
 
-  lib$test_protocolpayloads_imported.ImportStructPayload? get response {
+  LocalStructPayload? get response {
     if (_ordinal != 1) {
       return null;
     }
@@ -383,231 +568,46 @@ class MainProtocolOnImportWithErrorResult extends $fidl.Union {
   @override
   Object get $data => _data;
 
-  static MainProtocolOnImportWithErrorResult _ctor(int ordinal, Object data) {
-    return MainProtocolOnImportWithErrorResult._(ordinal, data);
+  static MainProtocolTwoWayLocalWithErrorResult _ctor(
+      int ordinal, Object data) {
+    return MainProtocolTwoWayLocalWithErrorResult._(ordinal, data);
   }
 }
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.UnionType<MainProtocolOnImportWithErrorResult>
-    kMainProtocol_OnImportWithError_Result_Type =
-    $fidl.UnionType<MainProtocolOnImportWithErrorResult>(
+const $fidl.UnionType<MainProtocolTwoWayLocalWithErrorResult>
+    kMainProtocol_TwoWayLocalWithError_Result_Type =
+    $fidl.UnionType<MainProtocolTwoWayLocalWithErrorResult>(
   members: <int, $fidl.FidlType>{
-    1: lib$test_protocolpayloads_imported.kImportStructPayload_Type,
+    1: kLocalStructPayload_Type,
     2: $fidl.Uint32Type(),
   },
-  ctor: MainProtocolOnImportWithErrorResult._ctor,
+  ctor: MainProtocolTwoWayLocalWithErrorResult._ctor,
   flexible: false,
   resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<MainProtocolOnImportWithErrorResult>
-    kMainProtocol_OnImportWithError_Result_OptType =
-    $fidl.NullableUnionType<MainProtocolOnImportWithErrorResult>(
+const $fidl.NullableUnionType<MainProtocolTwoWayLocalWithErrorResult>
+    kMainProtocol_TwoWayLocalWithError_Result_OptType =
+    $fidl.NullableUnionType<MainProtocolTwoWayLocalWithErrorResult>(
   members: <int, $fidl.FidlType>{
-    1: lib$test_protocolpayloads_imported.kImportStructPayload_Type,
+    1: kLocalStructPayload_Type,
     2: $fidl.Uint32Type(),
   },
-  ctor: MainProtocolOnImportWithErrorResult._ctor,
+  ctor: MainProtocolTwoWayLocalWithErrorResult._ctor,
   flexible: false,
   resource: false,
 );
 
-enum MainProtocolTwoWayAnonWithErrorResultTag {
-  response, // 0x1
-  err, // 0x2
-}
-
-const Map<int, MainProtocolTwoWayAnonWithErrorResultTag>
-    _MainProtocolTwoWayAnonWithErrorResultTag_map = {
-  1: MainProtocolTwoWayAnonWithErrorResultTag.response,
-  2: MainProtocolTwoWayAnonWithErrorResultTag.err,
-};
-
-class MainProtocolTwoWayAnonWithErrorResult extends $fidl.Union {
-  const MainProtocolTwoWayAnonWithErrorResult.withResponse(
-      MainProtocolTwoWayAnonWithErrorResponse value)
-      : _ordinal = 1,
-        _data = value;
-
-  const MainProtocolTwoWayAnonWithErrorResult.withErr(int value)
-      : _ordinal = 2,
-        _data = value;
-
-  MainProtocolTwoWayAnonWithErrorResult._(int ordinal, Object data)
-      : _ordinal = ordinal,
-        _data = data;
-
-  final int _ordinal;
-  final _data;
-
-  MainProtocolTwoWayAnonWithErrorResultTag get $tag =>
-      _MainProtocolTwoWayAnonWithErrorResultTag_map[_ordinal]!;
-
-  MainProtocolTwoWayAnonWithErrorResponse? get response {
-    if (_ordinal != 1) {
-      return null;
-    }
-    return _data;
-  }
-
-  int? get err {
-    if (_ordinal != 2) {
-      return null;
-    }
-    return _data;
-  }
-
-  $fidl.UnknownRawData? get $unknownData {
-    switch (_ordinal) {
-      case 1:
-      case 2:
-        return null;
-      default:
-        return _data;
-    }
-  }
-
-  @override
-  int get $ordinal => _ordinal;
-
-  @override
-  Object get $data => _data;
-
-  static MainProtocolTwoWayAnonWithErrorResult _ctor(int ordinal, Object data) {
-    return MainProtocolTwoWayAnonWithErrorResult._(ordinal, data);
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.UnionType<MainProtocolTwoWayAnonWithErrorResult>
-    kMainProtocol_TwoWayAnonWithError_Result_Type =
-    $fidl.UnionType<MainProtocolTwoWayAnonWithErrorResult>(
-  members: <int, $fidl.FidlType>{
-    1: kMainProtocol_TwoWayAnonWithError_Response_Type,
-    2: $fidl.Uint32Type(),
-  },
-  ctor: MainProtocolTwoWayAnonWithErrorResult._ctor,
-  flexible: false,
-  resource: false,
-);
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<MainProtocolTwoWayAnonWithErrorResult>
-    kMainProtocol_TwoWayAnonWithError_Result_OptType =
-    $fidl.NullableUnionType<MainProtocolTwoWayAnonWithErrorResult>(
-  members: <int, $fidl.FidlType>{
-    1: kMainProtocol_TwoWayAnonWithError_Response_Type,
-    2: $fidl.Uint32Type(),
-  },
-  ctor: MainProtocolTwoWayAnonWithErrorResult._ctor,
-  flexible: false,
-  resource: false,
-);
-
-enum MainProtocolOnAnonWithErrorResultTag {
-  response, // 0x1
-  err, // 0x2
-}
-
-const Map<int, MainProtocolOnAnonWithErrorResultTag>
-    _MainProtocolOnAnonWithErrorResultTag_map = {
-  1: MainProtocolOnAnonWithErrorResultTag.response,
-  2: MainProtocolOnAnonWithErrorResultTag.err,
-};
-
-class MainProtocolOnAnonWithErrorResult extends $fidl.Union {
-  const MainProtocolOnAnonWithErrorResult.withResponse(
-      MainProtocolOnAnonWithErrorResponse value)
-      : _ordinal = 1,
-        _data = value;
-
-  const MainProtocolOnAnonWithErrorResult.withErr(int value)
-      : _ordinal = 2,
-        _data = value;
-
-  MainProtocolOnAnonWithErrorResult._(int ordinal, Object data)
-      : _ordinal = ordinal,
-        _data = data;
-
-  final int _ordinal;
-  final _data;
-
-  MainProtocolOnAnonWithErrorResultTag get $tag =>
-      _MainProtocolOnAnonWithErrorResultTag_map[_ordinal]!;
-
-  MainProtocolOnAnonWithErrorResponse? get response {
-    if (_ordinal != 1) {
-      return null;
-    }
-    return _data;
-  }
-
-  int? get err {
-    if (_ordinal != 2) {
-      return null;
-    }
-    return _data;
-  }
-
-  $fidl.UnknownRawData? get $unknownData {
-    switch (_ordinal) {
-      case 1:
-      case 2:
-        return null;
-      default:
-        return _data;
-    }
-  }
-
-  @override
-  int get $ordinal => _ordinal;
-
-  @override
-  Object get $data => _data;
-
-  static MainProtocolOnAnonWithErrorResult _ctor(int ordinal, Object data) {
-    return MainProtocolOnAnonWithErrorResult._(ordinal, data);
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.UnionType<MainProtocolOnAnonWithErrorResult>
-    kMainProtocol_OnAnonWithError_Result_Type =
-    $fidl.UnionType<MainProtocolOnAnonWithErrorResult>(
-  members: <int, $fidl.FidlType>{
-    1: kMainProtocol_OnAnonWithError_Response_Type,
-    2: $fidl.Uint32Type(),
-  },
-  ctor: MainProtocolOnAnonWithErrorResult._ctor,
-  flexible: false,
-  resource: false,
-);
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<MainProtocolOnAnonWithErrorResult>
-    kMainProtocol_OnAnonWithError_Result_OptType =
-    $fidl.NullableUnionType<MainProtocolOnAnonWithErrorResult>(
-  members: <int, $fidl.FidlType>{
-    1: kMainProtocol_OnAnonWithError_Response_Type,
-    2: $fidl.Uint32Type(),
-  },
-  ctor: MainProtocolOnAnonWithErrorResult._ctor,
-  flexible: false,
-  resource: false,
-);
-
-class MainProtocolTwoWayAnonWithErrorResponse extends $fidl.Struct {
-  const MainProtocolTwoWayAnonWithErrorResponse({
+class LocalStructPayload extends $fidl.Struct {
+  const LocalStructPayload({
     required this.a,
     required this.b,
   });
-  MainProtocolTwoWayAnonWithErrorResponse.clone(
-    MainProtocolTwoWayAnonWithErrorResponse $orig, {
+  LocalStructPayload.clone(
+    LocalStructPayload $orig, {
     int? a,
     int? b,
   }) : this(
@@ -645,15 +645,15 @@ class MainProtocolTwoWayAnonWithErrorResponse extends $fidl.Struct {
     }
   }
 
-  static MainProtocolTwoWayAnonWithErrorResponse _structDecode(
+  static LocalStructPayload _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return MainProtocolTwoWayAnonWithErrorResponse(
+        return LocalStructPayload(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 4, $depth));
       case $fidl.WireFormat.v2:
-        return MainProtocolTwoWayAnonWithErrorResponse(
+        return LocalStructPayload(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 4, $depth));
       default:
@@ -664,12 +664,11 @@ class MainProtocolTwoWayAnonWithErrorResponse extends $fidl.Struct {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.StructType<MainProtocolTwoWayAnonWithErrorResponse>
-    kMainProtocol_TwoWayAnonWithError_Response_Type =
-    $fidl.StructType<MainProtocolTwoWayAnonWithErrorResponse>(
+const $fidl.StructType<LocalStructPayload> kLocalStructPayload_Type =
+    $fidl.StructType<LocalStructPayload>(
         inlineSizeV1: 8,
         inlineSizeV2: 8,
-        structDecode: MainProtocolTwoWayAnonWithErrorResponse._structDecode);
+        structDecode: LocalStructPayload._structDecode);
 
 class MainProtocolOnAnonWithErrorResponse extends $fidl.Struct {
   const MainProtocolOnAnonWithErrorResponse({
@@ -741,13 +740,13 @@ const $fidl.StructType<MainProtocolOnAnonWithErrorResponse>
         inlineSizeV2: 8,
         structDecode: MainProtocolOnAnonWithErrorResponse._structDecode);
 
-class LocalStructPayload extends $fidl.Struct {
-  const LocalStructPayload({
+class MainProtocolTwoWayAnonWithErrorResponse extends $fidl.Struct {
+  const MainProtocolTwoWayAnonWithErrorResponse({
     required this.a,
     required this.b,
   });
-  LocalStructPayload.clone(
-    LocalStructPayload $orig, {
+  MainProtocolTwoWayAnonWithErrorResponse.clone(
+    MainProtocolTwoWayAnonWithErrorResponse $orig, {
     int? a,
     int? b,
   }) : this(
@@ -785,15 +784,15 @@ class LocalStructPayload extends $fidl.Struct {
     }
   }
 
-  static LocalStructPayload _structDecode(
+  static MainProtocolTwoWayAnonWithErrorResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return LocalStructPayload(
+        return MainProtocolTwoWayAnonWithErrorResponse(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 4, $depth));
       case $fidl.WireFormat.v2:
-        return LocalStructPayload(
+        return MainProtocolTwoWayAnonWithErrorResponse(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 4, $depth));
       default:
@@ -804,11 +803,12 @@ class LocalStructPayload extends $fidl.Struct {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.StructType<LocalStructPayload> kLocalStructPayload_Type =
-    $fidl.StructType<LocalStructPayload>(
+const $fidl.StructType<MainProtocolTwoWayAnonWithErrorResponse>
+    kMainProtocol_TwoWayAnonWithError_Response_Type =
+    $fidl.StructType<MainProtocolTwoWayAnonWithErrorResponse>(
         inlineSizeV1: 8,
         inlineSizeV2: 8,
-        structDecode: LocalStructPayload._structDecode);
+        structDecode: MainProtocolTwoWayAnonWithErrorResponse._structDecode);
 
 // oneWayComposed: (int a)
 const int _kMainProtocol_OneWayComposed_Ordinal = 0x241e4384443ccb10;

@@ -110,442 +110,6 @@ const $fidl.StructType<Padding1ByteEnd> kPadding1ByteEnd_Type =
         inlineSizeV2: 4,
         structDecode: Padding1ByteEnd._structDecode);
 
-class Padding2ByteEnd extends $fidl.Struct {
-  const Padding2ByteEnd({
-    required this.a,
-    required this.b,
-  });
-  Padding2ByteEnd.clone(
-    Padding2ByteEnd $orig, {
-    int? a,
-    int? b,
-  }) : this(
-          a: a ?? $orig.a,
-          b: b ?? $orig.b,
-        );
-
-  final int a;
-  final int b;
-
-  @override
-  List<Object?> get $fields {
-    return <Object?>[
-      a,
-      b,
-    ];
-  }
-
-  static const $fieldType0 = $fidl.Uint32Type();
-  static const $fieldType1 = $fidl.Uint16Type();
-
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 4, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 4, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-
-  static Padding2ByteEnd _structDecode(
-      $fidl.Decoder $decoder, int $offset, int $depth) {
-    switch ($decoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 6, 2);
-        return Padding2ByteEnd(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 4, $depth));
-      case $fidl.WireFormat.v2:
-        $decoder.checkPadding($offset + 6, 2);
-        return Padding2ByteEnd(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 4, $depth));
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.StructType<Padding2ByteEnd> kPadding2ByteEnd_Type =
-    $fidl.StructType<Padding2ByteEnd>(
-        inlineSizeV1: 8,
-        inlineSizeV2: 8,
-        structDecode: Padding2ByteEnd._structDecode);
-
-class Padding3ByteEnd extends $fidl.Struct {
-  const Padding3ByteEnd({
-    required this.a,
-    required this.b,
-  });
-  Padding3ByteEnd.clone(
-    Padding3ByteEnd $orig, {
-    int? a,
-    int? b,
-  }) : this(
-          a: a ?? $orig.a,
-          b: b ?? $orig.b,
-        );
-
-  final int a;
-  final int b;
-
-  @override
-  List<Object?> get $fields {
-    return <Object?>[
-      a,
-      b,
-    ];
-  }
-
-  static const $fieldType0 = $fidl.Uint32Type();
-  static const $fieldType1 = $fidl.Uint8Type();
-
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 4, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 4, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-
-  static Padding3ByteEnd _structDecode(
-      $fidl.Decoder $decoder, int $offset, int $depth) {
-    switch ($decoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 5, 3);
-        return Padding3ByteEnd(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 4, $depth));
-      case $fidl.WireFormat.v2:
-        $decoder.checkPadding($offset + 5, 3);
-        return Padding3ByteEnd(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 4, $depth));
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.StructType<Padding3ByteEnd> kPadding3ByteEnd_Type =
-    $fidl.StructType<Padding3ByteEnd>(
-        inlineSizeV1: 8,
-        inlineSizeV2: 8,
-        structDecode: Padding3ByteEnd._structDecode);
-
-class Padding4ByteEnd extends $fidl.Struct {
-  const Padding4ByteEnd({
-    required this.a,
-    required this.b,
-  });
-  Padding4ByteEnd.clone(
-    Padding4ByteEnd $orig, {
-    int? a,
-    int? b,
-  }) : this(
-          a: a ?? $orig.a,
-          b: b ?? $orig.b,
-        );
-
-  final int a;
-  final int b;
-
-  @override
-  List<Object?> get $fields {
-    return <Object?>[
-      a,
-      b,
-    ];
-  }
-
-  static const $fieldType0 = $fidl.Uint64Type();
-  static const $fieldType1 = $fidl.Uint32Type();
-
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 8, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 8, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-
-  static Padding4ByteEnd _structDecode(
-      $fidl.Decoder $decoder, int $offset, int $depth) {
-    switch ($decoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 12, 4);
-        return Padding4ByteEnd(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 8, $depth));
-      case $fidl.WireFormat.v2:
-        $decoder.checkPadding($offset + 12, 4);
-        return Padding4ByteEnd(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 8, $depth));
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.StructType<Padding4ByteEnd> kPadding4ByteEnd_Type =
-    $fidl.StructType<Padding4ByteEnd>(
-        inlineSizeV1: 16,
-        inlineSizeV2: 16,
-        structDecode: Padding4ByteEnd._structDecode);
-
-class Padding5ByteEnd extends $fidl.Struct {
-  const Padding5ByteEnd({
-    required this.a,
-    required this.b,
-    required this.c,
-  });
-  Padding5ByteEnd.clone(
-    Padding5ByteEnd $orig, {
-    int? a,
-    int? b,
-    int? c,
-  }) : this(
-          a: a ?? $orig.a,
-          b: b ?? $orig.b,
-          c: c ?? $orig.c,
-        );
-
-  final int a;
-  final int b;
-  final int c;
-
-  @override
-  List<Object?> get $fields {
-    return <Object?>[
-      a,
-      b,
-      c,
-    ];
-  }
-
-  static const $fieldType0 = $fidl.Uint64Type();
-  static const $fieldType1 = $fidl.Uint16Type();
-  static const $fieldType2 = $fidl.Uint8Type();
-
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 8, $depth);
-        $fieldType2.encode($encoder, c, $offset + 10, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 8, $depth);
-        $fieldType2.encode($encoder, c, $offset + 10, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-
-  static Padding5ByteEnd _structDecode(
-      $fidl.Decoder $decoder, int $offset, int $depth) {
-    switch ($decoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 11, 5);
-        return Padding5ByteEnd(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 8, $depth),
-            c: $fieldType2.decode($decoder, $offset + 10, $depth));
-      case $fidl.WireFormat.v2:
-        $decoder.checkPadding($offset + 11, 5);
-        return Padding5ByteEnd(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 8, $depth),
-            c: $fieldType2.decode($decoder, $offset + 10, $depth));
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.StructType<Padding5ByteEnd> kPadding5ByteEnd_Type =
-    $fidl.StructType<Padding5ByteEnd>(
-        inlineSizeV1: 16,
-        inlineSizeV2: 16,
-        structDecode: Padding5ByteEnd._structDecode);
-
-class Padding6ByteEnd extends $fidl.Struct {
-  const Padding6ByteEnd({
-    required this.a,
-    required this.b,
-  });
-  Padding6ByteEnd.clone(
-    Padding6ByteEnd $orig, {
-    int? a,
-    int? b,
-  }) : this(
-          a: a ?? $orig.a,
-          b: b ?? $orig.b,
-        );
-
-  final int a;
-  final int b;
-
-  @override
-  List<Object?> get $fields {
-    return <Object?>[
-      a,
-      b,
-    ];
-  }
-
-  static const $fieldType0 = $fidl.Uint64Type();
-  static const $fieldType1 = $fidl.Uint16Type();
-
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 8, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 8, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-
-  static Padding6ByteEnd _structDecode(
-      $fidl.Decoder $decoder, int $offset, int $depth) {
-    switch ($decoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 10, 6);
-        return Padding6ByteEnd(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 8, $depth));
-      case $fidl.WireFormat.v2:
-        $decoder.checkPadding($offset + 10, 6);
-        return Padding6ByteEnd(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 8, $depth));
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.StructType<Padding6ByteEnd> kPadding6ByteEnd_Type =
-    $fidl.StructType<Padding6ByteEnd>(
-        inlineSizeV1: 16,
-        inlineSizeV2: 16,
-        structDecode: Padding6ByteEnd._structDecode);
-
-class Padding7ByteEnd extends $fidl.Struct {
-  const Padding7ByteEnd({
-    required this.a,
-    required this.b,
-  });
-  Padding7ByteEnd.clone(
-    Padding7ByteEnd $orig, {
-    int? a,
-    int? b,
-  }) : this(
-          a: a ?? $orig.a,
-          b: b ?? $orig.b,
-        );
-
-  final int a;
-  final int b;
-
-  @override
-  List<Object?> get $fields {
-    return <Object?>[
-      a,
-      b,
-    ];
-  }
-
-  static const $fieldType0 = $fidl.Uint64Type();
-  static const $fieldType1 = $fidl.Uint8Type();
-
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 8, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 8, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-
-  static Padding7ByteEnd _structDecode(
-      $fidl.Decoder $decoder, int $offset, int $depth) {
-    switch ($decoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 9, 7);
-        return Padding7ByteEnd(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 8, $depth));
-      case $fidl.WireFormat.v2:
-        $decoder.checkPadding($offset + 9, 7);
-        return Padding7ByteEnd(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 8, $depth));
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.StructType<Padding7ByteEnd> kPadding7ByteEnd_Type =
-    $fidl.StructType<Padding7ByteEnd>(
-        inlineSizeV1: 16,
-        inlineSizeV2: 16,
-        structDecode: Padding7ByteEnd._structDecode);
-
 class Padding1ByteMiddle extends $fidl.Struct {
   const Padding1ByteMiddle({
     required this.a,
@@ -616,6 +180,162 @@ const $fidl.StructType<Padding1ByteMiddle> kPadding1ByteMiddle_Type =
         inlineSizeV1: 4,
         inlineSizeV2: 4,
         structDecode: Padding1ByteMiddle._structDecode);
+
+class Padding2ByteAlignmentLength6 extends $fidl.Struct {
+  const Padding2ByteAlignmentLength6({
+    required this.a,
+    required this.b,
+    required this.c,
+  });
+  Padding2ByteAlignmentLength6.clone(
+    Padding2ByteAlignmentLength6 $orig, {
+    int? a,
+    int? b,
+    int? c,
+  }) : this(
+          a: a ?? $orig.a,
+          b: b ?? $orig.b,
+          c: c ?? $orig.c,
+        );
+
+  final int a;
+  final int b;
+  final int c;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      a,
+      b,
+      c,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint8Type();
+  static const $fieldType1 = $fidl.Uint16Type();
+  static const $fieldType2 = $fidl.Uint8Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 2, $depth);
+        $fieldType2.encode($encoder, c, $offset + 4, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 2, $depth);
+        $fieldType2.encode($encoder, c, $offset + 4, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  static Padding2ByteAlignmentLength6 _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 1, 1);
+        $decoder.checkPadding($offset + 5, 1);
+        return Padding2ByteAlignmentLength6(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 2, $depth),
+            c: $fieldType2.decode($decoder, $offset + 4, $depth));
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 1, 1);
+
+        $decoder.checkPadding($offset + 5, 1);
+        return Padding2ByteAlignmentLength6(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 2, $depth),
+            c: $fieldType2.decode($decoder, $offset + 4, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<Padding2ByteAlignmentLength6>
+    kPadding2ByteAlignmentLength6_Type =
+    $fidl.StructType<Padding2ByteAlignmentLength6>(
+        inlineSizeV1: 6,
+        inlineSizeV2: 6,
+        structDecode: Padding2ByteAlignmentLength6._structDecode);
+
+class Padding2ByteEnd extends $fidl.Struct {
+  const Padding2ByteEnd({
+    required this.a,
+    required this.b,
+  });
+  Padding2ByteEnd.clone(
+    Padding2ByteEnd $orig, {
+    int? a,
+    int? b,
+  }) : this(
+          a: a ?? $orig.a,
+          b: b ?? $orig.b,
+        );
+
+  final int a;
+  final int b;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      a,
+      b,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint32Type();
+  static const $fieldType1 = $fidl.Uint16Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 4, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 4, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  static Padding2ByteEnd _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 6, 2);
+        return Padding2ByteEnd(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 4, $depth));
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 6, 2);
+        return Padding2ByteEnd(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 4, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<Padding2ByteEnd> kPadding2ByteEnd_Type =
+    $fidl.StructType<Padding2ByteEnd>(
+        inlineSizeV1: 8,
+        inlineSizeV2: 8,
+        structDecode: Padding2ByteEnd._structDecode);
 
 class Padding2ByteMiddle extends $fidl.Struct {
   const Padding2ByteMiddle({
@@ -688,6 +408,77 @@ const $fidl.StructType<Padding2ByteMiddle> kPadding2ByteMiddle_Type =
         inlineSizeV2: 8,
         structDecode: Padding2ByteMiddle._structDecode);
 
+class Padding3ByteEnd extends $fidl.Struct {
+  const Padding3ByteEnd({
+    required this.a,
+    required this.b,
+  });
+  Padding3ByteEnd.clone(
+    Padding3ByteEnd $orig, {
+    int? a,
+    int? b,
+  }) : this(
+          a: a ?? $orig.a,
+          b: b ?? $orig.b,
+        );
+
+  final int a;
+  final int b;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      a,
+      b,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint32Type();
+  static const $fieldType1 = $fidl.Uint8Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 4, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 4, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  static Padding3ByteEnd _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 5, 3);
+        return Padding3ByteEnd(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 4, $depth));
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 5, 3);
+        return Padding3ByteEnd(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 4, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<Padding3ByteEnd> kPadding3ByteEnd_Type =
+    $fidl.StructType<Padding3ByteEnd>(
+        inlineSizeV1: 8,
+        inlineSizeV2: 8,
+        structDecode: Padding3ByteEnd._structDecode);
+
 class Padding3ByteMiddle extends $fidl.Struct {
   const Padding3ByteMiddle({
     required this.a,
@@ -758,300 +549,6 @@ const $fidl.StructType<Padding3ByteMiddle> kPadding3ByteMiddle_Type =
         inlineSizeV1: 8,
         inlineSizeV2: 8,
         structDecode: Padding3ByteMiddle._structDecode);
-
-class Padding4ByteMiddle extends $fidl.Struct {
-  const Padding4ByteMiddle({
-    required this.a,
-    required this.b,
-  });
-  Padding4ByteMiddle.clone(
-    Padding4ByteMiddle $orig, {
-    int? a,
-    int? b,
-  }) : this(
-          a: a ?? $orig.a,
-          b: b ?? $orig.b,
-        );
-
-  final int a;
-  final int b;
-
-  @override
-  List<Object?> get $fields {
-    return <Object?>[
-      a,
-      b,
-    ];
-  }
-
-  static const $fieldType0 = $fidl.Uint32Type();
-  static const $fieldType1 = $fidl.Uint64Type();
-
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 8, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 8, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-
-  static Padding4ByteMiddle _structDecode(
-      $fidl.Decoder $decoder, int $offset, int $depth) {
-    switch ($decoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 4, 4);
-        return Padding4ByteMiddle(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 8, $depth));
-      case $fidl.WireFormat.v2:
-        $decoder.checkPadding($offset + 4, 4);
-        return Padding4ByteMiddle(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 8, $depth));
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.StructType<Padding4ByteMiddle> kPadding4ByteMiddle_Type =
-    $fidl.StructType<Padding4ByteMiddle>(
-        inlineSizeV1: 16,
-        inlineSizeV2: 16,
-        structDecode: Padding4ByteMiddle._structDecode);
-
-class Padding5ByteMiddle extends $fidl.Struct {
-  const Padding5ByteMiddle({
-    required this.a,
-    required this.b,
-    required this.c,
-  });
-  Padding5ByteMiddle.clone(
-    Padding5ByteMiddle $orig, {
-    int? a,
-    int? b,
-    int? c,
-  }) : this(
-          a: a ?? $orig.a,
-          b: b ?? $orig.b,
-          c: c ?? $orig.c,
-        );
-
-  final int a;
-  final int b;
-  final int c;
-
-  @override
-  List<Object?> get $fields {
-    return <Object?>[
-      a,
-      b,
-      c,
-    ];
-  }
-
-  static const $fieldType0 = $fidl.Uint16Type();
-  static const $fieldType1 = $fidl.Uint8Type();
-  static const $fieldType2 = $fidl.Uint64Type();
-
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 2, $depth);
-        $fieldType2.encode($encoder, c, $offset + 8, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 2, $depth);
-        $fieldType2.encode($encoder, c, $offset + 8, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-
-  static Padding5ByteMiddle _structDecode(
-      $fidl.Decoder $decoder, int $offset, int $depth) {
-    switch ($decoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 3, 5);
-        return Padding5ByteMiddle(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 2, $depth),
-            c: $fieldType2.decode($decoder, $offset + 8, $depth));
-      case $fidl.WireFormat.v2:
-        $decoder.checkPadding($offset + 3, 5);
-        return Padding5ByteMiddle(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 2, $depth),
-            c: $fieldType2.decode($decoder, $offset + 8, $depth));
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.StructType<Padding5ByteMiddle> kPadding5ByteMiddle_Type =
-    $fidl.StructType<Padding5ByteMiddle>(
-        inlineSizeV1: 16,
-        inlineSizeV2: 16,
-        structDecode: Padding5ByteMiddle._structDecode);
-
-class Padding6ByteMiddle extends $fidl.Struct {
-  const Padding6ByteMiddle({
-    required this.a,
-    required this.b,
-  });
-  Padding6ByteMiddle.clone(
-    Padding6ByteMiddle $orig, {
-    int? a,
-    int? b,
-  }) : this(
-          a: a ?? $orig.a,
-          b: b ?? $orig.b,
-        );
-
-  final int a;
-  final int b;
-
-  @override
-  List<Object?> get $fields {
-    return <Object?>[
-      a,
-      b,
-    ];
-  }
-
-  static const $fieldType0 = $fidl.Uint16Type();
-  static const $fieldType1 = $fidl.Uint64Type();
-
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 8, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 8, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-
-  static Padding6ByteMiddle _structDecode(
-      $fidl.Decoder $decoder, int $offset, int $depth) {
-    switch ($decoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 2, 6);
-        return Padding6ByteMiddle(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 8, $depth));
-      case $fidl.WireFormat.v2:
-        $decoder.checkPadding($offset + 2, 6);
-        return Padding6ByteMiddle(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 8, $depth));
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.StructType<Padding6ByteMiddle> kPadding6ByteMiddle_Type =
-    $fidl.StructType<Padding6ByteMiddle>(
-        inlineSizeV1: 16,
-        inlineSizeV2: 16,
-        structDecode: Padding6ByteMiddle._structDecode);
-
-class Padding7ByteMiddle extends $fidl.Struct {
-  const Padding7ByteMiddle({
-    required this.a,
-    required this.b,
-  });
-  Padding7ByteMiddle.clone(
-    Padding7ByteMiddle $orig, {
-    int? a,
-    int? b,
-  }) : this(
-          a: a ?? $orig.a,
-          b: b ?? $orig.b,
-        );
-
-  final int a;
-  final int b;
-
-  @override
-  List<Object?> get $fields {
-    return <Object?>[
-      a,
-      b,
-    ];
-  }
-
-  static const $fieldType0 = $fidl.Uint8Type();
-  static const $fieldType1 = $fidl.Uint64Type();
-
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 8, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 8, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-
-  static Padding7ByteMiddle _structDecode(
-      $fidl.Decoder $decoder, int $offset, int $depth) {
-    switch ($decoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 1, 7);
-        return Padding7ByteMiddle(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 8, $depth));
-      case $fidl.WireFormat.v2:
-        $decoder.checkPadding($offset + 1, 7);
-        return Padding7ByteMiddle(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 8, $depth));
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.StructType<Padding7ByteMiddle> kPadding7ByteMiddle_Type =
-    $fidl.StructType<Padding7ByteMiddle>(
-        inlineSizeV1: 16,
-        inlineSizeV2: 16,
-        structDecode: Padding7ByteMiddle._structDecode);
 
 class Padding4ByteAlignmentLength12 extends $fidl.Struct {
   const Padding4ByteAlignmentLength12({
@@ -1148,14 +645,156 @@ const $fidl.StructType<Padding4ByteAlignmentLength12>
         inlineSizeV2: 12,
         structDecode: Padding4ByteAlignmentLength12._structDecode);
 
-class Padding2ByteAlignmentLength6 extends $fidl.Struct {
-  const Padding2ByteAlignmentLength6({
+class Padding4ByteEnd extends $fidl.Struct {
+  const Padding4ByteEnd({
+    required this.a,
+    required this.b,
+  });
+  Padding4ByteEnd.clone(
+    Padding4ByteEnd $orig, {
+    int? a,
+    int? b,
+  }) : this(
+          a: a ?? $orig.a,
+          b: b ?? $orig.b,
+        );
+
+  final int a;
+  final int b;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      a,
+      b,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint64Type();
+  static const $fieldType1 = $fidl.Uint32Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 8, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 8, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  static Padding4ByteEnd _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 12, 4);
+        return Padding4ByteEnd(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 8, $depth));
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 12, 4);
+        return Padding4ByteEnd(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 8, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<Padding4ByteEnd> kPadding4ByteEnd_Type =
+    $fidl.StructType<Padding4ByteEnd>(
+        inlineSizeV1: 16,
+        inlineSizeV2: 16,
+        structDecode: Padding4ByteEnd._structDecode);
+
+class Padding4ByteMiddle extends $fidl.Struct {
+  const Padding4ByteMiddle({
+    required this.a,
+    required this.b,
+  });
+  Padding4ByteMiddle.clone(
+    Padding4ByteMiddle $orig, {
+    int? a,
+    int? b,
+  }) : this(
+          a: a ?? $orig.a,
+          b: b ?? $orig.b,
+        );
+
+  final int a;
+  final int b;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      a,
+      b,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint32Type();
+  static const $fieldType1 = $fidl.Uint64Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 8, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 8, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  static Padding4ByteMiddle _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 4, 4);
+        return Padding4ByteMiddle(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 8, $depth));
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 4, 4);
+        return Padding4ByteMiddle(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 8, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<Padding4ByteMiddle> kPadding4ByteMiddle_Type =
+    $fidl.StructType<Padding4ByteMiddle>(
+        inlineSizeV1: 16,
+        inlineSizeV2: 16,
+        structDecode: Padding4ByteMiddle._structDecode);
+
+class Padding5ByteEnd extends $fidl.Struct {
+  const Padding5ByteEnd({
     required this.a,
     required this.b,
     required this.c,
   });
-  Padding2ByteAlignmentLength6.clone(
-    Padding2ByteAlignmentLength6 $orig, {
+  Padding5ByteEnd.clone(
+    Padding5ByteEnd $orig, {
     int? a,
     int? b,
     int? c,
@@ -1178,7 +817,7 @@ class Padding2ByteAlignmentLength6 extends $fidl.Struct {
     ];
   }
 
-  static const $fieldType0 = $fidl.Uint8Type();
+  static const $fieldType0 = $fidl.Uint64Type();
   static const $fieldType1 = $fidl.Uint16Type();
   static const $fieldType2 = $fidl.Uint8Type();
 
@@ -1187,37 +826,34 @@ class Padding2ByteAlignmentLength6 extends $fidl.Struct {
     switch ($encoder.wireFormat) {
       case $fidl.WireFormat.v1:
         $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 2, $depth);
-        $fieldType2.encode($encoder, c, $offset + 4, $depth);
+        $fieldType1.encode($encoder, b, $offset + 8, $depth);
+        $fieldType2.encode($encoder, c, $offset + 10, $depth);
         break;
       case $fidl.WireFormat.v2:
         $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 2, $depth);
-        $fieldType2.encode($encoder, c, $offset + 4, $depth);
+        $fieldType1.encode($encoder, b, $offset + 8, $depth);
+        $fieldType2.encode($encoder, c, $offset + 10, $depth);
         break;
       default:
         throw $fidl.FidlError('unknown wire format');
     }
   }
 
-  static Padding2ByteAlignmentLength6 _structDecode(
+  static Padding5ByteEnd _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 1, 1);
-        $decoder.checkPadding($offset + 5, 1);
-        return Padding2ByteAlignmentLength6(
+        $decoder.checkPadding($offset + 11, 5);
+        return Padding5ByteEnd(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 2, $depth),
-            c: $fieldType2.decode($decoder, $offset + 4, $depth));
+            b: $fieldType1.decode($decoder, $offset + 8, $depth),
+            c: $fieldType2.decode($decoder, $offset + 10, $depth));
       case $fidl.WireFormat.v2:
-        $decoder.checkPadding($offset + 1, 1);
-
-        $decoder.checkPadding($offset + 5, 1);
-        return Padding2ByteAlignmentLength6(
+        $decoder.checkPadding($offset + 11, 5);
+        return Padding5ByteEnd(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 2, $depth),
-            c: $fieldType2.decode($decoder, $offset + 4, $depth));
+            b: $fieldType1.decode($decoder, $offset + 8, $depth),
+            c: $fieldType2.decode($decoder, $offset + 10, $depth));
       default:
         throw $fidl.FidlError('unknown wire format');
     }
@@ -1226,9 +862,373 @@ class Padding2ByteAlignmentLength6 extends $fidl.Struct {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.StructType<Padding2ByteAlignmentLength6>
-    kPadding2ByteAlignmentLength6_Type =
-    $fidl.StructType<Padding2ByteAlignmentLength6>(
-        inlineSizeV1: 6,
-        inlineSizeV2: 6,
-        structDecode: Padding2ByteAlignmentLength6._structDecode);
+const $fidl.StructType<Padding5ByteEnd> kPadding5ByteEnd_Type =
+    $fidl.StructType<Padding5ByteEnd>(
+        inlineSizeV1: 16,
+        inlineSizeV2: 16,
+        structDecode: Padding5ByteEnd._structDecode);
+
+class Padding5ByteMiddle extends $fidl.Struct {
+  const Padding5ByteMiddle({
+    required this.a,
+    required this.b,
+    required this.c,
+  });
+  Padding5ByteMiddle.clone(
+    Padding5ByteMiddle $orig, {
+    int? a,
+    int? b,
+    int? c,
+  }) : this(
+          a: a ?? $orig.a,
+          b: b ?? $orig.b,
+          c: c ?? $orig.c,
+        );
+
+  final int a;
+  final int b;
+  final int c;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      a,
+      b,
+      c,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint16Type();
+  static const $fieldType1 = $fidl.Uint8Type();
+  static const $fieldType2 = $fidl.Uint64Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 2, $depth);
+        $fieldType2.encode($encoder, c, $offset + 8, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 2, $depth);
+        $fieldType2.encode($encoder, c, $offset + 8, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  static Padding5ByteMiddle _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 3, 5);
+        return Padding5ByteMiddle(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 2, $depth),
+            c: $fieldType2.decode($decoder, $offset + 8, $depth));
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 3, 5);
+        return Padding5ByteMiddle(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 2, $depth),
+            c: $fieldType2.decode($decoder, $offset + 8, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<Padding5ByteMiddle> kPadding5ByteMiddle_Type =
+    $fidl.StructType<Padding5ByteMiddle>(
+        inlineSizeV1: 16,
+        inlineSizeV2: 16,
+        structDecode: Padding5ByteMiddle._structDecode);
+
+class Padding6ByteEnd extends $fidl.Struct {
+  const Padding6ByteEnd({
+    required this.a,
+    required this.b,
+  });
+  Padding6ByteEnd.clone(
+    Padding6ByteEnd $orig, {
+    int? a,
+    int? b,
+  }) : this(
+          a: a ?? $orig.a,
+          b: b ?? $orig.b,
+        );
+
+  final int a;
+  final int b;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      a,
+      b,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint64Type();
+  static const $fieldType1 = $fidl.Uint16Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 8, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 8, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  static Padding6ByteEnd _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 10, 6);
+        return Padding6ByteEnd(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 8, $depth));
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 10, 6);
+        return Padding6ByteEnd(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 8, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<Padding6ByteEnd> kPadding6ByteEnd_Type =
+    $fidl.StructType<Padding6ByteEnd>(
+        inlineSizeV1: 16,
+        inlineSizeV2: 16,
+        structDecode: Padding6ByteEnd._structDecode);
+
+class Padding6ByteMiddle extends $fidl.Struct {
+  const Padding6ByteMiddle({
+    required this.a,
+    required this.b,
+  });
+  Padding6ByteMiddle.clone(
+    Padding6ByteMiddle $orig, {
+    int? a,
+    int? b,
+  }) : this(
+          a: a ?? $orig.a,
+          b: b ?? $orig.b,
+        );
+
+  final int a;
+  final int b;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      a,
+      b,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint16Type();
+  static const $fieldType1 = $fidl.Uint64Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 8, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 8, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  static Padding6ByteMiddle _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 2, 6);
+        return Padding6ByteMiddle(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 8, $depth));
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 2, 6);
+        return Padding6ByteMiddle(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 8, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<Padding6ByteMiddle> kPadding6ByteMiddle_Type =
+    $fidl.StructType<Padding6ByteMiddle>(
+        inlineSizeV1: 16,
+        inlineSizeV2: 16,
+        structDecode: Padding6ByteMiddle._structDecode);
+
+class Padding7ByteEnd extends $fidl.Struct {
+  const Padding7ByteEnd({
+    required this.a,
+    required this.b,
+  });
+  Padding7ByteEnd.clone(
+    Padding7ByteEnd $orig, {
+    int? a,
+    int? b,
+  }) : this(
+          a: a ?? $orig.a,
+          b: b ?? $orig.b,
+        );
+
+  final int a;
+  final int b;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      a,
+      b,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint64Type();
+  static const $fieldType1 = $fidl.Uint8Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 8, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 8, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  static Padding7ByteEnd _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 9, 7);
+        return Padding7ByteEnd(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 8, $depth));
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 9, 7);
+        return Padding7ByteEnd(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 8, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<Padding7ByteEnd> kPadding7ByteEnd_Type =
+    $fidl.StructType<Padding7ByteEnd>(
+        inlineSizeV1: 16,
+        inlineSizeV2: 16,
+        structDecode: Padding7ByteEnd._structDecode);
+
+class Padding7ByteMiddle extends $fidl.Struct {
+  const Padding7ByteMiddle({
+    required this.a,
+    required this.b,
+  });
+  Padding7ByteMiddle.clone(
+    Padding7ByteMiddle $orig, {
+    int? a,
+    int? b,
+  }) : this(
+          a: a ?? $orig.a,
+          b: b ?? $orig.b,
+        );
+
+  final int a;
+  final int b;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      a,
+      b,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint8Type();
+  static const $fieldType1 = $fidl.Uint64Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 8, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 8, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  static Padding7ByteMiddle _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 1, 7);
+        return Padding7ByteMiddle(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 8, $depth));
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 1, 7);
+        return Padding7ByteMiddle(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 8, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<Padding7ByteMiddle> kPadding7ByteMiddle_Type =
+    $fidl.StructType<Padding7ByteMiddle>(
+        inlineSizeV1: 16,
+        inlineSizeV2: 16,
+        structDecode: Padding7ByteMiddle._structDecode);

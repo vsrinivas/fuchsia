@@ -39,51 +39,43 @@ import 'package:zircon/zircon.dart' as $zircon;
 // ignore_for_file: avoid_unused_constructor_parameters
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
-class MyStrictEnum extends $fidl.Enum {
-  static const Map<int, MyStrictEnum> _values = {
-    0x1: foo,
-    0x2: bar,
-  };
-  factory MyStrictEnum(int _v) {
+class MyEmptyFlexibleEnum extends $fidl.Enum {
+  static final Map<int, MyEmptyFlexibleEnum> _values = {};
+  factory MyEmptyFlexibleEnum(int _v) {
     if (!_values.containsKey(_v)) {
-      throw $fidl.FidlError('Invalid strict enum value: $_v',
-          $fidl.FidlErrorCode.fidlInvalidEnumValue);
+      _values[_v] = MyEmptyFlexibleEnum._(_v, true);
     }
     return _values[_v]!;
   }
-  static const MyStrictEnum foo = MyStrictEnum._(0x1);
-  static const MyStrictEnum bar = MyStrictEnum._(0x2);
 
-  const MyStrictEnum._(this.$value);
+  /// Default unknown placeholder.
+  static const MyEmptyFlexibleEnum $unknown =
+      MyEmptyFlexibleEnum._(0xffffffff, true);
+
+  const MyEmptyFlexibleEnum._(this.$value, this._isUnknown);
 
   @override
   final int $value;
 
-  static const Map<String, MyStrictEnum> $valuesMap = {
-    r'foo': foo,
-    r'bar': bar,
-  };
+  final bool _isUnknown;
 
-  static const List<MyStrictEnum> $values = [
-    foo,
-    bar,
-  ];
+  static const Map<String, MyEmptyFlexibleEnum> $valuesMap = {};
 
-  static MyStrictEnum? $valueOf(String name) => $valuesMap[name];
+  static const List<MyEmptyFlexibleEnum> $values = [];
+
+  static MyEmptyFlexibleEnum? $valueOf(String name) => $valuesMap[name];
 
   @override
   bool isUnknown() {
-    return false;
+    return _isUnknown;
   }
 
-  static MyStrictEnum _ctor(int v) => MyStrictEnum(v);
+  static MyEmptyFlexibleEnum _ctor(int v) => MyEmptyFlexibleEnum(v);
 }
 
-const $fidl.EnumType<MyStrictEnum> kMyStrictEnum_Type =
-    $fidl.EnumType<MyStrictEnum>(
-        type: $fidl.Uint32Type(),
-        values: {0x1: null, 0x2: null},
-        ctor: MyStrictEnum._ctor);
+const $fidl.EnumType<MyEmptyFlexibleEnum> kMyEmptyFlexibleEnum_Type =
+    $fidl.EnumType<MyEmptyFlexibleEnum>(
+        type: $fidl.Uint32Type(), values: {}, ctor: MyEmptyFlexibleEnum._ctor);
 
 class MyFlexibleEnum extends $fidl.Enum {
   static final Map<int, MyFlexibleEnum> _values = {
@@ -196,40 +188,48 @@ const $fidl.EnumType<MyFlexibleEnumWithCustomUnknown>
         values: {0x1: null, 0x2: null, 0x3: null},
         ctor: MyFlexibleEnumWithCustomUnknown._ctor);
 
-class MyEmptyFlexibleEnum extends $fidl.Enum {
-  static final Map<int, MyEmptyFlexibleEnum> _values = {};
-  factory MyEmptyFlexibleEnum(int _v) {
+class MyStrictEnum extends $fidl.Enum {
+  static const Map<int, MyStrictEnum> _values = {
+    0x1: foo,
+    0x2: bar,
+  };
+  factory MyStrictEnum(int _v) {
     if (!_values.containsKey(_v)) {
-      _values[_v] = MyEmptyFlexibleEnum._(_v, true);
+      throw $fidl.FidlError('Invalid strict enum value: $_v',
+          $fidl.FidlErrorCode.fidlInvalidEnumValue);
     }
     return _values[_v]!;
   }
+  static const MyStrictEnum foo = MyStrictEnum._(0x1);
+  static const MyStrictEnum bar = MyStrictEnum._(0x2);
 
-  /// Default unknown placeholder.
-  static const MyEmptyFlexibleEnum $unknown =
-      MyEmptyFlexibleEnum._(0xffffffff, true);
-
-  const MyEmptyFlexibleEnum._(this.$value, this._isUnknown);
+  const MyStrictEnum._(this.$value);
 
   @override
   final int $value;
 
-  final bool _isUnknown;
+  static const Map<String, MyStrictEnum> $valuesMap = {
+    r'foo': foo,
+    r'bar': bar,
+  };
 
-  static const Map<String, MyEmptyFlexibleEnum> $valuesMap = {};
+  static const List<MyStrictEnum> $values = [
+    foo,
+    bar,
+  ];
 
-  static const List<MyEmptyFlexibleEnum> $values = [];
-
-  static MyEmptyFlexibleEnum? $valueOf(String name) => $valuesMap[name];
+  static MyStrictEnum? $valueOf(String name) => $valuesMap[name];
 
   @override
   bool isUnknown() {
-    return _isUnknown;
+    return false;
   }
 
-  static MyEmptyFlexibleEnum _ctor(int v) => MyEmptyFlexibleEnum(v);
+  static MyStrictEnum _ctor(int v) => MyStrictEnum(v);
 }
 
-const $fidl.EnumType<MyEmptyFlexibleEnum> kMyEmptyFlexibleEnum_Type =
-    $fidl.EnumType<MyEmptyFlexibleEnum>(
-        type: $fidl.Uint32Type(), values: {}, ctor: MyEmptyFlexibleEnum._ctor);
+const $fidl.EnumType<MyStrictEnum> kMyStrictEnum_Type =
+    $fidl.EnumType<MyStrictEnum>(
+        type: $fidl.Uint32Type(),
+        values: {0x1: null, 0x2: null},
+        ctor: MyStrictEnum._ctor);

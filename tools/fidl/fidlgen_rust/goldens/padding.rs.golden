@@ -68,6 +68,104 @@ fidl_struct_copy! {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(C)]
+pub struct Padding1ByteMiddle {
+    pub a: u8,
+    pub b: u16,
+}
+
+impl fidl::encoding::Persistable for Padding1ByteMiddle {}
+
+fidl_struct_copy! {
+  name: Padding1ByteMiddle,
+  members: [
+    a {
+      ty: u8,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+    b {
+      ty: u16,
+      offset_v1: 2,
+      offset_v2: 2,
+    },
+  ],
+  padding_v1: [
+  {
+      ty: u32,
+      offset: 0,
+      mask: 0x0000ff00u32,
+  },],
+  padding_v2: [
+  {
+      ty: u32,
+      offset: 0,
+      mask: 0x0000ff00u32,
+  },],
+  size_v1: 4,
+  size_v2: 4,
+  align_v1: 2,
+  align_v2: 2,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(C)]
+pub struct Padding2ByteAlignmentLength6 {
+    pub a: u8,
+    pub b: u16,
+    pub c: u8,
+}
+
+impl fidl::encoding::Persistable for Padding2ByteAlignmentLength6 {}
+
+fidl_struct_copy! {
+  name: Padding2ByteAlignmentLength6,
+  members: [
+    a {
+      ty: u8,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+    b {
+      ty: u16,
+      offset_v1: 2,
+      offset_v2: 2,
+    },
+    c {
+      ty: u8,
+      offset_v1: 4,
+      offset_v2: 4,
+    },
+  ],
+  padding_v1: [
+  {
+      ty: u32,
+      offset: 0,
+      mask: 0x0000ff00u32,
+  },
+  {
+      ty: u16,
+      offset: 4,
+      mask: 0xff00u16,
+  },],
+  padding_v2: [
+  {
+      ty: u32,
+      offset: 0,
+      mask: 0x0000ff00u32,
+  },
+  {
+      ty: u16,
+      offset: 4,
+      mask: 0xff00u16,
+  },],
+  size_v1: 6,
+  size_v2: 6,
+  align_v1: 2,
+  align_v2: 2,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(C)]
 pub struct Padding2ByteEnd {
     pub a: u32,
     pub b: u16,
@@ -100,6 +198,47 @@ fidl_struct_copy! {
       ty: u64,
       offset: 0,
       mask: 0xffff000000000000u64,
+  },],
+  size_v1: 8,
+  size_v2: 8,
+  align_v1: 4,
+  align_v2: 4,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(C)]
+pub struct Padding2ByteMiddle {
+    pub a: u16,
+    pub b: u32,
+}
+
+impl fidl::encoding::Persistable for Padding2ByteMiddle {}
+
+fidl_struct_copy! {
+  name: Padding2ByteMiddle,
+  members: [
+    a {
+      ty: u16,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+    b {
+      ty: u32,
+      offset_v1: 4,
+      offset_v2: 4,
+    },
+  ],
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0x00000000ffff0000u64,
+  },],
+  padding_v2: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0x00000000ffff0000u64,
   },],
   size_v1: 8,
   size_v2: 8,
@@ -150,258 +289,6 @@ fidl_struct_copy! {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(C)]
-pub struct Padding4ByteEnd {
-    pub a: u64,
-    pub b: u32,
-}
-
-impl fidl::encoding::Persistable for Padding4ByteEnd {}
-
-fidl_struct_copy! {
-  name: Padding4ByteEnd,
-  members: [
-    a {
-      ty: u64,
-      offset_v1: 0,
-      offset_v2: 0,
-    },
-    b {
-      ty: u32,
-      offset_v1: 8,
-      offset_v2: 8,
-    },
-  ],
-  padding_v1: [
-  {
-      ty: u64,
-      offset: 8,
-      mask: 0xffffffff00000000u64,
-  },],
-  padding_v2: [
-  {
-      ty: u64,
-      offset: 8,
-      mask: 0xffffffff00000000u64,
-  },],
-  size_v1: 16,
-  size_v2: 16,
-  align_v1: 8,
-  align_v2: 8,
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[repr(C)]
-pub struct Padding5ByteEnd {
-    pub a: u64,
-    pub b: u16,
-    pub c: u8,
-}
-
-impl fidl::encoding::Persistable for Padding5ByteEnd {}
-
-fidl_struct_copy! {
-  name: Padding5ByteEnd,
-  members: [
-    a {
-      ty: u64,
-      offset_v1: 0,
-      offset_v2: 0,
-    },
-    b {
-      ty: u16,
-      offset_v1: 8,
-      offset_v2: 8,
-    },
-    c {
-      ty: u8,
-      offset_v1: 10,
-      offset_v2: 10,
-    },
-  ],
-  padding_v1: [
-  {
-      ty: u64,
-      offset: 8,
-      mask: 0xffffffffff000000u64,
-  },],
-  padding_v2: [
-  {
-      ty: u64,
-      offset: 8,
-      mask: 0xffffffffff000000u64,
-  },],
-  size_v1: 16,
-  size_v2: 16,
-  align_v1: 8,
-  align_v2: 8,
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[repr(C)]
-pub struct Padding6ByteEnd {
-    pub a: u64,
-    pub b: u16,
-}
-
-impl fidl::encoding::Persistable for Padding6ByteEnd {}
-
-fidl_struct_copy! {
-  name: Padding6ByteEnd,
-  members: [
-    a {
-      ty: u64,
-      offset_v1: 0,
-      offset_v2: 0,
-    },
-    b {
-      ty: u16,
-      offset_v1: 8,
-      offset_v2: 8,
-    },
-  ],
-  padding_v1: [
-  {
-      ty: u64,
-      offset: 8,
-      mask: 0xffffffffffff0000u64,
-  },],
-  padding_v2: [
-  {
-      ty: u64,
-      offset: 8,
-      mask: 0xffffffffffff0000u64,
-  },],
-  size_v1: 16,
-  size_v2: 16,
-  align_v1: 8,
-  align_v2: 8,
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[repr(C)]
-pub struct Padding7ByteEnd {
-    pub a: u64,
-    pub b: u8,
-}
-
-impl fidl::encoding::Persistable for Padding7ByteEnd {}
-
-fidl_struct_copy! {
-  name: Padding7ByteEnd,
-  members: [
-    a {
-      ty: u64,
-      offset_v1: 0,
-      offset_v2: 0,
-    },
-    b {
-      ty: u8,
-      offset_v1: 8,
-      offset_v2: 8,
-    },
-  ],
-  padding_v1: [
-  {
-      ty: u64,
-      offset: 8,
-      mask: 0xffffffffffffff00u64,
-  },],
-  padding_v2: [
-  {
-      ty: u64,
-      offset: 8,
-      mask: 0xffffffffffffff00u64,
-  },],
-  size_v1: 16,
-  size_v2: 16,
-  align_v1: 8,
-  align_v2: 8,
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[repr(C)]
-pub struct Padding1ByteMiddle {
-    pub a: u8,
-    pub b: u16,
-}
-
-impl fidl::encoding::Persistable for Padding1ByteMiddle {}
-
-fidl_struct_copy! {
-  name: Padding1ByteMiddle,
-  members: [
-    a {
-      ty: u8,
-      offset_v1: 0,
-      offset_v2: 0,
-    },
-    b {
-      ty: u16,
-      offset_v1: 2,
-      offset_v2: 2,
-    },
-  ],
-  padding_v1: [
-  {
-      ty: u32,
-      offset: 0,
-      mask: 0x0000ff00u32,
-  },],
-  padding_v2: [
-  {
-      ty: u32,
-      offset: 0,
-      mask: 0x0000ff00u32,
-  },],
-  size_v1: 4,
-  size_v2: 4,
-  align_v1: 2,
-  align_v2: 2,
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[repr(C)]
-pub struct Padding2ByteMiddle {
-    pub a: u16,
-    pub b: u32,
-}
-
-impl fidl::encoding::Persistable for Padding2ByteMiddle {}
-
-fidl_struct_copy! {
-  name: Padding2ByteMiddle,
-  members: [
-    a {
-      ty: u16,
-      offset_v1: 0,
-      offset_v2: 0,
-    },
-    b {
-      ty: u32,
-      offset_v1: 4,
-      offset_v2: 4,
-    },
-  ],
-  padding_v1: [
-  {
-      ty: u64,
-      offset: 0,
-      mask: 0x00000000ffff0000u64,
-  },],
-  padding_v2: [
-  {
-      ty: u64,
-      offset: 0,
-      mask: 0x00000000ffff0000u64,
-  },],
-  size_v1: 8,
-  size_v2: 8,
-  align_v1: 4,
-  align_v2: 4,
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[repr(C)]
 pub struct Padding3ByteMiddle {
     pub a: u8,
     pub b: u32,
@@ -439,176 +326,6 @@ fidl_struct_copy! {
   size_v2: 8,
   align_v1: 4,
   align_v2: 4,
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[repr(C)]
-pub struct Padding4ByteMiddle {
-    pub a: u32,
-    pub b: u64,
-}
-
-impl fidl::encoding::Persistable for Padding4ByteMiddle {}
-
-fidl_struct_copy! {
-  name: Padding4ByteMiddle,
-  members: [
-    a {
-      ty: u32,
-      offset_v1: 0,
-      offset_v2: 0,
-    },
-    b {
-      ty: u64,
-      offset_v1: 8,
-      offset_v2: 8,
-    },
-  ],
-  padding_v1: [
-  {
-      ty: u64,
-      offset: 0,
-      mask: 0xffffffff00000000u64,
-  },],
-  padding_v2: [
-  {
-      ty: u64,
-      offset: 0,
-      mask: 0xffffffff00000000u64,
-  },],
-  size_v1: 16,
-  size_v2: 16,
-  align_v1: 8,
-  align_v2: 8,
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[repr(C)]
-pub struct Padding5ByteMiddle {
-    pub a: u16,
-    pub b: u8,
-    pub c: u64,
-}
-
-impl fidl::encoding::Persistable for Padding5ByteMiddle {}
-
-fidl_struct_copy! {
-  name: Padding5ByteMiddle,
-  members: [
-    a {
-      ty: u16,
-      offset_v1: 0,
-      offset_v2: 0,
-    },
-    b {
-      ty: u8,
-      offset_v1: 2,
-      offset_v2: 2,
-    },
-    c {
-      ty: u64,
-      offset_v1: 8,
-      offset_v2: 8,
-    },
-  ],
-  padding_v1: [
-  {
-      ty: u64,
-      offset: 0,
-      mask: 0xffffffffff000000u64,
-  },],
-  padding_v2: [
-  {
-      ty: u64,
-      offset: 0,
-      mask: 0xffffffffff000000u64,
-  },],
-  size_v1: 16,
-  size_v2: 16,
-  align_v1: 8,
-  align_v2: 8,
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[repr(C)]
-pub struct Padding6ByteMiddle {
-    pub a: u16,
-    pub b: u64,
-}
-
-impl fidl::encoding::Persistable for Padding6ByteMiddle {}
-
-fidl_struct_copy! {
-  name: Padding6ByteMiddle,
-  members: [
-    a {
-      ty: u16,
-      offset_v1: 0,
-      offset_v2: 0,
-    },
-    b {
-      ty: u64,
-      offset_v1: 8,
-      offset_v2: 8,
-    },
-  ],
-  padding_v1: [
-  {
-      ty: u64,
-      offset: 0,
-      mask: 0xffffffffffff0000u64,
-  },],
-  padding_v2: [
-  {
-      ty: u64,
-      offset: 0,
-      mask: 0xffffffffffff0000u64,
-  },],
-  size_v1: 16,
-  size_v2: 16,
-  align_v1: 8,
-  align_v2: 8,
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[repr(C)]
-pub struct Padding7ByteMiddle {
-    pub a: u8,
-    pub b: u64,
-}
-
-impl fidl::encoding::Persistable for Padding7ByteMiddle {}
-
-fidl_struct_copy! {
-  name: Padding7ByteMiddle,
-  members: [
-    a {
-      ty: u8,
-      offset_v1: 0,
-      offset_v2: 0,
-    },
-    b {
-      ty: u64,
-      offset_v1: 8,
-      offset_v2: 8,
-    },
-  ],
-  padding_v1: [
-  {
-      ty: u64,
-      offset: 0,
-      mask: 0xffffffffffffff00u64,
-  },],
-  padding_v2: [
-  {
-      ty: u64,
-      offset: 0,
-      mask: 0xffffffffffffff00u64,
-  },],
-  size_v1: 16,
-  size_v2: 16,
-  align_v1: 8,
-  align_v2: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -676,16 +393,314 @@ fidl_struct_copy! {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(C)]
-pub struct Padding2ByteAlignmentLength6 {
-    pub a: u8,
+pub struct Padding4ByteEnd {
+    pub a: u64,
+    pub b: u32,
+}
+
+impl fidl::encoding::Persistable for Padding4ByteEnd {}
+
+fidl_struct_copy! {
+  name: Padding4ByteEnd,
+  members: [
+    a {
+      ty: u64,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+    b {
+      ty: u32,
+      offset_v1: 8,
+      offset_v2: 8,
+    },
+  ],
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 8,
+      mask: 0xffffffff00000000u64,
+  },],
+  padding_v2: [
+  {
+      ty: u64,
+      offset: 8,
+      mask: 0xffffffff00000000u64,
+  },],
+  size_v1: 16,
+  size_v2: 16,
+  align_v1: 8,
+  align_v2: 8,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(C)]
+pub struct Padding4ByteMiddle {
+    pub a: u32,
+    pub b: u64,
+}
+
+impl fidl::encoding::Persistable for Padding4ByteMiddle {}
+
+fidl_struct_copy! {
+  name: Padding4ByteMiddle,
+  members: [
+    a {
+      ty: u32,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+    b {
+      ty: u64,
+      offset_v1: 8,
+      offset_v2: 8,
+    },
+  ],
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0xffffffff00000000u64,
+  },],
+  padding_v2: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0xffffffff00000000u64,
+  },],
+  size_v1: 16,
+  size_v2: 16,
+  align_v1: 8,
+  align_v2: 8,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(C)]
+pub struct Padding5ByteEnd {
+    pub a: u64,
     pub b: u16,
     pub c: u8,
 }
 
-impl fidl::encoding::Persistable for Padding2ByteAlignmentLength6 {}
+impl fidl::encoding::Persistable for Padding5ByteEnd {}
 
 fidl_struct_copy! {
-  name: Padding2ByteAlignmentLength6,
+  name: Padding5ByteEnd,
+  members: [
+    a {
+      ty: u64,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+    b {
+      ty: u16,
+      offset_v1: 8,
+      offset_v2: 8,
+    },
+    c {
+      ty: u8,
+      offset_v1: 10,
+      offset_v2: 10,
+    },
+  ],
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 8,
+      mask: 0xffffffffff000000u64,
+  },],
+  padding_v2: [
+  {
+      ty: u64,
+      offset: 8,
+      mask: 0xffffffffff000000u64,
+  },],
+  size_v1: 16,
+  size_v2: 16,
+  align_v1: 8,
+  align_v2: 8,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(C)]
+pub struct Padding5ByteMiddle {
+    pub a: u16,
+    pub b: u8,
+    pub c: u64,
+}
+
+impl fidl::encoding::Persistable for Padding5ByteMiddle {}
+
+fidl_struct_copy! {
+  name: Padding5ByteMiddle,
+  members: [
+    a {
+      ty: u16,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+    b {
+      ty: u8,
+      offset_v1: 2,
+      offset_v2: 2,
+    },
+    c {
+      ty: u64,
+      offset_v1: 8,
+      offset_v2: 8,
+    },
+  ],
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0xffffffffff000000u64,
+  },],
+  padding_v2: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0xffffffffff000000u64,
+  },],
+  size_v1: 16,
+  size_v2: 16,
+  align_v1: 8,
+  align_v2: 8,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(C)]
+pub struct Padding6ByteEnd {
+    pub a: u64,
+    pub b: u16,
+}
+
+impl fidl::encoding::Persistable for Padding6ByteEnd {}
+
+fidl_struct_copy! {
+  name: Padding6ByteEnd,
+  members: [
+    a {
+      ty: u64,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+    b {
+      ty: u16,
+      offset_v1: 8,
+      offset_v2: 8,
+    },
+  ],
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 8,
+      mask: 0xffffffffffff0000u64,
+  },],
+  padding_v2: [
+  {
+      ty: u64,
+      offset: 8,
+      mask: 0xffffffffffff0000u64,
+  },],
+  size_v1: 16,
+  size_v2: 16,
+  align_v1: 8,
+  align_v2: 8,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(C)]
+pub struct Padding6ByteMiddle {
+    pub a: u16,
+    pub b: u64,
+}
+
+impl fidl::encoding::Persistable for Padding6ByteMiddle {}
+
+fidl_struct_copy! {
+  name: Padding6ByteMiddle,
+  members: [
+    a {
+      ty: u16,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+    b {
+      ty: u64,
+      offset_v1: 8,
+      offset_v2: 8,
+    },
+  ],
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0xffffffffffff0000u64,
+  },],
+  padding_v2: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0xffffffffffff0000u64,
+  },],
+  size_v1: 16,
+  size_v2: 16,
+  align_v1: 8,
+  align_v2: 8,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(C)]
+pub struct Padding7ByteEnd {
+    pub a: u64,
+    pub b: u8,
+}
+
+impl fidl::encoding::Persistable for Padding7ByteEnd {}
+
+fidl_struct_copy! {
+  name: Padding7ByteEnd,
+  members: [
+    a {
+      ty: u64,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+    b {
+      ty: u8,
+      offset_v1: 8,
+      offset_v2: 8,
+    },
+  ],
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 8,
+      mask: 0xffffffffffffff00u64,
+  },],
+  padding_v2: [
+  {
+      ty: u64,
+      offset: 8,
+      mask: 0xffffffffffffff00u64,
+  },],
+  size_v1: 16,
+  size_v2: 16,
+  align_v1: 8,
+  align_v2: 8,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(C)]
+pub struct Padding7ByteMiddle {
+    pub a: u8,
+    pub b: u64,
+}
+
+impl fidl::encoding::Persistable for Padding7ByteMiddle {}
+
+fidl_struct_copy! {
+  name: Padding7ByteMiddle,
   members: [
     a {
       ty: u8,
@@ -693,40 +708,25 @@ fidl_struct_copy! {
       offset_v2: 0,
     },
     b {
-      ty: u16,
-      offset_v1: 2,
-      offset_v2: 2,
-    },
-    c {
-      ty: u8,
-      offset_v1: 4,
-      offset_v2: 4,
+      ty: u64,
+      offset_v1: 8,
+      offset_v2: 8,
     },
   ],
   padding_v1: [
   {
-      ty: u32,
+      ty: u64,
       offset: 0,
-      mask: 0x0000ff00u32,
-  },
-  {
-      ty: u16,
-      offset: 4,
-      mask: 0xff00u16,
+      mask: 0xffffffffffffff00u64,
   },],
   padding_v2: [
   {
-      ty: u32,
+      ty: u64,
       offset: 0,
-      mask: 0x0000ff00u32,
-  },
-  {
-      ty: u16,
-      offset: 4,
-      mask: 0xff00u16,
+      mask: 0xffffffffffffff00u64,
   },],
-  size_v1: 6,
-  size_v2: 6,
-  align_v1: 2,
-  align_v2: 2,
+  size_v1: 16,
+  size_v2: 16,
+  align_v1: 8,
+  align_v2: 8,
 }

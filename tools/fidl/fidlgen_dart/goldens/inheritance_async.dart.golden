@@ -40,6 +40,157 @@ import 'package:zircon/zircon.dart' as $zircon;
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
 // foo: (String s) -> (int y)
+const int _kSub_foo_Ordinal = 0x68a61c2a230db8b8;
+const $fidl.MethodType _kSub_foo_Type = $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<String>(
+        type: $fidl.StringType(maybeElementCount: null),
+        offsetV1: 0,
+        offsetV2: 0),
+  ],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
+  ],
+  name: r"Sub.foo",
+  requestInlineSizeV1: 16,
+  requestInlineSizeV2: 16,
+  responseInlineSizeV1: 8,
+  responseInlineSizeV2: 8,
+);
+
+abstract class Sub {
+  $fidl.ServiceData? get $serviceData => SubData();
+  $async.Future<int> foo(String s);
+}
+
+// TODO: Remove ServiceData for non-service
+class SubData implements $fidl.ServiceData<Sub> {
+  const SubData();
+
+  @override
+  String getName() {
+    return "";
+  }
+
+  @override
+  $fidl.AsyncBinding getBinding() {
+    return SubBinding();
+  }
+}
+
+class SubProxy extends $fidl.AsyncProxy<Sub> implements Sub {
+  SubProxy() : super($fidl.AsyncProxyController<Sub>($interfaceName: r'Sub')) {
+    ctrl.onResponse = _handleResponse;
+  }
+  @override
+  Null get $serviceData => null;
+
+  void _handleEvent($fidl.IncomingMessage $message) {
+    switch ($message.ordinal) {
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        break;
+    }
+  }
+
+  void _handleResponse($fidl.IncomingMessage $message) {
+    final int $txid = $message.txid;
+    if ($txid == 0) {
+      _handleEvent($message);
+      return;
+    }
+    final $async.Completer? $completer = ctrl.getCompleter($txid);
+    if ($completer == null) {
+      $message.closeHandles();
+      return;
+    }
+    switch ($message.ordinal) {
+      case _kSub_foo_Ordinal:
+        final String _name = _kSub_foo_Type.name;
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+          final List<$fidl.MemberType> $types = _kSub_foo_Type.response!;
+          // ignore: prefer_const_declarations
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kSub_foo_Type.responseInlineSize($message.wireFormat),
+              $types[0]);
+
+          $completer.complete($response);
+        }, 'method response');
+        break;
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        break;
+    }
+  }
+
+  @override
+  $async.Future<int> foo(String s) {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(_kSub_foo_Ordinal, 0);
+    final List<$fidl.MemberType> $types = _kSub_foo_Type.request!;
+    $fidl.encodeMessageWithCallback(
+        $encoder, _kSub_foo_Type.requestInlineSize($encoder.wireFormat), () {
+      $types[0].encode($encoder, s, $fidl.kMessageHeaderSize, 1);
+    });
+    final $completer = $async.Completer<int>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
+  }
+}
+
+class SubBinding extends $fidl.AsyncBinding<Sub> {
+  SubBinding() : super(r"Sub");
+
+  @override
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
+    switch ($message.ordinal) {
+      case _kSub_foo_Ordinal:
+        final String _name = _kSub_foo_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types = _kSub_foo_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<int> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<int>>($message,
+                  _kSub_foo_Type.requestInlineSize($message.wireFormat),
+                  ($fidl.Decoder decoder) {
+            return _impl.foo(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          });
+          $future.then(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(_kSub_foo_Ordinal, $message.txid);
+            final List<$fidl.MemberType> $types = _kSub_foo_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kSub_foo_Type.responseInlineSize($encoder.wireFormat),
+                $types[0],
+                $response);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            $fidl.handleException(_name, _e, close);
+          });
+        }, close);
+        break;
+      default:
+        throw $fidl.FidlError(r'Unexpected message name for SubBinding');
+    }
+  }
+}
+
+// foo: (String s) -> (int y)
 const int _kSuper_foo_Ordinal = 0x68a61c2a230db8b8;
 const $fidl.MethodType _kSuper_foo_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
@@ -187,157 +338,6 @@ class SuperBinding extends $fidl.AsyncBinding<Super> {
         break;
       default:
         throw $fidl.FidlError(r'Unexpected message name for SuperBinding');
-    }
-  }
-}
-
-// foo: (String s) -> (int y)
-const int _kSub_foo_Ordinal = 0x68a61c2a230db8b8;
-const $fidl.MethodType _kSub_foo_Type = $fidl.MethodType(
-  request: <$fidl.MemberType>[
-    $fidl.MemberType<String>(
-        type: $fidl.StringType(maybeElementCount: null),
-        offsetV1: 0,
-        offsetV2: 0),
-  ],
-  response: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
-  ],
-  name: r"Sub.foo",
-  requestInlineSizeV1: 16,
-  requestInlineSizeV2: 16,
-  responseInlineSizeV1: 8,
-  responseInlineSizeV2: 8,
-);
-
-abstract class Sub {
-  $fidl.ServiceData? get $serviceData => SubData();
-  $async.Future<int> foo(String s);
-}
-
-// TODO: Remove ServiceData for non-service
-class SubData implements $fidl.ServiceData<Sub> {
-  const SubData();
-
-  @override
-  String getName() {
-    return "";
-  }
-
-  @override
-  $fidl.AsyncBinding getBinding() {
-    return SubBinding();
-  }
-}
-
-class SubProxy extends $fidl.AsyncProxy<Sub> implements Sub {
-  SubProxy() : super($fidl.AsyncProxyController<Sub>($interfaceName: r'Sub')) {
-    ctrl.onResponse = _handleResponse;
-  }
-  @override
-  Null get $serviceData => null;
-
-  void _handleEvent($fidl.IncomingMessage $message) {
-    switch ($message.ordinal) {
-      default:
-        ctrl.proxyError(
-            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
-        break;
-    }
-  }
-
-  void _handleResponse($fidl.IncomingMessage $message) {
-    final int $txid = $message.txid;
-    if ($txid == 0) {
-      _handleEvent($message);
-      return;
-    }
-    final $async.Completer? $completer = ctrl.getCompleter($txid);
-    if ($completer == null) {
-      $message.closeHandles();
-      return;
-    }
-    switch ($message.ordinal) {
-      case _kSub_foo_Ordinal:
-        final String _name = _kSub_foo_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
-          final List<$fidl.MemberType> $types = _kSub_foo_Type.response!;
-          // ignore: prefer_const_declarations
-          final $response = $fidl.decodeMessage(
-              $message,
-              _kSub_foo_Type.responseInlineSize($message.wireFormat),
-              $types[0]);
-
-          $completer.complete($response);
-        }, 'method response');
-        break;
-      default:
-        ctrl.proxyError(
-            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
-        break;
-    }
-  }
-
-  @override
-  $async.Future<int> foo(String s) {
-    if (!ctrl.isBound) {
-      return $async.Future.error(
-          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
-          StackTrace.current);
-    }
-
-    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kSub_foo_Ordinal, 0);
-    final List<$fidl.MemberType> $types = _kSub_foo_Type.request!;
-    $fidl.encodeMessageWithCallback(
-        $encoder, _kSub_foo_Type.requestInlineSize($encoder.wireFormat), () {
-      $types[0].encode($encoder, s, $fidl.kMessageHeaderSize, 1);
-    });
-    final $completer = $async.Completer<int>();
-    ctrl.sendMessageWithResponse($encoder.message, $completer);
-    return $completer.future;
-  }
-}
-
-class SubBinding extends $fidl.AsyncBinding<Sub> {
-  SubBinding() : super(r"Sub");
-
-  @override
-  void handleMessage(
-      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
-    switch ($message.ordinal) {
-      case _kSub_foo_Ordinal:
-        final String _name = _kSub_foo_Type.name;
-        $fidl.performWithExceptionHandling(_name, () {
-          final List<$fidl.MemberType> $types = _kSub_foo_Type.request!;
-          // ignore: prefer_const_declarations
-          final _impl = impl!;
-          final $async.Future<int> $future = $fidl
-              .decodeMessageWithCallback<$async.Future<int>>($message,
-                  _kSub_foo_Type.requestInlineSize($message.wireFormat),
-                  ($fidl.Decoder decoder) {
-            return _impl.foo(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
-            );
-          });
-          $future.then(($response) {
-            final $fidl.Encoder $encoder =
-                $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(_kSub_foo_Ordinal, $message.txid);
-            final List<$fidl.MemberType> $types = _kSub_foo_Type.response!;
-            $fidl.encodeMessage(
-                $encoder,
-                _kSub_foo_Type.responseInlineSize($encoder.wireFormat),
-                $types[0],
-                $response);
-            $respond($encoder.message);
-          }, onError: (_e) {
-            $fidl.handleException(_name, _e, close);
-          });
-        }, close);
-        break;
-      default:
-        throw $fidl.FidlError(r'Unexpected message name for SubBinding');
     }
   }
 }

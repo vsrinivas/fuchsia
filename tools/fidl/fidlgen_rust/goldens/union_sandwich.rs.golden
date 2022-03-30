@@ -26,37 +26,6 @@ use {
 };
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub enum UnionSize8Alignment4 {
-    Variant(u32),
-}
-
-impl UnionSize8Alignment4 {
-    #[deprecated = "Strict unions should not use `validate`"]
-    #[inline]
-    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
-        Ok(self)
-    }
-
-    #[deprecated = "Strict unions should not use `is_unknown`"]
-    #[inline]
-    pub fn is_unknown(&self) -> bool {
-        false
-    }
-}
-
-impl fidl::encoding::Persistable for UnionSize8Alignment4 {}
-
-fidl_union! {
-    name: UnionSize8Alignment4,
-    members: [
-        Variant {
-            ty: u32,
-            ordinal: 1,
-        },
-    ],
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum UnionSize12Alignment4 {
     Variant([u8; 6]),
 }
@@ -150,59 +119,34 @@ fidl_union! {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct SandwichUnionSize8Alignment4 {
-    pub before: u32,
-    pub union: UnionSize8Alignment4,
-    pub after: u32,
+pub enum UnionSize8Alignment4 {
+    Variant(u32),
 }
 
-impl fidl::encoding::Persistable for SandwichUnionSize8Alignment4 {}
+impl UnionSize8Alignment4 {
+    #[deprecated = "Strict unions should not use `validate`"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        Ok(self)
+    }
 
-fidl_struct! {
-  name: SandwichUnionSize8Alignment4,
-  members: [
-    before {
-      ty: u32,
-      offset_v1: 0,
-      offset_v2: 0,
-    },
-    union {
-      ty: UnionSize8Alignment4,
-      offset_v1: 8,
-      offset_v2: 8,
-    },
-    after {
-      ty: u32,
-      offset_v1: 32,
-      offset_v2: 24,
-    },
-  ],
-  padding_v1: [
-  {
-      ty: u64,
-      offset: 0,
-      mask: 0xffffffff00000000u64,
-  },
-  {
-      ty: u64,
-      offset: 32,
-      mask: 0xffffffff00000000u64,
-  },],
-  padding_v2: [
-  {
-      ty: u64,
-      offset: 0,
-      mask: 0xffffffff00000000u64,
-  },
-  {
-      ty: u64,
-      offset: 24,
-      mask: 0xffffffff00000000u64,
-  },],
-  size_v1: 40,
-  size_v2: 32,
-  align_v1: 8,
-  align_v2: 8,
+    #[deprecated = "Strict unions should not use `is_unknown`"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+impl fidl::encoding::Persistable for UnionSize8Alignment4 {}
+
+fidl_union! {
+    name: UnionSize8Alignment4,
+    members: [
+        Variant {
+            ty: u32,
+            ordinal: 1,
+        },
+    ],
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -257,39 +201,6 @@ fidl_struct! {
   },],
   size_v1: 40,
   size_v2: 32,
-  align_v1: 8,
-  align_v2: 8,
-}
-
-#[derive(
-    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
-)]
-#[repr(C)]
-pub struct StructSize16Alignment8 {
-    pub f1: u64,
-    pub f2: u64,
-}
-
-impl fidl::encoding::Persistable for StructSize16Alignment8 {}
-
-fidl_struct_copy! {
-  name: StructSize16Alignment8,
-  members: [
-    f1 {
-      ty: u64,
-      offset_v1: 0,
-      offset_v2: 0,
-    },
-    f2 {
-      ty: u64,
-      offset_v1: 8,
-      offset_v2: 8,
-    },
-  ],
-  padding_v1: [],
-  padding_v2: [],
-  size_v1: 16,
-  size_v2: 16,
   align_v1: 8,
   align_v2: 8,
 }
@@ -402,6 +313,95 @@ fidl_struct! {
   },],
   size_v1: 40,
   size_v2: 32,
+  align_v1: 8,
+  align_v2: 8,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct SandwichUnionSize8Alignment4 {
+    pub before: u32,
+    pub union: UnionSize8Alignment4,
+    pub after: u32,
+}
+
+impl fidl::encoding::Persistable for SandwichUnionSize8Alignment4 {}
+
+fidl_struct! {
+  name: SandwichUnionSize8Alignment4,
+  members: [
+    before {
+      ty: u32,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+    union {
+      ty: UnionSize8Alignment4,
+      offset_v1: 8,
+      offset_v2: 8,
+    },
+    after {
+      ty: u32,
+      offset_v1: 32,
+      offset_v2: 24,
+    },
+  ],
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0xffffffff00000000u64,
+  },
+  {
+      ty: u64,
+      offset: 32,
+      mask: 0xffffffff00000000u64,
+  },],
+  padding_v2: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0xffffffff00000000u64,
+  },
+  {
+      ty: u64,
+      offset: 24,
+      mask: 0xffffffff00000000u64,
+  },],
+  size_v1: 40,
+  size_v2: 32,
+  align_v1: 8,
+  align_v2: 8,
+}
+
+#[derive(
+    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
+)]
+#[repr(C)]
+pub struct StructSize16Alignment8 {
+    pub f1: u64,
+    pub f2: u64,
+}
+
+impl fidl::encoding::Persistable for StructSize16Alignment8 {}
+
+fidl_struct_copy! {
+  name: StructSize16Alignment8,
+  members: [
+    f1 {
+      ty: u64,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+    f2 {
+      ty: u64,
+      offset_v1: 8,
+      offset_v2: 8,
+    },
+  ],
+  padding_v1: [],
+  padding_v2: [],
+  size_v1: 16,
+  size_v2: 16,
   align_v1: 8,
   align_v2: 8,
 }

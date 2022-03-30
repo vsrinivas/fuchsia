@@ -7,8 +7,8 @@
 #include "tools/kazoo/test.h"
 #include "tools/kazoo/test_ir_test_ulib_bits.test.h"
 #include "tools/kazoo/test_ir_test_ulib_enums.test.h"
-#include "tools/kazoo/test_ir_test_ulib_type_aliases.test.h"
 #include "tools/kazoo/test_ir_test_ulib_tables.test.h"
+#include "tools/kazoo/test_ir_test_ulib_type_aliases.test.h"
 
 namespace {
 
@@ -43,8 +43,18 @@ TEST(CUlibHeaderOutput, Bits) {
   Writer writer;
   ASSERT_TRUE(CUlibHeaderOutput(library, &writer));
 
-  EXPECT_EQ(writer.Out(),
-            std::string(kPrelude) + R"(
+  EXPECT_EQ(writer.Out(), std::string(kPrelude) + R"(
+// No Doc Comment Bits ---------------------------------------------------------
+
+typedef uint32_t zxio_no_doc_comment_bits_t;
+
+#define ZXIO_NO_DOC_COMMENT_BIT_NONE ((zxio_no_doc_comment_bits_t)0x0u)
+
+#define ZXIO_NO_DOC_COMMENT_BIT_FOO ((zxio_no_doc_comment_bits_t)0x1u)
+#define ZXIO_NO_DOC_COMMENT_BIT_BAR ((zxio_no_doc_comment_bits_t)0x2u)
+
+#define ZXIO_NO_DOC_COMMENT_BIT_ALL ((zxio_no_doc_comment_bits_t)0x3u)
+
 // Uint16 Bits -----------------------------------------------------------------
 
 // Doc Comments for Uint16Bits
@@ -58,17 +68,6 @@ typedef uint16_t zxio_uint16_bits_t;
 #define ZXIO_UINT16_BIT_FOO ((zxio_uint16_bits_t)0x1)
 
 #define ZXIO_UINT16_BIT_ALL ((zxio_uint16_bits_t)0x1)
-
-// No Doc Comment Bits ---------------------------------------------------------
-
-typedef uint32_t zxio_no_doc_comment_bits_t;
-
-#define ZXIO_NO_DOC_COMMENT_BIT_NONE ((zxio_no_doc_comment_bits_t)0x0u)
-
-#define ZXIO_NO_DOC_COMMENT_BIT_FOO ((zxio_no_doc_comment_bits_t)0x1u)
-#define ZXIO_NO_DOC_COMMENT_BIT_BAR ((zxio_no_doc_comment_bits_t)0x2u)
-
-#define ZXIO_NO_DOC_COMMENT_BIT_ALL ((zxio_no_doc_comment_bits_t)0x3u)
 )" + std::string(kEpilogue));
 }
 
@@ -79,8 +78,14 @@ TEST(CUlibHeaderOutput, Enums) {
   Writer writer;
   ASSERT_TRUE(CUlibHeaderOutput(library, &writer));
 
-  EXPECT_EQ(writer.Out(),
-            std::string(kPrelude) + R"(
+  EXPECT_EQ(writer.Out(), std::string(kPrelude) + R"(
+// No Doc Comment Enum ---------------------------------------------------------
+
+typedef uint32_t zxio_no_doc_comment_enum_t;
+
+#define ZXIO_NO_DOC_COMMENT_ENUM_FOO ((zxio_no_doc_comment_enum_t)0x1u)
+#define ZXIO_NO_DOC_COMMENT_ENUM_BAR ((zxio_no_doc_comment_enum_t)0x2u)
+
 // Uint16 Enum -----------------------------------------------------------------
 
 // Doc Comments for Uint16Enum
@@ -90,13 +95,6 @@ typedef uint16_t zxio_uint16_enum_t;
 
 // Doc comment on enum member.
 #define ZXIO_UINT16_ENUM_FOO ((zxio_uint16_enum_t)0x1)
-
-// No Doc Comment Enum ---------------------------------------------------------
-
-typedef uint32_t zxio_no_doc_comment_enum_t;
-
-#define ZXIO_NO_DOC_COMMENT_ENUM_FOO ((zxio_no_doc_comment_enum_t)0x1u)
-#define ZXIO_NO_DOC_COMMENT_ENUM_BAR ((zxio_no_doc_comment_enum_t)0x2u)
 )" + std::string(kEpilogue));
 }
 
@@ -107,8 +105,7 @@ TEST(CUlibHeaderOutput, TypeAliases) {
   Writer writer;
   ASSERT_TRUE(CUlibHeaderOutput(library, &writer));
 
-  EXPECT_EQ(writer.Out(),
-            std::string(kPrelude) + R"(
+  EXPECT_EQ(writer.Out(), std::string(kPrelude) + R"(
 // Destination -----------------------------------------------------------------
 
 typedef uint32_t zxio_destination_t;
@@ -129,8 +126,7 @@ TEST(CUlibHeaderOutput, Tables) {
   Writer writer;
   ASSERT_TRUE(CUlibHeaderOutput(library, &writer));
 
-  EXPECT_EQ(writer.Out(),
-            std::string(kPrelude) + R"(
+  EXPECT_EQ(writer.Out(), std::string(kPrelude) + R"(
 // Table where all members are optional.
 //
 // Optional fields have corresponding presence indicators. When creating

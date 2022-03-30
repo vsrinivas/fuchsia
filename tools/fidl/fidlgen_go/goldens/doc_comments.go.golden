@@ -14,57 +14,6 @@ const (
 	C int32 = 4
 )
 
-var _ _bindings.Enum = MyStrictEnum(0)
-
-// strict enum comment #1.
-//
-// strict enum comment #2.
-type MyStrictEnum uint32
-
-const (
-
-	// FOO member comment #1
-	//
-	// FOO member comment #3
-	MyStrictEnumFoo MyStrictEnum = 1
-
-	// BAR member comment #1
-	//
-	// BAR member comment #3
-	MyStrictEnumBar MyStrictEnum = 2
-)
-
-func (_ MyStrictEnum) I_EnumValues() []MyStrictEnum {
-	return []MyStrictEnum{
-		MyStrictEnumFoo,
-		MyStrictEnumBar,
-	}
-}
-
-func (_ MyStrictEnum) I_EnumIsStrict() bool {
-	return true
-}
-
-func (x MyStrictEnum) IsUnknown() bool {
-	switch x {
-	case 1:
-		return false
-	case 2:
-		return false
-	}
-	return true
-}
-
-func (x MyStrictEnum) String() string {
-	switch x {
-	case 1:
-		return "Foo"
-	case 2:
-		return "Bar"
-	}
-	return "Unknown"
-}
-
 var _ _bindings.Enum = MyFlexibleEnum(0)
 
 // flexible enum comment #1.
@@ -119,67 +68,55 @@ func (x MyFlexibleEnum) String() string {
 	return "Unknown"
 }
 
-var _ _bindings.Bits = MyStrictBits(0)
+var _ _bindings.Enum = MyStrictEnum(0)
 
-// strict bits comment #1
+// strict enum comment #1.
 //
-// strict bits comment #2
-type MyStrictBits uint32
+// strict enum comment #2.
+type MyStrictEnum uint32
 
 const (
-	MyStrictBitsMyFirstBit MyStrictBits = 1
-	MyStrictBitsMyOtherBit MyStrictBits = 2
-	MyStrictBits_Mask      MyStrictBits = 3
+
+	// FOO member comment #1
+	//
+	// FOO member comment #3
+	MyStrictEnumFoo MyStrictEnum = 1
+
+	// BAR member comment #1
+	//
+	// BAR member comment #3
+	MyStrictEnumBar MyStrictEnum = 2
 )
 
-func (_ MyStrictBits) I_BitsMask() MyStrictBits {
-	return MyStrictBits_Mask
+func (_ MyStrictEnum) I_EnumValues() []MyStrictEnum {
+	return []MyStrictEnum{
+		MyStrictEnumFoo,
+		MyStrictEnumBar,
+	}
 }
 
-func (_ MyStrictBits) I_BitsIsStrict() bool {
+func (_ MyStrictEnum) I_EnumIsStrict() bool {
 	return true
 }
 
-func (x MyStrictBits) HasUnknownBits() bool {
-	return x.GetUnknownBits() != 0
-}
-
-func (x MyStrictBits) GetUnknownBits() uint64 {
-	return uint64(^MyStrictBits_Mask & x)
-}
-
-func (x MyStrictBits) InvertBits() MyStrictBits {
-	return MyStrictBits_Mask & ^x
-}
-
-// HasBits validates that all flipped bits in the mask are set.
-func (x MyStrictBits) HasBits(mask MyStrictBits) bool {
-	return mask|x == x
-}
-
-// ClearBits ensures all flipped bits in the mask are unset.
-func (x MyStrictBits) ClearBits(mask MyStrictBits) MyStrictBits {
-	return ^mask & x
-}
-
-func (x MyStrictBits) String() string {
-	var buf _strings.Builder
-	if 1&x != 0 {
-		if buf.Len() != 0 {
-			buf.WriteRune('|')
-		}
-		buf.WriteString("MyFirstBit")
+func (x MyStrictEnum) IsUnknown() bool {
+	switch x {
+	case 1:
+		return false
+	case 2:
+		return false
 	}
-	if 2&x != 0 {
-		if buf.Len() != 0 {
-			buf.WriteRune('|')
-		}
-		buf.WriteString("MyOtherBit")
+	return true
+}
+
+func (x MyStrictEnum) String() string {
+	switch x {
+	case 1:
+		return "Foo"
+	case 2:
+		return "Bar"
 	}
-	if buf.Len() == 0 {
-		buf.WriteString("<empty bits>")
-	}
-	return buf.String()
+	return "Unknown"
 }
 
 var _ _bindings.Bits = MyFlexibleBits(0)
@@ -245,6 +182,69 @@ func (x MyFlexibleBits) String() string {
 	return buf.String()
 }
 
+var _ _bindings.Bits = MyStrictBits(0)
+
+// strict bits comment #1
+//
+// strict bits comment #2
+type MyStrictBits uint32
+
+const (
+	MyStrictBitsMyFirstBit MyStrictBits = 1
+	MyStrictBitsMyOtherBit MyStrictBits = 2
+	MyStrictBits_Mask      MyStrictBits = 3
+)
+
+func (_ MyStrictBits) I_BitsMask() MyStrictBits {
+	return MyStrictBits_Mask
+}
+
+func (_ MyStrictBits) I_BitsIsStrict() bool {
+	return true
+}
+
+func (x MyStrictBits) HasUnknownBits() bool {
+	return x.GetUnknownBits() != 0
+}
+
+func (x MyStrictBits) GetUnknownBits() uint64 {
+	return uint64(^MyStrictBits_Mask & x)
+}
+
+func (x MyStrictBits) InvertBits() MyStrictBits {
+	return MyStrictBits_Mask & ^x
+}
+
+// HasBits validates that all flipped bits in the mask are set.
+func (x MyStrictBits) HasBits(mask MyStrictBits) bool {
+	return mask|x == x
+}
+
+// ClearBits ensures all flipped bits in the mask are unset.
+func (x MyStrictBits) ClearBits(mask MyStrictBits) MyStrictBits {
+	return ^mask & x
+}
+
+func (x MyStrictBits) String() string {
+	var buf _strings.Builder
+	if 1&x != 0 {
+		if buf.Len() != 0 {
+			buf.WriteRune('|')
+		}
+		buf.WriteString("MyFirstBit")
+	}
+	if 2&x != 0 {
+		if buf.Len() != 0 {
+			buf.WriteRune('|')
+		}
+		buf.WriteString("MyOtherBit")
+	}
+	if buf.Len() == 0 {
+		buf.WriteString("<empty bits>")
+	}
+	return buf.String()
+}
+
 // struct comment #1
 //
 // struct comment #3
@@ -260,57 +260,6 @@ var _mStruct = _bindings.CreateLazyMarshaler(Struct{})
 
 func (msg *Struct) Marshaler() _bindings.Marshaler {
 	return _mStruct
-}
-
-type I_strictUnionTag uint64
-
-const (
-	StrictUnionField = 1 // 0x00000001
-)
-
-// strict union comment #1
-//
-// strict union comment #3
-type StrictUnion struct {
-	I_strictUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
-	// union member comment #1
-	//
-	// union member comment #3
-	Field int32 `fidl_ordinal:"1"`
-}
-
-var _mStrictUnion = _bindings.CreateLazyMarshaler(StrictUnion{})
-
-func (msg *StrictUnion) Marshaler() _bindings.Marshaler {
-	return _mStrictUnion
-}
-
-func (_m *StrictUnion) reset() {
-	switch _m.I_strictUnionTag {
-	case 1:
-		var _zeroed int32
-		_m.Field = _zeroed
-	}
-}
-
-func (_m *StrictUnion) Which() I_strictUnionTag {
-	return _m.I_strictUnionTag
-}
-
-func (_m *StrictUnion) Ordinal() uint64 {
-	return uint64(_m.I_strictUnionTag)
-}
-
-func (_m *StrictUnion) SetField(field int32) {
-	_m.reset()
-	_m.I_strictUnionTag = StrictUnionField
-	_m.Field = field
-}
-
-func StrictUnionWithField(field int32) StrictUnion {
-	var _u StrictUnion
-	_u.SetField(field)
-	return _u
 }
 
 type I_flexibleUnionTag uint64
@@ -375,6 +324,57 @@ func FlexibleUnionWithField(field int32) FlexibleUnion {
 }
 func (_m *FlexibleUnion) GetUnknownData() _bindings.UnknownData {
 	return _m.I_unknownData.(_bindings.UnknownData)
+}
+
+type I_strictUnionTag uint64
+
+const (
+	StrictUnionField = 1 // 0x00000001
+)
+
+// strict union comment #1
+//
+// strict union comment #3
+type StrictUnion struct {
+	I_strictUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	// union member comment #1
+	//
+	// union member comment #3
+	Field int32 `fidl_ordinal:"1"`
+}
+
+var _mStrictUnion = _bindings.CreateLazyMarshaler(StrictUnion{})
+
+func (msg *StrictUnion) Marshaler() _bindings.Marshaler {
+	return _mStrictUnion
+}
+
+func (_m *StrictUnion) reset() {
+	switch _m.I_strictUnionTag {
+	case 1:
+		var _zeroed int32
+		_m.Field = _zeroed
+	}
+}
+
+func (_m *StrictUnion) Which() I_strictUnionTag {
+	return _m.I_strictUnionTag
+}
+
+func (_m *StrictUnion) Ordinal() uint64 {
+	return uint64(_m.I_strictUnionTag)
+}
+
+func (_m *StrictUnion) SetField(field int32) {
+	_m.reset()
+	_m.I_strictUnionTag = StrictUnionField
+	_m.Field = field
+}
+
+func StrictUnionWithField(field int32) StrictUnion {
+	var _u StrictUnion
+	_u.SetField(field)
+	return _u
 }
 
 // table comment #1

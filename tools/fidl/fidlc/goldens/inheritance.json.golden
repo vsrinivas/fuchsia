@@ -8,78 +8,6 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "test.inheritance/super",
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
-        "line": 3,
-        "column": 10,
-        "length": 5
-      },
-      "composed_protocols": [],
-      "methods": [
-        {
-          "ordinal": 7540745593380780216,
-          "name": "foo",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
-            "line": 4,
-            "column": 5,
-            "length": 3
-          },
-          "has_request": true,
-          "maybe_request_payload": {
-            "kind": "identifier",
-            "identifier": "test.inheritance/SuperFooRequest",
-            "nullable": false,
-            "type_shape_v1": {
-              "inline_size": 16,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 4294967295,
-              "has_padding": true,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 16,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 4294967295,
-              "has_padding": true,
-              "has_flexible_envelope": false
-            }
-          },
-          "has_response": true,
-          "maybe_response_payload": {
-            "kind": "identifier",
-            "identifier": "test.inheritance/SuperFooTopResponse",
-            "nullable": false,
-            "type_shape_v1": {
-              "inline_size": 8,
-              "alignment": 8,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 8,
-              "alignment": 8,
-              "depth": 0,
-              "max_handles": 0,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "is_composed": false,
-          "has_error": false
-        }
-      ]
-    },
-    {
       "name": "test.inheritance/sub",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
@@ -190,6 +118,78 @@
             }
           },
           "is_composed": true,
+          "has_error": false
+        }
+      ]
+    },
+    {
+      "name": "test.inheritance/super",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
+        "line": 3,
+        "column": 10,
+        "length": 5
+      },
+      "composed_protocols": [],
+      "methods": [
+        {
+          "ordinal": 7540745593380780216,
+          "name": "foo",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
+            "line": 4,
+            "column": 5,
+            "length": 3
+          },
+          "has_request": true,
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "test.inheritance/SuperFooRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "has_response": true,
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "test.inheritance/SuperFooTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "is_composed": false,
           "has_error": false
         }
       ]
@@ -357,8 +357,8 @@
     "test.inheritance/sub"
   ],
   "declarations": {
-    "test.inheritance/super": "interface",
     "test.inheritance/sub": "interface",
+    "test.inheritance/super": "interface",
     "test.inheritance/SuperFooRequest": "struct",
     "test.inheritance/SuperFooTopResponse": "struct"
   }

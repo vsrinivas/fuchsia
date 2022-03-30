@@ -952,7 +952,7 @@ std::vector<const flat::Struct*> ExternalStructs(const flat::Library* library) {
   // Use the comparator below to ensure deterministic output when this set is converted into a
   // vector at the end of this function.
   auto ordering = [](const flat::Struct* a, const flat::Struct* b) {
-    return (a == nullptr ? "" : a->name.decl_name()) < (b == nullptr ? "" : b->name.decl_name());
+    return NameFlatName(a->name) < NameFlatName(b->name);
   };
   std::set<const flat::Struct*, decltype(ordering)> external_structs(ordering);
 

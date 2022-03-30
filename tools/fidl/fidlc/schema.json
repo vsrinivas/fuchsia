@@ -1828,14 +1828,14 @@
     },
     "properties": {
         "bits_declarations": {
-            "description": "List of bits declarations",
+            "description": "List of bits declarations, sorted by fully qualified name",
             "items": {
                 "$ref": "#/definitions/bits"
             },
             "type": "array"
         },
         "const_declarations": {
-            "description": "List of constants",
+            "description": "List of constants, sorted by fully qualified name",
             "items": {
                 "$ref": "#/definitions/const"
             },
@@ -1853,35 +1853,35 @@
             "description": "List of declarations and their types"
         },
         "enum_declarations": {
-            "description": "List of enumerations",
+            "description": "List of enumerations, sorted by fully qualified name",
             "items": {
                 "$ref": "#/definitions/enum"
             },
             "type": "array"
         },
         "experimental_resource_declarations": {
-            "description": "List of resources",
+            "description": "List of resources, sorted by fully qualified name",
             "items": {
                 "$ref": "#/definitions/resource"
             },
             "type": "array"
         },
         "external_struct_declarations": {
-            "description": "List of external structs that are used to form method payloads",
+            "description": "List of external structs that are used to form method payloads, sorted by fully qualified name",
             "items": {
                 "$ref": "#/definitions/struct"
             },
             "type": "array"
         },
         "interface_declarations": {
-            "description": "List of protocols",
+            "description": "List of protocols, sorted by fully qualified name",
             "items": {
                 "$ref": "#/definitions/interface"
             },
             "type": "array"
         },
         "library_dependencies": {
-            "description": "List of dependencies on other libraries",
+            "description": "List of dependencies on other libraries, sorted by library name",
             "items": {
                 "$ref": "#/definitions/library"
             },
@@ -1896,35 +1896,35 @@
             "description": "Name of the library"
         },
         "service_declarations": {
-            "description": "List of services",
+            "description": "List of services, sorted by fully qualified name",
             "items": {
                 "$ref": "#/definitions/service"
             },
             "type": "array"
         },
         "struct_declarations": {
-            "description": "List of structures",
+            "description": "List of structures, sorted by fully qualified name",
             "items": {
                 "$ref": "#/definitions/struct"
             },
             "type": "array"
         },
         "table_declarations": {
-            "description": "List of tables",
+            "description": "List of tables, sorted by fully qualified name",
             "items": {
                 "$ref": "#/definitions/table"
             },
             "type": "array"
         },
         "type_alias_declarations": {
-            "description": "List of type aliases",
+            "description": "List of type aliases, sorted by fully qualified name",
             "items": {
                 "$ref": "#/definitions/type-alias"
             },
             "type": "array"
         },
         "union_declarations": {
-            "description": "List of unions",
+            "description": "List of unions, sorted by fully qualified name",
             "items": {
                 "$ref": "#/definitions/union"
             },

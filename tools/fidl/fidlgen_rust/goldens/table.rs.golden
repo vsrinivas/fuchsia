@@ -51,66 +51,26 @@ fidl_table! {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct SimpleTable {
-    pub x: Option<i64>,
-    pub y: Option<i64>,
+pub struct ExtensionTable {
     /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
     /// map from ordinals to raw data. The `Some` case is always nonempty.
     pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
-    #[deprecated = "Use `..SimpleTable::EMPTY` to construct and `..` to match."]
+    #[deprecated = "Use `..ExtensionTable::EMPTY` to construct and `..` to match."]
     #[doc(hidden)]
     pub __non_exhaustive: (),
 }
 
-impl SimpleTable {
+impl ExtensionTable {
     /// An empty table with every field set to `None`.
     #[allow(deprecated)]
-    pub const EMPTY: Self = Self { x: None, y: None, unknown_data: None, __non_exhaustive: () };
+    pub const EMPTY: Self = Self { unknown_data: None, __non_exhaustive: () };
 }
 
-impl fidl::encoding::Persistable for SimpleTable {}
+impl fidl::encoding::Persistable for ExtensionTable {}
 
 fidl_table! {
-    name: SimpleTable,
+    name: ExtensionTable,
     members: [
-        x {
-            ty: i64,
-            ordinal: 1,
-        },
-        y {
-            ty: i64,
-            ordinal: 5,
-        },
-    ],
-    value_unknown_member: unknown_data,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct OlderSimpleTable {
-    pub x: Option<i64>,
-    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
-    /// map from ordinals to raw data. The `Some` case is always nonempty.
-    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
-    #[deprecated = "Use `..OlderSimpleTable::EMPTY` to construct and `..` to match."]
-    #[doc(hidden)]
-    pub __non_exhaustive: (),
-}
-
-impl OlderSimpleTable {
-    /// An empty table with every field set to `None`.
-    #[allow(deprecated)]
-    pub const EMPTY: Self = Self { x: None, unknown_data: None, __non_exhaustive: () };
-}
-
-impl fidl::encoding::Persistable for OlderSimpleTable {}
-
-fidl_table! {
-    name: OlderSimpleTable,
-    members: [
-        x {
-            ty: i64,
-            ordinal: 1,
-        },
     ],
     value_unknown_member: unknown_data,
 }
@@ -151,6 +111,36 @@ fidl_table! {
         z {
             ty: i64,
             ordinal: 6,
+        },
+    ],
+    value_unknown_member: unknown_data,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct OlderSimpleTable {
+    pub x: Option<i64>,
+    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
+    /// map from ordinals to raw data. The `Some` case is always nonempty.
+    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
+    #[deprecated = "Use `..OlderSimpleTable::EMPTY` to construct and `..` to match."]
+    #[doc(hidden)]
+    pub __non_exhaustive: (),
+}
+
+impl OlderSimpleTable {
+    /// An empty table with every field set to `None`.
+    #[allow(deprecated)]
+    pub const EMPTY: Self = Self { x: None, unknown_data: None, __non_exhaustive: () };
+}
+
+impl fidl::encoding::Persistable for OlderSimpleTable {}
+
+fidl_table! {
+    name: OlderSimpleTable,
+    members: [
+        x {
+            ty: i64,
+            ordinal: 1,
         },
     ],
     value_unknown_member: unknown_data,
@@ -198,56 +188,36 @@ fidl_table! {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct TableWithAttributes {
+pub struct SimpleTable {
     pub x: Option<i64>,
+    pub y: Option<i64>,
     /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
     /// map from ordinals to raw data. The `Some` case is always nonempty.
     pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
-    #[deprecated = "Use `..TableWithAttributes::EMPTY` to construct and `..` to match."]
+    #[deprecated = "Use `..SimpleTable::EMPTY` to construct and `..` to match."]
     #[doc(hidden)]
     pub __non_exhaustive: (),
 }
 
-impl TableWithAttributes {
+impl SimpleTable {
     /// An empty table with every field set to `None`.
     #[allow(deprecated)]
-    pub const EMPTY: Self = Self { x: None, unknown_data: None, __non_exhaustive: () };
+    pub const EMPTY: Self = Self { x: None, y: None, unknown_data: None, __non_exhaustive: () };
 }
 
-impl fidl::encoding::Persistable for TableWithAttributes {}
+impl fidl::encoding::Persistable for SimpleTable {}
 
 fidl_table! {
-    name: TableWithAttributes,
+    name: SimpleTable,
     members: [
         x {
             ty: i64,
             ordinal: 1,
         },
-    ],
-    value_unknown_member: unknown_data,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ExtensionTable {
-    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
-    /// map from ordinals to raw data. The `Some` case is always nonempty.
-    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
-    #[deprecated = "Use `..ExtensionTable::EMPTY` to construct and `..` to match."]
-    #[doc(hidden)]
-    pub __non_exhaustive: (),
-}
-
-impl ExtensionTable {
-    /// An empty table with every field set to `None`.
-    #[allow(deprecated)]
-    pub const EMPTY: Self = Self { unknown_data: None, __non_exhaustive: () };
-}
-
-impl fidl::encoding::Persistable for ExtensionTable {}
-
-fidl_table! {
-    name: ExtensionTable,
-    members: [
+        y {
+            ty: i64,
+            ordinal: 5,
+        },
     ],
     value_unknown_member: unknown_data,
 }
@@ -659,6 +629,36 @@ fidl_table! {
         v64 {
             ty: ExtensionTable,
             ordinal: 64,
+        },
+    ],
+    value_unknown_member: unknown_data,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TableWithAttributes {
+    pub x: Option<i64>,
+    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
+    /// map from ordinals to raw data. The `Some` case is always nonempty.
+    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
+    #[deprecated = "Use `..TableWithAttributes::EMPTY` to construct and `..` to match."]
+    #[doc(hidden)]
+    pub __non_exhaustive: (),
+}
+
+impl TableWithAttributes {
+    /// An empty table with every field set to `None`.
+    #[allow(deprecated)]
+    pub const EMPTY: Self = Self { x: None, unknown_data: None, __non_exhaustive: () };
+}
+
+impl fidl::encoding::Persistable for TableWithAttributes {}
+
+fidl_table! {
+    name: TableWithAttributes,
+    members: [
+        x {
+            ty: i64,
+            ordinal: 1,
         },
     ],
     value_unknown_member: unknown_data,

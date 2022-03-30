@@ -39,51 +39,6 @@ import 'package:zircon/zircon.dart' as $zircon;
 // ignore_for_file: avoid_unused_constructor_parameters
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
-class ObjType extends $fidl.Enum {
-  static const Map<int, ObjType> _values = {
-    0x0: none,
-    0xe: socket,
-  };
-  factory ObjType(int _v) {
-    if (!_values.containsKey(_v)) {
-      throw $fidl.FidlError('Invalid strict enum value: $_v',
-          $fidl.FidlErrorCode.fidlInvalidEnumValue);
-    }
-    return _values[_v]!;
-  }
-  static const ObjType none = ObjType._(0x0);
-  static const ObjType socket = ObjType._(0xe);
-
-  const ObjType._(this.$value);
-
-  @override
-  final int $value;
-
-  static const Map<String, ObjType> $valuesMap = {
-    r'none': none,
-    r'socket': socket,
-  };
-
-  static const List<ObjType> $values = [
-    none,
-    socket,
-  ];
-
-  static ObjType? $valueOf(String name) => $valuesMap[name];
-
-  @override
-  bool isUnknown() {
-    return false;
-  }
-
-  static ObjType _ctor(int v) => ObjType(v);
-}
-
-const $fidl.EnumType<ObjType> kobj_type_Type = $fidl.EnumType<ObjType>(
-    type: $fidl.Uint32Type(),
-    values: {0x0: null, 0xe: null},
-    ctor: ObjType._ctor);
-
 class ErrorEnum extends $fidl.Enum {
   static const Map<int, ErrorEnum> _values = {
     0x1: errFoo,
@@ -128,6 +83,51 @@ const $fidl.EnumType<ErrorEnum> kErrorEnum_Type = $fidl.EnumType<ErrorEnum>(
     type: $fidl.Uint32Type(),
     values: {0x1: null, 0x2: null},
     ctor: ErrorEnum._ctor);
+
+class ObjType extends $fidl.Enum {
+  static const Map<int, ObjType> _values = {
+    0x0: none,
+    0xe: socket,
+  };
+  factory ObjType(int _v) {
+    if (!_values.containsKey(_v)) {
+      throw $fidl.FidlError('Invalid strict enum value: $_v',
+          $fidl.FidlErrorCode.fidlInvalidEnumValue);
+    }
+    return _values[_v]!;
+  }
+  static const ObjType none = ObjType._(0x0);
+  static const ObjType socket = ObjType._(0xe);
+
+  const ObjType._(this.$value);
+
+  @override
+  final int $value;
+
+  static const Map<String, ObjType> $valuesMap = {
+    r'none': none,
+    r'socket': socket,
+  };
+
+  static const List<ObjType> $values = [
+    none,
+    socket,
+  ];
+
+  static ObjType? $valueOf(String name) => $valuesMap[name];
+
+  @override
+  bool isUnknown() {
+    return false;
+  }
+
+  static ObjType _ctor(int v) => ObjType(v);
+}
+
+const $fidl.EnumType<ObjType> kobj_type_Type = $fidl.EnumType<ObjType>(
+    type: $fidl.Uint32Type(),
+    values: {0x0: null, 0xe: null},
+    ctor: ObjType._ctor);
 
 class Rights extends $fidl.Bits {
   factory Rights(int _v) {
@@ -175,45 +175,119 @@ class Rights extends $fidl.Bits {
 const $fidl.BitsType<Rights> krights_Type =
     $fidl.BitsType<Rights>(type: $fidl.Uint32Type(), ctor: Rights._ctor);
 
-enum WithErrorSyntaxResponseAsStructResultTag {
-  response, // 0x1
-  err, // 0x2
+enum TheUnionTag {
+  $unknown,
+  v, // 0x1
 }
 
-const Map<int, WithErrorSyntaxResponseAsStructResultTag>
-    _WithErrorSyntaxResponseAsStructResultTag_map = {
-  1: WithErrorSyntaxResponseAsStructResultTag.response,
-  2: WithErrorSyntaxResponseAsStructResultTag.err,
+const Map<int, TheUnionTag> _TheUnionTag_map = {
+  1: TheUnionTag.v,
 };
 
-class WithErrorSyntaxResponseAsStructResult extends $fidl.Union {
-  const WithErrorSyntaxResponseAsStructResult.withResponse(
-      WithErrorSyntaxResponseAsStructResponse value)
+class TheUnion extends $fidl.Union {
+  const TheUnion.withV(int value)
       : _ordinal = 1,
         _data = value;
+  const TheUnion.with$UnknownData(this._ordinal, $fidl.UnknownRawData data)
+      : _data = data;
 
-  const WithErrorSyntaxResponseAsStructResult.withErr(int value)
-      : _ordinal = 2,
-        _data = value;
-
-  WithErrorSyntaxResponseAsStructResult._(int ordinal, Object data)
+  TheUnion._(int ordinal, Object data)
       : _ordinal = ordinal,
         _data = data;
 
   final int _ordinal;
   final _data;
 
-  WithErrorSyntaxResponseAsStructResultTag get $tag =>
-      _WithErrorSyntaxResponseAsStructResultTag_map[_ordinal]!;
+  TheUnionTag get $tag => _TheUnionTag_map[_ordinal] ?? TheUnionTag.$unknown;
 
-  WithErrorSyntaxResponseAsStructResponse? get response {
+  int? get v {
     if (_ordinal != 1) {
       return null;
     }
     return _data;
   }
 
-  int? get err {
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static TheUnion _ctor(int ordinal, Object data) {
+    return TheUnion._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<TheUnion> kTheUnion_Type = $fidl.UnionType<TheUnion>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Uint32Type(),
+  },
+  ctor: TheUnion._ctor,
+  flexible: true,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<TheUnion> kTheUnion_OptType =
+    $fidl.NullableUnionType<TheUnion>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Uint32Type(),
+  },
+  ctor: TheUnion._ctor,
+  flexible: true,
+  resource: false,
+);
+
+enum WithErrorSyntaxErrorAsEnumResultTag {
+  response, // 0x1
+  err, // 0x2
+}
+
+const Map<int, WithErrorSyntaxErrorAsEnumResultTag>
+    _WithErrorSyntaxErrorAsEnumResultTag_map = {
+  1: WithErrorSyntaxErrorAsEnumResultTag.response,
+  2: WithErrorSyntaxErrorAsEnumResultTag.err,
+};
+
+class WithErrorSyntaxErrorAsEnumResult extends $fidl.Union {
+  const WithErrorSyntaxErrorAsEnumResult.withResponse(
+      WithErrorSyntaxErrorAsEnumResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const WithErrorSyntaxErrorAsEnumResult.withErr(ErrorEnum value)
+      : _ordinal = 2,
+        _data = value;
+
+  WithErrorSyntaxErrorAsEnumResult._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  WithErrorSyntaxErrorAsEnumResultTag get $tag =>
+      _WithErrorSyntaxErrorAsEnumResultTag_map[_ordinal]!;
+
+  WithErrorSyntaxErrorAsEnumResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  ErrorEnum? get err {
     if (_ordinal != 2) {
       return null;
     }
@@ -236,34 +310,34 @@ class WithErrorSyntaxResponseAsStructResult extends $fidl.Union {
   @override
   Object get $data => _data;
 
-  static WithErrorSyntaxResponseAsStructResult _ctor(int ordinal, Object data) {
-    return WithErrorSyntaxResponseAsStructResult._(ordinal, data);
+  static WithErrorSyntaxErrorAsEnumResult _ctor(int ordinal, Object data) {
+    return WithErrorSyntaxErrorAsEnumResult._(ordinal, data);
   }
 }
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.UnionType<WithErrorSyntaxResponseAsStructResult>
-    kWithErrorSyntax_ResponseAsStruct_Result_Type =
-    $fidl.UnionType<WithErrorSyntaxResponseAsStructResult>(
+const $fidl.UnionType<WithErrorSyntaxErrorAsEnumResult>
+    kWithErrorSyntax_ErrorAsEnum_Result_Type =
+    $fidl.UnionType<WithErrorSyntaxErrorAsEnumResult>(
   members: <int, $fidl.FidlType>{
-    1: kWithErrorSyntax_ResponseAsStruct_Response_Type,
-    2: $fidl.Uint32Type(),
+    1: kWithErrorSyntax_ErrorAsEnum_Response_Type,
+    2: kErrorEnum_Type,
   },
-  ctor: WithErrorSyntaxResponseAsStructResult._ctor,
+  ctor: WithErrorSyntaxErrorAsEnumResult._ctor,
   flexible: false,
   resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<WithErrorSyntaxResponseAsStructResult>
-    kWithErrorSyntax_ResponseAsStruct_Result_OptType =
-    $fidl.NullableUnionType<WithErrorSyntaxResponseAsStructResult>(
+const $fidl.NullableUnionType<WithErrorSyntaxErrorAsEnumResult>
+    kWithErrorSyntax_ErrorAsEnum_Result_OptType =
+    $fidl.NullableUnionType<WithErrorSyntaxErrorAsEnumResult>(
   members: <int, $fidl.FidlType>{
-    1: kWithErrorSyntax_ResponseAsStruct_Response_Type,
-    2: $fidl.Uint32Type(),
+    1: kWithErrorSyntax_ErrorAsEnum_Response_Type,
+    2: kErrorEnum_Type,
   },
-  ctor: WithErrorSyntaxResponseAsStructResult._ctor,
+  ctor: WithErrorSyntaxErrorAsEnumResult._ctor,
   flexible: false,
   resource: false,
 );
@@ -361,99 +435,6 @@ const $fidl.NullableUnionType<WithErrorSyntaxErrorAsPrimitiveResult>
   resource: false,
 );
 
-enum WithErrorSyntaxErrorAsEnumResultTag {
-  response, // 0x1
-  err, // 0x2
-}
-
-const Map<int, WithErrorSyntaxErrorAsEnumResultTag>
-    _WithErrorSyntaxErrorAsEnumResultTag_map = {
-  1: WithErrorSyntaxErrorAsEnumResultTag.response,
-  2: WithErrorSyntaxErrorAsEnumResultTag.err,
-};
-
-class WithErrorSyntaxErrorAsEnumResult extends $fidl.Union {
-  const WithErrorSyntaxErrorAsEnumResult.withResponse(
-      WithErrorSyntaxErrorAsEnumResponse value)
-      : _ordinal = 1,
-        _data = value;
-
-  const WithErrorSyntaxErrorAsEnumResult.withErr(ErrorEnum value)
-      : _ordinal = 2,
-        _data = value;
-
-  WithErrorSyntaxErrorAsEnumResult._(int ordinal, Object data)
-      : _ordinal = ordinal,
-        _data = data;
-
-  final int _ordinal;
-  final _data;
-
-  WithErrorSyntaxErrorAsEnumResultTag get $tag =>
-      _WithErrorSyntaxErrorAsEnumResultTag_map[_ordinal]!;
-
-  WithErrorSyntaxErrorAsEnumResponse? get response {
-    if (_ordinal != 1) {
-      return null;
-    }
-    return _data;
-  }
-
-  ErrorEnum? get err {
-    if (_ordinal != 2) {
-      return null;
-    }
-    return _data;
-  }
-
-  $fidl.UnknownRawData? get $unknownData {
-    switch (_ordinal) {
-      case 1:
-      case 2:
-        return null;
-      default:
-        return _data;
-    }
-  }
-
-  @override
-  int get $ordinal => _ordinal;
-
-  @override
-  Object get $data => _data;
-
-  static WithErrorSyntaxErrorAsEnumResult _ctor(int ordinal, Object data) {
-    return WithErrorSyntaxErrorAsEnumResult._(ordinal, data);
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.UnionType<WithErrorSyntaxErrorAsEnumResult>
-    kWithErrorSyntax_ErrorAsEnum_Result_Type =
-    $fidl.UnionType<WithErrorSyntaxErrorAsEnumResult>(
-  members: <int, $fidl.FidlType>{
-    1: kWithErrorSyntax_ErrorAsEnum_Response_Type,
-    2: kErrorEnum_Type,
-  },
-  ctor: WithErrorSyntaxErrorAsEnumResult._ctor,
-  flexible: false,
-  resource: false,
-);
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<WithErrorSyntaxErrorAsEnumResult>
-    kWithErrorSyntax_ErrorAsEnum_Result_OptType =
-    $fidl.NullableUnionType<WithErrorSyntaxErrorAsEnumResult>(
-  members: <int, $fidl.FidlType>{
-    1: kWithErrorSyntax_ErrorAsEnum_Response_Type,
-    2: kErrorEnum_Type,
-  },
-  ctor: WithErrorSyntaxErrorAsEnumResult._ctor,
-  flexible: false,
-  resource: false,
-);
-
 enum WithErrorSyntaxHandleInResultResultTag {
   response, // 0x1
   err, // 0x2
@@ -547,33 +528,46 @@ const $fidl.NullableUnionType<WithErrorSyntaxHandleInResultResult>
   resource: true,
 );
 
-enum TheUnionTag {
-  $unknown,
-  v, // 0x1
+enum WithErrorSyntaxResponseAsStructResultTag {
+  response, // 0x1
+  err, // 0x2
 }
 
-const Map<int, TheUnionTag> _TheUnionTag_map = {
-  1: TheUnionTag.v,
+const Map<int, WithErrorSyntaxResponseAsStructResultTag>
+    _WithErrorSyntaxResponseAsStructResultTag_map = {
+  1: WithErrorSyntaxResponseAsStructResultTag.response,
+  2: WithErrorSyntaxResponseAsStructResultTag.err,
 };
 
-class TheUnion extends $fidl.Union {
-  const TheUnion.withV(int value)
+class WithErrorSyntaxResponseAsStructResult extends $fidl.Union {
+  const WithErrorSyntaxResponseAsStructResult.withResponse(
+      WithErrorSyntaxResponseAsStructResponse value)
       : _ordinal = 1,
         _data = value;
-  const TheUnion.with$UnknownData(this._ordinal, $fidl.UnknownRawData data)
-      : _data = data;
 
-  TheUnion._(int ordinal, Object data)
+  const WithErrorSyntaxResponseAsStructResult.withErr(int value)
+      : _ordinal = 2,
+        _data = value;
+
+  WithErrorSyntaxResponseAsStructResult._(int ordinal, Object data)
       : _ordinal = ordinal,
         _data = data;
 
   final int _ordinal;
   final _data;
 
-  TheUnionTag get $tag => _TheUnionTag_map[_ordinal] ?? TheUnionTag.$unknown;
+  WithErrorSyntaxResponseAsStructResultTag get $tag =>
+      _WithErrorSyntaxResponseAsStructResultTag_map[_ordinal]!;
 
-  int? get v {
+  WithErrorSyntaxResponseAsStructResponse? get response {
     if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
       return null;
     }
     return _data;
@@ -582,6 +576,7 @@ class TheUnion extends $fidl.Union {
   $fidl.UnknownRawData? get $unknownData {
     switch (_ordinal) {
       case 1:
+      case 2:
         return null;
       default:
         return _data;
@@ -594,297 +589,37 @@ class TheUnion extends $fidl.Union {
   @override
   Object get $data => _data;
 
-  static TheUnion _ctor(int ordinal, Object data) {
-    return TheUnion._(ordinal, data);
+  static WithErrorSyntaxResponseAsStructResult _ctor(int ordinal, Object data) {
+    return WithErrorSyntaxResponseAsStructResult._(ordinal, data);
   }
 }
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.UnionType<TheUnion> kTheUnion_Type = $fidl.UnionType<TheUnion>(
+const $fidl.UnionType<WithErrorSyntaxResponseAsStructResult>
+    kWithErrorSyntax_ResponseAsStruct_Result_Type =
+    $fidl.UnionType<WithErrorSyntaxResponseAsStructResult>(
   members: <int, $fidl.FidlType>{
-    1: $fidl.Uint32Type(),
+    1: kWithErrorSyntax_ResponseAsStruct_Response_Type,
+    2: $fidl.Uint32Type(),
   },
-  ctor: TheUnion._ctor,
-  flexible: true,
+  ctor: WithErrorSyntaxResponseAsStructResult._ctor,
+  flexible: false,
   resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<TheUnion> kTheUnion_OptType =
-    $fidl.NullableUnionType<TheUnion>(
+const $fidl.NullableUnionType<WithErrorSyntaxResponseAsStructResult>
+    kWithErrorSyntax_ResponseAsStruct_Result_OptType =
+    $fidl.NullableUnionType<WithErrorSyntaxResponseAsStructResult>(
   members: <int, $fidl.FidlType>{
-    1: $fidl.Uint32Type(),
+    1: kWithErrorSyntax_ResponseAsStruct_Response_Type,
+    2: $fidl.Uint32Type(),
   },
-  ctor: TheUnion._ctor,
-  flexible: true,
+  ctor: WithErrorSyntaxResponseAsStructResult._ctor,
+  flexible: false,
   resource: false,
 );
-
-class WithErrorSyntaxResponseAsStructResponse extends $fidl.Struct {
-  const WithErrorSyntaxResponseAsStructResponse({
-    required this.a,
-    required this.b,
-    required this.c,
-  });
-  WithErrorSyntaxResponseAsStructResponse.clone(
-    WithErrorSyntaxResponseAsStructResponse $orig, {
-    int? a,
-    int? b,
-    int? c,
-  }) : this(
-          a: a ?? $orig.a,
-          b: b ?? $orig.b,
-          c: c ?? $orig.c,
-        );
-
-  final int a;
-  final int b;
-  final int c;
-
-  @override
-  List<Object?> get $fields {
-    return <Object?>[
-      a,
-      b,
-      c,
-    ];
-  }
-
-  static const $fieldType0 = $fidl.Int64Type();
-  static const $fieldType1 = $fidl.Int64Type();
-  static const $fieldType2 = $fidl.Int64Type();
-
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 8, $depth);
-        $fieldType2.encode($encoder, c, $offset + 16, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 8, $depth);
-        $fieldType2.encode($encoder, c, $offset + 16, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-
-  static WithErrorSyntaxResponseAsStructResponse _structDecode(
-      $fidl.Decoder $decoder, int $offset, int $depth) {
-    switch ($decoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        return WithErrorSyntaxResponseAsStructResponse(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 8, $depth),
-            c: $fieldType2.decode($decoder, $offset + 16, $depth));
-      case $fidl.WireFormat.v2:
-        return WithErrorSyntaxResponseAsStructResponse(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 8, $depth),
-            c: $fieldType2.decode($decoder, $offset + 16, $depth));
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.StructType<WithErrorSyntaxResponseAsStructResponse>
-    kWithErrorSyntax_ResponseAsStruct_Response_Type =
-    $fidl.StructType<WithErrorSyntaxResponseAsStructResponse>(
-        inlineSizeV1: 24,
-        inlineSizeV2: 24,
-        structDecode: WithErrorSyntaxResponseAsStructResponse._structDecode);
-
-class WithErrorSyntaxErrorAsPrimitiveResponse extends $fidl.Struct {
-  const WithErrorSyntaxErrorAsPrimitiveResponse({
-    this.reserved: 0x0,
-  });
-  WithErrorSyntaxErrorAsPrimitiveResponse.clone(
-    WithErrorSyntaxErrorAsPrimitiveResponse $orig, {
-    int? reserved,
-  }) : this(
-          reserved: reserved ?? $orig.reserved,
-        );
-
-  final int reserved;
-
-  @override
-  List<Object?> get $fields {
-    return <Object?>[
-      reserved,
-    ];
-  }
-
-  static const $fieldType0 = $fidl.Uint8Type();
-
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-
-  static WithErrorSyntaxErrorAsPrimitiveResponse _structDecode(
-      $fidl.Decoder $decoder, int $offset, int $depth) {
-    switch ($decoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 0, 1);
-        return WithErrorSyntaxErrorAsPrimitiveResponse(
-            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
-      case $fidl.WireFormat.v2:
-        $decoder.checkPadding($offset + 0, 1);
-        return WithErrorSyntaxErrorAsPrimitiveResponse(
-            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.StructType<WithErrorSyntaxErrorAsPrimitiveResponse>
-    kWithErrorSyntax_ErrorAsPrimitive_Response_Type =
-    $fidl.StructType<WithErrorSyntaxErrorAsPrimitiveResponse>(
-        inlineSizeV1: 1,
-        inlineSizeV2: 1,
-        structDecode: WithErrorSyntaxErrorAsPrimitiveResponse._structDecode);
-
-class WithErrorSyntaxErrorAsEnumResponse extends $fidl.Struct {
-  const WithErrorSyntaxErrorAsEnumResponse({
-    this.reserved: 0x0,
-  });
-  WithErrorSyntaxErrorAsEnumResponse.clone(
-    WithErrorSyntaxErrorAsEnumResponse $orig, {
-    int? reserved,
-  }) : this(
-          reserved: reserved ?? $orig.reserved,
-        );
-
-  final int reserved;
-
-  @override
-  List<Object?> get $fields {
-    return <Object?>[
-      reserved,
-    ];
-  }
-
-  static const $fieldType0 = $fidl.Uint8Type();
-
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-
-  static WithErrorSyntaxErrorAsEnumResponse _structDecode(
-      $fidl.Decoder $decoder, int $offset, int $depth) {
-    switch ($decoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 0, 1);
-        return WithErrorSyntaxErrorAsEnumResponse(
-            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
-      case $fidl.WireFormat.v2:
-        $decoder.checkPadding($offset + 0, 1);
-        return WithErrorSyntaxErrorAsEnumResponse(
-            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.StructType<WithErrorSyntaxErrorAsEnumResponse>
-    kWithErrorSyntax_ErrorAsEnum_Response_Type =
-    $fidl.StructType<WithErrorSyntaxErrorAsEnumResponse>(
-        inlineSizeV1: 1,
-        inlineSizeV2: 1,
-        structDecode: WithErrorSyntaxErrorAsEnumResponse._structDecode);
-
-class WithErrorSyntaxHandleInResultResponse extends $fidl.Struct {
-  const WithErrorSyntaxHandleInResultResponse({
-    required this.h,
-  });
-  WithErrorSyntaxHandleInResultResponse.clone(
-    WithErrorSyntaxHandleInResultResponse $orig, {
-    $zircon.Handle? h,
-  }) : this(
-          h: h ?? $orig.h,
-        );
-
-  final $zircon.Handle h;
-
-  @override
-  List<Object?> get $fields {
-    return <Object?>[
-      h,
-    ];
-  }
-
-  static const $fieldType0 =
-      $fidl.HandleType(objectType: 0, rights: 2147483648);
-
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, h, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, h, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-
-  static WithErrorSyntaxHandleInResultResponse _structDecode(
-      $fidl.Decoder $decoder, int $offset, int $depth) {
-    switch ($decoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        return WithErrorSyntaxHandleInResultResponse(
-            h: $fieldType0.decode($decoder, $offset + 0, $depth));
-      case $fidl.WireFormat.v2:
-        return WithErrorSyntaxHandleInResultResponse(
-            h: $fieldType0.decode($decoder, $offset + 0, $depth));
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
-  }
-}
-
-// See fxbug.dev/7644:
-// ignore: recursive_compile_time_constant
-const $fidl.StructType<WithErrorSyntaxHandleInResultResponse>
-    kWithErrorSyntax_HandleInResult_Response_Type =
-    $fidl.StructType<WithErrorSyntaxHandleInResultResponse>(
-        inlineSizeV1: 4,
-        inlineSizeV2: 4,
-        structDecode: WithErrorSyntaxHandleInResultResponse._structDecode);
 
 class ProtocolEnds extends $fidl.Struct {
   const ProtocolEnds({
@@ -987,6 +722,1785 @@ const $fidl.StructType<ProtocolEnds> kProtocolEnds_Type =
         inlineSizeV1: 16,
         inlineSizeV2: 16,
         structDecode: ProtocolEnds._structDecode);
+
+class WithErrorSyntaxErrorAsEnumResponse extends $fidl.Struct {
+  const WithErrorSyntaxErrorAsEnumResponse({
+    this.reserved: 0x0,
+  });
+  WithErrorSyntaxErrorAsEnumResponse.clone(
+    WithErrorSyntaxErrorAsEnumResponse $orig, {
+    int? reserved,
+  }) : this(
+          reserved: reserved ?? $orig.reserved,
+        );
+
+  final int reserved;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      reserved,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint8Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  static WithErrorSyntaxErrorAsEnumResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 0, 1);
+        return WithErrorSyntaxErrorAsEnumResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 0, 1);
+        return WithErrorSyntaxErrorAsEnumResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<WithErrorSyntaxErrorAsEnumResponse>
+    kWithErrorSyntax_ErrorAsEnum_Response_Type =
+    $fidl.StructType<WithErrorSyntaxErrorAsEnumResponse>(
+        inlineSizeV1: 1,
+        inlineSizeV2: 1,
+        structDecode: WithErrorSyntaxErrorAsEnumResponse._structDecode);
+
+class WithErrorSyntaxErrorAsPrimitiveResponse extends $fidl.Struct {
+  const WithErrorSyntaxErrorAsPrimitiveResponse({
+    this.reserved: 0x0,
+  });
+  WithErrorSyntaxErrorAsPrimitiveResponse.clone(
+    WithErrorSyntaxErrorAsPrimitiveResponse $orig, {
+    int? reserved,
+  }) : this(
+          reserved: reserved ?? $orig.reserved,
+        );
+
+  final int reserved;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      reserved,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint8Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  static WithErrorSyntaxErrorAsPrimitiveResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 0, 1);
+        return WithErrorSyntaxErrorAsPrimitiveResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 0, 1);
+        return WithErrorSyntaxErrorAsPrimitiveResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<WithErrorSyntaxErrorAsPrimitiveResponse>
+    kWithErrorSyntax_ErrorAsPrimitive_Response_Type =
+    $fidl.StructType<WithErrorSyntaxErrorAsPrimitiveResponse>(
+        inlineSizeV1: 1,
+        inlineSizeV2: 1,
+        structDecode: WithErrorSyntaxErrorAsPrimitiveResponse._structDecode);
+
+class WithErrorSyntaxHandleInResultResponse extends $fidl.Struct {
+  const WithErrorSyntaxHandleInResultResponse({
+    required this.h,
+  });
+  WithErrorSyntaxHandleInResultResponse.clone(
+    WithErrorSyntaxHandleInResultResponse $orig, {
+    $zircon.Handle? h,
+  }) : this(
+          h: h ?? $orig.h,
+        );
+
+  final $zircon.Handle h;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      h,
+    ];
+  }
+
+  static const $fieldType0 =
+      $fidl.HandleType(objectType: 0, rights: 2147483648);
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, h, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, h, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  static WithErrorSyntaxHandleInResultResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return WithErrorSyntaxHandleInResultResponse(
+            h: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return WithErrorSyntaxHandleInResultResponse(
+            h: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<WithErrorSyntaxHandleInResultResponse>
+    kWithErrorSyntax_HandleInResult_Response_Type =
+    $fidl.StructType<WithErrorSyntaxHandleInResultResponse>(
+        inlineSizeV1: 4,
+        inlineSizeV2: 4,
+        structDecode: WithErrorSyntaxHandleInResultResponse._structDecode);
+
+class WithErrorSyntaxResponseAsStructResponse extends $fidl.Struct {
+  const WithErrorSyntaxResponseAsStructResponse({
+    required this.a,
+    required this.b,
+    required this.c,
+  });
+  WithErrorSyntaxResponseAsStructResponse.clone(
+    WithErrorSyntaxResponseAsStructResponse $orig, {
+    int? a,
+    int? b,
+    int? c,
+  }) : this(
+          a: a ?? $orig.a,
+          b: b ?? $orig.b,
+          c: c ?? $orig.c,
+        );
+
+  final int a;
+  final int b;
+  final int c;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      a,
+      b,
+      c,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Int64Type();
+  static const $fieldType1 = $fidl.Int64Type();
+  static const $fieldType2 = $fidl.Int64Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 8, $depth);
+        $fieldType2.encode($encoder, c, $offset + 16, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 8, $depth);
+        $fieldType2.encode($encoder, c, $offset + 16, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  static WithErrorSyntaxResponseAsStructResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return WithErrorSyntaxResponseAsStructResponse(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 8, $depth),
+            c: $fieldType2.decode($decoder, $offset + 16, $depth));
+      case $fidl.WireFormat.v2:
+        return WithErrorSyntaxResponseAsStructResponse(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 8, $depth),
+            c: $fieldType2.decode($decoder, $offset + 16, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<WithErrorSyntaxResponseAsStructResponse>
+    kWithErrorSyntax_ResponseAsStruct_Response_Type =
+    $fidl.StructType<WithErrorSyntaxResponseAsStructResponse>(
+        inlineSizeV1: 24,
+        inlineSizeV2: 24,
+        structDecode: WithErrorSyntaxResponseAsStructResponse._structDecode);
+
+// methodA: (int a, int b)
+const int _kChannelProtocol_MethodA_Ordinal = 0x2bc8d7d32bc66ba2;
+const $fidl.MethodType _kChannelProtocol_MethodA_Type = $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 8, offsetV2: 8),
+  ],
+  response: [],
+  name: r"ChannelProtocol.MethodA",
+  requestInlineSizeV1: 16,
+  requestInlineSizeV2: 16,
+  responseInlineSizeV1: 0,
+  responseInlineSizeV2: 0,
+);
+// eventA:  -> (int a, int b)
+const int _kChannelProtocol_EventA_Ordinal = 0x1ed0a220297145ce;
+const $fidl.MethodType _kChannelProtocol_EventA_Type = $fidl.MethodType(
+  request: [],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 8, offsetV2: 8),
+  ],
+  name: r"ChannelProtocol.EventA",
+  requestInlineSizeV1: 0,
+  requestInlineSizeV2: 0,
+  responseInlineSizeV1: 16,
+  responseInlineSizeV2: 16,
+);
+// methodB: (int a, int b) -> (int result)
+const int _kChannelProtocol_MethodB_Ordinal = 0x7b8dd3d6c741c9c6;
+const $fidl.MethodType _kChannelProtocol_MethodB_Type = $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 8, offsetV2: 8),
+  ],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
+  ],
+  name: r"ChannelProtocol.MethodB",
+  requestInlineSizeV1: 16,
+  requestInlineSizeV2: 16,
+  responseInlineSizeV1: 8,
+  responseInlineSizeV2: 8,
+);
+// takeHandle: ($zircon.Handle h) -> ()
+const int _kChannelProtocol_TakeHandle_Ordinal = 0x836fa31201a0a65;
+const $fidl.MethodType _kChannelProtocol_TakeHandle_Type = $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<$zircon.Handle>(
+        type: $fidl.HandleType(objectType: 0, rights: 2147483648),
+        offsetV1: 0,
+        offsetV2: 0),
+  ],
+  response: [],
+  name: r"ChannelProtocol.TakeHandle",
+  requestInlineSizeV1: 4,
+  requestInlineSizeV2: 4,
+  responseInlineSizeV1: 0,
+  responseInlineSizeV2: 0,
+);
+// mutateSocket: ($zircon.Socket a) -> ($zircon.Socket b)
+const int _kChannelProtocol_MutateSocket_Ordinal = 0x66dbcccc06f7f14f;
+const $fidl.MethodType _kChannelProtocol_MutateSocket_Type = $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<$zircon.Socket>(
+        type: $fidl.SocketType(objectType: 14, rights: 2147483648),
+        offsetV1: 0,
+        offsetV2: 0),
+  ],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<$zircon.Socket>(
+        type: $fidl.SocketType(objectType: 14, rights: 2147483648),
+        offsetV1: 0,
+        offsetV2: 0),
+  ],
+  name: r"ChannelProtocol.MutateSocket",
+  requestInlineSizeV1: 4,
+  requestInlineSizeV2: 4,
+  responseInlineSizeV1: 4,
+  responseInlineSizeV2: 4,
+);
+
+class ChannelProtocol$EventA$Response {
+  final int a;
+  final int b;
+  ChannelProtocol$EventA$Response(
+    this.a,
+    this.b,
+  );
+}
+
+abstract class ChannelProtocol {
+  $fidl.ServiceData? get $serviceData => ChannelProtocolData();
+  $async.Future<void> methodA(int a, int b);
+  $async.Stream<ChannelProtocol$EventA$Response>? get eventA;
+  $async.Future<int> methodB(int a, int b);
+  $async.Future<void> takeHandle($zircon.Handle h);
+  $async.Future<$zircon.Socket> mutateSocket($zircon.Socket a);
+}
+
+// TODO: Remove ServiceData for non-service
+class ChannelProtocolData implements $fidl.ServiceData<ChannelProtocol> {
+  const ChannelProtocolData();
+
+  @override
+  String getName() {
+    return "";
+  }
+
+  @override
+  $fidl.AsyncBinding getBinding() {
+    return ChannelProtocolBinding();
+  }
+}
+
+class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
+    implements ChannelProtocol {
+  ChannelProtocolProxy()
+      : super($fidl.AsyncProxyController<ChannelProtocol>(
+            $interfaceName: r'ChannelProtocol')) {
+    ctrl.onResponse = _handleResponse;
+    ctrl.whenClosed.then((_) {
+      _eventAEventStreamController.close();
+    }, onError: (_) {});
+  }
+  @override
+  Null get $serviceData => null;
+
+  void _handleEvent($fidl.IncomingMessage $message) {
+    switch ($message.ordinal) {
+      case _kChannelProtocol_EventA_Ordinal:
+        final String _name = _kChannelProtocol_EventA_Type.name;
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+          final List<$fidl.MemberType> $types =
+              _kChannelProtocol_EventA_Type.response!;
+          _eventAEventStreamController.add($fidl
+              .decodeMessageWithCallback<ChannelProtocol$EventA$Response>(
+                  $message,
+                  _kChannelProtocol_EventA_Type.responseInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
+            return ChannelProtocol$EventA$Response(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+              $types[1].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          }));
+        }, 'event');
+        break;
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        break;
+    }
+  }
+
+  void _handleResponse($fidl.IncomingMessage $message) {
+    final int $txid = $message.txid;
+    if ($txid == 0) {
+      _handleEvent($message);
+      return;
+    }
+    final $async.Completer? $completer = ctrl.getCompleter($txid);
+    if ($completer == null) {
+      $message.closeHandles();
+      return;
+    }
+    switch ($message.ordinal) {
+      case _kChannelProtocol_MethodB_Ordinal:
+        final String _name = _kChannelProtocol_MethodB_Type.name;
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+          final List<$fidl.MemberType> $types =
+              _kChannelProtocol_MethodB_Type.response!;
+          // ignore: prefer_const_declarations
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kChannelProtocol_MethodB_Type
+                  .responseInlineSize($message.wireFormat),
+              $types[0]);
+
+          $completer.complete($response);
+        }, 'method response');
+        break;
+      case _kChannelProtocol_TakeHandle_Ordinal:
+        final String _name = _kChannelProtocol_TakeHandle_Type.name;
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+          final List<$fidl.MemberType> $types =
+              _kChannelProtocol_TakeHandle_Type.response!;
+          // ignore: prefer_const_declarations
+          final $response = null;
+
+          $completer.complete($response);
+        }, 'method response');
+        break;
+      case _kChannelProtocol_MutateSocket_Ordinal:
+        final String _name = _kChannelProtocol_MutateSocket_Type.name;
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+          final List<$fidl.MemberType> $types =
+              _kChannelProtocol_MutateSocket_Type.response!;
+          // ignore: prefer_const_declarations
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kChannelProtocol_MutateSocket_Type
+                  .responseInlineSize($message.wireFormat),
+              $types[0]);
+
+          $completer.complete($response);
+        }, 'method response');
+        break;
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        break;
+    }
+  }
+
+  @override
+  $async.Future<void> methodA(int a, int b) {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(_kChannelProtocol_MethodA_Ordinal, 0);
+    final List<$fidl.MemberType> $types =
+        _kChannelProtocol_MethodA_Type.request!;
+    $fidl.encodeMessageWithCallback($encoder,
+        _kChannelProtocol_MethodA_Type.requestInlineSize($encoder.wireFormat),
+        () {
+      $types[0].encode($encoder, a, $fidl.kMessageHeaderSize, 1);
+      $types[1].encode($encoder, b, $fidl.kMessageHeaderSize, 1);
+    });
+    return $async.Future.sync(() {
+      ctrl.sendMessage($encoder.message);
+    });
+  }
+
+  final _eventAEventStreamController =
+      $async.StreamController<ChannelProtocol$EventA$Response>.broadcast();
+  @override
+  $async.Stream<ChannelProtocol$EventA$Response> get eventA =>
+      _eventAEventStreamController.stream;
+
+  @override
+  $async.Future<int> methodB(int a, int b) {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(_kChannelProtocol_MethodB_Ordinal, 0);
+    final List<$fidl.MemberType> $types =
+        _kChannelProtocol_MethodB_Type.request!;
+    $fidl.encodeMessageWithCallback($encoder,
+        _kChannelProtocol_MethodB_Type.requestInlineSize($encoder.wireFormat),
+        () {
+      $types[0].encode($encoder, a, $fidl.kMessageHeaderSize, 1);
+      $types[1].encode($encoder, b, $fidl.kMessageHeaderSize, 1);
+    });
+    final $completer = $async.Completer<int>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
+  }
+
+  @override
+  $async.Future<void> takeHandle($zircon.Handle h) {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(_kChannelProtocol_TakeHandle_Ordinal, 0);
+    final List<$fidl.MemberType> $types =
+        _kChannelProtocol_TakeHandle_Type.request!;
+    $fidl.encodeMessageWithCallback(
+        $encoder,
+        _kChannelProtocol_TakeHandle_Type
+            .requestInlineSize($encoder.wireFormat), () {
+      $types[0].encode($encoder, h, $fidl.kMessageHeaderSize, 1);
+    });
+    final $completer = $async.Completer<void>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
+  }
+
+  @override
+  $async.Future<$zircon.Socket> mutateSocket($zircon.Socket a) {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(_kChannelProtocol_MutateSocket_Ordinal, 0);
+    final List<$fidl.MemberType> $types =
+        _kChannelProtocol_MutateSocket_Type.request!;
+    $fidl.encodeMessageWithCallback(
+        $encoder,
+        _kChannelProtocol_MutateSocket_Type
+            .requestInlineSize($encoder.wireFormat), () {
+      $types[0].encode($encoder, a, $fidl.kMessageHeaderSize, 1);
+    });
+    final $completer = $async.Completer<$zircon.Socket>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
+  }
+}
+
+class ChannelProtocolBinding extends $fidl.AsyncBinding<ChannelProtocol> {
+  ChannelProtocolBinding() : super(r"ChannelProtocol") {
+    final List<$async.StreamSubscription<dynamic>> $subscriptions = [];
+    void $unsubscribe() {
+      for (final $sub in $subscriptions) {
+        $sub.cancel();
+      }
+      $subscriptions.clear();
+    }
+
+    whenBound.then((_) {
+      final impl = this.impl;
+      if (impl != null) {
+        final _eventA_stream = impl.eventA;
+        if (_eventA_stream != null) {
+          $subscriptions.add(_eventA_stream.listen(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(_kChannelProtocol_EventA_Ordinal, 0);
+            final List<$fidl.MemberType> $types =
+                _kChannelProtocol_EventA_Type.response!;
+            $fidl.encodeMessageWithCallback(
+                $encoder,
+                _kChannelProtocol_EventA_Type
+                    .responseInlineSize($encoder.wireFormat), () {
+              $types[0]
+                  .encode($encoder, $response.a, $fidl.kMessageHeaderSize, 1);
+              $types[1]
+                  .encode($encoder, $response.b, $fidl.kMessageHeaderSize, 1);
+            });
+            sendMessage($encoder.message);
+          }));
+        }
+      }
+    });
+    whenClosed.then((_) => $unsubscribe());
+  }
+
+  @override
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
+    switch ($message.ordinal) {
+      case _kChannelProtocol_MethodA_Ordinal:
+        final String _name = _kChannelProtocol_MethodA_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kChannelProtocol_MethodA_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message,
+                  _kChannelProtocol_MethodA_Type.requestInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
+            return _impl.methodA(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+              $types[1].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          });
+        }, close);
+        break;
+      case _kChannelProtocol_MethodB_Ordinal:
+        final String _name = _kChannelProtocol_MethodB_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kChannelProtocol_MethodB_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<int> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<int>>(
+                  $message,
+                  _kChannelProtocol_MethodB_Type.requestInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
+            return _impl.methodB(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+              $types[1].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          });
+          $future.then(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kChannelProtocol_MethodB_Ordinal, $message.txid);
+            final List<$fidl.MemberType> $types =
+                _kChannelProtocol_MethodB_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kChannelProtocol_MethodB_Type
+                    .responseInlineSize($encoder.wireFormat),
+                $types[0],
+                $response);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            $fidl.handleException(_name, _e, close);
+          });
+        }, close);
+        break;
+      case _kChannelProtocol_TakeHandle_Ordinal:
+        final String _name = _kChannelProtocol_TakeHandle_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kChannelProtocol_TakeHandle_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message,
+                  _kChannelProtocol_TakeHandle_Type.requestInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
+            return _impl.takeHandle(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          });
+          $future.then(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kChannelProtocol_TakeHandle_Ordinal, $message.txid);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            $fidl.handleException(_name, _e, close);
+          });
+        }, close);
+        break;
+      case _kChannelProtocol_MutateSocket_Ordinal:
+        final String _name = _kChannelProtocol_MutateSocket_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kChannelProtocol_MutateSocket_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<$zircon.Socket> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<$zircon.Socket>>(
+                  $message,
+                  _kChannelProtocol_MutateSocket_Type.requestInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
+            return _impl.mutateSocket(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          });
+          $future.then(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kChannelProtocol_MutateSocket_Ordinal, $message.txid);
+            final List<$fidl.MemberType> $types =
+                _kChannelProtocol_MutateSocket_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kChannelProtocol_MutateSocket_Type
+                    .responseInlineSize($encoder.wireFormat),
+                $types[0],
+                $response);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            $fidl.handleException(_name, _e, close);
+          });
+        }, close);
+        break;
+      default:
+        throw $fidl.FidlError(
+            r'Unexpected message name for ChannelProtocolBinding');
+    }
+  }
+}
+
+// method: ()
+const int _kDiscoverableProtocol_Method_Ordinal = 0x2ff5ba3a2bd170eb;
+const $fidl.MethodType _kDiscoverableProtocol_Method_Type = $fidl.MethodType(
+  request: [],
+  response: [],
+  name: r"DiscoverableProtocol.Method",
+  requestInlineSizeV1: 0,
+  requestInlineSizeV2: 0,
+  responseInlineSizeV1: 0,
+  responseInlineSizeV2: 0,
+);
+
+abstract class DiscoverableProtocol extends $fidl.Service {
+  static const String $serviceName = "test.protocols.DiscoverableProtocol";
+  @override
+  $fidl.ServiceData? get $serviceData => DiscoverableProtocolData();
+  $async.Future<void> method();
+}
+
+// TODO: Remove ServiceData for non-service
+class DiscoverableProtocolData
+    implements $fidl.ServiceData<DiscoverableProtocol> {
+  const DiscoverableProtocolData();
+
+  @override
+  String getName() {
+    return DiscoverableProtocol.$serviceName;
+  }
+
+  @override
+  $fidl.AsyncBinding getBinding() {
+    return DiscoverableProtocolBinding();
+  }
+}
+
+class DiscoverableProtocolProxy extends $fidl.AsyncProxy<DiscoverableProtocol>
+    implements DiscoverableProtocol {
+  DiscoverableProtocolProxy()
+      : super($fidl.AsyncProxyController<DiscoverableProtocol>(
+            $serviceName: "test.protocols.DiscoverableProtocol",
+            $interfaceName: r'DiscoverableProtocol')) {
+    ctrl.onResponse = _handleResponse;
+  }
+  @override
+  $fidl.ServiceData get $serviceData => DiscoverableProtocolData();
+
+  void _handleEvent($fidl.IncomingMessage $message) {
+    switch ($message.ordinal) {
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        break;
+    }
+  }
+
+  void _handleResponse($fidl.IncomingMessage $message) {
+    final int $txid = $message.txid;
+    if ($txid == 0) {
+      _handleEvent($message);
+      return;
+    }
+    final $async.Completer? $completer = ctrl.getCompleter($txid);
+    if ($completer == null) {
+      $message.closeHandles();
+      return;
+    }
+    switch ($message.ordinal) {
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        break;
+    }
+  }
+
+  @override
+  $async.Future<void> method() {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(_kDiscoverableProtocol_Method_Ordinal, 0);
+    return $async.Future.sync(() {
+      ctrl.sendMessage($encoder.message);
+    });
+  }
+}
+
+class DiscoverableProtocolBinding
+    extends $fidl.AsyncBinding<DiscoverableProtocol> {
+  DiscoverableProtocolBinding() : super(r"DiscoverableProtocol");
+
+  @override
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
+    switch ($message.ordinal) {
+      case _kDiscoverableProtocol_Method_Ordinal:
+        final String _name = _kDiscoverableProtocol_Method_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kDiscoverableProtocol_Method_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message,
+                  _kDiscoverableProtocol_Method_Type.requestInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
+            return _impl.method();
+          });
+        }, close);
+        break;
+      default:
+        throw $fidl.FidlError(
+            r'Unexpected message name for DiscoverableProtocolBinding');
+    }
+  }
+}
+
+// noResponseMethod: ($zircon.Socket h)
+const int _kHandleRightsProtocol_NoResponseMethod_Ordinal = 0x10078afd320d2bfd;
+const $fidl.MethodType _kHandleRightsProtocol_NoResponseMethod_Type =
+    $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<$zircon.Socket>(
+        type: $fidl.SocketType(objectType: 14, rights: 3),
+        offsetV1: 0,
+        offsetV2: 0),
+  ],
+  response: [],
+  name: r"HandleRightsProtocol.NoResponseMethod",
+  requestInlineSizeV1: 4,
+  requestInlineSizeV2: 4,
+  responseInlineSizeV1: 0,
+  responseInlineSizeV2: 0,
+);
+// responseMethod: ($zircon.Socket h) -> ($zircon.Socket h)
+const int _kHandleRightsProtocol_ResponseMethod_Ordinal = 0x52a8f194ac143547;
+const $fidl.MethodType _kHandleRightsProtocol_ResponseMethod_Type =
+    $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<$zircon.Socket>(
+        type: $fidl.SocketType(objectType: 14, rights: 3),
+        offsetV1: 0,
+        offsetV2: 0),
+  ],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<$zircon.Socket>(
+        type: $fidl.SocketType(objectType: 14, rights: 1),
+        offsetV1: 0,
+        offsetV2: 0),
+  ],
+  name: r"HandleRightsProtocol.ResponseMethod",
+  requestInlineSizeV1: 4,
+  requestInlineSizeV2: 4,
+  responseInlineSizeV1: 4,
+  responseInlineSizeV2: 4,
+);
+// anEvent:  -> ($zircon.Socket h)
+const int _kHandleRightsProtocol_AnEvent_Ordinal = 0x69dad41418eb133;
+const $fidl.MethodType _kHandleRightsProtocol_AnEvent_Type = $fidl.MethodType(
+  request: [],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<$zircon.Socket>(
+        type: $fidl.SocketType(objectType: 14, rights: 3),
+        offsetV1: 0,
+        offsetV2: 0),
+  ],
+  name: r"HandleRightsProtocol.AnEvent",
+  requestInlineSizeV1: 0,
+  requestInlineSizeV2: 0,
+  responseInlineSizeV1: 4,
+  responseInlineSizeV2: 4,
+);
+
+abstract class HandleRightsProtocol {
+  $fidl.ServiceData? get $serviceData => HandleRightsProtocolData();
+  $async.Future<void> noResponseMethod($zircon.Socket h);
+  $async.Future<$zircon.Socket> responseMethod($zircon.Socket h);
+  $async.Stream<$zircon.Socket>? get anEvent;
+}
+
+// TODO: Remove ServiceData for non-service
+class HandleRightsProtocolData
+    implements $fidl.ServiceData<HandleRightsProtocol> {
+  const HandleRightsProtocolData();
+
+  @override
+  String getName() {
+    return "";
+  }
+
+  @override
+  $fidl.AsyncBinding getBinding() {
+    return HandleRightsProtocolBinding();
+  }
+}
+
+class HandleRightsProtocolProxy extends $fidl.AsyncProxy<HandleRightsProtocol>
+    implements HandleRightsProtocol {
+  HandleRightsProtocolProxy()
+      : super($fidl.AsyncProxyController<HandleRightsProtocol>(
+            $interfaceName: r'HandleRightsProtocol')) {
+    ctrl.onResponse = _handleResponse;
+    ctrl.whenClosed.then((_) {
+      _anEventEventStreamController.close();
+    }, onError: (_) {});
+  }
+  @override
+  Null get $serviceData => null;
+
+  void _handleEvent($fidl.IncomingMessage $message) {
+    switch ($message.ordinal) {
+      case _kHandleRightsProtocol_AnEvent_Ordinal:
+        final String _name = _kHandleRightsProtocol_AnEvent_Type.name;
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+          final List<$fidl.MemberType> $types =
+              _kHandleRightsProtocol_AnEvent_Type.response!;
+          _anEventEventStreamController.add($fidl.decodeMessage(
+              $message,
+              _kHandleRightsProtocol_AnEvent_Type
+                  .responseInlineSize($message.wireFormat),
+              $types[0]));
+        }, 'event');
+        break;
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        break;
+    }
+  }
+
+  void _handleResponse($fidl.IncomingMessage $message) {
+    final int $txid = $message.txid;
+    if ($txid == 0) {
+      _handleEvent($message);
+      return;
+    }
+    final $async.Completer? $completer = ctrl.getCompleter($txid);
+    if ($completer == null) {
+      $message.closeHandles();
+      return;
+    }
+    switch ($message.ordinal) {
+      case _kHandleRightsProtocol_ResponseMethod_Ordinal:
+        final String _name = _kHandleRightsProtocol_ResponseMethod_Type.name;
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+          final List<$fidl.MemberType> $types =
+              _kHandleRightsProtocol_ResponseMethod_Type.response!;
+          // ignore: prefer_const_declarations
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kHandleRightsProtocol_ResponseMethod_Type
+                  .responseInlineSize($message.wireFormat),
+              $types[0]);
+
+          $completer.complete($response);
+        }, 'method response');
+        break;
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        break;
+    }
+  }
+
+  @override
+  $async.Future<void> noResponseMethod($zircon.Socket h) {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(
+        _kHandleRightsProtocol_NoResponseMethod_Ordinal, 0);
+    final List<$fidl.MemberType> $types =
+        _kHandleRightsProtocol_NoResponseMethod_Type.request!;
+    $fidl.encodeMessageWithCallback(
+        $encoder,
+        _kHandleRightsProtocol_NoResponseMethod_Type
+            .requestInlineSize($encoder.wireFormat), () {
+      $types[0].encode($encoder, h, $fidl.kMessageHeaderSize, 1);
+    });
+    return $async.Future.sync(() {
+      ctrl.sendMessage($encoder.message);
+    });
+  }
+
+  @override
+  $async.Future<$zircon.Socket> responseMethod($zircon.Socket h) {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(
+        _kHandleRightsProtocol_ResponseMethod_Ordinal, 0);
+    final List<$fidl.MemberType> $types =
+        _kHandleRightsProtocol_ResponseMethod_Type.request!;
+    $fidl.encodeMessageWithCallback(
+        $encoder,
+        _kHandleRightsProtocol_ResponseMethod_Type
+            .requestInlineSize($encoder.wireFormat), () {
+      $types[0].encode($encoder, h, $fidl.kMessageHeaderSize, 1);
+    });
+    final $completer = $async.Completer<$zircon.Socket>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
+  }
+
+  final _anEventEventStreamController =
+      $async.StreamController<$zircon.Socket>.broadcast();
+  @override
+  $async.Stream<$zircon.Socket> get anEvent =>
+      _anEventEventStreamController.stream;
+}
+
+class HandleRightsProtocolBinding
+    extends $fidl.AsyncBinding<HandleRightsProtocol> {
+  HandleRightsProtocolBinding() : super(r"HandleRightsProtocol") {
+    final List<$async.StreamSubscription<dynamic>> $subscriptions = [];
+    void $unsubscribe() {
+      for (final $sub in $subscriptions) {
+        $sub.cancel();
+      }
+      $subscriptions.clear();
+    }
+
+    whenBound.then((_) {
+      final impl = this.impl;
+      if (impl != null) {
+        final _anEvent_stream = impl.anEvent;
+        if (_anEvent_stream != null) {
+          $subscriptions.add(_anEvent_stream.listen(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kHandleRightsProtocol_AnEvent_Ordinal, 0);
+            final List<$fidl.MemberType> $types =
+                _kHandleRightsProtocol_AnEvent_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kHandleRightsProtocol_AnEvent_Type
+                    .responseInlineSize($encoder.wireFormat),
+                $types[0],
+                $response);
+            sendMessage($encoder.message);
+          }));
+        }
+      }
+    });
+    whenClosed.then((_) => $unsubscribe());
+  }
+
+  @override
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
+    switch ($message.ordinal) {
+      case _kHandleRightsProtocol_NoResponseMethod_Ordinal:
+        final String _name = _kHandleRightsProtocol_NoResponseMethod_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kHandleRightsProtocol_NoResponseMethod_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message,
+                  _kHandleRightsProtocol_NoResponseMethod_Type
+                      .requestInlineSize($message.wireFormat),
+                  ($fidl.Decoder decoder) {
+            return _impl.noResponseMethod(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          });
+        }, close);
+        break;
+      case _kHandleRightsProtocol_ResponseMethod_Ordinal:
+        final String _name = _kHandleRightsProtocol_ResponseMethod_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kHandleRightsProtocol_ResponseMethod_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<$zircon.Socket> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<$zircon.Socket>>(
+                  $message,
+                  _kHandleRightsProtocol_ResponseMethod_Type.requestInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
+            return _impl.responseMethod(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          });
+          $future.then(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kHandleRightsProtocol_ResponseMethod_Ordinal, $message.txid);
+            final List<$fidl.MemberType> $types =
+                _kHandleRightsProtocol_ResponseMethod_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kHandleRightsProtocol_ResponseMethod_Type
+                    .responseInlineSize($encoder.wireFormat),
+                $types[0],
+                $response);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            $fidl.handleException(_name, _e, close);
+          });
+        }, close);
+        break;
+      default:
+        throw $fidl.FidlError(
+            r'Unexpected message name for HandleRightsProtocolBinding');
+    }
+  }
+}
+
+// fifteen: (bool p1, bool p2, bool p3, bool p4, bool p5, bool p6, bool p7, bool p8, bool p9, bool p10, bool p11, bool p12, bool p13, bool p14, bool p15)
+const int _kManyParameters_Fifteen_Ordinal = 0x59233bcecd338967;
+const $fidl.MethodType _kManyParameters_Fifteen_Type = $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 1, offsetV2: 1),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 2, offsetV2: 2),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 3, offsetV2: 3),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 4, offsetV2: 4),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 5, offsetV2: 5),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 6, offsetV2: 6),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 7, offsetV2: 7),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 8, offsetV2: 8),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 9, offsetV2: 9),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 10, offsetV2: 10),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 11, offsetV2: 11),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 12, offsetV2: 12),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 13, offsetV2: 13),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 14, offsetV2: 14),
+  ],
+  response: [],
+  name: r"ManyParameters.Fifteen",
+  requestInlineSizeV1: 15,
+  requestInlineSizeV2: 15,
+  responseInlineSizeV1: 0,
+  responseInlineSizeV2: 0,
+);
+
+abstract class ManyParameters {
+  $fidl.ServiceData? get $serviceData => ManyParametersData();
+  $async.Future<void> fifteen(
+      bool p1,
+      bool p2,
+      bool p3,
+      bool p4,
+      bool p5,
+      bool p6,
+      bool p7,
+      bool p8,
+      bool p9,
+      bool p10,
+      bool p11,
+      bool p12,
+      bool p13,
+      bool p14,
+      bool p15);
+}
+
+// TODO: Remove ServiceData for non-service
+class ManyParametersData implements $fidl.ServiceData<ManyParameters> {
+  const ManyParametersData();
+
+  @override
+  String getName() {
+    return "";
+  }
+
+  @override
+  $fidl.AsyncBinding getBinding() {
+    return ManyParametersBinding();
+  }
+}
+
+class ManyParametersProxy extends $fidl.AsyncProxy<ManyParameters>
+    implements ManyParameters {
+  ManyParametersProxy()
+      : super($fidl.AsyncProxyController<ManyParameters>(
+            $interfaceName: r'ManyParameters')) {
+    ctrl.onResponse = _handleResponse;
+  }
+  @override
+  Null get $serviceData => null;
+
+  void _handleEvent($fidl.IncomingMessage $message) {
+    switch ($message.ordinal) {
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        break;
+    }
+  }
+
+  void _handleResponse($fidl.IncomingMessage $message) {
+    final int $txid = $message.txid;
+    if ($txid == 0) {
+      _handleEvent($message);
+      return;
+    }
+    final $async.Completer? $completer = ctrl.getCompleter($txid);
+    if ($completer == null) {
+      $message.closeHandles();
+      return;
+    }
+    switch ($message.ordinal) {
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        break;
+    }
+  }
+
+  @override
+  $async.Future<void> fifteen(
+      bool p1,
+      bool p2,
+      bool p3,
+      bool p4,
+      bool p5,
+      bool p6,
+      bool p7,
+      bool p8,
+      bool p9,
+      bool p10,
+      bool p11,
+      bool p12,
+      bool p13,
+      bool p14,
+      bool p15) {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(_kManyParameters_Fifteen_Ordinal, 0);
+    final List<$fidl.MemberType> $types =
+        _kManyParameters_Fifteen_Type.request!;
+    $fidl.encodeMessageWithCallback($encoder,
+        _kManyParameters_Fifteen_Type.requestInlineSize($encoder.wireFormat),
+        () {
+      $types[0].encode($encoder, p1, $fidl.kMessageHeaderSize, 1);
+      $types[1].encode($encoder, p2, $fidl.kMessageHeaderSize, 1);
+      $types[2].encode($encoder, p3, $fidl.kMessageHeaderSize, 1);
+      $types[3].encode($encoder, p4, $fidl.kMessageHeaderSize, 1);
+      $types[4].encode($encoder, p5, $fidl.kMessageHeaderSize, 1);
+      $types[5].encode($encoder, p6, $fidl.kMessageHeaderSize, 1);
+      $types[6].encode($encoder, p7, $fidl.kMessageHeaderSize, 1);
+      $types[7].encode($encoder, p8, $fidl.kMessageHeaderSize, 1);
+      $types[8].encode($encoder, p9, $fidl.kMessageHeaderSize, 1);
+      $types[9].encode($encoder, p10, $fidl.kMessageHeaderSize, 1);
+      $types[10].encode($encoder, p11, $fidl.kMessageHeaderSize, 1);
+      $types[11].encode($encoder, p12, $fidl.kMessageHeaderSize, 1);
+      $types[12].encode($encoder, p13, $fidl.kMessageHeaderSize, 1);
+      $types[13].encode($encoder, p14, $fidl.kMessageHeaderSize, 1);
+      $types[14].encode($encoder, p15, $fidl.kMessageHeaderSize, 1);
+    });
+    return $async.Future.sync(() {
+      ctrl.sendMessage($encoder.message);
+    });
+  }
+}
+
+class ManyParametersBinding extends $fidl.AsyncBinding<ManyParameters> {
+  ManyParametersBinding() : super(r"ManyParameters");
+
+  @override
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
+    switch ($message.ordinal) {
+      case _kManyParameters_Fifteen_Ordinal:
+        final String _name = _kManyParameters_Fifteen_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kManyParameters_Fifteen_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message,
+                  _kManyParameters_Fifteen_Type.requestInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
+            return _impl.fifteen(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+              $types[1].decode(decoder, $fidl.kMessageHeaderSize, 1),
+              $types[2].decode(decoder, $fidl.kMessageHeaderSize, 1),
+              $types[3].decode(decoder, $fidl.kMessageHeaderSize, 1),
+              $types[4].decode(decoder, $fidl.kMessageHeaderSize, 1),
+              $types[5].decode(decoder, $fidl.kMessageHeaderSize, 1),
+              $types[6].decode(decoder, $fidl.kMessageHeaderSize, 1),
+              $types[7].decode(decoder, $fidl.kMessageHeaderSize, 1),
+              $types[8].decode(decoder, $fidl.kMessageHeaderSize, 1),
+              $types[9].decode(decoder, $fidl.kMessageHeaderSize, 1),
+              $types[10].decode(decoder, $fidl.kMessageHeaderSize, 1),
+              $types[11].decode(decoder, $fidl.kMessageHeaderSize, 1),
+              $types[12].decode(decoder, $fidl.kMessageHeaderSize, 1),
+              $types[13].decode(decoder, $fidl.kMessageHeaderSize, 1),
+              $types[14].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          });
+        }, close);
+        break;
+      default:
+        throw $fidl.FidlError(
+            r'Unexpected message name for ManyParametersBinding');
+    }
+  }
+}
+
+// unionMethod: (TheUnion u)
+const int _kMethodWithUnion_UnionMethod_Ordinal = 0x393e7f5b2b821218;
+const $fidl.MethodType _kMethodWithUnion_UnionMethod_Type = $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<TheUnion>(type: kTheUnion_Type, offsetV1: 0, offsetV2: 0),
+  ],
+  response: [],
+  name: r"MethodWithUnion.UnionMethod",
+  requestInlineSizeV1: 24,
+  requestInlineSizeV2: 16,
+  responseInlineSizeV1: 0,
+  responseInlineSizeV2: 0,
+);
+
+abstract class MethodWithUnion {
+  $fidl.ServiceData? get $serviceData => MethodWithUnionData();
+  $async.Future<void> unionMethod(TheUnion u);
+}
+
+// TODO: Remove ServiceData for non-service
+class MethodWithUnionData implements $fidl.ServiceData<MethodWithUnion> {
+  const MethodWithUnionData();
+
+  @override
+  String getName() {
+    return "";
+  }
+
+  @override
+  $fidl.AsyncBinding getBinding() {
+    return MethodWithUnionBinding();
+  }
+}
+
+class MethodWithUnionProxy extends $fidl.AsyncProxy<MethodWithUnion>
+    implements MethodWithUnion {
+  MethodWithUnionProxy()
+      : super($fidl.AsyncProxyController<MethodWithUnion>(
+            $interfaceName: r'MethodWithUnion')) {
+    ctrl.onResponse = _handleResponse;
+  }
+  @override
+  Null get $serviceData => null;
+
+  void _handleEvent($fidl.IncomingMessage $message) {
+    switch ($message.ordinal) {
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        break;
+    }
+  }
+
+  void _handleResponse($fidl.IncomingMessage $message) {
+    final int $txid = $message.txid;
+    if ($txid == 0) {
+      _handleEvent($message);
+      return;
+    }
+    final $async.Completer? $completer = ctrl.getCompleter($txid);
+    if ($completer == null) {
+      $message.closeHandles();
+      return;
+    }
+    switch ($message.ordinal) {
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        break;
+    }
+  }
+
+  @override
+  $async.Future<void> unionMethod(TheUnion u) {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(_kMethodWithUnion_UnionMethod_Ordinal, 0);
+    final List<$fidl.MemberType> $types =
+        _kMethodWithUnion_UnionMethod_Type.request!;
+    $fidl.encodeMessageWithCallback(
+        $encoder,
+        _kMethodWithUnion_UnionMethod_Type
+            .requestInlineSize($encoder.wireFormat), () {
+      $types[0].encode($encoder, u, $fidl.kMessageHeaderSize, 1);
+    });
+    return $async.Future.sync(() {
+      ctrl.sendMessage($encoder.message);
+    });
+  }
+}
+
+class MethodWithUnionBinding extends $fidl.AsyncBinding<MethodWithUnion> {
+  MethodWithUnionBinding() : super(r"MethodWithUnion");
+
+  @override
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
+    switch ($message.ordinal) {
+      case _kMethodWithUnion_UnionMethod_Ordinal:
+        final String _name = _kMethodWithUnion_UnionMethod_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kMethodWithUnion_UnionMethod_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message,
+                  _kMethodWithUnion_UnionMethod_Type.requestInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
+            return _impl.unionMethod(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          });
+        }, close);
+        break;
+      default:
+        throw $fidl.FidlError(
+            r'Unexpected message name for MethodWithUnionBinding');
+    }
+  }
+}
+
+// request: (int x) -> (int y)
+const int _kTransitional_Request_Ordinal = 0x512cc1ba467fef08;
+const $fidl.MethodType _kTransitional_Request_Type = $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
+  ],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
+  ],
+  name: r"Transitional.Request",
+  requestInlineSizeV1: 8,
+  requestInlineSizeV2: 8,
+  responseInlineSizeV1: 8,
+  responseInlineSizeV2: 8,
+);
+// oneWay: (int x)
+const int _kTransitional_OneWay_Ordinal = 0x3c2ee8512dc7f7e7;
+const $fidl.MethodType _kTransitional_OneWay_Type = $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
+  ],
+  response: [],
+  name: r"Transitional.OneWay",
+  requestInlineSizeV1: 8,
+  requestInlineSizeV2: 8,
+  responseInlineSizeV1: 0,
+  responseInlineSizeV2: 0,
+);
+// event:  -> (int x)
+const int _kTransitional_Event_Ordinal = 0x76113c4b4d484841;
+const $fidl.MethodType _kTransitional_Event_Type = $fidl.MethodType(
+  request: [],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
+  ],
+  name: r"Transitional.Event",
+  requestInlineSizeV1: 0,
+  requestInlineSizeV2: 0,
+  responseInlineSizeV1: 8,
+  responseInlineSizeV2: 8,
+);
+
+abstract class Transitional {
+  $fidl.ServiceData? get $serviceData => TransitionalData();
+  $async.Future<int> request(int x) {
+    return $async.Future.error(UnimplementedError(), StackTrace.current);
+  }
+
+  $async.Future<void> oneWay(int x) {
+    return $async.Future.error(UnimplementedError(), StackTrace.current);
+  }
+
+  $async.Stream<int>? get event {
+    return $async.Stream.empty();
+  }
+}
+
+// TODO: Remove ServiceData for non-service
+class TransitionalData implements $fidl.ServiceData<Transitional> {
+  const TransitionalData();
+
+  @override
+  String getName() {
+    return "";
+  }
+
+  @override
+  $fidl.AsyncBinding getBinding() {
+    return TransitionalBinding();
+  }
+}
+
+class TransitionalProxy extends $fidl.AsyncProxy<Transitional>
+    implements Transitional {
+  TransitionalProxy()
+      : super($fidl.AsyncProxyController<Transitional>(
+            $interfaceName: r'Transitional')) {
+    ctrl.onResponse = _handleResponse;
+    ctrl.whenClosed.then((_) {
+      _eventEventStreamController.close();
+    }, onError: (_) {});
+  }
+  @override
+  Null get $serviceData => null;
+
+  void _handleEvent($fidl.IncomingMessage $message) {
+    switch ($message.ordinal) {
+      case _kTransitional_Event_Ordinal:
+        final String _name = _kTransitional_Event_Type.name;
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+          final List<$fidl.MemberType> $types =
+              _kTransitional_Event_Type.response!;
+          _eventEventStreamController.add($fidl.decodeMessage(
+              $message,
+              _kTransitional_Event_Type.responseInlineSize($message.wireFormat),
+              $types[0]));
+        }, 'event');
+        break;
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        break;
+    }
+  }
+
+  void _handleResponse($fidl.IncomingMessage $message) {
+    final int $txid = $message.txid;
+    if ($txid == 0) {
+      _handleEvent($message);
+      return;
+    }
+    final $async.Completer? $completer = ctrl.getCompleter($txid);
+    if ($completer == null) {
+      $message.closeHandles();
+      return;
+    }
+    switch ($message.ordinal) {
+      case _kTransitional_Request_Ordinal:
+        final String _name = _kTransitional_Request_Type.name;
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+          final List<$fidl.MemberType> $types =
+              _kTransitional_Request_Type.response!;
+          // ignore: prefer_const_declarations
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kTransitional_Request_Type
+                  .responseInlineSize($message.wireFormat),
+              $types[0]);
+
+          $completer.complete($response);
+        }, 'method response');
+        break;
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        break;
+    }
+  }
+
+  @override
+  $async.Future<int> request(int x) {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(_kTransitional_Request_Ordinal, 0);
+    final List<$fidl.MemberType> $types = _kTransitional_Request_Type.request!;
+    $fidl.encodeMessageWithCallback($encoder,
+        _kTransitional_Request_Type.requestInlineSize($encoder.wireFormat), () {
+      $types[0].encode($encoder, x, $fidl.kMessageHeaderSize, 1);
+    });
+    final $completer = $async.Completer<int>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
+  }
+
+  @override
+  $async.Future<void> oneWay(int x) {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(_kTransitional_OneWay_Ordinal, 0);
+    final List<$fidl.MemberType> $types = _kTransitional_OneWay_Type.request!;
+    $fidl.encodeMessageWithCallback($encoder,
+        _kTransitional_OneWay_Type.requestInlineSize($encoder.wireFormat), () {
+      $types[0].encode($encoder, x, $fidl.kMessageHeaderSize, 1);
+    });
+    return $async.Future.sync(() {
+      ctrl.sendMessage($encoder.message);
+    });
+  }
+
+  final _eventEventStreamController = $async.StreamController<int>.broadcast();
+  @override
+  $async.Stream<int> get event => _eventEventStreamController.stream;
+}
+
+class TransitionalBinding extends $fidl.AsyncBinding<Transitional> {
+  TransitionalBinding() : super(r"Transitional") {
+    final List<$async.StreamSubscription<dynamic>> $subscriptions = [];
+    void $unsubscribe() {
+      for (final $sub in $subscriptions) {
+        $sub.cancel();
+      }
+      $subscriptions.clear();
+    }
+
+    whenBound.then((_) {
+      final impl = this.impl;
+      if (impl != null) {
+        final _event_stream = impl.event;
+        if (_event_stream != null) {
+          $subscriptions.add(_event_stream.listen(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(_kTransitional_Event_Ordinal, 0);
+            final List<$fidl.MemberType> $types =
+                _kTransitional_Event_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kTransitional_Event_Type
+                    .responseInlineSize($encoder.wireFormat),
+                $types[0],
+                $response);
+            sendMessage($encoder.message);
+          }));
+        }
+      }
+    });
+    whenClosed.then((_) => $unsubscribe());
+  }
+
+  @override
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
+    switch ($message.ordinal) {
+      case _kTransitional_Request_Ordinal:
+        final String _name = _kTransitional_Request_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kTransitional_Request_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<int> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<int>>(
+                  $message,
+                  _kTransitional_Request_Type.requestInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
+            return _impl.request(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          });
+          $future.then(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kTransitional_Request_Ordinal, $message.txid);
+            final List<$fidl.MemberType> $types =
+                _kTransitional_Request_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kTransitional_Request_Type
+                    .responseInlineSize($encoder.wireFormat),
+                $types[0],
+                $response);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            $fidl.handleException(_name, _e, close);
+          });
+        }, close);
+        break;
+      case _kTransitional_OneWay_Ordinal:
+        final String _name = _kTransitional_OneWay_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kTransitional_OneWay_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message,
+                  _kTransitional_OneWay_Type.requestInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
+            return _impl.oneWay(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          });
+        }, close);
+        break;
+      default:
+        throw $fidl.FidlError(
+            r'Unexpected message name for TransitionalBinding');
+    }
+  }
+}
 
 // noRequestNoResponse: ()
 const int _kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal =
@@ -2130,1193 +3644,6 @@ class WithErrorSyntaxBinding extends $fidl.AsyncBinding<WithErrorSyntax> {
   }
 }
 
-// methodA: (int a, int b)
-const int _kChannelProtocol_MethodA_Ordinal = 0x2bc8d7d32bc66ba2;
-const $fidl.MethodType _kChannelProtocol_MethodA_Type = $fidl.MethodType(
-  request: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 8, offsetV2: 8),
-  ],
-  response: [],
-  name: r"ChannelProtocol.MethodA",
-  requestInlineSizeV1: 16,
-  requestInlineSizeV2: 16,
-  responseInlineSizeV1: 0,
-  responseInlineSizeV2: 0,
-);
-// eventA:  -> (int a, int b)
-const int _kChannelProtocol_EventA_Ordinal = 0x1ed0a220297145ce;
-const $fidl.MethodType _kChannelProtocol_EventA_Type = $fidl.MethodType(
-  request: [],
-  response: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 8, offsetV2: 8),
-  ],
-  name: r"ChannelProtocol.EventA",
-  requestInlineSizeV1: 0,
-  requestInlineSizeV2: 0,
-  responseInlineSizeV1: 16,
-  responseInlineSizeV2: 16,
-);
-// methodB: (int a, int b) -> (int result)
-const int _kChannelProtocol_MethodB_Ordinal = 0x7b8dd3d6c741c9c6;
-const $fidl.MethodType _kChannelProtocol_MethodB_Type = $fidl.MethodType(
-  request: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 8, offsetV2: 8),
-  ],
-  response: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
-  ],
-  name: r"ChannelProtocol.MethodB",
-  requestInlineSizeV1: 16,
-  requestInlineSizeV2: 16,
-  responseInlineSizeV1: 8,
-  responseInlineSizeV2: 8,
-);
-// takeHandle: ($zircon.Handle h) -> ()
-const int _kChannelProtocol_TakeHandle_Ordinal = 0x836fa31201a0a65;
-const $fidl.MethodType _kChannelProtocol_TakeHandle_Type = $fidl.MethodType(
-  request: <$fidl.MemberType>[
-    $fidl.MemberType<$zircon.Handle>(
-        type: $fidl.HandleType(objectType: 0, rights: 2147483648),
-        offsetV1: 0,
-        offsetV2: 0),
-  ],
-  response: [],
-  name: r"ChannelProtocol.TakeHandle",
-  requestInlineSizeV1: 4,
-  requestInlineSizeV2: 4,
-  responseInlineSizeV1: 0,
-  responseInlineSizeV2: 0,
-);
-// mutateSocket: ($zircon.Socket a) -> ($zircon.Socket b)
-const int _kChannelProtocol_MutateSocket_Ordinal = 0x66dbcccc06f7f14f;
-const $fidl.MethodType _kChannelProtocol_MutateSocket_Type = $fidl.MethodType(
-  request: <$fidl.MemberType>[
-    $fidl.MemberType<$zircon.Socket>(
-        type: $fidl.SocketType(objectType: 14, rights: 2147483648),
-        offsetV1: 0,
-        offsetV2: 0),
-  ],
-  response: <$fidl.MemberType>[
-    $fidl.MemberType<$zircon.Socket>(
-        type: $fidl.SocketType(objectType: 14, rights: 2147483648),
-        offsetV1: 0,
-        offsetV2: 0),
-  ],
-  name: r"ChannelProtocol.MutateSocket",
-  requestInlineSizeV1: 4,
-  requestInlineSizeV2: 4,
-  responseInlineSizeV1: 4,
-  responseInlineSizeV2: 4,
-);
-
-class ChannelProtocol$EventA$Response {
-  final int a;
-  final int b;
-  ChannelProtocol$EventA$Response(
-    this.a,
-    this.b,
-  );
-}
-
-abstract class ChannelProtocol {
-  $fidl.ServiceData? get $serviceData => ChannelProtocolData();
-  $async.Future<void> methodA(int a, int b);
-  $async.Stream<ChannelProtocol$EventA$Response>? get eventA;
-  $async.Future<int> methodB(int a, int b);
-  $async.Future<void> takeHandle($zircon.Handle h);
-  $async.Future<$zircon.Socket> mutateSocket($zircon.Socket a);
-}
-
-// TODO: Remove ServiceData for non-service
-class ChannelProtocolData implements $fidl.ServiceData<ChannelProtocol> {
-  const ChannelProtocolData();
-
-  @override
-  String getName() {
-    return "";
-  }
-
-  @override
-  $fidl.AsyncBinding getBinding() {
-    return ChannelProtocolBinding();
-  }
-}
-
-class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
-    implements ChannelProtocol {
-  ChannelProtocolProxy()
-      : super($fidl.AsyncProxyController<ChannelProtocol>(
-            $interfaceName: r'ChannelProtocol')) {
-    ctrl.onResponse = _handleResponse;
-    ctrl.whenClosed.then((_) {
-      _eventAEventStreamController.close();
-    }, onError: (_) {});
-  }
-  @override
-  Null get $serviceData => null;
-
-  void _handleEvent($fidl.IncomingMessage $message) {
-    switch ($message.ordinal) {
-      case _kChannelProtocol_EventA_Ordinal:
-        final String _name = _kChannelProtocol_EventA_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
-          final List<$fidl.MemberType> $types =
-              _kChannelProtocol_EventA_Type.response!;
-          _eventAEventStreamController.add($fidl
-              .decodeMessageWithCallback<ChannelProtocol$EventA$Response>(
-                  $message,
-                  _kChannelProtocol_EventA_Type.responseInlineSize(
-                      $message.wireFormat), ($fidl.Decoder decoder) {
-            return ChannelProtocol$EventA$Response(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
-              $types[1].decode(decoder, $fidl.kMessageHeaderSize, 1),
-            );
-          }));
-        }, 'event');
-        break;
-      default:
-        ctrl.proxyError(
-            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
-        break;
-    }
-  }
-
-  void _handleResponse($fidl.IncomingMessage $message) {
-    final int $txid = $message.txid;
-    if ($txid == 0) {
-      _handleEvent($message);
-      return;
-    }
-    final $async.Completer? $completer = ctrl.getCompleter($txid);
-    if ($completer == null) {
-      $message.closeHandles();
-      return;
-    }
-    switch ($message.ordinal) {
-      case _kChannelProtocol_MethodB_Ordinal:
-        final String _name = _kChannelProtocol_MethodB_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
-          final List<$fidl.MemberType> $types =
-              _kChannelProtocol_MethodB_Type.response!;
-          // ignore: prefer_const_declarations
-          final $response = $fidl.decodeMessage(
-              $message,
-              _kChannelProtocol_MethodB_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]);
-
-          $completer.complete($response);
-        }, 'method response');
-        break;
-      case _kChannelProtocol_TakeHandle_Ordinal:
-        final String _name = _kChannelProtocol_TakeHandle_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
-          final List<$fidl.MemberType> $types =
-              _kChannelProtocol_TakeHandle_Type.response!;
-          // ignore: prefer_const_declarations
-          final $response = null;
-
-          $completer.complete($response);
-        }, 'method response');
-        break;
-      case _kChannelProtocol_MutateSocket_Ordinal:
-        final String _name = _kChannelProtocol_MutateSocket_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
-          final List<$fidl.MemberType> $types =
-              _kChannelProtocol_MutateSocket_Type.response!;
-          // ignore: prefer_const_declarations
-          final $response = $fidl.decodeMessage(
-              $message,
-              _kChannelProtocol_MutateSocket_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]);
-
-          $completer.complete($response);
-        }, 'method response');
-        break;
-      default:
-        ctrl.proxyError(
-            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
-        break;
-    }
-  }
-
-  @override
-  $async.Future<void> methodA(int a, int b) {
-    if (!ctrl.isBound) {
-      return $async.Future.error(
-          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
-          StackTrace.current);
-    }
-
-    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kChannelProtocol_MethodA_Ordinal, 0);
-    final List<$fidl.MemberType> $types =
-        _kChannelProtocol_MethodA_Type.request!;
-    $fidl.encodeMessageWithCallback($encoder,
-        _kChannelProtocol_MethodA_Type.requestInlineSize($encoder.wireFormat),
-        () {
-      $types[0].encode($encoder, a, $fidl.kMessageHeaderSize, 1);
-      $types[1].encode($encoder, b, $fidl.kMessageHeaderSize, 1);
-    });
-    return $async.Future.sync(() {
-      ctrl.sendMessage($encoder.message);
-    });
-  }
-
-  final _eventAEventStreamController =
-      $async.StreamController<ChannelProtocol$EventA$Response>.broadcast();
-  @override
-  $async.Stream<ChannelProtocol$EventA$Response> get eventA =>
-      _eventAEventStreamController.stream;
-
-  @override
-  $async.Future<int> methodB(int a, int b) {
-    if (!ctrl.isBound) {
-      return $async.Future.error(
-          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
-          StackTrace.current);
-    }
-
-    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kChannelProtocol_MethodB_Ordinal, 0);
-    final List<$fidl.MemberType> $types =
-        _kChannelProtocol_MethodB_Type.request!;
-    $fidl.encodeMessageWithCallback($encoder,
-        _kChannelProtocol_MethodB_Type.requestInlineSize($encoder.wireFormat),
-        () {
-      $types[0].encode($encoder, a, $fidl.kMessageHeaderSize, 1);
-      $types[1].encode($encoder, b, $fidl.kMessageHeaderSize, 1);
-    });
-    final $completer = $async.Completer<int>();
-    ctrl.sendMessageWithResponse($encoder.message, $completer);
-    return $completer.future;
-  }
-
-  @override
-  $async.Future<void> takeHandle($zircon.Handle h) {
-    if (!ctrl.isBound) {
-      return $async.Future.error(
-          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
-          StackTrace.current);
-    }
-
-    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kChannelProtocol_TakeHandle_Ordinal, 0);
-    final List<$fidl.MemberType> $types =
-        _kChannelProtocol_TakeHandle_Type.request!;
-    $fidl.encodeMessageWithCallback(
-        $encoder,
-        _kChannelProtocol_TakeHandle_Type
-            .requestInlineSize($encoder.wireFormat), () {
-      $types[0].encode($encoder, h, $fidl.kMessageHeaderSize, 1);
-    });
-    final $completer = $async.Completer<void>();
-    ctrl.sendMessageWithResponse($encoder.message, $completer);
-    return $completer.future;
-  }
-
-  @override
-  $async.Future<$zircon.Socket> mutateSocket($zircon.Socket a) {
-    if (!ctrl.isBound) {
-      return $async.Future.error(
-          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
-          StackTrace.current);
-    }
-
-    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kChannelProtocol_MutateSocket_Ordinal, 0);
-    final List<$fidl.MemberType> $types =
-        _kChannelProtocol_MutateSocket_Type.request!;
-    $fidl.encodeMessageWithCallback(
-        $encoder,
-        _kChannelProtocol_MutateSocket_Type
-            .requestInlineSize($encoder.wireFormat), () {
-      $types[0].encode($encoder, a, $fidl.kMessageHeaderSize, 1);
-    });
-    final $completer = $async.Completer<$zircon.Socket>();
-    ctrl.sendMessageWithResponse($encoder.message, $completer);
-    return $completer.future;
-  }
-}
-
-class ChannelProtocolBinding extends $fidl.AsyncBinding<ChannelProtocol> {
-  ChannelProtocolBinding() : super(r"ChannelProtocol") {
-    final List<$async.StreamSubscription<dynamic>> $subscriptions = [];
-    void $unsubscribe() {
-      for (final $sub in $subscriptions) {
-        $sub.cancel();
-      }
-      $subscriptions.clear();
-    }
-
-    whenBound.then((_) {
-      final impl = this.impl;
-      if (impl != null) {
-        final _eventA_stream = impl.eventA;
-        if (_eventA_stream != null) {
-          $subscriptions.add(_eventA_stream.listen(($response) {
-            final $fidl.Encoder $encoder =
-                $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(_kChannelProtocol_EventA_Ordinal, 0);
-            final List<$fidl.MemberType> $types =
-                _kChannelProtocol_EventA_Type.response!;
-            $fidl.encodeMessageWithCallback(
-                $encoder,
-                _kChannelProtocol_EventA_Type
-                    .responseInlineSize($encoder.wireFormat), () {
-              $types[0]
-                  .encode($encoder, $response.a, $fidl.kMessageHeaderSize, 1);
-              $types[1]
-                  .encode($encoder, $response.b, $fidl.kMessageHeaderSize, 1);
-            });
-            sendMessage($encoder.message);
-          }));
-        }
-      }
-    });
-    whenClosed.then((_) => $unsubscribe());
-  }
-
-  @override
-  void handleMessage(
-      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
-    switch ($message.ordinal) {
-      case _kChannelProtocol_MethodA_Ordinal:
-        final String _name = _kChannelProtocol_MethodA_Type.name;
-        $fidl.performWithExceptionHandling(_name, () {
-          final List<$fidl.MemberType> $types =
-              _kChannelProtocol_MethodA_Type.request!;
-          // ignore: prefer_const_declarations
-          final _impl = impl!;
-          final $async.Future<void> $future = $fidl
-              .decodeMessageWithCallback<$async.Future<void>>(
-                  $message,
-                  _kChannelProtocol_MethodA_Type.requestInlineSize(
-                      $message.wireFormat), ($fidl.Decoder decoder) {
-            return _impl.methodA(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
-              $types[1].decode(decoder, $fidl.kMessageHeaderSize, 1),
-            );
-          });
-        }, close);
-        break;
-      case _kChannelProtocol_MethodB_Ordinal:
-        final String _name = _kChannelProtocol_MethodB_Type.name;
-        $fidl.performWithExceptionHandling(_name, () {
-          final List<$fidl.MemberType> $types =
-              _kChannelProtocol_MethodB_Type.request!;
-          // ignore: prefer_const_declarations
-          final _impl = impl!;
-          final $async.Future<int> $future = $fidl
-              .decodeMessageWithCallback<$async.Future<int>>(
-                  $message,
-                  _kChannelProtocol_MethodB_Type.requestInlineSize(
-                      $message.wireFormat), ($fidl.Decoder decoder) {
-            return _impl.methodB(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
-              $types[1].decode(decoder, $fidl.kMessageHeaderSize, 1),
-            );
-          });
-          $future.then(($response) {
-            final $fidl.Encoder $encoder =
-                $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kChannelProtocol_MethodB_Ordinal, $message.txid);
-            final List<$fidl.MemberType> $types =
-                _kChannelProtocol_MethodB_Type.response!;
-            $fidl.encodeMessage(
-                $encoder,
-                _kChannelProtocol_MethodB_Type
-                    .responseInlineSize($encoder.wireFormat),
-                $types[0],
-                $response);
-            $respond($encoder.message);
-          }, onError: (_e) {
-            $fidl.handleException(_name, _e, close);
-          });
-        }, close);
-        break;
-      case _kChannelProtocol_TakeHandle_Ordinal:
-        final String _name = _kChannelProtocol_TakeHandle_Type.name;
-        $fidl.performWithExceptionHandling(_name, () {
-          final List<$fidl.MemberType> $types =
-              _kChannelProtocol_TakeHandle_Type.request!;
-          // ignore: prefer_const_declarations
-          final _impl = impl!;
-          final $async.Future<void> $future = $fidl
-              .decodeMessageWithCallback<$async.Future<void>>(
-                  $message,
-                  _kChannelProtocol_TakeHandle_Type.requestInlineSize(
-                      $message.wireFormat), ($fidl.Decoder decoder) {
-            return _impl.takeHandle(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
-            );
-          });
-          $future.then(($response) {
-            final $fidl.Encoder $encoder =
-                $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kChannelProtocol_TakeHandle_Ordinal, $message.txid);
-            $respond($encoder.message);
-          }, onError: (_e) {
-            $fidl.handleException(_name, _e, close);
-          });
-        }, close);
-        break;
-      case _kChannelProtocol_MutateSocket_Ordinal:
-        final String _name = _kChannelProtocol_MutateSocket_Type.name;
-        $fidl.performWithExceptionHandling(_name, () {
-          final List<$fidl.MemberType> $types =
-              _kChannelProtocol_MutateSocket_Type.request!;
-          // ignore: prefer_const_declarations
-          final _impl = impl!;
-          final $async.Future<$zircon.Socket> $future = $fidl
-              .decodeMessageWithCallback<$async.Future<$zircon.Socket>>(
-                  $message,
-                  _kChannelProtocol_MutateSocket_Type.requestInlineSize(
-                      $message.wireFormat), ($fidl.Decoder decoder) {
-            return _impl.mutateSocket(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
-            );
-          });
-          $future.then(($response) {
-            final $fidl.Encoder $encoder =
-                $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kChannelProtocol_MutateSocket_Ordinal, $message.txid);
-            final List<$fidl.MemberType> $types =
-                _kChannelProtocol_MutateSocket_Type.response!;
-            $fidl.encodeMessage(
-                $encoder,
-                _kChannelProtocol_MutateSocket_Type
-                    .responseInlineSize($encoder.wireFormat),
-                $types[0],
-                $response);
-            $respond($encoder.message);
-          }, onError: (_e) {
-            $fidl.handleException(_name, _e, close);
-          });
-        }, close);
-        break;
-      default:
-        throw $fidl.FidlError(
-            r'Unexpected message name for ChannelProtocolBinding');
-    }
-  }
-}
-
-// request: (int x) -> (int y)
-const int _kTransitional_Request_Ordinal = 0x512cc1ba467fef08;
-const $fidl.MethodType _kTransitional_Request_Type = $fidl.MethodType(
-  request: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
-  ],
-  response: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
-  ],
-  name: r"Transitional.Request",
-  requestInlineSizeV1: 8,
-  requestInlineSizeV2: 8,
-  responseInlineSizeV1: 8,
-  responseInlineSizeV2: 8,
-);
-// oneWay: (int x)
-const int _kTransitional_OneWay_Ordinal = 0x3c2ee8512dc7f7e7;
-const $fidl.MethodType _kTransitional_OneWay_Type = $fidl.MethodType(
-  request: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
-  ],
-  response: [],
-  name: r"Transitional.OneWay",
-  requestInlineSizeV1: 8,
-  requestInlineSizeV2: 8,
-  responseInlineSizeV1: 0,
-  responseInlineSizeV2: 0,
-);
-// event:  -> (int x)
-const int _kTransitional_Event_Ordinal = 0x76113c4b4d484841;
-const $fidl.MethodType _kTransitional_Event_Type = $fidl.MethodType(
-  request: [],
-  response: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
-  ],
-  name: r"Transitional.Event",
-  requestInlineSizeV1: 0,
-  requestInlineSizeV2: 0,
-  responseInlineSizeV1: 8,
-  responseInlineSizeV2: 8,
-);
-
-abstract class Transitional {
-  $fidl.ServiceData? get $serviceData => TransitionalData();
-  $async.Future<int> request(int x) {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
-  }
-
-  $async.Future<void> oneWay(int x) {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
-  }
-
-  $async.Stream<int>? get event {
-    return $async.Stream.empty();
-  }
-}
-
-// TODO: Remove ServiceData for non-service
-class TransitionalData implements $fidl.ServiceData<Transitional> {
-  const TransitionalData();
-
-  @override
-  String getName() {
-    return "";
-  }
-
-  @override
-  $fidl.AsyncBinding getBinding() {
-    return TransitionalBinding();
-  }
-}
-
-class TransitionalProxy extends $fidl.AsyncProxy<Transitional>
-    implements Transitional {
-  TransitionalProxy()
-      : super($fidl.AsyncProxyController<Transitional>(
-            $interfaceName: r'Transitional')) {
-    ctrl.onResponse = _handleResponse;
-    ctrl.whenClosed.then((_) {
-      _eventEventStreamController.close();
-    }, onError: (_) {});
-  }
-  @override
-  Null get $serviceData => null;
-
-  void _handleEvent($fidl.IncomingMessage $message) {
-    switch ($message.ordinal) {
-      case _kTransitional_Event_Ordinal:
-        final String _name = _kTransitional_Event_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
-          final List<$fidl.MemberType> $types =
-              _kTransitional_Event_Type.response!;
-          _eventEventStreamController.add($fidl.decodeMessage(
-              $message,
-              _kTransitional_Event_Type.responseInlineSize($message.wireFormat),
-              $types[0]));
-        }, 'event');
-        break;
-      default:
-        ctrl.proxyError(
-            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
-        break;
-    }
-  }
-
-  void _handleResponse($fidl.IncomingMessage $message) {
-    final int $txid = $message.txid;
-    if ($txid == 0) {
-      _handleEvent($message);
-      return;
-    }
-    final $async.Completer? $completer = ctrl.getCompleter($txid);
-    if ($completer == null) {
-      $message.closeHandles();
-      return;
-    }
-    switch ($message.ordinal) {
-      case _kTransitional_Request_Ordinal:
-        final String _name = _kTransitional_Request_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
-          final List<$fidl.MemberType> $types =
-              _kTransitional_Request_Type.response!;
-          // ignore: prefer_const_declarations
-          final $response = $fidl.decodeMessage(
-              $message,
-              _kTransitional_Request_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]);
-
-          $completer.complete($response);
-        }, 'method response');
-        break;
-      default:
-        ctrl.proxyError(
-            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
-        break;
-    }
-  }
-
-  @override
-  $async.Future<int> request(int x) {
-    if (!ctrl.isBound) {
-      return $async.Future.error(
-          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
-          StackTrace.current);
-    }
-
-    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kTransitional_Request_Ordinal, 0);
-    final List<$fidl.MemberType> $types = _kTransitional_Request_Type.request!;
-    $fidl.encodeMessageWithCallback($encoder,
-        _kTransitional_Request_Type.requestInlineSize($encoder.wireFormat), () {
-      $types[0].encode($encoder, x, $fidl.kMessageHeaderSize, 1);
-    });
-    final $completer = $async.Completer<int>();
-    ctrl.sendMessageWithResponse($encoder.message, $completer);
-    return $completer.future;
-  }
-
-  @override
-  $async.Future<void> oneWay(int x) {
-    if (!ctrl.isBound) {
-      return $async.Future.error(
-          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
-          StackTrace.current);
-    }
-
-    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kTransitional_OneWay_Ordinal, 0);
-    final List<$fidl.MemberType> $types = _kTransitional_OneWay_Type.request!;
-    $fidl.encodeMessageWithCallback($encoder,
-        _kTransitional_OneWay_Type.requestInlineSize($encoder.wireFormat), () {
-      $types[0].encode($encoder, x, $fidl.kMessageHeaderSize, 1);
-    });
-    return $async.Future.sync(() {
-      ctrl.sendMessage($encoder.message);
-    });
-  }
-
-  final _eventEventStreamController = $async.StreamController<int>.broadcast();
-  @override
-  $async.Stream<int> get event => _eventEventStreamController.stream;
-}
-
-class TransitionalBinding extends $fidl.AsyncBinding<Transitional> {
-  TransitionalBinding() : super(r"Transitional") {
-    final List<$async.StreamSubscription<dynamic>> $subscriptions = [];
-    void $unsubscribe() {
-      for (final $sub in $subscriptions) {
-        $sub.cancel();
-      }
-      $subscriptions.clear();
-    }
-
-    whenBound.then((_) {
-      final impl = this.impl;
-      if (impl != null) {
-        final _event_stream = impl.event;
-        if (_event_stream != null) {
-          $subscriptions.add(_event_stream.listen(($response) {
-            final $fidl.Encoder $encoder =
-                $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(_kTransitional_Event_Ordinal, 0);
-            final List<$fidl.MemberType> $types =
-                _kTransitional_Event_Type.response!;
-            $fidl.encodeMessage(
-                $encoder,
-                _kTransitional_Event_Type
-                    .responseInlineSize($encoder.wireFormat),
-                $types[0],
-                $response);
-            sendMessage($encoder.message);
-          }));
-        }
-      }
-    });
-    whenClosed.then((_) => $unsubscribe());
-  }
-
-  @override
-  void handleMessage(
-      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
-    switch ($message.ordinal) {
-      case _kTransitional_Request_Ordinal:
-        final String _name = _kTransitional_Request_Type.name;
-        $fidl.performWithExceptionHandling(_name, () {
-          final List<$fidl.MemberType> $types =
-              _kTransitional_Request_Type.request!;
-          // ignore: prefer_const_declarations
-          final _impl = impl!;
-          final $async.Future<int> $future = $fidl
-              .decodeMessageWithCallback<$async.Future<int>>(
-                  $message,
-                  _kTransitional_Request_Type.requestInlineSize(
-                      $message.wireFormat), ($fidl.Decoder decoder) {
-            return _impl.request(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
-            );
-          });
-          $future.then(($response) {
-            final $fidl.Encoder $encoder =
-                $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kTransitional_Request_Ordinal, $message.txid);
-            final List<$fidl.MemberType> $types =
-                _kTransitional_Request_Type.response!;
-            $fidl.encodeMessage(
-                $encoder,
-                _kTransitional_Request_Type
-                    .responseInlineSize($encoder.wireFormat),
-                $types[0],
-                $response);
-            $respond($encoder.message);
-          }, onError: (_e) {
-            $fidl.handleException(_name, _e, close);
-          });
-        }, close);
-        break;
-      case _kTransitional_OneWay_Ordinal:
-        final String _name = _kTransitional_OneWay_Type.name;
-        $fidl.performWithExceptionHandling(_name, () {
-          final List<$fidl.MemberType> $types =
-              _kTransitional_OneWay_Type.request!;
-          // ignore: prefer_const_declarations
-          final _impl = impl!;
-          final $async.Future<void> $future = $fidl
-              .decodeMessageWithCallback<$async.Future<void>>(
-                  $message,
-                  _kTransitional_OneWay_Type.requestInlineSize(
-                      $message.wireFormat), ($fidl.Decoder decoder) {
-            return _impl.oneWay(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
-            );
-          });
-        }, close);
-        break;
-      default:
-        throw $fidl.FidlError(
-            r'Unexpected message name for TransitionalBinding');
-    }
-  }
-}
-
-// method: ()
-const int _kDiscoverableProtocol_Method_Ordinal = 0x2ff5ba3a2bd170eb;
-const $fidl.MethodType _kDiscoverableProtocol_Method_Type = $fidl.MethodType(
-  request: [],
-  response: [],
-  name: r"DiscoverableProtocol.Method",
-  requestInlineSizeV1: 0,
-  requestInlineSizeV2: 0,
-  responseInlineSizeV1: 0,
-  responseInlineSizeV2: 0,
-);
-
-abstract class DiscoverableProtocol extends $fidl.Service {
-  static const String $serviceName = "test.protocols.DiscoverableProtocol";
-  @override
-  $fidl.ServiceData? get $serviceData => DiscoverableProtocolData();
-  $async.Future<void> method();
-}
-
-// TODO: Remove ServiceData for non-service
-class DiscoverableProtocolData
-    implements $fidl.ServiceData<DiscoverableProtocol> {
-  const DiscoverableProtocolData();
-
-  @override
-  String getName() {
-    return DiscoverableProtocol.$serviceName;
-  }
-
-  @override
-  $fidl.AsyncBinding getBinding() {
-    return DiscoverableProtocolBinding();
-  }
-}
-
-class DiscoverableProtocolProxy extends $fidl.AsyncProxy<DiscoverableProtocol>
-    implements DiscoverableProtocol {
-  DiscoverableProtocolProxy()
-      : super($fidl.AsyncProxyController<DiscoverableProtocol>(
-            $serviceName: "test.protocols.DiscoverableProtocol",
-            $interfaceName: r'DiscoverableProtocol')) {
-    ctrl.onResponse = _handleResponse;
-  }
-  @override
-  $fidl.ServiceData get $serviceData => DiscoverableProtocolData();
-
-  void _handleEvent($fidl.IncomingMessage $message) {
-    switch ($message.ordinal) {
-      default:
-        ctrl.proxyError(
-            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
-        break;
-    }
-  }
-
-  void _handleResponse($fidl.IncomingMessage $message) {
-    final int $txid = $message.txid;
-    if ($txid == 0) {
-      _handleEvent($message);
-      return;
-    }
-    final $async.Completer? $completer = ctrl.getCompleter($txid);
-    if ($completer == null) {
-      $message.closeHandles();
-      return;
-    }
-    switch ($message.ordinal) {
-      default:
-        ctrl.proxyError(
-            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
-        break;
-    }
-  }
-
-  @override
-  $async.Future<void> method() {
-    if (!ctrl.isBound) {
-      return $async.Future.error(
-          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
-          StackTrace.current);
-    }
-
-    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kDiscoverableProtocol_Method_Ordinal, 0);
-    return $async.Future.sync(() {
-      ctrl.sendMessage($encoder.message);
-    });
-  }
-}
-
-class DiscoverableProtocolBinding
-    extends $fidl.AsyncBinding<DiscoverableProtocol> {
-  DiscoverableProtocolBinding() : super(r"DiscoverableProtocol");
-
-  @override
-  void handleMessage(
-      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
-    switch ($message.ordinal) {
-      case _kDiscoverableProtocol_Method_Ordinal:
-        final String _name = _kDiscoverableProtocol_Method_Type.name;
-        $fidl.performWithExceptionHandling(_name, () {
-          final List<$fidl.MemberType> $types =
-              _kDiscoverableProtocol_Method_Type.request!;
-          // ignore: prefer_const_declarations
-          final _impl = impl!;
-          final $async.Future<void> $future = $fidl
-              .decodeMessageWithCallback<$async.Future<void>>(
-                  $message,
-                  _kDiscoverableProtocol_Method_Type.requestInlineSize(
-                      $message.wireFormat), ($fidl.Decoder decoder) {
-            return _impl.method();
-          });
-        }, close);
-        break;
-      default:
-        throw $fidl.FidlError(
-            r'Unexpected message name for DiscoverableProtocolBinding');
-    }
-  }
-}
-
-// noResponseMethod: ($zircon.Socket h)
-const int _kHandleRightsProtocol_NoResponseMethod_Ordinal = 0x10078afd320d2bfd;
-const $fidl.MethodType _kHandleRightsProtocol_NoResponseMethod_Type =
-    $fidl.MethodType(
-  request: <$fidl.MemberType>[
-    $fidl.MemberType<$zircon.Socket>(
-        type: $fidl.SocketType(objectType: 14, rights: 3),
-        offsetV1: 0,
-        offsetV2: 0),
-  ],
-  response: [],
-  name: r"HandleRightsProtocol.NoResponseMethod",
-  requestInlineSizeV1: 4,
-  requestInlineSizeV2: 4,
-  responseInlineSizeV1: 0,
-  responseInlineSizeV2: 0,
-);
-// responseMethod: ($zircon.Socket h) -> ($zircon.Socket h)
-const int _kHandleRightsProtocol_ResponseMethod_Ordinal = 0x52a8f194ac143547;
-const $fidl.MethodType _kHandleRightsProtocol_ResponseMethod_Type =
-    $fidl.MethodType(
-  request: <$fidl.MemberType>[
-    $fidl.MemberType<$zircon.Socket>(
-        type: $fidl.SocketType(objectType: 14, rights: 3),
-        offsetV1: 0,
-        offsetV2: 0),
-  ],
-  response: <$fidl.MemberType>[
-    $fidl.MemberType<$zircon.Socket>(
-        type: $fidl.SocketType(objectType: 14, rights: 1),
-        offsetV1: 0,
-        offsetV2: 0),
-  ],
-  name: r"HandleRightsProtocol.ResponseMethod",
-  requestInlineSizeV1: 4,
-  requestInlineSizeV2: 4,
-  responseInlineSizeV1: 4,
-  responseInlineSizeV2: 4,
-);
-// anEvent:  -> ($zircon.Socket h)
-const int _kHandleRightsProtocol_AnEvent_Ordinal = 0x69dad41418eb133;
-const $fidl.MethodType _kHandleRightsProtocol_AnEvent_Type = $fidl.MethodType(
-  request: [],
-  response: <$fidl.MemberType>[
-    $fidl.MemberType<$zircon.Socket>(
-        type: $fidl.SocketType(objectType: 14, rights: 3),
-        offsetV1: 0,
-        offsetV2: 0),
-  ],
-  name: r"HandleRightsProtocol.AnEvent",
-  requestInlineSizeV1: 0,
-  requestInlineSizeV2: 0,
-  responseInlineSizeV1: 4,
-  responseInlineSizeV2: 4,
-);
-
-abstract class HandleRightsProtocol {
-  $fidl.ServiceData? get $serviceData => HandleRightsProtocolData();
-  $async.Future<void> noResponseMethod($zircon.Socket h);
-  $async.Future<$zircon.Socket> responseMethod($zircon.Socket h);
-  $async.Stream<$zircon.Socket>? get anEvent;
-}
-
-// TODO: Remove ServiceData for non-service
-class HandleRightsProtocolData
-    implements $fidl.ServiceData<HandleRightsProtocol> {
-  const HandleRightsProtocolData();
-
-  @override
-  String getName() {
-    return "";
-  }
-
-  @override
-  $fidl.AsyncBinding getBinding() {
-    return HandleRightsProtocolBinding();
-  }
-}
-
-class HandleRightsProtocolProxy extends $fidl.AsyncProxy<HandleRightsProtocol>
-    implements HandleRightsProtocol {
-  HandleRightsProtocolProxy()
-      : super($fidl.AsyncProxyController<HandleRightsProtocol>(
-            $interfaceName: r'HandleRightsProtocol')) {
-    ctrl.onResponse = _handleResponse;
-    ctrl.whenClosed.then((_) {
-      _anEventEventStreamController.close();
-    }, onError: (_) {});
-  }
-  @override
-  Null get $serviceData => null;
-
-  void _handleEvent($fidl.IncomingMessage $message) {
-    switch ($message.ordinal) {
-      case _kHandleRightsProtocol_AnEvent_Ordinal:
-        final String _name = _kHandleRightsProtocol_AnEvent_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
-          final List<$fidl.MemberType> $types =
-              _kHandleRightsProtocol_AnEvent_Type.response!;
-          _anEventEventStreamController.add($fidl.decodeMessage(
-              $message,
-              _kHandleRightsProtocol_AnEvent_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]));
-        }, 'event');
-        break;
-      default:
-        ctrl.proxyError(
-            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
-        break;
-    }
-  }
-
-  void _handleResponse($fidl.IncomingMessage $message) {
-    final int $txid = $message.txid;
-    if ($txid == 0) {
-      _handleEvent($message);
-      return;
-    }
-    final $async.Completer? $completer = ctrl.getCompleter($txid);
-    if ($completer == null) {
-      $message.closeHandles();
-      return;
-    }
-    switch ($message.ordinal) {
-      case _kHandleRightsProtocol_ResponseMethod_Ordinal:
-        final String _name = _kHandleRightsProtocol_ResponseMethod_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
-          final List<$fidl.MemberType> $types =
-              _kHandleRightsProtocol_ResponseMethod_Type.response!;
-          // ignore: prefer_const_declarations
-          final $response = $fidl.decodeMessage(
-              $message,
-              _kHandleRightsProtocol_ResponseMethod_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]);
-
-          $completer.complete($response);
-        }, 'method response');
-        break;
-      default:
-        ctrl.proxyError(
-            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
-        break;
-    }
-  }
-
-  @override
-  $async.Future<void> noResponseMethod($zircon.Socket h) {
-    if (!ctrl.isBound) {
-      return $async.Future.error(
-          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
-          StackTrace.current);
-    }
-
-    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(
-        _kHandleRightsProtocol_NoResponseMethod_Ordinal, 0);
-    final List<$fidl.MemberType> $types =
-        _kHandleRightsProtocol_NoResponseMethod_Type.request!;
-    $fidl.encodeMessageWithCallback(
-        $encoder,
-        _kHandleRightsProtocol_NoResponseMethod_Type
-            .requestInlineSize($encoder.wireFormat), () {
-      $types[0].encode($encoder, h, $fidl.kMessageHeaderSize, 1);
-    });
-    return $async.Future.sync(() {
-      ctrl.sendMessage($encoder.message);
-    });
-  }
-
-  @override
-  $async.Future<$zircon.Socket> responseMethod($zircon.Socket h) {
-    if (!ctrl.isBound) {
-      return $async.Future.error(
-          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
-          StackTrace.current);
-    }
-
-    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(
-        _kHandleRightsProtocol_ResponseMethod_Ordinal, 0);
-    final List<$fidl.MemberType> $types =
-        _kHandleRightsProtocol_ResponseMethod_Type.request!;
-    $fidl.encodeMessageWithCallback(
-        $encoder,
-        _kHandleRightsProtocol_ResponseMethod_Type
-            .requestInlineSize($encoder.wireFormat), () {
-      $types[0].encode($encoder, h, $fidl.kMessageHeaderSize, 1);
-    });
-    final $completer = $async.Completer<$zircon.Socket>();
-    ctrl.sendMessageWithResponse($encoder.message, $completer);
-    return $completer.future;
-  }
-
-  final _anEventEventStreamController =
-      $async.StreamController<$zircon.Socket>.broadcast();
-  @override
-  $async.Stream<$zircon.Socket> get anEvent =>
-      _anEventEventStreamController.stream;
-}
-
-class HandleRightsProtocolBinding
-    extends $fidl.AsyncBinding<HandleRightsProtocol> {
-  HandleRightsProtocolBinding() : super(r"HandleRightsProtocol") {
-    final List<$async.StreamSubscription<dynamic>> $subscriptions = [];
-    void $unsubscribe() {
-      for (final $sub in $subscriptions) {
-        $sub.cancel();
-      }
-      $subscriptions.clear();
-    }
-
-    whenBound.then((_) {
-      final impl = this.impl;
-      if (impl != null) {
-        final _anEvent_stream = impl.anEvent;
-        if (_anEvent_stream != null) {
-          $subscriptions.add(_anEvent_stream.listen(($response) {
-            final $fidl.Encoder $encoder =
-                $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kHandleRightsProtocol_AnEvent_Ordinal, 0);
-            final List<$fidl.MemberType> $types =
-                _kHandleRightsProtocol_AnEvent_Type.response!;
-            $fidl.encodeMessage(
-                $encoder,
-                _kHandleRightsProtocol_AnEvent_Type
-                    .responseInlineSize($encoder.wireFormat),
-                $types[0],
-                $response);
-            sendMessage($encoder.message);
-          }));
-        }
-      }
-    });
-    whenClosed.then((_) => $unsubscribe());
-  }
-
-  @override
-  void handleMessage(
-      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
-    switch ($message.ordinal) {
-      case _kHandleRightsProtocol_NoResponseMethod_Ordinal:
-        final String _name = _kHandleRightsProtocol_NoResponseMethod_Type.name;
-        $fidl.performWithExceptionHandling(_name, () {
-          final List<$fidl.MemberType> $types =
-              _kHandleRightsProtocol_NoResponseMethod_Type.request!;
-          // ignore: prefer_const_declarations
-          final _impl = impl!;
-          final $async.Future<void> $future = $fidl
-              .decodeMessageWithCallback<$async.Future<void>>(
-                  $message,
-                  _kHandleRightsProtocol_NoResponseMethod_Type
-                      .requestInlineSize($message.wireFormat),
-                  ($fidl.Decoder decoder) {
-            return _impl.noResponseMethod(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
-            );
-          });
-        }, close);
-        break;
-      case _kHandleRightsProtocol_ResponseMethod_Ordinal:
-        final String _name = _kHandleRightsProtocol_ResponseMethod_Type.name;
-        $fidl.performWithExceptionHandling(_name, () {
-          final List<$fidl.MemberType> $types =
-              _kHandleRightsProtocol_ResponseMethod_Type.request!;
-          // ignore: prefer_const_declarations
-          final _impl = impl!;
-          final $async.Future<$zircon.Socket> $future = $fidl
-              .decodeMessageWithCallback<$async.Future<$zircon.Socket>>(
-                  $message,
-                  _kHandleRightsProtocol_ResponseMethod_Type.requestInlineSize(
-                      $message.wireFormat), ($fidl.Decoder decoder) {
-            return _impl.responseMethod(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
-            );
-          });
-          $future.then(($response) {
-            final $fidl.Encoder $encoder =
-                $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kHandleRightsProtocol_ResponseMethod_Ordinal, $message.txid);
-            final List<$fidl.MemberType> $types =
-                _kHandleRightsProtocol_ResponseMethod_Type.response!;
-            $fidl.encodeMessage(
-                $encoder,
-                _kHandleRightsProtocol_ResponseMethod_Type
-                    .responseInlineSize($encoder.wireFormat),
-                $types[0],
-                $response);
-            $respond($encoder.message);
-          }, onError: (_e) {
-            $fidl.handleException(_name, _e, close);
-          });
-        }, close);
-        break;
-      default:
-        throw $fidl.FidlError(
-            r'Unexpected message name for HandleRightsProtocolBinding');
-    }
-  }
-}
-
 // clientEnds: ($fidl.InterfaceHandle<DiscoverableProtocol> in$) -> ($fidl.InterfaceHandle<DiscoverableProtocol>? out)
 const int _kWithProtocolEnds_ClientEnds_Ordinal = 0x51780563edb15042;
 const $fidl.MethodType _kWithProtocolEnds_ClientEnds_Type = $fidl.MethodType(
@@ -3680,333 +4007,6 @@ class WithProtocolEndsBinding extends $fidl.AsyncBinding<WithProtocolEnds> {
       default:
         throw $fidl.FidlError(
             r'Unexpected message name for WithProtocolEndsBinding');
-    }
-  }
-}
-
-// fifteen: (bool p1, bool p2, bool p3, bool p4, bool p5, bool p6, bool p7, bool p8, bool p9, bool p10, bool p11, bool p12, bool p13, bool p14, bool p15)
-const int _kManyParameters_Fifteen_Ordinal = 0x59233bcecd338967;
-const $fidl.MethodType _kManyParameters_Fifteen_Type = $fidl.MethodType(
-  request: <$fidl.MemberType>[
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 0, offsetV2: 0),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 1, offsetV2: 1),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 2, offsetV2: 2),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 3, offsetV2: 3),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 4, offsetV2: 4),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 5, offsetV2: 5),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 6, offsetV2: 6),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 7, offsetV2: 7),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 8, offsetV2: 8),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 9, offsetV2: 9),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 10, offsetV2: 10),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 11, offsetV2: 11),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 12, offsetV2: 12),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 13, offsetV2: 13),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 14, offsetV2: 14),
-  ],
-  response: [],
-  name: r"ManyParameters.Fifteen",
-  requestInlineSizeV1: 15,
-  requestInlineSizeV2: 15,
-  responseInlineSizeV1: 0,
-  responseInlineSizeV2: 0,
-);
-
-abstract class ManyParameters {
-  $fidl.ServiceData? get $serviceData => ManyParametersData();
-  $async.Future<void> fifteen(
-      bool p1,
-      bool p2,
-      bool p3,
-      bool p4,
-      bool p5,
-      bool p6,
-      bool p7,
-      bool p8,
-      bool p9,
-      bool p10,
-      bool p11,
-      bool p12,
-      bool p13,
-      bool p14,
-      bool p15);
-}
-
-// TODO: Remove ServiceData for non-service
-class ManyParametersData implements $fidl.ServiceData<ManyParameters> {
-  const ManyParametersData();
-
-  @override
-  String getName() {
-    return "";
-  }
-
-  @override
-  $fidl.AsyncBinding getBinding() {
-    return ManyParametersBinding();
-  }
-}
-
-class ManyParametersProxy extends $fidl.AsyncProxy<ManyParameters>
-    implements ManyParameters {
-  ManyParametersProxy()
-      : super($fidl.AsyncProxyController<ManyParameters>(
-            $interfaceName: r'ManyParameters')) {
-    ctrl.onResponse = _handleResponse;
-  }
-  @override
-  Null get $serviceData => null;
-
-  void _handleEvent($fidl.IncomingMessage $message) {
-    switch ($message.ordinal) {
-      default:
-        ctrl.proxyError(
-            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
-        break;
-    }
-  }
-
-  void _handleResponse($fidl.IncomingMessage $message) {
-    final int $txid = $message.txid;
-    if ($txid == 0) {
-      _handleEvent($message);
-      return;
-    }
-    final $async.Completer? $completer = ctrl.getCompleter($txid);
-    if ($completer == null) {
-      $message.closeHandles();
-      return;
-    }
-    switch ($message.ordinal) {
-      default:
-        ctrl.proxyError(
-            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
-        break;
-    }
-  }
-
-  @override
-  $async.Future<void> fifteen(
-      bool p1,
-      bool p2,
-      bool p3,
-      bool p4,
-      bool p5,
-      bool p6,
-      bool p7,
-      bool p8,
-      bool p9,
-      bool p10,
-      bool p11,
-      bool p12,
-      bool p13,
-      bool p14,
-      bool p15) {
-    if (!ctrl.isBound) {
-      return $async.Future.error(
-          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
-          StackTrace.current);
-    }
-
-    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kManyParameters_Fifteen_Ordinal, 0);
-    final List<$fidl.MemberType> $types =
-        _kManyParameters_Fifteen_Type.request!;
-    $fidl.encodeMessageWithCallback($encoder,
-        _kManyParameters_Fifteen_Type.requestInlineSize($encoder.wireFormat),
-        () {
-      $types[0].encode($encoder, p1, $fidl.kMessageHeaderSize, 1);
-      $types[1].encode($encoder, p2, $fidl.kMessageHeaderSize, 1);
-      $types[2].encode($encoder, p3, $fidl.kMessageHeaderSize, 1);
-      $types[3].encode($encoder, p4, $fidl.kMessageHeaderSize, 1);
-      $types[4].encode($encoder, p5, $fidl.kMessageHeaderSize, 1);
-      $types[5].encode($encoder, p6, $fidl.kMessageHeaderSize, 1);
-      $types[6].encode($encoder, p7, $fidl.kMessageHeaderSize, 1);
-      $types[7].encode($encoder, p8, $fidl.kMessageHeaderSize, 1);
-      $types[8].encode($encoder, p9, $fidl.kMessageHeaderSize, 1);
-      $types[9].encode($encoder, p10, $fidl.kMessageHeaderSize, 1);
-      $types[10].encode($encoder, p11, $fidl.kMessageHeaderSize, 1);
-      $types[11].encode($encoder, p12, $fidl.kMessageHeaderSize, 1);
-      $types[12].encode($encoder, p13, $fidl.kMessageHeaderSize, 1);
-      $types[13].encode($encoder, p14, $fidl.kMessageHeaderSize, 1);
-      $types[14].encode($encoder, p15, $fidl.kMessageHeaderSize, 1);
-    });
-    return $async.Future.sync(() {
-      ctrl.sendMessage($encoder.message);
-    });
-  }
-}
-
-class ManyParametersBinding extends $fidl.AsyncBinding<ManyParameters> {
-  ManyParametersBinding() : super(r"ManyParameters");
-
-  @override
-  void handleMessage(
-      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
-    switch ($message.ordinal) {
-      case _kManyParameters_Fifteen_Ordinal:
-        final String _name = _kManyParameters_Fifteen_Type.name;
-        $fidl.performWithExceptionHandling(_name, () {
-          final List<$fidl.MemberType> $types =
-              _kManyParameters_Fifteen_Type.request!;
-          // ignore: prefer_const_declarations
-          final _impl = impl!;
-          final $async.Future<void> $future = $fidl
-              .decodeMessageWithCallback<$async.Future<void>>(
-                  $message,
-                  _kManyParameters_Fifteen_Type.requestInlineSize(
-                      $message.wireFormat), ($fidl.Decoder decoder) {
-            return _impl.fifteen(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
-              $types[1].decode(decoder, $fidl.kMessageHeaderSize, 1),
-              $types[2].decode(decoder, $fidl.kMessageHeaderSize, 1),
-              $types[3].decode(decoder, $fidl.kMessageHeaderSize, 1),
-              $types[4].decode(decoder, $fidl.kMessageHeaderSize, 1),
-              $types[5].decode(decoder, $fidl.kMessageHeaderSize, 1),
-              $types[6].decode(decoder, $fidl.kMessageHeaderSize, 1),
-              $types[7].decode(decoder, $fidl.kMessageHeaderSize, 1),
-              $types[8].decode(decoder, $fidl.kMessageHeaderSize, 1),
-              $types[9].decode(decoder, $fidl.kMessageHeaderSize, 1),
-              $types[10].decode(decoder, $fidl.kMessageHeaderSize, 1),
-              $types[11].decode(decoder, $fidl.kMessageHeaderSize, 1),
-              $types[12].decode(decoder, $fidl.kMessageHeaderSize, 1),
-              $types[13].decode(decoder, $fidl.kMessageHeaderSize, 1),
-              $types[14].decode(decoder, $fidl.kMessageHeaderSize, 1),
-            );
-          });
-        }, close);
-        break;
-      default:
-        throw $fidl.FidlError(
-            r'Unexpected message name for ManyParametersBinding');
-    }
-  }
-}
-
-// unionMethod: (TheUnion u)
-const int _kMethodWithUnion_UnionMethod_Ordinal = 0x393e7f5b2b821218;
-const $fidl.MethodType _kMethodWithUnion_UnionMethod_Type = $fidl.MethodType(
-  request: <$fidl.MemberType>[
-    $fidl.MemberType<TheUnion>(type: kTheUnion_Type, offsetV1: 0, offsetV2: 0),
-  ],
-  response: [],
-  name: r"MethodWithUnion.UnionMethod",
-  requestInlineSizeV1: 24,
-  requestInlineSizeV2: 16,
-  responseInlineSizeV1: 0,
-  responseInlineSizeV2: 0,
-);
-
-abstract class MethodWithUnion {
-  $fidl.ServiceData? get $serviceData => MethodWithUnionData();
-  $async.Future<void> unionMethod(TheUnion u);
-}
-
-// TODO: Remove ServiceData for non-service
-class MethodWithUnionData implements $fidl.ServiceData<MethodWithUnion> {
-  const MethodWithUnionData();
-
-  @override
-  String getName() {
-    return "";
-  }
-
-  @override
-  $fidl.AsyncBinding getBinding() {
-    return MethodWithUnionBinding();
-  }
-}
-
-class MethodWithUnionProxy extends $fidl.AsyncProxy<MethodWithUnion>
-    implements MethodWithUnion {
-  MethodWithUnionProxy()
-      : super($fidl.AsyncProxyController<MethodWithUnion>(
-            $interfaceName: r'MethodWithUnion')) {
-    ctrl.onResponse = _handleResponse;
-  }
-  @override
-  Null get $serviceData => null;
-
-  void _handleEvent($fidl.IncomingMessage $message) {
-    switch ($message.ordinal) {
-      default:
-        ctrl.proxyError(
-            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
-        break;
-    }
-  }
-
-  void _handleResponse($fidl.IncomingMessage $message) {
-    final int $txid = $message.txid;
-    if ($txid == 0) {
-      _handleEvent($message);
-      return;
-    }
-    final $async.Completer? $completer = ctrl.getCompleter($txid);
-    if ($completer == null) {
-      $message.closeHandles();
-      return;
-    }
-    switch ($message.ordinal) {
-      default:
-        ctrl.proxyError(
-            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
-        break;
-    }
-  }
-
-  @override
-  $async.Future<void> unionMethod(TheUnion u) {
-    if (!ctrl.isBound) {
-      return $async.Future.error(
-          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
-          StackTrace.current);
-    }
-
-    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kMethodWithUnion_UnionMethod_Ordinal, 0);
-    final List<$fidl.MemberType> $types =
-        _kMethodWithUnion_UnionMethod_Type.request!;
-    $fidl.encodeMessageWithCallback(
-        $encoder,
-        _kMethodWithUnion_UnionMethod_Type
-            .requestInlineSize($encoder.wireFormat), () {
-      $types[0].encode($encoder, u, $fidl.kMessageHeaderSize, 1);
-    });
-    return $async.Future.sync(() {
-      ctrl.sendMessage($encoder.message);
-    });
-  }
-}
-
-class MethodWithUnionBinding extends $fidl.AsyncBinding<MethodWithUnion> {
-  MethodWithUnionBinding() : super(r"MethodWithUnion");
-
-  @override
-  void handleMessage(
-      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
-    switch ($message.ordinal) {
-      case _kMethodWithUnion_UnionMethod_Ordinal:
-        final String _name = _kMethodWithUnion_UnionMethod_Type.name;
-        $fidl.performWithExceptionHandling(_name, () {
-          final List<$fidl.MemberType> $types =
-              _kMethodWithUnion_UnionMethod_Type.request!;
-          // ignore: prefer_const_declarations
-          final _impl = impl!;
-          final $async.Future<void> $future = $fidl
-              .decodeMessageWithCallback<$async.Future<void>>(
-                  $message,
-                  _kMethodWithUnion_UnionMethod_Type.requestInlineSize(
-                      $message.wireFormat), ($fidl.Decoder decoder) {
-            return _impl.unionMethod(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
-            );
-          });
-        }, close);
-        break;
-      default:
-        throw $fidl.FidlError(
-            r'Unexpected message name for MethodWithUnionBinding');
     }
   }
 }

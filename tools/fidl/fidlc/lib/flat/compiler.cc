@@ -10,6 +10,7 @@
 #include "fidl/flat/resolve_step.h"
 #include "fidl/flat/sort_step.h"
 #include "fidl/flat/verify_steps.h"
+#include "fidl/names.h"
 
 namespace fidl::flat {
 
@@ -46,6 +47,27 @@ std::unique_ptr<Library> Compiler::Compile() {
     if (!VerifyOpenInteractionsStep(this).Run())
       return nullptr;
   }
+
+  // TODO(fxbug.dev/67858): We are temporarily sorting declarations here to
+  // match the new behavior in fxrev.dev/580349 and demonstrate that it has no
+  // impact on goldens.
+  auto sort = [&](auto& decls) {
+    auto cmp = [&](const auto& lhs, const auto& rhs) {
+      return NameFlatName(lhs->name) < NameFlatName(rhs->name);
+    };
+    std::sort(decls.begin(), decls.end(), cmp);
+  };
+  sort(library_->bits_declarations);
+  sort(library_->builtin_declarations);
+  sort(library_->const_declarations);
+  sort(library_->enum_declarations);
+  sort(library_->protocol_declarations);
+  sort(library_->resource_declarations);
+  sort(library_->service_declarations);
+  sort(library_->struct_declarations);
+  sort(library_->table_declarations);
+  sort(library_->type_alias_declarations);
+  sort(library_->union_declarations);
 
   assert(checkpoint.NoNewErrors() && "errors should have caused an early return");
   return std::move(library_);

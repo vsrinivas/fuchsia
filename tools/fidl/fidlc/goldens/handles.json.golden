@@ -8,16 +8,10 @@
         "zx/rights": {
           "kind": "bits"
         },
-        "zx/RIGHTS_BASIC": {
+        "zx/CHANNEL_MAX_MSG_BYTES": {
           "kind": "const"
         },
-        "zx/RIGHTS_IO": {
-          "kind": "const"
-        },
-        "zx/RIGHTS_PROPERTY": {
-          "kind": "const"
-        },
-        "zx/RIGHTS_POLICY": {
+        "zx/CHANNEL_MAX_MSG_HANDLES": {
           "kind": "const"
         },
         "zx/DEFAULT_CHANNEL_RIGHTS": {
@@ -26,16 +20,22 @@
         "zx/DEFAULT_EVENT_RIGHTS": {
           "kind": "const"
         },
-        "zx/CHANNEL_MAX_MSG_BYTES": {
-          "kind": "const"
-        },
-        "zx/CHANNEL_MAX_MSG_HANDLES": {
+        "zx/MAX_CPUS": {
           "kind": "const"
         },
         "zx/MAX_NAME_LEN": {
           "kind": "const"
         },
-        "zx/MAX_CPUS": {
+        "zx/RIGHTS_BASIC": {
+          "kind": "const"
+        },
+        "zx/RIGHTS_IO": {
+          "kind": "const"
+        },
+        "zx/RIGHTS_POLICY": {
+          "kind": "const"
+        },
+        "zx/RIGHTS_PROPERTY": {
           "kind": "const"
         },
         "zx/obj_type": {
@@ -44,22 +44,16 @@
         "zx/handle": {
           "kind": "experimental_resource"
         },
-        "zx/status": {
-          "kind": "type_alias"
-        },
-        "zx/time": {
-          "kind": "type_alias"
-        },
         "zx/duration": {
           "kind": "type_alias"
         },
-        "zx/ticks": {
+        "zx/gpaddr": {
           "kind": "type_alias"
         },
         "zx/koid": {
           "kind": "type_alias"
         },
-        "zx/vaddr": {
+        "zx/off": {
           "kind": "type_alias"
         },
         "zx/paddr": {
@@ -68,16 +62,22 @@
         "zx/paddr32": {
           "kind": "type_alias"
         },
-        "zx/gpaddr": {
-          "kind": "type_alias"
-        },
-        "zx/off": {
-          "kind": "type_alias"
-        },
         "zx/procarg": {
           "kind": "type_alias"
         },
         "zx/signals": {
+          "kind": "type_alias"
+        },
+        "zx/status": {
+          "kind": "type_alias"
+        },
+        "zx/ticks": {
+          "kind": "type_alias"
+        },
+        "zx/time": {
+          "kind": "type_alias"
+        },
+        "zx/vaddr": {
           "kind": "type_alias"
         }
       }
@@ -2159,20 +2159,6 @@
       }
     },
     {
-      "name": "test.handles/aliased_subtype_handle",
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-        "line": 49,
-        "column": 7,
-        "length": 22
-      },
-      "partial_type_ctor": {
-        "name": "test.handles/handle",
-        "args": [],
-        "nullable": false
-      }
-    },
-    {
       "name": "test.handles/aliased_rights_handle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
@@ -2191,6 +2177,20 @@
           "identifier": "zx/rights.DUPLICATE"
         }
       }
+    },
+    {
+      "name": "test.handles/aliased_subtype_handle",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
+        "line": 49,
+        "column": 7,
+        "length": 22
+      },
+      "partial_type_ctor": {
+        "name": "test.handles/handle",
+        "args": [],
+        "nullable": false
+      }
     }
   ],
   "declaration_order": [
@@ -2208,7 +2208,7 @@
     "test.handles/SomeProtocol": "interface",
     "test.handles/Handles": "struct",
     "test.handles/aliased_plain_handle": "type_alias",
-    "test.handles/aliased_subtype_handle": "type_alias",
-    "test.handles/aliased_rights_handle": "type_alias"
+    "test.handles/aliased_rights_handle": "type_alias",
+    "test.handles/aliased_subtype_handle": "type_alias"
   }
 }

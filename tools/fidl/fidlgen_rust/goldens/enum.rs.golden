@@ -26,45 +26,68 @@ use {
 };
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[repr(u32)]
-pub enum MyStrictEnum {
-    Foo = 1,
-    Bar = 2,
+#[non_exhaustive]
+pub enum MyEmptyFlexibleEnum {
+    #[deprecated = "Use `MyEmptyFlexibleEnum::unknown()` to construct and `MyEmptyFlexibleEnumUnknown!()` to exhaustively match."]
+    #[doc(hidden)]
+    __Unknown(u32),
+}
+/// Pattern that matches an unknown `MyEmptyFlexibleEnum` member.
+#[macro_export]
+macro_rules! MyEmptyFlexibleEnumUnknown {
+    () => {
+        _
+    };
 }
 
-impl MyStrictEnum {
+impl MyEmptyFlexibleEnum {
     #[inline]
     pub fn from_primitive(prim: u32) -> Option<Self> {
         match prim {
-            1 => Some(Self::Foo),
-            2 => Some(Self::Bar),
             _ => None,
         }
     }
 
     #[inline]
-    pub const fn into_primitive(self) -> u32 {
-        self as u32
+    pub fn from_primitive_allow_unknown(prim: u32) -> Self {
+        match prim {
+            #[allow(deprecated)]
+            x => Self::__Unknown(x),
+        }
     }
 
-    #[deprecated = "Strict enums should not use `validate`"]
+    #[inline]
+    pub fn unknown() -> Self {
+        #[allow(deprecated)]
+        Self::__Unknown(0xffffffff)
+    }
+
+    #[inline]
+    pub const fn into_primitive(self) -> u32 {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown(x) => x,
+        }
+    }
+
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, u32> {
-        Ok(self)
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown(x) => Err(x),
+        }
     }
 
-    #[deprecated = "Strict enums should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
-        false
+        self.validate().is_err()
     }
 }
 
 fidl_enum! {
-    name: MyStrictEnum,
+    name: MyEmptyFlexibleEnum,
     prim_ty: u32,
-    strict: true,
-    min_member: Foo,
+    flexible: true,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -221,66 +244,43 @@ fidl_enum! {
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[non_exhaustive]
-pub enum MyEmptyFlexibleEnum {
-    #[deprecated = "Use `MyEmptyFlexibleEnum::unknown()` to construct and `MyEmptyFlexibleEnumUnknown!()` to exhaustively match."]
-    #[doc(hidden)]
-    __Unknown(u32),
-}
-/// Pattern that matches an unknown `MyEmptyFlexibleEnum` member.
-#[macro_export]
-macro_rules! MyEmptyFlexibleEnumUnknown {
-    () => {
-        _
-    };
+#[repr(u32)]
+pub enum MyStrictEnum {
+    Foo = 1,
+    Bar = 2,
 }
 
-impl MyEmptyFlexibleEnum {
+impl MyStrictEnum {
     #[inline]
     pub fn from_primitive(prim: u32) -> Option<Self> {
         match prim {
+            1 => Some(Self::Foo),
+            2 => Some(Self::Bar),
             _ => None,
         }
     }
 
     #[inline]
-    pub fn from_primitive_allow_unknown(prim: u32) -> Self {
-        match prim {
-            #[allow(deprecated)]
-            x => Self::__Unknown(x),
-        }
-    }
-
-    #[inline]
-    pub fn unknown() -> Self {
-        #[allow(deprecated)]
-        Self::__Unknown(0xffffffff)
-    }
-
-    #[inline]
     pub const fn into_primitive(self) -> u32 {
-        match self {
-            #[allow(deprecated)]
-            Self::__Unknown(x) => x,
-        }
+        self as u32
     }
 
+    #[deprecated = "Strict enums should not use `validate`"]
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, u32> {
-        match self {
-            #[allow(deprecated)]
-            Self::__Unknown(x) => Err(x),
-        }
+        Ok(self)
     }
 
+    #[deprecated = "Strict enums should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
-        self.validate().is_err()
+        false
     }
 }
 
 fidl_enum! {
-    name: MyEmptyFlexibleEnum,
+    name: MyStrictEnum,
     prim_ty: u32,
-    flexible: true,
+    strict: true,
+    min_member: Foo,
 }

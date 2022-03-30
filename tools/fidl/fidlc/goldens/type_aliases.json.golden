@@ -628,6 +628,34 @@
   "union_declarations": [],
   "type_alias_declarations": [
     {
+      "name": "test.typealiases/alias_of_channel",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
+        "line": 23,
+        "column": 7,
+        "length": 16
+      },
+      "partial_type_ctor": {
+        "name": "test.typealiases/handle",
+        "args": [],
+        "nullable": false
+      }
+    },
+    {
+      "name": "test.typealiases/channel",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
+        "line": 22,
+        "column": 7,
+        "length": 7
+      },
+      "partial_type_ctor": {
+        "name": "test.typealiases/handle",
+        "args": [],
+        "nullable": false
+      }
+    },
+    {
       "name": "test.typealiases/u32",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
@@ -690,34 +718,6 @@
           }
         }
       }
-    },
-    {
-      "name": "test.typealiases/channel",
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
-        "line": 22,
-        "column": 7,
-        "length": 7
-      },
-      "partial_type_ctor": {
-        "name": "test.typealiases/handle",
-        "args": [],
-        "nullable": false
-      }
-    },
-    {
-      "name": "test.typealiases/alias_of_channel",
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
-        "line": 23,
-        "column": 7,
-        "length": 16
-      },
-      "partial_type_ctor": {
-        "name": "test.typealiases/handle",
-        "args": [],
-        "nullable": false
-      }
     }
   ],
   "declaration_order": [
@@ -734,10 +734,10 @@
     "test.typealiases/obj_type": "enum",
     "test.typealiases/handle": "experimental_resource",
     "test.typealiases/ExampleOfUseOfAliases": "struct",
+    "test.typealiases/alias_of_channel": "type_alias",
+    "test.typealiases/channel": "type_alias",
     "test.typealiases/u32": "type_alias",
     "test.typealiases/vec_of_strings": "type_alias",
-    "test.typealiases/vec_of_strings_at_most_5": "type_alias",
-    "test.typealiases/channel": "type_alias",
-    "test.typealiases/alias_of_channel": "type_alias"
+    "test.typealiases/vec_of_strings_at_most_5": "type_alias"
   }
 }

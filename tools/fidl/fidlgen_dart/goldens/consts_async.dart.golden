@@ -39,41 +39,41 @@ import 'package:zircon/zircon.dart' as $zircon;
 // ignore_for_file: avoid_unused_constructor_parameters
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
-const bool enabledFlag = true;
-
-const int offset = -33;
-
 const int answer = 0x2a;
 
 const int answerInBinary = 0x2a;
 
-const int populationUsa2018 = 0x13ab6680;
+const double conversionFactor = 1.41421;
 
 const int diamond = 0x183c7effff7e3c18;
 
-const int fuchsia = 0x3844828282453906;
+const bool enabledFlag = true;
 
-const String username = "\"squeenze\"";
+const int fuchsia = 0x3844828282453906;
 
 const double minTemp = -273.15;
 
-const double conversionFactor = 1.41421;
+const int offset = -33;
 
-const EnumType enumVal = EnumType.value;
+const int populationUsa2018 = 0x13ab6680;
 
-const int enumPrimitiveVal = EnumType.value;
+const String username = "\"squeenze\"";
 
-const EnumType enumTrue = EnumType.true$;
-
-const int enumPrimitiveTrue = EnumType.true$;
-
-const BitsType bitsVal = BitsType.value;
+const int bitsPrimitiveTrue = BitsType.true$;
 
 const int bitsPrimitiveVal = BitsType.value;
 
 const BitsType bitsTrue = BitsType.true$;
 
-const int bitsPrimitiveTrue = BitsType.true$;
+const BitsType bitsVal = BitsType.value;
+
+const int enumPrimitiveTrue = EnumType.true$;
+
+const int enumPrimitiveVal = EnumType.value;
+
+const EnumType enumTrue = EnumType.true$;
+
+const EnumType enumVal = EnumType.value;
 
 class EnumType extends $fidl.Enum {
   static const Map<int, EnumType> _values = {

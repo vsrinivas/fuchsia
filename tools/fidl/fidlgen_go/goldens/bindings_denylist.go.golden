@@ -65,16 +65,6 @@ func (msg *DenyEachBindingOnlyDenySyzkallerResponse) Marshaler() _bindings.Marsh
 	return _mDenyEachBindingOnlyDenySyzkallerResponse
 }
 
-type OnlyGo struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
-}
-
-var _mOnlyGo = _bindings.CreateLazyMarshaler(OnlyGo{})
-
-func (msg *OnlyGo) Marshaler() _bindings.Marshaler {
-	return _mOnlyGo
-}
-
 type MemberOnlyAppearsInImportingLibrary struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
 	A bool     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
@@ -95,6 +85,16 @@ var _mOnlyAppearsInImportingLibrary = _bindings.CreateLazyMarshaler(OnlyAppearsI
 
 func (msg *OnlyAppearsInImportingLibrary) Marshaler() _bindings.Marshaler {
 	return _mOnlyAppearsInImportingLibrary
+}
+
+type OnlyGo struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+}
+
+var _mOnlyGo = _bindings.CreateLazyMarshaler(OnlyGo{})
+
+func (msg *OnlyGo) Marshaler() _bindings.Marshaler {
+	return _mOnlyGo
 }
 
 type denyEachBindingWithCtxOnlyDenyCppRequest struct {
@@ -517,6 +517,34 @@ func DenyEachBindingOnlyDenySyzkallerResultWithErr(err uint32) DenyEachBindingOn
 	return _u
 }
 
+const ()
+
+type AllowedWithCtxInterface _bindings.ChannelProxy
+
+type AllowedWithCtx interface {
+}
+
+type AllowedWithCtxTransitionalBase struct{}
+
+type AllowedWithCtxInterfaceRequest _bindings.InterfaceRequest
+
+func NewAllowedWithCtxInterfaceRequest() (AllowedWithCtxInterfaceRequest, *AllowedWithCtxInterface, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return AllowedWithCtxInterfaceRequest(req), (*AllowedWithCtxInterface)(cli), err
+}
+
+type AllowedWithCtxStub struct {
+	Impl AllowedWithCtx
+}
+
+func (s_ *AllowedWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	switch args_.Ordinal {
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
+type AllowedEventProxy _bindings.ChannelProxy
+
 const (
 	DenyEachBindingOnlyDenyCppOrdinal       uint64 = 0x290bad96051b1b92
 	DenyEachBindingOnlyDenyDartOrdinal      uint64 = 0x75384066a26d87d7
@@ -650,34 +678,6 @@ func (s_ *DenyEachBindingWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_b
 }
 
 type DenyEachBindingEventProxy _bindings.ChannelProxy
-
-const ()
-
-type AllowedWithCtxInterface _bindings.ChannelProxy
-
-type AllowedWithCtx interface {
-}
-
-type AllowedWithCtxTransitionalBase struct{}
-
-type AllowedWithCtxInterfaceRequest _bindings.InterfaceRequest
-
-func NewAllowedWithCtxInterfaceRequest() (AllowedWithCtxInterfaceRequest, *AllowedWithCtxInterface, error) {
-	req, cli, err := _bindings.NewInterfaceRequest()
-	return AllowedWithCtxInterfaceRequest(req), (*AllowedWithCtxInterface)(cli), err
-}
-
-type AllowedWithCtxStub struct {
-	Impl AllowedWithCtx
-}
-
-func (s_ *AllowedWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
-	switch args_.Ordinal {
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
-}
-
-type AllowedEventProxy _bindings.ChannelProxy
 
 const (
 	ImportsSameNameContextUnattributedOrdinal                    uint64 = 0x698380acfd29e8f
