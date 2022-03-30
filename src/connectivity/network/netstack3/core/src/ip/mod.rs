@@ -2054,7 +2054,7 @@ pub(crate) fn del_route<I: IpLayerStateIpExt<C::Instant, C::DeviceId>, C: IpLaye
 pub(crate) fn iter_all_routes<D: EventDispatcher, C: BlanketCoreContext, A: IpAddress>(
     ctx: &Ctx<D, C>,
 ) -> Iter<'_, Entry<A, DeviceId>> {
-    get_state_inner::<A::Version, _>(&ctx.state).table.iter_installed()
+    get_state_inner::<A::Version, _>(&ctx.state).table.iter_table()
 }
 
 /// The metadata associated with an outgoing IP packet.
