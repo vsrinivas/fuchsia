@@ -31,7 +31,15 @@ group("tests") {
   deps = [ ":regulatory-region-integration-tests" ]
 }
 
-fuchsia_unittest_package("regulatory-region-integration-tests") {
+fuchsia_test_component("regulatory_region_integration_test_component") {
+  component_name = "regulatory_region_integration_test"
   manifest = "meta/regulatory-region-integration-test.cml"
   deps = [ ":test" ]
+}
+
+fuchsia_test_package("regulatory-region-integration-tests") {
+  test_components = [ ":regulatory_region_integration_test_component" ]
+  deps = [
+    "//src/connectivity/location/regulatory_region:regulatory_region_component",
+  ]
 }

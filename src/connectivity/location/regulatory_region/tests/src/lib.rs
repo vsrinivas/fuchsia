@@ -195,11 +195,7 @@ async fn new_test_context() -> Result<TestContext, Error> {
     let builder = RealmBuilder::new().await?;
     let region = builder
         // Add regulatory_region to the realm, which will be fetched with a URL
-        .add_child(
-            REGION_COMPONENT_NAME,
-            "fuchsia-pkg://fuchsia.com/regulatory_region#meta/regulatory_region.cm",
-            ChildOptions::new(),
-        )
+        .add_child(REGION_COMPONENT_NAME, "#meta/regulatory_region.cm", ChildOptions::new())
         .await?;
     builder
         .add_route(
