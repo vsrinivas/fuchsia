@@ -15,6 +15,18 @@ class VMO(object):
         self.committed_bytes = int(v[3])
         self.allocated_bytes = int(v[4])
 
+    def __hash__(self):
+        return hash((self.koid, self.name))
+
+    def __eq__(self, other):
+        return self.koid == other.koid and self.name == other.name
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __repr__(self):
+        return "VMO %d (%s)" % (self.koid, self.name)
+
 
 class Process(object):
 
@@ -23,16 +35,35 @@ class Process(object):
         self.name = p[1]
         self.vmos = [vmos[int(v)] for v in p[2]]
 
+    def __hash__(self):
+        return hash((self.koid, self.name))
+
+    def __eq__(self, other):
+        return self.koid == other.koid and self.name == other.name
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __str__(self):
+        return self.full_name
+
+    def __repr__(self):
+        return self.__str__()
+
+    @property
+    def full_name(self):
+        return "%s[%d]" % (self.name, self.koid)
+
 
 class Kernel(object):
 
     def __init__(self, k):
-        self.wired = k['wired']
-        self.total_heap = k['total_heap']
-        self.mmu = k['mmu']
-        self.ipc = k['ipc']
-        self.other = k['other']
-        self.vmo = k['vmo']
+        self.wired = k["wired"]
+        self.total_heap = k["total_heap"]
+        self.mmu = k["mmu"]
+        self.ipc = k["ipc"]
+        self.other = k["other"]
+        self.vmo = k["vmo"]
 
 
 class Snapshot(object):
@@ -55,11 +86,11 @@ class Snapshot(object):
             return cls.FromJSONFile(snap_file)
 
     def __init__(self, snap_json):
-        vmo_names = snap_json['VmoNames']
-        self.kernel = Kernel(snap_json['Kernel'])
-        self.vmos = {v[0]: VMO(v, vmo_names) for v in snap_json['Vmos'][1:]}
+        vmo_names = snap_json["VmoNames"]
+        self.kernel = Kernel(snap_json["Kernel"])
+        self.vmos = {v[0]: VMO(v, vmo_names) for v in snap_json["Vmos"][1:]}
         self.processes = {
-            p[0]: Process(p, self.vmos) for p in snap_json['Processes'][1:]
+            p[0]: Process(p, self.vmos) for p in snap_json["Processes"][1:]
         }
         vmo_bytes = 0
         for v in self.vmos.values():

@@ -1,0 +1,74 @@
+Archivist: 9.773MiB
+Blobs: 66.37MiB
+Bootfs: 52.68MiB
+ComponentManager: 18.53MiB
+CompositeDrivers: 28.91MiB
+DriverFramework: 3.484MiB
+Fshost: 884KiB
+Kernel: 125.7MiB
+Netstack: 13.56MiB
+Orphaned: 42.14MiB
+OtherDrivers: 417.5MiB
+Pkgfs: 12.29MiB
+Resolvers: 3.16MiB
+Undigested: 79.05MiB
+
+Total: 874.1MiB
+
+Undigested:
+	virtual-console.cm[24236]: 14.82MiB
+	blobfs.cm[3393]: 12.01MiB
+	/pkg/bin/minfs[13494]: 8.727MiB
+	cobalt.cm[17161]: 5.598MiB
+	memory_monitor.cm[26140]: 3.965MiB
+	remote-diagnostics-bridge.cm[32269]: 1.938MiB
+	system_log_recorder[28290]: 1.758MiB
+	overnetstack.cmx[31842]: 1.496MiB
+	pkg-cache.cm[23195]: 1.496MiB
+	log-stats.cm[16363]: 1.445MiB
+	intl_services.cmx[28808]: 1.344MiB
+	http-client.cm[28897]: 1.285MiB
+	httpsdate_time_source.cmx[28030]: 1.285MiB
+	appmgr.cm[16544]: 1.27MiB
+	triage-detect.cm[17305]: 1.258MiB
+	setui_service.cm[30119]: 1.008MiB
+	diagnostics-persistence.cm[16375]: 892KiB
+	feedback.cm[17280]: 888KiB
+	/pkg/bin/sshd[30829]: 780KiB
+	remote-control.cm[31648]: 772KiB
+	system-update-committer.cm[17181]: 744KiB
+	last_reboot.cm[21678]: 656KiB
+	crash_reports.cmx[27019]: 652KiB
+	feedback_data.cmx[27319]: 644KiB
+	exceptions.cm[17142]: 640KiB
+	system-updater.cm[17201]: 628KiB
+	diagnostics-kcounter.cm[16092]: 564KiB
+	system-update-checker.cm[17249]: 564KiB
+	wlancfg.cm[17275]: 552KiB
+	decompressor-sandbox.cm[9898]: 540KiB
+	wlanstack.cm[17115]: 484KiB
+	power-manager.cm[4810]: 480KiB
+	sshd-host.cmx[26602]: 464KiB
+	console.cm[2206]: 424KiB
+	timekeeper.cmx[26846]: 420KiB
+	cobalt_system_metrics.cmx[26282]: 416KiB
+	mdns.cm[17229]: 412KiB
+	reachability.cm[17991]: 404KiB
+	ptysvc.cm[24449]: 396KiB
+	stash_secure.cm[21140]: 384KiB
+	wlandevicemonitor.cm[17076]: 376KiB
+	device-name-provider.cm[3256]: 376KiB
+	stash.cm[30383]: 372KiB
+	shutdown-shim.cm[22437]: 356KiB
+	activity.cm[25622]: 352KiB
+	core.cm[15338]: 344KiB
+	hwinfo.cm[29157]: 344KiB
+	console-launcher.cm[2275]: 324KiB
+	build-info.cm[21787]: 308KiB
+	remote_control_runner[31501]: 308KiB
+	regulatory_region.cm[25687]: 308KiB
+	/boot/bin/sh[31354]: 260KiB
+	sh[24608]: 240KiB
+	sh[24706]: 240KiB
+	sh:console[3281]: 240KiB
+	sh[24710]: 236KiB
