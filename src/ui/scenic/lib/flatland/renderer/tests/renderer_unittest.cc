@@ -672,6 +672,8 @@ VK_TEST_F(VulkanRendererTest, DISABLED_RenderImageAfterBufferCollectionReleasedT
 }
 
 VK_TEST_F(VulkanRendererTest, RenderAfterImageReleasedTest) {
+  // TODO(fxbug.dev/96541): Re-enable on FEMU once it doesn't flake.
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher = std::make_unique<escher::Escher>(
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
