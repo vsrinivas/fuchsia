@@ -1,12 +1,12 @@
-# Kernel tracing
+# Recording a kernel trace
 
 The kernel traces various actions by writing records to an internal buffer,
 which can later be retrieved and printed.
 
 ## Kernel trace format
 
-The kernel trace format is described in the 
-[ktrace.h](/zircon/system/ulib/zircon-internal/include/lib/zircon-internal/ktrace.h) and 
+The kernel trace format is described in the
+[ktrace.h](/zircon/system/ulib/zircon-internal/include/lib/zircon-internal/ktrace.h) and
 [ktrace-def.h](/zircon/system/ulib/zircon-internal/include/lib/zircon-internal/ktrace-def.h) files under
 [system/ulib/zircon-internal/include/lib/zircon-internal](/zircon/system/ulib/zircon-internal/include/lib/zircon-internal).
 

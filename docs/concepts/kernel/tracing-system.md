@@ -8,7 +8,7 @@ For more information on using tracing in Fuchsia, see the following guides:
 
 * [Registering a trace provider](/docs/development/tracing/tutorial/registering-a-trace-provider.md)
 * [Adding tracing in your code](/docs/development/tracing/tutorial/adding-tracing-in-code.md)
-* [Recording a trace](/docs/development/tracing/tutorial/recording-a-fuchsia-trace.md)
+* [Recording a Fuchsia trace](/docs/development/tracing/tutorial/recording-a-fuchsia-trace.md)
 * [Converting and visualizing a trace](/docs/development/tracing/tutorial/converting-visualizing-a-trace.md)
 
 By default, tracing in Fuchsia is turned off. When an event occurs, such as a
@@ -85,9 +85,9 @@ Fuchsia uses a single trace client that consists of these utilities:
    manager to start and stop tracing, and it gathers the trace data. It also
    supports converting Fuchsia trace archives into other formats, such as
    Catapult JSON records.
-* `traceutil`: This utility runs on the development host.
-   `traceutil` communicates with the `trace` utility. Trace data can then be
-   streamed from `trace` through `traceutil` right to the a development host.
+* [`ffx trace`][ffx-trace]: This utility runs on the development host.
+   `ffx trace` communicates with the `trace` utility. Trace data can then be
+   streamed from `trace` to the development host as an output file.
 
 You can collect trace information directly with the `Controller` FIDL protocol.
 See [`fuchsia.tracing.controller`](https://fuchsia.dev/reference/fidl/fuchsia.tracing.controller).
@@ -158,6 +158,14 @@ but it may contain nonsensical data if trace providers deliberately emit garbage
 Figure 1 shows the components of the Fuchsia tracing system and the way how the
 components communicate with one another.
 
+Note: `fx traceutil` is being deprecated. Replace `fx traceutil` with `ffx
+trace` in the diagram below.
+
 ![This figure shows the Fuchsia tracing system.](images/fuchsia-tracing.png "Figure 1: Fuchsia tracing system")
 
+**Figure 1**. The Fuchsia tracing system
+
+<!-- Reference links -->
+
 [glossary.component]: /docs/glossary/README.md#component
+[ffx-trace]: https://fuchsia.dev/reference/tools/sdk/ffx#trace

@@ -104,19 +104,21 @@ These examples use the category from the source additions described above.
 
 Example:
 
-```sh
-fuchsia$ trace record --categories=example,kernel:sched,kernel:meta
-host$ fx cp --to-host /data/trace.json trace.json
-```
+<pre class="devsite-click-to-copy">
+<span class="no-select">fuchsia$ </span>trace record --categories=example,kernel:sched,kernel:meta
+</pre>
 
-However, it's easier to invoke the `traceutil` program on your development
-host and it will copy the files directly to your host and prepare them for
-viewing with the Chrome trace viewer.
+<pre class="devsite-click-to-copy">
+<span class="no-select">host$ </span>fx cp --to-host /data/trace.json trace.json
+</pre>
 
-```sh
-host$ fx traceutil record \
-  --categories=example,kernel:sched,kernel:meta
-```
+However, it's easier to invoke the `ffx trace` program on your development
+host. It will copy the output file directly to your host and prepare them for
+viewing with the [Perfetto viewer][perfetto-viewer]{:.external}.
+
+<pre class="devsite-click-to-copy">
+<span class="no-select">host$ </span>ffx trace start --categories "example,kernel:sched,kernel:meta"
+</pre>
 
 The categories `kernel:sched,kernel:meta` should always be present if you
 want to visualize the results. The visualizer wants to associate trace data
@@ -126,4 +128,8 @@ through these categories.
 ## Further Reading
 
 See the [Tracing Documentation](/docs/development/tracing/README.md)
-for further info.
+for more information.
+
+<!-- Reference links -->
+
+[perfetto-viewer]: https://ui.perfetto.dev/#!/

@@ -1,4 +1,4 @@
-# CPU performance monitor
+# Recording a CPU performance trace
 
 ## Introduction
 
@@ -29,34 +29,26 @@ of what h/w events to enable. The full set of categories can be found
 in the `.inc` files in this directory. A representative set of categories
 is described below.
 
-To collect trace data, run `trace record` on your Fuchsia system,
-or indirectly via the `traceutil` host tool. The latter is recommended
-as it automates the download of the collected "trace.json" file to your
-desktop.
+To collect trace data, run `ffx trace start` on your host machine,
+or run `trace` on a Fuchsia device directly.
 
 Example:
 
-```shell
-host$ categories="gfx"
-host$ categories="$categories,cpu:fixed:unhalted_reference_cycles"
-host$ categories="$categories,cpu:fixed:instructions_retired"
-host$ categories="$categories,cpu:l2_lines,cpu:sample:10000"
-host$ fx traceutil record --buffer-size=64 --duration=2s \
-  --categories=$categories
-Starting trace; will stop in 2 seconds...
-Stopping trace...
-Trace file written to /data/trace.json
-Downloading trace... done
-Converting trace-2017-11-12T17:55:45.json to trace-2017-11-12T17:55:45.html... done.
+```none {:.devsite-disable-click-to-copy}
+$ categories="gfx"
+$ categories="$categories,cpu:fixed:unhalted_reference_cycles"
+$ categories="$categories,cpu:fixed:instructions_retired"
+$ categories="$categories,cpu:l2_lines,cpu:sample:10000"
+$ ffx trace start --buffer-size 64 --duration 2 --categories $categories
 ```
 
-After you have the `.json` file on your desktop you can load it into
-`chrome://tracing`. If you are using `traceutil` an easier way to view
-the trace is by loading the corresponding `.html` file that `traceutil`
-generates. The author finds it easiest to run `traceutil` from the top level
-Fuchsia directory, view that directory in Chrome (e.g.,
-`file:///home/dje/fnl/ipt/fuchsia`), hit Refresh after each new trace
-and then view the trace file in a separate tab.
+After you have the `.fxt` file on your desktop you can load it into
+the [Perfetto viewer][perfetto-viewer]{:.external}.
+
+If you're using `traceutil`, an easier way to view the trace is by loading
+the corresponding `.html` file that `traceutil` generates. The author finds
+it easiest to run `traceutil` from the top level Fuchsia directory, view
+that directory in Chrome (e.g., `file:///home/dje/fnl/ipt/fuchsia`).
 
 ## Basic Operation
 
@@ -145,14 +137,13 @@ the "cpu:sample:* categories.
 
 Example:
 
-```shell
-host$ categories="cpu:l2_summary"
-host$ categories="$categories,cpu:fixed:unhalted_reference_cycles"
-host$ categories="$categories,cpu:fixed:instructions_retired"
-host$ categories="$categories,cpu:mem:bytes,cpu:mem:requests"
-host$ categories="$categories,cpu:tally"
-host$ fx traceutil record --buffer-size=64 --duration=2s \
-  --categories=$categories --report-type=tally --stdout
+```none {:.devsite-disable-click-to-copy}
+$ categories="cpu:l2_summary"
+$ categories="$categories,cpu:fixed:unhalted_reference_cycles"
+$ categories="$categories,cpu:fixed:instructions_retired"
+$ categories="$categories,cpu:mem:bytes,cpu:mem:requests"
+$ categories="$categories,cpu:tally"
+$ ffx trace start --buffer-size 64 --duration 2 --categories $categories
 ```
 
 ### Options
@@ -274,3 +265,7 @@ More will be added in time.
 
 - cpu:timebase:fixed:unhalted_reference_cycles
   - same counter as cpu:fixed:unhalted_reference_cycles
+
+<!-- Reference links -->
+
+[perfetto-viewer]: https://ui.perfetto.dev/#!/

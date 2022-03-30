@@ -1,4 +1,4 @@
-# Asynchronous tracing
+# Tracing asynchronously
 
 This guide shows how to add asynchronous tracing to your code.
 
