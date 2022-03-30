@@ -6,7 +6,7 @@ config("include") {
   include_dirs = [ "include" ]
 }
 
-source_set("fidl_driver_common") {
+source_set("fidl_driver_transport") {
   public = [ "include/lib/fidl_driver/cpp/transport.h" ]
   sources = [ "transport.cc" ]
   public_configs = [ ":include" ]
@@ -14,6 +14,10 @@ source_set("fidl_driver_common") {
     "//sdk/lib/driver_runtime",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//zircon/system/ulib/fidl:fidl-llcpp",
+  ]
+  visibility = [
+    ":fidl_driver",
+    ":fidl_driver_natural",
   ]
 }
 
@@ -29,7 +33,7 @@ source_set("fidl_driver") {
   ]
   public_configs = [ ":include" ]
   public_deps = [
-    ":fidl_driver_common",
+    ":fidl_driver_transport",
     "//sdk/lib/driver_runtime",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//zircon/system/ulib/fidl:fidl-llcpp",
@@ -47,7 +51,7 @@ source_set("fidl_driver_natural") {
   sources = [ "natural_messaging.cc" ]
   public_configs = [ ":include" ]
   public_deps = [
-    ":fidl_driver_common",
+    ":fidl_driver_transport",
     "//sdk/lib/driver_runtime",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//src/lib/fidl/cpp",
