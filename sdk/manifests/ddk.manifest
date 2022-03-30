@@ -9,7 +9,6 @@ sdk://fidl/fuchsia.hardware.i2cimpl
 sdk://fidl/fuchsia.hardware.pci
 sdk://fidl/fuchsia.hardware.serial
 sdk://fidl/fuchsia.hardware.serialimpl
-sdk://fidl/fuchsia.hardware.syscalls.pci
 sdk://fidl/fuchsia.hardware.usb
 sdk://fidl/fuchsia.hardware.usb.composite
 sdk://fidl/fuchsia.hardware.usb.descriptor
@@ -36,7 +35,6 @@ sdk://pkg/fidl_base
 sdk://pkg/fit
 sdk://pkg/fit-promise
 sdk://pkg/fitx-experimental-driver-only
-sdk://pkg/mmio-ptr
 sdk://pkg/stdcompat
 sdk://pkg/sync
 sdk://pkg/syslog-headers
