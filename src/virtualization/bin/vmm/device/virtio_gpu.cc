@@ -208,10 +208,11 @@ class ControlStream : public StreamBase {
                              virtio_gpu_ctrl_hdr_t* response, uint32_t extra_len) {
     // Entries may be stored in the next descriptor.
     const virtio_gpu_mem_entry_t* mem_entries;
+    const auto nr_entries = request->nr_entries;
     if (chain_.NextDescriptor(&desc_)) {
       mem_entries = reinterpret_cast<const virtio_gpu_mem_entry_t*>(response);
       response = static_cast<virtio_gpu_ctrl_hdr_t*>(desc_.addr);
-    } else if (extra_len >= request->nr_entries * sizeof(virtio_gpu_mem_entry_t)) {
+    } else if (extra_len >= nr_entries * sizeof(virtio_gpu_mem_entry_t)) {
       mem_entries = reinterpret_cast<const virtio_gpu_mem_entry_t*>(request + 1);
     } else {
       FX_LOGS(ERROR) << "Invalid GPU memory entries command";
@@ -220,7 +221,7 @@ class ControlStream : public StreamBase {
     }
 
     GET_RESOURCE_OR_RETURN(resource);
-    resource.AttachBacking(mem_entries, request->nr_entries);
+    resource.AttachBacking(mem_entries, nr_entries);
     response->type = VIRTIO_GPU_RESP_OK_NODATA;
   }
 
