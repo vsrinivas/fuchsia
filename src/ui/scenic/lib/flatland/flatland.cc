@@ -714,6 +714,18 @@ void Flatland::CreateViewport(ContentId link_id, ViewportCreationToken token,
     return;
   }
 
+  if (link_id.value == kInvalidId) {
+    error_reporter_->ERROR() << "CreateViewport called with ContentId zero";
+    ReportBadOperationError();
+    return;
+  }
+
+  if (content_handles_.count(link_id.value)) {
+    error_reporter_->ERROR() << "CreateViewport called with existing ContentId " << link_id.value;
+    ReportBadOperationError();
+    return;
+  }
+
   FX_DCHECK(link_system_);
 
   // The ViewportProperties and ChildViewWatcherImpl live on a handle from this Flatland instance.
@@ -734,20 +746,6 @@ void Flatland::CreateViewport(ContentId link_id, ViewportCreationToken token,
         if (auto impl = ref.lock())
           impl->ReportLinkProtocolError(error_log);
       });
-
-  // TODO(fxbug.dev/76640): probably move this up before creating the child-link.
-  if (link_id.value == kInvalidId) {
-    error_reporter_->ERROR() << "CreateViewport called with ContentId zero";
-    ReportBadOperationError();
-    return;
-  }
-
-  // TODO(fxbug.dev/76640): probably move this up before creating the child-link.
-  if (content_handles_.count(link_id.value)) {
-    error_reporter_->ERROR() << "CreateViewport called with existing ContentId " << link_id.value;
-    ReportBadOperationError();
-    return;
-  }
 
   // This is the feed-forward portion of the method. Here, we add the link to the map, and
   // initialize its layout with the desired properties. The Link will not actually result in
