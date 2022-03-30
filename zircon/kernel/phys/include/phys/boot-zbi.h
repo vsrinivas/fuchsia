@@ -39,6 +39,9 @@ class BootZbi {
     size_t size, alignment;
   };
 
+  // Returns the allocation size required for a kernel item.
+  static Size GetKernelAllocationSize(Zbi::iterator kernel_item);
+
   // The boot_alloc code uses arbitrary pages after the official bss space.
   // So make sure to allocate some extra slop for the kernel.
   //

@@ -441,11 +441,7 @@ if (current_toolchain != default_toolchain) {
   }
 
   kernel_cmdline("trampoline-cmdline") {
-    args = [
-      # Communicates the load address to be used by the shim,
-      # and then verified by the loaded ZBI.
-      "trampoline.load_address=1M",
-    ]
+    args = [ "trampoline.seed=12345" ]
   }
 
   turducken_zbi_test("trampoline-boot-zbi-test") {

@@ -14,6 +14,9 @@
 #include <phys/symbolize.h>
 #include <pretty/cpp/sizes.h>
 
+#include "lib/zbitl/item.h"
+#include "zircon/boot/image.h"
+
 namespace {
 
 constexpr fitx::error<BootZbi::Error> InputError(BootZbi::InputZbi::Error error) {
@@ -46,14 +49,8 @@ constexpr fitx::error<BootZbi::Error> OutputError(
   }};
 }
 
-}  // namespace
-
-BootZbi::Size BootZbi::SuggestedAllocation(uint32_t zbi_size_bytes) {
-  return {.size = zbi_size_bytes, .alignment = arch::kZbiBootKernelAlignment};
-}
-
-fitx::result<BootZbi::Error> BootZbi::InitKernelFromItem() {
-  kernel_ = reinterpret_cast<const zircon_kernel_t*>(
+const zircon_kernel_t* GetZirconKernel(const ktl::byte* kernel_payload) {
+  return reinterpret_cast<const zircon_kernel_t*>(
       // The payload is the kernel item contents, i.e. the zbi_kernel_t header
       // followed by the rest of the load image.  But the actual kernel load
       // image for purposes of address arithmetic is defined as being the whole
@@ -80,7 +77,25 @@ fitx::result<BootZbi::Error> BootZbi::InitKernelFromItem() {
       // aligned for the kernel handoff; but in the likely event that this
       // initial address is actually aligned, Load() may be able to avoid
       // additional memory allocation and copying.
-      kernel_item_->payload.data() - (2 * sizeof(zbi_header_t)));
+      kernel_payload - (2 * sizeof(zbi_header_t)));
+}
+
+}  // namespace
+
+BootZbi::Size BootZbi::SuggestedAllocation(uint32_t zbi_size_bytes) {
+  return {.size = zbi_size_bytes, .alignment = arch::kZbiBootKernelAlignment};
+}
+
+BootZbi::Size BootZbi::GetKernelAllocationSize(BootZbi::Zbi::iterator kernel_item) {
+  ZX_ASSERT(kernel_item->header->type == ZBI_TYPE_STORAGE_KERNEL);
+  uint64_t kernel_without_reserve = zbitl::UncompressedLength(*kernel_item->header);
+  auto zircon_kernel = GetZirconKernel(kernel_item->payload.data());
+  return SuggestedAllocation(static_cast<uint32_t>(kernel_without_reserve +
+                                                   zircon_kernel->data_kernel.reserve_memory_size));
+}
+
+fitx::result<BootZbi::Error> BootZbi::InitKernelFromItem() {
+  kernel_ = GetZirconKernel(kernel_item_->payload.data());
   return fitx::ok();
 }
 
