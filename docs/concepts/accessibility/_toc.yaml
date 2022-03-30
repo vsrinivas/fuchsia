@@ -12,3 +12,5 @@ toc:
   path: /docs/concepts/accessibility/semantics.md
 - title: "Accessibility Focus"
   path: /docs/concepts/accessibility/accessibility-focus.md
+- title: "Text-to-speech for accessibility"
+  path: /docs/concepts/accessibility/tts.md
