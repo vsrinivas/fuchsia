@@ -8,12 +8,9 @@
 #include <fuchsia/fuzzer/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
-#include <lib/fidl/cpp/interface_request.h>
-#include <stdint.h>
-
-#include <string>
 
 #include "src/lib/fxl/macros.h"
+#include "src/sys/fuzzing/common/async-deque.h"
 #include "src/sys/fuzzing/common/async-types.h"
 
 namespace fuzzing {
@@ -21,6 +18,9 @@ namespace fuzzing {
 using ::fuchsia::fuzzer::Controller;
 using ::fuchsia::fuzzer::ControllerProvider;
 using ::fuchsia::fuzzer::Registrar;
+
+// Alias this type to improve readability.
+using ControllerProviderHandle = fidl::InterfaceHandle<ControllerProvider>;
 
 class FakeRegistrar final : public Registrar {
  public:
@@ -31,15 +31,14 @@ class FakeRegistrar final : public Registrar {
   zx::channel Bind();
 
   // FIDL methods.
-  void Register(fidl::InterfaceHandle<ControllerProvider> provider,
-                RegisterCallback callback) override;
+  void Register(ControllerProviderHandle provider, RegisterCallback callback) override;
 
-  fidl::InterfaceHandle<ControllerProvider> TakeProvider();
+  ZxPromise<ControllerProviderHandle> TakeProvider();
 
  private:
   fidl::Binding<Registrar> binding_;
   ExecutorPtr executor_;
-  fidl::InterfaceHandle<ControllerProvider> provider_;
+  AsyncDeque<ControllerProviderHandle> providers_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(FakeRegistrar);
 };

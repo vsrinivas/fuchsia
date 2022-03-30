@@ -31,11 +31,17 @@ class ControllerProviderTest : public AsyncTest {
   }
 
   ControllerProviderPtr GetProvider() {
-    auto channel = registrar_->Bind();
-    FUZZING_EXPECT_OK(provider_->Serve(std::move(channel)));
-    RunUntilIdle();
     ControllerProviderPtr provider;
-    provider.Bind(registrar_->TakeProvider(), executor()->dispatcher());
+    auto channel = registrar_->Bind();
+    auto task = provider_->Serve(std::move(channel))
+                    .or_else([] { return fpromise::error(ZX_ERR_CANCELED); })
+                    .and_then(registrar_->TakeProvider())
+                    .and_then([this, &provider](ControllerProviderHandle& handle) -> ZxResult<> {
+                      provider.Bind(std::move(handle), executor()->dispatcher());
+                      return fpromise::ok();
+                    });
+    FUZZING_EXPECT_OK(std::move(task));
+    RunUntilIdle();
     return provider;
   }
 

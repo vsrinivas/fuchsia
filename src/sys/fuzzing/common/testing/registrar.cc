@@ -5,6 +5,7 @@
 #include "src/sys/fuzzing/common/testing/registrar.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/channel.h>
 #include <zircon/status.h>
 
 namespace fuzzing {
@@ -20,14 +21,13 @@ zx::channel FakeRegistrar::Bind() {
   return client;
 }
 
-void FakeRegistrar::Register(fidl::InterfaceHandle<ControllerProvider> provider,
-                             RegisterCallback callback) {
-  provider_ = std::move(provider);
+void FakeRegistrar::Register(ControllerProviderHandle provider, RegisterCallback callback) {
+  providers_.Send(std::move(provider));
   callback();
 }
 
-fidl::InterfaceHandle<ControllerProvider> FakeRegistrar::TakeProvider() {
-  return std::move(provider_);
+ZxPromise<ControllerProviderHandle> FakeRegistrar::TakeProvider() {
+  return providers_.Receive().or_else([] { return fpromise::error(ZX_ERR_CANCELED); });
 }
 
 }  // namespace fuzzing
