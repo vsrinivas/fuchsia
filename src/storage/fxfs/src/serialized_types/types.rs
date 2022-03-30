@@ -6,8 +6,8 @@ use crate::{
     lsm_tree::LayerInfo,
     object_store::{
         transaction::Mutation, AllocatorInfo, AllocatorKey, AllocatorValue, EncryptedMutations,
-        JournalRecord, ObjectKey, ObjectValue, StoreInfo, SuperBlock, SuperBlockRecord,
-        SuperBlockV1, SuperBlockV2,
+        JournalRecord, ObjectKey, ObjectValue, StoreInfo, StoreInfoV1, SuperBlock,
+        SuperBlockRecord, SuperBlockV1, SuperBlockV2,
     },
     serialized_types::{versioned_type, Version, Versioned, VersionedLatest},
 };
@@ -20,7 +20,7 @@ use crate::{
 /// Last breaking change:
 ///  v5:  Recombining extents from their own tree into the object tree.
 ///       This can't be done with on-the-fly struct upgrading because we removed structs.
-pub const LATEST_VERSION: Version = Version { major: 7, minor: 0 };
+pub const LATEST_VERSION: Version = Version { major: 8, minor: 0 };
 
 versioned_type! {
     2.. => AllocatorInfo,
@@ -50,7 +50,8 @@ versioned_type! {
     5.. => ObjectValue,
 }
 versioned_type! {
-    5.. => StoreInfo,
+    8.. => StoreInfo,
+    5.. => StoreInfoV1,
 }
 versioned_type! {
     7.. => SuperBlock,

@@ -160,10 +160,14 @@ pub async fn check_images(image_root: Option<String>) -> Result<(), Error> {
         )
     }
     // Next ensure that we can parse all golden images and validate expected content.
-    let paths = std::fs::read_dir(image_root)?.collect::<Result<Vec<_>, _>>()?;
+    let mut paths = std::fs::read_dir(image_root)?.collect::<Result<Vec<_>, _>>()?;
+    paths.sort_unstable_by_key(|path| path.path().to_str().unwrap().to_string());
     for path_buf in
         paths.iter().map(|e| e.path().clone()).filter(|x| x.to_str().unwrap().ends_with(".zstd"))
     {
+        println!("------------------------------------------------------------------------");
+        println!("Validating golden image: {}", path_buf.file_name().unwrap().to_str().unwrap());
+        println!("------------------------------------------------------------------------");
         if let Err(e) = check_image(path_buf.as_path()).await {
             bail!(
                 "Failed to validate golden image {} with the latest code: {}",

@@ -71,6 +71,7 @@ use {
         },
     },
     storage_device::Device,
+    uuid::Uuid,
 };
 
 // Exposed for serialized_types.
@@ -87,37 +88,85 @@ pub trait HandleOwner: AsRef<ObjectStore> + Send + Sync + 'static {
     fn create_data_buffer(&self, object_id: u64, initial_size: u64) -> Self::Buffer;
 }
 
+/// `guid` was added to [`StoreInfo`] after this version.
+#[derive(Serialize, Deserialize, Versioned)]
+pub struct StoreInfoV1 {
+    last_object_id: u64,
+    layers: Vec<u64>,
+    root_directory_object_id: u64,
+    graveyard_directory_object_id: u64,
+    object_count: u64,
+    mutations_key: Option<WrappedKeys>,
+    mutations_cipher_offset: u64,
+    encrypted_mutations_object_id: u64,
+}
+
 // StoreInfo stores information about the object store.  This is stored within the parent object
 // store, and is used, for example, to get the persistent layer objects.
 #[derive(Clone, Debug, Default, Serialize, Deserialize, Versioned)]
 pub struct StoreInfo {
-    // The last used object ID.  Note that this field is not accurate in memory; ObjectStore's
-    // last_object_id field is the one to use in that case.
+    /// The globally unique identifier for the associated object store. If unset, will be all zero.
+    guid: [u8; 16],
+
+    /// The last used object ID.  Note that this field is not accurate in memory; ObjectStore's
+    /// last_object_id field is the one to use in that case.
     last_object_id: u64,
 
-    // Object ids for layers.  TODO(fxbug.dev/95971): need a layer of indirection here so we can
-    // support snapshots.
+    /// Object ids for layers.  TODO(fxbug.dev/95971): need a layer of indirection here so we can
+    /// support snapshots.
     layers: Vec<u64>,
 
-    // The object ID for the root directory.
+    /// The object ID for the root directory.
     root_directory_object_id: u64,
 
-    // The object ID for the graveyard.
+    /// The object ID for the graveyard.
     graveyard_directory_object_id: u64,
 
-    // The number of live objects in the store.
+    /// The number of live objects in the store.
     object_count: u64,
 
-    // The (wrapped) key that encrypted mutations should use.
+    /// The (wrapped) key that encrypted mutations should use.
     mutations_key: Option<WrappedKeys>,
 
-    // Mutations for the store are encrypted using a stream cipher.  To decrypt the mutations, we
-    // need to know the offset in the cipher stream to start it.
+    /// Mutations for the store are encrypted using a stream cipher.  To decrypt the mutations, we
+    /// need to know the offset in the cipher stream to start it.
     mutations_cipher_offset: u64,
 
-    // If we have to flush the store whilst we do not have the key, we need to write the encrypted
-    // mutations to an object. This is the object ID of that file if it exists.
+    /// If we have to flush the store whilst we do not have the key, we need to write the encrypted
+    /// mutations to an object. This is the object ID of that file if it exists.
     encrypted_mutations_object_id: u64,
+}
+
+impl StoreInfo {
+    /// Create a new/default [`StoreInfo`] but with a newly generated GUID.
+    fn new_with_guid() -> Self {
+        let guid = Uuid::new_v4();
+        Self { guid: *guid.as_bytes(), ..Default::default() }
+    }
+
+    /// Ensure that the [`StoreInfo`] has a valid GUID. If unset, a new GUID will be generated.
+    fn ensure_guid(&mut self) {
+        if self.guid == [0; 16] {
+            let guid = Uuid::new_v4();
+            self.guid = *guid.as_bytes();
+        }
+    }
+}
+
+impl From<StoreInfoV1> for StoreInfo {
+    fn from(other: StoreInfoV1) -> Self {
+        Self {
+            guid: Default::default(),
+            last_object_id: other.last_object_id,
+            layers: other.layers,
+            root_directory_object_id: other.root_directory_object_id,
+            graveyard_directory_object_id: other.graveyard_directory_object_id,
+            object_count: other.object_count,
+            mutations_key: other.mutations_key,
+            mutations_cipher_offset: other.mutations_cipher_offset,
+            encrypted_mutations_object_id: other.encrypted_mutations_object_id,
+        }
+    }
 }
 
 // TODO(fxbug.dev/95972): We should test or put checks in place to ensure this limit isn't exceeded.
@@ -404,7 +453,7 @@ impl ObjectStore {
             Some(parent_store),
             handle.object_id(),
             filesystem.clone(),
-            Some(StoreInfo { mutations_key: Some(wrapped_keys), ..Default::default() }),
+            Some(StoreInfo { mutations_key: Some(wrapped_keys), ..StoreInfo::new_with_guid() }),
             Some(StreamCipher::new(&unwrapped_keys[0], 0)),
             LockState::Unlocked(crypt),
         );
@@ -818,6 +867,12 @@ impl ObjectStore {
 
     fn store_info(&self) -> StoreInfo {
         self.store_info.lock().unwrap().info().unwrap().clone()
+    }
+
+    /// Ensure this ObjectStore has a GUID assigned to its associated StoreInfo. Used to upgrade
+    /// existing on-disk structures which may not have a GUID when originally created.
+    fn ensure_guid(&self) {
+        self.store_info.lock().unwrap().info_mut().unwrap().ensure_guid();
     }
 
     /// Returns None if called during journal replay.

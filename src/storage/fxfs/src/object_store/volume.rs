@@ -119,10 +119,16 @@ impl RootVolume {
         crypt: Arc<dyn Crypt>,
     ) -> Result<Arc<ObjectStore>, Error> {
         match self.volume(volume_name, crypt.clone()).await {
-            Ok(volume) => Ok(volume),
+            Ok(volume) => {
+                // Ensure that we assign a GUID to the volume's ObjectStore if it doesn't have one.
+                // This can happen if the associated StoreInfo on disk is a previous version.
+                volume.ensure_guid();
+                Ok(volume)
+            }
             Err(e) => {
                 let cause = e.root_cause().downcast_ref::<FxfsError>().cloned();
                 if let Some(FxfsError::NotFound) = cause {
+                    // Create a new volume with a randomly generated GUID.
                     self.new_volume(volume_name, crypt).await
                 } else {
                     Err(e)
