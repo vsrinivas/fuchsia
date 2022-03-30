@@ -48,11 +48,7 @@ MessagePacket::~MessagePacket() {
   ZX_ASSERT(!InContainer());
   if (handles_) {
     for (size_t i = 0; i != num_handles_; i++) {
-      if (Handle::IsFdfHandle(handles_[i])) {
-        fdf_handle_close(handles_[i]);
-      } else {
-        zx_handle_close(handles_[i]);
-      }
+      fdf_handle_close(handles_[i]);
     }
   }
 }

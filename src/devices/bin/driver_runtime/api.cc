@@ -97,7 +97,11 @@ __EXPORT fdf_status_t fdf_channel_cancel_wait(fdf_handle_t channel_handle) {
 }
 
 __EXPORT void fdf_handle_close(fdf_handle_t channel_handle) {
-  if (channel_handle == ZX_HANDLE_INVALID) {
+  if (channel_handle == FDF_HANDLE_INVALID) {
+    return;
+  }
+  if (!driver_runtime::Handle::IsFdfHandle(channel_handle)) {
+    zx_handle_close(channel_handle);
     return;
   }
   driver_runtime::Handle* handle = driver_runtime::Handle::MapValueToHandle(channel_handle);

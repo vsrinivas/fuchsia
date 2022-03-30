@@ -976,11 +976,7 @@ bool Message::IsEquivalent(fdf::Channel::ReadReturn& read) const {
 
 void CloseHandles(const fdf::Channel::ReadReturn& read) {
   for (const auto& h : read.handles) {
-    if (driver_runtime::Handle::IsFdfHandle(h)) {
-      fdf_handle_close(h);
-    } else {
-      zx_handle_close(h);
-    }
+    fdf_handle_close(h);
   }
 }
 
@@ -1669,6 +1665,23 @@ TEST_F(ChannelTest, MoveConstructor) {
   remote_.reset();
 
   ASSERT_EQ(0, driver_runtime::gHandleTableArena.num_allocated());
+}
+
+TEST_F(ChannelTest, CloseZirconChannel) {
+  zx_handle_t local_handle, remote_handle;
+  {
+    zx::channel local;
+    zx::channel remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    local_handle = local.get();
+    remote_handle = remote.get();
+    fdf::Channel fdf_local(local.release());
+    fdf::Channel fdf_remote(remote.release());
+  }
+  ASSERT_EQ(ZX_ERR_BAD_HANDLE,
+            zx_object_get_info(local_handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
+  ASSERT_EQ(ZX_ERR_BAD_HANDLE,
+            zx_object_get_info(remote_handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
 }
 
 TEST(ChannelTest, IsValid) {
