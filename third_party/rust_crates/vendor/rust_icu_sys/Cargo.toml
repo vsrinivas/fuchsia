@@ -12,7 +12,7 @@
 [package]
 edition = "2018"
 name = "rust_icu_sys"
-version = "2.0.0"
+version = "2.0.1"
 authors = ["Google Inc."]
 build = "build.rs"
 links = "icuuc"

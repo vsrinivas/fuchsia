@@ -12,7 +12,7 @@
 [package]
 edition = "2018"
 name = "rust_icu_common"
-version = "2.0.0"
+version = "2.0.1"
 authors = ["Google Inc."]
 description = "Native bindings to the ICU4C library from Unicode.\n\nCommonly used types.\n"
 readme = "README.md"
@@ -23,7 +23,7 @@ repository = "https://github.com/google/rust_icu"
 version = "1.0.25"
 
 [dependencies.rust_icu_sys]
-version = "2.0.0"
+version = "2.0.1"
 default-features = false
 
 [dependencies.thiserror]
