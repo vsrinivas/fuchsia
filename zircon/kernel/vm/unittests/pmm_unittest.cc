@@ -1020,19 +1020,15 @@ static bool pq_toggle_dont_need_queue() {
   // Move the pages to the DontNeed queue.
   pq.MoveToPagerBackedDontNeed(&page1);
   pq.MoveToPagerBackedDontNeed(&page2);
-  EXPECT_TRUE(pq.DebugPageIsPagerBackedDontNeed(&page1, &queue));
-  EXPECT_EQ(queue, 0u);
-  EXPECT_TRUE(pq.DebugPageIsPagerBackedDontNeed(&page2, &queue));
-  EXPECT_EQ(queue, 0u);
+  EXPECT_TRUE(pq.DebugPageIsPagerBackedDontNeed(&page1));
+  EXPECT_TRUE(pq.DebugPageIsPagerBackedDontNeed(&page2));
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 0, 0, 0, 0, 0, 0, 0}, 2, 0, 0, 0}));
   EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 0, 2}));
 
   // Rotate the queues. This should also process the DontNeed queue.
   pq.RotatePagerBackedQueues();
-  EXPECT_TRUE(pq.DebugPageIsPagerBackedDontNeed(&page1, &queue));
-  EXPECT_EQ(queue, 1u);
-  EXPECT_TRUE(pq.DebugPageIsPagerBackedDontNeed(&page2, &queue));
-  EXPECT_EQ(queue, 1u);
+  EXPECT_TRUE(pq.DebugPageIsPagerBackedDontNeed(&page1));
+  EXPECT_TRUE(pq.DebugPageIsPagerBackedDontNeed(&page2));
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 0, 0, 0, 0, 0, 0, 0}, 2, 0, 0, 0}));
   EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 0, 2}));
 
@@ -1042,19 +1038,16 @@ static bool pq_toggle_dont_need_queue() {
   pq.RotatePagerBackedQueues();
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&page1, &queue));
   EXPECT_EQ(queue, 1u);
-  EXPECT_TRUE(pq.DebugPageIsPagerBackedDontNeed(&page2, &queue));
-  EXPECT_EQ(queue, 0u);
+  EXPECT_TRUE(pq.DebugPageIsPagerBackedDontNeed(&page2));
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 1, 0, 0, 0, 0, 0, 0}, 1, 0, 0, 0}));
   // Two active queues by default, so page1 is still considered active.
   EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 1, 1}));
 
-  // Rotate the queues again. The DontNeed page should be toggled to the other queue. The page
-  // accessed above should move to the next pager-backed queue.
+  // Rotate the queues again. The page accessed above should move to the next pager-backed queue.
   pq.RotatePagerBackedQueues();
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&page1, &queue));
   EXPECT_EQ(queue, 2u);
-  EXPECT_TRUE(pq.DebugPageIsPagerBackedDontNeed(&page2, &queue));
-  EXPECT_EQ(queue, 1u);
+  EXPECT_TRUE(pq.DebugPageIsPagerBackedDontNeed(&page2));
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 0, 1, 0, 0, 0, 0, 0}, 1, 0, 0, 0}));
   // page1 has now moved on past the two active queues, so it now counts as inactive.
   EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 0, 2}));

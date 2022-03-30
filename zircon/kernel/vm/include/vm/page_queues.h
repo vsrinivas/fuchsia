@@ -291,9 +291,7 @@ class PageQueues {
   // This takes an optional output parameter that, if the function returns true, will contain the
   // index of the queue that the page was in.
   bool DebugPageIsPagerBacked(const vm_page_t* page, size_t* queue = nullptr) const;
-  // This takes an optional output parameter that, if the function returns true, will contain the
-  // index of the DontNeed queue that the page was in, 0 for DontNeedA and 1 for DontNeedB.
-  bool DebugPageIsPagerBackedDontNeed(const vm_page_t* page, size_t* queue = nullptr) const;
+  bool DebugPageIsPagerBackedDontNeed(const vm_page_t* page) const;
   bool DebugPageIsPagerBackedDirty(const vm_page_t* page) const;
   bool DebugPageIsUnswappable(const vm_page_t* page) const;
   bool DebugPageIsUnswappableZeroFork(const vm_page_t* page) const;
@@ -337,50 +335,11 @@ class PageQueues {
     PageQueueWired,
     PageQueueUnswappableZeroFork,
     PageQueuePagerBackedDirty,
-    PageQueuePagerBackedDontNeedA,
-    PageQueuePagerBackedDontNeedB,
+    PageQueuePagerBackedDontNeed,
     PageQueuePagerBackedBase,
     PageQueuePagerBackedLast = PageQueuePagerBackedBase + kNumPagerBacked - 1,
     PageQueueNumQueues,
   };
-
-  // The DontNeed queue toggles between PageQueuePagerBackedDontNeedA and
-  // PageQueuePagerBackedDontNeedB, i.e. only of the two is the "actual" DontNeed queue at a time.
-  // The purpose of the other queue is to facilitate efficient processing of DontNeed pages to fixup
-  // their queues per their ages. Pages whose ages have changed since being put in the DontNeed
-  // queue get moved to the corresponding regular pager-backed queue, but pages that have not been
-  // accessed since being marked DontNeed need to remain in the DontNeed queue. Dropping the lock_
-  // multiple times while processing poses a problem, because we now need a way to resume where we
-  // left off in the DontNeed queue. The toggle queue helps here; pages that are still DontNeed can
-  // simply be moved out of the way to the toggle queue, and we can just resume at the tail again
-  // and continue processing until empty, at which point the toggle queue becomes the new DontNeed
-  // queue. This allows us to share a lot of the LRU queue processing logic, where pages get moved
-  // off the queue as they are processed.
-  //
-  // The DontNeed generation tracks the current DontNeed queue. We start off with
-  // PageQueuePagerBackedDontNeedA as the current DontNeed queue and toggle it each time the
-  // generation is incremented.
-  uint64_t dont_need_queue_gen_ TA_GUARDED(lock_) = 0;
-
-  uint64_t dont_need_queue_gen() TA_EXCL(lock_) {
-    Guard<CriticalMutex> guard{&lock_};
-    return dont_need_queue_gen_;
-  }
-
-  static constexpr bool is_dont_need_queue(PageQueue queue) {
-    return queue == PageQueuePagerBackedDontNeedA || queue == PageQueuePagerBackedDontNeedB;
-  }
-
-  // Helper to return the current DontNeed queue, computed from dont_need_queue_gen_.
-  PageQueue GetCurrentDontNeedQueueLocked() const TA_REQ(lock_) {
-    return static_cast<PageQueue>(PageQueuePagerBackedDontNeedA + dont_need_queue_gen_ % 2);
-  }
-
-  // Helper to return the toggle queue corresponding to the current DontNeed queue, computed from
-  // dont_need_queue_gen_.
-  PageQueue GetToggleDontNeedQueueLocked() const TA_REQ(lock_) {
-    return static_cast<PageQueue>(PageQueuePagerBackedDontNeedB - dont_need_queue_gen_ % 2);
-  }
 
   // Ensure that the pager-backed queue counts are always at the end.
   static_assert(PageQueuePagerBackedLast + 1 == PageQueueNumQueues);
@@ -409,20 +368,19 @@ class PageQueues {
   // returns false then it is guaranteed that both |queue_is_active| and |queue_is_inactive| would
   // return false.
   static constexpr bool queue_is_pager_backed(PageQueue page_queue) {
-    // We check against the the DontNeed queues and not the base queue so that accessing a page can
+    // We check against the the DontNeed queue and not the base queue so that accessing a page can
     // move it from the DontNeed list into the LRU queues. To keep this case efficient we require
-    // that the DontNeed queues be directly before the LRU queues, and next to each other.
-    static_assert(PageQueuePagerBackedDontNeedA + 2 == PageQueuePagerBackedBase);
-    static_assert(PageQueuePagerBackedDontNeedB == PageQueuePagerBackedDontNeedA + 1);
+    // that the DontNeed queue be directly before the LRU queues.
+    static_assert(PageQueuePagerBackedDontNeed + 1 == PageQueuePagerBackedBase);
 
     // Ensure that the Dirty queue comes before the smallest queue that would return true for this
     // function. This function is used for computing active/inactive sets for the purpose of
     // eviction, and dirty pages cannot be evicted. The Dirty queue also needs to come before the
-    // DontNeed queues so that MarkAccessed does not try to move the page to the MRU queue on
+    // DontNeed queue so that MarkAccessed does not try to move the page to the MRU queue on
     // access. All pager-backed queues except the Dirty queue contain evictable pages.
-    static_assert(PageQueuePagerBackedDirty < PageQueuePagerBackedDontNeedA);
+    static_assert(PageQueuePagerBackedDirty < PageQueuePagerBackedDontNeed);
 
-    return page_queue >= PageQueuePagerBackedDontNeedA;
+    return page_queue >= PageQueuePagerBackedDontNeed;
   }
 
   // Calculates the age of a queue against a given mru, with 0 meaning page_queue==mru
@@ -452,7 +410,7 @@ class PageQueues {
   static constexpr bool queue_is_inactive(PageQueue page_queue, PageQueue mru) {
     // The DontNeed queue does not have an age, and so we cannot call queue_age on it, but it should
     // definitely be considered part of the inactive set.
-    if (is_dont_need_queue(page_queue)) {
+    if (page_queue == PageQueuePagerBackedDontNeed) {
       return true;
     }
     if (page_queue < PageQueuePagerBackedBase) {
@@ -469,16 +427,19 @@ class PageQueues {
     return gen_to_queue(lru_gen_.load(ktl::memory_order_relaxed));
   }
 
-  // This processes the current DontNeed queue and the LRU queue.
-  // For the DontNeed queue, the aim is to toggle it to the other DontNeed queue (see comment near
-  // dont_need_queue_gen_). For the LRU queue, the aim is to make the lru_gen_ be the passed in
-  // target_gen. It achieves this by walking all the pages in the queue and either
+  // This processes the DontNeed queue and the LRU queue.
+  // For the DontNeed queue the pages are first placed in a temporary list (if |peek| is false), and
+  // then processed to ensure termination (see comment on dont_need_processing_list_ for full
+  // details). If |peek| is true we will either return a page from the DontNeed queue, or it will be
+  // empty, and so no temporary list is needed. For the LRU queue, the aim is to make the lru_gen_
+  // be the passed in target_gen. It achieves this by walking all the pages in the queue and either
   //   1. For pages that have a newest accessed time and are in the wrong queue, are moved into the
   //      correct queue.
   //   2. For pages that are in the correct queue, they are either returned (if |peek| is true), or
-  //      moved to another queue - pages in the DontNeed queue are moved to the toggle queue, and
-  //      pages in the LRU queue have their age effectively decreased by being moved to the next
-  //      queue.
+  //      moved to another queue - pages in the DontNeed queue are moved between
+  //      dont_need_processing_list_ and regular list, although this is in some ways the some queue
+  //      as the pages do not actually have their queue updated, and pages in the LRU queue have
+  //      their age effectively decreased by being moved to the next queue.
   // In the second case for LRU, pages get moved into the next queue so that the LRU queue can
   // become empty, allowing the gen to be incremented to eventually reach the |target_gen|. The
   // mechanism of freeing up the LRU queue is necessary to make room for new MRU queues. When |peek|
@@ -496,9 +457,8 @@ class PageQueues {
   // should be processed or the DontNeed queue. |target_gen| controls whether the function needs to
   // return early in the face of multiple concurrent calls, each of which acquire and drop the
   // lock_. For the LRU queue, |target_gen| is the minimum value lru_gen_ should advance to. For
-  // the DontNeed queue, |target_gen| is the minimum value dont_need_queue_gen_ should advance to if
-  // |peek| is false. If |peek| is true, the first page that is encountered in the respective queue,
-  // whose age does not require to be fixed up, is returned.
+  // the DontNeed queue |target_gen| is ignored. If |peek| is true, the first page that is
+  // encountered in the respective queue, whose age does not require to be fixed up, is returned.
   ktl::optional<PageQueues::VmoBacklink> ProcessQueueHelper(ProcessingQueue processing_queue,
                                                             uint64_t target_gen, bool peek);
 
@@ -667,6 +627,28 @@ class PageQueues {
 
   // Current active ratio multiplier.
   uint64_t active_ratio_multiplier_ TA_GUARDED(lock_);
+
+  // This list is a temporary list used when updating the ages of pages in the DontNeed queue.
+  // Logically it can be considered the same queue as the PageQueuePagerBackedDontNeed, just a
+  // different physical list, and hence whether a page is here or in the regular
+  // page_queue_[PageQueuePagerBackedDontNeed] the page_queue_count_[PageQueuePagerBackedDontNeed]
+  // is the same.
+  // The way this list is used is when processing the LRU queue, all the pages in the regular
+  // DontNeed queue are moved here, and then this list is processed till its empty by moving them
+  // back to the DontNeed list. By doing this it can be guaranteed that original page is checked,
+  // without new DontNeed pages being able to cause the process to not terminate.
+  // Due to the way list_node_t's work, whether a page is in this specific list, or the page_queues_
+  // list, they can still be removed with list_delete, which is why it's safe to move the pages
+  // here.
+  // Note that we cannot guard this list by the dont_need_processing_lock_ since peek actions, that
+  // do not take that lock, also need to be able to remove items from this list.
+  list_node_t dont_need_processing_list_ TA_GUARDED(lock_) = LIST_INITIAL_CLEARED_VALUE;
+
+  // The way processing works by moving all the DontNeed pages to the dont_need_process_list_ and
+  // then iterating over them means that it only make sense for one of these operations to be being
+  // done at a time. Since only one LRU rotation will realistically happen at a time, this lock in
+  // practice should never actually block anything.
+  DECLARE_MUTEX(PageQueues) dont_need_processing_lock_;
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_QUEUES_H_
