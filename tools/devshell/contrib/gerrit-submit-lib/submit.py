@@ -250,6 +250,10 @@ def submit_changes(
     print()
     print("Submitting CL %d: %s" % (cl.id, cl.subject))
 
+    # If the CL was already CQ+2'ed when we started, treat this as one of our attempts.
+    if cl.cq_votes() == 2:
+      num_attempts += 1
+
     while True:
       # Fetch the latest information about the CL.
       current_cl = server.fetch_change(cl.change_id)

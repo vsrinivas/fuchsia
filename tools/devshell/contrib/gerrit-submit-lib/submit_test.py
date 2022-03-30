@@ -16,6 +16,11 @@ import util
 import submit
 
 
+# Labels for CQ+1 and CQ+2 respectively.
+_CQ_PLUS1_LABEL = {'Commit-Queue': {'recommended': {'user_id': 1}}}
+_CQ_PLUS2_LABEL = {'Commit-Queue': {'approved': {'user_id': 1}}}
+
+
 class TestSubmit(unittest.TestCase):
 
     def test_change_from_json(self) -> None:
@@ -56,37 +61,15 @@ class TestSubmit(unittest.TestCase):
             ])
 
     def test_cq_votes(self) -> None:
-        c = submit.Change(
-            'abc', {'labels': {
-                'Commit-Queue': {
-                    'approved': {
-                        'user_id': 33
-                    }
-                }
-            }})
+        c = submit.Change('abc', {'labels': _CQ_PLUS2_LABEL})
         assert c.cq_votes() == 2
-        c = submit.Change(
-            'abc',
-            {'labels': {
-                'Commit-Queue': {
-                    'recommended': {
-                        'user_id': 33
-                    }
-                }
-            }})
+        c = submit.Change('abc', {'labels': _CQ_PLUS1_LABEL})
         assert c.cq_votes() == 1
         c = submit.Change('abc', {})
         assert c.cq_votes() == 0
 
     def test_unresolved_comment(self) -> None:
-        c = submit.Change(
-            'abc', {'labels': {
-                'Commit-Queue': {
-                    'approved': {
-                        'user_id': 33
-                    }
-                }
-            }})
+        c = submit.Change('abc', {'labels': _CQ_PLUS2_LABEL})
         assert not c.has_unresolved_comments()
         c = submit.Change('abc', {'unresolved_comment_count': 0})
         assert not c.has_unresolved_comments()
@@ -103,36 +86,12 @@ class TestSubmit(unittest.TestCase):
             # Initially, not on the queue.
             submit.Change('42', {}),
             # On the queue.
-            submit.Change(
-                '42',
-                {'labels': {
-                    'Commit-Queue': {
-                        'approved': {
-                            'user_id': 33
-                        }
-                    }
-                }}),
-            submit.Change(
-                '42',
-                {'labels': {
-                    'Commit-Queue': {
-                        'approved': {
-                            'user_id': 33
-                        }
-                    }
-                }}),
+            submit.Change('42', {'labels': _CQ_PLUS2_LABEL}),
+            submit.Change('42', {'labels': _CQ_PLUS2_LABEL}),
             # Retry.
             submit.Change('42', {}),
             # On the queue.
-            submit.Change(
-                '42',
-                {'labels': {
-                    'Commit-Queue': {
-                        'approved': {
-                            'user_id': 33
-                        }
-                    }
-                }}),
+            submit.Change('42', {'labels': _CQ_PLUS2_LABEL}),
             # Submitted.
             submit.Change('42', {'status': 'MERGED'}),
         ]
@@ -166,19 +125,27 @@ class TestSubmit(unittest.TestCase):
         server.set_cq_state.assert_called_with('42', 2)
         assert server.set_cq_state.call_count == 3
 
+    def test_submit_existing_submit_counts_as_retry(self) -> None:
+        server = mock.Mock(spec=submit.GerritServer)
+        server.fetch_change.side_effect = [
+            # Initially, the change is being submitted.
+            submit.Change('42', {'labels': _CQ_PLUS2_LABEL}),
+            # When we next poll, we have been kicked out of the queue. We should give up.
+            submit.Change('42', {}),
+        ]
+        submit.submit_changes(
+            util.FakeClock(),
+            server, [submit.Change('42', {'submittable': True, 'labels': _CQ_PLUS2_LABEL})],
+            num_retries=0)
+
+        # Should have not have been added to CQ, other than the initial existing attempt.
+        assert server.set_cq_state.call_count == 0
+
     def test_submit_cls_upgrade_to_approved(self) -> None:
         server = mock.Mock(spec=submit.GerritServer)
         server.fetch_change.side_effect = [
             # Initially, on the queue as recommended.
-            submit.Change(
-                '42',
-                {'labels': {
-                    'Commit-Queue': {
-                        'recommended': {
-                            'user_id': 33
-                        }
-                    }
-                }}),
+            submit.Change('42', {'labels': _CQ_PLUS1_LABEL}),
             # Submitted.
             submit.Change('42', {'status': 'MERGED'}),
         ]
