@@ -150,17 +150,20 @@ impl BlockDevice {
         &self,
         mut chain: ReadableChain<'a, 'b, N, M>,
     ) -> Result<(), anyhow::Error> {
-        let header = read_header(&mut chain)?;
-
-        let (mut chain, block_status) = match header.request_type.get() {
-            wire::VIRTIO_BLK_T_IN => self.read(header, chain).await?,
-            wire::VIRTIO_BLK_T_OUT => self.write(header, chain).await?,
-            wire::VIRTIO_BLK_T_FLUSH => self.flush(chain).await?,
-            _ => {
-                // If the command is unsupported we need to seek the chain to the final writable
-                // status byte.
-                readable_chain_error(chain, wire::VirtioBlockStatus::Unsupported)?
-            }
+        let (mut chain, block_status) = match read_header(&mut chain) {
+            Ok(header) => match header.request_type.get() {
+                wire::VIRTIO_BLK_T_IN => self.read(header, chain).await?,
+                wire::VIRTIO_BLK_T_OUT => self.write(header, chain).await?,
+                wire::VIRTIO_BLK_T_FLUSH => self.flush(chain).await?,
+                _ => {
+                    // If the command is unsupported we need to seek the chain to the final writable
+                    // status byte.
+                    readable_chain_error(chain, wire::VirtioBlockStatus::Unsupported)?
+                }
+            },
+            // If we couldn't read the header (ex: not enough readable bytes in the chain), then
+            // try to report an error.
+            Err(_e) => readable_chain_error(chain, wire::VirtioBlockStatus::IoError)?,
         };
 
         // If we're here the chain should be coherent, meaning we should have a block status and

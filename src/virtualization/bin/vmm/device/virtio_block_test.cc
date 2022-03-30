@@ -148,11 +148,6 @@ class VirtioBlockTest : public TestWithDevice,
 };
 
 TEST_P(VirtioBlockTest, BadHeaderShort) {
-  // TODO(fxbug.dev/95529): Enable this test for the rust device.
-  if (IsRustComponent()) {
-    GTEST_SKIP();
-  }
-
   uint8_t header[sizeof(virtio_blk_req_t) - 1] = {};
   uint8_t* blk_status;
   zx_status_t status = DescriptorChainBuilder(request_queue_)
