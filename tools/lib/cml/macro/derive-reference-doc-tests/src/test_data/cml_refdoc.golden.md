@@ -178,21 +178,26 @@ _array of `object` (optional)_
 The `collections` section declares collections as described in
 [Component collections][doc-collections].
 
-Keys:
-
--   `name`: The name of the component collection, which is a string of one or
-    more of the following characters: `a-z`, `0-9`, `_`, `.`, `-`. The name
-    identifies this collection when used in a [reference](#references).
--   `durability`: The duration of child component instances in the collection.
-    -   `transient`: The instance exists until its parent is stopped or it is
-        explicitly destroyed.
-    -   `single_run`: The instance is started when it is created, and destroyed
-        when it is stopped.
--   `environment` _(optional)_: If present, the environment that will be
-    assigned to instances in this collection, one of
-    [`environments`](#environments). If omitted, instances in this collection
-    will inherit the same environment assigned to this component.
-
+- `name`: (_`string`_) The name of the component collection, which is a string of one or
+  more of the following characters: `a-z`, `0-9`, `_`, `.`, `-`. The name
+  identifies this collection when used in a [reference](#references).
+- `durability`: (_`string`_) The duration of child component instances in the collection.
+  -   `transient`: The instance exists until its parent is stopped or it is
+      explicitly destroyed.
+  -   `single_run`: The instance is started when it is created, and destroyed
+      when it is stopped.
+- `allowed_offers`: (_optional `string`_) Constraints on the dynamic offers that target the components in this collection.
+  Dynamic offers are specified when calling `fuchsia.component.Realm/CreateChild`.
+  -   `static_only`: Only those specified in this `.cml` file. No dynamic offers.
+      This is the default.
+  -   `static_and_dynamic`: Both static offers and those specified at runtime
+      with `CreateChild` are allowed.
+- `allow_long_names`: (_optional `bool`_) Allow child names up to 1024 characters long instead of the usual 100 character limit.
+  Default is false.
+- `environment`: (_optional `string`_) If present, the environment that will be
+  assigned to instances in this collection, one of
+  [`environments`](#environments). If omitted, instances in this collection
+  will inherit the same environment assigned to this component.
 Example:
 
 ```json5
@@ -203,6 +208,8 @@ collections: [
     },
 ],
 ```
+
+
 
 ### `environments` {#environments}
 
