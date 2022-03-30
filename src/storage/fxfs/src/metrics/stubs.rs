@@ -10,10 +10,11 @@
 use {
     crate::metrics::traits::{Metric, NumericMetric},
     std::marker::PhantomData,
+    std::string::String,
 };
 
 /// Metric equivalent to [`fuchsia_inspect::StringProperty`].
-pub type StringMetric<'a> = ScalarMetric<&'a str>;
+pub type StringMetric = ScalarMetric<String>;
 /// Metric equivalent to [`fuchsia_inspect::IntProperty`].
 pub type IntMetric = ScalarMetric<i64>;
 /// Metric equivalent to [`fuchsia_inspect::UintProperty`].
@@ -28,7 +29,7 @@ pub struct ScalarMetric<DataType> {
 }
 
 impl<DataType> Metric<DataType> for ScalarMetric<DataType> {
-    fn new(_name: &'static str, _value: DataType) -> Self {
+    fn new(_name: impl AsRef<str>, _value: DataType) -> Self {
         Self { phantom: PhantomData }
     }
 

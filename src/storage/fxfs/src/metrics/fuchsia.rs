@@ -12,6 +12,7 @@ use {
     crate::metrics::traits::{Metric, NumericMetric},
     fuchsia_inspect::{NumericProperty, Property},
     once_cell::sync::Lazy,
+    std::string::String,
     std::sync::Mutex,
 };
 
@@ -42,19 +43,19 @@ pub struct ScalarMetric<InspectType> {
     inner: Mutex<InspectType>,
 }
 
-impl<'a> Metric<&'a str> for StringMetric {
-    fn new(name: &'static str, value: &'a str) -> Self {
-        Self { inner: Mutex::new(DETAIL_NODE.lock().unwrap().create_string(name, value)) }
+impl Metric<String> for StringMetric {
+    fn new(name: impl AsRef<str>, value: String) -> Self {
+        Self { inner: Mutex::new(DETAIL_NODE.lock().unwrap().create_string(name.as_ref(), value)) }
     }
 
-    fn set(&self, value: &'a str) {
-        self.inner.lock().unwrap().set(value)
+    fn set(&self, value: String) {
+        self.inner.lock().unwrap().set(value.as_str())
     }
 }
 
 impl Metric<i64> for IntMetric {
-    fn new(name: &'static str, value: i64) -> Self {
-        Self { inner: Mutex::new(DETAIL_NODE.lock().unwrap().create_int(name, value)) }
+    fn new(name: impl AsRef<str>, value: i64) -> Self {
+        Self { inner: Mutex::new(DETAIL_NODE.lock().unwrap().create_int(name.as_ref(), value)) }
     }
 
     fn set(&self, value: i64) {
@@ -63,8 +64,8 @@ impl Metric<i64> for IntMetric {
 }
 
 impl Metric<u64> for UintMetric {
-    fn new(name: &'static str, value: u64) -> Self {
-        Self { inner: Mutex::new(DETAIL_NODE.lock().unwrap().create_uint(name, value)) }
+    fn new(name: impl AsRef<str>, value: u64) -> Self {
+        Self { inner: Mutex::new(DETAIL_NODE.lock().unwrap().create_uint(name.as_ref(), value)) }
     }
 
     fn set(&self, value: u64) {
@@ -73,8 +74,8 @@ impl Metric<u64> for UintMetric {
 }
 
 impl Metric<f64> for DoubleMetric {
-    fn new(name: &'static str, value: f64) -> Self {
-        Self { inner: Mutex::new(DETAIL_NODE.lock().unwrap().create_double(name, value)) }
+    fn new(name: impl AsRef<str>, value: f64) -> Self {
+        Self { inner: Mutex::new(DETAIL_NODE.lock().unwrap().create_double(name.as_ref(), value)) }
     }
 
     fn set(&self, value: f64) {

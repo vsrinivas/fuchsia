@@ -118,7 +118,7 @@ impl RootVolume {
         volume_name: &str,
         crypt: Arc<dyn Crypt>,
     ) -> Result<Arc<ObjectStore>, Error> {
-        match self.volume(volume_name, crypt.clone()).await {
+        let volume = match self.volume(volume_name, crypt.clone()).await {
             Ok(volume) => {
                 // Ensure that we assign a GUID to the volume's ObjectStore if it doesn't have one.
                 // This can happen if the associated StoreInfo on disk is a previous version.
@@ -134,7 +134,9 @@ impl RootVolume {
                     Err(e)
                 }
             }
-        }
+        }?;
+        volume.record_metrics(volume_name);
+        Ok(volume)
     }
 }
 

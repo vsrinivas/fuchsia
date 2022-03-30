@@ -39,6 +39,7 @@ use {
             types::{BoxedLayerIterator, Item, ItemRef, LayerIterator, LayerIteratorFilter},
             LSMTree,
         },
+        metrics::{traits::Metric, StringMetric, UintMetric},
         object_handle::{ObjectHandle, ObjectHandleExt, WriteObjectHandle, INVALID_OBJECT_ID},
         object_store::{
             extent_record::{Checksums, DEFAULT_DATA_ATTRIBUTE_ID},
@@ -88,7 +89,7 @@ pub trait HandleOwner: AsRef<ObjectStore> + Send + Sync + 'static {
     fn create_data_buffer(&self, object_id: u64, initial_size: u64) -> Self::Buffer;
 }
 
-/// `guid` was added to [`StoreInfo`] after this version.
+/// `uuid` was added to [`StoreInfo`] after this version.
 #[derive(Serialize, Deserialize, Versioned)]
 pub struct StoreInfoV1 {
     last_object_id: u64,
@@ -368,23 +369,43 @@ pub struct ObjectStore {
     store_info: Mutex<StoreOrReplayInfo>,
     tree: LSMTree<ObjectKey, ObjectValue>,
 
-    // When replaying the journal, the store cannot read StoreInfo until the whole journal
-    // has been replayed, so during that time, store_info_handle will be None and records
-    // just get sent to the tree. Once the journal has been replayed, we can open the store
-    // and load all the other layer information.
+    /// When replaying the journal, the store cannot read StoreInfo until the whole journal
+    /// has been replayed, so during that time, store_info_handle will be None and records
+    /// just get sent to the tree. Once the journal has been replayed, we can open the store
+    /// and load all the other layer information.
     store_info_handle: OnceCell<StoreObjectHandle<ObjectStore>>,
 
-    // The cipher to use for encrypted mutations, if this store is encrypted.
+    /// The cipher to use for encrypted mutations, if this store is encrypted.
     mutations_cipher: Mutex<Option<StreamCipher>>,
 
-    // Any encrypted mutations that exist after replaying an encrypted store, but before it is
-    // unlocked.
+    /// Encrypted mutations that exist after replaying an encrypted store but before it is unlocked.
     encrypted_mutations: Mutex<Option<Arc<EncryptedMutations>>>,
 
-    // Holds the current lock state of the store.
+    /// Current lock state of the store.
     lock_state: Mutex<LockState>,
 
+    /// Enable/disable tracing.
     trace: AtomicBool,
+
+    /// Metrics associated with the store. Only set once the journal has been replayed.
+    metrics: OnceCell<ObjectStoreMetrics>,
+}
+
+struct ObjectStoreMetrics {
+    _guid: StringMetric,
+    _store_id: UintMetric,
+}
+
+impl ObjectStoreMetrics {
+    pub fn new(store_name: impl AsRef<str>, store_id: u64, store_info: &StoreInfo) -> Self {
+        // TODO(fxbug.dev/94075): Support proper nesting of values.
+        let prefix = format!("obj_store_{}", store_name.as_ref());
+        let guid_string = Uuid::from_bytes(store_info.guid).to_string();
+        ObjectStoreMetrics {
+            _guid: StringMetric::new(format!("{}_guid", &prefix), guid_string),
+            _store_id: UintMetric::new(format!("{}_id", &prefix), store_id),
+        }
+    }
 }
 
 impl ObjectStore {
@@ -414,6 +435,7 @@ impl ObjectStore {
             encrypted_mutations: Mutex::new(None),
             lock_state: Mutex::new(lock_state),
             trace: AtomicBool::new(false),
+            metrics: OnceCell::new(),
         })
     }
 
@@ -970,7 +992,7 @@ impl ObjectStore {
             size
         };
 
-        let _ = self.store_info_handle.set(handle);
+        assert!(self.store_info_handle.set(handle).is_ok(), "Failed to set store_info_handle!");
         self.filesystem().object_manager().update_reservation(
             self.store_object_id,
             tree::reservation_amount_from_layer_size(total_size),
@@ -981,6 +1003,14 @@ impl ObjectStore {
         }
 
         Ok(())
+    }
+
+    /// Record metrics for this ObjectStore under the given `store_name`.
+    /// Acts as a no-op if called multiple times.
+    pub fn record_metrics(&self, store_name: impl AsRef<str>) {
+        self.metrics.get_or_init(|| {
+            ObjectStoreMetrics::new(store_name, self.store_object_id, &self.store_info())
+        });
     }
 
     async fn open_layers(

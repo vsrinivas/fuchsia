@@ -10,9 +10,9 @@
 /// Wrapper for the [`fuchsia_inspect::Property`] trait. Used for all scalar metric types (e.g.
 /// [`crate::metrics::StringMetric`], [`crate::metrics::IntMetric`]).
 pub trait Metric<DataType> {
-    /// Create a new metric with the given `name` and `value`.
-    /// `name` should be a unique string identifier.
-    fn new(name: &'static str, value: DataType) -> Self;
+    /// Create a new metric with the given `name` and `value`. `name` should be a unique string
+    /// identifier, and can be any type that can be referenced as &str.
+    fn new(name: impl AsRef<str>, value: DataType) -> Self;
 
     /// Set the current value of this metric to `value`.
     fn set(&self, value: DataType);
