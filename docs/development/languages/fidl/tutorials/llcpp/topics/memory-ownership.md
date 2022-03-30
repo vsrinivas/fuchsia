@@ -1,7 +1,9 @@
-# LLCPP Memory Management
+# LLCPP memory management
 
 This document provides an overview of the tools available to manage memory when
-using the LLCPP bindings.
+using the wire domain objects from the LLCPP bindings.
+
+## Wire domain objects
 
 The domain objects from the LLCPP bindings, termed "wire types", are tightly
 coupled to the memory layout of the FIDL wire format used by the current
@@ -36,7 +38,7 @@ to an invalid object (except for the purpose of sending an empty absent
 union).
 
 For memory safety reasons tables are immutable. The default constructor for a
-table returns an empty table. To create a table with firelds you must use a
+table returns an empty table. To create a table with fields you must use a
 builder. The members of tables may be mutable but you can't add or remove
 members after creation.
 
@@ -124,7 +126,9 @@ struct OwnedBar {
   std::optional<std::string> b;
 };
 // Suppose we are in a class that has a `OwnedBar bar_` member.
-client_->MakeMove(args, [](fidl::WireResponse<TicTacToe::MakeMove>* response) {
+client_->MakeMove(args).Then([](fidl::WireUnownedResult<TicTacToe::MakeMove>& result) {
+  assert(result.ok());
+  auto* response = result.Unwrap();
   // Create an owned value and copy the LLCPP table into it.
   OwnedBar bar;
   if (response->bar.has_a())
@@ -157,7 +161,7 @@ use a buffer which fit the bigger size).
 
 The standard pattern for using the arena is:
 
-*   Define a local variable arena of type fidl::Arena.
+*   Define a local variable arena of type `fidl::Arena`.
 *   Allocate objects using the arena.
 *   Send the allocated objects by making a FIDL method call or making a reply
     via a completer.

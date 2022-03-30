@@ -42,9 +42,7 @@ those](images/llcpp-fidl-lifecycle.svg){: width="80%"}
   - Destroying a `fidl::WireClient`.
   - Calling `fidl::WireSharedClient::AsyncTeardown()`.
 
-  Teardown usually involves closing the client/server endpoint. The exception is
-  `fidl::WireSharedClient` where the client endpoint is only closed after
-  destroying the client object itself.
+  Teardown usually leads to the closing of the client/server endpoint.
 
 - **Unbind**: actions that stop the message dispatch, and additionally recover
   the client/server endpoint that was used to send and receive messages. Doing
@@ -143,10 +141,10 @@ class MyDevice : fidl::WireAsyncEventHandler<MyProtocol> {
   }
 
   void DoThing() {
-    // Capture |this| such that the |MyDevice| instance may be
-    // accessed in the callback. This is safe because destroying
-    // |client_| cancels all in-flight calls.
-    client_.Foo(args, [this] (fidl::WireResponse<Foo>*) { ... });
+    // Capture |this| such that the |MyDevice| instance may be accessed
+    // in the callback. This is safe because destroying |client_| silently
+    // discards all pending callbacks registered through |Then|.
+    client_->Foo(args).Then([this] (fidl::WireUnownedResult<Foo>&) { ... });
   }
 
  private:
@@ -159,37 +157,63 @@ destroyed - the client binding will be torn down as part of the process, and
 the threading checks performed by `WireClient` are sufficient to prevent this
 class of use-after-frees.
 
-#### Additional use-after-free risks in result callbacks
+#### Additional use-after-free risks with `ThenExactlyOnce`
 
-Pending response callbacks (i.e. those with the signature
-`[] (fidl::WireResponse<Foo>*) { ... }`) are silently discarded when a client
-tears down. In the case of result callbacks (i.e. those with the signature
-`[] (fidl::WireUnownedResult<Foo>&) { ... }`), a cancellation error will be
-asynchronously delivered. Care is needed to ensure any lambda captures are still
-alive. For example, if an object contains a `fidl::WireClient` and captures
-`this` in result callbacks, then manipulating the captured this within the
-result callbacks after destroying the object will lead to use-after-free. One
-way to avoid it is to return immediately if the error was due to destroying the
-`fidl::WireClient` (you may identify it by checking `is_canceled()` on the
-error). Using the `MyDevice` example above:
+When a client object is destroyed, pending callbacks registered through
+`ThenExactlyOnce` will asynchronously receive a cancellation error. Care is
+needed to ensure any lambda captures are still alive. For example, if an object
+contains a `fidl::WireClient` and captures `this` in async method callbacks,
+then manipulating the captured `this` within the callbacks after destroying the
+object will lead to use-after-free. To avoid this, use `Then` to register
+callbacks when the receiver object is destroyed together with the client. Using
+the `MyDevice` example above:
 
 ```cpp
 void MyDevice::DoOtherThing() {
-  // Capture |this| such that the |MyDevice| instance may be
-  // accessed in the callback.
-  client_.Foo(args, [this] (fidl::WireUnownedResult<Foo>& result) {
-    if (!result.ok()) {
-      if (result.error().is_canceled()) {
-        // When we receive a cancellation error, |MyDevice| has already
-        // destructed. The captured |this| pointer is invalid. We must not
-        // access any member objects.
-        return;
-      }
-    }
-    // Safe to proceed to use the |MyDevice|...
+  // Incorrect:
+  client_.Foo(request).ThenExactlyOnce([this] (fidl::WireUnownedResult<Foo>& result) {
+    // If |MyDevice| is destroyed, this pending callback will still run.
+    // The captured |this| pointer will be invalid.
+  });
+
+  // Correct:
+  client_.Foo(request).Then([this] (fidl::WireUnownedResult<Foo>& result) {
+    // The callback is silently dropped if |client_| is destroyed.
   });
 }
 ```
+
+You may use `ThenExactlyOnce` when the callback captures objects that need to be
+used exactly once, such as when propagating errors from a client call used as
+part of fulfilling a server request:
+
+```cpp
+class MyServer : public fidl::WireServer<FooProtocol> {
+ public:
+  void FooMethod(FooMethodRequestView request, FooMethodCompleter::Sync& completer) override {
+    bar_.client->Bar().ThenExactlyOnce(
+        [completer = completer.ToAsync()] (fidl::WireUnownedResult<Bar>& result) {
+          if (!result.ok()) {
+            completer.Reply(result.status());
+            return;
+          }
+          // ... more processing
+        });
+  }
+
+ private:
+  struct BarManager {
+    fidl::WireClient<BarProtocol> client;
+    /* Other internal state... */
+  };
+
+  std::unique_ptr<BarManager> bar_;
+};
+```
+
+In the above example, if the server would like to re-initialize `bar_` while
+keeping `FooProtocol` connections alive, it may use `ThenExactlyOnce` to
+reply a cancellation error when handling `FooMethod`, or introduce retry logic.
 
 ### WireSharedClient
 

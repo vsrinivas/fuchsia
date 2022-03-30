@@ -142,4 +142,4 @@ ffx component destroy /core/ffx-laboratory:echo_realm
 [client-tut]: /docs/development/languages/fidl/tutorials/llcpp/basics/client.md
 [overview]: /docs/development/languages/fidl/tutorials/llcpp/README.md
 [bindings-ref]: /docs/reference/fidl/bindings/llcpp-bindings.md#server-completers
-[memory-management]: /docs/development/languages/fidl/guides/llcpp-memory-ownership.md
+[memory-management]: /docs/development/languages/fidl/tutorials/llcpp/topics/memory-ownership.md

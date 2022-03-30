@@ -546,41 +546,20 @@ Dereferencing a `fidl::WireClient` provides access to the following methods:
 
 * For `MakeMove` (two way):
 
-    * `void MakeMove(uint8_t row, uint8_t col,
-      fit::callback<void(fidl::WireResponse<TicTacToe::MakeMove>*)> cb)`:
-      Managed variant of an asynchronous two way method. It takes a callback to
-      handle responses as the last argument. The callback is executed on
-      response on a dispatcher thread. In case of error, the callback is
-      destructed without invocation. The callback is referred to as the
-      **response callback**.
-
-    * `void MakeMove(uint8_t row, uint8_t col,
-      fit::callback<void(fidl::WireUnownedResult<TicTacToe::MakeMove>&)> cb)`:
-      Managed variant of an asynchronous two way method. It takes a callback to
-      handle results as the last argument. The callback is executed exactly
-      once, either when the call succeeds or fails. The executing thread is a
-      dispatcher thread unless the dispatcher is shutting down. The callback is
-      referred to as the **result callback**.
-
-Note: the response callback is suitable when there is no need to propagate error
-information on a per-call basis. Terminal errors are always funneled through the
-[central error handler](#central-error-handler). The result callback is suitable
-when the user needs to propagate errors for each FIDL call to their originators.
-For example, a server may need to make another FIDL call while handling an
-existing FIDL call, and need to fail the original call in case of errors.
-However, because the callbacks are invoked asynchronously, be ware of
-[use-after-free bugs when destroying a client][result-callback-use-after-free]
-when result callbacks are used: the objects captured by the callback may not be
-valid.
+    * `[...] MakeMove(uint8_t row, uint8_t col)`: Managed variant of an
+      asynchronous two way method. It returns an internal type that must be used
+      to register the asynchronous continuation for receiving the result, such
+      as a callback. See [specifying asynchronous
+      continuation][specifying-asynchronous-continuation]. The continuation will
+      be executed on a dispatcher thread unless the dispatcher is shutting down.
 
 `fidl::WireClient::buffer` provides access to the following methods:
 
 * `fidl::Status StartGame(bool start_first)`: Caller-allocated variant of a fire
   and forget method.
-* `void MakeMove(uint8_t row, uint8_t col,
-  fidl::WireResponseContext<MakeMove>* context)`: Asynchronous, caller-allocated
-  variant of a two way method. The final argument is a response context, which
-  is explained below.
+* `[...] MakeMove(uint8_t row, uint8_t col)`: Asynchronous, caller-allocated
+  variant of a two way method. It returns the same internal type as that from
+  the managed variant.
 
 `fidl::WireClient::sync` provides access to the following methods:
 
@@ -588,10 +567,31 @@ valid.
   managed variant of a two way method. The same method exists on
   `WireSyncClient`.
 
-Each asynchronous two way method has a response context that is used in the
-caller-allocated, asynchronous case. `TicTacToe` has only one response context,
-`TicTacToe::MakeMoveResponseContext`, which has pure virtual methods that should
-be overridden to handle responses:
+##### Specifying asynchronous continuation {#specifying-asynchronous-continuation}
+
+See the corresponding C++ [documentation comments][wire-thenable-impl].
+
+The continuation is called with a result object either representing a
+successfully decoded response or an error. This is useful when the user needs to
+propagate errors for each FIDL call to their originators. For example, a server
+may need to make another FIDL call while handling an existing FIDL call, and
+need to fail the original call in case of errors.
+
+The are a few methods on the returned object from a two way call:
+
+* `Then`: takes a callback, and invokes the callback at most once until the
+  client goes away.
+
+* `ThenExactlyOnce`: when passed a callback, the callback is executed exactly
+  once, either when the call succeeds or fails. However, because the callbacks
+  are invoked asynchronously, be ware of [use-after-free bugs when destroying a
+  client][result-callback-use-after-free]: the objects captured by the callback
+  may not be valid.
+
+* `ThenExactlyOnce` may also take a response context when control over
+  allocation is desired. `TicTacToe` has only one response context,
+  `fidl::WireResponseContext<TicTacToe::MakeMove>`, which has pure virtual
+  methods that should be overridden to handle the result of the call:
 
 ```c++
 virtual void OnResult(fidl::WireUnownedResult<MakeMove>& result) = 0;
@@ -1124,9 +1124,9 @@ completer)`, respectively.
 [anon-names]: /docs/reference/fidl/language/language.md#inline-layouts
 [cpp-style]: https://google.github.io/styleguide/cppguide.html#Naming
 [generated-name-attr]: /docs/reference/fidl/language/attributes.md#generated-name
-[llcpp-allocation]: /docs/development/languages/fidl/guides/llcpp-memory-ownership.md
+[llcpp-allocation]: /docs/development/languages/fidl/tutorials/llcpp/topics/memory-ownership.md
 [llcpp-async-example]: /docs/development/languages/fidl/tutorials/llcpp/topics/async-completer.md
-[llcpp-threading-guide]: /docs/development/languages/fidl/guides/llcpp-threading.md
+[llcpp-threading-guide]: /docs/development/languages/fidl/tutorials/llcpp/topics/threading.md
 [llcpp-tutorial]: /docs/development/languages/fidl/tutorials/llcpp
 [llcpp-server-example]: /examples/fidl/llcpp/server
 [lang-constants]: /docs/reference/fidl/language/language.md#constants
@@ -1139,7 +1139,9 @@ completer)`, respectively.
 [lang-resource]: /docs/reference/fidl/language/language.md#value-vs-resource
 [lang-protocols]: /docs/reference/fidl/language/language.md#protocols
 [lang-protocol-composition]: /docs/reference/fidl/language/language.md#protocol-composition
-[result-callback-use-after-free]: /docs/development/languages/fidl/guides/llcpp-threading.md#additional_use-after-free_risks_in_result_callbacks
+[result-callback-use-after-free]: /docs/development/languages/fidl/tutorials/llcpp/topics/threading.md#additional_use-after-free_risks_with_thenexactlyonce
+[specifying-asynchronous-continuation]: #specifying-asynchronous-continuation
 [union-lexicon]: /docs/reference/fidl/language/lexicon.md#union-terms
 [unknown-attr]: /docs/reference/fidl/language/attributes.md#unknown
+[wire-thenable-impl]: https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/system/ulib/fidl/include/lib/fidl/llcpp/internal/thenable.h;l=34?q=wirethenable&ss=fuchsia%2Ffuchsia
 [zircon-channel]: /docs/reference/kernel_objects/channel.md
