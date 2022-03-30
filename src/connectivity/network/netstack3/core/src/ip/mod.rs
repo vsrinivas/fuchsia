@@ -762,7 +762,7 @@ impl IpDeviceId for DummyDeviceId {
 }
 
 #[cfg(test)]
-impl<I: Ip, S, Id, Meta, Event> IpDeviceIdContext<I>
+impl<I: Ip, S, Id, Meta, Event: Debug> IpDeviceIdContext<I>
     for crate::context::testutil::DummyCtx<S, Id, Meta, Event>
 {
     type DeviceId = DummyDeviceId;

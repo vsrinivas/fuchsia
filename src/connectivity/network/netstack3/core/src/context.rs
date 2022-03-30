@@ -1121,32 +1121,33 @@ pub(crate) mod testutil {
     }
 
     /// A dummy [`EventContext`].
-    pub struct DummyEventCtx<E> {
+    pub struct DummyEventCtx<E: Debug> {
         events: Vec<E>,
     }
 
-    impl<E, Event: From<E>> EventContext<E> for DummyEventCtx<Event> {
+    impl<E, Event: Debug + From<E>> EventContext<E> for DummyEventCtx<Event> {
         fn on_event(&mut self, event: E) {
             self.events.push(event.into())
         }
     }
 
-    impl<E> Drop for DummyEventCtx<E> {
+    impl<E: Debug> Drop for DummyEventCtx<E> {
         fn drop(&mut self) {
-            // NB: It'd be really nice to provide better output here, but that
-            // becomes a nasty viral bound that is not worth the extra output.
-            // We could make this better with specialization.
-            assert!(self.events.is_empty(), "all events must be consumed");
+            assert!(
+                self.events.is_empty(),
+                "dropped context with unacknowledged events: {:?}",
+                self.events
+            );
         }
     }
 
-    impl<E> Default for DummyEventCtx<E> {
+    impl<E: Debug> Default for DummyEventCtx<E> {
         fn default() -> Self {
             Self { events: Default::default() }
         }
     }
 
-    impl<E> DummyEventCtx<E> {
+    impl<E: Debug> DummyEventCtx<E> {
         pub fn take(&mut self) -> Vec<E> {
             core::mem::take(&mut self.events)
         }
@@ -1182,7 +1183,7 @@ pub(crate) mod testutil {
     /// instead implement that trait for `DummyCtx<S, Id, Meta, Event>`. This
     /// allows for full test mocks to be written with a minimum of boilerplate
     /// code.
-    pub(crate) struct DummyCtx<S, Id = (), Meta = (), Event = ()> {
+    pub(crate) struct DummyCtx<S, Id = (), Meta = (), Event: Debug = ()> {
         state: S,
         timers: DummyTimerCtx<Id>,
         frames: DummyFrameCtx<Meta>,
@@ -1191,18 +1192,18 @@ pub(crate) mod testutil {
         events: DummyEventCtx<Event>,
     }
 
-    impl<S: Default, Id, Meta, Event> Default for DummyCtx<S, Id, Meta, Event> {
+    impl<S: Default, Id, Meta, Event: Debug> Default for DummyCtx<S, Id, Meta, Event> {
         fn default() -> DummyCtx<S, Id, Meta, Event> {
             DummyCtx::with_state(S::default())
         }
     }
 
-    impl<S, Id, Meta, Event> DummyNetworkContext for DummyCtx<S, Id, Meta, Event> {
+    impl<S, Id, Meta, Event: Debug> DummyNetworkContext for DummyCtx<S, Id, Meta, Event> {
         type TimerId = Id;
         type SendMeta = Meta;
     }
 
-    impl<S, Id, Meta, Event> DummyCtx<S, Id, Meta, Event> {
+    impl<S, Id, Meta, Event: Debug> DummyCtx<S, Id, Meta, Event> {
         /// Constructs a `DummyCtx` with the given state and default
         /// `DummyTimerCtx`, `DummyFrameCtx`, and `DummyCounterCtx`.
         pub(crate) fn with_state(state: S) -> DummyCtx<S, Id, Meta, Event> {
@@ -1271,37 +1272,39 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<S, Id, Meta, Event> AsRef<DummyInstantCtx> for DummyCtx<S, Id, Meta, Event> {
+    impl<S, Id, Meta, Event: Debug> AsRef<DummyInstantCtx> for DummyCtx<S, Id, Meta, Event> {
         fn as_ref(&self) -> &DummyInstantCtx {
             self.timers.as_ref()
         }
     }
 
-    impl<S, Id, Meta, Event> AsRef<DummyTimerCtx<Id>> for DummyCtx<S, Id, Meta, Event> {
+    impl<S, Id, Meta, Event: Debug> AsRef<DummyTimerCtx<Id>> for DummyCtx<S, Id, Meta, Event> {
         fn as_ref(&self) -> &DummyTimerCtx<Id> {
             &self.timers
         }
     }
 
-    impl<S, Id, Meta, Event> AsMut<DummyTimerCtx<Id>> for DummyCtx<S, Id, Meta, Event> {
+    impl<S, Id, Meta, Event: Debug> AsMut<DummyTimerCtx<Id>> for DummyCtx<S, Id, Meta, Event> {
         fn as_mut(&mut self) -> &mut DummyTimerCtx<Id> {
             &mut self.timers
         }
     }
 
-    impl<S, Id, Meta, Event> AsMut<DummyFrameCtx<Meta>> for DummyCtx<S, Id, Meta, Event> {
+    impl<S, Id, Meta, Event: Debug> AsMut<DummyFrameCtx<Meta>> for DummyCtx<S, Id, Meta, Event> {
         fn as_mut(&mut self) -> &mut DummyFrameCtx<Meta> {
             &mut self.frames
         }
     }
 
-    impl<S, Id, Meta, Event> AsRef<DummyCounterCtx> for DummyCtx<S, Id, Meta, Event> {
+    impl<S, Id, Meta, Event: Debug> AsRef<DummyCounterCtx> for DummyCtx<S, Id, Meta, Event> {
         fn as_ref(&self) -> &DummyCounterCtx {
             &self.counters
         }
     }
 
-    impl<S, Id: Debug + PartialEq, Meta, Event> TimerContext<Id> for DummyCtx<S, Id, Meta, Event> {
+    impl<S, Id: Debug + PartialEq, Meta, Event: Debug> TimerContext<Id>
+        for DummyCtx<S, Id, Meta, Event>
+    {
         fn schedule_timer_instant(&mut self, time: DummyInstant, id: Id) -> Option<DummyInstant> {
             self.timers.schedule_timer_instant(time, id)
         }
@@ -1319,13 +1322,15 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<S, Id, Meta, Event> EventContext<Event> for DummyCtx<S, Id, Meta, Event> {
+    impl<S, Id, Meta, Event: Debug> EventContext<Event> for DummyCtx<S, Id, Meta, Event> {
         fn on_event(&mut self, event: Event) {
             self.events.on_event(event)
         }
     }
 
-    impl<B: BufferMut, S, Id, Meta, Event> FrameContext<B, Meta> for DummyCtx<S, Id, Meta, Event> {
+    impl<B: BufferMut, S, Id, Meta, Event: Debug> FrameContext<B, Meta>
+        for DummyCtx<S, Id, Meta, Event>
+    {
         fn send_frame<SS: Serializer<Buffer = B>>(
             &mut self,
             metadata: Meta,
@@ -1335,7 +1340,7 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<S, Id, Meta, Event> RngContext for DummyCtx<S, Id, Meta, Event> {
+    impl<S, Id, Meta, Event: Debug> RngContext for DummyCtx<S, Id, Meta, Event> {
         type Rng = FakeCryptoRng<XorShiftRng>;
 
         fn rng(&self) -> &Self::Rng {
@@ -1347,7 +1352,7 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<S, Id, Meta, Event> DualStateContext<S, FakeCryptoRng<XorShiftRng>>
+    impl<S, Id, Meta, Event: Debug> DualStateContext<S, FakeCryptoRng<XorShiftRng>>
         for DummyCtx<S, Id, Meta, Event>
     {
         fn get_states_with(&self, _id0: (), _id1: ()) -> (&S, &FakeCryptoRng<XorShiftRng>) {
