@@ -22,6 +22,7 @@ source_set("mix") {
     "mix_thread.h",
     "packet.cc",
     "packet.h",
+    "pipeline_stage.cc",
     "pipeline_stage.h",
     "ptr_decls.h",
     "thread.h",
@@ -43,7 +44,10 @@ source_set("mix") {
 executable("mix_unittests") {
   testonly = true
 
-  sources = [ "packet_unittest.cc" ]
+  sources = [
+    "packet_unittest.cc",
+    "pipeline_stage_unittest.cc",
+  ]
 
   deps = [
     ":mix",

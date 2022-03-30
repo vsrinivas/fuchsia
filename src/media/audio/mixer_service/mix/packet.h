@@ -88,11 +88,11 @@ class Packet {
  private:
   Packet(const Format& format, Fixed start, int64_t length, void* payload);
 
-  const Format format_;
-  const Fixed start_;
-  const Fixed end_;
-  const int64_t length_;
-  void* const payload_;
+  Format format_;
+  Fixed start_;
+  Fixed end_;
+  int64_t length_;
+  void* payload_;
 };
 
 // Convenience for logging.
