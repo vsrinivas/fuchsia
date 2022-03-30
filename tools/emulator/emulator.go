@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -186,7 +187,11 @@ func UnpackFrom(path string, distroParams DistributionParams) (*Distribution, er
 		os.RemoveAll(unpackedPath)
 		return nil, err
 	}
-	return &Distribution{testDataDir: path, unpackedPath: unpackedPath, Emulator: distroParams.Emulator}, nil
+	return &Distribution{
+		testDataDir:  path,
+		unpackedPath: unpackedPath,
+		Emulator:     distroParams.Emulator,
+	}, nil
 }
 
 // Delete removes the emulator-related artifacts.
@@ -223,7 +228,10 @@ func (d *Distribution) TargetCPU() (Arch, error) {
 	return X64, fmt.Errorf("unknown target CPU: %s", buildinfo.TargetCPU)
 }
 
-func (d *Distribution) buildCommandLine(fvd *fvdpb.VirtualDevice, images build.ImageManifest) ([]string, error) {
+func (d *Distribution) buildCommandLine(
+	fvd *fvdpb.VirtualDevice,
+	images build.ImageManifest,
+) ([]string, error) {
 	if d.Emulator == Femu {
 		b := qemu.NewAEMUCommandBuilder()
 		b.SetBinary(d.systemPath(Arch(fvd.Hw.Arch)))
@@ -255,16 +263,44 @@ func (d *Distribution) Create(fvd *fvdpb.VirtualDevice) (*Instance, error) {
 	return d.create(
 		func(args []string) *exec.Cmd { return exec.Command(args[0], args[1:]...) },
 		fvd,
+		nil,
 	)
 }
 
 // CreateContext creates an instance of the emulator with the given parameters,
 // passing through ctx to the underlying exec.Cmd.
-func (d *Distribution) CreateContext(ctx context.Context, fvd *fvdpb.VirtualDevice) (*Instance, error) {
+func (d *Distribution) CreateContext(
+	ctx context.Context,
+	fvd *fvdpb.VirtualDevice,
+) (*Instance, error) {
 	return d.create(
 		func(args []string) *exec.Cmd { return exec.CommandContext(ctx, args[0], args[1:]...) },
 		fvd,
+		nil,
 	)
+}
+
+// CreateContextWithAuthorizedKeys creates an instance of the emulator, passing through ctx to the
+// underlying exec.Cmd, and updating the virtual device's initrd to contain the specified authorized
+// keys.
+func (d *Distribution) CreateContextWithAuthorizedKeys(
+	ctx context.Context,
+	fvd *fvdpb.VirtualDevice,
+	hostPathZbiBinary, hostPathAuthorizedKeys string,
+) (*Instance, error) {
+	return d.create(
+		func(args []string) *exec.Cmd { return exec.CommandContext(ctx, args[0], args[1:]...) },
+		fvd,
+		&addAuthorizedKeys{
+			hostPathZbiBinary:      hostPathZbiBinary,
+			hostPathAuthorizedKeys: hostPathAuthorizedKeys,
+		},
+	)
+}
+
+type addAuthorizedKeys = struct {
+	hostPathZbiBinary      string
+	hostPathAuthorizedKeys string
 }
 
 // The create method is structured like this because the context docs explicitly warn
@@ -273,10 +309,38 @@ func (d *Distribution) CreateContext(ctx context.Context, fvd *fvdpb.VirtualDevi
 func (d *Distribution) create(
 	makeCmd func(args []string) *exec.Cmd,
 	fvd *fvdpb.VirtualDevice,
+	addAuthorizedKeys *addAuthorizedKeys,
 ) (*Instance, error) {
 	images, err := d.loadImageManifest()
 	if err != nil {
 		return nil, err
+	}
+
+	if addAuthorizedKeys != nil {
+		hostPathZbiBinary := addAuthorizedKeys.hostPathZbiBinary
+		hostPathAuthorizedKeys := addAuthorizedKeys.hostPathAuthorizedKeys
+
+		// This will get cleaned up by d.Delete().
+		root, err := os.MkdirTemp(d.unpackedPath, "zbi-tmp-dir-*")
+		if err != nil {
+			return nil, fmt.Errorf("error making temp directory in %s: %w", d.unpackedPath, err)
+		}
+
+		if err := runZbi(runZbiArgs{
+			imagesIWillMutateThis: images,
+			workingDirectory:      root,
+			hostPathZbiBinary:     hostPathZbiBinary,
+			initrdName:            fvd.Initrd,
+			zbiArgs: []string{
+				"--entry",
+				fmt.Sprintf("data/ssh/authorized_keys=%s", hostPathAuthorizedKeys),
+			},
+		}); err != nil {
+			if rmErr := os.RemoveAll(root); rmErr != nil {
+				log.Println(rmErr)
+			}
+			return nil, err
+		}
 	}
 
 	args, err := d.buildCommandLine(fvd, images)
@@ -299,6 +363,42 @@ func (d *Distribution) create(
 	return i, nil
 }
 
+type runZbiArgs struct {
+	imagesIWillMutateThis []build.Image
+	workingDirectory      string
+	hostPathZbiBinary     string
+	initrdName            string
+	zbiArgs               []string
+}
+
+func runZbi(args runZbiArgs) error {
+	images := args.imagesIWillMutateThis
+	root := args.workingDirectory
+
+	oldZBIPath := ""
+	newZBIPath := filepath.Join(root, "a.zbi")
+
+	// Replace the ZBI in the image manifest with our modified one.
+	for i, image := range images {
+		if image.Name == args.initrdName && image.Type == "zbi" {
+			oldZBIPath = image.Path
+			images[i].Path = newZBIPath
+			break
+		}
+	}
+
+	cmd := exec.Command(
+		args.hostPathZbiBinary,
+		append([]string{"-o", newZBIPath, oldZBIPath}, args.zbiArgs...)...)
+
+	var stderrBuf bytes.Buffer
+	cmd.Stderr = &stderrBuf
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("error running %q: %w; stderr:\n%s", cmd, err, stderrBuf.String())
+	}
+	return nil
+}
+
 // RunNonInteractive runs an instance of the emulator that runs a single command and
 // returns the log that results from doing so.
 //
@@ -317,7 +417,10 @@ func (d *Distribution) create(
 // file system, write the commands to run, build the augmented .zbi to
 // be used to boot. We then use Start() and wait for shutdown.
 // Finally, extract and return the log from the minfs disk.
-func (d *Distribution) RunNonInteractive(toRun, hostPathMinfsBinary, hostPathZbiBinary string, fvd *fvdpb.VirtualDevice) (string, string, error) {
+func (d *Distribution) RunNonInteractive(
+	toRun, hostPathMinfsBinary, hostPathZbiBinary string,
+	fvd *fvdpb.VirtualDevice,
+) (string, string, error) {
 	root, err := ioutil.TempDir("", "qemu")
 	if err != nil {
 		return "", "", err
@@ -329,7 +432,10 @@ func (d *Distribution) RunNonInteractive(toRun, hostPathMinfsBinary, hostPathZbi
 	return log, logerr, err
 }
 
-func (d *Distribution) runNonInteractive(root, toRun, hostPathMinfsBinary, hostPathZbiBinary string, fvd *fvdpb.VirtualDevice) (string, string, error) {
+func (d *Distribution) runNonInteractive(
+	root, toRun, hostPathMinfsBinary, hostPathZbiBinary string,
+	fvd *fvdpb.VirtualDevice,
+) (string, string, error) {
 	// Write runcmds that mounts the results disk, runs the requested command, and
 	// shuts down.
 	script := `waitfor class=block topo=/dev/pci-00:06.0/virtio-block/block timeout=60000
@@ -354,21 +460,13 @@ dm poweroff
 		return "", "", err
 	}
 
-	oldZBIPath := ""
-	newZBIPath := filepath.Join(root, "a.zbi")
-
-	// Replace the ZBI in the image manifest with our modified one.
-	for i, image := range images {
-		if image.Name == fvd.Initrd && image.Type == "zbi" {
-			oldZBIPath = image.Path
-			images[i].Path = newZBIPath
-			break
-		}
-	}
-
-	// Create the new initrd that references the runcmds file.
-	cmd = exec.Command(hostPathZbiBinary, "-o", newZBIPath, oldZBIPath, "-e", "runcmds="+runcmds)
-	if err := cmd.Run(); err != nil {
+	if err := runZbi(runZbiArgs{
+		imagesIWillMutateThis: images,
+		workingDirectory:      root,
+		hostPathZbiBinary:     hostPathZbiBinary,
+		initrdName:            fvd.Initrd,
+		zbiArgs:               []string{"-e", "runcmds=" + runcmds},
+	}); err != nil {
 		return "", "", err
 	}
 
@@ -474,7 +572,9 @@ func (d *Distribution) loadImageManifest() (build.ImageManifest, error) {
 	var images build.ImageManifest
 
 	// ImageManifestPath is given as a relative path from test_data/emulator.
-	imageManifestPath := filepath.Clean(filepath.Join(d.testDataDir, "emulator", buildinfo.ImageManifestPath))
+	imageManifestPath := filepath.Clean(
+		filepath.Join(d.testDataDir, "emulator", buildinfo.ImageManifestPath),
+	)
 	if err := jsonutil.ReadFromFile(imageManifestPath, &images); err != nil {
 		return nil, fmt.Errorf("json read %q: %w", imageManifestPath, err)
 	}
@@ -626,7 +726,8 @@ func (i *Instance) WaitForLogMessages(msgs []string) error {
 	return i.checkForLogMessages(i.stdout, msgs)
 }
 
-// WaitForAnyLogMessage reads log messages from the emulator instance looking for any line that contains a message from msgs.
+// WaitForAnyLogMessage reads log messages from the emulator instance looking for any line that
+// contains a message from msgs.
 // Returns the first message that was found, or an error.
 func (i *Instance) WaitForAnyLogMessage(msgs ...string) (string, error) {
 	for {
@@ -666,7 +767,10 @@ func (i *Instance) WaitForLogMessageAssertNotSeen(msg string, notSeen string) er
 // AssertLogMessageNotSeenWithinTimeout will fail if |notSeen| is seen within the
 // |timeout| period. This function will timeout as success if more than |timeout| has
 // passed without seeing |notSeen|.
-func (i *Instance) AssertLogMessageNotSeenWithinTimeout(notSeen string, timeout time.Duration) error {
+func (i *Instance) AssertLogMessageNotSeenWithinTimeout(
+	notSeen string,
+	timeout time.Duration,
+) error {
 	// ReadString is blocking, we need to make sure it respects the global timeout.
 	seen := make(chan struct{})
 	stop := make(chan struct{})
@@ -747,7 +851,8 @@ func (i *Instance) checkForLogMessages(b *bufio.Reader, msgs []string) error {
 	}
 }
 
-// CaptureLinesContaining returns all the lines that contain the given msg, up until a line containing stop is found.
+// CaptureLinesContaining returns all the lines that contain the given msg, up until a line
+// containing stop is found.
 func (i *Instance) CaptureLinesContaining(msg string, stop string) ([]string, error) {
 	res := []string{}
 	for {
