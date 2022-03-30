@@ -9,11 +9,11 @@ Fuchsia, see [Session Framework](/docs/concepts/session/introduction.md)
 ## Building
 
 Add the `session_manager` component to builds by including `--with-base
-//src/session` in the `fx set` invocation followed by rebuilding and re-paving
-the device.
+//src/session/bin/session_manager` in the `fx set` invocation followed by
+rebuilding and re-paving the device.
 
 Product configurations built on Session Framework (such as `fx set
-workstation.x64`) include `//src/session` by default.
+workstation.x64`) include `//src/session/bin/session_manager` by default.
 
 ## Running
 
@@ -37,26 +37,19 @@ ffx session launch fuchsia-pkg://fuchsia.com/your_session#meta/your_session.cm
 `session_manager` attempts to launch a session on boot based on the contents of
 its `session_url` configuration parameter.
 
-To boot into a session, create a configuration file that specifies which session
-to launch on boot:
+To boot into a session, include `session_manager` and the session component in
+the base package set and assign the URL of the session component to the product
+configuration:
 
 ```
-{ "session_url": "fuchsia-pkg://fuchsia.com/your_package#meta/your_session.cm" }
+fx set core.qemu-x64 \
+  --with-base //src/session/bin/session_manager \
+  --with-base //path/to/your_session \
+  --args=product_config.session_url="fuchsia-pkg://fuchsia.com/your_package#meta/your_session.cm"
 ```
 
-Add to your `BUILD.gn` file:
-
-```
-import("//src/session/build/session_manager.gni")
-
-session_manager_package("your_session_manager") {
-  config = "path/to/config.json"
-}
-```
-
-Then, ensure that the target `:your_session_manager` is included in the base
-package set (for example, using `--with-base`, or as a direct dependency of a
-product build group).
+This can also be configured directly in a product's definition `*.gni` files
+or via `fx args`.
 
 Re-build, re-pave, and restart your device and it will boot into
 `session_manager` and launch your session.

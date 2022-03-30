@@ -16,7 +16,8 @@ PackageName = str
 FileHash = str
 T = TypeVar('T')
 
-MISMATCH_EXCEPTIONS = {}
+# packages which we knowingly mutate in the product assembly process
+MISMATCH_EXCEPTIONS = {"session_manager"}
 
 
 def compare_pkg_sets(

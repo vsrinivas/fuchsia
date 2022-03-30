@@ -4,6 +4,7 @@
 
 use crate as image_assembly_config;
 use crate::FileEntry;
+use anyhow::ensure;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -36,7 +37,10 @@ impl Default for BuildType {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct ProductConfig {}
+pub struct ProductConfig {
+    /// Start URL to pass to `session_manager`.
+    session_url: Option<String>,
+}
 
 impl ProductAssemblyConfig {
     /// Convert the high-level description of product configuration into a series of configuration
@@ -44,17 +48,69 @@ impl ProductAssemblyConfig {
     ///
     /// Returns a map from package names to configuration updates.
     pub fn define_repackaging(&self) -> anyhow::Result<StructuredConfigPatches> {
-        Ok(BTreeMap::new())
+        let mut patches = PatchesBuilder::default();
+
+        if let Some(session_url) = &self.product.session_url {
+            ensure!(
+                session_url.starts_with("fuchsia-pkg://"),
+                "valid session URLs must start with `fuchsia-pkg://`, got `{}`",
+                session_url
+            );
+            patches
+                .package("session_manager")
+                .component("meta/session_manager.cm")
+                .field("session_url", session_url.to_owned());
+        }
+
+        Ok(patches.inner)
+    }
+}
+
+/// A builder for collecting all of the structure configuration repackaging to perform in a given
+/// system.
+#[derive(Default)]
+struct PatchesBuilder {
+    inner: StructuredConfigPatches,
+}
+
+impl PatchesBuilder {
+    fn package(&mut self, name: &str) -> &mut PackageConfigPatch {
+        self.inner.entry(name.to_string()).or_default()
     }
 }
 
 /// A map from package names to patches to apply to their structured configuration.
 pub type StructuredConfigPatches = BTreeMap<String, PackageConfigPatch>;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PackageConfigPatch {
     /// A map from manifest paths within the package namespace to the values for the component.
-    pub components: BTreeMap<String, BTreeMap<String, serde_json::Value>>,
+    pub components: BTreeMap<String, ComponentConfig>,
+}
+
+impl PackageConfigPatch {
+    fn component(&mut self, pkg_path: &str) -> &mut ComponentConfig {
+        assert!(
+            self.components.insert(pkg_path.to_owned(), Default::default()).is_none(),
+            "each component's config can only be defined once"
+        );
+        self.components.get_mut(pkg_path).expect("just inserted this value")
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct ComponentConfig {
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl ComponentConfig {
+    fn field(&mut self, key: &str, value: impl Into<serde_json::Value>) -> &mut Self {
+        assert!(
+            self.fields.insert(key.to_owned(), value.into()).is_none(),
+            "each configuration key can only be defined once"
+        );
+        self
+    }
 }
 
 /// A bundle of inputs to be used in the assembly of a product.  This is closely

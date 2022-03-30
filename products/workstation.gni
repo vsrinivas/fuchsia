@@ -21,7 +21,7 @@ base_package_labels += [
   "//src/dart:dart_jit_product",
   "//src/developer/memory/buckets:workstation_memory_monitor_config",
   "//src/developer/ssh-key-manager",
-  "//src/experiences/session_shells/ermine/session:session_manager",
+  "//src/session/bin/session_manager",
   "//src/fonts",
   "//src/fonts:open-fonts",
   "//src/fonts:open-fonts-collection",
@@ -82,6 +82,8 @@ cache_package_labels += [
   "//src/ui/scenic",
   "//src/ui:workstation",
 ]
+product_config.session_url =
+    "fuchsia-pkg://fuchsia.com/workstation_session#meta/workstation_routing.cm"
 
 # Add Bluetooth packages
 core_realm_shards +=

@@ -75,6 +75,7 @@ rustc_library("lib") {
 }
 
 fuchsia_component_manifest("manifest") {
+  component_name = "session_manager"
   manifest = "meta/session_manager.cml"
   restricted_features = [ "structured_config" ]
 }
@@ -100,9 +101,13 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-# Creates a session_manager package that does not launch any session on startup.
-session_manager_package("session_manager_for_dev") {
-  config = "session_manager_for_dev_config.json"
+fuchsia_component("session_manager_comp") {
+  cm_target = ":manifest"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("session_manager") {
+  deps = [ ":session_manager_comp" ]
 }
 
 fuchsia_unittest_package("session_manager_tests") {

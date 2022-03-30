@@ -225,7 +225,7 @@ impl ImageAssemblyConfigBuilder {
                     .with_context(|| format!("reading existing manifest for {}", package))?;
                 for (component, values) in &config.components {
                     repackager
-                        .set_component_config(component, values.clone())
+                        .set_component_config(component, values.fields.clone())
                         .with_context(|| format!("setting new config for {}", component))?;
                 }
                 let new_path = repackager
