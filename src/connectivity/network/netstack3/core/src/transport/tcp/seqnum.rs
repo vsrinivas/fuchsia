@@ -4,7 +4,9 @@
 
 //! TCP sequence numbers and operations on them.
 
-use core::{fmt, ops};
+use core::{convert::TryFrom as _, fmt, num::TryFromIntError, ops};
+
+use explicit::ResultExt as _;
 
 /// Sequence number of a transferred TCP segment.
 ///
@@ -142,13 +144,17 @@ impl WindowSize {
     // in the state module once `Option::unwrap` is stable.
     pub(super) const DEFAULT: WindowSize = WindowSize(65535);
 
-    pub(super) const fn new(wnd: u32) -> Option<Self> {
+    pub const fn from_u32(wnd: u32) -> Option<Self> {
         let WindowSize(max) = Self::MAX;
         if wnd > max {
             None
         } else {
             Some(Self(wnd))
         }
+    }
+
+    pub(super) fn new(wnd: usize) -> Option<Self> {
+        u32::try_from(wnd).ok_checked::<TryFromIntError>().and_then(WindowSize::from_u32)
     }
 }
 
@@ -268,12 +274,12 @@ mod tests {
 
         #[test]
         fn window_size_less_than_or_eq_to_max(wnd in 0..=WindowSize::MAX.0) {
-            assert_eq!(WindowSize::new(wnd), Some(WindowSize(wnd)));
+            assert_eq!(WindowSize::from_u32(wnd), Some(WindowSize(wnd)));
         }
 
         #[test]
         fn window_size_greater_than_max(wnd in WindowSize::MAX.0+1..=u32::MAX) {
-            assert_eq!(WindowSize::new(wnd), None);
+            assert_eq!(WindowSize::from_u32(wnd), None);
         }
     }
 }
