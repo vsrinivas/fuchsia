@@ -88,8 +88,7 @@ bool DeviceAddress::IsStaticRandom() const {
 }
 
 std::size_t DeviceAddress::Hash() const {
-  const Type type_for_hashing = IsPublic() ? Type::kBREDR : type_;
-  std::size_t const h1(std::hash<Type>{}(type_for_hashing));
+  std::size_t const h1(std::hash<int>{}(static_cast<int>(type_)));
   std::size_t h2 = value_.Hash();
 
   return h1 ^ (h2 << 1);

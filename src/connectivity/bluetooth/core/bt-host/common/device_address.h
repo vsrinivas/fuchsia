@@ -38,12 +38,12 @@ class DeviceAddressBytes {
   void SetToZero();
 
   // Returns a view over the raw bytes of this address.
-  BufferView bytes() const { return BufferView(bytes_.data(), bytes_.size()); }
+  inline BufferView bytes() const { return BufferView(bytes_.data(), bytes_.size()); }
 
   // Comparison operators.
-  bool operator==(const DeviceAddressBytes& other) const { return bytes_ == other.bytes_; }
-  bool operator!=(const DeviceAddressBytes& other) const { return !(*this == other); }
-  bool operator<(const DeviceAddressBytes& other) const { return bytes_ < other.bytes_; }
+  inline bool operator==(const DeviceAddressBytes& other) const { return bytes_ == other.bytes_; }
+  inline bool operator!=(const DeviceAddressBytes& other) const { return !(*this == other); }
+  inline bool operator<(const DeviceAddressBytes& other) const { return bytes_ < other.bytes_; }
 
   // Returns a hash of the contents of this address.
   std::size_t Hash() const;
@@ -58,10 +58,6 @@ static_assert(sizeof(DeviceAddressBytes) == 6, "DeviceAddressBytes must take up 
 // DeviceAddress represents a Bluetooth device address, encapsulating the 48-bit
 // device address and the address type. A DeviceAddress is comparable and can be
 // used as a key in ordered and unordered associative STL containers.
-//
-// TODO(fxbug.dev/2761): Using the underlying DeviceAddressBytes for equality, comparison, and
-// hashing effectively obsoletes DeviceAddressBytes as a separate class. Removing the |type_| field
-// (see bug for rationale) will make this class compatible with serialization.
 class DeviceAddress {
  public:
   // Bluetooth device address types.
@@ -93,16 +89,13 @@ class DeviceAddress {
 
   // Comparison operators. The equality and less-than operators are needed to
   // support unordered and ordered containers, respectively.
-  bool operator==(const DeviceAddress& other) const {
-    return IsTypeCompatible(other) && value_ == other.value_;
+  inline bool operator==(const DeviceAddress& other) const {
+    return type_ == other.type_ && value_ == other.value_;
   }
-  bool operator!=(const DeviceAddress& other) const { return !(*this == other); }
-  bool operator<(const DeviceAddress& other) const {
+  inline bool operator!=(const DeviceAddress& other) const { return !(*this == other); }
+  inline bool operator<(const DeviceAddress& other) const {
     // Treat |type_| as the higher-order bits
-    if (type_ < other.type_ && !IsTypeCompatible(other)) {
-      return true;
-    }
-    return IsTypeCompatible(other) && value_ < other.value_;
+    return type_ < other.type_ || (type_ == other.type_ && value_ < other.value_);
   }
 
   // Returns true if this address is a BR/EDR BD_ADDR or LE public address.
@@ -124,11 +117,6 @@ class DeviceAddress {
   std::string ToString() const;
 
  private:
-  // True if both addresses have types indicating they're used for the same purpose
-  bool IsTypeCompatible(const DeviceAddress& other) const {
-    return (type_ == other.type_) || (IsPublic() && other.IsPublic());
-  }
-
   Type type_;
   DeviceAddressBytes value_;
 };
