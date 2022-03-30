@@ -259,6 +259,9 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	}
 	if ffx != nil {
 		defer ffx.Stop()
+		if err := ffx.SetLogLevel(ffxutil.Trace); err != nil {
+			return err
+		}
 	}
 
 	for _, t := range targetSlice {

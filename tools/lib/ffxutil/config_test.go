@@ -5,9 +5,11 @@
 package ffxutil
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -22,6 +24,9 @@ func TestFFXConfig(t *testing.T) {
 		t.Errorf("want socket at %s, got: %s", expectedSocket, config.socket)
 	}
 	config.Set("key", "value")
+	if err := config.SetJsonPointer("/log/level", "Trace"); err != nil {
+		t.Errorf("config.SetJsonPointer(%q, %q) = %s", "/log/level", "Trace", err)
+	}
 	expectedConfig := map[string]interface{}{
 		"overnet": map[string]string{
 			"socket": expectedSocket,
@@ -54,8 +59,29 @@ func TestFFXConfig(t *testing.T) {
 	if !containsSocketPath {
 		t.Errorf("Missing socket path in env; want ASCENDD=%s, got: %v", expectedSocket, config.env)
 	}
-	if err := config.ToFile(filepath.Join(tmpDir, "ffx_config")); err != nil {
+	configFilepath := filepath.Join(tmpDir, "ffx_config")
+	if err := config.ToFile(configFilepath); err != nil {
 		t.Errorf("failed to write config to file: %s", err)
+	}
+	configFromFile, err := configFromFile(configFilepath)
+	if err != nil {
+		t.Errorf("failed to read config from file %q: %s", configFilepath, err)
+	}
+	if diff := cmp.Diff(
+		config,
+		configFromFile,
+		cmp.Exporter(func(ty reflect.Type) bool { return ty == reflect.TypeOf(*config) }),
+		// Without this, map[string]interface{} might compare differently to e.g.
+		// map[string](map[string]interface{}) even when they are semantically equivalent.
+		cmp.Transformer("into_json", func(m map[string]interface{}) string {
+			b, err := json.MarshalIndent(m, "", "  ")
+			if err != nil {
+				panic(err)
+			}
+			return string(b)
+		}),
+	); diff != "" {
+		t.Errorf("config != configFromFile (-config +configFromFile):\n%s", diff)
 	}
 	if err := config.Close(); err != nil {
 		t.Errorf("failed to close config: %s", err)

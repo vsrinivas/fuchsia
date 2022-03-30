@@ -16,6 +16,7 @@ go_library("ffxutil") {
   ]
   deps = [
     ":constants",
+    "//third_party/golibs:github.com/xeipuuv/gojsonpointer",
     "//tools/lib/jsonutil",
     "//tools/lib/subprocess",
   ]

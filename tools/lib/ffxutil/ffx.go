@@ -22,9 +22,27 @@ const (
 	// The name of the snapshot zip file that gets outputted by `ffx target snapshot`.
 	// Keep in sync with //src/developer/ffx/plugins/target/snapshot/src/lib.rs.
 	snapshotZipName = "snapshot.zip"
+	// The JSON Pointer (https://tools.ietf.org/html/rfc6901) to log level in the config.
+	logLevelJsonPointer = "/log/level"
 )
 
-func runCommand(ctx context.Context, runner *subprocess.Runner, stdout, stderr io.Writer, args ...string) error {
+type LogLevel string
+
+const (
+	Off   LogLevel = "Off"
+	Error LogLevel = "Error"
+	Warn  LogLevel = "Warn"
+	Info  LogLevel = "Info"
+	Debug LogLevel = "Debug"
+	Trace LogLevel = "Trace"
+)
+
+func runCommand(
+	ctx context.Context,
+	runner *subprocess.Runner,
+	stdout, stderr io.Writer,
+	args ...string,
+) error {
 	return runner.RunWithStdin(ctx, args, stdout, stderr, nil)
 }
 
@@ -44,7 +62,13 @@ type FFXInstance struct {
 }
 
 // NewFFXInstance creates an isolated FFXInstance.
-func NewFFXInstance(ffxPath string, dir string, env []string, target, sshKey string, outputDir string) (*FFXInstance, error) {
+func NewFFXInstance(
+	ffxPath string,
+	dir string,
+	env []string,
+	target, sshKey string,
+	outputDir string,
+) (*FFXInstance, error) {
 	if ffxPath == "" {
 		return nil, nil
 	}
@@ -73,7 +97,11 @@ func NewFFXInstance(ffxPath string, dir string, env []string, target, sshKey str
 	return ffx, nil
 }
 
-func FFXInstanceWithConfig(ffxPath, dir string, env []string, target, configPath string) *FFXInstance {
+func FFXInstanceWithConfig(
+	ffxPath, dir string,
+	env []string,
+	target, configPath string,
+) *FFXInstance {
 	if ffxPath == "" {
 		return nil
 	}
@@ -95,6 +123,22 @@ func (f *FFXInstance) SetTarget(target string) {
 func (f *FFXInstance) SetStdoutStderr(stdout, stderr io.Writer) {
 	f.stdout = stdout
 	f.stderr = stderr
+}
+
+// SetLogLevel sets the log-level in the ffx instance's associated config.
+func (f *FFXInstance) SetLogLevel(level LogLevel) error {
+	levelStr := string(level)
+	if f.Config == nil {
+		config, err := configFromFile(f.ConfigPath)
+		if err != nil {
+			return err
+		}
+		f.Config = config
+	}
+	if err := f.Config.SetJsonPointer(logLevelJsonPointer, levelStr); err != nil {
+		return err
+	}
+	return f.Config.ToFile(f.ConfigPath)
 }
 
 // Run runs ffx with the associated config and provided args.
@@ -157,7 +201,12 @@ func (f *FFXInstance) TargetWait(ctx context.Context) error {
 }
 
 // Test runs a test suite.
-func (f *FFXInstance) Test(ctx context.Context, tests []TestDef, outDir string, args ...string) (*TestRunResult, error) {
+func (f *FFXInstance) Test(
+	ctx context.Context,
+	tests []TestDef,
+	outDir string,
+	args ...string,
+) (*TestRunResult, error) {
 	// Write the test def to a file and store in the outDir to upload with the test outputs.
 	if err := os.MkdirAll(outDir, os.ModePerm); err != nil {
 		return nil, err
@@ -166,9 +215,22 @@ func (f *FFXInstance) Test(ctx context.Context, tests []TestDef, outDir string, 
 	if err := jsonutil.WriteToFile(testFile, tests); err != nil {
 		return nil, err
 	}
-	// Create a new subdirectory within outDir to pass to --output-directory which is expected to be empty.
+	// Create a new subdirectory within outDir to pass to --output-directory which is expected to be
+	// empty.
 	testOutputDir := filepath.Join(outDir, "test-outputs")
-	f.RunWithTarget(ctx, append([]string{"test", "run", "--continue-on-timeout", "--test-file", testFile, "--output-directory", testOutputDir}, args...)...)
+	f.RunWithTarget(
+		ctx,
+		append(
+			[]string{
+				"test",
+				"run",
+				"--continue-on-timeout",
+				"--test-file",
+				testFile,
+				"--output-directory",
+				testOutputDir,
+			},
+			args...)...)
 
 	return getRunResult(testOutputDir)
 }
@@ -180,7 +242,10 @@ func (f *FFXInstance) Snapshot(ctx context.Context, outDir string, snapshotFilen
 		return err
 	}
 	if snapshotFilename != "" && snapshotFilename != snapshotZipName {
-		return os.Rename(filepath.Join(outDir, snapshotZipName), filepath.Join(outDir, snapshotFilename))
+		return os.Rename(
+			filepath.Join(outDir, snapshotZipName),
+			filepath.Join(outDir, snapshotFilename),
+		)
 	}
 	return nil
 }
