@@ -615,9 +615,11 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> Established<I, R, S> {
             let nwritten = rcv.buffer.write_at(offset, contents.data());
             let readable = rcv.assembler.insert(seg_seq..seg_seq + nwritten);
             rcv.buffer.make_readable(readable);
+            EstablishedOnSegmentDisposition::SendAck(Segment::ack(snd.nxt, rcv.nxt(), rcv.wnd()))
+        } else {
+            // TODO(https://fxbug.dev/93522): Handle FIN.
+            EstablishedOnSegmentDisposition::Ignore
         }
-        // TODO(https://fxbug.dev/93522): Handle FIN.
-        EstablishedOnSegmentDisposition::SendAck(Segment::ack(snd.nxt, rcv.nxt(), rcv.wnd()))
     }
 }
 
@@ -1006,6 +1008,9 @@ mod test {
     => EstablishedOnSegmentDisposition::SendAck(
         Segment::ack(ISS_1 + 1, ISS_2 + 1, WindowSize::new(1).unwrap())
     ); "unacceptable ack")]
+    #[test_case(
+        Segment::ack(ISS_2 + 1, ISS_1 + 1, WindowSize::DEFAULT)
+    => EstablishedOnSegmentDisposition::Ignore; "pure ack")]
     fn segment_arrives_when_established(incoming: Segment<()>) -> EstablishedOnSegmentDisposition {
         let mut established = Established {
             snd: Send {
@@ -1284,7 +1289,7 @@ mod test {
             assert_eq!(
                 established
                     .on_segment(Segment::ack(ISS_2 + 1, ack, WindowSize::new(win).unwrap()), now),
-                Some(Segment::ack(ack, ISS_2 + 1, WindowSize::new(BUFFER_SIZE_U32).unwrap()))
+                None,
             );
         };
         // Open up the window by 1 byte.
