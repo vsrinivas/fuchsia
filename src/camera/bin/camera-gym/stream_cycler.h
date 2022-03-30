@@ -84,6 +84,16 @@ class StreamCycler {
   // Utility to return what the next config_index should be.
   uint32_t NextConfigIndex();
 
+  // LateChecker: Update the timestamp because a new frame arrived.
+  void ResetStreamWatchdog(uint32_t stream_index);
+
+  // LateChecker: Restart all watchdog timers
+  // For purposes like the start of streaming, etc.
+  void ResetAllWatchdogs();
+
+  // LateChecker: See if any frame arrival deadlines expired.
+  void CheckAllWatchdogs();
+
   // Manual mode entry points:
   void PostedExecuteCommand(fuchsia::camera::gym::Command command, CommandStatusHandler handler);
 
@@ -106,6 +116,9 @@ class StreamCycler {
   std::vector<fuchsia::camera3::Configuration> configurations_;
 
   bool manual_mode_;
+
+  // Are the camera streams currently muted?
+  bool muted_ = false;
 
   // Only set by WatchCurrentConfigurationCallback().
   // Only used by ConnectToAllStreams() and NextConfigIndex().
@@ -132,6 +145,7 @@ class StreamCycler {
         source_highlight;  // Stream on which to highlight this stream's crop region.
     std::optional<fuchsia::math::RectF> highlight;
     fuchsia::sysmem::ImageFormat_2 image_format;
+    zx::time last_received;  // Last timestamp this stream received a frame.
   };
   std::map<uint32_t, StreamInfo> stream_infos_;
 
