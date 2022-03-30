@@ -25,7 +25,7 @@ source_set("devfs_exporter") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_llcpp",
-    "//src/lib/storage/vfs/cpp",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

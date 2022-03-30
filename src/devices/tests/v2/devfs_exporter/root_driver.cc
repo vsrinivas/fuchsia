@@ -72,8 +72,17 @@ class RootDriver : public fidl::WireServer<ft::Device> {
     }
 
     // Create the devfs exporter.
-    auto exporter =
-        driver::DevfsExporter::Create(ns_, dispatcher_, outgoing_.vfs(), outgoing_.svc_dir());
+    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    if (endpoints.is_error()) {
+      return zx::error(endpoints.status_value());
+    }
+    status = outgoing_.vfs().Serve(outgoing_.svc_dir(), endpoints->server.TakeChannel(),
+                                   fs::VnodeConnectionOptions::ReadWrite());
+    if (status != ZX_OK) {
+      return zx::error(status);
+    }
+    auto exporter = driver::DevfsExporter::Create(
+        ns_, dispatcher_, fidl::WireSharedClient(std::move(endpoints->client), dispatcher_));
     if (exporter.is_error()) {
       return exporter.take_error();
     }

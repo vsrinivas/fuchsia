@@ -342,14 +342,6 @@ result<void, zx_status_t> Driver::LoadDriver(std::tuple<zx::vmo, zx::vmo>& vmos)
   }
   inner_logger_ = std::move(*inner_logger);
 
-  // Create the devfs exporter.
-  auto exporter =
-      driver::DevfsExporter::Create(ns_, dispatcher_, outgoing_.vfs(), outgoing_.svc_dir());
-  if (exporter.is_error()) {
-    return error(exporter.error_value());
-  }
-  exporter_ = std::move(*exporter);
-
   return ok();
 }
 
@@ -529,7 +521,7 @@ zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device
                     // TODO(fxdebug.dev/90735): When DriverDevelopment works in DFv2, don't print
                     // this.
                     FDF_LOG(INFO, "Created /dev/%s", child->topological_path().data());
-                    interop_.ExportChild(&child->compat_child());
+                    return interop_.ExportChild(&child->compat_child());
                   })
                   .and_then([this, child]() {
                     // We have to create the node for the device after we've exported the

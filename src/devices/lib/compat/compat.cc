@@ -92,8 +92,21 @@ zx::status<Interop> Interop::Create(async_dispatcher_t* dispatcher, const driver
   interop.ns_ = ns;
   interop.outgoing_ = outgoing;
 
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
+  }
+  // Serve a connection to `svc_dir_`.
+  zx_status_t status =
+      interop.outgoing_->vfs().Serve(interop.outgoing_->svc_dir(), endpoints->server.TakeChannel(),
+                                     fs::VnodeConnectionOptions::ReadWrite());
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+
   auto exporter = driver::DevfsExporter::Create(
-      *interop.ns_, interop.dispatcher_, interop.outgoing_->vfs(), interop.outgoing_->svc_dir());
+      *interop.ns_, interop.dispatcher_,
+      fidl::WireSharedClient(std::move(endpoints->client), dispatcher));
   if (exporter.is_error()) {
     return zx::error(exporter.error_value());
   }

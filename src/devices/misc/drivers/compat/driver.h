@@ -108,8 +108,6 @@ class Driver {
   driver::Logger inner_logger_;
   zx::resource root_resource_;
 
-  driver::DevfsExporter exporter_;
-
   Interop interop_;
 
   // NOTE: Must be the last member.

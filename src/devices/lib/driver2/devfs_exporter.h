@@ -11,8 +11,6 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/devices/lib/driver2/namespace.h"
-#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
-#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
 namespace driver {
 
@@ -23,8 +21,7 @@ class DevfsExporter {
   // fuchsia.device.fs.Exporter, and `svc_dir` will be used to find the services
   // to export.
   static zx::status<DevfsExporter> Create(const Namespace& ns, async_dispatcher_t* dispatcher,
-                                          fs::SynchronousVfs& vfs,
-                                          const fbl::RefPtr<fs::PseudoDir>& svc_dir);
+                                          fidl::WireSharedClient<fuchsia_io::Directory> svc_dir);
 
   DevfsExporter() = default;
 
@@ -42,12 +39,17 @@ class DevfsExporter {
   }
 
  private:
-  DevfsExporter(fidl::WireSharedClient<fuchsia_device_fs::Exporter> exporter,
-                fs::SynchronousVfs& vfs, const fbl::RefPtr<fs::PseudoDir>& svc_dir);
+  DevfsExporter(async_dispatcher_t* dispatcher,
+                fidl::WireSharedClient<fuchsia_device_fs::Exporter> exporter,
+                fidl::WireSharedClient<fuchsia_io::Directory> svc_dir);
 
+  fpromise::promise<void, zx_status_t> ExportImpl(std::string_view service_path,
+                                                  std::string_view devfs_path,
+                                                  uint32_t protocol_id = 0) const;
+
+  async_dispatcher_t* dispatcher_;
   fidl::WireSharedClient<fuchsia_device_fs::Exporter> exporter_;
-  fs::SynchronousVfs* vfs_ = nullptr;
-  fbl::RefPtr<fs::PseudoDir> svc_dir_;
+  fidl::WireSharedClient<fuchsia_io::Directory> svc_dir_;
 };
 
 }  // namespace driver
