@@ -298,11 +298,8 @@ impl Task {
         let fs = if flags & (CLONE_FS as u64) != 0 { self.fs.clone() } else { self.fs.fork() };
         let files =
             if flags & (CLONE_FILES as u64) != 0 { self.files.clone() } else { self.files.fork() };
-        let signal_actions = if flags & (CLONE_SIGHAND as u64) != 0 {
-            self.signal_actions.clone()
-        } else {
-            self.signal_actions.fork()
-        };
+        let signal_actions =
+            if clone_sighand { self.signal_actions.clone() } else { self.signal_actions.fork() };
 
         let kernel = &self.thread_group.kernel;
         let mut pids = kernel.pids.write();
