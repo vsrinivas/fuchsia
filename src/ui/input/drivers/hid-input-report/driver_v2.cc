@@ -88,10 +88,15 @@ class InputReportDriver {
             // Get our parent's topological path.
             .and_then([this]() {
               fpromise::bridge<void, zx_status_t> topo_bridge;
-              interop_.device_client()->GetTopologicalPath(
+              interop_.device_client()->GetTopologicalPath().Then(
                   [this, completer = std::move(topo_bridge.completer)](
-                      fidl::WireResponse<fuchsia_driver_compat::Device::GetTopologicalPath>*
-                          response) mutable {
+                      fidl::WireUnownedResult<fuchsia_driver_compat::Device::GetTopologicalPath>&
+                          result) mutable {
+                    if (!result.ok()) {
+                      completer.complete_error(result.status());
+                      return;
+                    }
+                    auto* response = result.Unwrap();
                     parent_topo_path_ = std::string(response->path.data(), response->path.size());
                     completer.complete_ok();
                   });

@@ -346,7 +346,7 @@ TEST_F(HidDevTest, ReadInputReportsHangingGetTest) {
   }
 
   // Read the report. This will hang until a report is sent.
-  reader->ReadInputReports(
+  reader->ReadInputReports().ThenExactlyOnce(
       [&](fidl::WireUnownedResult<fuchsia_input_report::InputReportsReader::ReadInputReports>&
               response) {
         ASSERT_OK(response.status());
@@ -398,7 +398,7 @@ TEST_F(HidDevTest, CloseReaderWithOutstandingRead) {
   }
 
   // Queue a report.
-  reader->ReadInputReports(
+  reader->ReadInputReports().ThenExactlyOnce(
       [&](fidl::WireUnownedResult<fuchsia_input_report::InputReportsReader::ReadInputReports>&
               result) { ASSERT_TRUE(result.is_canceled()); });
   loop.RunUntilIdle();

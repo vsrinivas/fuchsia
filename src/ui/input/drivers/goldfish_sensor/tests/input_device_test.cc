@@ -116,7 +116,7 @@ TEST_P(AccelerationInputDeviceTest, ReadInputReports) {
   }
   EXPECT_EQ(dut_->OnReport(rpt), ZX_OK);
 
-  reader_client->ReadInputReports(
+  reader_client->ReadInputReports().ThenExactlyOnce(
       [](fidl::WireUnownedResult<fuchsia_input_report::InputReportsReader::ReadInputReports>&
              result) {
         ASSERT_TRUE(result.ok());
@@ -137,7 +137,7 @@ TEST_P(AccelerationInputDeviceTest, ReadInputReports) {
 
 TEST_F(AccelerationInputDeviceTest, Descriptor) {
   bool get_descriptor_called = false;
-  device_client_->GetDescriptor(
+  device_client_->GetDescriptor().ThenExactlyOnce(
       [&get_descriptor_called](
           fidl::WireUnownedResult<fuchsia_input_report::InputDevice::GetDescriptor>& result) {
         ASSERT_TRUE(result.ok());
@@ -254,7 +254,7 @@ TEST_P(GyroscopeInputDeviceTest, ReadInputReports) {
 
   EXPECT_EQ(dut_->OnReport(rpt), ZX_OK);
 
-  reader_client->ReadInputReports(
+  reader_client->ReadInputReports().ThenExactlyOnce(
       [](fidl::WireUnownedResult<fuchsia_input_report::InputReportsReader::ReadInputReports>&
              result) {
         ASSERT_TRUE(result.ok());
@@ -275,7 +275,7 @@ TEST_P(GyroscopeInputDeviceTest, ReadInputReports) {
 
 TEST_F(GyroscopeInputDeviceTest, Descriptor) {
   bool get_descriptor_called = false;
-  device_client_->GetDescriptor(
+  device_client_->GetDescriptor().ThenExactlyOnce(
       [&get_descriptor_called](
           fidl::WireUnownedResult<fuchsia_input_report::InputDevice::GetDescriptor>& result) {
         ASSERT_TRUE(result.ok());
@@ -392,7 +392,7 @@ TEST_P(RgbcLightInputDeviceTest, ReadInputReports) {
   }
   EXPECT_EQ(dut_->OnReport(rpt), ZX_OK);
 
-  reader_client->ReadInputReports(
+  reader_client->ReadInputReports().ThenExactlyOnce(
       [](fidl::WireUnownedResult<fuchsia_input_report::InputReportsReader::ReadInputReports>&
              result) {
         ASSERT_TRUE(result.ok());
@@ -414,7 +414,7 @@ TEST_P(RgbcLightInputDeviceTest, ReadInputReports) {
 
 TEST_F(RgbcLightInputDeviceTest, Descriptor) {
   bool get_descriptor_called = false;
-  device_client_->GetDescriptor(
+  device_client_->GetDescriptor().ThenExactlyOnce(
       [&get_descriptor_called](
           fidl::WireUnownedResult<fuchsia_input_report::InputDevice::GetDescriptor>& result) {
         ASSERT_TRUE(result.ok());

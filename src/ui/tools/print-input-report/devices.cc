@@ -14,9 +14,14 @@ namespace print_input_report {
 zx_status_t PrintFeatureReports(std::string filename, Printer* printer,
                                 fidl::WireSharedClient<fuchsia_input_report::InputDevice> client,
                                 fit::closure callback) {
-  client->GetFeatureReport(
+  client->GetFeatureReport().ThenExactlyOnce(
       [filename, printer, callback = std::move(callback), _ = client.Clone()](
-          fidl::WireResponse<fuchsia_input_report::InputDevice::GetFeatureReport>* result) {
+          fidl::WireUnownedResult<fuchsia_input_report::InputDevice::GetFeatureReport>&
+              call_result) {
+        if (!call_result.ok()) {
+          return;
+        }
+        auto* result = call_result.Unwrap();
         if (result->result.is_err()) {
           callback();
           return;
@@ -98,9 +103,13 @@ zx_status_t PrintFeatureReports(std::string filename, Printer* printer,
 zx_status_t PrintInputDescriptor(std::string filename, Printer* printer,
                                  fidl::WireSharedClient<fuchsia_input_report::InputDevice> client,
                                  fit::closure callback) {
-  client->GetDescriptor(
+  client->GetDescriptor().ThenExactlyOnce(
       [filename, printer, callback = std::move(callback), _ = client.Clone()](
-          fidl::WireResponse<fuchsia_input_report::InputDevice::GetDescriptor>* result) {
+          fidl::WireUnownedResult<fuchsia_input_report::InputDevice::GetDescriptor>& call_result) {
+        if (!call_result.ok()) {
+          return;
+        }
+        auto* result = call_result.Unwrap();
         printer->SetIndent(0);
         printer->Print("Descriptor from file: %s\n", filename.c_str());
         if (result->descriptor.has_mouse()) {
@@ -297,10 +306,14 @@ void PrintInputReports(std::string filename, Printer* printer,
   // Read the reports.
   // We need the ReadInputReport's callback to be mutable because the PrintInputReports callback is
   // moved into the next ReadInputReport's call.
-  reader->ReadInputReports(
+  reader->ReadInputReports().ThenExactlyOnce(
       [=, reader = reader.Clone(), callback = std::move(callback)](
-          fidl::WireResponse<fuchsia_input_report::InputReportsReader::ReadInputReports>*
-              result) mutable {
+          fidl::WireUnownedResult<fuchsia_input_report::InputReportsReader::ReadInputReports>&
+              call_result) mutable {
+        if (!call_result.ok()) {
+          return;
+        }
+        auto* result = call_result.Unwrap();
         size_t reads_left = num_reads;
         if (result->result.is_err()) {
           callback();
@@ -351,46 +364,51 @@ void GetAndPrintInputReport(std::string filename,
                             fuchsia_input_report::wire::DeviceType device_type, Printer* printer,
                             fidl::WireSharedClient<fuchsia_input_report::InputDevice> client,
                             fit::closure callback) {
-  client->GetInputReport(
-      device_type,
-      [=, callback = std::move(callback), _ = client.Clone()](
-          fidl::WireResponse<fuchsia_input_report::InputDevice::GetInputReport>* result) {
-        if (result->result.is_err()) {
-          callback();
-          return;
-        }
-        auto& report = result->result.response().report;
-        TRACE_DURATION("input", "print-input-report GetReport");
-        printer->SetIndent(0);
-        printer->Print("Report from file: %s\n", filename.c_str());
-        if (report.has_event_time()) {
-          printer->Print("EventTime: 0x%016lx\n", report.event_time());
-        }
-        if (report.has_trace_id()) {
-          TRACE_FLOW_END("input", "input_report", report.trace_id());
-        }
-        if (report.has_report_id()) {
-          printer->Print("ReportID: %02d\n", report.report_id());
-        }
-        if (report.has_mouse()) {
-          auto& mouse = report.mouse();
-          PrintMouseInputReport(printer, mouse);
-        }
-        if (report.has_sensor()) {
-          PrintSensorInputReport(printer, report.sensor());
-        }
-        if (report.has_touch()) {
-          PrintTouchInputReport(printer, report.touch());
-        }
-        if (report.has_keyboard()) {
-          PrintKeyboardInputReport(printer, report.keyboard());
-        }
-        if (report.has_consumer_control()) {
-          PrintConsumerControlInputReport(printer, report.consumer_control());
-        }
-        printer->Print("\n");
-        callback();
-      });
+  client->GetInputReport(device_type)
+      .ThenExactlyOnce(
+          [=, callback = std::move(callback), _ = client.Clone()](
+              fidl::WireUnownedResult<fuchsia_input_report::InputDevice::GetInputReport>&
+                  call_result) {
+            if (!call_result.ok()) {
+              return;
+            }
+            auto* result = call_result.Unwrap();
+            if (result->result.is_err()) {
+              callback();
+              return;
+            }
+            auto& report = result->result.response().report;
+            TRACE_DURATION("input", "print-input-report GetReport");
+            printer->SetIndent(0);
+            printer->Print("Report from file: %s\n", filename.c_str());
+            if (report.has_event_time()) {
+              printer->Print("EventTime: 0x%016lx\n", report.event_time());
+            }
+            if (report.has_trace_id()) {
+              TRACE_FLOW_END("input", "input_report", report.trace_id());
+            }
+            if (report.has_report_id()) {
+              printer->Print("ReportID: %02d\n", report.report_id());
+            }
+            if (report.has_mouse()) {
+              auto& mouse = report.mouse();
+              PrintMouseInputReport(printer, mouse);
+            }
+            if (report.has_sensor()) {
+              PrintSensorInputReport(printer, report.sensor());
+            }
+            if (report.has_touch()) {
+              PrintTouchInputReport(printer, report.touch());
+            }
+            if (report.has_keyboard()) {
+              PrintKeyboardInputReport(printer, report.keyboard());
+            }
+            if (report.has_consumer_control()) {
+              PrintConsumerControlInputReport(printer, report.consumer_control());
+            }
+            printer->Print("\n");
+            callback();
+          });
 }
 
 zx::status<fidl::WireSharedClient<fuchsia_input_report::InputReportsReader>> GetReaderClient(
