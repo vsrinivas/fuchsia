@@ -98,6 +98,10 @@ impl FsContext {
 
         old_umask
     }
+
+    pub fn namespace_root(&self) -> NamespaceNode {
+        self.namespace.root()
+    }
 }
 
 #[cfg(test)]

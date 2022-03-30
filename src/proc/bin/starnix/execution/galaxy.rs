@@ -51,6 +51,13 @@ struct Arguments {
     #[serde(default = "default_user")]
     init_user: String,
 
+    /// A file path that will be used to determine whether or not the system is ready to execute
+    /// tasks. Prior to the existence of this file (if specified), the system will only run the
+    /// `init` task (and any tasks `init` spawns). The `init` task is expected to create a file
+    /// at this path.
+    #[serde(default)]
+    startup_file_path: Option<String>,
+
     /// The command line arguments for the `Kernel`.
     #[serde(default)]
     kernel_cmdline: CString,
@@ -78,6 +85,11 @@ pub struct Galaxy {
     /// This task is executed prior to running any other tasks in the galaxy.
     pub init_task: Option<CurrentTask>,
 
+    /// A path to a file in the `init_task`'s filesystem. If this file is `Some`, then the runner
+    /// machinery will wait for the file to exist before executing any other tasks in the galaxy
+    /// (`init_task` is started, since it is expected to create this file).
+    pub startup_file_path: Option<String>,
+
     /// The `Kernel` object that is associated with the galaxy.
     pub kernel: Arc<Kernel>,
 
@@ -89,6 +101,9 @@ pub struct Galaxy {
 ///
 /// A galaxy contains a `Kernel`, and an optional `init_task`. The returned init task is expected to
 /// execute before any other tasks are executed.
+///
+/// If a `startup_file_path` is also returned, the caller should wait to start any other tasks
+/// until the file at `startup_file_path` exists.
 ///
 /// # Parameters
 /// - `outgoing_dir`: The outgoing directory of the component to run in the galaxy. This is used
@@ -143,7 +158,7 @@ pub fn create_galaxy(
         None
     };
 
-    Ok(Galaxy { init_task, kernel, root_fs })
+    Ok(Galaxy { init_task, startup_file_path: galaxy_args.startup_file_path, kernel, root_fs })
 }
 
 fn create_fs_context(

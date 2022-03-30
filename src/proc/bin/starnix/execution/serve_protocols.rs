@@ -46,7 +46,7 @@ pub async fn serve_component_runner(
         match event {
             fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } => {
                 fasync::Task::local(async move {
-                    if let Err(e) = start_component(start_info, controller) {
+                    if let Err(e) = start_component(start_info, controller).await {
                         error!("failed to start component: {:?}", e);
                     }
                 })
