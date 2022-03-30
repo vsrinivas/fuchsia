@@ -187,10 +187,10 @@ async fn forwarding<E: netemul::Endpoint>(name: &str, setup: Setup) {
         assert_eq!(response, RESPONSE, "got unexpected response from server: {}", response);
     };
 
+    let listener = fuchsia_async::net::TcpListener::listen_in_realm(&server, sockaddr)
+        .await
+        .expect("bind to address");
     let server = async {
-        let listener = fuchsia_async::net::TcpListener::listen_in_realm(&server, sockaddr)
-            .await
-            .expect("bind to address");
         let (_listener, mut stream, remote) =
             listener.accept().await.expect("accept incoming connection");
         assert_eq!(remote.ip(), client_ip);
