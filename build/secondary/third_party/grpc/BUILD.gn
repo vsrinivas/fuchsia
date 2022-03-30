@@ -84,6 +84,7 @@ config("grpc_config_private") {
     "-Wno-sign-compare",
     "-Wno-strict-prototypes",
     "-Wno-string-concatenation",
+    "-Wno-unused-but-set-variable",
   ]
 }
 
