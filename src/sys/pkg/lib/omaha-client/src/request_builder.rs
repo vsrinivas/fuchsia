@@ -8,9 +8,7 @@ mod tests;
 use crate::{
     common::{App, UserCounting},
     configuration::Config,
-    cup_ecdsa::{
-        CupDecorationError, CupRequest, Cupv2RequestHandler, RequestMetadata, StandardCupv2Handler,
-    },
+    cup_ecdsa::{CupDecorationError, CupRequest, Cupv2RequestHandler, RequestMetadata},
     protocol::{
         request::{
             Event, InstallSource, Ping, Request, RequestWrapper, UpdateCheck, GUID, HEADER_APP_ID,
@@ -151,11 +149,6 @@ pub struct RequestBuilder<'a> {
 
     request_id: Option<GUID>,
     session_id: Option<GUID>,
-
-    // A handler for decorating outgoing requests with CUPv2 query parameters.
-    // Only instantiated if (a) |config| contains omaha_public_keys and (b)
-    // |params| has cup_sign_requests set to True.
-    cup_handler: Option<StandardCupv2Handler<'a>>,
 }
 
 /// The RequestBuilder is a stateful builder for protocol::request::Request objects.  After being
@@ -182,10 +175,6 @@ impl<'a> RequestBuilder<'a> {
             app_entries: Vec::new(),
             request_id: None,
             session_id: None,
-            cup_handler: match (config.omaha_public_keys.as_ref(), params.cup_sign_requests) {
-                (Some(k), true) => Some(StandardCupv2Handler::new(k)),
-                _ => None,
-            },
         }
     }
 
@@ -255,14 +244,20 @@ impl<'a> RequestBuilder<'a> {
     /// This function constructs the protocol::request::Request object from this Builder.
     ///
     /// Note that the builder is not consumed in the process, and can be used afterward.
-    pub fn build(&self) -> Result<(http::Request<hyper::Body>, Option<RequestMetadata>)> {
-        let (intermediate, request_metadata) = self.build_intermediate()?;
+    pub fn build(
+        &self,
+        cup_handler: Option<&impl Cupv2RequestHandler>,
+    ) -> Result<(http::Request<hyper::Body>, Option<RequestMetadata>)> {
+        let (intermediate, request_metadata) = self.build_intermediate(cup_handler)?;
         info!("Building Request: {}", intermediate);
         Ok((Into::<Result<http::Request<hyper::Body>>>::into(intermediate)?, request_metadata))
     }
 
     /// Helper function that constructs the request body from the builder.
-    fn build_intermediate(&self) -> Result<(Intermediate, Option<RequestMetadata>)> {
+    fn build_intermediate(
+        &self,
+        cup_handler: Option<&impl Cupv2RequestHandler>,
+    ) -> Result<(Intermediate, Option<RequestMetadata>)> {
         let mut headers = vec![
             // Set the content-type to be JSON.
             (http::header::CONTENT_TYPE.as_str(), "application/json".to_string()),
@@ -304,9 +299,9 @@ impl<'a> RequestBuilder<'a> {
             },
         };
 
-        let request_metadata = match self.cup_handler.as_ref() {
-            Some(handler) => Some(handler.decorate_request(&mut intermediate)?),
-            None => None,
+        let request_metadata = match (cup_handler.as_ref(), self.params.cup_sign_requests) {
+            (Some(handler), true) => Some(handler.decorate_request(&mut intermediate)?),
+            _ => None,
         };
 
         Ok((intermediate, request_metadata))

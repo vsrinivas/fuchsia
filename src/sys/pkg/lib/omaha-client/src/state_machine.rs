@@ -6,7 +6,7 @@ use crate::{
     app_set::{AppSet, AppSetExt as _},
     common::{App, CheckOptions, CheckTiming},
     configuration::Config,
-    cup_ecdsa::CupDecorationError,
+    cup_ecdsa::{CupDecorationError, StandardCupv2Handler},
     http_request::{self, HttpRequest},
     installer::{AppInstallResult, Installer, Plan},
     metrics::{ClockType, Metrics, MetricsReporter, UpdateCheckFailureReason},
@@ -98,6 +98,8 @@ where
     /// The list of apps used for update check.
     /// When locking both storage and app_set, make sure to always lock storage first.
     app_set: Rc<Mutex<AS>>,
+
+    cup_handler: Option<StandardCupv2Handler>,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -1227,7 +1229,7 @@ where
         builder: &RequestBuilder<'a>,
         co: &mut async_generator::Yield<StateMachineEvent>,
     ) -> Result<(Parts, Vec<u8>), OmahaRequestError> {
-        let (request, _request_metadata) = builder.build()?;
+        let (request, _request_metadata) = builder.build(self.cup_handler.as_ref())?;
         let (parts, body) = Self::make_request(&mut self.http, request).await?.into_parts();
 
         // TODO: here, use request metadata to validate CUPv2 response.
@@ -1431,6 +1433,7 @@ mod tests {
             App, CheckOptions, PersistedApp, ProtocolState, UpdateCheckSchedule, UserCounting,
         },
         configuration::Updater,
+        cup_ecdsa::test_support::make_cup_handler_for_test,
         http_request::mock::MockHttpRequest,
         installer::{
             stub::{StubInstallErrors, StubInstaller, StubPlan},
@@ -1483,7 +1486,8 @@ mod tests {
     // Assert that the last request made to |http| is equal to the request built by
     // |request_builder|.
     async fn assert_request<'a>(http: &MockHttpRequest, request_builder: RequestBuilder<'a>) {
-        let (request, _request_metadata) = request_builder.build().unwrap();
+        let cup_handler = make_cup_handler_for_test();
+        let (request, _request_metadata) = request_builder.build(Some(&cup_handler)).unwrap();
         let body = hyper::body::to_bytes(request).await.unwrap();
         // Compare string instead of Vec<u8> for easier debugging.
         let body_str = String::from_utf8_lossy(&body);
@@ -3512,6 +3516,7 @@ mod tests {
         // Verify that it sends a ping.
         let config = crate::configuration::test_support::config_generator();
         let request_params = RequestParams::default();
+
         let apps = pool.run_until(apps.lock()).get_apps();
         let mut expected_request_builder = RequestBuilder::new(&config, &request_params)
             // 0: session id for update check

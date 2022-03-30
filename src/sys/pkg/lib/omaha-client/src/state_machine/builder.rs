@@ -5,6 +5,7 @@
 use crate::{
     app_set::{AppSet, AppSetExt as _},
     configuration::Config,
+    cup_ecdsa::StandardCupv2Handler,
     http_request::HttpRequest,
     installer::{Installer, Plan},
     metrics::MetricsReporter,
@@ -234,6 +235,7 @@ where
         };
 
         let time_source = policy_engine.time_source().clone();
+        let cup_handler = config.omaha_public_keys.as_ref().map(StandardCupv2Handler::new);
 
         StateMachine {
             config,
@@ -246,6 +248,7 @@ where
             storage_ref: storage,
             context,
             app_set,
+            cup_handler,
         }
     }
 

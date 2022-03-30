@@ -131,27 +131,28 @@ pub trait Cupv2Verifier {
 }
 
 // Default Cupv2Handler.
-pub struct StandardCupv2Handler<'a> {
+#[derive(Debug)]
+pub struct StandardCupv2Handler {
     /// Device-wide map from public key ID# to public key. Should be ingested at
     /// startup. This map should never be empty.
-    parameters_by_id: HashMap<PublicKeyId, &'a PublicKey>,
+    parameters_by_id: HashMap<PublicKeyId, PublicKey>,
     latest_public_key_id: PublicKeyId,
 }
 
-impl<'a> StandardCupv2Handler<'a> {
+impl StandardCupv2Handler {
     /// Constructor for the standard CUPv2 handler.
-    pub fn new(public_keys: &'a PublicKeys) -> Self {
+    pub fn new(public_keys: &PublicKeys) -> Self {
         Self {
             parameters_by_id: std::iter::once(&public_keys.latest)
                 .chain(&public_keys.historical)
-                .map(|k| (k.id, &k.key))
+                .map(|k| (k.id, k.key))
                 .collect(),
             latest_public_key_id: public_keys.latest.id,
         }
     }
 }
 
-impl<'a> Cupv2RequestHandler for StandardCupv2Handler<'a> {
+impl Cupv2RequestHandler for StandardCupv2Handler {
     fn decorate_request(
         &self,
         request: &mut impl CupRequest,
@@ -231,7 +232,7 @@ impl<'a> Cupv2RequestHandler for StandardCupv2Handler<'a> {
     }
 }
 
-impl<'a> Cupv2Verifier for StandardCupv2Handler<'a> {
+impl Cupv2Verifier for StandardCupv2Handler {
     fn verify_response_with_signature(
         &self,
         ecdsa_signature: DerSignature,
@@ -251,14 +252,41 @@ impl<'a> Cupv2Verifier for StandardCupv2Handler<'a> {
 }
 
 #[cfg(test)]
+pub mod test_support {
+    use super::*;
+    use p256::ecdsa::SigningKey;
+    use signature::rand_core::OsRng;
+    use std::convert::TryInto;
+
+    pub fn make_keys_for_test() -> (SigningKey, PublicKey) {
+        let signing_key = SigningKey::random(&mut OsRng);
+        let public_key = PublicKey::from(&signing_key);
+        (signing_key, public_key)
+    }
+    pub fn make_public_keys_for_test(
+        public_key_id: PublicKeyId,
+        public_key: PublicKey,
+    ) -> PublicKeys {
+        PublicKeys {
+            latest: PublicKeyAndId { id: public_key_id, key: public_key },
+            historical: vec![],
+        }
+    }
+    pub fn make_cup_handler_for_test() -> StandardCupv2Handler {
+        let (_signing_key, public_key) = make_keys_for_test();
+        let public_key_id: PublicKeyId = 42.try_into().unwrap();
+        let public_keys = make_public_keys_for_test(public_key_id, public_key);
+        StandardCupv2Handler::new(&public_keys)
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::protocol::request::{Request, RequestWrapper};
     use crate::request_builder::Intermediate;
     use assert_matches::assert_matches;
     use p256::ecdsa::SigningKey;
-    use signature::rand_core::OsRng;
-    use std::convert::TryInto;
 
     // For testing only, it is useful to compute equality for CupVerificationError enums.
     impl PartialEq for CupVerificationError {
@@ -275,13 +303,6 @@ mod tests {
         }
     }
 
-    fn make_public_keys_for_test(public_key_id: PublicKeyId, public_key: PublicKey) -> PublicKeys {
-        PublicKeys {
-            latest: PublicKeyAndId { id: public_key_id, key: public_key },
-            historical: vec![],
-        }
-    }
-
     fn make_expected_signature_for_test(
         signing_key: &SigningKey,
         request_metadata: &RequestMetadata,
@@ -291,12 +312,6 @@ mod tests {
         let mut message: Vec<u8> = response_body.to_vec();
         message.extend(request_metadata.hash());
         hex::encode(signing_key.sign(&message).to_der().as_bytes())
-    }
-
-    fn make_keys_for_test() -> (SigningKey, PublicKey) {
-        let signing_key = SigningKey::random(&mut OsRng);
-        let public_key = PublicKey::from(&signing_key);
-        (signing_key, public_key)
     }
 
     fn make_expected_hash_for_test(
@@ -313,9 +328,9 @@ mod tests {
 
     #[test]
     fn test_standard_cup_handler_decorate() -> Result<(), anyhow::Error> {
-        let (_, public_key) = make_keys_for_test();
+        let (_, public_key) = test_support::make_keys_for_test();
         let public_key_id: PublicKeyId = 42.try_into()?;
-        let public_keys = make_public_keys_for_test(public_key_id, public_key);
+        let public_keys = test_support::make_public_keys_for_test(public_key_id, public_key);
         let cup_handler = StandardCupv2Handler::new(&public_keys);
 
         let mut intermediate = make_standard_intermediate_for_test(Request::default());
@@ -340,9 +355,9 @@ mod tests {
 
     #[test]
     fn test_verify_response_missing_etag_header() -> Result<(), anyhow::Error> {
-        let (_, public_key) = make_keys_for_test();
+        let (_, public_key) = test_support::make_keys_for_test();
         let public_key_id: PublicKeyId = 12345.try_into()?;
-        let public_keys = make_public_keys_for_test(public_key_id, public_key);
+        let public_keys = test_support::make_public_keys_for_test(public_key_id, public_key);
         let cup_handler = StandardCupv2Handler::new(&public_keys);
 
         let mut intermediate = make_standard_intermediate_for_test(Request::default());
@@ -361,9 +376,9 @@ mod tests {
 
     #[test]
     fn test_verify_response_malformed_etag_header() -> Result<(), anyhow::Error> {
-        let (_, public_key) = make_keys_for_test();
+        let (_, public_key) = test_support::make_keys_for_test();
         let public_key_id: PublicKeyId = 12345.try_into()?;
-        let public_keys = make_public_keys_for_test(public_key_id, public_key);
+        let public_keys = test_support::make_public_keys_for_test(public_key_id, public_key);
         let cup_handler = StandardCupv2Handler::new(&public_keys);
 
         let mut intermediate = make_standard_intermediate_for_test(Request::default());
@@ -383,12 +398,13 @@ mod tests {
 
     #[test]
     fn test_verify_cached_signature_against_message() -> Result<(), anyhow::Error> {
-        let (priv_key, public_key) = make_keys_for_test();
+        let (priv_key, public_key) = test_support::make_keys_for_test();
         let response_body = "bar";
         let correct_public_key_id: PublicKeyId = 24682468.try_into()?;
         let wrong_public_key_id: PublicKeyId = 12341234.try_into()?;
 
-        let public_keys = make_public_keys_for_test(correct_public_key_id, public_key);
+        let public_keys =
+            test_support::make_public_keys_for_test(correct_public_key_id, public_key);
         let cup_handler = StandardCupv2Handler::new(&public_keys);
         let mut intermediate = make_standard_intermediate_for_test(Request::default());
         let request_metadata = cup_handler.decorate_request(&mut intermediate)?;
@@ -502,7 +518,7 @@ mod tests {
 
     #[test]
     fn test_historical_verification() -> Result<(), anyhow::Error> {
-        let (private_key_a, public_key_a) = make_keys_for_test();
+        let (private_key_a, public_key_a) = test_support::make_keys_for_test();
         let public_key_id_a: PublicKeyId = 24682468.try_into()?;
         let response_body_a = "foo";
 
@@ -523,7 +539,7 @@ mod tests {
         );
 
         // Now introduce a new set of keys,
-        let (private_key_b, public_key_b) = make_keys_for_test();
+        let (private_key_b, public_key_b) = test_support::make_keys_for_test();
         let public_key_id_b: PublicKeyId = 12341234.try_into()?;
         let response_body_b = "bar";
 

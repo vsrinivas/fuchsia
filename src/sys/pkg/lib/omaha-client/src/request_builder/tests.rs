@@ -5,6 +5,7 @@
 use super::*;
 use crate::{
     configuration::test_support::config_generator,
+    cup_ecdsa::{test_support::make_cup_handler_for_test, StandardCupv2Handler},
     protocol::{
         request::{EventErrorCode, EventResult, EventType},
         Cohort,
@@ -22,6 +23,7 @@ use url::Url;
 #[test]
 fn test_simple_request() {
     let config = config_generator();
+    let cup_handler = make_cup_handler_for_test();
 
     let (intermediate, _request_metadata) = RequestBuilder::new(
         &config,
@@ -39,7 +41,7 @@ fn test_simple_request() {
     )
     .session_id(GUID::from_u128(1))
     .request_id(GUID::from_u128(2))
-    .build_intermediate()
+    .build_intermediate(Some(&cup_handler))
     .unwrap();
 
     // Assert that all the request fields are accurate (this is in their order of declaration)
@@ -107,7 +109,7 @@ fn test_updates_disabled_request() {
     )
     .session_id(GUID::from_u128(1))
     .request_id(GUID::from_u128(2))
-    .build_intermediate()
+    .build_intermediate(None::<&StandardCupv2Handler>)
     .unwrap();
 
     // Assert that all the request fields are accurate (this is in their order of declaration)
@@ -150,7 +152,7 @@ fn test_app_includes_extras() {
         &RequestParams { source: InstallSource::OnDemand, ..RequestParams::default() },
     )
     .add_update_check(&App::builder("app id", [5, 6, 7, 8]).with_extra("key", "value").build())
-    .build_intermediate()
+    .build_intermediate(None::<&StandardCupv2Handler>)
     .unwrap();
     let request = intermediate.body.request;
 
@@ -168,21 +170,28 @@ fn test_app_includes_extras() {
 #[test]
 fn test_single_request() {
     let config = config_generator();
+    let cup_handler = make_cup_handler_for_test();
 
     let (http_request, _request_metadata) = RequestBuilder::new(
         &config,
-        &RequestParams { source: InstallSource::OnDemand, ..RequestParams::default() },
+        &RequestParams {
+            source: InstallSource::OnDemand,
+            cup_sign_requests: true,
+            ..RequestParams::default()
+        },
     )
     .add_update_check(
         &App::builder("app id", [5, 6, 7, 8]).with_cohort(Cohort::new("some-channel")).build(),
     )
-    .build()
+    .build(Some(&cup_handler))
     .unwrap();
     let (parts, body) = http_request.into_parts();
 
     // Assert that the HTTP method and uri are accurate
     assert_eq!(http::Method::POST, parts.method);
-    assert_eq!(config.service_url, parts.uri.to_string());
+    let uri = parts.uri;
+    assert!(uri.to_string().starts_with(&config.service_url));
+    assert!(uri.query().unwrap().starts_with("cup2key="));
 
     // Assert that all the request body is correct, by generating an equivalent JSON one and
     // then comparing the resultant byte bodies
@@ -242,7 +251,7 @@ fn test_simple_ping() {
             .with_user_counting(UserCounting::ClientRegulatedByDate(Some(34)))
             .build(),
     )
-    .build_intermediate()
+    .build_intermediate(None::<&StandardCupv2Handler>)
     .unwrap();
 
     // Validate that the App was added, with it's cohort
@@ -286,7 +295,7 @@ fn test_simple_event() {
             ..Event::default()
         },
     )
-    .build_intermediate()
+    .build_intermediate(None::<&StandardCupv2Handler>)
     .unwrap();
 
     let request = http_request.body.request;
@@ -335,7 +344,7 @@ fn test_multiple_events() {
             ..Event::default()
         },
     )
-    .build_intermediate()
+    .build_intermediate(None::<&StandardCupv2Handler>)
     .unwrap();
 
     let request = http_request.body.request;
@@ -387,7 +396,7 @@ fn test_ping_added_to_first_app_update_entry() {
     .add_update_check(&app_1)
     .add_update_check(&app_2)
     .add_ping(&app_1)
-    .build_intermediate()
+    .build_intermediate(None::<&StandardCupv2Handler>)
     .unwrap();
     let request = http_request.body.request;
 
@@ -438,7 +447,8 @@ fn test_ping_added_to_second_app_update_entry() {
     .add_update_check(&app_2)
     .add_ping(&app_2);
 
-    let (http_request, _request_metadata) = builder.build_intermediate().unwrap();
+    let (http_request, _request_metadata) =
+        builder.build_intermediate(None::<&StandardCupv2Handler>).unwrap();
     let request = http_request.body.request;
 
     // Validate that the resultant request is correct.
@@ -494,7 +504,7 @@ fn test_event_added_to_first_app_update_entry() {
             ..Event::default()
         },
     )
-    .build_intermediate()
+    .build_intermediate(None::<&StandardCupv2Handler>)
     .unwrap();
 
     let request = http_request.body.request;
@@ -552,7 +562,8 @@ fn test_event_added_to_second_app_update_entry() {
         },
     );
 
-    let (http_request, _request_metadata) = builder.build_intermediate().unwrap();
+    let (http_request, _request_metadata) =
+        builder.build_intermediate(None::<&StandardCupv2Handler>).unwrap();
     let request = http_request.body.request;
 
     // There should only be the two entries.
@@ -576,4 +587,34 @@ fn test_event_added_to_second_app_update_entry() {
     assert_eq!(event.event_type, EventType::UpdateDownloadFinished);
     assert_eq!(event.event_result, EventResult::Success);
     assert_eq!(event.errorcode, Some(EventErrorCode::Installation));
+}
+
+/// This test sets |cup_sign_requests| false and asserts that the outgoing
+/// request is not decorated with cup2key parameters.
+#[test]
+fn test_simple_request_without_cup() {
+    let cup_handler = make_cup_handler_for_test();
+    let config = config_generator();
+
+    let (intermediate, _request_metadata) = RequestBuilder::new(
+        &config,
+        &RequestParams {
+            source: InstallSource::OnDemand,
+            cup_sign_requests: false,
+            ..RequestParams::default()
+        },
+    )
+    .add_update_check(
+        &App::builder("app id", [5, 6, 7, 8])
+            .with_fingerprint("fp")
+            .with_cohort(Cohort::new("some-channel"))
+            .build(),
+    )
+    .session_id(GUID::from_u128(1))
+    .request_id(GUID::from_u128(2))
+    .build_intermediate(Some(&cup_handler))
+    .unwrap();
+
+    // Assert that the cup2key query parameter was not set.
+    assert_eq!(Url::parse(&intermediate.uri).unwrap().query_pairs().next(), None);
 }
