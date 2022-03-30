@@ -50,6 +50,9 @@ pub struct ThreadGroup {
     terminating: Mutex<bool>,
 
     pub did_exec: RwLock<bool>,
+
+    /// The signal actions that are registered for this process.
+    pub signal_actions: Arc<SignalActions>,
 }
 
 impl PartialEq for ThreadGroup {
@@ -64,6 +67,7 @@ impl ThreadGroup {
         process: zx::Process,
         leader: pid_t,
         job_control: ShellJobControl,
+        signal_actions: Arc<SignalActions>,
     ) -> ThreadGroup {
         let mut tasks = HashSet::new();
         tasks.insert(leader);
@@ -79,6 +83,7 @@ impl ThreadGroup {
             child_exit_waiters: Mutex::default(),
             terminating: Mutex::new(false),
             did_exec: RwLock::new(false),
+            signal_actions,
         }
     }
 

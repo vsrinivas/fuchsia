@@ -215,6 +215,7 @@ pub fn create_zircon_process(
     kernel: &Arc<Kernel>,
     pid: pid_t,
     job_control: ShellJobControl,
+    signal_actions: Arc<SignalActions>,
     name: &CString,
 ) -> Result<(zx::Thread, Arc<ThreadGroup>, Arc<MemoryManager>), Errno> {
     let (process, root_vmar) = kernel
@@ -227,7 +228,8 @@ pub fn create_zircon_process(
     let mm =
         Arc::new(MemoryManager::new(root_vmar).map_err(|status| from_status_like_fdio!(status))?);
 
-    let thread_group = Arc::new(ThreadGroup::new(kernel.clone(), process, pid, job_control));
+    let thread_group =
+        Arc::new(ThreadGroup::new(kernel.clone(), process, pid, job_control, signal_actions));
 
     Ok((thread, thread_group, mm))
 }

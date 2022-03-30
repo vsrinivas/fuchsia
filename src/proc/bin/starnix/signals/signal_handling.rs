@@ -207,7 +207,7 @@ pub fn send_signal(task: &Task, siginfo: SignalInfo) {
     signal_state.enqueue(siginfo.clone());
 
     if !siginfo.signal.is_in_set(signal_state.mask)
-        && action_for_signal(&siginfo, task.signal_actions.get(siginfo.signal))
+        && action_for_signal(&siginfo, task.thread_group.signal_actions.get(siginfo.signal))
             != DeliveryAction::Ignore
     {
         // Wake the task. Note that any potential signal handler will be executed before
@@ -264,7 +264,7 @@ pub fn dequeue_signal(current_task: &mut CurrentTask) {
     if let Some(siginfo) =
         signal_state.take_next_where(|sig| !sig.signal.is_in_set(mask) || sig.force)
     {
-        let sigaction = task.signal_actions.get(siginfo.signal);
+        let sigaction = task.thread_group.signal_actions.get(siginfo.signal);
         match action_for_signal(&siginfo, sigaction) {
             DeliveryAction::CallHandler => {
                 dispatch_signal_handler(current_task, &mut signal_state, siginfo, sigaction);

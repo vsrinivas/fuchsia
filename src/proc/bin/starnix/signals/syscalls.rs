@@ -42,7 +42,7 @@ pub fn sys_rt_sigaction(
         None
     };
 
-    let signal_actions = &current_task.signal_actions;
+    let signal_actions = &current_task.thread_group.signal_actions;
     let old_action = if let Some(new_signal_action) = new_signal_action {
         signal_actions.set(signal, new_signal_action)
     } else {
@@ -890,7 +890,7 @@ mod tests {
         original_action.sa_mask = 3;
 
         {
-            current_task.signal_actions.set(SIGHUP, original_action.clone());
+            current_task.thread_group.signal_actions.set(SIGHUP, original_action.clone());
         }
 
         let old_action_ref = UserRef::<sigaction_t>::new(addr);
@@ -941,7 +941,7 @@ mod tests {
             Ok(SUCCESS)
         );
 
-        assert_eq!(current_task.signal_actions.get(SIGINT), original_action,);
+        assert_eq!(current_task.thread_group.signal_actions.get(SIGINT), original_action,);
     }
 
     /// A task should be able to signal itself.

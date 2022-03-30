@@ -104,9 +104,6 @@ pub struct Task {
     // See https://man7.org/linux/man-pages/man2/set_tid_address.2.html
     pub clear_child_tid: Mutex<UserRef<pid_t>>,
 
-    /// The signal actions that are registered for this task.
-    pub signal_actions: Arc<SignalActions>,
-
     /// Signal handler related state. This is grouped together for when atomicity is needed during
     /// signal sending and delivery.
     pub signals: RwLock<SignalState>,
@@ -173,7 +170,6 @@ impl Task {
         files: Arc<FdTable>,
         mm: Arc<MemoryManager>,
         fs: Arc<FsContext>,
-        signal_actions: Arc<SignalActions>,
         creds: Credentials,
         abstract_socket_namespace: Arc<AbstractSocketNamespace>,
         exit_signal: Option<Signal>,
@@ -192,7 +188,6 @@ impl Task {
             creds: RwLock::new(creds),
             abstract_socket_namespace,
             clear_child_tid: Mutex::new(UserRef::default()),
-            signal_actions,
             signals: Default::default(),
             exit_signal,
             exit_code: Mutex::new(None),
@@ -216,6 +211,7 @@ impl Task {
             kernel,
             pid,
             ShellJobControl { sid: pid, pgid: pid },
+            SignalActions::default(),
             &initial_name,
         )?;
 
@@ -229,7 +225,6 @@ impl Task {
             FdTable::new(),
             mm,
             root_fs,
-            SignalActions::default(),
             Credentials::default(),
             Arc::clone(&kernel.default_abstract_socket_namespace),
             None,
@@ -298,8 +293,6 @@ impl Task {
         let fs = if flags & (CLONE_FS as u64) != 0 { self.fs.clone() } else { self.fs.fork() };
         let files =
             if flags & (CLONE_FILES as u64) != 0 { self.files.clone() } else { self.files.fork() };
-        let signal_actions =
-            if clone_sighand { self.signal_actions.clone() } else { self.signal_actions.fork() };
 
         let kernel = &self.thread_group.kernel;
         let mut pids = kernel.pids.write();
@@ -308,7 +301,18 @@ impl Task {
         let (thread, thread_group, mm) = if clone_thread {
             create_zircon_thread(self)?
         } else {
-            create_zircon_process(kernel, pid, self.thread_group.job_control.read().clone(), &comm)?
+            let signal_actions = if clone_sighand {
+                self.thread_group.signal_actions.clone()
+            } else {
+                self.thread_group.signal_actions.fork()
+            };
+            create_zircon_process(
+                kernel,
+                pid,
+                self.thread_group.job_control.read().clone(),
+                signal_actions,
+                &comm,
+            )?
         };
 
         let parent_pid = if clone_thread { self.parent } else { self.id };
@@ -323,7 +327,6 @@ impl Task {
             files,
             mm,
             fs,
-            signal_actions,
             self.creds.read().clone(),
             self.abstract_socket_namespace.clone(),
             child_exit_signal,
