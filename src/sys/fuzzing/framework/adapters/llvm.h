@@ -56,7 +56,6 @@ class LLVMTargetAdapter final : public TargetAdapter {
   std::vector<std::string> parameters_;
   AsyncEventPair eventpair_;
   SharedMemory test_input_;
-  fpromise::suspended_task suspended_;
   Scope scope_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(LLVMTargetAdapter);

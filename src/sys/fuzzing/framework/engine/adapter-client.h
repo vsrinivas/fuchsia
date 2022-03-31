@@ -6,6 +6,7 @@
 #define SRC_SYS_FUZZING_FRAMEWORK_ENGINE_ADAPTER_CLIENT_H_
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
+#include <lib/fidl/cpp/interface_request.h>
 
 #include <string>
 #include <vector>
