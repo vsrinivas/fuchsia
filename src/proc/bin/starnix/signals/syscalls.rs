@@ -954,7 +954,7 @@ mod tests {
 
     /// A task should be able to signal its own thread group.
     #[::fuchsia::test]
-    async fn test_kill_own_thread_group() {
+    fn test_kill_own_thread_group() {
         let (_kernel, init_task) = create_kernel_and_task();
         let task1 = init_task
             .clone_task(
@@ -980,7 +980,7 @@ mod tests {
 
     /// A task should be able to signal a thread group.
     #[::fuchsia::test]
-    async fn test_kill_thread_group() {
+    fn test_kill_thread_group() {
         let (_kernel, init_task) = create_kernel_and_task();
         let task1 = init_task
             .clone_task(
@@ -1006,7 +1006,7 @@ mod tests {
 
     /// A task should be able to signal everything but init and itself.
     #[::fuchsia::test]
-    async fn test_kill_all() {
+    fn test_kill_all() {
         let (_kernel, init_task) = create_kernel_and_task();
         let task1 = init_task
             .clone_task(
@@ -1032,7 +1032,7 @@ mod tests {
 
     /// A task should not be able to signal a nonexistent task.
     #[::fuchsia::test]
-    async fn test_kill_inexistant_task() {
+    fn test_kill_inexistant_task() {
         let (_kernel, current_task) = create_kernel_and_task();
 
         assert_eq!(sys_kill(&current_task, 9, SIGINT.into()), error!(ESRCH));
@@ -1040,7 +1040,7 @@ mod tests {
 
     /// A task should not be able to signal a task owned by another uid.
     #[::fuchsia::test]
-    async fn test_kill_invalid_task() {
+    fn test_kill_invalid_task() {
         let (_kernel, task1) = create_kernel_and_task();
         let task2 = task1
             .clone_task(
@@ -1059,7 +1059,7 @@ mod tests {
 
     /// A task should not be able to signal a task owned by another uid in a thead group.
     #[::fuchsia::test]
-    async fn test_kill_invalid_task_in_thread_group() {
+    fn test_kill_invalid_task_in_thread_group() {
         let (_kernel, init_task) = create_kernel_and_task();
         let task1 = init_task
             .clone_task(
