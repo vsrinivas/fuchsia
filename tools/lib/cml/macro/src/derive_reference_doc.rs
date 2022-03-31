@@ -62,6 +62,7 @@ pub fn impl_derive_reference_doc(ast: syn::DeriveInput) -> Result<TokenStream2, 
             }
 
             if top_level_doc_after_fields {
+                section_tokens.append_all(quote!(s.push_str("\n");));
                 section_tokens.append_all(quote!(s.push_str(&#top_level_doc);));
             }
 

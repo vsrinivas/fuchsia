@@ -145,6 +145,7 @@ The `children` section declares child component instances as described in
 - `environment`: (_optional `string`_) If present, the name of the environment to be assigned to the child component instance, one
   of [`environments`](#environments). If omitted, the child will inherit the same environment
   assigned to this component.
+
 Example:
 
 ```json5
@@ -198,6 +199,7 @@ The `collections` section declares collections as described in
   assigned to instances in this collection, one of
   [`environments`](#environments). If omitted, instances in this collection
   will inherit the same environment assigned to this component.
+
 Example:
 
 ```json5
@@ -431,6 +433,7 @@ One and only one of the capability type keys (`protocol`, `directory`, `service`
   capability to route.
 - `event_stream`: (_optional `string or array of strings`_) event stream
 - `scope`: (_optional `string or array of strings`_) Scope of event_stream
+
 Example:
 
 ```json5
