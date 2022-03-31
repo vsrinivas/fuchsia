@@ -31,10 +31,11 @@ impl FormaComposition {
         let mut option = raster.layer_details.borrow_mut();
         let layer_details = option
             .filter(|&(layer_id, layer_translation)| {
-                self.composition.get(layer_id).is_some() && raster.translation == layer_translation
+                self.composition.layer(layer_id).is_some()
+                    && raster.translation == layer_translation
             })
             .unwrap_or_else(|| {
-                let layer_id = self.composition.create_layer();
+                let mut layer = self.composition.create_layer().unwrap();
 
                 for print in &raster.prints {
                     let transform: [f32; 9] = [
@@ -48,10 +49,10 @@ impl FormaComposition {
                         0.0,
                         1.0,
                     ];
-                    self.composition.insert_in_layer(layer_id, &print.path.transform(&transform));
+                    layer.insert(&print.path.transform(&transform));
                 }
 
-                (layer_id, raster.translation)
+                (layer.id(), raster.translation)
             });
 
         *option = Some(layer_details);
@@ -84,7 +85,7 @@ impl FormaComposition {
 
             self.cached_display_transform = Some(new_transform);
 
-            for layer in self.composition.layers_mut() {
+            for mut layer in self.composition.layers() {
                 let transform = *layer.transform().as_slice();
                 let transform = Transform2D {
                     m11: transform[0],
@@ -127,7 +128,7 @@ impl Composition<Forma> for FormaComposition {
 
     fn clear(&mut self) {
         self.current_layer_ids.clear();
-        for layer in self.composition.layers_mut() {
+        for mut layer in self.composition.layers() {
             layer.disable();
         }
     }
@@ -137,7 +138,7 @@ impl Composition<Forma> for FormaComposition {
             if let Some(id) = self.orders_to_layer_ids.remove(
                 &(FormaOrder::try_from(order.as_u32() * 2 + i)).unwrap_or_else(|e| panic!("{}", e)),
             ) {
-                if let Some(layer) = self.composition.get_mut(id) {
+                if let Some(mut layer) = self.composition.layer(id) {
                     if !self.current_layer_ids.contains(&id) {
                         layer.disable();
                     }
@@ -153,7 +154,7 @@ impl Composition<Forma> for FormaComposition {
             let id = self.insert_in_composition(clip);
 
             let forma_transform = self.forma_transform(layer.raster.translation);
-            let forma_layer = self.composition.get_mut(id).unwrap();
+            let mut forma_layer = self.composition.layer(id).unwrap();
 
             let forma_order =
                 FormaOrder::try_from(order.as_u32() * 2).unwrap_or_else(|e| panic!("{}", e));
@@ -176,7 +177,7 @@ impl Composition<Forma> for FormaComposition {
         let id = self.insert_in_composition(&layer.raster);
 
         let forma_transform = self.forma_transform(layer.raster.translation);
-        let forma_layer = self.composition.get_mut(id).unwrap();
+        let mut forma_layer = self.composition.layer(id).unwrap();
         let forma_order =
             FormaOrder::try_from(order.as_u32() * 2 + 1).unwrap_or_else(|e| panic!("{}", e));
         forma_layer.enable().set_order(forma_order).set_props(forma::Props {
@@ -240,7 +241,7 @@ impl Composition<Forma> for FormaComposition {
             let order =
                 FormaOrder::try_from(order.as_u32() * 2 + i).unwrap_or_else(|e| panic!("{}", e));
             if let Some(id) = self.orders_to_layer_ids.remove(&order) {
-                if let Some(layer) = self.composition.get_mut(id) {
+                if let Some(mut layer) = self.composition.layer(id) {
                     layer.disable();
                 }
             }

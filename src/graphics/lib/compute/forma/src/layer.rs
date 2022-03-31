@@ -2,10 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{cmp::Ordering, convert::TryFrom, error::Error, fmt, iter::FromIterator, mem};
+use std::{
+    cell::RefCell, cmp::Ordering, convert::TryFrom, error::Error, fmt, iter::FromIterator, mem,
+};
 
 use rustc_hash::FxHashMap;
-use surpass::{self, painter::Props, GeomPresTransform, LAYER_LIMIT};
+use surpass::{self, painter::Props, GeomPresTransform, LinesBuilder, Path, LAYER_LIMIT};
+
+use crate::LayerId;
 
 const IDENTITY: &[f32; 6] = &[1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
 
@@ -188,41 +192,45 @@ impl SmallBitSet {
     }
 }
 
-#[derive(Debug, Default)]
-pub struct Layer {
-    pub inner: surpass::Layer,
-    props: Props,
-    pub(crate) is_unchanged: SmallBitSet,
-    pub(crate) len: usize,
+#[derive(Debug)]
+pub struct Layer<'c> {
+    pub(crate) layer: &'c mut crate::composition::Layer,
+    pub(crate) lines_builder: &'c RefCell<Option<LinesBuilder>>,
 }
 
-impl Layer {
+impl Layer<'_> {
+    #[inline]
+    pub fn id(&self) -> LayerId {
+        self.layer.id
+    }
+
     #[inline]
     pub fn is_enabled(&self) -> bool {
-        self.inner.is_enabled
+        self.layer.inner.is_enabled
     }
 
     #[inline]
     pub fn set_is_enabled(&mut self, is_enabled: bool) -> &mut Self {
-        self.inner.is_enabled = is_enabled;
+        self.layer.inner.is_enabled = is_enabled;
         self
     }
 
     #[inline]
     pub fn disable(&mut self) -> &mut Self {
-        self.inner.is_enabled = false;
+        self.layer.inner.is_enabled = false;
         self
     }
 
     #[inline]
     pub fn enable(&mut self) -> &mut Self {
-        self.inner.is_enabled = true;
+        self.layer.inner.is_enabled = true;
         self
     }
 
     #[inline]
     pub fn transform(&self) -> GeomPresTransform {
-        self.inner
+        self.layer
+            .inner
             .affine_transform
             .map(GeomPresTransform::from_affine)
             .flatten()
@@ -237,9 +245,9 @@ impl Layer {
         let affine_transform =
             if transform.as_slice() == IDENTITY { None } else { Some(*transform.as_slice()) };
 
-        if self.inner.affine_transform != affine_transform {
-            self.is_unchanged.clear();
-            self.inner.affine_transform = affine_transform;
+        if self.layer.inner.affine_transform != affine_transform {
+            self.layer.is_unchanged.clear();
+            self.layer.inner.affine_transform = affine_transform;
         }
 
         self
@@ -247,14 +255,14 @@ impl Layer {
 
     #[inline]
     pub fn order(&self) -> u32 {
-        self.inner.order.expect("Layers should always have orders")
+        self.layer.inner.order.expect("Layers should always have orders")
     }
 
     #[inline]
     pub fn set_order(&mut self, order: Order) -> &mut Self {
-        if self.inner.order != Some(order.as_u32()) {
-            self.is_unchanged.clear();
-            self.inner.order = Some(order.as_u32());
+        if self.layer.inner.order != Some(order.as_u32()) {
+            self.layer.is_unchanged.clear();
+            self.layer.inner.order = Some(order.as_u32());
         }
 
         self
@@ -262,29 +270,30 @@ impl Layer {
 
     #[inline]
     pub fn props(&self) -> &Props {
-        &self.props
+        &self.layer.props
     }
 
     #[inline]
     pub fn set_props(&mut self, props: Props) -> &mut Self {
-        if self.props != props {
-            self.is_unchanged.clear();
-            self.props = props;
+        if self.layer.props != props {
+            self.layer.is_unchanged.clear();
+            self.layer.props = props;
         }
 
         self
     }
 
-    pub(crate) fn is_unchanged(&self, cache_id: u8) -> bool {
-        self.is_unchanged.contains(&cache_id)
-    }
+    #[inline]
+    pub fn insert(&mut self, path: &Path) -> &mut Self {
+        let mut builder_ref = self.lines_builder.borrow_mut();
+        let builder = builder_ref.as_mut().unwrap();
 
-    pub(crate) fn set_is_unchanged(&mut self, cache_id: u8, is_unchanged: bool) -> bool {
-        if is_unchanged {
-            self.is_unchanged.insert(cache_id)
-        } else {
-            self.is_unchanged.remove(cache_id)
-        }
+        let old_len = builder.len();
+        builder.push_path(self.layer.inner.order.unwrap(), path);
+        let len = builder.len() - old_len;
+
+        self.layer.len += len;
+        self
     }
 }
 
