@@ -57,7 +57,8 @@ protocol Device2 {
     /// The `write_segments_data` vector of segments specifies the data to write for each write
     /// segment. Each segment itself is a vector of uint8s, so `write_segments_data` is a vector of
     /// vectors of uint8s.
-    /// The `read_segments_length` vector specifies the length of the read segments.
+    /// The `read_segments_length` vector specifies the length of the read segments. No entry may be
+    /// larger than MAX_TRANSFER_SIZE.
     /// If there is no error, `read_segments_data` returns a vector of segments, with each segment
     /// data itself returned in vectors.
     ///
@@ -69,7 +70,7 @@ protocol Device2 {
     Transfer(struct {
         segments_is_write vector<bool>:MAX_COUNT_SEGMENTS;
         write_segments_data vector<vector<uint8>:MAX_TRANSFER_SIZE>:MAX_COUNT_SEGMENTS;
-        read_segments_length vector<uint8>:MAX_COUNT_SEGMENTS;
+        read_segments_length vector<uint32>:MAX_COUNT_SEGMENTS;
     }) -> (struct {
         read_segments_data vector<vector<uint8>:MAX_TRANSFER_SIZE>:MAX_COUNT_SEGMENTS;
     }) error zx.status;

@@ -95,13 +95,14 @@ class I2cFidlChannel : public I2cChannelBase {
   fidl::WireResult<fuchsia_hardware_i2c::Device2::Transfer> Transfer(
       fidl::VectorView<bool> segments_is_write,
       fidl::VectorView<fidl::VectorView<uint8_t>> write_segments_data,
-      fidl::VectorView<uint8_t> read_segments_length) {
+      fidl::VectorView<uint32_t> read_segments_length) {
     return fidl_client_->Transfer(segments_is_write, write_segments_data, read_segments_length);
   }
 
   zx_status_t WriteReadSync(const uint8_t* tx_buf, size_t tx_len, uint8_t* rx_buf,
                             size_t rx_len) override {
-    if (tx_len > fuchsia_hardware_i2c::wire::kMaxTransferSize || rx_len > UINT8_MAX) {
+    if (tx_len > fuchsia_hardware_i2c::wire::kMaxTransferSize ||
+        rx_len > fuchsia_hardware_i2c::wire::kMaxTransferSize) {
       return ZX_ERR_OUT_OF_RANGE;
     }
 
@@ -109,7 +110,7 @@ class I2cFidlChannel : public I2cChannelBase {
 
     fidl::VectorView<bool> segments_is_write;
     fidl::VectorView<fidl::VectorView<uint8_t>> write_segments;
-    fidl::VectorView<uint8_t> read_segments_length;
+    fidl::VectorView<uint32_t> read_segments_length;
 
     if (tx_len > 0 && rx_len > 0) {
       segments_is_write = fidl::VectorView<bool>(arena, 2);
@@ -132,8 +133,8 @@ class I2cFidlChannel : public I2cChannelBase {
     }
 
     if (rx_len > 0) {
-      read_segments_length = fidl::VectorView<uint8_t>(arena, 1);
-      read_segments_length[0] = static_cast<uint8_t>(rx_len);
+      read_segments_length = fidl::VectorView<uint32_t>(arena, 1);
+      read_segments_length[0] = static_cast<uint32_t>(rx_len);
     }
 
     const auto reply =

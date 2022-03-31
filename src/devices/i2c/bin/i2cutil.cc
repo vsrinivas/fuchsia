@@ -28,14 +28,15 @@ static void usage(char* prog) {
          prog);
 }
 
-static zx_status_t convert_args(char** argv, size_t length, uint8_t* buffer) {
+template <typename T>
+static zx_status_t convert_args(char** argv, size_t length, T* buffer) {
   for (size_t i = 0; i < length; i++) {
     char* end = nullptr;
     unsigned long value = strtoul(argv[i], &end, 0);
     if (value > 0xFF || *end != '\0') {
       return ZX_ERR_INVALID_ARGS;
     }
-    buffer[i] = static_cast<uint8_t>(value);
+    buffer[i] = static_cast<T>(value);
   }
   return ZX_OK;
 }
@@ -51,7 +52,7 @@ static zx_status_t write_bytes(fidl::WireSyncClient<fuchsia_hardware_i2c::Device
   auto read = client->Transfer(
       std::move(segments_is_write),
       fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(&write_segment, 1),  // One write.
-      fidl::VectorView<uint8_t>());                                                  // No reads.
+      fidl::VectorView<uint32_t>());                                                 // No reads.
   auto status = read.status();
   if (status == ZX_OK && read->result.is_err()) {
     status = ZX_ERR_INTERNAL;
@@ -64,13 +65,13 @@ static zx_status_t read_byte(fidl::WireSyncClient<fuchsia_hardware_i2c::Device2>
   bool is_write[] = {true, false};
   auto segments_is_write = fidl::VectorView<bool>::FromExternal(is_write);
   auto write_segment = fidl::VectorView<uint8_t>::FromExternal(address.data(), address.size());
-  uint8_t read_length = 1;
+  uint32_t read_length = 1;
 
   auto read =
       client->Transfer(std::move(segments_is_write),
                        fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(&write_segment,
                                                                                  1),  // One write.
-                       fidl::VectorView<uint8_t>::FromExternal(&read_length, 1));     // One read.
+                       fidl::VectorView<uint32_t>::FromExternal(&read_length, 1));    // One read.
   auto status = read.status();
   if (status == ZX_OK) {
     if (read->result.is_err()) {
@@ -117,7 +118,7 @@ static zx_status_t transact(fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> 
   segment_start[n_segments] = n_elements + 1;
 
   auto write_data = std::make_unique<fidl::VectorView<uint8_t>[]>(n_writes);
-  auto read_lengths = std::make_unique<uint8_t[]>(n_segments - n_writes);
+  auto read_lengths = std::make_unique<uint32_t[]>(n_segments - n_writes);
   auto is_write = std::make_unique<bool[]>(n_segments);
   auto segments_is_write = fidl::VectorView<bool>::FromExternal(is_write.get(), n_segments);
 
@@ -176,7 +177,7 @@ static zx_status_t transact(fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> 
   auto read = client->Transfer(
       std::move(segments_is_write),
       fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(write_data.get(), n_writes),
-      fidl::VectorView<uint8_t>::FromExternal(read_lengths.get(), n_segments - n_writes));
+      fidl::VectorView<uint32_t>::FromExternal(read_lengths.get(), n_segments - n_writes));
   auto status = read.status();
   if (status == ZX_OK) {
     if (read->result.is_err()) {
