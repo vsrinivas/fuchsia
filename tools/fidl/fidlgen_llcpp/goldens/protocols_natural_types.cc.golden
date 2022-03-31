@@ -18,42 +18,6 @@
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
 ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response::Storage_
 test_protocols::WithErrorSyntax_ResponseAsStruct_Response::CloneStorage_()
     const {
@@ -67,6 +31,14 @@ test_protocols::WithErrorSyntaxResponseAsStructTopResponse::CloneStorage_()
     const {
   return Storage_{::fidl::internal::NaturalClone(storage_.result)};
 }
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
 
 ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response::Storage_
 test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response::CloneStorage_()
@@ -192,10 +164,38 @@ test_protocols::ManyParametersFifteenRequest::CloneStorage_() const {
                   ::fidl::internal::NaturalClone(storage_.p15)};
 }
 
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
 ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse::Storage_
 test_protocols::WithErrorSyntaxErrorAsEnumTopResponse::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.result)};
 }
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
 
 ::test_protocols::ChannelProtocolMethodBTopResponse::Storage_
 test_protocols::ChannelProtocolMethodBTopResponse::CloneStorage_() const {
@@ -220,10 +220,6 @@ test_protocols::ChannelProtocolEventARequest::CloneStorage_() const {
                   ::fidl::internal::NaturalClone(storage_.b)};
 }
 
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
 std::shared_ptr<
     ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result::Storage_>
 test_protocols::WithErrorSyntax_ResponseAsStruct_Result::CloneStorage_() const {
@@ -241,6 +237,10 @@ test_protocols::WithErrorSyntax_ResponseAsStruct_Result::CloneStorage_() const {
       return std::make_shared<Storage_>();
   }
 }
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
 
 std::shared_ptr<
     ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Storage_>

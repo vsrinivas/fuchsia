@@ -12,6 +12,7 @@ import 'package:fidl/fidl.dart' as $fidl;
 import 'package:meta/meta.dart';
 import 'package:zircon/zircon.dart' as $zircon;
 
+import 'package:fidl_zx/fidl_async.dart' as lib$zx;
 // ignore_for_file: always_specify_types
 // ignore_for_file: avoid_positional_boolean_parameters
 // ignore_for_file: avoid_returning_null
@@ -83,97 +84,6 @@ const $fidl.EnumType<ErrorEnum> kErrorEnum_Type = $fidl.EnumType<ErrorEnum>(
     type: $fidl.Uint32Type(),
     values: {0x1: null, 0x2: null},
     ctor: ErrorEnum._ctor);
-
-class ObjType extends $fidl.Enum {
-  static const Map<int, ObjType> _values = {
-    0x0: none,
-    0xe: socket,
-  };
-  factory ObjType(int _v) {
-    if (!_values.containsKey(_v)) {
-      throw $fidl.FidlError('Invalid strict enum value: $_v',
-          $fidl.FidlErrorCode.fidlInvalidEnumValue);
-    }
-    return _values[_v]!;
-  }
-  static const ObjType none = ObjType._(0x0);
-  static const ObjType socket = ObjType._(0xe);
-
-  const ObjType._(this.$value);
-
-  @override
-  final int $value;
-
-  static const Map<String, ObjType> $valuesMap = {
-    r'none': none,
-    r'socket': socket,
-  };
-
-  static const List<ObjType> $values = [
-    none,
-    socket,
-  ];
-
-  static ObjType? $valueOf(String name) => $valuesMap[name];
-
-  @override
-  bool isUnknown() {
-    return false;
-  }
-
-  static ObjType _ctor(int v) => ObjType(v);
-}
-
-const $fidl.EnumType<ObjType> kobj_type_Type = $fidl.EnumType<ObjType>(
-    type: $fidl.Uint32Type(),
-    values: {0x0: null, 0xe: null},
-    ctor: ObjType._ctor);
-
-class Rights extends $fidl.Bits {
-  factory Rights(int _v) {
-    if ((_v & ~$mask.$value) != 0) {
-      throw $fidl.FidlError('Bits value contains unknown bit(s): $_v',
-          $fidl.FidlErrorCode.fidlInvalidBit);
-    }
-    return Rights._(_v);
-  }
-  static const Rights transfer = Rights._(0x1);
-  static const Rights duplicate = Rights._(0x2);
-  static const Rights $none = Rights._(0);
-  static const Rights $mask = Rights._(0x3);
-
-  const Rights._(this.$value);
-
-  Rights operator |(Rights other) {
-    return Rights._($value | other.$value);
-  }
-
-  Rights operator &(Rights other) {
-    return Rights._($value & other.$value);
-  }
-
-  Rights operator ~() {
-    return Rights._(~$value & $mask.$value);
-  }
-
-  @override
-  final int $value;
-
-  @override
-  bool hasUnknownBits() {
-    return getUnknownBits() != 0;
-  }
-
-  @override
-  int getUnknownBits() {
-    return $value & ~$mask.$value;
-  }
-
-  static Rights _ctor(int v) => Rights(v);
-}
-
-const $fidl.BitsType<Rights> krights_Type =
-    $fidl.BitsType<Rights>(type: $fidl.Uint32Type(), ctor: Rights._ctor);
 
 enum TheUnionTag {
   $unknown,
@@ -1617,7 +1527,7 @@ const $fidl.MethodType _kHandleRightsProtocol_ResponseMethod_Type =
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<$zircon.Socket>(
-        type: $fidl.SocketType(objectType: 14, rights: 1),
+        type: $fidl.SocketType(objectType: 14, rights: 2),
         offsetV1: 0,
         offsetV2: 0),
   ],

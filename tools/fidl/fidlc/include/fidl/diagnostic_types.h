@@ -40,6 +40,7 @@ constexpr std::string_view kFormatMarker = "{}";
 std::string Display(const std::string& s);
 std::string Display(std::string_view s);
 std::string Display(const std::set<std::string>& s);
+std::string Display(const std::set<std::string_view>& s);
 std::string Display(const SourceSpan& s);
 std::string Display(const Token::KindAndSubkind& t);
 std::string Display(const types::Openness o);

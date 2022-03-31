@@ -50,6 +50,9 @@ class SharedAmongstLibraries final : public SharedInterface {
   // "obj_type", and "rights".
   void AddLibraryZx();
 
+  // Adds and compiles a library defining fdf.handle and fdf.obj_type.
+  void AddLibraryFdf();
+
   fidl::Reporter* reporter() override { return &reporter_; }
   fidl::flat::Libraries* all_libraries() override { return &all_libraries_; }
   fidl::ExperimentalFlags& experimental_flags() override { return experimental_flags_; }
@@ -120,6 +123,13 @@ class TestLibrary final : public SharedInterface {
   void UseLibraryZx() {
     assert(!library_ && "must call before compiling");
     owned_shared_.value().AddLibraryZx();
+  }
+
+  // Helper for making a single test library depend on library fdf, without
+  // requiring an explicit SharedAmongstLibraries.
+  void UseLibraryFdf() {
+    assert(!library_ && "must call before compiling");
+    owned_shared_.value().AddLibraryFdf();
   }
 
   fidl::Reporter* reporter() override { return shared_->reporter(); }

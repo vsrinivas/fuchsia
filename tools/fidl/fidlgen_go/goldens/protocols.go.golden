@@ -3,7 +3,6 @@
 package protocols
 
 import (
-	_strings "strings"
 	_zx "syscall/zx"
 	_bindings "syscall/zx/fidl"
 )
@@ -46,106 +45,6 @@ func (x ErrorEnum) String() string {
 		return "ErrBar"
 	}
 	return "Unknown"
-}
-
-var _ _bindings.Enum = ObjType(0)
-
-type ObjType uint32
-
-const (
-	ObjTypeNone   ObjType = 0
-	ObjTypeSocket ObjType = 14
-)
-
-func (_ ObjType) I_EnumValues() []ObjType {
-	return []ObjType{
-		ObjTypeNone,
-		ObjTypeSocket,
-	}
-}
-
-func (_ ObjType) I_EnumIsStrict() bool {
-	return true
-}
-
-func (x ObjType) IsUnknown() bool {
-	switch x {
-	case 0:
-		return false
-	case 14:
-		return false
-	}
-	return true
-}
-
-func (x ObjType) String() string {
-	switch x {
-	case 0:
-		return "None"
-	case 14:
-		return "Socket"
-	}
-	return "Unknown"
-}
-
-var _ _bindings.Bits = Rights(0)
-
-type Rights uint32
-
-const (
-	RightsTransfer  Rights = 1
-	RightsDuplicate Rights = 2
-	Rights_Mask     Rights = 3
-)
-
-func (_ Rights) I_BitsMask() Rights {
-	return Rights_Mask
-}
-
-func (_ Rights) I_BitsIsStrict() bool {
-	return true
-}
-
-func (x Rights) HasUnknownBits() bool {
-	return x.GetUnknownBits() != 0
-}
-
-func (x Rights) GetUnknownBits() uint64 {
-	return uint64(^Rights_Mask & x)
-}
-
-func (x Rights) InvertBits() Rights {
-	return Rights_Mask & ^x
-}
-
-// HasBits validates that all flipped bits in the mask are set.
-func (x Rights) HasBits(mask Rights) bool {
-	return mask|x == x
-}
-
-// ClearBits ensures all flipped bits in the mask are unset.
-func (x Rights) ClearBits(mask Rights) Rights {
-	return ^mask & x
-}
-
-func (x Rights) String() string {
-	var buf _strings.Builder
-	if 1&x != 0 {
-		if buf.Len() != 0 {
-			buf.WriteRune('|')
-		}
-		buf.WriteString("Transfer")
-	}
-	if 2&x != 0 {
-		if buf.Len() != 0 {
-			buf.WriteRune('|')
-		}
-		buf.WriteString("Duplicate")
-	}
-	if buf.Len() == 0 {
-		buf.WriteString("<empty bits>")
-	}
-	return buf.String()
 }
 
 type ProtocolEnds struct {
@@ -310,7 +209,7 @@ func (msg *handleRightsProtocolWithCtxResponseMethodRequest) Marshaler() _bindin
 
 type handleRightsProtocolWithCtxResponseMethodResponse struct {
 	_ struct{}   `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
-	H _zx.Socket `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_handle_subtype:"14" fidl_handle_rights:"1" fidl_bounds:"0"`
+	H _zx.Socket `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_handle_subtype:"14" fidl_handle_rights:"2" fidl_bounds:"0"`
 }
 
 var _mhandleRightsProtocolWithCtxResponseMethodResponse = _bindings.CreateLazyMarshaler(handleRightsProtocolWithCtxResponseMethodResponse{})

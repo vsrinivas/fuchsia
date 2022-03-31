@@ -26,28 +26,7 @@
 
 namespace test_protocols {
 namespace wire {
-using Rights = ::test_protocols::rights;
-
-using ObjType = ::test_protocols::obj_type;
 using ErrorEnum = ::test_protocols::ErrorEnum;
-
-struct WithErrorSyntaxHandleInResultResponse;
-
-struct WithErrorSyntaxHandleInResultTopResponse;
-
-struct HandleRightsProtocolResponseMethodTopResponse;
-
-struct HandleRightsProtocolResponseMethodRequest;
-
-struct HandleRightsProtocolNoResponseMethodRequest;
-
-struct HandleRightsProtocolAnEventRequest;
-
-struct ChannelProtocolTakeHandleRequest;
-
-struct ChannelProtocolMutateSocketTopResponse;
-
-struct ChannelProtocolMutateSocketRequest;
 
 struct WithProtocolEndsServerEndsTopResponse;
 
@@ -60,6 +39,10 @@ struct WithProtocolEndsClientEndsRequest;
 struct WithErrorSyntaxResponseAsStructResponse;
 
 struct WithErrorSyntaxResponseAsStructTopResponse;
+
+struct WithErrorSyntaxHandleInResultResponse;
+
+struct WithErrorSyntaxHandleInResultTopResponse;
 
 struct WithErrorSyntaxErrorAsPrimitiveResponse;
 
@@ -99,7 +82,21 @@ struct WithProtocolEndsStructContainingEndsRequest;
 
 struct ManyParametersFifteenRequest;
 
+struct HandleRightsProtocolResponseMethodTopResponse;
+
+struct HandleRightsProtocolResponseMethodRequest;
+
+struct HandleRightsProtocolNoResponseMethodRequest;
+
+struct HandleRightsProtocolAnEventRequest;
+
 struct WithErrorSyntaxErrorAsEnumTopResponse;
+
+struct ChannelProtocolTakeHandleRequest;
+
+struct ChannelProtocolMutateSocketTopResponse;
+
+struct ChannelProtocolMutateSocketRequest;
 
 struct ChannelProtocolMethodBTopResponse;
 
@@ -109,15 +106,63 @@ struct ChannelProtocolMethodARequest;
 
 struct ChannelProtocolEventARequest;
 
-class WithErrorSyntaxHandleInResultResult;
-
 class WithErrorSyntaxResponseAsStructResult;
+
+class WithErrorSyntaxHandleInResultResult;
 
 class WithErrorSyntaxErrorAsPrimitiveResult;
 
 class TheUnion;
 
 class WithErrorSyntaxErrorAsEnumResult;
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_WithProtocolEndsServerEndsTopResponseTable;
+
+struct WithProtocolEndsServerEndsTopResponse {
+  ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> out = {};
+
+  void _CloseHandles();
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_WithProtocolEndsServerEndsRequestTable;
+
+struct WithProtocolEndsServerEndsRequest {
+  ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> in = {};
+
+  void _CloseHandles();
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_WithProtocolEndsClientEndsTopResponseTable;
+
+struct WithProtocolEndsClientEndsTopResponse {
+  ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> out = {};
+
+  void _CloseHandles();
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_WithProtocolEndsClientEndsRequestTable;
+
+struct WithProtocolEndsClientEndsRequest {
+  ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> in = {};
+
+  void _CloseHandles();
+};
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
@@ -130,6 +175,20 @@ struct WithErrorSyntaxHandleInResultResponse {
   void _CloseHandles();
 };
 #endif  // __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
+
+struct WithErrorSyntaxErrorAsPrimitiveResponse {
+  uint8_t __reserved = {};
+};
+
+extern "C" const fidl_type_t
+    test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
+
+struct WithErrorSyntaxErrorAsEnumResponse {
+  uint8_t __reserved = {};
+};
 
 #ifdef __Fuchsia__
 
@@ -212,197 +271,6 @@ struct ChannelProtocolMutateSocketRequest {
   ::zx::socket a = {};
 
   void _CloseHandles();
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_WithProtocolEndsServerEndsTopResponseTable;
-
-struct WithProtocolEndsServerEndsTopResponse {
-  ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> out = {};
-
-  void _CloseHandles();
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_WithProtocolEndsServerEndsRequestTable;
-
-struct WithProtocolEndsServerEndsRequest {
-  ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> in = {};
-
-  void _CloseHandles();
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_WithProtocolEndsClientEndsTopResponseTable;
-
-struct WithProtocolEndsClientEndsTopResponse {
-  ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> out = {};
-
-  void _CloseHandles();
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_WithProtocolEndsClientEndsRequestTable;
-
-struct WithProtocolEndsClientEndsRequest {
-  ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> in = {};
-
-  void _CloseHandles();
-};
-#endif  // __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
-
-struct WithErrorSyntaxErrorAsPrimitiveResponse {
-  uint8_t __reserved = {};
-};
-
-extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
-
-struct WithErrorSyntaxErrorAsEnumResponse {
-  uint8_t __reserved = {};
-};
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntax_HandleInResult_ResultTable;
-
-class WithErrorSyntaxHandleInResultResult {
- public:
-  using Response = test_protocols::wire::WithErrorSyntaxHandleInResultResponse;
-
-  WithErrorSyntaxHandleInResultResult()
-      : ordinal_(::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
-                     Ordinal::Invalid),
-        envelope_{} {}
-
-  ~WithErrorSyntaxHandleInResultResult();
-  WithErrorSyntaxHandleInResultResult(
-      WithErrorSyntaxHandleInResultResult&& other) {
-    _Move(std::move(other));
-  }
-  WithErrorSyntaxHandleInResultResult& operator=(
-      WithErrorSyntaxHandleInResultResult&& other) {
-    if (this != &other) {
-      _Move(std::move(other));
-    }
-    return *this;
-  }
-
-  enum class Tag : fidl_xunion_tag_t {
-    kResponse = 1,  // 0x1
-    kErr = 2,       // 0x2
-  };
-
-  bool has_invalid_tag() const {
-    return ordinal_ ==
-           ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
-               Ordinal::Invalid;
-  }
-
-  bool is_response() const {
-    return ordinal_ ==
-           ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
-               Ordinal::kResponse;
-  }
-  static WithErrorSyntaxHandleInResultResult WithResponse(
-      ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse val) {
-    WithErrorSyntaxHandleInResultResult result;
-    result.set_response(std::move(val));
-    return result;
-  }
-
-  void set_response(
-      ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse elem) {
-    ordinal_ = ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
-        Ordinal::kResponse;
-    envelope_
-        .As<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>()
-        .set_data(std::move(elem));
-  }
-
-  ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse& response() {
-    ZX_ASSERT(ordinal_ ==
-              ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
-                  Ordinal::kResponse);
-    return envelope_
-        .As<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>()
-        .get_data();
-  }
-  const ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse&
-  response() const {
-    ZX_ASSERT(ordinal_ ==
-              ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
-                  Ordinal::kResponse);
-    return envelope_
-        .As<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>()
-        .get_data();
-  }
-
-  bool is_err() const {
-    return ordinal_ == ::test_protocols::wire::
-                           WithErrorSyntaxHandleInResultResult::Ordinal::kErr;
-  }
-  static WithErrorSyntaxHandleInResultResult WithErr(uint32_t val) {
-    WithErrorSyntaxHandleInResultResult result;
-    result.set_err(std::move(val));
-    return result;
-  }
-
-  void set_err(uint32_t elem) {
-    ordinal_ = ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
-        Ordinal::kErr;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
-  }
-
-  uint32_t& err() {
-    ZX_ASSERT(ordinal_ ==
-              ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
-                  Ordinal::kErr);
-    return envelope_.As<uint32_t>().get_data();
-  }
-  const uint32_t& err() const {
-    ZX_ASSERT(ordinal_ ==
-              ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
-                  Ordinal::kErr);
-    return envelope_.As<uint32_t>().get_data();
-  }
-  ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::Tag Which()
-      const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<
-        ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::Tag>(
-        ordinal_);
-  }
-  void _CloseHandles();
-
- private:
-  enum class Ordinal : fidl_xunion_tag_t {
-    Invalid = 0,
-    kResponse = 1,  // 0x1
-    kErr = 2,       // 0x2
-  };
-  void _Move(WithErrorSyntaxHandleInResultResult&& other);
-
-  static void SizeAndOffsetAssertionHelper();
-  ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::Ordinal ordinal_;
-  FIDL_ALIGNDECL
-  ::fidl::UntypedEnvelope envelope_;
 };
 #endif  // __Fuchsia__
 
@@ -552,6 +420,135 @@ class WithErrorSyntaxResponseAsStructResult {
   FIDL_ALIGNDECL
   ::fidl::UntypedEnvelope envelope_;
 };
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_WithErrorSyntax_HandleInResult_ResultTable;
+
+class WithErrorSyntaxHandleInResultResult {
+ public:
+  using Response = test_protocols::wire::WithErrorSyntaxHandleInResultResponse;
+
+  WithErrorSyntaxHandleInResultResult()
+      : ordinal_(::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
+                     Ordinal::Invalid),
+        envelope_{} {}
+
+  ~WithErrorSyntaxHandleInResultResult();
+  WithErrorSyntaxHandleInResultResult(
+      WithErrorSyntaxHandleInResultResult&& other) {
+    _Move(std::move(other));
+  }
+  WithErrorSyntaxHandleInResultResult& operator=(
+      WithErrorSyntaxHandleInResultResult&& other) {
+    if (this != &other) {
+      _Move(std::move(other));
+    }
+    return *this;
+  }
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,       // 0x2
+  };
+
+  bool has_invalid_tag() const {
+    return ordinal_ ==
+           ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
+               Ordinal::Invalid;
+  }
+
+  bool is_response() const {
+    return ordinal_ ==
+           ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
+               Ordinal::kResponse;
+  }
+  static WithErrorSyntaxHandleInResultResult WithResponse(
+      ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse val) {
+    WithErrorSyntaxHandleInResultResult result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  void set_response(
+      ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse elem) {
+    ordinal_ = ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
+        Ordinal::kResponse;
+    envelope_
+        .As<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>()
+        .set_data(std::move(elem));
+  }
+
+  ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse& response() {
+    ZX_ASSERT(ordinal_ ==
+              ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
+                  Ordinal::kResponse);
+    return envelope_
+        .As<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>()
+        .get_data();
+  }
+  const ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse&
+  response() const {
+    ZX_ASSERT(ordinal_ ==
+              ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
+                  Ordinal::kResponse);
+    return envelope_
+        .As<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>()
+        .get_data();
+  }
+
+  bool is_err() const {
+    return ordinal_ == ::test_protocols::wire::
+                           WithErrorSyntaxHandleInResultResult::Ordinal::kErr;
+  }
+  static WithErrorSyntaxHandleInResultResult WithErr(uint32_t val) {
+    WithErrorSyntaxHandleInResultResult result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
+  void set_err(uint32_t elem) {
+    ordinal_ = ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
+        Ordinal::kErr;
+    envelope_.As<uint32_t>().set_data(std::move(elem));
+  }
+
+  uint32_t& err() {
+    ZX_ASSERT(ordinal_ ==
+              ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
+                  Ordinal::kErr);
+    return envelope_.As<uint32_t>().get_data();
+  }
+  const uint32_t& err() const {
+    ZX_ASSERT(ordinal_ ==
+              ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
+                  Ordinal::kErr);
+    return envelope_.As<uint32_t>().get_data();
+  }
+  ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::Tag Which()
+      const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<
+        ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::Tag>(
+        ordinal_);
+  }
+  void _CloseHandles();
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,       // 0x2
+  };
+  void _Move(WithErrorSyntaxHandleInResultResult&& other);
+
+  static void SizeAndOffsetAssertionHelper();
+  ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::UntypedEnvelope envelope_;
+};
+#endif  // __Fuchsia__
 
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
@@ -848,20 +845,6 @@ class WithErrorSyntaxErrorAsEnumResult {
   ::fidl::UntypedEnvelope envelope_;
 };
 
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
-
-struct WithErrorSyntaxHandleInResultTopResponse {
-  using Result = test_protocols::wire::WithErrorSyntaxHandleInResultResult;
-
-  ::test_protocols::wire::WithErrorSyntaxHandleInResultResult result = {};
-
-  void _CloseHandles();
-};
-#endif  // __Fuchsia__
-
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 
@@ -881,6 +864,20 @@ struct WithErrorSyntaxResponseAsStructTopResponse {
 
   ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult result = {};
 };
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
+
+struct WithErrorSyntaxHandleInResultTopResponse {
+  using Result = test_protocols::wire::WithErrorSyntaxHandleInResultResult;
+
+  ::test_protocols::wire::WithErrorSyntaxHandleInResultResult result = {};
+
+  void _CloseHandles();
+};
+#endif  // __Fuchsia__
 
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxErrorAsPrimitiveTopResponseTable;
@@ -1090,349 +1087,6 @@ struct ChannelProtocolEventARequest {
 }  // namespace wire
 }  // namespace test_protocols
 namespace fidl {
-
-#ifdef __Fuchsia__
-template <>
-struct IsResource<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>
-    : public std::true_type {};
-
-template <>
-struct TypeTraits<
-    ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse> {
-  static constexpr const fidl_type_t* kType =
-      &::test_protocols::wire::
-          test_protocols_WithErrorSyntax_HandleInResult_ResponseTable;
-  static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 4;
-  static constexpr uint32_t kPrimarySizeV1 = 4;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasPointer = false;
-};
-
-template <>
-struct IsFidlType<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>
-    : public std::true_type {};
-template <>
-struct IsStruct<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>);
-static_assert(
-    offsetof(::test_protocols::wire::WithErrorSyntaxHandleInResultResponse,
-             h) == 0);
-static_assert(
-    sizeof(::test_protocols::wire::WithErrorSyntaxHandleInResultResponse) ==
-    TypeTraits<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>::
-        kPrimarySize);
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-template <>
-struct IsResource<
-    ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse>
-    : public std::true_type {};
-
-template <>
-struct TypeTraits<
-    ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse> {
-  static constexpr const fidl_type_t* kType =
-      &::test_protocols::wire::
-          test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
-  static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 8;
-  static constexpr bool kHasPointer = true;
-};
-
-template <>
-struct IsFidlType<
-    ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse>
-    : public std::true_type {};
-template <>
-struct IsStruct<
-    ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<
-        ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse>);
-static_assert(
-    offsetof(::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse,
-             result) == 0);
-static_assert(
-    sizeof(::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse) ==
-    TypeTraits<::test_protocols::wire::
-                   WithErrorSyntaxHandleInResultTopResponse>::kPrimarySize);
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-template <>
-struct IsResource<
-    ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse>
-    : public std::true_type {};
-
-template <>
-struct TypeTraits<
-    ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse> {
-  static constexpr const fidl_type_t* kType =
-      &::test_protocols::wire::
-          test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
-  static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 4;
-  static constexpr uint32_t kPrimarySizeV1 = 4;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasPointer = false;
-};
-
-template <>
-struct IsFidlType<
-    ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse>
-    : public std::true_type {};
-template <>
-struct IsStruct<
-    ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<
-        ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse>);
-static_assert(
-    offsetof(
-        ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse,
-        h) == 0);
-static_assert(
-    sizeof(::test_protocols::wire::
-               HandleRightsProtocolResponseMethodTopResponse) ==
-    TypeTraits<
-        ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse>::
-        kPrimarySize);
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-template <>
-struct IsResource<
-    ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest>
-    : public std::true_type {};
-
-template <>
-struct TypeTraits<
-    ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest> {
-  static constexpr const fidl_type_t* kType =
-      &::test_protocols::wire::
-          test_protocols_HandleRightsProtocolResponseMethodRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 4;
-  static constexpr uint32_t kPrimarySizeV1 = 4;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasPointer = false;
-};
-
-template <>
-struct IsFidlType<
-    ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest>
-    : public std::true_type {};
-template <>
-struct IsStruct<
-    ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<
-        ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest>);
-static_assert(
-    offsetof(::test_protocols::wire::HandleRightsProtocolResponseMethodRequest,
-             h) == 0);
-static_assert(
-    sizeof(::test_protocols::wire::HandleRightsProtocolResponseMethodRequest) ==
-    TypeTraits<::test_protocols::wire::
-                   HandleRightsProtocolResponseMethodRequest>::kPrimarySize);
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-template <>
-struct IsResource<
-    ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest>
-    : public std::true_type {};
-
-template <>
-struct TypeTraits<
-    ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest> {
-  static constexpr const fidl_type_t* kType =
-      &::test_protocols::wire::
-          test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 4;
-  static constexpr uint32_t kPrimarySizeV1 = 4;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasPointer = false;
-};
-
-template <>
-struct IsFidlType<
-    ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest>
-    : public std::true_type {};
-template <>
-struct IsStruct<
-    ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<
-        ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest>);
-static_assert(
-    offsetof(
-        ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest,
-        h) == 0);
-static_assert(
-    sizeof(
-        ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest) ==
-    TypeTraits<::test_protocols::wire::
-                   HandleRightsProtocolNoResponseMethodRequest>::kPrimarySize);
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-template <>
-struct IsResource<::test_protocols::wire::HandleRightsProtocolAnEventRequest>
-    : public std::true_type {};
-
-template <>
-struct TypeTraits<::test_protocols::wire::HandleRightsProtocolAnEventRequest> {
-  static constexpr const fidl_type_t* kType =
-      &::test_protocols::wire::
-          test_protocols_HandleRightsProtocolAnEventRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 4;
-  static constexpr uint32_t kPrimarySizeV1 = 4;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasPointer = false;
-};
-
-template <>
-struct IsFidlType<::test_protocols::wire::HandleRightsProtocolAnEventRequest>
-    : public std::true_type {};
-template <>
-struct IsStruct<::test_protocols::wire::HandleRightsProtocolAnEventRequest>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::test_protocols::wire::HandleRightsProtocolAnEventRequest>);
-static_assert(
-    offsetof(::test_protocols::wire::HandleRightsProtocolAnEventRequest, h) ==
-    0);
-static_assert(
-    sizeof(::test_protocols::wire::HandleRightsProtocolAnEventRequest) ==
-    TypeTraits<::test_protocols::wire::HandleRightsProtocolAnEventRequest>::
-        kPrimarySize);
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-template <>
-struct IsResource<::test_protocols::wire::ChannelProtocolTakeHandleRequest>
-    : public std::true_type {};
-
-template <>
-struct TypeTraits<::test_protocols::wire::ChannelProtocolTakeHandleRequest> {
-  static constexpr const fidl_type_t* kType =
-      &::test_protocols::wire::
-          test_protocols_ChannelProtocolTakeHandleRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 4;
-  static constexpr uint32_t kPrimarySizeV1 = 4;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasPointer = false;
-};
-
-template <>
-struct IsFidlType<::test_protocols::wire::ChannelProtocolTakeHandleRequest>
-    : public std::true_type {};
-template <>
-struct IsStruct<::test_protocols::wire::ChannelProtocolTakeHandleRequest>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::test_protocols::wire::ChannelProtocolTakeHandleRequest>);
-static_assert(offsetof(::test_protocols::wire::ChannelProtocolTakeHandleRequest,
-                       h) == 0);
-static_assert(
-    sizeof(::test_protocols::wire::ChannelProtocolTakeHandleRequest) ==
-    TypeTraits<::test_protocols::wire::ChannelProtocolTakeHandleRequest>::
-        kPrimarySize);
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-template <>
-struct IsResource<
-    ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse>
-    : public std::true_type {};
-
-template <>
-struct TypeTraits<
-    ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse> {
-  static constexpr const fidl_type_t* kType =
-      &::test_protocols::wire::
-          test_protocols_ChannelProtocolMutateSocketTopResponseTable;
-  static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 4;
-  static constexpr uint32_t kPrimarySizeV1 = 4;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasPointer = false;
-};
-
-template <>
-struct IsFidlType<
-    ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse>
-    : public std::true_type {};
-template <>
-struct IsStruct<::test_protocols::wire::ChannelProtocolMutateSocketTopResponse>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse>);
-static_assert(
-    offsetof(::test_protocols::wire::ChannelProtocolMutateSocketTopResponse,
-             b) == 0);
-static_assert(
-    sizeof(::test_protocols::wire::ChannelProtocolMutateSocketTopResponse) ==
-    TypeTraits<::test_protocols::wire::ChannelProtocolMutateSocketTopResponse>::
-        kPrimarySize);
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-template <>
-struct IsResource<::test_protocols::wire::ChannelProtocolMutateSocketRequest>
-    : public std::true_type {};
-
-template <>
-struct TypeTraits<::test_protocols::wire::ChannelProtocolMutateSocketRequest> {
-  static constexpr const fidl_type_t* kType =
-      &::test_protocols::wire::
-          test_protocols_ChannelProtocolMutateSocketRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 4;
-  static constexpr uint32_t kPrimarySizeV1 = 4;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasPointer = false;
-};
-
-template <>
-struct IsFidlType<::test_protocols::wire::ChannelProtocolMutateSocketRequest>
-    : public std::true_type {};
-template <>
-struct IsStruct<::test_protocols::wire::ChannelProtocolMutateSocketRequest>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::test_protocols::wire::ChannelProtocolMutateSocketRequest>);
-static_assert(
-    offsetof(::test_protocols::wire::ChannelProtocolMutateSocketRequest, a) ==
-    0);
-static_assert(
-    sizeof(::test_protocols::wire::ChannelProtocolMutateSocketRequest) ==
-    TypeTraits<::test_protocols::wire::ChannelProtocolMutateSocketRequest>::
-        kPrimarySize);
-#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 template <>
@@ -1646,6 +1300,82 @@ static_assert(
         ::test_protocols::wire::WithErrorSyntaxResponseAsStructTopResponse) ==
     TypeTraits<::test_protocols::wire::
                    WithErrorSyntaxResponseAsStructTopResponse>::kPrimarySize);
+
+#ifdef __Fuchsia__
+template <>
+struct IsResource<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::
+          test_protocols_WithErrorSyntax_HandleInResult_ResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>);
+static_assert(
+    offsetof(::test_protocols::wire::WithErrorSyntaxHandleInResultResponse,
+             h) == 0);
+static_assert(
+    sizeof(::test_protocols::wire::WithErrorSyntaxHandleInResultResponse) ==
+    TypeTraits<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>::
+        kPrimarySize);
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+struct IsResource<
+    ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::
+          test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<
+    ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse>);
+static_assert(
+    offsetof(::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse,
+             result) == 0);
+static_assert(
+    sizeof(::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse) ==
+    TypeTraits<::test_protocols::wire::
+                   WithErrorSyntaxHandleInResultTopResponse>::kPrimarySize);
+#endif  // __Fuchsia__
 
 template <>
 struct TypeTraits<
@@ -2313,6 +2043,166 @@ static_assert(sizeof(::test_protocols::wire::ManyParametersFifteenRequest) ==
               TypeTraits<::test_protocols::wire::ManyParametersFifteenRequest>::
                   kPrimarySize);
 
+#ifdef __Fuchsia__
+template <>
+struct IsResource<
+    ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::
+          test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<
+    ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse>);
+static_assert(
+    offsetof(
+        ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse,
+        h) == 0);
+static_assert(
+    sizeof(::test_protocols::wire::
+               HandleRightsProtocolResponseMethodTopResponse) ==
+    TypeTraits<
+        ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse>::
+        kPrimarySize);
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+struct IsResource<
+    ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::
+          test_protocols_HandleRightsProtocolResponseMethodRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<
+    ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest>);
+static_assert(
+    offsetof(::test_protocols::wire::HandleRightsProtocolResponseMethodRequest,
+             h) == 0);
+static_assert(
+    sizeof(::test_protocols::wire::HandleRightsProtocolResponseMethodRequest) ==
+    TypeTraits<::test_protocols::wire::
+                   HandleRightsProtocolResponseMethodRequest>::kPrimarySize);
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+struct IsResource<
+    ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::
+          test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<
+    ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest>);
+static_assert(
+    offsetof(
+        ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest,
+        h) == 0);
+static_assert(
+    sizeof(
+        ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest) ==
+    TypeTraits<::test_protocols::wire::
+                   HandleRightsProtocolNoResponseMethodRequest>::kPrimarySize);
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+struct IsResource<::test_protocols::wire::HandleRightsProtocolAnEventRequest>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocols::wire::HandleRightsProtocolAnEventRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::
+          test_protocols_HandleRightsProtocolAnEventRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_protocols::wire::HandleRightsProtocolAnEventRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_protocols::wire::HandleRightsProtocolAnEventRequest>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_protocols::wire::HandleRightsProtocolAnEventRequest>);
+static_assert(
+    offsetof(::test_protocols::wire::HandleRightsProtocolAnEventRequest, h) ==
+    0);
+static_assert(
+    sizeof(::test_protocols::wire::HandleRightsProtocolAnEventRequest) ==
+    TypeTraits<::test_protocols::wire::HandleRightsProtocolAnEventRequest>::
+        kPrimarySize);
+#endif  // __Fuchsia__
+
 template <>
 struct TypeTraits<
     ::test_protocols::wire::WithErrorSyntaxErrorAsEnumTopResponse> {
@@ -2342,6 +2232,113 @@ static_assert(
     sizeof(::test_protocols::wire::WithErrorSyntaxErrorAsEnumTopResponse) ==
     TypeTraits<::test_protocols::wire::WithErrorSyntaxErrorAsEnumTopResponse>::
         kPrimarySize);
+
+#ifdef __Fuchsia__
+template <>
+struct IsResource<::test_protocols::wire::ChannelProtocolTakeHandleRequest>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocols::wire::ChannelProtocolTakeHandleRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::
+          test_protocols_ChannelProtocolTakeHandleRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_protocols::wire::ChannelProtocolTakeHandleRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_protocols::wire::ChannelProtocolTakeHandleRequest>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_protocols::wire::ChannelProtocolTakeHandleRequest>);
+static_assert(offsetof(::test_protocols::wire::ChannelProtocolTakeHandleRequest,
+                       h) == 0);
+static_assert(
+    sizeof(::test_protocols::wire::ChannelProtocolTakeHandleRequest) ==
+    TypeTraits<::test_protocols::wire::ChannelProtocolTakeHandleRequest>::
+        kPrimarySize);
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+struct IsResource<
+    ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::
+          test_protocols_ChannelProtocolMutateSocketTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<
+    ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_protocols::wire::ChannelProtocolMutateSocketTopResponse>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse>);
+static_assert(
+    offsetof(::test_protocols::wire::ChannelProtocolMutateSocketTopResponse,
+             b) == 0);
+static_assert(
+    sizeof(::test_protocols::wire::ChannelProtocolMutateSocketTopResponse) ==
+    TypeTraits<::test_protocols::wire::ChannelProtocolMutateSocketTopResponse>::
+        kPrimarySize);
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+struct IsResource<::test_protocols::wire::ChannelProtocolMutateSocketRequest>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocols::wire::ChannelProtocolMutateSocketRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::
+          test_protocols_ChannelProtocolMutateSocketRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_protocols::wire::ChannelProtocolMutateSocketRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_protocols::wire::ChannelProtocolMutateSocketRequest>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_protocols::wire::ChannelProtocolMutateSocketRequest>);
+static_assert(
+    offsetof(::test_protocols::wire::ChannelProtocolMutateSocketRequest, a) ==
+    0);
+static_assert(
+    sizeof(::test_protocols::wire::ChannelProtocolMutateSocketRequest) ==
+    TypeTraits<::test_protocols::wire::ChannelProtocolMutateSocketRequest>::
+        kPrimarySize);
+#endif  // __Fuchsia__
 
 template <>
 struct TypeTraits<::test_protocols::wire::ChannelProtocolMethodBTopResponse> {
@@ -2460,6 +2457,29 @@ static_assert(sizeof(::test_protocols::wire::ChannelProtocolEventARequest) ==
               TypeTraits<::test_protocols::wire::ChannelProtocolEventARequest>::
                   kPrimarySize);
 
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::
+          test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 24;
+  static constexpr uint32_t kMaxOutOfLineV1 = 24;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult>
+    : public std::true_type {};
+template <>
+struct IsUnion<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult>);
+
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::test_protocols::wire::WithErrorSyntaxHandleInResultResult>
@@ -2487,29 +2507,6 @@ struct IsUnion<::test_protocols::wire::WithErrorSyntaxHandleInResultResult>
 static_assert(std::is_standard_layout_v<
               ::test_protocols::wire::WithErrorSyntaxHandleInResultResult>);
 #endif  // __Fuchsia__
-
-template <>
-struct TypeTraits<
-    ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult> {
-  static constexpr const fidl_type_t* kType =
-      &::test_protocols::wire::
-          test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 24;
-  static constexpr uint32_t kMaxOutOfLineV1 = 24;
-  static constexpr bool kHasPointer = true;
-};
-
-template <>
-struct IsFidlType<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult>
-    : public std::true_type {};
-template <>
-struct IsUnion<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult>);
 
 template <>
 struct TypeTraits<

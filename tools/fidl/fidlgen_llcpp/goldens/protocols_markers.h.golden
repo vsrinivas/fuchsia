@@ -6,37 +6,6 @@
 
 namespace test_protocols {
 
-class HandleRightsProtocol final {
-  HandleRightsProtocol() = delete;
-
- public:
-  using Transport = ::fidl::internal::ChannelTransport;
-  class NoResponseMethod final {
-    NoResponseMethod() = delete;
-
-   public:
-    using Protocol = ::test_protocols::HandleRightsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = false;
-  };
-  class ResponseMethod final {
-    ResponseMethod() = delete;
-
-   public:
-    using Protocol = ::test_protocols::HandleRightsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-  };
-  class AnEvent final {
-    AnEvent() = delete;
-
-   public:
-    using Protocol = ::test_protocols::HandleRightsProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasResponse = true;
-  };
-};
-
 class WithAndWithoutRequestResponse final {
   WithAndWithoutRequestResponse() = delete;
 
@@ -197,6 +166,37 @@ class ManyParameters final {
     using Protocol = ::test_protocols::ManyParameters;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
+  };
+};
+
+class HandleRightsProtocol final {
+  HandleRightsProtocol() = delete;
+
+ public:
+  using Transport = ::fidl::internal::ChannelTransport;
+  class NoResponseMethod final {
+    NoResponseMethod() = delete;
+
+   public:
+    using Protocol = ::test_protocols::HandleRightsProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+  };
+  class ResponseMethod final {
+    ResponseMethod() = delete;
+
+   public:
+    using Protocol = ::test_protocols::HandleRightsProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class AnEvent final {
+    AnEvent() = delete;
+
+   public:
+    using Protocol = ::test_protocols::HandleRightsProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
   };
 };
 

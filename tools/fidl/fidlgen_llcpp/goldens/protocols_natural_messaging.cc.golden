@@ -4,212 +4,6 @@
 
 namespace test_protocols {
 [[maybe_unused]] constexpr inline uint64_t
-    kHandleRightsProtocol_NoResponseMethod_Ordinal = 1155044649514904573lu;
-
-[[maybe_unused]] constexpr inline uint64_t
-    kHandleRightsProtocol_ResponseMethod_Ordinal = 5956276128041940295lu;
-
-[[maybe_unused]] constexpr inline uint64_t
-    kHandleRightsProtocol_AnEvent_Ordinal = 476727631355490611lu;
-
-#ifdef __Fuchsia__
-}  // namespace test_protocols
-void fidl::internal::NaturalClientImpl<::test_protocols::HandleRightsProtocol>::
-    ResponseMethod(
-        ::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>
-            request,
-        ::fidl::ClientCallback<
-            ::test_protocols::HandleRightsProtocol::ResponseMethod>&& _callback)
-        const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
-          ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-              ::test_protocols::HandleRightsProtocol::ResponseMethod>>::
-              IntoDomainObject(std::move(request))),
-      ::fidl::internal::MakeResponseContext<
-          ::test_protocols::HandleRightsProtocol::ResponseMethod>(
-          ::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal,
-          std::move(_callback)));
-}
-
-::fitx::result<::fidl::Error> fidl::internal::
-    NaturalClientImpl<::test_protocols::HandleRightsProtocol>::NoResponseMethod(
-        ::fidl::Request<
-            ::test_protocols::HandleRightsProtocol::NoResponseMethod>
-            request) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{
-          ::test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal};
-  ::fidl::Status status =
-      messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
-          ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-              ::test_protocols::HandleRightsProtocol::NoResponseMethod>>::
-              IntoDomainObject(std::move(request))));
-  return ::fidl::internal::ToFitxResult(status);
-}
-namespace test_protocols {
-#endif  // __Fuchsia__
-
-}  // namespace test_protocols
-#ifdef __Fuchsia__
-
-std::optional<::fidl::UnbindInfo>
-fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsProtocol>::
-    DispatchEvent(
-        ::fidl::IncomingMessage& msg,
-        ::fidl::internal::IncomingTransportContext transport_context) {
-  switch (msg.header()->ordinal) {
-    case ::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal: {
-      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-          ::test_protocols::HandleRightsProtocolAnEventRequest>(std::move(msg));
-      if (decoded.is_error()) {
-        return ::fidl::UnbindInfo(decoded.error_value());
-      }
-      if (event_handler()) {
-        ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> event =
-            ::fidl::internal::NaturalMessageConverter<::fidl::Event<
-                ::test_protocols::HandleRightsProtocol::AnEvent>>::
-                FromDomainObject(std::move(decoded.value()));
-        event_handler()->AnEvent(event);
-      }
-      return std::nullopt;
-    }
-    default:
-      break;
-  }
-  return ::fidl::UnbindInfo::UnknownOrdinal();
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-::fitx::result<::fidl::Error> fidl::internal::
-    NaturalWeakEventSender<::test_protocols::HandleRightsProtocol>::AnEvent(
-        ::test_protocols::HandleRightsProtocolAnEventRequest payload) {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal};
-  auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload));
-  ::fidl::Status result = _inner().SendEvent(encoded_message);
-  return ::fidl::internal::ToFitxResult(result);
-}
-
-::fitx::result<::fidl::Error> fidl::internal::
-    NaturalEventSender<::test_protocols::HandleRightsProtocol>::AnEvent(
-        ::test_protocols::HandleRightsProtocolAnEventRequest payload) {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal};
-  auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload));
-  encoded_message.Write(_transport());
-  return ::fidl::internal::ToFitxResult(::fidl::Status{encoded_message});
-}
-
-#endif  // __Fuchsia__
-
-void fidl::internal::NaturalCompleterBase<
-    ::test_protocols::HandleRightsProtocol::ResponseMethod>::
-    Reply(::fidl::Response<
-          ::test_protocols::HandleRightsProtocol::ResponseMethod>&& response) {
-  ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal};
-  _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
-          ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-              ::test_protocols::HandleRightsProtocol::ResponseMethod>>::
-              IntoDomainObject(std::move(response))),
-      ::fidl::internal::OutgoingTransportContext{});
-}
-
-#ifdef __Fuchsia__
-
-constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
-    ::test_protocols::HandleRightsProtocol>::entries_[] = {
-    {
-        ::test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
-           ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-              ::test_protocols::HandleRightsProtocolNoResponseMethodRequest>(
-              std::move(msg));
-          if (decoded.is_error()) {
-            return decoded.error_value().status();
-          }
-          ::fidl::Request<
-              ::test_protocols::HandleRightsProtocol::NoResponseMethod>
-              request = ::fidl::internal::NaturalMessageConverter<
-                  ::fidl::Request<::test_protocols::HandleRightsProtocol::
-                                      NoResponseMethod>>::
-                  FromDomainObject(std::move(decoded.value()));
-          ::fidl::internal::NaturalCompleter<
-              ::test_protocols::HandleRightsProtocol::NoResponseMethod>::Sync
-              completer(txn);
-          static_cast<::fidl::Server<::test_protocols::HandleRightsProtocol>*>(
-              interface)
-              ->NoResponseMethod(request, completer);
-          return ZX_OK;
-        },
-    },
-    {
-        ::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
-           ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-              ::test_protocols::HandleRightsProtocolResponseMethodRequest>(
-              std::move(msg));
-          if (decoded.is_error()) {
-            return decoded.error_value().status();
-          }
-          ::fidl::Request<
-              ::test_protocols::HandleRightsProtocol::ResponseMethod>
-              request =
-                  ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-                      ::test_protocols::HandleRightsProtocol::ResponseMethod>>::
-                      FromDomainObject(std::move(decoded.value()));
-          ::fidl::internal::NaturalCompleter<
-              ::test_protocols::HandleRightsProtocol::ResponseMethod>::Sync
-              completer(txn);
-          static_cast<::fidl::Server<::test_protocols::HandleRightsProtocol>*>(
-              interface)
-              ->ResponseMethod(request, completer);
-          return ZX_OK;
-        },
-    },
-};
-
-const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<
-    ::test_protocols::HandleRightsProtocol>::entries_end_ = &entries_[2];
-
-void fidl::internal::
-    NaturalServerDispatcher<::test_protocols::HandleRightsProtocol>::Dispatch(
-        ::fidl::Server<::test_protocols::HandleRightsProtocol>* impl,
-        ::fidl::IncomingMessage&& msg,
-        internal::IncomingTransportContext transport_context,
-        ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
-                             entries_, entries_end_);
-}
-void fidl::Server<::test_protocols::HandleRightsProtocol>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext transport_context) {
-  ::fidl::internal::NaturalServerDispatcher<
-      ::test_protocols::HandleRightsProtocol>::Dispatch(this, std::move(msg),
-                                                        std::move(
-                                                            transport_context),
-                                                        txn);
-}
-#endif  // __Fuchsia__
-
-namespace test_protocols {
-[[maybe_unused]] constexpr inline uint64_t
     kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal =
         5413654872775949227lu;
 
@@ -1331,6 +1125,212 @@ void fidl::Server<::test_protocols::ManyParameters>::dispatch_message(
       ::test_protocols::ManyParameters>::Dispatch(this, std::move(msg),
                                                   std::move(transport_context),
                                                   txn);
+}
+#endif  // __Fuchsia__
+
+namespace test_protocols {
+[[maybe_unused]] constexpr inline uint64_t
+    kHandleRightsProtocol_NoResponseMethod_Ordinal = 1155044649514904573lu;
+
+[[maybe_unused]] constexpr inline uint64_t
+    kHandleRightsProtocol_ResponseMethod_Ordinal = 5956276128041940295lu;
+
+[[maybe_unused]] constexpr inline uint64_t
+    kHandleRightsProtocol_AnEvent_Ordinal = 476727631355490611lu;
+
+#ifdef __Fuchsia__
+}  // namespace test_protocols
+void fidl::internal::NaturalClientImpl<::test_protocols::HandleRightsProtocol>::
+    ResponseMethod(
+        ::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>
+            request,
+        ::fidl::ClientCallback<
+            ::test_protocols::HandleRightsProtocol::ResponseMethod>&& _callback)
+        const {
+  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
+      _encoder{::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal};
+  return messenger().TwoWay(
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder,
+          ::fidl::internal::NaturalMessageConverter<::fidl::Request<
+              ::test_protocols::HandleRightsProtocol::ResponseMethod>>::
+              IntoDomainObject(std::move(request))),
+      ::fidl::internal::MakeResponseContext<
+          ::test_protocols::HandleRightsProtocol::ResponseMethod>(
+          ::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal,
+          std::move(_callback)));
+}
+
+::fitx::result<::fidl::Error> fidl::internal::
+    NaturalClientImpl<::test_protocols::HandleRightsProtocol>::NoResponseMethod(
+        ::fidl::Request<
+            ::test_protocols::HandleRightsProtocol::NoResponseMethod>
+            request) const {
+  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
+      _encoder{
+          ::test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal};
+  ::fidl::Status status =
+      messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
+          _encoder,
+          ::fidl::internal::NaturalMessageConverter<::fidl::Request<
+              ::test_protocols::HandleRightsProtocol::NoResponseMethod>>::
+              IntoDomainObject(std::move(request))));
+  return ::fidl::internal::ToFitxResult(status);
+}
+namespace test_protocols {
+#endif  // __Fuchsia__
+
+}  // namespace test_protocols
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo>
+fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsProtocol>::
+    DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  switch (msg.header()->ordinal) {
+    case ::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal: {
+      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
+          ::test_protocols::HandleRightsProtocolAnEventRequest>(std::move(msg));
+      if (decoded.is_error()) {
+        return ::fidl::UnbindInfo(decoded.error_value());
+      }
+      if (event_handler()) {
+        ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> event =
+            ::fidl::internal::NaturalMessageConverter<::fidl::Event<
+                ::test_protocols::HandleRightsProtocol::AnEvent>>::
+                FromDomainObject(std::move(decoded.value()));
+        event_handler()->AnEvent(event);
+      }
+      return std::nullopt;
+    }
+    default:
+      break;
+  }
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+::fitx::result<::fidl::Error> fidl::internal::
+    NaturalWeakEventSender<::test_protocols::HandleRightsProtocol>::AnEvent(
+        ::test_protocols::HandleRightsProtocolAnEventRequest payload) {
+  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
+      _encoder{::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal};
+  auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
+      _encoder, std::move(payload));
+  ::fidl::Status result = _inner().SendEvent(encoded_message);
+  return ::fidl::internal::ToFitxResult(result);
+}
+
+::fitx::result<::fidl::Error> fidl::internal::
+    NaturalEventSender<::test_protocols::HandleRightsProtocol>::AnEvent(
+        ::test_protocols::HandleRightsProtocolAnEventRequest payload) {
+  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
+      _encoder{::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal};
+  auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
+      _encoder, std::move(payload));
+  encoded_message.Write(_transport());
+  return ::fidl::internal::ToFitxResult(::fidl::Status{encoded_message});
+}
+
+#endif  // __Fuchsia__
+
+void fidl::internal::NaturalCompleterBase<
+    ::test_protocols::HandleRightsProtocol::ResponseMethod>::
+    Reply(::fidl::Response<
+          ::test_protocols::HandleRightsProtocol::ResponseMethod>&& response) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
+  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
+      _encoder{::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal};
+  _messenger.SendReply(
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder,
+          ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+              ::test_protocols::HandleRightsProtocol::ResponseMethod>>::
+              IntoDomainObject(std::move(response))),
+      ::fidl::internal::OutgoingTransportContext{});
+}
+
+#ifdef __Fuchsia__
+
+constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
+    ::test_protocols::HandleRightsProtocol>::entries_[] = {
+    {
+        ::test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::IncomingTransportContext transport_context,
+           ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
+              ::test_protocols::HandleRightsProtocolNoResponseMethodRequest>(
+              std::move(msg));
+          if (decoded.is_error()) {
+            return decoded.error_value().status();
+          }
+          ::fidl::Request<
+              ::test_protocols::HandleRightsProtocol::NoResponseMethod>
+              request = ::fidl::internal::NaturalMessageConverter<
+                  ::fidl::Request<::test_protocols::HandleRightsProtocol::
+                                      NoResponseMethod>>::
+                  FromDomainObject(std::move(decoded.value()));
+          ::fidl::internal::NaturalCompleter<
+              ::test_protocols::HandleRightsProtocol::NoResponseMethod>::Sync
+              completer(txn);
+          static_cast<::fidl::Server<::test_protocols::HandleRightsProtocol>*>(
+              interface)
+              ->NoResponseMethod(request, completer);
+          return ZX_OK;
+        },
+    },
+    {
+        ::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::IncomingTransportContext transport_context,
+           ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
+              ::test_protocols::HandleRightsProtocolResponseMethodRequest>(
+              std::move(msg));
+          if (decoded.is_error()) {
+            return decoded.error_value().status();
+          }
+          ::fidl::Request<
+              ::test_protocols::HandleRightsProtocol::ResponseMethod>
+              request =
+                  ::fidl::internal::NaturalMessageConverter<::fidl::Request<
+                      ::test_protocols::HandleRightsProtocol::ResponseMethod>>::
+                      FromDomainObject(std::move(decoded.value()));
+          ::fidl::internal::NaturalCompleter<
+              ::test_protocols::HandleRightsProtocol::ResponseMethod>::Sync
+              completer(txn);
+          static_cast<::fidl::Server<::test_protocols::HandleRightsProtocol>*>(
+              interface)
+              ->ResponseMethod(request, completer);
+          return ZX_OK;
+        },
+    },
+};
+
+const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<
+    ::test_protocols::HandleRightsProtocol>::entries_end_ = &entries_[2];
+
+void fidl::internal::
+    NaturalServerDispatcher<::test_protocols::HandleRightsProtocol>::Dispatch(
+        ::fidl::Server<::test_protocols::HandleRightsProtocol>* impl,
+        ::fidl::IncomingMessage&& msg,
+        internal::IncomingTransportContext transport_context,
+        ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
+                             entries_, entries_end_);
+}
+void fidl::Server<::test_protocols::HandleRightsProtocol>::dispatch_message(
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::internal::IncomingTransportContext transport_context) {
+  ::fidl::internal::NaturalServerDispatcher<
+      ::test_protocols::HandleRightsProtocol>::Dispatch(this, std::move(msg),
+                                                        std::move(
+                                                            transport_context),
+                                                        txn);
 }
 #endif  // __Fuchsia__
 

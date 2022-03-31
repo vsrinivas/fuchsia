@@ -33,3 +33,21 @@ resource_definition handle : uint32 {
   [[maybe_unused]] bool success = zx_lib.Compile();
   assert(success && "failed to compile library zx");
 }
+
+void SharedAmongstLibraries::AddLibraryFdf() {
+  TestLibrary fdf_lib(this, "fdf.fidl", R"FIDL(
+library fdf;
+
+type obj_type = enum : uint32 {
+  CHANNEL = 1;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        subtype obj_type;
+    };
+};
+)FIDL");
+  [[maybe_unused]] bool success = fdf_lib.Compile();
+  assert(success && "failed to compile library fdf");
+}

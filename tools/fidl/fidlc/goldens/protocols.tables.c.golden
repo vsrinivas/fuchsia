@@ -3,23 +3,8 @@
 #include <lib/fidl/internal.h>
 
 
-__LOCAL extern const struct FidlCodedBits test_protocols_rightsTable;
-__LOCAL extern const struct FidlCodedEnum test_protocols_obj_typeTable;
-__LOCAL extern const struct FidlCodedStruct test_protocols_WithErrorSyntax_HandleInResult_ResponseTable;
-__LOCAL extern const struct FidlCodedXUnion test_protocols_WithErrorSyntax_HandleInResult_ResultTable;
-__LOCAL extern const struct FidlCodedXUnion test_protocols_WithErrorSyntax_HandleInResult_ResultNullableRefTable;
-__LOCAL extern const struct FidlCodedStruct test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
-__LOCAL extern const struct FidlCodedStruct test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
-__LOCAL extern const struct FidlCodedStruct test_protocols_HandleRightsProtocolResponseMethodRequestTable;
-__LOCAL extern const struct FidlCodedStruct test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
-__LOCAL extern const struct FidlCodedStruct test_protocols_HandleRightsProtocolAnEventRequestTable;
-__LOCAL extern const struct FidlCodedStruct test_protocols_HandleRightsProtocolNoResponseMethodRequestMessageTable;
-__LOCAL extern const struct FidlCodedStruct test_protocols_HandleRightsProtocolResponseMethodRequestMessageTable;
-__LOCAL extern const struct FidlCodedStruct test_protocols_HandleRightsProtocolResponseMethodResponseMessageTable;
-__LOCAL extern const struct FidlCodedStruct test_protocols_HandleRightsProtocolAnEventEventMessageTable;
-__LOCAL extern const struct FidlCodedStruct test_protocols_ChannelProtocolTakeHandleRequestTable;
-__LOCAL extern const struct FidlCodedStruct test_protocols_ChannelProtocolMutateSocketTopResponseTable;
-__LOCAL extern const struct FidlCodedStruct test_protocols_ChannelProtocolMutateSocketRequestTable;
+__LOCAL extern const struct FidlCodedBits zx_rightsTable;
+__LOCAL extern const struct FidlCodedEnum zx_obj_typeTable;
 __LOCAL extern const struct FidlCodedStruct test_protocols_WithProtocolEndsServerEndsTopResponseTable;
 __LOCAL extern const struct FidlCodedStruct test_protocols_WithProtocolEndsServerEndsRequestTable;
 __LOCAL extern const struct FidlCodedStruct test_protocols_WithProtocolEndsClientEndsTopResponseTable;
@@ -28,6 +13,10 @@ __LOCAL extern const struct FidlCodedStruct test_protocols_WithErrorSyntax_Respo
 __LOCAL extern const struct FidlCodedXUnion test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
 __LOCAL extern const struct FidlCodedXUnion test_protocols_WithErrorSyntax_ResponseAsStruct_ResultNullableRefTable;
 __LOCAL extern const struct FidlCodedStruct test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable;
+__LOCAL extern const struct FidlCodedStruct test_protocols_WithErrorSyntax_HandleInResult_ResponseTable;
+__LOCAL extern const struct FidlCodedXUnion test_protocols_WithErrorSyntax_HandleInResult_ResultTable;
+__LOCAL extern const struct FidlCodedXUnion test_protocols_WithErrorSyntax_HandleInResult_ResultNullableRefTable;
+__LOCAL extern const struct FidlCodedStruct test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
 __LOCAL extern const struct FidlCodedStruct test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
 __LOCAL extern const struct FidlCodedXUnion test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
 __LOCAL extern const struct FidlCodedXUnion test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultNullableRefTable;
@@ -70,6 +59,14 @@ __LOCAL extern const struct FidlCodedStruct test_protocols_WithProtocolEndsStruc
 __LOCAL extern const struct FidlCodedStruct test_protocols_WithProtocolEndsStructContainingEndsResponseMessageTable;
 __LOCAL extern const struct FidlCodedStruct test_protocols_ManyParametersFifteenRequestTable;
 __LOCAL extern const struct FidlCodedStruct test_protocols_ManyParametersFifteenRequestMessageTable;
+__LOCAL extern const struct FidlCodedStruct test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
+__LOCAL extern const struct FidlCodedStruct test_protocols_HandleRightsProtocolResponseMethodRequestTable;
+__LOCAL extern const struct FidlCodedStruct test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
+__LOCAL extern const struct FidlCodedStruct test_protocols_HandleRightsProtocolAnEventRequestTable;
+__LOCAL extern const struct FidlCodedStruct test_protocols_HandleRightsProtocolNoResponseMethodRequestMessageTable;
+__LOCAL extern const struct FidlCodedStruct test_protocols_HandleRightsProtocolResponseMethodRequestMessageTable;
+__LOCAL extern const struct FidlCodedStruct test_protocols_HandleRightsProtocolResponseMethodResponseMessageTable;
+__LOCAL extern const struct FidlCodedStruct test_protocols_HandleRightsProtocolAnEventEventMessageTable;
 __LOCAL extern const struct FidlCodedEnum test_protocols_ErrorEnumTable;
 __LOCAL extern const struct FidlCodedXUnion test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
 __LOCAL extern const struct FidlCodedXUnion test_protocols_WithErrorSyntax_ErrorAsEnum_ResultNullableRefTable;
@@ -78,6 +75,9 @@ __LOCAL extern const struct FidlCodedStruct test_protocols_WithErrorSyntaxRespon
 __LOCAL extern const struct FidlCodedStruct test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseMessageTable;
 __LOCAL extern const struct FidlCodedStruct test_protocols_WithErrorSyntaxErrorAsEnumResponseMessageTable;
 __LOCAL extern const struct FidlCodedStruct test_protocols_WithErrorSyntaxHandleInResultResponseMessageTable;
+__LOCAL extern const struct FidlCodedStruct test_protocols_ChannelProtocolTakeHandleRequestTable;
+__LOCAL extern const struct FidlCodedStruct test_protocols_ChannelProtocolMutateSocketTopResponseTable;
+__LOCAL extern const struct FidlCodedStruct test_protocols_ChannelProtocolMutateSocketRequestTable;
 __LOCAL extern const struct FidlCodedStruct test_protocols_ChannelProtocolMethodBTopResponseTable;
 __LOCAL extern const struct FidlCodedStruct test_protocols_ChannelProtocolMethodBRequestTable;
 __LOCAL extern const struct FidlCodedStruct test_protocols_ChannelProtocolMethodARequestTable;
@@ -91,14 +91,6 @@ __LOCAL extern const struct FidlCodedStruct test_protocols_ChannelProtocolMutate
 __LOCAL extern const struct FidlCodedStruct test_protocols_ChannelProtocolMutateSocketResponseMessageTable;
 
 
-static const struct FidlCodedHandle Handlehandle2147483648nonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_NONE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
-
-static const struct FidlCodedHandle Handlesocket1nonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_SOCKET, .handle_rights=1u, .nullable=kFidlNullability_Nonnullable};
-
-static const struct FidlCodedHandle Handlesocket3nonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_SOCKET, .handle_rights=3u, .nullable=kFidlNullability_Nonnullable};
-
-static const struct FidlCodedHandle Handlesocket2147483648nonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_SOCKET, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
-
 static const struct FidlCodedHandle Request35test_protocols_DiscoverableProtocolnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=ZX_DEFAULT_CHANNEL_RIGHTS, .nullable=kFidlNullability_Nonnullable};
 
 static const struct FidlCodedHandle Request35test_protocols_DiscoverableProtocolnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=ZX_DEFAULT_CHANNEL_RIGHTS, .nullable=kFidlNullability_Nullable};
@@ -107,97 +99,16 @@ static const struct FidlCodedHandle Protocol35test_protocols_DiscoverableProtoco
 
 static const struct FidlCodedHandle Protocol35test_protocols_DiscoverableProtocolnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=ZX_DEFAULT_CHANNEL_RIGHTS, .nullable=kFidlNullability_Nonnullable};
 
+static const struct FidlCodedHandle Handlehandle2147483648nonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_NONE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
+
 static const struct FidlCodedString String4294967295nonnullableTable = {.tag=kFidlTypeString, .max_size=4294967295u, .nullable=kFidlNullability_Nonnullable};
 
+static const struct FidlCodedHandle Handlesocket2nonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_SOCKET, .handle_rights=2u, .nullable=kFidlNullability_Nonnullable};
 
-const struct FidlCodedBits test_protocols_rightsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .mask=3ul, .name="test.protocols/rights"};
+static const struct FidlCodedHandle Handlesocket3nonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_SOCKET, .handle_rights=3u, .nullable=kFidlNullability_Nonnullable};
 
-static bool EnumValidatorFor_test_protocols_obj_type(uint64_t v) {
-  switch (v) {
-    case 0ul:
-    case 14ul:
-      return true;
-    default:
-      return false;
-  }
-}
+static const struct FidlCodedHandle Handlesocket2147483648nonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_SOCKET, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-const struct FidlCodedEnum test_protocols_obj_typeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_test_protocols_obj_type, .name="test.protocols/obj_type"};
-
-static const struct FidlStructElement Fields54test_protocols_WithErrorSyntax_HandleInResult_Response[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlehandle2147483648nonnullableTable)}}
-};
-const struct FidlCodedStruct test_protocols_WithErrorSyntax_HandleInResult_ResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields54test_protocols_WithErrorSyntax_HandleInResult_Response, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/WithErrorSyntax_HandleInResult_Response"};
-
-static const struct FidlXUnionField Fields52test_protocols_WithErrorSyntax_HandleInResult_Result[] = {
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_protocols_WithErrorSyntax_HandleInResult_ResponseTable)},
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}
-};
-const struct FidlCodedXUnion test_protocols_WithErrorSyntax_HandleInResult_ResultTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields52test_protocols_WithErrorSyntax_HandleInResult_Result, .nullable=kFidlNullability_Nonnullable, .name="test.protocols/WithErrorSyntax_HandleInResult_Result", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_Resource};
-static const struct FidlXUnionField Fields63test_protocols_WithErrorSyntax_HandleInResult_ResultNullableRef[] = {
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_protocols_WithErrorSyntax_HandleInResult_ResponseTable)},
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}
-};
-const struct FidlCodedXUnion test_protocols_WithErrorSyntax_HandleInResult_ResultNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields63test_protocols_WithErrorSyntax_HandleInResult_ResultNullableRef, .nullable=kFidlNullability_Nullable, .name="test.protocols/WithErrorSyntax_HandleInResult_Result", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_Resource};
-static const struct FidlStructElement Fields55test_protocols_WithErrorSyntaxHandleInResultTopResponse[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_protocols_WithErrorSyntax_HandleInResult_ResultTable)}}
-};
-const struct FidlCodedStruct test_protocols_WithErrorSyntaxHandleInResultTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields55test_protocols_WithErrorSyntaxHandleInResultTopResponse, .element_count=1u, .size_v1=24u, .size_v2=16u, .name="test.protocols/WithErrorSyntaxHandleInResultTopResponse"};
-
-static const struct FidlStructElement Fields60test_protocols_HandleRightsProtocolResponseMethodTopResponse[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlesocket1nonnullableTable)}}
-};
-const struct FidlCodedStruct test_protocols_HandleRightsProtocolResponseMethodTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields60test_protocols_HandleRightsProtocolResponseMethodTopResponse, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/HandleRightsProtocolResponseMethodTopResponse"};
-
-static const struct FidlStructElement Fields56test_protocols_HandleRightsProtocolResponseMethodRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlesocket3nonnullableTable)}}
-};
-const struct FidlCodedStruct test_protocols_HandleRightsProtocolResponseMethodRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields56test_protocols_HandleRightsProtocolResponseMethodRequest, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/HandleRightsProtocolResponseMethodRequest"};
-
-static const struct FidlStructElement Fields58test_protocols_HandleRightsProtocolNoResponseMethodRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlesocket3nonnullableTable)}}
-};
-const struct FidlCodedStruct test_protocols_HandleRightsProtocolNoResponseMethodRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields58test_protocols_HandleRightsProtocolNoResponseMethodRequest, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/HandleRightsProtocolNoResponseMethodRequest"};
-
-static const struct FidlStructElement Fields49test_protocols_HandleRightsProtocolAnEventRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlesocket3nonnullableTable)}}
-};
-const struct FidlCodedStruct test_protocols_HandleRightsProtocolAnEventRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields49test_protocols_HandleRightsProtocolAnEventRequest, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/HandleRightsProtocolAnEventRequest"};
-
-static const struct FidlStructElement Fields65test_protocols_HandleRightsProtocolNoResponseMethodRequestMessage[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlesocket3nonnullableTable)}}
-};
-const struct FidlCodedStruct test_protocols_HandleRightsProtocolNoResponseMethodRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields65test_protocols_HandleRightsProtocolNoResponseMethodRequestMessage, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/HandleRightsProtocolNoResponseMethodRequestMessage"};
-
-static const struct FidlStructElement Fields63test_protocols_HandleRightsProtocolResponseMethodRequestMessage[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlesocket3nonnullableTable)}}
-};
-const struct FidlCodedStruct test_protocols_HandleRightsProtocolResponseMethodRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields63test_protocols_HandleRightsProtocolResponseMethodRequestMessage, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/HandleRightsProtocolResponseMethodRequestMessage"};
-
-static const struct FidlStructElement Fields64test_protocols_HandleRightsProtocolResponseMethodResponseMessage[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlesocket1nonnullableTable)}}
-};
-const struct FidlCodedStruct test_protocols_HandleRightsProtocolResponseMethodResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields64test_protocols_HandleRightsProtocolResponseMethodResponseMessage, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/HandleRightsProtocolResponseMethodResponseMessage"};
-
-static const struct FidlStructElement Fields54test_protocols_HandleRightsProtocolAnEventEventMessage[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlesocket3nonnullableTable)}}
-};
-const struct FidlCodedStruct test_protocols_HandleRightsProtocolAnEventEventMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields54test_protocols_HandleRightsProtocolAnEventEventMessage, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/HandleRightsProtocolAnEventEventMessage"};
-
-static const struct FidlStructElement Fields47test_protocols_ChannelProtocolTakeHandleRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlehandle2147483648nonnullableTable)}}
-};
-const struct FidlCodedStruct test_protocols_ChannelProtocolTakeHandleRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields47test_protocols_ChannelProtocolTakeHandleRequest, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/ChannelProtocolTakeHandleRequest"};
-
-static const struct FidlStructElement Fields53test_protocols_ChannelProtocolMutateSocketTopResponse[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlesocket2147483648nonnullableTable)}}
-};
-const struct FidlCodedStruct test_protocols_ChannelProtocolMutateSocketTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields53test_protocols_ChannelProtocolMutateSocketTopResponse, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/ChannelProtocolMutateSocketTopResponse"};
-
-static const struct FidlStructElement Fields49test_protocols_ChannelProtocolMutateSocketRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlesocket2147483648nonnullableTable)}}
-};
-const struct FidlCodedStruct test_protocols_ChannelProtocolMutateSocketRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields49test_protocols_ChannelProtocolMutateSocketRequest, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/ChannelProtocolMutateSocketRequest"};
 
 static const struct FidlStructElement Fields52test_protocols_WithProtocolEndsServerEndsTopResponse[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Request35test_protocols_DiscoverableProtocolnonnullableTable)}}
@@ -235,6 +146,26 @@ static const struct FidlStructElement Fields57test_protocols_WithErrorSyntaxResp
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable)}}
 };
 const struct FidlCodedStruct test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields57test_protocols_WithErrorSyntaxResponseAsStructTopResponse, .element_count=1u, .size_v1=24u, .size_v2=16u, .name="test.protocols/WithErrorSyntaxResponseAsStructTopResponse"};
+
+static const struct FidlStructElement Fields54test_protocols_WithErrorSyntax_HandleInResult_Response[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlehandle2147483648nonnullableTable)}}
+};
+const struct FidlCodedStruct test_protocols_WithErrorSyntax_HandleInResult_ResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields54test_protocols_WithErrorSyntax_HandleInResult_Response, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/WithErrorSyntax_HandleInResult_Response"};
+
+static const struct FidlXUnionField Fields52test_protocols_WithErrorSyntax_HandleInResult_Result[] = {
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_protocols_WithErrorSyntax_HandleInResult_ResponseTable)},
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}
+};
+const struct FidlCodedXUnion test_protocols_WithErrorSyntax_HandleInResult_ResultTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields52test_protocols_WithErrorSyntax_HandleInResult_Result, .nullable=kFidlNullability_Nonnullable, .name="test.protocols/WithErrorSyntax_HandleInResult_Result", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_Resource};
+static const struct FidlXUnionField Fields63test_protocols_WithErrorSyntax_HandleInResult_ResultNullableRef[] = {
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_protocols_WithErrorSyntax_HandleInResult_ResponseTable)},
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}
+};
+const struct FidlCodedXUnion test_protocols_WithErrorSyntax_HandleInResult_ResultNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields63test_protocols_WithErrorSyntax_HandleInResult_ResultNullableRef, .nullable=kFidlNullability_Nullable, .name="test.protocols/WithErrorSyntax_HandleInResult_Result", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_Resource};
+static const struct FidlStructElement Fields55test_protocols_WithErrorSyntaxHandleInResultTopResponse[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_protocols_WithErrorSyntax_HandleInResult_ResultTable)}}
+};
+const struct FidlCodedStruct test_protocols_WithErrorSyntaxHandleInResultTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields55test_protocols_WithErrorSyntaxHandleInResultTopResponse, .element_count=1u, .size_v1=24u, .size_v2=16u, .name="test.protocols/WithErrorSyntaxHandleInResultTopResponse"};
 
 const struct FidlCodedStruct test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsEmpty, .elements=NULL, .element_count=0u, .size_v1=1u, .size_v2=1u, .name="test.protocols/WithErrorSyntax_ErrorAsPrimitive_Response"};
 
@@ -451,6 +382,46 @@ static const struct FidlStructElement Fields50test_protocols_ManyParametersFifte
 };
 const struct FidlCodedStruct test_protocols_ManyParametersFifteenRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields50test_protocols_ManyParametersFifteenRequestMessage, .element_count=15u, .size_v1=15u, .size_v2=15u, .name="test.protocols/ManyParametersFifteenRequestMessage"};
 
+static const struct FidlStructElement Fields60test_protocols_HandleRightsProtocolResponseMethodTopResponse[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlesocket2nonnullableTable)}}
+};
+const struct FidlCodedStruct test_protocols_HandleRightsProtocolResponseMethodTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields60test_protocols_HandleRightsProtocolResponseMethodTopResponse, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/HandleRightsProtocolResponseMethodTopResponse"};
+
+static const struct FidlStructElement Fields56test_protocols_HandleRightsProtocolResponseMethodRequest[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlesocket3nonnullableTable)}}
+};
+const struct FidlCodedStruct test_protocols_HandleRightsProtocolResponseMethodRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields56test_protocols_HandleRightsProtocolResponseMethodRequest, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/HandleRightsProtocolResponseMethodRequest"};
+
+static const struct FidlStructElement Fields58test_protocols_HandleRightsProtocolNoResponseMethodRequest[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlesocket3nonnullableTable)}}
+};
+const struct FidlCodedStruct test_protocols_HandleRightsProtocolNoResponseMethodRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields58test_protocols_HandleRightsProtocolNoResponseMethodRequest, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/HandleRightsProtocolNoResponseMethodRequest"};
+
+static const struct FidlStructElement Fields49test_protocols_HandleRightsProtocolAnEventRequest[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlesocket3nonnullableTable)}}
+};
+const struct FidlCodedStruct test_protocols_HandleRightsProtocolAnEventRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields49test_protocols_HandleRightsProtocolAnEventRequest, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/HandleRightsProtocolAnEventRequest"};
+
+static const struct FidlStructElement Fields65test_protocols_HandleRightsProtocolNoResponseMethodRequestMessage[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlesocket3nonnullableTable)}}
+};
+const struct FidlCodedStruct test_protocols_HandleRightsProtocolNoResponseMethodRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields65test_protocols_HandleRightsProtocolNoResponseMethodRequestMessage, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/HandleRightsProtocolNoResponseMethodRequestMessage"};
+
+static const struct FidlStructElement Fields63test_protocols_HandleRightsProtocolResponseMethodRequestMessage[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlesocket3nonnullableTable)}}
+};
+const struct FidlCodedStruct test_protocols_HandleRightsProtocolResponseMethodRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields63test_protocols_HandleRightsProtocolResponseMethodRequestMessage, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/HandleRightsProtocolResponseMethodRequestMessage"};
+
+static const struct FidlStructElement Fields64test_protocols_HandleRightsProtocolResponseMethodResponseMessage[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlesocket2nonnullableTable)}}
+};
+const struct FidlCodedStruct test_protocols_HandleRightsProtocolResponseMethodResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields64test_protocols_HandleRightsProtocolResponseMethodResponseMessage, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/HandleRightsProtocolResponseMethodResponseMessage"};
+
+static const struct FidlStructElement Fields54test_protocols_HandleRightsProtocolAnEventEventMessage[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlesocket3nonnullableTable)}}
+};
+const struct FidlCodedStruct test_protocols_HandleRightsProtocolAnEventEventMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields54test_protocols_HandleRightsProtocolAnEventEventMessage, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/HandleRightsProtocolAnEventEventMessage"};
+
 static bool EnumValidatorFor_test_protocols_ErrorEnum(uint64_t v) {
   switch (v) {
     case 1ul:
@@ -497,6 +468,21 @@ static const struct FidlStructElement Fields59test_protocols_WithErrorSyntaxHand
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_protocols_WithErrorSyntax_HandleInResult_ResultTable)}}
 };
 const struct FidlCodedStruct test_protocols_WithErrorSyntaxHandleInResultResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields59test_protocols_WithErrorSyntaxHandleInResultResponseMessage, .element_count=1u, .size_v1=24u, .size_v2=16u, .name="test.protocols/WithErrorSyntaxHandleInResultResponseMessage"};
+
+static const struct FidlStructElement Fields47test_protocols_ChannelProtocolTakeHandleRequest[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlehandle2147483648nonnullableTable)}}
+};
+const struct FidlCodedStruct test_protocols_ChannelProtocolTakeHandleRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields47test_protocols_ChannelProtocolTakeHandleRequest, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/ChannelProtocolTakeHandleRequest"};
+
+static const struct FidlStructElement Fields53test_protocols_ChannelProtocolMutateSocketTopResponse[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlesocket2147483648nonnullableTable)}}
+};
+const struct FidlCodedStruct test_protocols_ChannelProtocolMutateSocketTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields53test_protocols_ChannelProtocolMutateSocketTopResponse, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/ChannelProtocolMutateSocketTopResponse"};
+
+static const struct FidlStructElement Fields49test_protocols_ChannelProtocolMutateSocketRequest[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlesocket2147483648nonnullableTable)}}
+};
+const struct FidlCodedStruct test_protocols_ChannelProtocolMutateSocketRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields49test_protocols_ChannelProtocolMutateSocketRequest, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocols/ChannelProtocolMutateSocketRequest"};
 
 const struct FidlCodedStruct test_protocols_ChannelProtocolMethodBTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=8u, .size_v2=8u, .name="test.protocols/ChannelProtocolMethodBTopResponse"};
 

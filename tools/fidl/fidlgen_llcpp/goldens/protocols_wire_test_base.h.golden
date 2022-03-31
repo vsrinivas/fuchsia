@@ -7,25 +7,6 @@ namespace fidl {
 namespace testing {
 
 template <>
-class WireTestBase<::test_protocols::HandleRightsProtocol>
-    : public ::fidl::WireServer<::test_protocols::HandleRightsProtocol> {
- public:
-  virtual ~WireTestBase<::test_protocols::HandleRightsProtocol>() {}
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
-  virtual void NoResponseMethod(
-      NoResponseMethodRequestView request,
-      NoResponseMethodCompleter::Sync& _completer) override {
-    NotImplemented_("NoResponseMethod", _completer);
-  }
-  virtual void ResponseMethod(
-      ResponseMethodRequestView request,
-      ResponseMethodCompleter::Sync& _completer) override {
-    NotImplemented_("ResponseMethod", _completer);
-  }
-};
-
-template <>
 class WireTestBase<::test_protocols::WithAndWithoutRequestResponse>
     : public ::fidl::WireServer<
           ::test_protocols::WithAndWithoutRequestResponse> {
@@ -127,6 +108,25 @@ class WireTestBase<::test_protocols::ManyParameters>
   virtual void Fifteen(FifteenRequestView request,
                        FifteenCompleter::Sync& _completer) override {
     NotImplemented_("Fifteen", _completer);
+  }
+};
+
+template <>
+class WireTestBase<::test_protocols::HandleRightsProtocol>
+    : public ::fidl::WireServer<::test_protocols::HandleRightsProtocol> {
+ public:
+  virtual ~WireTestBase<::test_protocols::HandleRightsProtocol>() {}
+  virtual void NotImplemented_(const std::string& name,
+                               ::fidl::CompleterBase& completer) = 0;
+  virtual void NoResponseMethod(
+      NoResponseMethodRequestView request,
+      NoResponseMethodCompleter::Sync& _completer) override {
+    NotImplemented_("NoResponseMethod", _completer);
+  }
+  virtual void ResponseMethod(
+      ResponseMethodRequestView request,
+      ResponseMethodCompleter::Sync& _completer) override {
+    NotImplemented_("ResponseMethod", _completer);
   }
 };
 

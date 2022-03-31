@@ -164,6 +164,139 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
   return types::Resourceness::kValue;
 }
 
+void VerifyHandleTransportCompatibilityStep::RunImpl() {
+  for (const auto& [name, decl] : library()->declarations) {
+    if (decl->kind == Decl::Kind::kProtocol) {
+      VerifyProtocol(static_cast<const Protocol*>(decl));
+    }
+  }
+}
+
+void VerifyHandleTransportCompatibilityStep::VerifyProtocol(const Protocol* protocol) {
+  std::string_view transport_name = "Channel";
+  Attribute* transport_attribute = protocol->attributes->Get("transport");
+  if (transport_attribute != nullptr) {
+    auto arg = transport_attribute->GetArg(AttributeArg::kDefaultAnonymousName);
+    std::string_view quoted_transport =
+        static_cast<const LiteralConstant*>(arg->value.get())->literal->span().data();
+    // Remove quotes around the transport.
+    transport_name = quoted_transport.substr(1, quoted_transport.size() - 2);
+  }
+  std::optional<Transport> transport = Transport::FromTransportName(transport_name);
+  if (!transport.has_value()) {
+    return;
+  }
+
+  for (auto& method : protocol->methods) {
+    if (method.maybe_request) {
+      std::set<const Decl*> seen;
+      CheckHandleTransportUsages(method.maybe_request->type, transport.value(), protocol,
+                                 method.name, seen);
+    }
+    if (method.maybe_response) {
+      std::set<const Decl*> seen;
+      CheckHandleTransportUsages(method.maybe_response->type, transport.value(), protocol,
+                                 method.name, seen);
+    }
+  }
+}
+
+void VerifyHandleTransportCompatibilityStep::CheckHandleTransportUsages(
+    const Type* type, const Transport& transport, const Protocol* protocol, SourceSpan source_span,
+    std::set<const Decl*>& seen) {
+  switch (type->kind) {
+    case Type::Kind::kUntypedNumeric:
+    case Type::Kind::kPrimitive:
+    case Type::Kind::kString:
+      return;
+    case Type::Kind::kArray:
+      return CheckHandleTransportUsages(static_cast<const ArrayType*>(type)->element_type,
+                                        transport, protocol, source_span, seen);
+    case Type::Kind::kVector:
+      return CheckHandleTransportUsages(static_cast<const VectorType*>(type)->element_type,
+                                        transport, protocol, source_span, seen);
+    case Type::Kind::kBox:
+      return CheckHandleTransportUsages(static_cast<const BoxType*>(type)->boxed_type, transport,
+                                        protocol, source_span, seen);
+    case Type::Kind::kHandle: {
+      const Resource* resource = static_cast<const HandleType*>(type)->resource_decl;
+      std::string handle_name =
+          LibraryName(resource->name.library(), ".") + "." + resource->GetName();
+      std::optional<HandleClass> handle_class = HandleClassFromName(handle_name);
+      if (!handle_class.has_value() || !transport.IsCompatible(handle_class.value())) {
+        Fail(ErrHandleUsedInIncompatibleTransport, source_span, handle_name, transport.name,
+             protocol);
+      }
+      return;
+    }
+    case Type::Kind::kTransportSide: {
+      std::string_view transport_name =
+          static_cast<const TransportSideType*>(type)->protocol_transport;
+      Transport transport_side_transport = Transport::FromTransportName(transport_name).value();
+      if (!transport_side_transport.handle_class.has_value() ||
+          !transport.IsCompatible(transport_side_transport.handle_class.value())) {
+        Fail(ErrTransportEndUsedInIncompatibleTransport, source_span, transport_name,
+             transport.name, protocol);
+      }
+      return;
+    }
+    case Type::Kind::kIdentifier:
+      break;
+  }
+
+  const TypeDecl* decl = static_cast<const IdentifierType*>(type)->type_decl;
+
+  // Break loops in recursive types.
+  if (seen.find(decl) != seen.end()) {
+    return;
+  }
+  seen.insert(decl);
+
+  switch (decl->kind) {
+    case Decl::Kind::kBits:
+    case Decl::Kind::kEnum:
+      return;
+    case Decl::Kind::kProtocol:
+    case Decl::Kind::kBuiltin:
+    case Decl::Kind::kConst:
+    case Decl::Kind::kResource:
+    case Decl::Kind::kTypeAlias:
+    case Decl::Kind::kService:
+      assert(false && "Compiler bug: unexpected kind");
+      __builtin_unreachable();
+    case Decl::Kind::kStruct: {
+      const Struct* s = static_cast<const Struct*>(decl);
+      for (auto& member : s->members) {
+        CheckHandleTransportUsages(member.type_ctor->type, transport, protocol, member.name, seen);
+      }
+      return;
+    }
+    case Decl::Kind::kTable: {
+      const Table* t = static_cast<const Table*>(decl);
+      for (auto& member : t->members) {
+        if (member.maybe_used != nullptr) {
+          CheckHandleTransportUsages(member.maybe_used->type_ctor->type, transport, protocol,
+                                     member.maybe_used->name, seen);
+        }
+      }
+      return;
+    }
+    case Decl::Kind::kUnion: {
+      const Union* u = static_cast<const Union*>(decl);
+      for (auto& member : u->members) {
+        if (member.maybe_used != nullptr) {
+          CheckHandleTransportUsages(member.maybe_used->type_ctor->type, transport, protocol,
+                                     member.maybe_used->name, seen);
+        }
+      }
+      return;
+    }
+  }
+
+  assert(false && "Compiler bug: unhandled case");
+  __builtin_unreachable();
+}
+
 void VerifyAttributesStep::RunImpl() {
   library()->TraverseElements([&](Element* element) { VerifyAttributes(element); });
 }

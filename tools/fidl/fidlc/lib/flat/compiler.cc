@@ -37,6 +37,8 @@ std::unique_ptr<Library> Compiler::Compile() {
     return nullptr;
   if (!VerifyResourcenessStep(this).Run())
     return nullptr;
+  if (!VerifyHandleTransportCompatibilityStep(this).Run())
+    return nullptr;
   if (!VerifyAttributesStep(this).Run())
     return nullptr;
   if (!VerifyInlineSizeStep(this).Run())

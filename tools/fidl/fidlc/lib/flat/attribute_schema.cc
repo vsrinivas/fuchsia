@@ -5,6 +5,7 @@
 #include "fidl/flat/attribute_schema.h"
 
 #include "fidl/flat/compile_step.h"
+#include "fidl/flat/transport.h"
 #include "fidl/flat/typespace.h"
 #include "fidl/flat_ast.h"
 
@@ -646,21 +647,13 @@ static bool TransportConstraint(Reporter* reporter, const Attribute* attribute,
   assert(element);
   assert(element->kind == Element::Kind::kProtocol);
 
-  // function-local static pointer to non-trivially-destructible type
-  // is allowed by styleguide
-  static const auto kValidTransports = new std::set<std::string>{
-      "Banjo",
-      "Channel",
-      "Driver",
-      "Syscall",
-  };
-
   auto arg = attribute->GetArg(AttributeArg::kDefaultAnonymousName);
   auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
   const std::string& value = arg_value.MakeContents();
-  if (kValidTransports->find(value) == kValidTransports->end()) {
-    reporter->Fail(ErrInvalidTransportType, attribute->span, value, *kValidTransports);
+  std::optional<Transport> transport = Transport::FromTransportName(value);
+  if (!transport.has_value()) {
+    reporter->Fail(ErrInvalidTransportType, attribute->span, value, Transport::AllTransportNames());
     return false;
   }
   return true;

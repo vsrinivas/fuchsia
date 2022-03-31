@@ -26,32 +26,6 @@ use {
 };
 
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
-bitflags! {
-    pub struct Rights: u32 {
-        const TRANSFER = 1;
-        const DUPLICATE = 2;
-    }
-}
-
-impl Rights {
-    #[deprecated = "Strict bits should not use `has_unknown_bits`"]
-    #[inline(always)]
-    pub fn has_unknown_bits(&self) -> bool {
-        false
-    }
-
-    #[deprecated = "Strict bits should not use `get_unknown_bits`"]
-    #[inline(always)]
-    pub fn get_unknown_bits(&self) -> u32 {
-        0
-    }
-}
-
-fidl_bits! {
-    name: Rights,
-    prim_ty: u32,
-    strict: true,
-}
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(u32)]
@@ -93,48 +67,6 @@ fidl_enum! {
     prim_ty: u32,
     strict: true,
     min_member: ErrFoo,
-}
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[repr(u32)]
-pub enum ObjType {
-    None = 0,
-    Socket = 14,
-}
-
-impl ObjType {
-    #[inline]
-    pub fn from_primitive(prim: u32) -> Option<Self> {
-        match prim {
-            0 => Some(Self::None),
-            14 => Some(Self::Socket),
-            _ => None,
-        }
-    }
-
-    #[inline]
-    pub const fn into_primitive(self) -> u32 {
-        self as u32
-    }
-
-    #[deprecated = "Strict enums should not use `validate`"]
-    #[inline]
-    pub fn validate(self) -> std::result::Result<Self, u32> {
-        Ok(self)
-    }
-
-    #[deprecated = "Strict enums should not use `is_unknown`"]
-    #[inline]
-    pub fn is_unknown(&self) -> bool {
-        false
-    }
-}
-
-fidl_enum! {
-    name: ObjType,
-    prim_ty: u32,
-    strict: true,
-    min_member: None,
 }
 
 pub type WithErrorSyntaxResponseAsStructResult = std::result::Result<(i64, i64, i64), u32>;
@@ -300,9 +232,9 @@ wrap_handle_metadata!(
 );
 
 wrap_handle_metadata!(
-    HandleWrapperObjectTypeSOCKETRights1,
+    HandleWrapperObjectTypeSOCKETRights2,
     fidl::ObjectType::SOCKET,
-    fidl::Rights::from_bits_const(1).unwrap()
+    fidl::Rights::from_bits_const(2).unwrap()
 );
 
 wrap_handle_metadata!(
@@ -1413,7 +1345,7 @@ impl HandleRightsProtocolSynchronousProxy {
         mut h: fidl::Socket,
         ___deadline: zx::Time,
     ) -> Result<(fidl::Socket), fidl::Error> {
-        let _value: (HandleWrapperObjectTypeSOCKETRights1<fidl::Socket>,) =
+        let _value: (HandleWrapperObjectTypeSOCKETRights2<fidl::Socket>,) =
             self.client.send_query(
                 &mut (HandleWrapperObjectTypeSOCKETRights3::<fidl::Socket>(h)),
                 0x52a8f194ac143547,
@@ -1483,7 +1415,7 @@ impl HandleRightsProtocolProxyInterface for HandleRightsProtocolProxy {
     type ResponseMethodResponseFut = fidl::client::QueryResponseFut<(fidl::Socket)>;
     fn r#response_method(&self, mut h: fidl::Socket) -> Self::ResponseMethodResponseFut {
         fn transform(
-            result: Result<(HandleWrapperObjectTypeSOCKETRights1<fidl::Socket>,), fidl::Error>,
+            result: Result<(HandleWrapperObjectTypeSOCKETRights2<fidl::Socket>,), fidl::Error>,
         ) -> Result<(fidl::Socket), fidl::Error> {
             result.map(|_value| _value.0.into_inner())
         }
@@ -1823,7 +1755,7 @@ impl HandleRightsProtocolResponseMethodResponder {
     }
 
     fn send_raw(&self, mut h: fidl::Socket) -> Result<(), fidl::Error> {
-        let mut response = (HandleWrapperObjectTypeSOCKETRights1::<fidl::Socket>(h));
+        let mut response = (HandleWrapperObjectTypeSOCKETRights2::<fidl::Socket>(h));
 
         let mut msg = fidl::encoding::TransactionMessage {
             header: fidl::encoding::TransactionHeader::new(

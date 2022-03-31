@@ -18,7 +18,10 @@ fidl("fidl_import") {
 fidl("fidl_service") {
   name = "fidl.test.compatibility"
   sources = [ "compatibility_service.test.fidl" ]
-  public_deps = [ ":fidl_import" ]
+  public_deps = [
+    ":fidl_import",
+    "//zircon/vdso/zx",
+  ]
 }
 
 # Shared between the hlcpp test server and the test harness

@@ -43,6 +43,7 @@ zx_library("fidl") {
     "lib/flat/reference.cc",
     "lib/flat/resolve_step.cc",
     "lib/flat/sort_step.cc",
+    "lib/flat/transport.cc",
     "lib/flat/type_resolver.cc",
     "lib/flat/types.cc",
     "lib/flat/typespace.cc",

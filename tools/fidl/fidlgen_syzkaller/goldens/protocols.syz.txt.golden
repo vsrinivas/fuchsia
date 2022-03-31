@@ -5,8 +5,6 @@
 
 include <test/protocols/c/fidl.h>
 test_protocols_ErrorEnum = test_protocols_ErrorEnum_ERR_FOO, test_protocols_ErrorEnum_ERR_BAR
-test_protocols_obj_type = test_protocols_obj_type_NONE, test_protocols_obj_type_SOCKET
-test_protocols_rights = test_protocols_rights_TRANSFER, test_protocols_rights_DUPLICATE
 test_protocols_ProtocolEndsInLine {
        client flags[fidl_handle_presence, int32]
        server flags[fidl_handle_presence, int32]

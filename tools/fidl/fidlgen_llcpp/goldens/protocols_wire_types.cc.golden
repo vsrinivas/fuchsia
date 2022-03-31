@@ -3,6 +3,34 @@
 #include <fidl/test.protocols/cpp/wire_types.h>
 
 #ifdef __Fuchsia__
+void ::test_protocols::wire::WithProtocolEndsServerEndsTopResponse::
+    _CloseHandles() {
+  out.reset();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void ::test_protocols::wire::WithProtocolEndsServerEndsRequest::
+    _CloseHandles() {
+  in.reset();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void ::test_protocols::wire::WithProtocolEndsClientEndsTopResponse::
+    _CloseHandles() {
+  out.reset();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void ::test_protocols::wire::WithProtocolEndsClientEndsRequest::
+    _CloseHandles() {
+  in.reset();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 void ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse::
     _CloseHandles() {
   h.reset();
@@ -13,6 +41,29 @@ void ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse::
 void ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse::
     _CloseHandles() {
   result._CloseHandles();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void ::test_protocols::wire::ProtocolEnds::_CloseHandles() {
+  client.reset();
+  server.reset();
+  client_opt.reset();
+  server_opt.reset();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void ::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse::
+    _CloseHandles() {
+  out._CloseHandles();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest::
+    _CloseHandles() {
+  in._CloseHandles();
 }
 #endif  // __Fuchsia__
 
@@ -64,56 +115,15 @@ void ::test_protocols::wire::ChannelProtocolMutateSocketRequest::
 }
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-void ::test_protocols::wire::WithProtocolEndsServerEndsTopResponse::
-    _CloseHandles() {
-  out.reset();
+void ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
+    SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(WithErrorSyntaxResponseAsStructResult) ==
+                sizeof(fidl_xunion_v2_t));
+  static_assert(offsetof(WithErrorSyntaxResponseAsStructResult, ordinal_) ==
+                offsetof(fidl_xunion_v2_t, tag));
+  static_assert(offsetof(WithErrorSyntaxResponseAsStructResult, envelope_) ==
+                offsetof(fidl_xunion_v2_t, envelope));
 }
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-void ::test_protocols::wire::WithProtocolEndsServerEndsRequest::
-    _CloseHandles() {
-  in.reset();
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-void ::test_protocols::wire::WithProtocolEndsClientEndsTopResponse::
-    _CloseHandles() {
-  out.reset();
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-void ::test_protocols::wire::WithProtocolEndsClientEndsRequest::
-    _CloseHandles() {
-  in.reset();
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-void ::test_protocols::wire::ProtocolEnds::_CloseHandles() {
-  client.reset();
-  server.reset();
-  client_opt.reset();
-  server_opt.reset();
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-void ::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse::
-    _CloseHandles() {
-  out._CloseHandles();
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-void ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest::
-    _CloseHandles() {
-  in._CloseHandles();
-}
-#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
@@ -178,16 +188,6 @@ void ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
   }
 }
 #endif  // __Fuchsia__
-
-void ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
-    SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(WithErrorSyntaxResponseAsStructResult) ==
-                sizeof(fidl_xunion_v2_t));
-  static_assert(offsetof(WithErrorSyntaxResponseAsStructResult, ordinal_) ==
-                offsetof(fidl_xunion_v2_t, tag));
-  static_assert(offsetof(WithErrorSyntaxResponseAsStructResult, envelope_) ==
-                offsetof(fidl_xunion_v2_t, envelope));
-}
 
 void ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
     SizeAndOffsetAssertionHelper() {

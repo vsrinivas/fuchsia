@@ -262,6 +262,13 @@ constexpr ErrorDef<types::Openness> ErrFlexibleTwoWayMethodRequiresOpenProtocol(
     "flexible two-way method may only be defined in an open protocol, not {}");
 constexpr ErrorDef<std::string_view> ErrFlexibleOneWayMethodInClosedProtocol(
     "flexible {} may only be defined in an open or ajar protocol, not closed");
+constexpr ErrorDef<std::string_view, std::string_view, const flat::Decl *>
+    ErrHandleUsedInIncompatibleTransport(
+        "handle of type {} may not be sent over transport {} used by {}");
+constexpr ErrorDef<std::string_view, std::string_view, const flat::Decl *>
+    ErrTransportEndUsedInIncompatibleTransport(
+        "client_end / server_end of transport type {} may not be sent over transport {} used by "
+        "{}");
 
 // ---------------------------------------------------------------------------
 // Attribute Validation: Placement, Values, Constraints
@@ -311,7 +318,7 @@ constexpr ErrorDef<uint32_t, uint32_t> ErrTooManyHandles(
     "too many handles: only {} allowed, but {} found");
 constexpr ErrorDef ErrInvalidErrorType(
     "invalid error type: must be int32, uint32 or an enum thereof");
-constexpr ErrorDef<std::string_view, std::set<std::string>> ErrInvalidTransportType(
+constexpr ErrorDef<std::string_view, std::set<std::string_view>> ErrInvalidTransportType(
     "invalid transport type: got {} expected one of {}");
 constexpr ErrorDef<const flat::Attribute *, std::string_view> ErrBoundIsTooBig(
     "'{}' bound of '{}' is too big");

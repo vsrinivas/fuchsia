@@ -6,20 +6,6 @@
 namespace test {
 namespace protocols {
 namespace testing {
-class HandleRightsProtocol_TestBase
-    : public ::test::protocols::HandleRightsProtocol {
- public:
-  virtual ~HandleRightsProtocol_TestBase() {}
-  virtual void NotImplemented_(const std::string& name) = 0;
-  void NoResponseMethod(::zx::socket h) override {
-    NotImplemented_("NoResponseMethod");
-  }
-  void ResponseMethod(::zx::socket h,
-                      ResponseMethodCallback callback) override {
-    NotImplemented_("ResponseMethod");
-  }
-};
-
 class WithAndWithoutRequestResponse_TestBase
     : public ::test::protocols::WithAndWithoutRequestResponse {
  public:
@@ -95,6 +81,20 @@ class ManyParameters_TestBase : public ::test::protocols::ManyParameters {
                bool p8, bool p9, bool p10, bool p11, bool p12, bool p13,
                bool p14, bool p15) override {
     NotImplemented_("Fifteen");
+  }
+};
+
+class HandleRightsProtocol_TestBase
+    : public ::test::protocols::HandleRightsProtocol {
+ public:
+  virtual ~HandleRightsProtocol_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void NoResponseMethod(::zx::socket h) override {
+    NotImplemented_("NoResponseMethod");
+  }
+  void ResponseMethod(::zx::socket h,
+                      ResponseMethodCallback callback) override {
+    NotImplemented_("ResponseMethod");
   }
 };
 

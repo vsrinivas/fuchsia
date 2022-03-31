@@ -6,6 +6,7 @@
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_VERIFY_STEPS_H_
 
 #include "fidl/flat/compiler.h"
+#include "fidl/flat/transport.h"
 
 namespace fidl::flat {
 
@@ -29,6 +30,19 @@ class VerifyResourcenessStep : public Compiler::Step {
   // value of std::nullopt indicates that the declaration has been visited, used
   // to prevent infinite recursion.
   std::map<const Decl*, std::optional<types::Resourceness>> effective_resourceness_;
+};
+
+class VerifyHandleTransportCompatibilityStep : public Compiler::Step {
+ public:
+  using Step::Step;
+
+ private:
+  void RunImpl() override;
+
+  void VerifyProtocol(const Protocol* protocol);
+  void CheckHandleTransportUsages(const Type* type, const Transport& transport,
+                                  const Protocol* protocol, SourceSpan source_span,
+                                  std::set<const Decl*>& seen);
 };
 
 class VerifyAttributesStep : public Compiler::Step {

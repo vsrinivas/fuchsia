@@ -13,28 +13,6 @@
 
 namespace fuzzing {
 
-using rights = ::test::protocols::rights;
-using obj_type = ::test::protocols::obj_type;
-using WithErrorSyntax_HandleInResult_Response =
-    ::test::protocols::WithErrorSyntax_HandleInResult_Response;
-using WithErrorSyntax_HandleInResult_Result =
-    ::test::protocols::WithErrorSyntax_HandleInResult_Result;
-using WithErrorSyntaxHandleInResultTopResponse =
-    ::test::protocols::WithErrorSyntaxHandleInResultTopResponse;
-using HandleRightsProtocolResponseMethodTopResponse =
-    ::test::protocols::HandleRightsProtocolResponseMethodTopResponse;
-using HandleRightsProtocolResponseMethodRequest =
-    ::test::protocols::HandleRightsProtocolResponseMethodRequest;
-using HandleRightsProtocolNoResponseMethodRequest =
-    ::test::protocols::HandleRightsProtocolNoResponseMethodRequest;
-using HandleRightsProtocolAnEventRequest =
-    ::test::protocols::HandleRightsProtocolAnEventRequest;
-using ChannelProtocolTakeHandleRequest =
-    ::test::protocols::ChannelProtocolTakeHandleRequest;
-using ChannelProtocolMutateSocketTopResponse =
-    ::test::protocols::ChannelProtocolMutateSocketTopResponse;
-using ChannelProtocolMutateSocketRequest =
-    ::test::protocols::ChannelProtocolMutateSocketRequest;
 using WithProtocolEndsServerEndsTopResponse =
     ::test::protocols::WithProtocolEndsServerEndsTopResponse;
 using WithProtocolEndsServerEndsRequest =
@@ -49,6 +27,12 @@ using WithErrorSyntax_ResponseAsStruct_Result =
     ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result;
 using WithErrorSyntaxResponseAsStructTopResponse =
     ::test::protocols::WithErrorSyntaxResponseAsStructTopResponse;
+using WithErrorSyntax_HandleInResult_Response =
+    ::test::protocols::WithErrorSyntax_HandleInResult_Response;
+using WithErrorSyntax_HandleInResult_Result =
+    ::test::protocols::WithErrorSyntax_HandleInResult_Result;
+using WithErrorSyntaxHandleInResultTopResponse =
+    ::test::protocols::WithErrorSyntaxHandleInResultTopResponse;
 using WithErrorSyntax_ErrorAsPrimitive_Response =
     ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response;
 using WithErrorSyntax_ErrorAsPrimitive_Result =
@@ -87,11 +71,25 @@ using WithProtocolEndsStructContainingEndsRequest =
     ::test::protocols::WithProtocolEndsStructContainingEndsRequest;
 using ManyParametersFifteenRequest =
     ::test::protocols::ManyParametersFifteenRequest;
+using HandleRightsProtocolResponseMethodTopResponse =
+    ::test::protocols::HandleRightsProtocolResponseMethodTopResponse;
+using HandleRightsProtocolResponseMethodRequest =
+    ::test::protocols::HandleRightsProtocolResponseMethodRequest;
+using HandleRightsProtocolNoResponseMethodRequest =
+    ::test::protocols::HandleRightsProtocolNoResponseMethodRequest;
+using HandleRightsProtocolAnEventRequest =
+    ::test::protocols::HandleRightsProtocolAnEventRequest;
 using ErrorEnum = ::test::protocols::ErrorEnum;
 using WithErrorSyntax_ErrorAsEnum_Result =
     ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result;
 using WithErrorSyntaxErrorAsEnumTopResponse =
     ::test::protocols::WithErrorSyntaxErrorAsEnumTopResponse;
+using ChannelProtocolTakeHandleRequest =
+    ::test::protocols::ChannelProtocolTakeHandleRequest;
+using ChannelProtocolMutateSocketTopResponse =
+    ::test::protocols::ChannelProtocolMutateSocketTopResponse;
+using ChannelProtocolMutateSocketRequest =
+    ::test::protocols::ChannelProtocolMutateSocketRequest;
 using ChannelProtocolMethodBTopResponse =
     ::test::protocols::ChannelProtocolMethodBTopResponse;
 using ChannelProtocolMethodBRequest =
@@ -101,251 +99,6 @@ using ChannelProtocolMethodARequest =
 using ChannelProtocolEventARequest =
     ::test::protocols::ChannelProtocolEventARequest;
 
-template <>
-struct MinSize<rights> {
-  operator size_t() { return sizeof(rights); }
-};
-template <>
-struct Allocate<rights> {
-  rights operator()(FuzzInput* src, size_t* size) {
-    rights out;
-    ZX_ASSERT(*size >= sizeof(rights));
-    ZX_ASSERT(src->CopyObject(&out));
-    *size = sizeof(rights);
-    return out;
-  }
-};
-template <>
-struct MinSize<obj_type> {
-  operator size_t() { return sizeof(uint64_t); }
-};
-template <>
-struct Allocate<obj_type> {
-  obj_type operator()(FuzzInput* src, size_t* size) {
-    obj_type out;
-    uint64_t selector;
-    ZX_ASSERT(*size >= sizeof(uint64_t));
-    ZX_ASSERT(src->CopyObject(&selector));
-    *size = sizeof(uint64_t);
-
-    switch (selector % 2) {
-      case 0:
-        out = obj_type::NONE;
-        break;
-      case 1:
-        out = obj_type::SOCKET;
-        break;
-    }
-
-    return out;
-  }
-};
-template <>
-struct MinSize<WithErrorSyntax_HandleInResult_Response> {
-  operator size_t() { return MinSize<::zx::handle>(); }
-};
-template <>
-struct Allocate<WithErrorSyntax_HandleInResult_Response> {
-  WithErrorSyntax_HandleInResult_Response operator()(FuzzInput* src,
-                                                     size_t* size) {
-    ZX_ASSERT(*size >= MinSize<WithErrorSyntax_HandleInResult_Response>());
-    WithErrorSyntax_HandleInResult_Response out;
-    const size_t slack_per_member =
-        (*size - MinSize<WithErrorSyntax_HandleInResult_Response>()) / 1;
-    size_t out_size;
-    out_size = MinSize<::zx::handle>() + slack_per_member;
-    out.h = Allocate<::zx::handle>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<WithErrorSyntax_HandleInResult_Result> {
-  operator size_t() {
-    size_t sizes[] = {
-        0,
-        MinSize<::test::protocols::WithErrorSyntax_HandleInResult_Response>(),
-        MinSize<uint32_t>()};
-    return 1 + *std::max_element(sizes, sizes + 2 + 1);
-  }
-};
-template <>
-struct Allocate<WithErrorSyntax_HandleInResult_Result> {
-  static_assert(2 > 0, "xunion must have at least one member");
-
-  WithErrorSyntax_HandleInResult_Result operator()(FuzzInput* src,
-                                                   size_t* size) {
-    ZX_ASSERT(*size >= MinSize<WithErrorSyntax_HandleInResult_Result>());
-
-    uint8_t selector;
-    ZX_ASSERT(src->CopyBytes(&selector, 1));
-    (*size)++;
-
-    WithErrorSyntax_HandleInResult_Result out;
-    switch (selector % 2) {
-      case 0: {
-        out.set_response(
-            Allocate<
-                ::test::protocols::WithErrorSyntax_HandleInResult_Response>{}(
-                src, size));
-        break;
-      }
-      case 1: {
-        out.set_err(Allocate<uint32_t>{}(src, size));
-        break;
-      }
-    }
-
-    return out;
-  }
-};
-template <>
-struct MinSize<WithErrorSyntaxHandleInResultTopResponse> {
-  operator size_t() {
-    return MinSize<::test::protocols::WithErrorSyntax_HandleInResult_Result>();
-  }
-};
-template <>
-struct Allocate<WithErrorSyntaxHandleInResultTopResponse> {
-  WithErrorSyntaxHandleInResultTopResponse operator()(FuzzInput* src,
-                                                      size_t* size) {
-    ZX_ASSERT(*size >= MinSize<WithErrorSyntaxHandleInResultTopResponse>());
-    WithErrorSyntaxHandleInResultTopResponse out;
-    const size_t slack_per_member =
-        (*size - MinSize<WithErrorSyntaxHandleInResultTopResponse>()) / 1;
-    size_t out_size;
-    out_size =
-        MinSize<::test::protocols::WithErrorSyntax_HandleInResult_Result>() +
-        slack_per_member;
-    out.result =
-        Allocate<::test::protocols::WithErrorSyntax_HandleInResult_Result>{}(
-            src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<HandleRightsProtocolResponseMethodTopResponse> {
-  operator size_t() { return MinSize<::zx::socket>(); }
-};
-template <>
-struct Allocate<HandleRightsProtocolResponseMethodTopResponse> {
-  HandleRightsProtocolResponseMethodTopResponse operator()(FuzzInput* src,
-                                                           size_t* size) {
-    ZX_ASSERT(*size >=
-              MinSize<HandleRightsProtocolResponseMethodTopResponse>());
-    HandleRightsProtocolResponseMethodTopResponse out;
-    const size_t slack_per_member =
-        (*size - MinSize<HandleRightsProtocolResponseMethodTopResponse>()) / 1;
-    size_t out_size;
-    out_size = MinSize<::zx::socket>() + slack_per_member;
-    out.h = Allocate<::zx::socket>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<HandleRightsProtocolResponseMethodRequest> {
-  operator size_t() { return MinSize<::zx::socket>(); }
-};
-template <>
-struct Allocate<HandleRightsProtocolResponseMethodRequest> {
-  HandleRightsProtocolResponseMethodRequest operator()(FuzzInput* src,
-                                                       size_t* size) {
-    ZX_ASSERT(*size >= MinSize<HandleRightsProtocolResponseMethodRequest>());
-    HandleRightsProtocolResponseMethodRequest out;
-    const size_t slack_per_member =
-        (*size - MinSize<HandleRightsProtocolResponseMethodRequest>()) / 1;
-    size_t out_size;
-    out_size = MinSize<::zx::socket>() + slack_per_member;
-    out.h = Allocate<::zx::socket>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<HandleRightsProtocolNoResponseMethodRequest> {
-  operator size_t() { return MinSize<::zx::socket>(); }
-};
-template <>
-struct Allocate<HandleRightsProtocolNoResponseMethodRequest> {
-  HandleRightsProtocolNoResponseMethodRequest operator()(FuzzInput* src,
-                                                         size_t* size) {
-    ZX_ASSERT(*size >= MinSize<HandleRightsProtocolNoResponseMethodRequest>());
-    HandleRightsProtocolNoResponseMethodRequest out;
-    const size_t slack_per_member =
-        (*size - MinSize<HandleRightsProtocolNoResponseMethodRequest>()) / 1;
-    size_t out_size;
-    out_size = MinSize<::zx::socket>() + slack_per_member;
-    out.h = Allocate<::zx::socket>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<HandleRightsProtocolAnEventRequest> {
-  operator size_t() { return MinSize<::zx::socket>(); }
-};
-template <>
-struct Allocate<HandleRightsProtocolAnEventRequest> {
-  HandleRightsProtocolAnEventRequest operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<HandleRightsProtocolAnEventRequest>());
-    HandleRightsProtocolAnEventRequest out;
-    const size_t slack_per_member =
-        (*size - MinSize<HandleRightsProtocolAnEventRequest>()) / 1;
-    size_t out_size;
-    out_size = MinSize<::zx::socket>() + slack_per_member;
-    out.h = Allocate<::zx::socket>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<ChannelProtocolTakeHandleRequest> {
-  operator size_t() { return MinSize<::zx::handle>(); }
-};
-template <>
-struct Allocate<ChannelProtocolTakeHandleRequest> {
-  ChannelProtocolTakeHandleRequest operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<ChannelProtocolTakeHandleRequest>());
-    ChannelProtocolTakeHandleRequest out;
-    const size_t slack_per_member =
-        (*size - MinSize<ChannelProtocolTakeHandleRequest>()) / 1;
-    size_t out_size;
-    out_size = MinSize<::zx::handle>() + slack_per_member;
-    out.h = Allocate<::zx::handle>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<ChannelProtocolMutateSocketTopResponse> {
-  operator size_t() { return MinSize<::zx::socket>(); }
-};
-template <>
-struct Allocate<ChannelProtocolMutateSocketTopResponse> {
-  ChannelProtocolMutateSocketTopResponse operator()(FuzzInput* src,
-                                                    size_t* size) {
-    ZX_ASSERT(*size >= MinSize<ChannelProtocolMutateSocketTopResponse>());
-    ChannelProtocolMutateSocketTopResponse out;
-    const size_t slack_per_member =
-        (*size - MinSize<ChannelProtocolMutateSocketTopResponse>()) / 1;
-    size_t out_size;
-    out_size = MinSize<::zx::socket>() + slack_per_member;
-    out.b = Allocate<::zx::socket>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<ChannelProtocolMutateSocketRequest> {
-  operator size_t() { return MinSize<::zx::socket>(); }
-};
-template <>
-struct Allocate<ChannelProtocolMutateSocketRequest> {
-  ChannelProtocolMutateSocketRequest operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<ChannelProtocolMutateSocketRequest>());
-    ChannelProtocolMutateSocketRequest out;
-    const size_t slack_per_member =
-        (*size - MinSize<ChannelProtocolMutateSocketRequest>()) / 1;
-    size_t out_size;
-    out_size = MinSize<::zx::socket>() + slack_per_member;
-    out.a = Allocate<::zx::socket>{}(src, &out_size);
-    return out;
-  }
-};
 template <>
 struct MinSize<WithProtocolEndsServerEndsTopResponse> {
   operator size_t() {
@@ -529,6 +282,88 @@ struct Allocate<WithErrorSyntaxResponseAsStructTopResponse> {
         slack_per_member;
     out.result =
         Allocate<::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>{}(
+            src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<WithErrorSyntax_HandleInResult_Response> {
+  operator size_t() { return MinSize<::zx::handle>(); }
+};
+template <>
+struct Allocate<WithErrorSyntax_HandleInResult_Response> {
+  WithErrorSyntax_HandleInResult_Response operator()(FuzzInput* src,
+                                                     size_t* size) {
+    ZX_ASSERT(*size >= MinSize<WithErrorSyntax_HandleInResult_Response>());
+    WithErrorSyntax_HandleInResult_Response out;
+    const size_t slack_per_member =
+        (*size - MinSize<WithErrorSyntax_HandleInResult_Response>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::zx::handle>() + slack_per_member;
+    out.h = Allocate<::zx::handle>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<WithErrorSyntax_HandleInResult_Result> {
+  operator size_t() {
+    size_t sizes[] = {
+        0,
+        MinSize<::test::protocols::WithErrorSyntax_HandleInResult_Response>(),
+        MinSize<uint32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 2 + 1);
+  }
+};
+template <>
+struct Allocate<WithErrorSyntax_HandleInResult_Result> {
+  static_assert(2 > 0, "xunion must have at least one member");
+
+  WithErrorSyntax_HandleInResult_Result operator()(FuzzInput* src,
+                                                   size_t* size) {
+    ZX_ASSERT(*size >= MinSize<WithErrorSyntax_HandleInResult_Result>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    WithErrorSyntax_HandleInResult_Result out;
+    switch (selector % 2) {
+      case 0: {
+        out.set_response(
+            Allocate<
+                ::test::protocols::WithErrorSyntax_HandleInResult_Response>{}(
+                src, size));
+        break;
+      }
+      case 1: {
+        out.set_err(Allocate<uint32_t>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<WithErrorSyntaxHandleInResultTopResponse> {
+  operator size_t() {
+    return MinSize<::test::protocols::WithErrorSyntax_HandleInResult_Result>();
+  }
+};
+template <>
+struct Allocate<WithErrorSyntaxHandleInResultTopResponse> {
+  WithErrorSyntaxHandleInResultTopResponse operator()(FuzzInput* src,
+                                                      size_t* size) {
+    ZX_ASSERT(*size >= MinSize<WithErrorSyntaxHandleInResultTopResponse>());
+    WithErrorSyntaxHandleInResultTopResponse out;
+    const size_t slack_per_member =
+        (*size - MinSize<WithErrorSyntaxHandleInResultTopResponse>()) / 1;
+    size_t out_size;
+    out_size =
+        MinSize<::test::protocols::WithErrorSyntax_HandleInResult_Result>() +
+        slack_per_member;
+    out.result =
+        Allocate<::test::protocols::WithErrorSyntax_HandleInResult_Result>{}(
             src, &out_size);
     return out;
   }
@@ -1044,6 +879,78 @@ struct Allocate<ManyParametersFifteenRequest> {
   }
 };
 template <>
+struct MinSize<HandleRightsProtocolResponseMethodTopResponse> {
+  operator size_t() { return MinSize<::zx::socket>(); }
+};
+template <>
+struct Allocate<HandleRightsProtocolResponseMethodTopResponse> {
+  HandleRightsProtocolResponseMethodTopResponse operator()(FuzzInput* src,
+                                                           size_t* size) {
+    ZX_ASSERT(*size >=
+              MinSize<HandleRightsProtocolResponseMethodTopResponse>());
+    HandleRightsProtocolResponseMethodTopResponse out;
+    const size_t slack_per_member =
+        (*size - MinSize<HandleRightsProtocolResponseMethodTopResponse>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::zx::socket>() + slack_per_member;
+    out.h = Allocate<::zx::socket>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<HandleRightsProtocolResponseMethodRequest> {
+  operator size_t() { return MinSize<::zx::socket>(); }
+};
+template <>
+struct Allocate<HandleRightsProtocolResponseMethodRequest> {
+  HandleRightsProtocolResponseMethodRequest operator()(FuzzInput* src,
+                                                       size_t* size) {
+    ZX_ASSERT(*size >= MinSize<HandleRightsProtocolResponseMethodRequest>());
+    HandleRightsProtocolResponseMethodRequest out;
+    const size_t slack_per_member =
+        (*size - MinSize<HandleRightsProtocolResponseMethodRequest>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::zx::socket>() + slack_per_member;
+    out.h = Allocate<::zx::socket>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<HandleRightsProtocolNoResponseMethodRequest> {
+  operator size_t() { return MinSize<::zx::socket>(); }
+};
+template <>
+struct Allocate<HandleRightsProtocolNoResponseMethodRequest> {
+  HandleRightsProtocolNoResponseMethodRequest operator()(FuzzInput* src,
+                                                         size_t* size) {
+    ZX_ASSERT(*size >= MinSize<HandleRightsProtocolNoResponseMethodRequest>());
+    HandleRightsProtocolNoResponseMethodRequest out;
+    const size_t slack_per_member =
+        (*size - MinSize<HandleRightsProtocolNoResponseMethodRequest>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::zx::socket>() + slack_per_member;
+    out.h = Allocate<::zx::socket>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<HandleRightsProtocolAnEventRequest> {
+  operator size_t() { return MinSize<::zx::socket>(); }
+};
+template <>
+struct Allocate<HandleRightsProtocolAnEventRequest> {
+  HandleRightsProtocolAnEventRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<HandleRightsProtocolAnEventRequest>());
+    HandleRightsProtocolAnEventRequest out;
+    const size_t slack_per_member =
+        (*size - MinSize<HandleRightsProtocolAnEventRequest>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::zx::socket>() + slack_per_member;
+    out.h = Allocate<::zx::socket>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
 struct MinSize<ErrorEnum> {
   operator size_t() { return sizeof(uint64_t); }
 };
@@ -1126,6 +1033,58 @@ struct Allocate<WithErrorSyntaxErrorAsEnumTopResponse> {
     out.result =
         Allocate<::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>{}(
             src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<ChannelProtocolTakeHandleRequest> {
+  operator size_t() { return MinSize<::zx::handle>(); }
+};
+template <>
+struct Allocate<ChannelProtocolTakeHandleRequest> {
+  ChannelProtocolTakeHandleRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<ChannelProtocolTakeHandleRequest>());
+    ChannelProtocolTakeHandleRequest out;
+    const size_t slack_per_member =
+        (*size - MinSize<ChannelProtocolTakeHandleRequest>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::zx::handle>() + slack_per_member;
+    out.h = Allocate<::zx::handle>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<ChannelProtocolMutateSocketTopResponse> {
+  operator size_t() { return MinSize<::zx::socket>(); }
+};
+template <>
+struct Allocate<ChannelProtocolMutateSocketTopResponse> {
+  ChannelProtocolMutateSocketTopResponse operator()(FuzzInput* src,
+                                                    size_t* size) {
+    ZX_ASSERT(*size >= MinSize<ChannelProtocolMutateSocketTopResponse>());
+    ChannelProtocolMutateSocketTopResponse out;
+    const size_t slack_per_member =
+        (*size - MinSize<ChannelProtocolMutateSocketTopResponse>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::zx::socket>() + slack_per_member;
+    out.b = Allocate<::zx::socket>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<ChannelProtocolMutateSocketRequest> {
+  operator size_t() { return MinSize<::zx::socket>(); }
+};
+template <>
+struct Allocate<ChannelProtocolMutateSocketRequest> {
+  ChannelProtocolMutateSocketRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<ChannelProtocolMutateSocketRequest>());
+    ChannelProtocolMutateSocketRequest out;
+    const size_t slack_per_member =
+        (*size - MinSize<ChannelProtocolMutateSocketRequest>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::zx::socket>() + slack_per_member;
+    out.a = Allocate<::zx::socket>{}(src, &out_size);
     return out;
   }
 };

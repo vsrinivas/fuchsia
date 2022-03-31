@@ -8,7 +8,7 @@
 ## **PROTOCOLS**
 
 ## ChannelProtocol {#ChannelProtocol}
-*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=65)*
+*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=47)*
 
 ### EventA {#ChannelProtocol.EventA}
 
@@ -137,7 +137,7 @@
 &lt;EMPTY&gt;
 
 ## DiscoverableProtocol {#DiscoverableProtocol}
-*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=118)*
+*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=100)*
 
 ### Method {#DiscoverableProtocol.Method}
 
@@ -148,7 +148,7 @@
 
 
 ## HandleRightsProtocol {#HandleRightsProtocol}
-*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=122)*
+*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=104)*
 
 ### AnEvent {#HandleRightsProtocol.AnEvent}
 
@@ -211,7 +211,7 @@
 </table>
 
 ## ManyParameters {#ManyParameters}
-*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=161)*
+*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=143)*
 
 ### Fifteen {#ManyParameters.Fifteen}
 
@@ -314,7 +314,7 @@
 
 
 ## MethodWithUnion {#MethodWithUnion}
-*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=187)*
+*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=169)*
 
 ### UnionMethod {#MethodWithUnion.UnionMethod}
 
@@ -333,7 +333,7 @@
 
 
 ## SyscallProtocol {#SyscallProtocol}
-*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=91)*
+*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=73)*
 
 ### MethodC {#SyscallProtocol.MethodC}
 
@@ -358,7 +358,7 @@
 
 
 ## Transitional {#Transitional}
-*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=98)*
+*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=80)*
 
 ### Event {#Transitional.Event}
 
@@ -421,7 +421,7 @@
 </table>
 
 ## WithAndWithoutRequestResponse {#WithAndWithoutRequestResponse}
-*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=23)*
+*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=5)*
 
 ### NoRequestEmptyResponse {#WithAndWithoutRequestResponse.NoRequestEmptyResponse}
 
@@ -552,7 +552,7 @@
 </table>
 
 ## WithErrorSyntax {#WithErrorSyntax}
-*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=51)*
+*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=33)*
 
 ### ErrorAsEnum {#WithErrorSyntax.ErrorAsEnum}
 
@@ -635,7 +635,7 @@
 </table>
 
 ## WithProtocolEnds {#WithProtocolEnds}
-*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=143)*
+*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=125)*
 
 ### ClientEnds {#WithProtocolEnds.ClientEnds}
 
@@ -725,7 +725,7 @@
 ## **STRUCTS**
 
 ### ProtocolEnds [resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute} {#ProtocolEnds data-text="ProtocolEnds"}
-*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=136)*
+*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=118)*
 
 <table>
     <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
@@ -764,17 +764,17 @@
 </table>
 
 ### WithErrorSyntax_ErrorAsEnum_Response  {#WithErrorSyntax_ErrorAsEnum_Response data-text="WithErrorSyntax_ErrorAsEnum_Response"}
-*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=58)*
+*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=40)*
 
 &lt;EMPTY&gt;
 
 ### WithErrorSyntax_ErrorAsPrimitive_Response  {#WithErrorSyntax_ErrorAsPrimitive_Response data-text="WithErrorSyntax_ErrorAsPrimitive_Response"}
-*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=57)*
+*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=39)*
 
 &lt;EMPTY&gt;
 
 ### WithErrorSyntax_HandleInResult_Response [resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute} {#WithErrorSyntax_HandleInResult_Response data-text="WithErrorSyntax_HandleInResult_Response"}
-*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=59)*
+*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=41)*
 
 <table>
     <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
@@ -789,7 +789,7 @@
 </table>
 
 ### WithErrorSyntax_ResponseAsStruct_Response  {#WithErrorSyntax_ResponseAsStruct_Response data-text="WithErrorSyntax_ResponseAsStruct_Response"}
-*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=52)*
+*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=34)*
 
 <table>
     <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
@@ -825,7 +825,7 @@
 ### ErrorEnum [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#ErrorEnum data-text="ErrorEnum"}
 Type: <code>uint32</code>
 
-*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=46)*
+*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=28)*
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr>
@@ -841,31 +841,12 @@ Type: <code>uint32</code>
         </tr>
 </table>
 
-### obj_type [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#obj_type data-text="obj_type"}
-Type: <code>uint32</code>
-
-*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=6)*
-
-<table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
-        <tr id="obj_type.NONE">
-<td><h3 id="obj_type.NONE" class="add-link hide-from-toc">NONE</h3></td>
-            <td><code>0</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.SOCKET">
-<td><h3 id="obj_type.SOCKET" class="add-link hide-from-toc">SOCKET</h3></td>
-            <td><code>14</code></td>
-            <td></td>
-        </tr>
-</table>
-
 
 
 ## **UNIONS**
 
 ### TheUnion [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#TheUnion data-text="TheUnion"}
-*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=183)*
+*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=165)*
 <table>
     <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
         <tr id="TheUnion.v">
@@ -879,7 +860,7 @@ Type: <code>uint32</code>
 </table>
 
 ### WithErrorSyntax_ErrorAsEnum_Result [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#WithErrorSyntax_ErrorAsEnum_Result data-text="WithErrorSyntax_ErrorAsEnum_Result"}
-*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=58)*
+*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=40)*
 <table>
     <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
         <tr id="WithErrorSyntax_ErrorAsEnum_Result.response">
@@ -901,7 +882,7 @@ Type: <code>uint32</code>
 </table>
 
 ### WithErrorSyntax_ErrorAsPrimitive_Result [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#WithErrorSyntax_ErrorAsPrimitive_Result data-text="WithErrorSyntax_ErrorAsPrimitive_Result"}
-*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=57)*
+*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=39)*
 <table>
     <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
         <tr id="WithErrorSyntax_ErrorAsPrimitive_Result.response">
@@ -923,7 +904,7 @@ Type: <code>uint32</code>
 </table>
 
 ### WithErrorSyntax_HandleInResult_Result [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} [resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute} {#WithErrorSyntax_HandleInResult_Result data-text="WithErrorSyntax_HandleInResult_Result"}
-*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=59)*
+*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=41)*
 <table>
     <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
         <tr id="WithErrorSyntax_HandleInResult_Result.response">
@@ -945,7 +926,7 @@ Type: <code>uint32</code>
 </table>
 
 ### WithErrorSyntax_ResponseAsStruct_Result [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#WithErrorSyntax_ResponseAsStruct_Result data-text="WithErrorSyntax_ResponseAsStruct_Result"}
-*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=52)*
+*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=34)*
 <table>
     <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
         <tr id="WithErrorSyntax_ResponseAsStruct_Result.response">
@@ -966,26 +947,5 @@ Type: <code>uint32</code>
         </tr>
 </table>
 
-
-## **BITS**
-
-### rights [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#rights}
-Type: <code>uint32</code>
-
-*Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=11)*
-
-<table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
-        <tr id="rights.TRANSFER">
-<td><h3 id="rights.TRANSFER" class="add-link hide-from-toc">TRANSFER</h3></td>
-            <td>1</td>
-            <td></td>
-        </tr>
-        <tr id="rights.DUPLICATE">
-<td><h3 id="rights.DUPLICATE" class="add-link hide-from-toc">DUPLICATE</h3></td>
-            <td>2</td>
-            <td></td>
-        </tr>
-</table>
 
 

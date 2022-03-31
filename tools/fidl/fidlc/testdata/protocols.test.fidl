@@ -1,24 +1,6 @@
 library test.protocols;
 
-// This is not a reference to library zx to avoid complexity in the test data.
-// A local handle is defined here that contains subtypes that this test cares
-// about.
-type obj_type = strict enum : uint32 {
-    NONE = 0;
-    SOCKET = 14;
-};
-
-type rights = strict bits : uint32 {
-    TRANSFER = 1;
-    DUPLICATE = 2;
-};
-
-resource_definition handle : uint32 {
-    properties {
-        subtype obj_type;
-        rights rights;
-    };
-};
+using zx;
 
 protocol WithAndWithoutRequestResponse {
     NoRequestNoResponse();
@@ -57,7 +39,7 @@ protocol WithErrorSyntax {
     ErrorAsPrimitive() -> (struct {}) error uint32;
     ErrorAsEnum() -> (struct {}) error ErrorEnum;
     HandleInResult() -> (resource struct {
-        h handle;
+        h zx.handle;
     }) error uint32;
 };
 
@@ -78,12 +60,12 @@ protocol ChannelProtocol {
         result int64;
     });
     TakeHandle(resource struct {
-        h handle;
+        h zx.handle;
     }) -> ();
     MutateSocket(resource struct {
-        a handle:SOCKET;
+        a zx.handle:SOCKET;
     }) -> (resource struct {
-        b handle:SOCKET;
+        b zx.handle:SOCKET;
     });
 };
 
@@ -121,15 +103,15 @@ protocol DiscoverableProtocol {
 
 protocol HandleRightsProtocol {
     NoResponseMethod(resource struct {
-        h handle:<SOCKET, rights.TRANSFER | rights.DUPLICATE>;
+        h zx.handle:<SOCKET, zx.rights.TRANSFER | zx.rights.DUPLICATE>;
     });
     ResponseMethod(resource struct {
-        h handle:<SOCKET, rights.TRANSFER | rights.DUPLICATE>;
+        h zx.handle:<SOCKET, zx.rights.TRANSFER | zx.rights.DUPLICATE>;
     }) -> (resource struct {
-        h handle:<SOCKET, rights.TRANSFER>;
+        h zx.handle:<SOCKET, zx.rights.TRANSFER>;
     });
     -> AnEvent(resource struct {
-        h handle:<SOCKET, rights.TRANSFER | rights.DUPLICATE>;
+        h zx.handle:<SOCKET, zx.rights.TRANSFER | zx.rights.DUPLICATE>;
     });
 };
 

@@ -19,24 +19,6 @@
 #endif  // __Fuchsia__
 
 namespace test_protocols {
-class WithErrorSyntax_HandleInResult_Response;
-
-class WithErrorSyntaxHandleInResultTopResponse;
-
-class HandleRightsProtocolResponseMethodTopResponse;
-
-class HandleRightsProtocolResponseMethodRequest;
-
-class HandleRightsProtocolNoResponseMethodRequest;
-
-class HandleRightsProtocolAnEventRequest;
-
-class ChannelProtocolTakeHandleRequest;
-
-class ChannelProtocolMutateSocketTopResponse;
-
-class ChannelProtocolMutateSocketRequest;
-
 class WithProtocolEndsServerEndsTopResponse;
 
 class WithProtocolEndsServerEndsRequest;
@@ -48,6 +30,10 @@ class WithProtocolEndsClientEndsRequest;
 class WithErrorSyntax_ResponseAsStruct_Response;
 
 class WithErrorSyntaxResponseAsStructTopResponse;
+
+class WithErrorSyntax_HandleInResult_Response;
+
+class WithErrorSyntaxHandleInResultTopResponse;
 
 class WithErrorSyntax_ErrorAsPrimitive_Response;
 
@@ -87,7 +73,21 @@ class WithProtocolEndsStructContainingEndsRequest;
 
 class ManyParametersFifteenRequest;
 
+class HandleRightsProtocolResponseMethodTopResponse;
+
+class HandleRightsProtocolResponseMethodRequest;
+
+class HandleRightsProtocolNoResponseMethodRequest;
+
+class HandleRightsProtocolAnEventRequest;
+
 class WithErrorSyntaxErrorAsEnumTopResponse;
+
+class ChannelProtocolTakeHandleRequest;
+
+class ChannelProtocolMutateSocketTopResponse;
+
+class ChannelProtocolMutateSocketRequest;
 
 class ChannelProtocolMethodBTopResponse;
 
@@ -97,564 +97,15 @@ class ChannelProtocolMethodARequest;
 
 class ChannelProtocolEventARequest;
 
-class WithErrorSyntax_HandleInResult_Result;
-
 class WithErrorSyntax_ResponseAsStruct_Result;
+
+class WithErrorSyntax_HandleInResult_Result;
 
 class WithErrorSyntax_ErrorAsPrimitive_Result;
 
 class TheUnion;
 
 class WithErrorSyntax_ErrorAsEnum_Result;
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntax_HandleInResult_ResponseTable;
-
-class WithErrorSyntax_HandleInResult_Response {
- private:
-  struct Storage_;
-
- public:
-  WithErrorSyntax_HandleInResult_Response(Storage_ storage) noexcept
-      : storage_(std::move(storage)) {}
-  WithErrorSyntax_HandleInResult_Response(::zx::handle h) noexcept
-      : storage_({.h = std::move(h)}) {}
-  WithErrorSyntax_HandleInResult_Response()
-      : WithErrorSyntax_HandleInResult_Response(Storage_{}) {}
-
-  WithErrorSyntax_HandleInResult_Response(
-      WithErrorSyntax_HandleInResult_Response&&) noexcept = default;
-  WithErrorSyntax_HandleInResult_Response& operator=(
-      WithErrorSyntax_HandleInResult_Response&&) noexcept = default;
-
-  const ::zx::handle& h() const { return storage_.h; }
-
-  ::zx::handle& h() { return storage_.h; }
-
- private:
-  struct Storage_ final {
-    ::zx::handle h{};
-  };
-
-  Storage_ storage_;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocols::WithErrorSyntax_HandleInResult_Response, 4, 4>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_protocols::WithErrorSyntax_HandleInResult_Response>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::handle,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_NONE,
-                                                        0x80000000, false>>{
-          &Storage_::h, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntax_HandleInResult_ResultTable;
-
-class WithErrorSyntax_HandleInResult_Result {
- private:
-  using Storage_ =
-      cpp17::variant<cpp17::monostate,
-                     ::test_protocols::WithErrorSyntax_HandleInResult_Response,
-                     uint32_t>;
-
- public:
-  // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 1,  // 0x1
-    kErr = 2,       // 0x2
-  };
-
-  // Create an unknown value of this union.
-  WithErrorSyntax_HandleInResult_Result()
-      : storage_(std::make_shared<Storage_>()) {}
-
-  WithErrorSyntax_HandleInResult_Result(
-      WithErrorSyntax_HandleInResult_Result&&) noexcept = default;
-  WithErrorSyntax_HandleInResult_Result& operator=(
-      WithErrorSyntax_HandleInResult_Result&&) noexcept = default;
-
-  constexpr ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag Which()
-      const {
-    return WithErrorSyntax_HandleInResult_Result::IndexToTag(storage_->index());
-  }
-  static WithErrorSyntax_HandleInResult_Result WithResponse(
-      ::test_protocols::WithErrorSyntax_HandleInResult_Response val) {
-    return WithErrorSyntax_HandleInResult_Result(
-        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
-    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage_> response() {
-    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
-  }
-  static WithErrorSyntax_HandleInResult_Result WithErr(uint32_t val) {
-    return WithErrorSyntax_HandleInResult_Result(
-        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
-    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage_> err() {
-    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
-  }
-
- private:
-  std::shared_ptr<Storage_> storage_;
-  friend struct ::fidl::internal::NaturalUnionCodingTraits<
-      ::test_protocols::WithErrorSyntax_HandleInResult_Result>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalUnionMember<
-                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
-                      ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>(),
-                      ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>());
-
-  explicit WithErrorSyntax_HandleInResult_Result(
-      std::shared_ptr<Storage_> storage)
-      : storage_(std::move(storage)) {}
-
-  static constexpr size_t TagToIndex(
-      ::fidl::internal::NaturalDecoder* decoder,
-      ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag tag) {
-    switch (tag) {
-      case ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag::
-          kResponse:
-        return 1;
-      case ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag::kErr:
-        return 2;
-      default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
-        return 0;
-      }
-    }
-  }
-
-  static constexpr ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag
-  IndexToTag(size_t index) {
-    switch (index) {
-      case 1:
-        return ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag::
-            kResponse;
-      case 2:
-        return ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag::
-            kErr;
-      // TODO: what's the right thing to do here?
-      default:
-        return ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag::
-            kResponse;
-    }
-  }
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
-
-class WithErrorSyntaxHandleInResultTopResponse {
- private:
-  struct Storage_;
-
- public:
-  WithErrorSyntaxHandleInResultTopResponse(Storage_ storage) noexcept
-      : storage_(std::move(storage)) {}
-  WithErrorSyntaxHandleInResultTopResponse(
-      ::test_protocols::WithErrorSyntax_HandleInResult_Result result) noexcept
-      : storage_({.result = std::move(result)}) {}
-  WithErrorSyntaxHandleInResultTopResponse()
-      : WithErrorSyntaxHandleInResultTopResponse(Storage_{}) {}
-
-  WithErrorSyntaxHandleInResultTopResponse(
-      WithErrorSyntaxHandleInResultTopResponse&&) noexcept = default;
-  WithErrorSyntaxHandleInResultTopResponse& operator=(
-      WithErrorSyntaxHandleInResultTopResponse&&) noexcept = default;
-
-  const ::test_protocols::WithErrorSyntax_HandleInResult_Result& result()
-      const {
-    return storage_.result;
-  }
-
-  ::test_protocols::WithErrorSyntax_HandleInResult_Result& result() {
-    return storage_.result;
-  }
-
- private:
-  struct Storage_ final {
-    ::test_protocols::WithErrorSyntax_HandleInResult_Result result{};
-  };
-
-  Storage_ storage_;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocols::WithErrorSyntaxHandleInResultTopResponse, 24, 16>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_protocols::WithErrorSyntaxHandleInResultTopResponse>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_protocols::WithErrorSyntax_HandleInResult_Result,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
-                                                        0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
-
-class HandleRightsProtocolResponseMethodTopResponse {
- private:
-  struct Storage_;
-
- public:
-  HandleRightsProtocolResponseMethodTopResponse(Storage_ storage) noexcept
-      : storage_(std::move(storage)) {}
-  HandleRightsProtocolResponseMethodTopResponse(::zx::socket h) noexcept
-      : storage_({.h = std::move(h)}) {}
-  HandleRightsProtocolResponseMethodTopResponse()
-      : HandleRightsProtocolResponseMethodTopResponse(Storage_{}) {}
-
-  HandleRightsProtocolResponseMethodTopResponse(
-      HandleRightsProtocolResponseMethodTopResponse&&) noexcept = default;
-  HandleRightsProtocolResponseMethodTopResponse& operator=(
-      HandleRightsProtocolResponseMethodTopResponse&&) noexcept = default;
-
-  const ::zx::socket& h() const { return storage_.h; }
-
-  ::zx::socket& h() { return storage_.h; }
-
- private:
-  struct Storage_ final {
-    ::zx::socket h{};
-  };
-
-  Storage_ storage_;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocols::HandleRightsProtocolResponseMethodTopResponse, 4, 4>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_protocols::HandleRightsProtocolResponseMethodTopResponse>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<
-                      Storage_, ::zx::socket,
-                      fidl::internal::NaturalCodingConstraintHandle<
-                          ZX_OBJ_TYPE_SOCKET, 0x1, false>>{&Storage_::h, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_HandleRightsProtocolResponseMethodRequestTable;
-
-class HandleRightsProtocolResponseMethodRequest {
- private:
-  struct Storage_;
-
- public:
-  HandleRightsProtocolResponseMethodRequest(Storage_ storage) noexcept
-      : storage_(std::move(storage)) {}
-  HandleRightsProtocolResponseMethodRequest(::zx::socket h) noexcept
-      : storage_({.h = std::move(h)}) {}
-  HandleRightsProtocolResponseMethodRequest()
-      : HandleRightsProtocolResponseMethodRequest(Storage_{}) {}
-
-  HandleRightsProtocolResponseMethodRequest(
-      HandleRightsProtocolResponseMethodRequest&&) noexcept = default;
-  HandleRightsProtocolResponseMethodRequest& operator=(
-      HandleRightsProtocolResponseMethodRequest&&) noexcept = default;
-
-  const ::zx::socket& h() const { return storage_.h; }
-
-  ::zx::socket& h() { return storage_.h; }
-
- private:
-  struct Storage_ final {
-    ::zx::socket h{};
-  };
-
-  Storage_ storage_;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocols::HandleRightsProtocolResponseMethodRequest, 4, 4>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_protocols::HandleRightsProtocolResponseMethodRequest>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<
-                      Storage_, ::zx::socket,
-                      fidl::internal::NaturalCodingConstraintHandle<
-                          ZX_OBJ_TYPE_SOCKET, 0x3, false>>{&Storage_::h, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
-
-class HandleRightsProtocolNoResponseMethodRequest {
- private:
-  struct Storage_;
-
- public:
-  HandleRightsProtocolNoResponseMethodRequest(Storage_ storage) noexcept
-      : storage_(std::move(storage)) {}
-  HandleRightsProtocolNoResponseMethodRequest(::zx::socket h) noexcept
-      : storage_({.h = std::move(h)}) {}
-  HandleRightsProtocolNoResponseMethodRequest()
-      : HandleRightsProtocolNoResponseMethodRequest(Storage_{}) {}
-
-  HandleRightsProtocolNoResponseMethodRequest(
-      HandleRightsProtocolNoResponseMethodRequest&&) noexcept = default;
-  HandleRightsProtocolNoResponseMethodRequest& operator=(
-      HandleRightsProtocolNoResponseMethodRequest&&) noexcept = default;
-
-  const ::zx::socket& h() const { return storage_.h; }
-
-  ::zx::socket& h() { return storage_.h; }
-
- private:
-  struct Storage_ final {
-    ::zx::socket h{};
-  };
-
-  Storage_ storage_;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocols::HandleRightsProtocolNoResponseMethodRequest, 4, 4>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_protocols::HandleRightsProtocolNoResponseMethodRequest>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<
-                      Storage_, ::zx::socket,
-                      fidl::internal::NaturalCodingConstraintHandle<
-                          ZX_OBJ_TYPE_SOCKET, 0x3, false>>{&Storage_::h, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_HandleRightsProtocolAnEventRequestTable;
-
-class HandleRightsProtocolAnEventRequest {
- private:
-  struct Storage_;
-
- public:
-  HandleRightsProtocolAnEventRequest(Storage_ storage) noexcept
-      : storage_(std::move(storage)) {}
-  HandleRightsProtocolAnEventRequest(::zx::socket h) noexcept
-      : storage_({.h = std::move(h)}) {}
-  HandleRightsProtocolAnEventRequest()
-      : HandleRightsProtocolAnEventRequest(Storage_{}) {}
-
-  HandleRightsProtocolAnEventRequest(
-      HandleRightsProtocolAnEventRequest&&) noexcept = default;
-  HandleRightsProtocolAnEventRequest& operator=(
-      HandleRightsProtocolAnEventRequest&&) noexcept = default;
-
-  const ::zx::socket& h() const { return storage_.h; }
-
-  ::zx::socket& h() { return storage_.h; }
-
- private:
-  struct Storage_ final {
-    ::zx::socket h{};
-  };
-
-  Storage_ storage_;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocols::HandleRightsProtocolAnEventRequest, 4, 4>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_protocols::HandleRightsProtocolAnEventRequest>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<
-                      Storage_, ::zx::socket,
-                      fidl::internal::NaturalCodingConstraintHandle<
-                          ZX_OBJ_TYPE_SOCKET, 0x3, false>>{&Storage_::h, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolTakeHandleRequestTable;
-
-class ChannelProtocolTakeHandleRequest {
- private:
-  struct Storage_;
-
- public:
-  ChannelProtocolTakeHandleRequest(Storage_ storage) noexcept
-      : storage_(std::move(storage)) {}
-  ChannelProtocolTakeHandleRequest(::zx::handle h) noexcept
-      : storage_({.h = std::move(h)}) {}
-  ChannelProtocolTakeHandleRequest()
-      : ChannelProtocolTakeHandleRequest(Storage_{}) {}
-
-  ChannelProtocolTakeHandleRequest(
-      ChannelProtocolTakeHandleRequest&&) noexcept = default;
-  ChannelProtocolTakeHandleRequest& operator=(
-      ChannelProtocolTakeHandleRequest&&) noexcept = default;
-
-  const ::zx::handle& h() const { return storage_.h; }
-
-  ::zx::handle& h() { return storage_.h; }
-
- private:
-  struct Storage_ final {
-    ::zx::handle h{};
-  };
-
-  Storage_ storage_;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocols::ChannelProtocolTakeHandleRequest, 4, 4>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_protocols::ChannelProtocolTakeHandleRequest>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::handle,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_NONE,
-                                                        0x80000000, false>>{
-          &Storage_::h, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolMutateSocketTopResponseTable;
-
-class ChannelProtocolMutateSocketTopResponse {
- private:
-  struct Storage_;
-
- public:
-  ChannelProtocolMutateSocketTopResponse(Storage_ storage) noexcept
-      : storage_(std::move(storage)) {}
-  ChannelProtocolMutateSocketTopResponse(::zx::socket b) noexcept
-      : storage_({.b = std::move(b)}) {}
-  ChannelProtocolMutateSocketTopResponse()
-      : ChannelProtocolMutateSocketTopResponse(Storage_{}) {}
-
-  ChannelProtocolMutateSocketTopResponse(
-      ChannelProtocolMutateSocketTopResponse&&) noexcept = default;
-  ChannelProtocolMutateSocketTopResponse& operator=(
-      ChannelProtocolMutateSocketTopResponse&&) noexcept = default;
-
-  const ::zx::socket& b() const { return storage_.b; }
-
-  ::zx::socket& b() { return storage_.b; }
-
- private:
-  struct Storage_ final {
-    ::zx::socket b{};
-  };
-
-  Storage_ storage_;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocols::ChannelProtocolMutateSocketTopResponse, 4, 4>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_protocols::ChannelProtocolMutateSocketTopResponse>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::socket,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_SOCKET,
-                                                        0x80000000, false>>{
-          &Storage_::b, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolMutateSocketRequestTable;
-
-class ChannelProtocolMutateSocketRequest {
- private:
-  struct Storage_;
-
- public:
-  ChannelProtocolMutateSocketRequest(Storage_ storage) noexcept
-      : storage_(std::move(storage)) {}
-  ChannelProtocolMutateSocketRequest(::zx::socket a) noexcept
-      : storage_({.a = std::move(a)}) {}
-  ChannelProtocolMutateSocketRequest()
-      : ChannelProtocolMutateSocketRequest(Storage_{}) {}
-
-  ChannelProtocolMutateSocketRequest(
-      ChannelProtocolMutateSocketRequest&&) noexcept = default;
-  ChannelProtocolMutateSocketRequest& operator=(
-      ChannelProtocolMutateSocketRequest&&) noexcept = default;
-
-  const ::zx::socket& a() const { return storage_.a; }
-
-  ::zx::socket& a() { return storage_.a; }
-
- private:
-  struct Storage_ final {
-    ::zx::socket a{};
-  };
-
-  Storage_ storage_;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocols::ChannelProtocolMutateSocketRequest, 4, 4>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_protocols::ChannelProtocolMutateSocketRequest>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::socket,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_SOCKET,
-                                                        0x80000000, false>>{
-          &Storage_::a, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
-};
-
-#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
@@ -1147,6 +598,216 @@ class WithErrorSyntaxResponseAsStructTopResponse {
   static constexpr auto kPaddingV1 = std::make_tuple();
   static constexpr auto kPaddingV2 = std::make_tuple();
 };
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_WithErrorSyntax_HandleInResult_ResponseTable;
+
+class WithErrorSyntax_HandleInResult_Response {
+ private:
+  struct Storage_;
+
+ public:
+  WithErrorSyntax_HandleInResult_Response(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  WithErrorSyntax_HandleInResult_Response(::zx::handle h) noexcept
+      : storage_({.h = std::move(h)}) {}
+  WithErrorSyntax_HandleInResult_Response()
+      : WithErrorSyntax_HandleInResult_Response(Storage_{}) {}
+
+  WithErrorSyntax_HandleInResult_Response(
+      WithErrorSyntax_HandleInResult_Response&&) noexcept = default;
+  WithErrorSyntax_HandleInResult_Response& operator=(
+      WithErrorSyntax_HandleInResult_Response&&) noexcept = default;
+
+  const ::zx::handle& h() const { return storage_.h; }
+
+  ::zx::handle& h() { return storage_.h; }
+
+ private:
+  struct Storage_ final {
+    ::zx::handle h{};
+  };
+
+  Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::WithErrorSyntax_HandleInResult_Response, 4, 4>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::WithErrorSyntax_HandleInResult_Response>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::zx::handle,
+          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_NONE,
+                                                        0x80000000, false>>{
+          &Storage_::h, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_WithErrorSyntax_HandleInResult_ResultTable;
+
+class WithErrorSyntax_HandleInResult_Result {
+ private:
+  using Storage_ =
+      cpp17::variant<cpp17::monostate,
+                     ::test_protocols::WithErrorSyntax_HandleInResult_Response,
+                     uint32_t>;
+
+ public:
+  // TODO: share union tag types between wire & natural.
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,       // 0x2
+  };
+
+  // Create an unknown value of this union.
+  WithErrorSyntax_HandleInResult_Result()
+      : storage_(std::make_shared<Storage_>()) {}
+
+  WithErrorSyntax_HandleInResult_Result(
+      WithErrorSyntax_HandleInResult_Result&&) noexcept = default;
+  WithErrorSyntax_HandleInResult_Result& operator=(
+      WithErrorSyntax_HandleInResult_Result&&) noexcept = default;
+
+  constexpr ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag Which()
+      const {
+    return WithErrorSyntax_HandleInResult_Result::IndexToTag(storage_->index());
+  }
+  static WithErrorSyntax_HandleInResult_Result WithResponse(
+      ::test_protocols::WithErrorSyntax_HandleInResult_Response val) {
+    return WithErrorSyntax_HandleInResult_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> response() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static WithErrorSyntax_HandleInResult_Result WithErr(uint32_t val) {
+    return WithErrorSyntax_HandleInResult_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> err() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
+ private:
+  std::shared_ptr<Storage_> storage_;
+  friend struct ::fidl::internal::NaturalUnionCodingTraits<
+      ::test_protocols::WithErrorSyntax_HandleInResult_Result>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
+
+  explicit WithErrorSyntax_HandleInResult_Result(
+      std::shared_ptr<Storage_> storage)
+      : storage_(std::move(storage)) {}
+
+  static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
+      ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag tag) {
+    switch (tag) {
+      case ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag::
+          kResponse:
+        return 1;
+      case ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag::kErr:
+        return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
+    }
+  }
+
+  static constexpr ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag
+  IndexToTag(size_t index) {
+    switch (index) {
+      case 1:
+        return ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag::
+            kResponse;
+      case 2:
+        return ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag::
+            kErr;
+      // TODO: what's the right thing to do here?
+      default:
+        return ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag::
+            kResponse;
+    }
+  }
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
+
+class WithErrorSyntaxHandleInResultTopResponse {
+ private:
+  struct Storage_;
+
+ public:
+  WithErrorSyntaxHandleInResultTopResponse(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  WithErrorSyntaxHandleInResultTopResponse(
+      ::test_protocols::WithErrorSyntax_HandleInResult_Result result) noexcept
+      : storage_({.result = std::move(result)}) {}
+  WithErrorSyntaxHandleInResultTopResponse()
+      : WithErrorSyntaxHandleInResultTopResponse(Storage_{}) {}
+
+  WithErrorSyntaxHandleInResultTopResponse(
+      WithErrorSyntaxHandleInResultTopResponse&&) noexcept = default;
+  WithErrorSyntaxHandleInResultTopResponse& operator=(
+      WithErrorSyntaxHandleInResultTopResponse&&) noexcept = default;
+
+  const ::test_protocols::WithErrorSyntax_HandleInResult_Result& result()
+      const {
+    return storage_.result;
+  }
+
+  ::test_protocols::WithErrorSyntax_HandleInResult_Result& result() {
+    return storage_.result;
+  }
+
+ private:
+  struct Storage_ final {
+    ::test_protocols::WithErrorSyntax_HandleInResult_Result result{};
+  };
+
+  Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::WithErrorSyntaxHandleInResultTopResponse, 24, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::WithErrorSyntaxHandleInResultTopResponse>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_protocols::WithErrorSyntax_HandleInResult_Result,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
+                                                        0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
+};
+
+#endif  // __Fuchsia__
 
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
@@ -2786,6 +2447,198 @@ class ManyParametersFifteenRequest {
   static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
+
+class HandleRightsProtocolResponseMethodTopResponse {
+ private:
+  struct Storage_;
+
+ public:
+  HandleRightsProtocolResponseMethodTopResponse(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  HandleRightsProtocolResponseMethodTopResponse(::zx::socket h) noexcept
+      : storage_({.h = std::move(h)}) {}
+  HandleRightsProtocolResponseMethodTopResponse()
+      : HandleRightsProtocolResponseMethodTopResponse(Storage_{}) {}
+
+  HandleRightsProtocolResponseMethodTopResponse(
+      HandleRightsProtocolResponseMethodTopResponse&&) noexcept = default;
+  HandleRightsProtocolResponseMethodTopResponse& operator=(
+      HandleRightsProtocolResponseMethodTopResponse&&) noexcept = default;
+
+  const ::zx::socket& h() const { return storage_.h; }
+
+  ::zx::socket& h() { return storage_.h; }
+
+ private:
+  struct Storage_ final {
+    ::zx::socket h{};
+  };
+
+  Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::HandleRightsProtocolResponseMethodTopResponse, 4, 4>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::HandleRightsProtocolResponseMethodTopResponse>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::zx::socket,
+                      fidl::internal::NaturalCodingConstraintHandle<
+                          ZX_OBJ_TYPE_SOCKET, 0x2, false>>{&Storage_::h, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_HandleRightsProtocolResponseMethodRequestTable;
+
+class HandleRightsProtocolResponseMethodRequest {
+ private:
+  struct Storage_;
+
+ public:
+  HandleRightsProtocolResponseMethodRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  HandleRightsProtocolResponseMethodRequest(::zx::socket h) noexcept
+      : storage_({.h = std::move(h)}) {}
+  HandleRightsProtocolResponseMethodRequest()
+      : HandleRightsProtocolResponseMethodRequest(Storage_{}) {}
+
+  HandleRightsProtocolResponseMethodRequest(
+      HandleRightsProtocolResponseMethodRequest&&) noexcept = default;
+  HandleRightsProtocolResponseMethodRequest& operator=(
+      HandleRightsProtocolResponseMethodRequest&&) noexcept = default;
+
+  const ::zx::socket& h() const { return storage_.h; }
+
+  ::zx::socket& h() { return storage_.h; }
+
+ private:
+  struct Storage_ final {
+    ::zx::socket h{};
+  };
+
+  Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::HandleRightsProtocolResponseMethodRequest, 4, 4>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::HandleRightsProtocolResponseMethodRequest>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::zx::socket,
+                      fidl::internal::NaturalCodingConstraintHandle<
+                          ZX_OBJ_TYPE_SOCKET, 0x3, false>>{&Storage_::h, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
+
+class HandleRightsProtocolNoResponseMethodRequest {
+ private:
+  struct Storage_;
+
+ public:
+  HandleRightsProtocolNoResponseMethodRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  HandleRightsProtocolNoResponseMethodRequest(::zx::socket h) noexcept
+      : storage_({.h = std::move(h)}) {}
+  HandleRightsProtocolNoResponseMethodRequest()
+      : HandleRightsProtocolNoResponseMethodRequest(Storage_{}) {}
+
+  HandleRightsProtocolNoResponseMethodRequest(
+      HandleRightsProtocolNoResponseMethodRequest&&) noexcept = default;
+  HandleRightsProtocolNoResponseMethodRequest& operator=(
+      HandleRightsProtocolNoResponseMethodRequest&&) noexcept = default;
+
+  const ::zx::socket& h() const { return storage_.h; }
+
+  ::zx::socket& h() { return storage_.h; }
+
+ private:
+  struct Storage_ final {
+    ::zx::socket h{};
+  };
+
+  Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::HandleRightsProtocolNoResponseMethodRequest, 4, 4>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::HandleRightsProtocolNoResponseMethodRequest>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::zx::socket,
+                      fidl::internal::NaturalCodingConstraintHandle<
+                          ZX_OBJ_TYPE_SOCKET, 0x3, false>>{&Storage_::h, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_HandleRightsProtocolAnEventRequestTable;
+
+class HandleRightsProtocolAnEventRequest {
+ private:
+  struct Storage_;
+
+ public:
+  HandleRightsProtocolAnEventRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  HandleRightsProtocolAnEventRequest(::zx::socket h) noexcept
+      : storage_({.h = std::move(h)}) {}
+  HandleRightsProtocolAnEventRequest()
+      : HandleRightsProtocolAnEventRequest(Storage_{}) {}
+
+  HandleRightsProtocolAnEventRequest(
+      HandleRightsProtocolAnEventRequest&&) noexcept = default;
+  HandleRightsProtocolAnEventRequest& operator=(
+      HandleRightsProtocolAnEventRequest&&) noexcept = default;
+
+  const ::zx::socket& h() const { return storage_.h; }
+
+  ::zx::socket& h() { return storage_.h; }
+
+ private:
+  struct Storage_ final {
+    ::zx::socket h{};
+  };
+
+  Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::HandleRightsProtocolAnEventRequest, 4, 4>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::HandleRightsProtocolAnEventRequest>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::zx::socket,
+                      fidl::internal::NaturalCodingConstraintHandle<
+                          ZX_OBJ_TYPE_SOCKET, 0x3, false>>{&Storage_::h, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
+};
+
+#endif  // __Fuchsia__
+
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
 
@@ -2975,6 +2828,153 @@ class WithErrorSyntaxErrorAsEnumTopResponse {
   static constexpr auto kPaddingV1 = std::make_tuple();
   static constexpr auto kPaddingV2 = std::make_tuple();
 };
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_ChannelProtocolTakeHandleRequestTable;
+
+class ChannelProtocolTakeHandleRequest {
+ private:
+  struct Storage_;
+
+ public:
+  ChannelProtocolTakeHandleRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  ChannelProtocolTakeHandleRequest(::zx::handle h) noexcept
+      : storage_({.h = std::move(h)}) {}
+  ChannelProtocolTakeHandleRequest()
+      : ChannelProtocolTakeHandleRequest(Storage_{}) {}
+
+  ChannelProtocolTakeHandleRequest(
+      ChannelProtocolTakeHandleRequest&&) noexcept = default;
+  ChannelProtocolTakeHandleRequest& operator=(
+      ChannelProtocolTakeHandleRequest&&) noexcept = default;
+
+  const ::zx::handle& h() const { return storage_.h; }
+
+  ::zx::handle& h() { return storage_.h; }
+
+ private:
+  struct Storage_ final {
+    ::zx::handle h{};
+  };
+
+  Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::ChannelProtocolTakeHandleRequest, 4, 4>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::ChannelProtocolTakeHandleRequest>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::zx::handle,
+          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_NONE,
+                                                        0x80000000, false>>{
+          &Storage_::h, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_ChannelProtocolMutateSocketTopResponseTable;
+
+class ChannelProtocolMutateSocketTopResponse {
+ private:
+  struct Storage_;
+
+ public:
+  ChannelProtocolMutateSocketTopResponse(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  ChannelProtocolMutateSocketTopResponse(::zx::socket b) noexcept
+      : storage_({.b = std::move(b)}) {}
+  ChannelProtocolMutateSocketTopResponse()
+      : ChannelProtocolMutateSocketTopResponse(Storage_{}) {}
+
+  ChannelProtocolMutateSocketTopResponse(
+      ChannelProtocolMutateSocketTopResponse&&) noexcept = default;
+  ChannelProtocolMutateSocketTopResponse& operator=(
+      ChannelProtocolMutateSocketTopResponse&&) noexcept = default;
+
+  const ::zx::socket& b() const { return storage_.b; }
+
+  ::zx::socket& b() { return storage_.b; }
+
+ private:
+  struct Storage_ final {
+    ::zx::socket b{};
+  };
+
+  Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::ChannelProtocolMutateSocketTopResponse, 4, 4>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::ChannelProtocolMutateSocketTopResponse>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::zx::socket,
+          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_SOCKET,
+                                                        0x80000000, false>>{
+          &Storage_::b, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_ChannelProtocolMutateSocketRequestTable;
+
+class ChannelProtocolMutateSocketRequest {
+ private:
+  struct Storage_;
+
+ public:
+  ChannelProtocolMutateSocketRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  ChannelProtocolMutateSocketRequest(::zx::socket a) noexcept
+      : storage_({.a = std::move(a)}) {}
+  ChannelProtocolMutateSocketRequest()
+      : ChannelProtocolMutateSocketRequest(Storage_{}) {}
+
+  ChannelProtocolMutateSocketRequest(
+      ChannelProtocolMutateSocketRequest&&) noexcept = default;
+  ChannelProtocolMutateSocketRequest& operator=(
+      ChannelProtocolMutateSocketRequest&&) noexcept = default;
+
+  const ::zx::socket& a() const { return storage_.a; }
+
+  ::zx::socket& a() { return storage_.a; }
+
+ private:
+  struct Storage_ final {
+    ::zx::socket a{};
+  };
+
+  Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::ChannelProtocolMutateSocketRequest, 4, 4>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::ChannelProtocolMutateSocketRequest>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::zx::socket,
+          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_SOCKET,
+                                                        0x80000000, false>>{
+          &Storage_::a, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
+};
+
+#endif  // __Fuchsia__
 
 extern "C" const fidl_type_t
     test_protocols_ChannelProtocolMethodBTopResponseTable;
@@ -3254,286 +3254,6 @@ namespace fidl {
 #ifdef __Fuchsia__
 
 extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntax_HandleInResult_ResponseTable;
-
-template <>
-struct IsResource<::test_protocols::WithErrorSyntax_HandleInResult_Response>
-    : public std::true_type {};
-template <>
-struct IsFidlType<::test_protocols::WithErrorSyntax_HandleInResult_Response>
-    : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::WithErrorSyntax_HandleInResult_Response>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithErrorSyntax_HandleInResult_ResponseTable;
-};
-
-template <>
-struct internal::NaturalCodingTraits<
-    ::test_protocols::WithErrorSyntax_HandleInResult_Response,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocols::WithErrorSyntax_HandleInResult_Response, 4, 4> {};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
-
-template <>
-struct IsResource<::test_protocols::WithErrorSyntaxHandleInResultTopResponse>
-    : public std::true_type {};
-template <>
-struct IsFidlType<::test_protocols::WithErrorSyntaxHandleInResultTopResponse>
-    : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::WithErrorSyntaxHandleInResultTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
-};
-
-template <>
-struct internal::NaturalCodingTraits<
-    ::test_protocols::WithErrorSyntaxHandleInResultTopResponse,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocols::WithErrorSyntaxHandleInResultTopResponse, 24, 16> {
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
-
-template <>
-struct IsResource<
-    ::test_protocols::HandleRightsProtocolResponseMethodTopResponse>
-    : public std::true_type {};
-template <>
-struct IsFidlType<
-    ::test_protocols::HandleRightsProtocolResponseMethodTopResponse>
-    : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::HandleRightsProtocolResponseMethodTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
-};
-
-template <>
-struct internal::NaturalCodingTraits<
-    ::test_protocols::HandleRightsProtocolResponseMethodTopResponse,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_protocols::HandleRightsProtocolResponseMethodTopResponse,
-                4, 4> {};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_HandleRightsProtocolResponseMethodRequestTable;
-
-template <>
-struct IsResource<::test_protocols::HandleRightsProtocolResponseMethodRequest>
-    : public std::true_type {};
-template <>
-struct IsFidlType<::test_protocols::HandleRightsProtocolResponseMethodRequest>
-    : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::HandleRightsProtocolResponseMethodRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_HandleRightsProtocolResponseMethodRequestTable;
-};
-
-template <>
-struct internal::NaturalCodingTraits<
-    ::test_protocols::HandleRightsProtocolResponseMethodRequest,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocols::HandleRightsProtocolResponseMethodRequest, 4, 4> {};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
-
-template <>
-struct IsResource<::test_protocols::HandleRightsProtocolNoResponseMethodRequest>
-    : public std::true_type {};
-template <>
-struct IsFidlType<::test_protocols::HandleRightsProtocolNoResponseMethodRequest>
-    : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::HandleRightsProtocolNoResponseMethodRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
-};
-
-template <>
-struct internal::NaturalCodingTraits<
-    ::test_protocols::HandleRightsProtocolNoResponseMethodRequest,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocols::HandleRightsProtocolNoResponseMethodRequest, 4, 4> {
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_HandleRightsProtocolAnEventRequestTable;
-
-template <>
-struct IsResource<::test_protocols::HandleRightsProtocolAnEventRequest>
-    : public std::true_type {};
-template <>
-struct IsFidlType<::test_protocols::HandleRightsProtocolAnEventRequest>
-    : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::HandleRightsProtocolAnEventRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_HandleRightsProtocolAnEventRequestTable;
-};
-
-template <>
-struct internal::NaturalCodingTraits<
-    ::test_protocols::HandleRightsProtocolAnEventRequest,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_protocols::HandleRightsProtocolAnEventRequest, 4, 4> {};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolTakeHandleRequestTable;
-
-template <>
-struct IsResource<::test_protocols::ChannelProtocolTakeHandleRequest>
-    : public std::true_type {};
-template <>
-struct IsFidlType<::test_protocols::ChannelProtocolTakeHandleRequest>
-    : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::ChannelProtocolTakeHandleRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_ChannelProtocolTakeHandleRequestTable;
-};
-
-template <>
-struct internal::NaturalCodingTraits<
-    ::test_protocols::ChannelProtocolTakeHandleRequest,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_protocols::ChannelProtocolTakeHandleRequest, 4, 4> {};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolMutateSocketTopResponseTable;
-
-template <>
-struct IsResource<::test_protocols::ChannelProtocolMutateSocketTopResponse>
-    : public std::true_type {};
-template <>
-struct IsFidlType<::test_protocols::ChannelProtocolMutateSocketTopResponse>
-    : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::ChannelProtocolMutateSocketTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_ChannelProtocolMutateSocketTopResponseTable;
-};
-
-template <>
-struct internal::NaturalCodingTraits<
-    ::test_protocols::ChannelProtocolMutateSocketTopResponse,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocols::ChannelProtocolMutateSocketTopResponse, 4, 4> {};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolMutateSocketRequestTable;
-
-template <>
-struct IsResource<::test_protocols::ChannelProtocolMutateSocketRequest>
-    : public std::true_type {};
-template <>
-struct IsFidlType<::test_protocols::ChannelProtocolMutateSocketRequest>
-    : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::ChannelProtocolMutateSocketRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_ChannelProtocolMutateSocketRequestTable;
-};
-
-template <>
-struct internal::NaturalCodingTraits<
-    ::test_protocols::ChannelProtocolMutateSocketRequest,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_protocols::ChannelProtocolMutateSocketRequest, 4, 4> {};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
     test_protocols_WithProtocolEndsServerEndsTopResponseTable;
 
 template <>
@@ -3701,6 +3421,69 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse,
                 24, 16> {};
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_WithErrorSyntax_HandleInResult_ResponseTable;
+
+template <>
+struct IsResource<::test_protocols::WithErrorSyntax_HandleInResult_Response>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::test_protocols::WithErrorSyntax_HandleInResult_Response>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_protocols::WithErrorSyntax_HandleInResult_Response>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_protocols_WithErrorSyntax_HandleInResult_ResponseTable;
+};
+
+template <>
+struct internal::NaturalCodingTraits<
+    ::test_protocols::WithErrorSyntax_HandleInResult_Response,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::WithErrorSyntax_HandleInResult_Response, 4, 4> {};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
+
+template <>
+struct IsResource<::test_protocols::WithErrorSyntaxHandleInResultTopResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::test_protocols::WithErrorSyntaxHandleInResultTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_protocols::WithErrorSyntaxHandleInResultTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
+};
+
+template <>
+struct internal::NaturalCodingTraits<
+    ::test_protocols::WithErrorSyntaxHandleInResultTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::WithErrorSyntaxHandleInResultTopResponse, 24, 16> {
+};
+
+#endif  // __Fuchsia__
 
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
@@ -4186,6 +3969,132 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::ManyParametersFifteenRequest, 15, 15> {};
 
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
+
+template <>
+struct IsResource<
+    ::test_protocols::HandleRightsProtocolResponseMethodTopResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlType<
+    ::test_protocols::HandleRightsProtocolResponseMethodTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_protocols::HandleRightsProtocolResponseMethodTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
+};
+
+template <>
+struct internal::NaturalCodingTraits<
+    ::test_protocols::HandleRightsProtocolResponseMethodTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_protocols::HandleRightsProtocolResponseMethodTopResponse,
+                4, 4> {};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_HandleRightsProtocolResponseMethodRequestTable;
+
+template <>
+struct IsResource<::test_protocols::HandleRightsProtocolResponseMethodRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::test_protocols::HandleRightsProtocolResponseMethodRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_protocols::HandleRightsProtocolResponseMethodRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_protocols_HandleRightsProtocolResponseMethodRequestTable;
+};
+
+template <>
+struct internal::NaturalCodingTraits<
+    ::test_protocols::HandleRightsProtocolResponseMethodRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::HandleRightsProtocolResponseMethodRequest, 4, 4> {};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
+
+template <>
+struct IsResource<::test_protocols::HandleRightsProtocolNoResponseMethodRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::test_protocols::HandleRightsProtocolNoResponseMethodRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_protocols::HandleRightsProtocolNoResponseMethodRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
+};
+
+template <>
+struct internal::NaturalCodingTraits<
+    ::test_protocols::HandleRightsProtocolNoResponseMethodRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::HandleRightsProtocolNoResponseMethodRequest, 4, 4> {
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_HandleRightsProtocolAnEventRequestTable;
+
+template <>
+struct IsResource<::test_protocols::HandleRightsProtocolAnEventRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::test_protocols::HandleRightsProtocolAnEventRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_protocols::HandleRightsProtocolAnEventRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_protocols_HandleRightsProtocolAnEventRequestTable;
+};
+
+template <>
+struct internal::NaturalCodingTraits<
+    ::test_protocols::HandleRightsProtocolAnEventRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_protocols::HandleRightsProtocolAnEventRequest, 4, 4> {};
+
+#endif  // __Fuchsia__
+
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxErrorAsEnumTopResponseTable;
 
@@ -4209,6 +4118,97 @@ struct internal::NaturalCodingTraits<
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse, 24, 16> {};
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_ChannelProtocolTakeHandleRequestTable;
+
+template <>
+struct IsResource<::test_protocols::ChannelProtocolTakeHandleRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::test_protocols::ChannelProtocolTakeHandleRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_protocols::ChannelProtocolTakeHandleRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_protocols_ChannelProtocolTakeHandleRequestTable;
+};
+
+template <>
+struct internal::NaturalCodingTraits<
+    ::test_protocols::ChannelProtocolTakeHandleRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_protocols::ChannelProtocolTakeHandleRequest, 4, 4> {};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_ChannelProtocolMutateSocketTopResponseTable;
+
+template <>
+struct IsResource<::test_protocols::ChannelProtocolMutateSocketTopResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::test_protocols::ChannelProtocolMutateSocketTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_protocols::ChannelProtocolMutateSocketTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_protocols_ChannelProtocolMutateSocketTopResponseTable;
+};
+
+template <>
+struct internal::NaturalCodingTraits<
+    ::test_protocols::ChannelProtocolMutateSocketTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::ChannelProtocolMutateSocketTopResponse, 4, 4> {};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocols_ChannelProtocolMutateSocketRequestTable;
+
+template <>
+struct IsResource<::test_protocols::ChannelProtocolMutateSocketRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::test_protocols::ChannelProtocolMutateSocketRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_protocols::ChannelProtocolMutateSocketRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_protocols_ChannelProtocolMutateSocketRequestTable;
+};
+
+template <>
+struct internal::NaturalCodingTraits<
+    ::test_protocols::ChannelProtocolMutateSocketRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_protocols::ChannelProtocolMutateSocketRequest, 4, 4> {};
+
+#endif  // __Fuchsia__
 
 extern "C" const fidl_type_t
     test_protocols_ChannelProtocolMethodBTopResponseTable;
@@ -4299,6 +4299,32 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::ChannelProtocolEventARequest, 16, 16> {};
 
+extern "C" const fidl_type_t
+    test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
+
+template <>
+struct IsFidlType<::test_protocols::WithErrorSyntax_ResponseAsStruct_Result>
+    : public std::true_type {};
+template <>
+struct IsUnion<::test_protocols::WithErrorSyntax_ResponseAsStruct_Result>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
+};
+
+template <>
+struct internal::NaturalCodingTraits<
+    ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalUnionCodingTraits<
+                ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result> {};
+
 #ifdef __Fuchsia__
 
 extern "C" const fidl_type_t
@@ -4331,32 +4357,6 @@ struct internal::NaturalCodingTraits<
                 ::test_protocols::WithErrorSyntax_HandleInResult_Result> {};
 
 #endif  // __Fuchsia__
-
-extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
-
-template <>
-struct IsFidlType<::test_protocols::WithErrorSyntax_ResponseAsStruct_Result>
-    : public std::true_type {};
-template <>
-struct IsUnion<::test_protocols::WithErrorSyntax_ResponseAsStruct_Result>
-    : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
-};
-
-template <>
-struct internal::NaturalCodingTraits<
-    ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalUnionCodingTraits<
-                ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result> {};
 
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
@@ -4430,66 +4430,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result> {};
 
-template <>
-struct internal::NaturalCodingTraits<
-    ::test_protocols::rights, ::fidl::internal::NaturalCodingConstraintEmpty> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
-  static constexpr size_t inline_size_v2 = sizeof(uint32_t);
-  static constexpr bool is_memcpy_compatible = false;
-
-  static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_protocols::rights* value, size_t offset,
-                     size_t recursion_depth) {
-    if (static_cast<uint32_t>(*value) & ~3ull) {
-      encoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
-    }
-    *encoder->template GetPtr<::test_protocols::rights>(offset) = *value;
-  }
-  static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_protocols::rights* value, size_t offset,
-                     size_t recursion_depth) {
-    *value = *decoder->template GetPtr<::test_protocols::rights>(offset);
-    if (static_cast<uint32_t>(*value) & ~3ull) {
-      decoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
-    }
-  }
-};
-
-template <>
-struct internal::NaturalCodingTraits<
-    ::test_protocols::obj_type,
-    ::fidl::internal::NaturalCodingConstraintEmpty> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
-  static constexpr size_t inline_size_v2 = sizeof(uint32_t);
-  static constexpr bool is_memcpy_compatible = false;
-
-  static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_protocols::obj_type* value, size_t offset,
-                     size_t recursion_depth) {
-    switch (*value) {
-      case ::test_protocols::obj_type::kNone:
-      case ::test_protocols::obj_type::kSocket:
-        break;
-      default:
-        encoder->SetError(::fidl::internal::kCodingErrorUnknownEnumValue);
-        return;
-    }
-    *encoder->template GetPtr<::test_protocols::obj_type>(offset) = *value;
-  }
-  static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_protocols::obj_type* value, size_t offset,
-                     size_t recursion_depth) {
-    *value = *decoder->template GetPtr<::test_protocols::obj_type>(offset);
-    switch (*value) {
-      case ::test_protocols::obj_type::kNone:
-      case ::test_protocols::obj_type::kSocket:
-        break;
-      default:
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownEnumValue);
-        return;
-    }
-  }
-};
 template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::ErrorEnum,
