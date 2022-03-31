@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    ansi_term::Colour,
     anyhow::{Context, Result},
     component_hub::{
         io::Directory,
@@ -13,14 +14,13 @@ use {
     ffx_writer::Writer,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
     fuchsia_zircon_status::Status,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+    prettytable::{cell, format::consts::FORMAT_CLEAN, row, Table},
     serde::{Deserialize, Serialize},
 };
 
 /// The number of times listing components from the hub should be retried before assuming failure.
 const NUM_COMPONENT_LIST_ATTEMPTS: u64 = 3;
-
-const SPACER: &str = "  ";
-const WIDTH_CS_TREE: usize = 19;
 
 #[derive(Deserialize, Serialize)]
 pub struct ListComponent {
@@ -63,7 +63,7 @@ pub async fn list(
 pub async fn try_get_component_list(hub_dir: Directory, writer: &Writer) -> Result<Component> {
     let mut attempt_number = 1;
     loop {
-        match Component::parse("/".to_string(), hub_dir.clone()?).await {
+        match Component::parse("/".to_string(), AbsoluteMoniker::root(), hub_dir.clone()?).await {
             Ok(component) => return Ok(component),
             Err(e) => {
                 if attempt_number > NUM_COMPONENT_LIST_ATTEMPTS {
@@ -79,7 +79,7 @@ pub async fn try_get_component_list(hub_dir: Directory, writer: &Writer) -> Resu
 
 async fn list_impl(
     rcs_proxy: rc::RemoteControlProxy,
-    writer: Writer,
+    mut writer: Writer,
     list_filter: Option<ListFilter>,
     verbose: bool,
 ) -> Result<()> {
@@ -99,8 +99,16 @@ async fn list_impl(
     if writer.is_machine() {
         writer.machine(&expand_component(component, &list_filter))?;
         Ok(())
+    } else if verbose {
+        let mut table = Table::new();
+        table.set_format(*FORMAT_CLEAN);
+        table.set_titles(row!("Type", "State", "Moniker", "URL"));
+        add_component_rows_to_table(&component, &list_filter, &mut table)?;
+        table.print(&mut writer)?;
+        Ok(())
     } else {
-        print_component_tree(&component, &list_filter, verbose, 0, &writer)
+        print_component_monikers(&component, &list_filter, &writer)?;
+        Ok(())
     }
 }
 
@@ -129,38 +137,47 @@ fn expand_component_rec(
     }
 }
 
-pub fn print_component_tree(
+/// Recursively print the component monikers
+///
+/// # Arguments
+///
+/// * `component` - The component to print.
+///                 Will recursively go through its children to print them too.
+/// * `list_filter` - Filter to apply to the components.
+/// * `writer` - The writer
+pub fn print_component_monikers(
     component: &Component,
     list_filter: &ListFilter,
-    verbose: bool,
-    indent: usize,
     writer: &Writer,
 ) -> Result<()> {
-    let space = SPACER.repeat(indent);
     if component.should_include(&list_filter) {
-        if verbose {
-            let component_type = if component.is_cmx { "CMX" } else { "CML" };
-
-            let state = if component.is_running { "Running" } else { "Stopped" };
-
-            writer.line(format!(
-                "{:<width_type$}{:<width_state$}{}{:<width_name$}{}",
-                component_type,
-                state,
-                space,
-                component.name,
-                component.url,
-                width_type = WIDTH_CS_TREE,
-                width_state = WIDTH_CS_TREE,
-                width_name = (WIDTH_CS_TREE - indent) * 2
-            ))?;
-        } else {
-            writer.line(format!("{}{}", space, component.name))?;
-        }
+        writer.line(component.moniker.to_string())?;
     }
 
     for child in &component.children {
-        print_component_tree(child, list_filter, verbose, indent + 1, writer)?;
+        print_component_monikers(child, list_filter, writer)?;
+    }
+
+    Ok(())
+}
+
+pub fn add_component_rows_to_table(
+    component: &Component,
+    list_filter: &ListFilter,
+    table: &mut Table,
+) -> Result<()> {
+    if component.should_include(&list_filter) {
+        let component_type = if component.is_cmx { "CMX" } else { "CML" };
+
+        let state = if component.is_running {
+            Colour::Green.paint("Running")
+        } else {
+            Colour::Red.paint("Stopped")
+        };
+        table.add_row(row!(component_type, state, component.moniker.to_string(), component.url));
+    }
+    for child in &component.children {
+        add_component_rows_to_table(child, list_filter, table)?;
     }
 
     Ok(())
@@ -185,6 +202,7 @@ fn join_names(first: &str, second: &str) -> String {
 #[cfg(test)]
 mod test {
     use super::*;
+    use moniker::{AbsoluteMoniker, AbsoluteMonikerBase};
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_list_component_name_construction() {
@@ -205,30 +223,34 @@ mod test {
     fn component_for_test() -> Component {
         Component {
             name: "/".to_owned(),
+            moniker: AbsoluteMoniker::root(),
             is_cmx: false,
-            url: "".to_owned(),
+            url: "fuchsia-boot:///#meta/root.cm".to_owned(),
             is_running: false,
             ancestors: vec![],
             children: vec![
                 Component {
                     name: "appmgr".to_owned(),
+                    moniker: AbsoluteMoniker::parse_str("/appmgr").unwrap(),
                     is_cmx: false,
-                    url: "".to_owned(),
+                    url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".to_owned(),
                     is_running: true,
                     ancestors: vec!["/".to_owned()],
                     children: vec![
                         Component {
                             name: "foo.cmx".to_owned(),
+                            moniker: AbsoluteMoniker::parse_str("/appmgr/foo.cmx").unwrap(),
                             is_cmx: true,
-                            url: "".to_owned(),
+                            url: "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx".to_owned(),
                             is_running: true,
                             ancestors: vec!["/".to_owned(), "appmgr".to_owned()],
                             children: vec![],
                         },
                         Component {
                             name: "bar.cmx".to_owned(),
+                            moniker: AbsoluteMoniker::parse_str("/appmgr/bar.cmx").unwrap(),
                             is_cmx: true,
-                            url: "".to_owned(),
+                            url: "fuchsia-pkg://fuchsia.com/bar#meta/bar.cmx".to_owned(),
                             is_running: true,
                             ancestors: vec!["/".to_owned(), "appmgr".to_owned()],
                             children: vec![],
@@ -237,29 +259,33 @@ mod test {
                 },
                 Component {
                     name: "sys".to_owned(),
+                    moniker: AbsoluteMoniker::parse_str("/sys").unwrap(),
                     is_cmx: false,
-                    url: "".to_owned(),
+                    url: "fuchsia-pkg://fuchsia.com/sys#meta/sys.cm".to_owned(),
                     is_running: false,
                     ancestors: vec!["/".to_owned()],
                     children: vec![
                         Component {
                             name: "baz".to_owned(),
+                            moniker: AbsoluteMoniker::parse_str("/sys/baz").unwrap(),
                             is_cmx: false,
-                            url: "".to_owned(),
+                            url: "fuchsia-pkg://fuchsia.com/baz#meta/baz.cm".to_owned(),
                             is_running: true,
                             ancestors: vec!["/".to_owned(), "sys".to_owned()],
                             children: vec![],
                         },
                         Component {
                             name: "fuzz".to_owned(),
+                            moniker: AbsoluteMoniker::parse_str("/sys/fuzz").unwrap(),
                             is_cmx: false,
-                            url: "".to_owned(),
+                            url: "fuchsia-pkg://fuchsia.com/fuzz#meta/fuzz.cm".to_owned(),
                             is_running: false,
                             ancestors: vec!["/".to_owned(), "sys".to_owned()],
                             children: vec![Component {
                                 name: "hello".to_owned(),
+                                moniker: AbsoluteMoniker::parse_str("/sys/fuzz/hello").unwrap(),
                                 is_cmx: false,
-                                url: "".to_owned(),
+                                url: "fuchsia-pkg://fuchsia.com/hello#meta/hello.cm".to_owned(),
                                 is_running: false,
                                 ancestors: vec![
                                     "/".to_owned(),
@@ -326,5 +352,83 @@ mod test {
 
         assert_eq!(result.len(), 6);
         assert_eq!(result[5].name, "/sys/fuzz/hello");
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_add_component_rows_to_table() {
+        let component = component_for_test();
+        let filter = ListFilter::None;
+        let mut table = Table::new();
+        let result = add_component_rows_to_table(&component, &filter, &mut table);
+        assert!(result.is_ok());
+        assert_eq!(table.len(), 8);
+
+        assert_eq!(
+            table.get_row(0).unwrap(),
+            &row!["CML", Colour::Red.paint("Stopped"), "/", "fuchsia-boot:///#meta/root.cm"]
+        );
+        assert_eq!(
+            table.get_row(1).unwrap(),
+            &row![
+                "CML",
+                Colour::Green.paint("Running"),
+                "/appmgr",
+                "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm"
+            ]
+        );
+        assert_eq!(
+            table.get_row(2).unwrap(),
+            &row![
+                "CMX",
+                Colour::Green.paint("Running"),
+                "/appmgr/foo.cmx",
+                "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx"
+            ]
+        );
+        assert_eq!(
+            table.get_row(3).unwrap(),
+            &row![
+                "CMX",
+                Colour::Green.paint("Running"),
+                "/appmgr/bar.cmx",
+                "fuchsia-pkg://fuchsia.com/bar#meta/bar.cmx"
+            ]
+        );
+        assert_eq!(
+            table.get_row(4).unwrap(),
+            &row![
+                "CML",
+                Colour::Red.paint("Stopped"),
+                "/sys",
+                "fuchsia-pkg://fuchsia.com/sys#meta/sys.cm"
+            ]
+        );
+        assert_eq!(
+            table.get_row(5).unwrap(),
+            &row![
+                "CML",
+                Colour::Green.paint("Running"),
+                "/sys/baz",
+                "fuchsia-pkg://fuchsia.com/baz#meta/baz.cm"
+            ]
+        );
+        assert_eq!(
+            table.get_row(6).unwrap(),
+            &row![
+                "CML",
+                Colour::Red.paint("Stopped"),
+                "/sys/fuzz",
+                "fuchsia-pkg://fuchsia.com/fuzz#meta/fuzz.cm"
+            ]
+        );
+        assert_eq!(
+            table.get_row(7).unwrap(),
+            &row![
+                "CML",
+                Colour::Red.paint("Stopped"),
+                "/sys/fuzz/hello",
+                "fuchsia-pkg://fuchsia.com/hello#meta/hello.cm"
+            ]
+        );
     }
 }
