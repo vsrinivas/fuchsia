@@ -220,36 +220,50 @@ _array of `object` (optional)_
 The `environments` section declares environments as described in
 [Environments][doc-environments].
 
-Keys:
+[doc-environments]: /docs/concepts/components/v2/environments.md
 
--   `name`: The name of the environment, which is a string of one or more of the
-    following characters: `a-z`, `0-9`, `_`, `.`, `-`. The name identifies this
-    environment when used in a [reference](#references).
--   `extend`: How the environment should extend this realm's environment.
-    -   `realm`: Inherit all properties from this compenent's environment.
-    -   `none`: Start with an empty environment, do not inherit anything.
--   `runners`: The runners registered in the environment. An array of objects
-    with the following properties:
-    -   `runner`: The [name](#name) of a runner capability, whose
-        source is specified in `from`.
-    -   `from`: The source of the runner capability, one of:
-        -   `parent`: The component's parent.
-        -   `self`: This component.
-        -   `#<child-name>`: A [reference](#references) to a child component
-            instance.
-    -   `as` _(option)_: An explicit name for the runner as it will be known in
-        this environment. If omitted, defaults to `runner`.
--   `resolvers`: The resolvers registered in the environment. An array of
-    objects with the following properties:
-    -   `resolver`: The [name](#name) of a resolver capability,
-        whose source is specified in `from`.
-    -   `from`: The source of the resolver capability, one of:
-        -   `parent`: The component's parent.
-        -   `self`: This component.
-        -   `#<child-name>`: A [reference](#references) to a child component
-            instance.
-    -   `scheme`: The URL scheme for which the resolver should handle
-        resolution.
+- `name`: (_`string`_) The name of the environment, which is a string of one or more of the
+  following characters: `a-z`, `0-9`, `_`, `.`, `-`. The name identifies this
+  environment when used in a [reference](#references).
+- `extends`: (_optional `string`_) How the environment should extend this realm's environment.
+  -   `realm`: Inherit all properties from this compenent's environment.
+  -   `none`: Start with an empty environment, do not inherit anything.
+- `runners`: (_optional array of `object`_) The runners registered in the environment. An array of objects
+  with the following properties:
+  - `runner`: (_`string`_) The [name](#name) of a runner capability, whose source is specified in `from`.
+  - `from`: (_`string`_) The source of the runner capability, one of:
+    -   `parent`: The component's parent.
+    -   `self`: This component.
+    -   `#<child-name>`: A [reference](#references) to a child component
+        instance.
+  - `as`: (_optional `string`_) An explicit name for the runner as it will be known in
+    this environment. If omitted, defaults to `runner`.
+
+- `resolvers`: (_optional array of `object`_) The resolvers registered in the environment. An array of
+  objects with the following properties:
+  - `resolver`: (_`string`_) The [name](#name) of a resolver capability,
+    whose source is specified in `from`.
+  - `from`: (_`string`_) The source of the resolver capability, one of:
+    -   `parent`: The component's parent.
+    -   `self`: This component.
+    -   `#<child-name>`: A [reference](#references) to a child component
+        instance.
+  - `scheme`: (_`string`_) The URL scheme for which the resolver should handle
+    resolution.
+
+- `debug`: (_optional array of `object`_) Debug protocols available to any component in this environment acquired
+  through `use from debug`.
+  - `protocol`: (_optional `string or array of strings`_) The name(s) of the protocol(s) to make available.
+  - `from`: (_`string`_) The source of the capability(s), one of:
+    -   `parent`: The component's parent.
+    -   `self`: This component.
+    -   `#<child-name>`: A [reference](#references) to a child component
+        instance.
+  - `as`: (_optional `string`_) If specified, the name that the capability in `protocol` should be made
+    available as to clients. Disallowed if `protocol` is an array.
+
+- `stop_timeout_ms`: (_optional `number`_) The number of milliseconds to wait, after notifying a component in this environment that it
+  should terminate, before forcibly killing it.
 
 Example:
 
@@ -275,7 +289,7 @@ environments: [
 ],
 ```
 
-[doc-environments]: /docs/concepts/components/v2/environments.md
+
 
 ### `capabilities` {#capabilities}
 

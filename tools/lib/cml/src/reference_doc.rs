@@ -47,6 +47,9 @@ fn indent_lines_with_spaces(s: &str, n: usize) -> String {
         s.to_string()
     } else {
         let prefix = " ".to_string().repeat(n);
-        s.split('\n').map(|part| prefix.clone() + part).collect::<Vec<_>>().join("\n")
+        s.split('\n')
+            .map(|part| if part.is_empty() { "".to_string() } else { prefix.clone() + part })
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 }

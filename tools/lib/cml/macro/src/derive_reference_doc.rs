@@ -88,7 +88,6 @@ pub fn impl_derive_reference_doc(ast: syn::DeriveInput) -> Result<TokenStream2, 
             }
 
             let rust_ty_string = get_outer_type_without_generics(&rust_ty_path);
-            let rust_ty_ident = quote::format_ident!("{}", rust_ty_string);
             // Get the json-equivalent value type for this Rust type.
             let json_type_string = get_json_type_string_from_field_attrs(&self, &rust_ty_string);
             match &self.fields_as {
@@ -98,7 +97,7 @@ pub fn impl_derive_reference_doc(ast: syn::DeriveInput) -> Result<TokenStream2, 
                         .unwrap_or_default();
                     let trait_output = if self.recurse {
                         quote!(
-                            #rust_ty_ident::get_reference_doc_markdown_with_options(#indent_headers + 1, 0)
+                            #rust_ty_path::get_reference_doc_markdown_with_options(#indent_headers + 1, 0)
                         )
                     } else {
                         quote!("")
@@ -138,7 +137,7 @@ pub fn impl_derive_reference_doc(ast: syn::DeriveInput) -> Result<TokenStream2, 
                         .unwrap_or_default();
                     let trait_output = if self.recurse {
                         quote!(
-                            #rust_ty_ident::get_reference_doc_markdown_with_options(#indent_headers, 2)
+                            #rust_ty_path::get_reference_doc_markdown_with_options(#indent_headers, 2)
                         )
                     } else {
                         quote!("")
@@ -158,7 +157,7 @@ pub fn impl_derive_reference_doc(ast: syn::DeriveInput) -> Result<TokenStream2, 
                         output.push_str("`_) ");
                         output.push_str(#doc);
                         if !trait_output.is_empty() {
-                            output.push_str("\n   ");
+                            output.push_str("\n");
                             output.push_str(&trait_output);
                         }
                         output.push_str("\n");
@@ -412,15 +411,13 @@ fn indent_lines_with_spaces(s: &str, n: usize, ignore_first: usize) -> String {
         let prefix = " ".to_string().repeat(n);
         s.split('\n')
             .enumerate()
-            .map(
-                |(i, part)| {
-                    if i < ignore_first || part.is_empty() {
-                        part.to_string()
-                    } else {
-                        prefix.clone() + part
-                    }
-                },
-            )
+            .map(|(i, part)| {
+                if i < ignore_first || part.is_empty() {
+                    part.to_string()
+                } else {
+                    prefix.clone() + part
+                }
+            })
             .collect::<Vec<_>>()
             .join("\n")
     }

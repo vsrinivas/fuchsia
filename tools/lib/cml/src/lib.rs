@@ -957,63 +957,8 @@ pub struct Document {
     /// The `environments` section declares environments as described in
     /// [Environments][doc-environments].
     ///
-    /// Keys:
-    ///
-    /// -   `name`: The name of the environment, which is a string of one or more of the
-    ///     following characters: `a-z`, `0-9`, `_`, `.`, `-`. The name identifies this
-    ///     environment when used in a [reference](#references).
-    /// -   `extend`: How the environment should extend this realm's environment.
-    ///     -   `realm`: Inherit all properties from this compenent's environment.
-    ///     -   `none`: Start with an empty environment, do not inherit anything.
-    /// -   `runners`: The runners registered in the environment. An array of objects
-    ///     with the following properties:
-    ///     -   `runner`: The [name](#name) of a runner capability, whose
-    ///         source is specified in `from`.
-    ///     -   `from`: The source of the runner capability, one of:
-    ///         -   `parent`: The component's parent.
-    ///         -   `self`: This component.
-    ///         -   `#<child-name>`: A [reference](#references) to a child component
-    ///             instance.
-    ///     -   `as` _(option)_: An explicit name for the runner as it will be known in
-    ///         this environment. If omitted, defaults to `runner`.
-    /// -   `resolvers`: The resolvers registered in the environment. An array of
-    ///     objects with the following properties:
-    ///     -   `resolver`: The [name](#name) of a resolver capability,
-    ///         whose source is specified in `from`.
-    ///     -   `from`: The source of the resolver capability, one of:
-    ///         -   `parent`: The component's parent.
-    ///         -   `self`: This component.
-    ///         -   `#<child-name>`: A [reference](#references) to a child component
-    ///             instance.
-    ///     -   `scheme`: The URL scheme for which the resolver should handle
-    ///         resolution.
-    ///
-    /// Example:
-    ///
-    /// ```json5
-    /// environments: [
-    ///     {
-    ///         name: "test-env",
-    ///         extend: "realm",
-    ///         runners: [
-    ///             {
-    ///                 runner: "gtest-runner",
-    ///                 from: "#gtest",
-    ///             },
-    ///         ],
-    ///         resolvers: [
-    ///             {
-    ///                 resolver: "universe-resolver",
-    ///                 from: "parent",
-    ///                 scheme: "fuchsia-pkg",
-    ///             },
-    ///         ],
-    ///     },
-    /// ],
-    /// ```
-    ///
     /// [doc-environments]: /docs/concepts/components/v2/environments.md
-    #[reference_doc(json_type = "object")]
+    #[reference_doc(recurse)]
     pub environments: Option<Vec<Environment>>,
 
     /// The `capabilities` section defines capabilities that are provided by this component.
@@ -1607,20 +1552,62 @@ pub enum EnvironmentExtends {
     None,
 }
 
-/// An Environment defines properties which affect the behavior of components within a realm, such
-/// as its resolver.
-#[derive(Deserialize, Debug, PartialEq)]
+/// Example:
+///
+/// ```json5
+/// environments: [
+///     {
+///         name: "test-env",
+///         extend: "realm",
+///         runners: [
+///             {
+///                 runner: "gtest-runner",
+///                 from: "#gtest",
+///             },
+///         ],
+///         resolvers: [
+///             {
+///                 resolver: "universe-resolver",
+///                 from: "parent",
+///                 scheme: "fuchsia-pkg",
+///             },
+///         ],
+///     },
+/// ],
+/// ```
+#[derive(Deserialize, Debug, PartialEq, ReferenceDoc)]
 #[serde(deny_unknown_fields)]
+#[reference_doc(fields_as = "list", top_level_doc_after_fields)]
 pub struct Environment {
-    /// This name is used to reference the environment assigned to the component's children
+    /// The name of the environment, which is a string of one or more of the
+    /// following characters: `a-z`, `0-9`, `_`, `.`, `-`. The name identifies this
+    /// environment when used in a [reference](#references).
     pub name: Name,
-    // Whether the environment state should extend its realm, or start with empty property set.
-    // When not set, its value is assumed to be EnvironmentExtends::None.
+
+    /// How the environment should extend this realm's environment.
+    /// -   `realm`: Inherit all properties from this compenent's environment.
+    /// -   `none`: Start with an empty environment, do not inherit anything.
     pub extends: Option<EnvironmentExtends>,
+
+    /// The runners registered in the environment. An array of objects
+    /// with the following properties:
+    #[reference_doc(recurse)]
     pub runners: Option<Vec<RunnerRegistration>>,
+
+    /// The resolvers registered in the environment. An array of
+    /// objects with the following properties:
+    #[reference_doc(recurse)]
     pub resolvers: Option<Vec<ResolverRegistration>>,
+
+    /// Debug protocols available to any component in this environment acquired
+    /// through `use from debug`.
+    #[reference_doc(recurse)]
     pub debug: Option<Vec<DebugRegistration>>,
+
+    /// The number of milliseconds to wait, after notifying a component in this environment that it
+    /// should terminate, before forcibly killing it.
     #[serde(rename(deserialize = "__stop_timeout_ms"))]
+    #[reference_doc(json_type = "number")]
     pub stop_timeout_ms: Option<StopTimeoutMs>,
 }
 
@@ -1786,19 +1773,42 @@ impl ConfigNestedValueType {
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Deserialize, Debug, PartialEq, ReferenceDoc)]
 #[serde(deny_unknown_fields)]
+#[reference_doc(fields_as = "list")]
 pub struct RunnerRegistration {
+    /// The [name](#name) of a runner capability, whose source is specified in `from`.
     pub runner: Name,
+
+    /// The source of the runner capability, one of:
+    /// -   `parent`: The component's parent.
+    /// -   `self`: This component.
+    /// -   `#<child-name>`: A [reference](#references) to a child component
+    ///     instance.
     pub from: RegistrationRef,
+
+    /// An explicit name for the runner as it will be known in
+    /// this environment. If omitted, defaults to `runner`.
     pub r#as: Option<Name>,
 }
 
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Deserialize, Debug, PartialEq, ReferenceDoc)]
 #[serde(deny_unknown_fields)]
+#[reference_doc(fields_as = "list")]
 pub struct ResolverRegistration {
+    /// The [name](#name) of a resolver capability,
+    /// whose source is specified in `from`.
     pub resolver: Name,
+
+    /// The source of the resolver capability, one of:
+    /// -   `parent`: The component's parent.
+    /// -   `self`: This component.
+    /// -   `#<child-name>`: A [reference](#references) to a child component
+    ///     instance.
     pub from: RegistrationRef,
+
+    /// The URL scheme for which the resolver should handle
+    /// resolution.
     pub scheme: cm_types::UrlScheme,
 }
 
@@ -1880,13 +1890,23 @@ pub struct Capability {
     pub storage_id: Option<StorageId>,
 }
 
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Deserialize, Debug, PartialEq, ReferenceDoc)]
 #[serde(deny_unknown_fields)]
+#[reference_doc(fields_as = "list")]
 pub struct DebugRegistration {
+    /// The name(s) of the protocol(s) to make available.
     pub protocol: Option<OneOrMany<Name>>,
+
+    /// The source of the capability(s), one of:
+    /// -   `parent`: The component's parent.
+    /// -   `self`: This component.
+    /// -   `#<child-name>`: A [reference](#references) to a child component
+    ///     instance.
     pub from: OfferFromRef,
+
+    /// If specified, the name that the capability in `protocol` should be made
+    /// available as to clients. Disallowed if `protocol` is an array.
     pub r#as: Option<Name>,
-    pub path: Option<Path>,
 }
 
 /// A list of event modes.
@@ -2406,7 +2426,7 @@ impl AsClause for DebugRegistration {
 
 impl PathClause for DebugRegistration {
     fn path(&self) -> Option<&Path> {
-        self.path.as_ref()
+        None
     }
 }
 
