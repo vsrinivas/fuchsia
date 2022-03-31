@@ -251,6 +251,43 @@ impl Ap {
         responder.send(&mut info).map_err(|e| e.into())
     }
 
+    pub fn handle_mlme_query_discovery_support(
+        &self,
+        responder: fidl_mlme::MlmeQueryDiscoverySupportResponder,
+    ) -> Result<(), Error> {
+        let ddk_support = self.ctx.device.discovery_support();
+        let mut support = crate::ddk_converter::convert_ddk_discovery_support(ddk_support)?;
+        responder.send(&mut support).map_err(|e| e.into())
+    }
+
+    pub fn handle_mlme_query_mac_sublayer_support(
+        &self,
+        responder: fidl_mlme::MlmeQueryMacSublayerSupportResponder,
+    ) -> Result<(), Error> {
+        let ddk_support = self.ctx.device.mac_sublayer_support();
+        let mut support = crate::ddk_converter::convert_ddk_mac_sublayer_support(ddk_support)?;
+        responder.send(&mut support).map_err(|e| e.into())
+    }
+
+    pub fn handle_mlme_query_security_support(
+        &self,
+        responder: fidl_mlme::MlmeQuerySecuritySupportResponder,
+    ) -> Result<(), Error> {
+        let ddk_support = self.ctx.device.security_support();
+        let mut support = crate::ddk_converter::convert_ddk_security_support(ddk_support)?;
+        responder.send(&mut support).map_err(|e| e.into())
+    }
+
+    pub fn handle_mlme_query_spectrum_management_support(
+        &self,
+        responder: fidl_mlme::MlmeQuerySpectrumManagementSupportResponder,
+    ) -> Result<(), Error> {
+        let ddk_support = self.ctx.device.spectrum_management_support();
+        let mut support =
+            crate::ddk_converter::convert_ddk_spectrum_management_support(ddk_support)?;
+        responder.send(&mut support).map_err(|e| e.into())
+    }
+
     fn handle_sme_list_minstrel_peers(
         &self,
         responder: fidl_mlme::MlmeListMinstrelPeersResponder,
@@ -280,6 +317,18 @@ impl Ap {
             fidl_mlme::MlmeRequest::SetKeysReq { req, .. } => self.handle_mlme_setkeys_req(req),
             fidl_mlme::MlmeRequest::QueryDeviceInfo { responder } => {
                 self.handle_mlme_query_device_info(responder)
+            }
+            fidl_mlme::MlmeRequest::QueryDiscoverySupport { responder } => {
+                self.handle_mlme_query_discovery_support(responder)
+            }
+            fidl_mlme::MlmeRequest::QueryMacSublayerSupport { responder } => {
+                self.handle_mlme_query_mac_sublayer_support(responder)
+            }
+            fidl_mlme::MlmeRequest::QuerySecuritySupport { responder } => {
+                self.handle_mlme_query_security_support(responder)
+            }
+            fidl_mlme::MlmeRequest::QuerySpectrumManagementSupport { responder } => {
+                self.handle_mlme_query_spectrum_management_support(responder)
             }
             fidl_mlme::MlmeRequest::ListMinstrelPeers { responder } => {
                 self.handle_sme_list_minstrel_peers(responder)
@@ -401,8 +450,11 @@ mod tests {
             device::FakeDevice,
             test_utils::{fake_control_handle, MockWlanRxInfo},
         },
-        banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_common as fidl_common,
-        fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fuchsia_async as fasync,
+        banjo_fuchsia_wlan_common as banjo_common,
+        fidl::endpoints::create_proxy_and_stream,
+        fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+        fuchsia_async as fasync,
+        futures::{task::Poll, StreamExt},
         std::convert::TryFrom,
         wlan_common::{
             assert_variant, big_endian::BigEndianU16, test_utils::fake_frames::fake_wpa2_rsne,
@@ -1401,6 +1453,118 @@ mod tests {
                 1, 2, 3,
             ][..]
         );
+    }
+
+    #[test]
+    fn ap_mlme_respond_to_query_device_info() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
+
+        let (mlme_proxy, mut mlme_req_stream) = create_proxy_and_stream::<fidl_mlme::MlmeMarker>()
+            .expect("failed to create Mlme proxy");
+        let mut query_fut = mlme_proxy.query_device_info();
+        assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Pending);
+        let mlme_req = assert_variant!(exec.run_until_stalled(&mut mlme_req_stream.next()), Poll::Ready(Some(Ok(req))) => match req {
+            fidl_mlme::MlmeRequest::QueryDeviceInfo { .. } => req,
+            other => panic!("unexpected MlmeRequest: {:?}", other),
+        });
+
+        assert_variant!(ap.handle_mlme_msg(mlme_req), Ok(()));
+        let info = assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Ready(Ok(r)) => r);
+        let expected = crate::ddk_converter::device_info_from_wlan_softmac_info(fake_device.info)
+            .expect("Failed to convert DDK WlanSoftmacInfo");
+        assert_eq!(info, expected);
+    }
+
+    #[test]
+    fn ap_mlme_respond_to_query_discovery_support() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
+
+        let (mlme_proxy, mut mlme_req_stream) = create_proxy_and_stream::<fidl_mlme::MlmeMarker>()
+            .expect("failed to create Mlme proxy");
+        let mut query_fut = mlme_proxy.query_discovery_support();
+        assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Pending);
+        let mlme_req = assert_variant!(exec.run_until_stalled(&mut mlme_req_stream.next()), Poll::Ready(Some(Ok(req))) => match req {
+            fidl_mlme::MlmeRequest::QueryDiscoverySupport { .. } => req,
+            other => panic!("unexpected MlmeRequest: {:?}", other),
+        });
+
+        assert_variant!(ap.handle_mlme_msg(mlme_req), Ok(()));
+        let resp = assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Ready(Ok(r)) => r);
+        assert_eq!(resp.scan_offload.supported, false);
+        assert_eq!(resp.probe_response_offload.supported, false);
+    }
+
+    #[test]
+    fn ap_mlme_respond_to_query_mac_sublayer_support() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
+
+        let (mlme_proxy, mut mlme_req_stream) = create_proxy_and_stream::<fidl_mlme::MlmeMarker>()
+            .expect("failed to create Mlme proxy");
+        let mut query_fut = mlme_proxy.query_mac_sublayer_support();
+        assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Pending);
+        let mlme_req = assert_variant!(exec.run_until_stalled(&mut mlme_req_stream.next()), Poll::Ready(Some(Ok(req))) => match req {
+            fidl_mlme::MlmeRequest::QueryMacSublayerSupport { .. } => req,
+            other => panic!("unexpected MlmeRequest: {:?}", other),
+        });
+
+        assert_variant!(ap.handle_mlme_msg(mlme_req), Ok(()));
+        let resp = assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Ready(Ok(r)) => r);
+        assert_eq!(resp.rate_selection_offload.supported, false);
+        assert_eq!(resp.data_plane.data_plane_type, fidl_common::DataPlaneType::EthernetDevice);
+        assert_eq!(resp.device.is_synthetic, true);
+        assert_eq!(
+            resp.device.mac_implementation_type,
+            fidl_common::MacImplementationType::Softmac
+        );
+        assert_eq!(resp.device.tx_status_report_supported, true);
+    }
+
+    #[test]
+    fn ap_mlme_respond_to_query_security_support() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
+
+        let (mlme_proxy, mut mlme_req_stream) = create_proxy_and_stream::<fidl_mlme::MlmeMarker>()
+            .expect("failed to create Mlme proxy");
+        let mut query_fut = mlme_proxy.query_security_support();
+        assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Pending);
+        let mlme_req = assert_variant!(exec.run_until_stalled(&mut mlme_req_stream.next()), Poll::Ready(Some(Ok(req))) => match req {
+            fidl_mlme::MlmeRequest::QuerySecuritySupport { .. } => req,
+            other => panic!("unexpected MlmeRequest: {:?}", other),
+        });
+
+        assert_variant!(ap.handle_mlme_msg(mlme_req), Ok(()));
+        let resp = assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Ready(Ok(r)) => r);
+        assert_eq!(resp.mfp.supported, false);
+        assert_eq!(resp.sae.driver_handler_supported, false);
+        assert_eq!(resp.sae.sme_handler_supported, false);
+    }
+
+    #[test]
+    fn ap_mlme_respond_to_query_spectrum_management_support() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
+
+        let (mlme_proxy, mut mlme_req_stream) = create_proxy_and_stream::<fidl_mlme::MlmeMarker>()
+            .expect("failed to create Mlme proxy");
+        let mut query_fut = mlme_proxy.query_spectrum_management_support();
+        assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Pending);
+        let mlme_req = assert_variant!(exec.run_until_stalled(&mut mlme_req_stream.next()), Poll::Ready(Some(Ok(req))) => match req {
+            fidl_mlme::MlmeRequest::QuerySpectrumManagementSupport { .. } => req,
+            other => panic!("unexpected MlmeRequest: {:?}", other),
+        });
+
+        assert_variant!(ap.handle_mlme_msg(mlme_req), Ok(()));
+        let resp = assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Ready(Ok(r)) => r);
+        assert_eq!(resp.dfs.supported, true);
     }
 
     #[test]
