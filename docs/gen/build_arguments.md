@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1716
+From //build/config/BUILDCONFIG.gn:1717
 
 ### allow_legacy_data_partition_names
 Set to true to enable legacy data partition names.
@@ -168,7 +168,7 @@ From //products/bringup.gni:48
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:26
+From //BUILD.gn:27
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -176,7 +176,7 @@ From //products/bringup.gni:48
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:26
+From //BUILD.gn:27
 
 ### base_package_labels
 If you add package labels to this variable, the packages will be included in
@@ -191,7 +191,7 @@ From //out/not-default/args.gn:9
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:33
+From //BUILD.gn:34
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -199,7 +199,7 @@ From //out/not-default/args.gn:9
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:33
+From //BUILD.gn:34
 
 ### basic_env_names
 The list of environment names to include in "basic_envs".
@@ -764,7 +764,7 @@ From //out/not-default/args.gn:10
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:41
+From //BUILD.gn:42
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -772,7 +772,7 @@ From //out/not-default/args.gn:10
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:41
+From //BUILD.gn:42
 
 ### camera_debug
 
@@ -1533,7 +1533,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1463
+From //build/config/BUILDCONFIG.gn:1464
 
 ### extra_vbmeta_descriptors
 Additional VBMeta Descriptors to add to the vbmeta image during assembly.
@@ -2185,7 +2185,7 @@ From //out/not-default/args.gn:11
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:60
+From //BUILD.gn:61
 
 **Current value for `target_cpu = "x64"`:** `["//tools/devshell:fx", "//tools/bindc:host"]`
 
@@ -2193,7 +2193,7 @@ From //out/not-default/args.gn:11
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:60
+From //BUILD.gn:61
 
 ### host_os
 
@@ -2289,6 +2289,13 @@ assemble_system().  See documentation there.
 **Current value (from the default):** `false`
 
 From //build/images/args.gni:157
+
+### include_zbi_host_tests
+Set this variable to true to include zbi_tests into tests.json.
+
+**Current value (from the default):** `false`
+
+From //build/testing/zbi_test.gni:13
 
 ### include_zxdb_large_tests
 Normally these tests are not built and run because they require large amounts of optional data
@@ -2608,7 +2615,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1285
+From //build/config/BUILDCONFIG.gn:1286
 
 ### launch_basemgr_on_boot
 Indicates whether to start basemgr.cmx on boot.
@@ -3878,7 +3885,7 @@ From //products/bringup.gni:68
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:64
+From //BUILD.gn:65
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -3886,7 +3893,7 @@ From //products/bringup.gni:68
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:64
+From //BUILD.gn:65
 
 ### sdk_dirs
 The directories to search for parts of the SDK.
@@ -3974,7 +3981,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1706
+From //build/config/BUILDCONFIG.gn:1707
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3983,7 +3990,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1711
+From //build/config/BUILDCONFIG.gn:1712
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -4033,7 +4040,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1509
+From //build/config/BUILDCONFIG.gn:1510
 
 ### size_checker_input
 The input to the size checker.
@@ -4271,7 +4278,7 @@ afterwards.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:47
+From //BUILD.gn:48
 
 ### testonly_in_containers
 Whether to allow testonly=true targets in fuchsia ZBI or base/cache packages.
@@ -4325,7 +4332,7 @@ for details and documentation for each field.
 }
 ```
 
-From //build/config/BUILDCONFIG.gn:96
+From //build/config/BUILDCONFIG.gn:97
 
 ### tsan_default_options
 Default [ThreadSanitizer](https://clang.llvm.org/docs/ThreadSanitizer.html)
@@ -4375,7 +4382,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1493
+From //build/config/BUILDCONFIG.gn:1494
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -4391,7 +4398,7 @@ From //out/not-default/args.gn:12
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:55
+From //BUILD.gn:56
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//build/images:fastboot", "//bundles:kitchen_sink"]`
 
@@ -4399,7 +4406,7 @@ From //out/not-default/args.gn:12
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:55
+From //BUILD.gn:56
 
 ### update_kernels
 (deprecated) List of kernel images to include in the update (OTA) package.
@@ -4970,7 +4977,7 @@ This allows testing for a Zircon-specific toolchain with:
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:113
+From //build/config/BUILDCONFIG.gn:114
 
 ### zircon_tracelog
 Where to emit a tracelog from Zircon's GN run. No trace will be produced if
