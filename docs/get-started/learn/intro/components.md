@@ -188,40 +188,40 @@ You should see output similar to the (truncated) list below:
 
 ```none {:.devsite-disable-click-to-copy}
 /
-  bootstrap
-    archivist
-    base_resolver
-    console
-    console-launcher
-    decompressor
-    device_name_provider
-    driver_manager
-    fshost
-    miscsvc
-    netsvc
-    power_manager
-    ptysvc
-    pwrbtn-monitor
-    shutdown_shim
-    svchost
-    sysinfo
-    virtual_console
-  core
-    activity
-    appmgr
-      ...
-    debug_serial
-    detect
-    font_provider
-    log-stats
-    remote-control
-    remote-diagnostics-bridge
-    sampler
-    system-update-committer
-    temperature-logger
-    test_manager
-    full-resolver
-  startup
+/bootstrap
+/bootstrap/archivist
+/bootstrap/base_resolver
+/bootstrap/console
+/bootstrap/console-launcher
+/bootstrap/decompressor
+/bootstrap/device_name_provider
+/bootstrap/driver_manager
+/bootstrap/fshost
+/bootstrap/miscsvc
+/bootstrap/netsvc
+/bootstrap/power_manager
+/bootstrap/ptysvc
+/bootstrap/pwrbtn-monitor
+/bootstrap/shutdown_shim
+/bootstrap/svchost
+/bootstrap/sysinfo
+/bootstrap/virtual_console
+/core
+/core/activity
+/core/appmgr
+...
+/core/debug_serial
+/core/detect
+/core/font_provider
+/core/log-stats
+/core/remote-control
+/core/remote-diagnostics-bridge
+/core/sampler
+/core/system-update-committer
+/core/temperature-logger
+/core/test_manager
+/core/full-resolver
+/startup
 ```
 
 This list represents the **component instance tree**, with organizational

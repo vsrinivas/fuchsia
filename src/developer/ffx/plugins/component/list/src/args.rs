@@ -49,7 +49,7 @@ pub struct ComponentListCommand {
     pub only: Option<ListFilter>,
 
     #[argh(switch, long = "verbose", short = 'v')]
-    /// whether or not to display a column showing component type and a column
-    /// showing running/stopped.
+    /// whether or not to display a column showing component type, a column
+    /// showing running/stopped and a column showing the url.
     pub verbose: bool,
 }

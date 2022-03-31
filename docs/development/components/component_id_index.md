@@ -115,7 +115,7 @@ a product's configuration.
 ### Add an entry to the index
 
 The first step is to determine the component instance's moniker, which is its
-URL and realm path. You can find the the realm path of a component on a
+URL and realm path. You can find the realm path of a component on a
 particular product's eng build by checking `ffx component list` and collecting
 "(realm)" labels under appmgr leading up to the component.
 
@@ -134,18 +134,12 @@ To determine the component instance's realm_path, you can look at the output of
 ```shell
 $ ffx component list
 /
-  .
-  .
-  core
-    appmgr
-      app
-        sysmgr.cmx
-        sys
-          my_other_component.cmx
-          .
-          .
-  .
-  .
+.
+.
+/core/appmgr/app/sysmgr.cmx
+/core/appmgr/app/sys/my_other_component.cmx
+.
+.
 ```
 
 The above output tells us that my_other_component.cmx runs under the

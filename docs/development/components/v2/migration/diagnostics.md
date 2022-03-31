@@ -55,22 +55,22 @@ You can see this hierarchy using `ffx component list` as well:
 
 ```
 /
-  bootstrap
-    archivist
-    ...
-  core
-    ...
-    appmgr
-      app
-        sysmgr.cmx
-        sys
-          build-info.cmx
-          cobalt.cmx
-          ...
-    battery_manager
-    font_provider
-    ...
-  startup
+/bootstrap
+/bootstrap/archivist
+...
+/core
+...
+/core/appmgr
+/core/appmgr/app
+/core/appmgr/app/sysmgr.cmx
+/core/appmgr/app/sys
+/core/appmgr/app/sys/build-info.cmx
+/core/appmgr/app/sys/cobalt.cmx
+...
+/core/battery_manager
+/core/font_provider
+...
+/startup
 ```
 
 Alternatively you can use `ffx inspect list` to see available components for
