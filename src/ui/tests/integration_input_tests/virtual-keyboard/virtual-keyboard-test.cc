@@ -288,7 +288,8 @@ class WebEngineTest : public gtest::TestWithEnvironmentFixture, public InputPosi
   std::optional<async::Task> inject_retry_task_;
 };
 
-TEST_F(WebEngineTest, ShowAndHideKeyboard) {
+// TODO(fxbug.dev/96697): Fix and re-enable test.
+TEST_F(WebEngineTest, DISABLED_ShowAndHideKeyboard) {
   LaunchChromium();
   client_component().events().OnTerminated = [](int64_t return_code,
                                                 fuchsia::sys::TerminationReason reason) {
