@@ -34,6 +34,10 @@ void fdf_internal_push_driver(const void* driver);
 // Removes the driver at the top of the thread's current call stack.
 void fdf_internal_pop_driver();
 
+// Returns the driver on top of the the thread's current call stack.
+// Returns NULL if no drivers are on the stack.
+const void* fdf_internal_get_current_driver();
+
 // Blocks the current thread until |dispatcher| is idle.
 // This is useful for testing.
 // This should not be called from a thread managed by the driver runtime,
