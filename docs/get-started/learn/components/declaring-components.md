@@ -244,7 +244,7 @@ Replace the `main()` function with the following code:
 ```
 
 <aside class="key-point">
-The <code>fuchsia::component</code> attribute removes some common boilerplate
+The <code>fuchsia::main</code> attribute removes some common boilerplate
 for component execution in Rust, such as initializing logging or async execution
 behavior.
 </aside>

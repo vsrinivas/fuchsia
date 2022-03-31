@@ -283,7 +283,7 @@ after the arguments are collected:
 `echo-args/src/main.rs`:
 
 ```rust
-#[fuchsia::component(logging = true)]
+#[fuchsia::main(logging = true)]
 async fn main() -> Result<(), anyhow::Error> {
     // ...
 

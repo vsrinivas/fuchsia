@@ -83,19 +83,19 @@ mod test {
     #[fuchsia::test(allow_stalls = true, threads = 1)]
     async fn empty_very_singlethreaded_allow_stalls_test() {}
 
-    #[fuchsia::component]
+    #[fuchsia::main]
     #[test]
     fn empty_component_test() {}
 
-    #[fuchsia::component]
+    #[fuchsia::main]
     #[test]
     async fn empty_async_component_test() {}
 
-    #[fuchsia::component(threads = 1)]
+    #[fuchsia::main(threads = 1)]
     #[test]
     async fn empty_async_singlethreaded_component_test() {}
 
-    #[fuchsia::component(threads = 2)]
+    #[fuchsia::main(threads = 2)]
     #[test]
     async fn empty_async_multithreaded_component_test() {}
 
@@ -138,145 +138,145 @@ mod test {
     }
 
     #[allow(dead_code)]
-    #[fuchsia::component(add_test_attr = true)]
+    #[fuchsia::main(add_test_attr = true)]
     fn empty_component_test_with_add_test_attr() {
         // `add_test_attr = true` should only have an effect when using fuchsia::test, not
-        // fuchsia::component. With fuchsia::component, this function shouldn't get a #[test]
+        // fuchsia::main. With fuchsia::main, this function shouldn't get a #[test]
         // annotation, and therefore is expected to _not_ run during tests.
         assert!(false)
     }
 
-    // TODO(fxbug.dev/81029): We combine #[fuchsia::component] and #[test] here as a kludge to
-    // enable testing of the fuchsia::component code in a unit test.
+    // TODO(fxbug.dev/81029): We combine #[fuchsia::main] and #[test] here as a kludge to
+    // enable testing of the fuchsia::main code in a unit test.
     // Real users of the fuchsia library should not do this, and the ability to do so is not
     // guaranteed to be present in the future.
-    #[fuchsia::component]
+    #[fuchsia::main]
     #[test]
     fn empty_component_test_with_result() -> Result<(), Error> {
         Ok(())
     }
 
-    // TODO(fxbug.dev/81029): We combine #[fuchsia::component] and #[test] here as a kludge to
-    // enable testing of the fuchsia::component code in a unit test.
+    // TODO(fxbug.dev/81029): We combine #[fuchsia::main] and #[test] here as a kludge to
+    // enable testing of the fuchsia::main code in a unit test.
     // Real users of the fuchsia library should not do this, and the ability to do so is not
     // guaranteed to be present in the future.
-    #[fuchsia::component]
+    #[fuchsia::main]
     #[test]
     async fn empty_async_component_test_with_result() -> Result<(), Error> {
         Ok(())
     }
 
-    // TODO(fxbug.dev/81029): We combine #[fuchsia::component] and #[test] here as a kludge to
-    // enable testing of the fuchsia::component code in a unit test.
+    // TODO(fxbug.dev/81029): We combine #[fuchsia::main] and #[test] here as a kludge to
+    // enable testing of the fuchsia::main code in a unit test.
     // Real users of the fuchsia library should not do this, and the ability to do so is not
     // guaranteed to be present in the future.
-    #[fuchsia::component(threads = 1)]
+    #[fuchsia::main(threads = 1)]
     #[test]
     async fn empty_async_singlethreaded_component_test_with_result() -> Result<(), Error> {
         Ok(())
     }
 
-    // TODO(fxbug.dev/81029): We combine #[fuchsia::component] and #[test] here as a kludge to
-    // enable testing of the fuchsia::component code in a unit test.
+    // TODO(fxbug.dev/81029): We combine #[fuchsia::main] and #[test] here as a kludge to
+    // enable testing of the fuchsia::main code in a unit test.
     // Real users of the fuchsia library should not do this, and the ability to do so is not
     // guaranteed to be present in the future.
-    #[fuchsia::component(threads = 2)]
+    #[fuchsia::main(threads = 2)]
     #[test]
     async fn empty_async_multithreaded_component_test_with_result() -> Result<(), Error> {
         Ok(())
     }
 
-    // TODO(fxbug.dev/81029): We combine #[fuchsia::component] and #[test] here as a kludge to
-    // enable testing of the fuchsia::component code in a unit test.
+    // TODO(fxbug.dev/81029): We combine #[fuchsia::main] and #[test] here as a kludge to
+    // enable testing of the fuchsia::main code in a unit test.
     // Real users of the fuchsia library should not do this, and the ability to do so is not
     // guaranteed to be present in the future.
-    #[fuchsia::component(logging_tags = [])]
+    #[fuchsia::main(logging_tags = [])]
     #[test]
     async fn component_with_empty_logging_tags() -> Result<(), Error> {
         Ok(())
     }
 
-    // TODO(fxbug.dev/81029): We combine #[fuchsia::component] and #[test] here as a kludge to
-    // enable testing of the fuchsia::component code in a unit test.
+    // TODO(fxbug.dev/81029): We combine #[fuchsia::main] and #[test] here as a kludge to
+    // enable testing of the fuchsia::main code in a unit test.
     // Real users of the fuchsia library should not do this, and the ability to do so is not
     // guaranteed to be present in the future.
-    #[fuchsia::component(logging_tags = ["foo"])]
+    #[fuchsia::main(logging_tags = ["foo"])]
     #[test]
     async fn component_with_single_logging_tag() -> Result<(), Error> {
         Ok(())
     }
 
-    // TODO(fxbug.dev/81029): We combine #[fuchsia::component] and #[test] here as a kludge to
-    // enable testing of the fuchsia::component code in a unit test.
+    // TODO(fxbug.dev/81029): We combine #[fuchsia::main] and #[test] here as a kludge to
+    // enable testing of the fuchsia::main code in a unit test.
     // Real users of the fuchsia library should not do this, and the ability to do so is not
     // guaranteed to be present in the future.
-    #[fuchsia::component(logging_tags = ["foo", "bar"])]
+    #[fuchsia::main(logging_tags = ["foo", "bar"])]
     #[test]
     async fn component_with_logging_tags() -> Result<(), Error> {
         Ok(())
     }
 
-    // TODO(fxbug.dev/81029): We combine #[fuchsia::component] and #[test] here as a kludge to
-    // enable testing of the fuchsia::component code in a unit test.
+    // TODO(fxbug.dev/81029): We combine #[fuchsia::main] and #[test] here as a kludge to
+    // enable testing of the fuchsia::main code in a unit test.
     // Real users of the fuchsia library should not do this, and the ability to do so is not
     // guaranteed to be present in the future.
-    #[fuchsia::component(logging_minimum_severity = "error")]
+    #[fuchsia::main(logging_minimum_severity = "error")]
     #[test]
     async fn component_with_minimum_severity() -> Result<(), Error> {
         Ok(())
     }
 
-    // fuchsia::component with arguments can't be written as a test
+    // fuchsia::main with arguments can't be written as a test
     // (since argh will parse command line arguments and these will be arguments defining
     // the test execution environment)
     #[allow(dead_code)]
-    #[fuchsia::component]
+    #[fuchsia::main]
     fn empty_component_test_with_argument(opt: Options) {
         assert_eq!(opt.should_be_false, false);
     }
 
-    // fuchsia::component with arguments can't be written as a test
+    // fuchsia::main with arguments can't be written as a test
     // (since argh will parse command line arguments and these will be arguments defining
     // the test execution environment)
     #[allow(dead_code)]
-    #[fuchsia::component]
+    #[fuchsia::main]
     async fn empty_async_component_test_with_argument(opt: Options) {
         assert_eq!(opt.should_be_false, false);
     }
 
-    // fuchsia::component with arguments can't be written as a test
+    // fuchsia::main with arguments can't be written as a test
     // (since argh will parse command line arguments and these will be arguments defining
     // the test execution environment)
     #[allow(dead_code)]
-    #[fuchsia::component(threads = 1)]
+    #[fuchsia::main(threads = 1)]
     async fn empty_async_singlethreaded_component_test_with_argument(opt: Options) {
         assert_eq!(opt.should_be_false, false);
     }
 
-    // fuchsia::component with arguments can't be written as a test
+    // fuchsia::main with arguments can't be written as a test
     // (since argh will parse command line arguments and these will be arguments defining
     // the test execution environment)
     #[allow(dead_code)]
-    #[fuchsia::component(threads = 2)]
+    #[fuchsia::main(threads = 2)]
     async fn empty_async_multithreaded_component_test_with_argument(opt: Options) {
         assert_eq!(opt.should_be_false, false);
     }
 
-    // fuchsia::component with arguments can't be written as a test
+    // fuchsia::main with arguments can't be written as a test
     // (since argh will parse command line arguments and these will be arguments defining
     // the test execution environment)
     #[allow(dead_code)]
-    #[fuchsia::component]
+    #[fuchsia::main]
     fn empty_component_test_with_argument_and_result(opt: Options) -> Result<(), Error> {
         assert_eq!(opt.should_be_false, false);
         Ok(())
     }
 
-    // fuchsia::component with arguments can't be written as a test
+    // fuchsia::main with arguments can't be written as a test
     // (since argh will parse command line arguments and these will be arguments defining
     // the test execution environment)
     #[allow(dead_code)]
-    #[fuchsia::component]
+    #[fuchsia::main]
     async fn empty_async_component_test_with_argument_and_result(
         opt: Options,
     ) -> Result<(), Error> {
@@ -284,11 +284,11 @@ mod test {
         Ok(())
     }
 
-    // fuchsia::component with arguments can't be written as a test
+    // fuchsia::main with arguments can't be written as a test
     // (since argh will parse command line arguments and these will be arguments defining
     // the test execution environment)
     #[allow(dead_code)]
-    #[fuchsia::component(threads = 1)]
+    #[fuchsia::main(threads = 1)]
     async fn empty_async_singlethreaded_component_test_with_argument_and_result(
         opt: Options,
     ) -> Result<(), Error> {
@@ -296,11 +296,11 @@ mod test {
         Ok(())
     }
 
-    // fuchsia::component with arguments can't be written as a test
+    // fuchsia::main with arguments can't be written as a test
     // (since argh will parse command line arguments and these will be arguments defining
     // the test execution environment)
     #[allow(dead_code)]
-    #[fuchsia::component(threads = 2)]
+    #[fuchsia::main(threads = 2)]
     async fn empty_async_multithreaded_component_test_with_argument_and_result(
         opt: Options,
     ) -> Result<(), Error> {

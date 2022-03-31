@@ -424,7 +424,7 @@ impl<R: Finish, E: Finish> Finish for Result<R, E> {
     }
 }
 
-/// Define a fuchsia component.
+/// Define a fuchsia main function.
 ///
 /// This attribute should be applied to the process `main` function.
 /// It will take care of setting up various Fuchsia crates for the component.
@@ -433,17 +433,13 @@ impl<R: Finish, E: Finish> Finish for Result<R, E> {
 /// Arguments:
 ///  - `threads` - integer worker thread count for the component. Must be >0. Default 1.
 ///  - `logging` - boolean toggle for whether to initialize logging (or not). Default true.
-///                This currently does nothing on host. On Fuchsia fuchsia-syslog is used.
 ///  - `logging_tags` - optional list of string to be used as tags for logs. Default: None.
 ///  - `logging_minimum_severity` - optional minimum severity to be set for logs. Default: None,
 ///                                 the logging library will choose it (typically `info`).
 ///
 /// The main function can return either () or a Result<(), E> where E is an error type.
-/// If the main function takes an argument, it's expected that argument implement
-/// argh::TopLevelCommand. argh::from_env will be invoked to parse command line arguments and
-/// pass them to the main function.
 #[proc_macro_attribute]
-pub fn component(args: TokenStream, input: TokenStream) -> TokenStream {
+pub fn main(args: TokenStream, input: TokenStream) -> TokenStream {
     Transformer::parse(FunctionType::Component, args, input).finish()
 }
 

@@ -49,10 +49,10 @@ deps = [
 ### Setup
 
 In your Rust source files, logging is enabled by default for any function
-initialized using the `fuchsia::component` or `fuchsia::test` macros:
+initialized using the `fuchsia::main` or `fuchsia::test` macros:
 
 ```rust
-#[fuchsia::component]
+#[fuchsia::main]
 fn main() {
     // ...
 }
@@ -66,7 +66,7 @@ fn example_test() {
 You can also pass the `logging` flag to make this explicit:
 
 ```rust
-#[fuchsia::component(logging = true)]
+#[fuchsia::main(logging = true)]
 fn main() {
     // ...
 }
@@ -84,7 +84,7 @@ To enable log tags for a given scope, pass the `logging_tags` parameter during
 [initialization](#initialization):
 
 ```rust
-#[fuchsia::component(logging_tags = ["foo", "bar"])]
+#[fuchsia::main(logging_tags = ["foo", "bar"])]
 fn main() {
     // ...
 }
