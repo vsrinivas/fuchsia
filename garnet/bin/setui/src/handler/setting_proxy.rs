@@ -21,7 +21,6 @@ use crate::trace::TracingNonce;
 use crate::{clock, event, service, trace, trace_guard};
 use anyhow::Error;
 use fuchsia_async as fasync;
-use fuchsia_inspect_contrib::nodes::BoundedListNode;
 use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon::Duration;
 use futures::channel::mpsc::UnboundedSender;
@@ -179,7 +178,15 @@ pub(crate) struct SettingProxy {
     retry_on_timeout: bool,
     teardown_cancellation: Option<futures::channel::oneshot::Sender<()>>,
     _node: fuchsia_inspect::Node,
-    node_errors: BoundedListNode,
+    error_node: fuchsia_inspect::Node,
+    node_errors: VecDeque<NodeError>,
+    error_count: usize,
+}
+
+struct NodeError {
+    _node: fuchsia_inspect::Node,
+    _timestamp: fuchsia_inspect::StringProperty,
+    _value: fuchsia_inspect::StringProperty,
 }
 
 /// Publishes an event to the event_publisher.
@@ -223,7 +230,6 @@ impl SettingProxy {
             futures::channel::mpsc::unbounded::<ProxyRequest>();
 
         let error_node = node.create_child("errors");
-        let bounded_list_node = BoundedListNode::new(error_node, MAX_NODE_ERRORS);
 
         // We must create handle here rather than return back the value as we
         // reference the proxy in the async tasks below.
@@ -246,7 +252,9 @@ impl SettingProxy {
             retry_on_timeout,
             teardown_cancellation: None,
             _node: node,
-            node_errors: bounded_list_node,
+            error_node,
+            node_errors: VecDeque::new(),
+            error_count: 0,
         };
 
         // Main task loop for receiving and processing incoming messages.
@@ -401,9 +409,18 @@ impl SettingProxy {
             {
                 Ok(signature) => Some(signature),
                 Err(e) => {
-                    let entry = self.node_errors.create_entry();
-                    entry.record_string("timestamp", clock::inspect_format_now());
-                    entry.record_string("value", format!("{:?}", e));
+                    let node = self.error_node.create_child(format!("{:020}", self.error_count));
+                    let timestamp = node.create_string("timestamp", clock::inspect_format_now());
+                    let value = node.create_string("value", format!("{:?}", e));
+                    self.node_errors.push_back(NodeError {
+                        _node: node,
+                        _timestamp: timestamp,
+                        _value: value,
+                    });
+                    self.error_count += 1;
+                    if self.node_errors.len() > MAX_NODE_ERRORS {
+                        let _ = self.node_errors.pop_front();
+                    }
                     None
                 }
             };
