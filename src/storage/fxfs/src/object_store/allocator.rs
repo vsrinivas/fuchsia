@@ -299,7 +299,14 @@ impl OrdUpperBound for AllocatorKey {
 
 impl OrdLowerBound for AllocatorKey {
     fn cmp_lower_bound(&self, other: &AllocatorKey) -> std::cmp::Ordering {
-        self.device_range.start.cmp(&other.device_range.start)
+        // The ordering over range.end is significant here as it is used in
+        // the heap ordering that feeds into our merge function and
+        // a total ordering over range lets us remove a symmetry case from
+        // the allocator merge function.
+        self.device_range
+            .start
+            .cmp(&other.device_range.start)
+            .then(self.device_range.end.cmp(&other.device_range.end))
     }
 }
 

@@ -68,12 +68,12 @@ pub fn merge(
                 },
                 right: Discard,
             };
-        }
         /*  Case 4:
          *    L:    |------------|
          *    R:    |-----------------|
          */
-        if left.key().device_range.end < right.key().device_range.end {
+        } else {
+            debug_assert!(left.key().device_range.end < right.key().device_range.end);
             return MergeResult::Other {
                 emit: None,
                 left: if left.value().delta + right.value().delta == 0 {
@@ -94,31 +94,8 @@ pub fn merge(
                 }),
             };
         }
-        /*  Case 5:
-         *    L:    |-------------------|
-         *    R:    |------------|
-         */
-        return MergeResult::Other {
-            emit: None,
-            left: Replace(Item {
-                key: AllocatorKey {
-                    device_range: right.key().device_range.end..left.key().device_range.end,
-                },
-                value: AllocatorValue { delta: left.value().delta },
-                sequence: std::cmp::min(left.sequence(), right.sequence()),
-            }),
-            right: if left.value().delta + right.value().delta == 0 {
-                Discard
-            } else {
-                Replace(Item {
-                    key: right.key().clone(),
-                    value: AllocatorValue { delta: left.value().delta + right.value().delta },
-                    sequence: std::cmp::min(left.sequence(), right.sequence()),
-                })
-            },
-        };
     }
-    /*  Case 6:
+    /*  Case 5:
      *    L:    |-----...
      *    R:         |-----...
      */
