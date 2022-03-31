@@ -9,9 +9,7 @@
     },
     "sandbox": {
         "dev": [
-            "class/temperature",
-            "class/wlanphy",
-            "wifi"
+            "class/temperature"
         ],
         "features": [
             "deprecated-global-data",
