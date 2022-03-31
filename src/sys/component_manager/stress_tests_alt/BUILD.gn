@@ -97,6 +97,11 @@ fuchsia_component("test") {
   manifest = "meta/test.cml"
 }
 
+fuchsia_component("test_short") {
+  testonly = true
+  manifest = "meta/test_short.cml"
+}
+
 fuchsia_test_package("component-manager-stress-tests-alt") {
   deps = [
     ":actor",
@@ -120,7 +125,34 @@ fuchsia_test_package("component-manager-stress-tests-alt") {
   }
 }
 
+# This test package is designed to run a small number of operations on CQ bots.
+# This ensures that these tests cannot break due to CL changes.
+fuchsia_test_package("component-manager-stress-tests-short") {
+  deps = [
+    ":actor",
+    ":no_binary",
+    ":unreliable_echo_client",
+    ":unreliable_echo_server",
+  ]
+  test_components = [ ":test_short" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+    environments = [
+      {
+        dimensions = {
+          device_type = "QEMU"
+        }
+      },
+    ]
+  }
+}
+
 group("stress_tests_alt") {
   testonly = true
-  deps = [ ":component-manager-stress-tests-alt" ]
+  deps = [
+    ":component-manager-stress-tests-alt",
+    ":component-manager-stress-tests-short",
+  ]
 }

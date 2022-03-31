@@ -17,13 +17,13 @@ use {
 };
 
 const COLLECTION_NAME: &'static str = "dynamic_children";
-const ECHO_CLIENT_URL: &'static str =
-    "fuchsia-pkg://fuchsia.com/component-manager-stress-tests-alt#meta/unreliable_echo_client.cm";
+const ECHO_CLIENT_URL: &'static str = "#meta/unreliable_echo_client.cm";
 
-const NO_BINARY_URL: &'static str =
-    "fuchsia-pkg://fuchsia.com/component-manager-stress-tests-alt#meta/no_binary.cm";
+const NO_BINARY_URL: &'static str = "#meta/no_binary.cm";
 
-const HUB_RIGHTS: u32 = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
+const HUB_RIGHTS: fio::OpenFlags = fio::OpenFlags::empty()
+    .union(fio::OpenFlags::RIGHT_WRITABLE)
+    .union(fio::OpenFlags::RIGHT_READABLE);
 
 /// Used for traversal of the hub
 pub struct Hub {
@@ -208,7 +208,10 @@ struct Directory {
 
 impl Directory {
     // Opens a path in the namespace as a Directory.
-    pub fn from_namespace(path: impl AsRef<Path>, flags: u32) -> Result<Directory, Status> {
+    pub fn from_namespace(
+        path: impl AsRef<Path>,
+        flags: fio::OpenFlags,
+    ) -> Result<Directory, Status> {
         let path = path.as_ref().to_str().unwrap();
         match io_util::directory::open_in_namespace(path, flags) {
             Ok(proxy) => Ok(Directory { proxy }),
@@ -230,11 +233,15 @@ impl Directory {
     }
 
     // Open a directory in the parent dir with the given `filename`.
-    pub async fn open_directory(&self, filename: &str, flags: u32) -> Result<Directory, Status> {
+    pub async fn open_directory(
+        &self,
+        filename: &str,
+        flags: fio::OpenFlags,
+    ) -> Result<Directory, Status> {
         match io_util::directory::open_directory(&self.proxy, filename, flags).await {
             Ok(proxy) => Ok(Directory { proxy }),
             Err(OpenError::OpenError(s)) => {
-                debug!("open_directory({},{}) failed: {}", filename, flags, s);
+                debug!("open_directory({},{:?}) failed: {}", filename, flags, s);
                 Err(s)
             }
             Err(OpenError::SendOpenRequest(e)) => {

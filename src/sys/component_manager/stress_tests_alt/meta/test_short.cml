@@ -1,0 +1,44 @@
+{
+    include: [
+        "//src/sys/test_runners/stress_test/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        actor_url: "#meta/actor.cm",
+        num_instances: "5",
+        action_timeout: "10", // Action Timeout: 10 seconds
+        test_duration: "60", // Test Duration: 1 minute
+    },
+    children: [
+        {
+            name: "unreliable_echo_server",
+            url: "#meta/unreliable_echo_server.cm",
+        },
+        {
+            name: "dynamic_children_root",
+            url: "#meta/no_binary.cm",
+            startup: "eager",
+        },
+    ],
+    offer: [
+        {
+            directory: "hub",
+            from: "#dynamic_children_root",
+            to: "#actors",
+            rights: [ "r*" ],
+        },
+        {
+            protocol: "fidl.examples.routing.echo.Echo",
+            from: "#unreliable_echo_server",
+            to: "#dynamic_children_root",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#actors",
+                "#dynamic_children_root",
+            ],
+        },
+    ],
+}
