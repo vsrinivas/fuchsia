@@ -424,6 +424,8 @@ impl EssSa {
                 frame: key_frame.clone(),
                 expect_response: true,
             });
+            // Always expect a confirm for a keyframe retransmission.
+            self.updates_awaiting_confirm = Some(Default::default());
         }
         Ok(())
     }
@@ -1149,6 +1151,11 @@ mod tests {
         // Send the first frame.
         let updates = send_fourway_msg1(&mut supplicant, |_| {}).1;
         let msg2 = test_util::expect_eapol_resp(&updates[..]);
+        let mut update_sink = vec![];
+        supplicant
+            .on_eapol_conf(&mut update_sink, EapolResultCode::Success)
+            .expect("Failed to send eapol conf");
+        assert!(update_sink.is_empty());
 
         // Timeout several times.
         for _ in 1..MAX_KEY_FRAME_RETRIES {
@@ -1157,6 +1164,9 @@ mod tests {
                 .on_eapol_key_frame_timeout(&mut update_sink)
                 .expect("Failed to send key frame timeout");
             let msg2_retry = test_util::expect_eapol_resp(&update_sink[..]);
+            supplicant
+                .on_eapol_conf(&mut update_sink, EapolResultCode::Success)
+                .expect("Failed to send eapol conf");
             assert_eq!(msg2, msg2_retry);
         }
 
@@ -1165,6 +1175,37 @@ mod tests {
         assert_variant!(
             supplicant.on_eapol_key_frame_timeout(&mut update_sink),
             Err(Error::TooManyKeyFrameRetries)
+        );
+    }
+
+    #[test]
+    fn test_key_frame_timeout_retry_without_conf() {
+        // Create ESS Security Association
+        let mut supplicant = test_util::get_wpa2_supplicant();
+        supplicant.start().expect("Failed starting Supplicant");
+
+        // Send the first frame.
+        let updates = send_fourway_msg1(&mut supplicant, |_| {}).1;
+        let msg2 = test_util::expect_eapol_resp(&updates[..]);
+        let mut update_sink = vec![];
+        supplicant
+            .on_eapol_conf(&mut update_sink, EapolResultCode::Success)
+            .expect("Failed to send eapol conf");
+        assert!(update_sink.is_empty());
+
+        // Respond to one timeout, but don't confirm the retry.
+        let mut update_sink = vec![];
+        supplicant
+            .on_eapol_key_frame_timeout(&mut update_sink)
+            .expect("Failed to send key frame timeout");
+        let msg2_retry = test_util::expect_eapol_resp(&update_sink[..]);
+        assert_eq!(msg2, msg2_retry);
+
+        // Failure on the next timeout.
+        let mut update_sink = vec![];
+        assert_variant!(
+            supplicant.on_eapol_key_frame_timeout(&mut update_sink),
+            Err(Error::NoKeyFrameTransmissionConfirm(0))
         );
     }
 
