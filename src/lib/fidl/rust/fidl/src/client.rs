@@ -1385,7 +1385,7 @@ mod tests {
             0,
             5,
             &crate::encoding::Context {
-                wire_format_version: crate::encoding::WireFormatVersion::V1,
+                wire_format_version: crate::encoding::WireFormatVersion::V2,
             },
             DynamicFlags::empty(),
             0,
