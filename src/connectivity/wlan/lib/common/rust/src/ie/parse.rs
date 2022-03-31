@@ -245,6 +245,96 @@ pub fn parse_wmm_param<B: ByteSlice>(raw_body: B) -> FrameParseResult<LayoutVeri
         .ok_or(FrameParseError::new("Invalid length for WMM Param element"))
 }
 
+pub fn parse_channel_switch_announcement<B: ByteSlice>(
+    raw_body: B,
+) -> FrameParseResult<LayoutVerified<B, ChannelSwitchAnnouncement>> {
+    LayoutVerified::new(raw_body)
+        .ok_or(FrameParseError::new("Invalid length for Channel Switch Announcement element"))
+}
+
+pub fn parse_extended_channel_switch_announcement<B: ByteSlice>(
+    raw_body: B,
+) -> FrameParseResult<LayoutVerified<B, ExtendedChannelSwitchAnnouncement>> {
+    LayoutVerified::new(raw_body).ok_or(FrameParseError::new(
+        "Invalid length for Extended Channel Switch Announcement element",
+    ))
+}
+
+pub fn parse_wide_bandwidth_channel_switch<B: ByteSlice>(
+    raw_body: B,
+) -> FrameParseResult<LayoutVerified<B, WideBandwidthChannelSwitch>> {
+    LayoutVerified::new(raw_body)
+        .ok_or(FrameParseError::new("Invalid length for Wide Bandwidth Channel Switch element"))
+}
+
+pub fn parse_transmit_power_envelope<B: ByteSlice>(
+    raw_body: B,
+) -> FrameParseResult<TransmitPowerEnvelopeView<B>> {
+    let mut reader = BufferReader::new(raw_body);
+    let transmit_power_info = reader
+        .read::<TransmitPowerInfo>()
+        .ok_or(FrameParseError::new("Transmit Power Envelope element too short"))?;
+    if transmit_power_info.max_transmit_power_count() > 3 {
+        return FrameParseResult::Err(FrameParseError::new(
+            "Invalid transmit power count for Transmit Power Envelope element",
+        ));
+    }
+    let expected_bytes_remaining = transmit_power_info.max_transmit_power_count() as usize + 1;
+    if reader.bytes_remaining() < expected_bytes_remaining {
+        return FrameParseResult::Err(FrameParseError::new(
+            "Transmit Power Envelope element too short",
+        ));
+    } else if reader.bytes_remaining() > expected_bytes_remaining {
+        return FrameParseResult::Err(FrameParseError::new(
+            "Transmit Power Envelope element too long",
+        ));
+    }
+    // Unwrap safe due to checks above.
+    let max_transmit_power_20 = reader.read().unwrap();
+    let max_transmit_power_40 = reader.read();
+    let max_transmit_power_80 = reader.read();
+    let max_transmit_power_160 = reader.read();
+    FrameParseResult::Ok(TransmitPowerEnvelopeView {
+        transmit_power_info,
+        max_transmit_power_20,
+        max_transmit_power_40,
+        max_transmit_power_80,
+        max_transmit_power_160,
+    })
+}
+
+pub fn parse_channel_switch_wrapper<B: ByteSlice>(
+    raw_body: B,
+) -> FrameParseResult<ChannelSwitchWrapperView<B>> {
+    let mut result = ChannelSwitchWrapperView {
+        new_country: None,
+        wide_bandwidth_channel_switch: None,
+        new_transmit_power_envelope: None,
+    };
+    let ie_reader = crate::ie::Reader::new(raw_body);
+    for (ie_id, ie_body) in ie_reader {
+        match ie_id {
+            Id::COUNTRY => {
+                result.new_country.replace(parse_country(ie_body)?);
+            }
+            Id::WIDE_BANDWIDTH_CHANNEL_SWITCH => {
+                result
+                    .wide_bandwidth_channel_switch
+                    .replace(parse_wide_bandwidth_channel_switch(ie_body)?);
+            }
+            Id::TRANSMIT_POWER_ENVELOPE => {
+                result.new_transmit_power_envelope.replace(parse_transmit_power_envelope(ie_body)?);
+            }
+            _ => {
+                return Err(FrameParseError::new(
+                    "Unexpected sub-element Id in Channel Switch Wrapper",
+                ));
+            }
+        }
+    }
+    FrameParseResult::Ok(result)
+}
+
 pub fn parse_vendor_ie<B: ByteSlice>(raw_body: B) -> FrameParseResult<VendorIe<B>> {
     let mut reader = BufferReader::new(raw_body);
     let oui = *reader.read::<Oui>().ok_or(FrameParseError::new("Failed to read vendor OUI"))?;
@@ -389,6 +479,171 @@ mod tests {
             "Element body is too short to include the whole country string",
             err.debug_message()
         );
+    }
+
+    #[test]
+    pub fn channel_switch_announcement() {
+        let raw_csa = [1, 30, 40];
+        let csa =
+            parse_channel_switch_announcement(&raw_csa[..]).expect("valid CSA should result in OK");
+        assert_eq!(csa.mode, 1);
+        assert_eq!(csa.new_channel_number, 30);
+        assert_eq!(csa.channel_switch_count, 40);
+    }
+
+    #[test]
+    pub fn extended_channel_switch_announcement() {
+        let raw_ecsa = [1, 20, 30, 40];
+        let ecsa = parse_extended_channel_switch_announcement(&raw_ecsa[..])
+            .expect("valid CSA should result in OK");
+        assert_eq!(ecsa.mode, 1);
+        assert_eq!(ecsa.new_operating_class, 20);
+        assert_eq!(ecsa.new_channel_number, 30);
+        assert_eq!(ecsa.channel_switch_count, 40);
+    }
+
+    #[test]
+    pub fn wide_bandwidth_channel_switch() {
+        let raw_wbcs = [40, 10, 20];
+        let wbcs = parse_wide_bandwidth_channel_switch(&raw_wbcs[..])
+            .expect("valid WBCS should result in OK");
+        assert_eq!(wbcs.new_width, 40);
+        assert_eq!(wbcs.new_center_freq_seg0, 10);
+        assert_eq!(wbcs.new_center_freq_seg1, 20);
+    }
+
+    #[test]
+    pub fn transmit_power_envelope_view() {
+        #[rustfmt::skip]
+        let raw_tpe = [
+            // transmit power information: All fields present, EIRP unit
+            0b00_000_011,
+            20, 40, 80, 160,
+        ];
+        let tpe =
+            parse_transmit_power_envelope(&raw_tpe[..]).expect("valid TPE should result in OK");
+        assert_eq!(tpe.transmit_power_info.max_transmit_power_count(), 3);
+        assert_eq!(
+            tpe.transmit_power_info.max_transmit_power_unit_interpretation(),
+            MaxTransmitPowerUnitInterpretation::EIRP
+        );
+        assert_eq!(*tpe.max_transmit_power_20, TransmitPower(20));
+        assert_eq!(tpe.max_transmit_power_40.map(|t| *t), Some(TransmitPower(40)));
+        assert_eq!(tpe.max_transmit_power_80.map(|t| *t), Some(TransmitPower(80)));
+        assert_eq!(tpe.max_transmit_power_160.map(|t| *t), Some(TransmitPower(160)));
+    }
+
+    #[test]
+    pub fn transmit_power_envelope_view_20_only() {
+        #[rustfmt::skip]
+        let raw_tpe = [
+            // transmit power information: Only 20 MHz, EIRP unit
+            0b00_000_000,
+            20,
+        ];
+        let tpe =
+            parse_transmit_power_envelope(&raw_tpe[..]).expect("valid TPE should result in OK");
+        assert_eq!(tpe.transmit_power_info.max_transmit_power_count(), 0);
+        assert_eq!(
+            tpe.transmit_power_info.max_transmit_power_unit_interpretation(),
+            MaxTransmitPowerUnitInterpretation::EIRP
+        );
+        assert_eq!(*tpe.max_transmit_power_20, TransmitPower(20));
+        assert_eq!(tpe.max_transmit_power_40, None);
+        assert_eq!(tpe.max_transmit_power_80, None);
+        assert_eq!(tpe.max_transmit_power_160, None);
+    }
+
+    #[test]
+    pub fn transmit_power_envelope_view_too_long() {
+        #[rustfmt::skip]
+        let raw_tpe = [
+            // transmit power information: Only 20 MHz, EIRP unit
+            0b00_000_000,
+            20, 40, 80, 160
+        ];
+        let err = parse_transmit_power_envelope(&raw_tpe[..]).err().expect("expected Err");
+        assert_eq!("Transmit Power Envelope element too long", err.debug_message());
+    }
+
+    #[test]
+    pub fn transmit_power_envelope_view_too_short() {
+        #[rustfmt::skip]
+        let raw_tpe = [
+            // transmit power information: 20 + 40 MHz, EIRP unit
+            0b00_000_001,
+            20,
+        ];
+        let err = parse_transmit_power_envelope(&raw_tpe[..]).err().expect("expected Err");
+        assert_eq!("Transmit Power Envelope element too short", err.debug_message());
+    }
+
+    #[test]
+    pub fn transmit_power_envelope_invalid_count() {
+        #[rustfmt::skip]
+        let raw_tpe = [
+            // transmit power information: Invalid count (4), EIRP unit
+            0b00_000_100,
+            20,
+        ];
+        let err = parse_transmit_power_envelope(&raw_tpe[..]).err().expect("expected Err");
+        assert_eq!(
+            "Invalid transmit power count for Transmit Power Envelope element",
+            err.debug_message()
+        );
+    }
+
+    #[test]
+    pub fn channel_switch_wrapper_view() {
+        #[rustfmt::skip]
+        let raw_csw = [
+            Id::COUNTRY.0, 3, b'U', b'S', b'O',
+            Id::WIDE_BANDWIDTH_CHANNEL_SWITCH.0, 3, 40, 10, 20,
+            Id::TRANSMIT_POWER_ENVELOPE.0, 2, 0b00_000_000, 20,
+        ];
+        let csw =
+            parse_channel_switch_wrapper(&raw_csw[..]).expect("valid CSW should result in OK");
+        let country = csw.new_country.expect("New country present in CSW.");
+        assert_eq!(country.country_code, [b'U', b'S']);
+        assert_eq!(country.environment, CountryEnvironment::OUTDOOR);
+        assert_variant!(csw.wide_bandwidth_channel_switch, Some(wbcs) => {
+            assert_eq!(wbcs.new_width, 40);
+            assert_eq!(wbcs.new_center_freq_seg0, 10);
+            assert_eq!(wbcs.new_center_freq_seg1, 20);
+        });
+        let tpe = csw.new_transmit_power_envelope.expect("Transmit power present in CSW.");
+        assert_eq!(*tpe.max_transmit_power_20, TransmitPower(20));
+        assert_eq!(tpe.max_transmit_power_40, None);
+        assert_eq!(tpe.max_transmit_power_80, None);
+        assert_eq!(tpe.max_transmit_power_160, None);
+    }
+
+    #[test]
+    pub fn partial_channel_switch_wrapper_view() {
+        #[rustfmt::skip]
+        let raw_csw = [
+            Id::WIDE_BANDWIDTH_CHANNEL_SWITCH.0, 3, 40, 10, 20,
+        ];
+        let csw =
+            parse_channel_switch_wrapper(&raw_csw[..]).expect("valid CSW should result in OK");
+        assert!(csw.new_country.is_none());
+        assert_variant!(csw.wide_bandwidth_channel_switch, Some(wbcs) => {
+            assert_eq!(wbcs.new_width, 40);
+            assert_eq!(wbcs.new_center_freq_seg0, 10);
+            assert_eq!(wbcs.new_center_freq_seg1, 20);
+        });
+        assert!(csw.new_transmit_power_envelope.is_none());
+    }
+
+    #[test]
+    pub fn channel_switch_wrapper_view_unexpected_subelement() {
+        #[rustfmt::skip]
+        let raw_csw = [
+            Id::WIDE_BANDWIDTH_CHANNEL_SWITCH.0, 3, 40, 10, 20,
+            Id::HT_OPERATION.0, 3, 1, 2, 3,
+        ];
+        let err = parse_channel_switch_wrapper(&raw_csw[..]).err().expect("expected Err");
+        assert_eq!("Unexpected sub-element Id in Channel Switch Wrapper", err.debug_message());
     }
 
     #[test]

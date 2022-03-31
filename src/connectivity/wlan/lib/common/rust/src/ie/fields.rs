@@ -147,12 +147,14 @@ pub struct CountryView<B> {
     pub subbands: B,
 }
 
+// IEEE Std 802.11-2016 Annex C, dot11CountryString
 #[derive(Debug, PartialOrd, PartialEq, Clone, Copy)]
 pub struct CountryEnvironment(pub u8);
 
 impl CountryEnvironment {
     pub const INDOOR: Self = Self(b'I');
     pub const OUTDOOR: Self = Self(b'O');
+    pub const NON_COUNTRY: Self = Self(b'X');
     pub const ANY: Self = Self(b' ');
 }
 
@@ -941,6 +943,77 @@ impl<B: ByteSlice> PerrDestinationIter<B> {
     pub fn bytes_remaining(&self) -> usize {
         self.0.bytes_remaining()
     }
+}
+
+// IEEE Std 802.11-2016 9.4.2.19: Channel Switch Announcement element
+// The element used to advertise a scheduled AP channel switch.
+#[repr(C, packed)]
+#[derive(Clone, Copy, Debug, AsBytes, FromBytes)]
+pub struct ChannelSwitchAnnouncement {
+    pub mode: u8,
+    pub new_channel_number: u8,
+    pub channel_switch_count: u8,
+}
+
+// IEEE Std 802.11-2016 9.4.2.53: Extended Channel Switch Announcement element
+// The extended element used to advertise a scheduled AP channel switch with
+// an operating class switch.
+#[repr(C, packed)]
+#[derive(Clone, Copy, Debug, AsBytes, FromBytes)]
+pub struct ExtendedChannelSwitchAnnouncement {
+    pub mode: u8,
+    pub new_operating_class: u8,
+    pub new_channel_number: u8,
+    pub channel_switch_count: u8,
+}
+
+// IEEE Std 802.11-2016 9.4.2.161: Wide Bandwidh Channel Switch element
+#[repr(C, packed)]
+#[derive(Clone, Copy, Debug, AsBytes, FromBytes)]
+pub struct WideBandwidthChannelSwitch {
+    pub new_width: u8,
+    pub new_center_freq_seg0: u8,
+    pub new_center_freq_seg1: u8,
+}
+
+// IEEE Std 802.11-2016, 9.4.2.162, Table 9-255
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+pub struct MaxTransmitPowerUnitInterpretation(pub u8);
+
+impl MaxTransmitPowerUnitInterpretation {
+    pub const EIRP: Self = Self(0);
+}
+
+// IEEE Std 802.11-2016, 9.4.2.162, Figure 9-568
+#[bitfield(
+    0..=2   max_transmit_power_count,
+    3..=5   max_transmit_power_unit_interpretation as MaxTransmitPowerUnitInterpretation(u8),
+    6..=7   _, // reserved
+)]
+#[repr(C)]
+#[derive(Clone, Copy, AsBytes, FromBytes, Unaligned)]
+pub struct TransmitPowerInfo(pub u8);
+
+// IEEE Std 802.11-2016 9.2.4.162: Transmit power is interpreted as an
+// 8-bit 2s complement signed integer with a step of 0.5.
+#[repr(C)]
+#[derive(Clone, Copy, AsBytes, FromBytes, Unaligned, Eq, PartialEq, Debug)]
+pub struct TransmitPower(pub u8);
+
+// IEEE Std 802.11-2016 9.2.4.162: Transmit Power Envelope element
+pub struct TransmitPowerEnvelopeView<B> {
+    pub transmit_power_info: LayoutVerified<B, TransmitPowerInfo>,
+    pub max_transmit_power_20: LayoutVerified<B, TransmitPower>,
+    pub max_transmit_power_40: Option<LayoutVerified<B, TransmitPower>>,
+    pub max_transmit_power_80: Option<LayoutVerified<B, TransmitPower>>,
+    pub max_transmit_power_160: Option<LayoutVerified<B, TransmitPower>>,
+}
+
+// IEEE Std 802.11-2016 9.2.4.163: Channel Switch Wrapper element
+pub struct ChannelSwitchWrapperView<B> {
+    pub new_country: Option<CountryView<B>>,
+    pub wide_bandwidth_channel_switch: Option<LayoutVerified<B, WideBandwidthChannelSwitch>>,
+    pub new_transmit_power_envelope: Option<TransmitPowerEnvelopeView<B>>,
 }
 
 // This enum represents all vendor IEs we know how to parse, plus an Unknown option for all other
