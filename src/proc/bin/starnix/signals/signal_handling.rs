@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::sync::Arc;
+
 use crate::logging::{not_implemented, strace};
 use crate::signals::*;
 use crate::task::*;
@@ -222,6 +224,18 @@ pub fn force_signal(current_task: &CurrentTask, mut siginfo: SignalInfo) {
     strace!(current_task, "forced signal {:?}", siginfo);
     siginfo.force = true;
     send_signal(current_task, siginfo)
+}
+
+/// Return the appropriate task in |thread_group| to send the given signal.
+pub fn get_signal_target(
+    thread_group: &ThreadGroup,
+    _signal: &UncheckedSignal,
+) -> Option<Arc<Task>> {
+    // TODO(fxb/96632): Consider more than the main thread or the first thread in the thread group
+    // to dispatch the signal.
+    let pids = thread_group.kernel.pids.read();
+    pids.get_task(thread_group.leader)
+        .or_else(|| thread_group.tasks.read().iter().next().map(|p| pids.get_task(*p)).flatten())
 }
 
 /// Represents the action to take when signal is delivered.

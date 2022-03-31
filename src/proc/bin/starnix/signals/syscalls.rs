@@ -228,8 +228,7 @@ pub fn sys_kill(
                     if current_task.thread_group == *thread_group {
                         return false;
                     }
-                    // TODO(lindkvist): This should be compared to the init pid.
-                    if thread_group.leader == 0 {
+                    if thread_group.leader == 1 {
                         return false;
                     }
                     true
@@ -358,12 +357,13 @@ where
     // This loop keeps track of whether a signal was sent, so that "on
     // success (at least one signal was sent), zero is returned."
     for thread_group in thread_groups {
-        let leader = task.get_task(thread_group.leader).ok_or(errno!(ESRCH))?;
-        if !task.can_signal(&leader, &unchecked_signal) {
+        let target = get_signal_target(&thread_group, unchecked_signal).ok_or(errno!(ESRCH))?;
+        if !task.can_signal(&target, &unchecked_signal) {
             last_error = errno!(EPERM);
+            continue;
         }
 
-        match send_unchecked_signal(&leader, unchecked_signal) {
+        match send_unchecked_signal(&target, unchecked_signal) {
             Ok(_) => sent_signal = true,
             Err(errno) => last_error = errno,
         }
@@ -527,6 +527,7 @@ pub fn sys_signalfd4(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::auth::Credentials;
     use crate::mm::PAGE_SIZE;
     use crate::testing::*;
     use std::convert::TryInto;
@@ -951,12 +952,137 @@ mod tests {
         assert_eq!(sys_kill(&current_task, current_task.id, SIGINT.into()), Ok(SUCCESS));
     }
 
+    /// A task should be able to signal its own thread group.
+    #[::fuchsia::test]
+    async fn test_kill_own_thread_group() {
+        let (_kernel, init_task) = create_kernel_and_task();
+        let task1 = init_task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+        task1.thread_group.setsid().expect("setsid");
+        let task2 = task1
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+
+        assert_eq!(sys_kill(&task1, 0, SIGINT.into()), Ok(SUCCESS));
+        assert_eq!(task1.signals.read().queued_count(SIGINT), 1);
+        assert_eq!(task2.signals.read().queued_count(SIGINT), 1);
+        assert_eq!(init_task.signals.read().queued_count(SIGINT), 0);
+    }
+
+    /// A task should be able to signal a thread group.
+    #[::fuchsia::test]
+    async fn test_kill_thread_group() {
+        let (_kernel, init_task) = create_kernel_and_task();
+        let task1 = init_task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+        task1.thread_group.setsid().expect("setsid");
+        let task2 = task1
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+
+        assert_eq!(sys_kill(&task1, -task1.id, SIGINT.into()), Ok(SUCCESS));
+        assert_eq!(task1.signals.read().queued_count(SIGINT), 1);
+        assert_eq!(task2.signals.read().queued_count(SIGINT), 1);
+        assert_eq!(init_task.signals.read().queued_count(SIGINT), 0);
+    }
+
+    /// A task should be able to signal everything but init and itself.
+    #[::fuchsia::test]
+    async fn test_kill_all() {
+        let (_kernel, init_task) = create_kernel_and_task();
+        let task1 = init_task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+        task1.thread_group.setsid().expect("setsid");
+        let task2 = task1
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+
+        assert_eq!(sys_kill(&task1, -1, SIGINT.into()), Ok(SUCCESS));
+        assert_eq!(task1.signals.read().queued_count(SIGINT), 0);
+        assert_eq!(task2.signals.read().queued_count(SIGINT), 1);
+        assert_eq!(init_task.signals.read().queued_count(SIGINT), 0);
+    }
+
     /// A task should not be able to signal a nonexistent task.
     #[::fuchsia::test]
-    fn test_kill_invalid_task() {
+    async fn test_kill_inexistant_task() {
         let (_kernel, current_task) = create_kernel_and_task();
 
         assert_eq!(sys_kill(&current_task, 9, SIGINT.into()), error!(ESRCH));
+    }
+
+    /// A task should not be able to signal a task owned by another uid.
+    #[::fuchsia::test]
+    async fn test_kill_invalid_task() {
+        let (_kernel, task1) = create_kernel_and_task();
+        let task2 = task1
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+        *task2.creds.write() = Credentials::from_passwd("bin:x:2:2:bin:/bin:/usr/sbin/nologin")
+            .expect("build credentials");
+
+        assert_eq!(task1.can_signal(&task2, &SIGINT.into()), false);
+        assert_eq!(sys_kill(&task2, task1.id, SIGINT.into()), error!(EPERM));
+        assert_eq!(task1.signals.read().queued_count(SIGINT), 0);
+    }
+
+    /// A task should not be able to signal a task owned by another uid in a thead group.
+    #[::fuchsia::test]
+    async fn test_kill_invalid_task_in_thread_group() {
+        let (_kernel, init_task) = create_kernel_and_task();
+        let task1 = init_task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+        task1.thread_group.setsid().expect("setsid");
+        let task2 = task1
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+        task2.thread_group.setsid().expect("setsid");
+        *task2.creds.write() = Credentials::from_passwd("bin:x:2:2:bin:/bin:/usr/sbin/nologin")
+            .expect("build credentials");
+
+        assert_eq!(task2.can_signal(&task1, &SIGINT.into()), false);
+        assert_eq!(sys_kill(&task2, -task1.id, SIGINT.into()), error!(EPERM));
+        assert_eq!(task1.signals.read().queued_count(SIGINT), 0);
     }
 
     /// A task should not be able to send an invalid signal.
