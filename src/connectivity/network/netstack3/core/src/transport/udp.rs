@@ -108,7 +108,6 @@ impl<I: IpExt, D> Default for UdpState<I, D> {
 struct UdpConnectionState<I: Ip, S> {
     conns: ConnSocketMap<ConnAddr<I::Addr>, S>,
     listeners: ListenerSocketMap<ListenerAddr<I::Addr>>,
-    wildcard_listeners: ListenerSocketMap<NonZeroU16>,
 }
 
 impl<I: Ip, S> Default for UdpConnectionState<I, S> {
@@ -116,7 +115,6 @@ impl<I: Ip, S> Default for UdpConnectionState<I, S> {
         UdpConnectionState {
             conns: ConnSocketMap::default(),
             listeners: ListenerSocketMap::default(),
-            wildcard_listeners: ListenerSocketMap::default(),
         }
     }
 }
@@ -124,7 +122,6 @@ impl<I: Ip, S> Default for UdpConnectionState<I, S> {
 enum LookupResult<I: Ip> {
     Conn(UdpConnId<I>, ConnAddr<I::Addr>),
     Listener(UdpListenerId<I>, ListenerAddr<I::Addr>),
-    WildcardListener(UdpListenerId<I>, NonZeroU16),
 }
 
 impl<I: Ip, S> UdpConnectionState<I, S> {
@@ -140,15 +137,16 @@ impl<I: Ip, S> UdpConnectionState<I, S> {
             .get_id_by_addr(&addr)
             .map(move |id| LookupResult::Conn(UdpConnId::new(id), addr))
             .or_else(|| {
-                let listener = ListenerAddr { addr: local_ip, port: local_port };
-                self.listeners.get_by_addr(&listener).map(move |id| {
-                    LookupResult::Listener(UdpListenerId::new_specified(id), listener)
-                })
+                let listener = ListenerAddr { addr: Some(local_ip), port: local_port };
+                self.listeners
+                    .get_by_addr(&listener)
+                    .map(move |id| LookupResult::Listener(UdpListenerId::new(id), listener))
             })
             .or_else(|| {
-                self.wildcard_listeners.get_by_addr(&local_port).map(move |id| {
-                    LookupResult::WildcardListener(UdpListenerId::new_wildcard(id), local_port)
-                })
+                let listener = ListenerAddr { addr: None, port: local_port };
+                self.listeners
+                    .get_by_addr(&listener)
+                    .map(move |id| LookupResult::Listener(UdpListenerId::new(id), listener))
             })
     }
 
@@ -162,16 +160,18 @@ impl<I: Ip, S> UdpConnectionState<I, S> {
         addrs: impl ExactSizeIterator<Item = &'a SpecifiedAddr<I::Addr>> + Clone,
     ) -> HashSet<NonZeroU16> {
         let mut ports = HashSet::new();
-        ports.extend(self.wildcard_listeners.iter_addrs());
         if addrs.len() == 0 {
             // For wildcard addresses, collect ALL local ports.
             ports.extend(self.listeners.iter_addrs().map(|l| l.port));
             ports.extend(self.conns.iter_addrs().map(|c| c.local_port));
         } else {
             // If `addrs` is not empty, just collect the ones that use the same
-            // local addresses.
+            // local addresses, or all addresses.
             ports.extend(self.listeners.iter_addrs().filter_map(|l| {
-                if addrs.clone().any(|a| a == &l.addr) {
+                if match l.addr {
+                    None => true,
+                    Some(addr) => addrs.clone().any(|a| a == &addr),
+                } {
                     Some(l.port)
                 } else {
                     None
@@ -198,10 +198,10 @@ impl<I: Ip, S> UdpConnectionState<I, S> {
         addr: Option<SpecifiedAddr<I::Addr>>,
         port: NonZeroU16,
     ) -> bool {
-        self.wildcard_listeners.get_by_addr(&port).is_none()
+        self.listeners.get_by_addr(&ListenerAddr { addr: None, port }).is_none()
             && addr
                 .map(|addr| {
-                    self.listeners.get_by_addr(&ListenerAddr { addr, port }).is_none()
+                    self.listeners.get_by_addr(&ListenerAddr { addr: Some(addr), port }).is_none()
                         && !self
                             .conns
                             .iter_addrs()
@@ -259,8 +259,8 @@ impl<I: Ip, S> PortAllocImpl for UdpConnectionState<I, S> {
         let port = NonZeroU16::new(port).unwrap();
         // Check if we have any listeners. Return true if we have no listeners
         // or active connections using the selected local port.
-        self.listeners.get_by_addr(&ListenerAddr { addr: *id.local_addr(), port }).is_none()
-            && self.wildcard_listeners.get_by_addr(&port).is_none()
+        self.listeners.get_by_addr(&ListenerAddr { addr: Some(*id.local_addr()), port }).is_none()
+            && self.listeners.get_by_addr(&ListenerAddr { addr: None, port }).is_none()
             && self
                 .conns
                 .get_id_by_addr(&ConnAddr::from_protocol_flow_and_local_port(id, port))
@@ -315,7 +315,8 @@ impl<A: IpAddress> From<ConnAddr<A>> for UdpConnInfo<A> {
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 struct ListenerAddr<A: IpAddress> {
-    addr: SpecifiedAddr<A>,
+    /// The specific address being listened on, or `None` for all addresses.
+    addr: Option<SpecifiedAddr<A>>,
     port: NonZeroU16,
 }
 
@@ -330,7 +331,7 @@ pub struct UdpListenerInfo<A: IpAddress> {
 
 impl<A: IpAddress> From<ListenerAddr<A>> for UdpListenerInfo<A> {
     fn from(l: ListenerAddr<A>) -> Self {
-        Self { local_ip: Some(l.addr), local_port: l.port }
+        Self { local_ip: l.addr, local_port: l.port }
     }
 }
 
@@ -373,12 +374,6 @@ impl<I: Ip> IdMapCollectionKey for UdpConnId<I> {
     }
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-enum ListenerType {
-    Specified,
-    Wildcard,
-}
-
 /// The ID identifying a UDP listener.
 ///
 /// When a new UDP listener is added, it is given a unique `UdpListenerId`.
@@ -389,35 +384,19 @@ enum ListenerType {
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct UdpListenerId<I: Ip> {
     id: usize,
-    listener_type: ListenerType,
     _marker: IpVersionMarker<I>,
 }
 
 impl<I: Ip> UdpListenerId<I> {
-    fn new_specified(id: usize) -> Self {
-        UdpListenerId {
-            id,
-            listener_type: ListenerType::Specified,
-            _marker: IpVersionMarker::default(),
-        }
-    }
-
-    fn new_wildcard(id: usize) -> Self {
-        UdpListenerId {
-            id,
-            listener_type: ListenerType::Wildcard,
-            _marker: IpVersionMarker::default(),
-        }
+    fn new(id: usize) -> Self {
+        UdpListenerId { id, _marker: IpVersionMarker::default() }
     }
 }
 
 impl<I: Ip> IdMapCollectionKey for UdpListenerId<I> {
-    const VARIANT_COUNT: usize = 2;
+    const VARIANT_COUNT: usize = 1;
     fn get_variant(&self) -> usize {
-        match self.listener_type {
-            ListenerType::Specified => 0,
-            ListenerType::Wildcard => 1,
-        }
+        0
     }
     fn get_id(&self) -> usize {
         self.id
@@ -689,9 +668,7 @@ impl<I: IpExt, C: UdpStateContext<I>> IpTransportContext<I, C> for UdpIpTranspor
             {
                 let id = match socket {
                     LookupResult::Conn(id, _) => id.into(),
-                    LookupResult::Listener(id, _) | LookupResult::WildcardListener(id, _) => {
-                        id.into()
-                    }
+                    LookupResult::Listener(id, _) => id.into(),
                 };
                 ctx.receive_icmp_error(id, err);
             } else {
@@ -737,7 +714,7 @@ impl<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>> BufferIpTransportCo
                     mem::drop(packet);
                     ctx.receive_udp_from_conn(id, conn.remote_ip.get(), conn.remote_port, buffer)
                 }
-                LookupResult::Listener(id, _) | LookupResult::WildcardListener(id, _) => {
+                LookupResult::Listener(id, _) => {
                     let src_port = packet.src_port();
                     mem::drop(packet);
                     ctx.receive_udp_from_listen(id, src_ip, dst_ip.get(), src_port, buffer)
@@ -873,10 +850,7 @@ pub enum UdpSendListenerError {
 
 /// Send a UDP packet on an existing listener.
 ///
-/// `send_udp_listener` sends a UDP packet on an existing listener. The caller
-/// must specify the local address in order to disambiguate in case the listener
-/// is bound to multiple local addresses. If the listener is not bound to the
-/// local address provided, `send_udp_listener` will fail.
+/// `send_udp_listener` sends a UDP packet on an existing listener.
 ///
 /// # Panics
 ///
@@ -885,7 +859,6 @@ pub enum UdpSendListenerError {
 pub fn send_udp_listener<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>(
     ctx: &mut C,
     listener: UdpListenerId<I>,
-    local_ip: Option<SpecifiedAddr<I::Addr>>,
     remote_ip: SpecifiedAddr<I::Addr>,
     remote_port: NonZeroU16,
     body: B,
@@ -897,6 +870,13 @@ pub fn send_udp_listener<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>
     //
     // Also, if the local IP address is a multicast address this function should
     // probably fail and `send_udp` must be used instead.
+    let state = ctx.get_first_state();
+    let ListenerAddr { addr: local_ip, port: local_port } = state
+        .conn_state
+        .listeners
+        .get_by_listener(listener.id)
+        .expect("specified listener not found")[0];
+
     let sock = match ctx.new_ip_socket(
         None,
         local_ip,
@@ -907,37 +887,6 @@ pub fn send_udp_listener<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>
     ) {
         Ok(sock) => sock,
         Err(err) => return Err((body, UdpSendListenerError::CreateSock(err))),
-    };
-
-    let state = ctx.get_first_state();
-    let local_port = match listener.listener_type {
-        ListenerType::Specified => {
-            let addrs = state
-                .conn_state
-                .listeners
-                .get_by_listener(listener.id)
-                .expect("specified listener not found");
-            // We found the listener. Make sure at least one of the addresses
-            // associated with it is the local_ip the caller passed.
-            match addrs.iter().find_map(|addr| {
-                if &addr.addr == sock.local_ip() {
-                    Some(addr.port)
-                } else {
-                    None
-                }
-            }) {
-                Some(port) => port,
-                None => return Err((body, UdpSendListenerError::LocalIpAddrMismatch)),
-            }
-        }
-        ListenerType::Wildcard => {
-            let ports = state
-                .conn_state
-                .wildcard_listeners
-                .get_by_listener(listener.id)
-                .expect("wildcard listener not found");
-            ports[0]
-        }
     };
 
     ctx.send_ip_packet(
@@ -1003,7 +952,7 @@ pub fn connect_udp<I: IpExt, C: UdpStateContext<I>>(
     };
 
     let c = ConnAddr { local_ip, local_port, remote_ip, remote_port };
-    let listener = ListenerAddr { addr: local_ip, port: local_port };
+    let listener = ListenerAddr { addr: Some(local_ip), port: local_port };
     let state = ctx.get_first_state_mut();
     if state.conn_state.conns.get_id_by_addr(&c).is_some()
         || state.conn_state.listeners.get_by_addr(&listener).is_some()
@@ -1082,23 +1031,15 @@ pub fn listen_udp<I: IpExt, C: UdpStateContext<I>>(
         try_alloc_listen_port(ctx, &used_ports)
             .ok_or(LocalAddressError::FailedToAllocateLocalPort)?
     };
-    match addr {
-        None => {
-            let state = ctx.get_first_state_mut();
-            Ok(UdpListenerId::new_wildcard(
-                state.conn_state.wildcard_listeners.insert(alloc::vec![port]),
-            ))
-        }
-        Some(addr) => {
-            if !ctx.is_assigned_local_addr(addr.get()) {
-                return Err(LocalAddressError::CannotBindToAddress);
-            }
-            let state = ctx.get_first_state_mut();
-            Ok(UdpListenerId::new_specified(
-                state.conn_state.listeners.insert(alloc::vec![ListenerAddr { addr, port }]),
-            ))
+    if let Some(addr) = addr {
+        if !ctx.is_assigned_local_addr(addr.get()) {
+            return Err(LocalAddressError::CannotBindToAddress);
         }
     }
+    let state = ctx.get_first_state_mut();
+    Ok(UdpListenerId::new(
+        state.conn_state.listeners.insert(alloc::vec![ListenerAddr { addr, port }]),
+    ))
 }
 
 /// Removes a previously registered UDP listener.
@@ -1115,30 +1056,17 @@ pub fn remove_udp_listener<I: IpExt, C: UdpStateContext<I>>(
     id: UdpListenerId<I>,
 ) -> UdpListenerInfo<I::Addr> {
     let state = ctx.get_first_state_mut();
-    match id.listener_type {
-        ListenerType::Specified => state
-            .conn_state
-            .listeners
-            .remove_by_listener(id.id)
-            .expect("Invalid UDP listener ID")
-            // NOTE(brunodalbo) ListenerSocketMap keeps vecs internally, but we
-            // always only add a single address, so unwrap the first one.
-            .first()
-            .expect("Unexpected empty UDP listener")
-            .clone()
-            .into(),
-        ListenerType::Wildcard => state
-            .conn_state
-            .wildcard_listeners
-            .remove_by_listener(id.id)
-            .expect("Invalid UDP listener ID")
-            // NOTE(brunodalbo) ListenerSocketMap keeps vecs internally, but we
-            // always only add a single address, so unwrap the first one.
-            .first()
-            .expect("Unexpected empty UDP listener")
-            .clone()
-            .into(),
-    }
+    state
+        .conn_state
+        .listeners
+        .remove_by_listener(id.id)
+        .expect("Invalid UDP listener ID")
+        // NOTE(brunodalbo) ListenerSocketMap keeps vecs internally, but we
+        // always only add a single address, so unwrap the first one.
+        .first()
+        .expect("Unexpected empty UDP listener")
+        .clone()
+        .into()
 }
 
 /// Gets the [`UdpListenerInfo`] associated with the UDP listener referenced by
@@ -1152,28 +1080,16 @@ pub fn get_udp_listener_info<I: IpExt, C: UdpStateContext<I>>(
     id: UdpListenerId<I>,
 ) -> UdpListenerInfo<I::Addr> {
     let state = ctx.get_first_state();
-    match id.listener_type {
-        ListenerType::Specified => state
-            .conn_state
-            .listeners
-            .get_by_listener(id.id)
-            .expect("UDP listener not found")
-            // NOTE(brunodalbo) ListenerSocketMap keeps vecs internally, but we
-            // always only add a single address, so unwrap the first one.
-            .first()
-            .map(|l| l.clone().into())
-            .expect("Unexpected empty UDP listener"),
-        ListenerType::Wildcard => state
-            .conn_state
-            .wildcard_listeners
-            .get_by_listener(id.id)
-            .expect("UDP listener not found")
-            // NOTE(brunodalbo) ListenerSocketMap keeps vecs internally, but we
-            // always only add a single address, so unwrap the first one.
-            .first()
-            .map(|l| l.clone().into())
-            .expect("Unexpected empty UDP listener"),
-    }
+    state
+        .conn_state
+        .listeners
+        .get_by_listener(id.id)
+        .expect("UDP listener not found")
+        // NOTE(brunodalbo) ListenerSocketMap keeps vecs internally, but we
+        // always only add a single address, so unwrap the first one.
+        .first()
+        .map(|l| l.clone().into())
+        .expect("Unexpected empty UDP listener")
 }
 
 /// An error when attempting to create a UDP socket.
@@ -1463,7 +1379,6 @@ mod tests {
         // Create a listener on local port 100, bound to the local IP:
         let listener = listen_udp::<I, _>(&mut ctx, Some(local_ip), NonZeroU16::new(100))
             .expect("listen_udp failed");
-        assert_eq!(listener.listener_type, ListenerType::Specified);
 
         // Inject a packet and check that the context receives it:
         let body = [1, 2, 3, 4, 5];
@@ -1489,7 +1404,6 @@ mod tests {
         send_udp_listener(
             &mut ctx,
             listener,
-            Some(local_ip),
             remote_ip,
             NonZeroU16::new(200).unwrap(),
             Buf::new(body.to_vec(), ..),
@@ -1499,7 +1413,6 @@ mod tests {
         send_udp_listener(
             &mut ctx,
             listener,
-            None,
             remote_ip,
             NonZeroU16::new(200).unwrap(),
             Buf::new(body.to_vec(), ..),
@@ -1699,7 +1612,7 @@ mod tests {
                     .conn_state
                     .listeners
                     .insert(vec![ListenerAddr {
-                        addr: local_ip,
+                        addr: Some(local_ip),
                         port: NonZeroU16::new(port_num).unwrap(),
                     }]);
         }
@@ -2072,7 +1985,6 @@ mod tests {
         let remote_port = NonZeroU16::new(200).unwrap();
         let listener =
             listen_udp::<I, _>(&mut ctx, None, Some(listener_port)).expect("listen_udp failed");
-        assert_eq!(listener.listener_type, ListenerType::Wildcard);
 
         let body = [1, 2, 3, 4, 5];
         receive_udp_packet(
@@ -2227,22 +2139,16 @@ mod tests {
         // Create some listeners and connections.
 
         // Wildcard listeners
-        assert_eq!(
-            listen_udp::<I, _>(&mut ctx, None, Some(pa)),
-            Ok(UdpListenerId::new_wildcard(0))
-        );
-        assert_eq!(
-            listen_udp::<I, _>(&mut ctx, None, Some(pb)),
-            Ok(UdpListenerId::new_wildcard(1))
-        );
+        assert_eq!(listen_udp::<I, _>(&mut ctx, None, Some(pa)), Ok(UdpListenerId::new(0)));
+        assert_eq!(listen_udp::<I, _>(&mut ctx, None, Some(pb)), Ok(UdpListenerId::new(1)));
         // Specified address listeners
         assert_eq!(
             listen_udp::<I, _>(&mut ctx, Some(local_ip), Some(pc)),
-            Ok(UdpListenerId::new_specified(0))
+            Ok(UdpListenerId::new(2))
         );
         assert_eq!(
             listen_udp::<I, _>(&mut ctx, Some(local_ip_2), Some(pd)),
-            Ok(UdpListenerId::new_specified(1))
+            Ok(UdpListenerId::new(3))
         );
         // Connections
         assert_eq!(
@@ -2298,11 +2204,12 @@ mod tests {
         let conn_state =
             &DualStateContext::<UdpState<I, DummyDeviceId>, _>::get_first_state(&ctx).conn_state;
         let wildcard_port = conn_state
-            .wildcard_listeners
+            .listeners
             .get_by_listener(wildcard_list.id)
             .unwrap()
             .first()
             .unwrap()
+            .port
             .clone();
         let specified_port =
             conn_state.listeners.get_by_listener(specified_list.id).unwrap().first().unwrap().port;
@@ -2377,7 +2284,7 @@ mod tests {
         assert_eq!(
             DualStateContext::<UdpState<I, DummyDeviceId>, _>::get_first_state(&ctx)
                 .conn_state
-                .wildcard_listeners
+                .listeners
                 .get_by_listener(list.id),
             None
         );
@@ -2466,12 +2373,12 @@ mod tests {
             let mut ctx = DummyCtx::default();
             assert_eq!(
                 listen_udp(&mut ctx, None, Some(NonZeroU16::new(1).unwrap())).unwrap(),
-                UdpListenerId::new_wildcard(0)
+                UdpListenerId::new(0)
             );
             assert_eq!(
                 listen_udp(&mut ctx, Some(local_ip::<I>()), Some(NonZeroU16::new(2).unwrap()))
                     .unwrap(),
-                UdpListenerId::new_specified(0)
+                UdpListenerId::new(1)
             );
             assert_eq!(
                 connect_udp(
@@ -2539,14 +2446,14 @@ mod tests {
             receive_icmp_error(&mut ctx, src_ip.get(), dst_ip.get(), 2, 4, err, f);
             assert_eq!(
                 &ctx.get_ref().icmp_errors.as_slice()[1..],
-                [IcmpError { id: UdpListenerId::new_specified(0).into(), err }]
+                [IcmpError { id: UdpListenerId::new(1).into(), err }]
             );
 
             // Test that we receive an error for the wildcard listener.
             receive_icmp_error(&mut ctx, src_ip.get(), dst_ip.get(), 1, 4, err, f);
             assert_eq!(
                 &ctx.get_ref().icmp_errors.as_slice()[2..],
-                [IcmpError { id: UdpListenerId::new_wildcard(0).into(), err }]
+                [IcmpError { id: UdpListenerId::new(0).into(), err }]
             );
 
             // Test that we receive an error for the wildcard listener even if
@@ -2554,7 +2461,7 @@ mod tests {
             receive_icmp_error(&mut ctx, src_ip.get(), other_remote_ip, 1, 5, err, f);
             assert_eq!(
                 &ctx.get_ref().icmp_errors.as_slice()[3..],
-                [IcmpError { id: UdpListenerId::new_wildcard(0).into(), err }]
+                [IcmpError { id: UdpListenerId::new(0).into(), err }]
             );
 
             // Test that an error that doesn't correspond to any connection or

@@ -341,12 +341,12 @@ impl<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>> BufferTransportStat
     fn send_listener(
         ctx: &mut C,
         listener: Self::ListenerId,
-        local_ip: Option<SpecifiedAddr<I::Addr>>,
+        _local_ip: Option<SpecifiedAddr<I::Addr>>,
         remote_ip: SpecifiedAddr<I::Addr>,
         remote_id: Self::RemoteIdentifier,
         body: B,
     ) -> Result<(), (B, Self::SendListenerError)> {
-        send_udp_listener(ctx, listener, local_ip, remote_ip, remote_id, body)
+        send_udp_listener(ctx, listener, remote_ip, remote_id, body)
     }
 }
 
