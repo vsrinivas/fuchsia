@@ -8,6 +8,14 @@
     capabilities: [
         { protocol: "fuchsia.test.Suite" },
     ],
+    use: [
+        {
+            directory: "hub",
+            from: "framework",
+            rights: [ "r*" ],
+            path: "/hub",
+        },
+    ],
     expose: [
         {
             protocol: "fuchsia.test.Suite",

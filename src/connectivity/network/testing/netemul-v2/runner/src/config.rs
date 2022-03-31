@@ -8,7 +8,8 @@ use fidl_fuchsia_net_ext as fnet_ext;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_netemul as fnetemul;
 use fidl_fuchsia_netemul_network as fnetemul_network;
-use log::{debug, info};
+use fidl_fuchsia_sys2 as fsys2;
+use log::{debug, info, warn};
 use std::{
     collections::{hash_map, HashMap, HashSet},
     convert::TryFrom,
@@ -95,12 +96,14 @@ pub(crate) struct Interface {
 struct UnvalidatedConfig {
     networks: Vec<Network>,
     netstacks: Vec<Netstack>,
+    eager_components: Vec<String>,
 }
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct Config {
     networks: Vec<Network>,
     netstacks: Vec<Netstack>,
+    eager_components: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -321,10 +324,15 @@ impl TryFrom<Dictionary> for UnvalidatedConfig {
             .into_iter()
             .map(|dict| Dictionary::try_from(dict).and_then(Netstack::try_from))
             .collect::<Result<Vec<_>, _>>()?;
+        let eager_components = program
+            .try_take_str_vec("start")
+            .transpose()
+            .map_err(|e| anyhow!("`start` is not a list of strings: {:?}", e))?
+            .unwrap_or_default();
 
         program.into_empty().map_err(|e| anyhow!("unrecognized fields in `program`: {:?}", e))?;
 
-        Ok(Self { networks, netstacks })
+        Ok(Self { networks, netstacks, eager_components })
     }
 }
 
@@ -345,16 +353,16 @@ pub(crate) enum Error {
     EndpointNameExceedsMaximumLength(String),
     #[error("unknown endpoint `{0}`, must be declared on a network")]
     UnknownEndpoint(String),
+    #[error("duplicate eager component `{0}`, component names must be unique")]
+    DuplicateEagerComponent(String),
 }
 
 impl UnvalidatedConfig {
     fn validate(self) -> Result<Config, Error> {
-        let Self { networks, netstacks } = &self;
+        let Self { networks, netstacks, eager_components } = &self;
 
         let mut network_names = HashSet::new();
         let mut installed_endpoints = HashMap::new();
-        let mut netstack_names = HashSet::new();
-
         for Network { name, endpoints } in networks {
             if !network_names.insert(name) {
                 return Err(Error::DuplicateNetwork(name.to_string()));
@@ -369,6 +377,7 @@ impl UnvalidatedConfig {
             }
         }
 
+        let mut netstack_names = HashSet::new();
         for Netstack { name, interfaces } in netstacks {
             if !netstack_names.insert(name) {
                 return Err(Error::DuplicateNetstack(name.to_string()));
@@ -389,8 +398,15 @@ impl UnvalidatedConfig {
             }
         }
 
-        let Self { networks, netstacks } = self;
-        Ok(Config { networks, netstacks })
+        let mut eager_component_names = HashSet::new();
+        for name in eager_components {
+            if !eager_component_names.insert(name) {
+                return Err(Error::DuplicateEagerComponent(name.to_string()));
+            }
+        }
+
+        let Self { networks, netstacks, eager_components } = self;
+        Ok(Config { networks, netstacks, eager_components })
     }
 }
 
@@ -419,15 +435,18 @@ impl Config {
     ///
     /// A netemul sandbox is used to create virtual networks and endpoints, and the
     /// netstacks to be configured are connected to with `connect_to_netstack`.
+    ///
+    /// Returns a handle to the network environment.
     pub(crate) async fn apply<F>(
         self,
         mut connect_to_netstack: F,
+        lifecycle_controller: fsys2::LifecycleControllerProxy,
     ) -> Result<NetworkEnvironment, anyhow::Error>
     where
         F: FnMut(String) -> Result<fnetemul::ConfigurableNetstackProxy, anyhow::Error>,
     {
         info!("configuring environment for test: {:#?}", self);
-        let Self { networks, netstacks } = self;
+        let Self { networks, netstacks, eager_components } = self;
 
         // Create the networks and endpoints in a netemul sandbox.
         let sandbox = netemul::TestSandbox::new().context("create test sandbox")?;
@@ -486,6 +505,26 @@ impl Config {
                     .await
                     .context("call configure interface")?
                     .map_err(|e| anyhow!("error configuring netstack: {:?}", e))?;
+            }
+        }
+
+        // Start all the eager components now that test setup is complete.
+        for component in eager_components {
+            match lifecycle_controller
+                .start(&format!("./{}", component))
+                .await
+                .context("call start")?
+                .map_err(|e| anyhow!("failed to start component '{}': {:?}", component, e))?
+            {
+                fsys2::StartResult::Started => {}
+                fsys2::StartResult::AlreadyStarted => {
+                    warn!(
+                        "component '{}' was already started during test setup: it probably has \
+                        `eager` startup, which is likely incorrect given it is also managed by the \
+                        netemul test runner",
+                        component,
+                    )
+                }
             }
         }
 
@@ -564,6 +603,7 @@ mod tests {
                     },
                 ],
             }],
+            eager_components: vec!["foo".to_string(), "bar".to_string()],
         }
     }
 
@@ -626,7 +666,8 @@ mod tests {
                     }
                 ]
             }
-        ]
+        ],
+        "start": ["foo", "bar"]
     }
 }
 "#;
@@ -707,6 +748,7 @@ mod tests {
                 },
             ],
             networks: vec![],
+            eager_components: vec![],
         },
         Error::UnknownEndpoint("ep".to_string());
         "netstack interfaces must be declared as endpoints on a network"
@@ -724,6 +766,7 @@ mod tests {
                 },
             ],
             networks: vec![],
+            eager_components: vec![],
         },
         Error::DuplicateNetstack("netstack".to_string());
         "netstack names must be unique"
@@ -741,6 +784,7 @@ mod tests {
                     endpoints: vec![],
                 },
             ],
+            eager_components: vec![],
         },
         Error::DuplicateNetwork("net".to_string());
         "network names must be unique"
@@ -769,6 +813,7 @@ mod tests {
                     ],
                 },
             ],
+            eager_components: vec![],
         },
         Error::DuplicateEndpoint("ep".to_string());
         "endpoint names must be unique"
@@ -790,6 +835,7 @@ mod tests {
                     ],
                 },
             ],
+            eager_components: vec![],
         },
         Error::EndpointNameExceedsMaximumLength("overly-long-ep-name".to_string());
         "endpoint name must be <= maximum interface name length"
@@ -834,9 +880,19 @@ mod tests {
                     ],
                 },
             ],
+            eager_components: vec![],
         },
         Error::EndpointAssignedMultipleTimes("ep".to_string());
         "endpoints may only be assigned once to a single netstack"
+    )]
+    #[test_case(
+        UnvalidatedConfig {
+            netstacks: vec![],
+            networks: vec![],
+            eager_components: vec!["server".to_string(), "server".to_string()],
+        },
+        Error::DuplicateEagerComponent("server".to_string());
+        "eager components must be unique"
     )]
     fn invalid_config(config: UnvalidatedConfig, error: Error) {
         assert_eq!(config.validate(), Err(error));
@@ -903,9 +959,18 @@ mod tests {
         diagnostics_log::init!();
 
         let (tx, mut rx) = mpsc::unbounded();
+        let (controller, server_end) =
+            fidl::endpoints::create_proxy::<fsys2::LifecycleControllerMarker>()
+                .expect("create proxy");
+        drop(server_end);
         let configure_environment = async {
-            example_config()
-                .apply(|name| {
+            Config {
+                // Don't test eager components here.
+                eager_components: vec![],
+                ..example_config()
+            }
+            .apply(
+                |name| {
                     let (proxy, server_end) =
                         fidl::endpoints::create_proxy::<fnetemul::ConfigurableNetstackMarker>()
                             .context("create proxy")?;
@@ -914,11 +979,13 @@ mod tests {
                     tx.unbounded_send((name, stream))
                         .expect("request stream receiver should not be closed");
                     Ok(proxy)
-                })
-                .await
-                .expect("configure network environment for test")
+                },
+                controller,
+            )
+            .await
+            .expect("configure network environment for test")
         };
-        let mock_service = async {
+        let mock_netstack = async {
             // Expect netstacks to be configured in the order in which they're declared: the
             // "local" netstack first and "remote" second. The same order applies to the
             // interfaces that are installed in the netstacks.
@@ -954,7 +1021,7 @@ mod tests {
             .await;
         };
         let (NetworkEnvironment { _sandbox: sandbox, _networks, _endpoints }, ()) =
-            futures::future::join(configure_environment, mock_service).await;
+            futures::future::join(configure_environment, mock_netstack).await;
 
         let network_manager = sandbox.get_network_manager().expect("get network manager");
         let networks = network_manager.list_networks().await.expect("list virtual networks");
@@ -967,5 +1034,48 @@ mod tests {
             endpoints,
             vec!["local-ep1".to_string(), "local-ep2".to_string(), "remote-ep".to_string()],
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn eager_components() {
+        diagnostics_log::init!();
+
+        let (controller, controller_requests) =
+            fidl::endpoints::create_proxy_and_stream::<fsys2::LifecycleControllerMarker>()
+                .expect("create proxy and stream");
+        let configure_environment = async {
+            let config = Config {
+                networks: vec![],
+                netstacks: vec![],
+                eager_components: vec!["foo".to_string(), "bar".to_string(), "baz".to_string()],
+            };
+            config
+                .apply(
+                    |_name| {
+                        let (proxy, server_end) =
+                            fidl::endpoints::create_proxy::<fnetemul::ConfigurableNetstackMarker>()
+                                .context("create proxy")?;
+                        drop(server_end);
+                        Ok(proxy)
+                    },
+                    controller,
+                )
+                .await
+                .expect("configure network environment for test")
+        };
+        let mock_lifecycle_controller = controller_requests
+            .map(|request| {
+                let (moniker, responder) = request
+                    .expect("get request")
+                    .into_start()
+                    .expect("unexpected lifecycle controller request");
+                responder.send(&mut Ok(fsys2::StartResult::Started)).expect("send response");
+                moniker
+            })
+            .collect::<Vec<String>>();
+        let (_network_environment, started_components) =
+            futures::future::join(configure_environment, mock_lifecycle_controller).await;
+
+        assert_eq!(started_components, vec!["./foo", "./bar", "./baz"]);
     }
 }

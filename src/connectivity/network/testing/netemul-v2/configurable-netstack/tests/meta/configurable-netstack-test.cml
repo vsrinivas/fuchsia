@@ -50,6 +50,7 @@
                 ],
             },
         ],
+        start: [ "server" ],
     },
     children: [
         {
@@ -59,7 +60,6 @@
         {
             name: "server",
             url: "#meta/server.cm",
-            startup: "eager",
         },
         {
             name: "client-netstack",

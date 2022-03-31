@@ -8,7 +8,6 @@
 use fidl_fuchsia_netemul_sync as fnetemul_sync;
 use net_declare::std_socket_addr;
 
-pub const CLIENT_NAME: &str = "client";
 pub const SERVER_NAME: &str = "server";
 pub const REQUEST: &str = "hello from client";
 pub const RESPONSE: &str = "hello from server";

@@ -4,7 +4,7 @@
 
 #![cfg(test)]
 
-use configurable_netstack_test::{server_ips, Bus, CLIENT_NAME, REQUEST, RESPONSE, SERVER_NAME};
+use configurable_netstack_test::{server_ips, Bus, REQUEST, RESPONSE, SERVER_NAME};
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_ext as fnet_ext;
@@ -18,6 +18,8 @@ use std::{
     collections::HashMap,
     io::{Read as _, Write as _},
 };
+
+pub const CLIENT_NAME: &str = "client";
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn connect_to_server() {

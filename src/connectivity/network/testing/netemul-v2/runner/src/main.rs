@@ -11,7 +11,11 @@ use fidl_fuchsia_component_runner as frunner;
 use fidl_fuchsia_data as fdata;
 use fidl_fuchsia_io as fio;
 use fidl_fuchsia_netemul as fnetemul;
+use fidl_fuchsia_sys2 as fsys2;
 use fidl_fuchsia_test as ftest;
+use fuchsia_component::client::{
+    connect_to_named_protocol_at_dir_root, connect_to_protocol_at_dir_root,
+};
 use fuchsia_component::server::{ServiceFs, ServiceFsDir};
 use fuchsia_zircon as zx;
 use futures::{FutureExt as _, StreamExt as _, TryStreamExt as _};
@@ -41,37 +45,85 @@ async fn main() -> Result<(), anyhow::Error> {
 }
 
 // Performs any necessary test setup, such as reading the specified virtual
-// network configuration and configuring it, and, if successful, returns the
-// '/svc' directory from the test root's namespace.
+// network configuration and configuring it, and, if successful, returns a
+// handle to its network environment, along with the '/svc' directory from the
+// test root's namespace.
 async fn test_setup(
     program: fdata::Dictionary,
     namespace: Vec<frunner::ComponentNamespaceEntry>,
 ) -> Result<(config::NetworkEnvironment, fio::DirectoryProxy), anyhow::Error> {
-    // Retrieve the '/svc' directory from the test root's namespace so we can access
-    // the `fuchsia.test/Suite` protocol from the test driver and any netstacks that
-    // need to be configured.
-    let svc_dir = namespace
-        .into_iter()
-        .find_map(|frunner::ComponentNamespaceEntry { path, directory, .. }| {
-            path.as_ref().and_then(|path| (path == "/svc").then(|| directory))
-        })
+    // Retrieve the '/svc' and '/hub' directories from the test root's namespace, so
+    // that we can:
+    // - access the `fuchsia.test/Suite` protocol from the test driver
+    // - access any netstacks that need to be configured
+    // - use the `fuchsia.sys2/LifecycleController` for the test root to start
+    //   non-test components once test setup is complete
+    let (svc_dir, hub_dir) = namespace.into_iter().fold(
+        (None, None),
+        |(svc_dir, hub_dir), frunner::ComponentNamespaceEntry { path, directory, .. }| match path
+            .as_ref()
+            .map(|s| s.as_str())
+        {
+            Some("/svc") => {
+                assert_eq!(svc_dir, None);
+                (Some(directory), hub_dir)
+            }
+            Some("/hub") => {
+                assert_eq!(hub_dir, None);
+                (svc_dir, Some(directory))
+            }
+            _ => (svc_dir, hub_dir),
+        },
+    );
+
+    let svc_dir = svc_dir
         .context("/svc directory not in namespace")?
         .context("directory field not set for /svc namespace entry")?
         .into_proxy()
         .context("client end into proxy")?;
 
-    let env = config::Config::load_from_program(program)
+    let lifecycle_controller = {
+        let hub_dir = hub_dir
+            .context("/hub directory not in namespace")?
+            .context("directory field not set for /hub namespace entry")?
+            .into_proxy()
+            .context("client end into proxy")?;
+
+        // TODO(https://fxbug.dev/96639): pipeline the `open` call rather than calling
+        // with the `fuchsia.io/OPEN_FLAG_DESCRIBE` flag and waiting for the describe
+        // event signaling that the directory is open.
+        //
+        // We cannot do this currently because there is a race between component manager
+        // opening /hub/debug and sending the start request to this runner, so it's
+        // possible to see a `PEER_CLOSED` error when attempting to interact with the
+        // `fuchsia.sys2/LifecycleController` protocol exposed in that directory.
+        let debug = io_util::directory::open_directory(
+            &hub_dir,
+            "debug",
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        )
+        .await
+        .context("open /hub/debug")?;
+
+        connect_to_protocol_at_dir_root::<fsys2::LifecycleControllerMarker>(&debug)
+            .context("connect to protocol")?
+    };
+
+    let network_environment = config::Config::load_from_program(program)
         .context("retrieving and parsing network configuration")?
-        .apply(|name| {
-            fuchsia_component::client::connect_to_named_protocol_at_dir_root::<
-                fnetemul::ConfigurableNetstackMarker,
-            >(&svc_dir, &name)
-            .context("connect to protocol")
-        })
+        .apply(
+            |name| {
+                connect_to_named_protocol_at_dir_root::<fnetemul::ConfigurableNetstackMarker>(
+                    &svc_dir, &name,
+                )
+                .context("connect to protocol")
+            },
+            lifecycle_controller,
+        )
         .await
         .context("configuring networking environment")?;
 
-    Ok((env, svc_dir))
+    Ok((network_environment, svc_dir))
 }
 
 async fn handle_runner_request(

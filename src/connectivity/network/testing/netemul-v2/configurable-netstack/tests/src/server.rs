@@ -2,22 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use configurable_netstack_test::{server_ips, Bus, CLIENT_NAME, REQUEST, RESPONSE, SERVER_NAME};
+use configurable_netstack_test::{server_ips, Bus, REQUEST, RESPONSE, SERVER_NAME};
 use log::info;
 use std::io::{Read as _, Write as _};
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() {
     diagnostics_log::init!();
-
-    // Wait for the client to join the bus as a proxy for knowing that test setup
-    // has completed (e.g., our netstack has been assigned the requested static IP
-    // addresses).
-    //
-    // TODO(https://fxbug.dev/94244): rather than using eager startup and
-    // synchronizing via the bus, have the netemul runner manage this component's
-    // lifetime and only start it once test setup is complete.
-    Bus::subscribe("wait for test setup").wait_for_client(CLIENT_NAME).await;
 
     let listeners = server_ips()
         .iter()
