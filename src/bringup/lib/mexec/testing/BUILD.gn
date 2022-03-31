@@ -5,12 +5,30 @@
 import("//build/testing/zbi_test_executable.gni")
 
 zbi_test_executable("mexec-zbi-test-entry") {
+  sources = [ "mexec-zbi-test-entry.cc" ]
+  deps = [
+    ":zbi-test-entry",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+source_set("zbi-test-entry") {
+  testonly = true
+
+  public = [ "zbi-test-entry.h" ]
+  public_deps = [
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxc",
+  ]
+
   sources = [ "zbi-test-entry.cc" ]
   deps = [
     "//sdk/lib/fdio",
     "//src/bringup/lib/mexec",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zbitl",
-    "//zircon/system/ulib/zx",
   ]
+
+  data_deps =
+      [ "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true" ]
 }

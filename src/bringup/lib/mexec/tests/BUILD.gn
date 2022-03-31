@@ -18,37 +18,38 @@ zbi_test_executable("no-op-success") {
   sources = [ "no-op-success.cc" ]
 }
 
-zbi_test("smoke-zbi-test") {
-  assert(current_cpu != "")
+# Define both an child zbi_test() and an mexec_zbi_test() using it.
+template("mexec_no_op_success_test") {
+  child_target = "$target_name-zbi-test"
+  mexec_target = "mexec-$target_name-test"
 
-  deps = [
-    ":no-op-success",
-    "//zircon/kernel",
-  ]
+  zbi_test(child_target) {
+    assert(current_cpu != "")
+
+    args = invoker.child_args
+
+    deps = [
+      ":no-op-success",
+      "//zircon/kernel",
+    ]
+  }
+
+  mexec_zbi_test(mexec_target) {
+    child_zbi = ":$child_target.zbi"
+    args = invoker.mexec_args
+  }
 }
 
-# This test is not intended to be run directly, as it relies
-# on requiring entropy from the cmdline.
-# It is intended to be used as part of an mexec_zbi_test.
-zbi_test("entropy-zbi-test") {
-  assert(current_cpu != "")
-
-  args = [ "kernel.cprng-seed-require.cmdline=true" ]
-
-  deps = [
-    ":no-op-success",
-    "//zircon/kernel",
-  ]
+mexec_no_op_success_test("smoke") {
+  # Force the data ZBI to be put above the 4GiB mark in physical memory;
+  # this covers an edge case that can arise with particularly large ZBIs.
+  mexec_args = [ "kernel.mexec-force-high-ramdisk=true" ]
+  child_args = []
 }
 
-mexec_zbi_test("mexec-smoke-test") {
-  child_zbi = ":smoke-zbi-test.zbi"
-
-  # Force that data ZBI to be put above the 4GiB mark in physical memory; this
-  # covers an edge case that can arise with particularly large ZBIs.
-  args = [ "kernel.mexec-force-high-ramdisk=true" ]
-}
-
-mexec_zbi_test("mexec-entropy-test") {
-  child_zbi = ":entropy-zbi-test.zbi"
+# The child test is not intended to be run directly, as it relies on requiring
+# entropy from the cmdline.  It is intended to be used only via the mexec test.
+mexec_no_op_success_test("entropy") {
+  mexec_args = []
+  child_args = [ "kernel.cprng-seed-require.cmdline=true" ]
 }

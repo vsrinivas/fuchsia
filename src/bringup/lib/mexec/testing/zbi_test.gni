@@ -5,26 +5,27 @@
 import("//build/dist/resource.gni")
 import("//build/testing/zbi_test.gni")
 
-# Build a "chain-loading" ZBI test that boots a provided ZBI test via
-# mexec.
+# This is the default if no $deps parameter is passed to mexec_zbi_test().
+mexec_zbi_test_default_deps = [
+  "//src/bringup/lib/mexec/testing:mexec-zbi-test-entry",
+  "//zircon/kernel",
+]
+
+# Build a "chain-loading" ZBI test that boots a provided ZBI test via mexec.
 #
-# `mexec_zbi_test()` defines a new ZBI test (see zbi_test.gni) by a
-# simple program, launched by bootsvc, that loads a specified child ZBI
-# and boots it via mexec.
-#
-# The template always provides the kernel command-line arguments of
-# `kernel.enable-debugging-syscalls` (to enable mexec) and `bootsvc.next`
-# (to specify the chain-loading program), along with those automatically
-# provided by zbi_test().
+# `mexec_zbi_test()` defines a new ZBI test (see zbi_test.gni) by a simple
+# program, launched directly by userboot, that loads a specified child ZBI and
+# boots it via mexec.
 #
 # Parameters
 #
 #   * child_zbi
-#     - Required: Label of the ZBI target to boot via mexec.
-#     The label must be that of a ZBI-defining target like `zbi_test`
-#     or `zbi`. If child_zbi_file is not specified, it must be defined
-#     within the same file and toolchain that this template is instantiated.
-#     The success string is expected to be printed on boot of the child ZBI.
+#     - Required: Label of the ZBI target to boot via mexec.  The success
+#     string is expected to be printed on boot of the child ZBI.  If the
+#     $child_zbi_file parameter is not also specified, this label must name
+#     something like a zbi() target defined within the same file and toolchain
+#     in which this template is instantiated.  That is, a target on which
+#     get_target_outputs() works and whose first output is the ZBI file.
 #     - Type: label
 #
 #   * child_zbi_file
@@ -39,6 +40,23 @@ import("//build/testing/zbi_test.gni")
 #     default by the template; no argument that overrides these should be
 #     provided here.
 #     - Type: list(string)
+#
+#  * deps
+#    - Optional: Dependencies for the *outer* zbi_test() target.
+#    This is what brings both the kernel and the mexec-launcher program
+#    into the outer ZBI, along with kernel command-line args needed to
+#    enable their use.  The default deps include the canonical kernel
+#    and a standard mexec launcher program.
+#    - Type: list(label)
+#    - Default: mexec_zbi_test_default_deps
+#
+#   * metadata
+#     - Optional: Usual meaning, but note the metadata is applied to the
+#     inner resource() target that depends on $child_zbi rather than to
+#     the zbi_test() target (which will collect it anyway).  This allows
+#     the metadata to constrain collection across the $child_zbi deps graph
+#     before it feeds into the zbi() metadata collection in the zbi_test().
+#     - Type: scope
 #
 # See zbi_test() for other parameters.
 #
@@ -60,23 +78,19 @@ template("mexec_zbi_test") {
   }
 
   resource(resource_target) {
+    visibility = [ ":*" ]
     testonly = true
+    forward_variables_from(invoker, [ "metadata" ])
     sources = [ child_zbi_file ]
     outputs = [ "testdata/mexec-child.zbi" ]
     deps = [ invoker.child_zbi ]
   }
 
   zbi_test(test_target) {
-    args = []
-    deps = []
-    forward_variables_from(invoker, "*")
-
-    args += [ "kernel.enable-debugging-syscalls=true" ]
-
-    deps += [
-      ":$resource_target",
-      "//src/bringup/lib/mexec/testing:mexec-zbi-test-entry",
-      "//zircon/kernel",
-    ]
+    forward_variables_from(invoker, "*", [ "metadata" ])
+    if (!defined(deps)) {
+      deps = mexec_zbi_test_default_deps
+    }
+    deps += [ ":$resource_target" ]
   }
 }

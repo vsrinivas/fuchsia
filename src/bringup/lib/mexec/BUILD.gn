@@ -3,8 +3,10 @@
 # found in the LICENSE file.
 
 source_set("mexec") {
-  sources = [ "mexec.cc" ]
+  public = [ "mexec.h" ]
+  public_deps = [ "//zircon/system/ulib/zx" ]
 
+  sources = [ "mexec.cc" ]
   deps = [
     "//sdk/lib/fdio",
     "//zircon/system/ulib/explicit-memory",
@@ -12,8 +14,6 @@ source_set("mexec") {
     "//zircon/system/ulib/zbitl",
     "//zircon/system/ulib/zircon-internal",
   ]
-
-  public_deps = [ "//zircon/system/ulib/zx" ]
 }
 
 group("tests") {
