@@ -5,7 +5,7 @@
 use crate::{
     app_set::{AppSet, AppSetExt as _},
     configuration::Config,
-    cup_ecdsa::StandardCupv2Handler,
+    cup_ecdsa::{Cupv2Handler, StandardCupv2Handler},
     http_request::HttpRequest,
     installer::{Installer, Plan},
     metrics::MetricsReporter,
@@ -22,6 +22,7 @@ use std::rc::Rc;
 use crate::{
     app_set::VecAppSet,
     common::App,
+    cup_ecdsa::test_support::StubCupv2Handler,
     http_request::StubHttpRequest,
     installer::stub::{StubInstaller, StubPlan},
     metrics::StubMetricsReporter,
@@ -33,7 +34,7 @@ use crate::{
 
 /// Helper type to build/start a [`StateMachine`].
 #[derive(Debug)]
-pub struct StateMachineBuilder<PE, HR, IN, TM, MR, ST, AS>
+pub struct StateMachineBuilder<PE, HR, IN, TM, MR, ST, AS, CH>
 where
     PE: PolicyEngine,
     HR: HttpRequest,
@@ -42,6 +43,7 @@ where
     MR: MetricsReporter,
     ST: Storage,
     AS: AppSet,
+    CH: Cupv2Handler,
 {
     policy_engine: PE,
     http: HR,
@@ -51,9 +53,11 @@ where
     storage: Rc<Mutex<ST>>,
     config: Config,
     app_set: Rc<Mutex<AS>>,
+    cup_handler: Option<CH>,
 }
 
-impl<'a, PE, HR, IN, TM, MR, ST, AS> StateMachineBuilder<PE, HR, IN, TM, MR, ST, AS>
+impl<'a, PE, HR, IN, TM, MR, ST, AS>
+    StateMachineBuilder<PE, HR, IN, TM, MR, ST, AS, StandardCupv2Handler>
 where
     PE: 'a + PolicyEngine,
     HR: 'a + HttpRequest,
@@ -75,14 +79,36 @@ where
         config: Config,
         app_set: Rc<Mutex<AS>>,
     ) -> Self {
-        Self { policy_engine, http, installer, timer, metrics_reporter, storage, config, app_set }
+        Self {
+            policy_engine,
+            http,
+            installer,
+            timer,
+            metrics_reporter,
+            storage,
+            config,
+            app_set,
+            cup_handler: None,
+        }
     }
+}
 
+impl<'a, PE, HR, IN, TM, MR, ST, AS, CH> StateMachineBuilder<PE, HR, IN, TM, MR, ST, AS, CH>
+where
+    PE: 'a + PolicyEngine,
+    HR: 'a + HttpRequest,
+    IN: 'a + Installer,
+    TM: 'a + Timer,
+    MR: 'a + MetricsReporter,
+    ST: 'a + Storage,
+    AS: 'a + AppSet,
+    CH: 'a + Cupv2Handler,
+{
     /// Configures the state machine to use the provided policy_engine implementation.
     pub fn policy_engine<PE2: 'a + PolicyEngine>(
         self,
         policy_engine: PE2,
-    ) -> StateMachineBuilder<PE2, HR, IN, TM, MR, ST, AS> {
+    ) -> StateMachineBuilder<PE2, HR, IN, TM, MR, ST, AS, CH> {
         StateMachineBuilder {
             policy_engine,
             http: self.http,
@@ -92,6 +118,7 @@ where
             storage: self.storage,
             config: self.config,
             app_set: self.app_set,
+            cup_handler: self.cup_handler,
         }
     }
 
@@ -99,7 +126,7 @@ where
     pub fn http<HR2: 'a + HttpRequest>(
         self,
         http: HR2,
-    ) -> StateMachineBuilder<PE, HR2, IN, TM, MR, ST, AS> {
+    ) -> StateMachineBuilder<PE, HR2, IN, TM, MR, ST, AS, CH> {
         StateMachineBuilder {
             policy_engine: self.policy_engine,
             http,
@@ -109,6 +136,7 @@ where
             storage: self.storage,
             config: self.config,
             app_set: self.app_set,
+            cup_handler: self.cup_handler,
         }
     }
 
@@ -116,7 +144,7 @@ where
     pub fn installer<IN2: 'a + Installer>(
         self,
         installer: IN2,
-    ) -> StateMachineBuilder<PE, HR, IN2, TM, MR, ST, AS> {
+    ) -> StateMachineBuilder<PE, HR, IN2, TM, MR, ST, AS, CH> {
         StateMachineBuilder {
             policy_engine: self.policy_engine,
             http: self.http,
@@ -126,6 +154,7 @@ where
             storage: self.storage,
             config: self.config,
             app_set: self.app_set,
+            cup_handler: self.cup_handler,
         }
     }
 
@@ -133,7 +162,7 @@ where
     pub fn timer<TM2: 'a + Timer>(
         self,
         timer: TM2,
-    ) -> StateMachineBuilder<PE, HR, IN, TM2, MR, ST, AS> {
+    ) -> StateMachineBuilder<PE, HR, IN, TM2, MR, ST, AS, CH> {
         StateMachineBuilder {
             policy_engine: self.policy_engine,
             http: self.http,
@@ -143,6 +172,7 @@ where
             storage: self.storage,
             config: self.config,
             app_set: self.app_set,
+            cup_handler: self.cup_handler,
         }
     }
 
@@ -150,7 +180,7 @@ where
     pub fn metrics_reporter<MR2: 'a + MetricsReporter>(
         self,
         metrics_reporter: MR2,
-    ) -> StateMachineBuilder<PE, HR, IN, TM, MR2, ST, AS> {
+    ) -> StateMachineBuilder<PE, HR, IN, TM, MR2, ST, AS, CH> {
         StateMachineBuilder {
             policy_engine: self.policy_engine,
             http: self.http,
@@ -160,6 +190,7 @@ where
             storage: self.storage,
             config: self.config,
             app_set: self.app_set,
+            cup_handler: self.cup_handler,
         }
     }
 
@@ -167,7 +198,7 @@ where
     pub fn storage<ST2: 'a + Storage>(
         self,
         storage: Rc<Mutex<ST2>>,
-    ) -> StateMachineBuilder<PE, HR, IN, TM, MR, ST2, AS> {
+    ) -> StateMachineBuilder<PE, HR, IN, TM, MR, ST2, AS, CH> {
         StateMachineBuilder {
             policy_engine: self.policy_engine,
             http: self.http,
@@ -177,6 +208,7 @@ where
             storage,
             config: self.config,
             app_set: self.app_set,
+            cup_handler: self.cup_handler,
         }
     }
 
@@ -190,7 +222,7 @@ where
     pub fn app_set<AS2: 'a + AppSet>(
         self,
         app_set: Rc<Mutex<AS2>>,
-    ) -> StateMachineBuilder<PE, HR, IN, TM, MR, ST, AS2> {
+    ) -> StateMachineBuilder<PE, HR, IN, TM, MR, ST, AS2, CH> {
         StateMachineBuilder {
             policy_engine: self.policy_engine,
             http: self.http,
@@ -200,11 +232,29 @@ where
             storage: self.storage,
             config: self.config,
             app_set,
+            cup_handler: self.cup_handler,
+        }
+    }
+
+    pub fn cup_handler<CH2: 'a + Cupv2Handler>(
+        self,
+        cup_handler: Option<CH2>,
+    ) -> StateMachineBuilder<PE, HR, IN, TM, MR, ST, AS, CH2> {
+        StateMachineBuilder {
+            policy_engine: self.policy_engine,
+            http: self.http,
+            installer: self.installer,
+            timer: self.timer,
+            metrics_reporter: self.metrics_reporter,
+            storage: self.storage,
+            config: self.config,
+            app_set: self.app_set,
+            cup_handler,
         }
     }
 }
 
-impl<'a, PE, HR, IN, TM, MR, ST, AS, IR, PL> StateMachineBuilder<PE, HR, IN, TM, MR, ST, AS>
+impl<'a, PE, HR, IN, TM, MR, ST, AS, CH, IR, PL> StateMachineBuilder<PE, HR, IN, TM, MR, ST, AS, CH>
 where
     PE: 'a + PolicyEngine<InstallResult = IR, InstallPlan = PL>,
     HR: 'a + HttpRequest,
@@ -213,10 +263,11 @@ where
     MR: 'a + MetricsReporter,
     ST: 'a + Storage,
     AS: 'a + AppSet,
+    CH: 'a + Cupv2Handler,
     IR: 'static + Send,
     PL: 'a + Plan,
 {
-    pub async fn build(self) -> StateMachine<PE, HR, IN, TM, MR, ST, AS> {
+    pub async fn build(self) -> StateMachine<PE, HR, IN, TM, MR, ST, AS, CH> {
         let StateMachineBuilder {
             policy_engine,
             http,
@@ -226,6 +277,7 @@ where
             storage,
             config,
             app_set,
+            cup_handler,
         } = self;
 
         let ((), context) = {
@@ -235,7 +287,6 @@ where
         };
 
         let time_source = policy_engine.time_source().clone();
-        let cup_handler = config.omaha_public_keys.as_ref().map(StandardCupv2Handler::new);
 
         StateMachine {
             config,
@@ -296,6 +347,7 @@ impl
         StubMetricsReporter,
         StubStorage,
         VecAppSet,
+        StubCupv2Handler,
     >
 {
     /// Create a new StateMachine with stub implementations and configuration.
@@ -310,7 +362,7 @@ impl
         .build()]);
         let mock_time = MockTimeSource::new_from_now();
 
-        Self::new(
+        StateMachineBuilder::new(
             StubPolicyEngine::new(mock_time),
             StubHttpRequest,
             StubInstaller::default(),
@@ -320,5 +372,6 @@ impl
             config,
             Rc::new(Mutex::new(app_set)),
         )
+        .cup_handler(Some(StubCupv2Handler {}))
     }
 }

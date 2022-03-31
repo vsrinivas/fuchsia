@@ -128,6 +128,8 @@ async fn main_inner() -> Result<(), Error> {
         platform_config.clone(),
         Rc::clone(&app_set),
     )
+    // TODO: add .cup_handler(..) here in order to enable CUPv2 protocol
+    // validation.
     .start()
     .await;
 

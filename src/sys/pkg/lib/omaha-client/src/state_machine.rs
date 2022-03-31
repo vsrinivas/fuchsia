@@ -6,7 +6,7 @@ use crate::{
     app_set::{AppSet, AppSetExt as _},
     common::{App, CheckOptions, CheckTiming},
     configuration::Config,
-    cup_ecdsa::{CupDecorationError, StandardCupv2Handler},
+    cup_ecdsa::{CupDecorationError, Cupv2Handler},
     http_request::{self, HttpRequest},
     installer::{AppInstallResult, Installer, Plan},
     metrics::{ClockType, Metrics, MetricsReporter, UpdateCheckFailureReason},
@@ -65,7 +65,7 @@ const MAX_OMAHA_REQUEST_ATTEMPTS: u64 = 3;
 /// This is the core state machine for a client's update check.  It is instantiated and used to
 /// perform update checks over time or to perform a single update check process.
 #[derive(Debug)]
-pub struct StateMachine<PE, HR, IN, TM, MR, ST, AS>
+pub struct StateMachine<PE, HR, IN, TM, MR, ST, AS, CH>
 where
     PE: PolicyEngine,
     HR: HttpRequest,
@@ -99,7 +99,7 @@ where
     /// When locking both storage and app_set, make sure to always lock storage first.
     app_set: Rc<Mutex<AS>>,
 
-    cup_handler: Option<StandardCupv2Handler>,
+    cup_handler: Option<CH>,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -232,7 +232,7 @@ enum RebootAfterUpdate<T> {
     NotNeeded,
 }
 
-impl<PE, HR, IN, TM, MR, ST, AS, IR, PL> StateMachine<PE, HR, IN, TM, MR, ST, AS>
+impl<PE, HR, IN, TM, MR, ST, AS, IR, PL, CH> StateMachine<PE, HR, IN, TM, MR, ST, AS, CH>
 where
     PE: PolicyEngine<InstallResult = IR, InstallPlan = PL>,
     HR: HttpRequest,
@@ -241,6 +241,7 @@ where
     MR: MetricsReporter,
     ST: Storage,
     AS: AppSet,
+    CH: Cupv2Handler,
     IR: 'static + Send,
     PL: Plan,
 {
@@ -1380,7 +1381,7 @@ fn randomize(n: u64, range: u64) -> u64 {
 }
 
 #[cfg(test)]
-impl<PE, HR, IN, TM, MR, ST, AS, IR, PL> StateMachine<PE, HR, IN, TM, MR, ST, AS>
+impl<PE, HR, IN, TM, MR, ST, AS, IR, PL, CH> StateMachine<PE, HR, IN, TM, MR, ST, AS, CH>
 where
     PE: PolicyEngine<InstallResult = IR, InstallPlan = PL>,
     HR: HttpRequest,
@@ -1389,6 +1390,7 @@ where
     MR: MetricsReporter,
     ST: Storage,
     AS: AppSet,
+    CH: Cupv2Handler,
     IR: 'static + Send,
     PL: Plan,
 {

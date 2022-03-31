@@ -28,6 +28,7 @@ use {
         app_set::VecAppSet,
         common::App,
         configuration::{Config, Updater},
+        cup_ecdsa::StandardCupv2Handler,
         http_request::HttpRequest,
         metrics::StubMetricsReporter,
         policy::StubPolicyEngine,
@@ -112,6 +113,7 @@ where
     let storage = Rc::new(Mutex::new(MemStorage::new()));
     let installer =
         IsolatedInstaller::new(blobfs, paver, cache, resolver, board_name.to_owned(), updater_url);
+    let cup_handler = config.omaha_public_keys.as_ref().map(StandardCupv2Handler::new);
     let state_machine = StateMachineBuilder::new(
         StubPolicyEngine::new(StandardTimeSource),
         http_request,
@@ -121,7 +123,8 @@ where
         storage,
         config,
         Rc::new(Mutex::new(app_set)),
-    );
+    )
+    .cup_handler(cup_handler);
 
     let stream: Vec<StateMachineEvent> = state_machine.oneshot_check().await.collect().await;
 

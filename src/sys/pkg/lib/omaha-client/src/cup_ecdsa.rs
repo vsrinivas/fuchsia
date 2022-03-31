@@ -130,6 +130,10 @@ pub trait Cupv2Verifier {
     ) -> Result<(), CupVerificationError>;
 }
 
+pub trait Cupv2Handler: Cupv2RequestHandler + Cupv2Verifier {}
+
+impl<T> Cupv2Handler for T where T: Cupv2RequestHandler + Cupv2Verifier {}
+
 // Default Cupv2Handler.
 #[derive(Debug)]
 pub struct StandardCupv2Handler {
@@ -277,6 +281,42 @@ pub mod test_support {
         let public_key_id: PublicKeyId = 42.try_into().unwrap();
         let public_keys = make_public_keys_for_test(public_key_id, public_key);
         StandardCupv2Handler::new(&public_keys)
+    }
+
+    pub struct StubCupv2Handler {}
+
+    impl Cupv2RequestHandler for StubCupv2Handler {
+        fn decorate_request(
+            &self,
+            _request: &mut impl CupRequest,
+        ) -> Result<RequestMetadata, CupDecorationError> {
+            Ok(RequestMetadata {
+                request_body: vec![],
+                public_key_id: 0.try_into().unwrap(),
+                nonce: [0u8; 32],
+            })
+        }
+
+        fn verify_response(
+            &self,
+            _request_metadata_hash: &[u8],
+            _resp: &Response<Vec<u8>>,
+            _public_key_id: PublicKeyId,
+        ) -> Result<(), CupVerificationError> {
+            Ok(())
+        }
+    }
+
+    impl Cupv2Verifier for StubCupv2Handler {
+        fn verify_response_with_signature(
+            &self,
+            _ecdsa_signature: DerSignature,
+            _request_metadata_hash: &[u8],
+            _response_body: &[u8],
+            _public_key_id: PublicKeyId,
+        ) -> Result<(), CupVerificationError> {
+            Ok(())
+        }
     }
 }
 
