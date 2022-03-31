@@ -41,9 +41,10 @@ def main():
                 source_filepath = os.path.join(path, filename)
                 filepath = os.path.join(
                     args.dest_root, os.path.relpath(source_filepath, directory))
+                sourcepath = os.path.relpath(source_filepath)
                 if binary_path != filepath:
                     dest_files += [filepath]
-                    print(f'{filepath}={source_filepath}', file=f)
+                    print(f'{filepath}={sourcepath}', file=f)
 
     metadata = {
         'files': dest_files,

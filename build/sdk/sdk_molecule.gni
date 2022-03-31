@@ -67,8 +67,5 @@ template("sdk_molecule") {
         invoker.category,
       ]
     }
-
-    # Manifest output contains the output dir name.
-    no_output_dir_leaks = false
   }
 }
