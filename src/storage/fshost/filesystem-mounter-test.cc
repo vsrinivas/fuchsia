@@ -180,62 +180,67 @@ TEST_F(MounterTest, FactoryMount) {
   ASSERT_TRUE(mounter.FactoryMounted());
 }
 
-TEST_F(MounterTest, PkgfsWillNotMountBeforeData) {
+TEST_F(MounterTest, PkgfsMountsWithBlob) {
   config_ = EmptyConfig();
-  config_.wait_for_data = true;
   TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
   ASSERT_OK(mounter.MountBlob(zx::channel(), fuchsia_fs_startup::wire::StartOptions()));
-
   ASSERT_TRUE(mounter.BlobMounted());
+
   ASSERT_FALSE(mounter.DataMounted());
-  mounter.TryMountPkgfs();
-  EXPECT_FALSE(mounter.PkgfsMounted());
-}
 
-TEST_F(MounterTest, PkgfsWillNotMountBeforeDataUnlessExplicitlyRequested) {
-  TestMounter mounter(manager(), &config_);
-
-  mounter.ExpectFilesystem(FilesystemType::kBlobfs);
-  ASSERT_OK(mounter.MountBlob(zx::channel(), fuchsia_fs_startup::wire::StartOptions()));
-
-  ASSERT_TRUE(mounter.BlobMounted());
-  ASSERT_FALSE(mounter.DataMounted());
   mounter.TryMountPkgfs();
   EXPECT_TRUE(mounter.PkgfsMounted());
 }
 
-TEST_F(MounterTest, PkgfsWillNotMountBeforeBlob) {
+TEST_F(MounterTest, DelayedWillNotStartBeforePkgfs) {
   config_ = EmptyConfig();
-  config_.wait_for_data = true;
   TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
   ASSERT_OK(mounter.MountData(zx::channel(), fs_management::MountOptions(),
                               fs_management::kDiskFormatMinfs));
-
-  ASSERT_FALSE(mounter.BlobMounted());
   ASSERT_TRUE(mounter.DataMounted());
-  mounter.TryMountPkgfs();
-  EXPECT_FALSE(mounter.PkgfsMounted());
+
+  mounter.ExpectFilesystem(FilesystemType::kBlobfs);
+  ASSERT_OK(mounter.MountBlob(zx::channel(), fuchsia_fs_startup::wire::StartOptions()));
+  ASSERT_TRUE(mounter.BlobMounted());
+
+  EXPECT_FALSE(mounter.TryStartDelayedVfs());
 }
 
-TEST_F(MounterTest, PkgfsMountsWithBlobAndData) {
+TEST_F(MounterTest, DelayedWillNotStartBeforeData) {
   config_ = EmptyConfig();
-  config_.wait_for_data = true;
   TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
   ASSERT_OK(mounter.MountBlob(zx::channel(), fuchsia_fs_startup::wire::StartOptions()));
+  ASSERT_TRUE(mounter.BlobMounted());
+
+  mounter.TryMountPkgfs();
+  ASSERT_TRUE(mounter.PkgfsMounted());
+
+  EXPECT_FALSE(mounter.TryStartDelayedVfs());
+}
+
+TEST_F(MounterTest, DelayedStartsWithPkgfsAndData) {
+  config_ = EmptyConfig();
+  TestMounter mounter(manager(), &config_);
+
+  mounter.ExpectFilesystem(FilesystemType::kBlobfs);
+  ASSERT_OK(mounter.MountBlob(zx::channel(), fuchsia_fs_startup::wire::StartOptions()));
+  ASSERT_TRUE(mounter.BlobMounted());
+
+  mounter.TryMountPkgfs();
+  ASSERT_TRUE(mounter.PkgfsMounted());
+
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
   ASSERT_OK(mounter.MountData(zx::channel(), fs_management::MountOptions(),
                               fs_management::kDiskFormatMinfs));
-
-  ASSERT_TRUE(mounter.BlobMounted());
   ASSERT_TRUE(mounter.DataMounted());
-  mounter.TryMountPkgfs();
-  EXPECT_TRUE(mounter.PkgfsMounted());
+
+  EXPECT_TRUE(mounter.TryStartDelayedVfs());
 }
 
 }  // namespace

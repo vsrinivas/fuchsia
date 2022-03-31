@@ -131,7 +131,6 @@ template("generated_fshost_config") {
       minfs_max_bytes = 0
       nand = false
       netboot = false
-      wait_for_data = false
 
       # Template arguments
       allow_legacy_data_partition_names =

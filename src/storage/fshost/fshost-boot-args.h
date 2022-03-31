@@ -32,7 +32,6 @@ class FshostBootArgs {
 
   bool netboot() const { return netsvc_netboot_ || zircon_system_disable_automount_; }
   bool check_filesystems() const { return zircon_system_filesystem_check_; }
-  bool wait_for_data() const { return zircon_system_wait_for_data_; }
 
   zx::status<std::string> pkgfs_cmd();
   zx::status<std::string> pkgfs_file_with_path(std::string path);
@@ -56,7 +55,6 @@ class FshostBootArgs {
   bool netsvc_netboot_ = false;
   bool zircon_system_disable_automount_ = false;
   bool zircon_system_filesystem_check_ = false;
-  bool zircon_system_wait_for_data_ = true;
   std::optional<std::string> blobfs_write_compression_algorithm_;
   std::optional<std::string> blobfs_eviction_policy_;
 };

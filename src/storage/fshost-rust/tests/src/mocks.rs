@@ -82,7 +82,6 @@ async fn run_boot_items(mut stream: fboot::ItemsRequestStream) {
 ///   netsvc.netboot (optional; default false)
 ///   zircon.system.disable-automount (optional; default false)
 ///   zircon.system.filesystem-check (optional; default false)
-///   zircon.system.wait-for-data (optional; default true)
 async fn run_boot_args(mut stream: fboot::ArgumentsRequestStream) {
     while let Some(request) = stream.next().await {
         match request.unwrap() {

@@ -79,8 +79,15 @@ class FilesystemMounter {
   // Attempts to mount pkgfs if all preconditions have been met:
   // - Pkgfs has not previously been mounted
   // - Blobfs has been mounted
-  // - The data partition has been mounted
   void TryMountPkgfs();
+
+  // Attempts to start servicing the delayed portion of the outoing directory if all the
+  // preconditions have been met:
+  // - Blobfs has been mounted
+  // - Pkgfs has been mounted
+  // - Data has been mounted
+  // Returns true iff the preconditions are met and the delayed VFS was started.
+  bool TryStartDelayedVfs();
 
   std::shared_ptr<FshostBootArgs> boot_args() { return fshost_.boot_args(); }
   void ReportMinfsCorruption();
@@ -108,8 +115,6 @@ class FilesystemMounter {
                                const fs_management::MountOptions& options,
                                zx::channel block_device_client, uint32_t fs_flags,
                                fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client = {});
-
-  bool WaitForData() const { return config_.wait_for_data; }
 
   // Actually launches the filesystem process.
   //

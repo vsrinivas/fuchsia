@@ -43,7 +43,6 @@ fshost_config::Config EmptyConfig() {
       .no_zxcrypt = false,
       .sandbox_decompression = false,
       .use_default_loader = false,
-      .wait_for_data = false,
       .zxcrypt_non_ramdisk = false,
   };
   return config;
@@ -55,9 +54,6 @@ void ApplyBootArgsToConfig(fshost_config::Config& config, const FshostBootArgs& 
   }
   if (boot_args.check_filesystems()) {
     config.check_filesystems = true;
-  }
-  if (boot_args.wait_for_data()) {
-    config.wait_for_data = true;
   }
 }
 

@@ -71,8 +71,6 @@ zx::status<> FinishPkgfsLaunch(FilesystemMounter* filesystems, zx::channel pkgfs
     // non-fatal
     FX_LOGS(WARNING) << "failed to install /bin";
   }
-  // start the delayed vfs
-  filesystems->FuchsiaStart();
   return zx::ok();
 }
 

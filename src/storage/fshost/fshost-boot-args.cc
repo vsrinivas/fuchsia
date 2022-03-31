@@ -50,7 +50,6 @@ FshostBootArgs::FshostBootArgs(fidl::WireSyncClient<fuchsia_boot::Arguments> boo
       {fidl::StringView{"netsvc.netboot"}, netsvc_netboot_},
       {fidl::StringView{"zircon.system.disable-automount"}, zircon_system_disable_automount_},
       {fidl::StringView{"zircon.system.filesystem-check"}, zircon_system_filesystem_check_},
-      {fidl::StringView{"zircon.system.wait-for-data"}, zircon_system_wait_for_data_},
   };
   auto ret =
       boot_args_->GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(defaults));
@@ -60,7 +59,6 @@ FshostBootArgs::FshostBootArgs(fidl::WireSyncClient<fuchsia_boot::Arguments> boo
     netsvc_netboot_ = ret->values[0];
     zircon_system_disable_automount_ = ret->values[1];
     zircon_system_filesystem_check_ = ret->values[2];
-    zircon_system_wait_for_data_ = ret->values[3];
   }
 
   auto algorithm = GetStringArgument("blobfs.write-compression-algorithm");

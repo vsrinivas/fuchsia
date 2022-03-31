@@ -411,13 +411,6 @@ pre-verified using a filesystem consistency checker before being mounted.
 
 By default, this option is set to false.
 
-## zircon.system.wait-for-data=\<bool>
-
-This option initializes `pkgfs` and `appmgr` only after a persistent data
-partition appears.
-
-By default, this option is set to true.
-
 ## netsvc.netboot=\<bool>
 
 If true, zircon will attempt to netboot into another instance of zircon upon
@@ -481,7 +474,7 @@ Example: `userboot.next=bin/core-tests+arg1+arg2=foo`
 
 ## userboot.root=\<path>
 
-This sets a "root" path prefix within the BOOTFS where the `userboot.next` path 
+This sets a "root" path prefix within the BOOTFS where the `userboot.next` path
 and the `lib/` directory for the loader service will be found. By default, there
 is no prefix so paths are treated as exact relative paths from the root of the
 BOOTFS. e.g. with `userboot.root=pkg/foo` and `userboot.next=bin/app`, the names

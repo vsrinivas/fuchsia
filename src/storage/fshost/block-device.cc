@@ -694,14 +694,15 @@ zx_status_t BlockDevice::MountFilesystem() {
     }
     case fs_management::kDiskFormatBlobfs: {
       FX_LOGS(INFO) << "BlockDevice::MountFilesystem(blobfs)";
-      zx_status_t status = mounter_->MountBlob(
-          std::move(block_device), GetBlobfsStartOptions(device_config_, mounter_->boot_args()));
-      if (status != ZX_OK) {
-        FX_LOGS(ERROR) << "Failed to mount blobfs partition: " << zx_status_get_string(status)
-                       << ".";
+      if (zx_status_t status =
+              mounter_->MountBlob(std::move(block_device),
+                                  GetBlobfsStartOptions(device_config_, mounter_->boot_args()));
+          status != ZX_OK) {
+        FX_PLOGS(ERROR, status) << "Failed to mount blobfs partition";
         return status;
       }
       mounter_->TryMountPkgfs();
+      mounter_->TryStartDelayedVfs();
       return ZX_OK;
     }
     case fs_management::kDiskFormatFxfs:
@@ -715,7 +716,7 @@ zx_status_t BlockDevice::MountFilesystem() {
         MaybeDumpMetadata(fd_.duplicate(), {.disk_format = fs_management::kDiskFormatMinfs});
         return status;
       }
-      mounter_->TryMountPkgfs();
+      mounter_->TryStartDelayedVfs();
       return ZX_OK;
     }
     default:

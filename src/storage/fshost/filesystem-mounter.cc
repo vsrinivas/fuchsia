@@ -273,24 +273,30 @@ zx_status_t FilesystemMounter::MountBlob(zx::channel block_device,
 }
 
 void FilesystemMounter::TryMountPkgfs() {
-  // Pkgfs waits for the following to mount before initializing:
-  //   - Blobfs. Pkgfs is launched from blobfs, so this is a hard requirement.
-  //   - Minfs. Pkgfs and other components want minfs to exist, so although they
-  //   could launch and query for it later, this synchronization point means that
-  //   subsequent clients will no longer need to query.
+  // Pkgfs waits for Blobfs to mount before initializing. Pkgfs is launched from blobfs, so this is
+  // a hard requirement.
   //
   // TODO(fxbug.dev/38621): In the future, this mechanism may be replaced with a feed-forward
   // design to the mounted filesystems.
-  if (!pkgfs_mounted_ && blob_mounted_ && (data_mounted_ || !WaitForData())) {
-    // Historically we don't retry if pkgfs fails to launch, which seems reasonable since the
-    // cause of a launch failure is unlikely to be transient.
-    // TODO(fxbug.dev/58363): fshost should handle failures to mount critical filesystems better.
-    auto status = LaunchPkgfs(this);
-    if (status.is_error()) {
-      FX_LOGS(ERROR) << "failed to launch pkgfs: " << status.status_string();
-    }
-    pkgfs_mounted_ = true;
+  if (!blob_mounted_ || pkgfs_mounted_) {
+    return;
   }
+
+  // Historically we don't retry if pkgfs fails to launch, which seems reasonable since the
+  // cause of a launch failure is unlikely to be transient.
+  // TODO(fxbug.dev/58363): fshost should handle failures to mount critical filesystems better.
+  if (zx::status status = LaunchPkgfs(this); status.is_error()) {
+    FX_PLOGS(ERROR, status.status_value()) << "failed to launch pkgfs";
+  }
+  pkgfs_mounted_ = true;
+}
+
+bool FilesystemMounter::TryStartDelayedVfs() {
+  if (blob_mounted_ && pkgfs_mounted_ && data_mounted_) {
+    FuchsiaStart();
+    return true;
+  }
+  return false;
 }
 
 void FilesystemMounter::ReportMinfsCorruption() {

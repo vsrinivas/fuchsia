@@ -85,8 +85,5 @@
 
         // Disables everything except fvm, gpt and bootpart.
         netboot: { type: "bool" },
-
-        // Wait for data before launching pkgfs.
-        wait_for_data: { type: "bool" },
     },
 }
