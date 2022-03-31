@@ -4,7 +4,7 @@
 
 use fuchsia_zircon as zx;
 use std::convert::TryInto;
-use zerocopy::{AsBytes, FromBytes};
+use zerocopy::AsBytes;
 
 use super::*;
 use crate::fs::buffers::*;
@@ -659,33 +659,9 @@ pub fn sys_getsockopt(
 ) -> Result<SyscallResult, Errno> {
     let file = current_task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
-    let opt_value = match level {
-        SOL_SOCKET => match optname {
-            SO_TYPE => socket.socket_type.as_raw().to_ne_bytes().to_vec(),
-            // TODO(tbodt): Update when internet sockets exist
-            SO_DOMAIN => AF_UNIX.to_ne_bytes().to_vec(),
-            SO_PEERCRED => socket
-                .peer_cred()
-                .unwrap_or(ucred { pid: 0, uid: uid_t::MAX, gid: gid_t::MAX })
-                .as_bytes()
-                .to_owned(),
-            SO_PEERSEC => "unconfined".as_bytes().to_vec(),
-            SO_RCVTIMEO => {
-                let duration = socket.get_receive_timeout().unwrap_or(zx::Duration::default());
-                timeval_from_duration(duration).as_bytes().to_owned()
-            }
-            SO_SNDTIMEO => {
-                let duration = socket.get_send_timeout().unwrap_or(zx::Duration::default());
-                timeval_from_duration(duration).as_bytes().to_owned()
-            }
-            SO_ACCEPTCONN => if socket.is_listening() { 1u32 } else { 0u32 }.to_ne_bytes().to_vec(),
-            SO_SNDBUF => (socket.get_send_capacity() as socklen_t).to_ne_bytes().to_vec(),
-            SO_RCVBUF => (socket.get_receive_capacity() as socklen_t).to_ne_bytes().to_vec(),
-            SO_LINGER => socket.get_linger().as_bytes().to_vec(),
-            _ => return error!(ENOPROTOOPT),
-        },
-        _ => return error!(ENOPROTOOPT),
-    };
+
+    let opt_value = socket.getsockopt(level, optname)?;
+
     let mut optlen = 0;
     current_task.mm.read_object(user_optlen, &mut optlen)?;
     let actual_optlen = opt_value.len() as socklen_t;
@@ -694,6 +670,7 @@ pub fn sys_getsockopt(
     }
     current_task.mm.write_memory(user_optval, &opt_value)?;
     current_task.mm.write_object(user_optlen, &actual_optlen)?;
+
     Ok(SUCCESS)
 }
 
@@ -708,62 +685,12 @@ pub fn sys_setsockopt(
     let file = current_task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
 
-    fn read<T: Default + AsBytes + FromBytes>(
-        current_task: &CurrentTask,
-        user_optval: UserAddress,
-        optlen: socklen_t,
-    ) -> Result<T, Errno> {
-        let user_ref = UserRef::<T>::new(user_optval);
-        if optlen < user_ref.len() as socklen_t {
-            return error!(EINVAL);
-        }
-        let mut value = T::default();
-        current_task.mm.read_object(user_ref, &mut value)?;
-        Ok(value)
-    }
-
-    let read_timeval = || {
-        let duration = duration_from_timeval(read::<timeval>(current_task, user_optval, optlen)?)?;
-        Ok(if duration == zx::Duration::default() { None } else { Some(duration) })
-    };
-
-    match level {
-        // TODO(tbodt): When unix domain sockets are separated from internet sockets, most if not
-        // all of these should be pushed down into the unix-specific or inet-specific code.
-        // E.g. SO_PASSCRED is only applicable to unix domain sockets.
-        SOL_SOCKET => match optname {
-            SO_RCVTIMEO => {
-                socket.set_receive_timeout(read_timeval()?);
-            }
-            SO_SNDTIMEO => {
-                socket.set_send_timeout(read_timeval()?);
-            }
-            SO_SNDBUF => {
-                let requested_capacity =
-                    read::<socklen_t>(current_task, user_optval, optlen)? as usize;
-                // See StreamUnixSocketPairTest.SetSocketSendBuf for why we multiply by 2 here.
-                socket.set_send_capacity(requested_capacity * 2);
-            }
-            SO_RCVBUF => {
-                let requested_capacity =
-                    read::<socklen_t>(current_task, user_optval, optlen)? as usize;
-                socket.set_receive_capacity(requested_capacity);
-            }
-            SO_LINGER => {
-                let mut linger = read::<uapi::linger>(current_task, user_optval, optlen)?;
-                if linger.l_onoff != 0 {
-                    linger.l_onoff = 1;
-                }
-                socket.set_linger(linger);
-            }
-            SO_PASSCRED => {
-                let passcred = read::<u32>(current_task, user_optval, optlen)?;
-                socket.set_passcred(passcred != 0);
-            }
-            _ => return error!(ENOPROTOOPT),
-        },
-        _ => return error!(ENOPROTOOPT),
-    }
+    socket.setsockopt(
+        current_task,
+        level,
+        optname,
+        UserBuffer { address: user_optval, length: optlen as usize },
+    )?;
     Ok(SUCCESS)
 }
 

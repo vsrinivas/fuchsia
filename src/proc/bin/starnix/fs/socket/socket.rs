@@ -4,6 +4,7 @@
 
 use fuchsia_zircon as zx;
 use std::collections::VecDeque;
+use zerocopy::{AsBytes, FromBytes};
 
 use super::*;
 
@@ -191,17 +192,110 @@ impl Socket {
         Ok(peer.getsockname())
     }
 
-    pub fn peer_cred(&self) -> Option<ucred> {
+    fn peer_cred(&self) -> Option<ucred> {
         let peer = self.lock().peer()?.clone();
         let peer = peer.lock();
         peer.credentials.clone()
+    }
+
+    pub fn setsockopt(
+        &self,
+        task: &Task,
+        level: u32,
+        optname: u32,
+        user_opt: UserBuffer,
+    ) -> Result<(), Errno> {
+        fn read<T: Default + AsBytes + FromBytes>(
+            task: &Task,
+            user_opt: UserBuffer,
+        ) -> Result<T, Errno> {
+            let user_ref = UserRef::<T>::new(user_opt.address);
+            if user_opt.length < user_ref.len() {
+                return error!(EINVAL);
+            }
+            let mut value = T::default();
+            task.mm.read_object(user_ref, &mut value)?;
+            Ok(value)
+        }
+
+        let read_timeval = || {
+            let duration = duration_from_timeval(read::<timeval>(task, user_opt)?)?;
+            Ok(if duration == zx::Duration::default() { None } else { Some(duration) })
+        };
+
+        match level {
+            SOL_SOCKET => match optname {
+                SO_RCVTIMEO => {
+                    self.set_receive_timeout(read_timeval()?);
+                }
+                SO_SNDTIMEO => {
+                    self.set_send_timeout(read_timeval()?);
+                }
+                SO_SNDBUF => {
+                    let requested_capacity = read::<socklen_t>(task, user_opt)? as usize;
+                    // See StreamUnixSocketPairTest.SetSocketSendBuf for why we multiply by 2 here.
+                    self.set_send_capacity(requested_capacity * 2);
+                }
+                SO_RCVBUF => {
+                    let requested_capacity = read::<socklen_t>(task, user_opt)? as usize;
+                    self.set_receive_capacity(requested_capacity);
+                }
+                SO_LINGER => {
+                    let mut linger = read::<uapi::linger>(task, user_opt)?;
+                    if linger.l_onoff != 0 {
+                        linger.l_onoff = 1;
+                    }
+                    self.set_linger(linger);
+                }
+                SO_PASSCRED => {
+                    let passcred = read::<u32>(task, user_opt)?;
+                    self.set_passcred(passcred != 0);
+                }
+                _ => return error!(ENOPROTOOPT),
+            },
+            _ => return error!(ENOPROTOOPT),
+        }
+        Ok(())
+    }
+
+    pub fn getsockopt(&self, level: u32, optname: u32) -> Result<Vec<u8>, Errno> {
+        let opt_value = match level {
+            SOL_SOCKET => match optname {
+                SO_TYPE => self.socket_type.as_raw().to_ne_bytes().to_vec(),
+                // TODO(tbodt): Update when internet sockets exist
+                SO_DOMAIN => AF_UNIX.to_ne_bytes().to_vec(),
+                SO_PEERCRED => self
+                    .peer_cred()
+                    .unwrap_or(ucred { pid: 0, uid: uid_t::MAX, gid: gid_t::MAX })
+                    .as_bytes()
+                    .to_owned(),
+                SO_PEERSEC => "unconfined".as_bytes().to_vec(),
+                SO_RCVTIMEO => {
+                    let duration = self.get_receive_timeout().unwrap_or(zx::Duration::default());
+                    timeval_from_duration(duration).as_bytes().to_owned()
+                }
+                SO_SNDTIMEO => {
+                    let duration = self.get_send_timeout().unwrap_or(zx::Duration::default());
+                    timeval_from_duration(duration).as_bytes().to_owned()
+                }
+                SO_ACCEPTCONN => {
+                    if self.is_listening() { 1u32 } else { 0u32 }.to_ne_bytes().to_vec()
+                }
+                SO_SNDBUF => (self.get_send_capacity() as socklen_t).to_ne_bytes().to_vec(),
+                SO_RCVBUF => (self.get_receive_capacity() as socklen_t).to_ne_bytes().to_vec(),
+                SO_LINGER => self.get_linger().as_bytes().to_vec(),
+                _ => return error!(ENOPROTOOPT),
+            },
+            _ => return error!(ENOPROTOOPT),
+        };
+        Ok(opt_value)
     }
 
     pub fn get_receive_timeout(&self) -> Option<zx::Duration> {
         self.lock().receive_timeout
     }
 
-    pub fn set_receive_timeout(&self, value: Option<zx::Duration>) {
+    fn set_receive_timeout(&self, value: Option<zx::Duration>) {
         self.lock().receive_timeout = value;
     }
 
@@ -209,19 +303,19 @@ impl Socket {
         self.lock().send_timeout
     }
 
-    pub fn set_send_timeout(&self, value: Option<zx::Duration>) {
+    fn set_send_timeout(&self, value: Option<zx::Duration>) {
         self.lock().send_timeout = value;
     }
 
-    pub fn get_receive_capacity(&self) -> usize {
+    fn get_receive_capacity(&self) -> usize {
         self.lock().messages.capacity()
     }
 
-    pub fn set_receive_capacity(&self, requested_capacity: usize) {
+    fn set_receive_capacity(&self, requested_capacity: usize) {
         self.lock().set_capacity(requested_capacity);
     }
 
-    pub fn get_send_capacity(&self) -> usize {
+    fn get_send_capacity(&self) -> usize {
         if let Some(peer) = self.lock().peer() {
             peer.lock().messages.capacity()
         } else {
@@ -229,7 +323,7 @@ impl Socket {
         }
     }
 
-    pub fn set_send_capacity(&self, requested_capacity: usize) {
+    fn set_send_capacity(&self, requested_capacity: usize) {
         if let Some(peer) = self.lock().peer() {
             peer.lock().set_capacity(requested_capacity);
         }
@@ -259,17 +353,17 @@ impl Socket {
         Ok(())
     }
 
-    pub fn get_linger(&self) -> uapi::linger {
+    fn get_linger(&self) -> uapi::linger {
         let inner = self.lock();
         inner.linger
     }
 
-    pub fn set_linger(&self, linger: uapi::linger) {
+    fn set_linger(&self, linger: uapi::linger) {
         let mut inner = self.lock();
         inner.linger = linger;
     }
 
-    pub fn set_passcred(&self, passcred: bool) {
+    fn set_passcred(&self, passcred: bool) {
         let mut inner = self.lock();
         inner.passcred = passcred;
     }
