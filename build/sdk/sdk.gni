@@ -262,9 +262,6 @@ template("sdk") {
     }
 
     public_deps = [ ":$verify_meta_target_name" ]
-
-    # Archive manifest contains output dir name
-    no_output_dir_leaks = false
   }
 
   # Generates the final archive.
@@ -273,8 +270,6 @@ template("sdk") {
   archive_generate_target_name = "${archive_target_name}_generate"
 
   compiled_action(archive_generate_target_name) {
-    no_output_dir_leaks = false
-
     forward_variables_from(invoker, [ "testonly" ])
 
     tool = "//build/tools/tarmaker"
@@ -285,9 +280,9 @@ template("sdk") {
 
     args = [
       "-manifest",
-      rebase_path(archive_manifest_file),
+      rebase_path(archive_manifest_file, root_build_dir),
       "-output",
-      rebase_path(local_archive),
+      rebase_path(local_archive, root_build_dir),
     ]
 
     deps = [ ":$archive_manifest_target_name" ]

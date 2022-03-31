@@ -9,10 +9,10 @@ import os
 import sys
 
 try:
-  # Python 3
-  from urllib.parse import urlparse
+    # Python 3
+    from urllib.parse import urlparse
 except ImportError:
-  from urlparse import urlparse
+    from urlparse import urlparse
 
 from sdk_common import Atom
 
@@ -69,8 +69,10 @@ def main():
         add(dest, source)
 
     with open(args.output, 'w') as output_file:
-        for mapping in sorted(all_files.items()):
-            output_file.write('%s=%s\n' % mapping)
+        for dest, src in sorted(all_files.items()):
+            dest = os.path.relpath(dest)
+            src = os.path.relpath(src)
+            output_file.write('%s=%s\n' % (dest, src))
 
 
 if __name__ == '__main__':
