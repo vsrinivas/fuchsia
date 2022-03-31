@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver"
+	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/serial"
@@ -287,7 +288,19 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 			}
 		}
 	} else {
-		if err := bootserver.Boot(ctx, t.Tftp(), images, args, authorizedKeys); err != nil {
+		var imgs []bootserver.Image
+		for _, img := range images {
+			if t.imageOverrides != nil {
+				if img.Name == fmt.Sprintf("zbi_%s", t.imageOverrides[build.ZbiImage]) {
+					img.Args = append(img.Args, "--boot")
+					imgs = append(imgs, img)
+					break
+				}
+			} else {
+				imgs = append(imgs, img)
+			}
+		}
+		if err := bootserver.Boot(ctx, t.Tftp(), imgs, args, authorizedKeys); err != nil {
 			return err
 		}
 	}
@@ -312,8 +325,14 @@ func (t *DeviceTarget) ramBoot(ctx context.Context, images []*bootserver.Image) 
 	// TODO(fxbug.dev/91352): Remove experimental condition once stable.
 	if t.UseFFXExperimental(2) {
 		t.ffx.TargetWait(ctx)
-		zbi := getImgByName(images, "zbi_zircon-a")
-		vbmeta := getImgByName(images, "vbmeta_zircon-a")
+		zbiImageName := "zbi_zircon-a"
+		vbmetaImageName := "vbmeta_zircon-a"
+		if t.imageOverrides != nil {
+			zbiImageName = fmt.Sprintf("zbi_%s", t.imageOverrides[build.ZbiImage])
+			vbmetaImageName = fmt.Sprintf("vbmeta_%s", t.imageOverrides[build.VbmetaImage])
+		}
+		zbi := getImgByName(images, zbiImageName)
+		vbmeta := getImgByName(images, vbmetaImageName)
 		return t.ffx.BootloaderBoot(ctx, zbi, vbmeta, "")
 	}
 	bootScript := getImgByName(images, "script_fastboot-boot-script")

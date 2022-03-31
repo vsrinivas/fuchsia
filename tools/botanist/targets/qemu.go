@@ -22,6 +22,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver"
 	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
+	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
@@ -221,11 +222,17 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	qemuCmd.SetBinary(absQEMUSystemPath)
 
 	var qemuKernel, zirconA, storageFull bootserver.Image
+	zbiImageName := "zbi_zircon-a"
+	qemuKernelName := "kernel_qemu-kernel"
+	if t.imageOverrides != nil {
+		zbiImageName = fmt.Sprintf("zbi_%s", t.imageOverrides[build.ZbiImage])
+		qemuKernelName = fmt.Sprintf("kernel_%s", t.imageOverrides[build.QemuKernel])
+	}
 	for _, img := range images {
 		switch img.Name {
-		case "kernel_qemu-kernel":
+		case qemuKernelName:
 			qemuKernel = img
-		case "zbi_zircon-a":
+		case zbiImageName:
 			zirconA = img
 		case "blk_storage-full":
 			storageFull = img
@@ -235,7 +242,7 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 		return fmt.Errorf("could not find kernel_qemu-kernel")
 	}
 	if zirconA.Reader == nil {
-		return fmt.Errorf("could not find zbi_zircon-a")
+		return fmt.Errorf("could not find %s", zbiImageName)
 	}
 	// The QEMU command needs to be invoked within an empty directory, as QEMU
 	// will attempt to pick up files from its working directory, one notable

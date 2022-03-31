@@ -21,6 +21,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/botanist"
 	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
 	"go.fuchsia.dev/fuchsia/tools/botanist/targets"
+	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/environment"
 	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
@@ -94,6 +95,9 @@ type target interface {
 
 	// FFXEnv returns the env vars that the ffx instance should run with.
 	FFXEnv() []string
+
+	// SetImageOverrides sets the images to override the defaults in images.json.
+	SetImageOverrides(build.ImageOverrides)
 }
 
 // RunCommand is a Command implementation for booting a device and running a
@@ -146,6 +150,24 @@ type RunCommand struct {
 
 	// The level of experimental ffx features to enable.
 	ffxExperimentLevel int
+
+	// A json struct following the build.ImageOverrides schema that defines the
+	// images to override the defaults in images.json.
+	imageOverrides imageOverridesFlagValue
+}
+
+type imageOverridesFlagValue build.ImageOverrides
+
+func (v *imageOverridesFlagValue) String() string {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+
+func (v *imageOverridesFlagValue) Set(s string) error {
+	return json.Unmarshal([]byte(s), &v)
 }
 
 // targetInfo is the schema for a JSON object used to communicate target
@@ -200,6 +222,7 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&r.localRepo, "local-repo", "", "path to a local package repository; the repo and blobs flags are ignored when this is set")
 	f.StringVar(&r.ffxPath, "ffx", "", "Path to the ffx tool.")
 	f.IntVar(&r.ffxExperimentLevel, "ffx-experiment-level", 0, "The level of experimental features to enable. If -ffx is not set, this will have no effect.")
+	f.Var(&r.imageOverrides, "image-overrides", "A json struct following the ImageOverrides schema at //tools/build/tests.go with the names of the images to use from images.json.")
 }
 
 func (r *RunCommand) execute(ctx context.Context, args []string) error {
@@ -275,6 +298,9 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		if ffx != nil {
 			ffxForTarget := ffxutil.FFXInstanceWithConfig(r.ffxPath, "", ffx.Config.Env(), t.Nodename(), ffx.ConfigPath)
 			t.SetFFX(&targets.FFXInstance{ffxForTarget, r.ffxExperimentLevel}, ffx.Config.Env())
+		}
+		if r.imageOverrides != nil {
+			t.SetImageOverrides(build.ImageOverrides(r.imageOverrides))
 		}
 	}
 

@@ -22,6 +22,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/repo"
 	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
+	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/serial"
@@ -61,6 +62,8 @@ type target struct {
 
 	ffx    *FFXInstance
 	ffxEnv []string
+
+	imageOverrides build.ImageOverrides
 }
 
 // newTarget creates a new generic Fuchsia target.
@@ -108,6 +111,11 @@ func (t *target) FFXConfigPath() string {
 // FFXEnv returns the environment to run ffx with.
 func (t *target) FFXEnv() []string {
 	return t.ffxEnv
+}
+
+// SetImageOverrides sets the images to override the defaults in images.json.
+func (t *target) SetImageOverrides(images build.ImageOverrides) {
+	t.imageOverrides = images
 }
 
 // StartSerialServer spawns a new serial server fo the given target.
