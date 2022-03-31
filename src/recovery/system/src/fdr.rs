@@ -135,6 +135,7 @@ impl FactoryResetStateMachine {
             },
             FactoryResetState::ExecuteReset => match event {
                 ResetEvent::AwaitPolicyResult(_, _) => FactoryResetState::ExecuteReset,
+                ResetEvent::ButtonPress(_, _) => FactoryResetState::ExecuteReset,
                 _ => {
                     panic!("Not expecting countdown events while in ExecuteReset state")
                 }
@@ -263,5 +264,26 @@ mod tests {
         let state = state_machine
             .handle_event(ResetEvent::ButtonPress(ConsumerControlButton::VolumeUp, Phase::Up));
         assert_eq!(state, FactoryResetState::CancelCountdown);
+    }
+
+    #[test]
+    fn test_reset_complete_button_released() -> std::result::Result<(), anyhow::Error> {
+        let mut state_machine = FactoryResetStateMachine::new();
+        let state = state_machine.get_state();
+        assert_eq!(state, FactoryResetState::Waiting);
+        let state = state_machine
+            .handle_event(ResetEvent::ButtonPress(ConsumerControlButton::VolumeDown, Phase::Down));
+        assert_eq!(state, FactoryResetState::Waiting);
+        let state = state_machine
+            .handle_event(ResetEvent::ButtonPress(ConsumerControlButton::VolumeUp, Phase::Down));
+        assert_eq!(state, FactoryResetState::AwaitingPolicy(1));
+        let state = state_machine.handle_event(ResetEvent::AwaitPolicyResult(1, true));
+        assert_eq!(state, FactoryResetState::StartCountdown);
+        let state = state_machine.handle_event(ResetEvent::CountdownFinished);
+        assert_eq!(state, FactoryResetState::ExecuteReset);
+        let state = state_machine
+            .handle_event(ResetEvent::ButtonPress(ConsumerControlButton::VolumeDown, Phase::Up));
+        assert_eq!(state, FactoryResetState::ExecuteReset);
+        Ok(())
     }
 }
