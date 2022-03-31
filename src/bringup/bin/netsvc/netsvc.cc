@@ -188,17 +188,25 @@ int main(int argc, char** argv) {
 
     if (g_netbootloader && should_advertise) {
       if (zx_status_t status = advertise_task.Post(loop.dispatcher()); status != ZX_OK) {
-        printf("netsvc: fatal: failed to post advertise task: %s", zx_status_get_string(status));
+        printf("netsvc: fatal: failed to post advertise task: %s\n", zx_status_get_string(status));
         return -1;
       }
     }
 
     loop.Run();
-    netifc_close();
     if (zx_status_t status = advertise_task.Cancel();
         status != ZX_OK && status != ZX_ERR_NOT_FOUND) {
-      printf("netsvc: fatal: failed to cancel advertise task: %s", zx_status_get_string(status));
+      printf("netsvc: fatal: failed to cancel advertise task: %s\n", zx_status_get_string(status));
       return -1;
+    }
+    netifc_close();
+    // Something went wrong bringing up the interface, reset the loop and go
+    // again in a bit.
+    {
+      zx_status_t status = loop.ResetQuit();
+      ZX_ASSERT_MSG(status == ZX_OK, "failed to reset loop: %s", zx_status_get_string(status));
+      printf("netsvc: waiting before retrying...\n");
+      sleep(1);
     }
   }
 }

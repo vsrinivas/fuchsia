@@ -401,6 +401,10 @@ zx::status<> open_netdevice(async_dispatcher_t* dispatcher, NetdeviceInterface i
   std::unique_ptr state = std::make_unique<NetdeviceIfc>(std::move(iface.device), dispatcher,
                                                          std::move(on_error), iface.port_id);
   NetdeviceIfc& ifc = *state;
+  ifc.client.SetErrorCallback([&ifc](zx_status_t status) {
+    printf("netsvc: netdevice error %s\n", zx_status_get_string(status));
+    ifc.on_error(status);
+  });
   ifc.client.SetRxCallback([dispatcher](network::client::NetworkDeviceClient::Buffer buffer) {
     ZX_ASSERT_MSG(buffer.data().parts() == 1, "received fragmented buffer with %d parts",
                   buffer.data().parts());

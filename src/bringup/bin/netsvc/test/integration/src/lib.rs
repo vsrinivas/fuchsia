@@ -1066,3 +1066,91 @@ async fn advertises<E: netemul::Endpoint>(name: &str) {
     )
     .await;
 }
+
+#[variants_test]
+async fn survives_device_removal<E: netemul::Endpoint>(name: &str) {
+    use packet_formats::ethernet::{EthernetFrame, EthernetFrameLengthCheck};
+
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+
+    // Create an event stream watcher before starting any realms so we're sure
+    // to observe netsvc early stop events.
+    let mut component_event_stream = netstack_testing_common::get_component_stopped_event_stream()
+        .await
+        .expect("get event stream");
+
+    // NB: We intentionally don't poll `services` since we don't need to
+    // observe proper interaction with them.
+    let (netsvc_realm, _services) = create_netsvc_realm(
+        &sandbox,
+        name,
+        IntoIterator::into_iter(DEFAULT_NETSVC_ARGS).chain(["--advertise"]),
+    );
+    let network = sandbox.create_network("net").await.expect("create network");
+    let fake_ep = network.create_fake_endpoint().expect("create fake endpoint");
+    let mut frames = fake_ep.frame_stream().map(|r| {
+        let (frame, dropped) = r.expect("failed to read frame");
+        assert_eq!(dropped, 0);
+        let mut buffer_view = &frame[..];
+        let eth = buffer_view
+            .parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::NoCheck)
+            .expect("failed to parse ethernet");
+        eth.src_mac()
+    });
+
+    let netsvc_stopped_fut = netstack_testing_common::wait_for_component_stopped_with_stream(
+        &mut component_event_stream,
+        &netsvc_realm,
+        NETSVC_NAME,
+        None,
+    );
+
+    let test_fut = async {
+        for i in 0..3 {
+            let ep_name = format!("ep-{:?}-{}", E::NETEMUL_BACKING, i);
+            let mac = net_types::ethernet::Mac::new([2, 3, 4, 5, 6, i]);
+            let ep = network
+                .create_endpoint_with(
+                    &ep_name,
+                    E::make_config(
+                        netemul::DEFAULT_MTU,
+                        Some(fidl_fuchsia_net::MacAddress { octets: mac.bytes() }),
+                    ),
+                )
+                .await
+                .expect("create endpoint");
+            let () = ep.set_link_up(true).await.expect("set link up");
+            let () = netsvc_realm
+                .add_virtual_device(&ep, E::dev_path(&ep_name).as_path())
+                .await
+                .expect("add virtual device");
+
+            // Wait until we observe any netsvc packet with the source mac set to
+            // our endpoint, as proof that it is alive.
+            frames
+                .by_ref()
+                .filter_map(|src_mac| {
+                    futures::future::ready(if src_mac == mac {
+                        Some(())
+                    } else {
+                        println!("ignoring frame with mac {}", src_mac);
+                        None
+                    })
+                })
+                .next()
+                .await
+                .expect("frames stream ended unexpectedly");
+
+            // Destroy the device backed by netemul. Netsvc must survive this
+            // and observe new devices in future iterations.
+            drop(ep);
+        }
+    };
+    futures::select! {
+        r = netsvc_stopped_fut.fuse() => {
+            let e: component_events::events::Stopped = r.expect("failed to observe stopped event");
+            panic!("netsvc stopped unexpectedly with {:?}", e);
+        },
+        () =  test_fut.fuse() => (),
+    }
+}
