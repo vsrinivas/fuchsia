@@ -520,7 +520,11 @@ where
             None
         })
         .await
-        .unwrap_or(OptOutPreference::AllowAllUpdates)
+        .unwrap_or_else(|| {
+            info!("fuchsia.update.config.OptOut provider not present on this product. Using default auto-update preference.");
+
+            OptOutPreference::AllowAllUpdates
+        })
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
