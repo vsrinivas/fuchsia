@@ -507,6 +507,9 @@ zx_status_t EnclosedGuest::LaunchV1(sys::testing::EnclosingEnvironment& environm
 zx_status_t ZirconEnclosedGuest::LaunchInfo(std::string* url,
                                             fuchsia::virtualization::GuestConfig* cfg) {
   *url = kZirconGuestUrl;
+  // TODO(fxbug.dev/96538): Re-enable after finding a way to allow MMIO access for VirtioGPU running
+  // inside the CFv2 test realm
+  cfg->set_virtio_gpu(false);
   // Disable netsvc to avoid spamming the net device with logs.
   cfg->mutable_cmdline_add()->emplace_back("netsvc.disable=true");
   return ZX_OK;
@@ -571,7 +574,9 @@ std::vector<std::string> ZirconEnclosedGuest::GetTestUtilCommand(
 zx_status_t DebianEnclosedGuest::LaunchInfo(std::string* url,
                                             fuchsia::virtualization::GuestConfig* cfg) {
   *url = kDebianGuestUrl;
-
+  // TODO(fxbug.dev/96538): Re-enable after finding a way to allow MMIO access for VirtioGPU running
+  // inside the CFv2 test realm
+  cfg->set_virtio_gpu(false);
   // Enable kernel debugging serial output.
   for (std::string_view cmd : kLinuxKernelSerialDebugCmdline) {
     cfg->mutable_cmdline_add()->emplace_back(cmd);

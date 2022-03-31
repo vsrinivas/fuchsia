@@ -26,11 +26,11 @@ class GuestTest : public ::testing::Test {
     FX_LOGS(INFO) << "Guest: " << fbl::TypeInfo<T>::Name();
     loop_.emplace(&kAsyncLoopConfigAttachToCurrentThread);
     enclosed_guest_.emplace(*loop_);
-    ASSERT_EQ(GetEnclosedGuest().Start(zx::time::infinite()), ZX_OK);
+    ZX_ASSERT(GetEnclosedGuest().Start(zx::time::infinite()) == ZX_OK);
   }
 
   static void TearDownTestSuite() {
-    EXPECT_EQ(GetEnclosedGuest().Stop(zx::time::infinite()), ZX_OK);
+    ZX_ASSERT(GetEnclosedGuest().Stop(zx::time::infinite()) == ZX_OK);
     loop_->Quit();
     enclosed_guest_.reset();
     loop_.reset();
