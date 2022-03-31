@@ -871,11 +871,11 @@ pub fn send_udp_listener<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>
     // Also, if the local IP address is a multicast address this function should
     // probably fail and `send_udp` must be used instead.
     let state = ctx.get_first_state();
-    let ListenerAddr { addr: local_ip, port: local_port } = state
+    let ListenerAddr { addr: local_ip, port: local_port } = *state
         .conn_state
         .listeners
         .get_by_listener(listener.id)
-        .expect("specified listener not found")[0];
+        .expect("specified listener not found");
 
     let sock = match ctx.new_ip_socket(
         None,
@@ -1037,9 +1037,7 @@ pub fn listen_udp<I: IpExt, C: UdpStateContext<I>>(
         }
     }
     let state = ctx.get_first_state_mut();
-    Ok(UdpListenerId::new(
-        state.conn_state.listeners.insert(alloc::vec![ListenerAddr { addr, port }]),
-    ))
+    Ok(UdpListenerId::new(state.conn_state.listeners.insert(ListenerAddr { addr, port })))
 }
 
 /// Removes a previously registered UDP listener.
@@ -1061,10 +1059,6 @@ pub fn remove_udp_listener<I: IpExt, C: UdpStateContext<I>>(
         .listeners
         .remove_by_listener(id.id)
         .expect("Invalid UDP listener ID")
-        // NOTE(brunodalbo) ListenerSocketMap keeps vecs internally, but we
-        // always only add a single address, so unwrap the first one.
-        .first()
-        .expect("Unexpected empty UDP listener")
         .clone()
         .into()
 }
@@ -1085,11 +1079,8 @@ pub fn get_udp_listener_info<I: IpExt, C: UdpStateContext<I>>(
         .listeners
         .get_by_listener(id.id)
         .expect("UDP listener not found")
-        // NOTE(brunodalbo) ListenerSocketMap keeps vecs internally, but we
-        // always only add a single address, so unwrap the first one.
-        .first()
-        .map(|l| l.clone().into())
-        .expect("Unexpected empty UDP listener")
+        .clone()
+        .into()
 }
 
 /// An error when attempting to create a UDP socket.
@@ -1611,10 +1602,10 @@ mod tests {
                 DualStateContext::<UdpState<I, DummyDeviceId>, _>::get_first_state_mut(&mut ctx)
                     .conn_state
                     .listeners
-                    .insert(vec![ListenerAddr {
+                    .insert(ListenerAddr {
                         addr: Some(local_ip),
                         port: NonZeroU16::new(port_num).unwrap(),
-                    }]);
+                    });
         }
 
         let remote_ip = remote_ip::<I>();
@@ -2203,16 +2194,9 @@ mod tests {
 
         let conn_state =
             &DualStateContext::<UdpState<I, DummyDeviceId>, _>::get_first_state(&ctx).conn_state;
-        let wildcard_port = conn_state
-            .listeners
-            .get_by_listener(wildcard_list.id)
-            .unwrap()
-            .first()
-            .unwrap()
-            .port
-            .clone();
-        let specified_port =
-            conn_state.listeners.get_by_listener(specified_list.id).unwrap().first().unwrap().port;
+        let wildcard_port =
+            conn_state.listeners.get_by_listener(wildcard_list.id).unwrap().port.clone();
+        let specified_port = conn_state.listeners.get_by_listener(specified_list.id).unwrap().port;
         assert!(UdpConnectionState::<I, IpSock<I, DummyDeviceId>>::EPHEMERAL_RANGE
             .contains(&wildcard_port.get()));
         assert!(UdpConnectionState::<I, IpSock<I, DummyDeviceId>>::EPHEMERAL_RANGE

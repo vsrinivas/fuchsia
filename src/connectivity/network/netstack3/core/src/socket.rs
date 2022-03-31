@@ -5,7 +5,7 @@
 //! General-purpose socket utilities common to device layer and IP layer
 //! sockets.
 
-use alloc::{collections::HashMap, vec::Vec};
+use alloc::collections::HashMap;
 use core::hash::Hash;
 
 use crate::data_structures::IdMap;
@@ -62,16 +62,14 @@ pub trait Socket {
 /// for constant-time mapping in either direction (though address -> index
 /// mappings are via a hash map, and are thus slower).
 pub(crate) struct ListenerSocketMap<A> {
-    listener_to_addrs: IdMap<Vec<A>>,
+    listener_to_addrs: IdMap<A>,
     addr_to_listener: HashMap<A, usize>,
 }
 
 impl<A: Eq + Hash + Clone> ListenerSocketMap<A> {
-    pub(crate) fn insert(&mut self, addrs: Vec<A>) -> usize {
-        let listener = self.listener_to_addrs.push(addrs.clone());
-        for addr in addrs.into_iter() {
-            assert_eq!(self.addr_to_listener.insert(addr, listener), None);
-        }
+    pub(crate) fn insert(&mut self, addr: A) -> usize {
+        let listener = self.listener_to_addrs.push(addr.clone());
+        assert_eq!(self.addr_to_listener.insert(addr, listener), None);
         listener
     }
 }
@@ -81,7 +79,7 @@ impl<A: Eq + Hash> ListenerSocketMap<A> {
         self.addr_to_listener.get(addr).cloned()
     }
 
-    pub(crate) fn get_by_listener(&self, listener: usize) -> Option<&Vec<A>> {
+    pub(crate) fn get_by_listener(&self, listener: usize) -> Option<&A> {
         self.listener_to_addrs.get(listener)
     }
 
@@ -89,12 +87,10 @@ impl<A: Eq + Hash> ListenerSocketMap<A> {
         self.addr_to_listener.keys()
     }
 
-    pub(crate) fn remove_by_listener(&mut self, listener: usize) -> Option<Vec<A>> {
-        let addrs = self.listener_to_addrs.remove(listener)?;
-        for addr in addrs.iter() {
-            assert_eq!(self.addr_to_listener.remove(addr), Some(listener));
-        }
-        Some(addrs)
+    pub(crate) fn remove_by_listener(&mut self, listener: usize) -> Option<A> {
+        let addr = self.listener_to_addrs.remove(listener)?;
+        assert_eq!(self.addr_to_listener.remove(&addr), Some(listener));
+        Some(addr)
     }
 }
 
