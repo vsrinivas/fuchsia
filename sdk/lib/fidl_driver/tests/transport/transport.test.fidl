@@ -28,11 +28,13 @@ protocol OneWayTest {
 };
 
 @transport("Driver")
-protocol SendDriverClientEndTest {
-    SendDriverClientEnd(resource struct {
-        h client_end:OneWayTest;
+protocol SendDriverTransportEndTest {
+    SendDriverTransportEnd(resource struct {
+        c client_end:OneWayTest;
+        s server_end:OneWayTest;
     }) -> (resource struct {
-        h client_end:OneWayTest;
+        c client_end:OneWayTest;
+        s server_end:OneWayTest;
     });
 };
 

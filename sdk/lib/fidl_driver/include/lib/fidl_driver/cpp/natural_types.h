@@ -17,12 +17,14 @@ struct NaturalCodingTraits<::fdf::ServerEnd<T>, Constraint> {
 
   static void Encode(NaturalEncoder* encoder, ::fdf::ServerEnd<T>* value, size_t offset,
                      size_t recursion_depth) {
-    ZX_PANIC("Not implemented");
+    encoder->EncodeHandle(value->TakeHandle().release(), {}, offset, Constraint::is_optional);
   }
 
   static void Decode(NaturalDecoder* decoder, ::fdf::ServerEnd<T>* value, size_t offset,
                      size_t recursion_depth) {
-    ZX_PANIC("Not implemented");
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    decoder->DecodeHandle(&handle, {}, offset, Constraint::is_optional);
+    value->reset(handle);
   }
 };
 
@@ -32,12 +34,14 @@ struct NaturalCodingTraits<::fdf::ClientEnd<T>, Constraint> {
 
   static void Encode(NaturalEncoder* encoder, ::fdf::ClientEnd<T>* value, size_t offset,
                      size_t recursion_depth) {
-    ZX_PANIC("Not implemented");
+    encoder->EncodeHandle(value->TakeHandle().release(), {}, offset, Constraint::is_optional);
   }
 
   static void Decode(NaturalDecoder* decoder, ::fdf::ClientEnd<T>* value, size_t offset,
                      size_t recursion_depth) {
-    ZX_PANIC("Not implemented");
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    decoder->DecodeHandle(&handle, {}, offset, Constraint::is_optional);
+    value->reset(handle);
   }
 };
 

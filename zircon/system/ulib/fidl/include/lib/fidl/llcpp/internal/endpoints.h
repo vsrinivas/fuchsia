@@ -51,8 +51,8 @@ class TransportEnd {
   explicit operator bool() const { return is_valid(); }
 
   // Close the underlying handle if any,
-  // and reset the object back to an invalid state.
-  void reset() { handle_.reset(); }
+  // and reset the object back to the specified value.
+  void reset(fidl_handle_t handle = FIDL_HANDLE_INVALID) { handle_.reset(handle); }
 
   // The underlying handle.
   UnownedType handle() const { return UnownedType(handle_.get()); }
