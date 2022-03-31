@@ -67,14 +67,13 @@ zx::status<std::pair<std::unique_ptr<Session>, netdev::wire::Fifos>> Session::Cr
   fbl::AllocChecker ac;
   std::unique_ptr<Session> session(new (&ac) Session(dispatcher, info, name, parent));
   if (!ac.check()) {
-    LOGF_ERROR("network-device: Failed to allocate session");
+    LOGF_ERROR("failed to allocate session");
     return zx::error(ZX_ERR_NO_MEMORY);
   }
 
   zx::status fifos = session->Init();
   if (fifos.is_error()) {
-    LOGF_ERROR("network-device: Failed to init session %s: %s", session->name(),
-               fifos.status_string());
+    LOGF_ERROR("failed to init session %s: %s", session->name(), fifos.status_string());
     return fifos.take_error();
   }
 
@@ -114,7 +113,7 @@ Session::~Session() {
     fidl_epitaph_write(control_channel_->channel().get(), ZX_ERR_CANCELED);
   }
 
-  LOGF_TRACE("network-device(%s): Session destroyed", name());
+  LOGF_TRACE("%s: Session destroyed", name());
 }
 
 zx::status<netdev::wire::Fifos> Session::Init() {
@@ -124,8 +123,7 @@ zx::status<netdev::wire::Fifos> Session::Init() {
           vmo_descriptors_, 0, descriptor_count_ * descriptor_length_,
           ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE, nullptr);
       status != ZX_OK) {
-    LOGF_ERROR("network-device(%s): failed to map data VMO: %s", name(),
-               zx_status_get_string(status));
+    LOGF_ERROR("%s: failed to map data VMO: %s", name(), zx_status_get_string(status));
     return zx::error(status);
   }
 
@@ -133,7 +131,7 @@ zx::status<netdev::wire::Fifos> Session::Init() {
   fbl::AllocChecker ac;
   fifo_rx_ = fbl::MakeRefCountedChecked<RefCountedFifo>(&ac);
   if (!ac.check()) {
-    LOGF_ERROR("network-device(%s): failed to allocate", name());
+    LOGF_ERROR("%s: failed to allocate", name());
     return zx::error(ZX_ERR_NO_MEMORY);
   }
 
@@ -141,13 +139,13 @@ zx::status<netdev::wire::Fifos> Session::Init() {
   if (zx_status_t status = zx::fifo::create(parent_->rx_fifo_depth(), sizeof(uint16_t), 0,
                                             &fifos.rx, &fifo_rx_->fifo);
       status != ZX_OK) {
-    LOGF_ERROR("network-device(%s): failed to create rx FIFO", name());
+    LOGF_ERROR("%s: failed to create rx FIFO", name());
     return zx::error(status);
   }
   if (zx_status_t status =
           zx::fifo::create(parent_->tx_fifo_depth(), sizeof(uint16_t), 0, &fifos.tx, &fifo_tx_);
       status != ZX_OK) {
-    LOGF_ERROR("network-device(%s): failed to create tx FIFO", name());
+    LOGF_ERROR("%s: failed to create tx FIFO", name());
     return zx::error(status);
   }
 
@@ -158,14 +156,14 @@ zx::status<netdev::wire::Fifos> Session::Init() {
       []() __TA_ASSERT(parent_->rx_lock()) {}();
       rx_return_queue_.reset(new (&ac) uint16_t[parent_->rx_fifo_depth()]);
       if (!ac.check()) {
-        LOGF_ERROR("network-device(%s): failed to create return queue", name());
+        LOGF_ERROR("%s: failed to create return queue", name());
         ZX_ERR_NO_MEMORY;
       }
       rx_return_queue_count_ = 0;
 
       rx_avail_queue_.reset(new (&ac) uint16_t[parent_->rx_fifo_depth()]);
       if (!ac.check()) {
-        LOGF_ERROR("network-device(%s): failed to create return queue", name());
+        LOGF_ERROR("%s: failed to create return queue", name());
         return ZX_ERR_NO_MEMORY;
       }
       rx_avail_queue_count_ = 0;
@@ -177,7 +175,7 @@ zx::status<netdev::wire::Fifos> Session::Init() {
   }
 
   LOGF_TRACE(
-      "network-device(%s): starting session:"
+      "%s: starting session:"
       " descriptor_count: %d,"
       " descriptor_length: %ld,"
       " flags: %08X",
@@ -195,8 +193,7 @@ void Session::Bind(fidl::ServerEnd<netdev::Session> channel) {
 }
 
 void Session::OnUnbind(fidl::UnbindInfo info, fidl::ServerEnd<netdev::Session> channel) {
-  LOGF_TRACE("network-device(%s): session unbound, info: %s", name(),
-             info.FormatDescription().c_str());
+  LOGF_TRACE("%s: session unbound, info: %s", name(), info.FormatDescription().c_str());
   {
     fbl::AutoLock lock(&parent_->tx_lock());
     // Remove ourselves from the Tx thread worker so we stop fetching buffers
@@ -258,8 +255,7 @@ zx_status_t Session::FetchTx(TxQueue::SessionTransaction& transaction) {
           fifo_tx_.read(sizeof(uint16_t), fetch_buffer, transaction.available(), &read);
       status != ZX_OK) {
     if (status != ZX_ERR_SHOULD_WAIT) {
-      LOGF_TRACE("network-device(%s): tx fifo read failed %s", name(),
-                 zx_status_get_string(status));
+      LOGF_TRACE("%s: tx fifo read failed %s", name(), zx_status_get_string(status));
     }
     return status;
   }
@@ -277,13 +273,13 @@ zx_status_t Session::FetchTx(TxQueue::SessionTransaction& transaction) {
   for (uint16_t desc_idx : descriptors) {
     buffer_descriptor_t* const desc_ptr = checked_descriptor(desc_idx);
     if (!desc_ptr) {
-      LOGF_ERROR("network-device(%s): received out of bounds descriptor: %d", name(), desc_idx);
+      LOGF_ERROR("%s: received out of bounds descriptor: %d", name(), desc_idx);
       return ZX_ERR_IO_INVALID;
     }
     buffer_descriptor_t& desc = *desc_ptr;
 
     if (desc.port_id.base >= attached_ports_.size()) {
-      LOGF_ERROR("network-device(%s): received invalid tx port id: %d", name(), desc.port_id.base);
+      LOGF_ERROR("%s: received invalid tx port id: %d", name(), desc.port_id.base);
       return ZX_ERR_IO_INVALID;
     }
     std::optional<AttachedPort>& slot = attached_ports_[desc.port_id.base];
@@ -302,8 +298,8 @@ zx_status_t Session::FetchTx(TxQueue::SessionTransaction& transaction) {
           // Tx FIFO closing is an expected error.
           return ZX_ERR_PEER_CLOSED;
         default:
-          LOGF_ERROR("network-device(%s): failed to return buffer with bad port number %d: %s",
-                     name(), desc.port_id.base, zx_status_get_string(status));
+          LOGF_ERROR("%s: failed to return buffer with bad port number %d: %s", name(),
+                     desc.port_id.base, zx_status_get_string(status));
           return ZX_ERR_IO_INVALID;
       }
     };
@@ -335,16 +331,14 @@ zx_status_t Session::FetchTx(TxQueue::SessionTransaction& transaction) {
 
     // check header space:
     if (desc.head_length < req_header_length) {
-      LOGF_ERROR("network-device(%s): received buffer with insufficient head length: %d", name(),
-                 desc.head_length);
+      LOGF_ERROR("%s: received buffer with insufficient head length: %d", name(), desc.head_length);
       return ZX_ERR_IO_INVALID;
     }
     auto skip_front = desc.head_length - req_header_length;
 
     // check tail space:
     if (desc.tail_length < req_tail_length) {
-      LOGF_ERROR("network-device(%s): received buffer with insufficient tail length: %d", name(),
-                 desc.tail_length);
+      LOGF_ERROR("%s: received buffer with insufficient tail length: %d", name(), desc.tail_length);
       return ZX_ERR_IO_INVALID;
     }
 
@@ -353,8 +347,8 @@ zx_status_t Session::FetchTx(TxQueue::SessionTransaction& transaction) {
       case netdev::wire::InfoType::kNoInfo:
         break;
       default:
-        LOGF_ERROR("network-device(%s): info type (%d) not recognized, discarding information",
-                   name(), buffer->meta.info_type);
+        LOGF_ERROR("%s: info type (%d) not recognized, discarding information", name(),
+                   buffer->meta.info_type);
         info_type = netdev::wire::InfoType::kNoInfo;
         break;
     }
@@ -376,8 +370,7 @@ zx_status_t Session::FetchTx(TxQueue::SessionTransaction& transaction) {
     // chain_length is the number of buffers to follow, so it must be strictly less than the maximum
     // descriptor chain value.
     if (desc.chain_length >= netdev::wire::kMaxDescriptorChain) {
-      LOGF_ERROR("network-device(%s): received invalid chain length: %d", name(),
-                 desc.chain_length);
+      LOGF_ERROR("%s: received invalid chain length: %d", name(), desc.chain_length);
       return ZX_ERR_IO_INVALID;
     }
     auto expect_chain = desc.chain_length;
@@ -413,12 +406,12 @@ zx_status_t Session::FetchTx(TxQueue::SessionTransaction& transaction) {
       uint16_t didx = part_desc.nxt;
       part_iter = checked_descriptor(didx);
       if (part_iter == nullptr) {
-        LOGF_ERROR("network-device(%s): invalid chained descriptor index: %d", name(), didx);
+        LOGF_ERROR("%s: invalid chained descriptor index: %d", name(), didx);
         return ZX_ERR_IO_INVALID;
       }
       buffer_descriptor_t& next_desc = *part_iter;
       if (next_desc.chain_length != expect_chain - 1) {
-        LOGF_ERROR("network-device(%s): invalid next chain length %d on descriptor %d", name(),
+        LOGF_ERROR("%s: invalid next chain length %d on descriptor %d", name(),
                    next_desc.chain_length, didx);
         return ZX_ERR_IO_INVALID;
       }
@@ -426,8 +419,8 @@ zx_status_t Session::FetchTx(TxQueue::SessionTransaction& transaction) {
     }
 
     if (total_length < parent_->info().min_tx_buffer_length) {
-      LOGF_ERROR("network-device(%s): tx buffer length %d less than required minimum of %d", name(),
-                 total_length, parent_->info().min_tx_buffer_length);
+      LOGF_ERROR("%s: tx buffer length %d less than required minimum of %d", name(), total_length,
+                 parent_->info().min_tx_buffer_length);
       return ZX_ERR_IO_INVALID;
     }
     transaction.Push(desc_idx);
@@ -623,12 +616,12 @@ void Session::MarkTxReturnResult(uint16_t descriptor_index, zx_status_t status) 
 void Session::ReturnTxDescriptors(const uint16_t* descriptors, size_t count) {
   size_t actual_count;
   zx_status_t status = fifo_tx_.write(sizeof(uint16_t), descriptors, count, &actual_count);
-  constexpr char kLogFormat[] = "network-device(%s): failed to return %ld tx descriptors: %s";
+  constexpr char kLogFormat[] = "%s: failed to return %ld tx descriptors: %s";
   switch (status) {
     case ZX_OK:
       if (actual_count != count) {
-        LOGF_ERROR("network-device(%s): failed to return %ld/%ld tx descriptors", name(),
-                   count - actual_count, count);
+        LOGF_ERROR("%s: failed to return %ld/%ld tx descriptors", name(), count - actual_count,
+                   count);
       }
       break;
     case ZX_ERR_PEER_CLOSED:
@@ -645,8 +638,8 @@ void Session::ReturnTxDescriptors(const uint16_t* descriptors, size_t count) {
 
 bool Session::LoadAvailableRxDescriptors(RxQueue::SessionTransaction& transact) {
   transact.AssertLock(*parent_);
-  LOGF_TRACE("network-device(%s): %s available:%ld transaction:%d", name(), __FUNCTION__,
-             rx_avail_queue_count_, transact.remaining());
+  LOGF_TRACE("%s: %s available:%ld transaction:%d", name(), __FUNCTION__, rx_avail_queue_count_,
+             transact.remaining());
   if (rx_avail_queue_count_ == 0) {
     return false;
   }
@@ -698,16 +691,14 @@ void Session::Kill() {
 zx_status_t Session::FillRxSpace(uint16_t descriptor_index, rx_space_buffer_t* buff) {
   buffer_descriptor_t* desc_ptr = checked_descriptor(descriptor_index);
   if (!desc_ptr) {
-    LOGF_ERROR("network-device(%s): received out of bounds descriptor: %d", name(),
-               descriptor_index);
+    LOGF_ERROR("%s: received out of bounds descriptor: %d", name(), descriptor_index);
     return ZX_ERR_INVALID_ARGS;
   }
   buffer_descriptor_t& desc = *desc_ptr;
 
   // chain_length is the number of buffers to follow. Rx buffers are always single buffers.
   if (desc.chain_length != 0) {
-    LOGF_ERROR("network-device(%s): received invalid chain length for rx buffer: %d", name(),
-               desc.chain_length);
+    LOGF_ERROR("%s: received invalid chain length for rx buffer: %d", name(), desc.chain_length);
     return ZX_ERR_INVALID_ARGS;
   }
   if (desc.data_length < parent_->info().min_rx_buffer_length) {
@@ -748,7 +739,7 @@ bool Session::CompleteRx(const RxFrameInfo& frame_info) {
     allow_reuse &= LoadRxInfo(frame_info) != ZX_OK;
   } else if (frame_info.meta.frame_type == 0) {
     // Help parent driver authors to debug common contract violation.
-    LOGF_WARN("network-device(%s): rx frame has unspecified frame type, dropping frame", name());
+    LOGF_WARN("%s: rx frame has unspecified frame type, dropping frame", name());
   }
 
   return allow_reuse;
@@ -763,7 +754,7 @@ bool Session::CompleteRxWith(const Session& owner, const RxFrameInfo& frame_info
       IsPaused()) {
     if (frame_info.meta.frame_type == 0) {
       // Help parent driver authors to debug common contract violation.
-      LOGF_WARN("network-device(%s): rx frame has unspecified frame type, dropping frame", name());
+      LOGF_WARN("%s: rx frame has unspecified frame type, dropping frame", name());
     }
     // Don't do anything if we're paused or not subscribed to this frame type.
     return false;
@@ -779,7 +770,7 @@ bool Session::CompleteRxWith(const Session& owner, const RxFrameInfo& frame_info
     if (parts_iter == parts_storage.end()) {
       // Chained too many parts, this session is not providing buffers large enough.
       LOGF_WARN(
-          "network-device(%s): failed to allocate %d bytes with %ld buffer parts (%d bytes "
+          "%s: failed to allocate %d bytes with %ld buffer parts (%d bytes "
           "remaining); frame dropped",
           name(), frame_info.total_length, parts_storage.size(), remaining);
       return false;
@@ -810,8 +801,8 @@ bool Session::CompleteRxWith(const Session& owner, const RxFrameInfo& frame_info
     session_buffer.descriptor = *(--rx_queue_pick);
     buffer_descriptor_t* desc_ptr = checked_descriptor(session_buffer.descriptor);
     if (!desc_ptr) {
-      LOGF_TRACE("network-device(%s): descriptor %d out of range %d", name(),
-                 session_buffer.descriptor, descriptor_count_);
+      LOGF_TRACE("%s: descriptor %d out of range %d", name(), session_buffer.descriptor,
+                 descriptor_count_);
       Kill();
       return false;
     }
@@ -941,8 +932,8 @@ bool Session::ListenFromTx(const Session& owner, uint16_t owner_index) {
     case netdev::wire::InfoType::kNoInfo:
       break;
     default:
-      LOGF_ERROR("network-device(%s): info type (%d) not recognized, discarding information",
-                 name(), owner_desc.info_type);
+      LOGF_ERROR("%s: info type (%d) not recognized, discarding information", name(),
+                 owner_desc.info_type);
       info_type = netdev::wire::InfoType::kNoInfo;
       break;
   }
@@ -982,8 +973,8 @@ zx_status_t Session::LoadRxInfo(const RxFrameInfo& info) {
     // from the offset on fulfilled buffer parts.
     uint32_t consumed_part_length = buffer.offset + buffer.length;
     if (consumed_part_length > available_len) {
-      LOGF_ERROR("network-device(%s): invalid returned buffer length: %d, descriptor fits %d",
-                 name(), consumed_part_length, available_len);
+      LOGF_ERROR("%s: invalid returned buffer length: %d, descriptor fits %d", name(),
+                 consumed_part_length, available_len);
       return ZX_ERR_INVALID_ARGS;
     }
     // NB: Update only the fields that we need to update here instead of using literals; we're
@@ -1005,8 +996,8 @@ zx_status_t Session::LoadRxInfo(const RxFrameInfo& info) {
         case netdev::wire::InfoType::kNoInfo:
           break;
         default:
-          LOGF_ERROR("network-device(%s): info type (%d) not recognized, discarding information",
-                     name(), info.meta.info_type);
+          LOGF_ERROR("%s: info type (%d) not recognized, discarding information", name(),
+                     info.meta.info_type);
           info_type = netdev::wire::InfoType::kNoInfo;
           break;
       }
@@ -1031,11 +1022,11 @@ void Session::CommitRx() {
   size_t actual;
   zx_status_t status = fifo_rx_->fifo.write(sizeof(uint16_t), rx_return_queue_.get(),
                                             rx_return_queue_count_, &actual);
-  constexpr char kLogFormat[] = "network-device(%s): failed to return %ld rx descriptors: %s";
+  constexpr char kLogFormat[] = "%s: failed to return %ld rx descriptors: %s";
   switch (status) {
     case ZX_OK:
       if (actual != rx_return_queue_count_) {
-        LOGF_ERROR("network-device(%s): failed to return %ld/%ld rx descriptors", name(),
+        LOGF_ERROR("%s: failed to return %ld/%ld rx descriptors", name(),
                    rx_return_queue_count_ - actual, rx_return_queue_count_);
       }
       break;

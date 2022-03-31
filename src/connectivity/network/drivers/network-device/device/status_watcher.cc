@@ -31,22 +31,22 @@ zx_status_t StatusWatcher::Bind(async_dispatcher_t* dispatcher,
                                 fit::callback<void(StatusWatcher*)> closed_callback) {
   fbl::AutoLock lock(&lock_);
   ZX_DEBUG_ASSERT(!binding_.has_value());
-  binding_ = fidl::BindServer(
-      dispatcher, std::move(channel), this,
-      [](StatusWatcher* closed, fidl::UnbindInfo info,
-         fidl::ServerEnd<fuchsia_hardware_network::StatusWatcher> /*unused*/) {
-        LOGF_TRACE("network-device: watcher closed: %s", info.FormatDescription().c_str());
-        fbl::AutoLock lock(&closed->lock_);
-        closed->binding_.reset();
-        if (closed->pending_txn_.has_value()) {
-          closed->pending_txn_->Close(ZX_ERR_CANCELED);
-          closed->pending_txn_.reset();
-        }
-        if (closed->closed_cb_) {
-          lock.release();
-          closed->closed_cb_(closed);
-        }
-      });
+  binding_ =
+      fidl::BindServer(dispatcher, std::move(channel), this,
+                       [](StatusWatcher* closed, fidl::UnbindInfo info,
+                          fidl::ServerEnd<fuchsia_hardware_network::StatusWatcher> /*unused*/) {
+                         LOGF_TRACE("watcher closed: %s", info.FormatDescription().c_str());
+                         fbl::AutoLock lock(&closed->lock_);
+                         closed->binding_.reset();
+                         if (closed->pending_txn_.has_value()) {
+                           closed->pending_txn_->Close(ZX_ERR_CANCELED);
+                           closed->pending_txn_.reset();
+                         }
+                         if (closed->closed_cb_) {
+                           lock.release();
+                           closed->closed_cb_(closed);
+                         }
+                       });
   closed_cb_ = std::move(closed_callback);
   return ZX_OK;
 }
@@ -66,8 +66,8 @@ void StatusWatcher::Unbind() {
 
 StatusWatcher::~StatusWatcher() {
   ZX_ASSERT_MSG(!pending_txn_.has_value(),
-                "Tried to destroy StatusWatcher with a pending transaction");
-  ZX_ASSERT_MSG(!binding_.has_value(), "Tried to destroy StatusWatcher without unbinding");
+                "tried to destroy StatusWatcher with a pending transaction");
+  ZX_ASSERT_MSG(!binding_.has_value(), "tried to destroy StatusWatcher without unbinding");
 }
 
 void StatusWatcher::WatchStatus(WatchStatusRequestView request,

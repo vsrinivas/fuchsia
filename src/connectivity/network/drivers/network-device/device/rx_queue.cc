@@ -49,7 +49,7 @@ zx::status<std::unique_ptr<RxQueue>> RxQueue::Create(DeviceInterface* parent) {
   }
   zx_status_t status;
   if ((status = zx::port::create(0, &queue->rx_watch_port_)) != ZX_OK) {
-    LOGF_ERROR("network-device: failed to create rx watch port: %s", zx_status_get_string(status));
+    LOGF_ERROR("failed to create rx watch port: %s", zx_status_get_string(status));
     return zx::error(status);
   }
 
@@ -70,7 +70,7 @@ zx::status<std::unique_ptr<RxQueue>> RxQueue::Create(DeviceInterface* parent) {
           },
           thread_args, "netdevice:rx_watch");
       result != thrd_success) {
-    LOGF_ERROR("network-device: rx queue failed to create thread: %d", result);
+    LOGF_ERROR("rx queue failed to create thread: %d", result);
     delete thread_args;
     return zx::error(ZX_ERR_INTERNAL);
   }
@@ -90,7 +90,7 @@ void RxQueue::TriggerRxWatch() {
   packet.status = ZX_OK;
   zx_status_t status = rx_watch_port_.queue(&packet);
   if (status != ZX_OK) {
-    LOGF_ERROR("network-device: TriggerRxWatch failed: %s", zx_status_get_string(status));
+    LOGF_ERROR("TriggerRxWatch failed: %s", zx_status_get_string(status));
   }
 }
 
@@ -104,7 +104,7 @@ void RxQueue::TriggerSessionChanged() {
   packet.status = ZX_OK;
   zx_status_t status = rx_watch_port_.queue(&packet);
   if (status != ZX_OK) {
-    LOGF_ERROR("network-device: TriggerSessionChanged failed: %s", zx_status_get_string(status));
+    LOGF_ERROR("TriggerSessionChanged failed: %s", zx_status_get_string(status));
   }
 }
 
@@ -115,8 +115,7 @@ void RxQueue::JoinThread() {
     packet.key = kQuitWatchKey;
     zx_status_t status = rx_watch_port_.queue(&packet);
     if (status != ZX_OK) {
-      LOGF_ERROR("network-device: RxQueue::JoinThread failed to send quit key: %s",
-                 zx_status_get_string(status));
+      LOGF_ERROR("RxQueue::JoinThread failed to send quit key: %s", zx_status_get_string(status));
     }
     // Mark the queue as not running anymore.
     running_ = false;
@@ -148,7 +147,7 @@ std::tuple<RxQueue::InFlightBuffer*, uint32_t> RxQueue::GetBuffer() {
   // Need to fetch more from the session.
   if (in_flight_->available() == 0) {
     // No more space to keep in flight buffers.
-    LOG_ERROR("network-device: can't fit more in-flight buffers");
+    LOG_ERROR("can't fit more in-flight buffers");
     return std::make_tuple(nullptr, 0);
   }
 
@@ -157,8 +156,7 @@ std::tuple<RxQueue::InFlightBuffer*, uint32_t> RxQueue::GetBuffer() {
     case ZX_OK:
       break;
     default:
-      LOGF_ERROR("network-device: failed to load rx buffer descriptors: %s",
-                 zx_status_get_string(status));
+      LOGF_ERROR("failed to load rx buffer descriptors: %s", zx_status_get_string(status));
       __FALLTHROUGH;
     case ZX_ERR_PEER_CLOSED:  // Primary FIFO closed.
     case ZX_ERR_SHOULD_WAIT:  // No Rx buffers available in FIFO.
@@ -224,7 +222,7 @@ void RxQueue::CompleteRxList(const rx_buffer_t* rx_buffer_list, size_t count) {
         // That's complicated enough and this is unexpected enough that the current decision is to
         // drop the frame on the floor.
         LOGF_WARN(
-            "network-device: dropping chained frame with %ld buffers spanning different sessions: "
+            "dropping chained frame with %ld buffers spanning different sessions: "
             "%s, %s",
             rx_buffer.data_count, primary_session->name(), in_flight_buffer.session->name());
         drop_frame = true;
@@ -235,7 +233,7 @@ void RxQueue::CompleteRxList(const rx_buffer_t* rx_buffer_list, size_t count) {
 
     if (!primary_session) {
       // Buffer contained no parts.
-      LOG_WARN("network-device: attempted to return an rx buffer with no parts");
+      LOG_WARN("attempted to return an rx buffer with no parts");
       continue;
     }
 
@@ -384,10 +382,9 @@ int RxQueue::WatchThread(std::unique_ptr<rx_space_buffer_t[]> space_buffers) {
 
   zx_status_t status = loop();
   if (status != ZX_OK) {
-    LOGF_ERROR("network-device: RxQueue::WatchThread finished loop with error: %s",
-               zx_status_get_string(status));
+    LOGF_ERROR("RxQueue::WatchThread finished loop with error: %s", zx_status_get_string(status));
   }
-  LOG_TRACE("network-device: watch thread done");
+  LOG_TRACE("watch thread done");
   return 0;
 }
 

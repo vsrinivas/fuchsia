@@ -30,8 +30,7 @@ void TxQueue::JoinThread() {
   }
 
   if (zx_status_t status = EnqueueUserPacket(kQuitKey); status != ZX_OK) {
-    LOGF_ERROR("network-device: TxQueue::JoinThread failed to send quit key: %s",
-               zx_status_get_string(status));
+    LOGF_ERROR("TxQueue::JoinThread failed to send quit key: %s", zx_status_get_string(status));
   }
 
   // Mark the queue as not running anymore.
@@ -103,8 +102,10 @@ zx::status<std::unique_ptr<TxQueue>> TxQueue::Create(DeviceInterface* parent) {
   if (!ac.check()) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
-  std::unique_ptr<BufferParts<buffer_region_t>[]> buffer_parts(
-      new (&ac) BufferParts<buffer_region_t>[capacity]);
+  // TODO(https://github.com/llvm/llvm-project/issues/54497): remove unnecessary
+  // type extraction once clang-format can deal with [] in template parameter.
+  using BufferParts_t = BufferParts<buffer_region_t>[];
+  std::unique_ptr<BufferParts_t> buffer_parts(new (&ac) BufferParts<buffer_region_t>[capacity]);
   if (!ac.check()) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
@@ -113,12 +114,12 @@ zx::status<std::unique_ptr<TxQueue>> TxQueue::Create(DeviceInterface* parent) {
   }
 
   if (zx_status_t status = zx::port::create(0, &queue->port_); status != ZX_OK) {
-    LOGF_ERROR("network-device: failed to create tx queue port");
+    LOGF_ERROR("failed to create tx queue port");
     return zx::error(status);
   }
 
-  using ThreadArgs = std::tuple<TxQueue*, std::unique_ptr<tx_buffer_t[]>,
-                                std::unique_ptr<BufferParts<buffer_region_t>[]>, size_t>;
+  using ThreadArgs =
+      std::tuple<TxQueue*, std::unique_ptr<tx_buffer_t[]>, std::unique_ptr<BufferParts_t>, size_t>;
   auto* thread_args =
       new (&ac) ThreadArgs(queue.get(), std::move(tx_buffers), std::move(buffer_parts), capacity);
   if (!ac.check()) {
@@ -130,6 +131,9 @@ zx::status<std::unique_ptr<TxQueue>> TxQueue::Create(DeviceInterface* parent) {
           &thread,
           [](void* ctx) {
             auto* args = reinterpret_cast<ThreadArgs*>(ctx);
+            // NB: space_buffers is built with pointers to buffers in
+            // buffer_parts, so we must keep the latter alive for the lifetime
+            // of the thread, even though we don't reference it explicitly here.
             auto [queue, space_buffers, buffer_parts, capacity] = std::move(*args);
             delete args;
             queue->Thread(cpp20::span(&space_buffers[0], capacity));
@@ -137,7 +141,7 @@ zx::status<std::unique_ptr<TxQueue>> TxQueue::Create(DeviceInterface* parent) {
           },
           thread_args, "netdevice:tx_watch");
       result != thrd_success) {
-    LOGF_ERROR("network-device: rx queue failed to create thread: %d", result);
+    LOGF_ERROR("rx queue failed to create thread: %d", result);
     delete thread_args;
     return zx::error(ZX_ERR_INTERNAL);
   }
@@ -152,7 +156,7 @@ void TxQueue::Thread(cpp20::span<tx_buffer_t> buffers) {
     zx_port_packet_t packet;
     zx_status_t status = port_.wait(zx::time::infinite(), &packet);
     if (status != ZX_OK) {
-      LOGF_ERROR("network-device: tx thread port wait failed: %s", zx_status_get_string(status));
+      LOGF_ERROR("tx thread port wait failed: %s", zx_status_get_string(status));
       return;
     }
     switch (packet.type) {
@@ -160,8 +164,7 @@ void TxQueue::Thread(cpp20::span<tx_buffer_t> buffers) {
         switch (packet.key) {
           case kResumeKey:
             if (zx_status_t status = UpdateFifoWatches(); status != ZX_OK) {
-              LOGF_ERROR("network-device: failed to install FIFO watches: %s",
-                         zx_status_get_string(status));
+              LOGF_ERROR("failed to install FIFO watches: %s", zx_status_get_string(status));
               return;
             }
             break;
@@ -174,8 +177,7 @@ void TxQueue::Thread(cpp20::span<tx_buffer_t> buffers) {
       case ZX_PKT_TYPE_SIGNAL_ONE:
         if (zx_status_t status = HandleFifoSignal(buffers, packet.key, packet.signal.observed);
             status != ZX_OK) {
-          LOGF_ERROR("network-device: failed to handle FIFO signal: %s",
-                     zx_status_get_string(status));
+          LOGF_ERROR("failed to handle FIFO signal: %s", zx_status_get_string(status));
           return;
         }
         break;
@@ -197,15 +199,15 @@ zx_status_t TxQueue::UpdateFifoWatches() {
         case ZX_OK:
           continue;
         default:
-          LOGF_ERROR("network-device: failed to cancel FIFO wait for session %s: %s",
-                     session.name(), zx_status_get_string(status));
+          LOGF_ERROR("failed to cancel FIFO wait for session %s: %s", session.name(),
+                     zx_status_get_string(status));
           return status;
       }
     }
     if (zx_status_t status =
             fifo.wait_async(port_, it.key(), ZX_FIFO_PEER_CLOSED | ZX_FIFO_READABLE, 0);
         status != ZX_OK) {
-      LOGF_ERROR("network-device: failed to start FIFO wait for session %s: %s", session.name(),
+      LOGF_ERROR("failed to start FIFO wait for session %s: %s", session.name(),
                  zx_status_get_string(status));
       return status;
     }
@@ -249,8 +251,8 @@ zx_status_t TxQueue::HandleFifoSignal(cpp20::span<tx_buffer_t> buffers, SessionK
         // notified of new buffers.
         return ZX_OK;
       default:
-        LOGF_ERROR("network-device: unexpected error for session %s: %s; killing it",
-                   session.name(), zx_status_get_string(status));
+        LOGF_ERROR("unexpected error for session %s: %s; killing it", session.name(),
+                   zx_status_get_string(status));
         session.Kill();
         return ZX_OK;
     }
@@ -263,7 +265,7 @@ zx_status_t TxQueue::HandleFifoSignal(cpp20::span<tx_buffer_t> buffers, SessionK
 
   if (zx_status_t status = fifo.wait_async(port_, key, ZX_FIFO_PEER_CLOSED | ZX_FIFO_READABLE, 0);
       status != ZX_OK) {
-    LOGF_ERROR("network-device: failed to start FIFO wait for session %s: %s", session.name(),
+    LOGF_ERROR("failed to start FIFO wait for session %s: %s", session.name(),
                zx_status_get_string(status));
     return status;
   }
@@ -277,7 +279,7 @@ void TxQueue::Resume() {
   }
 
   if (zx_status_t status = EnqueueUserPacket(kResumeKey); status != ZX_OK) {
-    LOGF_ERROR("network-device: TxQueue::Resume failed: %s", zx_status_get_string(status));
+    LOGF_ERROR("TxQueue::Resume failed: %s", zx_status_get_string(status));
   }
 }
 
@@ -343,8 +345,8 @@ TxQueue::SessionKey TxQueue::AddSession(Session* session) {
   TxQueue::SessionKey key = new_key.value();
 
   if (zx_status_t status = EnqueueUserPacket(kResumeKey); status != ZX_OK) {
-    LOGF_ERROR("network-device: failed to notify of new session %s with key %ld: %s",
-               session->name(), key, zx_status_get_string(status));
+    LOGF_ERROR("failed to notify of new session %s with key %ld: %s", session->name(), key,
+               zx_status_get_string(status));
   }
 
   return key;

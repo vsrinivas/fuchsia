@@ -35,7 +35,7 @@ zx_status_t PortWatcher::Bind(async_dispatcher_t* dispatcher,
       dispatcher, std::move(channel), this,
       [](PortWatcher* closed_ptr, fidl::UnbindInfo info,
          fidl::ServerEnd<netdev::PortWatcher> /*unused*/) {
-        LOGF_TRACE("network-device: port watcher closed: %s", info.FormatDescription().c_str());
+        LOGF_TRACE("port watcher closed: %s", info.FormatDescription().c_str());
         PortWatcher& closed = *closed_ptr;
         fbl::AutoLock lock(&closed.lock_);
         closed.binding_.reset();
@@ -61,7 +61,7 @@ void PortWatcher::Unbind() {
 }
 
 void PortWatcher::Watch(WatchRequestView request, WatchCompleter::Sync& completer) {
-  LOGF_TRACE("network-device: PortWatcher::%s(_, _)", __FUNCTION__);
+  LOGF_TRACE("PortWatcher::%s(_, _)", __FUNCTION__);
   fbl::AutoLock lock(&lock_);
   if (event_queue_.is_empty()) {
     if (pending_txn_.has_value()) {
@@ -78,8 +78,8 @@ void PortWatcher::Watch(WatchRequestView request, WatchCompleter::Sync& complete
 }
 
 zx_status_t PortWatcher::QueueEvent(const PortWatcher::Event& event) {
-  LOGF_TRACE("network-device: PortWatcher::%s(%ld); queue = %ld", __FUNCTION__,
-             event.event().Which(), event_queue_.size());
+  LOGF_TRACE("PortWatcher::%s(%ld); queue = %ld", __FUNCTION__, event.event().Which(),
+             event_queue_.size());
   if (event_queue_.size() == kMaximumQueuedEvents) {
     return ZX_ERR_CANCELED;
   }

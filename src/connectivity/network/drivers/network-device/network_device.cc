@@ -27,27 +27,27 @@ zx_status_t NetworkDevice::Create(void* ctx, zx_device_t* parent) {
   fbl::AllocChecker ac;
   std::unique_ptr netdev = fbl::make_unique_checked<NetworkDevice>(&ac, parent);
   if (!ac.check()) {
-    zxlogf(ERROR, "network-device: No memory");
+    zxlogf(ERROR, "no memory");
     return ZX_ERR_NO_MEMORY;
   }
 
   thrd_t thread;
   if (zx_status_t status = netdev->loop_.StartThread("network-device-handler", &thread);
       status != ZX_OK) {
-    zxlogf(ERROR, "network-device: Failed to create handler thread");
+    zxlogf(ERROR, "failed to create handler thread");
     return status;
   }
   netdev->loop_thread_ = thread;
 
   ddk::NetworkDeviceImplProtocolClient netdevice_impl(parent);
   if (!netdevice_impl.is_valid()) {
-    zxlogf(ERROR, "network-device: Bind failed, protocol not available");
+    zxlogf(ERROR, "bind failed, protocol not available");
     return ZX_ERR_NOT_FOUND;
   }
 
   zx::status device = NetworkDeviceInterface::Create(netdev->loop_.dispatcher(), netdevice_impl);
   if (device.is_error()) {
-    zxlogf(ERROR, "network-device: Failed to create inner device %s", device.status_string());
+    zxlogf(ERROR, "failed to create inner device %s", device.status_string());
     return device.status_value();
   }
   netdev->device_ = std::move(device.value());
@@ -55,7 +55,7 @@ zx_status_t NetworkDevice::Create(void* ctx, zx_device_t* parent) {
   if (zx_status_t status = netdev->DdkAdd(
           ddk::DeviceAddArgs("network-device").set_proto_id(ZX_PROTOCOL_NETWORK_DEVICE));
       status != ZX_OK) {
-    zxlogf(ERROR, "network-device: Failed to bind %s", zx_status_get_string(status));
+    zxlogf(ERROR, "failed to bind %s", zx_status_get_string(status));
     return status;
   }
 
@@ -67,17 +67,17 @@ zx_status_t NetworkDevice::Create(void* ctx, zx_device_t* parent) {
 }
 
 void NetworkDevice::DdkUnbind(ddk::UnbindTxn unbindTxn) {
-  zxlogf(DEBUG, "network-device: DdkUnbind");
+  zxlogf(DEBUG, "DdkUnbind");
   device_->Teardown([txn = std::move(unbindTxn)]() mutable { txn.Reply(); });
 }
 
 void NetworkDevice::DdkRelease() {
-  zxlogf(DEBUG, "network-device: DdkRelease");
+  zxlogf(DEBUG, "DdkRelease");
   delete this;
 }
 
 void NetworkDevice::GetDevice(GetDeviceRequestView request, GetDeviceCompleter::Sync& _completer) {
-  ZX_ASSERT_MSG(device_, "Can't serve device if not bound to parent implementation");
+  ZX_ASSERT_MSG(device_, "can't serve device if not bound to parent implementation");
   device_->Bind(std::move(request->device));
 }
 

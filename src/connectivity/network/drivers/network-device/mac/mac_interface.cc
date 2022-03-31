@@ -30,7 +30,7 @@ MacInterface::MacInterface(ddk::MacAddrProtocolClient parent) : impl_(parent) {}
 
 MacInterface::~MacInterface() {
   ZX_ASSERT_MSG(clients_.is_empty(),
-                "Can't dispose MacInterface while clients are still attached (%ld clients left).",
+                "can't dispose MacInterface while clients are still attached (%ld clients left).",
                 clients_.size_slow());
 }
 
@@ -142,7 +142,7 @@ void MacInterface::Consolidate() {
           mode = try_mode;
         } else {
           LOGF_WARN(
-              "Mac filter list is full, but more permissive modes are not supported. Multicast Mac "
+              "MAC filter list is full, but more permissive modes are not supported. Multicast MAC "
               "filter list is being truncated to %d entries",
               features_.multicast_filter_count);
         }

@@ -74,7 +74,7 @@ void DevicePort::GetStatusWatcher(GetStatusWatcherRequestView request,
       });
 
   if (status != ZX_OK) {
-    LOGF_ERROR("network-device: Failed to bind watcher: %s", zx_status_get_string(status));
+    LOGF_ERROR("failed to bind watcher: %s", zx_status_get_string(status));
     return;
   }
 
@@ -136,8 +136,7 @@ void DevicePort::GetMac(GetMacRequestView request, GetMacCompleter::Sync& _compl
   }
   zx_status_t status = mac_->Bind(dispatcher_, std::move(req));
   if (status != ZX_OK) {
-    LOGF_ERROR("network-device: failed to bind to MacAddr on port %d: %s", id_.base,
-               zx_status_get_string(status));
+    LOGF_ERROR("failed to bind to MacAddr on port %d: %s", id_.base, zx_status_get_string(status));
   }
 }
 
@@ -235,7 +234,7 @@ void DevicePort::GetStatus(GetStatusRequestView request, GetStatusCompleter::Syn
 
 void DevicePort::GetDevice(GetDeviceRequestView request, GetDeviceCompleter::Sync& _completer) {
   if (zx_status_t status = parent_->Bind(std::move(request->device)); status != ZX_OK) {
-    LOGF_ERROR("network-device: Bind failed %s", zx_status_get_string(status));
+    LOGF_ERROR("bind failed %s", zx_status_get_string(status));
   }
 }
 
