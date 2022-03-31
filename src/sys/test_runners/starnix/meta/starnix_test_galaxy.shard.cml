@@ -1,13 +1,14 @@
 {
+    // This shard contains the common routes used by the top-level starnix test runner components.
+    //
+    // This shard expects the component that includes it to define a `starnix_runner` child which
+    // is the component that will be expected to expose the
+    // `fuchsia.component.runner.ComponentRunner` protocol which is used to run the test binaries.
     include: [ "syslog/client.shard.cml" ],
     children: [
         {
-            name: "starnix_runner",
-            url: "fuchsia-pkg://fuchsia.com/starnix#meta/starnix_runner.cm",
-        },
-        {
             name: "starnix_test_runner",
-            url: "fuchsia-pkg://fuchsia.com/starnix-test-runner#meta/starnix_test_runner.cm",
+            url: "fuchsia-pkg://fuchsia.com/starnix-test-runners#meta/starnix_test_runner.cm",
         },
     ],
     offer: [
@@ -47,12 +48,6 @@
             directory: "dev-gpu",
             from: "parent",
             to: "#starnix_runner",
-        },
-    ],
-    expose: [
-        {
-            runner: "starnix_test_runner",
-            from: "#starnix_test_runner",
         },
     ],
 }

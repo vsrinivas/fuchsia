@@ -4,6 +4,7 @@
 
 group("bin") {
   deps = [
+    "galaxy:release",
     "starnix",
     "starsh",
   ]
@@ -11,5 +12,8 @@ group("bin") {
 
 group("tests") {
   testonly = true
-  deps = [ "starnix:tests" ]
+  deps = [
+    "galaxy:test",
+    "starnix:tests",
+  ]
 }

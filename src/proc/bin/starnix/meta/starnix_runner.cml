@@ -33,7 +33,6 @@
                 // Note that this is the parent's realm. This is used to create children in
                 // starnix_manager's collection.
                 "fuchsia.component.Realm",
-                "fuchsia.component.runner.ComponentRunner",
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.sysmem.Allocator",
 

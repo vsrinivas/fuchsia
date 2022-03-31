@@ -1,4 +1,5 @@
 {
+    // This component runs the tests for the starnix test runner.
     include: [
         "//src/sys/test_runners/rust/default.shard.cml",
         "syslog/client.shard.cml",

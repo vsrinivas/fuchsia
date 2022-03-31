@@ -37,6 +37,12 @@ rustc_binary("bin") {
   ]
 }
 
+fuchsia_component("test_runners") {
+  testonly = true
+  manifest = "meta/starnix_test_runners.cml"
+  component_name = "starnix_test_runners"
+}
+
 fuchsia_component("starnix_test_runner") {
   testonly = true
   manifest = "meta/starnix_test_runner.cml"
@@ -51,18 +57,26 @@ fuchsia_component("starnix_unit_test_runner") {
   deps = [ "//src/sys/test_runners/rust:bin" ]
 }
 
-fuchsia_component("starnix_test_runner_parent") {
+fuchsia_component("starmium_test_runner") {
   testonly = true
-  manifest = "meta/starnix_test_runner_parent.cml"
-  component_name = "starnix_test_runner_parent"
+  manifest = "meta/starmium_test_runner.cml"
+  component_name = "starmium_test_runner"
 }
 
-fuchsia_package("starnix-test-runner") {
+fuchsia_component("stardroid_test_runner") {
+  testonly = true
+  manifest = "meta/stardroid_test_runner.cml"
+  component_name = "stardroid_test_runner"
+}
+
+fuchsia_package("starnix-test-runners") {
   testonly = true
   deps = [
+    ":stardroid_test_runner",
+    ":starmium_test_runner",
     ":starnix_test_runner",
-    ":starnix_test_runner_parent",
     ":starnix_unit_test_runner",
+    ":test_runners",
   ]
 }
 
@@ -80,10 +94,14 @@ fuchsia_unittest_package("starnix-test-runner-tests") {
 
 group("starnix") {
   testonly = true
-  deps = [ ":starnix-test-runner" ]
+  if (target_cpu == "x64") {
+    deps = [ ":starnix-test-runners" ]
+  }
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":starnix-test-runner-tests" ]
+  if (target_cpu == "x64") {
+    deps = [ ":starnix-test-runner-tests" ]
+  }
 }

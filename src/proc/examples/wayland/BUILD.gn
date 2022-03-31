@@ -22,11 +22,7 @@ fuchsia_component("component") {
   component_name = "wayland_demo"
   manifest = "meta/wayland_demo.cml"
 
-  deps = [
-    ":demo_bin",
-    "//src/proc/tests/android:android_system_image",
-    "//src/proc/tests/android:starnix_data_tmp_placeholder",
-  ]
+  deps = [ ":demo_bin" ]
 }
 
 resource("test_bin") {
@@ -40,11 +36,7 @@ fuchsia_test_component("test_component") {
   component_name = "wayland_test"
   manifest = "meta/wayland_test.cml"
 
-  deps = [
-    ":test_bin",
-    "//src/proc/tests/android:android_system_image",
-    "//src/proc/tests/android:starnix_data_tmp_placeholder",
-  ]
+  deps = [ ":test_bin" ]
 }
 
 fuchsia_test_package("starnix_wayland_test") {

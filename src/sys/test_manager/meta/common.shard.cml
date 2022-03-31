@@ -42,12 +42,8 @@
             url: "fuchsia-pkg://fuchsia.com/rust-test-runner#meta/rust-test-runner.cm",
         },
         {
-            name: "starnix_test_runner",
-            url: "fuchsia-pkg://fuchsia.com/starnix-test-runner#meta/starnix_test_runner_parent.cm",
-        },
-        {
-            name: "starnix_unit_test_runner",
-            url: "fuchsia-pkg://fuchsia.com/starnix-test-runner#meta/starnix_unit_test_runner.cm",
+            name: "starnix_test_runners",
+            url: "fuchsia-pkg://fuchsia.com/starnix-test-runners#meta/starnix_test_runners.cm",
         },
         {
             name: "go_test_runner",
@@ -230,8 +226,7 @@
                 "#netemul_test_runner",
                 "#runner_memfs",
                 "#rust_test_runner",
-                "#starnix_test_runner",
-                "#starnix_unit_test_runner",
+                "#starnix_test_runners",
                 "#stress_test_runner",
                 "#test_tmpfs",
             ],
@@ -264,10 +259,7 @@
                 "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
-            to: [
-                "#starnix_test_runner",
-                "#starnix_unit_test_runner",
-            ],
+            to: [ "#starnix_test_runners" ],
         },
         {
             protocol: "fuchsia.process.Launcher",
@@ -279,8 +271,7 @@
                 "#gtest_runner",
                 "#netemul_test_runner",
                 "#rust_test_runner",
-                "#starnix_test_runner",
-                "#starnix_unit_test_runner",
+                "#starnix_test_runners",
             ],
         },
         {
@@ -292,7 +283,7 @@
                 "#go_test_runner",
                 "#gtest_runner",
                 "#rust_test_runner",
-                "#starnix_unit_test_runner",
+                "#starnix_test_runners",
             ],
         },
         {
@@ -335,8 +326,7 @@
             to: [
                 "#gtest_runner",
                 "#rust_test_runner",
-                "#starnix_test_runner",
-                "#starnix_unit_test_runner",
+                "#starnix_test_runners",
                 "#system-tests",
                 "#tests",
                 "#tier-2-tests",
@@ -451,7 +441,7 @@
             directory: "dev-gpu",
             from: "parent",
             to: [
-                "#starnix_test_runner",
+                "#starnix_test_runners",
                 "#system-tests",
             ],
             rights: [ "rw*" ],

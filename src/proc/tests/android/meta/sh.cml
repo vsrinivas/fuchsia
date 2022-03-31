@@ -1,6 +1,6 @@
 {
     program: {
-        runner: "starnix",
+        runner: "stardroid",
         binary: "/system/bin/sh",
         args: [ "-i" ],
     },

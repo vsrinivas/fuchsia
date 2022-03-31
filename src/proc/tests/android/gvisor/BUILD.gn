@@ -134,11 +134,7 @@ zip_resource("gvisor_runfiles") {
 }
 
 fuchsia_test_package("starnix_gvisor_tests") {
-  deps = [
-    ":gvisor_runfiles",
-    "//src/proc/tests/android:android_system_image",
-    "//src/proc/tests/android:starnix_data_tmp_placeholder",
-  ]
+  deps = [ ":gvisor_runfiles" ]
 
   test_components = []
 

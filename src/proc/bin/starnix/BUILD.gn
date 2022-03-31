@@ -217,30 +217,10 @@ if (target_cpu == "x64") {
     }
   }
 
-  resource("android_system_image") {
-    sources = [ "//prebuilt/starnix/android-image-amd64/system.img" ]
-    outputs = [ "data/system.img" ]
-  }
-
-  resource("stardroid_config") {
-    sources = [ "//src/proc/tests/android/stardroid.json" ]
-    outputs = [ "data/runner.config" ]
-  }
-
   fuchsia_component("starnix_runner_component") {
     component_name = "starnix_runner"
     deps = [ ":starnix_runner_bin" ]
     manifest = "meta/starnix_runner.cml"
-  }
-
-  resource("starnix_data_tmp_placeholder") {
-    sources = [ "//src/proc/tests/android/placeholder" ]
-    outputs = [ "data/tmp/.placeholder" ]
-  }
-
-  resource("starnix_data_pkg_placeholder") {
-    sources = [ "//src/proc/tests/android/placeholder" ]
-    outputs = [ "data/pkg/.placeholder" ]
   }
 
   resource("starnix-test-files") {
@@ -274,13 +254,7 @@ fuchsia_package("pkg") {
   deps = [ ":starnix_manager" ]
 
   if (target_cpu == "x64") {
-    deps += [
-      ":android_system_image",
-      ":stardroid_config",
-      ":starnix_data_pkg_placeholder",
-      ":starnix_data_tmp_placeholder",
-      ":starnix_runner_component",
-    ]
+    deps += [ ":starnix_runner_component" ]
   }
 }
 

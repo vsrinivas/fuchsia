@@ -10,9 +10,9 @@
     "apexes": [
         "com.android.runtime"
     ],
-    "kernel_cmdline": "androidboot.hardware=starnix",
     "features": [
         "binder",
         "logd"
-    ]
+    ],
+    "kernel_cmdline": "androidboot.hardware=starnix"
 }

@@ -1,6 +1,6 @@
 {
     program: {
-        runner: "starnix_test_runner",
+        runner: "starmium_test_runner",
     },
     capabilities: [
         { protocol: "fuchsia.test.Suite" },

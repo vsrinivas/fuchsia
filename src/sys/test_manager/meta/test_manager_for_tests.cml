@@ -47,12 +47,16 @@
                     from: "#rust_test_runner",
                 },
                 {
-                    runner: "starnix_test_runner",
-                    from: "#starnix_test_runner",
+                    runner: "stardroid_test_runner",
+                    from: "#starnix_test_runners",
+                },
+                {
+                    runner: "starmium_test_runner",
+                    from: "#starnix_test_runners",
                 },
                 {
                     runner: "starnix_unit_test_runner",
-                    from: "#starnix_unit_test_runner",
+                    from: "#starnix_test_runners",
                 },
                 {
                     runner: "go_test_runner",
@@ -113,12 +117,16 @@
                     from: "#rust_test_runner",
                 },
                 {
-                    runner: "starnix_test_runner",
-                    from: "#starnix_test_runner",
+                    runner: "stardroid_test_runner",
+                    from: "#starnix_test_runners",
+                },
+                {
+                    runner: "starmium_test_runner",
+                    from: "#starnix_test_runners",
                 },
                 {
                     runner: "starnix_unit_test_runner",
-                    from: "#starnix_unit_test_runner",
+                    from: "#starnix_test_runners",
                 },
                 {
                     runner: "inspect_test_runner",

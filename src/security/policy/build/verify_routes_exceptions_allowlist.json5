@@ -259,52 +259,52 @@
                     },
                 },
                 {
-                    "using_node": "/bootstrap/console-launcher",
-                    "capability": "fuchsia.pkg.PackageResolver",
-                    "error": {
-                        "error": {
-                            "analyzer_model_error": {
-                                "routing_error": {
-                                    "policy_error": {
-                                        "capability_use_disallowed": {
-                                            "cap": "fuchsia.pkg.PackageResolver",
-                                            "source_moniker": {
-                                                "component_instance": {
-                                                    "path": [
+                    using_node: "/bootstrap/console-launcher",
+                    capability: "fuchsia.pkg.PackageResolver",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    policy_error: {
+                                        capability_use_disallowed: {
+                                            cap: "fuchsia.pkg.PackageResolver",
+                                            source_moniker: {
+                                                component_instance: {
+                                                    path: [
+                                                        {
+                                                            name: "core",
+                                                            collection: null,
+                                                            rep: "core",
+                                                        },
+                                                        {
+                                                            name: "pkg-resolver",
+                                                            collection: null,
+                                                            rep: "pkg-resolver",
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                            target_moniker: {
+                                                path: [
                                                     {
-                                                        "name": "core",
-                                                        "collection": null,
-                                                        "rep": "core"
+                                                        name: "bootstrap",
+                                                        collection: null,
+                                                        rep: "bootstrap",
                                                     },
                                                     {
-                                                        "name": "pkg-resolver",
-                                                        "collection": null,
-                                                        "rep": "pkg-resolver"
-                                                    }
-                                                    ]
-                                                }
+                                                        name: "console-launcher",
+                                                        collection: null,
+                                                        rep: "console-launcher",
+                                                    },
+                                                ],
                                             },
-                                            "target_moniker": {
-                                                "path": [
-                                                {
-                                                    "name": "bootstrap",
-                                                    "collection": null,
-                                                    "rep": "bootstrap"
-                                                },
-                                                {
-                                                    "name": "console-launcher",
-                                                    "collection": null,
-                                                    "rep": "console-launcher"
-                                                }
-                                                ]
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                                        },
+                                    },
+                                },
+                            },
                         },
-                        "message": "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core/pkg-resolver\" being used at \"/bootstrap/console-launcher\""
-                    }
+                        message: "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core/pkg-resolver\" being used at \"/bootstrap/console-launcher\"",
+                    },
                 },
                 {
                     using_node: "/bootstrap/driver_manager",
@@ -355,52 +355,52 @@
                     },
                 },
                 {
-                    "using_node": "/bootstrap/netsvc",
-                    "capability": "fuchsia.pkg.PackageResolver",
-                    "error": {
-                        "error": {
-                            "analyzer_model_error": {
-                                "routing_error": {
-                                    "policy_error": {
-                                        "capability_use_disallowed": {
-                                            "cap": "fuchsia.pkg.PackageResolver",
-                                            "source_moniker": {
-                                                "component_instance": {
-                                                    "path": [
+                    using_node: "/bootstrap/netsvc",
+                    capability: "fuchsia.pkg.PackageResolver",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    policy_error: {
+                                        capability_use_disallowed: {
+                                            cap: "fuchsia.pkg.PackageResolver",
+                                            source_moniker: {
+                                                component_instance: {
+                                                    path: [
+                                                        {
+                                                            name: "core",
+                                                            collection: null,
+                                                            rep: "core",
+                                                        },
+                                                        {
+                                                            name: "pkg-resolver",
+                                                            collection: null,
+                                                            rep: "pkg-resolver",
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                            target_moniker: {
+                                                path: [
                                                     {
-                                                        "name": "core",
-                                                        "collection": null,
-                                                        "rep": "core"
+                                                        name: "bootstrap",
+                                                        collection: null,
+                                                        rep: "bootstrap",
                                                     },
                                                     {
-                                                        "name": "pkg-resolver",
-                                                        "collection": null,
-                                                        "rep": "pkg-resolver"
-                                                    }
-                                                    ]
-                                                }
+                                                        name: "netsvc",
+                                                        collection: null,
+                                                        rep: "netsvc",
+                                                    },
+                                                ],
                                             },
-                                            "target_moniker": {
-                                                "path": [
-                                                {
-                                                    "name": "bootstrap",
-                                                    "collection": null,
-                                                    "rep": "bootstrap"
-                                                },
-                                                {
-                                                    "name": "netsvc",
-                                                    "collection": null,
-                                                    "rep": "netsvc"
-                                                }
-                                                ]
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                                        },
+                                    },
+                                },
+                            },
                         },
-                        "message": "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core/pkg-resolver\" being used at \"/bootstrap/netsvc\""
-                    }
+                        message: "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core/pkg-resolver\" being used at \"/bootstrap/netsvc\"",
+                    },
                 },
                 {
                     capability: "fuchsia.pkg.PackageResolver",
@@ -768,41 +768,6 @@
                     },
                 },
                 {
-                    using_node: "/core/starnix_manager/starnix_runner",
-                    capability: "fuchsia.component.runner.ComponentRunner",
-                    error: {
-                        error: {
-                            analyzer_model_error: {
-                                routing_error: {
-                                    use_from_parent_not_found: {
-                                        moniker: {
-                                            path: [
-                                                {
-                                                    name: "core",
-                                                    collection: null,
-                                                    rep: "core",
-                                                },
-                                                {
-                                                    name: "starnix_manager",
-                                                    collection: null,
-                                                    rep: "starnix_manager",
-                                                },
-                                                {
-                                                    name: "starnix_runner",
-                                                    collection: null,
-                                                    rep: "starnix_runner",
-                                                },
-                                            ],
-                                        },
-                                        capability_id: "fuchsia.component.runner.ComponentRunner",
-                                    },
-                                },
-                            },
-                        },
-                        message: "A `use from parent` declaration was found at `/core/starnix_manager/starnix_runner` for `fuchsia.component.runner.ComponentRunner`, but no matching `offer` declaration was found in the parent",
-                    },
-                },
-                {
                     using_node: "/core/temperature-logger",
                     capability: "fuchsia.hardware.temperature.Device",
                     error: {
@@ -966,14 +931,14 @@
                                                     collection: null,
                                                     rep: "bt-a2dp",
                                                 },
-                                            ]
+                                            ],
                                         },
-                                        "capability_id": "fuchsia.power.battery.BatteryManager"
-                                    }
+                                        capability_id: "fuchsia.power.battery.BatteryManager",
+                                    },
                                 },
                             },
                         },
-                        "message": "A `use from parent` declaration was found at `/core/bt-a2dp` for `fuchsia.power.battery.BatteryManager`, but no matching `offer` declaration was found in the parent"
+                        message: "A `use from parent` declaration was found at `/core/bt-a2dp` for `fuchsia.power.battery.BatteryManager`, but no matching `offer` declaration was found in the parent",
                     },
                 },
                 {
@@ -997,14 +962,14 @@
                                                     collection: null,
                                                     rep: "bt-a2dp",
                                                 },
-                                            ]
+                                            ],
                                         },
-                                        "capability_id": "fuchsia.power.battery.BatteryManager"
-                                    }
+                                        capability_id: "fuchsia.power.battery.BatteryManager",
+                                    },
                                 },
                             },
                         },
-                        "message": "An `offer from parent` declaration was found at `/core/bt-a2dp` for `fuchsia.power.battery.BatteryManager`, but no matching `offer` declaration was found in the parent"
+                        message: "An `offer from parent` declaration was found at `/core/bt-a2dp` for `fuchsia.power.battery.BatteryManager`, but no matching `offer` declaration was found in the parent",
                     },
                 },
                 {
@@ -1028,14 +993,14 @@
                                                     collection: null,
                                                     rep: "bt-hfp-audio-gateway",
                                                 },
-                                            ]
+                                            ],
                                         },
-                                        "capability_id": "fuchsia.power.battery.BatteryManager"
-                                    }
+                                        capability_id: "fuchsia.power.battery.BatteryManager",
+                                    },
                                 },
                             },
                         },
-                        "message": "A `use from parent` declaration was found at `/core/bt-hfp-audio-gateway` for `fuchsia.power.battery.BatteryManager`, but no matching `offer` declaration was found in the parent"
+                        message: "A `use from parent` declaration was found at `/core/bt-hfp-audio-gateway` for `fuchsia.power.battery.BatteryManager`, but no matching `offer` declaration was found in the parent",
                     },
                 },
                 {

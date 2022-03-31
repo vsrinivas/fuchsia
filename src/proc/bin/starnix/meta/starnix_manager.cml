@@ -1,12 +1,12 @@
 {
     children: [
         {
-            name: "starnix_runner",
-            url: "fuchsia-pkg://fuchsia.com/starnix#meta/starnix_runner.cm",
-        },
-        {
             name: "stardroid",
             url: "fuchsia-pkg://fuchsia.com/stardroid#meta/starnix_runner.cm",
+        },
+        {
+            name: "starmium",
+            url: "fuchsia-pkg://fuchsia.com/starmium#meta/starnix_runner.cm",
         },
     ],
     collections: [
@@ -30,14 +30,20 @@
                 "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
-            to: "#starnix_runner",
+            to: [
+                "#stardroid",
+                "#starmium",
+            ],
         },
         {
             // Note that it's important that the runner gets access to starnix_manger's realm
             // instance, so it can create components in the "#playground" collection.
             protocol: "fuchsia.component.Realm",
             from: "framework",
-            to: "#starnix_runner",
+            to: [
+                "#stardroid",
+                "#starmium",
+            ],
         },
         {
             protocol: [ "fuchsia.logger.LogSink" ],
@@ -47,24 +53,29 @@
         {
             directory: "dev-gpu",
             from: "parent",
-            to: "#starnix_runner",
+            to: [
+                "#stardroid",
+                "#starmium",
+            ],
         },
     ],
     expose: [
         {
             runner: "starnix",
-            from: "#starnix_runner",
+            from: "#stardroid",
+            as: "stardroid",
         },
         {
-            runner: "stardroid",
-            from: "#stardroid",
+            runner: "starnix",
+            from: "#starmium",
+            as: "starmium",
         },
         {
             // In principle, this protocol should be exposed by the
             // starnix_manager component itself, but that is blocked
             // behind fxb/74087
             protocol: "fuchsia.starnix.developer.Manager",
-            from: "#starnix_runner",
+            from: "#stardroid",
         },
     ],
     environments: [
@@ -74,7 +85,13 @@
             runners: [
                 {
                     runner: "starnix",
-                    from: "#starnix_runner",
+                    from: "#starmium",
+                    as: "starmium",
+                },
+                {
+                    runner: "starnix",
+                    from: "#stardroid",
+                    as: "stardroid",
                 },
             ],
         },

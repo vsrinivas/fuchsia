@@ -86,10 +86,8 @@ resource("starnix_data_tmp_placeholder") {
 
 fuchsia_test_package("test_android_distro") {
   deps = [
-    ":android_system_image",
     ":init",
     ":sh",
-    ":starnix_data_tmp_placeholder",
   ]
 
   test_components = [

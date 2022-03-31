@@ -13,11 +13,7 @@ fuchsia_test_component("test_component") {
   component_name = "starnix_benchmarks"
   manifest = "meta/benchmarks.cml"
 
-  deps = [
-    ":bin",
-    "//src/proc/tests/android:android_system_image",
-    "//src/proc/tests/android:starnix_data_tmp_placeholder",
-  ]
+  deps = [ ":bin" ]
 }
 
 fuchsia_test_package("starnix_benchmarks") {
