@@ -148,6 +148,7 @@ impl Kind {
             fio::Representation::SynchronousDatagramSocket(_) => Kind::SynchronousDatagramSocket,
             fio::Representation::StreamSocket(_) => Kind::StreamSocket,
             fio::Representation::RawSocket(_) => Kind::RawSocket,
+            fio::Representation::PacketSocket(_) => Kind::PacketSocket,
             _ => Kind::Unknown,
         }
     }
