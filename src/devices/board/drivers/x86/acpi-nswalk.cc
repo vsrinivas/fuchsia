@@ -145,7 +145,8 @@ zx_status_t acpi_suspend(uint8_t requested_state, bool enable_wake, uint8_t susp
       return ZX_OK;
     }
     case DEVICE_SUSPEND_REASON_REBOOT:
-      return ZX_ERR_NOT_SUPPORTED;
+      // Don't do anything, we expect the higher layers to execute the reboot.
+      return ZX_OK;
     case DEVICE_SUSPEND_REASON_POWEROFF:
       poweroff();
       exit(0);
