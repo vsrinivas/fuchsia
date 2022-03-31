@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/testing/zbi_test.gni")
+import("//build/testing/zbi_test_executable.gni")
 import("//src/bringup/lib/mexec/testing/zbi_test.gni")
 
 group("tests") {
@@ -13,18 +14,12 @@ group("tests") {
   ]
 }
 
-executable("no-op-success") {
-  testonly = true
+zbi_test_executable("no-op-success") {
   sources = [ "no-op-success.cc" ]
 }
 
 zbi_test("smoke-zbi-test") {
   assert(current_cpu != "")
-
-  args = [
-    "userboot.next=bin/no-op-success",
-    "userboot.shutdown",
-  ]
 
   deps = [
     ":no-op-success",
@@ -38,11 +33,7 @@ zbi_test("smoke-zbi-test") {
 zbi_test("entropy-zbi-test") {
   assert(current_cpu != "")
 
-  args = [
-    "userboot.next=bin/no-op-success",
-    "userboot.shutdown",
-    "kernel.cprng-seed-require.cmdline=true",
-  ]
+  args = [ "kernel.cprng-seed-require.cmdline=true" ]
 
   deps = [
     ":no-op-success",

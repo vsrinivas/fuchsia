@@ -1,0 +1,51 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/testing/zbi_test.gni")
+import("//build/zbi/kernel_cmdline.gni")
+
+# Build an executable to run as the standalone test binary under Zircon.
+#
+# This wraps a test() with the metadata appropriate to have it launched by
+# userboot as the standalone.  This target should be included in deps of a
+# zbi_test() target, along with a kernel.  An auxiliary metadata target
+# "$target_name.cmdline" is defined and referenced in data_deps.
+#
+# Parameters are as for test().
+#
+template("zbi_test_executable") {
+  if (defined(invoker.output_name)) {
+    output_name = invoker.output_name
+  } else {
+    output_name = target_name
+  }
+  install_path = "test/$output_name"
+
+  main_target = target_name
+  cmdline_target = "$target_name.cmdline"
+
+  test(main_target) {
+    data_deps = []
+    forward_variables_from(invoker, "*")
+    data_deps += [ ":$cmdline_target" ]
+  }
+
+  kernel_cmdline(cmdline_target) {
+    testonly = true
+    forward_variables_from(invoker, [ "visibility" ])
+    if (defined(visibility)) {
+      visibility += [ ":$main_target" ]
+    }
+    args = [
+      "userboot.root=",
+      "userboot.next=$install_path",
+      "userboot.shutdown",
+    ]
+  }
+}
+
+set_defaults("zbi_test_executable") {
+  configs = default_executable_configs
+}

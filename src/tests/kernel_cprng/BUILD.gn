@@ -6,28 +6,26 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
 import("//build/testing/zbi_test.gni")
+import("//build/testing/zbi_test_executable.gni")
 
 group("tests") {
   testonly = true
 
   deps = []
 
-  # cprng_test uses //tools/emulator, which only works on
-  # linux.
+  # cprng_test uses //tools/emulator, which only works on linux.
   if (host_os == "linux") {
     deps += [ ":kernel_cprng_tests($host_toolchain)" ]
   }
 }
 
-executable("cprng-draw") {
-  testonly = true
+zbi_test_executable("cprng-draw") {
   sources = [ "cprng-draw.cc" ]
   deps = [ "//src/zircon/lib/zircon" ]
 }
 
 zbi_test("cprng-draw-zbi") {
   assert(current_cpu != "")
-  args = [ "userboot.next=bin/cprng-draw" ]
   deps = [
     ":cprng-draw",
     "//zircon/kernel",

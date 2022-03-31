@@ -6,6 +6,7 @@ import("//build/components/fuchsia_unittest_package.gni")
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 import("//build/testing/zbi_test.gni")
+import("//build/testing/zbi_test_executable.gni")
 
 # Each subdirectory just provides an eponymous source_set().
 core_tests = [
@@ -164,38 +165,34 @@ group("tests") {
   deps = core_test_packages
 }
 
-# Now build all of those (and more) together into the core-tests
-# binary.  This can and must be run directly from userboot because
-# some of the tests require the root resource handle or no system
-# services whatsoever.
-test("standalone") {
-  output_name = "core-standalone-test"
-
-  if (is_fuchsia) {
+if (is_fuchsia) {
+  # Now build all of those (and more) together into the core-tests
+  # binary.  This can and must be run directly from userboot because
+  # some of the tests require the root resource handle or no system
+  # services whatsoever.
+  zbi_test_executable("core-tests-standalone") {
     configs += [ "//build/config:all_source" ]
-  }
-  if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {
       configs -= fdio_config
     }
+    deps = all_bootfs_tests + unified_only
+    sources = [
+      "standalone-init.cc",
+      "standalone-io.cc",
+      "standalone-options.cc",
+      "test-main-with-filter.cc",
+    ]
+    deps += [
+      ":maybe-standalone",
+      "//sdk/lib/stdcompat",
+      "//zircon/kernel/lib/boot-options",
+      "//zircon/system/ulib/lazy_init",
+      "//zircon/system/ulib/zbitl",
+      "//zircon/system/ulib/zx",
+      "//zircon/system/ulib/zxtest",
+    ]
   }
-  deps = all_bootfs_tests + unified_only
-  sources = [
-    "standalone-init.cc",
-    "standalone-io.cc",
-    "standalone-options.cc",
-    "test-main-with-filter.cc",
-  ]
-  deps += [
-    ":maybe-standalone",
-    "//sdk/lib/stdcompat",
-    "//zircon/kernel/lib/boot-options",
-    "//zircon/system/ulib/lazy_init",
-    "//zircon/system/ulib/zbitl",
-    "//zircon/system/ulib/zx",
-    "//zircon/system/ulib/zxtest",
-  ]
 }
 
 source_set("maybe-standalone") {
@@ -214,15 +211,13 @@ template("core_tests") {
     assert(current_cpu != "")
 
     args = [
-             "userboot.next=test/core-standalone-test",
-             "userboot.shutdown",
              "kernel.vdso.always_use_next=true",
              "kernel.enable-debugging-syscalls=true",
              "kernel.test.ram.reserve=0x8000",
            ] + invoker.args
 
     deps = [
-      ":standalone",
+      ":core-tests-standalone",
       "//zircon/kernel",
     ]
     assert_no_deps = [

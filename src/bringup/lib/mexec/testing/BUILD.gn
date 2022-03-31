@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("zbi-test-entry") {
-  testonly = true
-  output_name = "mexec-zbi-test-entry"
+import("//build/testing/zbi_test_executable.gni")
+
+zbi_test_executable("mexec-zbi-test-entry") {
   sources = [ "zbi-test-entry.cc" ]
   deps = [
     "//sdk/lib/fdio",

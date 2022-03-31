@@ -71,15 +71,11 @@ template("mexec_zbi_test") {
     deps = []
     forward_variables_from(invoker, "*")
 
-    args += [
-      "userboot.root=",
-      "userboot.next=bin/mexec-zbi-test-entry",
-      "kernel.enable-debugging-syscalls=true",
-    ]
+    args += [ "kernel.enable-debugging-syscalls=true" ]
 
     deps += [
       ":$resource_target",
-      "//src/bringup/lib/mexec/testing:zbi-test-entry",
+      "//src/bringup/lib/mexec/testing:mexec-zbi-test-entry",
       "//zircon/kernel",
     ]
   }
