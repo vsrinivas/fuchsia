@@ -21,6 +21,12 @@ func mockImages(t *testing.T) []build.Image {
 			Type:     "zbi",
 		},
 		{
+			PaveZedbootArgs: []string{"--zirconr"},
+			Name:            "zircon-r",
+			Path:            "zedboot.zbi",
+			Type:            "zbi",
+		},
+		{
 			NetbootArgs: []string{"--boot"},
 			Name:        "netboot",
 			Path:        "netboot.zbi",
@@ -36,16 +42,32 @@ func mockImages(t *testing.T) []build.Image {
 			Path: "obj/build/images/fuchsia/fuchsia/fvm.blk",
 			Type: "blk",
 		},
+		{
+			Name: "zbi-image",
+			Path: "zbi-image.zbi",
+			Type: "zbi",
+		},
+		{
+			Name: "vbmeta-image",
+			Path: "vbmeta-image.vbmeta",
+			Type: "vbmeta",
+		},
+		{
+			Name: "other-qemu-kernel",
+			Path: "other-qemu-kernel",
+			Type: "kernel",
+		},
 	}
 }
 
 func TestAddImageDeps(t *testing.T) {
 	imgs := mockImages(t)
 	testCases := []struct {
-		name  string
-		pave  bool
-		isEmu bool
-		want  []string
+		name           string
+		pave           bool
+		isEmu          bool
+		imageOverrides build.ImageOverrides
+		want           []string
 	}{
 		{
 			name:  "emulator image deps",
@@ -57,20 +79,35 @@ func TestAddImageDeps(t *testing.T) {
 			name:  "paving image deps",
 			pave:  true,
 			isEmu: false,
-			want:  []string{"fuchsia.zbi", "images.json"},
+			want:  []string{"fuchsia.zbi", "images.json", "zedboot.zbi"},
 		},
 		{
 			name:  "netboot image deps",
 			pave:  false,
 			isEmu: false,
-			want:  []string{"images.json", "netboot.zbi"},
+			want:  []string{"images.json", "netboot.zbi", "zedboot.zbi"},
+		},
+		{
+			name:           "emulator env with image overrides",
+			pave:           false,
+			isEmu:          true,
+			imageOverrides: build.ImageOverrides{build.ZbiImage: "zbi-image", build.QemuKernel: "other-qemu-kernel"},
+			want:           []string{"images.json", "other-qemu-kernel", "zbi-image.zbi"},
+		},
+		{
+			name:           "hardware env with image overrides",
+			pave:           false,
+			isEmu:          false,
+			imageOverrides: build.ImageOverrides{build.ZbiImage: "zbi-image", build.VbmetaImage: "vbmeta-image"},
+			want:           []string{"images.json", "vbmeta-image.vbmeta", "zbi-image.zbi", "zedboot.zbi"},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			s := &Shard{
 				Env: build.Environment{
-					IsEmu: tc.isEmu,
+					IsEmu:          tc.isEmu,
+					ImageOverrides: tc.imageOverrides,
 				},
 			}
 			AddImageDeps(s, imgs, tc.pave)
