@@ -489,7 +489,7 @@ func TestGenArgs(t *testing.T) {
 			contextSpec: &fintpb.Context{
 				SdkId: "789",
 			},
-			expectedArgs: []string{`sdk_id="789"`, `build_sdk_archives=true`},
+			expectedArgs: []string{`sdk_id="789"`},
 		},
 		{
 			name: "sorts imports first",

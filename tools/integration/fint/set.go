@@ -273,7 +273,6 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context) ([]string, 
 
 	if contextSpec.SdkId != "" {
 		vars["sdk_id"] = contextSpec.SdkId
-		vars["build_sdk_archives"] = true
 	}
 
 	if contextSpec.ReleaseVersion != "" {
