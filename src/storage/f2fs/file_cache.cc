@@ -101,7 +101,6 @@ zx_status_t Page::GetPage(bool need_vmo_lock) {
     if (ret = VmoOpLock(true); ret != ZX_OK) {
       return ret;
     }
-    ZX_ASSERT(Map() == ZX_OK);
   } else if (need_vmo_lock) {
     if (ret = VmoOpLock(); ret != ZX_OK) {
       ZX_DEBUG_ASSERT(ret == ZX_ERR_UNAVAILABLE);
@@ -112,8 +111,10 @@ zx_status_t Page::GetPage(bool need_vmo_lock) {
         return ret;
       }
     }
-    ZX_ASSERT(Map() == ZX_OK);
   }
+
+  // TODO: Remove it when we use a per-file vmo.
+  ZX_ASSERT(Map() == ZX_OK);
   clear_flag.cancel();
   return ret;
 }
@@ -264,23 +265,27 @@ zx_status_t FileCache::GetPage(const pgoff_t index, fbl::RefPtr<Page> *out) {
     }
   }
   (*out)->Lock();
-  (*out)->GetPage(need_vmo_lock);
+  if (zx_status_t ret = (*out)->GetPage(need_vmo_lock); ret != ZX_OK) {
+    (*out)->Unlock();
+    return ret;
+  }
   return ZX_OK;
 }
 
 zx_status_t FileCache::FindPage(const pgoff_t index, fbl::RefPtr<Page> *out) {
-  zx::status<bool> ret;
+  bool need_vmo_lock = true;
   {
     std::lock_guard tree_lock(tree_lock_);
-    ret = GetPageUnsafe(index, out);
+    auto ret = GetPageUnsafe(index, out);
     if (ret.is_error()) {
       return ret.error_value();
     }
+    need_vmo_lock = ret.value();
   }
   (*out)->Lock();
-  (*out)->GetPage(ret.value());
+  zx_status_t ret = (*out)->GetPage(need_vmo_lock);
   (*out)->Unlock();
-  return ZX_OK;
+  return ret;
 }
 
 zx::status<bool> FileCache::GetPageUnsafe(const pgoff_t index, fbl::RefPtr<Page> *out) {
@@ -345,7 +350,8 @@ std::vector<fbl::RefPtr<Page>> FileCache::CleanupPagesUnsafe(pgoff_t start, pgof
         continue;
       }
       // Keep |page| alive in |pages| to prevent |page| from coming into fbl_recycle().
-      // When a caller resets the reference after doing some necessary work, they will be released.
+      // When a caller resets the reference after doing some necessary work, they will be
+      // released.
       prev_key = page->GetKey();
       EvictUnsafe(page.get());
       pages.push_back(std::move(page));
