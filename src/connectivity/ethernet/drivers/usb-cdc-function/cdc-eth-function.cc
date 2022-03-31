@@ -613,14 +613,15 @@ static zx_status_t cdc_set_configured(void* ctx, bool configured, usb_speed_t sp
   auto* cdc = static_cast<usb_cdc_t*>(ctx);
   zx_status_t status;
 
+  zxlogf(DEBUG, "%s: before crit_enter", __func__);
   mtx_lock(&cdc->ethernet_mutex);
-  zxlogf(DEBUG, "%s: crit_enter", __func__);
+  zxlogf(DEBUG, "%s: after crit_enter", __func__);
   cdc->online = false;
   if (cdc->ethernet_ifc.ops) {
     ethernet_ifc_status(&cdc->ethernet_ifc, 0);
   }
   mtx_unlock(&cdc->ethernet_mutex);
-  zxlogf(DEBUG, "%s: crit_leave", __func__);
+  zxlogf(DEBUG, "%s: after crit_leave", __func__);
 
   if (configured) {
     if ((status = usb_function_config_ep(&cdc->function, &descriptors.intr_ep, NULL)) != ZX_OK) {
