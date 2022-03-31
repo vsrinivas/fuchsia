@@ -10,14 +10,11 @@ use std::sync::{Arc, Once};
 
 use anyhow::{format_err, Context as _, Error};
 use assert_matches::assert_matches;
-use fidl::encoding::Decodable;
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fidl_fuchsia_netemul_network as net;
-use fidl_fuchsia_netemul_sandbox as sandbox;
 use fuchsia_async as fasync;
-use fuchsia_component::client;
 use futures::lock::Mutex;
 use net_types::{
     ip::{AddrSubnetEither, IpAddr, Ipv4Addr, Ipv6Addr, SubnetEither},
@@ -420,10 +417,10 @@ impl TestStack {
 pub(crate) struct TestSetup {
     // Let connection to sandbox be made lazily, so a netemul sandbox is not
     // created for tests that don't need it.
-    sandbox: Option<sandbox::SandboxProxy>,
-    // TODO(fxbug.dev/69490): Remove this or explain why it's here.
-    #[allow(dead_code)]
-    nets: Option<fidl::endpoints::ClientEnd<net::SetupHandleMarker>>,
+    sandbox: Option<netemul::TestSandbox>,
+    // Keep around the handle to the virtual networks and endpoints we create to
+    // ensure they're not cleaned up before test execution is complete.
+    _network: Option<net::SetupHandleProxy>,
     stacks: Vec<TestStack>,
 }
 
@@ -441,16 +438,12 @@ impl TestSetup {
         self.get(i).ctx.lock().await
     }
 
-    async fn get_endpoint<'a>(
-        &'a mut self,
-        ep_name: &'a str,
+    async fn get_endpoint(
+        &mut self,
+        ep_name: &str,
     ) -> Result<fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_ethernet::DeviceMarker>, Error>
     {
-        let (net_ctx, net_ctx_server) =
-            fidl::endpoints::create_proxy::<net::NetworkContextMarker>()?;
-        self.sandbox().get_network_context(net_ctx_server)?;
-        let (epm, epm_server) = fidl::endpoints::create_proxy::<net::EndpointManagerMarker>()?;
-        net_ctx.get_endpoint_manager(epm_server)?;
+        let epm = self.sandbox().get_endpoint_manager()?;
         let ep = match epm.get_endpoint(ep_name).await? {
             Some(ep) => ep.into_proxy()?,
             None => {
@@ -472,11 +465,7 @@ impl TestSetup {
         ep_name: &str,
         up: bool,
     ) -> Result<(), Error> {
-        let (net_ctx, net_ctx_server) =
-            fidl::endpoints::create_proxy::<net::NetworkContextMarker>()?;
-        self.sandbox().get_network_context(net_ctx_server)?;
-        let (epm, epm_server) = fidl::endpoints::create_proxy::<net::EndpointManagerMarker>()?;
-        net_ctx.get_endpoint_manager(epm_server)?;
+        let epm = self.sandbox().get_endpoint_manager()?;
         if let Some(ep) = epm.get_endpoint(ep_name).await? {
             ep.into_proxy()?.set_link_up(up).await?;
             Ok(())
@@ -488,40 +477,30 @@ impl TestSetup {
     /// Creates a new empty `TestSetup`.
     fn new() -> Result<Self, Error> {
         set_logger_for_test();
-        Ok(Self { sandbox: None, nets: None, stacks: Vec::new() })
+        Ok(Self { sandbox: None, _network: None, stacks: Vec::new() })
     }
 
-    fn sandbox(&mut self) -> &sandbox::SandboxProxy {
-        self.sandbox.get_or_insert_with(|| {
-            client::connect_to_protocol::<sandbox::SandboxMarker>()
-                .expect("Failed to connect to sandbox service")
-        })
-    }
-
-    fn get_network_context(&mut self) -> Result<net::NetworkContextProxy, Error> {
-        let (net_ctx, net_ctx_server) =
-            fidl::endpoints::create_proxy::<net::NetworkContextMarker>()?;
-        self.sandbox().get_network_context(net_ctx_server)?;
-        Ok(net_ctx)
+    fn sandbox(&mut self) -> &netemul::TestSandbox {
+        self.sandbox
+            .get_or_insert_with(|| netemul::TestSandbox::new().expect("create netemul sandbox"))
     }
 
     async fn configure_network(
         &mut self,
         ep_names: impl Iterator<Item = String>,
     ) -> Result<(), Error> {
-        let net_ctx = self.get_network_context()?;
-        let (status, handle) = net_ctx
-            .setup(
-                &mut vec![&mut net::NetworkSetup {
-                    name: "test_net".to_owned(),
-                    config: net::NetworkConfig::new_empty(),
-                    endpoints: ep_names.map(|name| new_endpoint_setup(name)).collect(),
-                }]
-                .into_iter(),
-            )
-            .await?;
+        let handle = self
+            .sandbox()
+            .setup_networks(vec![net::NetworkSetup {
+                name: "test_net".to_owned(),
+                config: net::NetworkConfig::EMPTY,
+                endpoints: ep_names.map(|name| new_endpoint_setup(name)).collect(),
+            }])
+            .await
+            .context("create network")?
+            .into_proxy();
 
-        self.nets = Some(handle.ok_or_else(|| format_err!("Create network failed: {}", status))?);
+        self._network = Some(handle);
         Ok(())
     }
 

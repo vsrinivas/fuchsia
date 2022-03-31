@@ -194,6 +194,21 @@ impl TestSandbox {
         Ok(TestNetwork { network, name, sandbox: self })
     }
 
+    /// Creates new networks and endpoints as specified in `networks`.
+    pub async fn setup_networks<'a>(
+        &'a self,
+        mut networks: Vec<fnetemul_network::NetworkSetup>,
+    ) -> Result<TestNetworkSetup<'a>> {
+        let ctx = self.get_network_context()?;
+        let (status, handle) =
+            ctx.setup(&mut networks.iter_mut()).await.context("setup FIDL error")?;
+        let () = zx::Status::ok(status).context("setup failed")?;
+        let handle = handle
+            .ok_or_else(|| anyhow::anyhow!("setup didn't return a valid handle"))?
+            .into_proxy()?;
+        Ok(TestNetworkSetup { _setup: handle, _sandbox: self })
+    }
+
     /// Creates a new unattached endpoint with default configurations and `name`.
     ///
     /// Characters may be dropped from the front of `name` if it exceeds the maximum length.
@@ -227,6 +242,28 @@ impl TestSandbox {
             .ok_or_else(|| anyhow::anyhow!("create_endpoint didn't return a valid endpoint"))?
             .into_proxy()?;
         Ok(TestEndpoint { endpoint, name, _sandbox: self })
+    }
+}
+
+/// A set of virtual networks and endpoints.
+///
+/// Created through [`TestSandbox::setup_networks`].
+#[must_use]
+pub struct TestNetworkSetup<'a> {
+    _setup: fnetemul_network::SetupHandleProxy,
+    _sandbox: &'a TestSandbox,
+}
+
+impl TestNetworkSetup<'_> {
+    /// Extracts the proxy to the backing setup handle.
+    ///
+    /// Note that this defeats the lifetime semantics that ensure the sandbox in
+    /// which these networks were created lives as long as the networks. The caller
+    /// of [`TestNetworkSetup::into_proxy`] is responsible for ensuring that the
+    /// sandbox outlives the networks.
+    pub fn into_proxy(self) -> fnetemul_network::SetupHandleProxy {
+        let Self { _setup, _sandbox: _ } = self;
+        _setup
     }
 }
 

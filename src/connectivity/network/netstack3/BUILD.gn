@@ -50,7 +50,7 @@ rustc_binary("bin") {
   test_deps = [
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
-    "//src/connectivity/network/testing/netemul/lib/fidl:sandbox-rustc",
+    "//src/connectivity/network/testing/netemul/rust:lib",
     "//src/lib/testing/fixture",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:test-case",
@@ -99,10 +99,9 @@ fuchsia_package("netstack3") {
 
 fuchsia_unittest_package("netstack3-tests") {
   component_name = "netstack3-bin-test"
-  manifest = "meta/netstack3-bin-test.cmx"
   deps = [
     ":bin_test",
-    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
+    "//src/connectivity/network/testing/netemul-v2/service:netemul-sandbox",
   ]
 }
 
