@@ -25,8 +25,11 @@ TEST(DeviceControllerConnectionTestCase, Creation) {
   fbl::RefPtr<zx_driver> drv;
   ASSERT_OK(zx_driver::Create("test", ctx.inspect().drivers(), &drv));
 
+  auto driver = Driver::Create(drv.get());
+  ASSERT_OK(driver.status_value());
+
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&ctx, "test", drv.get(), &dev));
+  ASSERT_OK(zx_device::Create(&ctx, "test", *std::move(driver), &dev));
 
   auto coordinator_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::Coordinator>();
   ASSERT_OK(coordinator_endpoints.status_value());
@@ -64,8 +67,12 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
   fbl::RefPtr<zx_driver> drv;
   ASSERT_OK(zx_driver::Create("test", ctx.inspect().drivers(), &drv));
 
+  auto driver = Driver::Create(drv.get());
+  ASSERT_OK(driver.status_value());
+
+
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&ctx, "test", drv.get(), &dev));
+  ASSERT_OK(zx_device::Create(&ctx, "test", *std::move(driver), &dev));
 
   zx::status device_ends = fidl::CreateEndpoints<fuchsia_device_manager::DeviceController>();
   ASSERT_OK(device_ends.status_value());
@@ -140,8 +147,11 @@ TEST(DeviceControllerConnectionTestCase, PeerClosed) {
   fbl::RefPtr<zx_driver> drv;
   ASSERT_OK(zx_driver::Create("test", ctx.inspect().drivers(), &drv));
 
+  auto driver = Driver::Create(drv.get());
+  ASSERT_OK(driver.status_value());
+
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&ctx, "test", drv.get(), &dev));
+  ASSERT_OK(zx_device::Create(&ctx, "test", *std::move(driver), &dev));
 
   auto coordinator_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::Coordinator>();
   ASSERT_OK(coordinator_endpoints.status_value());
@@ -174,8 +184,11 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
   fbl::RefPtr<zx_driver> drv;
   ASSERT_OK(zx_driver::Create("test", ctx.inspect().drivers(), &drv));
 
+  auto driver = Driver::Create(drv.get());
+  ASSERT_OK(driver.status_value());
+
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&ctx, "test", drv.get(), &dev));
+  ASSERT_OK(zx_device::Create(&ctx, "test", *std::move(driver), &dev));
 
   zx::status device_ends = fidl::CreateEndpoints<fuchsia_device_manager::DeviceController>();
   ASSERT_OK(device_ends.status_value());

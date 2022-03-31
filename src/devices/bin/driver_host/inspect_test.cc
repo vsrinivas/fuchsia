@@ -109,15 +109,19 @@ class DeviceInspectTestCase : public InspectTestHelper, public zxtest::Test {
  public:
   DeviceInspectTestCase() : driver_host_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     zx_driver::Create("test-driver", driver_host_.inspect().drivers(), &drv_);
+    auto driver = Driver::Create(drv_.get());
+    ASSERT_OK(driver.status_value());
+    driver_obj_ = *std::move(driver);
   }
 
   DriverHostContext& driver_host() { return driver_host_; }
 
-  zx_driver* driver() { return drv_.get(); }
+  fbl::RefPtr<Driver> driver() { return driver_obj_; }
 
  private:
   DriverHostContext driver_host_;
   fbl::RefPtr<zx_driver> drv_;
+  fbl::RefPtr<Driver> driver_obj_;
 };
 
 TEST_F(DeviceInspectTestCase, DeviceProperties) {

@@ -187,7 +187,7 @@ void DevfsVnode::GetMinDriverLogSeverity(GetMinDriverLogSeverityRequestView requ
     completer.Reply(ZX_ERR_UNAVAILABLE, 0);
     return;
   }
-  uint8_t severity = fx_logger_get_min_severity(dev_->driver->logger());
+  uint8_t severity = fx_logger_get_min_severity(dev_->zx_driver()->logger());
   completer.Reply(ZX_OK, severity);
 }
 
@@ -197,7 +197,7 @@ void DevfsVnode::SetMinDriverLogSeverity(SetMinDriverLogSeverityRequestView requ
     completer.Reply(ZX_ERR_UNAVAILABLE);
     return;
   }
-  auto status = dev_->driver->set_driver_min_log_severity(request->severity);
+  auto status = dev_->zx_driver()->set_driver_min_log_severity(request->severity);
   completer.Reply(status);
 }
 

@@ -91,8 +91,9 @@ TEST(HotReloadIntegrationTest, TestRestartOneDriver) {
 
   // Restart the driver host of the test driver.
   fuchsia::driver::development::DriverDevelopment_RestartDriverHosts_Result result;
-  auto resp = development_->RestartDriverHosts(kDriverRestartUrl.data(), &result);
+  auto resp = development_->RestartDriverHosts(std::string(kDriverRestartUrl), &result);
   ASSERT_OK(resp);
+  ASSERT_EQ(result.response().count, 1);
 
   // Make sure device has shut so that it isnt opened before it is restarted.
   ASSERT_OK(watcher->WaitForRemoval("driver-host-restart-driver", zx::duration::infinite()));

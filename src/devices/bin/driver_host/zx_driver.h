@@ -9,16 +9,22 @@
 #include <lib/fdf/internal.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/syslog/logger.h>
+#include <lib/trace/event.h>
 #include <zircon/types.h>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
+#include <fbl/string_buffer.h>
 
 #include "driver_stack_manager.h"
+#include "src/devices/bin/driver_host/inspect.h"
 
 class DriverInspect;
+struct InspectNodeCollection;
+
+class Driver;
 
 namespace internal {
 
@@ -92,15 +98,15 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
 
   bool has_run_unit_tests_op() const { return ops_->run_unit_tests != nullptr; }
 
-  zx_status_t InitOp() {
-    DriverStackManager dsm(this);
+  zx_status_t InitOp(const fbl::RefPtr<Driver>& driver) {
+    DriverStackManager dsm(driver.get());
 
     return ops_->init(&ctx_);
   }
 
-  zx_status_t BindOp(internal::BindContext* bind_context,
+  zx_status_t BindOp(internal::BindContext* bind_context, const fbl::RefPtr<Driver>& driver,
                      const fbl::RefPtr<zx_device_t>& device) const {
-    DriverStackManager dsm(this);
+    DriverStackManager dsm(driver.get());
 
     fbl::StringBuffer<32> trace_label;
     trace_label.AppendPrintf("%s:bind", name_);
@@ -113,9 +119,9 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
   }
 
   zx_status_t CreateOp(internal::CreationContext* creation_context,
-                       const fbl::RefPtr<zx_device_t>& parent, const char* name, const char* args,
-                       zx_handle_t rpc_channel) const {
-    DriverStackManager dsm(this);
+                       const fbl::RefPtr<Driver>& driver, const fbl::RefPtr<zx_device_t>& parent,
+                       const char* name, const char* args, zx_handle_t rpc_channel) const {
+    DriverStackManager dsm(driver.get());
 
     internal::set_creation_context(creation_context);
     auto status = ops_->create(ctx_, parent.get(), name, args, rpc_channel);
@@ -123,15 +129,16 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
     return status;
   }
 
-  void ReleaseOp() const {
-    DriverStackManager dsm(this);
+  void ReleaseOp(const fbl::RefPtr<Driver>& driver) const {
+    DriverStackManager dsm(driver.get());
 
     // TODO(kulakowski/teisenbe) Consider poisoning the ops_ table on release.
     ops_->release(ctx_);
   }
 
-  bool RunUnitTestsOp(const fbl::RefPtr<zx_device_t>& parent, zx::channel test_output) const {
-    DriverStackManager dsm(this);
+  bool RunUnitTestsOp(const fbl::RefPtr<zx_device_t>& parent, const fbl::RefPtr<Driver>& driver,
+                      zx::channel test_output) const {
+    DriverStackManager dsm(driver.get());
 
     return ops_->run_unit_tests(ctx_, parent.get(), test_output.release());
   }

@@ -46,6 +46,7 @@
 #include "async_loop_owned_rpc_handler.h"
 #include "composite_device.h"
 #include "device_controller_connection.h"
+#include "driver.h"
 #include "env.h"
 #include "log.h"
 #include "main.h"
@@ -54,11 +55,14 @@
 #include "scheduler_profile.h"
 #include "tracing.h"
 
+namespace fdf {
+using namespace fuchsia_driver_framework;
+}
+
 namespace {
 
 namespace fio = fuchsia_io;
 namespace fdm = fuchsia_device_manager;
-namespace fdf = fuchsia_driver_framework;
 
 bool property_value_type_valid(uint32_t value_type) {
   return value_type > ZX_DEVICE_PROPERTY_VALUE_UNDEFINED &&
@@ -402,7 +406,7 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
   auto response = coordinator_client.sync()->AddDevice(
       std::move(coordinator_endpoints->server), std::move(controller_endpoints->client),
       property_list, ::fidl::StringView::FromExternal(child->name()), child->protocol_id(),
-      ::fidl::StringView::FromExternal(child->driver->libname()),
+      ::fidl::StringView::FromExternal(child->zx_driver()->libname()),
       ::fidl::StringView::FromExternal(add_args->proxy_args, proxy_args_len), add_device_config,
       child->ops()->init /* has_init */, std::move(inspect), std::move(client_remote),
       std::move(outgoing_dir));
@@ -483,11 +487,21 @@ void DriverHostContext::ProxyIosDestroy(const fbl::RefPtr<zx_device_t>& dev) {
 }
 
 zx_status_t DriverHostContext::FindDriver(std::string_view libname, zx::vmo vmo,
-                                          fbl::RefPtr<zx_driver_t>* out) {
+                                          fbl::RefPtr<zx_driver_t>* out,
+                                          fbl::RefPtr<Driver>* out_driver) {
+  // Create unique context for the new driver instance.
   // check for already-loaded driver first
   for (auto& drv : drivers_) {
     if (!libname.compare(drv.libname())) {
       *out = fbl::RefPtr(&drv);
+
+      auto driver = Driver::Create(&drv);
+      if (driver.is_error()) {
+        LOGF(ERROR, "Failed to create driver: %s", driver.status_string());
+        return driver.status_value();
+      }
+      *out_driver = *std::move(driver);
+
       return drv.status();
     }
   }
@@ -498,9 +512,16 @@ zx_status_t DriverHostContext::FindDriver(std::string_view libname, zx::vmo vmo,
     return status;
   }
 
+  auto driver = Driver::Create(new_driver.get());
+  if (driver.is_error()) {
+    LOGF(ERROR, "Failed to create driver: %s", driver.status_string());
+    return driver.status_value();
+  }
+
   // Let the |drivers_| list and our out parameter each have a refcount.
   drivers_.push_back(new_driver);
   *out = new_driver;
+  *out_driver = *std::move(driver);
 
   const char* c_libname = new_driver->libname().c_str();
 
@@ -561,7 +582,7 @@ zx_status_t DriverHostContext::FindDriver(std::string_view libname, zx::vmo vmo,
   }
 
   if (new_driver->has_init_op()) {
-    new_driver->set_status(new_driver->InitOp());
+    new_driver->set_status(new_driver->InitOp(*out_driver));
     if (new_driver->status() != ZX_OK) {
       LOGF(ERROR, "Driver '%s' failed in init: %s", c_libname,
            zx_status_get_string(new_driver->status()));
@@ -626,8 +647,14 @@ StatusOrConn DriverHostControllerConnection::CreateNewProxyDevice(
     return zx::error(ZX_ERR_INTERNAL);
   }
 
+  auto drv = Driver::Create(driver.get());
+  if (drv.is_error()) {
+    LOGF(ERROR, "Failed to create driver: %s", drv.status_string());
+    return drv.take_error();
+  }
+
   fbl::RefPtr<zx_device_t> dev;
-  zx_status_t status = zx_device::Create(driver_host_context_, "proxy", driver.get(), &dev);
+  zx_status_t status = zx_device::Create(driver_host_context_, "proxy", *std::move(drv), &dev);
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -654,8 +681,9 @@ StatusOrConn DriverHostControllerConnection::CreateProxyDevice(CreateDeviceReque
 
   // named driver -- ask it to create the device
   fbl::RefPtr<zx_driver_t> drv;
-  zx_status_t status =
-      driver_host_context_->FindDriver(proxy.driver_path.get(), std::move(proxy.driver), &drv);
+  fbl::RefPtr<Driver> driver;
+  zx_status_t status = driver_host_context_->FindDriver(proxy.driver_path.get(),
+                                                        std::move(proxy.driver), &drv, &driver);
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to load driver '%.*s': %s", static_cast<int>(proxy.driver_path.size()),
          proxy.driver_path.data(), zx_status_get_string(status));
@@ -671,7 +699,8 @@ StatusOrConn DriverHostControllerConnection::CreateProxyDevice(CreateDeviceReque
 
   // Create a dummy parent device for use in this call to Create
   fbl::RefPtr<zx_device> parent;
-  status = zx_device::Create(driver_host_context_, "device_create dummy", drv.get(), &parent);
+  status =
+      zx_device::Create(driver_host_context_, "device_create dummy", std::move(driver), &parent);
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to create device: %s", zx_status_get_string(status));
     return zx::error(status);
@@ -683,7 +712,7 @@ StatusOrConn DriverHostControllerConnection::CreateProxyDevice(CreateDeviceReque
       .coordinator_client = coordinator.Clone(),
   };
 
-  status = drv->CreateOp(&creation_context, creation_context.parent, "proxy",
+  status = drv->CreateOp(&creation_context, driver, creation_context.parent, "proxy",
                          proxy.proxy_args.data(), proxy.parent_proxy.release());
 
   // Suppress a warning about dummy device being in a bad state.  The
@@ -748,10 +777,15 @@ StatusOrConn DriverHostControllerConnection::CreateCompositeDevice(
     return zx::error(ZX_ERR_INTERNAL);
   }
 
+  auto drv = Driver::Create(driver.get());
+  if (drv.is_error()) {
+    return drv.take_error();
+  }
+
   fbl::RefPtr<zx_device_t> dev;
   static_assert(fuchsia_device_manager::wire::kDeviceNameMax + 1 >= sizeof(dev->name()));
   zx_status_t status = zx_device::Create(driver_host_context_, std::string(composite.name.get()),
-                                         driver.get(), &dev);
+                                         *std::move(drv), &dev);
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -781,8 +815,13 @@ StatusOrConn DriverHostControllerConnection::CreateStubDevice(CreateDeviceReques
     return zx::error(ZX_ERR_INTERNAL);
   }
 
+  auto drv = Driver::Create(driver.get());
+  if (drv.is_error()) {
+    return drv.take_error();
+  }
+
   fbl::RefPtr<zx_device_t> dev;
-  zx_status_t status = zx_device::Create(driver_host_context_, "proxy", driver.get(), &dev);
+  zx_status_t status = zx_device::Create(driver_host_context_, "proxy", *std::move(drv), &dev);
   // TODO: dev->ops() and other lifecycle bits
   // no name means a dummy proxy device
   if (status != ZX_OK) {

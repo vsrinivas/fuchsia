@@ -103,7 +103,25 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
   {
     auto api_ctx = internal::ContextForApi();
     fbl::AutoLock lock(&api_ctx->api_lock());
-    r = api_ctx->DeviceCreate(drv, args->name, args->ctx, args->ops, &dev);
+
+    fbl::RefPtr<Driver> driver;
+    auto* current = static_cast<Driver*>(const_cast<void*>(fdf_internal_get_current_driver()));
+    if (current != nullptr && current->zx_driver() == drv) {
+      // We try retrieve the current driver instance from the driver runtime first. If we are
+      // currently in a driver hook such as |bind| or |create| this will yield us the correct
+      // driver. It should also yeild us the correct driver in most other cases, however it's
+      // possible that it will yield the wrong driver if a device is added inside of a banjo call -
+      // this is why we also double check that the zx_driver objects line up.
+      driver = fbl::RefPtr<Driver>(current);
+    } else {
+      // Otherwise we fall back to assuming the driver is not in bind or create, and therefore the
+      // device being added is from the same driver instance as the parent. This can incorrectly
+      // occur if the driver adds a device to it's original parent inside of a dedicated thread it
+      // spawned.
+      driver = parent->driver;
+    }
+
+    r = api_ctx->DeviceCreate(std::move(driver), args->name, args->ctx, args->ops, &dev);
     if (r != ZX_OK) {
       return r;
     }

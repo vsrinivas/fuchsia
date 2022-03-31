@@ -18,10 +18,13 @@ TEST(DriverHostTest, MkDevpath) {
   fbl::RefPtr<zx_driver> drv;
   ASSERT_OK(zx_driver::Create("test", ctx.inspect().drivers(), &drv));
 
+  auto driver = Driver::Create(drv.get());
+  ASSERT_OK(driver.status_value());
+
   fbl::RefPtr<zx_device> dev;
   constexpr char device_name[] = "device-name";
 
-  ASSERT_OK(zx_device::Create(&ctx, device_name, drv.get(), &dev));
+  ASSERT_OK(zx_device::Create(&ctx, device_name, *std::move(driver), &dev));
   dev->vnode.reset();
 
   auto result = mkdevpath(*dev, nullptr, 0);

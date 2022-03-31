@@ -123,14 +123,16 @@ void DeviceControllerConnection::BindDriver(BindDriverRequestView request,
     LOGD(TRACE, *dev, "Binding driver '%.*s'", static_cast<int>(driver_path.size()),
          driver_path.data());
   }
-  fbl::RefPtr<zx_driver_t> drv;
   if (dev->flags() & DEV_FLAG_DEAD) {
     LOGD(ERROR, *dev, "Cannot bind to removed device");
     BindReply(dev, completer, ZX_ERR_IO_NOT_PRESENT);
     return;
   }
 
-  zx_status_t r = driver_host_context_->FindDriver(driver_path, std::move(request->driver), &drv);
+  fbl::RefPtr<zx_driver_t> drv;
+  fbl::RefPtr<Driver> driver;
+  zx_status_t r =
+      driver_host_context_->FindDriver(driver_path, std::move(request->driver), &drv, &driver);
   if (r != ZX_OK) {
     LOGD(ERROR, *dev, "Failed to load driver '%.*s': %s", static_cast<int>(driver_path.size()),
          driver_path.data(), zx_status_get_string(r));
@@ -145,7 +147,7 @@ void DeviceControllerConnection::BindDriver(BindDriverRequestView request,
   if (getenv_bool(option.data(), tests_default) && drv->has_run_unit_tests_op()) {
     zx::channel test_input;
     zx::channel::create(0, &test_input, &test_output);
-    bool tests_passed = drv->RunUnitTestsOp(dev, std::move(test_input));
+    bool tests_passed = drv->RunUnitTestsOp(dev, driver, std::move(test_input));
     if (!tests_passed) {
       FX_LOGF(ERROR, "unit-tests", "[  FAILED  ] %s", drv->name());
       drv->set_status(ZX_ERR_BAD_STATE);
@@ -160,7 +162,7 @@ void DeviceControllerConnection::BindDriver(BindDriverRequestView request,
         .parent = dev,
         .child = nullptr,
     };
-    r = drv->BindOp(&bind_ctx, dev);
+    r = drv->BindOp(&bind_ctx, driver, dev);
 
     if (r != ZX_OK) {
       LOGD(ERROR, *dev, "Failed to bind driver '%.*s': %s", static_cast<int>(driver_path.size()),

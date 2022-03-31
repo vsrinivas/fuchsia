@@ -15,6 +15,7 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
 
+#include "driver.h"
 #include "inspect.h"
 #include "lock.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
@@ -78,7 +79,7 @@ class DriverHostContext {
   zx_status_t DeviceRunCompatibilityTests(const fbl::RefPtr<zx_device_t>& dev,
                                           int64_t hook_wait_time,
                                           fit::callback<void(zx_status_t)> cb) TA_REQ(api_lock_);
-  zx_status_t DeviceCreate(zx_driver_t* drv, const char* name, void* ctx,
+  zx_status_t DeviceCreate(fbl::RefPtr<Driver> drv, const char* name, void* ctx,
                            const zx_protocol_device_t* ops, fbl::RefPtr<zx_device_t>* out)
       TA_REQ(api_lock_);
   zx_status_t DeviceOpen(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr<zx_device_t>* out,
@@ -119,7 +120,8 @@ class DriverHostContext {
   zx_status_t DeviceAddGroup(const fbl::RefPtr<zx_device_t>& dev, std::string_view name,
                              const device_group_desc_t* group_desc) TA_REQ(api_lock_);
 
-  zx_status_t FindDriver(std::string_view libname, zx::vmo vmo, fbl::RefPtr<zx_driver_t>* out);
+  zx_status_t FindDriver(std::string_view libname, zx::vmo vmo, fbl::RefPtr<zx_driver_t>* out,
+                         fbl::RefPtr<Driver>* out_driver);
 
   // Called when a zx_device_t has run out of references and needs its destruction finalized.
   void QueueDeviceForFinalization(zx_device_t* device) TA_REQ(api_lock_);

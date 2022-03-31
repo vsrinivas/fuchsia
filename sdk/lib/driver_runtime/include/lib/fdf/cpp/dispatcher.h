@@ -7,12 +7,15 @@
 
 #include <lib/async/dispatcher.h>
 #include <lib/fdf/dispatcher.h>
+#include <lib/fit/function.h>
 #include <lib/stdcompat/string_view.h>
 #include <lib/zx/status.h>
 
 #include <string>
 
 namespace fdf {
+
+class UnownedDispatcher;
 
 // Usage Notes:
 //
@@ -129,6 +132,8 @@ class Dispatcher {
     return dispatcher_ ? std::optional(fdf_dispatcher_get_options(dispatcher_)) : std::nullopt;
   }
 
+  fdf::UnownedDispatcher borrow() const;
+
  protected:
   fdf_dispatcher_t* dispatcher_;
 
@@ -164,6 +169,8 @@ class UnownedDispatcher : public Dispatcher {
 
   ~UnownedDispatcher() { dispatcher_ = nullptr; }
 };
+
+inline UnownedDispatcher Dispatcher::borrow() const { return UnownedDispatcher(dispatcher_); }
 
 }  // namespace fdf
 

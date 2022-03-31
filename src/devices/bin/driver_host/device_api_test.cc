@@ -19,8 +19,11 @@ TEST(DeviceApiTest, OpsNotImplemented) {
   fbl::RefPtr<zx_driver> drv;
   ASSERT_OK(zx_driver::Create("device-api-test", ctx.inspect().drivers(), &drv));
 
+  auto driver = Driver::Create(drv.get());
+  ASSERT_OK(driver.status_value());
+
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&ctx, "test", drv.get(), &dev));
+  ASSERT_OK(zx_device::Create(&ctx, "test", *std::move(driver), &dev));
 
   zx_protocol_device_t ops = {};
   dev->set_ops(&ops);
@@ -50,8 +53,11 @@ TEST(DeviceApiTest, GetProtocol) {
   fbl::RefPtr<zx_driver> drv;
   ASSERT_OK(zx_driver::Create("device-api-test", ctx.inspect().drivers(), &drv));
 
+  auto driver = Driver::Create(drv.get());
+  ASSERT_OK(driver.status_value());
+
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&ctx, "test", drv.get(), &dev));
+  ASSERT_OK(zx_device::Create(&ctx, "test", *std::move(driver), &dev));
 
   zx_protocol_device_t ops = {};
   ops.get_protocol = test_get_protocol;
@@ -69,8 +75,11 @@ TEST(DeviceApiTest, GetSize) {
   fbl::RefPtr<zx_driver> drv;
   ASSERT_OK(zx_driver::Create("device-api-test", ctx.inspect().drivers(), &drv));
 
+  auto driver = Driver::Create(drv.get());
+  ASSERT_OK(driver.status_value());
+
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&ctx, "test", drv.get(), &dev));
+  ASSERT_OK(zx_device::Create(&ctx, "test", *std::move(driver), &dev));
 
   zx_protocol_device_t ops = {};
   ops.get_size = test_get_size;

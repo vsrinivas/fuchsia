@@ -109,6 +109,10 @@ class CoreTest : public zxtest::Test {
     ctx_.loop().StartThread("driver_host-test-loop");
     internal::RegisterContextForApi(&ctx_);
     ASSERT_OK(zx_driver::Create("core-test", ctx_.inspect().drivers(), &drv_));
+
+    auto driver = Driver::Create(drv_.get());
+    ASSERT_OK(driver.status_value());
+    driver_obj_ = *std::move(driver);
   }
 
   ~CoreTest() { internal::RegisterContextForApi(nullptr); }
@@ -149,12 +153,13 @@ class CoreTest : public zxtest::Test {
   std::vector<zx::channel> clients_;
   DriverHostContext ctx_;
   fbl::RefPtr<zx_driver> drv_;
+  fbl::RefPtr<Driver> driver_obj_;
   FakeCoordinator coordinator_;
 };
 
 TEST_F(CoreTest, RebindNoChildren) {
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&ctx_, "test", drv_.get(), &dev));
+  ASSERT_OK(zx_device::Create(&ctx_, "test", driver_obj_, &dev));
 
   zx_protocol_device_t ops = {};
   dev->set_ops(&ops);
@@ -187,13 +192,13 @@ TEST_F(CoreTest, RebindHasOneChild) {
     zx_protocol_device_t ops = {};
     ops.unbind = [](void* ctx) { *static_cast<uint32_t*>(ctx) += 1; };
 
-    ASSERT_OK(zx_device::Create(&ctx_, "parent", drv_.get(), &parent));
+    ASSERT_OK(zx_device::Create(&ctx_, "parent", driver_obj_, &parent));
     ASSERT_NO_FATAL_FAILURE(Connect(parent));
     parent->set_ops(&ops);
     parent->ctx = &unbind_count;
     {
       fbl::RefPtr<zx_device> child;
-      ASSERT_OK(zx_device::Create(&ctx_, "child", drv_.get(), &child));
+      ASSERT_OK(zx_device::Create(&ctx_, "child", driver_obj_, &child));
       ASSERT_NO_FATAL_FAILURE(Connect(child));
       child->set_ops(&ops);
       child->ctx = &unbind_count;
@@ -233,14 +238,14 @@ TEST_F(CoreTest, RebindHasMultipleChildren) {
     zx_protocol_device_t ops = {};
     ops.unbind = [](void* ctx) { *static_cast<uint32_t*>(ctx) += 1; };
 
-    ASSERT_OK(zx_device::Create(&ctx_, "parent", drv_.get(), &parent));
+    ASSERT_OK(zx_device::Create(&ctx_, "parent", driver_obj_, &parent));
     ASSERT_NO_FATAL_FAILURE(Connect(parent));
     parent->set_ops(&ops);
     parent->ctx = &unbind_count;
     {
       std::array<fbl::RefPtr<zx_device>, 5> children;
       for (auto& child : children) {
-        ASSERT_OK(zx_device::Create(&ctx_, "child", drv_.get(), &child));
+        ASSERT_OK(zx_device::Create(&ctx_, "child", driver_obj_, &child));
         ASSERT_NO_FATAL_FAILURE(Connect(child));
         child->set_ops(&ops);
         child->ctx = &unbind_count;
@@ -280,7 +285,7 @@ TEST_F(CoreTest, RebindHasMultipleChildren) {
 
 TEST_F(CoreTest, AddDeviceGroup) {
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&ctx_, "test", drv_.get(), &dev));
+  ASSERT_OK(zx_device::Create(&ctx_, "test", driver_obj_, &dev));
 
   zx_protocol_device_t ops = {};
   dev->set_ops(&ops);

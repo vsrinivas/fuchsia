@@ -20,8 +20,11 @@ TEST(ProxyIostateTestCase, Creation) {
   fbl::RefPtr<zx_driver> drv;
   ASSERT_OK(zx_driver::Create("test", ctx.inspect().drivers(), &drv));
 
+  auto driver = Driver::Create(drv.get());
+  ASSERT_OK(driver.status_value());
+
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&ctx, "test", drv.get(), &dev));
+  ASSERT_OK(zx_device::Create(&ctx, "test", *std::move(driver), &dev));
 
   zx::channel proxy_local, proxy_remote;
   ASSERT_OK(zx::channel::create(0, &proxy_local, &proxy_remote));
@@ -50,8 +53,11 @@ TEST(ProxyIostateTestCase, ChannelCloseThenCancel) {
   fbl::RefPtr<zx_driver> drv;
   ASSERT_OK(zx_driver::Create("test", ctx.inspect().drivers(), &drv));
 
+  auto driver = Driver::Create(drv.get());
+  ASSERT_OK(driver.status_value());
+
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&ctx, "test", drv.get(), &dev));
+  ASSERT_OK(zx_device::Create(&ctx, "test", *std::move(driver), &dev));
 
   zx::channel proxy_local, proxy_remote;
   ASSERT_OK(zx::channel::create(0, &proxy_local, &proxy_remote));

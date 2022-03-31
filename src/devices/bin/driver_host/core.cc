@@ -365,7 +365,7 @@ uint32_t get_perf_state(const fbl::RefPtr<zx_device>& dev, uint32_t requested_pe
 
 }  // namespace internal
 
-zx_status_t DriverHostContext::DeviceCreate(zx_driver_t* drv, const char* name, void* ctx,
+zx_status_t DriverHostContext::DeviceCreate(fbl::RefPtr<Driver> drv, const char* name, void* ctx,
                                             const zx_protocol_device_t* ops,
                                             fbl::RefPtr<zx_device_t>* out) {
   inspect_.DeviceCreateStats().Update();

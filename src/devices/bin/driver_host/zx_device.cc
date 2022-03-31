@@ -14,7 +14,7 @@
 #include "log.h"
 #include "proxy_device.h"
 
-zx_device::zx_device(DriverHostContext* ctx, std::string name, zx_driver_t* drv)
+zx_device::zx_device(DriverHostContext* ctx, std::string name, fbl::RefPtr<Driver> drv)
     : driver(drv), driver_host_context_(ctx) {
   size_t len = name.length();
   // TODO(teisenbe): I think this is overly aggressive, and could be changed
@@ -28,10 +28,10 @@ zx_device::zx_device(DriverHostContext* ctx, std::string name, zx_driver_t* drv)
   memcpy(name_, name.data(), len);
   name_[len] = '\0';
 
-  inspect_.emplace(driver->inspect().devices(), name_);
+  inspect_.emplace(driver->zx_driver()->inspect().devices(), name_);
 }
 
-zx_status_t zx_device::Create(DriverHostContext* ctx, std::string name, zx_driver_t* driver,
+zx_status_t zx_device::Create(DriverHostContext* ctx, std::string name, fbl::RefPtr<Driver> driver,
                               fbl::RefPtr<zx_device>* out_dev) {
   *out_dev = fbl::AdoptRef(new zx_device(ctx, name, driver));
   (*out_dev)->vnode = fbl::MakeRefCounted<DevfsVnode>(*out_dev);
