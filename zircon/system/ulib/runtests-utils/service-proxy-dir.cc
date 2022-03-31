@@ -52,13 +52,13 @@ zx_status_t ServiceProxyDir::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode
     return ZX_OK;
   }
 
-  entries_.emplace(
-      entry_name, *out = fbl::MakeRefCounted<fs::Service>([this, entry_name](zx::channel request) {
-        return fidl::WireCall<fio::Directory>(zx::unowned_channel(proxy_dir_))
-            ->Open(fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable,
-                   0755, fidl::StringView::FromExternal(entry_name), std::move(request))
-            .status();
-      }));
+  entries_.emplace(entry_name,
+                   *out = fbl::MakeRefCounted<fs::Service>([this, entry_name](zx::channel request) {
+                     return fidl::WireCall<fio::Directory>(zx::unowned_channel(proxy_dir_))
+                         ->Open(fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable, 0755,
+                                fidl::StringView::FromExternal(entry_name), std::move(request))
+                         .status();
+                   }));
 
   return ZX_OK;
 }

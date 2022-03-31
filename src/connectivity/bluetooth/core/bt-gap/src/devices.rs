@@ -10,7 +10,7 @@ use {
     fuchsia_bluetooth::constants::HOST_DEVICE_DIR,
     fuchsia_vfs_watcher::{self as vfs_watcher, WatchEvent, WatchMessage},
     futures::{future, FutureExt, Stream, TryStreamExt},
-    io_util::{open_directory_in_namespace, OpenFlags},
+    io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
     log::{info, warn},
     std::{
         ffi::OsStr,
@@ -27,8 +27,7 @@ pub enum HostEvent {
 /// Watch the VFS for host devices being added or removed, and produce a stream of HostEvent messages
 pub fn watch_hosts() -> impl Stream<Item = Result<HostEvent, io::Error>> {
     async {
-        let directory =
-            open_directory_in_namespace(HOST_DEVICE_DIR, OpenFlags::RIGHT_READABLE).unwrap();
+        let directory = open_directory_in_namespace(HOST_DEVICE_DIR, OPEN_RIGHT_READABLE).unwrap();
         let watcher = vfs_watcher::Watcher::new(directory)
             .await
             .expect("Cannot open vfs watcher for bt-host device path");

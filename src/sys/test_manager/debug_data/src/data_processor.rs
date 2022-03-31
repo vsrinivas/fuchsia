@@ -22,7 +22,7 @@ pub async fn process_debug_data_vmos<S: Stream<Item = VmoMessage> + std::marker:
 ) -> Result<(), Error> {
     let directory_proxy = io_util::open_directory_in_namespace(
         dir_path,
-        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
     )?;
     let client_end = ClientEnd::new(directory_proxy.into_channel().unwrap().into_zx_channel());
     processor_proxy.set_directory(client_end)?;
@@ -79,7 +79,7 @@ mod test {
         let file = io_util::open_file(
             &dir,
             "file".as_ref(),
-            fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
+            fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
         )
         .expect("create file");
         io_util::write_file(&file, "file content").await.expect("write to file");
@@ -105,7 +105,7 @@ mod test {
                     let file = io_util::open_file(
                         &dir,
                         "file_2".as_ref(),
-                        fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
+                        fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
                     )
                     .expect("create file");
                     io_util::write_file(&file, "file content").await.expect("write to file");

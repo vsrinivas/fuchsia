@@ -210,9 +210,8 @@ impl IncomingNamespace {
         ns: &mut Vec<fcrunner::ComponentNamespaceEntry>,
         package_dir: &fio::DirectoryProxy,
     ) -> Result<(), ModelError> {
-        let clone_dir_proxy =
-            io_util::clone_directory(package_dir, fio::OpenFlags::CLONE_SAME_RIGHTS)
-                .map_err(|e| ModelError::namespace_creation_failed(e))?;
+        let clone_dir_proxy = io_util::clone_directory(package_dir, fio::CLONE_FLAG_SAME_RIGHTS)
+            .map_err(|e| ModelError::namespace_creation_failed(e))?;
         let cloned_dir = ClientEnd::new(
             clone_dir_proxy
                 .into_channel()
@@ -285,7 +284,7 @@ impl IncomingNamespace {
             use_.path().expect("use decl without path used in add_directory_helper").to_string();
         let flags = match use_ {
             UseDecl::Directory(dir) => Rights::from(dir.rights).into_legacy(),
-            UseDecl::Storage(_) => fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            UseDecl::Storage(_) => fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             _ => panic!("not a directory or storage capability"),
         };
         let use_ = use_.clone();
@@ -471,7 +470,7 @@ impl IncomingNamespace {
                 .expect("could not create node proxy endpoints");
             pseudo_dir.clone().open(
                 ExecutionScope::new(),
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 fio::MODE_TYPE_DIRECTORY,
                 Path::dot(),
                 server_end.into_channel().into(),

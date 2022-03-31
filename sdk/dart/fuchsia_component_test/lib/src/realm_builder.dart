@@ -203,7 +203,7 @@ class ScopedInstance {
       T proxy, String protocolPath) async {
     var serverEnd = proxy.ctrl.request().passChannel();
     await exposedDir.open(
-      fio.OpenFlags.rightReadable | fio.OpenFlags.rightWritable,
+      fio.openRightReadable | fio.openRightWritable,
       fio.modeTypeService,
       protocolPath,
       fidl.InterfaceRequest<fio.Node>(serverEnd),

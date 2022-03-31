@@ -42,9 +42,9 @@ fuchsia::io::FileSyncPtr OpenAsFile(vfs::internal::Node* node, async_dispatcher_
                                     bool writable = false) {
   zx::channel local, remote;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
-  fuchsia::io::OpenFlags flags = fuchsia::io::OpenFlags::RIGHT_READABLE;
+  fuchsia::io::OpenFlags flags = fuchsia::io::OPEN_RIGHT_READABLE;
   if (writable) {
-    flags |= fuchsia::io::OpenFlags::RIGHT_WRITABLE;
+    flags |= fuchsia::io::OPEN_RIGHT_WRITABLE;
   }
   EXPECT_EQ(ZX_OK, node->Serve(flags, std::move(remote), dispatcher));
   fuchsia::io::FileSyncPtr ret;
@@ -111,9 +111,8 @@ TEST(VmoFile, GetAttrReadOnly) {
   EXPECT_EQ(ZX_OK, status);
   EXPECT_EQ(1000u, attr.content_size);
   EXPECT_EQ(1000u, attr.storage_size);
-  EXPECT_EQ(
-      fuchsia::io::MODE_TYPE_FILE | static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE),
-      attr.mode);
+  EXPECT_EQ(fuchsia::io::MODE_TYPE_FILE | static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE),
+            attr.mode);
 }
 
 TEST(VmoFile, GetAttrWritable) {
@@ -134,10 +133,9 @@ TEST(VmoFile, GetAttrWritable) {
   EXPECT_EQ(ZX_OK, status);
   EXPECT_EQ(1000u, attr.content_size);
   EXPECT_EQ(1000u, attr.storage_size);
-  EXPECT_EQ(
-      fuchsia::io::MODE_TYPE_FILE | static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE |
-                                                          fuchsia::io::OpenFlags::RIGHT_WRITABLE),
-      attr.mode);
+  EXPECT_EQ(fuchsia::io::MODE_TYPE_FILE | static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE |
+                                                                fuchsia::io::OPEN_RIGHT_WRITABLE),
+            attr.mode);
 }
 
 TEST(VmoFile, ReadOnlyNoSharing) {

@@ -23,7 +23,7 @@
 namespace early_boot_instrumentation {
 namespace {
 
-constexpr auto kFlags = fuchsia::io::OpenFlags::RIGHT_READABLE;
+constexpr auto kFlags = fuchsia::io::OPEN_RIGHT_READABLE;
 
 zx_koid_t GetKoid(zx_handle_t handle) {
   zx_info_handle_basic_t info;

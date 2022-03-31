@@ -833,7 +833,7 @@ func TestTriggerGC(t *testing.T) {
 	// always perform the operation on a dedicated channel, so that pkgfsDir is not
 	// closed.
 	unlink := func(path string) error {
-		d, err := pkgfsDir.Open(".", uint32(fidlio.OpenFlagsDirectory|fidlio.OpenFlagsRightReadable|fidlio.OpenFlagsRightWritable), 0o700)
+		d, err := pkgfsDir.Open(".", uint32(fidlio.OpenFlagDirectory|fidlio.OpenRightReadable|fidlio.OpenRightWritable), 0o700)
 		if err != nil {
 			return err
 		}

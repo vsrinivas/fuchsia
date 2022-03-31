@@ -62,8 +62,7 @@ TEST_F(DirectoryMigratorImplTest, ValidDirectories) {
 
     ASSERT_EQ(data_dir->GetFlags(&s, &flags), ZX_OK);
     EXPECT_EQ(s, ZX_OK);
-    ASSERT_EQ(flags,
-              (fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE));
+    ASSERT_EQ(flags, (fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE));
   }
 
   fuchsia::io::DirectorySyncPtr cache_dir;
@@ -74,8 +73,7 @@ TEST_F(DirectoryMigratorImplTest, ValidDirectories) {
 
     ASSERT_EQ(cache_dir->GetFlags(&s, &flags), ZX_OK);
     EXPECT_EQ(s, ZX_OK);
-    ASSERT_EQ(flags,
-              (fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE));
+    ASSERT_EQ(flags, (fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE));
   }
 }
 

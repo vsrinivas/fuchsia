@@ -62,9 +62,9 @@ impl TestPackage {
 // Should roughly be kept in sync with the heuristic under Open in pkgfs/package_directory.go
 fn should_redirect_request_to_merkle_file(path: &str, flags: fio::OpenFlags, mode: u32) -> bool {
     let mode_file = mode & fio::MODE_TYPE_MASK == fio::MODE_TYPE_FILE;
-    let file_flag = flags.intersects(fio::OpenFlags::NOT_DIRECTORY);
-    let dir_flag = flags.intersects(fio::OpenFlags::DIRECTORY);
-    let path_flag = flags.intersects(fio::OpenFlags::NODE_REFERENCE);
+    let file_flag = flags.intersects(fio::OPEN_FLAG_NOT_DIRECTORY);
+    let dir_flag = flags.intersects(fio::OPEN_FLAG_DIRECTORY);
+    let path_flag = flags.intersects(fio::OPEN_FLAG_NODE_REFERENCE);
 
     let open_as_file = mode_file || file_flag;
     let open_as_directory = dir_flag || path_flag;
@@ -83,7 +83,7 @@ pub fn handle_package_directory_stream(
             fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
         backing_dir_proxy
             .open(
-                fio::OpenFlags::DIRECTORY | fio::OpenFlags::RIGHT_READABLE,
+                fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE,
                 fio::MODE_TYPE_DIRECTORY,
                 PACKAGE_CONTENTS_PATH,
                 package_contents_dir_server_end,
@@ -409,9 +409,7 @@ mod tests {
 
     async fn read_file(dir_proxy: &fio::DirectoryProxy, path: &str) -> String {
         let file_proxy =
-            io_util::directory::open_file(dir_proxy, path, fio::OpenFlags::RIGHT_READABLE)
-                .await
-                .unwrap();
+            io_util::directory::open_file(dir_proxy, path, fio::OPEN_RIGHT_READABLE).await.unwrap();
 
         io_util::file::read_to_string(&file_proxy).await.unwrap()
     }

@@ -10,8 +10,7 @@ pub(crate) async fn create(
     blobfs: &fio::DirectoryProxy,
     hash: &Hash,
 ) -> Result<Blob<NeedsTruncate>, CreateError> {
-    let flags =
-        fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::RIGHT_READABLE;
+    let flags = fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_READABLE;
 
     let proxy = io_util::directory::open_file(&blobfs, &hash.to_string(), flags).await.map_err(
         |e| match e {

@@ -330,7 +330,7 @@ zx::status<fdio_ptr> remote::open(const char* path, fio::wire::OpenFlags flags, 
     return zx::error(status);
   }
 
-  if (flags & fio::wire::OpenFlags::kDescribe) {
+  if (flags & fio::wire::kOpenFlagDescribe) {
     return fdio::create_with_on_open(std::move(endpoints->client));
   }
 

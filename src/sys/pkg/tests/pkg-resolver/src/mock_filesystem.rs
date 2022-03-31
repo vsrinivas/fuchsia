@@ -56,7 +56,7 @@ fn reopen_self(node: ServerEnd<fio::NodeMarker>, flags: fio::OpenFlags, open_cou
 
 pub fn describe_dir(flags: fio::OpenFlags, stream: &fio::DirectoryRequestStream) {
     let ch = stream.control_handle();
-    if flags.intersects(fio::OpenFlags::DESCRIBE) {
+    if flags.intersects(fio::OPEN_FLAG_DESCRIBE) {
         let mut ni = fio::NodeInfo::Directory(fio::DirectoryObject);
         ch.send_on_open_(Status::OK.into_raw(), Some(&mut ni)).expect("send_on_open");
     }

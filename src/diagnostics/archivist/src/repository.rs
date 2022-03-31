@@ -584,7 +584,7 @@ impl DataRepoState {
                 // This artifact contains inspect and matches a passed selector.
                 io_util::clone_directory(
                     &inspect_artifacts.component_diagnostics_proxy,
-                    fio::OpenFlags::CLONE_SAME_RIGHTS,
+                    fio::CLONE_FLAG_SAME_RIGHTS,
                 )
                 .ok()
                 .map(|directory| UnpopulatedInspectDataContainer {
@@ -891,7 +891,7 @@ mod tests {
             .write()
             .add_inspect_artifacts(
                 identity,
-                io_util::open_directory_in_namespace("/tmp", io_util::OpenFlags::RIGHT_READABLE)
+                io_util::open_directory_in_namespace("/tmp", io_util::OPEN_RIGHT_READABLE)
                     .expect("open root"),
                 zx::Time::from_nanos(0),
             )
@@ -914,7 +914,7 @@ mod tests {
             .write()
             .add_inspect_artifacts(
                 identity2,
-                io_util::open_directory_in_namespace("/tmp", io_util::OpenFlags::RIGHT_READABLE)
+                io_util::open_directory_in_namespace("/tmp", io_util::OPEN_RIGHT_READABLE)
                     .expect("open root"),
                 zx::Time::from_nanos(0),
             )

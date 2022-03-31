@@ -20,7 +20,7 @@ use fuchsia_inspect::{component, health::Reporter};
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
 use futures::StreamExt;
-use io_util::OpenFlags;
+use io_util::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE};
 
 enum IncomingRequest {
     FirmwareParam(FirmwareParamRequestStream),
@@ -30,11 +30,9 @@ enum IncomingRequest {
 async fn find_nvram_device() -> Result<fnvram::DeviceProxy, anyhow::Error> {
     // The RTC houses the nvram where nvdata is stored.
     let nvram_path = "/dev/class/rtc";
-    let proxy = io_util::open_directory_in_namespace(
-        nvram_path,
-        OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
-    )
-    .context("Opening /dev/class/rtc")?;
+    let proxy =
+        io_util::open_directory_in_namespace(nvram_path, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)
+            .context("Opening /dev/class/rtc")?;
     let contents = files_async::readdir(&proxy).await.context("Reading /dev/class/rtc")?;
     if contents.len() > 1 {
         return Err(anyhow!("Too many rtc devices"));
@@ -50,11 +48,9 @@ async fn find_nvram_device() -> Result<fnvram::DeviceProxy, anyhow::Error> {
 async fn find_flashmap_device() -> Result<FlashmapProxy, anyhow::Error> {
     // Look for the first flash device.
     let nand_path = "/dev/class/nand";
-    let proxy = io_util::open_directory_in_namespace(
-        nand_path,
-        OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
-    )
-    .context("Opening /dev/class/nand")?;
+    let proxy =
+        io_util::open_directory_in_namespace(nand_path, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)
+            .context("Opening /dev/class/nand")?;
     let contents = files_async::readdir(&proxy).await.context("Reading /dev/class/nand")?;
     if contents.len() > 1 {
         return Err(anyhow!("Too many nand devices"));

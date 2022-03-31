@@ -44,16 +44,15 @@ async fn main() -> Result<(), Error> {
         err
     })?;
 
-    let dev_root =
-        open_in_namespace("/dev", fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE)?;
+    let dev_root = open_in_namespace("/dev", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE)?;
     let disk_manager = DevDiskManager::new(dev_root);
 
     let metadata_root = open_in_namespace(
         "/data/accounts",
-        fio::OpenFlags::RIGHT_READABLE
-            | fio::OpenFlags::RIGHT_WRITABLE
-            | fio::OpenFlags::DIRECTORY
-            | fio::OpenFlags::CREATE,
+        fio::OPEN_RIGHT_READABLE
+            | fio::OPEN_RIGHT_WRITABLE
+            | fio::OPEN_FLAG_DIRECTORY
+            | fio::OPEN_FLAG_CREATE,
     )?;
     let mut account_metadata_store = DataDirAccountMetadataStore::new(metadata_root);
     // Clean up any not-committed files laying around in the account metadata directory.

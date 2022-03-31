@@ -335,7 +335,7 @@ impl BootfsSvc {
         let (directory_proxy, directory_server_end) = create_proxy::<fio::DirectoryMarker>()?;
         vfs.open(
             ExecutionScope::new(),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
             fio::MODE_TYPE_DIRECTORY,
             vfs::path::Path::dot(),
             ServerEnd::<fio::NodeMarker>::new(directory_server_end.into_channel()),

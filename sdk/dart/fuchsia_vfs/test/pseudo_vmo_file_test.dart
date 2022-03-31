@@ -40,7 +40,7 @@ void main() {
     test('onOpen event on success', () async {
       final stringList = ['test string'];
       final file = _TestPseudoVmoFile.fromStringList(stringList);
-      final proxy = file.connect(OpenFlags.rightReadable | OpenFlags.describe);
+      final proxy = file.connect(openRightReadable | openFlagDescribe);
 
       await proxy.onOpen.first.then((response) {
         expect(response.s, ZX.OK);
@@ -53,7 +53,7 @@ void main() {
     test('read file', () async {
       final stringList = ['test string'];
       final file = _TestPseudoVmoFile.fromStringList(stringList);
-      final proxy = file.connect(OpenFlags.rightReadable);
+      final proxy = file.connect(openRightReadable);
       await _assertRead(proxy);
     });
 
@@ -62,7 +62,7 @@ void main() {
       final file = _TestPseudoVmoFile.fromStringList(stringList);
 
       for (final expectedString in stringList) {
-        final proxy = file.connect(OpenFlags.rightReadable);
+        final proxy = file.connect(openRightReadable);
         await _assertDescribeVmo(proxy, expectedString.length, expectedString);
         await proxy.close();
       }
@@ -76,7 +76,7 @@ void main() {
     test('pass null-producing vmo function', () async {
       Vmo? produceVmo() => null;
       final file = _TestPseudoVmoFile.fromVmoFunc(produceVmo);
-      final proxy = file.connect(OpenFlags.rightReadable);
+      final proxy = file.connect(openRightReadable);
       await _assertDescribeFile(proxy);
     });
   });

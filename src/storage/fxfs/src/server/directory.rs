@@ -165,7 +165,7 @@ impl FxDirectory {
             // lock in place.
             let keys =
                 [LockKey::object(store.store_object_id(), current_dir.directory.object_id())];
-            let transaction_or_guard = if last_segment && flags.intersects(fio::OpenFlags::CREATE) {
+            let transaction_or_guard = if last_segment && flags.intersects(fio::OPEN_FLAG_CREATE) {
                 Left(fs.clone().new_transaction(&keys, Options::default()).await?)
             } else {
                 // When child objects are created, the object is created along with the directory
@@ -177,19 +177,19 @@ impl FxDirectory {
             match current_dir.directory.lookup(name).await? {
                 Some((object_id, object_descriptor)) => {
                     if transaction_or_guard.is_left()
-                        && flags.intersects(fio::OpenFlags::CREATE_IF_ABSENT)
+                        && flags.intersects(fio::OPEN_FLAG_CREATE_IF_ABSENT)
                     {
                         bail!(FxfsError::AlreadyExists);
                     }
                     if last_segment {
                         match object_descriptor {
                             ObjectDescriptor::File => {
-                                if flags.intersects(fio::OpenFlags::DIRECTORY) {
+                                if flags.intersects(fio::OPEN_FLAG_DIRECTORY) {
                                     bail!(FxfsError::NotDir)
                                 }
                             }
                             ObjectDescriptor::Directory => {
-                                if flags.intersects(fio::OpenFlags::NOT_DIRECTORY) {
+                                if flags.intersects(fio::OPEN_FLAG_NOT_DIRECTORY) {
                                     bail!(FxfsError::NotFile)
                                 }
                             }
@@ -651,9 +651,9 @@ mod tests {
             let root = fixture.root();
 
             let flags = if i == 0 {
-                fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_READABLE
+                fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE
             } else {
-                fio::OpenFlags::RIGHT_READABLE
+                fio::OPEN_RIGHT_READABLE
             };
             let dir = open_dir_checked(&root, flags, fio::MODE_TYPE_DIRECTORY, "foo").await;
             close_dir_checked(dir).await;
@@ -668,7 +668,7 @@ mod tests {
         let root = fixture.root();
 
         assert_eq!(
-            open_file(&root, fio::OpenFlags::RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo")
+            open_file(&root, fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo")
                 .await
                 .expect_err("Open succeeded")
                 .root_cause()
@@ -687,7 +687,7 @@ mod tests {
 
         let f = open_file_checked(
             &root,
-            fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_READABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE,
             fio::MODE_TYPE_FILE,
             "foo",
         )
@@ -695,8 +695,7 @@ mod tests {
         close_file_checked(f).await;
 
         let f =
-            open_file_checked(&root, fio::OpenFlags::RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo")
-                .await;
+            open_file_checked(&root, fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo").await;
         close_file_checked(f).await;
 
         fixture.close().await;
@@ -709,9 +708,7 @@ mod tests {
 
         let d = open_dir_checked(
             &root,
-            fio::OpenFlags::CREATE
-                | fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             "foo",
         )
@@ -720,20 +717,16 @@ mod tests {
 
         let d = open_dir_checked(
             &root,
-            fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_READABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE,
             fio::MODE_TYPE_DIRECTORY,
             "foo/bar",
         )
         .await;
         close_dir_checked(d).await;
 
-        let d = open_dir_checked(
-            &root,
-            fio::OpenFlags::RIGHT_READABLE,
-            fio::MODE_TYPE_DIRECTORY,
-            "foo/bar",
-        )
-        .await;
+        let d =
+            open_dir_checked(&root, fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_DIRECTORY, "foo/bar")
+                .await;
         close_dir_checked(d).await;
 
         fixture.close().await;
@@ -746,9 +739,7 @@ mod tests {
 
         let f = open_file_checked(
             &root,
-            fio::OpenFlags::CREATE
-                | fio::OpenFlags::CREATE_IF_ABSENT
-                | fio::OpenFlags::RIGHT_READABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_FLAG_CREATE_IF_ABSENT | fio::OPEN_RIGHT_READABLE,
             fio::MODE_TYPE_FILE,
             "foo",
         )
@@ -758,9 +749,7 @@ mod tests {
         assert_eq!(
             open_file(
                 &root,
-                fio::OpenFlags::CREATE
-                    | fio::OpenFlags::CREATE_IF_ABSENT
-                    | fio::OpenFlags::RIGHT_READABLE,
+                fio::OPEN_FLAG_CREATE | fio::OPEN_FLAG_CREATE_IF_ABSENT | fio::OPEN_RIGHT_READABLE,
                 fio::MODE_TYPE_FILE,
                 "foo",
             )
@@ -782,9 +771,7 @@ mod tests {
 
         let file = open_file_checked(
             &root,
-            fio::OpenFlags::CREATE
-                | fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_FILE,
             "foo",
         )
@@ -814,7 +801,7 @@ mod tests {
             .expect("unlink failed");
 
         assert_eq!(
-            open_file(&root, fio::OpenFlags::RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo")
+            open_file(&root, fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo")
                 .await
                 .expect_err("Open succeeded")
                 .root_cause()
@@ -826,9 +813,7 @@ mod tests {
         // Create another file so we can verify that the extents were actually freed.
         let file = open_file_checked(
             &root,
-            fio::OpenFlags::CREATE
-                | fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_FILE,
             "bar",
         )
@@ -847,9 +832,7 @@ mod tests {
 
         let file = open_file_checked(
             &root,
-            fio::OpenFlags::CREATE
-                | fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_FILE,
             "foo",
         )
@@ -862,7 +845,7 @@ mod tests {
             .expect("unlink failed");
 
         assert_eq!(
-            open_file(&root, fio::OpenFlags::RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo")
+            open_file(&root, fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo")
                 .await
                 .expect_err("Open succeeded")
                 .root_cause()
@@ -881,9 +864,7 @@ mod tests {
 
         let file = open_file_checked(
             &root,
-            fio::OpenFlags::CREATE
-                | fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_FILE,
             "foo",
         )
@@ -899,7 +880,7 @@ mod tests {
 
         // The child should immediately appear unlinked...
         assert_eq!(
-            open_file(&root, fio::OpenFlags::RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo")
+            open_file(&root, fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo")
                 .await
                 .expect_err("Open succeeded")
                 .root_cause()
@@ -928,16 +909,14 @@ mod tests {
 
         let dir = open_dir_checked(
             &root,
-            fio::OpenFlags::CREATE
-                | fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             "foo",
         )
         .await;
         let f = open_file_checked(
             &dir,
-            fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_READABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE,
             fio::MODE_TYPE_FILE,
             "bar",
         )
@@ -975,9 +954,7 @@ mod tests {
 
         let dir = open_dir_checked(
             &root,
-            fio::OpenFlags::CREATE
-                | fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             "foo",
         )
@@ -991,7 +968,7 @@ mod tests {
         assert_eq!(
             open_file(
                 &dir,
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::CREATE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_CREATE,
                 fio::MODE_TYPE_FILE,
                 "bar"
             )
@@ -1018,9 +995,7 @@ mod tests {
         const GRANDCHILD: &str = "baz";
         open_dir_checked(
             &root,
-            fio::OpenFlags::CREATE
-                | fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             PARENT,
         )
@@ -1029,7 +1004,7 @@ mod tests {
         let open_parent = || async {
             open_dir_checked(
                 &root,
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 fio::MODE_TYPE_DIRECTORY,
                 PARENT,
             )
@@ -1045,9 +1020,7 @@ mod tests {
         for _ in 0..100 {
             let d = open_dir_checked(
                 &parent,
-                fio::OpenFlags::CREATE
-                    | fio::OpenFlags::RIGHT_READABLE
-                    | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 fio::MODE_TYPE_DIRECTORY,
                 CHILD,
             )
@@ -1075,7 +1048,7 @@ mod tests {
             let writer = fasync::Task::spawn(async move {
                 let child_or = open_dir(
                     &parent,
-                    fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                    fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                     fio::MODE_TYPE_DIRECTORY,
                     CHILD,
                 )
@@ -1093,7 +1066,7 @@ mod tests {
                 child.describe().await.expect("describe failed");
                 match open_file(
                     &child,
-                    fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_READABLE,
+                    fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE,
                     fio::MODE_TYPE_FILE,
                     GRANDCHILD,
                 )
@@ -1138,9 +1111,7 @@ mod tests {
         let open_dir = || {
             open_dir_checked(
                 &root,
-                fio::OpenFlags::CREATE
-                    | fio::OpenFlags::RIGHT_READABLE
-                    | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 fio::MODE_TYPE_DIRECTORY,
                 "foo",
             )
@@ -1151,7 +1122,7 @@ mod tests {
         for file in &files {
             let file = open_file_checked(
                 parent.as_ref(),
-                fio::OpenFlags::CREATE,
+                fio::OPEN_FLAG_CREATE,
                 fio::MODE_TYPE_FILE,
                 file,
             )
@@ -1162,7 +1133,7 @@ mod tests {
         for dir in &dirs {
             let dir = open_dir_checked(
                 parent.as_ref(),
-                fio::OpenFlags::CREATE,
+                fio::OPEN_FLAG_CREATE,
                 fio::MODE_TYPE_DIRECTORY,
                 dir,
             )
@@ -1214,9 +1185,7 @@ mod tests {
 
         let parent = open_dir_checked(
             &root,
-            fio::OpenFlags::CREATE
-                | fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             "foo",
         )
@@ -1225,7 +1194,7 @@ mod tests {
         let files = ["a", "b"];
         for file in &files {
             let file =
-                open_file_checked(&parent, fio::OpenFlags::CREATE, fio::MODE_TYPE_FILE, file).await;
+                open_file_checked(&parent, fio::OPEN_FLAG_CREATE, fio::MODE_TYPE_FILE, file).await;
             close_file_checked(file).await;
         }
 
@@ -1271,9 +1240,7 @@ mod tests {
 
         let dir = open_dir_checked(
             &root,
-            fio::OpenFlags::CREATE
-                | fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             "foo",
         )

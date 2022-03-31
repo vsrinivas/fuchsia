@@ -62,8 +62,8 @@ void main() {
 
   group('vmo file:', () {
     test('onOpen event on success', () async {
-      var file = _createVmoFile(
-          'test_str', OpenFlags.rightReadable | OpenFlags.describe);
+      var file =
+          _createVmoFile('test_str', openRightReadable | openFlagDescribe);
 
       await file.proxy.onOpen.first.then((response) {
         expect(response.s, ZX.OK);
@@ -74,8 +74,8 @@ void main() {
     });
 
     test('onOpen with describe flag', () async {
-      var file = _createVmoFile(
-          'test_str', OpenFlags.rightReadable | OpenFlags.describe);
+      var file =
+          _createVmoFile('test_str', openRightReadable | openFlagDescribe);
 
       await file.proxy.onOpen.first.then((response) {
         expect(response.s, ZX.OK);
@@ -90,20 +90,20 @@ void main() {
 
     test('read file', () async {
       var str = 'test_str';
-      var file = _createVmoFile(str, OpenFlags.rightReadable);
+      var file = _createVmoFile(str, openRightReadable);
       await _assertRead(file.proxy, str.length, str);
     });
 
     test('describe duplicate', () async {
       var str = 'test_str';
-      var file = _createVmoFile(str, OpenFlags.rightReadable);
+      var file = _createVmoFile(str, openRightReadable);
       await _assertDescribeVmo(file.proxy, str);
     });
 
     test('describe no sharing', () async {
       var str = 'test_str';
-      var file = _createVmoFile(
-          str, OpenFlags.rightReadable, VmoSharingMode.noSharing);
+      var file =
+          _createVmoFile(str, openRightReadable, VmoSharingMode.noSharing);
       await _assertDescribeFile(file.proxy);
     });
   });

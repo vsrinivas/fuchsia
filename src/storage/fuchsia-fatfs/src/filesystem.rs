@@ -442,7 +442,7 @@ mod tests {
         let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
         dir.clone().open(
             scope.clone(),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             0,
             Path::validate_and_split("test").unwrap(),
             server_end,

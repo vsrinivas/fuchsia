@@ -67,7 +67,7 @@ mod connect_to_driver {
         device_watcher::recursive_wait_and_open_node(
             &io_util::open_directory_in_namespace(
                 "/dev",
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             )?,
             path,
         )
@@ -114,7 +114,7 @@ mod connect_to_driver {
             let scope = ExecutionScope::new();
             dir.open(
                 scope,
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 fio::MODE_TYPE_DIRECTORY,
                 vfs::path::Path::dot(),
                 ServerEnd::new(dir_server.into_channel()),

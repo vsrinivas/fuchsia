@@ -116,7 +116,7 @@ impl Service {
             }
         };
 
-        debug_assert!(flags == fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
+        debug_assert!(flags == fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
 
         match Channel::from_channel(server_end.into_channel()) {
             Ok(channel) => (self.open)(scope, channel),
@@ -139,13 +139,13 @@ impl DirectoryEntry for Service {
     ) {
         if !path.is_empty() {
             // See comment at the beginning of [`Service::open_as_service`].
-            if flags.intersects(fio::OpenFlags::NODE_REFERENCE) {
+            if flags.intersects(fio::OPEN_FLAG_NODE_REFERENCE) {
                 send_on_open_with_error(flags, server_end, Status::NOT_DIR);
             }
             return;
         }
 
-        if flags.intersects(fio::OpenFlags::NODE_REFERENCE) {
+        if flags.intersects(fio::OPEN_FLAG_NODE_REFERENCE) {
             self.open_as_node(scope, flags, mode, server_end);
         } else {
             self.open_as_service(scope, flags, mode, server_end);

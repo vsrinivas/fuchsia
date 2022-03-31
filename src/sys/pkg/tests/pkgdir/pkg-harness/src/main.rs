@@ -54,7 +54,7 @@ async fn main_inner() -> Result<(), Error> {
     let pkgfs_backed_package = io_util::directory::open_directory(
         &pkgfs.root_dir_proxy().unwrap(),
         &format!("packages/{}/0", test_package.name()),
-        fio::OpenFlags::DIRECTORY,
+        fio::OPEN_FLAG_DIRECTORY,
     )
     .await
     .unwrap();
@@ -64,7 +64,7 @@ async fn main_inner() -> Result<(), Error> {
         vfs::execution_scope::ExecutionScope::new(),
         blobfs_client,
         *test_package.meta_far_merkle_root(),
-        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         dir_request,
     )
     .await
@@ -112,7 +112,7 @@ async fn serve_harness(
         };
 
         let () = pkg
-            .clone(fio::OpenFlags::CLONE_SAME_RIGHTS, ServerEnd::new(dir.into_channel()))
+            .clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(dir.into_channel()))
             .expect("clone to succeed");
 
         responder.send(&mut Ok(())).context("while sending success response")?;

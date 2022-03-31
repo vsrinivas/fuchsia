@@ -889,7 +889,7 @@ impl BuiltinEnvironment {
             .as_ref()
             .unwrap()
             .open_root(
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 hub_server_end.into_channel(),
             )
             .await?;
@@ -981,7 +981,7 @@ impl BuiltinEnvironment {
         let (hub_client_end, hub_server_end) = create_endpoints::<fio::DirectoryMarker>().unwrap();
         service_fs_proxy
             .open(
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 fio::MODE_TYPE_DIRECTORY,
                 "hub",
                 ServerEnd::new(hub_server_end.into_channel()),
@@ -1005,7 +1005,7 @@ impl BuiltinEnvironment {
         let (node, server_end) = fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
         service_fs_proxy
             .open(
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 fio::MODE_TYPE_DIRECTORY,
                 "diagnostics",
                 ServerEnd::new(server_end.into_channel()),
@@ -1071,7 +1071,7 @@ impl BuiltinEnvironment {
                 let expose_dir_proxy = io_util::open_directory(
                     &hub_proxy,
                     &PathBuf::from("exec/expose"),
-                    fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                    fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 )
                 .expect("Failed to open directory");
 

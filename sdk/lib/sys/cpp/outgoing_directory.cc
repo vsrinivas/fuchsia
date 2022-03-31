@@ -57,9 +57,8 @@ OutgoingDirectory& OutgoingDirectory::operator=(OutgoingDirectory&& other) noexc
 
 zx_status_t OutgoingDirectory::Serve(zx::channel directory_request,
                                      async_dispatcher_t* dispatcher) {
-  return root_->Serve(
-      fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
-      std::move(directory_request), dispatcher);
+  return root_->Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+                      std::move(directory_request), dispatcher);
 }
 
 zx_status_t OutgoingDirectory::ServeFromStartupInfo(async_dispatcher_t* dispatcher) {

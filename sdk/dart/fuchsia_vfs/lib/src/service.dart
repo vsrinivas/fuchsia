@@ -53,20 +53,20 @@ class Service<T> extends Vnode {
     if ((mode & ~modeProtectionMask) & ~modeTypeService != 0) {
       return ZX.ERR_INVALID_ARGS;
     }
-    if (flags & OpenFlags.directory != OpenFlags.$none) {
+    if (flags & openFlagDirectory != OpenFlags.$none) {
       return ZX.ERR_NOT_DIR;
     }
 
-    // We don't support OpenFlags.rightDescribe, as service request is not going
+    // We don't support openRightDescribe, as service request is not going
     // to be of type fidl.InterfaceRequest<Node> most of the time, but we do send
-    // OnOpen event incase of bad flags and if OpenFlags.rightDescribe is passed
+    // OnOpen event incase of bad flags and if openRightDescribe is passed
     // so that underlying services don't need to handle these flags.
-    final unsupportedFlags = ~(OpenFlags.rightReadable |
-        OpenFlags.rightWritable |
-        OpenFlags.posixDeprecated |
-        OpenFlags.posixWritable |
-        OpenFlags.posixExecutable |
-        OpenFlags.cloneSameRights);
+    final unsupportedFlags = ~(openRightReadable |
+        openRightWritable |
+        openFlagPosixDeprecated |
+        openFlagPosixWritable |
+        openFlagPosixExecutable |
+        cloneFlagSameRights);
     if (flags & unsupportedFlags != OpenFlags.$none) {
       return ZX.ERR_NOT_SUPPORTED;
     }

@@ -552,7 +552,7 @@ mod tests {
 
         let file = open_file_checked(
             &root,
-            fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_READABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE,
             fio::MODE_TYPE_FILE,
             "foo",
         )
@@ -588,9 +588,7 @@ mod tests {
 
         let file = open_file_checked(
             &root,
-            fio::OpenFlags::CREATE
-                | fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_FILE,
             "foo",
         )
@@ -644,9 +642,7 @@ mod tests {
 
         let file = open_file_checked(
             &root,
-            fio::OpenFlags::CREATE
-                | fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_FILE,
             "foo",
         )
@@ -704,9 +700,7 @@ mod tests {
 
             let file = open_file_checked(
                 &root,
-                fio::OpenFlags::CREATE
-                    | fio::OpenFlags::RIGHT_READABLE
-                    | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 fio::MODE_TYPE_FILE,
                 "foo",
             )
@@ -729,8 +723,7 @@ mod tests {
         let root = fixture.root();
 
         let file =
-            open_file_checked(&root, fio::OpenFlags::RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo")
-                .await;
+            open_file_checked(&root, fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo").await;
 
         let vmo =
             file.get_backing_memory(fio::VmoFlags::READ).await.expect("Fidl failure").unwrap();
@@ -762,9 +755,7 @@ mod tests {
 
             let file = open_file_checked(
                 &root,
-                fio::OpenFlags::CREATE
-                    | fio::OpenFlags::RIGHT_READABLE
-                    | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 fio::MODE_TYPE_FILE,
                 "foo",
             )
@@ -786,8 +777,7 @@ mod tests {
         let root = fixture.root();
 
         let file =
-            open_file_checked(&root, fio::OpenFlags::RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo")
-                .await;
+            open_file_checked(&root, fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo").await;
 
         let vmo =
             file.get_backing_memory(fio::VmoFlags::READ).await.expect("Fidl failure").unwrap();
@@ -808,11 +798,9 @@ mod tests {
             let root = fixture.root();
 
             let flags = if i == 0 {
-                fio::OpenFlags::CREATE
-                    | fio::OpenFlags::RIGHT_READABLE
-                    | fio::OpenFlags::RIGHT_WRITABLE
+                fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE
             } else {
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE
             };
             let file = open_file_checked(&root, flags, fio::MODE_TYPE_FILE, "foo").await;
 
@@ -853,10 +841,10 @@ mod tests {
         for input in inputs {
             let file = open_file_checked(
                 &root,
-                fio::OpenFlags::CREATE
-                    | fio::OpenFlags::RIGHT_READABLE
-                    | fio::OpenFlags::RIGHT_WRITABLE
-                    | fio::OpenFlags::APPEND,
+                fio::OPEN_FLAG_CREATE
+                    | fio::OPEN_RIGHT_READABLE
+                    | fio::OPEN_RIGHT_WRITABLE
+                    | fio::OPEN_FLAG_APPEND,
                 fio::MODE_TYPE_FILE,
                 "foo",
             )
@@ -873,8 +861,7 @@ mod tests {
         }
 
         let file =
-            open_file_checked(&root, fio::OpenFlags::RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo")
-                .await;
+            open_file_checked(&root, fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo").await;
         let buf = file
             .read_at(fio::MAX_BUF, 0)
             .await
@@ -900,9 +887,7 @@ mod tests {
 
         let file = open_file_checked(
             &root,
-            fio::OpenFlags::CREATE
-                | fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_FILE,
             "foo",
         )
@@ -992,9 +977,7 @@ mod tests {
 
         let file = open_file_checked(
             &root,
-            fio::OpenFlags::CREATE
-                | fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_FILE,
             "foo",
         )
@@ -1065,9 +1048,7 @@ mod tests {
 
         let file = open_file_checked(
             &root,
-            fio::OpenFlags::CREATE
-                | fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_FILE,
             "foo",
         )
@@ -1141,9 +1122,7 @@ mod tests {
 
         let file = open_file_checked(
             &root,
-            fio::OpenFlags::CREATE
-                | fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_FILE,
             "foo",
         )
@@ -1229,9 +1208,7 @@ mod tests {
                 while !done1.load(atomic::Ordering::Relaxed) {
                     let file = open_file_checked(
                         &root,
-                        fio::OpenFlags::CREATE
-                            | fio::OpenFlags::RIGHT_READABLE
-                            | fio::OpenFlags::RIGHT_WRITABLE,
+                        fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                         fio::MODE_TYPE_FILE,
                         "foo",
                     )
@@ -1249,9 +1226,7 @@ mod tests {
                 while !done2.load(atomic::Ordering::Relaxed) {
                     let file = open_file_checked(
                         &root,
-                        fio::OpenFlags::CREATE
-                            | fio::OpenFlags::RIGHT_READABLE
-                            | fio::OpenFlags::RIGHT_WRITABLE,
+                        fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                         fio::MODE_TYPE_FILE,
                         "foo",
                     )
@@ -1269,9 +1244,7 @@ mod tests {
                 for _ in 0..300 {
                     let file = open_file_checked(
                         &root,
-                        fio::OpenFlags::CREATE
-                            | fio::OpenFlags::RIGHT_READABLE
-                            | fio::OpenFlags::RIGHT_WRITABLE,
+                        fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                         fio::MODE_TYPE_FILE,
                         "foo",
                     )

@@ -22,9 +22,8 @@ async fn main() -> Result<(), anyhow::Error> {
 
     // TODO(fxbug.dev/59830): Get handle to USB directory using fuchsia.fs/Admin.GetRoot.
     let pkg_local_mirror = {
-        let usb_dir =
-            io_util::directory::open_in_namespace(USB_DIR_PATH, fio::OpenFlags::RIGHT_READABLE)
-                .with_context(|| format!("while opening usb dir: {}", USB_DIR_PATH))?;
+        let usb_dir = io_util::directory::open_in_namespace(USB_DIR_PATH, fio::OPEN_RIGHT_READABLE)
+            .with_context(|| format!("while opening usb dir: {}", USB_DIR_PATH))?;
         PkgLocalMirror::new(&usb_dir).await.context("creating PkgLocalMirror")?
     };
 

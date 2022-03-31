@@ -235,9 +235,7 @@ async fn get_local_repo(
             let repos_proxy = io_util::directory::open_directory(
                 &data_proxy,
                 persisted_repos_dir,
-                fio::OpenFlags::RIGHT_READABLE
-                    | fio::OpenFlags::RIGHT_WRITABLE
-                    | fio::OpenFlags::CREATE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
             )
             .await
             .with_context(|| format!("opening {}", persisted_repos_dir))?;
@@ -245,9 +243,7 @@ async fn get_local_repo(
             let proxy = io_util::directory::open_directory(
                 &repos_proxy,
                 host,
-                fio::OpenFlags::RIGHT_READABLE
-                    | fio::OpenFlags::RIGHT_WRITABLE
-                    | fio::OpenFlags::CREATE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
             )
             .await
             .with_context(|| format!("opening {}", host))?;
@@ -406,7 +402,7 @@ mod tests {
             let cobalt_sender = CobaltSender::new(sender);
             let proxy = io_util::directory::open_in_namespace(
                 self.data_dir.path().to_str().unwrap(),
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             )
             .unwrap();
             Repository::new(

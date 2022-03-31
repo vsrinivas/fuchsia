@@ -44,7 +44,7 @@ use async_trait::async_trait;
 use async_utils::stream::TryFlattenUnorderedExt as _;
 use dns_server_watcher::{DnsServers, DnsServersUpdateSource, DEFAULT_DNS_PORT};
 use futures::{StreamExt as _, TryFutureExt as _, TryStreamExt as _};
-use io_util::{open_directory_in_namespace, OpenFlags};
+use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
 use net_declare::fidl_ip_v4;
 use serde::Deserialize;
 use tracing::{debug, error, info, trace, warn};
@@ -1189,7 +1189,7 @@ impl<'a> NetCfg<'a> {
     {
         let installer = self.installer.clone();
         let stream_of_streams = fvfs_watcher::Watcher::new(
-            open_directory_in_namespace(D::PATH, OpenFlags::RIGHT_READABLE)
+            open_directory_in_namespace(D::PATH, OPEN_RIGHT_READABLE)
                 .with_context(|| format!("error opening {} directory", D::NAME))?,
         )
         .await

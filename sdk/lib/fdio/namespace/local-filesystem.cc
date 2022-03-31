@@ -115,7 +115,7 @@ zx_status_t fdio_namespace::WalkLocked(fbl::RefPtr<LocalVnode>* in_out_vn,
 //
 // |flags| and |mode| are passed to |fuchsia.io.Directory/Open| as |flags| and |mode|, respectively.
 //
-// If |flags| includes |fio::wire::OpenFlags::kDescribe|, this function reads the resulting
+// If |flags| includes |fio::wire::kOpenFlagDescribe|, this function reads the resulting
 // |fuchsia.io.Node/OnOpen| event from the newly created channel and creates an
 // appropriate object to interact with the remote object.
 //
@@ -137,7 +137,7 @@ zx::status<fdio_ptr> fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, const char
 
   // If we're trying to mkdir over top of a mount point,
   // the correct error is EEXIST
-  if ((flags & fio::wire::OpenFlags::kCreate) && !strcmp(path, ".")) {
+  if ((flags & fio::wire::kOpenFlagCreate) && !strcmp(path, ".")) {
     return zx::error(ZX_ERR_ALREADY_EXISTS);
   }
 
@@ -161,7 +161,7 @@ zx::status<fdio_ptr> fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, const char
     return zx::error(status);
   }
 
-  if (flags & fio::wire::OpenFlags::kDescribe) {
+  if (flags & fio::wire::kOpenFlagDescribe) {
     return fdio::create_with_on_open(std::move(endpoints->client));
   }
 

@@ -183,10 +183,9 @@ zx::status<std::pair<fidl::ClientEnd<Directory>, fidl::ClientEnd<Directory>>> St
 
   // Extract the handle to the root of the filesystem from the export root. The POSIX flags will
   // cause the writable and executable rights to be inherited (if present).
-  auto root_or =
-      FsRootHandle(fidl::UnownedClientEnd<Directory>(*export_root_or),
-                   fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kPosixWritable |
-                       fio::wire::OpenFlags::kPosixExecutable);
+  auto root_or = FsRootHandle(fidl::UnownedClientEnd<Directory>(*export_root_or),
+                              fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosixWritable |
+                                  fio::wire::kOpenFlagPosixExecutable);
   if (root_or.is_error())
     return root_or.take_error();
   return zx::ok(std::make_pair(*std::move(export_root_or), *std::move(root_or)));

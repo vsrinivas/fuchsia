@@ -257,7 +257,7 @@ impl RoutingTest {
         // "foo/hippo" in it.
         let test_dir_proxy = io_util::open_directory_in_namespace(
             test_dir.path().to_str().unwrap(),
-            io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
+            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
         )
         .expect("failed to open temp directory");
         capability_util::create_static_file(&test_dir_proxy, Path::new("foo/hippo"), "hello")
@@ -436,7 +436,7 @@ impl RoutingTest {
             let dir_proxy = io_util::open_directory(
                 &self.test_dir_proxy,
                 &dir_path,
-                io_util::OpenFlags::RIGHT_READABLE,
+                io_util::OPEN_RIGHT_READABLE,
             )
             .expect("failed to open directory");
             list_directory(&dir_proxy).await
@@ -450,7 +450,7 @@ impl RoutingTest {
         let dir_proxy = io_util::open_directory(
             &self.test_dir_proxy,
             Path::new(path),
-            io_util::OpenFlags::RIGHT_READABLE,
+            io_util::OPEN_RIGHT_READABLE,
         )
         .expect("failed to open directory");
         list_directory(&dir_proxy).await
@@ -650,7 +650,7 @@ impl RoutingTest {
             .await
             .expect("failed to start component")
             .open_outgoing(
-                fio::OpenFlags::RIGHT_READABLE,
+                fio::OPEN_RIGHT_READABLE,
                 fio::MODE_TYPE_DIRECTORY,
                 PathBuf::from("/."),
                 &mut server_end,
@@ -734,7 +734,7 @@ impl RoutingTestModel for RoutingTest {
                         // Check for the file in the /tmp in the test's namespace
                         let tmp_proxy = io_util::open_directory_in_namespace(
                             "/tmp",
-                            io_util::OpenFlags::RIGHT_READABLE,
+                            io_util::OPEN_RIGHT_READABLE,
                         )
                         .expect("failed to open /tmp");
                         let res = capability_util::check_file_in_storage(
@@ -775,7 +775,7 @@ impl RoutingTestModel for RoutingTest {
                     )
                     .await;
                 let (storage_proxy, server_end) = create_proxy().unwrap();
-                let flags = fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE;
+                let flags = fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE;
                 let relative_moniker_string = format!("{}", storage_relation);
                 let component_abs_moniker = AbsoluteMoniker::from_relative(
                     &moniker,
@@ -808,17 +808,11 @@ impl RoutingTestModel for RoutingTest {
                 .await;
                 if expected_res == ExpectedResult::Ok {
                     let storage_dir = if from_cm_namespace {
-                        io_util::open_directory_in_namespace(
-                            "/tmp",
-                            io_util::OpenFlags::RIGHT_READABLE,
-                        )
-                        .expect("failed to open /tmp")
+                        io_util::open_directory_in_namespace("/tmp", io_util::OPEN_RIGHT_READABLE)
+                            .expect("failed to open /tmp")
                     } else {
-                        io_util::clone_directory(
-                            &self.test_dir_proxy,
-                            fio::OpenFlags::CLONE_SAME_RIGHTS,
-                        )
-                        .expect("failed to clone test_dir_proxy")
+                        io_util::clone_directory(&self.test_dir_proxy, fio::CLONE_FLAG_SAME_RIGHTS)
+                            .expect("failed to clone test_dir_proxy")
                     };
                     capability_util::check_file_in_storage(
                         storage_subdir.clone(),
@@ -933,9 +927,8 @@ impl RoutingTestModel for RoutingTest {
     }
 
     async fn check_namespace_subdir_contents(&self, path: &str, expected: Vec<String>) {
-        let dir_proxy =
-            io_util::open_directory_in_namespace(path, io_util::OpenFlags::RIGHT_READABLE)
-                .expect("failed to open directory");
+        let dir_proxy = io_util::open_directory_in_namespace(path, io_util::OPEN_RIGHT_READABLE)
+            .expect("failed to open directory");
         assert_eq!(list_directory(&dir_proxy).await, expected)
     }
 
@@ -989,7 +982,7 @@ pub mod capability_util {
     ) {
         let path = path.to_string();
         let dir_proxy = take_dir_from_namespace(namespace, &path).await;
-        let file_proxy = io_util::open_file(&dir_proxy, file, fio::OpenFlags::RIGHT_READABLE)
+        let file_proxy = io_util::open_file(&dir_proxy, file, fio::OPEN_RIGHT_READABLE)
             .expect("failed to open file");
         let res = io_util::read_file(&file_proxy).await;
         match expected_res {
@@ -1032,7 +1025,7 @@ pub mod capability_util {
         expected_res: ExpectedResult,
     ) {
         let (file_proxy, server_end) = create_proxy::<fio::FileMarker>().unwrap();
-        let flags = fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE;
+        let flags = fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE;
         let res = async {
             dir_proxy.open(
                 flags,
@@ -1081,10 +1074,10 @@ pub mod capability_util {
             io_util::open_file(
                 &subdir,
                 &PathBuf::from(path.file_name().unwrap()),
-                fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
+                fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
             )?
         } else {
-            io_util::open_file(root, path, fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE)?
+            io_util::open_file(root, path, fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE)?
         };
 
         // Write contents.
@@ -1100,7 +1093,7 @@ pub mod capability_util {
         let mut dir_path = generate_storage_path(storage_subdir, &relation, instance_id);
         dir_path.push("hippos");
         let file_proxy =
-            io_util::open_file(&test_dir_proxy, &dir_path, io_util::OpenFlags::RIGHT_READABLE)?;
+            io_util::open_file(&test_dir_proxy, &dir_path, io_util::OPEN_RIGHT_READABLE)?;
         let res = io_util::read_file(&file_proxy).await;
 
         if let Ok(contents) = res {
@@ -1121,7 +1114,7 @@ pub mod capability_util {
         let res = io_util::directory::open_directory(
             &test_dir_proxy,
             dir_path.to_str().unwrap(),
-            io_util::OpenFlags::RIGHT_READABLE,
+            io_util::OPEN_RIGHT_READABLE,
         )
         .await
         .expect_err("open_directory shouldnt have succeeded");
@@ -1139,7 +1132,7 @@ pub mod capability_util {
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_SERVICE,
         )
         .expect("failed to open echo service");
@@ -1158,21 +1151,21 @@ pub mod capability_util {
         let service_dir = io_util::directory::open_directory(
             &dir_proxy,
             &path.basename,
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .await
         .expect("failed to open service dir");
         let instance_dir = io_util::directory::open_directory(
             &service_dir,
             instance,
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .await
         .expect("failed to open instance dir");
         let member_proxy = io_util::directory::open_node_no_describe(
             &instance_dir,
             member,
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_SERVICE,
         )
         .expect("failed to open member node");
@@ -1290,7 +1283,7 @@ pub mod capability_util {
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
             // This should be MODE_TYPE_SERVICE, but we implement the underlying
             // service as a file for convenience in testing.
             fio::MODE_TYPE_FILE,
@@ -1332,14 +1325,13 @@ pub mod capability_util {
         let dir_proxy = fio::DirectoryProxy::new(node_proxy.into_channel().unwrap());
         match expected_res {
             ExpectedResult::Ok => {
-                let file_proxy =
-                    io_util::open_file(&dir_proxy, &file, fio::OpenFlags::RIGHT_READABLE)
-                        .expect("failed to open file");
+                let file_proxy = io_util::open_file(&dir_proxy, &file, fio::OPEN_RIGHT_READABLE)
+                    .expect("failed to open file");
                 let res = io_util::read_file(&file_proxy).await;
                 assert_eq!("hello", res.expect("failed to read file"));
             }
             ExpectedResult::Err(s) => {
-                io_util::open_file(&dir_proxy, &file, fio::OpenFlags::RIGHT_READABLE)
+                io_util::open_file(&dir_proxy, &file, fio::OPEN_RIGHT_READABLE)
                     .expect_err("opened file successfully when it should fail");
                 let epitaph = dir_proxy.take_event_stream().next().await.expect("no epitaph");
                 assert_matches!(
@@ -1350,7 +1342,7 @@ pub mod capability_util {
                 );
             }
             ExpectedResult::ErrWithNoEpitaph => {
-                io_util::open_file(&dir_proxy, &file, fio::OpenFlags::RIGHT_READABLE)
+                io_util::open_file(&dir_proxy, &file, fio::OPEN_RIGHT_READABLE)
                     .expect_err("opened file successfully when it should fail");
                 assert_matches!(dir_proxy.take_event_stream().next().await, None);
             }
@@ -1385,14 +1377,14 @@ pub mod capability_util {
         let instance_dir = io_util::directory::open_directory(
             &service_dir,
             &instance,
-            io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
+            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
         )
         .await
         .expect("failed to open instance");
         let member_node = io_util::directory::open_node_no_describe(
             &instance_dir,
             &member,
-            io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
+            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_SERVICE,
         )
         .expect("failed to open member node");
@@ -1412,7 +1404,7 @@ pub mod capability_util {
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_SERVICE,
         )
         .expect("failed to open realm service");
@@ -1441,7 +1433,7 @@ pub mod capability_util {
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_SERVICE,
         )
         .expect("failed to open realm service");
@@ -1466,7 +1458,7 @@ pub mod capability_util {
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_SERVICE,
         )
         .expect("failed to open realm service");
@@ -1529,7 +1521,7 @@ pub mod capability_util {
         let state = component.lock_state().await;
         match &*state {
             InstanceState::Resolved(resolved_instance_state) => {
-                let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE;
+                let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
                 let vns_path = to_fvfs_path(path);
                 resolved_instance_state
                     .get_exposed_dir()

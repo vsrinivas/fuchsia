@@ -187,7 +187,7 @@ pub async fn load_driver(
                 .fragment()
                 .ok_or(anyhow::anyhow!("{}: URL is missing fragment", component_url.as_str()))?,
         ),
-        fio::OpenFlags::RIGHT_READABLE,
+        fio::OPEN_RIGHT_READABLE,
     )?;
     let component: fdecl::Component = io_util::read_file_fidl(&component)
         .await
@@ -204,9 +204,8 @@ pub async fn load_driver(
 
     let bind_path = get_rules_string_value(&component, "bind")
         .ok_or(anyhow::anyhow!("{}: Missing bind path", component_url.as_str()))?;
-    let bind =
-        io_util::open_file(&dir, std::path::Path::new(&bind_path), fio::OpenFlags::RIGHT_READABLE)
-            .with_context(|| format!("{}: Failed to open bind", component_url.as_str()))?;
+    let bind = io_util::open_file(&dir, std::path::Path::new(&bind_path), fio::OPEN_RIGHT_READABLE)
+        .with_context(|| format!("{}: Failed to open bind", component_url.as_str()))?;
     let bind = io_util::read_file_bytes(&bind)
         .await
         .with_context(|| format!("{}: Failed to read bind", component_url.as_str()))?;

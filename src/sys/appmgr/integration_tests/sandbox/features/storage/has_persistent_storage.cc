@@ -10,6 +10,6 @@ namespace fio = fuchsia_io;
 
 TEST_F(NamespaceTest, HasPersistentStorage) {
   ExpectExists("/data");
-  ExpectPathSupportsStrictRights(
-      "/data", fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable);
+  ExpectPathSupportsStrictRights("/data",
+                                 fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable);
 }

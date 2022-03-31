@@ -35,7 +35,7 @@ void main() {
 
       // connect to the file through the composed directory
       final fileProxy = io.FileProxy();
-      composedDir.open(io.OpenFlags.rightReadable, io.modeTypeFile, 'foo.txt',
+      composedDir.open(io.openRightReadable, io.modeTypeFile, 'foo.txt',
           InterfaceRequest<io.Node>(fileProxy.ctrl.request().passChannel()));
 
       final data = await fileProxy.read(io.maxBuf);
@@ -54,7 +54,7 @@ void main() {
       // connect to the service through the composed directory
       final proxy = AsyncProxy(AsyncProxyController());
       composedDir.open(
-          io.OpenFlags.rightReadable | io.OpenFlags.rightWritable,
+          io.openRightReadable | io.openRightWritable,
           io.modeTypeService,
           'test.foo',
           InterfaceRequest<io.Node>(proxy.ctrl.request().passChannel()));
@@ -69,7 +69,7 @@ void main() {
 
       // connect to the file through the composed directory
       final fileProxy = io.FileProxy();
-      composedDir.open(io.OpenFlags.rightReadable, io.modeTypeFile, 'foo.txt',
+      composedDir.open(io.openRightReadable, io.modeTypeFile, 'foo.txt',
           InterfaceRequest<io.Node>(fileProxy.ctrl.request().passChannel()));
 
       final data = await fileProxy.read(io.maxBuf);
@@ -91,7 +91,7 @@ void main() {
 
       // connect to the file through the composed directory
       final fileProxy = io.FileProxy();
-      composedDir.open(io.OpenFlags.rightReadable, io.modeTypeFile, 'foo.txt',
+      composedDir.open(io.openRightReadable, io.modeTypeFile, 'foo.txt',
           InterfaceRequest<io.Node>(fileProxy.ctrl.request().passChannel()));
 
       await expectLater(
@@ -109,7 +109,7 @@ void main() {
 
       // connect to the file through the composed directory
       final fileProxy = io.FileProxy();
-      composedDir.open(io.OpenFlags.rightReadable, io.modeTypeFile, 'foo.txt',
+      composedDir.open(io.openRightReadable, io.modeTypeFile, 'foo.txt',
           InterfaceRequest<io.Node>(fileProxy.ctrl.request().passChannel()));
 
       await expectLater(

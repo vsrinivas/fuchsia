@@ -67,9 +67,8 @@ fuchsia::modular::testing::TestHarnessSpec TestHarnessBuilder::BuildSpec() {
   fuchsia::io::DirectoryPtr dir;
   // This directory must be READABLE *and* WRITABLE, otherwise service
   // connections fail.
-  env_services_->Serve(
-      fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
-      dir.NewRequest().TakeChannel());
+  env_services_->Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+                       dir.NewRequest().TakeChannel());
   spec_.mutable_env_services()->set_service_dir(dir.Unbind().TakeChannel());
   return std::move(spec_);
 }

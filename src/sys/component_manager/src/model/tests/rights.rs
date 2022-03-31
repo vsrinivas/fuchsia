@@ -105,11 +105,9 @@ impl Hook for MockFrameworkDirectoryHost {
         {
             let mut capability_provider = capability_provider.lock().await;
             if source_name.str() == "foo_data" {
-                let test_dir_proxy = io_util::clone_directory(
-                    &self.test_dir_proxy,
-                    fio::OpenFlags::CLONE_SAME_RIGHTS,
-                )
-                .expect("failed to clone test dir");
+                let test_dir_proxy =
+                    io_util::clone_directory(&self.test_dir_proxy, fio::CLONE_FLAG_SAME_RIGHTS)
+                        .expect("failed to clone test dir");
                 *capability_provider =
                     Some(Box::new(MockFrameworkDirectoryProvider { test_dir_proxy }));
             }
@@ -152,7 +150,7 @@ async fn framework_directory_rights() {
     ];
     let test = RoutingTest::new("a", components).await;
     let test_dir_proxy =
-        io_util::clone_directory(&test.test_dir_proxy, fio::OpenFlags::CLONE_SAME_RIGHTS)
+        io_util::clone_directory(&test.test_dir_proxy, fio::CLONE_FLAG_SAME_RIGHTS)
             .expect("failed to clone test dir");
     let directory_host = Arc::new(MockFrameworkDirectoryHost { test_dir_proxy });
     test.model
@@ -201,7 +199,7 @@ async fn framework_directory_incompatible_rights() {
     ];
     let test = RoutingTest::new("a", components).await;
     let test_dir_proxy =
-        io_util::clone_directory(&test.test_dir_proxy, fio::OpenFlags::CLONE_SAME_RIGHTS)
+        io_util::clone_directory(&test.test_dir_proxy, fio::CLONE_FLAG_SAME_RIGHTS)
             .expect("failed to clone test dir");
     let directory_host = Arc::new(MockFrameworkDirectoryHost { test_dir_proxy });
     test.model

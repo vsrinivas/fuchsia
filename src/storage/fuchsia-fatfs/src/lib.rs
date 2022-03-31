@@ -245,7 +245,7 @@ mod tests {
                             let (proxy, server_end) =
                                 fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
                             remote
-                                .open(fio::OpenFlags::RIGHT_READABLE, 0, name, server_end)
+                                .open(fio::OPEN_RIGHT_READABLE, 0, name, server_end)
                                 .context("Sending open failed")?;
                             value.verify(proxy).await.context(format!("Verifying {}", name))?;
                         }
@@ -315,7 +315,7 @@ mod tests {
         let scope = ExecutionScope::new();
         let (proxy, remote) = fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
         let root = fatfs.get_root().expect("get_root OK");
-        root.clone().open(scope, fio::OpenFlags::RIGHT_READABLE, 0, Path::dot(), remote);
+        root.clone().open(scope, fio::OPEN_RIGHT_READABLE, 0, Path::dot(), remote);
         root.close().expect("Close OK");
 
         structure.verify(proxy).await.expect("Verify succeeds");

@@ -6,9 +6,9 @@ use fidl_fuchsia_io as fio;
 
 /// Set of all rights that are valid to use with the conformance test harness.
 const ALL_RIGHTS_FLAGS: fio::OpenFlags = fio::OpenFlags::empty()
-    .union(fio::OpenFlags::RIGHT_READABLE)
-    .union(fio::OpenFlags::RIGHT_WRITABLE)
-    .union(fio::OpenFlags::RIGHT_EXECUTABLE);
+    .union(fio::OPEN_RIGHT_READABLE)
+    .union(fio::OPEN_RIGHT_WRITABLE)
+    .union(fio::OPEN_RIGHT_EXECUTABLE);
 
 /// Helper struct that encapsulates generation of valid/invalid sets of flags based on
 /// which rights are supported by a particular node type.
@@ -116,28 +116,26 @@ mod tests {
     #[test]
     fn test_rights_combos() {
         const TEST_RIGHTS: fio::OpenFlags = fio::OpenFlags::empty()
-            .union(fio::OpenFlags::RIGHT_READABLE)
-            .union(fio::OpenFlags::RIGHT_WRITABLE)
-            .union(fio::OpenFlags::RIGHT_EXECUTABLE);
+            .union(fio::OPEN_RIGHT_READABLE)
+            .union(fio::OPEN_RIGHT_WRITABLE)
+            .union(fio::OPEN_RIGHT_EXECUTABLE);
         // We should get 0, R, W, X, RW, RX, WX, RWX (8 in total).
         const EXPECTED_COMBOS: [fio::OpenFlags; 8] = [
             fio::OpenFlags::empty(),
-            fio::OpenFlags::RIGHT_READABLE,
-            fio::OpenFlags::RIGHT_WRITABLE,
-            fio::OpenFlags::RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE,
+            fio::OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OpenFlags::empty().union(fio::OPEN_RIGHT_READABLE).union(fio::OPEN_RIGHT_WRITABLE),
             fio::OpenFlags::empty()
-                .union(fio::OpenFlags::RIGHT_READABLE)
-                .union(fio::OpenFlags::RIGHT_WRITABLE),
+                .union(fio::OPEN_RIGHT_READABLE)
+                .union(fio::OPEN_RIGHT_EXECUTABLE),
             fio::OpenFlags::empty()
-                .union(fio::OpenFlags::RIGHT_READABLE)
-                .union(fio::OpenFlags::RIGHT_EXECUTABLE),
+                .union(fio::OPEN_RIGHT_WRITABLE)
+                .union(fio::OPEN_RIGHT_EXECUTABLE),
             fio::OpenFlags::empty()
-                .union(fio::OpenFlags::RIGHT_WRITABLE)
-                .union(fio::OpenFlags::RIGHT_EXECUTABLE),
-            fio::OpenFlags::empty()
-                .union(fio::OpenFlags::RIGHT_READABLE)
-                .union(fio::OpenFlags::RIGHT_WRITABLE)
-                .union(fio::OpenFlags::RIGHT_EXECUTABLE),
+                .union(fio::OPEN_RIGHT_READABLE)
+                .union(fio::OPEN_RIGHT_WRITABLE)
+                .union(fio::OPEN_RIGHT_EXECUTABLE),
         ];
         let rights = Rights::new(TEST_RIGHTS);
         assert_eq!(rights.all(), TEST_RIGHTS);
@@ -152,19 +150,17 @@ mod tests {
         // Test that combinations including READABLE are generated correctly.
         // We should get R, RW, RX, and RWX (4 in total).
         const EXPECTED_READABLE_COMBOS: [fio::OpenFlags; 4] = [
-            fio::OpenFlags::RIGHT_READABLE,
+            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::empty().union(fio::OPEN_RIGHT_READABLE).union(fio::OPEN_RIGHT_WRITABLE),
             fio::OpenFlags::empty()
-                .union(fio::OpenFlags::RIGHT_READABLE)
-                .union(fio::OpenFlags::RIGHT_WRITABLE),
+                .union(fio::OPEN_RIGHT_READABLE)
+                .union(fio::OPEN_RIGHT_EXECUTABLE),
             fio::OpenFlags::empty()
-                .union(fio::OpenFlags::RIGHT_READABLE)
-                .union(fio::OpenFlags::RIGHT_EXECUTABLE),
-            fio::OpenFlags::empty()
-                .union(fio::OpenFlags::RIGHT_READABLE)
-                .union(fio::OpenFlags::RIGHT_WRITABLE)
-                .union(fio::OpenFlags::RIGHT_EXECUTABLE),
+                .union(fio::OPEN_RIGHT_READABLE)
+                .union(fio::OPEN_RIGHT_WRITABLE)
+                .union(fio::OPEN_RIGHT_EXECUTABLE),
         ];
-        let readable_combos = rights.valid_combos_with(fio::OpenFlags::RIGHT_READABLE);
+        let readable_combos = rights.valid_combos_with(fio::OPEN_RIGHT_READABLE);
         assert_eq!(readable_combos.len(), EXPECTED_READABLE_COMBOS.len());
         for expected_rights in EXPECTED_READABLE_COMBOS {
             assert!(readable_combos.contains(&expected_rights));
@@ -174,13 +170,13 @@ mod tests {
         // We should get 0, W, X, and WX (4 in total).
         const EXPECTED_NONREADABLE_COMBOS: [fio::OpenFlags; 4] = [
             fio::OpenFlags::empty(),
-            fio::OpenFlags::RIGHT_WRITABLE,
-            fio::OpenFlags::RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_EXECUTABLE,
             fio::OpenFlags::empty()
-                .union(fio::OpenFlags::RIGHT_WRITABLE)
-                .union(fio::OpenFlags::RIGHT_EXECUTABLE),
+                .union(fio::OPEN_RIGHT_WRITABLE)
+                .union(fio::OPEN_RIGHT_EXECUTABLE),
         ];
-        let nonreadable_combos = rights.valid_combos_without(fio::OpenFlags::RIGHT_READABLE);
+        let nonreadable_combos = rights.valid_combos_without(fio::OPEN_RIGHT_READABLE);
         assert_eq!(nonreadable_combos.len(), EXPECTED_NONREADABLE_COMBOS.len());
         for expected_rights in EXPECTED_NONREADABLE_COMBOS {
             assert!(nonreadable_combos.contains(&expected_rights));
@@ -191,6 +187,6 @@ mod tests {
     #[should_panic]
     fn test_rights_unsupported() {
         // Passing anything other than OPEN_RIGHT_* should fail.
-        Rights::new(fio::OpenFlags::CREATE);
+        Rights::new(fio::OPEN_FLAG_CREATE);
     }
 }

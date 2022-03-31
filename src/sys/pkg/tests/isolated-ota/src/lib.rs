@@ -492,8 +492,7 @@ fn launch_cloned_blobfs(
     flags: fio::OpenFlags,
     parent_flags: fio::OpenFlags,
 ) {
-    let flags =
-        if flags.contains(fio::OpenFlags::CLONE_SAME_RIGHTS) { parent_flags } else { flags };
+    let flags = if flags.contains(fio::CLONE_FLAG_SAME_RIGHTS) { parent_flags } else { flags };
     let chan = fidl::AsyncChannel::from_channel(end.into_channel()).expect("cloning blobfs dir");
     let stream = fio::DirectoryRequestStream::from_channel(chan);
     fasync::Task::spawn(async move {
@@ -508,7 +507,7 @@ async fn serve_failing_blobfs(
     mut stream: fio::DirectoryRequestStream,
     open_flags: fio::OpenFlags,
 ) -> Result<(), Error> {
-    if open_flags.contains(fio::OpenFlags::DESCRIBE) {
+    if open_flags.contains(fio::OPEN_FLAG_DESCRIBE) {
         stream
             .control_handle()
             .send_on_open_(

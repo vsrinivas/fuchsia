@@ -116,12 +116,8 @@ pub fn create_galaxy(
         serde_json::from_str(&std::fs::read_to_string(CONFIGURATION_FILE_PATH)?)?;
 
     let (server, client) = zx::Channel::create().context("failed to create channel pair")?;
-    fdio::open(
-        COMPONENT_PKG_PATH,
-        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
-        server,
-    )
-    .context("failed to open /pkg")?;
+    fdio::open(COMPONENT_PKG_PATH, fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, server)
+        .context("failed to open /pkg")?;
     let pkg_dir_proxy = fio::DirectorySynchronousProxy::new(client);
     let mut kernel = Kernel::new(&galaxy_args.name)?;
     kernel.cmdline = galaxy_args.kernel_cmdline.as_bytes().to_vec();

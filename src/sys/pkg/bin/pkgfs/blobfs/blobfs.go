@@ -55,7 +55,7 @@ func (m *Manager) Channel() zx.Channel {
 
 // HasBlob returns true if the requested blob is available for reading, false otherwise
 func (m *Manager) HasBlob(root string) bool {
-	f, err := m.dir.Open(root, uint32(io.OpenFlagsRightReadable|io.OpenFlagsNotDirectory), io.ModeTypeFile)
+	f, err := m.dir.Open(root, uint32(io.OpenRightReadable|io.OpenFlagNotDirectory), io.ModeTypeFile)
 	if err != nil {
 		// if the blob can't be opened for read at all, it doesn't
 		// exist and isn't in the process of being written.

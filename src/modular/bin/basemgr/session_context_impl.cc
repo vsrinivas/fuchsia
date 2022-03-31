@@ -77,7 +77,7 @@ fuchsia::sys::FlatNamespacePtr SessionContextImpl::CreateAndServeConfigNamespace
   // Host the config file in a PseudoDir
   config_dir_ = modular::MakeFilePathWithContents(modular_config::kStartupConfigFilePath,
                                                   std::move(config_contents));
-  config_dir_->Serve(fuchsia::io::OpenFlags::RIGHT_READABLE, std::move(config_request_channel));
+  config_dir_->Serve(fuchsia::io::OPEN_RIGHT_READABLE, std::move(config_request_channel));
 
   auto flat_namespace = std::make_unique<fuchsia::sys::FlatNamespace>();
   flat_namespace->paths.push_back(modular_config::kOverriddenConfigDir);

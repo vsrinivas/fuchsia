@@ -10,7 +10,7 @@ namespace internal {
 
 zx::status<> DirectoryOpenFunc(zx::unowned_channel dir, fidl::StringView path, zx::channel remote) {
   constexpr fuchsia_io::wire::OpenFlags flags =
-      fuchsia_io::wire::OpenFlags::kRightReadable | fuchsia_io::wire::OpenFlags::kRightWritable;
+      fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable;
   fidl::UnownedClientEnd<fuchsia_io::Directory> dir_end(dir);
   fidl::ServerEnd<fuchsia_io::Node> node_end(std::move(remote));
   fidl::WireResult<fuchsia_io::Directory::Open> result =

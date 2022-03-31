@@ -53,7 +53,7 @@ impl Client {
         Ok(Self {
             proxy: io_util::directory::open_in_namespace(
                 "/pkgfs/system",
-                fio::OpenFlags::RIGHT_READABLE,
+                fio::OPEN_RIGHT_READABLE,
             )?,
         })
     }
@@ -66,7 +66,7 @@ impl Client {
             proxy: io_util::directory::open_directory_no_describe(
                 pkgfs,
                 "system",
-                fio::OpenFlags::RIGHT_READABLE,
+                fio::OPEN_RIGHT_READABLE,
             )?,
         })
     }
@@ -99,14 +99,14 @@ impl Client {
         &self,
         path: &str,
     ) -> Result<fio::FileProxy, SystemImageFileOpenError> {
-        io_util::directory::open_file(&self.proxy, path, fio::OpenFlags::RIGHT_READABLE)
-            .await
-            .map_err(|e| match e {
+        io_util::directory::open_file(&self.proxy, path, fio::OPEN_RIGHT_READABLE).await.map_err(
+            |e| match e {
                 io_util::node::OpenError::OpenError(fuchsia_zircon::Status::NOT_FOUND) => {
                     SystemImageFileOpenError::NotFound
                 }
                 other => SystemImageFileOpenError::Io(other),
-            })
+            },
+        )
     }
 }
 

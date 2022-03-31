@@ -192,7 +192,7 @@ async fn main() -> Result<(), Error> {
         let scope = ExecutionScope::new();
         tree.open(
             scope.clone(),
-            fio::OpenFlags::RIGHT_READABLE,
+            fio::OPEN_RIGHT_READABLE,
             0,
             Path::dot(),
             Channel::from(directory_handle).into(),

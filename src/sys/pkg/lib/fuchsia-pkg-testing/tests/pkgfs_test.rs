@@ -1511,9 +1511,8 @@ async fn open_executable_allowed_when_statically_disabled() {
 async fn test_pkgfs_get_flags() {
     // Try get_flags on our own package directory.
     // thinfs returns an error for this call, which closes the channel.
-    let this_pkg_dir =
-        io_util::open_directory_in_namespace("/pkg", io_util::OpenFlags::RIGHT_READABLE)
-            .expect("opening /pkg");
+    let this_pkg_dir = io_util::open_directory_in_namespace("/pkg", io_util::OPEN_RIGHT_READABLE)
+        .expect("opening /pkg");
     let (status, flags) = this_pkg_dir.get_flags().await.expect("getting directory flags");
     assert_eq!(status, Status::NOT_SUPPORTED.into_raw());
     assert_eq!(flags, fio::OpenFlags::empty());
@@ -1521,11 +1520,11 @@ async fn test_pkgfs_get_flags() {
     // Try get_flags on a file within our package directory.
     // thinfs maps GetFlags to GetFlags, so this should not close the channel.
     let meta_far_file_proxy =
-        io_util::open_file_in_namespace("/pkg/meta", io_util::OpenFlags::RIGHT_READABLE)
+        io_util::open_file_in_namespace("/pkg/meta", io_util::OPEN_RIGHT_READABLE)
             .expect("opening /pkg/meta as file");
     let (zx_result, flags) = meta_far_file_proxy.get_flags().await.expect("getting file flags");
     assert_eq!(zx_result, Status::OK.into_raw());
-    assert_eq!(flags, io_util::OpenFlags::RIGHT_READABLE);
+    assert_eq!(flags, io_util::OPEN_RIGHT_READABLE);
 
     // We should still be able to read our own package directory and read our own merkle root,
     // which means pkgfs hasn't crashed.
@@ -1539,20 +1538,19 @@ async fn test_pkgfs_get_flags() {
 async fn test_pkgfs_set_flags() {
     // Try set_flags on our own package directory.
     // thinfs returns an error for this call, which closes the channel.
-    let this_pkg_dir =
-        io_util::open_directory_in_namespace("/pkg", io_util::OpenFlags::RIGHT_READABLE)
-            .expect("opening /pkg");
+    let this_pkg_dir = io_util::open_directory_in_namespace("/pkg", io_util::OPEN_RIGHT_READABLE)
+        .expect("opening /pkg");
     let status =
-        this_pkg_dir.set_flags(fio::OpenFlags::APPEND).await.expect("setting directory flags");
+        this_pkg_dir.set_flags(fio::OPEN_FLAG_APPEND).await.expect("setting directory flags");
     assert_eq!(status, Status::NOT_SUPPORTED.into_raw());
 
     // Try set_flags on a file within our package directory.
     // thinfs returns an error for this call, which closes the channel
     let meta_far_file_proxy =
-        io_util::open_file_in_namespace("/pkg/meta", io_util::OpenFlags::RIGHT_READABLE)
+        io_util::open_file_in_namespace("/pkg/meta", io_util::OPEN_RIGHT_READABLE)
             .expect("opening /pkg/meta as file");
     let status =
-        meta_far_file_proxy.set_flags(fio::OpenFlags::APPEND).await.expect("setting file flags");
+        meta_far_file_proxy.set_flags(fio::OPEN_FLAG_APPEND).await.expect("setting file flags");
     assert_eq!(status, Status::NOT_SUPPORTED.into_raw());
 
     // We should still be able to read our own package directory and read our own merkle root,
@@ -1587,18 +1585,17 @@ async fn test_multiple_opens_on_meta_file() {
     let meta_directory = io_util::directory::open_directory(
         &d,
         &format!("versions/{}/meta/", package.meta_far_merkle_root()),
-        io_util::OpenFlags::RIGHT_READABLE,
+        io_util::OPEN_RIGHT_READABLE,
     )
     .await
     .expect("open meta dir");
 
     // We should be able to open a file twice, close one version, then read from the second.
-    let file_a =
-        io_util::directory::open_file(&meta_directory, "a", io_util::OpenFlags::RIGHT_READABLE)
-            .await
-            .unwrap();
+    let file_a = io_util::directory::open_file(&meta_directory, "a", io_util::OPEN_RIGHT_READABLE)
+        .await
+        .unwrap();
     let file_a_2 =
-        io_util::directory::open_file(&meta_directory, "a", io_util::OpenFlags::RIGHT_READABLE)
+        io_util::directory::open_file(&meta_directory, "a", io_util::OPEN_RIGHT_READABLE)
             .await
             .unwrap();
 
@@ -1641,23 +1638,19 @@ async fn test_opening_file_within_directory_and_closing_directory() {
     let meta_directory = io_util::directory::open_directory(
         &d,
         &format!("versions/{}/meta/", package.meta_far_merkle_root()),
-        io_util::OpenFlags::RIGHT_READABLE,
+        io_util::OPEN_RIGHT_READABLE,
     )
     .await
     .expect("open meta dir");
 
     // We should be able to open subdir in a meta directory, open a file within it,
     // close the directory, and still read from the file.
-    let subdir = io_util::directory::open_directory(
-        &meta_directory,
-        "subdir",
-        io_util::OpenFlags::RIGHT_READABLE,
-    )
-    .await
-    .unwrap();
-    let file_a = io_util::directory::open_file(&subdir, "a", io_util::OpenFlags::RIGHT_READABLE)
-        .await
-        .unwrap();
+    let subdir =
+        io_util::directory::open_directory(&meta_directory, "subdir", io_util::OPEN_RIGHT_READABLE)
+            .await
+            .unwrap();
+    let file_a =
+        io_util::directory::open_file(&subdir, "a", io_util::OPEN_RIGHT_READABLE).await.unwrap();
     subdir.close().await.unwrap().map_err(Status::from_raw).unwrap();
     let a_contents = io_util::file::read_to_string(&file_a).await.unwrap();
     assert_eq!(a_contents, "Hello world!\n");
@@ -1708,19 +1701,16 @@ async fn test_walking_the_pkg_dir() {
         let pkg_directory = io_util::directory::open_directory(
             &pkgfs_dir,
             &format!("versions/{}", package.meta_far_merkle_root()),
-            io_util::OpenFlags::RIGHT_READABLE,
+            io_util::OPEN_RIGHT_READABLE,
         )
         .await
         .expect("open meta dir");
 
         for path in &paths {
-            let file = io_util::directory::open_file(
-                &pkg_directory,
-                path,
-                io_util::OpenFlags::RIGHT_READABLE,
-            )
-            .await
-            .unwrap();
+            let file =
+                io_util::directory::open_file(&pkg_directory, path, io_util::OPEN_RIGHT_READABLE)
+                    .await
+                    .unwrap();
 
             let body = io_util::file::read_to_string(&file).await.unwrap();
             assert_eq!(path, &body);
@@ -1732,7 +1722,7 @@ async fn test_walking_the_pkg_dir() {
         let mut d = io_util::directory::open_directory(
             &pkgfs_dir,
             &format!("versions/{}", package.meta_far_merkle_root()),
-            io_util::OpenFlags::RIGHT_READABLE,
+            io_util::OPEN_RIGHT_READABLE,
         )
         .await
         .expect("open meta dir");
@@ -1741,16 +1731,15 @@ async fn test_walking_the_pkg_dir() {
         let mut entry = entries.next().unwrap();
 
         while let Some(child) = entries.next() {
-            d = io_util::directory::open_directory(&d, entry, io_util::OpenFlags::RIGHT_READABLE)
+            d = io_util::directory::open_directory(&d, entry, io_util::OPEN_RIGHT_READABLE)
                 .await
                 .unwrap();
 
             entry = child;
         }
 
-        let file = io_util::directory::open_file(&d, entry, io_util::OpenFlags::RIGHT_READABLE)
-            .await
-            .unwrap();
+        let file =
+            io_util::directory::open_file(&d, entry, io_util::OPEN_RIGHT_READABLE).await.unwrap();
         let body = io_util::file::read_to_string(&file).await.unwrap();
         assert_eq!(path, &body);
     }
@@ -1798,7 +1787,7 @@ async fn test_interacting_with_broken_pkg_dir_does_not_break_pkgfs() {
     let pkg_dir = io_util::directory::open_directory(
         &pkgfs_dir,
         &format!("versions/{}", package_to_corrupt.meta_far_merkle_root()),
-        io_util::OpenFlags::RIGHT_READABLE,
+        io_util::OPEN_RIGHT_READABLE,
     )
     .await
     .expect("open meta dir");
@@ -1815,7 +1804,7 @@ async fn test_interacting_with_broken_pkg_dir_does_not_break_pkgfs() {
         io_util::directory::open_directory(
             &pkg_dir,
             "meta",
-            io_util::OpenFlags::RIGHT_READABLE
+            io_util::OPEN_RIGHT_READABLE
         ).await,
         Err(io_util::node::OpenError::OpenError(s)) if s == Status::NOT_FOUND
     );
@@ -1825,7 +1814,7 @@ async fn test_interacting_with_broken_pkg_dir_does_not_break_pkgfs() {
         io_util::directory::open_file(
             &pkg_dir,
             "meta/a",
-            io_util::OpenFlags::RIGHT_READABLE
+            io_util::OPEN_RIGHT_READABLE
         ).await,
         Err(io_util::node::OpenError::OpenError(s)) if s == Status::NOT_FOUND
     );
@@ -1834,7 +1823,7 @@ async fn test_interacting_with_broken_pkg_dir_does_not_break_pkgfs() {
     let file = io_util::directory::open_file(
         &pkgfs_dir,
         &format!("versions/{}/meta/b", package_still_good.meta_far_merkle_root()),
-        io_util::OpenFlags::RIGHT_READABLE,
+        io_util::OPEN_RIGHT_READABLE,
     )
     .await
     .unwrap();

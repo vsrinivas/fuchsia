@@ -37,9 +37,7 @@ impl BlobActor {
             .root_dir
             .open_file(
                 &merkle_root_hash,
-                fio::OpenFlags::CREATE
-                    | fio::OpenFlags::CREATE_IF_ABSENT
-                    | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_FLAG_CREATE | fio::OPEN_FLAG_CREATE_IF_ABSENT | fio::OPEN_RIGHT_WRITABLE,
             )
             .await?;
         file.truncate(data_bytes.len() as u64).await?;

@@ -71,7 +71,7 @@ async fn get_driver_topological_path(path: &str) -> Result<String> {
 }
 
 async fn list_drivers(path: &str) -> Vec<String> {
-    let dir = match io_util::open_directory_in_namespace(path, io_util::OpenFlags::RIGHT_READABLE) {
+    let dir = match io_util::open_directory_in_namespace(path, io_util::OPEN_RIGHT_READABLE) {
         Ok(s) => s,
         Err(e) => {
             fx_log_info!(

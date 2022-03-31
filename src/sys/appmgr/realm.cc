@@ -627,7 +627,7 @@ void Realm::Resolve(fidl::StringPtr name, fuchsia::process::Resolver::ResolveCal
 
     // Open the resource_path() out of the directory.
     fuchsia::io::OpenFlags flags =
-        fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_EXECUTABLE;
+        fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_EXECUTABLE;
     fbl::unique_fd exec_fd;
     zx_status_t status =
         fdio_open_fd_at(dirfd.get(), pkg_url.resource_path().c_str(), static_cast<uint32_t>(flags),
@@ -740,10 +740,10 @@ void Realm::CreateShell(const std::string& path, zx::channel svc) {
 
   zx::vmo executable;
   fbl::unique_fd fd;
-  status = fdio_open_fd(path.c_str(),
-                        static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE |
-                                              fuchsia::io::OpenFlags::RIGHT_EXECUTABLE),
-                        fd.reset_and_get_address());
+  status = fdio_open_fd(
+      path.c_str(),
+      static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_EXECUTABLE),
+      fd.reset_and_get_address());
   if (status != ZX_OK) {
     return;
   }
@@ -931,8 +931,8 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
     zx_status_t status;
     fbl::unique_fd elf_fd;
     status = fdio_open_fd_at(pkg_fd.get(), bin_path.c_str(),
-                             static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE |
-                                                   fuchsia::io::OpenFlags::RIGHT_EXECUTABLE),
+                             static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE |
+                                                   fuchsia::io::OPEN_RIGHT_EXECUTABLE),
                              elf_fd.reset_and_get_address());
     if (status == ZX_OK) {
       status = fdio_get_vmo_exec(elf_fd.get(), executable.reset_and_get_address());

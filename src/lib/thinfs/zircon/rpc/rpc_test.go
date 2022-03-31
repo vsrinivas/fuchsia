@@ -198,7 +198,7 @@ func TestFailingToSendOnOpenEventDoesNotCloseParentDir(t *testing.T) {
 	defer c22.Close()
 
 	nodeReq := io.NodeWithCtxInterfaceRequest{Channel: c22}
-	err = proxy.Open(context.Background(), io.OpenFlagsDescribe, 0, "", nodeReq)
+	err = proxy.Open(context.Background(), io.OpenFlagDescribe, 0, "", nodeReq)
 	if err != nil {
 		t.Fatalf("failed to open child node: %v", err)
 	}

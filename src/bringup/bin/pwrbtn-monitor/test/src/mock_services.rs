@@ -158,7 +158,7 @@ async fn main() -> Result<(), Error> {
     let (proxy, server_end) = create_proxy()?;
     input_dir.clone().open(
         ExecutionScope::new(),
-        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         fio::MODE_TYPE_DIRECTORY,
         pfsPath::dot(),
         server_end,

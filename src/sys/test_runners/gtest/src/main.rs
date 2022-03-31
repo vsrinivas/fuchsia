@@ -78,7 +78,7 @@ fn get_new_test_server() -> TestServer {
     fs::create_dir(&test_data_path).expect("cannot create test output directory.");
     let test_data_dir = io_util::open_directory_in_namespace(
         &test_data_path,
-        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
     )
     .expect("Cannot open data directory");
 

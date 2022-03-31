@@ -76,12 +76,12 @@ impl vfs::directory::entry::DirectoryEntry for MetaFile {
         }
 
         if flags.intersects(
-            fio::OpenFlags::RIGHT_WRITABLE
-                | fio::OpenFlags::RIGHT_EXECUTABLE
-                | fio::OpenFlags::CREATE
-                | fio::OpenFlags::CREATE_IF_ABSENT
-                | fio::OpenFlags::TRUNCATE
-                | fio::OpenFlags::APPEND,
+            fio::OPEN_RIGHT_WRITABLE
+                | fio::OPEN_RIGHT_EXECUTABLE
+                | fio::OPEN_FLAG_CREATE
+                | fio::OPEN_FLAG_CREATE_IF_ABSENT
+                | fio::OPEN_FLAG_TRUNCATE
+                | fio::OPEN_FLAG_APPEND,
         ) {
             let () = send_on_open_with_error(flags, server_end, zx::Status::NOT_SUPPORTED);
             return;
@@ -308,7 +308,7 @@ mod tests {
         DirectoryEntry::open(
             Arc::new(meta_file),
             ExecutionScope::new(),
-            fio::OpenFlags::DESCRIBE,
+            fio::OPEN_FLAG_DESCRIBE,
             0,
             VfsPath::validate_and_split("non-empty").unwrap(),
             server_end,
@@ -327,18 +327,18 @@ mod tests {
         let meta_file = Arc::new(meta_file);
 
         for forbidden_flag in [
-            fio::OpenFlags::RIGHT_WRITABLE,
-            fio::OpenFlags::RIGHT_EXECUTABLE,
-            fio::OpenFlags::CREATE,
-            fio::OpenFlags::CREATE_IF_ABSENT,
-            fio::OpenFlags::TRUNCATE,
-            fio::OpenFlags::APPEND,
+            fio::OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OPEN_FLAG_CREATE,
+            fio::OPEN_FLAG_CREATE_IF_ABSENT,
+            fio::OPEN_FLAG_TRUNCATE,
+            fio::OPEN_FLAG_APPEND,
         ] {
             let (proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
             DirectoryEntry::open(
                 Arc::clone(&meta_file),
                 ExecutionScope::new(),
-                fio::OpenFlags::DESCRIBE | forbidden_flag,
+                fio::OPEN_FLAG_DESCRIBE | forbidden_flag,
                 0,
                 VfsPath::dot(),
                 server_end,
@@ -360,7 +360,7 @@ mod tests {
         DirectoryEntry::open(
             Arc::new(meta_file),
             ExecutionScope::new(),
-            fio::OpenFlags::DESCRIBE,
+            fio::OPEN_FLAG_DESCRIBE,
             0,
             VfsPath::dot(),
             server_end,

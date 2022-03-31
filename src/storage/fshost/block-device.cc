@@ -905,8 +905,7 @@ zx::status<fidl::ClientEnd<fuchsia_io::Node>> BlockDevice::GetDeviceEndPoint() c
   fdio_cpp::UnownedFdioCaller caller(fd_);
   if (zx_status_t status =
           fidl::WireCall<fuchsia_io::Node>(zx::unowned_channel(caller.borrow_channel()))
-              ->Clone(fuchsia_io::wire::OpenFlags::kCloneSameRights,
-                      std::move(end_points_or->server))
+              ->Clone(fuchsia_io::wire::kCloneFlagSameRights, std::move(end_points_or->server))
               .status();
       status != ZX_OK) {
     return zx::error(status);
@@ -1106,9 +1105,9 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
     return status;
 
   if (auto resp = fidl::WireCall(export_root_or->client)
-                      ->Open(fuchsia_io::wire::OpenFlags::kRightReadable |
-                                 fuchsia_io::wire::OpenFlags::kPosixWritable |
-                                 fuchsia_io::wire::OpenFlags::kPosixExecutable,
+                      ->Open(fuchsia_io::wire::kOpenRightReadable |
+                                 fuchsia_io::wire::kOpenFlagPosixWritable |
+                                 fuchsia_io::wire::kOpenFlagPosixExecutable,
                              0, fidl::StringView("root"), std::move(root_server));
       !resp.ok()) {
     return resp.status();

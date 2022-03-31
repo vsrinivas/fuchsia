@@ -170,7 +170,7 @@ mod tests {
         let path =
             dir.path().join("read_to_end_with_expected_contents").to_str().unwrap().to_owned();
         let () = file::write_in_namespace(&path, expected_contents).await.unwrap();
-        let file = file::open_in_namespace(&path, fio::OpenFlags::RIGHT_READABLE).unwrap();
+        let file = file::open_in_namespace(&path, fio::OPEN_RIGHT_READABLE).unwrap();
 
         let mut reader = AsyncFile::from_proxy(file);
         let mut actual_contents = vec![];
@@ -196,7 +196,7 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let path = dir.path().join("read_at_different_offsets").to_str().unwrap().to_owned();
         let () = file::write_in_namespace(&path, &file_contents).await.unwrap();
-        let file = file::open_in_namespace(&path, fio::OpenFlags::RIGHT_READABLE).unwrap();
+        let file = file::open_in_namespace(&path, fio::OPEN_RIGHT_READABLE).unwrap();
 
         let mut reader = AsyncFile::from_proxy(file);
         for &(offset, length) in &[(0, 100), (100, 200), (50, 10), (500, 300)] {

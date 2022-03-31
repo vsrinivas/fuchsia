@@ -35,7 +35,7 @@ fn set_up_remote(scope: ExecutionScope) -> fio::DirectoryProxy {
         fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     r.open(
         scope,
-        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         fio::MODE_TYPE_DIRECTORY,
         Path::dot(),
         ServerEnd::new(remote_server_end.into_channel()),
@@ -64,7 +64,7 @@ fn remote_dir_construction_open_node_ref() {
 
     run_client(exec, || async move {
         let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
-        let flags = fio::OpenFlags::NODE_REFERENCE;
+        let flags = fio::OPEN_FLAG_NODE_REFERENCE;
         server.open(scope, flags, 0, Path::dot(), server_end.into_channel().into());
         assert_close!(proxy);
     })
@@ -80,7 +80,7 @@ fn remote_dir_construction_open_no_remote() {
 
     run_client(exec, || async move {
         let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
-        let flags = fio::OpenFlags::NO_REMOTE;
+        let flags = fio::OPEN_FLAG_NO_REMOTE;
         server.open(scope, flags, 0, Path::dot(), server_end.into_channel().into());
         assert_close!(proxy);
     })
@@ -96,7 +96,7 @@ fn remote_dir_node_ref_with_path() {
 
     run_client(exec, || async move {
         let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
-        let flags = fio::OpenFlags::NODE_REFERENCE;
+        let flags = fio::OPEN_FLAG_NODE_REFERENCE;
         server.open(
             scope,
             flags,
@@ -120,7 +120,7 @@ fn remote_dir_direct_connection() {
 
     run_client(exec, || async move {
         let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
-        let flags = fio::OpenFlags::RIGHT_READABLE;
+        let flags = fio::OPEN_RIGHT_READABLE;
         server.open(
             scope,
             flags,
@@ -151,7 +151,7 @@ fn remote_dir_direct_connection_dir_contents() {
 
     run_client(exec, || async move {
         let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
-        let flags = fio::OpenFlags::RIGHT_READABLE;
+        let flags = fio::OPEN_RIGHT_READABLE;
         let path = Path::validate_and_split("a").unwrap();
         server.open(scope, flags, fio::MODE_TYPE_FILE, path, server_end.into_channel().into());
 

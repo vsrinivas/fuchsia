@@ -38,8 +38,7 @@ impl Directory {
             .as_os_str()
             .to_str()
             .ok_or_else(|| format_err!("Could not convert path to string"))?;
-        let proxy =
-            io_util::directory::open_in_namespace(path_str, fio::OpenFlags::RIGHT_READABLE)?;
+        let proxy = io_util::directory::open_in_namespace(path_str, fio::OPEN_RIGHT_READABLE)?;
         let path = path.as_ref().to_path_buf();
         Ok(Self { path, proxy, readdir_mutex: Mutex::new(()) })
     }
@@ -52,7 +51,7 @@ impl Directory {
 
     // Open a directory at the given `relative_path` as readable.
     pub fn open_dir_readable<P: AsRef<Path>>(&self, relative_path: P) -> Result<Self> {
-        self.open_dir(relative_path, fio::OpenFlags::RIGHT_READABLE)
+        self.open_dir(relative_path, fio::OPEN_RIGHT_READABLE)
     }
 
     // Open a directory at the given `relative_path` with the provided flags.
@@ -80,8 +79,7 @@ impl Directory {
             None => return Err(format_err!("Relative path is not valid unicode")),
         };
         let proxy =
-            match open_file_no_describe(&self.proxy, relative_path, fio::OpenFlags::RIGHT_READABLE)
-            {
+            match open_file_no_describe(&self.proxy, relative_path, fio::OPEN_RIGHT_READABLE) {
                 Ok(proxy) => proxy,
                 Err(e) => {
                     return Err(format_err!(
@@ -110,8 +108,7 @@ impl Directory {
             None => return Err(format_err!("Relative path is not valid unicode")),
         };
         let proxy =
-            match open_file_no_describe(&self.proxy, relative_path, fio::OpenFlags::RIGHT_READABLE)
-            {
+            match open_file_no_describe(&self.proxy, relative_path, fio::OPEN_RIGHT_READABLE) {
                 Ok(proxy) => proxy,
                 Err(e) => {
                     return Err(format_err!(
@@ -154,7 +151,7 @@ impl Directory {
         let file = match open_file_no_describe(
             &self.proxy,
             relative_path,
-            fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
+            fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
         ) {
             Ok(proxy) => proxy,
             Err(e) => {
@@ -210,7 +207,7 @@ impl Directory {
     }
 
     pub fn clone(&self) -> Result<Self> {
-        let proxy = clone_no_describe(&self.proxy, Some(fio::OpenFlags::RIGHT_READABLE))?;
+        let proxy = clone_no_describe(&self.proxy, Some(fio::OPEN_RIGHT_READABLE))?;
         Ok(Self { path: self.path.clone(), proxy, readdir_mutex: Mutex::new(()) })
     }
 }

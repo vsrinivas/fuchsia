@@ -52,7 +52,7 @@ async fn check_bad_flags_root() -> Result<(), Error> {
 
     let test_fut = async move {
         // attempt to open . with CREATE flags
-        let flags = fio::OpenFlags::DESCRIBE | fio::OpenFlags::DIRECTORY | fio::OpenFlags::CREATE;
+        let flags = fio::OPEN_FLAG_DESCRIBE | fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_CREATE;
         let mode = fio::MODE_TYPE_DIRECTORY;
         let (node_proxy, server_end) = create_proxy::<fio::NodeMarker>()?;
         dir_proxy.open(flags, mode, ".", server_end.into()).unwrap();
@@ -72,7 +72,7 @@ async fn check_bad_flags_folder() -> Result<(), Error> {
 
     let test_fut = async move {
         // attempt to create a folder that already exists in ServiceFS
-        let flags = fio::OpenFlags::DESCRIBE | fio::OpenFlags::DIRECTORY | fio::OpenFlags::CREATE;
+        let flags = fio::OPEN_FLAG_DESCRIBE | fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_CREATE;
         let mode = fio::MODE_TYPE_DIRECTORY;
         let (node_proxy, server_end) = create_proxy::<fio::NodeMarker>()?;
         dir_proxy.open(flags, mode, "foo", server_end.into()).unwrap();
@@ -92,10 +92,10 @@ async fn check_bad_flags_file() -> Result<(), Error> {
 
     let test_fut = async move {
         // attempt to create a file that already exists in ServiceFS
-        let flags = fio::OpenFlags::DESCRIBE
-            | fio::OpenFlags::NOT_DIRECTORY
-            | fio::OpenFlags::CREATE
-            | fio::OpenFlags::TRUNCATE;
+        let flags = fio::OPEN_FLAG_DESCRIBE
+            | fio::OPEN_FLAG_NOT_DIRECTORY
+            | fio::OPEN_FLAG_CREATE
+            | fio::OPEN_FLAG_TRUNCATE;
         let mode = fio::MODE_TYPE_FILE;
         let (node_proxy, server_end) = create_proxy::<fio::NodeMarker>()?;
         dir_proxy.open(flags, mode, "foo/bar", server_end.into()).unwrap();
@@ -114,10 +114,10 @@ async fn check_bad_flags_new_file() -> Result<(), Error> {
 
     let test_fut = async move {
         // attempt to create a new file in ServiceFS
-        let flags = fio::OpenFlags::DESCRIBE
-            | fio::OpenFlags::NOT_DIRECTORY
-            | fio::OpenFlags::CREATE
-            | fio::OpenFlags::TRUNCATE;
+        let flags = fio::OPEN_FLAG_DESCRIBE
+            | fio::OPEN_FLAG_NOT_DIRECTORY
+            | fio::OPEN_FLAG_CREATE
+            | fio::OPEN_FLAG_TRUNCATE;
         let mode = fio::MODE_TYPE_FILE;
         let (node_proxy, server_end) = create_proxy::<fio::NodeMarker>()?;
         dir_proxy.open(flags, mode, "qaz", server_end.into()).unwrap();
@@ -170,7 +170,7 @@ async fn serve_on_root_and_subdir() -> Result<(), Error> {
     assert_has_service_child(&mut fs, &dir_proxy).await;
 
     // attempt to connect to the /fooey dir
-    let flags = fio::OpenFlags::DIRECTORY;
+    let flags = fio::OPEN_FLAG_DIRECTORY;
     let mode = fio::MODE_TYPE_DIRECTORY;
     let (subdir_proxy, server_end) = create_proxy::<fio::DirectoryMarker>()?;
     dir_proxy.open(flags, mode, "fooey", server_end.into_channel().into())?;
@@ -196,7 +196,7 @@ async fn open_service_node_reference() -> Result<(), Error> {
     let serve_fut = fs.collect().map(Ok);
 
     let open_reference_fut = async {
-        let flags = fio::OpenFlags::NODE_REFERENCE;
+        let flags = fio::OPEN_FLAG_NODE_REFERENCE;
         let mode = fio::MODE_TYPE_SERVICE;
         let (node_proxy, node_server_end) = create_proxy::<fio::NodeMarker>()?;
         dir_proxy.open(flags, mode, PATH, node_server_end)?;
@@ -229,12 +229,12 @@ async fn clone_service_dir() -> Result<(), Error> {
     let open_reference_fut = async {
         let (dir_proxy_clone, dir_server_end_clone) = create_proxy::<fio::DirectoryMarker>()?;
         dir_proxy.clone(
-            fio::OpenFlags::CLONE_SAME_RIGHTS,
+            fio::CLONE_FLAG_SAME_RIGHTS,
             ServerEnd::new(dir_server_end_clone.into_channel()),
         )?;
         drop(dir_proxy);
 
-        let flags = fio::OpenFlags::NODE_REFERENCE;
+        let flags = fio::OPEN_FLAG_NODE_REFERENCE;
         let mode = fio::MODE_TYPE_SERVICE;
         let (node_proxy, node_server_end) = create_proxy::<fio::NodeMarker>()?;
         dir_proxy_clone.open(flags, mode, PATH, node_server_end)?;
@@ -270,8 +270,8 @@ async fn handles_dir_not_dir_flags() -> Result<(), Error> {
 
     let service_open_count = &service_open_count;
     let test_fut = async move {
-        let dir_flags = fio::OpenFlags::DESCRIBE | fio::OpenFlags::DIRECTORY;
-        let not_dir_flags = fio::OpenFlags::DESCRIBE | fio::OpenFlags::NOT_DIRECTORY;
+        let dir_flags = fio::OPEN_FLAG_DESCRIBE | fio::OPEN_FLAG_DIRECTORY;
+        let not_dir_flags = fio::OPEN_FLAG_DESCRIBE | fio::OPEN_FLAG_NOT_DIRECTORY;
 
         // Verify flags when opening a directory.
         let (node_proxy, node_end) = create_proxy::<fio::NodeMarker>()?;
@@ -328,7 +328,7 @@ async fn node_reference_type_at_path(
     dir_proxy: &fio::DirectoryProxy,
     path: &str,
 ) -> Result<fio::NodeInfo, Error> {
-    let flags = fio::OpenFlags::NODE_REFERENCE;
+    let flags = fio::OPEN_FLAG_NODE_REFERENCE;
     let mode = fio::MODE_TYPE_DIRECTORY;
     let (node_proxy, node_server_end) = create_proxy::<fio::NodeMarker>()?;
     dir_proxy.open(flags, mode, path, node_server_end)?;
@@ -374,8 +374,7 @@ async fn list_service_entries(
     dir_proxy: &fio::DirectoryProxy,
     path: &str,
 ) -> Result<Vec<String>, Error> {
-    let flags =
-        fio::OpenFlags::DIRECTORY | fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE;
+    let flags = fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
     let instance_proxy = io_util::open_directory(dir_proxy, Path::new(&path), flags)?;
     let mut entries =
         files_async::readdir(&instance_proxy)
@@ -533,14 +532,14 @@ async fn open_remote_directory_files() -> Result<(), Error> {
 
     // Open the test file
     let (file_proxy, file_server_end) = create_proxy::<fio::FileMarker>()?;
-    let flags = fio::OpenFlags::RIGHT_READABLE;
+    let flags = fio::OPEN_RIGHT_READABLE;
     let mode = fio::MODE_TYPE_FILE;
     dir_proxy.open(flags, mode, "test/files/test.txt", file_server_end.into_channel().into())?;
 
     // Open the top of the remote hierarchy.
     let (top_proxy, top_end) = create_proxy::<fio::DirectoryMarker>()?;
     dir_proxy.open(
-        fio::OpenFlags::RIGHT_READABLE,
+        fio::OPEN_RIGHT_READABLE,
         fio::MODE_TYPE_DIRECTORY,
         "test",
         top_end.into_channel().into(),
@@ -566,7 +565,7 @@ async fn open_remote_pseudo_directory_files() -> Result<(), Error> {
     let scope = ExecutionScope::new();
     root.open(
         scope.clone(),
-        fio::OpenFlags::RIGHT_READABLE,
+        fio::OPEN_RIGHT_READABLE,
         0,
         vfs::path::Path::dot(),
         fidl::endpoints::ServerEnd::<fio::NodeMarker>::from(remote_server_end.into_channel()),
@@ -581,7 +580,7 @@ async fn open_remote_pseudo_directory_files() -> Result<(), Error> {
 
     // Open the test file
     let (file_proxy, file_server_end) = create_proxy::<fio::FileMarker>()?;
-    let flags = fio::OpenFlags::RIGHT_READABLE;
+    let flags = fio::OPEN_RIGHT_READABLE;
     let mode = fio::MODE_TYPE_FILE;
     dir_proxy.open(flags, mode, "test/test.txt", file_server_end.into_channel().into())?;
 
@@ -610,7 +609,7 @@ async fn open_remote_nested_servicefs_files() -> Result<(), Error> {
     // "temp/folder" should appear in this directory as "test/folder".
     fs.add_remote(
         "test",
-        io_util::open_directory(&nested_proxy, Path::new("temp"), fio::OpenFlags::RIGHT_READABLE)?,
+        io_util::open_directory(&nested_proxy, Path::new("temp"), fio::OPEN_RIGHT_READABLE)?,
     );
     let (dir_proxy, dir_server_end) = create_proxy::<fio::DirectoryMarker>()?;
     fs.serve_connection(dir_server_end.into_channel())?;
@@ -619,7 +618,7 @@ async fn open_remote_nested_servicefs_files() -> Result<(), Error> {
 
     // Open and read "test"
     let temp_proxy =
-        io_util::open_directory(&dir_proxy, Path::new("test"), fio::OpenFlags::RIGHT_READABLE)?;
+        io_util::open_directory(&dir_proxy, Path::new("test"), fio::OPEN_RIGHT_READABLE)?;
     let result = readdir(&temp_proxy).await;
     assert!(!result.is_err(), "got Err instead of Ok: {:?}", result.unwrap_err());
     let files = result.unwrap();
@@ -674,7 +673,7 @@ fn set_up_and_connect_to_vmo_file(
 
     // Open a connection to the file within the directory
     let (file_proxy, file_server_end) = create_proxy::<fio::FileMarker>()?;
-    let flags = fio::OpenFlags::RIGHT_READABLE;
+    let flags = fio::OPEN_RIGHT_READABLE;
     let mode = fio::MODE_TYPE_FILE;
     dir_proxy.open(flags, mode, PATH, file_server_end.into_channel().into())?;
 
@@ -742,7 +741,7 @@ async_test_with_vmo_file![
     read_from_clone => async {
         // Create a clone of the file
         let (file_proxy_clone, file_clone_server_end) = create_proxy::<fio::FileMarker>()?;
-        let flags = fio::OpenFlags::RIGHT_READABLE;
+        let flags = fio::OPEN_RIGHT_READABLE;
         file_proxy.clone(flags, file_clone_server_end.into_channel().into())?;
         // Read the whole file
         assert_read(&file_proxy, file_data.len() as u64, file_data).await?;

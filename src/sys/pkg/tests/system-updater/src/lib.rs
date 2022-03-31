@@ -139,12 +139,12 @@ impl TestEnvBuilder {
         let mut fs = ServiceFs::new();
         let data = io_util::directory::open_in_namespace(
             data_path.to_str().unwrap(),
-            io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
+            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
         )
         .unwrap();
         let build_info = io_util::directory::open_in_namespace(
             build_info_path.to_str().unwrap(),
-            io_util::OpenFlags::RIGHT_READABLE,
+            io_util::OPEN_RIGHT_READABLE,
         )
         .unwrap();
 

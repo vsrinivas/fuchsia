@@ -16,12 +16,7 @@ pub async fn lspci(
     // Creates the proxy and server
     let (proxy, server) = fidl::endpoints::create_proxy::<fio::NodeMarker>()?;
 
-    dev.open(
-        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        0,
-        &cmd.service,
-        server,
-    )?;
+    dev.open(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE, 0, &cmd.service, server)?;
 
     let bus = fidl_fuchsia_hardware_pci::BusProxy::new(proxy.into_channel().unwrap());
     let pci_ids = include_bytes!("../../../../../../../third_party/pciids/pci.ids.zst");

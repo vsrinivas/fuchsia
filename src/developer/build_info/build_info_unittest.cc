@@ -72,9 +72,8 @@ class BuildInfoServiceTestFixture : public gtest::TestLoopFixture {
 
     // Connect the build-info PseudoDir to the /config/build-info path.
     zx::channel channel(endpoint1);
-    build_info_directory_.Serve(
-        fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
-        std::move(channel), loop_.dispatcher());
+    build_info_directory_.Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+                                std::move(channel), loop_.dispatcher());
   }
 
   // Creates a PsuedoDir named |build_info_filename| in the PsuedoDir "/config/build-info" in

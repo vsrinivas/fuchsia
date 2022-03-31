@@ -73,8 +73,8 @@ TEST_F(ExecutableMountTest, CanLoadBlobsExecutable) {
   // The +2 here is because ./ is not valid for fuchsia.io.
   ASSERT_EQ(memcmp(info->path, "./", 2), 0);
   ASSERT_EQ(fdio_open_fd_at(root_fd(), info->path + 2,
-                            static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable |
-                                                  fio::wire::OpenFlags::kRightExecutable),
+                            static_cast<uint32_t>(fio::wire::kOpenRightReadable |
+                                                  fio::wire::kOpenRightExecutable),
                             fd.reset_and_get_address()),
             ZX_OK);
   ASSERT_TRUE(fd.is_valid());

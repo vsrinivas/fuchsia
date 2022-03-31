@@ -11,7 +11,7 @@ use {
     fuchsia_zbi::{ZbiParser, ZbiResult, ZbiType},
     fuchsia_zircon_status::Status,
     futures::prelude::*,
-    io_util::{file, file::ReadError, node::OpenError, OpenFlags},
+    io_util::{file, file::ReadError, node::OpenError, OPEN_RIGHT_READABLE},
     lazy_static::lazy_static,
     routing::capability_source::InternalCapability,
     std::{
@@ -83,7 +83,7 @@ impl Arguments {
 
         // This config file may not be present depending on the device, but errors besides file
         // not found should be surfaced.
-        let config = match file::open_in_namespace(BOOT_CONFIG_FILE, OpenFlags::RIGHT_READABLE) {
+        let config = match file::open_in_namespace(BOOT_CONFIG_FILE, OPEN_RIGHT_READABLE) {
             Ok(config) => Some(config),
             Err(OpenError::Namespace(Status::NOT_FOUND)) => None,
             Err(err) => return Err(anyhow!("Failed to open {}: {}", BOOT_CONFIG_FILE, err)),
@@ -281,7 +281,7 @@ mod tests {
     use {
         super::*,
         fuchsia_async as fasync,
-        io_util::{directory, file::close, file::write},
+        io_util::{directory, file::close, file::write, OPEN_RIGHT_WRITABLE},
         std::collections::HashMap,
     };
 
@@ -303,17 +303,14 @@ mod tests {
         let tempdir = tempfile::TempDir::new().unwrap();
         let dir = directory::open_in_namespace(
             tempdir.path().to_str().unwrap(),
-            OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )
         .unwrap();
 
-        let config = directory::open_file(
-            &dir,
-            "file",
-            fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
-        )
-        .await
-        .unwrap();
+        let config =
+            directory::open_file(&dir, "file", fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE)
+                .await
+                .unwrap();
         write(&config, data.clone()).await.unwrap();
 
         // Invalid config file.
@@ -370,26 +367,22 @@ mod tests {
         let tempdir = tempfile::TempDir::new().unwrap();
         let dir = directory::open_in_namespace(
             tempdir.path().to_str().unwrap(),
-            OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )
         .unwrap();
 
         // Finally, overrides one of the two arguments passed via image args. Note the comment
         // which is ignored.
-        let config = directory::open_file(
-            &dir,
-            "file",
-            fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
-        )
-        .await
-        .unwrap();
+        let config =
+            directory::open_file(&dir, "file", fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE)
+                .await
+                .unwrap();
 
         // Write and flush to disk.
         write(&config, b"# Comment!\narg4=config4").await.unwrap();
         close(config).await.unwrap();
 
-        let config =
-            directory::open_file(&dir, "file", fio::OpenFlags::RIGHT_READABLE).await.unwrap();
+        let config = directory::open_file(&dir, "file", fio::OPEN_RIGHT_READABLE).await.unwrap();
 
         let args = Arguments::new_from_sources(env, Some(cmdline), Some(image_args), Some(config))
             .await

@@ -29,11 +29,8 @@ async fn main() {
     fx_log_info!("Initalizing fake_boot_arguments with {:?}", args);
 
     let system_image = io_util::file::read(
-        &io_util::file::open_in_namespace(
-            system_image_path.as_str(),
-            fio::OpenFlags::RIGHT_READABLE,
-        )
-        .unwrap(),
+        &io_util::file::open_in_namespace(system_image_path.as_str(), fio::OPEN_RIGHT_READABLE)
+            .unwrap(),
     )
     .await
     .unwrap();

@@ -311,8 +311,7 @@ mod test {
     #[fuchsia::test]
     async fn no_inspect_files_do_not_give_an_error_response() {
         let directory =
-            io_util::open_directory_in_namespace("/tmp", io_util::OpenFlags::RIGHT_READABLE)
-                .unwrap();
+            io_util::open_directory_in_namespace("/tmp", io_util::OPEN_RIGHT_READABLE).unwrap();
         let container = UnpopulatedInspectDataContainer {
             identity: Arc::new(EMPTY_IDENTITY.clone()),
             component_diagnostics_proxy: directory,

@@ -60,7 +60,7 @@ fn new_exec_file() -> Result<Arc<dyn DirectoryEntry>, Error> {
     let init_vmo = || async {
         let file = fdio::open_fd(
             HARNESS_EXEC_PATH,
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )?;
         let vmo = fdio::get_vmo_exec_from_file(&file)?;
         let size = vmo.get_size()?;

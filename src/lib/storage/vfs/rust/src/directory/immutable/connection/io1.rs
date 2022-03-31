@@ -77,7 +77,7 @@ impl DerivedConnection for ImmutableConnection {
                 }
             };
 
-        if flags.intersects(fio::OpenFlags::DESCRIBE) {
+        if flags.intersects(fio::OPEN_FLAG_DESCRIBE) {
             let mut info = fio::NodeInfo::Directory(fio::DirectoryObject);
             match control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info)) {
                 Ok(()) => (),
@@ -104,7 +104,7 @@ impl DerivedConnection for ImmutableConnection {
         _name: &str,
         _path: &Path,
     ) -> Result<Arc<dyn DirectoryEntry>, Status> {
-        if !flags.intersects(fio::OpenFlags::CREATE) {
+        if !flags.intersects(fio::OPEN_FLAG_CREATE) {
             Err(Status::NOT_FOUND)
         } else {
             Err(Status::NOT_SUPPORTED)

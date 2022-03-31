@@ -25,11 +25,8 @@ impl RightsTestCase {
 
     /// Returns every right not available for this path.
     fn unavailable_rights(&self) -> Vec<fio::OpenFlags> {
-        let all_rights = [
-            fio::OpenFlags::RIGHT_READABLE,
-            fio::OpenFlags::RIGHT_WRITABLE,
-            fio::OpenFlags::RIGHT_EXECUTABLE,
-        ];
+        let all_rights =
+            [fio::OPEN_RIGHT_READABLE, fio::OPEN_RIGHT_WRITABLE, fio::OPEN_RIGHT_EXECUTABLE];
 
         let mut unavailable_rights: Vec<fio::OpenFlags> = vec![];
         for right_to_check in all_rights.iter() {
@@ -81,20 +78,11 @@ async fn run_trigger_service(mut stream: ftest::TriggerRequestStream) -> Result<
 async fn handle_trigger(event: ftest::TriggerRequest) {
     let ftest::TriggerRequest::Run { responder } = event;
     let tests = [
-        RightsTestCase::new("/read_only", fio::OpenFlags::RIGHT_READABLE),
-        RightsTestCase::new(
-            "/read_write",
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        ),
-        RightsTestCase::new(
-            "/read_write_dup",
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        ),
-        RightsTestCase::new(
-            "/read_exec",
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
-        ),
-        RightsTestCase::new("/read_only_after_scoped", fio::OpenFlags::RIGHT_READABLE),
+        RightsTestCase::new("/read_only", fio::OPEN_RIGHT_READABLE),
+        RightsTestCase::new("/read_write", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE),
+        RightsTestCase::new("/read_write_dup", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE),
+        RightsTestCase::new("/read_exec", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE),
+        RightsTestCase::new("/read_only_after_scoped", fio::OPEN_RIGHT_READABLE),
     ];
     for test_case in tests.iter() {
         if let Err(test_failure) = test_case.verify() {

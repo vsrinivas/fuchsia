@@ -176,7 +176,7 @@ pub(crate) async fn open(
     proxy: &fio::DirectoryProxy,
     image: &Image,
 ) -> Result<Buffer, OpenImageError> {
-    let file = io_util::directory::open_file(proxy, &image.name(), fio::OpenFlags::RIGHT_READABLE)
+    let file = io_util::directory::open_file(proxy, &image.name(), fio::OPEN_RIGHT_READABLE)
         .await
         .map_err(OpenImageError::OpenFile)?;
 

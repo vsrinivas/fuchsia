@@ -117,7 +117,7 @@ zx::status<zx::vmo> PackageResolver::LoadDriver(
     const fidl::WireSyncClient<fuchsia_io::Directory>& package_dir,
     const component::FuchsiaPkgUrl& package_url) {
   const fio::wire::OpenFlags kFileRights =
-      fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightExecutable;
+      fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable;
   const fio::wire::VmoFlags kDriverVmoFlags =
       fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kExecute;
 

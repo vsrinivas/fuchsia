@@ -73,7 +73,7 @@ impl FakePkgfs {
                         control_handle: _,
                     } => Self::handle_open(inside_pkgfs, &path, flags, object),
                     fio::DirectoryRequest::Clone { flags, object, control_handle: _ } => {
-                        if flags != fio::OpenFlags::CLONE_SAME_RIGHTS {
+                        if flags != fio::CLONE_FLAG_SAME_RIGHTS {
                             panic!(
                                 "Fake doesn't support these flags in Directory.Clone: {:#x}",
                                 flags

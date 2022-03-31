@@ -256,7 +256,7 @@ class FakeBootResolver final : public fidl::WireServer<fuchsia_sys2::ComponentRe
     }
     zx_status_t status =
         fdio_open_at(pkg_dir_->GetRemote().channel()->get(), std::string(relative_path).data(),
-                     static_cast<uint32_t>(fuchsia_io::wire::OpenFlags::kRightReadable),
+                     static_cast<uint32_t>(fuchsia_io::wire::kOpenRightReadable),
                      file->server.channel().release());
     if (status != ZX_OK) {
       completer.ReplyError(fuchsia_sys2::wire::ResolverError::kInternal);
@@ -363,12 +363,11 @@ class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm
         completer.ReplyError(ZX_ERR_INTERNAL);
         return;
       }
-      zx_status_t status =
-          fdio_open("/pkg",
-                    static_cast<uint32_t>(fuchsia_io::wire::OpenFlags::kDirectory |
-                                          fuchsia_io::wire::OpenFlags::kRightReadable |
-                                          fuchsia_io::wire::OpenFlags::kRightExecutable),
-                    endpoints->server.channel().release());
+      zx_status_t status = fdio_open("/pkg",
+                                     static_cast<uint32_t>(fuchsia_io::wire::kOpenFlagDirectory |
+                                                           fuchsia_io::wire::kOpenRightReadable |
+                                                           fuchsia_io::wire::kOpenRightExecutable),
+                                     endpoints->server.channel().release());
       if (status != ZX_OK) {
         completer.ReplyError(ZX_ERR_INTERNAL);
         return;

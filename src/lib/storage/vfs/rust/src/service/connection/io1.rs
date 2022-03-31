@@ -85,7 +85,7 @@ impl Connection {
                 }
             };
 
-        if flags.intersects(fio::OpenFlags::DESCRIBE) {
+        if flags.intersects(fio::OPEN_FLAG_DESCRIBE) {
             let mut info = fio::NodeInfo::Service(fio::Service);
             match control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info)) {
                 Ok(()) => (),
@@ -189,7 +189,7 @@ impl Connection {
                 todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
             }
             fio::FileRequest::GetFlags { responder } => {
-                responder.send(ZX_OK, fio::OpenFlags::NODE_REFERENCE)?;
+                responder.send(ZX_OK, fio::OPEN_FLAG_NODE_REFERENCE)?;
             }
             fio::FileRequest::SetFlags { flags: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
@@ -234,7 +234,7 @@ impl Connection {
                 responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
             }
             fio::FileRequest::GetFlagsDeprecatedUseNode { responder } => {
-                responder.send(ZX_OK, fio::OpenFlags::NODE_REFERENCE)?;
+                responder.send(ZX_OK, fio::OPEN_FLAG_NODE_REFERENCE)?;
             }
             fio::FileRequest::SetFlagsDeprecatedUseNode { flags: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
@@ -255,7 +255,7 @@ impl Connection {
     }
 
     fn handle_clone(&mut self, flags: fio::OpenFlags, server_end: ServerEnd<fio::NodeMarker>) {
-        let parent_flags = fio::OpenFlags::NODE_REFERENCE;
+        let parent_flags = fio::OPEN_FLAG_NODE_REFERENCE;
         let flags = match inherit_rights_for_clone(parent_flags, flags) {
             Ok(updated) => updated,
             Err(status) => {

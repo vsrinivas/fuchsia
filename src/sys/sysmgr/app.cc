@@ -134,7 +134,7 @@ App::~App() = default;
 
 zx::channel App::OpenAsDirectory() {
   fidl::InterfaceHandle<fuchsia::io::Directory> dir;
-  svc_root_.Serve(fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
+  svc_root_.Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
                   dir.NewRequest().TakeChannel());
   return dir.TakeChannel();
 }
@@ -143,7 +143,7 @@ void App::ConnectToService(const std::string& service_name, zx::channel channel)
   vfs::internal::Node* child;
   auto status = svc_root_.Lookup(service_name, &child);
   if (status == ZX_OK) {
-    status = child->Serve(fuchsia::io::OpenFlags::RIGHT_READABLE, std::move(channel));
+    status = child->Serve(fuchsia::io::OPEN_RIGHT_READABLE, std::move(channel));
   } else if (status == ZX_ERR_NOT_FOUND) {
     FX_LOGS(WARNING) << "Service " << service_name
                      << " not in service list, attempting to connect through environment";

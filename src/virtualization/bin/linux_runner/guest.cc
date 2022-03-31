@@ -216,9 +216,9 @@ zx::status<VolumeHandle> FindOrAllocatePartition(std::string_view path, size_t p
 // Opens the given disk image.
 zx::status<fuchsia::io::FileHandle> GetPartition(const DiskImage& image) {
   TRACE_DURATION("linux_runner", "GetPartition");
-  fuchsia::io::OpenFlags flags = fuchsia::io::OpenFlags::RIGHT_READABLE;
+  fuchsia::io::OpenFlags flags = fuchsia::io::OPEN_RIGHT_READABLE;
   if (!image.read_only) {
-    flags |= fuchsia::io::OpenFlags::RIGHT_WRITABLE;
+    flags |= fuchsia::io::OPEN_RIGHT_WRITABLE;
   }
   fuchsia::io::FileHandle file;
   zx_status_t status = fdio_open(image.path, static_cast<uint32_t>(flags),

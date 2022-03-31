@@ -37,7 +37,7 @@ async fn serve_resolver(mut stream: fresolution::ResolverRequestStream) -> Resul
                         .context("failed to create zx::channel pair")?;
                     fdio::open(
                         "/pkg",
-                        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+                        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
                         server.into_channel(),
                     )
                     .context("failed to open /pkg")?;
@@ -80,7 +80,7 @@ async fn serve_internal_resolver(
                         .context("failed to create zx::channel pair")?;
                     fdio::open(
                         "/pkg",
-                        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+                        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
                         server.into_channel(),
                     )
                     .context("failed to open /pkg")?;

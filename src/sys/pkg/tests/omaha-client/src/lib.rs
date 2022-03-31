@@ -182,12 +182,12 @@ impl TestEnvBuilder {
         let build_info_path = mounts.build_info.clone().into_os_string().into_string().unwrap();
         let config_data = io_util::directory::open_in_namespace(
             config_data_path.as_str(),
-            io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
+            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
         )
         .unwrap();
         let build_info = io_util::directory::open_in_namespace(
             build_info_path.as_str(),
-            io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
+            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
         )
         .unwrap();
         fs.dir("config").add_remote("data", config_data);

@@ -87,10 +87,10 @@ TEST(VnodeConnectionOptions, ValidateOptionsForDirectory) {
 
   TestDirectory vnode;
   EXPECT_RESULT_OK(vnode.ValidateOptions(
-      fs::VnodeConnectionOptions::FromIoV1Flags(fio::wire::OpenFlags::kDirectory)));
+      fs::VnodeConnectionOptions::FromIoV1Flags(fio::wire::kOpenFlagDirectory)));
   EXPECT_RESULT_ERROR(ZX_ERR_NOT_FILE,
                       vnode.ValidateOptions(fs::VnodeConnectionOptions::FromIoV1Flags(
-                          fio::wire::OpenFlags::kNotDirectory)));
+                          fio::wire::kOpenFlagNotDirectory)));
 }
 
 TEST(VnodeConnectionOptions, ValidateOptionsForService) {
@@ -102,9 +102,9 @@ TEST(VnodeConnectionOptions, ValidateOptionsForService) {
   TestConnector vnode;
   EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR,
                       vnode.ValidateOptions(fs::VnodeConnectionOptions::FromIoV1Flags(
-                          fio::wire::OpenFlags::kDirectory)));
+                          fio::wire::kOpenFlagDirectory)));
   EXPECT_RESULT_OK(vnode.ValidateOptions(
-      fs::VnodeConnectionOptions::FromIoV1Flags(fio::wire::OpenFlags::kNotDirectory)));
+      fs::VnodeConnectionOptions::FromIoV1Flags(fio::wire::kOpenFlagNotDirectory)));
 }
 
 TEST(VnodeConnectionOptions, ValidateOptionsForFile) {
@@ -116,9 +116,9 @@ TEST(VnodeConnectionOptions, ValidateOptionsForFile) {
   TestFile vnode;
   EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR,
                       vnode.ValidateOptions(fs::VnodeConnectionOptions::FromIoV1Flags(
-                          fio::wire::OpenFlags::kDirectory)));
+                          fio::wire::kOpenFlagDirectory)));
   EXPECT_RESULT_OK(vnode.ValidateOptions(
-      fs::VnodeConnectionOptions::FromIoV1Flags(fio::wire::OpenFlags::kNotDirectory)));
+      fs::VnodeConnectionOptions::FromIoV1Flags(fio::wire::kOpenFlagNotDirectory)));
 }
 
 TEST(VnodeProtocolSet, Union) {

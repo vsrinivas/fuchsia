@@ -54,8 +54,7 @@ TEST_F(GuestInteractionTestWithDiscovery, FidlExecScriptTest) {
 
   // Push the bash script to the guest
   fidl::InterfaceHandle<fuchsia::io::File> put_file;
-  ASSERT_OK(fdio_open(kTestScriptSource,
-                      static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE),
+  ASSERT_OK(fdio_open(kTestScriptSource, static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE),
                       put_file.NewRequest().TakeChannel().release()));
 
   std::optional<zx_status_t> put_status;
@@ -158,8 +157,8 @@ TEST_F(GuestInteractionTestWithDiscovery, FidlExecScriptTest) {
   fidl::InterfaceHandle<fuchsia::io::File> get_file;
   ASSERT_OK(fdio_open(
       kHostOuputCopyLocation,
-      static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_WRITABLE |
-                            fuchsia::io::OpenFlags::CREATE | fuchsia::io::OpenFlags::TRUNCATE),
+      static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_WRITABLE | fuchsia::io::OPEN_FLAG_CREATE |
+                            fuchsia::io::OPEN_FLAG_TRUNCATE),
       get_file.NewRequest().TakeChannel().release()));
 
   std::optional<zx_status_t> get_status;
@@ -218,7 +217,7 @@ TEST_F(GuestInteractionTestWithDiscovery, FidlPutGetTest) {
 
   // Push the file to the guest
   fidl::InterfaceHandle<fuchsia::io::File> put_file;
-  ASSERT_OK(fdio_open(test_file, static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE),
+  ASSERT_OK(fdio_open(test_file, static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE),
                       put_file.NewRequest().TakeChannel().release()));
 
   std::optional<zx_status_t> status;
@@ -234,8 +233,8 @@ TEST_F(GuestInteractionTestWithDiscovery, FidlPutGetTest) {
   fidl::InterfaceHandle<fuchsia::io::File> get_file;
   ASSERT_OK(fdio_open(
       host_verification_file,
-      static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_WRITABLE |
-                            fuchsia::io::OpenFlags::CREATE | fuchsia::io::OpenFlags::TRUNCATE),
+      static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_WRITABLE | fuchsia::io::OPEN_FLAG_CREATE |
+                            fuchsia::io::OPEN_FLAG_TRUNCATE),
       get_file.NewRequest().TakeChannel().release()));
 
   status.reset();

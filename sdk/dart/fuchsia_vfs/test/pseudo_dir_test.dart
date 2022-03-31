@@ -205,15 +205,15 @@ void main() {
       test('invalid flags', () async {
         PseudoDir dir = PseudoDir();
         final invalidFlags = [
-          OpenFlags.append,
-          OpenFlags.create,
-          OpenFlags.createIfAbsent,
-          OpenFlags.noRemote,
-          OpenFlags.truncate,
+          openFlagAppend,
+          openFlagCreate,
+          openFlagCreateIfAbsent,
+          openFlagNoRemote,
+          openFlagTruncate,
         ];
         for (final entry in invalidFlags.asMap().entries) {
           DirectoryProxy proxy = DirectoryProxy();
-          final status = dir.connect(entry.value | OpenFlags.describe, 0,
+          final status = dir.connect(entry.value | openFlagDescribe, 0,
               InterfaceRequest(proxy.ctrl.request().passChannel()));
           expect(status, isNot(ZX.OK), reason: 'flagIndex: ${entry.key}');
           await proxy.onOpen.first.then((response) {
@@ -237,7 +237,7 @@ void main() {
 
         for (final entry in invalidModes.asMap().entries) {
           DirectoryProxy proxy = DirectoryProxy();
-          final status = dir.connect(OpenFlags.describe, entry.value,
+          final status = dir.connect(openFlagDescribe, entry.value,
               InterfaceRequest(proxy.ctrl.request().passChannel()));
           expect(status, ZX.ERR_INVALID_ARGS,
               reason: 'modeIndex: ${entry.key}');
@@ -253,10 +253,8 @@ void main() {
 
     DirectoryProxy _getProxyForDir(PseudoDir dir, [OpenFlags? flags]) {
       DirectoryProxy proxy = DirectoryProxy();
-      final status = dir.connect(
-          flags ?? OpenFlags.rightReadable | OpenFlags.rightWritable,
-          0,
-          InterfaceRequest(proxy.ctrl.request().passChannel()));
+      final status = dir.connect(flags ?? openRightReadable | openRightWritable,
+          0, InterfaceRequest(proxy.ctrl.request().passChannel()));
       expect(status, ZX.OK);
       return proxy;
     }
@@ -264,7 +262,7 @@ void main() {
     test('open passes', () async {
       PseudoDir dir = PseudoDir();
       DirectoryProxy proxy =
-          _getProxyForDir(dir, OpenFlags.rightReadable | OpenFlags.describe);
+          _getProxyForDir(dir, openRightReadable | openFlagDescribe);
 
       await proxy.onOpen.first.then((response) {
         expect(response.s, ZX.OK);
@@ -283,7 +281,7 @@ void main() {
 
       for (final entry in validModes.asMap().entries) {
         DirectoryProxy proxy = DirectoryProxy();
-        final status = dir.connect(OpenFlags.describe, entry.value,
+        final status = dir.connect(openFlagDescribe, entry.value,
             InterfaceRequest(proxy.ctrl.request().passChannel()));
         expect(status, ZX.OK, reason: 'modeIndex: ${entry.key}');
         await proxy.onOpen.first.then((response) {
@@ -298,14 +296,14 @@ void main() {
     test('open passes with valid flags', () async {
       PseudoDir dir = PseudoDir();
       final validFlags = [
-        OpenFlags.rightReadable,
-        OpenFlags.rightWritable,
-        OpenFlags.rightReadable | OpenFlags.directory,
-        OpenFlags.nodeReference
+        openRightReadable,
+        openRightWritable,
+        openRightReadable | openFlagDirectory,
+        openFlagNodeReference
       ];
 
       for (final flag in validFlags) {
-        DirectoryProxy proxy = _getProxyForDir(dir, flag | OpenFlags.describe);
+        DirectoryProxy proxy = _getProxyForDir(dir, flag | openFlagDescribe);
         await proxy.onOpen.first.then((response) {
           expect(response.s, ZX.OK);
           expect(response.info, isNotNull);
@@ -828,7 +826,7 @@ void main() {
       Future<void> _openFileAndAssert(DirectoryProxy proxy, String filePath,
           int bufferLen, String expectedContent) async {
         FileProxy fileProxy = FileProxy();
-        await proxy.open(OpenFlags.rightReadable, 0, filePath,
+        await proxy.open(openRightReadable, 0, filePath,
             InterfaceRequest(fileProxy.ctrl.request().passChannel()));
 
         final data = await fileProxy.read(bufferLen);
@@ -859,7 +857,7 @@ void main() {
         final paths = ['.', './', './/', './//', './/.//./'];
         for (final path in paths) {
           DirectoryProxy newProxy = DirectoryProxy();
-          await proxy.open(OpenFlags.rightReadable, 0, path,
+          await proxy.open(openRightReadable, 0, path,
               InterfaceRequest(newProxy.ctrl.request().passChannel()));
 
           // open file 1 in proxy and check contents to make sure correct dir was opened.
@@ -895,8 +893,8 @@ void main() {
         ];
         for (final path in paths) {
           DirectoryProxy newProxy = DirectoryProxy();
-          await proxy.open(OpenFlags.rightReadable | OpenFlags.describe, 0,
-              path, InterfaceRequest(newProxy.ctrl.request().passChannel()));
+          await proxy.open(openRightReadable | openFlagDescribe, 0, path,
+              InterfaceRequest(newProxy.ctrl.request().passChannel()));
 
           await newProxy.onOpen.first.then((response) {
             expect(response.s, isNot(ZX.OK));
@@ -913,8 +911,8 @@ void main() {
         final proxy = _getProxyForDir(dir);
 
         FileProxy fileProxy = FileProxy();
-        await proxy.open(OpenFlags.rightReadable | OpenFlags.describe, 0,
-            'file1/', InterfaceRequest(fileProxy.ctrl.request().passChannel()));
+        await proxy.open(openRightReadable | openFlagDescribe, 0, 'file1/',
+            InterfaceRequest(fileProxy.ctrl.request().passChannel()));
 
         await fileProxy.onOpen.first.then((response) {
           expect(response.s, ZX.ERR_NOT_DIR);
@@ -930,7 +928,7 @@ void main() {
         final proxy = _getProxyForDir(dir);
 
         FileProxy fileProxy = FileProxy();
-        await proxy.open(OpenFlags.rightReadable, 0, 'invalid',
+        await proxy.open(openRightReadable, 0, 'invalid',
             InterfaceRequest(fileProxy.ctrl.request().passChannel()));
 
         // channel should be closed
@@ -943,10 +941,7 @@ void main() {
         final proxy = _getProxyForDir(dir);
 
         FileProxy fileProxy = FileProxy();
-        await proxy.open(
-            OpenFlags.rightReadable | OpenFlags.describe,
-            0,
-            'file1/file2',
+        await proxy.open(openRightReadable | openFlagDescribe, 0, 'file1/file2',
             InterfaceRequest(fileProxy.ctrl.request().passChannel()));
 
         await fileProxy.onOpen.first.then((response) {
@@ -967,11 +962,11 @@ void main() {
 
         final proxy = _getProxyForDir(dir);
         DirectoryProxy subDirProxy = DirectoryProxy();
-        await proxy.open(OpenFlags.rightReadable, 0, 'subDir',
+        await proxy.open(openRightReadable, 0, 'subDir',
             InterfaceRequest(subDirProxy.ctrl.request().passChannel()));
 
         FileProxy fileProxy = FileProxy();
-        await proxy.open(OpenFlags.rightReadable, 0, 'file1',
+        await proxy.open(openRightReadable, 0, 'file1',
             InterfaceRequest(fileProxy.ctrl.request().passChannel()));
         dir.close();
         proxy.ctrl.whenClosed.asStream().listen(expectAsync1((_) {}));
@@ -985,7 +980,7 @@ void main() {
         final proxy = _getProxyForDir(dir);
 
         DirectoryProxy dirProxy = DirectoryProxy();
-        await proxy.open(OpenFlags.rightReadable, 0, 'subDir',
+        await proxy.open(openRightReadable, 0, 'subDir',
             InterfaceRequest(dirProxy.ctrl.request().passChannel()));
 
         // open file 2 check contents to make sure correct dir was opened.
@@ -995,11 +990,11 @@ void main() {
       test('directory rights are hierarchical (open dir)', () async {
         PseudoDir dir = _setUpDir();
 
-        final proxy = _getProxyForDir(dir, OpenFlags.rightReadable);
+        final proxy = _getProxyForDir(dir, openRightReadable);
 
         final newProxy = DirectoryProxy();
-        await proxy.open(OpenFlags.rightWritable | OpenFlags.describe, 0,
-            'subDir', InterfaceRequest(newProxy.ctrl.request().passChannel()));
+        await proxy.open(openRightWritable | openFlagDescribe, 0, 'subDir',
+            InterfaceRequest(newProxy.ctrl.request().passChannel()));
 
         await newProxy.onOpen.first.then((response) {
           expect(response.s, ZX.ERR_ACCESS_DENIED);
@@ -1012,11 +1007,11 @@ void main() {
       test('directory rights are hierarchical (open file)', () async {
         PseudoDir dir = _setUpDir();
 
-        final proxy = _getProxyForDir(dir, OpenFlags.rightWritable);
+        final proxy = _getProxyForDir(dir, openRightWritable);
 
         final newProxy = DirectoryProxy();
-        await proxy.open(OpenFlags.rightWritable | OpenFlags.describe, 0,
-            'subDir', InterfaceRequest(newProxy.ctrl.request().passChannel()));
+        await proxy.open(openRightWritable | openFlagDescribe, 0, 'subDir',
+            InterfaceRequest(newProxy.ctrl.request().passChannel()));
 
         await newProxy.onOpen.first.then((response) {
           expect(response.s, ZX.OK);
@@ -1026,7 +1021,7 @@ void main() {
         });
 
         FileProxy fileProxy = FileProxy();
-        await newProxy.open(OpenFlags.rightReadable, 0, 'file2',
+        await newProxy.open(openRightReadable, 0, 'file2',
             InterfaceRequest(fileProxy.ctrl.request().passChannel()));
 
         // channel should be closed
@@ -1039,7 +1034,7 @@ void main() {
         final proxy = _getProxyForDir(dir);
 
         DirectoryProxy dirProxy = DirectoryProxy();
-        await proxy.open(OpenFlags.rightReadable, 0, 'subDir/',
+        await proxy.open(openRightReadable, 0, 'subDir/',
             InterfaceRequest(dirProxy.ctrl.request().passChannel()));
 
         // open file 2 check contents to make sure correct dir was opened.
@@ -1058,7 +1053,7 @@ void main() {
       test('readdir fails for NodeReference', () async {
         PseudoDir dir = _setUpDir();
 
-        final proxy = _getProxyForDir(dir, OpenFlags.nodeReference);
+        final proxy = _getProxyForDir(dir, openFlagNodeReference);
 
         final response = await proxy.readDirents(1024);
         expect(response.s, ZX.ERR_BAD_HANDLE);
@@ -1067,11 +1062,11 @@ void main() {
       test('not allowed to open a file for NodeReference', () async {
         PseudoDir dir = _setUpDir();
 
-        final proxy = _getProxyForDir(dir, OpenFlags.nodeReference);
+        final proxy = _getProxyForDir(dir, openFlagNodeReference);
 
         // open file 2 in subDir.
         FileProxy fileProxy = FileProxy();
-        await proxy.open(OpenFlags.rightReadable, 0, 'subDir/file2',
+        await proxy.open(openRightReadable, 0, 'subDir/file2',
             InterfaceRequest(fileProxy.ctrl.request().passChannel()));
 
         // channel should be closed
@@ -1081,17 +1076,15 @@ void main() {
       test('clone with same rights', () async {
         PseudoDir dir = _setUpDir();
 
-        final proxy = _getProxyForDir(
-            dir, OpenFlags.rightReadable | OpenFlags.rightWritable);
+        final proxy =
+            _getProxyForDir(dir, openRightReadable | openRightWritable);
         DirectoryProxy cloneProxy = DirectoryProxy();
-        await proxy.clone(OpenFlags.cloneSameRights | OpenFlags.describe,
+        await proxy.clone(cloneFlagSameRights | openFlagDescribe,
             InterfaceRequest(cloneProxy.ctrl.request().passChannel()));
 
         final subDirProxy = DirectoryProxy();
         await cloneProxy.open(
-            OpenFlags.rightReadable |
-                OpenFlags.rightWritable |
-                OpenFlags.describe,
+            openRightReadable | openRightWritable | openFlagDescribe,
             0,
             'subDir',
             InterfaceRequest(subDirProxy.ctrl.request().passChannel()));
@@ -1111,10 +1104,10 @@ void main() {
     test('test clone', () async {
       PseudoDir dir = PseudoDir();
 
-      final proxy = _getProxyForDir(dir, OpenFlags.rightReadable);
+      final proxy = _getProxyForDir(dir, openRightReadable);
 
       DirectoryProxy newProxy = DirectoryProxy();
-      await proxy.clone(OpenFlags.rightReadable | OpenFlags.describe,
+      await proxy.clone(openRightReadable | openFlagDescribe,
           InterfaceRequest(newProxy.ctrl.request().passChannel()));
 
       await newProxy.onOpen.first.then((response) {
@@ -1128,10 +1121,10 @@ void main() {
     test('clone should fail if requested rights exceed source rights',
         () async {
       PseudoDir dir = PseudoDir();
-      final proxy = _getProxyForDir(dir, OpenFlags.rightReadable);
+      final proxy = _getProxyForDir(dir, openRightReadable);
 
       final clonedProxy = DirectoryProxy();
-      await proxy.clone(OpenFlags.rightWritable | OpenFlags.describe,
+      await proxy.clone(openRightWritable | openFlagDescribe,
           InterfaceRequest(clonedProxy.ctrl.request().passChannel()));
 
       await clonedProxy.onOpen.first.then((response) {
@@ -1145,10 +1138,10 @@ void main() {
     test('test clone fails for invalid flags', () async {
       PseudoDir dir = PseudoDir();
 
-      final proxy = _getProxyForDir(dir, OpenFlags.rightReadable);
+      final proxy = _getProxyForDir(dir, openRightReadable);
 
       DirectoryProxy newProxy = DirectoryProxy();
-      await proxy.clone(OpenFlags.truncate | OpenFlags.describe,
+      await proxy.clone(openFlagTruncate | openFlagDescribe,
           InterfaceRequest(newProxy.ctrl.request().passChannel()));
 
       await newProxy.onOpen.first.then((response) {
@@ -1159,17 +1152,14 @@ void main() {
       });
     });
 
-    test(
-        'test clone disallows both OpenFlags.cloneSameRights and specific rights',
+    test('test clone disallows both cloneFlagSameRights and specific rights',
         () async {
       PseudoDir dir = PseudoDir();
-      final proxy = _getProxyForDir(dir, OpenFlags.rightReadable);
+      final proxy = _getProxyForDir(dir, openRightReadable);
 
       final clonedProxy = DirectoryProxy();
       await proxy.clone(
-          OpenFlags.rightReadable |
-              OpenFlags.cloneSameRights |
-              OpenFlags.describe,
+          openRightReadable | cloneFlagSameRights | openFlagDescribe,
           InterfaceRequest(clonedProxy.ctrl.request().passChannel()));
 
       await clonedProxy.onOpen.first.then((response) {

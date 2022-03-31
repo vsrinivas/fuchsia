@@ -127,7 +127,7 @@ where
 
         match this.entries.get(name) {
             Some(entry) => {
-                if flags.intersects(fio::OpenFlags::CREATE_IF_ABSENT) {
+                if flags.intersects(fio::OPEN_FLAG_CREATE_IF_ABSENT) {
                     return Err(Status::ALREADY_EXISTS);
                 }
 

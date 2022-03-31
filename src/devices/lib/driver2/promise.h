@@ -36,7 +36,7 @@ template <typename T>
 fpromise::promise<fidl::WireSharedClient<T>, zx_status_t> Connect(
     const driver::Namespace& ns, async_dispatcher_t* dispatcher,
     std::string_view path = fidl::DiscoverableProtocolDefaultPath<T>,
-    fuchsia_io::wire::OpenFlags flags = fuchsia_io::wire::OpenFlags::kRightReadable) {
+    fuchsia_io::wire::OpenFlags flags = fuchsia_io::wire::kOpenRightReadable) {
   return fpromise::make_result_promise(internal::ConnectWithResult<T>(ns, dispatcher, path, flags));
 }
 

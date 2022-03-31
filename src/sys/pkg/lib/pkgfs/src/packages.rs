@@ -26,10 +26,8 @@ pub struct Client {
 impl Client {
     /// Returns an client connected to pkgfs from the current component's namespace
     pub fn open_from_namespace() -> Result<Self, io_util::node::OpenError> {
-        let proxy = io_util::directory::open_in_namespace(
-            "/pkgfs/packages",
-            fio::OpenFlags::RIGHT_READABLE,
-        )?;
+        let proxy =
+            io_util::directory::open_in_namespace("/pkgfs/packages", fio::OPEN_RIGHT_READABLE)?;
         Ok(Client { proxy })
     }
 
@@ -41,7 +39,7 @@ impl Client {
             proxy: io_util::directory::open_directory_no_describe(
                 pkgfs,
                 "packages",
-                fio::OpenFlags::RIGHT_READABLE,
+                fio::OPEN_RIGHT_READABLE,
             )?,
         })
     }
@@ -67,7 +65,7 @@ impl Client {
         variant: Option<&str>,
     ) -> Result<fuchsia_pkg::PackageDirectory, OpenError> {
         // TODO(fxbug.dev/37858) allow opening as executable too
-        let flags = fio::OpenFlags::RIGHT_READABLE;
+        let flags = fio::OPEN_RIGHT_READABLE;
         let path = format!("{}/{}", name, variant.unwrap_or("0"));
         let dir = io_util::directory::open_directory(&self.proxy, &path, flags).await.map_err(
             |e| match e {

@@ -56,7 +56,7 @@ async fn main() -> Result<(), Error> {
 
     let pkg_dir = io_util::open_directory_in_namespace(
         "/pkg",
-        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_EXECUTABLE,
+        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_EXECUTABLE,
     )
     .expect("failed to open /pkg");
     let pkg_c_str = CString::new("/pkg").unwrap();
@@ -67,7 +67,7 @@ async fn main() -> Result<(), Error> {
 
     let svc_dir = io_util::open_directory_in_namespace(
         "/svc",
-        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
+        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
     )
     .expect("failed to open /svc");
     let svc_c_str = CString::new("/svc").unwrap();
@@ -80,10 +80,10 @@ async fn main() -> Result<(), Error> {
     fasync::Task::spawn(async move {
         let pkg_dir = io_util::open_directory_in_namespace(
             "/pkg",
-            fio::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_EXECUTABLE,
         )
         .expect("failed to open /pkg");
-        let pkg_dir_2 = io_util::clone_directory(&pkg_dir, fio::OpenFlags::CLONE_SAME_RIGHTS)
+        let pkg_dir_2 = io_util::clone_directory(&pkg_dir, fio::CLONE_FLAG_SAME_RIGHTS)
             .expect("failed to clone /pkg handle");
         let fake_pkgfs = pseudo_directory! {
             "packages" => pseudo_directory! {
@@ -115,7 +115,7 @@ async fn main() -> Result<(), Error> {
         };
         fake_pkgfs.open(
             ExecutionScope::new(),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
             fio::MODE_TYPE_DIRECTORY,
             pfsPath::dot(),
             pkgfs_server_end,
@@ -133,7 +133,7 @@ async fn main() -> Result<(), Error> {
         let fake_svc_for_sys = pseudo_directory! {};
         fake_svc_for_sys.open(
             ExecutionScope::new(),
-            fio::OpenFlags::RIGHT_READABLE,
+            fio::OPEN_RIGHT_READABLE,
             fio::MODE_TYPE_DIRECTORY,
             pfsPath::dot(),
             svc_for_sys_server_end,
@@ -165,7 +165,7 @@ async fn main() -> Result<(), Error> {
     let log_connector_node = io_util::open_node(
         &appmgr_out_dir_proxy,
         &Path::new("appmgr_svc/fuchsia.sys.internal.LogConnector"),
-        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         fio::MODE_TYPE_SERVICE,
     )?;
     let log_connector_node_chan =
@@ -176,7 +176,7 @@ async fn main() -> Result<(), Error> {
     let echo_service_node = io_util::open_node(
         &appmgr_out_dir_proxy,
         &Path::new("svc/fidl.examples.echo.Echo"),
-        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         fio::MODE_TYPE_SERVICE,
     )?;
     let echo_node_chan = echo_service_node.into_channel().map_err(|e| format_err!("{:?}", e))?;

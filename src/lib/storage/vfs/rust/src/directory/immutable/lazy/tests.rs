@@ -116,7 +116,7 @@ impl LazyDirectory for Entries {
 #[test]
 fn empty() {
     run_server_client(
-        fio::OpenFlags::RIGHT_READABLE,
+        fio::OPEN_RIGHT_READABLE,
         lazy(Entries::new(vec![], not_found)),
         |root| async move {
             assert_close!(root);
@@ -134,7 +134,7 @@ fn empty_with_watchers() {
     let server =
         lazy_with_watchers(scope.clone(), Entries::new(vec![], not_found), watcher_events_consumer);
 
-    test_server_client(fio::OpenFlags::RIGHT_READABLE, server, |root| async move {
+    test_server_client(fio::OPEN_RIGHT_READABLE, server, |root| async move {
         assert_close!(root);
         watcher_events.disconnect();
     })
@@ -151,28 +151,24 @@ fn static_listing() {
         (fio::DirentType::File, "three"),
     ];
 
-    run_server_client(
-        fio::OpenFlags::RIGHT_READABLE,
-        lazy(Entries::new(entries, not_found)),
-        |root| {
-            async move {
-                {
-                    let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
-                    // Note that the build_sorted_static_get_entry_names() will sort entries
-                    // alphabetically when returning them, so we see a different order here.
-                    expected
-                        .add(fio::DirentType::Directory, b".")
-                        .add(fio::DirentType::File, b"one")
-                        .add(fio::DirentType::File, b"three")
-                        .add(fio::DirentType::File, b"two");
+    run_server_client(fio::OPEN_RIGHT_READABLE, lazy(Entries::new(entries, not_found)), |root| {
+        async move {
+            {
+                let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
+                // Note that the build_sorted_static_get_entry_names() will sort entries
+                // alphabetically when returning them, so we see a different order here.
+                expected
+                    .add(fio::DirentType::Directory, b".")
+                    .add(fio::DirentType::File, b"one")
+                    .add(fio::DirentType::File, b"three")
+                    .add(fio::DirentType::File, b"two");
 
-                    assert_read_dirents!(root, 1000, expected.into_vec());
-                }
-
-                assert_close!(root);
+                assert_read_dirents!(root, 1000, expected.into_vec());
             }
-        },
-    );
+
+            assert_close!(root);
+        }
+    });
 }
 
 #[test]
@@ -191,10 +187,10 @@ fn static_entries() {
     };
 
     run_server_client(
-        fio::OpenFlags::RIGHT_READABLE,
+        fio::OPEN_RIGHT_READABLE,
         lazy(Entries::new(entries, get_entry)),
         |root| async move {
-            let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE;
+            let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
             open_as_vmo_file_assert_content!(&root, flags, "one", "File one content");
             open_as_vmo_file_assert_content!(&root, flags, "two", "File two content");
             open_as_vmo_file_assert_content!(&root, flags, "three", "File three content");
@@ -223,10 +219,10 @@ fn static_entries_with_traversal() {
     };
 
     run_server_client(
-        fio::OpenFlags::RIGHT_READABLE,
+        fio::OPEN_RIGHT_READABLE,
         lazy(Entries::new(entries, get_entry)),
         |root| async move {
-            let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE;
+            let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
             {
                 let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
                 expected
@@ -314,7 +310,7 @@ fn dynamic_listing() {
         vec![Entries::new(listing1, not_found), Entries::new(listing2, not_found)].into(),
     );
 
-    run_server_client(fio::OpenFlags::RIGHT_READABLE, lazy(entries), |root| {
+    run_server_client(fio::OPEN_RIGHT_READABLE, lazy(entries), |root| {
         async move {
             {
                 let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
@@ -373,10 +369,10 @@ fn dynamic_entries() {
     };
 
     run_server_client(
-        fio::OpenFlags::RIGHT_READABLE,
+        fio::OPEN_RIGHT_READABLE,
         lazy(Entries::new(entries, get_entry)),
         |root| async move {
-            let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE;
+            let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
 
             open_as_vmo_file_assert_content!(&root, flags, "file1", "Content: 1");
             open_as_vmo_file_assert_content!(&root, flags, "file1", "Content: 2");
@@ -399,70 +395,58 @@ fn read_dirents_small_buffer() {
         (fio::DirentType::File, "uname"),
     ];
 
-    run_server_client(
-        fio::OpenFlags::RIGHT_READABLE,
-        lazy(Entries::new(entries, not_found)),
-        |root| {
-            async move {
-                {
-                    let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
-                    // Entry header is 10 bytes + length of the name in bytes.
-                    // (10 + 1) = 11
-                    expected.add(fio::DirentType::Directory, b".");
-                    assert_read_dirents!(root, 11, expected.into_vec());
-                }
-
-                {
-                    let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
-                    expected
-                        // (10 + 3) = 13
-                        .add(fio::DirentType::Directory, b"etc")
-                        // 13 + (10 + 5) = 28
-                        .add(fio::DirentType::File, b"files");
-                    assert_read_dirents!(root, 28, expected.into_vec());
-                }
-
-                {
-                    let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
-                    expected
-                        .add(fio::DirentType::File, b"more")
-                        .add(fio::DirentType::File, b"uname");
-                    assert_read_dirents!(root, 100, expected.into_vec());
-                }
-
-                assert_read_dirents!(root, 100, vec![]);
-
-                assert_close!(root);
+    run_server_client(fio::OPEN_RIGHT_READABLE, lazy(Entries::new(entries, not_found)), |root| {
+        async move {
+            {
+                let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
+                // Entry header is 10 bytes + length of the name in bytes.
+                // (10 + 1) = 11
+                expected.add(fio::DirentType::Directory, b".");
+                assert_read_dirents!(root, 11, expected.into_vec());
             }
-        },
-    );
+
+            {
+                let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
+                expected
+                    // (10 + 3) = 13
+                    .add(fio::DirentType::Directory, b"etc")
+                    // 13 + (10 + 5) = 28
+                    .add(fio::DirentType::File, b"files");
+                assert_read_dirents!(root, 28, expected.into_vec());
+            }
+
+            {
+                let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
+                expected.add(fio::DirentType::File, b"more").add(fio::DirentType::File, b"uname");
+                assert_read_dirents!(root, 100, expected.into_vec());
+            }
+
+            assert_read_dirents!(root, 100, vec![]);
+
+            assert_close!(root);
+        }
+    });
 }
 
 #[test]
 fn read_dirents_very_small_buffer() {
     let entries = vec![DOT, (fio::DirentType::File, "file")];
 
-    run_server_client(
-        fio::OpenFlags::RIGHT_READABLE,
-        lazy(Entries::new(entries, not_found)),
-        |root| {
-            async move {
-                // Entry header is 10 bytes, so this read should not be able to return a single
-                // entry.
-                assert_read_dirents_err!(root, 8, Status::BUFFER_TOO_SMALL);
+    run_server_client(fio::OPEN_RIGHT_READABLE, lazy(Entries::new(entries, not_found)), |root| {
+        async move {
+            // Entry header is 10 bytes, so this read should not be able to return a single
+            // entry.
+            assert_read_dirents_err!(root, 8, Status::BUFFER_TOO_SMALL);
 
-                {
-                    let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
-                    expected
-                        .add(fio::DirentType::Directory, b".")
-                        .add(fio::DirentType::File, b"file");
-                    assert_read_dirents!(root, 100, expected.into_vec());
-                }
-
-                assert_close!(root);
+            {
+                let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
+                expected.add(fio::DirentType::Directory, b".").add(fio::DirentType::File, b"file");
+                assert_read_dirents!(root, 100, expected.into_vec());
             }
-        },
-    );
+
+            assert_close!(root);
+        }
+    });
 }
 
 #[test]
@@ -473,7 +457,7 @@ fn watch_empty() {
     let scope = ExecutionScope::new();
 
     let root = lazy_with_watchers(scope.clone(), Entries::new(vec![], not_found), watcher_stream);
-    test_server_client(fio::OpenFlags::RIGHT_READABLE, root, |root| async move {
+    test_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
         let mask = fio::WatchMask::EXISTING
             | fio::WatchMask::IDLE
             | fio::WatchMask::ADDED
@@ -504,7 +488,7 @@ fn watch_non_empty() {
 
     let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
-    test_server_client(fio::OpenFlags::RIGHT_READABLE, root, |root| async move {
+    test_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
         let mask = fio::WatchMask::EXISTING
             | fio::WatchMask::IDLE
             | fio::WatchMask::ADDED
@@ -542,7 +526,7 @@ fn watch_two_watchers() {
 
     let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
-    test_server_client(fio::OpenFlags::RIGHT_READABLE, root, |root| async move {
+    test_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
         let mask = fio::WatchMask::EXISTING
             | fio::WatchMask::IDLE
             | fio::WatchMask::ADDED
@@ -592,7 +576,7 @@ fn watch_with_mask() {
 
     let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
-    test_server_client(fio::OpenFlags::RIGHT_READABLE, root, |root| async move {
+    test_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
         let mask = fio::WatchMask::IDLE | fio::WatchMask::ADDED | fio::WatchMask::REMOVED;
         let watcher_client = assert_watch!(root, mask);
 
@@ -616,7 +600,7 @@ fn watch_addition() {
 
     let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
-    test_server_client(fio::OpenFlags::RIGHT_READABLE, root, |root| async move {
+    test_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
         let mask = fio::WatchMask::ADDED | fio::WatchMask::REMOVED;
         let watcher_client = assert_watch!(root, mask);
 
@@ -659,7 +643,7 @@ fn watch_removal() {
 
     let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
-    test_server_client(fio::OpenFlags::RIGHT_READABLE, root, |root| async move {
+    test_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
         let mask = fio::WatchMask::ADDED | fio::WatchMask::REMOVED;
         let watcher_client = assert_watch!(root, mask);
 
@@ -701,7 +685,7 @@ fn watch_watcher_stream_closed() {
 
     let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
-    test_server_client(fio::OpenFlags::RIGHT_READABLE, root, |root| async move {
+    test_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
         let mask = fio::WatchMask::EXISTING | fio::WatchMask::IDLE;
         assert_watch_err!(root, mask, Status::NOT_SUPPORTED);
 
@@ -726,7 +710,7 @@ fn watch_close_watcher_stream() {
 
     let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
-    test_server_client(fio::OpenFlags::RIGHT_READABLE, root, |root| async move {
+    test_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
         let mask = fio::WatchMask::ADDED | fio::WatchMask::REMOVED;
         let watcher_client = assert_watch!(root, mask);
 

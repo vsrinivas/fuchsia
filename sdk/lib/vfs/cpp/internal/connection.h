@@ -38,7 +38,7 @@ class Connection {
   // These flags are typically received from |fuchsia.io.Node/Clone| or
   // |fuchsia.io.Directory/Open|.
   //
-  // For example, |fuchsia::io::OpenFlags::RIGHT_READABLE|.
+  // For example, |fuchsia::io::OPEN_RIGHT_READABLE|.
   fuchsia::io::OpenFlags flags() const { return flags_; }
 
   // The current file offset.

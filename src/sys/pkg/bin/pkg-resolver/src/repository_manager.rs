@@ -241,19 +241,16 @@ impl RepositoryManager {
 
             // TODO(fxbug.dev/83342): We need to reopen because `resolve_succeeds_with_broken_minfs`
             // expects it, this should be removed once the test is fixed.
-            let data_proxy = io_util::directory::open_directory(
-                &data_proxy,
-                ".",
-                fio::OpenFlags::RIGHT_WRITABLE,
-            )
-            .await
-            .context("reopen /data")?;
+            let data_proxy =
+                io_util::directory::open_directory(&data_proxy, ".", fio::OPEN_RIGHT_WRITABLE)
+                    .await
+                    .context("reopen /data")?;
 
             let path = format!("{}.new", dynamic_configs_path);
             let proxy = io_util::directory::open_file(
                 &data_proxy,
                 &path,
-                fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE | fio::OpenFlags::TRUNCATE,
+                fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE | fio::OPEN_FLAG_TRUNCATE,
             )
             .await
             .with_context(|| format!("creating file: {}", path))?;
@@ -531,7 +528,7 @@ impl RepositoryManagerBuilder<UnsetCobaltSender, UnsetInspectNode> {
     {
         let proxy = io_util::directory::open_in_namespace(
             data_dir.path().to_str().unwrap(),
-            io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
+            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
         )
         .unwrap();
         Self::new(Some(proxy), dynamic_configs_path, Experiments::none()).await
@@ -766,8 +763,7 @@ async fn load_configs_file_from_proxy(
     proxy: &fio::DirectoryProxy,
     path: &str,
 ) -> Result<Vec<RepositoryConfig>, LoadError> {
-    let file = match io_util::directory::open_file(proxy, path, io_util::OpenFlags::RIGHT_READABLE)
-        .await
+    let file = match io_util::directory::open_file(proxy, path, io_util::OPEN_RIGHT_READABLE).await
     {
         Ok(file) => file,
         Err(io_util::node::OpenError::OpenError(Status::NOT_FOUND)) => return Ok(vec![]),

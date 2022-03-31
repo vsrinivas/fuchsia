@@ -233,7 +233,7 @@ impl UsbUpdateChecker<'_> {
             .context("Resolving pacakge")?;
 
         let meta_proxy =
-            io_util::open_file(&dir, std::path::Path::new("meta"), fio::OpenFlags::RIGHT_READABLE)
+            io_util::open_file(&dir, std::path::Path::new("meta"), fio::OPEN_RIGHT_READABLE)
                 .context("Opening meta in update package")?;
         let hash =
             io_util::file::read_to_string(&meta_proxy).await.context("Reading package hash")?;

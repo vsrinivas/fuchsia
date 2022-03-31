@@ -126,7 +126,7 @@ pub fn readdir_recursive(
                     dir
                 } else {
                     let open_dir_result = dir.open(
-                        fio::OpenFlags::DIRECTORY | fio::OpenFlags::RIGHT_READABLE,
+                        fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE,
                         fio::MODE_TYPE_DIRECTORY,
                         &dir_entry.name,
                         ServerEnd::new(subdir_server.into_channel()),
@@ -295,9 +295,9 @@ pub fn parse_dir_entries(mut buf: &[u8]) -> Vec<Result<DirEntry, DecodeDirentErr
 }
 
 const DIR_FLAGS: fio::OpenFlags = fio::OpenFlags::empty()
-    .union(fio::OpenFlags::DIRECTORY)
-    .union(fio::OpenFlags::RIGHT_READABLE)
-    .union(fio::OpenFlags::RIGHT_WRITABLE);
+    .union(fio::OPEN_FLAG_DIRECTORY)
+    .union(fio::OPEN_RIGHT_READABLE)
+    .union(fio::OPEN_RIGHT_WRITABLE);
 
 /// Removes a directory and all of its children. `name` must be a subdirectory of `root_dir`.
 ///
@@ -472,7 +472,7 @@ mod tests {
         let scope = ExecutionScope::new();
         dir.open(
             scope,
-            fio::OpenFlags::DIRECTORY | fio::OpenFlags::RIGHT_READABLE,
+            fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE,
             0,
             vfs::path::Path::dot(),
             ServerEnd::new(server_end.into_channel()),
@@ -506,7 +506,7 @@ mod tests {
         let scope = ExecutionScope::new();
         let () = dir.open(
             scope,
-            fio::OpenFlags::DIRECTORY | fio::OpenFlags::RIGHT_READABLE,
+            fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE,
             0,
             vfs::path::Path::dot(),
             ServerEnd::new(server_end.into_channel()),
@@ -545,8 +545,8 @@ mod tests {
         // run twice to check that seek offset is properly reset before reading the directory
         for _ in 0..2 {
             let (tx, rx) = oneshot::channel();
-            let clone_dir = io_util::clone_directory(&dir, fio::OpenFlags::CLONE_SAME_RIGHTS)
-                .expect("clone dir");
+            let clone_dir =
+                io_util::clone_directory(&dir, fio::CLONE_FLAG_SAME_RIGHTS).expect("clone dir");
             fasync::Task::spawn(async move {
                 let entries = readdir_recursive(&clone_dir, None)
                     .collect::<Vec<Result<DirEntry, Error>>>()
@@ -658,7 +658,7 @@ mod tests {
             let subdir = io_util::open_directory(
                 &dir,
                 &Path::new("subdir"),
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             )
             .expect("could not open subdir");
             remove_dir_recursive(&subdir, "subsubdir").await.expect("remove_dir_recursive failed");
@@ -684,7 +684,7 @@ mod tests {
             let subsubdir = io_util::open_directory(
                 &dir,
                 &Path::new("subdir/subsubdir"),
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             )
             .expect("could not open subsubdir");
             remove_dir_recursive(&subsubdir, "emptydir")
@@ -733,7 +733,7 @@ mod tests {
     async fn create_nested_dir(tempdir: &TempDir) -> fio::DirectoryProxy {
         let dir = io_util::open_directory_in_namespace(
             tempdir.path().to_str().unwrap(),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("could not open tmp dir");
         io_util::create_sub_directories(&dir, Path::new("emptydir"))
@@ -751,9 +751,7 @@ mod tests {
         io_util::open_file(
             dir,
             Path::new(path),
-            fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE
-                | fio::OpenFlags::CREATE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
         )
         .expect(&format!("failed to create {}", path));
     }

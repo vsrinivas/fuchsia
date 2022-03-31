@@ -27,11 +27,10 @@ class DeviceWatcher : public fidl::WireServer<fuchsia_device_manager::DeviceWatc
   void NextDevice(NextDeviceRequestView request, NextDeviceCompleter::Sync& completer) override {
     if (watcher_ == nullptr) {
       fbl::unique_fd fd;
-      zx_status_t status =
-          fdio_open_fd(dir_path_.c_str(),
-                       static_cast<uint32_t>(fuchsia_io::wire::OpenFlags::kRightWritable |
-                                             fuchsia_io::wire::OpenFlags::kRightReadable),
-                       fd.reset_and_get_address());
+      zx_status_t status = fdio_open_fd(dir_path_.c_str(),
+                                        static_cast<uint32_t>(fuchsia_io::wire::kOpenRightWritable |
+                                                              fuchsia_io::wire::kOpenRightReadable),
+                                        fd.reset_and_get_address());
       if (status != ZX_OK) {
         completer.ReplyError(status);
         return;

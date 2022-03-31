@@ -44,7 +44,7 @@ async fn list_instances_test() {
     let service_dir = io_util::directory::open_directory(
         branch.get_exposed_dir(),
         fexamples::BankAccountMarker::SERVICE_NAME,
-        io_util::OpenFlags::RIGHT_READABLE,
+        io_util::OPEN_RIGHT_READABLE,
     )
     .await
     .expect("failed to open service dir");
@@ -68,7 +68,7 @@ async fn connect_to_instances_test() {
     let service_dir = io_util::directory::open_directory(
         branch.get_exposed_dir(),
         fexamples::BankAccountMarker::SERVICE_NAME,
-        io_util::OpenFlags::RIGHT_READABLE,
+        io_util::OPEN_RIGHT_READABLE,
     )
     .await
     .expect("failed to open service dir");

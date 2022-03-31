@@ -158,8 +158,8 @@ int main(int argc, const char** argv) {
       return ISO_DEV_MGR_RET_ERR;
     }
     status = fdio_open(ns.c_str(),
-                       static_cast<uint32_t>(fuchsia_io::wire::OpenFlags::kRightReadable |
-                                             fuchsia_io::wire::OpenFlags::kRightExecutable),
+                       static_cast<uint32_t>(fuchsia_io::wire::kOpenRightReadable |
+                                             fuchsia_io::wire::kOpenRightExecutable),
                        server.release());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to open namespace " << ns;

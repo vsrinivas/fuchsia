@@ -97,7 +97,7 @@ pub async fn populate_data_map(inspect_proxy: &fio::DirectoryProxy) -> DataMap {
         let file_proxy = match io_util::open_file(
             inspect_proxy,
             Path::new(&entry.name),
-            io_util::OpenFlags::RIGHT_READABLE,
+            io_util::OPEN_RIGHT_READABLE,
         ) {
             Ok(proxy) => proxy,
             Err(_) => {
@@ -137,7 +137,7 @@ pub async fn find_directory_proxy(path: &Path) -> Result<fio::DirectoryProxy, an
     // TODO(fxbug.dev/36762): When available, use the async directory-open api.
     io_util::open_directory_in_namespace(
         &path.to_string_lossy(),
-        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
+        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
     )
 }
 

@@ -834,7 +834,7 @@ mod tests {
 
             out_dir.clone().open(
                 ExecutionScope::new(),
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 fio::MODE_TYPE_DIRECTORY,
                 pfsPath::dot(),
                 ServerEnd::new(server_end.into_channel()),
@@ -851,7 +851,7 @@ mod tests {
 
             pseudo_dir.clone().open(
                 ExecutionScope::new(),
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 fio::MODE_TYPE_DIRECTORY,
                 pfsPath::dot(),
                 ServerEnd::new(server_end.into_channel()),
@@ -1159,7 +1159,7 @@ mod tests {
         let config_dir = io_util::open_directory(
             &hub_proxy,
             &Path::new("resolved/config"),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
         assert_eq!(vec!["logging", "tags", "verbosity"], list_directory(&config_dir).await);
@@ -1196,7 +1196,7 @@ mod tests {
         let resolved_dir = io_util::open_directory(
             &hub_proxy,
             &Path::new("resolved"),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
         assert_eq!(vec!["expose", "resolved_url", "use"], list_directory(&resolved_dir).await);
@@ -1234,7 +1234,7 @@ mod tests {
         let use_dir = io_util::open_directory(
             &hub_proxy,
             &Path::new("resolved/use"),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
 
@@ -1304,7 +1304,7 @@ mod tests {
         let resolved_dir = io_util::open_directory(
             &hub_proxy,
             &Path::new("children/a/resolved"),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
 
@@ -1357,7 +1357,7 @@ mod tests {
         let expose_dir = io_util::open_directory(
             &hub_proxy,
             &Path::new("resolved/expose"),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
         assert_eq!(vec!["bar", "hippo"], list_directory_recursive(&expose_dir).await);
@@ -1448,7 +1448,7 @@ mod tests {
         let in_dir = io_util::open_directory(
             &hub_proxy,
             &Path::new("exec/in"),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
         assert_eq!(vec!["pkg"], list_directory(&in_dir).await);
@@ -1499,7 +1499,7 @@ mod tests {
         let expose_dir = io_util::open_directory(
             &hub_proxy,
             &Path::new("exec/expose"),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
         assert_eq!(vec!["bar", "hippo"], list_directory_recursive(&expose_dir).await);
@@ -1523,7 +1523,7 @@ mod tests {
         let debug_svc_dir = io_util::open_directory(
             &hub_proxy,
             &Path::new("debug"),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
 

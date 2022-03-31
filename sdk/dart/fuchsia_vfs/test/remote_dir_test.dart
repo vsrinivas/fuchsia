@@ -133,13 +133,13 @@ void main() {
       final dir = _serveLocal(_localDirectory);
 
       // flags and statuses need to be kept in sync
-      final flags = [OpenFlags.noRemote];
+      final flags = [openFlagNoRemote];
       final statuses = [ZX.ERR_NOT_SUPPORTED];
       expect(flags.length, statuses.length);
 
       for (int i = 0; i < flags.length; i++) {
         DirectoryProxy proxy = DirectoryProxy();
-        await dir.open(OpenFlags.describe | flags[i], 0, 'subdir',
+        await dir.open(openFlagDescribe | flags[i], 0, 'subdir',
             InterfaceRequest(proxy.ctrl.request().passChannel()));
 
         await proxy.onOpen.first.then((response) {
@@ -158,13 +158,13 @@ void main() {
       final dir = RemoteDir(_remoteDirHandle);
 
       // flags and statuses need to be kept in sync
-      final flags = [OpenFlags.noRemote];
+      final flags = [openFlagNoRemote];
       final statuses = [ZX.ERR_NOT_SUPPORTED];
       expect(flags.length, statuses.length);
 
       for (int i = 0; i < flags.length; i++) {
         DirectoryProxy proxy = DirectoryProxy();
-        dir.connect(OpenFlags.describe | flags[i], 0,
+        dir.connect(openFlagDescribe | flags[i], 0,
             InterfaceRequest(proxy.ctrl.request().passChannel()));
 
         await proxy.onOpen.first.then((response) {
@@ -183,7 +183,7 @@ void main() {
       final dir = _serveLocal(_localDirectory);
 
       DirectoryProxy proxy = DirectoryProxy();
-      await dir.open(OpenFlags.describe, 0, 'subdir',
+      await dir.open(openFlagDescribe, 0, 'subdir',
           InterfaceRequest(proxy.ctrl.request().passChannel()));
 
       await proxy.onOpen.first.then((response) {
@@ -200,7 +200,7 @@ void main() {
       final dir = RemoteDir(_remoteDirHandle)..close();
 
       DirectoryProxy proxy = DirectoryProxy();
-      dir.connect(OpenFlags.describe, 0,
+      dir.connect(openFlagDescribe, 0,
           InterfaceRequest(proxy.ctrl.request().passChannel()));
 
       await proxy.onOpen.first.then((response) {
@@ -215,14 +215,14 @@ void main() {
 
 DirectoryProxy _serveLocal(PseudoDir dir) {
   DirectoryProxy proxy = DirectoryProxy();
-  var status = dir.connect(OpenFlags.rightReadable | OpenFlags.rightWritable, 0,
+  var status = dir.connect(openRightReadable | openRightWritable, 0,
       InterfaceRequest(proxy.ctrl.request().passChannel()));
   expect(status, ZX.OK);
   return proxy;
 }
 
 Future<DirectoryProxy> _openDirectory(DirectoryProxy dir, String path,
-    [flags = OpenFlags.rightReadable]) async {
+    [flags = openRightReadable]) async {
   DirectoryProxy proxy = DirectoryProxy();
   await dir.open(
       flags, 0, path, InterfaceRequest(proxy.ctrl.request().passChannel()));
@@ -231,7 +231,7 @@ Future<DirectoryProxy> _openDirectory(DirectoryProxy dir, String path,
 
 Future<String> _readFileContents(DirectoryProxy dir, String filename) async {
   final proxy = FileProxy();
-  await dir.open(OpenFlags.rightReadable, modeTypeFile, filename,
+  await dir.open(openRightReadable, modeTypeFile, filename,
       InterfaceRequest<Node>(proxy.ctrl.request().passChannel()));
 
   final data = await proxy.read(maxBuf);

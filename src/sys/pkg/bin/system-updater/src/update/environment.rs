@@ -102,25 +102,23 @@ impl NamespaceBuildInfo {
     async fn read_file(&self, name: &str) -> Result<Option<String>, Error> {
         let build_info = io_util::directory::open_in_namespace(
             "/config/build-info",
-            io_util::OpenFlags::RIGHT_READABLE,
+            io_util::OPEN_RIGHT_READABLE,
         )
         .context("while opening /config/build-info")?;
 
-        let file = match io_util::directory::open_file(
-            &build_info,
-            name,
-            io_util::OpenFlags::RIGHT_READABLE,
-        )
-        .await
-        {
-            Ok(file) => file,
-            Err(io_util::node::OpenError::OpenError(fuchsia_zircon::Status::NOT_FOUND)) => {
-                return Ok(None)
-            }
-            Err(e) => {
-                return Err(e).with_context(|| format!("while opening /config/build-info/{}", name))
-            }
-        };
+        let file =
+            match io_util::directory::open_file(&build_info, name, io_util::OPEN_RIGHT_READABLE)
+                .await
+            {
+                Ok(file) => file,
+                Err(io_util::node::OpenError::OpenError(fuchsia_zircon::Status::NOT_FOUND)) => {
+                    return Ok(None)
+                }
+                Err(e) => {
+                    return Err(e)
+                        .with_context(|| format!("while opening /config/build-info/{}", name))
+                }
+            };
 
         let contents = io_util::file::read_to_string(&file)
             .await

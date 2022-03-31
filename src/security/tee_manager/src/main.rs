@@ -21,7 +21,7 @@ use {
     fuchsia_syslog::macros::*,
     fuchsia_vfs_watcher as vfs, fuchsia_zircon as zx,
     futures::{prelude::*, select, stream::FusedStream},
-    io_util::{open_directory_in_namespace, OpenFlags},
+    io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
     std::path::PathBuf,
     uuid::Uuid,
 };
@@ -123,7 +123,7 @@ async fn enumerate_tee_devices() -> Result<Vec<PathBuf>, Error> {
 }
 
 async fn create_watcher(path: &str) -> Result<vfs::Watcher, Error> {
-    let dir = open_directory_in_namespace(path, OpenFlags::RIGHT_READABLE)?;
+    let dir = open_directory_in_namespace(path, OPEN_RIGHT_READABLE)?;
     let watcher = vfs::Watcher::new(dir).await?;
     Ok(watcher)
 }

@@ -91,7 +91,7 @@ zx_status_t RemoteBlockDevice::VolumeGetInfo(
   if (status != ZX_OK) {
     return status;
   }
-  fio::wire::OpenFlags flags = fio::wire::OpenFlags::kCloneSameRights;
+  fio::wire::OpenFlags flags = fio::wire::kCloneFlagSameRights;
   auto result = fidl::WireCall<fio::Node>(device_.borrow())->Clone(flags, std::move(server));
   if (result.status() != ZX_OK) {
     return result.status();
@@ -156,7 +156,7 @@ zx::status<std::unique_ptr<RemoteBlockDevice>> RemoteBlockDevice::Create(int fd)
 
   fdio_cpp::UnownedFdioCaller caller(fd);
   auto status = fidl::WireCall(caller.node())
-                    ->Clone(fio::wire::OpenFlags::kCloneSameRights, std::move(endpoints->server))
+                    ->Clone(fio::wire::kCloneFlagSameRights, std::move(endpoints->server))
                     .status();
   if (status != ZX_OK) {
     return zx::error(status);

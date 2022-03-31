@@ -19,8 +19,7 @@ pub async fn serve_iterator(
     dir_path: &str,
     mut iterator: ftest_manager::DebugDataIteratorRequestStream,
 ) -> Result<(), Error> {
-    let directory =
-        io_util::open_directory_in_namespace(dir_path, io_util::OpenFlags::RIGHT_READABLE)?;
+    let directory = io_util::open_directory_in_namespace(dir_path, io_util::OPEN_RIGHT_READABLE)?;
     let mut file_stream = files_async::readdir_recursive(&directory, None)
         .filter_map(|entry_result| {
             let result = match entry_result {
@@ -47,7 +46,7 @@ pub async fn serve_iterator(
             .into_iter()
             .map(|file_name| {
                 let (file, server) = create_endpoints::<fio::NodeMarker>()?;
-                directory.open(io_util::OpenFlags::RIGHT_READABLE, 0, &file_name, server)?;
+                directory.open(io_util::OPEN_RIGHT_READABLE, 0, &file_name, server)?;
                 Ok(ftest_manager::DebugData {
                     file: Some(ClientEnd::new(file.into_channel())),
                     name: file_name.into(),

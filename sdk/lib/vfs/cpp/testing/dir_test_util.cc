@@ -40,7 +40,7 @@ void DirConnection::AssertOpen(async_dispatcher_t* dispatcher, fuchsia::io::Open
                                zx_status_t expected_status, bool test_on_open_event) {
   fuchsia::io::NodePtr node_ptr;
   if (test_on_open_event) {
-    flags |= fuchsia::io::OpenFlags::DESCRIBE;
+    flags |= fuchsia::io::OPEN_FLAG_DESCRIBE;
   }
   EXPECT_EQ(expected_status,
             GetDirectoryNode()->Serve(flags, node_ptr.NewRequest().TakeChannel(), dispatcher));

@@ -127,23 +127,23 @@ pub struct ServiceFs<ServiceObjTy: ServiceObjTrait> {
 const ROOT_NODE: usize = 0;
 const NO_FLAGS: fio::OpenFlags = fio::OpenFlags::empty();
 const CLONE_REQ_SUPPORTED_FLAGS: fio::OpenFlags = fio::OpenFlags::empty()
-    .union(fio::OpenFlags::RIGHT_READABLE)
-    .union(fio::OpenFlags::RIGHT_WRITABLE)
-    .union(fio::OpenFlags::DESCRIBE)
-    .union(fio::OpenFlags::CLONE_SAME_RIGHTS)
-    .union(fio::OpenFlags::DIRECTORY);
+    .union(fio::OPEN_RIGHT_READABLE)
+    .union(fio::OPEN_RIGHT_WRITABLE)
+    .union(fio::OPEN_FLAG_DESCRIBE)
+    .union(fio::CLONE_FLAG_SAME_RIGHTS)
+    .union(fio::OPEN_FLAG_DIRECTORY);
 // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED when all out-of-tree clients have been
 // updated to use the latest version of the SDK.
 const OPEN_REQ_SUPPORTED_FLAGS: fio::OpenFlags = fio::OpenFlags::empty()
-    .union(fio::OpenFlags::RIGHT_READABLE)
-    .union(fio::OpenFlags::RIGHT_WRITABLE)
-    .union(fio::OpenFlags::DESCRIBE)
-    .union(fio::OpenFlags::POSIX_DEPRECATED)
-    .union(fio::OpenFlags::POSIX_WRITABLE)
-    .union(fio::OpenFlags::POSIX_EXECUTABLE)
-    .union(fio::OpenFlags::DIRECTORY)
-    .union(fio::OpenFlags::NOT_DIRECTORY)
-    .union(fio::OpenFlags::NODE_REFERENCE);
+    .union(fio::OPEN_RIGHT_READABLE)
+    .union(fio::OPEN_RIGHT_WRITABLE)
+    .union(fio::OPEN_FLAG_DESCRIBE)
+    .union(fio::OPEN_FLAG_POSIX_DEPRECATED)
+    .union(fio::OPEN_FLAG_POSIX_WRITABLE)
+    .union(fio::OPEN_FLAG_POSIX_EXECUTABLE)
+    .union(fio::OPEN_FLAG_DIRECTORY)
+    .union(fio::OPEN_FLAG_NOT_DIRECTORY)
+    .union(fio::OPEN_FLAG_NODE_REFERENCE);
 
 impl<'a, Output: 'a> ServiceFs<ServiceObjLocal<'a, Output>> {
     /// Create a new `ServiceFs` that is singlethreaded-only and does not
@@ -990,7 +990,7 @@ fn maybe_send_error(
     flags: fio::OpenFlags,
     error: zx::sys::zx_status_t,
 ) -> Result<(), Error> {
-    if flags.intersects(fio::OpenFlags::DESCRIBE) {
+    if flags.intersects(fio::OPEN_FLAG_DESCRIBE) {
         send_failed_on_open(object, error)?;
     }
     Ok(())
@@ -1101,23 +1101,23 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             _ => {}
         }
 
-        let info = if flags.intersects(fio::OpenFlags::DESCRIBE) {
+        let info = if flags.intersects(fio::OPEN_FLAG_DESCRIBE) {
             Some(self.describe_node(position)?)
         } else {
             None
         };
 
         let is_directory = if let ServiceFsNode::Directory { .. } = node { true } else { false };
-        if (flags.intersects(fio::OpenFlags::DIRECTORY)) && !is_directory {
+        if (flags.intersects(fio::OPEN_FLAG_DIRECTORY)) && !is_directory {
             send_failed_on_open(object, zx::sys::ZX_ERR_NOT_DIR)?;
             return Ok(None);
         }
-        if (flags.intersects(fio::OpenFlags::NOT_DIRECTORY)) && is_directory {
+        if (flags.intersects(fio::OPEN_FLAG_NOT_DIRECTORY)) && is_directory {
             send_failed_on_open(object, zx::sys::ZX_ERR_NOT_FILE)?;
             return Ok(None);
         }
 
-        if flags.intersects(fio::OpenFlags::NODE_REFERENCE) {
+        if flags.intersects(fio::OPEN_FLAG_NODE_REFERENCE) {
             let chan = into_async(object.into_channel())?;
             let stream = fio::NodeRequestStream::from_channel(chan);
             send_info_node(&stream, info)?;
@@ -1570,7 +1570,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
     ) -> Result<ConnectionState, Error> {
         match request {
             fio::NodeRequest::Clone { flags, object, control_handle: _ } => {
-                if !flags.intersects(fio::OpenFlags::NODE_REFERENCE) {
+                if !flags.intersects(fio::OPEN_FLAG_NODE_REFERENCE) {
                     // we cannot connect the object-- it is requesting more than a
                     // node reference, which is not allowed from within a node reference.
                     return Ok(ConnectionState::Open);

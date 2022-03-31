@@ -55,7 +55,7 @@ impl Client {
     pub fn open_from_namespace() -> Result<Self, BlobfsError> {
         let proxy = io_util::directory::open_in_namespace(
             "/blob",
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )?;
         Ok(Client { proxy })
     }
@@ -65,7 +65,7 @@ impl Client {
     pub fn open_from_namespace_executable() -> Result<Self, BlobfsError> {
         let proxy = io_util::directory::open_in_namespace(
             "/blob",
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )?;
         Ok(Client { proxy })
     }
@@ -126,7 +126,7 @@ impl Client {
         let blobfs = Client::new(
             io_util::directory::open_in_namespace(
                 blobfs_dir.path().to_str().unwrap(),
-                fio::OpenFlags::RIGHT_READABLE,
+                fio::OPEN_RIGHT_READABLE,
             )
             .unwrap(),
         );
@@ -168,12 +168,8 @@ impl Client {
         &self,
         blob: &Hash,
     ) -> Result<fio::FileProxy, io_util::node::OpenError> {
-        io_util::directory::open_file(
-            &self.proxy,
-            &blob.to_string(),
-            fio::OpenFlags::RIGHT_READABLE,
-        )
-        .await
+        io_util::directory::open_file(&self.proxy, &blob.to_string(), fio::OPEN_RIGHT_READABLE)
+            .await
     }
 
     /// Open the blob for reading. The target is not verified to be any
@@ -185,7 +181,7 @@ impl Client {
         io_util::directory::open_file_no_describe(
             &self.proxy,
             &blob.to_string(),
-            fio::OpenFlags::RIGHT_READABLE,
+            fio::OPEN_RIGHT_READABLE,
         )
     }
 
@@ -202,7 +198,7 @@ impl Client {
         let file = match io_util::directory::open_file_no_describe(
             &self.proxy,
             &blob.to_string(),
-            fio::OpenFlags::DESCRIBE | fio::OpenFlags::RIGHT_READABLE,
+            fio::OPEN_FLAG_DESCRIBE | fio::OPEN_RIGHT_READABLE,
         ) {
             Ok(file) => file,
             Err(_) => return false,

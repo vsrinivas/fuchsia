@@ -92,7 +92,7 @@ impl DeviceWatcher {
         dir: &str,
         timeout: zx::Duration,
     ) -> Result<DeviceWatcher, Error> {
-        let open_dir = open_directory_in_namespace(dir, fio::OpenFlags::RIGHT_READABLE)?;
+        let open_dir = open_directory_in_namespace(dir, fio::OPEN_RIGHT_READABLE)?;
         Self::new(dir, open_dir, timeout).await
     }
 
@@ -216,7 +216,7 @@ impl DeviceWatcher {
         let file = io_util::open_file(
             &self.watched_dir,
             relative_path.as_path(),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )?;
         let file = fdio::create_fd(
             file.into_channel()
@@ -268,7 +268,7 @@ mod tests {
         let dev_dir = io_util::directory::open_directory(
             realm.root.get_exposed_dir(),
             "dev",
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .await?;
         // Block until the test control device is ready.
@@ -281,7 +281,7 @@ mod tests {
         let control_dev_dir = io_util::directory::open_directory(
             &dev_dir,
             CONTROL_DEVICE_RELATIVE,
-            fio::OpenFlags::RIGHT_READABLE,
+            fio::OPEN_RIGHT_READABLE,
         )
         .await?;
         Ok(IsolatedDevMgrTest { _realm: realm, dev_dir, control_dev_dir })
@@ -297,7 +297,7 @@ mod tests {
         let control_dev_file = io_util::open_file(
             dev_dir,
             Path::new(CONTROL_DEVICE_RELATIVE),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )?;
         let control_dev_chan = control_dev_file
             .into_channel()

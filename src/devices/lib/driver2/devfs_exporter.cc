@@ -19,7 +19,7 @@ fpromise::promise<void, zx_status_t> CheckFileExists(
   if (svc_endpoints.is_error()) {
     return fpromise::make_error_promise(svc_endpoints.status_value());
   }
-  auto result = dir->Open(fuchsia_io::wire::OpenFlags::kNodeReference, 0,
+  auto result = dir->Open(fuchsia_io::wire::kOpenFlagNodeReference, 0,
                           fidl::StringView::FromExternal(path), std::move(svc_endpoints->server));
   if (!result.ok()) {
     return fpromise::make_error_promise(result.status());
@@ -74,7 +74,7 @@ fpromise::promise<void, zx_status_t> DevfsExporter::ExportImpl(std::string_view 
   }
 
   auto result =
-      svc_dir_->Clone(fuchsia_io::wire::OpenFlags::kCloneSameRights,
+      svc_dir_->Clone(fuchsia_io::wire::kCloneFlagSameRights,
                       fidl::ServerEnd<fuchsia_io::Node>(svc_endpoints->server.TakeChannel()));
   if (!result.ok()) {
     return fpromise::make_error_promise(result.status());

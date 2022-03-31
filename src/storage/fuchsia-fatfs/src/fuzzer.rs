@@ -68,7 +68,7 @@ impl FuzzSink {
             let mut closer = Closer::new(fs.filesystem());
             let entry = match self.dir.open_child(
                 name,
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 0,
                 &mut closer,
             ) {

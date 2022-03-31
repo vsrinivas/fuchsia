@@ -162,7 +162,7 @@ impl Registry {
                             let (client_end, server_end) =
                                 create_endpoints::<fio::DirectoryMarker>()?;
                             p.clone(
-                                fio::OpenFlags::CLONE_SAME_RIGHTS,
+                                fio::CLONE_FLAG_SAME_RIGHTS,
                                 ServerEnd::new(server_end.into_channel()),
                             )?;
                             Some(fsys::Package {
@@ -220,7 +220,7 @@ impl Registry {
         let package_dir = component.package_dir.clone();
         let package_dir = package_dir.ok_or(fsys::ResolverError::PackageNotFound)?;
         let manifest_file =
-            io_util::open_file(&package_dir, Path::new(&fragment), fio::OpenFlags::RIGHT_READABLE)
+            io_util::open_file(&package_dir, Path::new(&fragment), fio::OPEN_RIGHT_READABLE)
                 .map_err(|_| fsys::ResolverError::ManifestNotFound)?;
         let component_decl: fcdecl::Component = io_util::read_file_fidl(&manifest_file)
             .await
@@ -230,7 +230,7 @@ impl Registry {
         let (client_end, server_end) = create_endpoints::<fio::DirectoryMarker>()
             .map_err(|_| fsys::ResolverError::Internal)?;
         package_dir
-            .clone(fio::OpenFlags::CLONE_SAME_RIGHTS, ServerEnd::new(server_end.into_channel()))
+            .clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server_end.into_channel()))
             .map_err(|_| fsys::ResolverError::Io)?;
         let config_values = Self::get_config_data(
             &component_decl,

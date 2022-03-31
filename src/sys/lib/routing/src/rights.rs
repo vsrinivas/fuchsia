@@ -28,18 +28,18 @@ lazy_static! {
         | fio::Operations::MODIFY_DIRECTORY
         | fio::Operations::UPDATE_ATTRIBUTES;
 
-    /// All the fio rights required to represent fio::OpenFlags::RIGHT_READABLE.
+    /// All the fio rights required to represent fio::OPEN_RIGHT_READABLE.
     static ref LEGACY_READABLE_RIGHTS: fio::Operations =
         fio::Operations::READ_BYTES
         | fio::Operations::GET_ATTRIBUTES
         | fio::Operations::TRAVERSE
         | fio::Operations::ENUMERATE;
-    /// All the fio rights required to represent fio::OpenFlags::RIGHT_WRITABLE.
+    /// All the fio rights required to represent fio::OPEN_RIGHT_WRITABLE.
     static ref LEGACY_WRITABLE_RIGHTS: fio::Operations =
         fio::Operations::WRITE_BYTES
         | fio::Operations::UPDATE_ATTRIBUTES
         | fio::Operations::MODIFY_DIRECTORY;
-    /// All the fio rights required to represent fio::OpenFlags::RIGHT_EXECUTABLE.
+    /// All the fio rights required to represent fio::OPEN_RIGHT_EXECUTABLE.
     static ref LEGACY_EXECUTABLE_RIGHTS: fio::Operations = fio::Operations::EXECUTE;
 }
 
@@ -56,13 +56,13 @@ impl Rights {
         // The `intersects` below is intentional. The translation from io2 to io rights is lossy
         // in the sense that a single io2 right may require an io right with coarser permissions.
         if rights.intersects(*LEGACY_READABLE_RIGHTS) {
-            flags |= fio::OpenFlags::RIGHT_READABLE;
+            flags |= fio::OPEN_RIGHT_READABLE;
         }
         if rights.intersects(*LEGACY_WRITABLE_RIGHTS) {
-            flags |= fio::OpenFlags::RIGHT_WRITABLE;
+            flags |= fio::OPEN_RIGHT_WRITABLE;
         }
         if rights.contains(fio::Operations::EXECUTE) {
-            flags |= fio::OpenFlags::RIGHT_EXECUTABLE;
+            flags |= fio::OPEN_RIGHT_EXECUTABLE;
         }
         // Since there is no direct translation for connect in CV1 we must explicitly define it
         // here as both flags.
@@ -70,7 +70,7 @@ impl Rights {
         // TODO(fxbug.dev/60673): Is this correct? ReadBytes | Connect seems like it should translate to
         // READABLE | WRITABLE, not empty rights.
         if flags.is_empty() && rights.contains(fio::Operations::CONNECT) {
-            flags |= fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE;
+            flags |= fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
         }
         flags
     }
@@ -135,58 +135,47 @@ mod tests {
 
     #[test]
     fn into_legacy() {
-        assert_eq!(
-            Rights::from(*LEGACY_READABLE_RIGHTS).into_legacy(),
-            fio::OpenFlags::RIGHT_READABLE
-        );
-        assert_eq!(
-            Rights::from(*LEGACY_WRITABLE_RIGHTS).into_legacy(),
-            fio::OpenFlags::RIGHT_WRITABLE
-        );
+        assert_eq!(Rights::from(*LEGACY_READABLE_RIGHTS).into_legacy(), fio::OPEN_RIGHT_READABLE);
+        assert_eq!(Rights::from(*LEGACY_WRITABLE_RIGHTS).into_legacy(), fio::OPEN_RIGHT_WRITABLE);
         assert_eq!(
             Rights::from(*LEGACY_EXECUTABLE_RIGHTS).into_legacy(),
-            fio::OpenFlags::RIGHT_EXECUTABLE
+            fio::OPEN_RIGHT_EXECUTABLE
         );
         assert_eq!(
             Rights::from(*LEGACY_READABLE_RIGHTS | *LEGACY_WRITABLE_RIGHTS).into_legacy(),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE
         );
         assert_eq!(
             Rights::from(
                 *LEGACY_READABLE_RIGHTS | *LEGACY_WRITABLE_RIGHTS | *LEGACY_EXECUTABLE_RIGHTS
             )
             .into_legacy(),
-            fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE
-                | fio::OpenFlags::RIGHT_EXECUTABLE
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE
         );
         assert_eq!(
             Rights::from(fio::Operations::READ_BYTES).into_legacy(),
-            fio::OpenFlags::RIGHT_READABLE
+            fio::OPEN_RIGHT_READABLE
         );
         assert_eq!(
             Rights::from(fio::Operations::GET_ATTRIBUTES).into_legacy(),
-            fio::OpenFlags::RIGHT_READABLE
+            fio::OPEN_RIGHT_READABLE
         );
-        assert_eq!(
-            Rights::from(fio::Operations::TRAVERSE).into_legacy(),
-            fio::OpenFlags::RIGHT_READABLE
-        );
+        assert_eq!(Rights::from(fio::Operations::TRAVERSE).into_legacy(), fio::OPEN_RIGHT_READABLE);
         assert_eq!(
             Rights::from(fio::Operations::ENUMERATE).into_legacy(),
-            fio::OpenFlags::RIGHT_READABLE
+            fio::OPEN_RIGHT_READABLE
         );
         assert_eq!(
             Rights::from(fio::Operations::WRITE_BYTES).into_legacy(),
-            fio::OpenFlags::RIGHT_WRITABLE
+            fio::OPEN_RIGHT_WRITABLE
         );
         assert_eq!(
             Rights::from(fio::Operations::UPDATE_ATTRIBUTES).into_legacy(),
-            fio::OpenFlags::RIGHT_WRITABLE
+            fio::OPEN_RIGHT_WRITABLE
         );
         assert_eq!(
             Rights::from(fio::Operations::MODIFY_DIRECTORY).into_legacy(),
-            fio::OpenFlags::RIGHT_WRITABLE
+            fio::OPEN_RIGHT_WRITABLE
         );
     }
 }

@@ -264,7 +264,7 @@ impl Package {
 async fn read_file(dir: &fio::DirectoryProxy, path: &str) -> Result<Vec<u8>, VerificationError> {
     let (file, server_end) = fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
-    let flags = fio::OpenFlags::DESCRIBE | fio::OpenFlags::RIGHT_READABLE;
+    let flags = fio::OPEN_FLAG_DESCRIBE | fio::OPEN_RIGHT_READABLE;
     dir.open(flags, 0, path, ServerEnd::new(server_end.into_channel()))
         .expect("open request to send");
 
@@ -805,14 +805,14 @@ mod tests {
         assert_eq!(pkg.meta_far_merkle, fs::read_to_string("/pkg/meta")?.parse()?);
 
         let this_pkg_dir =
-            io_util::open_directory_in_namespace("/pkg", io_util::OpenFlags::RIGHT_READABLE)?;
+            io_util::open_directory_in_namespace("/pkg", io_util::OPEN_RIGHT_READABLE)?;
         pkg.verify_contents(&this_pkg_dir).await.expect("contents to be equivalent");
 
         let pkg_dir = make_this_package_dir()?;
 
         let this_pkg_dir = io_util::open_directory_in_namespace(
             pkg_dir.path().to_str().unwrap(),
-            io_util::OpenFlags::RIGHT_READABLE,
+            io_util::OPEN_RIGHT_READABLE,
         )?;
 
         assert_matches!(pkg.verify_contents(&this_pkg_dir).await, Ok(()));
@@ -829,7 +829,7 @@ mod tests {
 
         let pkg_dir_proxy = io_util::open_directory_in_namespace(
             pkg_dir.path().to_str().unwrap(),
-            io_util::OpenFlags::RIGHT_READABLE,
+            io_util::OPEN_RIGHT_READABLE,
         )?;
 
         assert_matches!(
@@ -848,7 +848,7 @@ mod tests {
 
         let pkg_dir_proxy = io_util::open_directory_in_namespace(
             pkg_dir.path().to_str().unwrap(),
-            io_util::OpenFlags::RIGHT_READABLE,
+            io_util::OPEN_RIGHT_READABLE,
         )?;
 
         assert_matches!(
@@ -867,7 +867,7 @@ mod tests {
 
         let pkg_dir_proxy = io_util::open_directory_in_namespace(
             pkg_dir.path().to_str().unwrap(),
-            io_util::OpenFlags::RIGHT_READABLE,
+            io_util::OPEN_RIGHT_READABLE,
         )?;
 
         assert_matches!(
@@ -886,7 +886,7 @@ mod tests {
 
         let pkg_dir_proxy = io_util::open_directory_in_namespace(
             pkg_dir.path().to_str().unwrap(),
-            io_util::OpenFlags::RIGHT_READABLE,
+            io_util::OPEN_RIGHT_READABLE,
         )?;
 
         assert_matches!(

@@ -713,7 +713,7 @@ macro_rules! assert_read_dirents_path_one_listing {
     ($proxy:expr, $path:expr, $max_bytes:expr, $( { $type:tt, $name:expr $(,)* } ),* $(,)*) => {{
         use $crate::test_utils::assertions::reexport::fio;
 
-        let flags = fio::OpenFlags::DESCRIBE;
+        let flags = fio::OPEN_FLAG_DESCRIBE;
         let path = open_get_directory_proxy_assert_ok!($proxy, flags, $path);
 
         assert_read_dirents_one_listing!(path, $max_bytes, $( { $type, $name }, )*);

@@ -645,7 +645,7 @@ let component_storage_proxy = builder.host_storage(
 let file_proxy = io_util::open_file(
     &component_storage_proxy,
     "config-file.json",
-    fio::OpenFlags::RIGHT_WRITABLE|fio::OpenFlags::CREATE,
+    fio::OPEN_RIGHT_WRITABLE|fio::OPEN_FLAG_CREATE,
 )?;
 io_util::write_file(&file_proxy, "{ \"foo\": \"bar\"}").await?;
 let realm_instance = builder.create().await?;
@@ -954,7 +954,7 @@ let realm_instance = builder.build().await?;
 let rb_factory_proxy = connect_to_service::<RealmBuilderFactoryMarker>().await?;
 let pkg_dir_proxy = io_util::open_directory_in_namespace(
     "/pkg",
-    io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_EXECUTABLE,
+    io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_EXECUTABLE,
 )?;
 let pkg_dir_client_end =
     ClientEnd::from(pkg_dir_proxy.into_channel().unwrap().into_zx_channel());

@@ -46,7 +46,7 @@ use {
 };
 
 fn check_open_flags_for_existing_entry(flags: fio::OpenFlags) -> Result<(), Status> {
-    if flags.intersects(fio::OpenFlags::CREATE_IF_ABSENT) {
+    if flags.intersects(fio::OPEN_FLAG_CREATE_IF_ABSENT) {
         return Err(Status::ALREADY_EXISTS);
     }
     // Other flags are verified by VFS's new_connection_validate_flags method.
@@ -271,7 +271,7 @@ impl FatDirectory {
             let (child_flags, child_mode) = if path.is_single_component() {
                 (flags, mode)
             } else {
-                (fio::OpenFlags::DIRECTORY, fio::MODE_TYPE_DIRECTORY)
+                (fio::OPEN_FLAG_DIRECTORY, fio::MODE_TYPE_DIRECTORY)
             };
 
             match cur_entry {
@@ -338,11 +338,11 @@ impl FatDirectory {
                         name.to_owned(),
                     )))
                 }
-            } else if flags.intersects(fio::OpenFlags::CREATE) {
+            } else if flags.intersects(fio::OPEN_FLAG_CREATE) {
                 // Child entry does not exist, but we've been asked to create it.
                 created = true;
                 let dir = self.borrow_dir(&fs_lock)?;
-                if flags.intersects(fio::OpenFlags::DIRECTORY)
+                if flags.intersects(fio::OPEN_FLAG_DIRECTORY)
                     || (mode & fio::MODE_TYPE_MASK == fio::MODE_TYPE_DIRECTORY)
                 {
                     let dir = dir.create_dir(name).map_err(fatfs_error_to_status)?;
@@ -926,7 +926,7 @@ mod tests {
 
         let scope = ExecutionScope::new();
         let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
-        dir.clone().open(scope.clone(), fio::OpenFlags::RIGHT_READABLE, 0, Path::dot(), server_end);
+        dir.clone().open(scope.clone(), fio::OPEN_RIGHT_READABLE, 0, Path::dot(), server_end);
         let scope_clone = scope.clone();
 
         proxy
@@ -938,7 +938,7 @@ mod tests {
         let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
         dir.clone().open(
             scope_clone,
-            fio::OpenFlags::RIGHT_READABLE,
+            fio::OPEN_RIGHT_READABLE,
             0,
             Path::validate_and_split("test").unwrap(),
             server_end,

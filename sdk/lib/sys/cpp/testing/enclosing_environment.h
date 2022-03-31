@@ -130,19 +130,18 @@ class EnvironmentServices {
   // Serve service directory using |flags| and returns a new |InterfaceHandle|;
   // Will cause exception if serving fails.
   fidl::InterfaceHandle<fuchsia::io::Directory> ServeServiceDir(
-      fuchsia::io::OpenFlags flags = fuchsia::io::OpenFlags::RIGHT_READABLE |
-                                     fuchsia::io::OpenFlags::RIGHT_WRITABLE);
+      fuchsia::io::OpenFlags flags = fuchsia::io::OPEN_RIGHT_READABLE |
+                                     fuchsia::io::OPEN_RIGHT_WRITABLE);
 
   // Serves service directory using passed |request| and returns status.
-  zx_status_t ServeServiceDir(
-      fidl::InterfaceRequest<fuchsia::io::Directory> request,
-      fuchsia::io::OpenFlags flags = fuchsia::io::OpenFlags::RIGHT_READABLE |
-                                     fuchsia::io::OpenFlags::RIGHT_WRITABLE);
+  zx_status_t ServeServiceDir(fidl::InterfaceRequest<fuchsia::io::Directory> request,
+                              fuchsia::io::OpenFlags flags = fuchsia::io::OPEN_RIGHT_READABLE |
+                                                             fuchsia::io::OPEN_RIGHT_WRITABLE);
 
   // Serves service directory using passed |request| and returns status.
-  zx_status_t ServeServiceDir(
-      zx::channel request, fuchsia::io::OpenFlags flags = fuchsia::io::OpenFlags::RIGHT_READABLE |
-                                                          fuchsia::io::OpenFlags::RIGHT_WRITABLE);
+  zx_status_t ServeServiceDir(zx::channel request,
+                              fuchsia::io::OpenFlags flags = fuchsia::io::OPEN_RIGHT_READABLE |
+                                                             fuchsia::io::OPEN_RIGHT_WRITABLE);
 
   // Sets a callback to be triggered whenever a singleton service launched
   // by |AddServiceWithLaunchInfo| terminates. The callback provides the

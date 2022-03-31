@@ -76,7 +76,7 @@ pub(crate) async fn update_mode(
 ) -> Result<Option<UpdateMode>, ParseUpdateModeError> {
     // Open the update-mode file.
     let fopen_res =
-        io_util::directory::open_file(proxy, "update-mode", fio::OpenFlags::RIGHT_READABLE).await;
+        io_util::directory::open_file(proxy, "update-mode", fio::OPEN_RIGHT_READABLE).await;
     if let Err(io_util::node::OpenError::OpenError(Status::NOT_FOUND)) = fopen_res {
         return Ok(None);
     }

@@ -63,8 +63,7 @@ impl FatDevice {
     async fn find_fat_partition(dir_proxy: &fio::DirectoryProxy) -> Result<Option<String>, Error> {
         let children = files_async::readdir(&dir_proxy).await?;
         let (channel, remote) = zx::Channel::create()?;
-        dir_proxy
-            .clone(fio::OpenFlags::CLONE_SAME_RIGHTS, fidl::endpoints::ServerEnd::new(remote))?;
+        dir_proxy.clone(fio::CLONE_FLAG_SAME_RIGHTS, fidl::endpoints::ServerEnd::new(remote))?;
 
         for entry in children.iter() {
             let guid = match Self::get_guid_at(&channel, &entry.name).await {
@@ -225,7 +224,7 @@ pub mod test {
         let _fs_task = fasync::Task::spawn(fs.for_each(|part| async { part.serve().await }));
 
         let (dev_dir, remote) = zx::Channel::create().expect("create channel OK");
-        fdio::open_at(&local, "dev", fio::OpenFlags::RIGHT_READABLE, remote).expect("Open OK");
+        fdio::open_at(&local, "dev", fio::OPEN_RIGHT_READABLE, remote).expect("Open OK");
         let result = FatDevice::get_guid_at(&dev_dir, "000").await.expect("get guid succeeds");
         assert_eq!(result.unwrap().value, MICROSOFT_BASIC_DATA_GUID);
     }
@@ -243,7 +242,7 @@ pub mod test {
         let _fs_task = fasync::Task::spawn(fs.for_each(|part| async { part.serve().await }));
 
         let (dev_dir, remote) = zx::Channel::create().expect("create channel OK");
-        fdio::open_at(&local, "dev", fio::OpenFlags::RIGHT_READABLE, remote).expect("Open OK");
+        fdio::open_at(&local, "dev", fio::OPEN_RIGHT_READABLE, remote).expect("Open OK");
         let dev_dir = fio::DirectoryProxy::new(fidl::AsyncChannel::from_channel(dev_dir).unwrap());
         let result = FatDevice::find_fat_partition(&dev_dir).await;
         assert_eq!(result.expect("Find partition succeeds"), Some("002".to_owned()));
@@ -262,7 +261,7 @@ pub mod test {
         let _fs_task = fasync::Task::spawn(fs.for_each(|part| async { part.serve().await }));
 
         let (dev_dir, remote) = zx::Channel::create().expect("create channel OK");
-        fdio::open_at(&local, "dev", fio::OpenFlags::RIGHT_READABLE, remote).expect("Open OK");
+        fdio::open_at(&local, "dev", fio::OPEN_RIGHT_READABLE, remote).expect("Open OK");
         let dev_dir = fio::DirectoryProxy::new(fidl::AsyncChannel::from_channel(dev_dir).unwrap());
         let result = FatDevice::find_fat_partition(&dev_dir).await;
         assert_eq!(result.expect("Find partition succeeds"), None);
@@ -312,7 +311,7 @@ pub mod test {
         let root = dev.get_root().unwrap();
         root.clone().open(
             dev.scope.clone(),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             0,
             Path::dot(),
             fidl::endpoints::ServerEnd::new(channel),

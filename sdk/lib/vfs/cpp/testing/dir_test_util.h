@@ -65,7 +65,7 @@ class DirConnection : public gtest::RealLoopFixture {
                           fuchsia::io::OpenFlags flags, uint32_t mode = 0,
                           zx_status_t expected_status = ZX_OK) {
     ::fidl::InterfacePtr<fuchsia::io::Node> node_ptr;
-    dir_ptr->Open(flags | fuchsia::io::OpenFlags::DESCRIBE, mode, path, node_ptr.NewRequest());
+    dir_ptr->Open(flags | fuchsia::io::OPEN_FLAG_DESCRIBE, mode, path, node_ptr.NewRequest());
     bool on_open_called = false;
     node_ptr.events().OnOpen = [&](zx_status_t status,
                                    std::unique_ptr<fuchsia::io::NodeInfo> unused) {

@@ -29,9 +29,7 @@ impl FSHost {
         blobfs.mount(blobfs_mountpoint);
         let blobfs_dir = open_in_namespace(
             blobfs_mountpoint,
-            fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE
-                | fio::OpenFlags::RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )
         .unwrap();
         let mut system_image_file = File::open(system_image_path).unwrap();
@@ -53,9 +51,7 @@ impl FSHost {
         let scope = ExecutionScope::new();
         out_dir.open(
             scope.clone(),
-            fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE
-                | fio::OpenFlags::RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE,
             fio::MODE_TYPE_DIRECTORY,
             Path::dot(),
             take_startup_handle(HandleType::DirectoryRequest.into()).unwrap().into(),

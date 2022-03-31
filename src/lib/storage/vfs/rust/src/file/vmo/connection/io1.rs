@@ -141,7 +141,7 @@ impl VmoFileConnection {
                     }
                 };
 
-            if flags.intersects(fio::OpenFlags::TRUNCATE) {
+            if flags.intersects(fio::OPEN_FLAG_TRUNCATE) {
                 let mut seek = 0;
                 if let Err(status) = Self::truncate_vmo(&mut *state, 0, &mut seek) {
                     send_on_open_with_error(flags, server_end, status);
@@ -176,7 +176,7 @@ impl VmoFileConnection {
         let mut connection =
             VmoFileConnection { scope: scope.clone(), file, requests, flags, seek: 0 };
 
-        if flags.intersects(fio::OpenFlags::DESCRIBE) {
+        if flags.intersects(fio::OPEN_FLAG_DESCRIBE) {
             match connection.get_node_info().await {
                 Ok(mut info) => {
                     let send_result =
@@ -340,8 +340,8 @@ impl VmoFileConnection {
         // The current fuchsia.io specification for Vmofile node types specify that the node is
         // immutable, thus if the file is writable, we report it as a regular file instead.
         // If this changes in the future, we need to handle size changes in the backing VMO.
-        if self.flags.intersects(fio::OpenFlags::NODE_REFERENCE)
-            || self.flags.intersects(fio::OpenFlags::RIGHT_WRITABLE)
+        if self.flags.intersects(fio::OPEN_FLAG_NODE_REFERENCE)
+            || self.flags.intersects(fio::OPEN_RIGHT_WRITABLE)
         {
             Ok(fio::NodeInfo::File(fio::FileObject { event: None, stream: None }))
         } else {
@@ -355,7 +355,7 @@ impl VmoFileConnection {
                     // We already checked above that the connection is not writable. We also remove
                     // SET_PROPERTY as this would also allow size changes.
                     new_rights.remove(zx::Rights::WRITE | zx::Rights::SET_PROPERTY);
-                    if !self.flags.intersects(fio::OpenFlags::RIGHT_EXECUTABLE) {
+                    if !self.flags.intersects(fio::OPEN_RIGHT_EXECUTABLE) {
                         new_rights.remove(zx::Rights::EXECUTE);
                     }
                     let vmo = vmo.duplicate_handle(new_rights).unwrap();
@@ -696,7 +696,7 @@ impl VmoFileConnection {
     where
         R: FnOnce(zx::Status, &[u8]) -> Result<(), fidl::Error>,
     {
-        if !self.flags.intersects(fio::OpenFlags::RIGHT_READABLE) {
+        if !self.flags.intersects(fio::OPEN_RIGHT_READABLE) {
             responder(zx::Status::BAD_HANDLE, &[])?;
             return Ok(0);
         }
@@ -765,7 +765,7 @@ impl VmoFileConnection {
     where
         R: FnOnce(zx::Status, u64) -> Result<(), fidl::Error>,
     {
-        if !self.flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
+        if !self.flags.intersects(fio::OPEN_RIGHT_WRITABLE) {
             responder(zx::Status::BAD_HANDLE, 0)?;
             return Ok(0);
         }
@@ -834,7 +834,7 @@ impl VmoFileConnection {
     where
         R: FnOnce(zx::Status, u64) -> Result<(), fidl::Error>,
     {
-        if self.flags.intersects(fio::OpenFlags::NODE_REFERENCE) {
+        if self.flags.intersects(fio::OPEN_FLAG_NODE_REFERENCE) {
             responder(zx::Status::BAD_HANDLE, 0)?;
             return Ok(());
         }
@@ -883,7 +883,7 @@ impl VmoFileConnection {
     where
         R: FnOnce(zx::Status) -> Result<(), fidl::Error>,
     {
-        if !self.flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
+        if !self.flags.intersects(fio::OPEN_RIGHT_WRITABLE) {
             return responder(zx::Status::BAD_HANDLE);
         }
 

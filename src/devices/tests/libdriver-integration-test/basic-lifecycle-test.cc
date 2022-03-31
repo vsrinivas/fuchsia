@@ -222,7 +222,7 @@ TEST_F(BasicLifecycleTest, StatDoesntCallOpen) {
                      .and_then([&]() {
                        mock_child_device->set_hooks(std::make_unique<NeverOpenOrClose>());
                        return DoOpen(mock_child_device->path(), &client,
-                                     fuchsia::io::OpenFlags::NODE_REFERENCE);
+                                     fuchsia::io::OPEN_FLAG_NODE_REFERENCE);
                      })
                      .and_then([&]() { client.Unbind(); });
 

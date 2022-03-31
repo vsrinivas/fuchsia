@@ -66,21 +66,21 @@ async fn open_per_package_source(source: PackageSource) {
 
 const ALL_FLAGS: [fio::OpenFlags; 16] = [
     fio::OpenFlags::empty(),
-    fio::OpenFlags::RIGHT_READABLE,
-    fio::OpenFlags::RIGHT_WRITABLE,
-    fio::OpenFlags::RIGHT_EXECUTABLE,
-    fio::OpenFlags::CREATE,
-    fio::OpenFlags::empty().union(fio::OpenFlags::CREATE).union(fio::OpenFlags::CREATE_IF_ABSENT),
-    fio::OpenFlags::CREATE_IF_ABSENT,
-    fio::OpenFlags::TRUNCATE,
-    fio::OpenFlags::DIRECTORY,
-    fio::OpenFlags::APPEND,
-    fio::OpenFlags::NO_REMOTE,
-    fio::OpenFlags::NODE_REFERENCE,
-    fio::OpenFlags::DESCRIBE,
-    fio::OpenFlags::POSIX_WRITABLE,
-    fio::OpenFlags::POSIX_EXECUTABLE,
-    fio::OpenFlags::NOT_DIRECTORY,
+    fio::OPEN_RIGHT_READABLE,
+    fio::OPEN_RIGHT_WRITABLE,
+    fio::OPEN_RIGHT_EXECUTABLE,
+    fio::OPEN_FLAG_CREATE,
+    fio::OpenFlags::empty().union(fio::OPEN_FLAG_CREATE).union(fio::OPEN_FLAG_CREATE_IF_ABSENT),
+    fio::OPEN_FLAG_CREATE_IF_ABSENT,
+    fio::OPEN_FLAG_TRUNCATE,
+    fio::OPEN_FLAG_DIRECTORY,
+    fio::OPEN_FLAG_APPEND,
+    fio::OPEN_FLAG_NO_REMOTE,
+    fio::OPEN_FLAG_NODE_REFERENCE,
+    fio::OPEN_FLAG_DESCRIBE,
+    fio::OPEN_FLAG_POSIX_WRITABLE,
+    fio::OPEN_FLAG_POSIX_EXECUTABLE,
+    fio::OPEN_FLAG_NOT_DIRECTORY,
 ];
 
 const ALL_MODES: [u32; 6] = [
@@ -101,30 +101,30 @@ async fn assert_open_root_directory(
 
     let mut success_flags = vec![
         fio::OpenFlags::empty(),
-        fio::OpenFlags::RIGHT_READABLE,
-        fio::OpenFlags::RIGHT_EXECUTABLE,
-        fio::OpenFlags::DIRECTORY,
-        fio::OpenFlags::NODE_REFERENCE,
-        fio::OpenFlags::DESCRIBE,
-        fio::OpenFlags::POSIX_WRITABLE,
-        fio::OpenFlags::POSIX_EXECUTABLE,
+        fio::OPEN_RIGHT_READABLE,
+        fio::OPEN_RIGHT_EXECUTABLE,
+        fio::OPEN_FLAG_DIRECTORY,
+        fio::OPEN_FLAG_NODE_REFERENCE,
+        fio::OPEN_FLAG_DESCRIBE,
+        fio::OPEN_FLAG_POSIX_WRITABLE,
+        fio::OPEN_FLAG_POSIX_EXECUTABLE,
     ];
     if source.is_pkgfs() {
         success_flags.extend_from_slice(&[
             // "OPEN_RIGHT_WRITABLE not supported"
-            fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_WRITABLE,
             // "OPEN_FLAG_TRUNCATE and OPEN_FLAG_APPEND not supported"
-            fio::OpenFlags::TRUNCATE,
-            fio::OpenFlags::APPEND,
+            fio::OPEN_FLAG_TRUNCATE,
+            fio::OPEN_FLAG_APPEND,
             // "OPEN_FLAG_CREATE not supported"
-            fio::OpenFlags::CREATE,
-            fio::OpenFlags::CREATE | fio::OpenFlags::CREATE_IF_ABSENT,
+            fio::OPEN_FLAG_CREATE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_FLAG_CREATE_IF_ABSENT,
             // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
-            fio::OpenFlags::CREATE_IF_ABSENT,
+            fio::OPEN_FLAG_CREATE_IF_ABSENT,
             // TODO(fxbug.dev/83844): pkgdir doesn't accept OPEN_FLAG_NO_REMOTE
-            fio::OpenFlags::NO_REMOTE,
+            fio::OPEN_FLAG_NO_REMOTE,
             // "OPEN_FLAG_NOT_DIRECTORY enforced"
-            fio::OpenFlags::NOT_DIRECTORY,
+            fio::OPEN_FLAG_NOT_DIRECTORY,
         ])
     }
 
@@ -175,11 +175,11 @@ fn filter_out_contradictory_open_parameters(
 ) -> Option<(fio::OpenFlags, u32, &'_ str)> {
     // See "mode checked for consistency with OPEN_FLAG{_NOT,}_DIRECTORY" in the README
 
-    if flag.intersects(fio::OpenFlags::NOT_DIRECTORY) && mode == fio::MODE_TYPE_DIRECTORY {
+    if flag.intersects(fio::OPEN_FLAG_NOT_DIRECTORY) && mode == fio::MODE_TYPE_DIRECTORY {
         // Skipping invalid mode combination
         return None;
     }
-    if (flag.intersects(fio::OpenFlags::DIRECTORY) || child_path.ends_with('/'))
+    if (flag.intersects(fio::OPEN_FLAG_DIRECTORY) || child_path.ends_with('/'))
         && !(mode == 0 || mode == fio::MODE_TYPE_DIRECTORY)
     {
         // Skipping invalid mode combination
@@ -269,22 +269,22 @@ async fn assert_open_content_directory(
 
     let mut success_flags = vec![
         fio::OpenFlags::empty(),
-        fio::OpenFlags::RIGHT_READABLE,
-        fio::OpenFlags::RIGHT_EXECUTABLE,
-        fio::OpenFlags::DIRECTORY,
-        fio::OpenFlags::NODE_REFERENCE,
-        fio::OpenFlags::DESCRIBE,
-        fio::OpenFlags::POSIX_WRITABLE,
-        fio::OpenFlags::POSIX_EXECUTABLE,
+        fio::OPEN_RIGHT_READABLE,
+        fio::OPEN_RIGHT_EXECUTABLE,
+        fio::OPEN_FLAG_DIRECTORY,
+        fio::OPEN_FLAG_NODE_REFERENCE,
+        fio::OPEN_FLAG_DESCRIBE,
+        fio::OPEN_FLAG_POSIX_WRITABLE,
+        fio::OPEN_FLAG_POSIX_EXECUTABLE,
     ];
     if source.is_pkgfs() {
         success_flags.extend_from_slice(&[
             // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
-            fio::OpenFlags::CREATE_IF_ABSENT,
+            fio::OPEN_FLAG_CREATE_IF_ABSENT,
             // TODO(fxbug.dev/83844): pkgdir doesn't accept OPEN_FLAG_NO_REMOTE
-            fio::OpenFlags::NO_REMOTE,
+            fio::OPEN_FLAG_NO_REMOTE,
             // "OPEN_FLAG_NOT_DIRECTORY enforced"
-            fio::OpenFlags::NOT_DIRECTORY,
+            fio::OPEN_FLAG_NOT_DIRECTORY,
         ])
     }
     let child_paths = if source.is_pkgfs() {
@@ -370,22 +370,22 @@ async fn assert_open_content_file(
 
     let mut success_flags = vec![
         fio::OpenFlags::empty(),
-        fio::OpenFlags::RIGHT_READABLE,
-        fio::OpenFlags::RIGHT_EXECUTABLE,
-        fio::OpenFlags::NO_REMOTE,
-        fio::OpenFlags::NODE_REFERENCE,
-        fio::OpenFlags::DESCRIBE,
-        fio::OpenFlags::POSIX_WRITABLE,
-        fio::OpenFlags::POSIX_EXECUTABLE,
-        fio::OpenFlags::NOT_DIRECTORY,
+        fio::OPEN_RIGHT_READABLE,
+        fio::OPEN_RIGHT_EXECUTABLE,
+        fio::OPEN_FLAG_NO_REMOTE,
+        fio::OPEN_FLAG_NODE_REFERENCE,
+        fio::OPEN_FLAG_DESCRIBE,
+        fio::OPEN_FLAG_POSIX_WRITABLE,
+        fio::OPEN_FLAG_POSIX_EXECUTABLE,
+        fio::OPEN_FLAG_NOT_DIRECTORY,
     ];
     if source.is_pkgdir() {
         // "content files support `OPEN_FLAG_APPEND`"
-        success_flags.push(fio::OpenFlags::APPEND);
+        success_flags.push(fio::OPEN_FLAG_APPEND);
     }
     if source.is_pkgfs() {
         // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
-        success_flags.extend([fio::OpenFlags::CREATE_IF_ABSENT]);
+        success_flags.extend([fio::OPEN_FLAG_CREATE_IF_ABSENT]);
     }
     let mut success_modes = vec![
         0,
@@ -446,28 +446,28 @@ async fn assert_open_meta_as_directory_and_file(
 
     let mut base_directory_success_flags = vec![
         fio::OpenFlags::empty(),
-        fio::OpenFlags::RIGHT_READABLE,
-        fio::OpenFlags::DIRECTORY,
-        fio::OpenFlags::NODE_REFERENCE,
-        fio::OpenFlags::DESCRIBE,
-        fio::OpenFlags::POSIX_WRITABLE,
-        fio::OpenFlags::POSIX_EXECUTABLE,
+        fio::OPEN_RIGHT_READABLE,
+        fio::OPEN_FLAG_DIRECTORY,
+        fio::OPEN_FLAG_NODE_REFERENCE,
+        fio::OPEN_FLAG_DESCRIBE,
+        fio::OPEN_FLAG_POSIX_WRITABLE,
+        fio::OPEN_FLAG_POSIX_EXECUTABLE,
     ];
     if source.is_pkgfs() {
         base_directory_success_flags.extend_from_slice(&[
             // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
-            fio::OpenFlags::CREATE_IF_ABSENT,
+            fio::OPEN_FLAG_CREATE_IF_ABSENT,
             // TODO(fxbug.dev/83844): pkgdir doesn't accept OPEN_FLAG_NO_REMOTE
-            fio::OpenFlags::NO_REMOTE,
+            fio::OPEN_FLAG_NO_REMOTE,
             // "OPEN_FLAG_NOT_DIRECTORY enforced"
-            fio::OpenFlags::NOT_DIRECTORY,
+            fio::OPEN_FLAG_NOT_DIRECTORY,
         ])
     }
     // pkgfs allows meta (file or directory) to be opened EXECUTABLE if opened directly from the
     // package root, but not if "re-opened" from itself, i.e. opening "." from the meta dir.
     if source.is_pkgfs() && parent_path == "." {
         // "meta/ directories and files may not be opened with OPEN_RIGHT_EXECUTABLE"
-        base_directory_success_flags.push(fio::OpenFlags::RIGHT_EXECUTABLE);
+        base_directory_success_flags.push(fio::OPEN_RIGHT_EXECUTABLE);
     }
 
     // To open "meta" as a directory:
@@ -480,11 +480,11 @@ async fn assert_open_meta_as_directory_and_file(
         product(base_directory_success_flags.clone(), [fio::MODE_TYPE_DIRECTORY])
             .chain(product(
                 base_directory_success_flags.clone().into_iter().filter_map(|f| {
-                    if f.intersects(fio::OpenFlags::NOT_DIRECTORY) && source.is_pkgdir() {
+                    if f.intersects(fio::OPEN_FLAG_NOT_DIRECTORY) && source.is_pkgdir() {
                         // "OPEN_FLAG_DIRECTORY and OPEN_FLAG_NOT_DIRECTORY are mutually exclusive"
                         None
                     } else {
-                        Some(f | fio::OpenFlags::DIRECTORY)
+                        Some(f | fio::OPEN_FLAG_DIRECTORY)
                     }
                 }),
                 [
@@ -499,7 +499,7 @@ async fn assert_open_meta_as_directory_and_file(
                 base_directory_success_flags
                     .clone()
                     .into_iter()
-                    .map(|f| f | fio::OpenFlags::NODE_REFERENCE),
+                    .map(|f| f | fio::OPEN_FLAG_NODE_REFERENCE),
                 [
                     0,
                     fio::MODE_TYPE_DIRECTORY,
@@ -564,20 +564,20 @@ async fn assert_open_meta_as_directory_and_file(
     //    c. OPEN_FLAG_NODE_REFERENCE is set
     let mut base_file_flags = vec![
         fio::OpenFlags::empty(),
-        fio::OpenFlags::RIGHT_READABLE,
-        fio::OpenFlags::DESCRIBE,
-        fio::OpenFlags::POSIX_WRITABLE,
-        fio::OpenFlags::POSIX_EXECUTABLE,
-        fio::OpenFlags::NOT_DIRECTORY,
+        fio::OPEN_RIGHT_READABLE,
+        fio::OPEN_FLAG_DESCRIBE,
+        fio::OPEN_FLAG_POSIX_WRITABLE,
+        fio::OPEN_FLAG_POSIX_EXECUTABLE,
+        fio::OPEN_FLAG_NOT_DIRECTORY,
     ];
     if source.is_pkgfs() {
         base_file_flags.extend_from_slice(&[
             // "meta/ directories and files may not be opened with OPEN_RIGHT_EXECUTABLE"
-            fio::OpenFlags::RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_EXECUTABLE,
             // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
-            fio::OpenFlags::CREATE_IF_ABSENT,
+            fio::OPEN_FLAG_CREATE_IF_ABSENT,
             // TODO(fxbug.dev/83844): pkgdir doesn't accept OPEN_FLAG_NO_REMOTE
-            fio::OpenFlags::NO_REMOTE,
+            fio::OPEN_FLAG_NO_REMOTE,
         ])
     }
 
@@ -585,7 +585,7 @@ async fn assert_open_meta_as_directory_and_file(
         base_file_flags
             .iter()
             .copied()
-            .chain([fio::OpenFlags::DIRECTORY, fio::OpenFlags::NODE_REFERENCE]),
+            .chain([fio::OPEN_FLAG_DIRECTORY, fio::OPEN_FLAG_NODE_REFERENCE]),
         [fio::MODE_TYPE_FILE],
     )
     .chain(product(
@@ -641,21 +641,21 @@ async fn assert_open_meta_subdirectory(
 
     let mut success_flags = vec![
         fio::OpenFlags::empty(),
-        fio::OpenFlags::RIGHT_READABLE,
-        fio::OpenFlags::DIRECTORY,
-        fio::OpenFlags::NODE_REFERENCE,
-        fio::OpenFlags::DESCRIBE,
-        fio::OpenFlags::POSIX_WRITABLE,
-        fio::OpenFlags::POSIX_EXECUTABLE,
+        fio::OPEN_RIGHT_READABLE,
+        fio::OPEN_FLAG_DIRECTORY,
+        fio::OPEN_FLAG_NODE_REFERENCE,
+        fio::OPEN_FLAG_DESCRIBE,
+        fio::OPEN_FLAG_POSIX_WRITABLE,
+        fio::OPEN_FLAG_POSIX_EXECUTABLE,
     ];
     if source.is_pkgfs() {
         success_flags.extend_from_slice(&[
             // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
-            fio::OpenFlags::CREATE_IF_ABSENT,
+            fio::OPEN_FLAG_CREATE_IF_ABSENT,
             // TODO(fxbug.dev/83844): pkgdir doesn't accept OPEN_FLAG_NO_REMOTE
-            fio::OpenFlags::NO_REMOTE,
+            fio::OPEN_FLAG_NO_REMOTE,
             // "OPEN_FLAG_NOT_DIRECTORY enforced"
-            fio::OpenFlags::NOT_DIRECTORY,
+            fio::OPEN_FLAG_NOT_DIRECTORY,
         ])
     }
 
@@ -701,21 +701,21 @@ async fn assert_open_meta_file(source: &PackageSource, parent_path: &str, child_
 
     let mut success_flags = vec![
         fio::OpenFlags::empty(),
-        fio::OpenFlags::RIGHT_READABLE,
-        fio::OpenFlags::NODE_REFERENCE,
-        fio::OpenFlags::DESCRIBE,
-        fio::OpenFlags::POSIX_WRITABLE,
-        fio::OpenFlags::POSIX_EXECUTABLE,
-        fio::OpenFlags::NOT_DIRECTORY,
+        fio::OPEN_RIGHT_READABLE,
+        fio::OPEN_FLAG_NODE_REFERENCE,
+        fio::OPEN_FLAG_DESCRIBE,
+        fio::OPEN_FLAG_POSIX_WRITABLE,
+        fio::OPEN_FLAG_POSIX_EXECUTABLE,
+        fio::OPEN_FLAG_NOT_DIRECTORY,
     ];
     if source.is_pkgfs() {
         success_flags.extend_from_slice(&[
             // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
-            fio::OpenFlags::CREATE_IF_ABSENT,
+            fio::OPEN_FLAG_CREATE_IF_ABSENT,
             // TODO(fxbug.dev/83844): pkgdir doesn't accept OPEN_FLAG_NO_REMOTE
-            fio::OpenFlags::NO_REMOTE,
+            fio::OPEN_FLAG_NO_REMOTE,
             // "OPEN_FLAG_DIRECTORY enforced"
-            fio::OpenFlags::DIRECTORY,
+            fio::OPEN_FLAG_DIRECTORY,
         ])
     }
 
@@ -763,9 +763,9 @@ async fn open_parent(package_root: &fio::DirectoryProxy, parent_path: &str) -> f
         || parent_path.starts_with("meta/")
         || parent_path.starts_with("/meta/")
     {
-        fio::OpenFlags::RIGHT_READABLE
+        fio::OPEN_RIGHT_READABLE
     } else {
-        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE
     };
     io_util::directory::open_directory(package_root, parent_path, parent_rights)
         .await
@@ -835,7 +835,7 @@ async fn verify_directory_opened(node: fio::NodeProxy, flag: fio::OpenFlags) -> 
         Err(e) => return Err(e).context("failed to call describe"),
     }
 
-    if flag.intersects(fio::OpenFlags::DESCRIBE) {
+    if flag.intersects(fio::OPEN_FLAG_DESCRIBE) {
         match node.take_event_stream().next().await {
             Some(Ok(fio::NodeEvent::OnOpen_ { s, info: Some(boxed) })) => {
                 assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
@@ -861,7 +861,7 @@ async fn verify_content_file_opened(
     node: fio::NodeProxy,
     flag: fio::OpenFlags,
 ) -> Result<(), Error> {
-    if flag.intersects(fio::OpenFlags::NODE_REFERENCE) {
+    if flag.intersects(fio::OPEN_FLAG_NODE_REFERENCE) {
         match node.describe().await {
             Ok(fio::NodeInfo::Service(_)) => (),
             Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
@@ -874,8 +874,8 @@ async fn verify_content_file_opened(
             Err(e) => return Err(e).context("failed to call describe"),
         }
     }
-    if flag.intersects(fio::OpenFlags::DESCRIBE) {
-        if flag.intersects(fio::OpenFlags::NODE_REFERENCE) {
+    if flag.intersects(fio::OPEN_FLAG_DESCRIBE) {
+        if flag.intersects(fio::OPEN_FLAG_NODE_REFERENCE) {
             match node.take_event_stream().next().await {
                 Some(Ok(fio::NodeEvent::OnOpen_ { s, info: Some(boxed) })) => {
                     assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
@@ -943,7 +943,7 @@ async fn verify_meta_as_file_opened(
         Err(e) => return Err(e).context("failed to call describe"),
     }
 
-    if flag.intersects(fio::OpenFlags::DESCRIBE) {
+    if flag.intersects(fio::OPEN_FLAG_DESCRIBE) {
         match node.take_event_stream().next().await {
             Some(Ok(fio::NodeEvent::OnOpen_ { s, info: Some(boxed) })) => {
                 assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
@@ -989,23 +989,23 @@ async fn clone_per_package_source(source: PackageSource) {
 
     for flag in [
         fio::OpenFlags::empty(),
-        fio::OpenFlags::RIGHT_READABLE,
-        fio::OpenFlags::RIGHT_WRITABLE,
-        fio::OpenFlags::RIGHT_EXECUTABLE,
-        fio::OpenFlags::APPEND,
-        fio::OpenFlags::NO_REMOTE,
-        fio::OpenFlags::DESCRIBE,
-        fio::OpenFlags::CLONE_SAME_RIGHTS,
+        fio::OPEN_RIGHT_READABLE,
+        fio::OPEN_RIGHT_WRITABLE,
+        fio::OPEN_RIGHT_EXECUTABLE,
+        fio::OPEN_FLAG_APPEND,
+        fio::OPEN_FLAG_NO_REMOTE,
+        fio::OPEN_FLAG_DESCRIBE,
+        fio::CLONE_FLAG_SAME_RIGHTS,
     ] {
-        if source.is_pkgdir() && (flag.intersects(fio::OpenFlags::NO_REMOTE)) {
+        if source.is_pkgdir() && (flag.intersects(fio::OPEN_FLAG_NO_REMOTE)) {
             // TODO(fxbug.dev/83844): pkgdir doesn't accept OPEN_FLAG_NO_REMOTE
             continue;
         }
-        if source.is_pkgdir() && (flag.intersects(fio::OpenFlags::APPEND)) {
+        if source.is_pkgdir() && (flag.intersects(fio::OPEN_FLAG_APPEND)) {
             // "OPEN_FLAG_TRUNCATE and OPEN_FLAG_APPEND not supported"
             continue;
         }
-        if source.is_pkgdir() && (flag.intersects(fio::OpenFlags::RIGHT_WRITABLE)) {
+        if source.is_pkgdir() && (flag.intersects(fio::OPEN_RIGHT_WRITABLE)) {
             // "OPEN_RIGHT_WRITABLE not supported"
             continue;
         }
@@ -1042,7 +1042,7 @@ async fn clone_per_package_source(source: PackageSource) {
             ],
         )
         .await;
-        if flag.intersects(fio::OpenFlags::RIGHT_EXECUTABLE) {
+        if flag.intersects(fio::OPEN_RIGHT_EXECUTABLE) {
             // pkgdir requires a directory to have EXECUTABLE rights for it to be cloned
             // ("Hierarchical rights enforcement"), Since both pkgfs and pkgdir reject opening
             // meta dirs with EXECUTABLE rights, we can't get a valid parent directory to
@@ -1100,7 +1100,7 @@ async fn assert_clone_sends_on_open_event(package_root: &fio::DirectoryProxy, pa
 
     let parent = open_parent(package_root, path).await;
     let (node, server_end) = create_proxy::<fio::NodeMarker>().expect("create_proxy");
-    parent.clone(fio::OpenFlags::DESCRIBE, server_end).expect("clone dir");
+    parent.clone(fio::OPEN_FLAG_DESCRIBE, server_end).expect("clone dir");
     if let Err(e) = verify_directory_clone_sends_on_open_event(node).await {
         panic!("failed to verify clone. path: {:?}, error: {:#}", path, e);
     }
@@ -1115,7 +1115,7 @@ async fn assert_clone_directory_no_overflow(
     let parent = open_directory(
         package_root,
         path,
-        flags & (fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE),
+        flags & (fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE),
     )
     .await
     .expect("open parent directory");
@@ -1416,19 +1416,19 @@ async fn get_flags_per_package_source(source: PackageSource) {
     assert_get_flags_directory_calls(
         &source,
         ".",
-        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
     )
     .await;
     assert_get_flags_directory_calls(
         &source,
         "dir",
-        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
     )
     .await;
 
     // Test get_flags APIs for meta directory and subdirectory.
-    assert_get_flags_directory_calls(&source, "meta", fio::OpenFlags::RIGHT_READABLE).await;
-    assert_get_flags_directory_calls(&source, "meta/dir", fio::OpenFlags::RIGHT_READABLE).await;
+    assert_get_flags_directory_calls(&source, "meta", fio::OPEN_RIGHT_READABLE).await;
+    assert_get_flags_directory_calls(&source, "meta/dir", fio::OPEN_RIGHT_READABLE).await;
 }
 
 async fn assert_get_flags_directory_calls(
@@ -1440,10 +1440,10 @@ async fn assert_get_flags_directory_calls(
     let dir = io_util::directory::open_directory(
         package_root,
         path,
-        fio::OpenFlags::RIGHT_READABLE
-            | fio::OpenFlags::DIRECTORY
-            | fio::OpenFlags::POSIX_WRITABLE
-            | fio::OpenFlags::POSIX_EXECUTABLE,
+        fio::OPEN_RIGHT_READABLE
+            | fio::OPEN_FLAG_DIRECTORY
+            | fio::OPEN_FLAG_POSIX_WRITABLE
+            | fio::OPEN_FLAG_POSIX_EXECUTABLE,
     )
     .await
     .expect("open directory");

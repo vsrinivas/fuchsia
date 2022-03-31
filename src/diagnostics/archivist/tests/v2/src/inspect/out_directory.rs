@@ -55,9 +55,7 @@ async fn verify_out(hub_out_path: &Path) -> Result<(), Error> {
 }
 
 async fn read_entries(path: &Path) -> Result<Vec<String>, Error> {
-    let directory = io_util::open_directory_in_namespace(
-        path.to_str().unwrap(),
-        fio::OpenFlags::RIGHT_READABLE,
-    )?;
+    let directory =
+        io_util::open_directory_in_namespace(path.to_str().unwrap(), fio::OPEN_RIGHT_READABLE)?;
     Ok(files_async::readdir(&directory).await?.into_iter().map(|e| e.name).collect::<Vec<_>>())
 }

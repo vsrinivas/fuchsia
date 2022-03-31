@@ -177,11 +177,11 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
 
   // Flags which can be modified by SetFlags.
   constexpr static fuchsia_io::wire::OpenFlags kSettableStatusFlags =
-      fuchsia_io::wire::OpenFlags::kAppend;
+      fuchsia_io::wire::kOpenFlagAppend;
 
   // All flags which indicate state of the connection (excluding rights).
   constexpr static fuchsia_io::wire::OpenFlags kStatusFlags =
-      kSettableStatusFlags | fuchsia_io::wire::OpenFlags::kNodeReference;
+      kSettableStatusFlags | fuchsia_io::wire::kOpenFlagNodeReference;
 
   // Node operations. Note that these provide the shared implementation of |fuchsia.io/Node|
   // methods, used by all connection subclasses.

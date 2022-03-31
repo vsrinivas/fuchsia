@@ -111,7 +111,7 @@ fpromise::promise<void, zx_status_t> LaunchBasemgrV1(
   // Create the pseudo directory with our config "file" mapped to kConfigFilename.
   auto config_dir = CreateConfigPseudoDir(modular::ConfigToJsonString(config));
   fidl::InterfaceHandle<fuchsia::io::Directory> dir_handle;
-  config_dir->Serve(fuchsia::io::OpenFlags::RIGHT_READABLE, dir_handle.NewRequest().TakeChannel(),
+  config_dir->Serve(fuchsia::io::OPEN_RIGHT_READABLE, dir_handle.NewRequest().TakeChannel(),
                     dispatcher);
 
   // Build a LaunchInfo with the config directory above mapped to /config_override/data.

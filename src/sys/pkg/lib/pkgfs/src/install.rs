@@ -54,7 +54,7 @@ impl Client {
     pub fn open_from_namespace() -> Result<Self, io_util::node::OpenError> {
         let proxy = io_util::directory::open_in_namespace(
             "/pkgfs/install",
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )?;
         Ok(Client { proxy })
     }
@@ -67,7 +67,7 @@ impl Client {
             proxy: io_util::directory::open_directory_no_describe(
                 pkgfs,
                 "install",
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             )?,
         })
     }
@@ -104,7 +104,7 @@ impl Client {
         merkle: Hash,
         blob_kind: BlobKind,
     ) -> Result<(Blob<NeedsTruncate>, BlobCloser), BlobCreateError> {
-        let flags = fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE;
+        let flags = fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE;
 
         let blob = io_util::directory::open_file(
             &self.proxy,

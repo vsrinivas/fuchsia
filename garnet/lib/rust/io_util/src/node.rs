@@ -285,24 +285,27 @@ pub(crate) async fn verify_file_describe_event(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::OpenFlags, assert_matches::assert_matches, fuchsia_async as fasync};
+    use {
+        super::*, crate::OPEN_RIGHT_READABLE, assert_matches::assert_matches,
+        fuchsia_async as fasync,
+    };
 
     // open_in_namespace
 
     #[fasync::run_singlethreaded(test)]
     async fn open_in_namespace_opens_real_node() {
-        let file_node = open_in_namespace("/pkg/data/file", OpenFlags::RIGHT_READABLE).unwrap();
+        let file_node = open_in_namespace("/pkg/data/file", OPEN_RIGHT_READABLE).unwrap();
         let info = file_node.describe().await.unwrap();
         assert_matches!(Kind::expect_file(info), Ok(()));
 
-        let dir_node = open_in_namespace("/pkg/data", OpenFlags::RIGHT_READABLE).unwrap();
+        let dir_node = open_in_namespace("/pkg/data", OPEN_RIGHT_READABLE).unwrap();
         let info = dir_node.describe().await.unwrap();
         assert_eq!(Kind::expect_directory(info), Ok(()));
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn open_in_namespace_opens_fake_node_under_of_root_namespace_entry() {
-        let notfound = open_in_namespace("/pkg/fake", OpenFlags::RIGHT_READABLE).unwrap();
+        let notfound = open_in_namespace("/pkg/fake", OPEN_RIGHT_READABLE).unwrap();
         // The open error is not detected until the proxy is interacted with.
         assert_matches!(close(notfound).await, Err(_));
     }
@@ -310,7 +313,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn open_in_namespace_rejects_fake_root_namespace_entry() {
         assert_matches!(
-            open_in_namespace("/fake", OpenFlags::RIGHT_READABLE),
+            open_in_namespace("/fake", OPEN_RIGHT_READABLE),
             Err(OpenError::Namespace(zx_status::Status::NOT_FOUND))
         );
     }

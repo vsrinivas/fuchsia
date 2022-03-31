@@ -21,7 +21,7 @@ pub async fn serve(stream: PackageResolverRequestStream) -> anyhow::Result<()> {
                     let package_url = PkgUrl::parse(&package_url)?;
                     let root_url = package_url.root_url();
                     let package_name = io_util::canonicalize_path(root_url.path());
-                    let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DIRECTORY;
+                    let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DIRECTORY;
                     io_util::node::connect_in_namespace(
                         &format!("/pkgfs/packages/{}/0", package_name),
                         flags,

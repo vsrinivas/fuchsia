@@ -103,7 +103,7 @@ impl DerivedConnection for MutableConnection {
         name: &str,
         path: &Path,
     ) -> Result<Arc<dyn DirectoryEntry>, Status> {
-        if !flags.intersects(fio::OpenFlags::CREATE) {
+        if !flags.intersects(fio::OPEN_FLAG_CREATE) {
             return Err(Status::NOT_FOUND);
         }
 
@@ -200,7 +200,7 @@ impl MutableConnection {
         flags: fio::NodeAttributeFlags,
         attributes: fio::NodeAttributes,
     ) -> Result<(), Status> {
-        if !self.base.flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
+        if !self.base.flags.intersects(fio::OPEN_RIGHT_WRITABLE) {
             return Err(Status::BAD_HANDLE);
         }
 
@@ -218,7 +218,7 @@ impl MutableConnection {
     where
         R: FnOnce(Status) -> Result<(), fidl::Error>,
     {
-        if !self.base.flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
+        if !self.base.flags.intersects(fio::OPEN_RIGHT_WRITABLE) {
             return responder(Status::BAD_HANDLE);
         }
 
@@ -248,7 +248,7 @@ impl MutableConnection {
     where
         R: FnOnce(Status, Option<Handle>) -> Result<(), fidl::Error>,
     {
-        if !self.base.flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
+        if !self.base.flags.intersects(fio::OPEN_RIGHT_WRITABLE) {
             return responder(Status::BAD_HANDLE, None);
         }
 
@@ -278,7 +278,7 @@ impl MutableConnection {
     where
         R: FnOnce(Status) -> Result<(), fidl::Error>,
     {
-        if !self.base.flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
+        if !self.base.flags.intersects(fio::OPEN_RIGHT_WRITABLE) {
             return responder(Status::BAD_HANDLE);
         }
 
@@ -348,7 +348,7 @@ impl MutableConnection {
             ServerEnd::<fio::DirectoryMarker>::new(server_end.into_channel())
                 .into_stream_and_control_handle()?;
 
-        if flags.intersects(fio::OpenFlags::DESCRIBE) {
+        if flags.intersects(fio::OPEN_FLAG_DESCRIBE) {
             let mut info = fio::NodeInfo::Directory(fio::DirectoryObject);
             control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info))?;
         }
@@ -588,12 +588,10 @@ mod tests {
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
 
-        let (_dir, proxy) = fs
-            .clone()
-            .make_connection(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
-        let (dir2, proxy2) = fs
-            .clone()
-            .make_connection(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
+        let (_dir, proxy) =
+            fs.clone().make_connection(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
+        let (dir2, proxy2) =
+            fs.clone().make_connection(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
 
         let (status, token) = proxy2.get_token().await.unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
@@ -617,9 +615,8 @@ mod tests {
     async fn test_setattr() {
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
-        let (_dir, proxy) = fs
-            .clone()
-            .make_connection(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
+        let (_dir, proxy) =
+            fs.clone().make_connection(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
         let mut attrs = fio::NodeAttributes {
             mode: 0,
             id: 0,
@@ -654,12 +651,10 @@ mod tests {
     async fn test_link() {
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
-        let (_dir, proxy) = fs
-            .clone()
-            .make_connection(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
-        let (_dir2, proxy2) = fs
-            .clone()
-            .make_connection(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
+        let (_dir, proxy) =
+            fs.clone().make_connection(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
+        let (_dir2, proxy2) =
+            fs.clone().make_connection(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
 
         let (status, token) = proxy2.get_token().await.unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
@@ -674,9 +669,8 @@ mod tests {
     async fn test_unlink() {
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
-        let (_dir, proxy) = fs
-            .clone()
-            .make_connection(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
+        let (_dir, proxy) =
+            fs.clone().make_connection(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
         proxy
             .unlink("test", fio::UnlinkOptions::EMPTY)
             .await
@@ -693,9 +687,8 @@ mod tests {
     async fn test_sync() {
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
-        let (_dir, proxy) = fs
-            .clone()
-            .make_connection(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
+        let (_dir, proxy) =
+            fs.clone().make_connection(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
         let () = proxy.sync().await.unwrap().map_err(Status::from_raw).unwrap();
         let events = events.0.lock().unwrap();
         assert_eq!(*events, vec![MutableDirectoryAction::Sync]);
@@ -705,9 +698,8 @@ mod tests {
     async fn test_close() {
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
-        let (_dir, proxy) = fs
-            .clone()
-            .make_connection(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
+        let (_dir, proxy) =
+            fs.clone().make_connection(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
         let () = proxy.close().await.unwrap().map_err(Status::from_raw).unwrap();
         let events = events.0.lock().unwrap();
         assert_eq!(*events, vec![MutableDirectoryAction::Close]);
@@ -717,9 +709,8 @@ mod tests {
     async fn test_implicit_close() {
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
-        let (_dir, _proxy) = fs
-            .clone()
-            .make_connection(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
+        let (_dir, _proxy) =
+            fs.clone().make_connection(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
 
         fs.scope.shutdown();
         fs.scope.wait().await;

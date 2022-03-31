@@ -11,7 +11,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_zircon as zx,
-    io_util::{self, OpenFlags},
+    io_util::{self, OPEN_RIGHT_READABLE},
     std::path::PathBuf,
 };
 
@@ -205,7 +205,7 @@ fn open_trigger_svc(dir: &fio::DirectoryProxy) -> Result<ftest::TriggerProxy, Er
     let node_proxy = io_util::open_node(
         dir,
         &PathBuf::from("fidl.test.components.Trigger"),
-        OpenFlags::RIGHT_READABLE,
+        OPEN_RIGHT_READABLE,
         fio::MODE_TYPE_SERVICE,
     )
     .context("failed to open trigger service")?;

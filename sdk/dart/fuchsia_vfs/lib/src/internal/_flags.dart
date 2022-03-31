@@ -8,27 +8,27 @@ import 'package:fidl_fuchsia_io/fidl_async.dart';
 class Flags {
   /// Default rights.
   static OpenFlags fsRightsDefault() {
-    return OpenFlags.rightReadable | OpenFlags.rightWritable;
+    return openRightReadable | openRightWritable;
   }
 
   /// Returns true if the OPEN_FLAG_NODE_REFERENCE bit is set in |flags|.
   static bool isNodeReference(OpenFlags flags) {
-    return (flags & OpenFlags.nodeReference) != OpenFlags.$none;
+    return (flags & openFlagNodeReference) != OpenFlags.$none;
   }
 
   /// Returns true if the CLONE_FLAG_SAME_RIGHTS bit is set in |flags|.
   static bool shouldCloneWithSameRights(OpenFlags flags) {
-    return (flags & OpenFlags.cloneSameRights) != OpenFlags.$none;
+    return (flags & cloneFlagSameRights) != OpenFlags.$none;
   }
 
   /// Returns true if the OPEN_FLAG_POSIX_WRITABLE bit is set in |flags|.
   static bool isPosixWritable(OpenFlags flags) {
-    return (flags & OpenFlags.posixWritable) != OpenFlags.$none;
+    return (flags & openFlagPosixWritable) != OpenFlags.$none;
   }
 
   /// Returns true if the OPEN_FLAG_POSIX_EXECUTABLE bit is set in |flags|.
   static bool isPosixExecutable(OpenFlags flags) {
-    return (flags & OpenFlags.posixExecutable) != OpenFlags.$none;
+    return (flags & openFlagPosixExecutable) != OpenFlags.$none;
   }
 
   /// Returns true if the rights flags in |flagsA| does not exceed
@@ -44,7 +44,7 @@ class Flags {
   /// Returns false if the flags combination is invalid.
   static bool inputPrecondition(OpenFlags flags) {
     // Explicitly reject NODE_REFERENCE together with any invalid flags.
-    if ((flags & OpenFlags.nodeReference) != OpenFlags.$none) {
+    if ((flags & openFlagNodeReference) != OpenFlags.$none) {
       if ((flags & ~openFlagsAllowedWithNodeReference) != OpenFlags.$none) {
         return false;
       }

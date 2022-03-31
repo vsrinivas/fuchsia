@@ -139,8 +139,7 @@ where
     D: AsRef<[u8]>,
 {
     async {
-        let flags =
-            fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE | fio::OpenFlags::TRUNCATE;
+        let flags = fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE | fio::OPEN_FLAG_TRUNCATE;
         let file = open_in_namespace(path, flags)?;
 
         write(&file, data).await?;
@@ -260,7 +259,7 @@ pub async fn read_num_bytes(file: &fio::FileProxy, num_bytes: u64) -> Result<Vec
 #[cfg(target_os = "fuchsia")]
 pub async fn read_in_namespace(path: &str) -> Result<Vec<u8>, ReadNamedError> {
     async {
-        let file = open_in_namespace(path, fio::OpenFlags::RIGHT_READABLE)?;
+        let file = open_in_namespace(path, fio::OPEN_RIGHT_READABLE)?;
         read(&file).await
     }
     .await
@@ -323,7 +322,7 @@ mod tests {
 
     use {
         super::*,
-        crate::{directory, OpenFlags},
+        crate::{directory, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
         assert_matches::assert_matches,
         fidl_fidl_test_schema::{DataTable1, DataTable2},
         fuchsia_async as fasync,
@@ -337,13 +336,13 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn open_in_namespace_opens_real_file() {
-        let exists = open_in_namespace("/pkg/data/file", OpenFlags::RIGHT_READABLE).unwrap();
+        let exists = open_in_namespace("/pkg/data/file", OPEN_RIGHT_READABLE).unwrap();
         assert_matches!(close(exists).await, Ok(()));
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn open_in_namespace_opens_fake_file_under_of_root_namespace_entry() {
-        let notfound = open_in_namespace("/pkg/fake", OpenFlags::RIGHT_READABLE).unwrap();
+        let notfound = open_in_namespace("/pkg/fake", OPEN_RIGHT_READABLE).unwrap();
         // The open error is not detected until the proxy is interacted with.
         assert_matches!(close(notfound).await, Err(_));
     }
@@ -351,7 +350,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn open_in_namespace_rejects_fake_root_namespace_entry() {
         assert_matches!(
-            open_in_namespace("/fake", OpenFlags::RIGHT_READABLE),
+            open_in_namespace("/fake", OPEN_RIGHT_READABLE),
             Err(OpenError::Namespace(zx_status::Status::NOT_FOUND))
         );
     }
@@ -408,12 +407,12 @@ mod tests {
         let tempdir = TempDir::new().unwrap();
         let dir = directory::open_in_namespace(
             tempdir.path().to_str().unwrap(),
-            OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )
         .unwrap();
 
         // Write contents.
-        let flags = fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE;
+        let flags = fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE;
         let file = directory::open_file(&dir, "file", flags).await.unwrap();
         let data = b"\x80"; // Non UTF-8 data: a continuation byte as the first byte.
         write(&file, data).await.unwrap();
@@ -428,12 +427,12 @@ mod tests {
         let tempdir = TempDir::new().unwrap();
         let dir = directory::open_in_namespace(
             tempdir.path().to_str().unwrap(),
-            OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )
         .unwrap();
 
         // Write contents.
-        let flags = fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE;
+        let flags = fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE;
         let file = directory::open_file(&dir, "file", flags).await.unwrap();
         let data = "abc".repeat(10000);
         write(&file, &data).await.unwrap();
@@ -448,12 +447,12 @@ mod tests {
         let tempdir = TempDir::new().unwrap();
         let dir = directory::open_in_namespace(
             tempdir.path().to_str().unwrap(),
-            OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )
         .unwrap();
 
         // Create and write to the file.
-        let flags = fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE;
+        let flags = fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE;
         let file = directory::open_file(&dir, "file", flags).await.unwrap();
         write(&file, "Hello ").await.unwrap();
         write(&file, "World!\n").await.unwrap();
@@ -468,7 +467,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn read_reads_to_end_of_file() {
-        let file = open_in_namespace("/pkg/data/file", OpenFlags::RIGHT_READABLE).unwrap();
+        let file = open_in_namespace("/pkg/data/file", OPEN_RIGHT_READABLE).unwrap();
 
         let contents = read(&file).await.unwrap();
         assert_eq!(&contents[..], DATA_FILE_CONTENTS.as_bytes());
@@ -476,7 +475,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn read_reads_from_current_position() {
-        let file = open_in_namespace("/pkg/data/file", OpenFlags::RIGHT_READABLE).unwrap();
+        let file = open_in_namespace("/pkg/data/file", OPEN_RIGHT_READABLE).unwrap();
 
         // Advance past the first byte.
         let _: Vec<u8> = file.read(1).await.unwrap().unwrap();
@@ -509,7 +508,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn read_to_string_reads_data_file() {
-        let file = open_in_namespace("/pkg/data/file", OpenFlags::RIGHT_READABLE).unwrap();
+        let file = open_in_namespace("/pkg/data/file", OPEN_RIGHT_READABLE).unwrap();
         assert_eq!(read_to_string(&file).await.unwrap(), DATA_FILE_CONTENTS);
     }
 
@@ -530,12 +529,12 @@ mod tests {
         let tempdir = TempDir::new().unwrap();
         let dir = directory::open_in_namespace(
             tempdir.path().to_str().unwrap(),
-            OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )
         .unwrap();
 
         // Write contents.
-        let flags = fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE;
+        let flags = fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE;
         let file = directory::open_file(&dir, "file", flags).await.unwrap();
 
         let mut data = DataTable1 {
@@ -560,7 +559,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn read_fidl_reads_from_file() {
-        let file = open_in_namespace("/pkg/data/fidl_file", OpenFlags::RIGHT_READABLE).unwrap();
+        let file = open_in_namespace("/pkg/data/fidl_file", OPEN_RIGHT_READABLE).unwrap();
 
         let contents = read_fidl::<DataTable2>(&file).await.unwrap();
 

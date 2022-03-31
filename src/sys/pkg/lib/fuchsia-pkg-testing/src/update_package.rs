@@ -18,7 +18,7 @@ impl TestUpdatePackage {
         let temp_dir = tempfile::tempdir().expect("/tmp to exist");
         let update_pkg_proxy = io_util::directory::open_in_namespace(
             temp_dir.path().to_str().unwrap(),
-            io_util::OpenFlags::RIGHT_READABLE,
+            io_util::OPEN_RIGHT_READABLE,
         )
         .expect("temp dir to open");
         Self { temp_dir, update_pkg: UpdatePackage::new(update_pkg_proxy), packages: vec![] }

@@ -155,7 +155,7 @@ func (r *Ramdisk) StartBlobfs() error {
 	status = C.ramdisk_blobfs_mount(
 		r.ramdisk_client,
 		C.uint(uint32(zx.Handle(req))),
-		C.uint(io.OpenFlagsRightReadable|io.OpenFlagsRightWritable|io.OpenFlagsRightExecutable),
+		C.uint(io.OpenRightReadable|io.OpenRightWritable|io.OpenRightExecutable),
 		(*C.uint)(&r.proc),
 	)
 	if zx.Status(status) != zx.ErrOk {

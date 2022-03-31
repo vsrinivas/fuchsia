@@ -50,8 +50,8 @@ class ServerAndClient {
           outgoing_aux_service_directory_parent_->GetOrCreateDirectory("svc");
       ZX_ASSERT(outgoing_aux_service_directory_);
       status = outgoing_aux_service_directory_->Serve(
-          fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE |
-              fuchsia::io::OpenFlags::DIRECTORY,
+          fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE |
+              fuchsia::io::OPEN_FLAG_DIRECTORY,
           aux_service_directory.NewRequest().TakeChannel(), dispatcher_);
       ZX_ASSERT(status == ZX_OK);
       status = server_create_done.signal(0, ZX_EVENT_SIGNALED);

@@ -33,7 +33,7 @@ class Namespace {
   template <typename T>
   zx::status<fidl::ClientEnd<T>> Connect(
       std::string_view path = fidl::DiscoverableProtocolDefaultPath<T>,
-      fuchsia_io::wire::OpenFlags flags = fuchsia_io::wire::OpenFlags::kRightReadable) const {
+      fuchsia_io::wire::OpenFlags flags = fuchsia_io::wire::kOpenRightReadable) const {
     auto endpoints = fidl::CreateEndpoints<T>();
     if (endpoints.is_error()) {
       return endpoints.take_error();
@@ -49,9 +49,8 @@ class Namespace {
   template <typename FidlService>
   zx::status<typename FidlService::ServiceClient> OpenService(cpp17::string_view instance) const {
     std::string path = std::string("/") + FidlService::Name + "/" + std::string(instance);
-    auto result =
-        Connect<fuchsia_io::Directory>(path, fuchsia_io::wire::OpenFlags::kRightReadable |
-                                                 fuchsia_io::wire::OpenFlags::kRightWritable);
+    auto result = Connect<fuchsia_io::Directory>(
+        path, fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable);
     if (result.is_error()) {
       return result.take_error();
     }
@@ -62,8 +61,8 @@ class Namespace {
 
   zx::status<> Connect(
       std::string_view path, zx::channel server_end,
-      fuchsia_io::wire::OpenFlags flags = fuchsia_io::wire::OpenFlags::kRightReadable |
-                                          fuchsia_io::wire::OpenFlags::kRightWritable) const;
+      fuchsia_io::wire::OpenFlags flags = fuchsia_io::wire::kOpenRightReadable |
+                                          fuchsia_io::wire::kOpenRightWritable) const;
 
  private:
   explicit Namespace(fdio_ns_t* ns);

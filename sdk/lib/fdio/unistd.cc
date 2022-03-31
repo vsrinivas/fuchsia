@@ -69,33 +69,30 @@ fdio_state_t __fdio_global_state = []() constexpr {
 ();
 
 // Verify the O_* flags which align with fuchsia.io.
-static_assert(O_PATH == static_cast<uint32_t>(fio::wire::OpenFlags::kNodeReference),
+static_assert(O_PATH == static_cast<uint32_t>(fio::wire::kOpenFlagNodeReference),
               "Open Flag mismatch");
-static_assert(O_CREAT == static_cast<uint32_t>(fio::wire::OpenFlags::kCreate),
+static_assert(O_CREAT == static_cast<uint32_t>(fio::wire::kOpenFlagCreate), "Open Flag mismatch");
+static_assert(O_EXCL == static_cast<uint32_t>(fio::wire::kOpenFlagCreateIfAbsent),
               "Open Flag mismatch");
-static_assert(O_EXCL == static_cast<uint32_t>(fio::wire::OpenFlags::kCreateIfAbsent),
+static_assert(O_TRUNC == static_cast<uint32_t>(fio::wire::kOpenFlagTruncate), "Open Flag mismatch");
+static_assert(O_DIRECTORY == static_cast<uint32_t>(fio::wire::kOpenFlagDirectory),
               "Open Flag mismatch");
-static_assert(O_TRUNC == static_cast<uint32_t>(fio::wire::OpenFlags::kTruncate),
-              "Open Flag mismatch");
-static_assert(O_DIRECTORY == static_cast<uint32_t>(fio::wire::OpenFlags::kDirectory),
-              "Open Flag mismatch");
-static_assert(O_APPEND == static_cast<uint32_t>(fio::wire::OpenFlags::kAppend),
-              "Open Flag mismatch");
-static_assert(O_NOREMOTE == static_cast<uint32_t>(fio::wire::OpenFlags::kNoRemote),
+static_assert(O_APPEND == static_cast<uint32_t>(fio::wire::kOpenFlagAppend), "Open Flag mismatch");
+static_assert(O_NOREMOTE == static_cast<uint32_t>(fio::wire::kOpenFlagNoRemote),
               "Open Flag mismatch");
 
 // The mask of "1:1" flags which match between both open flag representations.
 constexpr fio::wire::OpenFlags kZxioFsMask =
-    fio::wire::OpenFlags::kNodeReference | fio::wire::OpenFlags::kCreate |
-    fio::wire::OpenFlags::kCreateIfAbsent | fio::wire::OpenFlags::kTruncate |
-    fio::wire::OpenFlags::kDirectory | fio::wire::OpenFlags::kAppend |
-    fio::wire::OpenFlags::kNoRemote | fio::wire::OpenFlags::kCloneSameRights;
+    fio::wire::kOpenFlagNodeReference | fio::wire::kOpenFlagCreate |
+    fio::wire::kOpenFlagCreateIfAbsent | fio::wire::kOpenFlagTruncate |
+    fio::wire::kOpenFlagDirectory | fio::wire::kOpenFlagAppend | fio::wire::kOpenFlagNoRemote |
+    fio::wire::kCloneFlagSameRights;
 
 // TODO(fxbug.dev/81185): Remove kOpenFlagPosixDeprecated after clients have updated to a newer SDK.
 constexpr fio::wire::OpenFlags kZxioFsFlags =
-    kZxioFsMask | fio::wire::OpenFlags::kPosixWritable | fio::wire::OpenFlags::kPosixExecutable |
-    fio::wire::OpenFlags::kPosixDeprecated | fio::wire::OpenFlags::kNotDirectory |
-    fio::wire::OpenFlags::kCloneSameRights;
+    kZxioFsMask | fio::wire::kOpenFlagPosixWritable | fio::wire::kOpenFlagPosixExecutable |
+    fio::wire::kOpenFlagPosixDeprecated | fio::wire::kOpenFlagNotDirectory |
+    fio::wire::kCloneFlagSameRights;
 
 // Verify that the remaining O_* flags don't overlap with the ZXIO_FS flags.
 static_assert(!(O_RDONLY & static_cast<uint32_t>(kZxioFsFlags)),
@@ -133,31 +130,31 @@ static fio::wire::OpenFlags fdio_flags_to_zxio(uint32_t flags) {
   fio::wire::OpenFlags rights = {};
   switch (flags & O_ACCMODE) {
     case O_RDONLY:
-      rights |= fio::wire::OpenFlags::kRightReadable;
+      rights |= fio::wire::kOpenRightReadable;
       break;
     case O_WRONLY:
-      rights |= fio::wire::OpenFlags::kRightWritable;
+      rights |= fio::wire::kOpenRightWritable;
       break;
     case O_RDWR:
-      rights |= fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable;
+      rights |= fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable;
       break;
   }
 
-  fio::wire::OpenFlags result = rights | fio::wire::OpenFlags::kDescribe |
+  fio::wire::OpenFlags result = rights | fio::wire::kOpenFlagDescribe |
                                 (static_cast<fio::wire::OpenFlags>(flags) & kZxioFsMask);
 
-  if (!(result & fio::wire::OpenFlags::kNodeReference)) {
-    result |= fio::wire::OpenFlags::kPosixWritable | fio::wire::OpenFlags::kPosixExecutable;
+  if (!(result & fio::wire::kOpenFlagNodeReference)) {
+    result |= fio::wire::kOpenFlagPosixWritable | fio::wire::kOpenFlagPosixExecutable;
   }
   return result;
 }
 
 static uint32_t zxio_flags_to_fdio(fio::wire::OpenFlags flags) {
   uint32_t result = 0;
-  if ((flags & (fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable)) ==
-      (fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable)) {
+  if ((flags & (fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable)) ==
+      (fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable)) {
     result |= O_RDWR;
-  } else if (flags & fio::wire::OpenFlags::kRightWritable) {
+  } else if (flags & fio::wire::kOpenRightWritable) {
     result |= O_WRONLY;
   } else {
     result |= O_RDONLY;
@@ -225,16 +222,16 @@ zx::status<fdio_ptr> open_at_impl(int dirfd, const char* path, int flags, uint32
 
   fio::wire::OpenFlags zx_flags = fdio_flags_to_zxio(static_cast<uint32_t>(flags));
 
-  if (!(zx_flags & fio::wire::OpenFlags::kDirectory)) {
+  if (!(zx_flags & fio::wire::kOpenFlagDirectory)) {
     // At this point we're not sure if the path refers to a directory.
     // To emulate EISDIR behavior, if the flags are not compatible with directory,
     // use this flag to instruct open to error if the path turns out to be a directory.
     // Otherwise, opening a directory with O_RDWR will incorrectly succeed.
     if (enforce_eisdir && flags_incompatible_with_directory) {
-      zx_flags |= fio::wire::OpenFlags::kNotDirectory;
+      zx_flags |= fio::wire::kOpenFlagNotDirectory;
     }
   }
-  if (zx_flags & fio::wire::OpenFlags::kNodeReference) {
+  if (zx_flags & fio::wire::kOpenFlagNodeReference) {
     zx_flags &= fio::wire::kOpenFlagsAllowedWithNodeReference;
   }
   return iodir->open(clean.c_str(), zx_flags, mode);

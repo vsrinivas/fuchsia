@@ -139,8 +139,8 @@ ComponentControllerBase::ComponentControllerBase(
   hub_.SetName(label_);
   hub_.AddEntry("url", url_);
   hub_.AddEntry("args", std::move(args));
-  exported_dir_->Clone(fuchsia::io::OpenFlags::DESCRIBE | fuchsia::io::OpenFlags::RIGHT_READABLE |
-                           fuchsia::io::OpenFlags::RIGHT_WRITABLE,
+  exported_dir_->Clone(fuchsia::io::OPEN_FLAG_DESCRIBE | fuchsia::io::OPEN_RIGHT_READABLE |
+                           fuchsia::io::OPEN_RIGHT_WRITABLE,
                        cloned_exported_dir_.NewRequest());
 
   cloned_exported_dir_.events().OnOpen = [this](zx_status_t status,
@@ -222,9 +222,9 @@ ComponentControllerBase::GetDir(std::string path) {
         }
       };
 
-  const fuchsia::io::OpenFlags flags = fuchsia::io::OpenFlags::DESCRIBE |
-                                       fuchsia::io::OpenFlags::RIGHT_READABLE |
-                                       fuchsia::io::OpenFlags::RIGHT_WRITABLE;
+  const fuchsia::io::OpenFlags flags = fuchsia::io::OPEN_FLAG_DESCRIBE |
+                                       fuchsia::io::OPEN_RIGHT_READABLE |
+                                       fuchsia::io::OPEN_RIGHT_WRITABLE;
   exported_dir_->Open(flags, 0u /* mode */, path, diagnostics_dir_node.NewRequest());
   return bridge.consumer.promise().and_then([diagnostics_dir_node =
                                                  std::move(diagnostics_dir_node)]() mutable {

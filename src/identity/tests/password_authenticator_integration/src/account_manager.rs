@@ -167,7 +167,7 @@ impl TestEnv {
                 .expect("Could not create volume manager channel pair");
         self.dev_root()
             .open(
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 fio::MODE_TYPE_SERVICE,
                 &fvm_path,
                 ServerEnd::new(volume_manager_server.into_channel()),
@@ -202,7 +202,7 @@ impl TestEnv {
         let mgr_path = ramdisk.get_path().to_string() + "/fvm/" + name + "-p-1/block/zxcrypt";
         self.dev_root()
             .open(
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 fio::MODE_TYPE_SERVICE,
                 &mgr_path,
                 ServerEnd::new(manager_server.into_channel()),
@@ -218,7 +218,7 @@ impl TestEnv {
         let block_path = ramdisk.get_path().to_string() + "/fvm/" + name + "-p-1/block";
         self.dev_root()
             .open(
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 fio::MODE_TYPE_SERVICE,
                 &block_path,
                 ServerEnd::new(controller_server.into_channel()),
@@ -252,7 +252,7 @@ impl TestEnv {
             .root
             .get_exposed_dir()
             .open(
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 fio::MODE_TYPE_DIRECTORY,
                 "dev",
                 ServerEnd::new(dev_dir_server.into_channel()),
@@ -473,9 +473,7 @@ async fn deprecated_provision_new_account_formats_directory() {
         let file = io_util::directory::open_file(
             &root,
             "test",
-            fio::OpenFlags::CREATE
-                | fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .await
         .expect("create file");
@@ -502,7 +500,7 @@ async fn deprecated_provision_new_account_formats_directory() {
         .await
         .expect("get_data_directory FIDL")
         .expect("get_data_directory");
-    let file = io_util::directory::open_file(&root, "test", fio::OpenFlags::RIGHT_READABLE)
+    let file = io_util::directory::open_file(&root, "test", fio::OPEN_RIGHT_READABLE)
         .await
         .expect("create file");
 
@@ -540,9 +538,7 @@ async fn locked_account_can_be_unlocked_again() {
         let file = io_util::directory::open_file(
             &root,
             "test",
-            fio::OpenFlags::CREATE
-                | fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .await
         .expect("create file");
@@ -561,7 +557,7 @@ async fn locked_account_can_be_unlocked_again() {
     account_proxy.lock().await.expect("lock FIDL").expect("locked");
 
     // The data directory should be closed.
-    io_util::directory::open_file(&root, "test", fio::OpenFlags::RIGHT_READABLE)
+    io_util::directory::open_file(&root, "test", fio::OPEN_RIGHT_READABLE)
         .await
         .expect_err("failed to open file");
 
@@ -593,7 +589,7 @@ async fn locked_account_can_be_unlocked_again() {
         .await
         .expect("get_data_directory FIDL")
         .expect("get_data_directory");
-    let file = io_util::directory::open_file(&root, "test", fio::OpenFlags::RIGHT_READABLE)
+    let file = io_util::directory::open_file(&root, "test", fio::OPEN_RIGHT_READABLE)
         .await
         .expect("create file");
 

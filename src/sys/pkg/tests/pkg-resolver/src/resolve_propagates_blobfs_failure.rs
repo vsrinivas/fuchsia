@@ -91,12 +91,12 @@ impl DirectoryWithFileCreateOverride {
         while let Some(req) = stream.next().await {
             match req.unwrap() {
                 fio::DirectoryRequest::Clone { flags, object, control_handle: _ } => {
-                    assert_eq!(flags, fio::OpenFlags::CLONE_SAME_RIGHTS);
+                    assert_eq!(flags, fio::CLONE_FLAG_SAME_RIGHTS);
                     let stream = object.into_stream().unwrap().cast_stream();
                     self.clone().spawn(stream);
                 }
                 fio::DirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
-                    let is_create = flags.intersects(fio::OpenFlags::CREATE);
+                    let is_create = flags.intersects(fio::OPEN_FLAG_CREATE);
 
                     if path == "." {
                         let stream = object.into_stream().unwrap().cast_stream();

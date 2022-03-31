@@ -59,10 +59,10 @@ void ProcessBuilder::LoadVMO(zx::vmo executable) {
 
 zx_status_t ProcessBuilder::LoadPath(const std::string& path) {
   fbl::unique_fd fd;
-  zx_status_t status = fdio_open_fd(path.c_str(),
-                                    static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE |
-                                                          fuchsia::io::OpenFlags::RIGHT_EXECUTABLE),
-                                    fd.reset_and_get_address());
+  zx_status_t status = fdio_open_fd(
+      path.c_str(),
+      static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_EXECUTABLE),
+      fd.reset_and_get_address());
   if (status != ZX_OK) {
     return status;
   }

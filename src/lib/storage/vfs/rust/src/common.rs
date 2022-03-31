@@ -19,11 +19,11 @@ const FS_RIGHTS: fio::OpenFlags = fio::OPEN_RIGHTS;
 /// Flags visible to GetFlags. These are flags that have meaning after the open call; all other
 /// flags are only significant at open time.
 pub const GET_FLAGS_VISIBLE: fio::OpenFlags = fio::OpenFlags::empty()
-    .union(fio::OpenFlags::RIGHT_READABLE)
-    .union(fio::OpenFlags::RIGHT_WRITABLE)
-    .union(fio::OpenFlags::RIGHT_EXECUTABLE)
-    .union(fio::OpenFlags::APPEND)
-    .union(fio::OpenFlags::NODE_REFERENCE);
+    .union(fio::OPEN_RIGHT_READABLE)
+    .union(fio::OPEN_RIGHT_WRITABLE)
+    .union(fio::OPEN_RIGHT_EXECUTABLE)
+    .union(fio::OPEN_FLAG_APPEND)
+    .union(fio::OPEN_FLAG_NODE_REFERENCE);
 
 /// Returns true if the rights flags in `flags` do not exceed those in `parent_flags`.
 pub fn stricter_or_same_rights(parent_flags: fio::OpenFlags, flags: fio::OpenFlags) -> bool {
@@ -38,20 +38,20 @@ pub fn inherit_rights_for_clone(
     parent_flags: fio::OpenFlags,
     mut flags: fio::OpenFlags,
 ) -> Result<fio::OpenFlags, Status> {
-    if flags.intersects(fio::OpenFlags::CLONE_SAME_RIGHTS) && flags.intersects(FS_RIGHTS) {
+    if flags.intersects(fio::CLONE_FLAG_SAME_RIGHTS) && flags.intersects(FS_RIGHTS) {
         return Err(Status::INVALID_ARGS);
     }
 
     // We preserve OPEN_FLAG_APPEND as this is what is the most convenient for the POSIX emulation.
     //
     // OPEN_FLAG_NODE_REFERENCE is enforced, according to our current FS permissions design.
-    flags |= parent_flags & (fio::OpenFlags::APPEND | fio::OpenFlags::NODE_REFERENCE);
+    flags |= parent_flags & (fio::OPEN_FLAG_APPEND | fio::OPEN_FLAG_NODE_REFERENCE);
 
     // If CLONE_FLAG_SAME_RIGHTS is requested, cloned connection will inherit the same rights
     // as those from the originating connection.  We have ensured that no FS_RIGHTS flags are set
     // above.
-    if flags.intersects(fio::OpenFlags::CLONE_SAME_RIGHTS) {
-        flags &= !fio::OpenFlags::CLONE_SAME_RIGHTS;
+    if flags.intersects(fio::CLONE_FLAG_SAME_RIGHTS) {
+        flags &= !fio::CLONE_FLAG_SAME_RIGHTS;
         flags |= parent_flags & FS_RIGHTS;
     }
 
@@ -62,9 +62,9 @@ pub fn inherit_rights_for_clone(
     // Ignore the POSIX flags for clone.
     // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED once out-of-tree clients have been
     // updated to the latest SDK version.
-    flags &= !(fio::OpenFlags::POSIX_DEPRECATED
-        | fio::OpenFlags::POSIX_WRITABLE
-        | fio::OpenFlags::POSIX_EXECUTABLE);
+    flags &= !(fio::OPEN_FLAG_POSIX_DEPRECATED
+        | fio::OPEN_FLAG_POSIX_WRITABLE
+        | fio::OPEN_FLAG_POSIX_EXECUTABLE);
 
     Ok(flags)
 }
@@ -112,7 +112,7 @@ pub fn send_on_open_with_error(
         panic!("send_on_open_with_error() should not be used to respond with Status::OK");
     }
 
-    if !flags.intersects(fio::OpenFlags::DESCRIBE) {
+    if !flags.intersects(fio::OPEN_FLAG_DESCRIBE) {
         // There is no reasonable way to report this error.  Assuming the `server_end` has just
         // disconnected or failed in some other way why we are trying to send OnOpen.
         let _ = server_end.close_with_epitaph(status);
@@ -184,9 +184,9 @@ mod tests {
     #[test]
     fn node_reference_is_inherited() {
         irfc_ok!(
-            fio::OpenFlags::NODE_REFERENCE,
+            fio::OPEN_FLAG_NODE_REFERENCE,
             fio::OpenFlags::empty(),
-            fio::OpenFlags::NODE_REFERENCE
+            fio::OPEN_FLAG_NODE_REFERENCE
         );
     }
 }

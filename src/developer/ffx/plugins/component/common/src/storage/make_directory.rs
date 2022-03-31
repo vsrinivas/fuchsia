@@ -40,10 +40,8 @@ pub async fn make_directory(storage_admin: StorageAdminProxy, path: String) -> R
         .map_err(|e| ffx_error!("Could not open component storage: {:?}", e))?;
 
     // Send a request to create the directory
-    let dir = storage_dir.open_dir(
-        remote_path.relative_path,
-        fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_READABLE,
-    )?;
+    let dir = storage_dir
+        .open_dir(remote_path.relative_path, fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE)?;
 
     // Verify that we can actually read the contents of the directory created
     dir.entries().await?;
@@ -75,8 +73,8 @@ mod test {
                     request
                 {
                     assert_eq!(path, "test");
-                    assert!(flags.intersects(fio::OpenFlags::CREATE));
-                    assert!(flags.intersects(fio::OpenFlags::DIRECTORY));
+                    assert!(flags.intersects(fio::OPEN_FLAG_CREATE));
+                    assert!(flags.intersects(fio::OPEN_FLAG_DIRECTORY));
                     assert!(mode & fio::MODE_TYPE_DIRECTORY != 0);
                     object
                 } else {

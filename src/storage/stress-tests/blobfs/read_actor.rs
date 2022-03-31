@@ -38,7 +38,7 @@ impl ReadActor {
 
         // Choose a random blob and open a handle to it
         let blob = blob_list.choose(&mut self.rng).unwrap();
-        let file = self.root_dir.open_file(blob, fio::OpenFlags::RIGHT_READABLE).await?;
+        let file = self.root_dir.open_file(blob, fio::OPEN_RIGHT_READABLE).await?;
 
         debug!("Reading from {}", blob);
         let data_size_bytes = file.uncompressed_size().await?;

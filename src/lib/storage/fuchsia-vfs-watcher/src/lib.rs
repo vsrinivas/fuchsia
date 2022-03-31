@@ -192,7 +192,7 @@ mod tests {
     use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
     use fuchsia_zircon::prelude::*;
     use futures::prelude::*;
-    use io_util::{open_directory_in_namespace, OpenFlags};
+    use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
     use std::fmt::Debug;
     use std::fs::File;
     use std::path::Path;
@@ -216,11 +216,9 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let _ = File::create(tmp_dir.path().join("file1")).unwrap();
 
-        let dir = open_directory_in_namespace(
-            tmp_dir.path().to_str().unwrap(),
-            OpenFlags::RIGHT_READABLE,
-        )
-        .unwrap();
+        let dir =
+            open_directory_in_namespace(tmp_dir.path().to_str().unwrap(), OPEN_RIGHT_READABLE)
+                .unwrap();
         let mut w = Watcher::new(dir).await.unwrap();
 
         // TODO(tkilbourn): this assumes "." always comes before "file1". If this test ever starts
@@ -241,11 +239,9 @@ mod tests {
     async fn test_add() {
         let tmp_dir = tempdir().unwrap();
 
-        let dir = open_directory_in_namespace(
-            tmp_dir.path().to_str().unwrap(),
-            OpenFlags::RIGHT_READABLE,
-        )
-        .unwrap();
+        let dir =
+            open_directory_in_namespace(tmp_dir.path().to_str().unwrap(), OPEN_RIGHT_READABLE)
+                .unwrap();
         let mut w = Watcher::new(dir).await.unwrap();
 
         loop {
@@ -271,11 +267,9 @@ mod tests {
         let filepath = tmp_dir.path().join(filename);
         let _ = File::create(&filepath).unwrap();
 
-        let dir = open_directory_in_namespace(
-            tmp_dir.path().to_str().unwrap(),
-            OpenFlags::RIGHT_READABLE,
-        )
-        .unwrap();
+        let dir =
+            open_directory_in_namespace(tmp_dir.path().to_str().unwrap(), OPEN_RIGHT_READABLE)
+                .unwrap();
         let mut w = Watcher::new(dir).await.unwrap();
 
         loop {
@@ -298,11 +292,9 @@ mod tests {
     async fn test_timeout() {
         let tmp_dir = tempdir().unwrap();
 
-        let dir = open_directory_in_namespace(
-            tmp_dir.path().to_str().unwrap(),
-            OpenFlags::RIGHT_READABLE,
-        )
-        .unwrap();
+        let dir =
+            open_directory_in_namespace(tmp_dir.path().to_str().unwrap(), OPEN_RIGHT_READABLE)
+                .unwrap();
         let mut w = Watcher::new(dir).await.unwrap();
 
         loop {

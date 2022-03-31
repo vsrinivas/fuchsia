@@ -246,9 +246,7 @@ impl Clone for ComponentNamespace {
             // here, we opt to omit the path we failed to clone from the namespace, as that's
             // simpler than generating some handle to put in the namespace that we'd need to then
             // later close.
-            if let Ok(client_proxy) =
-                io_util::clone_directory(proxy, fio::OpenFlags::CLONE_SAME_RIGHTS)
-            {
+            if let Ok(client_proxy) = io_util::clone_directory(proxy, fio::CLONE_FLAG_SAME_RIGHTS) {
                 ns.items.push((path.clone(), client_proxy));
             }
         }
@@ -374,7 +372,7 @@ pub async fn configure_launcher(
             let lib_proxy = io_util::open_directory(
                 pkg_proxy,
                 &Path::new("lib"),
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
             )
             .map_err(|e| LaunchError::LibLoadError(e.to_string()))?;
             let (ll_client_chan, ll_service_chan) =
@@ -692,7 +690,7 @@ mod tests {
                 let pkg_path = "/pkg".to_string();
                 let pkg_chan = io_util::open_directory_in_namespace(
                     "/pkg",
-                    fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+                    fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
                 )
                 .unwrap()
                 .into_channel()

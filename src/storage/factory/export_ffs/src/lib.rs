@@ -269,7 +269,7 @@ async fn get_entries(dir: &fio::DirectoryProxy) -> Result<Vec<DirectoryEntry>, E
         let (file_proxy, server_end) = fidl::endpoints::create_proxy::<fio::FileMarker>()
             .context("failed to create fidl proxy")?;
         dir.open(
-            fio::OpenFlags::RIGHT_READABLE,
+            fio::OPEN_RIGHT_READABLE,
             fio::MODE_TYPE_FILE,
             &ent.name,
             fidl::endpoints::ServerEnd::new(server_end.into_channel()),
@@ -447,7 +447,7 @@ mod tests {
         let scope = ExecutionScope::new();
         dir.open(
             scope,
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             vfs::path::Path::dot(),
             endpoints::ServerEnd::new(dir_server.into_channel()),
@@ -479,7 +479,7 @@ mod tests {
         let scope = ExecutionScope::new();
         dir.open(
             scope,
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             vfs::path::Path::dot(),
             endpoints::ServerEnd::new(dir_server.into_channel()),

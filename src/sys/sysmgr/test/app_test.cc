@@ -102,9 +102,8 @@ TEST_F(TestSysmgr, CrashingCriticalComponent) {
 
   fidl::InterfaceRequest<fuchsia::io::Directory> dir_request;
   auto svc_dir = sys::ServiceDirectory::CreateWithRequest(&dir_request);
-  composed_svc_dir.Serve(fuchsia::io::OpenFlags::RIGHT_READABLE |
-                             fuchsia::io::OpenFlags::RIGHT_WRITABLE |
-                             fuchsia::io::OpenFlags::DIRECTORY,
+  composed_svc_dir.Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE |
+                             fuchsia::io::OPEN_FLAG_DIRECTORY,
                          dir_request.TakeChannel(), loop.dispatcher());
 
   ::sysmgr::App app(std::move(config), svc_dir, &loop);

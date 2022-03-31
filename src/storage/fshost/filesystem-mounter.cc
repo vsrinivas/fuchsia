@@ -138,11 +138,10 @@ zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, con
     return zx::error(status);
   }
 
-  if (auto resp =
-          fidl::WireCall<fio::Directory>(zx::unowned_channel(export_root.channel()))
-              ->Open(fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kPosixWritable |
-                         fio::wire::OpenFlags::kPosixExecutable,
-                     0, fidl::StringView("root"), std::move(root_server));
+  if (auto resp = fidl::WireCall<fio::Directory>(zx::unowned_channel(export_root.channel()))
+                      ->Open(fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosixWritable |
+                                 fio::wire::kOpenFlagPosixExecutable,
+                             0, fidl::StringView("root"), std::move(root_server));
       !resp.ok()) {
     return zx::error(resp.status());
   }

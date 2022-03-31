@@ -509,7 +509,7 @@ mod tests {
         const TEST_UTIL_BIN: &'static str = "/pkg/bin/process_builder_test_util";
         let file_proxy = io_util::open_file_in_namespace(
             TEST_UTIL_BIN,
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )?;
         let vmo = file_proxy
             .get_backing_memory(fio::VmoFlags::READ | fio::VmoFlags::EXECUTE)
@@ -609,7 +609,7 @@ mod tests {
         };
         dir.clone().open(
             ExecutionScope::new(),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             path::Path::dot(),
             ServerEnd::new(dir_server),

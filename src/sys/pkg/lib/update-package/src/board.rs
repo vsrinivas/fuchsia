@@ -25,7 +25,7 @@ pub(crate) async fn verify_board(
     expected_contents: &str,
 ) -> Result<(), VerifyBoardError> {
     let file =
-        match io_util::directory::open_file(proxy, "board", fio::OpenFlags::RIGHT_READABLE).await {
+        match io_util::directory::open_file(proxy, "board", fio::OPEN_RIGHT_READABLE).await {
             Ok(file) => Ok(file),
             Err(io_util::node::OpenError::OpenError(Status::NOT_FOUND)) => return Ok(()),
             Err(e) => Err(e),

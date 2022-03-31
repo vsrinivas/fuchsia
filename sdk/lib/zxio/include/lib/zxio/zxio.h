@@ -282,7 +282,7 @@ ZXIO_EXPORT zx_status_t zxio_flags_get(zxio_t* io, uint32_t* out_flags);
 //
 // This function can modify the following flags:
 //
-//  * |fuchsia::io::OpenFlags::APPEND|.
+//  * |fuchsia::io::OPEN_FLAG_APPEND|.
 //
 // See fuchsia.io for the available |flags|.
 ZXIO_EXPORT zx_status_t zxio_flags_set(zxio_t* io, uint32_t flags);

@@ -28,9 +28,8 @@ namespace fio = fuchsia_io;
 namespace flogger = fuchsia_logger;
 namespace frunner = fuchsia_component_runner;
 
-constexpr auto kOpenFlags = fio::wire::OpenFlags::kRightReadable |
-                            fio::wire::OpenFlags::kRightExecutable |
-                            fio::wire::OpenFlags::kNotDirectory;
+constexpr auto kOpenFlags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable |
+                            fio::wire::kOpenFlagNotDirectory;
 constexpr auto kVmoFlags = fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kExecute;
 
 namespace {

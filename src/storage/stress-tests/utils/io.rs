@@ -315,8 +315,7 @@ impl File {
 
 impl Clone for Directory {
     fn clone(&self) -> Self {
-        let new_proxy =
-            clone_no_describe(&self.proxy, Some(fio::OpenFlags::CLONE_SAME_RIGHTS)).unwrap();
+        let new_proxy = clone_no_describe(&self.proxy, Some(fio::CLONE_FLAG_SAME_RIGHTS)).unwrap();
         Self { proxy: new_proxy }
     }
 }

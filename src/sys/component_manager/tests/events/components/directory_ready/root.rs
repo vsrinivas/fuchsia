@@ -26,7 +26,7 @@ async fn call_trigger(directory: &fio::DirectoryProxy, paths: &Vec<String>) {
         let (trigger, server_end) = create_proxy::<ftest::TriggerMarker>().unwrap();
         directory
             .open(
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 fio::MODE_TYPE_SERVICE,
                 path,
                 ServerEnd::new(server_end.into_channel()),
@@ -71,7 +71,7 @@ async fn main() {
 
                 // Open the directory and verify its contents
                 let (node_clone, server_end) = fidl::endpoints::create_proxy().unwrap();
-                payload.node.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, server_end).unwrap();
+                payload.node.clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end).unwrap();
                 let directory = io_util::node_to_directory(node_clone).unwrap();
                 let entries = list_entries(&directory).await;
 

@@ -29,7 +29,7 @@ pub mod file;
 pub mod node;
 
 // Reexported from fidl_fuchsia_io for convenience
-pub use fio::OpenFlags;
+pub use fio::{OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE};
 
 /// open_node will return a NodeProxy opened to the node at the given path relative to the
 /// given directory, or return an error if no such node exists (or some other FIDL error was
@@ -89,10 +89,10 @@ pub fn create_sub_directories(
                 };
                 let (subdir, local_server_end) = create_proxy::<fio::DirectoryMarker>()?;
                 dir_ref.open(
-                    fio::OpenFlags::DIRECTORY
-                        | fio::OpenFlags::RIGHT_READABLE
-                        | fio::OpenFlags::RIGHT_WRITABLE
-                        | fio::OpenFlags::CREATE,
+                    fio::OPEN_FLAG_DIRECTORY
+                        | OPEN_RIGHT_READABLE
+                        | OPEN_RIGHT_WRITABLE
+                        | fio::OPEN_FLAG_CREATE,
                     fio::MODE_TYPE_DIRECTORY,
                     part.to_str().unwrap(),
                     ServerEnd::new(local_server_end.into_channel()),
@@ -285,13 +285,11 @@ mod tests {
         let data = "abc".repeat(10000);
         fs::write(tempdir.path().join("myfile"), &data).expect("failed writing file");
 
-        let dir = open_directory_in_namespace(
-            tempdir.path().to_str().unwrap(),
-            OpenFlags::RIGHT_READABLE,
-        )
-        .expect("could not open tmp dir");
+        let dir =
+            open_directory_in_namespace(tempdir.path().to_str().unwrap(), OPEN_RIGHT_READABLE)
+                .expect("could not open tmp dir");
         let path = Path::new("myfile");
-        let file = open_file(&dir, &path, OpenFlags::RIGHT_READABLE).expect("could not open file");
+        let file = open_file(&dir, &path, OPEN_RIGHT_READABLE).expect("could not open file");
         let contents = read_file(&file).await.expect("could not read file");
         assert_eq!(&contents, &data, "File contents did not match");
     }
@@ -302,14 +300,14 @@ mod tests {
         let tempdir = TempDir::new().expect("failed to create tmp dir");
         let dir = open_directory_in_namespace(
             tempdir.path().to_str().unwrap(),
-            OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )
         .expect("could not open tmp dir");
 
         // Write contents.
         let file_name = Path::new("myfile");
         let data = "abc".repeat(10000);
-        let file = open_file(&dir, &file_name, OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE)
+        let file = open_file(&dir, &file_name, OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE)
             .expect("could not open file");
         write_file(&file, &data).await.expect("could not write file");
 
@@ -320,15 +318,15 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn open_checks_path_validity() {
-        let dir = open_directory_in_namespace("/pkg", OpenFlags::RIGHT_READABLE)
-            .expect("could not open /pkg");
+        let dir =
+            open_directory_in_namespace("/pkg", OPEN_RIGHT_READABLE).expect("could not open /pkg");
 
-        assert!(open_file(&dir, Path::new(""), OpenFlags::RIGHT_READABLE).is_err());
-        assert!(open_file(&dir, Path::new("/"), OpenFlags::RIGHT_READABLE).is_err());
-        assert!(open_file(&dir, Path::new("/foo"), OpenFlags::RIGHT_READABLE).is_err());
-        assert!(open_directory(&dir, Path::new(""), OpenFlags::RIGHT_READABLE).is_err());
-        assert!(open_directory(&dir, Path::new("/"), OpenFlags::RIGHT_READABLE).is_err());
-        assert!(open_directory(&dir, Path::new("/foo"), OpenFlags::RIGHT_READABLE).is_err());
+        assert!(open_file(&dir, Path::new(""), OPEN_RIGHT_READABLE).is_err());
+        assert!(open_file(&dir, Path::new("/"), OPEN_RIGHT_READABLE).is_err());
+        assert!(open_file(&dir, Path::new("/foo"), OPEN_RIGHT_READABLE).is_err());
+        assert!(open_directory(&dir, Path::new(""), OPEN_RIGHT_READABLE).is_err());
+        assert!(open_directory(&dir, Path::new("/"), OPEN_RIGHT_READABLE).is_err());
+        assert!(open_directory(&dir, Path::new("/foo"), OPEN_RIGHT_READABLE).is_err());
     }
 
     #[test]
@@ -357,22 +355,22 @@ mod tests {
         let scope = ExecutionScope::new();
         example_dir.open(
             scope,
-            OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             vfs::path::Path::dot(),
             ServerEnd::new(example_dir_service.into_channel()),
         );
 
         for (file_name, flags, should_succeed) in vec![
-            ("read_only", OpenFlags::RIGHT_READABLE, true),
-            ("read_only", OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE, false),
-            ("read_only", OpenFlags::RIGHT_WRITABLE, false),
-            ("read_write", OpenFlags::RIGHT_READABLE, true),
-            ("read_write", OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE, true),
-            ("read_write", OpenFlags::RIGHT_WRITABLE, true),
-            ("write_only", OpenFlags::RIGHT_READABLE, false),
-            ("write_only", OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE, false),
-            ("write_only", OpenFlags::RIGHT_WRITABLE, true),
+            ("read_only", OPEN_RIGHT_READABLE, true),
+            ("read_only", OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, false),
+            ("read_only", OPEN_RIGHT_WRITABLE, false),
+            ("read_write", OPEN_RIGHT_READABLE, true),
+            ("read_write", OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, true),
+            ("read_write", OPEN_RIGHT_WRITABLE, true),
+            ("write_only", OPEN_RIGHT_READABLE, false),
+            ("write_only", OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, false),
+            ("write_only", OPEN_RIGHT_WRITABLE, true),
         ] {
             let file_proxy = open_file(&example_dir_proxy, &Path::new(file_name), flags)?;
             match (should_succeed, file_proxy.describe().await) {
@@ -385,10 +383,10 @@ mod tests {
                     panic!("successfully opened when expected failure, could describe: {:?}", d)
                 }
             }
-            if flags.intersects(OpenFlags::RIGHT_READABLE) {
+            if flags.intersects(OPEN_RIGHT_READABLE) {
                 assert_eq!(file_name, read_file(&file_proxy).await.expect("failed to read file"));
             }
-            if flags.intersects(OpenFlags::RIGHT_WRITABLE) {
+            if flags.intersects(OPEN_RIGHT_WRITABLE) {
                 let _: u64 = file_proxy
                     .write(b"write_only")
                     .await
@@ -404,11 +402,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn open_directory_in_namespace_rejects_files() {
         let tempfile = NamedTempFile::new().expect("failed to create tmp file");
-        let dir = open_directory_in_namespace(
-            tempfile.path().to_str().unwrap(),
-            OpenFlags::RIGHT_READABLE,
-        )
-        .expect("could not send open request");
+        let dir =
+            open_directory_in_namespace(tempfile.path().to_str().unwrap(), OPEN_RIGHT_READABLE)
+                .expect("could not send open request");
 
         // We should see a PEER_CLOSED because we tried to open a file as a directory
         dir.on_closed().await.expect("Error waiting for peer closed");
@@ -424,14 +420,14 @@ mod tests {
 
         let root_dir = open_directory_in_namespace(
             tempdir.path().to_str().unwrap(),
-            OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )?;
 
         let sub_dir = create_sub_directories(&root_dir, &path)?;
         let file = open_file(
             &sub_dir,
             &file_name,
-            OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
         )?;
 
         write_file(&file, &data).await.expect("writing to the file failed");
@@ -446,11 +442,9 @@ mod tests {
     async fn write_path_bytes_create_test() {
         // Create temp dir for test, and bind it to our namespace.
         let tempdir = TempDir::new().expect("failed to create tmp dir");
-        let _dir = open_directory_in_namespace(
-            tempdir.path().to_str().unwrap(),
-            OpenFlags::RIGHT_READABLE,
-        )
-        .expect("could not open tmp dir");
+        let _dir =
+            open_directory_in_namespace(tempdir.path().to_str().unwrap(), OPEN_RIGHT_READABLE)
+                .expect("could not open tmp dir");
         let path = tempdir.path().join(Path::new("write_path_bytes_create"));
         let path_string = path.to_str().expect("converting path to string failed");
 
@@ -467,11 +461,9 @@ mod tests {
     async fn write_path_bytes_replace_test() {
         // Create temp dir for test, and bind it to our namespace.
         let tempdir = TempDir::new().expect("failed to create tmp dir");
-        let _dir = open_directory_in_namespace(
-            tempdir.path().to_str().unwrap(),
-            OpenFlags::RIGHT_READABLE,
-        )
-        .expect("could not open tmp dir");
+        let _dir =
+            open_directory_in_namespace(tempdir.path().to_str().unwrap(), OPEN_RIGHT_READABLE)
+                .expect("could not open tmp dir");
         let path = tempdir.path().join(Path::new("write_path_bytes_replace"));
         let path_string = path.to_str().expect("converting path to string failed");
 

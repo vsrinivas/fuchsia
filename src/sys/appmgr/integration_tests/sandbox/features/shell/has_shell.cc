@@ -15,24 +15,22 @@ static struct {
   fio::wire::OpenFlags rights;
   bool strict;
 } kExpectedShellPathTestcases[] = {
-    {"/boot", fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightExecutable, true},
-    {"/hub", fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable, true},
-    {"/tmp", fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable, true},
-    {"/blob", fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable, true},
-    {"/data", fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable, true},
+    {"/boot", fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable, true},
+    {"/hub", fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable, true},
+    {"/tmp", fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable, true},
+    {"/blob", fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable, true},
+    {"/data", fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable, true},
 
     // TODO(fxbug.dev/45603): devfs should reject EXECUTABLE and ADMIN but doesn't, switch this to
     // strict after it's ported to ulib/fs
-    {"/dev", fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable, false},
+    {"/dev", fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable, false},
 
     // TODO(fxbug.dev/37858): pkgfs/thinfs do not properly support hierarchical directory rights so
     // the StrictRights test fails, switch to that once fixed
-    {"/bin", fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightExecutable, false},
-    {"/config/ssl", fio::wire::OpenFlags::kRightReadable, false},
-    {"/pkgfs", fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightExecutable,
-     false},
-    {"/system", fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightExecutable,
-     false},
+    {"/bin", fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable, false},
+    {"/config/ssl", fio::wire::kOpenRightReadable, false},
+    {"/pkgfs", fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable, false},
+    {"/system", fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable, false},
 };
 
 TEST_F(NamespaceTest, HasShell) {

@@ -418,9 +418,9 @@ where
                     let scope = vfs::execution_scope::ExecutionScope::new();
                     let () = local_child_out_dir.open(
                         scope.clone(),
-                        fio::OpenFlags::RIGHT_READABLE
-                            | fio::OpenFlags::RIGHT_WRITABLE
-                            | fio::OpenFlags::RIGHT_EXECUTABLE,
+                        fio::OPEN_RIGHT_READABLE
+                            | fio::OPEN_RIGHT_WRITABLE
+                            | fio::OPEN_RIGHT_EXECUTABLE,
                         0,
                         vfs::path::Path::dot(),
                         handles.outgoing_dir.into_channel().into(),
@@ -520,21 +520,19 @@ where
             pkgfs_packages: io_util::directory::open_directory_no_describe(
                 realm_instance.root.get_exposed_dir(),
                 "pkgfs-packages",
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
             )
             .expect("open pkgfs-packages"),
             pkgfs_versions: io_util::directory::open_directory_no_describe(
                 realm_instance.root.get_exposed_dir(),
                 "pkgfs-versions",
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
             )
             .expect("open pkgfs-versions"),
             pkgfs: io_util::directory::open_directory_no_describe(
                 realm_instance.root.get_exposed_dir(),
                 "pkgfs",
-                fio::OpenFlags::RIGHT_READABLE
-                    | fio::OpenFlags::RIGHT_WRITABLE
-                    | fio::OpenFlags::RIGHT_EXECUTABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE,
             )
             .expect("open pkgfs"),
         };
@@ -668,7 +666,7 @@ impl<P: PkgFs> TestEnv<P> {
         io_util::directory::open_directory(
             self.apps.realm_instance.root.get_exposed_dir(),
             "system",
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )
         .await
         .expect("open system")

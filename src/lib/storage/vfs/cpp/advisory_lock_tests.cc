@@ -48,8 +48,8 @@ class FlockTest : public zxtest::Test {
     EXPECT_TRUE(endpoints.is_ok());
     auto [client, server] = *std::move(endpoints);
     EXPECT_EQ(ZX_OK, fdio_open(kTmpfsPath,
-                               static_cast<uint32_t>(fuchsia_io::wire::OpenFlags::kRightReadable |
-                                                     fuchsia_io::wire::OpenFlags::kRightExecutable),
+                               static_cast<uint32_t>(fuchsia_io::wire::kOpenRightReadable |
+                                                     fuchsia_io::wire::kOpenRightExecutable),
                                server.TakeChannel().release()));
     return fbl::MakeRefCounted<fs::RemoteDir>(std::move(client));
   }

@@ -38,7 +38,7 @@ pub async fn all_locations(root: impl AsRef<str>) -> Result<Vec<InspectLocation>
     path.push(&root);
     let dir_proxy = io_util::open_directory_in_namespace(
         &path.to_string_lossy().to_string(),
-        io_util::OpenFlags::RIGHT_READABLE,
+        io_util::OPEN_RIGHT_READABLE,
     )?;
 
     let locations =
@@ -179,7 +179,7 @@ impl InspectObject {
     async fn load_from_vmo(&mut self) -> Result<(), Error> {
         let proxy = io_util::open_file_in_namespace(
             &self.location.absolute_path()?,
-            io_util::OpenFlags::RIGHT_READABLE,
+            io_util::OPEN_RIGHT_READABLE,
         )?;
 
         // Obtain the vmo backing any VmoFiles.

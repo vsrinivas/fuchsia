@@ -187,9 +187,8 @@ void CloneFdAsReadOnlyHelper(fbl::unique_fd in_fd, fbl::unique_fd* out_fd) {
   zx::channel foo_handle_read_only, foo_request_read_only;
   ASSERT_EQ(zx::channel::create(0, &foo_handle_read_only, &foo_request_read_only), ZX_OK);
 
-  auto clone_result =
-      fidl::WireCall<fio::Node>(zx::unowned_channel(foo_handle))
-          ->Clone(fio::wire::OpenFlags::kRightReadable, std::move(foo_request_read_only));
+  auto clone_result = fidl::WireCall<fio::Node>(zx::unowned_channel(foo_handle))
+                          ->Clone(fio::wire::kOpenRightReadable, std::move(foo_request_read_only));
   ASSERT_EQ(clone_result.status(), ZX_OK);
 
   // Turn the handle back to an fd to test posix functions
@@ -206,8 +205,8 @@ void CloneFdAsReadOnlyHelper(fbl::unique_fd in_fd, fbl::unique_fd* out_fd) {
 
 TEST_P(DirectoryPermissionTest, TestCloneWithBadFlags) {
   fio::wire::OpenFlags rights[] = {
-      fio::wire::OpenFlags::kRightReadable,
-      fio::wire::OpenFlags::kRightWritable,
+      fio::wire::kOpenRightReadable,
+      fio::wire::kOpenRightWritable,
   };
 
   // CLONE_FLAG_SAME_RIGHTS cannot appear together with any specific rights.
@@ -221,9 +220,9 @@ TEST_P(DirectoryPermissionTest, TestCloneWithBadFlags) {
 
     zx::channel foo_clone_client_end, foo_clone_server_end;
     ASSERT_EQ(zx::channel::create(0, &foo_clone_client_end, &foo_clone_server_end), ZX_OK);
-    auto clone_result = fidl::WireCall<fio::Node>(zx::unowned_channel(foo_handle))
-                            ->Clone(fio::wire::OpenFlags::kCloneSameRights | right,
-                                    std::move(foo_clone_server_end));
+    auto clone_result =
+        fidl::WireCall<fio::Node>(zx::unowned_channel(foo_handle))
+            ->Clone(fio::wire::kCloneFlagSameRights | right, std::move(foo_clone_server_end));
     ASSERT_EQ(clone_result.status(), ZX_OK);
     auto describe_result =
         fidl::WireCall<fio::Node>(zx::unowned_channel(foo_clone_client_end.get()))->Describe();
@@ -243,10 +242,9 @@ TEST_P(DirectoryPermissionTest, TestCloneCannotIncreaseRights) {
   zx_handle_t foo_handle = fdio_caller.borrow_channel();
   zx::channel foo_clone_client_end, foo_clone_server_end;
   ASSERT_EQ(zx::channel::create(0, &foo_clone_client_end, &foo_clone_server_end), ZX_OK);
-  auto clone_result =
-      fidl::WireCall<fio::Node>(zx::unowned_channel(foo_handle))
-          ->Clone(fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable,
-                  std::move(foo_clone_server_end));
+  auto clone_result = fidl::WireCall<fio::Node>(zx::unowned_channel(foo_handle))
+                          ->Clone(fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable,
+                                  std::move(foo_clone_server_end));
   ASSERT_EQ(clone_result.status(), ZX_OK);
   auto describe_result =
       fidl::WireCall<fio::Node>(zx::unowned_channel(foo_clone_client_end.get()))->Describe();

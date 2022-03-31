@@ -26,7 +26,7 @@ class ServiceTest : public gtest::RealLoopFixture, public test::placeholders::Ec
     auto service =
         std::make_unique<vfs::Service>(bindings_.GetHandler(this, second_loop_.dispatcher()));
 
-    dir_.Serve(fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
+    dir_.Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
                dir_ptr_.NewRequest().TakeChannel(), second_loop_.dispatcher());
     dir_.AddEntry(service_name_, std::move(service));
     second_loop_.StartThread("vfs test thread");
@@ -40,7 +40,7 @@ class ServiceTest : public gtest::RealLoopFixture, public test::placeholders::Ec
     SCOPED_TRACE("flag: " + std::to_string(static_cast<uint32_t>(flag)) +
                  ", mode: " + std::to_string(mode));
     fuchsia::io::NodePtr node_ptr;
-    dir_ptr()->Open(flag | fuchsia::io::OpenFlags::DESCRIBE, mode, service_name(),
+    dir_ptr()->Open(flag | fuchsia::io::OPEN_FLAG_DESCRIBE, mode, service_name(),
                     node_ptr.NewRequest());
 
     bool on_open_called = false;
@@ -68,7 +68,7 @@ class ServiceTest : public gtest::RealLoopFixture, public test::placeholders::Ec
 
 TEST_F(ServiceTest, CanOpenAsNodeReferenceAndTestGetAttr) {
   fuchsia::io::NodeSyncPtr ptr;
-  dir_ptr()->Open(fuchsia::io::OpenFlags::NODE_REFERENCE, 0, service_name(), ptr.NewRequest());
+  dir_ptr()->Open(fuchsia::io::OPEN_FLAG_NODE_REFERENCE, 0, service_name(), ptr.NewRequest());
 
   zx_status_t s;
   fuchsia::io::NodeAttributes attr;
@@ -81,7 +81,7 @@ TEST_F(ServiceTest, CanCloneNodeReference) {
   fuchsia::io::NodeSyncPtr cloned_ptr;
   {
     fuchsia::io::NodeSyncPtr ptr;
-    dir_ptr()->Open(fuchsia::io::OpenFlags::NODE_REFERENCE, 0, service_name(), ptr.NewRequest());
+    dir_ptr()->Open(fuchsia::io::OPEN_FLAG_NODE_REFERENCE, 0, service_name(), ptr.NewRequest());
 
     ptr->Clone({}, cloned_ptr.NewRequest());
   }
@@ -95,7 +95,7 @@ TEST_F(ServiceTest, CanCloneNodeReference) {
 
 TEST_F(ServiceTest, TestDescribe) {
   fuchsia::io::NodeSyncPtr ptr;
-  dir_ptr()->Open(fuchsia::io::OpenFlags::NODE_REFERENCE, 0, service_name(), ptr.NewRequest());
+  dir_ptr()->Open(fuchsia::io::OPEN_FLAG_NODE_REFERENCE, 0, service_name(), ptr.NewRequest());
 
   fuchsia::io::NodeInfo info;
   ptr->Describe(&info);
@@ -104,8 +104,8 @@ TEST_F(ServiceTest, TestDescribe) {
 
 TEST_F(ServiceTest, CanOpenAsAService) {
   fuchsia::io::OpenFlags flags[] = {
-      fuchsia::io::OpenFlags::RIGHT_READABLE, fuchsia::io::OpenFlags::RIGHT_WRITABLE,
-      fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::NOT_DIRECTORY};
+      fuchsia::io::OPEN_RIGHT_READABLE, fuchsia::io::OPEN_RIGHT_WRITABLE,
+      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_FLAG_NOT_DIRECTORY};
   uint32_t modes[] = {
       // Valid mode types:
       0,
@@ -137,16 +137,15 @@ TEST_F(ServiceTest, CanOpenAsAService) {
 }
 
 TEST_F(ServiceTest, CannotOpenServiceWithInvalidFlags) {
-  fuchsia::io::OpenFlags flags[] = {
-      fuchsia::io::OpenFlags::CREATE, fuchsia::io::OpenFlags::CREATE_IF_ABSENT,
-      fuchsia::io::OpenFlags::TRUNCATE, fuchsia::io::OpenFlags::APPEND,
-      fuchsia::io::OpenFlags::NO_REMOTE};
+  fuchsia::io::OpenFlags flags[] = {fuchsia::io::OPEN_FLAG_CREATE,
+                                    fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT,
+                                    fuchsia::io::OPEN_FLAG_TRUNCATE, fuchsia::io::OPEN_FLAG_APPEND,
+                                    fuchsia::io::OPEN_FLAG_NO_REMOTE};
 
   for (fuchsia::io::OpenFlags flag : flags) {
-    AssertInvalidOpen(
-        flag | fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE, 0,
-        ZX_ERR_NOT_SUPPORTED);
+    AssertInvalidOpen(flag | fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE, 0,
+                      ZX_ERR_NOT_SUPPORTED);
   }
-  AssertInvalidOpen(fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::DIRECTORY, 0,
+  AssertInvalidOpen(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_FLAG_DIRECTORY, 0,
                     ZX_ERR_NOT_DIR);
 }

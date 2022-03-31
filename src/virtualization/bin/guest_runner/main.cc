@@ -23,7 +23,7 @@ zx_status_t ReadGuestCfg(const fuchsia::io::DirectoryHandle& dir, const std::str
                          fuchsia::virtualization::GuestConfig* cfg) {
   auto open_at = [&dir](const std::string& path, fidl::InterfaceRequest<fuchsia::io::File> file) {
     return fdio_open_at(dir.channel().get(), path.data(),
-                        static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE),
+                        static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE),
                         file.TakeChannel().release());
   };
   fuchsia::io::FileSyncPtr file;

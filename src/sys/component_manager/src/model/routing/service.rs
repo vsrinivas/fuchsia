@@ -481,7 +481,7 @@ impl lazy::LazyDirectory for CollectionServiceDirectory {
                 let (proxy, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
                     .map_err(|_| zx::Status::INTERNAL)?;
                 if let Ok(()) = open_capability_at_source(OpenRequest {
-                    flags: fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                    flags: fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                     open_mode: fio::MODE_TYPE_DIRECTORY,
                     relative_path: PathBuf::new(),
                     source,
@@ -745,7 +745,7 @@ mod tests {
         let task_scope = TaskScope::new();
         host.open(
             task_scope.clone(),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             PathBuf::new(),
             &mut server_end,
@@ -763,7 +763,7 @@ mod tests {
         let collection_dir = io_util::directory::open_directory(
             &service_proxy,
             instance_names.iter().next().expect("failed to get instance name"),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .await
         .expect("failed to open collection dir");
@@ -850,7 +850,7 @@ mod tests {
         let task_scope = TaskScope::new();
         host.open(
             task_scope.clone(),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             PathBuf::new(),
             &mut server_end,
@@ -938,7 +938,7 @@ mod tests {
         let task_scope = TaskScope::new();
         host.open(
             task_scope.clone(),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             PathBuf::new(),
             &mut server_end,
@@ -1026,7 +1026,7 @@ mod tests {
         path_buf.push("one");
         host.open(
             task_scope.clone(),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             path_buf,
             &mut server_end,

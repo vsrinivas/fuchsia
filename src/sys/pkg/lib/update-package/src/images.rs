@@ -211,7 +211,7 @@ mod tests {
         let scope = ExecutionScope::new();
         dir.open(
             scope,
-            io_util::OpenFlags::RIGHT_READABLE,
+            io_util::OPEN_RIGHT_READABLE,
             0,
             vfs::path::Path::dot(),
             fidl::endpoints::ServerEnd::new(proxy_server_end.into_channel()),

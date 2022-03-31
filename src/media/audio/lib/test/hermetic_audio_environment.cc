@@ -67,8 +67,8 @@ std::function<fuchsia::sys::LaunchInfo()> LaunchInfoWithIsolatedDevmgrForUrl(
       zx::channel remote;
       zx::channel::create(0, &config_data, &remote);
       zx_status_t status = fdio_open(config_data_path.c_str(),
-                                     static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE |
-                                                           fuchsia::io::OpenFlags::DIRECTORY),
+                                     static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE |
+                                                           fuchsia::io::OPEN_FLAG_DIRECTORY),
                                      remote.release());
       if (status == ZX_OK) {
         launch_info.flat_namespace->paths.push_back("/config/data");

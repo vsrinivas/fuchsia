@@ -74,7 +74,7 @@ impl LegacyComponent {
 
         let runner_svc_dir_proxy = io_util::open_directory_in_namespace(
             "/svc",
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )?;
         let host_pseudo_dir = pfs::simple();
         host_pseudo_dir.clone().add_entry(
@@ -135,7 +135,7 @@ impl LegacyComponent {
             .context("could not create node proxy endpoints")?;
         host_pseudo_dir.clone().open(
             execution_scope.clone(),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             VfsPath::dot(),
             host_dir_server_end.into_channel().into(),
@@ -189,7 +189,7 @@ impl LegacyComponent {
         );
         out_pseudo_dir.open(
             execution_scope.clone(),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             VfsPath::dot(),
             start_info
@@ -237,7 +237,7 @@ impl LegacyComponent {
         if let Some(runtime_dir_server) = self.runtime_dir.take() {
             runtime_dir.open(
                 execution_scope.clone(),
-                fio::OpenFlags::RIGHT_READABLE,
+                fio::OPEN_RIGHT_READABLE,
                 fio::MODE_TYPE_DIRECTORY,
                 VfsPath::dot(),
                 runtime_dir_server.into_channel().into(),

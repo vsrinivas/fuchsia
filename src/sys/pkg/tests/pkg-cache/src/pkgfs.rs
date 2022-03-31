@@ -45,7 +45,7 @@ async fn expose_pkgfs_ctl_validation_missing_file() {
     let missing = io_util::directory::open_file(
         &env.proxies.pkgfs,
         "ctl/validation/missing",
-        fio::OpenFlags::RIGHT_READABLE,
+        fio::OPEN_RIGHT_READABLE,
     )
     .await
     .unwrap();

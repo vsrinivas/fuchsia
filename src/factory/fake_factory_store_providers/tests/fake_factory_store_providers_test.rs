@@ -30,11 +30,8 @@ async fn read_file_from_proxy<'a>(
     dir_proxy: &'a fio::DirectoryProxy,
     file_path: &'a str,
 ) -> Result<Vec<u8>, Error> {
-    let file = io_util::open_file(
-        &dir_proxy,
-        &PathBuf::from(file_path),
-        io_util::OpenFlags::RIGHT_READABLE,
-    )?;
+    let file =
+        io_util::open_file(&dir_proxy, &PathBuf::from(file_path), io_util::OPEN_RIGHT_READABLE)?;
     io_util::read_file_bytes(&file).await
 }
 

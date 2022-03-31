@@ -63,7 +63,7 @@ impl PkgfsInstance {
     pub fn proxy(&self) -> fio::DirectoryProxy {
         let (proxy, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
         let server_end = server_end.into_channel().into();
-        self.proxy.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, server_end).unwrap();
+        self.proxy.clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end).unwrap();
         proxy
     }
 }

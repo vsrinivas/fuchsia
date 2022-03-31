@@ -71,7 +71,7 @@ TEST_F(LoaderUnittest, MagmaDevice) {
   fidl::InterfaceHandle<fuchsia::io::Directory> pkg_dir;
   async::Loop vfs_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   vfs_loop.StartThread("vfs-loop");
-  root.Serve(fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
+  root.Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
              pkg_dir.NewRequest().TakeChannel(), vfs_loop.dispatcher());
 
   fdio_t* dir_fdio;
@@ -121,7 +121,7 @@ TEST_F(LoaderUnittest, GoldfishDevice) {
   fidl::InterfaceHandle<fuchsia::io::Directory> pkg_dir;
   async::Loop vfs_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   vfs_loop.StartThread("vfs-loop");
-  root.Serve(fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
+  root.Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
              pkg_dir.NewRequest().TakeChannel(), vfs_loop.dispatcher());
 
   fdio_t* dir_fdio;

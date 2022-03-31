@@ -510,13 +510,13 @@ struct FlagSet {
 
 impl FlagSet {
     const OPEN_FOR_READ: FlagSet = FlagSet::new()
-        .require_present(fio::OpenFlags::RIGHT_READABLE)
-        .require_absent(fio::OpenFlags::CREATE)
-        .require_absent(fio::OpenFlags::RIGHT_WRITABLE);
+        .require_present(fio::OPEN_RIGHT_READABLE)
+        .require_absent(fio::OPEN_FLAG_CREATE)
+        .require_absent(fio::OPEN_RIGHT_WRITABLE);
 
     const OPEN_FOR_WRITE: FlagSet = FlagSet::new()
-        .require_present(fio::OpenFlags::CREATE)
-        .require_present(fio::OpenFlags::RIGHT_WRITABLE);
+        .require_present(fio::OPEN_FLAG_CREATE)
+        .require_present(fio::OPEN_RIGHT_WRITABLE);
 
     const fn new() -> Self {
         Self { required: fio::OpenFlags::empty(), anti_required: fio::OpenFlags::empty() }

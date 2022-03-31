@@ -178,7 +178,7 @@ fn create_directory_ready_payload(
 ) -> Result<fsys::EventResult, fidl::Error> {
     let node = {
         let (node_clone, server_end) = fidl::endpoints::create_proxy()?;
-        node.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, server_end)?;
+        node.clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end)?;
         let node_client_end = node_clone
             .into_channel()
             .expect("could not convert directory to channel")

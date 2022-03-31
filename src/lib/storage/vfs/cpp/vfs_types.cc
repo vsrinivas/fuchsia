@@ -17,58 +17,58 @@ VnodeConnectionOptions VnodeConnectionOptions::FromIoV1Flags(
   VnodeConnectionOptions options;
 
   // Flags:
-  if (fidl_flags & fio::wire::OpenFlags::kCreate) {
+  if (fidl_flags & fio::wire::kOpenFlagCreate) {
     options.flags.create = true;
   }
-  if (fidl_flags & fio::wire::OpenFlags::kCreateIfAbsent) {
+  if (fidl_flags & fio::wire::kOpenFlagCreateIfAbsent) {
     options.flags.fail_if_exists = true;
   }
-  if (fidl_flags & fio::wire::OpenFlags::kTruncate) {
+  if (fidl_flags & fio::wire::kOpenFlagTruncate) {
     options.flags.truncate = true;
   }
-  if (fidl_flags & fio::wire::OpenFlags::kDirectory) {
+  if (fidl_flags & fio::wire::kOpenFlagDirectory) {
     options.flags.directory = true;
   }
-  if (fidl_flags & fio::wire::OpenFlags::kAppend) {
+  if (fidl_flags & fio::wire::kOpenFlagAppend) {
     options.flags.append = true;
   }
-  if (fidl_flags & fio::wire::OpenFlags::kNoRemote) {
+  if (fidl_flags & fio::wire::kOpenFlagNoRemote) {
     options.flags.no_remote = true;
   }
-  if (fidl_flags & fio::wire::OpenFlags::kNodeReference) {
+  if (fidl_flags & fio::wire::kOpenFlagNodeReference) {
     options.flags.node_reference = true;
   }
-  if (fidl_flags & fio::wire::OpenFlags::kDescribe) {
+  if (fidl_flags & fio::wire::kOpenFlagDescribe) {
     options.flags.describe = true;
   }
   // Expand deprecated POSIX flag into new equivalents to maintain binary compatibility with
   // out-of-tree clients while still preventing rights escalations when crossing remote mounts.
   // TODO(fxbug.dev/81185): Remove kOpenFlagPosixDeprecated.
-  if (fidl_flags & fio::wire::OpenFlags::kPosixDeprecated) {
+  if (fidl_flags & fio::wire::kOpenFlagPosixDeprecated) {
     options.flags.posix_write = true;
     options.flags.posix_execute = true;
   }
-  if (fidl_flags & fio::wire::OpenFlags::kPosixWritable) {
+  if (fidl_flags & fio::wire::kOpenFlagPosixWritable) {
     options.flags.posix_write = true;
   }
-  if (fidl_flags & fio::wire::OpenFlags::kPosixExecutable) {
+  if (fidl_flags & fio::wire::kOpenFlagPosixExecutable) {
     options.flags.posix_execute = true;
   }
-  if (fidl_flags & fio::wire::OpenFlags::kNotDirectory) {
+  if (fidl_flags & fio::wire::kOpenFlagNotDirectory) {
     options.flags.not_directory = true;
   }
-  if (fidl_flags & fio::wire::OpenFlags::kCloneSameRights) {
+  if (fidl_flags & fio::wire::kCloneFlagSameRights) {
     options.flags.clone_same_rights = true;
   }
 
   // Rights (these are smushed into |fidl_flags| in fuchsia.io v1):
-  if (fidl_flags & fio::wire::OpenFlags::kRightReadable) {
+  if (fidl_flags & fio::wire::kOpenRightReadable) {
     options.rights.read = true;
   }
-  if (fidl_flags & fio::wire::OpenFlags::kRightWritable) {
+  if (fidl_flags & fio::wire::kOpenRightWritable) {
     options.rights.write = true;
   }
-  if (fidl_flags & fio::wire::OpenFlags::kRightExecutable) {
+  if (fidl_flags & fio::wire::kOpenRightExecutable) {
     options.rights.execute = true;
   }
 
@@ -80,51 +80,51 @@ fuchsia_io::wire::OpenFlags VnodeConnectionOptions::ToIoV1Flags() const {
 
   // Flags:
   if (flags.create) {
-    fidl_flags |= fio::wire::OpenFlags::kCreate;
+    fidl_flags |= fio::wire::kOpenFlagCreate;
   }
   if (flags.fail_if_exists) {
-    fidl_flags |= fio::wire::OpenFlags::kCreateIfAbsent;
+    fidl_flags |= fio::wire::kOpenFlagCreateIfAbsent;
   }
   if (flags.truncate) {
-    fidl_flags |= fio::wire::OpenFlags::kTruncate;
+    fidl_flags |= fio::wire::kOpenFlagTruncate;
   }
   if (flags.directory) {
-    fidl_flags |= fio::wire::OpenFlags::kDirectory;
+    fidl_flags |= fio::wire::kOpenFlagDirectory;
   }
   if (flags.append) {
-    fidl_flags |= fio::wire::OpenFlags::kAppend;
+    fidl_flags |= fio::wire::kOpenFlagAppend;
   }
   if (flags.no_remote) {
-    fidl_flags |= fio::wire::OpenFlags::kNoRemote;
+    fidl_flags |= fio::wire::kOpenFlagNoRemote;
   }
   if (flags.node_reference) {
-    fidl_flags |= fio::wire::OpenFlags::kNodeReference;
+    fidl_flags |= fio::wire::kOpenFlagNodeReference;
   }
   if (flags.describe) {
-    fidl_flags |= fio::wire::OpenFlags::kDescribe;
+    fidl_flags |= fio::wire::kOpenFlagDescribe;
   }
   if (flags.posix_write) {
-    fidl_flags |= fio::wire::OpenFlags::kPosixWritable;
+    fidl_flags |= fio::wire::kOpenFlagPosixWritable;
   }
   if (flags.posix_execute) {
-    fidl_flags |= fio::wire::OpenFlags::kPosixExecutable;
+    fidl_flags |= fio::wire::kOpenFlagPosixExecutable;
   }
   if (flags.not_directory) {
-    fidl_flags |= fio::wire::OpenFlags::kNotDirectory;
+    fidl_flags |= fio::wire::kOpenFlagNotDirectory;
   }
   if (flags.clone_same_rights) {
-    fidl_flags |= fio::wire::OpenFlags::kCloneSameRights;
+    fidl_flags |= fio::wire::kCloneFlagSameRights;
   }
 
   // Rights (these are smushed into |fidl_flags| in fuchsia.io v1):
   if (rights.read) {
-    fidl_flags |= fio::wire::OpenFlags::kRightReadable;
+    fidl_flags |= fio::wire::kOpenRightReadable;
   }
   if (rights.write) {
-    fidl_flags |= fio::wire::OpenFlags::kRightWritable;
+    fidl_flags |= fio::wire::kOpenRightWritable;
   }
   if (rights.execute) {
-    fidl_flags |= fio::wire::OpenFlags::kRightExecutable;
+    fidl_flags |= fio::wire::kOpenRightExecutable;
   }
 
   return fidl_flags;

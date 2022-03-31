@@ -186,7 +186,7 @@ IntegrationTest::Promise<void> IntegrationTest::DoOpen(
     completer.complete_ok();
     client->events().OnOpen = nullptr;
   };
-  devfs_->Open(flags | fuchsia::io::OpenFlags::DESCRIBE, 0, path, std::move(server));
+  devfs_->Open(flags | fuchsia::io::OPEN_FLAG_DESCRIBE, 0, path, std::move(server));
   return bridge.consumer.promise_or(::fpromise::error("devfs open abandoned"));
 }
 
@@ -285,12 +285,12 @@ void WaitForPath(const fidl::InterfacePtr<fuchsia::io::Directory>& dir,
   if (last_slash != std::string::npos) {
     std::string prefix(path, 0, last_slash);
 
-    dir->Open(fuchsia::io::OpenFlags::DIRECTORY | fuchsia::io::OpenFlags::DESCRIBE |
-                  fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
+    dir->Open(fuchsia::io::OPEN_FLAG_DIRECTORY | fuchsia::io::OPEN_FLAG_DESCRIBE |
+                  fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
               0, prefix, last_dir.NewRequest(dispatcher));
     filename = path.substr(last_slash + 1);
   } else {
-    dir->Clone(fuchsia::io::OpenFlags::CLONE_SAME_RIGHTS | fuchsia::io::OpenFlags::DESCRIBE,
+    dir->Clone(fuchsia::io::CLONE_FLAG_SAME_RIGHTS | fuchsia::io::OPEN_FLAG_DESCRIBE,
                last_dir.NewRequest(dispatcher));
     filename = path;
   }

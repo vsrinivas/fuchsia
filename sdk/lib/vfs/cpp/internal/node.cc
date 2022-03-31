@@ -18,18 +18,18 @@ namespace {
 // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED when all out-of-tree clients have been
 // updated to the latest version of fuchsia.io.
 constexpr fuchsia::io::OpenFlags kCommonAllowedFlags =
-    fuchsia::io::OpenFlags::DESCRIBE | fuchsia::io::OpenFlags::NODE_REFERENCE |
-    fuchsia::io::OpenFlags::POSIX_DEPRECATED | fuchsia::io::OpenFlags::POSIX_WRITABLE |
-    fuchsia::io::OpenFlags::POSIX_EXECUTABLE | fuchsia::io::OpenFlags::CLONE_SAME_RIGHTS;
+    fuchsia::io::OPEN_FLAG_DESCRIBE | fuchsia::io::OPEN_FLAG_NODE_REFERENCE |
+    fuchsia::io::OPEN_FLAG_POSIX_DEPRECATED | fuchsia::io::OPEN_FLAG_POSIX_WRITABLE |
+    fuchsia::io::OPEN_FLAG_POSIX_EXECUTABLE | fuchsia::io::CLONE_FLAG_SAME_RIGHTS;
 
 constexpr std::tuple<NodeKind::Type, fuchsia::io::OpenFlags> kKindFlagMap[] = {
-    {NodeKind::kReadable, fuchsia::io::OpenFlags::RIGHT_READABLE},
-    {NodeKind::kWritable, fuchsia::io::OpenFlags::RIGHT_WRITABLE},
-    {NodeKind::kExecutable, fuchsia::io::OpenFlags::RIGHT_EXECUTABLE},
-    {NodeKind::kAppendable, fuchsia::io::OpenFlags::APPEND},
-    {NodeKind::kCanTruncate, fuchsia::io::OpenFlags::TRUNCATE},
+    {NodeKind::kReadable, fuchsia::io::OPEN_RIGHT_READABLE},
+    {NodeKind::kWritable, fuchsia::io::OPEN_RIGHT_WRITABLE},
+    {NodeKind::kExecutable, fuchsia::io::OPEN_RIGHT_EXECUTABLE},
+    {NodeKind::kAppendable, fuchsia::io::OPEN_FLAG_APPEND},
+    {NodeKind::kCanTruncate, fuchsia::io::OPEN_FLAG_TRUNCATE},
     {NodeKind::kCreatable,
-     fuchsia::io::OpenFlags::CREATE | fuchsia::io::OpenFlags::CREATE_IF_ABSENT}};
+     fuchsia::io::OPEN_FLAG_CREATE | fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT}};
 
 }  // namespace
 
@@ -80,7 +80,7 @@ void Node::Clone(fuchsia::io::OpenFlags flags, fuchsia::io::OpenFlags parent_fla
   if (Flags::ShouldCloneWithSameRights(flags)) {
     flags &= (~Flags::kFsRights);
     flags |= (parent_flags & Flags::kFsRights);
-    flags &= ~fuchsia::io::OpenFlags::CLONE_SAME_RIGHTS;
+    flags &= ~fuchsia::io::CLONE_FLAG_SAME_RIGHTS;
   }
   if (!Flags::StricterOrSameRights(flags, parent_flags)) {
     SendOnOpenEventOnError(flags, std::move(request), ZX_ERR_ACCESS_DENIED);
@@ -103,9 +103,9 @@ zx_status_t Node::ValidateFlags(fuchsia::io::OpenFlags flags) const {
 
   fuchsia::io::OpenFlags allowed_flags = kCommonAllowedFlags | GetAllowedFlags();
   if (is_directory) {
-    allowed_flags = allowed_flags | fuchsia::io::OpenFlags::DIRECTORY;
+    allowed_flags = allowed_flags | fuchsia::io::OPEN_FLAG_DIRECTORY;
   } else {
-    allowed_flags = allowed_flags | fuchsia::io::OpenFlags::NOT_DIRECTORY;
+    allowed_flags = allowed_flags | fuchsia::io::OPEN_FLAG_NOT_DIRECTORY;
   }
 
   fuchsia::io::OpenFlags prohibitive_flags = GetProhibitiveFlags();
@@ -143,8 +143,8 @@ fuchsia::io::OpenFlags Node::GetAllowedFlags() const {
 fuchsia::io::OpenFlags Node::GetProhibitiveFlags() const {
   NodeKind::Type kind = GetKind();
   if (NodeKind::IsDirectory(kind)) {
-    return fuchsia::io::OpenFlags::CREATE | fuchsia::io::OpenFlags::CREATE_IF_ABSENT |
-           fuchsia::io::OpenFlags::TRUNCATE | fuchsia::io::OpenFlags::APPEND;
+    return fuchsia::io::OPEN_FLAG_CREATE | fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT |
+           fuchsia::io::OPEN_FLAG_TRUNCATE | fuchsia::io::OPEN_FLAG_APPEND;
   }
   return {};
 }
@@ -156,7 +156,7 @@ zx_status_t Node::SetAttr(fuchsia::io::NodeAttributeFlags flags,
 
 fuchsia::io::OpenFlags Node::FilterRefFlags(fuchsia::io::OpenFlags flags) {
   if (Flags::IsNodeReference(flags)) {
-    return flags & (kCommonAllowedFlags | fuchsia::io::OpenFlags::DIRECTORY);
+    return flags & (kCommonAllowedFlags | fuchsia::io::OPEN_FLAG_DIRECTORY);
   }
   return flags;
 }

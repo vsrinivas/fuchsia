@@ -57,10 +57,9 @@ int main(int argc, char** argv) {
   }
 
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  diagnostics_dir.Serve(
-      fuchsia::io::OpenFlags::RIGHT_WRITABLE | fuchsia::io::OpenFlags::RIGHT_READABLE |
-          fuchsia::io::OpenFlags::RIGHT_EXECUTABLE | fuchsia::io::OpenFlags::DIRECTORY,
-      endpoints->server.TakeChannel(), loop.dispatcher());
+  diagnostics_dir.Serve(fuchsia::io::OPEN_RIGHT_WRITABLE | fuchsia::io::OPEN_RIGHT_READABLE |
+                            fuchsia::io::OPEN_RIGHT_EXECUTABLE | fuchsia::io::OPEN_FLAG_DIRECTORY,
+                        endpoints->server.TakeChannel(), loop.dispatcher());
   zx::status<> status_result = outgoing.AddDirectory(std::move(endpoints->client), kDiagnosticsDir);
   if (status_result.is_error()) {
     LOGF(ERROR, "Failed to add directory entry '%s': %s", kDiagnosticsDir,

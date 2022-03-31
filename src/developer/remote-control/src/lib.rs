@@ -33,7 +33,7 @@ impl RemoteControlService {
     pub async fn new() -> Self {
         let f = match io_util::open_file_in_namespace(
             "/config/data/selector-maps.json",
-            io::OpenFlags::RIGHT_READABLE,
+            io::OPEN_RIGHT_READABLE,
         ) {
             Ok(f) => f,
             Err(e) => {
@@ -104,7 +104,7 @@ impl RemoteControlService {
                     &mut io_util::connect_in_namespace(
                         HUB_ROOT,
                         server.into_channel(),
-                        io::OpenFlags::RIGHT_READABLE | io::OpenFlags::RIGHT_WRITABLE,
+                        io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE,
                     )
                     .map_err(|i| i.into_raw()),
                 )?;
@@ -275,7 +275,7 @@ impl RemoteControlService {
         io_util::connect_in_namespace(
             hub_path,
             service_chan,
-            io::OpenFlags::RIGHT_READABLE | io::OpenFlags::RIGHT_WRITABLE,
+            io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE,
         )
         .map_err(|err| {
             error!(?selector, %err, "error connecting to selector");

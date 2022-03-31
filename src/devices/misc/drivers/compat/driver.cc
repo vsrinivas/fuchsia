@@ -39,9 +39,8 @@ zx::resource kRootResource;
 
 namespace {
 
-constexpr auto kOpenFlags = fio::wire::OpenFlags::kRightReadable |
-                            fio::wire::OpenFlags::kRightExecutable |
-                            fio::wire::OpenFlags::kNotDirectory;
+constexpr auto kOpenFlags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable |
+                            fio::wire::kOpenFlagNotDirectory;
 constexpr auto kVmoFlags = fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kExecute;
 constexpr auto kLibDriverPath = "/pkg/driver/compat.so";
 

@@ -120,11 +120,8 @@ async fn read_file_from_proxy<'a>(
     dir_proxy: &'a fio::DirectoryProxy,
     file_path: &'a str,
 ) -> Result<Vec<u8>, Error> {
-    let file = io_util::open_file(
-        &dir_proxy,
-        &PathBuf::from(file_path),
-        io_util::OpenFlags::RIGHT_READABLE,
-    )?;
+    let file =
+        io_util::open_file(&dir_proxy, &PathBuf::from(file_path), io_util::OPEN_RIGHT_READABLE)?;
     io_util::read_file_bytes(&file).await
 }
 
@@ -196,7 +193,7 @@ async fn apply_config(config: Config, dir: Arc<Mutex<fio::DirectoryProxy>>) -> f
 
     dir.open(
         ExecutionScope::new(),
-        fio::OpenFlags::RIGHT_READABLE,
+        fio::OPEN_RIGHT_READABLE,
         fio::MODE_TYPE_DIRECTORY,
         vfs::path::Path::dot(),
         ServerEnd::<fio::NodeMarker>::new(directory_server_end.into_channel()),
@@ -217,7 +214,7 @@ where
     while let Some(request) = stream.try_next().await? {
         if let Some(directory_request) = get_directory_request_fn(request) {
             if let Err(err) = directory_mutex.lock().await.clone(
-                fio::OpenFlags::RIGHT_READABLE,
+                fio::OPEN_RIGHT_READABLE,
                 ServerEnd::<fio::NodeMarker>::new(directory_request.into_channel()),
             ) {
                 syslog::fx_log_err!(
@@ -248,7 +245,7 @@ async fn open_factory_source(factory_config: FactoryConfig) -> Result<fio::Direc
 
             factory_items_directory.open(
                 ExecutionScope::new(),
-                fio::OpenFlags::RIGHT_READABLE,
+                fio::OPEN_RIGHT_READABLE,
                 fio::MODE_TYPE_DIRECTORY,
                 vfs::path::Path::dot(),
                 ServerEnd::<fio::NodeMarker>::new(directory_server_end.into_channel()),
@@ -275,7 +272,7 @@ async fn open_factory_source(factory_config: FactoryConfig) -> Result<fio::Direc
 
             syslog::fx_log_info!("Mounting EXT4 VMO");
             match ext4_server
-                .mount_vmo(&mut buf, fio::OpenFlags::RIGHT_READABLE, directory_server_end)
+                .mount_vmo(&mut buf, fio::OPEN_RIGHT_READABLE, directory_server_end)
                 .await
             {
                 Ok(MountVmoResult::Success(_)) => Ok(directory_proxy),
@@ -291,11 +288,7 @@ async fn open_factory_source(factory_config: FactoryConfig) -> Result<fio::Direc
         }
         FactoryConfig::FactoryVerity => {
             syslog::fx_log_info!("reading from factory verity");
-            fdio::open(
-                "/factory",
-                fio::OpenFlags::RIGHT_READABLE,
-                directory_server_end.into_channel(),
-            )?;
+            fdio::open("/factory", fio::OPEN_RIGHT_READABLE, directory_server_end.into_channel())?;
             Ok(directory_proxy)
         }
     }
@@ -454,7 +447,7 @@ mod tests {
         let scope = ExecutionScope::new();
         dir.open(
             scope,
-            fio::OpenFlags::RIGHT_READABLE,
+            fio::OPEN_RIGHT_READABLE,
             fio::MODE_TYPE_DIRECTORY,
             vfs::path::Path::dot(),
             ServerEnd::new(dir_server.into_channel()),

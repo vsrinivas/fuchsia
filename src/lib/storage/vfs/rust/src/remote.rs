@@ -92,9 +92,9 @@ impl Remote {
         // implementation also only allows access if both OPEN_RIGHT_READABLE and
         // OPEN_WRITE_WRITABLE is set, or it's OPEN_FLAG_NODE_REFERENCE, so, for now, we hack the
         // flags to be OPEN_FLAG_NODE_REFERENCE which will cause the rights to be ignored.
-        if flags.intersects(fio::OpenFlags::NO_REMOTE) {
-            flags &= !fio::OpenFlags::NO_REMOTE;
-            flags |= fio::OpenFlags::NODE_REFERENCE;
+        if flags.intersects(fio::OPEN_FLAG_NO_REMOTE) {
+            flags &= !fio::OPEN_FLAG_NO_REMOTE;
+            flags |= fio::OPEN_FLAG_NODE_REFERENCE;
         }
         Connection::create_connection(scope, flags, mode, server_end);
     }
@@ -122,7 +122,7 @@ impl DirectoryEntry for Remote {
         path: Path,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
-        if flags.intersects(fio::OpenFlags::NO_REMOTE) && path.is_empty() {
+        if flags.intersects(fio::OPEN_FLAG_NO_REMOTE) && path.is_empty() {
             self.open_as_node(scope, flags, mode, server_end);
         } else {
             self.open_as_remote(scope, flags, mode, path, server_end);

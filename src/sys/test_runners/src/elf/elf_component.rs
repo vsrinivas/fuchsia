@@ -297,7 +297,7 @@ fn get_pkg_and_lib_proxy<'a>(
     let lib_proxy = io_util::open_directory(
         pkg_proxy,
         &Path::new("lib"),
-        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
     )
     .map_err(|e| ComponentError::LibraryLoadError(url.clone(), e))?;
     Ok((pkg_proxy, lib_proxy))
@@ -556,7 +556,7 @@ mod tests {
     async fn sample_test_component() -> Result<Arc<Component>, Error> {
         let ns = create_ns_from_current_ns(vec![(
             "/pkg",
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )])?;
 
         Ok(Arc::new(

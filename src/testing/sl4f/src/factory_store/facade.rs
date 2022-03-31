@@ -75,11 +75,8 @@ impl FactoryStoreFacade {
         let req: ReadFileRequest = from_value(args)?;
         let dir_proxy = self.get_directory_for_provider(req.provider)?;
 
-        let file = io_util::open_file(
-            &dir_proxy,
-            &Path::new(&req.filename),
-            fio::OpenFlags::RIGHT_READABLE,
-        )?;
+        let file =
+            io_util::open_file(&dir_proxy, &Path::new(&req.filename), fio::OPEN_RIGHT_READABLE)?;
         let contents = io_util::read_file_bytes(&file).await?;
         Ok(to_value(base64::encode(&contents))?)
     }

@@ -22,10 +22,9 @@ int main(int argc, const char* const* argv) {
     return -1;
   }
   zx_status_t status;
-  status = fdio_open(
-      "/pkg",
-      fuchsia_io::wire::OpenFlags::kRightReadable | fuchsia_io::wire::OpenFlags::kRightExecutable,
-      endpoints->server.TakeChannel().release());
+  status = fdio_open("/pkg",
+                     fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightExecutable,
+                     endpoints->server.TakeChannel().release());
   if (status != ZX_OK) {
     fprintf(stderr, "Failed to open package");
     return -1;

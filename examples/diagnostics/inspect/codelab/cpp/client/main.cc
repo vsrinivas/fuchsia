@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
 
   fuchsia::examples::inspect::ReverserSyncPtr reverser;
   status = zx::make_status(exposed_dir->Open(
-      fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
+      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
       fuchsia::io::MODE_TYPE_SERVICE, fuchsia::examples::inspect::Reverser::Name_,
       fidl::InterfaceRequest<fuchsia::io::Node>(reverser.NewRequest().TakeChannel())));
   if (status.is_error()) {
@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
       realm->OpenExposedDir(fuchsia::component::decl::ChildRef{.name = "fizzbuzz"},
                             fizzbuzz_exposed_dir.NewRequest(), &result_open_fizzbuzz));
   status = zx::make_status(fizzbuzz_exposed_dir->Open(
-      fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
+      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
       fuchsia::io::MODE_TYPE_SERVICE, fuchsia::component::Binder::Name_,
       fidl::InterfaceRequest<fuchsia::io::Node>(binder.NewRequest().TakeChannel())));
   if (status.is_error()) {

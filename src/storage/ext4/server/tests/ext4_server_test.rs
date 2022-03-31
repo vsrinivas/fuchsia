@@ -110,7 +110,7 @@ async fn ext4_server_mounts_block_device(
         let file = io_util::open_file(
             &dir_proxy,
             &PathBuf::from(file_path),
-            io_util::OpenFlags::RIGHT_READABLE,
+            io_util::OPEN_RIGHT_READABLE,
         )?;
         let mut hasher = Sha256::new();
         hasher.update(&io_util::read_file_bytes(&file).await?);
@@ -175,14 +175,11 @@ async fn ext4_server_mounts_vmo_one_file() -> Result<(), Error> {
     let mut buf = Buffer { vmo, size };
 
     let (dir_proxy, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
-    let result = ext4.mount_vmo(&mut buf, fio::OpenFlags::RIGHT_READABLE, dir_server).await;
+    let result = ext4.mount_vmo(&mut buf, fio::OPEN_RIGHT_READABLE, dir_server).await;
     assert_matches!(result, Ok(MountVmoResult::Success(Success {})));
 
-    let file = io_util::open_file(
-        &dir_proxy,
-        &PathBuf::from("file1"),
-        io_util::OpenFlags::RIGHT_READABLE,
-    )?;
+    let file =
+        io_util::open_file(&dir_proxy, &PathBuf::from("file1"), io_util::OPEN_RIGHT_READABLE)?;
     assert_eq!("file1 contents.\n".to_string(), io_util::read_file(&file).await?);
     Ok(())
 }
@@ -204,20 +201,17 @@ async fn ext4_server_mounts_vmo_nested_dirs() -> Result<(), Error> {
     let mut buf = Buffer { vmo, size };
 
     let (dir_proxy, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
-    let result = ext4.mount_vmo(&mut buf, fio::OpenFlags::RIGHT_READABLE, dir_server).await;
+    let result = ext4.mount_vmo(&mut buf, fio::OPEN_RIGHT_READABLE, dir_server).await;
     assert_matches!(result, Ok(MountVmoResult::Success(Success {})));
 
-    let file1 = io_util::open_file(
-        &dir_proxy,
-        &PathBuf::from("file1"),
-        io_util::OpenFlags::RIGHT_READABLE,
-    )?;
+    let file1 =
+        io_util::open_file(&dir_proxy, &PathBuf::from("file1"), io_util::OPEN_RIGHT_READABLE)?;
     assert_eq!("file1 contents.\n".to_string(), io_util::read_file(&file1).await?);
 
     let file2 = io_util::open_file(
         &dir_proxy,
         &PathBuf::from("inner/file2"),
-        io_util::OpenFlags::RIGHT_READABLE,
+        io_util::OPEN_RIGHT_READABLE,
     )?;
     assert_eq!("file2 contents.\n".to_string(), io_util::read_file(&file2).await?);
     Ok(())
@@ -241,20 +235,17 @@ async fn ext4_unified_service_mounts_vmo() -> Result<(), Error> {
     let mut buf = Buffer { vmo, size };
 
     let (dir_proxy, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
-    let result = ext4.mount_vmo(&mut buf, fio::OpenFlags::RIGHT_READABLE, dir_server).await;
+    let result = ext4.mount_vmo(&mut buf, fio::OPEN_RIGHT_READABLE, dir_server).await;
     assert_matches!(result, Ok(MountVmoResult::Success(Success {})));
 
-    let file1 = io_util::open_file(
-        &dir_proxy,
-        &PathBuf::from("file1"),
-        io_util::OpenFlags::RIGHT_READABLE,
-    )?;
+    let file1 =
+        io_util::open_file(&dir_proxy, &PathBuf::from("file1"), io_util::OPEN_RIGHT_READABLE)?;
     assert_eq!("file1 contents.\n".to_string(), io_util::read_file(&file1).await?);
 
     let file2 = io_util::open_file(
         &dir_proxy,
         &PathBuf::from("inner/file2"),
-        io_util::OpenFlags::RIGHT_READABLE,
+        io_util::OPEN_RIGHT_READABLE,
     )?;
     assert_eq!("file2 contents.\n".to_string(), io_util::read_file(&file2).await?);
     Ok(())

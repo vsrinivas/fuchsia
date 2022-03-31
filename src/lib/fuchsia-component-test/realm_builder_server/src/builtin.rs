@@ -65,7 +65,7 @@ pub async fn read_only_directory_helper(
     }));
     top_directory.open(
         execution_scope_dropper.execution_scope.clone(),
-        fio::OpenFlags::RIGHT_READABLE,
+        fio::OPEN_RIGHT_READABLE,
         fio::MODE_TYPE_DIRECTORY,
         VfsPath::dot(),
         outgoing_dir.into_channel().into(),
@@ -203,7 +203,7 @@ mod tests {
                 let file_proxy = io_util::directory::open_file(
                     &outgoing_dir_proxy,
                     file_path,
-                    io_util::OpenFlags::RIGHT_READABLE,
+                    io_util::OPEN_RIGHT_READABLE,
                 )
                 .await
                 .expect(&format!("failed to open file {:?}", file_path));

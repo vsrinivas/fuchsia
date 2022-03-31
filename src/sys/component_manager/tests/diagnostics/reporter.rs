@@ -10,7 +10,7 @@ use {
 
 async fn read_file<'a>(root_proxy: &'a fio::DirectoryProxy, path: &'a str) -> String {
     let file_proxy =
-        io_util::open_file(&root_proxy, &Path::new(path), io_util::OpenFlags::RIGHT_READABLE)
+        io_util::open_file(&root_proxy, &Path::new(path), io_util::OPEN_RIGHT_READABLE)
             .expect("Failed to open file.");
     let res = io_util::read_file(&file_proxy).await;
     res.expect("Unable to read file.")
@@ -24,9 +24,8 @@ async fn main() {
         .await
         .expect("got inspect data");
 
-    let hub_proxy =
-        io_util::open_directory_in_namespace("/hub", io_util::OpenFlags::RIGHT_READABLE)
-            .expect("Unable to open directory in namespace");
+    let hub_proxy = io_util::open_directory_in_namespace("/hub", io_util::OPEN_RIGHT_READABLE)
+        .expect("Unable to open directory in namespace");
     let archivist_job_koid = read_file(&hub_proxy, "children/archivist/exec/runtime/elf/job_id")
         .await
         .parse::<u64>()

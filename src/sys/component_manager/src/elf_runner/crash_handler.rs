@@ -109,7 +109,7 @@ mod tests {
         library_loader::start(
             Arc::new(io_util::open_directory_in_namespace(
                 "/pkg/lib",
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
             )?),
             ll_service_chan,
         );
@@ -124,7 +124,7 @@ mod tests {
         // Load the executable into a vmo
         let executable_file_proxy = io_util::open_file_in_namespace(
             "/pkg/bin/panic_on_start",
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )?;
         let vmo = executable_file_proxy
             .get_backing_memory(fio::VmoFlags::READ | fio::VmoFlags::EXECUTE)

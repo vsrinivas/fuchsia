@@ -81,10 +81,10 @@ sys::ServiceDirectory LocalComponentHandles::svc() {
   zx::channel remote;
   ZX_COMPONENT_ASSERT_STATUS_OK("zx::channel/create", zx::channel::create(0, &local, &remote));
 
-  auto status = fdio_ns_connect(namespace_, kSvcDirectoryPath,
-                                static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE |
-                                                      fuchsia::io::OpenFlags::RIGHT_WRITABLE),
-                                remote.release());
+  auto status = fdio_ns_connect(
+      namespace_, kSvcDirectoryPath,
+      static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE),
+      remote.release());
   ZX_ASSERT_MSG(status == ZX_OK,
                 "fdio_ns_connect on LocalComponent's /svc directory failed: %s\nThis most often "
                 "occurs when a component has no FIDL protocols routed to it.",

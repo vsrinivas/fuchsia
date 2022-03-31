@@ -35,9 +35,9 @@ int main(int argc, char* argv[]) {
   fidl::InterfaceHandle<fuchsia::io::Node> restricted_dir;
   fidl::InterfaceHandle<fuchsia::io::Node> unrestricted_dir;
   svc::Outgoing outgoing(loop.dispatcher());
-  memfs_dir->Clone(fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
+  memfs_dir->Clone(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
                    restricted_dir.NewRequest());
-  memfs_dir->Clone(fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
+  memfs_dir->Clone(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
                    unrestricted_dir.NewRequest());
   outgoing.root_dir()->AddEntry("restricted",
                                 fbl::MakeRefCounted<fs::RemoteDir>(restricted_dir.TakeChannel()));

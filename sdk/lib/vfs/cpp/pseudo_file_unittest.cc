@@ -78,7 +78,7 @@ class PseudoFileTest : public gtest::RealLoopFixture {
                   bool test_on_open_event = true) {
     fuchsia::io::NodePtr node_ptr;
     if (test_on_open_event) {
-      flags |= fuchsia::io::OpenFlags::DESCRIBE;
+      flags |= fuchsia::io::OPEN_FLAG_DESCRIBE;
     }
     EXPECT_EQ(expected_status, node->Serve(flags, node_ptr.NewRequest().TakeChannel(), dispatcher));
 
@@ -103,14 +103,13 @@ class PseudoFileTest : public gtest::RealLoopFixture {
 
   static fuchsia::io::FileSyncPtr OpenReadWrite(vfs::internal::Node* node,
                                                 async_dispatcher_t* dispatcher) {
-    return OpenFile(node,
-                    fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
+    return OpenFile(node, fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
                     dispatcher);
   }
 
   static fuchsia::io::FileSyncPtr OpenRead(vfs::internal::Node* node,
                                            async_dispatcher_t* dispatcher) {
-    return OpenFile(node, fuchsia::io::OpenFlags::RIGHT_READABLE, dispatcher);
+    return OpenFile(node, fuchsia::io::OPEN_RIGHT_READABLE, dispatcher);
   }
 
   static fuchsia::io::FileSyncPtr OpenFile(vfs::internal::Node* node, fuchsia::io::OpenFlags flags,
@@ -228,9 +227,9 @@ class PseudoFileTest : public gtest::RealLoopFixture {
   static int OpenAsFD(vfs::internal::Node* node, async_dispatcher_t* dispatcher) {
     zx::channel local, remote;
     EXPECT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
-    EXPECT_EQ(ZX_OK, node->Serve(fuchsia::io::OpenFlags::RIGHT_READABLE |
-                                     fuchsia::io::OpenFlags::RIGHT_WRITABLE,
-                                 std::move(remote), dispatcher));
+    EXPECT_EQ(ZX_OK,
+              node->Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+                          std::move(remote), dispatcher));
     int fd = -1;
     EXPECT_EQ(ZX_OK, fdio_fd_create(local.release(), &fd));
     return fd;
@@ -241,12 +240,11 @@ TEST_F(PseudoFileTest, ServeOnInValidFlagsForReadWriteFile) {
   auto file_wrapper = FileWrapper::CreateReadWriteFile("test_str", 100, false);
   {
     SCOPED_TRACE("OPEN_FLAG_DIRECTORY");
-    AssertOpen(file_wrapper.file(), dispatcher(), fuchsia::io::OpenFlags::DIRECTORY,
-               ZX_ERR_NOT_DIR);
+    AssertOpen(file_wrapper.file(), dispatcher(), fuchsia::io::OPEN_FLAG_DIRECTORY, ZX_ERR_NOT_DIR);
   }
   fuchsia::io::OpenFlags not_allowed_flags[] = {
-      fuchsia::io::OpenFlags::CREATE, fuchsia::io::OpenFlags::CREATE_IF_ABSENT,
-      fuchsia::io::OpenFlags::NO_REMOTE, fuchsia::io::OpenFlags::APPEND};
+      fuchsia::io::OPEN_FLAG_CREATE, fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT,
+      fuchsia::io::OPEN_FLAG_NO_REMOTE, fuchsia::io::OPEN_FLAG_APPEND};
   for (auto not_allowed_flag : not_allowed_flags) {
     SCOPED_TRACE(std::to_string(static_cast<uint32_t>(not_allowed_flag)));
     AssertOpen(file_wrapper.file(), dispatcher(), not_allowed_flag, ZX_ERR_NOT_SUPPORTED);
@@ -257,13 +255,12 @@ TEST_F(PseudoFileTest, ServeOnInValidFlagsForReadOnlyFile) {
   auto file_wrapper = FileWrapper::CreateReadOnlyFile("test_str");
   {
     SCOPED_TRACE("OPEN_FLAG_DIRECTORY");
-    AssertOpen(file_wrapper.file(), dispatcher(), fuchsia::io::OpenFlags::DIRECTORY,
-               ZX_ERR_NOT_DIR);
+    AssertOpen(file_wrapper.file(), dispatcher(), fuchsia::io::OPEN_FLAG_DIRECTORY, ZX_ERR_NOT_DIR);
   }
   fuchsia::io::OpenFlags not_allowed_flags[] = {
-      fuchsia::io::OpenFlags::CREATE,    fuchsia::io::OpenFlags::CREATE_IF_ABSENT,
-      fuchsia::io::OpenFlags::NO_REMOTE, fuchsia::io::OpenFlags::RIGHT_WRITABLE,
-      fuchsia::io::OpenFlags::TRUNCATE,  fuchsia::io::OpenFlags::APPEND};
+      fuchsia::io::OPEN_FLAG_CREATE,    fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT,
+      fuchsia::io::OPEN_FLAG_NO_REMOTE, fuchsia::io::OPEN_RIGHT_WRITABLE,
+      fuchsia::io::OPEN_FLAG_TRUNCATE,  fuchsia::io::OPEN_FLAG_APPEND};
   for (auto not_allowed_flag : not_allowed_flags) {
     SCOPED_TRACE(std::to_string(static_cast<uint32_t>(not_allowed_flag)));
     AssertOpen(file_wrapper.file(), dispatcher(), not_allowed_flag, ZX_ERR_NOT_SUPPORTED);
@@ -273,9 +270,9 @@ TEST_F(PseudoFileTest, ServeOnInValidFlagsForReadOnlyFile) {
 TEST_F(PseudoFileTest, ServeOnValidFlagsForReadWriteFile) {
   auto file_wrapper = FileWrapper::CreateReadWriteFile("test_str", 100, false);
   fuchsia::io::OpenFlags allowed_flags[] = {
-      fuchsia::io::OpenFlags::RIGHT_READABLE, fuchsia::io::OpenFlags::RIGHT_WRITABLE,
-      fuchsia::io::OpenFlags::NODE_REFERENCE, fuchsia::io::OpenFlags::TRUNCATE,
-      fuchsia::io::OpenFlags::NOT_DIRECTORY};
+      fuchsia::io::OPEN_RIGHT_READABLE, fuchsia::io::OPEN_RIGHT_WRITABLE,
+      fuchsia::io::OPEN_FLAG_NODE_REFERENCE, fuchsia::io::OPEN_FLAG_TRUNCATE,
+      fuchsia::io::OPEN_FLAG_NOT_DIRECTORY};
   for (auto allowed_flag : allowed_flags) {
     SCOPED_TRACE(std::to_string(static_cast<uint32_t>(allowed_flag)));
     AssertOpen(file_wrapper.file(), dispatcher(), allowed_flag, ZX_OK);
@@ -284,8 +281,8 @@ TEST_F(PseudoFileTest, ServeOnValidFlagsForReadWriteFile) {
 
 TEST_F(PseudoFileTest, ServeOnValidFlagsForReadOnlyFile) {
   auto file_wrapper = FileWrapper::CreateReadOnlyFile("test_str", false);
-  fuchsia::io::OpenFlags allowed_flags[] = {fuchsia::io::OpenFlags::RIGHT_READABLE,
-                                            fuchsia::io::OpenFlags::NODE_REFERENCE};
+  fuchsia::io::OpenFlags allowed_flags[] = {fuchsia::io::OPEN_RIGHT_READABLE,
+                                            fuchsia::io::OPEN_FLAG_NODE_REFERENCE};
   for (auto allowed_flag : allowed_flags) {
     SCOPED_TRACE(std::to_string(static_cast<uint32_t>(allowed_flag)));
     AssertOpen(file_wrapper.file(), dispatcher(), allowed_flag, ZX_OK);
@@ -547,8 +544,8 @@ TEST_F(PseudoFileTest, TruncateFailsForReadOnly) {
 TEST_F(PseudoFileTest, ReadAtFailsForWriteOnly) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
-  auto file = OpenFile(file_wrapper.file(), fuchsia::io::OpenFlags::RIGHT_WRITABLE,
-                       file_wrapper.dispatcher());
+  auto file =
+      OpenFile(file_wrapper.file(), fuchsia::io::OPEN_RIGHT_WRITABLE, file_wrapper.dispatcher());
 
   AssertReadAt(file, 0, 10, "", ZX_ERR_BAD_HANDLE);
 }
@@ -556,8 +553,8 @@ TEST_F(PseudoFileTest, ReadAtFailsForWriteOnly) {
 TEST_F(PseudoFileTest, ReadFailsForWriteOnly) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
-  auto file = OpenFile(file_wrapper.file(), fuchsia::io::OpenFlags::RIGHT_WRITABLE,
-                       file_wrapper.dispatcher());
+  auto file =
+      OpenFile(file_wrapper.file(), fuchsia::io::OPEN_RIGHT_WRITABLE, file_wrapper.dispatcher());
 
   AssertRead(file, 10, "", ZX_ERR_BAD_HANDLE);
 }
@@ -565,8 +562,8 @@ TEST_F(PseudoFileTest, ReadFailsForWriteOnly) {
 TEST_F(PseudoFileTest, CapacityisSameAsFileContentSize) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, str.length());
-  auto file = OpenFile(file_wrapper.file(), fuchsia::io::OpenFlags::RIGHT_READABLE,
-                       file_wrapper.dispatcher());
+  auto file =
+      OpenFile(file_wrapper.file(), fuchsia::io::OPEN_RIGHT_READABLE, file_wrapper.dispatcher());
 
   AssertRead(file, str.length(), str);
 }
@@ -574,14 +571,14 @@ TEST_F(PseudoFileTest, CapacityisSameAsFileContentSize) {
 TEST_F(PseudoFileTest, OpenFailsForOverFlowingFile) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, str.length() - 1);
-  AssertOpen(file_wrapper.file(), file_wrapper.dispatcher(), fuchsia::io::OpenFlags::RIGHT_READABLE,
+  AssertOpen(file_wrapper.file(), file_wrapper.dispatcher(), fuchsia::io::OPEN_RIGHT_READABLE,
              ZX_ERR_FILE_BIG);
 }
 
 TEST_F(PseudoFileTest, CantReadNodeReferenceFile) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
-  auto file = OpenFile(file_wrapper.file(), fuchsia::io::OpenFlags::NODE_REFERENCE,
+  auto file = OpenFile(file_wrapper.file(), fuchsia::io::OPEN_FLAG_NODE_REFERENCE,
                        file_wrapper.dispatcher());
   // make sure node reference was opened
   zx_status_t status;
@@ -600,7 +597,7 @@ TEST_F(PseudoFileTest, CanCloneFileConnectionAndReadAndWrite) {
   auto file = OpenReadWrite(file_wrapper.file(), file_wrapper.dispatcher());
 
   fuchsia::io::FileSyncPtr cloned_file;
-  ASSERT_EQ(ZX_OK, file->Clone(fuchsia::io::OpenFlags::CLONE_SAME_RIGHTS,
+  ASSERT_EQ(ZX_OK, file->Clone(fuchsia::io::CLONE_FLAG_SAME_RIGHTS,
                                fidl::InterfaceRequest<fuchsia::io::Node>(
                                    cloned_file.NewRequest().TakeChannel())));
 
@@ -624,11 +621,11 @@ TEST_F(PseudoFileTest, CanCloneFileConnectionAndReadAndWrite) {
 TEST_F(PseudoFileTest, NodeReferenceIsClonedAsNodeReference) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
-  auto file = OpenFile(file_wrapper.file(), fuchsia::io::OpenFlags::NODE_REFERENCE,
+  auto file = OpenFile(file_wrapper.file(), fuchsia::io::OPEN_FLAG_NODE_REFERENCE,
                        file_wrapper.dispatcher());
 
   fuchsia::io::FileSyncPtr cloned_file;
-  ASSERT_EQ(ZX_OK, file->Clone(fuchsia::io::OpenFlags::CLONE_SAME_RIGHTS,
+  ASSERT_EQ(ZX_OK, file->Clone(fuchsia::io::CLONE_FLAG_SAME_RIGHTS,
                                fidl::InterfaceRequest<fuchsia::io::Node>(
                                    cloned_file.NewRequest().TakeChannel())));
   CloseFile(file);

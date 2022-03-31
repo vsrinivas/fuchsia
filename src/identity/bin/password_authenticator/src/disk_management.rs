@@ -71,9 +71,8 @@ impl From<DiskError> for faccount::Error {
     }
 }
 
-const OPEN_RW: fio::OpenFlags = fio::OpenFlags::empty()
-    .union(fio::OpenFlags::RIGHT_READABLE)
-    .union(fio::OpenFlags::RIGHT_WRITABLE);
+const OPEN_RW: fio::OpenFlags =
+    fio::OpenFlags::empty().union(fio::OPEN_RIGHT_READABLE).union(fio::OPEN_RIGHT_WRITABLE);
 
 // This is the 16-byte magic byte string found at the start of a valid zxcrypt partition.
 // It is also defined in `//src/security/zxcrypt/volume.h` and
@@ -498,7 +497,7 @@ impl MockMinfs {
         let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         vfs::directory::mutable::simple().open(
             scope,
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             vfs::path::Path::dot(),
             ServerEnd::new(server_end.into_channel()),

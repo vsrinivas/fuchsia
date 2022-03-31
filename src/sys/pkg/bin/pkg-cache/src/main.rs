@@ -263,9 +263,7 @@ async fn main_inner() -> Result<(), Error> {
     let scope = vfs::execution_scope::ExecutionScope::new();
     let () = out_dir.open(
         scope.clone(),
-        fio::OpenFlags::RIGHT_READABLE
-            | fio::OpenFlags::RIGHT_WRITABLE
-            | fio::OpenFlags::RIGHT_EXECUTABLE,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE,
         0,
         vfs::path::Path::dot(),
         fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleType::DirectoryRequest.into())

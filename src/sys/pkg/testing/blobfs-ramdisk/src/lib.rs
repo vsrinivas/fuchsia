@@ -103,9 +103,7 @@ impl BlobfsRamdiskBuilder {
 
         let (root_proxy, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
         export_root_proxy.open(
-            fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE
-                | fio::OpenFlags::RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE,
             0,
             "root",
             server.into_channel().into(),
@@ -163,7 +161,7 @@ impl BlobfsRamdisk {
     /// Returns a new connection to blobfs's root directory as a raw zircon channel.
     pub fn root_dir_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error> {
         let (root_clone, server_end) = zx::Channel::create()?;
-        self.root_proxy.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, server_end.into())?;
+        self.root_proxy.clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end.into())?;
         Ok(root_clone.into())
     }
 
@@ -312,7 +310,7 @@ impl Ramdisk {
 
     fn clone_channel(&self) -> Result<zx::Channel, Error> {
         let (result, server_end) = zx::Channel::create()?;
-        self.proxy.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, ServerEnd::new(server_end))?;
+        self.proxy.clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server_end))?;
         Ok(result)
     }
 
@@ -359,10 +357,7 @@ async fn blobfs_corrupt_blob(ramdisk: fio::NodeProxy, merkle: &Hash) -> Result<(
     let mut fs = ServiceFs::new();
     fs.root_dir().add_service_at("block", |chan| {
         ramdisk
-            .clone(
-                fio::OpenFlags::CLONE_SAME_RIGHTS | fio::OpenFlags::DESCRIBE,
-                ServerEnd::new(chan),
-            )
+            .clone(fio::CLONE_FLAG_SAME_RIGHTS | fio::OPEN_FLAG_DESCRIBE, ServerEnd::new(chan))
             .unwrap();
         None
     });

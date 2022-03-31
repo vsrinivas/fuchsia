@@ -39,7 +39,7 @@ class TestLazyDir : public vfs::LazyDir {
   }
 
   fuchsia::io::DirectorySyncPtr ServeForTest(
-      fuchsia::io::OpenFlags flags = fuchsia::io::OpenFlags::RIGHT_READABLE) {
+      fuchsia::io::OpenFlags flags = fuchsia::io::OPEN_RIGHT_READABLE) {
     fuchsia::io::DirectorySyncPtr ptr;
     Serve(flags, ptr.NewRequest().TakeChannel(), loop_.dispatcher());
     return ptr;
@@ -158,7 +158,7 @@ TEST_F(LazyDirConnection, LookupWorks) {
   vfs::internal::Node* n;
   ASSERT_EQ(ZX_OK, dir_.Lookup("file3", &n));
   fuchsia::io::FileSyncPtr file_ptr;
-  n->Serve(fuchsia::io::OpenFlags::RIGHT_READABLE, file_ptr.NewRequest().TakeChannel(),
+  n->Serve(fuchsia::io::OPEN_RIGHT_READABLE, file_ptr.NewRequest().TakeChannel(),
            dir_.dispatcher());
 
   fuchsia::io::File2_Read_Result result;

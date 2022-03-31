@@ -83,14 +83,13 @@ TEST(FidlTests, TestFidlOpenReadOnly) {
 
   zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
   ASSERT_OK(endpoints.status_value());
-  ASSERT_OK(fdio_open("/fidltmp-ro/file-ro",
-                      static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable),
+  ASSERT_OK(fdio_open("/fidltmp-ro/file-ro", static_cast<uint32_t>(fio::wire::kOpenRightReadable),
                       endpoints->server.TakeChannel().release()));
 
   auto result = fidl::WireCall(endpoints->client)->GetFlags();
   ASSERT_OK(result.status());
   ASSERT_OK(result.Unwrap()->s);
-  ASSERT_EQ(result.Unwrap()->flags, fio::wire::OpenFlags::kRightReadable);
+  ASSERT_EQ(result.Unwrap()->flags, fio::wire::kOpenRightReadable);
   endpoints->client.TakeChannel().reset();
 
   sync_completion_t unmounted;
