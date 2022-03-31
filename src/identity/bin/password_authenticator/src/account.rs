@@ -259,10 +259,10 @@ impl<EB: EncryptedBlockDevice, M: Minfs> Account<EB, M> {
             State::Unlocked { minfs, .. } => minfs
                 .root_dir()
                 .open(
-                    fio::OPEN_RIGHT_READABLE
-                        | fio::OPEN_RIGHT_WRITABLE
-                        | fio::OPEN_FLAG_DIRECTORY
-                        | fio::OPEN_FLAG_CREATE,
+                    fio::OpenFlags::RIGHT_READABLE
+                        | fio::OpenFlags::RIGHT_WRITABLE
+                        | fio::OpenFlags::DIRECTORY
+                        | fio::OpenFlags::CREATE,
                     fio::MODE_TYPE_DIRECTORY,
                     DEFAULT_DIR,
                     ServerEnd::new(data_directory.into_channel()),
@@ -405,7 +405,7 @@ mod test {
         let file = directory::open_file(
             &dir,
             "testfile",
-            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .await
         .expect("opening test file");

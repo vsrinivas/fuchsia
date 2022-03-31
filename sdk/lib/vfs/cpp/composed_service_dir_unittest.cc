@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <test/placeholders/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
@@ -13,6 +12,7 @@
 #include <lib/vfs/cpp/testing/dir_test_util.h>
 
 #include <gtest/gtest.h>
+#include <test/placeholders/cpp/fidl.h>
 
 namespace {
 
@@ -46,14 +46,14 @@ class ComposedServiceDirectorySimpleTest : public vfs_tests::DirConnection {
 
   fuchsia::io::DirectoryPtr GetConnection(vfs::internal::Directory* dir) {
     fuchsia::io::DirectoryPtr ptr;
-    dir->Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+    dir->Serve(fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
                ptr.NewRequest().TakeChannel(), loop_.dispatcher());
     return ptr;
   }
 
   fuchsia::io::DirectorySyncPtr GetSyncConnection(vfs::internal::Directory* dir) {
     fuchsia::io::DirectorySyncPtr ptr;
-    dir->Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+    dir->Serve(fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
                ptr.NewRequest().TakeChannel(), loop_.dispatcher());
     return ptr;
   }

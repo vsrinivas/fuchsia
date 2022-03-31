@@ -28,7 +28,7 @@ fidl::ClientEnd<fio::Directory> CreateDirectory(fio::wire::OpenFlags dir_flags,
   auto endpoints = fidl::CreateEndpoints<fio::Directory>();
   EXPECT_EQ(endpoints.status_value(), ZX_OK);
   EXPECT_EQ(
-      fdio_open(path.c_str(), static_cast<uint32_t>(dir_flags | fio::wire::kOpenFlagDirectory),
+      fdio_open(path.c_str(), static_cast<uint32_t>(dir_flags | fio::wire::OpenFlags::kDirectory),
                 endpoints->server.TakeChannel().release()),
       ZX_OK);
 
@@ -37,8 +37,9 @@ fidl::ClientEnd<fio::Directory> CreateDirectory(fio::wire::OpenFlags dir_flags,
 
 zx_status_t OpenFileWithCreate(const fidl::ClientEnd<fio::Directory>& dir,
                                const std::string& path) {
-  fio::wire::OpenFlags child_flags =
-      fio::wire::kOpenFlagCreate | fio::wire::kOpenRightReadable | fio::wire::kOpenFlagDescribe;
+  fio::wire::OpenFlags child_flags = fio::wire::OpenFlags::kCreate |
+                                     fio::wire::OpenFlags::kRightReadable |
+                                     fio::wire::OpenFlags::kDescribe;
   auto child_endpoints = fidl::CreateEndpoints<fio::Node>();
   EXPECT_EQ(child_endpoints.status_value(), ZX_OK);
   auto open_res = fidl::WireCall(dir)->Open(child_flags, fio::wire::kModeTypeFile,
@@ -67,13 +68,14 @@ zx_status_t OpenFileWithCreate(const fidl::ClientEnd<fio::Directory>& dir,
 }
 
 TEST_P(OpenTest, OpenFileWithCreateCreatesInReadWriteDir) {
-  fio::wire::OpenFlags flags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable;
+  fio::wire::OpenFlags flags =
+      fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable;
   auto parent = CreateDirectory(flags, GetPath("a"));
   EXPECT_EQ(OpenFileWithCreate(parent, "b"), ZX_OK);
 }
 
 TEST_P(OpenTest, OpenFileWithCreateFailsInReadOnlyDir) {
-  fio::wire::OpenFlags flags = fio::wire::kOpenRightReadable;
+  fio::wire::OpenFlags flags = fio::wire::OpenFlags::kRightReadable;
   auto parent = CreateDirectory(flags, GetPath("a"));
   EXPECT_EQ(OpenFileWithCreate(parent, "b"), ZX_ERR_ACCESS_DENIED);
 }
@@ -81,11 +83,12 @@ TEST_P(OpenTest, OpenFileWithCreateFailsInReadOnlyDir) {
 TEST_P(OpenTest, OpenFileWithCreateCreatesInReadWriteDirPosixOpen) {
   // kOpenFlagPosixWritable expand the rights of the directory connection to include write rights if
   // the parent connection has them.
-  fio::wire::OpenFlags flags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable;
+  fio::wire::OpenFlags flags =
+      fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable;
   auto parent = CreateDirectory(flags, GetPath("a"));
 
-  flags = fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosixWritable |
-          fio::wire::kOpenFlagDirectory;
+  flags = fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kPosixWritable |
+          fio::wire::OpenFlags::kDirectory;
   uint32_t mode = fio::wire::kModeTypeDirectory;
   std::string path = ".";
   auto clone_endpoints = fidl::CreateEndpoints<fio::Node>();
@@ -99,11 +102,11 @@ TEST_P(OpenTest, OpenFileWithCreateCreatesInReadWriteDirPosixOpen) {
 }
 
 TEST_P(OpenTest, OpenFileWithCreateFailsInReadOnlyDirPosixOpen) {
-  fio::wire::OpenFlags flags = fio::wire::kOpenRightReadable;
+  fio::wire::OpenFlags flags = fio::wire::OpenFlags::kRightReadable;
   auto parent = CreateDirectory(flags, GetPath("a"));
 
-  flags = fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosixWritable |
-          fio::wire::kOpenFlagDirectory;
+  flags = fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kPosixWritable |
+          fio::wire::OpenFlags::kDirectory;
   uint32_t mode = fio::wire::kModeTypeDirectory;
   std::string path = ".";
   auto clone_endpoints = fidl::CreateEndpoints<fio::Node>();
@@ -118,11 +121,12 @@ TEST_P(OpenTest, OpenFileWithCreateFailsInReadOnlyDirPosixOpen) {
 
 TEST_P(OpenTest, OpenFileWithCreateFailsInReadWriteDirPosixClone) {
   // kOpenFlagPosixWritable only does the rights expansion with the open call though.
-  fio::wire::OpenFlags flags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable;
+  fio::wire::OpenFlags flags =
+      fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable;
   auto parent = CreateDirectory(flags, GetPath("a"));
 
-  flags = fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosixWritable |
-          fio::wire::kOpenFlagDirectory;
+  flags = fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kPosixWritable |
+          fio::wire::OpenFlags::kDirectory;
   auto clone_endpoints = fidl::CreateEndpoints<fio::Node>();
   ASSERT_EQ(clone_endpoints.status_value(), ZX_OK);
   auto clone_res = fidl::WireCall(parent)->Clone(flags, std::move(clone_endpoints->server));
@@ -133,11 +137,11 @@ TEST_P(OpenTest, OpenFileWithCreateFailsInReadWriteDirPosixClone) {
 }
 
 TEST_P(OpenTest, OpenFileWithCreateFailsInReadOnlyDirPosixClone) {
-  fio::wire::OpenFlags flags = fio::wire::kOpenRightReadable;
+  fio::wire::OpenFlags flags = fio::wire::OpenFlags::kRightReadable;
   auto parent = CreateDirectory(flags, GetPath("a"));
 
-  flags = fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosixWritable |
-          fio::wire::kOpenFlagDirectory;
+  flags = fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kPosixWritable |
+          fio::wire::OpenFlags::kDirectory;
   auto clone_endpoints = fidl::CreateEndpoints<fio::Node>();
   ASSERT_EQ(clone_endpoints.status_value(), ZX_OK);
   auto clone_res = fidl::WireCall(parent)->Clone(flags, std::move(clone_endpoints->server));

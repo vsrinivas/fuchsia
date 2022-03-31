@@ -17,7 +17,7 @@ use fuchsia_inspect::{component, health::Reporter};
 use fuchsia_syslog::{fx_log_info, fx_log_warn};
 use fuchsia_zircon as zx;
 use futures::prelude::*;
-use io_util::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE};
+use io_util::OpenFlags;
 use std::{path::Path, sync::Arc};
 use tracing;
 
@@ -32,9 +32,13 @@ const CR50_VENDOR_ID: u16 = 0x1ae0;
 const CR50_DEVICE_ID: u16 = 0x0028;
 
 async fn is_cr50(dir: &fio::DirectoryProxy, name: &str) -> Result<Option<TpmDeviceProxy>, Error> {
-    let node =
-        io_util::open_node(dir, Path::new(name), OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, 0)
-            .context("Sending open")?;
+    let node = io_util::open_node(
+        dir,
+        Path::new(name),
+        OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
+        0,
+    )
+    .context("Sending open")?;
     let proxy = TpmDeviceProxy::new(node.into_channel().unwrap());
 
     let (vendor_id, device_id, _revision_id) = proxy
@@ -54,9 +58,11 @@ async fn is_cr50(dir: &fio::DirectoryProxy, name: &str) -> Result<Option<TpmDevi
 
 async fn find_cr50() -> Result<TpmDeviceProxy, Error> {
     let tpm_path = "/dev/class/tpm";
-    let proxy =
-        io_util::open_directory_in_namespace(tpm_path, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)
-            .context("Opening TPM directory")?;
+    let proxy = io_util::open_directory_in_namespace(
+        tpm_path,
+        OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
+    )
+    .context("Opening TPM directory")?;
 
     let contents = files_async::readdir(&proxy).await.context("Reading TPM directory")?;
     for entry in contents.iter() {

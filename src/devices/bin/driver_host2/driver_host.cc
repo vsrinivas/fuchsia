@@ -160,10 +160,10 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
     completer.Close(endpoints.error_value());
     return;
   }
-  zx_status_t status = fdio_open_at(
-      pkg->channel()->get(), binary->data(),
-      static_cast<uint32_t>(fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable),
-      endpoints->server.TakeChannel().release());
+  zx_status_t status = fdio_open_at(pkg->channel()->get(), binary->data(),
+                                    static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable |
+                                                          fio::wire::OpenFlags::kRightExecutable),
+                                    endpoints->server.TakeChannel().release());
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to start driver '%s', could not open library: %s", url.data(),
          zx_status_get_string(status));

@@ -143,7 +143,7 @@ func (d *directoryWrapper) Clone(_ fidl.Context, flags io.OpenFlags, node io.Nod
 		d.vfs.addDirectory(newDir, node)
 	}
 	// Only send an OnOpen message if OpenFlagDescribe is set.
-	if flags&io.OpenFlagDescribe != 0 {
+	if flags&io.OpenFlagsDescribe != 0 {
 		c := fidl.InterfaceRequest(node).Channel
 		pxy := io.NodeEventProxy(fidl.ChannelProxy{Channel: c})
 		var info io.NodeInfo
@@ -271,8 +271,8 @@ func (d *directoryWrapper) Open(_ fidl.Context, inFlags io.OpenFlags, inMode uin
 	if fsRemote != nil {
 		fwd := ((*io.DirectoryWithCtxInterface)(&fidl.ChannelProxy{Channel: fsRemote.Channel}))
 		flags, mode := openFlagsToFIDL(fsRemote.Flags)
-		if inFlags&io.OpenFlagDescribe != 0 {
-			flags |= io.OpenFlagDescribe
+		if inFlags&io.OpenFlagsDescribe != 0 {
+			flags |= io.OpenFlagsDescribe
 		}
 		return fwd.Open(context.Background(), flags, mode, fsRemote.Path, node)
 	}
@@ -294,7 +294,7 @@ func (d *directoryWrapper) Open(_ fidl.Context, inFlags io.OpenFlags, inMode uin
 	}
 
 	// Only send an OnOpen message if OpenFlagDescribe is set.
-	if inFlags&io.OpenFlagDescribe != 0 {
+	if inFlags&io.OpenFlagsDescribe != 0 {
 		var info io.NodeInfo
 		if fsFile != nil {
 			info.SetFile(io.FileObject{
@@ -490,7 +490,7 @@ func (f *fileWrapper) Clone(_ fidl.Context, flags io.OpenFlags, node io.NodeWith
 		f.vfs.addFile(newFile, node)
 	}
 	// Only send an OnOpen message if OpenFlagDescribe is set.
-	if flags&io.OpenFlagDescribe != 0 {
+	if flags&io.OpenFlagsDescribe != 0 {
 		c := fidl.InterfaceRequest(node).Channel
 		pxy := io.NodeEventProxy(fidl.ChannelProxy{Channel: c})
 		var info io.NodeInfo

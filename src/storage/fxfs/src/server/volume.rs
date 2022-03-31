@@ -431,7 +431,9 @@ mod tests {
 
         let src = open_dir_checked(
             &root,
-            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::CREATE
+                | fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             "foo",
         )
@@ -439,16 +441,17 @@ mod tests {
 
         let dst = open_dir_checked(
             &root,
-            fio::OPEN_FLAG_CREATE
-                | fio::OPEN_RIGHT_READABLE
-                | fio::OPEN_RIGHT_WRITABLE
-                | fio::OPEN_FLAG_DIRECTORY,
+            fio::OpenFlags::CREATE
+                | fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::DIRECTORY,
             fio::MODE_TYPE_DIRECTORY,
             "bar",
         )
         .await;
 
-        let f = open_file_checked(&root, fio::OPEN_FLAG_CREATE, fio::MODE_TYPE_FILE, "foo/a").await;
+        let f =
+            open_file_checked(&root, fio::OpenFlags::CREATE, fio::MODE_TYPE_FILE, "foo/a").await;
         close_file_checked(f).await;
 
         let (status, dst_token) = dst.get_token().await.expect("FIDL call failed");
@@ -484,13 +487,16 @@ mod tests {
 
         let src = open_dir_checked(
             &root,
-            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::CREATE
+                | fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             "foo",
         )
         .await;
 
-        let f = open_file_checked(&root, fio::OPEN_FLAG_CREATE, fio::MODE_TYPE_FILE, "foo/a").await;
+        let f =
+            open_file_checked(&root, fio::OpenFlags::CREATE, fio::MODE_TYPE_FILE, "foo/a").await;
         close_file_checked(f).await;
 
         let (status, src_token) = src.get_token().await.expect("FIDL call failed");
@@ -525,7 +531,9 @@ mod tests {
 
         let src = open_dir_checked(
             &root,
-            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::CREATE
+                | fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             "foo",
         )
@@ -533,10 +541,10 @@ mod tests {
 
         let dst = open_dir_checked(
             &root,
-            fio::OPEN_FLAG_CREATE
-                | fio::OPEN_RIGHT_READABLE
-                | fio::OPEN_RIGHT_WRITABLE
-                | fio::OPEN_FLAG_DIRECTORY,
+            fio::OpenFlags::CREATE
+                | fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::DIRECTORY,
             fio::MODE_TYPE_DIRECTORY,
             "bar",
         )
@@ -545,7 +553,7 @@ mod tests {
         // The src file is non-empty.
         let src_file = open_file_checked(
             &root,
-            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE,
             fio::MODE_TYPE_FILE,
             "foo/a",
         )
@@ -555,7 +563,8 @@ mod tests {
         close_file_checked(src_file).await;
 
         // The dst file is empty (so we can distinguish it).
-        let f = open_file_checked(&root, fio::OPEN_FLAG_CREATE, fio::MODE_TYPE_FILE, "bar/b").await;
+        let f =
+            open_file_checked(&root, fio::OpenFlags::CREATE, fio::MODE_TYPE_FILE, "bar/b").await;
         close_file_checked(f).await;
 
         let (status, dst_token) = dst.get_token().await.expect("FIDL call failed");
@@ -575,7 +584,8 @@ mod tests {
             &Status::NOT_FOUND,
         );
         let file =
-            open_file_checked(&root, fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_FILE, "bar/b").await;
+            open_file_checked(&root, fio::OpenFlags::RIGHT_READABLE, fio::MODE_TYPE_FILE, "bar/b")
+                .await;
         let buf = read_file_bytes(&file).await.expect("read file failed");
         assert_eq!(buf, vec![0xaa as u8; 8192]);
         close_file_checked(file).await;
@@ -593,7 +603,9 @@ mod tests {
 
         let src = open_dir_checked(
             &root,
-            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::CREATE
+                | fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             "foo",
         )
@@ -601,10 +613,10 @@ mod tests {
 
         let dst = open_dir_checked(
             &root,
-            fio::OPEN_FLAG_CREATE
-                | fio::OPEN_RIGHT_READABLE
-                | fio::OPEN_RIGHT_WRITABLE
-                | fio::OPEN_FLAG_DIRECTORY,
+            fio::OpenFlags::CREATE
+                | fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::DIRECTORY,
             fio::MODE_TYPE_DIRECTORY,
             "bar",
         )
@@ -613,13 +625,13 @@ mod tests {
         // The src dir is non-empty.
         open_dir_checked(
             &root,
-            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             "foo/a",
         )
         .await;
-        open_file_checked(&root, fio::OPEN_FLAG_CREATE, fio::MODE_TYPE_FILE, "foo/a/file").await;
-        open_dir_checked(&root, fio::OPEN_FLAG_CREATE, fio::MODE_TYPE_DIRECTORY, "bar/b").await;
+        open_file_checked(&root, fio::OpenFlags::CREATE, fio::MODE_TYPE_FILE, "foo/a/file").await;
+        open_dir_checked(&root, fio::OpenFlags::CREATE, fio::MODE_TYPE_DIRECTORY, "bar/b").await;
 
         let (status, dst_token) = dst.get_token().await.expect("FIDL call failed");
         Status::ok(status).expect("get_token failed");

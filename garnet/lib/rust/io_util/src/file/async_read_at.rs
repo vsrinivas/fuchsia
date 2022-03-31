@@ -620,7 +620,7 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let path = dir.path().join("get_size_file_with_contents").to_str().unwrap().to_owned();
         let () = file::write_in_namespace(&path, contents).await.unwrap();
-        let file = file::open_in_namespace(&path, fio::OPEN_RIGHT_READABLE).unwrap();
+        let file = file::open_in_namespace(&path, fio::OpenFlags::RIGHT_READABLE).unwrap();
 
         let mut reader = AsyncFile::from_proxy(file);
 
@@ -641,8 +641,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn get_size_changing_size() {
         let (mut file, path) = NamedTempFile::new().unwrap().into_parts();
-        let proxy =
-            file::open_in_namespace(path.to_str().unwrap(), fio::OPEN_RIGHT_READABLE).unwrap();
+        let proxy = file::open_in_namespace(path.to_str().unwrap(), fio::OpenFlags::RIGHT_READABLE)
+            .unwrap();
 
         let mut reader = AsyncFile::from_proxy(proxy);
 

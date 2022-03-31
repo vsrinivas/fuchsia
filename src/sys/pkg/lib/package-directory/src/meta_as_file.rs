@@ -43,12 +43,12 @@ impl vfs::directory::entry::DirectoryEntry for MetaAsFile {
         }
 
         if flags.intersects(
-            fio::OPEN_RIGHT_WRITABLE
-                | fio::OPEN_RIGHT_EXECUTABLE
-                | fio::OPEN_FLAG_CREATE
-                | fio::OPEN_FLAG_CREATE_IF_ABSENT
-                | fio::OPEN_FLAG_TRUNCATE
-                | fio::OPEN_FLAG_APPEND,
+            fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::RIGHT_EXECUTABLE
+                | fio::OpenFlags::CREATE
+                | fio::OpenFlags::CREATE_IF_ABSENT
+                | fio::OpenFlags::TRUNCATE
+                | fio::OpenFlags::APPEND,
         ) {
             let () = send_on_open_with_error(flags, server_end, zx::Status::NOT_SUPPORTED);
             return;
@@ -184,7 +184,7 @@ mod tests {
         DirectoryEntry::open(
             Arc::new(meta_as_file),
             ExecutionScope::new(),
-            fio::OPEN_FLAG_DESCRIBE,
+            fio::OpenFlags::DESCRIBE,
             0,
             VfsPath::validate_and_split("non-empty").unwrap(),
             server_end.into_channel().into(),
@@ -203,19 +203,19 @@ mod tests {
         let meta_as_file = Arc::new(meta_as_file);
 
         for forbidden_flag in [
-            fio::OPEN_RIGHT_WRITABLE,
-            fio::OPEN_RIGHT_EXECUTABLE,
-            fio::OPEN_FLAG_CREATE,
-            fio::OPEN_FLAG_CREATE_IF_ABSENT,
-            fio::OPEN_FLAG_TRUNCATE,
-            fio::OPEN_FLAG_APPEND,
+            fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_EXECUTABLE,
+            fio::OpenFlags::CREATE,
+            fio::OpenFlags::CREATE_IF_ABSENT,
+            fio::OpenFlags::TRUNCATE,
+            fio::OpenFlags::APPEND,
         ] {
             let (proxy, server_end) =
                 fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
             DirectoryEntry::open(
                 Arc::clone(&meta_as_file),
                 ExecutionScope::new(),
-                fio::OPEN_FLAG_DESCRIBE | forbidden_flag,
+                fio::OpenFlags::DESCRIBE | forbidden_flag,
                 0,
                 VfsPath::dot(),
                 server_end.into_channel().into(),
@@ -237,7 +237,7 @@ mod tests {
 
         Arc::new(meta_as_file).open(
             ExecutionScope::new(),
-            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_READABLE,
             fio::MODE_TYPE_FILE,
             VfsPath::dot(),
             server_end.into_channel().into(),

@@ -61,7 +61,7 @@ async fn meta_far_file() {
         let meta_far_file = io_util::directory::open_file(
             &d,
             &format!("versions/{}/meta/{}", base_pkg_with_meta_files.meta_far_merkle_root(), size),
-            io_util::OPEN_RIGHT_READABLE,
+            io_util::OpenFlags::RIGHT_READABLE,
         )
         .await
         .unwrap();

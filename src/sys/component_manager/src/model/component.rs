@@ -504,7 +504,7 @@ impl ComponentInstance {
                         .map_err(|_| ModelError::InsufficientResources)?;
                 let mut server_channel = server_channel.into_channel();
                 let options = OpenRunnerOptions {
-                    flags: fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                    flags: fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
                     open_mode: fio::MODE_TYPE_SERVICE,
                     server_chan: &mut server_channel,
                 };
@@ -948,9 +948,9 @@ impl ComponentInstance {
                 // TODO(fxbug.dev/36541): Until directory capabilities specify rights, we always
                 // open directories using OPEN_FLAG_POSIX_WRITABLE and OPEN_FLAG_POSIX_EXECUTABLE
                 // which expands the new connection's rights to those of the parent connection.
-                let flags = fio::OPEN_RIGHT_READABLE
-                    | fio::OPEN_FLAG_POSIX_WRITABLE
-                    | fio::OPEN_FLAG_POSIX_EXECUTABLE;
+                let flags = fio::OpenFlags::RIGHT_READABLE
+                    | fio::OpenFlags::POSIX_WRITABLE
+                    | fio::OpenFlags::POSIX_EXECUTABLE;
                 let server_chan = channel::take_channel(server_chan);
                 let server_end = ServerEnd::new(server_chan);
                 exposed_dir.open(flags, fio::MODE_TYPE_DIRECTORY, Path::dot(), server_end);

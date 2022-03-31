@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_time as ftime,
     fuchsia_zircon::{Clock, ClockOpts, HandleBased, Rights, Time},
     futures::prelude::*,
-    io_util::{file, OPEN_RIGHT_READABLE},
+    io_util::{file, OpenFlags},
     lazy_static::lazy_static,
     std::sync::Arc,
 };
@@ -60,7 +60,7 @@ impl BuiltinCapability for UtcTimeMaintainer {
 async fn read_utc_backstop(path: &str, bootfs: &Option<BootfsSvc>) -> Result<Time, Error> {
     let file_contents: String;
     if bootfs.is_none() {
-        let file_proxy = file::open_in_namespace(path, OPEN_RIGHT_READABLE)
+        let file_proxy = file::open_in_namespace(path, OpenFlags::RIGHT_READABLE)
             .context("failed to open backstop time file from disk")?;
         file_contents = file::read_to_string(&file_proxy)
             .await

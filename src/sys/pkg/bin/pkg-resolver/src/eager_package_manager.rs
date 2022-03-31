@@ -281,7 +281,7 @@ mod tests {
         std::fs::write(dir.path().join("meta"), hash).unwrap();
         let proxy = io_util::open_directory_in_namespace(
             dir.path().to_str().unwrap(),
-            io_util::OPEN_RIGHT_READABLE,
+            io_util::OpenFlags::RIGHT_READABLE,
         )
         .unwrap();
         let pkg_dir = PackageDirectory::from_proxy(proxy);

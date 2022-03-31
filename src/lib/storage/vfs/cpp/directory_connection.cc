@@ -206,7 +206,7 @@ void DirectoryConnection::AddInotifyFilter(AddInotifyFilterRequestView request,
 }
 
 void DirectoryConnection::Open(OpenRequestView request, OpenCompleter::Sync& completer) {
-  auto write_error = [describe = request->flags & fio::wire::kOpenFlagDescribe](
+  auto write_error = [describe = request->flags & fio::wire::OpenFlags::kDescribe](
                          fidl::ServerEnd<fio::Node> channel, zx_status_t error) {
     if (describe) {
       // TODO(fxbug.dev/95144) Use the returned fidl::Status's status value.
@@ -221,13 +221,13 @@ void DirectoryConnection::Open(OpenRequestView request, OpenCompleter::Sync& com
   }
 
   if (path.empty() ||
-      ((path == "." || path == "/") && (request->flags & fio::wire::kOpenFlagNotDirectory))) {
+      ((path == "." || path == "/") && (request->flags & fio::wire::OpenFlags::kNotDirectory))) {
     return write_error(std::move(request->object), ZX_ERR_INVALID_ARGS);
   }
 
   fio::wire::OpenFlags flags = request->flags;
   if (path.back() == '/') {
-    flags |= fio::wire::kOpenFlagDirectory;
+    flags |= fio::wire::OpenFlags::kDirectory;
   }
 
   auto open_options = VnodeConnectionOptions::FromIoV1Flags(flags);

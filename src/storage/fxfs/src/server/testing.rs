@@ -73,7 +73,9 @@ impl TestFixture {
             create_proxy::<fio::DirectoryMarker>().expect("create_proxy failed");
         volume.root().clone().open(
             scope.clone(),
-            fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::DIRECTORY
+                | fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             Path::dot(),
             ServerEnd::new(server_end.into_channel()),

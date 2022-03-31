@@ -438,7 +438,7 @@ mod tests {
         fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio, fuchsia_async as fasync,
         fuchsia_component::client,
         futures::{lock::Mutex, poll, task::Poll},
-        io_util::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+        io_util::OpenFlags,
         moniker::AbsoluteMoniker,
         routing_test_helpers::component_decl_with_exposed_binder,
         std::collections::HashSet,
@@ -1337,7 +1337,7 @@ mod tests {
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &PathBuf::from("hippo"),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
             fio::MODE_TYPE_SERVICE,
         )
         .expect("failed to open hippo service");
@@ -1422,7 +1422,7 @@ mod tests {
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &PathBuf::from("hippo"),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
             fio::MODE_TYPE_SERVICE,
         )
         .expect("failed to open hippo service");
@@ -1496,7 +1496,7 @@ mod tests {
             let node_proxy = io_util::open_node(
                 &dir_proxy,
                 &PathBuf::from("hippo"),
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
                 fio::MODE_TYPE_SERVICE,
             )
             .expect("failed to open hippo service");

@@ -48,7 +48,7 @@ pub fn serve_debug_data(
 
                     file_impl.open(
                         scope.clone(),
-                        fio::OPEN_RIGHT_READABLE,
+                        fio::OpenFlags::RIGHT_READABLE,
                         0,
                         vfs::path::Path::dot(),
                         file_server,

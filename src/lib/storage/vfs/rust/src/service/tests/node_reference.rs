@@ -30,7 +30,7 @@ use {
 #[test]
 fn construction() {
     run_server_client(
-        fio::OPEN_FLAG_NODE_REFERENCE,
+        fio::OpenFlags::NODE_REFERENCE,
         endpoint(|_scope, _channel| ()),
         |proxy| async move {
             assert_close!(proxy);
@@ -41,7 +41,7 @@ fn construction() {
 #[test]
 fn get_attr() {
     run_server_client(
-        fio::OPEN_FLAG_NODE_REFERENCE,
+        fio::OpenFlags::NODE_REFERENCE,
         endpoint(|_scope, _channel| ()),
         |proxy| async move {
             assert_get_attr!(
@@ -72,7 +72,7 @@ fn describe() {
         let (proxy, server_end) =
             create_proxy::<fio::FileMarker>().expect("Failed to create connection endpoints");
 
-        let flags = fio::OPEN_FLAG_NODE_REFERENCE | fio::OPEN_FLAG_DESCRIBE;
+        let flags = fio::OpenFlags::NODE_REFERENCE | fio::OpenFlags::DESCRIBE;
         server.open(scope, flags, 0, Path::dot(), server_end.into_channel().into());
 
         assert_event!(proxy, fio::FileEvent::OnOpen_ { s, info }, {
@@ -85,7 +85,7 @@ fn describe() {
 #[test]
 fn clone() {
     run_server_client(
-        fio::OPEN_FLAG_NODE_REFERENCE,
+        fio::OpenFlags::NODE_REFERENCE,
         endpoint(|_scope, _channel| ()),
         |first_proxy| async move {
             assert_get_attr!(
@@ -103,7 +103,7 @@ fn clone() {
 
             let second_proxy = clone_get_service_proxy_assert_ok!(
                 &first_proxy,
-                fio::OPEN_FLAG_NODE_REFERENCE | fio::OPEN_FLAG_DESCRIBE
+                fio::OpenFlags::NODE_REFERENCE | fio::OpenFlags::DESCRIBE
             );
 
             assert_read_err!(second_proxy, Status::ACCESS_DENIED);
@@ -130,7 +130,7 @@ fn clone() {
 #[test]
 fn clone_same_rights() {
     run_server_client(
-        fio::OPEN_FLAG_NODE_REFERENCE,
+        fio::OpenFlags::NODE_REFERENCE,
         endpoint(|_scope, _channel| ()),
         |first_proxy| async move {
             assert_get_attr!(
@@ -148,7 +148,7 @@ fn clone_same_rights() {
 
             let second_proxy = clone_get_service_proxy_assert_ok!(
                 &first_proxy,
-                fio::CLONE_FLAG_SAME_RIGHTS | fio::OPEN_FLAG_DESCRIBE
+                fio::OpenFlags::CLONE_SAME_RIGHTS | fio::OpenFlags::DESCRIBE
             );
 
             assert_read_err!(second_proxy, Status::ACCESS_DENIED);

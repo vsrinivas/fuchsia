@@ -16,7 +16,6 @@ struct fuchsia.io/AdvisoryLocking_AdvisoryLock_Response
 union/member fuchsia.io/AdvisoryLocking_AdvisoryLock_Result.err int32
 union/member fuchsia.io/AdvisoryLocking_AdvisoryLock_Result.response fuchsia.io/AdvisoryLocking_AdvisoryLock_Response
 strict union fuchsia.io/AdvisoryLocking_AdvisoryLock_Result
-const fuchsia.io/CLONE_FLAG_SAME_RIGHTS fuchsia.io/OpenFlags 67108864
 const fuchsia.io/CLOSE_ALL fuchsia.io/InotifyWatchMask 24
 bits/member fuchsia.io/ConnectionFlags.APPEND 4
 bits/member fuchsia.io/ConnectionFlags.CONNECT 2
@@ -436,22 +435,7 @@ bits/member fuchsia.io/NodeProtocols.SYNCHRONOUS_DATAGRAM_SOCKET 32
 bits/member fuchsia.io/NodeProtocols.TTY 536870912
 strict bits fuchsia.io/NodeProtocols uint64
 const fuchsia.io/OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE fuchsia.io/OpenFlags 46661632
-const fuchsia.io/OPEN_FLAG_APPEND fuchsia.io/OpenFlags 1048576
-const fuchsia.io/OPEN_FLAG_CREATE fuchsia.io/OpenFlags 65536
-const fuchsia.io/OPEN_FLAG_CREATE_IF_ABSENT fuchsia.io/OpenFlags 131072
-const fuchsia.io/OPEN_FLAG_DESCRIBE fuchsia.io/OpenFlags 8388608
-const fuchsia.io/OPEN_FLAG_DIRECTORY fuchsia.io/OpenFlags 524288
-const fuchsia.io/OPEN_FLAG_NODE_REFERENCE fuchsia.io/OpenFlags 4194304
-const fuchsia.io/OPEN_FLAG_NOT_DIRECTORY fuchsia.io/OpenFlags 33554432
-const fuchsia.io/OPEN_FLAG_NO_REMOTE fuchsia.io/OpenFlags 2097152
-const fuchsia.io/OPEN_FLAG_POSIX_DEPRECATED fuchsia.io/OpenFlags 16777216
-const fuchsia.io/OPEN_FLAG_POSIX_EXECUTABLE fuchsia.io/OpenFlags 268435456
-const fuchsia.io/OPEN_FLAG_POSIX_WRITABLE fuchsia.io/OpenFlags 134217728
-const fuchsia.io/OPEN_FLAG_TRUNCATE fuchsia.io/OpenFlags 262144
 const fuchsia.io/OPEN_RIGHTS fuchsia.io/OpenFlags 11
-const fuchsia.io/OPEN_RIGHT_EXECUTABLE fuchsia.io/OpenFlags 8
-const fuchsia.io/OPEN_RIGHT_READABLE fuchsia.io/OpenFlags 1
-const fuchsia.io/OPEN_RIGHT_WRITABLE fuchsia.io/OpenFlags 2
 bits/member fuchsia.io/OpenFlags.APPEND 1048576
 bits/member fuchsia.io/OpenFlags.CLONE_SAME_RIGHTS 67108864
 bits/member fuchsia.io/OpenFlags.CREATE 65536

@@ -199,8 +199,9 @@ pub async fn dir_contains<'a>(
     path: &'a str,
     entry_name: &'a str,
 ) -> bool {
-    let dir = io_util::open_directory(&root_proxy, &Path::new(path), fio::OPEN_RIGHT_READABLE)
-        .expect("Failed to open directory");
+    let dir =
+        io_util::open_directory(&root_proxy, &Path::new(path), fio::OpenFlags::RIGHT_READABLE)
+            .expect("Failed to open directory");
     let entries = files_async::readdir(&dir).await.expect("readdir failed");
     let listing = entries.iter().map(|entry| entry.name.clone()).collect::<Vec<String>>();
     listing.contains(&String::from(entry_name))
@@ -217,14 +218,14 @@ pub async fn list_sub_directory(parent: &fio::DirectoryProxy, path: &str) -> Vec
     let sub_dir = io_util::open_directory(
         &parent,
         &Path::new(path),
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
     )
     .expect("Failed to open directory");
     list_directory(&sub_dir).await
 }
 
 pub async fn list_directory_recursive<'a>(root_proxy: &'a fio::DirectoryProxy) -> Vec<String> {
-    let dir = io_util::clone_directory(&root_proxy, fio::CLONE_FLAG_SAME_RIGHTS)
+    let dir = io_util::clone_directory(&root_proxy, fio::OpenFlags::CLONE_SAME_RIGHTS)
         .expect("Failed to clone DirectoryProxy");
     let entries = files_async::readdir_recursive(&dir, /*timeout=*/ None);
     let mut items = entries
@@ -237,8 +238,9 @@ pub async fn list_directory_recursive<'a>(root_proxy: &'a fio::DirectoryProxy) -
 }
 
 pub async fn read_file<'a>(root_proxy: &'a fio::DirectoryProxy, path: &'a str) -> String {
-    let file_proxy = io_util::open_file(&root_proxy, &Path::new(path), fio::OPEN_RIGHT_READABLE)
-        .expect("Failed to open file.");
+    let file_proxy =
+        io_util::open_file(&root_proxy, &Path::new(path), fio::OpenFlags::RIGHT_READABLE)
+            .expect("Failed to open file.");
     let res = io_util::read_file(&file_proxy).await;
     res.expect("Unable to read file.")
 }
@@ -247,7 +249,7 @@ pub async fn write_file<'a>(root_proxy: &'a fio::DirectoryProxy, path: &'a str, 
     let file_proxy = io_util::open_file(
         &root_proxy,
         &Path::new(path),
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
     )
     .expect("Failed to open file.");
     let _: u64 = file_proxy
@@ -262,7 +264,7 @@ pub async fn call_echo<'a>(root_proxy: &'a fio::DirectoryProxy, path: &'a str) -
     let node_proxy = io_util::open_node(
         &root_proxy,
         &Path::new(path),
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         fio::MODE_TYPE_SERVICE,
     )
     .expect("failed to open echo service");

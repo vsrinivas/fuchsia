@@ -372,7 +372,7 @@ where
         path: String,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
-        if self.flags.intersects(fio::OPEN_FLAG_NODE_REFERENCE) {
+        if self.flags.intersects(fio::OpenFlags::NODE_REFERENCE) {
             send_on_open_with_error(flags, server_end, Status::BAD_HANDLE);
             return;
         }
@@ -386,7 +386,7 @@ where
         };
 
         if path.is_dir() {
-            flags |= fio::OPEN_FLAG_DIRECTORY;
+            flags |= fio::OpenFlags::DIRECTORY;
         }
 
         let (flags, mode) = match check_child_connection_flags(self.flags, flags, mode) {
@@ -402,9 +402,9 @@ where
         // filesystems.
         if path.is_dot()
             && flags.intersects(
-                fio::OPEN_FLAG_CREATE
-                    | fio::OPEN_FLAG_CREATE_IF_ABSENT
-                    | fio::OPEN_FLAG_NOT_DIRECTORY,
+                fio::OpenFlags::CREATE
+                    | fio::OpenFlags::CREATE_IF_ABSENT
+                    | fio::OpenFlags::NOT_DIRECTORY,
             )
         {
             send_on_open_with_error(flags, server_end, Status::INVALID_ARGS);
@@ -424,7 +424,7 @@ where
     where
         R: FnOnce(Status, &[u8]) -> Result<(), fidl::Error>,
     {
-        if self.flags.intersects(fio::OPEN_FLAG_NODE_REFERENCE) {
+        if self.flags.intersects(fio::OpenFlags::NODE_REFERENCE) {
             return responder(Status::BAD_HANDLE, &[]);
         }
 
@@ -471,7 +471,7 @@ where
             Some(registry) => registry,
         };
 
-        if !self.flags.intersects(fio::OPEN_RIGHT_WRITABLE) {
+        if !self.flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
             return responder(Status::BAD_HANDLE);
         }
 
@@ -522,7 +522,7 @@ mod tests {
         let dir = simple();
         dir.open(
             ExecutionScope::new(),
-            fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::DIRECTORY | fio::OpenFlags::RIGHT_READABLE,
             fio::MODE_TYPE_DIRECTORY,
             Path::dot(),
             ServerEnd::new(dir_server_end.into_channel()),
@@ -533,7 +533,12 @@ mod tests {
 
         // Try to open a file that doesn't exist.
         assert_matches!(
-            dir_proxy.open(fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo", node_server_end),
+            dir_proxy.open(
+                fio::OpenFlags::RIGHT_READABLE,
+                fio::MODE_TYPE_FILE,
+                "foo",
+                node_server_end
+            ),
             Ok(())
         );
 
@@ -555,7 +560,7 @@ mod tests {
         let dir = simple();
         dir.open(
             ExecutionScope::new(),
-            fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::DIRECTORY | fio::OpenFlags::RIGHT_READABLE,
             fio::MODE_TYPE_DIRECTORY,
             Path::dot(),
             ServerEnd::new(dir_server_end.into_channel()),
@@ -566,7 +571,12 @@ mod tests {
 
         // Try to open a file that doesn't exist.
         assert_matches!(
-            dir_proxy.open(fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo", node_server_end),
+            dir_proxy.open(
+                fio::OpenFlags::RIGHT_READABLE,
+                fio::MODE_TYPE_FILE,
+                "foo",
+                node_server_end
+            ),
             Ok(())
         );
 
@@ -590,7 +600,7 @@ mod tests {
         let dir = simple();
         dir.open(
             ExecutionScope::new(),
-            fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::DIRECTORY | fio::OpenFlags::RIGHT_READABLE,
             fio::MODE_TYPE_DIRECTORY,
             Path::dot(),
             ServerEnd::new(dir_server_end.into_channel()),
@@ -602,7 +612,7 @@ mod tests {
         // Try to open a file that doesn't exist.
         assert_matches!(
             dir_proxy.open(
-                fio::OPEN_FLAG_DESCRIBE | fio::OPEN_RIGHT_READABLE,
+                fio::OpenFlags::DESCRIBE | fio::OpenFlags::RIGHT_READABLE,
                 fio::MODE_TYPE_FILE,
                 "foo",
                 node_server_end,
@@ -628,7 +638,7 @@ mod tests {
         let dir = simple();
         dir.open(
             ExecutionScope::new(),
-            fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::DIRECTORY | fio::OpenFlags::RIGHT_READABLE,
             fio::MODE_TYPE_DIRECTORY,
             Path::dot(),
             ServerEnd::new(dir_server_end.into_channel()),
@@ -640,7 +650,7 @@ mod tests {
         // Try to open a file that doesn't exist.
         assert_matches!(
             dir_proxy.open(
-                fio::OPEN_FLAG_DESCRIBE | fio::OPEN_RIGHT_READABLE,
+                fio::OpenFlags::DESCRIBE | fio::OpenFlags::RIGHT_READABLE,
                 fio::MODE_TYPE_FILE,
                 "foo",
                 node_server_end,

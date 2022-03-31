@@ -148,8 +148,9 @@ mod tests {
         .detach();
 
         let svc_path = std::path::Path::new("svc");
-        let svc_dir = io_util::open_directory(&directory_proxy, svc_path, fio::OPEN_RIGHT_READABLE)
-            .expect("Couldn't open svc.");
+        let svc_dir =
+            io_util::open_directory(&directory_proxy, svc_path, fio::OpenFlags::RIGHT_READABLE)
+                .expect("Couldn't open svc.");
         let svc_contents = list_directory(&svc_dir).await;
         assert_eq!(svc_contents, vec![ftest::SuiteMarker::PROTOCOL_NAME]);
     }

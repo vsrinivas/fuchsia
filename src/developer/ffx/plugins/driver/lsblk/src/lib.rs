@@ -34,7 +34,7 @@ pub async fn lsblk(
     );
 
     if let Ok(block_dir) =
-        io_util::open_directory(&dev, &Path::new("class/block"), fio::OPEN_RIGHT_READABLE)
+        io_util::open_directory(&dev, &Path::new("class/block"), fio::OpenFlags::RIGHT_READABLE)
     {
         for device in get_devices::<BlockDevice>(&block_dir).await? {
             println!("{}", device);
@@ -43,9 +43,11 @@ pub async fn lsblk(
         println!("Error opening /dev/class/block");
     }
 
-    if let Ok(skip_block_dir) =
-        io_util::open_directory(&dev, &Path::new("class/skip-block"), fio::OPEN_RIGHT_READABLE)
-    {
+    if let Ok(skip_block_dir) = io_util::open_directory(
+        &dev,
+        &Path::new("class/skip-block"),
+        fio::OpenFlags::RIGHT_READABLE,
+    ) {
         for device in get_devices::<SkipBlockDevice>(&skip_block_dir).await? {
             println!("{}", device);
         }
@@ -64,9 +66,11 @@ trait New {
 async fn get_devices<DeviceType: New + New<Output = DeviceType>>(
     dir: &fio::DirectoryProxy,
 ) -> Result<Vec<DeviceType>> {
-    let mut watcher =
-        fuchsia_vfs_watcher::Watcher::new(io_util::clone_directory(dir, fio::OPEN_RIGHT_READABLE)?)
-            .await?;
+    let mut watcher = fuchsia_vfs_watcher::Watcher::new(io_util::clone_directory(
+        dir,
+        fio::OpenFlags::RIGHT_READABLE,
+    )?)
+    .await?;
     let mut devices = Vec::new();
     while let Some(msg) = watcher.try_next().await? {
         if msg.event == fuchsia_vfs_watcher::WatchEvent::IDLE {
@@ -80,7 +84,7 @@ async fn get_devices<DeviceType: New + New<Output = DeviceType>>(
         let device = io_util::open_node(
             dir,
             &msg.filename,
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             fio::MODE_TYPE_SERVICE,
         )?;
         let device = DeviceType::new(msg.filename.to_str().unwrap(), device).await?;

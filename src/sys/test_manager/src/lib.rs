@@ -293,7 +293,7 @@ const DYNAMIC_PROFILE_PREFIX: &'static str = "/prof-data/dynamic";
 async fn send_kernel_debug_data(mut event_sender: mpsc::Sender<RunEvent>) {
     let profile_dir = match io_util::open_directory_in_namespace(
         DYNAMIC_PROFILE_PREFIX,
-        io_util::OPEN_RIGHT_READABLE,
+        io_util::OpenFlags::RIGHT_READABLE,
     ) {
         Ok(d) => d,
         Err(e) => {
@@ -313,7 +313,7 @@ async fn send_kernel_debug_data(mut event_sender: mpsc::Sender<RunEvent>) {
             let name = file.name;
             let path =
                 PathBuf::from(DYNAMIC_PROFILE_PREFIX).join(&name).to_string_lossy().to_string();
-            let file = io_util::open_file_in_namespace(&path, io_util::OPEN_RIGHT_READABLE)?;
+            let file = io_util::open_file_in_namespace(&path, io_util::OpenFlags::RIGHT_READABLE)?;
             let content = io_util::read_file_bytes(&file).await;
 
             Ok::<_, Error>((name, content))
@@ -1417,7 +1417,7 @@ impl RunningSuite {
             let directory: ClientEnd<fio::DirectoryMarker> = node.into_channel().into();
             artifact_storage_admin.open_component_storage(
                 &storage_moniker,
-                fio::OPEN_RIGHT_READABLE,
+                fio::OpenFlags::RIGHT_READABLE,
                 fio::MODE_TYPE_DIRECTORY,
                 server,
             )?;
@@ -1854,7 +1854,8 @@ pub struct AboveRootCapabilitiesForTest {
 impl AboveRootCapabilitiesForTest {
     pub async fn new(manifest_name: &str) -> Result<Self, Error> {
         let path = format!("/pkg/meta/{}", manifest_name);
-        let file_proxy = io_util::open_file_in_namespace(&path, io_util::OPEN_RIGHT_READABLE)?;
+        let file_proxy =
+            io_util::open_file_in_namespace(&path, io_util::OpenFlags::RIGHT_READABLE)?;
         let component_decl = io_util::read_file_fidl::<fdecl::Component>(&file_proxy).await?;
         let capabilities = Self::load(component_decl);
         Ok(Self { capabilities })

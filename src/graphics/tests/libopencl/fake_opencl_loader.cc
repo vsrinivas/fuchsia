@@ -34,9 +34,9 @@ class LoaderImpl final : public fuchsia::opencl::loader::Loader {
     // libopencl_fake.so is located inside this package.
     std::string load_path = "/pkg/lib/" + name;
     int fd;
-    zx_status_t status =
-        fdio_open_fd(load_path.c_str(),
-                     fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_EXECUTABLE, &fd);
+    zx_status_t status = fdio_open_fd(
+        load_path.c_str(),
+        fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_EXECUTABLE, &fd);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Could not open path " << load_path << ":" << status;
       callback({});
@@ -54,7 +54,7 @@ class LoaderImpl final : public fuchsia::opencl::loader::Loader {
   void ConnectToDeviceFs(zx::channel channel) override {
     // The fake libopencl implementation expects to be able to read
     // libopencl_fake.json from the device fs.
-    fdio_open("/pkg/data/manifest", fuchsia::io::OPEN_RIGHT_READABLE, channel.release());
+    fdio_open("/pkg/data/manifest", fuchsia::io::OpenFlags::RIGHT_READABLE, channel.release());
   }
   void GetSupportedFeatures(GetSupportedFeaturesCallback callback) override {
     fuchsia::opencl::loader::Features features =
@@ -67,7 +67,7 @@ class LoaderImpl final : public fuchsia::opencl::loader::Loader {
 
   void ConnectToManifestFs(fuchsia::opencl::loader::ConnectToManifestOptions options,
                            zx::channel channel) override {
-    fdio_open("/pkg/data/manifest", fuchsia::io::OPEN_RIGHT_READABLE, channel.release());
+    fdio_open("/pkg/data/manifest", fuchsia::io::OpenFlags::RIGHT_READABLE, channel.release());
   }
 
   fidl::BindingSet<fuchsia::opencl::loader::Loader> bindings_;

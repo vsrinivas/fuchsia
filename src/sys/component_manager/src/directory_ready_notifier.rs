@@ -279,7 +279,7 @@ impl DirectoryReadyNotifier {
         let (node, server_end) = fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
         outgoing_dir
             .open(
-                rights.into_legacy() | fio::OPEN_FLAG_DESCRIBE,
+                rights.into_legacy() | fio::OpenFlags::DESCRIBE,
                 fio::MODE_TYPE_DIRECTORY,
                 &canonicalized_path,
                 ServerEnd::new(server_end.into_channel()),
@@ -311,7 +311,7 @@ impl DirectoryReadyNotifier {
                     }
                     let (node_clone, server_end) = fidl::endpoints::create_proxy().unwrap();
                     let event = node
-                        .clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end)
+                        .clone(fio::OpenFlags::CLONE_SAME_RIGHTS, server_end)
                         .map(|_| {
                             Event::new_builtin(Ok(EventPayload::DirectoryReady {
                                 name: name.clone(),
@@ -370,7 +370,7 @@ async fn clone_outgoing_root(
 ) -> Result<fio::NodeProxy, ModelError> {
     let outgoing_dir = io_util::clone_directory(
         &outgoing_dir,
-        fio::CLONE_FLAG_SAME_RIGHTS | fio::OPEN_FLAG_DESCRIBE,
+        fio::OpenFlags::CLONE_SAME_RIGHTS | fio::OpenFlags::DESCRIBE,
     )
     .map_err(|_| ModelError::open_directory_error(target_moniker.to_absolute_moniker(), "/"))?;
     let outgoing_dir_channel = outgoing_dir

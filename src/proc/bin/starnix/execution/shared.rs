@@ -194,7 +194,7 @@ pub fn create_filesystem_from_spec<'a>(
             Dir(task.lookup_path_from_root(fs_src.as_bytes())?.entry)
         }
         "remotefs" => {
-            let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
+            let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE;
             let root = syncio::directory_open_directory_async(&pkg, &fs_src, rights)
                 .map_err(|e| anyhow!("Failed to open root: {}", e))?;
             Fs(RemoteFs::new(root.into_channel(), rights)?)

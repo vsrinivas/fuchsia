@@ -33,7 +33,7 @@ func respond(ctx fidl.Context, flags io.OpenFlags, req io.NodeWithCtxInterfaceRe
 			_ = req.Close()
 		}()
 	}
-	if flags&io.OpenFlagDescribe != 0 {
+	if flags&io.OpenFlagsDescribe != 0 {
 		proxy := io.NodeEventProxy{Channel: req.Channel}
 		switch err := err.(type) {
 		case nil:
@@ -76,7 +76,7 @@ func (s *Service) getIO() io.NodeWithCtx {
 func (s *Service) addConnection(ctx fidl.Context, flags io.OpenFlags, mode uint32, req io.NodeWithCtxInterfaceRequest) error {
 	// TODO(fxbug.dev/33595): this does not implement the node protocol correctly,
 	// but matches the behaviour of SDK VFS.
-	if flags&io.OpenFlagNodeReference != 0 {
+	if flags&io.OpenFlagsNodeReference != 0 {
 		stub := io.NodeWithCtxStub{Impl: s}
 		go Serve(context.Background(), &stub, req.Channel, ServeOptions{
 			OnError: logError,

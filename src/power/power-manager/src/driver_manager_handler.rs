@@ -798,7 +798,7 @@ pub mod tests {
         let (devfs_proxy, devfs_server) = fidl::endpoints::create_proxy().unwrap();
         fake_devfs.open(
             vfs::execution_scope::ExecutionScope::new(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             vfs::path::Path::dot(),
             devfs_server,

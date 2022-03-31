@@ -9,9 +9,7 @@ mod pinweaver;
 
 use anyhow::{Context, Error};
 use fidl_fuchsia_identity_credential::CredentialManagerRequestStream;
-use fidl_fuchsia_io::{
-    OPEN_FLAG_CREATE, OPEN_FLAG_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-};
+use fidl_fuchsia_io as fio;
 use fidl_fuchsia_tpm_cr50::PinWeaverMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::{client::connect_to_protocol, server::ServiceFs};
@@ -44,7 +42,10 @@ async fn main() -> Result<(), Error> {
     info!("Reading Persistent Lookup Table");
     let cred_data = open_in_namespace(
         LOOKUP_TABLE_PATH,
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DIRECTORY | OPEN_FLAG_CREATE,
+        fio::OpenFlags::RIGHT_READABLE
+            | fio::OpenFlags::RIGHT_WRITABLE
+            | fio::OpenFlags::DIRECTORY
+            | fio::OpenFlags::CREATE,
     )?;
     let lookup_table = PersistentLookupTable::new(cred_data);
     let pinweaver = PinWeaver::new(pinweaver_proxy);

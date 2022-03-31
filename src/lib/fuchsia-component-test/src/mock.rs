@@ -72,7 +72,7 @@ impl MockHandles {
         let node_proxy = io_util::open_node(
             svc_dir_proxy,
             Path::new(P::PROTOCOL_NAME),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             fio::MODE_TYPE_SERVICE,
         )?;
         Ok(P::Proxy::from_channel(node_proxy.into_channel().unwrap()))
@@ -95,7 +95,7 @@ impl MockHandles {
             "the mock's namespace doesn't have a /{} directory",
             directory_name
         ))?;
-        io_util::clone_directory(dir_proxy, fio::CLONE_FLAG_SAME_RIGHTS)
+        io_util::clone_directory(dir_proxy, fio::OpenFlags::CLONE_SAME_RIGHTS)
     }
 }
 
@@ -237,7 +237,7 @@ mod tests {
         let (data_dir_proxy, data_dir_server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
         data_dir.open(
             ExecutionScope::new(),
-            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_READABLE,
             fio::MODE_TYPE_DIRECTORY,
             VfsPath::dot(),
             data_dir_server_end.into_channel().into(),
@@ -253,9 +253,12 @@ mod tests {
         let data_dir_clone =
             mock_handles.clone_from_namespace("data").expect("failed to clone from namespace");
 
-        let file_proxy =
-            io_util::open_file(&data_dir_clone, Path::new(file_name), fio::OPEN_RIGHT_READABLE)
-                .expect("failed to open file");
+        let file_proxy = io_util::open_file(
+            &data_dir_clone,
+            Path::new(file_name),
+            fio::OpenFlags::RIGHT_READABLE,
+        )
+        .expect("failed to open file");
         assert_eq!(
             file_contents,
             &io_util::read_file(&file_proxy).await.expect("failed to read file")

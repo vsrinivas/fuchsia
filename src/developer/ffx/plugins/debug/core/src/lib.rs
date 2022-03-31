@@ -105,8 +105,9 @@ async fn list_minidumps(rcs: &RemoteControlProxy, selector: &str) -> Result<Vec<
         .map_err(|e| anyhow!("Could not open component storage: {:?}", e))?;
 
     // NOTE: This is the implementation detail of feedback.cm and is subject to change.
-    let reports_dir = open_directory_no_describe(&root_dir, "reports", fio::OPEN_RIGHT_READABLE)
-        .context("Could not open the \"reports\" directory")?;
+    let reports_dir =
+        open_directory_no_describe(&root_dir, "reports", fio::OpenFlags::RIGHT_READABLE)
+            .context("Could not open the \"reports\" directory")?;
     let reports_dir_ref = &reports_dir;
 
     futures::future::try_join_all(
@@ -120,8 +121,11 @@ async fn list_minidumps(rcs: &RemoteControlProxy, selector: &str) -> Result<Vec<
                 entry.kind == files_async::DirentKind::File && entry.name.ends_with("/minidump.dmp")
             })
             .map(|entry| async move {
-                let proxy =
-                    open_file_no_describe(reports_dir_ref, &entry.name, fio::OPEN_RIGHT_READABLE)?;
+                let proxy = open_file_no_describe(
+                    reports_dir_ref,
+                    &entry.name,
+                    fio::OpenFlags::RIGHT_READABLE,
+                )?;
                 let (status, fio::NodeAttributes { modification_time, .. }) =
                     proxy.get_attr().await.context("FIDL error in get_attr")?;
 

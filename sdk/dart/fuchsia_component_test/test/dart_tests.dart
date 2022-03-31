@@ -304,7 +304,7 @@ void main() {
 
     //     var dataDir = fio.DirectoryProxy();
     //     await realmInstance.root.exposedDir.open(
-    //         fio.openRightReadable | fio.openRightWritable,
+    //         fio.OpenFlags.rightReadable | fio.OpenFlags.rightWritable,
     //         fio.modeTypeDirectory,
     //         'data',
     //         fidl.InterfaceRequest<fio.Node>(
@@ -314,9 +314,9 @@ void main() {
 
     //     final exampleFile = fio.File2Proxy();
     //     await dataDir.open(
-    //         fio.openRightReadable |
-    //             fio.openRightWritable |
-    //             fio.openFlagCreate,
+    //         fio.OpenFlags.rightReadable |
+    //             fio.OpenFlags.rightWritable |
+    //             fio.OpenFlags.create,
     //         fio.modeTypeFile,
     //         'example_file',
     //         fidl.InterfaceRequest<fio.Node>(

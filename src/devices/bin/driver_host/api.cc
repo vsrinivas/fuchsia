@@ -210,7 +210,7 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
   if (dev && client_remote.is_valid()) {
     // This needs to be called outside the api lock, as device_open will be called
     internal::ContextForApi()->DeviceConnect(
-        dev, fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable,
+        dev, fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable,
         std::move(client_remote));
 
     // Leak the reference that was written to |out|, it will be recovered in device_remove().

@@ -105,8 +105,9 @@ async fn test(blobfs: &mut Filesystem<Blobfs>) -> Result<(), Error> {
     }
     let mut blobs: HashMap<u64, Slot> = HashMap::new();
 
-    // let root_proxy = blobfs.open(io_util::OPEN_RIGHT_READABLE)?;
-    let root_proxy = io_util::open_directory_in_namespace(&root, io_util::OPEN_RIGHT_READABLE)?;
+    // let root_proxy = blobfs.open(io_util::OpenFlags::RIGHT_READABLE)?;
+    let root_proxy =
+        io_util::open_directory_in_namespace(&root, io_util::OpenFlags::RIGHT_READABLE)?;
     // first we figure out what blobs are there.
     for entry in readdir(&root_proxy).await? {
         let path = format!("{}/{}", root, entry.name);

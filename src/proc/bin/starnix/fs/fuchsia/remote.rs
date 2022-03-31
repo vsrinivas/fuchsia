@@ -522,7 +522,7 @@ mod test {
     #[::fuchsia::test]
     fn test_tree() -> Result<(), anyhow::Error> {
         let (kernel, current_task) = create_kernel_and_task();
-        let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
+        let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE;
         let (server, client) = zx::Channel::create().expect("failed to create channel pair");
         fdio::open("/pkg", rights, server).expect("failed to open /pkg");
         let fs = RemoteFs::new(client, rights)?;

@@ -75,7 +75,7 @@ async fn connect_to_archive_at(glob_path: &str) -> Result<ArchiveAccessorProxy, 
     for path_result in path_results {
         if let Ok(path) = path_result {
             let path_str = path.to_string_lossy().to_string();
-            let node = io_util::open_node_in_namespace(&path_str, fio::OPEN_FLAG_NODE_REFERENCE)
+            let node = io_util::open_node_in_namespace(&path_str, fio::OpenFlags::NODE_REFERENCE)
                 .map_err(|e| Error::io_error("open node in namespace", e))?;
             if let Ok(node_info) = node.describe().await {
                 match node_info {
@@ -88,7 +88,7 @@ async fn connect_to_archive_at(glob_path: &str) -> Result<ArchiveAccessorProxy, 
                     fio::NodeInfo::Directory(_) => {
                         let directory = io_util::open_directory_in_namespace(
                             &path_str,
-                            fio::OPEN_RIGHT_READABLE,
+                            fio::OpenFlags::RIGHT_READABLE,
                         )
                         .map_err(|e| Error::io_error("open directory in namespace", e))?;
                         let mut stream = files_async::readdir_recursive(&directory, None);
@@ -146,7 +146,7 @@ pub async fn get_accessor_paths(paths: &Vec<String>) -> Result<Vec<String>, Erro
 
 async fn all_accessors(root: impl AsRef<str>) -> Result<Vec<String>, Error> {
     let dir_proxy =
-        io_util::open_directory_in_namespace(root.as_ref(), io_util::OPEN_RIGHT_READABLE)
+        io_util::open_directory_in_namespace(root.as_ref(), io_util::OpenFlags::RIGHT_READABLE)
             .map_err(|e| Error::io_error(format!("Open dir {}", root.as_ref()), e))?;
     let expected_file_re = Regex::new(&EXPECTED_FILE_RE).unwrap();
 

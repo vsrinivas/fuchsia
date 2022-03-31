@@ -44,7 +44,7 @@ pub async fn connect_to_lifecycle_controller(
     let (lifecycle_controller, server_end) = create_proxy::<fsys::LifecycleControllerMarker>()?;
     let server_end = server_end.into_channel();
     hub.open(
-        fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_READABLE,
+        fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::RIGHT_READABLE,
         fio::MODE_TYPE_SERVICE,
         "debug/fuchsia.sys2.LifecycleController",
         server_end.into(),

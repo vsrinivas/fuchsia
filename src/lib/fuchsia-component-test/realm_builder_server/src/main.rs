@@ -899,9 +899,12 @@ impl RealmNode2 {
         async move {
             let path = relative_url.trim_start_matches('#');
 
-            let file_proxy_res =
-                io_util::directory::open_file(&test_pkg_dir, &path, io_util::OPEN_RIGHT_READABLE)
-                    .await;
+            let file_proxy_res = io_util::directory::open_file(
+                &test_pkg_dir,
+                &path,
+                io_util::OpenFlags::RIGHT_READABLE,
+            )
+            .await;
             let file_proxy = match file_proxy_res {
                 Ok(file_proxy) => file_proxy,
                 Err(io_util::node::OpenError::OpenError(zx_status::Status::NOT_FOUND)) => {
@@ -1835,7 +1838,7 @@ mod tests {
                 create_proxy_and_stream::<ftest::RealmMarker>().unwrap();
             let pkg_dir = io_util::open_directory_in_namespace(
                 "/pkg",
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
             )
             .unwrap();
             let realm_root = RealmNode2::new();
@@ -2427,7 +2430,7 @@ mod tests {
 
         let a_decl_file = io_util::open_file_in_namespace(
             "/pkg/meta/realm_builder_server_unit_tests.cm",
-            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_READABLE,
         )
         .expect("failed to open manifest");
         let a_decl = io_util::read_file_fidl::<fcdecl::Component>(&a_decl_file)
@@ -2467,7 +2470,7 @@ mod tests {
 
         let realm_with_child_decl_file = io_util::open_file_in_namespace(
             "/pkg/meta/realm_with_child.cm",
-            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_READABLE,
         )
         .expect("failed to open manifest");
         let mut realm_with_child_decl =
@@ -2481,7 +2484,7 @@ mod tests {
             realm_with_child_decl.children.into_iter().filter(|c| &c.name != "a").collect();
 
         let a_decl_file =
-            io_util::open_file_in_namespace("/pkg/meta/a.cm", fio::OPEN_RIGHT_READABLE)
+            io_util::open_file_in_namespace("/pkg/meta/a.cm", fio::OpenFlags::RIGHT_READABLE)
                 .expect("failed to open manifest");
         let a_decl = io_util::read_file_fidl::<fcdecl::Component>(&a_decl_file)
             .await

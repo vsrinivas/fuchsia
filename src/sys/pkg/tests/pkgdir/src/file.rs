@@ -48,7 +48,7 @@ async fn assert_read_max_buffer_success(
     path: &str,
     expected_contents: &str,
 ) {
-    let file = open_file(root_dir, path, fio::OPEN_RIGHT_READABLE).await.unwrap();
+    let file = open_file(root_dir, path, fio::OpenFlags::RIGHT_READABLE).await.unwrap();
     let bytes = file.read(fio::MAX_BUF).await.unwrap().map_err(zx::Status::from_raw).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), expected_contents);
 }
@@ -61,7 +61,7 @@ async fn assert_read_buffer_success(
     for buffer_size in 0..expected_contents.len() {
         let expected_contents = &expected_contents[0..buffer_size];
 
-        let file = open_file(root_dir, path, fio::OPEN_RIGHT_READABLE).await.unwrap();
+        let file = open_file(root_dir, path, fio::OpenFlags::RIGHT_READABLE).await.unwrap();
         let bytes = file
             .read(buffer_size.try_into().unwrap())
             .await
@@ -76,7 +76,7 @@ async fn assert_read_buffer_success(
 }
 
 async fn assert_read_past_end(root_dir: &fio::DirectoryProxy, path: &str, expected_contents: &str) {
-    let file = open_file(root_dir, path, fio::OPEN_RIGHT_READABLE).await.unwrap();
+    let file = open_file(root_dir, path, fio::OpenFlags::RIGHT_READABLE).await.unwrap();
     let bytes = file.read(fio::MAX_BUF).await.unwrap().map_err(zx::Status::from_raw).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), expected_contents);
 
@@ -85,7 +85,7 @@ async fn assert_read_past_end(root_dir: &fio::DirectoryProxy, path: &str, expect
 }
 
 async fn assert_read_exceeds_buffer_success(root_dir: &fio::DirectoryProxy, path: &str) {
-    let file = open_file(root_dir, path, fio::OPEN_RIGHT_READABLE).await.unwrap();
+    let file = open_file(root_dir, path, fio::OpenFlags::RIGHT_READABLE).await.unwrap();
 
     // Read the first MAX_BUF contents.
     let bytes = file.read(fio::MAX_BUF).await.unwrap().map_err(zx::Status::from_raw).unwrap();
@@ -117,7 +117,8 @@ async fn read_at_per_package_source(source: PackageSource) {
                 // "/meta opened as a file supports ReadAt()"
                 TEST_PKG_HASH
             } else {
-                let file = open_file(&source.dir, "meta", fio::OPEN_RIGHT_READABLE).await.unwrap();
+                let file =
+                    open_file(&source.dir, "meta", fio::OpenFlags::RIGHT_READABLE).await.unwrap();
                 let result =
                     file.read_at(fio::MAX_BUF, 0).await.unwrap().map_err(zx::Status::from_raw);
                 assert_eq!(result, Err(zx::Status::NOT_SUPPORTED));
@@ -139,7 +140,7 @@ async fn assert_read_at_max_buffer_success(
     path: &str,
     expected_contents: &str,
 ) {
-    let file = open_file(root_dir, path, fio::OPEN_RIGHT_READABLE).await.unwrap();
+    let file = open_file(root_dir, path, fio::OpenFlags::RIGHT_READABLE).await.unwrap();
     let bytes = file.read_at(fio::MAX_BUF, 0).await.unwrap().map_err(zx::Status::from_raw).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), expected_contents);
 }
@@ -154,7 +155,7 @@ async fn assert_read_at_success(
             let end = cmp::min(count + offset, full_expected_contents.len());
             let expected_contents = &full_expected_contents[offset..end];
 
-            let file = open_file(root_dir, path, fio::OPEN_RIGHT_READABLE).await.unwrap();
+            let file = open_file(root_dir, path, fio::OpenFlags::RIGHT_READABLE).await.unwrap();
             let bytes = file
                 .read_at(count.try_into().unwrap(), offset.try_into().unwrap())
                 .await
@@ -171,7 +172,7 @@ async fn assert_read_at_success(
 
 async fn assert_read_at_does_not_affect_seek_offset(root_dir: &fio::DirectoryProxy, path: &str) {
     for seek_offset in 0..path.len() as i64 {
-        let file = open_file(root_dir, path, fio::OPEN_RIGHT_READABLE).await.unwrap();
+        let file = open_file(root_dir, path, fio::OpenFlags::RIGHT_READABLE).await.unwrap();
 
         let position = file
             .seek(fio::SeekOrigin::Start, seek_offset)
@@ -201,7 +202,7 @@ async fn assert_read_at_does_not_affect_seek_offset(root_dir: &fio::DirectoryPro
 
 async fn assert_read_at_is_unaffected_by_seek(root_dir: &fio::DirectoryProxy, path: &str) {
     for seek_offset in 0..path.len() as i64 {
-        let file = open_file(root_dir, path, fio::OPEN_RIGHT_READABLE).await.unwrap();
+        let file = open_file(root_dir, path, fio::OpenFlags::RIGHT_READABLE).await.unwrap();
 
         let first_read_bytes = file
             .read_at(fio::MAX_BUF, 0)
@@ -244,7 +245,8 @@ async fn seek_per_package_source(source: PackageSource) {
         if source.is_pkgfs() && path == "meta" {
             // "/meta opened as a file supports Seek()"
             for seek_offset in 0..TEST_PKG_HASH.len() as i64 {
-                let file = open_file(root_dir, "meta", fio::OPEN_RIGHT_READABLE).await.unwrap();
+                let file =
+                    open_file(root_dir, "meta", fio::OpenFlags::RIGHT_READABLE).await.unwrap();
                 let result = file
                     .seek(fio::SeekOrigin::Current, seek_offset)
                     .await
@@ -273,7 +275,7 @@ async fn assert_seek_success(
     seek_origin: fio::SeekOrigin,
 ) {
     for expected_position in 0..expected.len() {
-        let file = open_file(root_dir, path, fio::OPEN_RIGHT_READABLE).await.unwrap();
+        let file = open_file(root_dir, path, fio::OpenFlags::RIGHT_READABLE).await.unwrap();
         let position = file
             .seek(seek_origin, expected_position.try_into().unwrap())
             .await
@@ -289,7 +291,7 @@ async fn assert_seek_success(
 
 async fn assert_seek_affects_read(root_dir: &fio::DirectoryProxy, path: &str, expected: &str) {
     for seek_offset in 0..expected.len() {
-        let file = open_file(root_dir, path, fio::OPEN_RIGHT_READABLE).await.unwrap();
+        let file = open_file(root_dir, path, fio::OpenFlags::RIGHT_READABLE).await.unwrap();
         let bytes = file
             .read(fio::MAX_BUF)
             .await
@@ -332,7 +334,7 @@ async fn assert_seek_past_end(
     expected: &str,
     seek_origin: fio::SeekOrigin,
 ) {
-    let file = open_file(root_dir, path, fio::OPEN_RIGHT_READABLE).await.unwrap();
+    let file = open_file(root_dir, path, fio::OpenFlags::RIGHT_READABLE).await.unwrap();
     let position = file
         .seek(seek_origin, expected.len() as i64 + 1)
         .await
@@ -352,7 +354,7 @@ async fn assert_seek_past_end_end_origin(
     path: &str,
     expected: &str,
 ) {
-    let file = open_file(root_dir, path, fio::OPEN_RIGHT_READABLE).await.unwrap();
+    let file = open_file(root_dir, path, fio::OpenFlags::RIGHT_READABLE).await.unwrap();
     let position =
         file.seek(fio::SeekOrigin::End, 1).await.unwrap().map_err(zx::Status::from_raw).unwrap();
     assert_eq!(expected.len() as u64 + 1, position);
@@ -380,7 +382,7 @@ async fn get_buffer_per_package_source(source: PackageSource) {
                 continue;
             }
 
-            let file = open_file(root_dir, &path, fio::OPEN_RIGHT_READABLE).await.unwrap();
+            let file = open_file(root_dir, &path, fio::OpenFlags::RIGHT_READABLE).await.unwrap();
 
             let _: zx::Vmo = test_get_buffer_success(&file, fio::VmoFlags::READ, size).await;
 
@@ -405,20 +407,20 @@ async fn get_buffer_per_package_source(source: PackageSource) {
     }
 
     // The empty blob will not return a vmo, failing calls to GetBuffer() with BAD_STATE.
-    let file = open_file(root_dir, "file_0", fio::OPEN_RIGHT_READABLE).await.unwrap();
+    let file = open_file(root_dir, "file_0", fio::OpenFlags::RIGHT_READABLE).await.unwrap();
     let result =
         file.get_backing_memory(fio::VmoFlags::READ).await.unwrap().map_err(zx::Status::from_raw);
     assert_eq!(result, Err(zx::Status::BAD_STATE));
 
     // For "meta as file", GetBuffer() should be unsupported.
-    let file = open_file(root_dir, "meta", fio::OPEN_RIGHT_READABLE).await.unwrap();
+    let file = open_file(root_dir, "meta", fio::OpenFlags::RIGHT_READABLE).await.unwrap();
     let result =
         file.get_backing_memory(fio::VmoFlags::READ).await.unwrap().map_err(zx::Status::from_raw);
     assert_eq!(result, Err(zx::Status::NOT_SUPPORTED));
 
     // For files NOT under meta, GetBuffer() calls with unsupported flags should successfully return
     // the FIDL call with a failure status.
-    let file = open_file(root_dir, "file", fio::OPEN_RIGHT_READABLE).await.unwrap();
+    let file = open_file(root_dir, "file", fio::OpenFlags::RIGHT_READABLE).await.unwrap();
     let result = file
         .get_backing_memory(fio::VmoFlags::EXECUTE)
         .await
@@ -441,7 +443,7 @@ async fn get_buffer_per_package_source(source: PackageSource) {
         file.get_backing_memory(fio::VmoFlags::WRITE).await.unwrap().map_err(zx::Status::from_raw);
     assert_eq!(result, Err(zx::Status::ACCESS_DENIED));
 
-    let file = open_file(root_dir, "meta/file", fio::OPEN_RIGHT_READABLE).await.unwrap();
+    let file = open_file(root_dir, "meta/file", fio::OpenFlags::RIGHT_READABLE).await.unwrap();
     // files under `/meta` behave like content files for `GetBuffer()`
     if !source.is_pkgdir() {
         for flags in [
@@ -552,12 +554,12 @@ async fn assert_clone_success(
     path: &str,
     expected_contents: &str,
 ) {
-    let parent = open_file(package_root, path, fio::OPEN_RIGHT_READABLE)
+    let parent = open_file(package_root, path, fio::OpenFlags::RIGHT_READABLE)
         .await
         .expect("open parent directory");
     let (clone, server_end) = create_proxy::<fio::FileMarker>().expect("create_proxy");
     let node_request = fidl::endpoints::ServerEnd::new(server_end.into_channel());
-    parent.clone(fio::OPEN_RIGHT_READABLE, node_request).expect("cloned node");
+    parent.clone(fio::OpenFlags::RIGHT_READABLE, node_request).expect("cloned node");
     let bytes = clone.read(fio::MAX_BUF).await.unwrap().map_err(zx::Status::from_raw).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), expected_contents);
 }
@@ -578,12 +580,12 @@ async fn assert_clone_sends_on_open_event(package_root: &fio::DirectoryProxy, pa
         };
     }
 
-    let parent = open_file(package_root, path, fio::OPEN_RIGHT_READABLE)
+    let parent = open_file(package_root, path, fio::OpenFlags::RIGHT_READABLE)
         .await
         .expect("open parent directory");
     let (file_proxy, server_end) = create_proxy::<fio::FileMarker>().expect("create_proxy");
 
-    parent.clone(fio::OPEN_FLAG_DESCRIBE, server_end.into_channel().into()).expect("clone file");
+    parent.clone(fio::OpenFlags::DESCRIBE, server_end.into_channel().into()).expect("clone file");
 
     if let Err(e) = verify_file_clone_sends_on_open_event(file_proxy).await {
         panic!("failed to verify clone. parent: {:?}, error: {:#}", path, e);
@@ -629,25 +631,26 @@ async fn assert_get_flags_content_file(root_dir: &fio::DirectoryProxy) {
     // Content files are served by blobfs, which uses the VFS library to filter out some of the
     // open flags before returning.
     // https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/storage/vfs/cpp/file_connection.cc;l=125;drc=6a01adba247f273496ee8b9227c24252a459a534
-    let status_flags = fio::OPEN_FLAG_APPEND | fio::OPEN_FLAG_NODE_REFERENCE;
-    let right_flags =
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE;
+    let status_flags = fio::OpenFlags::APPEND | fio::OpenFlags::NODE_REFERENCE;
+    let right_flags = fio::OpenFlags::RIGHT_READABLE
+        | fio::OpenFlags::RIGHT_WRITABLE
+        | fio::OpenFlags::RIGHT_EXECUTABLE;
 
     for open_flag in [
-        fio::OPEN_RIGHT_READABLE,
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_CREATE_IF_ABSENT,
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_NO_REMOTE,
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX_WRITABLE,
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX_EXECUTABLE,
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_NOT_DIRECTORY,
-        fio::OPEN_RIGHT_EXECUTABLE,
-        fio::OPEN_RIGHT_EXECUTABLE | fio::OPEN_FLAG_CREATE_IF_ABSENT,
-        fio::OPEN_RIGHT_EXECUTABLE | fio::OPEN_FLAG_NO_REMOTE,
-        fio::OPEN_RIGHT_EXECUTABLE | fio::OPEN_FLAG_DESCRIBE,
-        fio::OPEN_RIGHT_EXECUTABLE | fio::OPEN_FLAG_POSIX_WRITABLE,
-        fio::OPEN_RIGHT_EXECUTABLE | fio::OPEN_FLAG_POSIX_EXECUTABLE,
-        fio::OPEN_RIGHT_EXECUTABLE | fio::OPEN_FLAG_NOT_DIRECTORY,
+        fio::OpenFlags::RIGHT_READABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::CREATE_IF_ABSENT,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::NO_REMOTE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::POSIX_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::POSIX_EXECUTABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::NOT_DIRECTORY,
+        fio::OpenFlags::RIGHT_EXECUTABLE,
+        fio::OpenFlags::RIGHT_EXECUTABLE | fio::OpenFlags::CREATE_IF_ABSENT,
+        fio::OpenFlags::RIGHT_EXECUTABLE | fio::OpenFlags::NO_REMOTE,
+        fio::OpenFlags::RIGHT_EXECUTABLE | fio::OpenFlags::DESCRIBE,
+        fio::OpenFlags::RIGHT_EXECUTABLE | fio::OpenFlags::POSIX_WRITABLE,
+        fio::OpenFlags::RIGHT_EXECUTABLE | fio::OpenFlags::POSIX_EXECUTABLE,
+        fio::OpenFlags::RIGHT_EXECUTABLE | fio::OpenFlags::NOT_DIRECTORY,
     ] {
         assert_get_flags(root_dir, "file", open_flag, status_flags, right_flags).await;
     }
@@ -656,21 +659,22 @@ async fn assert_get_flags_content_file(root_dir: &fio::DirectoryProxy) {
 async fn assert_get_flags_meta_file(root_dir: &fio::DirectoryProxy, path: &str) {
     // Meta files are served by thinfs, which filter out some of the open flags before returning.
     // https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/thinfs/zircon/rpc/rpc.go;l=562-565;drc=fb0bf809980ed37f43a15e4292fb10bf943cb00e
-    let status_flags = fio::OPEN_FLAG_APPEND;
-    let right_flags =
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_NODE_REFERENCE;
+    let status_flags = fio::OpenFlags::APPEND;
+    let right_flags = fio::OpenFlags::RIGHT_READABLE
+        | fio::OpenFlags::RIGHT_WRITABLE
+        | fio::OpenFlags::NODE_REFERENCE;
 
     for open_flag in [
         fio::OpenFlags::empty(),
-        fio::OPEN_RIGHT_READABLE,
-        fio::OPEN_FLAG_CREATE_IF_ABSENT,
-        fio::OPEN_FLAG_DIRECTORY,
-        fio::OPEN_FLAG_NO_REMOTE,
-        fio::OPEN_FLAG_NODE_REFERENCE,
-        fio::OPEN_FLAG_DESCRIBE,
-        fio::OPEN_FLAG_POSIX_WRITABLE,
-        fio::OPEN_FLAG_POSIX_EXECUTABLE,
-        fio::OPEN_FLAG_NOT_DIRECTORY,
+        fio::OpenFlags::RIGHT_READABLE,
+        fio::OpenFlags::CREATE_IF_ABSENT,
+        fio::OpenFlags::DIRECTORY,
+        fio::OpenFlags::NO_REMOTE,
+        fio::OpenFlags::NODE_REFERENCE,
+        fio::OpenFlags::DESCRIBE,
+        fio::OpenFlags::POSIX_WRITABLE,
+        fio::OpenFlags::POSIX_EXECUTABLE,
+        fio::OpenFlags::NOT_DIRECTORY,
     ] {
         assert_get_flags(root_dir, path, open_flag, status_flags, right_flags).await;
     }
@@ -690,8 +694,8 @@ async fn set_flags_per_package_source(source: PackageSource) {
 }
 
 async fn assert_set_flags_meta_file_unsupported(root_dir: &fio::DirectoryProxy, path: &str) {
-    let file = open_file(root_dir, path, fio::OPEN_RIGHT_READABLE).await.unwrap();
-    let status = file.set_flags(fio::OPEN_FLAG_APPEND).await.unwrap();
+    let file = open_file(root_dir, path, fio::OpenFlags::RIGHT_READABLE).await.unwrap();
+    let status = file.set_flags(fio::OpenFlags::APPEND).await.unwrap();
     assert_eq!(status, zx::Status::NOT_SUPPORTED.into_raw());
 }
 
@@ -709,7 +713,7 @@ async fn unsupported_per_package_source(source: PackageSource) {
         path: &str,
         expected_status: zx::Status,
     ) {
-        let file = open_file(root_dir, path, fio::OPEN_RIGHT_READABLE).await.unwrap();
+        let file = open_file(root_dir, path, fio::OpenFlags::RIGHT_READABLE).await.unwrap();
 
         // Verify write() fails.
         let result = file.write(b"potato").await.unwrap().map_err(zx::Status::from_raw);

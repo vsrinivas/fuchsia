@@ -36,7 +36,8 @@ const MOUNT_PATH: &str = "/fs";
 
 pub fn open_dir_at_root(subdir: &str) -> Directory {
     let path = PathBuf::from(MOUNT_PATH).join(subdir);
-    Directory::from_namespace(path, fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_READABLE).unwrap()
+    Directory::from_namespace(path, fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::RIGHT_READABLE)
+        .unwrap()
 }
 
 /// Describes the environment that this stress test will run under.
@@ -81,11 +82,14 @@ impl<FSC: Clone + FSConfig> FsEnvironment<FSC> {
         // Make a home directory for file actor and deletion actor
         let root_dir = Directory::from_namespace(
             MOUNT_PATH,
-            fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::RIGHT_READABLE,
         )
         .unwrap();
         root_dir
-            .create_directory("home1", fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_READABLE)
+            .create_directory(
+                "home1",
+                fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::RIGHT_READABLE,
+            )
             .await
             .unwrap();
 

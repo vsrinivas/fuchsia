@@ -88,7 +88,9 @@ impl<'a> StagedFile<'a> {
         let file_proxy = io_util::directory::open_file(
             &dir_proxy,
             &temp_filename,
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
+            fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::CREATE,
         )
         .await?;
 
@@ -193,7 +195,7 @@ mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
         let mut staged_file = StagedFile::new(&dir, "prefix-").await.unwrap();
@@ -202,7 +204,8 @@ mod test {
 
         // Check that target_file_01 has been created.
         let open_res =
-            io_util::directory::open_file(&dir, "target_file_01", fio::OPEN_RIGHT_READABLE).await;
+            io_util::directory::open_file(&dir, "target_file_01", fio::OpenFlags::RIGHT_READABLE)
+                .await;
         assert!(open_res.is_ok());
         let file_bytes = io_util::file::read(&open_res.unwrap()).await.unwrap();
         assert_eq!(file_bytes, b"this is some file content");
@@ -213,7 +216,7 @@ mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
         assert!(StagedFile::new(&dir, "").await.is_err());
@@ -223,7 +226,9 @@ mod test {
         let file_proxy = io_util::directory::open_file(
             &dir_proxy,
             &filename,
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
+            fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::CREATE,
         )
         .await
         .expect("could not open test file");
@@ -235,9 +240,10 @@ mod test {
         filename: &str,
         expected_data: &[u8],
     ) -> bool {
-        let file = io_util::directory::open_file(&dir_proxy, &filename, fio::OPEN_RIGHT_READABLE)
-            .await
-            .expect("could not open file");
+        let file =
+            io_util::directory::open_file(&dir_proxy, &filename, fio::OpenFlags::RIGHT_READABLE)
+                .await
+                .expect("could not open file");
         let bytes = io_util::file::read(&file).await.expect("could not read file data");
         expected_data == bytes
     }
@@ -247,7 +253,7 @@ mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
 

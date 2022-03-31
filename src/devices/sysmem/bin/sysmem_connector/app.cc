@@ -42,8 +42,8 @@ App::App(async_dispatcher_t* dispatcher)
 
   fidl::InterfaceHandle<fuchsia::io::Directory> aux_service_directory;
   status = outgoing_aux_service_directory_->Serve(
-      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE |
-          fuchsia::io::OPEN_FLAG_DIRECTORY,
+      fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE |
+          fuchsia::io::OpenFlags::DIRECTORY,
       aux_service_directory.NewRequest().TakeChannel(), dispatcher_);
   if (status != ZX_OK) {
     printf("outgoing_aux_service_directory_.Serve() failed - status: %d\n", status);

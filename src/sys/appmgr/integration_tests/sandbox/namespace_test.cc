@@ -22,13 +22,13 @@ namespace fio = fuchsia_io;
 
 std::string rights_str(fio::wire::OpenFlags rights) {
   std::ostringstream os;
-  if (rights & fio::wire::kOpenRightReadable) {
+  if (rights & fio::wire::OpenFlags::kRightReadable) {
     os << 'r';
   }
-  if (rights & fio::wire::kOpenRightWritable) {
+  if (rights & fio::wire::OpenFlags::kRightWritable) {
     os << 'w';
   }
-  if (rights & fio::wire::kOpenRightExecutable) {
+  if (rights & fio::wire::OpenFlags::kRightExecutable) {
     os << 'x';
   }
   return os.str();

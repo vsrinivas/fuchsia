@@ -25,7 +25,7 @@ pub async fn open_file_data(
         fidl::endpoints::create_proxy::<fio::FileMarker>().map_err(FileError::CreateProxy)?;
     parent
         .open(
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
             fio::MODE_TYPE_FILE,
             path,
             ServerEnd::new(server_end.into_channel()),
@@ -303,7 +303,7 @@ mod tests {
         let (client, server) = create_proxy::<fio::DirectoryMarker>().unwrap();
         root.open(
             fs_scope.clone(),
-            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_READABLE,
             0,
             vfs::path::Path::dot(),
             ServerEnd::new(server.into_channel()),

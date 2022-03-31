@@ -40,7 +40,7 @@ use {
 
 #[test]
 fn empty_directory() {
-    run_server_client(fio::OPEN_RIGHT_READABLE, simple(), |proxy| async move {
+    run_server_client(fio::OpenFlags::RIGHT_READABLE, simple(), |proxy| async move {
         assert_close!(proxy);
     });
 }
@@ -53,10 +53,10 @@ fn unlink_entry() {
     };
 
     run_server_client(
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         root,
         |proxy| async move {
-            let ro_flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
+            let ro_flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE;
 
             open_as_vmo_file_assert_content!(&proxy, ro_flags, "fstab", "/dev/fs /");
             open_as_vmo_file_assert_content!(&proxy, ro_flags, "passwd", "[redacted]");
@@ -78,10 +78,10 @@ fn unlink_absent_entry() {
     };
 
     run_server_client(
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         root,
         |proxy| async move {
-            let ro_flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
+            let ro_flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE;
 
             open_as_vmo_file_assert_content!(&proxy, ro_flags, "fstab", "/dev/fs /");
 
@@ -103,10 +103,10 @@ fn unlink_does_not_traverse() {
     };
 
     run_server_client(
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         root,
         |proxy| async move {
-            let ro_flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
+            let ro_flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE;
 
             open_as_vmo_file_assert_content!(&proxy, ro_flags, "etc/fstab", "/dev/fs /");
 
@@ -128,10 +128,10 @@ fn unlink_fails_for_read_only_source() {
     };
 
     test_server_client(
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         root,
         |proxy| async move {
-            let ro_flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
+            let ro_flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE;
 
             let etc = open_get_directory_proxy_assert_ok!(&proxy, ro_flags, "etc");
 
@@ -153,10 +153,10 @@ fn rename_within_directory() {
     };
 
     test_server_client(
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         root,
         |proxy| async move {
-            let ro_flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
+            let ro_flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE;
 
             open_as_vmo_file_assert_content!(&proxy, ro_flags, "passwd", "/dev/fs /");
 
@@ -194,12 +194,13 @@ fn rename_across_directories() {
     };
 
     test_server_client(
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         root,
         |proxy| async move {
-            let ro_flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
-            let rw_flags =
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_DESCRIBE;
+            let ro_flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE;
+            let rw_flags = fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::DESCRIBE;
 
             open_as_vmo_file_assert_content!(&proxy, ro_flags, "tmp/fstab.new", "/dev/fs /");
             open_as_file_assert_err!(&proxy, ro_flags, "etc/fstab", Status::NOT_FOUND);
@@ -243,12 +244,13 @@ fn rename_across_directories_twice() {
     };
 
     test_server_client(
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         root,
         |proxy| async move {
-            let ro_flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
-            let rw_flags =
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_DESCRIBE;
+            let ro_flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE;
+            let rw_flags = fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::DESCRIBE;
 
             open_as_vmo_file_assert_content!(&proxy, ro_flags, "etc/fstab", "/dev/fs /");
             open_as_file_assert_err!(&proxy, ro_flags, "tmp/fstab.to-edit", Status::NOT_FOUND);
@@ -288,7 +290,7 @@ fn rename_within_directory_with_watchers() {
     };
 
     test_server_client(
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         root,
         |proxy| async move {
             let watcher_client = {
@@ -305,7 +307,7 @@ fn rename_within_directory_with_watchers() {
                 watcher_client
             };
 
-            let ro_flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
+            let ro_flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE;
 
             open_as_vmo_file_assert_content!(&proxy, ro_flags, "passwd", "/dev/fs /");
 
@@ -351,12 +353,13 @@ fn rename_across_directories_with_watchers() {
     };
 
     test_server_client(
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         root,
         |proxy| async move {
-            let ro_flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
-            let rw_flags =
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_DESCRIBE;
+            let ro_flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE;
+            let rw_flags = fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::DESCRIBE;
 
             open_as_vmo_file_assert_content!(&proxy, ro_flags, "tmp/fstab.new", "/dev/fs /");
             open_as_file_assert_err!(&proxy, ro_flags, "etc/fstab", Status::NOT_FOUND);
@@ -419,12 +422,13 @@ fn rename_across_directories_twice_with_watchers() {
     };
 
     test_server_client(
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         root,
         |proxy| async move {
-            let ro_flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
-            let rw_flags =
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_DESCRIBE;
+            let ro_flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE;
+            let rw_flags = fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::DESCRIBE;
 
             open_as_vmo_file_assert_content!(&proxy, ro_flags, "etc/fstab", "/dev/fs /");
             open_as_file_assert_err!(&proxy, ro_flags, "tmp/fstab.to-edit", Status::NOT_FOUND);
@@ -490,7 +494,7 @@ fn rename_into_self_with_watchers() {
     };
 
     test_server_client(
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         root,
         |proxy| async move {
             let watcher_client = {
@@ -507,7 +511,7 @@ fn rename_into_self_with_watchers() {
                 watcher_client
             };
 
-            let ro_flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
+            let ro_flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE;
 
             open_as_vmo_file_assert_content!(&proxy, ro_flags, "passwd", "[redacted]");
 
@@ -536,10 +540,10 @@ fn get_token_fails_for_read_only_target() {
     };
 
     test_server_client(
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         root,
         |proxy| async move {
-            let ro_flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
+            let ro_flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE;
 
             let etc = open_get_directory_proxy_assert_ok!(&proxy, ro_flags, "etc");
             assert_get_token_err!(&etc, Status::BAD_HANDLE);
@@ -562,12 +566,13 @@ fn rename_fails_for_read_only_source() {
     };
 
     test_server_client(
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         root,
         |proxy| async move {
-            let ro_flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
-            let rw_flags =
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_DESCRIBE;
+            let ro_flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE;
+            let rw_flags = fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::DESCRIBE;
 
             let etc = open_get_directory_proxy_assert_ok!(&proxy, ro_flags, "etc");
 
@@ -593,11 +598,12 @@ fn hardlink_not_supported() {
     };
 
     test_server_client(
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         root,
         |proxy| async move {
-            let flags =
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_DESCRIBE;
+            let flags = fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::DESCRIBE;
 
             let tmp = open_get_directory_proxy_assert_ok!(&proxy, flags, "tmp");
             let tmp_token = assert_get_token!(&tmp);
@@ -628,11 +634,11 @@ fn create_file() {
     };
 
     test_server_client(
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         root,
         |proxy| async move {
-            let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
-            let create_flags = flags | fio::OPEN_FLAG_CREATE;
+            let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE;
+            let create_flags = flags | fio::OpenFlags::CREATE;
 
             open_as_vmo_file_assert_content!(&proxy, create_flags, "etc/fstab", "fstab - 0");
 
@@ -661,11 +667,11 @@ fn create_directory() {
     };
 
     test_server_client(
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         root,
         |proxy| async move {
-            let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
-            let create_directory_flags = flags | fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_CREATE;
+            let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE;
+            let create_directory_flags = flags | fio::OpenFlags::DIRECTORY | fio::OpenFlags::CREATE;
 
             let etc = open_get_directory_proxy_assert_ok!(&proxy, create_directory_flags, "etc");
 
@@ -702,12 +708,12 @@ fn create_two_levels_deep() {
     };
 
     test_server_client(
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         root,
         |proxy| async move {
-            let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
-            let create_directory_flags = flags | fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_CREATE;
-            let create_flags = flags | fio::OPEN_FLAG_CREATE;
+            let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE;
+            let create_directory_flags = flags | fio::OpenFlags::DIRECTORY | fio::OpenFlags::CREATE;
+            let create_flags = flags | fio::OpenFlags::CREATE;
 
             let etc = open_get_directory_proxy_assert_ok!(&proxy, create_directory_flags, "etc");
 
@@ -751,11 +757,11 @@ fn can_not_create_nested() {
     let root = mut_pseudo_directory! {};
 
     test_server_client(
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         root,
         |proxy| async move {
-            let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
-            let create_flags = flags | fio::OPEN_FLAG_CREATE;
+            let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE;
+            let create_flags = flags | fio::OpenFlags::CREATE;
 
             open_as_file_assert_err!(&proxy, create_flags, "etc/fstab", Status::NOT_FOUND);
             open_as_directory_assert_err!(&proxy, create_flags, "tmp/log", Status::NOT_FOUND);
@@ -783,13 +789,15 @@ fn can_create_nested() {
     let root = mut_pseudo_directory! {};
 
     test_server_client(
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         root,
         |proxy| async move {
-            let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
-            let create_flags = flags | fio::OPEN_FLAG_CREATE;
-            let create_directory_flags =
-                flags | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_CREATE;
+            let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE;
+            let create_flags = flags | fio::OpenFlags::CREATE;
+            let create_directory_flags = flags
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::DIRECTORY
+                | fio::OpenFlags::CREATE;
 
             open_as_vmo_file_assert_content!(&proxy, create_flags, "etc/passwd", "passwd - 0");
             let log =
@@ -829,12 +837,12 @@ fn can_not_create_nested_when_parent_not_writable() {
     let root = mut_pseudo_directory! {};
 
     test_server_client(
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         root,
         |proxy| async move {
-            let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
-            let create_flags = flags | fio::OPEN_FLAG_CREATE;
-            let create_directory_flags = flags | fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_CREATE;
+            let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE;
+            let create_flags = flags | fio::OpenFlags::CREATE;
+            let create_directory_flags = flags | fio::OpenFlags::DIRECTORY | fio::OpenFlags::CREATE;
 
             let log =
                 open_get_directory_proxy_assert_ok!(&proxy, create_directory_flags, "tmp/log");

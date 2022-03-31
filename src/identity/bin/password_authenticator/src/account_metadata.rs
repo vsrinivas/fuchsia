@@ -256,7 +256,7 @@ impl AccountMetadataStore for DataDirAccountMetadataStore {
         account_id: &AccountId,
     ) -> Result<Option<AccountMetadata>, AccountMetadataStoreError> {
         let metadata_filename = format_account_id(&account_id);
-        let flags = fio::OPEN_RIGHT_READABLE;
+        let flags = fio::OpenFlags::RIGHT_READABLE;
 
         let maybe_file =
             io_util::directory::open_file(&self.accounts_dir, &metadata_filename, flags).await;
@@ -354,7 +354,9 @@ pub mod test {
         let file = io_util::open_file(
             &dir,
             path,
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
+            fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::CREATE,
         )
         .expect(&format!("create file {}", path.display()));
         file.write(data)
@@ -488,7 +490,7 @@ pub mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
 
@@ -538,7 +540,7 @@ pub mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
 
@@ -576,7 +578,7 @@ pub mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
 
@@ -620,7 +622,7 @@ pub mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
         let mut metadata_store = DataDirAccountMetadataStore::new(dir);
@@ -646,7 +648,7 @@ pub mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
 

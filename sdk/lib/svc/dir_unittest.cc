@@ -205,8 +205,8 @@ TEST_F(ServiceTest, AddSubdDir) {
             }));
     zx::channel server_end, client_end;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &server_end, &client_end));
-    subdir->Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE |
-                      fuchsia::io::OPEN_FLAG_DIRECTORY,
+    subdir->Serve(fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE |
+                      fuchsia::io::OpenFlags::DIRECTORY,
                   std::move(server_end), dispatcher());
 
     ASSERT_EQ(ZX_OK, svc_dir_add_directory(dir, kTestDirectory, client_end.release()));

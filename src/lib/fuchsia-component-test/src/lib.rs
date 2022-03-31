@@ -636,7 +636,7 @@ impl RealmBuilder {
 
         let pkg_dir_proxy = io_util::open_directory_in_namespace(
             "/pkg",
-            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_EXECUTABLE,
+            io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_EXECUTABLE,
         )
         .map_err(Error::FailedToOpenPkgDir)?;
 
@@ -1964,7 +1964,7 @@ impl ScopedInstance {
     ) -> Result<(), anyhow::Error> {
         self.exposed_dir
             .open(
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
                 fio::MODE_TYPE_SERVICE,
                 protocol_name,
                 ServerEnd::new(server_end),

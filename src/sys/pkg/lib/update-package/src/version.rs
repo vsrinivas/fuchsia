@@ -126,7 +126,7 @@ impl fmt::Display for SystemVersion {
 pub(crate) async fn read_version(
     proxy: &fio::DirectoryProxy,
 ) -> Result<SystemVersion, ReadVersionError> {
-    let file = io_util::directory::open_file(proxy, "version", fio::OPEN_RIGHT_READABLE)
+    let file = io_util::directory::open_file(proxy, "version", fio::OpenFlags::RIGHT_READABLE)
         .await
         .map_err(ReadVersionError::OpenFile)?;
     let version_str =

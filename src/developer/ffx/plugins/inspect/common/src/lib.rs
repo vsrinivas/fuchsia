@@ -205,7 +205,7 @@ async fn all_accessors(
         io_util::open_directory(
             &hub_root,
             std::path::Path::new(root.as_ref()),
-            io_util::OPEN_RIGHT_READABLE,
+            io_util::OpenFlags::RIGHT_READABLE,
         )
         .map_err(|e| Error::IOError(format!("Open dir {}", root.as_ref()), e.into()))?
     };

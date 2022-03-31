@@ -101,7 +101,7 @@ mod tests {
 
         let tree = construct_fs(buffer).expect("construct_fs parses the vmo");
 
-        run_server_client(fio::OPEN_RIGHT_READABLE, tree, |root| async move {
+        run_server_client(fio::OpenFlags::RIGHT_READABLE, tree, |root| async move {
             {
                 let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
                 expected.add(fio::DirentType::Directory, b".");
@@ -112,7 +112,7 @@ mod tests {
                 assert_read_dirents!(root, 1000, expected.into_vec());
             }
 
-            let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
+            let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE;
             let compare = "file1 contents.\n";
             open_as_vmo_file_assert_content!(&root, flags, "file1", compare);
 

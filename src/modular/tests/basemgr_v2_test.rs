@@ -451,7 +451,7 @@ fn spawn_vfs(dir: Arc<dyn DirectoryEntry>) -> fio::DirectoryProxy {
     let scope = vfs::execution_scope::ExecutionScope::new();
     dir.open(
         scope,
-        fio::OPEN_RIGHT_READABLE,
+        fio::OpenFlags::RIGHT_READABLE,
         0,
         vfs::path::Path::dot(),
         ServerEnd::new(server_end.into_channel()),

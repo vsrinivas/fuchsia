@@ -142,7 +142,7 @@ struct TestOutput {
 /// Opens and reads file defined by `path` in `dir`.
 async fn read_file(dir: &fio::DirectoryProxy, path: &Path) -> Result<String, anyhow::Error> {
     // Open the file in read-only mode.
-    let result_file_proxy = io_util::open_file(dir, path, fio::OPEN_RIGHT_READABLE)?;
+    let result_file_proxy = io_util::open_file(dir, path, fio::OpenFlags::RIGHT_READABLE)?;
     return io_util::read_file(&result_file_proxy).await;
 }
 
@@ -226,7 +226,7 @@ impl SuiteServer for TestServer {
             // longer needed and they are consuming space.
             let test_data_dir = io_util::open_directory_in_namespace(
                 &test_data_parent,
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             )
             .expect("Cannot open data directory");
             if let Err(e) = files_async::remove_dir_recursive(&test_data_dir, &test_data_name).await
@@ -336,7 +336,7 @@ impl TestServer {
 
     fn test_data_namespace(&self) -> Result<fproc::NameInfo, IoError> {
         let client_channnel =
-            io_util::clone_directory(&self.output_dir_proxy, fio::CLONE_FLAG_SAME_RIGHTS)
+            io_util::clone_directory(&self.output_dir_proxy, fio::OpenFlags::CLONE_SAME_RIGHTS)
                 .map_err(IoError::CloneProxy)?
                 .into_channel()
                 .map_err(|_| FidlError::ProxyToChannel)
@@ -732,7 +732,7 @@ mod tests {
         fn proxy(&self) -> Result<fio::DirectoryProxy, Error> {
             io_util::open_directory_in_namespace(
                 &self.dir_name,
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             )
             .context("Cannot open test data directory")
         }

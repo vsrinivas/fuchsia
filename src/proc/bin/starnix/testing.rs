@@ -21,7 +21,7 @@ use crate::types::*;
 ///
 /// Open "/pkg" and returns an FsContext rooted in that directory.
 fn create_pkgfs() -> Arc<FsContext> {
-    let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
+    let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE;
     let (server, client) = zx::Channel::create().expect("failed to create channel");
     fdio::open("/pkg", rights, server).expect("failed to open /pkg");
     return FsContext::new(RemoteFs::new(client, rights).unwrap());

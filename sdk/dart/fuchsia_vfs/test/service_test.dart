@@ -13,13 +13,13 @@ import 'package:zircon/zircon.dart';
 
 void main() {
   var unsupportedFlags = [
-    io_fidl.openFlagDescribe,
-    io_fidl.openFlagCreate,
-    io_fidl.openFlagCreateIfAbsent,
-    io_fidl.openFlagDirectory,
-    io_fidl.openFlagTruncate,
-    io_fidl.openFlagNoRemote,
-    io_fidl.openFlagNodeReference,
+    io_fidl.OpenFlags.describe,
+    io_fidl.OpenFlags.create,
+    io_fidl.OpenFlags.createIfAbsent,
+    io_fidl.OpenFlags.directory,
+    io_fidl.OpenFlags.truncate,
+    io_fidl.OpenFlags.noRemote,
+    io_fidl.OpenFlags.nodeReference,
   ];
 
   group('service tests:', () {
@@ -42,7 +42,7 @@ void main() {
         Service<Echo> service = Service.withConnector(echo.bind);
         EchoProxy echoProxy = EchoProxy();
         var expectedStatus = ZX.ERR_NOT_SUPPORTED;
-        if (unsupportedFlag == io_fidl.openFlagDirectory) {
+        if (unsupportedFlag == io_fidl.OpenFlags.directory) {
           expectedStatus = ZX.ERR_NOT_DIR;
         }
         expect(
@@ -52,11 +52,11 @@ void main() {
       }
     });
 
-    test('connect to service fails for openFlagDescribe', () async {
+    test('connect to service fails for OpenFlags.describe', () async {
       var fs = _FsWithEchoService();
 
       var echoProxy = io_fidl.NodeProxy();
-      await fs.dirProxy.open(io_fidl.openFlagDescribe, 0, Echo.$serviceName,
+      await fs.dirProxy.open(io_fidl.OpenFlags.describe, 0, Echo.$serviceName,
           echoProxy.ctrl.request());
       echoProxy.onOpen.listen(expectAsync1((response) {
         expect(response.s, ZX.ERR_NOT_SUPPORTED);
@@ -75,7 +75,7 @@ void main() {
       ];
       for (var mode in invalidModes) {
         var echoProxy = io_fidl.NodeProxy();
-        await fs.dirProxy.open(io_fidl.openFlagDescribe, mode,
+        await fs.dirProxy.open(io_fidl.OpenFlags.describe, mode,
             Echo.$serviceName, echoProxy.ctrl.request());
 
         echoProxy.onOpen.listen(expectAsync1((response) {
@@ -85,11 +85,11 @@ void main() {
       }
     });
 
-    test('connect to service fails for openFlagDirectory', () async {
+    test('connect to service fails for OpenFlags.directory', () async {
       var fs = _FsWithEchoService();
       var nodeProxy = io_fidl.NodeProxy();
       await fs.dirProxy.open(
-          io_fidl.openFlagDirectory | io_fidl.openFlagDescribe,
+          io_fidl.OpenFlags.directory | io_fidl.OpenFlags.describe,
           0,
           Echo.$serviceName,
           nodeProxy.ctrl.request());
@@ -102,8 +102,8 @@ void main() {
 
     test('connect to service passes with valid flags', () async {
       var supportedFlags = [
-        io_fidl.openRightReadable,
-        io_fidl.openRightWritable
+        io_fidl.OpenFlags.rightReadable,
+        io_fidl.OpenFlags.rightWritable
       ];
       for (var supportedFlag in supportedFlags) {
         var fs = _FsWithEchoService();
@@ -129,7 +129,7 @@ void main() {
         var echoProxy = EchoProxy();
 
         await fs.dirProxy.open(
-            io_fidl.openRightReadable,
+            io_fidl.OpenFlags.rightReadable,
             supportedMode,
             Echo.$serviceName,
             InterfaceRequest(echoProxy.ctrl.request().passChannel()));
@@ -149,7 +149,7 @@ class _FsWithEchoService {
   _FsWithEchoService() {
     Service<Echo> service = Service.withConnector(echo.bind);
     var status = _dir.connect(
-        io_fidl.openRightReadable | io_fidl.openRightWritable,
+        io_fidl.OpenFlags.rightReadable | io_fidl.OpenFlags.rightWritable,
         0,
         InterfaceRequest(dirProxy.ctrl.request().passChannel()));
     expect(status, ZX.OK);

@@ -27,7 +27,7 @@ struct DirectoryProtocolImpl(fio::DirectoryProxy);
 
 impl MemberOpener for DirectoryProtocolImpl {
     fn open_member(&self, member: &str, server_end: zx::Channel) -> Result<(), fidl::Error> {
-        let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
+        let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE;
         self.0.open(flags, fio::MODE_TYPE_SERVICE, member, ServerEnd::new(server_end))?;
         Ok(())
     }
@@ -79,7 +79,7 @@ impl LocalComponentHandles {
         let node_proxy = io_util::open_node(
             svc_dir_proxy,
             Path::new(name),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             fio::MODE_TYPE_SERVICE,
         )?;
         Ok(P::Proxy::from_channel(
@@ -104,7 +104,7 @@ impl LocalComponentHandles {
         io_util::open_directory(
             &svc_dir_proxy,
             &Path::new(name),
-            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+            io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
         )
     }
 
@@ -136,7 +136,7 @@ impl LocalComponentHandles {
         let directory_proxy = io_util::open_directory(
             &service_dir,
             &Path::new(instance_name),
-            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+            io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
         )?;
         Ok(S::Proxy::from_member_opener(Box::new(DirectoryProtocolImpl(directory_proxy))))
     }
@@ -158,7 +158,7 @@ impl LocalComponentHandles {
             "the local component's namespace doesn't have a /{} directory",
             directory_name
         ))?;
-        io_util::clone_directory(dir_proxy, fio::CLONE_FLAG_SAME_RIGHTS)
+        io_util::clone_directory(dir_proxy, fio::OpenFlags::CLONE_SAME_RIGHTS)
     }
 }
 
@@ -302,7 +302,7 @@ impl LocalComponentRunner {
                     );
                     runtime_dir.open(
                         self.execution_scope.clone(),
-                        fio::OPEN_RIGHT_READABLE,
+                        fio::OpenFlags::RIGHT_READABLE,
                         fio::MODE_TYPE_DIRECTORY,
                         VfsPath::dot(),
                         runtime_dir_server_end.into_channel().into(),
@@ -496,7 +496,7 @@ mod tests {
         let local_component_name_file = io_util::directory::open_file(
             &runner_and_handles.runtime_dir_proxy,
             &local_component_name_filename,
-            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_READABLE,
         )
         .await
         .expect("failed to open file");

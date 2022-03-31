@@ -10,6 +10,6 @@ namespace fio = fuchsia_io;
 
 TEST_F(NamespaceTest, HasDurableFolder) {
   ExpectExists("/durable");
-  ExpectPathSupportsStrictRights("/durable",
-                                 fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable);
+  ExpectPathSupportsStrictRights(
+      "/durable", fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable);
 }

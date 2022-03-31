@@ -18,8 +18,8 @@ namespace fio = fuchsia_io;
 
 TEST_F(NamespaceTest, HasCacheStorage) {
   ExpectExists("/cache");
-  ExpectPathSupportsStrictRights("/cache",
-                                 fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable);
+  ExpectPathSupportsStrictRights(
+      "/cache", fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable);
 }
 
 TEST_F(NamespaceTest, CanClearCacheStorage) {

@@ -1327,7 +1327,9 @@ async fn route_storage() -> Result<(), Error> {
                     let example_file = io_util::directory::open_file(
                         &data_dir,
                         "example_file",
-                        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
+                        fio::OpenFlags::RIGHT_READABLE
+                            | fio::OpenFlags::RIGHT_WRITABLE
+                            | fio::OpenFlags::CREATE,
                     )
                     .await
                     .expect("failed to open example_file");
@@ -1515,10 +1517,13 @@ async fn read_only_directory() -> Result<(), Error> {
     let local_component_impl = |mut send_file_contents: mpsc::Sender<String>,
                                 handles: LocalComponentHandles| async move {
         let config_dir = handles.clone_from_namespace("config").expect("failed to open /config");
-        let config_file =
-            io_util::directory::open_file(&config_dir, "config.txt", io_util::OPEN_RIGHT_READABLE)
-                .await
-                .expect("failed to open config.txt");
+        let config_file = io_util::directory::open_file(
+            &config_dir,
+            "config.txt",
+            io_util::OpenFlags::RIGHT_READABLE,
+        )
+        .await
+        .expect("failed to open config.txt");
         let config_file_contents =
             io_util::read_file(&config_file).await.expect("failed to read config.txt");
         send_file_contents
@@ -1571,7 +1576,7 @@ async fn read_only_directory() -> Result<(), Error> {
     let config_file = io_util::directory::open_file(
         &exposed_dir,
         "config/config.txt",
-        io_util::OPEN_RIGHT_READABLE,
+        io_util::OpenFlags::RIGHT_READABLE,
     )
     .await
     .expect("failed to open config.txt");
@@ -1586,8 +1591,10 @@ async fn read_only_directory() -> Result<(), Error> {
 async fn from_relative_url() -> Result<(), Error> {
     let builder = RealmBuilder::from_relative_url(ECHO_REALM_RELATIVE_URL).await?;
 
-    let echo_client_decl_file =
-        io_util::open_file_in_namespace("/pkg/meta/echo_client.cm", io_util::OPEN_RIGHT_READABLE)?;
+    let echo_client_decl_file = io_util::open_file_in_namespace(
+        "/pkg/meta/echo_client.cm",
+        io_util::OpenFlags::RIGHT_READABLE,
+    )?;
     let echo_client_decl: fcdecl::Component =
         io_util::read_file_fidl(&echo_client_decl_file).await?;
 
@@ -1596,8 +1603,10 @@ async fn from_relative_url() -> Result<(), Error> {
         echo_client_decl.fidl_into_native()
     );
 
-    let echo_server_decl_file =
-        io_util::open_file_in_namespace("/pkg/meta/echo_server.cm", io_util::OPEN_RIGHT_READABLE)?;
+    let echo_server_decl_file = io_util::open_file_in_namespace(
+        "/pkg/meta/echo_server.cm",
+        io_util::OpenFlags::RIGHT_READABLE,
+    )?;
     let echo_server_decl: fcdecl::Component =
         io_util::read_file_fidl(&echo_server_decl_file).await?;
 
@@ -1606,8 +1615,10 @@ async fn from_relative_url() -> Result<(), Error> {
         echo_server_decl.fidl_into_native()
     );
 
-    let echo_realm_decl_file =
-        io_util::open_file_in_namespace("/pkg/meta/echo_realm.cm", io_util::OPEN_RIGHT_READABLE)?;
+    let echo_realm_decl_file = io_util::open_file_in_namespace(
+        "/pkg/meta/echo_realm.cm",
+        io_util::OpenFlags::RIGHT_READABLE,
+    )?;
     let mut echo_realm_decl: fcdecl::Component =
         io_util::read_file_fidl(&echo_realm_decl_file).await?;
 

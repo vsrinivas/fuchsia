@@ -27,67 +27,67 @@ pub fn new_connection_validate_flags(
     // Nodes supporting both W+X rights are not supported.
     debug_assert!(!(writable && executable));
 
-    if flags.intersects(fio::OPEN_FLAG_NODE_REFERENCE) {
+    if flags.intersects(fio::OpenFlags::NODE_REFERENCE) {
         flags &= fio::OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE;
         readable = false;
         writable = false;
         executable = false;
     }
 
-    if flags.intersects(fio::OPEN_FLAG_DIRECTORY) {
+    if flags.intersects(fio::OpenFlags::DIRECTORY) {
         return Err(zx::Status::NOT_DIR);
     }
 
-    if flags.intersects(fio::OPEN_FLAG_NOT_DIRECTORY) {
-        flags &= !fio::OPEN_FLAG_NOT_DIRECTORY;
+    if flags.intersects(fio::OpenFlags::NOT_DIRECTORY) {
+        flags &= !fio::OpenFlags::NOT_DIRECTORY;
     }
 
     // For files, the OPEN_FLAG_POSIX_* flags are ignored as they have meaning only for directories.
     // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED.
-    flags &= !(fio::OPEN_FLAG_POSIX_DEPRECATED
-        | fio::OPEN_FLAG_POSIX_WRITABLE
-        | fio::OPEN_FLAG_POSIX_EXECUTABLE);
+    flags &= !(fio::OpenFlags::POSIX_DEPRECATED
+        | fio::OpenFlags::POSIX_WRITABLE
+        | fio::OpenFlags::POSIX_EXECUTABLE);
 
-    let allowed_flags = fio::OPEN_FLAG_NODE_REFERENCE
-        | fio::OPEN_FLAG_DESCRIBE
-        | fio::OPEN_FLAG_CREATE
-        | fio::OPEN_FLAG_CREATE_IF_ABSENT
-        | if readable { fio::OPEN_RIGHT_READABLE } else { fio::OpenFlags::empty() }
+    let allowed_flags = fio::OpenFlags::NODE_REFERENCE
+        | fio::OpenFlags::DESCRIBE
+        | fio::OpenFlags::CREATE
+        | fio::OpenFlags::CREATE_IF_ABSENT
+        | if readable { fio::OpenFlags::RIGHT_READABLE } else { fio::OpenFlags::empty() }
         | if writable {
-            fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_TRUNCATE
+            fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::TRUNCATE
         } else {
             fio::OpenFlags::empty()
         }
-        | if writable && append_allowed { fio::OPEN_FLAG_APPEND } else { fio::OpenFlags::empty() }
-        | if executable { fio::OPEN_RIGHT_EXECUTABLE } else { fio::OpenFlags::empty() };
+        | if writable && append_allowed { fio::OpenFlags::APPEND } else { fio::OpenFlags::empty() }
+        | if executable { fio::OpenFlags::RIGHT_EXECUTABLE } else { fio::OpenFlags::empty() };
 
     let prohibited_flags = (fio::OpenFlags::empty() | if readable {
-            fio::OPEN_FLAG_TRUNCATE
+            fio::OpenFlags::TRUNCATE
         } else {
             fio::OpenFlags::empty()
         } | if writable {
-            fio::OPEN_FLAG_APPEND
+            fio::OpenFlags::APPEND
         } else {
             fio::OpenFlags::empty()
         })
         // allowed_flags takes precedence over prohibited_flags.
         & !allowed_flags
         // TRUNCATE is only allowed if the file is writable.
-        | if !flags.intersects(fio::OPEN_RIGHT_WRITABLE) {
-            fio::OPEN_FLAG_TRUNCATE
+        | if !flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
+            fio::OpenFlags::TRUNCATE
         } else {
             fio::OpenFlags::empty()
         };
 
-    if !readable && flags.intersects(fio::OPEN_RIGHT_READABLE) {
+    if !readable && flags.intersects(fio::OpenFlags::RIGHT_READABLE) {
         return Err(zx::Status::ACCESS_DENIED);
     }
 
-    if !writable && flags.intersects(fio::OPEN_RIGHT_WRITABLE) {
+    if !writable && flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
         return Err(zx::Status::ACCESS_DENIED);
     }
 
-    if !executable && flags.intersects(fio::OPEN_RIGHT_EXECUTABLE) {
+    if !executable && flags.intersects(fio::OpenFlags::RIGHT_EXECUTABLE) {
         return Err(zx::Status::ACCESS_DENIED);
     }
 
@@ -136,17 +136,17 @@ pub fn get_buffer_validate_flags(
 
     // Ensure the requested rights in vmo_flags do not exceed those of the underlying connection.
     if vmo_flags.contains(fio::VmoFlags::READ)
-        && !connection_flags.intersects(fio::OPEN_RIGHT_READABLE)
+        && !connection_flags.intersects(fio::OpenFlags::RIGHT_READABLE)
     {
         return Err(zx::Status::ACCESS_DENIED);
     }
     if vmo_flags.contains(fio::VmoFlags::WRITE)
-        && !connection_flags.intersects(fio::OPEN_RIGHT_WRITABLE)
+        && !connection_flags.intersects(fio::OpenFlags::RIGHT_WRITABLE)
     {
         return Err(zx::Status::ACCESS_DENIED);
     }
     if vmo_flags.contains(fio::VmoFlags::EXECUTE)
-        && !connection_flags.intersects(fio::OPEN_RIGHT_EXECUTABLE)
+        && !connection_flags.intersects(fio::OpenFlags::RIGHT_EXECUTABLE)
     {
         return Err(zx::Status::ACCESS_DENIED);
     }
@@ -154,7 +154,7 @@ pub fn get_buffer_validate_flags(
     // As documented in the fuchsia.io interface, if VmoFlags::EXECUTE is requested, ensure that the
     // connection also has OPEN_RIGHT_READABLE.
     if vmo_flags.contains(fio::VmoFlags::EXECUTE)
-        && !connection_flags.intersects(fio::OPEN_RIGHT_READABLE)
+        && !connection_flags.intersects(fio::OpenFlags::RIGHT_READABLE)
     {
         return Err(zx::Status::ACCESS_DENIED);
     }
@@ -171,9 +171,9 @@ mod tests {
 
     fn io_flags_to_rights(flags: fio::OpenFlags) -> (bool, bool, bool) {
         return (
-            flags.intersects(fio::OPEN_RIGHT_READABLE),
-            flags.intersects(fio::OPEN_RIGHT_WRITABLE),
-            flags.intersects(fio::OPEN_RIGHT_EXECUTABLE),
+            flags.intersects(fio::OpenFlags::RIGHT_READABLE),
+            flags.intersects(fio::OpenFlags::RIGHT_WRITABLE),
+            flags.intersects(fio::OpenFlags::RIGHT_EXECUTABLE),
         );
     }
 
@@ -231,17 +231,20 @@ mod tests {
     #[test]
     fn new_connection_validate_flags_node_reference() {
         // Should drop access flags but preserve OPEN_FLAG_NODE_REFERENCE and OPEN_FLAG_DESCRIBE.
-        let preserved_flags = fio::OPEN_FLAG_NODE_REFERENCE | fio::OPEN_FLAG_DESCRIBE;
+        let preserved_flags = fio::OpenFlags::NODE_REFERENCE | fio::OpenFlags::DESCRIBE;
         for open_flags in build_flag_combinations(
-            fio::OPEN_FLAG_NODE_REFERENCE.bits(),
-            (fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_DESCRIBE).bits(),
+            fio::OpenFlags::NODE_REFERENCE.bits(),
+            (fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::DESCRIBE)
+                .bits(),
         ) {
             let open_flags = fio::OpenFlags::from_bits_truncate(open_flags);
             ncvf_ok(open_flags, true, true, false, open_flags & preserved_flags);
         }
 
         ncvf_err(
-            fio::OPEN_FLAG_NODE_REFERENCE | fio::OPEN_FLAG_DIRECTORY,
+            fio::OpenFlags::NODE_REFERENCE | fio::OpenFlags::DIRECTORY,
             true,
             true,
             false,
@@ -249,11 +252,11 @@ mod tests {
         );
 
         ncvf_ok(
-            fio::OPEN_FLAG_NODE_REFERENCE | fio::OPEN_FLAG_NOT_DIRECTORY,
+            fio::OpenFlags::NODE_REFERENCE | fio::OpenFlags::NOT_DIRECTORY,
             true,
             true,
             false,
-            fio::OPEN_FLAG_NODE_REFERENCE,
+            fio::OpenFlags::NODE_REFERENCE,
         );
     }
 
@@ -262,14 +265,14 @@ mod tests {
         // OPEN_FLAG_POSIX_* is ignored for files.
         // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED.
         const ALL_POSIX_FLAGS: fio::OpenFlags = fio::OpenFlags::empty()
-            .union(fio::OPEN_FLAG_POSIX_DEPRECATED)
-            .union(fio::OPEN_FLAG_POSIX_WRITABLE)
-            .union(fio::OPEN_FLAG_POSIX_EXECUTABLE);
+            .union(fio::OpenFlags::POSIX_DEPRECATED)
+            .union(fio::OpenFlags::POSIX_WRITABLE)
+            .union(fio::OpenFlags::POSIX_EXECUTABLE);
         for open_flags in build_flag_combinations(
             0,
-            (fio::OPEN_RIGHT_READABLE
-                | fio::OPEN_RIGHT_WRITABLE
-                | fio::OPEN_RIGHT_EXECUTABLE
+            (fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::RIGHT_EXECUTABLE
                 | ALL_POSIX_FLAGS)
                 .bits(),
         ) {
@@ -286,8 +289,10 @@ mod tests {
     #[test]
     fn new_connection_validate_flags_create() {
         for open_flags in build_flag_combinations(
-            fio::OPEN_FLAG_CREATE.bits(),
-            (fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE_IF_ABSENT)
+            fio::OpenFlags::CREATE.bits(),
+            (fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::CREATE_IF_ABSENT)
                 .bits(),
         ) {
             let open_flags = fio::OpenFlags::from_bits_truncate(open_flags);
@@ -299,21 +304,21 @@ mod tests {
     #[test]
     fn new_connection_validate_flags_truncate() {
         ncvf_err(
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_TRUNCATE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::TRUNCATE,
             true,
             true,
             false,
             zx::Status::INVALID_ARGS,
         );
         ncvf_ok(
-            fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_TRUNCATE,
+            fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::TRUNCATE,
             true,
             true,
             false,
-            fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_TRUNCATE,
+            fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::TRUNCATE,
         );
         ncvf_err(
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_TRUNCATE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::TRUNCATE,
             true,
             false,
             false,
@@ -324,14 +329,14 @@ mod tests {
     #[test]
     fn new_connection_validate_flags_append() {
         ncvf_err(
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_APPEND,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::APPEND,
             true,
             false,
             false,
             zx::Status::NOT_SUPPORTED,
         );
         ncvf_err(
-            fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_APPEND,
+            fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::APPEND,
             true,
             true,
             false,
@@ -343,7 +348,9 @@ mod tests {
     fn new_connection_validate_flags_open_rights() {
         for open_flags in build_flag_combinations(
             0,
-            (fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE)
+            (fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::RIGHT_EXECUTABLE)
                 .bits(),
         ) {
             let open_flags = fio::OpenFlags::from_bits_truncate(open_flags);
@@ -406,7 +413,9 @@ mod tests {
     fn get_buffer_validate_flags_less_rights() {
         for open_flags in build_flag_combinations(
             0,
-            (fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE)
+            (fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::RIGHT_EXECUTABLE)
                 .bits(),
         ) {
             let open_flags = fio::OpenFlags::from_bits_truncate(open_flags);
@@ -447,7 +456,9 @@ mod tests {
     fn get_buffer_validate_flags_more_rights() {
         for open_flags in build_flag_combinations(
             0,
-            (fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE)
+            (fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::RIGHT_EXECUTABLE)
                 .bits(),
         ) {
             let open_flags = fio::OpenFlags::from_bits_truncate(open_flags);

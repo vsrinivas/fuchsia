@@ -209,7 +209,7 @@ class CloneTest : public zxtest::Test {
         fidl::BindServer(server_loop_.dispatcher(), std::move(request->object), server.get());
     cloned_servers_.push_back(std::move(server));
 
-    if (request->flags & fio::wire::kOpenFlagDescribe) {
+    if (request->flags & fio::wire::OpenFlags::kDescribe) {
       fio::wire::FileObject file_object;
       const fidl::Status result =
           fidl::WireSendEvent(binding_ref)

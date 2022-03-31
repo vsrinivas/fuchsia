@@ -30,7 +30,7 @@ async fn main() -> Result<(), Error> {
     let (dir_proxy_chan, dir_proxy_server_end) = zx::Channel::create()?;
     fdio::open(
         &args.directory,
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DIRECTORY,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DIRECTORY,
         dir_proxy_server_end,
     )
     .context(format!("failed to open '{}'", &args.directory))?;

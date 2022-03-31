@@ -32,12 +32,12 @@ pub async fn serve(stream: ComponentResolverRequestStream) -> anyhow::Result<()>
 }
 
 async fn wait_for_minfs() -> anyhow::Result<()> {
-    let minfs = io_util::directory::open_in_namespace("/minfs", fio::OPEN_RIGHT_READABLE)
+    let minfs = io_util::directory::open_in_namespace("/minfs", fio::OpenFlags::RIGHT_READABLE)
         .context("opening minfs")?;
     // Opening from namespace doesn't require the directory itself to respond to requests, so
     // re-open and wait for the OnDescribe event.
     let _: fio::DirectoryProxy =
-        io_util::directory::open_directory(&minfs, ".", fio::OPEN_RIGHT_READABLE)
+        io_util::directory::open_directory(&minfs, ".", fio::OpenFlags::RIGHT_READABLE)
             .await
             .context("reopening minfs")?;
     Ok(())
@@ -100,7 +100,7 @@ async fn resolve_pkg_cache(
         package_directory::ExecutionScope::new(),
         blobfs.clone(),
         pkg_cache,
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         server,
     )
     .await

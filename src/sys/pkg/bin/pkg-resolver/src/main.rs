@@ -162,7 +162,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
 
     let data_proxy = match io_util::directory::open_in_namespace(
         "/data",
-        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
     ) {
         Ok(proxy) => Some(proxy),
         Err(e) => {
@@ -176,14 +176,16 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         namespace.unbind("/data").context("failed to unbind /data from default namespace")?;
     }
 
-    let config_proxy =
-        match io_util::directory::open_in_namespace("/config/data", io_util::OPEN_RIGHT_READABLE) {
-            Ok(proxy) => Some(proxy),
-            Err(e) => {
-                fx_log_err!("failed to open /config/data: {:#}", anyhow!(e));
-                None
-            }
-        };
+    let config_proxy = match io_util::directory::open_in_namespace(
+        "/config/data",
+        io_util::OpenFlags::RIGHT_READABLE,
+    ) {
+        Ok(proxy) => Some(proxy),
+        Err(e) => {
+            fx_log_err!("failed to open /config/data: {:#}", anyhow!(e));
+            None
+        }
+    };
 
     let font_package_manager = Arc::new(load_font_package_manager(cobalt_sender.clone()));
     let repo_manager = Arc::new(AsyncRwLock::new(

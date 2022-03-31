@@ -18,7 +18,7 @@ async fn main() {
 
     let real_pkg = io_util::directory::open_in_namespace(
         "/pkg",
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
     )
     .expect("failed to open /pkg");
     let fake_pkgfs = Arc::new(MockDir::new().add_entry(
@@ -32,7 +32,7 @@ async fn main() {
         )),
     ));
     fake_pkgfs.open(
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         fio::MODE_TYPE_DIRECTORY,
         ".",
         ServerEnd::new(outgoing_handle.into()),

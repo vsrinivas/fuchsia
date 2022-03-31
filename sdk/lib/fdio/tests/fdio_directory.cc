@@ -14,7 +14,7 @@ namespace {
 
 namespace fuchsia_io = fuchsia_io;
 
-const fuchsia_io::wire::OpenFlags kReadFlags = fuchsia_io::wire::kOpenRightReadable;
+const fuchsia_io::wire::OpenFlags kReadFlags = fuchsia_io::wire::OpenFlags::kRightReadable;
 
 TEST(DirectoryTest, ServiceConnect) {
   ASSERT_STATUS(ZX_ERR_INVALID_ARGS, fdio_service_connect(nullptr, ZX_HANDLE_INVALID));

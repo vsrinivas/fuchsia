@@ -38,7 +38,8 @@ impl BlobfsInstance {
     /// Instantiate blobfs using fvm block file store at `fvm_resource_path`.
     pub async fn new_from_resource(fvm_resource_path: &str) -> Self {
         // Create a VMO filled with the FVM image stored at `fvm_resource_path`.
-        let fvm_file = open_file_in_namespace(fvm_resource_path, fio::OPEN_RIGHT_READABLE).unwrap();
+        let fvm_file =
+            open_file_in_namespace(fvm_resource_path, fio::OpenFlags::RIGHT_READABLE).unwrap();
         let fvm_buf = read(&fvm_file).await.unwrap();
         let fvm_size = fvm_buf.len();
         let fvm_vmo = Vmo::create(fvm_size.try_into().unwrap()).unwrap();
@@ -91,7 +92,7 @@ impl BlobfsInstance {
         if let Some(blobfs_dir) = &self.blobfs_dir {
             return open_directory_in_namespace(
                 blobfs_dir,
-                fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_READABLE,
+                fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::RIGHT_READABLE,
             )
             .unwrap();
         }

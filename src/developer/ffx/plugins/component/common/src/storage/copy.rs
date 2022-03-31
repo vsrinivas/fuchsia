@@ -100,7 +100,7 @@ mod test {
             if let Ok(Some(fio::DirectoryRequest::Open { path, flags, mode, object, .. })) = request
             {
                 if path == "from_host" {
-                    assert!(flags.intersects(fio::OPEN_FLAG_CREATE));
+                    assert!(flags.intersects(fio::OpenFlags::CREATE));
                     assert!(mode & fio::MODE_TYPE_FILE != 0);
                     setup_fake_file_from_host(node_to_file(object));
                 } else if path == "from_device" {

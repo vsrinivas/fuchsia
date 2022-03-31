@@ -19,14 +19,14 @@ pub struct LocalMirrorManager {
 impl LocalMirrorManager {
     pub async fn new(usb_dir: &fio::DirectoryProxy) -> Result<Self, Error> {
         let blobs_dir =
-            io_util::directory::open_directory(usb_dir, "blobs", fio::OPEN_RIGHT_READABLE)
+            io_util::directory::open_directory(usb_dir, "blobs", fio::OpenFlags::RIGHT_READABLE)
                 .await
                 .context("while opening blobs dir")?;
 
         let metadata_dir = io_util::directory::open_directory(
             usb_dir,
             "repository_metadata",
-            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_READABLE,
         )
         .await
         .context("while opening metadata dir")?;
@@ -49,7 +49,7 @@ impl LocalMirrorManager {
         let () = self
             .metadata_dir
             .open(
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
                 fio::MODE_TYPE_FILE,
                 &path,
                 ServerEnd::new(metadata.into_channel()),
@@ -75,7 +75,7 @@ impl LocalMirrorManager {
         let () = self
             .blobs_dir
             .open(
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
                 fio::MODE_TYPE_FILE,
                 &path,
                 ServerEnd::new(blob.into_channel()),

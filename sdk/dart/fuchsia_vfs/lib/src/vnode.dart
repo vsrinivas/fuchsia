@@ -29,12 +29,12 @@ abstract class Vnode {
   int connect(OpenFlags flags, int mode, InterfaceRequest<Node> request,
       [OpenFlags? parentFlags]);
 
-  /// Filter flags when [openFlagNodeReference] is passed.
+  /// Filter flags when [OpenFlags.nodeReference] is passed.
   /// This will maintain compatibility with c++ layer.
   OpenFlags filterForNodeReference(OpenFlags flags) {
     if (Flags.isNodeReference(flags)) {
       return flags &
-          (openFlagNodeReference | openFlagDirectory | openFlagDescribe);
+          (OpenFlags.nodeReference | OpenFlags.directory | OpenFlags.describe);
     }
     return flags;
   }
@@ -62,7 +62,7 @@ abstract class Vnode {
   /// Create a error node to send onOpen event with failure status.
   void sendErrorEvent(
       OpenFlags flags, int status, InterfaceRequest<Node> request) {
-    if ((flags & openFlagDescribe) != OpenFlags.$none) {
+    if ((flags & OpenFlags.describe) != OpenFlags.$none) {
       final e = ErrorNodeForSendingEvent(status, _removeErrorNode, request);
       _errorNodes.add(e);
     } else {

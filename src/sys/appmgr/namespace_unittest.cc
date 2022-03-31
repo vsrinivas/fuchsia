@@ -117,8 +117,9 @@ class NamespaceHostDirectoryTest : public NamespaceTest {
  protected:
   zx::channel OpenAsDirectory() {
     fidl::InterfaceHandle<fuchsia::io::Directory> dir;
-    directory_.Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
-                     dir.NewRequest().TakeChannel(), dispatcher());
+    directory_.Serve(
+        fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
+        dir.NewRequest().TakeChannel(), dispatcher());
     return dir.TakeChannel();
   }
 

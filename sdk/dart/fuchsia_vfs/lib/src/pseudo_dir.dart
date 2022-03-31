@@ -105,23 +105,23 @@ class PseudoDir extends Vnode {
 
     var connectFlags = filterForNodeReference(flags);
 
-    // Explicitly expand openFlagPosixDeprecated into new equivalent flags.
+    // Explicitly expand OpenFlags.posixDeprecated into new equivalent flags.
     // TODO(fxbug.dev/81185): Remove entire branch when flag is removed from fuchsia.io.
-    if ((connectFlags & openFlagPosixDeprecated) != OpenFlags.$none) {
-      connectFlags |= openFlagPosixWritable | openFlagPosixExecutable;
-      connectFlags &= ~openFlagPosixDeprecated;
+    if ((connectFlags & OpenFlags.posixDeprecated) != OpenFlags.$none) {
+      connectFlags |= OpenFlags.posixWritable | OpenFlags.posixExecutable;
+      connectFlags &= ~OpenFlags.posixDeprecated;
     }
 
     parentFlags ??= Flags.fsRightsDefault();
     // Grant POSIX clients additional rights.
     if (Flags.isPosixWritable(connectFlags)) {
-      connectFlags |= parentFlags & openRightWritable;
+      connectFlags |= parentFlags & OpenFlags.rightWritable;
     }
     if (Flags.isPosixExecutable(connectFlags)) {
-      connectFlags |= parentFlags & openRightExecutable;
+      connectFlags |= parentFlags & OpenFlags.rightExecutable;
     }
     // Clear any remaining POSIX right expansion flags.
-    connectFlags &= ~(openFlagPosixWritable | openFlagPosixExecutable);
+    connectFlags &= ~(OpenFlags.posixWritable | OpenFlags.posixExecutable);
 
     final status = _validateFlags(connectFlags);
     if (status != ZX.OK) {
@@ -195,7 +195,8 @@ class PseudoDir extends Vnode {
         return;
       } else if (index == p.length - 1) {
         // '/' is at end, should be a directory, add flag
-        e!.node!.connect(flags | openFlagDirectory, mode, request, parentFlags);
+        e!.node!
+            .connect(flags | OpenFlags.directory, mode, request, parentFlags);
         return;
       } else {
         // forward request to child Vnode and let it handle rest of path.
@@ -233,8 +234,8 @@ class PseudoDir extends Vnode {
     if (rights != null) {
       assert((rights & ~openRights) == OpenFlags.$none);
     }
-    rights ??= openRightReadable | openRightWritable;
-    return connect(openFlagDirectory | rights, 0, request);
+    rights ??= OpenFlags.rightReadable | OpenFlags.rightWritable;
+    return connect(OpenFlags.directory | rights, 0, request);
   }
 
   @override
@@ -251,21 +252,21 @@ class PseudoDir extends Vnode {
   }
 
   int _validateFlags(OpenFlags flags) {
-    final allowedFlags = openRightReadable |
-        openRightWritable |
-        openFlagDirectory |
-        openFlagNodeReference |
-        openFlagDescribe |
-        openFlagPosixDeprecated |
-        openFlagPosixWritable |
-        openFlagPosixExecutable |
-        cloneFlagSameRights;
-    final prohibitedFlags = openFlagCreate |
-        openFlagCreateIfAbsent |
-        openFlagTruncate |
-        openFlagAppend;
+    final allowedFlags = OpenFlags.rightReadable |
+        OpenFlags.rightWritable |
+        OpenFlags.directory |
+        OpenFlags.nodeReference |
+        OpenFlags.describe |
+        OpenFlags.posixDeprecated |
+        OpenFlags.posixWritable |
+        OpenFlags.posixExecutable |
+        OpenFlags.cloneSameRights;
+    final prohibitedFlags = OpenFlags.create |
+        OpenFlags.createIfAbsent |
+        OpenFlags.truncate |
+        OpenFlags.append;
 
-    // TODO(fxbug.dev/33058) : do not allow openRightWritable.
+    // TODO(fxbug.dev/33058) : do not allow OpenFlags.rightWritable.
 
     // Pseudo directories do not allow mounting, at this point.
     if (flags & prohibitedFlags != OpenFlags.$none) {
@@ -308,7 +309,7 @@ class _DirConnection extends Directory {
     _binding.whenClosed.then((_) {
       return close();
     });
-    if (_flags & openFlagNodeReference != OpenFlags.$none) {
+    if (_flags & OpenFlags.nodeReference != OpenFlags.$none) {
       isNodeRef = true;
     }
   }
@@ -316,7 +317,7 @@ class _DirConnection extends Directory {
   @override
   Stream<Directory$OnOpen$Response> get onOpen {
     Directory$OnOpen$Response d;
-    if ((_flags & openFlagDescribe) == OpenFlags.$none) {
+    if ((_flags & OpenFlags.describe) == OpenFlags.$none) {
       d = Directory$OnOpen$Response(ZX.ERR_NOT_DIR, null);
     } else {
       NodeInfo nodeInfo = _describe();
@@ -355,7 +356,7 @@ class _DirConnection extends Directory {
     if (Flags.shouldCloneWithSameRights(flags)) {
       newFlags &= (~openRights);
       newFlags |= (_flags & openRights);
-      newFlags &= ~cloneFlagSameRights;
+      newFlags &= ~OpenFlags.cloneSameRights;
     }
 
     if (!Flags.stricterOrSameRights(newFlags, _flags)) {

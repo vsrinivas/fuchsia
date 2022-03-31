@@ -19,7 +19,7 @@ use futures::{
     stream::FuturesUnordered,
     TryStreamExt,
 };
-use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
+use io_util::{open_directory_in_namespace, OpenFlags};
 use log::*;
 use serde_derive::Deserialize;
 use serde_json as json;
@@ -145,7 +145,8 @@ impl<'a> LidShutdownBuilder<'a> {
 
     /// Checks all the input devices until the lid sensor is found.
     async fn find_lid_sensor() -> Result<LidProxy, Error> {
-        let dir_proxy = open_directory_in_namespace(INPUT_DEVICES_DIRECTORY, OPEN_RIGHT_READABLE)?;
+        let dir_proxy =
+            open_directory_in_namespace(INPUT_DEVICES_DIRECTORY, OpenFlags::RIGHT_READABLE)?;
 
         let mut watcher = vfs::Watcher::new(dir_proxy).await?;
 

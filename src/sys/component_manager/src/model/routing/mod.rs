@@ -42,9 +42,9 @@ pub type RouteRequest = ::routing::RouteRequest;
 pub type RouteSource = ::routing::RouteSource<ComponentInstance>;
 
 const SERVICE_OPEN_FLAGS: fio::OpenFlags = fio::OpenFlags::empty()
-    .union(fio::OPEN_FLAG_DESCRIBE)
-    .union(fio::OPEN_RIGHT_READABLE)
-    .union(fio::OPEN_RIGHT_WRITABLE);
+    .union(fio::OpenFlags::DESCRIBE)
+    .union(fio::OpenFlags::RIGHT_READABLE)
+    .union(fio::OpenFlags::RIGHT_WRITABLE);
 
 /// Routes a capability from `target` to its source. Opens the capability if routing succeeds.
 ///
@@ -501,7 +501,7 @@ async fn open_storage_capability(
             // clone the final connection to connect the channel we're routing to its destination
             let server_chan = channel::take_channel(server_chan);
             storage_dir_proxy
-                .clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server_chan))
+                .clone(fio::OpenFlags::CLONE_SAME_RIGHTS, ServerEnd::new(server_chan))
                 .map_err(|e| {
                     let moniker = match &dir_source {
                         Some(r) => InstancedExtendedMoniker::ComponentInstance(

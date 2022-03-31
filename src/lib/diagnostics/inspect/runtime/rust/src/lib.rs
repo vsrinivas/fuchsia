@@ -37,7 +37,7 @@ pub fn serve_with_options<'a, ServiceObjTy: ServiceObjTrait>(
     let scope = ExecutionScope::new();
     dir.open(
         scope,
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         0,
         Path::dot(),
         server_end,

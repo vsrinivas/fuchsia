@@ -23,7 +23,7 @@ pub enum ParseEpochError {
 pub(crate) async fn epoch(proxy: &fio::DirectoryProxy) -> Result<Option<u64>, ParseEpochError> {
     // Open the epoch.json file.
     let fopen_res =
-        io_util::directory::open_file(proxy, "epoch.json", fio::OPEN_RIGHT_READABLE).await;
+        io_util::directory::open_file(proxy, "epoch.json", fio::OpenFlags::RIGHT_READABLE).await;
     if let Err(io_util::node::OpenError::OpenError(Status::NOT_FOUND)) = fopen_res {
         return Ok(None);
     }

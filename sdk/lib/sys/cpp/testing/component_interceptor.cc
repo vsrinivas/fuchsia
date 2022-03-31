@@ -142,7 +142,7 @@ void ComponentInterceptor::LoadUrl(std::string url, LoadUrlCallback response) {
 
   auto pkg = std::make_unique<fuchsia::sys::Package>();
   fidl::InterfaceHandle<fuchsia::io::Directory> dir_handle;
-  it->second.pkg_dir->Serve(fuchsia::io::OPEN_RIGHT_READABLE,
+  it->second.pkg_dir->Serve(fuchsia::io::OpenFlags::RIGHT_READABLE,
                             dir_handle.NewRequest().TakeChannel());
 
   pkg->directory = dir_handle.TakeChannel();

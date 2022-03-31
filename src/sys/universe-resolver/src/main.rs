@@ -352,7 +352,7 @@ mod tests {
                         );
                         fs.clone().open(
                             ExecutionScope::new(),
-                            fio::OPEN_RIGHT_READABLE,
+                            fio::OpenFlags::RIGHT_READABLE,
                             fio::MODE_TYPE_DIRECTORY,
                             Path::dot(),
                             ServerEnd::new(dir.into_channel()),
@@ -370,10 +370,13 @@ mod tests {
             )
             .await;
             let directory = result.expect("package resolver failed unexpectedly");
-            let file =
-                io_util::directory::open_file(&directory, "test_file", fio::OPEN_RIGHT_READABLE)
-                    .await
-                    .expect("failed to open 'test_file' from package resolver directory");
+            let file = io_util::directory::open_file(
+                &directory,
+                "test_file",
+                fio::OpenFlags::RIGHT_READABLE,
+            )
+            .await
+            .expect("failed to open 'test_file' from package resolver directory");
             let contents = io_util::file::read(&file)
                 .await
                 .expect("failed to read 'test_file' contents from package resolver directory");
@@ -408,7 +411,7 @@ mod tests {
                         );
                         fs.clone().open(
                             ExecutionScope::new(),
-                            fio::OPEN_RIGHT_READABLE,
+                            fio::OpenFlags::RIGHT_READABLE,
                             fio::MODE_TYPE_DIRECTORY,
                             Path::dot(),
                             ServerEnd::new(dir.into_channel()),
@@ -454,7 +457,7 @@ mod tests {
                         assert_eq!(package_url, "fuchsia-pkg://fuchsia.com/test?hash=9e3a3f63c018e2a4db0ef93903a87714f036e3e8ff982a7a2020eca86cc4677c", "unexpected package URL");
                         fs.clone().open(
                             ExecutionScope::new(),
-                            fio::OPEN_RIGHT_READABLE,
+                            fio::OpenFlags::RIGHT_READABLE,
                             fio::MODE_TYPE_DIRECTORY,
                             Path::dot(),
                             ServerEnd::new(dir.into_channel()),
@@ -493,7 +496,7 @@ mod tests {
                     PackageResolverRequest::Resolve { dir, responder, .. } => {
                         fs.clone().open(
                             ExecutionScope::new(),
-                            fio::OPEN_RIGHT_READABLE,
+                            fio::OpenFlags::RIGHT_READABLE,
                             fio::MODE_TYPE_DIRECTORY,
                             Path::dot(),
                             ServerEnd::new(dir.into_channel()),
@@ -558,7 +561,7 @@ mod tests {
                     PackageResolverRequest::Resolve { dir, responder, .. } => {
                         fs.clone().open(
                             ExecutionScope::new(),
-                            fio::OPEN_RIGHT_READABLE,
+                            fio::OpenFlags::RIGHT_READABLE,
                             fio::MODE_TYPE_DIRECTORY,
                             Path::dot(),
                             ServerEnd::new(dir.into_channel()),
@@ -592,7 +595,7 @@ mod tests {
                         );
                         fs.clone().open(
                             ExecutionScope::new(),
-                            fio::OPEN_RIGHT_READABLE,
+                            fio::OpenFlags::RIGHT_READABLE,
                             fio::MODE_TYPE_DIRECTORY,
                             Path::dot(),
                             ServerEnd::new(dir.into_channel()),

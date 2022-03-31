@@ -37,7 +37,7 @@ async fn builtin_time_service_and_clock_routed() {
     let scope = ExecutionScope::new();
     dir.open(
         scope,
-        fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE,
+        fio::OpenFlags::DIRECTORY | fio::OpenFlags::RIGHT_READABLE,
         0,
         vfs::path::Path::dot(),
         ServerEnd::new(server),

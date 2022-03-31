@@ -26,12 +26,12 @@ pub fn open_in_isolated_devmgr(path: &str, flags: fio::OpenFlags) -> Result<File
 
 /// Opens a path as a directory
 pub fn open_dir_in_isolated_devmgr<P: AsRef<Path>>(path: P) -> Result<File, zx::Status> {
-    let flags = fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE;
+    let flags = fio::OpenFlags::DIRECTORY | fio::OpenFlags::RIGHT_READABLE;
     open_in_isolated_devmgr(path.as_ref().to_str().unwrap(), flags)
 }
 
 /// Opens a path as a file
 pub fn open_file_in_isolated_devmgr<P: AsRef<Path>>(path: P) -> Result<File, zx::Status> {
-    let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
+    let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE;
     open_in_isolated_devmgr(path.as_ref().to_str().unwrap(), flags)
 }

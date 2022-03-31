@@ -227,24 +227,24 @@ void Directory::Open(fuchsia::io::OpenFlags open_flags, fuchsia::io::OpenFlags p
   // we cross a remote mount point. This ensures binary compatibility with older clients who have
   // not yet transitioned to the new set of flags.
   // TODO(fxbug.dev/81185): Remove once all clients are updated to use the latest SDK.
-  if ((open_flags & fuchsia::io::OPEN_FLAG_POSIX_DEPRECATED) != fuchsia::io::OpenFlags()) {
-    open_flags |= fuchsia::io::OPEN_FLAG_POSIX_WRITABLE | fuchsia::io::OPEN_FLAG_POSIX_EXECUTABLE;
-    open_flags &= ~fuchsia::io::OPEN_FLAG_POSIX_DEPRECATED;
+  if ((open_flags & fuchsia::io::OpenFlags::POSIX_DEPRECATED) != fuchsia::io::OpenFlags()) {
+    open_flags |= fuchsia::io::OpenFlags::POSIX_WRITABLE | fuchsia::io::OpenFlags::POSIX_EXECUTABLE;
+    open_flags &= ~fuchsia::io::OpenFlags::POSIX_DEPRECATED;
   }
 
   // The POSIX compatibility flags allow the child dir connection to inherit
   // write/execute rights from its immediate parent. We remove the right inheritance
   // anywhere the parent node does not have the relevant right.
   if (Flags::IsPosixWritable(open_flags) && !Flags::IsWritable(parent_flags)) {
-    open_flags &= ~fuchsia::io::OPEN_FLAG_POSIX_WRITABLE;
+    open_flags &= ~fuchsia::io::OpenFlags::POSIX_WRITABLE;
   }
   if (Flags::IsPosixExecutable(open_flags) && !Flags::IsExecutable(parent_flags)) {
-    open_flags &= ~fuchsia::io::OPEN_FLAG_POSIX_EXECUTABLE;
+    open_flags &= ~fuchsia::io::OpenFlags::POSIX_EXECUTABLE;
   }
 
   if (n->IsRemote() && new_path_len > 0) {
     fuchsia::io::DirectoryPtr temp_dir;
-    status = n->Serve(open_flags | fuchsia::io::OPEN_FLAG_DIRECTORY,
+    status = n->Serve(open_flags | fuchsia::io::OpenFlags::DIRECTORY,
                       temp_dir.NewRequest().TakeChannel());
     if (status != ZX_OK) {
       return SendOnOpenEventOnError(open_flags, std::move(request), status);
@@ -257,16 +257,16 @@ void Directory::Open(fuchsia::io::OpenFlags open_flags, fuchsia::io::OpenFlags p
   // Perform POSIX rights expansion if required.
   if (n->IsDirectory()) {
     if (Flags::IsPosixWritable(open_flags))
-      open_flags |= (parent_flags & fuchsia::io::OPEN_RIGHT_WRITABLE);
+      open_flags |= (parent_flags & fuchsia::io::OpenFlags::RIGHT_WRITABLE);
     if (Flags::IsPosixExecutable(open_flags))
-      open_flags |= (parent_flags & fuchsia::io::OPEN_RIGHT_EXECUTABLE);
+      open_flags |= (parent_flags & fuchsia::io::OpenFlags::RIGHT_EXECUTABLE);
     // Strip flags now that rights have been expanded.
     open_flags &=
-        ~(fuchsia::io::OPEN_FLAG_POSIX_WRITABLE | fuchsia::io::OPEN_FLAG_POSIX_EXECUTABLE);
+        ~(fuchsia::io::OpenFlags::POSIX_WRITABLE | fuchsia::io::OpenFlags::POSIX_EXECUTABLE);
   }
 
   if (path_is_dir) {
-    open_flags |= fuchsia::io::OPEN_FLAG_DIRECTORY;
+    open_flags |= fuchsia::io::OpenFlags::DIRECTORY;
   }
   n->Serve(open_flags, std::move(request), dispatcher);
 }

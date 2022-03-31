@@ -23,7 +23,7 @@ impl FakePkgLocalMirror {
             .copy_local_repository_to_dir(
                 &io_util::directory::open_in_namespace(
                     dir.path().to_str().unwrap(),
-                    fio::OPEN_RIGHT_WRITABLE,
+                    fio::OpenFlags::RIGHT_WRITABLE,
                 )
                 .unwrap(),
                 url,
@@ -32,7 +32,7 @@ impl FakePkgLocalMirror {
         let pkg_local_mirror = PkgLocalMirror::new(
             &io_util::directory::open_in_namespace(
                 dir.path().to_str().unwrap(),
-                fio::OPEN_RIGHT_READABLE,
+                fio::OpenFlags::RIGHT_READABLE,
             )
             .unwrap(),
         )

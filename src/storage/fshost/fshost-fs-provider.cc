@@ -14,13 +14,13 @@ namespace fshost {
 
 zx::channel FshostFsProvider::CloneFs(const char* path) {
   fuchsia_io::wire::OpenFlags flags =
-      fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable |
-      fuchsia_io::wire::kOpenFlagDirectory | fuchsia_io::wire::kOpenFlagNoRemote;
+      fuchsia_io::wire::OpenFlags::kRightReadable | fuchsia_io::wire::OpenFlags::kRightWritable |
+      fuchsia_io::wire::OpenFlags::kDirectory | fuchsia_io::wire::OpenFlags::kNoRemote;
   if (strcmp(path, "data") == 0) {
     path = "/fs/data";
   } else if (strcmp(path, "blobexec") == 0) {
     path = "/blob";
-    flags |= fuchsia_io::wire::kOpenRightExecutable;
+    flags |= fuchsia_io::wire::OpenFlags::kRightExecutable;
   } else {
     FX_LOGS(ERROR) << "" << __FUNCTION__ << ": Cannot clone: " << path;
     return zx::channel();

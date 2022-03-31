@@ -33,7 +33,9 @@ impl FileActor {
             .home_dir
             .open_file(
                 &filename,
-                fio::OPEN_FLAG_CREATE | fio::OPEN_FLAG_CREATE_IF_ABSENT | fio::OPEN_RIGHT_WRITABLE,
+                fio::OpenFlags::CREATE
+                    | fio::OpenFlags::CREATE_IF_ABSENT
+                    | fio::OpenFlags::RIGHT_WRITABLE,
             )
             .await?;
         file.write(&data_bytes).await?;

@@ -39,7 +39,7 @@ typedef ReadFnStr = String? Function();
 /// Write callback, if any, is called when the connection is closed if the file
 /// content was ever modified while the connection was open.
 /// Modifications are: [fidl_fuchsia_io.File#write()] calls or opening a file
-/// for writing with the `openFlagTruncate` flag set.
+/// for writing with the `OpenFlags.truncate` flag set.
 class PseudoFile extends Vnode {
   final int _capacity;
   ReadFn? _readFn;
@@ -163,26 +163,29 @@ class PseudoFile extends Vnode {
   }
 
   int _validateFlags(OpenFlags parentFlags, OpenFlags flags) {
-    if (flags & openFlagDirectory != OpenFlags.$none) {
+    if (flags & OpenFlags.directory != OpenFlags.$none) {
       return ZX.ERR_NOT_DIR;
     }
-    var allowedFlags = openFlagDescribe |
-        openFlagNodeReference |
-        openFlagPosixDeprecated |
-        openFlagPosixWritable |
-        openFlagPosixExecutable |
-        cloneFlagSameRights;
+    var allowedFlags = OpenFlags.describe |
+        OpenFlags.nodeReference |
+        OpenFlags.posixDeprecated |
+        OpenFlags.posixWritable |
+        OpenFlags.posixExecutable |
+        OpenFlags.cloneSameRights;
     if (_readFn != null) {
-      allowedFlags |= openRightReadable;
+      allowedFlags |= OpenFlags.rightReadable;
     }
     if (_writeFn != null) {
-      allowedFlags |= openRightWritable | openFlagTruncate;
+      allowedFlags |= OpenFlags.rightWritable | OpenFlags.truncate;
     }
 
     // allowedFlags takes precedence over prohibited_flags.
-    const prohibitedFlags = openFlagAppend;
+    const prohibitedFlags = OpenFlags.append;
 
-    final flagsDependentOnParentFlags = [openRightReadable, openRightWritable];
+    final flagsDependentOnParentFlags = [
+      OpenFlags.rightReadable,
+      OpenFlags.rightWritable
+    ];
     for (final flag in flagsDependentOnParentFlags) {
       if (flags & flag != OpenFlags.$none &&
           parentFlags & flag == OpenFlags.$none) {
@@ -259,7 +262,7 @@ class _FileConnection extends File {
       _buffer = Uint8List(capacity);
     }
 
-    if (flags & openFlagTruncate != OpenFlags.$none) {
+    if (flags & OpenFlags.truncate != OpenFlags.$none) {
       // don't call read handler on truncate.
       _wasWritten = true;
     } else {
@@ -283,7 +286,7 @@ class _FileConnection extends File {
   @override
   Stream<File$OnOpen$Response> get onOpen {
     File$OnOpen$Response d;
-    if ((flags & openFlagDescribe) == OpenFlags.$none) {
+    if ((flags & OpenFlags.describe) == OpenFlags.$none) {
       d = File$OnOpen$Response(ZX.ERR_NOT_FILE, null);
     } else {
       NodeInfo nodeInfo = file.describe();
@@ -322,7 +325,7 @@ class _FileConnection extends File {
     if (Flags.shouldCloneWithSameRights(flags)) {
       newFlags &= (~openRights);
       newFlags |= (this.flags & openRights);
-      newFlags &= ~cloneFlagSameRights;
+      newFlags &= ~OpenFlags.cloneSameRights;
     }
 
     if (!Flags.stricterOrSameRights(newFlags, this.flags)) {
@@ -514,7 +517,7 @@ class _FileConnection extends File {
   }
 
   int _handleResize(int length) {
-    if ((flags & openRightWritable) == OpenFlags.$none) {
+    if ((flags & OpenFlags.rightWritable) == OpenFlags.$none) {
       return ZX.ERR_ACCESS_DENIED;
     }
     if (file._writeFn == null) {
@@ -566,7 +569,7 @@ class _FileConnection extends File {
   }
 
   File$ReadDeprecated$Response _handleRead(int count, int offset) {
-    if ((flags & openRightReadable) == OpenFlags.$none) {
+    if ((flags & OpenFlags.rightReadable) == OpenFlags.$none) {
       return File$ReadDeprecated$Response(ZX.ERR_ACCESS_DENIED, Uint8List(0));
     }
     if (file._readFn == null) {
@@ -591,7 +594,7 @@ class _FileConnection extends File {
   }
 
   File$WriteDeprecated$Response _handleWrite(int offset, Uint8List data) {
-    if ((flags & openRightWritable) == OpenFlags.$none) {
+    if ((flags & OpenFlags.rightWritable) == OpenFlags.$none) {
       return File$WriteDeprecated$Response(ZX.ERR_ACCESS_DENIED, 0);
     }
     if (file._writeFn == null) {

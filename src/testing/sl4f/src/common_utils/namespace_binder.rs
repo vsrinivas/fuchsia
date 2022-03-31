@@ -48,7 +48,7 @@ impl NamespaceBinder {
                 let (proxy, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
                 dir.clone().open(
                     self.scope.clone(),
-                    fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                    fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
                     fio::MODE_TYPE_DIRECTORY,
                     vfs::path::Path::dot(),
                     ServerEnd::new(server.into_channel()),

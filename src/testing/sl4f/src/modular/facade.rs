@@ -262,7 +262,7 @@ impl ModularFacade {
                         pseudo_directory! {"startup.config" => read_only_const(config_str.as_ref())};
                     pkg_dir.open(
                         scope.clone(),
-                        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
                         fio::MODE_TYPE_DIRECTORY,
                         vfs::path::Path::dot(),
                         ServerEnd::new(dir2_server),
@@ -435,7 +435,7 @@ mod tests {
                     let file_proxy = io_util::directory::open_file(
                         &dir_proxy,
                         "startup.config",
-                        fio::OPEN_RIGHT_READABLE,
+                        fio::OpenFlags::RIGHT_READABLE,
                     )
                     .await
                     .unwrap();

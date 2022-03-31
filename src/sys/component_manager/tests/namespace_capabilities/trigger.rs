@@ -39,7 +39,7 @@ async fn run_trigger_service(mut stream: ftest::TriggerRequestStream) {
         // Attempt to open test-pkg (a component manager namespace capability)
         let file = io_util::open_file_in_namespace(
             "/test-pkg/data/testdata",
-            io_util::OPEN_RIGHT_READABLE,
+            io_util::OpenFlags::RIGHT_READABLE,
         )
         .expect("could not open testdata");
         let contents = io_util::read_file(&file).await.expect("could not read file");

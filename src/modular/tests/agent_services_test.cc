@@ -775,8 +775,9 @@ class BuggyOutgoingDirAgent {
     //   svc/ -> composed_service_dir (type: ComposedServiceDir)
     //           with fallback: hidden_service_dir_ (type: PseudoDir)
     fuchsia::io::DirectoryPtr hidden_service_dir_ptr;
-    hidden_service_dir_->Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE |
-                                   fuchsia::io::OPEN_FLAG_DIRECTORY,
+    hidden_service_dir_->Serve(fuchsia::io::OpenFlags::RIGHT_READABLE |
+                                   fuchsia::io::OpenFlags::RIGHT_WRITABLE |
+                                   fuchsia::io::OpenFlags::DIRECTORY,
                                hidden_service_dir_ptr.NewRequest().TakeChannel());
 
     auto composed_service_dir = std::make_unique<vfs::ComposedServiceDir>();

@@ -35,12 +35,13 @@ int main(int argc, char* argv[]) {
   fidl::InterfaceHandle<fuchsia::io::Node> ra_dir;
   fidl::InterfaceHandle<fuchsia::io::Node> r_after_scoped_dir;
 
-  memfs_dir->Clone(fuchsia::io::OPEN_RIGHT_READABLE, ro_dir.NewRequest());
-  memfs_dir->Clone(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+  memfs_dir->Clone(fuchsia::io::OpenFlags::RIGHT_READABLE, ro_dir.NewRequest());
+  memfs_dir->Clone(fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
                    rw_dir.NewRequest());
-  memfs_dir->Clone(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_EXECUTABLE,
-                   rx_dir.NewRequest());
-  memfs_dir->Clone(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+  memfs_dir->Clone(
+      fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_EXECUTABLE,
+      rx_dir.NewRequest());
+  memfs_dir->Clone(fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
                    r_after_scoped_dir.NewRequest());
 
   svc::Outgoing outgoing(loop.dispatcher());

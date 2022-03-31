@@ -161,7 +161,7 @@ impl FvmInstance {
 /// Gets the full path to a volume matching the given instance GUID at the given
 /// /dev/class/block path. This function will wait until a matching volume is found.
 pub async fn get_volume_path(instance_guid: &Guid) -> PathBuf {
-    let dir = Directory::from_namespace(BLOCK_PATH, fio::OPEN_RIGHT_READABLE).unwrap();
+    let dir = Directory::from_namespace(BLOCK_PATH, fio::OpenFlags::RIGHT_READABLE).unwrap();
     let block_path = PathBuf::from(BLOCK_PATH);
     loop {
         // TODO(xbhatnag): Find a better way to wait for the volume to appear

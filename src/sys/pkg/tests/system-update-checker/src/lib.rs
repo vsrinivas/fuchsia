@@ -97,12 +97,12 @@ impl TestEnvBuilder {
         // Add fake directories.
         let misc = io_util::directory::open_in_namespace(
             mounts.misc_ota.path().to_str().unwrap(),
-            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+            io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
         )
         .unwrap();
         let pkgfs_system = io_util::directory::open_in_namespace(
             mounts.pkgfs_system.path().to_str().unwrap(),
-            io_util::OPEN_RIGHT_READABLE,
+            io_util::OpenFlags::RIGHT_READABLE,
         )
         .unwrap();
         fs.dir("misc").add_remote("ota", misc);

@@ -122,7 +122,7 @@ impl RuntimeDirBuilder {
         // Serve the runtime directory
         runtime_directory.clone().open(
             ExecutionScope::new(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             0,
             fvfsPath::dot(),
             self.server_end,

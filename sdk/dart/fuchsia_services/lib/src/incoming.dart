@@ -121,7 +121,8 @@ class Incoming {
     }
 
     // connection flags for service: can read & write from target object.
-    final OpenFlags _openFlags = openRightReadable | openRightWritable;
+    final OpenFlags _openFlags =
+        OpenFlags.rightReadable | OpenFlags.rightWritable;
     // 0755
     const int _openMode = 0x1ED;
 

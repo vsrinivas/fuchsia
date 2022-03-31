@@ -162,7 +162,7 @@ impl Resolver for RemoteResolver {
             fidl::Channel::create().map_err(ResolverError::internal)?;
         let component = self.component.upgrade().map_err(ResolverError::routing_error)?;
         let open_options = OpenResolverOptions {
-            flags: fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            flags: fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             open_mode: fio::MODE_TYPE_SERVICE,
             server_chan: &mut server_end,
         };

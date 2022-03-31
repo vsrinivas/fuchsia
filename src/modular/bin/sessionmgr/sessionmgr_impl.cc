@@ -367,10 +367,10 @@ void SessionmgrImpl::InitializeSessionCtl() {
 
 void SessionmgrImpl::ServeSvcFromV1SessionmgrDir(
     fidl::InterfaceRequest<fuchsia::io::Directory> svc_from_v1_sessionmgr) {
-  zx_status_t status = svc_from_v1_sessionmgr_dir_.Serve(fuchsia::io::OPEN_RIGHT_READABLE |
-                                                             fuchsia::io::OPEN_RIGHT_WRITABLE |
-                                                             fuchsia::io::OPEN_FLAG_DIRECTORY,
-                                                         svc_from_v1_sessionmgr.TakeChannel());
+  zx_status_t status = svc_from_v1_sessionmgr_dir_.Serve(
+      fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE |
+          fuchsia::io::OpenFlags::DIRECTORY,
+      svc_from_v1_sessionmgr.TakeChannel());
   if (status != ZX_OK) {
     FX_PLOGS(FATAL, status) << "Failed to serve the svc_from_v1_sessionmgr_dir";
   }

@@ -79,7 +79,7 @@ impl<D: Borrow<fio::DirectoryProxy>, P: DiscoverableProtocolMarker> ProtocolConn
         self.svc_dir
             .borrow()
             .open(
-                fio::OPEN_RIGHT_READABLE,
+                fio::OpenFlags::RIGHT_READABLE,
                 0, /* mode */
                 P::NAME,
                 fidl::endpoints::ServerEnd::new(server_end),
@@ -102,7 +102,7 @@ impl<D: Borrow<fio::DirectoryProxy>, P: DiscoverableProtocolMarker> ProtocolConn
 
 /// Clone the handle to the service directory in the application's root namespace.
 pub fn clone_namespace_svc() -> Result<fio::DirectoryProxy, Error> {
-    io_util::directory::open_in_namespace(SVC_DIR, fio::OPEN_RIGHT_READABLE)
+    io_util::directory::open_in_namespace(SVC_DIR, fio::OpenFlags::RIGHT_READABLE)
         .context("error opening svc directory")
 }
 
@@ -120,9 +120,11 @@ pub fn new_protocol_connector<P: DiscoverableProtocolMarker>(
 pub fn new_protocol_connector_at<P: DiscoverableProtocolMarker>(
     service_directory_path: &str,
 ) -> Result<ProtocolConnector<fio::DirectoryProxy, P>, Error> {
-    let dir =
-        io_util::directory::open_in_namespace(service_directory_path, fio::OPEN_RIGHT_READABLE)
-            .context("error opening service directory")?;
+    let dir = io_util::directory::open_in_namespace(
+        service_directory_path,
+        fio::OpenFlags::RIGHT_READABLE,
+    )
+    .context("error opening service directory")?;
 
     Ok(ProtocolConnector::new(dir))
 }
@@ -199,7 +201,7 @@ pub fn connect_to_named_protocol_at_dir_root<P: DiscoverableProtocolMarker>(
     let proxy = io_util::open_node(
         directory,
         &PathBuf::from(filename),
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         fio::MODE_TYPE_SERVICE,
     )
     .context("Failed to open protocol in directory")?;
@@ -214,7 +216,7 @@ pub fn connect_to_protocol_at_dir_svc<P: DiscoverableProtocolMarker>(
     let proxy = io_util::open_node(
         directory,
         &PathBuf::from(format!("svc/{}", P::PROTOCOL_NAME)),
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         fio::MODE_TYPE_SERVICE,
     )
     .context("Failed to open protocol in directory")?;
@@ -226,7 +228,7 @@ struct DirectoryProtocolImpl(fio::DirectoryProxy);
 
 impl MemberOpener for DirectoryProtocolImpl {
     fn open_member(&self, member: &str, server_end: zx::Channel) -> Result<(), fidl::Error> {
-        let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
+        let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE;
         self.0.open(flags, fio::MODE_TYPE_SERVICE, member, ServerEnd::new(server_end))?;
         Ok(())
     }
@@ -264,7 +266,7 @@ pub fn connect_to_service_instance_at<S: ServiceMarker>(
     service_path.push(instance);
     let directory_proxy = io_util::open_directory_in_namespace(
         service_path.to_str().unwrap(),
-        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
     )?;
     Ok(S::Proxy::from_member_opener(Box::new(DirectoryProtocolImpl(directory_proxy))))
 }
@@ -287,7 +289,7 @@ pub fn connect_to_service_instance_at_dir<S: ServiceMarker>(
     instance: &str,
 ) -> Result<S::Proxy, Error> {
     let service_path = Path::new(S::SERVICE_NAME).join(instance);
-    let flags = io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE;
+    let flags = io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE;
     let directory_proxy = io_util::open_directory(directory, service_path.as_path(), flags)?;
     Ok(S::Proxy::from_member_opener(Box::new(DirectoryProtocolImpl(directory_proxy))))
 }
@@ -310,7 +312,8 @@ pub fn connect_to_service_instance_at_channel<S: ServiceMarker>(
 ) -> Result<S::Proxy, Error> {
     let service_path = Path::new(S::SERVICE_NAME).join(instance);
     let (directory_proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
-    let flags = fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
+    let flags =
+        fio::OpenFlags::DIRECTORY | fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE;
     fdio::open_at(directory, service_path.to_str().unwrap(), flags, server_end.into_channel())?;
     Ok(S::Proxy::from_member_opener(Box::new(DirectoryProtocolImpl(directory_proxy))))
 }
@@ -320,7 +323,7 @@ pub fn open_service<S: ServiceMarker>() -> Result<fio::DirectoryProxy, Error> {
     let service_path = Path::new(SVC_DIR).join(S::SERVICE_NAME);
     io_util::open_directory_in_namespace(
         service_path.to_str().unwrap(),
-        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
     )
 }
 
@@ -332,7 +335,7 @@ pub fn open_service_at_dir<S: ServiceMarker>(
     io_util::open_directory(
         directory,
         Path::new(S::SERVICE_NAME),
-        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
     )
 }
 
@@ -994,7 +997,7 @@ mod tests {
         let scope = ExecutionScope::new();
         dir.open(
             scope,
-            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_READABLE,
             fio::MODE_TYPE_DIRECTORY,
             vfs::path::Path::dot(),
             ServerEnd::new(dir_server.into_channel()),

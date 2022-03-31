@@ -162,7 +162,7 @@ impl TestDevice {
         let dev_dir = io_util::directory::open_directory(
             realm.get_exposed_dir(),
             "dev",
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .await
         .context("failed to open /dev file")?;
@@ -252,7 +252,7 @@ async fn dev_watcher_maybe_in_namespace(
         let open_dir = io_util::directory::open_directory(
             dir,
             stripped_path.as_ref(),
-            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_READABLE,
         )
         .await?;
         DeviceWatcher::new(path, open_dir, WATCH_TIMEOUT).await
@@ -358,7 +358,7 @@ mod tests {
         let dev_dir = io_util::directory::open_directory(
             realm.root.get_exposed_dir(),
             "dev",
-            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_READABLE,
         )
         .await
         .unwrap();

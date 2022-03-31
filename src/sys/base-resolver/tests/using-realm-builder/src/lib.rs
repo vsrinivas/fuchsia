@@ -87,9 +87,9 @@ impl TestEnvBuilder {
                     let scope = ExecutionScope::new();
                     let () = out_dir.open(
                         scope.clone(),
-                        fio::OPEN_RIGHT_READABLE
-                            | fio::OPEN_RIGHT_WRITABLE
-                            | fio::OPEN_RIGHT_EXECUTABLE,
+                        fio::OpenFlags::RIGHT_READABLE
+                            | fio::OpenFlags::RIGHT_WRITABLE
+                            | fio::OpenFlags::RIGHT_EXECUTABLE,
                         0,
                         vfs::path::Path::dot(),
                         handles.outgoing_dir.into_channel().into(),

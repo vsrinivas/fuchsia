@@ -253,7 +253,7 @@ mod tests {
         // minimum that a process needs, and use this test's process handle for real values.
         let pkg = io_util::open_directory_in_namespace(
             "/pkg",
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )
         .expect("failed to open pkg");
         let args = LaunchProcessArgs {

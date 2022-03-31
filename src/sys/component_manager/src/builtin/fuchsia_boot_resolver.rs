@@ -50,7 +50,7 @@ impl FuchsiaBootResolver {
 
         let proxy = io_util::open_directory_in_namespace(
             bootfs_dir.to_str().unwrap(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )?;
         Ok(Some(Self::new_from_directory(proxy)))
     }
@@ -109,7 +109,7 @@ impl FuchsiaBootResolver {
         let path_proxy = io_util::directory::open_directory_no_describe(
             &self.boot_proxy,
             package_path,
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )
         .map_err(|_| fsys::ResolverError::Internal)?;
 
@@ -211,7 +211,7 @@ mod tests {
         let (client, server) = create_proxy::<fio::DirectoryMarker>().unwrap();
         root.open(
             fs_scope.clone(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
             0,
             vfs::path::Path::dot(),
             ServerEnd::new(server.into_channel()),
@@ -227,7 +227,7 @@ mod tests {
         let root = pseudo_directory! {
             "packages" => pseudo_directory! {
                 "hello-world" => remote_dir(
-                    open_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE).unwrap(),
+                    open_in_namespace("/pkg", fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE).unwrap(),
                 ),
             },
         };
@@ -282,7 +282,7 @@ mod tests {
 
         let dir_proxy = package_dir.unwrap().into_proxy().unwrap();
         let path = Path::new("meta/hello-world-rust.cm");
-        let file_proxy = io_util::open_file(&dir_proxy, path, fio::OPEN_RIGHT_READABLE)
+        let file_proxy = io_util::open_file(&dir_proxy, path, fio::OpenFlags::RIGHT_READABLE)
             .expect("could not open cm");
 
         let decl = io_util::read_file_fidl::<fdecl::Component>(&file_proxy)

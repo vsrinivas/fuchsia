@@ -111,9 +111,9 @@ fidl::ClientEnd<fuchsia_io::Directory> SystemInstance::CloneFs(const char* path)
     zx::unowned_channel fs = devfs_root_borrow();
     path += 4;
     status = fdio_open_at(fs->get(), path,
-                          static_cast<uint32_t>(fuchsia_io::wire::kOpenRightReadable |
-                                                fuchsia_io::wire::kOpenRightWritable |
-                                                fuchsia_io::wire::kOpenFlagDirectory),
+                          static_cast<uint32_t>(fuchsia_io::wire::OpenFlags::kRightReadable |
+                                                fuchsia_io::wire::OpenFlags::kRightWritable |
+                                                fuchsia_io::wire::OpenFlags::kDirectory),
                           endpoints->server.TakeChannel().release());
   }
   if (status != ZX_OK) {
