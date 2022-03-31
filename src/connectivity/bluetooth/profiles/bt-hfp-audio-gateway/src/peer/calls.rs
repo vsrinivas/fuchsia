@@ -5,7 +5,7 @@
 use {
     super::calls::{
         call_list::CallList,
-        types::{CallIndicators, CallIndicatorsUpdates},
+        types::{CallHeld, CallIndicators, CallIndicatorsUpdates},
     },
     crate::{
         error::{CallError, Error},
@@ -391,6 +391,12 @@ impl Calls {
         self.calls().any(|c| c.1.state == CallState::TransferredToAg)
     }
 
+    /// Return true if at least one call is in the Held state.
+    #[cfg(test)]
+    pub fn is_call_held(&self) -> bool {
+        self.calls().any(|c| c.1.state == CallState::OngoingHeld)
+    }
+
     /// Remove all references to the call assigned to `index`.
     /// Removing a call signals that it has been terminated by the Call Manager
     /// so a CallState::Terminated is recorded to pending calls.
@@ -629,6 +635,54 @@ impl Calls {
             }
         }
     }
+
+    /// Compute the call indicators to send after changes to calls have been polled and the call state updated.
+    /// TODO(fxb/96764) Move this to call_changes.
+    fn call_indicators_updates(
+        &mut self,
+        call_was_active: bool,
+        call_was_transferred: bool,
+        old_call_held_index: Option<CallIdx>,
+    ) -> Option<CallIndicatorsUpdates> {
+        let call_is_active = self.is_call_active();
+        let call_is_transferred = self.is_call_transferred_to_ag();
+
+        let new_call_held_index = self.oldest_by_state(CallState::OngoingHeld).map(|(idx, _)| idx);
+
+        let mut report_call_transferred = false;
+        let mut call_indicators_updates = Default::default();
+
+        if self.pending.report_now() {
+            let previous = self.reported_indicators;
+            self.reported_indicators = self.indicators();
+            // Generate a list of all the indicators that have changed as a result of the
+            // new call state.
+            call_indicators_updates = self.reported_indicators.difference(previous);
+            // Determine whether a call has been transferred to or from the AG/HF, in which case
+            // we'll need to report this so the task can update the SCO state even if the
+            // indicators are empty.
+            report_call_transferred = (call_was_active && call_is_transferred)
+                || (call_was_transferred && call_is_active);
+        }
+
+        // If the active call has been swapped with a held call, force an indicator to be produced
+        // to communcate this, even if one wouldn't be otherwise.
+        if call_indicators_updates.callheld == None
+            && old_call_held_index.is_some()
+            && new_call_held_index.is_some()
+            && call_was_active
+            && call_is_active
+            && old_call_held_index != new_call_held_index
+        {
+            call_indicators_updates.callheld = Some(CallHeld::HeldAndActive)
+        }
+
+        if !call_indicators_updates.is_empty() || report_call_transferred {
+            Some(call_indicators_updates)
+        } else {
+            None
+        }
+    }
 }
 
 impl Unpin for Calls {}
@@ -646,30 +700,19 @@ impl Stream for Calls {
         let call_was_active = self.is_call_active();
         let call_was_transferred = self.is_call_transferred_to_ag();
 
+        let old_call_held_index = self.oldest_by_state(CallState::OngoingHeld).map(|(idx, _)| idx);
+
         // Update the state of all new and ongoing calls.
         self.poll_and_consume_new_calls(cx);
         self.poll_and_consume_call_updates(cx);
 
-        let call_is_active = self.is_call_active();
-        let call_is_transferred = self.is_call_transferred_to_ag();
-
-        let mut report_call_transferred = false;
-
-        let mut call_indicators_updates = Default::default();
-        if self.pending.report_now() {
-            let previous = self.reported_indicators;
-            self.reported_indicators = self.indicators();
-            // Return a list of all the indicators that have changed as a result of the
-            // new call state.
-            call_indicators_updates = self.reported_indicators.difference(previous);
-            report_call_transferred = (call_was_active && call_is_transferred)
-                || (call_was_transferred && call_is_active);
-        }
-
-        if !call_indicators_updates.is_empty() || report_call_transferred {
-            Poll::Ready(Some(call_indicators_updates))
-        } else {
-            Poll::Pending
+        match self.call_indicators_updates(
+            call_was_active,
+            call_was_transferred,
+            old_call_held_index,
+        ) {
+            Some(call_indicators_updates) => Poll::Ready(Some(call_indicators_updates)),
+            None => Poll::Pending,
         }
     }
 }
@@ -928,6 +971,19 @@ mod tests {
     /// Expects a WatchState call to be the next pending item on `stream`.
     /// Returns the responder or panics.
     #[track_caller]
+    fn wait_for_call_state(
+        exec: &mut fasync::TestExecutor,
+        stream: &mut CallRequestStream,
+    ) -> CallRequest {
+        match exec.run_until_stalled(&mut stream.next()) {
+            Poll::Ready(Some(Ok(req))) => req,
+            result => panic!("Unexpected call request result: {:?}", result),
+        }
+    }
+
+    /// Expects a WatchState call to be the next pending item on `stream`.
+    /// Returns the responder or panics.
+    #[track_caller]
     fn watch_state_responder(
         exec: &mut fasync::TestExecutor,
         stream: &mut CallRequestStream,
@@ -1099,6 +1155,84 @@ mod tests {
         assert!(calls.is_call_active());
         assert!(!calls.is_call_transferred_to_ag());
         assert!(active_update.is_empty());
+    }
+
+    #[fuchsia::test]
+    fn calls_swap_produce_indicators() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+
+        let (proxy, mut peer_stream) =
+            fidl::endpoints::create_proxy_and_stream::<PeerHandlerMarker>().unwrap();
+        let mut calls = Calls::new(Some(proxy));
+
+        // No active call when there are no calls.
+        assert!(!calls.is_call_active());
+
+        // Create new call
+        poll_calls_until_pending(&mut exec, &mut calls);
+        let mut call_stream_1 = new_call(
+            &mut exec,
+            &mut peer_stream,
+            "1",
+            CallState::IncomingRinging,
+            CallDirection::MobileTerminated,
+        );
+        poll_calls_until_pending(&mut exec, &mut calls);
+
+        // Answer call
+        update_call(&mut exec, &mut call_stream_1, CallState::OngoingActive);
+        poll_calls_until_pending(&mut exec, &mut calls);
+        assert!(calls.is_call_active());
+
+        // Create second new call
+        poll_calls_until_pending(&mut exec, &mut calls);
+        let mut call_stream_2 = new_call(
+            &mut exec,
+            &mut peer_stream,
+            "2",
+            CallState::IncomingRinging,
+            CallDirection::MobileTerminated,
+        );
+        poll_calls_until_pending(&mut exec, &mut calls);
+
+        // Answer call from call manager and hold old call
+        update_call(&mut exec, &mut call_stream_1, CallState::OngoingHeld);
+        update_call(&mut exec, &mut call_stream_2, CallState::OngoingActive);
+        poll_calls_until_pending(&mut exec, &mut calls);
+        assert!(calls.is_call_active());
+        assert!(calls.is_call_held());
+        let first_active_idx = calls.oldest_by_state(CallState::OngoingActive).map(|(idx, _)| idx);
+        let first_held_idx = calls.oldest_by_state(CallState::OngoingHeld).map(|(idx, _)| idx);
+
+        // Swap held and active calls.
+        // The HF sends a command to hold the current active call and make the held call active.
+        calls.hold(CallHoldAction::HoldAllExceptSpecified(first_held_idx.unwrap())).expect("Hold.");
+        let watch_responder_1 = watch_state_responder(&mut exec, &mut call_stream_1);
+        let watch_responder_2 = watch_state_responder(&mut exec, &mut call_stream_2);
+
+        // The calls module sends a call state change to the Call Manager
+        assert_matches!(
+            wait_for_call_state(&mut exec, &mut call_stream_2),
+            CallRequest::RequestHold { .. }
+        );
+
+        // Simulate call namager responding when it has updated the state.
+        watch_responder_1.send(CallState::OngoingActive).expect("Call 1 held");
+        watch_responder_2.send(CallState::OngoingHeld).expect("Call 2 active");
+
+        // Make sure we get an indicator for the swap.
+        let held_update = assert_calls_indicators(&mut exec, &mut calls);
+        assert_eq!(held_update.callheld, Some(CallHeld::HeldAndActive));
+
+        // Make sure the calls state is both held and active.
+        assert!(calls.is_call_active());
+        assert!(calls.is_call_held());
+
+        // Confirm that the calls actually swapped.
+        let second_active_idx = calls.oldest_by_state(CallState::OngoingActive).map(|(idx, _)| idx);
+        let second_held_idx = calls.oldest_by_state(CallState::OngoingHeld).map(|(idx, _)| idx);
+        assert_eq!(first_active_idx, second_held_idx);
+        assert_eq!(second_active_idx, first_held_idx);
     }
 
     #[fuchsia::test]
