@@ -128,4 +128,29 @@ void AnnotationControllerImpl::GetAnnotations(GetAnnotationsCallback callback) {
   callback(std::move(result));
 }
 
+void AnnotationControllerImpl::WatchAnnotations(WatchAnnotationsCallback callback) {
+  if (!watch_annotations_called_) {
+    watch_annotations_called_ = true;
+    GetAnnotations(std::move(reinterpret_cast<GetAnnotationsCallback&>(callback)));
+    return;
+  }
+
+  session_storage_->SubscribeAnnotationsUpdated(
+      [story_id = story_id_, callback = std::move(callback)](
+          std::string updated_story_id,
+          const std::vector<fuchsia::modular::Annotation>& annotations,
+          const std::set<std::string>& /*annotation_keys_added*/,
+          const std::set<std::string>& /*annotation_keys_deleted*/) {
+        if (updated_story_id != story_id) {
+          return WatchInterest::kContinue;
+        }
+
+        fuchsia::element::AnnotationController_WatchAnnotations_Response response{
+            modular::annotations::ToElementAnnotations(annotations)};
+        fuchsia::element::AnnotationController_WatchAnnotations_Result result{};
+        result.set_response(std::move(response));
+        callback(std::move(result));
+        return WatchInterest::kStop;
+      });
+}
 }  // namespace modular

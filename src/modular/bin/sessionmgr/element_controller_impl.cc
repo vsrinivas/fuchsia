@@ -50,4 +50,8 @@ void ElementControllerImpl::GetAnnotations(GetAnnotationsCallback callback) {
   annotation_controller_->GetAnnotations(std::move(callback));
 }
 
+void ElementControllerImpl::WatchAnnotations(WatchAnnotationsCallback callback) {
+  annotation_controller_->WatchAnnotations(std::move(callback));
+}
+
 }  // namespace modular

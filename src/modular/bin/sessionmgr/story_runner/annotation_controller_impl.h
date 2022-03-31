@@ -28,7 +28,15 @@ class AnnotationControllerImpl : public fuchsia::element::AnnotationController {
   // |AnnotationController|
   void GetAnnotations(GetAnnotationsCallback callback) override;
 
+  // |AnnotationController|
+  void WatchAnnotations(WatchAnnotationsCallback callback) override;
+
  private:
+  // When false, |WatchAnnotations| returns immediately with the current annotations.
+  // Set to true after the initial call to |WatchAnnotations|, indicating that subsequent
+  // calls will return only when the annotations are updated.
+  bool watch_annotations_called_{false};
+
   // The ID of the story containing the element associated with this annotation controller.
   std::string story_id_;
 
