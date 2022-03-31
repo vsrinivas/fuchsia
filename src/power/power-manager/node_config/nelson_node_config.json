@@ -86,6 +86,46 @@
       "temperature_input_configs": [
         {
           "temperature_handler_node_name": "soc_pll_thermal",
+          "onset_temperature_c": 77.0,
+          "reboot_temperature_c": 97.0,
+          "poll_interval_s": 1,
+          "filter_time_constant_s": 5
+        },
+        {
+          "temperature_handler_node_name": "thermistor_thread",
+          "onset_temperature_c": 55.0,
+          "reboot_temperature_c": 75.0,
+          "poll_interval_s": 1,
+          "filter_time_constant_s": 5
+        },
+        {
+          "temperature_handler_node_name": "thermistor_audio",
+          "onset_temperature_c": 60.0,
+          "reboot_temperature_c": 80.0,
+          "poll_interval_s": 1,
+          "filter_time_constant_s": 5
+        }
+      ]
+    },
+    "dependencies": {
+      "system_shutdown_node": "sys_shutdown",
+      "thermal_load_notify_nodes": [
+        "thermal_state_handler"
+      ],
+      "temperature_handler_node_names": [
+        "soc_pll_thermal",
+        "thermistor_thread",
+        "thermistor_audio"
+      ]
+    }
+  },
+  {
+    "type": "ThermalLoadDriver",
+    "name": "legacy_thermal_load_driver",
+    "config": {
+      "temperature_input_configs": [
+        {
+          "temperature_handler_node_name": "soc_pll_thermal",
           "onset_temperature_c": 92.0,
           "reboot_temperature_c": 97.0,
           "poll_interval_s": 1,
@@ -110,8 +150,7 @@
     "dependencies": {
       "system_shutdown_node": "sys_shutdown",
       "thermal_load_notify_nodes": [
-        "thermal_limiter",
-        "thermal_state_handler"
+        "thermal_limiter"
       ],
       "temperature_handler_node_names": [
         "soc_pll_thermal",

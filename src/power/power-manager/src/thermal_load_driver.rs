@@ -116,8 +116,17 @@ impl ThermalLoadDriverBuilder<'_> {
 
         let node = Rc::new(ThermalLoadDriver {
             system_shutdown_node: self.system_shutdown_node,
+
+            // TODO(93088): The "notify" portion is temporarily added to the Inspect node name to
+            // differentiate between the multiple instances of ThermalLoadDriver. It is needed only
+            // temporarily while a soft migration takes places to the new ThermalLoadDriver.
+            inspect: inspect_root.create_child(format!(
+                "ThermalLoadDriver (notify: {:?})",
+                self.thermal_load_notify_nodes.iter().map(|n| n.name()).collect::<Vec<String>>()
+            )),
+
             thermal_load_notify_nodes: self.thermal_load_notify_nodes,
-            inspect: inspect_root.create_child("ThermalLoadDriver"),
+
             polling_tasks: RefCell::new(Vec::new()),
         });
 
@@ -713,7 +722,7 @@ mod tests {
         assert_data_tree!(
             inspector,
             root: {
-                ThermalLoadDriver: {
+                "ThermalLoadDriver (notify: [\"mock_thermal_load_receiver\"])": {
                     fake_driver_path_1: {
                         onset_temperature_c: 0.0,
                         reboot_temperature_c: 50.0,
