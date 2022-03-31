@@ -8,7 +8,6 @@ group("tests") {
   testonly = true
   public_deps = [
     ":apptests",
-    ":pixeltests",
     ":swapchain_tests",
     ":unittests",
     "//src/graphics/examples:vkcube-on-scenic",
@@ -67,74 +66,6 @@ source_set("testing_deps") {
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/inspect",
-    "//zircon/system/ulib/zx",
-  ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-}
-
-source_set("pixel_test") {
-  testonly = true
-
-  public = [ "pixel_test.h" ]
-
-  sources = [ "pixel_test.cc" ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.ui.annotation",
-
-    # TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-    "//sdk/fidl/fuchsia.ui.lifecycle",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//sdk/lib/ui/scenic/cpp",
-    "//src/lib/ui/base_view",
-    "//src/ui/testing/views",
-    "//zircon/system/ulib/zx",
-  ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.ui.gfx",
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/lib/syslog/cpp",
-    "//third_party/googletest:gtest",
-  ]
-}
-
-source_set("magnification_pixeltests") {
-  testonly = true
-
-  sources = [ "magnification_pixeltest.cc" ]
-  deps = [
-    ":pixel_test",
-    "//sdk/fidl/fuchsia.accessibility",
-    "//sdk/lib/fidl/cpp",
-    "//src/lib/files",
-    "//src/ui/a11y/lib/magnifier/tests/mocks:mock_magnifier",
-    "//src/ui/testing/views",
-    "//third_party/googletest:gtest",
-  ]
-}
-
-source_set("scenic_pixeltests") {
-  testonly = true
-
-  sources = [ "scenic_pixeltest.cc" ]
-  include_dirs = [ "//src/ui/lib/escher" ]
-  deps = [
-    ":gfx_tests_main",
-    ":pixel_test",
-    ":testing_deps",
-    "//sdk/fidl/fuchsia.images",
-    "//sdk/lib/ui/scenic/cpp",
-    "//src/lib/fxl",
-    "//src/ui/lib/escher",
-    "//src/ui/lib/yuv",
-    "//src/ui/testing/views",
-    "//third_party/glm",
-    "//third_party/googletest:gtest",
     "//zircon/system/ulib/zx",
   ]
 
@@ -222,16 +153,6 @@ executable("apptests") {
   deps = [
     ":gfx_tests_main",
     ":testing_deps",
-  ]
-}
-
-executable("pixeltests") {
-  output_name = "gfx_pixeltests"
-
-  testonly = true
-  deps = [
-    ":magnification_pixeltests",
-    ":scenic_pixeltests",
   ]
 }
 

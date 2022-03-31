@@ -68,7 +68,6 @@ group("tests") {
     ":flatland_unittests",
     ":fuzzers",
     ":gfx_apptests",
-    ":gfx_pixeltests",
     ":gfx_swapchain_tests",
     ":gfx_unittests",
     ":gfx_util_unittests",
@@ -222,17 +221,6 @@ fuchsia_unittest_package("gfx_apptests") {
     log_settings = {
       max_severity = "ERROR"
     }
-  }
-}
-
-fuchsia_unittest_package("gfx_pixeltests") {
-  manifest = "meta/gfx_pixeltests.cmx"
-  deps = [ "lib/gfx/tests:pixeltests" ] + scenic_test_deps
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-    environments = [ aemu_env ] + magma_libvulkan_hardware_envs
   }
 }
 

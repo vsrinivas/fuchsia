@@ -5,7 +5,7 @@
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/ui/composition/cpp/fidl.h>
-#include <lib/fdio/directory.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/images/cpp/images.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/commands.h>
@@ -32,9 +32,10 @@
 #include "src/ui/lib/yuv/yuv.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_import_export_tokens.h"
 #include "src/ui/scenic/lib/gfx/engine/buffer_collection.h"
-#include "src/ui/scenic/lib/gfx/tests/pixel_test.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_util.h"
+#include "src/ui/scenic/tests/gfx_integration_tests/pixel_test.h"
+#include "src/ui/scenic/tests/utils/scenic_realm_builder.h"
 #include "src/ui/testing/views/background_view.h"
 #include "src/ui/testing/views/coordinate_test_view.h"
 #include "src/ui/testing/views/opacity_view.h"
@@ -50,9 +51,8 @@
 #pragma GCC diagnostic pop
 #include <vulkan/vulkan.hpp>
 
-namespace {
+namespace integration_tests {
 
-constexpr char kEnvironment[] = "ScenicPixelTest";
 // If you change the size of YUV buffers, make sure that the YUV test in
 // host_image_unittest.cc is also updated. Unlike that unit test,
 // scenic_pixel_test.cc has no way to confirm that it is going through the
@@ -64,10 +64,8 @@ const float kPi = glm::pi<float>();
 
 fuchsia::sysmem::AllocatorSyncPtr CreateSysmemAllocator() {
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
-  zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
-                                            sysmem_allocator.NewRequest().TakeChannel().release());
-  if (status != ZX_OK)
-    return nullptr;
+  auto context = sys::ComponentContext::Create();
+  context->svc()->Connect(sysmem_allocator.NewRequest());
   sysmem_allocator->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
   return sysmem_allocator;
 }
@@ -101,9 +99,18 @@ fuchsia::ui::composition::RegisterBufferCollectionArgs CreateArgs(
   return args;
 }
 
-class ScenicPixelTest : public gfx::PixelTest {
- protected:
-  ScenicPixelTest() : gfx::PixelTest(kEnvironment) {}
+class ScenicPixelTest : public PixelTest {
+ private:
+  RealmRoot SetupRealm() {
+    RealmBuilderArgs args = {.scene_owner = SceneOwner::ROOT_PRESENTER};
+
+    return ScenicRealmBuilder(std::move(args))
+        .AddRealmProtocol(fuchsia::ui::scenic::Scenic::Name_)
+        .AddRealmProtocol(fuchsia::ui::annotation::Registry::Name_)
+        .AddRealmProtocol(fuchsia::ui::composition::Allocator::Name_)
+        .AddSceneOwnerProtocol(fuchsia::ui::policy::Presenter::Name_)
+        .Build();
+  }
 };
 
 TEST_F(ScenicPixelTest, SolidColor) {
@@ -255,11 +262,11 @@ TEST_F(ScenicPixelTest, GlobalCoordinates) {
   const float pane_width = display_width / 2;
   const float pane_height = display_height / 2;
 
-  for (uint32_t i = 0; i < 2; i++) {
-    for (uint32_t j = 0; j < 2; j++) {
+  for (uint8_t i = 0; i < 2; i++) {
+    for (uint8_t j = 0; j < 2; j++) {
       scenic::Rectangle pane_shape(session, pane_width, pane_height);
       scenic::Material pane_material(session);
-      pane_material.SetColor(i * 255.f, 0, j * 255.f, 255);
+      pane_material.SetColor(i * 255, 0, j * 255, 255);
 
       scenic::ShapeNode pane_node(session);
       pane_node.SetShape(pane_shape);
@@ -288,7 +295,7 @@ TEST_F(ScenicPixelTest, GlobalCoordinates) {
   // camera.
   std::string camera_type[2] = {"orthographic", "perspective"};
   auto camera = test_session->SetUpCamera();
-  float fov[2] = {0, 2 * atan((display_height / 2.f) / gfx::TestSession::kDefaultCameraOffset)};
+  float fov[2] = {0, 2 * atan((display_height / 2.f) / kDefaultCameraOffset)};
 
   for (int i = 0; i < 2; i++) {
     FX_LOGS(INFO) << "Testing " << camera_type[i] << " camera";
@@ -327,9 +334,9 @@ TEST_F(ScenicPixelTest, StereoCamera) {
   const float viewport_width = display_width / 2;
   const float viewport_height = display_height;
 
-  float fovy = 2 * atan((display_height / 2.f) / gfx::TestSession::kDefaultCameraOffset);
-  glm::mat4 projection = glm::perspective(fovy, viewport_width / viewport_height, 0.1f,
-                                          gfx::TestSession::kDefaultCameraOffset);
+  float fovy = 2 * atan((display_height / 2.f) / kDefaultCameraOffset);
+  glm::mat4 projection =
+      glm::perspective(fovy, viewport_width / viewport_height, 0.1f, kDefaultCameraOffset);
   projection = glm::scale(projection, glm::vec3(1.f, -1.f, 1.f));
 
   std::array<float, 16> projection_arr;
@@ -376,13 +383,13 @@ TEST_F(ScenicPixelTest, StereoCamera) {
   // Test 8 columns of 4 samples each
   int num_x_samples = 8;
   int num_y_samples = 4;
-  float x_step = 1.f / num_x_samples;
-  float y_step = 1.f / num_y_samples;
+  float x_step = 1.f / static_cast<float>(num_x_samples);
+  float y_step = 1.f / static_cast<float>(num_y_samples);
   // i maps to x, j maps to y
   for (int i = 0; i < num_x_samples; i++) {
     for (int j = 0; j < num_y_samples; j++) {
-      float x = x_step / 2 + i * x_step;
-      float y = y_step / 2 + j * y_step;
+      float x = x_step / 2 + static_cast<float>(i) * x_step;
+      float y = y_step / 2 + static_cast<float>(j) * y_step;
       EXPECT_EQ(colors[expected[i][j]], screenshot.ColorAt(x, y))
           << "i = " << i << ", j = " << j << ", Sample Location: {" << x << ", " << y << "}";
     }
@@ -639,8 +646,8 @@ TEST_F(ScenicPixelTest, ViewBoundClipping) {
 
   // Pane extends all the way across the screen horizontally, but
   // the view is only on the left-hand side of the screen.
-  int32_t pane_width = display_width;
-  int32_t pane_height = 0.25 * display_height;
+  auto pane_width = display_width;
+  auto pane_height = 0.25f * display_height;
   scenic::Rectangle pane_shape(session, pane_width, pane_height);
   scenic::Material pane_material(session);
   pane_material.SetColor(255, 0, 255, 255);  // Magenta.
@@ -648,7 +655,7 @@ TEST_F(ScenicPixelTest, ViewBoundClipping) {
   scenic::ShapeNode pane_node(session);
   pane_node.SetShape(pane_shape);
   pane_node.SetMaterial(pane_material);
-  pane_node.SetTranslation(0.5 * pane_width, 0.5 * display_height, 0);
+  pane_node.SetTranslation(0.5f * pane_width, 0.5f * display_height, 0);
 
   // Second pane node should be completely outside the view bounds
   // along the z-axis and get clipped entirely.
@@ -657,7 +664,7 @@ TEST_F(ScenicPixelTest, ViewBoundClipping) {
   scenic::Material pane_material2(session);
   pane_material2.SetColor(0, 255, 255, 255);  // Another color.
   pane_node2.SetMaterial(pane_material2);
-  pane_node2.SetTranslation(0.5 * pane_width, display_height - 0.5 * pane_height, 3);
+  pane_node2.SetTranslation(0.5f * pane_width, display_height - 0.5f * pane_height, 3);
 
   test_session->scene.AddChild(view_holder);
   view.AddChild(pane_node);
@@ -666,9 +673,9 @@ TEST_F(ScenicPixelTest, ViewBoundClipping) {
   Present(session);
   scenic::Screenshot screenshot = TakeScreenshot();
 
-  scenic::Color unclipped_color = screenshot.ColorAt(0.1, 0.5);
-  scenic::Color clipped_color = screenshot.ColorAt(0.6, 0.5);
-  scenic::Color clipped_color2 = screenshot.ColorAt(0.1, 0.95);
+  scenic::Color unclipped_color = screenshot.ColorAt(0.1f, 0.5f);
+  scenic::Color clipped_color = screenshot.ColorAt(0.6f, 0.5f);
+  scenic::Color clipped_color2 = screenshot.ColorAt(0.1f, 0.95f);
 
   // Unclipped color should be magenta, clipped should be black.
   EXPECT_EQ(unclipped_color, scenic::Color(255, 0, 255, 255));
@@ -756,8 +763,8 @@ TEST_F(ScenicPixelTest, ViewBoundClippingWithTransforms) {
 
   // Pane extends across the entire right-side of the display, even though
   // its containing view is only in the top-right corner.
-  int32_t pane_width = display_width / 2;
-  int32_t pane_height = display_height;
+  auto pane_width = display_width / 2;
+  auto pane_height = display_height;
   scenic::Rectangle pane_shape(session2, pane_width, pane_height);
   scenic::Rectangle pane_shape2(session3, pane_width, pane_height);
 
@@ -793,10 +800,10 @@ TEST_F(ScenicPixelTest, ViewBoundClippingWithTransforms) {
 
   scenic::Screenshot screenshot = TakeScreenshot();
 
-  scenic::Color magenta_color = screenshot.ColorAt(0.6, 0.1);
-  scenic::Color magenta_color2 = screenshot.ColorAt(0.9, 0.4);
-  scenic::Color cyan_color = screenshot.ColorAt(0.6, 0.9);
-  scenic::Color black_color = screenshot.ColorAt(0.0, 0.5);
+  scenic::Color magenta_color = screenshot.ColorAt(0.6f, 0.1f);
+  scenic::Color magenta_color2 = screenshot.ColorAt(0.9f, 0.4f);
+  scenic::Color cyan_color = screenshot.ColorAt(0.6f, 0.9f);
+  scenic::Color black_color = screenshot.ColorAt(0.0f, 0.5f);
 
   // Upper-right quadrant should be magenta, lower-right quadrant
   // should be cyan. The left half of the screen should be black.
@@ -972,18 +979,19 @@ TEST_F(ScenicPixelTest, DISABLED_Compositor) {
 
   // Color correction data
   static const std::array<float, 3> preoffsets = {0, 0, 0};
-  static const std::array<float, 9> matrix = {.288299,  0.052709, -0.257912, 0.711701, 0.947291,
-                                              0.257912, 0.000000, -0.000000, 1.000000};
+  static const std::array<float, 9> matrix = {.288299f,  0.052709f,  -0.257912f,
+                                              0.711701f, 0.947291f,  0.257912f,
+                                              0.000000f, -0.000000f, 1.000000f};
   static const std::array<float, 3> postoffsets = {0, 0, 0};
 
-  static const glm::mat4 glm_matrix(.288299, 0.052709, -0.257912, 0.00000, 0.711701, 0.947291,
-                                    0.257912, 0.00000, 0.000000, -0.000000, 1.000000, 0.00000,
-                                    0.000000, 0.000000, 0.00000, 1.00000);
+  static const glm::mat4 glm_matrix(.288299f, 0.052709f, -0.257912f, 0.00000f, 0.711701f, 0.947291f,
+                                    0.257912f, 0.00000f, 0.000000f, -0.000000f, 1.000000f, 0.00000f,
+                                    0.000000f, 0.000000f, 0.00000f, 1.00000f);
 
   const float pane_width = display_width / 5;
   const float pane_height = display_height;
 
-  static const float colors[15] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0};
+  static const uint8_t colors[15] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0};
 
   for (uint32_t i = 0; i < 5; i++) {
     scenic::Rectangle pane_shape(session, pane_width, pane_height);
@@ -994,7 +1002,7 @@ TEST_F(ScenicPixelTest, DISABLED_Compositor) {
     scenic::ShapeNode pane_node(session);
     pane_node.SetShape(pane_shape);
     pane_node.SetMaterial(pane_material);
-    pane_node.SetTranslation((i + 0.5) * pane_width, 0.5 * pane_height, -20);
+    pane_node.SetTranslation((static_cast<float>(i) + 0.5f) * pane_width, 0.5f * pane_height, -20);
     scene->AddChild(pane_node);
   }
 
@@ -1010,11 +1018,12 @@ TEST_F(ScenicPixelTest, DISABLED_Compositor) {
   scenic::Screenshot post_screenshot = TakeScreenshot();
 
   for (uint32_t i = 0; i < 5; i++) {
-    scenic::Color prev_color = prev_screenshot.ColorAt(i * .2, 0.5);
-    scenic::Color post_color = post_screenshot.ColorAt(i * .2, 0.5);
+    scenic::Color prev_color = prev_screenshot.ColorAt(static_cast<float>(i) * .2f, 0.5);
+    scenic::Color post_color = post_screenshot.ColorAt(static_cast<float>(i) * .2f, 0.5);
 
     glm::vec4 vec = glm_matrix * glm::vec4(prev_color.r, prev_color.g, prev_color.b, 1);
-    scenic::Color res(vec.x, vec.y, vec.z, vec.w);
+    scenic::Color res(static_cast<uint8_t>(vec.x), static_cast<uint8_t>(vec.y),
+                      static_cast<uint8_t>(vec.z), static_cast<uint8_t>(vec.w));
     EXPECT_EQ(res, post_color);
   }
 }
@@ -1039,7 +1048,7 @@ class RotationTest : public ScenicPixelTest {
     // For this test, create 5 vertical bands. This is an array of
     // the rgb colors for each of the five bands that will be
     // created below.
-    static const float colors[15] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0};
+    static const uint8_t colors[15] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0};
 
     for (uint32_t i = 0; i < 5; i++) {
       scenic::Rectangle pane_shape(session, pane_width, pane_height);
@@ -1050,7 +1059,8 @@ class RotationTest : public ScenicPixelTest {
       scenic::ShapeNode pane_node(session);
       pane_node.SetShape(pane_shape);
       pane_node.SetMaterial(pane_material);
-      pane_node.SetTranslation((i + 0.5) * pane_width, 0.5 * pane_height, -20);
+      pane_node.SetTranslation((static_cast<float>(i) + 0.5f) * pane_width, 0.5f * pane_height,
+                               -20);
       scene->AddChild(pane_node);
     }
 
@@ -1072,8 +1082,8 @@ class RotationTest : public ScenicPixelTest {
     // Only support 90 and 270 degree rotations here.
     for (uint32_t x = 0; x < prev_screenshot.width(); x++) {
       for (uint32_t y = 0; y < prev_screenshot.height(); y++) {
-        uint32_t post_x = angle == 90 ? y : prev_screenshot.height() - y - 1;
-        uint32_t post_y = angle == 90 ? prev_screenshot.width() - x - 1 : x;
+        auto post_x = angle == 90 ? y : prev_screenshot.height() - y - 1;
+        auto post_y = angle == 90 ? prev_screenshot.width() - x - 1 : x;
 
         EXPECT_EQ(prev_screenshot[y][x], post_screenshot[post_y][post_x]);
       }
@@ -1191,8 +1201,7 @@ TEST_F(ScenicPixelTest, ClipSpaceTransformPerspective) {
 
   static const glm::quat face_right = glm::angleAxis(kPi / 2, glm::vec3(0, -1, 0));
   static const float kFovy = kPi / 4;
-  static const float background_height =
-      2 * tan(kFovy / 2) * gfx::TestSession::kDefaultCameraOffset;
+  static const float background_height = 2 * tan(kFovy / 2) * kDefaultCameraOffset;
   const float background_width = background_height / display_height * display_width;
 
   struct Shape {
@@ -1898,9 +1907,8 @@ TEST_F(ScenicPixelTest, AnnotationTest) {
 
   // Pane extends across the entire right-side of the display, even though
   // its containing view is only in the top-right corner.
-  int32_t pane_width = display_width;
-  int32_t pane_height = display_height / 2;
-  FX_LOGS(ERROR) << pane_width << " " << pane_height;
+  auto pane_width = display_width;
+  auto pane_height = display_height / 2;
   scenic::Rectangle pane_shape(session_view1, pane_width, pane_height);
   scenic::Rectangle pane_shape2(session_view2, pane_width / 2, pane_height);
   scenic::Rectangle pane_shape_annotation(session_annotation, pane_width / 2, pane_height);
@@ -2405,7 +2413,7 @@ TEST_P(ParameterizedImage3PixelTest, Image3PixelTest) {
 
   // Create Scenic Allocator channel.
   fuchsia::ui::composition::AllocatorPtr scenic_allocator;
-  environment_->ConnectToService(scenic_allocator.NewRequest());
+  scenic_allocator = realm()->Connect<fuchsia::ui::composition::Allocator>();
   EXPECT_TRUE(scenic_allocator.is_bound());
   scenic_allocator.set_error_handler(
       [](zx_status_t status) { FAIL() << "Lost connection to Scenic Allocator"; });
@@ -2614,7 +2622,7 @@ TEST_F(ScenicPixelTest, CreateImage3FromMultipleSessions) {
 
   // Create Scenic Allocator channel.
   fuchsia::ui::composition::AllocatorPtr scenic_allocator;
-  environment_->ConnectToService(scenic_allocator.NewRequest());
+  scenic_allocator = realm()->Connect<fuchsia::ui::composition::Allocator>();
   EXPECT_TRUE(scenic_allocator.is_bound());
   scenic_allocator.set_error_handler(
       [](zx_status_t status) { FAIL() << "Lost connection to Scenic Allocator"; });
@@ -2714,8 +2722,8 @@ TEST_F(ScenicPixelTest, CreateImage3FromMultipleSessions) {
   const uint32_t kImageId1 = 123;
   session->Enqueue(scenic::NewCreateImage3Cmd(kImageId1, kShapeWidth, kShapeHeight,
                                               ref_pair.DuplicateImportToken(), 0));
-  int32_t pane_width = display_width / 2;
-  int32_t pane_height = display_height;
+  auto pane_width = display_width / 2;
+  auto pane_height = display_height;
   scenic::Rectangle pane_shape1(session, pane_width, pane_height);
   scenic::Material pane_material1(session);
   pane_material1.SetTexture(kImageId1);
@@ -2774,4 +2782,4 @@ TEST_F(ScenicPixelTest, CreateImage3FromMultipleSessions) {
   }
 }
 
-}  // namespace
+}  // namespace integration_tests

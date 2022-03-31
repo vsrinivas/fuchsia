@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
+#include "src/ui/scenic/tests/gfx_integration_tests/pixel_test.h"
 #include "src/ui/scenic/tests/utils/scenic_realm_builder.h"
 
 namespace integration_tests {
@@ -29,202 +30,12 @@ using RealmRoot = component_testing::RealmRoot;
 namespace {
 
 const int64_t kTestTimeout = 90;
-constexpr zx::duration kPresentTimeout = zx::sec(15);
-static constexpr float kDefaultCameraOffset = 1001;
 constexpr auto kBouncingBall = "bouncing_ball";
 constexpr auto kBouncingBallUrl = "#meta/bouncing_ball.cm";
 constexpr auto kVkCube = "wrapper_vk_cube";
 constexpr auto kVkCubeUrl = "#meta/wrapper_vk_cube.cm";
 
 }  // namespace
-
-struct DisplayDimensions {
-  float width, height;
-};
-
-struct RootSession {
-  RootSession(fuchsia::ui::scenic::Scenic* scenic, const DisplayDimensions& display_dimensions)
-      : session(scenic),
-        compositor(&session),
-        layer_stack(&session),
-        layer(&session),
-        renderer(&session),
-        scene(&session),
-        camera(scene),
-        display_dimensions(display_dimensions),
-        ambient_light(&session) {
-    compositor.SetLayerStack(layer_stack);
-    layer_stack.AddLayer(layer);
-    layer.SetRenderer(renderer);
-    layer.SetSize(display_dimensions.width, display_dimensions.height);
-    renderer.SetCamera(camera);
-    ambient_light.SetColor(1.f, 1.f, 1.f);
-  }
-
-  // Sets up a camera at (x, y) = (width / 2, height / 2) looking at +z such
-  // that the near plane is at -1000 and the far plane is at 0.
-  //
-  // Note that the ortho camera (fov = 0) ignores the transform and is
-  // effectively always set this way.
-  template <typename Camera = scenic::Camera>
-  Camera SetUpCamera(float offset = kDefaultCameraOffset) {
-    // fxbug.dev/24474: The near plane is hardcoded at -1000 and far at 0 in camera
-    // space.
-    const std::array<float, 3> eye_position = {display_dimensions.width / 2.f,
-                                               display_dimensions.height / 2.f, -offset};
-    const std::array<float, 3> look_at = {display_dimensions.width / 2.f,
-                                          display_dimensions.height / 2.f, 1};
-    static const std::array<float, 3> up = {0, -1, 0};
-    Camera camera(scene);
-    camera.SetTransform(eye_position, look_at, up);
-    renderer.SetCamera(camera.id());
-    return camera;
-  }
-
-  scenic::Session session;
-  scenic::DisplayCompositor compositor;
-  scenic::LayerStack layer_stack;
-  scenic::Layer layer;
-  scenic::Renderer renderer;
-  scenic::Scene scene;
-  scenic::Camera camera;
-  const DisplayDimensions display_dimensions;
-  scenic::AmbientLight ambient_light;
-  std::unique_ptr<scenic::ViewHolder> view_holder;
-};
-
-struct ViewContext {
-  scenic::SessionPtrAndListenerRequest session_and_listener_request;
-  fuchsia::ui::views::ViewToken view_token;
-};
-
-class EmbedderView : public fuchsia::ui::scenic::SessionListener {
- public:
-  EmbedderView(ViewContext context, fuchsia::ui::views::ViewHolderToken view_holder_token)
-      : binding_(this, std::move(context.session_and_listener_request.second)),
-        session_(std::move(context.session_and_listener_request.first)),
-        view_(&session_, std::move(context.view_token), "View"),
-        top_node_(&session_),
-        view_holder_(&session_, std::move(view_holder_token), "ViewHolder") {
-    binding_.set_error_handler([](zx_status_t status) {
-      FX_LOGS(FATAL) << "Session listener binding: " << zx_status_get_string(status);
-    });
-    view_.AddChild(top_node_);
-    // Call |Session::Present| in order to flush events having to do with
-    // creation of |view_| and |top_node_|.
-    session_.Present(0, [](auto) {});
-  }
-
-  void EmbedView(std::function<void(fuchsia::ui::gfx::ViewState)> view_state_changed_callback) {
-    view_state_changed_callback_ = std::move(view_state_changed_callback);
-    top_node_.Attach(view_holder_);
-    session_.Present(0, [](auto) {});
-  }
-
- private:
-  // |fuchsia::ui::scenic::SessionListener|
-  void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) override {
-    for (const auto& event : events) {
-      if (event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx &&
-          event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged) {
-        const auto& evt = event.gfx().view_properties_changed();
-
-        view_holder_.SetViewProperties(std::move(evt.properties));
-        session_.Present(0, [](auto) {});
-
-      } else if (event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx &&
-                 event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewStateChanged) {
-        const auto& evt = event.gfx().view_state_changed();
-        if (evt.view_holder_id == view_holder_.id()) {
-          // Clients of |EmbedderView| *must* set a view state changed
-          // callback.  Failure to do so is a usage error.
-          FX_CHECK(view_state_changed_callback_);
-          view_state_changed_callback_(evt.state);
-        }
-      }
-    }
-  }
-
-  // |fuchsia::ui::scenic::SessionListener|
-  void OnScenicError(std::string error) override { FX_LOGS(FATAL) << "OnScenicError: " << error; }
-
-  fidl::Binding<fuchsia::ui::scenic::SessionListener> binding_;
-  scenic::Session session_;
-  scenic::View view_;
-  scenic::EntityNode top_node_;
-  std::optional<fuchsia::ui::gfx::ViewProperties> embedded_view_properties_;
-  scenic::ViewHolder view_holder_;
-  std::function<void(fuchsia::ui::gfx::ViewState)> view_state_changed_callback_;
-};
-
-// Test fixture that sets up an environment suitable for Scenic pixel tests
-// and provides related utilities. The environment includes Scenic and
-// RootPresenter, and their dependencies.
-class PixelTest : public gtest::RealLoopFixture {
- protected:
-  fuchsia::ui::scenic::Scenic* scenic() { return scenic_.get(); }
-
-  void SetUp() override {
-    realm_ = std::make_unique<RealmRoot>(SetupRealm());
-
-    scenic_ = realm_->Connect<fuchsia::ui::scenic::Scenic>();
-    scenic_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
-    });
-
-    annotation_registry_ = realm_->Connect<fuchsia::ui::annotation::Registry>();
-    annotation_registry_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to Annotation Registry: " << zx_status_get_string(status);
-    });
-  }
-
-  fuchsia::ui::views::ViewToken CreatePresentationViewToken() {
-    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-
-    auto presenter = realm_->Connect<fuchsia::ui::policy::Presenter>();
-    presenter.set_error_handler(
-        [](zx_status_t status) { FAIL() << "presenter: " << zx_status_get_string(status); });
-
-    presenter->PresentView(std::move(view_holder_token), nullptr);
-
-    return std::move(view_token);
-  }
-
-  ViewContext CreatePresentationContext() {
-    FX_CHECK(scenic()) << "Scenic is not connected.";
-
-    return {
-        .session_and_listener_request = scenic::CreateScenicSessionPtrAndListenerRequest(scenic()),
-        .view_token = CreatePresentationViewToken(),
-    };
-  }
-
-  DisplayDimensions GetDisplayDimensions() {
-    DisplayDimensions display_dimensions;
-    scenic_->GetDisplayInfo(
-        [this, &display_dimensions](fuchsia::ui::gfx::DisplayInfo display_info) {
-          display_dimensions = {.width = static_cast<float>(display_info.width_in_px),
-                                .height = static_cast<float>(display_info.height_in_px)};
-          QuitLoop();
-        });
-    RunLoop();
-    return display_dimensions;
-  }
-
-  void Present(scenic::Session* session) {
-    session->Present(0, [this](auto) { QuitLoop(); });
-    ASSERT_FALSE(RunLoopWithTimeout(kPresentTimeout));
-  }
-
-  std::unique_ptr<RealmRoot> realm_;
-
-  fuchsia::ui::annotation::RegistryPtr annotation_registry_;
-
- private:
-  virtual RealmRoot SetupRealm() = 0;
-
-  fuchsia::ui::scenic::ScenicPtr scenic_;
-};
 
 class BouncingBallTest : public PixelTest {
  private:
@@ -245,7 +56,7 @@ class BouncingBallTest : public PixelTest {
 TEST_F(BouncingBallTest, BouncingBall) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   auto [view_ref_control, view_ref] = scenic::ViewRefPair::New();
-  auto view_provider = realm_->Connect<fuchsia::ui::app::ViewProvider>();
+  auto view_provider = realm()->Connect<fuchsia::ui::app::ViewProvider>();
 
   view_provider->CreateViewWithViewRef(std::move(view_token.value), std::move(view_ref_control),
                                        std::move(view_ref));
@@ -290,7 +101,7 @@ TEST_F(VkcubeTest, ProtectedVkcube) {
 
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   auto [view_ref_control, view_ref] = scenic::ViewRefPair::New();
-  auto view_provider = realm_->Connect<fuchsia::ui::app::ViewProvider>();
+  auto view_provider = realm()->Connect<fuchsia::ui::app::ViewProvider>();
 
   view_provider->CreateViewWithViewRef(std::move(view_token.value), std::move(view_ref_control),
                                        std::move(view_ref));
@@ -503,7 +314,7 @@ TEST_F(ViewEmbedderTest, AnnotationViewAndViewHolderInSingleFrame) {
   bool view_holder_annotation_created = false;
   fuchsia::ui::views::ViewRef view_ref_annotation;
   view_ref.Clone(&view_ref_annotation);
-  annotation_registry_->CreateAnnotationViewHolder(
+  annotation_registry()->CreateAnnotationViewHolder(
       std::move(view_ref_annotation), std::move(view_holder_token_annotation),
       [&view_holder_annotation_created]() { view_holder_annotation_created = true; });
   EXPECT_FALSE(view_holder_annotation_created);

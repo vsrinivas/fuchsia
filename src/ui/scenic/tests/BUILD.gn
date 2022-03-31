@@ -69,6 +69,25 @@ source_set("scenic_realm_builder") {
   ]
 }
 
+source_set("gfx_pixel_test") {
+  testonly = true
+  sources = [
+    "gfx_integration_tests/pixel_test.cc",
+    "gfx_integration_tests/pixel_test.h",
+  ]
+  public_deps = [
+    ":scenic_realm_builder",
+    "//sdk/fidl/fuchsia.ui.annotation",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/testing/loop_fixture",
+    "//src/ui/testing/views:views",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 fuchsia_component("scenic_realm") {
   testonly = true
   manifest = "meta/scenic_realm.cml"
@@ -93,6 +112,12 @@ fuchsia_component("wrapper_vk_cube") {
   testonly = true
   manifest = "meta/wrapper_vk_cube.cml"
   deps = [ "//third_party/Vulkan-Tools/cube:vkcube-on-scenic" ]
+}
+
+fuchsia_component("wrapper_root_presenter") {
+  testonly = true
+  manifest = "meta/wrapper_root_presenter.cml"
+  deps = [ "//src/ui/bin/root_presenter:component_v1" ]
 }
 
 fuchsia_test_component("gfx_focus_integration_test") {
@@ -195,6 +220,7 @@ executable("gfx_viewstate_apptest_bin") {
   testonly = true
   sources = [ "gfx_integration_tests/gfx_viewstate_apptest.cc" ]
   deps = [
+    ":gfx_pixel_test",
     ":scenic_realm_builder",
     "//src/ui/scenic/lib/gfx/tests:gfx_tests_main",
     "//src/ui/scenic/lib/gfx/tests:testing_deps",
@@ -209,6 +235,50 @@ fuchsia_test_component("gfx_viewstate_apptest") {
     ":wrapper_vk_cube",
     "//src/ui/bin/root_presenter:component_v2",
     "//src/ui/examples/bouncing_ball:component_v2_for_test",
+  ]
+}
+
+executable("magnification_pixeltest_bin") {
+  testonly = true
+  sources = [ "gfx_integration_tests/magnification_pixeltest.cc" ]
+  deps = [
+    ":common_deps",
+    ":gfx_pixel_test",
+    ":scenic_realm_builder",
+    "//sdk/fidl/fuchsia.ui.accessibility.view",
+    "//src/ui/a11y/lib/magnifier/tests/mocks:mock_magnifier",
+  ]
+}
+
+fuchsia_test_component("magnification_pixeltest") {
+  component_name = "magnification_pixeltest"
+  manifest = "meta/magnification_pixel_test.cml"
+  deps = [
+    ":magnification_pixeltest_bin",
+    ":wrapper_root_presenter",
+  ]
+}
+
+executable("scenic_pixeltest_bin") {
+  testonly = true
+  sources = [ "gfx_integration_tests/scenic_pixeltest.cc" ]
+  deps = [
+    ":gfx_pixel_test",
+    ":scenic_realm_builder",
+    "//sdk/fidl/fuchsia.images",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/ui/lib/yuv",
+    "//src/ui/scenic/lib/gfx/tests:gfx_tests_main",
+    "//src/ui/scenic/lib/gfx/tests:testing_deps",
+  ]
+}
+
+fuchsia_test_component("scenic_pixeltest") {
+  component_name = "scenic_pixeltest"
+  manifest = "meta/scenic_pixeltest.cml"
+  deps = [
+    ":scenic_pixeltest_bin",
+    ":wrapper_root_presenter",
   ]
 }
 
@@ -311,6 +381,8 @@ fuchsia_test_package("gfx_integration_tests") {
     ":gfx_touch_integration_test",
     ":gfx_view_ref_installed_integration_test",
     ":gfx_viewstate_apptest",
+    ":magnification_pixeltest",
+    ":scenic_pixeltest",
   ]
 
   test_specs = {

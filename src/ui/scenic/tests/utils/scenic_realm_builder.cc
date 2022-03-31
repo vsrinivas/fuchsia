@@ -22,6 +22,8 @@ constexpr auto kScenicRealm = "scenic_realm";
 constexpr auto kScenicRealmUrl = "#meta/scenic_realm.cm";
 constexpr auto kRootPresenter = "root_presenter";
 constexpr auto kRootPresenterUrl = "#meta/root_presenter.cm";
+constexpr auto kLegacyRootPresenter = "wrapper_root_presenter";
+constexpr auto kLegacyRootPresenterUrl = "#meta/wrapper_root_presenter.cm";
 
 }  // namespace
 
@@ -35,8 +37,13 @@ using RealmBuilder = component_testing::RealmBuilder;
 ScenicRealmBuilder::ScenicRealmBuilder(RealmBuilderArgs args)
     : realm_builder_(RealmBuilder::Create()) {
   if (args.scene_owner.has_value()) {
-    scene_owner_ = args.scene_owner;
+    if (args.scene_owner == SceneOwner::ROOT_PRESENTER) {
+      scene_owner_ = {kRootPresenter, kRootPresenterUrl};
+    } else if (args.scene_owner == SceneOwner::ROOT_PRESENTER_LEGACY) {
+      scene_owner_ = {kLegacyRootPresenter, kLegacyRootPresenterUrl};
+    }
   }
+
   Init(std::move(args));
 }
 
@@ -58,14 +65,12 @@ ScenicRealmBuilder& ScenicRealmBuilder::Init(RealmBuilderArgs args) {
   // owner and a view provider.
   // TODO(fxb/95644): Add support for Scene Manager.
   if (scene_owner_.has_value()) {
-    if (scene_owner_.value() == SceneOwner::ROOT_PRESENTER) {
-      realm_builder_.AddChild(kRootPresenter, kRootPresenterUrl);
+    realm_builder_.AddChild(scene_owner_->first, scene_owner_->second);
 
-      // Route the protocols required by the root presenter.
-      realm_builder_.AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-                                    .source = ChildRef{kScenicRealm},
-                                    .targets = {ChildRef{kRootPresenter}}});
-    }
+    // Route the protocols required by the root presenter.
+    realm_builder_.AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
+                                  .source = ChildRef{kScenicRealm},
+                                  .targets = {ChildRef{scene_owner_->first}}});
   }
 
   // Configure the ViewProvider for the test fixture. This setup is done for tests requiring a view
@@ -99,11 +104,29 @@ ScenicRealmBuilder& ScenicRealmBuilder::AddRealmProtocol(const ProtocolName& pro
 ScenicRealmBuilder& ScenicRealmBuilder::AddSceneOwnerProtocol(const ProtocolName& protocol) {
   FX_DCHECK(scene_owner_.has_value()) << "precondition.";
 
-  if (scene_owner_.value() == SceneOwner::ROOT_PRESENTER) {
-    realm_builder_.AddRoute(Route{.capabilities = {Protocol{protocol}},
-                                  .source = ChildRef{kRootPresenter},
-                                  .targets = {ParentRef()}});
-  }
+  realm_builder_.AddRoute(Route{.capabilities = {Protocol{protocol}},
+                                .source = ChildRef{scene_owner_->first},
+                                .targets = {ParentRef()}});
+
+  return *this;
+}
+
+ScenicRealmBuilder& ScenicRealmBuilder::AddMockComponent(const MockComponent& mock_component) {
+  FX_DCHECK(mock_component.impl != nullptr) << "precondition.";
+
+  realm_builder_.AddLocalChild(mock_component.name, mock_component.impl);
+
+  return *this;
+}
+
+ScenicRealmBuilder& ScenicRealmBuilder::RouteMockComponentProtocolToSceneOwner(
+    const std::string& component_name, const ProtocolName& protocol) {
+  FX_DCHECK(scene_owner_.has_value()) << "precondition";
+
+  realm_builder_.AddRoute(Route{.capabilities = {Protocol{protocol}},
+                                .source = ChildRef{component_name},
+                                .targets = {ChildRef{scene_owner_->first}}});
+
   return *this;
 }
 

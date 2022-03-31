@@ -11,10 +11,16 @@
 namespace integration_tests {
 
 using ProtocolName = std::string;
+using SceneOwnerInfo =
+    std::pair</*scene_owner_name */ std::string, /*scene_owner_url*/ std::string>;
 
 // TODO(fxb/95644): Add support for Scene Manager.
 enum class SceneOwner {
   ROOT_PRESENTER = 0,
+
+  // CFv1 component for the root presenter. Required for the test fixtures which depend on the root
+  // presenter to use fuchsia.accessibility.Magnifier.
+  ROOT_PRESENTER_LEGACY,
 };
 
 // Configs required to launch a client which exposes |fuchsia.ui.app.ViewProvider|.
@@ -24,6 +30,14 @@ struct ViewProviderConfig {
 
   // URL for the manifest of the component.
   std::string component_url;
+};
+
+struct MockComponent {
+  // Name of the mock component.
+  std::string name;
+
+  // The implementation class for the mock component. Must not be a nullptr.
+  component_testing::LocalComponent* impl;
 };
 
 struct RealmBuilderArgs {
@@ -64,6 +78,13 @@ class ScenicRealmBuilder {
   // |protocol| must be exposed by the scene owner component.
   ScenicRealmBuilder& AddSceneOwnerProtocol(const ProtocolName& protocol);
 
+  // Adds the |mock_component| to the realm topology.
+  ScenicRealmBuilder& AddMockComponent(const MockComponent& mock_component);
+
+  // Routes |protocol| exposed by a mock component with name |component_name| to the |scene_owner_|.
+  ScenicRealmBuilder& RouteMockComponentProtocolToSceneOwner(const std::string& component_name,
+                                                             const ProtocolName& protocol);
+
   // Builds the realm with the provided components and routes and returns the realm root.
   component_testing::RealmRoot Build();
 
@@ -74,9 +95,9 @@ class ScenicRealmBuilder {
 
   component_testing::RealmBuilder realm_builder_;
 
-  // |SceneOwner| for the test fixture when the |BaseRealmType| is |SCENIC_WITH_SCENE| or
+  // |SceneOwnerInfo| for the test fixture when the |BaseRealmType| is |SCENIC_WITH_SCENE| or
   // |MINIMAL_SCENE|.
-  std::optional<SceneOwner> scene_owner_;
+  std::optional<SceneOwnerInfo> scene_owner_;
 };
 
 }  // namespace integration_tests
