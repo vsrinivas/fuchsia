@@ -11,8 +11,9 @@
 namespace fidl {
 namespace internal {
 
-void NaturalServerMessenger::SendReply(fidl::OutgoingMessage message) const {
-  completer_base_->SendReply(&message, OutgoingTransportContext{});
+void NaturalServerMessenger::SendReply(fidl::OutgoingMessage message,
+                                       OutgoingTransportContext context) const {
+  completer_base_->SendReply(&message, std::move(context));
 }
 
 }  // namespace internal

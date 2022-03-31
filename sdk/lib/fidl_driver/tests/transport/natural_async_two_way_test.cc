@@ -21,14 +21,10 @@ namespace {
 constexpr uint32_t kRequestPayload = 1234;
 constexpr uint32_t kResponsePayload = 5678;
 
-// TODO(fxbug.dev/96101) Convert server to natural types.
-struct TestServer : public fdf::WireServer<test_transport::TwoWayTest> {
-  void TwoWay(TwoWayRequestView request, fdf::Arena& in_request_arena,
-              TwoWayCompleter::Sync& completer) override {
-    ASSERT_EQ(kRequestPayload, request->payload);
-
-    auto response_arena = fdf::Arena::Create(0, "");
-    completer.buffer(*response_arena).Reply(kResponsePayload);
+struct TestServer : public fdf::Server<test_transport::TwoWayTest> {
+  void TwoWay(TwoWayRequest& request, TwoWayCompleter::Sync& completer) override {
+    ASSERT_EQ(kRequestPayload, request.payload());
+    completer.Reply(kResponsePayload);
   }
 };
 

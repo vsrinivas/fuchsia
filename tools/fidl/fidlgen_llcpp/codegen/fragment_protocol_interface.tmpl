@@ -7,7 +7,7 @@
 {{- define "Protocol:Interface:WireMessagingHeader" }}
 {{- range .TwoWayMethods }}
   {{- if eq .Transport.Name "Driver" }}
-  {{- template "Method:CompleterBase:driver/MessagingHeader" . }}
+  {{- template "Method:CompleterBase:driver/WireMessagingHeader" . }}
   {{- else }}
   {{- template "Method:CompleterBase:WireMessagingHeader" . }}
   {{- end }}
@@ -63,7 +63,11 @@ class {{ .WireServer }} : public ::fidl::internal::IncomingMessageDispatcher {
 {{- end }}
 
 {{- range .TwoWayMethods }}
+  {{- if eq .Transport.Name "Driver" }}
+  {{- template "Method:CompleterBase:driver/NaturalMessagingHeader" . }}
+  {{- else }}
   {{- template "Method:CompleterBase:NaturalMessagingHeader" . }}
+  {{- end }}
 {{- end }}
 
 template<>
@@ -108,6 +112,10 @@ class {{ .NaturalServer }} : public ::fidl::internal::IncomingMessageDispatcher 
 {{- end }}
 
 {{- range .TwoWayMethods }}
+  {{- if eq .Transport.Name "Driver" }}
+  {{- template "Method:CompleterBase:driver/NaturalMessagingSource" . }}
+  {{- else }}
   {{- template "Method:CompleterBase:NaturalMessagingSource" . }}
+  {{- end }}
 {{- end }}
 {{- end }}

@@ -5,7 +5,7 @@
 */}}
 
 
-{{- define "Method:CompleterBase:driver/MessagingHeader" }}
+{{- define "Method:CompleterBase:driver/WireMessagingHeader" }}
 {{ EnsureNamespace "" }}
 template<>
 class {{ .WireCompleterImpl }} : public ::fdf::internal::CompleterImplBase<{{ .Marker }}> {
@@ -49,7 +49,7 @@ class {{ .WireCompleterBase }} : public ::fidl::CompleterBase, public {{ .WireCo
 
 
 
-{{- define "Method:CompleterBase:driver/MessagingSource" }}
+{{- define "Method:CompleterBase:driver/WireMessagingSource" }}
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
 
@@ -93,4 +93,43 @@ void
 {{- end }}
 
 {{- EndifFuchsia -}}
+{{- end }}
+
+
+{{- define "Method:CompleterBase:driver/NaturalMessagingHeader" }}
+{{ EnsureNamespace "" }}
+template<>
+class {{ .NaturalCompleterBase }} : public ::fidl::CompleterBase {
+ public:
+  void Reply({{ template "Method:NaturalReplySignature:Helper" . }});
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+};
+
+{{- end }}
+
+
+
+{{- define "Method:CompleterBase:driver/NaturalMessagingSource" }}
+{{ EnsureNamespace "" }}
+void {{ .NaturalCompleterBase.NoLeading }}::Reply(
+    {{- template "Method:NaturalReplySignature:Helper" . }}) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
+  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::DriverTransport> _encoder{ {{ .OrdinalName }} };
+
+  auto _arena = fdf::Arena::Create(0, "");
+  if (!_arena.is_ok()) {
+    _messenger.SendReply(
+      ::fidl::OutgoingMessage(::fidl::Status::TransportError(_arena.status_value())), {});
+    return;
+  }
+
+  ::fidl::internal::OutgoingTransportContext _context =
+    ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena->get());
+  ::fidl::OutgoingMessage _msg = ::fidl::internal::EncodeTransactionalMessage(
+    _encoder {{- if .HasResponsePayload }},
+    {{ .NaturalResponseConverter }}::IntoDomainObject(std::move(response)){{ end }});
+  _messenger.SendReply(::fdf::internal::MoveToArena(_msg, *_arena), std::move(_context));
+}
 {{- end }}

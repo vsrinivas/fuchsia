@@ -31,9 +31,8 @@ fidl/{{ .LibraryDots }}/cpp/driver/natural_messaging.h
   {{- template "Protocol:NaturalMessagingHeader" $protocol }}
   {{- template "Protocol:Client:driver/NaturalMessagingHeader" $protocol }}
   {{- template "Protocol:EventHandler:NaturalMessagingHeader" $protocol }}
-  {{- range $protocol.ClientMethods }}
-    {{- template "Method:Request:NaturalMessagingHeader" . }}
-  {{- end }}
+  {{- template "Protocol:Interface:NaturalMessagingHeader" $protocol }}
+  {{- template "Protocol:Dispatcher:NaturalMessagingHeader" $protocol }}
   {{- end }}
   {{- end }}
   {{- end }}

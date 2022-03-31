@@ -92,11 +92,14 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_requestflexibleenvelope::
                    kProtocol_RequestStrictResponseFlexible_Ordinal};
-  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder, ::fidl::internal::NaturalMessageConverter<
-                    ::fidl::Response<::test_requestflexibleenvelope::Protocol::
-                                         RequestStrictResponseFlexible>>::
-                    IntoDomainObject(std::move(response))));
+  _messenger.SendReply(
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder,
+          ::fidl::internal::NaturalMessageConverter<
+              ::fidl::Response<::test_requestflexibleenvelope::Protocol::
+                                   RequestStrictResponseFlexible>>::
+              IntoDomainObject(std::move(response))),
+      ::fidl::internal::OutgoingTransportContext{});
 }
 
 void fidl::internal::NaturalCompleterBase<
@@ -107,11 +110,14 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_requestflexibleenvelope::
                    kProtocol_RequestFlexibleResponseStrict_Ordinal};
-  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder, ::fidl::internal::NaturalMessageConverter<
-                    ::fidl::Response<::test_requestflexibleenvelope::Protocol::
-                                         RequestFlexibleResponseStrict>>::
-                    IntoDomainObject(std::move(response))));
+  _messenger.SendReply(
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder,
+          ::fidl::internal::NaturalMessageConverter<
+              ::fidl::Response<::test_requestflexibleenvelope::Protocol::
+                                   RequestFlexibleResponseStrict>>::
+              IntoDomainObject(std::move(response))),
+      ::fidl::internal::OutgoingTransportContext{});
 }
 
 #ifdef __Fuchsia__

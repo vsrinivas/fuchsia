@@ -95,11 +95,13 @@ void fidl::internal::
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocolrequest::kParent_GetChild_Ordinal};
-  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder,
-      ::fidl::internal::NaturalMessageConverter<
-          ::fidl::Response<::test_protocolrequest::Parent::GetChild>>::
-          IntoDomainObject(std::move(response))));
+  _messenger.SendReply(
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder,
+          ::fidl::internal::NaturalMessageConverter<
+              ::fidl::Response<::test_protocolrequest::Parent::GetChild>>::
+              IntoDomainObject(std::move(response))),
+      ::fidl::internal::OutgoingTransportContext{});
 }
 
 void fidl::internal::NaturalCompleterBase<
@@ -109,11 +111,12 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocolrequest::kParent_GetChildRequest_Ordinal};
-  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder,
-      ::fidl::internal::NaturalMessageConverter<
-          ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>>::
-          IntoDomainObject(std::move(response))));
+  _messenger.SendReply(
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+                        ::test_protocolrequest::Parent::GetChildRequest>>::
+                        IntoDomainObject(std::move(response))),
+      ::fidl::internal::OutgoingTransportContext{});
 }
 
 #ifdef __Fuchsia__

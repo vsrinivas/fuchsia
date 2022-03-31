@@ -113,11 +113,12 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal};
-  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder,
-      ::fidl::internal::NaturalMessageConverter<
-          ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>>::
-          IntoDomainObject(std::move(response))));
+  _messenger.SendReply(
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+                        ::test_emptystruct::EmptyProtocol::SendAndReceive>>::
+                        IntoDomainObject(std::move(response))),
+      ::fidl::internal::OutgoingTransportContext{});
 }
 
 #ifdef __Fuchsia__

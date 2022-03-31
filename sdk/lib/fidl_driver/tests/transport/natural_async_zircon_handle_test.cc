@@ -18,10 +18,10 @@
 
 namespace {
 
-class TestServer : public fdf::WireServer<test_transport::SendZirconHandleTest> {
-  void SendZirconHandle(SendZirconHandleRequestView request, fdf::Arena& arena,
+class TestServer : public fdf::Server<test_transport::SendZirconHandleTest> {
+  void SendZirconHandle(SendZirconHandleRequest& request,
                         SendZirconHandleCompleter::Sync& completer) override {
-    completer.buffer(arena).Reply(std::move(request->h));
+    completer.Reply(std::move(request.h()));
   }
 };
 

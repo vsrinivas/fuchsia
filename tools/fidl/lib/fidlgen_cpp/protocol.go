@@ -114,7 +114,7 @@ var (
 	// Server types
 	NaturalWeakEventSender  = internalNs.member("NaturalWeakEventSender")
 	NaturalEventSender      = internalNs.member("NaturalEventSender")
-	NaturalServer           = fidlNs.member("Server")
+	NaturalServer           = transportNs.member("Server")
 	NaturalServerDispatcher = internalNs.member("NaturalServerDispatcher")
 	NaturalCompleter        = internalNs.member("NaturalCompleter")
 	NaturalCompleterBase    = internalNs.member("NaturalCompleterBase")

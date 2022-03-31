@@ -810,10 +810,13 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{
           ::test_protocollayouts::kMainProtocol_TwoWayAnonComposed_Ordinal};
-  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-                    ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>>::
-                    IntoDomainObject(std::move(response))));
+  _messenger.SendReply(
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder,
+          ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+              ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>>::
+              IntoDomainObject(std::move(response))),
+      ::fidl::internal::OutgoingTransportContext{});
 }
 
 void fidl::internal::NaturalCompleterBase<
@@ -825,11 +828,13 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocollayouts::
                    kMainProtocol_TwoWayAnonComposedWithError_Ordinal};
-  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder,
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>>::
-          IntoDomainObject(std::move(response))));
+  _messenger.SendReply(
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder, ::fidl::internal::NaturalMessageConverter<
+                        ::fidl::Response<::test_protocollayouts::MainProtocol::
+                                             TwoWayAnonComposedWithError>>::
+                        IntoDomainObject(std::move(response))),
+      ::fidl::internal::OutgoingTransportContext{});
 }
 
 void fidl::internal::NaturalCompleterBase<
@@ -841,11 +846,13 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{
           ::test_protocollayouts::kMainProtocol_TwoWayNamedComposed_Ordinal};
-  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder,
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-          ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>>::
-          IntoDomainObject(std::move(response))));
+  _messenger.SendReply(
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder,
+          ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+              ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>>::
+              IntoDomainObject(std::move(response))),
+      ::fidl::internal::OutgoingTransportContext{});
 }
 
 void fidl::internal::NaturalCompleterBase<
@@ -857,11 +864,13 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocollayouts::
                    kMainProtocol_TwoWayNamedComposedWithError_Ordinal};
-  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder,
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-          ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>>::
-          IntoDomainObject(std::move(response))));
+  _messenger.SendReply(
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder, ::fidl::internal::NaturalMessageConverter<
+                        ::fidl::Response<::test_protocollayouts::MainProtocol::
+                                             TwoWayNamedComposedWithError>>::
+                        IntoDomainObject(std::move(response))),
+      ::fidl::internal::OutgoingTransportContext{});
 }
 
 void fidl::internal::NaturalCompleterBase<
@@ -871,10 +880,12 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocollayouts::kMainProtocol_TwoWayImport_Ordinal};
-  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-                    ::test_protocollayouts::MainProtocol::TwoWayImport>>::
-                    IntoDomainObject(std::move(response))));
+  _messenger.SendReply(
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+                        ::test_protocollayouts::MainProtocol::TwoWayImport>>::
+                        IntoDomainObject(std::move(response))),
+      ::fidl::internal::OutgoingTransportContext{});
 }
 
 void fidl::internal::NaturalCompleterBase<
@@ -886,11 +897,13 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{
           ::test_protocollayouts::kMainProtocol_TwoWayImportWithError_Ordinal};
-  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder,
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-          ::test_protocollayouts::MainProtocol::TwoWayImportWithError>>::
-          IntoDomainObject(std::move(response))));
+  _messenger.SendReply(
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder,
+          ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+              ::test_protocollayouts::MainProtocol::TwoWayImportWithError>>::
+              IntoDomainObject(std::move(response))),
+      ::fidl::internal::OutgoingTransportContext{});
 }
 
 void fidl::internal::NaturalCompleterBase<
@@ -900,11 +913,12 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocollayouts::kMainProtocol_TwoWayLocal_Ordinal};
-  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder,
-      ::fidl::internal::NaturalMessageConverter<
-          ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayLocal>>::
-          IntoDomainObject(std::move(response))));
+  _messenger.SendReply(
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+                        ::test_protocollayouts::MainProtocol::TwoWayLocal>>::
+                        IntoDomainObject(std::move(response))),
+      ::fidl::internal::OutgoingTransportContext{});
 }
 
 void fidl::internal::NaturalCompleterBase<
@@ -916,11 +930,13 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{
           ::test_protocollayouts::kMainProtocol_TwoWayLocalWithError_Ordinal};
-  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder,
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-          ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>>::
-          IntoDomainObject(std::move(response))));
+  _messenger.SendReply(
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder,
+          ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+              ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>>::
+              IntoDomainObject(std::move(response))),
+      ::fidl::internal::OutgoingTransportContext{});
 }
 
 void fidl::internal::NaturalCompleterBase<
@@ -930,11 +946,12 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocollayouts::kMainProtocol_TwoWayAnon_Ordinal};
-  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder,
-      ::fidl::internal::NaturalMessageConverter<
-          ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnon>>::
-          IntoDomainObject(std::move(response))));
+  _messenger.SendReply(
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+                        ::test_protocollayouts::MainProtocol::TwoWayAnon>>::
+                        IntoDomainObject(std::move(response))),
+      ::fidl::internal::OutgoingTransportContext{});
 }
 
 void fidl::internal::NaturalCompleterBase<
@@ -946,11 +963,13 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{
           ::test_protocollayouts::kMainProtocol_TwoWayAnonWithError_Ordinal};
-  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder,
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>>::
-          IntoDomainObject(std::move(response))));
+  _messenger.SendReply(
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder,
+          ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+              ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>>::
+              IntoDomainObject(std::move(response))),
+      ::fidl::internal::OutgoingTransportContext{});
 }
 
 #ifdef __Fuchsia__

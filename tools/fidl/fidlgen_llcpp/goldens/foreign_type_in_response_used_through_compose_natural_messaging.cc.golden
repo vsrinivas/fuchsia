@@ -52,11 +52,13 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{
           ::test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_Ordinal};
-  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder,
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-          ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>::
-          IntoDomainObject(std::move(response))));
+  _messenger.SendReply(
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder,
+          ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+              ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>::
+              IntoDomainObject(std::move(response))),
+      ::fidl::internal::OutgoingTransportContext{});
 }
 
 #ifdef __Fuchsia__

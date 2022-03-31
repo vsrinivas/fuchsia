@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_INTERNAL_NATURAL_SERVER_MESSENGER_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_INTERNAL_NATURAL_SERVER_MESSENGER_H_
 
+#include <lib/fidl/llcpp/internal/transport.h>
 #include <zircon/fidl.h>
 
 namespace fidl {
@@ -26,7 +27,7 @@ class NaturalServerMessenger {
   // Sends a reply.
   //
   // Any send-time errors are notified to |completer_base|.
-  void SendReply(OutgoingMessage message) const;
+  void SendReply(OutgoingMessage message, OutgoingTransportContext context) const;
 
  private:
   fidl::CompleterBase* completer_base_;

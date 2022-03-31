@@ -48,10 +48,13 @@ void fidl::internal::
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_nullable::kSimpleProtocol_Add_Ordinal};
-  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder, ::fidl::internal::NaturalMessageConverter<
-                    ::fidl::Response<::test_nullable::SimpleProtocol::Add>>::
-                    IntoDomainObject(std::move(response))));
+  _messenger.SendReply(
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder,
+          ::fidl::internal::NaturalMessageConverter<
+              ::fidl::Response<::test_nullable::SimpleProtocol::Add>>::
+              IntoDomainObject(std::move(response))),
+      ::fidl::internal::OutgoingTransportContext{});
 }
 
 #ifdef __Fuchsia__

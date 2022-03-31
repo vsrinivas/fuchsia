@@ -155,7 +155,8 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_unknowninteractions::kExample_StrictTwoWay_Ordinal};
-  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(_encoder));
+  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(_encoder),
+                       ::fidl::internal::OutgoingTransportContext{});
 }
 
 void fidl::internal::NaturalCompleterBase<
@@ -166,10 +167,12 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_unknowninteractions::kExample_FlexibleTwoWay_Ordinal};
-  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-                    ::test_unknowninteractions::Example::FlexibleTwoWay>>::
-                    IntoDomainObject(std::move(response))));
+  _messenger.SendReply(
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+                        ::test_unknowninteractions::Example::FlexibleTwoWay>>::
+                        IntoDomainObject(std::move(response))),
+      ::fidl::internal::OutgoingTransportContext{});
 }
 
 #ifdef __Fuchsia__

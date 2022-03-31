@@ -19,11 +19,9 @@ namespace {
 
 std::vector<uint8_t> kRequestPayload = {1, 2, 3, 4};
 
-struct TestServer : public fdf::WireServer<test_transport::OneWayTest> {
-  void OneWay(OneWayRequestView request, fdf::Arena& arena,
-              OneWayCompleter::Sync& completer) override {
-    ASSERT_EQ(kRequestPayload.size(), request->payload.count());
-    ASSERT_BYTES_EQ(kRequestPayload.data(), request->payload.data(), kRequestPayload.size());
+struct TestServer : public fdf::Server<test_transport::OneWayTest> {
+  void OneWay(OneWayRequest& request, OneWayCompleter::Sync& completer) override {
+    ASSERT_EQ(kRequestPayload, request.payload());
 
     sync_completion_signal(&done);
   }

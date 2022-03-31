@@ -171,6 +171,7 @@ void {{ .NaturalCompleterBase.NoLeading }}::Reply(
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport> _encoder{ {{ .OrdinalName }} };
   _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
     _encoder {{- if .HasResponsePayload }},
-    {{ .NaturalResponseConverter }}::IntoDomainObject(std::move(response)){{ end }}));
+    {{ .NaturalResponseConverter }}::IntoDomainObject(std::move(response)){{ end }}),
+    ::fidl::internal::OutgoingTransportContext{});
 }
 {{- end }}

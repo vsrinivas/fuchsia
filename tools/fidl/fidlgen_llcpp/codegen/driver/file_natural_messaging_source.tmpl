@@ -21,9 +21,8 @@
 {{- template "Protocol:Details:NaturalMessagingSource" $protocol }}
 {{- template "Protocol:Client:driver/NaturalMessagingSource" $protocol }}
 {{- template "Protocol:EventHandler:NaturalMessagingSource" $protocol }}
-{{- range $protocol.ClientMethods }}
-  {{- template "Method:Request:NaturalMessagingSource" . }}
-{{- end }}
+{{- template "Protocol:Interface:NaturalMessagingSource" $protocol }}
+{{- template "Protocol:Dispatcher:NaturalMessagingSource" $protocol }}
 {{- end }}
 {{- end }}
 {{- end }}
