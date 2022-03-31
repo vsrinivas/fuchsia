@@ -160,8 +160,8 @@ zx_status_t I2cFidlChild::CreateAndAddDevice(zx_device_t* parent, uint16_t addre
   return status;
 }
 
-void I2cChild::Transfer(fidl::WireServer<fidl_i2c::Device2>::TransferRequestView request,
-                        fidl::WireServer<fidl_i2c::Device2>::TransferCompleter::Sync& completer) {
+template <typename R, typename C>
+void I2cChild::Transfer(R request, C& completer) {
   if (request->segments_is_write.count() < 1) {
     completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
@@ -206,7 +206,7 @@ void I2cChild::Transfer(fidl::WireServer<fidl_i2c::Device2>::TransferRequestView
 
   struct Ctx {
     sync_completion_t done = {};
-    fidl::WireServer<fidl_i2c::Device2>::TransferCompleter::Sync* completer;
+    C* completer;
   } ctx;
   ctx.completer = &completer;
   auto callback = [](void* ctx, zx_status_t status, const i2c_op_t* op_list, size_t op_count) {

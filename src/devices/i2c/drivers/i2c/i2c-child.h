@@ -37,8 +37,9 @@ class I2cChild {
 
  protected:
   // To be called by I2cFidlChild and I2cBanjoChild.
-  void Transfer(fidl::WireServer<fidl_i2c::Device2>::TransferRequestView request,
-                fidl::WireServer<fidl_i2c::Device2>::TransferCompleter::Sync& completer);
+  // TODO(fxbug.dev/96293): Remove templating and use only Transfer after the I2C transition.
+  template <typename R, typename C>
+  void Transfer(R request, C& completer);
 
   // To be called by I2cBanjoChild.
   void Transact(const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
@@ -104,6 +105,10 @@ class I2cBanjoChild : public I2cBanjoChildType,
   void DdkRelease() { delete this; }
 
   void Transfer(TransferRequestView request, TransferCompleter::Sync& completer) override {
+    I2cChild::Transfer(request, completer);
+  }
+
+  void Transfer2(Transfer2RequestView request, Transfer2Completer::Sync& completer) override {
     I2cChild::Transfer(request, completer);
   }
 
