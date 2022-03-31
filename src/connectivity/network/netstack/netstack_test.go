@@ -299,7 +299,7 @@ func TestEndpoint_Close(t *testing.T) {
 	}
 
 	// Create a referent.
-	s, err := newStreamSocket(eps)
+	s, err := newStreamSocket(makeStreamSocketImpl(eps))
 	if err != nil {
 		t.Fatalf("newStreamSocket() = %s", err)
 	}
@@ -417,7 +417,7 @@ func TestTCPEndpointMapAcceptAfterReset(t *testing.T) {
 		t.Fatalf("ns.addLoopback() = %s", err)
 	}
 
-	listener := createEP(t, ns, new(waiter.Queue))
+	listener := makeStreamSocketImpl(createEP(t, ns, new(waiter.Queue)))
 
 	if err := listener.ep.Bind(tcpip.FullAddress{}); err != nil {
 		t.Fatalf("Bind({}) = %s", err)
@@ -457,27 +457,27 @@ func TestTCPEndpointMapAcceptAfterReset(t *testing.T) {
 	// Wait for the RST to be processed by the stack.
 	time.Sleep(100 * time.Millisecond)
 
-	_, _, eps, err := listener.Accept(false)
+	_, _, s, err := listener.accept(false)
 	if err != nil {
-		t.Fatalf("ep.Accept(nil) = %s", err)
+		t.Fatalf("ep.accept(false) = %s", err)
 	}
-	defer eps.close()
+	defer s.endpointWithSocket.close()
 
 	// Expect the `Accept` to have removed the endpoint from the map.
-	if _, ok := ns.endpoints.Load(eps.endpoint.key); ok {
-		t.Fatalf("got endpoints.Load(%d) = (_, true)", eps.endpoint.key)
+	if _, ok := ns.endpoints.Load(s.endpoint.key); ok {
+		t.Fatalf("got endpoints.Load(%d) = (_, true)", s.endpoint.key)
 	}
 
-	eps.mu.Lock()
+	s.mu.Lock()
 	channels := []struct {
 		ch   <-chan struct{}
 		name string
 	}{
-		{ch: eps.closing, name: "closing"},
-		{ch: eps.mu.loopReadDone, name: "loopReadDone"},
-		{ch: eps.mu.loopWriteDone, name: "loopWriteDone"},
+		{ch: s.closing, name: "closing"},
+		{ch: s.mu.loopReadDone, name: "loopReadDone"},
+		{ch: s.mu.loopWriteDone, name: "loopWriteDone"},
 	}
-	eps.mu.Unlock()
+	s.mu.Unlock()
 
 	// Give a generous timeout for the closed channel to be detected.
 	timeout := make(chan struct{})

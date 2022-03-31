@@ -1096,19 +1096,10 @@ type endpointWithSocket struct {
 	// resources once - the first time it was closed.
 	closeOnce sync.Once
 
-	// Used to unblock waiting to write when SO_LINGER is enabled.
-	linger chan struct{}
-
 	onHUpOnce sync.Once
 
 	// onHUp is used to register callback for closing events.
 	onHUp waiter.Entry
-
-	// onListen is used to register callbacks for listening sockets.
-	onListen sync.Once
-
-	// onConnect is used to register callbacks for connected sockets.
-	onConnect sync.Once
 }
 
 func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip.TransportProtocolNumber, netProto tcpip.NetworkProtocolNumber, ns *Netstack) (*endpointWithSocket, error) {
@@ -1133,7 +1124,6 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 		local:   localS,
 		peer:    peerS,
 		closing: make(chan struct{}),
-		linger:  make(chan struct{}),
 	}
 
 	// Add the endpoint before registering callback for hangup event.
@@ -1279,7 +1269,7 @@ func (eps *endpointWithSocket) close() {
 	})
 }
 
-func (eps *endpointWithSocket) Listen(_ fidl.Context, backlog int16) (socket.StreamSocketListenResult, error) {
+func (s *streamSocketImpl) Listen(_ fidl.Context, backlog int16) (socket.StreamSocketListenResult, error) {
 	if backlog < 0 {
 		backlog = 0
 	}
@@ -1289,18 +1279,18 @@ func (eps *endpointWithSocket) Listen(_ fidl.Context, backlog int16) (socket.Str
 	// https://github.com/torvalds/linux/blob/7acac4b3196/include/net/sock.h#L937
 	backlog++
 
-	if err := eps.ep.Listen(int(backlog)); err != nil {
+	if err := s.ep.Listen(int(backlog)); err != nil {
 		return socket.StreamSocketListenResultWithErr(tcpipErrorToCode(err)), nil
 	}
 
 	// It is possible to call `listen` on a connected socket - such a call would
 	// fail above, so we register the callback only in the success case to avoid
 	// incorrectly handling events on connected sockets.
-	eps.onListen.Do(func() {
-		eps.pending.supported = waiter.EventIn
+	s.onListen.Do(func() {
+		s.pending.supported = waiter.EventIn
 		var entry waiter.Entry
 		cb := func() {
-			err := eps.pending.update()
+			err := s.pending.update()
 			switch err := err.(type) {
 			case nil:
 				return
@@ -1309,16 +1299,16 @@ func (eps *endpointWithSocket) Listen(_ fidl.Context, backlog int16) (socket.Str
 				case zx.ErrBadHandle, zx.ErrPeerClosed:
 					// The endpoint is closing -- this is possible when an incoming
 					// connection races with the listening endpoint being closed.
-					go eps.wq.EventUnregister(&entry)
+					go s.wq.EventUnregister(&entry)
 					return
 				}
 			}
 			panic(err)
 		}
-		entry = waiter.NewFunctionEntry(eps.pending.supported, func(waiter.EventMask) {
+		entry = waiter.NewFunctionEntry(s.pending.supported, func(waiter.EventMask) {
 			cb()
 		})
-		eps.wq.EventRegister(&entry)
+		s.wq.EventRegister(&entry)
 
 		// We're registering after calling Listen, so we might've missed an event.
 		// Call the callback once to check for already-present incoming
@@ -1326,12 +1316,12 @@ func (eps *endpointWithSocket) Listen(_ fidl.Context, backlog int16) (socket.Str
 		cb()
 	})
 
-	_ = syslog.DebugTf("listen", "%p: backlog=%d", eps, backlog)
+	_ = syslog.DebugTf("listen", "%p: backlog=%d", s, backlog)
 
 	return socket.StreamSocketListenResultWithResponse(socket.StreamSocketListenResponse{}), nil
 }
 
-func (eps *endpointWithSocket) startReadWriteLoops() {
+func (eps *endpointWithSocket) startReadWriteLoops(loopRead, loopWrite func(chan<- struct{})) {
 	eps.mu.Lock()
 	defer eps.mu.Unlock()
 	select {
@@ -1344,8 +1334,8 @@ func (eps *endpointWithSocket) startReadWriteLoops() {
 			done *<-chan struct{}
 			fn   func(chan<- struct{})
 		}{
-			{&eps.mu.loopReadDone, eps.loopRead},
-			{&eps.mu.loopWriteDone, eps.loopWrite},
+			{&eps.mu.loopReadDone, loopRead},
+			{&eps.mu.loopWriteDone, loopWrite},
 		} {
 			ch := make(chan struct{})
 			*m.done = ch
@@ -1361,36 +1351,36 @@ func (eps *endpointWithSocket) describe() (zx.Handle, error) {
 	return socket, err
 }
 
-func (eps *endpointWithSocket) Connect(_ fidl.Context, address fidlnet.SocketAddress) (socket.BaseNetworkSocketConnectResult, error) {
-	err := eps.endpoint.connect(address)
+func (s *streamSocketImpl) Connect(_ fidl.Context, address fidlnet.SocketAddress) (socket.BaseNetworkSocketConnectResult, error) {
+	err := s.endpoint.connect(address)
 
 	switch err.(type) {
 	case *tcpip.ErrConnectStarted, nil:
 		// It is possible to call `connect` on a listening socket - such a call
 		// would fail above, so we register the callback only in the success case
 		// to avoid incorrectly handling events on connected sockets.
-		eps.onConnect.Do(func() {
+		s.onConnect.Do(func() {
 			var (
 				once  sync.Once
 				entry waiter.Entry
 			)
 			cb := func(m waiter.EventMask) {
 				once.Do(func() {
-					go eps.wq.EventUnregister(&entry)
+					go s.wq.EventUnregister(&entry)
 					if m&waiter.EventErr == 0 {
-						eps.startReadWriteLoops()
+						s.startReadWriteLoops(s.loopRead, s.loopWrite)
 					} else {
-						eps.HUp()
+						s.HUp()
 					}
 				})
 			}
 			entry = waiter.NewFunctionEntry(waiter.EventOut|waiter.EventErr, cb)
-			eps.wq.EventRegister(&entry)
+			s.wq.EventRegister(&entry)
 
 			// We're registering after calling Connect, so we might've missed an
 			// event. Call the callback once to check for an already-complete (even
 			// with error) handshake.
-			if m := eps.ep.Readiness(waiter.EventOut | waiter.EventErr); m != 0 {
+			if m := s.ep.Readiness(waiter.EventOut | waiter.EventErr); m != 0 {
 				cb(m)
 			}
 		})
@@ -1402,17 +1392,17 @@ func (eps *endpointWithSocket) Connect(_ fidl.Context, address fidlnet.SocketAdd
 	return socket.BaseNetworkSocketConnectResultWithResponse(socket.BaseNetworkSocketConnectResponse{}), nil
 }
 
-func (eps *endpointWithSocket) Accept(wantAddr bool) (posix.Errno, *tcpip.FullAddress, *endpointWithSocket, error) {
+func (s *streamSocketImpl) accept(wantAddr bool) (posix.Errno, *tcpip.FullAddress, streamSocketImpl, error) {
 	var addr *tcpip.FullAddress
 	if wantAddr {
 		addr = new(tcpip.FullAddress)
 	}
-	ep, wq, err := eps.endpoint.ep.Accept(addr)
+	ep, wq, err := s.endpoint.ep.Accept(addr)
 	if err != nil {
-		return tcpipErrorToCode(err), nil, nil, nil
+		return tcpipErrorToCode(err), nil, streamSocketImpl{}, nil
 	}
 	{
-		if err := eps.pending.update(); err != nil {
+		if err := s.pending.update(); err != nil {
 			panic(err)
 		}
 	}
@@ -1423,7 +1413,7 @@ func (eps *endpointWithSocket) Accept(wantAddr bool) (posix.Errno, *tcpip.FullAd
 		// actually return any errors. However, we handle the tcpip.ErrNotConnected
 		// case now for the same reasons as mentioned below for the
 		// ep.GetRemoteAddress case.
-		_ = syslog.DebugTf("accept", "%p: disconnected", eps)
+		_ = syslog.DebugTf("accept", "%p: disconnected", s)
 	case nil:
 		switch remoteAddr, err := ep.GetRemoteAddress(); err.(type) {
 		case *tcpip.ErrNotConnected:
@@ -1433,9 +1423,9 @@ func (eps *endpointWithSocket) Accept(wantAddr bool) (posix.Errno, *tcpip.FullAd
 			// actually witnessed was when a TCP RST was received after the call to
 			// Accept returned, but before this point. If GetRemoteAddress returns
 			// other (unexpected) errors, panic.
-			_ = syslog.DebugTf("accept", "%p: local=%+v, disconnected", eps, localAddr)
+			_ = syslog.DebugTf("accept", "%p: local=%+v, disconnected", s, localAddr)
 		case nil:
-			_ = syslog.DebugTf("accept", "%p: local=%+v, remote=%+v", eps, localAddr, remoteAddr)
+			_ = syslog.DebugTf("accept", "%p: local=%+v, remote=%+v", s, localAddr, remoteAddr)
 		default:
 			panic(err)
 		}
@@ -1444,53 +1434,57 @@ func (eps *endpointWithSocket) Accept(wantAddr bool) (posix.Errno, *tcpip.FullAd
 	}
 
 	{
-		eps, err := newEndpointWithSocket(ep, wq, eps.transProto, eps.netProto, eps.endpoint.ns)
+		eps, err := newEndpointWithSocket(ep, wq, s.transProto, s.netProto, s.endpoint.ns)
 		if err != nil {
-			return 0, nil, nil, err
+			return 0, nil, streamSocketImpl{}, err
 		}
 
-		// NB: signal connectedness before handling any error below to ensure
-		// correct interpretation in fdio.
-		//
-		// See //sdk/lib/fdio/socket.cc:stream_socket::wait_begin/wait_end for
-		// details on how fdio infers the error code from asserted signals.
-		eps.onConnect.Do(func() { eps.startReadWriteLoops() })
+		{
+			s := makeStreamSocketImpl(eps)
 
-		// Check if the endpoint has already encountered an error since
-		// our installed callback will not fire in this case.
-		if ep.Readiness(waiter.EventErr)&waiter.EventErr != 0 {
-			eps.HUp()
+			// NB: signal connectedness before handling any error below to ensure
+			// correct interpretation in fdio.
+			//
+			// See //sdk/lib/fdio/socket.cc:stream_socket::wait_begin/wait_end for
+			// details on how fdio infers the error code from asserted signals.
+			s.onConnect.Do(func() { s.startReadWriteLoops(s.loopRead, s.loopWrite) })
+
+			// Check if the endpoint has already encountered an error since
+			// our installed callback will not fire in this case.
+			if s.ep.Readiness(waiter.EventErr)&waiter.EventErr != 0 {
+				s.HUp()
+			}
+
+			return 0, addr, s, nil
 		}
-
-		return 0, addr, eps, nil
 	}
 }
 
 // loopWrite shuttles signals and data from the zircon socket to the tcpip.Endpoint.
-func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
+func (s *streamSocketImpl) loopWrite(ch chan<- struct{}) {
 	defer close(ch)
 
 	const sigs = zx.SignalSocketReadable | zx.SignalSocketPeerWriteDisabled | localSignalClosing
 
 	waitEntry, notifyCh := waiter.NewChannelEntry(waiter.EventOut)
-	eps.wq.EventRegister(&waitEntry)
-	defer eps.wq.EventUnregister(&waitEntry)
+	s.wq.EventRegister(&waitEntry)
+	defer s.wq.EventUnregister(&waitEntry)
 
 	reader := socketReader{
-		socket: eps.local,
+		socket: s.local,
 	}
 	for {
 		reader.lastError = nil
 		reader.lastRead = 0
 
-		eps.terminal.mu.Lock()
-		n, err := eps.ep.Write(&reader, tcpip.WriteOptions{
+		s.terminal.mu.Lock()
+		n, err := s.ep.Write(&reader, tcpip.WriteOptions{
 			// We must write atomically in order to guarantee all the data fetched
 			// from the zircon socket is consumed by the endpoint.
 			Atomic: true,
 		})
-		eps.terminal.setLocked(err)
-		eps.terminal.mu.Unlock()
+		s.terminal.setLocked(err)
+		s.terminal.mu.Unlock()
 
 		if n != int64(reader.lastRead) {
 			panic(fmt.Sprintf("partial write into endpoint (%s); got %d, want %d", err, n, reader.lastRead))
@@ -1504,7 +1498,7 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 			case *zx.Error:
 				switch err.Status {
 				case zx.ErrShouldWait:
-					obs, err := zxwait.WaitContext(context.Background(), zx.Handle(eps.local), sigs)
+					obs, err := zxwait.WaitContext(context.Background(), zx.Handle(s.local), sigs)
 					if err != nil {
 						panic(err)
 					}
@@ -1525,7 +1519,7 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 					fallthrough
 				case zx.ErrBadState:
 					// Reading has been disabled for this socket endpoint.
-					switch err := eps.ep.Shutdown(tcpip.ShutdownWrite); err.(type) {
+					switch err := s.ep.Shutdown(tcpip.ShutdownWrite); err.(type) {
 					case nil, *tcpip.ErrNotConnected:
 						// Shutdown can return ErrNotConnected if the endpoint was
 						// connected but no longer is.
@@ -1547,7 +1541,7 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 			//
 			// We must wait until the linger timeout.
 			select {
-			case <-eps.linger:
+			case <-s.linger:
 				return
 			case <-notifyCh:
 				continue
@@ -1561,11 +1555,11 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 			// state; an endpoint in an error state will soon be fully closed down,
 			// and shutting it down here would cause signals to be asserted twice,
 			// which can produce races in the client.
-			if eps.ep.Readiness(waiter.EventErr)&waiter.EventErr == 0 {
-				if err := eps.local.SetDisposition(0, zx.SocketDispositionWriteDisabled); err != nil {
+			if s.ep.Readiness(waiter.EventErr)&waiter.EventErr == 0 {
+				if err := s.local.SetDisposition(0, zx.SocketDispositionWriteDisabled); err != nil {
 					panic(err)
 				}
-				_ = syslog.DebugTf("zx_socket_set_disposition", "%p: disposition=0, disposition_peer=ZX_SOCKET_DISPOSITION_WRITE_DISABLED", eps)
+				_ = syslog.DebugTf("zx_socket_set_disposition", "%p: disposition=0, disposition_peer=ZX_SOCKET_DISPOSITION_WRITE_DISABLED", s)
 			}
 			return
 		case *tcpip.ErrConnectionAborted, *tcpip.ErrConnectionReset, *tcpip.ErrNetworkUnreachable, *tcpip.ErrNoRoute:
@@ -1581,23 +1575,23 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 }
 
 // loopRead shuttles signals and data from the tcpip.Endpoint to the zircon socket.
-func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
+func (s *streamSocketImpl) loopRead(ch chan<- struct{}) {
 	defer close(ch)
 
 	const sigs = zx.SignalSocketWritable | zx.SignalSocketWriteDisabled | localSignalClosing
 
 	inEntry, inCh := waiter.NewChannelEntry(waiter.EventIn)
-	eps.wq.EventRegister(&inEntry)
-	defer eps.wq.EventUnregister(&inEntry)
+	s.wq.EventRegister(&inEntry)
+	defer s.wq.EventUnregister(&inEntry)
 
 	writer := socketWriter{
-		socket: eps.local,
+		socket: s.local,
 	}
 	for {
-		eps.terminal.mu.Lock()
-		res, err := eps.ep.Read(&writer, tcpip.ReadOptions{})
-		eps.terminal.setLocked(err)
-		eps.terminal.mu.Unlock()
+		s.terminal.mu.Lock()
+		res, err := s.ep.Read(&writer, tcpip.ReadOptions{})
+		s.terminal.setLocked(err)
+		s.terminal.mu.Unlock()
 		// TODO(https://fxbug.dev/35006): Handle all transport read errors.
 		switch err.(type) {
 		case *tcpip.ErrNotConnected:
@@ -1622,7 +1616,7 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 			select {
 			case <-inCh:
 				continue
-			case <-eps.closing:
+			case <-s.closing:
 				// We're shutting down.
 				return
 			}
@@ -1631,18 +1625,18 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 			// state; an endpoint in an error state will soon be fully closed down,
 			// and shutting it down here would cause signals to be asserted twice,
 			// which can produce races in the client.
-			if eps.ep.Readiness(waiter.EventErr)&waiter.EventErr == 0 {
-				if err := eps.local.SetDisposition(zx.SocketDispositionWriteDisabled, 0); err != nil {
+			if s.ep.Readiness(waiter.EventErr)&waiter.EventErr == 0 {
+				if err := s.local.SetDisposition(zx.SocketDispositionWriteDisabled, 0); err != nil {
 					panic(err)
 				}
-				_ = syslog.DebugTf("zx_socket_set_disposition", "%p: disposition=ZX_SOCKET_DISPOSITION_WRITE_DISABLED, disposition_peer=0", eps)
+				_ = syslog.DebugTf("zx_socket_set_disposition", "%p: disposition=ZX_SOCKET_DISPOSITION_WRITE_DISABLED, disposition_peer=0", s)
 			}
 			return
 		case *tcpip.ErrConnectionAborted, *tcpip.ErrConnectionReset, *tcpip.ErrNetworkUnreachable, *tcpip.ErrNoRoute:
 			return
 		case nil, *tcpip.ErrBadBuffer:
 			if err == nil {
-				eps.ep.ModerateRecvBuf(res.Count)
+				s.ep.ModerateRecvBuf(res.Count)
 			}
 			// `tcpip.Endpoint.Read` returns a nil error if _anything_ was written
 			// - even if the writer returned an error - we always want to handle
@@ -1653,7 +1647,7 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 			case *zx.Error:
 				switch err.Status {
 				case zx.ErrShouldWait:
-					obs, err := zxwait.WaitContext(context.Background(), zx.Handle(eps.local), sigs)
+					obs, err := zxwait.WaitContext(context.Background(), zx.Handle(s.local), sigs)
 					if err != nil {
 						panic(err)
 					}
@@ -2157,18 +2151,33 @@ func (s *synchronousDatagramSocketImpl) GetInfoDeprecated(ctx fidl.Context) (soc
 type streamSocketImpl struct {
 	*endpointWithSocket
 
+	// onConnect is used to register callbacks for connected sockets.
+	onConnect *sync.Once
+
+	// onListen is used to register callbacks for listening sockets.
+	onListen *sync.Once
+
+	// Used to unblock waiting to write when SO_LINGER is enabled.
+	linger chan struct{}
+
 	cancel context.CancelFunc
 }
 
 var _ socket.StreamSocketWithCtx = (*streamSocketImpl)(nil)
 
-func newStreamSocket(eps *endpointWithSocket) (socket.StreamSocketWithCtxInterface, error) {
+func makeStreamSocketImpl(eps *endpointWithSocket) streamSocketImpl {
+	return streamSocketImpl{
+		endpointWithSocket: eps,
+		linger:             make(chan struct{}),
+		onConnect:          &sync.Once{},
+		onListen:           &sync.Once{},
+	}
+}
+
+func newStreamSocket(s streamSocketImpl) (socket.StreamSocketWithCtxInterface, error) {
 	localC, peerC, err := zx.NewChannel(0)
 	if err != nil {
 		return socket.StreamSocketWithCtxInterface{}, err
-	}
-	s := &streamSocketImpl{
-		endpointWithSocket: eps,
 	}
 	s.addConnection(context.Background(), fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
 	_ = syslog.DebugTf("NewStream", "%p", s.endpointWithSocket)
@@ -2331,26 +2340,28 @@ func (s *streamSocketImpl) Describe2(_ fidl.Context, query fidlio.ConnectionInfo
 }
 
 func (s *streamSocketImpl) Accept(_ fidl.Context, wantAddr bool) (socket.StreamSocketAcceptResult, error) {
-	code, addr, eps, err := s.endpointWithSocket.Accept(wantAddr)
-	if err != nil {
-		return socket.StreamSocketAcceptResult{}, err
+	{
+		code, addr, s, err := s.accept(wantAddr)
+		if err != nil {
+			return socket.StreamSocketAcceptResult{}, err
+		}
+		if code != 0 {
+			return socket.StreamSocketAcceptResultWithErr(code), nil
+		}
+		streamSocketInterface, err := newStreamSocket(s)
+		if err != nil {
+			return socket.StreamSocketAcceptResult{}, err
+		}
+		// TODO(https://fxbug.dev/67600): this copies a lock; avoid this when FIDL bindings are better.
+		response := socket.StreamSocketAcceptResponse{
+			S: streamSocketInterface,
+		}
+		if addr != nil {
+			sockaddr := toNetSocketAddress(s.netProto, *addr)
+			response.Addr = &sockaddr
+		}
+		return socket.StreamSocketAcceptResultWithResponse(response), nil
 	}
-	if code != 0 {
-		return socket.StreamSocketAcceptResultWithErr(code), nil
-	}
-	streamSocketInterface, err := newStreamSocket(eps)
-	if err != nil {
-		return socket.StreamSocketAcceptResult{}, err
-	}
-	// TODO(https://fxbug.dev/67600): this copies a lock; avoid this when FIDL bindings are better.
-	response := socket.StreamSocketAcceptResponse{
-		S: streamSocketInterface,
-	}
-	if addr != nil {
-		sockaddr := toNetSocketAddress(s.netProto, *addr)
-		response.Addr = &sockaddr
-	}
-	return socket.StreamSocketAcceptResultWithResponse(response), nil
 }
 
 func (s *streamSocketImpl) GetInfo(fidl.Context) (socket.StreamSocketGetInfoResult, error) {
@@ -2859,7 +2870,7 @@ func (sp *providerImpl) StreamSocket(_ fidl.Context, domain socket.Domain, proto
 	if err != nil {
 		return socket.ProviderStreamSocketResult{}, err
 	}
-	streamSocketInterface, err := newStreamSocket(socketEp)
+	streamSocketInterface, err := newStreamSocket(makeStreamSocketImpl(socketEp))
 	if err != nil {
 		return socket.ProviderStreamSocketResult{}, err
 	}
