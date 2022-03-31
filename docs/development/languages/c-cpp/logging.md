@@ -88,6 +88,8 @@ int main(int argc, char** argv) {
 ### Log messages
 
 ```C++
+#include <lib/syslog/cpp/macros.h>
+
 FX_LOGS(INFO) << "my message";
 FX_LOGST(INFO, "tag") << "my message";
 ```
