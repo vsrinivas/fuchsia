@@ -256,8 +256,8 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   // Only exposed for testing.
   const DebugDump* debug_dump() const { return debug_dump_.get(); }
 
-  const zx::vmo& mexec_kernel_zbi() const { return mexec_kernel_zbi_; }
-  const zx::vmo& mexec_data_zbi() const { return mexec_data_zbi_; }
+  zx::vmo& mexec_kernel_zbi() { return mexec_kernel_zbi_; }
+  zx::vmo& mexec_data_zbi() { return mexec_data_zbi_; }
 
  private:
   // fuchsia.driver.development/DriverDevelopment interface

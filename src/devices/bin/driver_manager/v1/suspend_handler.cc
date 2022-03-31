@@ -10,6 +10,7 @@
 
 #include <inspector/inspector.h>
 
+#include "src/bringup/lib/mexec/mexec.h"
 #include "src/devices/bin/driver_manager/coordinator.h"
 #include "src/devices/bin/driver_manager/driver_host.h"
 #include "src/devices/lib/log/log.h"
@@ -26,8 +27,8 @@ fidl::WireSharedClient<fuchsia_fshost::Admin> ConnectToFshostAdminServer(
   return fidl::WireSharedClient(std::move(*result), dispatcher);
 }
 
-void SuspendFallback(const zx::resource& root_resource, uint32_t flags,
-                     const zx::vmo& mexec_kernel_zbi, const zx::vmo& mexec_data_zbi) {
+void SuspendFallback(const zx::resource& root_resource, uint32_t flags, zx::vmo mexec_kernel_zbi,
+                     zx::vmo mexec_data_zbi) {
   LOGF(INFO, "Suspend fallback with flags %#08x", flags);
 
   const char* what = "zx_system_powerctl";
@@ -45,7 +46,8 @@ void SuspendFallback(const zx::resource& root_resource, uint32_t flags,
     status = zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_SHUTDOWN, nullptr);
   } else if (flags == DEVICE_SUSPEND_FLAG_MEXEC) {
     LOGF(INFO, "About to mexec...");
-    status = zx_system_mexec(root_resource.get(), mexec_kernel_zbi.get(), mexec_data_zbi.get());
+    status = mexec::BootZbi(root_resource.borrow(), std::move(mexec_kernel_zbi),
+                            std::move(mexec_data_zbi));
     what = "zx_system_mexec";
   }
   // Warning - and not an error - as a large number of tests unfortunately rely
@@ -149,8 +151,9 @@ void SuspendHandler::SuspendAfterFilesystemShutdown() {
       DumpSuspendTaskDependencies(suspend_task_.get());
     }
 
-    SuspendFallback(coordinator_->root_resource(), sflags_, coordinator_->mexec_kernel_zbi(),
-                    coordinator_->mexec_data_zbi());
+    SuspendFallback(coordinator_->root_resource(), sflags_,
+                    std::move(coordinator_->mexec_kernel_zbi()),
+                    std::move(coordinator_->mexec_data_zbi()));
     // Unless in test env, we should not reach here.
     if (suspend_callback_) {
       suspend_callback_(ZX_ERR_TIMED_OUT);
@@ -181,8 +184,9 @@ void SuspendHandler::SuspendAfterFilesystemShutdown() {
     // should never get here on x86
     // on arm, if the platform driver does not implement
     // suspend go to the kernel fallback
-    SuspendFallback(coordinator_->root_resource(), sflags_, coordinator_->mexec_kernel_zbi(),
-                    coordinator_->mexec_data_zbi());
+    SuspendFallback(coordinator_->root_resource(), sflags_,
+                    std::move(coordinator_->mexec_kernel_zbi()),
+                    std::move(coordinator_->mexec_data_zbi()));
     // if we get here the system did not suspend successfully
     flags_ = SuspendHandler::Flags::kRunning;
 

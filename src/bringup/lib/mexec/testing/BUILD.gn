@@ -6,9 +6,10 @@ import("//build/testing/zbi_test_executable.gni")
 
 zbi_test_executable("mexec-zbi-test-entry") {
   sources = [ "mexec-zbi-test-entry.cc" ]
+  include_dirs = [ "//" ]
   deps = [
     ":zbi-test-entry",
-    "//zircon/system/ulib/zx",
+    "//src/bringup/lib/mexec",
   ]
 }
 

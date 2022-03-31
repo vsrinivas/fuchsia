@@ -23,6 +23,10 @@ namespace mexec {
 //
 zx_status_t PrepareDataZbi(zx::unowned_resource resource, zx::unowned_vmo data_zbi);
 
+// Boot a new kernel from the separate kernel and data ZBIs in the two VMOs.
+// This never returns if successful.
+zx_status_t BootZbi(zx::unowned_resource resource, zx::vmo kernel_zbi, zx::vmo data_zbi);
+
 }  // namespace mexec
 
 #endif  // SRC_BRINGUP_LIB_MEXEC_MEXEC_H_
