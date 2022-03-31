@@ -77,8 +77,8 @@ pub enum GcsError {
     NeedNewAccessToken,
 
     /// GCS returned an empty response for the request.
-    #[error("The requested gs:// URL contains no data (not found).")]
-    NotFound,
+    #[error("The requested GCS bucket + path contains no data (not found): {0}, {1}.")]
+    NotFound(String, String),
 
     /// The authorization code is empty string (or None). Likely a mistake in
     /// the calling application (e.g. calling new_with_code() with an empty
@@ -497,7 +497,7 @@ impl TokenStore {
             }
         }
         if results.is_empty() {
-            bail!(GcsError::NotFound);
+            bail!(GcsError::NotFound(bucket.to_string(), prefix.to_string()));
         }
         Ok(results)
     }

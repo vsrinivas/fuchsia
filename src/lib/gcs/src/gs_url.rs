@@ -11,7 +11,7 @@ use anyhow::{bail, Result};
 /// Example: `gs://bucket/object/path` will return ("bucket", "object/path").
 /// Returns errors for incorrect prefix or missing slash between bucket and
 /// object.
-pub fn split_gs_url(gs_url: &String) -> Result<(&str, &str)> {
+pub fn split_gs_url(gs_url: &str) -> Result<(&str, &str)> {
     // Uri will create a local which we cannot return references to:
     //    let url = Uri::try_from(gs_url)
     // A regex is more than needed for this simple format.

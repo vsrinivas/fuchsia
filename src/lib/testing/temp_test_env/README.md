@@ -9,7 +9,7 @@ testing convenience *only*, it is not a secure sandbox by any means.
 When working on TempTestEnv lib, consider using:
 
 ```
-$ fx set [...] --with //src/lib:tests
+$ fx set [...] --with-host //src/lib/testing/temp_test_env:tests
 ```
 
 ### Unit Tests

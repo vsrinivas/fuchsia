@@ -13,6 +13,7 @@ use {
     std::{
         collections::HashMap,
         ffi::OsStr,
+        fmt::{self, Display, Formatter},
         fs::File,
         io::{BufReader, Read},
         path::{Path, PathBuf},
@@ -24,6 +25,22 @@ use {
 pub struct Entries {
     /// A collection of FMS Entries that have been added.
     data: HashMap<String, Metadata>,
+}
+
+impl Display for Entries {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(f, "Entries: [")?;
+        let mut first = true;
+        for key in self.data.keys() {
+            if !first {
+                first = false;
+                write!(f, ", ")?;
+            }
+            write!(f, "{}", key)?;
+        }
+        write!(f, "]")?;
+        Ok(())
+    }
 }
 
 impl Entries {

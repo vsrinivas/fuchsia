@@ -38,6 +38,7 @@ if (is_host) {
       "test_data/test_product_bundle.json",
     ]
     sources = [
+      "src/gcs.rs",
       "src/in_tree.rs",
       "src/lib.rs",
       "src/sdk.rs",
