@@ -101,7 +101,25 @@ type Environment struct {
 
 	// ExtraEnvNameKeys are keys to further distinguish a unique environment by.
 	ExtraEnvNameKeys []string `json:"extra_env_name_keys,omitempty"`
+
+	// ImageOverrides is a map of the images to override the default values in
+	// images.json used to boot a target. The key should be an ImageOverrideType
+	// and the value should be the name of the image to override with as defined
+	// in images.json.
+	ImageOverrides ImageOverrides `json:"image_overrides,omitempty"`
 }
+
+// ImageOverrides is a map of image type to image name as defined in images.json.
+type ImageOverrides map[ImageOverrideType]string
+
+// ImageOverrideType represents image types supported for overriding.
+type ImageOverrideType string
+
+const (
+	ZbiImage    ImageOverrideType = "zbi_image"
+	VbmetaImage ImageOverrideType = "vbmeta_image"
+	QemuKernel  ImageOverrideType = "qemu_kernel"
+)
 
 // DimensionSet encapsulates the Swarming dimensions a test wishes to target.
 type DimensionSet struct {

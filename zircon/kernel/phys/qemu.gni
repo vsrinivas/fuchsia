@@ -170,6 +170,7 @@ template("phys_qemu_test") {
         # The special kernel is all that really matters for this test.
         device_types = [ "QEMU" ]
         qemu_kernel = ":$executable_target"
+        qemu_kernel_name = "$executable_target"
 
         # Set a short timeout since the tests don't necessarily shut down QEMU
         # after printing the success string.

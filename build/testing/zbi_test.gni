@@ -3,9 +3,121 @@
 # found in the LICENSE file.
 
 import("//build/images/vbmeta.gni")
+import("//build/testing/test_spec.gni")
 import("//build/testing/zbi_test_success.gni")
 import("//build/zbi/zbi.gni")
 import("//build/zbi/zbi_input.gni")
+
+declare_args() {
+  # Set this variable to true to include zbi_tests into tests.json.
+  include_zbi_host_tests = false
+}
+
+# Composes a host test to check for the success of the zbi tests.
+#
+# The test target is constructed differently based on whether it is run against
+# hardware or an emulator, so the template needs to be called with device_types
+# that are either only hardware or only emulators.
+#
+# Parameters
+#
+#   is_emu
+#     [bool] Whether the device_types provided are all emulator types. If false,
+#     all device_types are expected to be hardware.
+#
+#   device_types
+#     [list of strings] Devices the test should run on.
+#     Allowable values are those among the entries in
+#     //build/testing/platforms.gni; others will be ignored.
+#
+#   zbi_image, vbmeta_image, qemu_kernel
+#     Passed through to the environments of the associated test_spec.
+#     See //build/testing/test_spec.gni.
+#
+template("zbi_host_test") {
+  forward_variables_from(invoker, [ "is_emu" ])
+  toolchain = host_toolchain
+  os = host_os
+  cpu = host_cpu
+  if (is_emu) {
+    toolchain = host_toolchain_for_target_cpu
+    os = host_os
+    cpu = target_cpu
+  }
+
+  # Create a script to run the seriallistener tool with the appropriate args.
+  _script_file = "${target_out_dir}/${target_name}.sh"
+  _test_script_target = "${target_name}_script"
+
+  action(_test_script_target) {
+    testonly = true
+    script = "//build/testing/create_test.sh"
+    binary_path = get_label_info("//tools/testing/seriallistener($toolchain)",
+                                 "root_out_dir") + "/seriallistener"
+    args = [
+      rebase_path(_script_file, root_build_dir),
+      rebase_path(binary_path, root_build_dir),
+    ]
+    args += [
+      "-success-str",
+      zbi_test_success_string,
+    ]
+    if (!is_emu) {
+      args += [ "-stdout=True" ]
+    }
+
+    outputs = [ "${_script_file}" ]
+    visibility = [ ":*" ]
+
+    deps = [ "//tools/testing/seriallistener($toolchain)" ]
+    metadata = {
+      test_runtime_deps = [
+        _script_file,
+        binary_path,
+      ]
+    }
+  }
+
+  test_spec(target_name) {
+    target = get_label_info(":${target_name}", "label_with_toolchain")
+    path = _script_file
+    os = os
+    cpu = cpu
+    isolated = true
+    if (defined(invoker.timeout) && invoker.timeout != false) {
+      timeout_secs = invoker.timeout
+    }
+    forward_variables_from(invoker, [ "visibility" ])
+
+    deps = [ ":${_test_script_target}" ]
+
+    environments = []
+    if (defined(invoker.device_types)) {
+      foreach(dt, invoker.device_types) {
+        environments += [
+          {
+            dimensions = {
+              device_type = dt
+            }
+            image_overrides = {
+              zbi_image = invoker.zbi_image
+              if (!is_emu && defined(invoker.vbmeta_image)) {
+                vbmeta_image = invoker.vbmeta_image
+              }
+              if (is_emu) {
+                if (defined(invoker.qemu_kernel)) {
+                  qemu_kernel = invoker.qemu_kernel
+                } else {  # If qemu_kernel is not provided, use the default.
+                  qemu_kernel = "qemu-kernel"
+                }
+              }
+            }
+          },
+        ]
+      }
+    }
+  }
+}
 
 # Composes a test zbi out of Zircon artifacts.
 #
@@ -32,6 +144,18 @@ import("//build/zbi/zbi_input.gni")
 #     //build/testing/platforms.gni; others will be ignored.
 #     Defaults to [ "QEMU" ].
 #
+#   qemu_kernel
+#     [label_with_toolchain] Label corresponding to the qemu-kernel image
+#     in images.json that should be used with the zbi_image. This will appear
+#     as the qemu_kernel_label in a zbi_tests.json entry. If provided,
+#     qemu_kernel_name should also be provided.
+#
+#   qemu_kernel_name
+#     [string] Name corresponding to the qemu-kernel image in images.json
+#     that should be used with the zbi image. This will be used in the
+#     associated zbi_host_test() to specify the qemu_kernel to use in the
+#     test spec environment. If provided, qemu_kernel should also be provided.
+#
 #   deps, data_deps, replace, complete, compress
 #     See //build/zbi/zbi.gni.
 template("zbi_test") {
@@ -41,6 +165,7 @@ template("zbi_test") {
   not_needed(invoker,
              [
                "qemu_kernel",
+               "qemu_kernel_name",
                "timeout",
              ])
 
@@ -67,6 +192,11 @@ template("zbi_test") {
     }
   }
 
+  forward_variables_from(invoker, [ "output_name" ])
+  if (!defined(output_name)) {
+    output_name = main_target
+  }
+
   zbi(zbi_target) {
     testonly = true
     data_deps = []
@@ -77,15 +207,12 @@ template("zbi_test") {
                              "data_deps",
                              "output_dir",
                              "output_extension",
-                             "output_name",
                              "visibility",
                            ])
     if (defined(visibility)) {
       visibility += [ ":$main_target" ]
     }
-    if (!defined(output_name)) {
-      output_name = main_target
-    }
+
     deps = invoker.deps + input_deps
     if (defined(invoker.qemu_kernel)) {
       data_deps += [ invoker.qemu_kernel ]
@@ -164,6 +291,44 @@ template("zbi_test") {
     output_vbmeta = vbmeta_outputs[0]
 
     group_deps += [ ":${vbmeta_target}" ]
+  }
+
+  if (include_zbi_host_tests) {
+    emu_types = []
+    hardware_types = []
+    foreach(dt, _device_types) {
+      if (dt == "QEMU" || dt == "AEMU") {
+        emu_types += [ dt ]
+      } else {
+        hardware_types += [ dt ]
+      }
+    }
+    host_test_name = "${main_target}_host_test"
+    if (emu_types != []) {
+      zbi_host_test(host_test_name) {
+        is_emu = true
+        zbi_image = output_name
+        if (defined(invoker.qemu_kernel_name)) {
+          qemu_kernel = invoker.qemu_kernel_name
+        }
+        forward_variables_from(invoker, [ "timeout" ])
+        device_types = emu_types
+      }
+      group_deps += [ ":$host_test_name" ]
+    }
+    if (hardware_types != []) {
+      host_test_hw_name = "${host_test_name}_for_hardware"
+      zbi_host_test(host_test_hw_name) {
+        is_emu = false
+        zbi_image = output_name
+        if (use_vbmeta) {
+          vbmeta_image = vbmeta_target
+        }
+        forward_variables_from(invoker, [ "timeout" ])
+        device_types = hardware_types
+      }
+      group_deps += [ ":$host_test_hw_name" ]
+    }
   }
 
   group(main_target) {

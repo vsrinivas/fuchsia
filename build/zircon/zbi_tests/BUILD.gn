@@ -9,6 +9,7 @@ group("zbi_tests") {
   visibility = [
     "//:default",
     "//:images",
+    "//:tests",
     "//:zbi_tests",
   ]
   testonly = true
@@ -17,7 +18,6 @@ group("zbi_tests") {
     "//src/bringup/bin/bootsvc/integration_test:bootsvc-integration-tests",
     "//src/bringup/bin/bootsvc/integration_test:bootsvc-root-job-test",
     "//src/bringup/lib/mexec/tests",
-    "//zircon/kernel/phys:tests",
     "//zircon/kernel/phys:tests",
     "//zircon/system/utest/core:core-tests",
   ]

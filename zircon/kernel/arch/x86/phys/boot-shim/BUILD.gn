@@ -271,6 +271,10 @@ template("qemu_shim_test") {
         if (qemu.name == shim.format) {
           qemu_kernel = ":${shim.name}(${qemu.environment})"
           forward_variables_from(qemu, [ "timeout" ])
+          qemu_kernel_name = "${shim.name}"
+          if (shim.name == "multiboot-shim") {
+            qemu_kernel_name = "qemu-kernel"
+          }
         }
       }
       assert(defined(qemu_kernel), "$shim not in $qemu_boot_formats")

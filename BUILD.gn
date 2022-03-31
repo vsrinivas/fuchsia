@@ -15,6 +15,7 @@ import("//build/product.gni")
 import("//build/rust/config.gni")
 import("//build/security.gni")
 import("//build/testing/platforms.gni")
+import("//build/testing/zbi_test.gni")
 import("//build/toolchain/goma.gni")
 import("//build/toolchain/zircon/clang.gni")
 import("//build/zbi/zbi.gni")
@@ -668,6 +669,9 @@ build_api_module("tests") {
     # Pull in tests from *_package_labels.
     "//build/images:packages",
   ]
+  if (include_zbi_host_tests) {
+    deps += [ "//build/zircon/zbi_tests" ]
+  }
 }
 
 # test-list.json contains the set of tests in the build along with arbitrary

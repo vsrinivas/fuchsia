@@ -292,6 +292,10 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context) ([]string, 
 		vars["test_durations_file"] = testDurationsFile
 	}
 
+	if staticSpec.IncludeZbiTests {
+		vars["include_zbi_host_tests"] = true
+	}
+
 	for varName, values := range map[string][]string{
 		"base_package_labels":     staticSpec.BasePackages,
 		"cache_package_labels":    staticSpec.CachePackages,
