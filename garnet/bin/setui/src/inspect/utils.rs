@@ -2,4 +2,5 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxb/94356): Add utility data structure mods.
+/// A map from String to inspect-writeable item.
+pub mod inspect_map;

@@ -168,6 +168,7 @@ rustc_library("lib") {
     "src/inspect/config_logger.rs",
     "src/inspect/stash_logger.rs",
     "src/inspect/utils.rs",
+    "src/inspect/utils/inspect_map.rs",
     "src/intl.rs",
     "src/intl/intl_controller.rs",
     "src/intl/intl_fidl_handler.rs",
