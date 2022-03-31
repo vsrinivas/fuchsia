@@ -4080,13 +4080,6 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void LibfuzzerNeedsNonemptyProtocol(
-      ::fidl::WireClientCallback<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                                     LibfuzzerNeedsNonemptyProtocol>
-          _cb);
-  void LibfuzzerNeedsNonemptyProtocol(::fit::callback<void()> _cb);
-  // Allocates 16 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
   ::fidl::internal::WireThenable<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                                      LibfuzzerNeedsNonemptyProtocol>
   LibfuzzerNeedsNonemptyProtocol();
@@ -4107,12 +4100,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
                 ::test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
-
-  // Caller provides the backing storage for FIDL message.
-  void LibfuzzerNeedsNonemptyProtocol(
-      ::fidl::WireResponseContext<
-          ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-              LibfuzzerNeedsNonemptyProtocol>* _context);
 
   // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
@@ -4372,33 +4359,9 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void OnlyDenyDart(bool a,
-                    ::fidl::WireClientCallback<
-                        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
-                        _cb);
-  void OnlyDenyDart(
-      bool a,
-      ::fit::callback<
-          void(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::
-                                        OnlyDenyDart>* response)>
-          _cb);
-  // Allocates 24 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
   ::fidl::internal::WireThenable<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
   OnlyDenyDart(bool a);
-  // Allocates 24 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
-  void OnlyDenyGo(bool a,
-                  ::fidl::WireClientCallback<
-                      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
-                      _cb);
-  void OnlyDenyGo(
-      bool a,
-      ::fit::callback<
-          void(::fidl::WireResponse<
-               ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>* response)>
-          _cb);
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   ::fidl::internal::WireThenable<
@@ -4406,50 +4369,14 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
   OnlyDenyGo(bool a);
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void OnlyDenyLibfuzzer(
-      bool a, ::fidl::WireClientCallback<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
-                  _cb);
-  void OnlyDenyLibfuzzer(
-      bool a,
-      ::fit::callback<
-          void(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::
-                                        OnlyDenyLibfuzzer>* response)>
-          _cb);
-  // Allocates 24 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
   ::fidl::internal::WireThenable<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
   OnlyDenyLibfuzzer(bool a);
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void OnlyDenyRust(bool a,
-                    ::fidl::WireClientCallback<
-                        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
-                        _cb);
-  void OnlyDenyRust(
-      bool a,
-      ::fit::callback<
-          void(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::
-                                        OnlyDenyRust>* response)>
-          _cb);
-  // Allocates 24 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
   ::fidl::internal::WireThenable<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
   OnlyDenyRust(bool a);
-  // Allocates 24 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
-  void OnlyDenySyzkaller(
-      bool a, ::fidl::WireClientCallback<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
-                  _cb);
-  void OnlyDenySyzkaller(
-      bool a,
-      ::fit::callback<
-          void(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::
-                                        OnlyDenySyzkaller>* response)>
-          _cb);
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   ::fidl::internal::WireThenable<
@@ -4474,21 +4401,9 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 
   // Caller provides the backing storage for FIDL message.
-  void OnlyDenyDart(
-      bool a,
-      ::fidl::WireResponseContext<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>* _context);
-
-  // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
   OnlyDenyDart(bool a);
-
-  // Caller provides the backing storage for FIDL message.
-  void OnlyDenyGo(
-      bool a,
-      ::fidl::WireResponseContext<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>* _context);
 
   // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
@@ -4496,32 +4411,14 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
   OnlyDenyGo(bool a);
 
   // Caller provides the backing storage for FIDL message.
-  void OnlyDenyLibfuzzer(
-      bool a, ::fidl::WireResponseContext<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
-                  _context);
-
-  // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
   OnlyDenyLibfuzzer(bool a);
 
   // Caller provides the backing storage for FIDL message.
-  void OnlyDenyRust(
-      bool a,
-      ::fidl::WireResponseContext<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>* _context);
-
-  // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
   OnlyDenyRust(bool a);
-
-  // Caller provides the backing storage for FIDL message.
-  void OnlyDenySyzkaller(
-      bool a, ::fidl::WireResponseContext<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
-                  _context);
 
   // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<

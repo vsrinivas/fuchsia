@@ -1118,13 +1118,6 @@ class ::fidl::internal::WireWeakAsyncClientImpl<::test_inheritance::Super> final
  public:
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   // The request and callback are allocated on the heap.
-  void Foo(::fidl::StringView s,
-           ::fidl::WireClientCallback<::test_inheritance::Super::Foo> _cb);
-  void Foo(::fidl::StringView s,
-           ::fit::callback<void(
-               ::fidl::WireResponse<::test_inheritance::Super::Foo>* response)>
-               _cb);
-  // The request and callback are allocated on the heap.
   ::fidl::internal::WireThenable<::test_inheritance::Super::Foo> Foo(
       ::fidl::StringView s);
 };
@@ -1142,11 +1135,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_inheritance::Super>
                 ::test_inheritance::Super> {
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
-
-  // Caller provides the backing storage for FIDL message.
-  void Foo(
-      ::fidl::StringView s,
-      ::fidl::WireResponseContext<::test_inheritance::Super::Foo>* _context);
 
   // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<::test_inheritance::Super::Foo> Foo(
@@ -1215,13 +1203,6 @@ class ::fidl::internal::WireWeakAsyncClientImpl<::test_inheritance::Sub> final
  public:
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   // The request and callback are allocated on the heap.
-  void Foo(::fidl::StringView s,
-           ::fidl::WireClientCallback<::test_inheritance::Sub::Foo> _cb);
-  void Foo(::fidl::StringView s,
-           ::fit::callback<void(
-               ::fidl::WireResponse<::test_inheritance::Sub::Foo>* response)>
-               _cb);
-  // The request and callback are allocated on the heap.
   ::fidl::internal::WireThenable<::test_inheritance::Sub::Foo> Foo(
       ::fidl::StringView s);
 };
@@ -1239,10 +1220,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_inheritance::Sub>
                 ::test_inheritance::Sub> {
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
-
-  // Caller provides the backing storage for FIDL message.
-  void Foo(::fidl::StringView s,
-           ::fidl::WireResponseContext<::test_inheritance::Sub::Foo>* _context);
 
   // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<::test_inheritance::Sub::Foo> Foo(

@@ -59,13 +59,13 @@ bool EchoCallBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     async::PostTask(loop.dispatcher(), [&]() {
       state->NextStep();  // End: Setup. Begin: EchoCall.
 
-      client->Echo(
-          std::move(aligned_value),
-          [&state, &completion](fidl::WireUnownedResult<typename ProtocolType::Echo>& result) {
-            state->NextStep();  // End: EchoCall. Begin: Teardown
-            ZX_ASSERT(result.ok());
-            completion.Signal();
-          });
+      client->Echo(std::move(aligned_value))
+          .ThenExactlyOnce(
+              [&state, &completion](fidl::WireUnownedResult<typename ProtocolType::Echo>& result) {
+                state->NextStep();  // End: EchoCall. Begin: Teardown
+                ZX_ASSERT(result.ok());
+                completion.Signal();
+              });
     });
     ZX_ASSERT(ZX_OK == completion.Wait());
   }

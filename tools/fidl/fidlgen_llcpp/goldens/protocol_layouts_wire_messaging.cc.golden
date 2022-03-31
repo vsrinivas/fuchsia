@@ -1390,91 +1390,6 @@ fidl::internal::WireWeakOnewayClientImpl<::test_protocollayouts::MainProtocol>::
                        &_request_object);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayAnonComposed(
-        ::test_protocollayouts_imported::wire::
-            ComposedProtocolTwoWayAnonComposedRequest
-                ComposedProtocolTwoWayAnonComposedRequest,
-        ::fidl::WireClientCallback<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonComposed> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>&
-                      result) override {
-      cb_(result);
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
-      _request{ComposedProtocolTwoWayAnonComposedRequest};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayAnonComposed(
-        ::test_protocollayouts_imported::wire::
-            ComposedProtocolTwoWayAnonComposedRequest
-                ComposedProtocolTwoWayAnonComposedRequest,
-        ::fit::callback<
-            void(::fidl::WireResponse<::test_protocollayouts::MainProtocol::
-                                          TwoWayAnonComposed>* response)>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonComposed> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>&
-                      result) override {
-      if (result.ok()) {
-        ::fidl::WireResponse<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>*
-            response = result.Unwrap();
-        cb_(response);
-      }
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
-      _request{ComposedProtocolTwoWayAnonComposedRequest};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
 
 ::fidl::internal::WireThenable<
     ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
@@ -1489,93 +1404,6 @@ fidl::internal::WireWeakAsyncClientImpl<::test_protocollayouts::MainProtocol>::
       ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>{
       _client_base(), ::fidl::WriteOptions{},
       ::fidl::internal::AllowUnownedInputRef{}, &_request};
-}
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayAnonComposedWithError(
-        ::test_protocollayouts_imported::wire::
-            ComposedProtocolTwoWayAnonComposedWithErrorRequest
-                ComposedProtocolTwoWayAnonComposedWithErrorRequest,
-        ::fidl::WireClientCallback<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(
-        ::fidl::WireUnownedResult<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>&
-            result) override {
-      cb_(result);
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
-      _request{ComposedProtocolTwoWayAnonComposedWithErrorRequest};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayAnonComposedWithError(
-        ::test_protocollayouts_imported::wire::
-            ComposedProtocolTwoWayAnonComposedWithErrorRequest
-                ComposedProtocolTwoWayAnonComposedWithErrorRequest,
-        ::fit::callback<void(
-            ::fidl::WireResponse<::test_protocollayouts::MainProtocol::
-                                     TwoWayAnonComposedWithError>* response)>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(
-        ::fidl::WireUnownedResult<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>&
-            result) override {
-      if (result.ok()) {
-        ::fidl::WireResponse<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>*
-            response = result.Unwrap();
-        cb_(response);
-      }
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
-      _request{ComposedProtocolTwoWayAnonComposedWithErrorRequest};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 
 ::fidl::internal::WireThenable<
@@ -1593,89 +1421,6 @@ fidl::internal::WireWeakAsyncClientImpl<::test_protocollayouts::MainProtocol>::
       _client_base(), ::fidl::WriteOptions{},
       ::fidl::internal::AllowUnownedInputRef{}, &_request};
 }
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayNamedComposed(
-        ::test_protocollayouts_imported::wire::ImportUnionPayload
-            ImportUnionPayload,
-        ::fidl::WireClientCallback<
-            ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayNamedComposed> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>&
-                      result) override {
-      cb_(result);
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
-      _request{ImportUnionPayload};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayNamedComposed(
-        ::test_protocollayouts_imported::wire::ImportUnionPayload
-            ImportUnionPayload,
-        ::fit::callback<
-            void(::fidl::WireResponse<::test_protocollayouts::MainProtocol::
-                                          TwoWayNamedComposed>* response)>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayNamedComposed> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>&
-                      result) override {
-      if (result.ok()) {
-        ::fidl::WireResponse<
-            ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>*
-            response = result.Unwrap();
-        cb_(response);
-      }
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
-      _request{ImportUnionPayload};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
 
 ::fidl::internal::WireThenable<
     ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
@@ -1690,91 +1435,6 @@ fidl::internal::WireWeakAsyncClientImpl<::test_protocollayouts::MainProtocol>::
       ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>{
       _client_base(), ::fidl::WriteOptions{},
       ::fidl::internal::AllowUnownedInputRef{}, &_request};
-}
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayNamedComposedWithError(
-        ::test_protocollayouts_imported::wire::ImportTablePayload
-            ImportTablePayload,
-        ::fidl::WireClientCallback<
-            ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final : public ::fidl::WireResponseContext<
-                                    ::test_protocollayouts::MainProtocol::
-                                        TwoWayNamedComposedWithError> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(
-        ::fidl::WireUnownedResult<
-            ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>&
-            result) override {
-      cb_(result);
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
-      _request{ImportTablePayload};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayNamedComposedWithError(
-        ::test_protocollayouts_imported::wire::ImportTablePayload
-            ImportTablePayload,
-        ::fit::callback<void(
-            ::fidl::WireResponse<::test_protocollayouts::MainProtocol::
-                                     TwoWayNamedComposedWithError>* response)>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final : public ::fidl::WireResponseContext<
-                                    ::test_protocollayouts::MainProtocol::
-                                        TwoWayNamedComposedWithError> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(
-        ::fidl::WireUnownedResult<
-            ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>&
-            result) override {
-      if (result.ok()) {
-        ::fidl::WireResponse<
-            ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>*
-            response = result.Unwrap();
-        cb_(response);
-      }
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
-      _request{ImportTablePayload};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 
 ::fidl::internal::WireThenable<
@@ -1791,87 +1451,6 @@ fidl::internal::WireWeakAsyncClientImpl<::test_protocollayouts::MainProtocol>::
       _client_base(), ::fidl::WriteOptions{},
       ::fidl::internal::AllowUnownedInputRef{}, &_request};
 }
-void fidl::internal::
-    WireWeakAsyncClientImpl<::test_protocollayouts::MainProtocol>::TwoWayImport(
-        ::test_protocollayouts_imported::wire::ImportUnionPayload
-            ImportUnionPayload,
-        ::fidl::WireClientCallback<
-            ::test_protocollayouts::MainProtocol::TwoWayImport>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayImport> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_protocollayouts::MainProtocol::TwoWayImport>& result)
-        override {
-      cb_(result);
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayImport>
-      _request{ImportUnionPayload};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayImport>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
-void fidl::internal::
-    WireWeakAsyncClientImpl<::test_protocollayouts::MainProtocol>::TwoWayImport(
-        ::test_protocollayouts_imported::wire::ImportUnionPayload
-            ImportUnionPayload,
-        ::fit::callback<
-            void(::fidl::WireResponse<
-                 ::test_protocollayouts::MainProtocol::TwoWayImport>* response)>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayImport> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_protocollayouts::MainProtocol::TwoWayImport>& result)
-        override {
-      if (result.ok()) {
-        ::fidl::WireResponse<
-            ::test_protocollayouts::MainProtocol::TwoWayImport>* response =
-            result.Unwrap();
-        cb_(response);
-      }
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayImport>
-      _request{ImportUnionPayload};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayImport>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
 
 ::fidl::internal::WireThenable<
     ::test_protocollayouts::MainProtocol::TwoWayImport>
@@ -1885,89 +1464,6 @@ fidl::internal::WireWeakAsyncClientImpl<::test_protocollayouts::MainProtocol>::
       ::test_protocollayouts::MainProtocol::TwoWayImport>{
       _client_base(), ::fidl::WriteOptions{},
       ::fidl::internal::AllowUnownedInputRef{}, &_request};
-}
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayImportWithError(
-        ::test_protocollayouts_imported::wire::ImportTablePayload
-            ImportTablePayload,
-        ::fidl::WireClientCallback<
-            ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayImportWithError> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_protocollayouts::MainProtocol::TwoWayImportWithError>&
-                      result) override {
-      cb_(result);
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
-      _request{ImportTablePayload};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayImportWithError>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayImportWithError(
-        ::test_protocollayouts_imported::wire::ImportTablePayload
-            ImportTablePayload,
-        ::fit::callback<
-            void(::fidl::WireResponse<::test_protocollayouts::MainProtocol::
-                                          TwoWayImportWithError>* response)>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayImportWithError> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_protocollayouts::MainProtocol::TwoWayImportWithError>&
-                      result) override {
-      if (result.ok()) {
-        ::fidl::WireResponse<
-            ::test_protocollayouts::MainProtocol::TwoWayImportWithError>*
-            response = result.Unwrap();
-        cb_(response);
-      }
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
-      _request{ImportTablePayload};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayImportWithError>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 
 ::fidl::internal::WireThenable<
@@ -1984,84 +1480,6 @@ fidl::internal::WireWeakAsyncClientImpl<::test_protocollayouts::MainProtocol>::
       _client_base(), ::fidl::WriteOptions{},
       ::fidl::internal::AllowUnownedInputRef{}, &_request};
 }
-void fidl::internal::
-    WireWeakAsyncClientImpl<::test_protocollayouts::MainProtocol>::TwoWayLocal(
-        ::test_protocollayouts::wire::LocalUnionPayload LocalUnionPayload,
-        ::fidl::WireClientCallback<
-            ::test_protocollayouts::MainProtocol::TwoWayLocal>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayLocal> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_protocollayouts::MainProtocol::TwoWayLocal>& result)
-        override {
-      cb_(result);
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayLocal>
-      _request{LocalUnionPayload};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayLocal>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
-void fidl::internal::
-    WireWeakAsyncClientImpl<::test_protocollayouts::MainProtocol>::TwoWayLocal(
-        ::test_protocollayouts::wire::LocalUnionPayload LocalUnionPayload,
-        ::fit::callback<
-            void(::fidl::WireResponse<
-                 ::test_protocollayouts::MainProtocol::TwoWayLocal>* response)>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayLocal> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_protocollayouts::MainProtocol::TwoWayLocal>& result)
-        override {
-      if (result.ok()) {
-        ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>*
-            response = result.Unwrap();
-        cb_(response);
-      }
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayLocal>
-      _request{LocalUnionPayload};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayLocal>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
 
 ::fidl::internal::WireThenable<
     ::test_protocollayouts::MainProtocol::TwoWayLocal>
@@ -2075,87 +1493,6 @@ fidl::internal::WireWeakAsyncClientImpl<::test_protocollayouts::MainProtocol>::
       ::test_protocollayouts::MainProtocol::TwoWayLocal>{
       _client_base(), ::fidl::WriteOptions{},
       ::fidl::internal::AllowUnownedInputRef{}, &_request};
-}
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayLocalWithError(
-        ::test_protocollayouts::wire::LocalTablePayload LocalTablePayload,
-        ::fidl::WireClientCallback<
-            ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayLocalWithError> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>&
-                      result) override {
-      cb_(result);
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
-      _request{LocalTablePayload};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayLocalWithError(
-        ::test_protocollayouts::wire::LocalTablePayload LocalTablePayload,
-        ::fit::callback<
-            void(::fidl::WireResponse<::test_protocollayouts::MainProtocol::
-                                          TwoWayLocalWithError>* response)>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayLocalWithError> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>&
-                      result) override {
-      if (result.ok()) {
-        ::fidl::WireResponse<
-            ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>*
-            response = result.Unwrap();
-        cb_(response);
-      }
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
-      _request{LocalTablePayload};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 
 ::fidl::internal::WireThenable<
@@ -2171,86 +1508,6 @@ fidl::internal::WireWeakAsyncClientImpl<::test_protocollayouts::MainProtocol>::
       _client_base(), ::fidl::WriteOptions{},
       ::fidl::internal::AllowUnownedInputRef{}, &_request};
 }
-void fidl::internal::
-    WireWeakAsyncClientImpl<::test_protocollayouts::MainProtocol>::TwoWayAnon(
-        ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest
-            MainProtocolTwoWayAnonRequest,
-        ::fidl::WireClientCallback<
-            ::test_protocollayouts::MainProtocol::TwoWayAnon>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayAnon> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_protocollayouts::MainProtocol::TwoWayAnon>& result)
-        override {
-      cb_(result);
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayAnon>
-      _request{MainProtocolTwoWayAnonRequest};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayAnon>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
-void fidl::internal::
-    WireWeakAsyncClientImpl<::test_protocollayouts::MainProtocol>::TwoWayAnon(
-        ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest
-            MainProtocolTwoWayAnonRequest,
-        ::fit::callback<
-            void(::fidl::WireResponse<
-                 ::test_protocollayouts::MainProtocol::TwoWayAnon>* response)>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayAnon> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_protocollayouts::MainProtocol::TwoWayAnon>& result)
-        override {
-      if (result.ok()) {
-        ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>*
-            response = result.Unwrap();
-        cb_(response);
-      }
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayAnon>
-      _request{MainProtocolTwoWayAnonRequest};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayAnon>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
 
 ::fidl::internal::WireThenable<::test_protocollayouts::MainProtocol::TwoWayAnon>
 fidl::internal::WireWeakAsyncClientImpl<::test_protocollayouts::MainProtocol>::
@@ -2263,89 +1520,6 @@ fidl::internal::WireWeakAsyncClientImpl<::test_protocollayouts::MainProtocol>::
       ::test_protocollayouts::MainProtocol::TwoWayAnon>{
       _client_base(), ::fidl::WriteOptions{},
       ::fidl::internal::AllowUnownedInputRef{}, &_request};
-}
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayAnonWithError(
-        ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest
-            MainProtocolTwoWayAnonWithErrorRequest,
-        ::fidl::WireClientCallback<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonWithError> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>&
-                      result) override {
-      cb_(result);
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
-      _request{MainProtocolTwoWayAnonWithErrorRequest};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayAnonWithError(
-        ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest
-            MainProtocolTwoWayAnonWithErrorRequest,
-        ::fit::callback<
-            void(::fidl::WireResponse<::test_protocollayouts::MainProtocol::
-                                          TwoWayAnonWithError>* response)>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonWithError> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>&
-                      result) override {
-      if (result.ok()) {
-        ::fidl::WireResponse<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>*
-            response = result.Unwrap();
-        cb_(response);
-      }
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
-      _request{MainProtocolTwoWayAnonWithErrorRequest};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 
 ::fidl::internal::WireThenable<
@@ -2474,36 +1648,6 @@ fidl::internal::WireWeakAsyncClientImpl<::test_protocollayouts::MainProtocol>::
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-void fidl::internal::WireWeakAsyncBufferClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayAnonComposed(
-        ::test_protocollayouts_imported::wire::
-            ComposedProtocolTwoWayAnonComposedRequest
-                ComposedProtocolTwoWayAnonComposedRequest,
-        ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>*
-            _context) {
-  constexpr uint32_t _buffer_size =
-      ::fidl::AsyncClientMethodBufferSizeInChannel<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
-      _allocator().TryAllocate(_buffer_size);
-  if (!_allocation.is_ok()) {
-    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
-    _client_base()->SendTwoWay(_failure, _context);
-    return;
-  }
-
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
-      _request{ComposedProtocolTwoWayAnonComposedRequest};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>>
-      _request_message(_allocation->data, _buffer_size, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
 ::fidl::internal::WireBufferThenable<
     ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
 fidl::internal::WireWeakAsyncBufferClientImpl<
@@ -2522,36 +1666,6 @@ fidl::internal::WireWeakAsyncBufferClientImpl<
       _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size,
       &_request};
 }
-void fidl::internal::WireWeakAsyncBufferClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayAnonComposedWithError(
-        ::test_protocollayouts_imported::wire::
-            ComposedProtocolTwoWayAnonComposedWithErrorRequest
-                ComposedProtocolTwoWayAnonComposedWithErrorRequest,
-        ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>*
-            _context) {
-  constexpr uint32_t _buffer_size =
-      ::fidl::AsyncClientMethodBufferSizeInChannel<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
-      _allocator().TryAllocate(_buffer_size);
-  if (!_allocation.is_ok()) {
-    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
-    _client_base()->SendTwoWay(_failure, _context);
-    return;
-  }
-
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
-      _request{ComposedProtocolTwoWayAnonComposedWithErrorRequest};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>>
-      _request_message(_allocation->data, _buffer_size, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
 ::fidl::internal::WireBufferThenable<
     ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
 fidl::internal::WireWeakAsyncBufferClientImpl<
@@ -2571,35 +1685,6 @@ fidl::internal::WireWeakAsyncBufferClientImpl<
       _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size,
       &_request};
 }
-void fidl::internal::WireWeakAsyncBufferClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayNamedComposed(
-        ::test_protocollayouts_imported::wire::ImportUnionPayload
-            ImportUnionPayload,
-        ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>*
-            _context) {
-  constexpr uint32_t _buffer_size =
-      ::fidl::AsyncClientMethodBufferSizeInChannel<
-          ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
-      _allocator().TryAllocate(_buffer_size);
-  if (!_allocation.is_ok()) {
-    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
-    _client_base()->SendTwoWay(_failure, _context);
-    return;
-  }
-
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
-      _request{ImportUnionPayload};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>>
-      _request_message(_allocation->data, _buffer_size, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
 ::fidl::internal::WireBufferThenable<
     ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
 fidl::internal::WireWeakAsyncBufferClientImpl<
@@ -2618,35 +1703,6 @@ fidl::internal::WireWeakAsyncBufferClientImpl<
       _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size,
       &_request};
 }
-void fidl::internal::WireWeakAsyncBufferClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayNamedComposedWithError(
-        ::test_protocollayouts_imported::wire::ImportTablePayload
-            ImportTablePayload,
-        ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>*
-            _context) {
-  constexpr uint32_t _buffer_size =
-      ::fidl::AsyncClientMethodBufferSizeInChannel<
-          ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
-      _allocator().TryAllocate(_buffer_size);
-  if (!_allocation.is_ok()) {
-    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
-    _client_base()->SendTwoWay(_failure, _context);
-    return;
-  }
-
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
-      _request{ImportTablePayload};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>>
-      _request_message(_allocation->data, _buffer_size, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
 ::fidl::internal::WireBufferThenable<
     ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
 fidl::internal::WireWeakAsyncBufferClientImpl<
@@ -2665,34 +1721,6 @@ fidl::internal::WireWeakAsyncBufferClientImpl<
       _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size,
       &_request};
 }
-void fidl::internal::WireWeakAsyncBufferClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayImport(
-        ::test_protocollayouts_imported::wire::ImportUnionPayload
-            ImportUnionPayload,
-        ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayImport>* _context) {
-  constexpr uint32_t _buffer_size =
-      ::fidl::AsyncClientMethodBufferSizeInChannel<
-          ::test_protocollayouts::MainProtocol::TwoWayImport>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
-      _allocator().TryAllocate(_buffer_size);
-  if (!_allocation.is_ok()) {
-    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
-    _client_base()->SendTwoWay(_failure, _context);
-    return;
-  }
-
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayImport>
-      _request{ImportUnionPayload};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayImport>>
-      _request_message(_allocation->data, _buffer_size, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
 ::fidl::internal::WireBufferThenable<
     ::test_protocollayouts::MainProtocol::TwoWayImport>
 fidl::internal::WireWeakAsyncBufferClientImpl<
@@ -2710,35 +1738,6 @@ fidl::internal::WireWeakAsyncBufferClientImpl<
       _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size,
       &_request};
 }
-void fidl::internal::WireWeakAsyncBufferClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayImportWithError(
-        ::test_protocollayouts_imported::wire::ImportTablePayload
-            ImportTablePayload,
-        ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayImportWithError>*
-            _context) {
-  constexpr uint32_t _buffer_size =
-      ::fidl::AsyncClientMethodBufferSizeInChannel<
-          ::test_protocollayouts::MainProtocol::TwoWayImportWithError>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
-      _allocator().TryAllocate(_buffer_size);
-  if (!_allocation.is_ok()) {
-    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
-    _client_base()->SendTwoWay(_failure, _context);
-    return;
-  }
-
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
-      _request{ImportTablePayload};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayImportWithError>>
-      _request_message(_allocation->data, _buffer_size, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
 ::fidl::internal::WireBufferThenable<
     ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
 fidl::internal::WireWeakAsyncBufferClientImpl<
@@ -2757,33 +1756,6 @@ fidl::internal::WireWeakAsyncBufferClientImpl<
       _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size,
       &_request};
 }
-void fidl::internal::WireWeakAsyncBufferClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayLocal(
-        ::test_protocollayouts::wire::LocalUnionPayload LocalUnionPayload,
-        ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayLocal>* _context) {
-  constexpr uint32_t _buffer_size =
-      ::fidl::AsyncClientMethodBufferSizeInChannel<
-          ::test_protocollayouts::MainProtocol::TwoWayLocal>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
-      _allocator().TryAllocate(_buffer_size);
-  if (!_allocation.is_ok()) {
-    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
-    _client_base()->SendTwoWay(_failure, _context);
-    return;
-  }
-
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayLocal>
-      _request{LocalUnionPayload};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayLocal>>
-      _request_message(_allocation->data, _buffer_size, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
 ::fidl::internal::WireBufferThenable<
     ::test_protocollayouts::MainProtocol::TwoWayLocal>
 fidl::internal::WireWeakAsyncBufferClientImpl<
@@ -2801,34 +1773,6 @@ fidl::internal::WireWeakAsyncBufferClientImpl<
       _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size,
       &_request};
 }
-void fidl::internal::WireWeakAsyncBufferClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayLocalWithError(
-        ::test_protocollayouts::wire::LocalTablePayload LocalTablePayload,
-        ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>*
-            _context) {
-  constexpr uint32_t _buffer_size =
-      ::fidl::AsyncClientMethodBufferSizeInChannel<
-          ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
-      _allocator().TryAllocate(_buffer_size);
-  if (!_allocation.is_ok()) {
-    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
-    _client_base()->SendTwoWay(_failure, _context);
-    return;
-  }
-
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
-      _request{LocalTablePayload};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>>
-      _request_message(_allocation->data, _buffer_size, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
 ::fidl::internal::WireBufferThenable<
     ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
 fidl::internal::WireWeakAsyncBufferClientImpl<
@@ -2846,34 +1790,6 @@ fidl::internal::WireWeakAsyncBufferClientImpl<
       _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size,
       &_request};
 }
-void fidl::internal::WireWeakAsyncBufferClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayAnon(
-        ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest
-            MainProtocolTwoWayAnonRequest,
-        ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayAnon>* _context) {
-  constexpr uint32_t _buffer_size =
-      ::fidl::AsyncClientMethodBufferSizeInChannel<
-          ::test_protocollayouts::MainProtocol::TwoWayAnon>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
-      _allocator().TryAllocate(_buffer_size);
-  if (!_allocation.is_ok()) {
-    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
-    _client_base()->SendTwoWay(_failure, _context);
-    return;
-  }
-
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayAnon>
-      _request{MainProtocolTwoWayAnonRequest};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayAnon>>
-      _request_message(_allocation->data, _buffer_size, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
 ::fidl::internal::WireBufferThenable<
     ::test_protocollayouts::MainProtocol::TwoWayAnon>
 fidl::internal::WireWeakAsyncBufferClientImpl<
@@ -2891,35 +1807,6 @@ fidl::internal::WireWeakAsyncBufferClientImpl<
       _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size,
       &_request};
 }
-void fidl::internal::WireWeakAsyncBufferClientImpl<
-    ::test_protocollayouts::MainProtocol>::
-    TwoWayAnonWithError(
-        ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest
-            MainProtocolTwoWayAnonWithErrorRequest,
-        ::fidl::WireResponseContext<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>*
-            _context) {
-  constexpr uint32_t _buffer_size =
-      ::fidl::AsyncClientMethodBufferSizeInChannel<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
-      _allocator().TryAllocate(_buffer_size);
-  if (!_allocation.is_ok()) {
-    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
-    _client_base()->SendTwoWay(_failure, _context);
-    return;
-  }
-
-  ::fidl::internal::TransactionalRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
-      _request{MainProtocolTwoWayAnonWithErrorRequest};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>>
-      _request_message(_allocation->data, _buffer_size, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
 ::fidl::internal::WireBufferThenable<
     ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
 fidl::internal::WireWeakAsyncBufferClientImpl<

@@ -602,16 +602,6 @@ class ::fidl::internal::WireWeakAsyncClientImpl<::test_nullable::SimpleProtocol>
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void Add(
-      int32_t a, int32_t b,
-      ::fidl::WireClientCallback<::test_nullable::SimpleProtocol::Add> _cb);
-  void Add(
-      int32_t a, int32_t b,
-      ::fit::callback<void(
-          ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>* response)>
-          _cb);
-  // Allocates 24 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
   ::fidl::internal::WireThenable<::test_nullable::SimpleProtocol::Add> Add(
       int32_t a, int32_t b);
 };
@@ -631,11 +621,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
                 ::test_nullable::SimpleProtocol> {
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
-
-  // Caller provides the backing storage for FIDL message.
-  void Add(int32_t a, int32_t b,
-           ::fidl::WireResponseContext<::test_nullable::SimpleProtocol::Add>*
-               _context);
 
   // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<::test_nullable::SimpleProtocol::Add>

@@ -217,92 +217,6 @@ namespace test_requestflexibleenvelope {
 }  // namespace test_requestflexibleenvelope
 #ifdef __Fuchsia__
 
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_requestflexibleenvelope::Protocol>::
-    RequestStrictResponseFlexible(
-        ::test_requestflexibleenvelope::wire::StrictFoo s,
-        ::fidl::WireClientCallback<::test_requestflexibleenvelope::Protocol::
-                                       RequestStrictResponseFlexible>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final : public ::fidl::WireResponseContext<
-                                    ::test_requestflexibleenvelope::Protocol::
-                                        RequestStrictResponseFlexible> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(
-        ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Protocol::
-                                      RequestStrictResponseFlexible>& result)
-        override {
-      cb_(result);
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
-      _request{s};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_requestflexibleenvelope::Protocol::
-              RequestStrictResponseFlexible>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_requestflexibleenvelope::Protocol>::
-    RequestStrictResponseFlexible(
-        ::test_requestflexibleenvelope::wire::StrictFoo s,
-        ::fit::callback<void(
-            ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
-                                     RequestStrictResponseFlexible>* response)>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final : public ::fidl::WireResponseContext<
-                                    ::test_requestflexibleenvelope::Protocol::
-                                        RequestStrictResponseFlexible> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(
-        ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Protocol::
-                                      RequestStrictResponseFlexible>& result)
-        override {
-      if (result.ok()) {
-        ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
-                                 RequestStrictResponseFlexible>* response =
-            result.Unwrap();
-        cb_(response);
-      }
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
-      _request{s};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_requestflexibleenvelope::Protocol::
-              RequestStrictResponseFlexible>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
 ::fidl::internal::WireThenable<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
 fidl::internal::WireWeakAsyncClientImpl<
@@ -316,91 +230,6 @@ fidl::internal::WireWeakAsyncClientImpl<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>{
       _client_base(), ::fidl::WriteOptions{},
       ::fidl::internal::AllowUnownedInputRef{}, &_request};
-}
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_requestflexibleenvelope::Protocol>::
-    RequestFlexibleResponseStrict(
-        ::test_requestflexibleenvelope::wire::FlexibleFoo s,
-        ::fidl::WireClientCallback<::test_requestflexibleenvelope::Protocol::
-                                       RequestFlexibleResponseStrict>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final : public ::fidl::WireResponseContext<
-                                    ::test_requestflexibleenvelope::Protocol::
-                                        RequestFlexibleResponseStrict> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(
-        ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Protocol::
-                                      RequestFlexibleResponseStrict>& result)
-        override {
-      cb_(result);
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
-      _request{s};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_requestflexibleenvelope::Protocol::
-              RequestFlexibleResponseStrict>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_requestflexibleenvelope::Protocol>::
-    RequestFlexibleResponseStrict(
-        ::test_requestflexibleenvelope::wire::FlexibleFoo s,
-        ::fit::callback<void(
-            ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
-                                     RequestFlexibleResponseStrict>* response)>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final : public ::fidl::WireResponseContext<
-                                    ::test_requestflexibleenvelope::Protocol::
-                                        RequestFlexibleResponseStrict> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(
-        ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Protocol::
-                                      RequestFlexibleResponseStrict>& result)
-        override {
-      if (result.ok()) {
-        ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
-                                 RequestFlexibleResponseStrict>* response =
-            result.Unwrap();
-        cb_(response);
-      }
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
-      _request{s};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_requestflexibleenvelope::Protocol::
-              RequestFlexibleResponseStrict>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 
 ::fidl::internal::WireThenable<
@@ -417,36 +246,6 @@ fidl::internal::WireWeakAsyncClientImpl<
       _client_base(), ::fidl::WriteOptions{},
       ::fidl::internal::AllowUnownedInputRef{}, &_request};
 }
-void fidl::internal::WireWeakAsyncBufferClientImpl<
-    ::test_requestflexibleenvelope::Protocol>::
-    RequestStrictResponseFlexible(
-        ::test_requestflexibleenvelope::wire::StrictFoo s,
-        ::fidl::WireResponseContext<::test_requestflexibleenvelope::Protocol::
-                                        RequestStrictResponseFlexible>*
-            _context) {
-  constexpr uint32_t _buffer_size =
-      ::fidl::AsyncClientMethodBufferSizeInChannel<
-          ::test_requestflexibleenvelope::Protocol::
-              RequestStrictResponseFlexible>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
-      _allocator().TryAllocate(_buffer_size);
-  if (!_allocation.is_ok()) {
-    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
-    _client_base()->SendTwoWay(_failure, _context);
-    return;
-  }
-
-  ::fidl::internal::TransactionalRequest<
-      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
-      _request{s};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_requestflexibleenvelope::Protocol::
-              RequestStrictResponseFlexible>>
-      _request_message(_allocation->data, _buffer_size, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
 ::fidl::internal::WireBufferThenable<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
 fidl::internal::WireWeakAsyncBufferClientImpl<
@@ -465,36 +264,6 @@ fidl::internal::WireWeakAsyncBufferClientImpl<
       _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size,
       &_request};
 }
-void fidl::internal::WireWeakAsyncBufferClientImpl<
-    ::test_requestflexibleenvelope::Protocol>::
-    RequestFlexibleResponseStrict(
-        ::test_requestflexibleenvelope::wire::FlexibleFoo s,
-        ::fidl::WireResponseContext<::test_requestflexibleenvelope::Protocol::
-                                        RequestFlexibleResponseStrict>*
-            _context) {
-  constexpr uint32_t _buffer_size =
-      ::fidl::AsyncClientMethodBufferSizeInChannel<
-          ::test_requestflexibleenvelope::Protocol::
-              RequestFlexibleResponseStrict>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
-      _allocator().TryAllocate(_buffer_size);
-  if (!_allocation.is_ok()) {
-    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
-    _client_base()->SendTwoWay(_failure, _context);
-    return;
-  }
-
-  ::fidl::internal::TransactionalRequest<
-      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
-      _request{s};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_requestflexibleenvelope::Protocol::
-              RequestFlexibleResponseStrict>>
-      _request_message(_allocation->data, _buffer_size, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
 ::fidl::internal::WireBufferThenable<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
 fidl::internal::WireWeakAsyncBufferClientImpl<

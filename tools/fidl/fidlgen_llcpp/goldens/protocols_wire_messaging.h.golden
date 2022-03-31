@@ -10630,19 +10630,6 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void ResponseMethod(
-      ::zx::socket&& h,
-      ::fidl::WireClientCallback<
-          ::test_protocols::HandleRightsProtocol::ResponseMethod>
-          _cb);
-  void ResponseMethod(
-      ::zx::socket&& h,
-      ::fit::callback<
-          void(::fidl::WireResponse<::test_protocols::HandleRightsProtocol::
-                                        ResponseMethod>* response)>
-          _cb);
-  // Allocates 24 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
   ::fidl::internal::WireThenable<
       ::test_protocols::HandleRightsProtocol::ResponseMethod>
   ResponseMethod(::zx::socket&& h);
@@ -10666,12 +10653,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
                 ::test_protocols::HandleRightsProtocol> {
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
-
-  // Caller provides the backing storage for FIDL message.
-  void ResponseMethod(
-      ::zx::socket&& h,
-      ::fidl::WireResponseContext<
-          ::test_protocols::HandleRightsProtocol::ResponseMethod>* _context);
 
   // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
@@ -10767,58 +10748,18 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void NoRequestEmptyResponse(::fidl::WireClientCallback<
-                              ::test_protocols::WithAndWithoutRequestResponse::
-                                  NoRequestEmptyResponse>
-                                  _cb);
-  void NoRequestEmptyResponse(::fit::callback<void()> _cb);
-  // Allocates 16 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
   ::fidl::internal::WireThenable<
       ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>
   NoRequestEmptyResponse();
-  // Allocates 16 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
-  void NoRequestWithResponse(::fidl::WireClientCallback<
-                             ::test_protocols::WithAndWithoutRequestResponse::
-                                 NoRequestWithResponse>
-                                 _cb);
-  void NoRequestWithResponse(
-      ::fit::callback<void(
-          ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
-                                   NoRequestWithResponse>* response)>
-          _cb);
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   ::fidl::internal::WireThenable<
       ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
   NoRequestWithResponse();
   // The request and callback are allocated on the heap.
-  void WithRequestEmptyResponse(
-      ::fidl::StringView arg,
-      ::fidl::WireClientCallback<
-          ::test_protocols::WithAndWithoutRequestResponse::
-              WithRequestEmptyResponse>
-          _cb);
-  void WithRequestEmptyResponse(::fidl::StringView arg,
-                                ::fit::callback<void()> _cb);
-  // The request and callback are allocated on the heap.
   ::fidl::internal::WireThenable<
       ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>
   WithRequestEmptyResponse(::fidl::StringView arg);
-  // The request and callback are allocated on the heap.
-  void WithRequestWithResponse(
-      ::fidl::StringView arg,
-      ::fidl::WireClientCallback<
-          ::test_protocols::WithAndWithoutRequestResponse::
-              WithRequestWithResponse>
-          _cb);
-  void WithRequestWithResponse(
-      ::fidl::StringView arg,
-      ::fit::callback<void(
-          ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
-                                   WithRequestWithResponse>* response)>
-          _cb);
   // The request and callback are allocated on the heap.
   ::fidl::internal::WireThenable<
       ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>
@@ -10848,19 +10789,9 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 
   // Caller provides the backing storage for FIDL message.
-  void NoRequestEmptyResponse(::fidl::WireResponseContext<
-                              ::test_protocols::WithAndWithoutRequestResponse::
-                                  NoRequestEmptyResponse>* _context);
-
-  // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
       ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>
   NoRequestEmptyResponse();
-
-  // Caller provides the backing storage for FIDL message.
-  void NoRequestWithResponse(::fidl::WireResponseContext<
-                             ::test_protocols::WithAndWithoutRequestResponse::
-                                 NoRequestWithResponse>* _context);
 
   // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
@@ -10868,23 +10799,9 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
   NoRequestWithResponse();
 
   // Caller provides the backing storage for FIDL message.
-  void WithRequestEmptyResponse(
-      ::fidl::StringView arg,
-      ::fidl::WireResponseContext<
-          ::test_protocols::WithAndWithoutRequestResponse::
-              WithRequestEmptyResponse>* _context);
-
-  // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
       ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>
   WithRequestEmptyResponse(::fidl::StringView arg);
-
-  // Caller provides the backing storage for FIDL message.
-  void WithRequestWithResponse(
-      ::fidl::StringView arg,
-      ::fidl::WireResponseContext<
-          ::test_protocols::WithAndWithoutRequestResponse::
-              WithRequestWithResponse>* _context);
 
   // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
@@ -10999,16 +10916,6 @@ class ::fidl::internal::WireWeakAsyncClientImpl<::test_protocols::Transitional>
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void Request(
-      int64_t x,
-      ::fidl::WireClientCallback<::test_protocols::Transitional::Request> _cb);
-  void Request(
-      int64_t x,
-      ::fit::callback<void(::fidl::WireResponse<
-                           ::test_protocols::Transitional::Request>* response)>
-          _cb);
-  // Allocates 24 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
   ::fidl::internal::WireThenable<::test_protocols::Transitional::Request>
   Request(int64_t x);
 };
@@ -11031,12 +10938,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
                 ::test_protocols::Transitional> {
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
-
-  // Caller provides the backing storage for FIDL message.
-  void Request(
-      int64_t x,
-      ::fidl::WireResponseContext<::test_protocols::Transitional::Request>*
-          _context);
 
   // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<::test_protocols::Transitional::Request>
@@ -11204,49 +11105,12 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void ClientEnds(
-      ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& in,
-      ::fidl::WireClientCallback<::test_protocols::WithProtocolEnds::ClientEnds>
-          _cb);
-  void ClientEnds(
-      ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& in,
-      ::fit::callback<void(
-          ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>*
-              response)>
-          _cb);
-  // Allocates 24 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
   ::fidl::internal::WireThenable<::test_protocols::WithProtocolEnds::ClientEnds>
   ClientEnds(::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& in);
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void ServerEnds(
-      ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& in,
-      ::fidl::WireClientCallback<::test_protocols::WithProtocolEnds::ServerEnds>
-          _cb);
-  void ServerEnds(
-      ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& in,
-      ::fit::callback<void(
-          ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>*
-              response)>
-          _cb);
-  // Allocates 24 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
   ::fidl::internal::WireThenable<::test_protocols::WithProtocolEnds::ServerEnds>
   ServerEnds(::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& in);
-  // Allocates 32 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
-  void StructContainingEnds(
-      ::test_protocols::wire::ProtocolEnds&& in,
-      ::fidl::WireClientCallback<
-          ::test_protocols::WithProtocolEnds::StructContainingEnds>
-          _cb);
-  void StructContainingEnds(
-      ::test_protocols::wire::ProtocolEnds&& in,
-      ::fit::callback<
-          void(::fidl::WireResponse<::test_protocols::WithProtocolEnds::
-                                        StructContainingEnds>* response)>
-          _cb);
   // Allocates 32 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   ::fidl::internal::WireThenable<
@@ -11271,32 +11135,14 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 
   // Caller provides the backing storage for FIDL message.
-  void ClientEnds(
-      ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& in,
-      ::fidl::WireResponseContext<
-          ::test_protocols::WithProtocolEnds::ClientEnds>* _context);
-
-  // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
       ::test_protocols::WithProtocolEnds::ClientEnds>
   ClientEnds(::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& in);
 
   // Caller provides the backing storage for FIDL message.
-  void ServerEnds(
-      ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& in,
-      ::fidl::WireResponseContext<
-          ::test_protocols::WithProtocolEnds::ServerEnds>* _context);
-
-  // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
       ::test_protocols::WithProtocolEnds::ServerEnds>
   ServerEnds(::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& in);
-
-  // Caller provides the backing storage for FIDL message.
-  void StructContainingEnds(
-      ::test_protocols::wire::ProtocolEnds&& in,
-      ::fidl::WireResponseContext<
-          ::test_protocols::WithProtocolEnds::StructContainingEnds>* _context);
 
   // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
@@ -11472,29 +11318,9 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void ResponseAsStruct(::fidl::WireClientCallback<
-                        ::test_protocols::WithErrorSyntax::ResponseAsStruct>
-                            _cb);
-  void ResponseAsStruct(
-      ::fit::callback<
-          void(::fidl::WireResponse<
-               ::test_protocols::WithErrorSyntax::ResponseAsStruct>* response)>
-          _cb);
-  // Allocates 16 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
   ::fidl::internal::WireThenable<
       ::test_protocols::WithErrorSyntax::ResponseAsStruct>
   ResponseAsStruct();
-  // Allocates 16 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
-  void ErrorAsPrimitive(::fidl::WireClientCallback<
-                        ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
-                            _cb);
-  void ErrorAsPrimitive(
-      ::fit::callback<
-          void(::fidl::WireResponse<
-               ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>* response)>
-          _cb);
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   ::fidl::internal::WireThenable<
@@ -11502,28 +11328,8 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
   ErrorAsPrimitive();
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void ErrorAsEnum(
-      ::fidl::WireClientCallback<::test_protocols::WithErrorSyntax::ErrorAsEnum>
-          _cb);
-  void ErrorAsEnum(
-      ::fit::callback<void(
-          ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>*
-              response)>
-          _cb);
-  // Allocates 16 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
   ::fidl::internal::WireThenable<::test_protocols::WithErrorSyntax::ErrorAsEnum>
   ErrorAsEnum();
-  // Allocates 16 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
-  void HandleInResult(::fidl::WireClientCallback<
-                      ::test_protocols::WithErrorSyntax::HandleInResult>
-                          _cb);
-  void HandleInResult(
-      ::fit::callback<
-          void(::fidl::WireResponse<
-               ::test_protocols::WithErrorSyntax::HandleInResult>* response)>
-          _cb);
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   ::fidl::internal::WireThenable<
@@ -11548,19 +11354,9 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 
   // Caller provides the backing storage for FIDL message.
-  void ResponseAsStruct(
-      ::fidl::WireResponseContext<
-          ::test_protocols::WithErrorSyntax::ResponseAsStruct>* _context);
-
-  // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
       ::test_protocols::WithErrorSyntax::ResponseAsStruct>
   ResponseAsStruct();
-
-  // Caller provides the backing storage for FIDL message.
-  void ErrorAsPrimitive(
-      ::fidl::WireResponseContext<
-          ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>* _context);
 
   // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
@@ -11568,18 +11364,9 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
   ErrorAsPrimitive();
 
   // Caller provides the backing storage for FIDL message.
-  void ErrorAsEnum(::fidl::WireResponseContext<
-                   ::test_protocols::WithErrorSyntax::ErrorAsEnum>* _context);
-
-  // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
       ::test_protocols::WithErrorSyntax::ErrorAsEnum>
   ErrorAsEnum();
-
-  // Caller provides the backing storage for FIDL message.
-  void HandleInResult(
-      ::fidl::WireResponseContext<
-          ::test_protocols::WithErrorSyntax::HandleInResult>* _context);
 
   // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
@@ -11763,42 +11550,12 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   // Allocates 32 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void MethodB(
-      int64_t a, int64_t b,
-      ::fidl::WireClientCallback<::test_protocols::ChannelProtocol::MethodB>
-          _cb);
-  void MethodB(int64_t a, int64_t b,
-               ::fit::callback<
-                   void(::fidl::WireResponse<
-                        ::test_protocols::ChannelProtocol::MethodB>* response)>
-                   _cb);
-  // Allocates 32 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
   ::fidl::internal::WireThenable<::test_protocols::ChannelProtocol::MethodB>
   MethodB(int64_t a, int64_t b);
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void TakeHandle(
-      ::zx::handle&& h,
-      ::fidl::WireClientCallback<::test_protocols::ChannelProtocol::TakeHandle>
-          _cb);
-  void TakeHandle(::zx::handle&& h, ::fit::callback<void()> _cb);
-  // Allocates 24 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
   ::fidl::internal::WireThenable<::test_protocols::ChannelProtocol::TakeHandle>
   TakeHandle(::zx::handle&& h);
-  // Allocates 24 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
-  void MutateSocket(::zx::socket&& a,
-                    ::fidl::WireClientCallback<
-                        ::test_protocols::ChannelProtocol::MutateSocket>
-                        _cb);
-  void MutateSocket(
-      ::zx::socket&& a,
-      ::fit::callback<void(
-          ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>*
-              response)>
-          _cb);
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   ::fidl::internal::WireThenable<
@@ -11826,31 +11583,14 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 
   // Caller provides the backing storage for FIDL message.
-  void MethodB(
-      int64_t a, int64_t b,
-      ::fidl::WireResponseContext<::test_protocols::ChannelProtocol::MethodB>*
-          _context);
-
-  // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
       ::test_protocols::ChannelProtocol::MethodB>
   MethodB(int64_t a, int64_t b);
 
   // Caller provides the backing storage for FIDL message.
-  void TakeHandle(::zx::handle&& h,
-                  ::fidl::WireResponseContext<
-                      ::test_protocols::ChannelProtocol::TakeHandle>* _context);
-
-  // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
       ::test_protocols::ChannelProtocol::TakeHandle>
   TakeHandle(::zx::handle&& h);
-
-  // Caller provides the backing storage for FIDL message.
-  void MutateSocket(
-      ::zx::socket&& a,
-      ::fidl::WireResponseContext<
-          ::test_protocols::ChannelProtocol::MutateSocket>* _context);
 
   // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<

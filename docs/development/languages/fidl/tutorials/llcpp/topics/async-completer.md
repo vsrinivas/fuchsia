@@ -45,7 +45,7 @@ After connecting to the server, the client will make multiple `EchoString` reque
 for loop:
 
 ```cpp
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/async_completer/client/main.cc" region_tag="main" highlight="14,16,17,18,19,20,21,22,23,24,25,26" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/async_completer/client/main.cc" region_tag="main" highlight="14,15,16,17,18,19,20,21,22,23,24,25,26" %}
 ```
 
 The loop is run `kNumEchoes` times (which is by default 3), and will print the time elapsed since

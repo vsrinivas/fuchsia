@@ -392,11 +392,12 @@ TEST_F(WireCompleterTest, CallerAllocateBufferSpan) {
       });
   fidl::WireClient client(std::move(client_end()), loop()->dispatcher());
   bool called = false;
-  client->Grob("test", [&](fidl::WireUnownedResult<test::Frobinator::Grob>& result) {
-    called = true;
-    ASSERT_OK(result.status());
-    EXPECT_EQ("test", result->value.get());
-  });
+  client->Grob("test").ThenExactlyOnce(
+      [&](fidl::WireUnownedResult<test::Frobinator::Grob>& result) {
+        called = true;
+        ASSERT_OK(result.status());
+        EXPECT_EQ("test", result->value.get());
+      });
   EXPECT_OK(loop()->RunUntilIdle());
   EXPECT_TRUE(called);
 }
@@ -409,11 +410,12 @@ TEST_F(WireCompleterTest, CallerAllocateArena) {
       });
   fidl::WireClient client(std::move(client_end()), loop()->dispatcher());
   bool called = false;
-  client->Grob("test", [&](fidl::WireUnownedResult<test::Frobinator::Grob>& result) {
-    called = true;
-    ASSERT_OK(result.status());
-    EXPECT_EQ("test", result->value.get());
-  });
+  client->Grob("test").ThenExactlyOnce(
+      [&](fidl::WireUnownedResult<test::Frobinator::Grob>& result) {
+        called = true;
+        ASSERT_OK(result.status());
+        EXPECT_EQ("test", result->value.get());
+      });
   EXPECT_OK(loop()->RunUntilIdle());
   EXPECT_TRUE(called);
 }
@@ -430,10 +432,11 @@ TEST_F(WireCompleterTest, CallerAllocateInsufficientBufferSize) {
       });
   fidl::WireClient client(std::move(client_end()), loop()->dispatcher());
   bool called = false;
-  client->Grob("test", [&](fidl::WireUnownedResult<test::Frobinator::Grob>& result) {
-    called = true;
-    ASSERT_STATUS(ZX_ERR_PEER_CLOSED, result.status());
-  });
+  client->Grob("test").ThenExactlyOnce(
+      [&](fidl::WireUnownedResult<test::Frobinator::Grob>& result) {
+        called = true;
+        ASSERT_STATUS(ZX_ERR_PEER_CLOSED, result.status());
+      });
   EXPECT_OK(loop()->RunUntilIdle());
   EXPECT_TRUE(called);
 }

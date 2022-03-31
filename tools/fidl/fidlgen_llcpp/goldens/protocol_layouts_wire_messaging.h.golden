@@ -7309,45 +7309,11 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   // Allocates 32 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void TwoWayAnonComposed(
-      ::test_protocollayouts_imported::wire::
-          ComposedProtocolTwoWayAnonComposedRequest
-              ComposedProtocolTwoWayAnonComposedRequest,
-      ::fidl::WireClientCallback<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
-          _cb);
-  void TwoWayAnonComposed(
-      ::test_protocollayouts_imported::wire::
-          ComposedProtocolTwoWayAnonComposedRequest
-              ComposedProtocolTwoWayAnonComposedRequest,
-      ::fit::callback<
-          void(::fidl::WireResponse<::test_protocollayouts::MainProtocol::
-                                        TwoWayAnonComposed>* response)>
-          _cb);
-  // Allocates 32 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
   ::fidl::internal::WireThenable<
       ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
   TwoWayAnonComposed(::test_protocollayouts_imported::wire::
                          ComposedProtocolTwoWayAnonComposedRequest
                              ComposedProtocolTwoWayAnonComposedRequest);
-  // Allocates 40 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
-  void TwoWayAnonComposedWithError(
-      ::test_protocollayouts_imported::wire::
-          ComposedProtocolTwoWayAnonComposedWithErrorRequest
-              ComposedProtocolTwoWayAnonComposedWithErrorRequest,
-      ::fidl::WireClientCallback<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
-          _cb);
-  void TwoWayAnonComposedWithError(
-      ::test_protocollayouts_imported::wire::
-          ComposedProtocolTwoWayAnonComposedWithErrorRequest
-              ComposedProtocolTwoWayAnonComposedWithErrorRequest,
-      ::fit::callback<
-          void(::fidl::WireResponse<::test_protocollayouts::MainProtocol::
-                                        TwoWayAnonComposedWithError>* response)>
-          _cb);
   // Allocates 40 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   ::fidl::internal::WireThenable<
@@ -7358,40 +7324,10 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
               ComposedProtocolTwoWayAnonComposedWithErrorRequest);
   // Allocates 32 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void TwoWayNamedComposed(
-      ::test_protocollayouts_imported::wire::ImportUnionPayload
-          ImportUnionPayload,
-      ::fidl::WireClientCallback<
-          ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
-          _cb);
-  void TwoWayNamedComposed(
-      ::test_protocollayouts_imported::wire::ImportUnionPayload
-          ImportUnionPayload,
-      ::fit::callback<
-          void(::fidl::WireResponse<::test_protocollayouts::MainProtocol::
-                                        TwoWayNamedComposed>* response)>
-          _cb);
-  // Allocates 32 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
   ::fidl::internal::WireThenable<
       ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
   TwoWayNamedComposed(::test_protocollayouts_imported::wire::ImportUnionPayload
                           ImportUnionPayload);
-  // Allocates 40 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
-  void TwoWayNamedComposedWithError(
-      ::test_protocollayouts_imported::wire::ImportTablePayload
-          ImportTablePayload,
-      ::fidl::WireClientCallback<
-          ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
-          _cb);
-  void TwoWayNamedComposedWithError(
-      ::test_protocollayouts_imported::wire::ImportTablePayload
-          ImportTablePayload,
-      ::fit::callback<void(
-          ::fidl::WireResponse<::test_protocollayouts::MainProtocol::
-                                   TwoWayNamedComposedWithError>* response)>
-          _cb);
   // Allocates 40 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   ::fidl::internal::WireThenable<
@@ -7401,39 +7337,10 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
           ImportTablePayload);
   // Allocates 32 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void TwoWayImport(::test_protocollayouts_imported::wire::ImportUnionPayload
-                        ImportUnionPayload,
-                    ::fidl::WireClientCallback<
-                        ::test_protocollayouts::MainProtocol::TwoWayImport>
-                        _cb);
-  void TwoWayImport(
-      ::test_protocollayouts_imported::wire::ImportUnionPayload
-          ImportUnionPayload,
-      ::fit::callback<
-          void(::fidl::WireResponse<
-               ::test_protocollayouts::MainProtocol::TwoWayImport>* response)>
-          _cb);
-  // Allocates 32 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
   ::fidl::internal::WireThenable<
       ::test_protocollayouts::MainProtocol::TwoWayImport>
   TwoWayImport(::test_protocollayouts_imported::wire::ImportUnionPayload
                    ImportUnionPayload);
-  // Allocates 40 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
-  void TwoWayImportWithError(
-      ::test_protocollayouts_imported::wire::ImportTablePayload
-          ImportTablePayload,
-      ::fidl::WireClientCallback<
-          ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
-          _cb);
-  void TwoWayImportWithError(
-      ::test_protocollayouts_imported::wire::ImportTablePayload
-          ImportTablePayload,
-      ::fit::callback<
-          void(::fidl::WireResponse<::test_protocollayouts::MainProtocol::
-                                        TwoWayImportWithError>* response)>
-          _cb);
   // Allocates 40 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   ::fidl::internal::WireThenable<
@@ -7443,36 +7350,10 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
           ImportTablePayload);
   // Allocates 32 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void TwoWayLocal(
-      ::test_protocollayouts::wire::LocalUnionPayload LocalUnionPayload,
-      ::fidl::WireClientCallback<
-          ::test_protocollayouts::MainProtocol::TwoWayLocal>
-          _cb);
-  void TwoWayLocal(
-      ::test_protocollayouts::wire::LocalUnionPayload LocalUnionPayload,
-      ::fit::callback<
-          void(::fidl::WireResponse<
-               ::test_protocollayouts::MainProtocol::TwoWayLocal>* response)>
-          _cb);
-  // Allocates 32 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
   ::fidl::internal::WireThenable<
       ::test_protocollayouts::MainProtocol::TwoWayLocal>
   TwoWayLocal(
       ::test_protocollayouts::wire::LocalUnionPayload LocalUnionPayload);
-  // Allocates 40 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
-  void TwoWayLocalWithError(
-      ::test_protocollayouts::wire::LocalTablePayload LocalTablePayload,
-      ::fidl::WireClientCallback<
-          ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
-          _cb);
-  void TwoWayLocalWithError(
-      ::test_protocollayouts::wire::LocalTablePayload LocalTablePayload,
-      ::fit::callback<
-          void(::fidl::WireResponse<::test_protocollayouts::MainProtocol::
-                                        TwoWayLocalWithError>* response)>
-          _cb);
   // Allocates 40 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   ::fidl::internal::WireThenable<
@@ -7481,39 +7362,10 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
       ::test_protocollayouts::wire::LocalTablePayload LocalTablePayload);
   // Allocates 32 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void TwoWayAnon(::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest
-                      MainProtocolTwoWayAnonRequest,
-                  ::fidl::WireClientCallback<
-                      ::test_protocollayouts::MainProtocol::TwoWayAnon>
-                      _cb);
-  void TwoWayAnon(
-      ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest
-          MainProtocolTwoWayAnonRequest,
-      ::fit::callback<
-          void(::fidl::WireResponse<
-               ::test_protocollayouts::MainProtocol::TwoWayAnon>* response)>
-          _cb);
-  // Allocates 32 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
   ::fidl::internal::WireThenable<
       ::test_protocollayouts::MainProtocol::TwoWayAnon>
   TwoWayAnon(::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest
                  MainProtocolTwoWayAnonRequest);
-  // Allocates 40 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
-  void TwoWayAnonWithError(
-      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest
-          MainProtocolTwoWayAnonWithErrorRequest,
-      ::fidl::WireClientCallback<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
-          _cb);
-  void TwoWayAnonWithError(
-      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest
-          MainProtocolTwoWayAnonWithErrorRequest,
-      ::fit::callback<
-          void(::fidl::WireResponse<::test_protocollayouts::MainProtocol::
-                                        TwoWayAnonWithError>* response)>
-          _cb);
   // Allocates 40 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   ::fidl::internal::WireThenable<
@@ -7565,28 +7417,11 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 
   // Caller provides the backing storage for FIDL message.
-  void TwoWayAnonComposed(
-      ::test_protocollayouts_imported::wire::
-          ComposedProtocolTwoWayAnonComposedRequest
-              ComposedProtocolTwoWayAnonComposedRequest,
-      ::fidl::WireResponseContext<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* _context);
-
-  // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
       ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
   TwoWayAnonComposed(::test_protocollayouts_imported::wire::
                          ComposedProtocolTwoWayAnonComposedRequest
                              ComposedProtocolTwoWayAnonComposedRequest);
-
-  // Caller provides the backing storage for FIDL message.
-  void TwoWayAnonComposedWithError(
-      ::test_protocollayouts_imported::wire::
-          ComposedProtocolTwoWayAnonComposedWithErrorRequest
-              ComposedProtocolTwoWayAnonComposedWithErrorRequest,
-      ::fidl::WireResponseContext<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>*
-          _context);
 
   // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
@@ -7597,25 +7432,10 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
               ComposedProtocolTwoWayAnonComposedWithErrorRequest);
 
   // Caller provides the backing storage for FIDL message.
-  void TwoWayNamedComposed(
-      ::test_protocollayouts_imported::wire::ImportUnionPayload
-          ImportUnionPayload,
-      ::fidl::WireResponseContext<
-          ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* _context);
-
-  // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
       ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
   TwoWayNamedComposed(::test_protocollayouts_imported::wire::ImportUnionPayload
                           ImportUnionPayload);
-
-  // Caller provides the backing storage for FIDL message.
-  void TwoWayNamedComposedWithError(
-      ::test_protocollayouts_imported::wire::ImportTablePayload
-          ImportTablePayload,
-      ::fidl::WireResponseContext<
-          ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>*
-          _context);
 
   // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
@@ -7625,25 +7445,10 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
           ImportTablePayload);
 
   // Caller provides the backing storage for FIDL message.
-  void TwoWayImport(
-      ::test_protocollayouts_imported::wire::ImportUnionPayload
-          ImportUnionPayload,
-      ::fidl::WireResponseContext<
-          ::test_protocollayouts::MainProtocol::TwoWayImport>* _context);
-
-  // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
       ::test_protocollayouts::MainProtocol::TwoWayImport>
   TwoWayImport(::test_protocollayouts_imported::wire::ImportUnionPayload
                    ImportUnionPayload);
-
-  // Caller provides the backing storage for FIDL message.
-  void TwoWayImportWithError(
-      ::test_protocollayouts_imported::wire::ImportTablePayload
-          ImportTablePayload,
-      ::fidl::WireResponseContext<
-          ::test_protocollayouts::MainProtocol::TwoWayImportWithError>*
-          _context);
 
   // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
@@ -7653,23 +7458,10 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
           ImportTablePayload);
 
   // Caller provides the backing storage for FIDL message.
-  void TwoWayLocal(
-      ::test_protocollayouts::wire::LocalUnionPayload LocalUnionPayload,
-      ::fidl::WireResponseContext<
-          ::test_protocollayouts::MainProtocol::TwoWayLocal>* _context);
-
-  // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
       ::test_protocollayouts::MainProtocol::TwoWayLocal>
   TwoWayLocal(
       ::test_protocollayouts::wire::LocalUnionPayload LocalUnionPayload);
-
-  // Caller provides the backing storage for FIDL message.
-  void TwoWayLocalWithError(
-      ::test_protocollayouts::wire::LocalTablePayload LocalTablePayload,
-      ::fidl::WireResponseContext<
-          ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>*
-          _context);
 
   // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
@@ -7678,24 +7470,10 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
       ::test_protocollayouts::wire::LocalTablePayload LocalTablePayload);
 
   // Caller provides the backing storage for FIDL message.
-  void TwoWayAnon(
-      ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest
-          MainProtocolTwoWayAnonRequest,
-      ::fidl::WireResponseContext<
-          ::test_protocollayouts::MainProtocol::TwoWayAnon>* _context);
-
-  // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
       ::test_protocollayouts::MainProtocol::TwoWayAnon>
   TwoWayAnon(::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest
                  MainProtocolTwoWayAnonRequest);
-
-  // Caller provides the backing storage for FIDL message.
-  void TwoWayAnonWithError(
-      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest
-          MainProtocolTwoWayAnonWithErrorRequest,
-      ::fidl::WireResponseContext<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>* _context);
 
   // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<

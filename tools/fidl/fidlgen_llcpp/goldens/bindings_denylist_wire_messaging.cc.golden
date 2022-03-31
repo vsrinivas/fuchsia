@@ -166,86 +166,6 @@ namespace test_bindingsdenylist {
 }  // namespace test_bindingsdenylist
 #ifdef __Fuchsia__
 
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
-    LibfuzzerNeedsNonemptyProtocol(
-        ::fidl::WireClientCallback<
-            ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                LibfuzzerNeedsNonemptyProtocol>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                LibfuzzerNeedsNonemptyProtocol> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                      LibfuzzerNeedsNonemptyProtocol>& result) override {
-      cb_(result);
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-          LibfuzzerNeedsNonemptyProtocol>
-      _request{};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-              LibfuzzerNeedsNonemptyProtocol>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
-    LibfuzzerNeedsNonemptyProtocol(::fit::callback<void()> _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                LibfuzzerNeedsNonemptyProtocol> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                      LibfuzzerNeedsNonemptyProtocol>& result) override {
-      if (result.ok()) {
-        cb_();
-      }
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-          LibfuzzerNeedsNonemptyProtocol>
-      _request{};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-              LibfuzzerNeedsNonemptyProtocol>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
 ::fidl::internal::WireThenable<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                                    LibfuzzerNeedsNonemptyProtocol>
 fidl::internal::WireWeakAsyncClientImpl<
@@ -261,36 +181,6 @@ fidl::internal::WireWeakAsyncClientImpl<
       _client_base(), ::fidl::WriteOptions{},
       ::fidl::internal::AllowUnownedInputRef{}, &_request};
 }
-void fidl::internal::WireWeakAsyncBufferClientImpl<
-    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
-    LibfuzzerNeedsNonemptyProtocol(
-        ::fidl::WireResponseContext<
-            ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                LibfuzzerNeedsNonemptyProtocol>* _context) {
-  constexpr uint32_t _buffer_size =
-      ::fidl::AsyncClientMethodBufferSizeInChannel<
-          ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-              LibfuzzerNeedsNonemptyProtocol>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
-      _allocator().TryAllocate(_buffer_size);
-  if (!_allocation.is_ok()) {
-    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
-    _client_base()->SendTwoWay(_failure, _context);
-    return;
-  }
-
-  ::fidl::internal::TransactionalRequest<
-      ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-          LibfuzzerNeedsNonemptyProtocol>
-      _request{};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-              LibfuzzerNeedsNonemptyProtocol>>
-      _request_message(_allocation->data, _buffer_size, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
 ::fidl::internal::WireBufferThenable<
     ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
         LibfuzzerNeedsNonemptyProtocol>
@@ -1415,87 +1305,6 @@ namespace test_bindingsdenylist {
 }  // namespace test_bindingsdenylist
 #ifdef __Fuchsia__
 
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_bindingsdenylist::DenyEachBinding>::
-    OnlyDenyDart(bool a,
-                 ::fidl::WireClientCallback<
-                     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
-                     _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&
-                      result) override {
-      cb_(result);
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
-      _request{a};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_bindingsdenylist::DenyEachBinding>::
-    OnlyDenyDart(
-        bool a,
-        ::fit::callback<
-            void(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::
-                                          OnlyDenyDart>* response)>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&
-                      result) override {
-      if (result.ok()) {
-        ::fidl::WireResponse<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>* response =
-            result.Unwrap();
-        cb_(response);
-      }
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
-      _request{a};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
 ::fidl::internal::WireThenable<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
 fidl::internal::WireWeakAsyncClientImpl<
@@ -1507,85 +1316,6 @@ fidl::internal::WireWeakAsyncClientImpl<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>{
       _client_base(), ::fidl::WriteOptions{},
       ::fidl::internal::AllowUnownedInputRef{}, &_request};
-}
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_bindingsdenylist::DenyEachBinding>::
-    OnlyDenyGo(bool a, ::fidl::WireClientCallback<
-                           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
-                           _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>& result)
-        override {
-      cb_(result);
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
-      _request{a};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_bindingsdenylist::DenyEachBinding>::
-    OnlyDenyGo(bool a,
-               ::fit::callback<
-                   void(::fidl::WireResponse<
-                        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*
-                            response)>
-                   _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>& result)
-        override {
-      if (result.ok()) {
-        ::fidl::WireResponse<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>* response =
-            result.Unwrap();
-        cb_(response);
-      }
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
-      _request{a};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 
 ::fidl::internal::WireThenable<
@@ -1600,86 +1330,6 @@ fidl::internal::WireWeakAsyncClientImpl<
       _client_base(), ::fidl::WriteOptions{},
       ::fidl::internal::AllowUnownedInputRef{}, &_request};
 }
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_bindingsdenylist::DenyEachBinding>::
-    OnlyDenyLibfuzzer(
-        bool a, ::fidl::WireClientCallback<
-                    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
-                    _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&
-                      result) override {
-      cb_(result);
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
-      _request{a};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_bindingsdenylist::DenyEachBinding>::
-    OnlyDenyLibfuzzer(
-        bool a,
-        ::fit::callback<
-            void(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::
-                                          OnlyDenyLibfuzzer>* response)>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&
-                      result) override {
-      if (result.ok()) {
-        ::fidl::WireResponse<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
-            response = result.Unwrap();
-        cb_(response);
-      }
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
-      _request{a};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
 
 ::fidl::internal::WireThenable<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
@@ -1693,86 +1343,6 @@ fidl::internal::WireWeakAsyncClientImpl<
       _client_base(), ::fidl::WriteOptions{},
       ::fidl::internal::AllowUnownedInputRef{}, &_request};
 }
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_bindingsdenylist::DenyEachBinding>::
-    OnlyDenyRust(bool a,
-                 ::fidl::WireClientCallback<
-                     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
-                     _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&
-                      result) override {
-      cb_(result);
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
-      _request{a};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_bindingsdenylist::DenyEachBinding>::
-    OnlyDenyRust(
-        bool a,
-        ::fit::callback<
-            void(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::
-                                          OnlyDenyRust>* response)>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&
-                      result) override {
-      if (result.ok()) {
-        ::fidl::WireResponse<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>* response =
-            result.Unwrap();
-        cb_(response);
-      }
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
-      _request{a};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
 
 ::fidl::internal::WireThenable<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
@@ -1785,86 +1355,6 @@ fidl::internal::WireWeakAsyncClientImpl<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>{
       _client_base(), ::fidl::WriteOptions{},
       ::fidl::internal::AllowUnownedInputRef{}, &_request};
-}
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_bindingsdenylist::DenyEachBinding>::
-    OnlyDenySyzkaller(
-        bool a, ::fidl::WireClientCallback<
-                    ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
-                    _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&
-                      result) override {
-      cb_(result);
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
-      _request{a};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_bindingsdenylist::DenyEachBinding>::
-    OnlyDenySyzkaller(
-        bool a,
-        ::fit::callback<
-            void(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::
-                                          OnlyDenySyzkaller>* response)>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&
-                      result) override {
-      if (result.ok()) {
-        ::fidl::WireResponse<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
-            response = result.Unwrap();
-        cb_(response);
-      }
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
-      _request{a};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 
 ::fidl::internal::WireThenable<
@@ -1879,33 +1369,6 @@ fidl::internal::WireWeakAsyncClientImpl<
       _client_base(), ::fidl::WriteOptions{},
       ::fidl::internal::AllowUnownedInputRef{}, &_request};
 }
-void fidl::internal::WireWeakAsyncBufferClientImpl<
-    ::test_bindingsdenylist::DenyEachBinding>::
-    OnlyDenyDart(
-        bool a,
-        ::fidl::WireResponseContext<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>* _context) {
-  constexpr uint32_t _buffer_size =
-      ::fidl::AsyncClientMethodBufferSizeInChannel<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
-      _allocator().TryAllocate(_buffer_size);
-  if (!_allocation.is_ok()) {
-    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
-    _client_base()->SendTwoWay(_failure, _context);
-    return;
-  }
-
-  ::fidl::internal::TransactionalRequest<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
-      _request{a};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>
-      _request_message(_allocation->data, _buffer_size, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
 ::fidl::internal::WireBufferThenable<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
 fidl::internal::WireWeakAsyncBufferClientImpl<
@@ -1921,33 +1384,6 @@ fidl::internal::WireWeakAsyncBufferClientImpl<
       _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size,
       &_request};
 }
-void fidl::internal::WireWeakAsyncBufferClientImpl<
-    ::test_bindingsdenylist::DenyEachBinding>::
-    OnlyDenyGo(
-        bool a,
-        ::fidl::WireResponseContext<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>* _context) {
-  constexpr uint32_t _buffer_size =
-      ::fidl::AsyncClientMethodBufferSizeInChannel<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
-      _allocator().TryAllocate(_buffer_size);
-  if (!_allocation.is_ok()) {
-    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
-    _client_base()->SendTwoWay(_failure, _context);
-    return;
-  }
-
-  ::fidl::internal::TransactionalRequest<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
-      _request{a};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>
-      _request_message(_allocation->data, _buffer_size, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
 ::fidl::internal::WireBufferThenable<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
 fidl::internal::WireWeakAsyncBufferClientImpl<
@@ -1963,34 +1399,6 @@ fidl::internal::WireWeakAsyncBufferClientImpl<
       _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size,
       &_request};
 }
-void fidl::internal::WireWeakAsyncBufferClientImpl<
-    ::test_bindingsdenylist::DenyEachBinding>::
-    OnlyDenyLibfuzzer(
-        bool a,
-        ::fidl::WireResponseContext<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
-            _context) {
-  constexpr uint32_t _buffer_size =
-      ::fidl::AsyncClientMethodBufferSizeInChannel<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
-      _allocator().TryAllocate(_buffer_size);
-  if (!_allocation.is_ok()) {
-    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
-    _client_base()->SendTwoWay(_failure, _context);
-    return;
-  }
-
-  ::fidl::internal::TransactionalRequest<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
-      _request{a};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>
-      _request_message(_allocation->data, _buffer_size, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
 ::fidl::internal::WireBufferThenable<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
 fidl::internal::WireWeakAsyncBufferClientImpl<
@@ -2006,33 +1414,6 @@ fidl::internal::WireWeakAsyncBufferClientImpl<
       _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size,
       &_request};
 }
-void fidl::internal::WireWeakAsyncBufferClientImpl<
-    ::test_bindingsdenylist::DenyEachBinding>::
-    OnlyDenyRust(
-        bool a,
-        ::fidl::WireResponseContext<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>* _context) {
-  constexpr uint32_t _buffer_size =
-      ::fidl::AsyncClientMethodBufferSizeInChannel<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
-      _allocator().TryAllocate(_buffer_size);
-  if (!_allocation.is_ok()) {
-    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
-    _client_base()->SendTwoWay(_failure, _context);
-    return;
-  }
-
-  ::fidl::internal::TransactionalRequest<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
-      _request{a};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>
-      _request_message(_allocation->data, _buffer_size, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
 ::fidl::internal::WireBufferThenable<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
 fidl::internal::WireWeakAsyncBufferClientImpl<
@@ -2048,34 +1429,6 @@ fidl::internal::WireWeakAsyncBufferClientImpl<
       _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size,
       &_request};
 }
-void fidl::internal::WireWeakAsyncBufferClientImpl<
-    ::test_bindingsdenylist::DenyEachBinding>::
-    OnlyDenySyzkaller(
-        bool a,
-        ::fidl::WireResponseContext<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
-            _context) {
-  constexpr uint32_t _buffer_size =
-      ::fidl::AsyncClientMethodBufferSizeInChannel<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
-      _allocator().TryAllocate(_buffer_size);
-  if (!_allocation.is_ok()) {
-    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
-    _client_base()->SendTwoWay(_failure, _context);
-    return;
-  }
-
-  ::fidl::internal::TransactionalRequest<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
-      _request{a};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>
-      _request_message(_allocation->data, _buffer_size, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
 ::fidl::internal::WireBufferThenable<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
 fidl::internal::WireWeakAsyncBufferClientImpl<

@@ -634,20 +634,6 @@ class ::fidl::internal::WireWeakAsyncClientImpl<::test_anonymous::SomeProtocol>
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   // Allocates 96 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void SomeMethod(
-      ::test_anonymous::wire::UnionMember union_member,
-      ::test_anonymous::wire::TableMember table_member,
-      ::fidl::WireClientCallback<::test_anonymous::SomeProtocol::SomeMethod>
-          _cb);
-  void SomeMethod(
-      ::test_anonymous::wire::UnionMember union_member,
-      ::test_anonymous::wire::TableMember table_member,
-      ::fit::callback<
-          void(::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>*
-                   response)>
-          _cb);
-  // Allocates 96 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
   ::fidl::internal::WireThenable<::test_anonymous::SomeProtocol::SomeMethod>
   SomeMethod(::test_anonymous::wire::UnionMember union_member,
              ::test_anonymous::wire::TableMember table_member);
@@ -668,13 +654,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
                 ::test_anonymous::SomeProtocol> {
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
-
-  // Caller provides the backing storage for FIDL message.
-  void SomeMethod(
-      ::test_anonymous::wire::UnionMember union_member,
-      ::test_anonymous::wire::TableMember table_member,
-      ::fidl::WireResponseContext<::test_anonymous::SomeProtocol::SomeMethod>*
-          _context);
 
   // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<

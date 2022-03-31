@@ -210,8 +210,13 @@ TEST_F(UnifiedClientToWireServer, RoundTrip) {
     fidl::Arena arena;
     auto node = MakeWireFile(arena);
     bool got_response = false;
-    client().wire()->RoundTrip(
-        node, [&](fidl::WireResponse<fidl_cpp_wire_interop_test::Interop::RoundTrip>* response) {
+    client().wire()->RoundTrip(node).ThenExactlyOnce(
+        [&](fidl::WireUnownedResult<fidl_cpp_wire_interop_test::Interop::RoundTrip>& result) {
+          if (!result.ok()) {
+            FAIL("RoundTrip failed: %s", result.error().FormatDescription().c_str());
+            return;
+          }
+          auto* response = result.Unwrap();
           CheckWireFile(response->node);
           got_response = true;
         });
@@ -267,8 +272,13 @@ TEST_F(UnifiedClientToWireServer, TryRoundTrip) {
     fidl::Arena arena;
     auto node = MakeWireDir(arena);
     bool got_response = false;
-    client().wire()->TryRoundTrip(
-        node, [&](fidl::WireResponse<fidl_cpp_wire_interop_test::Interop::TryRoundTrip>* response) {
+    client().wire()->TryRoundTrip(node).ThenExactlyOnce(
+        [&](fidl::WireUnownedResult<fidl_cpp_wire_interop_test::Interop::TryRoundTrip>& result) {
+          if (!result.ok()) {
+            FAIL("TryRoundTrip failed: %s", result.error().FormatDescription().c_str());
+            return;
+          }
+          auto* response = result.Unwrap();
           ASSERT_TRUE(response->result.is_response());
           CheckWireDir(response->result.response().node);
           got_response = true;
@@ -306,8 +316,13 @@ TEST_F(UnifiedClientToWireServer, TryRoundTrip) {
     fidl::Arena arena;
     auto node = MakeWireDir(arena);
     bool got_response = false;
-    client().wire()->TryRoundTrip(
-        node, [&](fidl::WireResponse<fidl_cpp_wire_interop_test::Interop::TryRoundTrip>* response) {
+    client().wire()->TryRoundTrip(node).ThenExactlyOnce(
+        [&](fidl::WireUnownedResult<fidl_cpp_wire_interop_test::Interop::TryRoundTrip>& result) {
+          if (!result.ok()) {
+            FAIL("TryRoundTrip failed: %s", result.error().FormatDescription().c_str());
+            return;
+          }
+          auto* response = result.Unwrap();
           ASSERT_TRUE(response->result.is_err());
           EXPECT_STATUS(ZX_ERR_INVALID_ARGS, response->result.err());
           got_response = true;
@@ -487,8 +502,13 @@ TEST_F(WireClientToNaturalServer, RoundTrip) {
   fidl::Arena arena;
   auto node = MakeWireFile(arena);
   bool got_response = false;
-  client()->RoundTrip(
-      node, [&](fidl::WireResponse<fidl_cpp_wire_interop_test::Interop::RoundTrip>* response) {
+  client()->RoundTrip(node).ThenExactlyOnce(
+      [&](fidl::WireUnownedResult<fidl_cpp_wire_interop_test::Interop::RoundTrip>& result) {
+        if (!result.ok()) {
+          FAIL("RoundTrip failed: %s", result.error().FormatDescription().c_str());
+          return;
+        }
+        auto* response = result.Unwrap();
         CheckWireFile(response->node);
         got_response = true;
       });
@@ -524,8 +544,13 @@ TEST_F(WireClientToNaturalServer, TryRoundTrip) {
     fidl::Arena arena;
     auto node = MakeWireDir(arena);
     bool got_response = false;
-    client()->TryRoundTrip(
-        node, [&](fidl::WireResponse<fidl_cpp_wire_interop_test::Interop::TryRoundTrip>* response) {
+    client()->TryRoundTrip(node).ThenExactlyOnce(
+        [&](fidl::WireUnownedResult<fidl_cpp_wire_interop_test::Interop::TryRoundTrip>& result) {
+          if (!result.ok()) {
+            FAIL("TryRoundTrip failed: %s", result.error().FormatDescription().c_str());
+            return;
+          }
+          auto* response = result.Unwrap();
           ASSERT_TRUE(response->result.is_response());
           CheckWireDir(response->result.response().node);
           got_response = true;
@@ -542,8 +567,13 @@ TEST_F(WireClientToNaturalServer, TryRoundTrip) {
     fidl::Arena arena;
     auto node = MakeWireDir(arena);
     bool got_response = false;
-    client()->TryRoundTrip(
-        node, [&](fidl::WireResponse<fidl_cpp_wire_interop_test::Interop::TryRoundTrip>* response) {
+    client()->TryRoundTrip(node).ThenExactlyOnce(
+        [&](fidl::WireUnownedResult<fidl_cpp_wire_interop_test::Interop::TryRoundTrip>& result) {
+          if (!result.ok()) {
+            FAIL("TryRoundTrip failed: %s", result.error().FormatDescription().c_str());
+            return;
+          }
+          auto* response = result.Unwrap();
           ASSERT_TRUE(response->result.is_err());
           EXPECT_STATUS(ZX_ERR_INVALID_ARGS, response->result.err());
           got_response = true;

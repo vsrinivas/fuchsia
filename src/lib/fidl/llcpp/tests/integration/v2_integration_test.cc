@@ -79,7 +79,7 @@ TEST(V2Integration, AsyncCallResponseDecode) {
   fidl::WireSharedClient<TestProtocol> client(std::move(client_end), loop.dispatcher());
 
   sync_completion_t done;
-  client->MethodWithResponse(
+  client->MethodWithResponse().ThenExactlyOnce(
       [&done](fidl::WireUnownedResult<TestProtocol::MethodWithResponse>& result) {
         ASSERT_EQ(ZX_OK, result.status());
         ASSERT_EQ(123u, result->u.v());

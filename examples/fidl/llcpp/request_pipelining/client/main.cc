@@ -26,25 +26,28 @@ int main(int argc, const char** argv) {
   fidl::WireClient launcher(std::move(*launcher_client_end), dispatcher);
 
   // Make a non-pipelined request to get an instance of Echo
-  launcher->GetEcho("non pipelined: ",
-                    [&](fidl::WireUnownedResult<fuchsia_examples::EchoLauncher::GetEcho>& result) {
-                      ZX_ASSERT(result.ok());
-                      // Take the channel to Echo in the response, bind it to the dispatcher, and
-                      // make an EchoString request on it.
-                      fidl::WireSharedClient echo(std::move(result->response), dispatcher);
-                      echo->EchoString(
-                          "hello!",
-                          // Clone |echo| into the callback so that the client
-                          // is only destroyed after we receive the response.
-                          [&, echo = echo.Clone()](
-                              fidl::WireResponse<fuchsia_examples::Echo::EchoString>* response) {
-                            std::string reply(response->response.data(), response->response.size());
-                            std::cout << "Got echo response " << reply << std::endl;
-                            if (++num_responses == 2) {
-                              loop.Quit();
-                            }
-                          });
-                    });
+  launcher->GetEcho("non pipelined: ")
+      .ThenExactlyOnce(
+          [&](fidl::WireUnownedResult<fuchsia_examples::EchoLauncher::GetEcho>& result) {
+            ZX_ASSERT(result.ok());
+            // Take the channel to Echo in the response, bind it to the dispatcher, and
+            // make an EchoString request on it.
+            fidl::WireSharedClient echo(std::move(result->response), dispatcher);
+            echo->EchoString("hello!").ThenExactlyOnce(
+                // Clone |echo| into the callback so that the client
+                // is only destroyed after we receive the response.
+                [&, echo = echo.Clone()](
+                    fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
+                  if (!result.ok())
+                    return;
+                  auto* response = result.Unwrap();
+                  std::string reply(response->response.data(), response->response.size());
+                  std::cout << "Got echo response " << reply << std::endl;
+                  if (++num_responses == 2) {
+                    loop.Quit();
+                  }
+                });
+          });
 
   auto endpoints = fidl::CreateEndpoints<fuchsia_examples::Echo>();
   ZX_ASSERT(endpoints.status_value() == ZX_OK);
@@ -53,8 +56,8 @@ int main(int argc, const char** argv) {
   ZX_ASSERT(launcher->GetEchoPipelined("pipelined: ", std::move(server_end)).ok());
   // A client can be initialized using the client end without waiting for a response
   fidl::WireClient echo_pipelined(std::move(client_end), dispatcher);
-  echo_pipelined->EchoString(
-      "hello!", [&](fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
+  echo_pipelined->EchoString("hello!").ThenExactlyOnce(
+      [&](fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
         ZX_ASSERT_MSG(result.ok(), "EchoString failed: %s",
                       result.error().FormatDescription().c_str());
         std::string reply(result->response.data(), result->response.size());

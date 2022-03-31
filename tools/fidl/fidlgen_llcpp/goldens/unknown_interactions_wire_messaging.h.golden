@@ -1431,25 +1431,9 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void StrictTwoWay(::fidl::WireClientCallback<
-                    ::test_unknowninteractions::Example::StrictTwoWay>
-                        _cb);
-  void StrictTwoWay(::fit::callback<void()> _cb);
-  // Allocates 16 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
   ::fidl::internal::WireThenable<
       ::test_unknowninteractions::Example::StrictTwoWay>
   StrictTwoWay();
-  // Allocates 16 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
-  void FlexibleTwoWay(::fidl::WireClientCallback<
-                      ::test_unknowninteractions::Example::FlexibleTwoWay>
-                          _cb);
-  void FlexibleTwoWay(
-      ::fit::callback<
-          void(::fidl::WireResponse<
-               ::test_unknowninteractions::Example::FlexibleTwoWay>* response)>
-          _cb);
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   ::fidl::internal::WireThenable<
@@ -1480,19 +1464,9 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 
   // Caller provides the backing storage for FIDL message.
-  void StrictTwoWay(
-      ::fidl::WireResponseContext<
-          ::test_unknowninteractions::Example::StrictTwoWay>* _context);
-
-  // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<
       ::test_unknowninteractions::Example::StrictTwoWay>
   StrictTwoWay();
-
-  // Caller provides the backing storage for FIDL message.
-  void FlexibleTwoWay(
-      ::fidl::WireResponseContext<
-          ::test_unknowninteractions::Example::FlexibleTwoWay>* _context);
 
   // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<

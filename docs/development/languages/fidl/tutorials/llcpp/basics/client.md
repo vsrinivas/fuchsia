@@ -175,23 +175,12 @@ The client object works by overriding the dereference operator to return a
 
 #### Asynchronous call with result callback
 
-The first asynchronous method call requires the request parameters followed by
+The asynchronous method call requires the request parameters followed by
 a *result callback*, which is called either when the method succeeds or an error
 happens.
 
 ```cpp
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="41,42,43,44,45,46,47,48,49,50,51" %}
-```
-
-#### Asynchronous call with response callback
-
-The second asynchronous method call requires the request parameters followed by
-a *response callback*, which is called when the response is received. If any
-error happens during this call, the callback object is silently dropped. The
-response callback takes a pointer to the response message directly.
-
-```cpp
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="55,56,57,58,59,60,61,62,63,64" %}
 ```
 
 #### Synchronous call
@@ -202,7 +191,7 @@ using the `.sync()` accessor. (e.g. `client.sync()->EchoString()`).
 
 
 ```cpp
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="68,69,70" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="55,56,57" %}
 ```
 
 In the synchronous case, a [result object][resultof] is returned, since the

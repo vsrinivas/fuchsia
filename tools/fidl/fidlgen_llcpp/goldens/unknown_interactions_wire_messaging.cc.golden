@@ -221,77 +221,6 @@ namespace test_unknowninteractions {
                        &_request_object);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-void fidl::internal::
-    WireWeakAsyncClientImpl<::test_unknowninteractions::Example>::StrictTwoWay(
-        ::fidl::WireClientCallback<
-            ::test_unknowninteractions::Example::StrictTwoWay>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_unknowninteractions::Example::StrictTwoWay> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_unknowninteractions::Example::StrictTwoWay>& result)
-        override {
-      cb_(result);
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_unknowninteractions::Example::StrictTwoWay>
-      _request{};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_unknowninteractions::Example::StrictTwoWay>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_unknowninteractions::Example>::StrictTwoWay(::fit::callback<void()>
-                                                           _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_unknowninteractions::Example::StrictTwoWay> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_unknowninteractions::Example::StrictTwoWay>& result)
-        override {
-      if (result.ok()) {
-        cb_();
-      }
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_unknowninteractions::Example::StrictTwoWay>
-      _request{};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_unknowninteractions::Example::StrictTwoWay>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
 
 ::fidl::internal::WireThenable<
     ::test_unknowninteractions::Example::StrictTwoWay>
@@ -304,84 +233,6 @@ fidl::internal::WireWeakAsyncClientImpl<
       ::test_unknowninteractions::Example::StrictTwoWay>{
       _client_base(), ::fidl::WriteOptions{},
       ::fidl::internal::AllowUnownedInputRef{}, &_request};
-}
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_unknowninteractions::Example>::
-    FlexibleTwoWay(::fidl::WireClientCallback<
-                   ::test_unknowninteractions::Example::FlexibleTwoWay>
-                       _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_unknowninteractions::Example::FlexibleTwoWay> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_unknowninteractions::Example::FlexibleTwoWay>& result)
-        override {
-      cb_(result);
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>
-      _request{};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_unknowninteractions::Example::FlexibleTwoWay>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
-void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_unknowninteractions::Example>::
-    FlexibleTwoWay(
-        ::fit::callback<void(
-            ::fidl::WireResponse<
-                ::test_unknowninteractions::Example::FlexibleTwoWay>* response)>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<
-            ::test_unknowninteractions::Example::FlexibleTwoWay> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fidl::WireUnownedResult<
-                  ::test_unknowninteractions::Example::FlexibleTwoWay>& result)
-        override {
-      if (result.ok()) {
-        ::fidl::WireResponse<
-            ::test_unknowninteractions::Example::FlexibleTwoWay>* response =
-            result.Unwrap();
-        cb_(response);
-      }
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-
-  auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::TransactionalRequest<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>
-      _request{};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_unknowninteractions::Example::FlexibleTwoWay>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 
 ::fidl::internal::WireThenable<
@@ -436,31 +287,6 @@ fidl::internal::WireWeakAsyncClientImpl<
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-void fidl::internal::WireWeakAsyncBufferClientImpl<
-    ::test_unknowninteractions::Example>::
-    StrictTwoWay(::fidl::WireResponseContext<
-                 ::test_unknowninteractions::Example::StrictTwoWay>* _context) {
-  constexpr uint32_t _buffer_size =
-      ::fidl::AsyncClientMethodBufferSizeInChannel<
-          ::test_unknowninteractions::Example::StrictTwoWay>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
-      _allocator().TryAllocate(_buffer_size);
-  if (!_allocation.is_ok()) {
-    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
-    _client_base()->SendTwoWay(_failure, _context);
-    return;
-  }
-
-  ::fidl::internal::TransactionalRequest<
-      ::test_unknowninteractions::Example::StrictTwoWay>
-      _request{};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_unknowninteractions::Example::StrictTwoWay>>
-      _request_message(_allocation->data, _buffer_size, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
 ::fidl::internal::WireBufferThenable<
     ::test_unknowninteractions::Example::StrictTwoWay>
 fidl::internal::WireWeakAsyncBufferClientImpl<
@@ -476,32 +302,6 @@ fidl::internal::WireWeakAsyncBufferClientImpl<
       _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size,
       &_request};
 }
-void fidl::internal::WireWeakAsyncBufferClientImpl<
-    ::test_unknowninteractions::Example>::
-    FlexibleTwoWay(
-        ::fidl::WireResponseContext<
-            ::test_unknowninteractions::Example::FlexibleTwoWay>* _context) {
-  constexpr uint32_t _buffer_size =
-      ::fidl::AsyncClientMethodBufferSizeInChannel<
-          ::test_unknowninteractions::Example::FlexibleTwoWay>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
-      _allocator().TryAllocate(_buffer_size);
-  if (!_allocation.is_ok()) {
-    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
-    _client_base()->SendTwoWay(_failure, _context);
-    return;
-  }
-
-  ::fidl::internal::TransactionalRequest<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>
-      _request{};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_unknowninteractions::Example::FlexibleTwoWay>>
-      _request_message(_allocation->data, _buffer_size, &_request);
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-
 ::fidl::internal::WireBufferThenable<
     ::test_unknowninteractions::Example::FlexibleTwoWay>
 fidl::internal::WireWeakAsyncBufferClientImpl<

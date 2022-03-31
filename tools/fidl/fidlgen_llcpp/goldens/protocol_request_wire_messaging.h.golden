@@ -1577,26 +1577,8 @@ class ::fidl::internal::WireWeakAsyncClientImpl<::test_protocolrequest::Parent>
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void GetChild(
-      ::fidl::WireClientCallback<::test_protocolrequest::Parent::GetChild> _cb);
-  void GetChild(
-      ::fit::callback<void(::fidl::WireResponse<
-                           ::test_protocolrequest::Parent::GetChild>* response)>
-          _cb);
-  // Allocates 16 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
   ::fidl::internal::WireThenable<::test_protocolrequest::Parent::GetChild>
   GetChild();
-  // Allocates 16 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
-  void GetChildRequest(::fidl::WireClientCallback<
-                       ::test_protocolrequest::Parent::GetChildRequest>
-                           _cb);
-  void GetChildRequest(
-      ::fit::callback<void(
-          ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>*
-              response)>
-          _cb);
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   ::fidl::internal::WireThenable<
@@ -1629,18 +1611,8 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 
   // Caller provides the backing storage for FIDL message.
-  void GetChild(
-      ::fidl::WireResponseContext<::test_protocolrequest::Parent::GetChild>*
-          _context);
-
-  // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<::test_protocolrequest::Parent::GetChild>
   GetChild();
-
-  // Caller provides the backing storage for FIDL message.
-  void GetChildRequest(
-      ::fidl::WireResponseContext<
-          ::test_protocolrequest::Parent::GetChildRequest>* _context);
 
   // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<

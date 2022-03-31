@@ -85,8 +85,8 @@ int main(int argc, const char** argv) {
 
   // [START two_way_wire_result]
   // Make an EchoString call with wire types and result callback.
-  client.wire()->EchoString(
-      "hello", [&](fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
+  client.wire()->EchoString("hello").ThenExactlyOnce(
+      [&](fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
         ZX_ASSERT(result.ok());
         fidl::WireResponse<fuchsia_examples::Echo::EchoString>& response = result.value();
         std::string reply(response.response.data(), response.response.size());
@@ -94,18 +94,6 @@ int main(int argc, const char** argv) {
         loop.Quit();
       });
   // [END two_way_wire_result]
-  loop.Run();
-  loop.ResetQuit();
-
-  // [START two_way_wire_response]
-  // Make an EchoString call with wire types and response callback.
-  client.wire()->EchoString(
-      "hello", [&](fidl::WireResponse<fuchsia_examples::Echo::EchoString>* response) {
-        std::string reply(response->response.data(), response->response.size());
-        std::cout << "(Wire types) got response: " << reply << std::endl;
-        loop.Quit();
-      });
-  // [END two_way_wire_response]
   loop.Run();
   loop.ResetQuit();
 

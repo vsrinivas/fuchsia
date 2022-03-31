@@ -577,13 +577,6 @@ class ::fidl::internal::WireWeakAsyncClientImpl<::test_error::Example> final
  public:
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   // The request and callback are allocated on the heap.
-  void Foo(::fidl::StringView s,
-           ::fidl::WireClientCallback<::test_error::Example::Foo> _cb);
-  void Foo(::fidl::StringView s,
-           ::fit::callback<
-               void(::fidl::WireResponse<::test_error::Example::Foo>* response)>
-               _cb);
-  // The request and callback are allocated on the heap.
   ::fidl::internal::WireThenable<::test_error::Example::Foo> Foo(
       ::fidl::StringView s);
 };
@@ -601,10 +594,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_error::Example>
                 ::test_error::Example> {
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
-
-  // Caller provides the backing storage for FIDL message.
-  void Foo(::fidl::StringView s,
-           ::fidl::WireResponseContext<::test_error::Example::Foo>* _context);
 
   // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<::test_error::Example::Foo> Foo(

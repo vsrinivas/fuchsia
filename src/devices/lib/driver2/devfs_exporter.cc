@@ -30,18 +30,19 @@ fpromise::promise<void, zx_status_t> CheckFileExists(
   // Call something simple on the Node to make sure we actually opened it successfully.
   // Otherwise, the open call is pipelined and it could fail silently.
   fpromise::bridge<void, zx_status_t> bridge;
-  file->GetFlags([file = file.Clone(), completer = std::move(bridge.completer)](
-                     fidl::WireUnownedResult<fuchsia_io::Node::GetFlags>& result) mutable {
-    if (result.ok()) {
-      completer.complete_ok();
-    } else {
-      zx_status_t status = result.status();
-      if (status == ZX_ERR_PEER_CLOSED) {
-        status = ZX_ERR_NOT_FOUND;
-      }
-      completer.complete_error(status);
-    }
-  });
+  file->GetFlags().ThenExactlyOnce(
+      [file = file.Clone(), completer = std::move(bridge.completer)](
+          fidl::WireUnownedResult<fuchsia_io::Node::GetFlags>& result) mutable {
+        if (result.ok()) {
+          completer.complete_ok();
+        } else {
+          zx_status_t status = result.status();
+          if (status == ZX_ERR_PEER_CLOSED) {
+            status = ZX_ERR_NOT_FOUND;
+          }
+          completer.complete_error(status);
+        }
+      });
   return bridge.consumer.promise();
 }
 

@@ -136,31 +136,6 @@ class WireClient {
   // Responses on the other hand live on the arena passed along with the
   // response, which may or may not be the same arena as the request.
   //
-  // Note that there are a few overloads for each two-way method:
-  //
-  // * Response callbacks:
-  //
-  //   void MyMethod(args, [] (fidl::WireResponse<MyMethod>*) { ... });
-  //
-  //   The callback is only invoked when the corresponding response is received.
-  //
-  // * Result callbacks:
-  //
-  //   void MyMethod(args, [] (fidl::WireUnownedResult<MyMethod>&) { ... });
-  //
-  //   The callback is invoked exactly once, with either a response or an error.
-  //
-  // * Request context:
-  //
-  //   void MyMethod(args, fidl::WireRequestContext<MyMethod>* context);
-  //
-  //   This overload is suitable when one needs complete control over memory
-  //   allocation. Instead of implicitly heap allocating the necessary
-  //   bookkeeping for in-flight operations, the methods take a raw pointer to a
-  //   |fidl::WireResponseContext<FidlMethod>|, which may be allocated via any
-  //   means as long as it outlives the duration of this async FIDL call. Refer
-  //   to documentation on the response context.
-  //
   // ## Lifecycle
   //
   // The returned object borrows from this object, hence must not outlive
@@ -172,8 +147,8 @@ class WireClient {
   //     fdf::Arena my_arena = /* create the arena */;
   //     fdf::WireClient client(std::move(client_end), some_dispatcher);
   //     auto buffered = client.buffer(my_arena);
-  //     buffered->FooMethod(args, foo_response_context);
-  //     buffered->BarMethod(args, bar_response_context);
+  //     buffered->FooMethod(args).ThenExactlyOnce(foo_response_context);
+  //     buffered->BarMethod(args).ThenExactlyOnce(bar_response_context);
   //     ...
   //
   // In this situation, those calls will all use the initially provided arena
