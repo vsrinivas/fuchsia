@@ -1,11 +1,5 @@
 protocol/member fuchsia.hardware.i2c/Device2.Transfer(vector<bool>:8 segments_is_write,vector<vector<uint8>:8196>:8 write_segments_data,vector<uint32>:8 read_segments_length) -> (fuchsia.hardware.i2c/Device2_Transfer_Result result)
-protocol/member fuchsia.hardware.i2c/Device2.Transfer2(vector<bool>:8 segments_is_write,vector<vector<uint8>:8196>:8 write_segments_data,vector<uint32>:8 read_segments_length) -> (fuchsia.hardware.i2c/Device2_Transfer2_Result result)
 protocol fuchsia.hardware.i2c/Device2
-struct/member fuchsia.hardware.i2c/Device2_Transfer2_Response.read_segments_data vector<vector<uint8>:8196>:8
-struct fuchsia.hardware.i2c/Device2_Transfer2_Response
-union/member fuchsia.hardware.i2c/Device2_Transfer2_Result.err int32
-union/member fuchsia.hardware.i2c/Device2_Transfer2_Result.response fuchsia.hardware.i2c/Device2_Transfer2_Response
-strict union fuchsia.hardware.i2c/Device2_Transfer2_Result
 struct/member fuchsia.hardware.i2c/Device2_Transfer_Response.read_segments_data vector<vector<uint8>:8196>:8
 struct fuchsia.hardware.i2c/Device2_Transfer_Response
 union/member fuchsia.hardware.i2c/Device2_Transfer_Result.err int32
