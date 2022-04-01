@@ -22,7 +22,7 @@ async fn system_services() {
         .collect::<Vec<_>>();
 
     // this protocol is added for coverage builders.
-    protocols.retain(|s| s != "fuchsia.debugdata.DebugData");
+    protocols.retain(|s| s != "fuchsia.debugdata.DebugData" && s != "fuchsia.debugdata.Publisher");
     // make sure we are getting access to system services.
     assert_eq!(
         protocols,

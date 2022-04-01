@@ -6,10 +6,17 @@ use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_debugdata as fdebug;
 use fuchsia_zircon as zx;
 
-/// Message indicating a request to connect to the `fuchsia.debugdata.DebugData` protocol.
-pub struct DebugDataRequestMessage {
+// This is temporary, until we can delete DebugData protocol.
+pub enum PublisherRequest {
+    Publisher(ServerEnd<fdebug::PublisherMarker>),
+    DebugData(ServerEnd<fdebug::DebugDataMarker>),
+}
+
+/// Message indicating a request to connect to the `fuchsia.debugdata.Publisher` or deprecated
+/// `fuchsia.debugdata.DebugData` protocol.
+pub struct PublisherRequestMessage {
     pub test_url: String,
-    pub request: ServerEnd<fdebug::DebugDataMarker>,
+    pub request: PublisherRequest,
 }
 
 /// Message indicating a new VMO to process.

@@ -4,5 +4,9 @@
             protocol: "fuchsia.debugdata.DebugData",
             from: "debug",
         },
+        {
+            protocol: "fuchsia.debugdata.Publisher",
+            from: "debug",
+        },
     ],
 }

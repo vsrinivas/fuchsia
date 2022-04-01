@@ -17,6 +17,7 @@
 
 #include <test/placeholders/cpp/fidl.h>
 
+#include "lib/zx/eventpair.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 using namespace fuchsia::sys;
@@ -343,14 +344,73 @@ class FakeDebugData : public fuchsia::debugdata::DebugData {
   uint64_t call_count_ = 0;
 };
 
+class FakePublisher : public fuchsia::debugdata::Publisher {
+ public:
+  void Publish(std::string data_sink, ::zx::vmo data, zx::eventpair token) override {
+    call_count_++;
+  }
+
+  fidl::InterfaceRequestHandler<fuchsia::debugdata::Publisher> GetHandler(
+      async_dispatcher_t* dispatcher = nullptr) {
+    return bindings_.GetHandler(this, dispatcher);
+  }
+
+  uint64_t call_count() const { return call_count_; }
+
+ private:
+  fidl::BindingSet<fuchsia::debugdata::Publisher> bindings_;
+  uint64_t call_count_ = 0;
+};
+
 TEST_F(EnclosingEnvTest, DebugDataServicePlumbedCorrectly) {
+  zx::vmo data;
+  fuchsia::debugdata::PublisherPtr ptr;
+  FakePublisher publisher;
+
+  // Add to first enclosing env and override plumbing
+  EnvironmentServices::ParentOverrides parent_overrides;
+  parent_overrides.debug_data_publisher_service_ =
+      std::make_shared<vfs::Service>(publisher.GetHandler());
+  auto svc = CreateServicesWithParentOverrides(std::move(parent_overrides));
+
+  auto env = CreateNewEnclosingEnvironment("test-env1", std::move(svc));
+  WaitForEnclosingEnvToStart(env.get());
+  // make sure count was 0
+  ASSERT_EQ(0u, publisher.call_count());
+
+  // make sure out fake servcie can be called.
+  env->ConnectToService(ptr.NewRequest());
+  ASSERT_EQ(ZX_OK, zx::vmo::create(8, 0, &data));
+  zx::eventpair token1, token2;
+  zx::eventpair::create(0, &token1, &token2);
+  ptr->Publish("data_sink", std::move(data), std::move(token1));
+
+  RunLoopUntil([&publisher]() { return publisher.call_count() == 1; });
+
+  // make sure service is automatically plumbed to sub environments
+  auto sub_env = env->CreateNestedEnclosingEnvironment("test-env2");
+
+  ptr.Unbind();
+  {
+    sub_env->ConnectToService(ptr.NewRequest());
+    ASSERT_EQ(ZX_OK, zx::vmo::create(8, 0, &data));
+    zx::eventpair token1, token2;
+    zx::eventpair::create(0, &token1, &token2);
+    ptr->Publish("data_sink", std::move(data), std::move(token1));
+
+    RunLoopUntil([&publisher]() { return publisher.call_count() == 2; });
+  }
+}
+
+TEST_F(EnclosingEnvTest, DeprecatedDebugDataServicePlumbedCorrectly) {
   zx::vmo data;
   fuchsia::debugdata::DebugDataPtr ptr;
   FakeDebugData debug_data;
 
   // Add to first enclosing env and override plumbing
   EnvironmentServices::ParentOverrides parent_overrides;
-  parent_overrides.debug_data_service_ = std::make_shared<vfs::Service>(debug_data.GetHandler());
+  parent_overrides.deprecated_debug_data_service_ =
+      std::make_shared<vfs::Service>(debug_data.GetHandler());
   auto svc = CreateServicesWithParentOverrides(std::move(parent_overrides));
 
   auto env = CreateNewEnclosingEnvironment("test-env1", std::move(svc));

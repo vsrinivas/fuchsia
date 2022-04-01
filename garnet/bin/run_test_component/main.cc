@@ -319,10 +319,15 @@ int main(int argc, const char** argv) {
     // the namespace. But pass DebugData from the namespace because it is not available in
     // `parent_env`.
     sys::testing::EnvironmentServices::ParentOverrides parent_overrides;
-    parent_overrides.debug_data_service_ =
+    parent_overrides.deprecated_debug_data_service_ =
         std::make_shared<vfs::Service>([namespace_services = namespace_services](
                                            zx::channel channel, async_dispatcher_t* /*unused*/) {
           namespace_services->Connect(fuchsia::debugdata::DebugData::Name_, std::move(channel));
+        });
+    parent_overrides.debug_data_publisher_service_ =
+        std::make_shared<vfs::Service>([namespace_services = namespace_services](
+                                           zx::channel channel, async_dispatcher_t* /*unused*/) {
+          namespace_services->Connect(fuchsia::debugdata::Publisher::Name_, std::move(channel));
         });
 
     auto test_env_services = sys::testing::EnvironmentServices::CreateWithParentOverrides(

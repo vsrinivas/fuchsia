@@ -46,6 +46,7 @@ macro_rules! assert_output {
 // function can be deleted.
 fn is_debug_data_warning(log: impl AsRef<str>) -> bool {
     log.as_ref().contains("No capability available at path /svc/fuchsia.debugdata.DebugData")
+        || log.as_ref().contains("No capability available at path /svc/fuchsia.debugdata.Publisher")
 }
 
 fn sanitize_log_for_comparison(log: impl AsRef<str>) -> String {

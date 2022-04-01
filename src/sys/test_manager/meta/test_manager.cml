@@ -66,6 +66,10 @@
                     protocol: "fuchsia.debugdata.DebugData",
                     from: "#debug_data",
                 },
+                {
+                    protocol: "fuchsia.debugdata.Publisher",
+                    from: "#debug_data",
+                },
             ],
 
             // TODO(fxbug.dev/87330): We need more time to collect logs on
@@ -149,6 +153,10 @@
             debug: [
                 {
                     protocol: "fuchsia.debugdata.DebugData",
+                    from: "#debug_data",
+                },
+                {
+                    protocol: "fuchsia.debugdata.Publisher",
                     from: "#debug_data",
                 },
             ],

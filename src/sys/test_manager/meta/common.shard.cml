@@ -289,8 +289,15 @@
         {
             event: "capability_requested",
             from: "framework",
+            as: "deprecated_debug_data_requested",
             to: "#debug_data",
             filter: { name: "fuchsia.debugdata.DebugData" },
+        },
+        {
+            event: "capability_requested",
+            from: "framework",
+            to: "#debug_data",
+            filter: { name: "fuchsia.debugdata.Publisher" },
         },
         {
             event: "started",

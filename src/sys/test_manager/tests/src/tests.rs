@@ -701,6 +701,14 @@ async fn debug_data_test() {
     assert!(
         test_run_events.iter().any(|run_event| {
             let TestRunEventPayload::DebugData { contents, .. } = &run_event.payload;
+            contents == "Deprecated debug data from test\n"
+        }),
+        "Actual events: {:?}",
+        test_run_events
+    );
+    assert!(
+        test_run_events.iter().any(|run_event| {
+            let TestRunEventPayload::DebugData { contents, .. } = &run_event.payload;
             contents == "Debug data from test\n"
         }),
         "Actual events: {:?}",

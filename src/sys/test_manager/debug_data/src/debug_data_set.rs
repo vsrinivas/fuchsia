@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::message::DebugDataRequestMessage;
+use crate::message::{PublisherRequest, PublisherRequestMessage};
 use anyhow::{anyhow, Error};
 use async_trait::async_trait;
 use fidl::endpoints::{RequestStream, ServerEnd};
@@ -21,12 +21,12 @@ use std::{
 };
 
 #[async_trait(?Send)]
-pub trait DebugRequestHandler {
+pub trait PublishRequestHandler {
     /// Handle a stream of |DebugData| connection requests. The final processed data
     /// is reported over the |iterator| channel.
-    async fn handle_debug_requests(
+    async fn handle_publish_requests(
         &self,
-        debug_request_recv: mpsc::Receiver<DebugDataRequestMessage>,
+        publish_request_recv: mpsc::Receiver<PublisherRequestMessage>,
         iterator: ftest_manager::DebugDataIteratorRequestStream,
     ) -> Result<(), Error>;
 }
@@ -37,7 +37,7 @@ pub trait DebugRequestHandler {
 /// per data set.
 ///
 /// The output is a terminated stream of |DebugData| connection requests and an |DebugDataIterator|
-/// request for each set. This output is passed to |debug_request_handler| for processing.
+/// request for each set. This output is passed to |publish_request_handler| for processing.
 ///
 /// The stream is terminated by observing the passed lifecycle events and determining when all
 /// realms in a set have stopped. To do this, a number of assumptions about ordering of events:
@@ -53,17 +53,17 @@ pub trait DebugRequestHandler {
 pub async fn handle_debug_data_controller_and_events<CS, D>(
     controller_requests: CS,
     events: fsys::EventStreamRequestStream,
-    debug_request_handler: D,
+    publish_request_handler: D,
     timeout_after_finish: zx::Duration,
     inspect_node: &Node,
 ) where
     CS: Stream<Item = Result<ftest_internal::DebugDataControllerRequest, fidl::Error>>
         + std::marker::Unpin,
-    D: DebugRequestHandler,
+    D: PublishRequestHandler,
 {
     let debug_data_sets: Mutex<Vec<Weak<Mutex<inner::DebugDataSet>>>> = Mutex::new(vec![]);
     let debug_data_sets_ref = &debug_data_sets;
-    let debug_request_handler_ref = &debug_request_handler;
+    let publish_request_handler_ref = &publish_request_handler;
 
     let inspect_node_count = std::sync::atomic::AtomicU32::new(0);
     let inspect_node_count_ref = &inspect_node_count;
@@ -75,9 +75,9 @@ pub async fn handle_debug_data_controller_and_events<CS, D>(
             let iter = iter.into_stream()?;
             let controller = controller.into_stream()?;
             let controller_handle = controller.control_handle();
-            let (debug_request_send, debug_request_recv) = mpsc::channel(5);
+            let (publish_request_send, publish_request_recv) = mpsc::channel(5);
             let debug_data_set =
-                inner::DebugDataSet::new(debug_request_send, move |debug_data_requested| {
+                inner::DebugDataSet::new(publish_request_send, move |debug_data_requested| {
                     if debug_data_requested {
                         let _ = controller_handle.send_on_debug_data_produced();
                     }
@@ -93,7 +93,7 @@ pub async fn handle_debug_data_controller_and_events<CS, D>(
             debug_data_sets_ref.lock().await.push(Arc::downgrade(&debug_data_set));
             futures::future::try_join(
                 serve_debug_data_set_controller(&*debug_data_set, controller),
-                debug_request_handler_ref.handle_debug_requests(debug_request_recv, iter),
+                publish_request_handler_ref.handle_publish_requests(publish_request_recv, iter),
             )
             .await?;
             Result::<(), Error>::Ok(())
@@ -201,6 +201,8 @@ async fn serve_debug_data_set_controller(
 }
 
 mod inner {
+    use fidl::endpoints::DiscoverableProtocolMarker;
+
     use {
         super::*,
         fuchsia_async as fasync,
@@ -220,7 +222,7 @@ mod inner {
         destroyed_before_start: HashSet<RelativeMoniker>,
         seen_realms: HashSet<ChildMoniker>,
         done_adding_realms: bool,
-        sender: mpsc::Sender<DebugDataRequestMessage>,
+        sender: mpsc::Sender<PublisherRequestMessage>,
         on_capability_event: Arc<Mutex<Option<Callback>>>,
         finish_timeout_task: Option<fasync::Task<()>>,
         /// Timeout after Finish() is called to stop waiting for events and serve any
@@ -235,7 +237,7 @@ mod inner {
     impl DebugDataSet {
         /// Create a new DebugDataSet.
         pub fn new<F: 'static + Fn(bool) + Send + Sync>(
-            sender: mpsc::Sender<DebugDataRequestMessage>,
+            sender: mpsc::Sender<PublisherRequestMessage>,
             on_capability_event: F,
         ) -> Self {
             Self {
@@ -403,9 +405,9 @@ mod inner {
             match header.event_type.ok_or(anyhow!("Event contained no event type"))? {
                 fsys::EventType::CapabilityRequested => {
                     let test_url = self.realms.get(&realm_id).unwrap().clone();
-                    let request = debug_data_request_from_event(event);
+                    let request = publish_request_from_event(event);
                     if let Err(e) =
-                        self.sender.send(DebugDataRequestMessage { test_url, request }).await
+                        self.sender.send(PublisherRequestMessage { test_url, request }).await
                     {
                         warn!(
                             "Dropping debug data request from {} for test {}: {:?}",
@@ -459,14 +461,19 @@ mod inner {
         }
     }
 
-    fn debug_data_request_from_event(event: fsys::Event) -> ServerEnd<fdebug::DebugDataMarker> {
+    fn publish_request_from_event(event: fsys::Event) -> PublisherRequest {
         let result = event.event_result.unwrap();
         match result {
             fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(
-                fsys::CapabilityRequestedPayload { capability, .. },
+                fsys::CapabilityRequestedPayload { name, capability, .. },
             )) => {
-                // todo check capability name and other stuff
-                ServerEnd::new(capability.unwrap())
+                if let Some(name) = name {
+                    if &name == fdebug::DebugDataMarker::PROTOCOL_NAME {
+                        return PublisherRequest::DebugData(ServerEnd::new(capability.unwrap()));
+                    }
+                }
+
+                PublisherRequest::Publisher(ServerEnd::new(capability.unwrap()))
             }
             _ => panic!("unexpected payload"),
         }
@@ -544,7 +551,7 @@ mod inner {
 
         /// Collect the requests sent on the receiver and count by test url.
         async fn collect_requests_to_count(
-            recv: mpsc::Receiver<DebugDataRequestMessage>,
+            recv: mpsc::Receiver<PublisherRequestMessage>,
         ) -> HashMap<String, u32> {
             let mut occurrences = HashMap::new();
             recv.for_each(|message| {
@@ -969,9 +976,9 @@ mod test {
     use maplit::hashmap;
     use std::sync::atomic::{AtomicU32, Ordering};
 
-    /// A |DebugRequestHandler| implementation that counts the number of requests per state, and
+    /// A |PublishRequestHandler| implementation that counts the number of requests per state, and
     /// sends them on completion.
-    struct TestDebugRequestHandler(AtomicU32, mpsc::Sender<DebugSetState>);
+    struct TestPublishRequestHandler(AtomicU32, mpsc::Sender<DebugSetState>);
 
     #[derive(PartialEq, Debug)]
     struct DebugSetState {
@@ -981,7 +988,7 @@ mod test {
         index: u32,
     }
 
-    impl TestDebugRequestHandler {
+    impl TestPublishRequestHandler {
         fn new() -> (Self, mpsc::Receiver<DebugSetState>) {
             let (send, recv) = mpsc::channel(10);
             (Self(AtomicU32::new(0), send), recv)
@@ -989,16 +996,16 @@ mod test {
     }
 
     #[async_trait(?Send)]
-    impl DebugRequestHandler for TestDebugRequestHandler {
-        async fn handle_debug_requests(
+    impl PublishRequestHandler for TestPublishRequestHandler {
+        async fn handle_publish_requests(
             &self,
-            mut debug_request_recv: mpsc::Receiver<DebugDataRequestMessage>,
+            mut publish_request_recv: mpsc::Receiver<PublisherRequestMessage>,
             _iterator: ftest_manager::DebugDataIteratorRequestStream,
         ) -> Result<(), Error> {
             let index = self.0.fetch_add(1, Ordering::Relaxed);
             let mut requests_for_url = HashMap::new();
 
-            while let Some(debug_request) = debug_request_recv.next().await {
+            while let Some(debug_request) = publish_request_recv.next().await {
                 requests_for_url
                     .entry(debug_request.test_url)
                     .and_modify(|count| *count += 1)
@@ -1022,7 +1029,7 @@ mod test {
             create_proxy_and_stream::<ftest_internal::DebugDataControllerMarker>().unwrap();
         let (event_proxy, event_request_stream) =
             create_proxy_and_stream::<fsys::EventStreamMarker>().unwrap();
-        let (request_handler, request_recv) = TestDebugRequestHandler::new();
+        let (request_handler, request_recv) = TestPublishRequestHandler::new();
         let ((), ()) = futures::future::join(
             handle_debug_data_controller_and_events(
                 controller_request_stream,

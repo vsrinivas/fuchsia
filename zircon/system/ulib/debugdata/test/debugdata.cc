@@ -13,6 +13,7 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fit/defer.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/eventpair.h>
 #include <lib/zx/job.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
@@ -39,14 +40,89 @@ constexpr uint8_t kTestData[] = {0x00, 0x11, 0x22, 0x33};
 
 TEST(DebugDataTest, PublishData) {
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+  zx::status endpoints = fidl::CreateEndpoints<fuchsia_debugdata::Publisher>();
+  ASSERT_OK(endpoints.status_value());
+  std::unordered_map<std::string, std::vector<zx::vmo>> data;
+  debugdata::Publisher publisher(loop.dispatcher(), fbl::unique_fd{open("/", O_RDONLY)},
+                                 [&](const std::string& data_sink, zx::vmo vmo) {
+                                   data[data_sink].push_back(std::move(vmo));
+                                 });
+  publisher.Bind(std::move(endpoints->server));
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(vmo.write(kTestData, 0, sizeof(kTestData)));
+
+  zx::eventpair token1, token2;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &token1, &token2));
+  ASSERT_OK(fidl::WireCall(endpoints->client)
+                ->Publish(kTestSink, std::move(vmo), std::move(token1))
+                .status());
+  // close the client handle to indicate the VMO is ready to process.
+  token2.reset();
+
+  ASSERT_OK(loop.RunUntilIdle());
+  loop.Shutdown();
+
+  ASSERT_EQ(data.size(), 1);
+
+  ASSERT_NE(data.find(kTestSink), data.end());
+  const auto& dump = data.at(kTestSink);
+  ASSERT_EQ(dump.size(), 1);
+
+  uint8_t content[sizeof(kTestData)];
+  ASSERT_OK(dump[0].read(content, 0, sizeof(content)));
+  ASSERT_EQ(memcmp(content, kTestData, sizeof(kTestData)), 0);
+}
+
+TEST(DebugDataTest, DrainData) {
+  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+  zx::status endpoints = fidl::CreateEndpoints<fuchsia_debugdata::Publisher>();
+  ASSERT_OK(endpoints.status_value());
+  std::unordered_map<std::string, std::vector<zx::vmo>> data;
+  debugdata::Publisher publisher(loop.dispatcher(), fbl::unique_fd{open("/", O_RDONLY)},
+                                 [&](const std::string& data_sink, zx::vmo vmo) {
+                                   data[data_sink].push_back(std::move(vmo));
+                                 });
+  publisher.Bind(std::move(endpoints->server));
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(vmo.write(kTestData, 0, sizeof(kTestData)));
+
+  zx::eventpair token1, token2;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &token1, &token2));
+  ASSERT_OK(fidl::WireCall(endpoints->client)
+                ->Publish(kTestSink, std::move(vmo), std::move(token1))
+                .status());
+
+  ASSERT_OK(loop.RunUntilIdle());
+  // As token_client is held open the data is not processed.
+  ASSERT_EQ(data.size(), 0);
+  // After draining data the VMO is processed anyway.
+  publisher.DrainData();
+
+  ASSERT_EQ(data.size(), 1);
+
+  ASSERT_NE(data.find(kTestSink), data.end());
+  const auto& dump = data.at(kTestSink);
+  ASSERT_EQ(dump.size(), 1);
+
+  uint8_t content[sizeof(kTestData)];
+  ASSERT_OK(dump[0].read(content, 0, sizeof(content)));
+  ASSERT_EQ(memcmp(content, kTestData, sizeof(kTestData)), 0);
+}
+
+TEST(DeprecatedDebugDataTest, PublishData) {
+  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   zx::status endpoints = fidl::CreateEndpoints<fuchsia_debugdata::DebugData>();
   ASSERT_OK(endpoints.status_value());
   std::unordered_map<std::string, std::vector<zx::vmo>> data;
-  debugdata::DebugData svc(loop.dispatcher(), fbl::unique_fd{open("/", O_RDONLY)},
-                           [&](const std::string& data_sink, zx::vmo vmo) {
-                             data[data_sink].push_back(std::move(vmo));
-                           });
-  fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(endpoints->server), &svc);
+  debugdata::Publisher publisher(loop.dispatcher(), fbl::unique_fd{open("/", O_RDONLY)},
+                                 [&](const std::string& data_sink, zx::vmo vmo) {
+                                   data[data_sink].push_back(std::move(vmo));
+                                 });
+  publisher.BindDeprecatedDebugData(std::move(endpoints->server));
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
@@ -74,16 +150,16 @@ TEST(DebugDataTest, PublishData) {
   ASSERT_EQ(memcmp(content, kTestData, sizeof(kTestData)), 0);
 }
 
-TEST(DebugDataTest, DrainData) {
+TEST(DeprecatedDebugDataTest, DrainData) {
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   zx::status endpoints = fidl::CreateEndpoints<fuchsia_debugdata::DebugData>();
   ASSERT_OK(endpoints.status_value());
   std::unordered_map<std::string, std::vector<zx::vmo>> data;
-  debugdata::DebugData svc(loop.dispatcher(), fbl::unique_fd{open("/", O_RDONLY)},
-                           [&](const std::string& data_sink, zx::vmo vmo) {
-                             data[data_sink].push_back(std::move(vmo));
-                           });
-  fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(endpoints->server), &svc);
+  debugdata::Publisher publisher(loop.dispatcher(), fbl::unique_fd{open("/", O_RDONLY)},
+                                 [&](const std::string& data_sink, zx::vmo vmo) {
+                                   data[data_sink].push_back(std::move(vmo));
+                                 });
+  publisher.BindDeprecatedDebugData(std::move(endpoints->server));
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
@@ -99,7 +175,7 @@ TEST(DebugDataTest, DrainData) {
   // As token_client is held open the data is not processed.
   ASSERT_EQ(data.size(), 0);
   // After draining data the VMO is processed anyway.
-  svc.DrainData();
+  publisher.DrainData();
 
   ASSERT_EQ(data.size(), 1);
 
@@ -112,7 +188,7 @@ TEST(DebugDataTest, DrainData) {
   ASSERT_EQ(memcmp(content, kTestData, sizeof(kTestData)), 0);
 }
 
-TEST(DebugDataTest, LoadConfig) {
+TEST(DeprecatedDebugDataTest, LoadConfig) {
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   std::unique_ptr<fs::SynchronousVfs> vfs;
 
@@ -141,9 +217,9 @@ TEST(DebugDataTest, LoadConfig) {
   async::Loop svc_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   zx::status debugdata_endpoints = fidl::CreateEndpoints<fuchsia_debugdata::DebugData>();
   ASSERT_OK(debugdata_endpoints.status_value());
-  debugdata::DebugData svc(loop.dispatcher(), fbl::unique_fd{fdio_ns_opendir(ns)},
-                           [&](const std::string&, zx::vmo) {});
-  fidl::BindSingleInFlightOnly(svc_loop.dispatcher(), std::move(debugdata_endpoints->server), &svc);
+  debugdata::Publisher publisher(loop.dispatcher(), fbl::unique_fd{fdio_ns_opendir(ns)},
+                                 [&](const std::string&, zx::vmo) {});
+  publisher.BindDeprecatedDebugData(std::move(debugdata_endpoints->server), svc_loop.dispatcher());
   ASSERT_OK(svc_loop.StartThread());
 
   const auto path = (directory / filename).string();

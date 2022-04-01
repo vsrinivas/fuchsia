@@ -175,7 +175,7 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   bool data_collection_err_occurred = false;
   fbl::unique_fd data_sink_dir_fd;
-  std::unique_ptr<debugdata::DebugData> debug_data;
+  std::unique_ptr<debugdata::Publisher> debug_data_publisher;
   std::unique_ptr<debugdata::DataSink> debug_data_sink;
   debugdata::DataSinkCallback on_data_collection_error_callback = [&](const std::string& error) {
     fprintf(stderr, "FAILURE: %s\n", error.c_str());
@@ -237,7 +237,7 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
 
     // Setup DebugData service implementation.
     debug_data_sink = std::make_unique<debugdata::DataSink>(data_sink_dir_fd);
-    debug_data = std::make_unique<debugdata::DebugData>(
+    debug_data_publisher = std::make_unique<debugdata::Publisher>(
         loop.dispatcher(), std::move(root_dir_fd), [&](std::string data_sink, zx::vmo vmo) {
           debug_data_sink->ProcessSingleDebugData(data_sink, std::move(vmo),
                                                   on_data_collection_error_callback,
@@ -247,10 +247,21 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
     // Setup proxy dir.
     proxy_dir = fbl::MakeRefCounted<ServiceProxyDir>(std::move(svc_handle));
     auto node = fbl::MakeRefCounted<fs::Service>(
-        [dispatcher = loop.dispatcher(), debug_data = debug_data.get()](zx::channel channel) {
-          return fidl::BindSingleInFlightOnly(dispatcher, std::move(channel), debug_data);
+        [dispatcher = loop.dispatcher(),
+         debug_data_publisher = debug_data_publisher.get()](zx::channel channel) {
+          debug_data_publisher->Bind(std::move(channel), dispatcher);
+          return ZX_OK;
         });
-    proxy_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_debugdata::DebugData>, node);
+    proxy_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_debugdata::Publisher>, node);
+
+    auto deprecated_node = fbl::MakeRefCounted<fs::Service>(
+        [dispatcher = loop.dispatcher(),
+         debug_data_publisher = debug_data_publisher.get()](zx::channel channel) {
+          debug_data_publisher->BindDeprecatedDebugData(std::move(channel), dispatcher);
+          return ZX_OK;
+        });
+    proxy_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_debugdata::DebugData>,
+                        deprecated_node);
 
     // Setup VFS.
     vfs = std::make_unique<fs::SynchronousVfs>(loop.dispatcher());
@@ -373,8 +384,8 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
     result = std::make_unique<Result>(test_name, FAILED_NONZERO_RETURN_CODE, proc_info.return_code,
                                       duration_milliseconds);
   }
-  if (debug_data) {
-    debug_data->DrainData();
+  if (debug_data_publisher) {
+    debug_data_publisher->DrainData();
     auto written_files = debug_data_sink->FlushToDirectory(on_data_collection_error_callback,
                                                            on_data_collection_warning_callback);
     for (auto& [data_sink, files] : written_files) {

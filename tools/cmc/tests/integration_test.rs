@@ -21,14 +21,18 @@ fn main() {
     if let Some(uses) = &mut cm_decl.uses {
         uses.retain(|u| match u {
             Use::Protocol(decl) => {
-                if decl.source_name == Some("fuchsia.debugdata.DebugData".to_owned()) {
+                if decl.source_name == Some("fuchsia.debugdata.DebugData".to_owned())
+                    || decl.source_name == Some("fuchsia.debugdata.Publisher".to_owned())
+                {
+                    let protocol = decl.source_name.clone().unwrap();
+                    let target_path = format!("/svc/{}", protocol);
                     assert_eq!(
                         decl,
                         &UseProtocol {
                             dependency_type: Some(DependencyType::Strong),
                             source: Some(Ref::Debug(DebugRef {})),
-                            source_name: Some("fuchsia.debugdata.DebugData".to_string()),
-                            target_path: Some("/svc/fuchsia.debugdata.DebugData".to_string()),
+                            source_name: Some(protocol),
+                            target_path: Some(target_path),
                             ..UseProtocol::EMPTY
                         }
                     );

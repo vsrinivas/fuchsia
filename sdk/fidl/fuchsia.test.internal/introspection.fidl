@@ -15,7 +15,7 @@ using zx;
 ///
 /// `DebugDataController` operates in conjunction with events passed from Component Manager.
 /// Specifically, DebugData consumes CapabilityRequested, Started, and Stopped events. These
-/// events allow it to route a fuchsia.debugdata.DebugData connection to a specific component
+/// events allow it to route a fuchsia.debugdata.Publisher connection to a specific component
 /// within a test. DebugData can then attribute that component to a specific test and test run
 /// using information it is passed through `DebugDataController` and `DebugDataSetController`.
 @discoverable

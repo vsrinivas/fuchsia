@@ -1,7 +1,8 @@
 {
     "sandbox": {
         "services": [
-            "fuchsia.debugdata.DebugData"
+            "fuchsia.debugdata.DebugData",
+            "fuchsia.debugdata.Publisher"
         ]
     }
 }

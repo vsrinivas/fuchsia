@@ -8,7 +8,7 @@ mod debug_data_set;
 mod iterator;
 mod message;
 
-use crate::message::DebugDataRequestMessage;
+use crate::message::PublisherRequestMessage;
 use anyhow::Error;
 use async_trait::async_trait;
 use fidl_fuchsia_sys2 as fsys;
@@ -48,7 +48,7 @@ async fn main() -> Result<(), Error> {
         debug_data_set::handle_debug_data_controller_and_events(
             request_stream_recv.flatten(),
             event_stream.into_stream()?,
-            DebugRequestHandlerImpl,
+            PublisherHandlerImpl,
             TIMEOUT_AFTER_FINISH,
             fuchsia_inspect::component::inspector().root(),
         ),
@@ -58,18 +58,18 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
-struct DebugRequestHandlerImpl;
+struct PublisherHandlerImpl;
 
 #[async_trait[?Send]]
-impl debug_data_set::DebugRequestHandler for DebugRequestHandlerImpl {
-    async fn handle_debug_requests(
+impl debug_data_set::PublishRequestHandler for PublisherHandlerImpl {
+    async fn handle_publish_requests(
         &self,
-        debug_request_recv: mpsc::Receiver<DebugDataRequestMessage>,
+        publish_request_recv: mpsc::Receiver<PublisherRequestMessage>,
         iter: ftest_manager::DebugDataIteratorRequestStream,
     ) -> Result<(), Error> {
         let (vmo_send, vmo_recv) = mpsc::channel(5);
-        let debug_data_handler_fut =
-            debug_data_server::serve_debug_data_requests(debug_request_recv, vmo_send).map(Ok);
+        let publisher_handler_fut =
+            debug_data_server::serve_publisher_requests(publish_request_recv, vmo_send).map(Ok);
         let process_and_iterator_fut = async move {
             let peekable = vmo_recv.peekable();
             pin_mut!(peekable);
@@ -86,7 +86,7 @@ impl debug_data_set::DebugRequestHandler for DebugRequestHandlerImpl {
                 Ok(())
             }
         };
-        futures::future::try_join(debug_data_handler_fut, process_and_iterator_fut).await?;
+        futures::future::try_join(publisher_handler_fut, process_and_iterator_fut).await?;
         Ok(())
     }
 }

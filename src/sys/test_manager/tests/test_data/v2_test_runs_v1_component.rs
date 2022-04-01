@@ -141,6 +141,7 @@ async fn enclosing_env_services() {
         protocols,
         vec![
             "fuchsia.debugdata.DebugData".to_string(),
+            "fuchsia.debugdata.Publisher".to_string(),
             "fuchsia.logger.LogSink".to_string(),
             "fuchsia.process.Launcher".to_string(),
             "fuchsia.process.Resolver".to_string(),

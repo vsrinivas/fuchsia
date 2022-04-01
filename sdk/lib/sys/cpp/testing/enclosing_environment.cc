@@ -21,6 +21,7 @@ namespace testing {
 // For Fuchsia in-tree coverage support, the the FIDL service name
 // also known as |fuchsia::debugdata::DebugData::Name_|
 static const char fuchsia_debugdata_DebugData_Name_[] = "fuchsia.debugdata.DebugData";
+static const char fuchsia_debugdata_Publisher_Name_[] = "fuchsia.debugdata.Publisher";
 
 EnvironmentServices::ParentOverrides::ParentOverrides(ParentOverrides&&) noexcept = default;
 
@@ -39,10 +40,17 @@ EnvironmentServices::EnvironmentServices(const fuchsia::sys::EnvironmentPtr& par
     AllowParentService(fuchsia::sys::Loader::Name_);
   }
 
-  if (parent_overrides.debug_data_service_) {
-    AddSharedService(parent_overrides.debug_data_service_, fuchsia_debugdata_DebugData_Name_);
+  if (parent_overrides.deprecated_debug_data_service_) {
+    AddSharedService(parent_overrides.deprecated_debug_data_service_,
+                     fuchsia_debugdata_DebugData_Name_);
   } else {
     AllowParentService(fuchsia_debugdata_DebugData_Name_);
+  }
+  if (parent_overrides.debug_data_publisher_service_) {
+    AddSharedService(parent_overrides.debug_data_publisher_service_,
+                     fuchsia_debugdata_Publisher_Name_);
+  } else {
+    AllowParentService(fuchsia_debugdata_Publisher_Name_);
   }
 }
 
