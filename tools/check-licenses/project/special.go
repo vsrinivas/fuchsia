@@ -36,7 +36,8 @@ func NewSpecialProject(projectRootPath string) (*Project, error) {
 		if item.IsDir() {
 			continue
 		}
-		if strings.Contains(strings.ToLower(item.Name()), "licen") {
+		if strings.Contains(strings.ToLower(item.Name()), "licen") &&
+			!strings.Contains(strings.ToLower(item.Name()), "tmpl") {
 			licenseFilePaths = append(licenseFilePaths, item.Name())
 		}
 	}

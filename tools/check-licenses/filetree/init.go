@@ -12,6 +12,7 @@ import (
 )
 
 var AllFileTrees map[string]*FileTree
+var RootFileTree *FileTree
 
 func init() {
 	AllFileTrees = make(map[string]*FileTree, 0)

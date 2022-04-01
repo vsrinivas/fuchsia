@@ -20,7 +20,7 @@
             }
         ],
         "diffNotice": "{DIFF_TARGET}",
-        "exitOnError": false,
+        "exitOnError": true,
         "zip": true
     }
 }

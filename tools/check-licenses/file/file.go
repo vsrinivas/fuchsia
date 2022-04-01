@@ -55,6 +55,9 @@ func NewFile(path string, ft FileType) (*File, error) {
 		if err != nil {
 			return nil, err
 		}
+		if ft == CopyrightHeader && len(content) > 0 {
+			content = content[:min(Config.CopyrightSize, len(content))]
+		}
 	}
 
 	data, err := NewFileData(path, content, ft)
@@ -72,4 +75,11 @@ func NewFile(path string, ft FileType) (*File, error) {
 
 	AllFiles[path] = f
 	return f, nil
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

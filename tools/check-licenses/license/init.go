@@ -57,8 +57,8 @@ func Initialize(c *LicenseConfig) error {
 		Name:               "_empty",
 		Matches:            make([]*file.FileData, 0),
 		AllowList:          []string{".*"},
-		previousMatches:    make(map[string]bool),
-		previousMismatches: make(map[string]bool),
+		PreviousMatches:    make(map[string]bool),
+		PreviousMismatches: make(map[string]bool),
 		Re:                 re,
 	}
 	AllPatterns = append(AllPatterns, Empty)
@@ -77,8 +77,8 @@ func Initialize(c *LicenseConfig) error {
 		Type:               "Unrecognized",
 		Matches:            make([]*file.FileData, 0),
 		AllowList:          []string{".*"},
-		previousMatches:    make(map[string]bool),
-		previousMismatches: make(map[string]bool),
+		PreviousMatches:    make(map[string]bool),
+		PreviousMismatches: make(map[string]bool),
 		Re:                 re,
 	}
 
