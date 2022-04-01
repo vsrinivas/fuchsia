@@ -7,12 +7,14 @@
 use core::{convert::TryFrom as _, num::TryFromIntError, ops::Range};
 
 use crate::transport::tcp::{
+    buffer::SendPayload,
     seqnum::{SeqNum, WindowSize},
     Control,
 };
 
 /// A TCP segment.
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(test, derive(Clone, Copy))]
 pub(super) struct Segment<P: Payload> {
     /// The sequence number of the segment.
     pub(super) seq: SeqNum,
@@ -31,6 +33,7 @@ const MAX_PAYLOAD_AND_CONTROL_LEN_U32: u32 = MAX_PAYLOAD_AND_CONTROL_LEN as u32;
 
 /// The contents of a TCP segment that takes up some sequence number space.
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(test, derive(Clone, Copy))]
 pub(super) struct Contents<P: Payload> {
     /// The control flag of the segment.
     control: Option<Control>,
@@ -307,6 +310,19 @@ impl From<Segment<()>> for Segment<&'static [u8]> {
         Segment { seq, ack, wnd, contents: Contents { control, data: () } }: Segment<()>,
     ) -> Self {
         Segment { seq, ack, wnd, contents: Contents { control, data: &[] } }
+    }
+}
+
+impl From<Segment<()>> for Segment<SendPayload<'static>> {
+    fn from(
+        Segment { seq, ack, wnd, contents: Contents { control, data: () } }: Segment<()>,
+    ) -> Self {
+        Segment {
+            seq,
+            ack,
+            wnd,
+            contents: Contents { control, data: SendPayload::Contiguous(&[]) },
+        }
     }
 }
 

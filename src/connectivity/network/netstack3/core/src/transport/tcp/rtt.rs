@@ -29,7 +29,7 @@ impl Estimator {
     /// [RFC 6298]: https://tools.ietf.org/html/rfc6298#section-2
     const K: u32 = 4;
     const G: Duration = Duration::from_millis(100);
-    const RTO_INIT: Duration = Duration::from_secs(1);
+    pub(super) const RTO_INIT: Duration = Duration::from_secs(1);
 
     /// Updates the estimates with a newly sampled RTT.
     pub(super) fn sample(&mut self, rtt: Duration) {

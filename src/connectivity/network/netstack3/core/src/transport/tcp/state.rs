@@ -7,7 +7,7 @@
 // this file are from https://tools.ietf.org/html/rfc793#section-3.9 if not
 // specified otherwise.
 
-use core::{convert::TryFrom as _, num::TryFromIntError};
+use core::{convert::TryFrom as _, num::TryFromIntError, time::Duration};
 
 use explicit::ResultExt as _;
 
@@ -43,7 +43,14 @@ impl Closed<Initial> {
     /// `iss`is The initial send sequence number. Which is effectively the
     /// sequence number of SYN.
     fn connect<I: Instant>(iss: SeqNum, now: I) -> (SynSent<I>, Segment<()>) {
-        (SynSent { iss, timestamp: now }, Segment::syn(iss, WindowSize::DEFAULT))
+        (
+            SynSent {
+                iss,
+                timestamp: Some(now),
+                retrans_timer: RetransTimer::new(now, Estimator::RTO_INIT),
+            },
+            Segment::syn(iss, WindowSize::DEFAULT),
+        )
     }
 
     fn listen(iss: SeqNum) -> Listen {
@@ -137,7 +144,12 @@ impl Listen {
             // there is no need to store these the RCV and SND variables.
             return ListenOnSegmentDisposition::SendSynAckAndEnterSynRcvd(
                 Segment::syn_ack(iss, seq + 1, WindowSize::DEFAULT),
-                SynRcvd { iss, irs: seq, timestamp: now },
+                SynRcvd {
+                    iss,
+                    irs: seq,
+                    timestamp: Some(now),
+                    retrans_timer: RetransTimer::new(now, Estimator::RTO_INIT),
+                },
             );
         }
         ListenOnSegmentDisposition::Ignore
@@ -148,8 +160,11 @@ impl Listen {
 #[cfg_attr(test, derive(PartialEq, Eq))]
 struct SynSent<I: Instant> {
     iss: SeqNum,
-    // The timestamp when the SYN segment was sent.
-    timestamp: I,
+    // The timestamp when the SYN segment was sent. A `None` here means that
+    // the SYN segment was retransmitted so that it can't be used to estimate
+    // RTT.
+    timestamp: Option<I>,
+    retrans_timer: RetransTimer<I>,
 }
 
 /// Dispositions of [`SynSent::on_segment`].
@@ -173,7 +188,7 @@ impl<I: Instant> SynSent<I> {
         Segment { seq: seg_seq, ack: seg_ack, wnd: seg_wnd, contents }: Segment<impl Payload>,
         now: I,
     ) -> SynSentOnSegmentDisposition<I, R, S> {
-        let SynSent { iss, timestamp: syn_sent_ts } = *self;
+        let SynSent { iss, timestamp: syn_sent_ts, retrans_timer: _ } = *self;
         // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-65):
         //   first check the ACK bit
         //   If the ACK bit is set
@@ -242,10 +257,13 @@ impl<I: Instant> SynSent<I> {
                         if seg_ack.after(iss) {
                             let irs = seg_seq;
                             let mut rtt_estimator = Estimator::default();
-                            rtt_estimator.sample(now.duration_since(syn_sent_ts));
+                            if let Some(syn_sent_ts) = syn_sent_ts {
+                                rtt_estimator.sample(now.duration_since(syn_sent_ts));
+                            }
                             let established = Established {
                                 snd: Send {
                                     nxt: iss + 1,
+                                    max: iss + 1,
                                     una: seg_ack,
                                     wnd: seg_wnd,
                                     wl1: seg_seq,
@@ -253,6 +271,7 @@ impl<I: Instant> SynSent<I> {
                                     buffer: S::default(),
                                     last_seq_ts: None,
                                     rtt_estimator,
+                                    timer: None,
                                 },
                                 rcv: Recv {
                                     buffer: R::default(),
@@ -281,7 +300,12 @@ impl<I: Instant> SynSent<I> {
                         //   ESTABLISHED state has been reached, return.
                         SynSentOnSegmentDisposition::SendSynAckAndEnterSynRcvd(
                             Segment::syn_ack(iss, seg_seq + 1, WindowSize::DEFAULT),
-                            SynRcvd { iss, irs: seg_seq, timestamp: now },
+                            SynRcvd {
+                                iss,
+                                irs: seg_seq,
+                                timestamp: Some(now),
+                                retrans_timer: RetransTimer::new(now, Estimator::RTO_INIT),
+                            },
                         )
                     }
                 }
@@ -303,8 +327,11 @@ impl<I: Instant> SynSent<I> {
 struct SynRcvd<I: Instant> {
     iss: SeqNum,
     irs: SeqNum,
-    // The timestamp when the SYN segment was received.
-    timestamp: I,
+    // The timestamp when the SYN segment was received, and consequently, our
+    // SYN-ACK segment was sent. A `None` here means that the SYN-ACK segment
+    // was retransmitted so that it can't be used to estimate RTT.
+    timestamp: Option<I>,
+    retrans_timer: RetransTimer<I>,
 }
 
 /// Dispositions of [`SynRcvd::on_segment`].
@@ -324,7 +351,7 @@ impl<I: Instant> SynRcvd<I> {
         incoming: Segment<impl Payload>,
         now: I,
     ) -> SynRcvdOnSegmentDisposition<I, R, S> {
-        let SynRcvd { iss, irs, timestamp: syn_rcvd_ts } = *self;
+        let SynRcvd { iss, irs, timestamp: syn_rcvd_ts, retrans_timer: _ } = *self;
         let is_rst = incoming.contents.control() == Some(Control::RST);
         let Segment { seq: seg_seq, ack: seg_ack, wnd: seg_wnd, contents } =
             match incoming.overlap(irs + 1, WindowSize::DEFAULT) {
@@ -406,10 +433,13 @@ impl<I: Instant> SynRcvd<I> {
                             SynRcvdOnSegmentDisposition::SendRst(Segment::rst(seg_ack))
                         } else {
                             let mut rtt_estimator = Estimator::default();
-                            rtt_estimator.sample(now.duration_since(syn_rcvd_ts));
+                            if let Some(syn_rcvd_ts) = syn_rcvd_ts {
+                                rtt_estimator.sample(now.duration_since(syn_rcvd_ts));
+                            }
                             SynRcvdOnSegmentDisposition::EnterEstablished(Established {
                                 snd: Send {
                                     nxt: iss + 1,
+                                    max: iss + 1,
                                     una: seg_ack,
                                     wnd: seg_wnd,
                                     wl1: seg_seq,
@@ -417,6 +447,7 @@ impl<I: Instant> SynRcvd<I> {
                                     buffer: S::default(),
                                     last_seq_ts: None,
                                     rtt_estimator,
+                                    timer: None,
                                 },
                                 rcv: Recv {
                                     buffer: R::default(),
@@ -441,6 +472,7 @@ impl<I: Instant> SynRcvd<I> {
 #[cfg_attr(test, derive(PartialEq, Eq))]
 struct Send<I: Instant, S: SendBuffer> {
     nxt: SeqNum,
+    max: SeqNum,
     una: SeqNum,
     wnd: WindowSize,
     wl1: SeqNum,
@@ -449,6 +481,42 @@ struct Send<I: Instant, S: SendBuffer> {
     // The last sequence number sent out and its timestamp when sent.
     last_seq_ts: Option<(SeqNum, I)>,
     rtt_estimator: Estimator,
+    timer: Option<SendTimer<I>>,
+}
+
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(test, derive(PartialEq, Eq))]
+struct RetransTimer<I: Instant> {
+    at: I,
+    rto: Duration,
+}
+
+impl<I: Instant> RetransTimer<I> {
+    fn new(now: I, rto: Duration) -> Self {
+        let at = now.checked_add(rto).unwrap_or_else(|| {
+            panic!("clock wraps around when adding {:?} to {:?}", rto, now);
+        });
+        Self { at, rto }
+    }
+
+    fn backoff(&mut self, now: I) {
+        let Self { at, rto } = self;
+        *rto *= 2;
+        *at = now.checked_add(*rto).unwrap_or_else(|| {
+            panic!("clock wraps around when adding {:?} to {:?}", rto, now);
+        });
+    }
+
+    fn rearm(&mut self, now: I) {
+        let Self { at: _, rto } = *self;
+        *self = Self::new(now, rto);
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(test, derive(PartialEq, Eq))]
+enum SendTimer<I: Instant> {
+    Retrans(RetransTimer<I>),
 }
 
 /// TCP control block variables that are responsible for receiving.
@@ -534,7 +602,10 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> Established<I, R, S> {
         }
         match seg_ack {
             Some(seg_ack) => {
-                if seg_ack.after(snd.nxt) {
+                // Note: we rewind SND.NXT to SND.UNA on retransmission; if
+                // `seg_ack` is after `snd.max`, it means the segment acks
+                // something we never sent.
+                if seg_ack.after(snd.max) {
                     //   If the ACK acks something not yet sent (SEG.ACK >
                     //   SND.NXT) then send an ACK, drop the segment, and
                     //   return.
@@ -555,10 +626,16 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> Established<I, R, S> {
                     );
                     // Remove the acked bytes from the send buffer. The following
                     // operation should not panic because we are in this branch
-                    // means seg_ack is before snd.nxt, thus seg_ack - snd.una
+                    // means seg_ack is before snd.max, thus seg_ack - snd.una
                     // cannot exceed the buffer length.
                     snd.buffer.mark_read(acked);
                     snd.una = seg_ack;
+                    // If the incoming segment acks something that has been sent
+                    // but not yet retransmitted (`snd.nxt < seg_ack <= snd.max`),
+                    // bump `snd.nxt` as well.
+                    if seg_ack.after(snd.nxt) {
+                        snd.nxt = seg_ack;
+                    }
                     //   If SND.UNA < SEG.ACK =< SND.NXT, the send window should be
                     //   updated.  If (SND.WL1 < SEG.SEQ or (SND.WL1 = SEG.SEQ and
                     //   SND.WL2 =< SEG.ACK)), set SND.WND <- SEG.WND, set
@@ -574,6 +651,23 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> Established<I, R, S> {
                         if !seg_ack.before(seq_max) {
                             snd.rtt_estimator.sample(now.duration_since(timestamp));
                         }
+                    }
+                    match &mut snd.timer {
+                        Some(SendTimer::Retrans(retrans_timer)) => {
+                            // Per https://tools.ietf.org/html/rfc6298#section-5:
+                            //   (5.2) When all outstanding data has been acknowledged,
+                            //         turn off the retransmission timer.
+                            //   (5.3) When an ACK is received that acknowledges new
+                            //         data, restart the retransmission timer so that
+                            //         it will expire after RTO seconds (for the current
+                            //         value of RTO).
+                            if seg_ack == snd.max {
+                                snd.timer = None;
+                            } else {
+                                retrans_timer.rearm(now);
+                            }
+                        }
+                        None => {}
                     }
                 } else {
                     //   If the ACK is a duplicate (SEG.ACK < SND.UNA), it can be
@@ -629,14 +723,36 @@ impl<I: Instant, S: SendBuffer> Send<I, S> {
     ) -> Option<Segment<SendPayload<'_>>> {
         let Self {
             nxt: snd_nxt,
+            max,
             una: snd_una,
             wnd: snd_wnd,
             buffer,
             wl1: _,
             wl2: _,
             last_seq_ts,
-            rtt_estimator: _,
+            rtt_estimator,
+            timer,
         } = self;
+        match timer {
+            Some(SendTimer::Retrans(retrans_timer)) => {
+                if retrans_timer.at <= now {
+                    // Per https://tools.ietf.org/html/rfc6298#section-5:
+                    //   (5.4) Retransmit the earliest segment that has not
+                    //         been acknowledged by the TCP receiver.
+                    //   (5.5) The host MUST set RTO <- RTO * 2 ("back off
+                    //         the timer").  The maximum value discussed in
+                    //         (2.5) above may be used to provide an upper
+                    //         bound to this doubling operation.
+                    //   (5.6) Start the retransmission timer, such that it
+                    //         expires after RTO seconds (for the value of
+                    //         RTO after the doubling operation outlined in
+                    //         5.5).
+                    *snd_nxt = *snd_una;
+                    retrans_timer.backoff(now);
+                }
+            }
+            None => {}
+        };
         // First calculate the open window, note that if our peer has shrank
         // their window (it is strongly discouraged), the following conversion
         // will fail and we return early.
@@ -680,6 +796,18 @@ impl<I: Instant, S: SendBuffer> Send<I, S> {
             None => *last_seq_ts = Some((seq_max, now)),
         }
         *snd_nxt = seq_max;
+        if seq_max.after(*max) {
+            *max = seq_max;
+        }
+        // Per https://tools.ietf.org/html/rfc6298#section-5:
+        //   (5.1) Every time a packet containing data is sent (including a
+        //         retransmission), if the timer is not running, start it
+        //         running so that it will expire after RTO seconds (for the
+        //         current value of RTO).
+        match timer {
+            Some(SendTimer::Retrans(_timer)) => {}
+            None => *timer = Some(SendTimer::Retrans(RetransTimer::new(now, rtt_estimator.rto()))),
+        }
         Some(seg)
     }
 }
@@ -757,10 +885,52 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
     /// receiver window allows.
     fn poll_send(&mut self, mss: u32, now: I) -> Option<Segment<SendPayload<'_>>> {
         match self {
+            State::SynSent(SynSent { iss, timestamp, retrans_timer }) => (retrans_timer.at >= now)
+                .then(|| {
+                    *timestamp = None;
+                    retrans_timer.backoff(now);
+                    Segment::syn(*iss, WindowSize::DEFAULT).into()
+                }),
+            State::SynRcvd(SynRcvd { iss, irs, timestamp, retrans_timer }) => {
+                (retrans_timer.at >= now).then(|| {
+                    *timestamp = None;
+                    retrans_timer.backoff(now);
+                    Segment::syn_ack(*iss, *irs + 1, WindowSize::DEFAULT).into()
+                })
+            }
             State::Established(Established { snd, rcv }) => {
                 snd.poll_send(rcv.nxt(), rcv.wnd(), mss, now)
             }
-            State::Closed(_) | State::Listen(_) | State::SynRcvd(_) | State::SynSent(_) => None,
+            State::Closed(_) | State::Listen(_) => None,
+        }
+    }
+
+    /// Returns an instant at which the caller SHOULD make their best effort to
+    /// call [`poll_send`].
+    ///
+    /// An example synchronous protocol loop would look like:
+    ///
+    /// ```ignore
+    /// loop {
+    ///     let now = Instant::now();
+    ///     output(state.poll_send(now));
+    ///     let incoming = wait_until(state.poll_send_at())
+    ///     output(state.on_segment(incoming, Instant::now()));
+    /// }
+    /// ```
+    ///
+    /// Note: When integrating asynchronously, the caller needs to install
+    /// timers (for example, by using `TimerContext`), then calls to
+    /// `poll_send_at` and to `install_timer`/`cancel_timer` should not
+    /// interleave, otherwise timers may be lost.
+    fn poll_send_at(&self) -> Option<I> {
+        match self {
+            State::Established(Established { snd, rcv: _ }) => match snd.timer? {
+                SendTimer::Retrans(RetransTimer { at, rto: _ }) => Some(at),
+            },
+            State::SynRcvd(syn_rcvd) => Some(syn_rcvd.retrans_timer.at),
+            State::SynSent(syn_sent) => Some(syn_sent.retrans_timer.at),
+            State::Closed(_) | State::Listen(_) => None,
         }
     }
 }
@@ -885,7 +1055,8 @@ mod test {
         SynRcvd {
             iss: ISS_1,
             irs: ISS_2,
-            timestamp: DummyInstant::default() + RTT,
+            timestamp: Some(DummyInstant::from(RTT)),
+            retrans_timer: RetransTimer::new(DummyInstant::from(RTT), Estimator::RTO_INIT)
         }
     ); "SYN only")]
     #[test_case(
@@ -900,8 +1071,12 @@ mod test {
     fn segment_arrives_when_syn_sent(
         incoming: Segment<()>,
     ) -> SynSentOnSegmentDisposition<DummyInstant, NullBuffer, NullBuffer> {
-        let syn_sent = SynSent { iss: ISS_1, timestamp: DummyInstant::default() };
-        syn_sent.on_segment(incoming, DummyInstant::default() + RTT)
+        let syn_sent = SynSent {
+            iss: ISS_1,
+            timestamp: Some(DummyInstant::default()),
+            retrans_timer: RetransTimer::new(DummyInstant::default(), Estimator::RTO_INIT),
+        };
+        syn_sent.on_segment(incoming, DummyInstant::from(RTT))
     }
 
     #[test_case(Segment::rst(ISS_2) => ListenOnSegmentDisposition::Ignore; "ignore RST")]
@@ -913,7 +1088,8 @@ mod test {
             SynRcvd {
                 iss: ISS_1,
                 irs: ISS_2,
-                timestamp: DummyInstant::default(),
+                timestamp: Some(DummyInstant::default()),
+                retrans_timer: RetransTimer::new(DummyInstant::default(), Estimator::RTO_INIT),
             }); "accept syn")]
     fn segment_arrives_when_listen(
         incoming: Segment<()>,
@@ -952,6 +1128,7 @@ mod test {
         Established {
             snd: Send {
                 nxt: ISS_2 + 1,
+                max: ISS_2 + 1,
                 una: ISS_2 + 1,
                 wnd: WindowSize::DEFAULT,
                 buffer: NullBuffer,
@@ -962,6 +1139,7 @@ mod test {
                     rtt_var: RTT / 2,
                 },
                 last_seq_ts: None,
+                timer: None,
             },
             rcv: Recv { buffer: NullBuffer, assembler: Assembler::new(ISS_1 + 1) },
         }
@@ -983,7 +1161,12 @@ mod test {
         incoming: Segment<()>,
     ) -> SynRcvdOnSegmentDisposition<DummyInstant, NullBuffer, NullBuffer> {
         let mut clock = DummyInstantCtx::default();
-        let syn_rcvd = SynRcvd { iss: ISS_2, irs: ISS_1, timestamp: clock.now() };
+        let syn_rcvd = SynRcvd {
+            iss: ISS_2,
+            irs: ISS_1,
+            timestamp: Some(clock.now()),
+            retrans_timer: RetransTimer::new(clock.now(), Estimator::RTO_INIT),
+        };
         clock.sleep(RTT);
         syn_rcvd.on_segment(incoming, clock.now())
     }
@@ -1011,6 +1194,7 @@ mod test {
         let mut established = Established {
             snd: Send {
                 nxt: ISS_1 + 1,
+                max: ISS_1 + 1,
                 una: ISS_1 + 1,
                 wnd: WindowSize::DEFAULT,
                 buffer: NullBuffer,
@@ -1018,6 +1202,7 @@ mod test {
                 wl2: ISS_1 + 1,
                 rtt_estimator: Estimator::default(),
                 last_seq_ts: None,
+                timer: None,
             },
             rcv: Recv {
                 buffer: RingBuffer::new(NonZeroUsize::new(1).unwrap()),
@@ -1032,7 +1217,14 @@ mod test {
         let mut clock = DummyInstantCtx::default();
         let (syn_sent, syn_seg) = Closed::<Initial>::connect(ISS_1, clock.now());
         assert_eq!(syn_seg, Segment::syn(ISS_1, WindowSize::DEFAULT));
-        assert_eq!(syn_sent, SynSent { iss: ISS_1, timestamp: clock.now() });
+        assert_eq!(
+            syn_sent,
+            SynSent {
+                iss: ISS_1,
+                timestamp: Some(clock.now()),
+                retrans_timer: RetransTimer::new(clock.now(), Estimator::RTO_INIT)
+            }
+        );
         let mut active = State::SynSent(syn_sent);
         let mut passive = State::Listen(Closed::<Initial>::listen(ISS_2));
         clock.sleep(RTT / 2);
@@ -1042,7 +1234,8 @@ mod test {
         assert_matches!(passive, State::SynRcvd(ref syn_rcvd) if syn_rcvd == &SynRcvd {
             iss: ISS_2,
             irs: ISS_1,
-            timestamp: clock.now(),
+            timestamp: Some(clock.now()),
+            retrans_timer: RetransTimer::new(clock.now(), Estimator::RTO_INIT),
         });
         clock.sleep(RTT / 2);
         let ack_seg =
@@ -1051,6 +1244,7 @@ mod test {
         assert_matches!(active, State::Established(ref established) if established == &Established {
             snd: Send {
                 nxt: ISS_1 + 1,
+                max: ISS_1 + 1,
                 una: ISS_1 + 1,
                 wnd: WindowSize::DEFAULT,
                 buffer: NullBuffer,
@@ -1061,6 +1255,7 @@ mod test {
                     rtt_var: RTT / 2,
                 },
                 last_seq_ts: None,
+                timer: None,
             },
             rcv: Recv { buffer: NullBuffer, assembler: Assembler::new(ISS_2 + 1) }
         });
@@ -1069,6 +1264,7 @@ mod test {
         assert_matches!(passive, State::Established(ref established) if established == &Established {
             snd: Send {
                 nxt: ISS_2 + 1,
+                max: ISS_2 + 1,
                 una: ISS_2 + 1,
                 wnd: WindowSize::ZERO,
                 buffer: NullBuffer,
@@ -1079,6 +1275,7 @@ mod test {
                     rtt_var: RTT / 2,
                 },
                 last_seq_ts: None,
+                timer: None,
             },
             rcv: Recv { buffer: NullBuffer, assembler: Assembler::new(ISS_1 + 1) }
         })
@@ -1106,12 +1303,14 @@ mod test {
         assert_matches!(state1, State::SynRcvd(ref syn_rcvd) if syn_rcvd == &SynRcvd {
             iss: ISS_1,
             irs: ISS_2,
-            timestamp: clock.now(),
+            timestamp: Some(clock.now()),
+            retrans_timer: RetransTimer::new(clock.now(), Estimator::RTO_INIT),
         });
         assert_matches!(state2, State::SynRcvd(ref syn_rcvd) if syn_rcvd == &SynRcvd {
             iss: ISS_2,
             irs: ISS_1,
-            timestamp: clock.now(),
+            timestamp: Some(clock.now()),
+            retrans_timer: RetransTimer::new(clock.now(), Estimator::RTO_INIT),
         });
 
         clock.sleep(RTT);
@@ -1121,6 +1320,7 @@ mod test {
         assert_matches!(state1, State::Established(established) if established == Established {
             snd: Send {
                 nxt: ISS_1 + 1,
+                max: ISS_1 + 1,
                 una: ISS_1 + 1,
                 wnd: WindowSize::DEFAULT,
                 buffer: NullBuffer,
@@ -1131,6 +1331,7 @@ mod test {
                     rtt_var: RTT / 2,
                 },
                 last_seq_ts: None,
+                timer: None,
             },
             rcv: Recv {
                 buffer: NullBuffer,
@@ -1141,6 +1342,7 @@ mod test {
         assert_matches!(state2, State::Established(established) if established == Established {
             snd: Send {
                 nxt: ISS_2 + 1,
+                max: ISS_2 + 1,
                 una: ISS_2 + 1,
                 wnd: WindowSize::DEFAULT,
                 buffer: NullBuffer,
@@ -1151,6 +1353,7 @@ mod test {
                     rtt_var: RTT / 2,
                 },
                 last_seq_ts: None,
+                timer: None,
             },
             rcv: Recv {
                 buffer: NullBuffer,
@@ -1168,6 +1371,7 @@ mod test {
         let mut established = Established {
             snd: Send {
                 nxt: ISS_1 + 1,
+                max: ISS_1 + 1,
                 una: ISS_1 + 1,
                 wnd: WindowSize::ZERO,
                 buffer: NullBuffer,
@@ -1175,6 +1379,7 @@ mod test {
                 wl2: ISS_1 + 1,
                 rtt_estimator: Estimator::default(),
                 last_seq_ts: None,
+                timer: None,
             },
             rcv: Recv {
                 buffer: RingBuffer::new(NonZeroUsize::new(BUFFER_SIZE).unwrap()),
@@ -1261,6 +1466,7 @@ mod test {
         let mut established = State::Established(Established {
             snd: Send {
                 nxt: ISS_1 + 1,
+                max: ISS_1 + 1,
                 una: ISS_1,
                 wnd: WindowSize::ZERO,
                 buffer: send_buffer,
@@ -1268,6 +1474,7 @@ mod test {
                 wl2: ISS_1,
                 last_seq_ts: None,
                 rtt_estimator: Estimator::default(),
+                timer: None,
             },
             rcv: Recv {
                 buffer: RingBuffer::new(NonZeroUsize::new(BUFFER_SIZE).unwrap()),
@@ -1322,5 +1529,107 @@ mod test {
 
         // We've exhausted our send buffer.
         assert_eq!(established.poll_send(u32::MAX, clock.now()), None);
+    }
+
+    #[test]
+    fn self_connect_retransmission() {
+        let mut clock = DummyInstantCtx::default();
+        let (syn_sent, syn) = Closed::<Initial>::connect(ISS_1, clock.now());
+        let mut state = State::<_, RingBuffer, RingBuffer>::SynSent(syn_sent);
+        // Retransmission timer should be installed.
+        assert_eq!(state.poll_send_at(), Some(DummyInstant::from(Estimator::RTO_INIT)));
+        clock.sleep(Estimator::RTO_INIT);
+        // The SYN segment should be retransmitted.
+        assert_eq!(state.poll_send(u32::MAX, clock.now()), Some(syn.into()));
+
+        // Bring the state to SYNRCVD.
+        let syn_ack = state.on_segment(syn, clock.now()).expect("expected SYN-ACK");
+        // Retransmission timer should be installed.
+        assert_eq!(state.poll_send_at(), Some(clock.now() + Estimator::RTO_INIT));
+        clock.sleep(Estimator::RTO_INIT);
+        // The SYN-ACK segment should be retransmitted.
+        assert_eq!(state.poll_send(u32::MAX, clock.now()), Some(syn_ack.into()));
+
+        // Bring the state to ESTABLISHED and write some data.
+        assert_eq!(state.on_segment(syn_ack, clock.now()), None);
+        match state {
+            State::Closed(_) | State::Listen(_) | State::SynRcvd(_) | State::SynSent(_) => {
+                panic!("expected that we have entered established state, but got {:?}", state)
+            }
+            State::Established(Established { ref mut snd, rcv: _ }) => {
+                assert_eq!(snd.buffer.enqueue_data(TEST_BYTES), TEST_BYTES.len());
+            }
+        }
+        // We have no outstanding segments, so there is no retransmission timer.
+        assert_eq!(state.poll_send_at(), None);
+        // The retransmission timer should backoff exponentially.
+        for i in 0..3 {
+            assert_eq!(
+                state.poll_send(u32::MAX, clock.now()),
+                Some(Segment::data(
+                    ISS_1 + 1,
+                    ISS_1 + 1,
+                    WindowSize::DEFAULT,
+                    SendPayload::Contiguous(TEST_BYTES),
+                ))
+            );
+            assert_eq!(state.poll_send_at(), Some(clock.now() + (1 << i) * Estimator::RTO_INIT));
+            clock.sleep((1 << i) * Estimator::RTO_INIT);
+        }
+        // The receiver acks the first byte of the payload.
+        assert_eq!(
+            state.on_segment(
+                Segment::ack(ISS_1 + 1 + TEST_BYTES.len(), ISS_1 + 1 + 1, WindowSize::DEFAULT),
+                clock.now()
+            ),
+            None
+        );
+        // The timer is rearmed, and the current RTO after 3 retransmissions
+        // should be 4s (1s, 2s, 4s).
+        assert_eq!(state.poll_send_at(), Some(clock.now() + 4 * Estimator::RTO_INIT));
+        clock.sleep(4 * Estimator::RTO_INIT);
+        assert_eq!(
+            state.poll_send(1, clock.now()),
+            Some(Segment::data(
+                ISS_1 + 1 + 1,
+                ISS_1 + 1,
+                WindowSize::DEFAULT,
+                SendPayload::Contiguous(&TEST_BYTES[1..2]),
+            ))
+        );
+        // Currently, snd.nxt = ISS_1 + 2, snd.max = ISS_1 + 5, a segment
+        // with ack number ISS_1 + 4 should bump snd.nxt immediately.
+        assert_eq!(
+            state.on_segment(
+                Segment::ack(ISS_1 + 1 + TEST_BYTES.len(), ISS_1 + 1 + 3, WindowSize::DEFAULT),
+                clock.now()
+            ),
+            None
+        );
+        // Since we retransmitted once more, the RTO is now 8s.
+        assert_eq!(state.poll_send_at(), Some(clock.now() + 8 * Estimator::RTO_INIT));
+        assert_eq!(
+            state.poll_send(1, clock.now()),
+            Some(Segment::data(
+                ISS_1 + 1 + 3,
+                ISS_1 + 1,
+                WindowSize::DEFAULT,
+                SendPayload::Contiguous(&TEST_BYTES[3..4]),
+            ))
+        );
+        // Finally the receiver ACKs all the outstanding data.
+        assert_eq!(
+            state.on_segment(
+                Segment::ack(
+                    ISS_1 + 1 + TEST_BYTES.len(),
+                    ISS_1 + 1 + TEST_BYTES.len(),
+                    WindowSize::DEFAULT
+                ),
+                clock.now()
+            ),
+            None
+        );
+        // The retransmission timer should be removed.
+        assert_eq!(state.poll_send_at(), None);
     }
 }
