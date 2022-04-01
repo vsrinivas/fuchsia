@@ -172,7 +172,7 @@ template("audio_core_package") {
                              "testonly",
                            ])
 
-    deps = [ component_target ]
+    deps = [ ":${component_target}" ]
     if (defined(invoker.package_deps)) {
       deps += invoker.package_deps
     }
