@@ -63,10 +63,15 @@ class ControllerImpl : public Controller {
   // Adds defaults for unset options.
   void AddDefaults();
 
+  // Returns a promise to configure the runner if needed.
+  ZxPromise<> Initialize();
+
+  bool initialized_ = false;
   fidl::Binding<Controller> binding_;
   ExecutorPtr executor_;
   RunnerPtr runner_;
   OptionsPtr options_;
+  Scope scope_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(ControllerImpl);
 };

@@ -36,9 +36,10 @@ ZxPromise<> Runner::Workflow::Stop() {
 }
 
 void Runner::Workflow::Finish() {
-  FX_CHECK(completer_);
-  runner_->FinishWorkflow();
-  completer_.complete_ok();
+  if (completer_) {
+    runner_->FinishWorkflow();
+    completer_.complete_ok();
+  }
 }
 
 ///////////////////////////////////////////////////////////////
