@@ -24,13 +24,13 @@ source_set("mix") {
     "packet.h",
     "pipeline_stage.cc",
     "pipeline_stage.h",
+    "producer_stage.h",
     "ptr_decls.h",
     "thread.h",
   ]
 
   public_deps = [
     "//src/media/audio/lib/clock",
-    "//src/media/audio/lib/timeline",
     "//src/media/audio/mixer_service/common",
   ]
 

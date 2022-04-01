@@ -7,6 +7,7 @@
 
 #include <fidl/fuchsia.audio.mixer/cpp/wire.h>
 #include <lib/fpromise/result.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
 #include <atomic>
@@ -15,7 +16,6 @@
 #include <string_view>
 
 #include "src/media/audio/lib/clock/audio_clock.h"
-#include "src/media/audio/lib/timeline/timeline_function.h"
 #include "src/media/audio/mixer_service/common/basic_types.h"
 #include "src/media/audio/mixer_service/mix/packet.h"
 #include "src/media/audio/mixer_service/mix/ptr_decls.h"
@@ -81,7 +81,7 @@ class PipelineStage {
   // Returns a function that translates from a timestamp to the corresponding fixed-point frame
   // number that will be presented at that time. The given timestamp is relative to
   // `reference_clock`.
-  virtual media::TimelineFunction ref_time_to_frac_presentation_frame() const = 0;
+  virtual TimelineFunction ref_time_to_frac_presentation_frame() const = 0;
 
   // Returns the stage's reference clock.
   virtual media::audio::AudioClock& reference_clock() = 0;
@@ -174,11 +174,11 @@ class PipelineStage {
   PipelineStage(PipelineStage&&) = delete;
   PipelineStage& operator=(PipelineStage&&) = delete;
 
-  // Stage specific implementation of `Read`.
-  virtual std::optional<Buffer> ReadImpl(Fixed frame_start, int64_t frame_count) = 0;
-
   // Stage specific implementation of `Advance`.
   virtual void AdvanceImpl(Fixed frame) = 0;
+
+  // Stage specific implementation of `Read`.
+  virtual std::optional<Buffer> ReadImpl(Fixed frame_start, int64_t frame_count) = 0;
 
   // `ReadImpl` should use this to create a cached buffer. If the buffer is not fully consumed after
   // one `Read`, the next `Read` call will return the same buffer without asking `ReadImpl` to

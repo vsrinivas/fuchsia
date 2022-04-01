@@ -35,6 +35,7 @@ source_set("common") {
     "//src/lib/fidl/cpp",
     "//src/media/audio/lib/format:constants",
     "//src/media/audio/lib/format2",
+    "//src/media/audio/lib/timeline",
     "//zircon/system/ulib/zircon-internal",
   ]
 

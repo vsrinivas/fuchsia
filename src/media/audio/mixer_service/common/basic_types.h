@@ -11,6 +11,8 @@
 
 #include "src/media/audio/lib/format/constants.h"
 #include "src/media/audio/lib/format2/format.h"
+#include "src/media/audio/lib/timeline/timeline_function.h"
+#include "src/media/audio/lib/timeline/timeline_rate.h"
 
 namespace media_audio_mixer_service {
 
@@ -29,6 +31,8 @@ static_assert(kAnyThreadId != kInvalidId);
 // Alias common types into this namespace.
 using Format = ::media_audio::Format;
 using Fixed = ::media::audio::Fixed;
+using TimelineFunction = ::media::TimelineFunction;
+using TimelineRate = ::media::TimelineRate;
 
 }  // namespace media_audio_mixer_service
 
