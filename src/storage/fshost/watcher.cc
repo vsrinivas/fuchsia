@@ -36,7 +36,7 @@ std::vector<Watcher> Watcher::CreateWatchers() {
     fdio_cpp::FdioCaller caller(std::move(dirfd));
 
     AddDeviceCallback callback;
-    switch (WatcherType(i)) {
+    switch (static_cast<WatcherType>(i)) {
       case WatcherType::kWatcherTypeBlock:
         callback = AddDeviceImpl<BlockDevice>;
         break;
@@ -47,7 +47,7 @@ std::vector<Watcher> Watcher::CreateWatchers() {
         ZX_ASSERT_MSG(false, "Invalid watcher type %zu", i);
     }
 
-    ret.emplace_back(Watcher(WatcherType(i), std::move(caller), std::move(callback)));
+    ret.emplace_back(Watcher(static_cast<WatcherType>(i), std::move(caller), std::move(callback)));
   }
 
   return ret;
@@ -55,19 +55,18 @@ std::vector<Watcher> Watcher::CreateWatchers() {
 
 zx_status_t Watcher::ReinitWatcher() {
   watcher_.reset();
-  zx::channel watcher, server;
-  zx_status_t status = zx::channel::create(0, &watcher, &server);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to create watcher channel: " << zx_status_get_string(status);
-    return status;
+  zx::status server_end = fidl::CreateEndpoints<fio::DirectoryWatcher>(&watcher_);
+  if (server_end.is_error()) {
+    FX_PLOGS(ERROR, server_end.status_value()) << "failed to create watcher channel";
+    return server_end.status_value();
   }
 
   auto mask = fio::wire::WatchMask::kMask;
   if (ignore_existing_) {
     mask &= ~fio::wire::WatchMask::kExisting;
   }
-  auto result =
-      fidl::WireCall<fio::Directory>(caller_.channel())->Watch(mask, 0, std::move(server));
+  auto result = fidl::WireCall(caller_.borrow_as<fio::Directory>())
+                    ->Watch(mask, 0, std::move(server_end.value()));
   if (!result.ok()) {
     FX_LOGS(ERROR) << "failed to send watch: " << result.error();
     return result.status();
@@ -77,7 +76,6 @@ zx_status_t Watcher::ReinitWatcher() {
     return result->s;
   }
 
-  watcher_ = std::move(watcher);
   return ZX_OK;
 }
 

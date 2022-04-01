@@ -272,7 +272,7 @@ zx_signals_t BlockWatcher::WaitForWatchMessages(cpp20::span<Watcher> watchers,
       can_pause = false;
     }
     wait_items.emplace_back(zx_wait_item_t{
-        .handle = watcher.borrow_watcher()->get(),
+        .handle = watcher.borrow_watcher().channel()->get(),
         .waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
         .pending = 0,
     });
@@ -310,8 +310,8 @@ zx_signals_t BlockWatcher::WaitForWatchMessages(cpp20::span<Watcher> watchers,
 
     if (wait_items[i].pending & ZX_CHANNEL_READABLE) {
       uint32_t read_len;
-      status = zx_channel_read(watchers[i].borrow_watcher()->get(), 0, buf.begin(), nullptr,
-                               static_cast<uint32_t>(buf.size()), 0, &read_len, nullptr);
+      status = watchers[i].borrow_watcher().channel()->read(
+          0, buf.begin(), nullptr, static_cast<uint32_t>(buf.size()), 0, &read_len, nullptr);
       if (status != ZX_OK) {
         FX_LOGS(ERROR) << "failed to read from channel:" << zx_status_get_string(status);
         return 0;

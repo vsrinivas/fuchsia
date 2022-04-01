@@ -209,11 +209,6 @@ source_set("block-watcher") {
     deps += [ "//src/storage/bin/f2fs" ]
   }
 
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-
   # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
   # Consider switching to the C++ bindings. See linked bug for details.
   configs += [ "//build/c:fidl-deprecated-c-bindings" ]

@@ -210,9 +210,8 @@ Copier TryReadingMinfs(fidl::ClientEnd<fuchsia_io::Node> device) {
 
 std::string GetTopologicalPath(int fd) {
   fdio_cpp::UnownedFdioCaller disk_connection(fd);
-  auto resp = fidl::WireCall<fuchsia_device::Controller>(
-                  zx::unowned_channel(disk_connection.borrow_channel()))
-                  ->GetTopologicalPath();
+  auto resp =
+      fidl::WireCall(disk_connection.borrow_as<fuchsia_device::Controller>())->GetTopologicalPath();
   if (resp.status() != ZX_OK) {
     FX_LOGS(WARNING) << "Unable to get topological path (fidl error): "
                      << zx_status_get_string(resp.status());
@@ -369,9 +368,8 @@ zx_status_t BlockDevice::AttachDriver(const std::string_view& driver) {
   FX_LOGS(INFO) << "Binding: " << driver;
   fdio_cpp::UnownedFdioCaller connection(fd_.get());
   zx_status_t call_status = ZX_OK;
-  auto resp =
-      fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(connection.borrow_channel()))
-          ->Bind(::fidl::StringView::FromExternal(driver));
+  auto resp = fidl::WireCall(connection.borrow_as<fuchsia_device::Controller>())
+                  ->Bind(::fidl::StringView::FromExternal(driver));
   zx_status_t io_status = resp.status();
   if (io_status != ZX_OK) {
     return io_status;
@@ -738,7 +736,7 @@ zx_status_t BlockDevice::MaybeChangeDataPartitionFormat() const {
     return ZX_ERR_BAD_STATE;
   }
   if (zx_status_t status =
-          RunBinary(argv, endpoint_or->TakeChannel(), std::move(export_root_or->server));
+          RunBinary(argv, std::move(endpoint_or).value(), std::move(export_root_or->server));
       status != ZX_OK) {
     // Device might not be minfs. That's ok.
     return ZX_ERR_BAD_STATE;
@@ -903,11 +901,10 @@ zx::status<fidl::ClientEnd<fuchsia_io::Node>> BlockDevice::GetDeviceEndPoint() c
     return end_points_or.take_error();
 
   fdio_cpp::UnownedFdioCaller caller(fd_);
-  if (zx_status_t status =
-          fidl::WireCall<fuchsia_io::Node>(zx::unowned_channel(caller.borrow_channel()))
-              ->Clone(fuchsia_io::wire::OpenFlags::kCloneSameRights,
-                      std::move(end_points_or->server))
-              .status();
+  if (zx_status_t status = fidl::WireCall(caller.borrow_as<fuchsia_io::Node>())
+                               ->Clone(fuchsia_io::wire::OpenFlags::kCloneSameRights,
+                                       std::move(end_points_or->server))
+                               .status();
       status != ZX_OK) {
     return zx::error(status);
   }
@@ -924,10 +921,10 @@ zx_status_t BlockDevice::CheckCustomFilesystem(const std::string& binary_path) c
   if (device_or.is_error()) {
     return device_or.error_value();
   }
-  auto crypt_client_or = mounter_->GetCryptClient();
+  auto crypt_client_or = service::Connect<fuchsia_fxfs::Crypt>();
   if (crypt_client_or.is_error())
     return crypt_client_or.error_value();
-  return RunBinary(argv, std::move(device_or).value(), {}, *std::move(crypt_client_or));
+  return RunBinary(argv, std::move(device_or).value(), {}, std::move(crypt_client_or).value());
 }
 
 // This is a destructive operation and isn't atomic (i.e. not resilient to power interruption).
@@ -1064,13 +1061,15 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
 
   fbl::Vector<const char*> argv = {binary_path.c_str(), "mkfs", nullptr};
 
-  auto crypt_client_or = mounter_->GetCryptClient();
-  crypt_client_or = mounter_->GetCryptClient();
-  if (crypt_client_or.is_error())
-    return crypt_client_or.error_value();
-  if (zx_status_t status = RunBinary(argv, std::move(device), {}, *std::move(crypt_client_or));
-      status != ZX_OK) {
-    return status;
+  {
+    auto crypt_client_or = service::Connect<fuchsia_fxfs::Crypt>();
+    if (crypt_client_or.is_error())
+      return crypt_client_or.error_value();
+    if (zx_status_t status =
+            RunBinary(argv, std::move(device), {}, std::move(crypt_client_or).value());
+        status != ZX_OK) {
+      return status;
+    }
   }
 
   // Now mount and then copy all the data back.
@@ -1090,20 +1089,24 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
   if (device_or.is_error()) {
     return device_or.error_value();
   }
-  crypt_client_or = mounter_->GetCryptClient();
-  if (crypt_client_or.is_error())
-    return crypt_client_or.error_value();
-  if (zx_status_t status =
-          RunBinary(argv, std::move(device_or).value(), std::move(export_root_or->server),
-                    *std::move(crypt_client_or));
-      status != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to mount after format";
-    return status;
+  {
+    auto crypt_client_or = service::Connect<fuchsia_fxfs::Crypt>();
+    if (crypt_client_or.is_error())
+      return crypt_client_or.error_value();
+    if (zx_status_t status =
+            RunBinary(argv, std::move(device_or).value(), std::move(export_root_or->server),
+                      std::move(crypt_client_or).value());
+        status != ZX_OK) {
+      FX_LOGS(ERROR) << "Unable to mount after format";
+      return status;
+    }
   }
 
-  zx::channel root_client, root_server;
-  if (zx_status_t status = zx::channel::create(0, &root_client, &root_server); status != ZX_OK)
-    return status;
+  zx::status create_root = fidl::CreateEndpoints<fuchsia_io::Node>();
+  if (create_root.is_error()) {
+    return create_root.status_value();
+  }
+  auto [root_client, root_server] = std::move(create_root).value();
 
   if (auto resp = fidl::WireCall(export_root_or->client)
                       ->Open(fuchsia_io::wire::OpenFlags::kRightReadable |
@@ -1114,7 +1117,8 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
     return resp.status();
   }
 
-  if (zx_status_t status = fdio_fd_create(root_client.release(), fd.reset_and_get_address());
+  if (zx_status_t status =
+          fdio_fd_create(root_client.TakeChannel().release(), fd.reset_and_get_address());
       status != ZX_OK) {
     FX_LOGS(ERROR) << "fdio_fd_create failed";
     return status;

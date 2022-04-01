@@ -102,9 +102,6 @@ class FilesystemMounter {
   // If configuration indicates the data filesystem requires a crypt client, initializes it.  Does
   // nothing otherwise.
   zx::status<> MaybeInitCryptClient();
-  // Returns a crypt client for a filesystem if configured. If configuration indicates the data
-  // filesystem does not require it, zx::ok({}) is returned.
-  zx::status<fidl::ClientEnd<fuchsia_fxfs::Crypt>> GetCryptClient();
 
   FsManager& manager() { return fshost_; }
   InspectManager& inspect_manager() { return fshost_.inspect_manager(); }

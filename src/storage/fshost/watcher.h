@@ -47,7 +47,9 @@ class Watcher {
   zx_status_t AddDevice(BlockDeviceManager& manager, FilesystemMounter* mounter, fbl::unique_fd fd);
   WatcherType type() const { return type_; }
   bool ignore_existing() const { return ignore_existing_; }
-  zx::unowned_channel borrow_watcher() { return watcher_.borrow(); }
+  fidl::UnownedClientEnd<fuchsia_io::DirectoryWatcher> borrow_watcher() {
+    return watcher_.borrow();
+  }
 
  private:
   Watcher(WatcherType type, fdio_cpp::FdioCaller caller, AddDeviceCallback callback)
@@ -55,7 +57,7 @@ class Watcher {
   WatcherType type_;
   fdio_cpp::FdioCaller caller_;
   AddDeviceCallback add_device_;
-  zx::channel watcher_;
+  fidl::ClientEnd<fuchsia_io::DirectoryWatcher> watcher_;
   bool ignore_existing_ = false;
 };
 

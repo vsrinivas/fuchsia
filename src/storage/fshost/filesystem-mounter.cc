@@ -87,11 +87,11 @@ zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, con
     device_path = result->result.response().path.get();
   }
 
-  zx::status create_endpoints = fidl::CreateEndpoints<fio::Node>();
-  if (create_endpoints.is_error()) {
-    return create_endpoints.take_error();
+  zx::status create_export = fidl::CreateEndpoints<fio::Directory>();
+  if (create_export.is_error()) {
+    return create_export.take_error();
   }
-  auto [export_root, server_end] = std::move(create_endpoints.value());
+  auto [export_root, server_end] = std::move(create_export.value());
 
   size_t num_handles = crypt_client ? 3 : 2;
   zx_handle_t handles[] = {server_end.TakeChannel().release(), block_device_client.release(),
@@ -133,21 +133,23 @@ zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, con
     return zx::error(result.status());
   }
 
-  zx::channel root_client, root_server;
-  if (zx_status_t status = zx::channel::create(0, &root_client, &root_server); status != ZX_OK) {
-    return zx::error(status);
+  zx::status create_root = fidl::CreateEndpoints<fio::Directory>();
+  if (create_root.is_error()) {
+    return create_root.take_error();
   }
+  auto [root_client, root_server] = std::move(create_root.value());
 
   if (auto resp =
-          fidl::WireCall<fio::Directory>(zx::unowned_channel(export_root.channel()))
+          fidl::WireCall(export_root)
               ->Open(fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kPosixWritable |
                          fio::wire::OpenFlags::kPosixExecutable,
-                     0, fidl::StringView("root"), std::move(root_server));
+                     0, fidl::StringView("root"),
+                     fidl::ServerEnd<fio::Node>{root_server.TakeChannel()});
       !resp.ok()) {
     return zx::error(resp.status());
   }
 
-  return InstallFs(point, device_path, export_root.TakeChannel(), std::move(root_client));
+  return InstallFs(point, device_path, std::move(export_root), std::move(root_client));
 }
 
 zx_status_t FilesystemMounter::MountData(zx::channel block_device,
@@ -184,11 +186,11 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device,
   }
 
   if (binary_path == kFxfsPath) {
-    auto crypt_client_or = GetCryptClient();
+    auto crypt_client_or = service::Connect<fuchsia_fxfs::Crypt>();
     if (crypt_client_or.is_error()) {
       return crypt_client_or.error_value();
     }
-    crypt_client = crypt_client_or->TakeHandle();
+    crypt_client = std::move(crypt_client_or).value();
   }
 
   if (auto result = MountFilesystem(FsManager::MountPoint::kData, binary_path.c_str(), options,
@@ -339,20 +341,6 @@ zx::status<> FilesystemMounter::MaybeInitCryptClient() {
     return zx::error(result.status());
   }
   return zx::ok();
-}
-
-zx::status<fidl::ClientEnd<fuchsia_fxfs::Crypt>> FilesystemMounter::GetCryptClient() {
-  auto crypt_endpoints_or = fidl::CreateEndpoints<fuchsia_fxfs::Crypt>();
-  if (crypt_endpoints_or.is_error())
-    return zx::error(crypt_endpoints_or.status_value());
-  if (zx_status_t status =
-          fdio_service_connect(fidl::DiscoverableProtocolDefaultPath<fuchsia_fxfs::Crypt>,
-                               crypt_endpoints_or->server.TakeChannel().release());
-      status != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to connect to crypt service";
-    return zx::error(status);
-  }
-  return zx::ok(std::move(crypt_endpoints_or->client));
 }
 
 }  // namespace fshost

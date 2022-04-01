@@ -24,52 +24,59 @@ namespace fshost {
 
 namespace {
 
-zx::status<> FinishPkgfsLaunch(FilesystemMounter* filesystems, zx::channel pkgfs_root) {
+zx::status<> FinishPkgfsLaunch(FilesystemMounter* filesystems,
+                               fidl::ClientEnd<fio::Directory> pkgfs_root) {
   constexpr auto kFlags =
       fuchsia_io::wire::OpenFlags::kRightReadable | fuchsia_io::wire::OpenFlags::kDirectory |
       fuchsia_io::wire::OpenFlags::kNoRemote | fuchsia_io::wire::OpenFlags::kRightExecutable;
 
   // re-export /pkgfs/system as /system
-  zx::channel system_channel, system_req;
-  zx_status_t status = zx::channel::create(0, &system_channel, &system_req);
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-  status =
-      fdio_open_at(pkgfs_root.get(), "system", static_cast<uint32_t>(kFlags), system_req.release());
-  if (status != ZX_OK) {
-    return zx::error(status);
+  {
+    zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
+    if (endpoints.is_error()) {
+      return endpoints.take_error();
+    }
+    fidl::ServerEnd<fio::Node> node{endpoints->server.TakeChannel()};
+    const fidl::WireResult result =
+        fidl::WireCall(pkgfs_root)->Open(kFlags, 0, "system", std::move(node));
+    if (!result.ok()) {
+      return zx::error(result.status());
+    }
+    if (zx::status result = filesystems->InstallFs(FsManager::MountPoint::kSystem, {}, {},
+                                                   std::move(endpoints->client));
+        result.is_error()) {
+      FX_PLOGS(ERROR, result.status_value()) << "failed to install /system";
+      return result;
+    }
   }
   // re-export /pkgfs/packages/shell-commands/0/bin as /bin
-  zx::channel bin_chan, bin_req;
-  status = zx::channel::create(0, &bin_chan, &bin_req);
-  if (status != ZX_OK) {
-    return zx::error(status);
+  {
+    zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
+    if (endpoints.is_error()) {
+      return endpoints.take_error();
+    }
+    fidl::ServerEnd<fio::Node> node{endpoints->server.TakeChannel()};
+    const fidl::WireResult result =
+        fidl::WireCall(pkgfs_root)
+            ->Open(kFlags, 0, "packages/shell-commands/0/bin", std::move(node));
+    if (!result.ok()) {
+      // non-fatal.
+      FX_PLOGS(WARNING, result.status())
+          << "failed to install /bin (could not open shell-commands)";
+    }
+    // as above, failure of /bin export is non-fatal.
+    if (zx::status result = filesystems->InstallFs(FsManager::MountPoint::kBin, {}, {},
+                                                   std::move(endpoints->client));
+        result.is_error()) {
+      FX_PLOGS(WARNING, result.status_value()) << "failed to install /bin";
+      return result;
+    }
   }
-  status = fdio_open_at(pkgfs_root.get(), "packages/shell-commands/0/bin",
-                        static_cast<uint32_t>(kFlags), bin_req.release());
-  if (status != ZX_OK) {
-    // non-fatal.
-    FX_LOGS(WARNING) << "failed to install /bin (could not open shell-commands)";
-  }
-  if (auto result =
-          filesystems->InstallFs(FsManager::MountPoint::kPkgfs, "", {}, std::move(pkgfs_root));
+  if (zx::status result =
+          filesystems->InstallFs(FsManager::MountPoint::kPkgfs, {}, {}, std::move(pkgfs_root));
       result.is_error()) {
-    FX_LOGS(ERROR) << "failed to install /pkgfs";
+    FX_PLOGS(ERROR, result.status_value()) << "failed to install /pkgfs";
     return result;
-  }
-  if (auto result =
-          filesystems->InstallFs(FsManager::MountPoint::kSystem, "", {}, std::move(system_channel));
-      result.is_error()) {
-    FX_LOGS(ERROR) << "failed to install /system";
-    return result;
-  }
-  // as above, failure of /bin export is non-fatal.
-  if (auto result =
-          filesystems->InstallFs(FsManager::MountPoint::kBin, "", {}, std::move(bin_chan));
-      result.is_error()) {
-    // non-fatal
-    FX_LOGS(WARNING) << "failed to install /bin";
   }
   return zx::ok();
 }
@@ -118,16 +125,15 @@ zx::status<> LaunchPkgfs(FilesystemMounter* filesystems) {
     return loader_conn.take_error();
   }
 
-  zx::channel h0, h1;
-  status = zx::make_status(zx::channel::create(0, &h0, &h1));
-  if (status.is_error()) {
-    FX_LOGS(ERROR) << "cannot create pkgfs root channel: " << status.status_string();
-    return status;
+  zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
+  if (endpoints.is_error()) {
+    FX_PLOGS(ERROR, endpoints.status_value()) << "cannot create pkgfs root channel";
+    return endpoints.take_error();
   }
 
-  const zx_handle_t handles[] = {h1.release()};
-  const uint32_t handle_types[] = {PA_HND(PA_USER0, 0)};
-  size_t hcount = sizeof(handles) / sizeof(*handles);
+  constexpr size_t kHandles = 1;
+  const zx_handle_t handles[kHandles] = {endpoints->server.TakeChannel().release()};
+  const uint32_t handle_types[kHandles] = {PA_HND(PA_USER0, 0)};
   zx::process proc;
   FX_LOGS(INFO) << "starting " << args << "...";
 
@@ -137,13 +143,13 @@ zx::status<> LaunchPkgfs(FilesystemMounter* filesystems) {
       launcher.LaunchWithLoader(*zx::job::default_job(), "pkgfs", std::move(executable).value(),
                                 loader_conn->TakeChannel(), argv, nullptr, -1,
                                 /* TODO(fxbug.dev/32044) */ zx::resource(), handles, handle_types,
-                                hcount, &proc, FS_DATA | FS_BLOB_EXEC | FS_SVC));
+                                kHandles, &proc, FS_DATA | FS_BLOB_EXEC | FS_SVC));
   if (status.is_error()) {
     FX_LOGS(ERROR) << "failed to launch " << cmd << ": " << status.status_string();
     return status;
   }
 
-  return FinishPkgfsLaunch(filesystems, std::move(h0));
+  return FinishPkgfsLaunch(filesystems, std::move(endpoints->client));
 }
 
 }  // namespace fshost
