@@ -105,15 +105,15 @@ fn get_task_or_current(current_task: &CurrentTask, pid: pid_t) -> Result<Arc<Tas
 }
 
 pub fn sys_getsid(current_task: &CurrentTask, pid: pid_t) -> Result<pid_t, Errno> {
-    Ok(get_task_or_current(current_task, pid)?.thread_group.job_control.read().sid)
+    Ok(get_task_or_current(current_task, pid)?.thread_group.process_group.read().session.leader)
 }
 
 pub fn sys_getpgrp(current_task: &CurrentTask) -> Result<pid_t, Errno> {
-    Ok(current_task.thread_group.job_control.read().pgid)
+    Ok(current_task.thread_group.process_group.read().leader)
 }
 
 pub fn sys_getpgid(current_task: &CurrentTask, pid: pid_t) -> Result<pid_t, Errno> {
-    Ok(get_task_or_current(current_task, pid)?.thread_group.job_control.read().pgid)
+    Ok(get_task_or_current(current_task, pid)?.thread_group.process_group.read().leader)
 }
 
 pub fn sys_setpgid(

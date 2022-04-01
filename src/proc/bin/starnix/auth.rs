@@ -71,12 +71,3 @@ impl Credentials {
         self.euid == 0
     }
 }
-
-/// Represents the IDs used to abstract shell job control.
-#[derive(Default, Clone)]
-pub struct ShellJobControl {
-    /// The process session ID of a task.
-    pub sid: pid_t,
-    /// The process group ID of a task.
-    pub pgid: pid_t,
-}

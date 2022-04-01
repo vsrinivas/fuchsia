@@ -18,7 +18,6 @@ use std::sync::Arc;
 use tracing::info;
 
 use super::shared::*;
-use crate::auth::ShellJobControl;
 use crate::logging::strace;
 use crate::mm::MemoryManager;
 use crate::signals::*;
@@ -214,7 +213,7 @@ pub fn create_zircon_thread(
 pub fn create_zircon_process(
     kernel: &Arc<Kernel>,
     pid: pid_t,
-    job_control: ShellJobControl,
+    process_group: Arc<ProcessGroup>,
     signal_actions: Arc<SignalActions>,
     name: &CString,
 ) -> Result<(zx::Thread, Arc<ThreadGroup>, Arc<MemoryManager>), Errno> {
@@ -229,7 +228,7 @@ pub fn create_zircon_process(
         Arc::new(MemoryManager::new(root_vmar).map_err(|status| from_status_like_fdio!(status))?);
 
     let thread_group =
-        Arc::new(ThreadGroup::new(kernel.clone(), process, pid, job_control, signal_actions));
+        Arc::new(ThreadGroup::new(kernel.clone(), process, pid, process_group, signal_actions));
 
     Ok((thread, thread_group, mm))
 }

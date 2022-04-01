@@ -4,6 +4,7 @@
 
 use parking_lot::RwLock;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use crate::types::*;
 
@@ -22,15 +23,15 @@ impl PartialEq for Session {
 }
 
 impl Session {
-    pub fn new(leader: pid_t) -> Session {
+    pub fn new(leader: pid_t) -> Arc<Session> {
         let mut process_groups = HashSet::new();
         process_groups.insert(leader);
 
-        Session { leader, process_groups: RwLock::new(process_groups) }
+        Arc::new(Session { leader, process_groups: RwLock::new(process_groups) })
     }
 
     /// Removes the process group from the session. Returns whether the session is empty.
-    pub fn remove(&mut self, pid: pid_t) -> bool {
+    pub fn remove(&self, pid: pid_t) -> bool {
         let mut process_groups = self.process_groups.write();
         process_groups.remove(&pid);
         return process_groups.is_empty();

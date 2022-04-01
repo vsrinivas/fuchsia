@@ -4,18 +4,21 @@
 
 use parking_lot::RwLock;
 use std::collections::HashSet;
+use std::fmt;
+use std::sync::Arc;
 
+use crate::task::*;
 use crate::types::*;
 
 pub struct ProcessGroup {
     /// The session of the process group.
-    pub sid: pid_t,
+    pub session: Arc<Session>,
 
     /// The leader of the process group.
     pub leader: pid_t,
 
     /// The tasks in the process group.
-    pub tasks: RwLock<HashSet<pid_t>>,
+    pub thread_groups: RwLock<HashSet<pid_t>>,
 }
 
 impl PartialEq for ProcessGroup {
@@ -24,18 +27,25 @@ impl PartialEq for ProcessGroup {
     }
 }
 
-impl ProcessGroup {
-    pub fn new(sid: pid_t, leader: pid_t) -> ProcessGroup {
-        let mut tasks = HashSet::new();
-        tasks.insert(leader);
+impl fmt::Debug for ProcessGroup {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[pgid: {}, sid: {}]", self.leader, self.session.leader)
+    }
+}
 
-        ProcessGroup { sid, leader, tasks: RwLock::new(tasks) }
+impl ProcessGroup {
+    pub fn new(session: Arc<Session>, leader: pid_t) -> Arc<ProcessGroup> {
+        let mut thread_groups = HashSet::new();
+        thread_groups.insert(leader);
+        session.process_groups.write().insert(leader);
+
+        Arc::new(ProcessGroup { session, leader, thread_groups: RwLock::new(thread_groups) })
     }
 
-    /// Removes the task from the session. Returns whether the process group is empty.
-    pub fn remove(&mut self, pid: pid_t) -> bool {
-        let mut tasks = self.tasks.write();
-        tasks.remove(&pid);
-        return tasks.is_empty();
+    /// Removes the thread group from the process group. Returns whether the process group is empty.
+    pub fn remove(&self, pid: pid_t) -> bool {
+        let mut thread_groups = self.thread_groups.write();
+        thread_groups.remove(&pid);
+        return thread_groups.is_empty();
     }
 }

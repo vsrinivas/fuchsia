@@ -9,7 +9,6 @@ use std::collections::HashSet;
 use std::ffi::CStr;
 use std::sync::Arc;
 
-use crate::auth::ShellJobControl;
 use crate::signals::*;
 use crate::task::*;
 use crate::types::*;
@@ -37,7 +36,7 @@ pub struct ThreadGroup {
     pub tasks: RwLock<HashSet<pid_t>>,
 
     /// The IDs used to perform shell job control.
-    pub job_control: RwLock<ShellJobControl>,
+    pub process_group: RwLock<Arc<ProcessGroup>>,
 
     /// The itimers for this thread group.
     pub itimers: RwLock<[itimerval; 3]>,
@@ -66,17 +65,18 @@ impl ThreadGroup {
         kernel: Arc<Kernel>,
         process: zx::Process,
         leader: pid_t,
-        job_control: ShellJobControl,
+        process_group: Arc<ProcessGroup>,
         signal_actions: Arc<SignalActions>,
     ) -> ThreadGroup {
         let mut tasks = HashSet::new();
         tasks.insert(leader);
+        process_group.thread_groups.write().insert(leader);
 
         ThreadGroup {
             kernel,
             process,
             leader,
-            job_control: RwLock::new(job_control),
+            process_group: RwLock::new(process_group),
             tasks: RwLock::new(tasks),
             itimers: Default::default(),
             zombie_leader: Mutex::new(None),
@@ -123,9 +123,10 @@ impl ThreadGroup {
         if !pids.get_process_group(self.leader).is_none() {
             return error!(EPERM);
         }
-        let job_control = ShellJobControl { sid: self.leader, pgid: self.leader };
-        pids.set_job_control(self.leader, &job_control);
-        *self.job_control.write() = job_control;
+        let process_group = ProcessGroup::new(Session::new(self.leader), self.leader);
+        pids.add_process_group(&process_group);
+        self.set_process_group(process_group);
+
         Ok(())
     }
 
@@ -146,42 +147,66 @@ impl ThreadGroup {
             }
         }
 
-        let mut pids = self.kernel.pids.write();
-        let sid;
-        let target_pgid;
+        let new_process_group;
         {
-            let current_job_control = self.job_control.read();
-            let target_job_control = target_thread_group.job_control.read();
+            let mut pids = self.kernel.pids.write();
+            let current_process_group = self.process_group.read();
+            let target_process_group = target_thread_group.process_group.read();
 
             // The target process must not be a session leader and must be in the same session as the current process.
-            if target_thread_group.leader == target_job_control.sid
-                || current_job_control.sid != target_job_control.sid
+            if target_thread_group.leader == target_process_group.session.leader
+                || current_process_group.session != target_process_group.session
             {
                 return error!(EPERM);
             }
 
-            target_pgid = if pgid == 0 { target_thread_group.leader } else { pgid };
+            let target_pgid = if pgid == 0 { target_thread_group.leader } else { pgid };
             if target_pgid < 0 {
                 return error!(EINVAL);
+            }
+
+            if target_pgid == target_process_group.leader {
+                return Ok(());
             }
 
             // If pgid is not equal to the target process id, the associated process group must exist
             // and be in the same session as the target process.
             if target_pgid != target_thread_group.leader {
-                let process_group = pids.get_process_group(target_pgid).ok_or(EPERM)?;
-                if process_group.sid != target_job_control.sid {
+                new_process_group = pids.get_process_group(target_pgid).ok_or(EPERM)?;
+                if new_process_group.session != target_process_group.session {
                     return error!(EPERM);
                 }
+            } else {
+                // Create a new process group
+                new_process_group =
+                    ProcessGroup::new(target_process_group.session.clone(), target_pgid);
+                pids.add_process_group(&new_process_group);
             }
-
-            sid = target_job_control.sid;
         }
 
-        let new_job_control = ShellJobControl { sid: sid, pgid: target_pgid };
-        pids.set_job_control(target.id, &new_job_control);
-        *target_thread_group.job_control.write() = new_job_control;
+        target_thread_group.set_process_group(new_process_group);
 
         Ok(())
+    }
+
+    fn set_process_group(&self, process_group: Arc<ProcessGroup>) {
+        let mut process_group_writer = self.process_group.write();
+        if *process_group_writer == process_group {
+            return;
+        }
+        self.leave_process_group(&process_group_writer);
+        *process_group_writer = process_group;
+        process_group_writer.thread_groups.write().insert(self.leader);
+    }
+
+    fn leave_process_group(&self, process_group: &Arc<ProcessGroup>) {
+        if process_group.remove(self.leader) {
+            let mut pids = self.kernel.pids.write();
+            if process_group.session.remove(process_group.leader) {
+                // TODO(qsr): Handle signals ?
+            }
+            pids.remove_process_group(process_group.leader);
+        }
     }
 
     fn remove_internal(&self, task: &Arc<Task>) -> bool {
@@ -200,6 +225,8 @@ impl ThreadGroup {
         if self.remove_internal(task) {
             let mut terminating = self.terminating.lock();
             *terminating = true;
+
+            self.leave_process_group(&self.process_group.read());
 
             let zombie =
                 self.zombie_leader.lock().take().expect("Failed to capture zombie leader.");
@@ -293,12 +320,17 @@ mod test {
         // Set an exit code to not panic when task is dropped and moved to the zombie state.
         *child_task.exit_code.lock() = Some(0);
         assert_eq!(
-            current_task.thread_group.job_control.read().sid,
-            child_task.thread_group.job_control.read().sid
+            current_task.thread_group.process_group.read().session.leader,
+            child_task.thread_group.process_group.read().session.leader
         );
 
+        let old_process_group = child_task.thread_group.process_group.read().clone();
         assert_eq!(child_task.thread_group.setsid(), Ok(()));
-        assert_eq!(child_task.thread_group.job_control.read().sid, child_task.get_pid());
+        assert_eq!(
+            child_task.thread_group.process_group.read().session.leader,
+            child_task.get_pid()
+        );
+        assert!(!old_process_group.thread_groups.read().contains(&child_task.thread_group.leader));
     }
 
     #[::fuchsia::test]
@@ -353,10 +385,12 @@ mod test {
         );
 
         assert_eq!(child_task1.thread_group.setpgid(&child_task1, 0), Ok(()));
-        assert_eq!(child_task1.thread_group.job_control.read().sid, current_task.id);
-        assert_eq!(child_task1.thread_group.job_control.read().pgid, child_task1.id);
+        assert_eq!(child_task1.thread_group.process_group.read().session.leader, current_task.id);
+        assert_eq!(child_task1.thread_group.process_group.read().leader, child_task1.id);
 
+        let old_process_group = child_task2.thread_group.process_group.read().clone();
         assert_eq!(current_task.thread_group.setpgid(&child_task2, child_task1.id), Ok(()));
-        assert_eq!(child_task2.thread_group.job_control.read().pgid, child_task1.id);
+        assert_eq!(child_task2.thread_group.process_group.read().leader, child_task1.id);
+        assert!(!old_process_group.thread_groups.read().contains(&child_task2.thread_group.leader));
     }
 }

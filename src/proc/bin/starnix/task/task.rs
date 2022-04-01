@@ -12,7 +12,7 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use crate::auth::{Credentials, ShellJobControl};
+use crate::auth::Credentials;
 use crate::execution::*;
 use crate::fs::*;
 use crate::loader::*;
@@ -207,10 +207,13 @@ impl Task {
         let mut pids = kernel.pids.write();
         let pid = pids.allocate_pid();
 
+        let process_group = ProcessGroup::new(Session::new(pid), pid);
+        pids.add_process_group(&process_group);
+
         let (thread, thread_group, mm) = create_zircon_process(
             kernel,
             pid,
-            ShellJobControl { sid: pid, pgid: pid },
+            process_group,
             SignalActions::default(),
             &initial_name,
         )?;
@@ -309,7 +312,7 @@ impl Task {
             create_zircon_process(
                 kernel,
                 pid,
-                self.thread_group.job_control.read().clone(),
+                self.thread_group.process_group.read().clone(),
                 signal_actions,
                 &comm,
             )?
