@@ -192,7 +192,7 @@ impl Repository {
         backend: Box<dyn RepositoryBackend + Send + Sync>,
     ) -> Result<Self, Error> {
         let tuf_repo = backend.get_tuf_repo()?;
-        let tuf_client = Self::get_tuf_client(tuf_repo).await?;
+        let tuf_client = get_tuf_client(tuf_repo).await?;
 
         Ok(Self {
             name: name.to_string(),
@@ -268,10 +268,16 @@ impl Repository {
         &self,
         path: &str,
     ) -> Result<Option<TargetDescription>, Error> {
-        let mut client = Self::get_tuf_client(self.backend.get_tuf_repo()?).await?;
-        let _ = client.update().await?;
+        let trusted_targets = {
+            let mut client = self.client.lock().await;
 
-        match client.database().trusted_targets() {
+            // Get the latest TUF metadata.
+            let _ = client.update().await?;
+
+            client.database().trusted_targets().cloned()
+        };
+
+        match trusted_targets {
             Some(trusted_targets) => Ok(trusted_targets
                 .targets()
                 .get(&TargetPath::new(path).map_err(|e| anyhow::anyhow!(e))?)
@@ -325,32 +331,6 @@ impl Repository {
             }]),
             storage_type: storage_type,
         })
-    }
-
-    async fn get_tuf_client(
-        tuf_repo: Box<dyn RepositoryProvider<Json>>,
-    ) -> Result<Client<Json, EphemeralRepository<Json>, Box<dyn RepositoryProvider<Json>>>, Error>
-    {
-        let metadata_repo = EphemeralRepository::<Json>::new();
-
-        let raw_signed_meta = {
-            // FIXME(http://fxbug.dev/92126) we really should be initializing trust, rather than just
-            // trusting 1.root.json.
-            let mut md = tuf_repo
-                .fetch_metadata(&MetadataPath::from_role(&Role::Root), MetadataVersion::Number(1))
-                .await?;
-
-            let mut buf = Vec::new();
-            md.read_to_end(&mut buf).await.context("reading metadata")?;
-
-            RawSignedMetadata::<Json, _>::new(buf)
-        };
-
-        let client =
-            Client::with_trusted_root(Config::default(), &raw_signed_meta, metadata_repo, tuf_repo)
-                .await?;
-
-        Ok(client)
     }
 
     async fn get_components_for_package(
@@ -572,6 +552,31 @@ impl Drop for Repository {
             (handler)()
         }
     }
+}
+
+async fn get_tuf_client(
+    tuf_repo: Box<dyn RepositoryProvider<Json>>,
+) -> Result<Client<Json, EphemeralRepository<Json>, Box<dyn RepositoryProvider<Json>>>, Error> {
+    let metadata_repo = EphemeralRepository::<Json>::new();
+
+    let raw_signed_meta = {
+        // FIXME(http://fxbug.dev/92126) we really should be initializing trust, rather than just
+        // trusting 1.root.json.
+        let mut md = tuf_repo
+            .fetch_metadata(&MetadataPath::from_role(&Role::Root), MetadataVersion::Number(1))
+            .await?;
+
+        let mut buf = Vec::new();
+        md.read_to_end(&mut buf).await.context("reading metadata")?;
+
+        RawSignedMetadata::<Json, _>::new(buf)
+    };
+
+    let client =
+        Client::with_trusted_root(Config::default(), &raw_signed_meta, metadata_repo, tuf_repo)
+            .await?;
+
+    Ok(client)
 }
 
 #[async_trait::async_trait]
