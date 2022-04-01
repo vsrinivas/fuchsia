@@ -62,8 +62,8 @@ group("non_hermetic_deps") {
 
   # See: fxbug.dev/69444
   visibility += [
-    "//scripts/sdk/gn/*",
-    "//sdk/cts/release/*",
+    "//scripts/sdk/gn:gn.modular.tar.gz",
+    "//sdk:cts_generate",
   ]
 
   # TODO(http://fxbug.dev/92612): Remove entries when
