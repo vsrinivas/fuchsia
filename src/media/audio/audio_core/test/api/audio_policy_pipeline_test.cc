@@ -8,8 +8,8 @@
 #include <zircon/device/audio.h>
 
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/media/audio/lib/test/hermetic_audio_test.h"
-#include "src/media/audio/lib/test/renderer_shim.h"
+#include "src/media/audio/audio_core/testing/integration/hermetic_audio_test.h"
+#include "src/media/audio/audio_core/testing/integration/renderer_shim.h"
 
 namespace media::audio::test {
 

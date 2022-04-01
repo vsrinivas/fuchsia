@@ -22,12 +22,12 @@
 
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/mixer/sinc_sampler.h"
+#include "src/media/audio/audio_core/testing/integration/hermetic_audio_test.h"
 #include "src/media/audio/lib/analysis/analysis.h"
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/test/comparators.h"
-#include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 using ASF = fuchsia::media::AudioSampleFormat;
 

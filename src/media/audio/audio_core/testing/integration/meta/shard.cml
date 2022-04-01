@@ -1,0 +1,32 @@
+{
+    include: [
+        "//sdk/lib/driver_test_realm/meta/realm_builder.shard.cml",
+        "//sdk/lib/inspect/client.shard.cml",
+        "//sdk/lib/sys/component/realm_builder.shard.cml",
+        "//sdk/lib/syslog/client.shard.cml",
+        "//src/sys/test_manager/system-test.shard.cml",
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+    ],
+    offer: [
+        {
+            // The use of these protocols makes these tests not-fully-hermetic,
+            // hence the inclusion of system-test.shard.cml above.
+            protocol: [
+                // Needed for real-time tests.
+                "fuchsia.scheduler.ProfileProvider",
+
+                // Not strictly needed by tests but can be useful during debugging.
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: "#realm_builder",
+        },
+    ],
+}

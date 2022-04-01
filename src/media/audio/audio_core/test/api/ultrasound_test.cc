@@ -10,10 +10,10 @@
 #include <memory>
 #include <vector>
 
+#include "src/media/audio/audio_core/testing/integration/hermetic_audio_test.h"
+#include "src/media/audio/audio_core/testing/integration/renderer_shim.h"
 #include "src/media/audio/lib/clock/testing/clock_test.h"
 #include "src/media/audio/lib/clock/utils.h"
-#include "src/media/audio/lib/test/hermetic_audio_test.h"
-#include "src/media/audio/lib/test/renderer_shim.h"
 
 namespace media::audio::test {
 
@@ -68,8 +68,56 @@ static const audio_stream_unique_id_t kUltrasoundInputDeviceId = {{
 class UltrasoundTest : public HermeticAudioTest {
  protected:
   static void SetUpTestSuite() {
-    HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options{
-        .audio_core_config_data_path = "/pkg/data/ultrasound",
+    HermeticAudioTest::SetTestSuiteRealmOptions([] {
+      return HermeticAudioRealm::Options{
+          .audio_core_config_data = MakeAudioCoreConfig({
+              .output_device_config = R"x(
+                "device_id": "*",
+                "supported_stream_types": [
+                  "render:media",
+                  "render:interruption",
+                  "render:background",
+                  "render:communications",
+                  "render:system_agent",
+                  "render:ultrasound",
+                  "capture:loopback"
+                ],
+                "pipeline":  {
+                  "name": "linearize",
+                  "streams": [
+                    "render:ultrasound"
+                  ],
+                  "output_rate": 96000,
+                  "output_channels": 2,
+                  "inputs": [
+                    {
+                      "name": "mix",
+                      "streams": [
+                        "render:media",
+                        "render:interruption",
+                        "render:background",
+                        "render:communications",
+                        "render:system_agent"
+                      ],
+                      "output_rate": 96000,
+                      "loopback": true
+                    }
+                  ]
+                }
+              )x",
+              .input_device_config = R"x(
+                "device_id": "*",
+                "supported_stream_types": [
+                  "capture:background",
+                  "capture:foreground",
+                  "capture:system_agent",
+                  "capture:communications",
+                  "capture:ultrasound"
+                ],
+                "rate": 96000
+              )x",
+          }),
+      };
     });
   }
 

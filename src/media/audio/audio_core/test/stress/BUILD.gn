@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//src/media/audio/audio_core_package_v2.gni")
 import("//src/media/audio/hardware.gni")
 
 executable("audio-core-stress-tests-bin") {
@@ -12,18 +13,23 @@ executable("audio-core-stress-tests-bin") {
     "//sdk/lib/media/audio/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
-    "//src/media/audio/lib/test:hermetic_audio_test",
+    "//src/media/audio/audio_core/testing/integration:hermetic_audio_test",
     "//third_party/googletest:gmock",
   ]
   testonly = true
 }
 
 fuchsia_test_component("audio-core-stress-tests-component") {
-  manifest = "meta/audio-core-stress-tests.cmx"
+  component_name = "audio-core-stress-tests"
+  manifest = "meta/audio-core-stress-tests.cml"
   deps = [ ":audio-core-stress-tests-bin" ]
 }
 
-fuchsia_test_package("audio-core-stress-tests") {
+audio_core_test_package("audio-core-stress-tests") {
+  audio_core_manifest_shards = [
+    "//src/media/audio/audio_core/meta/audio_core.shard.for_integration_tests.cml",
+    "//src/media/audio/audio_core/meta/audio_core.shard.ultrasound.cml",
+  ]
   test_components = [ ":audio-core-stress-tests-component" ]
   test_specs = {
     log_settings = {
@@ -31,5 +37,4 @@ fuchsia_test_package("audio-core-stress-tests") {
     }
     environments = hardware_envs
   }
-  deps = [ "//src/media/audio/lib/audio_test_devmgr:audio-test-devmgr" ]
 }

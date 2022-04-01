@@ -17,12 +17,10 @@ class VirtualAudioDeviceImpl;
 
 class VirtualAudioControlImpl : public fuchsia::virtualaudio::Control {
  public:
-  VirtualAudioControlImpl(async_dispatcher_t* dispatcher) : dev_host_dispatcher_(dispatcher) {
-    ZX_ASSERT(dev_host_dispatcher_ != nullptr);
-  }
-
   // TODO(mpuryear): Move the three static methods and table over to DDKTL.
   //
+  // Always called first.
+  static zx_status_t DdkBind(void* ctx, zx_device_t* parent_bus);
   // Always called after DdkUnbind.
   static void DdkRelease(void* ctx);
   // Always called after our child drivers are unbound and released.
@@ -47,17 +45,15 @@ class VirtualAudioControlImpl : public fuchsia::virtualaudio::Control {
   void ReleaseBindings();
   bool enabled() const { return enabled_; }
   zx_device_t* dev_node() const { return dev_node_; }
-  async_dispatcher_t* dispatcher() const { return dev_host_dispatcher_; }
+  async_dispatcher_t* dispatcher() const { return dispatcher_; }
 
  private:
-  friend class VirtualAudioBus;
-  friend class VirtualAudioDeviceImpl;
+  VirtualAudioControlImpl() = default;
 
   static fuchsia_virtualaudio_Forwarder_ops_t fidl_ops_;
 
-  async_dispatcher_t* dev_host_dispatcher_ = nullptr;
-
   zx_device_t* dev_node_ = nullptr;
+  async_dispatcher_t* dispatcher_ = nullptr;
   bool enabled_ = true;
 
   fidl::BindingSet<fuchsia::virtualaudio::Control> bindings_;

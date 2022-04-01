@@ -7,7 +7,7 @@
 
 #include <array>
 
-#include "src/media/audio/lib/test/hermetic_fidelity_test.h"
+#include "src/media/audio/audio_core/testing/integration/hermetic_fidelity_test.h"
 
 namespace media::audio::test {
 

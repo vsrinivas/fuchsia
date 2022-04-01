@@ -86,27 +86,27 @@ There is no complex processing in AudioCapturers other than a simple mixer.
 
 We represent audio as PCM-encoded streams. Each stream is a sequence of frames
 with N samples per frame, where the audio has N channels. Within a stream,
-individual frames are identified by a _frame number_, which is a simple index
+individual frames are identified by a *frame number*, which is a simple index
 into the stream. Each pipeline stage has zero or more source streams and
 destinations streams; in a pipeline graph, nodes are transformations and edges
 are streams.
 
-Each stream has a _reference clock_ which controls how the frame timeline
+Each stream has a *reference clock* which controls how the frame timeline
 advances relative to real time. An important question is how we translate
 between frame numbers and timestamps. At any given point in time, two kinds of
 frame numbers are important:
 
-*   The _presentation frame_ identifies the frame that is currently being played
+*   The *presentation frame* identifies the frame that is currently being played
     at a speaker or captured at a microphone. If it were possible to hear an
     individual frame, this would be the frame heard from the speaker at the
     current time.
 
-*   In output pipelines, the _safe write frame_ identifies the frame that the
+*   In output pipelines, the *safe write frame* identifies the frame that the
     pipeline is about to push into the next stage of the pipeline (for example,
     at the driver level, this is the next frame to be pushed into the hardware).
     This is the streams' last chance to produce this frame; all frames before
     this point have been pushed to the next pipeline stage. Once the frame
-    passes this point, there is a delay, known as the _presentation delay_,
+    passes this point, there is a delay, known as the *presentation delay*,
     before the frame is played at the speaker. To illustrate:
 
     ```
@@ -124,7 +124,7 @@ frame numbers are important:
     moves to the delay phase after it passes the safe write pointer, then is
     finally presented.
 
-*   In input pipelines, the _safe read frame_ serves a similar purpose: it
+*   In input pipelines, the *safe read frame* serves a similar purpose: it
     identifies the frame that the stream has just obtained from the prior stage
     of the pipeline. As above, there may be a delay between when the frame is
     captured at the microphone and when it becomes safe to read. To illustrate:
@@ -147,8 +147,8 @@ frame numbers are important:
     presented (played at a speaker).
 
 We anchor frames to real time using presentation frames. For each stream, we
-define a translation function _ReferencePtsToFrame_ which translates between
-_presentation timestamps_ (PTS) and frame numbers:
+define a translation function *ReferencePtsToFrame* which translates between
+*presentation timestamps* (PTS) and frame numbers:
 
 ```
 ReferencePtsToFrame(pts) = presentation frame number at pts

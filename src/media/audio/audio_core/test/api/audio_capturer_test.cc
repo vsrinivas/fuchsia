@@ -8,9 +8,9 @@
 #include <lib/zx/clock.h>
 #include <zircon/device/audio.h>
 
+#include "src/media/audio/audio_core/testing/integration/hermetic_audio_test.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/testing/clock_test.h"
-#include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 using ASF = fuchsia::media::AudioSampleFormat;
 

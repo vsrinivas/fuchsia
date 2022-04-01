@@ -38,23 +38,23 @@ template("audio_core_api_test_component") {
          "source must be specified")
 
   binary = "${target_name}-bin"
-  cmx_target = "${target_name}_cmx"
-  cmx_output = "${target_gen_dir}/${target_name}.cmx"
+  cml_target = "${target_name}_cml"
+  cml_output = "${target_gen_dir}/${target_name}.cml"
 
-  generated_file(cmx_target) {
-    contents = read_file("meta/audio-core-api-tests.cmx", "string")
+  generated_file(cml_target) {
+    contents = read_file("meta/audio-core-api-tests.cml", "string")
     contents = string_replace(contents, "{binary}", binary)
-    outputs = [ cmx_output ]
+    outputs = [ cml_output ]
     output_conversion = "string"
     testonly = true
   }
 
   fuchsia_component(target_name) {
     testonly = true
-    manifest = get_target_outputs(":${cmx_target}")
+    manifest = get_target_outputs(":${cml_target}")
     manifest = manifest[0]
     deps = [ ":${target_name}-bin" ]
-    manifest_deps = [ ":${cmx_target}" ]
+    manifest_deps = [ ":${cml_target}" ]
     if (defined(invoker.component_deps)) {
       deps += invoker.component_deps
     }
@@ -71,8 +71,8 @@ template("audio_core_api_test_component") {
       "//sdk/fidl/fuchsia.media",
       "//sdk/lib/syslog/cpp",
       "//src/lib/fxl/test:gtest_main",
+      "//src/media/audio/audio_core/testing/integration:hermetic_audio_test",
       "//src/media/audio/lib/test:comparators",
-      "//src/media/audio/lib/test:hermetic_audio_test",
       "//third_party/googletest:gmock",
     ]
     testonly = true

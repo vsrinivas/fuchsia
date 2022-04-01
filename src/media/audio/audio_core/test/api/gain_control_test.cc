@@ -8,8 +8,8 @@
 
 #include <gtest/gtest.h>
 
+#include "src/media/audio/audio_core/testing/integration/hermetic_audio_test.h"
 #include "src/media/audio/lib/test/constants.h"
-#include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 // TYPED_TEST_SUITE uses RTTI to print type names, but RTTI is disabled in our build, so
 // specialize this function to get nicer test failure messages.

@@ -88,7 +88,13 @@ class TestEffectsV2::TestProcessor : public fidl::WireServer<fuchsia_audio_effec
   float* output_ = nullptr;
 };
 
-TestEffectsV2::TestEffectsV2() { loop_.StartThread("test_effects_server_v2"); }
+TestEffectsV2::TestEffectsV2(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {
+  if (!dispatcher) {
+    loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
+    dispatcher_ = loop_->dispatcher();
+    loop_->StartThread("test_effects_server_v2");
+  }
+}
 
 // Must be defined in this file because TestProcessor is defined in this file.
 TestEffectsV2::~TestEffectsV2() = default;
@@ -125,7 +131,7 @@ fidl::ClientEnd<fuchsia_audio_effects::ProcessorCreator> TestEffectsV2::NewClien
 void TestEffectsV2::HandleRequest(
     fidl::ServerEnd<fuchsia_audio_effects::ProcessorCreator> server_end) {
   bindings_.emplace_back(fidl::BindServer(
-      loop_.dispatcher(), std::move(server_end), this,
+      dispatcher_, std::move(server_end), this,
       [](TestEffectsV2* impl, fidl::UnbindInfo info,
          fidl::ServerEnd<fuchsia_audio_effects::ProcessorCreator> server_end) {
         if (!info.is_user_initiated() && !info.is_peer_closed()) {
@@ -212,7 +218,7 @@ void TestEffectsV2::Create(CreateRequestView request, CreateCompleter::Sync& com
   config.set_processor(std::move(client_end));
   processors_.insert(std::make_unique<TestProcessor>(effect.process, std::move(vmo),
                                                      buffer_size_bytes, output_buffer.offset,
-                                                     std::move(server_end), loop_.dispatcher()));
+                                                     std::move(server_end), dispatcher_));
 
   completer.ReplySuccess(std::move(config));
 }

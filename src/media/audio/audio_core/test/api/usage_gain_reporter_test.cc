@@ -8,8 +8,8 @@
 #include <cmath>
 #include <memory>
 
+#include "src/media/audio/audio_core/testing/integration/hermetic_audio_test.h"
 #include "src/media/audio/lib/test/constants.h"
-#include "src/media/audio/lib/test/hermetic_audio_test.h"
 #include "src/media/audio/lib/test/test_fixture.h"
 
 namespace media::audio::test {
@@ -72,7 +72,7 @@ class UsageGainReporterTest : public HermeticAudioTest {
     audio_core_->BindUsageVolumeControl(fidl::Clone(usage), c->volume_control.NewRequest());
     AddErrorHandler(c->volume_control, "VolumeControl");
 
-    environment()->ConnectToService(c->gain_reporter.NewRequest());
+    realm().Connect(c->gain_reporter.NewRequest());
     AddErrorHandler(c->gain_reporter, "GainReporter");
     c->gain_reporter->RegisterListener(device_id_string_, fidl::Clone(usage),
                                        c->fake_listener.NewBinding());

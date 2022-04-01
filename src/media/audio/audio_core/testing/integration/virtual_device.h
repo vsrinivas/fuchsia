@@ -14,7 +14,7 @@
 #include <memory>
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
-#include "src/media/audio/audio_core/testing/integration/hermetic_audio_environment.h"
+#include "src/media/audio/audio_core/testing/integration/hermetic_audio_realm.h"
 #include "src/media/audio/lib/format/audio_buffer.h"
 #include "src/media/audio/lib/test/test_fixture.h"
 #include "src/media/audio/lib/test/vmo_backed_buffer.h"
@@ -67,7 +67,7 @@ class VirtualDevice {
   size_t inspect_id() const { return inspect_id_; }
 
  protected:
-  VirtualDevice(TestFixture* fixture, HermeticAudioEnvironment* environment,
+  VirtualDevice(TestFixture* fixture, HermeticAudioRealm* realm,
                 const audio_stream_unique_id_t& device_id, Format format, int64_t frame_count,
                 size_t inspect_id, std::optional<DevicePlugProperties> plug_properties,
                 float expected_gain_db,
@@ -109,14 +109,14 @@ class VirtualOutput : public VirtualOutputImpl {
   AudioBuffer<SampleFormat> SnapshotRingBuffer() { return rb_.Snapshot<SampleFormat>(); }
 
   // Don't call this directly. Use HermeticAudioTest::CreateOutput so the object is
-  // appropriately bound into the test environment.
-  VirtualOutput(TestFixture* fixture, HermeticAudioEnvironment* environment,
+  // appropriately bound into the test realm.
+  VirtualOutput(TestFixture* fixture, HermeticAudioRealm* realm,
                 const audio_stream_unique_id_t& device_id, Format format, int64_t frame_count,
                 size_t inspect_id, std::optional<DevicePlugProperties> plug_properties,
                 float expected_gain_db,
                 std::optional<DeviceClockProperties> device_clock_properties)
-      : VirtualDevice(fixture, environment, device_id, format, frame_count, inspect_id,
-                      plug_properties, expected_gain_db, device_clock_properties) {}
+      : VirtualDevice(fixture, realm, device_id, format, frame_count, inspect_id, plug_properties,
+                      expected_gain_db, device_clock_properties) {}
 };
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
@@ -130,13 +130,13 @@ class VirtualInput : public VirtualInputImpl {
   }
 
   // Don't call this directly. Use HermeticAudioTest::CreateInput so the object is
-  // appropriately bound into the test environment.
-  VirtualInput(TestFixture* fixture, HermeticAudioEnvironment* environment,
+  // appropriately bound into the test realm.
+  VirtualInput(TestFixture* fixture, HermeticAudioRealm* realm,
                const audio_stream_unique_id_t& device_id, Format format, int64_t frame_count,
                size_t inspect_id, std::optional<DevicePlugProperties> plug_properties,
                float expected_gain_db, std::optional<DeviceClockProperties> device_clock_properties)
-      : VirtualDevice(fixture, environment, device_id, format, frame_count, inspect_id,
-                      plug_properties, expected_gain_db, device_clock_properties) {}
+      : VirtualDevice(fixture, realm, device_id, format, frame_count, inspect_id, plug_properties,
+                      expected_gain_db, device_clock_properties) {}
 };
 
 }  // namespace media::audio::test

@@ -1,0 +1,5 @@
+{
+    program: {
+        binary: "bin/audio_core",
+    },
+}

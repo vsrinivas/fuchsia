@@ -296,7 +296,7 @@ void VirtualAudioDeviceImpl::Add() {
   // DeviceImpl makes those calls on the FIDL thread (task_queue_'s destination thread); all are
   // enqueued and subsequently discarded (via StopAndClear) upon RemoveStream. Stream makes those
   // calls in its execution domain, which is synchronously deactivated during its DdkUnbind.
-  task_queue_.emplace(owner_->dispatcher(), thrd_current());
+  task_queue_.emplace(owner_->dispatcher());
   if (!CreateStream(owner_->dev_node())) {
     zxlogf(ERROR, "CreateStream failed");
     task_queue_->StopAndClear();

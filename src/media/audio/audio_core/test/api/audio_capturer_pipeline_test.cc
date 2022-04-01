@@ -14,9 +14,9 @@
 #include <set>
 #include <vector>
 
+#include "src/media/audio/audio_core/testing/integration/hermetic_audio_test.h"
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/test/comparators.h"
-#include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 using ASF = fuchsia::media::AudioSampleFormat;
 using StreamPacket = fuchsia::media::StreamPacket;
@@ -145,8 +145,22 @@ TEST_F(AudioCapturerPipelineTest, CaptureWithPts) {
 class AudioCapturerPipelineSWGainTest : public AudioCapturerPipelineTest {
  protected:
   static void SetUpTestSuite() {
-    HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options{
-        .audio_core_config_data_path = "/pkg/data/audio-core-config-with-sw-gain",
+    HermeticAudioTest::SetTestSuiteRealmOptions([] {
+      return HermeticAudioRealm::Options{
+          .audio_core_config_data = MakeAudioCoreConfig({
+              .input_device_config = R"x(
+                "device_id": "*",
+                "supported_stream_types": [
+                    "capture:background",
+                    "capture:communications",
+                    "capture:foreground",
+                    "capture:system_agent"
+                ],
+                "rate": 48000,
+                "software_gain_db": 20
+              )x",
+          }),
+      };
     });
   }
 };

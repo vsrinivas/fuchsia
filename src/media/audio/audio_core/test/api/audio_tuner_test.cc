@@ -7,7 +7,7 @@
 
 #include <cmath>
 
-#include "src/media/audio/lib/test/hermetic_audio_test.h"
+#include "src/media/audio/audio_core/testing/integration/hermetic_audio_test.h"
 
 namespace media::audio::test {
 
@@ -28,7 +28,7 @@ class AudioTunerTest : public HermeticAudioTest {
 // TODO(fxbug.dev/52962): Flesh out
 TEST_F(AudioTunerTest, ConnectToAudioTuner) {
   fuchsia::media::tuning::AudioTunerPtr audio_tuner;
-  environment()->ConnectToService(audio_tuner.NewRequest());
+  realm().Connect(audio_tuner.NewRequest());
   AddErrorHandler(audio_tuner, "AudioTuner");
   audio_tuner->GetAvailableAudioEffects(AddCallback("GetAvailableAudioEffects"));
   ExpectCallbacks();

@@ -10,9 +10,9 @@
 #include "src/media/audio/audio_core/driver_output.h"
 #include "src/media/audio/audio_core/mixer/coefficient_table.h"
 #include "src/media/audio/audio_core/test/api/fidelity_results.h"
+#include "src/media/audio/audio_core/testing/integration/hermetic_fidelity_test.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/lib/analysis/generators.h"
-#include "src/media/audio/lib/test/hermetic_fidelity_test.h"
 
 using ASF = fuchsia::media::AudioSampleFormat;
 
@@ -62,8 +62,35 @@ class AudioCore48kFidelityTest : public AudioCoreFidelityTest {
   static constexpr int32_t kDeviceFrameRate = 48000;
 
   static void SetUpTestSuite() {
-    HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options{
-        .audio_core_config_data_path = "/pkg/data/audio-core-config-48k",
+    HermeticAudioTest::SetTestSuiteRealmOptions([] {
+      return HermeticAudioRealm::Options{
+          .audio_core_config_data = MakeAudioCoreConfig({
+              .output_device_config = R"x(
+                "device_id": "*",
+                "supported_stream_types": [
+                    "render:background",
+                    "render:communications",
+                    "render:interruption",
+                    "render:media",
+                    "render:system_agent",
+                    "capture:loopback"
+                ],
+                "pipeline": {
+                    "name": "Single MixStage 48k",
+                    "streams": [
+                        "render:background",
+                        "render:communications",
+                        "render:interruption",
+                        "render:media",
+                        "render:system_agent"
+                    ],
+                    "loopback": true,
+                    "output_rate": 48000,
+                    "output_channels": 2
+                }
+              )x",
+          }),
+      };
     });
   }
 };
@@ -73,8 +100,37 @@ class AudioCore96kFidelityTest : public AudioCoreFidelityTest {
   static constexpr int32_t kDeviceFrameRate = 96000;
 
   static void SetUpTestSuite() {
-    HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options{
-        .audio_core_config_data_path = "/pkg/data/audio-core-config-96k",
+    HermeticAudioTest::SetTestSuiteRealmOptions([] {
+      return HermeticAudioRealm::Options{
+          .audio_core_config_data = MakeAudioCoreConfig({
+              .output_device_config = R"x(
+                "device_id": "*",
+                "supported_stream_types": [
+                    "render:background",
+                    "render:communications",
+                    "render:interruption",
+                    "render:media",
+                    "render:system_agent",
+                    "render:ultrasound",
+                    "capture:loopback"
+                ],
+                "pipeline": {
+                    "name": "Single MixStage 96k",
+                    "streams": [
+                        "render:background",
+                        "render:communications",
+                        "render:interruption",
+                        "render:media",
+                        "render:system_agent",
+                        "render:ultrasound"
+                    ],
+                    "loopback": true,
+                    "output_rate": 96000,
+                    "output_channels": 2
+                }
+              )x",
+          }),
+      };
     });
   }
 };
@@ -84,8 +140,46 @@ class AudioCore48k96kFidelityTest : public AudioCoreFidelityTest {
   static constexpr int32_t kDeviceFrameRate = 96000;
 
   static void SetUpTestSuite() {
-    HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options{
-        .audio_core_config_data_path = "/pkg/data/audio-core-config-48k-96k",
+    HermeticAudioTest::SetTestSuiteRealmOptions([] {
+      return HermeticAudioRealm::Options{
+          .audio_core_config_data = MakeAudioCoreConfig({
+              .output_device_config = R"x(
+                "device_id": "*",
+                "supported_stream_types": [
+                    "render:background",
+                    "render:communications",
+                    "render:interruption",
+                    "render:media",
+                    "render:system_agent",
+                    "render:ultrasound",
+                    "capture:loopback"
+                ],
+                "pipeline": {
+                    "name": "Final MixStage 96k",
+                    "inputs": [
+                        {
+                            "name": "Initial MixStage 48k",
+                            "streams": [
+                                "render:background",
+                                "render:communications",
+                                "render:interruption",
+                                "render:media",
+                                "render:system_agent"
+                            ],
+                            "loopback": true,
+                            "output_rate": 48000,
+                            "output_channels": 2
+                        }
+                    ],
+                    "streams": [
+                        "render:ultrasound"
+                    ],
+                    "output_rate": 96000,
+                    "output_channels": 2
+                }
+              )x",
+          }),
+      };
     });
   }
 };

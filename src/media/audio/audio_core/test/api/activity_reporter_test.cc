@@ -8,7 +8,7 @@
 
 #include <gmock/gmock.h>
 
-#include "src/media/audio/lib/test/hermetic_audio_test.h"
+#include "src/media/audio/audio_core/testing/integration/hermetic_audio_test.h"
 
 using AudioRenderUsage = fuchsia::media::AudioRenderUsage;
 using AudioSampleFormat = fuchsia::media::AudioSampleFormat;
@@ -22,7 +22,7 @@ class ActivityReporterTest : public HermeticAudioTest {
   void SetUp() override {
     HermeticAudioTest::SetUp();
 
-    environment()->ConnectToService(activity_reporter_.NewRequest());
+    realm().Connect(activity_reporter_.NewRequest());
     AddErrorHandler(activity_reporter_, "ActivityReporter");
   }
 

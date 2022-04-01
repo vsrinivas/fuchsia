@@ -39,7 +39,7 @@ class HermeticAudioEnvironment {
     std::string audio_core_base_url = "fuchsia-pkg://fuchsia.com/audio-core-for-test";
     std::string audio_core_config_data_path = "";
     std::string devmgr_url =
-        "fuchsia-pkg://fuchsia.com/audio-core-api-tests#meta/audio-test-devmgr.cmx";
+        "fuchsia-pkg://fuchsia.com/audio-test-devmgr#meta/audio-test-devmgr.cmx";
     // clang-format off
     std::string virtual_audio_url =
         "fuchsia-pkg://fuchsia.com/virtual-audio-service-for-test#meta/virtual_audio_service_nodevfs.cmx";

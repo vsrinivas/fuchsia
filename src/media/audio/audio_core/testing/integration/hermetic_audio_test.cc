@@ -16,7 +16,6 @@
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/testing/integration/capturer_shim.h"
-#include "src/media/audio/audio_core/testing/integration/hermetic_audio_environment.h"
 #include "src/media/audio/audio_core/testing/integration/inspect.h"
 #include "src/media/audio/audio_core/testing/integration/renderer_shim.h"
 #include "src/media/audio/audio_core/testing/integration/virtual_device.h"
@@ -40,49 +39,97 @@ static TraceDispatcher* const trace_dispatcher = new TraceDispatcher;
 
 namespace media::audio::test {
 
-std::optional<HermeticAudioEnvironment::Options> HermeticAudioTest::test_suite_options_;
+// Creates a directory with an audio_core_config.json file.
+component_testing::DirectoryContents HermeticAudioTest::MakeAudioCoreConfig(
+    AudioCoreConfigOptions options) {
+  if (options.volume_curve == "") {
+    options.volume_curve = R"x(
+        {"level": 0.0, "db": "MUTED"},
+        {"level": 1.0, "db": 0.0}
+      )x";
+  }
+  if (options.output_device_config == "") {
+    options.output_device_config = R"x(
+        "device_id": "*",
+        "supported_stream_types": [
+          "render:media",
+          "render:background",
+          "render:interruption",
+          "render:system_agent",
+          "render:communications"
+        ]
+      )x";
+  }
+  if (options.input_device_config == "") {
+    options.input_device_config = R"x(
+        "device_id": "*",
+        "supported_stream_types": [
+          "capture:background",
+          "capture:communications",
+          "capture:foreground",
+          "capture:system_agent"
+        ],
+        "rate": 48000
+      )x";
+  }
+  std::string data;
+  data += "{\n";
+  data += "\"volume_curve\": [\n" + options.volume_curve + "\n],\n";
+  data += "\"output_devices\": [{\n" + options.output_device_config + "\n}],\n";
+  data += "\"input_devices\": [{\n" + options.input_device_config + "\n}]\n";
+  data += "}\n";
 
-void HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options options) {
-  test_suite_options_ = options;
+  component_testing::DirectoryContents dir;
+  dir.AddFile("audio_core_config.json", data);
+  return dir;
+}
+
+std::function<HermeticAudioRealm::Options(void)> HermeticAudioTest::make_test_suite_options_ = [] {
+  return HermeticAudioRealm::Options();
+};
+
+void HermeticAudioTest::SetTestSuiteRealmOptions(
+    std::function<HermeticAudioRealm::Options(void)> make_options) {
+  make_test_suite_options_ = std::move(make_options);
 }
 
 void HermeticAudioTest::SetUpTestSuite() {
   // We need this default implementation in case one test binary has multiple test suites:
-  // this ensures that test suite A cannot unintentionally set the environment options for
+  // this ensures that test suite A cannot unintentionally set the realm options for
   // a subsequent test suite B.
-  SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options());
+  SetTestSuiteRealmOptions([] { return HermeticAudioRealm::Options(); });
 }
 
-void HermeticAudioTest::SetUpEnvironment() {
-  auto options = test_suite_options_.value_or(HermeticAudioEnvironment::Options());
-  environment_ = std::make_unique<HermeticAudioEnvironment>(options);
+void HermeticAudioTest::SetUpRealm() {
+  ASSERT_NO_FATAL_FAILURE(
+      HermeticAudioRealm::Create(make_test_suite_options_(), dispatcher(), realm_));
 
   {
     TRACE_DURATION("audio", "HermeticAudioTest::ConnectToVAD");
-    environment_->ConnectToService(virtual_audio_control_sync_.NewRequest());
+    realm_->Connect(virtual_audio_control_sync_.NewRequest());
     virtual_audio_control_sync_->Enable();
   }
 
-  environment_->ConnectToService(thermal_controller_.NewRequest());
-  environment_->ConnectToService(thermal_test_control_sync_.NewRequest());
+  realm_->Connect(thermal_controller_.NewRequest());
+  realm_->Connect(thermal_test_control_sync_.NewRequest());
 }
 
-void HermeticAudioTest::TearDownEnvironment() { environment_ = nullptr; }
+void HermeticAudioTest::TearDownRealm() { realm_ = nullptr; }
 
 void HermeticAudioTest::SetUp() {
   TRACE_DURATION_BEGIN("audio", "HermeticAudioTest::RunTest");
-  SetUpEnvironment();
+  SetUpRealm();
   TestFixture::SetUp();
 
-  environment_->ConnectToService(audio_core_.NewRequest());
+  realm_->Connect(audio_core_.NewRequest());
   AddErrorHandler(audio_core_, "AudioCore");
 
-  environment_->ConnectToService(effects_controller_.NewRequest());
+  realm_->Connect(effects_controller_.NewRequest());
 
-  environment_->ConnectToService(ultrasound_factory_.NewRequest());
+  realm_->Connect(ultrasound_factory_.NewRequest());
   AddErrorHandler(ultrasound_factory_, "UltrasoundFactory");
 
-  environment_->ConnectToService(audio_dev_enum_.NewRequest());
+  realm_->Connect(audio_dev_enum_.NewRequest());
   AddErrorHandler(audio_dev_enum_, "AudioDeviceEnumerator");
   WatchForDeviceArrivals();
 
@@ -126,7 +173,7 @@ void HermeticAudioTest::TearDown() {
   }
 
   TestFixture::TearDown();
-  TearDownEnvironment();
+  TearDownRealm();
   TRACE_DURATION_END("audio", "HermeticAudioTest::RunTest");
 }
 
@@ -140,7 +187,7 @@ VirtualOutput<SampleFormat>* HermeticAudioTest::CreateOutput(
   FX_CHECK(audio_dev_enum_.is_bound());
 
   auto ptr = std::make_unique<VirtualOutput<SampleFormat>>(
-      static_cast<TestFixture*>(this), environment_.get(), device_id, format, frame_count,
+      static_cast<TestFixture*>(this), realm_.get(), device_id, format, frame_count,
       virtual_output_next_inspect_id_++, plug_properties, device_gain_db, device_clock_properties);
   auto out = ptr.get();
   auto id = AudioDevice::UniqueIdToString(device_id);
@@ -165,7 +212,7 @@ VirtualInput<SampleFormat>* HermeticAudioTest::CreateInput(
   FX_CHECK(audio_dev_enum_.is_bound());
 
   auto ptr = std::make_unique<VirtualInput<SampleFormat>>(
-      static_cast<TestFixture*>(this), environment_.get(), device_id, format, frame_count,
+      static_cast<TestFixture*>(this), realm_.get(), device_id, format, frame_count,
       virtual_input_next_inspect_id_++, plug_properties, device_gain_db, device_clock_properties);
   auto out = ptr.get();
   auto id = AudioDevice::UniqueIdToString(device_id);
@@ -426,7 +473,7 @@ fuchsia::media::AudioDeviceEnumeratorPtr HermeticAudioTest::TakeOwnershipOfAudio
 
 // Retrieve the number of thermal subscribers, and set them all to the specified thermal_state.
 // thermal_test_control is synchronous: when SetThermalState returns, a change is committed.
-zx_status_t HermeticFidelityTest::ConfigurePipelineForThermal(uint32_t thermal_state) {
+zx_status_t HermeticAudioTest::ConfigurePipelineForThermal(uint32_t thermal_state) {
   constexpr size_t kMaxRetries = 100;
   constexpr zx::duration kRetryPeriod = zx::msec(10);
 
@@ -549,7 +596,7 @@ void HermeticAudioTest::ExpectInspectMetrics(CapturerShimImpl* capturer,
 
 void HermeticAudioTest::ExpectInspectMetrics(const std::vector<std::string>& path,
                                              const ExpectedInspectProperties& props) {
-  auto root = environment_->ReadInspect(HermeticAudioEnvironment::kAudioCoreComponent);
+  auto root = realm_->ReadInspect(HermeticAudioRealm::kAudioCore);
   auto path_string = fxl::JoinStrings(path, "/");
   auto h = root.GetByPath(path);
   if (!h) {
@@ -561,7 +608,7 @@ void HermeticAudioTest::ExpectInspectMetrics(const std::vector<std::string>& pat
 
 template <fuchsia::media::AudioSampleFormat OutputFormat>
 bool HermeticAudioTest::DeviceHasUnderflows(VirtualOutput<OutputFormat>* device) {
-  auto root = environment()->ReadInspect(HermeticAudioEnvironment::kAudioCoreComponent);
+  auto root = realm_->ReadInspect(HermeticAudioRealm::kAudioCore);
   for (auto kind : {"device underflows", "pipeline underflows"}) {
     std::vector<std::string> path = {
         "output devices",

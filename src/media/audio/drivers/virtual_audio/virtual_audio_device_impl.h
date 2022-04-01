@@ -5,10 +5,11 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_VIRTUAL_AUDIO_VIRTUAL_AUDIO_DEVICE_IMPL_H_
 
 #include <fuchsia/virtualaudio/cpp/fidl.h>
-#include <lib/closure-queue/closure_queue.h>
+#include <lib/async/cpp/task.h>
 #include <lib/zx/clock.h>
 
 #include <memory>
+#include <unordered_set>
 
 #include <audio-proto/audio-proto.h>
 #include <fbl/ref_ptr.h>
@@ -201,8 +202,44 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   bool override_notification_frequency_;
   uint32_t notifications_per_ring_;
 
+  // Mimics <lib/closure-queue/closure_queue.h> but does not require running all tasks from
+  // the same thread. This assumes a "concurrent and synchronized" model -- see RFC 126.
+  // Tasks are run on the given dispatcher in the order they are enqueued.
+  class TaskQueue {
+   public:
+    explicit TaskQueue(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+
+    void Enqueue(fit::closure fn) {
+      if (stopped_) {
+        return;
+      }
+      // Wrap in an async::TaskClosure so the task can be canceled before it runs,
+      // then wrap with a closure that destroys the async::TaskClosure after the task runs.
+      auto task = std::make_shared<async::TaskClosure>();
+      task->set_handler([this, task, fn = std::move(fn)]() {
+        fn();
+        pending_.erase(task);
+      });
+      pending_.insert(task);
+      task->Post(dispatcher_);
+    }
+
+    void StopAndClear() {
+      for (auto& task : pending_) {
+        task->Cancel();
+      }
+      pending_.clear();
+      stopped_ = true;
+    }
+
+   private:
+    bool stopped_ = false;
+    async_dispatcher_t* dispatcher_;
+    std::unordered_set<std::shared_ptr<async::TaskClosure>> pending_;
+  };
+
   // The optional enables this to be emplaced when stream_ is created, minimizing memory churn.
-  std::optional<ClosureQueue> task_queue_;
+  std::optional<TaskQueue> task_queue_;
 };
 
 }  // namespace virtual_audio

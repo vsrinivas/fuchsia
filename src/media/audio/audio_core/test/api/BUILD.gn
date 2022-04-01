@@ -5,7 +5,7 @@
 import("//build/components.gni")
 import("//build/testing/environments.gni")
 import("//src/media/audio/audio_core/test/api/api_test_component.gni")
-import("//src/media/audio/audio_core_package.gni")
+import("//src/media/audio/audio_core_package_v2.gni")
 import("//src/media/audio/hardware.gni")
 
 loadable_module("audio-core-api-test-effects") {
@@ -19,69 +19,15 @@ loadable_module("audio-core-api-test-effects") {
   ]
 }
 
-audio_core_test_package("audio-core-with-test-effects") {
-  effects = {
-    target = "//src/media/audio/audio_core/test/api:audio-core-api-test-effects"
-    name = "audio-core-api-test-effects.so"
-  }
-}
-
-resource("audio-core-config-48k") {
-  sources = [ "testdata/audio_core_config_48k.json" ]
-  outputs = [ "data/audio-core-config-48k/audio_core_config.json" ]
-}
-
-resource("audio-core-config-96k") {
-  sources = [ "testdata/audio_core_config_96k.json" ]
-  outputs = [ "data/audio-core-config-96k/audio_core_config.json" ]
-}
-
-resource("audio-core-config-48k-96k") {
-  sources = [ "testdata/audio_core_config_48k_96k.json" ]
-  outputs = [ "data/audio-core-config-48k-96k/audio_core_config.json" ]
-}
-
-resource("audio-core-config-with-gain-limits") {
-  sources = [ "testdata/audio_core_config_with_gain_limits.json" ]
-  outputs = [ "data/audio-core-config-with-gain-limits/audio_core_config.json" ]
-}
-
-resource("audio-core-config-with-inversion-filter") {
-  sources = [ "testdata/audio_core_config_with_inversion_filter.json" ]
-  outputs =
-      [ "data/audio-core-config-with-inversion-filter/audio_core_config.json" ]
-}
-
-resource("audio-core-config-with-inversion-filter-v2") {
-  sources = [ "testdata/audio_core_config_with_inversion_filter_v2.json" ]
-  outputs = [
-    "data/audio-core-config-with-inversion-filter-v2/audio_core_config.json",
-  ]
-}
-
-resource("audio-core-config-with-sleeper-filter") {
-  sources = [ "testdata/audio_core_config_with_sleeper_filter.json" ]
-  outputs =
-      [ "data/audio-core-config-with-sleeper-filter/audio_core_config.json" ]
-}
-
-resource("audio-core-config-with-sw-gain") {
-  sources = [ "testdata/audio_core_config_with_sw_gain.json" ]
-  outputs = [ "data/audio-core-config-with-sw-gain/audio_core_config.json" ]
-}
-
-resource("audio-core-config-with-ultrasound") {
-  sources = [ "testdata/ultrasound_audio_core_config.json" ]
-  outputs = [ "data/ultrasound/audio_core_config.json" ]
-}
-
 source_set("fidelity_results") {
   testonly = true
   sources = [
     "fidelity_results.cc",
     "fidelity_results.h",
   ]
-  deps = [ "//src/media/audio/lib/test:hermetic_pipeline_test" ]
+  deps = [
+    "//src/media/audio/audio_core/testing/integration:hermetic_pipeline_test",
+  ]
 }
 
 audio_core_api_test_component("activity-reporter-test") {
@@ -101,7 +47,6 @@ audio_core_api_test_component("audio-capturer-test") {
 audio_core_api_test_component("audio-capturer-pipeline-test") {
   source = "audio_capturer_pipeline_test.cc"
   executable_deps = [ "//sdk/lib/media/audio/cpp" ]
-  component_deps = [ ":audio-core-config-with-sw-gain" ]
 }
 
 audio_core_api_test_component("audio-clock-pipeline-test") {
@@ -118,13 +63,8 @@ audio_core_api_test_component("audio-core-fidelity-test") {
   executable_deps = [
     ":fidelity_results",
     "//src/media/audio/audio_core/mixer:coefficient_table",
+    "//src/media/audio/audio_core/testing/integration:hermetic_pipeline_test",
     "//src/media/audio/lib/analysis",
-    "//src/media/audio/lib/test:hermetic_pipeline_test",
-  ]
-  component_deps = [
-    ":audio-core-config-48k",
-    ":audio-core-config-48k-96k",
-    ":audio-core-config-96k",
   ]
 }
 
@@ -153,13 +93,6 @@ audio_core_api_test_component("audio-renderer-pipeline-test") {
     "//src/media/audio/audio_core/mixer",
     "//src/media/audio/lib/analysis",
   ]
-  component_deps = [
-    ":audio-core-config-with-gain-limits",
-    ":audio-core-config-with-inversion-filter",
-    ":audio-core-config-with-inversion-filter-v2",
-    ":audio-core-config-with-sleeper-filter",
-    ":audio-core-with-test-effects",
-  ]
 }
 
 audio_core_api_test_component("audio-test") {
@@ -183,7 +116,6 @@ audio_core_api_test_component("ultrasound-test") {
     "//src/media/audio/lib/clock",
     "//src/media/audio/lib/clock/testing",
   ]
-  component_deps = [ ":audio-core-config-with-ultrasound" ]
 }
 
 audio_core_api_test_component("usage-gain-reporter-test") {
@@ -202,7 +134,13 @@ audio_core_api_test_component("volume-control-test") {
 }
 
 # These tests can run anywhere, including in emulators.
-fuchsia_test_package("audio-core-api-tests") {
+audio_core_test_package("audio-core-api-tests") {
+  package_deps = [ ":audio-core-api-test-effects" ]
+  audio_core_manifest_shards = [
+    "//src/media/audio/audio_core/meta/audio_core.shard.ultrasound.cml",
+    "//src/media/audio/audio_core/meta/audio_core.shard.for_integration_tests.cml",
+  ]
+
   test_components = [
     ":activity-reporter-test",
     ":audio-capturer-test",
@@ -216,17 +154,24 @@ fuchsia_test_package("audio-core-api-tests") {
     ":usage-reporter-test",
     ":volume-control-test",
   ]
+
+  # Many of the above tests print ERROR logs in cases where the client makes an error.
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
     }
   }
-  deps = [ "//src/media/audio/lib/audio_test_devmgr:audio-test-devmgr" ]
 }
 
 # These tests must run on real hardware because they have hard real-time restraints.
 # Emulators are too slow.
-fuchsia_test_package("audio-core-api-pipeline-tests") {
+audio_core_test_package("audio-core-api-pipeline-tests") {
+  package_deps = [ ":audio-core-api-test-effects" ]
+  audio_core_manifest_shards = [
+    "//src/media/audio/audio_core/meta/audio_core.shard.ultrasound.cml",
+    "//src/media/audio/audio_core/meta/audio_core.shard.for_integration_tests.cml",
+  ]
+
   test_components = [
     ":audio-capturer-pipeline-test",
     ":audio-clock-pipeline-test",
@@ -234,11 +179,12 @@ fuchsia_test_package("audio-core-api-pipeline-tests") {
     ":audio-policy-pipeline-test",
     ":audio-renderer-pipeline-test",
   ]
+
+  # Many of the above tests print ERROR logs in cases where the client makes an error.
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
     }
     environments = hardware_envs
   }
-  deps = [ "//src/media/audio/lib/audio_test_devmgr:audio-test-devmgr" ]
 }

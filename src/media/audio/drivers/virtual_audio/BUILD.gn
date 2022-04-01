@@ -21,6 +21,7 @@ group("tests") {
   testonly = true
   deps = [ ":virtual_audio_bind_test" ]
 }
+
 fuchsia_driver("virtual_audio_driver-driver") {
   output_name = "virtual_audio_driver"
 
@@ -48,7 +49,6 @@ fuchsia_driver("virtual_audio_driver-driver") {
     "//zircon/system/ulib/affine",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/closure-queue",
     "//zircon/system/ulib/fzl",
   ]
 
@@ -70,4 +70,8 @@ fuchsia_driver_component("virtual_audio_driver") {
 
 kernel_cmdline("kernel-logging") {
   args = [ "driver.virtual_audio.log=trace" ]
+}
+
+source_set("virtual_audio_driver_header") {
+  sources = [ "virtual_audio.h" ]
 }

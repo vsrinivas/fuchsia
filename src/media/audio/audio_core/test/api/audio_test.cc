@@ -4,7 +4,7 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 
-#include "src/media/audio/lib/test/hermetic_audio_test.h"
+#include "src/media/audio/audio_core/testing/integration/hermetic_audio_test.h"
 
 namespace media::audio::test {
 
@@ -16,7 +16,7 @@ class AudioTest : public HermeticAudioTest {
 // Test that the user is connected to the Audio FIDL service.
 TEST_F(AudioTest, ConnectToAudioService) {
   fuchsia::media::AudioPtr audio_client;
-  environment()->ConnectToService(audio_client.NewRequest());
+  realm().Connect(audio_client.NewRequest());
   AddErrorHandler(audio_client, "AudioClient");
 
   audio_client->CreateAudioRenderer(audio_renderer_.NewRequest());

@@ -6,7 +6,7 @@
 
 #include <cmath>
 
-#include "src/media/audio/lib/test/hermetic_audio_test.h"
+#include "src/media/audio/audio_core/testing/integration/hermetic_audio_test.h"
 
 using AudioCaptureUsage = fuchsia::media::AudioCaptureUsage;
 using AudioRenderUsage = fuchsia::media::AudioRenderUsage;
@@ -59,7 +59,7 @@ class UsageReporterTest : public HermeticAudioTest {
 
   std::unique_ptr<Controller> CreateController(AudioRenderUsage u) {
     auto c = std::make_unique<Controller>(this);
-    environment()->ConnectToService(c->usage_reporter.NewRequest());
+    realm().Connect(c->usage_reporter.NewRequest());
     AddErrorHandler(c->usage_reporter, "UsageReporter");
 
     c->usage_reporter->Watch(fuchsia::media::Usage::WithRenderUsage(std::move(u)),
@@ -70,7 +70,7 @@ class UsageReporterTest : public HermeticAudioTest {
 
   std::unique_ptr<Controller> CreateController(AudioCaptureUsage u) {
     auto c = std::make_unique<Controller>(this);
-    environment()->ConnectToService(c->usage_reporter.NewRequest());
+    realm().Connect(c->usage_reporter.NewRequest());
     AddErrorHandler(c->usage_reporter, "UsageReporter");
     c->usage_reporter->Watch(fuchsia::media::Usage::WithCaptureUsage(std::move(u)),
                              c->fake_watcher.NewBinding());

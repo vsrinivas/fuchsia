@@ -7,8 +7,8 @@ source_set("hermetic_audio_test") {
 
   sources = [
     "capturer_shim.h",
-    "hermetic_audio_environment.cc",
-    "hermetic_audio_environment.h",
+    "hermetic_audio_realm.cc",
+    "hermetic_audio_realm.h",
     "hermetic_audio_test.cc",
     "hermetic_audio_test.h",
     "inspect.h",
@@ -24,8 +24,9 @@ source_set("hermetic_audio_test") {
     "//sdk/fidl/fuchsia.media.audio",
     "//sdk/fidl/fuchsia.ultrasound",
     "//sdk/fidl/fuchsia.virtualaudio",
+    "//sdk/lib/device-watcher/cpp",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/media/audio/audio_core:audio_core_lib",
@@ -37,6 +38,7 @@ source_set("hermetic_audio_test") {
     "//src/media/audio/lib/test:comparators",
     "//src/media/audio/lib/test:constants",
     "//src/media/audio/lib/test:test_fixture",
+    "//src/media/audio/lib/test:vmo_backed_buffer",
     "//src/media/audio/lib/wav",
     "//src/power/fidl/testing:test.thermal",
     "//third_party/googletest:gtest",
@@ -44,9 +46,15 @@ source_set("hermetic_audio_test") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.driver.test",
     "//sdk/fidl/fuchsia.media.tuning",
     "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/lib/driver_test_realm/realm_builder/cpp",
+    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+    "//src/devices/bus/drivers/platform",
     "//src/lib/fxl",
+    "//src/media/audio/drivers/virtual_audio:virtual_audio_driver",
+    "//src/media/audio/drivers/virtual_audio:virtual_audio_driver_header",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 }

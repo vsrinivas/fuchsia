@@ -1,0 +1,5 @@
+{
+    program: {
+        binary: "bin/audio_core_with_prebuilt_coefficient_tables",
+    },
+}

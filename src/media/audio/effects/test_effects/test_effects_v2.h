@@ -20,7 +20,8 @@ namespace media::audio {
 // This class provides a simple interface for constructing ProcessorCreator servers in tests.
 class TestEffectsV2 : public fidl::WireServer<fuchsia_audio_effects::ProcessorCreator> {
  public:
-  TestEffectsV2();
+  // If the dispatcher is not specified, use an internal dispatcher that runs on a separate thread.
+  explicit TestEffectsV2(async_dispatcher_t* dispatcher = nullptr);
   ~TestEffectsV2() override;
 
   using ProcessFn = std::function<zx_status_t(
@@ -63,7 +64,8 @@ class TestEffectsV2 : public fidl::WireServer<fuchsia_audio_effects::ProcessorCr
   // Implements the FIDL API.
   void Create(CreateRequestView request, CreateCompleter::Sync& completer) override;
 
-  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
+  async_dispatcher_t* dispatcher_;
+  std::unique_ptr<async::Loop> loop_;
   std::vector<fidl::ServerBindingRef<fuchsia_audio_effects::ProcessorCreator>> bindings_;
   std::unordered_map<std::string, Effect> effects_;
   std::unordered_set<std::unique_ptr<TestProcessor>> processors_;

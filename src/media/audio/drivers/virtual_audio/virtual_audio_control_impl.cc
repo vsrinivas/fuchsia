@@ -6,10 +6,50 @@
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>
 
+#include "src/media/audio/drivers/virtual_audio/virtual_audio_bind.h"
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_device_impl.h"
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_stream.h"
 
 namespace virtual_audio {
+
+// static
+zx_status_t VirtualAudioControlImpl::DdkBind(void* ctx, zx_device_t* parent_bus) {
+  std::unique_ptr<VirtualAudioControlImpl> control(new VirtualAudioControlImpl);
+
+  // Define entry-point operations for this control device.
+  static zx_protocol_device_t device_ops = {
+      .version = DEVICE_OPS_VERSION,
+      .unbind = &DdkUnbind,
+      .release = &DdkRelease,
+      .message = &DdkMessage,
+  };
+
+  // Define other metadata, incl. "control" as our entry-point context.
+  device_add_args_t args = {};
+  args.version = DEVICE_ADD_ARGS_VERSION;
+  args.name = "virtual_audio";
+  args.ctx = control.get();
+  args.ops = &device_ops;
+  args.flags = DEVICE_ADD_NON_BINDABLE;
+
+  // Add the virtual_audio device node under the given parent.
+  zx_status_t status = device_add(parent_bus, &args, &control->dev_node_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "*** %s: could not add device '%s': %d", __func__, args.name, status);
+    return status;
+  }
+
+  zxlogf(INFO, "*** %s: added device '%s': %d", __func__, args.name, status);
+
+  // Use the dispatcher supplied by the DDK.
+  control->dispatcher_ = device_get_dispatcher(control->dev_node());
+
+  // On successful Add, Devmgr takes ownership (relinquished on DdkRelease), so transfer our
+  // ownership to a local var, and let it go out of scope.
+  [[maybe_unused]] auto temp_ref = control.release();
+
+  return ZX_OK;
+}
 
 // static
 //

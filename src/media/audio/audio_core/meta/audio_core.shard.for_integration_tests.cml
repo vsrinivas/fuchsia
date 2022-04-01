@@ -1,0 +1,12 @@
+{
+    expose: [
+        {
+            // audio_core.cml imports //sdk/lib/inspect/client.shard.cml, which
+            // exposes a "diagnostics" directory to "framework". This workaround
+            // is needed to expose "diagnostics" to integration tests.
+            directory: "diagnostics",
+            from: "self",
+            as: "diagnostics-for-integration-tests",
+        },
+    ],
+}

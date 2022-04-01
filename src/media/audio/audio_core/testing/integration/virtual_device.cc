@@ -12,7 +12,7 @@
 namespace media::audio::test {
 
 template <class Iface>
-VirtualDevice<Iface>::VirtualDevice(TestFixture* fixture, HermeticAudioEnvironment* environment,
+VirtualDevice<Iface>::VirtualDevice(TestFixture* fixture, HermeticAudioRealm* realm,
                                     const audio_stream_unique_id_t& device_id, Format format,
                                     int64_t frame_count, size_t inspect_id,
                                     std::optional<DevicePlugProperties> plug_properties,
@@ -23,7 +23,7 @@ VirtualDevice<Iface>::VirtualDevice(TestFixture* fixture, HermeticAudioEnvironme
       inspect_id_(inspect_id),
       expected_gain_db_(expected_gain_db),
       rb_(format, frame_count) {
-  environment->ConnectToService(fidl_.NewRequest());
+  realm->Connect(fidl_.NewRequest());
   fixture->AddErrorHandler(fidl_, "VirtualAudioDevice");
   WatchEvents();
 

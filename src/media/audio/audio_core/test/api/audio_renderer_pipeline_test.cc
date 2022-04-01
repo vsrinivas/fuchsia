@@ -15,10 +15,10 @@
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_tuner_impl.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
+#include "src/media/audio/audio_core/testing/integration/hermetic_audio_test.h"
 #include "src/media/audio/lib/analysis/analysis.h"
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/test/comparators.h"
-#include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 using ASF = fuchsia::media::AudioSampleFormat;
 using AudioRenderUsage = fuchsia::media::AudioRenderUsage;
@@ -629,12 +629,34 @@ TEST_F(AudioRendererPipelineTestFloat, NoDistortionOnGainChanges) {
 
 class AudioRendererGainLimitsTest : public AudioRendererPipelineTestFloat {
  protected:
-  // For these tests:
-  //   min_gain_db = -20
-  //   max_gain_db = -10
   static void SetUpTestSuite() {
-    HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options{
-        .audio_core_config_data_path = "/pkg/data/audio-core-config-with-gain-limits",
+    HermeticAudioTest::SetTestSuiteRealmOptions([] {
+      return HermeticAudioRealm::Options{
+          .audio_core_config_data = MakeAudioCoreConfig({
+              .output_device_config = R"x(
+                "device_id": "*",
+                "supported_stream_types": [
+                  "render:media",
+                  "render:background",
+                  "render:interruption",
+                  "render:system_agent",
+                  "render:communications"
+                ],
+                "pipeline": {
+                  "name": "default",
+                  "streams": [
+                    "render:media",
+                    "render:background",
+                    "render:interruption",
+                    "render:system_agent",
+                    "render:communications"
+                  ],
+                  "min_gain_db": -20,
+                  "max_gain_db": -10
+                }
+              )x",
+          }),
+      };
     });
   }
 
@@ -781,9 +803,38 @@ class AudioRendererPipelineUnderflowTest : public HermeticAudioTest {
   static constexpr auto kPacketFrames = kFrameRate / 100;
 
   static void SetUpTestSuite() {
-    HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options{
-        .audio_core_base_url = "fuchsia-pkg://fuchsia.com/audio-core-with-test-effects",
-        .audio_core_config_data_path = "/pkg/data/audio-core-config-with-sleeper-filter",
+    HermeticAudioTest::SetTestSuiteRealmOptions([] {
+      return HermeticAudioRealm::Options{
+          .audio_core_config_data = MakeAudioCoreConfig({
+              .output_device_config = R"x(
+                "device_id": "*",
+                "supported_stream_types": [
+                  "render:media",
+                  "render:background",
+                  "render:interruption",
+                  "render:system_agent",
+                  "render:communications"
+                ],
+                "pipeline": {
+                  "name": "default",
+                  "streams": [
+                    "render:media",
+                    "render:background",
+                    "render:interruption",
+                    "render:system_agent",
+                    "render:communications"
+                  ],
+                  "effects": [
+                    {
+                      "lib": "audio-core-api-test-effects.so",
+                      "effect": "sleeper_filter",
+                      "name": "sleeper"
+                    }
+                  ]
+                }
+              )x",
+          }),
+      };
     });
   }
 
@@ -827,15 +878,44 @@ class AudioRendererEffectsV1Test : public AudioRendererPipelineTestInt16 {
   static constexpr const char* kInverterEffectName = "inverter";
 
   static void SetUpTestSuite() {
-    HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options{
-        .audio_core_base_url = "fuchsia-pkg://fuchsia.com/audio-core-with-test-effects",
-        .audio_core_config_data_path = "/pkg/data/audio-core-config-with-inversion-filter",
+    HermeticAudioTest::SetTestSuiteRealmOptions([] {
+      return HermeticAudioRealm::Options{
+          .audio_core_config_data = MakeAudioCoreConfig({
+              .output_device_config = R"x(
+                "device_id": "*",
+                "supported_stream_types": [
+                  "render:media",
+                  "render:background",
+                  "render:interruption",
+                  "render:system_agent",
+                  "render:communications"
+                ],
+                "pipeline": {
+                  "name": "default",
+                  "streams": [
+                    "render:media",
+                    "render:background",
+                    "render:interruption",
+                    "render:system_agent",
+                    "render:communications"
+                  ],
+                  "effects": [
+                    {
+                      "lib": "audio-core-api-test-effects.so",
+                      "effect": "inversion_filter",
+                      "name": "inverter"
+                    }
+                  ]
+                }
+              )x",
+          }),
+      };
     });
   }
 
   void SetUp() override {
     AudioRendererPipelineTestInt16::SetUp();
-    environment()->ConnectToService(effects_controller_.NewRequest());
+    realm().Connect(effects_controller_.NewRequest());
   }
 
   void RunInversionFilter(AudioBuffer<ASF::SIGNED_16>* audio_buffer_ptr) {
@@ -933,17 +1013,43 @@ TEST_F(AudioRendererEffectsV1Test, EffectsControllerUpdateEffect) {
 class AudioRendererEffectsV2Test : public AudioRendererPipelineTestFloat {
  protected:
   static void SetUpTestSuite() {
-    HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options{
-        .audio_core_config_data_path = "/pkg/data/audio-core-config-with-inversion-filter-v2",
-        .test_effects_v2 = {{
-            .name = "inverter",
-            .process = &Invert,
-            .process_in_place = true,
-            .max_frames_per_call = 1024,
-            .frames_per_second = kOutputFrameRate,
-            .input_channels = kNumChannels,
-            .output_channels = kNumChannels,
-        }},
+    HermeticAudioTest::SetTestSuiteRealmOptions([] {
+      return HermeticAudioRealm::Options{
+          .audio_core_config_data = MakeAudioCoreConfig({
+              .output_device_config = R"x(
+                "device_id": "*",
+                "supported_stream_types": [
+                  "render:media",
+                  "render:background",
+                  "render:interruption",
+                  "render:system_agent",
+                  "render:communications"
+                ],
+                "pipeline": {
+                  "name": "default",
+                  "streams": [
+                    "render:media",
+                    "render:background",
+                    "render:interruption",
+                    "render:system_agent",
+                    "render:communications"
+                  ],
+                  "effect_over_fidl": {
+                    "name": "inverter"
+                  }
+                }
+              )x",
+          }),
+          .test_effects_v2 = std::vector<TestEffectsV2::Effect>{{
+              .name = "inverter",
+              .process = &Invert,
+              .process_in_place = true,
+              .max_frames_per_call = 1024,
+              .frames_per_second = kOutputFrameRate,
+              .input_channels = kNumChannels,
+              .output_channels = kNumChannels,
+          }},
+      };
     });
   }
 
@@ -998,15 +1104,44 @@ class AudioRendererPipelineTuningTest : public AudioRendererPipelineTestInt16 {
   static constexpr const char* kInverterEffectName = "inverter";
 
   static void SetUpTestSuite() {
-    HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options{
-        .audio_core_base_url = "fuchsia-pkg://fuchsia.com/audio-core-with-test-effects",
-        .audio_core_config_data_path = "/pkg/data/audio-core-config-with-inversion-filter",
+    HermeticAudioTest::SetTestSuiteRealmOptions([] {
+      return HermeticAudioRealm::Options{
+          .audio_core_config_data = MakeAudioCoreConfig({
+              .output_device_config = R"x(
+                "device_id": "*",
+                "supported_stream_types": [
+                  "render:media",
+                  "render:background",
+                  "render:interruption",
+                  "render:system_agent",
+                  "render:communications"
+                ],
+                "pipeline": {
+                  "name": "default",
+                  "streams": [
+                    "render:media",
+                    "render:background",
+                    "render:interruption",
+                    "render:system_agent",
+                    "render:communications"
+                  ],
+                  "effects": [
+                    {
+                      "lib": "audio-core-api-test-effects.so",
+                      "effect": "inversion_filter",
+                      "name": "inverter"
+                    }
+                  ]
+                }
+              )x",
+          }),
+      };
     });
   }
 
   void SetUp() override {
     AudioRendererPipelineTestInt16::SetUp();
-    environment()->ConnectToService(audio_tuner_.NewRequest());
+    realm().Connect(audio_tuner_.NewRequest());
   }
 
   void RunInversionFilter(AudioBuffer<ASF::SIGNED_16>* audio_buffer_ptr) {

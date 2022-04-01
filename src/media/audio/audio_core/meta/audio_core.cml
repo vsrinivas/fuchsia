@@ -1,0 +1,79 @@
+{
+    include: [
+        "//sdk/lib/inspect/client.shard.cml",
+        "//sdk/lib/syslog/client.shard.cml",
+    ],
+    program: {
+        // The binary is specified by a shard.
+        runner: "elf",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.media.ActivityReporter",
+                "fuchsia.media.Audio",
+                "fuchsia.media.audio.EffectsController",
+                "fuchsia.media.AudioCore",
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.ProfileProvider",
+                "fuchsia.media.tuning.AudioTuner",
+                "fuchsia.media.UsageGainReporter",
+                "fuchsia.media.UsageReporter",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.audio.effects.ProcessorCreator",
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.thermal.Controller",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.media.audio.EffectsController" ],
+            from: "self",
+        },
+        {
+            directory: "dev-audio-input",
+            rights: [ "r*" ],
+            path: "/dev/class/audio-input",
+        },
+        {
+            directory: "dev-audio-output",
+            rights: [ "r*" ],
+            path: "/dev/class/audio-output",
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
+            storage: "data",
+            path: "/data",
+        },
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.media.ActivityReporter",
+                "fuchsia.media.Audio",
+                "fuchsia.media.audio.EffectsController",
+                "fuchsia.media.AudioCore",
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.ProfileProvider",
+                "fuchsia.media.tuning.AudioTuner",
+                "fuchsia.media.UsageGainReporter",
+                "fuchsia.media.UsageReporter",
+            ],
+            from: "self",
+        },
+    ],
+}

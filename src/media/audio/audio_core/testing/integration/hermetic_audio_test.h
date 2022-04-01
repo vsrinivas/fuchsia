@@ -16,7 +16,7 @@
 #include <test/thermal/cpp/fidl.h>
 
 #include "src/media/audio/audio_core/testing/integration/capturer_shim.h"
-#include "src/media/audio/audio_core/testing/integration/hermetic_audio_environment.h"
+#include "src/media/audio/audio_core/testing/integration/hermetic_audio_realm.h"
 #include "src/media/audio/audio_core/testing/integration/inspect.h"
 #include "src/media/audio/audio_core/testing/integration/renderer_shim.h"
 #include "src/media/audio/audio_core/testing/integration/virtual_device.h"
@@ -39,22 +39,30 @@ class HermeticAudioTest : public TestFixture {
   // TODO(fxbug.dev/80003): re-enable underflow detection once outstanding bugs are resolved.
   static constexpr bool kEnableAllOverflowAndUnderflowChecksInRealtimeTests = false;
 
-  // TestSuite functions are run once per test suite; a suite can configure
-  // HermeticAudioEnvironment::Options for all tests by calling `SetTestSuiteEnvironmentOptions()`
-  // in an override of `SetUpTestSuite()`.
-  static void SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options options);
+  // Creates a directory with an audio_core_config.json file.
+  struct AudioCoreConfigOptions {
+    std::string volume_curve;          // if empty, a reasonable default is used
+    std::string output_device_config;  // if empty, a reasonable default is used
+    std::string input_device_config;   // if empty, a reasonable default is used
+  };
+  static component_testing::DirectoryContents MakeAudioCoreConfig(AudioCoreConfigOptions options);
 
-  // The default implementation calls SetTestSuiteEnvironmentOptions() with default Options.
+  // TestSuite functions are run once per test suite; a suite can configure
+  // HermeticAudioRealm::Options for all tests by calling `SetTestSuiteRealmOptions()`
+  // in an override of `SetUpTestSuite()`.
+  static void SetTestSuiteRealmOptions(std::function<HermeticAudioRealm::Options(void)>);
+
+  // The default implementation calls SetTestSuiteRealmOptions() with default Options.
   // Test suites can override this to provide custom behavior.
   static void SetUpTestSuite();
 
   void SetUp() override;
   void TearDown() override;
 
-  HermeticAudioEnvironment* environment() {
-    auto ptr = HermeticAudioTest::environment_.get();
-    FX_CHECK(ptr) << "No Environment; Did you forget to call SetUp?";
-    return ptr;
+  HermeticAudioRealm& realm() {
+    auto ptr = realm_.get();
+    FX_CHECK(ptr) << "No Realm; Did you forget to call SetUp?";
+    return *ptr;
   }
 
   // The returned pointers are owned by this class.
@@ -139,12 +147,12 @@ class HermeticAudioTest : public TestFixture {
 
  private:
   // Configurable for an entire test suite by calling `SetUpTestSuiteWithOptions()`.
-  static std::optional<HermeticAudioEnvironment::Options> test_suite_options_;
+  static std::function<HermeticAudioRealm::Options(void)> make_test_suite_options_;
 
-  // Initializes the HermeticAudioEnvironment for each test instance during `SetUp()`.
-  void SetUpEnvironment();
-  // Tears down the HermeticAudioEnvironment for each test instance during `TearDown()`.
-  void TearDownEnvironment();
+  // Initializes the HermeticAudioRealm for each test instance during `SetUp()`.
+  void SetUpRealm();
+  // Tears down the HermeticAudioRealm for each test instance during `TearDown()`.
+  void TearDownRealm();
 
   void WatchForDeviceArrivals();
   void WaitForDeviceDepartures();
@@ -171,7 +179,7 @@ class HermeticAudioTest : public TestFixture {
   std::vector<std::unique_ptr<CapturerShimImpl>> capturers_;
   std::vector<std::unique_ptr<RendererShimImpl>> renderers_;
 
-  std::unique_ptr<HermeticAudioEnvironment> environment_;
+  std::unique_ptr<HermeticAudioRealm> realm_;
   fuchsia::virtualaudio::ControlSyncPtr virtual_audio_control_sync_;
   fuchsia::thermal::ControllerPtr thermal_controller_;
   ::test::thermal::ControlSyncPtr thermal_test_control_sync_;
