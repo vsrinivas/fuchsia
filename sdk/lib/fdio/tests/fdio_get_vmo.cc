@@ -18,19 +18,10 @@
 #include <zircon/syscalls/object.h>
 
 #include <algorithm>
+#include <cerrno>
 
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
-
-// We redeclare _mmap_file because it is implemented as part of fdio and we care
-// about its behavior with respect to other things it calls within fdio.  The
-// canonical declaration of this function lives in
-// zircon/third_party/ulib/musl/src/internal/stdio_impl.h, but including that
-// header is fraught.  The implementation in fdio just declares and exports the
-// symbol inline, so I think it's reasonable for this test to declare it itself
-// and depend on it the same way musl does.
-extern "C" zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_option_t zx_options, int flags,
-                                  int fd, off_t fd_off, uintptr_t* out);
 
 namespace {
 
@@ -334,8 +325,8 @@ TEST(GetVMOTest, VMOFile) {
   EXPECT_EQ(get_rights(received), expected_rights | ZX_RIGHT_EXECUTE);
 }
 
-// Verify that mmap (or rather the internal fdio function used to implement mmap, _mmap_file, works
-// with PROT_EXEC).
+// Verify that mmap works with PROT_EXEC. This test is here instead of fdio_mmap.cc since we need
+// a file handle that supports execute rights, which the fake filesystem server above handles.
 TEST(MmapFileTest, ProtExecWorks) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread("fake-filesystem"));
@@ -358,14 +349,19 @@ TEST(MmapFileTest, ProtExecWorks) {
   ASSERT_OK(fdio_fd_create(endpoints->client.channel().release(), &raw_fd));
   fbl::unique_fd fd(raw_fd);
 
-  size_t offset = 0;
+  // Make sure we can obtain an executable VMO from the underlying fd otherwise the test is invalid.
+  {
+    zx::vmo received;
+    ASSERT_OK(
+        fdio_get_vmo_exec(fd.get(), received.reset_and_get_address()),
+        "File must support obtaining executable VMO to backing memory for test case to be valid!");
+  }
+
+  // Attempt to mmap some bytes from the fd using PROT_EXEC.
   size_t len = 4;
   off_t fd_off = 0;
-  zx_vm_option_t zx_options = PROT_READ | PROT_EXEC;
-  uintptr_t ptr;
-  ASSERT_OK(_mmap_file(offset, len, zx_options, MAP_SHARED, fd.get(), fd_off, &ptr));
-  EXPECT_EQ(context.last_flags,
-            fuchsia_io::wire::VmoFlags::kRead | fuchsia_io::wire::VmoFlags::kExecute);
+  ASSERT_NE(nullptr, mmap(nullptr, len, PROT_READ | PROT_EXEC, MAP_SHARED, fd.get(), fd_off),
+            "mmap failed: %s", strerror(errno));
 }
 
 }  // namespace

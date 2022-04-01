@@ -4,7 +4,7 @@
 		__libc_extensions_init;
 		_fd_open_max;
 		_getaddrinfo_from_dns;
-		_mmap_file;
+		_mmap_get_vmo_from_fd;
 		accept4;
 		access;
 		bind;

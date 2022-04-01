@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ZIRCON_THIRD_PARTY_ULIB_MUSL_SRC_INTERNAL_STDIO_IMPL_H_
+#define ZIRCON_THIRD_PARTY_ULIB_MUSL_SRC_INTERNAL_STDIO_IMPL_H_
 
 #include <stdatomic.h>
 #include <stdio.h>
@@ -62,8 +63,7 @@ size_t __string_read(FILE*, unsigned char*, size_t) ATTR_LIBC_VISIBILITY;
 int __toread(FILE*) ATTR_LIBC_VISIBILITY;
 int __towrite(FILE*) ATTR_LIBC_VISIBILITY;
 
-zx_status_t _mmap_file(size_t offset, size_t len, uint32_t zx_flags, int flags, int fd,
-                       off_t fd_off, uintptr_t* out);
+zx_status_t _mmap_get_vmo_from_fd(int mmap_prot, int mmap_flags, int fd, uint32_t* out_vmo);
 
 #if defined(__PIC__) && (100 * __GNUC__ + __GNUC_MINOR__ >= 303)
 __attribute__((visibility("protected")))
@@ -100,3 +100,5 @@ void __stdio_exit(void) ATTR_LIBC_VISIBILITY;
 /* Caller-allocated FILE * operations */
 FILE* __fopen_rb_ca(const char*, FILE*, unsigned char*, size_t) ATTR_LIBC_VISIBILITY;
 int __fclose_ca(FILE*) ATTR_LIBC_VISIBILITY;
+
+#endif  // ZIRCON_THIRD_PARTY_ULIB_MUSL_SRC_INTERNAL_STDIO_IMPL_H_

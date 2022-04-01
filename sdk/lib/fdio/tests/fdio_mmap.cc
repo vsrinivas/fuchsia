@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <memory>
 #include <string>
 
@@ -67,7 +68,7 @@ using MmapTestDirectory = MmapTestFixture<O_RDONLY | O_DIRECTORY>;
 
 // Test that MAP_PRIVATE keeps all copies of the underlying buffer separate, thus
 // ensuring copy-on-write semantics.
-TEST_F(MmapTest, Private) {
+TEST_F(MmapTest, MapPrivate) {
   const char data_1[] = "Hello, world!";
   const char data_2[] = "Other data...";
   constexpr size_t data_len = sizeof(data_1);
@@ -96,7 +97,7 @@ TEST_F(MmapTest, Private) {
 }
 
 // Test that file writes are propagated to a shared read-only buffer.
-TEST_F(MmapTest, Shared) {
+TEST_F(MmapTest, MapShared) {
   const char data_1[] = "this is a buffer";
   const char data_2[] = "another buffer!!";
   constexpr size_t data_len = sizeof(data_1);
@@ -185,6 +186,93 @@ TEST_F(MmapTest, InvalidMapFlags) {
   }
 #endif
 }
+
+// Test anonymous mappings (MAP_ANON).
+TEST_F(MmapTest, MapAnon) {
+  const size_t kMappingLength = kPageSize * 4;
+  uint8_t* map;
+  ASSERT_NE(map = static_cast<uint8_t*>(mmap(nullptr, kMappingLength, PROT_READ | PROT_WRITE,
+                                             MAP_ANON | MAP_PRIVATE, 0, 0)),
+            MAP_FAILED, "%s", strerror(errno));
+  auto unmap = defer_munmap(map, kMappingLength);
+  // Ensure that the mapping is zero filled.
+  ASSERT_TRUE(std::all_of(map, map + kMappingLength, [](uint8_t elem) { return elem == 0; }));
+  // Ensure that we can read/write the entire range.
+  std::fill(map, map + kMappingLength, 0xFF);
+  ASSERT_TRUE(std::all_of(map, map + kMappingLength, [](uint8_t elem) { return elem == 0xFF; }));
+
+  // Now we unmap the first and last page, and ensure the remaining mapped pages are still valid.
+  ASSERT_EQ(munmap(map, kPageSize), 0, "%s", strerror(errno));
+  ASSERT_EQ(munmap(map + (kMappingLength - kPageSize), kPageSize), 0, "%s", strerror(errno));
+  ASSERT_TRUE(std::all_of(map + kPageSize, map + (kMappingLength - kPageSize),
+                          [](uint8_t elem) { return elem == 0xFF; }));
+}
+
+// Test mappings at a fixed address (MAP_FIXED).
+TEST_F(MmapTest, MapFixed) {
+  // Create an anonymous mapping to find a valid address to use with MAP_FIXED.
+  const size_t kMappingLength = kPageSize * 4;
+  uint8_t* map_1;
+  ASSERT_NE(map_1 = static_cast<uint8_t*>(mmap(nullptr, kMappingLength, PROT_READ | PROT_WRITE,
+                                               MAP_ANON | MAP_PRIVATE, 0, 0)),
+            MAP_FAILED, "%s", strerror(errno));
+  auto unmap = defer_munmap(map_1, kMappingLength);
+  // Fill the entire range with 0xFF so we can determine which locations were modified afterwards.
+  std::fill(map_1, map_1 + kMappingLength, 0xFF);
+
+  // Overwrite the middle two pages using MAP_FIXED, and ensure we can write to those pages.
+  uint8_t* map_2;
+  ASSERT_NE(
+      map_2 = static_cast<uint8_t*>(mmap(map_1 + kPageSize, kPageSize * 2, PROT_READ | PROT_WRITE,
+                                         MAP_FIXED | MAP_ANON | MAP_PRIVATE, 0, 0)),
+      MAP_FAILED, "%s", strerror(errno));
+  std::fill(map_2, map_2 + (kPageSize * 2), 0x11);
+
+  // We should now have a layout of [0xFF], [0x11], [0x11], [0xFF].
+  ASSERT_TRUE(std::all_of(map_1, map_1 + kPageSize, [](uint8_t elem) { return elem == 0xFF; }));
+  ASSERT_TRUE(
+      std::all_of(map_2, map_2 + (kPageSize * 2), [](uint8_t elem) { return elem == 0x11; }));
+  ASSERT_TRUE(std::all_of(map_1 + (kPageSize * 3), map_1 + kMappingLength,
+                          [](uint8_t elem) { return elem == 0xFF; }));
+
+  // Unmap the last two pages. This ensures we handle unmapping overlapped mappings correctly.
+  ASSERT_EQ(munmap(map_2 + kPageSize, kPageSize * 2), 0, "%s", strerror(errno));
+  // Make sure the first two pages are still mapped.
+  ASSERT_TRUE(std::all_of(map_1, map_1 + kPageSize, [](uint8_t elem) { return elem == 0xFF; }));
+  ASSERT_TRUE(std::all_of(map_2, map_2 + kPageSize, [](uint8_t elem) { return elem == 0x11; }));
+}
+
+// TODO(fxbug.dev/96759): ASSERT_DEATH and ASSERT_NO_DEATH are only defined on Fuchsia currently.
+// When available, this test should be run on both host and target builds.
+#ifdef __Fuchsia__
+// Ensure accessing unmapped pages crashes, and that mappings cannot be accessed with permissions
+// they lack (e.g. that a mapping with only PROT_READ cannot be written to).
+TEST_F(MmapTest, Death) {
+  const size_t kMappingLength = kPageSize * 4;
+  // Create a read-only mapping spanning 4 pages.
+  uint8_t* map_1;
+  ASSERT_NE(map_1 = static_cast<uint8_t*>(
+                mmap(nullptr, kMappingLength, PROT_READ, MAP_ANON | MAP_PRIVATE, 0, 0)),
+            MAP_FAILED, "%s", strerror(errno));
+  auto unmap = defer_munmap(map_1, kMappingLength);
+  // Create a write-only mapping that spans the middle two pages.
+  uint8_t* map_2;
+  ASSERT_NE(map_2 = static_cast<uint8_t*>(mmap(map_1 + kPageSize, kPageSize * 2, PROT_WRITE,
+                                               MAP_FIXED | MAP_ANON | MAP_PRIVATE, 0, 0)),
+            MAP_FAILED, "%s", strerror(errno));
+
+  // Unmap the last two pages, which should leave the first page of both map_1 and map_2 valid.
+  ASSERT_EQ(munmap(map_1 + (kPageSize * 2), kPageSize * 2), 0, "%s", strerror(errno));
+
+  // Ensure we cannot access memory in the now unmapped pages.
+  ASSERT_DEATH([&] { map_1[kMappingLength - 1] = 0xFF; });
+  ASSERT_DEATH([&] { map_2[kPageSize * 2] = 0xFF; });
+
+  // Ensure that we cannot write to map_1 (read-only), but can write to map_2.
+  ASSERT_DEATH([&] { map_1[0] = 0xFF; });
+  ASSERT_NO_DEATH([&] { map_2[0] = 0xFF; });
+}
+#endif
 
 // Test all cases of MAP_PRIVATE and MAP_SHARED which require a readable file (fd is write-only).
 TEST_F(MmapTestWriteOnly, AccessDenied) {

@@ -44,12 +44,12 @@ static ssize_t stub_write(int fd, const void* buf, size_t count) {
 }
 weak_alias(stub_write, write);
 
-static zx_status_t stub__mmap_file(size_t offset, size_t len, uint32_t zx_flags, int flags, int fd,
-                                   off_t fd_off, uintptr_t* out) {
+static zx_status_t stub__mmap_get_vmo_from_fd(int mmap_prot, int mmap_flags, int fd,
+                                              zx_handle_t* out_vmo) {
   libc_io_functions_not_implemented_use_fdio_instead();
   return ZX_ERR_NOT_SUPPORTED;
 }
-weak_alias(stub__mmap_file, _mmap_file);
+weak_alias(stub__mmap_get_vmo_from_fd, _mmap_get_vmo_from_fd);
 
 static int stub_close(int fd) {
   libc_io_functions_not_implemented_use_fdio_instead();

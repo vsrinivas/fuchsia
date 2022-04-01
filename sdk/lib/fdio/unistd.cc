@@ -560,56 +560,28 @@ static zx_status_t fdio_stat(const fdio_ptr& io, struct stat* s) {
 
 // extern "C" is required here, since the corresponding declaration is in an internal musl header:
 // zircon/third_party/ulib/musl/src/internal/stdio_impl.h
-extern "C" __EXPORT zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_option_t zx_options,
-                                           int flags, int fd, off_t fd_off, uintptr_t* out) {
+extern "C" __EXPORT zx_status_t _mmap_get_vmo_from_fd(int mmap_prot, int mmap_flags, int fd,
+                                                      zx_handle_t* out_vmo) {
+  assert(out_vmo != nullptr);
   fdio_ptr io = fd_to_io(fd);
   if (io == nullptr) {
     return ZX_ERR_BAD_HANDLE;
   }
 
-  // Verify that the ZX_VM_PERM_* flags passed to __mmap_file match the respective constants
-  // from zxio when calling zxio_vmo_get.
-  static_assert(ZXIO_VMO_READ == ZX_VM_PERM_READ, "Vmar / Vmo flags should be aligned");
-  static_assert(ZXIO_VMO_WRITE == ZX_VM_PERM_WRITE, "Vmar / Vmo flags should be aligned");
-  static_assert(ZXIO_VMO_EXECUTE == ZX_VM_PERM_EXECUTE, "Vmar / Vmo flags should be aligned");
+  // Convert mmap flags into respective ZXIO flags.
+  zxio_vmo_flags_t zxio_flags = 0;
 
-  if (zx_options & (ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE)) {
-    // The POSIX standard requires the file to be opened with read permissions regardless of the
-    // PROT_* flags, and also permits implementations to allow access types exceeding those which
-    // were requested (e.g. PROT_WRITE may imply PROT_READ).
-    //
-    // Since zx_vmar_map currently disallows mapping writable/executable VMOs that lack read
-    // permissions, we add that here:
-    // https://cs.opensource.google/fuchsia/fuchsia/+/5cbdfbb2a7be562a76095a384efca39dac00d477:zircon/kernel/object/vm_address_region_dispatcher.cc;l=260
-    zx_options |= ZX_VM_PERM_READ;
-  }
+  // Handle protection bits and mode flags.
+  zxio_flags |= (mmap_prot & PROT_READ) ? ZXIO_VMO_READ : 0;
+  zxio_flags |= (mmap_prot & PROT_WRITE) ? ZXIO_VMO_WRITE : 0;
+  zxio_flags |= (mmap_prot & PROT_EXEC) ? ZXIO_VMO_EXECUTE : 0;
+  zxio_flags |= (mmap_flags & MAP_PRIVATE) ? ZXIO_VMO_PRIVATE_CLONE : 0;
+  // We cannot specify ZXIO_VMO_SHARED_BUFFER as not all filesystems support shared mappings.
+  // This does not affect behavior of filesystems that do not support writable shared mappings.
+  // Filesystems which support PROT_WRITE + MAP_SHARED can enable the `supports_mmap_shared_write`
+  // option in the fs_test suite to validate this case.
 
-  zxio_vmo_flags_t zxio_flags = zx_options;
-  if (flags & MAP_PRIVATE) {
-    zxio_flags |= ZXIO_VMO_PRIVATE_CLONE;
-  }
-
-  zx::vmo vmo;
-  size_t size;
-  {
-    zx_status_t status =
-        zxio_vmo_get(&io->zxio_storage().io, zxio_flags, vmo.reset_and_get_address(), &size);
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-
-  uintptr_t ptr = 0;
-  zx_options |= ZX_VM_ALLOW_FAULTS;
-  zx_status_t status =
-      zx_vmar_map(zx_vmar_root_self(), zx_options, offset, vmo.get(), fd_off, len, &ptr);
-  // TODO: map this as shared if we ever implement forking
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  *out = ptr;
-  return ZX_OK;
+  return zxio_vmo_get(&io->zxio_storage().io, zxio_flags, out_vmo, nullptr);
 }
 
 __EXPORT
