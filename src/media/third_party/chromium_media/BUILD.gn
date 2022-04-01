@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-config("h264_headers") {
+config("chromium_media_headers") {
   include_dirs = [ "." ]
 }
 
-source_set("h264_parser") {
+source_set("chromium_media") {
   sources = [
     "media/base/ranges.cc",
     "media/base/ranges.h",
@@ -34,5 +34,5 @@ source_set("h264_parser") {
     "//zircon/system/ulib/fbl",
     "//zircon/third_party/ulib/safemath",
   ]
-  public_configs = [ ":h264_headers" ]
+  public_configs = [ ":chromium_media_headers" ]
 }

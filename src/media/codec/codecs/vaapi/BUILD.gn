@@ -19,7 +19,7 @@ source_set("avcc_processor") {
     "//sdk/lib/syslog/cpp",
     "//src/media/lib/codec_impl",
 
-    #   "//src/media/lib/video_utils/h264:h264_parser",
+    #   "//src/media/third_party/chromium_media:lib"",
   ]
 }
 
@@ -51,7 +51,7 @@ source_set("codec_runner_vaapi") {
     "//src/lib/fxl",
     "//src/media/lib/codec_impl",
     "//src/media/lib/mpsc_queue",
-    "//src/media/lib/video_utils/h264:h264_parser",
+    "//src/media/third_party/chromium_media",
     "//third_party/intel/libva/fuchsia:headers",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
