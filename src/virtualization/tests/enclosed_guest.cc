@@ -164,7 +164,6 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
   constexpr auto kFakeNetstackComponentName = "fake_netstack";
   constexpr auto kHostVsockComponentName = "host_vsock";
   constexpr auto kHostVsockComponentUrl = "fuchsia-pkg://fuchsia.com/host_vsock#meta/host_vsock.cm";
-  constexpr auto kFakeScenicComponentName = "fake_scenic";
 
   fuchsia::virtualization::GuestConfig cfg;
   std::string url;
@@ -194,7 +193,6 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
   realm_builder.AddLocalChild(kGuestConfigProviderComponentName,
                               local_guest_config_provider_.get());
   realm_builder.AddLocalChild(kFakeNetstackComponentName, &fake_netstack_);
-  realm_builder.AddLocalChild(kFakeScenicComponentName, &fake_scenic_);
   realm_builder.AddChild(kHostVsockComponentName, kHostVsockComponentUrl);
 
   realm_builder
@@ -218,12 +216,6 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
                               Protocol{fuchsia::net::virtualization::Control::Name_},
                           },
                       .source = {ChildRef{kFakeNetstackComponentName}},
-                      .targets = {ChildRef{kVmmComponentName}}})
-      .AddRoute(Route{.capabilities =
-                          {
-                              Protocol{fuchsia::ui::scenic::Scenic::Name_},
-                          },
-                      .source = {ChildRef{kFakeScenicComponentName}},
                       .targets = {ChildRef{kVmmComponentName}}})
       .AddRoute(Route{.capabilities =
                           {
@@ -579,6 +571,7 @@ std::vector<std::string> ZirconEnclosedGuest::GetTestUtilCommand(
 zx_status_t DebianEnclosedGuest::LaunchInfo(std::string* url,
                                             fuchsia::virtualization::GuestConfig* cfg) {
   *url = kDebianGuestUrl;
+
   // Enable kernel debugging serial output.
   for (std::string_view cmd : kLinuxKernelSerialDebugCmdline) {
     cfg->mutable_cmdline_add()->emplace_back(cmd);

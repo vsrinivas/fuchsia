@@ -11,7 +11,6 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <string.h>
 
 #include <optional>
@@ -113,8 +112,7 @@ class FakeSession : public fuchsia::ui::scenic::testing::Session_TestBase {
   fidl::Binding<fuchsia::ui::scenic::Session> binding_;
 };
 
-class FakeScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase,
-                   public component_testing::LocalComponent {
+class FakeScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
  public:
   FakeScenic() = default;
 
@@ -144,15 +142,12 @@ class FakeScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase,
   // |fuchsia::ui::scenic::testing::Scenic_TestBase|
   void NotImplemented_(const std::string& name) final;
 
-  void Start(std::unique_ptr<component_testing::LocalComponentHandles> handles) override;
-
  private:
   // We only support a single session at a time. A session is active iff
   // session_ != nullopt.
   std::optional<FakeSession> session_;
 
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
-  std::unique_ptr<component_testing::LocalComponentHandles> handles_;
 };
 
 #endif  // SRC_VIRTUALIZATION_TESTS_FAKE_SCENIC_H_
