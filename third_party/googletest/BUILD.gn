@@ -95,7 +95,7 @@ source_set("gtest_prod") {
 }
 
 static_library("gtest_main") {
-  # In-tree tests should prefer //src/lib/fxl/tests:gtest_main which includes
+  # In-tree tests should prefer //src/lib/fxl/test:gtest_main which includes
   # Fuchsia-specific setup.
   visibility = [
     ":*",
