@@ -67,6 +67,32 @@ class UnexpectedThreadController : public ThreadController {
   const char* GetName() const override { return "Unexpected"; }
 };
 
+// This ThreadController responds twice with kFuture and then once with kStop.
+class FutureThreadController : public ThreadController {
+ public:
+  explicit FutureThreadController() = default;
+  ~FutureThreadController() override = default;
+
+  // ThreadController implementation.
+  void InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) override {
+    SetThread(thread);
+    cb(Err());
+  }
+  ContinueOp GetContinueOp() override { return ContinueOp::Continue(); }
+  StopOp OnThreadStop(debug_ipc::ExceptionType stop_type,
+                      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override {
+    if (futures_remaining_ == 0)
+      return kStopDone;
+
+    futures_remaining_--;
+    return kFuture;
+  }
+  const char* GetName() const override { return "Future"; }
+
+ private:
+  int futures_remaining_ = 2;
+};
+
 }  // namespace
 
 TEST_F(ThreadImplTest, Frames) {
@@ -294,6 +320,41 @@ TEST_F(ThreadImplTest, JumpTo) {
 
   // The thread should be in the new location.
   EXPECT_EQ(kDestAddress, thread->GetStack()[0]->GetAddress());
+}
+
+TEST_F(ThreadImplTest, FutureThreadController) {
+  constexpr uint64_t kProcessKoid = 1234;
+  InjectProcess(kProcessKoid);
+  constexpr uint64_t kThreadKoid = 5678;
+  Thread* thread = InjectThread(kProcessKoid, kThreadKoid);
+
+  TestThreadObserver thread_observer(thread);
+
+  // Notify of thread stop.
+  constexpr uint64_t kAddress1 = 0x12345678;
+  constexpr uint64_t kStack1 = 0x7890;
+  debug_ipc::NotifyException notification;
+  notification.type = debug_ipc::ExceptionType::kSingleStep;
+  notification.thread.id = {.process = kProcessKoid, .thread = kThreadKoid};
+  notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
+  notification.thread.frames.emplace_back(kAddress1, kStack1);
+  InjectException(notification);
+
+  thread->ContinueWith(std::make_unique<FutureThreadController>(), [](const Err& err) {});
+  thread_observer.set_got_stopped(false);
+
+  // Notify on thread stop (this is the same address as above but it doesn't matter). The thread
+  // controller should report "future" and not notify.
+  InjectException(notification);
+  EXPECT_FALSE(thread_observer.got_stopped());
+
+  // Declare that future stop as complete. This will return another future.
+  thread->ResumeFromAsyncThreadController();
+  EXPECT_FALSE(thread_observer.got_stopped());
+
+  // The third time the controller should report stop which should notify.
+  thread->ResumeFromAsyncThreadController();
+  EXPECT_TRUE(thread_observer.got_stopped());
 }
 
 }  // namespace zxdb

@@ -24,21 +24,47 @@ class Thread;
 
 // Abstract base class that provides the policy decisions for various types of thread stepping.
 //
-// Once installed, the thread will ask the topmost thread controller how (and whether) to continue.
-// All thread controllers installed on a thread will get notified for each exception and indicate
-// whether they want to handle the stop or continue. Each thread controller is queried for each
-// stop since completions could happen in the in any order.
+// HOW THREAD CONTROLLERS WORK
+// ---------------------------
+// Thread controllers are responsible for implementing the various complex step operations that
+// are more complex that run/stop/single-step-instruction. They are composable ("next" is just a
+// sequence of "step into"/"step out" operations until a new line is reached) and there can be
+// multiple active ones (if a breakpoint is hit in a stack frame being stepped over, the stepping
+// can continue after the breakpoint is resumed from).
+//
+// Once installed, the thread will ask the topmost thread controller how (and whether) to continue
+// via OnThreadStop(). This function is given the exception and breakpoint information regarding the
+// stop. The thread controllers installed on a thread will get notified for each exception and
+// indicate whether they want to handle the stop or continue. Each thread controller is queried for
+// each stop since completions could happen in the in any order.
 //
 // The thread may also delete thread controllers. This can happen when the thread is terminated or
 // when there is an internal error stepping. If a controller has a callback it executes on
 // completion it should be prepared to issue the callback from its destructor in such a way to
 // indicate that the step operation failed.
 //
-// Thread controllers run synchronously. This is sometimes limiting but otherwise some logic would
-// be very difficult to follow. This means that the thread controller can't request memory and
-// do something different based on that. There is some opportunity for asynchronous work via the
-// Thread's AddPostStopTask() function. This can inject asynchronous work after the thread
-// controllers run but before the stop or continue is processed.
+// "NONE" EXCEPTION TYPES
+// ----------------------
+// The special exception type "kNone" should cause a thread controller to evaluate the current
+// state of the thread without making assumptions about the exact exception type. This is most
+// commonly used when a controller makes a child controller to perform some operation and wants to
+// immediately ask if it the thread should stop now. The current exception might be a breakpoint or
+// something that the parent controller set up that the child controller might otherwise ignore.
+//
+// ASYNC COMPLETION
+// ----------------
+// Some thread controller need to perform async operations from OnThreadStop(). In this case they
+// can return StopOp::kFuture. The thread will interpret this to mean leave the thread stopped but
+// not to issue notifications that it has done so. The thread controller is responsible for calling
+// Thread::ResumeFromAsyncThreadController() once its operation has completed.
+//
+// Thread::ResumeFromAsyncThreadController() doesn't continue the thread (since the async operation
+// may want to report "stop"). Instead, it re-issues the same stop and the controllers should then
+// re-evaluate their location and issue a real stop or continue.
+//
+// There is also some opportunity for asynchronous work via the Thread's AddPostStopTask() function.
+// This can inject asynchronous work after the thread controllers run but before the stop or
+// continue is processed.
 class ThreadController {
  public:
   enum StopOp {
@@ -53,7 +79,13 @@ class ThreadController {
     // Reports that the controller doesn't know what to do with this thread stop. This is
     // effectively a neutral vote for what should happen in response to a thread stop. If all active
     // controllers report "unexpected", the thread will stop.
-    kUnexpected
+    kUnexpected,
+
+    // Reports that the controller is performing asynchronous work and will re-fire this stop in the
+    // future by calling ResumeFromAsyncThreadController(). This value takes precedence over other
+    // ones and if any thread controllers issue this stop, execution of thread controllers will be
+    // suspended.
+    kFuture,
   };
 
   // How the thread should run when it is executing this controller.
@@ -81,8 +113,8 @@ class ThreadController {
     }
 
     // A synthetic stop means that the thread remains stopped but a synthetic stop notification is
-    // broadcast to make it look like the thread did continued and stopped again. This will call
-    // back into the top controller's OnThreadStop().
+    // broadcast to make it look like the thread continued and stopped again. This will call back
+    // into the top controller's OnThreadStop().
     //
     // This is useful when modifying the stack for inline routines, where the code didn't execute
     // but from a user perspective they stepped into an inline subroutine. In this case the thread

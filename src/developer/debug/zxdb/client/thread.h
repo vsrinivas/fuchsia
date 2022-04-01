@@ -121,6 +121,11 @@ class Thread : public ClientObject {
   // stopped if a step operation was in place.
   virtual void CancelAllThreadControllers() = 0;
 
+  // Used by ThreadControllers that need to perform asynchronous operations from a thread stop.
+  // When OnThreadStop() returns kFuture, the thread controller is responsible for calling this
+  // to re-evaluate the thread controller state. See thread_controller.h comments.
+  virtual void ResumeFromAsyncThreadController() = 0;
+
   // Sets the thread's IP to the given location. This requires that the thread be stopped. It will
   // not resume the thread.
   //

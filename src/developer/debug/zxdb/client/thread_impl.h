@@ -36,6 +36,7 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
                     fit::callback<void(const Err&)> on_continue) override;
   void AddPostStopTask(PostStopTask task) override;
   void CancelAllThreadControllers() override;
+  void ResumeFromAsyncThreadController() override;
   void JumpTo(uint64_t new_address, fit::callback<void(const Err&)> cb) override;
   void NotifyControllerDone(ThreadController* controller) override;
   void StepInstruction() override;
@@ -87,6 +88,13 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
   // Tasks to run when the ThreadController::OnThreadStop functions complete.
   bool handling_on_stop_ = false;
   std::list<PostStopTask> post_stop_tasks_;
+
+  // State for thread controllers that return "kFuture" to resume from a stop later.
+  //
+  // This tracks the number of times a thread controller has responded "kFuture" without issuing a
+  // stop or continue. This prevents infinite loops if there is a bug in the thread controllers.
+  StopInfo async_stop_info_;
+  int nested_stop_future_completion_ = 0;
 
   fxl::WeakPtrFactory<ThreadImpl> weak_factory_;
 

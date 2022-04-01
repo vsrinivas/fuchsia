@@ -24,6 +24,16 @@
 
 namespace zxdb {
 
+namespace {
+
+// Maximum number of times we'll allow thread controller to return "kFuture" before we declare
+// they're in an infinite loop. Normally there will only be one "future" return before calling
+// ResumeFromAsyncThreadController() so if we get many it probably indicates a thread controller is
+// continuing to return the "future" from the same state and it's stuck (this is an easy mistake).
+constexpr int kMaxNestedFutureCompletion = 16;
+
+}  // namespace
+
 ThreadImpl::ThreadImpl(ProcessImpl* process, const debug_ipc::ThreadRecord& record)
     : Thread(process->session()),
       process_(process),
@@ -152,7 +162,24 @@ void ThreadImpl::AddPostStopTask(PostStopTask task) {
   post_stop_tasks_.push_back(std::move(task));
 }
 
-void ThreadImpl::CancelAllThreadControllers() { controllers_.clear(); }
+void ThreadImpl::CancelAllThreadControllers() {
+  controllers_.clear();
+  if (nested_stop_future_completion_) {
+    // We're waiting on an async thread controller to complete but just cleared them all. Reissue
+    // the exception to clean up the async state and issue stop notifications.
+    OnException(async_stop_info_);
+  }
+}
+
+void ThreadImpl::ResumeFromAsyncThreadController() {
+  if (nested_stop_future_completion_ == 0) {
+    // Not waiting on an async thread controller to finish. This could be a programming error but it
+    // could also be that somebody called CancelAllThreadControllers() out from under us.
+    return;
+  }
+
+  OnException(async_stop_info_);
+}
 
 void ThreadImpl::JumpTo(uint64_t new_address, fit::callback<void(const Err&)> cb) {
   // The register to set.
@@ -277,10 +304,32 @@ void ThreadImpl::OnException(const StopInfo& info) {
         controller->Log("Reported unexpected exception.");
         controller_iter++;
         break;
+      case ThreadController::kFuture:
+        controller->Log("Returned kFuture, waiting for async completion.");
+
+        nested_stop_future_completion_++;
+        if (nested_stop_future_completion_ >= kMaxNestedFutureCompletion) {
+          // The thread controllers issued too many sequential "future" stop completions. It's easy
+          // to accidentally get into an infinite loop by continuing to return kFuture from the same
+          // stop type. This code detects that case and gives up.
+          controller->Log(
+              "Hit limit for nested 'future' thread controllers. Clearing state and stopping.");
+          controllers_.clear();
+          should_stop = true;
+        } else {
+          // Normal good case. Don't do anything and wait for the controller to call
+          // ResumeFromAsyncThreadController() to continue.
+          //
+          // In this case we keep handling_on_stop_ true because we can continue to accumulate
+          // post-stop tasks.
+          async_stop_info_ = info;
+          return;
+        }
     }
   }
 
   handling_on_stop_ = false;
+  nested_stop_future_completion_ = 0;
 
   if (!have_continue) {
     // No controller voted to continue (maybe all active controllers reported "unexpected") or there
