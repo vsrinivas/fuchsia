@@ -69,14 +69,12 @@ pub type Nonce = [u8; 32];
 pub struct RequestMetadata {
     #[allow(dead_code)]
     request_body: Vec<u8>,
-    #[allow(dead_code)]
-    public_key_id: PublicKeyId,
+    pub public_key_id: PublicKeyId,
     #[allow(dead_code)]
     nonce: Nonce,
 }
 impl RequestMetadata {
-    #[allow(dead_code)]
-    fn hash(&self) -> Vec<u8> {
+    pub fn hash(&self) -> Vec<u8> {
         let mut hasher = Sha256::new();
         hasher.update(&self.request_body);
         hasher.update(self.public_key_id.to_string().as_bytes());
@@ -283,18 +281,47 @@ pub mod test_support {
         StandardCupv2Handler::new(&public_keys)
     }
 
-    pub struct StubCupv2Handler {}
+    // Mock Cupv2Handler which can be used to fail at request decoration or verification.
+    pub struct MockCupv2Handler {
+        decoration_error: fn() -> Option<CupDecorationError>,
+        verification_error: fn() -> Option<CupVerificationError>,
+    }
+    impl MockCupv2Handler {
+        pub fn new() -> MockCupv2Handler {
+            MockCupv2Handler {
+                decoration_error: || None::<CupDecorationError>,
+                verification_error: || None::<CupVerificationError>,
+            }
+        }
+        pub fn set_decoration_error(
+            mut self,
+            e: fn() -> Option<CupDecorationError>,
+        ) -> MockCupv2Handler {
+            self.decoration_error = e;
+            self
+        }
+        pub fn set_verification_error(
+            mut self,
+            e: fn() -> Option<CupVerificationError>,
+        ) -> MockCupv2Handler {
+            self.verification_error = e;
+            self
+        }
+    }
 
-    impl Cupv2RequestHandler for StubCupv2Handler {
+    impl Cupv2RequestHandler for MockCupv2Handler {
         fn decorate_request(
             &self,
             _request: &mut impl CupRequest,
         ) -> Result<RequestMetadata, CupDecorationError> {
-            Ok(RequestMetadata {
-                request_body: vec![],
-                public_key_id: 0.try_into().unwrap(),
-                nonce: [0u8; 32],
-            })
+            match (self.decoration_error)() {
+                Some(e) => Err(e),
+                None => Ok(RequestMetadata {
+                    request_body: vec![],
+                    public_key_id: 0.try_into().unwrap(),
+                    nonce: [0u8; 32],
+                }),
+            }
         }
 
         fn verify_response(
@@ -303,11 +330,14 @@ pub mod test_support {
             _resp: &Response<Vec<u8>>,
             _public_key_id: PublicKeyId,
         ) -> Result<(), CupVerificationError> {
-            Ok(())
+            match (self.verification_error)() {
+                Some(e) => Err(e),
+                None => Ok(()),
+            }
         }
     }
 
-    impl Cupv2Verifier for StubCupv2Handler {
+    impl Cupv2Verifier for MockCupv2Handler {
         fn verify_response_with_signature(
             &self,
             _ecdsa_signature: DerSignature,
@@ -315,7 +345,10 @@ pub mod test_support {
             _response_body: &[u8],
             _public_key_id: PublicKeyId,
         ) -> Result<(), CupVerificationError> {
-            Ok(())
+            match (self.verification_error)() {
+                Some(e) => Err(e),
+                None => Ok(()),
+            }
         }
     }
 }

@@ -6,7 +6,7 @@ use crate::{
     app_set::{AppSet, AppSetExt as _},
     common::{App, CheckOptions, CheckTiming},
     configuration::Config,
-    cup_ecdsa::{CupDecorationError, Cupv2Handler},
+    cup_ecdsa::{CupDecorationError, CupVerificationError, Cupv2Handler},
     http_request::{self, HttpRequest},
     installer::{AppInstallResult, Installer, Plan},
     metrics::{ClockType, Metrics, MetricsReporter, UpdateCheckFailureReason},
@@ -125,7 +125,10 @@ pub enum OmahaRequestError {
     HttpBuilder(#[from] http::Error),
 
     #[error("Error decorating outgoing request with CUPv2 parameters")]
-    Cup(#[from] CupDecorationError),
+    CupDecoration(#[from] CupDecorationError),
+
+    #[error("Error validating incoming response with CUPv2 protocol")]
+    CupValidation(#[from] CupVerificationError),
 
     // TODO: This still contains hyper user error which should be split out.
     #[error("HTTP transport error performing update check")]
@@ -140,7 +143,7 @@ impl From<request_builder::Error> for OmahaRequestError {
         match err {
             request_builder::Error::Json(e) => OmahaRequestError::Json(e),
             request_builder::Error::Http(e) => OmahaRequestError::HttpBuilder(e),
-            request_builder::Error::Cup(e) => OmahaRequestError::Cup(e),
+            request_builder::Error::Cup(e) => OmahaRequestError::CupDecoration(e),
         }
     }
 }
@@ -592,15 +595,15 @@ where
         let apps = self.app_set.lock().await.get_apps();
         let result = self.perform_update_check(request_params, apps, co).await;
 
-        let (result, reboot_after_update) =
-            match result {
-                Ok((result, reboot_after_update)) => {
-                    info!("Update check result: {:?}", result);
-                    // Update check succeeded, update |last_update_time|.
-                    self.context.schedule.last_update_time = Some(self.time_source.now().into());
+        let (result, reboot_after_update) = match result {
+            Ok((result, reboot_after_update)) => {
+                info!("Update check result: {:?}", result);
+                // Update check succeeded, update |last_update_time|.
+                self.context.schedule.last_update_time = Some(self.time_source.now().into());
 
-                    // Determine if any app failed to install, or we had a successful upadte.
-                    let install_success = result.app_responses.iter().fold(None, |result, app| {
+                // Determine if any app failed to install, or we had a successful update.
+                let install_success =
+                    result.app_responses.iter().fold(None, |result, app| {
                         match (result, &app.result) {
                             (_, update_check::Action::InstallPlanExecutionError) => Some(false),
                             (None, update_check::Action::Updated) => Some(true),
@@ -608,46 +611,48 @@ where
                         }
                     });
 
-                    // Update check succeeded, reset |consecutive_failed_update_checks| to 0 and
-                    // report metrics.
-                    self.report_attempts_to_successful_check(true).await;
+                // Update check succeeded, reset |consecutive_failed_update_checks| to 0 and
+                // report metrics.
+                self.report_attempts_to_successful_check(true).await;
 
-                    self.app_set.lock().await.update_from_omaha(&result.app_responses);
+                self.app_set.lock().await.update_from_omaha(&result.app_responses);
 
-                    // Only report |attempts_to_successful_install| if we get an error trying to
-                    // install, or we succeed to install an update without error.
-                    if let Some(success) = install_success {
-                        self.report_attempts_to_successful_install(success).await;
+                // Only report |attempts_to_successful_install| if we get an error trying to
+                // install, or we succeed to install an update without error.
+                if let Some(success) = install_success {
+                    self.report_attempts_to_successful_install(success).await;
+                }
+
+                (Ok(result), reboot_after_update)
+                // TODO: update consecutive_proxied_requests
+            }
+            Err(error) => {
+                error!("Update check failed: {:?}", error);
+
+                let failure_reason = match &error {
+                    UpdateCheckError::ResponseParser(_) | UpdateCheckError::InstallPlan(_) => {
+                        // We talked to Omaha, update |last_update_time|.
+                        self.context.schedule.last_update_time =
+                            Some(self.time_source.now().into());
+
+                        UpdateCheckFailureReason::Omaha
                     }
-
-                    (Ok(result), reboot_after_update)
-                    // TODO: update consecutive_proxied_requests
-                }
-                Err(error) => {
-                    error!("Update check failed: {:?}", error);
-
-                    let failure_reason = match &error {
-                        UpdateCheckError::ResponseParser(_) | UpdateCheckError::InstallPlan(_) => {
-                            // We talked to Omaha, update |last_update_time|.
-                            self.context.schedule.last_update_time =
-                                Some(self.time_source.now().into());
-
-                            UpdateCheckFailureReason::Omaha
+                    UpdateCheckError::OmahaRequest(request_error) => match request_error {
+                        OmahaRequestError::Json(_)
+                        | OmahaRequestError::HttpBuilder(_)
+                        | OmahaRequestError::CupDecoration(_)
+                        | OmahaRequestError::CupValidation(_) => UpdateCheckFailureReason::Internal,
+                        OmahaRequestError::HttpTransport(_) | OmahaRequestError::HttpStatus(_) => {
+                            UpdateCheckFailureReason::Network
                         }
-                        UpdateCheckError::OmahaRequest(request_error) => match request_error {
-                            OmahaRequestError::Json(_)
-                            | OmahaRequestError::HttpBuilder(_)
-                            | OmahaRequestError::Cup(_) => UpdateCheckFailureReason::Internal,
-                            OmahaRequestError::HttpTransport(_)
-                            | OmahaRequestError::HttpStatus(_) => UpdateCheckFailureReason::Network,
-                        },
-                    };
-                    self.report_metrics(Metrics::UpdateCheckFailureReason(failure_reason));
+                    },
+                };
+                self.report_metrics(Metrics::UpdateCheckFailureReason(failure_reason));
 
-                    self.report_attempts_to_successful_check(false).await;
-                    (Err(error), RebootAfterUpdate::NotNeeded)
-                }
-            };
+                self.report_attempts_to_successful_check(false).await;
+                (Err(error), RebootAfterUpdate::NotNeeded)
+            }
+        };
 
         co.yield_(StateMachineEvent::ScheduleChange(self.context.schedule)).await;
         co.yield_(StateMachineEvent::ProtocolStateChange(self.context.state.clone())).await;
@@ -766,8 +771,13 @@ where
                     Self::yield_state(State::ErrorCheckingForUpdate, co).await;
                     break Err(UpdateCheckError::OmahaRequest(e.into()));
                 }
-                Err(OmahaRequestError::Cup(e)) => {
+                Err(OmahaRequestError::CupDecoration(e)) => {
                     error!("Unable to decorate HTTP request with CUPv2 parameters! {:?}", e);
+                    Self::yield_state(State::ErrorCheckingForUpdate, co).await;
+                    break Err(UpdateCheckError::OmahaRequest(e.into()));
+                }
+                Err(OmahaRequestError::CupValidation(e)) => {
+                    error!("Unable to validate HTTP response with CUPv2 parameters! {:?}", e);
                     Self::yield_state(State::ErrorCheckingForUpdate, co).await;
                     break Err(UpdateCheckError::OmahaRequest(e.into()));
                 }
@@ -1230,10 +1240,15 @@ where
         builder: &RequestBuilder<'a>,
         co: &mut async_generator::Yield<StateMachineEvent>,
     ) -> Result<(Parts, Vec<u8>), OmahaRequestError> {
-        let (request, _request_metadata) = builder.build(self.cup_handler.as_ref())?;
-        let (parts, body) = Self::make_request(&mut self.http, request).await?.into_parts();
+        let (request, request_metadata) = builder.build(self.cup_handler.as_ref())?;
+        let response = Self::make_request(&mut self.http, request).await?;
 
-        // TODO: here, use request metadata to validate CUPv2 response.
+        if let (Some(handler), Some(metadata)) = (self.cup_handler.as_ref(), request_metadata) {
+            let () =
+                handler.verify_response(&metadata.hash(), &response, metadata.public_key_id)?;
+        }
+
+        let (parts, body) = response.into_parts();
 
         // Clients MUST respect this header even if paired with non-successful HTTP response code.
         let server_dictated_poll_interval = parts.headers.get(X_RETRY_AFTER).and_then(|header| {
@@ -1397,10 +1412,9 @@ where
     /// Run perform_update_check once, returning the update check result.
     async fn oneshot(
         &mut self,
+        request_params: RequestParams,
     ) -> Result<(update_check::Response, RebootAfterUpdate<IN::InstallResult>), UpdateCheckError>
     {
-        let request_params = RequestParams::default();
-
         let apps = self.app_set.lock().await.get_apps();
 
         async_generator::generate(move |mut co| async move {
@@ -1435,7 +1449,7 @@ mod tests {
             App, CheckOptions, PersistedApp, ProtocolState, UpdateCheckSchedule, UserCounting,
         },
         configuration::Updater,
-        cup_ecdsa::test_support::make_cup_handler_for_test,
+        cup_ecdsa::test_support::{make_cup_handler_for_test, MockCupv2Handler},
         http_request::mock::MockHttpRequest,
         installer::{
             stub::{StubInstallErrors, StubInstaller, StubPlan},
@@ -1485,6 +1499,23 @@ mod tests {
         HttpResponse::new(serde_json::to_vec(&response).unwrap())
     }
 
+    fn make_noupdate_httpresponse() -> Vec<u8> {
+        serde_json::to_vec(
+            &(json!({"response":{
+              "server": "prod",
+              "protocol": "3.0",
+              "app": [{
+                "appid": "{00000000-0000-0000-0000-000000000001}",
+                "status": "ok",
+                "updatecheck": {
+                  "status": "noupdate"
+                }
+              }]
+            }})),
+        )
+        .unwrap()
+    }
+
     // Assert that the last request made to |http| is equal to the request built by
     // |request_builder|.
     async fn assert_request<'a>(http: &MockHttpRequest, request_builder: RequestBuilder<'a>) {
@@ -1499,21 +1530,13 @@ mod tests {
     #[test]
     fn run_simple_check_with_noupdate_result() {
         block_on(async {
-            let response = json!({"response":{
-              "server": "prod",
-              "protocol": "3.0",
-              "app": [{
-                "appid": "{00000000-0000-0000-0000-000000000001}",
-                "status": "ok",
-                "updatecheck": {
-                  "status": "noupdate"
-                }
-              }]
-            }});
-            let response = serde_json::to_vec(&response).unwrap();
-            let http = MockHttpRequest::new(HttpResponse::new(response));
+            let http = MockHttpRequest::new(HttpResponse::new(make_noupdate_httpresponse()));
 
-            StateMachineBuilder::new_stub().http(http).oneshot().await.unwrap();
+            StateMachineBuilder::new_stub()
+                .http(http)
+                .oneshot(RequestParams::default())
+                .await
+                .unwrap();
 
             info!("update check complete!");
         });
@@ -1538,8 +1561,11 @@ mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(HttpResponse::new(response));
 
-            let (response, reboot_after_update) =
-                StateMachineBuilder::new_stub().http(http).oneshot().await.unwrap();
+            let (response, reboot_after_update) = StateMachineBuilder::new_stub()
+                .http(http)
+                .oneshot(RequestParams::default())
+                .await
+                .unwrap();
             assert_eq!("{00000000-0000-0000-0000-000000000001}", response.app_responses[0].app_id);
             assert_eq!(Some("1".into()), response.app_responses[0].cohort.id);
             assert_eq!(Some("stable-channel".into()), response.app_responses[0].cohort.name);
@@ -1568,8 +1594,11 @@ mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(HttpResponse::new(response));
 
-            let (response, reboot_after_update) =
-                StateMachineBuilder::new_stub().http(http).oneshot().await.unwrap();
+            let (response, reboot_after_update) = StateMachineBuilder::new_stub()
+                .http(http)
+                .oneshot(RequestParams::default())
+                .await
+                .unwrap();
             assert_eq!("{00000000-0000-0000-0000-000000000001}", response.app_responses[0].app_id);
             assert_eq!(Some("1".into()), response.app_responses[0].cohort.id);
             assert_eq!(Some("stable-channel".into()), response.app_responses[0].cohort.name);
@@ -1586,7 +1615,7 @@ mod tests {
 
             let mut state_machine = StateMachineBuilder::new_stub().http(http).build().await;
 
-            let response = state_machine.oneshot().await;
+            let response = state_machine.oneshot(RequestParams::default()).await;
             assert_matches!(response, Err(UpdateCheckError::ResponseParser(_)));
 
             let request_params = RequestParams::default();
@@ -1623,7 +1652,7 @@ mod tests {
 
             let mut state_machine = StateMachineBuilder::new_stub().http(http).build().await;
 
-            let response = state_machine.oneshot().await;
+            let response = state_machine.oneshot(RequestParams::default()).await;
             assert_matches!(response, Err(UpdateCheckError::InstallPlan(_)));
 
             let request_params = RequestParams::default();
@@ -1673,7 +1702,8 @@ mod tests {
                 .build()
                 .await;
 
-            let (response, reboot_after_update) = state_machine.oneshot().await.unwrap();
+            let (response, reboot_after_update) =
+                state_machine.oneshot(RequestParams::default()).await.unwrap();
             assert_eq!(Action::InstallPlanExecutionError, response.app_responses[0].result);
             assert_matches!(reboot_after_update, RebootAfterUpdate::NotNeeded);
 
@@ -1765,7 +1795,8 @@ mod tests {
             };
 
             let (oneshot_result, ()) =
-                future::join(state_machine.oneshot(), recv_install_fut).await;
+                future::join(state_machine.oneshot(RequestParams::default()), recv_install_fut)
+                    .await;
             let (response, reboot_after_update) = oneshot_result.unwrap();
 
             assert_eq!("appid_3", response.app_responses[0].app_id);
@@ -1859,7 +1890,8 @@ mod tests {
                 .build()
                 .await;
 
-            let (response, reboot_after_update) = state_machine.oneshot().await.unwrap();
+            let (response, reboot_after_update) =
+                state_machine.oneshot(RequestParams::default()).await.unwrap();
             assert_eq!(Action::DeferredByPolicy, response.app_responses[0].result);
             assert_matches!(reboot_after_update, RebootAfterUpdate::NotNeeded);
 
@@ -1896,7 +1928,8 @@ mod tests {
                 .build()
                 .await;
 
-            let (response, reboot_after_update) = state_machine.oneshot().await.unwrap();
+            let (response, reboot_after_update) =
+                state_machine.oneshot(RequestParams::default()).await.unwrap();
             assert_eq!(Action::DeniedByPolicy, response.app_responses[0].result);
             assert_matches!(reboot_after_update, RebootAfterUpdate::NotNeeded);
 
@@ -2014,8 +2047,11 @@ mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(HttpResponse::new(response));
 
-            let (response, reboot_after_update) =
-                StateMachineBuilder::new_stub().http(http).oneshot().await.unwrap();
+            let (response, reboot_after_update) = StateMachineBuilder::new_stub()
+                .http(http)
+                .oneshot(RequestParams::default())
+                .await
+                .unwrap();
 
             assert_eq!(
                 UserCounting::ClientRegulatedByDate(Some(1234567)),
@@ -2156,7 +2192,7 @@ mod tests {
             let _response = StateMachineBuilder::new_stub()
                 .http(http)
                 .metrics_reporter(&mut metrics_reporter)
-                .oneshot()
+                .oneshot(RequestParams::default())
                 .await;
 
             // FIXME(https://github.com/rust-lang/rustfmt/issues/4530) rustfmt doesn't wrap slice
@@ -2186,7 +2222,7 @@ mod tests {
             let mut metrics_reporter = MockMetricsReporter::new();
             let _response = StateMachineBuilder::new_stub()
                 .metrics_reporter(&mut metrics_reporter)
-                .oneshot()
+                .oneshot(RequestParams::default())
                 .await;
 
             // FIXME(https://github.com/rust-lang/rustfmt/issues/4530) rustfmt doesn't wrap slice
@@ -2219,7 +2255,7 @@ mod tests {
             let _response = StateMachineBuilder::new_stub()
                 .http(http)
                 .metrics_reporter(&mut metrics_reporter)
-                .oneshot()
+                .oneshot(RequestParams::default())
                 .await;
 
             // FIXME(https://github.com/rust-lang/rustfmt/issues/4530) rustfmt doesn't wrap slice
@@ -2251,7 +2287,7 @@ mod tests {
             let _response = StateMachineBuilder::new_stub()
                 .http(http)
                 .metrics_reporter(&mut metrics_reporter)
-                .oneshot()
+                .oneshot(RequestParams::default())
                 .await;
 
             // FIXME(https://github.com/rust-lang/rustfmt/issues/4530) rustfmt doesn't wrap slice
@@ -2283,7 +2319,7 @@ mod tests {
             let mut metrics_reporter = MockMetricsReporter::new();
             let _response = StateMachineBuilder::new_stub()
                 .metrics_reporter(&mut metrics_reporter)
-                .oneshot()
+                .oneshot(RequestParams::default())
                 .await;
 
             assert!(metrics_reporter
@@ -2307,7 +2343,7 @@ mod tests {
             let _response = StateMachineBuilder::new_stub()
                 .http(http)
                 .metrics_reporter(&mut metrics_reporter)
-                .oneshot()
+                .oneshot(RequestParams::default())
                 .await;
 
             assert!(!metrics_reporter.metrics.is_empty());
@@ -2334,7 +2370,7 @@ mod tests {
             let _response = StateMachineBuilder::new_stub()
                 .http(http)
                 .metrics_reporter(&mut metrics_reporter)
-                .oneshot()
+                .oneshot(RequestParams::default())
                 .await;
 
             assert!(!metrics_reporter.metrics.is_empty());
@@ -2355,7 +2391,7 @@ mod tests {
             let response = StateMachineBuilder::new_stub()
                 .http(MockHttpRequest::empty())
                 .timer(timer)
-                .oneshot()
+                .oneshot(RequestParams::default())
                 .await;
 
             let waits = requested_waits.borrow();
@@ -2433,20 +2469,10 @@ mod tests {
     #[test]
     fn test_persist_server_dictated_poll_interval() {
         block_on(async {
-            let response = json!({"response":{
-              "server": "prod",
-              "protocol": "3.0",
-              "app": [{
-                "appid": "{00000000-0000-0000-0000-000000000001}",
-                "status": "ok",
-                "updatecheck": {
-                  "status": "noupdate"
-                }
-              }]
-            }});
-            let response = serde_json::to_vec(&response).unwrap();
-            let response =
-                HttpResponse::builder().header(X_RETRY_AFTER, 1234).body(response).unwrap();
+            let response = HttpResponse::builder()
+                .header(X_RETRY_AFTER, 1234)
+                .body(make_noupdate_httpresponse())
+                .unwrap();
             let http = MockHttpRequest::new(response);
             let storage = Rc::new(Mutex::new(MemStorage::new()));
 
@@ -2455,7 +2481,7 @@ mod tests {
                 .storage(Rc::clone(&storage))
                 .build()
                 .await;
-            state_machine.oneshot().await.unwrap();
+            state_machine.oneshot(RequestParams::default()).await.unwrap();
 
             assert_eq!(
                 state_machine.context.state.server_dictated_poll_interval,
@@ -2485,7 +2511,7 @@ mod tests {
                 .build()
                 .await;
             assert_matches!(
-                state_machine.oneshot().await,
+                state_machine.oneshot(RequestParams::default()).await,
                 Err(UpdateCheckError::OmahaRequest(OmahaRequestError::HttpStatus(_)))
             );
 
@@ -2517,7 +2543,7 @@ mod tests {
                 .build()
                 .await;
             assert_matches!(
-                state_machine.oneshot().await,
+                state_machine.oneshot(RequestParams::default()).await,
                 Err(UpdateCheckError::OmahaRequest(OmahaRequestError::HttpStatus(_)))
             );
 
@@ -2551,7 +2577,7 @@ mod tests {
             // return the transport error on the first request, any additional requests will get
             // HttpStatus error.
             assert_matches!(
-                state_machine.oneshot().await,
+                state_machine.oneshot(RequestParams::default()).await,
                 Err(UpdateCheckError::OmahaRequest(OmahaRequestError::HttpTransport(_)))
             );
 
@@ -3920,7 +3946,7 @@ mod tests {
                     .http(http)
                     .policy_engine(StubPolicyEngine::new(mock_time.clone()))
                     .storage(Rc::clone(&storage))
-                    .oneshot()
+                    .oneshot(RequestParams::default())
             ),
             Ok(_)
         );
@@ -3970,5 +3996,71 @@ mod tests {
             assert_eq!(storage.get_string(TARGET_VERSION).await, None);
             assert!(storage.committed());
         })
+    }
+
+    // The same as |run_simple_check_with_noupdate_result|, but with CUPv2 protocol validation.
+    #[test]
+    fn run_cup_but_decoration_error() {
+        block_on(async {
+            let http = MockHttpRequest::new(HttpResponse::new(make_noupdate_httpresponse()));
+
+            let stub_cup_handler = MockCupv2Handler::new().set_decoration_error(|| {
+                Some(CupDecorationError::ParseError(url::ParseError::EmptyHost))
+            });
+
+            assert_matches!(
+                StateMachineBuilder::new_stub()
+                    .http(http)
+                    .cup_handler(Some(stub_cup_handler))
+                    .oneshot(RequestParams { cup_sign_requests: true, ..RequestParams::default() })
+                    .await,
+                Err(UpdateCheckError::OmahaRequest(OmahaRequestError::CupDecoration(
+                    CupDecorationError::ParseError(url::ParseError::EmptyHost)
+                )))
+            );
+
+            info!("update check complete!");
+        });
+    }
+
+    #[test]
+    fn run_cup_but_verification_error() {
+        block_on(async {
+            let http = MockHttpRequest::new(HttpResponse::new(make_noupdate_httpresponse()));
+
+            let stub_cup_handler = MockCupv2Handler::new()
+                .set_verification_error(|| Some(CupVerificationError::EtagHeaderMissing));
+
+            assert_matches!(
+                StateMachineBuilder::new_stub()
+                    .http(http)
+                    .cup_handler(Some(stub_cup_handler))
+                    .oneshot(RequestParams { cup_sign_requests: true, ..RequestParams::default() })
+                    .await,
+                Err(UpdateCheckError::OmahaRequest(OmahaRequestError::CupValidation(
+                    CupVerificationError::EtagHeaderMissing
+                )))
+            );
+
+            info!("update check complete!");
+        });
+    }
+
+    #[test]
+    fn run_cup_valid() {
+        block_on(async {
+            let http = MockHttpRequest::new(HttpResponse::new(make_noupdate_httpresponse()));
+
+            assert_matches!(
+                StateMachineBuilder::new_stub()
+                    .http(http)
+                    // Default stub_cup_handler, which is permissive.
+                    .oneshot(RequestParams { cup_sign_requests: true, ..RequestParams::default() })
+                    .await,
+                Ok(_)
+            );
+
+            info!("update check complete!");
+        });
     }
 }

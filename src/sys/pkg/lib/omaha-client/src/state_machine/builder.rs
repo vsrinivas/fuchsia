@@ -22,7 +22,7 @@ use std::rc::Rc;
 use crate::{
     app_set::VecAppSet,
     common::App,
-    cup_ecdsa::test_support::StubCupv2Handler,
+    cup_ecdsa::test_support::MockCupv2Handler,
     http_request::StubHttpRequest,
     installer::stub::{StubInstaller, StubPlan},
     metrics::StubMetricsReporter,
@@ -332,8 +332,9 @@ where
     #[cfg(test)]
     pub(super) async fn oneshot(
         self,
+        request_params: RequestParams,
     ) -> Result<(update_check::Response, RebootAfterUpdate<IR>), UpdateCheckError> {
-        self.build().await.oneshot().await
+        self.build().await.oneshot(request_params).await
     }
 }
 
@@ -347,7 +348,7 @@ impl
         StubMetricsReporter,
         StubStorage,
         VecAppSet,
-        StubCupv2Handler,
+        MockCupv2Handler,
     >
 {
     /// Create a new StateMachine with stub implementations and configuration.
@@ -372,6 +373,6 @@ impl
             config,
             Rc::new(Mutex::new(app_set)),
         )
-        .cup_handler(Some(StubCupv2Handler {}))
+        .cup_handler(Some(MockCupv2Handler::new()))
     }
 }
