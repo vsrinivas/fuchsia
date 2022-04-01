@@ -93,15 +93,16 @@ void AmlTdmOutDevice::Initialize() {
       pad1 = EE_AUDIO_MST_PAD_CTRL1_D3G;
       break;
   }
+  // Only modify the part of the MST PAD register that corresponds to the engine in use.
   switch (tdm_ch_) {
     case TDM_OUT_A:
-      mmio_.Write32((mclk_ch_ << 16) | (mclk_ch_ << 0), pad1);
+      mmio_.ModifyBits32((mclk_ch_ << 16) | (mclk_ch_ << 0), (7 << 16) | (7 << 0), pad1);
       break;
     case TDM_OUT_B:
-      mmio_.Write32((mclk_ch_ << 20) | (mclk_ch_ << 4), pad1);
+      mmio_.ModifyBits32((mclk_ch_ << 20) | (mclk_ch_ << 4), (7 << 20) | (7 << 4), pad1);
       break;
     case TDM_OUT_C:
-      mmio_.Write32((mclk_ch_ << 24) | (mclk_ch_ << 8), pad1);
+      mmio_.ModifyBits32((mclk_ch_ << 24) | (mclk_ch_ << 8), (7 << 24) | (7 << 8), pad1);
       break;
   }
 }

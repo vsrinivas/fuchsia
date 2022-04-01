@@ -1019,6 +1019,49 @@ TEST(AmlG12Tdm, I2sOutCodecsChannelsActive) {
   enable_gpio.VerifyAndClear();
 }
 
+TEST(AmlG12Tdm, I2sOutSetMclks) {
+  auto fake_parent = MockDevice::FakeRootParent();
+
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
+  auto* child_dev1 = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev1);
+  auto codec1 = child_dev1->GetDeviceContext<CodecTest>();
+  auto codec1_proto = codec1->GetProto();
+
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
+  auto* child_dev2 = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev2);
+  auto codec2 = child_dev2->GetDeviceContext<CodecTest>();
+  auto codec2_proto = codec2->GetProto();
+
+  constexpr size_t kRegSize = S905D2_EE_AUDIO_LENGTH / sizeof(uint32_t);  // in 32 bits chunks.
+  fbl::Array<ddk_mock::MockMmioReg> regs =
+      fbl::Array(new ddk_mock::MockMmioReg[kRegSize], kRegSize);
+  ddk_mock::MockMmioRegRegion mock(regs.data(), sizeof(uint32_t), kRegSize);
+
+  // HW Initialize the MCLK pads. EE_AUDIO_MST_PAD_CTRL0.
+  mock[0x01C].ExpectRead(0x00000000).ExpectWrite(0x00000002);  // MCLK C for PAD 0.
+
+  // HW Initialize the MCLK pads. EE_AUDIO_MST_PAD_CTRL1.
+  // Set 3 bits twice to MCLK C (2) and leave other configurations unchanged.
+  mock[0x020].ExpectRead(0xffffffff).ExpectWrite(0xfafffaff);  // MCLK C for PAD 1.
+
+  ddk::PDev unused_pdev;
+  ddk::MockGpio enable_gpio;
+  enable_gpio.ExpectWrite(ZX_OK, 0);
+  std::vector<codec_protocol_t*> codec_protocols = {&codec1_proto, &codec2_proto};
+
+  auto controller = audio::SimpleAudioStream::Create<AmlG12I2sOutTest>(
+      fake_parent.get(), codec_protocols, mock, unused_pdev, enable_gpio.GetProto());
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+
+  child_dev->UnbindOp();
+  EXPECT_TRUE(child_dev->UnbindReplyCalled());
+  enable_gpio.VerifyAndClear();
+  mock.VerifyAll();
+}
+
 TEST(AmlG12Tdm, I2sOutChangeRate96K) {
   auto fake_parent = MockDevice::FakeRootParent();
 
