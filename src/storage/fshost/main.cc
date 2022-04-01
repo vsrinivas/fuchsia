@@ -141,7 +141,7 @@ int RamctlWatcher(void* arg) {
 // Initialize the fshost namespace.
 //
 // |fs_root_client| is mapped to "/fs", and represents the filesystem of devmgr.
-zx_status_t BindNamespace(zx::channel fs_root_client) {
+zx_status_t BindNamespace(fidl::ClientEnd<fio::Directory> fs_root_client) {
   fdio_ns_t* ns;
   zx_status_t status;
   if ((status = fdio_ns_get_installed(&ns)) != ZX_OK) {
@@ -150,7 +150,7 @@ zx_status_t BindNamespace(zx::channel fs_root_client) {
   }
 
   // Bind "/fs".
-  if ((status = fdio_ns_bind(ns, "/fs", fs_root_client.release())) != ZX_OK) {
+  if ((status = fdio_ns_bind(ns, "/fs", fs_root_client.TakeChannel().release())) != ZX_OK) {
     FX_LOGS(ERROR) << "cannot bind /fs to namespace: " << status;
     return status;
   }
@@ -232,8 +232,10 @@ int Main(bool disable_block_watcher, bool ignore_component_config) {
   }
 
   // Initialize the local filesystem in isolation.
-  zx::channel dir_request(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
-  zx::channel lifecycle_request(zx_take_startup_handle(PA_LIFECYCLE));
+  fidl::ServerEnd<fio::Directory> dir_request{
+      zx::channel{zx_take_startup_handle(PA_DIRECTORY_REQUEST)}};
+  fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle_request{
+      zx::channel{zx_take_startup_handle(PA_LIFECYCLE)}};
 
   auto metrics = DefaultMetrics();
   FsManager fs_manager(boot_args, std::move(metrics));
@@ -252,11 +254,13 @@ int Main(bool disable_block_watcher, bool ignore_component_config) {
   }
 
   // Serve the root filesystems in our own namespace.
-  zx::channel fs_root_client, fs_root_server;
-  status = zx::channel::create(0, &fs_root_client, &fs_root_server);
-  if (status != ZX_OK) {
+  zx::status create_fs_root = fidl::CreateEndpoints<fio::Directory>();
+  if (create_fs_root.is_error()) {
+    FX_PLOGS(ERROR, create_fs_root.status_value()) << "Cannot create root filesystem channel";
     return EXIT_FAILURE;
   }
+  auto [fs_root_client, fs_root_server] = std::move(create_fs_root).value();
+
   status = fs_manager.ServeRoot(std::move(fs_root_server));
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Cannot serve devmgr's root filesystem";
