@@ -66,15 +66,5 @@ func NewSpecialProject(projectRootPath string) (*Project, error) {
 	plusVal(NumProjects, p.Root)
 	AllProjects[p.Root] = p
 
-	shouldInclude, err := Config.shouldInclude(p)
-	if err != nil {
-		return nil, err
-	}
-	if shouldInclude {
-		plusVal(NumFilteredProjects, p.Root)
-		FilteredProjects[p.Root] = p
-	} else {
-		plusVal(NumSkippedProjects, p.Root)
-	}
 	return p, nil
 }

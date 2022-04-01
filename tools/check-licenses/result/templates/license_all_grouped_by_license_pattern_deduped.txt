@@ -8,6 +8,10 @@ The following license text(s) applies to these projects:
 {{ range $_, $projectName := $projectTextMap.SortedNames }}
  • {{ $projectName }}{{ end }}
 
+The above project include the following files:
+{{ range $_, $fileName := $projectTextMap.SortedPaths }}
+ • {{ $fileName }}{{ end }}
+
 {{ printf "%s" $projectTextMap.LicenseText}}
 {{ end }}
 ================================================================================

@@ -7,13 +7,8 @@ import("//build/testing/host_test_data.gni")
 if (is_host) {
   host_test_data("testdata") {
     sources = [
-      "empty/README.fuchsia",
       "happy/README.fuchsia",
-      "incorrectformat/README.fuchsia",
-      "incorrectlicense/README.fuchsia",
       "multiline/README.fuchsia",
-      "nolicense/README.fuchsia",
-      "noname/README.fuchsia",
     ]
     outputs = [ "$root_gen_dir/{{source}}" ]
   }

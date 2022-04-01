@@ -15,51 +15,6 @@ import (
 
 var testDataDir = flag.String("test_data_dir", "", "Path to test data directory")
 
-func TestEmptyReadmeFile(t *testing.T) {
-	setup()
-	path := filepath.Join(*testDataDir, "empty", "README.fuchsia")
-	_, err := NewProject(path, filepath.Dir(path))
-	if err == nil {
-		t.Errorf("%v: expected error, got nil.", t.Name())
-	}
-}
-
-func TestEmptyNameField(t *testing.T) {
-	setup()
-	path := filepath.Join(*testDataDir, "noname", "README.fuchsia")
-	_, err := NewProject(path, filepath.Dir(path))
-	if err == nil {
-		t.Errorf("%v: expected error, got nil.", t.Name())
-	}
-}
-
-func TestEmptyLicenseField(t *testing.T) {
-	setup()
-	path := filepath.Join(*testDataDir, "nolicense", "README.fuchsia")
-	_, err := NewProject(path, filepath.Dir(path))
-	if err == nil {
-		t.Errorf("%v: expected error, got nil.", t.Name())
-	}
-}
-
-func TestMissingLicenseFile(t *testing.T) {
-	setup()
-	path := filepath.Join(*testDataDir, "missinglicense", "README.fuchsia")
-	_, err := NewProject(path, filepath.Dir(path))
-	if err == nil {
-		t.Errorf("%v: expected error, got nil.", t.Name())
-	}
-}
-
-func TestIncorrectFormat(t *testing.T) {
-	setup()
-	path := filepath.Join(*testDataDir, "incorrectformat", "README.fuchsia")
-	_, err := NewProject(path, filepath.Dir(path))
-	if err == nil {
-		t.Errorf("%v: expected error, got nil.", t.Name())
-	}
-}
-
 func TestNameLicenseProvided(t *testing.T) {
 	setup()
 	name := "Test Readme Project"

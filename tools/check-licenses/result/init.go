@@ -33,7 +33,7 @@ func initializeTemplates() error {
 				}
 
 				if !info.IsDir() {
-					if temp, err := template.New(filepath.Base(currentPath)).Funcs(templateFunctions).ParseFiles(currentPath); err != nil {
+					if temp, err := template.New(filepath.Base(currentPath)).ParseFiles(currentPath); err != nil {
 						return err
 					} else {
 						relPath, err := filepath.Rel(templatePath, currentPath)

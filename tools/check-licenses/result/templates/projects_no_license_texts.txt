@@ -1,8 +1,0 @@
-{{ range $_, $project := .Projects }}
-================================================================================
-{{ $project.Name }}
-{{ $project.ReadmePath }}
-{{ range $_, $sr:= $project.SearchResults}}
---------------------------------------------------------------------------------
-{{ $sr.LicenseData.FilePath }} ->[{{$sr.LicenseData.LineNumber }}] {{ $sr.LicenseData.LibraryName }}{{ end }}
-{{ end }}

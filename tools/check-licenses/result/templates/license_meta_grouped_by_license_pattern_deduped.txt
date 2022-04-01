@@ -1,15 +1,15 @@
-{{ range $_, $pattern := ( getDedupedPatterns . ) }}
+{{ range $_, $pattern := .GroupByPattern }}
 ================================================================================
-License Category: {{ $pattern.Type }}
+License Category: {{ $pattern.PatternType }}
 
 {{ range $_, $projectTextMap := $pattern.Sorted }}
 --------------------------------------------------------------------------------
 The following license text(s) applies to these projects:
-{{ range $_, $projectName := $projectTextMap.SortedProjectNames }}
+{{ range $_, $projectName := $projectTextMap.SortedNames }}
  • {{ $projectName }}{{ end }}
 
 The above project include the following files:
-{{ range $_, $fileName := $projectTextMap.SortedFileNames }}
+{{ range $_, $fileName := $projectTextMap.SortedPaths }}
  • {{ $fileName }}{{ end }}
 {{ end }}
 ================================================================================
