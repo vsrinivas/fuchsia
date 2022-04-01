@@ -44,18 +44,6 @@ constexpr zx_handle_t kDummyMlmeChannel = 73939133;  // An arbitrary value not Z
 
 using recv_cb_t = mock_function::MockFunction<void, void*, const wlan_rx_packet_t*>;
 
-// Short-cut to access the iwl_cfg80211_rates[] structure and convert it to 802.11 rate.
-//
-// Args:
-//   index: the index of iwl_cfg80211_rates[].
-//
-// Returns:
-//   the 802.11 rate.
-//
-static unsigned expected_rate(size_t index) {
-  return cfg_rates_to_80211(iwl_cfg80211_rates[index]);
-}
-
 // The wrapper used by wlan_softmac_ifc_t.recv() to call mock-up.
 void recv_wrapper(void* cookie, const wlan_rx_packet_t* packet) {
   auto recv = reinterpret_cast<recv_cb_t*>(cookie);
@@ -136,8 +124,8 @@ TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityList) {
   EXPECT_EQ(WLAN_BAND_TWO_GHZ, band_cap->band);
   EXPECT_EQ(true, band_cap->ht_supported);
   EXPECT_EQ(12, band_cap->basic_rate_count);
-  EXPECT_EQ(expected_rate(0), band_cap->basic_rate_list[0]);    // 1Mbps
-  EXPECT_EQ(expected_rate(11), band_cap->basic_rate_list[11]);  // 54Mbps
+  EXPECT_EQ(2, band_cap->basic_rate_list[0]);     // 1Mbps
+  EXPECT_EQ(108, band_cap->basic_rate_list[11]);  // 54Mbps
   EXPECT_EQ(13, band_cap->operating_channel_count);
   EXPECT_EQ(1, band_cap->operating_channel_list[0]);
   EXPECT_EQ(13, band_cap->operating_channel_list[12]);
@@ -146,8 +134,8 @@ TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityList) {
   EXPECT_EQ(WLAN_BAND_FIVE_GHZ, band_cap->band);
   EXPECT_EQ(true, band_cap->ht_supported);
   EXPECT_EQ(8, band_cap->basic_rate_count);
-  EXPECT_EQ(expected_rate(4), band_cap->basic_rate_list[0]);   // 6Mbps
-  EXPECT_EQ(expected_rate(11), band_cap->basic_rate_list[7]);  // 54Mbps
+  EXPECT_EQ(12, band_cap->basic_rate_list[0]);   // 6Mbps
+  EXPECT_EQ(108, band_cap->basic_rate_list[7]);  // 54Mbps
   EXPECT_EQ(25, band_cap->operating_channel_count);
   EXPECT_EQ(36, band_cap->operating_channel_list[0]);
   EXPECT_EQ(165, band_cap->operating_channel_list[24]);
@@ -167,8 +155,8 @@ TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityListOnly5GHz) {
   EXPECT_EQ(WLAN_BAND_FIVE_GHZ, band_cap->band);
   EXPECT_EQ(true, band_cap->ht_supported);
   EXPECT_EQ(8, band_cap->basic_rate_count);
-  EXPECT_EQ(expected_rate(4), band_cap->basic_rate_list[0]);   // 6Mbps
-  EXPECT_EQ(expected_rate(11), band_cap->basic_rate_list[7]);  // 54Mbps
+  EXPECT_EQ(12, band_cap->basic_rate_list[0]);   // 6Mbps
+  EXPECT_EQ(108, band_cap->basic_rate_list[7]);  // 54Mbps
   EXPECT_EQ(25, band_cap->operating_channel_count);
   EXPECT_EQ(36, band_cap->operating_channel_list[0]);
   EXPECT_EQ(165, band_cap->operating_channel_list[24]);
@@ -195,11 +183,11 @@ TEST_F(WlanSoftmacDeviceTest, Query) {
   //
   ASSERT_EQ(2, info.band_cap_count);
   EXPECT_EQ(12, info.band_cap_list[0].basic_rate_count);
-  EXPECT_EQ(expected_rate(0), info.band_cap_list[0].basic_rate_list[0]);    // 1 Mbps
-  EXPECT_EQ(expected_rate(7), info.band_cap_list[0].basic_rate_list[7]);    // 18 Mbps
-  EXPECT_EQ(expected_rate(11), info.band_cap_list[0].basic_rate_list[11]);  // 54 Mbps
+  EXPECT_EQ(2, info.band_cap_list[0].basic_rate_list[0]);     // 1 Mbps
+  EXPECT_EQ(36, info.band_cap_list[0].basic_rate_list[7]);    // 18 Mbps
+  EXPECT_EQ(108, info.band_cap_list[0].basic_rate_list[11]);  // 54 Mbps
   EXPECT_EQ(8, info.band_cap_list[1].basic_rate_count);
-  EXPECT_EQ(expected_rate(4), info.band_cap_list[1].basic_rate_list[0]);  // 6 Mbps
+  EXPECT_EQ(12, info.band_cap_list[1].basic_rate_list[0]);  // 6 Mbps
   EXPECT_EQ(165, info.band_cap_list[1].operating_channel_list[24]);
   EXPECT_EQ(info.driver_features & WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD,
             WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD);

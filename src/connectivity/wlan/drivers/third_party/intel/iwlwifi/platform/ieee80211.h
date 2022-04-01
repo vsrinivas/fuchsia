@@ -191,7 +191,7 @@ struct ieee80211_supported_band {
   wlan_band_t band;
   struct ieee80211_channel* channels;
   size_t n_channels;
-  uint8_t* bitrates;
+  uint16_t* bitrates;
   size_t n_bitrates;
   struct ieee80211_sta_ht_cap ht_cap;
 };

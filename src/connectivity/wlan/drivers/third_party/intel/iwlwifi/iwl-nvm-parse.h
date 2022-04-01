@@ -106,14 +106,14 @@ struct iwl_nvm_data* iwl_get_nvm(struct iwl_trans* trans, const struct iwl_fw* f
 // iwl_cfg80211_rates are defined in units of 100 kbit/s.
 // 802.11 rates are defined in IEEE Std 802.11-2016, 9.4.2.3, which are in units of 500 kbit/s.
 //
-static inline unsigned cfg_rates_to_80211(uint8_t cfg) { return cfg / 5; }
+static inline unsigned cfg_rates_to_80211(uint16_t cfg) { return cfg / 5; }
 
 // extern
-extern uint8_t iwl_cfg80211_rates[];
+extern uint16_t iwl_cfg80211_rates[];
 
 //
 // Get the index of the 'rate' in the iwl_cfg80211_rates[].
 //
-size_t iwl_get_rate_index(uint8_t rate);
+size_t iwl_get_rate_index(uint16_t rate);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_NVM_PARSE_H_
