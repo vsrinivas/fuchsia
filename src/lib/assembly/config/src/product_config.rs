@@ -52,7 +52,7 @@ impl ProductAssemblyConfig {
 
         if let Some(session_url) = &self.product.session_url {
             ensure!(
-                session_url.starts_with("fuchsia-pkg://"),
+                session_url.is_empty() || session_url.starts_with("fuchsia-pkg://"),
                 "valid session URLs must start with `fuchsia-pkg://`, got `{}`",
                 session_url
             );
