@@ -719,7 +719,9 @@ static void traverse_topology(uint32_t) {
 
   // TODO(eieio): Determine this automatically. The current value matches the
   // distance value of the cache above.
-  const CpuDistanceMap::Distance kDistanceThreshold = 2u;
+  // TODO(eieio): Temporarily increase the threshold to include all CPUs in the
+  // same cluster, as QEMU/AEMU tend to report every CPU having a different LLC.
+  const CpuDistanceMap::Distance kDistanceThreshold = 3u;
   CpuDistanceMap::Get().set_distance_threshold(kDistanceThreshold);
 
   CpuDistanceMap::Get().Dump();

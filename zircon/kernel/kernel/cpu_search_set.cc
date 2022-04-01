@@ -184,6 +184,8 @@ void CpuSearchSet::DumpClusters() {
 // crossings while attempting to maximize distribution across CPUs.
 void CpuSearchSet::DoInitialize(cpu_num_t this_cpu, size_t cpu_count, const ClusterSet& cluster_set,
                                 const CpuDistanceMap& map) {
+  this_cpu_ = this_cpu;
+
   // Initialize the search set in increasing ordinal order.
   cpu_count_ = cpu_count;
   for (cpu_num_t i = 0; i < cpu_count; i++) {
@@ -204,6 +206,13 @@ void CpuSearchSet::DoInitialize(cpu_num_t this_cpu, size_t cpu_count, const Clus
   //     found as few times as possible at a given offset in all search lists).
   //
   const auto comparator = [this_cpu, &cluster_set, &map](const Entry& a, const Entry& b) {
+    // TODO(eieio): Temporary hack to put little cores at the beginning of the search sets for
+    // better idle power consumption. This can be removed or revised when a power model is
+    // introduced to better handle power vs. performance tradeoffs.
+    if (perf_scales_[a.cpu] != perf_scales_[b.cpu]) {
+      return perf_scales_[a.cpu] < perf_scales_[b.cpu];
+    }
+
     const auto distance_a = map[{this_cpu, a.cpu}];
     const auto distance_b = map[{this_cpu, b.cpu}];
     if (distance_a != distance_b) {
@@ -232,7 +241,7 @@ void CpuSearchSet::DoInitialize(cpu_num_t this_cpu, size_t cpu_count, const Clus
 }
 
 void CpuSearchSet::Dump() const {
-  dprintf(INFO, "CPU %2" PRIu32 ": ", ordered_cpus_[0].cpu);
+  dprintf(INFO, "CPU %2" PRIu32 ": ", this_cpu_);
   for (cpu_num_t i = 0; i < cpu_count_; i++) {
     dprintf(INFO, "%2" PRIu32 "%s", ordered_cpus_[i].cpu, i < cpu_count_ - 1 ? ", " : "");
   }
