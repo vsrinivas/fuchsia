@@ -246,37 +246,18 @@ impl RepositoryManager {
                     .await
                     .context("reopen /data")?;
 
-            let path = format!("{}.new", dynamic_configs_path);
-            let proxy = io_util::directory::open_file(
+            let temp_path = &format!("{dynamic_configs_path}.new");
+            crate::util::do_with_atomic_file(
                 &data_proxy,
-                &path,
-                fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE | fio::OPEN_FLAG_TRUNCATE,
+                temp_path,
+                &dynamic_configs_path,
+                |proxy| async move {
+                    io_util::file::write(&proxy, &data)
+                        .await
+                        .with_context(|| format!("writing file: {}", temp_path))
+                },
             )
             .await
-            .with_context(|| format!("creating file: {}", path))?;
-
-            io_util::file::write(&proxy, &data)
-                .await
-                .with_context(|| format!("writing file: {}", path))?;
-
-            let () = proxy
-                .sync()
-                .await
-                .context("sending sync request")?
-                .map_err(Status::from_raw)
-                .with_context(|| format!("syncing file: {}", path))?;
-            io_util::file::close(proxy).await.with_context(|| format!("closing file: {}", path))?;
-
-            io_util::directory::rename(&data_proxy, &path, dynamic_configs_path)
-                .await
-                .with_context(|| format!("rename {:?} to {:?}", path, dynamic_configs_path))?;
-
-            data_proxy
-                .sync()
-                .await
-                .context("sending sync request")?
-                .map_err(Status::from_raw)
-                .context("syncing /data")
         }
         .await;
 

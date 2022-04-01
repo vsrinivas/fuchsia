@@ -9,7 +9,6 @@ use {
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_syslog::fx_log_err,
     fuchsia_url::pkg_url::PkgUrl,
-    fuchsia_zircon::Status,
     std::collections::VecDeque,
     thiserror::Error,
 };
@@ -92,34 +91,21 @@ impl RewriteManager {
                     .await
                     .context("opening data-proxy directory")?;
 
-            let temp_filename = dynamic_rules_path.to_owned() + ".new";
-            let file = io_util::directory::open_file(
+            let temp_filename = &format!("{dynamic_rules_path}.new");
+
+            let data = serde_json::to_vec(&config).context("encoding config")?;
+
+            crate::util::do_with_atomic_file(
                 &data_proxy,
-                &temp_filename,
-                fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE | fio::OPEN_FLAG_TRUNCATE,
+                temp_filename,
+                &dynamic_rules_path,
+                |proxy| async move {
+                    io_util::file::write(&proxy, &data)
+                        .await
+                        .with_context(|| format!("writing file: {}", temp_filename))
+                },
             )
             .await
-            .context("opening temp file")?;
-            io_util::file::write(&file, &serde_json::to_vec(&config).context("encoding config")?)
-                .await
-                .context("writing encoded config into temp file")?;
-            let () = file
-                .sync()
-                .await
-                .context("sending sync request")?
-                .map_err(Status::from_raw)
-                .with_context(|| format!("syncing file: {}", temp_filename))?;
-            io_util::file::close(file).await.context("closing temp file")?;
-            io_util::directory::rename(&data_proxy, &temp_filename, &dynamic_rules_path)
-                .await
-                .context("renaming temp file to replace config")?;
-            let () = data_proxy
-                .sync()
-                .await
-                .context("sending post-rename sync request")?
-                .map_err(Status::from_raw)
-                .with_context(|| format!("syncing directory: {}", temp_filename))?;
-            Ok::<(), anyhow::Error>(())
         }
         .await;
 

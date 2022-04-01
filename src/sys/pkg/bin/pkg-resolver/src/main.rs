@@ -43,6 +43,7 @@ mod repository_service;
 mod resolver_service;
 mod rewrite_manager;
 mod rewrite_service;
+mod util;
 
 #[cfg(test)]
 mod test_util;

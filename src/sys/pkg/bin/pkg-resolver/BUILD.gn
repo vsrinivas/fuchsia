@@ -102,6 +102,7 @@ rustc_library("lib") {
     "src/rewrite_manager.rs",
     "src/rewrite_service.rs",
     "src/test_util.rs",
+    "src/util.rs",
   ]
 
   visibility = [
