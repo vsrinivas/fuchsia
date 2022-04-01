@@ -13,18 +13,7 @@ constexpr scenic::Color kParentTappedColor = {0x00, 0x00, 0x00, 0xFF};      // B
 constexpr scenic::Color kChildBackgroundColor = {0xFF, 0x00, 0xFF, 0xFF};   // Pink
 constexpr scenic::Color kChildTappedColor = {0xFF, 0xFF, 0x00, 0xFF};       // Yellow
 
-// TODO(fxb/64201): The new flutter renderer draws overlays as a single, large layer.  Some parts of
-// this layer are fully transparent, so we want the compositor to treat the layer as transparent and
-// blend it with the contents below.
-//
-// The gfx Scenic API only provides one way to mark this layer as transparent which is to set an
-// opacity < 1.0 for the entire layer.  In practice, we use 0.9961 (254 / 255) as an opacity value
-// to force transparency.  Unfortunately this causes the overlay to blend very slightly and it looks
-// wrong.
-//
-// Flatland allows marking a layer as transparent while still using a 1.0 opacity value when
-// blending, so migrating flutter to Flatland will fix this issue.  For now we just hard-code the
-// broken, blended values.
+// TODO(fxb/64201): Remove forced opacity colors when Flatland is enabled.
 constexpr scenic::Color kOverlayBackgroundColor1 = {0x00, 0xFF, 0x0E,
                                                     0xFF};  // Green, blended with blue (FEMU local)
 constexpr scenic::Color kOverlayBackgroundColor2 = {0x0E, 0xFF, 0x0E,
