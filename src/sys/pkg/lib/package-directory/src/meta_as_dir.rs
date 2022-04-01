@@ -259,6 +259,10 @@ mod tests {
                     kind: files_async::DirentKind::Directory
                 },
                 files_async::DirEntry {
+                    name: "fuchsia.abi".to_string(),
+                    kind: files_async::DirentKind::Directory
+                },
+                files_async::DirEntry {
                     name: "package".to_string(),
                     kind: files_async::DirentKind::File
                 }
@@ -326,7 +330,7 @@ mod tests {
         let (_env, meta_as_dir) = TestEnv::new().await;
 
         let (pos, sealed) = meta_as_dir
-            .read_dirents(&TraversalPosition::Start, Box::new(crate::tests::FakeSink::new(4)))
+            .read_dirents(&TraversalPosition::Start, Box::new(crate::tests::FakeSink::new(5)))
             .await
             .expect("read_dirents failed");
         assert_eq!(
@@ -335,6 +339,10 @@ mod tests {
                 (".".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),
                 ("contents".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::File)),
                 ("dir".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),
+                (
+                    "fuchsia.abi".to_string(),
+                    EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)
+                ),
                 ("package".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::File)),
             ]
         );
@@ -367,8 +375,8 @@ mod tests {
             fio::NodeAttributes {
                 mode: fio::MODE_TYPE_DIRECTORY | 0o500,
                 id: 1,
-                content_size: 3,
-                storage_size: 3,
+                content_size: 4,
+                storage_size: 4,
                 link_count: 1,
                 creation_time: 0,
                 modification_time: 0,

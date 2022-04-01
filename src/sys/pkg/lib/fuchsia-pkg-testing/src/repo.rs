@@ -90,6 +90,8 @@ impl<'a> RepositoryBuilder<'a> {
         let mut pm = SpawnBuilder::new()
             .options(fdio::SpawnOptions::CLONE_ALL - fdio::SpawnOptions::CLONE_NAMESPACE)
             .arg("pm")?
+            .arg("-abi-revision")?
+            .arg(version_history::LATEST_VERSION.abi_revision.to_string())?
             .arg("publish")?
             .arg("-lp")?
             .arg("-f=/in/manifests.list")?
@@ -506,9 +508,10 @@ mod tests {
             .path()
             .join("repository_metadata/repo.example.org/1.root.json")
             .exists());
+
         assert!(local_repodir
             .path()
-            .join("blobs/e5/599ccbeeaae753738c54ec0dbe032cad2086727267ce68542451fbd20ef545")
+            .join("blobs/ad/82977cb53c9724b65f6a69cc2110796fe778ed168e2c25b2dbe797e7527a09")
             .exists());
     }
 }

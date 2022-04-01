@@ -12,6 +12,7 @@ use {
     futures::{future::Future, StreamExt},
     io_util::directory::open_directory,
     itertools::Itertools as _,
+    pretty_assertions::assert_eq,
     std::{
         clone::Clone,
         collections::HashSet,
@@ -1062,6 +1063,7 @@ async fn clone_per_package_source(source: PackageSource) {
                     DirEntry { name: "exceeds_max_buf".to_string(), kind: DirentKind::File },
                     DirEntry { name: "file".to_string(), kind: DirentKind::File },
                     DirEntry { name: "package".to_string(), kind: DirentKind::File },
+                    DirEntry { name: "fuchsia.abi".to_string(), kind: DirentKind::Directory },
                     DirEntry { name: "file_0".to_string(), kind: DirentKind::File },
                     DirEntry { name: "file_1".to_string(), kind: DirentKind::File },
                     DirEntry { name: "file_4095".to_string(), kind: DirentKind::File },
@@ -1179,6 +1181,7 @@ async fn read_dirents_per_package_source(source: PackageSource) {
             DirEntry { name: "exceeds_max_buf".to_string(), kind: DirentKind::File },
             DirEntry { name: "file".to_string(), kind: DirentKind::File },
             DirEntry { name: "package".to_string(), kind: DirentKind::File },
+            DirEntry { name: "fuchsia.abi".to_string(), kind: DirentKind::Directory },
             DirEntry { name: "file_0".to_string(), kind: DirentKind::File },
             DirEntry { name: "file_1".to_string(), kind: DirentKind::File },
             DirEntry { name: "file_4095".to_string(), kind: DirentKind::File },

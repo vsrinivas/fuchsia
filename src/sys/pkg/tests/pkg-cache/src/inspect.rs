@@ -500,7 +500,7 @@ async fn package_cache_get() {
                             "state": state,
                             "started-time": AnyProperty,
                             "meta-far-id":
-                                "18e1f8377a0416dec3bfd2dbaf5ad39dda57073f1d27ca8929eef012c0309fc9",
+                                "311ff6cebeff1e3d4c4dbe79c340caee13acea24ad69a20a7dd23b521b8db8c9",
                             "meta-far-length": 42u64,
                         }
                     }
@@ -729,11 +729,11 @@ async fn package_cache_concurrent_gets() {
     assert_matches!(
         values[..],
         [
-            ("c236d12eece5f32d66fa0cd102e5540e76c5e894b4443ded8d443353adf571a7", 42u64),
-            ("e8fa6fdf7ebcfcf6866dfacf8254938e873cb3f26f1c14d7b88c4a5229472495", 7u64)
+            ("0e2fe90610179abbd7e648f0526419d48e226aabaef32e52d79b4cfa4187c880", 42u64),
+            ("31ec29010d421b02992dff997a05786bd000aed369ffa77749c8629fdbeacf05", 7u64)
         ] | [
-            ("e8fa6fdf7ebcfcf6866dfacf8254938e873cb3f26f1c14d7b88c4a5229472495", 7u64),
-            ("c236d12eece5f32d66fa0cd102e5540e76c5e894b4443ded8d443353adf571a7", 42u64)
+            ("31ec29010d421b02992dff997a05786bd000aed369ffa77749c8629fdbeacf05", 7u64),
+            ("0e2fe90610179abbd7e648f0526419d48e226aabaef32e52d79b4cfa4187c880", 42u64)
         ]
     );
     env.stop().await;

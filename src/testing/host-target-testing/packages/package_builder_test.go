@@ -36,6 +36,9 @@ func createTestPackage(t *testing.T, dir string) (*Repository, string) {
 	// Create a config.
 	config := build.TestConfig()
 	t.Logf("Creating meta.far in %s", config.OutputDir)
+
+	config.PkgABIRevision = latestABIRevision()
+
 	build.BuildTestPackage(config)
 	defer os.RemoveAll(filepath.Dir(config.OutputDir))
 
@@ -136,10 +139,11 @@ func TestAddResource(t *testing.T) {
 	}
 
 	expectedFiles := map[string]struct{}{
-		"meta/contents": {},
-		"meta/foo/one":  {},
-		"meta/package":  {},
-		"blah/z":        {},
+		"blah/z":                        {},
+		"meta/contents":                 {},
+		"meta/foo/one":                  {},
+		"meta/fuchsia.abi/abi-revision": {},
+		"meta/package":                  {},
 	}
 	for _, item := range build.TestFiles {
 		expectedFiles[item] = struct{}{}

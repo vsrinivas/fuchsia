@@ -888,13 +888,13 @@ async fn verify_concurrent_resolve() {
 #[fasync::run_singlethreaded(test)]
 async fn merkle_pinned_meta_far_size_different_than_tuf_metadata() {
     let env = TestEnvBuilder::new().build().await;
-    // Content chunks in FARs are 4k aligned, so a meta.far for an empty package will be 8k
-    // because of meta/package (meta/contents is empty).
-    let pkg_8k_tuf = PackageBuilder::new("merkle-pin-size").build().await.unwrap();
-    assert_eq!(pkg_8k_tuf.meta_far().unwrap().metadata().unwrap().len(), 2 * 4096);
+    // Content chunks in FARs are 4k aligned, so a meta.far for an empty package will be 12k
+    // because of meta/package, meta/fuchsia.abi/abi-revision, and meta/contents is empty..
+    let pkg_12k_tuf = PackageBuilder::new("merkle-pin-size").build().await.unwrap();
+    assert_eq!(pkg_12k_tuf.meta_far().unwrap().metadata().unwrap().len(), 3 * 4096);
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
-            .add_package(&pkg_8k_tuf)
+            .add_package(&pkg_12k_tuf)
             .build()
             .await
             .unwrap(),
@@ -902,15 +902,15 @@ async fn merkle_pinned_meta_far_size_different_than_tuf_metadata() {
     let served_repository = Arc::clone(&repo).server().start().unwrap();
 
     // Put the larger, merkle-pinned package in /blobs.
-    let pkg_12k_pinned = PackageBuilder::new("merkle-pin-size")
+    let pkg_16k_pinned = PackageBuilder::new("merkle-pin-size")
         .add_resource_at("meta/zero", &[0u8][..])
         .build()
         .await
         .unwrap();
-    assert_eq!(pkg_12k_pinned.meta_far().unwrap().metadata().unwrap().len(), 3 * 4096);
+    assert_eq!(pkg_16k_pinned.meta_far().unwrap().metadata().unwrap().len(), 4 * 4096);
     std::fs::copy(
-        pkg_12k_pinned.artifacts().join("meta.far"),
-        repo.path().join("blobs").join(pkg_12k_pinned.meta_far_merkle_root().to_string()),
+        pkg_16k_pinned.artifacts().join("meta.far"),
+        repo.path().join("blobs").join(pkg_16k_pinned.meta_far_merkle_root().to_string()),
     )
     .unwrap();
 
@@ -920,11 +920,11 @@ async fn merkle_pinned_meta_far_size_different_than_tuf_metadata() {
 
     let pinned_url = format!(
         "fuchsia-pkg://test/merkle-pin-size?hash={}",
-        pkg_12k_pinned.meta_far_merkle_root()
+        pkg_16k_pinned.meta_far_merkle_root()
     );
     let resolved_pkg =
         env.resolve_package(&pinned_url).await.expect("package to resolve without error");
-    pkg_12k_pinned.verify_contents(&resolved_pkg).await.unwrap();
+    pkg_16k_pinned.verify_contents(&resolved_pkg).await.unwrap();
 
     env.stop().await;
 }

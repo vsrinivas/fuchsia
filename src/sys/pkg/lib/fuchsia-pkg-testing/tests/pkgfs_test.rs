@@ -72,7 +72,7 @@ async fn test_pkgfs_short_write() {
     let pkg = example_package().await;
     assert_eq!(
         pkg.meta_far_merkle_root(),
-        &"b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+        &"dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b"
             .parse::<fuchsia_merkle::Hash>()
             .unwrap()
     );
@@ -81,7 +81,7 @@ async fn test_pkgfs_short_write() {
     {
         let mut to_write = d
             .new_file(
-                "install/pkg/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93",
+                "install/pkg/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b",
                 0600,
             )
             .expect("create install file");
@@ -91,7 +91,7 @@ async fn test_pkgfs_short_write() {
     assert_eq!(
         ls_simple(
             d.list_dir(
-                "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+                "needs/packages/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b"
             )
             .expect("list dir")
         )
@@ -116,7 +116,7 @@ async fn test_pkgfs_short_write() {
     assert_eq!(
         ls_simple(
             d.list_dir(
-                "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+                "needs/packages/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b"
             )
             .expect("list dir")
         )
@@ -140,7 +140,7 @@ async fn test_pkgfs_short_write() {
     // Blob needs no more packages
     assert_error_kind!(
         d.list_dir(
-            "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93",
+            "needs/packages/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b",
         ),
         io::ErrorKind::NotFound,
     );
@@ -149,7 +149,7 @@ async fn test_pkgfs_short_write() {
         .await
         .expect("valid example package");
     let mut file_contents = String::new();
-    d.open_file("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93/a/b")
+    d.open_file("versions/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b/a/b")
         .expect("read package file")
         .read_to_string(&mut file_contents)
         .expect("read package file");
@@ -158,7 +158,7 @@ async fn test_pkgfs_short_write() {
     assert_eq!(
         ls_simple(blobfs_root_dir.list_dir(".").expect("list dir")).expect("list dir contents"),
         [
-            "b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93",
+            "dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b",
             "e5892a9b652ede2e19460a9103fd9cb3417f782a8d29f6c93ec0c31170a94af3"
         ],
     );
@@ -181,7 +181,7 @@ async fn test_pkgfs_restart_install() {
     let pkg = example_package().await;
     assert_eq!(
         pkg.meta_far_merkle_root(),
-        &"b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+        &"dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b"
             .parse::<fuchsia_merkle::Hash>()
             .unwrap()
     );
@@ -189,13 +189,13 @@ async fn test_pkgfs_restart_install() {
     // Start package install
     // first, some checks to see if it's already installed
     assert_error_kind!(
-        d.metadata("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93")
+        d.metadata("versions/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b")
             .map(|m| m.is_dir()),
         io::ErrorKind::NotFound,
     );
     assert_error_kind!(
         d.metadata(
-            "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+            "needs/packages/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b"
         )
         .map(|m| m.is_dir()),
         io::ErrorKind::NotFound,
@@ -205,7 +205,7 @@ async fn test_pkgfs_restart_install() {
         let mut meta_far = pkg.meta_far().expect("meta.far");
         let mut to_write = d
             .new_file(
-                "install/pkg/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93",
+                "install/pkg/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b",
                 0600,
             )
             .expect("create install file");
@@ -215,7 +215,7 @@ async fn test_pkgfs_restart_install() {
     assert_eq!(
         ls_simple(
             d.list_dir(
-                "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+                "needs/packages/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b"
             )
             .expect("list dir")
         )
@@ -240,7 +240,7 @@ async fn test_pkgfs_restart_install() {
     assert_eq!(
         ls_simple(
             d.list_dir(
-                "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+                "needs/packages/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b"
             )
             .expect("list dir")
         )
@@ -255,13 +255,13 @@ async fn test_pkgfs_restart_install() {
 
     // Restart package install
     assert_error_kind!(
-        d.metadata("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93")
+        d.metadata("versions/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b")
             .map(|m| m.is_dir()),
         io::ErrorKind::NotFound
     );
     assert_error_kind!(
         d.metadata(
-            "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+            "needs/packages/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b"
         )
         .map(|m| m.is_dir()),
         io::ErrorKind::NotFound
@@ -270,7 +270,7 @@ async fn test_pkgfs_restart_install() {
     // Retry installing meta.far (fails with AlreadyExists)
     assert_error_kind!(
         d.new_file(
-            "install/pkg/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93",
+            "install/pkg/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b",
             0600,
         )
         .map(|_| ()),
@@ -278,14 +278,14 @@ async fn test_pkgfs_restart_install() {
     );
 
     assert_error_kind!(
-        d.metadata("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93")
+        d.metadata("versions/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b")
             .map(|m| m.is_dir()),
         io::ErrorKind::NotFound
     );
     // Check needs again.
     assert_eq!(
         d.metadata(
-            "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+            "needs/packages/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b"
         )
         .map(|m| m.is_dir())
         .map_err(|e| format!("{:?}", e)),
@@ -297,7 +297,7 @@ async fn test_pkgfs_restart_install() {
     assert_eq!(
         ls_simple(
             d.list_dir(
-                "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+                "needs/packages/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b"
             )
             .expect("list dir")
         )
@@ -321,7 +321,7 @@ async fn test_pkgfs_restart_install() {
     // Blob Needs no more packages
     assert_error_kind!(
         d.list_dir(
-            "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+            "needs/packages/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b"
         ),
         io::ErrorKind::NotFound
     );
@@ -330,7 +330,7 @@ async fn test_pkgfs_restart_install() {
         .await
         .expect("valid example package");
     let mut file_contents = String::new();
-    d.open_file("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93/a/b")
+    d.open_file("versions/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b/a/b")
         .expect("read versions file")
         .read_to_string(&mut file_contents)
         .expect("read versions file");
@@ -339,7 +339,7 @@ async fn test_pkgfs_restart_install() {
     assert_eq!(
         ls_simple(blobfs_root_dir.list_dir(".").expect("list dir")).expect("list dir contents"),
         [
-            "b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93",
+            "dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b",
             "e5892a9b652ede2e19460a9103fd9cb3417f782a8d29f6c93ec0c31170a94af3"
         ],
     );
@@ -362,7 +362,7 @@ async fn test_pkgfs_restart_install_already_done() {
     let pkg = example_package().await;
     assert_eq!(
         pkg.meta_far_merkle_root(),
-        &"b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+        &"dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b"
             .parse::<fuchsia_merkle::Hash>()
             .unwrap()
     );
@@ -370,13 +370,13 @@ async fn test_pkgfs_restart_install_already_done() {
     // Start package install
     // first, some checks to see if it's already installed
     assert_error_kind!(
-        d.metadata("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93")
+        d.metadata("versions/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b")
             .map(|m| m.is_dir()),
         io::ErrorKind::NotFound
     );
     assert_error_kind!(
         d.metadata(
-            "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+            "needs/packages/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b"
         )
         .map(|m| m.is_dir()),
         io::ErrorKind::NotFound
@@ -386,7 +386,7 @@ async fn test_pkgfs_restart_install_already_done() {
         let mut meta_far = pkg.meta_far().expect("meta.far");
         let mut to_write = d
             .new_file(
-                "install/pkg/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93",
+                "install/pkg/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b",
                 0600,
             )
             .expect("create install file");
@@ -396,7 +396,7 @@ async fn test_pkgfs_restart_install_already_done() {
     assert_eq!(
         ls_simple(
             d.list_dir(
-                "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+                "needs/packages/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b"
             )
             .expect("list dir")
         )
@@ -418,7 +418,7 @@ async fn test_pkgfs_restart_install_already_done() {
     assert_eq!(
         ls_simple(
             d.list_dir(
-                "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+                "needs/packages/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b"
             )
             .expect("list dir")
         )
@@ -433,13 +433,13 @@ async fn test_pkgfs_restart_install_already_done() {
 
     // Restart package install
     assert_error_kind!(
-        d.metadata("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93")
+        d.metadata("versions/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b")
             .map(|m| m.is_dir()),
         io::ErrorKind::NotFound
     );
     assert_error_kind!(
         d.metadata(
-            "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+            "needs/packages/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b"
         )
         .map(|m| m.is_dir()),
         io::ErrorKind::NotFound
@@ -447,14 +447,14 @@ async fn test_pkgfs_restart_install_already_done() {
 
     // Retry installing meta.far (fails with Invalid argument)
     d.new_file(
-        "install/pkg/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93",
+        "install/pkg/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b",
         0600,
     )
     .expect_err("already exists");
 
     // Recheck versions
     assert_eq!(
-        d.metadata("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93")
+        d.metadata("versions/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b")
             .map(|m| m.is_dir())
             .map_err(|e| format!("{:?}", e)),
         Ok(true)
@@ -463,7 +463,7 @@ async fn test_pkgfs_restart_install_already_done() {
     // Check needs again.
     assert_error_kind!(
         d.metadata(
-            "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+            "needs/packages/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b"
         )
         .map(|m| m.is_dir()),
         io::ErrorKind::NotFound
@@ -473,7 +473,7 @@ async fn test_pkgfs_restart_install_already_done() {
         .await
         .expect("valid example package");
     let mut file_contents = String::new();
-    d.open_file("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93/a/b")
+    d.open_file("versions/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b/a/b")
         .expect("read package file")
         .read_to_string(&mut file_contents)
         .expect("read package file");
@@ -482,7 +482,7 @@ async fn test_pkgfs_restart_install_already_done() {
     assert_eq!(
         ls_simple(blobfs_root_dir.list_dir(".").expect("list dir")).expect("list dir contents"),
         [
-            "b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93",
+            "dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b",
             "e5892a9b652ede2e19460a9103fd9cb3417f782a8d29f6c93ec0c31170a94af3"
         ],
     );
@@ -501,7 +501,7 @@ async fn test_pkgfs_restart_install_failed_meta_far() {
     let pkg = example_package().await;
     assert_eq!(
         pkg.meta_far_merkle_root(),
-        &"b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+        &"dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b"
             .parse::<fuchsia_merkle::Hash>()
             .unwrap()
     );
@@ -509,13 +509,13 @@ async fn test_pkgfs_restart_install_failed_meta_far() {
     // Start package install
     // first, some checks to see if it's already installed
     assert_error_kind!(
-        d.metadata("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93")
+        d.metadata("versions/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b")
             .map(|m| m.is_dir()),
         io::ErrorKind::NotFound
     );
     assert_error_kind!(
         d.metadata(
-            "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+            "needs/packages/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b"
         )
         .map(|m| m.is_dir()),
         io::ErrorKind::NotFound
@@ -523,26 +523,26 @@ async fn test_pkgfs_restart_install_failed_meta_far() {
 
     // Create (but don't write) the meta.far
     d.new_file(
-        "install/pkg/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93",
+        "install/pkg/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b",
         0600,
     )
     .expect("create install file");
 
     assert_error_kind!(
-        d.metadata("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93")
+        d.metadata("versions/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b")
             .map(|m| m.is_dir()),
         io::ErrorKind::NotFound
     );
 
     assert_eq!(
         ls_simple(d.list_dir("needs/packages").expect("list dir")).expect("list dir contents"),
-        ["b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"]
+        ["dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b"]
     );
 
     assert_eq!(
         ls_simple(
             d.list_dir(
-                "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+                "needs/packages/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b"
             )
             .expect("list dir")
         )
@@ -970,7 +970,7 @@ async fn test_pkgfs() {
 
     // merkle root of pkg's meta.far.
     const META_FAR_MERKLE_ROOT: &'static str =
-        "b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93";
+        "dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b";
     assert_eq!(
         pkg.meta_far_merkle_root(),
         &META_FAR_MERKLE_ROOT.parse::<fuchsia_merkle::Hash>().unwrap()
@@ -988,7 +988,7 @@ async fn test_pkgfs() {
     {
         let mut to_write = d
             .new_file(
-                "install/pkg/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93",
+                "install/pkg/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b",
                 0600,
             )
             .expect("create install file");
@@ -998,7 +998,7 @@ async fn test_pkgfs() {
     assert_eq!(
         ls_simple(
             d.list_dir(
-                "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+                "needs/packages/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b"
             )
             .expect("list dir")
         )
@@ -1022,7 +1022,7 @@ async fn test_pkgfs() {
     // Blob Needs no more packages
     assert_eq!(
         d.list_dir(
-            "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+            "needs/packages/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b"
         )
         .expect_err("check empty needs dir")
         .kind(),
@@ -1036,7 +1036,7 @@ async fn test_pkgfs() {
         .expect("read package file");
     assert_eq!(&file_contents, "Hello world!\n");
     let mut file_contents = String::new();
-    d.open_file("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93/a/b")
+    d.open_file("versions/dac936c184d9258e892591d6f060f4cbecbe6789b7d3bb993b1d1b26d32c344b/a/b")
         .expect("read package file")
         .read_to_string(&mut file_contents)
         .expect("read package file");

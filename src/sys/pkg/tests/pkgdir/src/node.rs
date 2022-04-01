@@ -174,8 +174,8 @@ async fn get_attr_per_package_source(source: PackageSource) {
                 } else {
                     0o755
                 },
-            expected_content_size: 74,
-            expected_storage_size: 74,
+            expected_content_size: 75,
+            expected_storage_size: 75,
             time_verifier: if source.is_pkgdir() {
                 // "creation and modification times unimplemented"
                 Box::new(0)
@@ -197,8 +197,8 @@ async fn get_attr_per_package_source(source: PackageSource) {
                 } else {
                     0o755
                 },
-            expected_content_size: 74,
-            expected_storage_size: 74,
+            expected_content_size: 75,
+            expected_storage_size: 75,
             time_verifier: if source.is_pkgdir() {
                 // "creation and modification times unimplemented"
                 Box::new(0)

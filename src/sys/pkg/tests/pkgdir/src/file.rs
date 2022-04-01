@@ -20,7 +20,7 @@ use {
     },
 };
 
-const TEST_PKG_HASH: &str = "4f329d13506973259344e3397d07c8d72c98273203ea025469f5dce162c9aaf7";
+const TEST_PKG_HASH: &str = "44e7704720706ffd287bf0d27133cec7d609581547095ab6c6fee94f83a5bcbc";
 
 #[fuchsia::test]
 async fn read() {

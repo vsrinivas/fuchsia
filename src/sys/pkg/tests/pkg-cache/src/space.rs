@@ -413,14 +413,17 @@ async fn blob_write_fails_when_out_of_space() {
         .await
         .expect("build large package");
 
-    // The size of the meta far should be the size of our asset, plus two 4k-aligned files:
-    // meta/package
-    // Content chunks in FARs are 4KiB-aligned, so the most empty FAR we can get is 8KiB:
-    // meta/package at one alignment boundary, and meta/contents is empty.
-    // This FAR should be 8KiB + the size of our asset file.
+    // The size of the meta far should be the size of our asset, plus three 4k-aligned files:
+    //  - meta/contents
+    //  - meta/fuchsia.abi/abi-revision
+    //  - meta/package
+    // Content chunks in FARs are 4KiB-aligned, so the most empty FAR we can get is 12KiB:
+    // meta/package at one alignment boundary, meta/fuchsia.abi/abi-revision at the next alignment
+    // boundary, and meta/contents is empty.
+    // This FAR should be 12KiB + the size of our asset file.
     assert_eq!(
         pkg.meta_far().unwrap().metadata().unwrap().len(),
-        LARGE_ASSET_FILE_SIZE + 4096 + 4096
+        LARGE_ASSET_FILE_SIZE + 4096 + 4096 + 4096
     );
 
     let env = TestEnv::builder().pkgfs(pkgfs).build().await;

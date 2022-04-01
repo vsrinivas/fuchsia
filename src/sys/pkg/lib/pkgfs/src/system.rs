@@ -129,13 +129,10 @@ mod tests {
             .unwrap();
         let client = Client::open_from_pkgfs_root(&pkgfs.root_dir_proxy().unwrap()).unwrap();
 
-        let mut contents = vec![];
-        client.open_file("meta").await.unwrap().read_to_end(&mut contents).unwrap();
+        let mut contents = String::new();
+        client.open_file("meta").await.unwrap().read_to_string(&mut contents).unwrap();
 
-        assert_eq!(
-            contents,
-            &b"ac005270136ee566e3a908267e0eb1076fd777430cb0216bb1e96fc866fad6ed"[..]
-        );
+        assert_eq!(contents, "8bc6622d99b5fee3cf42c54d7f17b8b38c31b69da4573db98a647b692b760311");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -170,7 +167,7 @@ mod tests {
 
         assert_eq!(
             client.hash().await.unwrap(),
-            "ac005270136ee566e3a908267e0eb1076fd777430cb0216bb1e96fc866fad6ed"
+            "8bc6622d99b5fee3cf42c54d7f17b8b38c31b69da4573db98a647b692b760311"
                 .parse::<Hash>()
                 .unwrap()
         );

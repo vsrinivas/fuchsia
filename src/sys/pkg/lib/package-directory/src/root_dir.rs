@@ -355,6 +355,7 @@ mod tests {
         fidl::endpoints::{create_proxy, Proxy as _},
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         futures::stream::StreamExt as _,
+        pretty_assertions::assert_eq,
         std::convert::TryInto as _,
         vfs::directory::{entry::DirectoryEntry, entry_container::Directory},
     };
@@ -389,15 +390,16 @@ mod tests {
     async fn new_initializes_maps() {
         let (_env, root_dir) = TestEnv::new().await;
 
-        let meta_files: HashMap<String, MetaFileLocation> = [
+        let meta_files = HashMap::from([
             (String::from("meta/contents"), MetaFileLocation { offset: 4096, length: 148 }),
-            (String::from("meta/package"), MetaFileLocation { offset: 16384, length: 39 }),
+            (String::from("meta/package"), MetaFileLocation { offset: 20480, length: 39 }),
             (String::from("meta/file"), MetaFileLocation { offset: 12288, length: 14 }),
             (String::from("meta/dir/file"), MetaFileLocation { offset: 8192, length: 14 }),
-        ]
-        .iter()
-        .cloned()
-        .collect();
+            (
+                String::from("meta/fuchsia.abi/abi-revision"),
+                MetaFileLocation { offset: 16384, length: 8 },
+            ),
+        ]);
         assert_eq!(root_dir.meta_files, meta_files);
 
         let non_meta_files: HashMap<String, fuchsia_hash::Hash> = [
@@ -736,6 +738,10 @@ mod tests {
                         kind: files_async::DirentKind::File
                     },
                     files_async::DirEntry {
+                        name: "fuchsia.abi".to_string(),
+                        kind: files_async::DirentKind::Directory
+                    },
+                    files_async::DirEntry {
                         name: "package".to_string(),
                         kind: files_async::DirentKind::File
                     },
@@ -760,6 +766,10 @@ mod tests {
                     files_async::DirEntry {
                         name: "file".to_string(),
                         kind: files_async::DirentKind::File
+                    },
+                    files_async::DirEntry {
+                        name: "fuchsia.abi".to_string(),
+                        kind: files_async::DirentKind::Directory
                     },
                     files_async::DirEntry {
                         name: "package".to_string(),

@@ -22,9 +22,10 @@ func TestExpand(t *testing.T) {
 
 	// Make a "set" of all files we expect to see in the expand directory.
 	expectedFiles := map[string]struct{}{
-		"meta/contents": {},
-		"meta/foo/one":  {},
-		"meta/package":  {},
+		"meta/contents":                 {},
+		"meta/foo/one":                  {},
+		"meta/fuchsia.abi/abi-revision": {},
+		"meta/package":                  {},
 	}
 	for _, item := range build.TestFiles {
 		expectedFiles[item] = struct{}{}

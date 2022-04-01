@@ -360,8 +360,8 @@ mod tests {
             fio::NodeAttributes {
                 mode: fio::MODE_TYPE_DIRECTORY | 0o500,
                 id: 1,
-                content_size: 3,
-                storage_size: 3,
+                content_size: 4,
+                storage_size: 4,
                 link_count: 1,
                 creation_time: 0,
                 modification_time: 0,

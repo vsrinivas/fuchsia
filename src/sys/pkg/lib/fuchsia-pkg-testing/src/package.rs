@@ -571,6 +571,8 @@ impl PackageBuilder {
         let pm = SpawnBuilder::new()
             .options(fdio::SpawnOptions::CLONE_ALL - fdio::SpawnOptions::CLONE_NAMESPACE)
             .arg("pm")?
+            .arg("-abi-revision")?
+            .arg(version_history::LATEST_VERSION.abi_revision.to_string())?
             .arg(format!("-n={}", self.name))?
             .arg("-m=/in/package.manifest")?
             .arg("-r=fuchsia.com")?
@@ -592,6 +594,8 @@ impl PackageBuilder {
             fs::read_to_string(packagedir.path().join("meta.far.merkle"))?.parse()?;
 
         // clean up after pm
+        fs::remove_file(packagedir.path().join("meta/fuchsia.abi/abi-revision"))?;
+        fs::remove_dir(packagedir.path().join("meta/fuchsia.abi"))?;
         fs::remove_file(packagedir.path().join("meta/contents"))?;
         fs::remove_dir(packagedir.path().join("meta"))?;
         fs::remove_file(packagedir.path().join("meta.far.merkle"))?;
@@ -688,13 +692,13 @@ mod tests {
 
         assert_eq!(
             pkg.meta_far_merkle,
-            "7b3591496961a5b8918525feb2e49e6d1439580fd805a2b4178fc7581c011a0d".parse()?
+            "de210ba39b8f597cc1986c37b369c990707649f63bb8fa23b244a38274018b78".parse()?
         );
         assert_eq!(pkg.meta_far_merkle, MerkleTree::from_reader(pkg.meta_far()?)?.root());
         assert_eq!(
             pkg.list_blobs()?,
             btreeset![
-                "7b3591496961a5b8918525feb2e49e6d1439580fd805a2b4178fc7581c011a0d".parse()?,
+                "de210ba39b8f597cc1986c37b369c990707649f63bb8fa23b244a38274018b78".parse()?,
                 "b5b34f6234631edc7ccaa25533e2050e5d597a7331c8974306b617a3682a3197".parse()?
             ]
         );

@@ -18,6 +18,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/repo"
+	versionHistory "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/version-history/go"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
@@ -114,14 +115,16 @@ func (p *PackageBuilder) AddResource(path string, contents io.Reader) error {
 }
 
 func tempConfig(dir string, name string, version string, repository string) (*build.Config, error) {
+
 	cfg := &build.Config{
-		OutputDir:     filepath.Join(dir, "output"),
-		ManifestPath:  filepath.Join(dir, "manifest"),
-		KeyPath:       filepath.Join(dir, "key"),
-		TempDir:       filepath.Join(dir, "tmp"),
-		PkgName:       name,
-		PkgVersion:    version,
-		PkgRepository: repository,
+		OutputDir:      filepath.Join(dir, "output"),
+		ManifestPath:   filepath.Join(dir, "manifest"),
+		KeyPath:        filepath.Join(dir, "key"),
+		TempDir:        filepath.Join(dir, "tmp"),
+		PkgName:        name,
+		PkgVersion:     version,
+		PkgRepository:  repository,
+		PkgABIRevision: latestABIRevision(),
 	}
 
 	for _, d := range []string{cfg.OutputDir, cfg.TempDir} {
@@ -131,6 +134,14 @@ func tempConfig(dir string, name string, version string, repository string) (*bu
 	}
 
 	return cfg, nil
+}
+
+// Find and return the latest ABI revision,
+func latestABIRevision() uint64 {
+	versions := versionHistory.Versions()
+
+	// Use the most recent ABI version, which is the last one in the list.
+	return versions[len(versions)-1].ABIRevision
 }
 
 // Publish the package to the repository. Returns the TUF package path and
