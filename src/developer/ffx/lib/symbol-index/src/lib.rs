@@ -178,11 +178,15 @@ impl SymbolIndex {
     }
 
     pub fn save(&self, path: &str) -> Result<()> {
-        serde_json::to_writer_pretty(
-            File::create(path).map_err(|_| ffx_error!("Cannot save to {}", path))?,
-            self,
-        )
-        .map_err(|err| err.into())
+        let path = PathBuf::from(path);
+        let parent = path.parent().ok_or(ffx_error!("Invalid path {:?}", path))?;
+        if !parent.exists() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| ffx_error!("Cannot create {:?}: {}", parent, e))?;
+        }
+        let file =
+            File::create(&path).map_err(|e| ffx_error!("Cannot create {:?}: {}", path, e))?;
+        serde_json::to_writer_pretty(file, self).map_err(|err| err.into())
     }
 }
 
@@ -264,5 +268,17 @@ mod tests {
         assert_eq!(index.includes.len(), 0);
         assert_eq!(index.gcs_flat.len(), 2);
         assert_eq!(index.gcs_flat[1].require_authentication, true);
+    }
+
+    #[test]
+    fn test_save() {
+        let tmpdir = tempfile::TempDir::new().unwrap();
+        let mut path = tmpdir.path().to_str().unwrap().to_owned();
+        path.push_str("/subdir/symbol-index.json");
+        let mut index = SymbolIndex::new();
+        index.gcs_flat.push(GcsFlat { url: String::new(), require_authentication: false });
+        index.save(&path).unwrap();
+        let index = SymbolIndex::load(&path).unwrap();
+        assert_eq!(index.gcs_flat.len(), 1);
     }
 }
