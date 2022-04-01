@@ -145,10 +145,25 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
             .boxed()
         });
 
-        this.measure().await;
-        *(this.sampler_task.lock().await) = Some(Self::spawn_measuring_task(weak_self));
-
         this
+    }
+
+    /// Perform an initial measurement followed by spawning a task that will perform a measurement
+    /// every `CPU_SAMPLE_PERIOD` seconds.
+    pub async fn start_measuring(self: &Arc<Self>) {
+        let weak_self = Arc::downgrade(self);
+        self.measure().await;
+        *(self.sampler_task.lock().await) = Some(fasync::Task::spawn(async move {
+            loop {
+                fasync::Timer::new(CPU_SAMPLE_PERIOD).await;
+                match weak_self.upgrade() {
+                    None => break,
+                    Some(this) => {
+                        this.measure().await;
+                    }
+                }
+            }
+        }));
     }
 
     /// Initializes a new component stats with the given task.
@@ -256,20 +271,6 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
 
         self.totals.lock().await.update(aggregated);
         self.processing_times.insert((zx::Time::get_monotonic() - start).into_nanos());
-    }
-
-    fn spawn_measuring_task(weak_self: Weak<Self>) -> fasync::Task<()> {
-        fasync::Task::spawn(async move {
-            loop {
-                fasync::Timer::new(CPU_SAMPLE_PERIOD).await;
-                match weak_self.upgrade() {
-                    None => break,
-                    Some(this) => {
-                        this.measure().await;
-                    }
-                }
-            }
-        })
     }
 
     async fn on_component_started<P, C>(self: &Arc<Self>, moniker: AbsoluteMoniker, runtime: &P)
@@ -505,6 +506,7 @@ mod tests {
     async fn total_holds_sum_of_stats() {
         let inspector = inspect::Inspector::new();
         let stats = ComponentTreeStats::new(inspector.root().create_child("cpu_stats")).await;
+        stats.measure().await;
         stats
             .track_ready(
                 ExtendedMoniker::ComponentInstance(vec!["a"].into()),
@@ -566,6 +568,8 @@ mod tests {
         // Set up the test
         let inspector = inspect::Inspector::new();
         let stats = ComponentTreeStats::new(inspector.root().create_child("cpu_stats")).await;
+        stats.measure().await;
+
         stats
             .track_ready(
                 ExtendedMoniker::ComponentInstance(vec!["a"].into()),

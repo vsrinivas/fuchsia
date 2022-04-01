@@ -782,7 +782,7 @@ impl BuiltinEnvironment {
         let component_tree_stats =
             ComponentTreeStats::new(inspector.root().create_child("cpu_stats")).await;
         component_tree_stats.track_component_manager_stats().await;
-        component_tree_stats.measure().await;
+        component_tree_stats.start_measuring().await;
         model.root().hooks.install(component_tree_stats.hooks()).await;
 
         // Serve stats about inspect in a lazy node.
