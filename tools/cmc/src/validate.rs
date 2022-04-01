@@ -2078,7 +2078,7 @@ mod tests {
                     },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "unknown field `resolver`, expected one of `service`, `protocol`, `directory`, `storage`, `from`, `path`, `as`, `rights`, `subdir`, `event`, `event_stream_deprecated`, `event_stream`, `scope`, `filter`, `subscriptions`, `dependency`"
+            Err(Error::Parse { err, .. }) if &err == "unknown field `resolver`, expected one of `service`, `protocol`, `directory`, `storage`, `event`, `event_stream_deprecated`, `event_stream`, `from`, `path`, `rights`, `subdir`, `as`, `scope`, `filter`, `subscriptions`, `dependency`"
         ),
 
         test_cml_use_disallows_nested_dirs_directory(

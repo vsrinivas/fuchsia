@@ -977,63 +977,9 @@ pub struct Document {
     /// and each capability must have a valid route through all components between
     /// this component and the capability's source.
     ///
-    /// Keys:
-    ///
-    /// -   A capability declaration, one of:
-    ///     -   `protocol`: The [name](#name) of a [protocol capability][doc-protocol],
-    ///         or an array of names.
-    ///     -   `directory`: The [name](#name) of a [directory capability][doc-directory].
-    ///     -   `storage`: The [name](#name) of a [storage capability][doc-storage].
-    ///     -   `event`: The [name](#name) of an [event capability][doc-event],
-    ///         or an array of names.
-    /// -   `from` _(optional)_: The source of the capability. Defaults to `parent`.
-    ///     One of:
-    ///     -   `parent`: The component's parent.
-    ///     -   `debug`: One of [`debug_capabilities`][fidl-environment-decl] in the
-    ///         environment assigned to this component.
-    ///     -   `framework`: The Component Framework runtime.
-    ///     -   `self`: This component.
-    ///     -   `#<capability-name>`: The name of another capability from which the
-    ///         requested capability is derived.
-    ///     -   `#<child-name>`: A [reference](#references) to a child component
-    ///         instance.
-    /// -   `path` _(optional)_: The path at which to install the capability in the
-    ///     component's namespace. For protocols, defaults to `/svc/${protocol}`.
-    ///     Required for `directory` and `storage`. This property is disallowed for
-    ///     declarations with capability arrays.
-    ///
-    /// Example:
-    ///
-    /// ```json5
-    /// use: [
-    ///     {
-    ///         protocol: [
-    ///             "fuchsia.ui.scenic.Scenic",
-    ///             "fuchsia.accessibility.Manager",
-    ///         ]
-    ///     },
-    ///     {
-    ///         directory: "themes",
-    ///         path: "/data/themes",
-    ///         rights: [ "r*" ],
-    ///     },
-    ///     {
-    ///         storage: "persistent",
-    ///         path: "/data",
-    ///     },
-    ///     {
-    ///         event: [
-    ///             "started",
-    ///             "stopped",
-    ///         ],
-    ///         from: "framework",
-    ///     },
-    /// ],
-    /// ```
-    ///
     /// [fidl-environment-decl]: /reference/fidl/fuchsia.component.decl#Environment
     /// [glossary.namespace]: /docs/glossary/README.md#namespace
-    #[reference_doc(json_type = "object")]
+    #[reference_doc(recurse)]
     pub r#use: Option<Vec<Use>>,
 
     /// Declares the capabilities that are made available to the parent component or to the
@@ -1997,24 +1943,107 @@ impl<'de> de::Deserialize<'de> for Program {
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq, Clone)]
+/// Example:
+///
+/// ```json5
+/// use: [
+///     {
+///         protocol: [
+///             "fuchsia.ui.scenic.Scenic",
+///             "fuchsia.accessibility.Manager",
+///         ]
+///     },
+///     {
+///         directory: "themes",
+///         path: "/data/themes",
+///         rights: [ "r*" ],
+///     },
+///     {
+///         storage: "persistent",
+///         path: "/data",
+///     },
+///     {
+///         event: [
+///             "started",
+///             "stopped",
+///         ],
+///         from: "framework",
+///     },
+/// ],
+/// ```
+#[derive(Deserialize, Debug, PartialEq, Clone, ReferenceDoc)]
 #[serde(deny_unknown_fields)]
+#[reference_doc(fields_as = "list", top_level_doc_after_fields)]
 pub struct Use {
+    /// When using a service capability, the [name](#name) of a [service capability][doc-service].
     pub service: Option<OneOrMany<Name>>,
+
+    /// When using a protocol capability, the [name](#name) of a [protocol capability][doc-protocol].
     pub protocol: Option<OneOrMany<Name>>,
+
+    /// When using a directory capability, the [name](#name) of a [directory capability][doc-directory].
     pub directory: Option<Name>,
+
+    /// When using a storage capability, the [name](#name) of a [storage capability][doc-storage].
     pub storage: Option<Name>,
-    pub from: Option<UseFromRef>,
-    pub path: Option<Path>,
-    pub r#as: Option<Name>,
-    pub rights: Option<Rights>,
-    pub subdir: Option<RelativePath>,
+
+    /// When using an event capability, the [name](#name) of an [event capability][doc-event].
     pub event: Option<OneOrMany<Name>>,
+
+    /// Deprecated.
     pub event_stream_deprecated: Option<Name>,
+
+    /// When using an event stream capability, the [name](#name) of an [event stream capability][doc-event].
     pub event_stream: Option<OneOrMany<Name>>,
+
+    /// The source of the capability. Defaults to `parent`.  One of:
+    /// -   `parent`: The component's parent.
+    /// -   `debug`: One of [`debug_capabilities`][fidl-environment-decl] in the
+    ///     environment assigned to this component.
+    /// -   `framework`: The Component Framework runtime.
+    /// -   `self`: This component.
+    /// -   `#<capability-name>`: The name of another capability from which the
+    ///     requested capability is derived.
+    /// -   `#<child-name>`: A [reference](#references) to a child component
+    ///     instance.
+    pub from: Option<UseFromRef>,
+
+    /// The path at which to install the capability in the component's namespace. For protocols,
+    /// defaults to `/svc/${protocol}`.  Required for `directory` and `storage`. This property is
+    /// disallowed for declarations with arrays of capability names.
+    pub path: Option<Path>,
+
+    /// (`directory` only) the maximum [directory rights][doc-directory-rights] to apply to
+    /// the directory in the component's namespace.
+    pub rights: Option<Rights>,
+
+    /// (`directory` only) A subdirectory within the directory capability to provide in the
+    /// component's namespace.
+    pub subdir: Option<RelativePath>,
+
+    /// TODO(fxb/96705): Document events features.
+    pub r#as: Option<Name>,
+
+    /// TODO(fxb/96705): Document events features.
     pub scope: Option<OneOrMany<EventScope>>,
+
+    /// TODO(fxb/96705): Document events features.
     pub filter: Option<Map<String, Value>>,
+
+    /// TODO(fxb/96705): Document events features.
     pub subscriptions: Option<EventSubscriptions>,
+
+    /// `dependency` _(optional)_: The type of dependency between the source and
+    /// this component, one of:
+    /// -   `strong`: a strong dependency, which is used to determine shutdown
+    ///     ordering. Component manager is guaranteed to stop the target before the
+    ///     source. This is the default.
+    /// -   `weak_for_migration`: a weak dependency, which is ignored during
+    ///     shutdown. When component manager stops the parent realm, the source may
+    ///     stop before the clients. Clients of weak dependencies must be able to
+    ///     handle these dependencies becoming unavailable. This type exists to keep
+    ///     track of weak dependencies that resulted from migrations into v2
+    ///     components.
     pub dependency: Option<DependencyType>,
 }
 
@@ -2053,6 +2082,7 @@ pub struct Use {
 #[serde(deny_unknown_fields)]
 #[reference_doc(fields_as = "list", top_level_doc_after_fields)]
 pub struct Expose {
+    /// When routing a service, the [name](#name) of a [service capability][doc-service].
     pub service: Option<OneOrMany<Name>>,
 
     /// When routing a protocol, the [name](#name) of a [protocol capability][doc-protocol].
@@ -2091,10 +2121,10 @@ pub struct Expose {
     /// capability to route.
     pub subdir: Option<RelativePath>,
 
-    /// event stream
+    /// TODO(fxb/96705): Complete.
     pub event_stream: Option<OneOrMany<Name>>,
 
-    /// Scope of event_stream
+    /// TODO(fxb/96705): Complete.
     pub scope: Option<OneOrMany<EventScope>>,
 }
 

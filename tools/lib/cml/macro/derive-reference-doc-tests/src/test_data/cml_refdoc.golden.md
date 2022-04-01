@@ -360,30 +360,48 @@ Capabilities are routed from the `parent` unless otherwise specified,
 and each capability must have a valid route through all components between
 this component and the capability's source.
 
-Keys:
+[fidl-environment-decl]: /reference/fidl/fuchsia.component.decl#Environment
+[glossary.namespace]: /docs/glossary/README.md#namespace
 
--   A capability declaration, one of:
-    -   `protocol`: The [name](#name) of a [protocol capability][doc-protocol],
-        or an array of names.
-    -   `directory`: The [name](#name) of a [directory capability][doc-directory].
-    -   `storage`: The [name](#name) of a [storage capability][doc-storage].
-    -   `event`: The [name](#name) of an [event capability][doc-event],
-        or an array of names.
--   `from` _(optional)_: The source of the capability. Defaults to `parent`.
-    One of:
-    -   `parent`: The component's parent.
-    -   `debug`: One of [`debug_capabilities`][fidl-environment-decl] in the
-        environment assigned to this component.
-    -   `framework`: The Component Framework runtime.
-    -   `self`: This component.
-    -   `#<capability-name>`: The name of another capability from which the
-        requested capability is derived.
-    -   `#<child-name>`: A [reference](#references) to a child component
-        instance.
--   `path` _(optional)_: The path at which to install the capability in the
-    component's namespace. For protocols, defaults to `/svc/${protocol}`.
-    Required for `directory` and `storage`. This property is disallowed for
-    declarations with capability arrays.
+- `service`: (_optional `string or array of strings`_) When using a service capability, the [name](#name) of a [service capability][doc-service].
+- `protocol`: (_optional `string or array of strings`_) When using a protocol capability, the [name](#name) of a [protocol capability][doc-protocol].
+- `directory`: (_optional `string`_) When using a directory capability, the [name](#name) of a [directory capability][doc-directory].
+- `storage`: (_optional `string`_) When using a storage capability, the [name](#name) of a [storage capability][doc-storage].
+- `event`: (_optional `string or array of strings`_) When using an event capability, the [name](#name) of an [event capability][doc-event].
+- `event_stream_deprecated`: (_optional `string`_) Deprecated.
+- `event_stream`: (_optional `string or array of strings`_) When using an event stream capability, the [name](#name) of an [event stream capability][doc-event].
+- `from`: (_optional `string`_) The source of the capability. Defaults to `parent`.  One of:
+  -   `parent`: The component's parent.
+  -   `debug`: One of [`debug_capabilities`][fidl-environment-decl] in the
+      environment assigned to this component.
+  -   `framework`: The Component Framework runtime.
+  -   `self`: This component.
+  -   `#<capability-name>`: The name of another capability from which the
+      requested capability is derived.
+  -   `#<child-name>`: A [reference](#references) to a child component
+      instance.
+- `path`: (_optional `string`_) The path at which to install the capability in the component's namespace. For protocols,
+  defaults to `/svc/${protocol}`.  Required for `directory` and `storage`. This property is
+  disallowed for declarations with arrays of capability names.
+- `rights`: (_optional `string`_) (`directory` only) the maximum [directory rights][doc-directory-rights] to apply to
+  the directory in the component's namespace.
+- `subdir`: (_optional `string`_) (`directory` only) A subdirectory within the directory capability to provide in the
+  component's namespace.
+- `as`: (_optional `string`_) TODO(fxb/96705): Document events features.
+- `scope`: (_optional `string or array of strings`_) TODO(fxb/96705): Document events features.
+- `filter`: (_optional `object`_) TODO(fxb/96705): Document events features.
+- `subscriptions`: (_optional `string`_) TODO(fxb/96705): Document events features.
+- `dependency`: (_optional `string`_) `dependency` _(optional)_: The type of dependency between the source and
+  this component, one of:
+  -   `strong`: a strong dependency, which is used to determine shutdown
+      ordering. Component manager is guaranteed to stop the target before the
+      source. This is the default.
+  -   `weak_for_migration`: a weak dependency, which is ignored during
+      shutdown. When component manager stops the parent realm, the source may
+      stop before the clients. Clients of weak dependencies must be able to
+      handle these dependencies becoming unavailable. This type exists to keep
+      track of weak dependencies that resulted from migrations into v2
+      components.
 
 Example:
 
@@ -414,8 +432,7 @@ use: [
 ],
 ```
 
-[fidl-environment-decl]: /reference/fidl/fuchsia.component.decl#Environment
-[glossary.namespace]: /docs/glossary/README.md#namespace
+
 
 ### `expose` {#expose}
 
@@ -426,7 +443,7 @@ framework. It is valid to `expose` from `self` or from a child component.
 
 One and only one of the capability type keys (`protocol`, `directory`, `service`, ...) is required.
 
-- `service`: (_optional `string or array of strings`_) 
+- `service`: (_optional `string or array of strings`_) When routing a service, the [name](#name) of a [service capability][doc-service].
 - `protocol`: (_optional `string or array of strings`_) When routing a protocol, the [name](#name) of a [protocol capability][doc-protocol].
 - `directory`: (_optional `string or array of strings`_) When routing a directory, the [name](#name) of a [directory capability][doc-directory].
 - `runner`: (_optional `string or array of strings`_) When routing a runner, the [name](#name) of a [runner capability][doc-runners].
@@ -445,8 +462,8 @@ One and only one of the capability type keys (`protocol`, `directory`, `service`
   the exposed directory capability.
 - `subdir`: (_optional `string`_) (`directory` only) the relative path of a subdirectory within the source directory
   capability to route.
-- `event_stream`: (_optional `string or array of strings`_) event stream
-- `scope`: (_optional `string or array of strings`_) Scope of event_stream
+- `event_stream`: (_optional `string or array of strings`_) TODO(fxb/96705): Complete.
+- `scope`: (_optional `string or array of strings`_) TODO(fxb/96705): Complete.
 
 Example:
 
