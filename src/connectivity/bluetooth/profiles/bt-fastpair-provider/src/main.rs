@@ -6,6 +6,7 @@ use anyhow::Error;
 use tracing::info;
 
 mod gatt_service;
+mod types;
 
 use gatt_service::GattService;
 

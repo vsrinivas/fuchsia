@@ -30,6 +30,7 @@ rustc_binary("bin") {
   sources = [
     "src/gatt_service.rs",
     "src/main.rs",
+    "src/types.rs",
   ]
 
   configs -= [ "//build/config/rust:allow_unused_results" ]
