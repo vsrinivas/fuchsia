@@ -1,6 +1,6 @@
 {
     program: {
-        runner: "starmium",
+        runner: "starless",
         binary: "bin/hello_starnix",
     },
 }

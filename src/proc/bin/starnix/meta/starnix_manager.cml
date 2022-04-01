@@ -8,6 +8,10 @@
             name: "starmium",
             url: "fuchsia-pkg://fuchsia.com/starmium#meta/starnix_runner.cm",
         },
+        {
+            name: "starless",
+            url: "fuchsia-pkg://fuchsia.com/starless#meta/starnix_runner.cm",
+        },
     ],
     collections: [
         {
@@ -32,6 +36,7 @@
             from: "parent",
             to: [
                 "#stardroid",
+                "#starless",
                 "#starmium",
             ],
         },
@@ -42,6 +47,7 @@
             from: "framework",
             to: [
                 "#stardroid",
+                "#starless",
                 "#starmium",
             ],
         },
@@ -55,6 +61,7 @@
             from: "parent",
             to: [
                 "#stardroid",
+                "#starless",
                 "#starmium",
             ],
         },
@@ -69,6 +76,11 @@
             runner: "starnix",
             from: "#starmium",
             as: "starmium",
+        },
+        {
+            runner: "starnix",
+            from: "#starless",
+            as: "starless",
         },
         {
             // In principle, this protocol should be exposed by the
@@ -92,6 +104,11 @@
                     runner: "starnix",
                     from: "#stardroid",
                     as: "stardroid",
+                },
+                {
+                    runner: "starnix",
+                    from: "#starless",
+                    as: "starless",
                 },
             ],
         },

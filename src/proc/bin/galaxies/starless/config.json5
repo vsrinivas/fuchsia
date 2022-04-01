@@ -1,0 +1,14 @@
+{
+    apexes: [],
+    features: [],
+    init_args: [],
+    init_binary_path: "",
+    init_environ: [],
+    init_user: "fuchsia:x:42:42",
+    kernel_cmdline: "",
+    mounts: [
+        "/:remotefs",
+    ],
+    name: "starless",
+    startup_file_path: "",
+}

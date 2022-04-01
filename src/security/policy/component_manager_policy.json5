@@ -32,6 +32,7 @@
             create_raw_processes: [
                 "/core/starnix_manager/starmium",
                 "/core/starnix_manager/stardroid",
+                "/core/starnix_manager/starless",
                 "/core/test_manager/starnix_test_runners/starnix_unit_test_runner",
                 "/core/test_manager/starnix_test_runners/stardroid_test_runner/starnix_runner",
                 "/core/test_manager/starnix_test_runners/starmium_test_runner/starnix_runner",
@@ -196,6 +197,7 @@
                     "/core",
                     "/core/starnix_manager/starmium",
                     "/core/starnix_manager/stardroid",
+                    "/core/starnix_manager/starless",
                     "/core/test_manager/starnix_test_runners/starnix_unit_test_runner",
                     "/core/test_manager/starnix_test_runners/stardroid_test_runner/starnix_runner",
                     "/core/test_manager/starnix_test_runners/starmium_test_runner/starnix_runner",

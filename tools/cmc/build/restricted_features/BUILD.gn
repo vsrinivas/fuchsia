@@ -42,6 +42,7 @@ group("structured_config") {
     "//src/diagnostics/sampler:*",
     "//src/proc/bin/galaxies/stardroid:*",
     "//src/proc/bin/galaxies/stardroid_test:*",
+    "//src/proc/bin/galaxies/starless:*",
     "//src/proc/bin/galaxies/starmium:*",
     "//src/proc/bin/galaxies/starmium_test:*",
     "//src/proc/bin/starnix:*",
