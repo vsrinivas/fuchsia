@@ -143,8 +143,8 @@ TEST_F(UsageGainReporterTest, RoutedCorrectly) {
   auto c2 = CreateController(fuchsia::media::AudioRenderUsage::BACKGROUND);
 
   // The initial callbacks happen immediately.
-  c1->fake_listener.SetNextHandler(AddCallback("OnGainMuteChanged1 InitialCall"));
-  c2->fake_listener.SetNextHandler(AddCallback("OnGainMuteChanged2 InitialCall"));
+  c1->fake_listener.SetNextHandler(AddCallbackUnordered("OnGainMuteChanged1 InitialCall"));
+  c2->fake_listener.SetNextHandler(AddCallbackUnordered("OnGainMuteChanged2 InitialCall"));
   ExpectCallbacks();
 
   // Routing to c1.
