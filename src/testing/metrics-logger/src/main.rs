@@ -183,10 +183,11 @@ impl Sensor<fpower::DeviceProxy> for fpower::DeviceProxy {
 }
 
 macro_rules! log_trace {
-    ( $sensor_type:expr, $key:expr, $val:expr) => {
+    ( $sensor_type:expr, $client_id:expr, $key:expr, $val:expr) => {
+        // Use hash of `|client_id| driver_name [metrics]` as counter id.
         let mut hasher = DefaultHasher::new();
-        $key.hash(&mut hasher);
-        let key_hash = hasher.finish();
+        format!("|{}| {}", $client_id, $key).hash(&mut hasher);
+        let counter_id = hasher.finish();
 
         match $sensor_type {
             // TODO (didis): Remove temperature_logger category after the e2e test is transitioned.
@@ -194,13 +195,15 @@ macro_rules! log_trace {
                 fuchsia_trace::counter!(
                     "temperature_logger",
                     "temperature",
-                    key_hash,
+                    counter_id,
+                    "client_id" => $client_id,
                     $key => $val as f64
                 );
                 fuchsia_trace::counter!(
                     "metrics_logger",
                     "temperature",
-                    key_hash,
+                    counter_id,
+                    "client_id" => $client_id,
                     $key => $val as f64
                 );
             }
@@ -208,7 +211,8 @@ macro_rules! log_trace {
                 fuchsia_trace::counter!(
                     "metrics_logger",
                     "power",
-                    key_hash,
+                    counter_id,
+                    "client_id" => $client_id,
                     $key => $val as f64
                 );
             }
@@ -243,6 +247,9 @@ struct SensorLogger<T> {
     /// This is an exclusive end.
     end_time: fasync::Time,
 
+    /// Client associated with this logger.
+    client_id: String,
+
     inspect: InspectData,
 }
 
@@ -254,6 +261,7 @@ impl<T: Sensor<T>> SensorLogger<T> {
         duration_ms: Option<u32>,
         client_inspect: &inspect::Node,
         driver_names: Vec<String>,
+        client_id: String,
     ) -> Self {
         let start_time = fasync::Time::now();
         let statistics_start_time = fasync::Time::now();
@@ -282,6 +290,7 @@ impl<T: Sensor<T>> SensorLogger<T> {
             start_time,
             end_time,
             inspect,
+            client_id,
         }
     }
 
@@ -333,7 +342,12 @@ impl<T: Sensor<T>> SensorLogger<T> {
                     );
 
                     // Log data to Trace.
-                    log_trace!(T::sensor_type(), self.drivers[index].name(), value);
+                    log_trace!(
+                        T::sensor_type(),
+                        self.client_id.as_str(),
+                        &self.drivers[index].name(),
+                        value
+                    );
                 }
                 // In case of a polling error, the previous value from this sensor will not be
                 // updated. We could do something fancier like exposing an error count, but this
@@ -346,6 +360,7 @@ impl<T: Sensor<T>> SensorLogger<T> {
                     e
                 ),
             };
+
             if is_last_sample_for_statistics {
                 let mut min = f32::MAX;
                 let mut max = f32::MIN;
@@ -366,9 +381,24 @@ impl<T: Sensor<T>> SensorLogger<T> {
                     avg,
                 );
 
-                log_trace!(T::sensor_type(), &format!("{} [min]", self.drivers[index].name()), min);
-                log_trace!(T::sensor_type(), &format!("{} [max]", self.drivers[index].name()), max);
-                log_trace!(T::sensor_type(), &format!("{} [avg]", self.drivers[index].name()), avg);
+                log_trace!(
+                    T::sensor_type(),
+                    self.client_id.as_str(),
+                    &format!("{} [min]", self.drivers[index].name()),
+                    min
+                );
+                log_trace!(
+                    T::sensor_type(),
+                    self.client_id.as_str(),
+                    &format!("{} [max]", self.drivers[index].name()),
+                    max
+                );
+                log_trace!(
+                    T::sensor_type(),
+                    self.client_id.as_str(),
+                    &format!("{} [avg]", self.drivers[index].name()),
+                    avg
+                );
 
                 // Empty samples for this sensor.
                 self.samples[index].clear();
@@ -517,6 +547,7 @@ struct CpuLoadLogger {
     end_time: fasync::Time,
     last_sample: Option<(fasync::Time, fkernel::CpuStats)>,
     stats_proxy: Rc<fkernel::StatsProxy>,
+    client_id: String,
 }
 
 impl CpuLoadLogger {
@@ -524,9 +555,10 @@ impl CpuLoadLogger {
         interval: zx::Duration,
         duration: Option<zx::Duration>,
         stats_proxy: Rc<fkernel::StatsProxy>,
+        client_id: String,
     ) -> Self {
         let end_time = duration.map_or(fasync::Time::INFINITE, |d| fasync::Time::now() + d);
-        CpuLoadLogger { interval, end_time, last_sample: None, stats_proxy }
+        CpuLoadLogger { interval, end_time, last_sample: None, stats_proxy, client_id }
     }
 
     async fn log_cpu_usages(mut self) {
@@ -542,6 +574,10 @@ impl CpuLoadLogger {
     }
 
     async fn log_cpu_usage(&mut self, now: fasync::Time) {
+        let mut hasher = DefaultHasher::new();
+        self.client_id.hash(&mut hasher);
+        let trace_counter_id = hasher.finish();
+
         match self.stats_proxy.get_cpu_stats().await {
             Ok(cpu_stats) => {
                 if let Some((last_sample_time, last_cpu_stats)) = self.last_sample.take() {
@@ -570,7 +606,8 @@ impl CpuLoadLogger {
                     fuchsia_trace::counter!(
                         "metrics_logger",
                         "cpu_usage",
-                        0,
+                        trace_counter_id,
+                        "client_id" => self.client_id.as_str(),
                         "cpu_usage" => cpu_percentage_sum / cpu_stats.actual_num_cpus as f64
                     );
                 }
@@ -714,7 +751,7 @@ impl MetricsLoggerServer {
 
         self.client_tasks.borrow_mut().insert(
             client_id.to_string(),
-            self.spawn_client_tasks(client_id, metrics, duration_ms),
+            self.spawn_client_tasks(client_id.to_string(), metrics, duration_ms),
         );
 
         Ok(())
@@ -729,14 +766,14 @@ impl MetricsLoggerServer {
 
     fn spawn_client_tasks(
         &self,
-        client_id: &str,
+        client_id: String,
         metrics: Vec<fmetrics::Metric>,
         duration_ms: Option<u32>,
     ) -> fasync::Task<()> {
         let cpu_stats_proxy = self.cpu_stats_proxy.clone();
         let temperature_drivers = self.temperature_drivers.clone();
         let power_drivers = self.power_drivers.clone();
-        let client_inspect = self.inspect_root.create_child(client_id);
+        let client_inspect = self.inspect_root.create_child(&client_id);
 
         fasync::Task::local(async move {
             let mut futures: Vec<Box<dyn futures::Future<Output = ()>>> = Vec::new();
@@ -748,6 +785,7 @@ impl MetricsLoggerServer {
                             zx::Duration::from_millis(interval_ms as i64),
                             duration_ms.map(|ms| zx::Duration::from_millis(ms as i64)),
                             cpu_stats_proxy.clone(),
+                            String::from(&client_id),
                         );
                         futures.push(Box::new(cpu_load_logger.log_cpu_usages()));
                     }
@@ -765,6 +803,7 @@ impl MetricsLoggerServer {
                             duration_ms,
                             &client_inspect,
                             temperature_driver_names,
+                            String::from(&client_id),
                         );
                         futures.push(Box::new(temperature_logger.log_data()));
                     }
@@ -782,6 +821,7 @@ impl MetricsLoggerServer {
                             duration_ms,
                             &client_inspect,
                             power_driver_names,
+                            String::from(&client_id),
                         );
                         futures.push(Box::new(power_logger.log_data()));
                     }
