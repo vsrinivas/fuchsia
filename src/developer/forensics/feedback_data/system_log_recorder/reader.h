@@ -1,5 +1,5 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
-// Use of this source is governed by a BSD-style license that can be
+// Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_SYSTEM_LOG_RECORDER_READER_H_
