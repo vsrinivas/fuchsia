@@ -44,7 +44,8 @@ class FilesystemMounter {
   // |root_directory| can be an arbitrary Directory connection (although the fact that the) peer is
   // a directory is not verified).
   zx::status<> InstallFs(FsManager::MountPoint point, std::string_view device_path,
-                         zx::channel export_root, zx::channel root_directory) {
+                         fidl::ClientEnd<fuchsia_io::Directory> export_root,
+                         fidl::ClientEnd<fuchsia_io::Directory> root_directory) {
     return fshost_.InstallFs(point, device_path, std::move(export_root), std::move(root_directory));
   }
 

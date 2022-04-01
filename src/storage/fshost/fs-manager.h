@@ -78,7 +78,8 @@ class FsManager {
   // installed filesystem).
   // |root_directory| should be a connection to a Directory, but this is not verified.
   zx::status<> InstallFs(MountPoint mount_point, std::string_view device_path,
-                         zx::channel export_root_directory, zx::channel root_directory);
+                         fidl::ClientEnd<fuchsia_io::Directory> export_root_directory,
+                         fidl::ClientEnd<fuchsia_io::Directory> root_directory);
 
   // Serves connection to the root directory ("/") on |server|.
   zx_status_t ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> server);
@@ -177,7 +178,7 @@ class FsManager {
 
   struct MountNode {
     // Set by |InstallFs()|.
-    zx::channel export_root;
+    fidl::ClientEnd<fuchsia_io::Directory> export_root;
     fbl::RefPtr<fs::Vnode> root_directory;
 
     bool Installed() const { return export_root.is_valid(); }

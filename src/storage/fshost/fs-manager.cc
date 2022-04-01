@@ -139,33 +139,45 @@ zx_status_t FsManager::SetupOutgoingDirectory(fidl::ServerEnd<fuchsia_io::Direct
   outgoing_dir->AddEntry("svc", svc_dir_);
 
   // Add /fs to the outgoing vfs
-  zx::channel filesystems_client, filesystems_server;
-  zx_status_t status = zx::channel::create(0, &filesystems_client, &filesystems_server);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to create channel";
-    return status;
+  {
+    zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    if (endpoints.is_error()) {
+      FX_PLOGS(ERROR, endpoints.status_value()) << "failed to create channel";
+      return endpoints.status_value();
+    }
+    zx_status_t status = this->ServeRoot(std::move(endpoints->server));
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Cannot serve root filesystem";
+      return status;
+    }
+    status = outgoing_dir->AddEntry(
+        "fs", fbl::MakeRefCounted<fs::RemoteDir>(std::move(endpoints->client)));
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Cannot add root filesystem entry";
+      return status;
+    }
   }
-  status = this->ServeRoot(std::move(filesystems_server));
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot serve root filesystem";
-    return status;
-  }
-  outgoing_dir->AddEntry("fs", fbl::MakeRefCounted<fs::RemoteDir>(std::move(filesystems_client)));
 
   // TODO(fxbug.dev/39588): delete this
   // Add the delayed directory
-  zx::channel filesystems_client_2, filesystems_server_2;
-  status = zx::channel::create(0, &filesystems_client_2, &filesystems_server_2);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to create channel";
-    return status;
+  {
+    zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    if (endpoints.is_error()) {
+      FX_PLOGS(ERROR, endpoints.status_value()) << "failed to create channel";
+      return endpoints.status_value();
+    }
+    zx_status_t status = this->ServeRoot(std::move(endpoints->server));
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Cannot serve root filesystem";
+      return status;
+    }
+    status =
+        outgoing_dir->AddEntry("delayed", delayed_outdir_.Initialize(std::move(endpoints->client)));
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Cannot add root filesystem entry";
+      return status;
+    }
   }
-  status = this->ServeRoot(std::move(filesystems_server_2));
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "cannot serve root filesystem";
-    return status;
-  }
-  outgoing_dir->AddEntry("delayed", delayed_outdir_.Initialize(std::move(filesystems_client_2)));
 
   // Add the diagnostics directory
   diagnostics_dir_ = inspect_.Initialize(global_loop_->dispatcher());
@@ -234,7 +246,8 @@ zx_status_t FsManager::Initialize(
 void FsManager::FlushMetrics() { mutable_metrics()->Flush(); }
 
 zx::status<> FsManager::InstallFs(MountPoint point, std::string_view device_path,
-                                  zx::channel export_root_directory, zx::channel root_directory) {
+                                  fidl::ClientEnd<fuchsia_io::Directory> export_root_directory,
+                                  fidl::ClientEnd<fuchsia_io::Directory> root_directory) {
   // Hold the shutdown lock for the entire duration of the install to avoid racing with shutdown on
   // adding/removing the remote mount.
   std::lock_guard guard(lock_);
@@ -288,10 +301,11 @@ void FsManager::Shutdown(fit::function<void(zx_status_t)> callback) {
   //    handles to the filesystems, but it doesn't own them so it doesn't shut them down.
   // 2. Shut down the root vfs. This hosts the filesystems, and recursively shuts all of them down.
   // If at any point we hit an error, we log loudly, but continue with the shutdown procedure.
-  std::vector<std::pair<MountPoint, zx::channel>> filesystems_to_shut_down;
+  std::vector<std::pair<MountPoint, fidl::ClientEnd<fuchsia_io::Directory>>>
+      filesystems_to_shut_down;
   for (auto& [point, node] : mount_nodes_) {
     if (node.export_root)
-      filesystems_to_shut_down.push_back(std::make_pair(point, std::move(node.export_root)));
+      filesystems_to_shut_down.emplace_back(point, std::move(node.export_root));
   }
 
   // fs_management::Shutdown is synchronous, so we spawn a thread to shut down
@@ -398,7 +412,7 @@ zx_status_t FsManager::ForwardFsDiagnosticsDirectory(MountPoint point,
 
   auto inspect_node = fbl::MakeRefCounted<fs::Service>([this, point](zx::channel request) {
     std::string name = std::string("diagnostics/") + fuchsia::inspect::Tree::Name_;
-    return fdio_service_connect_at(mount_nodes_[point].export_root.get(), name.c_str(),
+    return fdio_service_connect_at(mount_nodes_[point].export_root.channel().get(), name.c_str(),
                                    request.release());
   });
   auto fs_diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>();
@@ -426,8 +440,8 @@ zx_status_t FsManager::ForwardFsService(MountPoint point, const char* service_na
   auto service_node =
       fbl::MakeRefCounted<fs::Service>([this, point, service_name](zx::channel request) {
         std::string name = std::string("svc/") + service_name;
-        return fdio_service_connect_at(mount_nodes_[point].export_root.get(), name.c_str(),
-                                       request.release());
+        return fdio_service_connect_at(mount_nodes_[point].export_root.channel().get(),
+                                       name.c_str(), request.release());
       });
   return svc_dir_->AddEntry(service_name, std::move(service_node));
 }

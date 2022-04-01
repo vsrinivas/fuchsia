@@ -5,39 +5,27 @@
 #include "src/storage/fshost/fshost-boot-args.h"
 
 #include <lib/fdio/directory.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
-
-#include <fbl/string_printf.h>
-
-#include "lib/fidl/llcpp/connect_service.h"
 
 namespace fshost {
 
 // static
 std::shared_ptr<FshostBootArgs> FshostBootArgs::Create() {
-  zx::channel remote, local;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    // This service might be missing if we're running in a test environment. Log
-    // the error and continue.
-    FX_LOGS(ERROR) << "failed to get boot arguments (" << zx_status_get_string(status)
-                   << "), assuming test "
-                      "environment and continuing";
-    return std::make_shared<FshostBootArgs>(fidl::WireSyncClient<fuchsia_boot::Arguments>{});
-  }
-  status = fdio_service_connect(fidl::DiscoverableProtocolDefaultPath<fuchsia_boot::Arguments>,
-                                remote.release());
-  if (status != ZX_OK) {
-    // This service might be missing if we're running in a test environment. Log
-    // the error and continue.
-    FX_LOGS(ERROR) << "failed to get boot arguments (" << zx_status_get_string(status)
-                   << "), assuming test "
-                      "environment and continuing";
-    return std::make_shared<FshostBootArgs>(fidl::WireSyncClient<fuchsia_boot::Arguments>{});
-  }
   return std::make_shared<FshostBootArgs>(
-      fidl::WireSyncClient<fuchsia_boot::Arguments>(std::move(local)));
+      fidl::BindSyncClient([]() -> fidl::ClientEnd<fuchsia_boot::Arguments> {
+        zx::status local = service::Connect<fuchsia_boot::Arguments>();
+        if (local.is_error()) {
+          // This service might be missing if we're running in a test environment. Log
+          // the error and continue.
+          FX_LOGS(ERROR) << "failed to get boot arguments (" << local.status_string()
+                         << "), assuming test "
+                            "environment and continuing";
+          return {};
+        }
+        return std::move(local.value());
+      }()));
 }
 
 FshostBootArgs::FshostBootArgs(fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args)
