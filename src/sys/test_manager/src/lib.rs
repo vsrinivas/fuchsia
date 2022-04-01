@@ -11,7 +11,6 @@ use {
     anyhow::{anyhow, format_err, Context, Error},
     cm_rust,
     diagnostics_bridge::ArchiveReaderManager,
-    fdiagnostics::ArchiveAccessorProxy,
     fidl::endpoints::{create_endpoints, create_proxy, ClientEnd},
     fidl::prelude::*,
     fidl_fuchsia_component_decl as fdecl,
@@ -55,7 +54,7 @@ use {
         path::PathBuf,
         sync::{
             atomic::{AtomicU32, AtomicU64, Ordering},
-            Arc, Weak,
+            Arc,
         },
     },
     thiserror::Error,
@@ -1191,9 +1190,6 @@ struct RunningSuite {
     /// custom storage. Used to defer destruction of the realm until clients have completed
     /// reading the storage.
     custom_artifact_tokens: Vec<zx::EventPair>,
-    /// Keep archive accessor which tests might use through weak references.
-    archive_accessor: Arc<ArchiveAccessorProxy>,
-
     /// The test collection in which this suite is running.
     test_collection: &'static str,
 }
@@ -1209,18 +1205,11 @@ impl RunningSuite {
     ) -> Result<Self, LaunchTestError> {
         info!("Starting '{}' in '{}' collection.", test_url, facets.collection);
 
-        // This archive accessor will be served by the embedded archivist.
-        let (archive_accessor, archive_accessor_server_end) =
-            fidl::endpoints::create_proxy::<fdiagnostics::ArchiveAccessorMarker>()
-                .map_err(LaunchTestError::CreateProxyForArchiveAccessor)?;
-
-        let archive_accessor_arc = Arc::new(archive_accessor);
         let test_package = match PkgUrl::parse(test_url) {
             Ok(package_url) => package_url.name().to_string(),
             Err(_) => return Err(LaunchTestError::InvalidResolverData),
         };
         let builder = get_realm(
-            Arc::downgrade(&archive_accessor_arc),
             test_url,
             test_package.as_ref(),
             facets.collection,
@@ -1234,23 +1223,13 @@ impl RunningSuite {
             Some(name) => builder.build_with_name(name).await,
         }
         .map_err(LaunchTestError::CreateTestRealm)?;
-        let connect_to_instance_services = async move {
-            instance
-                .root
-                .connect_request_to_protocol_at_exposed_dir::<fdiagnostics::ArchiveAccessorMarker>(
-                    archive_accessor_server_end,
-                )
-                .map_err(LaunchTestError::ConnectToArchiveAccessor)?;
-            Ok(RunningSuite {
-                custom_artifact_tokens: vec![],
-                logs_iterator_task: None,
-                instance,
-                archive_accessor: archive_accessor_arc,
-                test_collection: facets.collection,
-            })
-        };
 
-        connect_to_instance_services.await
+        Ok(RunningSuite {
+            custom_artifact_tokens: vec![],
+            logs_iterator_task: None,
+            instance,
+            test_collection: facets.collection,
+        })
     }
 
     async fn run_tests(
@@ -1280,14 +1259,30 @@ impl RunningSuite {
 
         sender.send(Ok(SuiteEvents::suite_syslog(syslog).into())).await.unwrap();
 
+        let archive_accessor = match self
+            .instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<fdiagnostics::ArchiveAccessorMarker>()
+        {
+            Ok(accessor) => accessor,
+            Err(e) => {
+                warn!("Error connecting to ArchiveAccessor");
+                sender
+                    .send(Err(LaunchTestError::ConnectToArchiveAccessor(e.into()).into()))
+                    .await
+                    .unwrap();
+                return;
+            }
+        };
+
         let logs_iterator_task_result = match log_iterator {
             ftest_manager::LogsIterator::Archive(iterator) => {
-                IsolatedLogsProvider::new(self.archive_accessor.clone())
+                IsolatedLogsProvider::new(archive_accessor)
                     .spawn_iterator_server(iterator)
                     .map(Some)
             }
             ftest_manager::LogsIterator::Batch(iterator) => {
-                IsolatedLogsProvider::new(self.archive_accessor.clone())
+                IsolatedLogsProvider::new(archive_accessor)
                     .start_streaming_logs(iterator)
                     .map(|()| None)
             }
@@ -1486,7 +1481,6 @@ impl RunningSuite {
 
         let destroy_waiter = self.instance.root.take_destroy_waiter();
         drop(self.instance);
-        drop(self.archive_accessor);
         #[derive(Debug, Error)]
         enum TeardownError {
             #[error("timeout")]
@@ -1556,7 +1550,6 @@ fn get_global_non_hermetic_pkg_allowlist() -> HashSet<String> {
 }
 
 async fn get_realm(
-    archive_accessor: Weak<fdiagnostics::ArchiveAccessorProxy>,
     test_url: &str,
     test_package: &str,
     collection: &str,
@@ -1565,16 +1558,16 @@ async fn get_realm(
 ) -> Result<RealmBuilder, RealmBuilderError> {
     let builder = RealmBuilder::new_with_collection(collection.to_string()).await?;
 
-    let mocks_server = builder
+    let wrapper_realm =
+        builder.add_child_realm(WRAPPER_REALM_NAME, ChildOptions::new().eager()).await?;
+
+    let mocks_server = wrapper_realm
         .add_local_child(
             MOCKS_SERVER_REALM_NAME,
-            move |handles| Box::pin(serve_mocks(archive_accessor.clone(), handles)),
+            move |handles| Box::pin(serve_mocks(handles)),
             ChildOptions::new(),
         )
         .await?;
-
-    let wrapper_realm =
-        builder.add_child_realm(WRAPPER_REALM_NAME, ChildOptions::new().eager()).await?;
 
     // If this is realm is inside the hermetic tests collections, set up the
     // hermetic resolver local component.
@@ -1693,30 +1686,23 @@ async fn get_realm(
         .await?;
 
     // Mocks server to test root
-    builder
-        .add_route(
-            Route::new()
-                .capability(Capability::protocol::<fdiagnostics::ArchiveAccessorMarker>())
-                .from(&mocks_server)
-                .to(&wrapper_realm),
-        )
-        .await?;
     wrapper_realm
         .add_route(
             Route::new()
                 .capability(Capability::protocol::<fdiagnostics::ArchiveAccessorMarker>())
-                .from(Ref::parent())
+                .from(&mocks_server)
                 .to(&test_root),
         )
         .await?;
 
-    // archivist to parent
+    // archivist to parent and mocks
     wrapper_realm
         .add_route(
             Route::new()
                 .capability(Capability::protocol::<fdiagnostics::ArchiveAccessorMarker>())
                 .from(&archivist)
-                .to(Ref::parent()),
+                .to(Ref::parent())
+                .to(&mocks_server),
         )
         .await?;
 
@@ -1817,15 +1803,21 @@ async fn get_realm(
     Ok(builder)
 }
 
-async fn serve_mocks(
-    archive_accessor: Weak<fdiagnostics::ArchiveAccessorProxy>,
-    handles: LocalComponentHandles,
-) -> Result<(), Error> {
+async fn serve_mocks(mut handles: LocalComponentHandles) -> Result<(), Error> {
+    let mut outgoing_dir_handle = zx::Handle::invalid().into();
+    std::mem::swap(&mut handles.outgoing_dir, &mut outgoing_dir_handle);
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(move |stream| {
-        let archive_accessor_clone = archive_accessor.clone();
+        let archive_accessor =
+            match handles.connect_to_protocol::<fdiagnostics::ArchiveAccessorMarker>() {
+                Ok(accessor) => accessor,
+                Err(e) => {
+                    warn!("Mock failed to connect to Archivist: {:?}", e);
+                    return;
+                }
+            };
         fasync::Task::spawn(async move {
-            diagnostics::run_intermediary_archive_accessor(archive_accessor_clone, stream)
+            diagnostics::run_intermediary_archive_accessor(archive_accessor, stream)
                 .await
                 .unwrap_or_else(|e| {
                     warn!("Couldn't run proxied ArchiveAccessor: {:?}", e);
@@ -1833,7 +1825,7 @@ async fn serve_mocks(
         })
         .detach()
     });
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(outgoing_dir_handle.into_channel())?;
     fs.collect::<()>().await;
     Ok(())
 }

@@ -20,16 +20,16 @@ use {
     fidl_fuchsia_mem as fmem, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{future::Either, stream::FusedStream, FutureExt, TryStreamExt},
     serde_json::{self, Value as JsonValue},
-    std::{ops::Deref, sync::Arc, sync::Weak},
+    std::ops::Deref,
     tracing::{error, warn},
 };
 
 pub struct IsolatedLogsProvider {
-    accessor: Arc<ArchiveAccessorProxy>,
+    accessor: ArchiveAccessorProxy,
 }
 
 impl IsolatedLogsProvider {
-    pub fn new(accessor: Arc<ArchiveAccessorProxy>) -> Self {
+    pub fn new(accessor: ArchiveAccessorProxy) -> Self {
         Self { accessor }
     }
 
@@ -53,7 +53,7 @@ impl IsolatedLogsProvider {
 }
 
 impl Deref for IsolatedLogsProvider {
-    type Target = Arc<ArchiveAccessorProxy>;
+    type Target = ArchiveAccessorProxy;
 
     fn deref(&self) -> &Self::Target {
         &self.accessor
@@ -90,7 +90,7 @@ impl ArchiveReaderManager for IsolatedLogsProvider {
 /// Runs an ArchiveAccessor to which test components connect.
 /// This will append the test realm name to all selectors coming from the component.
 pub async fn run_intermediary_archive_accessor(
-    embedded_archive_accessor: Weak<ArchiveAccessorProxy>,
+    embedded_archive_accessor: ArchiveAccessorProxy,
     mut stream: ArchiveAccessorRequestStream,
 ) -> Result<(), Error> {
     while let Some(ArchiveAccessorRequest::StreamDiagnostics {
@@ -99,10 +99,6 @@ pub async fn run_intermediary_archive_accessor(
         control_handle: _,
     }) = stream.try_next().await?
     {
-        let embedded_archive_accessor = match embedded_archive_accessor.upgrade() {
-            Some(e) => e,
-            None => break,
-        };
         let (iterator, server_end) = fidl::endpoints::create_proxy::<BatchIteratorMarker>()?;
         let stream_parameters = scope_stream_parameters(stream_parameters);
         embedded_archive_accessor.stream_diagnostics(stream_parameters, server_end)?;
@@ -270,10 +266,8 @@ mod tests {
         let (test_accessor, stream) =
             fidl::endpoints::create_proxy_and_stream::<ArchiveAccessorMarker>()
                 .expect("create our archive accessor proxy");
-        let accessor = Arc::new(embedded_accessor);
-        let accessor_clone = accessor.clone();
         fasync::Task::spawn(async move {
-            run_intermediary_archive_accessor(Arc::downgrade(&accessor_clone), stream)
+            run_intermediary_archive_accessor(embedded_accessor, stream)
                 .await
                 .expect("ran proxyed archive accessor");
         })

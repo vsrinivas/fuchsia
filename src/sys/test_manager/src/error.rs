@@ -23,9 +23,6 @@ pub enum TestManagerError {
 
 #[derive(Debug, Error)]
 pub enum LaunchTestError {
-    #[error("Failed to create proxy for archive accessor: {0:?}")]
-    CreateProxyForArchiveAccessor(#[source] fidl::Error),
-
     #[error("Failed to initialize test realm: {0:?}")]
     InitializeTestRealm(#[source] RealmBuilderError),
 
@@ -72,8 +69,7 @@ impl From<FacetError> for LaunchTestError {
 impl From<LaunchTestError> for LaunchError {
     fn from(e: LaunchTestError) -> Self {
         match e {
-            LaunchTestError::CreateProxyForArchiveAccessor(_)
-            | LaunchTestError::InitializeTestRealm(_)
+            LaunchTestError::InitializeTestRealm(_)
             | LaunchTestError::ConnectToArchiveAccessor(_)
             | LaunchTestError::StreamIsolatedLogs(_)
             | LaunchTestError::InvalidResolverData
