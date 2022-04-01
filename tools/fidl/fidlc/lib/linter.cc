@@ -338,8 +338,9 @@ Linter::Linter()
       kYearRegex(R"(\b(\d{4})\b)"),
       kDisallowedLibraryComponentRegex(R"(^(common|service|util|base|f[a-z]l|zx\w*)$)"),
       kPermittedLibraryPrefixes({
-          "fuchsia",
+          "fdf",
           "fidl",
+          "fuchsia",
           "test",
       }),
       kStopWords({

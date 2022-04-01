@@ -1,0 +1,14 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fdf;
+
+type ObjType = strict enum : uint32 {
+    CHANNEL = 4;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        subtype ObjType;
+    };
+};

@@ -13,7 +13,10 @@ group("transport") {
 
 fidl("test.transport") {
   sources = [ "transport.test.fidl" ]
-  public_deps = [ "//zircon/vdso/zx" ]
+  public_deps = [
+    "//sdk/fidl/fdf",
+    "//zircon/vdso/zx",
+  ]
   contains_drivers = true
 }
 

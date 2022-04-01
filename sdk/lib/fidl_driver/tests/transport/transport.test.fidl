@@ -5,6 +5,7 @@
 library test.transport;
 
 using zx;
+using fdf;
 
 @transport("Driver")
 protocol EmptyProtocol {};
@@ -44,5 +45,14 @@ protocol SendZirconHandleTest {
         h zx.handle:EVENT;
     }) -> (resource struct {
         h zx.handle:EVENT;
+    });
+};
+
+@transport("Driver")
+protocol SendFdfChannelTest {
+    SendFdfChannel(resource struct {
+        h fdf.handle:CHANNEL;
+    }) -> (resource struct {
+        h fdf.handle:CHANNEL;
     });
 };
