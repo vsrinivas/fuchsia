@@ -16,6 +16,11 @@ use std::pin::Pin;
 pub struct MaybeStream<S: Stream>(Option<S>);
 
 impl<S: Stream + Unpin> MaybeStream<S> {
+    /// Resets the underlying stream back into a Pending state and drops the set Stream, if set.
+    pub fn reset(&mut self) {
+        let _ = self.0.take();
+    }
+
     /// Set the current stream.
     ///
     /// This method will not call `poll` on the submitted stream. The caller must ensure

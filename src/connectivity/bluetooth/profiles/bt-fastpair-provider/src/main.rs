@@ -13,8 +13,7 @@ use gatt_service::GattService;
 async fn main() -> Result<(), Error> {
     info!("Fast Pair Provider component running.");
 
-    // TODO(fxbug.dev/95542): Publish the GATT service using the `GattService` object and plumb to
-    // the rest of the component.
-    let _gatt_service = GattService::new()?;
+    // TODO(fxbug.dev/95542): Create the GATT service in the toplevel FP Provider server.
+    let _gatt_service = GattService::new().await?;
     Ok(())
 }

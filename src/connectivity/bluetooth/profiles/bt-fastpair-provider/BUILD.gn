@@ -11,6 +11,7 @@ rustc_binary("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.gatt2:fuchsia.bluetooth.gatt2-rustc",
+    "//src/connectivity/bluetooth/lib/async-helpers",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
@@ -21,7 +22,10 @@ rustc_binary("bin") {
     "//third_party/rust_crates:tracing",
   ]
 
-  test_deps = [ "//src/lib/async-utils" ]
+  test_deps = [
+    "//src/lib/async-utils",
+    "//third_party/rust_crates:assert_matches",
+  ]
 
   sources = [
     "src/gatt_service.rs",
