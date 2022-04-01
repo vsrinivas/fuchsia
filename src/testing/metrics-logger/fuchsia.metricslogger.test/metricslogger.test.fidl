@@ -34,23 +34,33 @@ type Metric = strict union {
 
 /// Temperature metric details.
 type Temperature = struct {
-    /// Length of the polling interval in milliseconds.
-    /// Must be positive and smaller than `duration_ms` of the logging request.
-    interval_ms uint32;
+    /// Length of the sampling interval in milliseconds.
+    sampling_interval_ms uint32;
+
+    /// Length of the interval in milliseconds for summarizing statistics (e.g.,
+    /// min, max, avg).
+    /// Must be equal to or larger than `sampling_interval_ms`.
+    /// Must be smaller than `duration_ms` of the logging request.
+    statistics_interval_ms uint32;
 };
 
 /// CPU Load metric details.
 type CpuLoad = struct {
     /// Length of the polling interval in milliseconds.
-    /// Must be positive and smaller than `duration_ms` of the logging request.
+    /// Must be smaller than `duration_ms` of the logging request.
     interval_ms uint32;
 };
 
 /// Power metric details.
 type Power = struct {
-    /// Length of the polling interval in milliseconds.
-    /// Must be positive and smaller than `duration_ms` of the logging request.
-    interval_ms uint32;
+    /// Length of the sampling interval in milliseconds.
+    sampling_interval_ms uint32;
+
+    /// Length of the interval in milliseconds for summarizing statistics (e.g.,
+    /// min, max, avg).
+    /// Must be equal to or larger than `sampling_interval_ms`.
+    /// Must be smaller than `duration_ms` of the logging request.
+    statistics_interval_ms uint32;
 };
 
 /// A protocol for managing on-demand metrics logging.
@@ -68,8 +78,8 @@ protocol MetricsLogger {
     /// + request `client_id` String format Id of the client. Client may choose
     ///     any Id with a maximum byte size of 8 (e.g., "ffxTest").
     /// + request `metrics` Type of the metrics to be polled and logged.
-    /// + request `duration_ms` Duration of logging in milliseconds; must be
-    ///     positive. After this duration, polling and logging will cease.
+    /// + request `duration_ms` Duration of logging in milliseconds. After this
+    ///     duration, polling and logging will cease.
     /// + error a [fuchsia.metrics.test/MeticsLoggerError] value indicating why
     ///     the request failed.
     StartLogging(struct {
