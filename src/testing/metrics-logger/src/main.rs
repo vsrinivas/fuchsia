@@ -36,6 +36,9 @@ use {
 // a fixed number clients to keep memory use bounded.
 const MAX_CONCURRENT_CLIENTS: usize = 20;
 
+// Minimum interval for logging to syslog.
+const MIN_INTERVAL_FOR_SYSLOG_MS: u32 = 500;
+
 const CONFIG_PATH: &'static str = "/config/data/config.json";
 
 // The fuchsia.hardware.temperature.Device is composed into fuchsia.hardware.thermal.Device, so
@@ -145,6 +148,7 @@ enum SensorType {
 #[async_trait(?Send)]
 trait Sensor<T> {
     fn sensor_type() -> SensorType;
+    fn unit() -> String;
     async fn read_data(sensor: &T) -> Result<f32, Error>;
 }
 
@@ -152,6 +156,10 @@ trait Sensor<T> {
 impl Sensor<ftemperature::DeviceProxy> for ftemperature::DeviceProxy {
     fn sensor_type() -> SensorType {
         SensorType::Temperature
+    }
+
+    fn unit() -> String {
+        String::from("°C")
     }
 
     async fn read_data(sensor: &ftemperature::DeviceProxy) -> Result<f32, Error> {
@@ -169,6 +177,10 @@ impl Sensor<ftemperature::DeviceProxy> for ftemperature::DeviceProxy {
 impl Sensor<fpower::DeviceProxy> for fpower::DeviceProxy {
     fn sensor_type() -> SensorType {
         SensorType::Power
+    }
+
+    fn unit() -> String {
+        String::from("W")
     }
 
     async fn read_data(sensor: &fpower::DeviceProxy) -> Result<f32, Error> {
@@ -251,6 +263,10 @@ struct SensorLogger<T> {
     client_id: String,
 
     inspect: InspectData,
+
+    output_samples_to_syslog: bool,
+
+    output_stats_to_syslog: bool,
 }
 
 impl<T: Sensor<T>> SensorLogger<T> {
@@ -262,6 +278,8 @@ impl<T: Sensor<T>> SensorLogger<T> {
         client_inspect: &inspect::Node,
         driver_names: Vec<String>,
         client_id: String,
+        output_samples_to_syslog: bool,
+        output_stats_to_syslog: bool,
     ) -> Self {
         let start_time = fasync::Time::now();
         let statistics_start_time = fasync::Time::now();
@@ -271,15 +289,11 @@ impl<T: Sensor<T>> SensorLogger<T> {
         let statistics_interval = zx::Duration::from_millis(statistics_interval_ms as i64);
         let samples = vec![Vec::new(); drivers.len()];
 
-        let unit = match T::sensor_type() {
-            SensorType::Temperature => "°C",
-            SensorType::Power => "W",
-        };
         let logger_name = match T::sensor_type() {
             SensorType::Temperature => "TemperatureLogger",
             SensorType::Power => "PowerLogger",
         };
-        let inspect = InspectData::new(client_inspect, logger_name, unit, driver_names);
+        let inspect = InspectData::new(client_inspect, logger_name, &T::unit(), driver_names);
 
         SensorLogger {
             drivers,
@@ -291,6 +305,8 @@ impl<T: Sensor<T>> SensorLogger<T> {
             end_time,
             inspect,
             client_id,
+            output_samples_to_syslog,
+            output_stats_to_syslog,
         }
     }
 
@@ -329,6 +345,12 @@ impl<T: Sensor<T>> SensorLogger<T> {
             time_stamp - self.statistics_start_time >= self.statistics_interval;
 
         for (index, result) in results.into_iter() {
+            let topological_path = &self.drivers[index].topological_path;
+            let sensor_name =
+                self.drivers[index].alias.as_ref().map_or(topological_path.to_string(), |alias| {
+                    format!("{:?}({:?})", alias, topological_path)
+                });
+
             match result {
                 Ok(value) => {
                     // Save the current sample for calculating statistics.
@@ -342,12 +364,16 @@ impl<T: Sensor<T>> SensorLogger<T> {
                     );
 
                     // Log data to Trace.
-                    log_trace!(
-                        T::sensor_type(),
-                        self.client_id.as_str(),
-                        &self.drivers[index].name(),
-                        value
-                    );
+                    log_trace!(T::sensor_type(), self.client_id.as_str(), &sensor_name, value);
+
+                    if self.output_samples_to_syslog {
+                        fx_log_info!(
+                            "Reading sensor {:?} [{:?}]: {:?}",
+                            sensor_name,
+                            T::unit(),
+                            value
+                        );
+                    }
                 }
                 // In case of a polling error, the previous value from this sensor will not be
                 // updated. We could do something fancier like exposing an error count, but this
@@ -384,21 +410,33 @@ impl<T: Sensor<T>> SensorLogger<T> {
                 log_trace!(
                     T::sensor_type(),
                     self.client_id.as_str(),
-                    &format!("{} [min]", self.drivers[index].name()),
+                    &format!("{} [min]", sensor_name),
                     min
                 );
                 log_trace!(
                     T::sensor_type(),
                     self.client_id.as_str(),
-                    &format!("{} [max]", self.drivers[index].name()),
+                    &format!("{} [max]", sensor_name),
                     max
                 );
                 log_trace!(
                     T::sensor_type(),
                     self.client_id.as_str(),
-                    &format!("{} [avg]", self.drivers[index].name()),
+                    &format!("{} [avg]", sensor_name),
                     avg
                 );
+
+                if self.output_stats_to_syslog {
+                    fx_log_info!(
+                        "Sensor {:?} statistics [{:?}]:\n\
+                        max: {:?}, min: {:?}, avg: {:?};",
+                        sensor_name,
+                        T::unit(),
+                        max,
+                        min,
+                        avg
+                    );
+                }
 
                 // Empty samples for this sensor.
                 self.samples[index].clear();
@@ -548,6 +586,7 @@ struct CpuLoadLogger {
     last_sample: Option<(fasync::Time, fkernel::CpuStats)>,
     stats_proxy: Rc<fkernel::StatsProxy>,
     client_id: String,
+    output_samples_to_syslog: bool,
 }
 
 impl CpuLoadLogger {
@@ -556,9 +595,17 @@ impl CpuLoadLogger {
         duration: Option<zx::Duration>,
         stats_proxy: Rc<fkernel::StatsProxy>,
         client_id: String,
+        output_samples_to_syslog: bool,
     ) -> Self {
         let end_time = duration.map_or(fasync::Time::INFINITE, |d| fasync::Time::now() + d);
-        CpuLoadLogger { interval, end_time, last_sample: None, stats_proxy, client_id }
+        CpuLoadLogger {
+            interval,
+            end_time,
+            last_sample: None,
+            stats_proxy,
+            client_id,
+            output_samples_to_syslog,
+        }
     }
 
     async fn log_cpu_usages(mut self) {
@@ -595,20 +642,27 @@ impl CpuLoadLogger {
                         cpu_percentage_sum +=
                             100.0 * busy_time.into_nanos() as f64 / elapsed.into_nanos() as f64;
                     }
+
+                    let cpu_usage = cpu_percentage_sum / cpu_stats.actual_num_cpus as f64;
+
+                    if self.output_samples_to_syslog {
+                        fx_log_info!("CpuUsage: {:?}", cpu_usage);
+                    }
+
                     // TODO (didis): Remove system_metrics_logger category after the e2e test is
                     // transitioned.
                     fuchsia_trace::counter!(
                         "system_metrics_logger",
                         "cpu_usage",
                         0,
-                        "cpu_usage" => cpu_percentage_sum / cpu_stats.actual_num_cpus as f64
+                        "cpu_usage" => cpu_usage
                     );
                     fuchsia_trace::counter!(
                         "metrics_logger",
                         "cpu_usage",
                         trace_counter_id,
                         "client_id" => self.client_id.as_str(),
-                        "cpu_usage" => cpu_percentage_sum / cpu_stats.actual_num_cpus as f64
+                        "cpu_usage" => cpu_usage
                     );
                 }
 
@@ -675,12 +729,41 @@ impl MetricsLoggerServer {
         self.purge_completed_tasks();
 
         match request {
-            MetricsLoggerRequest::StartLogging { client_id, metrics, duration_ms, responder } => {
-                let mut result = self.start_logging(&client_id, metrics, Some(duration_ms)).await;
+            MetricsLoggerRequest::StartLogging {
+                client_id,
+                metrics,
+                duration_ms,
+                output_samples_to_syslog,
+                output_stats_to_syslog,
+                responder,
+            } => {
+                let mut result = self
+                    .start_logging(
+                        &client_id,
+                        metrics,
+                        output_samples_to_syslog,
+                        output_stats_to_syslog,
+                        Some(duration_ms),
+                    )
+                    .await;
                 responder.send(&mut result)?;
             }
-            MetricsLoggerRequest::StartLoggingForever { client_id, metrics, responder } => {
-                let mut result = self.start_logging(&client_id, metrics, None).await;
+            MetricsLoggerRequest::StartLoggingForever {
+                client_id,
+                metrics,
+                output_samples_to_syslog,
+                output_stats_to_syslog,
+                responder,
+            } => {
+                let mut result = self
+                    .start_logging(
+                        &client_id,
+                        metrics,
+                        output_samples_to_syslog,
+                        output_stats_to_syslog,
+                        None,
+                    )
+                    .await;
                 responder.send(&mut result)?;
             }
             MetricsLoggerRequest::StopLogging { client_id, responder } => {
@@ -695,6 +778,8 @@ impl MetricsLoggerServer {
         &self,
         client_id: &str,
         metrics: Vec<fmetrics::Metric>,
+        output_samples_to_syslog: bool,
+        output_stats_to_syslog: bool,
         duration_ms: Option<u32>,
     ) -> fmetrics::MetricsLoggerStartLoggingResult {
         if self.client_tasks.borrow_mut().contains_key(client_id) {
@@ -714,7 +799,10 @@ impl MetricsLoggerServer {
         for metric in metrics.iter() {
             match metric {
                 fmetrics::Metric::CpuLoad(fmetrics::CpuLoad { interval_ms }) => {
-                    if *interval_ms == 0 || duration_ms.map_or(false, |d| d <= *interval_ms) {
+                    if *interval_ms == 0
+                        || output_samples_to_syslog && *interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
+                        || duration_ms.map_or(false, |d| d <= *interval_ms)
+                    {
                         return Err(fmetrics::MetricsLoggerError::InvalidArgument);
                     }
                 }
@@ -726,6 +814,10 @@ impl MetricsLoggerServer {
                         return Err(fmetrics::MetricsLoggerError::NoDrivers);
                     }
                     if *sampling_interval_ms == 0
+                        || output_samples_to_syslog
+                            && *sampling_interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
+                        || output_stats_to_syslog
+                            && *statistics_interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
                         || *sampling_interval_ms > *statistics_interval_ms
                         || duration_ms.map_or(false, |d| d <= *statistics_interval_ms)
                     {
@@ -740,6 +832,10 @@ impl MetricsLoggerServer {
                         return Err(fmetrics::MetricsLoggerError::NoDrivers);
                     }
                     if *sampling_interval_ms == 0
+                        || output_samples_to_syslog
+                            && *sampling_interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
+                        || output_stats_to_syslog
+                            && *statistics_interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
                         || *sampling_interval_ms > *statistics_interval_ms
                         || duration_ms.map_or(false, |d| d <= *statistics_interval_ms)
                     {
@@ -751,7 +847,13 @@ impl MetricsLoggerServer {
 
         self.client_tasks.borrow_mut().insert(
             client_id.to_string(),
-            self.spawn_client_tasks(client_id.to_string(), metrics, duration_ms),
+            self.spawn_client_tasks(
+                client_id.to_string(),
+                metrics,
+                duration_ms,
+                output_samples_to_syslog,
+                output_stats_to_syslog,
+            ),
         );
 
         Ok(())
@@ -769,6 +871,8 @@ impl MetricsLoggerServer {
         client_id: String,
         metrics: Vec<fmetrics::Metric>,
         duration_ms: Option<u32>,
+        output_samples_to_syslog: bool,
+        output_stats_to_syslog: bool,
     ) -> fasync::Task<()> {
         let cpu_stats_proxy = self.cpu_stats_proxy.clone();
         let temperature_drivers = self.temperature_drivers.clone();
@@ -786,6 +890,7 @@ impl MetricsLoggerServer {
                             duration_ms.map(|ms| zx::Duration::from_millis(ms as i64)),
                             cpu_stats_proxy.clone(),
                             String::from(&client_id),
+                            output_samples_to_syslog,
                         );
                         futures.push(Box::new(cpu_load_logger.log_cpu_usages()));
                     }
@@ -804,6 +909,8 @@ impl MetricsLoggerServer {
                             &client_inspect,
                             temperature_driver_names,
                             String::from(&client_id),
+                            output_samples_to_syslog,
+                            output_stats_to_syslog,
                         );
                         futures.push(Box::new(temperature_logger.log_data()));
                     }
@@ -822,6 +929,8 @@ impl MetricsLoggerServer {
                             &client_inspect,
                             power_driver_names,
                             String::from(&client_id),
+                            output_samples_to_syslog,
+                            output_stats_to_syslog,
                         );
                         futures.push(Box::new(power_logger.log_data()));
                     }
@@ -1188,6 +1297,8 @@ mod tests {
             ]
             .into_iter(),
             1000,
+            false,
+            false,
         );
 
         assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
@@ -1367,6 +1478,8 @@ mod tests {
             "test",
             &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 100 })].into_iter(),
             2000,
+            false,
+            false,
         );
         runner.run_server_task_until_stalled();
 
@@ -1387,6 +1500,8 @@ mod tests {
             "test",
             &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 100 })].into_iter(),
             50,
+            false,
+            false,
         );
         assert_matches!(
             runner.executor.run_until_stalled(&mut query),
@@ -1416,6 +1531,8 @@ mod tests {
             ]
             .into_iter(),
             200,
+            false,
+            false,
         );
         assert_matches!(
             runner.executor.run_until_stalled(&mut query),
@@ -1431,6 +1548,8 @@ mod tests {
         let _query = runner.proxy.start_logging_forever(
             "test",
             &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 100 })].into_iter(),
+            false,
+            false,
         );
         runner.run_server_task_until_stalled();
 
@@ -1448,6 +1567,8 @@ mod tests {
         let mut query = runner.proxy.start_logging_forever(
             "test",
             &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 100 })].into_iter(),
+            false,
+            false,
         );
         assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
     }
@@ -1467,6 +1588,8 @@ mod tests {
             ]
             .into_iter(),
             600,
+            false,
+            false,
         );
         runner.run_server_task_until_stalled();
 
@@ -1532,6 +1655,8 @@ mod tests {
                 statistics_interval_ms: 100,
             })]
             .into_iter(),
+            false,
+            false,
         );
         runner.run_server_task_until_stalled();
 
@@ -1638,6 +1763,8 @@ mod tests {
             ]
             .into_iter(),
             500,
+            false,
+            false,
         );
 
         // Create a request for logging Temperature.
@@ -1649,6 +1776,8 @@ mod tests {
             })]
             .into_iter(),
             300,
+            false,
+            false,
         );
         runner.run_server_task_until_stalled();
 
@@ -1911,6 +2040,8 @@ mod tests {
             let mut query = runner.proxy.start_logging_forever(
                 &(i as u32).to_string(),
                 &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 300 })].into_iter(),
+                false,
+                false,
             );
             assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
             runner.run_server_task_until_stalled();
@@ -1921,6 +2052,8 @@ mod tests {
             "test",
             &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 100 })].into_iter(),
             400,
+            false,
+            false,
         );
         assert_matches!(
             runner.executor.run_until_stalled(&mut query),
@@ -1936,6 +2069,8 @@ mod tests {
             "test",
             &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 100 })].into_iter(),
             400,
+            false,
+            false,
         );
         assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
     }
@@ -1949,6 +2084,8 @@ mod tests {
             "test",
             &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 100 })].into_iter(),
             400,
+            false,
+            false,
         );
 
         runner.run_server_task_until_stalled();
@@ -1961,6 +2098,8 @@ mod tests {
             "test",
             &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 100 })].into_iter(),
             400,
+            false,
+            false,
         );
         assert_matches!(
             runner.executor.run_until_stalled(&mut query),
@@ -1977,6 +2116,8 @@ mod tests {
             })]
             .into_iter(),
             200,
+            false,
+            false,
         );
         assert_matches!(
             runner.executor.run_until_stalled(&mut query),
@@ -1992,6 +2133,8 @@ mod tests {
             })]
             .into_iter(),
             1000,
+            false,
+            false,
         );
         assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
 
@@ -2009,6 +2152,8 @@ mod tests {
             })]
             .into_iter(),
             200,
+            false,
+            false,
         );
         runner.run_server_task_until_stalled();
 
@@ -2021,6 +2166,8 @@ mod tests {
             })]
             .into_iter(),
             200,
+            false,
+            false,
         );
         assert_matches!(
             runner.executor.run_until_stalled(&mut query),
@@ -2036,9 +2183,42 @@ mod tests {
             "test",
             &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 0 })].into_iter(),
             200,
+            false,
+            false,
+        );
+        // Check `InvalidArgument` is returned when logging interval is 0.
+        assert_matches!(
+            runner.executor.run_until_stalled(&mut query),
+            Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::InvalidArgument)))
         );
 
-        // Check `InvalidArgument` is returned when logging interval is 0.
+        let mut query = runner.proxy.start_logging(
+            "test",
+            &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 200 })].into_iter(),
+            1_000,
+            true,
+            false,
+        );
+        // Check `InvalidArgument` is returned when logging to syslog at an interval smaller than
+        // 500ms.
+        assert_matches!(
+            runner.executor.run_until_stalled(&mut query),
+            Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::InvalidArgument)))
+        );
+
+        let mut query = runner.proxy.start_logging(
+            "test",
+            &mut vec![&mut Metric::Power(Power {
+                sampling_interval_ms: 200,
+                statistics_interval_ms: 200,
+            })]
+            .into_iter(),
+            300,
+            false,
+            true,
+        );
+        // Check `InvalidArgument` is returned when logging statistics to syslog at an interval
+        // smaller than 500ms.
         assert_matches!(
             runner.executor.run_until_stalled(&mut query),
             Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::InvalidArgument)))
@@ -2052,6 +2232,8 @@ mod tests {
             })]
             .into_iter(),
             300,
+            false,
+            false,
         );
 
         // Check `InvalidArgument` is returned when logging interval is larger
@@ -2069,6 +2251,8 @@ mod tests {
             })]
             .into_iter(),
             800,
+            false,
+            false,
         );
 
         // Check `InvalidArgument` is returned when statistics_interval_ms is
@@ -2093,6 +2277,8 @@ mod tests {
             "test",
             &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 100 })].into_iter(),
             200,
+            false,
+            false,
         );
         assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
         runner.run_server_task_until_stalled();
@@ -2119,6 +2305,8 @@ mod tests {
             })]
             .into_iter(),
             1_000,
+            false,
+            false,
         );
         runner.run_server_task_until_stalled();
 
@@ -2216,6 +2404,8 @@ mod tests {
             })]
             .into_iter(),
             1_000,
+            false,
+            false,
         );
         runner.run_server_task_until_stalled();
 
@@ -2323,6 +2513,8 @@ mod tests {
             })]
             .into_iter(),
             200,
+            false,
+            false,
         );
         runner.run_server_task_until_stalled();
 

@@ -35,12 +35,16 @@ type Metric = strict union {
 /// Temperature metric details.
 type Temperature = struct {
     /// Length of the sampling interval in milliseconds.
+    /// Must not be smaller than 500ms if `output_samples_to_syslog` is enabled
+    /// in the logging request.
     sampling_interval_ms uint32;
 
     /// Length of the interval in milliseconds for summarizing statistics (e.g.,
     /// min, max, avg).
     /// Must be equal to or larger than `sampling_interval_ms`.
     /// Must be smaller than `duration_ms` of the logging request.
+    /// Must not be smaller than 500ms if `output_stats_to_syslog` is enabled in
+    /// the logging request.
     statistics_interval_ms uint32;
 };
 
@@ -48,18 +52,24 @@ type Temperature = struct {
 type CpuLoad = struct {
     /// Length of the polling interval in milliseconds.
     /// Must be smaller than `duration_ms` of the logging request.
+    /// Must not be smaller than 500ms if `output_samples_to_syslog` is enabled
+    /// in the logging request.
     interval_ms uint32;
 };
 
 /// Power metric details.
 type Power = struct {
     /// Length of the sampling interval in milliseconds.
+    /// Must not be smaller than 500ms if `output_samples_to_syslog` is enabled
+    /// in the logging request.
     sampling_interval_ms uint32;
 
     /// Length of the interval in milliseconds for summarizing statistics (e.g.,
     /// min, max, avg).
     /// Must be equal to or larger than `sampling_interval_ms`.
     /// Must be smaller than `duration_ms` of the logging request.
+    /// Must not be smaller than 500ms if `output_stats_to_syslog` is enabled in
+    /// the logging request.
     statistics_interval_ms uint32;
 };
 
@@ -80,12 +90,18 @@ protocol MetricsLogger {
     /// + request `metrics` Type of the metrics to be polled and logged.
     /// + request `duration_ms` Duration of logging in milliseconds. After this
     ///     duration, polling and logging will cease.
+    /// + request `output_samples_to_syslog` Toggle for outputting raw data to
+    ///     syslog.
+    /// + request `output_stats_to_syslog` Toggle for outputting any available
+    ///     statistics to syslog.
     /// + error a [fuchsia.metrics.test/MeticsLoggerError] value indicating why
     ///     the request failed.
     StartLogging(struct {
         client_id ClientId;
         metrics vector<Metric>:MAX;
         duration_ms uint32;
+        output_samples_to_syslog bool;
+        output_stats_to_syslog bool;
     }) -> (struct {}) error MetricsLoggerError;
 
     /// Initiates logging of specified metrics. Supports concurrent logging of
@@ -97,11 +113,17 @@ protocol MetricsLogger {
     /// + request `client_id` String format Id of the client. Client may choose
     ///     any Id with a maximum byte size of 8 (e.g., "ffxTest").
     /// + request `metrics` Type of the metrics to be polled and logged.
+    /// + request `output_samples_to_syslog` Toggle for outputting raw data to
+    ///     syslog.
+    /// + request `output_stats_to_syslog` Toggle for outputting any available
+    ///     statistics to syslog.
     /// + error a [fuchsia.metrics.test/MetricsLoggerError] value indicating why
     ///     the request failed.
     StartLoggingForever(struct {
         client_id ClientId;
         metrics vector<Metric>:MAX;
+        output_samples_to_syslog bool;
+        output_stats_to_syslog bool;
     }) -> (struct {}) error MetricsLoggerError;
 
     /// Terminates all active logging tasks with the given client_id. It is
