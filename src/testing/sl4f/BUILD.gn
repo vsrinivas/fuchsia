@@ -15,7 +15,6 @@ rustc_library("lib") {
   deps = [
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
-    "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.avdtp:fuchsia.bluetooth.avdtp-rustc",
     "//sdk/fidl/fuchsia.bluetooth.avrcp:fuchsia.bluetooth.avrcp-rustc",
@@ -23,7 +22,6 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
     "//sdk/fidl/fuchsia.bluetooth.hfp:fuchsia.bluetooth.hfp-rustc",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.rfcomm.test:fuchsia.bluetooth.rfcomm.test-rustc",
     "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
     "//sdk/fidl/fuchsia.buildinfo:fuchsia.buildinfo-rustc",
     "//sdk/fidl/fuchsia.developer.tiles:fuchsia.developer.tiles-rustc",
@@ -32,7 +30,6 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.factory:fuchsia.factory-rustc",
     "//sdk/fidl/fuchsia.factory.lowpan:fuchsia.factory.lowpan-rustc",
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
-    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
     "//sdk/fidl/fuchsia.hardware.temperature:fuchsia.hardware.temperature-rustc",
@@ -62,9 +59,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
-    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
     "//sdk/fidl/fuchsia.testing.sl4f:fuchsia.testing.sl4f-rustc",
-    "//sdk/fidl/fuchsia.time:fuchsia.time-rustc",
     "//sdk/fidl/fuchsia.tracing.controller:fuchsia.tracing.controller-rustc",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition-rustc",
@@ -75,7 +70,6 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.weave:fuchsia.weave-rustc",
     "//sdk/fidl/fuchsia.web:fuchsia.web-rustc",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
-    "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device-rustc",
     "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service-rustc",
     "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal-rustc",
     "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
@@ -83,8 +77,6 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.wlan.sme:fuchsia.wlan.sme-rustc",
     "//sdk/lib/syslog:client_includes",
     "//src/camera/bin/virtual_camera:fuchsia.camera.test.virtualcamera-rustc",
-    "//src/chromium/web_engine/meta/shards:web_engine_base",
-    "//src/chromium/web_engine/meta/shards:web_engine_feature_network",
     "//src/connectivity/bluetooth/lib/bt-avdtp",
     "//src/connectivity/bluetooth/lib/bt-rfcomm",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
@@ -106,7 +98,6 @@ rustc_library("lib") {
     "//src/lib/mapped-vmo",
     "//src/lib/network/fidl_fuchsia_net_ext",
     "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
-    "//src/lib/storage/fuchsia-vfs-watcher",
     "//src/lib/storage/vfs/rust:vfs",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/ui/fuchsia-scenic",
@@ -135,7 +126,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:once_cell",
     "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
@@ -144,13 +134,13 @@ rustc_library("lib") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:uuid",
-    "//third_party/rust_crates:void",
   ]
 
   test_deps = [
     "//src/lib/test_util",
     "//src/testing/fidl:placeholders-rustc",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:pin-utils",
   ]
 
   sources = [

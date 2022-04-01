@@ -1,7 +1,5 @@
 {
     "include": [
-        "//src/chromium/web_engine/meta/shards/web_engine_base.shard.cmx",
-        "//src/chromium/web_engine/meta/shards/web_engine_feature_network.shard.cmx",
         "syslog/client.shard.cmx"
     ],
     "program": {
@@ -30,6 +28,7 @@
             "fuchsia.bluetooth.sys.Access",
             "fuchsia.bluetooth.sys.Configuration",
             "fuchsia.bluetooth.sys.HostWatcher",
+            "fuchsia.buildinfo.Provider",
             "fuchsia.developer.tiles.Controller",
             "fuchsia.device.NameProvider",
             "fuchsia.diagnostics.ArchiveAccessor",
@@ -49,9 +48,12 @@
             "fuchsia.input.injection.InputDeviceRegistry",
             "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
             "fuchsia.location.position.EmergencyProvider",
-            "fuchsia.logger.Log",
             "fuchsia.lowpan.device.Lookup",
+            "fuchsia.media.ProfileProvider",
+            "fuchsia.memorypressure.Provider",
+            "fuchsia.net.interfaces.State",
             "fuchsia.paver.Paver",
+            "fuchsia.posix.socket.Provider",
             "fuchsia.recovery.FactoryReset",
             "fuchsia.session.Launcher",
             "fuchsia.settings.Audio",
@@ -77,6 +79,7 @@
             "fuchsia.virtualaudio.Output",
             "fuchsia.weave.FactoryDataManager",
             "fuchsia.weave.Stack",
+            "fuchsia.web.ContextProvider",
             "fuchsia.wlan.device.Phy",
             "fuchsia.wlan.device.service.DeviceMonitor",
             "fuchsia.wlan.device.service.DeviceService",
