@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_CPU_SEARCH_SET_H_
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_CPU_SEARCH_SET_H_
 
+#include <platform.h>
 #include <stddef.h>
 
 #include <fbl/vector.h>
@@ -48,6 +49,12 @@ class CpuSearchSet {
 
   size_t cluster() const { return ordered_cpus_[0].cluster; }
 
+  // Sets the relative performance scale for the given CPU.
+  static void SetPerfScale(cpu_num_t cpu, int64_t perf_scale) {
+    DEBUG_ASSERT(cpu < SMP_MAX_CPUS);
+    perf_scales_[cpu] = perf_scale;
+  }
+
  private:
   friend struct percpu;
   friend struct CpuSearchSetTestAccess;
@@ -77,13 +84,16 @@ class CpuSearchSet {
   void DoInitialize(cpu_num_t this_cpu, size_t cpu_count, const ClusterSet& cluster_set,
                     const CpuDistanceMap& map);
 
-  // Each search set is initially populated by CPU 0 so that the boot processor
-  // has a valid search set during early kernel init.
-  // TODO(eieio): This depends on the assumption that the boot processor is
-  // always logical CPU id 0. This assumption exists in other places and may
-  // need to be addressed in the future.
+  // The following initializations depend the boot CPU having logical id 0.
+  static_assert(BOOT_CPU_ID == 0);
+
+  // Each search set is initially populated by BOOT_CPU_ID so that the boot
+  // processor has a valid search set during early kernel init.
   size_t cpu_count_{1};
-  ktl::array<Entry, SMP_MAX_CPUS> ordered_cpus_{{Entry{0, 0}}};
+  ktl::array<Entry, SMP_MAX_CPUS> ordered_cpus_{{Entry{BOOT_CPU_ID, 0}}};
+
+  // The CPU this search set is for.
+  cpu_num_t this_cpu_{BOOT_CPU_ID};
 
   // Type representing a logical CPU cluster and its members.
   struct Cluster {
@@ -110,6 +120,10 @@ class CpuSearchSet {
 
     auto iterator() { return ktl::span{clusters.begin(), clusters.size()}; }
   };
+
+  // The relative performance scales of each CPU. Each relevant scale must be set before
+  // initializing the search sets.
+  inline static ktl::array<int64_t, SMP_MAX_CPUS> perf_scales_{};
 
   // The global set of CPU clusters initialized during auto clustering.
   static ClusterSet cluster_set_;
