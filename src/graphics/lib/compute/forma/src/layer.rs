@@ -9,7 +9,7 @@ use std::{
 use rustc_hash::FxHashMap;
 use surpass::{self, painter::Props, GeomPresTransform, LinesBuilder, Path, LAYER_LIMIT};
 
-use crate::LayerId;
+use crate::{composition, LayerId};
 
 const IDENTITY: &[f32; 6] = &[1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
 
@@ -194,7 +194,7 @@ impl SmallBitSet {
 
 #[derive(Debug)]
 pub struct Layer<'c> {
-    pub(crate) layer: &'c mut crate::composition::Layer,
+    pub(crate) layer: &'c mut composition::Layer,
     pub(crate) lines_builder: &'c RefCell<Option<LinesBuilder>>,
 }
 

@@ -20,7 +20,7 @@ use surpass::{
 
 use crate::{
     buffer::{layout::Layout, Buffer, BufferLayerCache},
-    layer::{IdSet, SmallBitSet},
+    layer::{self, IdSet, SmallBitSet},
 };
 
 const LINES_GARBAGE_THRESHOLD: usize = 2;
@@ -97,7 +97,7 @@ impl Composition {
         self.builder.borrow().as_ref().unwrap().len()
     }
 
-    pub fn create_layer(&mut self) -> Option<crate::layer::Layer<'_>> {
+    pub fn create_layer(&mut self) -> Option<layer::Layer<'_>> {
         // Generate a new LayerId identifier.
         let layer_id = {
             let count = self.external_count;
@@ -125,25 +125,24 @@ impl Composition {
             Entry::Vacant(entry) => entry.insert(Layer::new(layer_id, internal_id)),
         };
 
-        Some(crate::layer::Layer { layer, lines_builder: &self.builder })
+        Some(layer::Layer { layer, lines_builder: &self.builder })
     }
 
     #[inline]
-    pub fn layer(&mut self, layer_id: LayerId) -> Option<crate::layer::Layer<'_>> {
+    pub fn layer(&mut self, layer_id: LayerId) -> Option<layer::Layer<'_>> {
         // TODO: remove with 2021 edition.
         let layers = &mut self.layers;
         let line_builder = &mut self.builder;
-        self.external_to_internal.get(&layer_id).and_then(move |id| layers.get_mut(id)).and_then(
-            move |layer| Some(crate::layer::Layer { layer: layer, lines_builder: line_builder }),
-        )
+        self.external_to_internal
+            .get(&layer_id)
+            .and_then(move |id| layers.get_mut(id))
+            .and_then(move |layer| Some(layer::Layer { layer: layer, lines_builder: line_builder }))
     }
 
     #[inline]
-    pub fn layers(&mut self) -> impl Iterator<Item = crate::layer::Layer<'_>> {
+    pub fn layers(&mut self) -> impl Iterator<Item = layer::Layer<'_>> {
         let builder = &self.builder;
-        self.layers
-            .values_mut()
-            .map(move |layer| crate::layer::Layer { layer, lines_builder: builder })
+        self.layers.values_mut().map(move |layer| layer::Layer { layer, lines_builder: builder })
     }
 
     fn actual_len(&self) -> usize {
