@@ -9,7 +9,15 @@
 
 namespace zxdb {
 
-void MockBreakpoint::SetSettings(const BreakpointSettings& settings) { settings_ = settings; }
+void MockBreakpoint::SetSettings(const BreakpointSettings& settings, SetCallback cb) {
+  settings_ = settings;
+
+  if (cb) {
+    // Issue the callback non-reentrantly.
+    debug::MessageLoop::Current()->PostTask(FROM_HERE,
+                                            [cb = std::move(cb)]() mutable { cb(Err()); });
+  }
+}
 
 std::vector<const BreakpointLocation*> MockBreakpoint::GetLocations() const {
   std::vector<const BreakpointLocation*> result;

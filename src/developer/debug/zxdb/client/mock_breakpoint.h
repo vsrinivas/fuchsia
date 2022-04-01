@@ -23,7 +23,8 @@ class MockBreakpoint : public Breakpoint {
 
   // Breakpoint implementation.
   BreakpointSettings GetSettings() const override { return settings_; }
-  void SetSettings(const BreakpointSettings& settings) override;
+  using Breakpoint::SetSettings;  // Pull in one-arg helper.
+  void SetSettings(const BreakpointSettings& settings, SetCallback cb) override;
   bool IsInternal() const override { return is_internal_; }
   std::vector<const BreakpointLocation*> GetLocations() const override;
   std::vector<BreakpointLocation*> GetLocations() override;

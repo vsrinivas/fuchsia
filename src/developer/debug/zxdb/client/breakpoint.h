@@ -22,6 +22,8 @@ class Thread;
 
 class Breakpoint : public ClientObject {
  public:
+  using SetCallback = fit::callback<void(const Err&)>;
+
   explicit Breakpoint(Session* session);
   ~Breakpoint() override;
 
@@ -31,12 +33,17 @@ class Breakpoint : public ClientObject {
   // API is designed so all settings changes happen atomically.
   //
   // The backend can fail to set the breakpoint for a variety of reasons (memory write failure, IPC
-  // failure, out of hardware breakpoints, etc.). If an async failure happens,
+  // failure, out of hardware breakpoints, etc.). The callback to SetSettings() (if provided)
+  // will indicate success or failure of this operation. This callback will called with an error if
+  // the breakpoint is deleted before completion.
+  //
+  // If an async failure happens and there is no callback provided,
   // BreakpointObserver::OnBreakpointUpdateFailure() will be called. These backend errors can occur
-  // at any time, not just when setting new settings, because new processese or dynamically loaded
+  // at any time, not just when setting new settings, because new processes or dynamically loaded
   // shared libraries can always be added that this breakpoint could apply to.
   virtual BreakpointSettings GetSettings() const = 0;
-  virtual void SetSettings(const BreakpointSettings& settings) = 0;
+  void SetSettings(const BreakpointSettings& settings) { SetSettings(settings, SetCallback()); }
+  virtual void SetSettings(const BreakpointSettings& settings, SetCallback cb) = 0;
 
   // Returns true if this is an internal breakpoint. Internal breakpoints are used to implement
   // other operations and are never exposed to the user.

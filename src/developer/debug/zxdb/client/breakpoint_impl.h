@@ -44,7 +44,8 @@ class BreakpointImpl : public Breakpoint,
 
   // Breakpoint implementation:
   BreakpointSettings GetSettings() const override;
-  void SetSettings(const BreakpointSettings& settings) override;
+  using Breakpoint::SetSettings;  // Pull in one-arg helper.
+  void SetSettings(const BreakpointSettings& settings, SetCallback cb) override;
   bool IsInternal() const override;
   std::vector<const BreakpointLocation*> GetLocations() const override;
   std::vector<BreakpointLocation*> GetLocations() override;
@@ -74,12 +75,15 @@ class BreakpointImpl : public Breakpoint,
   // ThreadObserver.
   void WillDestroyThread(Thread* thread) override;
 
-  void SyncBackend();
-  void SendBackendAddOrChange();
-  void SendBackendRemove();
+  // These functions update the debug_agent. The optional callback will be issued on confirmed
+  // success or failure.
+  void SyncBackend(SetCallback cb = SetCallback());
+  void SendBackendAddOrChange(SetCallback cb = SetCallback());
+  void SendBackendRemove(SetCallback cb = SetCallback());
 
-  void OnAddOrChangeComplete(const Err& err, debug_ipc::AddOrChangeBreakpointReply reply);
-  void OnRemoveComplete(const Err& err, debug_ipc::RemoveBreakpointReply reply);
+  void OnAddOrChangeComplete(const Err& err, debug_ipc::AddOrChangeBreakpointReply reply,
+                             SetCallback cb);
+  void OnRemoveComplete(const Err& err, debug_ipc::RemoveBreakpointReply reply, SetCallback cb);
 
   // Notification from BreakpointLocationImpl that the enabled state has changed and the breakpoint
   // state needs to be synced.

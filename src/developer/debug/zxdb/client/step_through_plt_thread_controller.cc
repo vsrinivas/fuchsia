@@ -84,7 +84,10 @@ void StepThroughPltThreadController::InitWithThread(Thread* thread,
     return;
   }
 
-  // Make the "until" controller the the resulting address(s).
+  // Make the "until" controller run until the resulting address(s). It's important that this
+  // forward asynchronous failures back to our callback parameter because the breakpoint set could
+  // fail (for example, the code could be in the read-only vDSO) and we don't want execution to just
+  // continue in that case.
   std::vector<InputLocation> input_locations;
   for (const auto& loc : found)
     input_locations.push_back(InputLocation(loc.address()));

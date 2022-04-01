@@ -49,8 +49,22 @@ void UntilThreadController::InitWithThread(Thread* thread, fit::callback<void(co
   settings.one_shot = !threshold_frame_.is_valid();
 
   breakpoint_ = GetSystem()->CreateNewInternalBreakpoint()->GetWeakPtr();
-  breakpoint_->SetSettings(settings);
+  breakpoint_->SetSettings(settings, [weak_controller = weak_factory_.GetWeakPtr(),
+                                      cb = std::move(cb)](const Err& err) mutable {
+    if (weak_controller)
+      weak_controller->OnBreakpointSetComplete(err, std::move(cb));
+  });
+}
 
+void UntilThreadController::OnBreakpointSetComplete(const Err& err,
+                                                    fit::callback<void(const Err&)> cb) {
+  if (err.has_error())
+    return cb(err);  // Error updating breakpoint.
+
+  // Validate that the breakpoint matched some locations that look reasonable. Note that this
+  // information is available synchronously after Breakpoint::SetSettings() since it's just doing
+  // symbol matching, but we defer checking to here to simplify error checking and issuing the
+  // callback from one place.
   const std::vector<const BreakpointLocation*>& locs = GetLocations();
   if (locs.empty()) {
     // Setting the breakpoint may have resolved to no locations and the breakpoint is now pending.

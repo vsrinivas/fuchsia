@@ -100,7 +100,7 @@ BreakpointImpl::~BreakpointImpl() {
 
 BreakpointSettings BreakpointImpl::GetSettings() const { return settings_; }
 
-void BreakpointImpl::SetSettings(const BreakpointSettings& settings) {
+void BreakpointImpl::SetSettings(const BreakpointSettings& settings, SetCallback cb) {
   settings_ = settings;
 
   bool changed = false;
@@ -119,7 +119,7 @@ void BreakpointImpl::SetSettings(const BreakpointSettings& settings) {
     registered_as_thread_observer_ = false;
   }
 
-  SyncBackend();
+  SyncBackend(std::move(cb));
 
   if (changed && !IsInternal()) {
     for (auto& observer : session()->breakpoint_observers())
@@ -240,18 +240,22 @@ void BreakpointImpl::WillDestroyThread(Thread* thread) {
   }
 }
 
-void BreakpointImpl::SyncBackend() {
+void BreakpointImpl::SyncBackend(SetCallback cb) {
   bool has_locations = HasEnabledLocation();
 
   if (backend_installed_ && !has_locations) {
-    SendBackendRemove();
+    SendBackendRemove(std::move(cb));
   } else if (has_locations) {
-    SendBackendAddOrChange();
+    SendBackendAddOrChange(std::move(cb));
+  } else if (cb) {
+    // The backend doesn't know about it and we don't require anything, but we still need to issue
+    // the callback (non-reentrantly).
+    debug::MessageLoop::Current()->PostTask(FROM_HERE,
+                                            [cb = std::move(cb)]() mutable { cb(Err()); });
   }
-  // Otherwise the backend doesn't know about it and we don't require anything.
 }
 
-void BreakpointImpl::SendBackendAddOrChange() {
+void BreakpointImpl::SendBackendAddOrChange(SetCallback cb) {
   backend_installed_ = true;
 
   debug_ipc::AddOrChangeBreakpointRequest request;
@@ -287,29 +291,36 @@ void BreakpointImpl::SendBackendAddOrChange() {
   }
 
   session()->remote_api()->AddOrChangeBreakpoint(
-      request, [breakpoint = impl_weak_factory_.GetWeakPtr()](
-                   const Err& err, debug_ipc::AddOrChangeBreakpointReply reply) {
-        if (breakpoint)
-          breakpoint->OnAddOrChangeComplete(err, std::move(reply));
+      request, [breakpoint = impl_weak_factory_.GetWeakPtr(), cb = std::move(cb)](
+                   const Err& err, debug_ipc::AddOrChangeBreakpointReply reply) mutable {
+        if (breakpoint) {
+          breakpoint->OnAddOrChangeComplete(err, std::move(reply), std::move(cb));
+        } else if (cb) {
+          cb(Err("Breakpoint deleted."));
+        }
       });
 }
 
-void BreakpointImpl::SendBackendRemove() {
+void BreakpointImpl::SendBackendRemove(SetCallback cb) {
   debug_ipc::RemoveBreakpointRequest request;
   request.breakpoint_id = backend_id_;
 
   session()->remote_api()->RemoveBreakpoint(
-      request, [breakpoint = impl_weak_factory_.GetWeakPtr()](
-                   const Err& err, debug_ipc::RemoveBreakpointReply reply) {
-        if (breakpoint)
-          breakpoint->OnRemoveComplete(err, std::move(reply));
+      request, [breakpoint = impl_weak_factory_.GetWeakPtr(), cb = std::move(cb)](
+                   const Err& err, debug_ipc::RemoveBreakpointReply reply) mutable {
+        if (breakpoint) {
+          breakpoint->OnRemoveComplete(err, std::move(reply), std::move(cb));
+        } else if (cb) {
+          cb(Err("Breakpoint deleted."));
+        }
       });
 
   backend_installed_ = false;
 }
 
 void BreakpointImpl::OnAddOrChangeComplete(const Err& input_err,
-                                           debug_ipc::AddOrChangeBreakpointReply reply) {
+                                           debug_ipc::AddOrChangeBreakpointReply reply,
+                                           SetCallback cb) {
   // Map transport errors and remote errors to a single error.
   Err err = input_err;
   if (err.ok())
@@ -328,14 +339,23 @@ void BreakpointImpl::OnAddOrChangeComplete(const Err& input_err,
                 "This kernel command-line flag \"kernel.enable-debugging-syscalls\" is\n"
                 "likely not set.");
     }
+  }
 
+  if (cb) {
+    cb(err);
+  } else if (err.has_error()) {
+    // There was no callback given, issue the global notification to show the error.
     for (auto& observer : session()->breakpoint_observers())
       observer.OnBreakpointUpdateFailure(this, err);
   }
 }
 
-void BreakpointImpl::OnRemoveComplete(const Err& err, debug_ipc::RemoveBreakpointReply reply) {
-  if (err.has_error()) {
+void BreakpointImpl::OnRemoveComplete(const Err& err, debug_ipc::RemoveBreakpointReply reply,
+                                      SetCallback cb) {
+  if (cb) {
+    cb(err);
+  } else if (err.has_error()) {
+    // There was no callback given, issue the global notification to show the error.
     for (auto& observer : session()->breakpoint_observers())
       observer.OnBreakpointUpdateFailure(this, err);
   }

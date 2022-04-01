@@ -23,6 +23,18 @@ class Err;
 class System;
 class Target;
 
+// The "until" thread controller continues until a given instruction is reached. It sets a
+// breakpoint at the desired location(s) and continues execution.
+//
+// Setting the breakpoint may fail in several different ways. In the simplest case the location
+// to run to isn't found (symbol resolution failure). The breakpoint could also fail to be set.
+// In addition to weird errors and race conditions that could cause the breakpoint set to fail, this
+// can happen if the breakpoint location is in unwritable memory, like the vDSO (this can happen
+// during certain stepping operations involving syscalls).
+//
+// These errors are indicated by the callback given to InitWithThread() which can be issued
+// asynchronously. Callers should be sure to handle these errors as otherwise program execution will
+// continue and the user's stepping location can be lost!
 class UntilThreadController : public ThreadController {
  public:
   enum FrameComparison {
@@ -63,6 +75,8 @@ class UntilThreadController : public ThreadController {
  private:
   System* GetSystem();
   Target* GetTarget();
+
+  void OnBreakpointSetComplete(const Err& err, fit::callback<void(const Err&)> cb);
 
   std::vector<InputLocation> locations_;
 

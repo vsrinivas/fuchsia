@@ -41,12 +41,19 @@ TEST_F(UntilThreadControllerTest, Basic) {
 
   bool controller_destroyed = false;
 
-  // Continue "until" an address a few bytes later.
+  // Continue "until" an address a few bytes later. Normally this completes asynchronously (it
+  // blocks on successful breakpoint set) so we need to run the message loop.
+  bool init_complete = false;
   uint64_t dest_address = start_address + 32;
   thread()->ContinueWith(
       std::make_unique<TrackedUntilThreadController>(
           &controller_destroyed, std::vector<InputLocation>{InputLocation(dest_address)}),
-      [](const Err& err) {});
+      [&init_complete](const Err& err) {
+        init_complete = true;
+        debug::MessageLoop::Current()->QuitNow();
+      });
+  loop().RunUntilNoTasks();
+  EXPECT_TRUE(init_complete);
   EXPECT_FALSE(controller_destroyed);
 
   // The thread should have continued.
