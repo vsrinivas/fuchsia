@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/mixer_service/mix/packet.h"
+#include "src/media/audio/mixer_service/mix/packet_view.h"
 
 #include <lib/syslog/cpp/macros.h>
 
 namespace media_audio_mixer_service {
 
-Packet::Packet(Args args) : Packet(args.format, args.start, args.length, args.payload) {}
+PacketView::PacketView(Args args)
+    : PacketView(args.format, args.start, args.length, args.payload) {}
 
-Packet::Packet(const Format& format, Fixed start, int64_t length, void* payload)
+PacketView::PacketView(const Format& format, Fixed start, int64_t length, void* payload)
     : format_(format),
       start_(start),
       end_(start + Fixed(length)),
@@ -19,20 +20,21 @@ Packet::Packet(const Format& format, Fixed start, int64_t length, void* payload)
   FX_CHECK(length > 0) << "packet length '" << length << "' must be positive";
 }
 
-Packet Packet::Slice(int64_t start_offset, int64_t end_offset) const {
+PacketView PacketView::Slice(int64_t start_offset, int64_t end_offset) const {
   FX_CHECK(0 <= start_offset && start_offset < end_offset && end_offset <= length())
       << "Invalid slice [" << start_offset << ", " << end_offset << ") of " << *this;
 
   auto byte_offset = static_cast<size_t>(start_offset * format().bytes_per_frame());
 
-  return Packet(
+  return PacketView(
       /* format          = */ format(),
       /* start           = */ start() + Fixed(start_offset),
       /* length          = */ end_offset - start_offset,
       /* payload         = */ reinterpret_cast<uint8_t*>(payload()) + byte_offset);
 }
 
-std::optional<Packet> Packet::IntersectionWith(Fixed range_start, int64_t range_length) const {
+std::optional<PacketView> PacketView::IntersectionWith(Fixed range_start,
+                                                       int64_t range_length) const {
   // Align the range to frame boundaries by shifting down.
   Fixed shift = range_start.Fraction() - start().Fraction();
   if (shift < 0) {
@@ -60,7 +62,7 @@ std::optional<Packet> Packet::IntersectionWith(Fixed range_start, int64_t range_
   return Slice(start_offset, end_offset);
 }
 
-std::ostream& operator<<(std::ostream& out, const Packet& packet) {
+std::ostream& operator<<(std::ostream& out, const PacketView& packet) {
   out << ffl::String::DecRational << "[" << packet.start() << ", " << packet.end() << ")";
   return out;
 }

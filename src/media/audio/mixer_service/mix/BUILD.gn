@@ -20,8 +20,8 @@ source_set("mix") {
     "detached_thread.h",
     "mix_thread.cc",
     "mix_thread.h",
-    "packet.cc",
-    "packet.h",
+    "packet_view.cc",
+    "packet_view.h",
     "pipeline_stage.cc",
     "pipeline_stage.h",
     "producer_stage.h",
@@ -29,10 +29,7 @@ source_set("mix") {
     "thread.h",
   ]
 
-  public_deps = [
-    "//src/media/audio/lib/clock",
-    "//src/media/audio/mixer_service/common",
-  ]
+  public_deps = [ "//src/media/audio/mixer_service/common" ]
 
   deps = [
     "//sdk/lib/fit",
@@ -45,7 +42,7 @@ executable("mix_unittests") {
   testonly = true
 
   sources = [
-    "packet_unittest.cc",
+    "packet_view_unittest.cc",
     "pipeline_stage_unittest.cc",
   ]
 

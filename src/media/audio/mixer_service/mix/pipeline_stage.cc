@@ -7,7 +7,6 @@
 #include <optional>
 
 #include "src/media/audio/mixer_service/common/basic_types.h"
-#include "src/media/audio/mixer_service/mix/packet.h"
 
 namespace media_audio_mixer_service {
 
@@ -22,56 +21,56 @@ void PipelineStage::Advance(Fixed frame) {
   }
   next_read_frame_ = frame;
 
-  if (cached_buffer_ && frame < cached_buffer_->end()) {
-    // Cached buffer is still in use.
+  if (cached_packet_ && frame < cached_packet_->end()) {
+    // Cached packet is still in use.
     return;
   }
-  cached_buffer_ = std::nullopt;
+  cached_packet_ = std::nullopt;
   AdvanceImpl(frame);
 }
 
-std::optional<PipelineStage::Buffer> PipelineStage::Read(Fixed start_frame, int64_t frame_count) {
+std::optional<PipelineStage::Packet> PipelineStage::Read(Fixed start_frame, int64_t frame_count) {
   // TODO(fxbug.dev/87651): Add more logging and tracing etc (similar to `ReadableStream`).
   FX_CHECK(!is_locked_);
 
   // Once a frame has been consumed, it cannot be locked again, we cannot travel backwards in time.
   FX_CHECK(!next_read_frame_ || start_frame >= *next_read_frame_);
 
-  // Check if we can reuse the cached buffer.
-  if (auto out_buffer = ReadFromCachedBuffer(start_frame, frame_count)) {
-    return out_buffer;
+  // Check if we can reuse the cached packet.
+  if (auto out_packet = ReadFromCachedPacket(start_frame, frame_count)) {
+    return out_packet;
   }
-  cached_buffer_ = std::nullopt;
+  cached_packet_ = std::nullopt;
 
-  auto buffer = ReadImpl(start_frame, frame_count);
-  if (!buffer) {
+  auto packet = ReadImpl(start_frame, frame_count);
+  if (!packet) {
     Advance(start_frame + Fixed(frame_count));
     return std::nullopt;
   }
-  FX_CHECK(buffer->length() > 0);
+  FX_CHECK(packet->length() > 0);
 
   is_locked_ = true;
-  if (!buffer->is_cached_) {
-    return buffer;
+  if (!packet->is_cached_) {
+    return packet;
   }
 
-  cached_buffer_ = std::move(buffer);
-  auto out_buffer = ReadFromCachedBuffer(start_frame, frame_count);
-  FX_CHECK(out_buffer);
-  return out_buffer;
+  cached_packet_ = std::move(packet);
+  auto out_packet = ReadFromCachedPacket(start_frame, frame_count);
+  FX_CHECK(out_packet);
+  return out_packet;
 }
 
-PipelineStage::Buffer PipelineStage::MakeCachedBuffer(Fixed start_frame, int64_t frame_count,
+PipelineStage::Packet PipelineStage::MakeCachedPacket(Fixed start_frame, int64_t frame_count,
                                                       void* payload) {
-  // This buffer will be stored in `cached_buffer_`. It won't be returned to the `Read` caller,
-  // instead we'll use `ReadFromCachedBuffer` to return a proxy to this buffer.
-  return Buffer({format_, start_frame, frame_count, payload}, /*is_cached=*/true,
+  // This packet will be stored in `cached_packet_`. It won't be returned to the `Read` caller,
+  // instead we'll use `ReadFromCachedPacket` to return a proxy to this packet.
+  return Packet({format_, start_frame, frame_count, payload}, /*is_cached=*/true,
                 /*destructor=*/nullptr);
 }
 
-PipelineStage::Buffer PipelineStage::MakeUncachedBuffer(Fixed start_frame, int64_t frame_count,
+PipelineStage::Packet PipelineStage::MakeUncachedPacket(Fixed start_frame, int64_t frame_count,
                                                         void* payload) {
-  return Buffer({format_, start_frame, frame_count, payload}, /*is_cached=*/false,
+  return Packet({format_, start_frame, frame_count, payload}, /*is_cached=*/false,
                 [this, start_frame](int64_t frames_consumed) {
                   // Unlock the stream.
                   is_locked_ = false;
@@ -79,33 +78,33 @@ PipelineStage::Buffer PipelineStage::MakeUncachedBuffer(Fixed start_frame, int64
                 });
 }
 
-std::optional<PipelineStage::Buffer> PipelineStage::ForwardBuffer(
-    std::optional<Buffer>&& buffer, std::optional<Fixed> start_frame) {
-  if (!buffer) {
+std::optional<PipelineStage::Packet> PipelineStage::ForwardPacket(
+    std::optional<Packet>&& packet, std::optional<Fixed> start_frame) {
+  if (!packet) {
     return std::nullopt;
   }
-  const auto buffer_start = start_frame ? *start_frame : buffer->start();
-  return Buffer(
-      // Wrap the buffer with a proxy so we can be notified when the buffer is unlocked.
-      {buffer->format(), buffer_start, buffer->length(), buffer->payload()},
+  const auto packet_start = start_frame ? *start_frame : packet->start();
+  return Packet(
+      // Wrap the packet with a proxy so we can be notified when the packet is unlocked.
+      {packet->format(), packet_start, packet->length(), packet->payload()},
       /*is_cached=*/false,
-      [this, buffer_start, buffer = std::move(buffer)](int64_t frames_consumed) mutable {
+      [this, packet_start, packet = std::move(packet)](int64_t frames_consumed) mutable {
         // Unlock the stream.
         is_locked_ = false;
-        // What is consumed from the proxy is also consumed from the source buffer.
-        buffer->set_frames_consumed(frames_consumed);
-        // Destroy the source buffer before calling `Advance` to ensure the source stream is
+        // What is consumed from the proxy is also consumed from the source packet.
+        packet->set_frames_consumed(frames_consumed);
+        // Destroy the source packet before calling `Advance` to ensure the source stream is
         // unlocked before it is advanced.
-        buffer = std::nullopt;
-        Advance(buffer_start + Fixed(frames_consumed));
+        packet = std::nullopt;
+        Advance(packet_start + Fixed(frames_consumed));
       });
 }
 
-std::optional<PipelineStage::Buffer> PipelineStage::ReadFromCachedBuffer(Fixed start_frame,
+std::optional<PipelineStage::Packet> PipelineStage::ReadFromCachedPacket(Fixed start_frame,
                                                                          int64_t frame_count) {
-  if (cached_buffer_) {
-    if (auto intersect = cached_buffer_->IntersectionWith(start_frame, frame_count)) {
-      return MakeUncachedBuffer(intersect->start(), intersect->length(), intersect->payload());
+  if (cached_packet_) {
+    if (auto intersect = cached_packet_->IntersectionWith(start_frame, frame_count)) {
+      return MakeUncachedPacket(intersect->start(), intersect->length(), intersect->payload());
     }
   }
   return std::nullopt;

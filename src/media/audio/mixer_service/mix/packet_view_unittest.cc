@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/mixer_service/mix/packet.h"
+#include "src/media/audio/mixer_service/mix/packet_view.h"
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -368,9 +368,10 @@ void RunIntersectionTests(const std::vector<IsectTestCase>& test_cases) {
           .take_value();
 
   for (auto& tc : test_cases) {
-    SCOPED_TRACE(std::string("IntersectPacket([") + ffl::String(tc.packet_start).c_str() + ", " +
-                 ffl::String(tc.packet_end).c_str() + "), [" + ffl::String(tc.range_start).c_str() +
-                 ", " + ffl::String(tc.range_end).c_str() + "))");
+    SCOPED_TRACE(std::string("IntersectPacketView([") + ffl::String(tc.packet_start).c_str() +
+                 ", " + ffl::String(tc.packet_end).c_str() + "), [" +
+                 ffl::String(tc.range_start).c_str() + ", " + ffl::String(tc.range_end).c_str() +
+                 "))");
 
     Fixed packet_length = tc.packet_end - tc.packet_start;
     ASSERT_EQ(packet_length.Fraction(), Fixed(0));
@@ -385,7 +386,7 @@ void RunIntersectionTests(const std::vector<IsectTestCase>& test_cases) {
     std::vector<char> buffer(want_payload_offset_bytes + 1);
     char* const packet_payload_buffer = &buffer[0];
 
-    Packet packet({
+    PacketView packet({
         .format = format,
         .start = tc.packet_start,
         .length = packet_length.Floor(),
@@ -421,21 +422,21 @@ void RunIntersectionTests(const std::vector<IsectTestCase>& test_cases) {
 }
 }  // namespace
 
-TEST(PacketTest, IntersectionWithIntegralBoundaries) {
+TEST(PacketViewTest, IntersectionWithIntegralBoundaries) {
   RunIntersectionTests(kIsectTestCasesIntegralBoundaries);
 }
 
-TEST(PacketTest, IntersectionWithFractionalBoundaries) {
+TEST(PacketViewTest, IntersectionWithFractionalBoundaries) {
   RunIntersectionTests(kIsectTestCasesFractionalBoundaries);
 }
 
-TEST(PacketTest, IntersectionWithNegativePositions) {
+TEST(PacketViewTest, IntersectionWithNegativePositions) {
   RunIntersectionTests(kIsectTestCasesNegativePositions);
 }
 
-TEST(PacketTest, IntersectionWithApiDocs) { RunIntersectionTests(kIsectTestCasesApiDocs); }
+TEST(PacketViewTest, IntersectionWithApiDocs) { RunIntersectionTests(kIsectTestCasesApiDocs); }
 
-TEST(PacketTest, Slice) {
+TEST(PacketViewTest, Slice) {
   constexpr auto kBytesPerFrame = 4;
   const auto format =
       Format::Create({
@@ -450,7 +451,7 @@ TEST(PacketTest, Slice) {
   std::vector<char> buffer(5 * format.bytes_per_frame());
   char* const packet_payload_buffer = &buffer[0];
 
-  Packet packet({
+  PacketView packet({
       .format = format,
       .start = Fixed(10),
       .length = 5,

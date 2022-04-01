@@ -11,8 +11,8 @@
 
 namespace media_audio_mixer_service {
 
-// Represents a fixed-sized packet of audio data.
-class Packet {
+// Represents a view to a fixed-sized packet of audio data.
+class PacketView {
  public:
   struct Args {
     Format format;   // format of audio frames in this packet
@@ -20,7 +20,7 @@ class Packet {
     int64_t length;  // number of frames in the packet; must be > 0
     void* payload;   // payload buffer
   };
-  explicit Packet(Args args);
+  explicit PacketView(Args args);
 
   // Reports the format of audio frames in this packet.
   const Format& format() const { return format_; }
@@ -39,7 +39,7 @@ class Packet {
 
   // Extracts a slice of this packet.
   // REQUIRES: 0 <= start_offset < end_offset <= length
-  Packet Slice(int64_t start_offset, int64_t end_offset) const;
+  PacketView Slice(int64_t start_offset, int64_t end_offset) const;
 
   // Intersects this packet with the given range, returning a packet that overlaps the given range,
   // or std::nullopt if there is no overlap. The intersection is guaranteed to start and end on a
@@ -83,10 +83,10 @@ class Packet {
   //     .start = 1.9
   //     .length = 3
   //     .payload = packet.payload + 1 frame
-  std::optional<Packet> IntersectionWith(Fixed range_start, int64_t range_length) const;
+  std::optional<PacketView> IntersectionWith(Fixed range_start, int64_t range_length) const;
 
  private:
-  Packet(const Format& format, Fixed start, int64_t length, void* payload);
+  PacketView(const Format& format, Fixed start, int64_t length, void* payload);
 
   Format format_;
   Fixed start_;
@@ -96,7 +96,7 @@ class Packet {
 };
 
 // Convenience for logging.
-std::ostream& operator<<(std::ostream& out, const Packet& packet);
+std::ostream& operator<<(std::ostream& out, const PacketView& packet);
 
 }  // namespace media_audio_mixer_service
 
