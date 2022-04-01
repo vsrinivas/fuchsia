@@ -163,7 +163,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/storage/fs_test:rename_tests",
     "//src/storage/fs_test:resize_tests",
     "//src/storage/fs_test:watcher_tests",
-    "//src/storage/fshost:fshost_integration_test",
     "//src/storage/fvm:fvm-integration",
     "//src/storage/fvm:test_support",
     "//src/storage/fvm/driver/test:fvm-driver-integration",
