@@ -297,6 +297,25 @@ mark_lr_sp_inaccessible
 .endif
 .endm
 
+.macro serror_exception, from_lower_el_64
+     start_isr_func_cfi
+     regsave
+ .if \from_lower_el_64
+     restore_fixed_regs x9
+     mov x1, #ARM64_EXCEPTION_FLAG_LOWER_EL
+ .else
+     restore_percpu_ptr x9
+     mov x1, #0
+ .endif
+     mov x0, sp
+     bl arm64_serror_exception
+ .if \from_lower_el_64
+     b   arm64_exc_shared_restore_lower_el
+ .else
+     b   arm64_exc_shared_restore
+ .endif
+ .endm
+
 // main vector table, aligned on 2048 byte boundary
 .align 11
 FUNCTION_LABEL(arm64_el1_exception_base)
@@ -341,7 +360,7 @@ END_FUNCTION(arm64_el1_fiq_current_el_SPx)
 
 .org 0x380
 LOCAL_FUNCTION_LABEL(arm64_el1_err_exc_current_el_SPx)
-    invalid_exception 0x13
+    serror_exception 0 // same EL, arm64
 END_FUNCTION(arm64_el1_err_exc_current_el_SPx)
 
 // exceptions from lower EL, running arm64
@@ -362,7 +381,7 @@ END_FUNCTION(arm64_el1_fiq_lower_el_64)
 
 .org 0x580
 LOCAL_FUNCTION_LABEL(arm64_el1_err_exc_lower_el_64)
-    invalid_exception 0x23
+    serror_exception 1 // lower EL, arm64
 END_FUNCTION(arm64_el1_err_exc_lower_el_64)
 
 // exceptions from lower EL, running arm32
