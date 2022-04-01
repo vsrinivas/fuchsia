@@ -39,45 +39,45 @@ pub fn assignment_state_stream(
     address_state_provider: fnet_interfaces_admin::AddressStateProviderProxy,
 ) -> impl Stream<Item = Result<fnet_interfaces_admin::AddressAssignmentState, AddressStateProviderError>>
 {
-    let event_stream = address_state_provider
-        .take_event_stream()
-        .map_err(AddressStateProviderError::Fidl)
-        .and_then(
-            |fnet_interfaces_admin::AddressStateProviderEvent::OnAddressRemoved { error }| {
-                futures::future::err(AddressStateProviderError::AddressRemoved(error))
-            },
-        );
-    let state_stream =
-        futures::stream::try_unfold(address_state_provider, |address_state_provider| {
-            address_state_provider.watch_address_assignment_state().map(|r| match r {
-                Ok(state) => Ok(Some((state, address_state_provider))),
-                Err(e) => {
-                    if e.is_closed() {
-                        Ok(None)
-                    } else {
-                        Err(AddressStateProviderError::Fidl(e))
+    let event_fut = address_state_provider.take_event_stream().into_future().map(
+        |(item, _stream)| match item {
+            Some(Ok(
+                fidl_fuchsia_net_interfaces_admin::AddressStateProviderEvent::OnAddressRemoved {
+                    error,
+                },
+            )) => AddressStateProviderError::AddressRemoved(error),
+            Some(Err(e)) => AddressStateProviderError::Fidl(e),
+            None => AddressStateProviderError::ChannelClosed,
+        },
+    );
+    futures::stream::try_unfold(
+        (address_state_provider, event_fut),
+        |(address_state_provider, event_fut)| {
+            // NB: Rely on the fact that select always polls the left future
+            // first to guarantee that if a terminal event was yielded by the
+            // right future, then we don't have an assignment state to emit to
+            // clients.
+            futures::future::select(
+                address_state_provider.watch_address_assignment_state(),
+                event_fut,
+            )
+            .then(|s| match s {
+                futures::future::Either::Left((state_result, event_fut)) => match state_result {
+                    Ok(state) => {
+                        futures::future::ok(Some((state, (address_state_provider, event_fut))))
+                            .left_future()
                     }
+                    Err(e) if e.is_closed() => event_fut.map(Result::<_, _>::Err).right_future(),
+                    Err(e) => {
+                        futures::future::err(AddressStateProviderError::Fidl(e)).left_future()
+                    }
+                },
+                futures::future::Either::Right((error, _state_fut)) => {
+                    futures::future::err(error).left_future()
                 }
             })
-        });
-    // TODO(https://github.com/rust-lang/futures-rs/issues/2476): Terminate the
-    // stream upon the first error with something more terse than the
-    // `take_while` block.
-    //
-    // FIDL errors other than PEER_CLOSED will be observed on both streams
-    // (note that the `try_unfold` stream will swallow PEER_CLOSED so that the
-    // address removal reason can be read from the event stream). Though this
-    // is not a problem technically, we terminate the stream upon yielding
-    // the first error to prevent the same error from being yielded twice.
-    futures::stream::select(event_stream, state_stream).take_while({
-        let mut error_observed = false;
-        move |r| {
-            futures::future::ready(match r {
-                Ok(_) => true,
-                Err(_) => !std::mem::replace(&mut error_observed, true),
-            })
-        }
-    })
+        },
+    )
 }
 
 // TODO(https://fxbug.dev/81964): Introduce type with better concurrency safety
@@ -259,8 +259,16 @@ impl Control {
         &self,
         fut: fidl::client::QueryResponseFut<R>,
     ) -> Result<R, TerminalError<fnet_interfaces_admin::InterfaceRemovedReason>> {
-        match futures::future::select(self.terminal_event_fut.clone(), fut).await {
-            futures::future::Either::Left((event, fut)) => {
+        match futures::future::select(fut, self.terminal_event_fut.clone()).await {
+            futures::future::Either::Left((query_result, fut)) => match query_result {
+                Ok(ok) => Ok(ok),
+                Err(e) if e.is_closed() => match fut.await {
+                    Ok(Some(reason)) => Err(TerminalError::Terminal(reason)),
+                    Ok(None) | Err(_) => Err(TerminalError::Fidl(e)),
+                },
+                Err(e) => Err(TerminalError::Fidl(e)),
+            },
+            futures::future::Either::Right((event, fut)) => {
                 match event.map_err(|e| TerminalError::Fidl(e))? {
                     Some(removal_reason) => Err(TerminalError::Terminal(removal_reason)),
                     None => {
@@ -274,9 +282,6 @@ impl Control {
                     }
                 }
             }
-            futures::future::Either::Right((query_result, _fut)) => {
-                query_result.map_err(TerminalError::Fidl)
-            }
         }
     }
 
@@ -288,6 +293,11 @@ impl Control {
             if !err.is_closed() {
                 return TerminalError::Fidl(err);
             }
+            // TODO(https://fxbug.dev/96755): The terminal event may have been
+            // sent by the server but the future may not resolve immediately,
+            // resulting in the terminal event being missed and a FIDL error
+            // being returned to the user.
+            //
             // Poll event stream to see if we have a terminal event to return
             // instead of a FIDL closed error.
             match self.terminal_event_fut.clone().now_or_never() {
@@ -336,7 +346,7 @@ impl<E: std::fmt::Debug> std::error::Error for TerminalError<E> {}
 #[cfg(test)]
 mod test {
     use super::{assignment_state_stream, AddressStateProviderError};
-    use fidl::endpoints::{ProtocolMarker as _, RequestStream as _, Responder as _};
+    use fidl::endpoints::{ProtocolMarker as _, RequestStream as _};
     use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
     use fuchsia_zircon_status as zx;
     use futures::{FutureExt as _, StreamExt as _, TryStreamExt as _};
@@ -412,6 +422,54 @@ mod test {
         );
     }
 
+    // Test that if an assignment state and a terminal event is available at
+    // the same time, the state is yielded first.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn assignment_state_stream_state_before_event() {
+        let (address_state_provider, mut request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<
+                fnet_interfaces_admin::AddressStateProviderMarker,
+            >()
+            .expect("failed to create proxy");
+
+        const ASSIGNMENT_STATE_ASSIGNED: fnet_interfaces_admin::AddressAssignmentState =
+            fnet_interfaces_admin::AddressAssignmentState::Assigned;
+        const REMOVAL_REASON_INVALID: fnet_interfaces_admin::AddressRemovalReason =
+            fnet_interfaces_admin::AddressRemovalReason::Invalid;
+
+        let ((), ()) = futures::future::join(
+            async move {
+                let () = request_stream
+                    .try_next()
+                    .await
+                    .expect("request stream error")
+                    .expect("request stream ended")
+                    .into_watch_address_assignment_state()
+                    .expect("unexpected request")
+                    .send(ASSIGNMENT_STATE_ASSIGNED)
+                    .expect("failed to send stubbed assignment state");
+                let () = request_stream
+                    .control_handle()
+                    .send_on_address_removed(REMOVAL_REASON_INVALID)
+                    .expect("failed to send fake INVALID address removal reason event");
+            },
+            async move {
+                let got = assignment_state_stream(address_state_provider).collect::<Vec<_>>().await;
+                assert_matches::assert_matches!(
+                    got.as_slice(),
+                    &[
+                        Ok(got_state),
+                        Err(AddressStateProviderError::AddressRemoved(got_reason)),
+                    ] => {
+                        assert_eq!(got_state, ASSIGNMENT_STATE_ASSIGNED);
+                        assert_eq!(got_reason, REMOVAL_REASON_INVALID);
+                    }
+                );
+            },
+        )
+        .await;
+    }
+
     // Tests that terminal event is observed when using ControlWrapper.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn control_terminal_event() {
@@ -421,30 +479,28 @@ mod test {
         let control = super::Control::new(control);
         const EXPECTED_EVENT: fnet_interfaces_admin::InterfaceRemovedReason =
             fnet_interfaces_admin::InterfaceRemovedReason::BadPort;
+        const ID: u64 = 15;
         let ((), ()) = futures::future::join(
             async move {
+                assert_matches::assert_matches!(control.get_id().await, Ok(ID));
                 assert_matches::assert_matches!(
                     control.get_id().await,
-                    Err(super::TerminalError::Terminal(EXPECTED_EVENT))
+                    Err(super::TerminalError::Terminal(got)) if got == EXPECTED_EVENT
                 );
             },
             async move {
-                match request_stream
+                let responder = request_stream
                     .try_next()
                     .await
                     .expect("operating request stream")
                     .expect("stream ended unexpectedly")
-                {
-                    fnet_interfaces_admin::ControlRequest::GetId { responder } => {
-                        let () = responder
-                            .control_handle()
-                            .send_on_interface_removed(EXPECTED_EVENT)
-                            .expect("sending terminal event");
-                        // Don't close the channel.
-                        let () = responder.drop_without_shutdown();
-                    }
-                    request => panic!("unexpected request {:?}", request),
-                }
+                    .into_get_id()
+                    .expect("unexpected request");
+                let () = responder.send(ID).expect("failed to send response");
+                let () = request_stream
+                    .control_handle()
+                    .send_on_interface_removed(EXPECTED_EVENT)
+                    .expect("sending terminal event");
             },
         )
         .await;

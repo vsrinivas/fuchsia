@@ -610,16 +610,7 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
         match state {
             Ok(_) => {}
             Err(_) => {
-                match state_stream.by_ref().next().await {
-                    None => {} // Error was terminal. Good.
-                    Some(state) => {
-                        // TODO(https://fxbug.dev/92940): Remove this arm when states no longer
-                        // interleave with the terminal event.
-                        assert_matches::assert_matches!(state, Ok(fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Tentative));
-                        // Ok, now we should really be done.
-                        assert_matches::assert_matches!(state_stream.by_ref().next().await, None);
-                    }
-                }
+                assert_matches::assert_matches!(state_stream.by_ref().next().await, None)
             }
         }
         state
