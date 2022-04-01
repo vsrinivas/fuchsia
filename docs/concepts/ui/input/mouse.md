@@ -25,6 +25,8 @@ reaches a UI client, which reacts to a mouse event. A UI client is typically
 implemented on top of a UI framework, so when a mouse event reaches this level,
 it gets exposed in a framework-specific way.
 
+![Mouse event flow](images/mouse-event-flow.png)
+
 ### Device
 
 A mouse device connects to a "host" (your computer), and speaks the USB HID
