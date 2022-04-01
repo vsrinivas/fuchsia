@@ -244,6 +244,20 @@ driver_bind_rules("nelson_selina_bind") {
   ]
 }
 
+driver_bind_rules("spi_0_bind") {
+  rules = "bind/spi_0.bind"
+  header_output = "spi_0_bind.h"
+  bind_output = "spi_0_bind.bc"
+  tests = "bind-tests/spi_0-test.json"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d3",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.registers",
+  ]
+}
+
 driver_bind_rules("spi_1_bind") {
   rules = "bind/spi_1.bind"
   header_output = "spi_1_bind.h"
@@ -360,6 +374,20 @@ driver_bind_rules("nelson_aml_video_bind") {
   ]
 }
 
+driver_bind_rules("nelson_ot_radio_bind") {
+  rules = "bind/nelson_ot_radio.bind"
+  header_output = "nelson_ot_radio_bind.h"
+  bind_output = "nelson_ot_radio_bind.bc"
+  tests = "bind-tests/nelson_ot_radio_test.json"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d3",
+    "//src/devices/bind/fuchsia.google.platform",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.nordic.platform",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
 fuchsia_driver("nelson-module-driver") {
   output_name = "nelson-module"
   configs += [
@@ -382,6 +410,7 @@ fuchsia_driver("nelson-module-driver") {
     "nelson-light.cc",
     "nelson-mali.cc",
     "nelson-nna.cc",
+    "nelson-ot-radio.cc",
     "nelson-power.cc",
     "nelson-pwm.cc",
     "nelson-ram.cc",
@@ -418,12 +447,14 @@ fuchsia_driver("nelson-module-driver") {
     ":nelson_emmc_bind_header",
     ":nelson_gpio_light_bind_header",
     ":nelson_mali_bind_header",
+    ":nelson_ot_radio_bind_header",
     ":nelson_selina_bind_header",
     ":nelson_tcs3400_light_bind_header",
     ":nelson_tee_bind_header",
     ":nelson_wifi_bind_header",
     ":nelson_xhci_bind_header",
     ":pwm_init_bind_header",
+    ":spi_0_bind_header",
     ":spi_1_bind_header",
     ":ti_ina231_mlb_bind_header",
     ":ti_ina231_speakers_bind_header",
@@ -441,6 +472,7 @@ fuchsia_driver("nelson-module-driver") {
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//src/connectivity/openthread/lib/ot-radio",
     "//src/devices/bind/fuchsia.ams.platform:bind.fuchsia.ams.platform",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/broadcom",
@@ -509,8 +541,11 @@ group("tests") {
     ":nelson_dwc2_bind_test",
     ":nelson_gpio_light_bind_test",
     ":nelson_mali_bind_test",
+    ":nelson_ot_radio_bind_test",
     ":nelson_selina_bind_test",
     ":nelson_tcs3400_light_bind_test",
     ":nelson_wifi_bind_test",
+    ":spi_0_bind_test",
+    ":spi_1_bind_test",
   ]
 }

@@ -216,6 +216,10 @@ int Nelson::Thread() {
     zxlogf(ERROR, "ThermistorInit failed");
   }
 
+  if (OtRadioInit() != ZX_OK) {
+    zxlogf(ERROR, "OtRadioInit failed");
+  }
+
   // This function includes some non-trivial delays, so lets run this last
   // to avoid slowing down the rest of the boot.
   if ((status = BluetoothInit()) != ZX_OK) {

@@ -127,6 +127,7 @@ class Nelson : public NelsonType {
   zx_status_t I2cInit();
   zx_status_t LightInit();
   zx_status_t MaliInit();
+  zx_status_t OtRadioInit();
   zx_status_t PowerInit();
   zx_status_t PwmInit();
   zx_status_t RegistersInit();
@@ -135,6 +136,8 @@ class Nelson : public NelsonType {
   zx_status_t SecureMemInit();
   zx_status_t SelinaInit();
   zx_status_t SpiInit();
+  zx_status_t Spi0Init();
+  zx_status_t Spi1Init();
   zx_status_t SysmemInit();
   zx_status_t TeeInit();
   zx_status_t ThermalInit();

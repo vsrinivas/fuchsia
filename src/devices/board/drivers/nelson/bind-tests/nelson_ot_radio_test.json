@@ -1,0 +1,71 @@
+[
+    {
+        "node": "pdev",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID": "0",
+                    "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.google.platform.BIND_PLATFORM_DEV_PID.NELSON",
+                    "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GENERIC",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.platform.BIND_PLATFORM_DEV_DID.OT_RADIO"
+                }
+            }
+        ]
+    },
+    {
+        "node": "spi",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.nordic.platform.BIND_PLATFORM_DEV_DID.THREAD",
+                    "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.nordic.platform.BIND_PLATFORM_DEV_VID.NORDIC",
+                    "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.nordic.platform.BIND_PLATFORM_DEV_PID.NRF52811"
+                }
+            }
+        ]
+    },
+    {
+        "node": "gpio-int",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_GPIO_PIN": "fuchsia.amlogic.platform.s905d3.GPIOC_PIN_ID.PIN_5",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.gpio.BIND_PROTOCOL.DEVICE"
+                }
+            }
+        ]
+    },
+    {
+        "node": "gpio-reset",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.gpio.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_GPIO_PIN": "fuchsia.amlogic.platform.s905d3.GPIOA_PIN_ID.PIN_13"
+                }
+            }
+        ]
+    },
+    {
+        "node": "gpio-bootloader",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.gpio.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_GPIO_PIN": "fuchsia.amlogic.platform.s905d3.GPIOZ_PIN_ID.PIN_1"
+                }
+            }
+        ]
+    }
+]
