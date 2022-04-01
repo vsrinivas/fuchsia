@@ -8,6 +8,7 @@ use fidl_fuchsia_tpm_cr50::{
     MAX_LOG_ENTRIES,
 };
 use fuchsia_syslog::fx_log_warn;
+use fuchsia_zircon as zx;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use std::{convert::TryInto, marker::PhantomData};
@@ -283,6 +284,24 @@ impl Serializable for PinweaverInsertLeaf {
     }
 }
 
+fn delay_seconds_from_duration(duration: zx::Duration) -> Result<u32, PinWeaverError> {
+    if duration == zx::Duration::INFINITE {
+        // Treat an infinite duration as PW_BLOCK_ATTEMPTS, which is the max u32
+        Ok(std::u32::MAX)
+    } else {
+        if duration <= zx::Duration::from_nanos(0) {
+            // Negative and zero delay are invalid
+            Err(PinWeaverError::DelayScheudleInvalid)
+        } else if duration < zx::Duration::from_seconds(1) {
+            // Round any duration less than a second up to a second
+            Ok(1u32)
+        } else {
+            let duration_secs = duration.into_seconds();
+            duration_secs.try_into().map_err(|_| PinWeaverError::DelayScheudleInvalid)
+        }
+    }
+}
+
 impl PinweaverInsertLeaf {
     pub fn new(
         params: InsertLeafParams,
@@ -300,10 +319,9 @@ impl PinweaverInsertLeaf {
             for item in schedule.into_iter() {
                 data.delay_schedule[i] = DelayScheduleEntry {
                     attempt_count: item.attempt_count,
-                    time_diff: item
-                        .time_delay
-                        .try_into()
-                        .map_err(|_| PinWeaverError::DelayScheudleInvalid)?,
+                    time_diff: delay_seconds_from_duration(zx::Duration::from_nanos(
+                        item.time_delay,
+                    ))?,
                 };
                 i += 1;
             }
@@ -637,6 +655,28 @@ impl Deserializable for PinweaverLogReplayResponse {
 mod tests {
     use super::*;
     use fidl_fuchsia_tpm_cr50::DelayScheduleEntry as FidlDelayScheduleEntry;
+
+    #[test]
+    fn test_delay_seconds_from_duration() {
+        let cases: Vec<(zx::Duration, Result<u32, PinWeaverError>)> = vec![
+            (zx::Duration::INFINITE_PAST, Err(PinWeaverError::DelayScheudleInvalid)),
+            (zx::Duration::from_seconds(-1), Err(PinWeaverError::DelayScheudleInvalid)),
+            (zx::Duration::from_seconds(0), Err(PinWeaverError::DelayScheudleInvalid)),
+            (zx::Duration::from_millis(500), Ok(1u32)),
+            (zx::Duration::from_seconds(1), Ok(1u32)),
+            (zx::Duration::from_millis(1500), Ok(1u32)),
+            (zx::Duration::from_seconds(2), Ok(2u32)),
+            (zx::Duration::from_seconds(20), Ok(20u32)),
+            (zx::Duration::from_seconds(0xffffffff), Ok(0xffffffffu32)),
+            (zx::Duration::from_seconds(0x100000000), Err(PinWeaverError::DelayScheudleInvalid)),
+            (zx::Duration::INFINITE, Ok(0xffffffffu32)),
+        ];
+
+        for case in cases.iter() {
+            assert_eq!(delay_seconds_from_duration(case.0), case.1);
+        }
+    }
+
     #[test]
     fn test_reset_tree() {
         let mut serializer = Serializer::new();
@@ -688,7 +728,7 @@ mod tests {
         let mut params = InsertLeafParams::EMPTY;
         params.label = Some(1);
         params.delay_schedule =
-            Some(vec![FidlDelayScheduleEntry { attempt_count: 5, time_delay: 10 }]);
+            Some(vec![FidlDelayScheduleEntry { attempt_count: 5, time_delay: 10_000_000_000 }]);
         params.le_secret = Some(le_secret.clone());
         params.he_secret = Some(he_secret.clone());
         params.reset_secret = Some(reset_secret.clone());
