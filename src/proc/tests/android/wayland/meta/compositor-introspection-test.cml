@@ -1,6 +1,6 @@
 {
     include: [ "//src/proc/tests/android/wayland/meta/wayland.shard.cml" ],
     program: {
-        binary: "tests/compositor-introspection-test",
+        binary: "data/tests/compositor-introspection-test",
     },
 }

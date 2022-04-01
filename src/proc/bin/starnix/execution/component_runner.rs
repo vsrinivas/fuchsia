@@ -19,7 +19,8 @@ use tracing::info;
 
 use crate::auth::Credentials;
 use crate::execution::{
-    create_filesystem_from_spec, execute_task, galaxy::create_galaxy, parse_numbered_handles,
+    create_filesystem_from_spec, execute_task, galaxy::create_galaxy, galaxy::Galaxy,
+    parse_numbered_handles,
 };
 use crate::fs::*;
 use crate::task::*;
@@ -65,13 +66,14 @@ pub async fn start_component(
     const COMPONENT_PKG_DIRECTORY: &str = "/data/pkg/";
     let binary_path = get_program_string(&start_info, "binary")
         .ok_or_else(|| anyhow!("Missing \"binary\" in manifest"))?;
-    let binary_path = CString::new(if &binary_path[..1] == "/" {
-        // If the binary path is absolute, treat it as a path to an existing binary.
-        binary_path.to_owned()
-    } else {
-        // If the binary path is absolute, treat it as a path into the component's package
+    let binary_in_package = &binary_path[..1] != "/";
+    let binary_path = CString::new(if binary_in_package {
+        // If the binary path is relative, treat it as a path into the component's package
         // directory.
         COMPONENT_PKG_DIRECTORY.to_owned() + binary_path
+    } else {
+        // If the binary path is absolute, treat it as a path to an existing binary.
+        binary_path.to_owned()
     })?;
     let mut current_task = Task::create_process_without_parent(
         &galaxy.kernel,
@@ -91,15 +93,11 @@ pub async fn start_component(
             .ok_or_else(|| anyhow!("Missing directory handlee in pkg namespace entry"))?
             .into_channel(),
     );
-    let remotefs_mount_point = COMPONENT_PKG_DIRECTORY.to_owned() + ":remotefs:data";
-    let (mount_point, child_fs) = create_filesystem_from_spec(
-        &galaxy.kernel,
-        Some(&current_task),
-        &pkg,
-        &remotefs_mount_point,
-    )?;
-    let mount_point = current_task.lookup_path_from_root(mount_point)?;
-    mount_point.mount(child_fs, MountFlags::empty())?;
+
+    if binary_in_package {
+        // If the component's binary path point inside the package, mount the package directory.
+        mount_component_pkg_data(&current_task, &galaxy, &COMPONENT_PKG_DIRECTORY, &pkg)?;
+    }
 
     let startup_handles =
         parse_numbered_handles(start_info.numbered_handles, &current_task.files, &galaxy.kernel)?;
@@ -136,6 +134,28 @@ pub async fn start_component(
             )),
         };
     });
+
+    Ok(())
+}
+
+/// Attempts to mount the component's package directory at `package_directory_path` in the task's
+/// filesystem. This allows components to bundle their own binary in their package, instead of
+/// relying on it existing in the system image of the galaxy.
+fn mount_component_pkg_data(
+    current_task: &CurrentTask,
+    galaxy: &Galaxy,
+    package_directory_path: &str,
+    package_proxy: &fio::DirectorySynchronousProxy,
+) -> Result<(), Error> {
+    let remotefs_mount_point = package_directory_path.to_owned() + ":remotefs";
+    let (mount_point, child_fs) = create_filesystem_from_spec(
+        &galaxy.kernel,
+        Some(&current_task),
+        &package_proxy,
+        &remotefs_mount_point,
+    )?;
+    let mount_point = current_task.lookup_path_from_root(mount_point)?;
+    mount_point.mount(child_fs, MountFlags::empty())?;
 
     Ok(())
 }

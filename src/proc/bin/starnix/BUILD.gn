@@ -16,6 +16,7 @@ group("starnix") {
   deps = [
     ":pkg",
     "//src/lib/ui/wayland/server",
+    "//src/proc/bin/galaxies",
   ]
 }
 
@@ -27,6 +28,7 @@ if (target_cpu == "x64") {
 
     source_root = "main.rs"
     deps = [
+      ":starnix_runner_config",
       "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
       "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
       "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
@@ -217,10 +219,15 @@ if (target_cpu == "x64") {
     }
   }
 
-  fuchsia_component("starnix_runner_component") {
-    component_name = "starnix_runner"
-    deps = [ ":starnix_runner_bin" ]
+  # The starnix runner manifest, used by all galaxies.
+  fuchsia_component_manifest("starnix_runner_manifest") {
     manifest = "meta/starnix_runner.cml"
+    restricted_features = [ "structured_config" ]
+  }
+
+  # The starnix runner configuration library, used by the Rust binary to parse configuration.
+  fuchsia_structured_config_rust_lib("starnix_runner_config") {
+    cm_target = ":starnix_runner_manifest"
   }
 
   resource("starnix-test-files") {
@@ -252,10 +259,6 @@ fuchsia_package("pkg") {
   package_name = "starnix"
 
   deps = [ ":starnix_manager" ]
-
-  if (target_cpu == "x64") {
-    deps += [ ":starnix_runner_component" ]
-  }
 }
 
 group("tests") {

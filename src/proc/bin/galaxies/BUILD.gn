@@ -1,0 +1,32 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("galaxies") {
+  if (target_cpu == "x64") {
+    deps = [
+      "stardroid",
+      "stardroid_test",
+      "starmium",
+      "starmium_test",
+    ]
+  }
+}
+
+group("release") {
+  if (target_cpu == "x64") {
+    deps = [
+      "stardroid",
+      "starmium",
+    ]
+  }
+}
+
+group("test") {
+  if (target_cpu == "x64") {
+    deps = [
+      "stardroid_test",
+      "starmium_test",
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 {
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
-        binary: "tests/bind_test",
+        binary: "data/tests/bind_test",
     },
 }

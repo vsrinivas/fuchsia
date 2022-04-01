@@ -5,7 +5,7 @@
 use anyhow::{anyhow, Context, Error};
 use fidl_fuchsia_io as fio;
 use fuchsia_zircon as zx;
-use serde::Deserialize;
+use starnix_runner_config::Config;
 use std::ffi::CString;
 use std::sync::Arc;
 
@@ -17,69 +17,19 @@ use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
 
-/// The arguments for the `Galaxy`.
-///
-/// These arguments are read from a configuration file in the Starnix runner's package. Thus one can
-/// create different runtime environments (galaxies) by packaging the Starnix runner component with
-/// different configuration files and system images.
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct Arguments {
-    /// The filesystems that get mounted when the galaxy is created.
-    #[serde(default)]
-    mounts: Vec<String>,
-
-    /// Hack for specifying apexes.
-    #[serde(default)]
-    apexes: Vec<CString>,
-
-    /// A path to a binary, inside of the system image, that is expected to run as the first task
-    /// in the galaxy.
-    #[serde(default)]
-    init_binary_path: Option<CString>,
-
-    /// The arguments for the `init` task, if such a task exists.
-    #[serde(default)]
-    init_args: Vec<CString>,
-
-    /// The environment for the `init` task.
-    #[serde(default)]
-    init_environ: Vec<CString>,
-
-    /// The user string to use when creating the `init` task.
-    #[serde(default = "default_user")]
-    init_user: String,
-
-    /// A file path that will be used to determine whether or not the system is ready to execute
-    /// tasks. Prior to the existence of this file (if specified), the system will only run the
-    /// `init` task (and any tasks `init` spawns). The `init` task is expected to create a file
-    /// at this path.
-    #[serde(default)]
-    startup_file_path: Option<String>,
-
-    /// The command line arguments for the `Kernel`.
-    #[serde(default)]
-    kernel_cmdline: CString,
-
-    /// The features to run in the galaxy (e.g., wayland support).
-    #[serde(default)]
-    features: Vec<String>,
-
-    /// The name of the galaxy.
-    #[serde(default = "default_kernel_name")]
-    name: CString,
+lazy_static::lazy_static! {
+    /// The configuration for the starnix runner. This is static because reading the configuration
+    /// consumes a startup handle, and thus can only be done once per component-run.
+    static ref CONFIG: Config = Config::from_args();
 }
 
-fn default_user() -> String {
-    "fuchsia:x:42:42".to_string()
-}
-
-fn default_kernel_name() -> CString {
-    CString::new("kernel").expect("Failed to create default kernel name")
+// Creates a CString from a String. Calling this with an invalid CString will panic.
+fn to_cstr(str: &String) -> CString {
+    CString::new(str.clone()).unwrap()
 }
 
 pub struct Galaxy {
-    /// The initial task in the galaxy, if one was specified in the galaxy's configuration file.
+    /// The initial task in the galaxy, if one was specified in the galaxy's CONFIGuration file.
     ///
     /// This task is executed prior to running any other tasks in the galaxy.
     pub init_task: Option<CurrentTask>,
@@ -110,10 +60,7 @@ pub struct Galaxy {
 pub fn create_galaxy(
     outgoing_dir: &mut Option<fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>>,
 ) -> Result<Galaxy, Error> {
-    const CONFIGURATION_FILE_PATH: &'static str = "/pkg/data/runner.config";
     const COMPONENT_PKG_PATH: &'static str = "/pkg";
-    let galaxy_args: Arguments =
-        serde_json::from_str(&std::fs::read_to_string(CONFIGURATION_FILE_PATH)?)?;
 
     let (server, client) = zx::Channel::create().context("failed to create channel pair")?;
     fdio::open(
@@ -123,53 +70,61 @@ pub fn create_galaxy(
     )
     .context("failed to open /pkg")?;
     let pkg_dir_proxy = fio::DirectorySynchronousProxy::new(client);
-    let mut kernel = Kernel::new(&galaxy_args.name)?;
-    kernel.cmdline = galaxy_args.kernel_cmdline.as_bytes().to_vec();
+    let mut kernel = Kernel::new(&to_cstr(&CONFIG.name))?;
+    kernel.cmdline = CONFIG.kernel_cmdline.as_bytes().to_vec();
     *kernel.outgoing_dir.lock() = outgoing_dir.take().map(|server_end| server_end.into_channel());
     let kernel = Arc::new(kernel);
 
-    let fs_context = create_fs_context(&galaxy_args, &kernel, &pkg_dir_proxy)?;
-    let mut init_task = create_init_task(&galaxy_args, &kernel, &fs_context)?;
+    let fs_context = create_fs_context(&kernel, &pkg_dir_proxy)?;
+    let mut init_task = create_init_task(&kernel, &fs_context)?;
 
-    mount_filesystems(&galaxy_args, &init_task, &pkg_dir_proxy)?;
+    mount_filesystems(&init_task, &pkg_dir_proxy)?;
 
     // Hack to allow mounting apexes before apexd is working.
     // TODO(tbodt): Remove once apexd works.
-    mount_apexes(&galaxy_args, &init_task)?;
+    mount_apexes(&init_task)?;
 
     // Run all the features (e.g., wayland) that were specified in the .cml.
-    run_features(&galaxy_args.features, &init_task)
+    run_features(&CONFIG.features, &init_task)
         .map_err(|e| anyhow!("Failed to initialize features: {:?}", e))?;
-    // TODO: This should probably be part of the "feature" configuration.
+    // TODO: This should probably be part of the "feature" CONFIGuration.
     let kernel = init_task.kernel().clone();
 
     let root_fs = init_task.fs.clone();
     // Only return an init task if there was an init binary path. The task struct is still used
     // to initialize the system up until this point, regardless of whether or not there is an
     // actual init to be run.
-    let init_task = if let Some(binary_path) = galaxy_args.init_binary_path {
-        let mut argv = vec![binary_path.clone()];
-        argv.extend(galaxy_args.init_args.into_iter());
-        init_task.exec(argv[0].clone(), argv.clone(), galaxy_args.init_environ)?;
-        Some(init_task)
-    } else {
+    let init_task = if CONFIG.init_binary_path.is_empty() {
         // A task must have an exit code, so set it here to simulate the init task having run.
         *init_task.exit_code.lock() = Some(0);
         None
+    } else {
+        let mut argv = vec![to_cstr(&CONFIG.init_binary_path)];
+        argv.extend(CONFIG.init_args.iter().map(to_cstr));
+        init_task.exec(
+            argv[0].clone(),
+            argv.clone(),
+            CONFIG.init_environ.iter().map(to_cstr).collect(),
+        )?;
+        Some(init_task)
     };
 
-    Ok(Galaxy { init_task, startup_file_path: galaxy_args.startup_file_path, kernel, root_fs })
+    let startup_file_path = if CONFIG.startup_file_path.is_empty() {
+        None
+    } else {
+        Some(CONFIG.startup_file_path.clone())
+    };
+    Ok(Galaxy { init_task, startup_file_path, kernel, root_fs })
 }
 
 fn create_fs_context(
-    args: &Arguments,
     kernel: &Arc<Kernel>,
     pkg_dir_proxy: &fio::DirectorySynchronousProxy,
 ) -> Result<Arc<FsContext>, Error> {
     // The mounts are appplied in the order listed. Mounting will fail if the designated mount
     // point doesn't exist in a previous mount. The root must be first so other mounts can be
     // applied on top of it.
-    let mut mounts_iter = args.mounts.iter();
+    let mut mounts_iter = CONFIG.mounts.iter();
     let (root_point, root_fs) = create_filesystem_from_spec(
         &kernel,
         None,
@@ -188,13 +143,13 @@ fn create_fs_context(
     Ok(FsContext::new(root_fs))
 }
 
-fn mount_apexes(args: &Arguments, init_task: &CurrentTask) -> Result<(), Error> {
-    if !args.apexes.is_empty() {
+fn mount_apexes(init_task: &CurrentTask) -> Result<(), Error> {
+    if !CONFIG.apexes.is_empty() {
         init_task
             .lookup_path_from_root(b"apex")?
             .mount(WhatToMount::Fs(TmpFs::new()), MountFlags::empty())?;
         let apex_dir = init_task.lookup_path_from_root(b"apex")?;
-        for apex in &args.apexes {
+        for apex in &CONFIG.apexes {
             let apex = apex.as_bytes();
             let apex_subdir = apex_dir.create_node(
                 apex,
@@ -208,24 +163,19 @@ fn mount_apexes(args: &Arguments, init_task: &CurrentTask) -> Result<(), Error> 
     Ok(())
 }
 
-fn create_init_task(
-    args: &Arguments,
-    kernel: &Arc<Kernel>,
-    fs: &Arc<FsContext>,
-) -> Result<CurrentTask, Error> {
-    let credentials = Credentials::from_passwd(&args.init_user)?;
-    let name = args.init_binary_path.clone().unwrap_or_default();
+fn create_init_task(kernel: &Arc<Kernel>, fs: &Arc<FsContext>) -> Result<CurrentTask, Error> {
+    let credentials = Credentials::from_passwd(&CONFIG.init_user)?;
+    let name = to_cstr(&CONFIG.init_binary_path);
     let init_task = Task::create_process_without_parent(kernel, name, fs.clone())?;
     *init_task.creds.write() = credentials;
     Ok(init_task)
 }
 
 fn mount_filesystems(
-    args: &Arguments,
     init_task: &CurrentTask,
     pkg_dir_proxy: &fio::DirectorySynchronousProxy,
 ) -> Result<(), Error> {
-    let mut mounts_iter = args.mounts.iter();
+    let mut mounts_iter = CONFIG.mounts.iter();
     // Skip the first mount, that was used to create the root filesystem.
     let _ = mounts_iter.next();
     for mount_spec in mounts_iter {

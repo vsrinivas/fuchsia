@@ -19,7 +19,11 @@
             extends: "realm",
             runners: [
                 {
-                    runner: "starnix",
+                    runner: "stardroid",
+                    from: "#starnix_manager",
+                },
+                {
+                    runner: "starmium",
                     from: "#starnix_manager",
                 },
             ],

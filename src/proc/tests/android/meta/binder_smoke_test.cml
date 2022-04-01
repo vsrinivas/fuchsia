@@ -1,6 +1,6 @@
 {
     include: [ "//src/proc/tests/android/stardroid_test.shard.cml" ],
     program: {
-        binary: "tests/binder_smoke_test",
+        binary: "data/tests/binder_smoke_test",
     },
 }

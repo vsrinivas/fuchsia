@@ -63,4 +63,89 @@
             from: "self",
         },
     ],
+    config: {
+        // Hack for specifying apexes.
+        apexes: {
+            type: "vector",
+            element: {
+                type: "string",
+                max_size: 256,
+            },
+            max_count: 100,
+        },
+
+        // The features to run in the galaxy (e.g., wayland support).
+        features: {
+            type: "vector",
+            element: {
+                type: "string",
+                max_size: 256,
+            },
+            max_count: 100,
+        },
+
+        // The arguments for the `init` task, if such a task exists.
+        init_args: {
+            type: "vector",
+            element: {
+                type: "string",
+                max_size: 256,
+            },
+            max_count: 100,
+        },
+
+        // A path to a binary, inside of the system image, that is expected to run as the first task
+        // in the galaxy.
+        init_binary_path: {
+            type: "string",
+            max_size: 1024,
+        },
+
+        // The environment for the `init` task.
+        init_environ: {
+            type: "vector",
+            element: {
+                type: "string",
+                max_size: 256,
+            },
+            max_count: 100,
+        },
+
+        // The user string used when creating the `init` task.
+        init_user: {
+            type: "string",
+            max_size: 256,
+        },
+
+        // The command line arguments for the kernel.
+        kernel_cmdline: {
+            type: "string",
+            max_size: 256,
+        },
+
+        //  The filesystems that get mounted when the galaxy is created.
+        mounts: {
+            type: "vector",
+            element: {
+                type: "string",
+                max_size: 256,
+            },
+            max_count: 100,
+        },
+
+        // The name of the galaxy.
+        name: {
+            type: "string",
+            max_size: 256,
+        },
+
+        // A file path that will be used to determine whether or not the system is ready to execute
+        // tasks. Prior to the existence of this file (if specified), the system will only run the
+        // `init` task (and any tasks `init` spawns). The `init` task is expected to create a file
+        // at this path.
+        startup_file_path: {
+            type: "string",
+            max_size: 1024,
+        },
+    },
 }

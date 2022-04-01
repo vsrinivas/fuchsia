@@ -1,7 +1,7 @@
 {
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
-        binary: "tests/madvise_test",
+        binary: "data/tests/madvise_test",
         args: [ "--gunit_filter=MadviseDontneedTest.*:-*.CleansPrivateFilePage" ],
     },
 }

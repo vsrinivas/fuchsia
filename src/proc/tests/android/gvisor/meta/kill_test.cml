@@ -1,7 +1,7 @@
 {
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
-        binary: "tests/kill_test",
+        binary: "data/tests/kill_test",
         args: [ "--gunit_filter=KillTest.CanKillAllPIDs:KillTest.CannotKillInvalidPID:KillTest.CannotKillTid" ],
     },
 }

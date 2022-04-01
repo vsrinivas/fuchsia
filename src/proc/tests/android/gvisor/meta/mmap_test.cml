@@ -1,7 +1,7 @@
 {
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
-        binary: "tests/mmap_test",
+        binary: "data/tests/mmap_test",
         args: [ "--gunit_filter=-*Death*:*DevZero*:*.MapCharDevice:*.MapLocked:*.MprotectHugeLength:*ExceedLimitData*:*ExceedLimitAS:*.AccessCOWInvalidatesCachedSegments:*.MapOffsetBeyondEnd:*SIGBUS*:*.InternalSigBusZeroing:*.Map32Bit:*.MapLastPositivePage:*.MapFirstNegativePage:*.MapSecondToLastNegativePage:*.MapLastNegativePage" ],
     },
 }

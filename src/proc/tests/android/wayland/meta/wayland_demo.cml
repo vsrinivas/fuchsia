@@ -1,6 +1,6 @@
 {
     program: {
-        runner: "starnix",
+        runner: "stardroid",
         binary: "bin/wayland_demo",
         environ: [
             "XDG_RUNTIME_DIR=/data/tmp",

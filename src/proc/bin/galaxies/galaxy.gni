@@ -1,0 +1,74 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+# Defines a starnix runner package with a provided configuration file and system image.
+#
+# Parameters
+#
+# `config` (required, string): path to a JSON configuration file.
+#
+# `system_image` (optional, string): path to a system image file for the galaxy.
+template("starnix_galaxy_package") {
+  assert(defined(invoker.config),
+         "must define `config` as a path to JSON file with startup config")
+
+  has_system_image = defined(invoker.system_image)
+  component_target = "${target_name}_component"
+  config_target = "${target_name}_config"
+  manifest_target = "${target_name}_manifest_compile"
+  data_tmp_target = "${target_name}_data_tmp"
+  data_pkg_target = "${target_name}_data_pkg"
+  if (has_system_image) {
+    system_image_target = "${target_name}_system_image"
+  }
+
+  fuchsia_component_manifest(manifest_target) {
+    component_name = "starnix_runner"
+    manifest = "//src/proc/bin/starnix/meta/starnix_runner.cml"
+    restricted_features = [ "structured_config" ]
+  }
+
+  fuchsia_component(component_target) {
+    cm_target = ":${manifest_target}"
+    deps = [ "//src/proc/bin/starnix:starnix_runner_bin" ]
+  }
+
+  fuchsia_structured_config_values(config_target) {
+    cm_target = ":${manifest_target}"
+    values_source = invoker.config
+  }
+
+  if (has_system_image) {
+    resource(system_image_target) {
+      sources = [ invoker.system_image ]
+      outputs = [ "data/system.img" ]
+    }
+  }
+
+  # A file that makes sure that the data/tmp directory exists.
+  resource(data_tmp_target) {
+    sources = [ "//src/proc/bin/galaxies/placeholder" ]
+    outputs = [ "data/tmp/.placeholder" ]
+  }
+
+  # A file that makes sure that the data/pkg directory exists.
+  resource(data_pkg_target) {
+    sources = [ "//src/proc/bin/galaxies/placeholder" ]
+    outputs = [ "data/pkg/.placeholder" ]
+  }
+
+  fuchsia_package(target_name) {
+    deps = [
+      ":${component_target}",
+      ":${config_target}",
+      ":${data_pkg_target}",
+      ":${data_tmp_target}",
+    ]
+    if (has_system_image) {
+      deps += [ ":${system_image_target}" ]
+    }
+  }
+}

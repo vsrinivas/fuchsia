@@ -1,11 +1,12 @@
 {
     program: {
-        runner: "starnix",
-        binary: "bin/wayland_demo",
+        runner: "stardroid",
+        binary: "data/bin/wayland_demo",
         environ: [
             "XDG_RUNTIME_DIR=/data/tmp",
             "VIRTWL_DEVICE=/data/tmp/wayland-1",
         ],
+        features: [ "wayland" ],
     },
     capabilities: [
         { protocol: "fuchsia.ui.app.ViewProvider" },

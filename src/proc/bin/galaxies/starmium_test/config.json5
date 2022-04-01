@@ -1,0 +1,20 @@
+{
+    apexes: [],
+    features: [
+        "wayland",
+    ],
+    init_args: [],
+    init_binary_path: "",
+    init_environ: [],
+    init_user: "fuchsia:x:42:42",
+    kernel_cmdline: "",
+    mounts: [
+        "/:ext4:data/system.img",
+        "/data:remotefs:data",
+        "/dev:devtmpfs",
+        "/data/tmp:tmpfs",
+        "/dev/pts:devpts",
+    ],
+    name: "starmium_test",
+    startup_file_path: "",
+}

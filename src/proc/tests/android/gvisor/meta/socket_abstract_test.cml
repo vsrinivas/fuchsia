@@ -1,7 +1,7 @@
 {
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
-        binary: "tests/socket_abstract_test",
+        binary: "data/tests/socket_abstract_test",
         args: [ "--gunit_filter=*Cmsg*:-*/2:*/3:*/6:*/7:*/8:*/9:*/10:*/11:*FDPassPeek*:*Cred*:*CloexecRecvFDPass*" ],
     },
 }

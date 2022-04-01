@@ -1,0 +1,25 @@
+{
+    apexes: [
+        "com.android.runtime",
+    ],
+    features: [
+        "binder",
+        "logd",
+        "wayland",
+    ],
+    init_args: [],
+    init_binary_path: "",
+    init_environ: [],
+    init_user: "fuchsia:x:42:42",
+    kernel_cmdline: "androidboot.hardware=starnix",
+    mounts: [
+        "/:ext4:data/system.img",
+        "/data:remotefs:data",
+        "/dev:devtmpfs",
+        "/data/tmp:tmpfs",
+        "/dev/pts:devpts",
+        "/proc:proc",
+    ],
+    name: "stardroid",
+    startup_file_path: "",
+}

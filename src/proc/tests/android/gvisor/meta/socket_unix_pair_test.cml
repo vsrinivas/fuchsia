@@ -1,7 +1,7 @@
 {
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
-        binary: "tests/socket_unix_pair_test",
+        binary: "data/tests/socket_unix_pair_test",
         args: [ "--gunit_filter=*.InvalidGetSockOpt/*:*.BindToBadName/*:*.BindToBadFamily/*:*.RecvmmsgTimeoutAfterRecv/*:*.ShutdownRead/*:*.ShutdownWrite/*:*.FDPassPeek/*:*.BasicCredPass/*" ],
     },
 }

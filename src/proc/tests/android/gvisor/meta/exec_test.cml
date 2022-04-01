@@ -1,7 +1,7 @@
 {
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
-        binary: "tests/exec_test",
+        binary: "data/tests/exec_test",
         args: [
             "--runfile_workspace_root=exec_test.runfiles",
 

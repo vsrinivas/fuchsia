@@ -1,7 +1,7 @@
 {
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
-        binary: "tests/chmod_test",
+        binary: "data/tests/chmod_test",
         args: [ "--gunit_filter=ChmodTest.FchmodBadF:ChmodTest.FchmodatBadF:ChmodTest.FchmodatNotDir:ChmodTest.FchmodDowngradeWritability" ],
     },
 }

@@ -40,6 +40,11 @@ group("structured_config") {
     "//sdk/lib/sys/component/cpp/tests:*",
     "//src/diagnostics/detect:*",
     "//src/diagnostics/sampler:*",
+    "//src/proc/bin/galaxies/stardroid:*",
+    "//src/proc/bin/galaxies/stardroid_test:*",
+    "//src/proc/bin/galaxies/starmium:*",
+    "//src/proc/bin/galaxies/starmium_test:*",
+    "//src/proc/bin/starnix:*",
     "//src/session/bin/session_manager:*",
     "//src/storage/fshost:*",
 

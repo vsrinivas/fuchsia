@@ -4,10 +4,6 @@
 
 import("//build/components.gni")
 
-group("android") {
-  deps = [ ":android_system_image" ]
-}
-
 group("tests") {
   testonly = true
   if (target_cpu == "x64") {
@@ -18,27 +14,6 @@ group("tests") {
       "//src/proc/tests/android/wayland",
     ]
   }
-}
-
-if (target_cpu == "x64") {
-  fuchsia_package("stardroid") {
-    package_name = "stardroid"
-    deps = [
-      ":android_system_image",
-      ":stardroid_config",
-      "//src/proc/bin/starnix:starnix_runner_component",
-    ]
-  }
-}
-
-resource("android_system_image") {
-  sources = [ "//prebuilt/starnix/android-image-amd64/system.img" ]
-  outputs = [ "data/system.img" ]
-}
-
-resource("stardroid_config") {
-  sources = [ "stardroid.config" ]
-  outputs = [ "data/runner.config" ]
 }
 
 fuchsia_component("init") {
@@ -68,20 +43,17 @@ fuchsia_test_component("java_hello_world") {
 fuchsia_component("sh_test") {
   testonly = true
   check_references = false
-  deps = [ ":android_system_image" ]
   manifest = "meta/sh_test.cml"
 }
 
 fuchsia_component("boringssl_self_test64") {
   testonly = true
   check_references = false
-  deps = [ ":android_system_image" ]
   manifest = "meta/boringssl_self_test64.cml"
 }
 
-resource("starnix_data_tmp_placeholder") {
-  sources = [ "placeholder" ]
-  outputs = [ "data/tmp/.placeholder" ]
+fuchsia_package("android_shell") {
+  deps = [ ":sh" ]
 }
 
 fuchsia_test_package("test_android_distro") {

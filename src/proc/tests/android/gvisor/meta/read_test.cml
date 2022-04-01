@@ -1,7 +1,7 @@
 {
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
-        binary: "tests/read_test",
+        binary: "data/tests/read_test",
         args: [ "--gunit_filter=-*.PartialReadSIGSEGV" ],
     },
 }

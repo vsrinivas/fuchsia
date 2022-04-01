@@ -1,7 +1,7 @@
 {
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
-        binary: "tests/stat_test",
+        binary: "data/tests/stat_test",
         args: [ "--gunit_filter=-*.Statx*:*.AnonDeviceAllocatesUniqueInodesAcrossSaveRestore" ],
     },
 }

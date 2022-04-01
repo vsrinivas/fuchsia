@@ -10,6 +10,7 @@ group("examples") {
       "//src/proc/bin/starnix",
       "//src/proc/bin/starsh",
       "//src/proc/examples/wayland:starnix_wayland",
+      "//src/proc/tests/android:android_shell",
     ]
   }
 }

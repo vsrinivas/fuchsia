@@ -1,7 +1,6 @@
 {
     program: {
-        runner: "starnix",
-        binary: "hello_starnix",
-        mounts: [ "/:remotefs:bin" ],
+        runner: "starmium",
+        binary: "bin/hello_starnix",
     },
 }

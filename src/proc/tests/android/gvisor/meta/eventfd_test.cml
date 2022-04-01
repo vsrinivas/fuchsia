@@ -1,7 +1,7 @@
 {
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
-        binary: "tests/eventfd_test",
+        binary: "data/tests/eventfd_test",
         args: [ "--gunit_filter=-EventfdTest.SpliceReturnsEINVAL" ],
     },
 }
