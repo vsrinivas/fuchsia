@@ -112,9 +112,9 @@ impl FSInstance {
         // mount errors to show before we bind to the namespace.
         let (root_dir, server_end) = fidl::endpoints::create_endpoints::<fio::NodeMarker>()?;
         export_root.open(
-            fio::OPEN_RIGHT_READABLE
-                | fio::OPEN_FLAG_POSIX_EXECUTABLE
-                | fio::OPEN_FLAG_POSIX_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::POSIX_EXECUTABLE
+                | fio::OpenFlags::POSIX_WRITABLE,
             0,
             "root",
             server_end.into(),
@@ -159,7 +159,7 @@ impl FSInstance {
 
         let namespace = Namespace::installed().context("failed to get installed namespace")?;
         namespace
-            .connect(&self.mount_point, fio::OPEN_RIGHT_READABLE, server_chan)
+            .connect(&self.mount_point, fio::OpenFlags::RIGHT_READABLE, server_chan)
             .context("failed to connect to filesystem")?;
 
         let proxy = fio::DirectorySynchronousProxy::new(client_chan);
@@ -272,7 +272,7 @@ impl<FSC: FSConfig> Filesystem<FSC> {
         let (channel, server) = zx::Channel::create()?;
         let () = self
             .device
-            .clone(fio::CLONE_FLAG_SAME_RIGHTS, fidl::endpoints::ServerEnd::new(server))?;
+            .clone(fio::OpenFlags::CLONE_SAME_RIGHTS, fidl::endpoints::ServerEnd::new(server))?;
         Ok(channel)
     }
 

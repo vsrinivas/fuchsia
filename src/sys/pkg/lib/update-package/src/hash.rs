@@ -19,7 +19,7 @@ pub enum HashError {
 }
 
 pub(crate) async fn hash(proxy: &fio::DirectoryProxy) -> Result<Hash, HashError> {
-    let meta = io_util::directory::open_file(proxy, "meta", io_util::OPEN_RIGHT_READABLE)
+    let meta = io_util::directory::open_file(proxy, "meta", io_util::OpenFlags::RIGHT_READABLE)
         .await
         .map_err(HashError::Open)?;
     let contents = io_util::file::read_to_string(&meta).await.map_err(HashError::Read)?;
@@ -40,9 +40,11 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn open_error() {
         let temp_dir = tempdir().expect("/tmp to exist");
-        let proxy =
-            open_in_namespace(temp_dir.path().to_str().unwrap(), io_util::OPEN_RIGHT_READABLE)
-                .expect("temp dir to open");
+        let proxy = open_in_namespace(
+            temp_dir.path().to_str().unwrap(),
+            io_util::OpenFlags::RIGHT_READABLE,
+        )
+        .expect("temp dir to open");
 
         assert_matches!(hash(&proxy).await, Err(HashError::Open(_)));
     }
@@ -51,9 +53,11 @@ mod tests {
     async fn parse_error() {
         let temp_dir = tempdir().expect("/tmp to exist");
         File::create(temp_dir.path().join("meta")).unwrap();
-        let proxy =
-            open_in_namespace(temp_dir.path().to_str().unwrap(), io_util::OPEN_RIGHT_READABLE)
-                .expect("temp dir to open");
+        let proxy = open_in_namespace(
+            temp_dir.path().to_str().unwrap(),
+            io_util::OpenFlags::RIGHT_READABLE,
+        )
+        .expect("temp dir to open");
 
         assert_matches!(hash(&proxy).await, Err(HashError::Parse(_)));
     }
@@ -64,9 +68,11 @@ mod tests {
         let mut meta = File::create(temp_dir.path().join("meta")).unwrap();
         let hex = "0000000000000000000000000000000000000000000000000000000000000000";
         meta.write_all(hex.as_bytes()).unwrap();
-        let proxy =
-            open_in_namespace(temp_dir.path().to_str().unwrap(), io_util::OPEN_RIGHT_READABLE)
-                .expect("temp dir to open");
+        let proxy = open_in_namespace(
+            temp_dir.path().to_str().unwrap(),
+            io_util::OpenFlags::RIGHT_READABLE,
+        )
+        .expect("temp dir to open");
 
         assert_matches!(hash(&proxy).await, Ok(hash) if hash == hex.parse().unwrap());
     }

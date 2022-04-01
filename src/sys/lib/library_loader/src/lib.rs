@@ -100,7 +100,7 @@ pub async fn load_vmo<'a>(
     let file_proxy = io_util::open_file(
         dir_proxy,
         &Path::new(object_name),
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
     )?;
     let vmo = file_proxy
         .get_backing_memory(fio::VmoFlags::READ | fio::VmoFlags::EXECUTE)
@@ -127,14 +127,14 @@ pub fn parse_config_string(
         let sub_dir_proxy = io_util::open_directory(
             dir_proxy,
             &Path::new(&config[..config.len() - 1]),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )?;
         Ok(vec![sub_dir_proxy.into()])
     } else {
         let sub_dir_proxy = io_util::open_directory(
             dir_proxy,
             &Path::new(config),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )?;
         Ok(vec![sub_dir_proxy.into(), dir_proxy.clone()])
     }
@@ -145,7 +145,7 @@ mod tests {
     use {super::*, fidl_fuchsia_ldsvc::LoaderMarker};
 
     async fn list_directory<'a>(root_proxy: &'a fio::DirectoryProxy) -> Vec<String> {
-        let dir = io_util::clone_directory(&root_proxy, fio::CLONE_FLAG_SAME_RIGHTS)
+        let dir = io_util::clone_directory(&root_proxy, fio::OpenFlags::CLONE_SAME_RIGHTS)
             .expect("Failed to clone DirectoryProxy");
         let entries = files_async::readdir(&dir).await.expect("readdir failed");
         entries.iter().map(|entry| entry.name.clone()).collect::<Vec<String>>()
@@ -158,7 +158,7 @@ mod tests {
         // TODO(fxbug.dev/37534): Use a synthetic /pkg/lib in this test so it doesn't depend on the
         // package layout (like whether sanitizers are in use) once Rust vfs supports
         // OPEN_RIGHT_EXECUTABLE
-        let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
+        let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE;
         let mut pkg_lib = io_util::open_directory_in_namespace("/pkg/lib", rights)?;
         let entries = list_directory(&pkg_lib).await;
         if entries.iter().any(|f| &f as &str == "asan-ubsan") {
@@ -218,7 +218,7 @@ mod tests {
         // package layout once Rust vfs supports OPEN_RIGHT_EXECUTABLE
         let pkg_lib = io_util::open_directory_in_namespace(
             "/pkg/lib/config_test/",
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )?;
         let (loader_proxy, loader_service) = fidl::endpoints::create_proxy::<LoaderMarker>()?;
         start(pkg_lib.into(), loader_service.into_channel());

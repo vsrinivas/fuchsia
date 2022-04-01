@@ -39,7 +39,7 @@ impl Client {
     pub fn open_from_namespace() -> Result<Self, io_util::node::OpenError> {
         let proxy = io_util::directory::open_in_namespace(
             "/pkgfs/ctl",
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )?;
         Ok(Client { proxy })
     }
@@ -52,7 +52,7 @@ impl Client {
             proxy: io_util::directory::open_directory_no_describe(
                 pkgfs,
                 "ctl",
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             )?,
         })
     }

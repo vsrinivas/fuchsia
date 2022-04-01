@@ -169,7 +169,7 @@ impl AccessCheckRequest {
             fx_log_info!("Opening package from pkgfs-versions: {}", pkgfs_versions_path);
             let package_directory_proxy = open_in_namespace(
                 &pkgfs_versions_path,
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
             )
             .unwrap();
             Some((
@@ -187,7 +187,7 @@ impl AccessCheckRequest {
             fx_log_info!("Opening package from pkgfs-packages: {}", pkgfs_packages_path);
             let package_directory_proxy = open_in_namespace(
                 &pkgfs_packages_path,
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
             )
             .unwrap();
             Some((
@@ -314,7 +314,7 @@ impl AccessCheckRequest {
         let bin_file = open_file(
             package_directory_proxy,
             &self.config.packaged_binary_path,
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )
         .await?;
         let vmo = bin_file
@@ -333,7 +333,7 @@ impl AccessCheckRequest {
         let bin_file = open_file(
             package_directory_proxy,
             &self.config.packaged_binary_path,
-            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_READABLE,
         )
         .await?;
         read_file_bytes(&bin_file).await.unwrap();
@@ -371,7 +371,7 @@ async fn get_storage_for_component_instance(moniker_prefix: &str) -> fio::Direct
     storage_admin
         .open_component_storage(
             matching_storage_users.first().unwrap(),
-            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_READABLE,
             fio::MODE_TYPE_DIRECTORY,
             ServerEnd::new(server_end.into_channel()),
         )

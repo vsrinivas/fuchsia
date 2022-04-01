@@ -22,8 +22,9 @@ zx::status<std::unique_ptr<ExportWatcher>> ExportWatcher::Create(
 
   auto response =
       fidl::WireCall(service_dir)
-          ->Open(fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable, 0,
-                 fidl::StringView::FromExternal(service_path), std::move(endpoints->server));
+          ->Open(fuchsia_io::wire::OpenFlags::kRightReadable |
+                     fuchsia_io::wire::OpenFlags::kRightWritable,
+                 0, fidl::StringView::FromExternal(service_path), std::move(endpoints->server));
   if (!response.ok()) {
     return zx::error(response.error().status());
   }

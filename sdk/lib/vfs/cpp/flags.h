@@ -14,54 +14,54 @@ class Flags {
   Flags() = delete;
 
   static bool IsReadable(fuchsia::io::OpenFlags flags) {
-    return (flags & fuchsia::io::OPEN_RIGHT_READABLE) != fuchsia::io::OpenFlags();
+    return (flags & fuchsia::io::OpenFlags::RIGHT_READABLE) != fuchsia::io::OpenFlags();
   }
 
   static bool IsWritable(fuchsia::io::OpenFlags flags) {
-    return (flags & fuchsia::io::OPEN_RIGHT_WRITABLE) != fuchsia::io::OpenFlags();
+    return (flags & fuchsia::io::OpenFlags::RIGHT_WRITABLE) != fuchsia::io::OpenFlags();
   }
 
   static bool IsExecutable(fuchsia::io::OpenFlags flags) {
-    return (flags & fuchsia::io::OPEN_RIGHT_EXECUTABLE) != fuchsia::io::OpenFlags();
+    return (flags & fuchsia::io::OpenFlags::RIGHT_EXECUTABLE) != fuchsia::io::OpenFlags();
   }
 
   static bool IsDirectory(fuchsia::io::OpenFlags flags) {
-    return (flags & fuchsia::io::OPEN_FLAG_DIRECTORY) != fuchsia::io::OpenFlags();
+    return (flags & fuchsia::io::OpenFlags::DIRECTORY) != fuchsia::io::OpenFlags();
   }
 
   static bool IsNotDirectory(fuchsia::io::OpenFlags flags) {
-    return (flags & fuchsia::io::OPEN_FLAG_NOT_DIRECTORY) != fuchsia::io::OpenFlags();
+    return (flags & fuchsia::io::OpenFlags::NOT_DIRECTORY) != fuchsia::io::OpenFlags();
   }
 
   static bool ShouldDescribe(fuchsia::io::OpenFlags flags) {
-    return (flags & fuchsia::io::OPEN_FLAG_DESCRIBE) != fuchsia::io::OpenFlags();
+    return (flags & fuchsia::io::OpenFlags::DESCRIBE) != fuchsia::io::OpenFlags();
   }
 
   static bool IsNodeReference(fuchsia::io::OpenFlags flags) {
-    return (flags & fuchsia::io::OPEN_FLAG_NODE_REFERENCE) != fuchsia::io::OpenFlags();
+    return (flags & fuchsia::io::OpenFlags::NODE_REFERENCE) != fuchsia::io::OpenFlags();
   }
 
   static bool ShouldCloneWithSameRights(fuchsia::io::OpenFlags flags) {
-    return (flags & fuchsia::io::CLONE_FLAG_SAME_RIGHTS) != fuchsia::io::OpenFlags();
+    return (flags & fuchsia::io::OpenFlags::CLONE_SAME_RIGHTS) != fuchsia::io::OpenFlags();
   }
 
   static bool IsPosixWritable(fuchsia::io::OpenFlags flags) {
-    return (flags & fuchsia::io::OPEN_FLAG_POSIX_WRITABLE) != fuchsia::io::OpenFlags();
+    return (flags & fuchsia::io::OpenFlags::POSIX_WRITABLE) != fuchsia::io::OpenFlags();
   }
 
   static bool IsPosixExecutable(fuchsia::io::OpenFlags flags) {
-    return (flags & fuchsia::io::OPEN_FLAG_POSIX_EXECUTABLE) != fuchsia::io::OpenFlags();
+    return (flags & fuchsia::io::OpenFlags::POSIX_EXECUTABLE) != fuchsia::io::OpenFlags();
   }
 
   // All known rights.
   static constexpr fuchsia::io::OpenFlags kFsRights = fuchsia::io::OPEN_RIGHTS;
 
   // Flags which can be modified by FIDL File::SetFlags.
-  static constexpr fuchsia::io::OpenFlags kSettableStatusFlags = fuchsia::io::OPEN_FLAG_APPEND;
+  static constexpr fuchsia::io::OpenFlags kSettableStatusFlags = fuchsia::io::OpenFlags::APPEND;
 
   // All flags which indicate state of the connection (excluding rights).
   static constexpr fuchsia::io::OpenFlags kStatusFlags =
-      kSettableStatusFlags | fuchsia::io::OPEN_FLAG_NODE_REFERENCE;
+      kSettableStatusFlags | fuchsia::io::OpenFlags::NODE_REFERENCE;
 
   // Returns true if the rights flags in |flags_a| does not exceed
   // those in |flags_b|.

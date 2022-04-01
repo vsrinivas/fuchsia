@@ -53,7 +53,8 @@ class BaseSocket {
       return endpoints.status_value();
     }
     zx_status_t status =
-        client_->Clone(fio::wire::kCloneFlagSameRights, std::move(endpoints->server)).status();
+        client_->Clone(fio::wire::OpenFlags::kCloneSameRights, std::move(endpoints->server))
+            .status();
     if (status != ZX_OK) {
       return status;
     }

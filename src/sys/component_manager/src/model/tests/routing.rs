@@ -2596,7 +2596,7 @@ async fn use_service_from_sibling_collection() {
     let service_dir = io_util::directory::open_directory(
         &dir,
         "my.service.Service",
-        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
     )
     .await
     .expect("failed to open service");

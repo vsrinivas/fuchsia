@@ -100,7 +100,7 @@ async fn test_setup(
         let debug = io_util::directory::open_directory(
             &hub_dir,
             "debug",
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .await
         .context("open /hub/debug")?;

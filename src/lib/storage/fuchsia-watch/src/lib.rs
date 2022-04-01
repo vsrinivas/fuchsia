@@ -19,7 +19,7 @@ use {
         sink::SinkExt,
         stream::{BoxStream, StreamExt, TryStreamExt},
     },
-    io_util::{open_node_in_namespace, OPEN_RIGHT_READABLE},
+    io_util::{open_node_in_namespace, OpenFlags},
     std::path::{Path, PathBuf},
 };
 
@@ -57,7 +57,7 @@ impl NodeType {
  non-blocking directory apis require utf8 paths: {:?}.",
             path
         ))?;
-        let dir_proxy = open_node_in_namespace(path_as_str, OPEN_RIGHT_READABLE)?;
+        let dir_proxy = open_node_in_namespace(path_as_str, OpenFlags::RIGHT_READABLE)?;
         Ok(match dir_proxy.describe().await {
             Ok(fio::NodeInfo::Directory(_)) => NodeType::Directory,
             Ok(fio::NodeInfo::File(_)) | Ok(fio::NodeInfo::Vmofile(_)) => NodeType::File,
@@ -106,7 +106,7 @@ async fn inner_watch(path: PathBuf) -> Result<BoxStream<'static, PathEvent>, Err
         path
     ))?;
     let dir_proxy =
-        io_util::open_directory_in_namespace(path_as_str, io_util::OPEN_RIGHT_READABLE)?;
+        io_util::open_directory_in_namespace(path_as_str, io_util::OpenFlags::RIGHT_READABLE)?;
     let (mut tx, rx) = channel(1);
     let mut watcher = Watcher::new(dir_proxy).await?;
 

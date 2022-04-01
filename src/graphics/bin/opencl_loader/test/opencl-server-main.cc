@@ -82,10 +82,10 @@ int main(int argc, const char* const* argv) {
   fxl::SetLogSettingsFromCommandLine(fxl::CommandLineFromArgcArgv(argc, argv));
   fidl::InterfaceHandle<fuchsia::io::Directory> pkg_dir;
   zx_status_t status;
-  status = fdio_open(
-      "/pkg",
-      static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_EXECUTABLE),
-      pkg_dir.NewRequest().TakeChannel().release());
+  status = fdio_open("/pkg",
+                     static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE |
+                                           fuchsia::io::OpenFlags::RIGHT_EXECUTABLE),
+                     pkg_dir.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
     FX_PLOGST(FATAL, nullptr, status) << "Failed to open package";
     return -1;

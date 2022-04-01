@@ -262,7 +262,7 @@ impl InputPipeline {
                 return;
             }
             let dir_proxy =
-                open_directory_in_namespace(input_device::INPUT_REPORT_PATH, fio::OPEN_RIGHT_READABLE)
+                open_directory_in_namespace(input_device::INPUT_REPORT_PATH, fio::OpenFlags::RIGHT_READABLE)
                     .expect("Unable to open input report directory.");
             let _ = Self::watch_for_devices(
                 device_watcher.unwrap(),
@@ -313,7 +313,7 @@ impl InputPipeline {
     async fn get_device_watcher() -> Result<Watcher, Error> {
         let input_report_dir_proxy = open_directory_in_namespace(
             input_device::INPUT_REPORT_PATH,
-            io_util::OPEN_RIGHT_READABLE,
+            io_util::OpenFlags::RIGHT_READABLE,
         )?;
         Watcher::new(input_report_dir_proxy).await
     }
@@ -704,7 +704,7 @@ mod tests {
         let scope_for_watcher = ExecutionScope::new();
         dir.open(
             scope_for_watcher,
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             0,
             Path::dot(),
             server_end_for_watcher,
@@ -719,7 +719,7 @@ mod tests {
         let scope_for_pipeline = ExecutionScope::new();
         pseudo_dir_clone.open(
             scope_for_pipeline,
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             0,
             Path::dot(),
             server_end_for_pipeline,
@@ -792,7 +792,7 @@ mod tests {
         let scope_for_watcher = ExecutionScope::new();
         dir.open(
             scope_for_watcher,
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             0,
             Path::dot(),
             server_end_for_watcher,
@@ -807,7 +807,7 @@ mod tests {
         let scope_for_pipeline = ExecutionScope::new();
         pseudo_dir_clone.open(
             scope_for_pipeline,
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             0,
             Path::dot(),
             server_end_for_pipeline,

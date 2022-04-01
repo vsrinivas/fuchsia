@@ -144,7 +144,7 @@ impl TestHarness for HostDriverHarness {
             let dir_to_watch = io_util::directory::open_directory(
                 realm.instance().get_exposed_dir(),
                 stripped_path.as_ref(),
-                fio::OPEN_RIGHT_READABLE,
+                fio::OpenFlags::RIGHT_READABLE,
             )
             .await?;
             let mut watcher =

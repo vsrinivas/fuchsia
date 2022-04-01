@@ -78,24 +78,24 @@ impl NewEntryType {
         }
 
         // Same for `flags`, allow only one of OPEN_FLAG_DIRECTORY or OPEN_FLAG_NOT_DIRECTORY.
-        if flags.intersects(fio::OPEN_FLAG_DIRECTORY)
-            && flags.intersects(fio::OPEN_FLAG_NOT_DIRECTORY)
+        if flags.intersects(fio::OpenFlags::DIRECTORY)
+            && flags.intersects(fio::OpenFlags::NOT_DIRECTORY)
         {
             return Err(Status::INVALID_ARGS);
         }
 
         // If specified, `flags` and `mode` should agree on what they are asking for.
-        if (flags.intersects(fio::OPEN_FLAG_DIRECTORY) && mode == fio::MODE_TYPE_FILE)
-            || (flags.intersects(fio::OPEN_FLAG_NOT_DIRECTORY) && mode == fio::MODE_TYPE_DIRECTORY)
+        if (flags.intersects(fio::OpenFlags::DIRECTORY) && mode == fio::MODE_TYPE_FILE)
+            || (flags.intersects(fio::OpenFlags::NOT_DIRECTORY) && mode == fio::MODE_TYPE_DIRECTORY)
         {
             return Err(Status::INVALID_ARGS);
         }
 
-        let type_ = if flags.intersects(fio::OPEN_FLAG_DIRECTORY)
+        let type_ = if flags.intersects(fio::OpenFlags::DIRECTORY)
             || mode == fio::MODE_TYPE_DIRECTORY
         {
             NewEntryType::Directory
-        } else if flags.intersects(fio::OPEN_FLAG_NOT_DIRECTORY) || mode == fio::MODE_TYPE_FILE {
+        } else if flags.intersects(fio::OpenFlags::NOT_DIRECTORY) || mode == fio::MODE_TYPE_FILE {
             NewEntryType::File
         } else {
             // Neither is set, so default to file, unless `force_directory` would make use fail.
@@ -162,7 +162,7 @@ mod tests {
 
     #[test]
     fn directory() {
-        assert_success!(flags: fio::OPEN_FLAG_DIRECTORY,
+        assert_success!(flags: fio::OpenFlags::DIRECTORY,
             mode: 0,
             force_directory: false,
             expected: Directory);
@@ -170,7 +170,7 @@ mod tests {
             mode: fio::MODE_TYPE_DIRECTORY,
             force_directory: false,
             expected: Directory);
-        assert_success!(flags: fio::OPEN_FLAG_DIRECTORY,
+        assert_success!(flags: fio::OpenFlags::DIRECTORY,
             mode: fio::MODE_TYPE_DIRECTORY,
             force_directory: false,
             expected: Directory);
@@ -178,7 +178,7 @@ mod tests {
             mode: 0,
             force_directory: true,
             expected: Directory);
-        assert_success!(flags: fio::OPEN_FLAG_DIRECTORY,
+        assert_success!(flags: fio::OpenFlags::DIRECTORY,
             mode: 0,
             force_directory: true,
             expected: Directory);
@@ -186,7 +186,7 @@ mod tests {
             mode: fio::MODE_TYPE_DIRECTORY,
             force_directory: true,
             expected: Directory);
-        assert_success!(flags: fio::OPEN_FLAG_DIRECTORY,
+        assert_success!(flags: fio::OpenFlags::DIRECTORY,
             mode: fio::MODE_TYPE_DIRECTORY,
             force_directory: true,
             expected: Directory);
@@ -198,7 +198,7 @@ mod tests {
             mode: 0,
             force_directory: false,
             expected: File);
-        assert_success!(flags: fio::OPEN_FLAG_NOT_DIRECTORY,
+        assert_success!(flags: fio::OpenFlags::NOT_DIRECTORY,
             mode: 0,
             force_directory: false,
             expected: File);
@@ -206,7 +206,7 @@ mod tests {
             mode: fio::MODE_TYPE_FILE,
             force_directory: false,
             expected: File);
-        assert_success!(flags: fio::OPEN_FLAG_NOT_DIRECTORY,
+        assert_success!(flags: fio::OpenFlags::NOT_DIRECTORY,
             mode: fio::MODE_TYPE_FILE,
             force_directory: false,
             expected: File);
@@ -234,19 +234,19 @@ mod tests {
     fn invalid_combinations() {
         let status = Status::INVALID_ARGS;
 
-        assert_failure!(flags: fio::OPEN_FLAG_DIRECTORY,
+        assert_failure!(flags: fio::OpenFlags::DIRECTORY,
             mode: fio::MODE_TYPE_FILE,
             force_directory: false,
             expected: status);
-        assert_failure!(flags: fio::OPEN_FLAG_DIRECTORY,
+        assert_failure!(flags: fio::OpenFlags::DIRECTORY,
             mode: fio::MODE_TYPE_FILE,
             force_directory: true,
             expected: status);
-        assert_failure!(flags: fio::OPEN_FLAG_NOT_DIRECTORY,
+        assert_failure!(flags: fio::OpenFlags::NOT_DIRECTORY,
             mode: fio::MODE_TYPE_DIRECTORY,
             force_directory: false,
             expected: status);
-        assert_failure!(flags: fio::OPEN_FLAG_NOT_DIRECTORY,
+        assert_failure!(flags: fio::OpenFlags::NOT_DIRECTORY,
             mode: fio::MODE_TYPE_DIRECTORY,
             force_directory: true,
             expected: status);

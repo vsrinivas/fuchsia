@@ -53,8 +53,8 @@ class TestFile : public fio::testing::File_TestBase {
     auto endpoints = fidl::CreateEndpoints<fuchsia_io::File>();
     ASSERT_TRUE(endpoints.is_ok());
     EXPECT_EQ(ZX_OK, fdio_open(path_.data(),
-                               static_cast<uint32_t>(fio::OPEN_RIGHT_READABLE |
-                                                     fio::OPEN_RIGHT_EXECUTABLE),
+                               static_cast<uint32_t>(fio::OpenFlags::RIGHT_READABLE |
+                                                     fio::OpenFlags::RIGHT_EXECUTABLE),
                                endpoints->server.channel().release()));
 
     fidl::WireSyncClient<fuchsia_io::File> file(std::move(endpoints->client));
@@ -164,7 +164,7 @@ class DriverHostTest : public testing::Test {
     pkg_binding.Bind(pkg_endpoints->server.TakeChannel(), loop_.dispatcher());
     pkg_directory.SetOpenHandler(
         [this, &file_binding](fio::OpenFlags flags, std::string path, auto object) {
-          EXPECT_EQ(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, flags);
+          EXPECT_EQ(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE, flags);
           EXPECT_EQ("driver/library.so", path);
           file_binding.Bind(object.TakeChannel(), loop_.dispatcher());
         });
@@ -475,7 +475,7 @@ TEST_F(DriverHostTest, Start_InvalidBinary) {
   pkg_binding.Bind(pkg_endpoints->server.TakeChannel(), loop().dispatcher());
   pkg_directory.SetOpenHandler(
       [this, &file_binding](fio::OpenFlags flags, std::string path, auto object) {
-        EXPECT_EQ(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, flags);
+        EXPECT_EQ(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE, flags);
         EXPECT_EQ("driver/library.so", path);
         file_binding.Bind(object.TakeChannel(), loop().dispatcher());
       });

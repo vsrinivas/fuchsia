@@ -30,7 +30,7 @@ class TestDirectoryServer : public zxio_tests::TestDirectoryServerBase {
 
   void Open(OpenRequestView request, OpenCompleter::Sync& completer) final {
     constexpr fuchsia_io::wire::OpenFlags kExpectedFlags =
-        fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenFlagDescribe;
+        fuchsia_io::wire::OpenFlags::kRightReadable | fuchsia_io::wire::OpenFlags::kDescribe;
     if (request->flags != kExpectedFlags) {
       ADD_FAILURE("unexpected flags for Open request: 0x%x vs 0x%x",
                   static_cast<uint32_t>(request->flags), static_cast<uint32_t>(kExpectedFlags));
@@ -159,7 +159,7 @@ class Directory : public zxtest::Test {
 };
 
 TEST_F(Directory, Open) {
-  fuchsia_io::wire::OpenFlags flags = fuchsia_io::wire::kOpenRightReadable;
+  fuchsia_io::wire::OpenFlags flags = fuchsia_io::wire::OpenFlags::kRightReadable;
   uint32_t mode = 0u;
   zxio_storage_t file_storage;
   ASSERT_OK(zxio_open(directory(), static_cast<uint32_t>(flags), mode, kTestPath.data(),

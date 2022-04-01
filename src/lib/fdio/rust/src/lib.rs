@@ -880,10 +880,13 @@ mod tests {
     fn fdio_open_and_open_at() {
         // fdio_open requires paths to be absolute
         let (_, pkg_server) = zx::Channel::create().unwrap();
-        assert_eq!(open("pkg", fio::OPEN_RIGHT_READABLE, pkg_server), Err(zx::Status::NOT_FOUND));
+        assert_eq!(
+            open("pkg", fio::OpenFlags::RIGHT_READABLE, pkg_server),
+            Err(zx::Status::NOT_FOUND)
+        );
 
         let (pkg_client, pkg_server) = zx::Channel::create().unwrap();
-        assert_eq!(open("/pkg", fio::OPEN_RIGHT_READABLE, pkg_server), Ok(()));
+        assert_eq!(open("/pkg", fio::OpenFlags::RIGHT_READABLE, pkg_server), Ok(()));
 
         // fdio_open/fdio_open_at do not support OPEN_FLAG_DESCRIBE
         let (_, bin_server) = zx::Channel::create().unwrap();
@@ -891,14 +894,14 @@ mod tests {
             open_at(
                 &pkg_client,
                 "bin",
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
                 bin_server
             ),
             Err(zx::Status::INVALID_ARGS)
         );
 
         let (_, bin_server) = zx::Channel::create().unwrap();
-        assert_eq!(open_at(&pkg_client, "bin", fio::OPEN_RIGHT_READABLE, bin_server), Ok(()));
+        assert_eq!(open_at(&pkg_client, "bin", fio::OpenFlags::RIGHT_READABLE, bin_server), Ok(()));
     }
 
     // Simple tests of the fdio_open_fd and fdio_open_fd_at wrappers. These aren't intended to
@@ -907,23 +910,23 @@ mod tests {
     #[test]
     fn fdio_open_fd_and_open_fd_at() {
         // fdio_open_fd requires paths to be absolute
-        match open_fd("pkg", fio::OPEN_RIGHT_READABLE) {
+        match open_fd("pkg", fio::OpenFlags::RIGHT_READABLE) {
             Err(zx::Status::NOT_FOUND) => {}
             Ok(_) => panic!("fdio_open_fd with relative path unexpectedly succeeded"),
             Err(err) => panic!("Unexpected error from fdio_open_fd: {}", err),
         }
 
-        let pkg_fd = open_fd("/pkg", fio::OPEN_RIGHT_READABLE)
+        let pkg_fd = open_fd("/pkg", fio::OpenFlags::RIGHT_READABLE)
             .expect("Failed to open /pkg using fdio_open_fd");
 
         // Trying to open a non-existent directory should fail.
-        match open_fd_at(&pkg_fd, "blahblah", fio::OPEN_RIGHT_READABLE) {
+        match open_fd_at(&pkg_fd, "blahblah", fio::OpenFlags::RIGHT_READABLE) {
             Err(zx::Status::NOT_FOUND) => {}
             Ok(_) => panic!("fdio_open_fd_at with greater rights unexpectedly succeeded"),
             Err(err) => panic!("Unexpected error from fdio_open_fd_at: {}", err),
         }
 
-        open_fd_at(&pkg_fd, "bin", fio::OPEN_RIGHT_READABLE)
+        open_fd_at(&pkg_fd, "bin", fio::OpenFlags::RIGHT_READABLE)
             .expect("Failed to open bin/ subdirectory using fdio_open_fd_at");
     }
 }

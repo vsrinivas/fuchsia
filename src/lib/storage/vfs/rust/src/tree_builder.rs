@@ -399,10 +399,10 @@ mod tests {
         };
         let root = tree.build_with_inode_generator(&mut get_inode);
 
-        run_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
+        run_server_client(fio::OpenFlags::RIGHT_READABLE, root, |root| async move {
             assert_get_attr_path!(
                 &root,
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
                 "a",
                 fio::NodeAttributes {
                     mode: fio::MODE_TYPE_DIRECTORY
@@ -419,7 +419,7 @@ mod tests {
             );
             assert_get_attr_path!(
                 &root,
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
                 "a/b",
                 fio::NodeAttributes {
                     mode: fio::MODE_TYPE_DIRECTORY
@@ -436,7 +436,7 @@ mod tests {
             );
             assert_get_attr_path!(
                 &root,
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
                 "a/c",
                 fio::NodeAttributes {
                     mode: fio::MODE_TYPE_DIRECTORY
@@ -462,7 +462,7 @@ mod tests {
 
         let root = tree.build();
 
-        run_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
+        run_server_client(fio::OpenFlags::RIGHT_READABLE, root, |root| async move {
             assert_read_dirents_one_listing!(
                 root, 1000,
                 { DIRECTORY, b"." },
@@ -471,13 +471,13 @@ mod tests {
             );
             open_as_vmo_file_assert_content!(
                 &root,
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
                 "a",
                 "A content"
             );
             open_as_vmo_file_assert_content!(
                 &root,
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
                 "b",
                 "B content"
             );
@@ -495,7 +495,7 @@ mod tests {
 
         let root = tree.build();
 
-        run_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
+        run_server_client(fio::OpenFlags::RIGHT_READABLE, root, |root| async move {
             assert_read_dirents_one_listing!(
                 root, 1000,
                 { DIRECTORY, b"." },
@@ -511,19 +511,19 @@ mod tests {
 
             open_as_vmo_file_assert_content!(
                 &root,
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
                 "one/two",
                 "A"
             );
             open_as_vmo_file_assert_content!(
                 &root,
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
                 "one/three",
                 "B"
             );
             open_as_vmo_file_assert_content!(
                 &root,
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
                 "four",
                 "C"
             );
@@ -547,7 +547,7 @@ mod tests {
 
         let root = tree.build();
 
-        run_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
+        run_server_client(fio::OpenFlags::RIGHT_READABLE, root, |root| async move {
             assert_read_dirents_one_listing!(
                 root, 1000,
                 { DIRECTORY, b"." },
@@ -568,19 +568,19 @@ mod tests {
 
             open_as_vmo_file_assert_content!(
                 &root,
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
                 "etc/fstab",
                 "/dev/fs /"
             );
             open_as_vmo_file_assert_content!(
                 &root,
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
                 "etc/ssh/sshd_config",
                 "# Empty"
             );
             open_as_vmo_file_assert_content!(
                 &root,
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
                 "uname",
                 "Fuchsia"
             );
@@ -597,7 +597,7 @@ mod tests {
 
         let root = tree.build();
 
-        run_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
+        run_server_client(fio::OpenFlags::RIGHT_READABLE, root, |root| async move {
             assert_read_dirents_one_listing!(
                 root, 1000,
                 { DIRECTORY, b"." },
@@ -616,7 +616,7 @@ mod tests {
 
             open_as_vmo_file_assert_content!(
                 &root,
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
                 "one/two/three",
                 "B"
             );
@@ -633,7 +633,7 @@ mod tests {
 
         let root = tree.build();
 
-        run_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
+        run_server_client(fio::OpenFlags::RIGHT_READABLE, root, |root| async move {
             assert_read_dirents_one_listing!(
                 root, 1000,
                 { DIRECTORY, b"." },
@@ -652,7 +652,7 @@ mod tests {
 
             open_as_vmo_file_assert_content!(
                 &root,
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
                 "one/two/three",
                 "B"
             );
@@ -668,7 +668,7 @@ mod tests {
 
         let root = tree.build();
 
-        run_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
+        run_server_client(fio::OpenFlags::RIGHT_READABLE, root, |root| async move {
             assert_read_dirents_one_listing!(
                 root, 1000,
                 { DIRECTORY, b"." },
@@ -690,7 +690,7 @@ mod tests {
 
         let root = tree.build();
 
-        run_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
+        run_server_client(fio::OpenFlags::RIGHT_READABLE, root, |root| async move {
             assert_read_dirents_one_listing!(
                 root, 1000,
                 { DIRECTORY, b"." },

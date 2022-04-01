@@ -50,7 +50,7 @@ async fn start_with_cache_no_space() {
         .expect("failed to create FIDL endpoints");
     let () = root.open(
         vfs::execution_scope::ExecutionScope::build().entry_constructor(constructor.clone()).new(),
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         0,
         vfs::path::Path::dot(),
         server.into_channel().into(),

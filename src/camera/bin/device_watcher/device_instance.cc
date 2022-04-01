@@ -49,7 +49,7 @@ fpromise::result<std::unique_ptr<DeviceInstance>, zx_status_t> DeviceInstance::C
   // Bind the injected services directory to the given channel.
   fidl::InterfaceHandle<fuchsia::io::Directory> injected_services_dir_channel;
   status = instance->injected_services_dir_.Serve(
-      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+      fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
       injected_services_dir_channel.NewRequest().TakeChannel());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);

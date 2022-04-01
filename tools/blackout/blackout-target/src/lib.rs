@@ -57,7 +57,7 @@ pub fn generate_content(seed: u64) -> Vec<u8> {
 pub async fn find_dev(dev: &str) -> Result<String, Error> {
     let dev_class_block = io_util::open_directory_in_namespace(
         "/dev/class/block",
-        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
     )?;
     for entry in readdir(&dev_class_block).await? {
         let path = format!("/dev/class/block/{}", entry.name);

@@ -64,7 +64,7 @@ async fn main() -> Result<(), Error> {
     let root = fatfs.get_root()?;
     root.clone().open(
         scope.clone(),
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         0,
         Path::dot(),
         server.into_channel().into(),

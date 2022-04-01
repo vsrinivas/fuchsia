@@ -565,7 +565,7 @@ impl FidlSuiteEventProcessor {
                             let file = io_util::open_file(
                                 &directory,
                                 entry.name.as_ref(),
-                                fio::OPEN_RIGHT_READABLE,
+                                fio::OpenFlags::RIGHT_READABLE,
                             )
                             .unwrap();
                             let contents = io_util::read_file(&file).await.unwrap();

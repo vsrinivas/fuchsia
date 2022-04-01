@@ -42,17 +42,17 @@ impl vfs::directory::entry::DirectoryEntry for MetaSubdir {
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
         let flags = flags
-            & !(fio::OPEN_FLAG_POSIX_WRITABLE
-                | fio::OPEN_FLAG_POSIX_EXECUTABLE
-                | fio::OPEN_FLAG_POSIX_DEPRECATED);
+            & !(fio::OpenFlags::POSIX_WRITABLE
+                | fio::OpenFlags::POSIX_EXECUTABLE
+                | fio::OpenFlags::POSIX_DEPRECATED);
         if path.is_empty() {
             if flags.intersects(
-                fio::OPEN_RIGHT_WRITABLE
-                    | fio::OPEN_RIGHT_EXECUTABLE
-                    | fio::OPEN_FLAG_CREATE
-                    | fio::OPEN_FLAG_CREATE_IF_ABSENT
-                    | fio::OPEN_FLAG_TRUNCATE
-                    | fio::OPEN_FLAG_APPEND,
+                fio::OpenFlags::RIGHT_WRITABLE
+                    | fio::OpenFlags::RIGHT_EXECUTABLE
+                    | fio::OpenFlags::CREATE
+                    | fio::OpenFlags::CREATE_IF_ABSENT
+                    | fio::OpenFlags::TRUNCATE
+                    | fio::OpenFlags::APPEND,
             ) {
                 let () = send_on_open_with_error(flags, server_end, zx::Status::NOT_SUPPORTED);
                 return;
@@ -198,11 +198,11 @@ mod tests {
 
         let () = crate::verify_open_adjusts_flags(
             &(sub_dir as Arc<dyn DirectoryEntry>),
-            fio::OPEN_RIGHT_READABLE
-                | fio::OPEN_FLAG_POSIX_WRITABLE
-                | fio::OPEN_FLAG_POSIX_EXECUTABLE
-                | fio::OPEN_FLAG_POSIX_DEPRECATED,
-            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::POSIX_WRITABLE
+                | fio::OpenFlags::POSIX_EXECUTABLE
+                | fio::OpenFlags::POSIX_DEPRECATED,
+            fio::OpenFlags::RIGHT_READABLE,
         )
         .await;
     }
@@ -213,19 +213,19 @@ mod tests {
         let sub_dir = Arc::new(sub_dir);
 
         for forbidden_flag in [
-            fio::OPEN_RIGHT_WRITABLE,
-            fio::OPEN_RIGHT_EXECUTABLE,
-            fio::OPEN_FLAG_CREATE,
-            fio::OPEN_FLAG_CREATE_IF_ABSENT,
-            fio::OPEN_FLAG_TRUNCATE,
-            fio::OPEN_FLAG_APPEND,
+            fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_EXECUTABLE,
+            fio::OpenFlags::CREATE,
+            fio::OpenFlags::CREATE_IF_ABSENT,
+            fio::OpenFlags::TRUNCATE,
+            fio::OpenFlags::APPEND,
         ] {
             let (proxy, server_end) =
                 fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
             DirectoryEntry::open(
                 Arc::clone(&sub_dir),
                 ExecutionScope::new(),
-                fio::OPEN_FLAG_DESCRIBE | forbidden_flag,
+                fio::OpenFlags::DESCRIBE | forbidden_flag,
                 0,
                 VfsPath::dot(),
                 server_end.into_channel().into(),
@@ -246,7 +246,7 @@ mod tests {
 
         Arc::new(sub_dir).open(
             ExecutionScope::new(),
-            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_READABLE,
             0,
             VfsPath::dot(),
             server_end.into_channel().into(),
@@ -270,7 +270,7 @@ mod tests {
             let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
             Arc::clone(&sub_dir).open(
                 ExecutionScope::new(),
-                fio::OPEN_RIGHT_READABLE,
+                fio::OpenFlags::RIGHT_READABLE,
                 0,
                 VfsPath::validate_and_split(path).unwrap(),
                 server_end.into_channel().into(),
@@ -290,7 +290,7 @@ mod tests {
                 fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
             Arc::clone(&sub_dir).open(
                 ExecutionScope::new(),
-                fio::OPEN_RIGHT_READABLE,
+                fio::OpenFlags::RIGHT_READABLE,
                 0,
                 VfsPath::validate_and_split(path).unwrap(),
                 server_end.into_channel().into(),

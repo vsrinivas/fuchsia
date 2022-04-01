@@ -945,7 +945,7 @@ where
                 let worker = Self {
                     ctx,
                     id,
-                    rights: fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                    rights: fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
                     _marker: PhantomData,
                 };
 
@@ -988,21 +988,24 @@ where
                     }
                 };
                 // Datagram sockets don't understand the following flags.
-                let append_no_remote = flags.intersects(fio::OPEN_FLAG_APPEND)
-                    || flags.intersects(fio::OPEN_FLAG_NO_REMOTE);
+                let append_no_remote = flags.intersects(fio::OpenFlags::APPEND)
+                    || flags.intersects(fio::OpenFlags::NO_REMOTE);
                 // Datagram sockets are neither mountable nor executable.
-                let executable = flags.intersects(fio::OPEN_RIGHT_EXECUTABLE);
+                let executable = flags.intersects(fio::OpenFlags::RIGHT_EXECUTABLE);
                 // Cannot specify CLONE_FLAGS_SAME_RIGHTS together with
                 // OPEN_RIGHT_* flags.
-                let conflicting_rights = flags.intersects(fio::CLONE_FLAG_SAME_RIGHTS)
-                    && (flags.intersects(fio::OPEN_RIGHT_READABLE)
-                        || flags.intersects(fio::OPEN_RIGHT_WRITABLE));
+                let conflicting_rights = flags.intersects(fio::OpenFlags::CLONE_SAME_RIGHTS)
+                    && (flags.intersects(fio::OpenFlags::RIGHT_READABLE)
+                        || flags.intersects(fio::OpenFlags::RIGHT_WRITABLE));
                 // If CLONE_FLAG_SAME_RIGHTS is not set, then use the
                 // intersection of the inherited rights and the newly specified
                 // rights.
-                let new_rights = flags & (fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
+                let new_rights =
+                    flags & (fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
                 let more_rights_than_original = new_rights.intersects(!worker.rights);
-                if !flags.intersects(fio::CLONE_FLAG_SAME_RIGHTS) && !more_rights_than_original {
+                if !flags.intersects(fio::OpenFlags::CLONE_SAME_RIGHTS)
+                    && !more_rights_than_original
+                {
                     worker.rights &= new_rights;
                 }
 
@@ -1013,7 +1016,7 @@ where
                     return Ok(());
                 }
 
-                if flags.intersects(fio::OPEN_FLAG_DESCRIBE) {
+                if flags.intersects(fio::OpenFlags::DESCRIBE) {
                     let mut info = worker.make_handler().await.describe();
                     send_on_open(zx::sys::ZX_OK, info.as_mut());
                 }
@@ -1850,7 +1853,7 @@ where
         ),
         fposix::Errno,
     > {
-        let () = self.need_rights(fio::OPEN_RIGHT_READABLE)?;
+        let () = self.need_rights(fio::OpenFlags::RIGHT_READABLE)?;
         let state = self.get_state_mut();
         let available = if let Some(front) = state.available_data.pop_front() {
             front
@@ -1926,7 +1929,7 @@ where
         addr: Option<fnet::SocketAddress>,
         data: Vec<u8>,
     ) -> Result<i64, fposix::Errno> {
-        let () = self.need_rights(fio::OPEN_RIGHT_WRITABLE)?;
+        let () = self.need_rights(fio::OpenFlags::RIGHT_WRITABLE)?;
         let remote = if let Some(addr) = addr {
             let sockaddr = I::SocketAddress::from_sock_addr(addr)?;
             let addr = sockaddr.get_specified_addr().ok_or(fposix::Errno::Einval)?;
@@ -2486,10 +2489,12 @@ mod tests {
             .unwrap();
         let (alice_socket, alice_events) = get_socket_and_event::<A>(t.get(0), proto).await;
         // Test for the OPEN_FLAG_DESCRIBE.
-        let alice_cloned =
-            socket_clone(&alice_socket, fio::CLONE_FLAG_SAME_RIGHTS | fio::OPEN_FLAG_DESCRIBE)
-                .await
-                .expect("cannot clone socket");
+        let alice_cloned = socket_clone(
+            &alice_socket,
+            fio::OpenFlags::CLONE_SAME_RIGHTS | fio::OpenFlags::DESCRIBE,
+        )
+        .await
+        .expect("cannot clone socket");
         let mut events = alice_cloned.take_event_stream();
         match events.next().await.expect("stream closed").expect("failed to decode") {
             fposix_socket::SynchronousDatagramSocketEvent::OnOpen_ { s, info } => {
@@ -2535,7 +2540,7 @@ mod tests {
         );
 
         let (bob_socket, bob_events) = get_socket_and_event::<A>(t.get(1), proto).await;
-        let bob_cloned = socket_clone(&bob_socket, fio::CLONE_FLAG_SAME_RIGHTS)
+        let bob_cloned = socket_clone(&bob_socket, fio::OpenFlags::CLONE_SAME_RIGHTS)
             .await
             .expect("failed to clone socket");
         let () = bob_cloned
@@ -2590,11 +2595,12 @@ mod tests {
 
         {
             let alice_readonly =
-                socket_clone(&alice_socket, fio::OPEN_RIGHT_READABLE).await.unwrap();
-            let bob_writeonly = socket_clone(&bob_cloned, fio::OPEN_RIGHT_WRITABLE).await.unwrap();
+                socket_clone(&alice_socket, fio::OpenFlags::RIGHT_READABLE).await.unwrap();
+            let bob_writeonly =
+                socket_clone(&bob_cloned, fio::OpenFlags::RIGHT_WRITABLE).await.unwrap();
             // We shouldn't allow the following.
-            expect_clone_invalid_args(&alice_readonly, fio::OPEN_RIGHT_WRITABLE).await;
-            expect_clone_invalid_args(&bob_writeonly, fio::OPEN_RIGHT_READABLE).await;
+            expect_clone_invalid_args(&alice_readonly, fio::OpenFlags::RIGHT_WRITABLE).await;
+            expect_clone_invalid_args(&bob_writeonly, fio::OpenFlags::RIGHT_READABLE).await;
 
             assert_eq!(
                 alice_readonly
@@ -2759,7 +2765,7 @@ mod tests {
         let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
         let test_stack = t.get(0);
         let socket = get_socket::<A>(test_stack, proto).await;
-        let cloned = socket_clone(&socket, fio::CLONE_FLAG_SAME_RIGHTS).await.unwrap();
+        let cloned = socket_clone(&socket, fio::OpenFlags::CLONE_SAME_RIGHTS).await.unwrap();
         let () = socket
             .close()
             .await
@@ -2814,7 +2820,7 @@ mod tests {
         let test_stack = t.get(0);
         let cloned = {
             let socket = get_socket::<A>(test_stack, proto).await;
-            socket_clone(&socket, fio::CLONE_FLAG_SAME_RIGHTS).await.unwrap()
+            socket_clone(&socket, fio::OpenFlags::CLONE_SAME_RIGHTS).await.unwrap()
             // socket goes out of scope indicating an implicit close.
         };
         // Using an explicit close here.
@@ -2871,14 +2877,17 @@ mod tests {
         let test_stack = t.get(0);
         let socket = get_socket::<A>(test_stack, proto).await;
         // conflicting flags
-        expect_clone_invalid_args(&socket, fio::CLONE_FLAG_SAME_RIGHTS | fio::OPEN_RIGHT_READABLE)
-            .await;
+        expect_clone_invalid_args(
+            &socket,
+            fio::OpenFlags::CLONE_SAME_RIGHTS | fio::OpenFlags::RIGHT_READABLE,
+        )
+        .await;
         // no remote
-        expect_clone_invalid_args(&socket, fio::OPEN_FLAG_NO_REMOTE).await;
+        expect_clone_invalid_args(&socket, fio::OpenFlags::NO_REMOTE).await;
         // append
-        expect_clone_invalid_args(&socket, fio::OPEN_FLAG_APPEND).await;
+        expect_clone_invalid_args(&socket, fio::OpenFlags::APPEND).await;
         // executable
-        expect_clone_invalid_args(&socket, fio::OPEN_RIGHT_EXECUTABLE).await;
+        expect_clone_invalid_args(&socket, fio::OpenFlags::RIGHT_EXECUTABLE).await;
         let () = socket
             .close()
             .await

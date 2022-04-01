@@ -12,5 +12,6 @@ TEST_F(NamespaceTest, HasShellCommands) {
   // TODO(fxbug.dev/37858): pkgfs/thinfs do not properly support hierarchical directory rights so
   // the StrictRights test fails, switch to that once fixed
   ExpectExists("/bin");
-  ExpectPathSupportsRights("/bin", fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable);
+  ExpectPathSupportsRights(
+      "/bin", fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightExecutable);
 }

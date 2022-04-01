@@ -75,7 +75,7 @@ async fn resolve(
         }
     };
 
-    let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DIRECTORY;
+    let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DIRECTORY;
     let mode = fio::MODE_TYPE_DIRECTORY;
     let node = ServerEnd::from(directory_request.into_channel());
 

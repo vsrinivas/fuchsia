@@ -158,9 +158,9 @@ void BasemgrImpl::CreateSessionProvider(const ModularConfigAccessor* const confi
     FX_CHECK(status == ZX_OK) << "failed to create channel: " << zx_status_get_string(status);
 
     status = fdio_open(path.c_str(),
-                       static_cast<uint32_t>(fuchsia_io::wire::kOpenRightReadable |
-                                             fuchsia_io::wire::kOpenFlagDirectory |
-                                             fuchsia_io::wire::kOpenRightWritable),
+                       static_cast<uint32_t>(fuchsia_io::wire::OpenFlags::kRightReadable |
+                                             fuchsia_io::wire::OpenFlags::kDirectory |
+                                             fuchsia_io::wire::OpenFlags::kRightWritable),
                        ns_server.release());
     FX_CHECK(status == ZX_OK) << "failed to open " << path << ": " << zx_status_get_string(status);
 

@@ -42,7 +42,7 @@ where
         Self::new(
             io_util::directory::open_in_namespace(
                 temp.path().to_str().unwrap(),
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             )
             .unwrap(),
         )
@@ -53,7 +53,7 @@ where
         path: String,
     ) -> tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>> {
         let file_proxy =
-            io_util::directory::open_file(&self.repo_proxy, &path, fio::OPEN_RIGHT_READABLE)
+            io_util::directory::open_file(&self.repo_proxy, &path, fio::OpenFlags::RIGHT_READABLE)
                 .await
                 .map_err(|err| match err {
                     io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND) => {
@@ -89,7 +89,7 @@ where
         let (temp_path, temp_proxy) = io_util::directory::create_randomly_named_file(
             &self.repo_proxy,
             &path,
-            fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_WRITABLE,
         )
         .await
         .with_context(|| format!("creating file: {}", path))

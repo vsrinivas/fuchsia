@@ -24,8 +24,9 @@ use {
 
 // TODO: The `use` declaration for storage implicitly carries these rights. While this is
 // correct, it would be more consistent to get the rights from `CapabilityState`.
-const FLAGS: fio::OpenFlags =
-    fio::OpenFlags::empty().union(fio::OPEN_RIGHT_READABLE).union(fio::OPEN_RIGHT_WRITABLE);
+const FLAGS: fio::OpenFlags = fio::OpenFlags::empty()
+    .union(fio::OpenFlags::RIGHT_READABLE)
+    .union(fio::OpenFlags::RIGHT_WRITABLE);
 
 pub type StorageCapabilitySource =
     ::routing::capability_source::StorageCapabilitySource<ComponentInstance>;

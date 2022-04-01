@@ -214,7 +214,7 @@ async fn create_realm_instance(
                         move |mock_handles: LocalComponentHandles| {
                             futures::future::ready(
                                 dir.clone(
-                                    fio::CLONE_FLAG_SAME_RIGHTS,
+                                    fio::OpenFlags::CLONE_SAME_RIGHTS,
                                     mock_handles.outgoing_dir.into_channel().into(),
                                 )
                                 .context("cloning directory for mock handles"),
@@ -510,7 +510,7 @@ impl ManagedRealm {
                 ManagedRealmRequest::GetDevfs { devfs: server_end, control_handle: _ } => {
                     let () = devfs.clone().open(
                         vfs::execution_scope::ExecutionScope::new(),
-                        fio::OPEN_RIGHT_READABLE,
+                        fio::OpenFlags::RIGHT_READABLE,
                         fio::MODE_TYPE_DIRECTORY,
                         vfs::path::Path::dot(),
                         server_end.into_channel().into(),
@@ -827,7 +827,7 @@ fn make_devfs() -> Result<(fio::DirectoryProxy, Arc<SimpleMutableDir>)> {
     let dir = vfs::directory::mutable::simple::simple();
     let () = dir.clone().open(
         vfs::execution_scope::ExecutionScope::new(),
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         fio::MODE_TYPE_DIRECTORY,
         vfs::path::Path::dot(),
         server.into_channel().into(),
@@ -2203,7 +2203,7 @@ mod tests {
                     &format!("{}/{}", DEVFS_PATH, name),
                     // TODO(https://fxbug.dev/77059): remove write permissions once they are no
                     // longer required to connect to protocols.
-                    fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                    fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
                     server_end.into_channel(),
                 )
                 .expect("failed to connect to device through counter");
@@ -2393,7 +2393,7 @@ mod tests {
             .expect("create directory proxy");
         let () = devfs
             .open(
-                fio::OPEN_RIGHT_READABLE,
+                fio::OpenFlags::RIGHT_READABLE,
                 fio::MODE_TYPE_DIRECTORY,
                 &ethernet_path,
                 server_end.into_channel().into(),
@@ -2480,7 +2480,7 @@ mod tests {
         let (ethernet, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
             .expect("create directory proxy");
         let () = counter
-            .open_in_namespace(&path, fio::OPEN_RIGHT_READABLE, server_end.into_channel())
+            .open_in_namespace(&path, fio::OpenFlags::RIGHT_READABLE, server_end.into_channel())
             .expect(&format!("failed to connect to {} through counter", path));
         let (status, mut buf) =
             ethernet.read_dirents(fio::MAX_BUF).await.expect("calling read dirents");

@@ -71,7 +71,7 @@ impl PackageDirectory {
     /// Returns the current component's package directory.
     #[cfg(target_os = "fuchsia")]
     pub fn open_from_namespace() -> Result<Self, OpenError> {
-        let dir = io_util::directory::open_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE)?;
+        let dir = io_util::directory::open_in_namespace("/pkg", fio::OpenFlags::RIGHT_READABLE)?;
         Ok(Self::from_proxy(dir))
     }
 
@@ -146,8 +146,10 @@ pub enum OpenRights {
 impl OpenRights {
     fn to_flags(&self) -> fio::OpenFlags {
         match self {
-            OpenRights::Read => fio::OPEN_RIGHT_READABLE,
-            OpenRights::ReadExecute => fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            OpenRights::Read => fio::OpenFlags::RIGHT_READABLE,
+            OpenRights::ReadExecute => {
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE
+            }
         }
     }
 }

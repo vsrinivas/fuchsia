@@ -133,8 +133,8 @@ TEST_F(TestSysmgr, ServiceStartup) {
   auto sysmgr_svc = sys::ServiceDirectory::CreateWithRequest(&directory);
 
   ASSERT_EQ(ZX_OK, fdio_open(path.c_str(),
-                             static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE |
-                                                   fuchsia::io::OPEN_RIGHT_WRITABLE),
+                             static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE |
+                                                   fuchsia::io::OpenFlags::RIGHT_WRITABLE),
                              directory.release()));
 
   std::string response;

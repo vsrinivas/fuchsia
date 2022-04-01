@@ -62,7 +62,7 @@ class BasemgrNonHermeticTest : public gtest::TestWithEnvironmentFixture {
     // Create the pseudo directory with our config "file"
     auto config_dir = CreateConfigPseudoDir(config_str);
     fidl::InterfaceHandle<fuchsia::io::Directory> config_dir_handle;
-    config_dir->Serve(fuchsia::io::OPEN_RIGHT_READABLE,
+    config_dir->Serve(fuchsia::io::OpenFlags::RIGHT_READABLE,
                       config_dir_handle.NewRequest().TakeChannel());
 
     zx::channel svc_request;

@@ -158,7 +158,7 @@ fn spawn_vfs(dir: Arc<dyn DirectoryEntry>) -> fio::DirectoryProxy {
     let scope = vfs::execution_scope::ExecutionScope::new();
     dir.open(
         scope,
-        fio::OPEN_RIGHT_READABLE,
+        fio::OpenFlags::RIGHT_READABLE,
         0,
         vfs::path::Path::dot(),
         ServerEnd::new(server_end.into_channel()),
@@ -194,7 +194,7 @@ impl DirectoryEntry for DropAndSignal {
         _path: Path,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
-        assert!(flags.intersects(fio::OPEN_FLAG_DESCRIBE));
+        assert!(flags.intersects(fio::OpenFlags::DESCRIBE));
         let (_, ch) = server_end.into_stream_and_control_handle().unwrap();
 
         // Need to send OnOpen because of the Describe flag.

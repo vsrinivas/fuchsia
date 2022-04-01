@@ -88,8 +88,11 @@ where
     match cmd {
         FactoryStoreCmd::List => print_files(&dir_proxy).await?,
         FactoryStoreCmd::Dump { name } => {
-            let file =
-                io_util::open_file(&dir_proxy, &PathBuf::from(name), fio::OPEN_RIGHT_READABLE)?;
+            let file = io_util::open_file(
+                &dir_proxy,
+                &PathBuf::from(name),
+                fio::OpenFlags::RIGHT_READABLE,
+            )?;
             let contents = io_util::read_file_bytes(&file).await?;
 
             match std::str::from_utf8(&contents) {
@@ -251,7 +254,7 @@ mod tests {
             fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
         test_dir.open(
             ExecutionScope::new(),
-            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_READABLE,
             fio::MODE_TYPE_DIRECTORY,
             vfs::path::Path::dot(),
             test_dir_service.into_channel().into(),
@@ -304,7 +307,7 @@ mod tests {
                                         ALPHA_BIN_FILE_CONTENTS,
                                     )?;
                                     alpha_proxy.clone(
-                                        fio::OPEN_RIGHT_READABLE,
+                                        fio::OpenFlags::RIGHT_READABLE,
                                         dir.into_channel().into(),
                                     )?;
                                     Ok(())
@@ -330,7 +333,7 @@ mod tests {
                                         CAST_BIN_FILE_CONTENTS,
                                     )?;
                                     cast_proxy.clone(
-                                        fio::OPEN_RIGHT_READABLE,
+                                        fio::OpenFlags::RIGHT_READABLE,
                                         dir.into_channel().into(),
                                     )?;
                                     Ok(())
@@ -356,7 +359,7 @@ mod tests {
                                         MISC_BIN_FILE_CONTENTS,
                                     )?;
                                     misc_proxy.clone(
-                                        fio::OPEN_RIGHT_READABLE,
+                                        fio::OpenFlags::RIGHT_READABLE,
                                         dir.into_channel().into(),
                                     )?;
                                     Ok(())
@@ -382,7 +385,7 @@ mod tests {
                                         PLAYREADY_BIN_FILE_CONTENTS,
                                     )?;
                                     playready_proxy.clone(
-                                        fio::OPEN_RIGHT_READABLE,
+                                        fio::OpenFlags::RIGHT_READABLE,
                                         dir.into_channel().into(),
                                     )?;
                                     Ok(())
@@ -408,7 +411,7 @@ mod tests {
                                         WEAVE_BIN_FILE_CONTENTS,
                                     )?;
                                     weave_proxy.clone(
-                                        fio::OPEN_RIGHT_READABLE,
+                                        fio::OpenFlags::RIGHT_READABLE,
                                         dir.into_channel().into(),
                                     )?;
                                     Ok(())
@@ -434,7 +437,7 @@ mod tests {
                                         WIDEVINE_BIN_FILE_CONTENTS,
                                     )?;
                                     widevine_proxy.clone(
-                                        fio::OPEN_RIGHT_READABLE,
+                                        fio::OpenFlags::RIGHT_READABLE,
                                         dir.into_channel().into(),
                                     )?;
                                     Ok(())

@@ -25,7 +25,7 @@ use {
         future::{self, join},
         Future, StreamExt, TryFutureExt, TryStreamExt,
     },
-    io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
+    io_util::{open_directory_in_namespace, OpenFlags},
     parking_lot::RwLock,
     qmi::connect_transport_device,
     std::fs::File,
@@ -199,7 +199,7 @@ impl Manager {
     }
 
     fn open_dir(path: &PathBuf) -> fio::DirectoryProxy {
-        open_directory_in_namespace(path.to_str().unwrap(), OPEN_RIGHT_READABLE).unwrap()
+        open_directory_in_namespace(path.to_str().unwrap(), OpenFlags::RIGHT_READABLE).unwrap()
     }
     fn open_file(path: &PathBuf) -> File {
         File::open(path).unwrap()

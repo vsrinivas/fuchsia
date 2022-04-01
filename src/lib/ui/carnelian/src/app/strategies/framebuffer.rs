@@ -30,7 +30,7 @@ use fuchsia_async::{self as fasync};
 use fuchsia_vfs_watcher as vfs_watcher;
 use fuchsia_zircon::{self as zx, Status};
 use futures::{channel::mpsc::UnboundedSender, StreamExt, TryFutureExt, TryStreamExt};
-use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
+use io_util::{open_directory_in_namespace, OpenFlags};
 use keymaps::Keymap;
 use std::{
     collections::HashMap,
@@ -45,7 +45,7 @@ async fn watch_directory_async(
     app_sender: UnboundedSender<MessageInternal>,
 ) -> Result<(), Error> {
     let dir_proxy =
-        open_directory_in_namespace(dir.to_str().expect("to_str"), OPEN_RIGHT_READABLE)?;
+        open_directory_in_namespace(dir.to_str().expect("to_str"), OpenFlags::RIGHT_READABLE)?;
     let mut watcher = vfs_watcher::Watcher::new(dir_proxy).await?;
     fasync::Task::local(async move {
         while let Some(msg) = (watcher.try_next()).await.expect("msg") {

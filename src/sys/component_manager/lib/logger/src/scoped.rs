@@ -35,7 +35,7 @@ impl ScopedLogger {
         let log_sink_node = io_util::open_node(
             &dir,
             &PathBuf::from(path.trim_start_matches("/")),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             fio::MODE_TYPE_SERVICE,
         )?;
         let mut sink = LogSinkProxy::from_channel(log_sink_node.into_channel().unwrap());

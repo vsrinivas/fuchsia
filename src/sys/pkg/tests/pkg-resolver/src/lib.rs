@@ -435,16 +435,16 @@ where
                 pkgfs.blobfs_root_dir_handle().expect("blob dir to open").into_proxy().unwrap()
             ),
             "data" => vfs::remote::remote_dir(
-                mounts.pkg_resolver_data.to_proxy(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE)
+                mounts.pkg_resolver_data.to_proxy(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE)
             ),
             "config" => vfs::pseudo_directory! {
                 "data" => vfs::remote::remote_dir(
-                    mounts.pkg_resolver_config_data.to_proxy(fio::OPEN_RIGHT_READABLE)
+                    mounts.pkg_resolver_config_data.to_proxy(fio::OpenFlags::RIGHT_READABLE)
                 ),
                 "ssl" => vfs::remote::remote_dir(
                     io_util::directory::open_in_namespace(
                         "/pkg/data/ssl",
-                        fio::OPEN_RIGHT_READABLE
+                        fio::OpenFlags::RIGHT_READABLE
                     ).unwrap()
                 ),
             },
@@ -455,7 +455,7 @@ where
         if let Some((repo, url)) = self.local_mirror_repo {
             let proxy = io_util::directory::open_in_namespace(
                 local_mirror_dir.path().to_str().unwrap(),
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             )
             .unwrap();
             let () = repo.copy_local_repository_to_dir(&proxy, &url).await;
@@ -495,9 +495,9 @@ where
                     let scope = vfs::execution_scope::ExecutionScope::new();
                     let () = local_child_out_dir.open(
                         scope.clone(),
-                        fio::OPEN_RIGHT_READABLE
-                            | fio::OPEN_RIGHT_WRITABLE
-                            | fio::OPEN_RIGHT_EXECUTABLE,
+                        fio::OpenFlags::RIGHT_READABLE
+                            | fio::OpenFlags::RIGHT_WRITABLE
+                            | fio::OpenFlags::RIGHT_EXECUTABLE,
                         0,
                         vfs::path::Path::dot(),
                         handles.outgoing_dir.into_channel().into(),

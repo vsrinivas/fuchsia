@@ -36,7 +36,7 @@ int main(int argc, const char** argv) {
     });
 
     zx_status_t status = fidl::WireCall(devfs_root.directory())
-                             ->Clone(fuchsia_io::wire::kCloneFlagSameRights,
+                             ->Clone(fuchsia_io::wire::OpenFlags::kCloneSameRights,
                                      fidl::ServerEnd<fuchsia_io::Node>(std::move(req)))
                              .status();
     if (status != ZX_OK) {

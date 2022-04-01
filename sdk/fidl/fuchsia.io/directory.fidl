@@ -88,29 +88,12 @@ type OpenFlags = strict bits : uint32 {
 };
 
 /// All known rights.
-const OPEN_RIGHTS OpenFlags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE;
+const OPEN_RIGHTS OpenFlags
+        = OpenFlags.RIGHT_READABLE | OpenFlags.RIGHT_WRITABLE | OpenFlags.RIGHT_EXECUTABLE;
 
 /// Flags used when opening a node reference must fall within this mask.
 const OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE OpenFlags
         = OpenFlags.DIRECTORY | OpenFlags.NOT_DIRECTORY | OpenFlags.DESCRIBE | OpenFlags.NODE_REFERENCE;
-
-/// Transitional flags to avoid changing the world all at once.
-const OPEN_RIGHT_READABLE OpenFlags = OpenFlags.RIGHT_READABLE;
-const OPEN_RIGHT_WRITABLE OpenFlags = OpenFlags.RIGHT_WRITABLE;
-const OPEN_RIGHT_EXECUTABLE OpenFlags = OpenFlags.RIGHT_EXECUTABLE;
-const OPEN_FLAG_CREATE OpenFlags = OpenFlags.CREATE;
-const OPEN_FLAG_CREATE_IF_ABSENT OpenFlags = OpenFlags.CREATE_IF_ABSENT;
-const OPEN_FLAG_TRUNCATE OpenFlags = OpenFlags.TRUNCATE;
-const OPEN_FLAG_DIRECTORY OpenFlags = OpenFlags.DIRECTORY;
-const OPEN_FLAG_APPEND OpenFlags = OpenFlags.APPEND;
-const OPEN_FLAG_NO_REMOTE OpenFlags = OpenFlags.NO_REMOTE;
-const OPEN_FLAG_NODE_REFERENCE OpenFlags = OpenFlags.NODE_REFERENCE;
-const OPEN_FLAG_DESCRIBE OpenFlags = OpenFlags.DESCRIBE;
-const OPEN_FLAG_POSIX_DEPRECATED OpenFlags = OpenFlags.POSIX_DEPRECATED;
-const OPEN_FLAG_POSIX_WRITABLE OpenFlags = OpenFlags.POSIX_WRITABLE;
-const OPEN_FLAG_POSIX_EXECUTABLE OpenFlags = OpenFlags.POSIX_EXECUTABLE;
-const OPEN_FLAG_NOT_DIRECTORY OpenFlags = OpenFlags.NOT_DIRECTORY;
-const CLONE_FLAG_SAME_RIGHTS OpenFlags = OpenFlags.CLONE_SAME_RIGHTS;
 
 /// Bits reserved for posix protections. Native fuchsia filesystems
 /// are not required to set bits contained within `MODE_PROTECTION_MASK`,

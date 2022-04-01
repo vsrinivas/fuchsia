@@ -115,9 +115,12 @@ impl AssetLoader for AssetLoaderImpl {
             cause,
         };
 
-        let file_proxy =
-            io_util::open_file(&directory_proxy, Path::new(&file_name), io::OPEN_RIGHT_READABLE)
-                .map_err(|e| packaged_file_error(e))?;
+        let file_proxy = io_util::open_file(
+            &directory_proxy,
+            Path::new(&file_name),
+            io::OpenFlags::RIGHT_READABLE,
+        )
+        .map_err(|e| packaged_file_error(e))?;
 
         let vmo = file_proxy
             .get_backing_memory(io::VmoFlags::READ)

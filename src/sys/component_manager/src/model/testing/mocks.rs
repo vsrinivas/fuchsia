@@ -198,7 +198,7 @@ impl MockResolver {
         );
         sub_dir.open(
             ExecutionScope::new(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             vfs::path::Path::dot(),
             ServerEnd::new(server.into_channel()),

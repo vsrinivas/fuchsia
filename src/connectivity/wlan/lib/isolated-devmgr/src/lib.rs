@@ -43,13 +43,13 @@ impl IsolatedDeviceEnv {
 
     /// Opens a path as a directory
     pub fn open_dir<P: AsRef<Path>>(path: P) -> Result<File, zx::Status> {
-        let flags = fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE;
+        let flags = fio::OpenFlags::DIRECTORY | fio::OpenFlags::RIGHT_READABLE;
         Self::open(path.as_ref().to_str().unwrap(), flags)
     }
 
     /// Opens a path as a file
     pub fn open_file<P: AsRef<Path>>(path: P) -> Result<File, zx::Status> {
-        let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
+        let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE;
         Self::open(path.as_ref().to_str().unwrap(), flags)
     }
 }

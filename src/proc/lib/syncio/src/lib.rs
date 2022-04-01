@@ -329,7 +329,7 @@ fn directory_open(
     mode: u32,
     deadline: zx::Time,
 ) -> Result<DescribedNode, zx::Status> {
-    let flags = flags | fio::OPEN_FLAG_DESCRIBE;
+    let flags = flags | fio::OpenFlags::DESCRIBE;
 
     let (client_end, server_end) = zx::Channel::create()?;
     directory.open(flags, mode, path, ServerEnd::new(server_end)).map_err(|_| zx::Status::IO)?;
@@ -362,13 +362,13 @@ pub fn directory_open_vmo(
 ) -> Result<zx::Vmo, zx::Status> {
     let mut open_flags = fio::OpenFlags::empty();
     if vmo_flags.contains(fio::VmoFlags::WRITE) {
-        open_flags |= fio::OPEN_RIGHT_WRITABLE;
+        open_flags |= fio::OpenFlags::RIGHT_WRITABLE;
     }
     if vmo_flags.contains(fio::VmoFlags::READ) {
-        open_flags |= fio::OPEN_RIGHT_READABLE;
+        open_flags |= fio::OpenFlags::RIGHT_READABLE;
     }
     if vmo_flags.contains(fio::VmoFlags::EXECUTE) {
-        open_flags |= fio::OPEN_RIGHT_EXECUTABLE;
+        open_flags |= fio::OpenFlags::RIGHT_EXECUTABLE;
     }
 
     let description = directory_open(directory, path, open_flags, 0, deadline)?;
@@ -399,7 +399,7 @@ pub fn directory_open_async(
     flags: fio::OpenFlags,
     mode: u32,
 ) -> Result<zx::Channel, zx::Status> {
-    if flags.intersects(fio::OPEN_FLAG_DESCRIBE) {
+    if flags.intersects(fio::OpenFlags::DESCRIBE) {
         return Err(zx::Status::INVALID_ARGS);
     }
 
@@ -425,7 +425,7 @@ pub fn directory_open_directory_async(
     path: &str,
     flags: fio::OpenFlags,
 ) -> Result<fio::DirectorySynchronousProxy, zx::Status> {
-    let flags = flags | fio::OPEN_FLAG_DIRECTORY;
+    let flags = flags | fio::OpenFlags::DIRECTORY;
     let mode = fio::MODE_TYPE_DIRECTORY;
     let client = directory_open_async(directory, path, flags, mode)?;
     Ok(fio::DirectorySynchronousProxy::new(client))
@@ -463,7 +463,7 @@ mod test {
     fn open_pkg() -> fio::DirectorySynchronousProxy {
         let pkg_proxy = directory::open_in_namespace(
             "/pkg",
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )
         .expect("failed to open /pkg");
         fio::DirectorySynchronousProxy::new(
@@ -480,7 +480,7 @@ mod test {
         let description = directory_open(
             &pkg,
             "bin/syncio_lib_test",
-            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_READABLE,
             0,
             zx::Time::INFINITE,
         )?;
@@ -514,7 +514,7 @@ mod test {
         let bin = directory_open_directory_async(
             &pkg,
             "bin",
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )?;
         let vmo = directory_open_vmo(
             &bin,
@@ -534,7 +534,7 @@ mod test {
     async fn test_directory_open_zxio_async() -> Result<(), Error> {
         let pkg_proxy = directory::open_in_namespace(
             "/pkg",
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )
         .expect("failed to open /pkg");
         let zx_channel = pkg_proxy
@@ -559,7 +559,7 @@ mod test {
     async fn test_directory_enumerate() -> Result<(), Error> {
         let pkg_dir_handle = directory::open_in_namespace(
             "/pkg",
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )
         .expect("failed to open /pkg")
         .into_channel()

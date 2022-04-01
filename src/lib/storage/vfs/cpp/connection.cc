@@ -33,8 +33,8 @@
 namespace fio = fuchsia_io;
 
 static_assert(fio::wire::kOpenFlagsAllowedWithNodeReference ==
-                  (fio::wire::kOpenFlagDirectory | fio::wire::kOpenFlagNotDirectory |
-                   fio::wire::kOpenFlagDescribe | fio::wire::kOpenFlagNodeReference),
+                  (fio::wire::OpenFlags::kDirectory | fio::wire::OpenFlags::kNotDirectory |
+                   fio::wire::OpenFlags::kDescribe | fio::wire::OpenFlags::kNodeReference),
               "OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE value mismatch");
 static_assert(PATH_MAX == fio::wire::kMaxPath, "POSIX PATH_MAX inconsistent with Fuchsia MAX_PATH");
 static_assert(NAME_MAX == fio::wire::kMaxFilename,
@@ -61,14 +61,14 @@ zx::status<VnodeRepresentation> Describe(const fbl::RefPtr<Vnode>& vnode, VnodeP
 }
 
 bool PrevalidateFlags(fio::wire::OpenFlags flags) {
-  if (flags & fio::wire::kOpenFlagNodeReference) {
+  if (flags & fio::wire::OpenFlags::kNodeReference) {
     // Explicitly reject VNODE_REF_ONLY together with any invalid flags.
     if (flags & ~fio::wire::kOpenFlagsAllowedWithNodeReference) {
       return false;
     }
   }
 
-  if ((flags & fio::wire::kOpenFlagNotDirectory) && (flags & fio::wire::kOpenFlagDirectory)) {
+  if ((flags & fio::wire::OpenFlags::kNotDirectory) && (flags & fio::wire::OpenFlags::kDirectory)) {
     return false;
   }
 

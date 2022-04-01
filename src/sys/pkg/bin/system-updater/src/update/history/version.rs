@@ -259,7 +259,7 @@ pub(super) async fn mock_pkgfs_system(
     .expect("write to temp dir");
     let pkgfs_proxy = io_util::directory::open_in_namespace(
         pkgfs_dir.path().to_str().unwrap(),
-        io_util::OPEN_RIGHT_READABLE,
+        io_util::OpenFlags::RIGHT_READABLE,
     )
     .expect("temp dir to open");
     (pkgfs::system::Client::open_from_pkgfs_root(&pkgfs_proxy).unwrap(), pkgfs_dir)

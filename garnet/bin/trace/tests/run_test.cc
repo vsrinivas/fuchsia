@@ -91,10 +91,10 @@ static zx_status_t AddAuxDirToSpawnAction(const char* local_path, const char* re
     return false;
   }
 
-  status = fdio_open(
-      local_path,
-      static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE),
-      server.release());
+  status = fdio_open(local_path,
+                     static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE |
+                                           fuchsia::io::OpenFlags::RIGHT_WRITABLE),
+                     server.release());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Could not open " << local_path;
     return false;
@@ -160,10 +160,10 @@ static bool AddAuxDirToLaunchInfo(const char* local_path, const char* remote_pat
     return false;
   }
 
-  status = fdio_open(
-      local_path,
-      static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE),
-      server.release());
+  status = fdio_open(local_path,
+                     static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE |
+                                           fuchsia::io::OpenFlags::RIGHT_WRITABLE),
+                     server.release());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Could not open " << local_path;
     return false;

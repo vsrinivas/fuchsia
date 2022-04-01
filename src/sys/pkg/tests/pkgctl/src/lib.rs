@@ -390,7 +390,7 @@ impl MockPackageResolverService {
                     let (dir_server, mut res) = self.resolve_response.lock().take().unwrap();
                     let () = dir_server.open(
                         vfs::execution_scope::ExecutionScope::new(),
-                        fio::OPEN_RIGHT_READABLE,
+                        fio::OpenFlags::RIGHT_READABLE,
                         0,
                         vfs::path::Path::dot(),
                         dir.into_channel().into(),

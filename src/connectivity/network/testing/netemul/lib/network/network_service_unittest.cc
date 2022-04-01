@@ -65,7 +65,7 @@ class NetworkServiceTest : public gtest::RealLoopFixture {
     devfs_root_.reset(std::move(result.value()));
     svc_->SetDevfsHandler([this](zx::channel req) {
       ASSERT_OK(fidl::WireCall(devfs_root_.directory())
-                    ->Clone(fuchsia_io::wire::kCloneFlagSameRights,
+                    ->Clone(fuchsia_io::wire::OpenFlags::kCloneSameRights,
                             fidl::ServerEnd<fuchsia_io::Node>(std::move(req)))
                     .status())
           << "failed to connect request to /dev";

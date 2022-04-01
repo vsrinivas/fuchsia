@@ -119,7 +119,7 @@ async fn get_next_vdso_vmo() -> Result<zx::Vmo, zx::Status> {
         fidl::endpoints::create_proxy::<fio::FileMarker>().map_err(|_| zx::Status::NO_MEMORY)?;
     io_util::node::connect_in_namespace(
         NEXT_VDSO_PATH,
-        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_EXECUTABLE,
+        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_EXECUTABLE,
         server_end.into_channel(),
     )?;
     let vmo = vdso_file
@@ -736,7 +736,7 @@ mod tests {
         let pkg_path = "/pkg".to_string();
         let pkg_chan = io_util::open_directory_in_namespace(
             "/pkg",
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )
         .unwrap()
         .into_channel()
@@ -789,7 +789,7 @@ mod tests {
         let pkg_path = "/pkg".to_string();
         let pkg_chan = io_util::open_directory_in_namespace(
             "/pkg",
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )
         .unwrap()
         .into_channel()
@@ -885,7 +885,7 @@ mod tests {
     // refactoring this into a test util file.
     async fn read_file<'a>(root_proxy: &'a fio::DirectoryProxy, path: &'a str) -> String {
         let file_proxy =
-            io_util::open_file(&root_proxy, &Path::new(path), io_util::OPEN_RIGHT_READABLE)
+            io_util::open_file(&root_proxy, &Path::new(path), io_util::OpenFlags::RIGHT_READABLE)
                 .expect("Failed to open file.");
         let res = io_util::read_file(&file_proxy).await;
         res.expect("Unable to read file.")
@@ -1476,7 +1476,7 @@ mod tests {
         let pkg_path = "/pkg".to_string();
         let pkg_chan = io_util::open_directory_in_namespace(
             "/pkg",
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )
         .unwrap()
         .into_channel()

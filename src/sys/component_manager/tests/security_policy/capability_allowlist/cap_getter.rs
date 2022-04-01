@@ -51,12 +51,14 @@ async fn check_unrestricted_protocol() -> bool {
 
 /// Attempts to access the restricted directory.
 async fn check_restricted_directory() -> bool {
-    fdio::open_fd("/restricted", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE).is_ok()
+    fdio::open_fd("/restricted", fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE)
+        .is_ok()
 }
 
 /// Attempts to access the unrestricted directory.
 async fn check_unrestricted_directory() -> bool {
-    fdio::open_fd("/unrestricted", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE).is_ok()
+    fdio::open_fd("/unrestricted", fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE)
+        .is_ok()
 }
 
 /// Trivial service that returns true if it can access the test.policy.Restricted cap.

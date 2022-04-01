@@ -40,7 +40,7 @@ impl<FSC: FSConfig> Filesystem<FSC> {
     // Clone a Channel to the block device.
     fn get_block_handle(&self) -> Result<Handle, fidl::Error> {
         let (block_device, server) = Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
-        self.block_device.clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server))?;
+        self.block_device.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, ServerEnd::new(server))?;
         Ok(block_device.into())
     }
 
@@ -144,9 +144,9 @@ impl<FSC: FSConfig> Filesystem<FSC> {
         // Wait until the filesystem is ready to take incoming requests.
         let (root_dir, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
         export_root.open(
-            fio::OPEN_RIGHT_READABLE
-                | fio::OPEN_FLAG_POSIX_EXECUTABLE
-                | fio::OPEN_FLAG_POSIX_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::POSIX_EXECUTABLE
+                | fio::OpenFlags::POSIX_WRITABLE,
             0,
             "root",
             server_end.into_channel().into(),
@@ -179,7 +179,7 @@ impl<FSC: FSConfig> ServingFilesystem<FSC> {
     /// Returns [`Err`] if binding failed.
     pub fn bind_to_path<'a>(&'a self, path: &str) -> Result<BindGuard<'a, FSC>, BindError> {
         let (client_end, server_end) = Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
-        self.root_dir.clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server_end))?;
+        self.root_dir.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, ServerEnd::new(server_end))?;
         let namespace = fdio::Namespace::installed().map_err(BindError::LocalNamespace)?;
         namespace.bind(path, client_end).map_err(BindError::Bind)?;
         Ok(BindGuard { _filesystem: self, namespace, path: path.to_string() })
@@ -450,7 +450,7 @@ mod tests {
             let test_file = io_util::directory::open_file(
                 serving.root(),
                 merkle,
-                fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE,
+                fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE,
             )
             .await
             .expect("failed to create test file");
@@ -479,10 +479,13 @@ mod tests {
         let serving = blobfs.serve().await.expect("failed to serve blobfs the second time");
 
         {
-            let test_file =
-                io_util::directory::open_file(serving.root(), merkle, fio::OPEN_RIGHT_READABLE)
-                    .await
-                    .expect("failed to open test file");
+            let test_file = io_util::directory::open_file(
+                serving.root(),
+                merkle,
+                fio::OpenFlags::RIGHT_READABLE,
+            )
+            .await
+            .expect("failed to open test file");
             let read_content =
                 io_util::file::read(&test_file).await.expect("failed to read from test file");
             assert_eq!(content, read_content);
@@ -615,7 +618,7 @@ mod tests {
             let test_file = io_util::directory::open_file(
                 serving.root(),
                 filename,
-                fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE,
+                fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE,
             )
             .await
             .expect("failed to create test file");
@@ -638,10 +641,13 @@ mod tests {
         let serving = minfs.serve().await.expect("failed to serve minfs the second time");
 
         {
-            let test_file =
-                io_util::directory::open_file(serving.root(), filename, fio::OPEN_RIGHT_READABLE)
-                    .await
-                    .expect("failed to open test file");
+            let test_file = io_util::directory::open_file(
+                serving.root(),
+                filename,
+                fio::OpenFlags::RIGHT_READABLE,
+            )
+            .await
+            .expect("failed to open test file");
             let read_content =
                 io_util::file::read(&test_file).await.expect("failed to read from test file");
             assert_eq!(content, read_content);

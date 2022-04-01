@@ -120,9 +120,10 @@ pub fn serialize_packages_json(pkg_urls: &[PkgUrl]) -> Result<Vec<u8>, Serialize
 pub(crate) async fn packages(
     proxy: &fio::DirectoryProxy,
 ) -> Result<Vec<PkgUrl>, ParsePackageError> {
-    let file = io_util::directory::open_file(&proxy, "packages.json", fio::OPEN_RIGHT_READABLE)
-        .await
-        .map_err(ParsePackageError::FailedToOpen)?;
+    let file =
+        io_util::directory::open_file(&proxy, "packages.json", fio::OpenFlags::RIGHT_READABLE)
+            .await
+            .map_err(ParsePackageError::FailedToOpen)?;
 
     let contents = io_util::file::read(&file).await.map_err(|e| ParsePackageError::ReadError(e))?;
     parse_packages_json(&contents)

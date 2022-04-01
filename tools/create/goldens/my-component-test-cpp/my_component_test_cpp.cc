@@ -49,8 +49,8 @@ TEST_F(MyComponentTestCppIntegrationTest, TestMethod) {
   // EXPECT_EQ(exposed_dir->Open("fuchsia.component.Binder"), ZX_OK);
   // zx::channel handle, request;
   // EXPECT_EQ(zx::channel::create(0, &handle, &request), ZX_OK);
-  // EXPECT_EQ(exposed_dir->Open(fuchsia::io::OPEN_FLAG_DIRECTORY |
-  // fuchsia::io::OPEN_RIGHT_READABLE,
+  // EXPECT_EQ(exposed_dir->Open(fuchsia::io::OpenFlags::DIRECTORY |
+  // fuchsia::io::OpenFlags::RIGHT_READABLE,
   //                   fuchsia::io::MODE_TYPE_DIRECTORY, fuchsia::component::Binder::Name_,
   //                   fidl::InterfaceRequest<fuchsia::component::Binder>(std::move(request)))),
   //                   ZX_OK);

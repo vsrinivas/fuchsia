@@ -60,27 +60,31 @@ TEST(ConnectionRightsTest, RightsBehaveAsExpected) {
   test_row_t test_data[] = {
       // If the connection has all rights, then everything should work.
       {
-          .connection_flags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable |
-                              fio::wire::kOpenRightExecutable,
+          .connection_flags = fio::wire::OpenFlags::kRightReadable |
+                              fio::wire::OpenFlags::kRightWritable |
+                              fio::wire::OpenFlags::kRightExecutable,
           .request_flags = fio::wire::VmoFlags::kRead,
           .expected_result = ZX_OK,
       },
       {
-          .connection_flags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable |
-                              fio::wire::kOpenRightExecutable,
+          .connection_flags = fio::wire::OpenFlags::kRightReadable |
+                              fio::wire::OpenFlags::kRightWritable |
+                              fio::wire::OpenFlags::kRightExecutable,
           .request_flags = fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kWrite,
           .expected_result = ZX_OK,
       },
       {
-          .connection_flags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable |
-                              fio::wire::kOpenRightExecutable,
+          .connection_flags = fio::wire::OpenFlags::kRightReadable |
+                              fio::wire::OpenFlags::kRightWritable |
+                              fio::wire::OpenFlags::kRightExecutable,
           .request_flags = fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kExecute,
           .expected_result = ZX_OK,
       },
       // If the connection is missing the EXECUTABLE right, then requests with
       // fio::wire::VmoFlags::kExecute should fail.
       {
-          .connection_flags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable,
+          .connection_flags =
+              fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable,
           .request_flags = fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kExecute,
           .expected_result = ZX_ERR_ACCESS_DENIED,
       },
@@ -88,7 +92,8 @@ TEST(ConnectionRightsTest, RightsBehaveAsExpected) {
       // If the connection is missing the WRITABLE right, then requests with
       // fio::wire::VmoFlags::kWrite should fail.
       {
-          .connection_flags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable,
+          .connection_flags =
+              fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightExecutable,
           .request_flags = fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kWrite,
           .expected_result = ZX_ERR_ACCESS_DENIED,
       },

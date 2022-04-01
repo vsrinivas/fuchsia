@@ -174,7 +174,7 @@ impl StorageManager for InsecureKeyDirectoryStorageManager {
             StorageManagerState::Available => io_util::open_directory(
                 &self.managed_dir,
                 Path::new(CLIENT_ROOT_PATH),
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             )
             .account_manager_error(ApiError::Resource),
             ref invalid_state @ _ => Err(AccountManagerError::new(ApiError::FailedPrecondition)
@@ -216,7 +216,7 @@ impl InsecureKeyDirectoryStorageManager {
         let key_file = io_util::open_file(
             &self.managed_dir,
             &Path::new(KEY_FILE_PATH),
-            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .map_err(|e| {
             AccountManagerError::new(ApiError::Resource)
@@ -233,7 +233,7 @@ impl InsecureKeyDirectoryStorageManager {
         let file_proxy = io_util::open_file(
             &self.managed_dir,
             &Path::new(KEY_FILE_PATH),
-            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_READABLE,
         )
         .map_err(|e| {
             AccountManagerError::new(ApiError::Resource)
@@ -273,7 +273,7 @@ mod test {
         let temp_dir = TempDir::new().unwrap();
         let dir_proxy = io_util::open_directory_in_namespace(
             temp_dir.path().to_str().unwrap(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .unwrap();
         (temp_dir, dir_proxy)
@@ -283,7 +283,7 @@ mod test {
         let file = io_util::open_file(
             dir,
             Path::new(path),
-            fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
+            fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
         )
         .unwrap();
         io_util::write_file(&file, content).await.unwrap();
@@ -295,7 +295,8 @@ mod test {
     }
 
     async fn assert_file_contents(dir: &fio::DirectoryProxy, path: &str, content: &str) {
-        let file = io_util::open_file(dir, Path::new(path), fio::OPEN_RIGHT_READABLE).unwrap();
+        let file =
+            io_util::open_file(dir, Path::new(path), fio::OpenFlags::RIGHT_READABLE).unwrap();
         let file_content = io_util::read_file(&file).await.unwrap();
         assert_eq!(content, &file_content);
     }
@@ -372,7 +373,7 @@ mod test {
             // Create a new manager with the same directory.
             let new_dir_proxy = io_util::open_directory_in_namespace(
                 dir.path().to_str().unwrap(),
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             )
             .unwrap();
 

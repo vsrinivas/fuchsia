@@ -15,8 +15,10 @@ TEST_F(NamespaceTest, HasPkg) {
   // the StrictRights test fails on the directory, switch to that once fixed. The file test still
   // should succeed, although it returns NOT_SUPPORTED instead of ACCESS_DENIED because of pkgfs
   // differences.
-  ExpectPathSupportsRights("/pkg", fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable);
-  ExpectPathSupportsStrictRights("/pkg/bin/has_pkg",
-                                 fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable,
-                                 /*require_access_denied=*/false);
+  ExpectPathSupportsRights(
+      "/pkg", fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightExecutable);
+  ExpectPathSupportsStrictRights(
+      "/pkg/bin/has_pkg",
+      fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightExecutable,
+      /*require_access_denied=*/false);
 }

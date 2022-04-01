@@ -48,7 +48,7 @@ impl OutDir {
         self.add_entry(
             CapabilityPath::try_from("/data").unwrap(),
             remote_dir(
-                io_util::clone_directory(&test_dir_proxy, fio::CLONE_FLAG_SAME_RIGHTS)
+                io_util::clone_directory(&test_dir_proxy, fio::OpenFlags::CLONE_SAME_RIGHTS)
                     .expect("could not clone directory"),
             ),
         );
@@ -77,7 +77,7 @@ impl OutDir {
         Box::new(move |server_end: ServerEnd<fio::DirectoryMarker>| {
             dir.clone().open(
                 ExecutionScope::new(),
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
                 fio::MODE_TYPE_DIRECTORY,
                 vfs::path::Path::dot(),
                 ServerEnd::new(server_end.into_channel()),

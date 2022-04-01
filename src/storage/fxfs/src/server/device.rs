@@ -522,7 +522,7 @@ impl BlockServer {
             }
             // TODO(fxbug.dev/89873)
             VolumeAndNodeRequest::GetFlags { responder } => {
-                responder.send(zx::sys::ZX_OK, fio::OPEN_FLAG_NODE_REFERENCE)?;
+                responder.send(zx::sys::ZX_OK, fio::OpenFlags::NODE_REFERENCE)?;
             }
             // TODO(fxbug.dev/89873)
             VolumeAndNodeRequest::SetFlags { flags: _, responder } => {
@@ -618,7 +618,9 @@ mod tests {
 
                 let file = open_file_checked(
                     &root,
-                    fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                    fio::OpenFlags::CREATE
+                        | fio::OpenFlags::RIGHT_READABLE
+                        | fio::OpenFlags::RIGHT_WRITABLE,
                     fio::MODE_TYPE_FILE,
                     "block_device",
                 )
@@ -637,7 +639,7 @@ mod tests {
                     .expect("close error");
 
                 root.open(
-                    fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                    fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
                     fio::MODE_TYPE_BLOCK_DEVICE,
                     "block_device",
                     ServerEnd::new(server_channel),
@@ -668,10 +670,16 @@ mod tests {
                             .into_proxy()
                             .expect("convert into proxy failed");
                     original_block_device
-                        .clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server_channel_copy1))
+                        .clone(
+                            fio::OpenFlags::CLONE_SAME_RIGHTS,
+                            ServerEnd::new(server_channel_copy1),
+                        )
                         .expect("clone failed");
                     original_block_device
-                        .clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server_channel_copy2))
+                        .clone(
+                            fio::OpenFlags::CLONE_SAME_RIGHTS,
+                            ServerEnd::new(server_channel_copy2),
+                        )
                         .expect("clone failed");
                 }
 
@@ -702,7 +710,9 @@ mod tests {
                 let fixture = TestFixture::new().await;
                 let root = fixture.root();
                 root.open(
-                    fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                    fio::OpenFlags::CREATE
+                        | fio::OpenFlags::RIGHT_READABLE
+                        | fio::OpenFlags::RIGHT_WRITABLE,
                     fio::MODE_TYPE_BLOCK_DEVICE,
                     "foo",
                     ServerEnd::new(server_channel),
@@ -742,7 +752,9 @@ mod tests {
                 let fixture = TestFixture::new().await;
                 let root = fixture.root();
                 root.open(
-                    fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                    fio::OpenFlags::CREATE
+                        | fio::OpenFlags::RIGHT_READABLE
+                        | fio::OpenFlags::RIGHT_WRITABLE,
                     fio::MODE_TYPE_BLOCK_DEVICE,
                     "foo",
                     ServerEnd::new(server_channel),
@@ -773,7 +785,9 @@ mod tests {
                 let fixture = TestFixture::new().await;
                 let root = fixture.root();
                 root.open(
-                    fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                    fio::OpenFlags::CREATE
+                        | fio::OpenFlags::RIGHT_READABLE
+                        | fio::OpenFlags::RIGHT_WRITABLE,
                     fio::MODE_TYPE_BLOCK_DEVICE,
                     "foo",
                     ServerEnd::new(server_channel),
@@ -831,7 +845,9 @@ mod tests {
                 let fixture = TestFixture::new().await;
                 let root = fixture.root();
                 root.open(
-                    fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                    fio::OpenFlags::CREATE
+                        | fio::OpenFlags::RIGHT_READABLE
+                        | fio::OpenFlags::RIGHT_WRITABLE,
                     fio::MODE_TYPE_BLOCK_DEVICE,
                     "foo",
                     ServerEnd::new(server_channel),
@@ -858,7 +874,9 @@ mod tests {
                 let fixture = TestFixture::new().await;
                 let root = fixture.root();
                 root.open(
-                    fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                    fio::OpenFlags::CREATE
+                        | fio::OpenFlags::RIGHT_READABLE
+                        | fio::OpenFlags::RIGHT_WRITABLE,
                     fio::MODE_TYPE_BLOCK_DEVICE,
                     "foo",
                     ServerEnd::new(server_channel),
@@ -889,7 +907,9 @@ mod tests {
                 let fixture = TestFixture::new().await;
                 let root = fixture.root();
                 root.open(
-                    fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                    fio::OpenFlags::CREATE
+                        | fio::OpenFlags::RIGHT_READABLE
+                        | fio::OpenFlags::RIGHT_WRITABLE,
                     fio::MODE_TYPE_BLOCK_DEVICE,
                     "foo",
                     ServerEnd::new(server_channel),
@@ -923,7 +943,9 @@ mod tests {
 
                 let file = open_file_checked(
                     &root,
-                    fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                    fio::OpenFlags::CREATE
+                        | fio::OpenFlags::RIGHT_READABLE
+                        | fio::OpenFlags::RIGHT_WRITABLE,
                     fio::MODE_TYPE_FILE,
                     "block_device",
                 )
@@ -942,7 +964,7 @@ mod tests {
                     .expect("close error");
 
                 root.open(
-                    fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                    fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
                     fio::MODE_TYPE_BLOCK_DEVICE,
                     "block_device",
                     ServerEnd::new(server_channel),
@@ -974,7 +996,7 @@ mod tests {
                     let file = io_util::directory::open_file(
                         serving.root(),
                         &merkle_root_hash,
-                        fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE,
+                        fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE,
                     )
                     .await
                     .expect("open file failed");
@@ -999,7 +1021,7 @@ mod tests {
                     let file = io_util::directory::open_file(
                         serving.root(),
                         &merkle_root_hash,
-                        fio::OPEN_RIGHT_READABLE,
+                        fio::OpenFlags::RIGHT_READABLE,
                     )
                     .await
                     .expect("open file failed");
@@ -1016,7 +1038,9 @@ mod tests {
 
                 let file = open_file_checked(
                     &root,
-                    fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                    fio::OpenFlags::CREATE
+                        | fio::OpenFlags::RIGHT_READABLE
+                        | fio::OpenFlags::RIGHT_WRITABLE,
                     fio::MODE_TYPE_FILE,
                     "block_device",
                 )
@@ -1035,7 +1059,7 @@ mod tests {
                     .expect("close error");
 
                 root.open(
-                    fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                    fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
                     fio::MODE_TYPE_BLOCK_DEVICE,
                     "block_device",
                     ServerEnd::new(server_channel),

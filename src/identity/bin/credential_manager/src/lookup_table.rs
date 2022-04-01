@@ -91,7 +91,7 @@ impl PersistentLookupTable {
         match io_util::directory::open_directory(
             &self.dir_proxy,
             &label.into_dir_name(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .await
         {
@@ -175,7 +175,9 @@ impl LookupTable for PersistentLookupTable {
         let child_dir = io_util::directory::create_directory(
             &self.dir_proxy,
             &label.into_dir_name(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
+            fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::CREATE,
         )
         .await?;
 
@@ -197,7 +199,7 @@ impl LookupTable for PersistentLookupTable {
         let child_dir = io_util::directory::open_directory(
             &self.dir_proxy,
             &label.into_dir_name(),
-            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_READABLE,
         )
         .await
         .map_err(|_| LookupTableError::NotFound)?;
@@ -214,7 +216,7 @@ impl LookupTable for PersistentLookupTable {
         let latest_file = io_util::directory::open_file(
             &child_dir,
             &format_version(&latest_version),
-            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_READABLE,
         )
         .await?;
         let file_bytes = io_util::file::read(&latest_file).await?;
@@ -228,7 +230,7 @@ impl LookupTable for PersistentLookupTable {
         io_util::directory::open_directory(
             &self.dir_proxy,
             &label.into_dir_name(),
-            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_READABLE,
         )
         .await
         .map_err(|_| LookupTableError::NotFound)?;
@@ -279,7 +281,7 @@ mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
         let plt = PersistentLookupTable::new(dir);
@@ -292,7 +294,7 @@ mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
         let mut plt = PersistentLookupTable::new(dir);
@@ -306,13 +308,15 @@ mod test {
         // Manually delete files in the label directory.
         let dir_2 = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
         let child_dir = io_util::directory::create_directory(
             &dir_2,
             &TEST_LABEL.into_dir_name(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
+            fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::CREATE,
         )
         .await
         .unwrap();
@@ -329,7 +333,7 @@ mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
         let mut plt = PersistentLookupTable::new(dir);
@@ -352,7 +356,7 @@ mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
         let mut plt = PersistentLookupTable::new(dir);
@@ -372,7 +376,7 @@ mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
         let mut plt = PersistentLookupTable::new(dir);
@@ -394,7 +398,7 @@ mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
 
@@ -402,14 +406,18 @@ mod test {
         let child_dir = io_util::directory::create_directory(
             &dir,
             &TEST_LABEL.into_dir_name(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
+            fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::CREATE,
         )
         .await
         .unwrap();
         let bad_file = io_util::directory::open_file(
             &child_dir,
             &"bad file name",
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
+            fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::CREATE,
         )
         .await
         .unwrap();
@@ -456,7 +464,7 @@ mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
 
@@ -464,14 +472,18 @@ mod test {
         let child_dir = io_util::directory::create_directory(
             &dir,
             &TEST_LABEL.into_dir_name(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
+            fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::CREATE,
         )
         .await
         .unwrap();
         let stale_file = io_util::directory::open_file(
             &child_dir,
             &format!("{}01234", STAGEDFILE_PREFIX),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
+            fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::CREATE,
         )
         .await
         .unwrap();
@@ -503,7 +515,7 @@ mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
         let mut plt = PersistentLookupTable::new(dir);

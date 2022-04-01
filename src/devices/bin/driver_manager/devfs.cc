@@ -444,7 +444,7 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<
       path = nullptr;
     }
 
-    auto describe = [&ipc, describe = flags & fio::wire::kOpenFlagDescribe](
+    auto describe = [&ipc, describe = flags & fio::wire::OpenFlags::kDescribe](
                         zx::status<fio::wire::NodeInfo> node_info) {
       if (describe) {
         __UNUSED auto result = fidl::WireSendEvent(ipc)->OnOpen(
@@ -462,7 +462,7 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<
     // If we are a local-only node, or we are asked to not go remote, or we are asked to
     // open-as-a-directory, open locally:
     if (devnode_is_local(dn) ||
-        flags & (fio::wire::kOpenFlagNoRemote | fio::wire::kOpenFlagDirectory)) {
+        flags & (fio::wire::OpenFlags::kNoRemote | fio::wire::OpenFlags::kDirectory)) {
       auto ios = std::make_unique<DcIostate>(dn, dispatcher);
       if (ios == nullptr) {
         describe(zx::error(ZX_ERR_NO_MEMORY));
@@ -680,12 +680,12 @@ void DcIostate::Open(OpenRequestView request, OpenCompleter::Sync& completer) {
 }
 
 void DcIostate::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
-  if (request->flags & fio::wire::kCloneFlagSameRights) {
-    request->flags |= fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable;
+  if (request->flags & fio::wire::OpenFlags::kCloneSameRights) {
+    request->flags |= fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable;
   }
   char path[] = ".";
   devfs_open(devnode_, dispatcher_, std::move(request->object), path,
-             request->flags | fio::wire::kOpenFlagNoRemote);
+             request->flags | fio::wire::OpenFlags::kNoRemote);
 }
 
 void DcIostate::QueryFilesystem(QueryFilesystemRequestView request,
@@ -901,7 +901,7 @@ zx_status_t devfs_export(Devnode* dn, fidl::ClientEnd<fuchsia_io::Directory> ser
       return endpoints.status_value();
     }
     auto result = fidl::WireCall(dn->service_dir)
-                      ->Clone(fio::wire::kCloneFlagSameRights, std::move(endpoints->server));
+                      ->Clone(fio::wire::OpenFlags::kCloneSameRights, std::move(endpoints->server));
     if (!result.ok()) {
       return result.status();
     }

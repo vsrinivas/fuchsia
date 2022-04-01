@@ -62,7 +62,7 @@ void main() {
           .serve(InterfaceRequest(dirProxy.ctrl.request().passChannel()));
       final fileProxy = io.FileProxy();
       await dirProxy.open(
-          io.openRightReadable,
+          io.OpenFlags.rightReadable,
           io.modeTypeFile,
           'diagnostics/foo',
           InterfaceRequest<io.Node>(fileProxy.ctrl.request().passChannel()));

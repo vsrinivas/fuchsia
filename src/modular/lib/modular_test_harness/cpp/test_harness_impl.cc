@@ -249,7 +249,7 @@ zx_status_t TestHarnessImpl::PopulateEnvServicesWithComponents(
 std::vector<std::string> GetDirListing(fuchsia::io::Directory* dir) {
   // Make a clone of |dir| since translating to a POSIX fd is destructive.
   fuchsia::io::NodePtr dir_copy;
-  dir->Clone(fuchsia::io::OPEN_RIGHT_READABLE, dir_copy.NewRequest());
+  dir->Clone(fuchsia::io::OpenFlags::RIGHT_READABLE, dir_copy.NewRequest());
 
   std::vector<std::string> svcs;
   DIR* fd = fdopendir(fsl::OpenChannelAsFileDescriptor(dir_copy.Unbind().TakeChannel()).release());
@@ -338,7 +338,7 @@ void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {
   zx::channel request;
   FX_CHECK(zx::channel::create(0u, &client, &request) == ZX_OK);
   basemgr_config_dir_ = MakeBasemgrConfigDir(spec_);
-  basemgr_config_dir_->Serve(fuchsia::io::OPEN_RIGHT_READABLE, std::move(request));
+  basemgr_config_dir_->Serve(fuchsia::io::OpenFlags::RIGHT_READABLE, std::move(request));
 
   fuchsia::io::DirectoryPtr basemgr_svc_dir;
   fuchsia::sys::LaunchInfo launch_info;

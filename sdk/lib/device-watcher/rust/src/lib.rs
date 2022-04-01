@@ -6,9 +6,11 @@ use fidl_fuchsia_io as fio;
 use fuchsia_async::futures::TryStreamExt;
 
 async fn wait_for_file(dir: &fio::DirectoryProxy, name: &str) -> Result<(), anyhow::Error> {
-    let mut watcher =
-        fuchsia_vfs_watcher::Watcher::new(io_util::clone_directory(dir, fio::OPEN_RIGHT_READABLE)?)
-            .await?;
+    let mut watcher = fuchsia_vfs_watcher::Watcher::new(io_util::clone_directory(
+        dir,
+        fio::OpenFlags::RIGHT_READABLE,
+    )?)
+    .await?;
     while let Some(msg) = watcher.try_next().await? {
         if msg.event != fuchsia_vfs_watcher::WatchEvent::EXISTING
             && msg.event != fuchsia_vfs_watcher::WatchEvent::ADD_FILE
@@ -65,7 +67,7 @@ pub async fn recursive_wait_and_open_node(
     recursive_wait_and_open_node_with_flags(
         initial_dir,
         name,
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         fio::MODE_TYPE_SERVICE,
     )
     .await
@@ -89,7 +91,7 @@ mod tests {
         };
         root.open(
             fs_scope.clone(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
             0,
             vfs::path::Path::dot(),
             fidl::endpoints::ServerEnd::new(server.into_channel()),
@@ -99,7 +101,7 @@ mod tests {
         recursive_wait_and_open_node_with_flags(
             &client,
             "test/dir",
-            io_util::OPEN_RIGHT_READABLE,
+            io_util::OpenFlags::RIGHT_READABLE,
             0,
         )
         .await

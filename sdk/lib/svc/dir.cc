@@ -127,8 +127,9 @@ zx_status_t svc_dir_serve(svc_dir_t* dir, async_dispatcher_t* dispatcher, zx_han
     return ZX_ERR_INVALID_ARGS;
   }
 
-  return dir->impl->Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
-                          zx::channel(request), dispatcher);
+  return dir->impl->Serve(
+      fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
+      zx::channel(request), dispatcher);
 }
 
 zx_status_t svc_dir_add_service(svc_dir_t* dir, const char* type, const char* service_name,

@@ -161,7 +161,7 @@ impl PkgfsRamdisk {
     /// Returns a new connection to pkgfs's root directory as a raw zircon channel.
     pub fn root_dir_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error> {
         let (root_clone, server_end) = fuchsia_zircon::Channel::create()?;
-        self.proxy.clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end.into())?;
+        self.proxy.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, server_end.into())?;
         Ok(root_clone.into())
     }
 

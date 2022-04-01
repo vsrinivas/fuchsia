@@ -7,7 +7,7 @@ use {
     fidl_fidl_test_components as ftest, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::{StreamExt, TryStreamExt},
-    io_util::{self, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    io_util::{self, OpenFlags},
     std::path::PathBuf,
 };
 
@@ -29,12 +29,12 @@ async fn run_trigger_service(mut stream: ftest::TriggerRequestStream) -> Result<
         let ftest::TriggerRequest::Run { responder } = event;
         let data_proxy = io_util::open_directory_in_namespace(
             "/data",
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
         )?;
         let file = io_util::open_file(
             &data_proxy,
             &PathBuf::from("test"),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
+            OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
         )?;
         let msg = if let Err(_) = io_util::write_file_bytes(&file, b"test_data").await {
             "Failed to write to file"

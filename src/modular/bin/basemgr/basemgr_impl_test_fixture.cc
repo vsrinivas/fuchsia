@@ -14,9 +14,9 @@ void FakeComponentWithNamespace::Register(std::string url,
       [this, dispatcher](fuchsia::sys::LaunchInfo launch_info,
                          fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
         ctrls_.push_back(std::move(ctrl));
-        zx_status_t status =
-            directory_.Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
-                             std::move(launch_info.directory_request), dispatcher);
+        zx_status_t status = directory_.Serve(
+            fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
+            std::move(launch_info.directory_request), dispatcher);
         ZX_ASSERT(status == ZX_OK);
 
         namespace_map_.clear();

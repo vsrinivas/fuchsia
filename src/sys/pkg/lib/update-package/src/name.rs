@@ -28,7 +28,7 @@ pub enum VerifyNameError {
 }
 
 pub(crate) async fn verify(proxy: &fio::DirectoryProxy) -> Result<(), VerifyNameError> {
-    let file = io_util::directory::open_file(proxy, "meta/package", fio::OPEN_RIGHT_READABLE)
+    let file = io_util::directory::open_file(proxy, "meta/package", fio::OpenFlags::RIGHT_READABLE)
         .await
         .map_err(VerifyNameError::OpenMetaPackage)?;
     let contents = io_util::file::read(&file).await.map_err(VerifyNameError::ReadMetaPackage)?;

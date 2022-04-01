@@ -870,7 +870,7 @@ async fn read_custom_artifact_directory(
     let futs = FuturesUnordered::new();
     paths.iter().for_each(|path| {
         let path = std::path::PathBuf::from(path);
-        let file = io_util::open_file(&directory, &path, io_util::OPEN_RIGHT_READABLE);
+        let file = io_util::open_file(&directory, &path, io_util::OpenFlags::RIGHT_READABLE);
         let output_file = out_dir.new_file(&path);
         futs.push(async move {
             let file = file.with_context(|| format!("with path {:?}", path))?;
@@ -1331,7 +1331,7 @@ mod test {
         let scope = ExecutionScope::new();
         dir.open(
             scope,
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             vfs::path::Path::dot(),
             ServerEnd::new(directory_service.into_channel()),
@@ -1478,7 +1478,7 @@ mod test {
         let scope = ExecutionScope::new();
         dir.open(
             scope,
-            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_READABLE,
             fio::MODE_TYPE_FILE,
             vfs::path::Path::validate_and_split("test_file.profraw").unwrap(),
             ServerEnd::new(file_service.into_channel()),

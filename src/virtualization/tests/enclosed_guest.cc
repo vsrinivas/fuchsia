@@ -96,7 +96,7 @@ void LocalGuestConfigProvider::Get(GetCallback callback) {
 
   auto open_at = [&](const std::string& path, fidl::InterfaceRequest<fuchsia::io::File> file) {
     return fdio_open((package_dir_name_ + "/" + path).c_str(),
-                     static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE),
+                     static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE),
                      file.TakeChannel().release());
   };
 

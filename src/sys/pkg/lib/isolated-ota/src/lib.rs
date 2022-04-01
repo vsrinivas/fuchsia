@@ -125,7 +125,7 @@ fn clone_blobfs(
     let (blobfs_clone, remote) = fidl::endpoints::create_endpoints::<fio::DirectoryMarker>()
         .map_err(UpdateError::FidlError)?;
     blobfs_proxy
-        .clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::from(remote.into_channel()))
+        .clone(fio::OpenFlags::CLONE_SAME_RIGHTS, ServerEnd::from(remote.into_channel()))
         .map_err(UpdateError::FidlError)?;
     Ok(blobfs_clone)
 }

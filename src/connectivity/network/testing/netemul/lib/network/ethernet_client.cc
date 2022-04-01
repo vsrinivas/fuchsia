@@ -479,10 +479,10 @@ int EthernetClientFactory::OpenDir() {
     if (zx::channel::create(0, &eth, &srv) != ZX_OK) {
       return -1;
     }
-    auto status = fdio_open_at(
-        devfs_root_.get(), base_dir_.c_str(),
-        static_cast<uint32_t>(fuchsia::io::OPEN_FLAG_DIRECTORY | fuchsia::io::OPEN_RIGHT_READABLE),
-        srv.release());
+    auto status = fdio_open_at(devfs_root_.get(), base_dir_.c_str(),
+                               static_cast<uint32_t>(fuchsia::io::OpenFlags::DIRECTORY |
+                                                     fuchsia::io::OpenFlags::RIGHT_READABLE),
+                               srv.release());
     if (status != ZX_OK) {
       std::cerr << "Failed to open ethernet directory " << base_dir_ << ", "
                 << static_cast<bool>(devfs_root_) << " - " << zx_status_get_string(status);

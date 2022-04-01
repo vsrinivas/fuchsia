@@ -46,7 +46,7 @@ macro_rules! tests {
                     let path = Path::new("/pkg/data/invalid-fars").join(filename);
                     let file = io_util::file::open_in_namespace(
                         path.to_str().unwrap(),
-                        fio::OPEN_RIGHT_READABLE,
+                        fio::OpenFlags::RIGHT_READABLE,
                     )
                     .unwrap();
                     let reader = io_util::file::AsyncFile::from_proxy(file);

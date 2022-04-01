@@ -6,7 +6,7 @@ use {
     anyhow::{Context, Error},
     fidl_fuchsia_io as fio,
     futures::StreamExt,
-    io_util::{directory, file, node, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE},
+    io_util::{directory, file, node, OpenFlags},
     libc::{S_IRUSR, S_IXUSR},
 };
 
@@ -27,7 +27,7 @@ const BOOTFS_EXECUTABLE_NON_LIB_FILES: &[&str] =
 #[fuchsia::test]
 async fn basic_filenode_test() -> Result<(), Error> {
     // Open the known good file as a node, and check its attributes.
-    let node = node::open_in_namespace(SAMPLE_UTF8_READONLY_FILE, OPEN_RIGHT_READABLE)
+    let node = node::open_in_namespace(SAMPLE_UTF8_READONLY_FILE, OpenFlags::RIGHT_READABLE)
         .context("failed to open as a readable node")?;
 
     // This node should be a readonly file, the inode should not be unknown,
@@ -41,7 +41,7 @@ async fn basic_filenode_test() -> Result<(), Error> {
     node::close(node).await?;
 
     // Reopen the known good file as a file to make use of the helper functions.
-    let file = file::open_in_namespace(SAMPLE_UTF8_READONLY_FILE, OPEN_RIGHT_READABLE)
+    let file = file::open_in_namespace(SAMPLE_UTF8_READONLY_FILE, OpenFlags::RIGHT_READABLE)
         .context("failed to open as a readable file")?;
 
     // Check for data corruption. This file should contain a single utf-8 string which can
@@ -64,7 +64,7 @@ async fn basic_directory_test() -> Result<(), Error> {
     // Open the known good file as a node, and check its attributes.
     let node = node::open_in_namespace(
         SAMPLE_REQUIRED_DIRECTORY,
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+        OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_EXECUTABLE,
     )
     .context("failed to open as a readable and executable node")?;
 
@@ -90,7 +90,7 @@ async fn basic_directory_test() -> Result<(), Error> {
 async fn check_kernel_vmos() -> Result<(), Error> {
     let directory = directory::open_in_namespace(
         KERNEL_VDSO_DIRECTORY,
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+        OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_EXECUTABLE,
     )
     .context("failed to open kernel vdso directory")?;
     let vdsos =
@@ -103,8 +103,9 @@ async fn check_kernel_vmos() -> Result<(), Error> {
     // All VDSOs should have execution rights.
     for vdso in vdsos {
         let name = format!("{}/{}", KERNEL_VDSO_DIRECTORY, vdso.name);
-        let file = file::open_in_namespace(&name, OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE)
-            .context("failed to open file")?;
+        let file =
+            file::open_in_namespace(&name, OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_EXECUTABLE)
+                .context("failed to open file")?;
         let data = file::read_num_bytes(&file, 1).await.context(format!(
             "failed to read a single byte from a vdso opened as read-execute: {}",
             name
@@ -120,9 +121,11 @@ async fn check_kernel_vmos() -> Result<(), Error> {
 async fn check_executable_files() -> Result<(), Error> {
     // Sanitizers nest lib files within '/boot/lib/asan' or '/boot/lib/asan-ubsan' etc., so
     // we need to just search recursively for these files instead.
-    let directory =
-        directory::open_in_namespace("/boot/lib", OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE)
-            .context("failed to open /boot/lib directory")?;
+    let directory = directory::open_in_namespace(
+        "/boot/lib",
+        OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_EXECUTABLE,
+    )
+    .context("failed to open /boot/lib directory")?;
     let lib_paths = files_async::readdir_recursive(&directory, None)
         .filter_map(|result| async {
             assert!(result.is_ok());
@@ -148,8 +151,9 @@ async fn check_executable_files() -> Result<(), Error> {
     .concat();
 
     for path in paths {
-        let file = file::open_in_namespace(&path, OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE)
-            .context("failed to open file")?;
+        let file =
+            file::open_in_namespace(&path, OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_EXECUTABLE)
+                .context("failed to open file")?;
         let data = file::read_num_bytes(&file, 1).await.context(format!(
             "failed to read a single byte from a file opened as read-execute: {}",
             path
@@ -168,7 +172,7 @@ async fn check_readonly_files() -> Result<(), Error> {
     // should be readonly.
     let directory = directory::open_in_namespace(
         BOOTFS_DATA_DIRECTORY,
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+        OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_EXECUTABLE,
     )
     .context("failed to open data directory")?;
     let data_paths = files_async::readdir_recursive(&directory, None)
@@ -186,15 +190,16 @@ async fn check_readonly_files() -> Result<(), Error> {
 
     for path in paths {
         // A readonly file should not be usable when opened as executable.
-        let mut file = file::open_in_namespace(&path, OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE)
-            .context("failed to open file")?;
+        let mut file =
+            file::open_in_namespace(&path, OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_EXECUTABLE)
+                .context("failed to open file")?;
         let result = file::read_num_bytes(&file, 1).await;
         assert!(result.is_err());
         // Don't close the file proxy -- the access error above has already closed the channel.
 
         // Reopen as readonly, and confirm that it can be read from.
-        file =
-            file::open_in_namespace(&path, OPEN_RIGHT_READABLE).context("failed to open file")?;
+        file = file::open_in_namespace(&path, OpenFlags::RIGHT_READABLE)
+            .context("failed to open file")?;
         let data = file::read_num_bytes(&file, 1).await.context(format!(
             "failed to read a single byte from a file opened as readonly: {}",
             path

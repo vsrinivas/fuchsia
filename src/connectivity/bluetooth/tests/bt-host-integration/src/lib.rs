@@ -63,7 +63,7 @@ async fn test_lifecycle(_: ()) -> Result<(), Error> {
     let dir_to_watch = directory::open_directory(
         realm.instance().get_exposed_dir(),
         stripped_path.as_ref(),
-        fio::OPEN_RIGHT_READABLE,
+        fio::OpenFlags::RIGHT_READABLE,
     )
     .await?;
     let mut watcher =

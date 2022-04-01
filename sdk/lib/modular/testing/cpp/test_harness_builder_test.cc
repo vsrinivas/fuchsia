@@ -46,8 +46,9 @@ class TestHarnessBuilderTest : public modular_testing::TestHarnessFixture {
   TestHarnessBuilderTest() {
     zx::channel dir_req;
     env_service_dir_ = sys::ServiceDirectory::CreateWithRequest(&dir_req);
-    env_pseudo_dir_.Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
-                          std::move(dir_req));
+    env_pseudo_dir_.Serve(
+        fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
+        std::move(dir_req));
   }
 
   template <typename Interface>

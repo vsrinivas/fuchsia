@@ -43,10 +43,10 @@ zx_status_t LoaderApp::InitDeviceFs() {
   for (const char* dev_class : kDevClassList) {
     fidl::InterfaceHandle<fuchsia::io::Directory> gpu_dir;
     std::string input_path = std::string("/dev/class/") + dev_class;
-    zx_status_t status = fdio_open(
-        input_path.c_str(),
-        static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE),
-        gpu_dir.NewRequest().TakeChannel().release());
+    zx_status_t status = fdio_open(input_path.c_str(),
+                                   static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE |
+                                                         fuchsia::io::OpenFlags::RIGHT_WRITABLE),
+                                   gpu_dir.NewRequest().TakeChannel().release());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to open " << input_path;
       return status;

@@ -116,20 +116,22 @@ impl vfs::directory::entry::DirectoryEntry for PkgfsVersions {
         mut path: VfsPath,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
-        let flags = flags.difference(fio::OPEN_FLAG_POSIX_WRITABLE);
-        let flags = if flags.intersects(fio::OPEN_FLAG_POSIX_DEPRECATED) {
-            flags.difference(fio::OPEN_FLAG_POSIX_DEPRECATED).union(fio::OPEN_FLAG_POSIX_EXECUTABLE)
+        let flags = flags.difference(fio::OpenFlags::POSIX_WRITABLE);
+        let flags = if flags.intersects(fio::OpenFlags::POSIX_DEPRECATED) {
+            flags
+                .difference(fio::OpenFlags::POSIX_DEPRECATED)
+                .union(fio::OpenFlags::POSIX_EXECUTABLE)
         } else {
             flags
         };
 
         // This directory and all child nodes are read-only
         if flags.intersects(
-            fio::OPEN_RIGHT_WRITABLE
-                | fio::OPEN_FLAG_CREATE
-                | fio::OPEN_FLAG_CREATE_IF_ABSENT
-                | fio::OPEN_FLAG_TRUNCATE
-                | fio::OPEN_FLAG_APPEND,
+            fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::CREATE
+                | fio::OpenFlags::CREATE_IF_ABSENT
+                | fio::OpenFlags::TRUNCATE
+                | fio::OpenFlags::APPEND,
         ) {
             return send_on_open_with_error(flags, server_end, zx::Status::NOT_SUPPORTED);
         }
@@ -156,7 +158,7 @@ impl vfs::directory::entry::DirectoryEntry for PkgfsVersions {
                         &package_status,
                         self.non_static_allow_list.as_ref(),
                     );
-                    let executablity_requested = flags.intersects(fio::OPEN_RIGHT_EXECUTABLE);
+                    let executablity_requested = flags.intersects(fio::OpenFlags::RIGHT_EXECUTABLE);
                     let flags = match (executability_status, executablity_requested) {
                         (ExecutabilityStatus::Forbidden, true) => {
                             let () = send_on_open_with_error(
@@ -167,7 +169,7 @@ impl vfs::directory::entry::DirectoryEntry for PkgfsVersions {
                             return;
                         }
                         (ExecutabilityStatus::Forbidden, false) => {
-                            flags.difference(fio::OPEN_FLAG_POSIX_EXECUTABLE)
+                            flags.difference(fio::OpenFlags::POSIX_EXECUTABLE)
                         }
                         (ExecutabilityStatus::Allowed, _) => flags,
                     };
@@ -428,13 +430,14 @@ mod tests {
 
         register_dynamic_package(&env.package_index, create_path("dynamic"), hash(1)).await;
 
-        let proxy = pkgfs_versions.proxy(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE);
+        let proxy =
+            pkgfs_versions.proxy(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE);
 
         assert_matches!(
             io_util::directory::open_directory(
                 &proxy,
                 &hash(1).to_string(),
-                fio::OPEN_RIGHT_EXECUTABLE
+                fio::OpenFlags::RIGHT_EXECUTABLE
             )
             .await,
             Err(io_util::node::OpenError::OpenError(zx::Status::ACCESS_DENIED))
@@ -459,25 +462,26 @@ mod tests {
         )
         .await;
 
-        let proxy = pkgfs_versions.proxy(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE);
+        let proxy =
+            pkgfs_versions.proxy(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE);
 
         // Open a package directory with OPEN_FLAG_POSIX_EXECUTABLE set
         let pkg_dir = io_util::directory::open_directory(
             &proxy,
             &pkg.meta_far_merkle_root().to_string(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX_EXECUTABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::POSIX_EXECUTABLE,
         )
         .await
         .unwrap();
 
         // DirectoryEntry::open should have unset OPEN_FLAG_POSIX_EXECUTABLE (instead of allowing
-        // the upgrade to fio::OPEN_RIGHT_EXECUTABLE), so re-opening self with fio::OPEN_RIGHT_EXECUTABLE
+        // the upgrade to fio::OpenFlags::RIGHT_EXECUTABLE), so re-opening self with fio::OpenFlags::RIGHT_EXECUTABLE
         // should be rejected.
         assert_matches!(
             io_util::directory::open_directory(
                 &pkg_dir,
                 ".",
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE
             )
             .await,
             Err(io_util::node::OpenError::OpenError(zx::Status::ACCESS_DENIED))
@@ -493,11 +497,12 @@ mod tests {
             &[],
         );
 
-        let proxy = pkgfs_versions.proxy(fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX_WRITABLE);
+        let proxy =
+            pkgfs_versions.proxy(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::POSIX_WRITABLE);
 
         let (status, flags) = proxy.get_flags().await.unwrap();
         let () = zx::Status::ok(status).unwrap();
-        assert_eq!(flags, fio::OPEN_RIGHT_READABLE);
+        assert_eq!(flags, fio::OpenFlags::RIGHT_READABLE);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -510,11 +515,11 @@ mod tests {
         );
 
         let proxy =
-            pkgfs_versions.proxy(fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX_DEPRECATED);
+            pkgfs_versions.proxy(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::POSIX_DEPRECATED);
 
         let (status, flags) = proxy.get_flags().await.unwrap();
         let () = zx::Status::ok(status).unwrap();
-        assert_eq!(flags, fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE);
+        assert_eq!(flags, fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -526,13 +531,14 @@ mod tests {
             &[],
         );
 
-        let proxy = pkgfs_versions.proxy(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE);
+        let proxy =
+            pkgfs_versions.proxy(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE);
 
         assert_matches!(
             io_util::directory::open_directory(
                 &proxy,
                 &hash(0).to_string(),
-                fio::OPEN_RIGHT_EXECUTABLE
+                fio::OpenFlags::RIGHT_EXECUTABLE
             )
             .await,
             Err(io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND))
@@ -548,13 +554,14 @@ mod tests {
             &[],
         );
 
-        let proxy = pkgfs_versions.proxy(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE);
+        let proxy =
+            pkgfs_versions.proxy(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE);
 
         assert_matches!(
             io_util::directory::open_directory(
                 &proxy,
                 &hash(0).to_string(),
-                fio::OPEN_RIGHT_EXECUTABLE
+                fio::OpenFlags::RIGHT_EXECUTABLE
             )
             .await,
             Err(io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND))
@@ -564,7 +571,7 @@ mod tests {
             io_util::directory::open_directory(
                 &proxy,
                 &hash(1).to_string(),
-                fio::OPEN_RIGHT_READABLE
+                fio::OpenFlags::RIGHT_READABLE
             )
             .await,
             Err(io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND))
@@ -584,7 +591,7 @@ mod tests {
         vfs::directory::entry::DirectoryEntry::open(
             pkgfs_versions,
             ExecutionScope::new(),
-            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_READABLE,
             0,
             VfsPath::dot(),
             server_end.into_channel().into(),
@@ -622,9 +629,10 @@ mod tests {
         .await;
 
         let proxy = io_util::directory::open_directory(
-            &pkgfs_versions.proxy(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE),
+            &pkgfs_versions
+                .proxy(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE),
             &pkg.meta_far_merkle_root().to_string(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )
         .await
         .unwrap();
@@ -646,7 +654,7 @@ mod tests {
         let file = io_util::directory::open_file(
             &proxy,
             "message",
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )
         .await
         .unwrap();

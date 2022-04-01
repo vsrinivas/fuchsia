@@ -190,7 +190,8 @@ bool ServedArchive::Serve(zx::channel server_end, async_dispatcher_t* dispatcher
                           std::function<void()> completed) {
   channel_closed_observer_ =
       std::make_unique<async::WaitOnce>(server_end.get(), ZX_CHANNEL_PEER_CLOSED);
-  if (const auto status = file_.Serve(fuchsia::io::OPEN_RIGHT_READABLE, std::move(server_end));
+  if (const auto status =
+          file_.Serve(fuchsia::io::OpenFlags::RIGHT_READABLE, std::move(server_end));
       status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Cannot serve archive";
     return false;

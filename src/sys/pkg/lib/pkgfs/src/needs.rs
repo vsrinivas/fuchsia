@@ -40,7 +40,7 @@ impl Client {
     /// Returns an client connected to pkgfs from the current component's namespace
     pub fn open_from_namespace() -> Result<Self, io_util::node::OpenError> {
         let proxy =
-            io_util::directory::open_in_namespace("/pkgfs/needs", fio::OPEN_RIGHT_READABLE)?;
+            io_util::directory::open_in_namespace("/pkgfs/needs", fio::OpenFlags::RIGHT_READABLE)?;
         Ok(Client { proxy })
     }
 
@@ -52,7 +52,7 @@ impl Client {
             proxy: io_util::directory::open_directory_no_describe(
                 pkgfs,
                 "needs",
-                fio::OPEN_RIGHT_READABLE,
+                fio::OpenFlags::RIGHT_READABLE,
             )?,
         })
     }
@@ -122,7 +122,7 @@ async fn enumerate_needs_dir(
     pkg_merkle: Hash,
 ) -> Result<HashSet<Hash>, ListNeedsError> {
     let path = format!("packages/{}", pkg_merkle);
-    let flags = fio::OPEN_RIGHT_READABLE;
+    let flags = fio::OpenFlags::RIGHT_READABLE;
 
     let needs_dir = match io_util::directory::open_directory(pkgfs_needs, &path, flags).await {
         Ok(dir) => dir,

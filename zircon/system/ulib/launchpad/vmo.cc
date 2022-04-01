@@ -19,10 +19,10 @@ namespace fio = fuchsia_io;
 __EXPORT
 zx_status_t launchpad_vmo_from_file(const char* filename, zx_handle_t* out) {
   fbl::unique_fd fd;
-  zx_status_t status = fdio_open_fd(
-      filename,
-      static_cast<uint32_t>(fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable),
-      fd.reset_and_get_address());
+  zx_status_t status = fdio_open_fd(filename,
+                                    static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable |
+                                                          fio::wire::OpenFlags::kRightExecutable),
+                                    fd.reset_and_get_address());
   if (status != ZX_OK) {
     return status;
   }

@@ -879,7 +879,7 @@ zx_status_t zxio_dir_open(zxio_t* io, uint32_t flags, uint32_t mode, const char*
 
   fidl::Status result =
       fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
-          ->Open(static_cast<fio::wire::OpenFlags>(flags) | fuchsia_io::wire::kOpenFlagDescribe,
+          ->Open(static_cast<fio::wire::OpenFlags>(flags) | fuchsia_io::wire::OpenFlags::kDescribe,
                  mode, fidl::StringView::FromExternal(path, path_len), std::move(node_server_end));
   if (!result.ok()) {
     return result.status();
@@ -1383,9 +1383,9 @@ zx_status_t zxio_raw_remote_reopen(zx::unowned_channel source, zxio_reopen_flags
   if (ends.is_error()) {
     return ends.status_value();
   }
-  fio::wire::OpenFlags flags = fio::wire::kCloneFlagSameRights;
+  fio::wire::OpenFlags flags = fio::wire::OpenFlags::kCloneSameRights;
   if (zxio_flags & ZXIO_REOPEN_DESCRIBE) {
-    flags |= fio::wire::kOpenFlagDescribe;
+    flags |= fio::wire::OpenFlags::kDescribe;
   }
   const fidl::WireResult result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(source))
                                       ->Clone(flags, std::move(ends->server));

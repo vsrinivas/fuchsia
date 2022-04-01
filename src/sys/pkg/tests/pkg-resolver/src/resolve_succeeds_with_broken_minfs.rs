@@ -156,7 +156,9 @@ impl WriteFailOrTempFs {
 
         fdio::open(
             tempdir.path().to_str().unwrap(),
-            fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::DIRECTORY
+                | fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE,
             server_end.into_channel(),
         )
         .expect("open temp directory");
@@ -226,7 +228,7 @@ impl OpenRequestHandler for WriteFailOrTempFs {
         // not directories, so cast the NodeProxy to a FileProxy. If the pkg-resolver assumption
         // changes, this code will have to support both.
         let backing_file_proxy = fio::FileProxy::new(backing_node_proxy.into_channel().unwrap());
-        let send_onopen = flags.intersects(fio::OPEN_FLAG_DESCRIBE);
+        let send_onopen = flags.intersects(fio::OpenFlags::DESCRIBE);
 
         let file_handler = Arc::new(FailingWriteFileStreamHandler::new(
             backing_file_proxy,

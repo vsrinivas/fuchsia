@@ -18,7 +18,7 @@ where
     let file = io_util::directory::open_file(
         &dir_proxy,
         &temp_filename,
-        fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE | fio::OPEN_FLAG_TRUNCATE,
+        fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE | fio::OpenFlags::TRUNCATE,
     )
     .await
     .context("opening temp file")?;
@@ -53,7 +53,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let dir_proxy = io_util::open_directory_in_namespace(
             dir.path().to_str().unwrap(),
-            fio::OPEN_RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_WRITABLE,
         )
         .unwrap();
         let temp_path = dir.path().join("foo.new");

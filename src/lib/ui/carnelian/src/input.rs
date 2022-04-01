@@ -15,7 +15,7 @@ use fuchsia_async::{self as fasync, Time, TimeoutExt};
 use fuchsia_vfs_watcher as vfs_watcher;
 use fuchsia_zircon::{self as zx, Duration};
 use futures::{TryFutureExt, TryStreamExt};
-use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
+use io_util::{open_directory_in_namespace, OpenFlags};
 use keymaps::usages::input3_key_to_hid_usage;
 use std::{
     collections::HashSet,
@@ -401,7 +401,8 @@ pub(crate) async fn listen_for_user_input(
             _ => (),
         }
     }
-    let dir_proxy = open_directory_in_namespace(input_devices_directory, OPEN_RIGHT_READABLE)?;
+    let dir_proxy =
+        open_directory_in_namespace(input_devices_directory, OpenFlags::RIGHT_READABLE)?;
     let mut watcher = vfs_watcher::Watcher::new(dir_proxy).await?;
     fasync::Task::local(async move {
         let input_devices_directory_path = PathBuf::from("/dev/class/input-report");

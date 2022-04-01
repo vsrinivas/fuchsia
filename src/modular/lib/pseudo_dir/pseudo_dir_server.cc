@@ -22,15 +22,17 @@ PseudoDirServer::~PseudoDirServer() {
 
 fbl::unique_fd PseudoDirServer::OpenAt(std::string path) {
   fuchsia::io::NodePtr node;
-  dir_ptr_->Open(/*flags=*/fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_FLAG_DESCRIBE,
-                 /*mode=*/0u, path, node.NewRequest());
+  dir_ptr_->Open(
+      /*flags=*/fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::DESCRIBE,
+      /*mode=*/0u, path, node.NewRequest());
 
   return fsl::OpenChannelAsFileDescriptor(node.Unbind().TakeChannel());
 }
 
 void PseudoDirServer::Serve(zx::channel request) {
-  pseudo_dir_->Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
-                     std::move(request), loop_.dispatcher());
+  pseudo_dir_->Serve(
+      fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
+      std::move(request), loop_.dispatcher());
 }
 
 fuchsia::io::DirectoryPtr PseudoDirServer::Serve() {

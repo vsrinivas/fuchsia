@@ -26,8 +26,8 @@ namespace {
 
 zx::status<> FinishPkgfsLaunch(FilesystemMounter* filesystems, zx::channel pkgfs_root) {
   constexpr auto kFlags =
-      fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenFlagDirectory |
-      fuchsia_io::wire::kOpenFlagNoRemote | fuchsia_io::wire::kOpenRightExecutable;
+      fuchsia_io::wire::OpenFlags::kRightReadable | fuchsia_io::wire::OpenFlags::kDirectory |
+      fuchsia_io::wire::OpenFlags::kNoRemote | fuchsia_io::wire::OpenFlags::kRightExecutable;
 
   // re-export /pkgfs/system as /system
   zx::channel system_channel, system_req;
@@ -86,10 +86,11 @@ zx::status<> LaunchPkgfs(FilesystemMounter* filesystems) {
   const char* cmd = cmd_status.value().c_str();
 
   fbl::unique_fd blob_dir;
-  auto status = zx::make_status(fdio_open_fd(
-      "/blob",
-      static_cast<uint32_t>(fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable),
-      blob_dir.reset_and_get_address()));
+  auto status =
+      zx::make_status(fdio_open_fd("/blob",
+                                   static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable |
+                                                         fio::wire::OpenFlags::kRightExecutable),
+                                   blob_dir.reset_and_get_address()));
   if (status.is_error()) {
     FX_LOGS(ERROR) << "fdio_open_fd(/blob) failed: " << status.status_string();
     return status;

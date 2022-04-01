@@ -86,10 +86,13 @@ impl RewriteManager {
         let result = async {
             // TODO(fxbug.dev/83342): We need to reopen because `resolve_succeeds_with_broken_minfs`
             // expects it, this should be removed once the test is fixed.
-            let data_proxy =
-                io_util::directory::open_directory(&data_proxy, ".", fio::OPEN_RIGHT_WRITABLE)
-                    .await
-                    .context("opening data-proxy directory")?;
+            let data_proxy = io_util::directory::open_directory(
+                &data_proxy,
+                ".",
+                fio::OpenFlags::RIGHT_WRITABLE,
+            )
+            .await
+            .context("opening data-proxy directory")?;
 
             let temp_filename = &format!("{dynamic_rules_path}.new");
 
@@ -337,7 +340,8 @@ impl<N> RewriteManagerBuilder<N> {
             .as_ref()
             .ok_or_else(|| LoadRulesError::DirOpen(anyhow!("failed to open config directory")))?;
         let file_proxy =
-            io_util::directory::open_file(&dir_proxy, &path, fio::OPEN_RIGHT_READABLE).await?;
+            io_util::directory::open_file(&dir_proxy, &path, fio::OpenFlags::RIGHT_READABLE)
+                .await?;
         let contents = io_util::read_file(&file_proxy).await.map_err(LoadRulesError::ReadFile)?;
         let RuleConfig::Version1(rules) = serde_json::from_str(&contents)?;
         Ok(rules)
@@ -455,7 +459,7 @@ pub(crate) mod tests {
         let dir = path.parent().unwrap().to_str().unwrap().to_string();
         let proxy = io_util::directory::open_in_namespace(
             &dir,
-            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+            io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
         )
         .ok();
         (proxy, filename)

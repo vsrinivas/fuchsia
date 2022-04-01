@@ -108,16 +108,18 @@ async fn connect_to_harness() -> io_test::Io1HarnessProxy {
 ///
 /// Must support read, write, execute.
 fn get_supported_dir_rights(_config: &io_test::Io1Config) -> fio::OpenFlags {
-    fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE
+    fio::OpenFlags::RIGHT_READABLE
+        | fio::OpenFlags::RIGHT_WRITABLE
+        | fio::OpenFlags::RIGHT_EXECUTABLE
 }
 
 /// Returns the aggregate of all rights that are supported for File objects.
 ///
 /// Must support read, and optionally, write (if immutable_file == true).
 fn get_supported_file_rights(config: &io_test::Io1Config) -> fio::OpenFlags {
-    let mut rights = fio::OPEN_RIGHT_READABLE;
+    let mut rights = fio::OpenFlags::RIGHT_READABLE;
     if !config.immutable_file.unwrap_or_default() {
-        rights |= fio::OPEN_RIGHT_WRITABLE;
+        rights |= fio::OpenFlags::RIGHT_WRITABLE;
     }
     rights
 }
@@ -126,12 +128,12 @@ fn get_supported_file_rights(config: &io_test::Io1Config) -> fio::OpenFlags {
 ///
 /// Must support both read and write.
 fn get_supported_vmofile_rights() -> fio::OpenFlags {
-    fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE
+    fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE
 }
 
 /// Returns the aggregate of all rights that are supported for ExecFile objects.
 ///
 /// Must support both read and execute.
 fn get_supported_execfile_rights() -> fio::OpenFlags {
-    fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE
+    fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE
 }

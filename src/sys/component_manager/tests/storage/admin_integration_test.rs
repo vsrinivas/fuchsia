@@ -46,7 +46,7 @@ fn new_data_user_mock<T: Into<String>, U: Into<String>>(
             let file = io_util::open_file(
                 &data_handle,
                 filename_clone.as_ref(),
-                fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
+                fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
             )
             .expect("failed to open file");
             io_util::write_file(&file, &contents_clone).await.expect("write file failed");
@@ -126,7 +126,7 @@ async fn single_storage_user() {
     storage_admin
         .open_component_storage(
             &storage_user_moniker_with_instances,
-            fio::OPEN_RIGHT_READABLE,
+            fio::OpenFlags::RIGHT_READABLE,
             0,
             node_server,
         )
@@ -137,7 +137,8 @@ async fn single_storage_user() {
         .await
         .expect("Error reading directory");
     assert_eq!(filenames, hashset! {"file".to_string()});
-    let file = io_util::open_file(&dir_proxy, "file".as_ref(), fio::OPEN_RIGHT_READABLE).unwrap();
+    let file =
+        io_util::open_file(&dir_proxy, "file".as_ref(), fio::OpenFlags::RIGHT_READABLE).unwrap();
     assert_eq!(io_util::file::read_to_string(&file).await.unwrap(), "data".to_string());
 }
 

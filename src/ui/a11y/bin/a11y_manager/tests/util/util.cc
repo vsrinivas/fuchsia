@@ -29,7 +29,8 @@ char *ReadFile(vfs::internal::Node *node, int length, char *buffer) {
 int OpenAsFD(vfs::internal::Node *node, async_dispatcher_t *dispatcher) {
   zx::channel local, remote;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
-  EXPECT_EQ(ZX_OK, node->Serve(fuchsia::io::OPEN_RIGHT_READABLE, std::move(remote), dispatcher));
+  EXPECT_EQ(ZX_OK,
+            node->Serve(fuchsia::io::OpenFlags::RIGHT_READABLE, std::move(remote), dispatcher));
   int fd = -1;
   EXPECT_EQ(ZX_OK, fdio_fd_create(local.release(), &fd));
   return fd;

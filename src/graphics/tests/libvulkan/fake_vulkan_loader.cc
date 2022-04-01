@@ -34,10 +34,11 @@ class LoaderImpl final : public fuchsia::vulkan::loader::Loader {
     // libvulkan_fake.so is located inside this package.
     std::string load_path = "/pkg/lib/" + name;
     int fd;
-    zx_status_t status = fdio_open_fd(load_path.c_str(),
-                                      static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE |
-                                                            fuchsia::io::OPEN_RIGHT_EXECUTABLE),
-                                      &fd);
+    zx_status_t status =
+        fdio_open_fd(load_path.c_str(),
+                     static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE |
+                                           fuchsia::io::OpenFlags::RIGHT_EXECUTABLE),
+                     &fd);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Could not open path " << load_path << ":" << status;
       callback({});
@@ -55,7 +56,7 @@ class LoaderImpl final : public fuchsia::vulkan::loader::Loader {
   void ConnectToDeviceFs(zx::channel channel) override {
     // The fake libvulkan implementation expects to be able to read
     // libvulkan_fake.json from the device fs.
-    fdio_open("/pkg/data/manifest", static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE),
+    fdio_open("/pkg/data/manifest", static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE),
               channel.release());
   }
   void GetSupportedFeatures(GetSupportedFeaturesCallback callback) override {
@@ -69,7 +70,7 @@ class LoaderImpl final : public fuchsia::vulkan::loader::Loader {
 
   void ConnectToManifestFs(fuchsia::vulkan::loader::ConnectToManifestOptions options,
                            zx::channel channel) override {
-    fdio_open("/pkg/data/manifest", static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE),
+    fdio_open("/pkg/data/manifest", static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE),
               channel.release());
   }
 

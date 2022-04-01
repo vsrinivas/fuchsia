@@ -70,7 +70,8 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
 
   // Push the bash script to the guest.
   fidl::InterfaceHandle<fuchsia::io::File> put_remote;
-  ASSERT_OK(fdio_open(kTestScriptSource, static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE),
+  ASSERT_OK(fdio_open(kTestScriptSource,
+                      static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE),
                       put_remote.NewRequest().TakeChannel().release()));
 
   status.reset();
@@ -174,8 +175,8 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
   fidl::InterfaceHandle<fuchsia::io::File> get_remote;
   ASSERT_OK(fdio_open(
       kHostOuputCopyLocation,
-      static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_WRITABLE | fuchsia::io::OPEN_FLAG_CREATE |
-                            fuchsia::io::OPEN_FLAG_TRUNCATE),
+      static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_WRITABLE |
+                            fuchsia::io::OpenFlags::CREATE | fuchsia::io::OpenFlags::TRUNCATE),
       get_remote.NewRequest().TakeChannel().release()));
 
   status.reset();
@@ -249,7 +250,7 @@ TEST_F(GuestInteractionTest, GrpcPutGetTest) {
 
   // Push the test file to the guest
   fidl::InterfaceHandle<fuchsia::io::File> put_remote;
-  ASSERT_OK(fdio_open(test_file, static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE),
+  ASSERT_OK(fdio_open(test_file, static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE),
                       put_remote.NewRequest().TakeChannel().release()));
 
   status.reset();
@@ -265,8 +266,8 @@ TEST_F(GuestInteractionTest, GrpcPutGetTest) {
   fidl::InterfaceHandle<fuchsia::io::File> get_remote;
   ASSERT_OK(fdio_open(
       host_verification_file,
-      static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_WRITABLE | fuchsia::io::OPEN_FLAG_CREATE |
-                            fuchsia::io::OPEN_FLAG_TRUNCATE),
+      static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_WRITABLE |
+                            fuchsia::io::OpenFlags::CREATE | fuchsia::io::OpenFlags::TRUNCATE),
       get_remote.NewRequest().TakeChannel().release()));
 
   status.reset();

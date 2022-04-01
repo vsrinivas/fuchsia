@@ -92,8 +92,8 @@ TEST(ServiceProxyDirTest, Simple) {
     ASSERT_OK(zx::channel::create(0, &h1, &h2));
 
     ASSERT_OK(fidl::WireCall<fio::Directory>(zx::unowned_channel(proxy_dir_client))
-                  ->Open(fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable |
-                             fio::wire::kOpenFlagDescribe,
+                  ->Open(fio::wire::OpenFlags::kRightReadable |
+                             fio::wire::OpenFlags::kRightWritable | fio::wire::OpenFlags::kDescribe,
                          0755, fidl::StringView(kProxyEchoString), std::move(h1))
                   .status());
 
@@ -130,8 +130,8 @@ TEST(ServiceProxyDirTest, Simple) {
     ASSERT_OK(zx::channel::create(0, &h1, &h2));
 
     ASSERT_OK(fidl::WireCall<fio::Directory>(zx::unowned_channel(proxy_dir_client))
-                  ->Open(fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable |
-                             fio::wire::kOpenFlagDescribe,
+                  ->Open(fio::wire::OpenFlags::kRightReadable |
+                             fio::wire::OpenFlags::kRightWritable | fio::wire::OpenFlags::kDescribe,
                          0755, fidl::StringView(kEchoString), std::move(h1))
                   .status());
 

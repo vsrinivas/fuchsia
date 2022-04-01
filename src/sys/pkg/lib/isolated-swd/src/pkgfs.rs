@@ -69,7 +69,7 @@ impl Pkgfs {
     /// Get a handle to the root directory of the pkgfs.
     pub fn root_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error> {
         let (root_clone, server_end) = zx::Channel::create()?;
-        self.root.clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end.into())?;
+        self.root.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, server_end.into())?;
         Ok(root_clone.into())
     }
 }

@@ -85,7 +85,7 @@ async fn get_attr_per_package_source(source: PackageSource) {
         root_dir,
         ".",
         Args {
-            open_flags: fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            open_flags: fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
             expected_mode: fio::MODE_TYPE_DIRECTORY
                 | if source.is_pkgdir() {
                     // "mode protection write bit and group and other bytes not set"
@@ -128,7 +128,7 @@ async fn get_attr_per_package_source(source: PackageSource) {
         root_dir,
         "file",
         Args {
-            open_flags: fio::OPEN_RIGHT_READABLE,
+            open_flags: fio::OpenFlags::RIGHT_READABLE,
             expected_mode: fio::MODE_TYPE_FILE | 0o500,
             id_verifier: Box::new(AnyU64),
             expected_content_size: 4,
@@ -244,9 +244,10 @@ async fn close() {
 async fn close_per_package_source(source: PackageSource) {
     let root_dir = source.dir;
     async fn verify_close(root_dir: &fio::DirectoryProxy, path: &str, mode: u32) {
-        let node = io_util::directory::open_node(root_dir, path, fio::OPEN_RIGHT_READABLE, mode)
-            .await
-            .unwrap();
+        let node =
+            io_util::directory::open_node(root_dir, path, fio::OpenFlags::RIGHT_READABLE, mode)
+                .await
+                .unwrap();
 
         let () = node.close().await.unwrap().map_err(zx::Status::from_raw).unwrap();
 
@@ -288,7 +289,7 @@ async fn describe_per_package_source(source: PackageSource) {
 }
 
 async fn assert_describe_directory(package_root: &fio::DirectoryProxy, path: &str) {
-    for flag in [fio::OpenFlags::empty(), fio::OPEN_FLAG_NODE_REFERENCE] {
+    for flag in [fio::OpenFlags::empty(), fio::OpenFlags::NODE_REFERENCE] {
         let node =
             io_util::directory::open_node(package_root, path, flag, fio::MODE_TYPE_DIRECTORY)
                 .await
@@ -312,7 +313,7 @@ async fn verify_describe_directory_success(node: fio::NodeProxy) -> Result<(), E
 }
 
 async fn assert_describe_file(package_root: &fio::DirectoryProxy, path: &str) {
-    for flag in [fio::OPEN_RIGHT_READABLE, fio::OPEN_FLAG_NODE_REFERENCE] {
+    for flag in [fio::OpenFlags::RIGHT_READABLE, fio::OpenFlags::NODE_REFERENCE] {
         let node = io_util::directory::open_node(package_root, path, flag, 0).await.unwrap();
         if let Err(e) = verify_describe_content_file(node, flag).await {
             panic!(
@@ -328,7 +329,7 @@ async fn verify_describe_content_file(
     node: fio::NodeProxy,
     flag: fio::OpenFlags,
 ) -> Result<(), Error> {
-    if flag.intersects(fio::OPEN_FLAG_NODE_REFERENCE) {
+    if flag.intersects(fio::OpenFlags::NODE_REFERENCE) {
         match node.describe().await {
             Ok(fio::NodeInfo::Service(fio::Service)) => Ok(()),
             Ok(other) => Err(anyhow!("wrong node type returned: {:?}", other)),
@@ -349,7 +350,7 @@ async fn verify_describe_content_file(
 }
 
 async fn assert_describe_meta_file(package_root: &fio::DirectoryProxy, path: &str) {
-    for flag in [fio::OpenFlags::empty(), fio::OPEN_FLAG_NODE_REFERENCE] {
+    for flag in [fio::OpenFlags::empty(), fio::OpenFlags::NODE_REFERENCE] {
         let node = io_util::directory::open_node(package_root, path, flag, fio::MODE_TYPE_FILE)
             .await
             .unwrap();
@@ -407,7 +408,7 @@ async fn set_flags_per_package_source(source: PackageSource) {
     };
     {
         let outcome =
-            do_set_flags(package_root, "meta", fio::MODE_TYPE_FILE, fio::OPEN_FLAG_APPEND).await;
+            do_set_flags(package_root, "meta", fio::MODE_TYPE_FILE, fio::OpenFlags::APPEND).await;
         if source.is_pkgdir() {
             // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
             outcome.assert_ok();
@@ -428,7 +429,7 @@ async fn set_flags_per_package_source(source: PackageSource) {
     };
     {
         let outcome =
-            do_set_flags(package_root, "meta/file", fio::MODE_TYPE_FILE, fio::OPEN_FLAG_APPEND)
+            do_set_flags(package_root, "meta/file", fio::MODE_TYPE_FILE, fio::OpenFlags::APPEND)
                 .await;
         if source.is_pkgdir() {
             // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
@@ -451,9 +452,10 @@ async fn do_set_flags<'a>(
     mode: u32,
     argument: fio::OpenFlags,
 ) -> SetFlagsOutcome<'a> {
-    let node = io_util::directory::open_node(package_root, path, fio::OPEN_RIGHT_READABLE, mode)
-        .await
-        .unwrap();
+    let node =
+        io_util::directory::open_node(package_root, path, fio::OpenFlags::RIGHT_READABLE, mode)
+            .await
+            .unwrap();
 
     let result = node.set_flags(argument).await.map(zx::Status::ok);
     SetFlagsOutcome { path, mode: Mode(mode), result, argument }

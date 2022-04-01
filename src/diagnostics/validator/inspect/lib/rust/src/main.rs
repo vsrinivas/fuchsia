@@ -605,7 +605,7 @@ fn make_diagnostics_dir<T: ServiceObjTrait>(fs: &mut ServiceFs<T>) -> Arc<Simple
     let scope = ExecutionScope::new();
     dir.clone().open(
         scope,
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         fio::MODE_TYPE_DIRECTORY,
         Path::dot(),
         server_end,

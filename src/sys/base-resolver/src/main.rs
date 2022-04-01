@@ -59,7 +59,7 @@ enum Services {
 async fn serve(mut stream: ComponentResolverRequestStream) -> anyhow::Result<()> {
     let packages_dir = io_util::open_directory_in_namespace(
         "/pkgfs/packages",
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
     )
     .context("failed to open /pkgfs")?;
     while let Some(ComponentResolverRequest::Resolve { component_url, responder }) =
@@ -150,7 +150,7 @@ async fn resolve_package(
     let dir = io_util::directory::open_directory(
         packages_dir,
         &format!("{}/0", package_name),
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
     )
     .await
     .map_err(ResolverError::PackageNotFound)?;
@@ -248,7 +248,7 @@ mod tests {
         let (proxy, server_end) = create_proxy::<fio::DirectoryMarker>()
             .context("failed to create DirectoryProxy/Server pair")?;
         pseudo_dir.open(
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
             fio::MODE_TYPE_DIRECTORY,
             ".",
             ServerEnd::new(server_end.into_channel()),
@@ -260,8 +260,9 @@ mod tests {
     async fn resolves_package_with_executable_rights() {
         let pkg_url = PkgUrl::new_package("fuchsia.com".into(), "/test-package".into(), None)
             .expect("failed to create test PkgUrl");
-        let flag_verifier =
-            Arc::new(FlagVerifier(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE));
+        let flag_verifier = Arc::new(FlagVerifier(
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+        ));
         let pkgfs_dir = serve_pkgfs(Arc::new(
             MockDir::new()
                 .add_entry("test-package", Arc::new(MockDir::new().add_entry("0", flag_verifier))),
