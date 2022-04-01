@@ -28,7 +28,7 @@ class ServiceHandlerInterface {
   // User-defined action for handling a connection attempt to a
   // member FIDL protocol defined by |Protocol|.
   template <typename Protocol>
-  using MemberHandler = fit::function<zx::status<>(::fidl::ServerEnd<Protocol>)>;
+  using MemberHandler = fit::function<void(::fidl::ServerEnd<Protocol>)>;
 
   // Add a |member| to the instance, which will be handled by |handler|.
   //
@@ -48,7 +48,7 @@ class ServiceHandlerInterface {
  protected:
   // User-defined action for handling a connection attempt to any
   // member FIDL protocol.
-  using AnyMemberHandler = fit::function<zx::status<>(zx::channel)>;
+  using AnyMemberHandler = fit::function<void(zx::channel)>;
 
   // Add a |member| to the instance, whose connection will be handled by |handler|.
   //

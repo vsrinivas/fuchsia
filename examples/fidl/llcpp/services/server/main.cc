@@ -61,16 +61,14 @@ int main(int argc, const char** argv) {
 
   // Example of serving members of a service instance.
   auto add_regular_result = my_service.add_regular_echo(
-      [&loop](fidl::ServerEnd<fuchsia_examples::Echo> request_channel) -> zx::status<> {
+      [&loop](fidl::ServerEnd<fuchsia_examples::Echo> request_channel) -> void {
         new EchoImpl(false, loop.dispatcher(), std::move(request_channel));
-        return zx::ok();
       });
   ZX_ASSERT(add_regular_result.is_ok());
 
   auto add_reversed_result = my_service.add_reversed_echo(
-      [&loop](fidl::ServerEnd<fuchsia_examples::Echo> request_channel) -> zx::status<> {
+      [&loop](fidl::ServerEnd<fuchsia_examples::Echo> request_channel) -> void {
         new EchoImpl(true, loop.dispatcher(), std::move(request_channel));
-        return zx::ok();
       });
   ZX_ASSERT(add_reversed_result.is_ok());
 

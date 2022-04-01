@@ -101,13 +101,12 @@ class OutgoingDirectoryTest : public gtest::RealLoopFixture {
   void InstallServiceHandler(fuchsia_examples::EchoService::Handler& service_handler,
                              EchoImpl* impl, bool reversed) {
     auto handler = [dispatcher = dispatcher(),
-                    impl = impl](fidl::ServerEnd<fuchsia_examples::Echo> request) -> zx::status<> {
+                    impl = impl](fidl::ServerEnd<fuchsia_examples::Echo> request) -> void {
       // This is invoked during handler unbound. We're not testing for that
       // here so we just provide a no-op callback.
       auto _on_unbound = [](EchoImpl* impl, fidl::UnbindInfo info,
                             fidl::ServerEnd<fuchsia_examples::Echo> server_end) {};
       fidl::BindServer(dispatcher, std::move(request), impl, std::move(_on_unbound));
-      return zx::ok();
     };
     auto result = reversed ? service_handler.add_reversed_echo(std::move(handler))
                            : service_handler.add_regular_echo(std::move(handler));
@@ -471,9 +470,7 @@ TEST_P(OutgoingDirectoryPathParameterizedFixture, BadServicePaths) {
   component::ServiceHandler service_handler;
   fuchsia_examples::EchoService::Handler echo_service_handler(&service_handler);
   EchoImpl regular_impl(/*reversed=*/false);
-  auto noop_handler = [](fidl::ServerEnd<fuchsia_examples::Echo> _request) -> zx::status<> {
-    return zx::ok();
-  };
+  auto noop_handler = [](fidl::ServerEnd<fuchsia_examples::Echo> _request) -> void {};
   ZX_ASSERT(echo_service_handler.add_regular_echo(std::move(noop_handler)).is_ok());
 
   auto service_and_instance_names = GetParam();

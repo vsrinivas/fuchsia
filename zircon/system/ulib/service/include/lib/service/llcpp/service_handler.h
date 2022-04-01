@@ -41,7 +41,8 @@ class ServiceHandler final : public fidl::ServiceHandlerInterface {
   zx::status<> AddAnyMember(cpp17::string_view member, AnyMemberHandler handler) override {
     // Bridge for fs::Service Callable argument
     auto bridge_func = [handler = std::move(handler)](zx::channel request_channel) {
-      return handler(std::move(request_channel)).status_value();
+      handler(std::move(request_channel));
+      return ZX_OK;
     };
     return zx::make_status(
         dir_->AddEntry(member, fbl::MakeRefCounted<fs::Service>(std::move(bridge_func))));

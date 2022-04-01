@@ -68,7 +68,6 @@ int main(int argc, const char** argv) {
       my_service.add_regular_echo([&loop](fidl::ServerEnd<fuchsia_examples::Echo> request_channel) {
         std::unique_ptr regular_impl = std::make_unique<EchoImpl>(false);
         regular_impl->Bind(std::move(regular_impl), loop.dispatcher(), std::move(request_channel));
-        return zx::ok();
       });
   ZX_ASSERT(add_regular_result.is_ok());
 
@@ -77,7 +76,6 @@ int main(int argc, const char** argv) {
         std::unique_ptr reversed_impl = std::make_unique<EchoImpl>(true);
         reversed_impl->Bind(std::move(reversed_impl), loop.dispatcher(),
                             std::move(request_channel));
-        return zx::ok();
       });
   ZX_ASSERT(add_reversed_result.is_ok());
 

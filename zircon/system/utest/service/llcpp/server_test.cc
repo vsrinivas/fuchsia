@@ -75,16 +75,14 @@ class ServerTest : public zxtest::Test {
     EchoService::Handler my_service(&handler);
 
     auto add_foo_result =
-        my_service.add_foo([this, foo_impl](fidl::ServerEnd<Echo> request_channel) -> zx::status<> {
+        my_service.add_foo([this, foo_impl](fidl::ServerEnd<Echo> request_channel) -> void {
           fidl::BindServer(loop_.dispatcher(), std::move(request_channel), foo_impl);
-          return zx::ok();
         });
     ZX_ASSERT(add_foo_result.is_ok());
 
     auto add_bar_result =
-        my_service.add_bar([this, bar_impl](fidl::ServerEnd<Echo> request_channel) -> zx::status<> {
+        my_service.add_bar([this, bar_impl](fidl::ServerEnd<Echo> request_channel) -> void {
           fidl::BindServer(loop_.dispatcher(), std::move(request_channel), bar_impl);
-          return zx::ok();
         });
     ZX_ASSERT(add_bar_result.is_ok());
 

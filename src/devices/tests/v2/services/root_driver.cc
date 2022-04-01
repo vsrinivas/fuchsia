@@ -48,10 +48,9 @@ class RootDriver : public fidl::WireServer<ft::ControlPlane>,
     component::ServiceHandler handler;
     ft::Device::Handler device(&handler);
 
-    auto control = [this](fidl::ServerEnd<ft::ControlPlane> server_end) -> zx::status<> {
+    auto control = [this](fidl::ServerEnd<ft::ControlPlane> server_end) -> void {
       fidl::BindServer<fidl::WireServer<ft::ControlPlane>>(dispatcher_, std::move(server_end),
                                                            this);
-      return zx::ok();
     };
     auto result = device.add_control(control);
     if (result.is_error()) {
@@ -59,9 +58,8 @@ class RootDriver : public fidl::WireServer<ft::ControlPlane>,
       return result.take_error();
     }
 
-    auto data = [this](fidl::ServerEnd<ft::DataPlane> server_end) -> zx::status<> {
+    auto data = [this](fidl::ServerEnd<ft::DataPlane> server_end) -> void {
       fidl::BindServer<fidl::WireServer<ft::DataPlane>>(dispatcher_, std::move(server_end), this);
-      return zx::ok();
     };
     result = device.add_data(data);
     if (result.is_error()) {

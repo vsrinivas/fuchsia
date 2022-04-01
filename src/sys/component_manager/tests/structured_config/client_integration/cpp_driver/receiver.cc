@@ -94,10 +94,9 @@ class ReceiverDriver : public fidl::WireServer<scr::ConfigReceiverPuppet> {
     component::ServiceHandler handler;
     scrs::ConfigService::Handler device(&handler);
 
-    auto puppet = [this](fidl::ServerEnd<scr::ConfigReceiverPuppet> server_end) -> zx::status<> {
+    auto puppet = [this](fidl::ServerEnd<scr::ConfigReceiverPuppet> server_end) -> void {
       fidl::BindServer<fidl::WireServer<scr::ConfigReceiverPuppet>>(dispatcher_,
                                                                     std::move(server_end), this);
-      return zx::ok();
     };
 
     auto result = device.add_puppet(puppet);

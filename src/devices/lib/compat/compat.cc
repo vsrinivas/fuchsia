@@ -137,12 +137,10 @@ fpromise::promise<void, zx_status_t> Interop::ExportChild(Child* child) {
   // Expose the fuchsia.driver.compat.Service instance.
   service::ServiceHandler handler;
   fuchsia_driver_compat::Service::Handler compat_service(&handler);
-  auto device =
-      [this,
-       child](fidl::ServerEnd<fuchsia_driver_compat::Device> server_end) mutable -> zx::status<> {
+  auto device = [this,
+                 child](fidl::ServerEnd<fuchsia_driver_compat::Device> server_end) mutable -> void {
     fidl::BindServer<fidl::WireServer<fuchsia_driver_compat::Device>>(
         dispatcher_, std::move(server_end), &child->compat_device());
-    return zx::ok();
   };
   zx::status<> status = compat_service.add_device(std::move(device));
   if (status.is_error()) {

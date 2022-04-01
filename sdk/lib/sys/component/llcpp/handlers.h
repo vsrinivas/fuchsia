@@ -58,11 +58,7 @@ class ServiceHandler final : public fidl::ServiceHandlerInterface {
     // Since AnyMemberHandler is a protected type of this class' parent class,
     // |fidl::ServiceHandlerInterface|, wrap the type into a public one.
     AnyHandler bridge_func = [handler = std::move(handler)](zx::channel request_channel) {
-      // We scrub the return value of |handler| which is a |zx::status| because
-      // it is unused by the internal VFS implementation.
-      // TODO(https://fxbug.dev/92898): Remove the return type from |AnyMemberHandler|
-      // and |MemberHandler| in |ServiceHandlerInterface|.
-      (void)handler(std::move(request_channel));
+      handler(std::move(request_channel));
     };
     handlers_[owned_member] = std::move(bridge_func);
     return zx::ok();
