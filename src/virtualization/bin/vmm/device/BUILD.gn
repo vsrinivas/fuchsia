@@ -554,6 +554,7 @@ executable("device_unittests") {
   testonly = true
 
   sources = [
+    "phys_mem_unittest.cc",
     "qcow_unittest.cc",
     "request_queue_unittest.cc",
     "volatile_write_block_dispatcher_unittest.cc",
@@ -565,6 +566,7 @@ executable("device_unittests") {
     "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -578,7 +580,7 @@ fuchsia_unittest_package("device_unittests_package") {
   deps = [ ":device_unittests" ]
   test_specs = {
     log_settings = {
-      max_severity = "ERROR"
+      max_severity = "FATAL"
     }
   }
 }

@@ -18,30 +18,10 @@
 #include "src/virtualization/bin/vmm/io.h"
 #include "src/virtualization/bin/vmm/vcpu.h"
 
-// For devices that can have their addresses anywhere we run a dynamic
-// allocator that starts fairly high in the guest physical address space.
-constexpr zx_gpaddr_t kFirstDynamicDeviceAddr = 0xb00000000;
-
-// Arbitrarily large number used when restricting guest memory ranges. If a restricted range
-// has this size, it means "restrict from the base address until +INF".
-constexpr uint64_t kGuestMemoryAllRemainingRange = 1ul << 52;
-
 enum class TrapType {
   MMIO_SYNC = 0,
   MMIO_BELL = 1,
   PIO_SYNC = 2,
-};
-
-struct GuestMemoryRegion {
-  // Base address of a region of guest physical address space.
-  zx_gpaddr_t base;
-  // Size of a region of guest physical address space in bytes.
-  uint64_t size;
-
-  constexpr static bool CompareMinByBase(const GuestMemoryRegion& lhs,
-                                         const GuestMemoryRegion& rhs) {
-    return lhs.base < rhs.base;
-  }
 };
 
 class Guest {

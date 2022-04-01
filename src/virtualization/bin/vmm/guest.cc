@@ -245,8 +245,7 @@ zx_status_t Guest::Init(uint64_t guest_memory) {
     }
   }
 
-  // TODO(fxb/94972): Use memory layout information in PhysMem.
-  status = phys_mem_.Init(std::move(vmo));
+  status = phys_mem_.Init(vmar_regions, std::move(vmo));
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to initialize guest physical memory";
     return status;

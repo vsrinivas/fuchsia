@@ -7,11 +7,36 @@
 
 #include <lib/stdcompat/span.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+
+// For devices that can have their addresses anywhere we run a dynamic
+// allocator that starts fairly high in the guest physical address space.
+constexpr zx_gpaddr_t kFirstDynamicDeviceAddr = 0xb00000000;
+
+// Arbitrarily large number used when restricting guest memory ranges. If a restricted range
+// has this size, it means "restrict from the base address until +INF".
+constexpr uint64_t kGuestMemoryAllRemainingRange = 1ul << 52;
+
+struct GuestMemoryRegion {
+  // Base address of a region of guest physical address space.
+  zx_gpaddr_t base;
+  // Size of a region of guest physical address space in bytes.
+  uint64_t size;
+
+  constexpr static bool CompareMinByBase(const GuestMemoryRegion& lhs,
+                                         const GuestMemoryRegion& rhs) {
+    return lhs.base < rhs.base;
+  }
+};
 
 class PhysMem {
  public:
+  // Initializes this PhysMem object with all of guest memory mapped into a child VMAR.
   zx_status_t Init(zx::vmo vmo);
+
+  // Initializes this PhysMem object with only valid guest memory regions mapped into a child VMAR.
+  zx_status_t Init(const std::vector<GuestMemoryRegion>& guest_mem, zx::vmo vmo);
 
   ~PhysMem();
 
@@ -77,6 +102,7 @@ class PhysMem {
   zx::vmo vmo_;
   size_t vmo_size_ = 0;
   zx_vaddr_t addr_ = 0;
+  zx::vmar child_vmar_;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_PHYS_MEM_H_
