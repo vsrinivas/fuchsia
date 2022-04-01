@@ -45,7 +45,8 @@ namespace fdf {
 //
 class Channel {
  public:
-  explicit Channel(fdf_handle_t channel = FDF_HANDLE_INVALID) : channel_(channel) {}
+  Channel() : channel_(FDF_HANDLE_INVALID) {}
+  explicit Channel(fdf_handle_t channel) : channel_(channel) {}
 
   Channel(const Channel& to_copy) = delete;
   Channel& operator=(const Channel& other) = delete;
