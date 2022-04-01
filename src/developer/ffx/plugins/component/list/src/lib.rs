@@ -227,7 +227,6 @@ mod test {
             is_cmx: false,
             url: "fuchsia-boot:///#meta/root.cm".to_owned(),
             is_running: false,
-            ancestors: vec![],
             children: vec![
                 Component {
                     name: "appmgr".to_owned(),
@@ -235,7 +234,6 @@ mod test {
                     is_cmx: false,
                     url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".to_owned(),
                     is_running: true,
-                    ancestors: vec!["/".to_owned()],
                     children: vec![
                         Component {
                             name: "foo.cmx".to_owned(),
@@ -243,7 +241,6 @@ mod test {
                             is_cmx: true,
                             url: "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx".to_owned(),
                             is_running: true,
-                            ancestors: vec!["/".to_owned(), "appmgr".to_owned()],
                             children: vec![],
                         },
                         Component {
@@ -252,7 +249,6 @@ mod test {
                             is_cmx: true,
                             url: "fuchsia-pkg://fuchsia.com/bar#meta/bar.cmx".to_owned(),
                             is_running: true,
-                            ancestors: vec!["/".to_owned(), "appmgr".to_owned()],
                             children: vec![],
                         },
                     ],
@@ -263,7 +259,6 @@ mod test {
                     is_cmx: false,
                     url: "fuchsia-pkg://fuchsia.com/sys#meta/sys.cm".to_owned(),
                     is_running: false,
-                    ancestors: vec!["/".to_owned()],
                     children: vec![
                         Component {
                             name: "baz".to_owned(),
@@ -271,7 +266,6 @@ mod test {
                             is_cmx: false,
                             url: "fuchsia-pkg://fuchsia.com/baz#meta/baz.cm".to_owned(),
                             is_running: true,
-                            ancestors: vec!["/".to_owned(), "sys".to_owned()],
                             children: vec![],
                         },
                         Component {
@@ -280,18 +274,12 @@ mod test {
                             is_cmx: false,
                             url: "fuchsia-pkg://fuchsia.com/fuzz#meta/fuzz.cm".to_owned(),
                             is_running: false,
-                            ancestors: vec!["/".to_owned(), "sys".to_owned()],
                             children: vec![Component {
                                 name: "hello".to_owned(),
                                 moniker: AbsoluteMoniker::parse_str("/sys/fuzz/hello").unwrap(),
                                 is_cmx: false,
                                 url: "fuchsia-pkg://fuchsia.com/hello#meta/hello.cm".to_owned(),
                                 is_running: false,
-                                ancestors: vec![
-                                    "/".to_owned(),
-                                    "sys".to_owned(),
-                                    "fuzz".to_owned(),
-                                ],
                                 children: vec![],
                             }],
                         },

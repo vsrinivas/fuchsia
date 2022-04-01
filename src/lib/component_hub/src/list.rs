@@ -77,9 +77,6 @@ pub struct Component {
 
     // Children of this component.
     pub children: Vec<Component>,
-
-    // Names of all ancestors of this component, ordered from oldest to youngest.
-    pub ancestors: Vec<String>,
 }
 
 impl Component {
@@ -88,7 +85,6 @@ impl Component {
         child_moniker: String,
         abs_moniker: AbsoluteMoniker,
         hub_dir: Directory,
-        ancestors: Vec<String>,
     ) -> BoxFuture<'static, Result<Component>> {
         async move {
             let exec_fut = hub_dir.exists("exec");
@@ -100,22 +96,13 @@ impl Component {
             let (is_running, child_moniker, url) =
                 (exec_res?, moniker_res.unwrap_or(child_moniker), url_res?);
 
-            // Add this component to the list of ancestors for its children.
-            let mut child_ancestors = ancestors.clone();
-            child_ancestors.extend([child_moniker.clone()]);
-
             // Recurse on the CML children
             let mut future_children = vec![];
             let children_dir = hub_dir.open_dir_readable("children")?;
             for child_dir in children_dir.entries().await? {
                 let hub_dir = children_dir.open_dir_readable(&child_dir)?;
                 let future_moniker = abs_moniker.child(ChildMoniker::parse(&child_dir)?);
-                let future_child = Component::parse_recursive(
-                    child_dir,
-                    future_moniker,
-                    hub_dir,
-                    child_ancestors.clone(),
-                );
+                let future_child = Component::parse_recursive(child_dir, future_moniker, hub_dir);
                 future_children.push(future_child);
             }
 
@@ -134,7 +121,6 @@ impl Component {
                     abs_moniker.clone(),
                     url.clone(),
                     realm_dir,
-                    child_ancestors,
                 )
                 .await?;
                 children.extend(component.children);
@@ -147,7 +133,6 @@ impl Component {
                 is_cmx: false,
                 url,
                 is_running,
-                ancestors,
             })
         }
         .boxed()
@@ -158,14 +143,13 @@ impl Component {
         moniker: AbsoluteMoniker,
         hub_dir: Directory,
     ) -> BoxFuture<'static, Result<Component>> {
-        Component::parse_recursive(root_moniker, moniker, hub_dir, Vec::<String>::new())
+        Component::parse_recursive(root_moniker, moniker, hub_dir)
     }
 
     fn parse_cmx_component(
         name: String,
         moniker: AbsoluteMoniker,
         dir: Directory,
-        ancestors: Vec<String>,
     ) -> BoxFuture<'static, Result<Component>> {
         async move {
             // Runner CMX components may have child components
@@ -175,29 +159,13 @@ impl Component {
             let children = if dir.exists("c").await? {
                 let children_dir = dir.open_dir_readable("c")?;
 
-                let mut child_ancestors = ancestors.clone();
-                child_ancestors.extend([name.clone()]);
-
-                Component::parse_cmx_components_in_c_dir(
-                    children_dir,
-                    moniker.clone(),
-                    child_ancestors,
-                )
-                .await?
+                Component::parse_cmx_components_in_c_dir(children_dir, moniker.clone()).await?
             } else {
                 vec![]
             };
 
             // CMX components are always running if they exist in tree.
-            Ok(Component {
-                name,
-                moniker,
-                children,
-                is_cmx: true,
-                url,
-                is_running: true,
-                ancestors,
-            })
+            Ok(Component { name, moniker, children, is_cmx: true, url, is_running: true })
         }
         .boxed()
     }
@@ -207,22 +175,14 @@ impl Component {
         moniker: AbsoluteMoniker,
         url: String,
         realm_dir: Directory,
-        ancestors: Vec<String>,
     ) -> BoxFuture<'static, Result<Component>> {
         async move {
             let children_dir = realm_dir.open_dir_readable("c")?;
             let realms_dir = realm_dir.open_dir_readable("r")?;
 
-            let future_children = Component::parse_cmx_components_in_c_dir(
-                children_dir,
-                moniker.clone(),
-                ancestors.clone(),
-            );
-            let future_realms = Component::parse_cmx_realms_in_r_dir(
-                realms_dir,
-                moniker.clone(),
-                ancestors.clone(),
-            );
+            let future_children =
+                Component::parse_cmx_components_in_c_dir(children_dir, moniker.clone());
+            let future_realms = Component::parse_cmx_realms_in_r_dir(realms_dir, moniker.clone());
 
             let (children, realms) = join(future_children, future_realms).await;
             let mut children = children?;
@@ -239,7 +199,6 @@ impl Component {
                 is_cmx: true,
                 url,
                 is_running: true,
-                ancestors,
             })
         }
         .boxed()
@@ -248,7 +207,6 @@ impl Component {
     async fn parse_cmx_components_in_c_dir(
         children_dir: Directory,
         moniker: AbsoluteMoniker,
-        ancestors: Vec<String>,
     ) -> Result<Vec<Component>> {
         // Get all CMX child components
         let child_component_names = children_dir.entries().await?;
@@ -263,7 +221,6 @@ impl Component {
                     child_component_name.clone(),
                     child_moniker.clone(),
                     child_dir,
-                    ancestors.clone(),
                 );
                 future_children.push(future_child);
             }
@@ -276,7 +233,6 @@ impl Component {
     async fn parse_cmx_realms_in_r_dir(
         realms_dir: Directory,
         moniker: AbsoluteMoniker,
-        ancestors: Vec<String>,
     ) -> Result<Vec<Component>> {
         // Get all CMX child realms
         let mut future_realms = vec![];
@@ -291,7 +247,6 @@ impl Component {
                     child_moniker.clone(),
                     "".to_string(), // cmx realms don't have a url
                     child_realm_dir,
-                    ancestors.clone(),
                 );
                 future_realms.push(future_realm);
             }
@@ -337,7 +292,12 @@ impl Component {
     }
 
     fn has_ancestor(&self, component_name: String) -> bool {
-        self.ancestors.contains(&component_name)
+        for part in self.moniker.path() {
+            if part.to_string() == component_name {
+                return true;
+            }
+        }
+        false
     }
 
     fn has_descendant(&self, component_name: String) -> bool {
@@ -430,7 +390,6 @@ mod tests {
         assert!(!component.is_running);
         assert_eq!(component.name, "/");
         assert_eq!(component.url, "fuchsia-test://test.com/tmp");
-        assert!(component.ancestors.is_empty());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -455,7 +414,6 @@ mod tests {
         assert!(component.is_running);
         assert_eq!(component.name, "/");
         assert_eq!(component.url, "fuchsia-test://test.com/tmp");
-        assert!(component.ancestors.is_empty());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -492,7 +450,6 @@ mod tests {
         assert_eq!(component.name, "appmgr");
         assert_eq!(component.url, "fuchsia-test://test.com/appmgr");
         assert_eq!(component.children.len(), 1);
-        assert!(component.ancestors.is_empty());
 
         let child = component.children.get(0).unwrap();
         assert_eq!(child.name, "foo.cmx");
@@ -500,7 +457,6 @@ mod tests {
         assert!(child.is_running);
         assert!(child.is_cmx);
         assert!(child.children.is_empty());
-        assert_eq!(child.ancestors, ["appmgr"]);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -542,7 +498,6 @@ mod tests {
         assert_eq!(component.name, "appmgr");
         assert_eq!(component.url, "fuchsia-test://test.com/appmgr");
         assert_eq!(component.children.len(), 1);
-        assert!(component.ancestors.is_empty());
 
         let child = component.children.get(0).unwrap();
         assert_eq!(child.name, "foo.cmx");
@@ -550,7 +505,6 @@ mod tests {
         assert!(child.is_running);
         assert!(child.is_cmx);
         assert_eq!(child.children.len(), 1);
-        assert_eq!(child.ancestors, ["appmgr"]);
 
         let child = child.children.get(0).unwrap();
         assert_eq!(child.name, "bar.cmx");
@@ -558,7 +512,6 @@ mod tests {
         assert!(child.is_running);
         assert!(child.is_cmx);
         assert_eq!(child.children.len(), 0);
-        assert_eq!(child.ancestors, ["appmgr", "foo.cmx"]);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -585,7 +538,6 @@ mod tests {
         assert_eq!(component.name, "/");
         assert_eq!(component.url, "fuchsia-test://test.com/tmp");
         assert_eq!(component.children.len(), 1);
-        assert!(component.ancestors.is_empty());
 
         let child = component.children.get(0).unwrap();
         assert_eq!(child.name, "foo");
@@ -593,7 +545,6 @@ mod tests {
         assert!(!child.is_running);
         assert!(!child.is_cmx);
         assert!(child.children.is_empty());
-        assert_eq!(child.ancestors, ["/"]);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1021,7 +972,7 @@ mod tests {
         let root_dir = Directory::from_namespace(root.join("ancestor")).unwrap();
         let component = Component::parse(
             "ancestor".to_string(),
-            AbsoluteMoniker::parse_str("/ancestor/parent/foo/child/descendant").unwrap(),
+            AbsoluteMoniker::parse_str("/ancestor").unwrap(),
             root_dir,
         )
         .await

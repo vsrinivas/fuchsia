@@ -17,7 +17,7 @@ async fn list() {
     let hub_path = PathBuf::from("/hub");
     let hub_dir = Directory::from_namespace(hub_path).unwrap();
 
-    let list::Component { name, moniker, is_cmx, is_running, url, children, ancestors: _ancestors } =
+    let list::Component { name, moniker, is_cmx, is_running, url, children } =
         list::Component::parse(
             "test_root".to_string(),
             AbsoluteMoniker::parse_str("/test").unwrap(),
@@ -33,7 +33,7 @@ async fn list() {
     assert!(Regex::new(URL_REGEX).unwrap().is_match(&url));
     assert_eq!(children.len(), 1);
 
-    let list::Component { name, moniker, is_cmx, is_running, url, children, ancestors: _ancestors } =
+    let list::Component { name, moniker, is_cmx, is_running, url, children } =
         children.get(0).unwrap();
     assert_eq!(name, "foo");
     assert_eq!(moniker.to_string(), "/test/foo");

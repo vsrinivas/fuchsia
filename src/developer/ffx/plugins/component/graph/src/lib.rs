@@ -189,7 +189,6 @@ mod test {
             is_cmx: false,
             url: "".to_owned(),
             is_running: false,
-            ancestors: vec![],
             children: vec![
                 Component {
                     name: "appmgr".to_owned(),
@@ -197,7 +196,6 @@ mod test {
                     is_cmx: false,
                     url: "".to_owned(),
                     is_running: true,
-                    ancestors: vec!["/".to_owned()],
                     children: vec![
                         Component {
                             name: "foo.cmx".to_owned(),
@@ -205,7 +203,6 @@ mod test {
                             is_cmx: true,
                             url: "".to_owned(),
                             is_running: true,
-                            ancestors: vec!["/".to_owned(), "appmgr".to_owned()],
                             children: vec![],
                         },
                         Component {
@@ -214,7 +211,6 @@ mod test {
                             is_cmx: true,
                             url: "".to_owned(),
                             is_running: true,
-                            ancestors: vec!["/".to_owned(), "appmgr".to_owned()],
                             children: vec![],
                         },
                     ],
@@ -225,7 +221,6 @@ mod test {
                     is_cmx: false,
                     url: "".to_owned(),
                     is_running: false,
-                    ancestors: vec!["/".to_owned()],
                     children: vec![
                         Component {
                             name: "baz".to_owned(),
@@ -233,7 +228,6 @@ mod test {
                             is_cmx: false,
                             url: "".to_owned(),
                             is_running: true,
-                            ancestors: vec!["/".to_owned(), "sys".to_owned()],
                             children: vec![],
                         },
                         Component {
@@ -242,18 +236,12 @@ mod test {
                             is_cmx: false,
                             url: "".to_owned(),
                             is_running: false,
-                            ancestors: vec!["/".to_owned(), "sys".to_owned()],
                             children: vec![Component {
                                 name: "hello".to_owned(),
                                 moniker: AbsoluteMoniker::parse_str("/sys/fuzz/hello").unwrap(),
                                 is_cmx: false,
                                 url: "".to_owned(),
                                 is_running: false,
-                                ancestors: vec![
-                                    "/".to_owned(),
-                                    "sys".to_owned(),
-                                    "fuzz".to_owned(),
-                                ],
                                 children: vec![],
                             }],
                         },
