@@ -401,8 +401,10 @@ mod test {
     use fuchsia_pkg::MetaPackage;
     use fuchsia_pkg::{build_with_file_system, CreationManifest, FileSystem};
     use maplit::{btreemap, hashmap};
-    use pkg::repository::{RepositoryManager, RepositoryServer};
-    use pkg::test_utils::make_writable_empty_repository;
+    use pkg::{
+        manager::RepositoryManager, server::RepositoryServer,
+        test_utils::make_writable_empty_repository,
+    };
     use serde_json::json;
     use serde_json5;
     use std::collections::HashMap;

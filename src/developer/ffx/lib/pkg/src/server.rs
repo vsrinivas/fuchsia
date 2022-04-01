@@ -3,7 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    super::{Error, Repository, RepositoryId, RepositoryManager, Resource, ResourceRange},
+    crate::{
+        manager::RepositoryManager,
+        repository::{Error, Repository, RepositoryId},
+        resource::{Resource, ResourceRange},
+    },
     anyhow::Result,
     async_net::{TcpListener, TcpStream},
     chrono::Utc,
@@ -513,7 +517,7 @@ impl tokio::io::AsyncWrite for ConnectionStream {
 mod tests {
     use {
         super::*,
-        crate::{repository::RepositoryManager, test_utils::make_writable_empty_repository},
+        crate::{manager::RepositoryManager, test_utils::make_writable_empty_repository},
         anyhow::Result,
         assert_matches::assert_matches,
         bytes::Bytes,

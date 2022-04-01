@@ -24,10 +24,11 @@ use {
     itertools::Itertools as _,
     pkg::{
         config as pkg_config,
+        manager::RepositoryManager,
         repository::{
-            self, FileSystemRepository, HttpRepository, PmRepository, Repository,
-            RepositoryBackend, RepositoryManager, RepositoryServer,
+            self, FileSystemRepository, HttpRepository, PmRepository, Repository, RepositoryBackend,
         },
+        server::RepositoryServer,
     },
     protocols::prelude::*,
     std::{

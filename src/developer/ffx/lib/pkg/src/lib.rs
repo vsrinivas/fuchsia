@@ -3,5 +3,8 @@
 // found in the LICENSE file.
 
 pub mod config;
+pub mod manager;
 pub mod repository;
+pub mod resource;
+pub mod server;
 pub mod test_utils;

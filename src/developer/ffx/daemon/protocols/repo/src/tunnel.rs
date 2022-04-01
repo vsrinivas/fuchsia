@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_net_ext::SocketAddress as SocketAddressExt,
     fuchsia_async as fasync,
     futures::{channel::mpsc::UnboundedSender, StreamExt as _},
-    pkg::repository::ConnectionStream,
+    pkg::server::ConnectionStream,
     protocols::prelude::*,
     std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration},
 };

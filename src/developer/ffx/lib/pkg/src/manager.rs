@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::Repository,
+    crate::repository::Repository,
     parking_lot::RwLock,
     std::{collections::HashMap, sync::Arc},
 };

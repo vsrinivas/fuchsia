@@ -219,8 +219,10 @@ mod test {
     use fuchsia_async as fasync;
     use fuchsia_pkg::{build_with_file_system, CreationManifest, FileSystem, MetaPackage};
     use maplit::{btreemap, hashmap};
-    use pkg::repository::{RepositoryManager, RepositoryServer};
-    use pkg::test_utils::make_writable_empty_repository;
+    use pkg::{
+        manager::RepositoryManager, server::RepositoryServer,
+        test_utils::make_writable_empty_repository,
+    };
     use std::collections::HashMap;
     use std::convert::TryInto;
     use std::fs::create_dir;

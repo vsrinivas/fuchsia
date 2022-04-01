@@ -8,7 +8,10 @@
 //! - [TUF](https://theupdateframework.io/)
 
 use {
-    super::{Error, Repository, RepositoryBackend, Resource, ResourceRange},
+    crate::{
+        repository::{Error, Repository, RepositoryBackend},
+        resource::{Resource, ResourceRange},
+    },
     anyhow::{anyhow, Context, Result},
     errors::{ffx_bail, ffx_error},
     fidl_fuchsia_developer_ffx_ext::RepositorySpec,
@@ -270,8 +273,7 @@ mod test {
     use {
         super::*,
         crate::{
-            repository::{RepositoryManager, RepositoryServer},
-            test_utils::make_repository,
+            manager::RepositoryManager, server::RepositoryServer, test_utils::make_repository,
         },
         camino::Utf8Path,
         fuchsia_async as fasync,
