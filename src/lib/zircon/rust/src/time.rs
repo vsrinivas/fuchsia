@@ -440,7 +440,6 @@ mod tests {
         let slack = 0.millis();
         let ten_ms = 10.millis();
         let five_secs = 5.seconds();
-        let six_secs = 6.seconds();
 
         // Create a timer
         let timer = Timer::create().unwrap();
@@ -454,7 +453,7 @@ mod tests {
         // Set it, and soon it should signal.
         assert_eq!(timer.set(Time::after(five_secs), slack), Ok(()));
         assert_eq!(
-            timer.wait_handle(Signals::TIMER_SIGNALED, Time::after(six_secs)),
+            timer.wait_handle(Signals::TIMER_SIGNALED, Time::INFINITE),
             Ok(Signals::TIMER_SIGNALED)
         );
 
