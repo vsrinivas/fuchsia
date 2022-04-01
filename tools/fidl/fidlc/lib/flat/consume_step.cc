@@ -130,6 +130,7 @@ void ConsumeStep::ConsumeAttribute(std::unique_ptr<raw::Attribute> raw_attribute
       break;
   }
   *out_attribute = std::make_unique<Attribute>(name, std::move(args), raw_attribute->span());
+  all_libraries()->WarnOnAttributeTypo(out_attribute->get());
 }
 
 bool ConsumeStep::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,

@@ -613,8 +613,7 @@ void CompileStep::CompileAttribute(Attribute* attribute, bool early) {
     }
   }
 
-  const AttributeSchema& schema =
-      all_libraries()->RetrieveAttributeSchema(attribute, /*warn_on_typo=*/true);
+  const AttributeSchema& schema = all_libraries()->RetrieveAttributeSchema(attribute);
   if (early) {
     assert(schema.CanCompileEarly() && "attribute is not allowed to be compiled early");
   }

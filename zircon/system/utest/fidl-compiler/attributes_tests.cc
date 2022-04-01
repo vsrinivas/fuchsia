@@ -402,6 +402,29 @@ protocol A {
   ASSERT_SUBSTR(warnings[0]->msg.c_str(), "doc");
 }
 
+// Ensures we detect typos early enough that we still report them, even if there
+// were other compilation errors.
+TEST(AttributesTests, WarnOnCloseAttributeWithOtherErrors) {
+  TestLibrary library(R"FIDL(
+@available(added=1)
+library fidl.test;
+
+@available(added=1, removed=2)
+type Foo = struct {};
+
+// This actually gets added at 1 because we misspelled "available".
+@availabe(added=2)
+type Foo = resource struct {};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameOverlap);
+  const auto& warnings = library.warnings();
+  ASSERT_EQ(warnings.size(), 1);
+  ASSERT_ERR(warnings[0], fidl::WarnAttributeTypo);
+  ASSERT_SUBSTR(warnings[0]->msg.c_str(), "availabe");
+  ASSERT_SUBSTR(warnings[0]->msg.c_str(), "available");
+}
+
 // This tests our ability to treat warnings as errors.  It is here because this
 // is the most convenient warning.
 TEST(AttributesTests, BadWarningsAsErrors) {

@@ -125,10 +125,12 @@ class Libraries : private ReporterMixin {
   AttributeSchema& AddAttributeSchema(std::string name);
 
   // Gets the schema for an attribute. For unrecognized attributes, returns
-  // AttributeSchema::kUserDefined. If warn_on_typo is true, reports a warning
-  // if the attribute appears to be a typo for an official attribute.
-  const AttributeSchema& RetrieveAttributeSchema(const Attribute* attribute,
-                                                 bool warn_on_typo = false) const;
+  // AttributeSchema::kUserDefined.
+  const AttributeSchema& RetrieveAttributeSchema(const Attribute* attribute) const;
+
+  // Reports a warning if the given attribute appears to be a typo for an
+  // official attribute.
+  void WarnOnAttributeTypo(const Attribute* attribute) const;
 
   using ReporterMixin::reporter;
   Typespace* typespace() { return &typespace_; }

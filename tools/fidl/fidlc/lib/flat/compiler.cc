@@ -156,25 +156,28 @@ static size_t EditDistance(std::string_view sequence1, std::string_view sequence
   return last_row[s1_length];
 }
 
-const AttributeSchema& Libraries::RetrieveAttributeSchema(const Attribute* attribute,
-                                                          bool warn_on_typo) const {
+const AttributeSchema& Libraries::RetrieveAttributeSchema(const Attribute* attribute) const {
   auto attribute_name = attribute->name.data();
   auto iter = attribute_schemas_.find(attribute_name);
   if (iter != attribute_schemas_.end()) {
     return iter->second;
   }
+  return AttributeSchema::kUserDefined;
+}
 
-  if (warn_on_typo) {
-    // Match against all known attributes.
-    for (const auto& [suspected_name, schema] : attribute_schemas_) {
-      auto supplied_name = attribute_name;
-      auto edit_distance = EditDistance(supplied_name, suspected_name);
-      if (0 < edit_distance && edit_distance < 2) {
-        Warn(WarnAttributeTypo, attribute->span, supplied_name, suspected_name);
-      }
+void Libraries::WarnOnAttributeTypo(const Attribute* attribute) const {
+  auto attribute_name = attribute->name.data();
+  auto iter = attribute_schemas_.find(attribute_name);
+  if (iter != attribute_schemas_.end()) {
+    return;
+  }
+  for (const auto& [suspected_name, schema] : attribute_schemas_) {
+    auto supplied_name = attribute_name;
+    auto edit_distance = EditDistance(supplied_name, suspected_name);
+    if (0 < edit_distance && edit_distance < 2) {
+      Warn(WarnAttributeTypo, attribute->span, supplied_name, suspected_name);
     }
   }
-  return AttributeSchema::kUserDefined;
 }
 
 // Helper function to calculate Compilation::external_structs.
