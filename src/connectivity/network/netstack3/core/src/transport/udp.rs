@@ -6,6 +6,7 @@
 
 use alloc::collections::HashSet;
 use core::{
+    marker::PhantomData,
     mem,
     num::{NonZeroU16, NonZeroUsize},
     ops::RangeInclusive,
@@ -35,7 +36,7 @@ use crate::{
     ip::{
         icmp::{IcmpIpExt, Icmpv4ErrorCode, Icmpv6ErrorCode},
         socket::{IpSock, IpSockCreationError, IpSockSendError, IpSocket, UnroutableBehavior},
-        BufferIpTransportContext, BufferTransportIpContext, IpDeviceIdContext, IpExt,
+        BufferIpTransportContext, BufferTransportIpContext, IpDeviceId, IpDeviceIdContext, IpExt,
         IpTransportContext, TransportIpContext, TransportReceiveError,
     },
     socket::{ConnSocketEntry, ConnSocketMap, ListenerSocketMap},
@@ -89,9 +90,9 @@ impl UdpStateBuilder {
 ///
 /// `D` is the device ID type.
 pub struct UdpState<I: IpExt, D> {
-    conn_state: UdpConnectionState<I, IpSock<I, D>>,
+    conn_state: UdpConnectionState<I, D, IpSock<I, D>>,
     /// lazy_port_alloc is lazy-initialized when it's used.
-    lazy_port_alloc: Option<PortAlloc<UdpConnectionState<I, IpSock<I, D>>>>,
+    lazy_port_alloc: Option<PortAlloc<UdpConnectionState<I, D, IpSock<I, D>>>>,
     send_port_unreachable: bool,
 }
 
@@ -105,16 +106,18 @@ impl<I: IpExt, D> Default for UdpState<I, D> {
 ///
 /// `UdpConnectionState` provides a [`PortAllocImpl`] implementation to
 /// allocate unused local ports.
-struct UdpConnectionState<I: Ip, S> {
+struct UdpConnectionState<I: Ip, D, S> {
     conns: ConnSocketMap<ConnAddr<I::Addr>, S>,
     listeners: ListenerSocketMap<ListenerAddr<I::Addr>>,
+    _device_marker: PhantomData<D>,
 }
 
-impl<I: Ip, S> Default for UdpConnectionState<I, S> {
-    fn default() -> UdpConnectionState<I, S> {
+impl<I: Ip, D, S> Default for UdpConnectionState<I, D, S> {
+    fn default() -> UdpConnectionState<I, D, S> {
         UdpConnectionState {
             conns: ConnSocketMap::default(),
             listeners: ListenerSocketMap::default(),
+            _device_marker: PhantomData,
         }
     }
 }
@@ -124,13 +127,16 @@ enum LookupResult<I: Ip> {
     Listener(UdpListenerId<I>, ListenerAddr<I::Addr>),
 }
 
-impl<I: Ip, S> UdpConnectionState<I, S> {
+impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
     fn lookup(
         &self,
         local_ip: SpecifiedAddr<I::Addr>,
         remote_ip: SpecifiedAddr<I::Addr>,
         local_port: NonZeroU16,
         remote_port: NonZeroU16,
+        // TODO(https://fxbug.dev/96573): use this to match on device when that
+        // is part of the address vector.
+        _device: D,
     ) -> Option<LookupResult<I>> {
         let addr = ConnAddr { local_ip, remote_ip, local_port, remote_port };
         self.conns
@@ -235,8 +241,9 @@ fn try_alloc_listen_port<I: IpExt, C: UdpStateContext<I>>(
     ctx: &mut C,
     used_ports: &HashSet<NonZeroU16>,
 ) -> Option<NonZeroU16> {
-    let mut port = UdpConnectionState::<I, IpSock<I, C::DeviceId>>::rand_ephemeral(ctx.rng_mut());
-    for _ in UdpConnectionState::<I, IpSock<I, C::DeviceId>>::EPHEMERAL_RANGE {
+    let mut port =
+        UdpConnectionState::<I, C::DeviceId, IpSock<I, C::DeviceId>>::rand_ephemeral(ctx.rng_mut());
+    for _ in UdpConnectionState::<I, C::DeviceId, IpSock<I, C::DeviceId>>::EPHEMERAL_RANGE {
         // We can unwrap here because we know that the EPHEMERAL_RANGE doesn't
         // include 0.
         let tryport = NonZeroU16::new(port.get()).unwrap();
@@ -248,7 +255,7 @@ fn try_alloc_listen_port<I: IpExt, C: UdpStateContext<I>>(
     None
 }
 
-impl<I: Ip, S> PortAllocImpl for UdpConnectionState<I, S> {
+impl<I: Ip, D, S> PortAllocImpl for UdpConnectionState<I, D, S> {
     const TABLE_SIZE: NonZeroUsize = nonzero!(20usize);
     const EPHEMERAL_RANGE: RangeInclusive<u16> = 49152..=65535;
     type Id = ProtocolFlowId<I::Addr>;
@@ -643,6 +650,7 @@ pub(crate) enum UdpIpTransportContext {}
 impl<I: IpExt, C: UdpStateContext<I>> IpTransportContext<I, C> for UdpIpTransportContext {
     fn receive_icmp_error(
         ctx: &mut C,
+        device: C::DeviceId,
         src_ip: Option<SpecifiedAddr<I::Addr>>,
         dst_ip: SpecifiedAddr<I::Addr>,
         mut udp_packet: &[u8],
@@ -664,7 +672,7 @@ impl<I: IpExt, C: UdpStateContext<I>> IpTransportContext<I, C> for UdpIpTranspor
             (src_ip, udp_packet.src_port(), udp_packet.dst_port())
         {
             if let Some(socket) =
-                ctx.get_first_state().conn_state.lookup(src_ip, dst_ip, src_port, dst_port)
+                ctx.get_first_state().conn_state.lookup(src_ip, dst_ip, src_port, dst_port, device)
             {
                 let id = match socket {
                     LookupResult::Conn(id, _) => id.into(),
@@ -685,7 +693,7 @@ impl<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>> BufferIpTransportCo
 {
     fn receive_ip_packet(
         ctx: &mut C,
-        _device: Option<C::DeviceId>,
+        device: C::DeviceId,
         src_ip: I::RecvSrcAddr,
         dst_ip: SpecifiedAddr<I::Addr>,
         mut buffer: B,
@@ -706,7 +714,7 @@ impl<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>> BufferIpTransportCo
         if let Some(socket) = SpecifiedAddr::new(src_ip)
             .and_then(|src_ip| packet.src_port().map(|src_port| (src_ip, src_port)))
             .and_then(|(src_ip, src_port)| {
-                state.conn_state.lookup(dst_ip, src_ip, packet.dst_port(), src_port)
+                state.conn_state.lookup(dst_ip, src_ip, packet.dst_port(), src_port, device)
             })
         {
             match socket {
@@ -1345,7 +1353,7 @@ mod tests {
             .into_inner();
         UdpIpTransportContext::receive_ip_packet(
             ctx,
-            Some(DummyDeviceId),
+            DummyDeviceId,
             I::try_into_recv_src_addr(src_ip).unwrap(),
             SpecifiedAddr::new(dst_ip).unwrap(),
             buffer,
@@ -1597,7 +1605,9 @@ mod tests {
 
         let local_ip = local_ip::<I>();
         // Exhaust local ports to trigger FailedToAllocateLocalPort error.
-        for port_num in UdpConnectionState::<I, IpSock<I, DummyDeviceId>>::EPHEMERAL_RANGE {
+        for port_num in
+            UdpConnectionState::<I, DummyDeviceId, IpSock<I, DummyDeviceId>>::EPHEMERAL_RANGE
+        {
             let _: usize =
                 DualStateContext::<UdpState<I, DummyDeviceId>, _>::get_first_state_mut(&mut ctx)
                     .conn_state
@@ -2087,7 +2097,8 @@ mod tests {
         )
         .expect("connect_udp failed");
         let conns = &ctx.get_ref().state.conn_state.conns;
-        let valid_range = &UdpConnectionState::<I, IpSock<I, DummyDeviceId>>::EPHEMERAL_RANGE;
+        let valid_range =
+            &UdpConnectionState::<I, DummyDeviceId, IpSock<I, DummyDeviceId>>::EPHEMERAL_RANGE;
         let port_a = conns.get_sock_by_id(conn_a.into()).unwrap().addr.local_port.get();
         assert!(valid_range.contains(&port_a));
         let port_b = conns.get_sock_by_id(conn_b.into()).unwrap().addr.local_port.get();
@@ -2197,9 +2208,9 @@ mod tests {
         let wildcard_port =
             conn_state.listeners.get_by_listener(wildcard_list.id).unwrap().port.clone();
         let specified_port = conn_state.listeners.get_by_listener(specified_list.id).unwrap().port;
-        assert!(UdpConnectionState::<I, IpSock<I, DummyDeviceId>>::EPHEMERAL_RANGE
+        assert!(UdpConnectionState::<I, DummyDeviceId, IpSock<I, DummyDeviceId>>::EPHEMERAL_RANGE
             .contains(&wildcard_port.get()));
-        assert!(UdpConnectionState::<I, IpSock<I, DummyDeviceId>>::EPHEMERAL_RANGE
+        assert!(UdpConnectionState::<I, DummyDeviceId, IpSock<I, DummyDeviceId>>::EPHEMERAL_RANGE
             .contains(&specified_port.get()));
         assert_ne!(wildcard_port, specified_port);
     }
@@ -2458,11 +2469,12 @@ mod tests {
             Icmpv4ErrorCode::DestUnreachable(Icmpv4DestUnreachableCode::DestNetworkUnreachable),
             |ctx: &mut DummyCtx<Ipv4>, mut packet, error_code| {
                 let packet = packet.parse::<Ipv4PacketRaw<_>>().unwrap();
+                let device = DummyDeviceId;
                 let src_ip = SpecifiedAddr::new(packet.src_ip());
                 let dst_ip = SpecifiedAddr::new(packet.dst_ip()).unwrap();
                 let body = packet.body().into_inner();
                 <UdpIpTransportContext as IpTransportContext<Ipv4, _>>::receive_icmp_error(
-                    ctx, src_ip, dst_ip, body, error_code,
+                    ctx, device, src_ip, dst_ip, body, error_code,
                 )
             },
             Ipv4Addr::new([1, 2, 3, 4]),
@@ -2472,11 +2484,12 @@ mod tests {
             Icmpv6ErrorCode::DestUnreachable(Icmpv6DestUnreachableCode::NoRoute),
             |ctx: &mut DummyCtx<Ipv6>, mut packet, error_code| {
                 let packet = packet.parse::<Ipv6PacketRaw<_>>().unwrap();
+                let device = DummyDeviceId;
                 let src_ip = SpecifiedAddr::new(packet.src_ip());
                 let dst_ip = SpecifiedAddr::new(packet.dst_ip()).unwrap();
                 let body = packet.body().unwrap().into_inner();
                 <UdpIpTransportContext as IpTransportContext<Ipv6, _>>::receive_icmp_error(
-                    ctx, src_ip, dst_ip, body, error_code,
+                    ctx, device, src_ip, dst_ip, body, error_code,
                 )
             },
             Ipv6Addr::from_bytes([1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8]),

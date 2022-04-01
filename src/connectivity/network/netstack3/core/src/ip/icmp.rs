@@ -647,7 +647,8 @@ pub(crate) trait InnerIcmpContext<I: IcmpIpExt + IpExt>:
     ///
     /// All arguments beginning with `original_` are fields from the IP packet
     /// that triggered the error. The `original_body` is provided here so that
-    /// the error can be associated with a transport-layer socket.
+    /// the error can be associated with a transport-layer socket. `device`
+    /// identifies the device on which the packet was received.
     ///
     /// While ICMPv4 error messages are supposed to contain the first 8 bytes of
     /// the body of the offending packet, and ICMPv6 error messages are supposed
@@ -657,6 +658,7 @@ pub(crate) trait InnerIcmpContext<I: IcmpIpExt + IpExt>:
     /// of `original_body`, and to perform any necessary validation.
     fn receive_icmp_error(
         &mut self,
+        device: Self::DeviceId,
         original_src_ip: Option<SpecifiedAddr<I::Addr>>,
         original_dst_ip: SpecifiedAddr<I::Addr>,
         original_proto: I::Proto,
@@ -888,6 +890,7 @@ where
 {
     fn receive_icmp_error(
         ctx: &mut C,
+        _device: C::DeviceId,
         original_src_ip: Option<SpecifiedAddr<I::Addr>>,
         original_dst_ip: SpecifiedAddr<I::Addr>,
         mut original_body: &[u8],
@@ -933,7 +936,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv4Context<B> + PmtuHandler<Ipv4>>
 {
     fn receive_ip_packet(
         ctx: &mut C,
-        device: Option<C::DeviceId>,
+        device: C::DeviceId,
         src_ip: Ipv4Addr,
         dst_ip: SpecifiedAddr<Ipv4Addr>,
         mut buffer: B,
@@ -959,7 +962,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv4Context<B> + PmtuHandler<Ipv4>>
                     let (local_ip, remote_ip) = (dst_ip, src_ip);
                     // TODO(joshlf): Do something if send_icmp_reply returns an
                     // error?
-                    let _ = send_icmp_reply(ctx, device, remote_ip, local_ip, |src_ip| {
+                    let _ = send_icmp_reply(ctx, Some(device), remote_ip, local_ip, |src_ip| {
                         buffer.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
                             src_ip,
                             remote_ip,
@@ -1013,7 +1016,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv4Context<B> + PmtuHandler<Ipv4>>
                         buffer.shrink_front_to(0);
                         // TODO(joshlf): Do something if send_icmp_reply returns
                         // an error?
-                        let _ = send_icmp_reply(ctx, device, remote_ip, local_ip, |src_ip| {
+                        let _ = send_icmp_reply(ctx, Some(device), remote_ip, local_ip, |src_ip| {
                             buffer.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
                                 src_ip,
                                 remote_ip,
@@ -1100,6 +1103,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv4Context<B> + PmtuHandler<Ipv4>>
 
                 receive_icmpv4_error(
                     ctx,
+                    device,
                     &dest_unreachable,
                     Icmpv4ErrorCode::DestUnreachable(dest_unreachable.code()),
                 );
@@ -1110,6 +1114,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv4Context<B> + PmtuHandler<Ipv4>>
 
                 receive_icmpv4_error(
                     ctx,
+                    device,
                     &time_exceeded,
                     Icmpv4ErrorCode::TimeExceeded(time_exceeded.code()),
                 );
@@ -1121,6 +1126,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv4Context<B> + PmtuHandler<Ipv4>>
 
                 receive_icmpv4_error(
                     ctx,
+                    device,
                     &parameter_problem,
                     Icmpv4ErrorCode::ParameterProblem(parameter_problem.code()),
                 );
@@ -1142,7 +1148,7 @@ impl<
 {
     fn receive_ip_packet(
         ctx: &mut C,
-        device: Option<C::DeviceId>,
+        device: C::DeviceId,
         src_ip: Ipv6SourceAddr,
         dst_ip: SpecifiedAddr<Ipv6Addr>,
         mut buffer: B,
@@ -1172,7 +1178,7 @@ impl<
                     // error?
                     let _ = send_icmp_reply(
                         ctx,
-                        device,
+                        Some(device),
                         remote_ip.into_specified(),
                         local_ip,
                         |src_ip| {
@@ -1200,12 +1206,7 @@ impl<
                     receive_icmp_echo_reply(ctx, src_ip.get(), dst_ip, id, seq, buffer);
                 }
             }
-            Icmpv6Packet::Ndp(packet) => ctx.receive_ndp_packet(
-                device.expect("received NDP packet from localhost"),
-                src_ip,
-                dst_ip,
-                packet,
-            ),
+            Icmpv6Packet::Ndp(packet) => ctx.receive_ndp_packet(device, src_ip, dst_ip, packet),
             Icmpv6Packet::PacketTooBig(packet_too_big) => {
                 ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet::packet_too_big");
                 trace!("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet: Received a Packet Too Big message");
@@ -1225,28 +1226,26 @@ impl<
                         packet_too_big.message().mtu(),
                     );
                 }
-                receive_icmpv6_error(ctx, &packet_too_big, Icmpv6ErrorCode::PacketTooBig);
+                receive_icmpv6_error(ctx, device, &packet_too_big, Icmpv6ErrorCode::PacketTooBig);
             }
             Icmpv6Packet::Mld(packet) => {
-                ctx.receive_mld_packet(
-                    device.expect("MLD messages must come from a device"),
-                    src_ip,
-                    dst_ip,
-                    packet,
-                );
+                ctx.receive_mld_packet(device, src_ip, dst_ip, packet);
             }
             Icmpv6Packet::DestUnreachable(dest_unreachable) => receive_icmpv6_error(
                 ctx,
+                device,
                 &dest_unreachable,
                 Icmpv6ErrorCode::DestUnreachable(dest_unreachable.code()),
             ),
             Icmpv6Packet::TimeExceeded(time_exceeded) => receive_icmpv6_error(
                 ctx,
+                device,
                 &time_exceeded,
                 Icmpv6ErrorCode::TimeExceeded(time_exceeded.code()),
             ),
             Icmpv6Packet::ParameterProblem(parameter_problem) => receive_icmpv6_error(
                 ctx,
+                device,
                 &parameter_problem,
                 Icmpv6ErrorCode::ParameterProblem(parameter_problem.code()),
             ),
@@ -1309,6 +1308,7 @@ fn receive_icmpv4_error<
     M: IcmpMessage<Ipv4, BB, Body = OriginalPacket<BB>>,
 >(
     ctx: &mut C,
+    device: C::DeviceId,
     packet: &IcmpPacket<Ipv4, BB, M>,
     err: Icmpv4ErrorCode,
 ) {
@@ -1323,6 +1323,7 @@ fn receive_icmpv4_error<
             };
             InnerIcmpContext::receive_icmp_error(
                 ctx,
+                device,
                 SpecifiedAddr::new(original_packet.src_ip()),
                 dst_ip,
                 original_packet.proto(),
@@ -1347,6 +1348,7 @@ fn receive_icmpv6_error<
     M: IcmpMessage<Ipv6, BB, Body = OriginalPacket<BB>>,
 >(
     ctx: &mut C,
+    device: C::DeviceId,
     packet: &IcmpPacket<Ipv6, BB, M>,
     err: Icmpv6ErrorCode,
 ) {
@@ -1363,6 +1365,7 @@ fn receive_icmpv6_error<
                 Ok((body, proto)) => {
                     InnerIcmpContext::receive_icmp_error(
                         ctx,
+                        device,
                         SpecifiedAddr::new(original_packet.src_ip()),
                         dst_ip,
                         proto,
@@ -3334,6 +3337,7 @@ mod tests {
             impl InnerIcmpContext<$ip> for $outer {
                 fn receive_icmp_error(
                     &mut self,
+                    device: DummyDeviceId,
                     original_src_ip: Option<SpecifiedAddr<<$ip as Ip>::Addr>>,
                     original_dst_ip: SpecifiedAddr<<$ip as Ip>::Addr>,
                     original_proto: <$ip as packet_formats::ip::IpExt>::Proto,
@@ -3345,6 +3349,7 @@ mod tests {
                     if original_proto == <$ip as packet_formats::icmp::IcmpIpExt>::ICMP_IP_PROTO {
                         <IcmpIpTransportContext as IpTransportContext<$ip, _>>::receive_icmp_error(
                             self,
+                            device,
                             original_src_ip,
                             original_dst_ip,
                             original_body,
@@ -3446,7 +3451,7 @@ mod tests {
 
             <IcmpIpTransportContext as BufferIpTransportContext<Ipv4, _, _>>::receive_ip_packet(
                 &mut ctx,
-                Some(DummyDeviceId),
+                DummyDeviceId,
                 DUMMY_CONFIG_V4.remote_ip.get(),
                 DUMMY_CONFIG_V4.local_ip,
                 Buf::new(original_packet, ..)
@@ -3757,7 +3762,7 @@ mod tests {
 
             <IcmpIpTransportContext as BufferIpTransportContext<Ipv6, _, _>>::receive_ip_packet(
                 &mut ctx,
-                Some(DummyDeviceId),
+                DummyDeviceId,
                 DUMMY_CONFIG_V6.remote_ip.get().try_into().unwrap(),
                 DUMMY_CONFIG_V6.local_ip,
                 Buf::new(original_packet, ..)
