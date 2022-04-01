@@ -148,11 +148,19 @@ TEST_P(ShutdownOnNoConnectionsTest, OnNoConnections) {
   // Disconnect outgoing directory connection.
   fs().ResetOutgoingDirectory();
 
-  // Sleep for a while until the filesystem shutdown complete.
-  zx::nanosleep(zx::deadline_after(zx::msec(100)));
+  zx_status_t status;
+  // Retry for one minute.
+  for (uint64_t i = 0; i < 60; ++i) {
+    // Sleep for a while until the filesystem shutdown complete.
+    zx::nanosleep(zx::deadline_after(zx::sec(1)));
 
-  // Now, the filesystem is terminated. We can remount the filesystem.
-  ASSERT_EQ(fs().Mount().status_value(), ZX_OK);
+    // Now, the filesystem is terminated. We can remount the filesystem.
+    if (status = fs().Mount().status_value(); status == ZX_OK) {
+      break;
+    }
+  }
+  // Remount was successfully completed.
+  ASSERT_EQ(status, ZX_OK);
 }
 
 INSTANTIATE_TEST_SUITE_P(
