@@ -47,13 +47,10 @@ TEST(FsManagerTestCase, ShutdownBeforeReadyFails) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-  zx::channel dir_request, lifecycle_request;
   FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
   auto config = EmptyConfig();
   BlockWatcher watcher(manager, &config);
-  ASSERT_EQ(
-      manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher),
-      ZX_OK);
+  ASSERT_EQ(manager.Initialize({}, {}, nullptr, watcher), ZX_OK);
 
   sync_completion_t callback_called;
   manager.Shutdown([callback_called = &callback_called](zx_status_t status) {
@@ -70,13 +67,10 @@ TEST(FsManagerTestCase, ShutdownSignalsCompletion) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-  zx::channel dir_request, lifecycle_request;
   FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
   auto config = EmptyConfig();
   BlockWatcher watcher(manager, &config);
-  ASSERT_EQ(
-      manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher),
-      ZX_OK);
+  ASSERT_EQ(manager.Initialize({}, {}, nullptr, watcher), ZX_OK);
 
   manager.ReadyForShutdown();
   // The manager should not have exited yet: No one has asked for the shutdown.
@@ -103,9 +97,9 @@ TEST(FsManagerTestCase, ShutdownSignalsCompletion) {
 
 // Test that the manager shuts down the filesystems given a call on the lifecycle channel
 TEST(FsManagerTestCase, LifecycleStop) {
-  zx::channel dir_request, lifecycle_request, lifecycle;
-  zx_status_t status = zx::channel::create(0, &lifecycle_request, &lifecycle);
-  ASSERT_EQ(status, ZX_OK);
+  zx::status create_lifecycle = fidl::CreateEndpoints<fuchsia_process_lifecycle::Lifecycle>();
+  ASSERT_TRUE(create_lifecycle.is_ok()) << create_lifecycle.status_string();
+  auto [lifecycle_client, lifecycle_server] = std::move(create_lifecycle).value();
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
@@ -113,24 +107,21 @@ TEST(FsManagerTestCase, LifecycleStop) {
   FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
   auto config = DefaultConfig();
   BlockWatcher watcher(manager, &config);
-  ASSERT_EQ(
-      manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher),
-      ZX_OK);
+  ASSERT_EQ(manager.Initialize({}, std::move(lifecycle_server), nullptr, watcher), ZX_OK);
 
   manager.ReadyForShutdown();
   // The manager should not have exited yet: No one has asked for an unmount.
   EXPECT_FALSE(manager.IsShutdown());
 
   // Call stop on the lifecycle channel
-  fidl::WireSyncClient<fuchsia_process_lifecycle::Lifecycle> client(std::move(lifecycle));
-  auto result = client->Stop();
+  auto result = fidl::WireCall(lifecycle_client)->Stop();
   ASSERT_EQ(result.status(), ZX_OK);
 
   // the lifecycle channel should be closed now
   zx_signals_t pending;
-  EXPECT_EQ(client.client_end().channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
-                                                   &pending),
-            ZX_OK);
+  EXPECT_EQ(
+      lifecycle_client.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &pending),
+      ZX_OK);
   EXPECT_TRUE(pending & ZX_CHANNEL_PEER_CLOSED);
 
   // Now we expect a shutdown signal.
@@ -165,13 +156,10 @@ TEST(FsManagerTestCase, InstallFsAfterShutdownWillFail) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-  zx::channel dir_request, lifecycle_request;
   FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
   auto config = EmptyConfig();
   BlockWatcher watcher(manager, &config);
-  ASSERT_EQ(
-      manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher),
-      ZX_OK);
+  ASSERT_EQ(manager.Initialize({}, {}, nullptr, watcher), ZX_OK);
 
   manager.ReadyForShutdown();
   manager.Shutdown([](zx_status_t status) { EXPECT_EQ(status, ZX_OK); });
@@ -190,8 +178,8 @@ TEST(FsManagerTestCase, InstallFsAfterShutdownWillFail) {
   fidl::BindServer(loop.dispatcher(), std::move(root->server), root_server);
 
   EXPECT_EQ(manager
-                .InstallFs(FsManager::MountPoint::kData, "", export_root->client.TakeChannel(),
-                           root->client.TakeChannel())
+                .InstallFs(FsManager::MountPoint::kData, {}, std::move(export_root->client),
+                           std::move(root->client))
                 .status_value(),
             ZX_ERR_BAD_STATE);
 }
@@ -200,13 +188,10 @@ TEST(FsManagerTestCase, ReportFailureOnUncleanUnmount) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-  zx::channel dir_request, lifecycle_request;
   FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
   auto config = EmptyConfig();
   BlockWatcher watcher(manager, &config);
-  ASSERT_EQ(
-      manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher),
-      ZX_OK);
+  ASSERT_EQ(manager.Initialize({}, {}, nullptr, watcher), ZX_OK);
 
   auto export_root = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_EQ(export_root.status_value(), ZX_OK);
@@ -224,8 +209,8 @@ TEST(FsManagerTestCase, ReportFailureOnUncleanUnmount) {
   ASSERT_EQ(admin.status_value(), ZX_OK);
 
   EXPECT_EQ(manager
-                .InstallFs(FsManager::MountPoint::kData, "", export_root->client.TakeChannel(),
-                           root->client.TakeChannel())
+                .InstallFs(FsManager::MountPoint::kData, {}, std::move(export_root->client),
+                           std::move(root->client))
                 .status_value(),
             ZX_OK);
 
