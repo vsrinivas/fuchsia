@@ -354,6 +354,9 @@ fn send_notification(
     }
 }
 
+/// T_MTP defined by AVRCP 1.6.2 Sec 15
+const T_MTP: Duration = Duration::from_millis(1000);
+
 async fn handle_notify_command(
     delegate: Arc<TargetDelegate>,
     command: impl IncomingTargetCommand,
@@ -368,7 +371,7 @@ async fn handle_notify_command(
     let notification_fut = delegate.send_get_notification(notify_command.event_id().into()).fuse();
     pin_mut!(notification_fut);
 
-    let interim_timer = fasync::Timer::new(fasync::Time::after(Duration::from_millis(1000))).fuse();
+    let interim_timer = fasync::Timer::new(fasync::Time::after(T_MTP)).fuse();
     pin_mut!(interim_timer);
 
     let notification: Notification = futures::select! {

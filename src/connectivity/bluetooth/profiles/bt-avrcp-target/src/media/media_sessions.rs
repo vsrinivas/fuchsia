@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Context, Error};
-use fidl::endpoints::{create_proxy, create_request_stream};
+use fidl::endpoints::{create_proxy, create_request_stream, Responder};
 use fidl_fuchsia_bluetooth_avrcp as fidl_avrcp;
 use fidl_fuchsia_media_sessions2::{
     DiscoveryMarker, DiscoveryProxy, SessionControlProxy, SessionInfoDelta, SessionsWatcherRequest,
@@ -350,8 +350,8 @@ impl MediaSessionsInner {
         // The response timeout (nanos) will be the scaled (nonzero) `pos_change_interval`
         // duration after the current time.
         //
-        // For AddressedPlayerChanged, send an immediate reject because we currently only
-        // support one player.
+        // For AddressedPlayerChanged, hang indefinitely because we currently only
+        // support one player and our ID will not change.
         //
         // For all other event_ids, use the provided `current` parameter, and the `response_timeout`
         // is not needed.
@@ -376,8 +376,7 @@ impl MediaSessionsInner {
                 (current_values, response_timeout)
             }
             (fidl_avrcp::NotificationEvent::AddressedPlayerChanged, _) => {
-                responder
-                    .send(&mut Err(fidl_avrcp::TargetAvcError::RejectedAddressedPlayerChanged))?;
+                responder.drop_without_shutdown();
                 return Ok(None);
             }
             (_, _) => (current, None),
@@ -467,7 +466,7 @@ pub(crate) mod tests {
     use fidl::endpoints::{create_proxy, create_proxy_and_stream};
     use fidl_fuchsia_bluetooth_avrcp::{NotificationEvent, TargetHandlerMarker};
     use fidl_fuchsia_media_sessions2 as fidl_media;
-    use futures::{future::join_all, task::Poll};
+    use futures::{future::join_all, task::Poll, FutureExt};
 
     /// Creates the MediaSessions object and sets an active session if `is_active` = true.
     /// Returns the object and the id of the set active session.
@@ -598,8 +597,7 @@ pub(crate) mod tests {
 
     #[fuchsia::test]
     /// Test the insertion of a AddressedPlayerChanged notification.
-    /// It should resolve immediately with a RejectedPlayerChanged because we only
-    /// have at most one media player at all times.
+    /// It should not resolve.
     async fn test_register_notification_addressed_player_changed() {
         let (discovery, _request_stream) = create_proxy::<DiscoveryMarker>()
             .expect("Couldn't create discovery service endpoints.");
@@ -625,11 +623,8 @@ pub(crate) mod tests {
         assert_matches!(res, Ok(None));
         assert!(!inner.notifications.contains_key(&supported_id));
 
-        // Should return AddressedPlayerChanged.
-        assert_matches!(
-            result_fut.await.expect("Fidl call should work"),
-            Err(fidl_avrcp::TargetAvcError::RejectedAddressedPlayerChanged)
-        );
+        // Should not be resolved.
+        assert!(result_fut.now_or_never().is_none());
     }
 
     #[fuchsia::test]
