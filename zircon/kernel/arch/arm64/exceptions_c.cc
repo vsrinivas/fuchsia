@@ -86,6 +86,7 @@ KCOUNTER(exceptions_unhandled, "exceptions.unhandled")
 KCOUNTER(exceptions_user, "exceptions.user")
 KCOUNTER(exceptions_unknown, "exceptions.unknown")
 KCOUNTER(exceptions_access, "exceptions.access_fault")
+KCOUNTER(exceptions_serror, "exceptions.serror")
 
 static zx_status_t try_dispatch_user_data_fault_exception(zx_excp_type_t type, iframe_t* iframe,
                                                           uint32_t esr, uint64_t far,
@@ -442,6 +443,7 @@ extern "C" void arm64_sync_exception(iframe_t* iframe, uint exception_flags, uin
 }
 
 /* called from assembly */
+extern "C" void arm64_irq(iframe_t* iframe, uint exception_flags);
 extern "C" void arm64_irq(iframe_t* iframe, uint exception_flags) {
   LTRACEF("iframe %p, flags %#x\n", iframe, exception_flags);
   bool is_user = exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL;
@@ -476,6 +478,18 @@ extern "C" void arm64_irq(iframe_t* iframe, uint exception_flags) {
 }
 
 /* called from assembly */
+extern "C" void arm64_serror_exception(iframe_t* iframe, uint exception_flags, uint32_t esr);
+extern "C" void arm64_serror_exception(iframe_t* iframe, uint exception_flags, uint32_t esr) {
+  // SError is largely implementation defined and may or may not be fatal. For now, just count the
+  // occurrences and add a tracer to help analyze possible causes.
+  const cpu_num_t cpu = arch_curr_cpu_num();
+  ktrace_tiny(TAG_IRQ_ENTER, 0xaa55 << 8 | cpu);
+  exceptions_serror.Add(1);
+  ktrace_tiny(TAG_IRQ_EXIT, 0xaa55 << 8 | cpu);
+}
+
+/* called from assembly */
+extern "C" void arm64_invalid_exception(iframe_t* iframe, unsigned int which);
 extern "C" void arm64_invalid_exception(iframe_t* iframe, unsigned int which) {
   platform_panic_start();
 

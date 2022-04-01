@@ -253,10 +253,7 @@ void arch_setup_uspace_iframe(iframe_t* iframe, uintptr_t pc, uintptr_t sp, uint
   //  - No SS, no IL, no D.
   //  - All interrupts enabled.
   //  - Mode 0: EL0t.
-  //
-  // TODO: (hollande,travisg) Need to determine why some platforms throw an
-  //         SError exception when first switching to uspace.
-  uint32_t spsr = 1 << 8;  // Mask SError exceptions (currently unhandled).
+  uint32_t spsr = 0;
 
   iframe->r[0] = arg1;
   iframe->r[1] = arg2;

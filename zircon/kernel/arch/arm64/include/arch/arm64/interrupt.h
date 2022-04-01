@@ -12,13 +12,14 @@
 #include <ktl/atomic.h>
 
 // override of some routines
+
+// Clear/set both I and A bits to prevent arbitrary nesting of IRQ and SError.
 static inline void arch_enable_ints() {
   ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
-  __asm__ volatile("msr daifclr, #2" ::: "memory");
+  __asm__ volatile("msr daifclr, #6" ::: "memory");
 }
-
 static inline void arch_disable_ints() {
-  __asm__ volatile("msr daifset, #2" ::: "memory");
+  __asm__ volatile("msr daifset, #6" ::: "memory");
   ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
 }
 
