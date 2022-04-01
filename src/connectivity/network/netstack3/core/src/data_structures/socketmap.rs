@@ -166,11 +166,15 @@ where
     /// those keys for which `key` is one of their shadows, then calling
     /// [`Tagged::tag`] on the value for each of those keys, and then computing
     /// the number of occurrences for each tag.
-    pub fn descendant_counts(&self, key: &A) -> impl Iterator<Item = &'_ (V::Tag, NonZeroUsize)> {
+    pub fn descendant_counts(
+        &self,
+        key: &A,
+    ) -> impl ExactSizeIterator<Item = &'_ (V::Tag, NonZeroUsize)> {
         let Self { map, len: _ } = self;
-        map.get(key)
-            .into_iter()
-            .flat_map(|MapValue { value: _, descendant_counts }| descendant_counts.into_iter())
+        OptionalIterator(
+            map.get(key)
+                .map(|MapValue { value: _, descendant_counts }| descendant_counts.into_iter()),
+        )
     }
 
     /// Returns an iterator over the keys and values in the map.
@@ -274,6 +278,25 @@ impl<'d, T, const INLINE_SIZE: usize> IntoIterator for &'d DescendantCounts<T, I
         counts.into_iter()
     }
 }
+
+/// Wrapper for an optional iterator.
+struct OptionalIterator<I>(Option<I>);
+
+impl<I: Iterator> Iterator for OptionalIterator<I> {
+    type Item = I::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let Self(it) = self;
+        it.as_mut().and_then(Iterator::next)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let Self(it) = self;
+        it.as_ref().map(Iterator::size_hint).unwrap_or((0, Some(0)))
+    }
+}
+
+impl<I: ExactSizeIterator> ExactSizeIterator for OptionalIterator<I> {}
 
 #[cfg(test)]
 mod tests {
