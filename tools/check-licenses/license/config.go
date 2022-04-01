@@ -23,10 +23,10 @@ type AllowList struct {
 var Config *LicenseConfig
 
 func init() {
-	Config = NewLicenseConfig()
+	Config = NewConfig()
 }
 
-func NewLicenseConfig() *LicenseConfig {
+func NewConfig() *LicenseConfig {
 	return &LicenseConfig{
 		PatternRoots: make([]*PatternRoot, 0),
 		AllowLists:   make([]*AllowList, 0),

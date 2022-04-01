@@ -11,6 +11,8 @@ type ProjectMetrics struct {
 
 const (
 	NumProjects                 = "Project Count"
+	NumFilteredProjects         = "Filtered Project Count"
+	NumSkippedProjects          = "Projects Not Included In Notice Count"
 	NumInitCustomProjects       = "Initialized Custom Project Count"
 	NumPreviousProjectRetrieved = "Initialized Custom Project Retrieval Count"
 	DuplicateReadmeFiles        = "Duplicate README.fuchsia Files"

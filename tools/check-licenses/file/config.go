@@ -15,6 +15,10 @@ type FileConfig struct {
 	// Replace them with their utf8 equivalents so the resulting
 	// NOTICE file renders it properly.
 	Replacements []*Replacement
+
+	// Extensions map is the list of filetypes that we can expect
+	// may have license information included in it.
+	Extensions map[string]bool
 }
 
 type Replacement struct {
@@ -23,10 +27,11 @@ type Replacement struct {
 	Notes   []string `json:"notes"`
 }
 
-func NewFileConfig() *FileConfig {
+func NewConfig() *FileConfig {
 	return &FileConfig{
 		CopyrightSize: 0,
 		Replacements:  make([]*Replacement, 0),
+		Extensions:    make(map[string]bool, 0),
 	}
 }
 
@@ -35,4 +40,7 @@ func (c *FileConfig) Merge(other *FileConfig) {
 		c.CopyrightSize = other.CopyrightSize
 	}
 	c.Replacements = append(c.Replacements, other.Replacements...)
+	for k, v := range other.Extensions {
+		c.Extensions[k] = v
+	}
 }

@@ -13,6 +13,7 @@ go_library("project") {
     "metrics.go",
     "project.go",
     "project_test.go",
+    "special.go",
   ]
   deps = [
     "//third_party/golibs:golang.org/x/sync",

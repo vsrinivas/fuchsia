@@ -12,9 +12,10 @@
         "barriers": [
             {
                 "paths": [
+                    "prebuilt",
                     "third_party",
                     "thirdparty",
-                    "prebuilt"
+                    "vendor"
                 ],
                 "notes": []
             }

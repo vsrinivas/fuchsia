@@ -83,6 +83,32 @@ func NewProject(readmePath string, projectRootPath string) (*Project, error) {
 		return AllProjects[projectRootPath], nil
 	}
 
+	// There are a ton of rust_crate projects that don't (and will never) have a README.fuchsia file.
+	// Handle those projects separately.
+	if strings.Contains(projectRootPath, "rust_crates") {
+		return NewSpecialProject(projectRootPath)
+	}
+
+	// Same goes for golib projects
+	if strings.Contains(projectRootPath, "golibs") {
+		return NewSpecialProject(projectRootPath)
+	}
+
+	// Same goes for 3p golang.org projects
+	if strings.Contains(projectRootPath, "golang.org") {
+		return NewSpecialProject(projectRootPath)
+	}
+
+	// Same goes for several syzkaller golang projects
+	if strings.Contains(projectRootPath, "syzkaller/vendor") {
+		return NewSpecialProject(projectRootPath)
+	}
+
+	// Same goes for dart-pkg projects
+	if strings.Contains(projectRootPath, "dart-pkg") {
+		return NewSpecialProject(projectRootPath)
+	}
+
 	// Double-check that this README.fuchsia file actually exists.
 	if _, err := os.Stat(readmePath); os.IsNotExist(err) {
 		return nil, err
@@ -166,7 +192,7 @@ func NewProject(readmePath string, projectRootPath string) (*Project, error) {
 	}
 
 	for _, l := range licenseFilePaths {
-		l = filepath.Join(p.Root, l)
+		l = filepath.Join(Config.FuchsiaDir, p.Root, l)
 		l = filepath.Clean(l)
 
 		licenseFile, err := file.NewFile(l, p.LicenseFileType)
@@ -174,14 +200,21 @@ func NewProject(readmePath string, projectRootPath string) (*Project, error) {
 			return nil, err
 		}
 		p.LicenseFile = append(p.LicenseFile, licenseFile)
-
-		if _, err := os.Stat(readmePath); os.IsNotExist(err) {
-			return nil, fmt.Errorf("Project %v: License file %v does not exist.", p.ReadmePath, l)
-		}
 	}
 
 	plusVal(NumProjects, p.Root)
 	AllProjects[p.Root] = p
+
+	shouldInclude, err := Config.shouldInclude(p)
+	if err != nil {
+		return nil, err
+	}
+	if shouldInclude {
+		plusVal(NumFilteredProjects, p.Root)
+		FilteredProjects[p.Root] = p
+	} else {
+		plusVal(NumSkippedProjects, p.Root)
+	}
 	return p, nil
 }
 
@@ -209,7 +242,16 @@ func (p *Project) processCustomFields() error {
 }
 
 func (p *Project) AddFiles(filepaths []string) error {
+	licenseFileMap := make(map[string]bool, 0)
+	for _, lpath := range p.LicenseFile {
+		licenseFileMap[lpath.Path] = true
+	}
+
 	for _, path := range filepaths {
+		if _, ok := licenseFileMap[path]; ok {
+			continue
+		}
+
 		f, err := file.NewFile(path, p.RegularFileType)
 		if err != nil {
 			return err

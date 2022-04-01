@@ -55,6 +55,15 @@
                 "notes": [
                     "Don't check the fuchsia build out directory for licenses."
                 ]
+            },
+            {
+                "paths": [
+                    "tools/check-licenses/project/testdata",
+                    "tools/check-licenses/filetree/testdata"
+                ],
+                "notes": [
+                    "Don't check the check-licenses test directories for licenses."
+                ]
             }
         ]
     }

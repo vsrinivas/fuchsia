@@ -5,10 +5,7 @@
 package license
 
 import (
-	"context"
 	"fmt"
-
-	"golang.org/x/sync/errgroup"
 
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/file"
 )
@@ -37,59 +34,27 @@ func SearchHeaders(f *file.File) ([]*SearchResult, error) {
 func search(f *file.File, patterns []*Pattern) ([]*SearchResult, error) {
 	searchResults := make([]*SearchResult, 0)
 
-	eg, _ := errgroup.WithContext(context.Background())
-
 	// Run the license patterns on the parsed license texts.
 	// Save the match results to a result object.
 	for _, d := range f.Data {
-		matches := make([]bool, len(patterns))
-		for i, p := range patterns {
-			// https://golang.org/doc/faq#closures_and_goroutines
-			i := i
-			p := p
-			eg.Go(func() error {
-				matches[i] = p.Search(d)
-				return nil
-			})
-
-			// The license patterns have a lot of overlap right now.
-			// A single license segment may match to 5 or more different patterns.
-			// This results in really large output files, since some of the texts
-			// are duplicated (when grouping by patterns).
-			//
-			// TODO: Clean up the license texts to make this not happen.
-			// In the mean time, break after the first match.
-			if err := eg.Wait(); err != nil {
-				return nil, err
-			}
-
-			if matches[i] {
-				break
-			}
-		}
-
-		matchFound := false
-		for i := range matches {
-			p := patterns[i]
-			if matches[i] {
+		for _, p := range patterns {
+			if p.Search(d) {
 				result := &SearchResult{
 					LicenseData: d,
 					Pattern:     p,
 				}
 				AllSearchResults = append(AllSearchResults, result)
 				searchResults = append(searchResults, result)
-				matchFound = true
 
 				// The "unrecognized" license pattern is put at the end of the list.
 				// If it is the only license that matched the text, that's bad.
 				// Record these instances in the metrics, so we can investigate later.
-				if patterns[i].Name == Unrecognized.Name {
+				if p.Name == Unrecognized.Name {
 					plusVal(UnrecognizedLicenses, fmt.Sprintf("%v - %v", f.Path, d.LibraryName))
 				}
+
+				break
 			}
-		}
-		if !matchFound {
-			plusVal(UnrecognizedLicenses, fmt.Sprintf("%v - %v", f.Path, d.LibraryName))
 		}
 	}
 	return searchResults, nil

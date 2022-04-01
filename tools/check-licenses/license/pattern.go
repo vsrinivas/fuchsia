@@ -47,6 +47,8 @@ type Pattern struct {
 	// searches, keyed using filedata hash.
 	previousMatches    map[string]bool
 	previousMismatches map[string]bool
+
+	isHeader bool
 }
 
 // Order implements sort.Interface for []*Pattern based on the Name field.
@@ -71,12 +73,9 @@ func NewPattern(path string) (*Pattern, error) {
 	// Update regex to ignore multiple white spaces, newlines, comments.
 	regex = strings.ReplaceAll(regex, ` `, `([\s\\#\*\/]|\^L)*`)
 
-	// Surround the entire regex above in a capturing group.
-	//regex = fmt.Sprintf("(.*%s)", regex)
-
 	// Convert date strings to a regex that supports any date
 	dates := regexp.MustCompile(`(\D)[\d]{4}(\D)`)
-	regex = dates.ReplaceAllString(regex, "$1[\\d]{4}$2")
+	regex = dates.ReplaceAllString(regex, `$1[\d]{4}$2`)
 
 	re, err := regexp.Compile(regex)
 	if err != nil {
@@ -94,10 +93,9 @@ func NewPattern(path string) (*Pattern, error) {
 	allowlist := make([]string, 0)
 	if licCategory == "approved" || licCategory == "notice" {
 		allowlist = append(allowlist, ".*")
-	} else if licCategory == "restricted" {
-		// No projects are allowed
 	} else {
-		// allowlist_only
+		// allowlist_only and restricted
+		// TODO: make restricted licenses un-allowlist-able.
 		if regexes, ok := AllowListPatternMap[name]; ok {
 			allowlist = append(allowlist, regexes...)
 		}
@@ -124,7 +122,7 @@ func (p *Pattern) Search(d *file.FileData) bool {
 
 	// If we've seen this data segment before, return the previous result.
 	// This should be faster than running the regex search.
-	if _, ok := p.previousMatches[d.Hash()]; ok {
+	if _, ok := p.previousMatches[d.Hash()]; ok && !p.isHeader {
 		p.Matches = append(p.Matches, d)
 		return true
 	} else if _, ok := p.previousMismatches[d.Hash()]; ok {
@@ -132,11 +130,19 @@ func (p *Pattern) Search(d *file.FileData) bool {
 	}
 
 	if m := p.Re.Find(d.Data); m != nil {
+		// If this is a source file with the copyright header info at the top,
+		// modify the filedata object to hold the copyright info instead of the
+		// full file contents.
+		if p.isHeader {
+			d.SetData(m)
+		}
+
 		p.Matches = append(p.Matches, d)
 		p.previousMatches[d.Hash()] = true
 
 		return true
 	}
+
 	p.previousMismatches[d.Hash()] = true
 	return false
 }

@@ -8,7 +8,9 @@ The following license text(s) applies to these projects:
 {{ range $_, $projectName := $projectTextMap.SortedProjectNames }}
  • {{ $projectName }}{{ end }}
 
-{{ printf "%s" $projectTextMap.LicenseText}}
+The above project include the following files:
+{{ range $_, $fileName := $projectTextMap.SortedFileNames }}
+ • {{ $fileName }}{{ end }}
 {{ end }}
 ================================================================================
 {{ end }}

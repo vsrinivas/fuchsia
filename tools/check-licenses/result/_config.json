@@ -1,9 +1,12 @@
 {
     "result": {
         "fuchsiaDir": "{FUCHSIA_DIR}",
-        "outputdir": "/tmp/check-licenses",
+        "outputdir": "{OUT_DIR}",
         "outputs": [
             "license_texts_grouped_by_project.txt",
+            "license_texts_grouped_by_license_pattern_deduped.txt",
+            "license_meta_grouped_by_license_pattern_deduped.txt",
+            "projects_no_license_texts.txt",
             "summary.csv",
             "summary_diff.csv"
         ],
@@ -15,7 +18,9 @@
                 "notes": []
             }
         ],
-        "diffNotice": "",
+        "diffNotice": "{DIFF_TARGET}",
+        "exitOnError": false,
+        "gnGenOutputFile": "{GN_GEN_OUTPUT_FILE}",
         "zip": true
     }
 }
