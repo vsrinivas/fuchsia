@@ -318,10 +318,9 @@ static zx_status_t write_boot_params(const PhysMem& phys_mem, const DevMem& dev_
     return ZX_ERR_BAD_STATE;
   }
   write_bp(phys_mem, E820_COUNT, static_cast<uint8_t>(e820_entries));
-  const size_t e820_size = e820_entries * sizeof(E820Entry);
   static_assert(((kKernelOffset + kE820MapOffset) % alignof(E820Entry)) == 0);
-  E820Entry* e820_addr = phys_mem.aligned_as<E820Entry>(kKernelOffset + kE820MapOffset, e820_size);
-  e820_map.copy(e820_addr);
+  auto span = phys_mem.span<E820Entry>(kKernelOffset + kE820MapOffset, e820_entries);
+  e820_map.copy(span);
 #endif
   return ZX_OK;
 }

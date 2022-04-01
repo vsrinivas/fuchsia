@@ -131,9 +131,8 @@ zx_status_t read_unified_zbi(fbl::unique_fd zbi_fd, const uintptr_t kernel_zbi_o
   auto second = std::next(first);
   size_t kernel_zbi_size = second.item_offset();
   size_t data_zbi_size = view.size_bytes() - (second.item_offset() - first.item_offset());
-  cpp20::span<std::byte> kernel_zbi{phys_mem.aligned_as<std::byte>(kernel_zbi_off),
-                                    kernel_zbi_size};
-  cpp20::span<std::byte> data_zbi{phys_mem.aligned_as<std::byte>(data_zbi_off), data_zbi_size};
+  auto kernel_zbi = phys_mem.span<std::byte>(kernel_zbi_off, kernel_zbi_size);
+  auto data_zbi = phys_mem.span<std::byte>(data_zbi_off, data_zbi_size);
 
   // Now that we have performed basic data integrity checks and know that the
   // kernel and data ZBI ranges do not overlap, copy.

@@ -23,7 +23,7 @@ constexpr size_t kMaxBufferSize = 256ul * 1024 * 1024;  // 256 MiB
 
 // Shorthand for creating a safemath::CheckedNumeric.
 template <typename T>
-auto Checked(T n) -> auto {
+auto Checked(T n) -> auto{
   return safemath::MakeCheckedNum(n);
 }
 
@@ -135,7 +135,7 @@ virtio_gpu_ctrl_type GpuResource::TransferToHost2d(const virtio_gpu_rect_t& rect
 
       zx_vaddr_t src_vaddr = entry.addr + off - entry_off;
       CopyBytes(/*dest=*/ArraySubspan(host_backing_, /*offset=*/off, /*size=*/copy_size),
-                phys_mem_->span(src_vaddr, copy_size));
+                phys_mem_->span<std::byte>(src_vaddr, copy_size));
       transfer_bytes_remaining -= copy_size;
       off = off_next;
     }
