@@ -13,3 +13,9 @@ See [Python versions](python_style.md#python-versions) in the style guide.
 ## Testing
 
 See [Python testing](testing.md).
+
+## Python scripts as build actions
+
+See under [Build system policies][python-build-action]
+
+[python-build-action]: /docs/development/build/concepts/build_system/policies.md#python_scripts_as_build_actions
