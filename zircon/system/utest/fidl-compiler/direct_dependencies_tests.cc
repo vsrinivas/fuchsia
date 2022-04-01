@@ -55,11 +55,12 @@ protocol CapturesDependencyThroughCompose {
 )FIDL");
     ASSERT_COMPILED(lib);
 
-    auto deps = lib.all_libraries()->DirectAndComposedDependencies(lib.library());
+    fidl::ExperimentalFlags flags;
+    auto deps = lib.direct_and_composed_dependencies();
     ASSERT_EQ(deps.size(), 2);
     auto iter = deps.cbegin();
-    EXPECT_EQ(fidl::NameLibrary((*iter++)->name), "dep1");
-    EXPECT_EQ(fidl::NameLibrary((*iter++)->name), "dep2");
+    EXPECT_EQ(fidl::NameLibrary((*iter++).library->name), "dep1");
+    EXPECT_EQ(fidl::NameLibrary((*iter++).library->name), "dep2");
   }
 }
 
@@ -96,10 +97,11 @@ protocol CapturesDependencyThroughCompose {
 )FIDL");
   ASSERT_COMPILED(lib);
 
-  auto deps = lib.all_libraries()->DirectAndComposedDependencies(lib.library());
+  fidl::ExperimentalFlags flags;
+  auto deps = lib.direct_and_composed_dependencies();
   ASSERT_EQ(deps.size(), 1);
   auto iter = deps.cbegin();
-  EXPECT_EQ(fidl::NameLibrary((*iter++)->name), "dep1");
+  EXPECT_EQ(fidl::NameLibrary((*iter++).library->name), "dep1");
 }
 
 }  // namespace

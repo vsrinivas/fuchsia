@@ -6,6 +6,8 @@
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_DIAGNOSTICS_H_
 
 #include "diagnostic_types.h"
+#include "fidl/source_span.h"
+#include "versioning_types.h"
 
 namespace fidl {
 
@@ -71,11 +73,20 @@ constexpr ErrorDef<Token::KindAndSubkind, Token::KindAndSubkind> ErrConflictingM
 // ---------------------------------------------------------------------------
 // Library::ConsumeFile: Consume* methods and declaration registration
 // ---------------------------------------------------------------------------
-constexpr ErrorDef<flat::Name, SourceSpan> ErrNameCollision(
-    "multiple declarations of '{}'; also declared at {}");
-constexpr ErrorDef<flat::Name, flat::Name, SourceSpan, std::string_view> ErrNameCollisionCanonical(
-    "declaration name '{}' conflicts with '{}' from {}; both are represented "
-    "by the canonical form '{}'");
+constexpr ErrorDef<std::string_view, SourceSpan> ErrNameCollision(
+    "the name '{}' conflicts with another declaration at {}");
+constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string_view>
+    ErrNameCollisionCanonical(
+        "the name '{}' conflicts with '{}' from {}; both are represented by "
+        "the canonical form '{}'");
+constexpr ErrorDef<std::string_view, SourceSpan, VersionRange, Platform> ErrNameOverlap(
+    "the name '{}' conflicts with another declaration at {}; both are "
+    "available {} of platform '{}'");
+constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string_view, VersionRange,
+                   Platform>
+    ErrNameOverlapCanonical(
+        "the name '{}' conflicts with '{}' from {}; both are represented "
+        "by the canonical form '{}' and are available {} of platform '{}'");
 constexpr ErrorDef<flat::Name> ErrDeclNameConflictsWithLibraryImport(
     "Declaration name '{}' conflicts with a library import. Consider using the "
     "'as' keyword to import the library under a different name.");
@@ -102,6 +113,13 @@ constexpr ErrorDef<SourceSpan> ErrProtocolComposedMultipleTimes(
     "protocol composed multiple times; previous was at {}");
 constexpr ErrorDef ErrNullableTableMember("Table members cannot be nullable");
 constexpr ErrorDef ErrNullableUnionMember("Union members cannot be nullable");
+constexpr ErrorDef<std::vector<std::string_view>, Platform, Version, VersionRange>
+    ErrLibraryNotAvailable(
+        "library '{}' is unavailable in the requested platform version {}:{}; "
+        "it is only available {}");
+constexpr WarningDef<std::vector<std::string_view>, Platform, Version> WarnLibraryDeprecated(
+    "library '{}' is deprecated in the requested platform version {}:{}, and "
+    "will be removed in a later version");
 
 // ---------------------------------------------------------------------------
 // ResolveStep
@@ -114,6 +132,17 @@ constexpr ErrorDef<std::string_view, std::vector<std::string_view>> ErrNameNotFo
     "cannot find '{}' in library '{}'");
 constexpr ErrorDef<const flat::Decl *> ErrCannotReferToMember("cannot refer to member of {}");
 constexpr ErrorDef<const flat::Decl *, std::string_view> ErrMemberNotFound("{} has no member '{}'");
+constexpr ErrorDef<const flat::Element *, VersionRange, Platform, const flat::Element *,
+                   const flat::Element *>
+    ErrInvalidReferenceToDeprecated(
+        "invalid reference to {}, which is deprecated {} of platform '{}' while {} "
+        "is not; either remove this reference or mark {} as deprecated");
+constexpr ErrorDef<const flat::Element *, VersionRange, Platform, const flat::Element *,
+                   VersionRange, Platform, const flat::Element *>
+    ErrInvalidReferenceToDeprecatedOtherPlatform(
+        "invalid reference to {}, which is deprecated {} of platform '{}' while {} "
+        "is not deprecated {} of platform '{}'; either remove this reference or mark {} as "
+        "deprecated");
 
 // ---------------------------------------------------------------------------
 // Library::Compile: SortDeclarations
@@ -161,7 +190,7 @@ constexpr ErrorDef ErrUnknownAttributeOnStrictEnumMember(
 constexpr ErrorDef ErrUnknownAttributeOnMultipleEnumMembers(
     "the @unknown attribute can be only applied to one enum member.");
 constexpr ErrorDef ErrComposingNonProtocol("This declaration is not a protocol");
-constexpr ErrorDef<const flat::Decl *> ErrInvalidParameterListDecl(
+constexpr ErrorDef<flat::Decl::Kind> ErrInvalidParameterListKind(
     "'{}' cannot be used as a parameter list");
 constexpr ErrorDef<const flat::Type *> ErrInvalidParameterListType(
     "'{}' cannot be used as a parameter list");
@@ -287,7 +316,7 @@ constexpr ErrorDef<const flat::AttributeArg *, const flat::Attribute *> ErrCanOn
     "value; use a bool or string instead");
 constexpr ErrorDef ErrAttributeArgMustNotBeNamed(
     "attributes that take a single argument must not name that argument");
-constexpr ErrorDef<const flat::AttributeArg *> ErrAttributeArgNotNamed(
+constexpr ErrorDef<const flat::Constant *> ErrAttributeArgNotNamed(
     "attributes that take multiple arguments must name all of them explicitly, but '{}' was not");
 constexpr ErrorDef<const flat::Attribute *, std::string_view> ErrMissingRequiredAttributeArg(
     "attribute '{}' is missing the required '{}' argument");
@@ -327,6 +356,30 @@ constexpr ErrorDef<const flat::Attribute *, std::string_view> ErrUnableToParseBo
 constexpr WarningDef<std::string_view, std::string_view> WarnAttributeTypo(
     "suspect attribute with name '{}'; did you mean '{}'?");
 constexpr ErrorDef ErrInvalidGeneratedName("generated name must be a valid identifier");
+constexpr ErrorDef ErrAvailableMissingArguments(
+    "at least one argument is required: 'added', 'deprecated', or 'removed'");
+constexpr ErrorDef ErrNoteWithoutDeprecation(
+    "the argument 'note' cannot be used without 'deprecated'");
+constexpr ErrorDef ErrPlatformNotOnLibrary(
+    "the argument 'platform' can only be used on the library's @available attribute");
+constexpr ErrorDef ErrLibraryAvailabilityMissingAdded(
+    "missing 'added' argument on the library's @available attribute");
+constexpr ErrorDef<std::vector<std::string_view>> ErrMissingLibraryAvailability(
+    "to use the @available attribute here, you must also annotate the "
+    "`library {};` declaration in one of the library's files");
+constexpr ErrorDef<std::string_view> ErrInvalidPlatform(
+    "invalid platform '{}'; must match the regex [a-z][a-z0-9_]*");
+constexpr ErrorDef<uint64_t> ErrInvalidVersion(
+    "invalid version '{}'; must be an integer from 1 to 2^63-1 inclusive, or "
+    "the special constant `HEAD`");
+constexpr ErrorDef ErrInvalidAvailabilityOrder(
+    "invalid availability; must have added <= deprecated < removed");
+constexpr ErrorDef<const flat::AttributeArg *, std::string_view, const flat::AttributeArg *,
+                   std::string_view, SourceSpan, std::string_view, std::string_view,
+                   std::string_view>
+    ErrAvailabilityConflictsWithParent(
+        "the argument {}={} conflicts with {}={} at {}; a child element "
+        "cannot be {} {} its parent element is {}");
 
 // ---------------------------------------------------------------------------
 // Type Templates

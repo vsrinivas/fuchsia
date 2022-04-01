@@ -24,10 +24,17 @@ class AttributeArgSchema {
     kRequired,
   };
 
-  explicit AttributeArgSchema(ConstantValue::Kind type,
+  enum class SpecialCase {
+    // Allows a uint64 literal or the special constant `HEAD`.
+    kVersion,
+  };
+
+  explicit AttributeArgSchema(std::variant<ConstantValue::Kind, SpecialCase> type,
                               Optionality optionality = Optionality::kRequired)
       : type_(type), optionality_(optionality) {
-    assert(type != ConstantValue::Kind::kDocComment);
+    if (auto kind = std::get_if<ConstantValue::Kind>(&type_)) {
+      assert(*kind != ConstantValue::Kind::kDocComment);
+    }
   }
 
   bool IsOptional() const { return optionality_ == Optionality::kOptional; }
@@ -35,8 +42,13 @@ class AttributeArgSchema {
   void ResolveArg(CompileStep* step, Attribute* attribute, AttributeArg* arg,
                   bool literal_only) const;
 
+  // Attempts to resolve `reference` as the builtin HEAD by approximating what
+  // the ResolveStep would do, and returns true if successful. We need this to
+  // resolve HEAD earlier than usual, in the AvailabilityStep.
+  bool TryResolveAsHead(CompileStep* step, Reference& reference) const;
+
  private:
-  const ConstantValue::Kind type_;
+  const std::variant<ConstantValue::Kind, SpecialCase> type_;
   const Optionality optionality_;
 };
 
@@ -60,6 +72,7 @@ class AttributeSchema {
   // Chainable mutators for customizing the schema.
   AttributeSchema& RestrictTo(std::set<Element::Kind> placements);
   AttributeSchema& RestrictToAnonymousLayouts();
+  AttributeSchema& DisallowOnAnonymousLayouts();
   AttributeSchema& AddArg(AttributeArgSchema arg_schema);
   AttributeSchema& AddArg(std::string name, AttributeArgSchema arg_schema);
   AttributeSchema& Constrain(AttributeSchema::Constraint constraint);
@@ -114,9 +127,11 @@ class AttributeSchema {
     kAnywhere,
     // Only allowed in certain places specified by std::set<Element::Kind>.
     kSpecific,
-    // Only allowed on anonymous layouts (not directly bound to a type
-    // declaration like `type foo = struct { ... };`).
+    // Only allowed on anonymous layouts (i.e. layouts not directly bound to a
+    // type declaration as in `type Foo = struct { ... };`).
     kAnonymousLayout,
+    // The opposite of kAnonymousLayout.
+    kAnythingButAnonymousLayout,
   };
 
   explicit AttributeSchema(Kind kind) : kind_(kind) {}

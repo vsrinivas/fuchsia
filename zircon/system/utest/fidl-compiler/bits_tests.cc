@@ -22,7 +22,26 @@ type Fruit = bits : uint64 {
   auto type_decl = library.LookupBits("Fruit");
   ASSERT_NOT_NULL(type_decl);
   EXPECT_EQ(type_decl->members.size(), 3);
-  EXPECT_EQ(type_decl->subtype_ctor->layout.target_name().decl_name(), "uint64");
+  auto underlying = type_decl->subtype_ctor->type;
+  ASSERT_EQ(underlying->kind, fidl::flat::Type::Kind::kPrimitive);
+  auto underlying_primitive = static_cast<const fidl::flat::PrimitiveType*>(underlying);
+  EXPECT_EQ(underlying_primitive->subtype, fidl::types::PrimitiveSubtype::kUint64);
+}
+
+TEST(BitsTests, GoodBitsDefaultUint32) {
+  TestLibrary library(R"FIDL(library example;
+
+type Fruit = bits {
+    ORANGE = 1;
+};
+)FIDL");
+  ASSERT_COMPILED(library);
+  auto type_decl = library.LookupBits("Fruit");
+  ASSERT_NOT_NULL(type_decl);
+  auto underlying = type_decl->subtype_ctor->type;
+  ASSERT_EQ(underlying->kind, fidl::flat::Type::Kind::kPrimitive);
+  auto underlying_primitive = static_cast<const fidl::flat::PrimitiveType*>(underlying);
+  EXPECT_EQ(underlying_primitive->subtype, fidl::types::PrimitiveSubtype::kUint32);
 }
 
 TEST(BitsTests, BadBitsTestSigned) {

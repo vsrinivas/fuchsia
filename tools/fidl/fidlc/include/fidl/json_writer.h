@@ -56,8 +56,21 @@ class JsonWriter {
     self.GenerateArray(collection.begin(), collection.end());
   }
 
+  // Note that this overload will take precedence over Generate(const Base*)
+  // when given a Derived* argument. To avoid that, you must either static_cast
+  // to Base* or implement Generate(const Base&).
+  template <typename T>
+  void Generate(const T* value) {
+    self.Generate(*value);
+  }
+
   template <typename T>
   void Generate(const std::unique_ptr<T>& value) {
+    self.Generate(*value);
+  }
+
+  template <typename T>
+  void Generate(const std::shared_ptr<T>& value) {
     self.Generate(*value);
   }
 

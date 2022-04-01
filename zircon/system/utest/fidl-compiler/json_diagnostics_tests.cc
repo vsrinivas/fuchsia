@@ -87,8 +87,7 @@ TEST(JsonDiagnosticsTests, BadMultipleErrors) {
   TestLibrary library(R"FIDL(
 library example;
 
-protocol P {};
-protocol P {};         // Error: name collision
+type Foo = strict bits {}; // Error: must have at least one member
 
 type Table = table {
     1: s string;
@@ -102,20 +101,20 @@ type NewType = Table;  // Error: new type not allowed
   ASSERT_JSON(diagnostics, R"JSON([
   {
     "category": "fidlc/error",
-    "message": "multiple declarations of 'P'; also declared at example.fidl:4:10",
+    "message": "must have at least one member",
     "path": "example.fidl",
-    "start_line": 5,
-    "start_char": 9,
-    "end_line": 5,
-    "end_char": 10
+    "start_line": 4,
+    "start_char": 11,
+    "end_line": 4,
+    "end_char": 25
   },
   {
     "category": "fidlc/error",
     "message": "newtypes not allowed: type declaration NewType defines a new type of the existing Table type, which is not yet supported",
     "path": "example.fidl",
-    "start_line": 11,
+    "start_line": 10,
     "start_char": 0,
-    "end_line": 11,
+    "end_line": 10,
     "end_char": 20
   }
 ])JSON");

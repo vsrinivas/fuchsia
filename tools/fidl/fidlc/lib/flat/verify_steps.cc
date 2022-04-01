@@ -10,7 +10,7 @@
 namespace fidl::flat {
 
 void VerifyResourcenessStep::RunImpl() {
-  for (const auto& [name, decl] : library()->declarations) {
+  for (const auto& [name, decl] : library()->declarations.all) {
     VerifyDecl(decl);
   }
 }
@@ -165,10 +165,8 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
 }
 
 void VerifyHandleTransportCompatibilityStep::RunImpl() {
-  for (const auto& [name, decl] : library()->declarations) {
-    if (decl->kind == Decl::Kind::kProtocol) {
-      VerifyProtocol(static_cast<const Protocol*>(decl));
-    }
+  for (const auto& protocol : library()->declarations.protocols) {
+    VerifyProtocol(protocol.get());
   }
 }
 
@@ -221,7 +219,7 @@ void VerifyHandleTransportCompatibilityStep::CheckHandleTransportUsages(
     case Type::Kind::kHandle: {
       const Resource* resource = static_cast<const HandleType*>(type)->resource_decl;
       std::string handle_name =
-          LibraryName(resource->name.library(), ".") + "." + resource->GetName();
+          LibraryName(resource->name.library()->name, ".") + "." + resource->GetName();
       std::optional<HandleClass> handle_class = HandleClassFromName(handle_name);
       if (!handle_class.has_value() || !transport.IsCompatible(handle_class.value())) {
         Fail(ErrHandleUsedInIncompatibleTransport, source_span, handle_name, transport.name,
@@ -313,7 +311,7 @@ void VerifyDependenciesStep::RunImpl() {
 }
 
 void VerifyInlineSizeStep::RunImpl() {
-  for (auto& struct_decl : library()->struct_declarations) {
+  for (auto& struct_decl : library()->declarations.structs) {
     if (struct_decl->typeshape(WireFormat::kV1NoEe).inline_size >= 65536) {
       Fail(ErrInlineSizeExceeds64k, struct_decl->name.span().value());
     }
@@ -321,7 +319,7 @@ void VerifyInlineSizeStep::RunImpl() {
 }
 
 void VerifyOpenInteractionsStep::RunImpl() {
-  for (const auto& protocol : library()->protocol_declarations) {
+  for (const auto& protocol : library()->declarations.protocols) {
     VerifyProtocolOpenness(*protocol);
   }
 }
@@ -330,16 +328,12 @@ void VerifyOpenInteractionsStep::VerifyProtocolOpenness(const Protocol& protocol
   assert(protocol.compiled && "verification must happen after compilation of decls");
 
   for (const auto& composed : protocol.composed_protocols) {
-    auto target = composed.reference.target();
-
-    // These shoud be ensured by CompileStep.
+    auto target = composed.reference.resolved().element();
     assert(target->kind == Element::Kind::kProtocol && "Composed protocol not a protocol");
-
     auto composed_protocol = static_cast<const Protocol*>(target);
-
     if (!IsAllowedComposition(protocol.openness, composed_protocol->openness)) {
-      Fail(ErrComposedProtocolTooOpen, composed.reference.span().value(), protocol.openness,
-           protocol.name, composed_protocol->openness, composed_protocol->name);
+      Fail(ErrComposedProtocolTooOpen, composed.reference.span(), protocol.openness, protocol.name,
+           composed_protocol->openness, composed_protocol->name);
     }
   }
 
@@ -374,6 +368,21 @@ bool VerifyOpenInteractionsStep::IsAllowedComposition(types::Openness composing,
     case types::Openness::kClosed:
       // Closed protocol can only compose another closed protocol.
       return composed == types::Openness::kClosed;
+  }
+}
+
+void VerifyVersionSelectionStep::RunImpl() {
+  auto& platform = library()->platform.value();
+  auto version = version_selection()->Lookup(platform);
+  if (!library()->availability.range().Contains(version)) {
+    Fail(ErrLibraryNotAvailable, library()->arbitrary_name_span, library()->name, platform, version,
+         library()->availability.range());
+    return;
+  }
+  if (auto range = library()->availability.deprecated_range();
+      range && range.value().Contains(version)) {
+    Warn(WarnLibraryDeprecated, library()->arbitrary_name_span, library()->name, platform, version);
+    return;
   }
 }
 

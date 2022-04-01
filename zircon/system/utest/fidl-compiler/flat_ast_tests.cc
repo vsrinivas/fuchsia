@@ -17,11 +17,14 @@
 namespace {
 
 using fidl::SourceSpan;
-using fidl::flat::Constant;
+using fidl::Token;
 using fidl::flat::HandleRights;
 using fidl::flat::HandleType;
+using fidl::flat::LiteralConstant;
 using fidl::flat::Name;
 using fidl::flat::NumericConstantValue;
+using fidl::raw::Literal;
+using fidl::raw::SourceElement;
 using fidl::types::HandleSubtype;
 using fidl::types::Nullability;
 using fidl::types::RightsWrappedType;
@@ -34,10 +37,12 @@ TEST(FlatAstTests, GoodImplicitAssumptions) {
 
 TEST(FlatAstTests, GoodCompareHandles) {
   auto name_not_important = Name::CreateIntrinsic(nullptr, "ignore");
-  auto rights1Constant = std::make_unique<Constant>(Constant::Kind::kLiteral, SourceSpan());
+  auto fake_source_element = SourceElement(Token(), Token());
+  auto fake_literal = Literal(fake_source_element, Literal::Kind::kNumeric);
+  auto rights1Constant = std::make_unique<LiteralConstant>(&fake_literal);
   rights1Constant->ResolveTo(std::make_unique<HandleRights>(1), nullptr);
   auto rights1Value = static_cast<const HandleRights*>(&rights1Constant->Value());
-  auto rights2Constant = std::make_unique<Constant>(Constant::Kind::kLiteral, SourceSpan());
+  auto rights2Constant = std::make_unique<LiteralConstant>(&fake_literal);
   rights2Constant->ResolveTo(std::make_unique<HandleRights>(2), nullptr);
   auto rights2Value = static_cast<const HandleRights*>(&rights2Constant->Value());
   fidl::flat::Resource* resource_decl_not_needed = nullptr;

@@ -180,7 +180,15 @@ const ConstantValue& Constant::Value() const {
   return *value_;
 }
 
-LiteralConstant::LiteralConstant(std::unique_ptr<raw::Literal> literal)
-    : Constant(Kind::kLiteral, literal->span()), literal(std::move(literal)) {}
+std::unique_ptr<Constant> Constant::Clone() const {
+  auto cloned = CloneImpl();
+  cloned->compiled = compiled;
+  cloned->type = type;
+  cloned->value_ = value_ ? value_->Clone() : nullptr;
+  return cloned;
+}
+
+LiteralConstant::LiteralConstant(const raw::Literal* literal)
+    : Constant(Kind::kLiteral, literal->span()), literal(literal) {}
 
 }  // namespace fidl::flat

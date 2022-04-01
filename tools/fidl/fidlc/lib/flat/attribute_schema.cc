@@ -33,6 +33,16 @@ AttributeSchema& AttributeSchema::RestrictToAnonymousLayouts() {
   return *this;
 }
 
+AttributeSchema& AttributeSchema::DisallowOnAnonymousLayouts() {
+  assert(kind_ == AttributeSchema::Kind::kValidateOnly ||
+         kind_ == AttributeSchema::Kind::kUseEarly ||
+         kind_ == AttributeSchema::Kind::kCompileEarly && "wrong kind");
+  assert(placement_ == AttributeSchema::Placement::kAnywhere && "already set placements");
+  assert(specific_placements_.empty() && "already set placements");
+  placement_ = AttributeSchema::Placement::kAnythingButAnonymousLayout;
+  return *this;
+}
+
 AttributeSchema& AttributeSchema::AddArg(AttributeArgSchema arg_schema) {
   assert(kind_ == AttributeSchema::Kind::kValidateOnly ||
          kind_ == AttributeSchema::Kind::kUseEarly ||
@@ -105,32 +115,24 @@ void AttributeSchema::Validate(Reporter* reporter, const Attribute* attribute,
       return;
   }
 
+  bool valid_placement;
   switch (placement_) {
     case Placement::kAnywhere:
+      valid_placement = true;
       break;
     case Placement::kSpecific:
-      if (specific_placements_.count(element->kind) == 0) {
-        reporter->Fail(ErrInvalidAttributePlacement, attribute->span, attribute);
-        return;
-      }
+      valid_placement = specific_placements_.count(element->kind) > 0;
       break;
     case Placement::kAnonymousLayout:
-      switch (element->kind) {
-        case Element::Kind::kBits:
-        case Element::Kind::kEnum:
-        case Element::Kind::kStruct:
-        case Element::Kind::kTable:
-        case Element::Kind::kUnion:
-          if (static_cast<const Decl*>(element)->name.as_anonymous()) {
-            // Good: the attribute is on an anonymous layout.
-            break;
-          }
-          [[fallthrough]];
-        default:
-          reporter->Fail(ErrInvalidAttributePlacement, attribute->span, attribute);
-          return;
-      }
+      valid_placement = element->IsAnonymousLayout();
       break;
+    case Placement::kAnythingButAnonymousLayout:
+      valid_placement = !element->IsAnonymousLayout();
+      break;
+  }
+  if (!valid_placement) {
+    reporter->Fail(ErrInvalidAttributePlacement, attribute->span, attribute);
+    return;
   }
 
   if (constraint_ == nullptr) {
@@ -170,7 +172,7 @@ void AttributeSchema::ResolveArgs(CompileStep* step, Attribute* attribute) const
       return;
     }
     if (arg_schemas_.size() > 1) {
-      step->Fail(ErrAttributeArgNotNamed, attribute->span, anon_arg);
+      step->Fail(ErrAttributeArgNotNamed, attribute->span, anon_arg->value.get());
       return;
     }
     anon_arg->name = step->generated_source_file()->AddLine(arg_schemas_.begin()->first);
@@ -203,9 +205,49 @@ void AttributeSchema::ResolveArgs(CompileStep* step, Attribute* attribute) const
   }
 }
 
+static bool RefersToHead(const std::vector<std::string_view>& components, const Decl* head_decl) {
+  auto head_name = head_decl->name.decl_name();
+  if (components.size() == 1 && components[0] == head_name) {
+    return true;
+  }
+  auto& library_name = head_decl->name.library()->name;
+  return components.size() == library_name.size() + 1 &&
+         std::equal(library_name.begin(), library_name.end(), components.begin()) &&
+         components.back() == head_name;
+}
+
+bool AttributeArgSchema::TryResolveAsHead(CompileStep* step, Reference& reference) const {
+  Decl* head_decl =
+      step->all_libraries()->root_library()->declarations.LookupBuiltin(Builtin::Identity::kHead);
+  if (RefersToHead(reference.raw_sourced().components, head_decl)) {
+    auto name = head_decl->name;
+    reference.SetKey(Reference::Key(name.library(), name.decl_name()));
+    reference.ResolveTo(Reference::Target(head_decl));
+    return true;
+  }
+  return false;
+}
+
 void AttributeArgSchema::ResolveArg(CompileStep* step, Attribute* attribute, AttributeArg* arg,
                                     bool literal_only) const {
   Constant* constant = arg->value.get();
+  assert(!constant->IsResolved() && "argument should not be resolved yet");
+
+  ConstantValue::Kind kind;
+  if (auto special_case = std::get_if<SpecialCase>(&type_)) {
+    assert(*special_case == SpecialCase::kVersion && "unhandled special case");
+    kind = ConstantValue::Kind::kUint64;
+    if (constant->kind == Constant::Kind::kIdentifier) {
+      if (TryResolveAsHead(step, static_cast<IdentifierConstant*>(constant)->reference)) {
+        constant->ResolveTo(
+            std::make_unique<NumericConstantValue<uint64_t>>(Version::Head().ordinal()),
+            step->typespace()->GetPrimitiveType(types::PrimitiveSubtype::kUint64));
+        return;
+      }
+    }
+  } else {
+    kind = std::get<ConstantValue::Kind>(type_);
+  }
 
   if (literal_only && constant->kind != Constant::Kind::kLiteral) {
     step->Fail(ErrAttributeArgRequiresLiteral, constant->span, arg->name.value().data(), attribute);
@@ -213,7 +255,7 @@ void AttributeArgSchema::ResolveArg(CompileStep* step, Attribute* attribute, Att
   }
 
   const Type* target_type;
-  switch (type_) {
+  switch (kind) {
     case ConstantValue::Kind::kDocComment:
       assert(false && "we know the target type of doc comments, and should not end up here");
       return;
@@ -346,7 +388,7 @@ static bool IsSimple(const Type* type, Reporter* reporter) {
       if (identifier_type->type_decl->kind == Decl::Kind::kUnion) {
         auto name = identifier_type->type_decl->name;
         auto union_name = std::make_pair<const std::string&, const std::string_view&>(
-            LibraryName(name.library(), "."), name.decl_name());
+            LibraryName(name.library()->name, "."), name.decl_name());
         if (allowed_simple_unions.find(union_name) == allowed_simple_unions.end()) {
           // Any unions not in the allow-list are treated as non-simple.
           return reporter->Fail(ErrUnionCannotBeSimple, name.span().value(), name);
@@ -475,7 +517,7 @@ static bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
                                const Element* element) {
   assert(element);
   auto arg = attribute->GetArg(AttributeArg::kDefaultAnonymousName);
-  auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
+  auto& arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
   uint32_t bound;
   if (!ParseBound(reporter, attribute, std::string(arg_value.MakeContents()), &bound))
@@ -545,7 +587,7 @@ static bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute,
                                  const Element* element) {
   assert(element);
   auto arg = attribute->GetArg(AttributeArg::kDefaultAnonymousName);
-  auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
+  auto& arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
   uint32_t bound;
   if (!ParseBound(reporter, attribute, std::string(arg_value.MakeContents()), &bound))
@@ -648,7 +690,7 @@ static bool TransportConstraint(Reporter* reporter, const Attribute* attribute,
   assert(element->kind == Element::Kind::kProtocol);
 
   auto arg = attribute->GetArg(AttributeArg::kDefaultAnonymousName);
-  auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
+  auto& arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
   const std::string& value = arg_value.MakeContents();
   std::optional<Transport> transport = Transport::FromTransportName(value);
@@ -722,6 +764,19 @@ AttributeSchemaMap AttributeSchema::OfficialAttributes() {
       .AddArg(AttributeArgSchema(ConstantValue::Kind::kString))
       .Constrain(TransportConstraint);
   map["unknown"].RestrictTo({Element::Kind::kEnumMember});
+  map["available"]
+      .DisallowOnAnonymousLayouts()
+      .AddArg("platform", AttributeArgSchema(ConstantValue::Kind::kString,
+                                             AttributeArgSchema::Optionality::kOptional))
+      .AddArg("added", AttributeArgSchema(AttributeArgSchema::SpecialCase::kVersion,
+                                          AttributeArgSchema::Optionality::kOptional))
+      .AddArg("deprecated", AttributeArgSchema(AttributeArgSchema::SpecialCase::kVersion,
+                                               AttributeArgSchema::Optionality::kOptional))
+      .AddArg("removed", AttributeArgSchema(AttributeArgSchema::SpecialCase::kVersion,
+                                            AttributeArgSchema::Optionality::kOptional))
+      .AddArg("note", AttributeArgSchema(ConstantValue::Kind::kString,
+                                         AttributeArgSchema::Optionality::kOptional))
+      .CompileEarly();
   return map;
 }
 

@@ -11,6 +11,7 @@
 
 #include "fidl/flat/name.h"
 #include "fidl/flat/reference.h"
+#include "fidl/flat/traits.h"
 #include "fidl/raw_ast.h"
 #include "fidl/source_span.h"
 #include "fidl/types.h"
@@ -22,7 +23,7 @@ struct Type;
 // ConstantValue represents the concrete _value_ of a constant. (For the
 // _declaration_, see Const. For the _use_, see Constant.) ConstantValue has
 // derived classes for all the different kinds of constants.
-struct ConstantValue {
+struct ConstantValue : public HasClone<ConstantValue> {
   virtual ~ConstantValue() {}
 
   enum struct Kind {
@@ -104,6 +105,10 @@ struct NumericConstantValue final : ConstantValue {
 
   bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override;
 
+  std::unique_ptr<ConstantValue> Clone() const override {
+    return std::make_unique<NumericConstantValue<ValueType>>(value);
+  }
+
   static NumericConstantValue<ValueType> Min() {
     return NumericConstantValue<ValueType>(std::numeric_limits<ValueType>::lowest());
   }
@@ -162,6 +167,10 @@ struct BoolConstantValue final : ConstantValue {
 
   bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override;
 
+  std::unique_ptr<ConstantValue> Clone() const override {
+    return std::make_unique<BoolConstantValue>(value);
+  }
+
   bool value;
 };
 
@@ -173,8 +182,12 @@ struct DocCommentConstantValue final : ConstantValue {
     return os << v.value.data();
   }
 
-  bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const;
+  bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override;
   std::string MakeContents() const;
+
+  std::unique_ptr<ConstantValue> Clone() const override {
+    return std::make_unique<DocCommentConstantValue>(value);
+  }
 
   std::string_view value;
 };
@@ -188,8 +201,12 @@ struct StringConstantValue final : ConstantValue {
     return os;
   }
 
-  bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const;
+  bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override;
   std::string MakeContents() const;
+
+  std::unique_ptr<ConstantValue> Clone() const override {
+    return std::make_unique<StringConstantValue>(value);
+  }
 
   std::string_view value;
 };
@@ -198,7 +215,7 @@ struct StringConstantValue final : ConstantValue {
 // Const. For the _value_, see ConstantValue.) A Constant can either be a
 // reference to another constant (IdentifierConstant), a literal value
 // (LiteralConstant). Every Constant resolves to a concrete ConstantValue.
-struct Constant {
+struct Constant : HasClone<Constant> {
   virtual ~Constant() {}
 
   enum struct Kind { kIdentifier, kLiteral, kBinaryOperator };
@@ -208,6 +225,7 @@ struct Constant {
   bool IsResolved() const { return value_ != nullptr; }
   void ResolveTo(std::unique_ptr<ConstantValue> value, const Type* type);
   const ConstantValue& Value() const;
+  std::unique_ptr<Constant> Clone() const override;
 
   const Kind kind;
   const SourceSpan span;
@@ -220,6 +238,10 @@ struct Constant {
 
  protected:
   std::unique_ptr<ConstantValue> value_;
+
+ private:
+  // Helper to implement Clone(). Clones without including compilation state.
+  virtual std::unique_ptr<Constant> CloneImpl() const = 0;
 };
 
 struct IdentifierConstant final : Constant {
@@ -230,12 +252,25 @@ struct IdentifierConstant final : Constant {
       : Constant(Kind::kIdentifier, span), reference(std::move(reference)) {}
 
   Reference reference;
+
+ private:
+  std::unique_ptr<Constant> CloneImpl() const override {
+    return std::make_unique<IdentifierConstant>(reference, span);
+  }
 };
 
 struct LiteralConstant final : Constant {
-  explicit LiteralConstant(std::unique_ptr<raw::Literal> literal);
+  explicit LiteralConstant(const raw::Literal* literal);
 
-  std::unique_ptr<raw::Literal> literal;
+  std::unique_ptr<LiteralConstant> CloneLiteralConstant() const {
+    return std::make_unique<LiteralConstant>(literal);
+  }
+
+  // Owned by Library::raw_literals.
+  const raw::Literal* literal;
+
+ private:
+  std::unique_ptr<Constant> CloneImpl() const override { return CloneLiteralConstant(); }
 };
 
 struct BinaryOperatorConstant final : Constant {
@@ -252,6 +287,12 @@ struct BinaryOperatorConstant final : Constant {
   const std::unique_ptr<Constant> left_operand;
   const std::unique_ptr<Constant> right_operand;
   const Operator op;
+
+ private:
+  std::unique_ptr<Constant> CloneImpl() const override {
+    return std::make_unique<BinaryOperatorConstant>(left_operand->Clone(), right_operand->Clone(),
+                                                    op, span);
+  }
 };
 
 }  // namespace fidl::flat

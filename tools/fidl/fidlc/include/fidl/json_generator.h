@@ -56,16 +56,14 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   using utils::JsonWriter<JSONGenerator>::Generate;
   using utils::JsonWriter<JSONGenerator>::GenerateArray;
 
-  explicit JSONGenerator(const flat::Libraries* all_libraries, ExperimentalFlags experimental_flags)
+  explicit JSONGenerator(const flat::Compilation* compilation, ExperimentalFlags experimental_flags)
       : JsonWriter(json_file_),
-        all_libraries_(all_libraries),
+        compilation_(compilation),
         experimental_flags_(experimental_flags) {}
 
   ~JSONGenerator() = default;
 
   std::ostringstream Produce();
-
-  void Generate(const flat::Decl* decl);
 
   void Generate(SourceSpan value);
   void Generate(NameSpan value);
@@ -103,7 +101,6 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   void Generate(const flat::Service& value);
   void Generate(const flat::Service::Member& value);
   void Generate(const flat::Struct& value);
-  void Generate(const flat::Struct* value);
   void Generate(const flat::Struct::Member& value);
   void Generate(const flat::Table& value);
   void Generate(const flat::Table::Member& value);
@@ -112,7 +109,7 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   void Generate(const flat::LayoutInvocation& value);
   void Generate(const flat::TypeConstructor& value);
   void Generate(const flat::TypeAlias& value);
-  void Generate(const flat::Library* library);
+  void Generate(const flat::Compilation::Dependency& dependency);
 
  private:
   enum TypeKind {
@@ -145,19 +142,25 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
                                  Position position = Position::kSubsequent);
   void GenerateExperimentalMaybeFromTypeAlias(const flat::LayoutInvocation& invocation);
   void GenerateDeclarationsEntry(int count, const flat::Name& name, std::string_view decl_kind);
-  void GenerateDeclarationsMember(const flat::Library* library,
+  void GenerateDeclarationsMember(const flat::Compilation::Declarations& declarations,
                                   Position position = Position::kSubsequent);
   void GenerateExternalDeclarationsEntry(int count, const flat::Name& name,
                                          std::string_view decl_kind,
                                          std::optional<types::Resourceness> maybe_resourceness);
-  void GenerateExternalDeclarationsMember(const flat::Library* library,
+  void GenerateExternalDeclarationsMember(const flat::Compilation::Declarations& declarations,
                                           Position position = Position::kSubsequent);
   void GenerateTypeShapes(const flat::Object& object);
   void GenerateFieldShapes(const flat::Struct::Member& struct_member);
 
-  const flat::Libraries* all_libraries_;
-  std::ostringstream json_file_;
+  template <typename T>
+  std::vector<std::reference_wrapper<const T>> FilterDecls(
+      const std::vector<std::unique_ptr<T>>& vector);
+  template <typename T>
+  std::vector<std::reference_wrapper<const T>> FilterDecls2(const std::vector<const T*>& vector);
+
+  const flat::Compilation* compilation_;
   const ExperimentalFlags experimental_flags_;
+  std::ostringstream json_file_;
 };
 
 }  // namespace fidl

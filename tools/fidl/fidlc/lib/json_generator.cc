@@ -13,8 +13,6 @@
 
 namespace fidl {
 
-void JSONGenerator::Generate(const flat::Decl* decl) { Generate(decl->name); }
-
 void JSONGenerator::Generate(SourceSpan value) { EmitString(value.data()); }
 
 void JSONGenerator::Generate(NameSpan value) {
@@ -29,67 +27,67 @@ void JSONGenerator::Generate(NameSpan value) {
 void JSONGenerator::Generate(const flat::ConstantValue& value) {
   switch (value.kind) {
     case flat::ConstantValue::Kind::kUint8: {
-      auto numeric_constant = reinterpret_cast<const flat::NumericConstantValue<uint8_t>&>(value);
+      auto& numeric_constant = reinterpret_cast<const flat::NumericConstantValue<uint8_t>&>(value);
       EmitNumeric(static_cast<uint64_t>(numeric_constant), kAsString);
       break;
     }
     case flat::ConstantValue::Kind::kUint16: {
-      auto numeric_constant = reinterpret_cast<const flat::NumericConstantValue<uint16_t>&>(value);
+      auto& numeric_constant = reinterpret_cast<const flat::NumericConstantValue<uint16_t>&>(value);
       EmitNumeric(static_cast<uint16_t>(numeric_constant), kAsString);
       break;
     }
     case flat::ConstantValue::Kind::kUint32: {
-      auto numeric_constant = reinterpret_cast<const flat::NumericConstantValue<uint32_t>&>(value);
+      auto& numeric_constant = reinterpret_cast<const flat::NumericConstantValue<uint32_t>&>(value);
       EmitNumeric(static_cast<uint32_t>(numeric_constant), kAsString);
       break;
     }
     case flat::ConstantValue::Kind::kUint64: {
-      auto numeric_constant = reinterpret_cast<const flat::NumericConstantValue<uint64_t>&>(value);
+      auto& numeric_constant = reinterpret_cast<const flat::NumericConstantValue<uint64_t>&>(value);
       EmitNumeric(static_cast<uint64_t>(numeric_constant), kAsString);
       break;
     }
     case flat::ConstantValue::Kind::kInt8: {
-      auto numeric_constant = reinterpret_cast<const flat::NumericConstantValue<int8_t>&>(value);
+      auto& numeric_constant = reinterpret_cast<const flat::NumericConstantValue<int8_t>&>(value);
       EmitNumeric(static_cast<int64_t>(numeric_constant), kAsString);
       break;
     }
     case flat::ConstantValue::Kind::kInt16: {
-      auto numeric_constant = reinterpret_cast<const flat::NumericConstantValue<int16_t>&>(value);
+      auto& numeric_constant = reinterpret_cast<const flat::NumericConstantValue<int16_t>&>(value);
       EmitNumeric(static_cast<int16_t>(numeric_constant), kAsString);
       break;
     }
     case flat::ConstantValue::Kind::kInt32: {
-      auto numeric_constant = reinterpret_cast<const flat::NumericConstantValue<int32_t>&>(value);
+      auto& numeric_constant = reinterpret_cast<const flat::NumericConstantValue<int32_t>&>(value);
       EmitNumeric(static_cast<int32_t>(numeric_constant), kAsString);
       break;
     }
     case flat::ConstantValue::Kind::kInt64: {
-      auto numeric_constant = reinterpret_cast<const flat::NumericConstantValue<int64_t>&>(value);
+      auto& numeric_constant = reinterpret_cast<const flat::NumericConstantValue<int64_t>&>(value);
       EmitNumeric(static_cast<int64_t>(numeric_constant), kAsString);
       break;
     }
     case flat::ConstantValue::Kind::kFloat32: {
-      auto numeric_constant = reinterpret_cast<const flat::NumericConstantValue<float>&>(value);
+      auto& numeric_constant = reinterpret_cast<const flat::NumericConstantValue<float>&>(value);
       EmitNumeric(static_cast<float>(numeric_constant), kAsString);
       break;
     }
     case flat::ConstantValue::Kind::kFloat64: {
-      auto numeric_constant = reinterpret_cast<const flat::NumericConstantValue<double>&>(value);
+      auto& numeric_constant = reinterpret_cast<const flat::NumericConstantValue<double>&>(value);
       EmitNumeric(static_cast<double>(numeric_constant), kAsString);
       break;
     }
     case flat::ConstantValue::Kind::kBool: {
-      auto bool_constant = reinterpret_cast<const flat::BoolConstantValue&>(value);
+      auto& bool_constant = reinterpret_cast<const flat::BoolConstantValue&>(value);
       EmitBoolean(static_cast<bool>(bool_constant), kAsString);
       break;
     }
     case flat::ConstantValue::Kind::kDocComment: {
-      auto doc_comment_constant = reinterpret_cast<const flat::DocCommentConstantValue&>(value);
+      auto& doc_comment_constant = reinterpret_cast<const flat::DocCommentConstantValue&>(value);
       EmitString(doc_comment_constant.MakeContents());
       break;
     }
     case flat::ConstantValue::Kind::kString: {
-      auto string_constant = reinterpret_cast<const flat::StringConstantValue&>(value);
+      auto& string_constant = reinterpret_cast<const flat::StringConstantValue&>(value);
       EmitLiteral(string_constant.value);
       break;
     }
@@ -150,12 +148,12 @@ void JSONGenerator::Generate(const flat::Constant& value) {
         // fidl/uint32 etc. But if we emit "MAX" here it fails JSON schema
         // validation, so we manually emit "fidl/MAX". We likely shouldn't be
         // emitting anything in the IR for MAX bounds.
-        if (identifier->reference.target()->kind == flat::Element::Kind::kBuiltin &&
-            static_cast<const flat::Builtin*>(identifier->reference.target())->kind ==
-                flat::Builtin::Kind::kMax) {
+        if (identifier->reference.resolved().element()->kind == flat::Element::Kind::kBuiltin &&
+            static_cast<const flat::Builtin*>(identifier->reference.resolved().element())->id ==
+                flat::Builtin::Identity::kMax) {
           GenerateObjectMember("identifier", std::string_view("fidl/MAX"));
         } else {
-          GenerateObjectMember("identifier", identifier->reference.target_name());
+          GenerateObjectMember("identifier", identifier->reference.resolved().name());
         }
         break;
       }
@@ -383,10 +381,10 @@ void JSONGenerator::Generate(const flat::Protocol& value) {
 
 void JSONGenerator::Generate(const flat::Protocol::ComposedProtocol& value) {
   GenerateObject([&]() {
-    GenerateObjectMember("name", value.reference.target_name(), Position::kFirst);
+    GenerateObjectMember("name", value.reference.resolved().name(), Position::kFirst);
     if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
-    GenerateObjectMember("location", NameSpan(value.reference.span().value()));
+    GenerateObjectMember("location", NameSpan(value.reference.span()));
   });
 }
 
@@ -416,16 +414,16 @@ void JSONGenerator::Generate(const flat::Protocol::MethodWithInfo& method_with_i
     if (value.HasResultUnion()) {
       auto response_id = static_cast<const flat::IdentifierType*>(value.maybe_response->type);
       auto response_struct = static_cast<const flat::Struct*>(response_id->type_decl);
-      const auto* result_union_type =
-          static_cast<const flat::IdentifierType*>(response_struct->members[0].type_ctor->type);
-      const auto* result_union = static_cast<const flat::Union*>(result_union_type->type_decl);
-      const auto* success_variant_type = static_cast<const flat::IdentifierType*>(
-          result_union->members[0].maybe_used->type_ctor->type);
+      const auto* result_union_type = response_struct->members[0].type_ctor->type;
+      const auto* result_union = static_cast<const flat::Union*>(
+          static_cast<const flat::IdentifierType*>(result_union_type)->type_decl);
       GenerateObjectMember("maybe_response_result_type", result_union_type);
-      GenerateObjectMember("maybe_response_success_type", success_variant_type);
-      if (value.has_error)
+      GenerateObjectMember("maybe_response_success_type",
+                           result_union->members[0].maybe_used->type_ctor->type);
+      if (value.has_error) {
         GenerateObjectMember("maybe_response_err_type",
                              result_union->members[1].maybe_used->type_ctor->type);
+      }
     }
   });
 }
@@ -607,8 +605,6 @@ void JSONGenerator::Generate(const flat::Struct& value) {
   });
 }
 
-void JSONGenerator::Generate(const flat::Struct* value) { Generate(*value); }
-
 void JSONGenerator::Generate(const flat::Struct::Member& value) {
   GenerateObject([&]() {
     GenerateTypeAndFromTypeAlias(value.type_ctor.get(), Position::kFirst);
@@ -722,7 +718,7 @@ void JSONGenerator::Generate(const flat::LayoutInvocation& value) {
     if (value.element_type_resolved) {
       Indent();
       EmitNewlineWithIndent();
-      Generate(value.element_type_raw->layout.target_name());
+      Generate(value.element_type_raw->layout.resolved().name());
       Outdent();
       EmitNewlineWithIndent();
     }
@@ -760,7 +756,7 @@ void JSONGenerator::Generate(const flat::TypeConstructor& value) {
         server_end = end_type;
       }
     } else {
-      GenerateObjectMember("name", value.type ? value.type->name : value.layout.target_name(),
+      GenerateObjectMember("name", value.type ? value.type->name : value.layout.resolved().name(),
                            Position::kFirst);
     }
     GenerateObjectPunctuation(Position::kSubsequent);
@@ -819,11 +815,11 @@ void JSONGenerator::Generate(const flat::TypeAlias& value) {
   });
 }
 
-void JSONGenerator::Generate(const flat::Library* library) {
+void JSONGenerator::Generate(const flat::Compilation::Dependency& dependency) {
   GenerateObject([&]() {
-    auto library_name = flat::LibraryName(library, ".");
+    auto library_name = flat::LibraryName(dependency.library->name, ".");
     GenerateObjectMember("name", library_name, Position::kFirst);
-    GenerateExternalDeclarationsMember(library);
+    GenerateExternalDeclarationsMember(dependency.declarations);
   });
 }
 
@@ -851,39 +847,40 @@ void JSONGenerator::GenerateDeclarationsEntry(int count, const flat::Name& name,
   EmitString(decl_kind);
 }
 
-void JSONGenerator::GenerateDeclarationsMember(const flat::Library* library, Position position) {
+void JSONGenerator::GenerateDeclarationsMember(const flat::Compilation::Declarations& declarations,
+                                               Position position) {
   GenerateObjectPunctuation(position);
   EmitObjectKey("declarations");
   GenerateObject([&]() {
     int count = 0;
-    for (const auto& decl : library->bits_declarations)
+    for (const auto& decl : declarations.bits)
       GenerateDeclarationsEntry(count++, decl->name, "bits");
 
-    for (const auto& decl : library->const_declarations)
+    for (const auto& decl : declarations.consts)
       GenerateDeclarationsEntry(count++, decl->name, "const");
 
-    for (const auto& decl : library->enum_declarations)
+    for (const auto& decl : declarations.enums)
       GenerateDeclarationsEntry(count++, decl->name, "enum");
 
-    for (const auto& decl : library->resource_declarations)
+    for (const auto& decl : declarations.resources)
       GenerateDeclarationsEntry(count++, decl->name, "experimental_resource");
 
-    for (const auto& decl : library->protocol_declarations)
+    for (const auto& decl : declarations.protocols)
       GenerateDeclarationsEntry(count++, decl->name, "interface");
 
-    for (const auto& decl : library->service_declarations)
+    for (const auto& decl : declarations.services)
       GenerateDeclarationsEntry(count++, decl->name, "service");
 
-    for (const auto& decl : library->struct_declarations)
+    for (const auto& decl : declarations.structs)
       GenerateDeclarationsEntry(count++, decl->name, "struct");
 
-    for (const auto& decl : library->table_declarations)
+    for (const auto& decl : declarations.tables)
       GenerateDeclarationsEntry(count++, decl->name, "table");
 
-    for (const auto& decl : library->union_declarations)
+    for (const auto& decl : declarations.unions)
       GenerateDeclarationsEntry(count++, decl->name, "union");
 
-    for (const auto& decl : library->type_alias_declarations)
+    for (const auto& decl : declarations.type_aliases)
       GenerateDeclarationsEntry(count++, decl->name, "type_alias");
   });
 }
@@ -906,144 +903,79 @@ void JSONGenerator::GenerateExternalDeclarationsEntry(
   });
 }
 
-void JSONGenerator::GenerateExternalDeclarationsMember(const flat::Library* library,
-                                                       Position position) {
+void JSONGenerator::GenerateExternalDeclarationsMember(
+    const flat::Compilation::Declarations& declarations, Position position) {
   GenerateObjectPunctuation(position);
   EmitObjectKey("declarations");
   GenerateObject([&]() {
     int count = 0;
-    for (const auto& decl : library->bits_declarations)
+    for (const auto& decl : declarations.bits)
       GenerateExternalDeclarationsEntry(count++, decl->name, "bits", std::nullopt);
 
-    for (const auto& decl : library->const_declarations)
+    for (const auto& decl : declarations.consts)
       GenerateExternalDeclarationsEntry(count++, decl->name, "const", std::nullopt);
 
-    for (const auto& decl : library->enum_declarations)
+    for (const auto& decl : declarations.enums)
       GenerateExternalDeclarationsEntry(count++, decl->name, "enum", std::nullopt);
 
-    for (const auto& decl : library->resource_declarations)
+    for (const auto& decl : declarations.resources)
       GenerateExternalDeclarationsEntry(count++, decl->name, "experimental_resource", std::nullopt);
 
-    for (const auto& decl : library->protocol_declarations)
+    for (const auto& decl : declarations.protocols)
       GenerateExternalDeclarationsEntry(count++, decl->name, "interface", std::nullopt);
 
-    for (const auto& decl : library->service_declarations)
+    for (const auto& decl : declarations.services)
       GenerateExternalDeclarationsEntry(count++, decl->name, "service", std::nullopt);
 
-    for (const auto& decl : library->struct_declarations)
+    for (const auto& decl : declarations.structs)
       GenerateExternalDeclarationsEntry(count++, decl->name, "struct", decl->resourceness);
 
-    for (const auto& decl : library->table_declarations)
+    for (const auto& decl : declarations.tables)
       GenerateExternalDeclarationsEntry(count++, decl->name, "table", decl->resourceness);
 
-    for (const auto& decl : library->union_declarations)
+    for (const auto& decl : declarations.unions)
       GenerateExternalDeclarationsEntry(count++, decl->name, "union", decl->resourceness);
 
-    for (const auto& decl : library->type_alias_declarations)
+    for (const auto& decl : declarations.type_aliases)
       GenerateExternalDeclarationsEntry(count++, decl->name, "type_alias", std::nullopt);
   });
 }
 
-namespace {
-
-// Return all externally defined structs used by method payloads defined in this library. Such
-// structs may enter this library by being used as the payload definitions for composed methods.
-std::vector<const flat::Struct*> ExternalStructs(const flat::Library* library) {
-  // Use the comparator below to ensure deterministic output when this set is converted into a
-  // vector at the end of this function.
-  auto ordering = [](const flat::Struct* a, const flat::Struct* b) {
-    return NameFlatName(a->name) < NameFlatName(b->name);
-  };
-  std::set<const flat::Struct*, decltype(ordering)> external_structs(ordering);
-
-  for (const auto& protocol : library->protocol_declarations) {
-    for (const auto method_with_info : protocol->all_methods) {
-      const auto& method = method_with_info.method;
-      if (method->maybe_request) {
-        auto id = static_cast<const flat::IdentifierType*>(method->maybe_request->type);
-
-        // Make sure this is actually an externally defined struct before proceeding.
-        if (id->name.library() != library && id->type_decl->kind == flat::Decl::Kind::kStruct) {
-          auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
-          external_structs.insert(as_struct);
-        }
-      }
-      if (method->maybe_response) {
-        auto id = static_cast<const flat::IdentifierType*>(method->maybe_response->type);
-
-        // Make sure this is actually an externally defined struct before proceeding.
-        if (id->name.library() != library && id->type_decl->kind == flat::Decl::Kind::kStruct) {
-          auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
-          external_structs.insert(as_struct);
-        }
-
-        // This struct is actually wrapping an error union, so check to see if the success variant
-        // struct should be exported as well.
-        if (method->has_error) {
-          auto response_struct = static_cast<const flat::Struct*>(id->type_decl);
-          const auto* result_union_type =
-              static_cast<const flat::IdentifierType*>(response_struct->members[0].type_ctor->type);
-
-          assert(result_union_type->type_decl->kind == flat::Decl::Kind::kUnion);
-          const auto* result_union = static_cast<const flat::Union*>(result_union_type->type_decl);
-          const auto* success_variant_type = static_cast<const flat::IdentifierType*>(
-              result_union->members[0].maybe_used->type_ctor->type);
-          if (success_variant_type->type_decl->kind != flat::Decl::Kind::kStruct) {
-            continue;
-          }
-
-          const auto* success_variant_struct =
-              static_cast<const flat::Struct*>(success_variant_type->type_decl);
-
-          // Make sure this is actually an externally defined struct before proceeding.
-          if (success_variant_type->name.library() != library) {
-            external_structs.insert(success_variant_struct);
-          }
-        }
-      }
-    }
-  }
-
-  return std::vector<const flat::Struct*>(external_structs.begin(), external_structs.end());
-}
-
-}  // namespace
-
 std::ostringstream JSONGenerator::Produce() {
-  const flat::Library* library = all_libraries_->target_library();
   ResetIndentLevel();
   GenerateObject([&]() {
     GenerateObjectMember("version", std::string_view("0.0.1"), Position::kFirst);
 
-    GenerateObjectMember("name", LibraryName(library, "."));
+    GenerateObjectMember("name", flat::LibraryName(compilation_->library_name, "."));
 
-    if (!library->attributes->Empty()) {
-      GenerateObjectMember("maybe_attributes", library->attributes);
+    if (!compilation_->library_attributes->Empty()) {
+      GenerateObjectMember("maybe_attributes", compilation_->library_attributes);
     }
 
     GenerateObjectPunctuation(Position::kSubsequent);
     EmitObjectKey("library_dependencies");
-    GenerateArray(all_libraries_->DirectAndComposedDependencies(library));
+    GenerateArray(compilation_->direct_and_composed_dependencies);
 
-    GenerateObjectMember("bits_declarations", library->bits_declarations);
-    GenerateObjectMember("const_declarations", library->const_declarations);
-    GenerateObjectMember("enum_declarations", library->enum_declarations);
-    GenerateObjectMember("experimental_resource_declarations", library->resource_declarations);
-    GenerateObjectMember("interface_declarations", library->protocol_declarations);
-    GenerateObjectMember("service_declarations", library->service_declarations);
-    GenerateObjectMember("struct_declarations", library->struct_declarations);
-    GenerateObjectMember("external_struct_declarations", ExternalStructs(library));
-    GenerateObjectMember("table_declarations", library->table_declarations);
-    GenerateObjectMember("union_declarations", library->union_declarations);
-    GenerateObjectMember("type_alias_declarations", library->type_alias_declarations);
+    GenerateObjectMember("bits_declarations", compilation_->declarations.bits);
+    GenerateObjectMember("const_declarations", compilation_->declarations.consts);
+    GenerateObjectMember("enum_declarations", compilation_->declarations.enums);
+    GenerateObjectMember("experimental_resource_declarations",
+                         compilation_->declarations.resources);
+    GenerateObjectMember("interface_declarations", compilation_->declarations.protocols);
+    GenerateObjectMember("service_declarations", compilation_->declarations.services);
+    GenerateObjectMember("struct_declarations", compilation_->declarations.structs);
+    GenerateObjectMember("external_struct_declarations", compilation_->external_structs);
+    GenerateObjectMember("table_declarations", compilation_->declarations.tables);
+    GenerateObjectMember("union_declarations", compilation_->declarations.unions);
+    GenerateObjectMember("type_alias_declarations", compilation_->declarations.type_aliases);
 
     std::vector<std::string> declaration_order;
-    for (const flat::Decl* decl : library->declaration_order) {
+    for (const auto decl : compilation_->declaration_order) {
       declaration_order.push_back(NameFlatName(decl->name));
     }
     GenerateObjectMember("declaration_order", declaration_order);
 
-    GenerateDeclarationsMember(library);
+    GenerateDeclarationsMember(compilation_->declarations);
   });
   GenerateEOF();
 

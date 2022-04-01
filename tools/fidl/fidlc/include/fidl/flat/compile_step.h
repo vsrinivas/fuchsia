@@ -83,6 +83,9 @@ class CompileStep : public Compiler::Step {
   template <typename MemberType>
   bool ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl, MemberType* out_unknown_value);
 
+  // Decl for the HEAD constant, used in attribute_schema.cc.
+  Decl* head_decl;
+
   // If the given |decl| is already in the decl_stack, gets a vector of decls
   // describing the decl cycle starting and ending with that decl. Otherwise,
   // returns nullopt.

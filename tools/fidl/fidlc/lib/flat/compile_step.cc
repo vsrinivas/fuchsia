@@ -21,7 +21,7 @@ constexpr size_t kMaxTableOrdinals = 64;
 
 void CompileStep::RunImpl() {
   CompileAttributeList(library()->attributes.get());
-  for (auto& [name, decl] : library()->declarations) {
+  for (auto& [name, decl] : library()->declarations.all) {
     CompileDecl(decl);
   }
 }
@@ -307,8 +307,9 @@ bool CompileStep::ResolveIdentifierConstant(IdentifierConstant* identifier_const
            "Compiler bug: resolving identifier constant to non-const-able type!");
   }
 
-  Decl* parent = identifier_constant->reference.target_or_parent_decl();
-  Element* target = identifier_constant->reference.target();
+  auto& reference = identifier_constant->reference;
+  Decl* parent = reference.resolved().element_or_parent_decl();
+  Element* target = reference.resolved().element();
   CompileDecl(parent);
 
   const Type* const_type = nullptr;
@@ -349,8 +350,7 @@ bool CompileStep::ResolveIdentifierConstant(IdentifierConstant* identifier_const
       break;
     }
     default: {
-      return Fail(ErrExpectedValueButGotType, identifier_constant->reference.span().value(),
-                  identifier_constant->reference.target_name());
+      return Fail(ErrExpectedValueButGotType, reference.span(), reference.resolved().name());
       break;
     }
   }
@@ -438,8 +438,8 @@ bool CompileStep::ResolveIdentifierConstant(IdentifierConstant* identifier_const
   return true;
 
 fail_cannot_convert:
-  return Fail(ErrTypeCannotBeConvertedToType, identifier_constant->reference.span().value(),
-              identifier_constant, const_type, type);
+  return Fail(ErrTypeCannotBeConvertedToType, reference.span(), identifier_constant, const_type,
+              type);
 }
 
 bool CompileStep::ResolveLiteralConstant(LiteralConstant* literal_constant,
@@ -453,7 +453,7 @@ bool CompileStep::ResolveLiteralConstant(LiteralConstant* literal_constant,
   switch (literal_constant->literal->kind) {
     case raw::Literal::Kind::kDocComment: {
       auto doc_comment_literal =
-          static_cast<raw::DocCommentLiteral*>(literal_constant->literal.get());
+          static_cast<const raw::DocCommentLiteral*>(literal_constant->literal);
       literal_constant->ResolveTo(
           std::make_unique<DocCommentConstantValue>(doc_comment_literal->span().data()),
           typespace()->GetUnboundedStringType());
@@ -466,7 +466,7 @@ bool CompileStep::ResolveLiteralConstant(LiteralConstant* literal_constant,
       return true;
     }
     case raw::Literal::Kind::kBool: {
-      auto bool_literal = static_cast<raw::BoolLiteral*>(literal_constant->literal.get());
+      auto bool_literal = static_cast<const raw::BoolLiteral*>(literal_constant->literal);
       literal_constant->ResolveTo(std::make_unique<BoolConstantValue>(bool_literal->value),
                                   typespace()->GetPrimitiveType(types::PrimitiveSubtype::kBool));
       return true;
@@ -528,8 +528,8 @@ bool CompileStep::ResolveLiteralConstantKindNumericLiteral(LiteralConstant* lite
 const Type* CompileStep::InferType(Constant* constant) {
   switch (constant->kind) {
     case Constant::Kind::kLiteral: {
-      auto literal = static_cast<const raw::Literal*>(
-          static_cast<const LiteralConstant*>(constant)->literal.get());
+      auto literal =
+          static_cast<const raw::Literal*>(static_cast<const LiteralConstant*>(constant)->literal);
       switch (literal->kind) {
         case raw::Literal::Kind::kString: {
           auto string_literal = static_cast<const raw::StringLiteral*>(literal);
@@ -563,11 +563,11 @@ bool CompileStep::ResolveAsOptional(Constant* constant) {
     return false;
 
   auto identifier_constant = static_cast<IdentifierConstant*>(constant);
-  auto decl = identifier_constant->reference.target();
-  if (decl->kind != Element::Kind::kBuiltin)
+  auto element = identifier_constant->reference.resolved().element();
+  if (element->kind != Element::Kind::kBuiltin)
     return false;
-  auto builtin = static_cast<Builtin*>(decl);
-  return builtin->kind == Builtin::Kind::kOptional;
+  auto builtin = static_cast<Builtin*>(element);
+  return builtin->id == Builtin::Identity::kOptional;
 }
 
 void CompileStep::CompileAttributeList(AttributeList* attributes) {
@@ -910,7 +910,7 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
   auto CheckScopes = [this, &protocol_declaration, &method_scope](const Protocol* protocol,
                                                                   auto Visitor) -> void {
     for (const auto& composed_protocol : protocol->composed_protocols) {
-      auto target = composed_protocol.reference.target();
+      auto target = composed_protocol.reference.resolved().element();
       if (target->kind != Element::Kind::kProtocol) {
         // No need to report an error here since it was already done by the loop
         // after the definition of CheckScopes (before calling CheckScopes).
@@ -973,8 +973,8 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
   Scope<const Protocol*> scope;
   for (const auto& composed_protocol : protocol_declaration->composed_protocols) {
     CompileAttributeList(composed_protocol.attributes.get());
-    auto target = composed_protocol.reference.target();
-    auto span = composed_protocol.reference.span().value();
+    auto target = composed_protocol.reference.resolved().element();
+    auto span = composed_protocol.reference.span();
     if (target->kind != Element::Kind::kProtocol) {
       Fail(ErrComposingNonProtocol, span);
       continue;
@@ -1034,14 +1034,14 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
             break;
           }
           default: {
-            Fail(ErrInvalidParameterListDecl, method_name, decl);
+            Fail(ErrInvalidParameterListKind, method_name, decl->kind);
             break;
           }
         }
         break;
       }
       default: {
-        Fail(ErrInvalidParameterListDecl, method_name, decl);
+        Fail(ErrInvalidParameterListKind, method_name, decl->kind);
         break;
       }
     }
@@ -1306,15 +1306,6 @@ void CompileStep::CompileTypeConstructor(TypeConstructor* type_ctor) {
   TypeResolver type_resolver(this);
   type_ctor->type = typespace()->Create(&type_resolver, type_ctor->layout, *type_ctor->parameters,
                                         *type_ctor->constraints, &type_ctor->resolved_params);
-  if (!type_ctor->type) {
-    return;
-  }
-  assert(type_ctor->type && "type constructors' type not resolved after compilation");
-  const auto& src_span = type_ctor->layout.span();
-  const auto& dest_name = type_ctor->type->name;
-  if (src_span.has_value() && dest_name.as_anonymous()) {
-    Fail(ErrAnonymousNameReference, src_span.value(), dest_name);
-  }
 }
 
 bool CompileStep::ResolveHandleRightsConstant(Resource* resource, Constant* constant,
@@ -1372,10 +1363,10 @@ bool CompileStep::ResolveHandleSubtypeIdentifier(Resource* resource, Constant* c
 bool CompileStep::ResolveSizeBound(Constant* size_constant, const Size** out_size) {
   if (size_constant->kind == Constant::Kind::kIdentifier) {
     auto identifier_constant = static_cast<IdentifierConstant*>(size_constant);
-    auto target = identifier_constant->reference.target();
+    auto target = identifier_constant->reference.resolved().element();
     if (target->kind == Element::Kind::kBuiltin &&
-        static_cast<Builtin*>(target)->kind == Builtin::Kind::kMax) {
-      size_constant->ResolveTo(std::make_unique<Size>(Size::Max()),
+        static_cast<Builtin*>(target)->id == Builtin::Identity::kMax) {
+      size_constant->ResolveTo(Size::Max().Clone(),
                                typespace()->GetPrimitiveType(types::PrimitiveSubtype::kUint32));
     }
   }

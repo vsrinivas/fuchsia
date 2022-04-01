@@ -68,6 +68,11 @@ class ConsumeStep : public Compiler::Step {
                               const std::shared_ptr<NamingContext>& context,
                               std::unique_ptr<TypeConstructor>* out_type);
 
+  // Elements stored in the library
+  const raw::Literal* ConsumeLiteral(std::unique_ptr<raw::Literal> raw_literal);
+  const raw::Identifier* ConsumeIdentifier(std::unique_ptr<raw::Identifier> raw_identifier);
+  const raw::Ordinal64* ConsumeOrdinal(std::unique_ptr<raw::Ordinal64> raw_ordinal);
+
   // Sets the naming context's generated name override to the @generated_name
   // attribute's value if present, otherwise does nothing.
   void MaybeOverrideName(AttributeList& attributes, NamingContext* context);
@@ -91,10 +96,6 @@ class ConsumeStep : public Compiler::Step {
 
   // Decl for the type to use for transport_err.
   Decl* transport_err_type_;
-
-  // This map contains the same decls as library()->declarations keyed by
-  // `utils::canonicalize(name.decl_name())` rather than `name.key()`.
-  std::map<std::string, const Decl*> declarations_by_canonical_name_;
 };
 
 }  // namespace fidl::flat

@@ -44,14 +44,14 @@ bool TypeResolver::ResolveParamAsSize(const Reference& layout,
     case LayoutParameter::kType: {
       auto type_param = static_cast<TypeLayoutParameter*>(param.get());
       return Fail(ErrExpectedValueButGotType, type_param->span,
-                  type_param->type_ctor->layout.target_name());
+                  type_param->type_ctor->layout.resolved().name());
     }
     case LayoutParameter::Kind::kIdentifier: {
       auto ambig_param = static_cast<IdentifierLayoutParameter*>(param.get());
       auto as_constant = ambig_param->AsConstant();
       if (!as_constant) {
         return Fail(ErrExpectedValueButGotType, ambig_param->span,
-                    ambig_param->reference.target_name());
+                    ambig_param->reference.resolved().name());
       }
       if (!ResolveSizeBound(as_constant, out_size)) {
         return Fail(ErrCannotResolveConstantValue, ambig_param->span);
@@ -61,7 +61,7 @@ bool TypeResolver::ResolveParamAsSize(const Reference& layout,
   }
   assert(*out_size);
   if ((*out_size)->value == 0)
-    return Fail(ErrMustHaveNonZeroSize, param->span, layout.target_name());
+    return Fail(ErrMustHaveNonZeroSize, param->span, layout.resolved().name());
   return true;
 }
 
@@ -135,7 +135,7 @@ bool TypeResolver::ResolveAsProtocol(const Constant* constant, const Protocol** 
     return false;
 
   const auto* as_identifier = static_cast<const IdentifierConstant*>(constant);
-  const auto* target = as_identifier->reference.target();
+  const auto* target = as_identifier->reference.resolved().element();
   if (target->kind != Element::Kind::kProtocol)
     return false;
   *out_decl = static_cast<const Protocol*>(target);

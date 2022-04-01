@@ -523,7 +523,7 @@ protocol Narcisse {
 
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "protocol Narcisse -> protocol Narcisse");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "protocol 'Narcisse' -> protocol 'Narcisse'");
 }
 
 TEST(ProtocolTests, BadCannotMutuallyCompose) {
@@ -539,7 +539,8 @@ protocol Yang {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "protocol Yang -> protocol Yin -> protocol Yang");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(),
+                "protocol 'Yang' -> protocol 'Yin' -> protocol 'Yang'");
 }
 
 TEST(ProtocolTests, BadCannotComposeSameProtocolTwice) {
@@ -1051,7 +1052,7 @@ protocol MyProtocol {
     MyMethod(handle);
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidParameterListDecl);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidParameterListKind);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "handle");
 }
 
@@ -1095,6 +1096,7 @@ protocol MyProtocol {
   ASSERT_ERR(library.errors()[2], fidl::ErrInvalidParameterListType);
   ASSERT_SUBSTR(library.errors()[2]->msg.c_str(), "vector<bool>");
   ASSERT_ERR(library.errors()[3], fidl::ErrInvalidParameterListType);
+  // TODO(fxbug.dev/93999): Should be "vector<bool>:optional".
   ASSERT_SUBSTR(library.errors()[3]->msg.c_str(), "vector<bool>?");
 }
 

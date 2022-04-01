@@ -35,10 +35,14 @@ resource_definition SomeResource : uint32 {
 
   ASSERT_EQ(resource->properties.size(), 1u);
   EXPECT_EQ(resource->properties[0].name.data(), "subtype");
-  EXPECT_EQ(resource->properties[0].type_ctor->layout.target(), library.LookupEnum("MyEnum"));
+  EXPECT_EQ(resource->properties[0].type_ctor->layout.resolved().element(),
+            library.LookupEnum("MyEnum"));
 
   ASSERT_NOT_NULL(resource->subtype_ctor);
-  EXPECT_EQ(resource->subtype_ctor->layout.target_name().decl_name(), "uint32");
+  auto underlying = resource->subtype_ctor->type;
+  ASSERT_EQ(underlying->kind, fidl::flat::Type::Kind::kPrimitive);
+  auto underlying_primitive = static_cast<const fidl::flat::PrimitiveType*>(underlying);
+  EXPECT_EQ(underlying_primitive->subtype, fidl::types::PrimitiveSubtype::kUint32);
 }
 
 TEST(ResourceTests, GoodAliasedBaseType) {
@@ -63,13 +67,14 @@ resource_definition SomeResource : via {
 
   ASSERT_EQ(resource->properties.size(), 1u);
   EXPECT_EQ(resource->properties[0].name.data(), "subtype");
-  EXPECT_EQ(resource->properties[0].type_ctor->layout.target(), library.LookupEnum("MyEnum"));
+  EXPECT_EQ(resource->properties[0].type_ctor->layout.resolved().element(),
+            library.LookupEnum("MyEnum"));
 
   ASSERT_NOT_NULL(resource->subtype_ctor);
-  ASSERT_NOT_NULL(resource->subtype_ctor->type);
-  ASSERT_EQ(resource->subtype_ctor->type->kind, fidl::flat::Type::Kind::kPrimitive);
-  auto primitive_type = static_cast<const fidl::flat::PrimitiveType*>(resource->subtype_ctor->type);
-  EXPECT_EQ(primitive_type->subtype, fidl::types::PrimitiveSubtype::kUint32);
+  auto underlying = resource->subtype_ctor->type;
+  ASSERT_EQ(underlying->kind, fidl::flat::Type::Kind::kPrimitive);
+  auto underlying_primitive = static_cast<const fidl::flat::PrimitiveType*>(underlying);
+  EXPECT_EQ(underlying_primitive->subtype, fidl::types::PrimitiveSubtype::kUint32);
 }
 
 TEST(ResourceTests, BadEmpty) {

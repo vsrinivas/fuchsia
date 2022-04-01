@@ -47,7 +47,7 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
   // be a place to own all the root nodes, which are not owned by an anonymous name), and
   // doing it manually is even worse.
   static std::shared_ptr<NamingContext> Create(SourceSpan decl_name) {
-    return Create(decl_name, Kind::kDecl);
+    return Create(decl_name, Kind::kDecl, nullptr);
   }
   static std::shared_ptr<NamingContext> Create(const Name& decl_name);
 
@@ -86,7 +86,8 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
   std::shared_ptr<NamingContext> SwapStructPayloadContext() {
     if (kind_ == Kind::kMethodResponse) {
       assert(parent_ != nullptr);
-      assert(!name_override_.has_value() && "must perform swap before setting name override");
+      assert(!flattened_name_override_.has_value() &&
+             "must perform swap before setting name override");
       auto swapped = parent_->EnterResult(name_);
       return swapped;
     }
@@ -100,9 +101,14 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
     return parent_;
   }
 
-  void set_name_override(std::string value) { name_override_ = std::move(value); }
+  void set_name_override(std::string value) { flattened_name_override_ = std::move(value); }
 
-  std::string FlattenedName() const;
+  std::string_view flattened_name() const {
+    if (flattened_name_override_) {
+      return flattened_name_override_.value();
+    }
+    return flattened_name_;
+  }
   std::vector<std::string> Context() const;
 
   // ToName() exists to handle the case where the caller does not necessarily know what
@@ -139,25 +145,32 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
     kMethodResult,
   };
 
-  NamingContext(SourceSpan name, Kind kind) : name_(name), kind_(kind) {}
+  NamingContext(SourceSpan name, Kind kind, std::shared_ptr<NamingContext> parent)
+      : name_(name),
+        kind_(kind),
+        parent_(std::move(parent)),
+        flattened_name_(BuildFlattenedName(name_, kind_, parent_)) {}
 
-  static std::shared_ptr<NamingContext> Create(SourceSpan decl_name, Kind kind) {
+  static std::string BuildFlattenedName(SourceSpan name, Kind kind,
+                                        const std::shared_ptr<NamingContext>& parent);
+
+  static std::shared_ptr<NamingContext> Create(SourceSpan decl_name, Kind kind,
+                                               std::shared_ptr<NamingContext> parent) {
     // We need to create a shared pointer but there are only private constructors. Since
     // we don't care about an extra allocation here, we use `new` to get around this
     // (see https://abseil.io/tips/134)
-    return std::shared_ptr<NamingContext>(new NamingContext(decl_name, kind));
+    return std::shared_ptr<NamingContext>(new NamingContext(decl_name, kind, std::move(parent)));
   }
 
   std::shared_ptr<NamingContext> Push(SourceSpan name, Kind kind) {
-    auto ctx = Create(name, kind);
-    ctx->parent_ = shared_from_this();
-    return ctx;
+    return Create(name, kind, shared_from_this());
   }
 
   SourceSpan name_;
-  std::optional<std::string> name_override_;
   Kind kind_;
-  std::shared_ptr<NamingContext> parent_ = nullptr;
+  std::shared_ptr<NamingContext> parent_;
+  std::string flattened_name_;
+  std::optional<std::string> flattened_name_override_;
 };
 
 // Name represents a named entry in a particular scope.
@@ -291,9 +304,10 @@ class Name final {
 
   struct AnonymousNameContext {
     explicit AnonymousNameContext(std::shared_ptr<NamingContext> context, SourceSpan span)
-        : flattened_name(context->FlattenedName()), context(std::move(context)), span(span) {}
+        : flattened_name(context->flattened_name()), context(std::move(context)), span(span) {}
 
-    std::string flattened_name;
+    // The string is owned by the naming context.
+    std::string_view flattened_name;
     std::shared_ptr<NamingContext> context;
     // The span of the object to which this anonymous name refers to (anonymous names
     // by definition do not appear in source, so the name itself has no span).

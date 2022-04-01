@@ -154,7 +154,8 @@ type ExampleUnion = union {
 }
 
 TEST(AttributesTests, GoodOfficialAttributes) {
-  TestLibrary library(R"FIDL(@no_doc
+  TestLibrary library(R"FIDL(
+@no_doc
 library example;
 
 /// For EXAMPLE_CONSTANT
@@ -210,22 +211,22 @@ service ExampleService {
   ASSERT_NOT_NULL(example_const);
   EXPECT_TRUE(example_const->attributes->Get("no_doc"));
   EXPECT_TRUE(example_const->attributes->Get("doc")->GetArg("value"));
-  auto const_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
+  auto& const_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
       example_const->attributes->Get("doc")->GetArg("value")->value->Value());
   EXPECT_STREQ(const_doc_value.MakeContents(), " For EXAMPLE_CONSTANT\n");
   EXPECT_TRUE(example_const->attributes->Get("deprecated")->GetArg("value"));
-  auto const_str_value = static_cast<const fidl::flat::StringConstantValue&>(
+  auto& const_str_value = static_cast<const fidl::flat::StringConstantValue&>(
       example_const->attributes->Get("deprecated")->GetArg("value")->value->Value());
   EXPECT_STREQ(const_str_value.MakeContents(), "Note");
 
   auto example_enum = library.LookupEnum("ExampleEnum");
   ASSERT_NOT_NULL(example_enum);
   EXPECT_TRUE(example_enum->attributes->Get("doc")->GetArg("value"));
-  auto enum_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
+  auto& enum_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
       example_enum->attributes->Get("doc")->GetArg("value")->value->Value());
   EXPECT_STREQ(enum_doc_value.MakeContents(), " For ExampleEnum\n");
   EXPECT_TRUE(example_enum->attributes->Get("deprecated")->GetArg("value"));
-  auto enum_str_value = static_cast<const fidl::flat::StringConstantValue&>(
+  auto& enum_str_value = static_cast<const fidl::flat::StringConstantValue&>(
       example_enum->attributes->Get("deprecated")->GetArg("value")->value->Value());
   EXPECT_STREQ(enum_str_value.MakeContents(), "Reason");
   EXPECT_TRUE(example_enum->members.back().attributes->Get("unknown"));
@@ -233,15 +234,15 @@ service ExampleService {
   auto example_struct = library.LookupStruct("ExampleStruct");
   ASSERT_NOT_NULL(example_struct);
   EXPECT_TRUE(example_struct->attributes->Get("doc")->GetArg("value"));
-  auto struct_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
+  auto& struct_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
       example_struct->attributes->Get("doc")->GetArg("value")->value->Value());
   EXPECT_STREQ(struct_doc_value.MakeContents(), " For ExampleStruct\n");
   EXPECT_TRUE(example_struct->attributes->Get("max_bytes")->GetArg("value"));
-  auto struct_str_value1 = static_cast<const fidl::flat::StringConstantValue&>(
+  auto& struct_str_value1 = static_cast<const fidl::flat::StringConstantValue&>(
       example_struct->attributes->Get("max_bytes")->GetArg("value")->value->Value());
   EXPECT_STREQ(struct_str_value1.MakeContents(), "1234");
   EXPECT_TRUE(example_struct->attributes->Get("max_handles")->GetArg("value"));
-  auto struct_str_value2 = static_cast<const fidl::flat::StringConstantValue&>(
+  auto& struct_str_value2 = static_cast<const fidl::flat::StringConstantValue&>(
       example_struct->attributes->Get("max_handles")->GetArg("value")->value->Value());
   EXPECT_STREQ(struct_str_value2.MakeContents(), "5678");
 
@@ -249,7 +250,7 @@ service ExampleService {
   ASSERT_NOT_NULL(example_anon);
   EXPECT_TRUE(example_anon->attributes->Get("generated_name"));
 
-  auto generated_name_value = static_cast<const fidl::flat::StringConstantValue&>(
+  auto& generated_name_value = static_cast<const fidl::flat::StringConstantValue&>(
       example_anon->attributes->Get("generated_name")->GetArg("value")->value->Value());
   EXPECT_STREQ(generated_name_value.MakeContents(), "CustomName");
 
@@ -258,11 +259,11 @@ service ExampleService {
   EXPECT_TRUE(example_protocol->attributes->Get("discoverable"));
   EXPECT_TRUE(example_protocol->attributes->Get("for_deprecated_c_bindings"));
   EXPECT_TRUE(example_protocol->attributes->Get("doc")->GetArg("value"));
-  auto protocol_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
+  auto& protocol_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
       example_protocol->attributes->Get("doc")->GetArg("value")->value->Value());
   EXPECT_STREQ(protocol_doc_value.MakeContents(), " For ExampleProtocol\n");
   EXPECT_TRUE(example_protocol->attributes->Get("transport")->GetArg("value"));
-  auto protocol_str_value = static_cast<const fidl::flat::StringConstantValue&>(
+  auto& protocol_str_value = static_cast<const fidl::flat::StringConstantValue&>(
       example_protocol->attributes->Get("transport")->GetArg("value")->value->Value());
   EXPECT_STREQ(protocol_str_value.MakeContents(), "Syscall");
 
@@ -270,11 +271,11 @@ service ExampleService {
   EXPECT_TRUE(example_method.attributes->Get("internal"));
   EXPECT_TRUE(example_method.attributes->Get("transitional"));
   EXPECT_TRUE(example_method.attributes->Get("doc")->GetArg("value"));
-  auto method_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
+  auto& method_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
       example_method.attributes->Get("doc")->GetArg("value")->value->Value());
   EXPECT_STREQ(method_doc_value.MakeContents(), " For ExampleMethod\n");
   EXPECT_TRUE(example_method.attributes->Get("selector")->GetArg("value"));
-  auto method_str_value = static_cast<const fidl::flat::StringConstantValue&>(
+  auto& method_str_value = static_cast<const fidl::flat::StringConstantValue&>(
       example_method.attributes->Get("selector")->GetArg("value")->value->Value());
   EXPECT_STREQ(method_str_value.MakeContents(), "Bar");
 
@@ -282,22 +283,22 @@ service ExampleService {
   ASSERT_NOT_NULL(example_service);
   EXPECT_TRUE(example_service->attributes->Get("no_doc"));
   EXPECT_TRUE(example_service->attributes->Get("doc")->GetArg("value"));
-  auto service_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
+  auto& service_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
       example_service->attributes->Get("doc")->GetArg("value")->value->Value());
   EXPECT_STREQ(service_doc_value.MakeContents(), " For ExampleService\n");
   EXPECT_TRUE(example_service->attributes->Get("foo")->GetArg("value"));
-  auto service_str_value = static_cast<const fidl::flat::StringConstantValue&>(
+  auto& service_str_value = static_cast<const fidl::flat::StringConstantValue&>(
       example_service->attributes->Get("foo")->GetArg("value")->value->Value());
   EXPECT_STREQ(service_str_value.MakeContents(), "ExampleService");
 
   auto& example_service_member = example_service->members.front();
   EXPECT_TRUE(example_service_member.attributes->Get("no_doc"));
   EXPECT_TRUE(example_service_member.attributes->Get("doc")->GetArg("value"));
-  auto service_member_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
+  auto& service_member_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
       example_service_member.attributes->Get("doc")->GetArg("value")->value->Value());
   EXPECT_STREQ(service_member_doc_value.MakeContents(), " For ExampleProtocol\n");
   EXPECT_TRUE(example_service_member.attributes->Get("foo")->GetArg("value"));
-  auto service_member_str_value = static_cast<const fidl::flat::StringConstantValue&>(
+  auto& service_member_str_value = static_cast<const fidl::flat::StringConstantValue&>(
       example_service_member.attributes->Get("foo")->GetArg("value")->value->Value());
   EXPECT_STREQ(service_member_str_value.MakeContents(), "ExampleProtocol");
 }
@@ -1827,7 +1828,7 @@ const BAR bool = true;
 )FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrIncludeCycle,
                                       fidl::ErrCouldNotResolveAttributeArg);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "const BAR -> const BAR");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "const 'BAR' -> const 'BAR'");
 }
 
 TEST(AttributesTests, BadSelfReferenceWithoutSchemaString) {
@@ -1840,7 +1841,7 @@ const BAR string = "bar";
 )FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrIncludeCycle,
                                       fidl::ErrCouldNotResolveAttributeArg);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "const BAR -> const BAR");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "const 'BAR' -> const 'BAR'");
 }
 
 TEST(AttributesTests, BadSelfReferenceWithSchema) {
@@ -1855,7 +1856,7 @@ const BAR bool = true;
       "value", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool));
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrIncludeCycle,
                                       fidl::ErrCouldNotResolveAttributeArg);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "const BAR -> const BAR");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "const 'BAR' -> const 'BAR'");
 }
 
 TEST(AttributesTests, BadMutualReferenceWithoutSchemaBool) {
@@ -1870,7 +1871,8 @@ const SECOND bool = false;
 )FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrIncludeCycle,
                                       fidl::ErrCouldNotResolveAttributeArg);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "const FIRST -> const SECOND -> const FIRST");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(),
+                "const 'FIRST' -> const 'SECOND' -> const 'FIRST'");
 }
 
 TEST(AttributesTests, BadMutualReferenceWithoutSchemaString) {
@@ -1885,7 +1887,8 @@ const SECOND string = "second";
 )FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrIncludeCycle,
                                       fidl::ErrCouldNotResolveAttributeArg);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "const FIRST -> const SECOND -> const FIRST");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(),
+                "const 'FIRST' -> const 'SECOND' -> const 'FIRST'");
 }
 
 TEST(AttributesTests, BadMutualReferenceWithSchema) {
@@ -1902,7 +1905,8 @@ const SECOND bool = false;
       "value", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool));
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrIncludeCycle,
                                       fidl::ErrCouldNotResolveAttributeArg);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "const FIRST -> const SECOND -> const FIRST");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(),
+                "const 'FIRST' -> const 'SECOND' -> const 'FIRST'");
 }
 
 }  // namespace

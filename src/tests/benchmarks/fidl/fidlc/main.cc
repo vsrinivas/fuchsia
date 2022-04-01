@@ -32,8 +32,9 @@ bool RunBenchmark(perftest::RepeatState* state, const char* fidl) {
     fidl::Lexer lexer(source_file, &reporter);
     fidl::Parser parser(&lexer, &reporter, experimental_flags);
     fidl::flat::Libraries all_libraries(&reporter);
-    fidl::flat::Compiler compiler(&all_libraries, fidl::ordinals::GetGeneratedOrdinal64,
-                                  experimental_flags);
+    fidl::VersionSelection version_selection;
+    fidl::flat::Compiler compiler(&all_libraries, &version_selection,
+                                  fidl::ordinals::GetGeneratedOrdinal64, experimental_flags);
     auto ast = parser.Parse();
     bool enable_color = !std::getenv("NO_COLOR") && isatty(fileno(stderr));
     if (!parser.Success()) {
@@ -44,16 +45,12 @@ bool RunBenchmark(perftest::RepeatState* state, const char* fidl) {
       reporter.PrintReports(enable_color);
       return false;
     }
-    auto library = compiler.Compile();
-    if (!library) {
+    if (!compiler.Compile()) {
       reporter.PrintReports(enable_color);
       return false;
     }
-    if (!all_libraries.Insert(std::move(library))) {
-      reporter.PrintReports(enable_color);
-      return false;
-    }
-    fidl::JSONGenerator json_generator(&all_libraries, experimental_flags);
+    auto compilation = all_libraries.Filter(&version_selection);
+    fidl::JSONGenerator json_generator(compilation.get(), experimental_flags);
     json_generator.Produce();
   }
   return true;

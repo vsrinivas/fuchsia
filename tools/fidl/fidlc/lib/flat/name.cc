@@ -8,41 +8,40 @@
 
 namespace fidl::flat {
 
-std::shared_ptr<NamingContext> NamingContext::Create(const Name& decl_name) {
-  assert(decl_name.span().has_value() && "cannot have a naming context from a name without a span");
-  return Create(decl_name.span().value());
-}
-
-std::string NamingContext::FlattenedName() const {
-  if (name_override_.has_value())
-    return name_override_.value();
-
-  switch (kind_) {
+// static
+std::string NamingContext::BuildFlattenedName(SourceSpan name, Kind kind,
+                                              const std::shared_ptr<NamingContext>& parent) {
+  switch (kind) {
     case Kind::kDecl:
-      return std::string(name_.data());
+      return std::string(name.data());
     case Kind::kLayoutMember:
-      return utils::to_upper_camel_case(std::string(name_.data()));
+      return utils::to_upper_camel_case(std::string(name.data()));
     case Kind::kMethodRequest: {
-      std::string result = utils::to_upper_camel_case(std::string(parent()->name_.data()));
-      result.append(utils::to_upper_camel_case(std::string(name_.data())));
+      std::string result = utils::to_upper_camel_case(std::string(parent->name_.data()));
+      result.append(utils::to_upper_camel_case(std::string(name.data())));
       result.append("Request");
       return result;
     }
     case Kind::kMethodResponse: {
-      std::string result = utils::to_upper_camel_case(std::string(parent()->name_.data()));
-      result.append(utils::to_upper_camel_case(std::string(name_.data())));
+      std::string result = utils::to_upper_camel_case(std::string(parent->name_.data()));
+      result.append(utils::to_upper_camel_case(std::string(name.data())));
       result.append("Response");
       return result;
     }
     case Kind::kMethodResult: {
-      std::string result = utils::to_upper_camel_case(std::string(parent()->name_.data()));
-      result.append(utils::to_upper_camel_case(std::string(name_.data())));
+      std::string result = utils::to_upper_camel_case(std::string(parent->name_.data()));
+      result.append(utils::to_upper_camel_case(std::string(name.data())));
       // We can't use [protocol][method]Response, because that is occupied by the success variant of
       // the result type, if this method has an error.
       result.append("TopResponse");
       return result;
     }
   }
+}
+
+std::shared_ptr<NamingContext> NamingContext::Create(const Name& decl_name) {
+  assert(decl_name.span().has_value() && "cannot have a naming context from a name without a span");
+  return Create(decl_name.span().value());
 }
 
 std::vector<std::string> NamingContext::Context() const {

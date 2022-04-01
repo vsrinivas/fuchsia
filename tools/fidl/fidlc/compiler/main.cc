@@ -15,6 +15,7 @@
 #include <fidl/parser.h>
 #include <fidl/source_manager.h>
 #include <fidl/tables_generator.h>
+#include <fidl/versioning_types.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -37,6 +38,7 @@ void Usage() {
   std::cout
       << "usage: fidlc [--tables TABLES_PATH]\n"
          "             [--json JSON_PATH]\n"
+         "             [--available PLATFORM:VERSION]\n"
          "             [--name LIBRARY_NAME]\n"
          "             [--experimental FLAG_NAME]\n"
          "             [--werror]\n"
@@ -55,9 +57,10 @@ void Usage() {
          "   representation is JSON that conforms to the schema available via --json-schema.\n"
          "   The intermediate representation is used as input to the various backends.\n"
          "\n"
-         " * `--convert-syntax CONVERTED_SYNTAX_PATH`. If present, this flag instructs `fidlc`\n"
-         "   to output the last file listed with updated syntax at the given path. The input\n"
-         "   file must be written in the old syntax for this to succeed.\n"
+         " * `--available PLATFORM:VERSION`. If present, this flag instructs `fidlc` to compile\n"
+         "    libraries versioned under PLATFORM at VERSION, based on `@available` attributes.\n"
+         "    PLATFORM corresponds to a library's `@available(platform=\"PLATFORM\")` attribute,\n"
+         "    or to the library name's first component if the `platform` argument is omitted.\n"
          "\n"
          " * `--name LIBRARY_NAME`. If present, this flag instructs `fidlc` to validate\n"
          "   that the library being compiled has the given name. This flag is useful to\n"
@@ -300,6 +303,7 @@ int compile(fidl::Reporter* reporter, std::string library_name, std::string dep_
             const std::vector<std::string>& source_list,
             const std::vector<std::pair<Behavior, std::string>>& outputs,
             const std::vector<fidl::SourceManager>& source_managers,
+            const fidl::VersionSelection* version_selection,
             fidl::ExperimentalFlags experimental_flags);
 
 int main(int argc, char* argv[]) {
@@ -319,6 +323,7 @@ int main(int argc, char* argv[]) {
   bool warnings_as_errors = false;
   std::string format = "text";
   std::vector<std::pair<Behavior, std::string>> outputs;
+  fidl::VersionSelection version_selection;
   fidl::ExperimentalFlags experimental_flags;
   while (args->Remaining()) {
     // Try to parse an output type.
@@ -356,6 +361,23 @@ int main(int argc, char* argv[]) {
     } else if (behavior_argument == "--json") {
       std::string path = args->Claim();
       outputs.emplace_back(std::make_pair(Behavior::kJSON, path));
+    } else if (behavior_argument == "--available") {
+      std::string selection = args->Claim();
+      const auto colon_idx = selection.find(':');
+      if (colon_idx == std::string::npos) {
+        FailWithUsage("Invalid value `%s` for flag `available`\n", selection.data());
+      }
+      const auto platform_str = selection.substr(0, colon_idx);
+      const auto version_str = selection.substr(colon_idx + 1);
+      const auto platform = fidl::Platform::Parse(platform_str);
+      const auto version = fidl::Version::Parse(version_str);
+      if (!platform.has_value()) {
+        FailWithUsage("Invalid platform name `%s`\n", platform_str.data());
+      }
+      if (!version.has_value()) {
+        FailWithUsage("Invalid version `%s`\n", version_str.data());
+      }
+      version_selection.Insert(platform.value(), version.value());
     } else if (behavior_argument == "--name") {
       library_name = args->Claim();
     } else if (behavior_argument == "--experimental") {
@@ -393,7 +415,7 @@ int main(int argc, char* argv[]) {
   fidl::Reporter reporter;
   reporter.set_warnings_as_errors(warnings_as_errors);
   auto status = compile(&reporter, library_name, dep_file_path, source_list, outputs,
-                        source_managers, experimental_flags);
+                        source_managers, &version_selection, experimental_flags);
   if (format == "json") {
     reporter.PrintReportsJson();
   } else {
@@ -407,28 +429,28 @@ int compile(fidl::Reporter* reporter, std::string library_name, std::string dep_
             const std::vector<std::string>& source_list,
             const std::vector<std::pair<Behavior, std::string>>& outputs,
             const std::vector<fidl::SourceManager>& source_managers,
+            const fidl::VersionSelection* version_selection,
             fidl::ExperimentalFlags experimental_flags) {
   fidl::flat::Libraries all_libraries(reporter);
   for (const auto& source_manager : source_managers) {
     if (source_manager.sources().empty()) {
       continue;
     }
-    fidl::flat::Compiler compiler(&all_libraries, fidl::ordinals::GetGeneratedOrdinal64,
-                                  experimental_flags);
+    fidl::flat::Compiler compiler(&all_libraries, version_selection,
+                                  fidl::ordinals::GetGeneratedOrdinal64, experimental_flags);
     for (const auto& source_file : source_manager.sources()) {
       if (!Parse(*source_file, reporter, &compiler, experimental_flags)) {
         return 1;
       }
     }
-    auto library = compiler.Compile();
-    if (!library || !all_libraries.Insert(std::move(library))) {
+    if (!compiler.Compile()) {
       return 1;
     }
   }
   if (all_libraries.Empty()) {
     Fail("No library was produced.\n");
   }
-  const fidl::flat::Library* target_library = all_libraries.target_library();
+
   auto unused_libraries = all_libraries.Unused();
   // TODO(fxbug.dev/90838): Remove this once all GN rules only include zx
   // sources when the zx library is actually used.
@@ -441,22 +463,42 @@ int compile(fidl::Reporter* reporter, std::string library_name, std::string dep_
     }
   }
   if (!unused_libraries.empty()) {
-    std::string message = "Unused libraries provided via --files: ";
+    std::string library_names;
     bool first = true;
     for (auto library : unused_libraries) {
       if (first) {
         first = false;
       } else {
-        message.append(", ");
+        library_names.append(", ");
       }
-      message.append(fidl::NameLibrary(library->name));
+      library_names.append(fidl::NameLibrary(library->name));
     }
-    message.append("\n");
-    Fail(message.data());
+    library_names.append("\n");
+    Fail("Unused libraries provided via --files: %s", library_names.c_str());
   }
 
+  auto unused_platforms = version_selection->Platforms();
+  for (auto& platform : all_libraries.Platforms()) {
+    unused_platforms.erase(platform);
+  }
+  if (!unused_platforms.empty()) {
+    std::string platform_names;
+    bool first = true;
+    for (auto& platform : unused_platforms) {
+      if (first) {
+        first = false;
+      } else {
+        platform_names.append(", ");
+      }
+      platform_names.append(platform.name());
+    }
+    Fail("Unused platforms provided via --available: %s\n", platform_names.c_str());
+  }
+
+  auto compilation = all_libraries.Filter(version_selection);
+
   // Verify that the produced library's name matches the expected name.
-  std::string produced_name = fidl::NameLibrary(target_library->name);
+  std::string produced_name = fidl::NameLibrary(compilation->library_name);
   if (!library_name.empty() && produced_name != library_name) {
     Fail("Generated library '%s' did not match --name argument: %s\n", produced_name.data(),
          library_name.data());
@@ -488,27 +530,27 @@ int compile(fidl::Reporter* reporter, std::string library_name, std::string dep_
 
     switch (behavior) {
       case Behavior::kCHeader: {
-        fidl::CGenerator generator(target_library);
+        fidl::CGenerator generator(compilation.get());
         Write(generator.ProduceHeader(), file_path);
         break;
       }
       case Behavior::kCClient: {
-        fidl::CGenerator generator(target_library);
+        fidl::CGenerator generator(compilation.get());
         Write(generator.ProduceClient(), file_path);
         break;
       }
       case Behavior::kCServer: {
-        fidl::CGenerator generator(target_library);
+        fidl::CGenerator generator(compilation.get());
         Write(generator.ProduceServer(), file_path);
         break;
       }
       case Behavior::kTables: {
-        fidl::TablesGenerator generator(&all_libraries);
+        fidl::TablesGenerator generator(compilation.get());
         Write(generator.Produce(), file_path);
         break;
       }
       case Behavior::kJSON: {
-        fidl::JSONGenerator generator(&all_libraries, experimental_flags);
+        fidl::JSONGenerator generator(compilation.get(), experimental_flags);
         Write(generator.Produce(), file_path);
         break;
       }

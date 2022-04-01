@@ -11,10 +11,12 @@
 #include <sstream>
 #include <string_view>
 
+#include "flat_ast.h"
 #include "source_span.h"
 #include "token.h"
 #include "types.h"
 #include "utils.h"
+#include "versioning_types.h"
 
 namespace fidl {
 
@@ -22,16 +24,6 @@ namespace fidl {
 namespace raw {
 class AttributeList;
 }  // namespace raw
-
-namespace flat {
-struct Attribute;
-struct AttributeArg;
-struct Constant;
-struct Decl;
-struct Element;
-struct Type;
-class Name;
-}  // namespace flat
 
 namespace internal {
 
@@ -49,10 +41,15 @@ std::string Display(const std::vector<std::string_view>& library_name);
 std::string Display(const flat::Attribute* a);
 std::string Display(const flat::AttributeArg* a);
 std::string Display(const flat::Constant* c);
-std::string Display(const flat::Decl* d);
+std::string Display(flat::Element::Kind k);
+std::string Display(flat::Decl::Kind k);
+std::string Display(const flat::Element* e);
 std::string Display(std::vector<const flat::Decl*>& d);
 std::string Display(const flat::Type* t);
 std::string Display(const flat::Name& n);
+std::string Display(const Platform& p);
+std::string Display(const Version& v);
+std::string Display(const VersionRange& r);
 template <typename T, typename = decltype(std::to_string(std::declval<T>()))>
 std::string Display(T val) {
   return std::to_string(val);

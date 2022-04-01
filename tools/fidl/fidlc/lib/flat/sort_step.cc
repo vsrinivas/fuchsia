@@ -12,10 +12,15 @@ namespace fidl::flat {
 
 namespace {
 
-// Compares decls by name lexicographically.
+// Compares decls by name lexicographically, then by availability.
 struct CmpDeclName {
   bool operator()(const Decl* a, const Decl* b) const {
-    assert(a->name != b->name || a == b);
+    if (a->name == b->name) {
+      auto ar = a->availability.range();
+      auto br = b->availability.range();
+      assert(ar != br || a == b);
+      return ar < br;
+    }
     // Avoid constructing the full name when libraries are the same (faster).
     if (a->name.library() == b->name.library()) {
       return a->name.decl_name() < b->name.decl_name();
@@ -52,7 +57,7 @@ void CalcDependencies::VisitConstant(const Constant* constant) {
   switch (constant->kind) {
     case Constant::Kind::kIdentifier: {
       auto identifier = static_cast<const flat::IdentifierConstant*>(constant);
-      AddDependency(identifier->reference.target_or_parent_decl());
+      AddDependency(identifier->reference.resolved().element_or_parent_decl());
       break;
     }
     case Constant::Kind::kLiteral: {
@@ -150,14 +155,14 @@ CalcDependencies::CalcDependencies(const Decl* decl) : library_(decl->name.libra
     case Decl::Kind::kProtocol: {
       auto protocol_decl = static_cast<const Protocol*>(decl);
       for (const auto& composed_protocol : protocol_decl->composed_protocols) {
-        AddDependency(composed_protocol.reference.target()->AsDecl());
+        AddDependency(composed_protocol.reference.resolved().element()->AsDecl());
       }
       for (const auto& method : protocol_decl->methods) {
         if (method.maybe_request) {
-          AddDependency(method.maybe_request->layout.target()->AsDecl());
+          AddDependency(method.maybe_request->layout.resolved().element()->AsDecl());
         }
         if (method.maybe_response) {
-          AddDependency(method.maybe_response->layout.target()->AsDecl());
+          AddDependency(method.maybe_response->layout.resolved().element()->AsDecl());
         }
       }
       break;
@@ -252,7 +257,7 @@ void SortStep::RunImpl() {
   std::map<const Decl*, std::set<const Decl*, CmpDeclName>, CmpDeclName> dependencies;
   // |inverse_dependencies| records the decls that depend on each decl.
   std::map<const Decl*, std::vector<const Decl*>, CmpDeclName> inverse_dependencies;
-  for (const auto& [name, decl] : library()->declarations) {
+  for (const auto& [name, decl] : library()->declarations.all) {
     auto deps = CalcDependencies(decl).get();
     for (const Decl* dep : deps) {
       inverse_dependencies[dep].push_back(decl);

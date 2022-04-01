@@ -19,18 +19,10 @@ namespace fidl {
 
 class CodedTypesGenerator {
  public:
-  explicit CodedTypesGenerator(const flat::Libraries* all_libraries)
-      : target_library_decl_order_(all_libraries->target_library()->declaration_order),
-        all_libraries_decl_order_(all_libraries->DeclarationOrder()) {}
+  explicit CodedTypesGenerator(const flat::Compilation* compilation) : compilation_(compilation) {}
 
   void CompileCodedTypes();
 
-  const std::vector<const flat::Decl*>& target_library_decl_order() {
-    return target_library_decl_order_;
-  }
-  const std::vector<const flat::Decl*>& all_libraries_decl_order() {
-    return all_libraries_decl_order_;
-  }
   const std::vector<std::unique_ptr<coded::Type>>& coded_types() const { return coded_types_; }
 
   const coded::Type* CodedTypeFor(flat::Name::Key name) const {
@@ -106,8 +98,7 @@ class CodedTypesGenerator {
     }
   };
 
-  const std::vector<const flat::Decl*>& target_library_decl_order_;
-  std::vector<const flat::Decl*> all_libraries_decl_order_;
+  const flat::Compilation* compilation_;
 
   // All flat::Types here are owned by all_libraries passed in the constructor,
   // and all coded::Types are owned by by named_coded_types_ or coded_types_.

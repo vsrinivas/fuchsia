@@ -24,12 +24,19 @@
 #include "flat/attributes.h"
 #include "flat/name.h"
 #include "flat/object.h"
+#include "flat/traits.h"
 #include "flat/types.h"
 #include "flat/values.h"
 #include "ordinals.h"
-#include "reporter.h"
 #include "type_shape.h"
 #include "types.h"
+#include "versioning_types.h"
+
+namespace fidl {
+
+class Reporter;
+
+}  // namespace fidl
 
 namespace fidl::raw {
 
@@ -48,7 +55,8 @@ class Typespace;
 bool HasSimpleLayout(const Decl* decl);
 
 // This is needed (for now) to work around declaration order issues.
-std::string LibraryName(const Library* library, std::string_view separator);
+std::string LibraryName(const std::vector<std::string_view>& components,
+                        std::string_view separator);
 
 struct Element {
   enum struct Kind {
@@ -88,8 +96,13 @@ struct Element {
   // Asserts that this element is a decl.
   Decl* AsDecl();
 
+  // Returns true if this is an anonymous layout (i.e. a layout not
+  // directly bound to a type declaration as in `type Foo = struct { ... };`).
+  bool IsAnonymousLayout() const;
+
   Kind kind;
   std::unique_ptr<AttributeList> attributes;
+  Availability availability;
 };
 
 struct Decl : public Element {
@@ -146,12 +159,21 @@ struct Decl : public Element {
   // unlike Library::TraverseElements, it does not call `fn(this)`.
   void ForEachMember(const fit::function<void(Element*)>& fn);
 
+  // Returns a clone of this decl for the given range, only including members
+  // that intersect the range. Narrows the returned decl's availability, and its
+  // members' availabilities, to the range.
+  std::unique_ptr<Decl> Split(VersionRange range) const;
+
   bool compiling = false;
   bool compiled = false;
+
+ private:
+  // Helper to implement Split. Leaves the result's availability unset.
+  virtual std::unique_ptr<Decl> SplitImpl(VersionRange range) const = 0;
 };
 
 struct Builtin : public Decl {
-  enum struct Kind {
+  enum struct Identity {
     // Layouts (primitive)
     kBool,
     kInt8,
@@ -178,13 +200,17 @@ struct Builtin : public Decl {
     // Constraints
     kOptional,
     kMax,
+    // Constants
+    kHead,
   };
 
-  explicit Builtin(Kind kind, Name name)
-      : Decl(Decl::Kind::kBuiltin, std::make_unique<AttributeList>(), std::move(name)),
-        kind(kind) {}
+  explicit Builtin(Identity id, Name name)
+      : Decl(Decl::Kind::kBuiltin, std::make_unique<AttributeList>(), std::move(name)), id(id) {}
 
-  const Kind kind;
+  const Identity id;
+
+ private:
+  std::unique_ptr<Decl> SplitImpl(VersionRange range) const override;
 };
 
 struct TypeDecl : public Decl, public Object {
@@ -260,25 +286,26 @@ struct TypeConstraints;
 // This allows all type compilation to share the code paths through the consume
 // step (i.e. RegisterDecl) and the compilation step (i.e. Typespace::Create),
 // while ensuring that users cannot refer to anonymous layouts by name.
-struct TypeConstructor final {
+struct TypeConstructor final : public HasClone<TypeConstructor> {
   explicit TypeConstructor(Reference layout, std::unique_ptr<LayoutParameterList> parameters,
                            std::unique_ptr<TypeConstraints> constraints)
       : layout(std::move(layout)),
         parameters(std::move(parameters)),
         constraints(std::move(constraints)) {}
 
+  std::unique_ptr<TypeConstructor> Clone() const override;
+
   // Set during construction.
   Reference layout;
   std::unique_ptr<LayoutParameterList> parameters;
   std::unique_ptr<TypeConstraints> constraints;
-  std::optional<SourceSpan> span;
 
   // Set during compilation.
   const Type* type = nullptr;
   LayoutInvocation resolved_params;
 };
 
-struct LayoutParameter {
+struct LayoutParameter : public HasClone<LayoutParameter> {
  public:
   virtual ~LayoutParameter() = default;
   enum Kind {
@@ -304,6 +331,8 @@ struct LiteralLayoutParameter final : public LayoutParameter {
 
   TypeConstructor* AsTypeCtor() const override;
   Constant* AsConstant() const override;
+  std::unique_ptr<LayoutParameter> Clone() const override;
+
   std::unique_ptr<LiteralConstant> literal;
 };
 
@@ -313,6 +342,8 @@ struct TypeLayoutParameter final : public LayoutParameter {
 
   TypeConstructor* AsTypeCtor() const override;
   Constant* AsConstant() const override;
+  std::unique_ptr<LayoutParameter> Clone() const override;
+
   std::unique_ptr<TypeConstructor> type_ctor;
 };
 
@@ -326,6 +357,7 @@ struct IdentifierLayoutParameter final : public LayoutParameter {
 
   TypeConstructor* AsTypeCtor() const override;
   Constant* AsConstant() const override;
+  std::unique_ptr<LayoutParameter> Clone() const override;
 
   Reference reference;
 
@@ -333,22 +365,25 @@ struct IdentifierLayoutParameter final : public LayoutParameter {
   std::unique_ptr<Constant> as_constant;
 };
 
-struct LayoutParameterList {
+struct LayoutParameterList final : public HasClone<LayoutParameterList> {
   LayoutParameterList() = default;
   explicit LayoutParameterList(std::vector<std::unique_ptr<LayoutParameter>> items,
                                std::optional<SourceSpan> span)
       : items(std::move(items)), span(span) {}
 
-  std::vector<std::unique_ptr<LayoutParameter>> items;
+  std::unique_ptr<LayoutParameterList> Clone() const override;
 
+  std::vector<std::unique_ptr<LayoutParameter>> items;
   const std::optional<SourceSpan> span;
 };
 
-struct TypeConstraints {
+struct TypeConstraints final : public HasClone<TypeConstraints> {
   TypeConstraints() = default;
   explicit TypeConstraints(std::vector<std::unique_ptr<Constant>> items,
                            std::optional<SourceSpan> span)
       : items(std::move(items)), span(span) {}
+
+  std::unique_ptr<TypeConstraints> Clone() const override;
 
   std::vector<std::unique_ptr<Constant>> items;
   const std::optional<SourceSpan> span;
@@ -363,17 +398,23 @@ struct Const final : public Decl {
       : Decl(Kind::kConst, std::move(attributes), std::move(name)),
         type_ctor(std::move(type_ctor)),
         value(std::move(value)) {}
+
   std::unique_ptr<TypeConstructor> type_ctor;
   std::unique_ptr<Constant> value;
+
+ private:
+  std::unique_ptr<Decl> SplitImpl(VersionRange range) const override;
 };
 
 struct Enum final : public TypeDecl {
-  struct Member : public Element {
+  struct Member : public Element, public HasCopy<Member> {
     Member(SourceSpan name, std::unique_ptr<Constant> value,
            std::unique_ptr<AttributeList> attributes)
         : Element(Element::Kind::kEnumMember, std::move(attributes)),
           name(name),
           value(std::move(value)) {}
+    Member Copy() const override;
+
     SourceSpan name;
     std::unique_ptr<Constant> value;
   };
@@ -399,15 +440,20 @@ struct Enum final : public TypeDecl {
   // underlying enum type.
   std::optional<int64_t> unknown_value_signed;
   std::optional<uint64_t> unknown_value_unsigned;
+
+ private:
+  std::unique_ptr<Decl> SplitImpl(VersionRange range) const override;
 };
 
 struct Bits final : public TypeDecl {
-  struct Member : public Element {
+  struct Member : public Element, public HasCopy<Member> {
     Member(SourceSpan name, std::unique_ptr<Constant> value,
            std::unique_ptr<AttributeList> attributes)
         : Element(Element::Kind::kBitsMember, std::move(attributes)),
           name(name),
           value(std::move(value)) {}
+    Member Copy() const override;
+
     SourceSpan name;
     std::unique_ptr<Constant> value;
   };
@@ -429,15 +475,19 @@ struct Bits final : public TypeDecl {
 
   // Set during compilation.
   uint64_t mask = 0;
+
+ private:
+  std::unique_ptr<Decl> SplitImpl(VersionRange range) const override;
 };
 
 struct Service final : public TypeDecl {
-  struct Member : public Element {
+  struct Member : public Element, public HasCopy<Member> {
     Member(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
            std::unique_ptr<AttributeList> attributes)
         : Element(Element::Kind::kServiceMember, std::move(attributes)),
           type_ctor(std::move(type_ctor)),
           name(name) {}
+    Member Copy() const override;
 
     std::unique_ptr<TypeConstructor> type_ctor;
     SourceSpan name;
@@ -450,6 +500,9 @@ struct Service final : public TypeDecl {
   std::any AcceptAny(VisitorAny* visitor) const override;
 
   std::vector<Member> members;
+
+ private:
+  std::unique_ptr<Decl> SplitImpl(VersionRange range) const override;
 };
 
 struct Struct;
@@ -458,22 +511,21 @@ struct Struct;
 // was made a top-level class since it's not possible to forward-declare nested classes in C++. For
 // backward-compatibility, Struct::Member is now an alias for this top-level StructMember.
 // TODO(fxbug.dev/37535): Move this to a nested class inside Struct.
-struct StructMember : public Element, public Object {
+struct StructMember : public Element, public Object, public HasCopy<StructMember> {
   StructMember(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
                std::unique_ptr<Constant> maybe_default_value,
                std::unique_ptr<AttributeList> attributes)
       : Element(Element::Kind::kStructMember, std::move(attributes)),
         type_ctor(std::move(type_ctor)),
-        name(std::move(name)),
+        name(name),
         maybe_default_value(std::move(maybe_default_value)) {}
+  StructMember Copy() const override;
+  std::any AcceptAny(VisitorAny* visitor) const override;
+  FieldShape fieldshape(WireFormat wire_format) const;
+
   std::unique_ptr<TypeConstructor> type_ctor;
   SourceSpan name;
   std::unique_ptr<Constant> maybe_default_value;
-
-  std::any AcceptAny(VisitorAny* visitor) const override;
-
-  FieldShape fieldshape(WireFormat wire_format) const;
-
   const Struct* parent = nullptr;
 };
 
@@ -497,13 +549,16 @@ struct Struct final : public TypeDecl {
   // compilation based on the struct's members.
   std::optional<types::Resourceness> resourceness;
   std::any AcceptAny(VisitorAny* visitor) const override;
+
+ private:
+  std::unique_ptr<Decl> SplitImpl(VersionRange range) const override;
 };
 
 struct Table;
 
 // See the comment on the StructMember class for why this is a top-level class.
 // TODO(fxbug.dev/37535): Move this to a nested class inside Table::Member.
-struct TableMemberUsed : public Object {
+struct TableMemberUsed : public Object, public HasClone<TableMemberUsed> {
   TableMemberUsed(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name)
       : type_ctor(std::move(type_ctor)), name(std::move(name)) {}
   std::unique_ptr<TypeConstructor> type_ctor;
@@ -512,32 +567,41 @@ struct TableMemberUsed : public Object {
   std::any AcceptAny(VisitorAny* visitor) const override;
 
   FieldShape fieldshape(WireFormat wire_format) const;
+
+  std::unique_ptr<TableMemberUsed> Clone() const override {
+    return std::make_unique<TableMemberUsed>(type_ctor->Clone(), name);
+  }
 };
 
 // See the comment on the StructMember class for why this is a top-level class.
 // TODO(fxbug.dev/37535): Move this to a nested class inside Table.
-struct TableMember : public Element, public Object {
+struct TableMember : public Element, public Object, public HasCopy<TableMember> {
   using Used = TableMemberUsed;
 
-  TableMember(std::unique_ptr<raw::Ordinal64> ordinal, std::unique_ptr<TypeConstructor> type,
-              SourceSpan name, std::unique_ptr<AttributeList> attributes)
-      : Element(Element::Kind::kTableMember, std::move(attributes)),
-        ordinal(std::move(ordinal)),
-        maybe_used(std::make_unique<Used>(std::move(type), name)) {}
-  TableMember(std::unique_ptr<raw::Ordinal64> ordinal, SourceSpan span,
+  TableMember(const raw::Ordinal64* ordinal, std::unique_ptr<TypeConstructor> type, SourceSpan name,
               std::unique_ptr<AttributeList> attributes)
       : Element(Element::Kind::kTableMember, std::move(attributes)),
-        ordinal(std::move(ordinal)),
-        span(span) {}
+        ordinal(ordinal),
+        maybe_used(std::make_unique<Used>(std::move(type), name)) {}
+  TableMember(const raw::Ordinal64* ordinal, SourceSpan span,
+              std::unique_ptr<AttributeList> attributes)
+      : Element(Element::Kind::kTableMember, std::move(attributes)), ordinal(ordinal), span(span) {}
+  TableMember Copy() const override;
+  std::any AcceptAny(VisitorAny* visitor) const override;
 
-  std::unique_ptr<raw::Ordinal64> ordinal;
-
+  // Owned by Library::raw_ordinals.
+  const raw::Ordinal64* ordinal;
   // The span for reserved table members.
   std::optional<SourceSpan> span;
-
   std::unique_ptr<Used> maybe_used;
 
-  std::any AcceptAny(VisitorAny* visitor) const override;
+ private:
+  TableMember(const raw::Ordinal64* ordinal, std::optional<SourceSpan> span,
+              std::unique_ptr<Used> maybe_used, std::unique_ptr<AttributeList> attributes)
+      : Element(Element::Kind::kTableMember, std::move(attributes)),
+        ordinal(ordinal),
+        span(span),
+        maybe_used(std::move(maybe_used)) {}
 };
 
 struct Table final : public TypeDecl {
@@ -555,15 +619,17 @@ struct Table final : public TypeDecl {
   const types::Resourceness resourceness;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
+
+ private:
+  std::unique_ptr<Decl> SplitImpl(VersionRange range) const override;
 };
 
 struct Union;
 
 // See the comment on the StructMember class for why this is a top-level class.
 // TODO(fxbug.dev/37535): Move this to a nested class inside Union.
-struct UnionMemberUsed : public Object {
-  UnionMemberUsed(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
-                  std::unique_ptr<AttributeList> attributes)
+struct UnionMemberUsed : public Object, public HasClone<UnionMemberUsed> {
+  UnionMemberUsed(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name)
       : type_ctor(std::move(type_ctor)), name(name) {}
   std::unique_ptr<TypeConstructor> type_ctor;
   SourceSpan name;
@@ -572,33 +638,42 @@ struct UnionMemberUsed : public Object {
 
   FieldShape fieldshape(WireFormat wire_format) const;
 
+  std::unique_ptr<UnionMemberUsed> Clone() const override {
+    return std::make_unique<UnionMemberUsed>(type_ctor->Clone(), name);
+  }
+
   const Union* parent = nullptr;
 };
 
 // See the comment on the StructMember class for why this is a top-level class.
 // TODO(fxbug.dev/37535): Move this to a nested class inside Union.
-struct UnionMember : public Element, public Object {
+struct UnionMember : public Element, public Object, public HasCopy<UnionMember> {
   using Used = UnionMemberUsed;
 
-  UnionMember(std::unique_ptr<raw::Ordinal64> ordinal, std::unique_ptr<TypeConstructor> type_ctor,
+  UnionMember(const raw::Ordinal64* ordinal, std::unique_ptr<TypeConstructor> type_ctor,
               SourceSpan name, std::unique_ptr<AttributeList> attributes)
       : Element(Element::Kind::kUnionMember, std::move(attributes)),
-        ordinal(std::move(ordinal)),
-        maybe_used(std::make_unique<Used>(std::move(type_ctor), name, std::move(attributes))) {}
-  UnionMember(std::unique_ptr<raw::Ordinal64> ordinal, SourceSpan span,
+        ordinal(ordinal),
+        maybe_used(std::make_unique<Used>(std::move(type_ctor), name)) {}
+  UnionMember(const raw::Ordinal64* ordinal, SourceSpan span,
               std::unique_ptr<AttributeList> attributes)
-      : Element(Element::Kind::kUnionMember, std::move(attributes)),
-        ordinal(std::move(ordinal)),
-        span(span) {}
+      : Element(Element::Kind::kUnionMember, std::move(attributes)), ordinal(ordinal), span(span) {}
+  UnionMember Copy() const override;
+  std::any AcceptAny(VisitorAny* visitor) const override;
 
-  std::unique_ptr<raw::Ordinal64> ordinal;
-
+  // Owned by Library::raw_ordinals.
+  const raw::Ordinal64* ordinal;
   // The span for reserved members.
   std::optional<SourceSpan> span;
-
   std::unique_ptr<Used> maybe_used;
 
-  std::any AcceptAny(VisitorAny* visitor) const override;
+ private:
+  UnionMember(const raw::Ordinal64* ordinal, std::optional<SourceSpan> span,
+              std::unique_ptr<Used> maybe_used, std::unique_ptr<AttributeList> attributes)
+      : Element(Element::Kind::kUnionMember, std::move(attributes)),
+        ordinal(ordinal),
+        span(span),
+        maybe_used(std::move(maybe_used)) {}
 };
 
 struct Union final : public TypeDecl {
@@ -629,20 +704,20 @@ struct Union final : public TypeDecl {
   std::vector<std::reference_wrapper<const Member>> MembersSortedByXUnionOrdinal() const;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
+
+ private:
+  std::unique_ptr<Decl> SplitImpl(VersionRange range) const override;
 };
 
 struct Protocol final : public TypeDecl {
-  struct Method : public Element {
-    Method(Method&&) = default;
-    Method& operator=(Method&&) = default;
-
+  struct Method : public Element, public HasCopy<Method> {
     Method(std::unique_ptr<AttributeList> attributes, types::Strictness strictness,
-           std::unique_ptr<raw::Identifier> identifier, SourceSpan name, bool has_request,
+           const raw::Identifier* identifier, SourceSpan name, bool has_request,
            std::unique_ptr<TypeConstructor> maybe_request, bool has_response,
            std::unique_ptr<TypeConstructor> maybe_response, bool has_error)
         : Element(Element::Kind::kProtocolMethod, std::move(attributes)),
           strictness(strictness),
-          identifier(std::move(identifier)),
+          identifier(identifier),
           name(name),
           has_request(has_request),
           maybe_request(std::move(maybe_request)),
@@ -652,9 +727,11 @@ struct Protocol final : public TypeDecl {
           generated_ordinal64(nullptr) {
       assert(this->has_request || this->has_response);
     }
+    Method Copy() const override;
 
     types::Strictness strictness;
-    std::unique_ptr<raw::Identifier> identifier;
+    // Owned by Library::raw_identifiers.
+    const raw::Identifier* identifier;
     SourceSpan name;
     bool has_request;
     std::unique_ptr<TypeConstructor> maybe_request;
@@ -691,6 +768,7 @@ struct Protocol final : public TypeDecl {
     ComposedProtocol(std::unique_ptr<AttributeList> attributes, Reference reference)
         : Element(Element::Kind::kProtocolCompose, std::move(attributes)),
           reference(std::move(reference)) {}
+    ComposedProtocol Copy() const;
 
     Reference reference;
   };
@@ -709,9 +787,14 @@ struct Protocol final : public TypeDecl {
   types::Openness openness;
   std::vector<ComposedProtocol> composed_protocols;
   std::vector<Method> methods;
+
+  // Set during compilation.
   std::vector<MethodWithInfo> all_methods;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
+
+ private:
+  std::unique_ptr<Decl> SplitImpl(VersionRange range) const override;
 };
 
 struct Resource final : public Decl {
@@ -721,6 +804,8 @@ struct Resource final : public Decl {
         : Element(Element::Kind::kResourceProperty, std::move(attributes)),
           type_ctor(std::move(type_ctor)),
           name(name) {}
+    Property Copy() const;
+
     std::unique_ptr<TypeConstructor> type_ctor;
     SourceSpan name;
   };
@@ -736,6 +821,9 @@ struct Resource final : public Decl {
   std::vector<Property> properties;
 
   Property* LookupProperty(std::string_view name);
+
+ private:
+  std::unique_ptr<Decl> SplitImpl(VersionRange range) const override;
 };
 
 struct TypeAlias final : public Decl {
@@ -755,6 +843,9 @@ struct TypeAlias final : public Decl {
   // constraint can only specified once. This behavior will change in
   // fxbug.dev/74193.
   std::unique_ptr<TypeConstructor> partial_type_ctor;
+
+ private:
+  std::unique_ptr<Decl> SplitImpl(VersionRange range) const override;
 };
 
 // This class is used to manage a library's set of direct dependencies, i.e.
@@ -825,28 +916,47 @@ struct Library final : public Element {
   // Runs it on the library itself, on all Decls, and on all their members.
   void TraverseElements(const fit::function<void(Element*)>& fn);
 
+  struct Declarations {
+    // Inserts a declaration. When inserting builtins, this must be called in
+    // order of Builtin::Identity. For other decls, the order doesn't matter.
+    Decl* Insert(std::unique_ptr<Decl> decl);
+    // Looks up a builtin. Must have inserted it already with InsertBuiltin.
+    Builtin* LookupBuiltin(Builtin::Identity id) const;
+
+    // Contains all the declarations owned by the vectors below.
+    std::multimap<std::string_view, Decl*> all;
+
+    std::vector<std::unique_ptr<Bits>> bits;
+    std::vector<std::unique_ptr<Builtin>> builtins;
+    std::vector<std::unique_ptr<Const>> consts;
+    std::vector<std::unique_ptr<Enum>> enums;
+    std::vector<std::unique_ptr<Protocol>> protocols;
+    std::vector<std::unique_ptr<Resource>> resources;
+    std::vector<std::unique_ptr<Service>> services;
+    std::vector<std::unique_ptr<Struct>> structs;
+    std::vector<std::unique_ptr<Table>> tables;
+    std::vector<std::unique_ptr<TypeAlias>> type_aliases;
+    std::vector<std::unique_ptr<Union>> unions;
+  };
+
   std::vector<std::string_view> name;
   // There is no unique SourceSpan for a library's name since it can be declared
   // in multiple files, but we store an arbitrary one to use in error messages.
   SourceSpan arbitrary_name_span;
+  // Set during AvailabilityStep.
+  std::optional<Platform> platform;
   Dependencies dependencies;
-  // Maps decl names to decls, which are owned by the vectors below.
-  std::map<std::string_view, Decl*> declarations;
+  // Populated by ConsumeStep, and then rewritten by ResolveStep.
+  Declarations declarations;
   // Contains the same decls as `declarations`, but in a topologically sorted
   // order, i.e. later decls only depend on earlier ones. Populated by SortStep.
   std::vector<const Decl*> declaration_order;
-
-  std::vector<std::unique_ptr<Bits>> bits_declarations;
-  std::vector<std::unique_ptr<Builtin>> builtin_declarations;
-  std::vector<std::unique_ptr<Const>> const_declarations;
-  std::vector<std::unique_ptr<Enum>> enum_declarations;
-  std::vector<std::unique_ptr<Protocol>> protocol_declarations;
-  std::vector<std::unique_ptr<Resource>> resource_declarations;
-  std::vector<std::unique_ptr<Service>> service_declarations;
-  std::vector<std::unique_ptr<Struct>> struct_declarations;
-  std::vector<std::unique_ptr<Table>> table_declarations;
-  std::vector<std::unique_ptr<TypeAlias>> type_alias_declarations;
-  std::vector<std::unique_ptr<Union>> union_declarations;
+  // Raw AST objects pointed to by certain flat AST nodes. We store them on the
+  // Library because there is no unique ownership (e.g. multiple Table::Member
+  // instances can point to the same raw::Ordinal64 after decomposition).
+  std::vector<std::unique_ptr<raw::Literal>> raw_literals;
+  std::vector<std::unique_ptr<raw::Identifier>> raw_identifiers;
+  std::vector<std::unique_ptr<raw::Ordinal64>> raw_ordinals;
 };
 
 struct LibraryComparator {

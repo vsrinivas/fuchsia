@@ -351,7 +351,7 @@ TEST(UsingTests, BadTooManyProvidedLibraries) {
 
   auto unused = shared.all_libraries()->Unused();
   ASSERT_EQ(unused.size(), 1);
-  ASSERT_EQ(*unused.begin(), dependency.library());
+  ASSERT_EQ(fidl::NameLibrary((*unused.begin())->name), "not.used");
 }
 
 TEST(UsingTests, BadFilesDisagreeOnLibraryName) {

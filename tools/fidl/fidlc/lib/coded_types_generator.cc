@@ -322,7 +322,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
         assert(method_with_info.method != nullptr);
         const auto& method = *method_with_info.method;
         auto CompileMessage = [&](const std::unique_ptr<flat::TypeConstructor>& payload) -> void {
-          if (payload && payload->layout.target_name().as_anonymous() != nullptr) {
+          if (payload && payload->layout.IsSynthetic()) {
             auto id = static_cast<const flat::IdentifierType*>(payload->type);
             std::unique_ptr<coded::Type>& coded_message =
                 coded_protocol->messages_during_compile[i++];
@@ -537,7 +537,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
         std::string method_qname = NameMethod(protocol_qname, method);
         auto CreateMessage = [&](const std::unique_ptr<flat::TypeConstructor>& payload,
                                  types::MessageKind kind) -> void {
-          if (payload && payload->layout.target_name().as_anonymous() != nullptr) {
+          if (payload && payload->layout.IsSynthetic()) {
             std::string message_name = NameMessage(method_name, kind);
             std::string message_qname = NameMessage(method_qname, kind);
             auto id = static_cast<const flat::IdentifierType*>(payload->type);
@@ -648,10 +648,10 @@ std::unique_ptr<coded::XUnionType> CodedTypesGenerator::CompileUnionDecl(
 }
 
 void CodedTypesGenerator::CompileCodedTypes() {
-  for (const auto& decl : all_libraries_decl_order_) {
+  for (const auto& decl : compilation_->all_libraries_declaration_order) {
     CompileDecl(decl);
   }
-  for (const auto& decl : target_library_decl_order_) {
+  for (const auto& decl : compilation_->declaration_order) {
     CompileFields(decl);
   }
 }

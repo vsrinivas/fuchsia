@@ -9,137 +9,172 @@
 namespace fidl::flat {
 
 void ResolveStep::RunImpl() {
-  ResolveForContext();
-  library()->TraverseElements([&](Element* element) { ResolveElement(element); });
-}
+  // In a single pass:
+  // (1) parse all references into keys/contextuals;
+  // (2) insert reference edges into the graph.
+  library()->TraverseElements([&](Element* element) {
+    VisitElement(element, Context(Context::Mode::kParseAndInsert, element));
+  });
 
-void ResolveStep::ResolveForContext() {
-  // We need to resolve the type constructors of resource properties early so
-  // that ConstraintContext can get their targets. Note that this only matters
-  // for contextual constraints in the same library. If the resource is in
-  // another library, it will already have been resolved and compiled.
-  for (auto& resource : library()->resource_declarations) {
-    for (auto& property : resource->properties) {
-      ResolveTypeConstructor(property.type_ctor.get());
+  // Add all elements of this library to the graph, with membership edges.
+  for (auto& entry : library()->declarations.all) {
+    Decl* decl = entry.second;
+    // Note: It's important to insert decl here so that (1) we properly
+    // initialize its points below, and (2) we can always recursively look up a
+    // neighbor in the graph, even if it has out-degree zero.
+    graph_.try_emplace(decl);
+    decl->ForEachMember([this, &decl](Element* member) { graph_[member].neighbors.insert(decl); });
+  }
+
+  // Initialize point sets for each element in the graph.
+  for (auto& [element, info] : graph_) {
+    auto [a, b] = element->availability.range().pair();
+    info.points.insert(a);
+    info.points.insert(b);
+    if (auto deprecated = element->availability.deprecated_range()) {
+      auto [c, another_b] = deprecated.value().pair();
+      assert(another_b == b && "deprecation continues until the end");
+      info.points.insert(c);
     }
   }
+
+  // Run the temporal decomposition algorithm.
+  std::vector<const Element*> worklist;
+  for (auto& [element, info] : graph_) {
+    worklist.push_back(element);
+  }
+  while (!worklist.empty()) {
+    const Element* element = worklist.back();
+    worklist.pop_back();
+    auto& [element_points, neighbors] = graph_.at(element);
+    for (auto& neighbor : neighbors) {
+      auto& neighbor_points = graph_.at(neighbor).points;
+      auto min = *neighbor_points.begin();
+      auto max = *neighbor_points.rbegin();
+      bool pushed_neighbor = false;
+      for (auto p : element_points) {
+        if (p > min && p < max) {
+          auto [iter, inserted] = neighbor_points.insert(p);
+          if (inserted && !pushed_neighbor) {
+            worklist.push_back(neighbor);
+            pushed_neighbor = true;
+          }
+        }
+      }
+    }
+  }
+
+  // Split declarations based on the final point sets.
+  Library::Declarations decomposed_declarations;
+  for (auto [name, decl] : library()->declarations.all) {
+    auto& points = graph_.at(decl).points;
+    assert(points.size() >= 2 && "every decl must have at least 2 points");
+    // Note: Even if there are only two points, we still "split" the decl into
+    // one piece. There is no need to make it a special case.
+    auto prev = *points.begin();
+    for (auto it = std::next(points.begin()); it != points.end(); ++it) {
+      decomposed_declarations.Insert(decl->Split(VersionRange(prev, *it)));
+      prev = *it;
+    }
+  }
+  library()->declarations = std::move(decomposed_declarations);
+
+  // Resolve all references and validate them.
+  library()->TraverseElements([&](Element* element) {
+    VisitElement(element, Context(Context::Mode::kResolveAndValidate, element));
+  });
 }
 
-// static
-const ResolveStep::Context ResolveStep::Context::kNone = {};
-
-// static
-ResolveStep::Context ResolveStep::ConstraintContext(const TypeConstructor* type_ctor) {
-  if (!type_ctor->layout.IsResolved()) {
-    return {};
-  }
-  auto target = type_ctor->layout.target();
-  if (target->kind != Element::Kind::kResource) {
-    return {};
-  }
-  auto subtype = static_cast<Resource*>(target)->LookupProperty("subtype");
-  if (!subtype) {
-    return {};
-  }
-  if (!subtype->type_ctor->layout.IsResolved()) {
-    return {};
-  }
-  auto subtype_target = subtype->type_ctor->layout.target();
-  if (subtype_target->kind != Element::Kind::kEnum) {
-    return {};
-  }
-  return Context{.maybe_resource_subtype = static_cast<Enum*>(subtype_target)};
-}
-
-void ResolveStep::ResolveElement(Element* element) {
+void ResolveStep::VisitElement(Element* element, Context context) {
   for (auto& attribute : element->attributes->attributes) {
     for (auto& arg : attribute->args) {
-      ResolveConstant(arg->value.get());
+      VisitConstant(arg->value.get(), context);
     }
   }
   switch (element->kind) {
     case Element::Kind::kTypeAlias: {
       auto alias_decl = static_cast<TypeAlias*>(element);
-      ResolveTypeConstructor(alias_decl->partial_type_ctor.get());
+      VisitTypeConstructor(alias_decl->partial_type_ctor.get(), context);
       break;
     }
     case Element::Kind::kConst: {
       auto const_decl = static_cast<Const*>(element);
-      ResolveTypeConstructor(const_decl->type_ctor.get());
-      ResolveConstant(const_decl->value.get());
+      VisitTypeConstructor(const_decl->type_ctor.get(), context);
+      VisitConstant(const_decl->value.get(), context);
       break;
     }
     case Element::Kind::kBits: {
       auto bits_decl = static_cast<Bits*>(element);
-      ResolveTypeConstructor(bits_decl->subtype_ctor.get());
+      VisitTypeConstructor(bits_decl->subtype_ctor.get(), context);
       break;
     }
     case Element::Kind::kBitsMember: {
       auto bits_member = static_cast<Bits::Member*>(element);
-      ResolveConstant(bits_member->value.get());
+      VisitConstant(bits_member->value.get(), context);
       break;
     }
     case Element::Kind::kEnum: {
       auto enum_decl = static_cast<Enum*>(element);
-      ResolveTypeConstructor(enum_decl->subtype_ctor.get());
+      VisitTypeConstructor(enum_decl->subtype_ctor.get(), context);
       break;
     }
     case Element::Kind::kEnumMember: {
       auto enum_member = static_cast<Enum::Member*>(element);
-      ResolveConstant(enum_member->value.get());
+      VisitConstant(enum_member->value.get(), context);
       break;
     }
     case Element::Kind::kStructMember: {
       auto struct_member = static_cast<Struct::Member*>(element);
-      ResolveTypeConstructor(struct_member->type_ctor.get());
+      VisitTypeConstructor(struct_member->type_ctor.get(), context);
       if (auto& constant = struct_member->maybe_default_value) {
-        ResolveConstant(constant.get());
+        VisitConstant(constant.get(), context);
       }
       break;
     }
     case Element::Kind::kTableMember: {
       auto table_member = static_cast<Table::Member*>(element);
       if (auto& used = table_member->maybe_used) {
-        ResolveTypeConstructor(used->type_ctor.get());
+        VisitTypeConstructor(used->type_ctor.get(), context);
       }
       break;
     }
     case Element::Kind::kUnionMember: {
       auto union_member = static_cast<Union::Member*>(element);
       if (auto& used = union_member->maybe_used) {
-        ResolveTypeConstructor(used->type_ctor.get());
+        VisitTypeConstructor(used->type_ctor.get(), context);
       }
       break;
     }
     case Element::Kind::kProtocolCompose: {
       auto composed_protocol = static_cast<Protocol::ComposedProtocol*>(element);
-      ResolveReference(composed_protocol->reference);
+      VisitReference(composed_protocol->reference, context);
       break;
     }
     case Element::Kind::kProtocolMethod: {
       auto method = static_cast<Protocol::Method*>(element);
       if (auto& type_ctor = method->maybe_request) {
-        ResolveTypeConstructor(type_ctor.get());
+        VisitTypeConstructor(type_ctor.get(), context);
       }
       if (auto& type_ctor = method->maybe_response) {
-        ResolveTypeConstructor(type_ctor.get());
+        VisitTypeConstructor(type_ctor.get(), context);
       }
       break;
     }
     case Element::Kind::kServiceMember: {
       auto service_member = static_cast<Service::Member*>(element);
-      ResolveTypeConstructor(service_member->type_ctor.get());
+      VisitTypeConstructor(service_member->type_ctor.get(), context);
       break;
     }
     case Element::Kind::kResource: {
       auto resource_decl = static_cast<Resource*>(element);
-      ResolveTypeConstructor(resource_decl->subtype_ctor.get());
+      VisitTypeConstructor(resource_decl->subtype_ctor.get(), context);
       break;
     }
-    case Element::Kind::kResourceProperty:
-      // The resource property's type constructor is resolved earlier, in
-      // ResolveForContext().
+    case Element::Kind::kResourceProperty: {
+      auto resource_property = static_cast<Resource::Property*>(element);
+      VisitTypeConstructor(resource_property->type_ctor.get(), context);
       break;
+    }
     case Element::Kind::kBuiltin:
     case Element::Kind::kLibrary:
     case Element::Kind::kProtocol:
@@ -151,83 +186,123 @@ void ResolveStep::ResolveElement(Element* element) {
   }
 }
 
-void ResolveStep::ResolveTypeConstructor(TypeConstructor* type_ctor) {
-  assert(type_ctor && "null type_ctor");
-  ResolveReference(type_ctor->layout);
+void ResolveStep::VisitTypeConstructor(TypeConstructor* type_ctor, Context context) {
+  VisitReference(type_ctor->layout, context);
   for (auto& param : type_ctor->parameters->items) {
     switch (param->kind) {
       case LayoutParameter::kLiteral:
         break;
       case LayoutParameter::kType: {
         auto type_param = static_cast<TypeLayoutParameter*>(param.get());
-        ResolveTypeConstructor(type_param->type_ctor.get());
+        VisitTypeConstructor(type_param->type_ctor.get(), context);
         break;
       }
       case LayoutParameter::kIdentifier: {
         auto identifier_param = static_cast<IdentifierLayoutParameter*>(param.get());
-        ResolveReference(identifier_param->reference);
-        if (identifier_param->reference.IsResolved()) {
+        VisitReference(identifier_param->reference, context);
+        // After resolving an IdentifierLayoutParameter, we can determine
+        // whether it's a type constructor or a constant.
+        if (identifier_param->reference.state() == Reference::State::kResolved) {
           identifier_param->Disambiguate();
         }
         break;
       }
     }
   }
+  auto constraint_context = ConstraintContext(type_ctor, context);
   for (auto& constraint : type_ctor->constraints->items) {
-    ResolveConstant(constraint.get(), ConstraintContext(type_ctor));
+    VisitConstant(constraint.get(), constraint_context);
   }
 }
 
-void ResolveStep::ResolveConstant(Constant* constant, Context context) {
+void ResolveStep::VisitConstant(Constant* constant, Context context) {
   switch (constant->kind) {
     case Constant::Kind::kLiteral:
       break;
     case Constant::Kind::kIdentifier: {
       auto identifier_constant = static_cast<IdentifierConstant*>(constant);
-      ResolveReference(identifier_constant->reference, context);
+      VisitReference(identifier_constant->reference, context);
       break;
     }
     case Constant::Kind::kBinaryOperator: {
       auto binop_constant = static_cast<BinaryOperatorConstant*>(constant);
-      ResolveConstant(binop_constant->left_operand.get(), context);
-      ResolveConstant(binop_constant->right_operand.get(), context);
+      VisitConstant(binop_constant->left_operand.get(), context);
+      VisitConstant(binop_constant->right_operand.get(), context);
       break;
     }
   }
 }
 
-namespace {
+ResolveStep::Context ResolveStep::ConstraintContext(const TypeConstructor* type_ctor,
+                                                    Context context) {
+  switch (context.mode) {
+    case Context::Mode::kParseAndInsert: {
+      // Assume all constraints might be contextual.
+      Context augmented(Context::Mode::kParseAndInsert, context.enclosing);
+      augmented.allow_contextual = true;
+      return augmented;
+    }
+    case Context::Mode::kResolveAndValidate:
+      // Handled below.
+      break;
+  }
+  if (type_ctor->layout.state() != Reference::State::kResolved) {
+    return context;
+  }
+  auto target = type_ctor->layout.resolved().element();
+  if (target->kind != Element::Kind::kResource) {
+    return context;
+  }
+  auto subtype_property = static_cast<Resource*>(target)->LookupProperty("subtype");
+  if (!subtype_property) {
+    return context;
+  }
+  auto& subtype_layout = subtype_property->type_ctor->layout;
+  // If the resource_definition is in the same library, we might not have
+  // resolved it yet depending on the element traversal order.
+  ResolveReference(subtype_layout, Context(Context::Mode::kResolveAndValidate, subtype_property));
+  if (subtype_layout.state() == Reference::State::kFailed) {
+    return context;
+  }
+  auto subtype_target = subtype_layout.resolved().element();
+  if (subtype_target->kind != Element::Kind::kEnum) {
+    return context;
+  }
+  Context augmented(Context::Mode::kResolveAndValidate, context.enclosing);
+  augmented.maybe_resource_subtype = static_cast<Enum*>(subtype_target);
+  return augmented;
+}
 
-// Helper methods for looking up a name as a library, decl, or member. The Try*
-// methods do not report an error, while the Must* methods do.
-class Lookup final : ReporterMixin {
+// Helper for looking up names as libraries, decls, or members. The Try* methods
+// do not report an error, while the Must* methods do.
+class ResolveStep::Lookup final : ReporterMixin {
  public:
-  Lookup(const Reference& ref, const Library* root_library, const Dependencies& dependencies,
-         Reporter* reporter)
-      : ReporterMixin(reporter),
-        ref_(ref),
-        root_library_(root_library),
-        dependencies_(dependencies) {}
+  Lookup(ResolveStep* step, const Reference& ref)
+      : ReporterMixin(step->reporter()), step_(step), ref_(ref) {}
 
   const Library* TryLibrary(const std::vector<std::string_view>& name) {
-    if (name == root_library_->name) {
-      return root_library_;
+    auto root_library = step_->all_libraries()->root_library();
+    if (name == root_library->name) {
+      return root_library;
     }
-    auto filename = ref_.span()->source_file().filename();
-    return dependencies_.LookupAndMarkUsed(filename, name);
+    auto filename = ref_.span().source_file().filename();
+    return step_->library()->dependencies.LookupAndMarkUsed(filename, name);
   }
 
-  Decl* TryDecl(const Library* library, std::string_view name) {
-    auto iter = library->declarations.find(name);
-    return iter == library->declarations.end() ? nullptr : iter->second;
+  std::optional<Reference::Key> TryDecl(const Library* library, std::string_view name) {
+    auto [begin, end] = library->declarations.all.equal_range(name);
+    if (begin == end) {
+      return std::nullopt;
+    }
+    return Reference::Key(library, name);
   }
 
-  Decl* MustDecl(const Library* library, std::string_view name) {
-    if (auto decl = TryDecl(library, name)) {
-      return decl;
+  std::optional<Reference::Key> MustDecl(const Library* library, std::string_view name) {
+    if (auto key = TryDecl(library, name)) {
+      return key;
     }
-    Fail(ErrNameNotFound, ref_.span().value(), name, library->name);
-    return nullptr;
+    Fail(ErrNameNotFound, ref_.span(), name, library->name);
+    return std::nullopt;
   }
 
   Element* TryMember(Decl* parent, std::string_view name) {
@@ -260,28 +335,68 @@ class Lookup final : ReporterMixin {
         }
         break;
       default:
-        Fail(ErrCannotReferToMember, ref_.span().value(), parent);
+        Fail(ErrCannotReferToMember, ref_.span(), parent);
         return nullptr;
     }
-    Fail(ErrMemberNotFound, ref_.span().value(), parent, name);
+    Fail(ErrMemberNotFound, ref_.span(), parent, name);
     return nullptr;
   }
 
  private:
+  ResolveStep* step_;
   const Reference& ref_;
-  const Library* root_library_;
-  const Dependencies& dependencies_;
 };
 
-}  // namespace
-
-void ResolveStep::ResolveReference(Reference& ref, Context context) {
-  // Skip pre-resolved references.
-  if (!ref.span()) {
-    assert(ref.IsResolved() && "reference without span should be pre-resolved");
-    return;
+void ResolveStep::VisitReference(Reference& ref, Context context) {
+  switch (context.mode) {
+    case Context::Mode::kParseAndInsert:
+      ParseReference(ref, context);
+      InsertReferenceEdges(ref, context);
+      break;
+    case Context::Mode::kResolveAndValidate: {
+      ResolveReference(ref, context);
+      ValidateReference(ref, context);
+      break;
+    }
   }
+}
 
+void ResolveStep::ParseReference(Reference& ref, Context context) {
+  auto initial_state = ref.state();
+  [[maybe_unused]] auto checkpoint = reporter()->Checkpoint();
+  switch (initial_state) {
+    case Reference::State::kRawSynthetic:
+      ParseSyntheticReference(ref, context);
+      break;
+    case Reference::State::kRawSourced:
+      ParseSourcedReference(ref, context);
+      break;
+    case Reference::State::kResolved:
+      // This can only happen for the early compilation of HEAD in
+      // AttributeArgSchema::TryResolveAsHead.
+      assert(ref.resolved().element()->kind == Element::Kind::kBuiltin &&
+             static_cast<Builtin*>(ref.resolved().element())->id == Builtin::Identity::kHead);
+      return;
+    default:
+      assert(false && "unexpected reference state");
+      break;
+  }
+  if (ref.state() == initial_state) {
+    assert(checkpoint.NumNewErrors() > 0 && "should have reported an error");
+    ref.MarkFailed();
+  }
+}
+
+void ResolveStep::ParseSyntheticReference(Reference& ref, Context context) {
+  // Note that we can't use target.name() here because it returns a Name by
+  // value, which would go out of scope.
+  auto& name = ref.raw_synthetic().target.element()->AsDecl()->name;
+  ref.SetKey(Reference::Key(name.library(), name.decl_name()));
+}
+
+void ResolveStep::ParseSourcedReference(Reference& ref, Context context) {
+  // TOOD(fxbug.dev/77561): Move this information to the FIDL language spec.
+  //
   // Below is an outline of FIDL scoping semantics. We navigate it by moving
   // down and to the right. That is, if a rule succeeds, we proceed to the
   // indented one below it (if there is none, SUCCESS); if a rule fails, we try
@@ -311,82 +426,212 @@ void ResolveStep::ResolveReference(Reference& ref, Context context) {
   // follow the linter naming conventions (lowercase library, CamelCase decl),
   // this will never come up in practice.
 
-  Element* target = nullptr;
-  Decl* maybe_parent = nullptr;
-  const auto& components = ref.components();
-  Lookup lookup(ref, all_libraries()->root_library(), library()->dependencies, reporter());
+  const auto& components = ref.raw_sourced().components;
+  Lookup lookup(this, ref);
   switch (components.size()) {
     case 1: {
-      if (auto decl = lookup.TryDecl(library(), components[0])) {
-        target = decl;
-        break;
+      if (auto key = lookup.TryDecl(library(), components[0])) {
+        ref.SetKey(key.value());
+      } else if (auto key = lookup.TryDecl(all_libraries()->root_library(), components[0])) {
+        ref.SetKey(key.value());
+      } else if (context.allow_contextual) {
+        ref.MarkContextual();
+      } else {
+        Fail(ErrNameNotFound, ref.span(), components[0], library()->name);
       }
-      if (auto decl = lookup.TryDecl(all_libraries()->root_library(), components[0])) {
-        target = decl;
-        break;
-      }
-      if (auto parent = context.maybe_resource_subtype) {
-        if (auto member = lookup.TryMember(parent, components[0])) {
-          target = member;
-          maybe_parent = parent;
-          break;
-        }
-      }
-      Fail(ErrNameNotFound, ref.span().value(), components[0], library()->name);
-      return;
+      break;
     }
     case 2: {
-      if (auto parent = lookup.TryDecl(library(), components[0])) {
-        auto member = lookup.MustMember(parent, components[1]);
-        if (!member) {
-          return;
+      if (auto key = lookup.TryDecl(library(), components[0])) {
+        ref.SetKey(key.value().Member(components[1]));
+      } else if (auto dep_library = lookup.TryLibrary({components[0]})) {
+        if (auto key = lookup.MustDecl(dep_library, components[1])) {
+          ref.SetKey(key.value());
         }
-        target = member;
-        maybe_parent = parent;
-        break;
+      } else {
+        Fail(ErrNameNotFound, ref.span(), components[0], library()->name);
       }
-      if (auto dep_library = lookup.TryLibrary({components[0]})) {
-        auto decl = lookup.MustDecl(dep_library, components[1]);
-        if (!decl) {
-          return;
-        }
-        target = decl;
-        break;
-      }
-      Fail(ErrNameNotFound, ref.span().value(), components[0], library()->name);
-      return;
+      break;
     }
     default: {
       std::vector<std::string_view> long_library_name(components.begin(), components.end() - 1);
-      if (auto dep_library = lookup.TryLibrary(long_library_name)) {
-        auto decl = lookup.MustDecl(dep_library, components.back());
-        if (!decl) {
-          return;
-        }
-        target = decl;
-        break;
-      }
       std::vector<std::string_view> short_library_name(components.begin(), components.end() - 2);
-      if (auto dep_library = lookup.TryLibrary(short_library_name)) {
-        auto parent = lookup.MustDecl(dep_library, components[components.size() - 2]);
-        if (!parent) {
-          return;
+      if (auto dep_library = lookup.TryLibrary(long_library_name)) {
+        if (auto key = lookup.MustDecl(dep_library, components.back())) {
+          ref.SetKey(key.value());
         }
-        auto member = lookup.MustMember(parent, components.back());
-        if (!member) {
-          return;
+      } else if (auto dep_library = lookup.TryLibrary(short_library_name)) {
+        if (auto key = lookup.MustDecl(dep_library, components[components.size() - 2])) {
+          ref.SetKey(key.value().Member(components.back()));
         }
-        target = member;
-        maybe_parent = parent;
-        break;
+      } else {
+        Fail(ErrUnknownDependentLibrary, ref.span(), long_library_name, short_library_name);
       }
-      Fail(ErrUnknownDependentLibrary, ref.span().value(), long_library_name, short_library_name);
-      return;
+      break;
     }
   }
+}
 
-  assert(target);
-  ref.Resolve(target, maybe_parent);
+void ResolveStep::InsertReferenceEdges(const Reference& ref, Context context) {
+  // Don't insert edges for a contextual reference, if parsing failed, or if the
+  // reference is already resolved (see comment in ResolveStep::ParseReference
+  // for details about when this happens).
+  if (ref.state() == Reference::State::kContextual || ref.state() == Reference::State::kFailed ||
+      ref.state() == Reference::State::kResolved) {
+    return;
+  }
+  auto key = ref.key();
+  // Only insert edges if the target is in the same platform.
+  if (key.library->platform.value() != library()->platform.value()) {
+    return;
+  }
+  // Note: key.library may is not necessarily library(), thus
+  // key.library->declarations could be pre-decomposition or post-decomposition.
+  // Although no branching is needed here, this is important to keep in mind.
+  auto [begin, end] = key.library->declarations.all.equal_range(key.decl_name);
+  for (auto it = begin; it != end; ++it) {
+    Element* target = it->second;
+    Element* enclosing = context.enclosing;
+    // Don't insert a self-loop.
+    if (target == enclosing) {
+      continue;
+    }
+    // Only insert an edge if we have a chance of resolving to this target
+    // post-decomposition (as opposed to one of the other same-named targets).
+    if (VersionRange::Intersect(target->availability.range(), enclosing->availability.range())) {
+      graph_[target].neighbors.insert(enclosing);
+    }
+  }
+}
+
+void ResolveStep::ResolveReference(Reference& ref, Context context) {
+  auto initial_state = ref.state();
+  [[maybe_unused]] auto checkpoint = reporter()->Checkpoint();
+  switch (initial_state) {
+    case Reference::State::kFailed:
+    case Reference::State::kResolved:
+      // Nothing to do, either failed parsing or already attempted resolving.
+      return;
+    case Reference::State::kContextual:
+      ResolveContextualReference(ref, context);
+      break;
+    case Reference::State::kKey:
+      ResolveKeyReference(ref, context);
+      break;
+    default:
+      assert(false && "unexpected reference state");
+      break;
+  }
+  if (ref.state() == initial_state) {
+    assert(checkpoint.NumNewErrors() > 0 && "should have reported an error");
+    ref.MarkFailed();
+  }
+}
+
+void ResolveStep::ResolveContextualReference(Reference& ref, Context context) {
+  auto name = ref.contextual().name;
+  auto subtype_enum = context.maybe_resource_subtype;
+  if (!subtype_enum) {
+    Fail(ErrNameNotFound, ref.span(), name, library()->name);
+    return;
+  }
+  Lookup lookup(this, ref);
+  auto member = lookup.TryMember(subtype_enum, name);
+  if (!member) {
+    Fail(ErrNameNotFound, ref.span(), name, library()->name);
+    return;
+  }
+  ref.ResolveTo(Reference::Target(member, subtype_enum));
+}
+
+void ResolveStep::ResolveKeyReference(Reference& ref, Context context) {
+  auto decl = LookupDeclByKey(ref, context);
+  if (!decl) {
+    return;
+  }
+  if (!ref.key().member_name) {
+    ref.ResolveTo(Reference::Target(decl));
+    return;
+  }
+  Lookup lookup(this, ref);
+  auto member = lookup.MustMember(decl, ref.key().member_name.value());
+  if (!member) {
+    return;
+  }
+  ref.ResolveTo(Reference::Target(member, decl));
+}
+
+Decl* ResolveStep::LookupDeclByKey(const Reference& ref, Context context) {
+  auto key = ref.key();
+  auto [begin, end] = key.library->declarations.all.equal_range(key.decl_name);
+  assert(begin != end && "key must exist");
+  auto platform = key.library->platform.value();
+  // Case #1: source and target libraries are versioned in the same platform.
+  if (library()->platform == platform) {
+    for (auto it = begin; it != end; ++it) {
+      auto decl = it->second;
+      auto us = context.enclosing->availability.range();
+      auto them = decl->availability.range();
+      if (auto overlap = VersionRange::Intersect(us, them)) {
+        assert(overlap.value() == us && "referencee must outlive referencer");
+        return decl;
+      }
+    }
+    // TODO(fxbug.dev/67858): Provide a nicer error message in the case where a
+    // decl with that name does exist, but in a different version range.
+    Fail(ErrNameNotFound, ref.span(), key.decl_name, key.library->name);
+    return nullptr;
+  }
+  // Case #2: source and target libraries are versioned in different platforms.
+  auto version = version_selection()->Lookup(platform);
+  for (auto it = begin; it != end; ++it) {
+    auto decl = it->second;
+    if (decl->availability.range().Contains(version)) {
+      return decl;
+    }
+  }
+  // TODO(fxbug.dev/67858): Provide a nicer error message in the case where
+  // a decl with that name does exist, but in a different version range.
+  Fail(ErrNameNotFound, ref.span(), key.decl_name, key.library->name);
+  return nullptr;
+}
+
+void ResolveStep::ValidateReference(const Reference& ref, Context context) {
+  if (ref.state() == Reference::State::kFailed) {
+    return;
+  }
+  if (!ref.IsSynthetic() && ref.resolved().name().as_anonymous()) {
+    Fail(ErrAnonymousNameReference, ref.span(), ref.resolved().name());
+  }
+
+  auto source = context.enclosing;
+  auto& source_platform = library()->platform.value();
+  auto source_present = source->availability.range();
+  auto source_deprecated = source->availability.deprecated_range();
+
+  auto target = ref.resolved().element();
+  auto& target_platform = ref.resolved().library()->platform.value();
+  auto target_deprecated = target->availability.deprecated_range();
+
+  if (!target_deprecated) {
+    return;
+  }
+
+  if (source_platform == target_platform) {
+    // Same platform: check if target is deprecated while source is not.
+    if (auto problem = VersionRange::Subtract(
+            VersionRange::Intersect(target_deprecated, source_present), source_deprecated)) {
+      Fail(ErrInvalidReferenceToDeprecated, ref.span(), target, problem.value(), source_platform,
+           source, source);
+    }
+  } else {
+    // Different platform: check if source is _ever_ not deprecated.
+    if (auto problem = VersionRange::Subtract(source_present, source_deprecated)) {
+      Fail(ErrInvalidReferenceToDeprecatedOtherPlatform, ref.span(), target,
+           target_deprecated.value(), target_platform, source, problem.value(), source_platform,
+           source);
+    }
+  }
 }
 
 }  // namespace fidl::flat

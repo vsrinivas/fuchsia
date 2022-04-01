@@ -20,7 +20,7 @@ void CheckConstEq(TestLibrary& library, std::string_view name, PrimitiveType exp
   ASSERT_NOT_NULL(const_decl);
   ASSERT_EQ(expected_constant_kind, const_decl->value->kind);
   ASSERT_EQ(expected_constant_value_kind, const_decl->value->Value().kind);
-  auto numeric_const_value = static_cast<const fidl::flat::NumericConstantValue<PrimitiveType>&>(
+  auto& numeric_const_value = static_cast<const fidl::flat::NumericConstantValue<PrimitiveType>&>(
       const_decl->value->Value());
   EXPECT_EQ(expected_value, static_cast<PrimitiveType>(numeric_const_value));
 }

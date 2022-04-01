@@ -36,6 +36,7 @@ zx_library("fidl") {
     "lib/findings_json.cc",
     "lib/flat/attribute_schema.cc",
     "lib/flat/attributes.cc",
+    "lib/flat/availability_step.cc",
     "lib/flat/compile_step.cc",
     "lib/flat/compiler.cc",
     "lib/flat/consume_step.cc",
@@ -70,6 +71,7 @@ zx_library("fidl") {
     "lib/tree_visitor.cc",
     "lib/type_shape.cc",
     "lib/utils.cc",
+    "lib/versioning_types.cc",
     "lib/virtual_source_file.cc",
   ]
   public_deps = [

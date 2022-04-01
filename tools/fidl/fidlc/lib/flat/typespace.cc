@@ -11,29 +11,29 @@ namespace fidl::flat {
 
 static const Size kMaxSize = Size::Max();
 
-static std::optional<types::PrimitiveSubtype> BuiltinKindToPrimitiveSubtype(Builtin::Kind kind) {
-  switch (kind) {
-    case Builtin::Kind::kBool:
+static std::optional<types::PrimitiveSubtype> BuiltinToPrimitiveSubtype(Builtin::Identity id) {
+  switch (id) {
+    case Builtin::Identity::kBool:
       return types::PrimitiveSubtype::kBool;
-    case Builtin::Kind::kInt8:
+    case Builtin::Identity::kInt8:
       return types::PrimitiveSubtype::kInt8;
-    case Builtin::Kind::kInt16:
+    case Builtin::Identity::kInt16:
       return types::PrimitiveSubtype::kInt16;
-    case Builtin::Kind::kInt32:
+    case Builtin::Identity::kInt32:
       return types::PrimitiveSubtype::kInt32;
-    case Builtin::Kind::kInt64:
+    case Builtin::Identity::kInt64:
       return types::PrimitiveSubtype::kInt64;
-    case Builtin::Kind::kUint8:
+    case Builtin::Identity::kUint8:
       return types::PrimitiveSubtype::kUint8;
-    case Builtin::Kind::kUint16:
+    case Builtin::Identity::kUint16:
       return types::PrimitiveSubtype::kUint16;
-    case Builtin::Kind::kUint32:
+    case Builtin::Identity::kUint32:
       return types::PrimitiveSubtype::kUint32;
-    case Builtin::Kind::kUint64:
+    case Builtin::Identity::kUint64:
       return types::PrimitiveSubtype::kUint64;
-    case Builtin::Kind::kFloat32:
+    case Builtin::Identity::kFloat32:
       return types::PrimitiveSubtype::kFloat32;
-    case Builtin::Kind::kFloat64:
+    case Builtin::Identity::kFloat64:
       return types::PrimitiveSubtype::kFloat64;
     default:
       return std::nullopt;
@@ -41,14 +41,14 @@ static std::optional<types::PrimitiveSubtype> BuiltinKindToPrimitiveSubtype(Buil
 }
 
 Typespace::Typespace(const Library* root_library, Reporter* reporter) : ReporterMixin(reporter) {
-  for (auto& builtin : root_library->builtin_declarations) {
-    if (auto subtype = BuiltinKindToPrimitiveSubtype(builtin->kind)) {
+  for (auto& builtin : root_library->declarations.builtins) {
+    if (auto subtype = BuiltinToPrimitiveSubtype(builtin->id)) {
       primitive_types_.emplace(subtype.value(),
                                std::make_unique<PrimitiveType>(builtin->name, subtype.value()));
-    } else if (builtin->kind == Builtin::Kind::kString) {
+    } else if (builtin->id == Builtin::Identity::kString) {
       unbounded_string_type_ =
           std::make_unique<StringType>(builtin->name, &kMaxSize, types::Nullability::kNonnullable);
-    } else if (builtin->kind == Builtin::Kind::kVector) {
+    } else if (builtin->id == Builtin::Identity::kVector) {
       vector_layout_name_ = builtin->name;
     }
   }
@@ -124,7 +124,7 @@ const Type* Typespace::Create(TypeResolver* resolver, const Reference& layout,
 }
 
 const Type* Typespace::Creator::Create() {
-  Decl* target = layout_.target()->AsDecl();
+  Decl* target = layout_.resolved().element()->AsDecl();
 
   switch (target->kind) {
     case Decl::Kind::kBits:
@@ -141,43 +141,44 @@ const Type* Typespace::Creator::Create() {
       // Handled below.
       break;
     default:
-      Fail(ErrExpectedType, layout_.span().value());
+      Fail(ErrExpectedType, layout_.span());
       return nullptr;
   }
 
   auto builtin = static_cast<const Builtin*>(target);
-  switch (builtin->kind) {
-    case Builtin::Kind::kBool:
-    case Builtin::Kind::kInt8:
-    case Builtin::Kind::kInt16:
-    case Builtin::Kind::kInt32:
-    case Builtin::Kind::kInt64:
-    case Builtin::Kind::kUint8:
-    case Builtin::Kind::kUint16:
-    case Builtin::Kind::kUint32:
-    case Builtin::Kind::kUint64:
-    case Builtin::Kind::kFloat32:
-    case Builtin::Kind::kFloat64:
-      return CreatePrimitiveType(BuiltinKindToPrimitiveSubtype(builtin->kind).value());
-    case Builtin::Kind::kString:
+  switch (builtin->id) {
+    case Builtin::Identity::kBool:
+    case Builtin::Identity::kInt8:
+    case Builtin::Identity::kInt16:
+    case Builtin::Identity::kInt32:
+    case Builtin::Identity::kInt64:
+    case Builtin::Identity::kUint8:
+    case Builtin::Identity::kUint16:
+    case Builtin::Identity::kUint32:
+    case Builtin::Identity::kUint64:
+    case Builtin::Identity::kFloat32:
+    case Builtin::Identity::kFloat64:
+      return CreatePrimitiveType(BuiltinToPrimitiveSubtype(builtin->id).value());
+    case Builtin::Identity::kString:
       return CreateStringType();
-    case Builtin::Kind::kBox:
+    case Builtin::Identity::kBox:
       return CreateBoxType();
-    case Builtin::Kind::kArray:
+    case Builtin::Identity::kArray:
       return CreateArrayType();
-    case Builtin::Kind::kVector:
+    case Builtin::Identity::kVector:
       return CreateVectorType();
-    case Builtin::Kind::kClientEnd:
+    case Builtin::Identity::kClientEnd:
       return CreateTransportSideType(TransportSide::kClient);
-    case Builtin::Kind::kServerEnd:
+    case Builtin::Identity::kServerEnd:
       return CreateTransportSideType(TransportSide::kServer);
-    case Builtin::Kind::kByte:
+    case Builtin::Identity::kByte:
       return CreatePrimitiveType(types::PrimitiveSubtype::kUint8);
-    case Builtin::Kind::kBytes:
+    case Builtin::Identity::kBytes:
       return CreateBytesType();
-    case Builtin::Kind::kOptional:
-    case Builtin::Kind::kMax:
-      Fail(ErrExpectedType, layout_.span().value());
+    case Builtin::Identity::kOptional:
+    case Builtin::Identity::kMax:
+    case Builtin::Identity::kHead:
+      Fail(ErrExpectedType, layout_.span());
       return nullptr;
   }
 }
@@ -187,8 +188,8 @@ bool Typespace::Creator::EnsureNumberOfLayoutParams(size_t expected_params) {
   if (num_params == expected_params) {
     return true;
   }
-  auto span = num_params == 0 ? layout_.span().value() : parameters_.span.value();
-  return Fail(ErrWrongNumberOfLayoutParameters, span, layout_.target_name(), expected_params,
+  auto span = num_params == 0 ? layout_.span() : parameters_.span.value();
+  return Fail(ErrWrongNumberOfLayoutParameters, span, layout_.resolved().name(), expected_params,
               num_params);
 }
 
@@ -218,7 +219,7 @@ const Type* Typespace::Creator::CreateArrayType() {
   out_params_->size_resolved = size;
   out_params_->size_raw = parameters_.items[1]->AsConstant();
 
-  ArrayType type(layout_.target_name(), element_type, size);
+  ArrayType type(layout_.resolved().name(), element_type, size);
   std::unique_ptr<Type> constrained_type;
   type.ApplyConstraints(resolver_, constraints_, layout_, &constrained_type, out_params_);
   return typespace_->Intern(std::move(constrained_type));
@@ -234,7 +235,7 @@ const Type* Typespace::Creator::CreateVectorType() {
   out_params_->element_type_resolved = element_type;
   out_params_->element_type_raw = parameters_.items[0]->AsTypeCtor();
 
-  VectorType type(layout_.target_name(), element_type);
+  VectorType type(layout_.resolved().name(), element_type);
   std::unique_ptr<Type> constrained_type;
   type.ApplyConstraints(resolver_, constraints_, layout_, &constrained_type, out_params_);
   return typespace_->Intern(std::move(constrained_type));
@@ -256,7 +257,7 @@ const Type* Typespace::Creator::CreateStringType() {
   if (!EnsureNumberOfLayoutParams(0))
     return nullptr;
 
-  StringType type(layout_.target_name());
+  StringType type(layout_.resolved().name());
   std::unique_ptr<Type> constrained_type;
   type.ApplyConstraints(resolver_, constraints_, layout_, &constrained_type, out_params_);
   return typespace_->Intern(std::move(constrained_type));
@@ -266,7 +267,7 @@ const Type* Typespace::Creator::CreateHandleType(Resource* resource) {
   if (!EnsureNumberOfLayoutParams(0))
     return nullptr;
 
-  HandleType type(layout_.target_name(), resource);
+  HandleType type(layout_.resolved().name(), resource);
   std::unique_ptr<Type> constrained_type;
   type.ApplyConstraints(resolver_, constraints_, layout_, &constrained_type, out_params_);
   return typespace_->Intern(std::move(constrained_type));
@@ -279,7 +280,7 @@ const Type* Typespace::Creator::CreateTransportSideType(TransportSide end) {
   if (!EnsureNumberOfLayoutParams(0))
     return nullptr;
 
-  TransportSideType type(layout_.target_name(), end, kChannelTransport);
+  TransportSideType type(layout_.resolved().name(), end, kChannelTransport);
   std::unique_ptr<Type> constrained_type;
   type.ApplyConstraints(resolver_, constraints_, layout_, &constrained_type, out_params_);
   return typespace_->Intern(std::move(constrained_type));
@@ -361,7 +362,7 @@ const Type* Typespace::Creator::CreateBoxType() {
   out_params_->boxed_type_resolved = boxed_type;
   out_params_->boxed_type_raw = parameters_.items[0]->AsTypeCtor();
 
-  BoxType type(layout_.target_name(), boxed_type);
+  BoxType type(layout_.resolved().name(), boxed_type);
   std::unique_ptr<Type> constrained_type;
   type.ApplyConstraints(resolver_, constraints_, layout_, &constrained_type, out_params_);
   return typespace_->Intern(std::move(constrained_type));

@@ -6,8 +6,13 @@
 
 #include "fidl/flat/typespace.h"
 #include "fidl/flat_ast.h"
+#include "fidl/utils.h"
 
 namespace fidl::flat {
+
+std::unique_ptr<AttributeArg> AttributeArg::Clone() const {
+  return std::make_unique<AttributeArg>(name, value->Clone(), span);
+}
 
 const AttributeArg* Attribute::GetArg(std::string_view arg_name) const {
   std::string name = utils::canonicalize(arg_name);
@@ -28,6 +33,12 @@ AttributeArg* Attribute::GetStandaloneAnonymousArg() const {
   return nullptr;
 }
 
+std::unique_ptr<Attribute> Attribute::Clone() const {
+  auto attribute = std::make_unique<Attribute>(name, utils::MapClone(args), span);
+  attribute->compiled = compiled;
+  return attribute;
+}
+
 const Attribute* AttributeList::Get(std::string_view attribute_name) const {
   for (const auto& attribute : attributes) {
     if (attribute->name.data() == attribute_name)
@@ -42,6 +53,10 @@ Attribute* AttributeList::Get(std::string_view attribute_name) {
       return attribute.get();
   }
   return nullptr;
+}
+
+std::unique_ptr<AttributeList> AttributeList::Clone() const {
+  return std::make_unique<AttributeList>(utils::MapClone(attributes));
 }
 
 }  // namespace fidl::flat

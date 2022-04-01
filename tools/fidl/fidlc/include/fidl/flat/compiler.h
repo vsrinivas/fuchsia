@@ -14,6 +14,8 @@
 #include "fidl/flat/typespace.h"
 #include "fidl/flat_ast.h"
 #include "fidl/ordinals.h"
+#include "fidl/reporter.h"
+#include "fidl/versioning_types.h"
 #include "fidl/virtual_source_file.h"
 
 namespace fidl::flat {
@@ -23,13 +25,15 @@ class Libraries;
 // Compiler consumes raw::File ASTs and produces a compiled flat::Library.
 class Compiler final : private ReporterMixin {
  public:
-  Compiler(Libraries* all_libraries, ordinals::MethodHasher method_hasher,
-           ExperimentalFlags experimental_flags);
+  Compiler(Libraries* all_libraries, const VersionSelection* version_selection,
+           ordinals::MethodHasher method_hasher, ExperimentalFlags experimental_flags);
   Compiler(const Compiler&) = delete;
 
+  // Consumes a parsed file. Must be called once for each file in the library.
   bool ConsumeFile(std::unique_ptr<raw::File> file);
-  // Returns the library if compilation was successful, otherwise returns null.
-  std::unique_ptr<Library> Compile();
+  // Compiles the library. Must be called once after consuming all files. On
+  // success, inserts the new library into all_libraries and returns true.
+  bool Compile();
 
   // Step is the base class for compilation steps. Compiling a library consists
   // of performing all steps in sequence. Each step succeeds (no additional
@@ -50,6 +54,7 @@ class Compiler final : private ReporterMixin {
     const Libraries* all_libraries() { return compiler_->all_libraries_; }
     Typespace* typespace();
     VirtualSourceFile* generated_source_file();
+    const VersionSelection* version_selection() { return compiler_->version_selection; }
     const ordinals::MethodHasher& method_hasher() { return compiler_->method_hasher_; }
     const ExperimentalFlags& experimental_flags() { return compiler_->experimental_flags_; }
 
@@ -64,9 +69,12 @@ class Compiler final : private ReporterMixin {
  private:
   std::unique_ptr<Library> library_;
   Libraries* all_libraries_;
+  const VersionSelection* version_selection;
   ordinals::MethodHasher method_hasher_;
   const ExperimentalFlags experimental_flags_;
 };
+
+struct Compilation;
 
 // Libraries manages a set of compiled libraries along with resources common to
 // all of them (e.g. the shared typespace). The libraries must be inserted in
@@ -81,6 +89,12 @@ class Libraries : private ReporterMixin {
         attribute_schemas_(AttributeSchema::OfficialAttributes()) {}
   Libraries(const Libraries&) = delete;
   Libraries(Libraries&&) = default;
+
+  // Returns the filtered compilation for the last-inserted library.
+  //
+  // TODO(fxbug.dev/67858): Add a method that doesn't take a version selection
+  // and preserves everything, for the full-history IR needed by kazoo.
+  std::unique_ptr<Compilation> Filter(const VersionSelection* version_selection);
 
   // Insert |library|. It must only depend on already-inserted libraries.
   bool Insert(std::unique_ptr<Library> library);
@@ -100,25 +114,12 @@ class Libraries : private ReporterMixin {
   // Returns the root library, which defines builtin types.
   const Library* root_library() const { return root_library_.get(); }
 
-  // Returns the target library. Must have inserted at least one library.
-  const Library* target_library() const {
-    assert(!libraries_.empty());
-    return libraries_.back().get();
-  }
-
   // Returns libraries that were inserted but never used, i.e. that do not occur
   // in the target libary's dependency tree. Must have inserted at least one.
   std::set<const Library*, LibraryComparator> Unused() const;
 
-  // Returns decls from all libraries in a topologically sorted order, i.e.
-  // later decls only depend on earlier ones.
-  std::vector<const Decl*> DeclarationOrder() const;
-
-  // Returns a set that is like `library->dependencies`, but also includes
-  // indirect dependencies that come from protocol composition, i.e. what would
-  // need to be imported if the composed methods were copied and pasted.
-  std::set<const Library*, LibraryComparator> DirectAndComposedDependencies(
-      const Library* library) const;
+  // Returns the set of platforms that these libraries are versioned under.
+  std::set<Platform, Platform::Compare> Platforms() const;
 
   // Registers a new attribute schema under the given name, and returns it.
   AttributeSchema& AddAttributeSchema(std::string name);
@@ -141,6 +142,57 @@ class Libraries : private ReporterMixin {
   AttributeSchemaMap attribute_schemas_;
   // TODO(fxbug.dev/8027): Remove this field.
   VirtualSourceFile generated_source_file_{"generated"};
+};
+
+// A compilation is the result of compiling a library and all its transitive
+// dependencies. All fidlc output should be a function of the compilation
+// (roughly speaking; of course everything is reachable via pointers into the
+// AST, but we should avoid any further processing/traversals).
+struct Compilation {
+  // Like Library::Declarations, but with const pointers rather than unique_ptr.
+  struct Declarations {
+    std::vector<const Bits*> bits;
+    std::vector<const Builtin*> builtins;
+    std::vector<const Const*> consts;
+    std::vector<const Enum*> enums;
+    std::vector<const Protocol*> protocols;
+    std::vector<const Resource*> resources;
+    std::vector<const Service*> services;
+    std::vector<const Struct*> structs;
+    std::vector<const Table*> tables;
+    std::vector<const TypeAlias*> type_aliases;
+    std::vector<const Union*> unions;
+  };
+
+  // A library dependency together with its filtered declarations.
+  struct Dependency {
+    const Library* library;
+    Declarations declarations;
+  };
+
+  // The target library name and attributes. Note, we purposely do not store a
+  // Library* to avoid accidentally reaching into its unfiltered decls.
+  std::vector<std::string_view> library_name;
+  const AttributeList* library_attributes;
+
+  // Filtered from library->declarations.
+  Declarations declarations;
+
+  // Filtered from structs used as method payloads in protocols that come from
+  // an external library via composition.
+  std::vector<const Struct*> external_structs;
+
+  // Filtered from library->declaration_order.
+  std::vector<const Decl*> declaration_order;
+
+  // Filtered from the combined declaration_order of the target library and all
+  // its transitive dependencies, in a single topologically sorted list.
+  std::vector<const Decl*> all_libraries_declaration_order;
+
+  // Filtered from library->dependencies, and also includes indirect
+  // dependencies that come from protocol composition, i.e. what would need to
+  // be imported if the composed methods were copied and pasted.
+  std::vector<Dependency> direct_and_composed_dependencies;
 };
 
 }  // namespace fidl::flat

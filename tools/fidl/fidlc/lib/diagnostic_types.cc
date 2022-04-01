@@ -82,60 +82,138 @@ std::string Display(const flat::AttributeArg* a) {
 
 std::string Display(const flat::Constant* c) { return NameFlatConstant(c); }
 
-std::string Display(const flat::Decl* d) {
-  std::string decl_kind;
-  switch (d->kind) {
-    case flat::Decl::Kind::kBits: {
-      decl_kind = "bits";
+std::string Display(flat::Element::Kind k) {
+  switch (k) {
+    case flat::Element::Kind::kBits:
+      return "bits";
+    case flat::Element::Kind::kBitsMember:
+      return "bits member";
+    case flat::Element::Kind::kBuiltin:
+      return "builtin";
+    case flat::Element::Kind::kConst:
+      return "const";
+    case flat::Element::Kind::kEnum:
+      return "enum";
+    case flat::Element::Kind::kEnumMember:
+      return "enum member";
+    case flat::Element::Kind::kLibrary:
+      return "library";
+    case flat::Element::Kind::kProtocol:
+      return "protocol";
+    case flat::Element::Kind::kProtocolCompose:
+      return "protocol composition";
+    case flat::Element::Kind::kProtocolMethod:
+      return "protocol method";
+    case flat::Element::Kind::kResource:
+      return "resource";
+    case flat::Element::Kind::kResourceProperty:
+      return "resource property";
+    case flat::Element::Kind::kService:
+      return "service";
+    case flat::Element::Kind::kServiceMember:
+      return "service member";
+    case flat::Element::Kind::kStruct:
+      return "struct";
+    case flat::Element::Kind::kStructMember:
+      return "struct member";
+    case flat::Element::Kind::kTable:
+      return "table";
+    case flat::Element::Kind::kTableMember:
+      return "table member";
+    case flat::Element::Kind::kTypeAlias:
+      return "alias";
+    case flat::Element::Kind::kUnion:
+      return "union";
+    case flat::Element::Kind::kUnionMember:
+      return "union member";
+  }
+}
+
+std::string Display(flat::Decl::Kind k) { return Display(flat::Decl::ElementKind(k)); }
+
+std::string Display(const flat::Element* e) {
+  std::stringstream ss;
+
+  switch (e->kind) {
+    case flat::Element::Kind::kTableMember: {
+      auto table_member = static_cast<const flat::Table::Member*>(e);
+      if (!table_member->maybe_used) {
+        ss << "reserved " << Display(e->kind);
+        return ss.str();
+      }
       break;
     }
-    case flat::Decl::Kind::kBuiltin: {
-      decl_kind = "builtin";
+    case flat::Element::Kind::kUnionMember: {
+      auto table_member = static_cast<const flat::Union::Member*>(e);
+      if (!table_member->maybe_used) {
+        ss << "reserved " << Display(e->kind);
+        return ss.str();
+      }
       break;
     }
-    case flat::Decl::Kind::kConst: {
-      decl_kind = "const";
+    default:
+      break;
+  }
+
+  ss << Display(e->kind) << " '";
+
+  switch (e->kind) {
+    case flat::Element::Kind::kBits:
+    case flat::Element::Kind::kBuiltin:
+    case flat::Element::Kind::kConst:
+    case flat::Element::Kind::kEnum:
+    case flat::Element::Kind::kProtocol:
+    case flat::Element::Kind::kResource:
+    case flat::Element::Kind::kService:
+    case flat::Element::Kind::kStruct:
+    case flat::Element::Kind::kTable:
+    case flat::Element::Kind::kTypeAlias:
+    case flat::Element::Kind::kUnion:
+      ss << static_cast<const flat::Decl*>(e)->name.decl_name();
+      break;
+    case flat::Element::Kind::kBitsMember:
+      ss << static_cast<const flat::Bits::Member*>(e)->name.data();
+      break;
+    case flat::Element::Kind::kEnumMember:
+      ss << static_cast<const flat::Enum::Member*>(e)->name.data();
+      break;
+    case flat::Element::Kind::kLibrary:
+      ss << Display(static_cast<const flat::Library*>(e)->name);
+      break;
+    case flat::Element::Kind::kProtocolCompose:
+      ss << Display(
+          static_cast<const flat::Protocol::ComposedProtocol*>(e)->reference.span().data());
+      break;
+    case flat::Element::Kind::kProtocolMethod:
+      ss << static_cast<const flat::Protocol::Method*>(e)->name.data();
+      break;
+    case flat::Element::Kind::kResourceProperty:
+      ss << static_cast<const flat::Resource::Property*>(e)->name.data();
+      break;
+    case flat::Element::Kind::kServiceMember:
+      ss << static_cast<const flat::Service::Member*>(e)->name.data();
+      break;
+    case flat::Element::Kind::kStructMember:
+      ss << static_cast<const flat::Struct::Member*>(e)->name.data();
+      break;
+    case flat::Element::Kind::kTableMember: {
+      auto table_member = static_cast<const flat::Table::Member*>(e);
+      if (auto& used = table_member->maybe_used) {
+        ss << used->name.data();
+      }
       break;
     }
-    case flat::Decl::Kind::kEnum: {
-      decl_kind = "enum";
-      break;
-    }
-    case flat::Decl::Kind::kProtocol: {
-      decl_kind = "protocol";
-      break;
-    }
-    case flat::Decl::Kind::kResource: {
-      decl_kind = "resource";
-      break;
-    }
-    case flat::Decl::Kind::kService: {
-      decl_kind = "service";
-      break;
-    }
-    case flat::Decl::Kind::kStruct: {
-      decl_kind = "struct";
-      break;
-    }
-    case flat::Decl::Kind::kTable: {
-      decl_kind = "table";
-      break;
-    }
-    case flat::Decl::Kind::kTypeAlias: {
-      decl_kind = "alias";
-      break;
-    }
-    case flat::Decl::Kind::kUnion: {
-      decl_kind = "union";
+    case flat::Element::Kind::kUnionMember: {
+      auto union_member = static_cast<const flat::Union::Member*>(e);
+      if (auto& used = union_member->maybe_used) {
+        ss << used->name.data();
+      }
       break;
     }
   }
 
-  if (d->name.is_sourced()) {
-    return decl_kind + " " + d->GetName();
-  }
-
-  return decl_kind;
+  ss << "'";
+  return ss.str();
 }
 
 // Display a list of nested types with arrows indicating what includes what:
@@ -154,5 +232,38 @@ std::string Display(std::vector<const flat::Decl*>& d) {
 std::string Display(const flat::Type* t) { return NameFlatType(t); }
 
 std::string Display(const flat::Name& n) { return std::string(n.full_name()); }
+
+std::string Display(const Platform& p) { return p.name(); }
+
+std::string Display(const Version& v) { return v.ToString(); }
+
+std::string Display(const VersionRange& r) {
+  // Here we assume the version range is for an error about a versioned element.
+  // We handle 3 special cases (-inf, +inf, HEAD) for each endpoint.
+  auto [a, b] = r.pair();
+  std::stringstream ss;
+  if (a == Version::NegInf()) {
+    assert(false && "versioned elements cannot start at -inf");
+  } else if (a == Version::PosInf()) {
+    assert(false && "versioned elements cannot start at +inf");
+  } else if (a == Version::Head()) {
+    assert(b == Version::PosInf() && "unexpected end version");
+    ss << "at version " << Display(a);
+  } else {
+    if (b == Version::NegInf()) {
+      assert(false && "versioned elements cannot end at -inf");
+    } else if (b == Version::PosInf()) {
+      ss << "from version " << Display(a) << " onward";
+    } else if (b == Version::Head()) {
+      ss << "from version " << Display(a) << " to " << Display(b);
+    } else if (a.ordinal() + 1 == b.ordinal()) {
+      ss << "at version " << Display(a);
+    } else {
+      ss << "from version " << Display(a) << " to "
+         << Display(Version::From(b.ordinal() - 1).value());
+    }
+  }
+  return ss.str();
+}
 
 }  // namespace fidl::internal

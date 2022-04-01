@@ -39,7 +39,7 @@ namespace fidl {
 // by ctor is not guaranteed (see fxbug.dev/39978).
 class TablesGenerator {
  public:
-  explicit TablesGenerator(const flat::Libraries* all_libraries) : all_libraries_(all_libraries) {}
+  explicit TablesGenerator(const flat::Compilation* compilation) : compilation_(compilation) {}
 
   ~TablesGenerator() = default;
 
@@ -87,7 +87,7 @@ class TablesGenerator {
 
   void Produce(CodedTypesGenerator* coded_types_generator);
 
-  const flat::Libraries* all_libraries_;
+  const flat::Compilation* compilation_;
 
   // These will be empty after calling Produce(), since Produce() std::moves
   // them into the result.

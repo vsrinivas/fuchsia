@@ -18,6 +18,7 @@
 #include <fstream>
 
 #include "fidl/experimental_flags.h"
+#include "fidl/versioning_types.h"
 
 // Behavior that applies to SharedAmongstLibraries, but that is also provided on
 // TestLibrary for convenience in single-library tests.
@@ -25,6 +26,7 @@ class SharedInterface {
  public:
   virtual fidl::Reporter* reporter() = 0;
   virtual fidl::flat::Libraries* all_libraries() = 0;
+  virtual fidl::VersionSelection* version_selection() = 0;
   virtual fidl::ExperimentalFlags& experimental_flags() = 0;
 
   const std::vector<std::unique_ptr<fidl::Diagnostic>>& errors() { return reporter()->errors(); }
@@ -34,6 +36,10 @@ class SharedInterface {
   std::vector<fidl::Diagnostic*> Diagnostics() { return reporter()->Diagnostics(); }
   void set_warnings_as_errors(bool value) { reporter()->set_warnings_as_errors(value); }
   void PrintReports() { reporter()->PrintReports(/*enable_color=*/false); }
+  void SelectVersion(const std::string& platform, std::string_view version) {
+    version_selection()->Insert(fidl::Platform::Parse(platform).value(),
+                                fidl::Version::Parse(version).value());
+  }
   void EnableFlag(fidl::ExperimentalFlags::Flag flag) { experimental_flags().EnableFlag(flag); }
 };
 
@@ -55,6 +61,7 @@ class SharedAmongstLibraries final : public SharedInterface {
 
   fidl::Reporter* reporter() override { return &reporter_; }
   fidl::flat::Libraries* all_libraries() override { return &all_libraries_; }
+  fidl::VersionSelection* version_selection() override { return &version_selection_; }
   fidl::ExperimentalFlags& experimental_flags() override { return experimental_flags_; }
 
   std::vector<std::unique_ptr<fidl::SourceFile>>& all_sources_of_all_libraries() {
@@ -65,6 +72,7 @@ class SharedAmongstLibraries final : public SharedInterface {
   fidl::Reporter reporter_;
   fidl::flat::Libraries all_libraries_;
   std::vector<std::unique_ptr<fidl::SourceFile>> all_sources_of_all_libraries_;
+  fidl::VersionSelection version_selection_;
   fidl::ExperimentalFlags experimental_flags_;
 };
 
@@ -121,19 +129,20 @@ class TestLibrary final : public SharedInterface {
   // Helper for making a single test library depend on library zx, without
   // requiring an explicit SharedAmongstLibraries.
   void UseLibraryZx() {
-    assert(!library_ && "must call before compiling");
+    assert(!compilation_ && "must call before compiling");
     owned_shared_.value().AddLibraryZx();
   }
 
   // Helper for making a single test library depend on library fdf, without
   // requiring an explicit SharedAmongstLibraries.
   void UseLibraryFdf() {
-    assert(!library_ && "must call before compiling");
+    assert(!compilation_ && "must call before compiling");
     owned_shared_.value().AddLibraryFdf();
   }
 
   fidl::Reporter* reporter() override { return shared_->reporter(); }
   fidl::flat::Libraries* all_libraries() override { return shared_->all_libraries(); }
+  fidl::VersionSelection* version_selection() override { return shared_->version_selection(); }
   fidl::ExperimentalFlags& experimental_flags() override { return shared_->experimental_flags(); }
 
   void AddSource(const std::string& filename, const std::string& raw_source_code) {
@@ -162,8 +171,8 @@ class TestLibrary final : public SharedInterface {
   // Compiles the library. Must have compiled all dependencies first, using the
   // same SharedAmongstLibraries object for all of them.
   bool Compile() {
-    fidl::flat::Compiler compiler(all_libraries(), internal::GetGeneratedOrdinal64ForTesting,
-                                  experimental_flags());
+    fidl::flat::Compiler compiler(all_libraries(), version_selection(),
+                                  internal::GetGeneratedOrdinal64ForTesting, experimental_flags());
     for (auto source_file : all_sources_) {
       fidl::Lexer lexer(*source_file, reporter());
       fidl::Parser parser(&lexer, reporter(), experimental_flags());
@@ -173,11 +182,10 @@ class TestLibrary final : public SharedInterface {
       if (!compiler.ConsumeFile(std::move(ast)))
         return false;
     }
-    auto library = compiler.Compile();
-    if (!library)
+    if (!compiler.Compile())
       return false;
-    library_ = library.get();
-    return all_libraries()->Insert(std::move(library));
+    compilation_ = all_libraries()->Filter(version_selection());
+    return true;
   }
 
   // TODO(pascallouis): remove, this does not use a library.
@@ -216,112 +224,123 @@ class TestLibrary final : public SharedInterface {
   }
 
   std::string GenerateJSON() {
-    auto json_generator = fidl::JSONGenerator(all_libraries(), experimental_flags());
+    auto json_generator = fidl::JSONGenerator(compilation_.get(), experimental_flags());
     auto out = json_generator.Produce();
     return out.str();
   }
 
   std::string GenerateTables() {
-    auto tables_generator = fidl::TablesGenerator(all_libraries());
+    auto tables_generator = fidl::TablesGenerator(compilation_.get());
     auto out = tables_generator.Produce();
     return out.str();
   }
 
+  // Note: We don't provide a convenient library() method because inspecting a
+  // Library is usually the wrong thing to do in tests. What usually matters is
+  // the Compilation, for which we provide compilation() and helpers like
+  // LookupStruct() etc. However, sometimes tests really need to get a Library*
+  // (e.g. to construct Name::Key), hence this method.
+  const fidl::flat::Library* LookupLibrary(std::string_view name) {
+    std::vector<std::string_view> parts;
+    size_t dot_idx = 0;
+    for (size_t i = 0; dot_idx != std::string::npos; i = dot_idx + 1) {
+      dot_idx = name.find('.', i);
+      parts.push_back(name.substr(i, dot_idx));
+    }
+    auto library = all_libraries()->Lookup(parts);
+    assert(library && "library not found");
+    return library;
+  }
+
   const fidl::flat::Bits* LookupBits(std::string_view name) {
-    for (const auto& bits_decl : library_->bits_declarations) {
+    for (const auto& bits_decl : compilation_->declarations.bits) {
       if (bits_decl->GetName() == name) {
-        return bits_decl.get();
+        return bits_decl;
       }
     }
     return nullptr;
   }
 
   const fidl::flat::Const* LookupConstant(std::string_view name) {
-    for (const auto& const_decl : library_->const_declarations) {
+    for (const auto& const_decl : compilation_->declarations.consts) {
       if (const_decl->GetName() == name) {
-        return const_decl.get();
+        return const_decl;
       }
     }
     return nullptr;
   }
 
   const fidl::flat::Enum* LookupEnum(std::string_view name) {
-    for (const auto& enum_decl : library_->enum_declarations) {
+    for (const auto& enum_decl : compilation_->declarations.enums) {
       if (enum_decl->GetName() == name) {
-        return enum_decl.get();
+        return enum_decl;
       }
     }
     return nullptr;
   }
 
   const fidl::flat::Resource* LookupResource(std::string_view name) {
-    for (const auto& resource_decl : library_->resource_declarations) {
+    for (const auto& resource_decl : compilation_->declarations.resources) {
       if (resource_decl->GetName() == name) {
-        return resource_decl.get();
+        return resource_decl;
       }
     }
     return nullptr;
   }
 
   const fidl::flat::Service* LookupService(std::string_view name) {
-    for (const auto& service_decl : library_->service_declarations) {
+    for (const auto& service_decl : compilation_->declarations.services) {
       if (service_decl->GetName() == name) {
-        return service_decl.get();
+        return service_decl;
       }
     }
     return nullptr;
   }
 
   const fidl::flat::Struct* LookupStruct(std::string_view name) {
-    for (const auto& struct_decl : library_->struct_declarations) {
+    for (const auto& struct_decl : compilation_->declarations.structs) {
       if (struct_decl->GetName() == name) {
-        return struct_decl.get();
+        return struct_decl;
       }
     }
     return nullptr;
   }
 
   const fidl::flat::Table* LookupTable(std::string_view name) {
-    for (const auto& table_decl : library_->table_declarations) {
+    for (const auto& table_decl : compilation_->declarations.tables) {
       if (table_decl->GetName() == name) {
-        return table_decl.get();
+        return table_decl;
       }
     }
     return nullptr;
   }
 
   const fidl::flat::TypeAlias* LookupTypeAlias(std::string_view name) {
-    for (const auto& type_alias_decl : library_->type_alias_declarations) {
+    for (const auto& type_alias_decl : compilation_->declarations.type_aliases) {
       if (type_alias_decl->GetName() == name) {
-        return type_alias_decl.get();
+        return type_alias_decl;
       }
     }
     return nullptr;
   }
 
   const fidl::flat::Union* LookupUnion(std::string_view name) {
-    for (const auto& union_decl : library_->union_declarations) {
+    for (const auto& union_decl : compilation_->declarations.unions) {
       if (union_decl->GetName() == name) {
-        return union_decl.get();
+        return union_decl;
       }
     }
     return nullptr;
   }
 
   const fidl::flat::Protocol* LookupProtocol(std::string_view name) {
-    for (const auto& protocol_decl : library_->protocol_declarations) {
+    for (const auto& protocol_decl : compilation_->declarations.protocols) {
       if (protocol_decl->GetName() == name) {
-        return protocol_decl.get();
+        return protocol_decl;
       }
     }
     return nullptr;
   }
-
-  fidl::flat::Library* library() const {
-    assert(library_ && "must compile successfully before accessing library");
-    return library_;
-  }
-  const fidl::flat::AttributeList* attributes() { return library_->attributes.get(); }
 
   const fidl::SourceFile& source_file() const {
     assert(all_sources_.size() == 1 && "convenience method only possible with single source");
@@ -338,8 +357,27 @@ class TestLibrary final : public SharedInterface {
 
   const std::vector<std::string>& lints() const { return lints_; }
 
-  std::vector<const fidl::flat::Decl*> declaration_order() const {
-    return library_->declaration_order;
+  const fidl::flat::Compilation* compilation() const {
+    assert(compilation_ && "must compile successfully before accessing compilation");
+    return compilation_.get();
+  }
+
+  const fidl::flat::AttributeList* attributes() { return compilation_->library_attributes; }
+
+  const std::vector<const fidl::flat::Struct*>& external_structs() const {
+    return compilation_->external_structs;
+  }
+
+  const std::vector<const fidl::flat::Decl*>& declaration_order() const {
+    return compilation_->declaration_order;
+  }
+
+  const std::vector<const fidl::flat::Decl*>& all_libraries_declaration_order() const {
+    return compilation_->all_libraries_declaration_order;
+  }
+
+  const std::vector<fidl::flat::Compilation::Dependency>& direct_and_composed_dependencies() const {
+    return compilation_->direct_and_composed_dependencies;
   }
 
  private:
@@ -347,7 +385,7 @@ class TestLibrary final : public SharedInterface {
   SharedAmongstLibraries* shared_;
   std::vector<std::string> lints_;
   std::vector<fidl::SourceFile*> all_sources_;
-  fidl::flat::Library* library_ = nullptr;
+  std::unique_ptr<fidl::flat::Compilation> compilation_;
 };
 
 #endif  // ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_TEST_LIBRARY_H_

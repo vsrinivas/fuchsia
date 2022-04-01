@@ -10,6 +10,7 @@
 #include <string_view>
 #include <vector>
 
+#include "flat/compiler.h"
 #include "flat_ast.h"
 
 namespace fidl {
@@ -26,7 +27,7 @@ namespace fidl {
 
 class CGenerator {
  public:
-  explicit CGenerator(const flat::Library* library) : library_(library) {}
+  explicit CGenerator(const flat::Compilation* compilation) : compilation_(compilation) {}
 
   ~CGenerator() = default;
 
@@ -129,17 +130,16 @@ class CGenerator {
   void GenerateTableDeclaration(std::string_view name);
   void GenerateTaggedUnionDeclaration(std::string_view name, const std::vector<Member>& members);
 
-  std::map<const flat::Decl*, NamedBits> NameBits(
-      const std::vector<std::unique_ptr<flat::Bits>>& bits_infos);
+  std::map<const flat::Decl*, NamedBits> NameBits(const std::vector<const flat::Bits*>& bits_infos);
   std::map<const flat::Decl*, NamedConst> NameConsts(
-      const std::vector<std::unique_ptr<flat::Const>>& const_infos);
+      const std::vector<const flat::Const*>& const_infos);
   std::map<const flat::Decl*, NamedEnum> NameEnums(
-      const std::vector<std::unique_ptr<flat::Enum>>& enum_infos);
+      const std::vector<const flat::Enum*>& enum_infos);
   std::map<const flat::Decl*, NamedProtocol> NameProtocols(
-      const std::vector<std::unique_ptr<flat::Protocol>>& protocol_infos);
+      const std::vector<const flat::Protocol*>& protocol_infos);
   std::map<const flat::Decl*, NamedStruct> NameStructs(
-      const std::vector<std::unique_ptr<flat::Struct>>& struct_infos,
-      const std::vector<std::unique_ptr<flat::Protocol>>& protocol_infos);
+      const std::vector<const flat::Struct*>& struct_infos,
+      const std::vector<const flat::Protocol*>& protocol_infos);
 
   void ProduceBitsForwardDeclaration(const NamedBits& named_bits);
   void ProduceConstForwardDeclaration(const NamedConst& named_const);
@@ -160,7 +160,7 @@ class CGenerator {
   void ProduceProtocolServerDeclaration(const NamedProtocol& named_protocol);
   void ProduceProtocolServerImplementation(const NamedProtocol& named_protocol);
 
-  const flat::Library* library_;
+  const flat::Compilation* compilation_;
   std::ostringstream file_;
 };
 

@@ -61,6 +61,17 @@ struct matchers : Ts... {
 template <class... Ts>
 matchers(Ts...) -> matchers<Ts...>;
 
+// Clones a vector of unique_ptr by calling Clone() on each element.
+template <typename T>
+std::vector<std::unique_ptr<T>> MapClone(const std::vector<std::unique_ptr<T>>& original) {
+  std::vector<std::unique_ptr<T>> cloned;
+  cloned.reserve(original.size());
+  for (const auto& item : original) {
+    cloned.push_back(item->Clone());
+  }
+  return cloned;
+}
+
 constexpr char kWhitespaceChars[] = " \t\n\v\f\r";
 constexpr char kWhitespaceNoNewlineChars[] = " \t\v\f\r";
 

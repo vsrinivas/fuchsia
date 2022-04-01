@@ -9,33 +9,10 @@
 
 namespace fidl::flat {
 
-Reference::Reference(const raw::CompoundIdentifier& name) : span_(name.span()) {
-  assert(!name.components.empty() && "expected at least one component");
-  for (auto& identifier : name.components) {
-    components_.push_back(identifier->span().data());
-  }
-}
+Reference::Target::Target(Decl* decl) : target_(decl) {}
+Reference::Target::Target(Element* member, Decl* parent) : target_(member), maybe_parent_(parent) {}
 
-Reference::Reference(Decl* target) : target_(target) {}
-
-void Reference::Resolve(Element* target, Decl* maybe_parent) {
-  switch (target->kind) {
-    case Element::Kind::kBitsMember:
-    case Element::Kind::kEnumMember:
-      assert(maybe_parent && "must provide parent when target is a member");
-      break;
-    default:
-      assert(!maybe_parent && "unexpected parent decl");
-      break;
-  }
-  assert(target_ == nullptr);
-  assert(maybe_parent_ == nullptr);
-  target_ = target;
-  maybe_parent_ = maybe_parent;
-}
-
-Name Reference::target_name() const {
-  assert(target_ && "reference is not resolved");
+Name Reference::Target::name() const {
   switch (target_->kind) {
     case Element::Kind::kBits:
     case Element::Kind::kBuiltin:
@@ -61,14 +38,56 @@ Name Reference::target_name() const {
   }
 }
 
-const Library* Reference::target_library() const { return target_or_parent_decl()->name.library(); }
+const Library* Reference::Target::library() const {
+  return element_or_parent_decl()->name.library();
+}
 
-Decl* Reference::target_or_parent_decl() const {
-  assert(target_ && "reference is not resolved");
-  if (maybe_parent_) {
-    return maybe_parent_;
+Decl* Reference::Target::element_or_parent_decl() const {
+  return maybe_parent_ ? maybe_parent_ : target_->AsDecl();
+}
+
+Reference::Reference(const raw::CompoundIdentifier& name) : span_(name.span()) {
+  assert(!name.components.empty() && "expected at least one component");
+  auto& raw = std::get<RawSourced>(state_);
+  for (auto& identifier : name.components) {
+    raw.components.push_back(identifier->span().data());
   }
-  return target_->AsDecl();
+}
+
+Reference::Reference(Target target) : state_(RawSynthetic{target}) {}
+
+Reference::State Reference::state() const {
+  return std::visit(fidl::utils::matchers{
+                        [&](const RawSourced&) { return State::kRawSourced; },
+                        [&](const RawSynthetic&) { return State::kRawSynthetic; },
+                        [&](const Key&) { return State::kKey; },
+                        [&](const Contextual&) { return State::kContextual; },
+                        [&](const Target&) { return State::kResolved; },
+                        [&](const Failed&) { return State::kFailed; },
+                    },
+                    state_);
+}
+
+void Reference::SetKey(Key key) {
+  assert(state() == State::kRawSourced || state() == State::kRawSynthetic && "invalid state");
+  state_ = key;
+}
+
+void Reference::MarkContextual() {
+  auto raw = raw_sourced();
+  assert(raw.components.size() == 1 && "contextual requires 1 component");
+  state_ = Contextual{raw.components[0]};
+}
+
+void Reference::ResolveTo(Target target) {
+  assert(state() == State::kKey || state() == State::kContextual && "invalid state");
+  state_ = target;
+}
+
+void Reference::MarkFailed() {
+  assert(state() == State::kRawSourced || state() == State::kKey ||
+         state() == State::kContextual && "invalid state");
+  state_ = Failed{};
 }
 
 }  // namespace fidl::flat

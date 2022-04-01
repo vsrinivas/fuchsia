@@ -233,7 +233,7 @@ type Yang = struct {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "struct Yang -> struct Yin -> struct Yang");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "struct 'Yang' -> struct 'Yin' -> struct 'Yang'");
 }
 
 TEST(StructsTests, BadSelfRecursive) {
@@ -245,7 +245,7 @@ type MySelf = struct {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "struct MySelf -> struct MySelf");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "struct 'MySelf' -> struct 'MySelf'");
 }
 
 TEST(StructsTests, BadMutuallyRecursiveWithIncomingLeaf) {
@@ -267,7 +267,7 @@ type Leaf = struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
   // Leaf sorts before either Yin or Yang, so the cycle finder in sort_step.cc
   // starts there, which leads it to yin before yang.
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "struct Yin -> struct Yang -> struct Yin");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "struct 'Yin' -> struct 'Yang' -> struct 'Yin'");
 }
 
 TEST(StructsTests, BadMutuallyRecursiveWithOutogingLeaf) {
@@ -288,7 +288,7 @@ type Leaf = struct {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "struct Yang -> struct Yin -> struct Yang");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "struct 'Yang' -> struct 'Yin' -> struct 'Yang'");
 }
 
 TEST(StructsTests, BadMutuallyRecursiveIntersectingLoops) {
@@ -310,7 +310,7 @@ type Intersection = struct {
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(),
-                "struct Intersection -> struct Yang -> struct Intersection");
+                "struct 'Intersection' -> struct 'Yang' -> struct 'Intersection'");
 }
 
 TEST(StructsTests, BadBoxCannotBeNullable) {

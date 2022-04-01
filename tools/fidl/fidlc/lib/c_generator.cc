@@ -50,7 +50,7 @@ const std::map<std::string, std::set<std::string>> allowed_decls({
 });
 
 bool DeclAlwaysAllowed(const flat::Name& name) {
-  auto library_name = flat::LibraryName(name.library(), ".");
+  auto library_name = flat::LibraryName(name.library()->name, ".");
 
   auto iter = allowed_decls.find(library_name);
   if (iter != allowed_decls.end()) {
@@ -72,7 +72,7 @@ std::map<std::string, std::map<std::string, std::set<std::string>>> allowed_meth
 });
 
 bool MethodAlwaysAllowed(const flat::Protocol::Method& method) {
-  auto library_name = flat::LibraryName(method.owning_protocol->name.library(), ".");
+  auto library_name = flat::LibraryName(method.owning_protocol->name.library()->name, ".");
   auto iter = allowed_methods.find(library_name);
   if (iter != allowed_methods.end()) {
     const auto& protocols = iter->second;
@@ -86,8 +86,6 @@ bool MethodAlwaysAllowed(const flat::Protocol::Method& method) {
   }
   return false;
 }
-
-bool TypeAllowed(const flat::Library* library, const flat::Type* type);
 
 bool DeclAllowed(const flat::Decl* decl) {
   if (HasSimpleLayout(decl) || DeclAlwaysAllowed(decl->name)) {
@@ -105,7 +103,7 @@ bool DeclAllowed(const flat::Decl* decl) {
   }
 }
 
-bool TypeAllowed(const flat::Library* library, const flat::Type* type) {
+bool TypeAllowed(const flat::Type* type) {
   assert(type != nullptr);
   // treat box types like we do nullable structs
   if (type->kind == flat::Type::Kind::kBox)
@@ -119,8 +117,7 @@ bool TypeAllowed(const flat::Library* library, const flat::Type* type) {
   return true;
 }
 
-bool PayloadLayoutAllowed(const flat::Library* library,
-                          const std::unique_ptr<flat::TypeConstructor>& payload) {
+bool PayloadLayoutAllowed(const std::unique_ptr<flat::TypeConstructor>& payload) {
   if (!payload) {
     return true;
   }
@@ -135,16 +132,16 @@ bool PayloadLayoutAllowed(const flat::Library* library,
 
   auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
   for (const auto& member : as_struct->members) {
-    if (!TypeAllowed(library, member.type_ctor->type)) {
+    if (!TypeAllowed(member.type_ctor->type)) {
       return false;
     }
   }
   return true;
 }
 
-bool MethodAllowed(const flat::Library* library, const flat::Protocol::Method& method) {
-  return MethodAlwaysAllowed(method) || (PayloadLayoutAllowed(library, method.maybe_request) &&
-                                         PayloadLayoutAllowed(library, method.maybe_response));
+bool MethodAllowed(const flat::Protocol::Method& method) {
+  return MethodAlwaysAllowed(method) || (PayloadLayoutAllowed(method.maybe_request) &&
+                                         PayloadLayoutAllowed(method.maybe_response));
 }
 
 CGenerator::Member MessageHeader() {
@@ -580,22 +577,22 @@ void BitsValue(const flat::Constant* constant, std::string* out_value) {
   const flat::ConstantValue& const_val = constant->Value();
   switch (const_val.kind) {
     case flat::ConstantValue::Kind::kUint8: {
-      auto value = static_cast<const flat::NumericConstantValue<uint8_t>&>(const_val);
+      auto& value = static_cast<const flat::NumericConstantValue<uint8_t>&>(const_val);
       member_value << value;
       break;
     }
     case flat::ConstantValue::Kind::kUint16: {
-      auto value = static_cast<const flat::NumericConstantValue<uint16_t>&>(const_val);
+      auto& value = static_cast<const flat::NumericConstantValue<uint16_t>&>(const_val);
       member_value << value;
       break;
     }
     case flat::ConstantValue::Kind::kUint32: {
-      auto value = static_cast<const flat::NumericConstantValue<uint32_t>&>(const_val);
+      auto& value = static_cast<const flat::NumericConstantValue<uint32_t>&>(const_val);
       member_value << value;
       break;
     }
     case flat::ConstantValue::Kind::kUint64: {
-      auto value = static_cast<const flat::NumericConstantValue<uint64_t>&>(const_val);
+      auto& value = static_cast<const flat::NumericConstantValue<uint64_t>&>(const_val);
       member_value << value;
       break;
     }
@@ -621,42 +618,42 @@ void EnumValue(const flat::Constant* constant, std::string* out_value) {
   const flat::ConstantValue& const_val = constant->Value();
   switch (const_val.kind) {
     case flat::ConstantValue::Kind::kInt8: {
-      auto value = static_cast<const flat::NumericConstantValue<int8_t>&>(const_val);
+      auto& value = static_cast<const flat::NumericConstantValue<int8_t>&>(const_val);
       member_value << value;
       break;
     }
     case flat::ConstantValue::Kind::kInt16: {
-      auto value = static_cast<const flat::NumericConstantValue<int16_t>&>(const_val);
+      auto& value = static_cast<const flat::NumericConstantValue<int16_t>&>(const_val);
       member_value << value;
       break;
     }
     case flat::ConstantValue::Kind::kInt32: {
-      auto value = static_cast<const flat::NumericConstantValue<int32_t>&>(const_val);
+      auto& value = static_cast<const flat::NumericConstantValue<int32_t>&>(const_val);
       member_value << value;
       break;
     }
     case flat::ConstantValue::Kind::kInt64: {
-      auto value = static_cast<const flat::NumericConstantValue<int64_t>&>(const_val);
+      auto& value = static_cast<const flat::NumericConstantValue<int64_t>&>(const_val);
       member_value << value;
       break;
     }
     case flat::ConstantValue::Kind::kUint8: {
-      auto value = static_cast<const flat::NumericConstantValue<uint8_t>&>(const_val);
+      auto& value = static_cast<const flat::NumericConstantValue<uint8_t>&>(const_val);
       member_value << value;
       break;
     }
     case flat::ConstantValue::Kind::kUint16: {
-      auto value = static_cast<const flat::NumericConstantValue<uint16_t>&>(const_val);
+      auto& value = static_cast<const flat::NumericConstantValue<uint16_t>&>(const_val);
       member_value << value;
       break;
     }
     case flat::ConstantValue::Kind::kUint32: {
-      auto value = static_cast<const flat::NumericConstantValue<uint32_t>&>(const_val);
+      auto& value = static_cast<const flat::NumericConstantValue<uint32_t>&>(const_val);
       member_value << value;
       break;
     }
     case flat::ConstantValue::Kind::kUint64: {
-      auto value = static_cast<const flat::NumericConstantValue<uint64_t>&>(const_val);
+      auto& value = static_cast<const flat::NumericConstantValue<uint64_t>&>(const_val);
       member_value << value;
       break;
     }
@@ -672,8 +669,7 @@ void EnumValue(const flat::Constant* constant, std::string* out_value) {
   *out_value = member_value.str();
 }
 
-void ArrayCountsAndElementTypeName(const flat::Library* library, const flat::Type* type,
-                                   std::vector<uint32_t>* out_array_counts,
+void ArrayCountsAndElementTypeName(const flat::Type* type, std::vector<uint32_t>* out_array_counts,
                                    std::string* out_element_type_name) {
   std::vector<uint32_t> array_counts;
   for (;;) {
@@ -694,8 +690,7 @@ void ArrayCountsAndElementTypeName(const flat::Library* library, const flat::Typ
 }
 
 template <typename T>
-CGenerator::Member CreateMember(const flat::Library* library, const T& decl,
-                                bool* out_allowed = nullptr) {
+CGenerator::Member CreateMember(const T& decl, bool* out_allowed = nullptr) {
   std::string name = NameIdentifier(decl.name);
   const flat::Type* type = decl.type_ctor->type;
   // treat box types like we do nullable structs
@@ -715,7 +710,7 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl,
       assert(false && "no box types should appear at this point");
       __builtin_unreachable();
     case flat::Type::Kind::kArray: {
-      ArrayCountsAndElementTypeName(library, type, &array_counts, &element_type_name);
+      ArrayCountsAndElementTypeName(type, &array_counts, &element_type_name);
       break;
     }
     case flat::Type::Kind::kVector: {
@@ -761,14 +756,14 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl,
   };
 }
 
-bool GetMethodParameters(const flat::Library* library, const CGenerator::NamedMethod& method_info,
+bool GetMethodParameters(const CGenerator::NamedMethod& method_info,
                          std::vector<CGenerator::Member>* request,
                          std::vector<CGenerator::Member>* response) {
   if (request && method_info.request->parameters) {
     request->reserve(method_info.request->parameters->size());
     for (const auto& parameter : *method_info.request->parameters) {
       bool allowed = true;
-      request->push_back(CreateMember(library, parameter, &allowed));
+      request->push_back(CreateMember(parameter, &allowed));
       if (!allowed) {
         request->clear();
         if (response) {
@@ -783,7 +778,7 @@ bool GetMethodParameters(const flat::Library* library, const CGenerator::NamedMe
     response->reserve(method_info.response->parameters->size());
     for (const auto& parameter : *method_info.response->parameters) {
       bool allowed = true;
-      response->push_back(CreateMember(library, parameter, &allowed));
+      response->push_back(CreateMember(parameter, &allowed));
       if (!allowed) {
         if (request) {
           request->clear();
@@ -821,9 +816,8 @@ void CGenerator::GeneratePrologues() {
   // Dependencies are in pointer order... change to a deterministic
   // ordering prior to output.
   std::set<std::string> add_includes;
-  for (const auto& dep_library : library_->dependencies.all()) {
-    assert(dep_library != library_ && "dependencies should not include self");
-    add_includes.insert(NameLibraryCHeader(dep_library->name));
+  for (const auto& dep : compilation_->direct_and_composed_dependencies) {
+    add_includes.insert(NameLibraryCHeader(dep.library->name));
   }
   for (const auto& include : add_includes) {
     EmitIncludeHeader(&file_, "<" + include + ">");
@@ -929,11 +923,11 @@ void CGenerator::GenerateTaggedUnionDeclaration(std::string_view name,
 }
 
 std::map<const flat::Decl*, CGenerator::NamedBits> CGenerator::NameBits(
-    const std::vector<std::unique_ptr<flat::Bits>>& bits_infos) {
+    const std::vector<const flat::Bits*>& bits_infos) {
   std::map<const flat::Decl*, NamedBits> named_bits;
   for (const auto& bits_info : bits_infos) {
     std::string bits_name = NameCodedName(bits_info->name);
-    named_bits.emplace(bits_info.get(), NamedBits{std::move(bits_name), *bits_info});
+    named_bits.emplace(bits_info, NamedBits{std::move(bits_name), *bits_info});
   }
   return named_bits;
 }
@@ -941,27 +935,26 @@ std::map<const flat::Decl*, CGenerator::NamedBits> CGenerator::NameBits(
 // TODO(fxbug.dev/27764) These should maybe check for global name
 // collisions? Otherwise, is there some other way they should fail?
 std::map<const flat::Decl*, CGenerator::NamedConst> CGenerator::NameConsts(
-    const std::vector<std::unique_ptr<flat::Const>>& const_infos) {
+    const std::vector<const flat::Const*>& const_infos) {
   std::map<const flat::Decl*, NamedConst> named_consts;
   for (const auto& const_info : const_infos) {
-    named_consts.emplace(const_info.get(),
-                         NamedConst{NameCodedName(const_info->name), *const_info});
+    named_consts.emplace(const_info, NamedConst{NameCodedName(const_info->name), *const_info});
   }
   return named_consts;
 }
 
 std::map<const flat::Decl*, CGenerator::NamedEnum> CGenerator::NameEnums(
-    const std::vector<std::unique_ptr<flat::Enum>>& enum_infos) {
+    const std::vector<const flat::Enum*>& enum_infos) {
   std::map<const flat::Decl*, NamedEnum> named_enums;
   for (const auto& enum_info : enum_infos) {
     std::string enum_name = NameCodedName(enum_info->name);
-    named_enums.emplace(enum_info.get(), NamedEnum{std::move(enum_name), *enum_info});
+    named_enums.emplace(enum_info, NamedEnum{std::move(enum_name), *enum_info});
   }
   return named_enums;
 }
 
 std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols(
-    const std::vector<std::unique_ptr<flat::Protocol>>& protocol_infos) {
+    const std::vector<const flat::Protocol*>& protocol_infos) {
   std::map<const flat::Decl*, NamedProtocol> named_protocols;
   for (const auto& protocol_info : protocol_infos) {
     NamedProtocol named_protocol;
@@ -973,7 +966,7 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
     for (const auto& method_with_info : protocol_info->all_methods) {
       assert(method_with_info.method != nullptr);
       const auto& method = *method_with_info.method;
-      if (!MethodAllowed(library_, method)) {
+      if (!MethodAllowed(method)) {
         continue;
       }
       NamedMethod named_method;
@@ -1033,23 +1026,24 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
       named_protocol.methods.push_back(std::move(named_method));
     }
     if (named_protocol.methods.size() > 0) {
-      named_protocols.emplace(protocol_info.get(), std::move(named_protocol));
+      named_protocols.emplace(protocol_info, std::move(named_protocol));
     }
   }
   return named_protocols;
 }
 
 std::map<const flat::Decl*, CGenerator::NamedStruct> CGenerator::NameStructs(
-    const std::vector<std::unique_ptr<flat::Struct>>& struct_infos,
-    const std::vector<std::unique_ptr<flat::Protocol>>& protocol_infos) {
+    const std::vector<const flat::Struct*>& struct_infos,
+    const std::vector<const flat::Protocol*>& protocol_infos) {
   std::set<const flat::Name> message_body_type_names;
   for (const auto& protocol_info : protocol_infos) {
     for (const auto& method_info : protocol_info->all_methods) {
       if (method_info.method->maybe_request != nullptr) {
-        message_body_type_names.insert(method_info.method->maybe_request->layout.target_name());
+        message_body_type_names.insert(method_info.method->maybe_request->layout.resolved().name());
       }
       if (method_info.method->maybe_response != nullptr) {
-        message_body_type_names.insert(method_info.method->maybe_response->layout.target_name());
+        message_body_type_names.insert(
+            method_info.method->maybe_response->layout.resolved().name());
       }
     }
   }
@@ -1064,7 +1058,7 @@ std::map<const flat::Decl*, CGenerator::NamedStruct> CGenerator::NameStructs(
     }
     std::string c_name = NameCodedName(struct_info->name);
     std::string coded_name = c_name + "Coded";
-    named_structs.emplace(struct_info.get(),
+    named_structs.emplace(struct_info,
                           NamedStruct{std::move(c_name), std::move(coded_name), *struct_info});
   }
   return named_structs;
@@ -1180,7 +1174,7 @@ void CGenerator::ProduceMessageDeclaration(const NamedMessage& named_message) {
     members.reserve(1 + named_message.parameters->size());
     members.push_back(MessageHeader());
     for (const auto& parameter : *named_message.parameters) {
-      members.push_back(CreateMember(library_, parameter));
+      members.push_back(CreateMember(parameter));
     }
   } else {
     members.reserve(1);
@@ -1205,7 +1199,7 @@ void CGenerator::ProduceStructDeclaration(const NamedStruct& named_struct) {
   std::vector<CGenerator::Member> members;
   members.reserve(named_struct.struct_info.members.size());
   for (const auto& struct_member : named_struct.struct_info.members) {
-    members.push_back(CreateMember(library_, struct_member));
+    members.push_back(CreateMember(struct_member));
   }
 
   GenerateStructDeclaration(named_struct.c_name, members, StructKind::kNonmessage);
@@ -1219,7 +1213,7 @@ void CGenerator::ProduceProtocolClientDeclaration(const NamedProtocol& named_pro
       continue;
     std::vector<Member> request;
     std::vector<Member> response;
-    if (GetMethodParameters(library_, method_info, &request, &response)) {
+    if (GetMethodParameters(method_info, &request, &response)) {
       if (CanGenerateCodecFunctions(request) && CanGenerateCodecFunctions(response)) {
         EmitClientMethodDecl(&file_, method_info.c_name, request, response);
         file_ << ";\n";
@@ -1236,7 +1230,7 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
       continue;
     std::vector<Member> request;
     std::vector<Member> response;
-    if (!GetMethodParameters(library_, method_info, &request, &response) ||
+    if (!GetMethodParameters(method_info, &request, &response) ||
         !CanGenerateCodecFunctions(request) || !CanGenerateCodecFunctions(response)) {
       continue;
     }
@@ -1512,8 +1506,7 @@ void CGenerator::ProduceProtocolServerDeclaration(const NamedProtocol& named_pro
     if (!method_info.request)
       continue;
     std::vector<Member> request;
-    if (GetMethodParameters(library_, method_info, &request, nullptr) &&
-        CanGenerateCodecFunctions(request)) {
+    if (GetMethodParameters(method_info, &request, nullptr) && CanGenerateCodecFunctions(request)) {
       bool has_response = method_info.response != nullptr;
       file_ << kIndent;
       EmitServerMethodDecl(&file_, method_info.identifier, request, has_response);
@@ -1531,7 +1524,7 @@ void CGenerator::ProduceProtocolServerDeclaration(const NamedProtocol& named_pro
     if (!method_info.request || !method_info.response)
       continue;
     std::vector<Member> response;
-    if (GetMethodParameters(library_, method_info, nullptr, &response) &&
+    if (GetMethodParameters(method_info, nullptr, &response) &&
         CanGenerateCodecFunctions(response)) {
       EmitServerReplyDecl(&file_, method_info.c_name, response);
       file_ << ";\n";
@@ -1557,7 +1550,7 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
     if (!method_info.request)
       continue;
     std::vector<Member> request;
-    if (!GetMethodParameters(library_, method_info, &request, nullptr)) {
+    if (!GetMethodParameters(method_info, &request, nullptr)) {
       continue;
     }
     file_ << kIndent << "case " << method_info.ordinal_name << ": {\n";
@@ -1659,7 +1652,7 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
       continue;
 
     std::vector<Member> response;
-    if (!GetMethodParameters(library_, method_info, nullptr, &response) ||
+    if (!GetMethodParameters(method_info, nullptr, &response) ||
         !CanGenerateCodecFunctions(response)) {
       continue;
     }
@@ -1714,17 +1707,18 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
 std::ostringstream CGenerator::ProduceHeader() {
   GeneratePrologues();
 
-  std::map<const flat::Decl*, NamedBits> named_bits = NameBits(library_->bits_declarations);
-  std::map<const flat::Decl*, NamedConst> named_consts = NameConsts(library_->const_declarations);
-  std::map<const flat::Decl*, NamedEnum> named_enums = NameEnums(library_->enum_declarations);
+  std::map<const flat::Decl*, NamedBits> named_bits = NameBits(compilation_->declarations.bits);
+  std::map<const flat::Decl*, NamedConst> named_consts =
+      NameConsts(compilation_->declarations.consts);
+  std::map<const flat::Decl*, NamedEnum> named_enums = NameEnums(compilation_->declarations.enums);
   std::map<const flat::Decl*, NamedProtocol> named_protocols =
-      NameProtocols(library_->protocol_declarations);
+      NameProtocols(compilation_->declarations.protocols);
   std::map<const flat::Decl*, NamedStruct> named_structs =
-      NameStructs(library_->struct_declarations, library_->protocol_declarations);
+      NameStructs(compilation_->declarations.structs, compilation_->declarations.protocols);
 
   file_ << "\n// Forward declarations\n\n";
 
-  for (const auto* decl : library_->declaration_order) {
+  for (const auto* decl : compilation_->declaration_order) {
     if (!DeclAllowed(decl)) {
       continue;
     }
@@ -1787,7 +1781,7 @@ std::ostringstream CGenerator::ProduceHeader() {
 
   file_ << "\n// Extern declarations\n\n";
 
-  for (const auto* decl : library_->declaration_order) {
+  for (const auto* decl : compilation_->declaration_order) {
     if (!DeclAllowed(decl)) {
       continue;
     }
@@ -1817,7 +1811,7 @@ std::ostringstream CGenerator::ProduceHeader() {
 
   file_ << "\n// Declarations\n\n";
 
-  for (const auto* decl : library_->declaration_order) {
+  for (const auto* decl : compilation_->declaration_order) {
     if (!DeclAllowed(decl)) {
       continue;
     }
@@ -1875,7 +1869,7 @@ std::ostringstream CGenerator::ProduceHeader() {
 
   file_ << "\n// Simple bindings \n\n";
 
-  for (const auto* decl : library_->declaration_order) {
+  for (const auto* decl : compilation_->declaration_order) {
     switch (decl->kind) {
       case flat::Decl::Kind::kBuiltin:
       case flat::Decl::Kind::kBits:
@@ -1916,13 +1910,13 @@ std::ostringstream CGenerator::ProduceClient() {
   EmitIncludeHeader(&file_, "<string.h>");
   EmitIncludeHeader(&file_, "<zircon/assert.h>");
   EmitIncludeHeader(&file_, "<zircon/syscalls.h>");
-  EmitIncludeHeader(&file_, "<" + NameLibraryCHeader(library_->name) + ">");
+  EmitIncludeHeader(&file_, "<" + NameLibraryCHeader(compilation_->library_name) + ">");
   EmitBlank(&file_);
 
   std::map<const flat::Decl*, NamedProtocol> named_protocols =
-      NameProtocols(library_->protocol_declarations);
+      NameProtocols(compilation_->declarations.protocols);
 
-  for (const auto* decl : library_->declaration_order) {
+  for (const auto* decl : compilation_->declaration_order) {
     switch (decl->kind) {
       case flat::Decl::Kind::kBuiltin:
       case flat::Decl::Kind::kBits:
@@ -1960,13 +1954,13 @@ std::ostringstream CGenerator::ProduceServer() {
   EmitIncludeHeader(&file_, "<string.h>");
   EmitIncludeHeader(&file_, "<zircon/assert.h>");
   EmitIncludeHeader(&file_, "<zircon/syscalls.h>");
-  EmitIncludeHeader(&file_, "<" + NameLibraryCHeader(library_->name) + ">");
+  EmitIncludeHeader(&file_, "<" + NameLibraryCHeader(compilation_->library_name) + ">");
   EmitBlank(&file_);
 
   std::map<const flat::Decl*, NamedProtocol> named_protocols =
-      NameProtocols(library_->protocol_declarations);
+      NameProtocols(compilation_->declarations.protocols);
 
-  for (const auto* decl : library_->declaration_order) {
+  for (const auto* decl : compilation_->declaration_order) {
     switch (decl->kind) {
       case flat::Decl::Kind::kBuiltin:
       case flat::Decl::Kind::kBits:

@@ -32,7 +32,7 @@ type Arrays = struct {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(4, gen.coded_types().size());
@@ -83,10 +83,10 @@ type Vectors = struct {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
-  auto name_some_struct = fidl::flat::Name::Key(library.library(), "SomeStruct");
+  auto name_some_struct = fidl::flat::Name::Key(library.LookupLibrary("example"), "SomeStruct");
   auto type_some_struct = gen.CodedTypeFor(name_some_struct);
   ASSERT_NOT_NULL(type_some_struct);
   EXPECT_STREQ("example_SomeStruct", type_some_struct->coded_name.c_str());
@@ -220,7 +220,7 @@ protocol UseOfProtocol {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(3, gen.coded_types().size());
@@ -257,7 +257,8 @@ protocol UseOfProtocol {
   EXPECT_EQ(0, field(type2_message->elements.at(0)).offset_v2);
   EXPECT_EQ(type0, field(type2_message->elements.at(0)).type);
 
-  auto named_payload_name = fidl::flat::Name::Key(library.library(), "OnReceivePayload");
+  auto named_payload_name =
+      fidl::flat::Name::Key(library.LookupLibrary("example"), "OnReceivePayload");
   auto type_named_payload = gen.CodedTypeFor(named_payload_name);
   ASSERT_NOT_NULL(type_named_payload);
   EXPECT_STREQ("example_OnReceivePayload", type_named_payload->coded_name.c_str());
@@ -293,7 +294,7 @@ protocol UseOfProtocol {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(7, gen.coded_types().size());
@@ -370,7 +371,7 @@ protocol UseOfProtocol {
   EXPECT_EQ(1, type6_message->elements.size());
 
   auto anon_payload_name =
-      fidl::flat::Name::Key(library.library(), "UseOfProtocol_Method_Response");
+      fidl::flat::Name::Key(library.LookupLibrary("example"), "UseOfProtocol_Method_Response");
   auto type_anon_payload = gen.CodedTypeFor(anon_payload_name);
   ASSERT_NOT_NULL(type_anon_payload);
   EXPECT_STREQ("example_UseOfProtocol_Method_Response", type_anon_payload->coded_name.c_str());
@@ -388,7 +389,8 @@ protocol UseOfProtocol {
   EXPECT_EQ(0, field(type_anon_payload_message->elements.at(0)).offset_v2);
   EXPECT_EQ(type2, field(type_anon_payload_message->elements.at(0)).type);
 
-  auto named_payload_name = fidl::flat::Name::Key(library.library(), "OnReceivePayload");
+  auto named_payload_name =
+      fidl::flat::Name::Key(library.LookupLibrary("example"), "OnReceivePayload");
   auto type_named_payload = gen.CodedTypeFor(named_payload_name);
   ASSERT_NOT_NULL(type_named_payload);
   EXPECT_STREQ("example_OnReceivePayload", type_named_payload->coded_name.c_str());
@@ -415,7 +417,7 @@ protocol ErrorSyntaxProtocol {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(3, gen.coded_types().size());
@@ -457,7 +459,7 @@ protocol UseOfProtocolEnds {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(8, gen.coded_types().size());
@@ -580,7 +582,7 @@ type MyXUnionStruct = struct {
 
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(3, gen.coded_types().size());
@@ -606,7 +608,7 @@ type MyXUnionStruct = struct {
   auto type1_primitive = static_cast<const fidl::coded::PrimitiveType*>(type2);
   ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, type1_primitive->subtype);
 
-  auto name = fidl::flat::Name::Key(library.library(), "MyXUnion");
+  auto name = fidl::flat::Name::Key(library.LookupLibrary("example"), "MyXUnion");
   auto type = gen.CodedTypeFor(name);
   ASSERT_NOT_NULL(type);
   ASSERT_STREQ("example_MyXUnion", type->coded_name.c_str());
@@ -626,7 +628,7 @@ type MyXUnionStruct = struct {
   ASSERT_EQ(fidl::types::Nullability::kNonnullable, coded_xunion->nullability);
   ASSERT_NOT_NULL(coded_xunion->maybe_reference_type);
 
-  auto struct_name = fidl::flat::Name::Key(library.library(), "MyXUnionStruct");
+  auto struct_name = fidl::flat::Name::Key(library.LookupLibrary("example"), "MyXUnionStruct");
   auto struct_type = gen.CodedTypeFor(struct_name);
   ASSERT_NOT_NULL(struct_type);
   ASSERT_STREQ("example_MyXUnionStruct", struct_type->coded_name.c_str());
@@ -658,7 +660,7 @@ type Wrapper2 = struct {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
   // 3 == size of {bool, int32, MyXUnion?}, which is all of the types used in
@@ -721,7 +723,7 @@ type Wrapper2 = struct {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
   // 5 == size of {bool, int32, MyStruct?, MyUnion?, MyXUnion?},
@@ -754,10 +756,10 @@ type MyStruct = resource struct {
 )FIDL");
 
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
-  auto struct_name = fidl::flat::Name::Key(library.library(), "MyStruct");
+  auto struct_name = fidl::flat::Name::Key(library.LookupLibrary("example"), "MyStruct");
   auto struct_type = static_cast<const fidl::coded::StructType*>(gen.CodedTypeFor(struct_name));
   auto handle_type =
       static_cast<const fidl::coded::HandleType*>(field(struct_type->elements[0]).type);
@@ -786,7 +788,7 @@ type Complex = struct {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(4, gen.coded_types().size());
@@ -804,7 +806,8 @@ type Complex = struct {
   EXPECT_STREQ("int16", type3->coded_name.c_str());
   EXPECT_TRUE(type3->is_coding_needed);
 
-  auto name_bool_and_int32 = fidl::flat::Name::Key(library.library(), "BoolAndInt32");
+  auto name_bool_and_int32 =
+      fidl::flat::Name::Key(library.LookupLibrary("example"), "BoolAndInt32");
   auto type_bool_and_int32 = gen.CodedTypeFor(name_bool_and_int32);
   ASSERT_NOT_NULL(type_bool_and_int32);
   EXPECT_STREQ("example_BoolAndInt32", type_bool_and_int32->coded_name.c_str());
@@ -820,7 +823,7 @@ type Complex = struct {
   EXPECT_EQ(padding(type_bool_and_int32_struct->elements[1]).offset_v2, 0);
   EXPECT_EQ(std::get<uint32_t>(padding(type_bool_and_int32_struct->elements[1]).mask), 0xffffff00);
 
-  auto name_complex = fidl::flat::Name::Key(library.library(), "Complex");
+  auto name_complex = fidl::flat::Name::Key(library.LookupLibrary("example"), "Complex");
   auto type_complex = gen.CodedTypeFor(name_complex);
   ASSERT_NOT_NULL(type_complex);
   EXPECT_STREQ("example_Complex", type_complex->coded_name.c_str());
@@ -867,10 +870,10 @@ type Level2 = struct {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
-  auto name_level0 = fidl::flat::Name::Key(library.library(), "Level0");
+  auto name_level0 = fidl::flat::Name::Key(library.LookupLibrary("example"), "Level0");
   auto type_level0 = gen.CodedTypeFor(name_level0);
   ASSERT_NOT_NULL(type_level0);
   auto struct_level0 = static_cast<const fidl::coded::StructType*>(type_level0);
@@ -883,7 +886,7 @@ type Level2 = struct {
   EXPECT_EQ(padding(struct_level0->elements[1]).offset_v2, 8);
   EXPECT_EQ(std::get<uint32_t>(padding(struct_level0->elements[1]).mask), 0xffffff00);
 
-  auto name_level1 = fidl::flat::Name::Key(library.library(), "Level1");
+  auto name_level1 = fidl::flat::Name::Key(library.LookupLibrary("example"), "Level1");
   auto type_level1 = gen.CodedTypeFor(name_level1);
   ASSERT_NOT_NULL(type_level1);
   auto struct_level1 = static_cast<const fidl::coded::StructType*>(type_level1);
@@ -896,7 +899,7 @@ type Level2 = struct {
   EXPECT_EQ(padding(struct_level1->elements[1]).offset_v2, 8);
   EXPECT_EQ(std::get<uint64_t>(padding(struct_level1->elements[1]).mask), 0xffffffffffffff00);
 
-  auto name_level2 = fidl::flat::Name::Key(library.library(), "Level2");
+  auto name_level2 = fidl::flat::Name::Key(library.LookupLibrary("example"), "Level2");
   auto type_level2 = gen.CodedTypeFor(name_level2);
   ASSERT_NOT_NULL(type_level2);
   auto struct_level2 = static_cast<const fidl::coded::StructType*>(type_level2);
@@ -929,10 +932,11 @@ type TwoLevelRecursiveOptionalStructB = struct {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
-  auto name_one_level = fidl::flat::Name::Key(library.library(), "OneLevelRecursiveOptionalStruct");
+  auto name_one_level =
+      fidl::flat::Name::Key(library.LookupLibrary("example"), "OneLevelRecursiveOptionalStruct");
   auto type_one_level = gen.CodedTypeFor(name_one_level);
   ASSERT_NOT_NULL(type_one_level);
   auto struct_one_level = static_cast<const fidl::coded::StructType*>(type_one_level);
@@ -946,7 +950,7 @@ type TwoLevelRecursiveOptionalStructB = struct {
   EXPECT_EQ(field(struct_one_level->elements[0]).offset_v2, 0);
 
   auto name_two_level_b =
-      fidl::flat::Name::Key(library.library(), "TwoLevelRecursiveOptionalStructB");
+      fidl::flat::Name::Key(library.LookupLibrary("example"), "TwoLevelRecursiveOptionalStructB");
   auto type_two_level_b = gen.CodedTypeFor(name_two_level_b);
   ASSERT_NOT_NULL(type_two_level_b);
   auto struct_two_level_b = static_cast<const fidl::coded::StructType*>(type_two_level_b);
@@ -962,7 +966,7 @@ type TwoLevelRecursiveOptionalStructB = struct {
   // TwoLevelRecursiveOptionalStructA will be equivalent to TwoLevelRecursiveOptionalStructB
   // because of flattening.
   auto name_two_level_a =
-      fidl::flat::Name::Key(library.library(), "TwoLevelRecursiveOptionalStructA");
+      fidl::flat::Name::Key(library.LookupLibrary("example"), "TwoLevelRecursiveOptionalStructA");
   auto type_two_level_a = gen.CodedTypeFor(name_two_level_a);
   ASSERT_NOT_NULL(type_two_level_a);
   auto struct_two_level_a = static_cast<const fidl::coded::StructType*>(type_two_level_a);
@@ -992,10 +996,10 @@ type OuterStruct = struct {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
-  auto name_inner_struct = fidl::flat::Name::Key(library.library(), "InnerStruct");
+  auto name_inner_struct = fidl::flat::Name::Key(library.LookupLibrary("example"), "InnerStruct");
   auto type_inner_struct = gen.CodedTypeFor(name_inner_struct);
   ASSERT_NOT_NULL(type_inner_struct);
   auto struct_inner_struct = static_cast<const fidl::coded::StructType*>(type_inner_struct);
@@ -1006,7 +1010,7 @@ type OuterStruct = struct {
   ASSERT_TRUE(std::get<uint16_t>(padding(struct_inner_struct->elements[0]).mask));
   EXPECT_EQ(std::get<uint16_t>(padding(struct_inner_struct->elements[0]).mask), 0xff00);
 
-  auto name_outer_struct = fidl::flat::Name::Key(library.library(), "OuterStruct");
+  auto name_outer_struct = fidl::flat::Name::Key(library.LookupLibrary("example"), "OuterStruct");
   auto type_outer_struct = gen.CodedTypeFor(name_outer_struct);
   ASSERT_NOT_NULL(type_outer_struct);
   auto struct_outer_struct = static_cast<const fidl::coded::StructType*>(type_outer_struct);
@@ -1047,10 +1051,10 @@ type OuterStruct = resource struct {
 )FIDL");
   library.UseLibraryZx();
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
-  auto name_outer_struct = fidl::flat::Name::Key(library.library(), "OuterStruct");
+  auto name_outer_struct = fidl::flat::Name::Key(library.LookupLibrary("example"), "OuterStruct");
   auto type_outer_struct = gen.CodedTypeFor(name_outer_struct);
   ASSERT_NOT_NULL(type_outer_struct);
   auto struct_outer_struct = static_cast<const fidl::coded::StructType*>(type_outer_struct);
@@ -1093,10 +1097,10 @@ type container = struct {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
-  auto the_struct_name = fidl::flat::Name::Key(library.library(), "container");
+  auto the_struct_name = fidl::flat::Name::Key(library.LookupLibrary("example"), "container");
   auto the_coded_type = gen.CodedTypeFor(the_struct_name);
   ASSERT_NOT_NULL(the_coded_type);
   auto the_struct_coded_type = static_cast<const fidl::coded::StructType*>(the_coded_type);
@@ -1116,7 +1120,7 @@ type MyTable = table {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(3, gen.coded_types().size());
@@ -1148,7 +1152,7 @@ type MyTable = table {
       static_cast<const fidl::coded::PrimitiveType*>(type3_array->element_type);
   EXPECT_EQ(fidl::types::PrimitiveSubtype::kBool, type3_array_element_type->subtype);
 
-  auto name_table = fidl::flat::Name::Key(library.library(), "MyTable");
+  auto name_table = fidl::flat::Name::Key(library.LookupLibrary("example"), "MyTable");
   auto type_table = gen.CodedTypeFor(name_table);
   ASSERT_NOT_NULL(type_table);
   EXPECT_STREQ("example_MyTable", type_table->coded_name.c_str());
@@ -1183,12 +1187,12 @@ type FlexibleBits = flexible bits : uint8 {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(0, gen.coded_types().size());
   {
-    auto name_bits = fidl::flat::Name::Key(library.library(), "StrictBits");
+    auto name_bits = fidl::flat::Name::Key(library.LookupLibrary("example"), "StrictBits");
     auto type_bits = gen.CodedTypeFor(name_bits);
     ASSERT_NOT_NULL(type_bits);
     EXPECT_STREQ("example_StrictBits", type_bits->coded_name.c_str());
@@ -1200,7 +1204,7 @@ type FlexibleBits = flexible bits : uint8 {
     EXPECT_EQ(0x1u | 0x10u, type_bits_bits->mask);
   }
   {
-    auto name_bits = fidl::flat::Name::Key(library.library(), "FlexibleBits");
+    auto name_bits = fidl::flat::Name::Key(library.LookupLibrary("example"), "FlexibleBits");
     auto type_bits = gen.CodedTypeFor(name_bits);
     ASSERT_NOT_NULL(type_bits);
     EXPECT_STREQ("example_FlexibleBits", type_bits->coded_name.c_str());
@@ -1227,12 +1231,12 @@ type FlexibleEnum = flexible enum : uint16 {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(0, gen.coded_types().size());
   {
-    auto name_enum = fidl::flat::Name::Key(library.library(), "StrictEnum");
+    auto name_enum = fidl::flat::Name::Key(library.LookupLibrary("example"), "StrictEnum");
     auto type_enum = gen.CodedTypeFor(name_enum);
     ASSERT_NOT_NULL(type_enum);
     EXPECT_STREQ("example_StrictEnum", type_enum->coded_name.c_str());
@@ -1247,7 +1251,7 @@ type FlexibleEnum = flexible enum : uint16 {
     EXPECT_EQ(0x10, type_enum_enum->members[1]);
   }
   {
-    auto name_enum = fidl::flat::Name::Key(library.library(), "FlexibleEnum");
+    auto name_enum = fidl::flat::Name::Key(library.LookupLibrary("example"), "FlexibleEnum");
     auto type_enum = gen.CodedTypeFor(name_enum);
     ASSERT_NOT_NULL(type_enum);
     EXPECT_STREQ("example_FlexibleEnum", type_enum->coded_name.c_str());
@@ -1273,10 +1277,10 @@ type MyUnion = strict union {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
-  auto name = fidl::flat::Name::Key(library.library(), "MyUnion");
+  auto name = fidl::flat::Name::Key(library.LookupLibrary("example"), "MyUnion");
   auto type = gen.CodedTypeFor(name);
   ASSERT_NOT_NULL(type);
   EXPECT_STREQ("example_MyUnion", type->coded_name.c_str());
@@ -1323,7 +1327,7 @@ type U2 = strict union {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
   check_duplicate_coded_type_names(gen);
 }
@@ -1337,7 +1341,7 @@ type Union = strict union {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
   check_duplicate_coded_type_names(gen);
 }
@@ -1351,7 +1355,7 @@ type Union = strict union {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
   check_duplicate_coded_type_names(gen);
 }
@@ -1365,7 +1369,7 @@ type Table = table {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
   check_duplicate_coded_type_names(gen);
 }
@@ -1382,11 +1386,11 @@ type NonResourceUnion = strict union {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
   {
-    auto name = fidl::flat::Name::Key(library.library(), "ResourceUnion");
+    auto name = fidl::flat::Name::Key(library.LookupLibrary("example"), "ResourceUnion");
     auto type = gen.CodedTypeFor(name);
     ASSERT_NOT_NULL(type);
     ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type->kind);
@@ -1396,7 +1400,7 @@ type NonResourceUnion = strict union {
   }
 
   {
-    auto name = fidl::flat::Name::Key(library.library(), "NonResourceUnion");
+    auto name = fidl::flat::Name::Key(library.LookupLibrary("example"), "NonResourceUnion");
     auto type = gen.CodedTypeFor(name);
     ASSERT_NOT_NULL(type);
     ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type->kind);
@@ -1418,11 +1422,11 @@ type NonResourceTable = table {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
   {
-    auto name = fidl::flat::Name::Key(library.library(), "ResourceTable");
+    auto name = fidl::flat::Name::Key(library.LookupLibrary("example"), "ResourceTable");
     auto type = gen.CodedTypeFor(name);
     ASSERT_NOT_NULL(type);
     ASSERT_EQ(fidl::coded::Type::Kind::kTable, type->kind);
@@ -1432,7 +1436,7 @@ type NonResourceTable = table {
   }
 
   {
-    auto name = fidl::flat::Name::Key(library.library(), "NonResourceTable");
+    auto name = fidl::flat::Name::Key(library.LookupLibrary("example"), "NonResourceTable");
     auto type = gen.CodedTypeFor(name);
     ASSERT_NOT_NULL(type);
     ASSERT_EQ(fidl::coded::Type::Kind::kTable, type->kind);
@@ -1458,7 +1462,7 @@ protocol UseOfProtocol {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(2, gen.coded_types().size());
@@ -1483,7 +1487,8 @@ protocol UseOfProtocol {
   EXPECT_EQ(1, field(anon_payload_message->elements.at(1)).offset_v1);
   EXPECT_EQ(1, field(anon_payload_message->elements.at(1)).offset_v2);
 
-  auto named_payload_name = fidl::flat::Name::Key(library.library(), "OnReceivePayload");
+  auto named_payload_name =
+      fidl::flat::Name::Key(library.LookupLibrary("example"), "OnReceivePayload");
   auto type_named_payload = gen.CodedTypeFor(named_payload_name);
   ASSERT_NOT_NULL(type_named_payload);
   EXPECT_STREQ("example_OnReceivePayload", type_named_payload->coded_name.c_str());
@@ -1517,7 +1522,7 @@ protocol UseOfProtocol {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(6, gen.coded_types().size());
@@ -1583,7 +1588,7 @@ protocol UseOfProtocol {
   ASSERT_EQ(1, type5_message->elements.size());
 
   auto anon_payload_name =
-      fidl::flat::Name::Key(library.library(), "UseOfProtocol_Method_Response");
+      fidl::flat::Name::Key(library.LookupLibrary("example"), "UseOfProtocol_Method_Response");
   auto type_anon_payload = gen.CodedTypeFor(anon_payload_name);
   ASSERT_NOT_NULL(type_anon_payload);
   EXPECT_STREQ("example_UseOfProtocol_Method_Response", type_anon_payload->coded_name.c_str());
@@ -1602,7 +1607,8 @@ protocol UseOfProtocol {
   EXPECT_EQ(1, field(type_anon_payload_message->elements.at(1)).offset_v1);
   EXPECT_EQ(1, field(type_anon_payload_message->elements.at(1)).offset_v2);
 
-  auto named_payload_name = fidl::flat::Name::Key(library.library(), "OnReceivePayload");
+  auto named_payload_name =
+      fidl::flat::Name::Key(library.LookupLibrary("example"), "OnReceivePayload");
   auto type_named_payload = gen.CodedTypeFor(named_payload_name);
   ASSERT_NOT_NULL(type_named_payload);
   EXPECT_STREQ("example_OnReceivePayload", type_named_payload->coded_name.c_str());
@@ -1636,7 +1642,7 @@ protocol UseOfProtocol {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(2, gen.coded_types().size());
@@ -1659,7 +1665,8 @@ protocol UseOfProtocol {
   EXPECT_EQ(1, anon_payload_message->fields.at(1).type->size_v1);
   EXPECT_EQ(1, anon_payload_message->fields.at(1).type->size_v2);
 
-  auto named_payload_name = fidl::flat::Name::Key(library.library(), "OnReceivePayload");
+  auto named_payload_name =
+      fidl::flat::Name::Key(library.LookupLibrary("example"), "OnReceivePayload");
   auto type_named_payload = gen.CodedTypeFor(named_payload_name);
   ASSERT_NOT_NULL(type_named_payload);
   EXPECT_STREQ("example_OnReceivePayload", type_named_payload->coded_name.c_str());
@@ -1691,7 +1698,7 @@ protocol UseOfProtocol {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(6, gen.coded_types().size());
@@ -1753,7 +1760,7 @@ protocol UseOfProtocol {
   ASSERT_EQ(1, type5_message->elements.size());
 
   auto anon_payload_name =
-      fidl::flat::Name::Key(library.library(), "UseOfProtocol_Method_Response");
+      fidl::flat::Name::Key(library.LookupLibrary("example"), "UseOfProtocol_Method_Response");
   auto type_anon_payload = gen.CodedTypeFor(anon_payload_name);
   ASSERT_NOT_NULL(type_anon_payload);
   EXPECT_STREQ("example_UseOfProtocol_Method_Response", type_anon_payload->coded_name.c_str());
@@ -1770,7 +1777,8 @@ protocol UseOfProtocol {
   EXPECT_EQ(1, type_anon_payload_message->fields.at(1).type->size_v1);
   EXPECT_EQ(1, type_anon_payload_message->fields.at(1).type->size_v2);
 
-  auto named_payload_name = fidl::flat::Name::Key(library.library(), "OnReceivePayload");
+  auto named_payload_name =
+      fidl::flat::Name::Key(library.LookupLibrary("example"), "OnReceivePayload");
   auto type_named_payload = gen.CodedTypeFor(named_payload_name);
   ASSERT_NOT_NULL(type_named_payload);
   EXPECT_STREQ("example_OnReceivePayload", type_named_payload->coded_name.c_str());
@@ -1802,7 +1810,7 @@ protocol UseOfProtocol {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(4, gen.coded_types().size());
@@ -1826,7 +1834,8 @@ protocol UseOfProtocol {
   EXPECT_EQ(1, anon_payload_message->fields.at(1).type->size_v1);
   EXPECT_EQ(1, anon_payload_message->fields.at(1).type->size_v2);
 
-  auto named_payload_name = fidl::flat::Name::Key(library.library(), "OnReceivePayload");
+  auto named_payload_name =
+      fidl::flat::Name::Key(library.LookupLibrary("example"), "OnReceivePayload");
   auto type_named_payload = gen.CodedTypeFor(named_payload_name);
   ASSERT_NOT_NULL(type_named_payload);
   EXPECT_STREQ("example_OnReceivePayload", type_named_payload->coded_name.c_str());
@@ -1859,7 +1868,7 @@ protocol UseOfProtocol {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.all_libraries());
+  fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(8, gen.coded_types().size());
@@ -1921,7 +1930,7 @@ protocol UseOfProtocol {
   ASSERT_EQ(1, type7_message->elements.size());
 
   auto anon_payload_name =
-      fidl::flat::Name::Key(library.library(), "UseOfProtocol_Method_Response");
+      fidl::flat::Name::Key(library.LookupLibrary("example"), "UseOfProtocol_Method_Response");
   auto type_anon_payload = gen.CodedTypeFor(anon_payload_name);
   ASSERT_NOT_NULL(type_anon_payload);
   EXPECT_STREQ("example_UseOfProtocol_Method_Response", type_anon_payload->coded_name.c_str());
@@ -1939,7 +1948,8 @@ protocol UseOfProtocol {
   EXPECT_EQ(1, type_anon_payload_message->fields.at(1).type->size_v1);
   EXPECT_EQ(1, type_anon_payload_message->fields.at(1).type->size_v2);
 
-  auto named_payload_name = fidl::flat::Name::Key(library.library(), "OnReceivePayload");
+  auto named_payload_name =
+      fidl::flat::Name::Key(library.LookupLibrary("example"), "OnReceivePayload");
   auto type_named_payload = gen.CodedTypeFor(named_payload_name);
   ASSERT_NOT_NULL(type_named_payload);
   EXPECT_STREQ("example_OnReceivePayload", type_named_payload->coded_name.c_str());

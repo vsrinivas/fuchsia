@@ -11,24 +11,12 @@
 namespace fidl::flat {
 
 ConsumeStep::ConsumeStep(Compiler* compiler, std::unique_ptr<raw::File> file)
-    : Step(compiler), file_(std::move(file)) {
-  // TODO(fxbug.dev/67858): Consider making builtins_declarations a struct
-  // rather than a vector to avoid lookups like this.
-  for (auto& builtin : all_libraries()->root_library()->builtin_declarations) {
-    if (builtin->kind == Builtin::Kind::kUint32) {
-      default_underlying_type_ = builtin.get();
-      break;
-    }
-  }
-  assert(default_underlying_type_ && "root library must have uint32");
-  for (auto& builtin : all_libraries()->root_library()->builtin_declarations) {
-    if (builtin->kind == Builtin::Kind::kInt32) {
-      transport_err_type_ = builtin.get();
-      break;
-    }
-  }
-  assert(transport_err_type_ && "root library must have int32");
-}
+    : Step(compiler),
+      file_(std::move(file)),
+      default_underlying_type_(
+          all_libraries()->root_library()->declarations.LookupBuiltin(Builtin::Identity::kUint32)),
+      transport_err_type_(
+          all_libraries()->root_library()->declarations.LookupBuiltin(Builtin::Identity::kInt32)) {}
 
 void ConsumeStep::RunImpl() {
   // All fidl files in a library should agree on the library name.
@@ -36,14 +24,20 @@ void ConsumeStep::RunImpl() {
   for (const auto& part : file_->library_decl->path->components) {
     new_name.push_back(part->span().data());
   }
-  if (!library()->name.empty()) {
+  if (library()->name.empty()) {
+    library()->name = new_name;
+    library()->arbitrary_name_span = file_->library_decl->span();
+  } else {
     if (new_name != library()->name) {
       Fail(ErrFilesDisagreeOnLibraryName, file_->library_decl->path->components[0]->span());
       return;
     }
-  } else {
-    library()->name = new_name;
-    library()->arbitrary_name_span = file_->library_decl->span();
+    // Prefer setting arbitrary_name_span to a file which has attributes on the
+    // library declaration, if any do, since it's conventional to put library
+    // attributes and doc comments in a single file.
+    if (library()->attributes->Empty() && file_->library_decl->attributes) {
+      library()->arbitrary_name_span = file_->library_decl->span();
+    }
   }
 
   ConsumeAttributeList(std::move(file_->library_decl->attributes), &library()->attributes);
@@ -71,89 +65,20 @@ void ConsumeStep::RunImpl() {
   }
 }
 
-template <typename T>
-static void StoreDecl(Decl* decl_ptr, std::vector<std::unique_ptr<T>>* declarations) {
-  std::unique_ptr<T> t_decl;
-  t_decl.reset(static_cast<T*>(decl_ptr));
-  declarations->push_back(std::move(t_decl));
-}
-
 Decl* ConsumeStep::RegisterDecl(std::unique_ptr<Decl> decl) {
-  assert(decl);
-
-  auto decl_ptr = decl.release();
-  auto kind = decl_ptr->kind;
-  switch (kind) {
-    case Decl::Kind::kBuiltin:
-      assert(false && "cannot consume builtins");
-      break;
-    case Decl::Kind::kBits:
-      StoreDecl(decl_ptr, &library()->bits_declarations);
-      break;
-    case Decl::Kind::kConst:
-      StoreDecl(decl_ptr, &library()->const_declarations);
-      break;
-    case Decl::Kind::kEnum:
-      StoreDecl(decl_ptr, &library()->enum_declarations);
-      break;
-    case Decl::Kind::kProtocol:
-      StoreDecl(decl_ptr, &library()->protocol_declarations);
-      break;
-    case Decl::Kind::kResource:
-      StoreDecl(decl_ptr, &library()->resource_declarations);
-      break;
-    case Decl::Kind::kService:
-      StoreDecl(decl_ptr, &library()->service_declarations);
-      break;
-    case Decl::Kind::kStruct:
-      StoreDecl(decl_ptr, &library()->struct_declarations);
-      break;
-    case Decl::Kind::kTable:
-      StoreDecl(decl_ptr, &library()->table_declarations);
-      break;
-    case Decl::Kind::kTypeAlias:
-      StoreDecl(decl_ptr, &library()->type_alias_declarations);
-      break;
-    case Decl::Kind::kUnion:
-      StoreDecl(decl_ptr, &library()->union_declarations);
-      break;
-  }  // switch
-
+  auto decl_ptr = library()->declarations.Insert(std::move(decl));
   const Name& name = decl_ptr->name;
-  {
-    const auto it = library()->declarations.emplace(name.decl_name(), decl_ptr);
-    if (!it.second) {
-      const auto previous_name = it.first->second->name;
-      Fail(ErrNameCollision, name.span().value(), name, previous_name.span().value());
-      return nullptr;
-    }
-  }
-
-  const auto canonical_decl_name = utils::canonicalize(name.decl_name());
-  {
-    const auto it = declarations_by_canonical_name_.emplace(canonical_decl_name, decl_ptr);
-    if (!it.second) {
-      const auto previous_name = it.first->second->name;
-      Fail(ErrNameCollisionCanonical, name.span().value(), name, previous_name,
-           previous_name.span().value(), canonical_decl_name);
-      return nullptr;
-    }
-  }
-
   if (name.span()) {
     if (library()->dependencies.Contains(name.span()->source_file().filename(),
                                          {name.span()->data()})) {
       Fail(ErrDeclNameConflictsWithLibraryImport, name.span().value(), name);
-      return nullptr;
-    }
-    if (library()->dependencies.Contains(name.span()->source_file().filename(),
-                                         {canonical_decl_name})) {
+    } else if (auto canonical_decl_name = utils::canonicalize(name.decl_name());
+               library()->dependencies.Contains(name.span()->source_file().filename(),
+                                                {canonical_decl_name})) {
       Fail(ErrDeclNameConflictsWithLibraryImportCanonical, name.span().value(), name,
            canonical_decl_name);
-      return nullptr;
     }
   }
-
   return decl_ptr;
 }
 
@@ -249,7 +174,8 @@ bool ConsumeStep::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
 
 void ConsumeStep::ConsumeLiteralConstant(raw::LiteralConstant* raw_constant,
                                          std::unique_ptr<LiteralConstant>* out_constant) {
-  *out_constant = std::make_unique<LiteralConstant>(std::move(raw_constant->literal));
+  *out_constant =
+      std::make_unique<LiteralConstant>(ConsumeLiteral(std::move(raw_constant->literal)));
 }
 
 void ConsumeStep::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
@@ -330,7 +256,8 @@ void ConsumeStep::ConsumeConstDeclaration(
 
 // Create a type constructor pointing to an anonymous layout.
 static std::unique_ptr<TypeConstructor> IdentifierTypeForDecl(Decl* decl) {
-  return std::make_unique<TypeConstructor>(Reference(decl), std::make_unique<LayoutParameterList>(),
+  return std::make_unique<TypeConstructor>(Reference(Reference::Target(decl)),
+                                           std::make_unique<LayoutParameterList>(),
                                            std::make_unique<TypeConstraints>());
 }
 
@@ -349,9 +276,14 @@ bool ConsumeStep::CreateMethodResult(
   raw::SourceElement sourceElement = raw::SourceElement(fidl::Token(), fidl::Token());
   std::vector<Union::Member> result_members;
 
+  enum {
+    kSuccessOrdinal = 1,
+    kErrorOrdinal = 2,
+    kTransportErrorOrdinal = 3,
+  };
+
   result_members.emplace_back(
-      std::make_unique<raw::Ordinal64>(sourceElement,
-                                       1),  // success case explicitly has ordinal 1
+      ConsumeOrdinal(std::make_unique<raw::Ordinal64>(sourceElement, kSuccessOrdinal)),
       std::move(success_variant), success_variant_context->name(),
       std::make_unique<AttributeList>());
 
@@ -365,12 +297,12 @@ bool ConsumeStep::CreateMethodResult(
     assert(error_type_ctor != nullptr && "Missing err type ctor");
 
     result_members.emplace_back(
-        std::make_unique<raw::Ordinal64>(sourceElement, 2),  // error case explicitly has ordinal 2
+        ConsumeOrdinal(std::make_unique<raw::Ordinal64>(sourceElement, kErrorOrdinal)),
         std::move(error_type_ctor), err_variant_context->name(), std::make_unique<AttributeList>());
   } else {
     // If there's no error, the error variant is reserved.
     result_members.emplace_back(
-        std::make_unique<raw::Ordinal64>(sourceElement, 2),  // error case explicitly has ordinal 2
+        ConsumeOrdinal(std::make_unique<raw::Ordinal64>(sourceElement, kErrorOrdinal)),
         err_variant_context->name(), std::make_unique<AttributeList>());
   }
 
@@ -378,8 +310,7 @@ bool ConsumeStep::CreateMethodResult(
     std::unique_ptr<TypeConstructor> error_type_ctor = IdentifierTypeForDecl(transport_err_type_);
     assert(error_type_ctor != nullptr && "Missing transport_err type ctor");
     result_members.emplace_back(
-        std::make_unique<raw::Ordinal64>(sourceElement,
-                                         3),  // transport error case explicitly has ordinal 3
+        ConsumeOrdinal(std::make_unique<raw::Ordinal64>(sourceElement, kTransportErrorOrdinal)),
         std::move(error_type_ctor), transport_err_variant_context->name(),
         std::make_unique<AttributeList>());
   }
@@ -539,9 +470,10 @@ void ConsumeStep::ConsumeProtocolDeclaration(
       }
     }
     assert(has_request || has_response);
-    methods.emplace_back(std::move(attributes), strictness, std::move(method->identifier),
-                         method_name, has_request, std::move(maybe_request), has_response,
-                         std::move(maybe_response), has_error);
+    methods.emplace_back(std::move(attributes), strictness,
+                         ConsumeIdentifier(std::move(method->identifier)), method_name, has_request,
+                         std::move(maybe_request), has_response, std::move(maybe_response),
+                         has_error);
   }
 
   std::unique_ptr<AttributeList> attributes;
@@ -720,7 +652,8 @@ bool ConsumeStep::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout,
     std::unique_ptr<AttributeList> attributes;
     ConsumeAttributeList(std::move(member->attributes), &attributes);
     if (member->reserved) {
-      members.emplace_back(std::move(member->ordinal), member->span(), std::move(attributes));
+      members.emplace_back(ConsumeOrdinal(std::move(member->ordinal)), member->span(),
+                           std::move(attributes));
       continue;
     }
 
@@ -729,7 +662,7 @@ bool ConsumeStep::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout,
                                 context->EnterMember(member->identifier->span()), &type_ctor))
       return false;
 
-    members.emplace_back(std::move(member->ordinal), std::move(type_ctor),
+    members.emplace_back(ConsumeOrdinal(std::move(member->ordinal)), std::move(type_ctor),
                          member->identifier->span(), std::move(attributes));
   }
 
@@ -905,7 +838,7 @@ bool ConsumeStep::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> r
     }
     if (out_type_ctor) {
       *out_type_ctor = std::make_unique<TypeConstructor>(
-          Reference(inline_decl),
+          Reference(Reference::Target(inline_decl)),
           std::make_unique<LayoutParameterList>(std::move(params), params_span),
           std::make_unique<TypeConstraints>(std::move(constraints), constraints_span));
     }
@@ -941,6 +874,25 @@ void ConsumeStep::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
   ConsumeTypeConstructor(std::move(type_decl->type_ctor), NamingContext::Create(name),
                          std::move(type_decl->attributes),
                          /*out_type=*/nullptr, /*out_inline_decl=*/nullptr);
+}
+
+const raw::Literal* ConsumeStep::ConsumeLiteral(std::unique_ptr<raw::Literal> raw_literal) {
+  auto ptr = raw_literal.get();
+  library()->raw_literals.push_back(std::move(raw_literal));
+  return ptr;
+}
+
+const raw::Identifier* ConsumeStep::ConsumeIdentifier(
+    std::unique_ptr<raw::Identifier> raw_identifier) {
+  auto ptr = raw_identifier.get();
+  library()->raw_identifiers.push_back(std::move(raw_identifier));
+  return ptr;
+}
+
+const raw::Ordinal64* ConsumeStep::ConsumeOrdinal(std::unique_ptr<raw::Ordinal64> raw_ordinal) {
+  auto ptr = raw_ordinal.get();
+  library()->raw_ordinals.push_back(std::move(raw_ordinal));
+  return ptr;
 }
 
 }  // namespace fidl::flat

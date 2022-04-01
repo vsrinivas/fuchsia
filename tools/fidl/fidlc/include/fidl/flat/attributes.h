@@ -10,14 +10,17 @@
 #include <memory>
 #include <optional>
 
+#include "fidl/flat/traits.h"
 #include "fidl/flat/values.h"
 #include "fidl/source_span.h"
 
 namespace fidl::flat {
 
-struct AttributeArg final {
+struct AttributeArg final : public HasClone<AttributeArg> {
   AttributeArg(std::optional<SourceSpan> name, std::unique_ptr<Constant> value, SourceSpan span)
       : name(name), value(std::move(value)), span(span) {}
+
+  std::unique_ptr<AttributeArg> Clone() const override;
 
   // Span of just the argument name, e.g. "bar". This is initially null for
   // arguments like `@foo("abc")`, but will be set during compilation.
@@ -31,7 +34,7 @@ struct AttributeArg final {
   static constexpr std::string_view kDefaultAnonymousName = "value";
 };
 
-struct Attribute final {
+struct Attribute final : public HasClone<Attribute> {
   // A constructor for synthetic attributes like @result.
   explicit Attribute(SourceSpan name) : name(name) {}
 
@@ -43,6 +46,8 @@ struct Attribute final {
   // Returns the lone argument if there is exactly 1 and it is not named. For
   // example it returns non-null for `@foo("x")` but not for `@foo(bar="x")`.
   AttributeArg* GetStandaloneAnonymousArg() const;
+
+  std::unique_ptr<Attribute> Clone() const override;
 
   // Span of just the attribute name not including the "@", e.g. "foo".
   const SourceSpan name;
@@ -60,7 +65,7 @@ struct Attribute final {
 
 // In the flat AST, "no attributes" is represented by an AttributeList
 // containing an empty vector. (In the raw AST, null is used instead.)
-struct AttributeList final {
+struct AttributeList final : public HasClone<AttributeList> {
   explicit AttributeList() = default;
   explicit AttributeList(std::vector<std::unique_ptr<Attribute>> attributes)
       : attributes(std::move(attributes)) {}
@@ -68,6 +73,7 @@ struct AttributeList final {
   bool Empty() const { return attributes.empty(); }
   const Attribute* Get(std::string_view attribute_name) const;
   Attribute* Get(std::string_view attribute_name);
+  std::unique_ptr<AttributeList> Clone() const override;
 
   std::vector<std::unique_ptr<Attribute>> attributes;
 };

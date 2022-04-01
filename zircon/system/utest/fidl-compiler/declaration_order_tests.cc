@@ -384,7 +384,7 @@ type #Bar# = struct {};
 )FIDL");
     TestLibrary library(source);
     ASSERT_COMPILED(library);
-    ASSERT_EQ(library.declaration_order(), library.all_libraries()->DeclarationOrder());
+    ASSERT_EQ(library.declaration_order(), library.all_libraries_declaration_order());
   }
 }
 
@@ -424,7 +424,7 @@ protocol ExampleDecl1 {
     ASSERT_DECL_FQ_NAME(library_decl_order[2], "example/ExampleDecl1");
     ASSERT_DECL_FQ_NAME(library_decl_order[3], "example/ExampleDecl0");
 
-    auto all_decl_order = shared.all_libraries()->DeclarationOrder();
+    auto all_decl_order = library.all_libraries_declaration_order();
     ASSERT_EQ(5, all_decl_order.size());
     ASSERT_DECL_FQ_NAME(all_decl_order[0], "dependency/ExampleDecl1");
     ASSERT_DECL_FQ_NAME(all_decl_order[1], "example/ExampleDecl2");

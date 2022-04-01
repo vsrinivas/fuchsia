@@ -118,8 +118,9 @@ A _platform identifier_ is a label that gives context to versions. Platform
 identifiers must be a valid FIDL library name element, i.e. as of this writing
 match the regex `[a-z][a-z0-9_]*`.
 
-A _version identifier_ an unsigned 64-bit integer. The highest version
-identifer, `0xffffffffffffffff`, is called `HEAD` and is treated specially.
+A _version identifier_ is an unsigned 64-bit integer between 1 and 2^63-1
+(inclusive) or equal to 2^64-1. The latter version identifier is known as `HEAD`
+and is treated specially.
 
 Version identifiers are totally ordered by an "is newer than" relationship.
 Version _X_ is newer than version _Y_ when _X_ > _Y_.

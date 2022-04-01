@@ -29,7 +29,7 @@ std::string FormatName(const flat::Name& name, std::string_view library_separato
                        std::string_view name_separator) {
   std::string compiled_name("");
   if (name.library() != nullptr && !name.is_intrinsic()) {
-    compiled_name += LibraryName(name.library(), library_separator);
+    compiled_name += flat::LibraryName(name.library()->name, library_separator);
     compiled_name += name_separator;
   }
   compiled_name += name.full_name();
@@ -293,7 +293,7 @@ std::string NameFlatConstant(const flat::Constant* constant) {
     }
     case flat::Constant::Kind::kIdentifier: {
       auto identifier_constant = static_cast<const flat::IdentifierConstant*>(constant);
-      return NameFlatName(identifier_constant->reference.target_name());
+      return NameFlatName(identifier_constant->reference.resolved().name());
     }
     case flat::Constant::Kind::kBinaryOperator: {
       return std::string("binary operator");
@@ -362,6 +362,7 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
       // Like Stars, they are known by name.
       break;
   }  // switch
+  // TODO(fxbug.dev/93999): Use the new syntax, `:optional`.
   if (type->nullability == types::Nullability::kNullable) {
     buf << "?";
   }
