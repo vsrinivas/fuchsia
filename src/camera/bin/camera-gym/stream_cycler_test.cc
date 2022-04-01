@@ -114,7 +114,7 @@ class FakeAllocator : public fuchsia::sysmem::testing::Allocator_TestBase {
   void AllocateSharedCollection(BufferCollectionTokenRequest token_request) override;
 
   // Stats/Counters
-  CallStat* allocate_shared_collection_stat() { return &allocate_shared_collection_stat_; }
+  CallStat& allocate_shared_collection_stat() { return allocate_shared_collection_stat_; }
 
  private:
   FakeAllocatorServ* owner_;
@@ -135,8 +135,8 @@ class FakeBufferCollectionToken : public fuchsia::sysmem::testing::BufferCollect
   void Sync(SyncCallback callback) override;
 
   // Stats/Counters
-  CallStat* duplicate_stat() { return &duplicate_stat_; }
-  CallStat* sync_stat() { return &sync_stat_; }
+  CallStat& duplicate_stat() { return duplicate_stat_; }
+  CallStat& sync_stat() { return sync_stat_; }
 
  private:
   FakeBufferCollectionTokenServ* owner_;
@@ -160,11 +160,11 @@ class FakeDevice : public fuchsia::camera3::testing::Device_TestBase {
   void ConnectToStream(uint32_t id, StreamRequest request) override;
 
   // Stats/Counters
-  CallStat* get_configurations_stat() { return &get_configurations_stat_; }
-  CallStat* watch_current_configuration_stat() { return &watch_current_configuration_stat_; }
-  CallStat* set_current_configuration_stat() { return &set_current_configuration_stat_; }
-  CallStat* watch_mute_state_stat() { return &watch_mute_state_stat_; }
-  CallStat* connect_to_stream_stat() { return &connect_to_stream_stat_; }
+  CallStat& get_configurations_stat() { return get_configurations_stat_; }
+  CallStat& watch_current_configuration_stat() { return watch_current_configuration_stat_; }
+  CallStat& set_current_configuration_stat() { return set_current_configuration_stat_; }
+  CallStat& watch_mute_state_stat() { return watch_mute_state_stat_; }
+  CallStat& connect_to_stream_stat() { return connect_to_stream_stat_; }
 
   void SetupConfigurations(std::vector<fuchsia::camera3::Configuration> configurations) {
     configurations_ = std::move(configurations);
@@ -196,8 +196,8 @@ class FakeDeviceWatcher : public fuchsia::camera3::testing::DeviceWatcher_TestBa
   void ConnectToDevice(uint64_t id, DeviceRequest request) override;
 
   // Stats/Counters
-  CallStat* watch_devices_stat() { return &watch_devices_stat_; }
-  CallStat* connect_to_device_stat() { return &connect_to_device_stat_; }
+  CallStat& watch_devices_stat() { return watch_devices_stat_; }
+  CallStat& connect_to_device_stat() { return connect_to_device_stat_; }
 
  private:
   FakeDeviceWatcherServ* owner_;
@@ -223,12 +223,12 @@ class FakeStream : public fuchsia::camera3::testing::Stream_TestBase {
   void GetNextFrame(GetNextFrameCallback callback) override;
 
   // Stats/Counters
-  CallStat* get_properties_stat() { return &get_properties_stat_; }
-  CallStat* set_crop_region_stat() { return &set_crop_region_stat_; }
-  CallStat* watch_crop_region_stat() { return &watch_crop_region_stat_; }
-  CallStat* set_buffer_collection_stat() { return &set_buffer_collection_stat_; }
-  CallStat* watch_buffer_collection_stat() { return &watch_buffer_collection_stat_; }
-  CallStat* get_next_frame_stat() { return &get_next_frame_stat_; }
+  CallStat& get_properties_stat() { return get_properties_stat_; }
+  CallStat& set_crop_region_stat() { return set_crop_region_stat_; }
+  CallStat& watch_crop_region_stat() { return watch_crop_region_stat_; }
+  CallStat& set_buffer_collection_stat() { return set_buffer_collection_stat_; }
+  CallStat& watch_buffer_collection_stat() { return watch_buffer_collection_stat_; }
+  CallStat& get_next_frame_stat() { return get_next_frame_stat_; }
 
   // Handlers
   void set_token_handle_provider(TokenHandleProvider* provider) {
@@ -405,16 +405,16 @@ class FakeStreamServ {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 void FakeAllocator::AllocateSharedCollection(BufferCollectionTokenRequest token_request) {
-  allocate_shared_collection_stat()->Enter();
+  allocate_shared_collection_stat().Enter();
   owner()->OnAllocateSharedCollection(std::move(token_request));
 }
 
 void FakeBufferCollectionToken::Duplicate(uint32_t mask, BufferCollectionTokenRequest request) {
-  duplicate_stat()->Enter();
+  duplicate_stat().Enter();
 }
 
 void FakeBufferCollectionToken::Sync(SyncCallback callback) {
-  sync_stat()->Enter();
+  sync_stat().Enter();
   if (owner()->sync_remaining() > 0) {
     owner()->dec_sync_remaining();
     callback();
@@ -422,12 +422,12 @@ void FakeBufferCollectionToken::Sync(SyncCallback callback) {
 }
 
 void FakeDevice::GetConfigurations(GetConfigurationsCallback callback) {
-  get_configurations_stat()->Enter();
+  get_configurations_stat().Enter();
   callback(fidl::Clone(configurations_));
 }
 
 void FakeDevice::WatchCurrentConfiguration(WatchCurrentConfigurationCallback callback) {
-  watch_current_configuration_stat()->Enter();
+  watch_current_configuration_stat().Enter();
   if (owner()->watch_current_configuration_remaining() > 0) {
     owner()->dec_watch_current_configuration_remaining();
     callback(watch_current_configuration_config_id_);
@@ -435,20 +435,20 @@ void FakeDevice::WatchCurrentConfiguration(WatchCurrentConfigurationCallback cal
 }
 
 void FakeDevice::SetCurrentConfiguration(uint32_t index) {
-  set_current_configuration_stat()->Enter();
+  set_current_configuration_stat().Enter();
 }
 
 void FakeDevice::WatchMuteState(WatchMuteStateCallback callback) {
-  watch_mute_state_stat()->Enter();
+  watch_mute_state_stat().Enter();
 }
 
 void FakeDevice::ConnectToStream(uint32_t id, StreamRequest request) {
-  connect_to_stream_stat()->Enter();
+  connect_to_stream_stat().Enter();
   owner()->OnConnectToStream(id, std::move(request));
 }
 
 void FakeDeviceWatcher::WatchDevices(WatchDevicesCallback callback) {
-  watch_devices_stat()->Enter();
+  watch_devices_stat().Enter();
   if (owner()->watch_devices_remaining() > 0) {
     owner()->dec_watch_devices_remaining();
     std::vector<fuchsia::camera3::WatchDevicesEvent> events;
@@ -459,26 +459,26 @@ void FakeDeviceWatcher::WatchDevices(WatchDevicesCallback callback) {
 }
 
 void FakeDeviceWatcher::ConnectToDevice(uint64_t id, DeviceRequest request) {
-  connect_to_device_stat()->Enter();
+  connect_to_device_stat().Enter();
   owner()->OnConnectToDevice(id, std::move(request));
 }
 
-void FakeStream::GetProperties(GetPropertiesCallback callback) { get_properties_stat()->Enter(); }
+void FakeStream::GetProperties(GetPropertiesCallback callback) { get_properties_stat().Enter(); }
 
 void FakeStream::SetCropRegion(std::unique_ptr<fuchsia::math::RectF> region) {
-  set_crop_region_stat()->Enter();
+  set_crop_region_stat().Enter();
 }
 
 void FakeStream::WatchCropRegion(WatchCropRegionCallback callback) {
-  watch_crop_region_stat()->Enter();
+  watch_crop_region_stat().Enter();
 }
 
 void FakeStream::SetBufferCollection(BufferCollectionTokenHandle token) {
-  set_buffer_collection_stat()->Enter();
+  set_buffer_collection_stat().Enter();
 }
 
 void FakeStream::WatchBufferCollection(WatchBufferCollectionCallback callback) {
-  watch_buffer_collection_stat()->Enter();
+  watch_buffer_collection_stat().Enter();
   if (owner()->watch_buffer_collection_remaining() > 0) {
     owner()->dec_watch_buffer_collection_remaining();
     EXPECT_GT(token_handle_provider()->Size(), 0U);
@@ -487,7 +487,7 @@ void FakeStream::WatchBufferCollection(WatchBufferCollectionCallback callback) {
   }
 }
 
-void FakeStream::GetNextFrame(GetNextFrameCallback callback) { get_next_frame_stat()->Enter(); }
+void FakeStream::GetNextFrame(GetNextFrameCallback callback) { get_next_frame_stat().Enter(); }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -619,23 +619,23 @@ class StreamCyclerTest : public gtest::TestLoopFixture {
   // Fake StreamCycler handler stubs.
   uint32_t OnAddCollection(BufferCollectionTokenHandle token,
                            fuchsia::sysmem::ImageFormat_2 image_format, std::string description) {
-    on_add_collection_stat()->Enter();
+    on_add_collection_stat().Enter();
     set_on_add_collection_width(image_format.coded_width);
     set_on_add_collection_height(image_format.coded_height);
     return 0;
   }
   void OnRemoveCollection(uint32_t id) {
-    on_remove_collection_stat()->Enter();
+    on_remove_collection_stat().Enter();
     set_on_remove_collection_id(id);
   }
   void OnShowBuffer(uint32_t collection_id, uint32_t buffer_index, zx::eventpair release_fence,
                     std::optional<fuchsia::math::RectF> subregion) {
-    on_show_buffer_stat()->Enter();
+    on_show_buffer_stat().Enter();
     set_on_show_buffer_id(collection_id);
     set_on_show_buffer_index(buffer_index);
   }
   void OnMuteChanged(bool muted) {
-    on_mute_changed_stat()->Enter();
+    on_mute_changed_stat().Enter();
     set_on_mute_changed_muted(muted);
   }
   void SetupHandlers(StreamCycler* cycler) {
@@ -824,7 +824,7 @@ class StreamCyclerTest : public gtest::TestLoopFixture {
     Command command = Command::WithSetConfig(std::move(set_config_command));
     cycler->ExecuteCommand(std::move(command),
                            [this](fuchsia::camera::gym::Controller_SendCommand_Result result) {
-                             execute_set_config_command_stat()->Enter();
+                             execute_set_config_command_stat().Enter();
                              set_execute_set_config_command_result(std::move(result));
                            });
   }
@@ -837,7 +837,7 @@ class StreamCyclerTest : public gtest::TestLoopFixture {
     Command command = Command::WithAddStream(std::move(add_stream_command));
     cycler->ExecuteCommand(std::move(command),
                            [this](fuchsia::camera::gym::Controller_SendCommand_Result result) {
-                             execute_add_stream_command_stat()->Enter();
+                             execute_add_stream_command_stat().Enter();
                              set_execute_add_stream_command_result(std::move(result));
                            });
   }
@@ -855,7 +855,7 @@ class StreamCyclerTest : public gtest::TestLoopFixture {
     Command command = Command::WithSetCrop(std::move(set_crop_command));
     cycler->ExecuteCommand(std::move(command),
                            [this](fuchsia::camera::gym::Controller_SendCommand_Result result) {
-                             execute_set_crop_command_stat()->Enter();
+                             execute_set_crop_command_stat().Enter();
                            });
   }
 
@@ -878,14 +878,14 @@ class StreamCyclerTest : public gtest::TestLoopFixture {
   FakeDevice* device_impl() { return device_serv()->impl(); }
   FakeStream* stream_impl(uint32_t client_index) { return stream_serv()->impl(client_index); }
 
-  CallStat* execute_set_config_command_stat() { return &execute_set_config_command_stat_; }
-  CallStat* execute_add_stream_command_stat() { return &execute_add_stream_command_stat_; }
-  CallStat* execute_set_crop_command_stat() { return &execute_set_crop_command_stat_; }
+  CallStat& execute_set_config_command_stat() { return execute_set_config_command_stat_; }
+  CallStat& execute_add_stream_command_stat() { return execute_add_stream_command_stat_; }
+  CallStat& execute_set_crop_command_stat() { return execute_set_crop_command_stat_; }
 
-  CallStat* on_add_collection_stat() { return &on_add_collection_stat_; }
-  CallStat* on_remove_collection_stat() { return &on_remove_collection_stat_; }
-  CallStat* on_show_buffer_stat() { return &on_show_buffer_stat_; }
-  CallStat* on_mute_changed_stat() { return &on_mute_changed_stat_; }
+  CallStat& on_add_collection_stat() { return on_add_collection_stat_; }
+  CallStat& on_remove_collection_stat() { return on_remove_collection_stat_; }
+  CallStat& on_show_buffer_stat() { return on_show_buffer_stat_; }
+  CallStat& on_mute_changed_stat() { return on_mute_changed_stat_; }
 
   float on_add_collection_width() { return on_add_collection_width_; }
   float on_add_collection_height() { return on_add_collection_height_; }
@@ -959,7 +959,7 @@ TEST_F(StreamCyclerTest, SimpleConfiguration_AutomaticMode_Create) {
   RunLoopUntilIdle();
 
   // VERIFY:
-  EXPECT_EQ(device_watcher_impl()->watch_devices_stat()->call_counter(), 1U);
+  EXPECT_EQ(device_watcher_impl()->watch_devices_stat().call_counter(), 1U);
 }
 
 // Test WatchDevicesCallback()
@@ -972,11 +972,11 @@ TEST_F(StreamCyclerTest, SimpleConfiguration_AutomaticMode_WatchDevicesCallback)
   RunLoopUntilIdle();
 
   // VERIFY:
-  EXPECT_EQ(device_watcher_impl()->watch_devices_stat()->call_counter(), 2U);
-  EXPECT_EQ(device_watcher_impl()->connect_to_device_stat()->call_counter(), 1U);
-  EXPECT_EQ(device_impl()->get_configurations_stat()->call_counter(), 1U);
-  EXPECT_EQ(device_impl()->watch_current_configuration_stat()->call_counter(), 1U);
-  EXPECT_EQ(device_impl()->watch_mute_state_stat()->call_counter(), 1U);
+  EXPECT_EQ(device_watcher_impl()->watch_devices_stat().call_counter(), 2U);
+  EXPECT_EQ(device_watcher_impl()->connect_to_device_stat().call_counter(), 1U);
+  EXPECT_EQ(device_impl()->get_configurations_stat().call_counter(), 1U);
+  EXPECT_EQ(device_impl()->watch_current_configuration_stat().call_counter(), 1U);
+  EXPECT_EQ(device_impl()->watch_mute_state_stat().call_counter(), 1U);
 }
 
 // Test WatchCurrentConfigurationCallback()
@@ -1008,7 +1008,7 @@ TEST_F(StreamCyclerTest, SimpleConfiguration_AutomaticMode_ConnectToStream) {
 
   // VERIFY:
   EXPECT_EQ(stream_serv()->clients_size(), 1U);
-  EXPECT_EQ(stream_impl(0)->get_next_frame_stat()->call_counter(), 1U);
+  EXPECT_EQ(stream_impl(0)->get_next_frame_stat().call_counter(), 1U);
 }
 
 // Test ConnectToStream() (complex configuration)
@@ -1024,9 +1024,9 @@ TEST_F(StreamCyclerTest, ComplexConfiguration_AutomaticMode_ConnectToStream) {
 
   // VERIFY:
   EXPECT_EQ(stream_serv()->clients_size(), 3U);
-  EXPECT_EQ(stream_impl(0)->get_next_frame_stat()->call_counter(), 1U);
-  EXPECT_EQ(stream_impl(1)->get_next_frame_stat()->call_counter(), 1U);
-  EXPECT_EQ(stream_impl(2)->get_next_frame_stat()->call_counter(), 1U);
+  EXPECT_EQ(stream_impl(0)->get_next_frame_stat().call_counter(), 1U);
+  EXPECT_EQ(stream_impl(1)->get_next_frame_stat().call_counter(), 1U);
+  EXPECT_EQ(stream_impl(2)->get_next_frame_stat().call_counter(), 1U);
 }
 
 // Test WatchCurrentConfigurationCallback()
@@ -1043,11 +1043,11 @@ TEST_F(StreamCyclerTest, SimpleConfiguration_ManualMode_WatchCurrentConfiguratio
   RunLoopUntilIdle();
 
   // VERIFY:
-  EXPECT_EQ(device_watcher_impl()->watch_devices_stat()->call_counter(), 2U);
-  EXPECT_EQ(device_watcher_impl()->connect_to_device_stat()->call_counter(), 1U);
-  EXPECT_EQ(device_impl()->get_configurations_stat()->call_counter(), 1U);
-  EXPECT_EQ(device_impl()->watch_current_configuration_stat()->call_counter(), 2U);
-  EXPECT_EQ(device_impl()->watch_mute_state_stat()->call_counter(), 1U);
+  EXPECT_EQ(device_watcher_impl()->watch_devices_stat().call_counter(), 2U);
+  EXPECT_EQ(device_watcher_impl()->connect_to_device_stat().call_counter(), 1U);
+  EXPECT_EQ(device_impl()->get_configurations_stat().call_counter(), 1U);
+  EXPECT_EQ(device_impl()->watch_current_configuration_stat().call_counter(), 2U);
+  EXPECT_EQ(device_impl()->watch_mute_state_stat().call_counter(), 1U);
 }
 
 // Test ConnectToStream() (simple configuration)
@@ -1070,7 +1070,7 @@ TEST_F(StreamCyclerTest, SimpleConfiguration_ManualMode_ConnectToStream) {
 
   // VERIFY:
   EXPECT_EQ(stream_serv()->clients_size(), 1U);
-  EXPECT_EQ(stream_impl(0)->get_next_frame_stat()->call_counter(), 1U);
+  EXPECT_EQ(stream_impl(0)->get_next_frame_stat().call_counter(), 1U);
 }
 
 // Test WatchCurrentConfigurationCallback() (complex configuration)
@@ -1102,12 +1102,12 @@ TEST_F(StreamCyclerTest, ComplexConfiguration_ManualMode_ExecuteSetConfigCommand
   RunLoopUntilIdle();  // Should run until WatchCurrentConfiguration().
 
   // The callback should not be called yet.
-  EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 0U);
+  EXPECT_EQ(execute_set_config_command_stat().call_counter(), 0U);
 
   RunControllerLoopUntilIdle();
 
   // The callback should not be called yet.
-  EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 0U);
+  EXPECT_EQ(execute_set_config_command_stat().call_counter(), 0U);
 
   cycler->current_config_index_ = 2U;  // Make current_config_index same.
 
@@ -1116,13 +1116,13 @@ TEST_F(StreamCyclerTest, ComplexConfiguration_ManualMode_ExecuteSetConfigCommand
   RunLoopUntilIdle();  // Should run until end of ExecuteSetConfigCommand().
 
   // The callback should not be called yet.
-  EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 0U);
+  EXPECT_EQ(execute_set_config_command_stat().call_counter(), 0U);
 
   RunControllerLoopUntilIdle();
 
   // VERIFY:
   // The callback must be called.
-  EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 1U);
+  EXPECT_EQ(execute_set_config_command_stat().call_counter(), 1U);
 }
 
 // Test ExecuteSetConfigCommand() (complex configuration)
@@ -1134,7 +1134,7 @@ TEST_F(StreamCyclerTest, ComplexConfiguration_ManualMode_ExecuteSetConfigCommand
   RunLoopUntilIdle();  // Should run until WatchCurrentConfiguration().
 
   // The callback should not be called yet.
-  EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 0U);
+  EXPECT_EQ(execute_set_config_command_stat().call_counter(), 0U);
 
   cycler->current_config_index_ = 1U;  // Make current_config_index different.
 
@@ -1143,24 +1143,24 @@ TEST_F(StreamCyclerTest, ComplexConfiguration_ManualMode_ExecuteSetConfigCommand
   RunLoopUntilIdle();  // Should run until end of ExecuteSetConfigCommand().
 
   // The callback should not be called yet.
-  EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 0U);
+  EXPECT_EQ(execute_set_config_command_stat().call_counter(), 0U);
 
   RunControllerLoopUntilIdle();
 
   // The callback should not be called yet.
-  EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 0U);
+  EXPECT_EQ(execute_set_config_command_stat().call_counter(), 0U);
 
   // Emulate WatchCurrentConfiguration() callback which occurs because the config id changed.
   cycler->WatchCurrentConfigurationCallback(2U);
 
   // The callback should not be called yet.
-  EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 0U);
+  EXPECT_EQ(execute_set_config_command_stat().call_counter(), 0U);
 
   RunControllerLoopUntilIdle();
 
   // VERIFY:
   // The callback must be called.
-  EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 1U);
+  EXPECT_EQ(execute_set_config_command_stat().call_counter(), 1U);
 }
 
 // Test ExecuteSetAddStreamCommand() (complex configuration)
@@ -1171,41 +1171,41 @@ TEST_F(StreamCyclerTest, ComplexConfiguration_ManualMode_ExecuteAddStreamCommand
   SetupFakeComplexConfigurations();
   RunLoopUntilIdle();  // Should run until WatchCurrentConfiguration().
 
-  EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 0U);
+  EXPECT_EQ(execute_set_config_command_stat().call_counter(), 0U);
 
   cycler->current_config_index_ = 0U;  // Make current_config_index different.
   SetupAndInvokeExecuteSetConfigCommand(cycler.get(), 2U /* config_id */);
   RunLoopUntilIdle();  // Should run until end of ExecuteSetConfigCommand().
 
-  EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 0U);
+  EXPECT_EQ(execute_set_config_command_stat().call_counter(), 0U);
 
   // Emulate WatchCurrentConfiguration() callback which occurs because the config id changed.
   cycler->WatchCurrentConfigurationCallback(2U);
 
   // The callback should not be called yet.
-  EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 0U);
+  EXPECT_EQ(execute_set_config_command_stat().call_counter(), 0U);
 
   RunControllerLoopUntilIdle();
 
   // The callback must be called.
-  EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 1U);
+  EXPECT_EQ(execute_set_config_command_stat().call_counter(), 1U);
 
   // TEST: Call ExecuteAddStreamCommand().
   SetupAndInvokeExecuteAddStreamCommand(cycler.get(), 1U /* stream_id */);
 
-  EXPECT_EQ(execute_add_stream_command_stat()->call_counter(), 0U);
+  EXPECT_EQ(execute_add_stream_command_stat().call_counter(), 0U);
   RunLoopUntilIdle();  // Should run until GetNextFrame().
 
   // The callback should not be called yet.
-  EXPECT_EQ(execute_add_stream_command_stat()->call_counter(), 0U);
+  EXPECT_EQ(execute_add_stream_command_stat().call_counter(), 0U);
 
   RunControllerLoopUntilIdle();
 
   // The callback must be called.
-  EXPECT_EQ(execute_add_stream_command_stat()->call_counter(), 1U);
+  EXPECT_EQ(execute_add_stream_command_stat().call_counter(), 1U);
 
   // VERIFY:
-  EXPECT_EQ(on_add_collection_stat()->call_counter(), 1U);
+  EXPECT_EQ(on_add_collection_stat().call_counter(), 1U);
   EXPECT_EQ(on_add_collection_width(), 468.0);
   EXPECT_EQ(on_add_collection_height(), 345.0);
 }
@@ -1218,45 +1218,45 @@ TEST_F(StreamCyclerTest, ComplexConfiguration_ManualMode_ExecuteSetCropCommand) 
   SetupFakeComplexConfigurations();
   RunLoopUntilIdle();  // Should run until WatchCurrentConfiguration().
 
-  EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 0U);
+  EXPECT_EQ(execute_set_config_command_stat().call_counter(), 0U);
 
   cycler->current_config_index_ = 0U;  // Make current_config_index different.
   SetupAndInvokeExecuteSetConfigCommand(cycler.get(), 2U /* config_id */);
   RunLoopUntilIdle();  // Should run until end of ExecuteSetConfigCommand().
 
-  EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 0U);
+  EXPECT_EQ(execute_set_config_command_stat().call_counter(), 0U);
 
   // Emulate WatchCurrentConfiguration() callback which occurs because the config id changed.
   cycler->WatchCurrentConfigurationCallback(2U);
 
   // The callback should not be called yet.
-  EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 0U);
+  EXPECT_EQ(execute_set_config_command_stat().call_counter(), 0U);
 
   RunControllerLoopUntilIdle();
 
   // The callback must be called.
-  EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 1U);
+  EXPECT_EQ(execute_set_config_command_stat().call_counter(), 1U);
 
   // Call ExecuteAddStreamCommand().
   SetupAndInvokeExecuteAddStreamCommand(cycler.get(), 1U /* stream_id */);
 
-  EXPECT_EQ(execute_add_stream_command_stat()->call_counter(), 0U);
+  EXPECT_EQ(execute_add_stream_command_stat().call_counter(), 0U);
   RunLoopUntilIdle();  // Should run until GetNextFrame().
 
   // The callback should not be called yet.
-  EXPECT_EQ(execute_add_stream_command_stat()->call_counter(), 0U);
+  EXPECT_EQ(execute_add_stream_command_stat().call_counter(), 0U);
 
   RunControllerLoopUntilIdle();
 
   // The callback must be called.
-  EXPECT_EQ(execute_add_stream_command_stat()->call_counter(), 1U);
+  EXPECT_EQ(execute_add_stream_command_stat().call_counter(), 1U);
 
-  EXPECT_EQ(stream_impl(0)->watch_crop_region_stat()->call_counter(), 0U);
-  EXPECT_EQ(stream_impl(0)->set_crop_region_stat()->call_counter(), 0U);
-  EXPECT_EQ(execute_set_crop_command_stat()->call_counter(), 0U);
+  EXPECT_EQ(stream_impl(0)->watch_crop_region_stat().call_counter(), 0U);
+  EXPECT_EQ(stream_impl(0)->set_crop_region_stat().call_counter(), 0U);
+  EXPECT_EQ(execute_set_crop_command_stat().call_counter(), 0U);
 
   // OnAddCollection handler should have been called with width & height of config 2 stream 1.
-  EXPECT_EQ(on_add_collection_stat()->call_counter(), 1U);
+  EXPECT_EQ(on_add_collection_stat().call_counter(), 1U);
   EXPECT_EQ(on_add_collection_width(), 468.0);
   EXPECT_EQ(on_add_collection_height(), 345.0);
 
@@ -1281,8 +1281,8 @@ TEST_F(StreamCyclerTest, ComplexConfiguration_ManualMode_ExecuteSetCropCommand) 
   RunLoopUntilIdle();  // Should run until SetCropRegion().
 
   // VERIFY:
-  EXPECT_EQ(stream_impl(0)->watch_crop_region_stat()->call_counter(), 1U);
-  EXPECT_EQ(stream_impl(0)->set_crop_region_stat()->call_counter(), 1U);
+  EXPECT_EQ(stream_impl(0)->watch_crop_region_stat().call_counter(), 1U);
+  EXPECT_EQ(stream_impl(0)->set_crop_region_stat().call_counter(), 1U);
 }
 
 // TODO(b/180931632) - Need error path unit tests.
