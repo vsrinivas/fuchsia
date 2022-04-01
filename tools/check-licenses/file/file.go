@@ -37,9 +37,24 @@ func NewFile(path string, ft FileType) (*File, error) {
 		return f, nil
 	}
 
-	content, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
+	var content []byte
+	var err error
+	var readFile bool
+
+	content = make([]byte, 0)
+	if ft == Any {
+		// Don't read in regular files.
+	} else if ft == CopyrightHeader {
+		_, readFile = Config.Extensions[filepath.Ext(path)]
+	} else {
+		readFile = true
+	}
+
+	if readFile {
+		content, err = ioutil.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	data, err := NewFileData(path, content, ft)

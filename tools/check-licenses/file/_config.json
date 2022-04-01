@@ -15,6 +15,40 @@
                     "Some part of the golang string processing is handling these characters incorrectly."
                 ]
             }
-        ]
+        ],
+        "extensions": {
+            ".a": true,
+            ".gyp": true,
+            ".gypi": true,
+            ".in": true,
+            ".merkle": true,
+            ".txt": true,
+            ".TXT": true,
+            ".ac": true,
+            ".am": true,
+            ".asm": true,
+            ".bat": true,
+            ".c": true,
+            ".cc": true,
+            ".cpp": true,
+            ".d": true,
+            ".dart": true,
+            ".dat": true,
+            ".fidl": true,
+            ".gn": true,
+            ".gni": true,
+            ".go": true,
+            ".h": true,
+            ".hh": true,
+            ".inc": true,
+            ".java": true,
+            ".js": true,
+            ".m": true,
+            ".py": true,
+            ".rs": true,
+            ".sh": true,
+            ".yaml": true,
+            "": true
+        }
     }
 }

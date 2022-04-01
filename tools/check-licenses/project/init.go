@@ -10,9 +10,11 @@ import (
 )
 
 var AllProjects map[string]*Project
+var FilteredProjects map[string]*Project
 
 func init() {
 	AllProjects = make(map[string]*Project)
+	FilteredProjects = make(map[string]*Project)
 }
 
 func Initialize(c *ProjectConfig) error {
@@ -49,10 +51,8 @@ func initializeReadmes() error {
 						projectRoot = Config.FuchsiaDir
 					}
 
-					if p, err := NewProject(currentPath, projectRoot); err != nil {
+					if _, err := NewProject(currentPath, projectRoot); err != nil {
 						return err
-					} else {
-						AllProjects[projectRoot] = p
 					}
 				}
 				return nil

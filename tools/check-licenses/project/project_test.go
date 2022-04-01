@@ -122,6 +122,6 @@ func TestMultiLineFields(t *testing.T) {
 }
 
 func setup() {
-	file.Config = file.NewFileConfig()
-	Config = NewProjectConfig()
+	file.Config = file.NewConfig()
+	Config = NewConfig()
 }

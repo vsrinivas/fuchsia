@@ -73,6 +73,8 @@ func Initialize(c *LicenseConfig) error {
 	}
 	Unrecognized = &Pattern{
 		Name:               "_unrecognized",
+		Category:           "Unrecognized",
+		Type:               "Unrecognized",
 		Matches:            make([]*file.FileData, 0),
 		AllowList:          []string{".*"},
 		previousMatches:    make(map[string]bool),
@@ -83,6 +85,7 @@ func Initialize(c *LicenseConfig) error {
 	// TODO(jcecil): Remove this pattern from AllPatterns if/when
 	// we re-enable searching with all available patterns.
 	AllPatterns = append(AllPatterns, Unrecognized)
+
 	return nil
 }
 
@@ -101,6 +104,11 @@ func patternsWalker(path string, info os.FileInfo, err error) error {
 	}
 
 	plusVal(NumPatterns, path)
+	if strings.Contains(filepath.Base(path), "copyright") {
+		pattern.isHeader = true
+		AllCopyrightPatterns = append(AllCopyrightPatterns, pattern)
+	}
 	AllPatterns = append(AllPatterns, pattern)
+
 	return nil
 }

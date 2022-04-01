@@ -29,7 +29,7 @@ type Skip struct {
 	SkipAnywhere bool `json:"skipAnywhere"`
 }
 
-func NewFileTreeConfig() *FileTreeConfig {
+func NewConfig() *FileTreeConfig {
 	return &FileTreeConfig{
 		Skips: make([]*Skip, 0),
 	}

@@ -12,10 +12,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 
+	"go.fuchsia.dev/fuchsia/tools/check-licenses/file"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/filetree"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/license"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/project"
@@ -33,9 +35,35 @@ func SaveResults() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	for _, p := range license.AllPatterns {
+		filename := fmt.Sprintf("%v-%v-%v", p.Category, p.Type, p.Name)
+		if err := writeFile(filepath.Join("license", "patterns", filename), []byte(p.Re.String())); err != nil {
+			return "", err
+		}
+		var m strings.Builder
+		for _, match := range p.Matches {
+			m.WriteString(match.FilePath)
+			m.WriteString("\n")
+		}
+		if err := writeFile(filepath.Join("license", "matches", filename), []byte(m.String())); err != nil {
+			return "", err
+		}
+	}
+	for _, d := range license.Unrecognized.Matches {
+		filename := fmt.Sprintf("%v.lic", d.LibraryName)
+		if err := writeFile(filepath.Join("license", "unrecognized", filename), []byte(d.Data)); err != nil {
+			return "", err
+		}
+	}
 	b.WriteString(s)
 
 	s, err = savePackageInfo("project", project.Config, project.Metrics)
+	if err != nil {
+		return "", err
+	}
+	b.WriteString(s)
+
+	s, err = savePackageInfo("file", file.Config, file.Metrics)
 	if err != nil {
 		return "", err
 	}
@@ -52,6 +80,15 @@ func SaveResults() (string, error) {
 		return "", err
 	}
 	b.WriteString(s)
+
+	err = verifyLicensesApproved()
+	if err != nil {
+		if Config.ExitOnError {
+			return "", err
+		} else {
+			fmt.Println(err)
+		}
+	}
 
 	s, err = expandTemplates()
 	if err != nil {
@@ -158,4 +195,29 @@ func compressGZ(path string) error {
 		return err
 	}
 	return writeFile(path+".gz", buf.Bytes())
+}
+
+func verifyLicensesApproved() error {
+	var b strings.Builder
+
+OUTER:
+	for _, sr := range license.AllSearchResults {
+		filepath := sr.LicenseData.FilePath
+		allowlist := sr.Pattern.AllowList
+		for _, entry := range allowlist {
+			re, err := regexp.Compile("(" + entry + ")")
+			if err != nil {
+				return err
+			}
+			if m := re.Find([]byte(filepath)); m != nil {
+				continue OUTER
+			}
+		}
+		b.WriteString(fmt.Sprintf("File %v was not approved to use license pattern %v\n", filepath, sr.Pattern.Name))
+	}
+	result := b.String()
+	if len(result) > 0 {
+		return fmt.Errorf("Encountered license texts that were not approved for usage:\n%v", result)
+	}
+	return nil
 }

@@ -27,22 +27,28 @@ func AnalyzeLicenses() error {
 		// Analyze the license files in each project.
 		sort.Sort(file.Order(p.LicenseFile))
 		for _, l := range p.LicenseFile {
-			if result, err := license.Search(l); err != nil {
+			if results, err := license.Search(l); err != nil {
 				return fmt.Errorf("Issue analyzing Project defined in [%v]: %v\n", p.ReadmePath, err)
 			} else {
-				p.SearchResults = append(p.SearchResults, result...)
+				p.SearchResults = append(p.SearchResults, results...)
 			}
 		}
 
 		// Analyze the copyright headers in the files in each project.
 		sort.Sort(file.Order(p.Files))
 		for _, f := range p.Files {
-			if result, err := license.SearchHeaders(f); err != nil {
+			if len(f.Text) == 0 {
+				continue
+			}
+			if results, err := license.SearchHeaders(f); err != nil {
 				return fmt.Errorf("Issue analyzing Project defined in [%v]: %v\n", p.ReadmePath, err)
 			} else {
-				p.SearchResults = append(p.SearchResults, result...)
+				p.SearchResults = append(p.SearchResults, results...)
 			}
 		}
 	}
+
+	// Keep track of all license patterns that went unused.
+	license.RecordUnusedPatterns()
 	return nil
 }

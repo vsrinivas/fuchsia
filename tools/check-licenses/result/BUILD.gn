@@ -8,8 +8,11 @@ import("//build/go/go_test.gni")
 go_library("result") {
   sources = [
     "config.go",
+    "csv.go",
+    "dedup.go",
     "init.go",
     "metrics.go",
+    "notice_filter_fx_gn_gen.go",
     "result.go",
     "template.go",
   ]

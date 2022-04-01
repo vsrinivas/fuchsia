@@ -15,7 +15,8 @@ type ResultMetrics struct {
 }
 
 const (
-	NumInitTemplates = "Number of initialized templates"
+	NumInitTemplates  = "Number of initialized templates"
+	NotFoundInFileMap = "Not Found in File Map"
 )
 
 var Metrics *ResultMetrics

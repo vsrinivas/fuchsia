@@ -5,11 +5,13 @@
 package result
 
 type ResultConfig struct {
-	FuchsiaDir string      `json:"fuchsiaDir"`
-	OutputDir  string      `json:"outputdir"`
-	Outputs    []string    `json:"outputs"`
-	Templates  []*Template `json:"templates"`
-	Zip        bool        `json:"zip"`
+	FuchsiaDir      string      `json:"fuchsiaDir"`
+	OutputDir       string      `json:"outputdir"`
+	Outputs         []string    `json:"outputs"`
+	Templates       []*Template `json:"templates"`
+	Zip             bool        `json:"zip"`
+	ExitOnError     bool        `json:"exitOnError"`
+	GnGenOutputFile string      `json:"gnGenOutputFile"`
 
 	DiffNotice string `json:"diffnotice"`
 }
@@ -26,7 +28,7 @@ type DiffNotice struct {
 
 var Config *ResultConfig
 
-func NewResultConfig() *ResultConfig {
+func NewConfig() *ResultConfig {
 	return &ResultConfig{
 		Outputs:   make([]string, 0),
 		Templates: make([]*Template, 0),
@@ -34,6 +36,9 @@ func NewResultConfig() *ResultConfig {
 }
 
 func (c *ResultConfig) Merge(other *ResultConfig) {
+	if c.FuchsiaDir == "" {
+		c.FuchsiaDir = other.FuchsiaDir
+	}
 	if c.OutputDir == "" {
 		c.OutputDir = other.OutputDir
 	}
@@ -42,5 +47,9 @@ func (c *ResultConfig) Merge(other *ResultConfig) {
 	c.Zip = c.Zip || other.Zip
 	if c.DiffNotice == "" {
 		c.DiffNotice = other.DiffNotice
+	}
+	c.ExitOnError = c.ExitOnError || other.ExitOnError
+	if c.GnGenOutputFile == "" {
+		c.GnGenOutputFile = other.GnGenOutputFile
 	}
 }

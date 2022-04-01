@@ -53,14 +53,21 @@ func NewFileData(path string, content []byte, filetype FileType) ([]*FileData, e
 	// This is most likely a regular source file in the repository.
 	// May or may not have copyright information.
 	case Any:
-		// TODO(jcecil): Read in a few lines of text and store it away.
-		// For now, lets skip reading these files at all.
+		data = append(data, &FileData{
+			FilePath:   path,
+			LineNumber: 0,
+			Data:       bytes.TrimSpace(content),
+		})
 
 	// File.LicenseFormat == CopyrightHeader
 	// All source files belonging to "The Fuchsia Authors" (fuchsia.git)
 	// must contain Copyright header information.
 	case CopyrightHeader:
-		// TODO(jcecil): Read in a few lines of text and store it away.
+		data = append(data, &FileData{
+			FilePath:   path,
+			LineNumber: 0,
+			Data:       bytes.TrimSpace(content),
+		})
 
 	// File.LicenseFormat == SingleLicense
 	// Regular LICENSE files that contain text for a single license.
@@ -123,14 +130,21 @@ func NewFileData(path string, content []byte, filetype FileType) ([]*FileData, e
 	return data, nil
 }
 
+func (fd *FileData) SetData(data []byte) {
+	fd.Data = data
+	fd.hash = ""
+	fd.Hash()
+}
+
 // Hash the content of this filedata object, to help detect duplicate texts
 // and help reduce the final NOTICE filesize.
 func (fd *FileData) Hash() string {
 	if len(fd.hash) > 0 {
 		return fd.hash
 	}
+
 	hasher := sha1.New()
-	hasher.Write(fd.Data)
+	hasher.Write(bytes.TrimSpace(fd.Data))
 	fd.hash = base64.URLEncoding.EncodeToString(hasher.Sum(nil))
 	return fd.hash
 }

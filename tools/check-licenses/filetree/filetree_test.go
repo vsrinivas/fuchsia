@@ -65,7 +65,7 @@ func setupFileTreeTestDir(name string, t *testing.T) (string, string) {
 
 	// Unmarshal the config json data into the Config object, and run
 	// NewFileTree.
-	c := NewFileTreeConfig()
+	c := NewConfig()
 	if err = json.Unmarshal(configJson, c); err != nil {
 		t.Fatal(err)
 	}
