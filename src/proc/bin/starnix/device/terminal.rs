@@ -42,7 +42,6 @@ impl TTYState {
 
     /// Release the terminal identifier into the set of available identifier.
     pub fn release_terminal(&self, id: u32) -> Result<(), Errno> {
-        unlink_ptr_node_if_exists(&self.fs, id)?;
         self.pts_ids_set.lock().release(id);
         self.terminals.write().remove(&id);
         Ok(())

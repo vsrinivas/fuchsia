@@ -38,14 +38,6 @@ pub fn create_pts_node(fs: &FileSystemHandle, id: u32) -> Result<(), Errno> {
     Ok(())
 }
 
-pub fn unlink_ptr_node_if_exists(fs: &FileSystemHandle, id: u32) -> Result<(), Errno> {
-    let pts_filename = id.to_string();
-    match fs.root().unlink(pts_filename.as_bytes(), UnlinkKind::NonDirectory) {
-        Err(e) if e == ENOENT => Ok(()),
-        other => other,
-    }
-}
-
 fn init_devpts(kernel: &Kernel) -> FileSystemHandle {
     let fs = TmpFs::new();
 
@@ -66,7 +58,7 @@ fn init_devpts(kernel: &Kernel) -> FileSystemHandle {
                 .unwrap();
         }
         // Register ptmx device type
-        registry.register_chrdev(DevPtmx::new(state), DeviceType::PTMX).unwrap();
+        registry.register_chrdev(DevPtmx::new(fs.clone(), state), DeviceType::PTMX).unwrap();
     }
 
     fs
@@ -77,13 +69,22 @@ fn get_device_type_for_pts(id: u32) -> DeviceType {
     DeviceType::new(DEVPTS_FIRST_MAJOR + id / 256, id % 256)
 }
 
+fn unlink_ptr_node_if_exists(fs: &FileSystemHandle, id: u32) -> Result<(), Errno> {
+    let pts_filename = id.to_string();
+    match fs.root().unlink(pts_filename.as_bytes(), UnlinkKind::NonDirectory) {
+        Err(e) if e == ENOENT => Ok(()),
+        other => other,
+    }
+}
+
 struct DevPtmx {
+    fs: FileSystemHandle,
     state: Arc<TTYState>,
 }
 
 impl DevPtmx {
-    pub fn new(state: Arc<TTYState>) -> Self {
-        Self { state }
+    pub fn new(fs: FileSystemHandle, state: Arc<TTYState>) -> Self {
+        Self { fs, state }
     }
 }
 
@@ -100,17 +101,24 @@ impl DeviceOps for DevPtmx {
     ) -> Result<Box<dyn FileOps>, Errno> {
         let terminal = self.state.get_next_terminal()?;
 
-        Ok(Box::new(DevPtmxFile::new(terminal)))
+        Ok(Box::new(DevPtmxFile::new(self.fs.clone(), terminal)))
     }
 }
 
 struct DevPtmxFile {
+    fs: FileSystemHandle,
     terminal: Arc<Terminal>,
 }
 
 impl DevPtmxFile {
-    pub fn new(terminal: Arc<Terminal>) -> Self {
-        Self { terminal }
+    pub fn new(fs: FileSystemHandle, terminal: Arc<Terminal>) -> Self {
+        Self { fs, terminal }
+    }
+}
+
+impl Drop for DevPtmxFile {
+    fn drop(&mut self) {
+        unlink_ptr_node_if_exists(&self.fs, self.terminal.id).unwrap();
     }
 }
 
@@ -180,6 +188,7 @@ impl FileOps for DevPtmxFile {
     ) -> Result<SyscallResult, Errno> {
         match request {
             TIOCGPTN => {
+                // Get the therminal id.
                 if user_addr.is_null() {
                     return error!(EINVAL);
                 }
@@ -189,6 +198,7 @@ impl FileOps for DevPtmxFile {
                 Ok(SUCCESS)
             }
             TIOCGPTLCK => {
+                // Get the lock status.
                 if user_addr.is_null() {
                     return error!(EINVAL);
                 }
@@ -198,6 +208,7 @@ impl FileOps for DevPtmxFile {
                 Ok(SUCCESS)
             }
             TIOCSPTLCK => {
+                // Lock/Unlock the terminal.
                 if user_addr.is_null() {
                     return error!(EINVAL);
                 }
@@ -207,6 +218,7 @@ impl FileOps for DevPtmxFile {
                 *self.terminal.locked.write() = value != 0;
                 Ok(SUCCESS)
             }
+
             _ => {
                 tracing::error!("ptmx received unknown ioctl request 0x{:08x}", request);
                 error!(EINVAL)
@@ -241,11 +253,13 @@ impl DeviceOps for DevPts {
     }
 }
 
-struct DevPtsFile {}
+struct DevPtsFile {
+    _terminal: Arc<Terminal>,
+}
 
 impl DevPtsFile {
-    pub fn new(_terminal: Arc<Terminal>) -> Self {
-        Self {}
+    pub fn new(terminal: Arc<Terminal>) -> Self {
+        Self { _terminal: terminal }
     }
 }
 
@@ -337,17 +351,25 @@ mod tests {
         Ok(result)
     }
 
+    fn open_component(
+        kernel: &Kernel,
+        fs: &FileSystemHandle,
+        name: &FsStr,
+    ) -> Result<FileHandle, Errno> {
+        let component = fs.root().component_lookup(name)?;
+        Ok(FileObject::new_anonymous(
+            component.node.open(kernel, OpenFlags::RDONLY)?,
+            component.node.clone(),
+            OpenFlags::RDWR,
+        ))
+    }
+
     fn open_ptmx_and_unlock(
         kernel: &Kernel,
         task: &CurrentTask,
         fs: &FileSystemHandle,
     ) -> Result<FileHandle, Errno> {
-        let ptmx = fs.root().component_lookup(b"ptmx")?;
-        let file = FileObject::new_anonymous(
-            ptmx.node.open(kernel, OpenFlags::RDONLY)?,
-            ptmx.node.clone(),
-            OpenFlags::RDWR,
-        );
+        let file = open_component(kernel, fs, b"ptmx")?;
 
         // Unlock terminal
         ioctl::<i32>(task, &file, TIOCSPTLCK, &0)?;
@@ -373,7 +395,9 @@ mod tests {
         let fs = dev_pts_fs(&kernel);
         let root = fs.root();
         root.component_lookup(b"0").unwrap_err();
-        open_ptmx_and_unlock(&kernel, &task, &fs)?;
+        let ptmx = open_ptmx_and_unlock(&kernel, &task, &fs)?;
+        let _pts = open_component(&kernel, &fs, b"0")?;
+        std::mem::drop(ptmx);
         root.component_lookup(b"0").unwrap_err();
 
         Ok(())
@@ -435,17 +459,11 @@ mod tests {
     fn test_unknown_ioctl() -> Result<(), anyhow::Error> {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
-        let root = fs.root();
 
         let ptmx = open_ptmx_and_unlock(&kernel, &task, &fs)?;
         ptmx.ioctl(&task, 42, UserAddress::default()).unwrap_err();
 
-        let pts = root.component_lookup(b"0")?;
-        let pts_file = FileObject::new_anonymous(
-            pts.node.open(&kernel, OpenFlags::RDONLY)?,
-            pts.node.clone(),
-            OpenFlags::RDONLY,
-        );
+        let pts_file = open_component(&kernel, &fs, b"0")?;
         pts_file.ioctl(&task, 42, UserAddress::default()).unwrap_err();
 
         Ok(())
@@ -471,12 +489,7 @@ mod tests {
     fn test_new_terminal_is_locked() -> Result<(), anyhow::Error> {
         let (kernel, _task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
-        let ptmx = fs.root().component_lookup(b"ptmx")?;
-        let _ptmx_file = FileObject::new_anonymous(
-            ptmx.node.open(&kernel, OpenFlags::RDONLY)?,
-            ptmx.node.clone(),
-            OpenFlags::RDWR,
-        );
+        let _ptmx_file = open_component(&kernel, &fs, b"ptmx")?;
 
         let pts = fs.root().component_lookup(b"0")?;
         assert_eq!(pts.node.open(&kernel, OpenFlags::RDONLY).map(|_| ()).unwrap_err(), EIO);
