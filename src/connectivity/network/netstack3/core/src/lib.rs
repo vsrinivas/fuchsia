@@ -66,10 +66,11 @@ pub use crate::{
             state::{IpDeviceConfiguration, Ipv4DeviceConfiguration, Ipv6DeviceConfiguration},
             IpDeviceEvent,
         },
+        forwarding::AddRouteError,
         icmp,
         socket::{IpSockCreationError, IpSockRouteError, IpSockSendError, IpSockUnroutableError},
-        EntryDest, EntryDestEither, EntryEither, IpExt, IpLayerEvent, Ipv4StateBuilder,
-        Ipv6StateBuilder, TransportIpContext,
+        AddableEntryEither, EntryEither, IpExt, IpLayerEvent, Ipv4StateBuilder, Ipv6StateBuilder,
+        TransportIpContext,
     },
     transport::{
         udp::{
@@ -541,16 +542,17 @@ pub fn del_ip_addr<D: EventDispatcher, C: BlanketCoreContext>(
 /// Adds a route to the forwarding table.
 pub fn add_route<D: EventDispatcher, C: BlanketCoreContext>(
     ctx: &mut Ctx<D, C>,
-    entry: EntryEither<DeviceId>,
-) -> Result<(), error::NetstackError> {
-    let (subnet, dest) = entry.into_subnet_dest();
-    match dest {
-        EntryDest::Local { device } => map_addr_version!(
+    entry: AddableEntryEither<DeviceId>,
+) -> Result<(), AddRouteError> {
+    let (subnet, device, gateway) = entry.into_subnet_device_gateway();
+    match (device, gateway) {
+        (Some(device), None) => map_addr_version!(
             subnet: SubnetEither;
             crate::ip::add_device_route::<Ipv4, _>(ctx, subnet, device),
             crate::ip::add_device_route::<Ipv6, _>(ctx, subnet, device)
-        ),
-        EntryDest::Remote { next_hop } => {
+        )
+        .map_err(From::from),
+        (None, Some(next_hop)) => {
             let next_hop = next_hop.into();
             map_addr_version!(
                 (subnet: SubnetEither, next_hop: IpAddr);
@@ -559,8 +561,8 @@ pub fn add_route<D: EventDispatcher, C: BlanketCoreContext>(
                 unreachable!()
             )
         }
+        x => todo!("TODO(https://fxbug.dev/96680): support setting gateway route with device; (device, gateway) = {:?}", x),
     }
-    .map_err(From::from)
 }
 
 /// Delete a route from the forwarding table, returning `Err` if no

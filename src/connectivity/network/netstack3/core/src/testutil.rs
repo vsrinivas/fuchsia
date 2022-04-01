@@ -32,7 +32,7 @@ use crate::{
     ip::{
         icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
         socket::IpSockCreationError,
-        EntryDest, EntryEither, SendIpPacketMeta,
+        AddableEntryEither, SendIpPacketMeta,
     },
     transport::udp::{BufferUdpContext, UdpContext},
     BlanketCoreContext, Ctx, EventDispatcher, StackStateBuilder, TimerId,
@@ -539,7 +539,7 @@ impl DummyEventDispatcherBuilder {
             let device = *idx_to_device_id.get(&idx).unwrap();
             crate::add_route(
                 &mut ctx,
-                EntryEither::new(subnet, EntryDest::Local { device })
+                AddableEntryEither::new(subnet, Some(device), None)
                     .expect("valid forwarding table entry"),
             )
             .expect("add device route");
@@ -547,7 +547,7 @@ impl DummyEventDispatcherBuilder {
         for (subnet, next_hop) in routes {
             crate::add_route(
                 &mut ctx,
-                EntryEither::new(subnet, EntryDest::Remote { next_hop })
+                AddableEntryEither::new(subnet, None, Some(next_hop.into()))
                     .expect("valid forwarding table entry"),
             )
             .expect("add remote route");

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use core::convert::Infallible as Never;
+use core::{convert::Infallible as Never, num::NonZeroU64};
 
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_stack as fidl_net_stack;
@@ -11,7 +11,7 @@ use net_types::ip::{
     SubnetEither, SubnetError,
 };
 use net_types::{SpecifiedAddr, UnicastAddr, Witness};
-use netstack3_core::{DeviceId, EntryDest, EntryEither, NetstackError};
+use netstack3_core::{AddRouteError, AddableEntryEither, DeviceId, EntryEither, NetstackError};
 
 /// A core type which can be fallibly converted from the FIDL type `F`.
 ///
@@ -158,6 +158,17 @@ impl TryIntoFidl<fidl_net_stack::Error> for NetstackError {
             NetstackError::Exists => Ok(fidl_net_stack::Error::AlreadyExists),
             NetstackError::NotFound => Ok(fidl_net_stack::Error::NotFound),
             _ => Ok(fidl_net_stack::Error::Internal),
+        }
+    }
+}
+
+impl TryIntoFidl<fidl_net_stack::Error> for AddRouteError {
+    type Error = Never;
+
+    fn try_into_fidl(self) -> Result<fidl_net_stack::Error, Never> {
+        match self {
+            AddRouteError::AlreadyExists => Ok(fidl_net_stack::Error::AlreadyExists),
+            AddRouteError::GatewayNotNeighbor => Ok(fidl_net_stack::Error::BadState),
         }
     }
 }
@@ -432,27 +443,21 @@ impl From<ForwardingConversionError> for fidl_net_stack::Error {
     }
 }
 
-impl TryFromFidlWithContext<fidl_net_stack::ForwardingEntry> for EntryEither<DeviceId> {
+impl TryFromFidlWithContext<fidl_net_stack::ForwardingEntry> for AddableEntryEither<DeviceId> {
     type Error = ForwardingConversionError;
 
     fn try_from_fidl_with_ctx<C: ConversionContext>(
         ctx: &C,
         fidl: fidl_net_stack::ForwardingEntry,
-    ) -> Result<EntryEither<DeviceId>, ForwardingConversionError> {
+    ) -> Result<AddableEntryEither<DeviceId>, ForwardingConversionError> {
         let fidl_net_stack::ForwardingEntry { subnet, device_id, next_hop, metric: _ } = fidl;
         let subnet = subnet.try_into_core()?;
-        let destination = match (device_id, next_hop) {
-            (device_id, None) => {
-                EntryDest::Local { device: device_id.try_into_core_with_ctx(ctx)? }
-            }
-            (device_id, Some(next_hop)) => {
-                if device_id != 0 {
-                    return Err(ForwardingConversionError::TypeMismatch);
-                }
-                EntryDest::Remote { next_hop: (*next_hop).try_into_core()? }
-            }
-        };
-        EntryEither::new(subnet, destination).ok_or(ForwardingConversionError::TypeMismatch)
+        let device =
+            NonZeroU64::new(device_id).map(|d| d.get().try_into_core_with_ctx(ctx)).transpose()?;
+        let next_hop: Option<SpecifiedAddr<IpAddr>> =
+            next_hop.map(|next_hop| (*next_hop).try_into_core()).transpose()?;
+        AddableEntryEither::new(subnet, device, next_hop.map(Into::into))
+            .ok_or(ForwardingConversionError::TypeMismatch)
     }
 }
 
@@ -463,14 +468,12 @@ impl TryIntoFidlWithContext<fidl_net_stack::ForwardingEntry> for EntryEither<Dev
         self,
         ctx: &C,
     ) -> Result<fidl_net_stack::ForwardingEntry, DeviceNotFoundError> {
-        let (subnet, dest) = self.into_subnet_dest();
-        let (device_id, next_hop) = match dest {
-            EntryDest::Local { device } => (device.try_into_fidl_with_ctx(ctx)?, None),
-            EntryDest::Remote { next_hop } => {
-                let next_hop: IpAddr = next_hop.get().into();
-                (0, Some(Box::new(next_hop.into_fidl())))
-            }
-        };
+        let (subnet, device, gateway) = self.into_subnet_device_gateway();
+        let device_id = device.try_into_fidl_with_ctx(ctx)?;
+        let next_hop = gateway.map(|next_hop| {
+            let next_hop: SpecifiedAddr<IpAddr> = next_hop.into();
+            Box::new(next_hop.get().into_fidl())
+        });
         Ok(fidl_net_stack::ForwardingEntry {
             subnet: subnet.into_fidl(),
             device_id,
@@ -530,32 +533,13 @@ impl TryIntoFidl<fidl_net::InterfaceAddress> for InterfaceAddr {
 #[cfg(test)]
 mod tests {
     use fidl_fuchsia_net as fidl_net;
-    use fidl_fuchsia_net_stack as fidl_net_stack;
-    use net_types::ethernet::Mac;
     use net_types::ip::{Ipv4Addr, Ipv6Addr};
-    use net_types::UnicastAddr;
 
     use super::*;
-    use crate::bindings::NetstackContext;
-    use netstack3_core::EntryDestEither;
 
     struct FakeConversionContext {
         binding: u64,
         core: DeviceId,
-    }
-
-    impl FakeConversionContext {
-        fn new() -> Self {
-            // we need a valid context to be able to create DeviceIds, so
-            // we just create it, get the device id and then destroy everything
-            let ctx = NetstackContext::default();
-            let core = ctx
-                .try_lock()
-                .unwrap()
-                .state
-                .add_ethernet_device(UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 7])).unwrap(), 1500);
-            Self { binding: 1, core }
-        }
     }
 
     impl ConversionContext for FakeConversionContext {
@@ -621,45 +605,6 @@ mod tests {
         )
     }
 
-    enum ForwardingDestination {
-        DeviceId(u64),
-        NextHop(fidl_net::IpAddress),
-    }
-
-    fn create_local_dest_entry(
-        binding: u64,
-        core: DeviceId,
-    ) -> (EntryDestEither<DeviceId>, ForwardingDestination) {
-        let core = EntryDest::<IpAddr, _>::Local { device: core };
-        let fidl = ForwardingDestination::DeviceId(binding);
-        (core, fidl)
-    }
-
-    fn create_remote_dest_entry(
-        addr: (IpAddr, fidl_net::IpAddress),
-    ) -> (EntryDestEither<DeviceId>, ForwardingDestination) {
-        let (core, fidl) = addr;
-        let core = EntryDest::<IpAddr, _>::Remote { next_hop: SpecifiedAddr::new(core).unwrap() };
-        let fidl = ForwardingDestination::NextHop(fidl);
-        (core, fidl)
-    }
-
-    fn create_forwarding_entry(
-        subnet: (SubnetEither, fidl_net::Subnet),
-        dest: (EntryDestEither<DeviceId>, ForwardingDestination),
-    ) -> (EntryEither<DeviceId>, fidl_net_stack::ForwardingEntry) {
-        let (core_s, fidl_s) = subnet;
-        let (core_d, fidl_d) = dest;
-        let (device_id, next_hop) = match fidl_d {
-            ForwardingDestination::DeviceId(device_id) => (device_id, None),
-            ForwardingDestination::NextHop(next_hop) => (0, Some(Box::new(next_hop))),
-        };
-        (
-            EntryEither::new(core_s, core_d).unwrap(),
-            fidl_net_stack::ForwardingEntry { subnet: fidl_s, device_id, next_hop, metric: 0 },
-        )
-    }
-
     #[test]
     fn test_addr_v4() {
         let bytes = [192, 168, 0, 1];
@@ -716,99 +661,6 @@ mod tests {
 
         assert_eq!(fidl, core.into_fidl());
         assert_eq!(core, fidl.try_into_core().unwrap());
-    }
-
-    #[test]
-    fn test_forwarding_entry_v4() {
-        let dst_bytes = [192, 168, 0, 1];
-        let subnet_bytes = [192, 168, 0, 0];
-        let prefix = 24;
-        let ctx = EmptyFakeConversionContext;
-        let (core, fidl) = create_forwarding_entry(
-            create_subnet(create_addr_v4(subnet_bytes), prefix),
-            create_remote_dest_entry(create_addr_v4(dst_bytes)),
-        );
-
-        assert_eq!(fidl, core.try_into_fidl_with_ctx(&ctx).unwrap());
-        assert_eq!(core, fidl.try_into_core_with_ctx(&ctx).unwrap());
-    }
-
-    #[test]
-    fn test_forwarding_entry_v6() {
-        let dst_bytes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
-        let subnet_bytes = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
-        let prefix = 64;
-        let ctx = EmptyFakeConversionContext;
-        let (core, fidl) = create_forwarding_entry(
-            create_subnet(create_addr_v6(subnet_bytes), prefix),
-            create_remote_dest_entry(create_addr_v6(dst_bytes)),
-        );
-
-        assert_eq!(fidl, core.try_into_fidl_with_ctx(&ctx).unwrap());
-        assert_eq!(core, fidl.try_into_core_with_ctx(&ctx).unwrap());
-    }
-
-    #[test]
-    fn test_forwarding_entry_device() {
-        let ctx = FakeConversionContext::new();
-        let subnet_bytes = [192, 168, 0, 0];
-        let prefix = 24;
-
-        let (core, fidl) = create_forwarding_entry(
-            create_subnet(create_addr_v4(subnet_bytes), prefix),
-            create_local_dest_entry(ctx.binding, ctx.core),
-        );
-
-        assert_eq!(fidl, core.try_into_fidl_with_ctx(&ctx).unwrap());
-        assert_eq!(core, fidl.try_into_core_with_ctx(&ctx).unwrap());
-    }
-
-    #[test]
-    fn test_forwarding_entry_errors() {
-        let valid_ctx = FakeConversionContext::new();
-        let ctx = EmptyFakeConversionContext;
-        let subnet_bytes = [192, 168, 0, 0];
-        let prefix = 24;
-        let bad_addr_bytes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
-
-        let (core, mut fidl) = create_forwarding_entry(
-            create_subnet(create_addr_v4(subnet_bytes), prefix),
-            create_local_dest_entry(valid_ctx.binding, valid_ctx.core),
-        );
-        // check device not found works:
-        assert!(fidl_net_stack::ForwardingEntry::try_from_core_with_ctx(&ctx, core).is_err());
-        assert_eq!(
-            EntryEither::try_from_fidl_with_ctx(&ctx, fidl).unwrap_err(),
-            ForwardingConversionError::DeviceNotFound
-        );
-
-        // try with an invalid subnet (fidl is not Clone, so we keep
-        // re-generating it from core):
-        fidl = core.try_into_fidl_with_ctx(&valid_ctx).unwrap();
-        fidl.subnet.prefix_len = 64;
-        assert_eq!(
-            EntryEither::try_from_fidl_with_ctx(&ctx, fidl).unwrap_err(),
-            ForwardingConversionError::Subnet(SubnetError::PrefixTooLong)
-        );
-
-        // Try with a mismatched address:
-        fidl = core.try_into_fidl_with_ctx(&valid_ctx).unwrap();
-        {
-            let (_, destination) = create_remote_dest_entry(create_addr_v6(bad_addr_bytes));
-            match destination {
-                ForwardingDestination::DeviceId(device_id) => {
-                    fidl.device_id = device_id;
-                }
-                ForwardingDestination::NextHop(next_hop) => {
-                    fidl.next_hop = Some(Box::new(next_hop));
-                }
-            }
-        }
-
-        assert_eq!(
-            EntryEither::try_from_fidl_with_ctx(&ctx, fidl).unwrap_err(),
-            ForwardingConversionError::TypeMismatch
-        );
     }
 
     #[test]

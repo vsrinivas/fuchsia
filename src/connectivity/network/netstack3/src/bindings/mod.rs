@@ -55,10 +55,10 @@ use netstack3_core::{
     add_ip_addr_subnet, add_route,
     context::{EventContext, InstantContext, RngContext, TimerContext},
     handle_timer, icmp, initialize_device, remove_device, set_ipv4_configuration,
-    set_ipv6_configuration, BlanketCoreContext, BufferUdpContext, Ctx, DeviceId,
-    DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher, IpDeviceConfiguration,
-    IpExt, IpSockCreationError, Ipv4DeviceConfiguration, Ipv6DeviceConfiguration, TimerId,
-    UdpBoundId, UdpConnId, UdpContext, UdpListenerId,
+    set_ipv6_configuration, AddableEntryEither, BlanketCoreContext, BufferUdpContext, Ctx,
+    DeviceId, DeviceLayerEventDispatcher, EventDispatcher, IpDeviceConfiguration, IpExt,
+    IpSockCreationError, Ipv4DeviceConfiguration, Ipv6DeviceConfiguration, TimerId, UdpBoundId,
+    UdpConnId, UdpContext, UdpListenerId,
 };
 
 /// Default MTU for loopback.
@@ -770,11 +770,8 @@ impl NetstackSeed {
             .expect("error adding IPv4 loopback address");
             add_route(
                 ctx,
-                EntryEither::new(
-                    Ipv4::LOOPBACK_SUBNET.into(),
-                    EntryDest::Local { device: loopback },
-                )
-                .expect("error creating IPv4 route entry"),
+                AddableEntryEither::new(Ipv4::LOOPBACK_SUBNET.into(), Some(loopback), None)
+                    .expect("error creating IPv4 route entry"),
             )
             .expect("error adding IPv4 loopback on-link subnet route");
             add_ip_addr_subnet(
@@ -791,11 +788,8 @@ impl NetstackSeed {
             .expect("error adding IPv6 loopback address");
             add_route(
                 ctx,
-                EntryEither::new(
-                    Ipv6::LOOPBACK_SUBNET.into(),
-                    EntryDest::Local { device: loopback },
-                )
-                .expect("error creating IPv6 route entry"),
+                AddableEntryEither::new(Ipv6::LOOPBACK_SUBNET.into(), Some(loopback), None)
+                    .expect("error creating IPv6 route entry"),
             )
             .expect("error adding IPv6 loopback on-link subnet route");
 

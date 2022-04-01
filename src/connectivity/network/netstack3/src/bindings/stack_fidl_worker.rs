@@ -23,8 +23,8 @@ use futures::{TryFutureExt as _, TryStreamExt as _};
 use log::{debug, error};
 use net_types::{ethernet::Mac, SpecifiedAddr, UnicastAddr};
 use netstack3_core::{
-    add_ip_addr_subnet, add_route, del_ip_addr, del_route, get_all_routes, initialize_device, Ctx,
-    EntryEither,
+    add_ip_addr_subnet, add_route, del_ip_addr, del_route, get_all_routes, initialize_device,
+    AddableEntryEither, Ctx,
 };
 
 pub(crate) struct StackFidlWorker<C> {
@@ -306,7 +306,7 @@ where
         mut self,
         entry: ForwardingEntry,
     ) -> Result<(), fidl_net_stack::Error> {
-        let entry = match EntryEither::try_from_fidl_with_ctx(&self.ctx.dispatcher, entry) {
+        let entry = match AddableEntryEither::try_from_fidl_with_ctx(&self.ctx.dispatcher, entry) {
             Ok(entry) => entry,
             Err(e) => return Err(e.into()),
         };

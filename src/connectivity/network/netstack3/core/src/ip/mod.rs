@@ -55,7 +55,7 @@ use crate::{
             get_ipv4_device_state, get_ipv6_device_state, iter_ipv4_devices, iter_ipv6_devices,
             state::{AddressState, AssignedAddress as _, IpDeviceState},
         },
-        forwarding::{Destination, ForwardingTable},
+        forwarding::{AddRouteError, Destination, ForwardingTable},
         gmp::igmp::IgmpPacketHandler,
         icmp::{
             BufferIcmpHandler, IcmpHandlerIpExt, IcmpIpExt, IcmpIpTransportContext, IcmpState,
@@ -2007,7 +2007,7 @@ pub(crate) fn add_route<I: IpLayerStateIpExt<C::Instant, C::DeviceId>, C: IpLaye
     ctx: &mut C,
     subnet: Subnet<I::Addr>,
     next_hop: SpecifiedAddr<I::Addr>,
-) -> Result<(), ExistsError> {
+) -> Result<(), AddRouteError> {
     get_ip_layer_state_inner_mut(ctx)
         .table
         .add_route(subnet, next_hop)
@@ -2038,11 +2038,9 @@ pub(crate) fn del_route<I: IpLayerStateIpExt<C::Instant, C::DeviceId>, C: IpLaye
 ) -> Result<(), NotFoundError> {
     get_ip_layer_state_inner_mut(ctx).table.del_route(subnet).map(|removed| {
         on_routing_state_updated(ctx);
-        removed.into_iter().for_each(|entry| match entry.dest {
-            EntryDest::Local { device } => {
-                ctx.on_event(IpLayerEvent::DeviceRouteRemoved { device, subnet })
-            }
-            EntryDest::Remote { next_hop: _ } => (),
+        removed.into_iter().for_each(|Entry { subnet, device, gateway }| match gateway {
+            None => ctx.on_event(IpLayerEvent::DeviceRouteRemoved { device, subnet }),
+            Some(SpecifiedAddr { .. }) => (),
         });
     })
 }

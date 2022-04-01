@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom as _;
 use std::num::NonZeroU16;
 use std::ops::DerefMut as _;
@@ -24,9 +24,9 @@ use netstack3_core::{
     context::EventContext,
     get_all_ip_addr_subnets,
     icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
-    initialize_device, BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, EntryDest,
-    EntryEither, IpExt, IpSockCreationError, Ipv6DeviceConfiguration, StackStateBuilder,
-    UdpBoundId, UdpContext,
+    initialize_device, AddableEntryEither, BufferUdpContext, Ctx, DeviceId,
+    DeviceLayerEventDispatcher, IpExt, IpSockCreationError, Ipv6DeviceConfiguration,
+    StackStateBuilder, UdpBoundId, UdpContext,
 };
 use packet::{Buf, BufferMut, Serializer};
 use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
@@ -1129,8 +1129,6 @@ async fn test_add_device_routes() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_list_del_routes() {
-    use crate::bindings::util::TryIntoFidlWithContext;
-
     // create a stack and add a single endpoint to it so we have the interface
     // id:
     let mut t = TestSetupBuilder::new()
@@ -1143,95 +1141,103 @@ async fn test_list_del_routes() {
     let test_stack = t.get(0);
     let stack = test_stack.connect_stack().unwrap();
     let if_id = test_stack.get_endpoint_id(1);
-
-    let route1 = EntryEither::new(
-        SubnetEither::new(Ipv4Addr::from([192, 168, 0, 0]).into(), 24).unwrap(),
-        EntryDest::Local { device: test_stack.ctx().await.dispatcher.get_core_id(if_id).unwrap() },
+    let device = test_stack.ctx().await.dispatcher.get_core_id(if_id);
+    let route1_subnet_bytes = [192, 168, 0, 0];
+    let route1_subnet_prefix = 24;
+    let route1 = AddableEntryEither::new(
+        SubnetEither::new(Ipv4Addr::from(route1_subnet_bytes).into(), route1_subnet_prefix)
+            .unwrap(),
+        device,
+        None,
     )
     .unwrap();
-    let route2 = EntryEither::new(
-        SubnetEither::new(Ipv4Addr::from([10, 0, 0, 0]).into(), 24).unwrap(),
-        EntryDest::Remote {
-            next_hop: SpecifiedAddr::new(Ipv4Addr::from([10, 0, 0, 1]).into()).unwrap(),
-        },
-    )
-    .unwrap();
+    let sub10 = SubnetEither::new(Ipv4Addr::from([10, 0, 0, 0]).into(), 24).unwrap();
+    let route2 = AddableEntryEither::new(sub10, device, None).unwrap();
+    let sub10_gateway = SpecifiedAddr::new(Ipv4Addr::from([10, 0, 0, 1])).map(Into::into);
+    let route3 = AddableEntryEither::new(sub10, None, sub10_gateway).unwrap();
 
     let () = test_stack
         .with_ctx(|ctx| {
             // add a couple of routes directly into core:
             netstack3_core::add_route(ctx, route1).unwrap();
             netstack3_core::add_route(ctx, route2).unwrap();
+            netstack3_core::add_route(ctx, route3).unwrap();
         })
         .await;
 
     let routes = stack.get_forwarding_table().await.expect("Can get forwarding table");
-    assert_eq!(routes.len(), 2);
-    let routes: Vec<_> = test_stack
-        .with_ctx(|ctx| {
-            routes
-                .into_iter()
-                .map(|e| EntryEither::try_from_fidl_with_ctx(&ctx.dispatcher, e).unwrap())
-                .collect()
-        })
-        .await;
-    assert!(routes.iter().any(|e| e == &route1));
-    assert!(routes.iter().any(|e| e == &route2));
+    let route3_with_device = AddableEntryEither::new(sub10, device, sub10_gateway).unwrap();
+    assert_eq!(
+        test_stack
+            .with_ctx(|ctx| {
+                routes
+                    .into_iter()
+                    .map(|e| {
+                        AddableEntryEither::try_from_fidl_with_ctx(&ctx.dispatcher, e).unwrap()
+                    })
+                    .collect::<HashSet<_>>()
+            })
+            .await,
+        HashSet::from([route1, route2, route3_with_device])
+    );
 
     // delete route1:
-    let mut fidl = test_stack
-        .with_ctx(|ctx| route1.try_into_fidl_with_ctx(&ctx.dispatcher).expect("valid FIDL"))
-        .await;
+    let mut fwd_entry = fidl_net_stack::ForwardingEntry {
+        subnet: fidl_net::Subnet {
+            addr: fidl_net::IpAddress::Ipv4(fidl_net::Ipv4Address { addr: route1_subnet_bytes }),
+            prefix_len: route1_subnet_prefix,
+        },
+        device_id: 0,
+        next_hop: None,
+        metric: 0,
+    };
     let () = stack
-        .del_forwarding_entry(&mut fidl)
+        .del_forwarding_entry(&mut fwd_entry)
         .await
         .squash_result()
         .expect("can delete device forwarding entry");
     // can't delete again:
     assert_eq!(
-        stack.del_forwarding_entry(&mut fidl).await.unwrap().unwrap_err(),
+        stack.del_forwarding_entry(&mut fwd_entry).await.unwrap().unwrap_err(),
         fidl_net_stack::Error::NotFound
     );
 
     // check that route was deleted (should've disappeared from core)
-    let all_routes: Vec<_> =
-        netstack3_core::get_all_routes(test_stack.ctx().await.deref_mut()).collect();
-    assert!(!all_routes.iter().any(|e| e == &route1));
-    assert!(all_routes.iter().any(|e| e == &route2));
-
-    // delete route2:
-    let mut fidl = test_stack
-        .with_ctx(|ctx| route2.try_into_fidl_with_ctx(&ctx.dispatcher).expect("valid FIDL"))
-        .await;
-    let () = stack
-        .del_forwarding_entry(&mut fidl)
-        .await
-        .squash_result()
-        .expect("can delete next-hop forwarding entry");
-    // can't delete again:
+    let routes = stack.get_forwarding_table().await.expect("Can get forwarding table");
     assert_eq!(
-        stack.del_forwarding_entry(&mut fidl).await.unwrap().unwrap_err(),
-        fidl_net_stack::Error::NotFound
+        test_stack
+            .with_ctx(|ctx| {
+                routes
+                    .into_iter()
+                    .map(|e| {
+                        AddableEntryEither::try_from_fidl_with_ctx(&ctx.dispatcher, e).unwrap()
+                    })
+                    .collect::<HashSet<_>>()
+            })
+            .await,
+        HashSet::from([route2, route3_with_device])
     );
-
-    // check that both routes were deleted (should've disappeared from core)
-    let all_routes: Vec<_> =
-        netstack3_core::get_all_routes(test_stack.ctx().await.deref_mut()).collect();
-    assert!(!all_routes.iter().any(|e| e == &route1));
-    assert!(!all_routes.iter().any(|e| e == &route2));
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn test_add_remote_routes() {
-    let mut t = TestSetupBuilder::new().add_empty_stack().build().await.unwrap();
+    let mut t = TestSetupBuilder::new()
+        .add_endpoint()
+        .add_stack(StackSetupBuilder::new().add_endpoint(1, None))
+        .build()
+        .await
+        .unwrap();
+
     let test_stack = t.get(0);
     let stack = test_stack.connect_stack().unwrap();
+    let device_id = test_stack.get_endpoint_id(1);
 
+    let subnet = fidl_net::Subnet {
+        addr: fidl_net::IpAddress::Ipv4(fidl_net::Ipv4Address { addr: [192, 168, 0, 0] }),
+        prefix_len: 24,
+    };
     let mut fwd_entry = fidl_net_stack::ForwardingEntry {
-        subnet: fidl_net::Subnet {
-            addr: fidl_net::IpAddress::Ipv4(fidl_net::Ipv4Address { addr: [192, 168, 0, 0] }),
-            prefix_len: 24,
-        },
+        subnet,
         device_id: 0,
         next_hop: Some(Box::new(fidl_net::IpAddress::Ipv4(fidl_net::Ipv4Address {
             addr: [192, 168, 0, 1],
@@ -1239,27 +1245,30 @@ async fn test_add_remote_routes() {
         metric: 0,
     };
 
+    // Cannot add gateway route without device set or on-link route to gateway.
+    assert_eq!(
+        stack.add_forwarding_entry(&mut fwd_entry).await.unwrap(),
+        Err(fidl_net_stack::Error::BadState)
+    );
+    let mut device_fwd_entry = fidl_net_stack::ForwardingEntry {
+        subnet: fwd_entry.subnet,
+        device_id,
+        next_hop: None,
+        metric: 0,
+    };
     let () = stack
-        .add_forwarding_entry(&mut fwd_entry)
+        .add_forwarding_entry(&mut device_fwd_entry)
         .await
         .squash_result()
-        .expect("Add forwarding entry succeeds");
+        .expect("add device route");
+
+    let () =
+        stack.add_forwarding_entry(&mut fwd_entry).await.squash_result().expect("add device route");
 
     // finally, check that bad routes will fail:
     // a duplicate entry should fail with AlreadyExists:
-    let mut bad_entry = fidl_net_stack::ForwardingEntry {
-        subnet: fidl_net::Subnet {
-            addr: fidl_net::IpAddress::Ipv4(fidl_net::Ipv4Address { addr: [192, 168, 0, 0] }),
-            prefix_len: 24,
-        },
-        device_id: 0,
-        next_hop: Some(Box::new(fidl_net::IpAddress::Ipv4(fidl_net::Ipv4Address {
-            addr: [192, 168, 0, 1],
-        }))),
-        metric: 0,
-    };
     assert_eq!(
-        stack.add_forwarding_entry(&mut bad_entry).await.unwrap().unwrap_err(),
-        fidl_net_stack::Error::AlreadyExists
+        stack.add_forwarding_entry(&mut fwd_entry).await.unwrap(),
+        Err(fidl_net_stack::Error::AlreadyExists)
     );
 }

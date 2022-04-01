@@ -8,6 +8,7 @@ use net_types::{
     ip::{Ip, IpAddress, Subnet},
     SpecifiedAddr,
 };
+use thiserror::Error;
 
 use crate::ip::*;
 
@@ -29,6 +30,24 @@ pub(crate) struct Destination<A: IpAddress, D> {
     pub(crate) device: D,
 }
 
+/// An error encountered when adding a forwarding entry.
+#[derive(Error, Debug, PartialEq)]
+pub enum AddRouteError {
+    /// Indicates that the route already exists.
+    #[error("Already exists")]
+    AlreadyExists,
+
+    /// Indicates the gateway is not a neighbor of the host.
+    #[error("Gateway is not a neighbor")]
+    GatewayNotNeighbor,
+}
+
+impl From<ExistsError> for AddRouteError {
+    fn from(ExistsError: ExistsError) -> AddRouteError {
+        AddRouteError::AlreadyExists
+    }
+}
+
 /// An IP forwarding table.
 ///
 /// `ForwardingTable` maps destination subnets to the nearest IP hosts (on the
@@ -40,8 +59,9 @@ pub struct ForwardingTable<I: Ip, D> {
     /// `table` may have redundant, but unique, paths to the same
     /// destination.
     ///
-    /// The entries are sorted based on the subnet's prefix length - larger
-    /// prefix lengths appear first.
+    /// The entries are sorted based on the subnet's prefix length and
+    /// local-ness; when there's a tie in prefix length, on-linkness breaks the
+    /// tie (with the on-link routes appearing before off-link ones).
     table: Vec<Entry<I::Addr, D>>,
 }
 
@@ -61,13 +81,22 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
             return Err(ExistsError);
         }
 
-        // Insert the new entry after the last route to a more specific subnet
-        // to maintain the invariant that the table is sorted by subnet prefix
-        // length.
-        let Entry { subnet, dest: _ } = entry;
+        // Insert the new entry after the last route to a more specific and/or
+        // local subnet to maintain the invariant that the table is sorted by
+        // subnet prefix length and local-ness.
+        let Entry { subnet, device: _, gateway: _ } = entry;
         let prefix = subnet.prefix();
         table.insert(
-            table.partition_point(|Entry { subnet, dest: _ }| subnet.prefix() > prefix),
+            table.partition_point(|Entry { subnet, device: _, gateway }| {
+                let subnet_prefix = subnet.prefix();
+                subnet_prefix > prefix
+                    || (subnet_prefix == prefix
+                        && match gateway {
+                            Some(SpecifiedAddr { .. }) => false,
+                            // on-link routes have a higher preference.
+                            None => true,
+                        })
+            }),
             entry,
         );
 
@@ -77,15 +106,32 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
     // TODO(joshlf): Should `next_hop` actually be restricted even further,
     // perhaps to unicast addresses?
 
-    /// Add a route to a destination subnet that requires going through another
-    /// node.
+    /// Add a route to a destination subnet that requires going through a
+    /// gateway.
+    ///
+    /// The egress device for the gateway is calculated before inserting the
+    /// route to the forwarding table. Note that the gateway must be a neighbor.
     pub(crate) fn add_route(
         &mut self,
         subnet: Subnet<I::Addr>,
-        next_hop: SpecifiedAddr<I::Addr>,
-    ) -> Result<(), ExistsError> {
-        debug!("adding route: {} -> {}", subnet, next_hop);
-        self.add_entry(Entry { subnet, dest: EntryDest::Remote { next_hop } })
+        gateway: SpecifiedAddr<I::Addr>,
+    ) -> Result<(), AddRouteError> {
+        debug!("adding route: {} -> {}", subnet, gateway);
+
+        let device = self.lookup(None, gateway).map_or(
+            Err(AddRouteError::GatewayNotNeighbor),
+            |Destination { next_hop, device }| {
+                // If the gateway is a neighbor, the next hop to the gateway
+                // should be the gateway itself.
+                if next_hop != gateway {
+                    Err(AddRouteError::GatewayNotNeighbor)
+                } else {
+                    Ok(device)
+                }
+            },
+        )?;
+
+        self.add_entry(Entry { subnet, device, gateway: Some(gateway) }).map_err(From::from)
     }
 
     /// Add a route to a destination subnet that lives on a link an interface is
@@ -96,7 +142,7 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         device: D,
     ) -> Result<(), ExistsError> {
         debug!("adding device route: {} -> {:?}", subnet, device);
-        self.add_entry(Entry { subnet, dest: EntryDest::Local { device } })
+        self.add_entry(Entry { subnet, device, gateway: None })
     }
 
     /// Delete all routes to a subnet, returning `Err` if no route was found to
@@ -159,113 +205,22 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
     /// routable and will return None even if they have been added to the table.
     pub(crate) fn lookup(
         &self,
-        device: Option<D>,
-        address: SpecifiedAddr<I::Addr>,
-    ) -> Option<Destination<I::Addr, D>> {
-        use alloc::vec;
-
-        let mut observed = vec![false; self.table.len()];
-        self.lookup_helper(device, address, &mut observed)
-    }
-
-    /// Find the destination a packet destined to `address` should be routed to
-    /// by inspecting the table.
-    ///
-    /// `observed` will be marked with each entry we have already observed to
-    /// prevent loops.
-    fn lookup_helper(
-        &self,
         local_device: Option<D>,
         address: SpecifiedAddr<I::Addr>,
-        observed: &mut Vec<bool>,
     ) -> Option<Destination<I::Addr, D>> {
+        let Self { table } = self;
+
         // Get all potential routes we could take to reach `address`.
-        let q = self.table.iter().enumerate().filter(|(_, Entry { subnet, dest })| {
-            subnet.contains(&address)
-                && match dest {
-                    EntryDest::Local { device } => {
-                        local_device.as_ref().map_or(true, |d| d == device)
-                    }
-                    EntryDest::Remote { .. } => true,
-                }
-        });
+        table.iter().find_map(|Entry { subnet, device, gateway }| {
+            (subnet.contains(&address) && local_device.as_ref().map_or(true, |d| d == device)).then(
+                || {
+                    let next_hop =
+                        if let Some(next_hop) = gateway { next_hop.clone() } else { address };
 
-        // The best route to reach `address` so far.
-        //
-        // Tuple of (ADDRESS_PREFIX, `Destination`).
-        let mut best_so_far: Option<(u8, Destination<I::Addr, D>)> = None;
-
-        for (i, e) in q {
-            // Check if we already observed this entry.
-            if observed[i] {
-                // If we already observed this entry, then that means we are
-                // hitting it again, indicating the following:
-                //  1) There is a loop.
-                //  2) The last time we hit this entry, we did not find a valid
-                //     destination.
-                // Given what we know, we skip checking it again.
-                continue;
-            }
-
-            // Mark the entry as now observed.
-            observed[i] = true;
-
-            match &e.dest {
-                EntryDest::Local { device } => {
-                    // If we have a best route so far and its subnet prefix is
-                    // greater than the one we are looking at right now, skip.
-                    // Otherwise, if the the subnet prefix is less than the one
-                    // we are looking at right now, or the prefixes are equal
-                    // but the existing best destination is a remote, update to
-                    // the this local.
-                    if let Some(best_so_far) = &mut best_so_far {
-                        if best_so_far.0 > e.subnet.prefix() {
-                            continue;
-                        } else if best_so_far.0 < e.subnet.prefix()
-                            || best_so_far.1.next_hop != address
-                        {
-                            // If the prefixes are equal, we know this is a
-                            // remote because for local destinations, the next
-                            // hop MUST match `address`.
-                            *best_so_far = (
-                                e.subnet.prefix(),
-                                Destination { next_hop: address, device: device.clone() },
-                            );
-                        }
-                    } else {
-                        // No best route exists, this is the best so far.
-                        best_so_far = Some((
-                            e.subnet.prefix(),
-                            Destination { next_hop: address, device: device.clone() },
-                        ));
-                    }
-                }
-                EntryDest::Remote { next_hop } => {
-                    // If we have a best route so far and its subnet prefix is
-                    // greater than or equal to the one we are looking at right
-                    // now, skip.
-                    if let Some(best_so_far) = best_so_far.clone() {
-                        if best_so_far.0 >= e.subnet.prefix() {
-                            continue;
-                        }
-                    }
-
-                    // If the subnet requires a next hop, attempt to resolve the
-                    // route to the next hop. If no route exists, ignore this
-                    // potential match as we have no path to `address` with this
-                    // route. If a route exists, keep it as the best route so
-                    // far.
-                    if let Some(dest) =
-                        self.lookup_helper(local_device.clone(), *next_hop, observed)
-                    {
-                        best_so_far = Some((e.subnet.prefix(), dest));
-                    }
-                }
-            }
-        }
-
-        // Return the best destination we know about.
-        best_so_far.map(|x| x.1)
+                    Destination { next_hop, device: device.clone() }
+                },
+            )
+        })
     }
 }
 
@@ -275,7 +230,7 @@ mod tests {
     use specialize_ip_macro::ip_test;
 
     use super::*;
-    use crate::{device::DeviceId, testutil::assert_empty};
+    use crate::{device::DeviceId, testutil::DummyEventDispatcherConfig};
 
     impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         /// Print the table.
@@ -287,51 +242,9 @@ mod tests {
                 return;
             }
 
-            for e in self.iter_table() {
-                trace!("    {} -> {:?} ", e.subnet, e.dest);
+            for Entry { subnet, device, gateway } in self.iter_table() {
+                trace!("    {} -> via {:?} on device {:?}", subnet, gateway, device);
             }
-        }
-
-        /// Delete the route to a subnet that goes through a next hop node,
-        /// returning `Err` if no route was found to be deleted.
-        fn del_next_hop_route(
-            &mut self,
-            subnet: Subnet<I::Addr>,
-            next_hop: SpecifiedAddr<I::Addr>,
-        ) -> Result<(), NotFoundError> {
-            debug!("deleting next hop route: {} -> {}", subnet, next_hop);
-            self.del_entry(Entry { subnet, dest: EntryDest::Remote { next_hop } })
-        }
-
-        /// Delete the route to a subnet that is considered on-link for a device,
-        /// returning `Err` if no route was found to be deleted.
-        fn del_device_route(
-            &mut self,
-            subnet: Subnet<I::Addr>,
-            device: D,
-        ) -> Result<(), NotFoundError> {
-            debug!("deleting device route: {} -> {:?}", subnet, device);
-            self.del_entry(Entry { subnet, dest: EntryDest::Local { device } })
-        }
-
-        /// Delete a route (`entry`) from this `ForwardingTable`, returning `Err` if
-        /// the route did not already exist.
-        fn del_entry(&mut self, entry: Entry<I::Addr, D>) -> Result<(), NotFoundError> {
-            let Self { table } = self;
-            let old_len = table.len();
-            table.retain(|e| *e != entry);
-            let new_len = table.len();
-
-            if old_len == new_len {
-                // If a path to `subnet` was not in our installed table, then it
-                // definitely won't be in our active routes cache.
-                return Err(NotFoundError);
-            }
-
-            // Must have deleted exactly 1 route if we reach this point.
-            assert_eq!(old_len - new_len, 1);
-
-            Ok(())
         }
     }
 
@@ -385,573 +298,115 @@ mod tests {
         }
     }
 
-    #[ip_test]
-    fn test_add_del_lookup_simple_ip<I: Ip + TestIpExt>() {
+    fn simple_setup<I: Ip + TestIpExt>() -> (
+        ForwardingTable<I, DeviceId>,
+        DummyEventDispatcherConfig<I::Addr>,
+        SpecifiedAddr<I::Addr>,
+        Subnet<I::Addr>,
+        DeviceId,
+    ) {
         let mut table = ForwardingTable::<I, DeviceId>::default();
 
         let config = I::DUMMY_CONFIG;
         let subnet = config.subnet;
         let device = DeviceId::new_ethernet(0);
-        let next_hop = I::next_hop_addr();
-        let next_hop_specific_subnet = Subnet::new(next_hop.get(), I::Addr::BYTES * 8).unwrap();
+        let (next_hop, next_hop_subnet) = I::next_hop_addr_sub(1, 1);
 
         // Should add the route successfully.
         table.add_device_route(subnet, device).unwrap();
-        assert_eq!(table.iter_table().count(), 1);
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == subnet) && (x.dest == EntryDest::Local { device })));
+        assert_eq!(
+            table.iter_table().collect::<Vec<_>>(),
+            &[&Entry { subnet, device, gateway: None }]
+        );
 
         // Attempting to add the route again should fail.
         assert_eq!(table.add_device_route(subnet, device).unwrap_err(), ExistsError);
-        assert_eq!(table.iter_table().count(), 1);
+        assert_eq!(
+            table.iter_table().collect::<Vec<_>>(),
+            &[&Entry { subnet, device, gateway: None }]
+        );
 
         // Add the route but as a next hop route.
+        table.add_device_route(next_hop_subnet, device).unwrap();
         table.add_route(subnet, next_hop).unwrap();
-        assert_eq!(table.iter_table().count(), 2);
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == subnet) && (x.dest == EntryDest::Local { device })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == subnet) && (x.dest == EntryDest::Remote { next_hop })));
+        assert_eq!(
+            table.iter_table().collect::<HashSet<_>>(),
+            HashSet::from([
+                &Entry { subnet, device, gateway: None },
+                &Entry { subnet: next_hop_subnet, device, gateway: None },
+                &Entry { subnet, device, gateway: Some(next_hop) },
+            ])
+        );
 
         // Attempting to add the route again should fail.
-        assert_eq!(table.add_route(subnet, next_hop).unwrap_err(), ExistsError);
-        assert_eq!(table.iter_table().count(), 2);
+        assert_eq!(table.add_route(subnet, next_hop).unwrap_err(), AddRouteError::AlreadyExists);
+        assert_eq!(
+            table.iter_table().collect::<HashSet<_>>(),
+            HashSet::from([
+                &Entry { subnet, device, gateway: None },
+                &Entry { subnet: next_hop_subnet, device, gateway: None },
+                &Entry { subnet, device, gateway: Some(next_hop) },
+            ])
+        );
+
+        (table, config, next_hop, next_hop_subnet, device)
+    }
+
+    #[ip_test]
+    fn test_simple_add_del<I: Ip + TestIpExt>() {
+        let (mut table, config, next_hop, next_hop_subnet, device) = simple_setup::<I>();
+        assert_eq!(table.iter_table().count(), 3);
 
         // Delete all routes to subnet.
         assert_eq!(
-            table.del_route(subnet).unwrap().into_iter().collect::<HashSet<_>>(),
+            table.del_route(config.subnet).unwrap().into_iter().collect::<HashSet<_>>(),
             HashSet::from([
-                Entry { subnet, dest: EntryDest::Local { device } },
-                Entry { subnet, dest: EntryDest::Remote { next_hop } }
+                Entry { subnet: config.subnet, device, gateway: None },
+                Entry { subnet: config.subnet, device, gateway: Some(next_hop) }
             ])
         );
-        assert_empty(table.iter_table());
 
-        // Add the next hop route.
-        table.add_route(subnet, next_hop).unwrap();
-        assert_eq!(table.iter_table().count(), 1);
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == subnet) && (x.dest == EntryDest::Remote { next_hop })));
+        assert_eq!(
+            table.iter_table().collect::<Vec<_>>(),
+            &[&Entry { subnet: next_hop_subnet, device, gateway: None }]
+        );
+    }
 
-        // Attempting to add the next hop route again should fail.
-        assert_eq!(table.add_route(subnet, next_hop).unwrap_err(), ExistsError);
-        assert_eq!(table.iter_table().count(), 1);
-
-        // Add a device route from the `next_hop` to some device.
-        table.add_device_route(next_hop_specific_subnet, device).unwrap();
-        assert_eq!(table.iter_table().count(), 2);
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == next_hop_specific_subnet)
-                && (x.dest == EntryDest::Local { device })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == subnet) && (x.dest == EntryDest::Remote { next_hop })));
+    #[ip_test]
+    fn test_simple_lookup<I: Ip + TestIpExt>() {
+        let (mut table, config, next_hop, _next_hop_subnet, device) = simple_setup::<I>();
 
         // Do lookup for our next hop (should be the device).
-        assert_eq!(table.lookup(None, next_hop).unwrap(), Destination { next_hop, device });
+        assert_eq!(table.lookup(None, next_hop), Some(Destination { next_hop, device }));
 
         // Do lookup for some address within `subnet`.
-        assert_eq!(table.lookup(None, config.local_ip).unwrap(), Destination { next_hop, device });
-        assert_eq!(table.lookup(None, config.remote_ip).unwrap(), Destination { next_hop, device });
-
-        // Delete the device route.
         assert_eq!(
-            table.del_route(next_hop_specific_subnet).unwrap(),
-            &[Entry { subnet: next_hop_specific_subnet, dest: EntryDest::Local { device } }][..]
+            table.lookup(None, config.local_ip),
+            Some(Destination { next_hop: config.local_ip, device })
+        );
+        assert_eq!(
+            table.lookup(None, config.remote_ip),
+            Some(Destination { next_hop: config.remote_ip, device })
         );
 
-        // Do lookup for our next hop (should get None since we have no route to
-        // a local device).
-        assert_eq!(table.lookup(None, next_hop), None);
-
-        // Do lookup for some address within `subnet` (should get None as well).
+        // Delete routes to the subnet and make sure that we can no longer route
+        // to destinations in the subnet.
+        assert_eq!(
+            table.del_route(config.subnet).unwrap().into_iter().collect::<HashSet<_>>(),
+            HashSet::from([
+                Entry { subnet: config.subnet, device, gateway: None },
+                Entry { subnet: config.subnet, device, gateway: Some(next_hop) }
+            ])
+        );
+        assert_eq!(table.lookup(None, next_hop), Some(Destination { next_hop, device }));
         assert_eq!(table.lookup(None, config.local_ip), None);
         assert_eq!(table.lookup(None, config.remote_ip), None);
-    }
 
-    #[ip_test]
-    fn test_max_depth_for_forwarding_table_ip<I: Ip + TestIpExt>() {
-        let mut table = ForwardingTable::<I, DeviceId>::default();
-        let device0 = DeviceId::new_ethernet(0);
-        let device1 = DeviceId::new_ethernet(1);
-        let (_, sub1) = I::next_hop_addr_sub(1, 24);
-        let (addr2, sub2) = I::next_hop_addr_sub(2, 24);
-        let (addr3, sub3) = I::next_hop_addr_sub(3, 24);
-        let (addr4, sub4) = I::next_hop_addr_sub(4, 24);
-        let (addr5, sub5) = I::next_hop_addr_sub(5, 24);
-
-        // Add the following routes:
-        //  sub1 -> addr2
-        //  sub2 -> addr3
-        //  sub3 -> addr4
-        //  sub4 -> addr5
-        //  sub3 -> device0
-        //  sub5 -> device1
-        //
-        // Our expected forwarding table should look like:
-        //  sub1 -> addr3 w/ device0
-        //  sub2 -> addr3 w/ device0
-        //  sub3 -> device0
-        //  sub4 -> addr5 w/ device1
-        //  sub5 -> device1
-
-        table.add_route(sub1, addr2).unwrap();
-        table.add_route(sub2, addr3).unwrap();
-        table.add_route(sub3, addr4).unwrap();
-        table.add_route(sub4, addr5).unwrap();
-        table.add_device_route(sub3, device0).unwrap();
-        table.add_device_route(sub5, device1).unwrap();
-        table.print_table();
-        assert_eq!(table.iter_table().count(), 6);
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub1) && (x.dest == EntryDest::Remote { next_hop: addr2 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub2) && (x.dest == EntryDest::Remote { next_hop: addr3 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub3) && (x.dest == EntryDest::Remote { next_hop: addr4 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub4) && (x.dest == EntryDest::Remote { next_hop: addr5 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub3) && (x.dest == EntryDest::Local { device: device0 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub5) && (x.dest == EntryDest::Local { device: device1 })));
-
-        // Delete the route:
-        //  sub3 -> device0
-        //
-        // Our expected forwarding table should look like:
-        //  sub1 -> addr5 w/ device1
-        //  sub2 -> addr5 w/ device1
-        //  sub3 -> addr5 w/ device1
-        //  sub4 -> addr5 w/ device1
-        //  sub5 -> device1
-        table.del_device_route(sub3, device0).unwrap();
-        table.print_table();
-        assert_eq!(table.iter_table().count(), 5);
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub1) && (x.dest == EntryDest::Remote { next_hop: addr2 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub2) && (x.dest == EntryDest::Remote { next_hop: addr3 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub3) && (x.dest == EntryDest::Remote { next_hop: addr4 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub4) && (x.dest == EntryDest::Remote { next_hop: addr5 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub5) && (x.dest == EntryDest::Local { device: device1 })));
-
-        // Delete the route:
-        //  sub3 -> addr4
-        //
-        // Our expected forwarding table should look like:
-        //  sub4 -> addr5 w/ device1
-        //  sub5 -> device1
-        table.del_next_hop_route(sub3, addr4).unwrap();
-        table.print_table();
-        assert_eq!(table.iter_table().count(), 4);
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub1) && (x.dest == EntryDest::Remote { next_hop: addr2 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub2) && (x.dest == EntryDest::Remote { next_hop: addr3 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub4) && (x.dest == EntryDest::Remote { next_hop: addr5 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub5) && (x.dest == EntryDest::Local { device: device1 })));
-
-        // Deleting routes that don't exist should fail
-        assert_eq!(table.del_device_route(sub1, device0).unwrap_err(), NotFoundError);
-        assert_eq!(table.del_next_hop_route(sub1, addr5).unwrap_err(), NotFoundError);
-    }
-
-    #[ip_test]
-    fn test_use_most_specific_route_ip<I: Ip + TestIpExt>() {
-        let mut table = ForwardingTable::<I, DeviceId>::default();
-        let device0 = DeviceId::new_ethernet(0);
-        let device1 = DeviceId::new_ethernet(1);
-        let (addr7, sub7_s24) = I::next_hop_addr_sub(7, 24);
-        let (addr8, sub8_s27) = I::next_hop_addr_sub(8, 27);
-        let (addr10, sub10_s25) = I::next_hop_addr_sub(10, 25);
-        let (addr12, sub12_s26) = I::next_hop_addr_sub(12, 26);
-        let (addr14, sub14_s25) = I::next_hop_addr_sub(14, 25);
-        let (addr15, _) = I::next_hop_addr_sub(15, 24);
-
-        // In the following comments, we will use a modified form of prefix
-        // notation. Normally to identify the prefix of an address, we do
-        // ADDRESS/PREFIX (e.g. fe80::e80c:830f:1cc3:2336/64 for IPv6;
-        // 100.96.232.33/24 for IPv4). Here, we will do ADDRESS/-SUFFIX to
-        // represent the number of bits of the host portion of the address
-        // instead of the network. The following is the relationship between
-        // SUFFIX and PREFIX: PREFIX = ADDRESS_BITS - SUFFIX. So for the
-        // examples given earlier:
-        //  fe80::e80c:830f:1cc3:2336/64 <-> fe80::e80c:830f:1cc3:2336/-64
-        //  100.96.232.33/24 <-> 100.96.232.33/-8
-        //
-        // We do this because this method is generic for IPv4 and IPv6 which
-        // have different address lengths. To keep the comments consistent (at
-        // the cost of some readability) we use this custom notation for the
-        // comments below.
-        //
-        // Subnetting:
-        //  sub10/-25, sub12/-26, sub14/-25 and sub15/-24 are subnets of sub8/-27.
-        //  sub14/-25 and sub15/-24 are subnets of sub12/-26.
-        //  sub15/-24 is a subnet of sub14/-25.
-
-        // Add the following routes:
-        //  sub8/-27 -> device0
-        //
-        // Our expected forwarding table should look like:
-        //  sub8/-27 -> device0
-
-        table.add_device_route(sub8_s27, device0).unwrap();
-        table.print_table();
-        assert_eq!(table.iter_table().count(), 1);
-        assert_eq!(table.lookup(None, addr7), None);
-        assert_eq!(
-            table.lookup(None, addr8).unwrap(),
-            Destination { next_hop: addr8, device: device0 }
-        );
-        assert_eq!(
-            table.lookup(None, addr10).unwrap(),
-            Destination { next_hop: addr10, device: device0 }
-        );
-        assert_eq!(
-            table.lookup(None, addr12).unwrap(),
-            Destination { next_hop: addr12, device: device0 }
-        );
-        assert_eq!(
-            table.lookup(None, addr14).unwrap(),
-            Destination { next_hop: addr14, device: device0 }
-        );
-        assert_eq!(
-            table.lookup(None, addr15).unwrap(),
-            Destination { next_hop: addr15, device: device0 }
-        );
-
-        // Add the following routes:
-        //  sub12/-26 -> device1
-        //
-        // Our expected forwarding table should look like:
-        //  sub8/-27 -> device0
-        //  sub12/-26 -> device1
-
-        table.add_device_route(sub12_s26, device1).unwrap();
-        table.print_table();
-        assert_eq!(table.iter_table().count(), 2);
-        assert_eq!(table.lookup(None, addr7), None);
-        assert_eq!(
-            table.lookup(None, addr8).unwrap(),
-            Destination { next_hop: addr8, device: device0 }
-        );
-        assert_eq!(
-            table.lookup(None, addr10).unwrap(),
-            Destination { next_hop: addr10, device: device0 }
-        );
-        assert_eq!(
-            table.lookup(None, addr12).unwrap(),
-            Destination { next_hop: addr12, device: device1 }
-        );
-        assert_eq!(
-            table.lookup(None, addr14).unwrap(),
-            Destination { next_hop: addr14, device: device1 }
-        );
-        assert_eq!(
-            table.lookup(None, addr15).unwrap(),
-            Destination { next_hop: addr15, device: device1 }
-        );
-
-        // Add the following routes:
-        //  sub14/-25 -> addr10
-        //
-        // Our expected forwarding table should look like:
-        //  sub8/-27 -> device0
-        //  sub12/-26 -> device1
-        //  sub14/-25 -> addr10 w/ device0
-
-        table.add_route(sub14_s25, addr10).unwrap();
-        table.print_table();
-        assert_eq!(table.iter_table().count(), 3);
-        assert_eq!(
-            table.lookup(None, addr8).unwrap(),
-            Destination { next_hop: addr8, device: device0 }
-        );
-        assert_eq!(
-            table.lookup(None, addr10).unwrap(),
-            Destination { next_hop: addr10, device: device0 }
-        );
-        assert_eq!(
-            table.lookup(None, addr12).unwrap(),
-            Destination { next_hop: addr12, device: device1 },
-        );
-        assert_eq!(
-            table.lookup(None, addr14).unwrap(),
-            Destination { next_hop: addr10, device: device0 },
-            "addr = {}",
-            addr14
-        );
-        assert_eq!(
-            table.lookup(None, addr15).unwrap(),
-            Destination { next_hop: addr10, device: device0 }
-        );
-
-        // This next two tests are important.
-        //
-        // Here, we add a route from sub10/-25 -> addr7. The routing table as no
-        // route from addr7 so normally we would not have any route to the
-        // subnet sub10/-25. However, we have a route for a less specific subnet
-        // (sub8/-27) which IS routable so we use that instead.
-        //
-        // When we do eventually make sub7/-24 routable, sub10/-25 will be
-        // routed through addr7.
-
-        // Add the following routes:
-        //  sub10/-25 -> addr7
-        //
-        // Our expected forwarding table should look like:
-        //  sub8/-27 -> device0
-        //  sub12/-26 -> device1
-        //  sub14/-25 -> addr10 w/ device0
-
-        table.add_route(sub10_s25, addr7).unwrap();
-        table.print_table();
-        assert_eq!(table.iter_table().count(), 4);
-        assert_eq!(table.lookup(None, addr7), None);
-        assert_eq!(
-            table.lookup(None, addr8).unwrap(),
-            Destination { next_hop: addr8, device: device0 }
-        );
-        assert_eq!(
-            table.lookup(None, addr10).unwrap(),
-            Destination { next_hop: addr10, device: device0 }
-        );
-        assert_eq!(
-            table.lookup(None, addr12).unwrap(),
-            Destination { next_hop: addr12, device: device1 }
-        );
-        assert_eq!(
-            table.lookup(None, addr14).unwrap(),
-            Destination { next_hop: addr10, device: device0 }
-        );
-        assert_eq!(
-            table.lookup(None, addr15).unwrap(),
-            Destination { next_hop: addr10, device: device0 }
-        );
-
-        // Add the following routes:
-        //  sub7/-24 -> addr12
-        //
-        // Our expected forwarding table should look like:
-        //  sub8/-27 -> device0
-        //  sub12/-26 -> device1
-        //  sub14/-25 -> addr12 w/ deviec1
-        //  sub7/-24 -> addr12 w/ device1
-        //  sub10/-25 -> addr12 w/ device1
-
-        table.add_route(sub7_s24, addr12).unwrap();
-        table.print_table();
-        assert_eq!(table.iter_table().count(), 5);
-        assert_eq!(
-            table.lookup(None, addr7).unwrap(),
-            Destination { next_hop: addr12, device: device1 }
-        );
-        assert_eq!(
-            table.lookup(None, addr8).unwrap(),
-            Destination { next_hop: addr8, device: device0 }
-        );
-        assert_eq!(
-            table.lookup(None, addr10).unwrap(),
-            Destination { next_hop: addr12, device: device1 }
-        );
-        assert_eq!(
-            table.lookup(None, addr12).unwrap(),
-            Destination { next_hop: addr12, device: device1 }
-        );
-        assert_eq!(
-            table.lookup(None, addr14).unwrap(),
-            Destination { next_hop: addr12, device: device1 }
-        );
-        assert_eq!(
-            table.lookup(None, addr15).unwrap(),
-            Destination { next_hop: addr12, device: device1 }
-        );
-
-        // Add the following routes:
-        //  sub14/-25 -> device0
-        //
-        // Our expected forwarding table should look like:
-        //  sub8/-27 -> device0
-        //  sub12/-26 -> device1
-        //  sub7/-24 -> addr12 w/ device1
-        //  sub10/-25 -> addr12 w/ device1
-        //  sub14/-25 -> device0
-
-        table.add_device_route(sub14_s25, device0).unwrap();
-        table.print_table();
-        assert_eq!(table.iter_table().count(), 6);
-        assert_eq!(
-            table.lookup(None, addr7).unwrap(),
-            Destination { next_hop: addr12, device: device1 }
-        );
-        assert_eq!(
-            table.lookup(None, addr8).unwrap(),
-            Destination { next_hop: addr8, device: device0 }
-        );
-        assert_eq!(
-            table.lookup(None, addr10).unwrap(),
-            Destination { next_hop: addr12, device: device1 }
-        );
-        assert_eq!(
-            table.lookup(None, addr12).unwrap(),
-            Destination { next_hop: addr12, device: device1 }
-        );
-        assert_eq!(
-            table.lookup(None, addr14).unwrap(),
-            Destination { next_hop: addr14, device: device0 }
-        );
-        assert_eq!(
-            table.lookup(None, addr15).unwrap(),
-            Destination { next_hop: addr15, device: device0 }
-        );
-
-        // Check the installed table just in case.
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub8_s27) && (x.dest == EntryDest::Local { device: device0 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub12_s26) && (x.dest == EntryDest::Local { device: device1 })));
-        assert!(
-            table
-                .iter_table()
-                .any(|x| (x.subnet == sub14_s25)
-                    && (x.dest == EntryDest::Remote { next_hop: addr10 }))
-        );
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub10_s25) && (x.dest == EntryDest::Remote { next_hop: addr7 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub7_s24) && (x.dest == EntryDest::Remote { next_hop: addr12 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub14_s25) && (x.dest == EntryDest::Local { device: device0 })));
-    }
-
-    #[ip_test]
-    fn test_cycle_ip<I: Ip + TestIpExt>() {
-        let mut table = ForwardingTable::<I, DeviceId>::default();
-        let device0 = DeviceId::new_ethernet(0);
-        let (addr1, sub1) = I::next_hop_addr_sub(1, 24);
-        let (addr2, sub2) = I::next_hop_addr_sub(2, 24);
-        let (addr3, sub3) = I::next_hop_addr_sub(3, 24);
-        let (addr4, sub4) = I::next_hop_addr_sub(4, 24);
-        let (addr5, _) = I::next_hop_addr_sub(5, 24);
-
-        // Add the following routes:
-        //  sub1 -> addr2
-        //  sub2 -> addr2 (cycle)
-        //  sub3 -> addr4
-        //  sub4 -> addr5
-        //  sub3 -> device0
-        //
-        // Our expected forwarding table should look like:
-        //  sub3 -> device0
-
-        table.add_route(sub1, addr2).unwrap();
-        table.add_route(sub2, addr2).unwrap();
-        table.add_route(sub3, addr4).unwrap();
-        table.add_route(sub4, addr5).unwrap();
-        table.add_device_route(sub3, device0).unwrap();
-        table.print_table();
-        assert_eq!(table.iter_table().count(), 5);
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub1) && (x.dest == EntryDest::Remote { next_hop: addr2 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub2) && (x.dest == EntryDest::Remote { next_hop: addr2 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub3) && (x.dest == EntryDest::Remote { next_hop: addr4 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub4) && (x.dest == EntryDest::Remote { next_hop: addr5 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub3) && (x.dest == EntryDest::Local { device: device0 })));
-        assert_eq!(table.lookup(None, addr1), None);
-        assert_eq!(table.lookup(None, addr2), None);
-        assert_eq!(
-            table.lookup(None, addr3).unwrap(),
-            Destination { next_hop: addr3, device: device0 }
-        );
-        assert_eq!(table.lookup(None, addr4), None);
-        assert_eq!(table.lookup(None, addr5), None);
-
-        // Keep the route with the cycle, but add another route that doesn't
-        // have a cycle for sub2.
-        //
-        // Add the following routes:
-        //  sub2 -> addr3
-        //
-        // Our expected forwarding table should look like:
-        //  sub3 -> device0
-        //  sub1 -> addr3 w/ device0
-        //  sub2 -> addr3 w/ device0
-
-        table.add_route(sub2, addr3).unwrap();
-        table.print_table();
-        assert_eq!(table.iter_table().count(), 6);
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub1) && (x.dest == EntryDest::Remote { next_hop: addr2 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub2) && (x.dest == EntryDest::Remote { next_hop: addr2 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub3) && (x.dest == EntryDest::Remote { next_hop: addr4 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub4) && (x.dest == EntryDest::Remote { next_hop: addr5 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub3) && (x.dest == EntryDest::Local { device: device0 })));
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub2) && (x.dest == EntryDest::Remote { next_hop: addr3 })));
-        assert_eq!(
-            table.lookup(None, addr1).unwrap(),
-            Destination { next_hop: addr3, device: device0 }
-        );
-        assert_eq!(
-            table.lookup(None, addr2).unwrap(),
-            Destination { next_hop: addr3, device: device0 }
-        );
-        assert_eq!(
-            table.lookup(None, addr3).unwrap(),
-            Destination { next_hop: addr3, device: device0 }
-        );
-        assert_eq!(table.lookup(None, addr4), None);
-        assert_eq!(table.lookup(None, addr5), None);
+        // Make the subnet routable again but through a gateway.
+        table.add_route(config.subnet, next_hop).unwrap();
+        assert_eq!(table.lookup(None, next_hop), Some(Destination { next_hop, device }));
+        assert_eq!(table.lookup(None, config.local_ip), Some(Destination { next_hop, device }));
+        assert_eq!(table.lookup(None, config.remote_ip), Some(Destination { next_hop, device }));
     }
 
     #[ip_test]
@@ -970,10 +425,6 @@ mod tests {
 
         table.add_device_route(sub1, device0).unwrap();
         table.print_table();
-        assert_eq!(table.iter_table().count(), 1);
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub1) && (x.dest == EntryDest::Local { device: device0 })));
         assert_eq!(
             table.lookup(None, addr1).unwrap(),
             Destination { next_hop: addr1, device: device0 }
@@ -988,13 +439,6 @@ mod tests {
 
         let default_sub = Subnet::new(I::UNSPECIFIED_ADDRESS, 0).unwrap();
         table.add_route(default_sub, addr1).unwrap();
-        assert_eq!(table.iter_table().count(), 2);
-        assert!(table
-            .iter_table()
-            .any(|x| (x.subnet == sub1) && (x.dest == EntryDest::Local { device: device0 })));
-        assert!(table.iter_table().any(
-            |x| (x.subnet == default_sub) && (x.dest == EntryDest::Remote { next_hop: addr1 })
-        ));
         assert_eq!(
             table.lookup(None, addr1).unwrap(),
             Destination { next_hop: addr1, device: device0 }
@@ -1010,7 +454,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_device_filter<I: Ip + TestIpExt>() {
+    fn test_device_filter_with_varying_prefix_lengths<I: Ip + TestIpExt>() {
         const MORE_SPECIFIC_SUB_DEVICE: u8 = 1;
         const LESS_SPECIFIC_SUB_DEVICE: u8 = 2;
 
