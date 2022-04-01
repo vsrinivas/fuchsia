@@ -166,11 +166,6 @@ zx_status_t Nelson::Spi0Init() {
 }
 
 zx_status_t Nelson::Spi1Init() {
-  // Approximate CPU time required to read a single burst, determined with tracing.
-  constexpr zx::duration kSelinaCapacity = zx::usec(3'500);
-  // The radar sensor interrupts the host with a new burst every 33,333 us.
-  constexpr zx::duration kSelinaPeriod = zx::usec(33'333);
-
   static const pbus_mmio_t spi_1_mmios[] = {
       {
           .base = S905D3_SPICC1_BASE,
@@ -197,8 +192,8 @@ zx_status_t Nelson::Spi1Init() {
   };
 
   static const amlspi_config_t spi_1_config = {
-      .capacity = kSelinaCapacity.to_nsecs(),
-      .period = kSelinaPeriod.to_nsecs(),
+      .capacity = 0,
+      .period = 0,
       .bus_id = NELSON_SPICC1,
       .cs_count = 1,
       .cs = {0},                          // index into fragments list

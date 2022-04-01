@@ -26,7 +26,7 @@ static composite_device_desc_t composite_dev = []() {
   desc.fragments = selina_fragments;
   desc.fragments_count = std::size(selina_fragments);
   desc.primary_fragment = "spi";
-  desc.spawn_colocated = false;
+  desc.spawn_colocated = true;
   return desc;
 }();
 
