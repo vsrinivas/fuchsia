@@ -36,6 +36,9 @@ func (a Order) Less(i, j int) bool { return a[i].Path < a[j].Path }
 // NewFileTree returns an instance of FileTree.
 func NewFileTree(root string, parent *FileTree) (*FileTree, error) {
 	ft := FileTree{}
+	if RootFileTree == nil {
+		RootFileTree = &ft
+	}
 
 	ft.Name = filepath.Base(root)
 	ft.Path = root
@@ -87,8 +90,18 @@ func NewFileTree(root string, parent *FileTree) (*FileTree, error) {
 		}
 
 		// Files
-		plus1(NumFiles)
-		ft.FilePaths = append(ft.FilePaths, path)
+		fi, err := os.Stat(path)
+		if err != nil {
+			// Likely a symlink issue
+			continue
+		}
+		if fi.Size() == 0 {
+			// Ignore empty files
+			continue
+		} else {
+			plus1(NumFiles)
+			ft.FilePaths = append(ft.FilePaths, path)
+		}
 	}
 
 	sort.Sort(Order(ft.Children))

@@ -236,6 +236,11 @@ func (p *Project) AddFiles(filepaths []string) error {
 			continue
 		}
 
+		ext := filepath.Ext(path)
+		if _, ok := file.Config.Extensions[ext]; !ok {
+			continue
+		}
+
 		f, err := file.NewFile(path, p.RegularFileType)
 		if err != nil {
 			return err

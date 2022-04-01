@@ -1,5 +1,6 @@
 {
     "file": {
+        "copyrightSize": 6124,
         "replacements": [
             {
                 "replace": "\u201c",
@@ -17,13 +18,9 @@
             }
         ],
         "extensions": {
-            ".a": true,
             ".gyp": true,
             ".gypi": true,
-            ".in": true,
             ".merkle": true,
-            ".txt": true,
-            ".TXT": true,
             ".ac": true,
             ".am": true,
             ".asm": true,
@@ -46,9 +43,7 @@
             ".m": true,
             ".py": true,
             ".rs": true,
-            ".sh": true,
-            ".yaml": true,
-            "": true
+            ".sh": true
         }
     }
 }

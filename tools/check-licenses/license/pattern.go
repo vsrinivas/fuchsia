@@ -45,8 +45,8 @@ type Pattern struct {
 
 	// Maps that keep track of previous successful and failed
 	// searches, keyed using filedata hash.
-	previousMatches    map[string]bool
-	previousMismatches map[string]bool
+	PreviousMatches    map[string]bool
+	PreviousMismatches map[string]bool
 
 	isHeader bool
 }
@@ -71,7 +71,7 @@ func NewPattern(path string) (*Pattern, error) {
 	regex = strings.Join(strings.Fields(regex), " ")
 
 	// Update regex to ignore multiple white spaces, newlines, comments.
-	regex = strings.ReplaceAll(regex, ` `, `([\s\\#\*\/]|\^L)*`)
+	regex = strings.ReplaceAll(regex, ` `, `(?:[\s\\#\*\/]|\^L)*`)
 
 	// Convert date strings to a regex that supports any date
 	dates := regexp.MustCompile(`(\D)[\d]{4}(\D)`)
@@ -107,8 +107,8 @@ func NewPattern(path string) (*Pattern, error) {
 		Category:           licCategory,
 		AllowList:          allowlist,
 		Matches:            make([]*file.FileData, 0),
-		previousMatches:    make(map[string]bool),
-		previousMismatches: make(map[string]bool),
+		PreviousMatches:    make(map[string]bool),
+		PreviousMismatches: make(map[string]bool),
 		Re:                 re,
 	}, nil
 }
@@ -122,10 +122,10 @@ func (p *Pattern) Search(d *file.FileData) bool {
 
 	// If we've seen this data segment before, return the previous result.
 	// This should be faster than running the regex search.
-	if _, ok := p.previousMatches[d.Hash()]; ok && !p.isHeader {
+	if _, ok := p.PreviousMatches[d.Hash()]; ok && !p.isHeader {
 		p.Matches = append(p.Matches, d)
 		return true
-	} else if _, ok := p.previousMismatches[d.Hash()]; ok {
+	} else if _, ok := p.PreviousMismatches[d.Hash()]; ok {
 		return false
 	}
 
@@ -138,11 +138,11 @@ func (p *Pattern) Search(d *file.FileData) bool {
 		}
 
 		p.Matches = append(p.Matches, d)
-		p.previousMatches[d.Hash()] = true
+		p.PreviousMatches[d.Hash()] = true
 
 		return true
 	}
 
-	p.previousMismatches[d.Hash()] = true
+	p.PreviousMismatches[d.Hash()] = true
 	return false
 }

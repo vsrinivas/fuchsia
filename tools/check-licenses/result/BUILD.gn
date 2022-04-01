@@ -7,6 +7,7 @@ import("//build/go/go_test.gni")
 
 go_library("result") {
   sources = [
+    "checks.go",
     "config.go",
     "init.go",
     "metrics.go",

@@ -12,7 +12,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -81,12 +80,12 @@ func SaveResults() (string, error) {
 	}
 	b.WriteString(s)
 
-	err = verifyLicensesApproved()
+	err = RunChecks()
 	if err != nil {
 		if Config.ExitOnError {
 			return "", err
 		} else {
-			fmt.Println(err)
+			// TODO: Log err to a file
 		}
 	}
 
@@ -195,29 +194,4 @@ func compressGZ(path string) error {
 		return err
 	}
 	return writeFile(path+".gz", buf.Bytes())
-}
-
-func verifyLicensesApproved() error {
-	var b strings.Builder
-
-OUTER:
-	for _, sr := range license.AllSearchResults {
-		filepath := sr.LicenseData.FilePath
-		allowlist := sr.Pattern.AllowList
-		for _, entry := range allowlist {
-			re, err := regexp.Compile("(" + entry + ")")
-			if err != nil {
-				return err
-			}
-			if m := re.Find([]byte(filepath)); m != nil {
-				continue OUTER
-			}
-		}
-		b.WriteString(fmt.Sprintf("File %v was not approved to use license pattern %v\n", filepath, sr.Pattern.Name))
-	}
-	result := b.String()
-	if len(result) > 0 {
-		return fmt.Errorf("Encountered license texts that were not approved for usage:\n%v", result)
-	}
-	return nil
 }
