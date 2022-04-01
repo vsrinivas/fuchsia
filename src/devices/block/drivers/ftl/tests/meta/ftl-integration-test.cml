@@ -3,8 +3,8 @@
         "//sdk/lib/driver_test_realm/meta/realm_builder.shard.cml",
         "//sdk/lib/inspect/client.shard.cml",
         "//sdk/lib/syslog/client.shard.cml",
-        "//src/sys/test_runners/elf/default.shard.cml",
         "sys/component/realm_builder.shard.cml",
+        "sys/testing/elf_test_runner.shard.cml",
     ],
     program: {
         binary: "test/ftl-integration-test",

@@ -144,7 +144,7 @@ In order to use this runner, add the following to your component manifest:
 
 ```json5
 {
-    include: [ "//src/sys/test_runners/elf/default.shard.cml" ]
+    include: [ "sys/testing/elf_test_runner.shard.cml" ]
 }
 ```
 

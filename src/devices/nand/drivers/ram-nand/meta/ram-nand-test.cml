@@ -5,7 +5,7 @@
     include: [
         "//sdk/lib/driver_test_realm/meta/client.shard.cml",
         "//sdk/lib/syslog/client.shard.cml",
-        "//src/sys/test_runners/elf/default.shard.cml",
+        "sys/testing/elf_test_runner.shard.cml",
     ],
     program: {
         binary: "test/ram-nand-test",
