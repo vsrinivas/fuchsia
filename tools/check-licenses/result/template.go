@@ -6,39 +6,12 @@ package result
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
-	"text/template"
 
-	"go.fuchsia.dev/fuchsia/tools/check-licenses/file"
-	"go.fuchsia.dev/fuchsia/tools/check-licenses/filetree"
-	"go.fuchsia.dev/fuchsia/tools/check-licenses/license"
-	"go.fuchsia.dev/fuchsia/tools/check-licenses/project"
+	"go.fuchsia.dev/fuchsia/tools/check-licenses/result/world"
 )
-
-// World is a struct that contains all the information about this check-license
-// run. The fields are all defined for easy use in template files.
-type World struct {
-	Files         []*file.File
-	FileTrees     []*filetree.FileTree
-	Projects      []*project.Project
-	Patterns      []*license.Pattern
-	GnGenProjects []*project.Project
-
-	Diff *DiffInfo
-}
-
-// DiffInfo combines some header information along with the content of
-// the NOTICE file that we are diffing against.
-//
-// This just makes it easier for us to access the information from a template.
-type DiffInfo struct {
-	Header  []string
-	Content []byte
-}
 
 // Generate output files for every template defined in the config file.
 func expandTemplates() (string, error) {
@@ -57,61 +30,12 @@ func expandTemplates() (string, error) {
 	var b strings.Builder
 	b.WriteString("\n")
 
-	allPatterns := make([]*license.Pattern, 0)
-	for _, p := range license.AllPatterns {
-		if len(p.Matches) > 0 {
-			allPatterns = append(allPatterns, p)
-		}
-	}
-	sort.Sort(license.Order(allPatterns))
-
-	allProjects := make([]*project.Project, 0)
-	for _, p := range project.FilteredProjects {
-		allProjects = append(allProjects, p)
-	}
-	sort.Sort(project.Order(allProjects))
-
-	allFiles := make([]*file.File, 0)
-	for _, f := range file.AllFiles {
-		allFiles = append(allFiles, f)
-	}
-	sort.Sort(file.Order(allFiles))
-
-	allFileTrees := make([]*filetree.FileTree, 0)
-	for _, f := range filetree.AllFileTrees {
-		allFileTrees = append(allFileTrees, f)
-	}
-	sort.Sort(filetree.Order(allFileTrees))
-
-	gnGenProjects, err := getGnGenProjects()
+	w, err := world.NewWorld()
 	if err != nil {
 		return "", err
 	}
-	sort.Sort(project.Order(gnGenProjects))
-
-	diffTarget := []byte{}
-	diffHeader := []string{}
-	if Config.DiffNotice != "" {
-		diffTarget, err = ioutil.ReadFile(Config.DiffNotice)
-		if err != nil {
-			return "", err
-		}
-		diffHeader = []string{"Diffing local workspace against " + Config.DiffNotice}
-	}
-	diffInfo := &DiffInfo{
-		Content: diffTarget,
-		Header:  diffHeader,
-	}
-
-	w := &World{
-		Files:         allFiles,
-		FileTrees:     allFileTrees,
-		Patterns:      allPatterns,
-		Projects:      allProjects,
-		GnGenProjects: gnGenProjects,
-
-		Diff: diffInfo,
-	}
+	b.WriteString(w.Status.String())
+	b.WriteString("\n")
 
 	for _, o := range Config.Outputs {
 		if t, ok := AllTemplates[o]; !ok {
@@ -138,13 +62,4 @@ func expandTemplates() (string, error) {
 		}
 	}
 	return b.String(), nil
-}
-
-var templateFunctions = template.FuncMap{
-	// Return a list of CSVEntries that can be used to easily
-	// produce a CSV file, given the information stored in the World object.
-	"getCSVEntries": getCSVEntries,
-
-	// List projects together that have the same exact license texts.
-	"getDedupedPatterns": getDedupedPatterns,
 }

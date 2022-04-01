@@ -174,17 +174,11 @@ func NewProject(readmePath string, projectRootPath string) (*Project, error) {
 	// All projects must have a name.
 	if p.Name == "" {
 		plusVal(MissingName, p.ReadmePath)
-		if !Config.ContinueOnError {
-			return nil, fmt.Errorf("Project %v is missing a name.", p.ReadmePath)
-		}
 	}
 
 	// All projects must point to a license file.
 	if len(licenseFilePaths) == 0 {
 		plusVal(MissingLicenseFile, p.ReadmePath)
-		if !Config.ContinueOnError {
-			return nil, fmt.Errorf("Project %v is missing a license file.", p.ReadmePath)
-		}
 	}
 
 	if err := p.processCustomFields(); err != nil {
@@ -205,16 +199,6 @@ func NewProject(readmePath string, projectRootPath string) (*Project, error) {
 	plusVal(NumProjects, p.Root)
 	AllProjects[p.Root] = p
 
-	shouldInclude, err := Config.shouldInclude(p)
-	if err != nil {
-		return nil, err
-	}
-	if shouldInclude {
-		plusVal(NumFilteredProjects, p.Root)
-		FilteredProjects[p.Root] = p
-	} else {
-		plusVal(NumSkippedProjects, p.Root)
-	}
 	return p, nil
 }
 

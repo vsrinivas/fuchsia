@@ -6,7 +6,6 @@ package project
 
 import (
 	"path/filepath"
-	"regexp"
 )
 
 var Config *ProjectConfig
@@ -27,17 +26,6 @@ type ProjectConfig struct {
 	// ends, and the license info for another project begins.
 	// (e.g. "third_party")
 	Barriers []*Barrier `json:"barriers"`
-
-	// Project regexs that should be included in the final NOTICE file.
-	//
-	// Everything is included by default. This field should only be used
-	// if something was explicitly excluded, but needs to be brought back.
-	Includes []*Include `json:"includes"`
-
-	// Project regexs that should be excluded from the final NOTICE file.
-	Excludes []*Exclude `json:"excludes"`
-
-	ContinueOnError bool `json:"continueOnError"`
 }
 
 type Readme struct {
@@ -46,16 +34,6 @@ type Readme struct {
 }
 
 type Barrier struct {
-	Paths []string `json:"paths"`
-	Notes []string `json:"notes"`
-}
-
-type Include struct {
-	Paths []string `json:"paths"`
-	Notes []string `json:"notes"`
-}
-
-type Exclude struct {
 	Paths []string `json:"paths"`
 	Notes []string `json:"notes"`
 }
@@ -81,48 +59,13 @@ func NewConfig() *ProjectConfig {
 	return &ProjectConfig{
 		Readmes:  make([]*Readme, 0),
 		Barriers: make([]*Barrier, 0),
-		Includes: make([]*Include, 0),
-		Excludes: make([]*Exclude, 0),
 	}
 }
 
-func (c *ProjectConfig) shouldInclude(p *Project) (bool, error) {
-	include := true
-	for _, e := range c.Excludes {
-		for _, path := range e.Paths {
-			m, err := regexp.MatchString(path, p.Root)
-			if err != nil {
-				return false, err
-			}
-			if m {
-				include = false
-				break
-			}
-		}
-	}
-	if !include {
-		for _, i := range c.Includes {
-			for _, path := range i.Paths {
-				m, err := regexp.MatchString(path, p.Root)
-				if err != nil {
-					return false, err
-				}
-				if m {
-					include = true
-					break
-				}
-			}
-		}
-	}
-	return include, nil
-}
 func (c *ProjectConfig) Merge(other *ProjectConfig) {
 	if c.FuchsiaDir == "" {
 		c.FuchsiaDir = other.FuchsiaDir
 	}
 	c.Readmes = append(c.Readmes, other.Readmes...)
 	c.Barriers = append(c.Barriers, other.Barriers...)
-	c.Includes = append(c.Includes, other.Includes...)
-	c.Excludes = append(c.Excludes, other.Excludes...)
-	c.ContinueOnError = c.ContinueOnError || other.ContinueOnError
 }
