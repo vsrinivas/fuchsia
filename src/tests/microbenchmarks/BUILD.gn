@@ -30,7 +30,13 @@ executable("bin") {
     "round_trips_posix.cc",
   ]
   if (is_host) {
-    sources += [ "process_spawn_posix.cc" ]
+    sources += [
+      # The getpid() microbenchmark would work on Fuchsia, but it is
+      # not useful to run it on Fuchsia because Fuchsia's getpid()
+      # function does not return a real process ID.
+      "getpid.cc",
+      "process_spawn_posix.cc",
+    ]
   }
   if (is_fuchsia) {
     sources += [
