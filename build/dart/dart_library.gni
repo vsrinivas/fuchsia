@@ -606,9 +606,9 @@ if (current_toolchain == dart_toolchain) {
           "--golden-api",
           rebase_path("$package_name.api", root_build_dir),
           "--fuchsia-root",
-          rebase_path("//"),
+          rebase_path("//", root_build_dir),
           "--fuchsia-build-root",
-          rebase_path(root_build_dir),
+          rebase_path(root_build_dir, root_build_dir),
           "--depfile",
           rebase_path(depfile, root_build_dir),
 
@@ -622,9 +622,6 @@ if (current_toolchain == dart_toolchain) {
                  _detect_snapshot_label,
                ]
         forward_variables_from(invoker, [ "testonly" ])
-
-        # --fuchsia-root is absolute path to output dir
-        no_output_dir_leaks = false
       }
 
       # Verify that the library API file complies with the specified schema.
