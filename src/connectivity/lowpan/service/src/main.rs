@@ -9,29 +9,21 @@ pub mod service;
 
 use anyhow::{format_err, Context as _, Error};
 use fidl_fuchsia_factory_lowpan::{FactoryLookupRequestStream, FactoryRegisterRequestStream};
-use fidl_fuchsia_lowpan::LookupRequestStream;
-use fidl_fuchsia_lowpan_device::{
-    CountersConnectorRequestStream, DeviceConnectorRequestStream,
-    DeviceExtraConnectorRequestStream, DeviceRouteConnectorRequestStream,
-    DeviceRouteExtraConnectorRequestStream,
-};
 use fidl_fuchsia_lowpan_driver::RegisterRequestStream;
-use fidl_fuchsia_lowpan_test::DeviceTestConnectorRequestStream;
-use fidl_fuchsia_lowpan_thread::DatasetConnectorRequestStream;
-use fidl_fuchsia_lowpan_thread::LegacyJoiningConnectorRequestStream;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_inspect::Inspector;
 use fuchsia_syslog::macros::*;
 use futures::prelude::*;
 use futures::task::{FutureObj, Spawn, SpawnError};
+use lowpan_driver_common::lowpan_fidl::*;
 use lowpan_driver_common::ServeTo;
 use service::*;
 use std::default::Default;
 use std::sync::Arc;
 
 enum IncomingService {
-    Lookup(LookupRequestStream),
+    DeviceWatcher(DeviceWatcherRequestStream),
     Register(RegisterRequestStream),
     FactoryLookup(FactoryLookupRequestStream),
     FactoryRegister(FactoryRegisterRequestStream),
@@ -43,6 +35,9 @@ enum IncomingService {
     DeviceTestConnector(DeviceTestConnectorRequestStream),
     LegacyJoiningConnector(LegacyJoiningConnectorRequestStream),
     DatasetConnector(DatasetConnectorRequestStream),
+    EnergyScanConnector(EnergyScanConnectorRequestStream),
+    ExperimentalDeviceConnector(ExperimentalDeviceConnectorRequestStream),
+    ExperimentalDeviceExtraConnector(ExperimentalDeviceExtraConnectorRequestStream),
 }
 
 const MAX_CONCURRENT: usize = 100;
@@ -78,7 +73,7 @@ async fn main() -> Result<(), Error> {
     });
 
     fs.dir("svc")
-        .add_fidl_service(IncomingService::Lookup)
+        .add_fidl_service(IncomingService::DeviceWatcher)
         .add_fidl_service(IncomingService::Register)
         .add_fidl_service(IncomingService::FactoryLookup)
         .add_fidl_service(IncomingService::FactoryRegister)
@@ -89,13 +84,16 @@ async fn main() -> Result<(), Error> {
         .add_fidl_service(IncomingService::CountersConnector)
         .add_fidl_service(IncomingService::DeviceTestConnector)
         .add_fidl_service(IncomingService::LegacyJoiningConnector)
-        .add_fidl_service(IncomingService::DatasetConnector);
+        .add_fidl_service(IncomingService::DatasetConnector)
+        .add_fidl_service(IncomingService::ExperimentalDeviceConnector)
+        .add_fidl_service(IncomingService::ExperimentalDeviceExtraConnector)
+        .add_fidl_service(IncomingService::EnergyScanConnector);
 
     fs.take_and_serve_directory_handle()?;
 
     let fut = fs.for_each_concurrent(MAX_CONCURRENT, |request| async {
         if let Err(err) = match request {
-            IncomingService::Lookup(stream) => service.serve_to(stream).await,
+            IncomingService::DeviceWatcher(stream) => service.serve_to(stream).await,
             IncomingService::Register(stream) => service.serve_to(stream).await,
             IncomingService::FactoryLookup(stream) => service.serve_to(stream).await,
             IncomingService::FactoryRegister(stream) => service.serve_to(stream).await,
@@ -107,6 +105,11 @@ async fn main() -> Result<(), Error> {
             IncomingService::DeviceTestConnector(stream) => service.serve_to(stream).await,
             IncomingService::LegacyJoiningConnector(stream) => service.serve_to(stream).await,
             IncomingService::DatasetConnector(stream) => service.serve_to(stream).await,
+            IncomingService::EnergyScanConnector(stream) => service.serve_to(stream).await,
+            IncomingService::ExperimentalDeviceConnector(stream) => service.serve_to(stream).await,
+            IncomingService::ExperimentalDeviceExtraConnector(stream) => {
+                service.serve_to(stream).await
+            }
         } {
             fx_log_err!("{:?}", err);
         }

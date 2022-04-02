@@ -940,10 +940,10 @@ impl InterfaceType {
     pub fn to_net_type(self) -> Option<String> {
         match self {
             Self::Bootloader => None,
-            Self::ZigbeeIp => Some(fidl_fuchsia_lowpan::NET_TYPE_ZIGBEE_IP_1_X.to_string()),
-            Self::Thread => Some(fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X.to_string()),
+            Self::ZigbeeIp => Some(crate::lowpan_fidl::NET_TYPE_ZIGBEE_IP_1_X.to_string()),
+            Self::Thread => Some(crate::lowpan_fidl::NET_TYPE_THREAD_1_X.to_string()),
             Self::Unknown(x) => {
-                Some(format!("{}.{}", fidl_fuchsia_lowpan::NET_TYPE_UNKNOWN_802_15_4_PID, x))
+                Some(format!("{}.{}", crate::lowpan_fidl::NET_TYPE_UNKNOWN_802_15_4_PID, x))
             }
         }
     }

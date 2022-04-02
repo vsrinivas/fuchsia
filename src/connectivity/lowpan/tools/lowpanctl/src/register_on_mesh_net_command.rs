@@ -4,9 +4,9 @@
 
 use crate::context::LowpanCtlContext;
 use crate::prelude::*;
-use fidl_fuchsia_lowpan::Ipv6Subnet;
-use fidl_fuchsia_lowpan_device::{OnMeshPrefix, RoutePreference};
+use fidl_fuchsia_lowpan_experimental::{OnMeshPrefix, RoutePreference};
 use fidl_fuchsia_net::Ipv6Address;
+use fidl_fuchsia_net::Ipv6AddressWithPrefix as Ipv6Subnet;
 
 /// Contains the arguments decoded for the `register-on-mesh-net` command.
 #[derive(FromArgs, PartialEq, Debug)]

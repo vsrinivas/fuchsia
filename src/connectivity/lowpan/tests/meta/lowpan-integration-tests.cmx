@@ -2,16 +2,19 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.lowpan.Lookup": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
-                "fuchsia.lowpan.driver.Register": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.lowpan.DeviceWatcher": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.lowpan.device.CountersConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
                 "fuchsia.lowpan.device.DeviceConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
                 "fuchsia.lowpan.device.DeviceExtraConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
-                "fuchsia.lowpan.device.DeviceRouterConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
-                "fuchsia.lowpan.device.DeviceRouterExtraConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
-                "fuchsia.lowpan.device.CountersConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.lowpan.device.EnergyScanConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.lowpan.driver.Register": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.lowpan.experimental.DeviceConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.lowpan.experimental.DeviceExtraConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.lowpan.experimental.DeviceRouterConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.lowpan.experimental.DeviceRouterExtraConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.lowpan.experimental.LegacyJoiningConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
                 "fuchsia.lowpan.test.DeviceTestConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
-                "fuchsia.lowpan.thread.DatasetConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
-                "fuchsia.lowpan.thread.LegacyJoiningConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx"
+                "fuchsia.lowpan.thread.DatasetConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx"
             }
         }
     },
@@ -23,16 +26,19 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.lowpan.Lookup",
+            "fuchsia.lowpan.DeviceWatcher",
             "fuchsia.lowpan.device.CountersConnector",
             "fuchsia.lowpan.device.DeviceConnector",
             "fuchsia.lowpan.device.DeviceExtraConnector",
-            "fuchsia.lowpan.device.DeviceRouterConnector",
-            "fuchsia.lowpan.device.DeviceRouterExtraConnector",
+            "fuchsia.lowpan.device.EnergyScanConnector",
             "fuchsia.lowpan.driver.Register",
+            "fuchsia.lowpan.experimental.DeviceConnector",
+            "fuchsia.lowpan.experimental.DeviceExtraConnector",
+            "fuchsia.lowpan.experimental.DeviceRouterConnector",
+            "fuchsia.lowpan.experimental.DeviceRouterExtraConnector",
+            "fuchsia.lowpan.experimental.LegacyJoiningConnector",
             "fuchsia.lowpan.test.DeviceTestConnector",
             "fuchsia.lowpan.thread.DatasetConnector",
-            "fuchsia.lowpan.thread.LegacyJoiningConnector",
             "fuchsia.sys.Launcher"
         ]
     }

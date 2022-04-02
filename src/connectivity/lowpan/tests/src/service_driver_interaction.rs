@@ -5,7 +5,7 @@
 use anyhow::{format_err, Context as _, Error};
 use fasync::Time;
 use fidl::endpoints::create_endpoints;
-use fidl_fuchsia_lowpan::LookupMarker;
+use fidl_fuchsia_lowpan::DeviceWatcherMarker;
 use fidl_fuchsia_lowpan_device::{
     DeviceConnectorMarker, DeviceExtraConnectorMarker, DeviceExtraMarker, DeviceMarker,
 };
@@ -21,22 +21,11 @@ const DEFAULT_TIMEOUT: fuchsia_zircon::Duration = fuchsia_zircon::Duration::from
 async fn test_service_driver_interaction() -> Result<(), Error> {
     const IFACE_NAME: &str = "lowpan0";
 
-    // Step 1: Get an instance of the Lookup API and make sure there are no devices registered.
-    let lookup = connect_to_protocol::<LookupMarker>()
-        .context("Failed to connect to Lowpan Lookup service")?;
+    // Step 1: Get an instance of the DeviceWatcher API and make sure there are no devices registered.
+    let lookup = connect_to_protocol::<DeviceWatcherMarker>()
+        .context("Failed to connect to Lowpan DeviceWatcher service")?;
 
-    let devices = lookup
-        .get_devices()
-        .err_into::<Error>()
-        .on_timeout(Time::after(DEFAULT_TIMEOUT), || {
-            Err(format_err!("Timeout waiting for lookup.get_devices()"))
-        })
-        .await
-        .context("Initial call to lookup.get_devices() failed")?;
-
-    assert!(devices.is_empty(), "Initial device list not empty");
-
-    let device_changes = lookup
+    let (added, removed) = lookup
         .watch_devices()
         .err_into::<Error>()
         .on_timeout(Time::after(DEFAULT_TIMEOUT), || {
@@ -45,10 +34,7 @@ async fn test_service_driver_interaction() -> Result<(), Error> {
         .await
         .context("Initial call to lookup.watch_devices() failed")?;
 
-    assert!(
-        device_changes.added.is_empty() && device_changes.removed.is_empty(),
-        "Initial device list not empty"
-    );
+    assert!(added.is_empty() && removed.is_empty(), "Initial device list not empty");
 
     // Step 2: Start the LoWPAN Dummy Driver
     let launcher = launcher()?;
@@ -56,7 +42,7 @@ async fn test_service_driver_interaction() -> Result<(), Error> {
     let mut driver = launch(&launcher, driver_url.to_string(), None)?;
 
     // Step 3: Wait to receive an event that the driver has registered.
-    let device_changes = lookup
+    let (added, removed) = lookup
         .watch_devices()
         .err_into::<Error>()
         .on_timeout(Time::after(DEFAULT_TIMEOUT), || {
@@ -65,8 +51,8 @@ async fn test_service_driver_interaction() -> Result<(), Error> {
         .await
         .context("Second call to lookup.watch_devices() failed")?;
 
-    assert_eq!(device_changes.added, vec![IFACE_NAME.to_string()]);
-    assert_eq!(device_changes.removed, Vec::<String>::new());
+    assert_eq!(added, vec![IFACE_NAME.to_string()]);
+    assert_eq!(removed, Vec::<String>::new());
 
     // Step 4: Try to lookup the dummy device via the Lookup API
     let (client, server) = create_endpoints::<DeviceMarker>()?;
@@ -108,7 +94,7 @@ async fn test_service_driver_interaction() -> Result<(), Error> {
     driver.kill().context("Unable to kill driver")?;
 
     // Step 7: Make sure that the service doesn't have the device anymore.
-    let device_changes = lookup
+    let (added, removed) = lookup
         .watch_devices()
         .err_into::<Error>()
         .on_timeout(Time::after(DEFAULT_TIMEOUT), || {
@@ -117,8 +103,8 @@ async fn test_service_driver_interaction() -> Result<(), Error> {
         .await
         .context("Second call to lookup.watch_devices() failed")?;
 
-    assert_eq!(device_changes.added, Vec::<String>::new());
-    assert_eq!(device_changes.removed, vec![IFACE_NAME.to_string()]);
+    assert_eq!(added, Vec::<String>::new());
+    assert_eq!(removed, vec![IFACE_NAME.to_string()]);
 
     // Step 8: Make sure that the endpoints are dead.
     assert!(

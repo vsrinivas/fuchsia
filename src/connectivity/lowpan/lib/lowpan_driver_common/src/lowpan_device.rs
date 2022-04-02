@@ -4,20 +4,10 @@
 
 use crate::prelude_internal::*;
 
+use crate::lowpan_fidl::*;
 use crate::ServeTo;
 use anyhow::Error;
 use core::future::ready;
-use fidl_fuchsia_factory_lowpan::*;
-use fidl_fuchsia_lowpan::*;
-use fidl_fuchsia_lowpan_device::{
-    AllCounters, CountersRequest, CountersRequestStream, DeviceExtraRequest,
-    DeviceExtraRequestStream, DeviceRequest, DeviceRequestStream, DeviceRouteExtraRequest,
-    DeviceRouteExtraRequestStream, DeviceRouteRequest, DeviceRouteRequestStream, DeviceState,
-    EnergyScanParameters, EnergyScanResult, ExternalRoute, NetworkScanParameters, OnMeshPrefix,
-    ProvisionError, ProvisioningProgress,
-};
-use fidl_fuchsia_lowpan_test::*;
-use fidl_fuchsia_lowpan_thread::*;
 use futures::stream::BoxStream;
 use futures::{FutureExt, StreamExt, TryStreamExt};
 
@@ -94,7 +84,7 @@ pub trait Driver: Send + Sync {
     /// Returns the value of the current credential, if one is available.
     ///
     /// See [`fidl_fuchsia_lowpan_device::DeviceExtra::get_credential`] for more information.
-    async fn get_credential(&self) -> ZxResult<Option<fidl_fuchsia_lowpan::Credential>>;
+    async fn get_credential(&self) -> ZxResult<Option<Credential>>;
 
     /// Starts a new energy scan operation and returns a stream for tracking the
     /// results.
@@ -146,7 +136,7 @@ pub trait Driver: Send + Sync {
     /// Returns the immediate RSSI value for the radio on this device.
     ///
     /// See [`fidl_fuchsia_lowpan_test::DeviceTest::get_rssi`] for more information.
-    async fn get_current_rssi(&self) -> ZxResult<i32>;
+    async fn get_current_rssi(&self) -> ZxResult<i8>;
 
     /// Returns the partition id that this device is a part of.
     /// Returns 0xFFFFFFFF if this device is not a member of a partition.
@@ -322,16 +312,6 @@ impl<T: Driver> ServeTo<DeviceRequestStream> for T {
                         .context("error in get_supported_network_types request")?;
                 }
 
-                DeviceRequest::GetSupportedChannels { responder } => {
-                    self.get_supported_channels()
-                        .err_into::<Error>()
-                        .and_then(|response| {
-                            ready(responder.send(&mut response.into_iter()).map_err(Error::from))
-                        })
-                        .await
-                        .context("error in get_supported_channels request")?;
-                }
-
                 DeviceRequest::WatchDeviceState { responder } => {
                     watcher
                         .try_lock()
@@ -351,10 +331,63 @@ impl<T: Driver> ServeTo<DeviceRequestStream> for T {
             Result::<(), anyhow::Error>::Ok(())
         };
 
+        request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.map_err(
+            |err| {
+                fx_log_err!("Error serving DeviceRequestStream: {:?}", err);
+
+                if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+                    request_control_handle.shutdown_with_epitaph(*epitaph);
+                }
+
+                err
+            },
+        )
+    }
+}
+
+#[async_trait()]
+impl<T: Driver> ServeTo<DeviceExtraRequestStream> for T {
+    async fn serve_to(&self, request_stream: DeviceExtraRequestStream) -> anyhow::Result<()> {
+        use futures::lock::Mutex;
+        let watcher = Mutex::new(self.watch_identity());
+        let request_control_handle = request_stream.control_handle();
+
+        let closure = |command| async {
+            match command {
+                DeviceExtraRequest::GetCredential { responder, .. } => {
+                    self.get_credential()
+                        .err_into::<Error>()
+                        .and_then(|mut response| {
+                            ready(responder.send(response.as_mut()).map_err(Error::from))
+                        })
+                        .await
+                        .context("error in get_credential request")?;
+                }
+                DeviceExtraRequest::WatchIdentity { responder, .. } => {
+                    watcher
+                        .try_lock()
+                        .ok_or_else(|| {
+                            format_err!(
+                                "No more than 1 outstanding call to watch_identity is allowed"
+                            )
+                        })?
+                        .next()
+                        .map(|x| match x {
+                            Some(x) => x.map_err(Error::from),
+                            None => Err(format_err!("Device combined state stream ended early")),
+                        })
+                        .and_then(|response| ready(responder.send(response).map_err(Error::from)))
+                        .await
+                        .context("error in watch_identity request")?;
+                }
+            }
+            Result::<(), anyhow::Error>::Ok(())
+        };
+
         if let Some(err) =
             request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.err()
         {
-            fx_log_err!("Error serving DeviceRequestStream: {:?}", err);
+            fx_log_err!("Error serving DeviceExtraRequestStream: {:?}", err);
 
             if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
                 request_control_handle.shutdown_with_epitaph(*epitaph);
@@ -368,17 +401,54 @@ impl<T: Driver> ServeTo<DeviceRequestStream> for T {
 }
 
 #[async_trait()]
-impl<T: Driver> ServeTo<DeviceExtraRequestStream> for T {
-    async fn serve_to(&self, request_stream: DeviceExtraRequestStream) -> anyhow::Result<()> {
-        use futures::lock::Mutex;
-        let watcher = Mutex::new(self.watch_identity());
+impl<T: Driver> ServeTo<ExperimentalDeviceRequestStream> for T {
+    async fn serve_to(
+        &self,
+        request_stream: ExperimentalDeviceRequestStream,
+    ) -> anyhow::Result<()> {
+        let request_control_handle = request_stream.control_handle();
+
+        let closure = |command| async {
+            match command {
+                ExperimentalDeviceRequest::GetSupportedChannels { responder } => {
+                    self.get_supported_channels()
+                        .err_into::<Error>()
+                        .and_then(|response| {
+                            ready(responder.send(&mut response.into_iter()).map_err(Error::from))
+                        })
+                        .await
+                        .context("error in get_supported_channels request")?;
+                }
+            }
+            Result::<(), anyhow::Error>::Ok(())
+        };
+
+        request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.map_err(
+            |err| {
+                fx_log_err!("Error serving ExperimentalDeviceRequestStream: {:?}", err);
+
+                if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+                    request_control_handle.shutdown_with_epitaph(*epitaph);
+                }
+
+                err
+            },
+        )
+    }
+}
+
+#[async_trait()]
+impl<T: Driver> ServeTo<ExperimentalDeviceExtraRequestStream> for T {
+    async fn serve_to(
+        &self,
+        request_stream: ExperimentalDeviceExtraRequestStream,
+    ) -> anyhow::Result<()> {
         let request_control_handle = request_stream.control_handle();
 
         let closure = |command| {
             async {
                 match command {
-                    DeviceExtraRequest::JoinNetwork { params, progress, .. } => {
-                        use fidl_fuchsia_lowpan_device::ProvisioningMonitorRequest;
+                    ExperimentalDeviceExtraRequest::JoinNetwork { params, progress, .. } => {
                         let stream = progress.into_stream()?;
                         let control_handle = stream.control_handle();
 
@@ -417,8 +487,7 @@ impl<T: Driver> ServeTo<DeviceExtraRequestStream> for T {
                             fx_log_err!("Error during DeviceExtraRequest::JoinNetwork: {:?}", err);
                         }
                     }
-                    DeviceExtraRequest::FormNetwork { params, progress, .. } => {
-                        use fidl_fuchsia_lowpan_device::ProvisioningMonitorRequest;
+                    ExperimentalDeviceExtraRequest::FormNetwork { params, progress, .. } => {
                         let stream = progress.into_stream()?;
                         let control_handle = stream.control_handle();
 
@@ -457,17 +526,99 @@ impl<T: Driver> ServeTo<DeviceExtraRequestStream> for T {
                             fx_log_err!("Error during DeviceExtraRequest::FormNetwork: {:?}", err);
                         }
                     }
-                    DeviceExtraRequest::GetCredential { responder, .. } => {
-                        self.get_credential()
-                            .err_into::<Error>()
-                            .and_then(|mut response| {
-                                ready(responder.send(response.as_mut()).map_err(Error::from))
+                    ExperimentalDeviceExtraRequest::StartNetworkScan { params, stream, .. } => {
+                        let stream = stream.into_stream()?;
+                        let control_handle = stream.control_handle();
+
+                        // Convert the stream of requests (of which there is only one
+                        // variant) into a stream of `BeaconInfoStreamNextResponder`
+                        // instances, for clarity.
+                        let responder_stream = stream.map_ok(|x| match x {
+                            BeaconInfoStreamRequest::Next { responder } => responder,
+                        });
+
+                        // The reason for the `filter()` and `chain()` calls below is to
+                        // avoid having two different ways to signal the end of the scan stream.
+                        //
+                        // The `BeaconInfoStream::Next` FIDL method signals the end of the scan
+                        // by returning an empty vector. However, the stream returned by
+                        // `lowpan_driver_common::Driver::start_network_scan()` denotes the end
+                        // of the scan simply as the end of the stream (`next()` returning `None`
+                        // instead of `Some(...)`).
+                        //
+                        // These two mechanisms are different. We don't want `start_network_scan()`
+                        // to be able to trigger the end of the scan when the stream hasn't
+                        // finished yet. Likewise we want to make sure that we properly indicate
+                        // via `BeaconInfoStream::Next` that the scan has been terminated when the
+                        // scan stream has ended, even when the last vector emitted was not empty.
+                        //
+                        // To do that we first strip all empty vectors from the scan stream, and
+                        // then ensure that the last emitted vector is empty.
+                        let result_stream = self
+                            .start_network_scan(&params)
+                            .filter(|x| {
+                                // Remove empty vectors that may
+                                // happen erroneously. We don't want them
+                                // confused with indicating the end
+                                // of the scan.
+                                ready(!matches!(x,Ok(v) if v.is_empty()))
                             })
-                            .await
-                            .context("error in get_credential request")?;
+                            // Append an empty vector to signal the real end
+                            // of the scan.
+                            .chain(ready(Ok(vec![])).into_stream());
+
+                        let ret = responder_stream
+                            .zip(result_stream)
+                            .map(move |x| match x {
+                                (Ok(responder), Ok(result)) => {
+                                    Ok(responder.send(&mut result.into_iter())?)
+                                }
+                                (Err(err), _) => {
+                                    Err(Error::from(err).context("BeaconInfoStreamRequestStream"))
+                                }
+                                (_, Err(status)) => {
+                                    control_handle.shutdown_with_epitaph(status);
+                                    Err(Error::from(status).context("network_scan_result_stream"))
+                                }
+                            })
+                            .try_for_each(|_| ready(Ok(())))
+                            .await;
+
+                        if let Err(err) = ret {
+                            // These errors only affect the scan channel, so
+                            // we only report them to the logs rather than passing
+                            // them up.
+                            fx_log_err!("Error during network scan: {:?}", err);
+                        }
                     }
-                    DeviceExtraRequest::StartEnergyScan { params, stream, .. } => {
-                        use fidl_fuchsia_lowpan_device::EnergyScanResultStreamRequest;
+                }
+                Result::<(), anyhow::Error>::Ok(())
+            }
+        };
+
+        request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.map_err(
+            |err| {
+                fx_log_err!("Error serving ExperimentalDeviceExtraRequestStream: {:?}", err);
+
+                if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+                    request_control_handle.shutdown_with_epitaph(*epitaph);
+                }
+
+                err
+            },
+        )
+    }
+}
+
+#[async_trait()]
+impl<T: Driver> ServeTo<EnergyScanRequestStream> for T {
+    async fn serve_to(&self, request_stream: EnergyScanRequestStream) -> anyhow::Result<()> {
+        let request_control_handle = request_stream.control_handle();
+
+        let closure = |command| {
+            async {
+                match command {
+                    EnergyScanRequest::StartEnergyScan { params, stream, .. } => {
                         let stream = stream.into_stream()?;
                         let control_handle = stream.control_handle();
 
@@ -532,112 +683,22 @@ impl<T: Driver> ServeTo<DeviceExtraRequestStream> for T {
                             fx_log_err!("Error during energy scan: {:?}", err);
                         }
                     }
-                    DeviceExtraRequest::StartNetworkScan { params, stream, .. } => {
-                        use fidl_fuchsia_lowpan_device::BeaconInfoStreamRequest;
-                        let stream = stream.into_stream()?;
-                        let control_handle = stream.control_handle();
-
-                        // Convert the stream of requests (of which there is only one
-                        // variant) into a stream of `BeaconInfoStreamNextResponder`
-                        // instances, for clarity.
-                        let responder_stream = stream.map_ok(|x| match x {
-                            BeaconInfoStreamRequest::Next { responder } => responder,
-                        });
-
-                        // The reason for the `filter()` and `chain()` calls below is to
-                        // avoid having two different ways to signal the end of the scan stream.
-                        //
-                        // The `BeaconInfoStream::Next` FIDL method signals the end of the scan
-                        // by returning an empty vector. However, the stream returned by
-                        // `lowpan_driver_common::Driver::start_network_scan()` denotes the end
-                        // of the scan simply as the end of the stream (`next()` returning `None`
-                        // instead of `Some(...)`).
-                        //
-                        // These two mechanisms are different. We don't want `start_network_scan()`
-                        // to be able to trigger the end of the scan when the stream hasn't
-                        // finished yet. Likewise we want to make sure that we properly indicate
-                        // via `BeaconInfoStream::Next` that the scan has been terminated when the
-                        // scan stream has ended, even when the last vector emitted was not empty.
-                        //
-                        // To do that we first strip all empty vectors from the scan stream, and
-                        // then ensure that the last emitted vector is empty.
-                        let result_stream = self
-                            .start_network_scan(&params)
-                            .filter(|x| {
-                                ready(match x {
-                                    // Remove empty vectors that may
-                                    // happen erroneously. We don't want them
-                                    // confused with indicating the end
-                                    // of the scan.
-                                    Ok(v) if v.is_empty() => false,
-                                    _ => true,
-                                })
-                            })
-                            // Append an empty vector to signal the real end
-                            // of the scan.
-                            .chain(ready(Ok(vec![])).into_stream());
-
-                        let ret = responder_stream
-                            .zip(result_stream)
-                            .map(move |x| match x {
-                                (Ok(responder), Ok(mut result)) => {
-                                    Ok(responder.send(&mut result.iter_mut())?)
-                                }
-                                (Err(err), _) => {
-                                    Err(Error::from(err).context("BeaconInfoStreamRequestStream"))
-                                }
-                                (_, Err(status)) => {
-                                    control_handle.shutdown_with_epitaph(status);
-                                    Err(Error::from(status).context("network_scan_result_stream"))
-                                }
-                            })
-                            .try_for_each(|_| ready(Ok(())))
-                            .await;
-
-                        if let Err(err) = ret {
-                            // These errors only affect the scan channel, so
-                            // we only report them to the logs rather than passing
-                            // them up.
-                            fx_log_err!("Error during network scan: {:?}", err);
-                        }
-                    }
-                    DeviceExtraRequest::WatchIdentity { responder, .. } => {
-                        watcher
-                            .try_lock()
-                            .ok_or(format_err!(
-                                "No more than 1 outstanding call to watch_identity is allowed"
-                            ))?
-                            .next()
-                            .map(|x| match x {
-                                Some(x) => x.map_err(Error::from),
-                                None => {
-                                    Err(format_err!("Device combined state stream ended early"))
-                                }
-                            })
-                            .and_then(|response| {
-                                ready(responder.send(response).map_err(Error::from))
-                            })
-                            .await
-                            .context("error in watch_identity request")?;
-                    }
                 }
                 Result::<(), anyhow::Error>::Ok(())
             }
         };
 
-        if let Some(err) =
-            request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.err()
-        {
-            fx_log_err!("Error serving DeviceExtraRequestStream: {:?}", err);
+        request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.map_err(
+            |err| {
+                fx_log_err!("Error serving EnergyScanRequestStream: {:?}", err);
 
-            if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
-                request_control_handle.shutdown_with_epitaph(*epitaph);
-            }
+                if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+                    request_control_handle.shutdown_with_epitaph(*epitaph);
+                }
 
-            Err(err)
-        } else {
-            Ok(())
-        }
+                err
+            },
+        )
     }
 }
 
@@ -1016,8 +1077,6 @@ mod tests {
     use crate::DummyDevice;
     use assert_matches::assert_matches;
     use fidl::endpoints::create_endpoints;
-    use fidl_fuchsia_lowpan_device::{BeaconInfoStreamMarker, DeviceExtraMarker};
-    use fidl_fuchsia_lowpan_device::{EnergyScanParameters, EnergyScanResultStreamMarker};
     use fuchsia_async as fasync;
 
     #[fasync::run_until_stalled(test)]
@@ -1049,7 +1108,7 @@ mod tests {
     async fn test_energy_scan() {
         let device = DummyDevice::default();
 
-        let (client_ep, server_ep) = create_endpoints::<DeviceExtraMarker>().unwrap();
+        let (client_ep, server_ep) = create_endpoints::<EnergyScanMarker>().unwrap();
 
         let server_future = device.serve_to(server_ep.into_stream().unwrap());
 
@@ -1088,7 +1147,7 @@ mod tests {
     async fn test_network_scan() {
         let device = DummyDevice::default();
 
-        let (client_ep, server_ep) = create_endpoints::<DeviceExtraMarker>().unwrap();
+        let (client_ep, server_ep) = create_endpoints::<ExperimentalDeviceExtraMarker>().unwrap();
 
         let server_future = device.serve_to(server_ep.into_stream().unwrap());
 

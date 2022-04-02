@@ -7,7 +7,7 @@ use crate::spinel::*;
 
 use anyhow::format_err;
 use anyhow::Error;
-use fidl_fuchsia_lowpan::Identity;
+use lowpan_driver_common::lowpan_fidl::Identity;
 use spinel_pack::EUI64;
 use std::collections::HashSet;
 use std::fmt::Debug;
@@ -307,6 +307,8 @@ impl ConnectivityStateExt for ConnectivityState {
             ConnectivityState::Attached => true,
             ConnectivityState::Isolated => true,
             ConnectivityState::Commissioning => false,
+
+            x => panic!("Unexpected connectivity state: {:?}", x),
         }
     }
 
@@ -320,6 +322,8 @@ impl ConnectivityStateExt for ConnectivityState {
             ConnectivityState::Attached => true,
             ConnectivityState::Isolated => true,
             ConnectivityState::Commissioning => true,
+
+            x => panic!("Unexpected connectivity state: {:?}", x),
         }
     }
 
@@ -337,6 +341,8 @@ impl ConnectivityStateExt for ConnectivityState {
             ConnectivityState::Attached => true,
             ConnectivityState::Isolated => true,
             ConnectivityState::Commissioning => false,
+
+            _ => unreachable!("Bad connectivity state"),
         }
     }
 

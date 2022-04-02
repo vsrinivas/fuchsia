@@ -4,7 +4,7 @@
 
 use crate::context::LowpanCtlContext;
 use crate::prelude::*;
-use fidl_fuchsia_lowpan::{Credential, Identity, ProvisioningParams};
+use fidl_fuchsia_lowpan_device::{Credential, Identity, ProvisioningParams};
 use std::u16;
 
 const PROVISION_CMD_NAME_LEN: usize = 63;
@@ -93,7 +93,7 @@ impl ProvisionCommand {
 
     fn get_credential(&self) -> Result<Option<Box<Credential>>, Error> {
         let cred_master_key_vec = self.get_cred_master_key_vec_from_str()?;
-        Ok(cred_master_key_vec.map(|value| Box::new(Credential::MasterKey(value))))
+        Ok(cred_master_key_vec.map(|value| Box::new(Credential::NetworkKey(value))))
     }
 
     fn get_provisioning_params(&self) -> Result<ProvisioningParams, Error> {

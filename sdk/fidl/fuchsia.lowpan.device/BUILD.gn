@@ -8,13 +8,11 @@ fidl("fuchsia.lowpan.device") {
   sdk_category = "internal"
 
   sources = [
+    "counters.fidl",
     "device.fidl",
-    "device_counters.fidl",
-    "device_route.fidl",
     "energy_scanner.fidl",
     "misc.fidl",
-    "network_scanner.fidl",
-    "provisioning_monitor.fidl",
+    "provisioning_params.fidl",
   ]
 
   public_deps = [

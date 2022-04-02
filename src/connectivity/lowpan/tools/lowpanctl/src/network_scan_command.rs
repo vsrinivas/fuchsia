@@ -4,7 +4,7 @@
 
 use crate::context::LowpanCtlContext;
 use crate::prelude::*;
-use fidl_fuchsia_lowpan_device::{BeaconInfoStreamMarker, NetworkScanParameters};
+use fidl_fuchsia_lowpan_experimental::{BeaconInfoStreamMarker, NetworkScanParameters};
 
 /// Contains the arguments decoded for the `network-scan` command.
 #[derive(FromArgs, PartialEq, Debug)]
@@ -27,7 +27,7 @@ pub struct NetworkScanCommand {
     /// power is lower than the lowest transmit power supported
     /// by the hardware, then that will be used instead.
     #[argh(option)]
-    pub tx_power_dbm: Option<i32>,
+    pub tx_power_dbm: Option<i8>,
 }
 
 impl NetworkScanCommand {
@@ -54,18 +54,10 @@ impl NetworkScanCommand {
         })
     }
 
-    fn get_hex_string(&self, vec: &Vec<u8>) -> String {
-        let mut string = String::from("");
-        for item in vec {
-            string.push_str(&format!("{:02x}", item)[..]);
-        }
-        string
-    }
-
     pub async fn exec(&self, context: &mut LowpanCtlContext) -> Result<(), Error> {
         let network_scan_marker = self.get_network_scan_params()?;
         let device_extra = context
-            .get_default_device_extra_proxy()
+            .get_default_experimental_device_extra()
             .await
             .context("Unable to get device instance")?;
         let (client_end, server_end) = create_endpoints::<BeaconInfoStreamMarker>()?;
@@ -89,37 +81,53 @@ impl NetworkScanCommand {
             }
             println!("|-------------------+--------+----+------------------+------------------+-----------|");
             for item in vec {
-                let network_name_vec = match item.identity.raw_name {
-                    Some(x) => x,
-                    None => Vec::new(),
-                };
-                let network_name = match std::str::from_utf8(&network_name_vec) {
-                    Ok(x) => format!("{:?}", x),
-                    Err(_) => format!("{:?}", self.get_hex_string(&network_name_vec)),
-                };
-                let panid = format!(
-                    "{:^6}",
-                    match item.identity.panid {
-                        Some(num) => format_args!("{:#04X}", num).to_string(),
-                        None => format_args!("N/A").to_string(),
-                    }
-                );
-                let ch = format!(
-                    "{:^2}",
-                    match item.identity.channel {
-                        Some(num) => num.to_string(),
-                        None => format_args!("N/A").to_string(),
-                    }
-                );
-                let xpanid_vec = match item.identity.xpanid {
-                    Some(x) => x,
-                    None => Vec::new(),
-                };
-                let xpanid = format!("{:^16}", self.get_hex_string(&xpanid_vec));
-                let hwaddr = format!("{:^16}", self.get_hex_string(&item.address));
-                let rssi = format!("{:^9}", item.rssi);
+                let network_name = item
+                    .identity
+                    .as_ref()
+                    .map(|x| x.raw_name.as_ref().map(Vec::as_slice))
+                    .flatten()
+                    .map(|x| {
+                        std::str::from_utf8(x)
+                            .map(|x| format!("{:?}", x))
+                            .unwrap_or_else(|_| hex::encode(x))
+                    })
+                    .unwrap_or_else(|| String::new());
+
+                let panid = item
+                    .identity
+                    .as_ref()
+                    .map(|x| x.panid)
+                    .flatten()
+                    .map(|x| format!("{:#04X}", x))
+                    .unwrap_or_else(|| "N/A".to_string());
+
+                let ch = item
+                    .identity
+                    .as_ref()
+                    .map(|x| x.channel)
+                    .flatten()
+                    .map(|x| x.to_string())
+                    .unwrap_or_else(|| "N/A".to_string());
+
+                let xpanid = item
+                    .identity
+                    .as_ref()
+                    .map(|x| x.xpanid.as_ref().map(Vec::as_slice))
+                    .flatten()
+                    .map(hex::encode)
+                    .unwrap_or_else(|| "N/A".to_string());
+
+                let hwaddr = item
+                    .address
+                    .as_ref()
+                    .map(Vec::as_slice)
+                    .map(hex::encode)
+                    .unwrap_or_else(|| "N/A".to_string());
+
+                let rssi = item.rssi.map(|x| x.to_string()).unwrap_or_else(|| "N/A".to_string());
+
                 println!(
-                    "| {:^17} | {} | {} | {} | {} | {} |",
+                    "| {:^17} | {:^6} | {:^2} | {:^16} | {:^16} | {:^9} |",
                     network_name, panid, ch, xpanid, hwaddr, rssi
                 );
             }

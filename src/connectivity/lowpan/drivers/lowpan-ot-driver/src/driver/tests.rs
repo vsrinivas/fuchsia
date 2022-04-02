@@ -4,10 +4,10 @@
 
 use super::*;
 
-use fidl_fuchsia_lowpan::{
+use futures::prelude::*;
+use lowpan_driver_common::lowpan_fidl::{
     ConnectivityState, Credential, Identity, ProvisioningParams, NET_TYPE_THREAD_1_X,
 };
-use futures::prelude::*;
 use lowpan_driver_common::net::*;
 use lowpan_driver_common::spinel::mock::*;
 use lowpan_driver_common::spinel::*;
@@ -30,7 +30,7 @@ lazy_static::lazy_static! {
         };
 
     static ref TEST_CREDENTIAL: Credential =
-            Credential::MasterKey(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
+            Credential::NetworkKey(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
 }
 
 const DEFAULT_TEST_TIMEOUT: Duration = Duration::from_seconds(45);
@@ -159,8 +159,8 @@ async fn test_initial_device_state() {
 #[ignore] // TODO: Re-enable once scan support is added to test RCP
 async fn test_network_scan() {
     test_harness(|driver| async move {
-        let network_scan_stream =
-            driver.start_network_scan(&fidl_fuchsia_lowpan_device::NetworkScanParameters::EMPTY);
+        let network_scan_stream = driver
+            .start_network_scan(&lowpan_driver_common::lowpan_fidl::NetworkScanParameters::EMPTY);
         assert_eq!(network_scan_stream.try_collect::<Vec<_>>().await.unwrap().len(), 3);
     })
     .await;
@@ -169,8 +169,8 @@ async fn test_network_scan() {
 #[fasync::run(10, test)]
 #[ignore] // TODO: Re-enable once joiner support is added to test RCP
 async fn test_joiner() {
-    use fidl_fuchsia_lowpan::JoinParams;
-    use fidl_fuchsia_lowpan::JoinerCommissioningParams;
+    use lowpan_driver_common::lowpan_fidl::JoinParams;
+    use lowpan_driver_common::lowpan_fidl::JoinerCommissioningParams;
 
     test_harness(|driver| async move {
         let join_stream =
@@ -187,8 +187,8 @@ async fn test_joiner() {
 #[ignore] // TODO: Re-enable once scan support is added to test RCP
 async fn test_energy_scan() {
     test_harness(|driver| async move {
-        let energy_scan_stream =
-            driver.start_energy_scan(&fidl_fuchsia_lowpan_device::EnergyScanParameters::EMPTY);
+        let energy_scan_stream = driver
+            .start_energy_scan(&lowpan_driver_common::lowpan_fidl::EnergyScanParameters::EMPTY);
         assert_eq!(energy_scan_stream.try_collect::<Vec<_>>().await.unwrap().len(), 3);
     })
     .await;
@@ -225,7 +225,10 @@ async fn test_get_current_mac_address() {
 async fn test_get_supported_network_types() {
     test_harness(|driver| async move {
         let network_types = driver.get_supported_network_types().await;
-        assert_eq!(network_types, Ok(vec![fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X.to_string()]));
+        assert_eq!(
+            network_types,
+            Ok(vec![lowpan_driver_common::lowpan_fidl::NET_TYPE_THREAD_1_X.to_string()])
+        );
     })
     .await;
 }
@@ -410,14 +413,14 @@ async fn test_add_on_mesh_prefix() {
 
         driver.wait_for_state(DriverState::is_active_and_ready).await;
 
-        let on_mesh_prefix_subnet: fidl_fuchsia_lowpan::Ipv6Subnet =
+        let on_mesh_prefix_subnet: lowpan_driver_common::lowpan_fidl::Ipv6Subnet =
             Subnet { addr: std::net::Ipv6Addr::from_str("2001:DB8::").unwrap(), prefix_len: 64 }
                 .into();
-        let x = fidl_fuchsia_lowpan_device::OnMeshPrefix {
-            subnet: Some(on_mesh_prefix_subnet.clone()),
+        let x = lowpan_driver_common::lowpan_fidl::OnMeshPrefix {
+            subnet: Some(on_mesh_prefix_subnet),
             slaac_preferred: Some(true),
             slaac_valid: Some(true),
-            ..fidl_fuchsia_lowpan_device::OnMeshPrefix::EMPTY
+            ..lowpan_driver_common::lowpan_fidl::OnMeshPrefix::EMPTY
         };
         assert_eq!(driver.register_on_mesh_prefix(x.clone()).await, Ok(()));
 
@@ -455,14 +458,14 @@ async fn test_add_external_route() {
 
         driver.wait_for_state(DriverState::is_active_and_ready).await;
 
-        let external_route_subnet: fidl_fuchsia_lowpan::Ipv6Subnet =
+        let external_route_subnet: lowpan_driver_common::lowpan_fidl::Ipv6Subnet =
             Subnet { addr: std::net::Ipv6Addr::from_str("2001:DB8::").unwrap(), prefix_len: 64 }
                 .into();
-        let x = fidl_fuchsia_lowpan_device::ExternalRoute {
-            subnet: Some(external_route_subnet.clone()),
-            route_preference: Some(fidl_fuchsia_lowpan_device::RoutePreference::Medium),
+        let x = lowpan_driver_common::lowpan_fidl::ExternalRoute {
+            subnet: Some(external_route_subnet),
+            route_preference: Some(lowpan_driver_common::lowpan_fidl::RoutePreference::Medium),
             stable: Some(true),
-            ..fidl_fuchsia_lowpan_device::ExternalRoute::EMPTY
+            ..lowpan_driver_common::lowpan_fidl::ExternalRoute::EMPTY
         };
         assert_eq!(driver.register_external_route(x.clone()).await, Ok(()));
 
@@ -529,7 +532,7 @@ async fn test_grind_lowpan_ot_driver() {
             fx_log_debug!("app_task: Supported Network Types: {:?}", network_types);
             assert_eq!(
                 network_types,
-                Ok(vec![fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X.to_string()])
+                Ok(vec![lowpan_driver_common::lowpan_fidl::NET_TYPE_THREAD_1_X.to_string()])
             );
 
             let curr_chan = driver.get_current_channel().await;
@@ -623,16 +626,16 @@ async fn test_grind_lowpan_ot_driver() {
             fx_log_debug!("app_task: Is empty!");
 
             fx_log_debug!("app_task: Adding an on-mesh prefix...");
-            let on_mesh_prefix_subnet: fidl_fuchsia_lowpan::Ipv6Subnet = Subnet {
+            let on_mesh_prefix_subnet: lowpan_driver_common::lowpan_fidl::Ipv6Subnet = Subnet {
                 addr: std::net::Ipv6Addr::from_str("2001:DB8::").unwrap(),
                 prefix_len: 64,
             }
             .into();
-            let x = fidl_fuchsia_lowpan_device::OnMeshPrefix {
-                subnet: Some(on_mesh_prefix_subnet.clone()),
+            let x = lowpan_driver_common::lowpan_fidl::OnMeshPrefix {
+                subnet: Some(on_mesh_prefix_subnet),
                 slaac_preferred: Some(true),
                 slaac_valid: Some(true),
-                ..fidl_fuchsia_lowpan_device::OnMeshPrefix::EMPTY
+                ..lowpan_driver_common::lowpan_fidl::OnMeshPrefix::EMPTY
             };
             assert_eq!(driver.register_on_mesh_prefix(x.clone()).await, Ok(()));
             fx_log_debug!("app_task: Registered!");

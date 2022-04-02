@@ -12,7 +12,10 @@ pub struct GetSupportedChannelsCommand {}
 
 impl GetSupportedChannelsCommand {
     pub async fn exec(&self, context: &mut LowpanCtlContext) -> Result<(), Error> {
-        let device = context.get_default_device().await.context("Unable to get device instance")?;
+        let device = context
+            .get_default_experimental_device()
+            .await
+            .context("Unable to get device instance")?;
 
         let channel_infos = device
             .get_supported_channels()
@@ -32,15 +35,15 @@ impl GetSupportedChannelsCommand {
                 Some(x) => format!("{:?}", x),
                 None => format!("{}", "N/A".to_string()),
             };
-            let max_transmit_power = match channel_info.max_transmit_power {
+            let max_transmit_power = match channel_info.max_transmit_power_dbm {
                 Some(x) => format!("{:^14}", x),
                 None => format!("{:^14}", "N/A".to_string()),
             };
-            let spectrum_center_frequency = match channel_info.spectrum_center_frequency {
+            let spectrum_center_frequency = match channel_info.spectrum_center_frequency_hz {
                 Some(x) => format!("{:^22}", x),
                 None => format!("{:^22}", "N/A".to_string()),
             };
-            let spectrum_bandwidth = match channel_info.spectrum_bandwidth {
+            let spectrum_bandwidth = match channel_info.spectrum_bandwidth_hz {
                 Some(x) => format!("{:^20}", x),
                 None => format!("{:^20}", "N/A".to_string()),
             };

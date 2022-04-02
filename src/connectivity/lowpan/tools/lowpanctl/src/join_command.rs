@@ -4,10 +4,10 @@
 
 use crate::context::LowpanCtlContext;
 use crate::prelude::*;
-use fidl_fuchsia_lowpan::{
-    Credential, Identity, JoinParams, JoinerCommissioningParams, ProvisioningParams,
+use fidl_fuchsia_lowpan_device::{Credential, Identity, ProvisioningParams};
+use fidl_fuchsia_lowpan_experimental::{
+    JoinParams, JoinerCommissioningParams, ProvisioningMonitorMarker, ProvisioningProgress,
 };
-use fidl_fuchsia_lowpan_device::{ProvisioningMonitorMarker, ProvisioningProgress};
 use hex;
 
 const PROVISION_CMD_NAME_LEN: usize = 63;
@@ -116,7 +116,7 @@ impl JoinCommand {
 
     fn get_credential(&self) -> Result<Option<Box<Credential>>, Error> {
         let cred_master_key_vec = self.get_cred_master_key_vec_from_str()?;
-        Ok(cred_master_key_vec.map(|value| Box::new(Credential::MasterKey(value))))
+        Ok(cred_master_key_vec.map(|value| Box::new(Credential::NetworkKey(value))))
     }
 
     fn get_joiner_params(&self) -> JoinerCommissioningParams {
@@ -147,7 +147,7 @@ impl JoinCommand {
     pub async fn exec(&self, context: &mut LowpanCtlContext) -> Result<(), Error> {
         let mut join_args = self.get_join_params()?;
         let device_extra = context
-            .get_default_device_extra_proxy()
+            .get_default_experimental_device_extra()
             .await
             .context("Unable to get device instance")?;
         let (client_end, server_end) = create_endpoints::<ProvisioningMonitorMarker>()?;

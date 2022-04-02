@@ -5,10 +5,9 @@
 use crate::context::LowpanCtlContext;
 use crate::prelude::*;
 use fidl::endpoints::create_endpoints;
-use fidl_fuchsia_lowpan::ConnectivityState;
 use fidl_fuchsia_lowpan_device::{
-    DeviceConnectorMarker, DeviceExtraConnectorMarker, DeviceExtraMarker, DeviceExtraProxy,
-    DeviceMarker, DeviceProxy,
+    ConnectivityState, DeviceConnectorMarker, DeviceExtraConnectorMarker, DeviceExtraMarker,
+    DeviceExtraProxy, DeviceMarker, DeviceProxy,
 };
 use fidl_fuchsia_lowpan_test::{DeviceTestConnectorMarker, DeviceTestMarker, DeviceTestProxy};
 use std::fmt;
@@ -233,10 +232,11 @@ impl StatusCommand {
     pub async fn exec(&self, context: &mut LowpanCtlContext) -> Result<(), Error> {
         let lookup = &context.lookup;
         let device_names: Vec<String> = lookup
-            .get_devices()
+            .watch_devices()
             .await
             .map_err(std::convert::Into::<Error>::into)
-            .context("Unable to list LoWPAN devices")?;
+            .context("Unable to list LoWPAN devices")?
+            .0;
 
         if device_names.is_empty() {
             Err(format_err!("No LoWPAN interfaces present"))

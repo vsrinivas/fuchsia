@@ -7,17 +7,21 @@ using fuchsia.lowpan;
 using fuchsia.lowpan.device;
 using fuchsia.lowpan.test;
 using fuchsia.lowpan.thread;
+using fuchsia.lowpan.experimental;
 
 /// Table of protocol requests that is passed into `Driver.GetProtocols()`.
 type Protocols = resource table {
     1: device server_end:fuchsia.lowpan.device.Device;
     2: device_extra server_end:fuchsia.lowpan.device.DeviceExtra;
     3: device_test server_end:fuchsia.lowpan.test.DeviceTest;
-    4: device_route server_end:fuchsia.lowpan.device.DeviceRoute;
-    5: device_route_extra server_end:fuchsia.lowpan.device.DeviceRouteExtra;
+    4: device_route server_end:fuchsia.lowpan.experimental.DeviceRoute;
+    5: device_route_extra server_end:fuchsia.lowpan.experimental.DeviceRouteExtra;
     6: counters server_end:fuchsia.lowpan.device.Counters;
-    7: thread_legacy_joining server_end:fuchsia.lowpan.thread.LegacyJoining;
+    7: thread_legacy_joining server_end:fuchsia.lowpan.experimental.LegacyJoining;
     8: thread_dataset server_end:fuchsia.lowpan.thread.Dataset;
+    9: energy_scan server_end:fuchsia.lowpan.device.EnergyScan;
+   10: experimental_device server_end:fuchsia.lowpan.experimental.Device;
+   11: experimental_device_extra server_end:fuchsia.lowpan.experimental.DeviceExtra;
 };
 
 /// Protocol representing a LoWPAN driver instance.

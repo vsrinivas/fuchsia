@@ -8,10 +8,11 @@ mod net_flags;
 use crate::prelude_internal::*;
 
 use super::{Correlated, CorrelatedBox};
+use crate::lowpan_fidl::{
+    AllCounters, CoexCounters, JoinerCommissioningParams, MacCounters, RoutePreference,
+};
 use crate::net::Ipv6PacketDebug;
 use core::convert::{TryFrom, TryInto};
-use fidl_fuchsia_lowpan::JoinerCommissioningParams;
-use fidl_fuchsia_lowpan_device::{AllCounters, CoexCounters, MacCounters};
 use hex;
 use net_types::ip::IpAddress;
 use spinel_pack::*;
@@ -294,17 +295,17 @@ impl TryFrom<fidl_fuchsia_net::Subnet> for Subnet {
     }
 }
 
-impl Into<fidl_fuchsia_lowpan::Ipv6Subnet> for Subnet {
-    fn into(self) -> fidl_fuchsia_lowpan::Ipv6Subnet {
-        fidl_fuchsia_lowpan::Ipv6Subnet {
-            addr: fidl_fuchsia_net::Ipv6Address { addr: self.addr.octets() },
-            prefix_len: self.prefix_len,
+impl From<Subnet> for fidl_fuchsia_net::Ipv6AddressWithPrefix {
+    fn from(x: Subnet) -> fidl_fuchsia_net::Ipv6AddressWithPrefix {
+        fidl_fuchsia_net::Ipv6AddressWithPrefix {
+            addr: fidl_fuchsia_net::Ipv6Address { addr: x.addr.octets() },
+            prefix_len: x.prefix_len,
         }
     }
 }
 
-impl From<fidl_fuchsia_lowpan::Ipv6Subnet> for Subnet {
-    fn from(subnet: fidl_fuchsia_lowpan::Ipv6Subnet) -> Self {
+impl From<fidl_fuchsia_net::Ipv6AddressWithPrefix> for Subnet {
+    fn from(subnet: fidl_fuchsia_net::Ipv6AddressWithPrefix) -> Self {
         Self { addr: subnet.addr.addr.into(), prefix_len: subnet.prefix_len }
     }
 }
@@ -390,22 +391,21 @@ pub struct OnMeshNet {
     pub rloc16: u16,
 }
 
-impl Into<fidl_fuchsia_lowpan_device::OnMeshPrefix> for OnMeshNet {
-    fn into(self) -> fidl_fuchsia_lowpan_device::OnMeshPrefix {
-        fidl_fuchsia_lowpan_device::OnMeshPrefix {
-            subnet: Some(self.subnet.into()),
-            default_route_preference: self.flags.route_preference(),
-            stable: Some(self.stable),
-            slaac_preferred: Some(self.flags.is_slaac_preferred()),
-            slaac_valid: Some(self.flags.is_slaac_valid()),
-            ..fidl_fuchsia_lowpan_device::OnMeshPrefix::EMPTY
+impl From<OnMeshNet> for crate::lowpan_fidl::OnMeshPrefix {
+    fn from(x: OnMeshNet) -> crate::lowpan_fidl::OnMeshPrefix {
+        crate::lowpan_fidl::OnMeshPrefix {
+            subnet: Some(x.subnet.into()),
+            default_route_preference: x.flags.route_preference(),
+            stable: Some(x.stable),
+            slaac_preferred: Some(x.flags.is_slaac_preferred()),
+            slaac_valid: Some(x.flags.is_slaac_valid()),
+            ..crate::lowpan_fidl::OnMeshPrefix::EMPTY
         }
     }
 }
 
-impl From<fidl_fuchsia_lowpan_device::OnMeshPrefix> for OnMeshNet {
-    fn from(prefix: fidl_fuchsia_lowpan_device::OnMeshPrefix) -> Self {
-        use fidl_fuchsia_lowpan_device::RoutePreference;
+impl From<crate::lowpan_fidl::OnMeshPrefix> for OnMeshNet {
+    fn from(prefix: crate::lowpan_fidl::OnMeshPrefix) -> Self {
         Self {
             subnet: prefix.subnet.expect("OnMeshNet missing required field `subnet`").into(),
             stable: prefix.stable.unwrap_or(false),
@@ -433,8 +433,8 @@ impl From<fidl_fuchsia_lowpan_device::OnMeshPrefix> for OnMeshNet {
     }
 }
 
-impl From<fidl_fuchsia_lowpan::Ipv6Subnet> for OnMeshNet {
-    fn from(subnet: fidl_fuchsia_lowpan::Ipv6Subnet) -> Self {
+impl From<fidl_fuchsia_net::Ipv6AddressWithPrefix> for OnMeshNet {
+    fn from(subnet: fidl_fuchsia_net::Ipv6AddressWithPrefix) -> Self {
         Self {
             subnet: subnet.into(),
             stable: false,
@@ -492,20 +492,19 @@ pub struct ExternalRoute {
     pub rloc16: u16,
 }
 
-impl Into<fidl_fuchsia_lowpan_device::ExternalRoute> for ExternalRoute {
-    fn into(self) -> fidl_fuchsia_lowpan_device::ExternalRoute {
-        fidl_fuchsia_lowpan_device::ExternalRoute {
-            subnet: Some(self.subnet.into()),
-            route_preference: Some(self.flags.route_preference()),
-            stable: Some(self.stable),
-            ..fidl_fuchsia_lowpan_device::ExternalRoute::EMPTY
+impl From<ExternalRoute> for crate::lowpan_fidl::ExternalRoute {
+    fn from(x: ExternalRoute) -> crate::lowpan_fidl::ExternalRoute {
+        crate::lowpan_fidl::ExternalRoute {
+            subnet: Some(x.subnet.into()),
+            route_preference: Some(x.flags.route_preference()),
+            stable: Some(x.stable),
+            ..crate::lowpan_fidl::ExternalRoute::EMPTY
         }
     }
 }
 
-impl From<fidl_fuchsia_lowpan_device::ExternalRoute> for ExternalRoute {
-    fn from(route: fidl_fuchsia_lowpan_device::ExternalRoute) -> Self {
-        use fidl_fuchsia_lowpan_device::RoutePreference;
+impl From<crate::lowpan_fidl::ExternalRoute> for ExternalRoute {
+    fn from(route: crate::lowpan_fidl::ExternalRoute) -> Self {
         Self {
             subnet: route.subnet.expect("OnMeshNet missing required field `subnet`").into(),
             stable: route.stable.unwrap_or(false),
@@ -521,8 +520,8 @@ impl From<fidl_fuchsia_lowpan_device::ExternalRoute> for ExternalRoute {
     }
 }
 
-impl From<fidl_fuchsia_lowpan::Ipv6Subnet> for ExternalRoute {
-    fn from(subnet: fidl_fuchsia_lowpan::Ipv6Subnet) -> Self {
+impl From<fidl_fuchsia_net::Ipv6AddressWithPrefix> for ExternalRoute {
+    fn from(subnet: fidl_fuchsia_net::Ipv6AddressWithPrefix) -> Self {
         Self {
             subnet: subnet.into(),
             stable: false,

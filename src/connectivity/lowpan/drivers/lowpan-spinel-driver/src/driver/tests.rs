@@ -9,9 +9,11 @@ use futures::prelude::*;
 use mock::*;
 
 use crate::spinel::mock::{PROP_DEBUG_LOGGING_TEST, PROP_DEBUG_SAVED_PANID_TEST};
-use fidl_fuchsia_lowpan::{Credential, Identity, ProvisioningParams, NET_TYPE_THREAD_1_X};
-use fidl_fuchsia_lowpan_device::{AllCounters, CoexCounters, MacCounters};
 use fidl_fuchsia_lowpan_test::NeighborInfo;
+use lowpan_driver_common::lowpan_fidl::{
+    AllCounters, CoexCounters, Credential, EnergyScanParameters, Identity, Ipv6Subnet, MacCounters,
+    NetworkScanParameters, OnMeshPrefix, ProvisioningParams, NET_TYPE_THREAD_1_X,
+};
 use lowpan_driver_common::Driver as _;
 use std::str::FromStr;
 
@@ -72,10 +74,7 @@ async fn test_spinel_lowpan_driver() {
 
             let network_types = driver.get_supported_network_types().await;
             traceln!("app_task: Supported Network Types: {:?}", network_types);
-            assert_eq!(
-                network_types,
-                Ok(vec![fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X.to_string()])
-            );
+            assert_eq!(network_types, Ok(vec![NET_TYPE_THREAD_1_X.to_string()]));
 
             let curr_chan = driver.get_current_channel().await;
             traceln!("app_task: Current Channel: {:?}", curr_chan);
@@ -337,7 +336,7 @@ async fn test_spinel_lowpan_driver() {
                 ..Identity::EMPTY
             };
             let test_credential =
-                Credential::MasterKey(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
+                Credential::NetworkKey(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
             assert_eq!(
                 driver
                     .provision_network(ProvisioningParams {
@@ -388,16 +387,16 @@ async fn test_spinel_lowpan_driver() {
             traceln!("app_task: Is empty!");
 
             traceln!("app_task: Adding an on-mesh prefix...");
-            let on_mesh_prefix_subnet: fidl_fuchsia_lowpan::Ipv6Subnet = Subnet {
+            let on_mesh_prefix_subnet: Ipv6Subnet = Subnet {
                 addr: std::net::Ipv6Addr::from_str("fd00:abcd:1234::").unwrap(),
                 prefix_len: 64,
             }
             .into();
-            let x = fidl_fuchsia_lowpan_device::OnMeshPrefix {
-                subnet: Some(on_mesh_prefix_subnet.clone()),
+            let x = OnMeshPrefix {
+                subnet: Some(on_mesh_prefix_subnet),
                 slaac_preferred: Some(true),
                 slaac_valid: Some(true),
-                ..fidl_fuchsia_lowpan_device::OnMeshPrefix::EMPTY
+                ..OnMeshPrefix::EMPTY
             };
             assert_eq!(driver.register_on_mesh_prefix(x.clone()).await, Ok(()));
             traceln!("app_task: Registered!");
@@ -503,13 +502,11 @@ async fn test_spinel_lowpan_driver() {
             );
 
             traceln!("app_task: Performing energy scan...");
-            let energy_scan_stream =
-                driver.start_energy_scan(&fidl_fuchsia_lowpan_device::EnergyScanParameters::EMPTY);
+            let energy_scan_stream = driver.start_energy_scan(&EnergyScanParameters::EMPTY);
             assert_eq!(energy_scan_stream.try_collect::<Vec<_>>().await.unwrap().len(), 3);
 
             traceln!("app_task: Performing network scan...");
-            let network_scan_stream = driver
-                .start_network_scan(&fidl_fuchsia_lowpan_device::NetworkScanParameters::EMPTY);
+            let network_scan_stream = driver.start_network_scan(&NetworkScanParameters::EMPTY);
             assert_eq!(network_scan_stream.try_collect::<Vec<_>>().await.unwrap().len(), 3);
 
             traceln!("app_task: Testing debug logging...");

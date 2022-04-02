@@ -29,6 +29,7 @@ mod prelude {
     pub use fuchsia_syslog::macros::*;
     pub use fuchsia_zircon_status::Status as ZxStatus;
     pub use futures::prelude::*;
+    pub use lowpan_driver_common::lowpan_fidl;
     pub use spinel_pack::prelude::*;
 
     pub use net_declare::{fidl_ip, fidl_ip_v6};

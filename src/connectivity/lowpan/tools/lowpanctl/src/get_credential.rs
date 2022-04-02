@@ -30,7 +30,7 @@ impl GetCredentialCommand {
 
         let credential_str = match credential {
             Some(boxed) => match *boxed {
-                fidl_fuchsia_lowpan::Credential::MasterKey(x) => self.get_hex_string(&x),
+                fidl_fuchsia_lowpan_device::Credential::NetworkKey(x) => self.get_hex_string(&x),
                 _ => "credential type not recognized".to_string(),
             },
             None => "None".to_string(),

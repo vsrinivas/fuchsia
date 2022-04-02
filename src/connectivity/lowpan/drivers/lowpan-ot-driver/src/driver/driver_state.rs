@@ -4,9 +4,7 @@
 
 use super::*;
 
-use fidl_fuchsia_lowpan::{ConnectivityState, Identity, Role};
-use fidl_fuchsia_lowpan_device::DeviceState;
-
+use lowpan_driver_common::lowpan_fidl::*;
 use lowpan_driver_common::spinel::AddressTable;
 
 #[derive(Debug)]

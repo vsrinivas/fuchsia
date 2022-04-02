@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Error},
     fasync::Time,
-    fidl_fuchsia_lowpan::LookupMarker,
+    fidl_fuchsia_lowpan::DeviceWatcherMarker,
     fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext, fuchsia_async as fasync,
     fuchsia_async::TimeoutExt,
     fuchsia_component::client::{connect_to_protocol, launch, launcher, App},
@@ -16,8 +16,8 @@ use {
 const DEFAULT_TIMEOUT: fuchsia_zircon::Duration = fuchsia_zircon::Duration::from_seconds(50);
 
 pub async fn lowpan_driver_init() -> App {
-    let lookup =
-        connect_to_protocol::<LookupMarker>().expect("Failed to connect to Lowpan Lookup service");
+    let lookup = connect_to_protocol::<DeviceWatcherMarker>()
+        .expect("Failed to connect to Lowpan DeviceWatcher service");
 
     let devices = lookup
         .watch_devices()
@@ -28,8 +28,8 @@ pub async fn lowpan_driver_init() -> App {
         .await
         .expect("Initial call to lookup.watch_devices() failed");
 
-    assert!(devices.added.is_empty(), "Initial device list not empty");
-    assert!(devices.removed.is_empty(), "Initial device watch had removed devices");
+    assert!(devices.0.is_empty(), "Initial device list not empty");
+    assert!(devices.1.is_empty(), "Initial device watch had removed devices");
 
     // Start a LoWPAN spinel Driver
     println!("Starting lowpan spinel driver");
@@ -49,14 +49,14 @@ pub async fn lowpan_driver_init() -> App {
         .await
         .expect("Second call to lookup.watch_devices() failed");
 
-    assert_eq!(devices.added, vec!["lowpan0".to_string()]);
-    assert!(devices.removed.is_empty(), "Second device watch had removed devices");
+    assert_eq!(devices.0, vec!["lowpan0".to_string()]);
+    assert!(devices.1.is_empty(), "Second device watch had removed devices");
     driver
 }
 
 pub async fn lowpan_driver_deinit(mut driver: App) {
-    let lookup =
-        connect_to_protocol::<LookupMarker>().expect("Failed to connect to Lowpan Lookup service");
+    let lookup = connect_to_protocol::<DeviceWatcherMarker>()
+        .expect("Failed to connect to Lowpan DeviceWatcher service");
 
     let devices = lookup
         .watch_devices()
@@ -67,8 +67,8 @@ pub async fn lowpan_driver_deinit(mut driver: App) {
         .await
         .expect("Deinit first call to watch_devices() failed");
 
-    assert_eq!(devices.added, vec!["lowpan0".to_string()]);
-    assert!(devices.removed.is_empty(), "Second device watch had removed devices");
+    assert_eq!(devices.0, vec!["lowpan0".to_string()]);
+    assert!(devices.1.is_empty(), "Second device watch had removed devices");
 
     // Kill the spinel driver.
     driver.kill().expect("Unable to kill driver");
@@ -83,8 +83,8 @@ pub async fn lowpan_driver_deinit(mut driver: App) {
         .await
         .expect("Final call to lookup.watch_devices() failed");
 
-    assert!(devices.added.is_empty(), "Final device watch had added devices");
-    assert_eq!(devices.removed, vec!["lowpan0".to_string()]);
+    assert!(devices.0.is_empty(), "Final device watch had added devices");
+    assert_eq!(devices.1, vec!["lowpan0".to_string()]);
 }
 
 pub async fn call_lowpanctl_cmd(args: Vec<String>) {

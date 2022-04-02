@@ -17,12 +17,11 @@ const MAX_DATASET_TLV_LEN uint8 = 254;
 /// [1]: https://openthread.io/reference/struct/ot-operational-dataset-tlvs#structot_operational_dataset_tlvs
 alias OperationalDatasetTlvs = bytes:MAX_DATASET_TLV_LEN;
 
-/// Protocol for connecting to [`Dataset`] on a LoWPAN
-/// interface.
+/// Protocol for connecting to [`Dataset`] on a LoWPAN device.
 @discoverable
 protocol DatasetConnector {
     /// Connects to the [`Dataset`] protocol on the
-    /// named LoWPAN interface.
+    /// named LoWPAN device.
     ///
     /// The name of the interface can be learned by calling
     /// [`fuchsia.lowpan/Lookup.GetDevices`].
@@ -44,6 +43,8 @@ protocol DatasetConnector {
 };
 
 /// Thread Operational Dataset Protocol.
+///
+/// This protocol can expose PII.
 ///
 /// This protocol provides methods related to the management of the
 /// Thread operational dataset in raw TLV form.

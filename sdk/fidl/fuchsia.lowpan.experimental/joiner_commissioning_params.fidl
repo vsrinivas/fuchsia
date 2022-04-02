@@ -1,7 +1,7 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-library fuchsia.lowpan;
+library fuchsia.lowpan.experimental;
 
 const MAX_PROVISION_URL_LEN uint16 = 64;
 const MAX_VENDOR_NAME_LEN uint16 = 32;

@@ -5,7 +5,7 @@
 use anyhow::{Context as _, Error};
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_factory_lowpan::{FactoryDeviceMarker, FactoryDeviceProxy, FactoryLookupMarker};
-use fidl_fuchsia_lowpan::{LookupMarker, LookupProxy};
+use fidl_fuchsia_lowpan::{DeviceWatcherMarker, DeviceWatcherProxy};
 use fidl_fuchsia_lowpan_device::{
     DeviceConnectorMarker, DeviceExtraConnectorMarker, DeviceExtraMarker, DeviceExtraProxy,
     DeviceMarker, DeviceProxy,
@@ -18,7 +18,7 @@ use fuchsia_component::client::connect_to_protocol;
 /// invoked in interactive mode. For single command execution
 /// it is set up once and then discarded.
 pub struct LowpanContext {
-    pub lookup: LookupProxy,
+    pub device_watcher: DeviceWatcherProxy,
     pub device_name: String,
 }
 
@@ -26,11 +26,11 @@ impl LowpanContext {
     const DEFAULT_DEVICE_NAME: &'static str = "lowpan0";
 
     pub fn new(device_name: Option<String>) -> Result<LowpanContext, Error> {
-        let lookup = connect_to_protocol::<LookupMarker>()
-            .context("Failed to connect to Lowpan Lookup service")?;
+        let device_watcher = connect_to_protocol::<DeviceWatcherMarker>()
+            .context("Failed to connect to Lowpan DeviceWatcher service")?;
 
         Ok(LowpanContext {
-            lookup,
+            device_watcher,
             device_name: device_name
                 .clone()
                 .unwrap_or(LowpanContext::DEFAULT_DEVICE_NAME.to_string()),

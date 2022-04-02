@@ -1,0 +1,284 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.lowpan.experimental;
+
+using fuchsia.lowpan;
+using fuchsia.lowpan.device;
+
+type ChannelInfo = table {
+    /// The index used by the interface to identify
+    /// this channel.
+    1: index fuchsia.lowpan.ChannelIndex;
+
+    /// Human-readable identifier for channel.
+    ///
+    /// For most network types, this is just
+    /// the string representation of the index.
+    /// However, some network types might have
+    /// non-integer ways of identifying specific
+    /// channels. This field allows the application
+    /// to display the name of the channel correctly
+    /// under such circumstances.
+    ///
+    /// The allowed characters include:
+    ///
+    ///  * Dash (`-`), Underscore (`_`), Plus(`+`), Semicolon(`:`)
+    ///  * Numbers (`0`-`9`)
+    ///  * Letters (`a`-`z`, `A`-`Z`)
+    2: id string:16;
+
+    /// The maximum transmit power allowed on
+    /// this channel, in dBm.
+    3: max_transmit_power_dbm fuchsia.lowpan.PowerDbm;
+
+    /// The center RF frequency of this channel, in Hz.
+    ///
+    /// For example, 802.15.4 has the following values:
+    ///
+    /// Channel | Center Frequency (Hz)
+    /// --------|----------------------
+    /// 11      | 2,405,000,000
+    /// 12      | 2,410,000,000
+    /// 13      | 2,415,000,000
+    /// 14      | 2,420,000,000
+    /// 15      | 2,425,000,000
+    /// 16      | 2,430,000,000
+    /// 17      | 2,435,000,000
+    /// 18      | 2,440,000,000
+    /// 19      | 2,445,000,000
+    /// 20      | 2,450,000,000
+    /// 21      | 2,455,000,000
+    /// 22      | 2,460,000,000
+    /// 23      | 2,465,000,000
+    /// 24      | 2,470,000,000
+    /// 25      | 2,475,000,000
+    /// 26      | 2,480,000,000
+    4: spectrum_center_frequency_hz uint64;
+
+    /// The RF spectrum bandwidth used by this
+    /// channel where the power level is expected to
+    /// be higher than -20dBr, in Hz.
+    ///
+    /// For example, 802.15.4 channels 11 thru 26 would
+    /// have the value 2,000,000 (2 MHz).
+    5: spectrum_bandwidth_hz uint64;
+
+    /// Indicates if this channel is masked by the
+    /// current regulatory domain and is thus unable
+    /// to be used.
+    6: masked_by_regulatory_domain bool;
+};
+
+/// Protocol for connecting to [`Device`] on a LoWPAN
+/// interface.
+@discoverable
+protocol DeviceConnector {
+    /// Connects to the [`Device`] protocol on the
+    /// named LoWPAN interface.
+    ///
+    /// The name of the interface can be learned by calling
+    /// [`fuchsia.lowpan/Lookup.GetDevices()`].
+    ///
+    /// If there is an error in processing this request
+    /// the given channel is closed and an epitaph code used
+    /// to describe the reason for the failure:
+    ///
+    /// * `ZX_ERR_INVALID_ARGUMENT`: The given interface name
+    ///   was not formatted correctly or otherwise invalid.
+    /// * `ZX_ERR_NOT_FOUND`: No interface was found with the
+    ///   given name.
+    /// * `ZX_ERR_NOT_SUPPORTED`: The interface exists but
+    ///   does not support this protocol.
+    Connect(resource struct {
+        name fuchsia.lowpan.InterfaceName;
+        server_end server_end:Device;
+    });
+};
+
+/// LoWPAN Device Protocol, Experimental Methods.
+///
+/// This protocol provides clients with a way to control and
+/// monitor the device.
+///
+/// Note that aspects of the device that deal with PII must
+/// be monitored and controlled via the [`DeviceExtra`] protocol.
+protocol Device {
+    /// Returns a vector of information about the
+    /// channels supported by this interface.
+    GetSupportedChannels() -> (struct {
+        channels_info vector<ChannelInfo>:fuchsia.lowpan.device.MAX_CHANNELS;
+    });
+};
+
+type BeaconInfo = table {
+    /// The MAC address associated with this beacon.
+    1: address bytes:16;
+
+    /// The identity of the network being advertised by
+    /// this beacon.
+    2: identity fuchsia.lowpan.device.Identity;
+
+    /// RSSI of the beacon, measured in dBm.
+    ///
+    /// A value of -128 should be treated as if this
+    /// field was absent.
+    3: rssi fuchsia.lowpan.PowerDbm;
+
+    /// Link Quality Index (LQI) of the beacon.
+    ///
+    /// * A value of 0 should be treated as if this
+    ///   field was absent.
+    /// * A value of 1 indicates the worst possible
+    ///   quality where the decoded beacon is still valid.
+    /// * A value of 255 indicates the best possible
+    ///   quality that can be recognized by the radio
+    ///   hardware.
+    /// * Values 2-254 are intended to represent relative
+    ///   quality levels evenly distributed between the
+    ///   worst and best, with lower values always
+    ///   indicating a worse quality than higher values.
+    4: lqi uint8;
+};
+
+/// Protocol for returning the results of a network scan operation.
+///
+/// Closing the client end of an instance of this protocol will effectively
+/// cancel the scan operation.
+protocol BeaconInfoStream {
+    /// Called to fetch the next set of received beacons.
+    ///
+    /// The last set will have zero items. Once all received
+    /// beacons have been returned, this channel will close.
+    Next() -> (struct {
+        beacons vector<BeaconInfo>:fuchsia.lowpan.device.MAX_STREAM_SET_SIZE;
+    });
+};
+
+/// Describes the parameters of a network scan.
+type NetworkScanParameters = table {
+    /// Subset of channels to scan.
+    ///
+    /// If unspecified, all channels will be scanned.
+    1: channels vector<fuchsia.lowpan.ChannelIndex>:fuchsia.lowpan.device.MAX_CHANNELS;
+
+    /// Transmit power (in dBm to the antenna) for transmitting
+    /// beacon requests.
+    ///
+    /// Note that hardware limitations may cause the actual
+    /// used transmit power to differ from what is specified.
+    /// In that case the used transmit power will always be
+    /// the highest available transmit power that is less than
+    /// the specified transmit power. If the desired transmit
+    /// power is lower than the lowest transmit power supported
+    /// by the hardware, then that will be used instead.
+    2: tx_power_dbm fuchsia.lowpan.PowerDbm;
+};
+
+
+/// Protocol for connecting to [`DeviceExtra`] on a LoWPAN
+/// interface.
+@discoverable
+protocol DeviceExtraConnector {
+    /// Connects to the [`DeviceExtra`] protocol on the
+    /// named LoWPAN interface.
+    ///
+    /// The name of the interface can be learned by calling
+    /// [`fuchsia.lowpan/Lookup.GetDevices`].
+    ///
+    /// If there is an error in processing this request
+    /// the given channel is closed and an epitaph code used
+    /// to describe the reason for the failure:
+    ///
+    /// * `ZX_ERR_INVALID_ARGUMENT`: The given interface name
+    ///   was not formatted correctly or otherwise invalid.
+    /// * `ZX_ERR_NOT_FOUND`: No interface was found with the
+    ///   given name.
+    /// * `ZX_ERR_NOT_SUPPORTED`: The interface exists but
+    ///   does not support this protocol.
+    Connect(resource struct {
+        name fuchsia.lowpan.InterfaceName;
+        server_end server_end:DeviceExtra;
+    });
+};
+
+/// LoWPAN Device "Extra" Protocol, Experimental Methods.
+///
+/// This protocol provides clients with a way to control and
+/// monitor aspects of the LoWPAN device that can, either
+/// directly or indirectly, leak PII or cryptographic keys.
+protocol DeviceExtra {
+    // *****************************************************
+    // ALL METHODS IN THIS CLASS DEAL WITH PII.
+    // *****************************************************
+
+    /// Forms a new network with the given provisioning parameters.
+    ///
+    /// Any unspecified fields that are required by the underlying
+    /// device or network type will assigned with default values.
+    /// If the credential is unspecified, a random one will be
+    /// generated automatically.
+    ///
+    /// This method will cause the device to leave any previously
+    /// provisioned network.
+    ///
+    /// Calling this method while the device is not active will
+    /// implicitly make the device active.
+    ///
+    /// Upon success, the device will be active and provisioned
+    /// for the newly created network.
+    ///
+    /// The progress of the operation can be monitored via
+    /// the `ProvisioningMonitor` protocol instance. The operation
+    /// may be cancelled by closing the `ProvisioningMonitor`.
+    ///
+    /// Calling this method will cause any current form, join, or
+    /// commission operation to be canceled.
+    FormNetwork(resource struct {
+        params fuchsia.lowpan.device.ProvisioningParams;
+        progress server_end:ProvisioningMonitor;
+    });
+
+    /// Attempts to join a pre-existing nearby network
+    /// with the given provisioning parameters or joiner parameters.
+    ///
+    /// In-band commissioning is supported.
+    ///
+    /// Upon success, the device will be active and provisioned
+    /// for the newly created network.
+    ///
+    /// The progress of the operation can be monitored via
+    /// the `ProvisioningMonitor` protocol instance. The operation
+    /// may be cancelled by closing the `ProvisioningMonitor`.
+    ///
+    /// Calling this method will cause any current form, join, or
+    /// commission operation to be canceled.
+    JoinNetwork(resource struct {
+        params JoinParams;
+        progress server_end:ProvisioningMonitor;
+    });
+
+    /// Starts an active network scan operation.
+    ///
+    /// This scan is used to identify other nearby networks in order
+    /// to identify channels that should be avoided.
+    ///
+    /// The scan operation may be cancelled by closing the stream protocol.
+    ///
+    /// If a scan is started while another scan is in progress,
+    /// the previous scan is allowed to complete before
+    /// the new scan executes and starts returning results.
+    ///
+    /// All scans should be expected to completely occupy the
+    /// LoWPAN device while it is in progress, preventing other operations
+    /// from completing until the scan has completed. Additionally, all
+    /// network packets should be expected to be dropped while a scan is
+    /// in progress.
+    ///
+    /// A [`BeaconInfoStream`] instance could be used to expose coarse
+    /// location information.
+    StartNetworkScan(resource struct {
+        params NetworkScanParameters;
+        stream server_end:BeaconInfoStream;
+    });
+};

@@ -6,10 +6,10 @@ use super::*;
 
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherMarker;
-use fidl_fuchsia_lowpan::ConnectivityState;
 use fuchsia_component::client::connect_to_protocol;
 use futures::never::Never;
 use futures::prelude::*;
+use lowpan_driver_common::lowpan_fidl::ConnectivityState;
 
 use lowpan_driver_common::spinel::Canceled;
 use lowpan_driver_common::FutureExt;

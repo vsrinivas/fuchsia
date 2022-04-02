@@ -55,14 +55,14 @@ impl EnergyScanCommand {
 
     pub async fn exec(&self, context: &mut LowpanCtlContext) -> Result<(), Error> {
         let energy_scan_marker = self.get_energy_scan_params()?;
-        let device_extra = context
-            .get_default_device_extra_proxy()
+        let energy_scan = context
+            .get_default_energy_scan()
             .await
-            .context("Unable to get device instance")?;
+            .context("Unable to get energy scan instance")?;
         let (client_end, server_end) = create_endpoints::<EnergyScanResultStreamMarker>()?;
         let result_stream = client_end.into_proxy()?;
         println!("{:?}", energy_scan_marker);
-        device_extra
+        energy_scan
             .start_energy_scan(energy_scan_marker, server_end)
             .context("Unable to send start energy scan command")?;
         println!("result(s):");

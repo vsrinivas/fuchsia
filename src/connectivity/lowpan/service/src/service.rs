@@ -10,24 +10,24 @@ use fidl_fuchsia_factory_lowpan::{
     FactoryDriverMarker, FactoryDriverProxy, FactoryLookupRequest, FactoryLookupRequestStream,
     FactoryRegisterRequest, FactoryRegisterRequestStream,
 };
-use fidl_fuchsia_lowpan::{DeviceChanges, LookupRequest, LookupRequestStream, MAX_LOWPAN_DEVICES};
-use fidl_fuchsia_lowpan_device::{
-    CountersConnectorRequest, CountersConnectorRequestStream, DeviceConnectorRequest,
-    DeviceConnectorRequestStream, DeviceExtraConnectorRequest, DeviceExtraConnectorRequestStream,
-    DeviceRouteConnectorRequest, DeviceRouteConnectorRequestStream,
-    DeviceRouteExtraConnectorRequest, DeviceRouteExtraConnectorRequestStream,
-};
 use fidl_fuchsia_lowpan_driver::{
     DriverMarker, DriverProxy, Protocols, RegisterRequest, RegisterRequestStream,
-};
-use fidl_fuchsia_lowpan_test::{DeviceTestConnectorRequest, DeviceTestConnectorRequestStream};
-use fidl_fuchsia_lowpan_thread::{
-    DatasetConnectorRequest, DatasetConnectorRequestStream, LegacyJoiningConnectorRequest,
-    LegacyJoiningConnectorRequestStream,
 };
 use fuchsia_syslog::macros::*;
 use futures::prelude::*;
 use futures::task::{Spawn, SpawnExt};
+use lowpan_driver_common::lowpan_fidl::{
+    CountersConnectorRequest, CountersConnectorRequestStream, DatasetConnectorRequest,
+    DatasetConnectorRequestStream, DeviceConnectorRequest, DeviceConnectorRequestStream,
+    DeviceExtraConnectorRequest, DeviceExtraConnectorRequestStream, DeviceRouteConnectorRequest,
+    DeviceRouteConnectorRequestStream, DeviceRouteExtraConnectorRequest,
+    DeviceRouteExtraConnectorRequestStream, DeviceTestConnectorRequest,
+    DeviceTestConnectorRequestStream, DeviceWatcherRequest, DeviceWatcherRequestStream,
+    EnergyScanConnectorRequest, EnergyScanConnectorRequestStream,
+    ExperimentalDeviceConnectorRequest, ExperimentalDeviceConnectorRequestStream,
+    ExperimentalDeviceExtraConnectorRequest, ExperimentalDeviceExtraConnectorRequestStream,
+    LegacyJoiningConnectorRequest, LegacyJoiningConnectorRequestStream, MAX_LOWPAN_DEVICES,
+};
 use lowpan_driver_common::{AsyncCondition, ZxStatus};
 use parking_lot::Mutex;
 use regex::Regex;
@@ -181,10 +181,22 @@ impl_serve_to_driver!(
     LegacyJoiningConnectorRequest,
     thread_legacy_joining
 );
+impl_serve_to_driver!(EnergyScanConnectorRequestStream, EnergyScanConnectorRequest, energy_scan);
+
+impl_serve_to_driver!(
+    ExperimentalDeviceConnectorRequestStream,
+    ExperimentalDeviceConnectorRequest,
+    experimental_device
+);
+impl_serve_to_driver!(
+    ExperimentalDeviceExtraConnectorRequestStream,
+    ExperimentalDeviceExtraConnectorRequest,
+    experimental_device_extra
+);
 
 #[async_trait::async_trait()]
-impl<S: Sync> ServeTo<LookupRequestStream> for LowpanService<S> {
-    async fn serve_to(&self, request_stream: LookupRequestStream) -> anyhow::Result<()> {
+impl<S: Sync> ServeTo<DeviceWatcherRequestStream> for LowpanService<S> {
+    async fn serve_to(&self, request_stream: DeviceWatcherRequestStream) -> anyhow::Result<()> {
         use futures::lock::Mutex;
         let last_device_list: Mutex<Option<Vec<String>>> = Mutex::new(None);
 
@@ -192,15 +204,7 @@ impl<S: Sync> ServeTo<LookupRequestStream> for LowpanService<S> {
             .err_into::<Error>()
             .try_for_each_concurrent(MAX_CONCURRENT, |command| async {
                 match command {
-                    LookupRequest::GetDevices { responder } => {
-                        fx_log_info!("Received get devices request");
-                        responder
-                            .send(&mut self.get_devices().iter().map(|s| &**s))
-                            .context("error sending response")?;
-                        fx_log_info!("Responded to get devices request");
-                    }
-
-                    LookupRequest::WatchDevices { responder } => {
+                    DeviceWatcherRequest::WatchDevices { responder } => {
                         let mut locked_device_list =
                             last_device_list.try_lock().ok_or(format_err!(
                                 "No more than 1 outstanding call to watch_devices is allowed"
@@ -212,13 +216,12 @@ impl<S: Sync> ServeTo<LookupRequestStream> for LowpanService<S> {
 
                             *locked_device_list = Some(self.get_devices());
 
-                            let mut device_changes = DeviceChanges {
-                                added: locked_device_list.clone().unwrap(),
-                                removed: vec![],
-                            };
-
+                            let (added, removed) = (locked_device_list.clone().unwrap(), vec![]);
                             responder
-                                .send(&mut device_changes)
+                                .send(
+                                    &mut added.iter().map(String::as_str),
+                                    &mut removed.iter().map(String::as_str),
+                                )
                                 .context("error sending response")?;
                         } else {
                             // This is a follow-up call.
@@ -240,48 +243,50 @@ impl<S: Sync> ServeTo<LookupRequestStream> for LowpanService<S> {
                             };
 
                             // Devices have been added or removed, let's sort them out.
-                            let mut device_changes = DeviceChanges {
-                                // Calculate devices added.
-                                // This mechanism is O(n^2), but in reality n is going to
-                                // almost always be 1---so it makes sense to prioritize
-                                // convenience. It may even be slower to try to optimize
-                                // this.
-                                added: current_devices
-                                    .iter()
-                                    .filter_map(|name| {
-                                        if !locked_device_list.as_ref().unwrap().contains(name) {
-                                            Some(name.clone())
-                                        } else {
-                                            None
-                                        }
-                                    })
-                                    .collect(),
 
-                                // Calculate devices removed.
-                                // This mechanism is O(n^2), but in reality n is going to
-                                // almost always be 1---so it makes sense to prioritize
-                                // convenience. It may even be slower to try to optimize
-                                // this.
-                                removed: locked_device_list
-                                    .as_ref()
-                                    .unwrap()
-                                    .iter()
-                                    .filter_map(|name| {
-                                        if !current_devices.contains(name) {
-                                            Some(name.clone())
-                                        } else {
-                                            None
-                                        }
-                                    })
-                                    .collect(),
-                            };
+                            // Calculate devices added.
+                            // This mechanism is O(n^2), but in reality n is going to
+                            // almost always be 1---so it makes sense to prioritize
+                            // convenience. It may even be slower to try to optimize
+                            // this.
+                            let added = current_devices
+                                .iter()
+                                .filter_map(|name| {
+                                    if !locked_device_list.as_ref().unwrap().contains(name) {
+                                        Some(name.clone())
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .collect::<Vec<_>>();
+
+                            // Calculate devices removed.
+                            // This mechanism is O(n^2), but in reality n is going to
+                            // almost always be 1---so it makes sense to prioritize
+                            // convenience. It may even be slower to try to optimize
+                            // this.
+                            let removed = locked_device_list
+                                .as_ref()
+                                .unwrap()
+                                .iter()
+                                .filter_map(|name| {
+                                    if !current_devices.contains(name) {
+                                        Some(name.clone())
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .collect::<Vec<_>>();
 
                             // Save our current list of devices so that we
                             // can use it the next time this method is called.
                             *locked_device_list = Some(current_devices);
 
                             responder
-                                .send(&mut device_changes)
+                                .send(
+                                    &mut added.iter().map(String::as_str),
+                                    &mut removed.iter().map(String::as_str),
+                                )
                                 .context("error sending response")?;
                         }
                     }

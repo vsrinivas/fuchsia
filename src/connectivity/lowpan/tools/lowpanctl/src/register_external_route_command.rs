@@ -4,9 +4,9 @@
 
 use crate::context::LowpanCtlContext;
 use crate::prelude::*;
-use fidl_fuchsia_lowpan::Ipv6Subnet;
-use fidl_fuchsia_lowpan_device::ExternalRoute;
+use fidl_fuchsia_lowpan_experimental::ExternalRoute;
 use fidl_fuchsia_net::Ipv6Address;
+use fidl_fuchsia_net::Ipv6AddressWithPrefix as Ipv6Subnet;
 
 /// Contains the arguments decoded for the `register-external-route` command.
 #[derive(FromArgs, PartialEq, Debug)]

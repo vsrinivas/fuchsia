@@ -7,6 +7,14 @@ use crate::prelude::*;
 use fidl_fuchsia_factory_lowpan::*;
 use fidl_fuchsia_lowpan::*;
 use fidl_fuchsia_lowpan_device::*;
+use fidl_fuchsia_lowpan_experimental::DeviceConnectorMarker as ExperimentalDeviceConnectorMarker;
+use fidl_fuchsia_lowpan_experimental::DeviceExtraConnectorMarker as ExperimentalDeviceExtraConnectorMarker;
+use fidl_fuchsia_lowpan_experimental::DeviceExtraMarker as ExperimentalDeviceExtraMarker;
+use fidl_fuchsia_lowpan_experimental::DeviceMarker as ExperimentalDeviceMarker;
+use fidl_fuchsia_lowpan_experimental::{
+    DeviceRouteConnectorMarker, DeviceRouteExtraConnectorMarker, DeviceRouteExtraMarker,
+    DeviceRouteMarker, LegacyJoiningConnectorMarker, LegacyJoiningMarker,
+};
 use fidl_fuchsia_lowpan_test::*;
 use fidl_fuchsia_lowpan_thread::*;
 
@@ -15,7 +23,7 @@ use fidl_fuchsia_lowpan_thread::*;
 /// invoked in interactive mode. For single command execution
 /// it is set up once and then discarded.
 pub struct LowpanCtlContext {
-    pub lookup: LookupProxy,
+    pub lookup: DeviceWatcherProxy,
     pub device_name: String,
 }
 
@@ -37,7 +45,7 @@ macro_rules! impl_get_protocol_method {
 
 impl LowpanCtlContext {
     pub fn from_invocation(args: &LowpanCtlInvocation) -> Result<LowpanCtlContext, Error> {
-        let lookup = connect_to_protocol::<LookupMarker>()
+        let lookup = connect_to_protocol::<DeviceWatcherMarker>()
             .context("Failed to connect to Lowpan Lookup service")?;
 
         Ok(LowpanCtlContext {
@@ -53,6 +61,16 @@ impl LowpanCtlContext {
         get_default_device_extra_proxy
     );
     impl_get_protocol_method!(
+        ExperimentalDeviceConnectorMarker,
+        ExperimentalDeviceMarker,
+        get_default_experimental_device
+    );
+    impl_get_protocol_method!(
+        ExperimentalDeviceExtraConnectorMarker,
+        ExperimentalDeviceExtraMarker,
+        get_default_experimental_device_extra
+    );
+    impl_get_protocol_method!(
         DeviceRouteConnectorMarker,
         DeviceRouteMarker,
         get_default_device_route_proxy
@@ -62,6 +80,7 @@ impl LowpanCtlContext {
         DeviceRouteExtraMarker,
         get_default_device_route_extra_proxy
     );
+    impl_get_protocol_method!(EnergyScanConnectorMarker, EnergyScanMarker, get_default_energy_scan);
     impl_get_protocol_method!(
         DeviceTestConnectorMarker,
         DeviceTestMarker,

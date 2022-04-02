@@ -58,6 +58,7 @@ pub enum ConnectivityState {
     Attached,
     Isolated,
     Commissioning,
+    Unknown,
 }
 
 #[derive(Serialize, Deserialize)]

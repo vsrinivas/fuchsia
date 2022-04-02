@@ -44,7 +44,7 @@ protocol Counters {
     });
 };
 
-/// Table describing all counters.
+/// Describes all counters.
 ///
 /// May be empty if no counters are supported.
 type AllCounters = table {

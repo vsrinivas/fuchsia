@@ -4,9 +4,8 @@
 
 use super::*;
 use anyhow::Error;
-use fidl_fuchsia_lowpan::*;
-use fidl_fuchsia_lowpan_device::*;
 use futures::future::Either;
+use lowpan_driver_common::lowpan_fidl::*;
 use lowpan_driver_common::AsyncConditionWait;
 use lowpan_driver_common::ZxResult;
 

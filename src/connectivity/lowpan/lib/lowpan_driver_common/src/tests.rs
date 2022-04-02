@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use super::prelude_internal::*;
+use crate::lowpan_fidl::LegacyJoiningMarker;
 use crate::DummyDevice;
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_lowpan_driver::{DriverMarker, Protocols};
-use fidl_fuchsia_lowpan_thread::LegacyJoiningMarker;
 use fuchsia_async as fasync;
 use futures::task::{Context, Poll};
 

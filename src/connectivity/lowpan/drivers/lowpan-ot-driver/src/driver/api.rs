@@ -6,10 +6,8 @@ use super::*;
 use anyhow::Error;
 use async_trait::async_trait;
 use core::future::ready;
-use fidl_fuchsia_lowpan::*;
-use fidl_fuchsia_lowpan_device::*;
-use fidl_fuchsia_lowpan_test::*;
 use fuchsia_zircon::Duration;
+use lowpan_driver_common::lowpan_fidl::*;
 use lowpan_driver_common::AsyncConditionWait;
 use lowpan_driver_common::Driver as LowpanDriver;
 use lowpan_driver_common::ZxResult;
@@ -175,7 +173,7 @@ where
 
     async fn get_supported_network_types(&self) -> ZxResult<Vec<String>> {
         // We only support Thread networks.
-        Ok(vec![fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X.to_string()])
+        Ok(vec![NET_TYPE_THREAD_1_X.to_string()])
     }
 
     async fn get_supported_channels(&self) -> ZxResult<Vec<ChannelInfo>> {
@@ -318,7 +316,7 @@ where
         }
     }
 
-    async fn get_credential(&self) -> ZxResult<Option<fidl_fuchsia_lowpan::Credential>> {
+    async fn get_credential(&self) -> ZxResult<Option<Credential>> {
         fx_log_info!("Got get credential command");
         let driver_state = self.driver_state.lock();
         let ot_instance = &driver_state.ot_instance;
@@ -329,7 +327,7 @@ where
         Ok(operational_dataset
             .get_network_key()
             .map(ot::NetworkKey::to_vec)
-            .map(fidl_fuchsia_lowpan::Credential::MasterKey))
+            .map(Credential::NetworkKey))
     }
 
     fn start_energy_scan(
@@ -478,8 +476,8 @@ where
         Ok(self.driver_state.lock().ot_instance.get_channel() as u16)
     }
 
-    async fn get_current_rssi(&self) -> ZxResult<i32> {
-        Ok(self.driver_state.lock().ot_instance.get_rssi() as i32)
+    async fn get_current_rssi(&self) -> ZxResult<i8> {
+        Ok(self.driver_state.lock().ot_instance.get_rssi())
     }
 
     async fn get_partition_id(&self) -> ZxResult<u32> {
@@ -634,7 +632,7 @@ where
 
     async fn unregister_on_mesh_prefix(
         &self,
-        subnet: fidl_fuchsia_lowpan::Ipv6Subnet,
+        subnet: fidl_fuchsia_net::Ipv6AddressWithPrefix,
     ) -> ZxResult<()> {
         let prefix = ot::Ip6Prefix::new(subnet.addr.addr, subnet.prefix_len);
 
@@ -673,7 +671,7 @@ where
 
     async fn unregister_external_route(
         &self,
-        subnet: fidl_fuchsia_lowpan::Ipv6Subnet,
+        subnet: fidl_fuchsia_net::Ipv6AddressWithPrefix,
     ) -> ZxResult<()> {
         let prefix = ot::Ip6Prefix::new(subnet.addr.addr, subnet.prefix_len);
 
@@ -687,7 +685,7 @@ where
 
     async fn get_local_on_mesh_prefixes(
         &self,
-    ) -> ZxResult<Vec<fidl_fuchsia_lowpan_device::OnMeshPrefix>> {
+    ) -> ZxResult<Vec<lowpan_driver_common::lowpan_fidl::OnMeshPrefix>> {
         Ok(self
             .driver_state
             .lock()
@@ -699,7 +697,7 @@ where
 
     async fn get_local_external_routes(
         &self,
-    ) -> ZxResult<Vec<fidl_fuchsia_lowpan_device::ExternalRoute>> {
+    ) -> ZxResult<Vec<lowpan_driver_common::lowpan_fidl::ExternalRoute>> {
         Ok(self
             .driver_state
             .lock()

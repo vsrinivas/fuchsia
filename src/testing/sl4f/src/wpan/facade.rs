@@ -5,7 +5,7 @@
 use super::types::{ConnectivityState, MacAddressFilterSettingsDto, NeighborInfoDto};
 use crate::common_utils::lowpan_context::LowpanContext;
 use anyhow::Error;
-use fidl_fuchsia_lowpan::ConnectivityState as lowpan_ConnectivityState;
+use fidl_fuchsia_lowpan_device::ConnectivityState as lowpan_ConnectivityState;
 use fidl_fuchsia_lowpan_device::{DeviceExtraProxy, DeviceProxy};
 use fidl_fuchsia_lowpan_test::DeviceTestProxy;
 use parking_lot::{RwLock, RwLockUpgradableReadGuard};
@@ -82,7 +82,7 @@ impl WpanFacade {
             Some(device_test) => device_test.get_current_rssi().await?,
             _ => bail!("DeviceTest proxy is not set"),
         };
-        Ok(ncp_rssi)
+        Ok(ncp_rssi.into())
     }
 
     /// Returns the factory mac address from the DeviceTest proxy service.
@@ -203,6 +203,7 @@ impl WpanFacade {
             lowpan_ConnectivityState::Attached => ConnectivityState::Attached,
             lowpan_ConnectivityState::Isolated => ConnectivityState::Isolated,
             lowpan_ConnectivityState::Commissioning => ConnectivityState::Commissioning,
+            _ => ConnectivityState::Unknown,
         }
     }
 }

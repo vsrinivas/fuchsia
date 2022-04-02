@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::prelude::*;
-use fidl_fuchsia_lowpan::{ConnectivityState, Role};
+use fidl_fuchsia_lowpan_device::{ConnectivityState, Role};
 
 /// Extension trait for adding some helper methods to
 /// [`::fidl_fuchsia_lowpan::ConnectivityState`].
@@ -63,6 +63,8 @@ impl ConnectivityStateExt for ConnectivityState {
             ConnectivityState::Attached => true,
             ConnectivityState::Isolated => true,
             ConnectivityState::Commissioning => false,
+
+            x => panic!("Unexpected connectivity state: {:?}", x),
         }
     }
 
@@ -76,6 +78,8 @@ impl ConnectivityStateExt for ConnectivityState {
             ConnectivityState::Attached => true,
             ConnectivityState::Isolated => true,
             ConnectivityState::Commissioning => true,
+
+            x => panic!("Unexpected connectivity state: {:?}", x),
         }
     }
 
@@ -101,6 +105,8 @@ impl ConnectivityStateExt for ConnectivityState {
             ConnectivityState::Attached => true,
             ConnectivityState::Isolated => true,
             ConnectivityState::Commissioning => false,
+
+            x => panic!("Unexpected connectivity state: {:?}", x),
         }
     }
 

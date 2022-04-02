@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::lowpan_fidl::*;
 use anyhow::Context as _;
 use core::convert::{TryFrom, TryInto};
-use fidl_fuchsia_lowpan_device::RoutePreference;
 use spinel_pack::*;
 use std::io;
 use thiserror::Error;

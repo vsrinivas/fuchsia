@@ -10,6 +10,7 @@ use fidl_fuchsia_lowpan_driver::{
     DriverMarker, DriverRequest, DriverRequestStream, RegisterProxyInterface,
 };
 use futures::future::join_all;
+use log::warn;
 
 /// Registers a driver instance with the given LoWPAN service and returns
 /// a future which services requests for the driver.
@@ -56,6 +57,24 @@ impl<T: Driver> ServeTo<DriverRequestStream> for T {
                         if let Some(server_end) = protocols.device_extra {
                             if let Some(stream) = server_end.into_stream().ok() {
                                 futures.push(self.serve_to(stream));
+                            }
+                        }
+                        if let Some(server_end) = protocols.experimental_device {
+                            match server_end.into_stream() {
+                                Ok(stream) => futures.push(self.serve_to(stream)),
+                                Err(err) => warn!("into_stream() failed: {:?}", err),
+                            }
+                        }
+                        if let Some(server_end) = protocols.experimental_device_extra {
+                            match server_end.into_stream() {
+                                Ok(stream) => futures.push(self.serve_to(stream)),
+                                Err(err) => warn!("into_stream() failed: {:?}", err),
+                            }
+                        }
+                        if let Some(server_end) = protocols.energy_scan {
+                            match server_end.into_stream() {
+                                Ok(stream) => futures.push(self.serve_to(stream)),
+                                Err(err) => warn!("into_stream() failed: {:?}", err),
                             }
                         }
                         if let Some(server_end) = protocols.counters {

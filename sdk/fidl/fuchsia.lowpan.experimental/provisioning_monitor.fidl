@@ -1,13 +1,13 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-library fuchsia.lowpan.device;
+library fuchsia.lowpan.experimental;
 
-using fuchsia.lowpan;
+using fuchsia.lowpan.device;
 
 /// LoWPAN Provisioning Error
 ///
-/// Returned by `ProvisioningMonitor.WatchProgress()`.
+/// Returned by [`ProvisioningMonitor.WatchProgress`].
 type ProvisionError = flexible enum : int32 {
     /// Provisioning did not successfully complete because the
     /// credential was rejected. For example, the key was incorrect.
@@ -30,13 +30,13 @@ type ProvisionError = flexible enum : int32 {
 
 /// Indicates the current status of the form/join operation.
 ///
-/// Returned by `ProvisioningMonitor.WatchProgress()`.
+/// Returned by [`ProvisioningMonitor.WatchProgress`].
 type ProvisioningProgress = flexible union {
     /// Approximate percent complete indication for a user interface.
     1: progress float32;
 
     /// The final Identity when the operation has completed successfully.
-    2: identity fuchsia.lowpan.Identity;
+    2: identity fuchsia.lowpan.device.Identity;
 };
 
 /// Reports the progress of a provisioning operation like Join or Form.
@@ -50,11 +50,12 @@ protocol ProvisioningMonitor {
     /// current status. On subsequent calls, it will block until the status
     /// changes.
     ///
-    /// If provisioning error is encountered, it is returned as a `ProvisionError`. See
-    /// the documentation for `ProvisionError` details on error handling.
+    /// If provisioning error is encountered, it is returned as a
+    /// [`ProvisionError`]. See the documentation for [`ProvisionError`]
+    /// details on error handling.
     ///
-    /// Once the method has either returned an identity or indicated a `ProvisionError`,
-    /// the ProvisioningMonitor will close with `ZX_OK`.
+    /// Once the method has either returned an identity or indicated a
+    /// [`ProvisionError`], the ProvisioningMonitor will close with `ZX_OK`.
     WatchProgress() -> (struct {
         progress ProvisioningProgress;
     }) error ProvisionError;

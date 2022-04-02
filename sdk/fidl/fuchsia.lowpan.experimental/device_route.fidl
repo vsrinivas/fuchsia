@@ -1,9 +1,10 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-library fuchsia.lowpan.device;
+library fuchsia.lowpan.experimental;
 
 using fuchsia.lowpan;
+using fuchsia.net;
 
 const MAX_ON_MESH_PREFIXES uint32 = 32;
 const MAX_EXTERNAL_ROUTES uint32 = 32;
@@ -25,7 +26,7 @@ type RoutePreference = strict enum : int8 {
 /// Informed by the Thread 1.1.1 Specification, section 5.13.2.
 type OnMeshPrefix = table {
     /// Subnet to advertise for devices to use on the network. Required.
-    1: subnet fuchsia.lowpan.Ipv6Subnet;
+    1: subnet fuchsia.net.Ipv6AddressWithPrefix;
 
     /// If present, indicates that this device is offering a default route
     /// as well as indicating the what preference this default
@@ -72,7 +73,7 @@ type OnMeshPrefix = table {
 /// Informed by the Thread 1.1.1 Specification, section 5.13.3.
 type ExternalRoute = table {
     /// Subnet for route. Required.
-    1: subnet fuchsia.lowpan.Ipv6Subnet;
+    1: subnet fuchsia.net.Ipv6AddressWithPrefix;
 
     /// Indicates the what preference this route should be given relative
     /// to other devices offering the same external route. If not present,
@@ -153,7 +154,7 @@ protocol DeviceRoute {
     /// If the given mesh prefix was not previously registered,
     /// no action is taken.
     UnregisterOnMeshPrefix(struct {
-        subnet fuchsia.lowpan.Ipv6Subnet;
+        subnet fuchsia.net.Ipv6AddressWithPrefix;
     }) -> ();
 
     /// Registers an external route to be advertised on the
@@ -184,7 +185,7 @@ protocol DeviceRoute {
     /// If the given external route was not previously registered,
     /// no action is taken.
     UnregisterExternalRoute(struct {
-        subnet fuchsia.lowpan.Ipv6Subnet;
+        subnet fuchsia.net.Ipv6AddressWithPrefix;
     }) -> ();
 };
 
@@ -220,12 +221,18 @@ protocol DeviceRouteExtraConnector {
 /// Note that methods that do not deal with PII are located in the
 /// `DeviceRoute` protocol.
 protocol DeviceRouteExtra {
-    /// Returns a vector containing all of the locally added on-mesh prefixes.
+    /// Returns a vector containing all of the locally-added on-mesh prefixes.
+    ///
+    /// Locally-added on-mesh prefixes are those that have been registered
+    /// with a prior call to [`DeviceRoute.RegisterOnMeshPrefix`].
     GetLocalOnMeshPrefixes() -> (struct {
         prefixes vector<OnMeshPrefix>:MAX_ON_MESH_PREFIXES;
     });
 
-    /// Returns a vector containing all of the locally added external routes.
+    /// Returns a vector containing all of the locally-added external routes.
+    ///
+    /// Locally-added external routes are those that have been registered
+    /// with a prior call to [`DeviceRoute.RegisterExternalRoute`].
     GetLocalExternalRoutes() -> (struct {
         external_routes vector<ExternalRoute>:MAX_EXTERNAL_ROUTES;
     });

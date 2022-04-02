@@ -7,19 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.lowpan") {
   sdk_category = "internal"
 
-  sources = [
-    "beacon_info.fidl",
-    "channel_info.fidl",
-    "credential.fidl",
-    "identity.fidl",
-    "join_params.fidl",
-    "joiner_commissioning_params.fidl",
-    "misc.fidl",
-    "provisioning_params.fidl",
-    "role.fidl",
-    "service.fidl",
-    "state.fidl",
-  ]
+  sources = [ "lowpan.fidl" ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.net" ]
+  public_deps = []
 }

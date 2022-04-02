@@ -4,6 +4,236 @@
 library fuchsia.lowpan.device;
 
 using fuchsia.lowpan;
+using fuchsia.net;
+
+type Identity = table {
+    /// The raw bytes for the network name.
+    /// This is typically a [StringPrep'd][1] UTF8 encoding.
+    ///
+    /// Note that extra care must be taken when displaying
+    /// this value to users, since there are many ways
+    /// to make visually similar UTF8 strings that
+    /// have differing bytecode representations.
+    ///
+    /// [1]: https://tools.ietf.org/html/rfc3454
+    1: raw_name bytes:63;
+
+    /// Extended PANID.
+    2: xpanid bytes:8;
+
+    /// String identifying the type of network.
+    ///
+    /// Well-known protocol ids are associated with
+    /// specific string values (like "org.threadgroup.std.thread"
+    /// or "org.zigbee.std.zigbee-ip"). For unknown protocol ids,
+    /// the string will map to something like
+    /// `fuchsia.lowpan.net_type.802.15.4.pid.XX`, where `XX` is
+    /// the value of the protocol id from a 802.14.5 beacon.
+    /// This field is optional when joining, forming, or provisioning.
+    3: net_type NetworkType;
+
+    /// Channel Index.
+    4: channel fuchsia.lowpan.ChannelIndex;
+
+    /// PANID for 802.14.5-based networks (or the equivalent).
+    5: panid uint16;
+
+    /// IPv6 Mesh-local prefix.
+    ///
+    /// This parameter allows you to determine the mesh-local
+    /// IPv6 prefix for the current network, or to specify one
+    /// when provisioning the interface for a network or forming
+    /// a new network.
+    ///
+    /// The prefix length is always 64 bits, so only the upper
+    /// 64 bits of the value are used: the least significant bits
+    /// must be ignored when read and zero when set.
+    ///
+    /// This field is ignored when supplied to `JoinNetwork()`.
+    6: mesh_local_prefix fuchsia.net.Ipv6AddressWithPrefix;
+};
+
+/// LoWPAN Role Type.
+///
+/// This type describes the role a device can assume on a network.
+type Role = flexible enum : int32 {
+    /// Detached role. The interface is not
+    /// currently participating on the network,
+    /// either because it cannot find a parent
+    //// or the interface is not currently provisioned.
+    DETACHED = 1;
+
+    /// End-device role. End devices do not route
+    /// traffic on behalf of other nodes.
+    END_DEVICE = 2;
+
+    /// Router role. Routers help route traffic
+    /// around the mesh network.
+    ///
+    /// Note that this role is independent of the
+    /// device being a "border router".
+    ///
+    /// Not all network types support this role.
+    ROUTER = 3;
+
+    /// Sleepy End-Device role.
+    ///
+    /// End devices with this role are nominally asleep,
+    /// waking up periodically to check in with their
+    /// parent to see if there are packets destined for
+    /// them. Such devices are capable of extraordinarily
+    /// low power consumption, but packet latency can be
+    /// on the order of dozens of seconds(depending on how
+    /// the node is configured). Not all network types
+    /// support this role.
+    ///
+    /// Not all network types support this role.
+    SLEEPY_END_DEVICE = 4;
+
+    /// Sleepy-router role.
+    ///
+    /// Routers with this role are nominally asleep,
+    /// waking up periodically to check in with
+    /// other routers and their children.
+    ///
+    /// Not all network types support this role.
+    SLEEPY_ROUTER = 5;
+
+    /// Leader role.
+    ///
+    /// On Thread networks, for each partition/fragment
+    /// one router is designated as the "leader", which
+    /// means that it is considered authoritative for
+    /// all network data. In most cases this role can be
+    /// considered as a synonym to Role::ROUTER.
+    ///
+    /// Not all network types support this role.
+    LEADER = 6;
+
+    /// Coordinator role.
+    ///
+    /// Not all network types support this role.
+    COORDINATOR = 7;
+};
+
+/// LoWPAN Connectivity State
+///
+/// This enum describes the level of connectivity being provided
+/// by a device.
+type ConnectivityState = flexible enum : int32 {
+    /// Inactive state.
+    ///
+    /// In this state the device is unprovisioned and administratively
+    /// disabled (inactive).
+    ///
+    /// This state can always be explicitly entered by calling `Leave`
+    /// followed by `SetActive(false)`.
+    INACTIVE = 1;
+
+    /// Ready state.
+    ///
+    /// In this state the device is provisioned for a network, but is
+    /// administratively disabled (inactive).
+    ///
+    /// This state can be directly entered with the following actions
+    /// based on the current connectivity state:
+    ///
+    /// * `INACTIVE`: by calling `ProvisionNetwork(...)`.
+    /// * `ATTACHING`, `ATTACHED`, `ISOLATED`, `COMMISSIONING`: by calling `SetActive(false)`.
+    READY = 2;
+
+    /// Offline state.
+    ///
+    /// In this state the device is administratively enabled (active)
+    /// but is not provisioned and thus has no network to attach to.
+    ///
+    /// This state can be directly entered with the following actions
+    /// based on the current connectivity state:
+    ///
+    /// * `INACTIVE`: by calling `SetActive(true)`.
+    /// * `ATTACHING`, `ATTACHED`, `ISOLATED`, `COMMISSIONING`: by calling `Leave()`.
+    OFFLINE = 3;
+
+    /// Attaching state.
+    ///
+    /// In this state the device is administratively enabled
+    /// (active) and either provisioned for a network or shortly
+    /// about to become provisioned for a network.
+    ///
+    /// The interface enters this state when it starts the process
+    /// of trying to find other nodes so that it can attach to any
+    /// pre-existing network fragment, or when it is in the process
+    /// of calculating the optimal values for unspecified parameters
+    /// when forming a new network.
+    ///
+    /// This state can be directly entered with the following actions
+    /// based on the current connectivity state:
+    ///
+    /// * `READY`: by calling `SetActive(true)`
+    /// * `OFFLINE`, `ATTACHING`, `ATTACHED`, `ISOLATED`, `COMMISSIONING`:
+    ///    by calling `ProvisionNetwork(...)`, `FormNetwork(...)`, or `JoinNetwork(...)`
+    ATTACHING = 4;
+
+    /// Attached state.
+    ///
+    /// In this state the device is both administratively enabled
+    /// (active) and provisioned for a network. The device is an
+    /// active participant on the network and can communicate with
+    /// peers.
+    ///
+    /// This state usually implies that peers are available, but that
+    /// may not actually be the case due to current network conditions
+    /// or privacy-protecting measures.
+    ///
+    /// This state cannot generally be entered directly, rather
+    /// the device will enter this state automatically from the
+    /// `ATTACHING` or `ISOLATED` states once connectivity has been
+    /// (re)established.
+    ATTACHED = 5;
+
+    /// Isolated state.
+    ///
+    /// In this state the device is both administratively enabled
+    /// (active) and provisioned for a network. However, the device
+    /// has no connectivity because there are no peers in range on
+    /// the provisioned network.
+    ///
+    /// Once peer devices on the same network come into range
+    /// the connectivity state will eventually switch back to
+    /// `ATTACHED`, indicating restored connectivity with at least
+    /// one peer.
+    ///
+    /// This state cannot generally be entered directly, rather
+    /// the device may enter this state automatically from the
+    /// `ATTACHING` or `ATTACHED` states.
+    ISOLATED = 6;
+
+    /// Commissioning state.
+    ///
+    /// Currently unused, but will later be used to
+    /// support in-band commissioning. It is usually appropriate
+    /// to consider this as a synonym for the `ATTACHING` state
+    /// except that the device remains unprovisioned.
+    COMMISSIONING = 7;
+};
+
+/// Describes a LoWPAN credential.
+///
+/// Currently only supports a symmetric network key,
+/// but may be extended in the future to support other
+/// types of credentials, such as passwords, PAKE
+/// secrets, or a reference to a certificate/private-key
+/// pair.
+type Credential = flexible union {
+    /// Describes a symmetric key credential.
+    ///
+    /// The size of the symmetric key is defined by the
+    /// underlying network technology. For Thread this
+    /// is a 16-byte value.
+    ///
+    /// Note that this value is not a password.
+    1: network_key bytes:32;
+};
 
 /// Combined State for LoWPAN Devices
 ///
@@ -18,13 +248,13 @@ type DeviceState = table {
     ///
     /// This field describes the current level of connectivity being
     /// provided by this device.
-    1: connectivity_state fuchsia.lowpan.ConnectivityState;
+    1: connectivity_state ConnectivityState;
 
     /// LoWPAN Role
     ///
     /// This field describes the current role this device is taking
     /// on the current network.
-    2: role fuchsia.lowpan.Role;
+    2: role Role;
 };
 
 /// Protocol for connecting to [`Device`] on a LoWPAN
@@ -88,7 +318,7 @@ protocol Device {
     /// Any error that prevents the operation from completing successfully
     /// will result in the protocol being closed.
     ProvisionNetwork(struct {
-        params fuchsia.lowpan.ProvisioningParams;
+        params ProvisioningParams;
     }) -> ();
 
     /// Bring down the network interface and forget
@@ -115,7 +345,7 @@ protocol Device {
     ///
     /// Note that simply setting this to `true` does not mean that
     /// the network interface will necessarily become online and usable,
-    /// see the `connectivity_state` field of the `DeviceState` table for
+    /// see the `connectivity_state` field of the [`DeviceState`] table for
     /// more information.
     ///
     /// This method returns once the operation has completed successfully.
@@ -132,16 +362,10 @@ protocol Device {
     /// but some devices may support more than one. Up to `MAX_NETWORK_TYPES`
     /// network types may be returned.
     GetSupportedNetworkTypes() -> (struct {
-        network_types vector<fuchsia.lowpan.NetworkType>:MAX_NETWORK_TYPES;
+        network_types vector<NetworkType>:MAX_NETWORK_TYPES;
     });
 
-    /// Returns a vector of information about the
-    /// channels supported by this interface.
-    GetSupportedChannels() -> (struct {
-        channels_info vector<fuchsia.lowpan.ChannelInfo>:fuchsia.lowpan.MAX_CHANNELS;
-    });
-
-    /// Observes changes to the `DeviceState`.
+    /// Observes changes to the [`DeviceState`].
     ///
     /// First call always returns a snapshot of the current state.
     /// Subsequent calls will block until the state has changed
@@ -191,52 +415,6 @@ protocol DeviceExtra {
     // ALL METHODS IN THIS CLASS DEAL WITH PII.
     // *****************************************************
 
-    /// Forms a new network with the given provisioning parameters.
-    ///
-    /// Any unspecified fields that are required by the underlying
-    /// device or network type will assigned with default values.
-    /// If the credential is unspecified, a random one will be
-    /// generated automatically.
-    ///
-    /// This method will cause the device to leave any previously
-    /// provisioned network.
-    ///
-    /// Calling this method while the device is not active will
-    /// implicitly make the device active.
-    ///
-    /// Upon success, the device will be active and provisioned
-    /// for the newly created network.
-    ///
-    /// The progress of the operation can be monitored via
-    /// the `ProvisioningMonitor` protocol instance. The operation
-    /// may be cancelled by closing the `ProvisioningMonitor`.
-    ///
-    /// Calling this method will cause any current form, join, or
-    /// commission operation to be canceled.
-    FormNetwork(resource struct {
-        params fuchsia.lowpan.ProvisioningParams;
-        progress server_end:ProvisioningMonitor;
-    });
-
-    /// Attempts to join a pre-existing nearby network
-    /// with the given provisioning parameters or joiner parameters.
-    ///
-    /// In-band commissioning is supported.
-    ///
-    /// Upon success, the device will be active and provisioned
-    /// for the newly created network.
-    ///
-    /// The progress of the operation can be monitored via
-    /// the `ProvisioningMonitor` protocol instance. The operation
-    /// may be cancelled by closing the `ProvisioningMonitor`.
-    ///
-    /// Calling this method will cause any current form, join, or
-    /// commission operation to be canceled.
-    JoinNetwork(resource struct {
-        params fuchsia.lowpan.JoinParams;
-        progress server_end:ProvisioningMonitor;
-    });
-
     /// Fetches the current credential.
     ///
     /// The returned credential will have originated from a previous call
@@ -244,56 +422,7 @@ protocol DeviceExtra {
     /// device is not provisioned (for example, by calling `LeaveNetwork()`)
     /// then this method returns nothing.
     GetCredential() -> (struct {
-        credential fuchsia.lowpan.Credential:optional;
-    });
-
-    /// Starts an energy scan operation.
-    ///
-    /// This can be used for surveying the spectrum to identify channels
-    /// that should be avoided.
-    ///
-    /// The scan operation may be cancelled by closing the stream protocol.
-    ///
-    /// If a scan is started while another scan is in progress,
-    /// the previous scan is allowed to complete before
-    /// the new scan executes and starts returning results.
-    ///
-    /// All scans should be expected to completely occupy the
-    /// LoWPAN device while it is in progress, preventing other operations
-    /// from completing until the scan has completed. Additionally, all
-    /// network packets should be expected to be dropped while a scan is
-    /// in progress.
-    ///
-    /// Performing energy scans could be used to profile the spectrum
-    /// energy for a location and thus be used to determine or refine coarse
-    /// location information.
-    StartEnergyScan(resource struct {
-        params EnergyScanParameters;
-        stream server_end:EnergyScanResultStream;
-    });
-
-    /// Starts an active network scan operation.
-    ///
-    /// This scan is used to identify other nearby networks in order
-    /// to identify channels that should be avoided.
-    ///
-    /// The scan operation may be cancelled by closing the stream protocol.
-    ///
-    /// If a scan is started while another scan is in progress,
-    /// the previous scan is allowed to complete before
-    /// the new scan executes and starts returning results.
-    ///
-    /// All scans should be expected to completely occupy the
-    /// LoWPAN device while it is in progress, preventing other operations
-    /// from completing until the scan has completed. Additionally, all
-    /// network packets should be expected to be dropped while a scan is
-    /// in progress.
-    ///
-    /// A `NetworkScanner` instance could be used to expose coarse
-    /// location information.
-    StartNetworkScan(resource struct {
-        params NetworkScanParameters;
-        stream server_end:BeaconInfoStream;
+        credential Credential:optional;
     });
 
     /// Observes changes to the current network identity.
@@ -320,6 +449,6 @@ protocol DeviceExtra {
     /// * `DeviceExtra.JoinNetwork()`
     /// * `DeviceExtra.FormNetwork()`
     WatchIdentity() -> (struct {
-        identity fuchsia.lowpan.Identity;
+        identity Identity;
     });
 };

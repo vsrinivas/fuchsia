@@ -7,7 +7,8 @@ using fuchsia.lowpan;
 
 /// Describes the result from one channel of an energy scan.
 type EnergyScanResult = table {
-    1: channel_index ChannelIndex;
+    /// The channel index for this energy scan result.
+    1: channel_index fuchsia.lowpan.ChannelIndex;
 
     /// The maximum RSSI detected on this channel.
     2: max_rssi int32;
@@ -21,7 +22,7 @@ type EnergyScanParameters = table {
     /// Subset of channels to scan.
     ///
     /// If unspecified, all channels will be scanned.
-    1: channels vector<ChannelIndex>:fuchsia.lowpan.MAX_CHANNELS;
+    1: channels vector<fuchsia.lowpan.ChannelIndex>:MAX_CHANNELS;
 
     /// Desired dwell time per-channel for the energy scan,
     /// measured in milliseconds.
@@ -53,5 +54,58 @@ protocol EnergyScanResultStream {
     /// The last set will have zero items and the protocol will be closed.
     Next() -> (struct {
         results vector<EnergyScanResult>:MAX_STREAM_SET_SIZE;
+    });
+};
+
+/// Protocol for connecting to [`EnergyScan`] on a LoWPAN
+/// interface.
+@discoverable
+protocol EnergyScanConnector {
+    /// Connects to the [`EnergyScan`] protocol on the
+    /// named LoWPAN interface.
+    ///
+    /// The name of the interface can be learned by calling
+    /// [`fuchsia.lowpan/Lookup.GetDevices`].
+    ///
+    /// If there is an error in processing this request
+    /// the given channel is closed and an epitaph code used
+    /// to describe the reason for the failure:
+    ///
+    /// * `ZX_ERR_INVALID_ARGUMENT`: The given interface name
+    ///   was not formatted correctly or otherwise invalid.
+    /// * `ZX_ERR_NOT_FOUND`: No interface was found with the
+    ///   given name.
+    /// * `ZX_ERR_NOT_SUPPORTED`: The interface exists but
+    ///   does not support this protocol.
+    Connect(resource struct {
+        name fuchsia.lowpan.InterfaceName;
+        server_end server_end:EnergyScan;
+    });
+};
+
+protocol EnergyScan {
+    /// Starts an energy scan operation.
+    ///
+    /// This can be used for surveying the spectrum to identify channels
+    /// that should be avoided.
+    ///
+    /// The scan operation may be cancelled by closing the stream protocol.
+    ///
+    /// If a scan is started while another scan is in progress,
+    /// the previous scan is allowed to complete before
+    /// the new scan executes and starts returning results.
+    ///
+    /// All scans should be expected to completely occupy the
+    /// LoWPAN device while it is in progress, preventing other operations
+    /// from completing until the scan has completed. Additionally, all
+    /// network packets should be expected to be dropped while a scan is
+    /// in progress.
+    ///
+    /// Performing energy scans could be used to profile the spectrum
+    /// energy for a location and thus be used to determine or refine coarse
+    /// location information.
+    StartEnergyScan(resource struct {
+        params EnergyScanParameters;
+        stream server_end:EnergyScanResultStream;
     });
 };

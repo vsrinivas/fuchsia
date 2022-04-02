@@ -7,18 +7,16 @@ use super::*;
 use anyhow::Error;
 use async_utils::hanging_get::client::HangingGetStream;
 use fidl::endpoints::create_endpoints;
-use fidl_fuchsia_lowpan::Identity;
-use fidl_fuchsia_lowpan::{DeviceChanges, LookupMarker, LookupProxyInterface};
-use fidl_fuchsia_lowpan_device::{
-    CountersConnectorMarker, CountersMarker, DeviceConnectorMarker, DeviceExtraConnectorMarker,
-    DeviceExtraMarker, DeviceMarker, DeviceState,
-};
-use fidl_fuchsia_lowpan_test::{DeviceTestConnectorMarker, DeviceTestMarker};
 use fuchsia_async::Task;
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_inspect::{LazyNode, Node, StringProperty};
 use fuchsia_inspect_contrib::inspect_log;
 use fuchsia_inspect_contrib::nodes::{BoundedListNode, NodeExt, TimeProperty};
+use lowpan_driver_common::lowpan_fidl::{
+    CountersConnectorMarker, CountersMarker, DeviceConnectorMarker, DeviceExtraConnectorMarker,
+    DeviceExtraMarker, DeviceMarker, DeviceState, DeviceTestConnectorMarker, DeviceTestMarker,
+    DeviceWatcherMarker, DeviceWatcherProxyInterface, Identity,
+};
 use parking_lot::Mutex;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
@@ -207,8 +205,8 @@ impl IfaceStatusNode {
 
 pub async fn watch_device_changes<
     LP: 'static
-        + LookupProxyInterface<
-            WatchDevicesResponseFut = fidl::client::QueryResponseFut<DeviceChanges>,
+        + DeviceWatcherProxyInterface<
+            WatchDevicesResponseFut = fidl::client::QueryResponseFut<(Vec<String>, Vec<String>)>,
         >,
 >(
     inspect_tree: Arc<LowpanServiceTree>,
@@ -224,7 +222,7 @@ pub async fn watch_device_changes<
                 break;
             }
             Some(Ok(devices)) => {
-                for available_device in devices.added.iter() {
+                for available_device in devices.0.iter() {
                     inspect_log!(
                         inspect_tree.events.lock(),
                         msg: format!("{}:available", available_device)
@@ -243,7 +241,7 @@ pub async fn watch_device_changes<
                     device_table
                         .insert(available_device.to_string(), Arc::new(Task::spawn(future)));
                 }
-                for unavailable_device in devices.removed.iter() {
+                for unavailable_device in devices.1.iter() {
                     inspect_log!(
                         inspect_tree.events.lock(),
                         msg: format!("{}:unavailable", unavailable_device)
@@ -261,7 +259,7 @@ pub async fn watch_device_changes<
 }
 
 pub async fn start_inspect_process(inspect_tree: Arc<LowpanServiceTree>) -> Result<(), Error> {
-    let lookup = connect_to_protocol::<LookupMarker>()?;
+    let lookup = connect_to_protocol::<DeviceWatcherMarker>()?;
     watch_device_changes(inspect_tree, Arc::new(lookup)).await;
     Ok::<(), Error>(())
 }
@@ -592,7 +590,7 @@ mod tests {
 
     #[fasync::run(4, test)]
     async fn test_watch_device_changes() {
-        let lookup = connect_to_protocol::<LookupMarker>().unwrap();
+        let lookup = connect_to_protocol::<DeviceWatcherMarker>().unwrap();
 
         let inspector = fuchsia_inspect::Inspector::new();
         let inspector_clone = inspector.clone();

@@ -100,7 +100,7 @@ impl<OT: ot::Cli, NI> OtDriver<OT, NI> {
     }
 
     pub fn is_net_type_supported(&self, net_type: &str) -> bool {
-        net_type.starts_with(fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X)
+        net_type.starts_with(fidl_fuchsia_lowpan_device::NET_TYPE_THREAD_1_X)
     }
 }
 

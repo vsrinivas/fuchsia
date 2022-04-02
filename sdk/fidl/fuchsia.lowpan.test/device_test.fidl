@@ -54,7 +54,7 @@ protocol DeviceTest {
 
     /// Returns the current RSSI measured by the radio.
     GetCurrentRssi() -> (struct {
-        rssi int32;
+        rssi fuchsia.lowpan.PowerDbm;
     });
 
     /// Returns the factory-assigned static MAC address.

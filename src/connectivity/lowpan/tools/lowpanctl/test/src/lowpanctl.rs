@@ -4,7 +4,7 @@
 
 use anyhow::{format_err, Context as _, Error};
 use fasync::Time;
-use fidl_fuchsia_lowpan::LookupMarker;
+use fidl_fuchsia_lowpan::DeviceWatcherMarker;
 use fuchsia_async as fasync;
 use fuchsia_async::TimeoutExt;
 use fuchsia_component::client::{connect_to_protocol, launch, launcher};
@@ -205,11 +205,11 @@ pub async fn test_lowpanctl_reset_counters() {
 }
 
 pub async fn test_lowpanctl_command(args: Vec<String>) -> Result<(), Error> {
-    // Step 1: Get an instance of the Lookup API and make sure there are no devices registered.
-    let lookup = connect_to_protocol::<LookupMarker>()
-        .context("Failed to connect to Lowpan Lookup service")?;
+    // Step 1: Get an instance of the DeviceWatcher API and make sure there are no devices registered.
+    let lookup = connect_to_protocol::<DeviceWatcherMarker>()
+        .context("Failed to connect to Lowpan DeviceWatcher service")?;
 
-    let devices = lookup
+    let (added, removed) = lookup
         .watch_devices()
         .err_into::<Error>()
         .on_timeout(Time::after(DEFAULT_TIMEOUT), || {
@@ -218,8 +218,8 @@ pub async fn test_lowpanctl_command(args: Vec<String>) -> Result<(), Error> {
         .await
         .context("Initial call to lookup.watch_devices() failed")?;
 
-    assert!(devices.added.is_empty(), "Initial device list not empty");
-    assert!(devices.removed.is_empty(), "Initial device watch had removed devices");
+    assert!(added.is_empty(), "Initial device list not empty");
+    assert!(removed.is_empty(), "Initial device watch had removed devices");
 
     // Step 2: Start a LoWPAN Dummy Driver
     println!("Starting lowpan dummy driver");
@@ -229,7 +229,7 @@ pub async fn test_lowpanctl_command(args: Vec<String>) -> Result<(), Error> {
         launch(&launcher, driver_url.to_string(), None).context("launch dummy driver")?;
 
     // Step 3: Wait to receive an event that the driver has registered.
-    let devices = lookup
+    let (added, removed) = lookup
         .watch_devices()
         .err_into::<Error>()
         .on_timeout(Time::after(DEFAULT_TIMEOUT), || {
@@ -238,8 +238,8 @@ pub async fn test_lowpanctl_command(args: Vec<String>) -> Result<(), Error> {
         .await
         .context("Second call to lookup.watch_devices() failed")?;
 
-    assert_eq!(devices.added, vec!["lowpan0".to_string()]);
-    assert!(devices.removed.is_empty(), "Second device watch had removed devices");
+    assert_eq!(added, vec!["lowpan0".to_string()]);
+    assert!(removed.is_empty(), "Second device watch had removed devices");
 
     // Step 4: Call lowpanctl
     println!("Calling lowpanctl with {:?}", args);
@@ -260,7 +260,7 @@ pub async fn test_lowpanctl_command(args: Vec<String>) -> Result<(), Error> {
     driver.kill().context("Unable to kill driver")?;
 
     // Step 6: Wait to receive an event that the driver has unregistered.
-    let devices = lookup
+    let (added, removed) = lookup
         .watch_devices()
         .err_into::<Error>()
         .on_timeout(Time::after(DEFAULT_TIMEOUT), || {
@@ -269,8 +269,8 @@ pub async fn test_lowpanctl_command(args: Vec<String>) -> Result<(), Error> {
         .await
         .context("Final call to lookup.watch_devices() failed")?;
 
-    assert!(devices.added.is_empty(), "Final device watch had added devices");
-    assert_eq!(devices.removed, vec!["lowpan0".to_string()]);
+    assert!(added.is_empty(), "Final device watch had added devices");
+    assert_eq!(removed, vec!["lowpan0".to_string()]);
 
     output.ok()?;
 

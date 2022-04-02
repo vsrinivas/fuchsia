@@ -3,26 +3,36 @@
 // found in the LICENSE file.
 library fuchsia.lowpan;
 
+/// Index used to identify a specific channel in the LoWPAN API.
+alias ChannelIndex = uint16;
+
+/// Transmit/Received power, in dBm.
+///
+/// Can represent transmit and receive power levels from .2 femtowatts (-127dBm)
+/// to 5 gigawatts (127dBm).
+///
+/// The value -128 ([`RSSI_UNSPECIFIED`]) is reserved for
+/// indicating that a signal level is unspecified when used
+/// in the context of RSSI values, and must not be used when
+/// specifying transmit power.
+alias PowerDbm = int8;
+
+/// Type describing the name of the network interface.
+///
+/// Interface names must satisfy the following regular expression:
+///
+///     ^[a-z_][-_.+0-9a-z]{1,31}$
+///
+alias InterfaceName = string:32;
+
 // Arbitrarily chosen at an expected maximum number of radio interfaces on
 // a single device.
 const MAX_LOWPAN_DEVICES uint32 = 8;
 
-/// Describes changes to the devices being managed
-/// by the LoWPAN service.
-type DeviceChanges = struct {
-    removed vector<InterfaceName>:MAX_LOWPAN_DEVICES;
-    added vector<InterfaceName>:MAX_LOWPAN_DEVICES;
-};
-
 /// Protocol for discovering and resolving LoWPAN interfaces and their
 /// associated control protocol instances.
 @discoverable
-protocol Lookup {
-    /// Returns the list of all registered LoWPAN device interface names.
-    GetDevices() -> (struct {
-        device_names vector<InterfaceName>:MAX_LOWPAN_DEVICES;
-    });
-
+protocol DeviceWatcher {
     /// Observes when devices are added or removed.
     ///
     /// The first call to this method returns immediately with a
@@ -46,6 +56,7 @@ protocol Lookup {
     /// the client should be able to handle this condition, it should not depend
     /// on the server will always have this behavior.
     WatchDevices() -> (struct {
-        device_changes DeviceChanges;
+        added vector<InterfaceName>:MAX_LOWPAN_DEVICES;
+        removed vector<InterfaceName>:MAX_LOWPAN_DEVICES;
     });
 };

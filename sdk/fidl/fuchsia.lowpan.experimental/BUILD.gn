@@ -4,16 +4,22 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.lowpan.driver") {
+fidl("fuchsia.lowpan.experimental") {
   sdk_category = "internal"
 
-  sources = [ "driver.fidl" ]
+  sources = [
+    "device.fidl",
+    "device_route.fidl",
+    "join_params.fidl",
+    "joiner_commissioning_params.fidl",
+    "legacy.fidl",
+    "provisioning_monitor.fidl",
+  ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.lowpan",
     "//sdk/fidl/fuchsia.lowpan.device",
-    "//sdk/fidl/fuchsia.lowpan.experimental",
-    "//sdk/fidl/fuchsia.lowpan.test",
-    "//sdk/fidl/fuchsia.lowpan.thread",
+    "//sdk/fidl/fuchsia.net",
+    "//zircon/vdso/zx",
   ]
 }

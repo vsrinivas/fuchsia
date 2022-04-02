@@ -56,6 +56,39 @@ pub(crate) mod prelude_internal {
     pub use net_declare::{fidl_ip, fidl_ip_v6};
 }
 
+pub mod lowpan_fidl {
+    pub use fidl_fuchsia_factory_lowpan::*;
+    pub use fidl_fuchsia_lowpan::*;
+    pub use fidl_fuchsia_lowpan_device::*;
+    pub use fidl_fuchsia_lowpan_experimental::DeviceConnectorMarker as ExperimentalDeviceConnectorMarker;
+    pub use fidl_fuchsia_lowpan_experimental::DeviceConnectorRequest as ExperimentalDeviceConnectorRequest;
+    pub use fidl_fuchsia_lowpan_experimental::DeviceConnectorRequestStream as ExperimentalDeviceConnectorRequestStream;
+    pub use fidl_fuchsia_lowpan_experimental::DeviceExtraConnectorMarker as ExperimentalDeviceExtraConnectorMarker;
+    pub use fidl_fuchsia_lowpan_experimental::DeviceExtraConnectorRequest as ExperimentalDeviceExtraConnectorRequest;
+    pub use fidl_fuchsia_lowpan_experimental::DeviceExtraConnectorRequestStream as ExperimentalDeviceExtraConnectorRequestStream;
+    pub use fidl_fuchsia_lowpan_experimental::DeviceExtraMarker as ExperimentalDeviceExtraMarker;
+    pub use fidl_fuchsia_lowpan_experimental::DeviceExtraRequest as ExperimentalDeviceExtraRequest;
+    pub use fidl_fuchsia_lowpan_experimental::DeviceExtraRequestStream as ExperimentalDeviceExtraRequestStream;
+    pub use fidl_fuchsia_lowpan_experimental::DeviceMarker as ExperimentalDeviceMarker;
+    pub use fidl_fuchsia_lowpan_experimental::DeviceRequest as ExperimentalDeviceRequest;
+    pub use fidl_fuchsia_lowpan_experimental::DeviceRequestStream as ExperimentalDeviceRequestStream;
+    pub use fidl_fuchsia_lowpan_experimental::{
+        BeaconInfo, BeaconInfoStreamMarker, BeaconInfoStreamRequest, ChannelInfo,
+        DeviceRouteConnectorMarker, DeviceRouteConnectorRequest, DeviceRouteConnectorRequestStream,
+        DeviceRouteExtraConnectorMarker, DeviceRouteExtraConnectorRequest,
+        DeviceRouteExtraConnectorRequestStream, DeviceRouteExtraMarker, DeviceRouteExtraRequest,
+        DeviceRouteExtraRequestStream, DeviceRouteMarker, DeviceRouteRequest,
+        DeviceRouteRequestStream, ExternalRoute, JoinParams, JoinerCommissioningParams,
+        LegacyJoiningConnectorMarker, LegacyJoiningConnectorRequest,
+        LegacyJoiningConnectorRequestStream, LegacyJoiningMarker, LegacyJoiningRequest,
+        LegacyJoiningRequestStream, NetworkScanParameters, OnMeshPrefix, ProvisionError,
+        ProvisioningMonitorRequest, ProvisioningProgress, RoutePreference,
+    };
+    pub use fidl_fuchsia_lowpan_test::*;
+    pub use fidl_fuchsia_lowpan_thread::*;
+    pub use fidl_fuchsia_net::Ipv6AddressWithPrefix as Ipv6Subnet;
+}
+
 pub use fuchsia_zircon_status::Status as ZxStatus;
 
 /// A `Result` that uses `fuchsia_zircon::Status` for the error condition.

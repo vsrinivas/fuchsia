@@ -4,7 +4,7 @@
 
 use crate::context::LowpanCtlContext;
 use crate::prelude::*;
-use fidl_fuchsia_lowpan_device::RoutePreference;
+use fidl_fuchsia_lowpan_experimental::RoutePreference;
 
 /// Contains the arguments decoded for the `get-external-routes` command.
 #[derive(FromArgs, PartialEq, Debug)]

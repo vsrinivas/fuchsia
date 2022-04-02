@@ -29,6 +29,9 @@ use std::net::SocketAddrV6;
 /// want to revisit this approach in the future if this is a big concern.
 pub type Ip6Address = std::net::Ipv6Addr;
 
+/// Functional equivalent of [`otsys::OT_IP6_PREFIX_BITSIZE`](crate::otsys::OT_IP6_PREFIX_BITSIZE).
+pub const IP6_PREFIX_BITSIZE: u8 = otsys::OT_IP6_PREFIX_BITSIZE as u8;
+
 impl Transparent for std::net::Ipv6Addr {
     fn from_ot(x: otIp6Address) -> std::net::Ipv6Addr {
         unsafe { x.mFields.m8.into() }

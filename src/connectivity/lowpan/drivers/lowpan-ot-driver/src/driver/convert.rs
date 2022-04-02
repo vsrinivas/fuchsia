@@ -4,10 +4,8 @@
 
 use crate::convert_ext::*;
 use crate::prelude::*;
-use fidl_fuchsia_lowpan::*;
-use fidl_fuchsia_lowpan_device::{
-    ExternalRoute, OnMeshPrefix, ProvisionError, ProvisioningProgress,
-};
+use lowpan_driver_common::lowpan_fidl::*;
+use std::num::NonZeroU8;
 
 impl FromExt<ot::JoinerState> for ProvisioningProgress {
     fn from_ext(x: ot::JoinerState) -> Self {
@@ -43,7 +41,7 @@ impl FromExt<ot::Error> for ProvisionError {
 impl FromExt<ot::BorderRouterConfig> for OnMeshPrefix {
     fn from_ext(x: ot::BorderRouterConfig) -> Self {
         OnMeshPrefix {
-            subnet: Some(Ipv6Subnet {
+            subnet: Some(fidl_fuchsia_net::Ipv6AddressWithPrefix {
                 addr: fidl_fuchsia_net::Ipv6Address { addr: x.prefix().addr().octets() },
                 prefix_len: x.prefix().prefix_len(),
             }),
@@ -59,7 +57,7 @@ impl FromExt<ot::BorderRouterConfig> for OnMeshPrefix {
 impl FromExt<ot::ExternalRouteConfig> for ExternalRoute {
     fn from_ext(x: ot::ExternalRouteConfig) -> Self {
         ExternalRoute {
-            subnet: Some(Ipv6Subnet {
+            subnet: Some(fidl_fuchsia_net::Ipv6AddressWithPrefix {
                 addr: fidl_fuchsia_net::Ipv6Address { addr: x.prefix().addr().octets() },
                 prefix_len: x.prefix().prefix_len(),
             }),
@@ -70,22 +68,26 @@ impl FromExt<ot::ExternalRouteConfig> for ExternalRoute {
     }
 }
 
-impl FromExt<fidl_fuchsia_lowpan_device::RoutePreference> for ot::RoutePreference {
-    fn from_ext(x: fidl_fuchsia_lowpan_device::RoutePreference) -> Self {
+impl FromExt<lowpan_driver_common::lowpan_fidl::RoutePreference> for ot::RoutePreference {
+    fn from_ext(x: lowpan_driver_common::lowpan_fidl::RoutePreference) -> Self {
         match x {
-            fidl_fuchsia_lowpan_device::RoutePreference::Low => ot::RoutePreference::Low,
-            fidl_fuchsia_lowpan_device::RoutePreference::Medium => ot::RoutePreference::Medium,
-            fidl_fuchsia_lowpan_device::RoutePreference::High => ot::RoutePreference::High,
+            lowpan_driver_common::lowpan_fidl::RoutePreference::Low => ot::RoutePreference::Low,
+            lowpan_driver_common::lowpan_fidl::RoutePreference::Medium => {
+                ot::RoutePreference::Medium
+            }
+            lowpan_driver_common::lowpan_fidl::RoutePreference::High => ot::RoutePreference::High,
         }
     }
 }
 
-impl FromExt<ot::RoutePreference> for fidl_fuchsia_lowpan_device::RoutePreference {
+impl FromExt<ot::RoutePreference> for lowpan_driver_common::lowpan_fidl::RoutePreference {
     fn from_ext(x: ot::RoutePreference) -> Self {
         match x {
-            ot::RoutePreference::Low => fidl_fuchsia_lowpan_device::RoutePreference::Low,
-            ot::RoutePreference::Medium => fidl_fuchsia_lowpan_device::RoutePreference::Medium,
-            ot::RoutePreference::High => fidl_fuchsia_lowpan_device::RoutePreference::High,
+            ot::RoutePreference::Low => lowpan_driver_common::lowpan_fidl::RoutePreference::Low,
+            ot::RoutePreference::Medium => {
+                lowpan_driver_common::lowpan_fidl::RoutePreference::Medium
+            }
+            ot::RoutePreference::High => lowpan_driver_common::lowpan_fidl::RoutePreference::High,
         }
     }
 }
@@ -93,7 +95,7 @@ impl FromExt<ot::RoutePreference> for fidl_fuchsia_lowpan_device::RoutePreferenc
 impl FromExt<ot::ActiveScanResult> for BeaconInfo {
     fn from_ext(x: ot::ActiveScanResult) -> Self {
         BeaconInfo {
-            identity: Identity {
+            identity: Some(Identity {
                 raw_name: if x.network_name().len() != 0 {
                     Some(x.network_name().to_vec())
                 } else {
@@ -103,11 +105,11 @@ impl FromExt<ot::ActiveScanResult> for BeaconInfo {
                 panid: Some(x.pan_id()),
                 xpanid: Some(x.extended_pan_id().to_vec()),
                 ..Identity::EMPTY
-            },
-            rssi: x.rssi().into(),
-            lqi: x.lqi(),
-            address: x.ext_address().to_vec(),
-            flags: vec![],
+            }),
+            rssi: Some(x.rssi()),
+            lqi: NonZeroU8::new(x.lqi()).map(NonZeroU8::get),
+            address: Some(x.ext_address().to_vec()),
+            ..BeaconInfo::EMPTY
         }
     }
 }
@@ -117,13 +119,15 @@ impl FromExt<&ot::OperationalDataset> for Identity {
         Identity {
             raw_name: operational_dataset.get_network_name().map(ot::NetworkName::to_vec),
             xpanid: operational_dataset.get_extended_pan_id().map(ot::ExtendedPanId::to_vec),
-            net_type: Some(fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X.to_string()),
+            net_type: Some(NET_TYPE_THREAD_1_X.to_string()),
             channel: operational_dataset.get_channel().map(|x| x as u16),
             panid: operational_dataset.get_pan_id(),
-            mesh_local_prefix: operational_dataset
-                .get_mesh_local_prefix()
-                .copied()
-                .map(fidl_fuchsia_net::Ipv6Address::from),
+            mesh_local_prefix: operational_dataset.get_mesh_local_prefix().copied().map(|x| {
+                fidl_fuchsia_net::Ipv6AddressWithPrefix {
+                    addr: x.into(),
+                    prefix_len: ot::IP6_PREFIX_BITSIZE,
+                }
+            }),
             ..Identity::EMPTY
         }
     }
@@ -180,8 +184,7 @@ impl UpdateOperationalDataset<Identity> for ot::OperationalDataset {
             self.set_mesh_local_prefix(
                 ident
                     .mesh_local_prefix
-                    .clone()
-                    .map(|x| std::net::Ipv6Addr::from(x.addr))
+                    .map(|x| std::net::Ipv6Addr::from(x.addr.addr))
                     .map(ot::MeshLocalPrefix::from)
                     .as_ref(),
             )
@@ -193,7 +196,7 @@ impl UpdateOperationalDataset<Identity> for ot::OperationalDataset {
 impl UpdateOperationalDataset<Credential> for ot::OperationalDataset {
     fn update_from(&mut self, cred: &Credential) -> Result<(), anyhow::Error> {
         match cred {
-            Credential::MasterKey(key) => {
+            Credential::NetworkKey(key) => {
                 self.set_network_key(Some(ot::NetworkKey::try_ref_from_slice(key.as_slice())?))
             }
             _ => Err(format_err!("Unknown credential type"))?,

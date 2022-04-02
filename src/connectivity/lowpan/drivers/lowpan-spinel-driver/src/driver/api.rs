@@ -10,20 +10,15 @@ use anyhow::Error;
 use async_trait::async_trait;
 use core::num::NonZeroU16;
 use fasync::Time;
-use fidl_fuchsia_lowpan::BeaconInfo;
-use fidl_fuchsia_lowpan::*;
-use fidl_fuchsia_lowpan_device::{
-    AllCounters, DeviceState, EnergyScanParameters, ExternalRoute, NetworkScanParameters,
-    OnMeshPrefix, ProvisionError, ProvisioningProgress,
-};
-use fidl_fuchsia_lowpan_test::*;
 use fuchsia_async::TimeoutExt;
 use fuchsia_zircon::Duration;
 use futures::stream::BoxStream;
 use futures::{StreamExt, TryFutureExt};
 use lowpan_driver_common::{AsyncConditionWait, Driver as LowpanDriver, FutureExt, ZxResult};
+use lowpan_fidl::*;
 use spinel_pack::{TryUnpack, EUI64};
 use std::convert::TryInto;
+use std::num::NonZeroU8;
 
 const JOIN_TIMEOUT: Duration = Duration::from_seconds(120);
 
@@ -217,9 +212,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
             }
 
             // Set the credential, if we have one.
-            if let Some(fidl_fuchsia_lowpan::Credential::MasterKey(key)) =
-                params.credential.map(|x| *x)
-            {
+            if let Some(lowpan_fidl::Credential::NetworkKey(key)) = params.credential.map(|x| *x) {
                 self.frame_handler
                     .send_request(CmdPropValueSet(PropNet::MasterKey.into(), key).verify())
                     .await?;
@@ -309,7 +302,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
     }
 
     async fn get_supported_channels(&self) -> ZxResult<Vec<ChannelInfo>> {
-        use fidl_fuchsia_lowpan::ChannelInfo;
+        use lowpan_fidl::ChannelInfo;
 
         fx_log_info!("Got get_supported_channels command");
 
@@ -592,7 +585,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
             .boxed()
     }
 
-    async fn get_credential(&self) -> ZxResult<Option<fidl_fuchsia_lowpan::Credential>> {
+    async fn get_credential(&self) -> ZxResult<Option<lowpan_fidl::Credential>> {
         fx_log_info!("Got get credential command");
 
         // Wait until we are ready.
@@ -604,7 +597,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
                     futures::future::ready(if key.is_empty() {
                         Ok(None)
                     } else {
-                        Ok(Some(fidl_fuchsia_lowpan::Credential::MasterKey(key)))
+                        Ok(Some(lowpan_fidl::Credential::NetworkKey(key)))
                     })
                 })
                 .await
@@ -616,7 +609,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
     fn start_energy_scan(
         &self,
         params: &EnergyScanParameters,
-    ) -> BoxStream<'_, ZxResult<Vec<fidl_fuchsia_lowpan_device::EnergyScanResult>>> {
+    ) -> BoxStream<'_, ZxResult<Vec<lowpan_fidl::EnergyScanResult>>> {
         fx_log_info!("Got energy scan command: {:?}", params);
 
         let channels = params.channels.clone();
@@ -670,16 +663,19 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
                 {
                     Ok(prop_value) if prop_value.prop == Prop::Mac(PropMac::EnergyScanResult) => {
                         let mut iter = prop_value.value.iter();
-                        let result = match EnergyScanResult::try_unpack(&mut iter) {
-                            Ok(val) => val,
-                            Err(err) => return Some(Err(err)),
-                        };
+                        let result =
+                            match lowpan_driver_common::spinel::EnergyScanResult::try_unpack(
+                                &mut iter,
+                            ) {
+                                Ok(val) => val,
+                                Err(err) => return Some(Err(err)),
+                            };
                         fx_log_info!("energy_scan: got result: {:?}", result);
 
-                        Some(Ok(Some(vec![fidl_fuchsia_lowpan_device::EnergyScanResult {
+                        Some(Ok(Some(vec![lowpan_fidl::EnergyScanResult {
                             channel_index: Some(result.channel as u16),
                             max_rssi: Some(result.rssi as i32),
-                            ..fidl_fuchsia_lowpan_device::EnergyScanResult::EMPTY
+                            ..lowpan_fidl::EnergyScanResult::EMPTY
                         }])))
                     }
                     Err(err) => Some(Err(err)),
@@ -730,14 +726,6 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
 
             // Set beacon request transmit power
             if let Some(tx_power) = tx_power {
-                // Saturate to signed 8-bit integer
-                let tx_power = if tx_power > i8::MAX as i32 {
-                    i8::MAX as i32
-                } else if tx_power < i8::MIN as i32 {
-                    i8::MIN as i32
-                } else {
-                    tx_power
-                };
                 self.frame_handler
                     .send_request(CmdPropValueSet(PropPhy::TxPower.into(), tx_power))
                     .await?
@@ -779,18 +767,18 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
                         fx_log_debug!("network_scan: got result: {:?}", result);
 
                         Some(Ok(Some(vec![BeaconInfo {
-                            identity: Identity {
+                            identity: Some(Identity {
                                 raw_name: Some(result.net.network_name),
                                 channel: Some(result.channel as u16),
                                 panid: Some(result.mac.panid),
                                 xpanid: Some(result.net.xpanid),
                                 net_type: InterfaceType::from(result.net.net_type).to_net_type(),
                                 ..Identity::EMPTY
-                            },
-                            rssi: result.rssi as i32,
-                            lqi: result.mac.lqi,
-                            address: result.mac.long_addr.0.to_vec(),
-                            flags: vec![],
+                            }),
+                            rssi: Some(result.rssi),
+                            lqi: NonZeroU8::new(result.mac.lqi).map(NonZeroU8::get),
+                            address: Some(result.mac.long_addr.0.to_vec()),
+                            ..BeaconInfo::EMPTY
                         }])))
                     }
                     Err(err) => Some(Err(err)),
@@ -873,11 +861,11 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
 
     // Returns the current RSSI measured by the radio.
     // <fxbug.dev/44668>
-    async fn get_current_rssi(&self) -> ZxResult<i32> {
+    async fn get_current_rssi(&self) -> ZxResult<i8> {
         // Wait until we are ready.
         self.wait_for_state(DriverState::is_initialized).await;
 
-        self.get_property_simple::<i8, _>(PropPhy::Rssi).map_ok(|x| x as i32).await
+        self.get_property_simple::<i8, _>(PropPhy::Rssi).await
     }
 
     async fn get_partition_id(&self) -> ZxResult<u32> {
@@ -973,10 +961,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
         .await
     }
 
-    async fn unregister_on_mesh_prefix(
-        &self,
-        subnet: fidl_fuchsia_lowpan::Ipv6Subnet,
-    ) -> ZxResult<()> {
+    async fn unregister_on_mesh_prefix(&self, subnet: lowpan_fidl::Ipv6Subnet) -> ZxResult<()> {
         fx_log_info!("Got unregister_on_mesh_prefix command");
 
         // Wait until we are ready.
@@ -1032,7 +1017,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
         .await
     }
 
-    async fn register_external_route(&self, net: ExternalRoute) -> ZxResult<()> {
+    async fn register_external_route(&self, net: lowpan_fidl::ExternalRoute) -> ZxResult<()> {
         fx_log_info!("Got register_external_route command");
 
         // Wait until we are ready.
@@ -1093,10 +1078,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
         .await
     }
 
-    async fn unregister_external_route(
-        &self,
-        subnet: fidl_fuchsia_lowpan::Ipv6Subnet,
-    ) -> ZxResult<()> {
+    async fn unregister_external_route(&self, subnet: lowpan_fidl::Ipv6Subnet) -> ZxResult<()> {
         fx_log_info!("Got unregister_external_route command");
 
         // Wait until we are ready.
@@ -1154,9 +1136,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
         .await
     }
 
-    async fn get_local_on_mesh_prefixes(
-        &self,
-    ) -> ZxResult<Vec<fidl_fuchsia_lowpan_device::OnMeshPrefix>> {
+    async fn get_local_on_mesh_prefixes(&self) -> ZxResult<Vec<lowpan_fidl::OnMeshPrefix>> {
         // Wait until we are ready.
         self.wait_for_state(DriverState::is_initialized).await;
 
@@ -1164,15 +1144,13 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
             .map_ok(|x| {
                 x.into_iter()
                     .filter(|x| x.local)
-                    .map(std::convert::Into::<fidl_fuchsia_lowpan_device::OnMeshPrefix>::into)
+                    .map(std::convert::Into::<lowpan_fidl::OnMeshPrefix>::into)
                     .collect::<Vec<_>>()
             })
             .await
     }
 
-    async fn get_local_external_routes(
-        &self,
-    ) -> ZxResult<Vec<fidl_fuchsia_lowpan_device::ExternalRoute>> {
+    async fn get_local_external_routes(&self) -> ZxResult<Vec<lowpan_fidl::ExternalRoute>> {
         // Wait until we are ready.
         self.wait_for_state(DriverState::is_initialized).await;
 
@@ -1180,7 +1158,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
             .map_ok(|x| {
                 x.into_iter()
                     .filter(|x| x.local)
-                    .map(std::convert::Into::<fidl_fuchsia_lowpan_device::ExternalRoute>::into)
+                    .map(std::convert::Into::<lowpan_fidl::ExternalRoute>::into)
                     .collect::<Vec<_>>()
             })
             .await
