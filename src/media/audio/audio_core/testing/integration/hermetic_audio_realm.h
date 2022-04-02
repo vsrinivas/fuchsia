@@ -25,12 +25,20 @@ class HermeticAudioRealm {
  public:
   ~HermeticAudioRealm();
 
+  struct LocalDirectory {
+    // These fields combine to describe a directory `{root}/{subdir}`, where
+    // `{root}` is capability in the test component's manifest and `{subdir}`
+    // is a relative subdirectory (does not start with `/`).
+    std::string root_cabability_name;
+    std::string subdir;
+  };
+
   struct Options {
     // audio_core's /config/data directory can be created in one of three ways:
     // 1. empty
-    // 2. as a link to a path in the test component, or
+    // 2. as a local directory from the test component's namespace
     // 3. from scratch with mapping from file name -> file contents
-    std::variant<std::monostate, std::string, component_testing::DirectoryContents>
+    std::variant<std::monostate, LocalDirectory, component_testing::DirectoryContents>
         audio_core_config_data;
 
     // Should we create a V2 effects FIDL server?

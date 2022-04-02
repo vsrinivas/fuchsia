@@ -160,15 +160,18 @@ HermeticAudioRealm::CtorArgs HermeticAudioRealm::BuildRealm(Options options,
     case 0:  // empty
       builder.RouteReadOnlyDirectory("config-data", {ChildRef{kAudioCore}}, DirectoryContents());
       break;
-    case 1:  // route from parent
+    case 1: {  // route from parent
+      auto dir = std::get<1>(options.audio_core_config_data);
       builder.AddRoute({
-          .capabilities = {Directory{.name = std::get<1>(options.audio_core_config_data),
+          .capabilities = {Directory{.name = dir.root_cabability_name,
                                      .as = "config-data",
+                                     .subdir = dir.subdir,
                                      .rights = fuchsia::io::RW_STAR_DIR}},
           .source = ParentRef(),
           .targets = {ChildRef{kAudioCore}},
       });
       break;
+    }
     case 2:  // use specified files
       builder.RouteReadOnlyDirectory("config-data", {ChildRef{kAudioCore}},
                                      std::move(std::get<2>(options.audio_core_config_data)));
