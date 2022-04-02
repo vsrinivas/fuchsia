@@ -230,6 +230,10 @@ resource("no-detect-service-config") {
   outputs = "config/archivist/archivist_service_config.json"
 }
 
+# TODO(fxbug.dev/96483): remove. Transitional.
+group("no-service-config") {
+}
+
 group("bootfs") {
   deps = [
     ":bin",
@@ -250,9 +254,6 @@ fuchsia_package("archivist-for-embedding") {
 resource("embedding-config-file") {
   sources = [ "configs/embedding-config.json" ]
   outputs = "data/{{source_file_part}}"
-}
-
-group("with_default_config") {
 }
 
 rustc_fuzzer("convert_debuglog_to_log_message_fuzzer") {
