@@ -285,6 +285,7 @@ group("host-tests_no_e2e") {
     "//build/assembly:host_tests($host_toolchain)",
     "//build/python:host_tests($host_toolchain)",
     "//src/lib/assembly:host_tests($host_toolchain)",
+    "//src/tests/assembly:host_tests($host_toolchain)",
   ]
 }
 

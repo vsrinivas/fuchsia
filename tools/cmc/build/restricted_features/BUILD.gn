@@ -35,6 +35,7 @@ group("dynamic_offers") {
 group("structured_config") {
   visibility = [
     # components
+    "//examples/assembly/structured_config/*",
     "//examples/components/config/cpp:*",
     "//examples/components/config/rust:*",
     "//sdk/lib/sys/component/cpp/tests:*",

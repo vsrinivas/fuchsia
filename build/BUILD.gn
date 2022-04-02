@@ -76,6 +76,7 @@ group("non_hermetic_deps") {
   visibility += [
     "//build/images/*",
     "//src/security/pkg_test/tests/*",
+    "//src/tests/assembly/*",
     "//third_party/network-conformance/images/*",
     "//vendor/google/security/fuss_testing/*",
   ]
