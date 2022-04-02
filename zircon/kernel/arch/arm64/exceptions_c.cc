@@ -524,8 +524,8 @@ extern "C" void arm64_irq(iframe_t* iframe, uint exception_flags) {
 }
 
 /* called from assembly */
-extern "C" void arm64_serror_exception(iframe_t* iframe, uint exception_flags, uint32_t esr);
-extern "C" void arm64_serror_exception(iframe_t* iframe, uint exception_flags, uint32_t esr) {
+extern "C" void arm64_serror_exception(iframe_t* iframe, uint exception_flags);
+extern "C" void arm64_serror_exception(iframe_t* iframe, uint exception_flags) {
   // SError is largely implementation defined and may or may not be fatal. For now, just count the
   // occurrences and add a tracer to help analyze possible causes.
   const cpu_num_t cpu = arch_curr_cpu_num();
