@@ -55,6 +55,9 @@ static constexpr uint32_t kLastExtendedStateComponent = 9;
 static constexpr uint32_t kXsaveLegacyRegionSize = 512;
 static constexpr uint32_t kXsaveHeaderSize = 64;
 
+// NOTE: x86 instructions are guaranteed to be 15 bytes or fewer.
+static constexpr uint8_t kMaxInstructionSize = 15;
+
 static constexpr char kHypVendorId[] = "KVMKVMKVM\0\0\0";
 static constexpr size_t kHypVendorIdLength = 12;
 static_assert(sizeof(kHypVendorId) - 1 == kHypVendorIdLength, "");
@@ -936,91 +939,23 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
   }
 }
 
-/* Returns the page address for a given page table entry.
- *
- * If the page address is for a large page, we additionally calculate the offset
- * to the correct guest physical page that backs the large page.
- */
-static zx_paddr_t page_addr(zx_paddr_t pt_addr, size_t level, zx_vaddr_t guest_vaddr) {
-  zx_paddr_t off = 0;
-  if (IS_LARGE_PAGE(pt_addr)) {
-    if (level == 1) {
-      off = guest_vaddr & PAGE_OFFSET_MASK_HUGE;
-    } else if (level == 2) {
-      off = guest_vaddr & PAGE_OFFSET_MASK_LARGE;
-    }
+static uint8_t default_operand_size(uint64_t efer, uint32_t cs_access_rights) {
+  // See Volume 3, Section 5.2.1.
+  if ((efer & X86_EFER_LMA) && (cs_access_rights & kGuestXxAccessRightsL)) {
+    // IA32-e 64 bit mode.
+    return 4;
+  } else if (cs_access_rights & kGuestXxAccessRightsD) {
+    // CS.D set (and not 64 bit mode).
+    return 4;
+  } else {
+    // CS.D clear (and not 64 bit mode).
+    return 2;
   }
-  return (pt_addr & X86_PG_FRAME) + (off & X86_PG_FRAME);
-}
-
-static zx_status_t get_page(hypervisor::GuestPhysicalAddressSpace* gpas, zx_vaddr_t guest_vaddr,
-                            zx_paddr_t pt_addr, zx_paddr_t* host_paddr) {
-  size_t indices[X86_PAGING_LEVELS] = {
-      VADDR_TO_PML4_INDEX(guest_vaddr),
-      VADDR_TO_PDP_INDEX(guest_vaddr),
-      VADDR_TO_PD_INDEX(guest_vaddr),
-      VADDR_TO_PT_INDEX(guest_vaddr),
-  };
-  zx_paddr_t pa;
-  for (size_t level = 0; level <= X86_PAGING_LEVELS; level++) {
-    auto result = gpas->GetPage(page_addr(pt_addr, level - 1, guest_vaddr));
-    if (result.is_error()) {
-      return result.status_value();
-    }
-    pa = *result;
-    if (level == X86_PAGING_LEVELS || IS_LARGE_PAGE(pt_addr)) {
-      break;
-    }
-    pt_entry_t* pt = static_cast<pt_entry_t*>(paddr_to_physmap(pa));
-    pt_addr = pt[indices[level]];
-    if (!IS_PAGE_PRESENT(pt_addr)) {
-      return ZX_ERR_NOT_FOUND;
-    }
-  }
-  *host_paddr = pa;
-  return ZX_OK;
-}
-
-static zx_status_t fetch_data(hypervisor::GuestPhysicalAddressSpace* gpas, zx_vaddr_t guest_vaddr,
-                              uint8_t* data, size_t size, zx_paddr_t pt_addr) {
-  // TODO(abdulla): Make this handle a fetch that crosses more than two pages.
-  if (size > PAGE_SIZE) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
-  zx_paddr_t pa;
-  zx_status_t status = get_page(gpas, guest_vaddr, pt_addr, &pa);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  size_t page_offset = guest_vaddr & PAGE_OFFSET_MASK_4KB;
-  uint8_t* page = static_cast<uint8_t*>(paddr_to_physmap(pa));
-  size_t from_page = ktl::min(size, PAGE_SIZE - page_offset);
-  mandatory_memcpy(data, page + page_offset, from_page);
-
-  // If the fetch is not split across pages, return.
-  if (from_page == size) {
-    return ZX_OK;
-  }
-
-  status = get_page(gpas, guest_vaddr + size, pt_addr, &pa);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  page = static_cast<uint8_t*>(paddr_to_physmap(pa));
-  mandatory_memcpy(data + from_page, page, size - from_page);
-  return ZX_OK;
 }
 
 static zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs* vmcs, bool read,
-                               zx_vaddr_t guest_paddr, hypervisor::GuestPhysicalAddressSpace* gpas,
-                               hypervisor::TrapMap* traps, zx_port_packet_t* packet) {
-  if (exit_info.exit_instruction_length > X86_MAX_INST_LEN) {
-    return ZX_ERR_INTERNAL;
-  }
-
+                               zx_vaddr_t guest_paddr, hypervisor::TrapMap* traps,
+                               zx_port_packet_t* packet) {
   zx::status<hypervisor::Trap*> trap = traps->FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr);
   if (trap.is_error()) {
     return trap.status_value();
@@ -1039,31 +974,20 @@ static zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs* vmcs, bool r
         return ZX_ERR_BAD_STATE;
       }
       return (*trap)->Queue(*packet, vmcs).status_value();
-    case ZX_GUEST_TRAP_MEM: {
+    case ZX_GUEST_TRAP_MEM:
+      if (exit_info.exit_instruction_length > kMaxInstructionSize) {
+        return ZX_ERR_INTERNAL;
+      }
       packet->key = (*trap)->key();
       packet->type = ZX_PKT_TYPE_GUEST_MEM;
       packet->guest_mem.addr = guest_paddr;
-      packet->guest_mem.inst_len = exit_info.exit_instruction_length & UINT8_MAX;
-      // See Volume 3, Section 5.2.1.
-      uint64_t efer = vmcs->Read(VmcsField64::GUEST_IA32_EFER);
-      uint32_t cs_access_rights = vmcs->Read(VmcsField32::GUEST_CS_ACCESS_RIGHTS);
-      if ((efer & X86_EFER_LMA) && (cs_access_rights & kGuestXxAccessRightsL)) {
-        // IA32-e 64 bit mode.
-        packet->guest_mem.default_operand_size = 4;
-      } else if (cs_access_rights & kGuestXxAccessRightsD) {
-        // CS.D set (and not 64 bit mode).
-        packet->guest_mem.default_operand_size = 4;
-      } else {
-        // CS.D clear (and not 64 bit mode).
-        packet->guest_mem.default_operand_size = 2;
-      }
-      zx_paddr_t pt_addr = vmcs->Read(VmcsFieldXX::GUEST_CR3);
-      // Done with the vmcs, can now invalidate in case we block.
-      vmcs->Invalidate();
-      zx_status_t status = fetch_data(gpas, exit_info.guest_rip, packet->guest_mem.inst_buf,
-                                      packet->guest_mem.inst_len, pt_addr);
-      return status == ZX_OK ? ZX_ERR_NEXT : status;
-    }
+      packet->guest_mem.cr3 = vmcs->Read(VmcsFieldXX::GUEST_CR3);
+      packet->guest_mem.rip = exit_info.guest_rip;
+      packet->guest_mem.instruction_size = static_cast<uint8_t>(exit_info.exit_instruction_length);
+      packet->guest_mem.default_operand_size =
+          default_operand_size(vmcs->Read(VmcsField64::GUEST_IA32_EFER),
+                               vmcs->Read(VmcsField32::GUEST_CS_ACCESS_RIGHTS));
+      return ZX_ERR_NEXT;
     default:
       return ZX_ERR_BAD_STATE;
   }
@@ -1075,7 +999,7 @@ static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmc
   EptViolationInfo ept_violation_info(exit_info.exit_qualification);
   zx_gpaddr_t guest_paddr = exit_info.guest_physical_address;
   zx_status_t status =
-      handle_trap(exit_info, vmcs, ept_violation_info.read, guest_paddr, gpas, traps, packet);
+      handle_trap(exit_info, vmcs, ept_violation_info.read, guest_paddr, traps, packet);
   switch (status) {
     case ZX_ERR_NOT_FOUND:
       break;

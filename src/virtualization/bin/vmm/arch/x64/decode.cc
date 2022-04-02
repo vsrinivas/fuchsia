@@ -9,6 +9,8 @@
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
 
+#include "src/virtualization/bin/vmm/arch/x64/page_table.h"
+
 static constexpr uint8_t kRexRMask = 1u << 2;
 static constexpr uint8_t kRexWMask = 1u << 3;
 static constexpr uint8_t kModRMRegMask = 0b00111000;
@@ -183,7 +185,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, uint8_t defa
   if (inst_len == 0) {
     return ZX_ERR_BAD_STATE;
   }
-  if (inst_len > X86_MAX_INST_LEN) {
+  if (inst_len > kMaxInstructionSize) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   if (default_operand_size != 2 && default_operand_size != 4) {

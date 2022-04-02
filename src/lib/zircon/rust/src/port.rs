@@ -242,14 +242,6 @@ impl GuestMemPacket {
             _ => None,
         }
     }
-
-    /// Retrieves the instruction that caused this trap.
-    ///
-    /// Returns a `None` if the packet is corrupt and  claims to have an instruction that is too
-    /// long.
-    pub fn instruction(&self) -> Option<&[u8]> {
-        self.0.inst_buf.get(0..self.0.inst_len.into())
-    }
 }
 
 impl GuestIoPacket {

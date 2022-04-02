@@ -143,6 +143,10 @@ source_set("lib") {
     "//zircon/system/ulib/virtio",
     "//zircon/system/ulib/zx",
   ]
+
+  if (current_cpu == "x64") {
+    public_deps += [ "//zircon/system/ulib/page_tables" ]
+  }
 }
 
 executable("bin") {

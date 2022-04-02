@@ -135,12 +135,9 @@ namespace {
 
 bool ExceptionThrown(const zx_packet_guest_mem_t& guest_mem, const zx::vcpu& vcpu) {
 #if __x86_64__
-  if (guest_mem.inst_len != 12) {
-    // Not the expected mov imm, (EXIT_TEST_ADDR) size.
-    return true;
-  }
-  if (guest_mem.inst_buf[8] == 0 && guest_mem.inst_buf[9] == 0 && guest_mem.inst_buf[10] == 0 &&
-      guest_mem.inst_buf[11] == 0) {
+  // The size of the instruction matches "mov imm, (EXIT_TEST_ADDR)", therefore
+  // we assume that we exited the VM correctly.
+  if (guest_mem.instruction_size == 12) {
     return false;
   }
   zx_vcpu_state_t vcpu_state;

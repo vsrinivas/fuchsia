@@ -351,10 +351,11 @@ VALIDATE_FIELD_OFFSET_SIZE(zx_packet_guest_mem_t, read, 11, 1);
 VALIDATE_FIELD_OFFSET_SIZE(zx_packet_guest_mem_t, data, 16, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_packet_guest_mem_t, reserved, 24, 8);
 #elif defined(__x86_64__)
-VALIDATE_FIELD_OFFSET_SIZE(zx_packet_guest_mem_t, inst_len, 8, 1);
-VALIDATE_FIELD_OFFSET_SIZE(zx_packet_guest_mem_t, inst_buf, 9, 15);
-VALIDATE_FIELD_OFFSET_SIZE(zx_packet_guest_mem_t, default_operand_size, 24, 1);
-VALIDATE_FIELD_OFFSET_SIZE(zx_packet_guest_mem_t, reserved, 25, 7);
+VALIDATE_FIELD_OFFSET_SIZE(zx_packet_guest_mem_t, cr3, 8, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_packet_guest_mem_t, rip, 16, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_packet_guest_mem_t, instruction_size, 24, 1);
+VALIDATE_FIELD_OFFSET_SIZE(zx_packet_guest_mem_t, default_operand_size, 25, 1);
+VALIDATE_FIELD_OFFSET_SIZE(zx_packet_guest_mem_t, reserved, 26, 6);
 #endif
 
 VALIDATE_TYPE_SIZE_ALIGNMENT(zx_packet_guest_io_t, 32, 8);

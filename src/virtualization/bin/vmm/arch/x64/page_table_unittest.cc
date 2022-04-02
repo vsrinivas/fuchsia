@@ -4,11 +4,13 @@
 
 #include "src/virtualization/bin/vmm/arch/x64/page_table.h"
 
-#include <gtest/gtest.h>
 #include <limits.h>
 #include <stdlib.h>
 
 #include <cinttypes>
+
+#include <gtest/gtest.h>
+#include <page_tables/x86/constants.h>
 
 #include "src/virtualization/bin/vmm/phys_mem_fake.h"
 
@@ -208,4 +210,67 @@ TEST(PageTableTest, Complex) {
     expected[3].entries[i] = (pd_offset + (i << 12)) | X86_PTE_P | X86_PTE_RW;
   }
   ASSERT_EPT_EQ(actual, expected, sizeof(actual));
+}
+
+TEST(PageTableTest, ReadInstruction_1gb) {
+  zx::vmo vmo;
+  ASSERT_EQ(ZX_OK, zx::vmo::create(1 << PDP_SHIFT, 0, &vmo));
+
+  PhysMem phys_mem;
+  ASSERT_EQ(ZX_OK, phys_mem.Init(std::move(vmo)));
+
+  ASSERT_EQ(ZX_OK, create_page_table(phys_mem));
+
+  uint8_t mov[] = {0x89, 0b00'001'000};
+  phys_mem.write(1 << (PDP_SHIFT - 1), mov);
+
+  InstructionBuffer buffer;
+  InstructionSpan span{buffer.begin(), sizeof(mov)};
+  auto result = ReadInstruction(phys_mem, 0, 1 << (PDP_SHIFT - 1), span);
+  ASSERT_EQ(ZX_OK, result.status_value());
+
+  EXPECT_EQ(mov[0], span[0]);
+  EXPECT_EQ(mov[1], span[1]);
+}
+
+TEST(PageTableTest, ReadInstruction_2mb) {
+  zx::vmo vmo;
+  ASSERT_EQ(ZX_OK, zx::vmo::create(1 << PD_SHIFT, 0, &vmo));
+
+  PhysMem phys_mem;
+  ASSERT_EQ(ZX_OK, phys_mem.Init(std::move(vmo)));
+
+  ASSERT_EQ(ZX_OK, create_page_table(phys_mem));
+
+  uint8_t mov[] = {0x89, 0b00'001'000};
+  phys_mem.write(1 << (PD_SHIFT - 1), mov);
+
+  InstructionBuffer buffer;
+  InstructionSpan span{buffer.begin(), sizeof(mov)};
+  auto result = ReadInstruction(phys_mem, 0, 1 << (PD_SHIFT - 1), span);
+  ASSERT_EQ(ZX_OK, result.status_value());
+
+  EXPECT_EQ(mov[0], span[0]);
+  EXPECT_EQ(mov[1], span[1]);
+}
+
+TEST(PageTableTest, ReadInstruction_4kb) {
+  zx::vmo vmo;
+  ASSERT_EQ(ZX_OK, zx::vmo::create(8 << PT_SHIFT, 0, &vmo));
+
+  PhysMem phys_mem;
+  ASSERT_EQ(ZX_OK, phys_mem.Init(std::move(vmo)));
+
+  ASSERT_EQ(ZX_OK, create_page_table(phys_mem));
+
+  uint8_t mov[] = {0x89, 0b00'001'000};
+  phys_mem.write(4 << PT_SHIFT, mov);
+
+  InstructionBuffer buffer;
+  InstructionSpan span{buffer.begin(), sizeof(mov)};
+  auto result = ReadInstruction(phys_mem, 0, 4 << PT_SHIFT, span);
+  ASSERT_EQ(ZX_OK, result.status_value());
+
+  EXPECT_EQ(mov[0], span[0]);
+  EXPECT_EQ(mov[1], span[1]);
 }

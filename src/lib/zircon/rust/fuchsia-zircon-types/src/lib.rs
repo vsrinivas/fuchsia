@@ -984,8 +984,9 @@ pub const X86_MAX_INST_LEN: usize = 15;
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct zx_packet_guest_mem_t {
     pub addr: zx_gpaddr_t,
-    pub inst_len: u8,
-    pub inst_buf: [u8; X86_MAX_INST_LEN],
+    pub cr3: zx_gpaddr_t,
+    pub rip: zx_vaddr_t,
+    pub instruction_size: u8,
     pub default_operand_size: u8,
 }
 
