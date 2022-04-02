@@ -89,32 +89,68 @@ void StepThroughPltThreadController::InitWithThread(Thread* thread,
   // fail (for example, the code could be in the read-only vDSO) and we don't want execution to just
   // continue in that case.
   std::vector<InputLocation> input_locations;
-  for (const auto& loc : found)
+  for (const auto& loc : found) {
+    dest_addrs_.push_back(loc.address());
     input_locations.push_back(InputLocation(loc.address()));
+  }
+
   until_ = std::make_unique<UntilThreadController>(std::move(input_locations));
-  until_->InitWithThread(thread, std::move(cb));
+  until_->InitWithThread(
+      thread, [weak_this = weak_factory_.GetWeakPtr(), cb = std::move(cb)](const Err& err) mutable {
+        if (err.has_error() && weak_this)
+          weak_this->OnUntilControllerInitializationFailed();
+        cb(err);
+      });
 }
 
 ThreadController::ContinueOp StepThroughPltThreadController::GetContinueOp() {
-  return until_->GetContinueOp();
+  if (until_)
+    return until_->GetContinueOp();
+
+  // Fall back to single-stepping instructions if the until controller failed.
+  return ContinueOp::StepInstruction();
 }
 
 ThreadController::StopOp StepThroughPltThreadController::OnThreadStop(
     debug_ipc::ExceptionType stop_type,
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
-  if (!until_) {
-    Log("No destination for PLT step, stopping execution.");
-    return ThreadController::StopOp::kStopDone;
+  if (until_) {
+    // Delegate to thread controller.
+    Log("Checking with until controller to see if PLT stepping is complete.");
+    return until_->OnThreadStop(stop_type, hit_breakpoints);
   }
 
-  Log("Checking if PLT stepping is complete.");
-  auto result = until_->OnThreadStop(stop_type, hit_breakpoints);
-  if (result == ThreadController::StopOp::kStopDone) {
-    Log("PLT stepping complete.");
-  } else {
-    Log("Until controller reports it's not done yet.");
+  // We're single-stepping through the PLT, check against the addresses.
+  if (!dest_addrs_.empty()) {
+    Stack& stack = thread()->GetStack();
+    if (stack.empty()) {
+      Log("Unexpected empty stack");
+      return kUnexpected;  // Agent sent bad state, give up trying to step.
+    }
+    const Frame* top_frame = stack[0];
+    uint64_t ip = top_frame->GetAddress();
+
+    for (auto addr : dest_addrs_) {
+      if (addr == ip) {
+        Log("Matched PLT destination for stepping.");
+        return ThreadController::StopOp::kStopDone;
+      }
+    }
+
+    Log("Continuing to single-step through PLT.");
+    return ThreadController::StopOp::kContinue;
   }
-  return result;
+
+  Log("No destination for PLT step, stopping execution.");
+  return ThreadController::StopOp::kStopDone;
+}
+
+void StepThroughPltThreadController::OnUntilControllerInitializationFailed() {
+  // The "until" controller failed to initialize. Most commonly this is because the breakpoint could
+  // not be set because the destination memory is read-only (this will happen for syscalls which are
+  // in the vDSO). Fall back to single-stepping through the trampoline.
+  Log("Until controller failed, falling back to single-stepping through PLT.");
+  until_ = nullptr;
 }
 
 }  // namespace zxdb

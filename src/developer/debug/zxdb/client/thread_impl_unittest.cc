@@ -349,11 +349,11 @@ TEST_F(ThreadImplTest, FutureThreadController) {
   EXPECT_FALSE(thread_observer.got_stopped());
 
   // Declare that future stop as complete. This will return another future.
-  thread->ResumeFromAsyncThreadController();
+  thread->ResumeFromAsyncThreadController(std::nullopt);
   EXPECT_FALSE(thread_observer.got_stopped());
 
   // The third time the controller should report stop which should notify.
-  thread->ResumeFromAsyncThreadController();
+  thread->ResumeFromAsyncThreadController(std::nullopt);
   EXPECT_TRUE(thread_observer.got_stopped());
 }
 

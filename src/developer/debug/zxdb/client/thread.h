@@ -124,7 +124,12 @@ class Thread : public ClientObject {
   // Used by ThreadControllers that need to perform asynchronous operations from a thread stop.
   // When OnThreadStop() returns kFuture, the thread controller is responsible for calling this
   // to re-evaluate the thread controller state. See thread_controller.h comments.
-  virtual void ResumeFromAsyncThreadController() = 0;
+  //
+  // The parameter allows optionally overriding the exception type for the re-delivery of the
+  // stop notification. Often thread controllers will want to override this to "none" to force
+  // a re-evaluation of the current location independent of the exception type. If the parameter is
+  // nullopt, the original exception type will be used.
+  virtual void ResumeFromAsyncThreadController(std::optional<debug_ipc::ExceptionType> type) = 0;
 
   // Sets the thread's IP to the given location. This requires that the thread be stopped. It will
   // not resume the thread.

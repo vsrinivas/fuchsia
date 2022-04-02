@@ -5,8 +5,12 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_STEP_THROUGH_PLT_THREAD_CONTROLLER_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_STEP_THROUGH_PLT_THREAD_CONTROLLER_H_
 
+#include <vector>
+
 #include "src/developer/debug/zxdb/client/step_through_plt_thread_controller.h"
 #include "src/developer/debug/zxdb/client/until_thread_controller.h"
+#include "src/developer/debug/zxdb/symbols/arch.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
@@ -21,7 +25,7 @@ namespace zxdb {
 // When InitWithThread() is called, the thread should be stopped at a PLT trampoline.
 class StepThroughPltThreadController : public ThreadController {
  public:
-  explicit StepThroughPltThreadController() = default;
+  explicit StepThroughPltThreadController() : weak_factory_(this) {}
 
   // ThreadController implementation.
   void InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) override;
@@ -31,13 +35,25 @@ class StepThroughPltThreadController : public ThreadController {
   const char* GetName() const override { return "Step Through PLT"; }
 
  private:
+  void OnUntilControllerInitializationFailed();
+
   // Address of the beginning of the PLT we're at.
   uint64_t plt_address_ = 0;
 
+  // The destination address of this PLT trampoline. There can be multiple matches if the symbol
+  // lookup matches multiple locations, but one particular trampoline will match only one of these
+  // addresses.
+  std::vector<TargetPointer> dest_addrs_;
+
   // This sub-controller handles stopping the thread at the destination of the call we computed.
   //
-  // Will be null if the destination of the call was not found.
-  std::unique_ptr<UntilThreadController> until_;
+  // We prefer the "until" controller because the trampoline could do non-trivial work (dynamically
+  // resolving the destination) but fall back on single-stepping if it fails to initialize (the
+  // destination of the jump isn't writable). In that failure case the until_ member will be null
+  // and we'll step by instructions. Usually the PLTs are short enough where this is reasonable.
+  std::unique_ptr<ThreadController> until_;
+
+  fxl::WeakPtrFactory<StepThroughPltThreadController> weak_factory_;
 };
 
 }  // namespace zxdb

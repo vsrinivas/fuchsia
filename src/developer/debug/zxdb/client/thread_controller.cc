@@ -13,6 +13,41 @@
 
 namespace zxdb {
 
+ThreadController::ResumeAsyncCallbackInfo::ResumeAsyncCallbackInfo(
+    fxl::WeakPtr<Thread> weak_thread, debug_ipc::ExceptionType exception_type)
+    : exception_type(exception_type),
+      called(std::make_shared<bool>(false)),
+      is_sync(std::make_shared<bool>(true)) {
+  callback = [weak_thread = std::move(weak_thread), exception_type, called = called,
+              is_sync = is_sync](const Err&) mutable {
+    // Only issue the resume if we're running in an async context. Otherwise this will try to resume
+    // from within the OnThreadStop() stack which will confuse the thread.
+    if (!*is_sync && weak_thread)
+      weak_thread->ResumeFromAsyncThreadController(exception_type);
+    *called = true;
+  };
+}
+
+ThreadController::ResumeAsyncCallbackInfo::~ResumeAsyncCallbackInfo() {
+  // Tell the callback that if the callback is issued from now on, the thread needs a Resume.
+  *is_sync = false;
+
+  // The callback should have been moved out. If we still own it, it can't be called in the future
+  // this stop will never be completed.
+  FX_DCHECK(!callback);
+}
+
+ThreadController::StopOp ThreadController::ResumeAsyncCallbackInfo::ForwardStopOrReturnFuture(
+    ThreadController* controller, const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
+  if (*called) {
+    // Callback has been issued, safe to forward to the controller.
+    return controller->OnThreadStop(exception_type, hit_breakpoints);
+  }
+
+  // Callback still pending, the Thread will be resumed in the future.
+  return kFuture;
+}
+
 ThreadController::ThreadController() = default;
 
 ThreadController::~ThreadController() = default;
@@ -107,6 +142,11 @@ void ThreadController::SetInlineFrameIfAmbiguous(InlineFrameIs comparison,
 void ThreadController::NotifyControllerDone() {
   thread_->NotifyControllerDone(this);
   // Warning: |this| is likely deleted.
+}
+
+ThreadController::ResumeAsyncCallbackInfo ThreadController::MakeResumeAsyncThreadCallback(
+    debug_ipc::ExceptionType type) const {
+  return ResumeAsyncCallbackInfo(thread_->GetWeakPtr(), type);
 }
 
 }  // namespace zxdb

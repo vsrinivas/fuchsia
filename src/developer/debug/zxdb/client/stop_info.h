@@ -21,8 +21,14 @@ struct StopInfo {
 
   // Breakpoints at this address. There can be more than one breakpoint at the same address.
   //
-  // These are weak poiners because there can be multiple observers and certain observers might
+  // These are weak pointers because there can be multiple observers and certain observers might
   // remove breakpoints in response to the notification, leaving it null for later observers.
+  //
+  // Note that there may be breakpoints set even if the exception type is something other than a
+  // breakpoint. Some thread controllers override the exception type to "none", and platforms can
+  // differ about the exception type if two things happened at once (i.e. a single step exception
+  // and a breakpoint could be hit at the same time, and we would count the breakpoint as hit even
+  // if the exception was a single-step one).
   std::vector<fxl::WeakPtr<Breakpoint>> hit_breakpoints;
 };
 

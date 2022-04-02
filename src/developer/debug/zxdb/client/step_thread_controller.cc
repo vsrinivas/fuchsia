@@ -200,11 +200,31 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
       FunctionStep func_step = GetFunctionStepAction(thread());
       if (func_step != FunctionStep::kDefault) {
         Log("Got a new function, step mode of %s", FunctionStepToString(func_step));
+
+        // Optimization note: currently this is designed to be very regular so that if we hit a PLT
+        // trampoline, we go through it to stop at the actual function and re-evaluate what should
+        // happen as if the trampoline didn't exist. But in the "step over" case, we know we'll want
+        // to step out of the given function and can omit this step, doing a "step out" directly.
+        // The challenge to implementing this is that the code that knows we're going to step out
+        // subsequently is at a higher level than we are (it created this object) and this code is
+        // already extremely complex.
+        //
+        // The current design should be fine unless we notice a performance problem with automated
+        // stepping in the future. In that case we could short-circuit the PLT stepping and
+        // immediately step out in cases where there's no need to know about the function we're
+        // stepping to.
         function_step_ = std::make_unique<FunctionThreadController>(func_step);
-        function_step_->InitWithThread(thread(), [](const Err&) {});
-        // Use a "none" exception type to request that the re-evaluate this location, ignoring
-        // the type and any breakpoints (which were created before the function_step_ was created).
-        return function_step_->OnThreadStop(debug_ipc::ExceptionType::kNone, {});
+
+        // Resume once the function step controller has initialized. This can involve setting
+        // breakpoints (for stepping over function prologues) which can asynchronously fail, so
+        // don't continue until we know it's OK. Otherwise failures will resume execution without
+        // stopping which is not what the user expects.
+        //
+        // Force the "none" exception type because the current exception won't correspond to the
+        // new thread controller's expectations.
+        auto resume_async = MakeResumeAsyncThreadCallback(debug_ipc::ExceptionType::kNone);
+        function_step_->InitWithThread(thread(), std::move(resume_async.callback));
+        return resume_async.ForwardStopOrReturnFuture(function_step_.get(), {});
       }
 
       // Continue through the default behavior.

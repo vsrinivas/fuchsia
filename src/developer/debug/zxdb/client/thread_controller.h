@@ -60,7 +60,8 @@ class Thread;
 //
 // Thread::ResumeFromAsyncThreadController() doesn't continue the thread (since the async operation
 // may want to report "stop"). Instead, it re-issues the same stop and the controllers should then
-// re-evaluate their location and issue a real stop or continue.
+// re-evaluate their location and issue a real stop or continue. See also
+// ThreadController::MakeResumeAsyncThreadCallback() for some extra complications.
 //
 // There is also some opportunity for asynchronous work via the Thread's AddPostStopTask() function.
 // This can inject asynchronous work after the thread controllers run but before the stop or
@@ -135,6 +136,25 @@ class ThreadController {
     // When how == kStepInRange, this defines the address range to step in. As long as the
     // instruction pointer is inside, execution will continue.
     AddressRange range;
+  };
+
+  // See MakeResumeAsyncThreadCallback().
+  struct ResumeAsyncCallbackInfo {
+    ResumeAsyncCallbackInfo(fxl::WeakPtr<Thread> thread, debug_ipc::ExceptionType exception_type);
+    ~ResumeAsyncCallbackInfo();
+
+    debug_ipc::ExceptionType exception_type;
+
+    // Shared between the callback and this struct to coordinate what's happening.
+    std::shared_ptr<bool> called;   // Indicates the callback has been issued.
+    std::shared_ptr<bool> is_sync;  // Indicates the callback should run in a synchronous context.
+
+    fit::callback<void(const Err&)> callback;
+
+    // If the callback has completed, calls controller->OnStop() with the given arguments. If it
+    // has not, returns kFuture.
+    StopOp ForwardStopOrReturnFuture(ThreadController* controller,
+                                     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints);
   };
 
   ThreadController();
@@ -250,6 +270,41 @@ class ThreadController {
   //
   // This function will likely cause |this| to be deleted.
   void NotifyControllerDone();
+
+  // Makes a callback that calls the current thread ResumeFromAsyncThreadController() function to
+  // resume from a previous "kFuture" stop operation. This is a convenience function to deal with
+  // some delicacies including weak Thread pointers and the sync/async issue described below.
+  //
+  // The Err parameter to the callback is ignored, we use this function type to match the callback
+  // to InitWithThread().
+  //
+  // The type parameter is passed to ResumeFromAsyncThreadController().
+  //
+  // SYNC/ASYNC ISSUES
+  // -----------------
+  // The normal sync pattern is to make a new ThreadController, call its InitWithThread(), and
+  // then send it a "kNone" exception if you need to ask it about the current location. The problem
+  // is the callback may:
+  //
+  //  - Complete synchronously from within InitWithThread(), in which case you want to immediately
+  //    do e.g. "return controller->OnThreadStop(kNone)") and do nothing from the callback.
+  //
+  //  - Complete asynchronously in which case you want to return kFuture to the Thread and have the
+  //    callback issue ResumeFromAsyncThreadController() when it completes.
+  //
+  // This function makes a ResumeAsyncCallbackInfo which implements this behavior. The callback will
+  // only call ResumeFromAsyncThreadController() if it is issued after the ResumeAsyncCallbackInfo
+  // is destructed.
+  //
+  // Typical use:
+  //
+  //   sub_controller_ = std::make_unique<MyController>();
+  //   ResumeAsyncCallbackInfo resume_info =
+  //       MakeResumeAsyncThreadCallback(debug_ipc::ExceptionType::kNone);
+  //   sub_controller_->InitWithThread(std::move(resume_info.callback));
+  //
+  //   return resume_info.ForwardStopOrReturnFuture(sub_controller_.get(), hit_bps);
+  ResumeAsyncCallbackInfo MakeResumeAsyncThreadCallback(debug_ipc::ExceptionType type) const;
 
   // Returns true if this controller has debug logging enabled. This is only valid after the thread
   // has been set.

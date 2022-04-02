@@ -108,6 +108,14 @@ void FunctionThreadControllerTest::DoUnsymbolizedPltCallTest(bool stop_on_no_sym
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::ExceptionType::kSingleStep, std::move(stack), true);
   EXPECT_TRUE(continued);
+
+  // The PLT controller initializes asynchronously after the breakpoint is confirmed set. In real
+  // life this will be woken up by the debug_agent's set breakpoint reply, but our mock breakpoints
+  // just post a task to respond.
+  EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());
+  loop().RunUntilNoTasks();
+  // That should wake up the "until" controller which should then tell the PLT controller which will
+  // then request a continue.
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // The PLT controller will have created an "until" controller which should set a breakpoint at the

@@ -171,12 +171,21 @@ void ThreadImpl::CancelAllThreadControllers() {
   }
 }
 
-void ThreadImpl::ResumeFromAsyncThreadController() {
+void ThreadImpl::ResumeFromAsyncThreadController(std::optional<debug_ipc::ExceptionType> type) {
+  bool debug_stepping = settings().GetBool(ClientSettings::Thread::kDebugStepping);
+  if (debug_stepping)
+    printf("↓↓↓↓↓↓↓↓↓↓ Resuming from async thread controller.\r\n");
+
   if (nested_stop_future_completion_ == 0) {
     // Not waiting on an async thread controller to finish. This could be a programming error but it
     // could also be that somebody called CancelAllThreadControllers() out from under us.
+    if (debug_stepping)
+      printf("No async stepping in progress, giving up.\r\n");
     return;
   }
+
+  if (type)
+    async_stop_info_.exception_type = *type;
 
   OnException(async_stop_info_);
 }
@@ -356,7 +365,8 @@ void ThreadImpl::OnException(const StopInfo& info) {
 
   // Non-debug exceptions also mean the thread should always stop (check this after running the
   // controllers for the same reason as the breakpoint check above).
-  if (!debug_ipc::IsDebug(info.exception_type))
+  if (info.exception_type != debug_ipc::ExceptionType::kNone &&
+      !debug_ipc::IsDebug(info.exception_type))
     should_stop = true;
 
   // Execute the chain of post-stop tasks (may be asynchronous) and then dispatch the stop
@@ -425,14 +435,20 @@ void ThreadImpl::RunNextPostStopTaskOrNotify(const StopInfo& info, bool should_s
     return;
   }
 
+  bool debug_stepping = settings().GetBool(ClientSettings::Thread::kDebugStepping);
+
   if (post_stop_tasks_.empty()) {
     // No post-stop tasks left to run, dispatch the stop notification or continue.
     if (should_stop) {
       // Stay stopped and notify the observers.
+      if (debug_stepping)
+        printf(" → Dispatching stop notification.\r\n");
       for (auto& observer : session()->thread_observers())
         observer.OnThreadStopped(this, info);
     } else {
       // Controllers all say to continue.
+      if (debug_stepping)
+        printf(" → Sending continue request.\r\n");
       Continue(false);
     }
   } else {
