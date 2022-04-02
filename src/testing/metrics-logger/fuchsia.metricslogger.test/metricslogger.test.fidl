@@ -12,8 +12,8 @@ alias ClientId = string:8;
 type MetricsLoggerError = strict enum : uint32 {
     /// Indicates that no driver is found for requested metric logging.
     NO_DRIVERS = 1;
-    /// Indicates that an invalid argument was provided.
-    INVALID_ARGUMENT = 2;
+    /// Indicates that an invalid sampling interval was provided.
+    INVALID_SAMPLING_INTERVAL = 2;
     /// Requests to start logging will fail if logging is already active for a
     /// given client.
     ALREADY_LOGGING = 3;
@@ -23,6 +23,9 @@ type MetricsLoggerError = strict enum : uint32 {
     /// allowed maxium (defined by `MAX_CONCURRENT_CLIENTS = 20` in
     /// the MetricsLogger to keep memory use bounded).
     TOO_MANY_ACTIVE_CLIENTS = 5;
+    /// Indicates that statistics is enabled and an invalid statistics interval
+    /// is provided.
+    INVALID_STATISTICS_INTERVAL = 6;
 };
 
 /// Metric type requested in MetricsLogger methods.
@@ -32,20 +35,26 @@ type Metric = strict union {
     3: power Power;
 };
 
+type StatisticsArgs = struct {
+    /// Length of the interval in milliseconds for summarizing statistics (e.g.,
+    /// min, max, avg).
+    /// Must be equal to or larger than `sampling_interval_ms` in the metrics.
+    /// Must be smaller than `duration_ms` of the logging request.
+    /// Must not be smaller than 500ms if `output_stats_to_syslog` is enabled in
+    /// the logging request.
+    statistics_interval_ms uint32;
+};
+
 /// Temperature metric details.
 type Temperature = struct {
     /// Length of the sampling interval in milliseconds.
     /// Must not be smaller than 500ms if `output_samples_to_syslog` is enabled
     /// in the logging request.
+    /// Must be smaller than `duration_ms` of the logging request.
     sampling_interval_ms uint32;
 
-    /// Length of the interval in milliseconds for summarizing statistics (e.g.,
-    /// min, max, avg).
-    /// Must be equal to or larger than `sampling_interval_ms`.
-    /// Must be smaller than `duration_ms` of the logging request.
-    /// Must not be smaller than 500ms if `output_stats_to_syslog` is enabled in
-    /// the logging request.
-    statistics_interval_ms uint32;
+    /// Boxed(optional) statistics arguments. If none, statistics is disabled.
+    statistics_args box<StatisticsArgs>;
 };
 
 /// CPU Load metric details.
@@ -62,15 +71,11 @@ type Power = struct {
     /// Length of the sampling interval in milliseconds.
     /// Must not be smaller than 500ms if `output_samples_to_syslog` is enabled
     /// in the logging request.
+    /// Must be smaller than `duration_ms` of the logging request.
     sampling_interval_ms uint32;
 
-    /// Length of the interval in milliseconds for summarizing statistics (e.g.,
-    /// min, max, avg).
-    /// Must be equal to or larger than `sampling_interval_ms`.
-    /// Must be smaller than `duration_ms` of the logging request.
-    /// Must not be smaller than 500ms if `output_stats_to_syslog` is enabled in
-    /// the logging request.
-    statistics_interval_ms uint32;
+    /// Boxed(optional) statistics arguments. If none, statistics is disabled.
+    statistics_args box<StatisticsArgs>;
 };
 
 /// A protocol for managing on-demand metrics logging.

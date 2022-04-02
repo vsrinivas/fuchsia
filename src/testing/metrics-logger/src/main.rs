@@ -232,13 +232,7 @@ macro_rules! log_trace {
     };
 }
 
-struct SensorLogger<T> {
-    /// List of sensor drivers.
-    drivers: Rc<Vec<SensorDriver<T>>>,
-
-    /// Polling interval from the sensors.
-    sampling_interval: zx::Duration,
-
+struct StatisticsTracker {
     /// Interval for summarizing statistics.
     statistics_interval: zx::Duration,
 
@@ -250,6 +244,14 @@ struct SensorLogger<T> {
     /// Start time for a new statistics period.
     /// This is an exclusive start.
     statistics_start_time: fasync::Time,
+}
+
+struct SensorLogger<T> {
+    /// List of sensor drivers.
+    drivers: Rc<Vec<SensorDriver<T>>>,
+
+    /// Polling interval from the sensors.
+    sampling_interval: zx::Duration,
 
     /// Start time for the logger; used to calculate elapsed time.
     /// This is an exclusive start.
@@ -262,6 +264,8 @@ struct SensorLogger<T> {
     /// Client associated with this logger.
     client_id: String,
 
+    statistics_tracker: Option<StatisticsTracker>,
+
     inspect: InspectData,
 
     output_samples_to_syslog: bool,
@@ -273,7 +277,7 @@ impl<T: Sensor<T>> SensorLogger<T> {
     fn new(
         drivers: Rc<Vec<SensorDriver<T>>>,
         sampling_interval_ms: u32,
-        statistics_interval_ms: u32,
+        statistics_interval_ms: Option<u32>,
         duration_ms: Option<u32>,
         client_inspect: &inspect::Node,
         driver_names: Vec<String>,
@@ -282,29 +286,36 @@ impl<T: Sensor<T>> SensorLogger<T> {
         output_stats_to_syslog: bool,
     ) -> Self {
         let start_time = fasync::Time::now();
-        let statistics_start_time = fasync::Time::now();
         let end_time = duration_ms
             .map_or(fasync::Time::INFINITE, |d| start_time + zx::Duration::from_millis(d as i64));
         let sampling_interval = zx::Duration::from_millis(sampling_interval_ms as i64);
-        let statistics_interval = zx::Duration::from_millis(statistics_interval_ms as i64);
-        let samples = vec![Vec::new(); drivers.len()];
+
+        let statistics_tracker = statistics_interval_ms.map(|i| StatisticsTracker {
+            statistics_interval: zx::Duration::from_millis(i as i64),
+            statistics_start_time: fasync::Time::now(),
+            samples: vec![Vec::new(); drivers.len()],
+        });
 
         let logger_name = match T::sensor_type() {
             SensorType::Temperature => "TemperatureLogger",
             SensorType::Power => "PowerLogger",
         };
-        let inspect = InspectData::new(client_inspect, logger_name, &T::unit(), driver_names);
+        let inspect = InspectData::new(
+            client_inspect,
+            logger_name,
+            &T::unit(),
+            driver_names,
+            statistics_interval_ms.is_some(),
+        );
 
         SensorLogger {
             drivers,
             sampling_interval,
-            statistics_interval,
-            samples,
-            statistics_start_time,
             start_time,
             end_time,
-            inspect,
             client_id,
+            statistics_tracker,
+            inspect,
             output_samples_to_syslog,
             output_stats_to_syslog,
         }
@@ -339,10 +350,13 @@ impl<T: Sensor<T>> SensorLogger<T> {
         }
         let results = queries.collect::<Vec<(usize, Result<f32, Error>)>>().await;
 
-        // Current statistics interval is (self.statistics_start_time, self.statistics_start_time +
-        // self.statistics_interval]
-        let is_last_sample_for_statistics =
-            time_stamp - self.statistics_start_time >= self.statistics_interval;
+        // Current statistics interval is (self.statistics_start_time,
+        // self.statistics_start_time + self.statistics_interval]. Check if current sample
+        // is the last sample of the current statistics interval.
+        let is_last_sample_for_statistics = self
+            .statistics_tracker
+            .as_ref()
+            .map_or(false, |t| time_stamp - t.statistics_start_time >= t.statistics_interval);
 
         for (index, result) in results.into_iter() {
             let topological_path = &self.drivers[index].topological_path;
@@ -354,7 +368,9 @@ impl<T: Sensor<T>> SensorLogger<T> {
             match result {
                 Ok(value) => {
                     // Save the current sample for calculating statistics.
-                    self.samples[index].push(value);
+                    if let Some(tracker) = &mut self.statistics_tracker {
+                        tracker.samples[index].push(value);
+                    }
 
                     // Log data to Inspect.
                     self.inspect.log_data(
@@ -388,62 +404,65 @@ impl<T: Sensor<T>> SensorLogger<T> {
             };
 
             if is_last_sample_for_statistics {
-                let mut min = f32::MAX;
-                let mut max = f32::MIN;
-                let mut sum: f32 = 0.0;
-                for sample in &self.samples[index] {
-                    min = f32::min(min, *sample);
-                    max = f32::max(max, *sample);
-                    sum += *sample;
-                }
-                let avg = sum / self.samples[index].len() as f32;
+                if let Some(tracker) = &mut self.statistics_tracker {
+                    let mut min = f32::MAX;
+                    let mut max = f32::MIN;
+                    let mut sum: f32 = 0.0;
+                    for sample in &tracker.samples[index] {
+                        min = f32::min(min, *sample);
+                        max = f32::max(max, *sample);
+                        sum += *sample;
+                    }
+                    let avg = sum / tracker.samples[index].len() as f32;
 
-                self.inspect.log_statistics(
-                    index,
-                    (self.statistics_start_time - self.start_time).into_millis(),
-                    (time_stamp - self.start_time).into_millis(),
-                    min,
-                    max,
-                    avg,
-                );
-
-                log_trace!(
-                    T::sensor_type(),
-                    self.client_id.as_str(),
-                    &format!("{} [min]", sensor_name),
-                    min
-                );
-                log_trace!(
-                    T::sensor_type(),
-                    self.client_id.as_str(),
-                    &format!("{} [max]", sensor_name),
-                    max
-                );
-                log_trace!(
-                    T::sensor_type(),
-                    self.client_id.as_str(),
-                    &format!("{} [avg]", sensor_name),
-                    avg
-                );
-
-                if self.output_stats_to_syslog {
-                    fx_log_info!(
-                        "Sensor {:?} statistics [{:?}]:\n\
-                        max: {:?}, min: {:?}, avg: {:?};",
-                        sensor_name,
-                        T::unit(),
-                        max,
+                    self.inspect.log_statistics(
+                        index,
+                        (tracker.statistics_start_time - self.start_time).into_millis(),
+                        (time_stamp - self.start_time).into_millis(),
                         min,
+                        max,
+                        avg,
+                    );
+
+                    log_trace!(
+                        T::sensor_type(),
+                        self.client_id.as_str(),
+                        &format!("{} [min]", sensor_name),
+                        min
+                    );
+                    log_trace!(
+                        T::sensor_type(),
+                        self.client_id.as_str(),
+                        &format!("{} [max]", sensor_name),
+                        max
+                    );
+                    log_trace!(
+                        T::sensor_type(),
+                        self.client_id.as_str(),
+                        &format!("{} [avg]", sensor_name),
                         avg
                     );
-                }
 
-                // Empty samples for this sensor.
-                self.samples[index].clear();
+                    if self.output_stats_to_syslog {
+                        fx_log_info!(
+                            "Sensor {:?} statistics [{:?}]:\n\
+                            max: {:?}, min: {:?}, avg: {:?};",
+                            sensor_name,
+                            T::unit(),
+                            max,
+                            min,
+                            avg,
+                        );
+                    }
+
+                    // Empty samples for this sensor.
+                    tracker.samples[index].clear();
+                }
             }
         }
+        // Reset timestamp if current statistics interval ends.
         if is_last_sample_for_statistics {
-            self.statistics_start_time = time_stamp;
+            self.statistics_tracker.as_mut().map(|t| t.statistics_start_time = time_stamp);
         }
     }
 }
@@ -803,43 +822,55 @@ impl MetricsLoggerServer {
                         || output_samples_to_syslog && *interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
                         || duration_ms.map_or(false, |d| d <= *interval_ms)
                     {
-                        return Err(fmetrics::MetricsLoggerError::InvalidArgument);
+                        return Err(fmetrics::MetricsLoggerError::InvalidSamplingInterval);
                     }
                 }
                 fmetrics::Metric::Temperature(fmetrics::Temperature {
                     sampling_interval_ms,
-                    statistics_interval_ms,
+                    statistics_args,
                 }) => {
                     if self.temperature_drivers.len() == 0 {
                         return Err(fmetrics::MetricsLoggerError::NoDrivers);
                     }
+                    if let Some(args) = statistics_args {
+                        if *sampling_interval_ms > args.statistics_interval_ms
+                            || duration_ms.map_or(false, |d| d <= args.statistics_interval_ms)
+                            || output_stats_to_syslog
+                                && args.statistics_interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
+                        {
+                            return Err(fmetrics::MetricsLoggerError::InvalidStatisticsInterval);
+                        }
+                    }
                     if *sampling_interval_ms == 0
                         || output_samples_to_syslog
                             && *sampling_interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
-                        || output_stats_to_syslog
-                            && *statistics_interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
-                        || *sampling_interval_ms > *statistics_interval_ms
-                        || duration_ms.map_or(false, |d| d <= *statistics_interval_ms)
+                        || duration_ms.map_or(false, |d| d <= *sampling_interval_ms)
                     {
-                        return Err(fmetrics::MetricsLoggerError::InvalidArgument);
+                        return Err(fmetrics::MetricsLoggerError::InvalidSamplingInterval);
                     }
                 }
                 fmetrics::Metric::Power(fmetrics::Power {
                     sampling_interval_ms,
-                    statistics_interval_ms,
+                    statistics_args,
                 }) => {
                     if self.power_drivers.len() == 0 {
                         return Err(fmetrics::MetricsLoggerError::NoDrivers);
                     }
+                    if let Some(args) = statistics_args {
+                        if *sampling_interval_ms > args.statistics_interval_ms
+                            || duration_ms.map_or(false, |d| d <= args.statistics_interval_ms)
+                            || output_stats_to_syslog
+                                && args.statistics_interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
+                        {
+                            return Err(fmetrics::MetricsLoggerError::InvalidStatisticsInterval);
+                        }
+                    }
                     if *sampling_interval_ms == 0
                         || output_samples_to_syslog
                             && *sampling_interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
-                        || output_stats_to_syslog
-                            && *statistics_interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
-                        || *sampling_interval_ms > *statistics_interval_ms
-                        || duration_ms.map_or(false, |d| d <= *statistics_interval_ms)
+                        || duration_ms.map_or(false, |d| d <= *sampling_interval_ms)
                     {
-                        return Err(fmetrics::MetricsLoggerError::InvalidArgument);
+                        return Err(fmetrics::MetricsLoggerError::InvalidSamplingInterval);
                     }
                 }
             }
@@ -896,7 +927,7 @@ impl MetricsLoggerServer {
                     }
                     fmetrics::Metric::Temperature(fmetrics::Temperature {
                         sampling_interval_ms,
-                        statistics_interval_ms,
+                        statistics_args,
                     }) => {
                         let temperature_driver_names: Vec<String> =
                             temperature_drivers.iter().map(|c| c.name().to_string()).collect();
@@ -904,7 +935,7 @@ impl MetricsLoggerServer {
                         let temperature_logger = TemperatureLogger::new(
                             temperature_drivers.clone(),
                             sampling_interval_ms,
-                            statistics_interval_ms,
+                            statistics_args.map(|i| i.statistics_interval_ms),
                             duration_ms,
                             &client_inspect,
                             temperature_driver_names,
@@ -916,7 +947,7 @@ impl MetricsLoggerServer {
                     }
                     fmetrics::Metric::Power(fmetrics::Power {
                         sampling_interval_ms,
-                        statistics_interval_ms,
+                        statistics_args,
                     }) => {
                         let power_driver_names: Vec<String> =
                             power_drivers.iter().map(|c| c.name().to_string()).collect();
@@ -924,7 +955,7 @@ impl MetricsLoggerServer {
                         let power_logger = PowerLogger::new(
                             power_drivers.clone(),
                             sampling_interval_ms,
-                            statistics_interval_ms,
+                            statistics_args.map(|i| i.statistics_interval_ms),
                             duration_ms,
                             &client_inspect,
                             power_driver_names,
@@ -964,6 +995,7 @@ impl InspectData {
         logger_name: &str,
         unit: &str,
         sensor_names: Vec<String>,
+        statistics_enabled: bool,
     ) -> Self {
         let root = parent.create_child(logger_name);
         let elapsed_millis = root.create_int("elapsed time (ms)", std::i64::MIN);
@@ -978,20 +1010,23 @@ impl InspectData {
         sensor_nodes.iter().for_each(|node| {
             data.push(node.create_double(format!("data ({})", unit), f64::MIN));
 
-            let statistics_node = node.create_child("statistics");
+            if statistics_enabled {
+                let statistics_node = node.create_child("statistics");
 
-            let statistics_period = statistics_node.create_int_array("(start ms, end ms]", 2);
-            statistics_period.set(0, std::i64::MIN);
-            statistics_period.set(1, std::i64::MIN);
-            statistics_periods.push(statistics_period);
+                let statistics_period = statistics_node.create_int_array("(start ms, end ms]", 2);
+                statistics_period.set(0, std::i64::MIN);
+                statistics_period.set(1, std::i64::MIN);
+                statistics_periods.push(statistics_period);
 
-            // The indices of the statistics child nodes match the sequence defined in `Statistics`.
-            statistics.push(vec![
-                statistics_node.create_double(format!("min ({})", unit), f64::MIN),
-                statistics_node.create_double(format!("max ({})", unit), f64::MIN),
-                statistics_node.create_double(format!("average ({})", unit), f64::MIN),
-            ]);
-            statistics_nodes.push(statistics_node);
+                // The indices of the statistics child nodes match the sequence defined in
+                // `Statistics`.
+                statistics.push(vec![
+                    statistics_node.create_double(format!("min ({})", unit), f64::MIN),
+                    statistics_node.create_double(format!("max ({})", unit), f64::MIN),
+                    statistics_node.create_double(format!("average ({})", unit), f64::MIN),
+                ]);
+                statistics_nodes.push(statistics_node);
+            }
         });
 
         Self {
@@ -1073,7 +1108,7 @@ mod tests {
     use {
         super::*,
         fidl_fuchsia_kernel::{CpuStats, PerCpuStats},
-        fmetrics::{CpuLoad, Metric, Power, Temperature},
+        fmetrics::{CpuLoad, Metric, Power, StatisticsArgs, Temperature},
         futures::{task::Poll, FutureExt, TryStreamExt},
         inspect::assert_data_tree,
         matches::assert_matches,
@@ -1292,7 +1327,7 @@ mod tests {
                 &mut Metric::CpuLoad(CpuLoad { interval_ms: 100 }),
                 &mut Metric::Temperature(Temperature {
                     sampling_interval_ms: 100,
-                    statistics_interval_ms: 100,
+                    statistics_args: None,
                 }),
             ]
             .into_iter(),
@@ -1327,21 +1362,9 @@ mod tests {
                             "elapsed time (ms)": std::i64::MIN,
                             "cpu": {
                                 "data (°C)": f64::MIN,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![std::i64::MIN, std::i64::MIN],
-                                    "max (°C)": f64::MIN,
-                                    "min (°C)": f64::MIN,
-                                    "average (°C)": f64::MIN,
-                                }
                             },
                             "/dev/fake/gpu_temperature": {
                                 "data (°C)": f64::MIN,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![std::i64::MIN, std::i64::MIN],
-                                    "max (°C)": f64::MIN,
-                                    "min (°C)": f64::MIN,
-                                    "average (°C)": f64::MIN,
-                                }
                             }
                         }
                     }
@@ -1367,21 +1390,9 @@ mod tests {
                             "elapsed time (ms)": 100i64,
                             "cpu": {
                                 "data (°C)": 35.0,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![0i64, 100i64],
-                                    "max (°C)": 35.0,
-                                    "min (°C)": 35.0,
-                                    "average (°C)": 35.0,
-                                }
                             },
                             "/dev/fake/gpu_temperature": {
                                 "data (°C)": 45.0,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![0i64, 100i64],
-                                    "max (°C)": 45.0,
-                                    "min (°C)": 45.0,
-                                    "average (°C)": 45.0,
-                                }
                             }
                         }
                     }
@@ -1404,21 +1415,9 @@ mod tests {
                             "elapsed time (ms)": 900i64,
                             "cpu": {
                                 "data (°C)": 35.0,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![800i64, 900i64],
-                                    "max (°C)": 35.0,
-                                    "min (°C)": 35.0,
-                                    "average (°C)": 35.0,
-                                }
                             },
                             "/dev/fake/gpu_temperature": {
                                 "data (°C)": 45.0,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![800i64, 900i64],
-                                    "max (°C)": 45.0,
-                                    "min (°C)": 45.0,
-                                    "average (°C)": 45.0,
-                                }
                             }
                         }
                     }
@@ -1505,7 +1504,7 @@ mod tests {
         );
         assert_matches!(
             runner.executor.run_until_stalled(&mut query),
-            Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::InvalidArgument)))
+            Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::InvalidSamplingInterval)))
         );
 
         // Check client node is not added in Inspect.
@@ -1583,7 +1582,7 @@ mod tests {
                 &mut Metric::CpuLoad(CpuLoad { interval_ms: 100 }),
                 &mut Metric::Temperature(Temperature {
                     sampling_interval_ms: 200,
-                    statistics_interval_ms: 200,
+                    statistics_args: None,
                 }),
             ]
             .into_iter(),
@@ -1603,21 +1602,9 @@ mod tests {
                             "elapsed time (ms)": std::i64::MIN,
                             "cpu": {
                                 "data (°C)": f64::MIN,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![std::i64::MIN, std::i64::MIN],
-                                    "max (°C)": f64::MIN,
-                                    "min (°C)": f64::MIN,
-                                    "average (°C)": f64::MIN,
-                                }
                             },
                             "/dev/fake/gpu_temperature": {
                                 "data (°C)": f64::MIN,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![std::i64::MIN, std::i64::MIN],
-                                    "max (°C)": f64::MIN,
-                                    "min (°C)": f64::MIN,
-                                    "average (°C)": f64::MIN,
-                                }
                             }
 
                         }
@@ -1652,7 +1639,7 @@ mod tests {
             "test",
             &mut vec![&mut Metric::Temperature(Temperature {
                 sampling_interval_ms: 100,
-                statistics_interval_ms: 100,
+                statistics_args: None,
             })]
             .into_iter(),
             false,
@@ -1670,21 +1657,9 @@ mod tests {
                             "elapsed time (ms)": std::i64::MIN,
                             "cpu": {
                                 "data (°C)": f64::MIN,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![std::i64::MIN, std::i64::MIN],
-                                    "max (°C)": f64::MIN,
-                                    "min (°C)": f64::MIN,
-                                    "average (°C)": f64::MIN,
-                                }
                             },
                             "/dev/fake/gpu_temperature": {
                                 "data (°C)": f64::MIN,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![std::i64::MIN, std::i64::MIN],
-                                    "max (°C)": f64::MIN,
-                                    "min (°C)": f64::MIN,
-                                    "average (°C)": f64::MIN,
-                                }
                             }
                         }
                     }
@@ -1710,21 +1685,9 @@ mod tests {
                             "elapsed time (ms)": 1_000i64,
                             "cpu": {
                                 "data (°C)": 35.0,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![900i64, 1_000i64],
-                                    "max (°C)": 35.0,
-                                    "min (°C)": 35.0,
-                                    "average (°C)": 35.0,
-                                }
                             },
                             "/dev/fake/gpu_temperature": {
                                 "data (°C)": 45.0,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![900i64, 1_000i64],
-                                    "max (°C)": 45.0,
-                                    "min (°C)": 45.0,
-                                    "average (°C)": 45.0,
-                                }
                             }
                         }
                     }
@@ -1758,7 +1721,7 @@ mod tests {
                 &mut Metric::CpuLoad(CpuLoad { interval_ms: 300 }),
                 &mut Metric::Temperature(Temperature {
                     sampling_interval_ms: 200,
-                    statistics_interval_ms: 200,
+                    statistics_args: None,
                 }),
             ]
             .into_iter(),
@@ -1772,7 +1735,7 @@ mod tests {
             "test2",
             &mut vec![&mut Metric::Temperature(Temperature {
                 sampling_interval_ms: 200,
-                statistics_interval_ms: 200,
+                statistics_args: None,
             })]
             .into_iter(),
             300,
@@ -1791,21 +1754,9 @@ mod tests {
                             "elapsed time (ms)": std::i64::MIN,
                             "cpu": {
                                 "data (°C)": f64::MIN,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![std::i64::MIN, std::i64::MIN],
-                                    "max (°C)": f64::MIN,
-                                    "min (°C)": f64::MIN,
-                                    "average (°C)": f64::MIN,
-                                }
                             },
                             "/dev/fake/gpu_temperature": {
                                 "data (°C)": f64::MIN,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![std::i64::MIN, std::i64::MIN],
-                                    "max (°C)": f64::MIN,
-                                    "min (°C)": f64::MIN,
-                                    "average (°C)": f64::MIN,
-                                }
                             }
                         }
                     },
@@ -1814,21 +1765,9 @@ mod tests {
                             "elapsed time (ms)": std::i64::MIN,
                             "cpu": {
                                 "data (°C)": f64::MIN,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![std::i64::MIN, std::i64::MIN],
-                                    "max (°C)": f64::MIN,
-                                    "min (°C)": f64::MIN,
-                                    "average (°C)": f64::MIN,
-                                }
                             },
                             "/dev/fake/gpu_temperature": {
                                 "data (°C)": f64::MIN,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![std::i64::MIN, std::i64::MIN],
-                                    "max (°C)": f64::MIN,
-                                    "min (°C)": f64::MIN,
-                                    "average (°C)": f64::MIN,
-                                }
                             }
                         }
                     }
@@ -1852,21 +1791,9 @@ mod tests {
                             "elapsed time (ms)": 200i64,
                             "cpu": {
                                 "data (°C)": 35.0,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![0i64, 200i64],
-                                    "max (°C)": 35.0,
-                                    "min (°C)": 35.0,
-                                    "average (°C)": 35.0,
-                                }
                             },
                             "/dev/fake/gpu_temperature": {
                                 "data (°C)": 45.0,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![0i64, 200i64],
-                                    "max (°C)": 45.0,
-                                    "min (°C)": 45.0,
-                                    "average (°C)": 45.0,
-                                }
                             }
                         }
                     },
@@ -1875,21 +1802,9 @@ mod tests {
                             "elapsed time (ms)": std::i64::MIN,
                             "cpu": {
                                 "data (°C)": f64::MIN,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![std::i64::MIN, std::i64::MIN],
-                                    "max (°C)": f64::MIN,
-                                    "min (°C)": f64::MIN,
-                                    "average (°C)": f64::MIN,
-                                }
                             },
                             "/dev/fake/gpu_temperature": {
                                 "data (°C)": f64::MIN,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![std::i64::MIN, std::i64::MIN],
-                                    "max (°C)": f64::MIN,
-                                    "min (°C)": f64::MIN,
-                                    "average (°C)": f64::MIN,
-                                }
                             }
                         }
                     }
@@ -1915,21 +1830,9 @@ mod tests {
                             "elapsed time (ms)": 200i64,
                             "cpu": {
                                 "data (°C)": 35.0,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![0i64, 200i64],
-                                    "max (°C)": 35.0,
-                                    "min (°C)": 35.0,
-                                    "average (°C)": 35.0,
-                                }
                             },
                             "/dev/fake/gpu_temperature": {
                                 "data (°C)": 45.0,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![0i64, 200i64],
-                                    "max (°C)": 45.0,
-                                    "min (°C)": 45.0,
-                                    "average (°C)": 45.0,
-                                }
                             }
                         }
                     },
@@ -1938,21 +1841,9 @@ mod tests {
                             "elapsed time (ms)": 200i64,
                             "cpu": {
                                 "data (°C)": 36.0,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![0i64, 200i64],
-                                    "max (°C)": 36.0,
-                                    "min (°C)": 36.0,
-                                    "average (°C)": 36.0,
-                                }
                             },
                             "/dev/fake/gpu_temperature": {
                                 "data (°C)": 46.0,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![0i64, 200i64],
-                                    "max (°C)": 46.0,
-                                    "min (°C)": 46.0,
-                                    "average (°C)": 46.0,
-                                }
                             }
                         }
                     }
@@ -1972,21 +1863,9 @@ mod tests {
                             "elapsed time (ms)": 400i64,
                             "cpu": {
                                 "data (°C)": 36.0,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![200i64, 400i64],
-                                    "max (°C)": 36.0,
-                                    "min (°C)": 36.0,
-                                    "average (°C)": 36.0,
-                                }
                             },
                             "/dev/fake/gpu_temperature": {
                                 "data (°C)": 46.0,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![200i64, 400i64],
-                                    "max (°C)": 46.0,
-                                    "min (°C)": 46.0,
-                                    "average (°C)": 46.0,
-                                }
                             }
                         }
                     },
@@ -1995,21 +1874,9 @@ mod tests {
                             "elapsed time (ms)": 200i64,
                             "cpu": {
                                 "data (°C)": 36.0,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![0i64, 200i64],
-                                    "max (°C)": 36.0,
-                                    "min (°C)": 36.0,
-                                    "average (°C)": 36.0,
-                                }
                             },
                             "/dev/fake/gpu_temperature": {
                                 "data (°C)": 46.0,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![0i64, 200i64],
-                                    "max (°C)": 46.0,
-                                    "min (°C)": 46.0,
-                                    "average (°C)": 46.0,
-                                }
                             }
                         }
                     }
@@ -2112,7 +1979,7 @@ mod tests {
             "test",
             &mut vec![&mut Metric::Temperature(Temperature {
                 sampling_interval_ms: 100,
-                statistics_interval_ms: 100,
+                statistics_args: Some(Box::new(StatisticsArgs { statistics_interval_ms: 100 })),
             })]
             .into_iter(),
             200,
@@ -2129,7 +1996,7 @@ mod tests {
             "test2",
             &mut vec![&mut Metric::Temperature(Temperature {
                 sampling_interval_ms: 500,
-                statistics_interval_ms: 500,
+                statistics_args: Some(Box::new(StatisticsArgs { statistics_interval_ms: 500 })),
             })]
             .into_iter(),
             1000,
@@ -2148,7 +2015,7 @@ mod tests {
             "test",
             &mut vec![&mut Metric::Temperature(Temperature {
                 sampling_interval_ms: 100,
-                statistics_interval_ms: 100,
+                statistics_args: Some(Box::new(StatisticsArgs { statistics_interval_ms: 100 })),
             })]
             .into_iter(),
             200,
@@ -2162,7 +2029,7 @@ mod tests {
             "test2",
             &mut vec![&mut Metric::Temperature(Temperature {
                 sampling_interval_ms: 100,
-                statistics_interval_ms: 100,
+                statistics_args: Some(Box::new(StatisticsArgs { statistics_interval_ms: 100 })),
             })]
             .into_iter(),
             200,
@@ -2186,10 +2053,10 @@ mod tests {
             false,
             false,
         );
-        // Check `InvalidArgument` is returned when logging interval is 0.
+        // Check `InvalidSamplingInterval` is returned when interval_ms is 0.
         assert_matches!(
             runner.executor.run_until_stalled(&mut query),
-            Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::InvalidArgument)))
+            Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::InvalidSamplingInterval)))
         );
 
         let mut query = runner.proxy.start_logging(
@@ -2199,36 +2066,37 @@ mod tests {
             true,
             false,
         );
-        // Check `InvalidArgument` is returned when logging to syslog at an interval smaller than
-        // 500ms.
+        // Check `InvalidSamplingInterval` is returned when logging samples to syslog at an interval
+        // smaller than MIN_INTERVAL_FOR_SYSLOG_MS.
         assert_matches!(
             runner.executor.run_until_stalled(&mut query),
-            Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::InvalidArgument)))
+            Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::InvalidSamplingInterval)))
         );
 
         let mut query = runner.proxy.start_logging(
             "test",
-            &mut vec![&mut Metric::Power(Power {
-                sampling_interval_ms: 200,
-                statistics_interval_ms: 200,
-            })]
-            .into_iter(),
-            300,
+            &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 200 })].into_iter(),
+            100,
             false,
-            true,
+            false,
         );
-        // Check `InvalidArgument` is returned when logging statistics to syslog at an interval
-        // smaller than 500ms.
+        // Check `InvalidSamplingInterval` is returned when logging samples to syslog at an interval
+        // larger than `duration_ms`.
         assert_matches!(
             runner.executor.run_until_stalled(&mut query),
-            Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::InvalidArgument)))
+            Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::InvalidSamplingInterval)))
         );
+    }
+
+    #[test]
+    fn test_invalid_statistics_interval() {
+        let mut runner = Runner::new();
 
         let mut query = runner.proxy.start_logging(
             "test",
             &mut vec![&mut Metric::Power(Power {
                 sampling_interval_ms: 500,
-                statistics_interval_ms: 500,
+                statistics_args: Some(Box::new(StatisticsArgs { statistics_interval_ms: 500 })),
             })]
             .into_iter(),
             300,
@@ -2236,18 +2104,18 @@ mod tests {
             false,
         );
 
-        // Check `InvalidArgument` is returned when logging interval is larger
-        // than logging duration.
+        // Check `InvalidStatisticsInterval` is returned when statistics is enabled and
+        // `statistics_interval_ms` is larger than `duration_ms`.
         assert_matches!(
             runner.executor.run_until_stalled(&mut query),
-            Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::InvalidArgument)))
+            Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::InvalidStatisticsInterval)))
         );
 
         let mut query = runner.proxy.start_logging(
             "test",
             &mut vec![&mut Metric::Power(Power {
                 sampling_interval_ms: 600,
-                statistics_interval_ms: 500,
+                statistics_args: Some(Box::new(StatisticsArgs { statistics_interval_ms: 500 })),
             })]
             .into_iter(),
             800,
@@ -2255,11 +2123,30 @@ mod tests {
             false,
         );
 
-        // Check `InvalidArgument` is returned when statistics_interval_ms is
-        // less than sampling_interval_ms.
+        // Check `InvalidStatisticsInterval` is returned when statistics is enabled and
+        // `statistics_interval_ms` is less than `sampling_interval_ms`.
         assert_matches!(
             runner.executor.run_until_stalled(&mut query),
-            Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::InvalidArgument)))
+            Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::InvalidStatisticsInterval)))
+        );
+
+        let mut query = runner.proxy.start_logging(
+            "test",
+            &mut vec![&mut Metric::Power(Power {
+                sampling_interval_ms: 200,
+                statistics_args: Some(Box::new(StatisticsArgs { statistics_interval_ms: 200 })),
+            })]
+            .into_iter(),
+            800,
+            false,
+            true,
+        );
+
+        // Check `InvalidStatisticsInterval` is returned when statistics is enabled and
+        // `statistics_interval_ms` is less than MIN_INTERVAL_FOR_SYSLOG_MS.
+        assert_matches!(
+            runner.executor.run_until_stalled(&mut query),
+            Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::InvalidStatisticsInterval)))
         );
     }
 
@@ -2301,7 +2188,7 @@ mod tests {
             "test",
             &mut vec![&mut Metric::Temperature(Temperature {
                 sampling_interval_ms: 100,
-                statistics_interval_ms: 100,
+                statistics_args: None,
             })]
             .into_iter(),
             1_000,
@@ -2320,21 +2207,9 @@ mod tests {
                             "elapsed time (ms)": std::i64::MIN,
                             "cpu": {
                                 "data (°C)": f64::MIN,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![std::i64::MIN, std::i64::MIN],
-                                    "max (°C)": f64::MIN,
-                                    "min (°C)": f64::MIN,
-                                    "average (°C)": f64::MIN,
-                                }
                             },
                             "/dev/fake/gpu_temperature": {
                                 "data (°C)": f64::MIN,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![std::i64::MIN, std::i64::MIN],
-                                    "max (°C)": f64::MIN,
-                                    "min (°C)": f64::MIN,
-                                    "average (°C)": f64::MIN,
-                                }
                             }
                         }
                     }
@@ -2356,23 +2231,9 @@ mod tests {
                                 "elapsed time (ms)": 100 * (1 + i as i64),
                                 "cpu": {
                                     "data (°C)": runner.cpu_temperature.get() as f64,
-                                    "statistics": {
-                                        "(start ms, end ms]":
-                                            vec![100 * i as i64, 100 * (1 + i as i64)],
-                                        "max (°C)": runner.cpu_temperature.get() as f64,
-                                        "min (°C)": runner.cpu_temperature.get() as f64,
-                                        "average (°C)": runner.cpu_temperature.get() as f64,
-                                    }
                                 },
                                 "/dev/fake/gpu_temperature": {
                                     "data (°C)": runner.gpu_temperature.get() as f64,
-                                    "statistics": {
-                                        "(start ms, end ms]":
-                                            vec![100 * i as i64, 100 * (1 + i as i64)],
-                                        "max (°C)": runner.gpu_temperature.get() as f64,
-                                        "min (°C)": runner.gpu_temperature.get() as f64,
-                                        "average (°C)": runner.gpu_temperature.get() as f64,
-                                    }
                                 }
                             }
                         }
@@ -2400,7 +2261,7 @@ mod tests {
             "test",
             &mut vec![&mut Metric::Temperature(Temperature {
                 sampling_interval_ms: 100,
-                statistics_interval_ms: 300,
+                statistics_args: Some(Box::new(StatisticsArgs { statistics_interval_ms: 300 })),
             })]
             .into_iter(),
             1_000,
@@ -2509,7 +2370,7 @@ mod tests {
             "test",
             &mut vec![&mut Metric::Power(Power {
                 sampling_interval_ms: 100,
-                statistics_interval_ms: 100,
+                statistics_args: Some(Box::new(StatisticsArgs { statistics_interval_ms: 100 })),
             })]
             .into_iter(),
             200,
