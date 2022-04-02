@@ -18,7 +18,6 @@
 
 #include <src/lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <src/lib/fostr/fidl/fuchsia/ui/scenic/formatting.h>
-
 // If true, print to log files received Session commands.
 constexpr bool kTraceCommands = false;
 
@@ -233,3 +232,10 @@ void FakeScenic::CreateSession(fidl::InterfaceRequest<Session> session_request,
 }
 
 void FakeScenic::NotImplemented_(const std::string& name) {}
+
+void FakeScenic::Start(std::unique_ptr<component_testing::LocalComponentHandles> handles) {
+  // This class contains handles to the component's incoming and outgoing capabilities.
+  handles_ = std::move(handles);
+
+  ZX_ASSERT(handles_->outgoing()->AddPublicService(GetHandler()) == ZX_OK);
+}

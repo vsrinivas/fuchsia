@@ -12,7 +12,8 @@
 #include "guest_test.h"
 
 template <class T>
-class VsockGuestTest : public GuestTest<T>, public fuchsia::virtualization::HostVsockAcceptor {
+class DISABLED_VsockGuestTest : public GuestTest<T>,
+                                public fuchsia::virtualization::HostVsockAcceptor {
  public:
   struct IncomingRequest {
     uint32_t src_cid;
@@ -116,9 +117,9 @@ class VsockGuestTest : public GuestTest<T>, public fuchsia::virtualization::Host
 // driver has known bugs that need fixing.
 using GuestTypes = ::testing::Types<DebianEnclosedGuest, TerminaEnclosedGuest>;
 
-TYPED_TEST_SUITE(VsockGuestTest, GuestTypes);
+TYPED_TEST_SUITE(DISABLED_VsockGuestTest, GuestTypes);
 
-TYPED_TEST(VsockGuestTest, ConnectDisconnect) {
+TYPED_TEST(DISABLED_VsockGuestTest, ConnectDisconnect) {
   auto handle = std::async(std::launch::async, [this] { this->TestThread(); });
 
   std::string result;
