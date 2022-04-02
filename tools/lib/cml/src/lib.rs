@@ -986,107 +986,12 @@ pub struct Document {
     /// framework. It is valid to `expose` from `self` or from a child component.
     ///
     /// One and only one of the capability type keys (`protocol`, `directory`, `service`, ...) is required.
-    #[reference_doc(json_type = "object", recurse)]
+    #[reference_doc(recurse)]
     pub expose: Option<Vec<Expose>>,
 
     /// Declares the capabilities that are made available to a [child component][doc-children]
     /// instance or a [child collection][doc-collections].
-    ///
-    /// Keys:
-    ///
-    /// -   A capability declaration, one of:
-    ///     -   `protocol`: The [name](#name) of a [protocol capability][doc-protocol],
-    ///         or an array of names.
-    ///     -   `directory`: The [name](#name) of a [directory capability][doc-directory],
-    ///         or an array of names.
-    ///     -   `storage`: The [name](#name) of a [storage capability][doc-storage],
-    ///         or an array of names.
-    ///     -   `runner`: The [name](#name) of a [runner capability][doc-runners],
-    ///         or an array of names.
-    ///     -   `resolver`: The [name](#name) of a [resolver capability][doc-resolvers],
-    ///         or an array of names.
-    ///     -   `event`: The [name](#name) of an [event capability][doc-event],
-    ///         or an array of names.
-    /// -   `from`: The source of the capability, one of:
-    ///     -   `parent`: The component's parent. This source can be used for all
-    ///         capability types.
-    ///     -   `self`: This component. Requires a corresponding
-    ///         [`capability`](#capabilities) declaration.
-    ///     -   `framework`: The Component Framework runtime.
-    ///     -   `#<child-name>`: A [reference](#references) to a child component
-    ///         instance. This source can only be used when offering protocol,
-    ///         directory, or runner capabilities.
-    /// -   `to`: A capability target or array of targets, each of which is a
-    ///     [reference](#references) to the child or collection to which the capability
-    ///     is being offered, of the form `#<target-name>`.
-    /// -   `as` _(optional)_: An explicit [name](#name) for the capability
-    ///     as it will be known by the target. If omitted, defaults to the original
-    ///     name. `as` cannot be used when an array of multiple names is provided.
-    /// -   `dependency` _(optional)_: The type of dependency between the source and
-    ///     targets, one of:
-    ///     -   `strong`: a strong dependency, which is used to determine shutdown
-    ///         ordering. Component manager is guaranteed to stop the target before the
-    ///         source. This is the default.
-    ///     -   `weak_for_migration`: a weak dependency, which is ignored during
-    ///         shutdown. When component manager stops the parent realm, the source may
-    ///         stop before the clients. Clients of weak dependencies must be able to
-    ///         handle these dependencies becoming unavailable. This type exists to keep
-    ///         track of weak dependencies that resulted from migrations into v2
-    ///         components.
-    ///
-    /// Example:
-    ///
-    /// ```json5
-    /// offer: [
-    ///     {
-    ///         protocol: "fuchsia.logger.LogSink",
-    ///         from: "#logger",
-    ///         to: [ "#fshost", "#pkg_cache" ],
-    ///         dependency: "weak_for_migration",
-    ///     },
-    ///     {
-    ///         protocol: [
-    ///             "fuchsia.ui.app.ViewProvider",
-    ///             "fuchsia.fonts.Provider",
-    ///         ],
-    ///         from: "#session",
-    ///         to: [ "#ui_shell" ],
-    ///         dependency: "strong",
-    ///     },
-    ///     {
-    ///         directory: "blobfs",
-    ///         from: "self",
-    ///         to: [ "#pkg_cache" ],
-    ///     },
-    ///     {
-    ///         directory: "fshost-config",
-    ///         from: "parent",
-    ///         to: [ "#fshost" ],
-    ///         as: "config",
-    ///     },
-    ///     {
-    ///         storage: "cache",
-    ///         from: "parent",
-    ///         to: [ "#logger" ],
-    ///     },
-    ///     {
-    ///         runner: "web",
-    ///         from: "parent",
-    ///         to: [ "#user-shell" ],
-    ///     },
-    ///     {
-    ///         resolver: "universe-resolver",
-    ///         from: "parent",
-    ///         to: [ "#user-shell" ],
-    ///     },
-    ///     {
-    ///         event: "stopped",
-    ///         from: "framework",
-    ///         to: [ "#logger" ],
-    ///     },
-    /// ],
-    /// ```
-    #[reference_doc(json_type = "object")]
+    #[reference_doc(recurse)]
     pub offer: Option<Vec<Offer>>,
 
     /// Contains metadata that components may interpret for their own purposes. The component
@@ -2128,24 +2033,131 @@ pub struct Expose {
     pub scope: Option<OneOrMany<EventScope>>,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Clone)]
+/// Example:
+///
+/// ```json5
+/// offer: [
+///     {
+///         protocol: "fuchsia.logger.LogSink",
+///         from: "#logger",
+///         to: [ "#fshost", "#pkg_cache" ],
+///         dependency: "weak_for_migration",
+///     },
+///     {
+///         protocol: [
+///             "fuchsia.ui.app.ViewProvider",
+///             "fuchsia.fonts.Provider",
+///         ],
+///         from: "#session",
+///         to: [ "#ui_shell" ],
+///         dependency: "strong",
+///     },
+///     {
+///         directory: "blobfs",
+///         from: "self",
+///         to: [ "#pkg_cache" ],
+///     },
+///     {
+///         directory: "fshost-config",
+///         from: "parent",
+///         to: [ "#fshost" ],
+///         as: "config",
+///     },
+///     {
+///         storage: "cache",
+///         from: "parent",
+///         to: [ "#logger" ],
+///     },
+///     {
+///         runner: "web",
+///         from: "parent",
+///         to: [ "#user-shell" ],
+///     },
+///     {
+///         resolver: "universe-resolver",
+///         from: "parent",
+///         to: [ "#user-shell" ],
+///     },
+///     {
+///         event: "stopped",
+///         from: "framework",
+///         to: [ "#logger" ],
+///     },
+/// ],
+/// ```
+#[derive(Deserialize, Debug, PartialEq, Clone, ReferenceDoc)]
 #[serde(deny_unknown_fields)]
+#[reference_doc(fields_as = "list", top_level_doc_after_fields)]
 pub struct Offer {
+    /// When routing a service, the [name](#name) of a [service capability][doc-service].
     pub service: Option<OneOrMany<Name>>,
+
+    /// When routing a protocol, the [name](#name) of a [protocol capability][doc-protocol].
     pub protocol: Option<OneOrMany<Name>>,
+
+    /// When routing a directory, the [name](#name) of a [directory capability][doc-directory].
     pub directory: Option<OneOrMany<Name>>,
-    pub storage: Option<OneOrMany<Name>>,
+
+    /// When routing a runner, the [name](#name) of a [runner capability][doc-runners].
     pub runner: Option<OneOrMany<Name>>,
+
+    /// When routing a resolver, the [name](#name) of a [resolver capability][doc-resolvers].
     pub resolver: Option<OneOrMany<Name>>,
+
+    /// When routing a storage capability, the [name](#name) of a [storage capability][doc-storage].
+    pub storage: Option<OneOrMany<Name>>,
+
+    /// When routing an event, the [name](#name) of the [event][doc-event].
     pub event: Option<OneOrMany<Name>>,
+
+    /// `from`: The source of the capability, one of:
+    /// -   `parent`: The component's parent. This source can be used for all
+    ///     capability types.
+    /// -   `self`: This component. Requires a corresponding
+    ///     [`capability`](#capabilities) declaration.
+    /// -   `framework`: The Component Framework runtime.
+    /// -   `#<child-name>`: A [reference](#references) to a child component
+    ///     instance. This source can only be used when offering protocol,
+    ///     directory, or runner capabilities.
     pub from: OneOrMany<OfferFromRef>,
+
+    /// A capability target or array of targets, each of which is a [reference](#references) to the
+    /// child or collection to which the capability is being offered, of the form `#<target-name>`.
     pub to: OneOrMany<OfferToRef>,
+
+    /// An explicit [name](#name) for the capability as it will be known by the target. If omitted,
+    /// defaults to the original name. `as` cannot be used when an array of multiple names is
+    /// provided.
     pub r#as: Option<Name>,
-    pub rights: Option<Rights>,
-    pub subdir: Option<RelativePath>,
+
+    /// The type of dependency between the source and
+    /// targets, one of:
+    /// -   `strong`: a strong dependency, which is used to determine shutdown
+    ///     ordering. Component manager is guaranteed to stop the target before the
+    ///     source. This is the default.
+    /// -   `weak_for_migration`: a weak dependency, which is ignored during
+    ///     shutdown. When component manager stops the parent realm, the source may
+    ///     stop before the clients. Clients of weak dependencies must be able to
+    ///     handle these dependencies becoming unavailable. This type exists to keep
+    ///     track of weak dependencies that resulted from migrations into v2
+    ///     components.
     pub dependency: Option<DependencyType>,
+
+    /// (`directory` only) the maximum [directory rights][doc-directory-rights] to apply to
+    /// the offered directory capability.
+    pub rights: Option<Rights>,
+
+    /// (`directory` only) the relative path of a subdirectory within the source directory
+    /// capability to route.
+    pub subdir: Option<RelativePath>,
+
+    /// TODO(fxb/96705): Complete.
     pub filter: Option<Map<String, Value>>,
+
+    /// TODO(fxb/96705): Complete.
     pub event_stream: Option<OneOrMany<Name>>,
+
+    /// TODO(fxb/96705): Complete.
     pub scope: Option<OneOrMany<EventScope>>,
 }
 
