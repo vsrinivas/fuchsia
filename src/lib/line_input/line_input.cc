@@ -405,6 +405,7 @@ void LineInputEditor::HandleReverseHistory(char c) {
     // Almost all special characters end history mode. This is what sh does.
     case SpecialCharacters::kKeyControlA:
     case SpecialCharacters::kKeyControlB:
+    case SpecialCharacters::kKeyControlC:
     case SpecialCharacters::kKeyControlD:
     case SpecialCharacters::kKeyControlE:
     case SpecialCharacters::kKeyControlF:
