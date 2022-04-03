@@ -70,6 +70,11 @@ files (mainly `BUILD.gn`) with third party files.
 To migrate legacy third party repositories to the new layout, follow these
 steps:
 
+Note: For Python repositories, replace `//third_party/<name>/src` with
+`//third_party/<name>/<module_name>` to follow Python's convention.
+This convention is expected by common Python tools like
+[pyright][pyrightconfig].
+
 1. Move Fuchsia-specific `BUILD.gn` files to
    [`//build/secondary`][build-secondary].
 
@@ -197,3 +202,4 @@ Please exercise careful deliberation when stepping off the beaten path.
 [rust-third-party]: /docs/development/languages/rust/external_crates.md
 [source-layout]: /docs/development/source_code/layout.md
 [third-party-googletest]: https://fuchsia.googlesource.com/third_party/github.com/google/googletest/
+[pyrightconfig]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/pyrightconfig.json
