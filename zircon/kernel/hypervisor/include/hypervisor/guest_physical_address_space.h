@@ -74,11 +74,11 @@ class GuestPhysicalAddressSpace {
 #if ARCH_ARM64
   uint16_t arch_asid() const { return guest_aspace_->arch_aspace().arch_asid(); }
 #endif
-  fbl::RefPtr<VmAddressRegion> RootVmar() { return guest_aspace_->RootVmar(); }
+  fbl::RefPtr<VmAddressRegion> RootVmar() const { return guest_aspace_->RootVmar(); }
 
+  bool IsMapped(zx_gpaddr_t guest_paddr) const;
   zx::status<> MapInterruptController(zx_gpaddr_t guest_paddr, zx_paddr_t host_paddr, size_t len);
   zx::status<> UnmapRange(zx_gpaddr_t guest_paddr, size_t len);
-  zx::status<zx_paddr_t> GetPage(zx_gpaddr_t guest_paddr);
   zx::status<> PageFault(zx_gpaddr_t guest_paddr);
   zx::status<uint> QueryFlags(zx_gpaddr_t guest_paddr);
   zx::status<GuestPtr> CreateGuestPtr(zx_gpaddr_t guest_paddr, size_t len, const char* name);
