@@ -278,16 +278,14 @@ impl BlockDevice {
         &self,
         chain: ReadableChain<'a, 'b, N, M>,
     ) -> Result<(WritableChain<'a, 'b, N, M>, wire::VirtioBlockStatus), anyhow::Error> {
-        if chain.remaining()? != 0 {
-            // The request is malformed, so don't attempt to process it.
-            return readable_chain_error(chain, wire::VirtioBlockStatus::IoError);
-        }
-        let mut chain = WritableChain::from_readable(chain)?;
-        if chain.remaining()? != 1 {
-            // The request is malformed, so don't attempt to process it.
-            seek_to_status(&mut chain)?;
-            return Ok((chain, wire::VirtioBlockStatus::IoError));
-        }
+        // Virtio 1.1, Section 5.2.6.1: A driver SHOULD NOT include any data in a
+        // VIRTIO_BLK_T_FLUSH request.
+        //
+        // Since this is a SHOULD NOT and not a MUST NOT we will accommodate data buffers. Using
+        // from_incomplete_readable will allow output buffers and seek_to_status will zero out any
+        // unused input buffers.
+        let mut chain = WritableChain::from_incomplete_readable(chain)?;
+        seek_to_status(&mut chain)?;
 
         if let Err(_e) = self.backend.flush().await {
             Ok((chain, wire::VirtioBlockStatus::IoError))
