@@ -12,10 +12,8 @@
 
 // Create an identity-mapped page table.
 //
-// @param addr The mapped address of guest physical memory.
-// @param size The size of guest physical memory.
-// @param end_off The offset to the end of the page table.
-zx_status_t create_page_table(const PhysMem& phys_mem);
+// @param phys_mem     The guest physical memory to write the page table to.
+zx::status<> CreatePageTable(const PhysMem& phys_mem);
 
 // NOTE: x86 instructions are guaranteed to be 15 bytes or fewer.
 constexpr uint8_t kMaxInstructionSize = 15;

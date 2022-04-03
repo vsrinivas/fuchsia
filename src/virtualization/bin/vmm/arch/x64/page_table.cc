@@ -16,9 +16,7 @@ using Page = cpp20::span<const uint8_t>;
 
 // Create all page tables for a given page size.
 //
-// @param addr         The mapped address of where to write the page table.
-//                     Must be page-aligned.
-// @param size         The size of memory to map.
+// @param phys_mem     The guest physical memory to write the page table to.
 // @param l1_page_size The size of pages at this level.
 // @param l1_pte_off   The offset of this page table, relative to the start of
 //                     memory.
@@ -27,9 +25,8 @@ using Page = cpp20::span<const uint8_t>;
 // @param has_page     Whether this level of the page table has associated
 //                     pages.
 // @param map_flags    Flags added to any descriptors directly mapping pages.
-uintptr_t create_page_table_level(const PhysMem& phys_mem, size_t l1_page_size,
-                                  uintptr_t l1_pte_off, uint64_t* aspace_off, bool has_page,
-                                  uint64_t map_flags) {
+uintptr_t CreatePageTableLevel(const PhysMem& phys_mem, size_t l1_page_size, uintptr_t l1_pte_off,
+                               uint64_t* aspace_off, bool has_page, uint64_t map_flags) {
   const size_t size = phys_mem.size() - *aspace_off;
   const size_t l1_ptes = (size + l1_page_size - 1) / l1_page_size;
   const bool has_l0_aspace = size % l1_page_size != 0;
@@ -55,23 +52,23 @@ uintptr_t create_page_table_level(const PhysMem& phys_mem, size_t l1_page_size,
 
 }  // namespace
 
-zx_status_t create_page_table(const PhysMem& phys_mem) {
+zx::status<> CreatePageTable(const PhysMem& phys_mem) {
   if (phys_mem.size() % PAGE_SIZE != 0) {
-    return ZX_ERR_INVALID_ARGS;
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
   if (phys_mem.size() > kMaxSize || phys_mem.size() < kMinSize) {
-    return ZX_ERR_OUT_OF_RANGE;
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
 
   uint64_t aspace_off = 0;
   uintptr_t next_off = 0;
-  next_off = create_page_table_level(phys_mem, 1ul << PML4_SHIFT, next_off, &aspace_off, false, 0);
-  next_off = create_page_table_level(phys_mem, 1ul << PDP_SHIFT, next_off, &aspace_off, true,
-                                     X86_MMU_PG_PS);
-  next_off = create_page_table_level(phys_mem, 1ul << PD_SHIFT, next_off, &aspace_off, true,
-                                     X86_MMU_PG_PS);
-  next_off = create_page_table_level(phys_mem, 1ul << PT_SHIFT, next_off, &aspace_off, true, 0);
-  return ZX_OK;
+  next_off = CreatePageTableLevel(phys_mem, 1ul << PML4_SHIFT, next_off, &aspace_off, false, 0);
+  next_off =
+      CreatePageTableLevel(phys_mem, 1ul << PDP_SHIFT, next_off, &aspace_off, true, X86_MMU_PG_PS);
+  next_off =
+      CreatePageTableLevel(phys_mem, 1ul << PD_SHIFT, next_off, &aspace_off, true, X86_MMU_PG_PS);
+  next_off = CreatePageTableLevel(phys_mem, 1ul << PT_SHIFT, next_off, &aspace_off, true, 0);
+  return zx::ok();
 }
 
 // Returns the page address for a given page table entry.

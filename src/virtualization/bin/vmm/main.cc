@@ -421,10 +421,9 @@ int main(int argc, char** argv) {
   }
 
 #if __x86_64__
-  status = create_page_table(guest.phys_mem());
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to create page table";
-    return status;
+  if (auto result = CreatePageTable(guest.phys_mem()); result.is_error()) {
+    FX_PLOGS(ERROR, result.status_value()) << "Failed to create page table";
+    return result.status_value();
   }
 
   AcpiConfig acpi_cfg = {

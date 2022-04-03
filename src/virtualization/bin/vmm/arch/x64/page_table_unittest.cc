@@ -103,7 +103,7 @@ TEST(PageTableTest, 1gb) {
   page_table actual[4] = INITIALIZE_PAGE_TABLE;
   page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
-  ASSERT_EQ(create_page_table(PhysMemFake((uintptr_t)actual, 1 << 30)), ZX_OK);
+  ASSERT_EQ(ZX_OK, CreatePageTable(PhysMemFake((uintptr_t)actual, 1 << 30)).status_value());
 
   // pml4
   expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
@@ -116,7 +116,7 @@ TEST(PageTableTest, 2mb) {
   page_table actual[4] = INITIALIZE_PAGE_TABLE;
   page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
-  ASSERT_EQ(create_page_table(PhysMemFake((uintptr_t)actual, 2 << 20)), ZX_OK);
+  ASSERT_EQ(ZX_OK, CreatePageTable(PhysMemFake((uintptr_t)actual, 2 << 20)).status_value());
 
   // pml4
   expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
@@ -131,7 +131,7 @@ TEST(PageTableTest, 4kb) {
   page_table actual[4] = INITIALIZE_PAGE_TABLE;
   page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
-  ASSERT_EQ(create_page_table(PhysMemFake((uintptr_t)actual, 4 * 4 << 10)), ZX_OK);
+  ASSERT_EQ(ZX_OK, CreatePageTable(PhysMemFake((uintptr_t)actual, 4 * 4 << 10)).status_value());
 
   // pml4
   expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
@@ -151,7 +151,8 @@ TEST(PageTableTest, MixedPages) {
   page_table actual[4] = INITIALIZE_PAGE_TABLE;
   page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
-  ASSERT_EQ(create_page_table(PhysMemFake((uintptr_t)actual, (2 << 20) + (4 << 10))), ZX_OK);
+  ASSERT_EQ(ZX_OK,
+            CreatePageTable(PhysMemFake((uintptr_t)actual, (2 << 20) + (4 << 10))).status_value());
 
   // pml4
   expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
@@ -187,7 +188,7 @@ TEST(PageTableTest, Complex) {
   //
   // PT
   // >  264 mapped pages
-  ASSERT_EQ(create_page_table(PhysMemFake((uintptr_t)actual, 0x87B08000)), ZX_OK);
+  ASSERT_EQ(ZX_OK, CreatePageTable(PhysMemFake((uintptr_t)actual, 0x87B08000)).status_value());
 
   // pml4
   expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
@@ -219,7 +220,7 @@ TEST(PageTableTest, ReadInstruction_1gb) {
   PhysMem phys_mem;
   ASSERT_EQ(ZX_OK, phys_mem.Init(std::move(vmo)));
 
-  ASSERT_EQ(ZX_OK, create_page_table(phys_mem));
+  ASSERT_EQ(ZX_OK, CreatePageTable(phys_mem).status_value());
 
   uint8_t mov[] = {0x89, 0b00'001'000};
   phys_mem.write(1 << (PDP_SHIFT - 1), mov);
@@ -240,7 +241,7 @@ TEST(PageTableTest, ReadInstruction_2mb) {
   PhysMem phys_mem;
   ASSERT_EQ(ZX_OK, phys_mem.Init(std::move(vmo)));
 
-  ASSERT_EQ(ZX_OK, create_page_table(phys_mem));
+  ASSERT_EQ(ZX_OK, CreatePageTable(phys_mem).status_value());
 
   uint8_t mov[] = {0x89, 0b00'001'000};
   phys_mem.write(1 << (PD_SHIFT - 1), mov);
@@ -261,7 +262,7 @@ TEST(PageTableTest, ReadInstruction_4kb) {
   PhysMem phys_mem;
   ASSERT_EQ(ZX_OK, phys_mem.Init(std::move(vmo)));
 
-  ASSERT_EQ(ZX_OK, create_page_table(phys_mem));
+  ASSERT_EQ(ZX_OK, CreatePageTable(phys_mem).status_value());
 
   uint8_t mov[] = {0x89, 0b00'001'000};
   phys_mem.write(4 << PT_SHIFT, mov);
