@@ -73,7 +73,7 @@ otherwise behaves similarly to the case where neither **ZX_VM_SPECIFIC** nor
 at random by the kernel (with an allocator determined by policy set on the
 target VMAR).
 
-*len* must be page-aligned.
+*len* must be non-zero and page-aligned.
 
 In addition one of the following power-of-two alignment flags can added:
 
@@ -118,7 +118,8 @@ and non-zero.  In the event of failure, a negative error value is returned.
  - **ZX_VM_OFFSET_IS_UPPER_LIMIT** is specified together with either **ZX_VM_SPECIFIC**
    or **ZX_VM_SPECIFIC_OVERWRITE**.
  - *vmar_offset* and *len* describe an unsatisfiable allocation due to exceeding the region bounds.
- - *vmar_offset* or *vmo_offset* or *len* is not page-aligned.
+ - *vmar_offset* or *vmo_offset* is not page-aligned.
+ - *len* is 0 or not page-aligned.
 
 **ZX_ERR_ALREADY_EXISTS**  **ZX_VM_SPECIFIC** has been specified without
 **ZX_VM_SPECIFIC_OVERWRITE**, and the requested range overlaps with another mapping.
