@@ -147,7 +147,7 @@ fn start_archivist() -> App {
         &launcher,
         "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"
             .to_owned(),
-        Some(vec!["--v1", "no-log-connector".to_owned()]),
+        Some(vec!["--disable-log-connector".to_owned()]),
         LaunchOptions::new(),
     )
     .unwrap()

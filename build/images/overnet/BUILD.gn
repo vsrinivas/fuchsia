@@ -59,7 +59,6 @@ assemble_system("overnet") {
   bootfs_labels += [
     "//src/sys/component_manager:component_manager_bootfs_config",
     "//src/power/power-manager:base_config",
-    "//src/diagnostics/archivist:default-service-config",
   ]
 
   ramdisk_fvm_in_zbi = true

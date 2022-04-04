@@ -3,7 +3,7 @@
     children: [
         {
             name: "archivist",
-            url: "fuchsia-pkg://fuchsia.com/archive-reader-integration-tests#meta/archivist-for-embedding.cm",
+            url: "fuchsia-pkg://fuchsia.com/archive-reader-integration-tests#meta/archivist.cm",
         },
         {
             name: "driver",
@@ -44,12 +44,6 @@
             from: "framework",
             to: "#archivist",
             filter: { name: "diagnostics" },
-        },
-        {
-            event: "capability_requested",
-            from: "framework",
-            to: "#archivist",
-            filter: { name: "fuchsia.logger.LogSink" },
         },
         {
             directory: "config-data",

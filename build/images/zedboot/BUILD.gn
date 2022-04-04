@@ -61,7 +61,6 @@ assemble_system("zedboot_assembly") {
     "//bundles/drivers:usb-peripheral-stack",
     "//bundles/drivers:utils",
     "//src/sys/component_manager:component_manager_bootfs_config",
-    "//src/diagnostics/archivist:default-service-config",
     "//src/sys/installer:bin",
   ]
 

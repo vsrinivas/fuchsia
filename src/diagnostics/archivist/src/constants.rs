@@ -33,7 +33,8 @@ pub const FORMATTED_CONTENT_CHUNK_SIZE_TARGET: u64 = 1 << 20; // 1 MiB
 
 /// For production archivist instances this value is retrieved from configuration but we still
 /// provide a default here for internal testing purposes.
-pub const LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES: usize = 4 * 1024 * 1024;
+#[cfg(test)]
+pub(crate) const LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES: usize = 4 * 1024 * 1024;
 
 /// The root Archivist's moniker in the component topology, used for attributing our own logs.
 // TODO(fxbug.dev/50105,fxbug.dev/64197): update this to reflect updated monikers received in events

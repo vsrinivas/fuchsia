@@ -7,7 +7,7 @@
 pub mod accessor;
 pub mod archivist;
 mod component_lifecycle;
-mod configs;
+pub mod configs;
 pub mod constants;
 pub mod container;
 pub mod diagnostics;

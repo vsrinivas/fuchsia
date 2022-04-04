@@ -6,5 +6,10 @@
     ],
     program: {
         binary: "bin/archivist",
+        args: [
+            "--enable-event-source",
+            "--config-path",
+            "/pkg/data/config/small-caches-config.json",
+        ],
     },
 }

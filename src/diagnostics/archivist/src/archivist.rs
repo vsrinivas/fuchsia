@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        component_lifecycle, diagnostics,
+        component_lifecycle, configs, diagnostics,
         error::Error,
         events::{
             router::{ConsumerConfig, EventConsumer, EventRouter, ProducerConfig, ProducerType},
@@ -18,7 +18,6 @@ use {
         pipeline::Pipeline,
         repository::DataRepo,
     },
-    archivist_config::Config,
     async_trait::async_trait,
     fidl_fuchsia_io as fio, fidl_fuchsia_logger as flogger,
     fidl_fuchsia_sys2::EventSourceMarker,
@@ -36,7 +35,7 @@ use {
         prelude::*,
     },
     parking_lot::RwLock,
-    std::{path::Path, sync::Arc},
+    std::sync::Arc,
     tracing::{debug, error, warn},
 };
 
@@ -93,7 +92,7 @@ impl Archivist {
     /// Creates new instance, sets up inspect and adds 'archive' directory to output folder.
     /// Also installs `fuchsia.diagnostics.Archive` service.
     /// Call `install_log_services`
-    pub fn new(archivist_configuration: &Config) -> Result<Self, Error> {
+    pub fn new(archivist_configuration: configs::Config) -> Result<Self, Error> {
         let mut fs = ServiceFs::new();
         diagnostics::serve(&mut fs)?;
 
@@ -101,11 +100,11 @@ impl Archivist {
         let (listen_sender, listen_receiver) = mpsc::unbounded();
 
         let logs_budget =
-            BudgetManager::new(archivist_configuration.logs_max_cached_original_bytes as usize);
+            BudgetManager::new(archivist_configuration.logs.max_cached_original_bytes);
         let diagnostics_repo = DataRepo::new(&logs_budget, component::inspector().root());
 
         let pipelines_node = component::inspector().root().create_child("pipelines");
-        let pipelines_path = Path::new(&archivist_configuration.pipelines_path);
+        let pipelines_path = archivist_configuration.pipelines_path;
         let pipelines = vec![
             Pipeline::feedback(diagnostics_repo.clone(), &pipelines_path, &pipelines_node),
             Pipeline::legacy_metrics(diagnostics_repo.clone(), &pipelines_path, &pipelines_node),
@@ -553,22 +552,15 @@ mod tests {
     use futures::channel::oneshot;
 
     fn init_archivist() -> Archivist {
-        let config = Config {
-            consume_own_logs: false,
-            enable_component_event_provider: false,
-            enable_klog: false,
-            enable_event_source: false,
-            enable_log_connector: false,
-            install_controller: false,
-            listen_to_lifecycle: false,
-            log_to_debuglog: false,
-            logs_max_cached_original_bytes: LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES as u64,
+        let config = configs::Config {
             num_threads: 1,
+            logs: configs::LogsConfig {
+                max_cached_original_bytes: LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES,
+            },
             pipelines_path: DEFAULT_PIPELINES_PATH.into(),
-            bind_services: vec![],
         };
 
-        let mut archivist = Archivist::new(&config).unwrap();
+        let mut archivist = Archivist::new(config).unwrap();
         // Install a fake producer that allows all incoming events. This allows skipping
         // validation for the purposes of the tests here.
         let mut fake_producer = FakeProducer {};

@@ -2,15 +2,53 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::{constants::DEFAULT_PIPELINES_PATH, error::Error};
 use fidl_fuchsia_diagnostics::Selector;
 use fuchsia_inspect as inspect;
 use selectors::{contains_recursive_glob, parse_selector_file, FastError};
+use serde::Deserialize;
 use std::{
     collections::BTreeMap,
+    fs,
     path::{Path, PathBuf},
 };
 
 static DISABLE_FILTER_FILE_NAME: &str = "DISABLE_FILTERING.txt";
+
+fn default_pipelines_path() -> PathBuf {
+    DEFAULT_PIPELINES_PATH.into()
+}
+
+#[derive(Deserialize, Debug, PartialEq, Eq)]
+pub struct Config {
+    /// Number of threads the archivist has available to use.
+    pub num_threads: usize,
+
+    /// path where pipeline configuration data should be looked for
+    #[serde(default = "default_pipelines_path")]
+    pub pipelines_path: PathBuf,
+
+    /// Configuration for Archivist's log subsystem.
+    pub logs: LogsConfig,
+}
+
+#[derive(Deserialize, Debug, PartialEq, Eq)]
+pub struct LogsConfig {
+    /// The maximum number of "raw logs bytes" Archivist will keep cached at one time.
+    ///
+    /// Note: because the Archivist does not preserve the original messages' bytes, the amount of
+    /// memory consumed by the cache will be a multiple of this value. See https://fxbug.dev/67022
+    /// for more information and future work.
+    pub max_cached_original_bytes: usize,
+}
+
+#[derive(Deserialize, Debug, PartialEq, Eq)]
+pub struct ServiceConfig {
+    /// The list of services to connect to at startup.
+    ///
+    /// Archivist is responsible for starting up diagnostics processing components listed here.
+    pub service_list: Vec<String>,
+}
 
 /// Configuration for pipeline selection.
 pub struct PipelineConfig {
@@ -135,6 +173,24 @@ impl PipelineConfig {
     }
 }
 
+pub fn parse_config(path: impl AsRef<Path>) -> Result<Config, Error> {
+    let path = path.as_ref();
+    let json_string =
+        fs::read_to_string(path).map_err(|_| Error::ParseConfig(path.to_path_buf()))?;
+    let config: Config =
+        serde_json::from_str(&json_string).map_err(|_| Error::ParseConfig(path.to_path_buf()))?;
+    Ok(config)
+}
+
+pub fn parse_service_config(path: impl AsRef<Path>) -> Result<ServiceConfig, Error> {
+    let path = path.as_ref();
+    let json_string =
+        fs::read_to_string(path).map_err(|_| Error::ParseServiceConfig(path.to_path_buf()))?;
+    let config: ServiceConfig = serde_json::from_str(&json_string)
+        .map_err(|_| Error::ParseServiceConfig(path.to_path_buf()))?;
+    Ok(config)
+}
+
 /// Validates a static selector against rules that apply specifically to a static selector and
 /// do not apply to selectors in general. Assumes the selector is already validated against the
 /// rules in selectors::validate_selector.
@@ -152,7 +208,111 @@ fn validate_static_selector(static_selector: &Selector) -> Result<(), String> {
 mod tests {
     use super::*;
     use fuchsia_inspect::testing::{assert_data_tree, AnyProperty};
-    use std::fs;
+    use std::io::Write;
+    use std::path::Path;
+
+    fn write_test_config_to_file<T: AsRef<Path>>(path: T, test_config: &str) {
+        let mut file = fs::File::create(path).expect("failed to create file");
+        write!(file, "{}", test_config).expect("failed to write file");
+        file.sync_all().expect("failed to sync file");
+    }
+
+    #[fuchsia::test]
+    fn parse_valid_config() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("config");
+        fs::create_dir(&config_path).unwrap();
+
+        let test_config_file_name = config_path.join("test_config.json");
+        let test_config = r#"
+                {
+                  "logs": {
+                    "max_cached_original_bytes": 500
+                  },
+                  "num_threads": 4
+                }"#;
+
+        write_test_config_to_file(&test_config_file_name, test_config);
+        let parsed_config = parse_config(&test_config_file_name).unwrap();
+        assert_eq!(parsed_config.logs.max_cached_original_bytes, 500);
+        assert_eq!(parsed_config.num_threads, 4);
+    }
+
+    #[fuchsia::test]
+    fn parse_valid_config_missing_optional() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("config");
+        fs::create_dir(&config_path).unwrap();
+
+        let test_config_file_name = config_path.join("test_config.json");
+        let test_config = r#"
+                {
+                  "logs": {
+                    "max_cached_original_bytes": 500
+                  },
+                  "num_threads": 1
+                }"#;
+
+        write_test_config_to_file(&test_config_file_name, test_config);
+        let parsed_config = parse_config(&test_config_file_name).unwrap();
+        assert_eq!(parsed_config.logs.max_cached_original_bytes, 500);
+        assert_eq!(parsed_config.num_threads, 1);
+    }
+
+    #[fuchsia::test]
+    fn parse_invalid_config() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("config");
+        fs::create_dir(&config_path).unwrap();
+
+        let test_config_file_name = config_path.join("test_config.json");
+        let test_config = r#"
+                {
+                  "num_threads": 4,
+                  "bad_field": "hello world",
+                }"#;
+
+        write_test_config_to_file(&test_config_file_name, test_config);
+        let parsed_config_result = parse_config(&test_config_file_name);
+        assert!(parsed_config_result.is_err(), "Config had a missing field, and invalid field.");
+    }
+
+    #[fuchsia::test]
+    fn parse_valid_services_config() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("config");
+        fs::create_dir(&config_path).unwrap();
+
+        let test_config_file_name = config_path.join("test_config.json");
+        let test_config = r#"
+                {
+                  "service_list": ["a", "b", "c"]
+                }"#;
+
+        write_test_config_to_file(&test_config_file_name, test_config);
+        let parsed_config_result =
+            parse_service_config(&test_config_file_name).expect("failed to parse config");
+        assert_eq!(
+            parsed_config_result.service_list,
+            vec!["a", "b", "c"].into_iter().map(|s| s.to_string()).collect::<Vec<_>>()
+        );
+    }
+
+    #[fuchsia::test]
+    fn parse_invalid_services_config() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("config");
+        fs::create_dir(&config_path).unwrap();
+
+        let test_config_file_name = config_path.join("test_config.json");
+        let test_config = r#"
+                {
+                  "service_list": [1]
+                }"#;
+
+        write_test_config_to_file(&test_config_file_name, test_config);
+        assert!(parse_service_config(&test_config_file_name).is_err());
+    }
 
     #[fuchsia::test]
     fn parse_missing_pipeline() {

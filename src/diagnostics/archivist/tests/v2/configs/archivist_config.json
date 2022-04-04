@@ -1,0 +1,7 @@
+{
+    "logs": {
+        "max_cached_original_bytes": 4194304
+    },
+    "num_threads": 4,
+    "pipelines_path": "/pkg/data/config/pipelines"
+}

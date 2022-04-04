@@ -1,0 +1,6 @@
+{
+    "logs": {
+        "max_cached_original_bytes": 3000
+    },
+    "num_threads": 1
+}

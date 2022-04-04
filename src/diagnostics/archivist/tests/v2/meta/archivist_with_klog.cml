@@ -6,6 +6,12 @@
     ],
     program: {
         binary: "bin/archivist",
+        args: [
+            "--enable-event-source",
+            "--enable-klog",
+            "--config-path",
+            "/pkg/data/config/archivist_config.json",
+        ],
     },
     use: [
         {

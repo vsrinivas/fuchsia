@@ -2,6 +2,18 @@
     include: [ "//src/diagnostics/archivist/meta/common.shard.cml" ],
     program: {
         binary: "bin/archivist",
+        args: [
+            "--enable-component-event-provider",
+            "--enable-klog",
+            "--enable-event-source",
+            "--enable-log-connector",
+            "--log-to-debuglog",
+            "--listen-to-lifecycle",
+            "--config-path",
+            "/config/data/archivist_config.json",
+            "--service-config-path",
+            "/config/data/archivist_service_config.json",
+        ],
         lifecycle: { stop_event: "notify" },
         main_process_critical: "true",
     },

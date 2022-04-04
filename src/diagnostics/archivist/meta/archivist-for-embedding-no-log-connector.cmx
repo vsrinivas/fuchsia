@@ -4,8 +4,10 @@
     ],
     "program": {
         "args": [
-            "--v1",
-            "no-log-connector"
+            "--enable-component-event-provider",
+            "--install-controller",
+            "--config-path",
+            "/pkg/data/embedding-config.json"
         ],
         "binary": "bin/archivist"
     },

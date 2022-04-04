@@ -1,0 +1,9 @@
+{
+    "service_list": [
+        "fuchsia.component.DetectBinder",
+        "fuchsia.component.KcounterBinder",
+        "fuchsia.component.PersistenceBinder",
+        "fuchsia.component.LogStatsBinder",
+        "fuchsia.component.SamplerBinder"
+    ]
+}

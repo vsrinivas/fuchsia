@@ -1,23 +1,33 @@
-// This shard is meant to contain stuff that is meant to be shared across all flavors of the
-// archivist.
 {
-    include: [ "inspect/client.shard.cml" ],
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
     program: {
         runner: "elf",
+        binary: "bin/archivist",
+        args: [
+            "--enable-event-source",
+            "--config-path",
+            "/pkg/config/archivist_config.json",
+        ],
     },
     capabilities: [
         {
-            protocol: [
-                "fuchsia.diagnostics.ArchiveAccessor",
-                "fuchsia.diagnostics.LogSettings",
-                "fuchsia.logger.Log",
-                "fuchsia.logger.LogSink",
-            ],
+            protocol: [ "fuchsia.logger.LogSink" ],
+        },
+        {
+            protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
         },
     ],
     use: [
         {
             protocol: [ "fuchsia.sys2.EventSource" ],
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
         },
         {
             event: [
@@ -35,15 +45,14 @@
         },
         {
             event: "capability_requested",
-            from: "parent",
-            as: "log_sink_requested",
+            from: "framework",
             filter: { name: "fuchsia.logger.LogSink" },
         },
         {
             event_stream_deprecated: "EventStream",
             subscriptions: [
                 { event: "diagnostics_ready" },
-                { event: "log_sink_requested" },
+                { event: "capability_requested" },
                 { event: "running" },
                 { event: "started" },
                 { event: "stopped" },
@@ -52,12 +61,11 @@
     ],
     expose: [
         {
-            protocol: [
-                "fuchsia.diagnostics.ArchiveAccessor",
-                "fuchsia.diagnostics.LogSettings",
-                "fuchsia.logger.Log",
-                "fuchsia.logger.LogSink",
-            ],
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "self",
+        },
+        {
+            protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
             from: "self",
         },
     ],

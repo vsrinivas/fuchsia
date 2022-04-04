@@ -36,11 +36,26 @@ fuchsia_component("archive_reader_integration_test") {
   manifest = "meta/archive_reader_integration_test.cml"
 }
 
+resource("archivist_config") {
+  sources = [ "configs/archivist_config.json" ]
+  outputs = [ "config/{{source_file_part}}" ]
+}
+
+fuchsia_component("archivist") {
+  testonly = true
+  deps = [
+    ":archivist_config",
+    "//src/diagnostics/archivist:bin",
+  ]
+  manifest = "meta/archivist_for_integration.cml"
+}
+
 fuchsia_test_package("archive-reader-integration-tests") {
   test_components = [ ":archive_reader_integration_test" ]
   deps = [
+    ":archivist",
+    ":archivist_config",
     ":driver",
-    "//src/diagnostics/archivist:archivist-for-embedding-v2",
   ]
 }
 

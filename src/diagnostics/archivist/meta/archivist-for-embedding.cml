@@ -5,6 +5,12 @@
     ],
     program: {
         binary: "bin/archivist",
+        args: [
+            "--enable-event-source",
+            "--listen-to-lifecycle",
+            "--config-path",
+            "/pkg/data/embedding-config.json",
+        ],
         lifecycle: { stop_event: "notify" },
     },
 }
