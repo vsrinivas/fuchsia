@@ -4,9 +4,12 @@
 
 use crate as image_assembly_config;
 use crate::FileEntry;
-use anyhow::ensure;
+use anyhow::{bail, ensure};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+
+/// ffx config flag for enabling configuring the assembly+structured config example.
+const EXAMPLE_ENABLED_FLAG: &str = "assembly_example_enabled";
 
 /// Configuration for a Product Assembly operation.  This is a high-level operation
 /// that takes a more abstract description of what is desired in the assembled
@@ -20,8 +23,17 @@ pub struct ProductAssemblyConfig {
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct PlatformConfig {
+    example: Option<ExampleConfig>,
+
     #[serde(default)]
     pub build_type: BuildType,
+}
+
+/// Used for demonstrating product assembly in conjunction with
+/// `//examples/assembly/structured_config`.
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
+struct ExampleConfig {
+    not_from_package: u8,
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
@@ -50,6 +62,21 @@ impl ProductAssemblyConfig {
     pub fn define_repackaging(&self) -> anyhow::Result<StructuredConfigPatches> {
         let mut patches = PatchesBuilder::default();
 
+        // Configure the Product Assembly + Structured Config example, if enabled.
+        match (should_configure_example(), &self.platform.example) {
+            (true, Some(ExampleConfig { not_from_package })) => {
+                patches
+                    .package("configured_by_assembly")
+                    .component("meta/to_configure.cm")
+                    .field("not_from_package", *not_from_package);
+            }
+            (false, Some(..)) => {
+                bail!("Found example config but not ffx config `{}=true`.", EXAMPLE_ENABLED_FLAG);
+            }
+            (_, None) => (), // nop
+        }
+
+        // Configure the session URL.
         if let Some(session_url) = &self.product.session_url {
             ensure!(
                 session_url.is_empty() || session_url.starts_with("fuchsia-pkg://"),
@@ -64,6 +91,12 @@ impl ProductAssemblyConfig {
 
         Ok(patches.inner)
     }
+}
+
+/// Check ffx config for whether we should execute example code.
+fn should_configure_example() -> bool {
+    futures::executor::block_on(ffx_config::get::<bool, _>(EXAMPLE_ENABLED_FLAG))
+        .unwrap_or_default()
 }
 
 /// A builder for collecting all of the structure configuration repackaging to perform in a given

@@ -75,6 +75,7 @@ group("structured_config") {
     "//src/sys/component_manager/tests/structured_config/client_integration/cpp_elf:*",
     "//src/sys/component_manager/tests/structured_config/client_integration/rust:*",
     "//src/sys/component_manager/tests/structured_config/different_values:*",
+    "//src/tests/assembly/structured_config/*",
     "//tools/cmc:*",
     "//tools/configc:*",
   ]

@@ -9,6 +9,10 @@ group("tests") {
 if (is_host) {
   group("host_tests") {
     testonly = true
-    deps = [ "fail_without_config" ]
+    deps = [
+      "assembled_config",
+      "example_not_configured",
+      "fail_without_config",
+    ]
   }
 }
