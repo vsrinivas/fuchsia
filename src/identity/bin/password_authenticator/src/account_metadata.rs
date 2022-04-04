@@ -4,11 +4,7 @@
 
 use {
     crate::{
-        account_manager::AccountId,
-        insecure::{NullKeyParams, NullKeySource},
-        keys::{Key, KeyError, KeyRetrieval},
-        options::Options,
-        scrypt::{ScryptKeySource, ScryptParams},
+        account_manager::AccountId, insecure::NullKeyParams, options::Options, scrypt::ScryptParams,
     },
     async_trait::async_trait,
     fidl_fuchsia_identity_account as faccount, fidl_fuchsia_io as fio, fuchsia_zircon as zx,
@@ -134,18 +130,10 @@ impl AccountMetadata {
     pub fn name(&self) -> &str {
         &self.name
     }
-}
 
-#[async_trait]
-impl KeyRetrieval for AccountMetadata {
-    async fn retrieve_key(&self, password: &str) -> Result<Key, KeyError> {
-        match &self.authenticator_metadata {
-            AuthenticatorMetadata::NullKey(_) => NullKeySource.retrieve_key(&password).await,
-            AuthenticatorMetadata::ScryptOnly(s_meta) => {
-                let key_source = ScryptKeySource::new_with_params(s_meta.scrypt_params);
-                key_source.retrieve_key(&password).await
-            }
-        }
+    /// Returns the authenticator metadata
+    pub fn authenticator_metadata(&self) -> &AuthenticatorMetadata {
+        &self.authenticator_metadata
     }
 }
 
@@ -288,13 +276,7 @@ impl AccountMetadataStore for DataDirAccountMetadataStore {
 pub mod test {
     use {
         super::*,
-        crate::{
-            insecure::{INSECURE_EMPTY_KEY, INSECURE_EMPTY_PASSWORD},
-            scrypt::test::{
-                FULL_STRENGTH_SCRYPT_PARAMS, TEST_SCRYPT_KEY, TEST_SCRYPT_PARAMS,
-                TEST_SCRYPT_PASSWORD,
-            },
-        },
+        crate::scrypt::test::{FULL_STRENGTH_SCRYPT_PARAMS, TEST_SCRYPT_PARAMS},
         assert_matches::assert_matches,
         lazy_static::lazy_static,
         tempfile::TempDir,
@@ -342,7 +324,7 @@ pub mod test {
     lazy_static! {
         pub static ref TEST_SCRYPT_METADATA: AccountMetadata =
             AccountMetadata::test_new_weak_scrypt(TEST_NAME.into());
-        static ref TEST_NULL_METADATA: AccountMetadata =
+        pub static ref TEST_NULL_METADATA: AccountMetadata =
             AccountMetadata::test_new_null(TEST_NAME.into(),);
     }
 
@@ -449,25 +431,6 @@ pub mod test {
         let reserialized = serde_json::to_vec::<AccountMetadata>(&deserialized)
             .expect("Reserialize password-only auth metadata");
         assert_eq!(reserialized, SCRYPT_KEY_AND_NAME_DATA);
-    }
-
-    #[fuchsia::test]
-    async fn test_account_metadata_key_retrieval() {
-        let meta = AccountMetadata {
-            name: "Test Display Name".into(),
-            authenticator_metadata: AuthenticatorMetadata::ScryptOnly(ScryptOnlyMetadata {
-                scrypt_params: TEST_SCRYPT_PARAMS,
-            }),
-        };
-        let key = meta.retrieve_key(TEST_SCRYPT_PASSWORD).await.expect("retrieve_key");
-        assert_eq!(key, TEST_SCRYPT_KEY);
-
-        let null_meta = AccountMetadata {
-            name: "Test Display Name".into(),
-            authenticator_metadata: AuthenticatorMetadata::NullKey(NullAuthMetadata {}),
-        };
-        let null_key = null_meta.retrieve_key(INSECURE_EMPTY_PASSWORD).await.expect("retrieve_key");
-        assert_eq!(null_key, INSECURE_EMPTY_KEY);
     }
 
     #[fuchsia::test]

@@ -10,7 +10,7 @@ use crate::{
     constants::{ACCOUNT_LABEL, FUCHSIA_DATA_GUID},
     disk_management::{DiskError, DiskManager, EncryptedBlockDevice, Partition},
     insecure::{NullKeySource, INSECURE_EMPTY_PASSWORD},
-    keys::{Key, KeyEnrollment, KeyRetrieval},
+    keys::{Key, KeyEnrollment, KeyError, KeyRetrieval},
     scrypt::ScryptKeySource,
     Options,
 };
@@ -229,6 +229,26 @@ where
         })
     }
 
+    /// Compute or retrieve the user key for the account described by `meta` using the
+    /// user-provided `password` with the metadata's specified key source.
+    /// Note that for the Pinweaver key source, this call may fail if we are unable to reach
+    /// CredentialManager or if CredentialManager rejects our password or has some other failure.
+    /// For ScryptKeySource, we expect this to return an Ok(), but the key returned may not be the
+    /// correct key if the user provided an incorrect password.
+    async fn retrieve_user_key(
+        &self,
+        meta: &AccountMetadata,
+        password: &str,
+    ) -> Result<Key, KeyError> {
+        match meta.authenticator_metadata() {
+            AuthenticatorMetadata::NullKey(_) => NullKeySource.retrieve_key(&password).await,
+            AuthenticatorMetadata::ScryptOnly(s_meta) => {
+                let key_source = ScryptKeySource::new_with_params(s_meta.scrypt_params);
+                key_source.retrieve_key(&password).await
+            }
+        }
+    }
+
     /// Authenticates an account and serves the Account FIDL protocol over the `account` channel.
     /// The `id` is verified to be present.
     /// The only id that we accept is GLOBAL_ACCOUNT_ID.
@@ -273,9 +293,12 @@ where
             return Err(faccount::Error::UnsupportedOperation);
         }
 
-        // If account metadata present, derive key (using the appropriate scheme for the
+        // If account metadata present, retrieve key (using the appropriate scheme for the
         // AccountMetadata instance).
-        let key = account_metadata.retrieve_key(&password).await?;
+        let key = self.retrieve_user_key(&account_metadata, &password).await.map_err(|err| {
+            warn!("get_account: retrieve_user_key failed: {:?}", err);
+            err
+        })?;
 
         // Acquire the lock for all accounts.
         let mut accounts_locked = self.accounts.lock().await;
@@ -665,7 +688,7 @@ mod test {
         super::*,
         crate::{
             account_metadata::{
-                test::{TEST_NAME, TEST_SCRYPT_METADATA},
+                test::{TEST_NAME, TEST_NULL_METADATA, TEST_SCRYPT_METADATA},
                 AccountMetadata, AccountMetadataStoreError,
             },
             disk_management::{DiskError, MockMinfs},
@@ -1678,6 +1701,28 @@ mod test {
             .await
             .expect("get_data_directory FIDL")
             .expect("get_data_directory");
+    }
+
+    #[fuchsia::test]
+    async fn test_key_retrieval() {
+        let disk_manager = MockDiskManager::new();
+        let account_metadata_store = MemoryAccountMetadataStore::new();
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, account_metadata_store);
+
+        // null
+        let key = account_manager
+            .retrieve_user_key(&TEST_NULL_METADATA, INSECURE_EMPTY_PASSWORD)
+            .await
+            .expect("retrieve key (null)");
+        assert_eq!(key, INSECURE_EMPTY_KEY);
+
+        // scrypt
+        let key = account_manager
+            .retrieve_user_key(&TEST_SCRYPT_METADATA, TEST_SCRYPT_PASSWORD)
+            .await
+            .expect("retrieve key (scrypt)");
+        assert_eq!(key, TEST_SCRYPT_KEY);
     }
 
     #[fuchsia::test]
