@@ -84,7 +84,7 @@ void VnodeF2fs::UpdateExtentCache(block_t blk_addr, DnodeOfData *dn) {
   block_t start_blkaddr, end_blkaddr;
 
   ZX_ASSERT(blk_addr != kNewAddr);
-  fofs = Vfs()->GetNodeManager().StartBidxOfNode(*dn->node_page) + dn->ofs_in_node;
+  fofs = dn->node_page->StartBidxOfNode() + dn->ofs_in_node;
 
   /* Update the page address in the parent node */
   SetDataBlkaddr(dn, blk_addr);
@@ -450,7 +450,8 @@ zx_status_t VnodeF2fs::WriteDirtyPage(fbl::RefPtr<Page> page, bool is_reclaim) {
   if (IsMeta()) {
     return Vfs()->F2fsWriteMetaPage(std::move(page), false);
   } else if (IsNode()) {
-    return Vfs()->GetNodeManager().F2fsWriteNodePage(std::move(page), false);
+    return Vfs()->GetNodeManager().F2fsWriteNodePage(
+        fbl::RefPtr<NodePage>::Downcast(std::move(page)), false);
   }
   return WriteDataPage(std::move(page), false);
 }

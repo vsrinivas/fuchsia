@@ -366,9 +366,23 @@ class VnodeF2fs : public fs::Vnode,
   zx_status_t FindPage(pgoff_t index, fbl::RefPtr<Page> *out) {
     return file_cache_.FindPage(index, out);
   }
+
+  zx_status_t GrabCachePage(pgoff_t index, fbl::RefPtr<NodePage> *out) {
+    if (!IsNode()) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    fbl::RefPtr<Page> page;
+    if (auto err = file_cache_.GetPage(index, &page); err != ZX_OK) {
+      return err;
+    }
+    *out = fbl::RefPtr<NodePage>::Downcast(std::move(page));
+    return ZX_OK;
+  }
+
   zx_status_t GrabCachePage(pgoff_t index, fbl::RefPtr<Page> *out) {
     return file_cache_.GetPage(index, out);
   }
+
   pgoff_t Writeback(WritebackOperation &operation) { return file_cache_.Writeback(operation); }
   void InvalidatePages(pgoff_t start = 0, pgoff_t end = kPgOffMax) {
     file_cache_.InvalidatePages(start, end);

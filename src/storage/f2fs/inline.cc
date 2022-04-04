@@ -36,9 +36,10 @@ uint8_t (*Dir::InlineDentryFilenameArray(Page *page))[kDentrySlotLen] {
 }
 
 DirEntry *Dir::FindInInlineDir(std::string_view name, fbl::RefPtr<Page> *res_page) {
-  if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), res_page); ret != ZX_OK)
+  fbl::RefPtr<NodePage> ipage = nullptr;
+  if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); ret != ZX_OK)
     return nullptr;
-
+  *res_page = std::move(ipage);
   f2fs_hash_t namehash = DentryHash(name);
 
   for (uint32_t bit_pos = 0; bit_pos < MaxInlineDentry();) {
@@ -79,17 +80,19 @@ DirEntry *Dir::FindInInlineDir(std::string_view name, fbl::RefPtr<Page> *res_pag
 }
 
 DirEntry *Dir::ParentInlineDir(fbl::RefPtr<Page> *out) {
-  if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), out); ret != ZX_OK) {
+  fbl::RefPtr<NodePage> ipage;
+  if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); ret != ZX_OK) {
     return nullptr;
   }
 
-  DirEntry *de = &InlineDentryArray((*out).get())[1];
-  (*out)->Unlock();
+  DirEntry *de = &InlineDentryArray(ipage.get())[1];
+  ipage->Unlock();
+  *out = std::move(ipage);
   return de;
 }
 
 zx_status_t Dir::MakeEmptyInlineDir(VnodeF2fs *vnode) {
-  fbl::RefPtr<Page> ipage;
+  fbl::RefPtr<NodePage> ipage;
 
   if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(vnode->Ino(), &ipage); err != ZX_OK)
     return err;
@@ -212,22 +215,22 @@ zx_status_t Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode, bool *i
 
   f2fs_hash_t name_hash = DentryHash(name);
 
-  fbl::RefPtr<Page> page;
-  if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(Ino(), &page); err != ZX_OK) {
+  fbl::RefPtr<NodePage> ipage;
+  if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); err != ZX_OK) {
     return err;
   }
 
   int slots = GetDentrySlots(static_cast<uint16_t>(name.length()));
-  unsigned int bit_pos = RoomInInlineDir(page.get(), slots);
+  unsigned int bit_pos = RoomInInlineDir(ipage.get(), slots);
   if (bit_pos >= MaxInlineDentry()) {
-    Page::PutPage(std::move(page), true);
+    Page::PutPage(std::move(ipage), true);
     ZX_ASSERT(ConvertInlineDir() == ZX_OK);
 
     *is_converted = true;
     return ZX_OK;
   }
 
-  page->WaitOnWriteback();
+  ipage->WaitOnWriteback();
 
 #if 0  // porting needed
   // down_write(&F2FS_I(inode)->i_sem);
@@ -239,21 +242,21 @@ zx_status_t Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode, bool *i
 #endif
 
     if (TestFlag(InodeInfoFlag::kUpdateDir)) {
-      UpdateInode(page.get());
+      UpdateInode(ipage.get());
       ClearFlag(InodeInfoFlag::kUpdateDir);
     }
-    Page::PutPage(std::move(page), true);
+    Page::PutPage(std::move(ipage), true);
     return err;
   }
 
-  DirEntry *de = &InlineDentryArray(page.get())[bit_pos];
+  DirEntry *de = &InlineDentryArray(ipage.get())[bit_pos];
   de->hash_code = name_hash;
   de->name_len = static_cast<uint16_t>(CpuToLe(name.length()));
-  memcpy(InlineDentryFilenameArray(page.get())[bit_pos], name.data(), name.length());
+  memcpy(InlineDentryFilenameArray(ipage.get())[bit_pos], name.data(), name.length());
   de->ino = CpuToLe(vnode->Ino());
   SetDeType(de, vnode);
   for (int i = 0; i < slots; ++i) {
-    TestAndSetBit(bit_pos + i, InlineDentryBitmap(page.get()));
+    TestAndSetBit(bit_pos + i, InlineDentryBitmap(ipage.get()));
   }
 
 #ifdef __Fuchsia__
@@ -262,10 +265,10 @@ zx_status_t Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode, bool *i
   }
 #endif  // __Fuchsia__
 
-  page->SetDirty();
+  ipage->SetDirty();
   UpdateParentMetadata(vnode, 0);
   vnode->WriteInode();
-  UpdateInode(page.get());
+  UpdateInode(ipage.get());
 
 #if 0  // porting needed
   // up_write(&F2FS_I(inode)->i_sem);
@@ -275,7 +278,7 @@ zx_status_t Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode, bool *i
     ClearFlag(InodeInfoFlag::kUpdateDir);
   }
 
-  Page::PutPage(std::move(page), true);
+  Page::PutPage(std::move(ipage), true);
   return ZX_OK;
 }
 
@@ -326,7 +329,7 @@ void Dir::DeleteInlineEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
 }
 
 bool Dir::IsEmptyInlineDir() {
-  fbl::RefPtr<Page> ipage;
+  fbl::RefPtr<NodePage> ipage;
 
   if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); err != ZX_OK)
     return false;
@@ -353,32 +356,32 @@ zx_status_t Dir::ReadInlineDir(fs::VdirCookie *cookie, void *dirents, size_t len
     return ZX_OK;
   }
 
-  fbl::RefPtr<Page> page;
+  fbl::RefPtr<NodePage> ipage;
 
-  if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(Ino(), &page); err != ZX_OK)
+  if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); err != ZX_OK)
     return err;
 
   const unsigned char *types = kFiletypeTable;
   uint32_t bit_pos = *pos_cookie % MaxInlineDentry();
 
   while (bit_pos < MaxInlineDentry()) {
-    bit_pos = FindNextBit(InlineDentryBitmap(page.get()), MaxInlineDentry(), bit_pos);
+    bit_pos = FindNextBit(InlineDentryBitmap(ipage.get()), MaxInlineDentry(), bit_pos);
     if (bit_pos >= MaxInlineDentry()) {
       break;
     }
 
-    DirEntry *de = &InlineDentryArray(page.get())[bit_pos];
+    DirEntry *de = &InlineDentryArray(ipage.get())[bit_pos];
     unsigned char d_type = DT_UNKNOWN;
     if (de->file_type < static_cast<uint8_t>(FileType::kFtMax))
       d_type = types[de->file_type];
 
-    std::string_view name(reinterpret_cast<char *>(InlineDentryFilenameArray(page.get())[bit_pos]),
+    std::string_view name(reinterpret_cast<char *>(InlineDentryFilenameArray(ipage.get())[bit_pos]),
                           LeToCpu(de->name_len));
 
     if (de->ino && name != "..") {
       if (zx_status_t ret = df.Next(name, d_type, LeToCpu(de->ino)); ret != ZX_OK) {
         *pos_cookie = bit_pos;
-        Page::PutPage(std::move(page), true);
+        Page::PutPage(std::move(ipage), true);
 
         *out_actual = df.BytesFilled();
         return ZX_OK;
@@ -389,7 +392,7 @@ zx_status_t Dir::ReadInlineDir(fs::VdirCookie *cookie, void *dirents, size_t len
   }
 
   *pos_cookie = MaxInlineDentry();
-  Page::PutPage(std::move(page), true);
+  Page::PutPage(std::move(ipage), true);
 
   *out_actual = df.BytesFilled();
 

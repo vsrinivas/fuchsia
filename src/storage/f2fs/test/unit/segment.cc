@@ -17,18 +17,17 @@ namespace {
 using SegmentManagerTest = F2fsFakeDevTestFixture;
 
 TEST_F(SegmentManagerTest, BlkChaining) {
-  fbl::RefPtr<Page> root_node_page = nullptr;
   SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
   std::vector<block_t> blk_chain(0);
   int nwritten = kDefaultBlocksPerSegment * 2;
   // write the root inode, and read the block where the previous version of the root inode is stored
   // to check if the block has a proper lba address to the next node block
   for (int i = 0; i < nwritten; ++i) {
-    fbl::RefPtr<Page> read_page = nullptr;
+    fbl::RefPtr<NodePage> read_page;
     NodeInfo ni;
 
     fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &read_page);
-    blk_chain.push_back(NodeManager::NextBlkaddrOfNode(*read_page));
+    blk_chain.push_back(read_page->NextBlkaddrOfNode());
     read_page->SetDirty();
     Page::PutPage(std::move(read_page), true);
     WritebackOperation op = {.bSync = true};
@@ -55,7 +54,7 @@ TEST_F(SegmentManagerTest, DirtyToFree) {
 
   // write the root inode repeatedly as much as 2 segments
   for (int i = 0; i < nwritten; ++i) {
-    fbl::RefPtr<Page> read_page = nullptr;
+    fbl::RefPtr<NodePage> read_page;
     NodeInfo ni;
 
     fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &read_page);
@@ -115,7 +114,7 @@ TEST_F(SegmentManagerTest, BalanceFs) {
 
 TEST_F(SegmentManagerTest, InvalidateBlocksExceptionCase) {
   // read the root inode block
-  fbl::RefPtr<Page> root_node_page = nullptr;
+  fbl::RefPtr<NodePage> root_node_page;
   SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
   fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
   ASSERT_NE(root_node_page, nullptr);
@@ -129,8 +128,6 @@ TEST_F(SegmentManagerTest, InvalidateBlocksExceptionCase) {
 }
 
 TEST_F(SegmentManagerTest, GetNewSegmentHeap) {
-  // read the root inode block
-  fbl::RefPtr<Page> root_node_page = nullptr;
   SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
 
   // Check GetNewSegment() on AllocDirection::kAllocLeft
@@ -138,7 +135,7 @@ TEST_F(SegmentManagerTest, GetNewSegmentHeap) {
   uint32_t nwritten = kDefaultBlocksPerSegment * 3;
 
   for (uint32_t i = 0; i < nwritten; ++i) {
-    fbl::RefPtr<Page> read_page = nullptr;
+    fbl::RefPtr<NodePage> read_page;
     NodeInfo ni, new_ni;
 
     fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &read_page);
@@ -270,7 +267,7 @@ TEST_F(SegmentManagerTest, AllocateNewSegments) {
 
 TEST_F(SegmentManagerTest, DirtySegments) {
   // read the root inode block
-  fbl::RefPtr<Page> root_node_page = nullptr;
+  fbl::RefPtr<NodePage> root_node_page;
   SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
   fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
   ASSERT_NE(root_node_page, nullptr);
@@ -305,7 +302,7 @@ TEST(SegmentManagerOptionTest, Section) {
 
   for (uint32_t i = 0; i < blocks_per_section; ++i) {
     NodeInfo ni;
-    fbl::RefPtr<Page> root_node_page = nullptr;
+    fbl::RefPtr<NodePage> root_node_page;
     CursegInfo *cur_segment = fs->GetSegmentManager().CURSEG_I(CursegType::kCursegHotNode);
     fs->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
     ASSERT_NE(root_node_page, nullptr);
@@ -357,7 +354,7 @@ TEST(SegmentManagerOptionTest, GetNewSegmentHeap) {
 
   for (uint32_t i = 0; i < nwritten; ++i) {
     NodeInfo ni, new_ni;
-    fbl::RefPtr<Page> root_node_page = nullptr;
+    fbl::RefPtr<NodePage> root_node_page;
     fs->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
     ASSERT_NE(root_node_page, nullptr);
 
@@ -408,7 +405,7 @@ TEST(SegmentManagerOptionTest, GetNewSegmentNoHeap) {
 
   for (uint32_t i = 0; i < nwritten; ++i) {
     NodeInfo ni, new_ni;
-    fbl::RefPtr<Page> root_node_page = nullptr;
+    fbl::RefPtr<NodePage> root_node_page;
     fs->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
     ASSERT_NE(root_node_page, nullptr);
 

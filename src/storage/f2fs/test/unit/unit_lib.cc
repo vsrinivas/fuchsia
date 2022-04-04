@@ -271,7 +271,7 @@ void FileTester::ReadFromFile(File *file, void *data, size_t len, size_t off) {
 }
 
 void MapTester::CheckNodeLevel(F2fs *fs, VnodeF2fs *vn, int level) {
-  fbl::RefPtr<Page> ipage = nullptr;
+  fbl::RefPtr<NodePage> ipage;
   ASSERT_EQ(fs->GetNodeManager().GetNodePage(vn->Ino(), &ipage), ZX_OK);
   Inode *inode = &(static_cast<Node *>(ipage->GetAddress())->i);
 

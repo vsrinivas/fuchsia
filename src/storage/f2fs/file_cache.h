@@ -69,12 +69,9 @@ class Page : public PageRefCounted<Page>,
   Page &operator=(const Page &) = delete;
   Page(const Page &&) = delete;
   Page &operator=(const Page &&) = delete;
-  ~Page();
+  virtual ~Page();
 
-  // It requests ZX_VMO_OP_UNLOCK to allow the kernel to reclaim the committed page after
-  // releasing mappings. If |this| still remains in FileCache, it downgrades the strong reference
-  // to a weak pointer. Otherwise, delete |this|.
-  void fbl_recycle();
+  void fbl_recycle() { RecyclePage(); }
 
   pgoff_t GetKey() const { return index_; }
   pgoff_t GetIndex() const { return GetKey(); }
@@ -167,6 +164,12 @@ class Page : public PageRefCounted<Page>,
   zx_status_t VmoWrite(const void *buffer, uint64_t offset, size_t buffer_size);
   zx_status_t VmoRead(void *buffer, uint64_t offset, size_t buffer_size);
 
+ protected:
+  // It requests ZX_VMO_OP_UNLOCK to allow the kernel to reclaim the committed page after
+  // releasing mappings. If |this| still remains in FileCache, it downgrades the strong reference
+  // to a weak pointer. Otherwise, delete |this|.
+  void RecyclePage();
+
  private:
   void WaitOnFlag(PageFlag flag) {
     while (flags_[static_cast<uint8_t>(flag)].test(std::memory_order_acquire)) {
@@ -205,6 +208,8 @@ class Page : public PageRefCounted<Page>,
   // node, and meta vnodes. For file vnodes, it has file offset. For node vnodes, it indicates the
   // node id. For meta vnode, it points to the block address to which the metadata is written.
   pgoff_t index_ = -1;
+
+ protected:
   F2fs *fs_ = nullptr;
 };
 

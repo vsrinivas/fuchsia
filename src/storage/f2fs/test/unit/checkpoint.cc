@@ -920,7 +920,7 @@ TEST(CheckpointTest, UmountFlag) {
 
   fbl::RefPtr<VnodeF2fs> root;
   FileTester::CreateRoot(fs.get(), &root);
-  fbl::RefPtr<Page> root_node_page = nullptr;
+  fbl::RefPtr<NodePage> root_node_page;
   SuperblockInfo &superblock_info = fs->GetSuperblockInfo();
 
   // read the node block where the root inode is stored

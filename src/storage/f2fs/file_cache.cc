@@ -22,7 +22,7 @@ Page::~Page() {
   ZX_DEBUG_ASSERT(IsLocked() == false);
 }
 
-void Page::fbl_recycle() {
+void Page::RecyclePage() {
   ZX_ASSERT(Unmap() == ZX_OK);
   ZX_ASSERT(VmoOpUnlock() == ZX_OK);
   // For active Pages, we evict them with strong references, so it is safe to call InContainer()
@@ -257,7 +257,11 @@ zx_status_t FileCache::GetPage(const pgoff_t index, fbl::RefPtr<Page> *out) {
     std::lock_guard tree_lock(tree_lock_);
     auto ret = GetPageUnsafe(index, out);
     if (ret.is_error()) {
-      *out = fbl::MakeRefCounted<Page>(this, index);
+      if (GetVnode().IsNode()) {
+        *out = fbl::MakeRefCounted<NodePage>(this, index);
+      } else {
+        *out = fbl::MakeRefCounted<Page>(this, index);
+      }
       ZX_ASSERT(AddPageUnsafe(*out) == ZX_OK);
       (*out)->SetActive();
     } else {

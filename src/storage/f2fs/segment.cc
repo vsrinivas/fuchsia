@@ -847,7 +847,9 @@ CursegType SegmentManager::GetSegmentType4(Page &page, PageType p_type) {
     return CursegType::kCursegColdData;
   }
 
-  if (NodeManager::IS_DNODE(page) && !NodeManager::IsColdNode(page)) {
+  ZX_ASSERT(p_type == PageType::kNode);
+  NodePage *node_page = static_cast<NodePage *>(&page);
+  if (node_page->IsDnode() && !node_page->IsColdNode()) {
     return CursegType::kCursegHotNode;
   }
   return CursegType::kCursegColdNode;
@@ -864,9 +866,10 @@ CursegType SegmentManager::GetSegmentType6(Page &page, PageType p_type) {
     }
     return CursegType::kCursegWarmData;
   }
-
-  if (NodeManager::IS_DNODE(page)) {
-    return NodeManager::IsColdNode(page) ? CursegType::kCursegWarmNode : CursegType::kCursegHotNode;
+  ZX_ASSERT(p_type == PageType::kNode);
+  NodePage *node_page = static_cast<NodePage *>(&page);
+  if (node_page->IsDnode()) {
+    return node_page->IsColdNode() ? CursegType::kCursegWarmNode : CursegType::kCursegHotNode;
   }
   return CursegType::kCursegColdNode;
 }
@@ -919,8 +922,10 @@ zx_status_t SegmentManager::DoWritePage(fbl::RefPtr<Page> page, block_t old_blka
       LocateDirtySegment(GetSegmentNumber(*new_blkaddr));
     }
 
-    if (p_type == PageType::kNode)
-      fs_->GetNodeManager().FillNodeFooterBlkaddr(*page, NextFreeBlkAddr(type));
+    if (p_type == PageType::kNode) {
+      auto node_page = fbl::RefPtr<NodePage>::Downcast(page);
+      node_page->FillNodeFooterBlkaddr(NextFreeBlkAddr(type));
+    }
   }
 
   // writeout dirty page into bdev
@@ -998,12 +1003,12 @@ void SegmentManager::RecoverDataPage(Page *page, Summary *sum, block_t old_blkad
   LocateDirtySegment(GetSegmentNumber(new_blkaddr));
 }
 
-void SegmentManager::RewriteNodePage(fbl::RefPtr<Page> page, Summary *sum, block_t old_blkaddr,
+void SegmentManager::RewriteNodePage(fbl::RefPtr<NodePage> page, Summary *sum, block_t old_blkaddr,
                                      block_t new_blkaddr) {
   CursegType type = CursegType::kCursegWarmNode;
   CursegInfo *curseg;
   uint32_t segno, old_cursegno;
-  block_t next_blkaddr = NodeManager::NextBlkaddrOfNode(*page);
+  block_t next_blkaddr = page->NextBlkaddrOfNode();
   uint32_t next_segno = GetSegmentNumber(next_blkaddr);
 
   curseg = CURSEG_I(type);

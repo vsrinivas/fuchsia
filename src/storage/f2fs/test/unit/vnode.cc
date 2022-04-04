@@ -32,7 +32,7 @@ void VgetFaultInjetionAndTest(F2fs &fs, Dir &root_dir, std::string_view name, T 
   ASSERT_EQ(test_vnode->Close(), ZX_OK);
 
   // fault injection
-  fbl::RefPtr<Page> node_page = nullptr;
+  fbl::RefPtr<NodePage> node_page;
   ASSERT_EQ(fs.GetNodeManager().GetNodePage(nid, &node_page), ZX_OK);
   Node *rn = static_cast<Node *>(node_page->GetAddress());
 

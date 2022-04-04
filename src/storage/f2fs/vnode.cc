@@ -79,7 +79,7 @@ void VnodeF2fs::Allocate(F2fs *fs, ino_t ino, uint32_t mode, fbl::RefPtr<VnodeF2
 }
 
 zx_status_t VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) {
-  fbl::RefPtr<Page> node_page;
+  fbl::RefPtr<NodePage> node_page;
 
   if (ino == fs->GetSuperblockInfo().GetNodeIno() || ino == fs->GetSuperblockInfo().GetMetaIno()) {
     *out = fbl::MakeRefCounted<VnodeF2fs>(fs, ino);
@@ -379,7 +379,7 @@ zx_status_t VnodeF2fs::WriteInode(bool is_reclaim) {
 
   if (IsDirty()) {
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kNodeOp));
-    fbl::RefPtr<Page> node_page;
+    fbl::RefPtr<NodePage> node_page;
     if (ret = Vfs()->GetNodeManager().GetNodePage(ino_, &node_page); ret != ZX_OK) {
       return ret;
     }
@@ -410,7 +410,7 @@ int VnodeF2fs::TruncateDataBlocksRange(DnodeOfData *dn, int count) {
   int nr_free = 0, ofs = dn->ofs_in_node;
   Node *raw_node = static_cast<Node *>(dn->node_page->GetAddress());
   uint32_t *addr = BlkaddrInNode(*raw_node) + ofs;
-  pgoff_t start = NodeManager::StartBidxOfNode(*dn->node_page) + ofs;
+  pgoff_t start = dn->node_page->StartBidxOfNode() + ofs;
   pgoff_t end = start + count;
 
   for (; count > 0; --count, ++addr, ++dn->ofs_in_node) {
@@ -617,14 +617,14 @@ zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
     // support logging nodes for roll-forward recovery.
     // kMountDisableRollForward can be removed when gc is available
     // since LFS cannot be used for nodes without gc.
-    fbl::RefPtr<Page> node_page;
-    int mark = !Vfs()->GetNodeManager().IsCheckpointedNode(Ino());
+    fbl::RefPtr<NodePage> node_page;
+    bool mark = !Vfs()->GetNodeManager().IsCheckpointedNode(Ino());
     if (ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &node_page); ret != ZX_OK) {
       return ret;
     }
 
-    NodeManager::SetFsyncMark(*node_page, 1);
-    NodeManager::SetDentryMark(*node_page, mark);
+    node_page->SetFsyncMark(true);
+    node_page->SetDentryMark(mark);
 
     UpdateInode(node_page.get());
     Page::PutPage(std::move(node_page), true);

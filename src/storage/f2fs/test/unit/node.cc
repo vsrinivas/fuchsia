@@ -664,41 +664,41 @@ TEST_F(NodeManagerTest, NodeFooter) {
   ASSERT_EQ(fs_->GetNodeManager().GetDnodeOfData(dn, direct_index, 0), ZX_OK);
   MapTester::CheckDnodeOfData(&dn, inode_nid, direct_index, true);
 
-  fbl::RefPtr<Page> page = nullptr;
-  fs_->GetMetaVnode().GrabCachePage(direct_index, &page);
+  fbl::RefPtr<NodePage> page;
+  fs_->GetNodeVnode().GrabCachePage(direct_index, &page);
 
-  // Check CopyNodeFooter()
-  NodeManager::CopyNodeFooter(*page, *dn.node_page);
+  // Check CopyNodeFooterFrom()
+  page->CopyNodeFooterFrom(*dn.node_page);
 
-  ASSERT_EQ(NodeManager::InoOfNode(*page), vnode->Ino());
-  ASSERT_EQ(NodeManager::InoOfNode(*page), NodeManager::InoOfNode(*dn.node_page));
-  ASSERT_EQ(NodeManager::NidOfNode(*page), NodeManager::NidOfNode(*dn.node_page));
-  ASSERT_EQ(NodeManager::OfsOfNode(*page), NodeManager::OfsOfNode(*dn.node_page));
-  ASSERT_EQ(NodeManager::CpverOfNode(*page), NodeManager::CpverOfNode(*dn.node_page));
-  ASSERT_EQ(NodeManager::NextBlkaddrOfNode(*page), NodeManager::NextBlkaddrOfNode(*dn.node_page));
+  ASSERT_EQ(page->InoOfNode(), vnode->Ino());
+  ASSERT_EQ(page->InoOfNode(), dn.node_page->InoOfNode());
+  ASSERT_EQ(page->NidOfNode(), dn.node_page->NidOfNode());
+  ASSERT_EQ(page->OfsOfNode(), dn.node_page->OfsOfNode());
+  ASSERT_EQ(page->CpverOfNode(), dn.node_page->CpverOfNode());
+  ASSERT_EQ(page->NextBlkaddrOfNode(), dn.node_page->NextBlkaddrOfNode());
 
   // Check footer.flag
-  ASSERT_EQ(NodeManager::IsFsyncDnode(*page), NodeManager::IsFsyncDnode(*dn.node_page));
-  ASSERT_EQ(NodeManager::IsFsyncDnode(*page), 0);
-  NodeManager::SetFsyncMark(*page, 1);
-  ASSERT_EQ(NodeManager::IsFsyncDnode(*page), 0x1 << static_cast<int>(BitShift::kFsyncBitShift));
-  NodeManager::SetFsyncMark(*page, 0);
-  ASSERT_EQ(NodeManager::IsFsyncDnode(*page), 0);
+  ASSERT_EQ(page->IsFsyncDnode(), dn.node_page->IsFsyncDnode());
+  ASSERT_EQ(page->IsFsyncDnode(), false);
+  page->SetFsyncMark(true);
+  ASSERT_EQ(page->IsFsyncDnode(), true);
+  page->SetFsyncMark(false);
+  ASSERT_EQ(page->IsFsyncDnode(), false);
 
-  ASSERT_EQ(NodeManager::IsDentDnode(*page), NodeManager::IsDentDnode(*dn.node_page));
-  ASSERT_EQ(NodeManager::IsDentDnode(*page), 0);
-  NodeManager::SetDentryMark(*page, 0);
-  ASSERT_EQ(NodeManager::IsDentDnode(*page), 0);
-  NodeManager::SetDentryMark(*page, 1);
-  ASSERT_EQ(NodeManager::IsDentDnode(*page), 0x1 << static_cast<int>(BitShift::kDentBitShift));
-  int mark = !fs_->GetNodeManager().IsCheckpointedNode(NodeManager::InoOfNode(*page));
-  NodeManager::SetDentryMark(*page, mark);
-  ASSERT_EQ(NodeManager::IsDentDnode(*page), 0x1 << static_cast<int>(BitShift::kDentBitShift));
+  ASSERT_EQ(page->IsDentDnode(), dn.node_page->IsDentDnode());
+  ASSERT_EQ(page->IsDentDnode(), false);
+  page->SetDentryMark(false);
+  ASSERT_EQ(page->IsDentDnode(), false);
+  page->SetDentryMark(true);
+  ASSERT_EQ(page->IsDentDnode(), true);
+  bool mark = !fs_->GetNodeManager().IsCheckpointedNode(page->InoOfNode());
+  page->SetDentryMark(mark);
+  ASSERT_EQ(page->IsDentDnode(), true);
 
   MapTester::SetCachedNatEntryCheckpointed(fs_->GetNodeManager(), dn.nid);
-  mark = !fs_->GetNodeManager().IsCheckpointedNode(NodeManager::InoOfNode(*page));
-  NodeManager::SetDentryMark(*page, mark);
-  ASSERT_EQ(NodeManager::IsDentDnode(*page), 0x0 << static_cast<int>(BitShift::kDentBitShift));
+  mark = !fs_->GetNodeManager().IsCheckpointedNode(page->InoOfNode());
+  page->SetDentryMark(mark);
+  ASSERT_EQ(page->IsDentDnode(), false);
 
   Page::PutPage(std::move(page), true);
   F2fsPutDnode(&dn);

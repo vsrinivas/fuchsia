@@ -294,7 +294,7 @@ void Dir::SetLink(DirEntry *de, Page *page, VnodeF2fs *vnode) {
   MarkInodeDirty();
 }
 
-void Dir::InitDentInode(VnodeF2fs *vnode, Page *ipage) {
+void Dir::InitDentInode(VnodeF2fs *vnode, NodePage *ipage) {
   if (!ipage)
     return;
 
@@ -331,7 +331,7 @@ zx_status_t Dir::InitInodeMetadata(VnodeF2fs *vnode) {
     // }
 #endif
   } else {
-    fbl::RefPtr<Page> ipage;
+    fbl::RefPtr<NodePage> ipage;
 
     if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(vnode->Ino(), &ipage); err != ZX_OK) {
       return err;

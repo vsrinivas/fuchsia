@@ -113,7 +113,7 @@ TEST_F(FileTest, NidAndBlkaddrAllocFree) {
   std::unordered_set<block_t> blkaddr_set;
 
   nid_set.insert(test_file_ptr->Ino());
-  fbl::RefPtr<Page> ipage = nullptr;
+  fbl::RefPtr<NodePage> ipage;
   ASSERT_EQ(fs_->GetNodeManager().GetNodePage(test_file_ptr->Ino(), &ipage), ZX_OK);
   Inode *inode = &(static_cast<Node *>(ipage->GetAddress())->i);
 
@@ -128,7 +128,7 @@ TEST_F(FileTest, NidAndBlkaddrAllocFree) {
   }
 
   for (int i = 0; i < 2; ++i) {
-    fbl::RefPtr<Page> direct_node_page = nullptr;
+    fbl::RefPtr<NodePage> direct_node_page;
     ASSERT_EQ(fs_->GetNodeManager().GetNodePage(inode->i_nid[i], &direct_node_page), ZX_OK);
     DirectNode *direct_node = &(static_cast<Node *>(direct_node_page->GetAddress())->dn);
 

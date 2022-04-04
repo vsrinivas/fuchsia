@@ -55,7 +55,7 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
   zx_status_t InitInodeMetadata(VnodeF2fs *vnode);
   zx_status_t MakeEmpty(VnodeF2fs *vnode);
   zx_status_t MakeEmptyInlineDir(VnodeF2fs *vnode);
-  void InitDentInode(VnodeF2fs *vnode, Page *ipage);
+  void InitDentInode(VnodeF2fs *vnode, NodePage *ipage);
 
   // delete
   zx_status_t Unlink(std::string_view name, bool must_be_dir) final;

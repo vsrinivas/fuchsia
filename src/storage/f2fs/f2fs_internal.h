@@ -67,12 +67,12 @@ constexpr int kLinkMax = 32000;  // maximum link count per file
 // by the data offset in a file.
 struct DnodeOfData {
   VnodeF2fs *vnode = nullptr;
-  fbl::RefPtr<Page> inode_page = nullptr;  // its inode page, nullptr is possible
-  fbl::RefPtr<Page> node_page = nullptr;   // cached direct node page
-  nid_t nid = 0;                           // node id of the direct node block
-  uint32_t ofs_in_node = 0;                // data offset in the node page
-  bool inode_page_locked = false;          // inode page is locked or not
-  block_t data_blkaddr = 0;                // block address of the node block
+  fbl::RefPtr<NodePage> inode_page = nullptr;  // its inode page, nullptr is possible
+  fbl::RefPtr<NodePage> node_page = nullptr;   // cached direct node page
+  nid_t nid = 0;                               // node id of the direct node block
+  uint32_t ofs_in_node = 0;                    // data offset in the node page
+  bool inode_page_locked = false;              // inode page is locked or not
+  block_t data_blkaddr = 0;                    // block address of the node block
 };
 
 // CountType for monitoring
@@ -422,7 +422,7 @@ inline void F2fsPutDnode(DnodeOfData *dn) {
 
 inline bool RawIsInode(Node &node) { return node.footer.nid == node.footer.ino; }
 
-inline bool IsInode(Page &page) {
+inline bool IsInode(NodePage &page) {
   Node *p = static_cast<Node *>(page.GetAddress());
   return RawIsInode(*p);
 }
@@ -437,7 +437,7 @@ inline uint32_t *BlkaddrInNode(Node &node) {
   return node.dn.addr;
 }
 
-inline block_t DatablockAddr(Page *node_page, uint64_t offset) {
+inline block_t DatablockAddr(NodePage *node_page, uint64_t offset) {
   Node *raw_node;
   uint32_t *addr_array;
   raw_node = static_cast<Node *>(node_page->GetAddress());

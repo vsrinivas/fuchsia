@@ -64,6 +64,7 @@
 #include "src/storage/f2fs/f2fs_lib.h"
 #include "src/storage/f2fs/f2fs_layout.h"
 #include "src/storage/f2fs/file_cache.h"
+#include "src/storage/f2fs/node_page.h"
 #include "src/storage/f2fs/f2fs_internal.h"
 #include "src/storage/f2fs/namestring.h"
 #include "src/storage/f2fs/bcache.h"
@@ -237,12 +238,13 @@ class F2fs : public fs::Vfs {
   // recovery.cc
   bool SpaceForRollForward();
   FsyncInodeEntry *GetFsyncInode(list_node_t *head, nid_t ino);
-  zx_status_t RecoverDentry(Page *ipage, VnodeF2fs *vnode);
-  zx_status_t RecoverInode(VnodeF2fs *inode, Page *node_page);
+  // TODO: Use reference type parameters instead of pointer type
+  zx_status_t RecoverDentry(NodePage *ipage, VnodeF2fs *vnode);
+  zx_status_t RecoverInode(VnodeF2fs *inode, NodePage *node_page);
   zx_status_t FindFsyncDnodes(list_node_t *head);
   void DestroyFsyncDnodes(list_node_t *head);
   void CheckIndexInPrevNodes(block_t blkaddr);
-  void DoRecoverData(VnodeF2fs *inode, Page *page, block_t blkaddr);
+  void DoRecoverData(VnodeF2fs *inode, NodePage *page, block_t blkaddr);
   void RecoverData(list_node_t *head, CursegType type);
   void RecoverFsyncData();
 

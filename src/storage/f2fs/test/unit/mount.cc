@@ -93,22 +93,22 @@ void TestSegmentType(F2fs *fs, Dir *root_dir, std::string_view name, bool is_dir
   Page::PutPage(std::move(page), true);
 
   // Dnode block test
-  fs->GetNodeVnode().GrabCachePage(vn->Ino(), &page);
-  NodeManager::FillNodeFooter(*page, static_cast<nid_t>(page->GetIndex()), vn->Ino(), inode_ofs,
-                              true);
-  NodeManager::SetColdNode(*vn, *page);
-  type = fs->GetSegmentManager().GetSegmentType(*page, PageType::kNode);
+  fbl::RefPtr<NodePage> node_page;
+  fs->GetNodeVnode().GrabCachePage(vn->Ino(), &node_page);
+  node_page->FillNodeFooter(static_cast<nid_t>(node_page->GetIndex()), vn->Ino(), inode_ofs, true);
+  node_page->SetColdNode(*vn);
+  type = fs->GetSegmentManager().GetSegmentType(*node_page, PageType::kNode);
   out.push_back(type);
-  Page::PutPage(std::move(page), true);
+  Page::PutPage(std::move(node_page), true);
 
   // indirect node block test
-  fs->GetNodeVnode().GrabCachePage(nid, &page);
-  NodeManager::FillNodeFooter(*page, static_cast<nid_t>(page->GetIndex()), vn->Ino(),
-                              indirect_node_ofs, true);
-  NodeManager::SetColdNode(*vn, *page);
-  type = fs->GetSegmentManager().GetSegmentType(*page, PageType::kNode);
+  fs->GetNodeVnode().GrabCachePage(nid, &node_page);
+  node_page->FillNodeFooter(static_cast<nid_t>(node_page->GetIndex()), vn->Ino(), indirect_node_ofs,
+                            true);
+  node_page->SetColdNode(*vn);
+  type = fs->GetSegmentManager().GetSegmentType(*node_page, PageType::kNode);
   out.push_back(type);
-  Page::PutPage(std::move(page), true);
+  Page::PutPage(std::move(node_page), true);
   vnode->Close();
 }
 
