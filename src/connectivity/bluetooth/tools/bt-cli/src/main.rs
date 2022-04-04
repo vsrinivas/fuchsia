@@ -7,15 +7,18 @@ use {
     fidl_fuchsia_bluetooth::{HostId as FidlHostId, PeerId as FidlPeerId},
     fidl_fuchsia_bluetooth_sys::{
         AccessMarker, AccessProxy, BondableMode, HostWatcherMarker, HostWatcherProxy,
-        PairingOptions, PairingSecurityLevel, ProcedureTokenProxy, TechnologyType,
+        PairingDelegateMarker, PairingOptions, PairingSecurityLevel, ProcedureTokenProxy,
+        TechnologyType,
     },
     fuchsia_async::{self as fasync, futures::select},
+    fuchsia_bluetooth::types::io_capabilities::{InputCapability, OutputCapability},
     fuchsia_bluetooth::types::{HostId, HostInfo, Peer, PeerId},
     fuchsia_component::client::connect_to_protocol,
     futures::{
         channel::mpsc::{channel, SendError},
         FutureExt, Sink, SinkExt, Stream, StreamExt, TryFutureExt,
     },
+    pairing_delegate,
     parking_lot::Mutex,
     pin_utils::pin_mut,
     prettytable::{cell, format, row, Row, Table},
@@ -365,6 +368,51 @@ async fn pair(
     }
 }
 
+async fn allow_pairing(args: &[&str], access_svc: &AccessProxy) -> Result<String, Error> {
+    let mut input_cap = InputCapability::None;
+    let mut output_cap = OutputCapability::None;
+    match args.len() {
+        0 => {}
+        2 => {
+            input_cap = InputCapability::from_str(args[0]).map_err(|_| {
+                format_err!("invalid input capability: {}", Cmd::AllowPairing.cmd_help())
+            })?;
+            output_cap = OutputCapability::from_str(args[1]).map_err(|_| {
+                format_err!("invalid output capability: {}", Cmd::AllowPairing.cmd_help())
+            })?;
+        }
+        _ => return Err(format_err!("usage: {}", Cmd::AllowPairing.cmd_help())),
+    };
+
+    // Setup pairing delegate
+    let (pairing_delegate_client, pairing_delegate_server_stream) =
+        fidl::endpoints::create_request_stream::<PairingDelegateMarker>()?;
+    let (sig_sender, mut sig_receiver) = channel(0);
+    let pairing_delegate_server =
+        pairing_delegate::handle_requests(pairing_delegate_server_stream, sig_sender);
+
+    let _ = access_svc.set_pairing_delegate(
+        input_cap.into(),
+        output_cap.into(),
+        pairing_delegate_client,
+    );
+
+    let delegate_server_task =
+        fasync::Task::spawn(pairing_delegate_server.map(|res| println!("{res:?}")));
+
+    println!(
+        "Now accepting pairing requests with input capability {:?} and output capability {:?}.",
+        input_cap, output_cap
+    );
+
+    if let Some(paired) = sig_receiver.next().await {
+        // If pairing was completed, exit.
+        let _ = delegate_server_task.cancel().await;
+        return Ok(format!("Completed pairing process with a peer (pair succeess? {}).", paired));
+    }
+    Err(format_err!("Pairing delegate server will close without pairing with a peer"))
+}
+
 async fn forget<'a>(
     args: &'a [&'a str],
     state: &'a Mutex<State>,
@@ -512,6 +560,7 @@ async fn handle_cmd(
         Cmd::Connect => connect(args, &state, &access_svc).await,
         Cmd::Disconnect => disconnect(args, &state, &access_svc).await,
         Cmd::Pair => pair(args, &state, &access_svc).await,
+        Cmd::AllowPairing => allow_pairing(args, &access_svc).await,
         Cmd::Forget => forget(args, &state, &access_svc).await,
         Cmd::StartDiscovery => set_discovery(true, &state, &access_svc).await,
         Cmd::StopDiscovery => set_discovery(false, &state, &access_svc).await,
@@ -680,12 +729,16 @@ async fn main() -> Result<(), Error> {
 mod tests {
     use super::*;
     use {
+        assert_matches::assert_matches,
         bt_fidl_mocks::sys::AccessMock,
+        fidl::endpoints::Proxy,
         fidl_fuchsia_bluetooth as fbt, fidl_fuchsia_bluetooth_sys as fsys,
+        fidl_fuchsia_bluetooth_sys::{InputCapability, OutputCapability},
         fuchsia_bluetooth::types::{Address, PeerId},
         fuchsia_zircon::{Duration, DurationNum},
         futures::join,
         parking_lot::Mutex,
+        std::task::Poll,
     };
 
     fn peer(connected: bool, bonded: bool) -> Peer {
@@ -1150,6 +1203,72 @@ mod tests {
 
         let _ = mock_result.expect("mock FIDL expectation not satisfied");
         assert!(result.expect("expected a result").contains("Disconnect error"));
+    }
+
+    #[test]
+    fn test_allow_pairing_no_args() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+
+        let args = vec![];
+        let (proxy, mut mock) = AccessMock::new(1.second()).expect("failed to create mock");
+        let pair = allow_pairing(args.as_slice(), &proxy);
+        pin_mut!(pair);
+
+        assert!(exec.run_until_stalled(&mut pair).is_pending());
+
+        let mock_expect =
+            mock.expect_set_pairing_delegate(InputCapability::None, OutputCapability::None);
+
+        assert!(exec.run_singlethreaded(mock_expect).is_ok());
+    }
+
+    #[fuchsia::test]
+    fn test_allow_pairing_args() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+
+        let (proxy, mut mock) = AccessMock::new(1.second()).expect("failed to create mock");
+
+        // Enable pairing with confirmation input cap and display output cap.
+        let args = vec!["confirmation", "display"];
+        let pair = allow_pairing(args.as_slice(), &proxy);
+        pin_mut!(pair);
+
+        // Should be waiting until pairing is completed.
+        assert!(exec.run_until_stalled(&mut pair).is_pending());
+
+        // Expect pairing delegate to be set with the correct capabilities.
+        let proxy = exec
+            .run_singlethreaded(mock.expect_set_pairing_delegate(
+                InputCapability::Confirmation,
+                OutputCapability::Display,
+            ))
+            .expect("cannot get proxy");
+        let proxy_close_fut = proxy.on_closed();
+        pin_mut!(proxy_close_fut);
+
+        // Verify that our pairing delegate client proxy is open.
+        assert!(exec.run_until_stalled(&mut proxy_close_fut).is_pending());
+
+        // Force closing of the proxy.
+        std::mem::drop(proxy);
+
+        // Verify that allow_pairing existed with error.
+        assert_matches!(exec.run_until_stalled(&mut pair), Poll::Ready(Err(_)));
+    }
+
+    #[fuchsia::test(allow_stalls = false)]
+    async fn test_allow_pairing_error() {
+        // Arguments that don't correspond to any capabilities.
+        let args = vec!["nonsense", "fake"];
+        let (proxy, _mock) = AccessMock::new(1.second()).expect("failed to create mock");
+
+        assert!(allow_pairing(args.as_slice(), &proxy).await.is_err());
+
+        // Incorrect number of arguments.
+        let args = vec!["none"];
+        let (proxy, _mock) = AccessMock::new(1.second()).expect("failed to create mock");
+
+        assert!(allow_pairing(args.as_slice(), &proxy).await.is_err());
     }
 
     #[fasync::run_until_stalled(test)]

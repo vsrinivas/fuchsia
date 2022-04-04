@@ -62,6 +62,7 @@ group("tests") {
     "bt-le-central:tests",
     "bt-le-peripheral:tests",
     "bt-snoop:tests",
+    "lib:tests",
     "tests",
   ]
 }

@@ -90,6 +90,7 @@ gen_commands! {
         Connect = ("connect", ["id|addr"], "connect to a peer"),
         Disconnect = ("disconnect", ["id|addr"], "disconnect from a peer"),
         Pair = ("pair", ["id|addr", "security_level", "bondable_mode", "transport (optional)"], "pair to a peer"),
+        AllowPairing = ("allow-pairing", ["input cap. (none|confirmation|keyboard)", "output cap. (none|display)"], "Enable pairing mode to allow incoming pairing requests. Capabilities default to none if no arguments are passed in."),
         Forget = ("forget", ["id|addr"], "delete and disconnect a remote peer"),
         ActiveAdapter = ("adapter", [], "Show the Active Adapter"),
         SetActiveAdapter = ("set-adapter", ["id"], "Set the Active Adapter"),

@@ -9,10 +9,9 @@ use {
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::io_capabilities::{InputCapability, OutputCapability},
     fuchsia_component::client::connect_to_protocol,
-    fuchsia_zircon as zx,
+    futures::channel::mpsc::channel,
+    pairing_delegate,
 };
-
-mod pairing;
 
 // Defines all the command line arguments accepted by the tool.
 #[derive(FromArgs)]
@@ -41,11 +40,12 @@ fn run(opt: Opt) -> Result<(), Error> {
         .context("Failed to connect to bluetooth access interface")?;
 
     // Setup pairing delegate
-    let (delegate_local, delegate_remote) = zx::Channel::create()?;
-    let delegate_local = fasync::Channel::from_channel(delegate_local)?;
-    let pairing_delegate_server = pairing::pairing_delegate(delegate_local);
-    let pairing_delegate_client =
-        fidl::endpoints::ClientEnd::<PairingDelegateMarker>::new(delegate_remote);
+    let (pairing_delegate_client, pairing_delegate_server_stream) =
+        fidl::endpoints::create_request_stream::<PairingDelegateMarker>()
+            .expect("cannot create request stream");
+    let (sig_sender, _sig_receiver) = channel(0);
+    let pairing_delegate_server =
+        pairing_delegate::handle_requests(pairing_delegate_server_stream, sig_sender);
 
     let pair_set =
         access.set_pairing_delegate(opt.input.into(), opt.output.into(), pairing_delegate_client);
@@ -57,7 +57,7 @@ fn run(opt: Opt) -> Result<(), Error> {
 
     println!("Now accepting pairing requests.");
     exec.run_singlethreaded(pairing_delegate_server)
-        .map_err(|_| format_err!("Failed to run pairing server"))
+        .map_err(|e| format_err!("Failed to run pairing server: {:?}", e))
 }
 
 fn main() {

@@ -15,3 +15,9 @@ source_set("lib") {
 
   public_deps = [ "//sdk/lib/fit" ]
 }
+
+group("tests") {
+  testonly = true
+
+  deps = [ "//src/connectivity/bluetooth/tools/lib/pairing-delegate:pairing-delegate-unittests" ]
+}

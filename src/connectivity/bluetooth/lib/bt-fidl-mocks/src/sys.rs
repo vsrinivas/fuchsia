@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_bluetooth::PeerId,
     fidl_fuchsia_bluetooth_sys::{
         AccessMarker, AccessProxy, AccessRequest, AccessRequestStream, Error as AccessError,
-        PairingOptions,
+        InputCapability, OutputCapability, PairingDelegateProxy, PairingOptions,
     },
     fuchsia_zircon::Duration,
 };
@@ -72,12 +72,30 @@ impl AccessMock {
         })
         .await
     }
+
+    pub async fn expect_set_pairing_delegate(
+        &mut self,
+        expected_input_cap: InputCapability,
+        expected_output_cap: OutputCapability,
+    ) -> Result<PairingDelegateProxy, Error> {
+        expect_call(&mut self.stream, self.timeout, move |req| match req {
+            AccessRequest::SetPairingDelegate { input, output, delegate, control_handle: _ }
+                if input == expected_input_cap && output == expected_output_cap =>
+            {
+                Ok(Status::Satisfied(delegate.into_proxy()?))
+            }
+            _ => Ok(Status::Pending),
+        })
+        .await
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {crate::timeout_duration, futures::join};
+    use {
+        crate::timeout_duration, fidl_fuchsia_bluetooth_sys::PairingDelegateMarker, futures::join,
+    };
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_expect_disconnect() {
@@ -102,6 +120,23 @@ mod tests {
 
         let (forget_result, expect_result) = join!(forget, expect);
         let _ = forget_result.expect("forget request failed");
+        let _ = expect_result.expect("expectation not satisifed");
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_expect_set_pairing_delegate() {
+        let (proxy, mut mock) = AccessMock::new(timeout_duration()).expect("failed to create mock");
+
+        let input_cap = InputCapability::None;
+        let output_cap = OutputCapability::Display;
+        let (pairing_delegate_client, _pairing_delegate_server) =
+            fidl::endpoints::create_endpoints::<PairingDelegateMarker>().unwrap();
+
+        let pair_set_result =
+            proxy.set_pairing_delegate(input_cap, output_cap, pairing_delegate_client);
+        let expect_result = mock.expect_set_pairing_delegate(input_cap, output_cap).await;
+
+        let _ = pair_set_result.expect("set_pairing_delegate request failed");
         let _ = expect_result.expect("expectation not satisifed");
     }
 }

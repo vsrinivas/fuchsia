@@ -3,14 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
-    fidl::endpoints::RequestStream,
+    anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth_sys::{
         PairingDelegateRequest, PairingDelegateRequestStream, PairingMethod,
     },
-    fuchsia_async as fasync,
     fuchsia_bluetooth::types::{Address, PeerId},
-    futures::{future, Future, TryFutureExt, TryStreamExt},
+    futures::{channel::mpsc::Sender, StreamExt},
     std::io::{self, Read, Write},
 };
 
@@ -84,35 +82,44 @@ fn prompt_for_remote_input(passkey: u32) -> bool {
 
 fn prompt_for_local_input() -> Option<u32> {
     print_and_flush!("Enter the passkey displayed on the peer (or nothing to reject): ");
-    let mut input = String::new();
-    match io::stdin().read_line(&mut input) {
-        Ok(_) => {
-            let input = input.trim().to_string();
-            if input.len() == 0 {
-                None
-            } else {
-                println!("Entered: {}", input);
-                match input.parse::<u32>() {
-                    Ok(passkey) => Some(passkey),
+    let mut passphrase = String::new();
+    while let Some(input) = io::stdin().bytes().next() {
+        match input {
+            Ok(input) => {
+                if input != 13 {
+                    // Keep reading user's input until enter key is pressed.
+                    print_and_flush!("{}", (input as char));
+                    passphrase.push(input as char);
+                    continue;
+                }
+                println!("");
+                match passphrase.parse::<u32>() {
+                    Ok(passkey) => return Some(passkey),
                     Err(_) => {
                         eprintln!("Error: passkey not an integer.");
-                        None
+                        return None;
                     }
                 }
             }
-        }
-        Err(e) => {
-            println!("Failed to receive passkey: {}", e);
-            None
+            Err(e) => {
+                println!("Failed to receive passkey: {:?}", e);
+                return None;
+            }
         }
     }
+    unreachable!();
 }
 
-pub fn pairing_delegate(channel: fasync::Channel) -> impl Future<Output = Result<(), Error>> {
-    let stream = PairingDelegateRequestStream::from_channel(channel);
-    stream
-        .try_for_each(move |evt| {
-            match evt {
+/// Handles requests from the `PairingDelegateRequestStream`, prompting for
+/// user input when necessary. Signals the status of an `OnPairingComplete`
+/// event using the provided  sig_channel.
+pub async fn handle_requests(
+    mut stream: PairingDelegateRequestStream,
+    mut sig_channel: Sender<bool>,
+) -> Result<(), Error> {
+    while let Some(req) = stream.next().await {
+        match req {
+            Ok(event) => match event {
                 PairingDelegateRequest::OnPairingComplete { id, success, control_handle: _ } => {
                     println!(
                         "Pairing complete for peer (id: {}, status: {})",
@@ -122,6 +129,7 @@ pub fn pairing_delegate(channel: fasync::Channel) -> impl Future<Output = Result
                             false => "failure".to_string(),
                         }
                     );
+                    sig_channel.try_send(success)?;
                 }
                 PairingDelegateRequest::OnPairingRequest {
                     peer,
@@ -167,8 +175,31 @@ pub fn pairing_delegate(channel: fasync::Channel) -> impl Future<Output = Result
                 PairingDelegateRequest::OnRemoteKeypress { id, keypress, control_handle: _ } => {
                     eprintln!("Peer: {} | {:?}", PeerId::from(id), keypress);
                 }
-            };
-            future::ready(Ok(()))
-        })
-        .map_err(|e| e.into())
+            },
+            Err(e) => return Err(format_err!("error encountered {:?}", e)),
+        };
+    }
+    Err(format_err!("PairingDelegate channel closed (likely due to pre-existing PairingDelegate)"))
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*, fidl_fuchsia_bluetooth_sys::PairingDelegateMarker, fuchsia_async as fasync,
+        futures::channel::mpsc::channel,
+    };
+
+    #[fuchsia::test]
+    async fn test_pairing_delegate() {
+        let (pairing_delegate_client, pairing_delegate_server_stream) =
+            fidl::endpoints::create_request_stream::<PairingDelegateMarker>().unwrap();
+        let (sig_sender, _sig_receiver) = channel(0);
+        let pairing_server = handle_requests(pairing_delegate_server_stream, sig_sender);
+        let delegate_server_task = fasync::Task::spawn(async move { pairing_server.await });
+
+        std::mem::drop(pairing_delegate_client); // drop client to make channel close
+
+        // Closing the client causes the server to exit.
+        let _ = delegate_server_task.await.expect_err("should have returned error");
+    }
 }

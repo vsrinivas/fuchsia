@@ -14,6 +14,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
     "//src/connectivity/bluetooth/lib/bt-fidl-mocks",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//src/connectivity/bluetooth/tools/lib/pairing-delegate",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -36,7 +37,10 @@ rustc_binary("bin") {
 
   configs -= [ "//build/config/rust:allow_unused_results" ]
 
-  test_deps = [ "//src/lib/fuchsia" ]
+  test_deps = [
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:assert_matches",
+  ]
 }
 
 fuchsia_shell_package("bt-cli") {
