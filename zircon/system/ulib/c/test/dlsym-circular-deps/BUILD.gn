@@ -15,7 +15,8 @@ import("//build/toolchain/ifs_shared_library.gni")
 # GN. Rather than having shared_lib2 depend on shared_lib3 depend on
 # shared_lib2, we can have the shared_libs depend on each other's IFS files.
 ifs_shared_library("shared_lib2_ifs") {
-  testonly = true
+  # TODO(mcgrathr): setting testonly seems to tickle a GN bug
+  #testonly = true
   abi = "shared_lib2.ifs"
 }
 

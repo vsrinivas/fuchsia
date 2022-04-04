@@ -183,6 +183,7 @@ if (zircon_toolchain == false) {
       "setjmp",
       "stubs",
       "zircon",
+      "//src/zircon/lib/zircon",
       "//zircon/system/ulib/zx-panic-libc:as_source",
       "//zircon/third_party/ulib/musl",
     ]

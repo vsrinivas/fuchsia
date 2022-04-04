@@ -16,10 +16,15 @@ _llvm_ifs = "$clang_tool_dir/llvm-ifs"
 # This target only takes care of satisfying any link-time dependencies.
 # Its label is used in `deps` like a shared_library() target.
 #
-# This defines two targets.  The main target acts like shared_library() for
-# linking purposes, but is not a GN target with outputs.  An additional target
-# "$target_name.stub" is defined whose outputs include the linking stub ELF
-# file itself, e.g. for use as input to a copy() target or the like.
+# This defines two public targets and a config.  The main target acts like
+# shared_library() for linking purposes, but is not a GN target with outputs.
+# An additional target "$target_name.stub" is defined whose outputs include the
+# linking stub ELF file itself, e.g. for use as input to a copy() target or the
+# like.  The "$target_name.config" config is defined to make `-l$output_name`
+# implicit link arguments work by supplying a `lib_dirs` that will find the
+# stub and nothing else.  This config is propagated from the main target via
+# public_configs, but this alone may not be sufficient for it to reach the
+# linking targets unless all the intervening deps are via public_deps.
 #
 # Parameters
 #
@@ -39,6 +44,12 @@ _llvm_ifs = "$clang_tool_dir/llvm-ifs"
 template("ifs_shared_library") {
   main_target = target_name
   stub_target = "$target_name.stub"
+  config_target = "$target_name.config"
+
+  gen_target = "_ifs_shared_library.$target_name.$clang_cpu"
+  gen_label = ":$gen_target($default_toolchain)"
+  gen_dir =
+      get_label_info(gen_label, "target_gen_dir") + "/$target_name.$clang_cpu"
 
   if (defined(invoker.output_name)) {
     output_name = invoker.output_name
@@ -46,9 +57,11 @@ template("ifs_shared_library") {
     output_name = target_name
   }
 
-  stub_file = "$root_out_dir/lib$output_name.so"
+  gen_stub_file = "$gen_dir/lib$output_name.so"
+  public_stub_file = "$root_out_dir/lib$output_name.so"
 
   source_set(main_target) {
+    public_configs = []
     forward_variables_from(invoker,
                            [
                              "visibility",
@@ -57,11 +70,12 @@ template("ifs_shared_library") {
                              "public_deps",
                              "testonly",
                            ])
-    libs = [ stub_file ]
-    deps = [ ":$stub_target" ]
+    public_configs += [ ":$config_target" ]
+    libs = [ gen_stub_file ]
+    deps = [ gen_label ]
   }
 
-  action(stub_target) {
+  config(config_target) {
     forward_variables_from(invoker,
                            [
                              "visibility",
@@ -70,22 +84,51 @@ template("ifs_shared_library") {
     if (defined(visibility)) {
       visibility += [ ":$main_target" ]
     }
+    lib_dirs = [ gen_dir ]
+  }
 
-    # Output timestamps are not freshened if contents do not change.
-    all_outputs_fresh = false
+  copy(stub_target) {
+    forward_variables_from(invoker,
+                           [
+                             "visibility",
+                             "testonly",
+                           ])
+    deps = [ gen_label ]
+    sources = [ gen_stub_file ]
+    outputs = [ public_stub_file ]
+  }
 
-    script = _llvm_ifs
-    sources = [ invoker.abi ]
-    outputs = [ stub_file ]
-    rebased_stub_file = rebase_path(stub_file, root_build_dir)
-    args = [
-      "--input-format=IFS",
-      "--arch=${clang_cpu}",
-      "--endianness=little",
-      "--bitwidth=64",
-      "--write-if-changed",
-      "--output-elf=${rebased_stub_file}",
-      rebase_path(invoker.abi, root_build_dir),
-    ]
+  if (current_toolchain == default_toolchain) {
+    action(gen_target) {
+      forward_variables_from(invoker,
+                             [
+                               "visibility",
+                               "testonly",
+                             ])
+      if (defined(visibility)) {
+        visibility += [
+          ":$main_target",
+          ":$stub_target",
+        ]
+      }
+
+      # Output timestamps are not freshened if contents do not change.
+      all_outputs_fresh = false
+
+      script = _llvm_ifs
+      sources = [ invoker.abi ]
+      outputs = [ gen_stub_file ]
+      args = [
+        "--input-format=IFS",
+        "--arch=${clang_cpu}",
+        "--endianness=little",
+        "--bitwidth=64",
+        "--write-if-changed",
+        "--output-elf=" + rebase_path(gen_stub_file, root_build_dir),
+        rebase_path(invoker.abi, root_build_dir),
+      ]
+    }
+  } else {
+    not_needed(invoker, [ "abi" ])
   }
 }
