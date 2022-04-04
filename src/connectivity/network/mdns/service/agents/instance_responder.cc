@@ -12,15 +12,22 @@
 
 namespace mdns {
 
-InstanceResponder::InstanceResponder(MdnsAgent::Owner* owner, const std::string& service_name,
-                                     const std::string& instance_name, Media media,
+InstanceResponder::InstanceResponder(MdnsAgent::Owner* owner, std::string host_full_name,
+                                     std::vector<inet::IpAddress> addresses,
+                                     std::string service_name, std::string instance_name,
+                                     Media media, IpVersions ip_versions,
                                      Mdns::Publisher* publisher)
     : MdnsAgent(owner),
+      host_full_name_(std::move(host_full_name)),
+      addresses_(std::move(addresses)),
       service_name_(service_name),
       instance_name_(instance_name),
       instance_full_name_(MdnsNames::InstanceFullName(instance_name, service_name)),
       media_(media),
-      publisher_(publisher) {}
+      ip_versions_(ip_versions),
+      publisher_(publisher) {
+  FX_DCHECK(host_full_name_.empty() == addresses_.empty());
+}
 
 InstanceResponder::~InstanceResponder() {}
 
@@ -29,7 +36,9 @@ void InstanceResponder::Start(const std::string& local_host_full_name) {
 
   MdnsAgent::Start(local_host_full_name);
 
-  host_full_name_ = local_host_full_name;
+  if (host_full_name_.empty()) {
+    host_full_name_ = local_host_full_name;
+  }
 
   Reannounce();
 }
@@ -40,16 +49,15 @@ void InstanceResponder::ReceiveQuestion(const DnsQuestion& question,
   std::string name = question.name_.dotted_string_;
   std::string subtype;
 
-  if (media_ != Media::kBoth && sender_address.media() != media_) {
-    // Question received on unsupported medium. Ignore.
+  if (!sender_address.Matches(media_) || !sender_address.Matches(ip_versions_)) {
+    // Question received via unsupported medium or ip version. Ignore.
     return;
   }
 
   // We infer publication cause from the reply address. Announcements don't use this path, and
   // there are cases in which we send unicast even though the unicast bit is not set on the question
-  // (specifically, when the reply address port isn't 5353). A V4 multicast reply address indicates
-  // V4 and V6 multicast.
-  auto publication_cause = reply_address.socket_address() == MdnsAddresses::v4_multicast()
+  // (specifically, when the reply address port isn't 5353).
+  auto publication_cause = reply_address.is_multicast_placeholder()
                                ? PublicationCause::kQueryMulticastResponse
                                : PublicationCause::kQueryUnicastResponse;
 
@@ -57,23 +65,23 @@ void InstanceResponder::ReceiveQuestion(const DnsQuestion& question,
     case DnsType::kPtr:
       if (MdnsNames::MatchServiceName(name, service_name_, &subtype)) {
         LogSenderAddress(sender_address);
-        MaybeGetAndSendPublication(publication_cause, subtype, reply_address);
+        MaybeGetAndSendPublication(publication_cause, subtype, Constrain(reply_address));
       } else if (question.name_.dotted_string_ == MdnsNames::kAnyServiceFullName) {
-        SendAnyServiceResponse(reply_address);
+        SendAnyServiceResponse(Constrain(reply_address));
       }
       break;
     case DnsType::kSrv:
     case DnsType::kTxt:
       if (question.name_.dotted_string_ == instance_full_name_) {
         LogSenderAddress(sender_address);
-        MaybeGetAndSendPublication(publication_cause, "", reply_address);
+        MaybeGetAndSendPublication(publication_cause, "", Constrain(reply_address));
       }
       break;
     case DnsType::kAny:
       if (question.name_.dotted_string_ == instance_full_name_ ||
           MdnsNames::MatchServiceName(name, service_name_, &subtype)) {
         LogSenderAddress(sender_address);
-        MaybeGetAndSendPublication(publication_cause, subtype, reply_address);
+        MaybeGetAndSendPublication(publication_cause, subtype, Constrain(reply_address));
       }
       break;
     default:
@@ -220,7 +228,7 @@ void InstanceResponder::GetAndSendPublication(PublicationCause publication_cause
           FlushSentItems();
 
           // A V4 multicast reply address indicates V4 and V6 multicast.
-          if (query && reply_address.socket_address() == MdnsAddresses::v4_multicast()) {
+          if (query && reply_address.is_multicast_placeholder()) {
             throttle_state_by_subtype_[subtype] = now();
             // Remove the entry from |throttle_state_by_subtype_| later to prevent the map from
             // growing indefinitely.
@@ -258,7 +266,16 @@ void InstanceResponder::SendPublication(const Mdns::Publication& publication,
   txt_resource->txt_.strings_ = publication.text_;
   SendResource(txt_resource, MdnsResourceSection::kAdditional, reply_address);
 
-  SendAddresses(MdnsResourceSection::kAdditional, reply_address);
+  if (addresses_.empty()) {
+    // Send addresses for the local host.
+    SendAddresses(MdnsResourceSection::kAdditional, reply_address);
+  } else {
+    // Send addresses that were provided in the constructor.
+    for (const auto& address : addresses_) {
+      SendResource(std::make_shared<DnsResource>(host_full_name_, address),
+                   MdnsResourceSection::kAdditional, reply_address);
+    }
+  }
 }
 
 void InstanceResponder::SendSubtypePtrRecord(const std::string& subtype, uint32_t ttl,
@@ -286,10 +303,6 @@ void InstanceResponder::IdleCheck(const std::string& subtype) {
   if (iter != throttle_state_by_subtype_.end() && iter->second + kMinMulticastInterval < now()) {
     throttle_state_by_subtype_.erase(iter);
   }
-}
-
-ReplyAddress InstanceResponder::multicast_reply() const {
-  return ReplyAddress::Multicast(media_, IpVersions::kBoth);
 }
 
 }  // namespace mdns

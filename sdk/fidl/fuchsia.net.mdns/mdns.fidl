@@ -35,6 +35,10 @@ alias subtype_name = string:63;
 /// at most 255 characters long and are UTF-8-encoded.
 alias txt_string = string:255;
 
+/// Provides description relating to a service instance. TXT strings must be
+/// at most 255 characters long.
+alias txt_character_string = bytes:255;
+
 /// Discoverable protocol for resolving host names to IP addresses.
 @discoverable
 protocol Resolver {
@@ -66,7 +70,9 @@ protocol Subscriber {
 };
 
 /// Discoverable protocol for publishing service instances.
+/// Deprecated: use ServiceInstancePublisher.
 @discoverable
+@deprecated
 protocol Publisher {
     /// Publishes a service instance. `publication_responder` is consulted via its
     /// `OnPublication` method for initial announcements and to answer queries.
@@ -89,11 +95,95 @@ protocol Publisher {
     }) -> (struct {}) error Error;
 };
 
+/// Client-supplied publication responder interface.
+@deprecated
+protocol PublicationResponder {
+    /// Provides instance information for initial announcements and query
+    /// responses relating to the service instance specified in
+    /// `ServiceInstancePublisher.PublishServiceInstance`.  If the publication relates to a
+    /// subtype of the service, `subtype` contains the subtype, otherwise
+    /// it is null. If `publication` is null, no announcement or response is
+    /// transmitted. Strings in `text` are transmitted in the TXT record.
+    OnPublication(struct {
+        publication_cause PublicationCause;
+        subtype subtype_name:optional;
+        source_addresses vector<fuchsia.net.IpAddress>:MAX_ADDRESSES;
+    }) -> (struct {
+        publication box<Publication>;
+    });
+
+    /// Sets the subtypes for the service instance. The specified subtypes will
+    /// be announced subject to filtering through the responder. The initial
+    /// subtype collection is empty.
+    -> SetSubtypes(struct {
+        subtypes vector<subtype_name>:MAX_SUBTYPES;
+    });
+
+    /// Initiates reannouncement of the service instance due to a change in the
+    /// instance's port number or text strings. All announcements are filtered
+    /// through `OnPublication`, which replies with the new port and text
+    /// values.
+    -> Reannounce();
+};
+
+/// Describes the cause of a publication.
+@deprecated
+type PublicationCause = strict enum : uint32 {
+    /// Indicates the publication is part of an initial announcement.
+    ANNOUNCEMENT = 1;
+
+    /// Indicates the publication is in response to a question that requests a
+    /// multicast response.
+    QUERY_MULTICAST_RESPONSE = 2;
+
+    /// Indicates the publication is in response to a question that requests a
+    /// unicast response.
+    QUERY_UNICAST_RESPONSE = 3;
+};
+
+/// Describes an initial instance announcement or query response. In typical
+/// use, the default SRV priority, SRV weight and TTL values should be used. TTL
+/// values are rounded down to the nearest second. TTL values less than one
+/// second are not permitted and will result in the `PublicationResponder`
+/// channel being closed.
+@deprecated
+type Publication = struct {
+    /// The port at which the service instance is addressable.
+    port uint16;
+
+    /// Text strings describing the instance.
+    text vector<txt_string>:MAX_TEXT_STRINGS;
+
+    /// The priority of the SRV resource record for this publication. See
+    /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
+    srv_priority uint16 = DEFAULT_SRV_PRIORITY;
+
+    /// The weight of the SRV resource record for this publication. See
+    /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
+    srv_weight uint16 = DEFAULT_SRV_WEIGHT;
+
+    /// Time-to-live for PTR resource records.
+    ptr_ttl zx.duration = DEFAULT_PTR_TTL;
+
+    /// Time-to-live for SRV resource records.
+    srv_ttl zx.duration = DEFAULT_SRV_TTL;
+
+    /// Time-to-live for TXT resource records.
+    txt_ttl zx.duration = DEFAULT_TXT_TTL;
+};
+
 /// Discoverable protocol for resolving service instances.
 @discoverable
 protocol ServiceInstanceResolver {
     /// Resolves a specific service instance by sending an SRV query and returns
     /// the endpoints, target and text records.
+    ///
+    /// + request `service` name of the type of service to be resolved. For example, cast uses
+    ///   '_googlecast._tcp.'.
+    /// + request `instance` name of the instance to be resolved. This is often a descriptive name
+    ///   such as `Office Printer` or a name containing a large random number.
+    /// + request `timeout` specifies how long the service should wait before giving up when
+    ///   waiting for a response to a resolution query.
     ///
     /// A successful resolution will return target and at least one endpoint.
     /// Unsuccessful resolution occurs when either the service instance doesn't respond or
@@ -116,8 +206,17 @@ type Media = strict bits : uint32 {
     WIRELESS = 2;
 };
 
+/// Specifies IP versions on which a service instance should be published.
+type IpVersions = strict bits : uint32 {
+    /// Specifies IPv4.
+    V4 = 1;
+
+    /// Specifies IPv6.
+    V6 = 2;
+};
+
 /// Error values for instance publishing.
-type Error = strict enum : int32 {
+type Error = strict enum : uint32 {
     /// The specified service name is invalid.
     INVALID_SERVICE_NAME = 1;
 
@@ -164,6 +263,7 @@ protocol ServiceSubscriber {
 type ResourceType = strict enum {
     /// Domain name pointer.
     PTR = 12;
+
     /// Any (wildcard) type.
     ANY = 255;
 };
@@ -197,80 +297,6 @@ type ServiceInstance = table {
     8: target host_name;
 };
 
-/// Client-supplied publication responder interface.
-protocol PublicationResponder {
-    /// Provides instance information for initial announcements and query
-    /// responses relating to the service instance specified in
-    /// `Publisher.PublishServiceInstance`.  If the publication relates to a
-    /// subtype of the service, `subtype` contains the subtype, otherwise
-    /// it is null. If `publication` is null, no announcement or response is
-    /// transmitted. Strings in `text` are transmitted in the TXT record.
-    OnPublication(struct {
-        publication_cause PublicationCause;
-        subtype subtype_name:optional;
-        source_addresses vector<fuchsia.net.IpAddress>:64;
-    }) -> (struct {
-        publication box<Publication>;
-    });
-
-    /// Sets the subtypes for the service instance. The specified subtypes will
-    /// be announced subject to filtering through the responder. The initial
-    /// subtype collection is empty.
-    -> SetSubtypes(struct {
-        subtypes vector<subtype_name>:MAX_SUBTYPES;
-    });
-
-    /// Initiates reannouncement of the service instance due to a change in the
-    /// instance's port number or text strings. All announcements are filtered
-    /// through `OnPublication`, which replies with the new port and text
-    /// values.
-    -> Reannounce();
-};
-
-/// Describes the cause of a publication.
-type PublicationCause = strict enum : int32 {
-    /// Indicates the publication is part of an initial announcement.
-    ANNOUNCEMENT = 1;
-
-    /// Indicates the publication is in response to a question that requests a
-    /// multicast response.
-    QUERY_MULTICAST_RESPONSE = 2;
-
-    /// Indicates the publication is in response to a question that requests a
-    /// unicast response.
-    QUERY_UNICAST_RESPONSE = 3;
-};
-
-/// Describes an initial instance announcement or query response. In typical
-/// use, the default SRV priority, SRV weight and TTL values should be used. TTL
-/// values are rounded down to the nearest second. TTL values less than one
-/// second are not permitted and will result in the `PublicationResponder`
-/// channel being closed.
-type Publication = struct {
-    /// The port at which the service instance is addressable.
-    port uint16;
-
-    /// Text strings describing the instance.
-    text vector<txt_string>:MAX_TEXT_STRINGS;
-
-    /// The priority of the SRV resource record for this publication. See
-    /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
-    srv_priority uint16 = DEFAULT_SRV_PRIORITY;
-
-    /// The weight of the SRV resource record for this publication. See
-    /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
-    srv_weight uint16 = DEFAULT_SRV_WEIGHT;
-
-    /// Time-to-live for PTR resource records.
-    ptr_ttl zx.duration = DEFAULT_PTR_TTL;
-
-    /// Time-to-live for SRV resource records.
-    srv_ttl zx.duration = DEFAULT_SRV_TTL;
-
-    /// Time-to-live for TXT resource records.
-    txt_ttl zx.duration = DEFAULT_TXT_TTL;
-};
-
 const DEFAULT_SRV_PRIORITY uint16 = 0;
 const DEFAULT_SRV_WEIGHT uint16 = 0;
 const DEFAULT_PTR_TTL zx.duration = 120000000000; // 2 minutes
@@ -278,3 +304,4 @@ const DEFAULT_SRV_TTL zx.duration = 120000000000; // 2 minutes
 const DEFAULT_TXT_TTL zx.duration = 4500000000000; // 75 minutes
 const MAX_TEXT_STRINGS uint32 = 256;
 const MAX_SUBTYPES uint32 = 256;
+const MAX_ADDRESSES uint32 = 64;

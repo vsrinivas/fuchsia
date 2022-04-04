@@ -14,6 +14,8 @@
 
 namespace mdns {
 
+std::ostream& operator<<(std::ostream& os, DnsType value);
+
 #ifdef MDNS_TRACE
 
 template <typename T>
@@ -35,7 +37,6 @@ std::ostream& operator<<(std::ostream& os, const std::shared_ptr<T>& value) {
   return os << *value;
 }
 
-std::ostream& operator<<(std::ostream& os, DnsType value);
 std::ostream& operator<<(std::ostream& os, DnsClass value);
 std::ostream& operator<<(std::ostream& os, const DnsName& value);
 std::ostream& operator<<(std::ostream& os, const DnsV4Address& value);

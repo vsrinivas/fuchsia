@@ -6,57 +6,13 @@
 
 #include <iostream>
 
+#include "src/connectivity/network/mdns/service/common/formatters.h"
 #include "src/connectivity/network/mdns/service/encoding/dns_formatting.h"
 
 namespace mdns {
-
-#ifndef MDNS_TRACE
-
-std::ostream& operator<<(std::ostream& os, DnsType value) {
-  switch (value) {
-    case DnsType::kA:
-      return os << "A";
-    case DnsType::kNs:
-      return os << "NS";
-    case DnsType::kCName:
-      return os << "CNAME";
-    case DnsType::kPtr:
-      return os << "PTR";
-    case DnsType::kTxt:
-      return os << "TXT";
-    case DnsType::kAaaa:
-      return os << "AAAA";
-    case DnsType::kSrv:
-      return os << "SRV";
-    case DnsType::kOpt:
-      return os << "OPT";
-    case DnsType::kNSec:
-      return os << "NSEC";
-    case DnsType::kAny:
-      return os << "any";
-    default:
-      return os << "TYPE " << static_cast<uint16_t>(value);
-  }
-}
-
-#endif
-
-std::ostream& operator<<(std::ostream& os, MdnsResourceSection value) {
-  switch (value) {
-    case MdnsResourceSection::kAnswer:
-      return os << "answer";
-    case MdnsResourceSection::kAuthority:
-      return os << "authority";
-    case MdnsResourceSection::kAdditional:
-      return os << "additional";
-    case MdnsResourceSection::kExpired:
-      return os << "EXPIRED";
-  }
-}
-
 namespace test {
 
-const std::string AgentTest::kHostFullName = "testhost.local.";
+const std::string AgentTest::kLocalHostFullName = "testhost.local.";
 
 void AgentTest::PostTaskForTime(MdnsAgent* agent, fit::closure task, zx::time target_time) {
   EXPECT_EQ(agent_, agent);
@@ -64,10 +20,9 @@ void AgentTest::PostTaskForTime(MdnsAgent* agent, fit::closure task, zx::time ta
       PostTaskForTimeCall{.task_ = std::move(task), .target_time_ = target_time});
 }
 
-void AgentTest::SendQuestion(std::shared_ptr<DnsQuestion> question) {
+void AgentTest::SendQuestion(std::shared_ptr<DnsQuestion> question, ReplyAddress reply_address) {
   EXPECT_NE(nullptr, question);
-  auto& message =
-      outbound_messages_by_reply_address_[ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth)];
+  auto& message = outbound_messages_by_reply_address_[reply_address];
   if (message == nullptr) {
     message = std::make_unique<DnsMessage>();
   }
@@ -141,7 +96,7 @@ void AgentTest::ExpectPostTaskForTimeAndInvoke(zx::duration earliest, zx::durati
 
 std::unique_ptr<DnsMessage> AgentTest::ExpectOutboundMessage(ReplyAddress reply_address) {
   auto message = std::move(outbound_messages_by_reply_address_[reply_address]);
-  EXPECT_NE(nullptr, message);
+  EXPECT_NE(nullptr, message) << "Expected output message not found for " << reply_address;
   outbound_messages_by_reply_address_.erase(reply_address);
   return message;
 }
@@ -173,6 +128,9 @@ std::shared_ptr<DnsResource> AgentTest::ExpectResource(DnsMessage* message,
                                                        const std::string& name, DnsType type,
                                                        DnsClass dns_class, bool cache_flush) {
   EXPECT_NE(nullptr, message);
+  if (!message) {
+    return nullptr;
+  }
 
   std::vector<std::shared_ptr<DnsResource>>* collection;
   switch (section) {
@@ -204,8 +162,89 @@ std::shared_ptr<DnsResource> AgentTest::ExpectResource(DnsMessage* message,
   return nullptr;
 }
 
+std::vector<std::shared_ptr<DnsResource>> AgentTest::ExpectResources(
+    DnsMessage* message, MdnsResourceSection section, const std::string& name, DnsType type,
+    DnsClass dns_class, bool cache_flush) {
+  EXPECT_NE(nullptr, message);
+
+  std::vector<std::shared_ptr<DnsResource>>* collection;
+  switch (section) {
+    case MdnsResourceSection::kAnswer:
+      collection = &message->answers_;
+      break;
+    case MdnsResourceSection::kAuthority:
+      collection = &message->authorities_;
+      break;
+    case MdnsResourceSection::kAdditional:
+      collection = &message->additionals_;
+      break;
+    case MdnsResourceSection::kExpired:
+      EXPECT_TRUE(false);
+      return std::vector<std::shared_ptr<DnsResource>>();
+  }
+
+  std::vector<std::shared_ptr<DnsResource>> result;
+  for (auto i = collection->begin(); i != collection->end();) {
+    if ((*i)->name_.dotted_string_.compare(name) == 0 && (*i)->type_ == type &&
+        (*i)->class_ == dns_class && (*i)->cache_flush_ == cache_flush) {
+      result.push_back(std::move(*i));
+      i = collection->erase(i);
+    } else {
+      ++i;
+    }
+  }
+
+  EXPECT_FALSE(result.empty()) << "No matching resource with name " << name << " and type " << type
+                               << " in section " << section << " of message.";
+  return result;
+}
+
 void AgentTest::ExpectAddressPlaceholder(DnsMessage* message, MdnsResourceSection section) {
-  ExpectResource(message, section, kHostFullName, DnsType::kA);
+  ExpectResource(message, section, kLocalHostFullName, DnsType::kA);
+}
+
+void AgentTest::ExpectAddresses(DnsMessage* message, MdnsResourceSection section,
+                                const std::string& host_full_name,
+                                const std::vector<inet::IpAddress>& addresses) {
+  bool expect_v4 = false;
+  bool expect_v6 = false;
+  for (auto& address : addresses) {
+    if (address.is_v4()) {
+      expect_v4 = true;
+    } else {
+      expect_v6 = true;
+    }
+  }
+
+  if (expect_v4) {
+    auto resources = ExpectResources(message, section, host_full_name, DnsType::kA);
+    for (auto& address : addresses) {
+      if (address.is_v4()) {
+        ExpectAddress(resources, address);
+      }
+    }
+  }
+
+  if (expect_v6) {
+    auto resources = ExpectResources(message, section, host_full_name, DnsType::kAaaa);
+    for (auto& address : addresses) {
+      if (address.is_v6()) {
+        ExpectAddress(resources, address);
+      }
+    }
+  }
+}
+
+void AgentTest::ExpectAddress(std::vector<std::shared_ptr<DnsResource>>& resources,
+                              inet::IpAddress address) {
+  for (auto i = resources.begin(); i != resources.end(); ++i) {
+    if ((*i)->a_.address_.address_ == address) {
+      resources.erase(i);
+      return;
+    }
+  }
+
+  EXPECT_TRUE(false) << "No matching address " << address;
 }
 
 void AgentTest::ExpectNoOtherQuestionOrResource(DnsMessage* message) {

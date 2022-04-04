@@ -22,7 +22,8 @@ class MdnsInterfaceTransceiverTest : public MdnsInterfaceTransceiver {
  public:
   MdnsInterfaceTransceiverTest(inet::IpAddress address, const std::string& name, uint32_t index,
                                Media media)
-      : MdnsInterfaceTransceiver(address, name, index, media) {}
+      : MdnsInterfaceTransceiver(address, name, index, media),
+        ip_versions_(address.is_v4() ? IpVersions::kV4 : IpVersions::kV6) {}
 
   virtual ~MdnsInterfaceTransceiverTest() override {}
 
@@ -55,6 +56,7 @@ class MdnsInterfaceTransceiverTest : public MdnsInterfaceTransceiver {
 
  protected:
   // MdnsInterfaceTransceiver overrides.
+  enum IpVersions IpVersions() override { return ip_versions_; }
   int SetOptionDisableMulticastLoop() override { return 0; }
   int SetOptionJoinMulticastGroup() override { return 0; }
   int SetOptionOutboundInterface() override { return 0; }
@@ -68,6 +70,9 @@ class MdnsInterfaceTransceiverTest : public MdnsInterfaceTransceiver {
     send_to_address_ = address;
     return 0;
   }
+
+ private:
+  enum IpVersions ip_versions_;
 };
 
 // Constructs an |MdnsInterfaceTransceiverTest| and checks the values of its

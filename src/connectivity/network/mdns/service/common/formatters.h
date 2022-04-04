@@ -13,7 +13,9 @@
 namespace mdns {
 
 std::ostream& operator<<(std::ostream& os, const Media& value);
+std::ostream& operator<<(std::ostream& os, const IpVersions& value);
 std::ostream& operator<<(std::ostream& os, const ReplyAddress& value);
+std::ostream& operator<<(std::ostream& os, MdnsResourceSection value);
 
 }  // namespace mdns
 

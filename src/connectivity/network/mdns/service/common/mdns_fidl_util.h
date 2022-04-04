@@ -33,6 +33,9 @@ class MdnsFidlUtil {
   static std::unique_ptr<Mdns::Publication> Convert(
       const fuchsia::net::mdns::PublicationPtr& publication_ptr);
 
+  static std::unique_ptr<Mdns::Publication> Convert(
+      const fuchsia::net::mdns::ServiceInstancePublication& publication);
+
   static std::vector<fuchsia::net::IpAddress> Convert(
       const std::vector<inet::SocketAddress>& addresses);
 

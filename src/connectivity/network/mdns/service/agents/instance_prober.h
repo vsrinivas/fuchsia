@@ -18,7 +18,9 @@ class InstanceProber : public Prober {
 
   // Creates a |InstanceProber|.
   InstanceProber(MdnsAgent::Owner* owner, const std::string& service_name,
-                 const std::string& instance_name, inet::IpPort port, CompletionCallback callback);
+                 const std::string& instance_name, const std::string& host_full_name,
+                 inet::IpPort port, Media media, IpVersions ip_verions,
+                 CompletionCallback callback);
 
   ~InstanceProber() override;
 
@@ -31,6 +33,7 @@ class InstanceProber : public Prober {
  private:
   std::string instance_full_name_;
   inet::IpPort port_;
+  std::string host_full_name_;
 
  public:
   // Disallow copy, assign and move.

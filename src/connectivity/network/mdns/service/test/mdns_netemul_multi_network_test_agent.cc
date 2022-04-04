@@ -181,7 +181,8 @@ class TestAgent {
   void SendRequest() {
     DnsMessage message;
     message.questions_.push_back(std::make_shared<DnsQuestion>(kInstanceName, DnsType::kAaaa));
-    transceiver_.SendMessage(&message, ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
+    transceiver_.SendMessage(std::move(message),
+                             ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
   }
 
   void Quit(int exit_code) {

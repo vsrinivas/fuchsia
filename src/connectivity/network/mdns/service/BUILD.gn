@@ -86,8 +86,12 @@ source_set("source_set") {
     "services/mdns_deprecated_service_impl.h",
     "services/mdns_service_impl.cc",
     "services/mdns_service_impl.h",
+    "services/proxy_host_publisher_service_impl.cc",
+    "services/proxy_host_publisher_service_impl.h",
     "services/service_impl_base.h",
     "services/service_impl_manager.h",
+    "services/service_instance_publisher_service_impl.cc",
+    "services/service_instance_publisher_service_impl.h",
     "services/service_instance_resolver_service_impl.cc",
     "services/service_instance_resolver_service_impl.h",
     "transport/mdns_interface_transceiver.cc",
@@ -125,12 +129,14 @@ source_set("source_set") {
 
 test("mdns_test") {
   sources = [
+    "test/address_prober_test.cc",
     "test/address_responder_test.cc",
     "test/agent_test.cc",
     "test/agent_test.h",
     "test/config_test.cc",
     "test/dns_names_test.cc",
     "test/dns_reading_test.cc",
+    "test/instance_prober_test.cc",
     "test/instance_responder_test.cc",
     "test/interface_transceiver_test.cc",
     "test/mdns_transceiver_test.cc",

@@ -13,8 +13,13 @@ namespace mdns {
 // static
 constexpr zx::duration Prober::kMaxProbeInterval = zx::msec(250);
 
-Prober::Prober(MdnsAgent::Owner* owner, DnsType type, CompletionCallback callback)
-    : MdnsAgent(owner), type_(type), callback_(std::move(callback)) {
+Prober::Prober(MdnsAgent::Owner* owner, DnsType type, Media media, IpVersions ip_versions,
+               CompletionCallback callback)
+    : MdnsAgent(owner),
+      type_(type),
+      media_(media),
+      ip_versions_(ip_versions),
+      callback_(std::move(callback)) {
   FX_DCHECK(callback_);
 }
 
@@ -23,9 +28,9 @@ Prober::~Prober() {}
 void Prober::Start(const std::string& local_host_full_name) {
   FX_DCHECK(!local_host_full_name.empty());
 
-  MdnsAgent::Start(local_host_full_name);
-
   local_host_full_name_ = local_host_full_name;
+
+  MdnsAgent::Start(local_host_full_name_);
 
   question_ = std::make_shared<DnsQuestion>(ResourceName(), DnsType::kAny);
   question_->unicast_response_ = true;
@@ -33,8 +38,10 @@ void Prober::Start(const std::string& local_host_full_name) {
   Probe(InitialDelay());
 }
 
-void Prober::ReceiveResource(const DnsResource& resource, MdnsResourceSection section) {
-  if (resource.name_.dotted_string_ != ResourceName()) {
+void Prober::ReceiveResource(const DnsResource& resource, MdnsResourceSection section,
+                             ReplyAddress sender_address) {
+  if (!sender_address.Matches(media_) || !sender_address.Matches(ip_versions_) ||
+      resource.name_.dotted_string_ != ResourceName()) {
     return;
   }
 
@@ -72,7 +79,7 @@ void Prober::Probe(zx::duration delay) {
           // we avoid referencing any members.
           callback(true);
         } else {
-          SendQuestion(question_);
+          SendQuestion(question_, ReplyAddress::Multicast(media_, ip_versions_));
           SendProposedResources(MdnsResourceSection::kAuthority);
           Probe(kMaxProbeInterval);
         }

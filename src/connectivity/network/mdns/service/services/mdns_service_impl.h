@@ -72,11 +72,13 @@ class MdnsServiceImpl {
   bool ready_ = false;
   Mdns mdns_;
   MdnsTransceiver transceiver_;
-  std::unordered_map<std::string, std::unique_ptr<Mdns::Publisher>>
-      publishers_by_instance_full_name_;
+  std::vector<std::unique_ptr<Mdns::Publisher>> publishers_;
 
   MdnsDeprecatedServiceImpl deprecated_services_;
 
+  ServiceImplManager<fuchsia::net::mdns::ProxyHostPublisher> proxy_host_publisher_manager_;
+  ServiceImplManager<fuchsia::net::mdns::ServiceInstancePublisher>
+      service_instance_publisher_manager_;
   ServiceImplManager<fuchsia::net::mdns::ServiceInstanceResolver>
       service_instance_resolver_manager_;
 

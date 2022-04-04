@@ -17,10 +17,6 @@
 
 namespace mdns {
 
-// kExpired is used when distributing resource expirations. It's not a real
-// resource section.
-enum class MdnsResourceSection { kAnswer, kAuthority, kAdditional, kExpired };
-
 // Base class for objects that drive mDNS question and record traffic.
 //
 // Agents that have been 'started' receive all inbound questions and resource records via their
@@ -56,7 +52,8 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
     virtual void PostTaskForTime(MdnsAgent* agent, fit::closure task, zx::time target_time) = 0;
 
     // Sends a question to the multicast address.
-    virtual void SendQuestion(std::shared_ptr<DnsQuestion> question) = 0;
+    virtual void SendQuestion(std::shared_ptr<DnsQuestion> question,
+                              ReplyAddress reply_address) = 0;
 
     // Sends a resource to the specified address. The default |reply_address|
     // |kV4MulticastReply| sends the resource to the V4 or V6
@@ -69,7 +66,7 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
     // multicast address.
     virtual void SendAddresses(MdnsResourceSection section, const ReplyAddress& reply_address) = 0;
 
-    // Registers the resource for renewal. See |MdnsAgent::Renew|.
+    // Registers the resource for renewal. See |Mdns::Renew|.
     virtual void Renew(const DnsResource& resource) = 0;
 
     // Removes the specified agent.
@@ -86,14 +83,18 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
   // Specializations should call this method first.
   virtual void Start(const std::string& local_host_full_name) { started_ = true; }
 
-  // Presents a received question. This agent must not call |RemoveSelf| during
-  // a call to this method.
+  // Presents a received question. |sender_address| identifies the sender of the question. If
+  // the question is not marked for unicast response, |reply_address| is the multicast placeholder
+  // address with |Media::kBoth| and |IpVersions::kBoth|. If the question is marked for unicast
+  // response, |reply_address| is the same as |sender_address|. This agent must not call
+  // |RemoveSelf| during a call to this method.
   virtual void ReceiveQuestion(const DnsQuestion& question, const ReplyAddress& reply_address,
                                const ReplyAddress& sender_address) {}
 
-  // Presents a received resource. This agent must not call |RemoveSelf| during
-  // a call to this method.
-  virtual void ReceiveResource(const DnsResource& resource, MdnsResourceSection section) {}
+  // Presents a received resource. |sender_address| identifies the sender of the resource. This
+  // agent must not call |RemoveSelf| during a call to this method.
+  virtual void ReceiveResource(const DnsResource& resource, MdnsResourceSection section,
+                               ReplyAddress sender_address) {}
 
   // Signals the end of a message. This agent must not call |RemoveSelf| during
   // a call to this method.
@@ -130,9 +131,10 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
     owner_->PostTaskForTime(this, std::move(task), target_time);
   }
 
-  // Sends a question to the multicast address.
-  void SendQuestion(std::shared_ptr<DnsQuestion> question) const {
-    owner_->SendQuestion(std::move(question));
+  // Sends a question to the specified address.
+  void SendQuestion(std::shared_ptr<DnsQuestion> question,
+                    const ReplyAddress& reply_address) const {
+    owner_->SendQuestion(std::move(question), reply_address);
   }
 
   // Sends a resource to the specified address.

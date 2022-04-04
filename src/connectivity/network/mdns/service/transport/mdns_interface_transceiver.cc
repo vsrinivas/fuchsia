@@ -298,15 +298,26 @@ void MdnsInterfaceTransceiver::FixUpAddresses(
   std::string name;
 
   // Move A/AAAA resources to the end of the vector.
-  auto iter = std::remove_if(
-      resources->begin(), resources->end(), [&name](const std::shared_ptr<DnsResource>& resource) {
-        if (resource->type_ != DnsType::kA && resource->type_ != DnsType::kAaaa) {
-          return false;
-        }
+  auto iter = std::remove_if(resources->begin(), resources->end(),
+                             [&name](const std::shared_ptr<DnsResource>& resource) {
+                               if (resource->type_ == DnsType::kA) {
+                                 if (resource->a_.address_.address_.is_valid()) {
+                                   // Don't fix up valid addresses.
+                                   return false;
+                                 }
+                               } else if (resource->type_ == DnsType::kAaaa) {
+                                 if (resource->aaaa_.address_.address_.is_valid()) {
+                                   // Don't fix up valid addresses.
+                                   return false;
+                                 }
+                               } else {
+                                 // Not an address resource.
+                                 return false;
+                               }
 
-        name = resource->name_.dotted_string_;
-        return true;
-      });
+                               name = resource->name_.dotted_string_;
+                               return true;
+                             });
 
   if (iter == resources->end()) {
     // No address resources found/moved.

@@ -1,0 +1,58 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.mdns;
+
+using fuchsia.net;
+
+/// Discoverable protocol for publishing on behalf of another host.
+@discoverable
+protocol ProxyHostPublisher {
+    /// Publishes a host name on behalf of a remote host and provides a `ServiceInstancePublisher`
+    /// for publishing service instances on behalf of that host.
+    ///
+    /// + request `host` host name to publish.
+    /// + request `addresses` addresses to publish for the host name.
+    /// + request `options` options to be applied to the publication.
+    /// + request `service_instance_publisher` server end of the `ServiceInstancePublisher` for
+    ///   the proxied host.
+    ///
+    /// This method causes the service to publish the host name at the specified addresses. The
+    /// actual host must not be present on any relevant links or there will be a conflict. If
+    /// the `perform_probe` option is true or not supplied (true by default), a probe will occur
+    /// to verify that the host name isn't otherwise published.
+    PublishProxyHost(resource struct {
+        host host_name;
+        addresses vector<fuchsia.net.IpAddress>:MAX_ADDRESSES;
+        options ProxyHostPublicationOptions;
+        service_instance_publisher server_end:ServiceInstancePublisher;
+    }) -> (struct {}) error PublishProxyHostError;
+};
+
+/// Options for `ProxyHostPublisher.PublishProxyHost`.
+type ProxyHostPublicationOptions = table {
+    /// The media (wired, wireless, both) of the interfaces on which the host name should be
+    /// published. If this value is not supplied, the host name will be published on wired and
+    /// wireless media.
+    1: media Media;
+
+    /// The IP versions (V4, V6, both) of the interfaces on which the host name should be published.
+    /// If this value is not supplied, the host name will be published on interfaces of both IP
+    /// versions.
+    2: ip_versions IpVersions;
+
+    /// Whether a probe for conflicting host names should be performed prior to publishing the
+    /// host name. If this value is not supplied, probing is performed.
+    3: perform_probe bool;
+};
+
+/// Error values for `ProxyHostPublisher.PublishProxyHost`.
+type PublishProxyHostError = flexible enum : uint32 {
+    /// The specified host name is already being published by the mDNS local implementation.
+    ALREADY_PUBLISHED_LOCALLY = 1;
+
+    /// The specified host name is already being published by another host on the subnet.
+    /// This result occurs when an initial probe discovers a conflicting host name.
+    ALREADY_PUBLISHED_ON_SUBNET = 2;
+};

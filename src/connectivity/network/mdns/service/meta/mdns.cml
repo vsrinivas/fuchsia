@@ -12,8 +12,10 @@
     capabilities: [
         {
             protocol: [
+                "fuchsia.net.mdns.ProxyHostPublisher",
                 "fuchsia.net.mdns.Publisher",
                 "fuchsia.net.mdns.Resolver",
+                "fuchsia.net.mdns.ServiceInstancePublisher",
                 "fuchsia.net.mdns.ServiceInstanceResolver",
                 "fuchsia.net.mdns.Subscriber",
             ],
@@ -36,8 +38,10 @@
     expose: [
         {
             protocol: [
+                "fuchsia.net.mdns.ProxyHostPublisher",
                 "fuchsia.net.mdns.Publisher",
                 "fuchsia.net.mdns.Resolver",
+                "fuchsia.net.mdns.ServiceInstancePublisher",
                 "fuchsia.net.mdns.ServiceInstanceResolver",
                 "fuchsia.net.mdns.Subscriber",
             ],

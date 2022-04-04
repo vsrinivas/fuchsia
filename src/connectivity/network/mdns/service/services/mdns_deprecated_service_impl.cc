@@ -131,8 +131,8 @@ void MdnsDeprecatedServiceImpl::PublishServiceInstance(
         publishers_by_instance_full_name_.erase(instance_full_name);
       });
 
-  bool result = mdns_.PublishServiceInstance(service, instance, perform_probe,
-                                             fidl::To<Media>(media), publisher.get());
+  bool result = mdns_.PublishServiceInstance(service, instance, fidl::To<Media>(media),
+                                             IpVersions::kBoth, perform_probe, publisher.get());
   // Because of the erase call above, |PublishServiceInstance| should always succeed.
   FX_DCHECK(result);
 

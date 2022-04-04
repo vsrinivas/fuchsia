@@ -19,7 +19,12 @@ class AddressResponder : public MdnsAgent {
  public:
   // Creates an |AddressResponder| that responds to queries for the local host name with local
   // addresses.
-  explicit AddressResponder(MdnsAgent::Owner* owner);
+  AddressResponder(MdnsAgent::Owner* owner, Media media, IpVersions ip_versions);
+
+  // Creates an |AddressResponder| that responds to queries for the specified host name with the
+  // specified addresses.
+  AddressResponder(MdnsAgent::Owner* owner, std::string host_full_name,
+                   std::vector<inet::IpAddress> addresses, Media media, IpVersions ip_versions);
 
   ~AddressResponder() override;
 
@@ -34,9 +39,14 @@ class AddressResponder : public MdnsAgent {
   static constexpr zx::time kThrottleStateIdle = zx::time::infinite_past();
   static constexpr zx::time kThrottleStatePending = zx::time::infinite();
 
-  void MaybeSendAddresses(const ReplyAddress& reply_address);
+  void MaybeSendAddresses(ReplyAddress reply_address);
+
+  void SendAddressResources(ReplyAddress reply_address);
 
   std::string host_full_name_;
+  std::vector<inet::IpAddress> addresses_;
+  Media media_;
+  IpVersions ip_versions_;
   zx::time throttle_state_ = kThrottleStateIdle;
 
  public:

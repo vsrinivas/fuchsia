@@ -116,6 +116,22 @@ DnsResource::DnsResource(const std::string& name, DnsType type)
   }
 }
 
+DnsResource::DnsResource(std::string name, inet::IpAddress address) : name_(DnsName(name)) {
+  if (address.is_v4()) {
+    type_ = DnsType::kA;
+    new (&a_) DnsResourceDataA();
+    time_to_live_ = kShortTimeToLive;
+    cache_flush_ = true;
+    a_.address_.address_ = address;
+  } else {
+    type_ = DnsType::kAaaa;
+    new (&aaaa_) DnsResourceDataAaaa();
+    time_to_live_ = kShortTimeToLive;
+    cache_flush_ = true;
+    aaaa_.address_.address_ = address;
+  }
+}
+
 DnsResource::DnsResource(const DnsResource& other) {
   name_ = other.name_;
   type_ = other.type_;

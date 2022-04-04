@@ -1,0 +1,161 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.mdns;
+
+using fuchsia.net;
+using zx;
+
+/// Discoverable protocol for publishing service instances.
+@discoverable
+protocol ServiceInstancePublisher {
+    /// Publishes a service instance. `publication_responder` is consulted via its
+    /// `OnPublication` method for initial announcements and to answer queries.
+    /// The service is published until the `publication_responder` channel closes. In
+    /// addition to announcements and queries for the service type, all queries
+    /// for subtypes are answered subject to filtering through the responder.
+    ///
+    /// + request `service` name of the type of service to be published. For example, cast uses
+    ///   '_googlecast._tcp.'.
+    /// + request `instance` name of the instance to be published. This is often a descriptive name
+    ///   such as `Office Printer` or a name containing a large random number.
+    /// + request `options` options to be applied to the publication.
+    /// + request `publication_responder` client end of the `ServiceInstancePublicationResponder`
+    ///   channel consulted when formulating service instance announcements and query responses.
+    /// * error reason the requested operation failed.
+    ///
+    /// If a service with the same service and instance names is already published, the
+    /// old publication will be terminated, and the responder channel for the old
+    /// publication will be closed.
+    PublishServiceInstance(resource struct {
+        service service_name;
+        instance instance_name;
+        options ServiceInstancePublicationOptions;
+        publication_responder client_end:ServiceInstancePublicationResponder;
+    }) -> (struct {}) error PublishServiceInstanceError;
+};
+
+/// Options for `ServiceInstancePublisher.PublishServiceInstance`.
+type ServiceInstancePublicationOptions = table {
+    /// The media (wired, wireless, both) of the interfaces on which the service instance should
+    /// be published. The default `media` value depends on whether the `ServiceInstancePublisher`
+    /// is associated with a proxy host. If so, the default matches the `media` value of the
+    /// `ProxyHostPublicationOptions` for the proxy host. If not, the default is both wired and
+    /// wireless media.
+    1: media Media;
+
+    /// The IP versions (V4, V6, both) with which the service instance should
+    /// be published. The default `ip_versions` value depends on whether the
+    /// `ServiceInstancePublisher` is associated with a proxy host. If so, the default matches the
+    /// `ip_versions` value of the `ProxyHostPublicationOptions` for the proxy host. If not, the
+    /// default value is both IPv4 and IPv6.
+    2: ip_versions IpVersions;
+
+    /// Whether a probe for conflicting instances should be performed prior to publishing the
+    /// instance. If this value is not supplied, probing is performed.
+    3: perform_probe bool;
+};
+
+/// Error values for `ServiceInstancePublisher.PublishServiceInstance`.
+type PublishServiceInstanceError = strict enum : uint32 {
+    /// The specified service instance is already being published by the mDNS local implementation.
+    ALREADY_PUBLISHED_LOCALLY = 1;
+
+    /// The specified service instance is already being published by another host on the subnet.
+    /// This result occurs when an initial probe discovers a conflicting service instance.
+    ALREADY_PUBLISHED_ON_SUBNET = 2;
+};
+
+/// Client-supplied publication responder interface.
+protocol ServiceInstancePublicationResponder {
+    /// Provides instance information for initial announcements and query
+    /// responses relating to the service instance specified in
+    /// `ServiceInstancePublisher.PublishServiceInstance`.
+    ///
+    /// + request `publication_cause` the action that motivates this publication.
+    /// + request `subtype` the subtype if the publication relates to a subtype of the service,
+    ///   otherwise null.
+    /// + request `source_addresses` addresses from which queries arrived, if applicable.
+    /// - response `publication` the desired publication. Strings in `publication.text` are sent
+    ///   in the TXT resource.
+    /// * error indicates the publication should not be sent.
+    ///
+    /// If no publication should be sent, this method should return a `DO_NOT_RESPOND` error.
+    OnPublication(struct {
+        publication_cause ServiceInstancePublicationCause;
+        subtype subtype_name:optional;
+        source_addresses vector<fuchsia.net.IpAddress>:MAX_ADDRESSES;
+    }) -> (struct {
+        publication ServiceInstancePublication;
+    }) error OnPublicationError;
+
+    /// Sets the subtypes for the service instance. The specified subtypes will
+    /// be announced subject to filtering through the responder. The initial
+    /// subtype collection is empty.
+    -> SetSubtypes(struct {
+        subtypes vector<subtype_name>:MAX_SUBTYPES;
+    });
+
+    /// Initiates reannouncement of the service instance due to a change in the
+    /// instance's port number or text strings. All announcements are filtered
+    /// through `OnPublication`, which replies with the new port and text
+    /// values.
+    -> Reannounce();
+};
+
+/// Error values for `ServiceInstancePublicationResponder.OnPublication`.
+type OnPublicationError = strict enum : uint32 {
+    /// Indicates the publisher should not respond to this publication request.
+    DO_NOT_RESPOND = 1;
+};
+
+/// Describes the cause of a publication.
+type ServiceInstancePublicationCause = strict enum : uint32 {
+    /// Indicates the publication is part of an initial announcement.
+    ANNOUNCEMENT = 1;
+
+    /// Indicates the publication is in response to a question that requests a
+    /// multicast response.
+    QUERY_MULTICAST_RESPONSE = 2;
+
+    /// Indicates the publication is in response to a question that requests a
+    /// unicast response.
+    QUERY_UNICAST_RESPONSE = 3;
+};
+
+/// Describes an initial instance announcement or query response. In typical
+/// use, the default SRV priority, SRV weight and TTL values should be used. TTL
+/// values are rounded down to the nearest second. TTL values less than one
+/// second are not permitted and will result in the `ServiceInstancePublicationResponder`
+/// channel being closed.
+type ServiceInstancePublication = table {
+    /// The port at which the service instance is addressable. This value is required.
+    1: port uint16;
+
+    /// Text strings describing the instance. If this value is not supplied, no text strings are
+    /// associated with the instance in this publication.
+    2: text vector<txt_character_string>:MAX_TEXT_STRINGS;
+
+    /// The priority of the SRV resource record for this publication. See
+    /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details. If this value is not supplied,
+    /// the default SRV priority of 0 is used.
+    3: srv_priority uint16;
+
+    /// The weight of the SRV resource record for this publication. See
+    /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details. If this value is not supplied,
+    /// the default SRV weight of 0 is used.
+    4: srv_weight uint16;
+
+    /// Time-to-live for PTR resource records. If this value is not supplied, the default PTR TTL
+    /// of 2 minutes is used. This value is rounded down to the nearest second.
+    5: ptr_ttl zx.duration;
+
+    /// Time-to-live for SRV resource records. If this value is not supplied, the default SRV TTL
+    /// of 2 minutes is used. This value is rounded down to the nearest second.
+    6: srv_ttl zx.duration;
+
+    /// Time-to-live for TXT resource records. If this value is not supplied, the default TXT TTL
+    /// of 75 minutes is used. This value is rounded down to the nearest second.
+    7: txt_ttl zx.duration;
+};

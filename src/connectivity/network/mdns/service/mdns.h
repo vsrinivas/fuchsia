@@ -18,6 +18,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include "src/connectivity/network/mdns/service/agents/address_prober.h"
+#include "src/connectivity/network/mdns/service/agents/address_responder.h"
 #include "src/connectivity/network/mdns/service/agents/mdns_agent.h"
 #include "src/connectivity/network/mdns/service/encoding/dns_message.h"
 #include "src/connectivity/network/mdns/service/transport/mdns_interface_transceiver.h"
@@ -59,7 +61,7 @@ class Mdns : public MdnsAgent::Owner {
     // Sends a message to the specified address. A V6 interface will send to
     // |MdnsAddresses::V6Multicast| if |reply_address.socket_address()| is
     // |MdnsAddresses::V4Multicast|.
-    virtual void SendMessage(DnsMessage* message, const ReplyAddress& reply_address) = 0;
+    virtual void SendMessage(DnsMessage message, const ReplyAddress& reply_address) = 0;
 
     // Writes log messages describing lifetime traffic.
     virtual void LogTraffic() = 0;
@@ -174,6 +176,36 @@ class Mdns : public MdnsAgent::Owner {
     friend class Mdns;
   };
 
+  // Abstract base class for client-supplied host publisher.
+  class HostPublisher {
+   public:
+    virtual ~HostPublisher();
+
+    // Unpublishes the service instance. If this |Publisher| is already
+    // unpublished, this method does nothing.
+    void Unpublish();
+
+    // Reports whether the publication attempt was successful. Publication can
+    // fail if the service instance is currently being published by another device
+    // on the subnet.
+    virtual void ReportSuccess(bool success) = 0;
+
+   protected:
+    HostPublisher() = default;
+
+   private:
+    void Connect(std::shared_ptr<AddressResponder> address_responder);
+
+    void ConnectProber(std::shared_ptr<AddressProber> address_prober);
+
+    void DisconnectProber();
+
+    std::shared_ptr<AddressResponder> address_responder_;
+    std::shared_ptr<AddressProber> address_prober_;
+
+    friend class Mdns;
+  };
+
   using ResolveHostNameCallback =
       fit::function<void(const std::string& host_name, const inet::IpAddress& v4_address,
                          const inet::IpAddress& v6_address)>;
@@ -221,8 +253,25 @@ class Mdns : public MdnsAgent::Owner {
   // already published locally. The instance is unpublished when the publisher
   // is deleted or its |Unpublish| method is called. Must not be called before
   // |Start|'s ready callback is called.
-  bool PublishServiceInstance(const std::string& service_name, const std::string& instance_name,
-                              bool perform_probe, Media media, Publisher* publisher);
+  bool PublishServiceInstance(std::string service_name, std::string instance_name, Media media,
+                              IpVersions ip_versions, bool perform_probe, Publisher* publisher) {
+    return PublishServiceInstance("", {}, std::move(service_name), std::move(instance_name), media,
+                                  ip_versions, perform_probe, publisher);
+  }
+
+  // Publishes a service instance for a host identified by |host_name| and |addresses|. Returns
+  // false if and only if the instance was already published locally. The instance is unpublished
+  // when the publisher is deleted or its |Unpublish| method is called. Must not be called before
+  // |Start|'s ready callback is called.
+  bool PublishServiceInstance(std::string host_name, std::vector<inet::IpAddress> addresses,
+                              std::string service_name, std::string instance_name, Media media,
+                              IpVersions ip_versions, bool perform_probe, Publisher* publisher);
+
+  // Publishes a host. Returns false if and only if the host was already published locally. The
+  // host is unpublished when the publisher is deleted or its |Unpublish| method is called. Must
+  // not be called for |Start|'s ready callback is called.
+  bool PublishHost(std::string host_name, std::vector<inet::IpAddress> addresses, Media media,
+                   IpVersions ip_versions, bool perform_probe, HostPublisher* publisher);
 
   // Writes log messages describing lifetime traffic.
   void LogTraffic();
@@ -253,7 +302,8 @@ class Mdns : public MdnsAgent::Owner {
     std::size_t operator()(const ReplyAddress& reply_address) const noexcept {
       return std::hash<inet::SocketAddress>{}(reply_address.socket_address()) ^
              (std::hash<inet::IpAddress>{}(reply_address.interface_address()) << 1) ^
-             (std::hash<Media>{}(reply_address.media()) << 2);
+             (std::hash<Media>{}(reply_address.media()) << 2) ^
+             (std::hash<IpVersions>{}(reply_address.ip_versions()) << 3);
     }
   };
 
@@ -343,7 +393,7 @@ class Mdns : public MdnsAgent::Owner {
 
   void PostTaskForTime(MdnsAgent* agent, fit::closure task, zx::time target_time) override;
 
-  void SendQuestion(std::shared_ptr<DnsQuestion> question) override;
+  void SendQuestion(std::shared_ptr<DnsQuestion> question, ReplyAddress reply_address) override;
 
   void SendResource(std::shared_ptr<DnsResource> resource, MdnsResourceSection section,
                     const ReplyAddress& reply_address) override;
@@ -369,7 +419,8 @@ class Mdns : public MdnsAgent::Owner {
 
   // Distributes resources to all the agents, starting with the resource
   // renewer.
-  void ReceiveResource(const DnsResource& resource, MdnsResourceSection section);
+  void ReceiveResource(const DnsResource& resource, MdnsResourceSection section,
+                       ReplyAddress sender_address);
 
   // Runs tasks in |task_queue_| using |dispatcher_|.
   void PostTask();
@@ -392,6 +443,8 @@ class Mdns : public MdnsAgent::Owner {
       instance_requestors_by_service_name_;
   std::unordered_map<std::string, std::shared_ptr<InstanceResponder>>
       instance_responders_by_instance_full_name_;
+  std::unordered_map<std::string, std::shared_ptr<AddressResponder>>
+      address_responders_by_host_full_name_;
   std::shared_ptr<DnsResource> address_placeholder_;
 #ifdef MDNS_TRACE
   // Because |verbose_| defaults to true, traffic will be logged as long as the

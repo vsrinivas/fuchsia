@@ -21,10 +21,13 @@ namespace mdns {
 // Dynamically publishes an instance of a service type.
 class InstanceResponder : public MdnsAgent {
  public:
-  // Creates an |InstanceResponder|. The publisher is consulted to determine
-  // how queries are handled.
-  InstanceResponder(MdnsAgent::Owner* owner, const std::string& service_name,
-                    const std::string& instance_name, Media media, Mdns::Publisher* publisher);
+  // Creates an |InstanceResponder|. The publisher is consulted to determine how queries are
+  // handled. If |host_full_name| is empty and |addresses| is empty, the local host name and
+  // local addresses will be used. Otherwise, neither parameter may be empty.
+  InstanceResponder(MdnsAgent::Owner* owner, std::string host_full_name,
+                    std::vector<inet::IpAddress> addresses, std::string service_name,
+                    std::string instance_name, Media media, IpVersions ip_versions,
+                    Mdns::Publisher* publisher);
 
   ~InstanceResponder() override;
 
@@ -85,14 +88,25 @@ class InstanceResponder : public MdnsAgent {
   // Frees resources associated with |subtype| if they're no longer required.
   void IdleCheck(const std::string& subtype);
 
-  // Returns the correct multicast reply address depending on |media_|.
-  ReplyAddress multicast_reply() const;
+  // Returns the correct multicast reply address depending on |media_| and |ip_verions_|.
+  ReplyAddress multicast_reply() const { return ReplyAddress::Multicast(media_, ip_versions_); }
+
+  // Constrain multicast reply addresses to the allowed media and ip versions.
+  ReplyAddress Constrain(const ReplyAddress& reply_address) {
+    if (reply_address.is_multicast_placeholder()) {
+      return multicast_reply();
+    }
+
+    return reply_address;
+  }
 
   std::string host_full_name_;
+  std::vector<inet::IpAddress> addresses_;
   std::string service_name_;
   std::string instance_name_;
   std::string instance_full_name_;
   Media media_;
+  IpVersions ip_versions_;
   Mdns::Publisher* publisher_;
   std::vector<std::string> subtypes_;
   zx::duration announcement_interval_ = kInitialAnnouncementInterval;

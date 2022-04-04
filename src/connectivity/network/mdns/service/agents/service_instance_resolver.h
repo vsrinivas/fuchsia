@@ -30,7 +30,8 @@ class ServiceInstanceResolver : public MdnsAgent {
   // MdnsAgent overrides.
   void Start(const std::string& service_instance) override;
 
-  void ReceiveResource(const DnsResource& resource, MdnsResourceSection section) override;
+  void ReceiveResource(const DnsResource& resource, MdnsResourceSection section,
+                       ReplyAddress sender_address) override;
 
   void EndOfMessage() override;
 

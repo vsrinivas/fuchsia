@@ -16,8 +16,14 @@ class AddressProber : public Prober {
  public:
   using CompletionCallback = fit::function<void(bool)>;
 
-  // Creates an |AddressProber|.
-  AddressProber(MdnsAgent::Owner* owner, CompletionCallback callback);
+  // Creates an |AddressProber| for the local host.
+  AddressProber(MdnsAgent::Owner* owner, Media media, IpVersions ip_versions,
+                CompletionCallback callback);
+
+  // Creates an |AddressProber| for a host identified by |host_full_name| and |addresses|.
+  AddressProber(MdnsAgent::Owner* owner, std::string host_full_name,
+                std::vector<inet::IpAddress> addresses, Media media, IpVersions ip_versions,
+                CompletionCallback callback);
 
   ~AddressProber() override;
 
@@ -26,6 +32,10 @@ class AddressProber : public Prober {
   const std::string& ResourceName() override;
 
   void SendProposedResources(MdnsResourceSection section) override;
+
+ private:
+  std::string host_full_name_;
+  std::vector<inet::IpAddress> addresses_;
 
  public:
   // Disallow copy, assign and move.

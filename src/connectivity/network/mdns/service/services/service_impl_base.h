@@ -18,7 +18,11 @@ class ServiceImplBase : public TProtocol {
     binding_.set_error_handler([this](zx_status_t status) mutable { Quit(); });
   }
 
-  ~ServiceImplBase() override { Quit(); }
+  ~ServiceImplBase() override {
+    // Make sure we don't call |deleter_|.
+    deleter_ = nullptr;
+    Quit();
+  }
 
   // Disallow copy, assign and move.
   ServiceImplBase(const ServiceImplBase&) = delete;

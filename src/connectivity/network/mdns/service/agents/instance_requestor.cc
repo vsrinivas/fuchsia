@@ -8,6 +8,7 @@
 #include <lib/zx/time.h>
 
 #include "src/connectivity/network/mdns/service/common/mdns_names.h"
+#include "src/connectivity/network/mdns/service/common/types.h"
 
 namespace mdns {
 namespace {
@@ -44,7 +45,8 @@ void InstanceRequestor::Start(const std::string& local_host_full_name) {
   SendQuery();
 }
 
-void InstanceRequestor::ReceiveResource(const DnsResource& resource, MdnsResourceSection section) {
+void InstanceRequestor::ReceiveResource(const DnsResource& resource, MdnsResourceSection section,
+                                        ReplyAddress sender_address) {
   switch (resource.type_) {
     case DnsType::kPtr:
       if (resource.name_.dotted_string_ == service_full_name_) {
@@ -166,7 +168,7 @@ void InstanceRequestor::ReportAllDiscoveries(Mdns::Subscriber* subscriber) {
 }
 
 void InstanceRequestor::SendQuery() {
-  SendQuestion(question_);
+  SendQuestion(question_, ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
   for (auto& subscriber : subscribers_) {
     subscriber->Query(question_->type_);
   }

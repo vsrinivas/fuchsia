@@ -2,20 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <iostream>
+
 #include "lib/gtest/real_loop_fixture.h"
+#include "src/connectivity/network/mdns/service/common/formatters.h"
+#include "src/connectivity/network/mdns/service/encoding/dns_formatting.h"
 #include "src/connectivity/network/mdns/service/mdns.h"
 
 namespace mdns {
 namespace test {
 
-static const std::string kHostName = "test_host_name";
-static const std::string kHostFullName = "test_host_name.local.";
-static const std::string kServiceName = "_yardapult._tcp.";
-static const std::string kServiceFullName = "_yardapult._tcp.local.";
-static const std::string kInstanceName = "my";
-static const std::string kInstanceFullName = "my._yardapult._tcp.local.";
-static const ReplyAddress kReplyAddress({192, 168, 78, 9, inet::IpPort::From_in_port_t(5353)},
+constexpr char kHostName[] = "test_host_name";
+constexpr char kLocalHostFullName[] = "test_host_name.local.";
+constexpr char kServiceName[] = "_yardapult._tcp.";
+constexpr char kServiceFullName[] = "_yardapult._tcp.local.";
+constexpr char kInstanceName[] = "my";
+constexpr char kInstanceFullName[] = "my._yardapult._tcp.local.";
+static const ReplyAddress kReplyAddress({192, 168, 78, 9, inet::IpPort::From_uint16_t(5353)},
                                         {192, 168, 1, 1}, Media::kWired, IpVersions::kBoth);
+constexpr char kAlternateHostName[] = "test_alt_host_name";
+constexpr char kAlternateHostFullName[] = "test_alt_host_name.local.";
+const std::vector<inet::IpAddress> kAddresses{inet::IpAddress(192, 168, 1, 200),
+                                              inet::IpAddress(192, 168, 1, 201)};
+const inet::IpPort kPort = inet::IpPort::From_uint16_t(5353);
 
 // Unit tests for the |Mdns| class.
 class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
@@ -35,8 +44,9 @@ class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
 
   bool HasInterfaces() override { return has_interfaces_; }
 
-  void SendMessage(DnsMessage* message, const ReplyAddress& reply_address) override {
+  void SendMessage(DnsMessage message, const ReplyAddress& reply_address) override {
     send_message_called_ = true;
+    send_message_message_ = std::move(message);
     send_message_reply_address_ = reply_address;
   }
 
@@ -62,10 +72,13 @@ class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
     return result;
   }
 
-  void ExpectSendMessageCalled(const ReplyAddress& reply_address) {
+  void ExpectSendMessageNotCalled() { EXPECT_FALSE(get_and_clear_send_message_called()); }
+
+  DnsMessage ExpectSendMessageCalled(const ReplyAddress& reply_address) {
     EXPECT_TRUE(send_message_called_);
     EXPECT_EQ(reply_address, send_message_reply_address_);
     send_message_called_ = false;
+    return std::move(send_message_message_);
   }
 
   // Whether the ready callback has been called by the unit under test.
@@ -103,18 +116,8 @@ class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
     return resource;
   }
 
-  // Simulates the receipt of a typical query for PTR resources.
-  void ReceiveQuery() {
-    auto message = std::make_unique<DnsMessage>();
-    auto ptr_question = std::make_shared<DnsQuestion>(kServiceName, DnsType::kPtr);
-    message->questions_.push_back(ptr_question);
-    message->UpdateCounts();
-
-    ReceiveMessage(std::move(message), kReplyAddress);
-  }
-
   // Simulates the receipt of a typical query response (with PTR, SRC and A resources).
-  void ReceiveQueryResponse() {
+  void ReceivePtrQueryResponse() {
     auto message = std::make_unique<DnsMessage>();
     auto ptr_resource = std::make_shared<DnsResource>(kServiceFullName, DnsType::kPtr);
     ptr_resource->time_to_live_ = DnsResource::kShortTimeToLive;
@@ -126,11 +129,11 @@ class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
     srv_resource->srv_.priority_ = 0;
     srv_resource->srv_.weight_ = 0;
     srv_resource->srv_.port_ = inet::IpPort::From_uint16_t(5353);
-    srv_resource->srv_.target_ = kHostFullName;
+    srv_resource->srv_.target_ = kLocalHostFullName;
     message->additionals_.push_back(srv_resource);
 
     message->additionals_.push_back(
-        MakeAddressResource(kHostFullName, inet::IpAddress(192, 168, 66, 6)));
+        MakeAddressResource(kLocalHostFullName, inet::IpAddress(192, 168, 66, 6)));
 
     message->header_.SetResponse(true);
     message->header_.SetAuthoritativeAnswer(true);
@@ -139,12 +142,143 @@ class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
     ReceiveMessage(std::move(message), kReplyAddress);
   }
 
+  // Simulates the receipt of a query.
+  void ReceiveQuery(const std::string& name, DnsType type, ReplyAddress sender_address) {
+    auto message = std::make_unique<DnsMessage>();
+    auto ptr_question = std::make_shared<DnsQuestion>(name, type);
+    message->questions_.push_back(ptr_question);
+    message->UpdateCounts();
+
+    ReceiveMessage(std::move(message), sender_address);
+  }
+
+  // Expects that |message| contains a resource in |section| with the given parameters and returns
+  // it.
+  std::shared_ptr<DnsResource> ExpectResource(DnsMessage& message, MdnsResourceSection section,
+                                              const std::string& name, DnsType type,
+                                              DnsClass dns_class = DnsClass::kIn,
+                                              bool cache_flush = true) {
+    auto extracted = ExtractResources(1, message, section, name, type, dns_class, cache_flush);
+
+    EXPECT_FALSE(extracted.empty()) << "No matching resource with name " << name << " and type "
+                                    << type << " in section " << section << " of message.";
+    return extracted.empty() ? nullptr : std::move(extracted.front());
+  }
+
+  // Expects that |message| contains one or more resources in |section| with the given parameters
+  // and returns them.
+  std::vector<std::shared_ptr<DnsResource>> ExpectResources(DnsMessage& message,
+                                                            MdnsResourceSection section,
+                                                            const std::string& name, DnsType type,
+                                                            DnsClass dns_class = DnsClass::kIn,
+                                                            bool cache_flush = true) {
+    auto extracted = ExtractResources(std::numeric_limits<size_t>::max(), message, section, name,
+                                      type, dns_class, cache_flush);
+    EXPECT_FALSE(extracted.empty()) << "No matching resource with name " << name << " and type "
+                                    << type << " in section " << section << " of message.";
+    return extracted;
+  }
+
+  // Expects that |message| contains resources for |addresses| in |section|.
+  void ExpectAddresses(DnsMessage& message, MdnsResourceSection section,
+                       const std::string& host_full_name,
+                       const std::vector<inet::IpAddress>& addresses) {
+    bool expect_v4 = false;
+    bool expect_v6 = false;
+    for (const auto& address : addresses) {
+      if (address.is_v4()) {
+        expect_v4 = true;
+      } else {
+        expect_v6 = true;
+      }
+    }
+
+    if (expect_v4) {
+      auto resources = ExpectResources(message, section, host_full_name, DnsType::kA);
+      for (const auto& address : addresses) {
+        if (address.is_v4()) {
+          ExpectAddress(resources, address);
+        }
+      }
+    }
+
+    if (expect_v6) {
+      auto resources = ExpectResources(message, section, host_full_name, DnsType::kAaaa);
+      for (const auto& address : addresses) {
+        if (address.is_v6()) {
+          ExpectAddress(resources, address);
+        }
+      }
+    }
+  }
+
+  // Expect that |address| appears in |resources| and remove it.
+  void ExpectAddress(std::vector<std::shared_ptr<DnsResource>>& resources,
+                     const inet::IpAddress& address) {
+    for (auto i = resources.begin(); i != resources.end(); ++i) {
+      if ((*i)->a_.address_.address_ == address) {
+        resources.erase(i);
+        return;
+      }
+    }
+
+    EXPECT_TRUE(false) << "No matching address " << address;
+  }
+
+  // Expects that |message| contains no questions or resources.
+  void ExpectNoOtherQuestionOrResource(DnsMessage& message) {
+    EXPECT_TRUE(message.questions_.empty());
+    EXPECT_TRUE(message.answers_.empty());
+    EXPECT_TRUE(message.authorities_.empty());
+    EXPECT_TRUE(message.additionals_.empty());
+  }
+
  private:
+  // Removes and returns at most |max| resources in |section| with the given parameters.
+  std::vector<std::shared_ptr<DnsResource>> ExtractResources(size_t max, DnsMessage& message,
+                                                             MdnsResourceSection section,
+                                                             const std::string& name, DnsType type,
+                                                             DnsClass dns_class = DnsClass::kIn,
+                                                             bool cache_flush = true) {
+    std::vector<std::shared_ptr<DnsResource>>* collection;
+    switch (section) {
+      case MdnsResourceSection::kAnswer:
+        collection = &message.answers_;
+        break;
+      case MdnsResourceSection::kAuthority:
+        collection = &message.authorities_;
+        break;
+      case MdnsResourceSection::kAdditional:
+        collection = &message.additionals_;
+        break;
+      case MdnsResourceSection::kExpired:
+        EXPECT_TRUE(false);
+        return std::vector<std::shared_ptr<DnsResource>>();
+    }
+
+    std::vector<std::shared_ptr<DnsResource>> result;
+    for (auto i = collection->begin(); i != collection->end();) {
+      if ((*i)->name_.dotted_string_ == name && (*i)->type_ == type && (*i)->class_ == dns_class &&
+          (*i)->cache_flush_ == cache_flush) {
+        result.push_back(std::move(*i));
+        i = collection->erase(i);
+        if (result.size() == max) {
+          return result;
+        }
+      } else {
+        ++i;
+      }
+    }
+
+    return result;
+  }
+
   Mdns under_test_;
   bool has_interfaces_ = false;
   bool start_called_ = false;
   bool stop_called_ = false;
   bool send_message_called_ = false;
+  DnsMessage send_message_message_;
   ReplyAddress send_message_reply_address_;
   bool ready_ = false;
   fit::closure link_change_callback_;
@@ -196,7 +330,7 @@ class Publisher : public Mdns::Publisher {
   void GetPublication(PublicationCause publication_cause, const std::string& subtype,
                       const std::vector<inet::SocketAddress>& source_addresses,
                       fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) override {
-    callback(Mdns::Publication::Create(inet::IpPort::From_in_port_t(5353), {}));
+    callback(Mdns::Publication::Create(kPort, {}));
   }
 };
 
@@ -237,6 +371,15 @@ class AsyncPublisher : public Mdns::Publisher {
   fit::function<void(std::unique_ptr<Mdns::Publication>)> get_publication_callback_;
 };
 
+// Responds synchronously to |GetPublication| with publication.
+class HostPublisher : public Mdns::HostPublisher {
+ public:
+  HostPublisher() {}
+
+  // Mdns::HostPublisher implementation.
+  void ReportSuccess(bool success) override {}
+};
+
 // Tests a subscription.
 TEST_F(MdnsUnitTests, Subscribe) {
   // Start.
@@ -251,7 +394,7 @@ TEST_F(MdnsUnitTests, Subscribe) {
   EXPECT_FALSE(subscriber.InstanceDiscoveredCalled());
 
   // Receive a response to the query.
-  ReceiveQueryResponse();
+  ReceivePtrQueryResponse();
   RunLoopUntilIdle();
   EXPECT_TRUE(subscriber.InstanceDiscoveredCalled());
 
@@ -284,7 +427,7 @@ TEST_F(MdnsUnitTests, Regression55116) {
   EXPECT_FALSE(subscriber.InstanceDiscoveredCalled());
 
   // Receive a response to the query.
-  ReceiveQueryResponse();
+  ReceivePtrQueryResponse();
   EXPECT_TRUE(subscriber.InstanceDiscoveredCalled());
 
   // Clean up.
@@ -303,16 +446,19 @@ TEST_F(MdnsUnitTests, PublishUnpublish) {
   NonPublisher publisher1;
 
   // Publish should work the first time.
-  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false, Media::kWired,
+  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, Media::kWired,
+                                                  IpVersions::kBoth, /*perform_probe*/ false,
                                                   &publisher0));
 
   // A second attempt should fail.
-  EXPECT_FALSE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false,
-                                                   Media::kWired, &publisher1));
+  EXPECT_FALSE(under_test().PublishServiceInstance(kServiceName, kInstanceName, Media::kWired,
+                                                   IpVersions::kBoth, /*perform_probe*/ false,
+                                                   &publisher1));
 
   // We should be able to unpublish and publish again.
   publisher0.Unpublish();
-  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false, Media::kWired,
+  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, Media::kWired,
+                                                  IpVersions::kBoth, /*perform_probe*/ false,
                                                   &publisher1));
 
   // Clean up.
@@ -330,8 +476,8 @@ TEST_F(MdnsUnitTests, UnpublishDuringProbe) {
   NonPublisher publisher;
 
   // Publish with probe and then immediately unpublish.
-  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, true, Media::kWired,
-                                                  &publisher));
+  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, Media::kWired,
+                                                  IpVersions::kBoth, true, &publisher));
   publisher.Unpublish();
   RunLoopUntilIdle();
 
@@ -341,7 +487,7 @@ TEST_F(MdnsUnitTests, UnpublishDuringProbe) {
   // The prober sends a message within 250 ms, so wait 300 ms before checking that the prober isn't
   // sending anymore.
   RunLoopWithTimeout(zx::duration(zx::msec(300)));
-  EXPECT_FALSE(get_and_clear_send_message_called());
+  ExpectSendMessageNotCalled();
 
   // Clean up.
   under_test().Stop();
@@ -357,8 +503,8 @@ TEST_F(MdnsUnitTests, AsyncSendMessage) {
   AsyncPublisher publisher;
 
   // Publish should work the first time.
-  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false, Media::kWired,
-                                                  &publisher));
+  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, Media::kWired,
+                                                  IpVersions::kBoth, false, &publisher));
 
   // The publisher should get a |GetPublication| call immediately as part of initial announcement.
   auto callback = publisher.get_publication_callback();
@@ -385,8 +531,8 @@ TEST_F(MdnsUnitTests, PublishWiredOnly) {
   Publisher publisher;
 
   // Publish wired-only.
-  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false, Media::kWired,
-                                                  &publisher));
+  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, Media::kWired,
+                                                  IpVersions::kBoth, false, &publisher));
   RunLoopUntilIdle();
   ExpectSendMessageCalled(ReplyAddress::Multicast(Media::kWired, IpVersions::kBoth));
 
@@ -404,8 +550,8 @@ TEST_F(MdnsUnitTests, PublishWirelessOnly) {
   Publisher publisher;
 
   // Publish wired-only.
-  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false,
-                                                  Media::kWireless, &publisher));
+  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, Media::kWireless,
+                                                  IpVersions::kBoth, false, &publisher));
   RunLoopUntilIdle();
   ExpectSendMessageCalled(ReplyAddress::Multicast(Media::kWireless, IpVersions::kBoth));
 
@@ -423,10 +569,246 @@ TEST_F(MdnsUnitTests, PublishBoth) {
   Publisher publisher;
 
   // Publish wired-only.
-  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false, Media::kBoth,
-                                                  &publisher));
+  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, Media::kBoth,
+                                                  IpVersions::kBoth, false, &publisher));
   RunLoopUntilIdle();
   ExpectSendMessageCalled(ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
+
+  // Clean up.
+  under_test().Stop();
+  RunLoopUntilIdle();
+}
+
+// Tests that a IPv4-only publisher multicasts to IPv4 interfaces only.
+TEST_F(MdnsUnitTests, PublishV4Only) {
+  // Start.
+  SetHasInterfaces(true);
+  Start(false);
+
+  Publisher publisher;
+
+  // Publish wired-only.
+  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, Media::kBoth,
+                                                  IpVersions::kV4, false, &publisher));
+  RunLoopUntilIdle();
+  ExpectSendMessageCalled(ReplyAddress::Multicast(Media::kBoth, IpVersions::kV4));
+
+  // Clean up.
+  under_test().Stop();
+  RunLoopUntilIdle();
+}
+
+// Tests that a IPv6-only publisher multicasts to IPv6 interfaces only.
+TEST_F(MdnsUnitTests, PublishV6Only) {
+  // Start.
+  SetHasInterfaces(true);
+  Start(false);
+
+  Publisher publisher;
+
+  // Publish wired-only.
+  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, Media::kBoth,
+                                                  IpVersions::kV6, false, &publisher));
+  RunLoopUntilIdle();
+  ExpectSendMessageCalled(ReplyAddress::Multicast(Media::kBoth, IpVersions::kV6));
+
+  // Clean up.
+  under_test().Stop();
+  RunLoopUntilIdle();
+}
+
+// Tests that a publisher with non-default host name and addresses behaves properly.
+TEST_F(MdnsUnitTests, PublishInstanceWithHostNameAndAddresses) {
+  // Start.
+  SetHasInterfaces(true);
+  Start(false);
+
+  Publisher publisher;
+
+  EXPECT_TRUE(under_test().PublishServiceInstance(kAlternateHostName, kAddresses, kServiceName,
+                                                  kInstanceName, Media::kBoth, IpVersions::kBoth,
+                                                  false, &publisher));
+  RunLoopUntilIdle();
+  auto message = ExpectSendMessageCalled(ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
+
+  auto resource = ExpectResource(message, MdnsResourceSection::kAnswer, kServiceFullName,
+                                 DnsType::kPtr, DnsClass::kIn, false);
+  EXPECT_EQ(kInstanceFullName, resource->ptr_.pointer_domain_name_.dotted_string_);
+
+  resource =
+      ExpectResource(message, MdnsResourceSection::kAdditional, kInstanceFullName, DnsType::kSrv);
+  EXPECT_EQ(0, resource->srv_.priority_);
+  EXPECT_EQ(0, resource->srv_.weight_);
+  EXPECT_EQ(kPort, resource->srv_.port_);
+  EXPECT_EQ(kAlternateHostFullName, resource->srv_.target_.dotted_string_);
+
+  resource =
+      ExpectResource(message, MdnsResourceSection::kAdditional, kInstanceFullName, DnsType::kTxt);
+  EXPECT_TRUE(resource->txt_.strings_.empty());
+
+  ExpectAddresses(message, MdnsResourceSection::kAdditional, kAlternateHostFullName, kAddresses);
+
+  ExpectNoOtherQuestionOrResource(message);
+
+  // Clean up.
+  under_test().Stop();
+  RunLoopUntilIdle();
+}
+
+// Tests |PublishHost|.
+TEST_F(MdnsUnitTests, PublishHost) {
+  // Start.
+  SetHasInterfaces(true);
+  Start(false);
+
+  HostPublisher host_publisher;
+
+  EXPECT_TRUE(under_test().PublishHost(kAlternateHostName, kAddresses, Media::kBoth,
+                                       IpVersions::kBoth, false, &host_publisher));
+  RunLoopUntilIdle();
+  ExpectSendMessageNotCalled();
+
+  ReceiveQuery(kAlternateHostFullName, DnsType::kA, kReplyAddress);
+  RunLoopUntilIdle();
+  auto message = ExpectSendMessageCalled(ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
+  ExpectAddresses(message, MdnsResourceSection::kAnswer, kAlternateHostFullName, kAddresses);
+
+  // Clean up.
+  under_test().Stop();
+  RunLoopUntilIdle();
+}
+
+// Tests |PublishHost| responding on wired-only.
+TEST_F(MdnsUnitTests, PublishHostWiredOnly) {
+  // Start.
+  SetHasInterfaces(true);
+  Start(false);
+
+  HostPublisher host_publisher;
+
+  EXPECT_TRUE(under_test().PublishHost(kAlternateHostName, kAddresses, Media::kWired,
+                                       IpVersions::kBoth, false, &host_publisher));
+  RunLoopUntilIdle();
+  ExpectSendMessageNotCalled();
+
+  // Expect no response to wireless query.
+  ReplyAddress sender_address0({192, 168, 78, 9, inet::IpPort::From_uint16_t(5353)},
+                               {192, 168, 1, 1}, Media::kWireless, IpVersions::kBoth);
+  ReceiveQuery(kAlternateHostFullName, DnsType::kA, sender_address0);
+  RunLoopUntilIdle();
+  ExpectSendMessageNotCalled();
+
+  // Expect response to wired query.
+  ReplyAddress sender_address1({192, 168, 78, 9, inet::IpPort::From_uint16_t(5353)},
+                               {192, 168, 1, 1}, Media::kWired, IpVersions::kBoth);
+  ReceiveQuery(kAlternateHostFullName, DnsType::kA, sender_address1);
+  RunLoopUntilIdle();
+
+  auto message = ExpectSendMessageCalled(ReplyAddress::Multicast(Media::kWired, IpVersions::kBoth));
+  ExpectAddresses(message, MdnsResourceSection::kAnswer, kAlternateHostFullName, kAddresses);
+
+  // Clean up.
+  under_test().Stop();
+  RunLoopUntilIdle();
+}
+
+// Tests |PublishHost| responding on wireless-only.
+TEST_F(MdnsUnitTests, PublishHostWirelessOnly) {
+  // Start.
+  SetHasInterfaces(true);
+  Start(false);
+
+  HostPublisher host_publisher;
+
+  EXPECT_TRUE(under_test().PublishHost(kAlternateHostName, kAddresses, Media::kWireless,
+                                       IpVersions::kBoth, false, &host_publisher));
+  RunLoopUntilIdle();
+  ExpectSendMessageNotCalled();
+
+  // Expect no response to wired query.
+  ReplyAddress sender_address0({192, 168, 78, 9, inet::IpPort::From_uint16_t(5353)},
+                               {192, 168, 1, 1}, Media::kWired, IpVersions::kBoth);
+  ReceiveQuery(kAlternateHostFullName, DnsType::kA, sender_address0);
+  RunLoopUntilIdle();
+  ExpectSendMessageNotCalled();
+
+  // Expect response to wireless query.
+  ReplyAddress sender_address1({192, 168, 78, 9, inet::IpPort::From_uint16_t(5353)},
+                               {192, 168, 1, 1}, Media::kWireless, IpVersions::kBoth);
+  ReceiveQuery(kAlternateHostFullName, DnsType::kA, sender_address1);
+  RunLoopUntilIdle();
+
+  auto message =
+      ExpectSendMessageCalled(ReplyAddress::Multicast(Media::kWireless, IpVersions::kBoth));
+  ExpectAddresses(message, MdnsResourceSection::kAnswer, kAlternateHostFullName, kAddresses);
+
+  // Clean up.
+  under_test().Stop();
+  RunLoopUntilIdle();
+}
+
+// Tests |PublishHost| responding on IPv4 only.
+TEST_F(MdnsUnitTests, PublishHostV4Only) {
+  // Start.
+  SetHasInterfaces(true);
+  Start(false);
+
+  HostPublisher host_publisher;
+
+  EXPECT_TRUE(under_test().PublishHost(kAlternateHostName, kAddresses, Media::kBoth,
+                                       IpVersions::kV4, false, &host_publisher));
+  RunLoopUntilIdle();
+  ExpectSendMessageNotCalled();
+
+  // Expect no response to an IPv6 query.
+  ReplyAddress sender_address0({0xfe80, 9, inet::IpPort::From_uint16_t(5353)}, {0xfe80, 1},
+                               Media::kBoth, IpVersions::kV6);
+  ReceiveQuery(kAlternateHostFullName, DnsType::kAaaa, sender_address0);
+  RunLoopUntilIdle();
+  ExpectSendMessageNotCalled();
+
+  // Expect response to an IPv4 query.
+  ReplyAddress sender_address1({192, 168, 78, 9, inet::IpPort::From_uint16_t(5353)},
+                               {192, 168, 1, 1}, Media::kBoth, IpVersions::kV4);
+  ReceiveQuery(kAlternateHostFullName, DnsType::kA, sender_address1);
+  RunLoopUntilIdle();
+
+  auto message = ExpectSendMessageCalled(ReplyAddress::Multicast(Media::kBoth, IpVersions::kV4));
+  ExpectAddresses(message, MdnsResourceSection::kAnswer, kAlternateHostFullName, kAddresses);
+
+  // Clean up.
+  under_test().Stop();
+  RunLoopUntilIdle();
+}
+
+// Tests |PublishHost| responding on IPv6 only.
+TEST_F(MdnsUnitTests, PublishHostV6Only) {
+  // Start.
+  SetHasInterfaces(true);
+  Start(false);
+
+  HostPublisher host_publisher;
+
+  EXPECT_TRUE(under_test().PublishHost(kAlternateHostName, kAddresses, Media::kBoth,
+                                       IpVersions::kV6, false, &host_publisher));
+  RunLoopUntilIdle();
+  ExpectSendMessageNotCalled();
+
+  // Expect no response to an IPv4 query.
+  ReplyAddress sender_address0({192, 168, 78, 9, inet::IpPort::From_uint16_t(5353)},
+                               {192, 168, 1, 1}, Media::kBoth, IpVersions::kV4);
+  ReceiveQuery(kAlternateHostFullName, DnsType::kA, sender_address0);
+  RunLoopUntilIdle();
+  ExpectSendMessageNotCalled();
+
+  // Expect response to an IPv6 query.
+  ReplyAddress sender_address1({0xfe80, 9, inet::IpPort::From_uint16_t(5353)}, {0xfe80, 1},
+                               Media::kBoth, IpVersions::kV6);
+  ReceiveQuery(kAlternateHostFullName, DnsType::kAaaa, sender_address1);
+  RunLoopUntilIdle();
+
+  auto message = ExpectSendMessageCalled(ReplyAddress::Multicast(Media::kBoth, IpVersions::kV6));
+  ExpectAddresses(message, MdnsResourceSection::kAnswer, kAlternateHostFullName, kAddresses);
 
   // Clean up.
   under_test().Stop();

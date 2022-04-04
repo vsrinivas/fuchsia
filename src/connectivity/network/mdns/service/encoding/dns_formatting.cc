@@ -12,8 +12,6 @@
 
 namespace mdns {
 
-#ifdef MDNS_TRACE
-
 std::ostream& operator<<(std::ostream& os, DnsType value) {
   switch (value) {
     case DnsType::kA:
@@ -40,6 +38,8 @@ std::ostream& operator<<(std::ostream& os, DnsType value) {
       return os << "TYPE " << static_cast<uint16_t>(value);
   }
 }
+
+#ifdef MDNS_TRACE
 
 std::ostream& operator<<(std::ostream& os, DnsClass value) {
   switch (value) {

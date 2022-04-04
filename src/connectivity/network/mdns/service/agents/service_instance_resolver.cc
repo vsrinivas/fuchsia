@@ -52,7 +52,8 @@ void ServiceInstanceResolver::EndOfMessage() {
 void ServiceInstanceResolver::Start(const std::string& service_instance) {
   MdnsAgent::Start(service_instance);
   service_instance_ = MdnsNames::InstanceFullName(instance_name_, service_);
-  SendQuestion(std::make_shared<DnsQuestion>(service_instance_, DnsType::kSrv));
+  SendQuestion(std::make_shared<DnsQuestion>(service_instance_, DnsType::kSrv),
+               ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
 
   PostTaskForTime(
       [this]() {
@@ -66,7 +67,8 @@ void ServiceInstanceResolver::Start(const std::string& service_instance) {
 }
 
 void ServiceInstanceResolver::ReceiveResource(const DnsResource& resource,
-                                              MdnsResourceSection section) {
+                                              MdnsResourceSection section,
+                                              ReplyAddress sender_address) {
   switch (resource.type_) {
     case DnsType::kSrv:
       if (resource.name_.dotted_string_ == service_instance_) {

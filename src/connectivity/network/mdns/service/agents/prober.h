@@ -37,17 +37,23 @@ class Prober : public MdnsAgent {
 
   // Creates a |Prober|. |type| is the resource type for which we're probing.
   // Use |kA| for address types (A and AAAA).
-  Prober(MdnsAgent::Owner* owner, DnsType type, CompletionCallback callback);
+  Prober(MdnsAgent::Owner* owner, DnsType type, Media media, IpVersions ip_versions,
+         CompletionCallback callback);
 
   ~Prober() override;
 
   // MdnsAgent overrides.
   void Start(const std::string& local_host_full_name) final;
 
-  void ReceiveResource(const DnsResource& resource, MdnsResourceSection section) final;
+  void ReceiveResource(const DnsResource& resource, MdnsResourceSection section,
+                       ReplyAddress sender_address) final;
 
  protected:
-  const std::string& local_host_full_name() { return local_host_full_name_; }
+  Media media() const { return media_; }
+
+  IpVersions ip_versions() const { return ip_versions_; }
+
+  const std::string& local_host_full_name() const { return local_host_full_name_; }
 
   // Returns the name of the resource for which we're probing.
   virtual const std::string& ResourceName() = 0;
@@ -67,6 +73,8 @@ class Prober : public MdnsAgent {
   void Probe(zx::duration delay);
 
   DnsType type_;
+  Media media_;
+  IpVersions ip_versions_;
   CompletionCallback callback_;
   std::string local_host_full_name_;
   std::shared_ptr<DnsQuestion> question_;

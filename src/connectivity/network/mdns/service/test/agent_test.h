@@ -23,7 +23,7 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Owner {
 
  protected:
   static constexpr zx::time kInitialTime = zx::time(1000);
-  static const std::string kHostFullName;
+  static const std::string kLocalHostFullName;
 
   // Sets the agent under test. This must be called before the test gets underway, and the agent
   // must survive until the end of the test.
@@ -57,7 +57,10 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Owner {
   void ExpectNoRemoveAgentCall() { EXPECT_FALSE(remove_agent_called_); }
 
   // Expects that the agent has called |RemoveAgent| to remove itself.
-  void ExpectRemoveAgentCall() { EXPECT_TRUE(remove_agent_called_); }
+  void ExpectRemoveAgentCall() {
+    EXPECT_TRUE(remove_agent_called_);
+    remove_agent_called_ = false;
+  }
 
   // Expects that the agent has not called |FlushSentItems|.
   void ExpectNoFlushSentItemsCall() { EXPECT_FALSE(flush_sent_items_called_); }
@@ -80,8 +83,24 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Owner {
                                               DnsClass dns_class = DnsClass::kIn,
                                               bool cache_flush = true);
 
+  // Expects that |message| contains one or more resources in |section| with the given parameters
+  // and returns them.
+  std::vector<std::shared_ptr<DnsResource>> ExpectResources(DnsMessage* message,
+                                                            MdnsResourceSection section,
+                                                            const std::string& name, DnsType type,
+                                                            DnsClass dns_class = DnsClass::kIn,
+                                                            bool cache_flush = true);
+
   // Expects that |message| contains an address placeholder resource in |section|.
   void ExpectAddressPlaceholder(DnsMessage* message, MdnsResourceSection section);
+
+  // Expects that |message| contains resources for |addresses| in |section|.
+  void ExpectAddresses(DnsMessage* message, MdnsResourceSection section,
+                       const std::string& host_full_name,
+                       const std::vector<inet::IpAddress>& addresses);
+
+  // Expect that |address| appears in |resources| and remove it.
+  void ExpectAddress(std::vector<std::shared_ptr<DnsResource>>& resources, inet::IpAddress address);
 
   // Expects that |message| contains no questions or resources.
   void ExpectNoOtherQuestionOrResource(DnsMessage* message);
@@ -100,7 +119,8 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Owner {
     std::size_t operator()(const ReplyAddress& reply_address) const noexcept {
       return std::hash<inet::SocketAddress>{}(reply_address.socket_address()) ^
              (std::hash<inet::IpAddress>{}(reply_address.interface_address()) << 1) ^
-             (std::hash<Media>{}(reply_address.media()) << 2);
+             (std::hash<Media>{}(reply_address.media()) << 2) ^
+             (std::hash<IpVersions>{}(reply_address.ip_versions()) << 3);
     }
   };
 
@@ -111,7 +131,7 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Owner {
  private:
   void PostTaskForTime(MdnsAgent* agent, fit::closure task, zx::time target_time) override;
 
-  void SendQuestion(std::shared_ptr<DnsQuestion> question) override;
+  void SendQuestion(std::shared_ptr<DnsQuestion> question, ReplyAddress reply_address) override;
 
   void SendResource(std::shared_ptr<DnsResource> resource, MdnsResourceSection section,
                     const ReplyAddress& reply_address) override;
@@ -126,7 +146,7 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Owner {
 
   const MdnsAgent* agent_;
   std::shared_ptr<DnsResource> address_placeholder_ =
-      std::make_shared<DnsResource>(kHostFullName, DnsType::kA);
+      std::make_shared<DnsResource>(kLocalHostFullName, DnsType::kA);
 
   zx::time now_ = kInitialTime;
 

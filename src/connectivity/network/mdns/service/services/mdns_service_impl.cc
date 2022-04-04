@@ -16,6 +16,9 @@
 
 #include "src/connectivity/network/mdns/service/common/mdns_fidl_util.h"
 #include "src/connectivity/network/mdns/service/common/mdns_names.h"
+#include "src/connectivity/network/mdns/service/common/type_converters.h"
+#include "src/connectivity/network/mdns/service/services/proxy_host_publisher_service_impl.h"
+#include "src/connectivity/network/mdns/service/services/service_instance_publisher_service_impl.h"
 #include "src/connectivity/network/mdns/service/services/service_instance_resolver_service_impl.h"
 
 namespace mdns {
@@ -45,12 +48,26 @@ MdnsServiceImpl::MdnsServiceImpl(sys::ComponentContext* component_context)
     : component_context_(component_context),
       mdns_(transceiver_),
       deprecated_services_(mdns_, component_context),
+      proxy_host_publisher_manager_(
+          [this](fidl::InterfaceRequest<fuchsia::net::mdns::ProxyHostPublisher> request,
+                 fit::closure deleter) {
+            return std::make_unique<ProxyHostPublisherServiceImpl>(mdns_, std::move(request),
+                                                                   std::move(deleter));
+          }),
+      service_instance_publisher_manager_(
+          [this](fidl::InterfaceRequest<fuchsia::net::mdns::ServiceInstancePublisher> request,
+                 fit::closure deleter) {
+            return std::make_unique<ServiceInstancePublisherServiceImpl>(mdns_, std::move(request),
+                                                                         std::move(deleter));
+          }),
       service_instance_resolver_manager_(
           [this](fidl::InterfaceRequest<fuchsia::net::mdns::ServiceInstanceResolver> request,
                  fit::closure deleter) {
             return std::make_unique<ServiceInstanceResolverServiceImpl>(mdns_, std::move(request),
                                                                         std::move(deleter));
           }) {
+  proxy_host_publisher_manager_.AddOutgoingPublicService(component_context);
+  service_instance_publisher_manager_.AddOutgoingPublicService(component_context);
   service_instance_resolver_manager_.AddOutgoingPublicService(component_context);
 
   Start();
@@ -98,6 +115,8 @@ void MdnsServiceImpl::OnReady() {
         });
   }
 
+  proxy_host_publisher_manager_.OnReady();
+  service_instance_publisher_manager_.OnReady();
   service_instance_resolver_manager_.OnReady();
 }
 
@@ -107,20 +126,12 @@ bool MdnsServiceImpl::PublishServiceInstance(
     fit::function<void(fpromise::result<void, fuchsia::net::mdns::Error>)> callback) {
   auto publisher = std::make_unique<SimplePublisher>(std::move(publication), callback.share());
 
-  if (!mdns_.PublishServiceInstance(service_name, instance_name, perform_probe, media,
-                                    publisher.get())) {
+  if (!mdns_.PublishServiceInstance(service_name, instance_name, media, IpVersions::kBoth,
+                                    perform_probe, publisher.get())) {
     return false;
   }
 
-  std::string instance_full_name = MdnsNames::InstanceFullName(instance_name, service_name);
-
-  // |Mdns| told us our instance is unique locally, so the full name should
-  // not appear in our collection.
-  FX_DCHECK(publishers_by_instance_full_name_.find(instance_full_name) ==
-            publishers_by_instance_full_name_.end());
-
-  publishers_by_instance_full_name_.emplace(instance_full_name, std::move(publisher));
-
+  publishers_.push_back(std::move(publisher));
   return true;
 }
 

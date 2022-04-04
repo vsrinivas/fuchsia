@@ -106,6 +106,7 @@ struct DnsClassAndFlag {
 struct DnsName {
   DnsName() {}
   DnsName(const std::string dotted_string) : dotted_string_(dotted_string) {}
+  DnsName(const char* dotted_string) : dotted_string_(dotted_string) {}
 
   std::string dotted_string_;
 };
@@ -289,6 +290,7 @@ struct DnsResource {
 
   DnsResource();
   DnsResource(const std::string& name, DnsType type);
+  DnsResource(std::string name, inet::IpAddress address);
   DnsResource(const DnsResource& other);
   ~DnsResource();
 

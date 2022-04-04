@@ -7,10 +7,15 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
-#include "lib/fidl/cpp/type_converter.h"
-#include "src/lib/fsl/types/type_converters.h"
+#include "src/connectivity/network/mdns/service/common/type_converters.h"
 
 namespace mdns {
+namespace {
+
+constexpr uint16_t kDefaultSrvPriority = 0;
+constexpr uint16_t kDefaultSrvWeight = 0;
+
+}  // namespace
 
 // static
 fuchsia::net::Ipv4Address MdnsFidlUtil::CreateIpv4Address(const inet::IpAddress& ip_address) {
@@ -109,6 +114,62 @@ std::unique_ptr<Mdns::Publication> MdnsFidlUtil::Convert(
   publication->txt_ttl_seconds_ = ensure_uint32_secs(publication_ptr->txt_ttl);
 
   return publication;
+}
+
+// static
+std::unique_ptr<Mdns::Publication> MdnsFidlUtil::Convert(
+    const fuchsia::net::mdns::ServiceInstancePublication& publication) {
+  if (!publication.has_port()) {
+    FX_LOGS(ERROR) << "ServiceInstancePublication has no port value, closing connection.";
+    return nullptr;
+  }
+
+  std::vector<std::string> text;
+  if (publication.has_text()) {
+    text = fidl::To<std::vector<std::string>>(publication.text());
+  }
+
+  uint16_t srv_priority =
+      publication.has_srv_priority() ? publication.srv_priority() : kDefaultSrvPriority;
+  uint16_t srv_weight = publication.has_srv_weight() ? publication.srv_weight() : kDefaultSrvWeight;
+
+  auto result = Mdns::Publication::Create(inet::IpPort::From_uint16_t(publication.port()),
+                                          std::move(text), srv_priority, srv_weight);
+
+  if (publication.has_ptr_ttl()) {
+    const int64_t secs = zx::nsec(publication.ptr_ttl()).to_secs();
+    if (secs < 0 || secs > std::numeric_limits<uint32_t>::max()) {
+      FX_LOGS(ERROR) << "ServiceInstancePublication has ptr_ttl value out of range, "
+                        "closing connection.";
+      return nullptr;
+    }
+
+    result->ptr_ttl_seconds_ = static_cast<uint32_t>(secs);
+  }
+
+  if (publication.has_srv_ttl()) {
+    const int64_t secs = zx::nsec(publication.srv_ttl()).to_secs();
+    if (secs < 0 || secs > std::numeric_limits<uint32_t>::max()) {
+      FX_LOGS(ERROR) << "ServiceInstancePublication has srv_ttl value out of range, "
+                        "closing connection.";
+      return nullptr;
+    }
+
+    result->srv_ttl_seconds_ = static_cast<uint32_t>(secs);
+  }
+
+  if (publication.has_txt_ttl()) {
+    const int64_t secs = zx::nsec(publication.txt_ttl()).to_secs();
+    if (secs < 0 || secs > std::numeric_limits<uint32_t>::max()) {
+      FX_LOGS(ERROR) << "ServiceInstancePublication has txt_ttl value out of range, "
+                        "closing connection.";
+      return nullptr;
+    }
+
+    result->txt_ttl_seconds_ = static_cast<uint32_t>(secs);
+  }
+
+  return result;
 }
 
 // static

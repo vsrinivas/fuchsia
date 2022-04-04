@@ -74,6 +74,8 @@ class MdnsInterfaceTransceiver {
   // Writes log messages describing lifetime traffic.
   void LogTraffic();
 
+  virtual IpVersions IpVersions() = 0;
+
  protected:
   static constexpr int kTimeToLive_ = 255;
   // RFC6762 suggests a max packet size of 1500, but we see bigger packets in the wild. 9000 is

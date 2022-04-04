@@ -29,8 +29,10 @@ void HostNameResolver::Start(const std::string& local_host_full_name) {
 
   MdnsAgent::Start(local_host_full_name);
 
-  SendQuestion(std::make_shared<DnsQuestion>(host_full_name_, DnsType::kA));
-  SendQuestion(std::make_shared<DnsQuestion>(host_full_name_, DnsType::kAaaa));
+  SendQuestion(std::make_shared<DnsQuestion>(host_full_name_, DnsType::kA),
+               ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
+  SendQuestion(std::make_shared<DnsQuestion>(host_full_name_, DnsType::kAaaa),
+               ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
 
   PostTaskForTime(
       [this]() {
@@ -43,7 +45,8 @@ void HostNameResolver::Start(const std::string& local_host_full_name) {
       timeout_);
 }
 
-void HostNameResolver::ReceiveResource(const DnsResource& resource, MdnsResourceSection section) {
+void HostNameResolver::ReceiveResource(const DnsResource& resource, MdnsResourceSection section,
+                                       ReplyAddress sender_address) {
   if (resource.name_.dotted_string_ != host_full_name_) {
     return;
   }

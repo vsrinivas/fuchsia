@@ -10,7 +10,20 @@
 
 namespace mdns {
 
-AddressResponder::AddressResponder(MdnsAgent::Owner* host) : MdnsAgent(host) {}
+AddressResponder::AddressResponder(MdnsAgent::Owner* owner, Media media, IpVersions ip_versions)
+    : MdnsAgent(owner), media_(media), ip_versions_(ip_versions) {}
+
+AddressResponder::AddressResponder(MdnsAgent::Owner* owner, std::string host_full_name,
+                                   std::vector<inet::IpAddress> addresses, Media media,
+                                   IpVersions ip_versions)
+    : MdnsAgent(owner),
+      host_full_name_(std::move(host_full_name)),
+      addresses_(std::move(addresses)),
+      media_(media),
+      ip_versions_(ip_versions) {
+  FX_DCHECK(!host_full_name_.empty());
+  FX_DCHECK(!addresses_.empty());
+}
 
 AddressResponder::~AddressResponder() {}
 
@@ -18,22 +31,30 @@ void AddressResponder::Start(const std::string& local_host_full_name) {
   FX_DCHECK(!local_host_full_name.empty());
 
   MdnsAgent::Start(local_host_full_name);
-  host_full_name_ = local_host_full_name;
+
+  if (host_full_name_.empty()) {
+    host_full_name_ = local_host_full_name;
+  }
 }
 
 void AddressResponder::ReceiveQuestion(const DnsQuestion& question,
                                        const ReplyAddress& reply_address,
                                        const ReplyAddress& sender_address) {
-  if ((question.type_ == DnsType::kA || question.type_ == DnsType::kAaaa ||
+  if (sender_address.Matches(media_) && sender_address.Matches(ip_versions_) &&
+      (question.type_ == DnsType::kA || question.type_ == DnsType::kAaaa ||
        question.type_ == DnsType::kAny) &&
       question.name_.dotted_string_ == host_full_name_) {
     MaybeSendAddresses(reply_address);
   }
 }
 
-void AddressResponder::MaybeSendAddresses(const ReplyAddress& reply_address) {
+void AddressResponder::MaybeSendAddresses(ReplyAddress reply_address) {
   // We only throttle multicast sends. A V4 multicast reply address indicates V4 and V6 multicast.
-  if (reply_address.socket_address() == MdnsAddresses::v4_multicast()) {
+  if (reply_address.is_multicast_placeholder()) {
+    // Replace the general multicast placeholder with one that's restricted to the desired |Media|
+    // and |IpVersions|.
+    reply_address = ReplyAddress::Multicast(media_, ip_versions_);
+
     if (throttle_state_ == kThrottleStatePending) {
       // The send is already happening.
       return;
@@ -44,7 +65,7 @@ void AddressResponder::MaybeSendAddresses(const ReplyAddress& reply_address) {
       // schedule a multicast send for one second after the previous one.
       PostTaskForTime(
           [this, reply_address]() {
-            SendAddresses(MdnsResourceSection::kAnswer, reply_address);
+            SendAddressResources(reply_address);
             throttle_state_ = now();
           },
           throttle_state_ + kMinMulticastInterval);
@@ -54,8 +75,22 @@ void AddressResponder::MaybeSendAddresses(const ReplyAddress& reply_address) {
     }
   }
 
-  SendAddresses(MdnsResourceSection::kAnswer, reply_address);
+  SendAddressResources(reply_address);
+
   throttle_state_ = now();
+}
+
+void AddressResponder::SendAddressResources(ReplyAddress reply_address) {
+  if (addresses_.empty()) {
+    // Send addresses for the local host.
+    SendAddresses(MdnsResourceSection::kAnswer, reply_address);
+  } else {
+    // Send addresses that were provided in the constructor.
+    for (const auto& address : addresses_) {
+      SendResource(std::make_shared<DnsResource>(host_full_name_, address),
+                   MdnsResourceSection::kAnswer, reply_address);
+    }
+  }
 }
 
 }  // namespace mdns

@@ -19,6 +19,7 @@ class MdnsInterfaceTransceiverV4 : public MdnsInterfaceTransceiver {
 
  protected:
   // MdnsInterfaceTransceiver overrides.
+  enum IpVersions IpVersions() override { return IpVersions::kV4; }
   int SetOptionDisableMulticastLoop() override;
   int SetOptionJoinMulticastGroup() override;
   int SetOptionOutboundInterface() override;

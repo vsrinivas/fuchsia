@@ -31,6 +31,36 @@ struct TypeConverter<mdns::Media, fuchsia::net::mdns::Media> {
 };
 
 template <>
+struct TypeConverter<mdns::IpVersions, fuchsia::net::mdns::IpVersions> {
+  static mdns::IpVersions Convert(fuchsia::net::mdns::IpVersions value) {
+    switch (value) {
+      case fuchsia::net::mdns::IpVersions::V4:
+        return mdns::IpVersions::kV4;
+      case fuchsia::net::mdns::IpVersions::V6:
+        return mdns::IpVersions::kV6;
+      default:
+        FX_DCHECK(value ==
+                  (fuchsia::net::mdns::IpVersions::V4 | fuchsia::net::mdns::IpVersions::V6));
+        return mdns::IpVersions::kBoth;
+    }
+  }
+};
+
+template <>
+struct TypeConverter<fuchsia::net::mdns::ServiceInstancePublicationCause, mdns::PublicationCause> {
+  static fuchsia::net::mdns::ServiceInstancePublicationCause Convert(mdns::PublicationCause value) {
+    switch (value) {
+      case mdns::PublicationCause::kAnnouncement:
+        return fuchsia::net::mdns::ServiceInstancePublicationCause::ANNOUNCEMENT;
+      case mdns::PublicationCause::kQueryMulticastResponse:
+        return fuchsia::net::mdns::ServiceInstancePublicationCause::QUERY_MULTICAST_RESPONSE;
+      case mdns::PublicationCause::kQueryUnicastResponse:
+        return fuchsia::net::mdns::ServiceInstancePublicationCause::QUERY_UNICAST_RESPONSE;
+    }
+  }
+};
+
+template <>
 struct TypeConverter<fuchsia::net::mdns::PublicationCause, mdns::PublicationCause> {
   static fuchsia::net::mdns::PublicationCause Convert(mdns::PublicationCause value) {
     switch (value) {
@@ -41,6 +71,29 @@ struct TypeConverter<fuchsia::net::mdns::PublicationCause, mdns::PublicationCaus
       case mdns::PublicationCause::kQueryUnicastResponse:
         return fuchsia::net::mdns::PublicationCause::QUERY_UNICAST_RESPONSE;
     }
+  }
+};
+
+template <>
+struct TypeConverter<std::vector<std::string>, std::vector<std::vector<uint8_t>>> {
+  static std::vector<std::string> Convert(const std::vector<std::vector<uint8_t>>& value) {
+    std::vector<std::string> result;
+    std::transform(
+        value.begin(), value.end(), std::back_inserter(result),
+        [](const std::vector<uint8_t>& bytes) { return std::string(bytes.begin(), bytes.end()); });
+    return result;
+  }
+};
+
+template <>
+struct TypeConverter<std::vector<std::vector<uint8_t>>, std::vector<std::string>> {
+  static std::vector<std::vector<uint8_t>> Convert(const std::vector<std::string>& value) {
+    std::vector<std::vector<uint8_t>> result;
+    std::transform(value.begin(), value.end(), std::back_inserter(result),
+                   [](const std::string& string) {
+                     return std::vector<uint8_t>(string.data(), string.data() + string.size());
+                   });
+    return result;
   }
 };
 

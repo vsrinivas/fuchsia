@@ -123,7 +123,8 @@ void Config::IntegrateDocument(const rapidjson::Document& document,
   }
 }
 
-void Config::IntegratePublication(const rapidjson::Value& value, const std::string& host_name) {
+void Config::IntegratePublication(const rapidjson::Value& value,
+                                  const std::string& local_host_name) {
   FX_DCHECK(value.IsObject());
   FX_DCHECK(value.HasMember(kServiceKey));
   FX_DCHECK(value[kServiceKey].IsString());
@@ -151,12 +152,13 @@ void Config::IntegratePublication(const rapidjson::Value& value, const std::stri
       return;
     }
   } else {
-    instance = host_name;
+    instance = local_host_name;
     if (!MdnsNames::IsValidInstanceName(instance)) {
-      parser_.ReportError((std::stringstream() << "Publication of service " << service
-                                               << " specifies that the host name should be "
-                                                  "used as the instance name, but "
-                                               << host_name << "is not a valid instance name.")
+      parser_.ReportError((std::stringstream()
+                           << "Publication of service " << service
+                           << " specifies that the host name should be "
+                              "used as the instance name, but "
+                           << local_host_name << "is not a valid instance name.")
                               .str());
       return;
     }

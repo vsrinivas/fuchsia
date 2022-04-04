@@ -17,6 +17,10 @@ enum class PublicationCause {
   kQueryUnicastResponse,
 };
 
+// kExpired is used when distributing resource expirations. It's not a real
+// resource section.
+enum class MdnsResourceSection { kAnswer, kAuthority, kAdditional, kExpired };
+
 }  // namespace mdns
 
 #endif  // SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_COMMON_TYPES_H_

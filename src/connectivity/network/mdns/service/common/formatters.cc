@@ -19,13 +19,41 @@ std::ostream& operator<<(std::ostream& os, const Media& value) {
   }
 }
 
+std::ostream& operator<<(std::ostream& os, const IpVersions& value) {
+  switch (value) {
+    case IpVersions::kV4:
+      return os << "IPv4";
+    case IpVersions::kV6:
+      return os << "IPv6";
+    case IpVersions::kBoth:
+      return os << "IPv4/v6";
+  }
+}
+
 std::ostream& operator<<(std::ostream& os, const ReplyAddress& value) {
   if (!value.socket_address().is_valid()) {
     return os << "<invalid>";
   }
 
-  return os << value.socket_address() << " interface " << value.interface_address() << " media "
-            << value.media();
+  if (value.is_multicast_placeholder()) {
+    return os << "mulitcast_placeholder " << value.media() << " " << value.ip_versions();
+  }
+
+  return os << value.socket_address() << " interface " << value.interface_address() << ""
+            << value.media() << " " << value.ip_versions();
+}
+
+std::ostream& operator<<(std::ostream& os, MdnsResourceSection value) {
+  switch (value) {
+    case MdnsResourceSection::kAnswer:
+      return os << "answer";
+    case MdnsResourceSection::kAuthority:
+      return os << "authority";
+    case MdnsResourceSection::kAdditional:
+      return os << "additional";
+    case MdnsResourceSection::kExpired:
+      return os << "EXPIRED";
+  }
 }
 
 }  // namespace mdns

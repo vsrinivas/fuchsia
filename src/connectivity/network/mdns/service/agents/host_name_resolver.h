@@ -28,7 +28,8 @@ class HostNameResolver : public MdnsAgent {
   // MdnsAgent overrides.
   void Start(const std::string& local_host_full_name) override;
 
-  void ReceiveResource(const DnsResource& resource, MdnsResourceSection section) override;
+  void ReceiveResource(const DnsResource& resource, MdnsResourceSection section,
+                       ReplyAddress sender_address) override;
 
   void EndOfMessage() override;
 

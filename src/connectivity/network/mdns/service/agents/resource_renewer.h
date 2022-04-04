@@ -50,7 +50,8 @@ class ResourceRenewer : public MdnsAgent {
   void Renew(const DnsResource& resource);
 
   // MdnsAgent overrides.
-  void ReceiveResource(const DnsResource& resource, MdnsResourceSection section) override;
+  void ReceiveResource(const DnsResource& resource, MdnsResourceSection section,
+                       ReplyAddress sender_address) override;
 
   void Quit() override;
 

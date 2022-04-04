@@ -36,7 +36,8 @@ void ResourceRenewer::Renew(const DnsResource& resource) {
   }
 }
 
-void ResourceRenewer::ReceiveResource(const DnsResource& resource, MdnsResourceSection section) {
+void ResourceRenewer::ReceiveResource(const DnsResource& resource, MdnsResourceSection section,
+                                      ReplyAddress sender_address) {
   FX_DCHECK(section != MdnsResourceSection::kExpired);
 
   auto key = std::make_unique<Entry>(resource.name_.dotted_string_, resource.type_);
@@ -73,7 +74,8 @@ void ResourceRenewer::SendRenewals() {
       EraseEntry(entry);
     } else {
       // Need to query.
-      SendQuestion(std::make_shared<DnsQuestion>(entry->name_, entry->type_));
+      SendQuestion(std::make_shared<DnsQuestion>(entry->name_, entry->type_),
+                   ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
       entry->SetNextQueryOrExpiration();
       Schedule(entry);
     }

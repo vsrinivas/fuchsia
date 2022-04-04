@@ -97,7 +97,8 @@ class StubInterfaceTransceiver : public MdnsInterfaceTransceiver {
  public:
   StubInterfaceTransceiver(inet::IpAddress address, const std::string& name, uint32_t index,
                            Media media)
-      : MdnsInterfaceTransceiver(address, name, index, media) {}
+      : MdnsInterfaceTransceiver(address, name, index, media),
+        ip_versions_(address.is_v4() ? IpVersions::kV4 : IpVersions::kV6) {}
 
   static std::unique_ptr<MdnsInterfaceTransceiver> Create(inet::IpAddress address,
                                                           const std::string& name, uint32_t index,
@@ -106,6 +107,7 @@ class StubInterfaceTransceiver : public MdnsInterfaceTransceiver {
   }
 
  protected:
+  enum IpVersions IpVersions() override { return ip_versions_; }
   int SetOptionDisableMulticastLoop() override { return 0; }
   int SetOptionJoinMulticastGroup() override { return 0; }
   int SetOptionOutboundInterface() override { return 0; }
@@ -119,6 +121,9 @@ class StubInterfaceTransceiver : public MdnsInterfaceTransceiver {
 
   bool Start(InboundMessageCallback callback) override { return true; }
   void Stop() override {}
+
+ private:
+  enum IpVersions ip_versions_;
 };
 
 class MdnsTransceiverTests : public gtest::TestLoopFixture {
