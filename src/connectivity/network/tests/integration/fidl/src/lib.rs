@@ -608,50 +608,28 @@ async fn disable_interface_loopback<N: Netstack>(name: &str) {
 
             let did_disable = control.disable().await.expect("send disable").expect("disable");
             assert!(did_disable);
-
-            let () = assert_matches::assert_matches!(stream.try_next().await,
-                Ok(Some(fidl_fuchsia_net_interfaces::Event::Changed(
-                    fidl_fuchsia_net_interfaces::Properties {
-                        id: Some(id),
-                        online: Some(false),
-                        ..
-                    },
-                ))) if id == loopback_id => ()
-            );
         }
         NetstackVersion::Netstack3 => {
             // TODO(https://fxbug.dev/92767): Remove this when N3 implements Control.
             let () =
                 exec_fidl!(stack.disable_interface_deprecated(loopback_id), "disable interface")
                     .unwrap();
-
-            // TODO(https://fxbug.dev/75553): Wait for changed event instead of
-            // creating a new watcher.
-            let stream = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
-                .expect("get interface event stream");
-            futures::pin_mut!(stream);
-            let new_loopback_id = assert_matches::assert_matches!(
-                stream.try_next().await,
-                Ok(Some(fidl_fuchsia_net_interfaces::Event::Existing(
-                    fidl_fuchsia_net_interfaces::Properties {
-                        id: Some(id),
-                        device_class:
-                        Some(fidl_fuchsia_net_interfaces::DeviceClass::Loopback(
-                            fidl_fuchsia_net_interfaces::Empty {},
-                        )),
-                        online: Some(false),
-                        ..
-                    },
-                ))) => id
-            );
-
-            assert_eq!(loopback_id, new_loopback_id);
         }
         NetstackVersion::ProdNetstack2 => panic!("unexpectedly got ProdNetstack2 variant"),
         NetstackVersion::Netstack2WithFastUdp => {
             panic!("unexpectedly got Netstack2WithFastUdp variant")
         }
     }
+
+    let () = assert_matches::assert_matches!(stream.try_next().await,
+        Ok(Some(fidl_fuchsia_net_interfaces::Event::Changed(
+            fidl_fuchsia_net_interfaces::Properties {
+                id: Some(id),
+                online: Some(false),
+                ..
+            },
+        ))) if id == loopback_id => ()
+    );
 }
 
 enum ForwardingConfiguration {
