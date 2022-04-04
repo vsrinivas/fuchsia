@@ -73,7 +73,8 @@ class reader_ctx : public fidl::WireResponseContext<FIR::InputReportsReader::Rea
         reader(std::move(input_reader))             // take ownership of the reader
   {
     fidl::AsyncClientBuffer<FIR::InputReportsReader::ReadInputReports> fidl_buffer;
-    reader.buffer(fidl_buffer.view())->ReadInputReports(this);
+
+    reader.buffer(fidl_buffer.view())->ReadInputReports().ThenExactlyOnce(this);
   }
 
   void
@@ -748,7 +749,8 @@ reader_ctx::OnResult(fidl::WireUnownedResult<FIR::InputReportsReader::ReadInputR
   // Initiate another async read
   //
   fidl::AsyncClientBuffer<FIR::InputReportsReader::ReadInputReports> fidl_buffer;
-  reader.buffer(fidl_buffer.view())->ReadInputReports(this);
+
+  reader.buffer(fidl_buffer.view())->ReadInputReports().ThenExactlyOnce(this);
 
   //
   // Get the reports vector view

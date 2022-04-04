@@ -306,7 +306,7 @@ typedef struct spinel_vk_swapchain_submit_ext_graphics_clear
 //
 // Stores changed swapchain tiles to `.image`.
 //
-// Necessary queue ownership transfers and layout transisitions are implicitly
+// Necessary queue ownership transfers and layout transitions are implicitly
 // handled.
 //
 typedef struct spinel_vk_swapchain_submit_ext_graphics_store

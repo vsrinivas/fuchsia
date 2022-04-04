@@ -28,8 +28,6 @@ extern "C" {
                                                                                                    \
   SPN_RESULT(SPN_SUCCESS)                                                                          \
                                                                                                    \
-  SPN_RESULT(SPN_ERROR_PARTIAL_TARGET_REQUIREMENTS)                                                \
-                                                                                                   \
   SPN_RESULT(SPN_TIMEOUT)                                                                          \
                                                                                                    \
   SPN_RESULT(SPN_ERROR_NOT_IMPLEMENTED)                                                            \

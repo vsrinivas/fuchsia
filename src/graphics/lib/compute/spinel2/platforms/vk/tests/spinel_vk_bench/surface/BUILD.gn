@@ -55,7 +55,6 @@ source_set("surface") {
   if (is_fuchsia) {
     deps += [
       "//sdk/fidl/fuchsia.input",
-      "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_c",
       "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
       "//sdk/lib/fdio",
       "//src/lib/fxl",

@@ -28,7 +28,7 @@
 //
 
 char const *
-spinel_result_t_to_string(spinel_result_t const result)
+spinel_result_t_to_string(spinel_result_t result)
 {
   switch (result)
     {
@@ -47,17 +47,14 @@ spinel_result_t_to_string(spinel_result_t const result)
 //
 
 spinel_result_t
-spinel_assert_1(char const * const    file,
-                int32_t const         line,
-                bool const            is_abort,
-                spinel_result_t const result)
+spinel_assert_1(char const * file, uint32_t line, bool is_abort, spinel_result_t result)
 {
   if (result != SPN_SUCCESS)
     {
       char const * const spinel_result_t_str = spinel_result_t_to_string(result);
 
       fprintf(stderr,
-              "\"%s\", line %d: spinel_assert(%d) = \"%s\"\n",
+              "\"%s\", line %u: spinel_assert(%d) = \"%s\"\n",
               file,
               line,
               result,
@@ -77,11 +74,11 @@ spinel_assert_1(char const * const    file,
 //
 
 spinel_result_t
-spinel_assert_n(char const * const    file,
-                int32_t const         line,
-                bool const            is_abort,
-                spinel_result_t const result,
-                uint32_t const        n,
+spinel_assert_n(char const *          file,
+                uint32_t              line,
+                bool                  is_abort,
+                spinel_result_t       result,
+                uint32_t              n,
                 spinel_result_t const expect[])
 {
   bool match = false;
@@ -96,7 +93,7 @@ spinel_assert_n(char const * const    file,
       char const * const spinel_result_t_str = spinel_result_t_to_string(result);
 
       fprintf(stderr,
-              "\"%s\", line %d: spinel_assert( %d ) = \"%s\"\n",
+              "\"%s\", line %u: spinel_assert( %d ) = \"%s\"\n",
               file,
               line,
               result,

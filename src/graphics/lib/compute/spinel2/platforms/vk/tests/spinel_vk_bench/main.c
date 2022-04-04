@@ -1184,7 +1184,7 @@ main(int argc, char * const argv[])
   //
   // save compute queue index and count
   //
-  struct spinel_vk_context_create_info const cci = {
+  spinel_vk_context_create_info_t const cci = {
     .vk = {
       .pd = vk.pd,
       .d  = vk.d,

@@ -85,7 +85,7 @@ env_vk_device::SetUp()
   //
   // probe Spinel device requirements for this target
   //
-  struct spinel_vk_target_requirements spinel_tr = {};
+  spinel_vk_target_requirements_t spinel_tr = {};
 
   spinel_vk_target_get_requirements(target->spinel, &spinel_tr);
 
