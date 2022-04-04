@@ -177,7 +177,7 @@ class ResponseContext : public fidl::internal_wavl::WAVLTreeContainable<Response
 //       void LoadGame() {
 //         // Passing `this` to the caller-allocating flavor since `Game`
 //         // implements the corresponding response context.
-//         disk_client_.buffer(arena_)->Download("foo.zip", this);
+//         disk_client_.buffer(arena_)->Download("foo.zip").ThenExactlyOnce(this);
 //       }
 //
 //      private:
