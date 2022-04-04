@@ -32,12 +32,12 @@
             path: "/boot",
         },
         {
-            directory: "system-delayed",
+            directory: "system",
             rights: [ "rx*" ],
             path: "/system",
         },
         {
-            directory: "pkgfs-delayed",
+            directory: "pkgfs",
             rights: [ "rx*" ],
             path: "/pkgfs",
         },

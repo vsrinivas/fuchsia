@@ -35,10 +35,6 @@ TEST(NamespaceTest, Test) {
   auto top_level_dir_names = list_dir_contents("/");
   for (const auto& name : top_level_dir_names) {
     fbl::String sub_dir_name = fbl::StringPrintf("/%s", name.c_str());
-    // /system-delayed will never respond on bringup.
-    if (sub_dir_name.compare("/system-delayed") == 0) {
-      continue;
-    }
     auto dir_contents = list_dir_contents(sub_dir_name.c_str());
   }
 }

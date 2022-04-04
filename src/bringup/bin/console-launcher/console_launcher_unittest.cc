@@ -19,7 +19,7 @@ TEST(SystemInstanceTest, CheckBootArgParsing) {
   arguments["console.path"] = "/test/path";
   arguments["TERM"] = "FAKE_TERM";
   arguments["zircon.autorun.boot"] = "ls+/dev/class/";
-  arguments["zircon.autorun.system"] = "ls+/system-delayed";
+  arguments["zircon.autorun.system"] = "ls+/system";
 
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
   mock_boot_arguments::Server boot_server(std::move(arguments));
@@ -36,7 +36,7 @@ TEST(SystemInstanceTest, CheckBootArgParsing) {
   ASSERT_EQ(args->term.compare("TERM=FAKE_TERM"), 0);
   ASSERT_EQ(args->device.compare("/test/path"), 0);
   ASSERT_EQ(args->autorun_boot.compare("ls+/dev/class/"), 0);
-  ASSERT_EQ(args->autorun_system.compare("ls+/system-delayed"), 0);
+  ASSERT_EQ(args->autorun_system.compare("ls+/system"), 0);
 }
 
 TEST(SystemInstanceTest, CheckBootArgDefaultStrings) {

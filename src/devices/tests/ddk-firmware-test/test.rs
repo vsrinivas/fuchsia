@@ -71,18 +71,14 @@ async fn create_realm(
     builder
         .add_route(
             Route::new()
+                .capability(Capability::directory("pkgfs").path("/pkgfs").rights(fio::RX_STAR_DIR))
                 .capability(
-                    Capability::directory("pkgfs-delayed").path("/pkgfs").rights(fio::RX_STAR_DIR),
-                )
-                .capability(
-                    Capability::directory("pkgfs-packages-delayed")
+                    Capability::directory("pkgfs-packages")
                         .path("/pkgfs/packages")
                         .rights(fio::R_STAR_DIR),
                 )
                 .capability(
-                    Capability::directory("system-delayed")
-                        .path("/system")
-                        .rights(fio::RX_STAR_DIR),
+                    Capability::directory("system").path("/system").rights(fio::RX_STAR_DIR),
                 )
                 .capability(Capability::directory("boot").path("/boot").rights(fio::R_STAR_DIR))
                 .from(&fake_filesystem)

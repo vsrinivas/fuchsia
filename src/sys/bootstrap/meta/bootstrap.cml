@@ -536,13 +536,13 @@
         },
         {
             directory: [
-                "bin",
+                "bin-not-delayed",
                 "blob",
                 "install",
                 "minfs-not-delayed",
-                "pkgfs",
+                "pkgfs-not-delayed",
                 "system",
-                "system-delayed",
+                "system-not-delayed",
                 "tmp",
             ],
             from: "#fshost",
@@ -559,7 +559,7 @@
             dependency: "weak_for_migration",
         },
         {
-            directory: "system-delayed",
+            directory: "system",
             from: "#fshost",
             to: "#driver_manager",
             dependency: "weak_for_migration",
@@ -806,7 +806,7 @@
             to: "#live_usb",
         },
         {
-            directory: "pkgfs-delayed",
+            directory: "pkgfs",
             from: "#fshost",
             to: "#driver_manager",
             dependency: "weak_for_migration",
@@ -878,13 +878,13 @@
         {
             directory: [
                 "minfs",
-                "pkgfs-packages-delayed",
+                "pkgfs-packages",
             ],
             from: "#fshost",
             to: "#base_resolver",
         },
         {
-            directory: "pkgfs-packages-delayed",
+            directory: "pkgfs-packages",
             from: "#fshost",
             to: "#driver_index",
             dependency: "weak_for_migration",

@@ -52,17 +52,17 @@
             to: "#driver-index",
         },
         {
-            directory: "pkgfs-packages-delayed",
+            directory: "pkgfs-packages",
             from: "parent",
             to: [ "#driver-index" ],
         },
         {
-            directory: "pkgfs-delayed",
+            directory: "pkgfs",
             from: "parent",
             to: [ "#driver-manager" ],
         },
         {
-            directory: "system-delayed",
+            directory: "system",
             from: "parent",
             to: [ "#driver-manager" ],
         },

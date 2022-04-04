@@ -22,17 +22,17 @@
             ],
         },
         {
-            directory: "pkgfs-delayed",
+            directory: "pkgfs",
             rights: [ "rx*" ],
             path: "/pkgfs",
         },
         {
-            directory: "pkgfs-packages-delayed",
+            directory: "pkgfs-packages",
             rights: [ "r*" ],
             path: "/pkgfs/packages",
         },
         {
-            directory: "system-delayed",
+            directory: "system",
             rights: [ "rx*" ],
             path: "/system",
         },
@@ -59,15 +59,15 @@
             from: "self",
         },
         {
-            directory: "pkgfs-delayed",
+            directory: "pkgfs",
             from: "self",
         },
         {
-            directory: "pkgfs-packages-delayed",
+            directory: "pkgfs-packages",
             from: "self",
         },
         {
-            directory: "system-delayed",
+            directory: "system",
             from: "self",
         },
         {

@@ -207,10 +207,9 @@
             {
                 source_moniker: "/bootstrap/fshost",
                 source: "component",
-                source_name: "bin",
+                source_name: "bin-not-delayed",
                 capability: "directory",
                 target_monikers: [
-                    "/bootstrap",
                     "/bootstrap/console-launcher",
                     "/bootstrap/fshost",
                     "/bootstrap/netsvc",
@@ -238,12 +237,22 @@
                 capability: "directory",
                 target_monikers: [
                     "/bootstrap",
-                    "/bootstrap/console-launcher",
+                    "/bootstrap/driver_manager",
                     "/bootstrap/fshost",
-                    "/bootstrap/netsvc",
                     "/core",
                     "/core/appmgr",
                     "/core/pkg-cache",
+                ],
+            },
+            {
+                source_moniker: "/bootstrap/fshost",
+                source: "component",
+                source_name: "pkgfs-not-delayed",
+                capability: "directory",
+                target_monikers: [
+                    "/bootstrap/console-launcher",
+                    "/bootstrap/fshost",
+                    "/bootstrap/netsvc",
                 ],
             },
             {
@@ -282,11 +291,21 @@
                     "/bootstrap/console-launcher",
                     "/bootstrap/driver_manager",
                     "/bootstrap/fshost",
-                    "/bootstrap/netsvc",
                     "/core",
                     "/core/appmgr",
                     "/core/system-updater",
                     "/core/system-update-checker",
+                ],
+            },
+            {
+                source_moniker: "/bootstrap/fshost",
+                source: "component",
+                source_name: "system-not-delayed",
+                capability: "directory",
+                target_monikers: [
+                    "/bootstrap/console-launcher",
+                    "/bootstrap/fshost",
+                    "/bootstrap/netsvc",
                 ],
             },
             {

@@ -11,22 +11,25 @@
     ],
     capabilities: [
         {
-            directory: "pkgfs-delayed",
-            rights: [ "rx*" ],
+            directory: "pkgfs",
+            rights: [
+                "execute",
+                "rw*",
+            ],
             path: "/delayed/fs/pkgfs",
         },
         {
-            directory: "pkgfs-packages-delayed",
+            directory: "pkgfs-packages",
             rights: [ "rx*" ],
             path: "/delayed/fs/pkgfs/packages",
         },
         {
-            directory: "system-delayed",
+            directory: "system",
             rights: [ "rx*" ],
             path: "/delayed/fs/system",
         },
         {
-            directory: "bin",
+            directory: "bin-not-delayed",
             rights: [ "rx*" ],
             path: "/fs/bin",
         },
@@ -41,11 +44,8 @@
             path: "/delayed/fs/data",
         },
         {
-            directory: "pkgfs",
-            rights: [
-                "execute",
-                "rw*",
-            ],
+            directory: "pkgfs-not-delayed",
+            rights: [ "rx*" ],
             path: "/fs/pkgfs",
         },
         {
@@ -64,7 +64,7 @@
             path: "/delayed/fs/pkgfs/packages/build-info/0/data",
         },
         {
-            directory: "system",
+            directory: "system-not-delayed",
             rights: [ "rx*" ],
             path: "/fs/system",
         },
@@ -114,22 +114,6 @@
     ],
     expose: [
         {
-            directory: "pkgfs-delayed",
-            from: "self",
-        },
-        {
-            directory: "pkgfs-packages-delayed",
-            from: "self",
-        },
-        {
-            directory: "system-delayed",
-            from: "self",
-        },
-        {
-            directory: "bin",
-            from: "self",
-        },
-        {
             directory: "root",
             from: "#blobfs",
             as: "blob",
@@ -147,6 +131,14 @@
             from: "self",
         },
         {
+            directory: "pkgfs-packages",
+            from: "self",
+        },
+        {
+            directory: "system",
+            from: "self",
+        },
+        {
             directory: "config-data",
             from: "self",
         },
@@ -159,7 +151,15 @@
             from: "self",
         },
         {
-            directory: "system",
+            directory: "pkgfs-not-delayed",
+            from: "self",
+        },
+        {
+            directory: "system-not-delayed",
+            from: "self",
+        },
+        {
+            directory: "bin-not-delayed",
             from: "self",
         },
         {

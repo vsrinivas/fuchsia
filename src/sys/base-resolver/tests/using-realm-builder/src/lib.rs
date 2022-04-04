@@ -108,7 +108,7 @@ impl TestEnvBuilder {
                         Capability::directory("blob").path("/blob").rights(fio::RX_STAR_DIR),
                     )
                     .capability(
-                        Capability::directory("pkgfs-packages-delayed")
+                        Capability::directory("pkgfs-packages")
                             .path("/pkgfs-packages")
                             .rights(fio::RX_STAR_DIR),
                     )
