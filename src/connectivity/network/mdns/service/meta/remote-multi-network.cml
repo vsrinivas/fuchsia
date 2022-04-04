@@ -1,0 +1,22 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/connectivity/network/lib/net_interfaces/client.shard.cml",
+        "syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        binary: "bin/mdns_netemul_multi_network_test_agent",
+        args: [ "--remote" ],
+    },
+    use: [
+        {
+            protocol: [
+                "fuchsia.netemul.sync.SyncManager",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "parent",
+        },
+    ],
+}
