@@ -29,6 +29,8 @@
 #include <string_view>
 #include <type_traits>
 
+#include <trace-vthread/event_vthread.h>
+
 #include "amlogic_decoder_test_hooks.h"
 #include "decoder_core.h"
 #include "firmware_blob.h"
@@ -252,12 +254,14 @@ class DiagnosticStateWrapper {
       : owner_(owner),
         state_value_(state_value),
         state_name_function_(std::move(state_name_function)),
-        async_id_(TRACE_NONCE()) {
-    TRACE_ASYNC_BEGIN("media", state_name_function_(state_value_), async_id_);
+        vthread_id_(GetNextVthreadID()) {
+    TRACE_VTHREAD_DURATION_BEGIN("media", state_name_function_(state_value_), "Decoder",
+                                 vthread_id_, zx_ticks_get());
   }
 
   ~DiagnosticStateWrapper() {
-    TRACE_ASYNC_END("media", state_name_function_(state_value_), async_id_);
+    TRACE_VTHREAD_DURATION_END("media", state_name_function_(state_value_), "Decoder", vthread_id_,
+                               zx_ticks_get());
   }
 
   // Wrapper assignment operator. When a different state is assigned, end the current trace for
@@ -266,9 +270,11 @@ class DiagnosticStateWrapper {
   DiagnosticStateWrapper& operator=(StateType new_statue) {
     // Only process updates if the state has changed
     if (state_value_ != new_statue) {
-      TRACE_ASYNC_END("media", state_name_function_(state_value_), async_id_);
+      TRACE_VTHREAD_DURATION_END("media", state_name_function_(state_value_), "Decoder",
+                                 vthread_id_, zx_ticks_get());
       state_value_ = new_statue;
-      TRACE_ASYNC_BEGIN("media", state_name_function_(state_value_), async_id_);
+      TRACE_VTHREAD_DURATION_BEGIN("media", state_name_function_(state_value_), "Decoder",
+                                   vthread_id_, zx_ticks_get());
       owner_->UpdateDiagnostics();
     }
 
@@ -286,10 +292,17 @@ class DiagnosticStateWrapper {
   }
 
  private:
+  static trace_vthread_id_t GetNextVthreadID() {
+    static std::atomic<uint64_t> id;
+    // Vthread IDs are rounded to the nearest 1000 due to the double->float conversion. See
+    // fxbug.dev/22971/
+    constexpr uint32_t kVthreadIdDistance = 2000;
+    return id.fetch_add(kVthreadIdDistance);
+  }
   VideoDecoder* owner_;
   StateType state_value_;
   fit::function<const char*(StateType)> state_name_function_;
-  const trace_async_id_t async_id_;
+  const trace_vthread_id_t vthread_id_;
 };
 
 }  // namespace amlogic_decoder

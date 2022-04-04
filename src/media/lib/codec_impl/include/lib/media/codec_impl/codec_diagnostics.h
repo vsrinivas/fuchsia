@@ -59,7 +59,7 @@ class CodecDiagnostics {
   static constexpr std::string_view kAllocation = "allocation_pct";
   static constexpr std::string_view kTotalAllocatedTime = "total_allocated_time_ns";
 
-  static constexpr zx::duration kMemoryDuration = zx::msec(100);
+  static constexpr zx::duration kMemoryDuration = zx::msec(1000);
   static constexpr zx::duration kBucketDuration = zx::msec(50);
 
   static std::atomic<trace_counter_id_t> CurrentTraceCounter;

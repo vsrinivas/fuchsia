@@ -200,6 +200,7 @@ if (target_cpu == "arm64") {
       "//zircon/system/ulib/syslog",
       "//zircon/system/ulib/trace",
       "//zircon/system/ulib/trace:trace-driver",
+      "//zircon/system/ulib/trace-vthread",
       "//zircon/system/ulib/zx",
       "//zircon/third_party/ulib/safemath",
     ]
