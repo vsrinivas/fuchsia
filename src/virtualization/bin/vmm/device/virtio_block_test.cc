@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -16,7 +18,6 @@
 #include <gtest/gtest.h>
 #include <virtio/block.h>
 
-#include "fuchsia/logger/cpp/fidl.h"
 #include "src/virtualization/bin/vmm/device/block.h"
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
@@ -73,7 +74,18 @@ class VirtioBlockTest : public TestWithDevice,
                         .targets = {ParentRef()}});
 
     realm_ = std::make_unique<RealmRoot>(realm_builder.Build(dispatcher()));
+  }
 
+  struct StartDeviceOptions {
+    uint32_t negotiated_features;
+    fuchsia::virtualization::BlockMode block_mode;
+
+    static StartDeviceOptions Default() {
+      return {0, fuchsia::virtualization::BlockMode::READ_WRITE};
+    }
+  };
+
+  void StartFileBlockDevice(StartDeviceOptions options = StartDeviceOptions::Default()) {
     // Setup block file.
     // Open the file twice; once to get a FilePtr to provide to the
     // virtio_block process and another to retain to verify the file
@@ -96,9 +108,9 @@ class VirtioBlockTest : public TestWithDevice,
     status = MakeStartInfo(request_queue_.end(), &start_info);
     ASSERT_EQ(ZX_OK, status);
 
-    status = block_->Start(
-        std::move(start_info), kVirtioBlockId, fuchsia::virtualization::BlockMode::READ_WRITE,
-        fuchsia::virtualization::BlockFormat::FILE, std::move(client), &capacity, &block_size);
+    status = block_->Start(std::move(start_info), kVirtioBlockId, options.block_mode,
+                           fuchsia::virtualization::BlockFormat::FILE, std::move(client), &capacity,
+                           &block_size);
     ASSERT_EQ(ZX_OK, status);
     ASSERT_EQ(kBlockSectorSize * kNumSectors, capacity);
 
@@ -112,7 +124,7 @@ class VirtioBlockTest : public TestWithDevice,
     }
 
     // Finish negotiating features.
-    status = block_->Ready(0);
+    status = block_->Ready(options.negotiated_features);
     ASSERT_EQ(ZX_OK, status);
   }
 
@@ -148,6 +160,8 @@ class VirtioBlockTest : public TestWithDevice,
 };
 
 TEST_P(VirtioBlockTest, BadHeaderShort) {
+  ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
+
   uint8_t header[sizeof(virtio_blk_req_t) - 1] = {};
   uint8_t* blk_status;
   zx_status_t status = DescriptorChainBuilder(request_queue_)
@@ -165,6 +179,8 @@ TEST_P(VirtioBlockTest, BadHeaderShort) {
 }
 
 TEST_P(VirtioBlockTest, BadHeaderLong) {
+  ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
+
   uint8_t header[sizeof(virtio_blk_req_t) + 1] = {};
   uint8_t* blk_status;
   zx_status_t status = DescriptorChainBuilder(request_queue_)
@@ -182,6 +198,8 @@ TEST_P(VirtioBlockTest, BadHeaderLong) {
 }
 
 TEST_P(VirtioBlockTest, BadPayload) {
+  ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
+
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_IN,
   };
@@ -203,6 +221,8 @@ TEST_P(VirtioBlockTest, BadPayload) {
 }
 
 TEST_P(VirtioBlockTest, BadRequestType) {
+  ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
+
   virtio_blk_req_t header = {
       .type = UINT32_MAX,
   };
@@ -222,6 +242,8 @@ TEST_P(VirtioBlockTest, BadRequestType) {
 }
 
 TEST_P(VirtioBlockTest, Read) {
+  ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
+
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_IN,
   };
@@ -246,6 +268,8 @@ TEST_P(VirtioBlockTest, Read) {
 }
 
 TEST_P(VirtioBlockTest, ReadMultipleDescriptors) {
+  ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
+
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_IN,
   };
@@ -273,6 +297,8 @@ TEST_P(VirtioBlockTest, ReadMultipleDescriptors) {
 }
 
 TEST_P(VirtioBlockTest, UnderflowOnWrite) {
+  ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
+
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_OUT,
       .sector = 0,
@@ -296,6 +322,8 @@ TEST_P(VirtioBlockTest, UnderflowOnWrite) {
 }
 
 TEST_P(VirtioBlockTest, BadWriteOffset) {
+  ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
+
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_OUT,
       .sector = kNumSectors,
@@ -319,6 +347,8 @@ TEST_P(VirtioBlockTest, BadWriteOffset) {
 }
 
 TEST_P(VirtioBlockTest, Write) {
+  ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
+
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_OUT,
   };
@@ -341,6 +371,8 @@ TEST_P(VirtioBlockTest, Write) {
 }
 
 TEST_P(VirtioBlockTest, WriteGoodAndBadSectors) {
+  ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
+
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_OUT,
       .sector = 1,
@@ -390,6 +422,8 @@ TEST_P(VirtioBlockTest, WriteGoodAndBadSectors) {
 }
 
 TEST_P(VirtioBlockTest, WriteMultipleDescriptors) {
+  ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
+
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_OUT,
       .sector = 0,
@@ -421,6 +455,8 @@ TEST_P(VirtioBlockTest, WriteMultipleDescriptors) {
 }
 
 TEST_P(VirtioBlockTest, Sync) {
+  ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
+
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_FLUSH,
   };
@@ -440,6 +476,8 @@ TEST_P(VirtioBlockTest, Sync) {
 }
 
 TEST_P(VirtioBlockTest, SyncWithData) {
+  ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
+
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_FLUSH,
   };
@@ -462,6 +500,8 @@ TEST_P(VirtioBlockTest, SyncWithData) {
 }
 
 TEST_P(VirtioBlockTest, SyncNonZeroSector) {
+  ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
+
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_FLUSH,
       .sector = 1,
@@ -482,6 +522,8 @@ TEST_P(VirtioBlockTest, SyncNonZeroSector) {
 }
 
 TEST_P(VirtioBlockTest, Id) {
+  ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
+
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_GET_ID,
   };
@@ -504,6 +546,8 @@ TEST_P(VirtioBlockTest, Id) {
 }
 
 TEST_P(VirtioBlockTest, IdLengthIncorrect) {
+  ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
+
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_GET_ID,
   };
