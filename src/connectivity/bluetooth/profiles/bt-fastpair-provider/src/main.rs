@@ -10,7 +10,7 @@ mod types;
 
 use gatt_service::GattService;
 
-#[fuchsia::component(logging_tags = ["bt-fastpair-provider"])]
+#[fuchsia::main(logging_tags = ["bt-fastpair-provider"])]
 async fn main() -> Result<(), Error> {
     info!("Fast Pair Provider component running.");
 

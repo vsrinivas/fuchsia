@@ -363,7 +363,7 @@ async fn run_repl<'a>(peer_map: Arc<RwLock<PeerFactoryMap>>) -> Result<(), Error
     Ok(())
 }
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let args: Options = argh::from_env();
 

@@ -20,7 +20,7 @@ mod types;
 use crate::fidl_service::run_services;
 use crate::profile_registrar::ProfileRegistrar;
 
-#[fuchsia::component]
+#[fuchsia::main]
 pub async fn main() -> Result<(), Error> {
     let profile_svc = fuchsia_component::client::connect_to_protocol::<ProfileMarker>()
         .context("Failed to connect to Bluetooth Profile service")?;

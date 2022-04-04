@@ -32,7 +32,7 @@ use crate::{
     profile::AvrcpService,
 };
 
-#[fuchsia::component(logging_tags = ["avrcp"])]
+#[fuchsia::main(logging_tags = ["avrcp"])]
 async fn main() -> Result<(), Error> {
     // Begin searching for AVRCP target/controller SDP records on newly connected remote peers
     // and register our AVRCP service with the `bredr.Profile` service.

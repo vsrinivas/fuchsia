@@ -21,7 +21,7 @@ use crate::avrcp_handler::process_avrcp_requests;
 use crate::battery_client::process_battery_client_requests;
 use crate::media::media_sessions::MediaSessions;
 
-#[fuchsia::component(logging_tags = ["avrcp-tg"])]
+#[fuchsia::main(logging_tags = ["avrcp-tg"])]
 async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     let lifecycle = ComponentLifecycleServer::spawn();

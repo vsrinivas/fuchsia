@@ -422,7 +422,7 @@ fn init_logging(verbosity: u16) {
 }
 
 /// Parse program arguments, call the main loop, and log any unrecoverable errors.
-#[fuchsia::component(logging_tags = ["bt-snoop"])]
+#[fuchsia::main(logging_tags = ["bt-snoop"])]
 async fn main() {
     let args: Args = argh::from_env();
     init_logging(args.verbosity);

@@ -5,7 +5,7 @@
 use anyhow::Error;
 use fuchsia_audio_dai as dai;
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let mut devices = dai::find_devices().await?;
 
