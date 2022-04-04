@@ -96,8 +96,11 @@ void dyn_break_on_load_test_handler(inferior_data_t* data, const zx_port_packet_
       rip = regs.pc;
 #endif
 
-      // The breakpoint should be exactly the same as informed by the dynamic loader.
-      ASSERT_EQ(rip, dl_debug.r_brk_on_load);
+      // The address of the breakpoint should euqal to the value of ZX_PROP_PROCESS_BREAK_ON_LOAD.
+      uintptr_t break_on_load_addr;
+      status = zx_object_get_property(test_state->process_handle, ZX_PROP_PROCESS_BREAK_ON_LOAD,
+                                      &break_on_load_addr, sizeof(break_on_load_addr));
+      ASSERT_EQ(rip, break_on_load_addr);
 
       ASSERT_EQ(cleanup_breakpoint(thread.get()), ZX_OK);
 

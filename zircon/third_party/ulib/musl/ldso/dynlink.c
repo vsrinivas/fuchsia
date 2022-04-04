@@ -213,10 +213,18 @@ __NO_SAFESTACK static bool should_break_on_load(void) {
   intptr_t dyn_break_on_load = 0;
   zx_status_t status = _zx_object_get_property(__zircon_process_self, ZX_PROP_PROCESS_BREAK_ON_LOAD,
                                                &dyn_break_on_load, sizeof(dyn_break_on_load));
-  if (status != ZX_OK)
+  if (status != ZX_OK || dyn_break_on_load == 0)
     return false;
 
-  return dyn_break_on_load != 0;
+  if (dyn_break_on_load != (intptr_t)&debug_break) {
+    // Set ZX_PROP_PROCESS_BREAK_ON_LOAD to &debug_break. Debuggers use this to know whether
+    // a breakpoint exception is to notify changes of dso list.
+    dyn_break_on_load = (intptr_t)&debug_break;
+    _zx_object_set_property(__zircon_process_self, ZX_PROP_PROCESS_BREAK_ON_LOAD,
+                            &dyn_break_on_load, sizeof(dyn_break_on_load));
+  };
+
+  return true;
 }
 
 // Simple bump allocator for dynamic linker internal data structures.
@@ -1819,7 +1827,6 @@ __NO_SAFESTACK static void* dls3(zx_handle_t exec_vmo, const char* argv0, const 
 
   debug.r_version = 1;
   debug.r_brk = (uintptr_t)&_dl_debug_state;
-  debug.r_brk_on_load = (uintptr_t)&debug_break;
   debug.r_map = &head->l_map;
   debug.r_ldbase = ldso.l_map.l_addr;
   debug.r_state = 0;

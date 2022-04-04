@@ -105,12 +105,14 @@ The dynamic loader sets the expected value of `ZX_PROP_PROCESS_DEBUG_ADDR` befor
 triggering this debug trap. Exception handlers can use this property to query the
 dynamic loader's state.
 
-When the dynamic loader issues the debug trap, it sets the value of the `r_brk_on_load`
-member on the `r_debug` struct exposed by the dynamic loader. The address of this
-struct can be obtained by the `ZX_PROP_PROCESS_DEBUG_ADDR` property.
+When the dynamic loader issues the debug trap, it also sets the value of
+`ZX_PROP_PROCESS_BREAK_ON_LOAD` to the address of the debug trap, so that
+a debugger could compare the value with the address of the exception to
+determine whether the debug trap was triggered by the dynamic loader.
 
 Any non-zero value is considered to activate this feature. Setting this property to
-zero will disable it.
+zero will disable it. A debugger could also use this property to detect whether
+there's already another debugger attached to the same process.
 
 Note: Depending on the architecture, the address reported by the exception might be
 different that the one reported by this property. For example, an x64 platform reports

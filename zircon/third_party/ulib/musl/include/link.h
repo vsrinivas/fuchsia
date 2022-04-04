@@ -37,17 +37,6 @@ struct r_debug {
   int r_version;
   struct link_map* r_map;
   ElfW(Addr) r_brk;
-
-  /* This is the address of a function internal to the run-time linker
-     that triggers a debug trap. This function will always be called
-     when the linker begins to map in a library or unmap it, and again
-     when the mapping change is complete.
-
-     The debugger can compare the address of a sw exception to this value
-     to determine whether the debug trap was triggered by the run-time
-     linker. */
-  ElfW(Addr) r_brk_on_load;
-
   enum { RT_CONSISTENT, RT_ADD, RT_DELETE } r_state;
   ElfW(Addr) r_ldbase;
 };
