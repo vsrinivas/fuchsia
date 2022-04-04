@@ -1,5 +1,5 @@
 {
-    apexes: [
+    apex_hack: [
         "com.android.runtime",
     ],
     features: [

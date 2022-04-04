@@ -1,5 +1,5 @@
 {
-    apexes: [],
+    apex_hack: [],
     features: [],
     init_args: [],
     init_binary_path: "",

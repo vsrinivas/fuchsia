@@ -65,7 +65,7 @@
     ],
     config: {
         // Hack for specifying apexes.
-        apexes: {
+        apex_hack: {
             type: "vector",
             element: {
                 type: "string",

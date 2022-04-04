@@ -144,12 +144,12 @@ fn create_fs_context(
 }
 
 fn mount_apexes(init_task: &CurrentTask) -> Result<(), Error> {
-    if !CONFIG.apexes.is_empty() {
+    if !CONFIG.apex_hack.is_empty() {
         init_task
             .lookup_path_from_root(b"apex")?
             .mount(WhatToMount::Fs(TmpFs::new()), MountFlags::empty())?;
         let apex_dir = init_task.lookup_path_from_root(b"apex")?;
-        for apex in &CONFIG.apexes {
+        for apex in &CONFIG.apex_hack {
             let apex = apex.as_bytes();
             let apex_subdir = apex_dir.create_node(
                 apex,
