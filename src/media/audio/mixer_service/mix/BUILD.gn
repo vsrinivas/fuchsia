@@ -20,6 +20,8 @@ source_set("mix") {
     "detached_thread.h",
     "mix_thread.cc",
     "mix_thread.h",
+    "packet_queue_producer_stage.cc",
+    "packet_queue_producer_stage.h",
     "packet_view.cc",
     "packet_view.h",
     "pipeline_stage.cc",
@@ -42,6 +44,7 @@ executable("mix_unittests") {
   testonly = true
 
   sources = [
+    "packet_queue_producer_stage_unittest.cc",
     "packet_view_unittest.cc",
     "pipeline_stage_unittest.cc",
   ]
