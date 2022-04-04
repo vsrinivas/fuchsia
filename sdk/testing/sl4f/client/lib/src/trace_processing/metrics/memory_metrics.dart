@@ -38,15 +38,18 @@ _Results _memoryMetrics(Model model, bool excludeBandwidth) {
         'the category "memory_monitor" is missing.');
     return null;
   }
-  final totalMemory =
-      filterEventsTyped<CounterEvent>(memoryMonitorEvents, name: 'fixed')
-          // Add a placeholder event so that [first] never throws an exception.
-          .followedBy([CounterEvent()])
-          .first
-          ?.args['total'];
-  if (totalMemory == null) {
+
+  final fixedMemoryEvents =
+      filterEventsTyped<CounterEvent>(memoryMonitorEvents, name: 'fixed');
+  if (fixedMemoryEvents.isEmpty) {
     _log.warning(
         'Missing ("memory_monitor", "fixed") counter event in trace. No memory data is extracted.');
+    return null;
+  }
+  final totalMemory = fixedMemoryEvents.first.args['total'];
+  if (totalMemory == null) {
+    _log.warning(
+        'Malformed ("memory_monitor", "fixed") counter event in trace. Missing "total" field. No memory data is extracted.');
     return null;
   }
   final allocatedMemoryEvents =

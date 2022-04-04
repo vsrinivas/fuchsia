@@ -30,23 +30,6 @@ Model createModelFromJsonString(String jsonString) {
 Model createModelFromJson(Map<String, dynamic> rootObject) =>
     _createModelFromJson(rootObject);
 
-/// A helper function to load common fields into an [Event] from a raw JSON trace
-/// event.
-void _fromJsonCommon(Event event, Map<String, dynamic> jsonTraceEvent) {
-  event
-    ..category = jsonTraceEvent['cat']
-    ..name = jsonTraceEvent['name']
-    ..pid = jsonTraceEvent['pid']
-    ..tid = jsonTraceEvent['tid'].toInt()
-    ..start = TimePoint.fromEpochDelta(
-        TimeDelta.fromMicroseconds(jsonTraceEvent['ts']));
-
-  final args = jsonTraceEvent['args'];
-  if (args != null) {
-    event.args = args;
-  }
-}
-
 /// Assert that expected fields in a JSON trace event are present and are of
 /// the correct type.  If any of these fields are missing or is of a different
 /// type than what is asserted here, then the JSON trace event is considered to
@@ -339,15 +322,7 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
 
     final phase = traceEvent['ph'];
     if (phase == 'X') {
-      final durationEvent = DurationEvent();
-      _fromJsonCommon(durationEvent, traceEvent);
-      if (!(traceEvent.containsKey('dur') &&
-          (traceEvent['dur'] is double || traceEvent['dur'] is int))) {
-        throw FormatException(
-            'Expected $traceEvent to have field "dur" of type double or int');
-      }
-      durationEvent.duration = TimeDelta.fromMicroseconds(traceEvent['dur']);
-
+      final durationEvent = DurationEvent.fromJson(traceEvent);
       if (unboundFlowEvents.containsKey(trackKey)) {
         for (final flowEvent in unboundFlowEvents[trackKey]) {
           flowEvent.enclosingDuration = durationEvent;
@@ -357,8 +332,7 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
       addToDurationStack(durationEvent, durationStack);
       resultEvents.add(durationEvent);
     } else if (phase == 'B') {
-      final durationEvent = DurationEvent();
-      _fromJsonCommon(durationEvent, traceEvent);
+      final durationEvent = DurationEvent.fromJson(traceEvent);
 
       if (unboundFlowEvents.containsKey(trackKey)) {
         for (final flowEvent in unboundFlowEvents[trackKey]) {
@@ -381,9 +355,7 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
       durationStack.removeLast();
     } else if (phase == 'b') {
       final asyncKey = _AsyncKey.fromTraceEvent(traceEvent);
-      final asyncEvent = AsyncEvent();
-      _fromJsonCommon(asyncEvent, traceEvent);
-      asyncEvent.id = asyncKey.id;
+      final asyncEvent = AsyncEvent.fromJson(asyncKey.id, traceEvent);
       liveAsyncEvents[asyncKey] = asyncEvent;
     } else if (phase == 'e') {
       final asyncKey = _AsyncKey.fromTraceEvent(traceEvent);
@@ -400,24 +372,7 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
       }
       resultEvents.add(asyncEvent);
     } else if (phase == 'i' || phase == 'I') {
-      if (!(traceEvent.containsKey('s') && traceEvent['s'] is String)) {
-        throw FormatException(
-            'Expected $traceEvent to have field "s" of type String');
-      }
-      final String scope = traceEvent['s'];
-      if (!(scope == 'g' || scope == 'p' || scope == 't')) {
-        throw FormatException(
-            'Expected "s" (scope) field of $traceEvent to have value in {"g", "p", "t"}');
-      }
-      final instantEvent = InstantEvent();
-      _fromJsonCommon(instantEvent, traceEvent);
-      instantEvent.scope = {
-        'g': InstantEventScope.global,
-        'p': InstantEventScope.process,
-        't': InstantEventScope.thread
-      }[scope];
-
-      resultEvents.add(instantEvent);
+      resultEvents.add(InstantEvent.fromJson(traceEvent));
     } else if (phase == 's' || phase == 't' || phase == 'f') {
       String bindingPoint;
 
@@ -457,16 +412,8 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
       final enclosingDuration =
           bindingPoint == 'enclosing' ? durationStack.last : null;
 
-      final flowEvent = FlowEvent();
-      _fromJsonCommon(flowEvent, traceEvent);
-      flowEvent
-        ..id = flowKey.id
-        ..phase = {
-          's': FlowEventPhase.start,
-          't': FlowEventPhase.step,
-          'f': FlowEventPhase.end
-        }[phase]
-        ..enclosingDuration = enclosingDuration;
+      final flowEvent =
+          FlowEvent.fromJson(flowKey.id, enclosingDuration, traceEvent);
       if (bindingPoint == 'enclosing') {
         enclosingDuration.childFlows.add(flowEvent);
       } else {
@@ -487,23 +434,7 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
       }
       resultEvents.add(flowEvent);
     } else if (phase == 'C') {
-      int id;
-      if (traceEvent.containsKey('id')) {
-        if (traceEvent['id'] is int) {
-          id = traceEvent['id'];
-        } else if (traceEvent['id'] is String) {
-          id = int.tryParse(traceEvent['id']);
-        }
-        if (id == null) {
-          throw FormatException(
-              'Expected $traceEvent with "id" field set to be of type int '
-              'or a string that parses as an int');
-        }
-      }
-      final counterEvent = CounterEvent();
-      _fromJsonCommon(counterEvent, traceEvent);
-      counterEvent.id = id;
-      resultEvents.add(counterEvent);
+      resultEvents.add(CounterEvent.fromJson(traceEvent));
     } else if (phase == 'n') {
       // TODO(fxbug.dev/41309): Support nested async events.  In the meantime, just drop them.
       droppedNestedAsyncEventCounter++;
@@ -658,12 +589,11 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
 
   final Map<int, Process> processes = {};
   for (final event in resultEvents) {
-    final process =
-        processes.putIfAbsent(event.pid, () => Process()..pid = event.pid);
+    final process = processes.putIfAbsent(event.pid, () => Process(event.pid));
 
     int threadIndex = process.threads.indexWhere((e) => e.tid == event.tid);
     if (threadIndex == -1) {
-      final thread = Thread()..tid = event.tid;
+      final thread = Thread(event.tid);
       if (tidToName.containsKey(event.tid)) {
         thread.name = tidToName[event.tid];
       }
