@@ -447,19 +447,20 @@ const (
 )
 
 type Type struct {
-	Kind              TypeKind
-	ElementType       *Type
-	ElementCount      *int
-	HandleSubtype     HandleSubtype
-	HandleRights      HandleRights
-	RequestSubtype    EncodedCompoundIdentifier
-	PrimitiveSubtype  PrimitiveSubtype
-	Identifier        EncodedCompoundIdentifier
-	Nullable          bool
-	ProtocolTransport string
-	ObjType           uint32
-	TypeShapeV1       TypeShape
-	TypeShapeV2       TypeShape
+	Kind               TypeKind
+	ElementType        *Type
+	ElementCount       *int
+	HandleSubtype      HandleSubtype
+	HandleRights       HandleRights
+	RequestSubtype     EncodedCompoundIdentifier
+	PrimitiveSubtype   PrimitiveSubtype
+	Identifier         EncodedCompoundIdentifier
+	Nullable           bool
+	ProtocolTransport  string
+	ObjType            uint32
+	ResourceIdentifier string
+	TypeShapeV1        TypeShape
+	TypeShapeV2        TypeShape
 }
 
 // UnmarshalJSON customizes the JSON unmarshalling for Type.
@@ -535,6 +536,10 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 			return err
 		}
 		err = json.Unmarshal(*obj["obj_type"], &t.ObjType)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(*obj["resource_identifier"], &t.ResourceIdentifier)
 		if err != nil {
 			return err
 		}

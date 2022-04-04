@@ -528,7 +528,10 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		}
 	case fidlgen.HandleType:
 		c.handleTypes[val.HandleSubtype] = struct{}{}
-		r.nameVariants = nameVariantsForHandle(val.HandleSubtype)
+		if val.ResourceIdentifier == "fdf/handle" {
+			c.containsDriverReferences = true
+		}
+		r.nameVariants = nameVariantsForHandle(val.ResourceIdentifier, val.HandleSubtype)
 		r.WireFamily = FamilyKinds.Reference
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.Handle

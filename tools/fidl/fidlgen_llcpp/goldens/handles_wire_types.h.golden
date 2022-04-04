@@ -133,7 +133,7 @@ struct Handles {
 extern "C" const fidl_type_t test_handles_FdfHandlesTable;
 
 struct FdfHandles {
-  ::zx::channel fdf_channel_handle = {};
+  ::fdf::Channel fdf_channel_handle = {};
 
   ::fdf::ClientEnd<::test_handles::DriverProtocol> client_end_driver = {};
 

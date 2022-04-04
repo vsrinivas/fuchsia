@@ -504,7 +504,7 @@ class FdfHandles {
 
  public:
   FdfHandles(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  FdfHandles(::zx::channel fdf_channel_handle,
+  FdfHandles(::fdf::Channel fdf_channel_handle,
              ::fdf::ClientEnd<::test_handles::DriverProtocol> client_end_driver,
              ::fdf::ServerEnd<::test_handles::DriverProtocol>
                  server_end_driver) noexcept
@@ -516,11 +516,11 @@ class FdfHandles {
   FdfHandles(FdfHandles&&) noexcept = default;
   FdfHandles& operator=(FdfHandles&&) noexcept = default;
 
-  const ::zx::channel& fdf_channel_handle() const {
+  const ::fdf::Channel& fdf_channel_handle() const {
     return storage_.fdf_channel_handle;
   }
 
-  ::zx::channel& fdf_channel_handle() { return storage_.fdf_channel_handle; }
+  ::fdf::Channel& fdf_channel_handle() { return storage_.fdf_channel_handle; }
 
   const ::fdf::ClientEnd<::test_handles::DriverProtocol>& client_end_driver()
       const {
@@ -542,7 +542,7 @@ class FdfHandles {
 
  private:
   struct Storage_ final {
-    ::zx::channel fdf_channel_handle{};
+    ::fdf::Channel fdf_channel_handle{};
     ::fdf::ClientEnd<::test_handles::DriverProtocol> client_end_driver{};
     ::fdf::ServerEnd<::test_handles::DriverProtocol> server_end_driver{};
   };
@@ -554,7 +554,7 @@ class FdfHandles {
   friend struct ::fidl::internal::MemberVisitor<::test_handles::FdfHandles>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::channel,
+          Storage_, ::fdf::Channel,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL,
                                                         0x80000000, false>>{
           &Storage_::fdf_channel_handle, 0, 0},
