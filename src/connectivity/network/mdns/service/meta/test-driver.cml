@@ -1,0 +1,23 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "sys/testing/elf_test_runner.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/mdns_netemul_test_agent",
+        args: [ "--local" ],
+    },
+    use: [
+        {
+            protocol: [
+                "fuchsia.device.NameProvider",
+                "fuchsia.net.mdns.Resolver",
+                "fuchsia.net.mdns.Subscriber",
+            ],
+            from: "parent",
+        },
+    ],
+}

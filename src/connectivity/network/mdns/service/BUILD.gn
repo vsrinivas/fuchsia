@@ -237,21 +237,48 @@ executable("mdns_netemul_test_agent") {
   ]
 }
 
-fuchsia_component("mdns_netemul_test_agent_component") {
-  testonly = true
-  component_name = "mdns_netemul_test_agent"
+fuchsia_test_component("test-driver") {
+  manifest = "meta/test-driver.cml"
   deps = [ ":mdns_netemul_test_agent" ]
-  manifest = "meta/mdns_netemul_test_agent.cmx"
 }
 
-fuchsia_unittest_component("mdns_netemul_test") {
-  deps = [ ":mdns_netemul_test_agent_component" ]
-  manifest = "meta/mdns_netemul_test.cmx"
+fuchsia_test_component("publisher") {
+  manifest = "meta/publisher.cml"
+  deps = [ ":mdns_netemul_test_agent" ]
 }
 
-fuchsia_unittest_component("mdns_netemul_v6_test") {
-  deps = [ ":mdns_netemul_test_agent_component" ]
-  manifest = "meta/mdns_netemul_v6_test.cmx"
+fuchsia_test_component("device-name-provider-local") {
+  manifest = "meta/device-name-provider-local.cml"
+  deps = [ "//src/bringup/bin/device-name-provider" ]
+}
+
+fuchsia_test_component("device-name-provider-remote") {
+  manifest = "meta/device-name-provider-remote.cml"
+  deps = [ "//src/bringup/bin/device-name-provider" ]
+}
+
+fuchsia_test_component("mdns-netemul-test") {
+  manifest = "meta/mdns-netemul-test.cml"
+  deps = [
+    ":component",
+    ":device-name-provider-local",
+    ":device-name-provider-remote",
+    ":publisher",
+    ":test-driver",
+    "//src/connectivity/network/testing/netemul-v2/configurable-netstack",
+  ]
+}
+
+fuchsia_test_component("mdns-netemul-v6-test") {
+  manifest = "meta/mdns-netemul-v6-test.cml"
+  deps = [
+    ":component",
+    ":device-name-provider-local",
+    ":device-name-provider-remote",
+    ":publisher",
+    ":test-driver",
+    "//src/connectivity/network/testing/netemul-v2/configurable-netstack",
+  ]
 }
 
 executable("mdns_netemul_multi_network_test_agent") {
@@ -284,8 +311,8 @@ fuchsia_unittest_component("mdns_netemul_multi_network_test") {
 
 fuchsia_test_package("mdns-netemul-tests") {
   test_components = [
-    ":mdns_netemul_test",
-    ":mdns_netemul_v6_test",
+    ":mdns-netemul-test",
+    ":mdns-netemul-v6-test",
     ":mdns_netemul_multi_network_test",
   ]
   deps = [

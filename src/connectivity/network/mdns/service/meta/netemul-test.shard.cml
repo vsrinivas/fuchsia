@@ -1,0 +1,157 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/connectivity/network/testing/netemul-v2/runner/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        networks: [
+            {
+                name: "net",
+                endpoints: [
+                    { name: "local-ep" },
+                    { name: "local-ep2" },
+                    { name: "remote-ep" },
+                ],
+            },
+        ],
+        start: [ "publisher" ],
+    },
+    children: [
+        // ================== local node ==================
+        {
+            name: "test-driver",
+            url: "#meta/test-driver.cm",
+        },
+        {
+            name: "local-mdns",
+            url: "#meta/mdns.cm",
+        },
+        {
+            name: "local-netstack",
+            url: "#meta/configurable-netstack.cm",
+        },
+        {
+            name: "local-name-provider",
+            url: "#meta/device-name-provider-local.cm",
+        },
+
+        // ================== remote node ==================
+        {
+            name: "publisher",
+            url: "#meta/publisher.cm",
+        },
+        {
+            name: "remote-mdns",
+            url: "#meta/mdns.cm",
+        },
+        {
+            name: "remote-netstack",
+            url: "#meta/configurable-netstack.cm",
+        },
+        {
+            name: "remote-name-provider",
+            url: "#meta/device-name-provider-remote.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#test-driver",
+        },
+        {
+            protocol: "fuchsia.netemul.ConfigurableNetstack",
+            from: "#local-netstack",
+            path: "/svc/local",
+        },
+        {
+            protocol: "fuchsia.netemul.ConfigurableNetstack",
+            from: "#remote-netstack",
+            path: "/svc/remote",
+        },
+    ],
+    offer: [
+        // ================== local node ==================
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#local-mdns",
+                "#local-name-provider",
+                "#local-netstack",
+                "#test-driver",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.device.NameProvider" ],
+            from: "#local-name-provider",
+            to: [
+                "#local-mdns",
+                "#test-driver",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.net.mdns.Resolver",
+                "fuchsia.net.mdns.Subscriber",
+            ],
+            from: "#local-mdns",
+            to: "#test-driver",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#local-mdns",
+            subdir: "local-mdns",
+        },
+        {
+            protocol: [
+                "fuchsia.net.interfaces.State",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#local-netstack",
+            to: "#local-mdns",
+        },
+
+        // ================== remote node ==================
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#publisher",
+                "#remote-mdns",
+                "#remote-name-provider",
+                "#remote-netstack",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.device.NameProvider" ],
+            from: "#remote-name-provider",
+            to: [
+                "#publisher",
+                "#remote-mdns",
+            ],
+        },
+        {
+            protocol: "fuchsia.net.mdns.Publisher",
+            from: "#remote-mdns",
+            to: "#publisher",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#remote-mdns",
+            subdir: "remote-mdns",
+        },
+        {
+            protocol: [
+                "fuchsia.net.interfaces.State",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#remote-netstack",
+            to: "#remote-mdns",
+        },
+    ],
+}
