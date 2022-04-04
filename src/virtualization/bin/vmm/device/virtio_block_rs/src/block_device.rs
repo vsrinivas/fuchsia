@@ -6,6 +6,7 @@ use {
     crate::backend::{BlockBackend, DeviceAttrs, Request, Sector},
     crate::wire,
     anyhow::anyhow,
+    fidl_fuchsia_virtualization::BlockMode,
     std::io::{Read, Write},
     thiserror::Error,
     virtio_device::chain::{ReadableChain, WritableChain},
@@ -126,17 +127,51 @@ fn read_header<'a, 'b, N: DriverNotify, M: DriverMem>(
         .expect("Failed to deserialize VirtioBlockHeader."))
 }
 
+/// Note that AccessMode should be determined based on if the RO feature was offered to the device,
+/// and not if the feature was negotiated. In other words, a driver must not be able to get write
+/// access to a device by simply failing to confirm the RO feature.
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+pub enum AccessMode {
+    ReadOnly,
+    ReadWrite,
+}
+
+impl AccessMode {
+    pub fn is_read_only(&self) -> bool {
+        match self {
+            AccessMode::ReadOnly => true,
+            AccessMode::ReadWrite => false,
+        }
+    }
+}
+
+impl From<BlockMode> for AccessMode {
+    fn from(mode: BlockMode) -> Self {
+        match mode {
+            BlockMode::ReadOnly => AccessMode::ReadOnly,
+            BlockMode::ReadWrite => AccessMode::ReadWrite,
+            // Volatile write controls the backend used, but the device is still writable.
+            BlockMode::VolatileWrite => AccessMode::ReadWrite,
+        }
+    }
+}
+
 pub struct BlockDevice {
     backend: Box<dyn BlockBackend>,
     device_attrs: DeviceAttrs,
     id: String,
+    mode: AccessMode,
 }
 
 impl BlockDevice {
-    pub async fn new(id: String, backend: Box<dyn BlockBackend>) -> Result<Self, anyhow::Error> {
+    pub async fn new(
+        id: String,
+        mode: AccessMode,
+        backend: Box<dyn BlockBackend>,
+    ) -> Result<Self, anyhow::Error> {
         // FIDL already enforces this upper bound.
         assert!(id.len() <= wire::VIRTIO_BLK_ID_LEN);
-        Ok(Self { device_attrs: backend.get_attrs().await?, backend, id })
+        Ok(Self { device_attrs: backend.get_attrs().await?, backend, id, mode })
     }
 
     /// Returns the cached `DeviceAttrs` for this device.
@@ -256,8 +291,9 @@ impl BlockDevice {
         header: wire::VirtioBlockHeader,
         mut chain: ReadableChain<'a, 'b, N, M>,
     ) -> Result<(WritableChain<'a, 'b, N, M>, wire::VirtioBlockStatus), anyhow::Error> {
-        // TODO(fxbug.dev/95529): Check if device is configured as Read Only and reject the write
-        // if so.
+        if self.mode.is_read_only() {
+            return readable_chain_error(chain, wire::VirtioBlockStatus::IoError);
+        }
         let bytes_to_write = chain.remaining()?;
         let sector = Sector::from_raw_sector(header.sector.get());
         if let Err(_e) = check_request(bytes_to_write as u64, sector, self.device_attrs.capacity) {
@@ -484,7 +520,9 @@ mod tests {
 
         // Process the chain.
         let (backend, controller) = MemoryBackend::new();
-        let device = BlockDevice::new("device-id".to_string(), Box::new(backend)).await?;
+        let device =
+            BlockDevice::new("device-id".to_string(), AccessMode::ReadWrite, Box::new(backend))
+                .await?;
 
         // Fill some sectors in the backend.
         controller.color_sector(Sector::from_raw_sector(0), 0xaa);
@@ -531,7 +569,9 @@ mod tests {
 
         // Process the chain.
         let (backend, controller) = MemoryBackend::new();
-        let device = BlockDevice::new("device-id".to_string(), Box::new(backend)).await?;
+        let device =
+            BlockDevice::new("device-id".to_string(), AccessMode::ReadWrite, Box::new(backend))
+                .await?;
 
         // Fill some sectors in the backend.
         controller.color_sector(Sector::from_raw_sector(0), 0xaa);
@@ -581,7 +621,9 @@ mod tests {
 
         // Process the chain.
         let (backend, _) = MemoryBackend::new();
-        let device = BlockDevice::new("device-id".to_string(), Box::new(backend)).await?;
+        let device =
+            BlockDevice::new("device-id".to_string(), AccessMode::ReadWrite, Box::new(backend))
+                .await?;
 
         // Process the request.
         device.process_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem)).await?;
@@ -627,7 +669,9 @@ mod tests {
 
         // Process the request.
         let (backend, controller) = MemoryBackend::new();
-        let device = BlockDevice::new("device-id".to_string(), Box::new(backend)).await?;
+        let device =
+            BlockDevice::new("device-id".to_string(), AccessMode::ReadWrite, Box::new(backend))
+                .await?;
         device.process_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem)).await?;
 
         // Validate returned chain. We should only have a single status byte written.
@@ -672,7 +716,9 @@ mod tests {
 
         // Process the chain.
         let (backend, _) = MemoryBackend::new();
-        let device = BlockDevice::new("device-id".to_string(), Box::new(backend)).await?;
+        let device =
+            BlockDevice::new("device-id".to_string(), AccessMode::ReadWrite, Box::new(backend))
+                .await?;
 
         // Process the request.
         device.process_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem)).await?;
@@ -716,7 +762,9 @@ mod tests {
 
         // Process the chain.
         let (backend, _) = MemoryBackend::new();
-        let device = BlockDevice::new("device-id".to_string(), Box::new(backend)).await?;
+        let device =
+            BlockDevice::new("device-id".to_string(), AccessMode::ReadWrite, Box::new(backend))
+                .await?;
 
         // Process the request.
         device.process_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem)).await?;
@@ -758,7 +806,9 @@ mod tests {
 
         // Process the chain.
         let (backend, _) = MemoryBackend::new();
-        let device = BlockDevice::new("device-id".to_string(), Box::new(backend)).await?;
+        let device =
+            BlockDevice::new("device-id".to_string(), AccessMode::ReadWrite, Box::new(backend))
+                .await?;
 
         // Process the request.
         device.process_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem)).await?;
@@ -782,7 +832,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_get_id_short_buffer() -> Result<(), anyhow::Error> {
         let (backend, _) = MemoryBackend::new();
-        let device = BlockDevice::new("device-id".to_string(), Box::new(backend)).await?;
+        let device =
+            BlockDevice::new("device-id".to_string(), AccessMode::ReadWrite, Box::new(backend))
+                .await?;
         for buf_size in [wire::VIRTIO_BLK_ID_LEN as u32 - 1, wire::VIRTIO_BLK_ID_LEN as u32 + 1] {
             let mem = IdentityDriverMem::new();
             let mut state = TestQueue::new(32, &mem);

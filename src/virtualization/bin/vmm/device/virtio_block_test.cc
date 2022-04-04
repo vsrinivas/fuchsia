@@ -130,6 +130,49 @@ class VirtioBlockTest : public TestWithDevice,
 
   bool IsRustComponent() { return GetParam().component_url == kVirtioBlockRustUrl; }
 
+  void VerifySectorNotWritten(uint64_t sector) {
+    ASSERT_LT(sector, kNumSectors);
+
+    std::vector<uint8_t> expected(kBlockSectorSize, kSectorBytes[sector]);
+    std::vector<uint8_t> result(kBlockSectorSize, 0);
+    size_t file_offset = sector * kBlockSectorSize;
+    ASSERT_EQ(pread(fd_.get(), result.data(), result.size(), file_offset),
+              static_cast<ssize_t>(result.size()));
+    ASSERT_EQ(memcmp(result.data(), expected.data(), expected.size()), 0);
+  }
+
+  void TestWriteReadOnlyDevice(uint32_t features) {
+    StartFileBlockDevice(StartDeviceOptions{
+        .negotiated_features = features,
+        .block_mode = fuchsia::virtualization::BlockMode::READ_ONLY,
+    });
+
+    virtio_blk_req_t header = {
+        .type = VIRTIO_BLK_T_OUT,
+    };
+    std::vector<uint8_t> sector(kBlockSectorSize, UINT8_MAX);
+    uint8_t* blk_status;
+    zx_status_t status =
+        DescriptorChainBuilder(request_queue_)
+            .AppendReadableDescriptor(&header, sizeof(header))
+            .AppendReadableDescriptor(sector.data(), static_cast<uint32_t>(sector.size()))
+            .AppendWritableDescriptor(&blk_status, sizeof(*blk_status))
+            .Build();
+    ASSERT_EQ(ZX_OK, status);
+
+    status = block_->NotifyQueue(0);
+    ASSERT_EQ(ZX_OK, status);
+    status = WaitOnInterrupt();
+    ASSERT_EQ(ZX_OK, status);
+
+    EXPECT_EQ(VIRTIO_BLK_S_IOERR, *blk_status);
+
+    // Ensure nothing was written to the file.
+    for (size_t sector = 0; sector < kNumSectors; ++sector) {
+      VerifySectorNotWritten(sector);
+    }
+  }
+
   fbl::unique_fd fd_;
   // Note: use of sync can be problematic here if the test environment needs to handle
   // some incoming FIDL requests.
@@ -453,6 +496,12 @@ TEST_P(VirtioBlockTest, WriteMultipleDescriptors) {
   ASSERT_EQ(memcmp(result.data(), block_1.data(), block_1.size()), 0);
   ASSERT_EQ(memcmp(result.data() + block_1.size(), block_2.data(), block_2.size()), 0);
 }
+
+TEST_P(VirtioBlockTest, WriteReadOnlyDeviceWithFeature) {
+  TestWriteReadOnlyDevice(VIRTIO_BLK_F_RO);
+}
+
+TEST_P(VirtioBlockTest, WriteReadOnlyDeviceWithoutFeature) { TestWriteReadOnlyDevice(0); }
 
 TEST_P(VirtioBlockTest, Sync) {
   ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
