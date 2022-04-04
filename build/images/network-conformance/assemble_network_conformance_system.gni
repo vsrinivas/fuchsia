@@ -1,0 +1,103 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/images/assemble_system.gni")
+import("//build/images/zedboot/zedboot_args.gni")
+import("//src/sys/core/build/core.gni")
+import("//src/sys/root/build/root.gni")
+
+# Wraps assemble_system to allow adding internal network-conformance test stubs.
+#
+# Parameters
+#
+#   additional_base_packages
+#     Additional package labels to include in the `base_packages` passed to `assemble_system`.
+#
+template("assemble_network_conformance_system") {
+  core_name = "core-${target_name}"
+
+  core_realm("core") {
+    testonly = true
+
+    package_name = core_name
+    restrict_persistent_storage = false
+    restrict_full_resolver_to_base = false
+  }
+
+  root_realm("root") {
+    testonly = true
+
+    core_package_name = core_name
+  }
+
+  assemble_system(target_name) {
+    testonly = true
+
+    base_packages = [
+      ":core",
+      "//garnet/bin/sshd-host",
+      "//garnet/bin/sshd-host:config",
+      "//src/connectivity/network",
+      "//src/connectivity/network/dhcp",
+      "//src/connectivity/network/mdns/bundles:config",
+      "//src/connectivity/network/mdns/bundles:services",
+      "//src/connectivity/network/netcfg:config-default",
+      "//src/connectivity/network/net-cli",
+      "//src/connectivity/network/testing/network-test-realm/service:network-test-realm",
+      "//src/developer/ffx:runtime",
+      "//src/security/policy:appmgr_policy_eng",
+      "//src/security/root_ssl_certificates",
+      "//src/sys/appmgr:appmgr_scheme_config",
+      "//src/sys/appmgr",
+      "//src/sys/pkg/bin/pkg-cache",
+      "//src/sys/pkg/bin/pkg-resolver",
+      "//src/sys/sysmgr",
+    ]
+    base_packages += invoker.additional_base_packages
+
+    generate_fvm = !bootfs_only
+
+    # We avoid compressing blobs in the blobfs image so that they can be more
+    # effectively compressed by the ZBI compressor that is tuned to zstd max.
+    if (generate_fvm) {
+      assembly_compress_blobs = false
+    }
+    ramdisk_fvm_in_zbi = true
+
+    include_component_id_index = true
+    devmgr_config = [ "virtcon.disable=true" ] + zedboot_devmgr_config
+    cmdline = [
+      "console.shell=true",
+      "netsvc.disable=false",
+      "kernel.enable-debugging-syscalls=true",
+      "kernel.enable-serial-syscalls=true",
+      "kernel.serial=legacy",
+      "kernel.halt-on-panic=true",
+    ]
+
+    bootfs_labels = [
+      ":root",
+      "//build/info:bootfs",
+      "//build/input:recovery_bootfs",
+      "//bundles:bootstrap",
+      "//bundles/drivers:bootstrap",
+      "//src/sys/bin/psutils",
+      "//src/sys/component_manager:component_manager_bootfs_config",
+    ]
+
+    # TODO(https://fxbug.dev/81569): Move this metadata to assemble_system.gni.
+    metadata = {
+      images = [
+        {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          name = target_name
+          path =
+              rebase_path("$target_out_dir/${target_name}/${target_name}.zbi",
+                          root_build_dir)
+          type = "zbi"
+        },
+      ]
+    }
+  }
+}

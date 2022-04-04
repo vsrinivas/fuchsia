@@ -1,0 +1,54 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+if (is_linux) {
+  go_library("emulator") {
+    sources = [
+      "emulator.go",
+      "emulator_test.go",
+    ]
+    deps = [
+      "//third_party/golibs:go.uber.org/multierr",
+      "//third_party/golibs:golang.org/x/crypto",
+      "//tools/emulator",
+      "//tools/lib/ffxutil",
+    ]
+    non_go_deps = [ ":zbi_bin" ]
+    testonly = true
+  }
+
+  go_test("conformance_emulator_test") {
+    gopackages = [ "go.fuchsia.dev/fuchsia/src/connectivity/network/testing/conformance/emulator" ]
+    deps = [ ":emulator" ]
+    non_go_deps = [
+      ":ffx_bin",
+      "//build/images/network-conformance:network-conformance-base-test-data",
+    ]
+  }
+
+  out_dir =
+      "${root_out_dir}/src/connectivity/network/testing/conformance/emulator"
+
+  host_test_data("ffx_bin") {
+    deps = [ "//src/developer/ffx:host" ]
+    sources = [ "${host_tools_dir}/ffx" ]
+    outputs = [ "${out_dir}/{{source_file_part}}" ]
+  }
+
+  host_test_data("zbi_bin") {
+    deps = [ "//zircon/tools/zbi" ]
+    sources = [ "${root_out_dir}/zbi" ]
+    outputs = [ "${out_dir}/{{source_file_part}}" ]
+  }
+}
+
+group("tests") {
+  if (host_os == "linux") {
+    deps = [ ":conformance_emulator_test($host_toolchain)" ]
+  }
+  testonly = true
+}
