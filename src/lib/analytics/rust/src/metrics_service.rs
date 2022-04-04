@@ -236,7 +236,7 @@ impl MetricsService {
                 false => GA_URL,
             };
 
-            log::debug!("POSTING ANALYTICS: url: {}, \nBODY: {}", &url, &body);
+            log::trace!("POSTING ANALYTICS: url: {}, \nBODY: {}", &url, &body);
 
             let req = Request::builder().method(Method::POST).uri(url).body(Body::from(body))?;
             let res = self.client.request(req).await;
@@ -244,7 +244,7 @@ impl MetricsService {
                 Ok(mut res) => {
                     log::info!("Analytics response: {}", res.status());
                     while let Some(chunk) = res.body_mut().data().await {
-                        log::debug!("{:?}", &chunk?);
+                        log::trace!("{:?}", &chunk?);
                     }
                     //let result = String::from_utf8(bytes.into_iter().collect()).expect("");
                 }
