@@ -9,13 +9,11 @@
 //! API for setting and getting values while maintaining extra information about
 //! the number of values of certain types present in the map.
 
-use alloc::collections::{hash_map::Entry, HashMap};
+use alloc::collections::{hash_map, HashMap};
 use core::{hash::Hash, num::NonZeroUsize};
 
 use const_unwrap::const_unwrap_option;
 use derivative::Derivative;
-
-use crate::error::ExistsError;
 
 /// A type whose values can "shadow" other values of the type.
 ///
@@ -42,7 +40,7 @@ pub trait IterShadows {
 /// This can be used to provide a summary value, e.g. even or odd for an
 /// integer-like type.
 pub(crate) trait Tagged {
-    type Tag: Copy + Eq;
+    type Tag: Copy + Eq + core::fmt::Debug;
 
     /// Returns the tag value for `self`.
     ///
@@ -65,22 +63,21 @@ pub(crate) trait Tagged {
 /// In addition to keys and values, this map stores the number of values
 /// present in the map for all descendants of each key. These counts are
 /// separated into buckets for different tags of type `V::Tag`.
-#[derive(Derivative)]
+#[derive(Derivative, Debug)]
 #[derivative(Default(bound = ""))]
 pub(crate) struct SocketMap<A: Hash + Eq, V: Tagged> {
     map: HashMap<A, MapValue<V>>,
     len: usize,
 }
 
-#[derive(Derivative)]
+#[derive(Derivative, Debug)]
 #[derivative(Default(bound = ""))]
 struct MapValue<V: Tagged> {
     value: Option<V>,
     descendant_counts: DescendantCounts<V::Tag>,
 }
 
-#[cfg_attr(test, derive(Debug))]
-#[derive(Derivative)]
+#[derive(Derivative, Debug)]
 #[derivative(Default(bound = ""))]
 struct DescendantCounts<T, const INLINE_SIZE: usize = 1> {
     /// Holds unordered (tag, count) pairs.
@@ -88,6 +85,27 @@ struct DescendantCounts<T, const INLINE_SIZE: usize = 1> {
     /// [`DescendantCounts`] maintains the invariant that tags are unique. The
     /// ordering of tags is unspecified.
     counts: smallvec::SmallVec<[(T, NonZeroUsize); INLINE_SIZE]>,
+}
+
+/// An entry for a key in a map that has a value.
+#[cfg_attr(test, derive(Debug))]
+pub(crate) struct OccupiedEntry<'a, A: Hash + Eq, V: Tagged>(&'a mut SocketMap<A, V>, A);
+
+/// An entry for a key in a map that does not have a value.
+#[cfg_attr(test, derive(Debug))]
+pub(crate) struct VacantEntry<'a, A: Hash + Eq, V: Tagged>(&'a mut SocketMap<A, V>, A);
+
+/// An entry in a map that can be used to manipulate the value in-place.
+#[cfg_attr(test, derive(Debug))]
+pub(crate) enum Entry<'a, A: Hash + Eq, V: Tagged> {
+    // NB: Both `OccupiedEntry` and `VacantEntry` store a reference to the map
+    // and a key directly since they need access to the entire map to update
+    // descendant counts. This means that any operation on them requires an
+    // additional map lookup with the same key. Experimentation suggests the
+    // compiler will optimize this duplicate lookup out, since it is the same
+    // one done by `SocketMap::entry` to produce the `Entry` in the first place.
+    Occupied(OccupiedEntry<'a, A, V>),
+    Vacant(VacantEntry<'a, A, V>),
 }
 
 impl<A, V> SocketMap<A, V>
@@ -101,22 +119,19 @@ where
         map.get(key).and_then(|MapValue { value, descendant_counts: _ }| value.as_ref())
     }
 
-    /// Inserts the given value unless there is already one present.
+    /// Provides an [`Entry`] for the given key for in-place manipulation.
     ///
-    /// Returns `Ok(())` if the insert succeeded. If there was already a value
-    /// present in the map, returns `Err(ExistsError)`.
-    pub fn try_insert(&mut self, key: A, value: V) -> Result<(), ExistsError> {
-        let Self { map, len: num_values } = self;
-        let iter_shadows = key.iter_shadows();
-        let MapValue { value: map_value, descendant_counts: _ } = map.entry(key).or_default();
-        match map_value {
-            Some(_existing) => Err(ExistsError),
-            None => {
-                let tag = value.tag();
-                *map_value = Some(value);
-                *num_values += 1;
-                Self::increment_descendant_counts(map, iter_shadows, tag);
-                Ok(())
+    /// This is similar to the API provided by [`HashMap::entry`]. Callers can
+    /// match on the result to perform different actions depending on whether
+    /// the map has a value for the key or not.
+    pub fn entry(&mut self, key: A) -> Entry<'_, A, V> {
+        let Self { map, len: _ } = self;
+        match map.get(&key) {
+            Some(MapValue { descendant_counts: _, value: Some(_) }) => {
+                Entry::Occupied(OccupiedEntry(self, key))
+            }
+            Some(MapValue { descendant_counts: _, value: None }) | None => {
+                Entry::Vacant(VacantEntry(self, key))
             }
         }
     }
@@ -129,17 +144,17 @@ where
     where
         A: Clone,
     {
-        let Self { map, len: num_values } = self;
+        let Self { map, len } = self;
         match map.entry(key.clone()) {
-            Entry::Vacant(_) => return None,
-            Entry::Occupied(mut o) => {
+            hash_map::Entry::Vacant(_) => return None,
+            hash_map::Entry::Occupied(mut o) => {
                 let MapValue { descendant_counts, value } = o.get_mut();
                 let value = value.take()?;
                 if descendant_counts.is_empty() {
                     let _: MapValue<V> = o.remove();
                 }
                 Self::decrement_descendant_counts(map, key.iter_shadows(), value.tag());
-                *num_values -= 1;
+                *len -= 1;
                 Some(value)
             }
         }
@@ -219,8 +234,8 @@ where
     ) {
         for shadow in shadows {
             let mut entry = match map.entry(shadow) {
-                Entry::Occupied(o) => o,
-                Entry::Vacant(_) => unreachable!(),
+                hash_map::Entry::Occupied(o) => o,
+                hash_map::Entry::Vacant(_) => unreachable!(),
             };
             let MapValue { descendant_counts, value } = entry.get_mut();
             descendant_counts.decrement(old_tag);
@@ -228,6 +243,48 @@ where
                 let _: MapValue<_> = entry.remove();
             }
         }
+    }
+}
+
+impl<'a, K: Eq + Hash + IterShadows, V: Tagged> OccupiedEntry<'a, K, V> {
+    /// Retrieves the value referenced by this entry.
+    pub(crate) fn get(&self) -> &V {
+        let Self(SocketMap { map, len: _ }, key) = self;
+        let MapValue { descendant_counts: _, value } = map.get(key).unwrap();
+        // unwrap() call is guaranteed safe by OccupiedEntry invariant.
+        value.as_ref().unwrap()
+    }
+
+    // NB: there is no get_mut because that would allow the caller to manipulate
+    // a value without updating the descendant tag counts.
+
+    /// Runs the provided callback on the value referenced by this entry.
+    ///
+    /// Returns the result of the callback.
+    pub(crate) fn map_mut<R>(&mut self, apply: impl FnOnce(&mut V) -> R) -> R {
+        let Self(SocketMap { map, len: _ }, key) = self;
+        // unwrap() calls are guaranteed safe by OccupiedEntry invariant.
+        let MapValue { descendant_counts: _, value } = map.get_mut(key).unwrap();
+        let value = value.as_mut().unwrap();
+
+        let old_tag = value.tag();
+        let r = apply(value);
+        let new_tag = value.tag();
+        SocketMap::update_descendant_counts(map, key.iter_shadows(), old_tag, new_tag);
+        r
+    }
+}
+
+impl<'a, K: Eq + Hash + IterShadows, V: Tagged> VacantEntry<'a, K, V> {
+    /// Inserts a value for the key referenced by this entry.
+    pub(crate) fn insert(self, value: V) {
+        let Self(SocketMap { map, len }, key) = self;
+        let iter_shadows = key.iter_shadows();
+        let MapValue { value: map_value, descendant_counts: _ } = map.entry(key).or_default();
+        let tag = value.tag();
+        assert!(map_value.replace(value).is_none());
+        *len += 1;
+        SocketMap::increment_descendant_counts(map, iter_shadows, tag);
     }
 }
 
@@ -301,6 +358,8 @@ impl<I: ExactSizeIterator> ExactSizeIterator for OptionalIterator<I> {}
 #[cfg(test)]
 mod tests {
     use alloc::{vec, vec::Vec};
+
+    use assert_matches::assert_matches;
     use proptest::strategy::Strategy;
 
     use super::*;
@@ -348,7 +407,7 @@ mod tests {
     #[derive(Eq, PartialEq, Clone, Copy, Debug)]
     struct TV<T, V>(T, V);
 
-    impl<T: Copy + Eq, V> Tagged for TV<T, V> {
+    impl<T: Copy + Eq + core::fmt::Debug, V> Tagged for TV<T, V> {
         type Tag = T;
 
         fn tag(&self) -> Self::Tag {
@@ -362,7 +421,7 @@ mod tests {
     fn insert_get_remove() {
         let mut map = TestSocketMap::default();
 
-        assert_eq!(map.try_insert(ABC(1, 'c', 2), TV(0, 32)), Ok(()));
+        assert_matches!(map.entry(ABC(1, 'c', 2)), Entry::Vacant(v) => v.insert(TV(0, 32)));
         assert_eq!(map.get(&ABC(1, 'c', 2)), Some(&TV(0, 32)));
 
         assert_eq!(map.remove(&ABC(1, 'c', 2)), Some(TV(0, 32)));
@@ -375,7 +434,7 @@ mod tests {
         let TestSocketMap { len, map: _ } = map;
         assert_eq!(len, 0);
 
-        assert_eq!(map.try_insert(ABC(1, 'c', 2), TV(0, 32)), Ok(()));
+        assert_matches!(map.entry(ABC(1, 'c', 2)), Entry::Vacant(v) => v.insert(TV(0, 32)));
         let TestSocketMap { len, map: _ } = map;
         assert_eq!(len, 1);
 
@@ -385,11 +444,12 @@ mod tests {
     }
 
     #[test]
-    fn insert_same_key() {
+    fn entry_same_key() {
         let mut map = TestSocketMap::default();
 
-        assert_eq!(map.try_insert(ABC(1, 'c', 2), TV(0, 32)), Ok(()));
-        assert_eq!(map.try_insert(ABC(1, 'c', 2), TV(0, 5)), Err(ExistsError));
+        assert_matches!(map.entry(ABC(1, 'c', 2)), Entry::Vacant(v) => v.insert(TV(0, 32)));
+        let occupied = assert_matches!(map.entry(ABC(1, 'c', 2)), Entry::Occupied(o) => o);
+        assert_eq!(occupied.get(), &TV(0, 32));
         let TestSocketMap { len, map: _ } = map;
         assert_eq!(len, 1);
     }
@@ -398,10 +458,10 @@ mod tests {
     fn multiple_insert_descendant_counts() {
         let mut map = TestSocketMap::default();
 
-        assert_eq!(map.try_insert(ABC(1, 'c', 2), TV(1, 111)), Ok(()));
-        assert_eq!(map.try_insert(ABC(1, 'd', 2), TV(2, 111)), Ok(()));
-        assert_eq!(map.try_insert(AB(5, 'd'), TV(1, 54)), Ok(()));
-        assert_eq!(map.try_insert(AB(1, 'd'), TV(3, 56)), Ok(()));
+        assert_matches!(map.entry(ABC(1, 'c', 2)), Entry::Vacant(v) => v.insert(TV(1, 111)));
+        assert_matches!(map.entry(ABC(1, 'd', 2)), Entry::Vacant(v) => v.insert(TV(2, 111)));
+        assert_matches!(map.entry(AB(5, 'd')), Entry::Vacant(v) => v.insert(TV(1, 54)));
+        assert_matches!(map.entry(AB(1, 'd')),  Entry::Vacant(v) => v.insert(TV(3, 56)));
         let TestSocketMap { len, map: _ } = map;
         assert_eq!(len, 4);
 
@@ -419,8 +479,8 @@ mod tests {
     fn map_mut_keep_descendant_counts() {
         let mut map = TestSocketMap::default();
 
-        assert_eq!(map.try_insert(A(1), TV(3, 56)), Ok(()));
-        assert_eq!(map.try_insert(ABC(1, 'c', 2), TV(3, 111)), Ok(()));
+        assert_matches!(map.entry(A(1)), Entry::Vacant(v) => v.insert(TV(3, 56)));
+        assert_matches!(map.entry(ABC(1, 'c', 2)), Entry::Vacant(v) => v.insert(TV(3, 111)));
         let expected_counts = HashMap::from([(3, 1)]);
         assert_eq!(map.descendant_counts(&A(1)).as_map(), expected_counts);
 
@@ -432,8 +492,8 @@ mod tests {
     fn map_mut_change_descendant_counts() {
         let mut map = TestSocketMap::default();
 
-        assert_eq!(map.try_insert(A(1), TV(3, 56)), Ok(()));
-        assert_eq!(map.try_insert(ABC(1, 'c', 2), TV(3, 111)), Ok(()));
+        assert_matches!(map.entry(A(1)), Entry::Vacant(v) => v.insert(TV(3, 56)));
+        assert_matches!(map.entry(ABC(1, 'c', 2)), Entry::Vacant(v) => v.insert(TV(3, 111)));
         assert_eq!(map.descendant_counts(&A(1)).as_map(), HashMap::from([(3, 1)]));
 
         assert_eq!(map.map_mut(&ABC(1, 'c', 2), |TV(t, _)| *t = 80), Some(()));
@@ -444,7 +504,7 @@ mod tests {
     fn map_mut_value_not_present() {
         let mut map = TestSocketMap::default();
 
-        assert_eq!(map.try_insert(ABC(1, 'c', 2), TV(3, 111)), Ok(()));
+        assert_matches!(map.entry(ABC(1, 'c', 2)), Entry::Vacant(v) => v.insert(TV(3, 111)));
         assert_eq!(map.map_mut(&ABC(32, 'g', 27), |TV(_, _)| 3245), None);
     }
 
@@ -452,15 +512,15 @@ mod tests {
     fn map_mut_passes_return_value_when_present() {
         let mut map = TestSocketMap::default();
 
-        assert_eq!(map.try_insert(ABC(16, 'c', 8), TV(3, 111)), Ok(()));
+        assert_matches!(map.entry(ABC(16, 'c', 8)), Entry::Vacant(v) => v.insert(TV(3, 111)));
         assert_eq!(map.map_mut(&ABC(16, 'c', 8), |TV(_, _)| 1845859), Some(1845859));
     }
 
     #[test]
     fn remove_ancestor_value() {
         let mut map = TestSocketMap::default();
-        assert_eq!(map.try_insert(ABC(2, 'e', 1), TV(20, 100)), Ok(()));
-        assert_eq!(map.try_insert(AB(2, 'e'), TV(20, 100)), Ok(()));
+        assert_matches!(map.entry(ABC(2, 'e', 1)), Entry::Vacant(v) => v.insert(TV(20, 100)));
+        assert_matches!(map.entry(AB(2, 'e')), Entry::Vacant(v) => v.insert(TV(20, 100)));
         assert_eq!(map.remove(&AB(2, 'e')), Some(TV(20, 100)));
 
         assert_eq!(map.descendant_counts(&A(2)).as_map(), HashMap::from([(20, 1)]));
@@ -485,7 +545,7 @@ mod tests {
 
     #[derive(Debug, Copy, Clone, Eq, PartialEq)]
     enum Operation {
-        TryInsert(Address, TV<u8, u8>),
+        Entry(Address, TV<u8, u8>),
         Replace(Address, TV<u8, u8>),
         Remove(Address),
     }
@@ -497,18 +557,21 @@ mod tests {
             reference: &mut HashMap<Address, TV<u8, u8>>,
         ) {
             match self {
-                Operation::TryInsert(a, v) => {
-                    assert_eq!(
-                        socket_map.try_insert(a, v),
-                        match reference.entry(a) {
-                            Entry::Occupied(_) => Err(ExistsError),
-                            Entry::Vacant(vacant) => {
-                                let _ = vacant.insert(v);
-                                Ok(())
-                            }
-                        }
-                    );
-                }
+                Operation::Entry(a, v) => match (socket_map.entry(a), reference.entry(a)) {
+                    (Entry::Occupied(mut s), hash_map::Entry::Occupied(mut h)) => {
+                        assert_eq!(s.map_mut(|value| core::mem::replace(value, v)), h.insert(v))
+                    }
+                    (Entry::Vacant(s), hash_map::Entry::Vacant(h)) => {
+                        s.insert(v);
+                        let _: &mut TV<_, _> = h.insert(v);
+                    }
+                    (Entry::Occupied(_), hash_map::Entry::Vacant(_)) => {
+                        panic!("socketmap has a value for {:?} but reference does not", a)
+                    }
+                    (Entry::Vacant(_), hash_map::Entry::Occupied(_)) => {
+                        panic!("socketmap has no value for {:?} but reference does", a)
+                    }
+                },
                 Operation::Replace(a, v) => {
                     match socket_map.map_mut(&a, |x| core::mem::replace(x, v)) {
                         Some(prev_v) => assert_eq!(reference.insert(a, v), Some(prev_v)),
@@ -522,7 +585,7 @@ mod tests {
 
     fn operation_strategy() -> impl Strategy<Value = Operation> {
         proptest::prop_oneof!(
-            (key_strategy(), value_strategy()).prop_map(|(a, v)| Operation::TryInsert(a, v)),
+            (key_strategy(), value_strategy()).prop_map(|(a, v)| Operation::Entry(a, v)),
             (key_strategy(), value_strategy()).prop_map(|(a, v)| Operation::Replace(a, v)),
             key_strategy().prop_map(|a| Operation::Remove(a)),
         )
