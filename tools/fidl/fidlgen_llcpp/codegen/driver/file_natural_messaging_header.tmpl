@@ -20,6 +20,7 @@ fidl/{{ .LibraryDots }}/cpp/driver/natural_messaging.h
 
   #include <{{ .Library | Filename "Markers" }}>
   #include <{{ .Library | Filename "NaturalTypesHeader" }}>
+  #include <{{ .Library | Filename "driver/WireMessagingHeader" }}>
 
   {{ IfdefFuchsia }}
   {{ EndifFuchsia }}

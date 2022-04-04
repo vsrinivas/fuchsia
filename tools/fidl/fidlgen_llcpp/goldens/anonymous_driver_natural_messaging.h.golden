@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <fidl/test.anonymous/cpp/driver/wire_messaging.h>
 #include <fidl/test.anonymous/cpp/markers.h>
 #include <fidl/test.anonymous/cpp/natural_types.h>
 #include <lib/fidl_driver/cpp/natural_messaging.h>
