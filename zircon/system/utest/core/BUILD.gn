@@ -225,7 +225,11 @@ template("core_tests") {
       "//zircon/system/dev/*",
     ]
 
-    device_types = invoker.device_types
+    forward_variables_from(invoker,
+                           [
+                             "device_types",
+                             "timeout",
+                           ])
   }
 }
 
@@ -247,5 +251,9 @@ if (current_cpu == "x64") {
   core_tests("core-tests-hpet") {
     args = [ "kernel.wallclock=hpet" ]
     device_types = [ "Intel NUC Kit NUC7i5DNHE" ]
+    if (is_asan) {
+      # This test frequently exceeds automation's default timeout of 6 minutes.
+      timeout = 600
+    }
   }
 }
