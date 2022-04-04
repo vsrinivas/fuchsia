@@ -341,11 +341,6 @@ TEST_P(VirtioBlockTest, Write) {
 }
 
 TEST_P(VirtioBlockTest, WriteGoodAndBadSectors) {
-  // TODO(fxbug.dev/95529): Enable this test for the rust device.
-  if (IsRustComponent()) {
-    GTEST_SKIP();
-  }
-
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_OUT,
       .sector = 1,
@@ -375,7 +370,23 @@ TEST_P(VirtioBlockTest, WriteGoodAndBadSectors) {
   std::vector<uint8_t> result(2 * kBlockSectorSize, 0);
   ASSERT_EQ(pread(fd_.get(), result.data(), result.size(), kBlockSectorSize),
             static_cast<const long>(kBlockSectorSize));
-  ASSERT_EQ(memcmp(result.data(), block_1.data(), block_1.size()), 0);
+
+  // The C++ component will write part of a request before failing. The rust device, however, will
+  // reject the entire chain if any part of the request will extend beyond the capacity of the
+  // device.
+  //
+  // From Virtio 1.1, Section 5.2.6.1: A driver MUST NOT submit a request which would cause a read
+  // or write beyond capacity.
+  //
+  // Since the language is clear this is something the device MUST NOT do, strictly rejecting the
+  // entire request is OK but we'll continue to allow the existing coponents current behavior since
+  // that component should be removed before too long.
+  if (IsRustComponent()) {
+    std::vector<uint8_t> expected(kBlockSectorSize, kSectorBytes[1]);
+    ASSERT_EQ(memcmp(result.data(), expected.data(), expected.size()), 0);
+  } else {
+    ASSERT_EQ(memcmp(result.data(), block_1.data(), block_1.size()), 0);
+  }
 }
 
 TEST_P(VirtioBlockTest, WriteMultipleDescriptors) {
