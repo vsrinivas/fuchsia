@@ -366,7 +366,7 @@ pub(super) fn receive_arp_packet<
 impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>>
     FrameHandler<C, C::DeviceId, B> for ArpTimerFrameHandler<D, P>
 {
-    fn handle_frame(ctx: &mut C, device_id: C::DeviceId, mut buffer: B) {
+    fn handle_frame(sync_ctx: &mut C, device_id: C::DeviceId, mut buffer: B) {
         // TODO(wesleyac) Add support for probe.
         let packet = match buffer.parse::<ArpPacket<_, D::HType, P>>() {
             Ok(packet) => packet,
@@ -383,7 +383,7 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>>
         };
 
         let addressed_to_me =
-            Some(packet.target_protocol_address()) == ctx.get_protocol_addr(device_id);
+            Some(packet.target_protocol_address()) == sync_ctx.get_protocol_addr(device_id);
 
         // The following logic is equivalent to the "ARP, Proxy ARP, and
         // Gratuitous ARP" section of RFC 2002.
@@ -392,7 +392,7 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>>
         // to be handled separately since they do not send a response.
         if packet.sender_protocol_address() == packet.target_protocol_address() {
             insert_dynamic(
-                ctx,
+                sync_ctx,
                 device_id,
                 packet.sender_protocol_address(),
                 packet.sender_hardware_address(),
@@ -400,14 +400,14 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>>
 
             // If we have an outstanding retry timer for this host, we should
             // cancel it since we now have the mapping in cache.
-            let _: Option<C::Instant> = ctx.cancel_timer(ArpTimerId::new_request_retry(
+            let _: Option<C::Instant> = sync_ctx.cancel_timer(ArpTimerId::new_request_retry(
                 device_id,
                 packet.sender_protocol_address(),
             ));
 
-            ctx.increment_counter("arp::rx_gratuitous_resolve");
+            sync_ctx.increment_counter("arp::rx_gratuitous_resolve");
             // Notify device layer:
-            ctx.address_resolved(
+            sync_ctx.address_resolved(
                 device_id,
                 packet.sender_protocol_address(),
                 packet.sender_hardware_address(),
@@ -460,38 +460,38 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>>
         // (one to update the table, and one to send a response).
 
         if addressed_to_me
-            || ctx
+            || sync_ctx
                 .get_state_with(device_id)
                 .table
                 .lookup(packet.sender_protocol_address())
                 .is_some()
         {
             insert_dynamic(
-                ctx,
+                sync_ctx,
                 device_id,
                 packet.sender_protocol_address(),
                 packet.sender_hardware_address(),
             );
             // Since we just got the protocol -> hardware address mapping, we
             // can cancel a timer to resend a request.
-            let _: Option<C::Instant> = ctx.cancel_timer(ArpTimerId::new_request_retry(
+            let _: Option<C::Instant> = sync_ctx.cancel_timer(ArpTimerId::new_request_retry(
                 device_id,
                 packet.sender_protocol_address(),
             ));
 
-            ctx.increment_counter("arp::rx_resolve");
+            sync_ctx.increment_counter("arp::rx_resolve");
             // Notify device layer:
-            ctx.address_resolved(
+            sync_ctx.address_resolved(
                 device_id,
                 packet.sender_protocol_address(),
                 packet.sender_hardware_address(),
             );
         }
         if addressed_to_me && packet.operation() == ArpOp::Request {
-            let self_hw_addr = ctx.get_hardware_addr(device_id);
-            ctx.increment_counter("arp::rx_request");
+            let self_hw_addr = sync_ctx.get_hardware_addr(device_id);
+            sync_ctx.increment_counter("arp::rx_request");
             // TODO(joshlf): Do something if send_frame returns an error?
-            let _ = ctx.send_frame(
+            let _ = sync_ctx.send_frame(
                 ArpFrameMetadata { device_id, dst_addr: packet.sender_hardware_address() },
                 ArpPacketBuilder::new(
                     ArpOp::Response,
@@ -566,20 +566,20 @@ const DEFAULT_ARP_REQUEST_PERIOD: Duration = Duration::from_secs(20);
 const DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD: Duration = Duration::from_secs(60);
 
 fn send_arp_request<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device_id: C::DeviceId,
     lookup_addr: P,
 ) {
-    let tries_remaining = ctx
+    let tries_remaining = sync_ctx
         .get_state_mut_with(device_id)
         .table
         .get_remaining_tries(lookup_addr)
         .unwrap_or(DEFAULT_ARP_REQUEST_MAX_TRIES);
 
-    if let Some(sender_protocol_addr) = ctx.get_protocol_addr(device_id) {
-        let self_hw_addr = ctx.get_hardware_addr(device_id);
+    if let Some(sender_protocol_addr) = sync_ctx.get_protocol_addr(device_id) {
+        let self_hw_addr = sync_ctx.get_hardware_addr(device_id);
         // TODO(joshlf): Do something if send_frame returns an error?
-        let _ = ctx.send_frame(
+        let _ = sync_ctx.send_frame(
             ArpFrameMetadata { device_id, dst_addr: D::HType::BROADCAST },
             ArpPacketBuilder::new(
                 ArpOp::Request,
@@ -597,12 +597,15 @@ fn send_arp_request<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
         let id = ArpTimerId::new_request_retry(device_id, lookup_addr);
         if tries_remaining > 1 {
             // TODO(wesleyac): Configurable timer.
-            let _: Option<C::Instant> = ctx.schedule_timer(DEFAULT_ARP_REQUEST_PERIOD, id);
-            ctx.get_state_mut_with(device_id).table.set_waiting(lookup_addr, tries_remaining - 1);
+            let _: Option<C::Instant> = sync_ctx.schedule_timer(DEFAULT_ARP_REQUEST_PERIOD, id);
+            sync_ctx
+                .get_state_mut_with(device_id)
+                .table
+                .set_waiting(lookup_addr, tries_remaining - 1);
         } else {
-            let _: Option<C::Instant> = ctx.cancel_timer(id);
-            ctx.get_state_mut_with(device_id).table.remove(lookup_addr);
-            ctx.address_resolution_failed(device_id, lookup_addr);
+            let _: Option<C::Instant> = sync_ctx.cancel_timer(id);
+            sync_ctx.get_state_mut_with(device_id).table.remove(lookup_addr);
+            sync_ctx.address_resolution_failed(device_id, lookup_addr);
         }
     } else {
         // RFC 826 does not specify what to do if we don't have a local address,

@@ -145,7 +145,7 @@ fn send_ndp_packet<
     S: Serializer<Buffer = EmptyBuf>,
     M: IcmpMessage<Ipv6, &'static [u8]>,
 >(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device_id: C::DeviceId,
     src_ip: Ipv6Addr,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -155,7 +155,7 @@ fn send_ndp_packet<
 ) -> Result<(), S> {
     // TODO(https://fxbug.dev/95359): Send through ICMPv6 send path.
     send_ipv6_packet_from_device(
-        ctx,
+        sync_ctx,
         SendIpPacketMeta {
             device: device_id,
             src_ip: SpecifiedAddr::new(src_ip),

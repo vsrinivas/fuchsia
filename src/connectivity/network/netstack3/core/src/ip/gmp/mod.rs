@@ -813,7 +813,7 @@ trait GmpMessage<I: Ip> {
 }
 
 fn handle_gmp_message<I, PS, Msg, C, F>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device: C::DeviceId,
     body: &Msg,
     handler: F,
@@ -825,7 +825,7 @@ where
     Msg: GmpMessage<I>,
     F: Fn(&mut C::Rng, &mut C::GroupState) -> Actions<PS>,
 {
-    let (state, rng) = ctx.get_state_mut_and_rng(device);
+    let (state, rng) = sync_ctx.get_state_mut_and_rng(device);
     let group_addr = body.group_addr();
     if !group_addr.is_specified() {
         let addr_and_actions = state
@@ -833,7 +833,7 @@ where
             .map(|(addr, state)| (addr.clone(), handler(rng, state)))
             .collect::<Vec<_>>();
         for (addr, actions) in addr_and_actions {
-            ctx.run_actions(device, actions, addr);
+            sync_ctx.run_actions(device, actions, addr);
         }
         return Ok(());
     }
@@ -842,14 +842,14 @@ where
             Some(state) => handler(rng, state),
             None => return Err(C::not_a_member_err(*group_addr)),
         };
-        ctx.run_actions(device, actions, group_addr);
+        sync_ctx.run_actions(device, actions, group_addr);
         return Ok(());
     }
     Err(C::not_a_member_err(group_addr))
 }
 
 fn gmp_join_group<C, I, PS>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device: C::DeviceId,
     group_addr: MulticastAddr<I::Addr>,
 ) -> GroupJoinResult
@@ -859,15 +859,15 @@ where
     PS::Config: Default,
     I: Ip,
 {
-    let now = ctx.now();
-    let (state, rng) = ctx.get_state_mut_and_rng(device);
+    let now = sync_ctx.now();
+    let (state, rng) = sync_ctx.get_state_mut_and_rng(device);
     state
         .join_group_gmp(group_addr, rng, now)
-        .map(|actions| ctx.run_actions(device, actions, group_addr))
+        .map(|actions| sync_ctx.run_actions(device, actions, group_addr))
 }
 
 fn gmp_leave_group<C, I, PS>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device: C::DeviceId,
     group_addr: MulticastAddr<I::Addr>,
 ) -> GroupLeaveResult
@@ -876,9 +876,10 @@ where
     PS: ProtocolSpecific,
     I: Ip,
 {
-    ctx.get_state_mut(device)
+    sync_ctx
+        .get_state_mut(device)
         .leave_group_gmp(group_addr)
-        .map(|actions| ctx.run_actions(device, actions, group_addr))
+        .map(|actions| sync_ctx.run_actions(device, actions, group_addr))
 }
 
 #[cfg(test)]

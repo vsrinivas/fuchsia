@@ -225,10 +225,10 @@ impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
 /// Attempts to allocate a new unused local port with the given flow identifier
 /// `id`.
 fn try_alloc_local_port<I: IpExt, C: UdpStateContext<I>>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     id: &ProtocolFlowId<I::Addr>,
 ) -> Option<NonZeroU16> {
-    let (state, rng) = ctx.get_state_rng();
+    let (state, rng) = sync_ctx.get_state_rng();
     // Lazily init port_alloc if it hasn't been inited yet.
     let port_alloc = state.lazy_port_alloc.get_or_insert_with(|| PortAlloc::new(rng));
     port_alloc.try_alloc(&id, &state.conn_state).and_then(NonZeroU16::new)
@@ -238,11 +238,12 @@ fn try_alloc_local_port<I: IpExt, C: UdpStateContext<I>>(
 ///
 /// Finds a random ephemeral port that is not in the provided `used_ports` set.
 fn try_alloc_listen_port<I: IpExt, C: UdpStateContext<I>>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     used_ports: &HashSet<NonZeroU16>,
 ) -> Option<NonZeroU16> {
-    let mut port =
-        UdpConnectionState::<I, C::DeviceId, IpSock<I, C::DeviceId>>::rand_ephemeral(ctx.rng_mut());
+    let mut port = UdpConnectionState::<I, C::DeviceId, IpSock<I, C::DeviceId>>::rand_ephemeral(
+        sync_ctx.rng_mut(),
+    );
     for _ in UdpConnectionState::<I, C::DeviceId, IpSock<I, C::DeviceId>>::EPHEMERAL_RANGE {
         // We can unwrap here because we know that the EPHEMERAL_RANGE doesn't
         // include 0.
@@ -649,14 +650,14 @@ pub(crate) enum UdpIpTransportContext {}
 
 impl<I: IpExt, C: UdpStateContext<I>> IpTransportContext<I, C> for UdpIpTransportContext {
     fn receive_icmp_error(
-        ctx: &mut C,
+        sync_ctx: &mut C,
         device: C::DeviceId,
         src_ip: Option<SpecifiedAddr<I::Addr>>,
         dst_ip: SpecifiedAddr<I::Addr>,
         mut udp_packet: &[u8],
         err: I::ErrorCode,
     ) {
-        ctx.increment_counter("UdpIpTransportContext::receive_icmp_error");
+        sync_ctx.increment_counter("UdpIpTransportContext::receive_icmp_error");
         trace!("UdpIpTransportContext::receive_icmp_error({:?})", err);
 
         let udp_packet =
@@ -671,14 +672,16 @@ impl<I: IpExt, C: UdpStateContext<I>> IpTransportContext<I, C> for UdpIpTranspor
         if let (Some(src_ip), Some(src_port), Some(dst_port)) =
             (src_ip, udp_packet.src_port(), udp_packet.dst_port())
         {
-            if let Some(socket) =
-                ctx.get_first_state().conn_state.lookup(src_ip, dst_ip, src_port, dst_port, device)
+            if let Some(socket) = sync_ctx
+                .get_first_state()
+                .conn_state
+                .lookup(src_ip, dst_ip, src_port, dst_port, device)
             {
                 let id = match socket {
                     LookupResult::Conn(id, _) => id.into(),
                     LookupResult::Listener(id, _) => id.into(),
                 };
-                ctx.receive_icmp_error(id, err);
+                sync_ctx.receive_icmp_error(id, err);
             } else {
                 trace!("UdpIpTransportContext::receive_icmp_error: Got ICMP error message for nonexistent UDP socket; either the socket responsible has since been removed, or the error message was sent in error or corrupted");
             }
@@ -692,7 +695,7 @@ impl<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>> BufferIpTransportCo
     for UdpIpTransportContext
 {
     fn receive_ip_packet(
-        ctx: &mut C,
+        sync_ctx: &mut C,
         device: C::DeviceId,
         src_ip: I::RecvSrcAddr,
         dst_ip: SpecifiedAddr<I::Addr>,
@@ -709,7 +712,7 @@ impl<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>> BufferIpTransportCo
             return Ok(());
         };
 
-        let state = ctx.get_first_state();
+        let state = sync_ctx.get_first_state();
 
         if let Some(socket) = SpecifiedAddr::new(src_ip)
             .and_then(|src_ip| packet.src_port().map(|src_port| (src_ip, src_port)))
@@ -720,12 +723,17 @@ impl<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>> BufferIpTransportCo
             match socket {
                 LookupResult::Conn(id, conn) => {
                     mem::drop(packet);
-                    ctx.receive_udp_from_conn(id, conn.remote_ip.get(), conn.remote_port, buffer)
+                    sync_ctx.receive_udp_from_conn(
+                        id,
+                        conn.remote_ip.get(),
+                        conn.remote_port,
+                        buffer,
+                    )
                 }
                 LookupResult::Listener(id, _) => {
                     let src_port = packet.src_port();
                     mem::drop(packet);
-                    ctx.receive_udp_from_listen(id, src_ip, dst_ip.get(), src_port, buffer)
+                    sync_ctx.receive_udp_from_listen(id, src_ip, dst_ip.get(), src_port, buffer)
                 }
             }
             Ok(())
@@ -773,7 +781,7 @@ pub enum UdpSendError {
 // TODO(brunodalbo): We may need more arguments here to express REUSEADDR and
 // BIND_TO_DEVICE options.
 pub fn send_udp<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     local_ip: Option<SpecifiedAddr<I::Addr>>,
     local_port: Option<NonZeroU16>,
     remote_ip: SpecifiedAddr<I::Addr>,
@@ -782,15 +790,15 @@ pub fn send_udp<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>(
 ) -> Result<(), (B, UdpSendError)> {
     // TODO(brunodalbo) this can be faster if we just perform the checks but
     // don't actually create a UDP connection.
-    let tmp_conn = match connect_udp(ctx, local_ip, local_port, remote_ip, remote_port) {
+    let tmp_conn = match connect_udp(sync_ctx, local_ip, local_port, remote_ip, remote_port) {
         Ok(conn) => conn,
         Err(err) => return Err((body, UdpSendError::CreateSock(err))),
     };
 
     // Not using `?` here since we need to `remove_udp_conn` even in the case of failure.
-    let ret =
-        send_udp_conn(ctx, tmp_conn, body).map_err(|(body, err)| (body, UdpSendError::Send(err)));
-    let info = remove_udp_conn(ctx, tmp_conn);
+    let ret = send_udp_conn(sync_ctx, tmp_conn, body)
+        .map_err(|(body, err)| (body, UdpSendError::Send(err)));
+    let info = remove_udp_conn(sync_ctx, tmp_conn);
     if cfg!(debug_assertions) {
         assert_matches::assert_matches!(info, UdpConnInfo {
             local_ip: removed_local_ip,
@@ -814,11 +822,11 @@ pub fn send_udp<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>(
 /// On error, the original `body` is returned unmodified so that it can be
 /// reused by the caller.
 pub fn send_udp_conn<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     conn: UdpConnId<I>,
     body: B,
 ) -> Result<(), (B, IpSockSendError)> {
-    let state = ctx.get_first_state();
+    let state = sync_ctx.get_first_state();
     let ConnSocketEntry { sock, addr } = state
         .conn_state
         .conns
@@ -827,17 +835,18 @@ pub fn send_udp_conn<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>(
     let sock = sock.clone();
     let ConnAddr { local_ip, local_port, remote_ip, remote_port } = *addr;
 
-    ctx.send_ip_packet(
-        &sock,
-        body.encapsulate(UdpPacketBuilder::new(
-            local_ip.get(),
-            remote_ip.get(),
-            Some(local_port),
-            remote_port,
-        )),
-        None,
-    )
-    .map_err(|(body, err)| (body.into_inner(), err))
+    sync_ctx
+        .send_ip_packet(
+            &sock,
+            body.encapsulate(UdpPacketBuilder::new(
+                local_ip.get(),
+                remote_ip.get(),
+                Some(local_port),
+                remote_port,
+            )),
+            None,
+        )
+        .map_err(|(body, err)| (body.into_inner(), err))
 }
 
 /// An error encountered while sending a UDP packet on a listener socket.
@@ -865,7 +874,7 @@ pub enum UdpSendListenerError {
 /// `send_udp_listener` panics if `listener` is not associated with a listener
 /// for this IP version.
 pub fn send_udp_listener<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     listener: UdpListenerId<I>,
     remote_ip: SpecifiedAddr<I::Addr>,
     remote_port: NonZeroU16,
@@ -878,14 +887,14 @@ pub fn send_udp_listener<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>
     //
     // Also, if the local IP address is a multicast address this function should
     // probably fail and `send_udp` must be used instead.
-    let state = ctx.get_first_state();
+    let state = sync_ctx.get_first_state();
     let ListenerAddr { addr: local_ip, port: local_port } = *state
         .conn_state
         .listeners
         .get_by_listener(listener.id)
         .expect("specified listener not found");
 
-    let sock = match ctx.new_ip_socket(
+    let sock = match sync_ctx.new_ip_socket(
         None,
         local_ip,
         remote_ip,
@@ -897,7 +906,7 @@ pub fn send_udp_listener<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>
         Err(err) => return Err((body, UdpSendListenerError::CreateSock(err))),
     };
 
-    ctx.send_ip_packet(
+    sync_ctx.send_ip_packet(
         &sock,
         body.encapsulate(UdpPacketBuilder::new(
             sock.local_ip().get(),
@@ -932,13 +941,13 @@ pub fn send_udp_listener<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>
 ///   local ports for that address)
 /// - If there is no route to `remote_ip`
 pub fn connect_udp<I: IpExt, C: UdpStateContext<I>>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     local_ip: Option<SpecifiedAddr<I::Addr>>,
     local_port: Option<NonZeroU16>,
     remote_ip: SpecifiedAddr<I::Addr>,
     remote_port: NonZeroU16,
 ) -> Result<UdpConnId<I>, UdpSockCreationError> {
-    let ip_sock = ctx
+    let ip_sock = sync_ctx
         .new_ip_socket(
             None,
             local_ip,
@@ -955,13 +964,13 @@ pub fn connect_udp<I: IpExt, C: UdpStateContext<I>>(
     let local_port = if let Some(local_port) = local_port {
         local_port
     } else {
-        try_alloc_local_port(ctx, &ProtocolFlowId::new(local_ip, remote_ip, remote_port))
+        try_alloc_local_port(sync_ctx, &ProtocolFlowId::new(local_ip, remote_ip, remote_port))
             .ok_or(UdpSockCreationError::CouldNotAllocateLocalPort)?
     };
 
     let c = ConnAddr { local_ip, local_port, remote_ip, remote_port };
     let listener = ListenerAddr { addr: Some(local_ip), port: local_port };
-    let state = ctx.get_first_state_mut();
+    let state = sync_ctx.get_first_state_mut();
     if state.conn_state.conns.get_id_by_addr(&c).is_some()
         || state.conn_state.listeners.get_by_addr(&listener).is_some()
     {
@@ -980,10 +989,10 @@ pub fn connect_udp<I: IpExt, C: UdpStateContext<I>>(
 ///
 /// `remove_udp_conn` panics if `id` is not a valid `UdpConnId`.
 pub fn remove_udp_conn<I: IpExt, C: UdpStateContext<I>>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     id: UdpConnId<I>,
 ) -> UdpConnInfo<I::Addr> {
-    let state = ctx.get_first_state_mut();
+    let state = sync_ctx.get_first_state_mut();
     state.conn_state.conns.remove_by_id(id.into()).expect("UDP connection not found").addr.into()
 }
 
@@ -993,10 +1002,11 @@ pub fn remove_udp_conn<I: IpExt, C: UdpStateContext<I>>(
 ///
 /// `get_udp_conn_info` panics if `id` is not a valid `UdpConnId`.
 pub fn get_udp_conn_info<I: IpExt, C: UdpStateContext<I>>(
-    ctx: &C,
+    sync_ctx: &C,
     id: UdpConnId<I>,
 ) -> UdpConnInfo<I::Addr> {
-    ctx.get_first_state()
+    sync_ctx
+        .get_first_state()
         .conn_state
         .conns
         .get_sock_by_id(id.into())
@@ -1022,29 +1032,29 @@ pub fn get_udp_conn_info<I: IpExt, C: UdpStateContext<I>>(
 ///
 /// `listen_udp` panics if `listener` is already in use.
 pub fn listen_udp<I: IpExt, C: UdpStateContext<I>>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     addr: Option<SpecifiedAddr<I::Addr>>,
     port: Option<NonZeroU16>,
 ) -> Result<UdpListenerId<I>, LocalAddressError> {
     let port = if let Some(port) = port {
-        if !ctx.get_first_state().conn_state.is_listen_port_available(addr, port) {
+        if !sync_ctx.get_first_state().conn_state.is_listen_port_available(addr, port) {
             return Err(LocalAddressError::AddressInUse);
         }
         port
     } else {
-        let used_ports = ctx
+        let used_ports = sync_ctx
             .get_first_state_mut()
             .conn_state
             .collect_used_local_ports(addr.as_ref().into_iter());
-        try_alloc_listen_port(ctx, &used_ports)
+        try_alloc_listen_port(sync_ctx, &used_ports)
             .ok_or(LocalAddressError::FailedToAllocateLocalPort)?
     };
     if let Some(addr) = addr {
-        if !ctx.is_assigned_local_addr(addr.get()) {
+        if !sync_ctx.is_assigned_local_addr(addr.get()) {
             return Err(LocalAddressError::CannotBindToAddress);
         }
     }
-    let state = ctx.get_first_state_mut();
+    let state = sync_ctx.get_first_state_mut();
     Ok(UdpListenerId::new(state.conn_state.listeners.insert(ListenerAddr { addr, port })))
 }
 
@@ -1058,10 +1068,10 @@ pub fn listen_udp<I: IpExt, C: UdpStateContext<I>>(
 ///
 /// `remove_listener` panics if `id` is not a valid `UdpListenerId`.
 pub fn remove_udp_listener<I: IpExt, C: UdpStateContext<I>>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     id: UdpListenerId<I>,
 ) -> UdpListenerInfo<I::Addr> {
-    let state = ctx.get_first_state_mut();
+    let state = sync_ctx.get_first_state_mut();
     state
         .conn_state
         .listeners
@@ -1078,10 +1088,10 @@ pub fn remove_udp_listener<I: IpExt, C: UdpStateContext<I>>(
 ///
 /// `get_udp_conn_info` panics if `id` is not a valid `UdpListenerId`.
 pub fn get_udp_listener_info<I: IpExt, C: UdpStateContext<I>>(
-    ctx: &C,
+    sync_ctx: &C,
     id: UdpListenerId<I>,
 ) -> UdpListenerInfo<I::Addr> {
-    let state = ctx.get_first_state();
+    let state = sync_ctx.get_first_state();
     state
         .conn_state
         .listeners

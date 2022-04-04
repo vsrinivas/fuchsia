@@ -331,7 +331,7 @@ impl<I: Ip> IpPacketFragmentCache<I> {
     /// Panics if the packet has no fragment data.
     pub(crate) fn process_fragment<C: FragmentContext<I>, B: ByteSlice>(
         &mut self,
-        ctx: &mut C,
+        sync_ctx: &mut C,
         packet: <I as IpExtByteSlice<B>>::Packet,
     ) -> FragmentProcessingState<B, I>
     where
@@ -371,7 +371,7 @@ impl<I: Ip> IpPacketFragmentCache<I> {
         let key = FragmentCacheKey::new(packet.src_ip(), packet.dst_ip(), id);
 
         // Get (or create) the fragment cache data.
-        let fragment_data = self.get_or_create(ctx, key);
+        let fragment_data = self.get_or_create(sync_ctx, key);
 
         // The number of fragment blocks `packet` contains.
         //
@@ -437,7 +437,7 @@ impl<I: Ip> IpPacketFragmentCache<I> {
                 //               we don't check for this case and just drop the
                 //               packet.
                 assert_matches!(self.remove_data(&key), Some(_));
-                assert_matches!(ctx.cancel_timer(key), Some(_));
+                assert_matches!(sync_ctx.cancel_timer(key), Some(_));
 
                 return FragmentProcessingState::InvalidFragment;
             }
@@ -573,7 +573,7 @@ impl<I: Ip> IpPacketFragmentCache<I> {
         BV: BufferViewMut<B>,
     >(
         &mut self,
-        ctx: &mut C,
+        sync_ctx: &mut C,
         key: &FragmentCacheKey<I::Addr>,
         buffer: BV,
     ) -> Result<<I as IpExtByteSlice<B>>::Packet, FragmentReassemblyError> {
@@ -596,7 +596,7 @@ impl<I: Ip> IpPacketFragmentCache<I> {
 
         // Cancel the reassembly timer now that we know we have all the data
         // required for reassembly and are attempting to do so.
-        assert_matches!(ctx.cancel_timer(*key), Some(_));
+        assert_matches!(sync_ctx.cancel_timer(*key), Some(_));
 
         // TODO(https://github.com/rust-lang/rust/issues/59278): Use
         // `BinaryHeap::into_iter_sorted`.
@@ -622,7 +622,7 @@ impl<I: Ip> IpPacketFragmentCache<I> {
     /// When a new entry is created, a re-assembly timer is scheduled.
     fn get_or_create<C: FragmentContext<I>>(
         &mut self,
-        ctx: &mut C,
+        sync_ctx: &mut C,
         key: FragmentCacheKey<I::Addr>,
     ) -> &mut FragmentCacheData {
         self.cache.entry(key).or_insert_with(|| {
@@ -633,7 +633,7 @@ impl<I: Ip> IpPacketFragmentCache<I> {
             //
             // Since there was no entry, there should also have been no timer
             // installed.
-            assert_eq!(ctx.schedule_timer(REASSEMBLY_TIMEOUT, key), None);
+            assert_eq!(sync_ctx.schedule_timer(REASSEMBLY_TIMEOUT, key), None);
             FragmentCacheData::default()
         })
     }
@@ -831,17 +831,31 @@ mod tests {
     #[specialize_ip]
     fn process_ip_fragment<I: Ip, C: FragmentContext<I>>(
         cache: &mut IpPacketFragmentCache<I>,
-        ctx: &mut C,
+        sync_ctx: &mut C,
         fragment_id: u16,
         fragment_offset: u16,
         m_flag: bool,
         expected_result: ExpectedResult,
     ) {
         #[ipv4]
-        process_ipv4_fragment(cache, ctx, fragment_id, fragment_offset, m_flag, expected_result);
+        process_ipv4_fragment(
+            cache,
+            sync_ctx,
+            fragment_id,
+            fragment_offset,
+            m_flag,
+            expected_result,
+        );
 
         #[ipv6]
-        process_ipv6_fragment(cache, ctx, fragment_id, fragment_offset, m_flag, expected_result);
+        process_ipv6_fragment(
+            cache,
+            sync_ctx,
+            fragment_id,
+            fragment_offset,
+            m_flag,
+            expected_result,
+        );
     }
 
     /// Generates and processes an IPv4 fragment packet.
@@ -849,7 +863,7 @@ mod tests {
     /// The generated packet will have body of size `FRAGMENT_BLOCK_SIZE` bytes.
     fn process_ipv4_fragment<C: FragmentContext<Ipv4>>(
         cache: &mut IpPacketFragmentCache<Ipv4>,
-        ctx: &mut C,
+        sync_ctx: &mut C,
         fragment_id: u16,
         fragment_offset: u16,
         m_flag: bool,
@@ -868,7 +882,7 @@ mod tests {
         match expected_result {
             ExpectedResult::Ready { total_body_len } => {
                 let _: (FragmentCacheKey<_>, usize) = assert_frag_proc_state_ready!(
-                    cache.process_fragment::<_, &[u8]>(ctx, packet),
+                    cache.process_fragment::<_, &[u8]>(sync_ctx, packet),
                     DUMMY_CONFIG_V4.remote_ip.get(),
                     DUMMY_CONFIG_V4.local_ip.get(),
                     fragment_id,
@@ -876,13 +890,17 @@ mod tests {
                 );
             }
             ExpectedResult::NeedMore => {
-                assert_frag_proc_state_need_more!(cache.process_fragment::<_, &[u8]>(ctx, packet));
+                assert_frag_proc_state_need_more!(
+                    cache.process_fragment::<_, &[u8]>(sync_ctx, packet)
+                );
             }
             ExpectedResult::Invalid => {
-                assert_frag_proc_state_invalid!(cache.process_fragment::<_, &[u8]>(ctx, packet));
+                assert_frag_proc_state_invalid!(
+                    cache.process_fragment::<_, &[u8]>(sync_ctx, packet)
+                );
             }
             ExpectedResult::OutOfMemory => {
-                assert_frag_proc_state_oom!(cache.process_fragment::<_, &[u8]>(ctx, packet));
+                assert_frag_proc_state_oom!(cache.process_fragment::<_, &[u8]>(sync_ctx, packet));
             }
         }
     }
@@ -892,7 +910,7 @@ mod tests {
     /// The generated packet will have body of size `FRAGMENT_BLOCK_SIZE` bytes.
     fn process_ipv6_fragment<C: FragmentContext<Ipv6>>(
         cache: &mut IpPacketFragmentCache<Ipv6>,
-        ctx: &mut C,
+        sync_ctx: &mut C,
         fragment_id: u16,
         fragment_offset: u16,
         m_flag: bool,
@@ -920,7 +938,7 @@ mod tests {
         match expected_result {
             ExpectedResult::Ready { total_body_len } => {
                 let _: (FragmentCacheKey<_>, usize) = assert_frag_proc_state_ready!(
-                    cache.process_fragment::<_, &[u8]>(ctx, packet),
+                    cache.process_fragment::<_, &[u8]>(sync_ctx, packet),
                     DUMMY_CONFIG_V6.remote_ip.get(),
                     DUMMY_CONFIG_V6.local_ip.get(),
                     fragment_id,
@@ -928,13 +946,17 @@ mod tests {
                 );
             }
             ExpectedResult::NeedMore => {
-                assert_frag_proc_state_need_more!(cache.process_fragment::<_, &[u8]>(ctx, packet));
+                assert_frag_proc_state_need_more!(
+                    cache.process_fragment::<_, &[u8]>(sync_ctx, packet)
+                );
             }
             ExpectedResult::Invalid => {
-                assert_frag_proc_state_invalid!(cache.process_fragment::<_, &[u8]>(ctx, packet));
+                assert_frag_proc_state_invalid!(
+                    cache.process_fragment::<_, &[u8]>(sync_ctx, packet)
+                );
             }
             ExpectedResult::OutOfMemory => {
-                assert_frag_proc_state_oom!(cache.process_fragment::<_, &[u8]>(ctx, packet));
+                assert_frag_proc_state_oom!(cache.process_fragment::<_, &[u8]>(sync_ctx, packet));
             }
         }
     }
@@ -952,7 +974,7 @@ mod tests {
     /// Tries to reassemble the packet with the given fragment ID.
     fn try_reassemble_ip_packet<I: TestIpExt, C: FragmentContext<I>>(
         cache: &mut IpPacketFragmentCache<I>,
-        ctx: &mut C,
+        sync_ctx: &mut C,
         fragment_id: u16,
         total_body_len: usize,
     ) {
@@ -963,7 +985,7 @@ mod tests {
             I::DUMMY_CONFIG.local_ip.get(),
             fragment_id.into(),
         );
-        let packet = cache.reassemble_packet(ctx, &key, &mut buffer).unwrap();
+        let packet = cache.reassemble_packet(sync_ctx, &key, &mut buffer).unwrap();
         let expected_body = generate_body_fragment(fragment_id, 0, total_body_len);
         assert_eq!(packet.body(), &expected_body[..]);
     }

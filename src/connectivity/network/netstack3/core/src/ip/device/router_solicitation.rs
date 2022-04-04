@@ -141,12 +141,12 @@ impl<C: RsContext> RsHandler for C {
 }
 
 /// Solicit routers once and schedule next message.
-fn do_router_solicitation<C: RsContext>(ctx: &mut C, device_id: C::DeviceId) {
-    let src_ll = ctx.get_link_layer_addr_bytes(device_id).map(|a| a.to_vec());
+fn do_router_solicitation<C: RsContext>(sync_ctx: &mut C, device_id: C::DeviceId) {
+    let src_ll = sync_ctx.get_link_layer_addr_bytes(device_id).map(|a| a.to_vec());
 
     // TODO(https://fxbug.dev/85055): Either panic or guarantee that this error
     // can't happen statically.
-    let _: Result<(), _> = ctx.send_rs_packet(
+    let _: Result<(), _> = sync_ctx.send_rs_packet(
         device_id,
         RouterSolicitation::default(),
         OptionSequenceBuilder::<_>::new(
@@ -155,7 +155,7 @@ fn do_router_solicitation<C: RsContext>(ctx: &mut C, device_id: C::DeviceId) {
         .into_serializer(),
     );
 
-    let remaining = ctx.get_router_soliciations_remaining_mut(device_id);
+    let remaining = sync_ctx.get_router_soliciations_remaining_mut(device_id);
     *remaining = NonZeroU8::new(
         remaining
             .expect("should only send a router solicitations when at least one is remaining")
@@ -166,7 +166,7 @@ fn do_router_solicitation<C: RsContext>(ctx: &mut C, device_id: C::DeviceId) {
         None => {}
         Some(NonZeroU8 { .. }) => {
             assert_eq!(
-                ctx.schedule_timer(RTR_SOLICITATION_INTERVAL, RsTimerId { device_id },),
+                sync_ctx.schedule_timer(RTR_SOLICITATION_INTERVAL, RsTimerId { device_id },),
                 None
             );
         }

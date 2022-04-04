@@ -283,7 +283,7 @@ impl<C: IgmpContext> TimerHandler<IgmpTimerId<C::DeviceId>> for C {
 }
 
 fn send_igmp_message<C: IgmpContext, M>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device: C::DeviceId,
     group_addr: MulticastAddr<Ipv4Addr>,
     dst_ip: MulticastAddr<Ipv4Addr>,
@@ -292,7 +292,7 @@ fn send_igmp_message<C: IgmpContext, M>(
 where
     M: MessageType<EmptyBuf, FixedHeader = Ipv4Addr, VariableBody = ()>,
 {
-    let src_ip = match ctx.get_ip_addr_subnet(device) {
+    let src_ip = match sync_ctx.get_ip_addr_subnet(device) {
         Some(addr_subnet) => addr_subnet.addr(),
         None => return Err(IgmpError::NoIpAddress { device }),
     };
@@ -307,7 +307,8 @@ where
     };
     let body = body.into_serializer().encapsulate(builder);
 
-    ctx.send_frame(IgmpPacketMetadata::new(device, dst_ip), body)
+    sync_ctx
+        .send_frame(IgmpPacketMetadata::new(device, dst_ip), body)
         .map_err(|_| IgmpError::SendFailure { addr: *group_addr })
 }
 
@@ -434,23 +435,23 @@ impl<I: Instant> GmpStateMachine<I, Igmpv2ProtocolSpecific> {
 
 /// Interprets the `action`.
 fn run_action<C: IgmpContext>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device: C::DeviceId,
     action: Action<Igmpv2ProtocolSpecific>,
     group_addr: MulticastAddr<Ipv4Addr>,
 ) -> IgmpResult<(), C::DeviceId> {
     match action {
         Action::Generic(GmpAction::ScheduleReportTimer(duration)) => {
-            let _: Option<C::Instant> =
-                ctx.schedule_timer(duration, IgmpTimerId::new_report_delay(device, group_addr));
+            let _: Option<C::Instant> = sync_ctx
+                .schedule_timer(duration, IgmpTimerId::new_report_delay(device, group_addr));
         }
         Action::Generic(GmpAction::StopReportTimer) => {
             let _: Option<C::Instant> =
-                ctx.cancel_timer(IgmpTimerId::new_report_delay(device, group_addr));
+                sync_ctx.cancel_timer(IgmpTimerId::new_report_delay(device, group_addr));
         }
         Action::Generic(GmpAction::SendLeave) => {
             send_igmp_message::<_, IgmpLeaveGroup>(
-                ctx,
+                sync_ctx,
                 device,
                 group_addr,
                 Ipv4::ALL_ROUTERS_MULTICAST_ADDRESS,
@@ -460,7 +461,7 @@ fn run_action<C: IgmpContext>(
         Action::Generic(GmpAction::SendReport(Igmpv2ProtocolSpecific { v1_router_present })) => {
             if v1_router_present {
                 send_igmp_message::<_, IgmpMembershipReportV1>(
-                    ctx,
+                    sync_ctx,
                     device,
                     group_addr,
                     group_addr,
@@ -468,7 +469,7 @@ fn run_action<C: IgmpContext>(
                 )?;
             } else {
                 send_igmp_message::<_, IgmpMembershipReportV2>(
-                    ctx,
+                    sync_ctx,
                     device,
                     group_addr,
                     group_addr,
@@ -478,7 +479,7 @@ fn run_action<C: IgmpContext>(
         }
         Action::Specific(Igmpv2Actions::ScheduleV1RouterPresentTimer(duration)) => {
             let _: Option<C::Instant> =
-                ctx.schedule_timer(duration, IgmpTimerId::new_v1_router_present(device));
+                sync_ctx.schedule_timer(duration, IgmpTimerId::new_v1_router_present(device));
         }
     }
     Ok(())

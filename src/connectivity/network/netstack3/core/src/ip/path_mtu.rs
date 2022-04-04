@@ -126,16 +126,18 @@ impl<I: Ip, Instant: crate::Instant> PmtuCache<I, Instant> {
     /// for an IP.
     pub(crate) fn update_pmtu_if_less<C: PmtuContext<I, Instant = Instant>>(
         &mut self,
-        ctx: &mut C,
+        sync_ctx: &mut C,
         src_ip: I::Addr,
         dst_ip: I::Addr,
         new_mtu: u32,
     ) -> Result<Option<u32>, Option<u32>> {
         match self.get_pmtu(src_ip, dst_ip) {
             // No PMTU exists so update.
-            None => self.update_pmtu(ctx, src_ip, dst_ip, new_mtu),
+            None => self.update_pmtu(sync_ctx, src_ip, dst_ip, new_mtu),
             // A PMTU exists but it is greater than `new_mtu` so update.
-            Some(prev_mtu) if new_mtu < prev_mtu => self.update_pmtu(ctx, src_ip, dst_ip, new_mtu),
+            Some(prev_mtu) if new_mtu < prev_mtu => {
+                self.update_pmtu(sync_ctx, src_ip, dst_ip, new_mtu)
+            }
             // A PMTU exists but it is less than or equal to `new_mtu` so no need to
             // update.
             Some(prev_mtu) => {
@@ -154,7 +156,7 @@ impl<I: Ip, Instant: crate::Instant> PmtuCache<I, Instant> {
     /// otherwise, where `a` is the same `a` as in the success case.
     pub(crate) fn update_pmtu_next_lower<C: PmtuContext<I, Instant = Instant>>(
         &mut self,
-        ctx: &mut C,
+        sync_ctx: &mut C,
         src_ip: I::Addr,
         dst_ip: I::Addr,
         from: u32,
@@ -167,7 +169,7 @@ impl<I: Ip, Instant: crate::Instant> PmtuCache<I, Instant> {
                 next_pmtu
             );
 
-            self.update_pmtu_if_less(ctx, src_ip, dst_ip, next_pmtu)
+            self.update_pmtu_if_less(sync_ctx, src_ip, dst_ip, next_pmtu)
         } else {
             // TODO(ghanan): Should we make sure the current PMTU value is set
             //               to the IP specific minimum MTU value?
@@ -190,7 +192,7 @@ impl<I: Ip, Instant: crate::Instant> PmtuCache<I, Instant> {
     /// current time instant known by `dispatcher`.
     fn update_pmtu<C: PmtuContext<I, Instant = Instant>>(
         &mut self,
-        ctx: &mut C,
+        sync_ctx: &mut C,
         src_ip: I::Addr,
         dst_ip: I::Addr,
         new_mtu: u32,
@@ -201,14 +203,14 @@ impl<I: Ip, Instant: crate::Instant> PmtuCache<I, Instant> {
         }
 
         let key = PmtuCacheKey::new(src_ip, dst_ip);
-        let now = ctx.now();
+        let now = sync_ctx.now();
         let ret = if let Some(data) = self.cache.get_mut(&key) {
             let prev_pmtu = data.pmtu;
             data.pmtu = new_mtu;
             data.last_updated = now;
             Ok(Some(prev_pmtu))
         } else {
-            let val = PmtuCacheData::new(new_mtu, ctx.now());
+            let val = PmtuCacheData::new(new_mtu, sync_ctx.now());
             assert!(self.cache.insert(key, val).is_none());
             Ok(None)
         };
@@ -217,7 +219,7 @@ impl<I: Ip, Instant: crate::Instant> PmtuCache<I, Instant> {
         // don't, create one.
         if !self.timer_scheduled {
             self.timer_scheduled = true;
-            assert_eq!(ctx.schedule_timer(MAINTENANCE_PERIOD, PmtuTimerId::default()), None);
+            assert_eq!(sync_ctx.schedule_timer(MAINTENANCE_PERIOD, PmtuTimerId::default()), None);
         }
 
         ret
@@ -225,7 +227,7 @@ impl<I: Ip, Instant: crate::Instant> PmtuCache<I, Instant> {
 
     pub(crate) fn handle_timer<C: PmtuContext<I, Instant = Instant>>(
         &mut self,
-        ctx: &mut C,
+        sync_ctx: &mut C,
         _timer: PmtuTimerId<I>,
     ) {
         // Make sure we expected this timer to fire.
@@ -256,7 +258,7 @@ impl<I: Ip, Instant: crate::Instant> PmtuCache<I, Instant> {
             //               valid. Considering the use case, PMTU value changes
             //               may be infrequent so it may be enough to just use a
             //               long stale timer.
-            ctx.now().duration_since(v.last_updated) < PMTU_STALE_TIMEOUT
+            sync_ctx.now().duration_since(v.last_updated) < PMTU_STALE_TIMEOUT
         });
 
         // Only attempt to create the next maintenance task if we still have
@@ -267,7 +269,7 @@ impl<I: Ip, Instant: crate::Instant> PmtuCache<I, Instant> {
         // See `IpLayerPathMtuCache::update_pmtu`.
         if !self.cache.is_empty() {
             self.timer_scheduled = true;
-            assert_eq!(ctx.schedule_timer(MAINTENANCE_PERIOD, PmtuTimerId::default()), None);
+            assert_eq!(sync_ctx.schedule_timer(MAINTENANCE_PERIOD, PmtuTimerId::default()), None);
         }
     }
 }

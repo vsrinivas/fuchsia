@@ -431,9 +431,9 @@ pub(crate) trait NdpContext<D: LinkDevice>:
     }
 }
 
-fn deinitialize<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, device_id: C::DeviceId) {
+fn deinitialize<D: LinkDevice, C: NdpContext<D>>(sync_ctx: &mut C, device_id: C::DeviceId) {
     // Remove all timers associated with the device
-    ctx.cancel_timers_with(|timer_id| timer_id.get_device_id() == device_id);
+    sync_ctx.cancel_timers_with(|timer_id| timer_id.get_device_id() == device_id);
     // TODO(rheacock): Send any immediate packets, and potentially flag the
     // state as uninitialized?
 }
@@ -816,10 +816,10 @@ impl<D: LinkDevice, DeviceId: Copy> NdpTimerId<D, DeviceId> {
     }
 }
 
-fn handle_timer<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, id: NdpTimerId<D, C::DeviceId>) {
+fn handle_timer<D: LinkDevice, C: NdpContext<D>>(sync_ctx: &mut C, id: NdpTimerId<D, C::DeviceId>) {
     match id.inner {
         InnerNdpTimerId::LinkAddressResolution { neighbor_addr } => {
-            let ndp_state = ctx.get_state_mut_with(id.device_id);
+            let ndp_state = sync_ctx.get_state_mut_with(id.device_id);
             if let Some(NeighborState {
                 state: NeighborEntryState::Incomplete { transmit_counter },
                 ..
@@ -831,8 +831,8 @@ fn handle_timer<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, id: NdpTimerId<D, 
                     // Increase the transmit counter and send the solicitation
                     // again
                     *transmit_counter += 1;
-                    send_neighbor_solicitation(ctx, id.device_id, neighbor_addr);
-                    let _: Option<C::Instant> = ctx.schedule_timer(
+                    send_neighbor_solicitation(sync_ctx, id.device_id, neighbor_addr);
+                    let _: Option<C::Instant> = sync_ctx.schedule_timer(
                         retrans_timer,
                         NdpTimerId::new_link_address_resolution(id.device_id, neighbor_addr).into(),
                     );
@@ -841,9 +841,9 @@ fn handle_timer<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, id: NdpTimerId<D, 
                     // unreachable state forever, remove the neighbor from the
                     // database:
                     ndp_state.neighbors.delete_neighbor_state(&neighbor_addr);
-                    ctx.increment_counter("ndp::neighbor_solicitation_timer");
+                    sync_ctx.increment_counter("ndp::neighbor_solicitation_timer");
 
-                    ctx.address_resolution_failed(id.device_id, &neighbor_addr);
+                    sync_ctx.address_resolution_failed(id.device_id, &neighbor_addr);
                 }
             } else {
                 unreachable!("handle_timer: timer for neighbor {:?} address resolution should not exist if no entry exists", neighbor_addr);
@@ -858,7 +858,7 @@ fn handle_timer<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, id: NdpTimerId<D, 
             // valid lifetime > 0, at which point this timeout. would have been
             // set. Given this, we know that `invalidate_default_router` will
             // not panic.
-            ctx.get_state_mut_with(id.device_id).invalidate_default_router(&ip)
+            sync_ctx.get_state_mut_with(id.device_id).invalidate_default_router(&ip)
         }
         InnerNdpTimerId::PrefixInvalidation { subnet } => {
             // Invalidate the prefix.
@@ -869,16 +869,16 @@ fn handle_timer<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, id: NdpTimerId<D, 
             // with the on-link flag set. Given this we know that `addr_subnet`
             // must exist if this timer was fired so `invalidate_prefix` will
             // not panic.
-            ctx.get_state_mut_with(id.device_id).invalidate_prefix(subnet);
+            sync_ctx.get_state_mut_with(id.device_id).invalidate_prefix(subnet);
         }
         InnerNdpTimerId::DeprecateSlaacAddress { addr } => {
-            ctx.deprecate_slaac_addr(id.device_id, &addr);
+            sync_ctx.deprecate_slaac_addr(id.device_id, &addr);
         }
         InnerNdpTimerId::InvalidateSlaacAddress { addr } => {
-            ctx.invalidate_slaac_addr(id.device_id, &addr);
+            sync_ctx.invalidate_slaac_addr(id.device_id, &addr);
         }
         InnerNdpTimerId::RegenerateTemporaryAddress { addr_subnet } => {
-            regenerate_temporary_slaac_addr(ctx, id.device_id, &addr_subnet);
+            regenerate_temporary_slaac_addr(sync_ctx, id.device_id, &addr_subnet);
         }
     }
 }
@@ -905,15 +905,15 @@ fn regen_advance(
 }
 
 fn set_ndp_configuration<D: LinkDevice, C: NdpContext<D>>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device_id: C::DeviceId,
     config: NdpConfiguration,
 ) {
-    ctx.get_state_mut_with(device_id).config = config;
+    sync_ctx.get_state_mut_with(device_id).config = config;
 }
 
 fn lookup<D: LinkDevice, C: NdpContext<D>>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device_id: C::DeviceId,
     lookup_addr: UnicastAddr<Ipv6Addr>,
 ) -> Option<D::Address>
@@ -923,7 +923,7 @@ where
     trace!("ndp::lookup: {:?}", lookup_addr);
 
     // TODO(brunodalbo): Figure out what to do if a frame can't be sent
-    let ndpstate = ctx.get_state_mut_with(device_id);
+    let ndpstate = sync_ctx.get_state_mut_with(device_id);
     let result = ndpstate.neighbors.get_neighbor_state(&lookup_addr);
 
     match result {
@@ -950,11 +950,11 @@ where
             // also setting the transmission count to 1.
             ndpstate.neighbors.add_incomplete_neighbor_state(lookup_addr);
 
-            send_neighbor_solicitation(ctx, device_id, lookup_addr);
+            send_neighbor_solicitation(sync_ctx, device_id, lookup_addr);
 
             // Also schedule a timer to retransmit in case we don't get neighbor
             // advertisements back.
-            let _: Option<C::Instant> = ctx.schedule_timer(
+            let _: Option<C::Instant> = sync_ctx.schedule_timer(
                 retrans_timer,
                 NdpTimerId::new_link_address_resolution(device_id, lookup_addr).into(),
             );
@@ -981,13 +981,13 @@ where
 
 #[cfg(test)]
 fn insert_neighbor<D: LinkDevice, C: NdpContext<D>>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device_id: C::DeviceId,
     net: UnicastAddr<Ipv6Addr>,
     hw: D::Address,
 ) {
     // Neighbor `net` should be marked as reachable.
-    ctx.get_state_mut_with(device_id).neighbors.set_link_address(net, hw, true)
+    sync_ctx.get_state_mut_with(device_id).neighbors.set_link_address(net, hw, true)
 }
 
 /// `NeighborState` keeps all state that NDP may want to keep about neighbors,
@@ -1152,7 +1152,7 @@ impl<H> Default for NeighborTable<H> {
 }
 
 fn send_neighbor_solicitation<D: LinkDevice, C: NdpContext<D>>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device_id: C::DeviceId,
     lookup_addr: UnicastAddr<Ipv6Addr>,
 ) {
@@ -1162,14 +1162,14 @@ fn send_neighbor_solicitation<D: LinkDevice, C: NdpContext<D>>(
     //  source IP to the same IP as the packet that triggered the solicitation,
     //  so that when we hit the neighbor they'll have us in their cache,
     //  reducing overall burden on the network.
-    if let Some(src_ip) = ctx.get_non_tentative_global_or_link_local_addr(device_id) {
+    if let Some(src_ip) = sync_ctx.get_non_tentative_global_or_link_local_addr(device_id) {
         assert!(src_ip.is_valid_unicast());
-        let src_ll = ctx.get_link_layer_addr(device_id);
+        let src_ll = sync_ctx.get_link_layer_addr(device_id);
         let dst_ip = lookup_addr.to_solicited_node_address();
         // TODO(https://fxbug.dev/85055): Either panic or guarantee that this
         // error can't happen statically?
         let _ = send_ndp_packet::<_, _, &[u8], _>(
-            ctx,
+            sync_ctx,
             device_id,
             src_ip.get(),
             dst_ip.into_specified(),
@@ -1184,7 +1184,7 @@ fn send_neighbor_solicitation<D: LinkDevice, C: NdpContext<D>>(
 }
 
 fn send_neighbor_advertisement<D: LinkDevice, C: NdpContext<D>>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device_id: C::DeviceId,
     solicited: bool,
     device_addr: SpecifiedAddr<Ipv6Addr>,
@@ -1205,16 +1205,21 @@ fn send_neighbor_advertisement<D: LinkDevice, C: NdpContext<D>>(
     // information, but it is not necessary. So it is perfectly valid that
     // trying to send this advertisement will end up triggering a neighbor
     // solicitation to be sent.
-    let src_ll = ctx.get_link_layer_addr(device_id);
+    let src_ll = sync_ctx.get_link_layer_addr(device_id);
     // TODO(https://fxbug.dev/85055): Either panic or guarantee that this error
     // can't happen statically?
     let device_addr = device_addr.get();
     let _ = send_ndp_packet::<_, _, &[u8], _>(
-        ctx,
+        sync_ctx,
         device_id,
         device_addr,
         dst_ip,
-        NeighborAdvertisement::new(ctx.is_router_device(device_id), solicited, false, device_addr),
+        NeighborAdvertisement::new(
+            sync_ctx.is_router_device(device_id),
+            solicited,
+            false,
+            device_addr,
+        ),
         &[NdpOptionBuilder::TargetLinkLayerAddress(src_ll.bytes())],
     );
 }
@@ -1223,7 +1228,7 @@ fn send_neighbor_advertisement<D: LinkDevice, C: NdpContext<D>>(
 // TODO(https://fxbug.dev/85055): Is it possible to guarantee that some types of
 // errors don't happen?
 pub(super) fn send_ndp_packet<D: LinkDevice, C: NdpContext<D>, B: ByteSlice, M>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device_id: C::DeviceId,
     src_ip: Ipv6Addr,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -1235,35 +1240,36 @@ where
 {
     trace!("send_ndp_packet: src_ip={:?} dst_ip={:?}", src_ip, dst_ip);
 
-    ctx.send_ipv6_frame(
-        device_id,
-        dst_ip,
-        ndp::OptionSequenceBuilder::<_>::new(options.iter())
-            .into_serializer()
-            .encapsulate(IcmpPacketBuilder::<Ipv6, B, M>::new(
-                src_ip,
-                dst_ip,
-                IcmpUnusedCode,
-                message,
-            ))
-            .encapsulate(Ipv6PacketBuilder::new(
-                src_ip,
-                dst_ip,
-                REQUIRED_NDP_IP_PACKET_HOP_LIMIT,
-                Ipv6Proto::Icmpv6,
-            )),
-    )
-    .map_err(|_| ())
+    sync_ctx
+        .send_ipv6_frame(
+            device_id,
+            dst_ip,
+            ndp::OptionSequenceBuilder::<_>::new(options.iter())
+                .into_serializer()
+                .encapsulate(IcmpPacketBuilder::<Ipv6, B, M>::new(
+                    src_ip,
+                    dst_ip,
+                    IcmpUnusedCode,
+                    message,
+                ))
+                .encapsulate(Ipv6PacketBuilder::new(
+                    src_ip,
+                    dst_ip,
+                    REQUIRED_NDP_IP_PACKET_HOP_LIMIT,
+                    Ipv6Proto::Icmpv6,
+                )),
+        )
+        .map_err(|_| ())
 }
 
 fn regenerate_temporary_slaac_addr<'a, D: LinkDevice, C: NdpContext<D>>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device_id: <C as DeviceIdContext<D>>::DeviceId,
     addr_subnet: &AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
 ) {
     let entry = {
         let mut subnet_addrs =
-            ctx.get_ip_device_state(device_id).iter_global_ipv6_addrs().filter(|entry| {
+            sync_ctx.get_ip_device_state(device_id).iter_global_ipv6_addrs().filter(|entry| {
                 entry.addr_sub().subnet() == addr_subnet.subnet() && !entry.state.is_deprecated()
             });
 
@@ -1280,18 +1286,19 @@ fn regenerate_temporary_slaac_addr<'a, D: LinkDevice, C: NdpContext<D>>(
         // a subnet, we ignore all but the last regen timer for the
         // non-deprecated addresses in a subnet.
         if let Some((entry, regen_at)) = subnet_addrs.find_map(|entry| {
-            ctx.scheduled_instant(NdpTimerId::new_regenerate_temporary_slaac_address(
-                device_id,
-                *entry.addr_sub(),
-            ))
-            .map(|instant| (entry, instant))
+            sync_ctx
+                .scheduled_instant(NdpTimerId::new_regenerate_temporary_slaac_address(
+                    device_id,
+                    *entry.addr_sub(),
+                ))
+                .map(|instant| (entry, instant))
         }) {
             debug!(
                 "regenerate_temporary_addr: ignoring regen event at {:?} for {:?} since {:?} will regenerate after at {:?}",
-                ctx.now(), addr_subnet, entry.addr_sub().addr(), regen_at);
+                sync_ctx.now(), addr_subnet, entry.addr_sub().addr(), regen_at);
             return;
         }
-        match ctx
+        match sync_ctx
             .get_ip_device_state(device_id)
             .iter_global_ipv6_addrs()
             .find(|entry| entry.addr_sub() == addr_subnet)
@@ -1315,7 +1322,7 @@ fn regenerate_temporary_slaac_addr<'a, D: LinkDevice, C: NdpContext<D>>(
             ),
         };
 
-    let state = ctx.get_state_with(device_id);
+    let state = sync_ctx.get_state_with(device_id);
     let TemporarySlaacAddressConfiguration {
         temp_valid_lifetime,
         temp_preferred_lifetime: _,
@@ -1326,7 +1333,7 @@ fn regenerate_temporary_slaac_addr<'a, D: LinkDevice, C: NdpContext<D>>(
         None => return,
     };
 
-    let deprecate_at = ctx
+    let deprecate_at = sync_ctx
         .scheduled_instant(NdpTimerId::new_deprecate_slaac_address(device_id, addr_subnet.addr()))
         .unwrap_or_else(|| unreachable!(
             "temporary SLAAC address {:?} had a regen timer fire but does not have a deprecation timer",
@@ -1334,7 +1341,7 @@ fn regenerate_temporary_slaac_addr<'a, D: LinkDevice, C: NdpContext<D>>(
         ));
     let preferred_for = deprecate_at.duration_since(creation_time) + desync_factor;
 
-    let now = ctx.now();
+    let now = sync_ctx.now();
     // It's possible this `valid_for` value is larger than `temp_valid_lifetime`
     // (e.g. if the NDP configuration was changed since this address was
     // generated). That's okay, because `add_slaac_addr_sub` will apply the
@@ -1343,7 +1350,7 @@ fn regenerate_temporary_slaac_addr<'a, D: LinkDevice, C: NdpContext<D>>(
         .unwrap_or(*temp_valid_lifetime);
 
     add_slaac_addr_sub(
-        ctx,
+        sync_ctx,
         device_id,
         now,
         SlaacInitConfig::Temporary { dad_count: 0 },
@@ -1363,7 +1370,7 @@ fn regenerate_temporary_slaac_addr<'a, D: LinkDevice, C: NdpContext<D>>(
 /// [RFC 4862 Section 5.5.3]: http://tools.ietf.org/html/rfc4862#section-5.5.3
 /// [RFC 8981 Section 3.4]: https://tools.ietf.org/html/rfc8981#section-3.4
 fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device_id: <C as DeviceIdContext<D>>::DeviceId,
     prefix_info: &PrefixInformation,
 ) {
@@ -1388,10 +1395,10 @@ fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
         }
     };
 
-    let now = ctx.now();
+    let now = sync_ctx.now();
     let prefix_preferred_for = prefix_info.preferred_lifetime();
 
-    let existing_subnet_slaac_addrs: Vec<_> = ctx
+    let existing_subnet_slaac_addrs: Vec<_> = sync_ctx
         .get_ip_device_state(device_id)
         .iter_global_ipv6_addrs()
         .filter(|a| a.config_type() == AddrConfigType::Slaac && a.addr_sub().subnet() == subnet)
@@ -1454,7 +1461,11 @@ fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
                 desync_factor,
                 dad_counter: _,
             }) => {
-                match ctx.get_state_with(device_id).config.get_temporary_address_configuration() {
+                match sync_ctx
+                    .get_state_with(device_id)
+                    .config
+                    .get_temporary_address_configuration()
+                {
                     // Since it's possible to change NDP configuration for a
                     // device during runtime, we can end up here, with a
                     // temporary address on an interface even though temporary
@@ -1520,8 +1531,8 @@ fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
             SlaacConfig::Static { valid_until: _ } => None,
             SlaacConfig::Temporary(_) => {
                 preferred_for.and_then(|preferred_for| {
-                    let device_config = ctx.get_ip_device_configuration(device_id);
-                    let state = ctx.get_state_with(device_id);
+                    let device_config = sync_ctx.get_ip_device_configuration(device_id);
+                    let state = sync_ctx.get_state_with(device_id);
                     state.config.get_temporary_address_configuration().and_then(
                         |TemporarySlaacAddressConfiguration {
                              temp_idgen_retries,
@@ -1570,7 +1581,7 @@ fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
         // assigned to a device.
         if let Some(preferred_for) = preferred_for {
             if entry.state.is_deprecated() {
-                let entry = ctx
+                let entry = sync_ctx
                     .get_ip_device_state_mut(device_id)
                     .iter_addrs_mut()
                     .find(|a| a.addr_sub() == entry.addr_sub())
@@ -1586,25 +1597,25 @@ fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
             // helps prevent skew in cases where this task gets preempted and
             // isn't scheduled for some period of time between recording `now`
             // and here.
-            let _: Option<C::Instant> = ctx.schedule_timer_instant(
+            let _: Option<C::Instant> = sync_ctx.schedule_timer_instant(
                 now.checked_add(preferred_for.get()).unwrap(),
                 NdpTimerId::new_deprecate_slaac_address(device_id, addr).into(),
             );
 
             let _prev_regen_at: Option<C::Instant> = match regen_at {
-                Some(regen_at) => ctx.schedule_timer_instant(
+                Some(regen_at) => sync_ctx.schedule_timer_instant(
                     regen_at,
                     NdpTimerId::new_regenerate_temporary_slaac_address(device_id, *addr_sub),
                 ),
-                None => ctx.cancel_timer(NdpTimerId::new_regenerate_temporary_slaac_address(
+                None => sync_ctx.cancel_timer(NdpTimerId::new_regenerate_temporary_slaac_address(
                     device_id, *addr_sub,
                 )),
             };
         } else if !entry.state.is_deprecated() {
-            ctx.deprecate_slaac_addr(device_id, &addr);
+            sync_ctx.deprecate_slaac_addr(device_id, &addr);
             let _: Option<C::Instant> =
-                ctx.cancel_timer(NdpTimerId::new_deprecate_slaac_address(device_id, addr));
-            let _: Option<C::Instant> = ctx.cancel_timer(
+                sync_ctx.cancel_timer(NdpTimerId::new_deprecate_slaac_address(device_id, addr));
+            let _: Option<C::Instant> = sync_ctx.cancel_timer(
                 NdpTimerId::new_regenerate_temporary_slaac_address(device_id, *addr_sub),
             );
         }
@@ -1662,12 +1673,12 @@ fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
                 trace!("receive_ndp_packet: updating valid lifetime to {:?} for SLAAC address {:?} on device {:?}", valid_until, addr, device_id);
 
                 // Set the valid lifetime for this address.
-                ctx.update_slaac_addr_valid_until(device_id, &addr, valid_until);
+                sync_ctx.update_slaac_addr_valid_until(device_id, &addr, valid_until);
 
                 // Must not have reached this point if the address was already
                 // assigned to a device.
                 assert_matches!(
-                    ctx.schedule_timer_instant(
+                    sync_ctx.schedule_timer_instant(
                         valid_until,
                         NdpTimerId::new_invalidate_slaac_address(device_id, addr).into(),
                     ),
@@ -1729,7 +1740,7 @@ fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
 
     for slaac_type in address_types_to_add {
         add_slaac_addr_sub(
-            ctx,
+            sync_ctx,
             device_id,
             now,
             SlaacInitConfig::new(slaac_type),
@@ -1782,7 +1793,7 @@ fn has_iana_allowed_iid(address: Ipv6Addr) -> bool {
 }
 
 fn add_slaac_addr_sub<'a, D: LinkDevice, C: NdpContext<D>>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device_id: <C as DeviceIdContext<D>>::DeviceId,
     now: C::Instant,
     slaac_config: SlaacInitConfig,
@@ -1810,14 +1821,14 @@ fn add_slaac_addr_sub<'a, D: LinkDevice, C: NdpContext<D>>(
                 // Generate the global address as defined by RFC 4862 section 5.5.3.d.
                 generate_global_static_address(
                     &subnet,
-                    &ctx.get_interface_identifier(device_id)[..],
+                    &sync_ctx.get_interface_identifier(device_id)[..],
                 ),
             )
         }
         SlaacInitConfig::Temporary { dad_count } => {
-            let per_attempt_random_seed = ctx.rng_mut().next_u64();
-            let state = ctx.get_state_with(device_id);
-            let device_config = ctx.get_ip_device_configuration(device_id);
+            let per_attempt_random_seed = sync_ctx.rng_mut().next_u64();
+            let state = sync_ctx.get_state_with(device_id);
+            let device_config = sync_ctx.get_ip_device_configuration(device_id);
             let temporary_address_config = match state.config.get_temporary_address_configuration()
             {
                 Some(temporary_address_config) => temporary_address_config,
@@ -1864,15 +1875,15 @@ fn add_slaac_addr_sub<'a, D: LinkDevice, C: NdpContext<D>>(
                 loop {
                     let address = generate_global_temporary_address(
                         &subnet,
-                        &ctx.get_interface_identifier(device_id),
+                        &sync_ctx.get_interface_identifier(device_id),
                         seed,
                         &temporary_address_config.secret_key,
                     );
 
                     if has_iana_allowed_iid(address.addr().get()) {
-                        match ctx.get_ip_device_state(device_id).find_addr(&address.addr()) {
+                        match sync_ctx.get_ip_device_state(device_id).find_addr(&address.addr()) {
                             Some(_) => {
-                                ctx.increment_counter("generated_temporary_slaac_addr_exists")
+                                sync_ctx.increment_counter("generated_temporary_slaac_addr_exists")
                             }
                             None => break address,
                         }
@@ -1902,7 +1913,7 @@ fn add_slaac_addr_sub<'a, D: LinkDevice, C: NdpContext<D>>(
             );
 
             let desync_factor =
-                ctx.rng_mut().sample(Uniform::new(Duration::ZERO, max_desync_factor));
+                sync_ctx.rng_mut().sample(Uniform::new(Duration::ZERO, max_desync_factor));
             let preferred_for = core::cmp::min(
                 prefix_preferred_for.map_or(Duration::ZERO, NonZeroDuration::get),
                 temp_preferred_lifetime - desync_factor,
@@ -1939,7 +1950,7 @@ fn add_slaac_addr_sub<'a, D: LinkDevice, C: NdpContext<D>>(
     // assign the address to maintain a "single source of truth"?
 
     // Attempt to add the address to the device.
-    if let Err(err) = ctx.add_slaac_addr_sub(device_id, address, slaac_config) {
+    if let Err(err) = sync_ctx.add_slaac_addr_sub(device_id, address, slaac_config) {
         error!("receive_ndp_packet: Failed configure new IPv6 address {:?} on device {:?} via SLAAC with error {:?}", address, device_id, err);
     } else {
         trace!("receive_ndp_packet: Successfully configured new IPv6 address {:?} on device {:?} via SLAAC", address, device_id);
@@ -1949,7 +1960,7 @@ fn add_slaac_addr_sub<'a, D: LinkDevice, C: NdpContext<D>>(
         // Must not have reached this point if the address was already assigned
         // to a device.
         assert_eq!(
-            ctx.schedule_timer_instant(
+            sync_ctx.schedule_timer_instant(
                 valid_until,
                 NdpTimerId::new_invalidate_slaac_address(device_id, address.addr()).into(),
             ),
@@ -1969,7 +1980,7 @@ fn add_slaac_addr_sub<'a, D: LinkDevice, C: NdpContext<D>>(
             // between recording `now` and here.
             Some(PreferredForAndRegenAt(preferred_for, regen_at)) => {
                 assert_eq!(
-                    ctx.schedule_timer_instant(
+                    sync_ctx.schedule_timer_instant(
                         now.checked_add(preferred_for.get()).unwrap(),
                         deprecate_timer_id.into()
                     ),
@@ -1977,7 +1988,7 @@ fn add_slaac_addr_sub<'a, D: LinkDevice, C: NdpContext<D>>(
                 );
                 match regen_at {
                     Some(regen_at) => assert_eq!(
-                        ctx.schedule_timer_instant(
+                        sync_ctx.schedule_timer_instant(
                             regen_at,
                             NdpTimerId::new_regenerate_temporary_slaac_address(device_id, address)
                                 .into()
@@ -1988,8 +1999,8 @@ fn add_slaac_addr_sub<'a, D: LinkDevice, C: NdpContext<D>>(
                 }
             }
             None => {
-                ctx.deprecate_slaac_addr(device_id, &address.addr());
-                assert_eq!(ctx.cancel_timer(deprecate_timer_id.into()), None);
+                sync_ctx.deprecate_slaac_addr(device_id, &address.addr());
+                assert_eq!(sync_ctx.cancel_timer(deprecate_timer_id.into()), None);
             }
         };
     }
@@ -2012,11 +2023,11 @@ pub(crate) trait NdpPacketHandler<DeviceId> {
 }
 
 fn duplicate_address_detected<D: LinkDevice, C: NdpContext<D>>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device_id: C::DeviceId,
     addr: UnicastAddr<Ipv6Addr>,
 ) {
-    let addr_entry = ctx.get_ip_device_state(device_id).find_addr(&addr);
+    let addr_entry = sync_ctx.get_ip_device_state(device_id).find_addr(&addr);
     let regenerable_prefix = addr_entry.and_then(|e| match e.config {
         AddrConfig::Slaac(SlaacConfig::Temporary(temporary_config)) => {
             Some((*e.addr_sub(), temporary_config))
@@ -2026,7 +2037,7 @@ fn duplicate_address_detected<D: LinkDevice, C: NdpContext<D>>(
     });
 
     // Let's notify our device.
-    ctx.duplicate_address_detected(device_id, addr);
+    sync_ctx.duplicate_address_detected(device_id, addr);
 
     let (addr_sub, TemporarySlaacConfig { valid_until, creation_time, desync_factor, dad_counter }) =
         match regenerable_prefix {
@@ -2034,7 +2045,7 @@ fn duplicate_address_detected<D: LinkDevice, C: NdpContext<D>>(
             None => return,
         };
 
-    let state = ctx.get_state_with(device_id);
+    let state = sync_ctx.get_state_with(device_id);
     let temporary_address_configuration = match &state.config.temporary_address_configuration {
         Some(configuration) => configuration,
         None => return,
@@ -2054,7 +2065,7 @@ fn duplicate_address_detected<D: LinkDevice, C: NdpContext<D>>(
     // what will be calculated here. That's fine because it's a lower bound on
     // the prefix's value, which means the prefix's value is still being
     // respected.
-    let preferred_for = match ctx
+    let preferred_for = match sync_ctx
         .cancel_timer(deprecate_timer_id)
         .map(|preferred_until| preferred_until.duration_since(creation_time) + desync_factor)
     {
@@ -2064,7 +2075,7 @@ fn duplicate_address_detected<D: LinkDevice, C: NdpContext<D>>(
         None => return,
     };
 
-    let now = ctx.now();
+    let now = sync_ctx.now();
     // It's possible this `valid_for` value is larger than `temp_valid_lifetime`
     // (e.g. if the NDP configuration was changed since this address was
     // generated). That's okay, because `add_slaac_addr_sub` will apply the
@@ -2073,7 +2084,7 @@ fn duplicate_address_detected<D: LinkDevice, C: NdpContext<D>>(
         .unwrap_or(temp_valid_lifetime);
 
     add_slaac_addr_sub(
-        ctx,
+        sync_ctx,
         device_id,
         now,
         SlaacInitConfig::Temporary { dad_count: dad_counter + 1 },
@@ -2084,7 +2095,7 @@ fn duplicate_address_detected<D: LinkDevice, C: NdpContext<D>>(
 }
 
 pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device_id: C::DeviceId,
     src_ip: Ipv6SourceAddr,
     _dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -2102,7 +2113,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
 
             trace!("receive_ndp_packet: Received NDP RS");
 
-            if !ctx.is_router_device(device_id) {
+            if !sync_ctx.is_router_device(device_id) {
                 // Hosts MUST silently discard Router Solicitation messages as
                 // per RFC 4861 section 6.1.1.
                 trace!(
@@ -2138,14 +2149,14 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
             // TODO(ghanan): Make sure IP's hop limit is set to 255 as per RFC
             // 4861 section 6.1.2.
 
-            ctx.increment_counter("ndp::rx_router_advertisement");
+            sync_ctx.increment_counter("ndp::rx_router_advertisement");
 
-            if ctx.is_router_device(device_id) {
+            if sync_ctx.is_router_device(device_id) {
                 trace!("receive_ndp_packet: received NDP RA as a router, discarding NDP RA");
                 return;
             }
 
-            let ndp_state = ctx.get_state_mut_with(device_id);
+            let ndp_state = sync_ctx.get_state_mut_with(device_id);
             let ra = p.message();
 
             let timer_id = NdpTimerId::new_router_invalidation(device_id, src_ip).into();
@@ -2163,7 +2174,8 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
 
                 // Reset invalidation timeout.
                 trace!("receive_ndp_packet: NDP RA: updating invalidation timer to {:?} for router: {:?}", router_lifetime, src_ip);
-                let _: Option<C::Instant> = ctx.schedule_timer(router_lifetime.get(), timer_id);
+                let _: Option<C::Instant> =
+                    sync_ctx.schedule_timer(router_lifetime.get(), timer_id);
             } else {
                 if ndp_state.has_default_router(&src_ip) {
                     trace!("receive_ndp_packet: NDP RA has zero-valued router lifetime, invaliding router: {:?}", src_ip);
@@ -2177,7 +2189,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
 
                     // As per RFC 4861 section 6.3.4, immediately timeout the
                     // entry as specified in RFC 4861 section 6.3.5.
-                    assert_matches!(ctx.cancel_timer(timer_id), Some(_));
+                    assert_matches!(sync_ctx.cancel_timer(timer_id), Some(_));
                 } else {
                     trace!("receive_ndp_packet: NDP RA has zero-valued router lifetime, but the router {:?} is unknown so doing nothing", src_ip);
                 }
@@ -2195,7 +2207,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
             // various code above (namely, to schedule timers). Now that all of
             // that mutation has happened, we can borrow `ctx` mutably again and
             // not run afoul of the borrow checker.
-            let ndp_state = ctx.get_state_mut_with(device_id);
+            let ndp_state = sync_ctx.get_state_mut_with(device_id);
 
             // As per RFC 4861 section 6.3.4:
             // If the received Reachable Time value is specified, the host
@@ -2244,7 +2256,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
             if let Some(hop_limit) = ra.current_hop_limit() {
                 trace!("receive_ndp_packet: NDP RA: updating device's hop limit to {:?} for router: {:?}", ra.current_hop_limit(), src_ip);
 
-                ctx.get_ip_device_state_mut(device_id).default_hop_limit = hop_limit;
+                sync_ctx.get_ip_device_state_mut(device_id).default_hop_limit = hop_limit;
             }
 
             for option in p.body().iter() {
@@ -2259,7 +2271,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                     // TODO(ghanan): Mark NDP state as STALE as per the RFC once
                     //               we implement the RFC compliant states.
                     NdpOption::SourceLinkLayerAddress(a) => {
-                        let ndp_state = ctx.get_state_mut_with(device_id);
+                        let ndp_state = sync_ctx.get_state_mut_with(device_id);
                         let link_addr = D::Address::from_bytes(&a[..D::Address::BYTES_LENGTH]);
 
                         trace!("receive_ndp_packet: NDP RA: setting link address for router {:?} to {:?}", src_ip, link_addr);
@@ -2279,13 +2291,13 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                             // `MINIMUM_LINK_MTU` but we just checked to make
                             // sure that `mtu` is at least `MINIMUM_LINK_MTU` so
                             // we know `set_mtu` will not panic.
-                            ctx.set_mtu(device_id, mtu);
+                            sync_ctx.set_mtu(device_id, mtu);
                         } else {
                             trace!("receive_ndp_packet: NDP RA: not setting link MTU (from {:?}) to {:?} as it is less than Ipv6::MINIMUM_LINK_MTU", src_ip, mtu);
                         }
                     }
                     NdpOption::PrefixInformation(prefix_info) => {
-                        let ndp_state = ctx.get_state_mut_with(device_id);
+                        let ndp_state = sync_ctx.get_state_mut_with(device_id);
 
                         trace!(
                             "receive_ndp_packet: prefix information option with prefix = {:?}",
@@ -2334,10 +2346,10 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                     // We do not need a timer to mark the prefix
                                     // as invalid when it has an infinite
                                     // lifetime.
-                                    let _: Option<C::Instant> = ctx.cancel_timer(timer_id);
+                                    let _: Option<C::Instant> = sync_ctx.cancel_timer(timer_id);
                                 } else {
                                     let _: Option<C::Instant> =
-                                        ctx.schedule_timer(valid_lifetime.get(), timer_id);
+                                        sync_ctx.schedule_timer(valid_lifetime.get(), timer_id);
                                 }
                             } else if ndp_state.has_prefix(&subnet) {
                                 trace!("receive_ndp_packet: on-link prefix is known and has valid lifetime = 0, so invaliding");
@@ -2350,9 +2362,9 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
 
                                 // Cancel the prefix invalidation timeout if it
                                 // exists.
-                                let _: Option<C::Instant> = ctx.cancel_timer(timer_id);
+                                let _: Option<C::Instant> = sync_ctx.cancel_timer(timer_id);
 
-                                let ndp_state = ctx.get_state_mut_with(device_id);
+                                let ndp_state = sync_ctx.get_state_mut_with(device_id);
                                 ndp_state.invalidate_prefix(subnet);
                             } else {
                                 // If the on-link flag is set, the valid
@@ -2364,7 +2376,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                         }
 
                         if prefix_info.autonomous_address_configuration_flag() {
-                            apply_slaac_update(ctx, device_id, prefix_info);
+                            apply_slaac_update(sync_ctx, device_id, prefix_info);
                         }
                     }
                     _ => {}
@@ -2373,7 +2385,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
 
             // If the router exists in our router table, make sure it is marked
             // as a router as per RFC 4861 section 6.3.4.
-            let ndp_state = ctx.get_state_mut_with(device_id);
+            let ndp_state = sync_ctx.get_state_mut_with(device_id);
             if let Some(state) = ndp_state.neighbors.get_neighbor_state_mut(&src_ip) {
                 state.is_router = true;
             }
@@ -2396,7 +2408,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
 
             // Is `target_address` associated with our device? If not, drop the
             // packet.
-            if ctx.get_ip_device_state(device_id).find_addr(&target_address).is_none() {
+            if sync_ctx.get_ip_device_state(device_id).find_addr(&target_address).is_none() {
                 trace!("receive_ndp_packet: Dropping NDP NS packet that is not meant for us");
                 return;
             }
@@ -2404,7 +2416,8 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
             // We know the call to `unwrap` will not panic because we just
             // checked to make sure that `target_address` is associated with
             // `device_id`.
-            let addr_entry = ctx.get_ip_device_state(device_id).find_addr(&target_address).unwrap();
+            let addr_entry =
+                sync_ctx.get_ip_device_state(device_id).find_addr(&target_address).unwrap();
             if addr_entry.state.is_tentative() {
                 if !src_ip.is_specified() {
                     // If the source address of the packet is the unspecified
@@ -2414,7 +2427,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                     trace!(
                         "receive_ndp_packet: Received NDP NS: duplicate address {:?} detected on device {:?}", target_address, device_id
                     );
-                    duplicate_address_detected(ctx, device_id, target_address);
+                    duplicate_address_detected(sync_ctx, device_id, target_address);
                 }
 
                 // `target_address` is tentative on `device_id` so we do not
@@ -2430,7 +2443,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
             //      `device_id`.
             //   3) The target address is not tentative.
 
-            ctx.increment_counter("ndp::rx_neighbor_solicitation");
+            sync_ctx.increment_counter("ndp::rx_neighbor_solicitation");
 
             // If we have a source link layer address option, we take it and
             // save to our cache.
@@ -2443,7 +2456,10 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                     // Set the link address and mark it as stale if we either
                     // create the neighbor entry, or updated an existing one, as
                     // per RFC 4861 section 7.2.3.
-                    ctx.get_state_mut_with(device_id).neighbors.set_link_address(src_ip, ll, false);
+                    sync_ctx
+                        .get_state_mut_with(device_id)
+                        .neighbors
+                        .set_link_address(src_ip, ll, false);
                 }
 
                 trace!(
@@ -2454,7 +2470,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                 // Finally we ought to reply to the Neighbor Solicitation with a
                 // Neighbor Advertisement.
                 send_neighbor_advertisement(
-                    ctx,
+                    sync_ctx,
                     device_id,
                     true,
                     target_address.into_specified(),
@@ -2466,7 +2482,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                 // Send out Unsolicited Advertisement in response to neighbor
                 // who's performing DAD, as described in RFC 4861 and 4862.
                 send_neighbor_advertisement(
-                    ctx,
+                    sync_ctx,
                     device_id,
                     false,
                     target_address.into_specified(),
@@ -2501,14 +2517,14 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                 }
             };
 
-            match ctx
+            match sync_ctx
                 .get_ip_device_state(device_id)
                 .find_addr(&target_address)
                 .map(|entry| entry.state)
             {
                 Some(AddressState::Tentative { dad_transmits_remaining }) => {
                     trace!("receive_ndp_packet: NDP NA has a target address {:?} that is tentative on device {:?}; dad_transmits_remaining={:?}", target_address, device_id, dad_transmits_remaining);
-                    duplicate_address_detected(ctx, device_id, target_address);
+                    duplicate_address_detected(sync_ctx, device_id, target_address);
                     return;
                 }
                 Some(AddressState::Assigned) | Some(AddressState::Deprecated) => {
@@ -2524,9 +2540,9 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                 None => {}
             }
 
-            ctx.increment_counter("ndp::rx_neighbor_advertisement");
+            sync_ctx.increment_counter("ndp::rx_neighbor_advertisement");
 
-            let ndp_state = ctx.get_state_mut_with(device_id);
+            let ndp_state = sync_ctx.get_state_mut_with(device_id);
 
             let neighbor_state = if let Some(state) =
                 ndp_state.neighbors.get_neighbor_state_mut(&src_ip)
@@ -2574,13 +2590,13 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                     ndp_state.neighbors.set_link_address(src_ip, address, message.solicited_flag());
 
                     // Cancel the resolution timeout.
-                    let _: Option<C::Instant> = ctx.cancel_timer(
+                    let _: Option<C::Instant> = sync_ctx.cancel_timer(
                         NdpTimerId::new_link_address_resolution(device_id, src_ip).into(),
                     );
 
                     // Send any packets queued for the neighbor awaiting address
                     // resolution.
-                    ctx.address_resolved(device_id, &src_ip, address);
+                    sync_ctx.address_resolved(device_id, &src_ip, address);
                 } else {
                     trace!("receive_ndp_packet: Performing address resolution but the NDP NA from {:?} does not have a target link layer address option, so discarding", src_ip);
                     return;

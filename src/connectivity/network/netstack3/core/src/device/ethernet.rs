@@ -318,12 +318,14 @@ impl<D> From<NdpTimerId<EthernetLinkDevice, D>> for EthernetTimerId<D> {
 
 /// Handle an Ethernet timer firing.
 pub(super) fn handle_timer<C: EthernetIpLinkDeviceContext>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     id: EthernetTimerId<C::DeviceId>,
 ) {
     match id {
-        EthernetTimerId::Arp(id) => arp::handle_timer(ctx, id.into()),
-        EthernetTimerId::Ndp(id) => <C as NdpHandler<EthernetLinkDevice>>::handle_timer(ctx, id),
+        EthernetTimerId::Arp(id) => arp::handle_timer(sync_ctx, id.into()),
+        EthernetTimerId::Ndp(id) => {
+            <C as NdpHandler<EthernetLinkDevice>>::handle_timer(sync_ctx, id)
+        }
     }
 }
 
@@ -359,32 +361,32 @@ pub(super) fn send_ip_frame<
     A: IpAddress,
     S: Serializer<Buffer = B>,
 >(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device_id: C::DeviceId,
     local_addr: SpecifiedAddr<A>,
     body: S,
 ) -> Result<(), S> {
     trace!("ethernet::send_ip_frame: local_addr = {:?}; device = {:?}", local_addr, device_id);
 
-    let state = &mut ctx.get_state_mut_with(device_id).link;
+    let state = &mut sync_ctx.get_state_mut_with(device_id).link;
     let (local_mac, mtu) = (state.mac, state.mtu);
 
     #[ipv4addr]
     let dst_mac = match MulticastAddr::from_witness(local_addr) {
         Some(multicast) => Ok(Mac::from(&multicast)),
-        None => arp::lookup(ctx, device_id, local_mac.get(), local_addr.get())
+        None => arp::lookup(sync_ctx, device_id, local_mac.get(), local_addr.get())
             .ok_or(IpAddr::V4(local_addr)),
     };
     #[ipv6addr]
     let dst_mac = match UnicastOrMulticastIpv6Addr::from_specified(local_addr) {
         UnicastOrMulticastIpv6Addr::Multicast(addr) => Ok(Mac::from(&addr)),
         UnicastOrMulticastIpv6Addr::Unicast(addr) => {
-            <C as NdpHandler<_>>::lookup(ctx, device_id, addr).ok_or(IpAddr::V6(local_addr))
+            <C as NdpHandler<_>>::lookup(sync_ctx, device_id, addr).ok_or(IpAddr::V6(local_addr))
         }
     };
 
     match dst_mac {
-        Ok(dst_mac) => ctx
+        Ok(dst_mac) => sync_ctx
             .send_frame(
                 device_id.into(),
                 body.with_mtu(mtu as usize).encapsulate(EthernetFrameBuilder::new(
@@ -395,7 +397,7 @@ pub(super) fn send_ip_frame<
             )
             .map_err(|ser| ser.into_inner().into_inner()),
         Err(local_addr) => {
-            let state = &mut ctx.get_state_mut_with(device_id).link;
+            let state = &mut sync_ctx.get_state_mut_with(device_id).link;
             // The `serialize_vec_outer` call returns an `Either<B,
             // Buf<Vec<u8>>`. We could naively call `.as_ref().to_vec()` on it,
             // but if it were the `Buf<Vec<u8>>` variant, we'd be unnecessarily
@@ -424,7 +426,7 @@ pub(super) fn send_ip_frame<
 
 /// Receive an Ethernet frame from the network.
 pub(super) fn receive_frame<B: BufferMut, C: BufferEthernetIpLinkDeviceContext<B>>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device_id: C::DeviceId,
     mut buffer: B,
 ) {
@@ -449,7 +451,7 @@ pub(super) fn receive_frame<B: BufferMut, C: BufferEthernetIpLinkDeviceContext<B
 
     let (_, dst) = (frame.src_mac(), frame.dst_mac());
 
-    if !ctx.get_state_with(device_id).link.should_deliver(&dst) {
+    if !sync_ctx.get_state_with(device_id).link.should_deliver(&dst) {
         trace!("ethernet::receive_frame: destination mac {:?} not for device {:?}", dst, device_id);
         return;
     }
@@ -466,15 +468,15 @@ pub(super) fn receive_frame<B: BufferMut, C: BufferEthernetIpLinkDeviceContext<B
             };
             match types {
                 (ArpHardwareType::Ethernet, ArpNetworkType::Ipv4) => {
-                    arp::receive_arp_packet(ctx, device_id, buffer)
+                    arp::receive_arp_packet(sync_ctx, device_id, buffer)
                 }
             }
         }
         Some(EtherType::Ipv4) => {
-            ctx.receive_frame(RecvIpFrameMeta::<_, Ipv4>::new(device_id, frame_dst), buffer)
+            sync_ctx.receive_frame(RecvIpFrameMeta::<_, Ipv4>::new(device_id, frame_dst), buffer)
         }
         Some(EtherType::Ipv6) => {
-            ctx.receive_frame(RecvIpFrameMeta::<_, Ipv6>::new(device_id, frame_dst), buffer)
+            sync_ctx.receive_frame(RecvIpFrameMeta::<_, Ipv6>::new(device_id, frame_dst), buffer)
         }
         Some(EtherType::Other(_)) | None => {} // TODO(joshlf)
     }
@@ -482,11 +484,11 @@ pub(super) fn receive_frame<B: BufferMut, C: BufferEthernetIpLinkDeviceContext<B
 
 /// Set the promiscuous mode flag on `device_id`.
 pub(super) fn set_promiscuous_mode<C: EthernetIpLinkDeviceContext>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device_id: C::DeviceId,
     enabled: bool,
 ) {
-    ctx.get_state_mut_with(device_id).link.promiscuous_mode = enabled;
+    sync_ctx.get_state_mut_with(device_id).link.promiscuous_mode = enabled;
 }
 
 /// Add `device_id` to a link multicast group `multicast_addr`.
@@ -505,11 +507,11 @@ pub(super) fn set_promiscuous_mode<C: EthernetIpLinkDeviceContext>(
 /// `join_link_multicast` joins an L2 multicast group, whereas
 /// `join_ip_multicast` joins an L3 multicast group.
 pub(super) fn join_link_multicast<C: EthernetIpLinkDeviceContext>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device_id: C::DeviceId,
     multicast_addr: MulticastAddr<Mac>,
 ) {
-    let device_state = &mut ctx.get_state_mut_with(device_id).link;
+    let device_state = &mut sync_ctx.get_state_mut_with(device_id).link;
 
     let groups = &mut device_state.link_multicast_groups;
 
@@ -545,11 +547,11 @@ pub(super) fn join_link_multicast<C: EthernetIpLinkDeviceContext>(
 ///
 /// If `device_id` is not in the multicast group `multicast_addr`.
 pub(super) fn leave_link_multicast<C: EthernetIpLinkDeviceContext>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device_id: C::DeviceId,
     multicast_addr: MulticastAddr<Mac>,
 ) {
-    let device_state = &mut ctx.get_state_mut_with(device_id).link;
+    let device_state = &mut sync_ctx.get_state_mut_with(device_id).link;
 
     let groups = &mut device_state.link_multicast_groups;
 
@@ -574,8 +576,8 @@ pub(super) fn leave_link_multicast<C: EthernetIpLinkDeviceContext>(
 }
 
 /// Get the MTU associated with this device.
-pub(super) fn get_mtu<C: EthernetIpLinkDeviceContext>(ctx: &C, device_id: C::DeviceId) -> u32 {
-    ctx.get_state_with(device_id).link.mtu
+pub(super) fn get_mtu<C: EthernetIpLinkDeviceContext>(sync_ctx: &C, device_id: C::DeviceId) -> u32 {
+    sync_ctx.get_state_with(device_id).link.mtu
 }
 
 /// Insert a static entry into this device's ARP table.
@@ -586,12 +588,12 @@ pub(super) fn get_mtu<C: EthernetIpLinkDeviceContext>(ctx: &C, device_id: C::Dev
 // by a pub fn in the device mod.
 #[cfg(test)]
 pub(super) fn insert_static_arp_table_entry<C: EthernetIpLinkDeviceContext>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device_id: C::DeviceId,
     addr: Ipv4Addr,
     mac: Mac,
 ) {
-    arp::insert_static_neighbor(ctx, device_id, addr, mac)
+    arp::insert_static_neighbor(sync_ctx, device_id, addr, mac)
 }
 
 /// Insert an entry into this device's NDP table.
@@ -602,21 +604,24 @@ pub(super) fn insert_static_arp_table_entry<C: EthernetIpLinkDeviceContext>(
 // TODO(rheacock): Remove when this is called from non-test code.
 #[cfg(test)]
 pub(super) fn insert_ndp_table_entry<C: EthernetIpLinkDeviceContext>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device_id: C::DeviceId,
     addr: UnicastAddr<Ipv6Addr>,
     mac: Mac,
 ) {
-    <C as NdpHandler<_>>::insert_static_neighbor(ctx, device_id, addr, mac)
+    <C as NdpHandler<_>>::insert_static_neighbor(sync_ctx, device_id, addr, mac)
 }
 
 /// Deinitializes and cleans up state for ethernet devices
 ///
 /// After this function is called, the ethernet device should not be used and
 /// nothing else should be done with the state.
-pub(super) fn deinitialize<C: EthernetIpLinkDeviceContext>(ctx: &mut C, device_id: C::DeviceId) {
-    arp::deinitialize(ctx, device_id);
-    <C as NdpHandler<_>>::deinitialize(ctx, device_id);
+pub(super) fn deinitialize<C: EthernetIpLinkDeviceContext>(
+    sync_ctx: &mut C,
+    device_id: C::DeviceId,
+) {
+    arp::deinitialize(sync_ctx, device_id);
+    <C as NdpHandler<_>>::deinitialize(sync_ctx, device_id);
 }
 
 impl<C: EthernetIpLinkDeviceContext>
@@ -713,10 +718,10 @@ impl<C: EthernetIpLinkDeviceContext> StateContext<NdpState<EthernetLinkDevice>, 
 }
 
 pub(super) fn get_mac<C: EthernetIpLinkDeviceContext>(
-    ctx: &C,
+    sync_ctx: &C,
     device_id: C::DeviceId,
 ) -> &UnicastAddr<Mac> {
-    &ctx.get_state_with(device_id).link.mac
+    &sync_ctx.get_state_with(device_id).link.mac
 }
 
 impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
@@ -890,12 +895,12 @@ impl LinkDevice for EthernetLinkDevice {
 /// `mac_resolved` is the common logic used when a link layer address is
 /// resolved either by ARP or NDP.
 fn mac_resolved<C: EthernetIpLinkDeviceContext>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device_id: C::DeviceId,
     address: IpAddr,
     dst_mac: Mac,
 ) {
-    let state = &mut ctx.get_state_mut_with(device_id).link;
+    let state = &mut sync_ctx.get_state_mut_with(device_id).link;
     let src_mac = state.mac;
     let ether_type = match &address {
         IpAddr::V4(_) => EtherType::Ipv4,
@@ -909,7 +914,7 @@ fn mac_resolved<C: EthernetIpLinkDeviceContext>(
             //  padding required by EthernetFrameBuilder, but that's fine (as it
             //  stands right now) because the MTU is guaranteed to be larger
             //  than an Ethernet minimum frame body size.
-            let res = ctx.send_frame(
+            let res = sync_ctx.send_frame(
                 device_id.into(),
                 frame.encapsulate(EthernetFrameBuilder::new(src_mac.get(), dst_mac, ether_type)),
             );
@@ -927,7 +932,7 @@ fn mac_resolved<C: EthernetIpLinkDeviceContext>(
 /// `mac_resolution_failed` is the common logic used when a link layer address
 /// fails to resolve either by ARP or NDP.
 fn mac_resolution_failed<C: EthernetIpLinkDeviceContext>(
-    ctx: &mut C,
+    sync_ctx: &mut C,
     device_id: C::DeviceId,
     address: IpAddr,
 ) {
@@ -940,7 +945,7 @@ fn mac_resolution_failed<C: EthernetIpLinkDeviceContext>(
     //  resolution."
     //  For ARP, we don't have such a clear statement on the RFC, it would make
     //  sense to do the same thing though.
-    let state = &mut ctx.get_state_mut_with(device_id).link;
+    let state = &mut sync_ctx.get_state_mut_with(device_id).link;
     if let Some(_) = state.take_pending_frames(address) {
         log_unimplemented!((), "ethernet mac resolution failed not implemented");
     }
