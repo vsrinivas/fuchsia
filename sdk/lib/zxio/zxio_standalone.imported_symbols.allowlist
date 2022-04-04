@@ -122,6 +122,7 @@ wmemset
 _zx_futex_requeue
 _zx_futex_wait
 _zx_futex_wake
+_zx_system_get_features
 zx_channel_call_etc
 zx_channel_create
 zx_channel_read_etc
