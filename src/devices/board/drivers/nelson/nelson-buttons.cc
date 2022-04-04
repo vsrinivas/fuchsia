@@ -31,7 +31,9 @@ static const buttons_button_config_t buttons[] = {
 static const buttons_gpio_config_t gpios[] = {
     {BUTTONS_GPIO_TYPE_INTERRUPT, BUTTONS_GPIO_FLAG_INVERTED, {.interrupt = {GPIO_PULL_UP}}},
     {BUTTONS_GPIO_TYPE_INTERRUPT, BUTTONS_GPIO_FLAG_INVERTED, {.interrupt = {GPIO_PULL_UP}}},
-    {BUTTONS_GPIO_TYPE_INTERRUPT, BUTTONS_GPIO_FLAG_INVERTED, {.interrupt = {GPIO_NO_PULL}}},
+    {BUTTONS_GPIO_TYPE_POLL,
+     BUTTONS_GPIO_FLAG_INVERTED,
+     {.poll = {GPIO_NO_PULL, zx::msec(20).get()}}},
     {BUTTONS_GPIO_TYPE_POLL, 0, {.poll = {GPIO_NO_PULL, zx::msec(20).get()}}},
 };
 
