@@ -741,11 +741,26 @@ class BtTransportUsbHciProtocolTest : public BtTransportUsbTest {
     return status;
   }
 
-  const std::vector<std::vector<uint8_t>>& hci_events() const { return cmd_chan_received_packets_; }
+  // Make sure expected number of snoop packets have arrived before we continue
+  std::vector<std::vector<uint8_t>> wait_for_n_snoop_packets(size_t n) {
+    std::vector<std::vector<uint8_t>> out;
 
-  const std::vector<std::vector<uint8_t>>& snoop_packets() const {
-    return snoop_chan_received_packets_;
+    zx_status_t status = ZX_OK;
+    sync_mutex_lock(&mutex_);
+    while (snoop_chan_received_packets_.size() < n) {
+      // Give up waiting after an arbitrary deadline to prevent tests timing out.
+      status = sync_condition_timedwait(&snoop_packets_condition_, &mutex_,
+                                        zx_deadline_after(kOutboundPacketWaitTimeout));
+      if (status == ZX_ERR_TIMED_OUT) {
+        break;
+      }
+    }
+    out = snoop_chan_received_packets_;
+    sync_mutex_unlock(&mutex_);
+    return out;
   }
+
+  const std::vector<std::vector<uint8_t>>& hci_events() const { return cmd_chan_received_packets_; }
 
   const std::vector<std::vector<uint8_t>>& received_acl_packets() const {
     return acl_chan_received_packets_;
@@ -817,7 +832,10 @@ class BtTransportUsbHciProtocolTest : public BtTransportUsbTest {
       if (wait == &cmd_chan_readable_wait_) {
         cmd_chan_received_packets_.push_back(std::move(bytes));
       } else if (wait == &snoop_chan_readable_wait_) {
+        sync_mutex_lock(&mutex_);
         snoop_chan_received_packets_.push_back(std::move(bytes));
+        sync_mutex_unlock(&mutex_);
+        sync_condition_signal(&snoop_packets_condition_);
       } else if (wait == &acl_chan_readable_wait_) {
         acl_chan_received_packets_.push_back(std::move(bytes));
       } else if (wait == &sco_chan_readable_wait_) {
@@ -856,9 +874,16 @@ class BtTransportUsbHciProtocolTest : public BtTransportUsbTest {
       sco_chan_readable_wait_{this, zx_handle_t(), ZX_CHANNEL_READABLE};
 
   std::vector<std::vector<uint8_t>> cmd_chan_received_packets_;
-  std::vector<std::vector<uint8_t>> snoop_chan_received_packets_;
+  std::vector<std::vector<uint8_t>> snoop_chan_received_packets_ __TA_GUARDED(mutex_);
   std::vector<std::vector<uint8_t>> acl_chan_received_packets_;
   std::vector<std::vector<uint8_t>> sco_chan_received_packets_;
+
+  // Condition signaled when a command packet is added to snoop_chan_received_packets_
+  sync_condition_t snoop_packets_condition_;
+
+  // Guards against simultaneous access to the snoop queue from the main test thread and the channel
+  // notification thread
+  sync_mutex_t mutex_;
 };
 
 class BtTransportUsbBindFailureTest : public ::gtest::TestLoopFixture {};
@@ -980,8 +1005,9 @@ TEST_F(BtTransportUsbHciProtocolTest, ReceiveManySmallHciEvents) {
     EXPECT_EQ(event, kEventBuffer);
   }
 
-  ASSERT_EQ(snoop_packets().size(), static_cast<size_t>(kNumEvents));
-  for (const std::vector<uint8_t>& packet : snoop_packets()) {
+  auto packets = wait_for_n_snoop_packets(kNumEvents);
+  ASSERT_EQ(packets.size(), static_cast<size_t>(kNumEvents));
+  for (const std::vector<uint8_t>& packet : packets) {
     EXPECT_EQ(packet, kSnoopEventBuffer);
   }
 }
@@ -1011,8 +1037,9 @@ TEST_F(BtTransportUsbHciProtocolTest, ReceiveManyHciEventsSplitIntoTwoResponses)
     EXPECT_EQ(event, kEventBuffer);
   }
 
-  ASSERT_EQ(snoop_packets().size(), static_cast<size_t>(kNumEvents));
-  for (const std::vector<uint8_t>& packet : snoop_packets()) {
+  auto packets = wait_for_n_snoop_packets(kNumEvents);
+  ASSERT_EQ(packets.size(), static_cast<size_t>(kNumEvents));
+  for (const std::vector<uint8_t>& packet : packets) {
     EXPECT_EQ(packet, kSnoopEventBuffer);
   }
 }
@@ -1050,9 +1077,10 @@ TEST_F(BtTransportUsbHciProtocolTest, SendHciCommands) {
   EXPECT_EQ(packets[1], kCmd1);
 
   RunLoopUntilIdle();
-  ASSERT_EQ(snoop_packets().size(), 2u);
-  EXPECT_EQ(snoop_packets()[0], kSnoopCmd0);
-  EXPECT_EQ(snoop_packets()[1], kSnoopCmd1);
+  packets = wait_for_n_snoop_packets(2);
+  ASSERT_EQ(packets.size(), 2u);
+  EXPECT_EQ(packets[0], kSnoopCmd0);
+  EXPECT_EQ(packets[1], kSnoopCmd1);
 }
 
 TEST_F(BtTransportUsbHciProtocolTest, ReceiveManyAclPackets) {
@@ -1076,8 +1104,9 @@ TEST_F(BtTransportUsbHciProtocolTest, ReceiveManyAclPackets) {
   }
 
   RunLoopUntilIdle();
-  ASSERT_EQ(snoop_packets().size(), static_cast<size_t>(kNumPackets));
-  for (const std::vector<uint8_t>& packet : snoop_packets()) {
+  auto packets = wait_for_n_snoop_packets(kNumPackets);
+  ASSERT_EQ(packets.size(), static_cast<size_t>(kNumPackets));
+  for (const std::vector<uint8_t>& packet : packets) {
     EXPECT_EQ(packet, kSnoopAclBuffer);
   }
 }
@@ -1114,7 +1143,8 @@ TEST_F(BtTransportUsbHciProtocolTest, SendManyAclPackets) {
   }
 
   RunLoopUntilIdle();
-  ASSERT_EQ(snoop_packets().size(), kNumPackets);
+  packets = wait_for_n_snoop_packets(kNumPackets);
+  ASSERT_EQ(packets.size(), kNumPackets);
   for (uint8_t i = 0; i < kNumPackets; i++) {
     std::vector<uint8_t> expectedSnoopPacket = {BT_HCI_SNOOP_TYPE_ACL};
     if (i % 2) {
@@ -1124,7 +1154,7 @@ TEST_F(BtTransportUsbHciProtocolTest, SendManyAclPackets) {
       const std::vector<uint8_t> data(10, i);
       expectedSnoopPacket.insert(expectedSnoopPacket.end(), data.begin(), data.end());
     }
-    EXPECT_EQ(snoop_packets()[i], expectedSnoopPacket);
+    EXPECT_EQ(packets[i], expectedSnoopPacket);
   }
 }
 
@@ -1210,11 +1240,12 @@ TEST_F(BtTransportUsbHciProtocolTest, SendManyScoPackets) {
   }
 
   RunLoopUntilIdle();
-  ASSERT_EQ(snoop_packets().size(), kNumPackets);
+  packets = wait_for_n_snoop_packets(kNumPackets);
+  ASSERT_EQ(packets.size(), kNumPackets);
   for (uint8_t i = 0; i < kNumPackets; i++) {
     const std::vector<uint8_t> kExpectedSnoopPacket = {BT_HCI_SNOOP_TYPE_SCO,  // Snoop packet flag
                                                        i};
-    EXPECT_EQ(snoop_packets()[i], kExpectedSnoopPacket);
+    EXPECT_EQ(packets[i], kExpectedSnoopPacket);
   }
 
   ResetSco();
@@ -1281,8 +1312,9 @@ TEST_F(BtTransportUsbHciProtocolTest, ReceiveManyScoPackets) {
   }
 
   RunLoopUntilIdle();
-  ASSERT_EQ(snoop_packets().size(), static_cast<size_t>(kNumPackets));
-  for (const std::vector<uint8_t>& packet : snoop_packets()) {
+  auto packets = wait_for_n_snoop_packets(kNumPackets);
+  ASSERT_EQ(packets.size(), static_cast<size_t>(kNumPackets));
+  for (const std::vector<uint8_t>& packet : packets) {
     EXPECT_EQ(packet, kSnoopScoBuffer);
   }
 }
