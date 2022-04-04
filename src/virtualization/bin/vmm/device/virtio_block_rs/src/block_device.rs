@@ -154,7 +154,7 @@ impl BlockDevice {
             Ok(header) => match header.request_type.get() {
                 wire::VIRTIO_BLK_T_IN => self.read(header, chain).await?,
                 wire::VIRTIO_BLK_T_OUT => self.write(header, chain).await?,
-                wire::VIRTIO_BLK_T_FLUSH => self.flush(chain).await?,
+                wire::VIRTIO_BLK_T_FLUSH => self.flush(header, chain).await?,
                 _ => {
                     // If the command is unsupported we need to seek the chain to the final writable
                     // status byte.
@@ -276,8 +276,15 @@ impl BlockDevice {
 
     async fn flush<'a, 'b, N: DriverNotify, M: DriverMem>(
         &self,
+        header: wire::VirtioBlockHeader,
         chain: ReadableChain<'a, 'b, N, M>,
     ) -> Result<(WritableChain<'a, 'b, N, M>, wire::VirtioBlockStatus), anyhow::Error> {
+        // Virtio 1.1, Section 5.2.6.1: A driver MUST set sector to 0 for a VIRTIO_BLK_T_FLUSH
+        // request.
+        if header.sector.get() != 0 {
+            return readable_chain_error(chain, wire::VirtioBlockStatus::IoError);
+        }
+
         // Virtio 1.1, Section 5.2.6.1: A driver SHOULD NOT include any data in a
         // VIRTIO_BLK_T_FLUSH request.
         //

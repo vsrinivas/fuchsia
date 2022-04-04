@@ -451,11 +451,6 @@ TEST_P(VirtioBlockTest, SyncWithData) {
 }
 
 TEST_P(VirtioBlockTest, SyncNonZeroSector) {
-  // TODO(fxbug.dev/95529): Enable this test for the rust device.
-  if (IsRustComponent()) {
-    GTEST_SKIP();
-  }
-
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_FLUSH,
       .sector = 1,
