@@ -26,9 +26,6 @@ if (is_host) {
   cts_signature_tests("canary_signature_tests") {
     old_cts_path = "//prebuilt/cts/canary/$host_platform/cts"
     new_cts_path = "$root_build_dir/cts"
-    deps = [
-      "//sdk/cts:plasa($target_toolchain)",
-      "//sdk/cts:plasa_manifest($target_toolchain)",
-    ]
+    deps = [ "//sdk:cts($target_toolchain)" ]
   }
 }

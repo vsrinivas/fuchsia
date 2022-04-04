@@ -45,6 +45,10 @@ template("cts_sdk") {
       rebase_path("$final_export_dir", root_build_dir),
     ]
 
+    # TODO(fxbug.dev/69444): This reads SDK files that are not declared as inputs.
+    # Fix this and delete this line.
+    hermetic_deps = false
+
     # The generate.py script generates a gn frontend for the CTS SDK.
     # This involves creating BUILD.gn files for several dependencies.
     # Those files need to be listed in the metadata field, in order to be

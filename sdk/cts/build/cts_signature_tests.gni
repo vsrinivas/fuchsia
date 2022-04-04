@@ -43,7 +43,10 @@ template("cts_signature_tests") {
       "--utils_dir",
       rebase_path("$root_build_dir/host_x64", root_build_dir),
     ]
-    deps = [ ":${target_name}_cts_deps" ]
+    deps = [
+      ":${target_name}_cts_deps",
+      "//tools/fidl/fidl_api_diff:host",
+    ]
   }
 
   host_test_data("${target_name}_cts_deps") {
