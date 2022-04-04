@@ -11,6 +11,7 @@ import 'package:fidl/fidl.dart' as $fidl;
 import 'package:meta/meta.dart';
 import 'package:zircon/zircon.dart' as $zircon;
 
+import 'package:fidl_fdf/fidl_async.dart' as lib$fdf;
 import 'package:fidl_zx/fidl_async.dart' as lib$zx;
 import './fidl_async.dart';
 

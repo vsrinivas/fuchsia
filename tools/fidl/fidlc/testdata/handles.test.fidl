@@ -1,84 +1,45 @@
 library test.handles;
 
 using zx;
-
-// This is not a reference to library zx to avoid complexity in the test data.
-// A local handle is defined here that contains subtypes that this test cares
-// about.
-type obj_type = strict enum : uint32 {
-    NONE = 0;
-    PROCESS = 1;
-    THREAD = 2;
-    VMO = 3;
-    CHANNEL = 4;
-    EVENT = 5;
-    PORT = 6;
-    INTERRUPT = 9;
-    LOG = 12;
-    SOCKET = 14;
-    RESOURCE = 15;
-    EVENTPAIR = 16;
-    JOB = 17;
-    VMAR = 18;
-    FIFO = 19;
-    GUEST = 20;
-    VCPU = 21;
-    TIMER = 22;
-    IOMMU = 23;
-    BTI = 24;
-    PROFILE = 25;
-    PMT = 26;
-    SUSPEND_TOKEN = 27;
-    PAGER = 28;
-    EXCEPTION = 29;
-    CLOCK = 30;
-    STREAM = 31;
-    MSI = 32;
-};
-
-resource_definition handle : uint32 {
-    properties {
-        subtype obj_type;
-        rights zx.rights;
-    };
-};
+using fdf;
 
 protocol SomeProtocol {};
 
-alias aliased_plain_handle = handle;
-alias aliased_subtype_handle = handle:VMO;
-alias aliased_rights_handle = handle:<VMO, zx.rights.DUPLICATE>;
+alias aliased_plain_handle = zx.handle;
+alias aliased_subtype_handle = zx.handle:VMO;
+alias aliased_rights_handle = zx.handle:<VMO, zx.rights.DUPLICATE>;
 
 type Handles = resource struct {
-    plain_handle handle;
+    plain_handle zx.handle;
 
-    bti_handle handle:BTI;
-    channel_handle handle:CHANNEL;
-    clock_handle handle:CLOCK;
-    debuglog_handle handle:LOG;
-    event_handle handle:EVENT;
-    eventpair_handle handle:EVENTPAIR;
-    exception_handle handle:EXCEPTION;
-    fifo_handle handle:FIFO;
-    guest_handle handle:GUEST;
-    interrupt_handle handle:INTERRUPT;
-    iommu_handle handle:IOMMU;
-    job_handle handle:JOB;
-    pager_handle handle:PAGER;
-    pmt_handle handle:PMT;
-    port_handle handle:PORT;
-    process_handle handle:PROCESS;
-    profile_handle handle:PROFILE;
-    resource_handle handle:RESOURCE;
-    socket_handle handle:SOCKET;
-    suspendtoken_handle handle:SUSPEND_TOKEN;
-    thread_handle handle:THREAD;
-    timer_handle handle:TIMER;
-    vcpu_handle handle:VCPU;
-    vmar_handle handle:VMAR;
-    vmo_handle handle:VMO;
+    bti_handle zx.handle:BTI;
+    channel_handle zx.handle:CHANNEL;
+    clock_handle zx.handle:CLOCK;
+    debuglog_handle zx.handle:LOG;
+    event_handle zx.handle:EVENT;
+    eventpair_handle zx.handle:EVENTPAIR;
+    exception_handle zx.handle:EXCEPTION;
+    fifo_handle zx.handle:FIFO;
+    guest_handle zx.handle:GUEST;
+    interrupt_handle zx.handle:INTERRUPT;
+    iommu_handle zx.handle:IOMMU;
+    job_handle zx.handle:JOB;
+    pager_handle zx.handle:PAGER;
+    pmt_handle zx.handle:PMT;
+    port_handle zx.handle:PORT;
+    process_handle zx.handle:PROCESS;
+    profile_handle zx.handle:PROFILE;
+    resource_handle zx.handle:RESOURCE;
+    socket_handle zx.handle:SOCKET;
+    suspendtoken_handle zx.handle:SUSPEND_TOKEN;
+    thread_handle zx.handle:THREAD;
+    timer_handle zx.handle:TIMER;
+    vcpu_handle zx.handle:VCPU;
+    vmar_handle zx.handle:VMAR;
+    vmo_handle zx.handle:VMO;
 
-    rights_handle handle:<VMO, zx.rights.DUPLICATE | zx.rights.READ>;
+    rights_handle zx.handle:<VMO, zx.rights.DUPLICATE | zx.rights.READ>;
+
 
     aliased_plain_handle_field aliased_plain_handle;
     aliased_subtype_handle_field aliased_subtype_handle;
@@ -86,4 +47,15 @@ type Handles = resource struct {
 
     some_protocol client_end:SomeProtocol;
     request_some_protocol server_end:SomeProtocol;
+};
+
+@transport("Driver")
+protocol DriverProtocol {};
+
+@bindings_denylist("hlcpp,dart,go,rust")
+type FdfHandles = resource struct {
+    fdf_channel_handle fdf.handle:CHANNEL;
+
+    client_end_driver client_end:DriverProtocol;
+    server_end_driver server_end:DriverProtocol;
 };

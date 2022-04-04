@@ -592,6 +592,10 @@
                     "$ref": "#/definitions/handle-subtype",
                     "description": "Sub-type of handle type"
                 },
+                "resource_identifier": {
+                    "description": "Qualified name of handle's resource type",
+                    "type": "string"
+                },
                 "type_shape_v1": {
                     "$ref": "#/definitions/typeshape",
                     "description": "Type shape of this declaration"

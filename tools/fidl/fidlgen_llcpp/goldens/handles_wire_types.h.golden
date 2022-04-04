@@ -15,6 +15,7 @@
 
 #include <cinttypes>
 #ifdef __Fuchsia__
+#include <lib/fidl_driver/cpp/wire_types.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/clock.h>
@@ -44,14 +45,15 @@
 
 #endif  // __Fuchsia__
 
+#include <fidl/fdf/cpp/wire_types.h>
 #include <fidl/test.handles/cpp/common_types.h>
 #include <fidl/test.handles/cpp/markers.h>
 
 namespace test_handles {
 namespace wire {
-using ObjType = ::test_handles::obj_type;
-
 struct Handles;
+
+struct FdfHandles;
 
 #ifdef __Fuchsia__
 
@@ -126,6 +128,21 @@ struct Handles {
 };
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t test_handles_FdfHandlesTable;
+
+struct FdfHandles {
+  ::zx::channel fdf_channel_handle = {};
+
+  ::fdf::ClientEnd<::test_handles::DriverProtocol> client_end_driver = {};
+
+  ::fdf::ServerEnd<::test_handles::DriverProtocol> server_end_driver = {};
+
+  void _CloseHandles();
+};
+#endif  // __Fuchsia__
+
 }  // namespace wire
 }  // namespace test_handles
 namespace fidl {
@@ -190,6 +207,37 @@ static_assert(offsetof(::test_handles::wire::Handles, request_some_protocol) ==
               124);
 static_assert(sizeof(::test_handles::wire::Handles) ==
               TypeTraits<::test_handles::wire::Handles>::kPrimarySize);
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+struct IsResource<::test_handles::wire::FdfHandles> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_handles::wire::FdfHandles> {
+  static constexpr const fidl_type_t* kType =
+      &::test_handles::wire::test_handles_FdfHandlesTable;
+  static constexpr uint32_t kMaxNumHandles = 3;
+  static constexpr uint32_t kPrimarySize = 12;
+  static constexpr uint32_t kPrimarySizeV1 = 12;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_handles::wire::FdfHandles> : public std::true_type {};
+template <>
+struct IsStruct<::test_handles::wire::FdfHandles> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_handles::wire::FdfHandles>);
+static_assert(offsetof(::test_handles::wire::FdfHandles, fdf_channel_handle) ==
+              0);
+static_assert(offsetof(::test_handles::wire::FdfHandles, client_end_driver) ==
+              4);
+static_assert(offsetof(::test_handles::wire::FdfHandles, server_end_driver) ==
+              8);
+static_assert(sizeof(::test_handles::wire::FdfHandles) ==
+              TypeTraits<::test_handles::wire::FdfHandles>::kPrimarySize);
 #endif  // __Fuchsia__
 
 }  // namespace fidl

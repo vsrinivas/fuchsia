@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <fdf/cpp/fidl.h>
+
 #include "lib/fidl/cpp/internal/header.h"
 
 //
@@ -9,72 +11,6 @@
 //
 namespace test {
 namespace handles {
-
-enum class obj_type : uint32_t {
-
-  NONE = 0u,
-
-  PROCESS = 1u,
-
-  THREAD = 2u,
-
-  VMO = 3u,
-
-  CHANNEL = 4u,
-
-  EVENT = 5u,
-
-  PORT = 6u,
-
-  INTERRUPT = 9u,
-
-  LOG = 12u,
-
-  SOCKET = 14u,
-
-  RESOURCE = 15u,
-
-  EVENTPAIR = 16u,
-
-  JOB = 17u,
-
-  VMAR = 18u,
-
-  FIFO = 19u,
-
-  GUEST = 20u,
-
-  VCPU = 21u,
-
-  TIMER = 22u,
-
-  IOMMU = 23u,
-
-  BTI = 24u,
-
-  PROFILE = 25u,
-
-  PMT = 26u,
-
-  SUSPEND_TOKEN = 27u,
-
-  PAGER = 28u,
-
-  EXCEPTION = 29u,
-
-  CLOCK = 30u,
-
-  STREAM = 31u,
-
-  MSI = 32u,
-};
-
-inline zx_status_t Clone(::test::handles::obj_type value,
-                         ::test::handles::obj_type* result) {
-  *result = value;
-  return ZX_OK;
-}
-
 class Handles;
 
 #ifdef __Fuchsia__
@@ -187,39 +123,6 @@ class SomeProtocol_ResponseEncoder {
 }  // namespace handles
 }  // namespace test
 namespace fidl {
-template <>
-struct CodingTraits<::test::handles::obj_type> {
-  static constexpr size_t inline_size_old = sizeof(::test::handles::obj_type);
-  static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::test::handles::obj_type);
-  static constexpr size_t inline_size_v2 = sizeof(::test::handles::obj_type);
-  static void Encode(
-      Encoder* encoder, ::test::handles::obj_type* value, size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-    ZX_DEBUG_ASSERT(!maybe_handle_info);
-    uint32_t underlying = static_cast<uint32_t>(*value);
-    ::fidl::Encode(encoder, &underlying, offset);
-  }
-  static void Decode(Decoder* decoder, ::test::handles::obj_type* value,
-                     size_t offset) {
-    uint32_t underlying = {};
-    ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<::test::handles::obj_type>(underlying);
-  }
-};
-
-inline zx_status_t Clone(::test::handles::obj_type value,
-                         ::test::handles::obj_type* result) {
-  return ::test::handles::Clone(value, result);
-}
-template <>
-struct Equality<::test::handles::obj_type> {
-  bool operator()(const ::test::handles::obj_type& _lhs,
-                  const ::test::handles::obj_type& _rhs) const {
-    return _lhs == _rhs;
-  }
-};
-
 #ifdef __Fuchsia__
 
 template <>

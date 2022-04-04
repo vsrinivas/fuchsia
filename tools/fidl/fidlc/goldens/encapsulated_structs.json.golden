@@ -466,6 +466,7 @@
             "subtype": "handle",
             "rights": 2147483648,
             "nullable": false,
+            "resource_identifier": "zx/handle",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,

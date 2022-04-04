@@ -467,6 +467,7 @@
             "subtype": "channel",
             "rights": 2147483648,
             "nullable": false,
+            "resource_identifier": "test.typealiases/handle",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -514,6 +515,7 @@
             "subtype": "channel",
             "rights": 2147483648,
             "nullable": false,
+            "resource_identifier": "test.typealiases/handle",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -561,6 +563,7 @@
             "subtype": "channel",
             "rights": 2147483648,
             "nullable": true,
+            "resource_identifier": "test.typealiases/handle",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,

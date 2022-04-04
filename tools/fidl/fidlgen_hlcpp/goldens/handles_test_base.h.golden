@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <fdf/cpp/fidl.h>
 #include <test/handles/cpp/fidl.h>
 namespace test {
 namespace handles {

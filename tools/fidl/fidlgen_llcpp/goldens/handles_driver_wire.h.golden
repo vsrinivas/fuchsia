@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <fidl/fdf/cpp/driver/wire.h>
 #include <fidl/test.handles/cpp/driver/wire_messaging.h>
 #include <fidl/test.handles/cpp/markers.h>
 #include <fidl/test.handles/cpp/wire_types.h>

@@ -5,8 +5,9 @@
 
 __LOCAL extern const struct FidlCodedBits zx_rightsTable;
 __LOCAL extern const struct FidlCodedEnum zx_obj_typeTable;
-__LOCAL extern const struct FidlCodedEnum test_handles_obj_typeTable;
+__LOCAL extern const struct FidlCodedEnum fdf_ObjTypeTable;
 __LOCAL extern const struct FidlCodedStruct test_handles_HandlesTable;
+__LOCAL extern const struct FidlCodedStruct test_handles_FdfHandlesTable;
 
 
 static const struct FidlCodedHandle Handlehandle2147483648nonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_NONE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
@@ -69,44 +70,10 @@ static const struct FidlCodedHandle Protocol25test_handles_SomeProtocolnonnullab
 
 static const struct FidlCodedHandle Request25test_handles_SomeProtocolnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=ZX_DEFAULT_CHANNEL_RIGHTS, .nullable=kFidlNullability_Nonnullable};
 
+static const struct FidlCodedHandle Protocol27test_handles_DriverProtocolnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=ZX_DEFAULT_CHANNEL_RIGHTS, .nullable=kFidlNullability_Nonnullable};
 
-static bool EnumValidatorFor_test_handles_obj_type(uint64_t v) {
-  switch (v) {
-    case 0ul:
-    case 1ul:
-    case 2ul:
-    case 3ul:
-    case 4ul:
-    case 5ul:
-    case 6ul:
-    case 9ul:
-    case 12ul:
-    case 14ul:
-    case 15ul:
-    case 16ul:
-    case 17ul:
-    case 18ul:
-    case 19ul:
-    case 20ul:
-    case 21ul:
-    case 22ul:
-    case 23ul:
-    case 24ul:
-    case 25ul:
-    case 26ul:
-    case 27ul:
-    case 28ul:
-    case 29ul:
-    case 30ul:
-    case 31ul:
-    case 32ul:
-      return true;
-    default:
-      return false;
-  }
-}
+static const struct FidlCodedHandle Request27test_handles_DriverProtocolnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=ZX_DEFAULT_CHANNEL_RIGHTS, .nullable=kFidlNullability_Nonnullable};
 
-const struct FidlCodedEnum test_handles_obj_typeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_test_handles_obj_type, .name="test.handles/obj_type"};
 
 static const struct FidlStructElement Fields20test_handles_Handles[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlehandle2147483648nonnullableTable)}},
@@ -143,4 +110,11 @@ static const struct FidlStructElement Fields20test_handles_Handles[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=124u, .offset_v2=124u, .field_type=(fidl_type_t*)(&Request25test_handles_SomeProtocolnonnullableTable)}}
 };
 const struct FidlCodedStruct test_handles_HandlesTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields20test_handles_Handles, .element_count=32u, .size_v1=128u, .size_v2=128u, .name="test.handles/Handles"};
+
+static const struct FidlStructElement Fields23test_handles_FdfHandles[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Handlechannel2147483648nonnullableTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=4u, .offset_v2=4u, .field_type=(fidl_type_t*)(&Protocol27test_handles_DriverProtocolnonnullableTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=8u, .offset_v2=8u, .field_type=(fidl_type_t*)(&Request27test_handles_DriverProtocolnonnullableTable)}}
+};
+const struct FidlCodedStruct test_handles_FdfHandlesTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields23test_handles_FdfHandles, .element_count=3u, .size_v1=12u, .size_v2=12u, .name="test.handles/FdfHandles"};
 

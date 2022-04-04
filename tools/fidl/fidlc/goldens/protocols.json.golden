@@ -2322,6 +2322,7 @@
             "subtype": "socket",
             "rights": 2147483648,
             "nullable": false,
+            "resource_identifier": "zx/handle",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -2399,6 +2400,7 @@
             "subtype": "socket",
             "rights": 2147483648,
             "nullable": false,
+            "resource_identifier": "zx/handle",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -2476,6 +2478,7 @@
             "subtype": "handle",
             "rights": 2147483648,
             "nullable": false,
+            "resource_identifier": "zx/handle",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -2553,6 +2556,7 @@
             "subtype": "socket",
             "rights": 3,
             "nullable": false,
+            "resource_identifier": "zx/handle",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -2630,6 +2634,7 @@
             "subtype": "socket",
             "rights": 3,
             "nullable": false,
+            "resource_identifier": "zx/handle",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -2707,6 +2712,7 @@
             "subtype": "socket",
             "rights": 3,
             "nullable": false,
+            "resource_identifier": "zx/handle",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -2784,6 +2790,7 @@
             "subtype": "socket",
             "rights": 2,
             "nullable": false,
+            "resource_identifier": "zx/handle",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -4980,6 +4987,7 @@
             "subtype": "handle",
             "rights": 2147483648,
             "nullable": false,
+            "resource_identifier": "zx/handle",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,

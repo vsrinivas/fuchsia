@@ -12,6 +12,7 @@
 
 #ifdef __Fuchsia__
 
+#include <lib/fidl_driver/cpp/natural_types.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/clock.h>
@@ -41,8 +42,12 @@
 
 #endif  // __Fuchsia__
 
+#include <fidl/fdf/cpp/natural_types.h>
+
 namespace test_handles {
 class Handles;
+
+class FdfHandles;
 
 #ifdef __Fuchsia__
 
@@ -489,6 +494,86 @@ class Handles {
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t test_handles_FdfHandlesTable;
+
+class FdfHandles {
+ private:
+  struct Storage_;
+
+ public:
+  FdfHandles(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  FdfHandles(::zx::channel fdf_channel_handle,
+             ::fdf::ClientEnd<::test_handles::DriverProtocol> client_end_driver,
+             ::fdf::ServerEnd<::test_handles::DriverProtocol>
+                 server_end_driver) noexcept
+      : storage_({.fdf_channel_handle = std::move(fdf_channel_handle),
+                  .client_end_driver = std::move(client_end_driver),
+                  .server_end_driver = std::move(server_end_driver)}) {}
+  FdfHandles() : FdfHandles(Storage_{}) {}
+
+  FdfHandles(FdfHandles&&) noexcept = default;
+  FdfHandles& operator=(FdfHandles&&) noexcept = default;
+
+  const ::zx::channel& fdf_channel_handle() const {
+    return storage_.fdf_channel_handle;
+  }
+
+  ::zx::channel& fdf_channel_handle() { return storage_.fdf_channel_handle; }
+
+  const ::fdf::ClientEnd<::test_handles::DriverProtocol>& client_end_driver()
+      const {
+    return storage_.client_end_driver;
+  }
+
+  ::fdf::ClientEnd<::test_handles::DriverProtocol>& client_end_driver() {
+    return storage_.client_end_driver;
+  }
+
+  const ::fdf::ServerEnd<::test_handles::DriverProtocol>& server_end_driver()
+      const {
+    return storage_.server_end_driver;
+  }
+
+  ::fdf::ServerEnd<::test_handles::DriverProtocol>& server_end_driver() {
+    return storage_.server_end_driver;
+  }
+
+ private:
+  struct Storage_ final {
+    ::zx::channel fdf_channel_handle{};
+    ::fdf::ClientEnd<::test_handles::DriverProtocol> client_end_driver{};
+    ::fdf::ServerEnd<::test_handles::DriverProtocol> server_end_driver{};
+  };
+
+  Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_handles::FdfHandles, 12, 12>;
+  friend struct ::fidl::internal::MemberVisitor<::test_handles::FdfHandles>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::zx::channel,
+          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL,
+                                                        0x80000000, false>>{
+          &Storage_::fdf_channel_handle, 0, 0},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::fdf::ClientEnd<::test_handles::DriverProtocol>,
+          fidl::internal::NaturalCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
+          &Storage_::client_end_driver, 4, 4},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::fdf::ServerEnd<::test_handles::DriverProtocol>,
+          fidl::internal::NaturalCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
+          &Storage_::server_end_driver, 8, 8});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
+};
+
+#endif  // __Fuchsia__
+
 }  // namespace test_handles
 namespace fidl {
 
@@ -515,91 +600,28 @@ struct internal::NaturalCodingTraits<
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t test_handles_FdfHandlesTable;
+
+template <>
+struct IsResource<::test_handles::FdfHandles> : public std::true_type {};
+template <>
+struct IsFidlType<::test_handles::FdfHandles> : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::test_handles::FdfHandles> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_handles_FdfHandlesTable;
+};
+
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_handles::obj_type, ::fidl::internal::NaturalCodingConstraintEmpty> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
-  static constexpr size_t inline_size_v2 = sizeof(uint32_t);
-  static constexpr bool is_memcpy_compatible = false;
+    ::test_handles::FdfHandles, ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_handles::FdfHandles, 12, 12> {};
 
-  static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_handles::obj_type* value, size_t offset,
-                     size_t recursion_depth) {
-    switch (*value) {
-      case ::test_handles::obj_type::kNone:
-      case ::test_handles::obj_type::kProcess:
-      case ::test_handles::obj_type::kThread:
-      case ::test_handles::obj_type::kVmo:
-      case ::test_handles::obj_type::kChannel:
-      case ::test_handles::obj_type::kEvent:
-      case ::test_handles::obj_type::kPort:
-      case ::test_handles::obj_type::kInterrupt:
-      case ::test_handles::obj_type::kLog:
-      case ::test_handles::obj_type::kSocket:
-      case ::test_handles::obj_type::kResource:
-      case ::test_handles::obj_type::kEventpair:
-      case ::test_handles::obj_type::kJob:
-      case ::test_handles::obj_type::kVmar:
-      case ::test_handles::obj_type::kFifo:
-      case ::test_handles::obj_type::kGuest:
-      case ::test_handles::obj_type::kVcpu:
-      case ::test_handles::obj_type::kTimer:
-      case ::test_handles::obj_type::kIommu:
-      case ::test_handles::obj_type::kBti:
-      case ::test_handles::obj_type::kProfile:
-      case ::test_handles::obj_type::kPmt:
-      case ::test_handles::obj_type::kSuspendToken:
-      case ::test_handles::obj_type::kPager:
-      case ::test_handles::obj_type::kException:
-      case ::test_handles::obj_type::kClock:
-      case ::test_handles::obj_type::kStream:
-      case ::test_handles::obj_type::kMsi:
-        break;
-      default:
-        encoder->SetError(::fidl::internal::kCodingErrorUnknownEnumValue);
-        return;
-    }
-    *encoder->template GetPtr<::test_handles::obj_type>(offset) = *value;
-  }
-  static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_handles::obj_type* value, size_t offset,
-                     size_t recursion_depth) {
-    *value = *decoder->template GetPtr<::test_handles::obj_type>(offset);
-    switch (*value) {
-      case ::test_handles::obj_type::kNone:
-      case ::test_handles::obj_type::kProcess:
-      case ::test_handles::obj_type::kThread:
-      case ::test_handles::obj_type::kVmo:
-      case ::test_handles::obj_type::kChannel:
-      case ::test_handles::obj_type::kEvent:
-      case ::test_handles::obj_type::kPort:
-      case ::test_handles::obj_type::kInterrupt:
-      case ::test_handles::obj_type::kLog:
-      case ::test_handles::obj_type::kSocket:
-      case ::test_handles::obj_type::kResource:
-      case ::test_handles::obj_type::kEventpair:
-      case ::test_handles::obj_type::kJob:
-      case ::test_handles::obj_type::kVmar:
-      case ::test_handles::obj_type::kFifo:
-      case ::test_handles::obj_type::kGuest:
-      case ::test_handles::obj_type::kVcpu:
-      case ::test_handles::obj_type::kTimer:
-      case ::test_handles::obj_type::kIommu:
-      case ::test_handles::obj_type::kBti:
-      case ::test_handles::obj_type::kProfile:
-      case ::test_handles::obj_type::kPmt:
-      case ::test_handles::obj_type::kSuspendToken:
-      case ::test_handles::obj_type::kPager:
-      case ::test_handles::obj_type::kException:
-      case ::test_handles::obj_type::kClock:
-      case ::test_handles::obj_type::kStream:
-      case ::test_handles::obj_type::kMsi:
-        break;
-      default:
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownEnumValue);
-        return;
-    }
-  }
-};
+#endif  // __Fuchsia__
 
 }  // namespace fidl

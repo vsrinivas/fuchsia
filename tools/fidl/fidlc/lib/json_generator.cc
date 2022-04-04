@@ -206,6 +206,7 @@ void JSONGenerator::Generate(const flat::Type* value) {
             "rights",
             static_cast<const flat::NumericConstantValue<uint32_t>*>(type->rights)->value);
         GenerateObjectMember("nullable", type->nullability);
+        GenerateObjectMember("resource_identifier", NameFlatName(type->resource_decl->name));
         break;
       }
       case flat::Type::Kind::kPrimitive: {

@@ -10,3 +10,80 @@
 #ifdef __Fuchsia__
 
 #endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalClientImpl<::test_handles::DriverProtocol> final
+    : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<
+    ::test_handles::DriverProtocol> {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+};
+
+template <>
+class ::fdf::AsyncEventHandler<::test_handles::DriverProtocol>
+    : public ::fidl::internal::NaturalEventHandlerInterface<
+          ::test_handles::DriverProtocol>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<::test_handles::DriverProtocol>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fdf::AsyncEventHandler<::test_handles::DriverProtocol>> {
+ public:
+  explicit NaturalEventDispatcher(
+      ::fdf::AsyncEventHandler<::test_handles::DriverProtocol>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+template <>
+class ::fdf::Server<::test_handles::DriverProtocol>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  Server() = default;
+  virtual ~Server() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_handles::DriverProtocol;
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::IncomingTransportContext transport_context) final;
+};
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::NaturalServerDispatcher<::test_handles::DriverProtocol>
+    final {
+  NaturalServerDispatcher() = delete;
+  static void Dispatch(::fdf::Server<::test_handles::DriverProtocol>* impl,
+                       ::fidl::IncomingMessage&& msg,
+                       internal::IncomingTransportContext transport_context,
+                       ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
+};
+#endif  // __Fuchsia__

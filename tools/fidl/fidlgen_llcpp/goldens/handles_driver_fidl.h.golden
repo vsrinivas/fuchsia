@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <fidl/fdf/cpp/driver/fidl.h>
 #include <fidl/test.handles/cpp/driver/natural_messaging.h>
 #include <fidl/test.handles/cpp/driver/wire.h>
 #include <fidl/test.handles/cpp/natural_types.h>

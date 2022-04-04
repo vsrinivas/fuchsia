@@ -9,7 +9,6 @@
 //
 namespace test {
 namespace handles {
-
 #ifdef __Fuchsia__
 
 extern "C" const fidl_type_t test_handles_HandlesTable;

@@ -38,3 +38,11 @@ void ::test_handles::wire::Handles::_CloseHandles() {
   request_some_protocol.reset();
 }
 #endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void ::test_handles::wire::FdfHandles::_CloseHandles() {
+  fdf_channel_handle.reset();
+  client_end_driver.reset();
+  server_end_driver.reset();
+}
+#endif  // __Fuchsia__

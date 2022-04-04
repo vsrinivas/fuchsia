@@ -7,14 +7,48 @@
 
 ## **PROTOCOLS**
 
+## DriverProtocol {#DriverProtocol}
+*Defined in [test.handles/handles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=53)*
+
 ## SomeProtocol {#SomeProtocol}
-*Defined in [test.handles/handles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=46)*
+*Defined in [test.handles/handles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=6)*
 
 
 ## **STRUCTS**
 
+### FdfHandles [resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute} {#FdfHandles data-text="FdfHandles"}
+*Defined in [test.handles/handles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=56)*
+
+<table>
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
+        <tr id="FdfHandles.fdf_channel_handle">
+            <td><code>fdf_channel_handle</code></td>
+            <td>
+                <code>handle&lt;channel&gt;</code>
+            </td>
+            <td></td>
+            <td>No default</td>
+        </tr>
+        <tr id="FdfHandles.client_end_driver">
+            <td><code>client_end_driver</code></td>
+            <td>
+                <code><a class='link' href='#DriverProtocol'>DriverProtocol</a></code>
+            </td>
+            <td></td>
+            <td>No default</td>
+        </tr>
+        <tr id="FdfHandles.server_end_driver">
+            <td><code>server_end_driver</code></td>
+            <td>
+                <code>request&lt;<a class='link' href='#DriverProtocol'>DriverProtocol</a>&gt;</code>
+            </td>
+            <td></td>
+            <td>No default</td>
+        </tr>
+</table>
+
 ### Handles [resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute} {#Handles data-text="Handles"}
-*Defined in [test.handles/handles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=52)*
+*Defined in [test.handles/handles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=12)*
 
 <table>
     <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
@@ -277,157 +311,6 @@
 </table>
 
 
-## **ENUMS**
-
-### obj_type [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#obj_type data-text="obj_type"}
-Type: <code>uint32</code>
-
-*Defined in [test.handles/handles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=8)*
-
-<table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
-        <tr id="obj_type.NONE">
-<td><h3 id="obj_type.NONE" class="add-link hide-from-toc">NONE</h3></td>
-            <td><code>0</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.PROCESS">
-<td><h3 id="obj_type.PROCESS" class="add-link hide-from-toc">PROCESS</h3></td>
-            <td><code>1</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.THREAD">
-<td><h3 id="obj_type.THREAD" class="add-link hide-from-toc">THREAD</h3></td>
-            <td><code>2</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.VMO">
-<td><h3 id="obj_type.VMO" class="add-link hide-from-toc">VMO</h3></td>
-            <td><code>3</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.CHANNEL">
-<td><h3 id="obj_type.CHANNEL" class="add-link hide-from-toc">CHANNEL</h3></td>
-            <td><code>4</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.EVENT">
-<td><h3 id="obj_type.EVENT" class="add-link hide-from-toc">EVENT</h3></td>
-            <td><code>5</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.PORT">
-<td><h3 id="obj_type.PORT" class="add-link hide-from-toc">PORT</h3></td>
-            <td><code>6</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.INTERRUPT">
-<td><h3 id="obj_type.INTERRUPT" class="add-link hide-from-toc">INTERRUPT</h3></td>
-            <td><code>9</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.LOG">
-<td><h3 id="obj_type.LOG" class="add-link hide-from-toc">LOG</h3></td>
-            <td><code>12</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.SOCKET">
-<td><h3 id="obj_type.SOCKET" class="add-link hide-from-toc">SOCKET</h3></td>
-            <td><code>14</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.RESOURCE">
-<td><h3 id="obj_type.RESOURCE" class="add-link hide-from-toc">RESOURCE</h3></td>
-            <td><code>15</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.EVENTPAIR">
-<td><h3 id="obj_type.EVENTPAIR" class="add-link hide-from-toc">EVENTPAIR</h3></td>
-            <td><code>16</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.JOB">
-<td><h3 id="obj_type.JOB" class="add-link hide-from-toc">JOB</h3></td>
-            <td><code>17</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.VMAR">
-<td><h3 id="obj_type.VMAR" class="add-link hide-from-toc">VMAR</h3></td>
-            <td><code>18</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.FIFO">
-<td><h3 id="obj_type.FIFO" class="add-link hide-from-toc">FIFO</h3></td>
-            <td><code>19</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.GUEST">
-<td><h3 id="obj_type.GUEST" class="add-link hide-from-toc">GUEST</h3></td>
-            <td><code>20</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.VCPU">
-<td><h3 id="obj_type.VCPU" class="add-link hide-from-toc">VCPU</h3></td>
-            <td><code>21</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.TIMER">
-<td><h3 id="obj_type.TIMER" class="add-link hide-from-toc">TIMER</h3></td>
-            <td><code>22</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.IOMMU">
-<td><h3 id="obj_type.IOMMU" class="add-link hide-from-toc">IOMMU</h3></td>
-            <td><code>23</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.BTI">
-<td><h3 id="obj_type.BTI" class="add-link hide-from-toc">BTI</h3></td>
-            <td><code>24</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.PROFILE">
-<td><h3 id="obj_type.PROFILE" class="add-link hide-from-toc">PROFILE</h3></td>
-            <td><code>25</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.PMT">
-<td><h3 id="obj_type.PMT" class="add-link hide-from-toc">PMT</h3></td>
-            <td><code>26</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.SUSPEND_TOKEN">
-<td><h3 id="obj_type.SUSPEND_TOKEN" class="add-link hide-from-toc">SUSPEND_TOKEN</h3></td>
-            <td><code>27</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.PAGER">
-<td><h3 id="obj_type.PAGER" class="add-link hide-from-toc">PAGER</h3></td>
-            <td><code>28</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.EXCEPTION">
-<td><h3 id="obj_type.EXCEPTION" class="add-link hide-from-toc">EXCEPTION</h3></td>
-            <td><code>29</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.CLOCK">
-<td><h3 id="obj_type.CLOCK" class="add-link hide-from-toc">CLOCK</h3></td>
-            <td><code>30</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.STREAM">
-<td><h3 id="obj_type.STREAM" class="add-link hide-from-toc">STREAM</h3></td>
-            <td><code>31</code></td>
-            <td></td>
-        </tr>
-        <tr id="obj_type.MSI">
-<td><h3 id="obj_type.MSI" class="add-link hide-from-toc">MSI</h3></td>
-            <td><code>32</code></td>
-            <td></td>
-        </tr>
-</table>
-
 
 
 
@@ -438,21 +321,21 @@ Type: <code>uint32</code>
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr>
         <tr id="aliased_plain_handle">
-            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=48">aliased_plain_handle</a></td>
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=8">aliased_plain_handle</a></td>
             <td>
-                <code>test.handles/handle</code></td>
+                <code>zx/handle</code></td>
             <td></td>
         </tr>
         <tr id="aliased_rights_handle">
-            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=50">aliased_rights_handle</a></td>
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=10">aliased_rights_handle</a></td>
             <td>
-                <code>test.handles/handle</code></td>
+                <code>zx/handle</code></td>
             <td></td>
         </tr>
         <tr id="aliased_subtype_handle">
-            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=49">aliased_subtype_handle</a></td>
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=9">aliased_subtype_handle</a></td>
             <td>
-                <code>test.handles/handle</code></td>
+                <code>zx/handle</code></td>
             <td></td>
         </tr>
 </table>
