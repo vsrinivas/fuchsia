@@ -423,6 +423,11 @@ AmlClock::AmlClock(zx_device_t* device, fdf::MmioBuffer hiu_mmio, fdf::MmioBuffe
     }
     case PDEV_DID_AMLOGIC_SM1_CLK: {
       // Nelson
+      clk_msr_offsets_ = sm1_clk_msr;
+
+      clk_table_ = static_cast<const char* const*>(sm1_clk_table);
+      clk_table_count_ = std::size(sm1_clk_table);
+
       gates_ = sm1_clk_gates;
       gate_count_ = std::size(sm1_clk_gates);
       meson_gate_enable_count_.resize(gate_count_);
