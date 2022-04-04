@@ -4,7 +4,7 @@
 
 use {argh::FromArgs, ffx_core::ffx_command, std::path::PathBuf, std::str::FromStr};
 
-/// Discover and get access to product bundle metadata and image data.
+/// Discover and access product bundle metadata and image data.
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "product-bundle")]
