@@ -8,9 +8,13 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <lib/fidl-async/cpp/bind.h>
 
+#include <ddk/metadata/gpio.h>
 #include <fbl/alloc_checker.h>
+
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace gpio {
 
@@ -129,6 +133,34 @@ TEST_F(GpioTest, TestOneClient) {
   EXPECT_OK(gpio_->DdkOpen(nullptr, 0));
 
   EXPECT_OK(gpio_->DdkClose(0));
+}
+
+TEST_F(GpioTest, ValidateMetadataOk) {
+  constexpr gpio_pin_t pins[] = {
+      {0},
+      {1},
+      {2},
+  };
+
+  auto parent = MockDevice::FakeRootParent();
+
+  parent->AddProtocol(ZX_PROTOCOL_GPIO_IMPL, gpio_impl_.GetProto()->ops,
+                      gpio_impl_.GetProto()->ctx);
+  parent->SetMetadata(DEVICE_METADATA_GPIO_PINS, pins, std::size(pins) * sizeof(gpio_pin_t));
+
+  ASSERT_OK(GpioDevice::Create(nullptr, parent.get()));
+}
+
+TEST_F(GpioTest, ValidateMetadataRejectDuplicates) {
+  constexpr gpio_pin_t pins[] = {{2}, {1}, {2}, {0}};
+
+  auto parent = MockDevice::FakeRootParent();
+
+  parent->AddProtocol(ZX_PROTOCOL_GPIO_IMPL, gpio_impl_.GetProto()->ops,
+                      gpio_impl_.GetProto()->ctx);
+  parent->SetMetadata(DEVICE_METADATA_GPIO_PINS, pins, std::size(pins) * sizeof(gpio_pin_t));
+
+  ASSERT_NOT_OK(GpioDevice::Create(nullptr, parent.get()));
 }
 
 }  // namespace gpio

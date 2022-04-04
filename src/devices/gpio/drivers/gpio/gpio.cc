@@ -99,6 +99,16 @@ zx_status_t GpioDevice::Create(void* ctx, zx_device_t* parent) {
     return pins.error_value();
   }
 
+  // Make sure that the list of GPIO pins has no duplicates.
+  auto gpio_cmp_lt = [](gpio_pin_t& lhs, gpio_pin_t& rhs) { return lhs.pin < rhs.pin; };
+  auto gpio_cmp_eq = [](gpio_pin_t& lhs, gpio_pin_t& rhs) { return lhs.pin == rhs.pin; };
+  std::sort(pins.value().begin(), pins.value().end(), gpio_cmp_lt);
+  auto result = std::adjacent_find(pins.value().begin(), pins.value().end(), gpio_cmp_eq);
+  if (result != pins.value().end()) {
+    zxlogf(ERROR, "gpio pin '%d' was published more than once", result->pin);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   for (auto pin : pins.value()) {
     fbl::AllocChecker ac;
     std::unique_ptr<GpioDevice> dev(new (&ac) GpioDevice(parent, &gpio, pin.pin));
