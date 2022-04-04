@@ -279,7 +279,11 @@ impl<EB: EncryptedBlockDevice, M: Minfs> Account<EB, M> {
 mod test {
     use {
         super::*,
-        crate::{disk_management::MockMinfs, keys::Key, testing::CallCounter},
+        crate::{
+            disk_management::MockMinfs,
+            keys::{Key, KEY_LEN},
+            testing::CallCounter,
+        },
         async_trait::async_trait,
         fidl_fuchsia_identity_account::{AccountMarker, AccountProxy},
         fuchsia_zircon::Status,
@@ -287,8 +291,8 @@ mod test {
         vfs::execution_scope::ExecutionScope,
     };
 
-    const TEST_KEY: Key = [1; 32];
-    const WRONG_KEY: Key = [2; 32];
+    const TEST_KEY: Key = [1; KEY_LEN];
+    const WRONG_KEY: Key = [2; KEY_LEN];
 
     /// A mock implementation of [`EncryptedBlockDevice`].
     #[derive(Debug, Clone)]
@@ -418,7 +422,7 @@ mod test {
         let (seal_call_counter, mock_encrypted_block) =
             MockEncryptedBlockDevice::new_with_call_counter(Ok(()));
         let mock_minfs = MockMinfs::simple(scope.clone());
-        let account = Arc::new(Account::new([0; 32], mock_encrypted_block, mock_minfs));
+        let account = Arc::new(Account::new([0; KEY_LEN], mock_encrypted_block, mock_minfs));
 
         let proxy1 = serve_new_client(&account).await.expect("serve client 1");
         let proxy2 = serve_new_client(&account).await.expect("serve client 2");
@@ -469,7 +473,7 @@ mod test {
                 DiskError::FailedToSealZxcrypt(Status::BAD_STATE)
             }));
         let mock_minfs = MockMinfs::simple(scope.clone());
-        let account = Arc::new(Account::new([0; 32], mock_encrypted_block, mock_minfs));
+        let account = Arc::new(Account::new([0; KEY_LEN], mock_encrypted_block, mock_minfs));
 
         let proxy = serve_new_client(&account).await.expect("serve client");
 

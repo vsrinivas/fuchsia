@@ -7,7 +7,7 @@
 //! which implementations need to be re-written with production versions and removed.
 
 use {
-    crate::keys::{EnrolledKey, Key, KeyEnrollment, KeyError, KeyRetrieval},
+    crate::keys::{EnrolledKey, Key, KeyEnrollment, KeyError, KeyRetrieval, KEY_LEN},
     async_trait::async_trait,
 };
 
@@ -17,7 +17,7 @@ pub const INSECURE_EMPTY_PASSWORD: &'static str = "";
 
 /// The hardcoded 256 bit key used to format and unseal zxcrypt volumes.
 /// This will be replaced in a future milestone with a proper password-based key-derivation scheme.
-pub const INSECURE_EMPTY_KEY: [u8; 32] = [0; 32];
+pub const INSECURE_EMPTY_KEY: [u8; KEY_LEN] = [0; KEY_LEN];
 
 /// A test/mock key derivation that always returns a 256 bit null key of zeroes.
 pub struct NullKeySource;

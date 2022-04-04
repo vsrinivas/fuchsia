@@ -21,8 +21,11 @@ pub enum KeyError {
     KeyRetrievalError,
 }
 
+/// The size, in bytes of a key.
+pub const KEY_LEN: usize = 32;
+
 /// A 256-bit key.
-pub type Key = [u8; 32];
+pub type Key = [u8; KEY_LEN];
 
 #[derive(Debug)]
 pub struct EnrolledKey<T> {

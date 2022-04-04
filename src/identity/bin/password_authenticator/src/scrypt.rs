@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::keys::{EnrolledKey, Key, KeyEnrollment, KeyError, KeyRetrieval},
+    crate::keys::{EnrolledKey, Key, KeyEnrollment, KeyError, KeyRetrieval, KEY_LEN},
     async_trait::async_trait,
     fuchsia_zircon as zx,
     serde::{Deserialize, Serialize},
@@ -48,7 +48,7 @@ impl KeyEnrollment<ScryptParams> for ScryptKeySource {
         let s = self.scrypt_params;
         let params =
             scrypt::Params::new(s.log_n, s.r, s.p).map_err(|_| KeyError::KeyEnrollmentError)?;
-        let mut output = [0u8; 32];
+        let mut output = [0u8; KEY_LEN];
         scrypt::scrypt(password.as_bytes(), &s.salt, &params, &mut output)
             .map_err(|_| KeyError::KeyEnrollmentError)?;
         Ok(EnrolledKey { key: output, enrollment_data: self.scrypt_params.clone() })
@@ -61,7 +61,7 @@ impl KeyRetrieval for ScryptKeySource {
         let s = self.scrypt_params;
         let params =
             scrypt::Params::new(s.log_n, s.r, s.p).map_err(|_| KeyError::KeyRetrievalError)?;
-        let mut output = [0u8; 32];
+        let mut output = [0u8; KEY_LEN];
         scrypt::scrypt(password.as_bytes(), &s.salt, &params, &mut output)
             .map_err(|_| KeyError::KeyRetrievalError)?;
         Ok(output)
@@ -83,7 +83,7 @@ pub mod test {
     // We have precomputed the key produced by the above fixed salt and params so that each test
     // that wants to use one doesn't need to perform an additional key derivation every single time.
     // A test below ensures that we verify our constant is correct.
-    pub const TEST_SCRYPT_KEY: [u8; 32] = [
+    pub const TEST_SCRYPT_KEY: [u8; KEY_LEN] = [
         88, 91, 129, 123, 173, 34, 21, 1, 23, 147, 87, 189, 56, 149, 89, 132, 210, 235, 150, 102,
         129, 93, 202, 53, 115, 170, 162, 217, 254, 115, 216, 181,
     ];
@@ -108,7 +108,7 @@ pub mod test {
     pub const FULL_STRENGTH_SCRYPT_PARAMS: ScryptParams =
         ScryptParams { salt: FULL_STRENGTH_SCRYPT_SALT, log_n: 15, r: 8, p: 1 };
     const GOLDEN_SCRYPT_PASSWORD: &str = "test password";
-    const GOLDEN_SCRYPT_KEY: [u8; 32] = [
+    const GOLDEN_SCRYPT_KEY: [u8; KEY_LEN] = [
         27, 250, 228, 96, 145, 67, 194, 114, 144, 240, 92, 150, 43, 136, 128, 51, 223, 120, 56,
         118, 124, 122, 106, 185, 159, 111, 178, 50, 86, 243, 227, 175,
     ];
