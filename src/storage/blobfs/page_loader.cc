@@ -403,7 +403,8 @@ PagerErrorStatus PageLoader::Worker::TransferChunkedPages(PageLoader::PageSuppli
     fzl::VmoMapper decompressed_mapper;
     if (zx_status_t status =
             decompressed_mapper.Map(decompression_buffer_, 0, mapping.decompressed_length,
-                                    ZX_VM_PERM_READ | ZX_VM_PERM_WRITE) != ZX_OK) {
+                                    ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+        status != ZX_OK) {
       FX_LOGS(ERROR) << "TransferChunked: Failed to map decompress buffer: "
                      << zx_status_get_string(status);
       return ToPagerErrorStatus(status);
