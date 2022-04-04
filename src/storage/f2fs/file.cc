@@ -315,6 +315,10 @@ zx_status_t File::Read(void *data, size_t len, size_t off, size_t *out_actual) {
     return ZX_OK;
   }
 
+  if (TestFlag(InodeInfoFlag::kInlineData)) {
+    return ReadInline(data, len, off, out_actual);
+  }
+
   for (pgoff_t n = blk_start; n <= blk_end; ++n) {
     bool is_empty_page = false;
     if (zx_status_t ret = GetLockDataPage(n, &data_page); ret != ZX_OK) {
@@ -371,6 +375,14 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
 
   if (offset + len > static_cast<size_t>(Vfs()->MaxFileSize(Vfs()->RawSb().log_blocksize)))
     return ZX_ERR_INVALID_ARGS;
+
+  if (TestFlag(InodeInfoFlag::kInlineData)) {
+    if (offset + len < MaxInlineData()) {
+      return WriteInline(data, len, offset, out_actual);
+    }
+
+    ConvertInlineData();
+  }
 
   std::vector<fbl::RefPtr<Page>> data_pages(blk_end - blk_start + 1, nullptr);
 
@@ -461,6 +473,14 @@ zx_status_t File::Truncate(size_t len) {
 
   if (len > static_cast<size_t>(Vfs()->MaxFileSize(Vfs()->RawSb().log_blocksize)))
     return ZX_ERR_INVALID_ARGS;
+
+  if (TestFlag(InodeInfoFlag::kInlineData)) {
+    if (len < MaxInlineData()) {
+      return TruncateInline(len);
+    }
+
+    ConvertInlineData();
+  }
 
   return DoTruncate(len);
 }

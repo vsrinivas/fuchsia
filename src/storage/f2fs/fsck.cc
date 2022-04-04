@@ -410,12 +410,11 @@ zx::status<TraverseResult> FsckWorker::TraverseInodeBlock(const Node &node_block
         ftype == FileType::kFtFifo || ftype == FileType::kFtSock) {
       break;
     }
-#if 0  // porting needed
-  if ((node_block->i.i_inline & F2FS_INLINE_DATA)) {
-    FX_LOGS(INFO) << "ino[0x" << std::hex << nid << "] has inline data";
-    break;
-  }
-#endif
+
+    if (node_block.i.i_inline & kInlineData) {
+      FX_LOGS(INFO) << "ino[0x" << std::hex << nid << "] has inline data";
+      break;
+    }
 
     if (node_block.i.i_inline & kInlineDentry) {
       if (auto status =

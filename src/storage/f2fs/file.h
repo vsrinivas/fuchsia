@@ -29,6 +29,14 @@ class File : public VnodeF2fs, public fbl::Recyclable<File> {
   zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) final;
   zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final;
   zx_status_t Truncate(size_t len) final;
+
+ private:
+  zx_status_t ReadInline(void* data, size_t len, size_t off, size_t* out_actual);
+  zx_status_t WriteInline(const void* data, size_t len, size_t offset, size_t* out_actual);
+  zx_status_t TruncateInline(size_t len);
+  zx_status_t ConvertInlineData();
+
+  uint8_t* InlineDataPtr(Page* page);
 };
 
 }  // namespace f2fs

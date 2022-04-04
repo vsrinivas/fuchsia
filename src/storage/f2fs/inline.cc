@@ -396,4 +396,119 @@ zx_status_t Dir::ReadInlineDir(fs::VdirCookie *cookie, void *dirents, size_t len
   return ZX_OK;
 }
 
+uint8_t *File::InlineDataPtr(Page *page) {
+  Node *rn = static_cast<Node *>(page->GetAddress());
+  Inode &ri = rn->i;
+  return reinterpret_cast<uint8_t *>(
+      &ri.i_addr[GetExtraISize() / sizeof(uint32_t) + kInlineStartOffset]);
+}
+
+zx_status_t File::ReadInline(void *data, size_t len, size_t off, size_t *out_actual) {
+  fbl::RefPtr<Page> inline_page;
+  if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret != ZX_OK) {
+    return ret;
+  }
+
+  uint8_t *inline_data = InlineDataPtr(inline_page.get());
+  size_t cur_len = std::min(len, GetSize() - off);
+  memcpy(static_cast<uint8_t *>(data), inline_data + off, cur_len);
+
+  Page::PutPage(std::move(inline_page), true);
+
+  *out_actual = cur_len;
+
+  return ZX_OK;
+}
+
+zx_status_t File::ConvertInlineData() {
+  fbl::RefPtr<Page> page;
+  if (zx_status_t ret = GrabCachePage(0, &page); ret != ZX_OK) {
+    return ret;
+  }
+
+  DnodeOfData dn;
+  NodeManager::SetNewDnode(dn, this, nullptr, nullptr, 0);
+  if (zx_status_t err = Vfs()->GetNodeManager().GetDnodeOfData(dn, 0, 0); err != ZX_OK) {
+    return err;
+  }
+
+  if (dn.data_blkaddr == kNullAddr) {
+    if (zx_status_t err = ReserveNewBlock(&dn); err != ZX_OK) {
+      Page::PutPage(std::move(page), true);
+      F2fsPutDnode(&dn);
+      return err;
+    }
+  }
+
+  page->WaitOnWriteback();
+  page->ZeroUserSegment(0, kPageSize);
+
+  Page *ipage = dn.inode_page.get();
+  uint8_t *inline_data = InlineDataPtr(ipage);
+  memcpy(page->GetAddress(), inline_data, GetSize());
+
+  page->SetDirty();
+
+  ipage->WaitOnWriteback();
+  ipage->ZeroUserSegment(InlineDataOffset(), InlineDataOffset() + MaxInlineData());
+  ClearFlag(InodeInfoFlag::kInlineData);
+
+  UpdateInode(ipage);
+
+  F2fsPutDnode(&dn);
+  Page::PutPage(std::move(page), true);
+  return ZX_OK;
+}
+
+zx_status_t File::WriteInline(const void *data, size_t len, size_t offset, size_t *out_actual) {
+  fbl::RefPtr<Page> inline_page;
+  if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret != ZX_OK) {
+    return ret;
+  }
+
+  inline_page->WaitOnWriteback();
+
+  uint8_t *inline_data = InlineDataPtr(inline_page.get());
+  memcpy(inline_data + offset, static_cast<const uint8_t *>(data), len);
+
+  SetSize(std::max(static_cast<size_t>(GetSize()), offset + len));
+  inline_page->SetDirty();
+  Page::PutPage(std::move(inline_page), true);
+
+  timespec cur_time;
+  clock_gettime(CLOCK_REALTIME, &cur_time);
+  SetCTime(cur_time);
+  SetMTime(cur_time);
+  MarkInodeDirty();
+
+  *out_actual = len;
+
+  return ZX_OK;
+}
+
+zx_status_t File::TruncateInline(size_t len) {
+  fbl::RefPtr<Page> inline_page;
+  if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret != ZX_OK) {
+    return ret;
+  }
+
+  inline_page->WaitOnWriteback();
+
+  uint8_t *inline_data = InlineDataPtr(inline_page.get());
+  size_t size_diff = (len > GetSize()) ? (len - GetSize()) : (GetSize() - len);
+  memset(inline_data + ((len > GetSize()) ? GetSize() : len), 0, size_diff);
+
+  SetSize(len);
+  inline_page->SetDirty();
+  Page::PutPage(std::move(inline_page), true);
+
+  timespec cur_time;
+  clock_gettime(CLOCK_REALTIME, &cur_time);
+  SetCTime(cur_time);
+  SetMTime(cur_time);
+  MarkInodeDirty();
+
+  return ZX_OK;
+}
+
 }  // namespace f2fs

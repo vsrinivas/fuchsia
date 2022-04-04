@@ -142,6 +142,9 @@ zx_status_t VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) 
   if (ri.i_inline & kInlineDentry) {
     vnode->SetFlag(InodeInfoFlag::kInlineDentry);
   }
+  if (ri.i_inline & kInlineData) {
+    vnode->SetFlag(InodeInfoFlag::kInlineData);
+  }
   if (ri.i_inline & kExtraAttr) {
     vnode->SetExtraISize(ri.i_extra_isize);
   }
@@ -348,6 +351,11 @@ void VnodeF2fs::UpdateInode(Page *node_page) {
   ri->i_namelen = CpuToLe(size);
   name.copy(reinterpret_cast<char *>(&ri->i_name[0]), size);
 
+  if (TestFlag(InodeInfoFlag::kInlineData)) {
+    ri->i_inline |= kInlineData;
+  } else {
+    ri->i_inline &= ~kInlineData;
+  }
   if (TestFlag(InodeInfoFlag::kInlineDentry)) {
     ri->i_inline |= kInlineDentry;
   } else {

@@ -163,6 +163,14 @@ void FileTester::CheckNonInlineDir(VnodeF2fs *vn) {
   ASSERT_GT(vn->GetSize(), vn->MaxInlineData());
 }
 
+void FileTester::CheckInlineFile(VnodeF2fs *vn) {
+  ASSERT_NE(vn->TestFlag(InodeInfoFlag::kInlineData), 0);
+}
+
+void FileTester::CheckNonInlineFile(VnodeF2fs *vn) {
+  ASSERT_EQ(vn->TestFlag(InodeInfoFlag::kInlineData), 0);
+}
+
 void FileTester::CheckChildrenFromReaddir(Dir *dir, std::unordered_set<std::string> childs) {
   childs.insert(".");
 
@@ -252,6 +260,13 @@ void FileTester::AppendToFile(File *file, const void *data, size_t len) {
   size_t ret = 0;
 
   ASSERT_EQ(file->Append(data, len, &end, &ret), ZX_OK);
+  ASSERT_EQ(ret, len);
+}
+
+void FileTester::ReadFromFile(File *file, void *data, size_t len, size_t off) {
+  size_t ret = 0;
+
+  ASSERT_EQ(file->Read(data, len, off, &ret), ZX_OK);
   ASSERT_EQ(ret, len);
 }
 

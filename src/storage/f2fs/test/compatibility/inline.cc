@@ -19,8 +19,8 @@ TEST_F(InlineCompatibilityTest, InlineDentryHostToFuchsia) {
 
   // Get max inline dentry
   {
-    uint64_t block_count = 819200;  // 400MB
-    uint64_t disk_size = block_count * kDefaultSectorSize;
+    uint64_t sector_count = 819200;  // 400MB
+    uint64_t disk_size = sector_count * kDefaultSectorSize;
 
     std::string tmp_image = GenerateTestPath(kTestFileFormat);
     fbl::unique_fd tmp_fd = fbl::unique_fd(mkstemp(tmp_image.data()));
@@ -30,7 +30,7 @@ TEST_F(InlineCompatibilityTest, InlineDentryHostToFuchsia) {
     mkdtemp(tmp_mount_dir.data());
 
     std::unique_ptr<TargetOperator> tmp_target_operator =
-        std::make_unique<TargetOperator>(tmp_image, std::move(tmp_fd), block_count);
+        std::make_unique<TargetOperator>(tmp_image, std::move(tmp_fd), sector_count);
 
     tmp_target_operator->Mkfs();
     MountOptions options;
@@ -211,6 +211,156 @@ TEST_F(InlineCompatibilityTest, InlineDentryFuchsiaToHost) {
           system(std::string("ls ").append(host_operator_->GetAbsolutePath(child_name)).c_str()),
           0);
     }
+  }
+}
+
+TEST_F(InlineCompatibilityTest, InlineDataHostToFuchsia) {
+  constexpr std::string_view inline_file_name = "/inline";
+
+  uint32_t max_inline_data;
+
+  // Get max inline data size
+  {
+    uint64_t sector_count = 819200;  // 400MB
+    uint64_t disk_size = sector_count * kDefaultSectorSize;
+
+    std::string tmp_image = GenerateTestPath(kTestFileFormat);
+    fbl::unique_fd tmp_fd = fbl::unique_fd(mkstemp(tmp_image.data()));
+    ftruncate(tmp_fd.get(), disk_size);
+
+    std::string tmp_mount_dir = GenerateTestPath(kTestFileFormat);
+    mkdtemp(tmp_mount_dir.data());
+
+    std::unique_ptr<TargetOperator> tmp_target_operator =
+        std::make_unique<TargetOperator>(tmp_image, std::move(tmp_fd), sector_count);
+
+    tmp_target_operator->Mkfs();
+    MountOptions options;
+    ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineData), 1), ZX_OK);
+    tmp_target_operator->Mount(options);
+
+    auto umount = fit::defer([&] { tmp_target_operator->Unmount(); });
+
+    auto tmpfile = tmp_target_operator->Open("/tmpfile", O_RDWR | O_CREAT, 0644);
+    ASSERT_TRUE(tmpfile->is_valid());
+
+    File *raw_ptr =
+        static_cast<File *>(static_cast<TargetTestFile *>(tmpfile.get())->GetRawVnodePtr());
+
+    max_inline_data = raw_ptr->MaxInlineData();
+  }
+
+  uint32_t r_buf[kPageSize / sizeof(uint32_t)];
+  uint32_t w_buf[kPageSize / sizeof(uint32_t)];
+  for (uint32_t i = 0; i < kPageSize / sizeof(uint32_t); ++i) {
+    w_buf[i] = CpuToLe(i);
+  }
+
+  // Create and write inline file on Linux
+  {
+    host_operator_->Mkfs();
+    host_operator_->Mount();
+
+    auto umount = fit::defer([&] { host_operator_->Unmount(); });
+
+    auto test_file = host_operator_->Open(inline_file_name, O_RDWR | O_CREAT, 0644);
+    ASSERT_TRUE(test_file->is_valid());
+
+    ASSERT_EQ(test_file->Write(w_buf, max_inline_data / 2), max_inline_data / 2);
+  }
+
+  // Verify on Fuchsia
+  {
+    target_operator_->Fsck();
+    target_operator_->Mount();
+
+    auto umount = fit::defer([&] { target_operator_->Unmount(); });
+
+    // Check if inline file is still inline on Fuchsia
+    auto test_file = target_operator_->Open(inline_file_name, O_RDWR, 0644);
+    ASSERT_TRUE(test_file->is_valid());
+
+    VnodeF2fs *raw_vn_ptr = static_cast<TargetTestFile *>(test_file.get())->GetRawVnodePtr();
+    ASSERT_TRUE(raw_vn_ptr->TestFlag(InodeInfoFlag::kInlineData));
+
+    // Read verify
+    ASSERT_EQ(test_file->Read(r_buf, max_inline_data / 2), max_inline_data / 2);
+    ASSERT_EQ(memcmp(r_buf, w_buf, max_inline_data / 2), 0);
+  }
+}
+
+TEST_F(InlineCompatibilityTest, InlineDataFuchsiaToHost) {
+  constexpr std::string_view inline_file_name = "/inline";
+
+  uint32_t max_inline_data;
+
+  // Get max inline data size
+  {
+    uint64_t sector_count = 819200;  // 400MB
+    uint64_t disk_size = sector_count * kDefaultSectorSize;
+
+    std::string tmp_image = GenerateTestPath(kTestFileFormat);
+    fbl::unique_fd tmp_fd = fbl::unique_fd(mkstemp(tmp_image.data()));
+    ftruncate(tmp_fd.get(), disk_size);
+
+    std::string tmp_mount_dir = GenerateTestPath(kTestFileFormat);
+    mkdtemp(tmp_mount_dir.data());
+
+    std::unique_ptr<TargetOperator> tmp_target_operator =
+        std::make_unique<TargetOperator>(tmp_image, std::move(tmp_fd), sector_count);
+
+    tmp_target_operator->Mkfs();
+    MountOptions options;
+    ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineData), 1), ZX_OK);
+    tmp_target_operator->Mount(options);
+
+    auto umount = fit::defer([&] { tmp_target_operator->Unmount(); });
+
+    auto tmpfile = tmp_target_operator->Open("/tmpfile", O_RDWR | O_CREAT, 0644);
+    ASSERT_TRUE(tmpfile->is_valid());
+
+    File *raw_ptr =
+        static_cast<File *>(static_cast<TargetTestFile *>(tmpfile.get())->GetRawVnodePtr());
+
+    max_inline_data = raw_ptr->MaxInlineData();
+  }
+
+  uint32_t r_buf[kPageSize / sizeof(uint32_t)];
+  uint32_t w_buf[kPageSize / sizeof(uint32_t)];
+  for (uint32_t i = 0; i < kPageSize / sizeof(uint32_t); ++i) {
+    w_buf[i] = CpuToLe(i);
+  }
+
+  // Create and write inline file on Fuchsia
+  {
+    target_operator_->Mkfs();
+    target_operator_->Mount();
+
+    auto umount = fit::defer([&] { target_operator_->Unmount(); });
+
+    auto test_file = target_operator_->Open(inline_file_name, O_RDWR | O_CREAT, 0644);
+    ASSERT_TRUE(test_file->is_valid());
+
+    ASSERT_EQ(test_file->Write(w_buf, max_inline_data / 2), max_inline_data / 2);
+
+    VnodeF2fs *raw_vn_ptr = static_cast<TargetTestFile *>(test_file.get())->GetRawVnodePtr();
+    ASSERT_TRUE(raw_vn_ptr->TestFlag(InodeInfoFlag::kInlineData));
+  }
+
+  // Verify on Linux
+  {
+    host_operator_->Fsck();
+    host_operator_->Mount();
+
+    auto umount = fit::defer([&] { host_operator_->Unmount(); });
+
+    // Check if inline file is still inline on Fuchsia
+    auto test_file = host_operator_->Open(inline_file_name, O_RDWR, 0644);
+    ASSERT_TRUE(test_file->is_valid());
+
+    // Read verify
+    ASSERT_EQ(test_file->Read(r_buf, max_inline_data / 2), max_inline_data / 2);
+    ASSERT_EQ(memcmp(r_buf, w_buf, max_inline_data / 2), 0);
   }
 }
 

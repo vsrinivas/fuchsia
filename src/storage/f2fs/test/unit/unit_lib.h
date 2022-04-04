@@ -62,12 +62,16 @@ class FileTester {
   static void CheckInlineDir(VnodeF2fs *vn);
   static void CheckNonInlineDir(VnodeF2fs *vn);
 
+  static void CheckInlineFile(VnodeF2fs *vn);
+  static void CheckNonInlineFile(VnodeF2fs *vn);
+
   static void CheckChildrenFromReaddir(Dir *dir, std::unordered_set<std::string> childs);
   static void CheckChildrenInBlock(Dir *vn, uint64_t bidx, std::unordered_set<std::string> childs);
 
   static std::string GetRandomName(unsigned int len);
 
   static void AppendToFile(File *file, const void *data, size_t len);
+  static void ReadFromFile(File *file, void *data, size_t len, size_t off);
 };
 
 class MapTester {
