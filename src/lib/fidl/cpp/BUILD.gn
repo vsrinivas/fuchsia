@@ -43,6 +43,7 @@ source_set("cpp") {
     "include/lib/fidl/cpp/internal/make_response_context.h",
     "include/lib/fidl/cpp/internal/natural_client_base.h",
     "include/lib/fidl/cpp/internal/natural_client_messenger.h",
+    "include/lib/fidl/cpp/internal/natural_message_encoder.h",
     "include/lib/fidl/cpp/internal/natural_server_messenger.h",
     "include/lib/fidl/cpp/unified_messaging.h",
     "include/lib/fidl/cpp/unified_messaging_declarations.h",
@@ -50,6 +51,7 @@ source_set("cpp") {
   sources = [
     "any_error_in.cc",
     "internal/natural_client_messenger.cc",
+    "internal/natural_message_encoder.cc",
     "internal/natural_server_messenger.cc",
   ]
   public_deps = [ "//src/lib/fidl/cpp:cpp_base" ]

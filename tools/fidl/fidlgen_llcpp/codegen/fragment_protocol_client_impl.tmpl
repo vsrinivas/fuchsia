@@ -160,11 +160,12 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
 {{- EnsureNamespace "" }}
 void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
     {{- template "Method:ClientAsyncRequestArgumentsWithResult:Helper" . }}) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport> _encoder{ {{ .OrdinalName }} };
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder {{- if .HasRequestPayload }},
-          {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request)){{ end }}),
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }} };
+  return messenger().TwoWay(_encoder.EncodeTransactionalMessage(
+        {{- if .HasRequestPayload }}
+          {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request))
+        {{ end }}),
       ::fidl::internal::MakeResponseContext<{{ .Marker }}>({{ .OrdinalName }}, std::move(_callback))
   );
 }
@@ -177,10 +178,12 @@ void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
 ::fitx::result<::fidl::Error>
 {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
     {{- template "Method:ClientRequestArgumentsOneWay:Helper" . }}) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport> _encoder{ {{ .OrdinalName }} };
-  ::fidl::Status status = messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
-      _encoder {{- if .HasRequestPayload }},
-      {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request)){{ end }}));
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }} };
+  ::fidl::Status status = messenger().OneWay(_encoder.EncodeTransactionalMessage(
+      {{- if .HasRequestPayload }}
+        {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request))
+      {{ end }}));
   return ::fidl::internal::ToFitxResult(status);
 }
 {{ end }}

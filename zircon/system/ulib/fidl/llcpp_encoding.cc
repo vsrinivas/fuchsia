@@ -374,9 +374,7 @@ class FidlEncoder final : public ::fidl::Visitor<WireFormatVersion, fidl::Mutati
   }
 
   void ThrowAwayHandle(HandlePointer handle) {
-#ifdef __Fuchsia__
-    zx_handle_close(*handle);
-#endif
+    encoding_configuration_.close(*handle);
     *handle = ZX_HANDLE_INVALID;
   }
 
@@ -487,7 +485,7 @@ zx_status_t EncodeIovecEtc(const CodingConfig& encoding_configuration, const fid
                                      .dest = backing_buffer + header_size});
     if (unlikely(encoder.status() != ZX_OK)) {
       *out_actual_handles = 0;
-      FidlHandleCloseMany(handles, encoder.num_out_handles());
+      encoding_configuration.close_many(handles, encoder.num_out_handles());
       return ZX_ERR_INVALID_ARGS;
     }
   }

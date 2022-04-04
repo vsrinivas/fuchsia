@@ -100,7 +100,8 @@ OutgoingMessage::OutgoingMessage(InternalIovecConstructorArgs args)
       iovec_capacity_(args.iovec_capacity),
       handle_capacity_(args.handle_capacity),
       backing_buffer_capacity_(args.backing_buffer_capacity),
-      backing_buffer_(args.backing_buffer) {}
+      backing_buffer_(args.backing_buffer),
+      is_transactional_(args.is_transactional) {}
 
 OutgoingMessage::OutgoingMessage(InternalByteBackedConstructorArgs args)
     : fidl::Status(fidl::Status::Ok()),
@@ -125,13 +126,10 @@ OutgoingMessage::OutgoingMessage(InternalByteBackedConstructorArgs args)
       is_transactional_(args.is_transactional) {}
 
 OutgoingMessage::~OutgoingMessage() {
-#ifdef __Fuchsia__
-  if (handle_actual() > 0) {
-    FidlHandleCloseMany(handles(), handle_actual());
+  // We may not have a vtable when the |OutgoingMessage| represents an error.
+  if (transport_vtable_) {
+    transport_vtable_->encoding_configuration->close_many(handles(), handle_actual());
   }
-#else
-  ZX_ASSERT(handle_actual() == 0);
-#endif
 }
 
 fidl_outgoing_msg_t OutgoingMessage::ReleaseToEncodedCMessage() && {

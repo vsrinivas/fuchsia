@@ -42,12 +42,12 @@ void fidl::internal::NaturalClientImpl<
     NoRequestEmptyResponse(
         ::fidl::ClientCallback<::test_protocols::WithAndWithoutRequestResponse::
                                    NoRequestEmptyResponse>&& _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{
-          ::test_protocols::
-              kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::
+          kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder),
+      _encoder.EncodeTransactionalMessage(),
       ::fidl::internal::MakeResponseContext<
           ::test_protocols::WithAndWithoutRequestResponse::
               NoRequestEmptyResponse>(
@@ -61,12 +61,12 @@ void fidl::internal::NaturalClientImpl<
     NoRequestWithResponse(
         ::fidl::ClientCallback<::test_protocols::WithAndWithoutRequestResponse::
                                    NoRequestWithResponse>&& _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{
-          ::test_protocols::
-              kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::
+          kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder),
+      _encoder.EncodeTransactionalMessage(),
       ::fidl::internal::MakeResponseContext<
           ::test_protocols::WithAndWithoutRequestResponse::
               NoRequestWithResponse>(
@@ -84,13 +84,12 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientCallback<::test_protocols::WithAndWithoutRequestResponse::
                                    WithRequestEmptyResponse>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{
-          ::test_protocols::
-              kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::
+          kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
                                   WithRequestEmptyResponse>>::
@@ -111,13 +110,12 @@ void fidl::internal::NaturalClientImpl<
             request,
         ::fidl::ClientCallback<::test_protocols::WithAndWithoutRequestResponse::
                                    WithRequestWithResponse>&& _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{
-          ::test_protocols::
-              kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::
+          kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
                                   WithRequestWithResponse>>::
@@ -133,11 +131,12 @@ void fidl::internal::NaturalClientImpl<
 ::fitx::result<::fidl::Error> fidl::internal::NaturalClientImpl<
     ::test_protocols::WithAndWithoutRequestResponse>::NoRequestNoResponse()
     const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::
-                   kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal};
-  ::fidl::Status status = messenger().OneWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder));
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::
+          kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal};
+  ::fidl::Status status =
+      messenger().OneWay(_encoder.EncodeTransactionalMessage());
   return ::fidl::internal::ToFitxResult(status);
 }
 
@@ -147,13 +146,12 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
                             WithRequestNoResponse>
             request) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{
-          ::test_protocols::
-              kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::
+          kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal};
   ::fidl::Status status =
-      messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      messenger().OneWay(_encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
                                   WithRequestNoResponse>>::
@@ -217,20 +215,20 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
 
 ::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<
     ::test_protocols::WithAndWithoutRequestResponse>::OnEmptyResponse() {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::
-                   kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal};
-  auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(_encoder);
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal};
+  auto encoded_message = _encoder.EncodeTransactionalMessage();
   ::fidl::Status result = _inner().SendEvent(encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
 
 ::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<
     ::test_protocols::WithAndWithoutRequestResponse>::OnEmptyResponse() {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::
-                   kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal};
-  auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(_encoder);
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal};
+  auto encoded_message = _encoder.EncodeTransactionalMessage();
   encoded_message.Write(_transport());
   return ::fidl::internal::ToFitxResult(::fidl::Status{encoded_message});
 }
@@ -240,11 +238,11 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
     OnWithResponse(
         ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest
             payload) {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::
-                   kWithAndWithoutRequestResponse_OnWithResponse_Ordinal};
-  auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload));
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kWithAndWithoutRequestResponse_OnWithResponse_Ordinal};
+  auto encoded_message =
+      _encoder.EncodeTransactionalMessage(std::move(payload));
   ::fidl::Status result = _inner().SendEvent(encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
@@ -254,11 +252,11 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
     OnWithResponse(
         ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest
             payload) {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::
-                   kWithAndWithoutRequestResponse_OnWithResponse_Ordinal};
-  auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload));
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kWithAndWithoutRequestResponse_OnWithResponse_Ordinal};
+  auto encoded_message =
+      _encoder.EncodeTransactionalMessage(std::move(payload));
   encoded_message.Write(_transport());
   return ::fidl::internal::ToFitxResult(::fidl::Status{encoded_message});
 }
@@ -269,11 +267,11 @@ void fidl::internal::NaturalCompleterBase<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>::
     Reply() {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{
-          ::test_protocols::
-              kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal};
-  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(_encoder),
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::
+          kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal};
+  _messenger.SendReply(_encoder.EncodeTransactionalMessage(),
                        ::fidl::internal::OutgoingTransportContext{});
 }
 
@@ -282,13 +280,12 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
                                NoRequestWithResponse>&& response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{
-          ::test_protocols::
-              kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::
+          kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal};
   _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
                                    NoRequestWithResponse>>::
@@ -300,11 +297,11 @@ void fidl::internal::NaturalCompleterBase<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>::
     Reply() {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{
-          ::test_protocols::
-              kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal};
-  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(_encoder),
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::
+          kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal};
+  _messenger.SendReply(_encoder.EncodeTransactionalMessage(),
                        ::fidl::internal::OutgoingTransportContext{});
 }
 
@@ -313,13 +310,12 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
                                WithRequestWithResponse>&& response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{
-          ::test_protocols::
-              kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::
+          kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal};
   _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
                                    WithRequestWithResponse>>::
@@ -535,11 +531,11 @@ void fidl::internal::NaturalClientImpl<::test_protocols::Transitional>::Request(
     ::fidl::Request<::test_protocols::Transitional::Request> request,
     ::fidl::ClientCallback<::test_protocols::Transitional::Request>&& _callback)
     const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kTransitional_Request_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kTransitional_Request_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Request<::test_protocols::Transitional::Request>>::
               IntoDomainObject(std::move(request))),
@@ -552,11 +548,11 @@ void fidl::internal::NaturalClientImpl<::test_protocols::Transitional>::Request(
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_protocols::Transitional>::OneWay(
     ::fidl::Request<::test_protocols::Transitional::OneWay> request) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kTransitional_OneWay_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kTransitional_OneWay_Ordinal};
   ::fidl::Status status =
-      messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      messenger().OneWay(_encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Request<::test_protocols::Transitional::OneWay>>::
               IntoDomainObject(std::move(request))));
@@ -600,10 +596,11 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalWeakEventSender<::test_protocols::Transitional>::Event(
     ::test_protocols::TransitionalEventRequest payload) {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kTransitional_Event_Ordinal};
-  auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload));
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kTransitional_Event_Ordinal};
+  auto encoded_message =
+      _encoder.EncodeTransactionalMessage(std::move(payload));
   ::fidl::Status result = _inner().SendEvent(encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
@@ -611,10 +608,11 @@ fidl::internal::NaturalWeakEventSender<::test_protocols::Transitional>::Event(
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalEventSender<::test_protocols::Transitional>::Event(
     ::test_protocols::TransitionalEventRequest payload) {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kTransitional_Event_Ordinal};
-  auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload));
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kTransitional_Event_Ordinal};
+  auto encoded_message =
+      _encoder.EncodeTransactionalMessage(std::move(payload));
   encoded_message.Write(_transport());
   return ::fidl::internal::ToFitxResult(::fidl::Status{encoded_message});
 }
@@ -625,11 +623,11 @@ void fidl::internal::
     NaturalCompleterBase<::test_protocols::Transitional::Request>::Reply(
         ::fidl::Response<::test_protocols::Transitional::Request>&& response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kTransitional_Request_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kTransitional_Request_Ordinal};
   _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Response<::test_protocols::Transitional::Request>>::
               IntoDomainObject(std::move(response))),
@@ -717,11 +715,11 @@ namespace test_protocols {
     NaturalClientImpl<::test_protocols::MethodWithUnion>::UnionMethod(
         ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> request)
         const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kMethodWithUnion_UnionMethod_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kMethodWithUnion_UnionMethod_Ordinal};
   ::fidl::Status status =
-      messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      messenger().OneWay(_encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>>::
               IntoDomainObject(std::move(request))));
@@ -815,11 +813,11 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithProtocolEnds>::
         ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds> request,
         ::fidl::ClientCallback<::test_protocols::WithProtocolEnds::ClientEnds>&&
             _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kWithProtocolEnds_ClientEnds_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kWithProtocolEnds_ClientEnds_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds>>::
               IntoDomainObject(std::move(request))),
@@ -834,11 +832,11 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithProtocolEnds>::
         ::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds> request,
         ::fidl::ClientCallback<::test_protocols::WithProtocolEnds::ServerEnds>&&
             _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kWithProtocolEnds_ServerEnds_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kWithProtocolEnds_ServerEnds_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds>>::
               IntoDomainObject(std::move(request))),
@@ -856,12 +854,11 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithProtocolEnds>::
         ::fidl::ClientCallback<
             ::test_protocols::WithProtocolEnds::StructContainingEnds>&&
             _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{
-          ::test_protocols::kWithProtocolEnds_StructContainingEnds_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kWithProtocolEnds_StructContainingEnds_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<::fidl::Request<
               ::test_protocols::WithProtocolEnds::StructContainingEnds>>::
               IntoDomainObject(std::move(request))),
@@ -894,13 +891,14 @@ void fidl::internal::
         ::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds>&&
             response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kWithProtocolEnds_ClientEnds_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kWithProtocolEnds_ClientEnds_Ordinal};
   _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-                        ::test_protocols::WithProtocolEnds::ClientEnds>>::
-                        IntoDomainObject(std::move(response))),
+      _encoder.EncodeTransactionalMessage(
+          ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+              ::test_protocols::WithProtocolEnds::ClientEnds>>::
+              IntoDomainObject(std::move(response))),
       ::fidl::internal::OutgoingTransportContext{});
 }
 
@@ -909,13 +907,14 @@ void fidl::internal::
         ::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds>&&
             response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kWithProtocolEnds_ServerEnds_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kWithProtocolEnds_ServerEnds_Ordinal};
   _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-                        ::test_protocols::WithProtocolEnds::ServerEnds>>::
-                        IntoDomainObject(std::move(response))),
+      _encoder.EncodeTransactionalMessage(
+          ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+              ::test_protocols::WithProtocolEnds::ServerEnds>>::
+              IntoDomainObject(std::move(response))),
       ::fidl::internal::OutgoingTransportContext{});
 }
 
@@ -925,12 +924,11 @@ void fidl::internal::NaturalCompleterBase<
           ::test_protocols::WithProtocolEnds::StructContainingEnds>&&
               response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{
-          ::test_protocols::kWithProtocolEnds_StructContainingEnds_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kWithProtocolEnds_StructContainingEnds_Ordinal};
   _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<::fidl::Response<
               ::test_protocols::WithProtocolEnds::StructContainingEnds>>::
               IntoDomainObject(std::move(response))),
@@ -1051,11 +1049,11 @@ namespace test_protocols {
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_protocols::ManyParameters>::Fifteen(
     ::fidl::Request<::test_protocols::ManyParameters::Fifteen> request) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kManyParameters_Fifteen_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kManyParameters_Fifteen_Ordinal};
   ::fidl::Status status =
-      messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      messenger().OneWay(_encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Request<::test_protocols::ManyParameters::Fifteen>>::
               IntoDomainObject(std::move(request))));
@@ -1147,11 +1145,11 @@ void fidl::internal::NaturalClientImpl<::test_protocols::HandleRightsProtocol>::
         ::fidl::ClientCallback<
             ::test_protocols::HandleRightsProtocol::ResponseMethod>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<::fidl::Request<
               ::test_protocols::HandleRightsProtocol::ResponseMethod>>::
               IntoDomainObject(std::move(request))),
@@ -1166,12 +1164,11 @@ void fidl::internal::NaturalClientImpl<::test_protocols::HandleRightsProtocol>::
         ::fidl::Request<
             ::test_protocols::HandleRightsProtocol::NoResponseMethod>
             request) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{
-          ::test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal};
   ::fidl::Status status =
-      messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      messenger().OneWay(_encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<::fidl::Request<
               ::test_protocols::HandleRightsProtocol::NoResponseMethod>>::
               IntoDomainObject(std::move(request))));
@@ -1216,10 +1213,11 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsProtocol>::
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalWeakEventSender<::test_protocols::HandleRightsProtocol>::AnEvent(
         ::test_protocols::HandleRightsProtocolAnEventRequest payload) {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal};
-  auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload));
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal};
+  auto encoded_message =
+      _encoder.EncodeTransactionalMessage(std::move(payload));
   ::fidl::Status result = _inner().SendEvent(encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
@@ -1227,10 +1225,11 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsProtocol>::
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalEventSender<::test_protocols::HandleRightsProtocol>::AnEvent(
         ::test_protocols::HandleRightsProtocolAnEventRequest payload) {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal};
-  auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload));
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal};
+  auto encoded_message =
+      _encoder.EncodeTransactionalMessage(std::move(payload));
   encoded_message.Write(_transport());
   return ::fidl::internal::ToFitxResult(::fidl::Status{encoded_message});
 }
@@ -1242,11 +1241,11 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::fidl::Response<
           ::test_protocols::HandleRightsProtocol::ResponseMethod>&& response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal};
   _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<::fidl::Response<
               ::test_protocols::HandleRightsProtocol::ResponseMethod>>::
               IntoDomainObject(std::move(response))),
@@ -1353,10 +1352,11 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::
     ResponseAsStruct(::fidl::ClientCallback<
                      ::test_protocols::WithErrorSyntax::ResponseAsStruct>&&
                          _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder),
+      _encoder.EncodeTransactionalMessage(),
       ::fidl::internal::MakeResponseContext<
           ::test_protocols::WithErrorSyntax::ResponseAsStruct>(
           ::test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal,
@@ -1367,10 +1367,11 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::
     ErrorAsPrimitive(::fidl::ClientCallback<
                      ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>&&
                          _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder),
+      _encoder.EncodeTransactionalMessage(),
       ::fidl::internal::MakeResponseContext<
           ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>(
           ::test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal,
@@ -1381,10 +1382,11 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::
     ErrorAsEnum(
         ::fidl::ClientCallback<::test_protocols::WithErrorSyntax::ErrorAsEnum>&&
             _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder),
+      _encoder.EncodeTransactionalMessage(),
       ::fidl::internal::MakeResponseContext<
           ::test_protocols::WithErrorSyntax::ErrorAsEnum>(
           ::test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal,
@@ -1395,10 +1397,11 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::
     HandleInResult(::fidl::ClientCallback<
                    ::test_protocols::WithErrorSyntax::HandleInResult>&&
                        _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kWithErrorSyntax_HandleInResult_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kWithErrorSyntax_HandleInResult_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder),
+      _encoder.EncodeTransactionalMessage(),
       ::fidl::internal::MakeResponseContext<
           ::test_protocols::WithErrorSyntax::HandleInResult>(
           ::test_protocols::kWithErrorSyntax_HandleInResult_Ordinal,
@@ -1429,13 +1432,14 @@ void fidl::internal::NaturalCompleterBase<
         ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>&&
             response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal};
   _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-                        ::test_protocols::WithErrorSyntax::ResponseAsStruct>>::
-                        IntoDomainObject(std::move(response))),
+      _encoder.EncodeTransactionalMessage(
+          ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+              ::test_protocols::WithErrorSyntax::ResponseAsStruct>>::
+              IntoDomainObject(std::move(response))),
       ::fidl::internal::OutgoingTransportContext{});
 }
 
@@ -1445,13 +1449,14 @@ void fidl::internal::NaturalCompleterBase<
         ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>&&
             response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal};
   _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-                        ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>::
-                        IntoDomainObject(std::move(response))),
+      _encoder.EncodeTransactionalMessage(
+          ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+              ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>::
+              IntoDomainObject(std::move(response))),
       ::fidl::internal::OutgoingTransportContext{});
 }
 
@@ -1460,13 +1465,14 @@ void fidl::internal::
         ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum>&&
             response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal};
   _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-                        ::test_protocols::WithErrorSyntax::ErrorAsEnum>>::
-                        IntoDomainObject(std::move(response))),
+      _encoder.EncodeTransactionalMessage(
+          ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+              ::test_protocols::WithErrorSyntax::ErrorAsEnum>>::
+              IntoDomainObject(std::move(response))),
       ::fidl::internal::OutgoingTransportContext{});
 }
 
@@ -1475,13 +1481,14 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult>&&
               response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kWithErrorSyntax_HandleInResult_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kWithErrorSyntax_HandleInResult_Ordinal};
   _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-                        ::test_protocols::WithErrorSyntax::HandleInResult>>::
-                        IntoDomainObject(std::move(response))),
+      _encoder.EncodeTransactionalMessage(
+          ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+              ::test_protocols::WithErrorSyntax::HandleInResult>>::
+              IntoDomainObject(std::move(response))),
       ::fidl::internal::OutgoingTransportContext{});
 }
 
@@ -1605,10 +1612,11 @@ namespace test_protocols {
 }  // namespace test_protocols
 ::fitx::result<::fidl::Error> fidl::internal::NaturalClientImpl<
     ::test_protocols::DiscoverableProtocol>::Method() const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kDiscoverableProtocol_Method_Ordinal};
-  ::fidl::Status status = messenger().OneWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder));
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kDiscoverableProtocol_Method_Ordinal};
+  ::fidl::Status status =
+      messenger().OneWay(_encoder.EncodeTransactionalMessage());
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_protocols {
@@ -1702,11 +1710,11 @@ void fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::
     MethodB(::fidl::Request<::test_protocols::ChannelProtocol::MethodB> request,
             ::fidl::ClientCallback<::test_protocols::ChannelProtocol::MethodB>&&
                 _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kChannelProtocol_MethodB_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kChannelProtocol_MethodB_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Request<::test_protocols::ChannelProtocol::MethodB>>::
               IntoDomainObject(std::move(request))),
@@ -1721,11 +1729,11 @@ void fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::
         ::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle> request,
         ::fidl::ClientCallback<::test_protocols::ChannelProtocol::TakeHandle>&&
             _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kChannelProtocol_TakeHandle_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kChannelProtocol_TakeHandle_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle>>::
               IntoDomainObject(std::move(request))),
@@ -1742,13 +1750,14 @@ void fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::
         ::fidl::ClientCallback<
             ::test_protocols::ChannelProtocol::MutateSocket>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kChannelProtocol_MutateSocket_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kChannelProtocol_MutateSocket_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-                        ::test_protocols::ChannelProtocol::MutateSocket>>::
-                        IntoDomainObject(std::move(request))),
+      _encoder.EncodeTransactionalMessage(
+          ::fidl::internal::NaturalMessageConverter<::fidl::Request<
+              ::test_protocols::ChannelProtocol::MutateSocket>>::
+              IntoDomainObject(std::move(request))),
       ::fidl::internal::MakeResponseContext<
           ::test_protocols::ChannelProtocol::MutateSocket>(
           ::test_protocols::kChannelProtocol_MutateSocket_Ordinal,
@@ -1758,11 +1767,11 @@ void fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::MethodA(
     ::fidl::Request<::test_protocols::ChannelProtocol::MethodA> request) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kChannelProtocol_MethodA_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kChannelProtocol_MethodA_Ordinal};
   ::fidl::Status status =
-      messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      messenger().OneWay(_encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Request<::test_protocols::ChannelProtocol::MethodA>>::
               IntoDomainObject(std::move(request))));
@@ -1806,10 +1815,11 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalWeakEventSender<::test_protocols::ChannelProtocol>::EventA(
         ::test_protocols::ChannelProtocolEventARequest payload) {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kChannelProtocol_EventA_Ordinal};
-  auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload));
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kChannelProtocol_EventA_Ordinal};
+  auto encoded_message =
+      _encoder.EncodeTransactionalMessage(std::move(payload));
   ::fidl::Status result = _inner().SendEvent(encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
@@ -1817,10 +1827,11 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalEventSender<::test_protocols::ChannelProtocol>::EventA(
     ::test_protocols::ChannelProtocolEventARequest payload) {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kChannelProtocol_EventA_Ordinal};
-  auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload));
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kChannelProtocol_EventA_Ordinal};
+  auto encoded_message =
+      _encoder.EncodeTransactionalMessage(std::move(payload));
   encoded_message.Write(_transport());
   return ::fidl::internal::ToFitxResult(::fidl::Status{encoded_message});
 }
@@ -1832,11 +1843,11 @@ void fidl::internal::
         ::fidl::Response<::test_protocols::ChannelProtocol::MethodB>&&
             response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kChannelProtocol_MethodB_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kChannelProtocol_MethodB_Ordinal};
   _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Response<::test_protocols::ChannelProtocol::MethodB>>::
               IntoDomainObject(std::move(response))),
@@ -1846,9 +1857,10 @@ void fidl::internal::
 void fidl::internal::NaturalCompleterBase<
     ::test_protocols::ChannelProtocol::TakeHandle>::Reply() {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kChannelProtocol_TakeHandle_Ordinal};
-  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(_encoder),
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kChannelProtocol_TakeHandle_Ordinal};
+  _messenger.SendReply(_encoder.EncodeTransactionalMessage(),
                        ::fidl::internal::OutgoingTransportContext{});
 }
 
@@ -1857,13 +1869,14 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::fidl::Response<::test_protocols::ChannelProtocol::MutateSocket>&&
               response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocols::kChannelProtocol_MutateSocket_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocols::kChannelProtocol_MutateSocket_Ordinal};
   _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-                        ::test_protocols::ChannelProtocol::MutateSocket>>::
-                        IntoDomainObject(std::move(response))),
+      _encoder.EncodeTransactionalMessage(
+          ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+              ::test_protocols::ChannelProtocol::MutateSocket>>::
+              IntoDomainObject(std::move(response))),
       ::fidl::internal::OutgoingTransportContext{});
 }
 

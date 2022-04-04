@@ -103,8 +103,8 @@ class UnionMemberView final {
 // Success/failure information is stored in |message|.
 class EncodeResult {
  public:
-  EncodeResult(const fidl_type_t* type, ::fidl::internal::NaturalBodyEncoder&& storage)
-      : storage_(std::move(storage)), message_(storage_.GetBody(type)) {}
+  explicit EncodeResult(::fidl::internal::NaturalBodyEncoder&& storage)
+      : storage_(std::move(storage)), message_(std::move(storage_).GetBody()) {}
 
   ::fidl::OutgoingMessage& message() { return message_; }
 
@@ -162,19 +162,16 @@ template <typename FidlType>
 // |message| of the returned |EncodeResult|.
 //
 // TODO(fxbug.dev/82681): Make this API comply with the requirements in FIDL-at-rest.
-template <typename FidlType>
+template <typename Transport, typename FidlType>
 ::fidl::internal::EncodeResult EncodeIntoResult(FidlType& value) {
   static_assert(::fidl::IsFidlType<FidlType>::value, "Only FIDL types are supported");
-  const fidl_type_t* coding_table = TypeTraits<FidlType>::kCodingTable;
-  // Since a majority of the domain objects are HLCPP objects, for now
-  // the wire format version of the encoded message is the same as the one
-  // used in HLCPP.
-  ::fidl::internal::NaturalBodyEncoder encoder(fidl::internal::WireFormatVersion::kV2);
+  ::fidl::internal::NaturalBodyEncoder encoder(&Transport::VTable,
+                                               fidl::internal::WireFormatVersion::kV2);
   encoder.Alloc(::fidl::internal::NaturalEncodingInlineSize<FidlType, NaturalCodingConstraintEmpty>(
       &encoder));
   ::fidl::internal::NaturalCodingTraits<FidlType, NaturalCodingConstraintEmpty>::Encode(
       &encoder, &value, 0, kRecursionDepthInitial);
-  return EncodeResult(coding_table, std::move(encoder));
+  return EncodeResult(std::move(encoder));
 }
 
 }  // namespace internal

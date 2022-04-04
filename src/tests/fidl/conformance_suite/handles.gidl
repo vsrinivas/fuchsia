@@ -160,7 +160,7 @@ success("VectorOfHandles") {
 // has a constraint error.
 encode_failure("TooManyHandlesInVector") {
     // TODO(96626): Should close handles in some constraint violation cases.
-    bindings_denylist = [llcpp, hlcpp, go, rust, cpp, dart],
+    bindings_denylist = [llcpp, hlcpp, go, rust, dart],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -176,7 +176,7 @@ encode_failure("TooManyHandlesInVector") {
 // has a constraint error.
 encode_failure("UnrelatedConstraintErrorBeforeHandle") {
     // TODO(96626): Should close handles in some constraint violation cases.
-    bindings_denylist = [hlcpp, go, rust, cpp, dart],
+    bindings_denylist = [hlcpp, go, rust, dart],
     handle_defs = {
         #0 = event(),
     },

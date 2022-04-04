@@ -241,9 +241,6 @@ struct TransportVTable {
   void (*create_thread_checker)(async_dispatcher_t* dispatcher, ThreadingPolicy threading_policy,
                                 AnyThreadChecker& any_thread_checker);
 
-  // Close the handle.
-  void (*close)(fidl_handle_t);
-
   // Closes incoming/outgoing transport context contents.
   // Set to nullptr if no close function is needed.
   void (*close_incoming_transport_context)(void*);
@@ -340,7 +337,7 @@ class AnyTransport {
   }
   ~AnyTransport() {
     if (handle_ != FIDL_HANDLE_INVALID) {
-      vtable_->close(handle_);
+      vtable_->encoding_configuration->close(handle_);
     }
   }
 

@@ -56,3 +56,18 @@ protocol SendFdfChannelTest {
         h fdf.handle:CHANNEL;
     });
 };
+
+@transport("Driver")
+protocol OnErrorCloseHandlesTest {
+    // The first string member is used to trigger an encoding error.
+    SendZirconHandle(resource struct {
+        s string:1;
+        h zx.handle:CHANNEL;
+    });
+
+    // The first string member is used to trigger an encoding error.
+    SendDriverClientEnd(resource struct {
+        s string:1;
+        h client_end:OneWayTest;
+    });
+};

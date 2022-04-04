@@ -31,8 +31,11 @@ const TransportVTable ChannelTransport::VTable = {
 
 const CodingConfig ChannelTransport::EncodingConfiguration = {
     .max_iovecs_write = ZX_CHANNEL_MAX_MSG_IOVECS,
+    .handle_metadata_stride = sizeof(fidl_channel_handle_metadata_t),
     .encode_process_handle = channel_encode_process_handle,
     .decode_process_handle = channel_decode_process_handle,
+    .close = [](fidl_handle_t) {},
+    .close_many = [](const fidl_handle_t*, size_t num_handles) {},
 };
 
 }  // namespace fidl::internal

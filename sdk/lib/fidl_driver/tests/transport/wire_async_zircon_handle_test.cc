@@ -12,6 +12,7 @@
 
 #include <zxtest/zxtest.h>
 
+#include "sdk/lib/fidl_driver/tests/transport/assert_peer_closed_helper.h"
 #include "sdk/lib/fidl_driver/tests/transport/scoped_fake_driver.h"
 #include "sdk/lib/fidl_driver/tests/transport/server_on_unbound_helper.h"
 
@@ -64,6 +65,26 @@ TEST(DriverTransport, WireSendZirconHandleAsync) {
           });
 
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
+}
+
+TEST(DriverTransport, WireSendZirconHandleEncodeErrorShouldCloseHandle) {
+  fidl_driver_testing::ScopedFakeDriver driver;
+  zx::status dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED);
+  ASSERT_OK(dispatcher.status_value());
+  zx::status endpoints = fdf::CreateEndpoints<test_transport::OnErrorCloseHandlesTest>();
+  ASSERT_OK(endpoints.status_value());
+  zx::status arena = fdf::Arena::Create(0, "");
+  ASSERT_OK(arena.status_value());
+
+  fdf::WireSharedClient client(std::move(endpoints->client), dispatcher->get());
+
+  zx::channel c1, c2;
+  ASSERT_OK(zx::channel::create(0, &c1, &c2));
+
+  fidl::Status status = client.buffer(*arena)->SendZirconHandle("too long", std::move(c1));
+  ASSERT_FALSE(status.ok());
+  ASSERT_EQ(fidl::Reason::kEncodeError, status.reason());
+  ASSERT_NO_FAILURES(fidl_driver_testing::AssertPeerClosed(c2));
 }
 
 }  // namespace

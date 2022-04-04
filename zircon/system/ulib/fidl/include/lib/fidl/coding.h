@@ -146,6 +146,11 @@ struct CodingConfig {
   // Used to limit the number produced by encode_process_handle.
   uint32_t max_iovecs_write;
 
+  // In the handle metadata array, how many bytes does each element occupy.
+  // This field may be set to zero if |encode_process_handle| and
+  // |decode_process_handle| are both NULL.
+  uint32_t handle_metadata_stride;
+
   // Callback to process a single handle during encode.
   // |out_metadata_array| contains an array of transport-specific metadata being outputted.
   // |metadata_index| contains an index to a specific metadata item corresponding to the current
@@ -160,6 +165,12 @@ struct CodingConfig {
   zx_status_t (*decode_process_handle)(fidl_handle_t* handle, HandleAttributes attr,
                                        uint32_t metadata_index, const void* metadata_array,
                                        const char** error);
+
+  // Close the handle.
+  void (*close)(fidl_handle_t handle);
+
+  // Close many handles.
+  void (*close_many)(const fidl_handle_t* handles, size_t num_handles);
 };
 
 }  // namespace internal

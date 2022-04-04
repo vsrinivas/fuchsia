@@ -24,6 +24,8 @@ test("fidl_driver_transport_tests_bin") {
   output_name = "fidl_driver_transport_tests"
   sources = [
     "api_test.cc",
+    "assert_peer_closed_helper.cc",
+    "assert_peer_closed_helper.h",
     "client_test.cc",
     "death_test_helper.cc",
     "death_test_helper.h",

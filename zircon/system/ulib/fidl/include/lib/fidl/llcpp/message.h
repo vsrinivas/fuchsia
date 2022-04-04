@@ -92,11 +92,12 @@ class OutgoingMessage : public ::fidl::Status {
     const internal::TransportVTable* transport_vtable;
     zx_channel_iovec_t* iovecs;
     uint32_t iovec_capacity;
-    zx_handle_t* handles;
+    fidl_handle_t* handles;
     fidl_handle_metadata_t* handle_metadata;
     uint32_t handle_capacity;
     uint8_t* backing_buffer;
     uint32_t backing_buffer_capacity;
+    bool is_transactional;
   };
   // Creates an object which can manage a FIDL message.
   // |args.iovecs|, |args.handles| and |args.backing_buffer| contain undefined data that will be
@@ -110,7 +111,7 @@ class OutgoingMessage : public ::fidl::Status {
     const internal::TransportVTable* transport_vtable;
     uint8_t* bytes;
     uint32_t num_bytes;
-    zx_handle_t* handles;
+    fidl_handle_t* handles;
     fidl_handle_metadata_t* handle_metadata;
     uint32_t num_handles;
     bool is_transactional;

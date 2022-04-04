@@ -21,13 +21,14 @@ void fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>::
         ::fidl::ClientCallback<
             ::test_emptystruct::EmptyProtocol::SendAndReceive>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-                        ::test_emptystruct::EmptyProtocol::SendAndReceive>>::
-                        IntoDomainObject(std::move(request))),
+      _encoder.EncodeTransactionalMessage(
+          ::fidl::internal::NaturalMessageConverter<::fidl::Request<
+              ::test_emptystruct::EmptyProtocol::SendAndReceive>>::
+              IntoDomainObject(std::move(request))),
       ::fidl::internal::MakeResponseContext<
           ::test_emptystruct::EmptyProtocol::SendAndReceive>(
           ::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal,
@@ -37,11 +38,11 @@ void fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>::
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>::Send(
     ::fidl::Request<::test_emptystruct::EmptyProtocol::Send> request) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_emptystruct::kEmptyProtocol_Send_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_emptystruct::kEmptyProtocol_Send_Ordinal};
   ::fidl::Status status =
-      messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      messenger().OneWay(_encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>>::
               IntoDomainObject(std::move(request))));
@@ -85,10 +86,11 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalWeakEventSender<::test_emptystruct::EmptyProtocol>::Receive(
         ::test_emptystruct::EmptyProtocolReceiveRequest payload) {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_emptystruct::kEmptyProtocol_Receive_Ordinal};
-  auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload));
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_emptystruct::kEmptyProtocol_Receive_Ordinal};
+  auto encoded_message =
+      _encoder.EncodeTransactionalMessage(std::move(payload));
   ::fidl::Status result = _inner().SendEvent(encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
@@ -96,10 +98,11 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalEventSender<::test_emptystruct::EmptyProtocol>::Receive(
     ::test_emptystruct::EmptyProtocolReceiveRequest payload) {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_emptystruct::kEmptyProtocol_Receive_Ordinal};
-  auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload));
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_emptystruct::kEmptyProtocol_Receive_Ordinal};
+  auto encoded_message =
+      _encoder.EncodeTransactionalMessage(std::move(payload));
   encoded_message.Write(_transport());
   return ::fidl::internal::ToFitxResult(::fidl::Status{encoded_message});
 }
@@ -111,13 +114,14 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>&&
               response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal};
   _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-                        ::test_emptystruct::EmptyProtocol::SendAndReceive>>::
-                        IntoDomainObject(std::move(response))),
+      _encoder.EncodeTransactionalMessage(
+          ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+              ::test_emptystruct::EmptyProtocol::SendAndReceive>>::
+              IntoDomainObject(std::move(response))),
       ::fidl::internal::OutgoingTransportContext{});
 }
 

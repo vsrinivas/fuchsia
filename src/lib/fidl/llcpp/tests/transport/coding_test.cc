@@ -8,10 +8,13 @@
 
 #include <zxtest/zxtest.h>
 
+namespace {
+
 struct TestHandleMetadata {
   uint32_t metadata;
 };
 
+constexpr uint32_t kTestHandleValue = 123;
 constexpr uint32_t kTestMetadataValue = 456;
 
 zx_status_t encode_process_handle(fidl::internal::HandleAttributes attr, uint32_t metadata_index,
@@ -28,18 +31,31 @@ zx_status_t decode_process_handle(fidl_handle_t* handle, fidl::internal::HandleA
   return ZX_OK;
 }
 
+void close_handle(fidl_handle_t h) { ZX_ASSERT(h == kTestHandleValue); }
+
+void(close_handle_many)(const fidl_handle_t* handles, size_t num_handles) {
+  ZX_ASSERT(num_handles == 1);
+  close_handle(*handles);
+}
+
+}  // namespace
+
 struct TestTransport {
   using HandleMetadata = TestHandleMetadata;
   static constexpr const fidl::internal::CodingConfig EncodingConfiguration = {
       .max_iovecs_write = 256,
+      .handle_metadata_stride = sizeof(TestHandleMetadata),
       .encode_process_handle = encode_process_handle,
       .decode_process_handle = decode_process_handle,
+      .close = close_handle,
+      .close_many = close_handle_many,
   };
   static constexpr const fidl::internal::TransportVTable VTable = {
       .type = FIDL_TRANSPORT_TYPE_TEST,
       .encoding_configuration = &TestTransport::EncodingConfiguration,
   };
 };
+
 template <>
 struct fidl::internal::AssociatedTransportImpl<TestHandleMetadata> {
   using type = TestTransport;
@@ -86,7 +102,7 @@ template <>
 struct fidl::IsFidlObject<Input> : public std::true_type {};
 
 TEST(Coding, EncodedDecode) {
-  Input input{.h = 123};
+  Input input{.h = kTestHandleValue};
   fidl::unstable::OwnedEncodedMessage<Input, TestTransport> encoded(
       fidl::internal::WireFormatVersion::kV1, &input);
   ASSERT_OK(encoded.status());
@@ -100,5 +116,5 @@ TEST(Coding, EncodedDecode) {
       msg.handle_metadata<TestTransport>(), msg.handle_actual());
   ASSERT_OK(decoded.status());
 
-  ASSERT_EQ(123, decoded.PrimaryObject()->h);
+  ASSERT_EQ(kTestHandleValue, decoded.PrimaryObject()->h);
 }

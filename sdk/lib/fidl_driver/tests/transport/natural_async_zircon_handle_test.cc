@@ -13,6 +13,7 @@
 
 #include <zxtest/zxtest.h>
 
+#include "sdk/lib/fidl_driver/tests/transport/assert_peer_closed_helper.h"
 #include "sdk/lib/fidl_driver/tests/transport/scoped_fake_driver.h"
 #include "sdk/lib/fidl_driver/tests/transport/server_on_unbound_helper.h"
 
@@ -61,6 +62,27 @@ TEST(DriverTransport, NaturalSendZirconHandleAsync) {
       });
 
   ASSERT_OK(completion.Wait());
+}
+
+TEST(DriverTransport, NaturalSendZirconHandleEncodeErrorShouldCloseHandle) {
+  fidl_driver_testing::ScopedFakeDriver driver;
+  zx::status dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED);
+  ASSERT_OK(dispatcher.status_value());
+  zx::status endpoints = fdf::CreateEndpoints<test_transport::OnErrorCloseHandlesTest>();
+  ASSERT_OK(endpoints.status_value());
+
+  fdf::SharedClient client(std::move(endpoints->client), dispatcher->get());
+
+  zx::channel c1, c2;
+  ASSERT_OK(zx::channel::create(0, &c1, &c2));
+
+  fitx::result result = client->SendZirconHandle({{
+      .s = "too long",
+      .h = std::move(c1),
+  }});
+  ASSERT_FALSE(result.is_ok());
+  ASSERT_EQ(fidl::Reason::kEncodeError, result.error_value().reason());
+  ASSERT_NO_FAILURES(fidl_driver_testing::AssertPeerClosed(c2));
 }
 
 }  // namespace

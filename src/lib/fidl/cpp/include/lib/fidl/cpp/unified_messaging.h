@@ -6,8 +6,8 @@
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_UNIFIED_MESSAGING_H_
 
 #include <lib/fidl/cpp/internal/natural_client_base.h>
+#include <lib/fidl/cpp/internal/natural_message_encoder.h>
 #include <lib/fidl/cpp/internal/natural_types.h>
-#include <lib/fidl/cpp/natural_encoder.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging_declarations.h>
 #include <lib/fidl/llcpp/message.h>
@@ -95,33 +95,6 @@ static auto DecodeTransactionalMessage(::fidl::IncomingMessage&& message)
           ::fidl::Status::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorNotAllHandlesConsumed)));
     }
     return ::fitx::result<::fidl::Error>(::fitx::ok());
-  }
-}
-
-// Encode |payload| as part of a request/response message without validating.
-//
-// |encoder| must be initialized with a transactional header with the
-// appropriate method ordinal.
-//
-// To reducing branching in generated code, |payload| may be |std::nullopt|, in
-// which case the message will be encoded without a payload (header-only
-// messages).
-template <typename Transport, typename Payload = const cpp17::nullopt_t&>
-fidl::OutgoingMessage EncodeTransactionalMessage(
-    ::fidl::internal::NaturalMessageEncoder<Transport>& encoder,
-    Payload&& payload = cpp17::nullopt) {
-  // When the caller omits the |payload| argument, it will default to
-  // |cpp17::nullopt|, which is of type |cpp17::nullopt_t|.
-  constexpr bool kHasPayload = !std::is_same_v<cpp20::remove_cvref_t<Payload>, cpp17::nullopt_t>;
-  if constexpr (kHasPayload) {
-    encoder.Alloc(
-        ::fidl::internal::NaturalEncodingInlineSize<Payload, NaturalCodingConstraintEmpty>(
-            &encoder));
-    ::fidl::internal::NaturalCodingTraits<Payload, NaturalCodingConstraintEmpty>::Encode(
-        &encoder, &payload, sizeof(fidl_message_header_t), kRecursionDepthInitial);
-    return encoder.GetMessage(TypeTraits<Payload>::kCodingTable);
-  } else {
-    return encoder.GetMessage(nullptr);
   }
 }
 

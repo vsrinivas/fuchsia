@@ -13,10 +13,11 @@ namespace test_doccomments {
 }  // namespace test_doccomments
 ::fitx::result<::fidl::Error> fidl::internal::NaturalClientImpl<
     ::test_doccomments::Interface>::Method() const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_doccomments::kInterface_Method_Ordinal};
-  ::fidl::Status status = messenger().OneWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder));
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_doccomments::kInterface_Method_Ordinal};
+  ::fidl::Status status =
+      messenger().OneWay(_encoder.EncodeTransactionalMessage());
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_doccomments {
@@ -53,18 +54,20 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 
 ::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<
     ::test_doccomments::Interface>::OnEvent() {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_doccomments::kInterface_OnEvent_Ordinal};
-  auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(_encoder);
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_doccomments::kInterface_OnEvent_Ordinal};
+  auto encoded_message = _encoder.EncodeTransactionalMessage();
   ::fidl::Status result = _inner().SendEvent(encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
 
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalEventSender<::test_doccomments::Interface>::OnEvent() {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_doccomments::kInterface_OnEvent_Ordinal};
-  auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(_encoder);
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_doccomments::kInterface_OnEvent_Ordinal};
+  auto encoded_message = _encoder.EncodeTransactionalMessage();
   encoded_message.Write(_transport());
   return ::fidl::internal::ToFitxResult(::fidl::Status{encoded_message});
 }

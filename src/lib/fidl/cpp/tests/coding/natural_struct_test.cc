@@ -98,7 +98,8 @@ TEST(NaturalStruct, Encode) {
   obj.x() = 42;
 
   // Perform encoding.
-  fidl::internal::EncodeResult result = fidl::internal::EncodeIntoResult(obj);
+  fidl::internal::EncodeResult result =
+      fidl::internal::EncodeIntoResult<fidl::internal::ChannelTransport>(obj);
   ASSERT_TRUE(result.message().ok(), "Error encoding: %s",
               result.message().error().FormatDescription().c_str());
 
@@ -142,7 +143,8 @@ TEST(NaturalStructWithHandle, Encode) {
   obj.h() = std::move(event);
 
   // Perform encoding.
-  fidl::internal::EncodeResult result = fidl::internal::EncodeIntoResult(obj);
+  fidl::internal::EncodeResult result =
+      fidl::internal::EncodeIntoResult<fidl::internal::ChannelTransport>(obj);
   ASSERT_TRUE(result.message().ok(), "Error encoding: %s",
               result.message().error().FormatDescription().c_str());
   // Handles are moved.

@@ -12,11 +12,11 @@ namespace test_placementofattributes {
     NaturalClientImpl<::test_placementofattributes::ExampleProtocol>::Method(
         ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>
             request) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_placementofattributes::kExampleProtocol_Method_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_placementofattributes::kExampleProtocol_Method_Ordinal};
   ::fidl::Status status =
-      messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      messenger().OneWay(_encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<::fidl::Request<
               ::test_placementofattributes::ExampleProtocol::Method>>::
               IntoDomainObject(std::move(request))));

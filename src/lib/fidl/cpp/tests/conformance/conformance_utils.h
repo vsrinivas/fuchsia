@@ -43,7 +43,8 @@ inline zx_handle_t CreateEvent(zx_rights_t rights) {
 template <class Input>
 void ForgetHandles(fidl::internal::WireFormatVersion wire_format, Input input) {
   // Encode purely for the side effect of linearizing the handles.
-  fidl::internal::EncodeResult result = fidl::internal::EncodeIntoResult(input);
+  fidl::internal::EncodeResult result =
+      fidl::internal::EncodeIntoResult<fidl::internal::ChannelTransport>(input);
   result.message().ReleaseHandles();
 }
 
@@ -63,7 +64,8 @@ void EncodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
                    const std::vector<uint8_t>& expected_bytes,
                    const std::vector<zx_handle_disposition_t> expected_handles,
                    bool check_handle_rights) {
-  fidl::internal::EncodeResult result = fidl::internal::EncodeIntoResult(obj);
+  fidl::internal::EncodeResult result =
+      fidl::internal::EncodeIntoResult<fidl::internal::ChannelTransport>(obj);
   ASSERT_TRUE(result.message().ok(), "Error encoding: %s",
               result.message().error().FormatDescription().c_str());
 
@@ -111,7 +113,8 @@ void DecodeSuccess(fidl::internal::WireFormatVersion wire_format_version,
 
 template <typename FidlType>
 void EncodeFailure(fidl::internal::WireFormatVersion wire_format_version, FidlType& obj) {
-  fidl::internal::EncodeResult result = fidl::internal::EncodeIntoResult(obj);
+  fidl::internal::EncodeResult result =
+      fidl::internal::EncodeIntoResult<fidl::internal::ChannelTransport>(obj);
   ASSERT_FALSE(result.message().ok());
 }
 

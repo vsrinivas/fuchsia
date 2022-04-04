@@ -122,6 +122,9 @@ void channel_create_thread_checker(async_dispatcher_t* dispatcher, ThreadingPoli
 }
 
 void channel_close(fidl_handle_t handle) { zx_handle_close(handle); }
+void channel_close_many(const fidl_handle_t* handles, size_t num_handles) {
+  zx_handle_close_many(handles, num_handles);
+}
 
 }  // namespace
 
@@ -133,7 +136,6 @@ const TransportVTable ChannelTransport::VTable = {
     .call = channel_call,
     .create_waiter = channel_create_waiter,
     .create_thread_checker = channel_create_thread_checker,
-    .close = channel_close,
 };
 
 void ChannelWaiter::HandleWaitFinished(async_dispatcher_t* dispatcher, zx_status_t status,
@@ -181,8 +183,11 @@ zx_status_t channel_decode_process_handle(fidl_handle_t* handle, HandleAttribute
 
 const CodingConfig ChannelTransport::EncodingConfiguration = {
     .max_iovecs_write = ZX_CHANNEL_MAX_MSG_IOVECS,
+    .handle_metadata_stride = sizeof(fidl_channel_handle_metadata_t),
     .encode_process_handle = channel_encode_process_handle,
     .decode_process_handle = channel_decode_process_handle,
+    .close = channel_close,
+    .close_many = channel_close_many,
 };
 
 }  // namespace internal

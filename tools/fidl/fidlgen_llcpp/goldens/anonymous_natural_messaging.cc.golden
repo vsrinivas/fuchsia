@@ -13,11 +13,11 @@ void fidl::internal::NaturalClientImpl<::test_anonymous::SomeProtocol>::
         ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod> request,
         ::fidl::ClientCallback<::test_anonymous::SomeProtocol::SomeMethod>&&
             _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>>::
               IntoDomainObject(std::move(request))),
@@ -50,11 +50,11 @@ void fidl::internal::
         ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>&&
             response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
   _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>>::
               IntoDomainObject(std::move(response))),

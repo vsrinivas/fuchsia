@@ -34,7 +34,8 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
 
   while (state->KeepRunning()) {
     auto value = builder();
-    fidl::internal::EncodeResult encode_result = fidl::internal::EncodeIntoResult(value);
+    fidl::internal::EncodeResult encode_result =
+        fidl::internal::EncodeIntoResult<fidl::internal::ChannelTransport>(value);
     ZX_ASSERT(encode_result.message().ok());
 
     // Convert the outgoing message to incoming which is suitable for decoding.

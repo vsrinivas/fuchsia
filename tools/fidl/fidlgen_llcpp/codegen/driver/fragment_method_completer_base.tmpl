@@ -116,7 +116,8 @@ class {{ .NaturalCompleterBase }} : public ::fidl::CompleterBase {
 void {{ .NaturalCompleterBase.NoLeading }}::Reply(
     {{- template "Method:NaturalReplySignature:Helper" . }}) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::DriverTransport> _encoder{ {{ .OrdinalName }} };
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::DriverTransport::VTable, {{ .OrdinalName }} };
 
   auto _arena = fdf::Arena::Create(0, "");
   if (!_arena.is_ok()) {
@@ -127,9 +128,10 @@ void {{ .NaturalCompleterBase.NoLeading }}::Reply(
 
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena->get());
-  ::fidl::OutgoingMessage _msg = ::fidl::internal::EncodeTransactionalMessage(
-    _encoder {{- if .HasResponsePayload }},
-    {{ .NaturalResponseConverter }}::IntoDomainObject(std::move(response)){{ end }});
+  ::fidl::OutgoingMessage _msg = _encoder.EncodeTransactionalMessage(
+    {{- if .HasResponsePayload }}
+      {{ .NaturalResponseConverter }}::IntoDomainObject(std::move(response))
+    {{ end }});
   _messenger.SendReply(::fdf::internal::MoveToArena(_msg, *_arena), std::move(_context));
 }
 {{- end }}

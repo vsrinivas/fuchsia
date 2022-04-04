@@ -20,10 +20,11 @@ namespace test_protocolrequest {
 void fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::
     GetChild(::fidl::ClientCallback<::test_protocolrequest::Parent::GetChild>&&
                  _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocolrequest::kParent_GetChild_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocolrequest::kParent_GetChild_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder),
+      _encoder.EncodeTransactionalMessage(),
       ::fidl::internal::MakeResponseContext<
           ::test_protocolrequest::Parent::GetChild>(
           ::test_protocolrequest::kParent_GetChild_Ordinal,
@@ -34,10 +35,11 @@ void fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::
     GetChildRequest(::fidl::ClientCallback<
                     ::test_protocolrequest::Parent::GetChildRequest>&&
                         _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocolrequest::kParent_GetChildRequest_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocolrequest::kParent_GetChildRequest_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder),
+      _encoder.EncodeTransactionalMessage(),
       ::fidl::internal::MakeResponseContext<
           ::test_protocolrequest::Parent::GetChildRequest>(
           ::test_protocolrequest::kParent_GetChildRequest_Ordinal,
@@ -47,11 +49,11 @@ void fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::TakeChild(
     ::fidl::Request<::test_protocolrequest::Parent::TakeChild> request) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocolrequest::kParent_TakeChild_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocolrequest::kParent_TakeChild_Ordinal};
   ::fidl::Status status =
-      messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      messenger().OneWay(_encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Request<::test_protocolrequest::Parent::TakeChild>>::
               IntoDomainObject(std::move(request))));
@@ -62,13 +64,14 @@ fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::TakeChild(
     NaturalClientImpl<::test_protocolrequest::Parent>::TakeChildRequest(
         ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>
             request) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocolrequest::kParent_TakeChildRequest_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocolrequest::kParent_TakeChildRequest_Ordinal};
   ::fidl::Status status =
-      messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
-          _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-                        ::test_protocolrequest::Parent::TakeChildRequest>>::
-                        IntoDomainObject(std::move(request))));
+      messenger().OneWay(_encoder.EncodeTransactionalMessage(
+          ::fidl::internal::NaturalMessageConverter<::fidl::Request<
+              ::test_protocolrequest::Parent::TakeChildRequest>>::
+              IntoDomainObject(std::move(request))));
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_protocolrequest {
@@ -93,11 +96,11 @@ void fidl::internal::
     NaturalCompleterBase<::test_protocolrequest::Parent::GetChild>::Reply(
         ::fidl::Response<::test_protocolrequest::Parent::GetChild>&& response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocolrequest::kParent_GetChild_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocolrequest::kParent_GetChild_Ordinal};
   _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Response<::test_protocolrequest::Parent::GetChild>>::
               IntoDomainObject(std::move(response))),
@@ -109,13 +112,14 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>&&
               response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocolrequest::kParent_GetChildRequest_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocolrequest::kParent_GetChildRequest_Ordinal};
   _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-                        ::test_protocolrequest::Parent::GetChildRequest>>::
-                        IntoDomainObject(std::move(response))),
+      _encoder.EncodeTransactionalMessage(
+          ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+              ::test_protocolrequest::Parent::GetChildRequest>>::
+              IntoDomainObject(std::move(response))),
       ::fidl::internal::OutgoingTransportContext{});
 }
 

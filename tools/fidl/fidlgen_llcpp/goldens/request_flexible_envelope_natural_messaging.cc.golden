@@ -20,12 +20,12 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientCallback<::test_requestflexibleenvelope::Protocol::
                                    RequestStrictResponseFlexible>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_requestflexibleenvelope::
-                   kProtocol_RequestStrictResponseFlexible_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_requestflexibleenvelope::
+          kProtocol_RequestStrictResponseFlexible_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Request<::test_requestflexibleenvelope::Protocol::
                                   RequestStrictResponseFlexible>>::
@@ -47,12 +47,12 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientCallback<::test_requestflexibleenvelope::Protocol::
                                    RequestFlexibleResponseStrict>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_requestflexibleenvelope::
-                   kProtocol_RequestFlexibleResponseStrict_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_requestflexibleenvelope::
+          kProtocol_RequestFlexibleResponseStrict_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Request<::test_requestflexibleenvelope::Protocol::
                                   RequestFlexibleResponseStrict>>::
@@ -89,12 +89,12 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::fidl::Response<::test_requestflexibleenvelope::Protocol::
                                RequestStrictResponseFlexible>&& response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_requestflexibleenvelope::
-                   kProtocol_RequestStrictResponseFlexible_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_requestflexibleenvelope::
+          kProtocol_RequestStrictResponseFlexible_Ordinal};
   _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Response<::test_requestflexibleenvelope::Protocol::
                                    RequestStrictResponseFlexible>>::
@@ -107,12 +107,12 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::fidl::Response<::test_requestflexibleenvelope::Protocol::
                                RequestFlexibleResponseStrict>&& response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_requestflexibleenvelope::
-                   kProtocol_RequestFlexibleResponseStrict_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_requestflexibleenvelope::
+          kProtocol_RequestFlexibleResponseStrict_Ordinal};
   _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Response<::test_requestflexibleenvelope::Protocol::
                                    RequestFlexibleResponseStrict>>::

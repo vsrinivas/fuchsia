@@ -182,7 +182,7 @@ struct NaturalCodingTraits<::std::vector<T>, Constraint> {
     size_t count = value->size();
     if (count > Constraint::limit) {
       encoder->SetError(kCodingErrorVectorLimitExceeded);
-      return;
+      // Proceed to visit vector elements and collect handles to close.
     }
     if (recursion_depth + 1 > kRecursionDepthMax) {
       encoder->SetError(kCodingErrorRecursionDepthExceeded);

@@ -11,13 +11,14 @@ namespace test_inheritance {
 void fidl::internal::NaturalClientImpl<::test_inheritance::Super>::Foo(
     ::fidl::Request<::test_inheritance::Super::Foo> request,
     ::fidl::ClientCallback<::test_inheritance::Super::Foo>&& _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_inheritance::ksuper_foo_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_inheritance::ksuper_foo_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder, ::fidl::internal::NaturalMessageConverter<
-                        ::fidl::Request<::test_inheritance::Super::Foo>>::
-                        IntoDomainObject(std::move(request))),
+      _encoder.EncodeTransactionalMessage(
+          ::fidl::internal::NaturalMessageConverter<
+              ::fidl::Request<::test_inheritance::Super::Foo>>::
+              IntoDomainObject(std::move(request))),
       ::fidl::internal::MakeResponseContext<::test_inheritance::Super::Foo>(
           ::test_inheritance::ksuper_foo_Ordinal, std::move(_callback)));
 }
@@ -43,13 +44,14 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 void fidl::internal::NaturalCompleterBase<::test_inheritance::Super::Foo>::
     Reply(::fidl::Response<::test_inheritance::Super::Foo>&& response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_inheritance::ksuper_foo_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_inheritance::ksuper_foo_Ordinal};
   _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder, ::fidl::internal::NaturalMessageConverter<
-                        ::fidl::Response<::test_inheritance::Super::Foo>>::
-                        IntoDomainObject(std::move(response))),
+      _encoder.EncodeTransactionalMessage(
+          ::fidl::internal::NaturalMessageConverter<
+              ::fidl::Response<::test_inheritance::Super::Foo>>::
+              IntoDomainObject(std::move(response))),
       ::fidl::internal::OutgoingTransportContext{});
 }
 
@@ -109,13 +111,14 @@ namespace test_inheritance {
 void fidl::internal::NaturalClientImpl<::test_inheritance::Sub>::Foo(
     ::fidl::Request<::test_inheritance::Sub::Foo> request,
     ::fidl::ClientCallback<::test_inheritance::Sub::Foo>&& _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_inheritance::ksub_foo_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_inheritance::ksub_foo_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder, ::fidl::internal::NaturalMessageConverter<
-                        ::fidl::Request<::test_inheritance::Sub::Foo>>::
-                        IntoDomainObject(std::move(request))),
+      _encoder.EncodeTransactionalMessage(
+          ::fidl::internal::NaturalMessageConverter<
+              ::fidl::Request<::test_inheritance::Sub::Foo>>::
+              IntoDomainObject(std::move(request))),
       ::fidl::internal::MakeResponseContext<::test_inheritance::Sub::Foo>(
           ::test_inheritance::ksub_foo_Ordinal, std::move(_callback)));
 }
@@ -141,14 +144,14 @@ fidl::internal::NaturalEventDispatcher<::test_inheritance::Sub>::DispatchEvent(
 void fidl::internal::NaturalCompleterBase<::test_inheritance::Sub::Foo>::Reply(
     ::fidl::Response<::test_inheritance::Sub::Foo>&& response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_inheritance::ksub_foo_Ordinal};
-  _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder, ::fidl::internal::NaturalMessageConverter<
-                        ::fidl::Response<::test_inheritance::Sub::Foo>>::
-                        IntoDomainObject(std::move(response))),
-      ::fidl::internal::OutgoingTransportContext{});
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_inheritance::ksub_foo_Ordinal};
+  _messenger.SendReply(_encoder.EncodeTransactionalMessage(
+                           ::fidl::internal::NaturalMessageConverter<
+                               ::fidl::Response<::test_inheritance::Sub::Foo>>::
+                               IntoDomainObject(std::move(response))),
+                       ::fidl::internal::OutgoingTransportContext{});
 }
 
 #ifdef __Fuchsia__

@@ -6,6 +6,7 @@
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_INTERNAL_NATURAL_TYPES_H_
 
 #include <lib/fidl/cpp/natural_coding_traits.h>
+#include <lib/fidl/cpp/natural_encoder.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/wire_types.h>
 #include <lib/fitx/result.h>
@@ -27,6 +28,8 @@ namespace fidl {
 using Error = Status;
 
 namespace internal {
+
+class NaturalEncoder;
 
 template <typename Constraint, typename Field>
 void NaturalEnvelopeEncode(NaturalEncoder* encoder, Field* value, size_t offset,

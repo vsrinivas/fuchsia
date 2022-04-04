@@ -110,6 +110,7 @@ class WireFormatMetadata {
 
 }  // namespace internal
 }  // namespace fidl
+
 #endif
 
 __BEGIN_CDECLS

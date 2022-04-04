@@ -62,6 +62,9 @@ void socket_create_thread_checker(async_dispatcher_t* dispatcher, ThreadingPolic
 }
 
 void socket_close(fidl_handle_t handle) { zx_handle_close(handle); }
+void socket_close_many(const fidl_handle_t* handles, size_t num_handles) {
+  zx_handle_close_many(handles, num_handles);
+}
 
 }  // namespace
 
@@ -72,7 +75,6 @@ const TransportVTable SocketTransport::VTable = {
     .read = socket_read,
     .create_waiter = socket_create_waiter,
     .create_thread_checker = socket_create_thread_checker,
-    .close = socket_close,
 };
 
 void SocketWaiter::HandleWaitFinished(async_dispatcher_t* dispatcher, zx_status_t status,
@@ -96,6 +98,9 @@ void SocketWaiter::HandleWaitFinished(async_dispatcher_t* dispatcher, zx_status_
 
 const CodingConfig SocketTransport::EncodingConfiguration = {
     .max_iovecs_write = 1,
+    .handle_metadata_stride = 0,
+    .close = socket_close,
+    .close_many = socket_close_many,
 };
 
 }  // namespace internal

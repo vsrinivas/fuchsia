@@ -21,12 +21,12 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientCallback<::test_errorsyntax::ExampleUseOfErrorSyntax::
                                    ComposedCallWhichMayFail>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_errorsyntax::
-                   kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_errorsyntax::
+          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::
                                   ComposedCallWhichMayFail>>::
@@ -48,12 +48,11 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientCallback<
             ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&&
             _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_errorsyntax::
-                   kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<::fidl::Request<
               ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>::
               IntoDomainObject(std::move(request))),
@@ -87,12 +86,12 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::
                                ComposedCallWhichMayFail>&& response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_errorsyntax::
-                   kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_errorsyntax::
+          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
   _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<
               ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::
                                    ComposedCallWhichMayFail>>::
@@ -106,12 +105,11 @@ void fidl::internal::NaturalCompleterBase<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&&
               response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_errorsyntax::
-                   kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
   _messenger.SendReply(
-      ::fidl::internal::EncodeTransactionalMessage(
-          _encoder,
+      _encoder.EncodeTransactionalMessage(
           ::fidl::internal::NaturalMessageConverter<::fidl::Response<
               ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>::
               IntoDomainObject(std::move(response))),

@@ -9,6 +9,10 @@ namespace fdf::internal {
 const char* const kFailedToCreateDriverArena = "failed to create driver arena";
 
 fidl::OutgoingMessage MoveToArena(fidl::OutgoingMessage& message, const fdf::Arena& arena) {
+  if (!message.ok()) {
+    return fidl::OutgoingMessage(message.error());
+  }
+
   auto bytes = message.CopyBytes();
   void* bytes_on_arena = arena.Allocate(bytes.size());
   memcpy(bytes_on_arena, bytes.data(), bytes.size());
@@ -26,7 +30,7 @@ fidl::OutgoingMessage MoveToArena(fidl::OutgoingMessage& message, const fdf::Are
       .handles = static_cast<fidl_handle_t*>(handles_on_arena),
       .handle_metadata = nullptr,
       .num_handles = handle_actual,
-      .is_transactional = true,
+      .is_transactional = message.is_transactional(),
   };
   return fidl::OutgoingMessage::Create_InternalMayBreak(args);
 }

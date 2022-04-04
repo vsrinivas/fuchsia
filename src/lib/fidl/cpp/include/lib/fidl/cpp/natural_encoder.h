@@ -6,30 +6,22 @@
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_ENCODER_H_
 
 #include <lib/fidl/coding.h>
-#include <lib/fidl/cpp/natural_coding_errors.h>
 #include <lib/fidl/internal.h>
+#include <lib/fidl/llcpp/internal/transport.h>
 #include <lib/fidl/llcpp/message.h>
-
-#ifdef __Fuchsia__
-#include <lib/fidl/llcpp/internal/transport_channel.h>
-#else
-#include <lib/fidl/llcpp/internal/transport_channel_host.h>
-#endif  // __Fuchsia__
-
+#include <lib/stdcompat/span.h>
 #include <zircon/fidl.h>
 
-#include <atomic>
 #include <vector>
 
 namespace fidl::internal {
 
 class NaturalEncoder {
  public:
-  NaturalEncoder(const CodingConfig* coding_config, fidl_handle_t* handles,
-                 fidl_handle_metadata_t* handle_metadata, uint32_t handle_capacity);
-  NaturalEncoder(const CodingConfig* coding_config, fidl_handle_t* handles,
-                 fidl_handle_metadata_t* handle_metadata, uint32_t handle_capacity,
-                 internal::WireFormatVersion wire_format);
+  NaturalEncoder(const CodingConfig* coding_config, fidl_handle_metadata_t* handle_metadata,
+                 uint32_t handle_metadata_capacity);
+  NaturalEncoder(const CodingConfig* coding_config, fidl_handle_metadata_t* handle_metadata,
+                 uint32_t handle_metadata_capacity, internal::WireFormatVersion wire_format);
 
   NaturalEncoder(NaturalEncoder&&) noexcept = default;
   NaturalEncoder& operator=(NaturalEncoder&&) noexcept = default;
@@ -52,7 +44,7 @@ class NaturalEncoder {
 
   size_t CurrentLength() const { return bytes_.size(); }
 
-  size_t CurrentHandleCount() const { return handle_actual_; }
+  size_t CurrentHandleCount() const { return handles_.size(); }
 
   std::vector<uint8_t> TakeBytes() { return std::move(bytes_); }
 
@@ -68,90 +60,76 @@ class NaturalEncoder {
  protected:
   const CodingConfig* coding_config_;
   std::vector<uint8_t> bytes_;
-  fidl_handle_t* handles_;
+  std::vector<fidl_handle_t> handles_;
+
+  // When handle ownership is transferred to an |OutgoingMessage|, our class
+  // must no longer close those handles, but still need to keep their backing
+  // storage alive. This is done by moving the vector buffer to a second vector
+  // which does not close handles.
+  std::vector<fidl_handle_t> handles_staging_area_;
   fidl_handle_metadata_t* handle_metadata_;
-  uint32_t handle_capacity_;
-  uint32_t handle_actual_ = 0;
+  uint32_t handle_metadata_capacity_;
   internal::WireFormatVersion wire_format_ = internal::WireFormatVersion::kV2;
   zx_status_t status_ = ZX_OK;
   const char* error_ = nullptr;
 };
 
-// The NaturalMessageEncoder produces an |OutgoingMessage|, representing a transactional
-// message.
-template <typename Transport>
-class NaturalMessageEncoder final : public NaturalEncoder {
- public:
-  explicit NaturalMessageEncoder(uint64_t ordinal)
-      : NaturalEncoder(&Transport::EncodingConfiguration, handles_,
-                       reinterpret_cast<fidl_handle_metadata_t*>(handle_metadata_),
-                       ZX_CHANNEL_MAX_MSG_HANDLES) {
-    EncodeMessageHeader(ordinal);
-  }
-
-  NaturalMessageEncoder(NaturalMessageEncoder&&) noexcept = default;
-  NaturalMessageEncoder& operator=(NaturalMessageEncoder&&) noexcept = default;
-
-  ~NaturalMessageEncoder() = default;
-
-  fidl::OutgoingMessage GetMessage(const fidl_type_t* type) {
-    if (status_ != ZX_OK) {
-      return fidl::OutgoingMessage(fidl::Status::EncodeError(status_, error_));
-    }
-
-    return fidl::OutgoingMessage::Create_InternalMayBreak(
-        fidl::OutgoingMessage::InternalByteBackedConstructorArgs{
-            .transport_vtable = &Transport::VTable,
-            .bytes = bytes_.data(),
-            .num_bytes = static_cast<uint32_t>(bytes_.size()),
-            .handles = handles_,
-            .handle_metadata = reinterpret_cast<fidl_handle_metadata_t*>(handle_metadata_),
-            .num_handles = handle_actual_,
-            .is_transactional = true,
-        });
-  }
-
-  void Reset(uint64_t ordinal) {
-    bytes_.clear();
-    handle_actual_ = 0;
-    EncodeMessageHeader(ordinal);
-  }
-
- private:
-  fidl_handle_t handles_[ZX_CHANNEL_MAX_MSG_HANDLES];
-  typename Transport::HandleMetadata handle_metadata_[ZX_CHANNEL_MAX_MSG_HANDLES];
-  zx_handle_disposition_t handle_dispositions_[ZX_CHANNEL_MAX_MSG_HANDLES];
-
-  void EncodeMessageHeader(uint64_t ordinal) {
-    size_t offset = Alloc(sizeof(fidl_message_header_t));
-    fidl_message_header_t* header = GetPtr<fidl_message_header_t>(offset);
-    fidl_init_txn_header(header, 0, ordinal);
-    if (wire_format() == internal::WireFormatVersion::kV2) {
-      header->flags[0] |= FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2;
-    }
-  }
-};
-
-// The NaturalBodyEncoder produces an |OutgoingBody|, representing a transactional message
-// body.
+// The NaturalBodyEncoder produces an |OutgoingMessage|, representing an encoded
+// domain object (typically used as a transactional message body).
 class NaturalBodyEncoder final : public NaturalEncoder {
  public:
-  explicit NaturalBodyEncoder(internal::WireFormatVersion wire_format)
-      : NaturalEncoder(&fidl::internal::ChannelTransport::EncodingConfiguration, handles_,
-                       reinterpret_cast<fidl_handle_metadata_t*>(handle_metadata_),
-                       ZX_CHANNEL_MAX_MSG_HANDLES, wire_format) {}
+  NaturalBodyEncoder(const TransportVTable* vtable, internal::WireFormatVersion wire_format)
+      : NaturalEncoder(vtable->encoding_configuration, AllocateHandleMetadata(vtable),
+                       kHandleMetadataCapacity, wire_format),
+        vtable_(vtable) {}
 
-  NaturalBodyEncoder(NaturalBodyEncoder&&) noexcept = default;
-  NaturalBodyEncoder& operator=(NaturalBodyEncoder&&) noexcept = default;
+  NaturalBodyEncoder(NaturalBodyEncoder&& other) noexcept
+      : NaturalEncoder(std::move(static_cast<NaturalEncoder&>(other))) {
+    MoveImpl(std::move(other));
+  }
 
-  ~NaturalBodyEncoder() = default;
+  NaturalBodyEncoder& operator=(NaturalBodyEncoder&& other) noexcept {
+    if (this != &other) {
+      Reset();
+      NaturalEncoder::operator=(std::move(static_cast<NaturalEncoder&>(other)));
+      MoveImpl(std::move(other));
+    }
+    return *this;
+  }
 
-  fidl::OutgoingMessage GetBody(const fidl_type_t* type);
+  ~NaturalBodyEncoder();
+
+  // Return an outgoing message representing the encoded body.
+  // Handle ownership will be transferred to the outgoing message.
+  // Do not encode another value until the previous message is sent.
+  fidl::OutgoingMessage GetBody() &&;
+
+  // Free memory and close owned handles.
   void Reset();
 
  private:
-  fidl_handle_t handles_[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl_channel_handle_metadata_t handle_metadata_[ZX_CHANNEL_MAX_MSG_HANDLES];
+  static constexpr uint32_t kHandleMetadataCapacity = ZX_CHANNEL_MAX_MSG_HANDLES;
+
+  friend class NaturalMessageEncoder;
+
+  struct BodyView {
+    cpp20::span<uint8_t> bytes;
+    fidl_handle_t* handles;
+    fidl_handle_metadata_t* handle_metadata;
+    uint32_t num_handles;
+    const TransportVTable* vtable;
+  };
+
+  // Return a view representing the encoded body.
+  // Caller takes ownership of the handles.
+  // Do not encode another value until the previous message is sent.
+  fitx::result<fidl::Error, BodyView> GetBodyView() &&;
+
+  static fidl_handle_metadata_t* AllocateHandleMetadata(const TransportVTable* vtable);
+
+  void MoveImpl(NaturalBodyEncoder&& other);
+
+  const TransportVTable* vtable_;
 };
 
 }  // namespace fidl::internal

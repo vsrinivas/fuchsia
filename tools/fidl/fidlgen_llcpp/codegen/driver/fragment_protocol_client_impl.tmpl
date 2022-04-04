@@ -98,7 +98,8 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
 {{- EnsureNamespace "" }}
 void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
     {{- template "Method:ClientAsyncRequestArgumentsWithResult:Helper" . }}) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::DriverTransport> _encoder{ {{ .OrdinalName }} };
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::DriverTransport::VTable, {{ .OrdinalName }} };
 
   auto response_context = ::fidl::internal::MakeResponseContext<{{ .Marker }}>({{ .OrdinalName }}, std::move(_callback));
 
@@ -114,9 +115,10 @@ void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
     .outgoing_transport_context =
       ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena->get()),
   };
-  ::fidl::OutgoingMessage _msg = ::fidl::internal::EncodeTransactionalMessage(
-      _encoder {{- if .HasRequestPayload }},
-      {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request)){{ end }});
+  ::fidl::OutgoingMessage _msg = _encoder.EncodeTransactionalMessage(
+      {{- if .HasRequestPayload }}
+        {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request))
+      {{ end }});
   return messenger().TwoWay(
       ::fdf::internal::MoveToArena(_msg, *_arena),
       response_context,
@@ -132,7 +134,8 @@ void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
 ::fitx::result<::fidl::Error>
 {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
     {{- template "Method:ClientRequestArgumentsOneWay:Helper" . }}) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::DriverTransport> _encoder{ {{ .OrdinalName }} };
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::DriverTransport::VTable, {{ .OrdinalName }} };
 
   auto _arena = fdf::Arena::Create(0, "");
   if (!_arena.is_ok()) {
@@ -141,12 +144,13 @@ void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
   }
 
   ::fidl::WriteOptions _options = {
-    .outgoing_transport_context = 
+    .outgoing_transport_context =
       ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena->get()),
   };
-  ::fidl::OutgoingMessage _msg = ::fidl::internal::EncodeTransactionalMessage(
-      _encoder {{- if .HasRequestPayload }},
-      {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request)){{ end }});
+  ::fidl::OutgoingMessage _msg = _encoder.EncodeTransactionalMessage(
+      {{- if .HasRequestPayload }}
+        {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request))
+      {{ end }});
   ::fidl::Status status = messenger().OneWay(
       ::fdf::internal::MoveToArena(_msg, *_arena),
       std::move(_options));

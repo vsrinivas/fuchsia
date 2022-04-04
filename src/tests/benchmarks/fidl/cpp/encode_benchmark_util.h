@@ -31,7 +31,8 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
 
     state->NextStep();  // End: Setup. Begin: Encode.
 
-    fidl::internal::EncodeResult result = fidl::internal::EncodeIntoResult(value);
+    fidl::internal::EncodeResult result =
+        fidl::internal::EncodeIntoResult<fidl::internal::ChannelTransport>(value);
 
     state->NextStep();  // End: Encode. Begin: Teardown.
 

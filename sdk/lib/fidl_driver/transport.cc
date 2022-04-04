@@ -192,6 +192,12 @@ void driver_create_thread_checker(async_dispatcher_t* dispatcher, ThreadingPolic
 
 void driver_close(fidl_handle_t handle) { fdf_handle_close(handle); }
 
+void driver_close_many(const fidl_handle_t* handles, size_t num_handles) {
+  for (size_t i = 0; i < num_handles; i++) {
+    fdf_handle_close(handles[i]);
+  }
+}
+
 void driver_close_context(void* arena) { fdf_arena_destroy(static_cast<fdf_arena_t*>(arena)); }
 
 }  // namespace
@@ -204,7 +210,6 @@ const TransportVTable DriverTransport::VTable = {
     .call = driver_call,
     .create_waiter = driver_create_waiter,
     .create_thread_checker = driver_create_thread_checker,
-    .close = driver_close,
 
     // The arena in the incoming context is owned, while the arena in the outgoing context is
     // borrowed (and does not require a custom close function).
@@ -273,6 +278,9 @@ zx_status_t DriverWaiter::Cancel() {
 
 const CodingConfig DriverTransport::EncodingConfiguration = {
     .max_iovecs_write = 1,
+    .handle_metadata_stride = 0,
+    .close = driver_close,
+    .close_many = driver_close_many,
 };
 
 }  // namespace internal

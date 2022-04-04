@@ -81,7 +81,8 @@ TEST(NaturalResponsePayload, Encode) {
   response.res() = test_types::FooResponse{{.bar = 42}};
 
   // Perform encoding.
-  fidl::internal::EncodeResult result = fidl::internal::EncodeIntoResult(response);
+  fidl::internal::EncodeResult result =
+      fidl::internal::EncodeIntoResult<fidl::internal::ChannelTransport>(response);
   ASSERT_TRUE(result.message().ok(), "Error encoding: %s",
               result.message().error().FormatDescription().c_str());
 
@@ -126,7 +127,8 @@ TEST(NaturalResponseWithHandle, Encode) {
   response.result() = ::test_types::TestXUnion::WithH(std::move(event));
 
   // Perform encoding.
-  fidl::internal::EncodeResult result = fidl::internal::EncodeIntoResult(response);
+  fidl::internal::EncodeResult result =
+      fidl::internal::EncodeIntoResult<fidl::internal::ChannelTransport>(response);
   ASSERT_TRUE(result.message().ok(), "Error encoding: %s",
               result.message().error().FormatDescription().c_str());
   // Handles are moved.
