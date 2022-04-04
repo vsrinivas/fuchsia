@@ -4,7 +4,7 @@
     init_args: [],
     init_binary_path: "",
     init_environ: [],
-    init_user: "fuchsia:x:42:42",
+    init_user: "root:x:0:0",
     kernel_cmdline: "",
     mounts: [
         "/:remotefs",
