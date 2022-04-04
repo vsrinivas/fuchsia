@@ -130,10 +130,9 @@ you can expect to find along the way:
   <tr>
     <td><code>sdk</code></td>
     <td>
-      The <a href="/docs/development/idk/README.md">Integrators Development
-      Kit</a>, including the <a
-      href="https://fuchsia.dev/reference/fidl/">FIDL protocol
-      definitions</a> for Fuchsia services.
+      Contains the source of the Fuchsia platform APIs including the <a
+      href="https://fuchsia.dev/reference/fidl/">FIDL protocol definitions</a>
+      and the build targets use to create the Fuchsia SDK distribution archives.
     </td>
   </tr>
   <tr>
