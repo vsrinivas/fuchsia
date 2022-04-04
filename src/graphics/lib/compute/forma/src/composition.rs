@@ -28,6 +28,14 @@ const LINES_GARBAGE_THRESHOLD: usize = 2;
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct LayerId(usize);
 
+/// Internal ID use to track line data.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+struct CompositionId(u32);
+
+/// Per pixel segment ID used by the renderer to track order and properties.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+struct PixelSegmentId(u32);
+
 #[derive(Debug)]
 pub(crate) struct Layer {
     pub(crate) id: LayerId,
@@ -70,11 +78,11 @@ pub struct Composition {
     // initializing a new line buffer.
     builder: RefCell<Option<LinesBuilder>>,
     rasterizer: Rasterizer,
-    layers: FxHashMap<u32, Layer>,
-    layer_ids: IdSet,
-    external_count: usize,
-    external_to_internal: FxHashMap<LayerId, u32>,
-    orders_to_layers: FxHashMap<u32, u32>,
+    layers: FxHashMap<CompositionId, Layer>,
+    composition_ids: IdSet,
+    layer_id_count: usize,
+    layer_id_to_composition_id: FxHashMap<LayerId, CompositionId>,
+    pixel_segment_id_to_composition_id: FxHashMap<PixelSegmentId, CompositionId>,
     buffers_with_caches: Rc<RefCell<SmallBitSet>>,
 }
 
@@ -85,10 +93,10 @@ impl Composition {
             builder: RefCell::new(Some(LinesBuilder::new())),
             rasterizer: Rasterizer::new(),
             layers: FxHashMap::default(),
-            layer_ids: IdSet::new(),
-            external_count: 0,
-            external_to_internal: FxHashMap::default(),
-            orders_to_layers: FxHashMap::default(),
+            composition_ids: IdSet::new(),
+            layer_id_count: 0,
+            layer_id_to_composition_id: FxHashMap::default(),
+            pixel_segment_id_to_composition_id: FxHashMap::default(),
             buffers_with_caches: Rc::new(RefCell::new(SmallBitSet::default())),
         }
     }
@@ -98,31 +106,32 @@ impl Composition {
     }
 
     pub fn create_layer(&mut self) -> Option<layer::Layer<'_>> {
-        // Generate a new LayerId identifier.
+        // Generate a user-facing layer ID.
         let layer_id = {
-            let count = self.external_count;
-            LayerId(mem::replace(&mut self.external_count, count + 1))
+            let count = self.layer_id_count;
+            LayerId(mem::replace(&mut self.layer_id_count, count + 1))
         };
 
-        // Generate a new Surpass identifier.
-        let internal_id = self.layer_ids.acquire();
+        // Generate a composition ID used to track line data in LinesBuilder.
+        let id = self.composition_ids.acquire();
         // TODO(plabatut): Attempt to remove the duplicated call to `remove_disabled()`.
-        if internal_id.is_none() {
+        if id.is_none() {
             self.remove_disabled();
         }
-        let internal_id = internal_id.or_else(|| {
+        let id = id.or_else(|| {
             self.remove_disabled();
-            self.layer_ids.acquire()
+            self.composition_ids.acquire()
         })?;
+        let composition_id = CompositionId(id);
 
         assert!(
-            self.external_to_internal.insert(layer_id, internal_id).is_none(),
-            "internal error: no layer should have the same id as the new layer id"
+            self.layer_id_to_composition_id.insert(layer_id, composition_id).is_none(),
+            "CompositionId should already have been removed by self.remove_disabled"
         );
 
-        let layer = match self.layers.entry(internal_id) {
-            Entry::Occupied(_) => panic!(),
-            Entry::Vacant(entry) => entry.insert(Layer::new(layer_id, internal_id)),
+        let layer = match self.layers.entry(composition_id) {
+            Entry::Vacant(entry) => entry.insert(Layer::new(layer_id, composition_id.0)),
+            _ => unreachable!("Layer should already have been removed by self.remove_disabled"),
         };
 
         Some(layer::Layer { layer, lines_builder: &self.builder })
@@ -133,7 +142,7 @@ impl Composition {
         // TODO: remove with 2021 edition.
         let layers = &mut self.layers;
         let line_builder = &mut self.builder;
-        self.external_to_internal
+        self.layer_id_to_composition_id
             .get(&layer_id)
             .and_then(move |id| layers.get_mut(id))
             .and_then(move |layer| Some(layer::Layer { layer: layer, lines_builder: line_builder }))
@@ -146,31 +155,32 @@ impl Composition {
     }
 
     fn actual_len(&self) -> usize {
-        self.layers
-            .values()
-            .filter_map(|layer| if layer.inner.is_enabled { Some(layer.len) } else { None })
-            .sum()
+        self.layers.values().filter_map(|layer| layer.inner.is_enabled.then(|| layer.len)).sum()
     }
 
     #[inline]
     pub fn remove_disabled(&mut self) {
         if self.builder_len() >= self.actual_len() * LINES_GARBAGE_THRESHOLD {
             let layers = &mut self.layers;
-            self.builder.get_mut().as_mut().unwrap().retain(move |layer| {
-                layers.get(&layer).map(|layer| layer.inner.is_enabled).unwrap_or_default()
+            self.builder.get_mut().as_mut().unwrap().retain(move |id| {
+                layers
+                    .get(&CompositionId(id))
+                    .map(|layer| layer.inner.is_enabled)
+                    .unwrap_or_default()
             });
 
-            let layer_ids = &mut self.layer_ids;
-            self.layers.retain(|&layer_id, layer| {
+            let internal_ids = &mut self.composition_ids;
+            self.layers.retain(|&composition_id, layer| {
                 if !layer.inner.is_enabled {
-                    layer_ids.release(layer_id);
+                    internal_ids.release(composition_id.0);
                 }
 
                 layer.inner.is_enabled
             });
 
             let layers = &mut self.layers;
-            self.external_to_internal.retain(|_, id| layers.contains_key(id));
+            self.layer_id_to_composition_id
+                .retain(|_, composition_id| layers.contains_key(composition_id));
         }
     }
 
@@ -212,53 +222,55 @@ impl Composition {
 
         self.remove_disabled();
 
-        for (layer_id, layer) in &self.layers {
+        for (id, layer) in &self.layers {
             if layer.inner.is_enabled {
-                self.orders_to_layers.insert(
-                    layer.inner.order.expect("Layers should always have orders"),
-                    *layer_id,
+                self.pixel_segment_id_to_composition_id.insert(
+                    PixelSegmentId(layer.inner.order.expect("Layers should always have orders")),
+                    *id,
                 );
             }
         }
 
         let layers = &self.layers;
-        let orders_to_layers = &self.orders_to_layers;
+        let pixel_segment_id_to_composition_id = &self.pixel_segment_id_to_composition_id;
         let rasterizer = &mut self.rasterizer;
 
         struct CompositionContext<'l> {
-            layers: &'l FxHashMap<u32, Layer>,
-            orders_to_layers: &'l FxHashMap<u32, u32>,
+            layers: &'l FxHashMap<CompositionId, Layer>,
+            pixel_segment_id_to_composition_id: &'l FxHashMap<PixelSegmentId, CompositionId>,
             cache_id: Option<u8>,
         }
 
         impl LayerProps for CompositionContext<'_> {
             #[inline]
-            fn get(&self, layer_id: u32) -> Cow<'_, Props> {
-                let layer_id = self
-                    .orders_to_layers
-                    .get(&layer_id)
-                    .expect("orders_to_layers was not populated in Composition::render");
+            fn get(&self, id: u32) -> Cow<'_, Props> {
+                let composition_id = self
+                    .pixel_segment_id_to_composition_id
+                    .get(&PixelSegmentId(id))
+                    .expect("pixel_segment_id_to_composition_id was not populated in Composition::render");
                 Cow::Borrowed(
                     self.layers
-                        .get(layer_id)
+                        .get(composition_id)
                         .map(|layer| &layer.props)
-                        .expect("orders_to_layers points to non-existant Layer"),
+                        .expect("pixel_segment_id_to_composition_id points to non-existant Layer"),
                 )
             }
 
             #[inline]
-            fn is_unchanged(&self, layer_id: u32) -> bool {
+            fn is_unchanged(&self, id: u32) -> bool {
                 match self.cache_id {
                     None => false,
                     Some(cache_id) => {
-                        let layer_id = self
-                            .orders_to_layers
-                            .get(&layer_id)
-                            .expect("orders_to_layers was not populated in Composition::render");
+                        let composition_id = self
+                            .pixel_segment_id_to_composition_id
+                            .get(&PixelSegmentId(id))
+                            .expect("pixel_segment_id_to_composition_id was not populated in Composition::render");
                         self.layers
-                            .get(layer_id)
+                            .get(composition_id)
                             .map(|layer| layer.is_unchanged(cache_id))
-                            .expect("orders_to_layers points to non-existant Layer")
+                            .expect(
+                                "pixel_segment_id_to_composition_id points to non-existant Layer",
+                            )
                     }
                 }
             }
@@ -266,7 +278,7 @@ impl Composition {
 
         let context = CompositionContext {
             layers,
-            orders_to_layers,
+            pixel_segment_id_to_composition_id,
             cache_id: buffer.layer_cache.as_ref().map(|cache| cache.id),
         };
 
@@ -275,7 +287,7 @@ impl Composition {
         self.builder.replace({
             let lines = {
                 duration!("gfx", "LinesBuilder::build");
-                builder.build(|layer_id| layers.get(&layer_id).map(|layer| layer.inner.clone()))
+                builder.build(|id| layers.get(&CompositionId(id)).map(|layer| layer.inner.clone()))
             };
 
             {

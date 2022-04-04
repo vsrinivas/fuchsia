@@ -489,7 +489,7 @@ impl Primitives {
 
             (
                 (ExtendVec::new(&mut lines.x), ExtendVec::new(&mut lines.y)),
-                ExtendVec::new(&mut lines.layer_ids),
+                ExtendVec::new(&mut lines.ids),
             )
                 .par_extend(points);
         });
@@ -528,7 +528,7 @@ enum PathCommand {
 struct Lines {
     x: Vec<f32>,
     y: Vec<f32>,
-    layer_ids: Vec<Option<u32>>,
+    ids: Vec<Option<u32>>,
 }
 
 #[derive(Debug)]
@@ -638,8 +638,8 @@ impl Path {
         &self,
         x: &mut Vec<f32>,
         y: &mut Vec<f32>,
-        layer_id: u32,
-        layer_ids: &mut Vec<Option<u32>>,
+        id: u32,
+        ids: &mut Vec<Option<u32>>,
     ) {
         let mut inner = self.inner.borrow_mut();
 
@@ -655,19 +655,19 @@ impl Path {
                     .y
                     .par_iter()
                     .with_min_len(MIN_LEN)
-                    .zip(lines.layer_ids.par_iter().with_min_len(MIN_LEN)),
+                    .zip(lines.ids.par_iter().with_min_len(MIN_LEN)),
             )
-            .map(|(&x, (&y, id))| {
+            .map(|(&x, (&y, current_id))| {
                 let point = if let Some(transform) = &transform {
                     transform.transform(Point::new(x, y))
                 } else {
                     Point::new(x, y)
                 };
 
-                (point.x, point.y, id.map(|_| layer_id))
+                (point.x, point.y, current_id.map(|_| id))
             });
 
-        ExtendTuple3::new((x, y, layer_ids)).par_extend(iter);
+        ExtendTuple3::new((x, y, ids)).par_extend(iter);
     }
 
     #[inline]
@@ -1234,12 +1234,12 @@ mod tests {
 
         let lines = primitives.into_lines();
 
-        assert_eq!(lines.layer_ids.len(), 30);
+        assert_eq!(lines.ids.len(), 30);
 
-        assert_eq!(lines.layer_ids.iter().filter(|layer_id| layer_id.is_none()).count(), 2);
+        assert_eq!(lines.ids.iter().filter(|id| id.is_none()).count(), 2);
 
-        assert_eq!(lines.layer_ids[16], None);
-        assert_eq!(lines.layer_ids[29], None);
+        assert_eq!(lines.ids[16], None);
+        assert_eq!(lines.ids[29], None);
     }
 
     #[test]
@@ -1260,12 +1260,12 @@ mod tests {
 
         let lines = primitives.into_lines();
 
-        assert_eq!(lines.layer_ids.len(), 26);
+        assert_eq!(lines.ids.len(), 26);
 
-        assert_eq!(lines.layer_ids.iter().filter(|layer_id| layer_id.is_none()).count(), 2);
+        assert_eq!(lines.ids.iter().filter(|id| id.is_none()).count(), 2);
 
-        assert_eq!(lines.layer_ids[12], None);
-        assert_eq!(lines.layer_ids[25], None);
+        assert_eq!(lines.ids[12], None);
+        assert_eq!(lines.ids[25], None);
     }
 
     #[test]
@@ -1331,14 +1331,14 @@ mod tests {
 
         let mut x = Vec::new();
         let mut y = Vec::new();
-        let mut layer_ids = Vec::new();
+        let mut ids = Vec::new();
 
-        path.push_lines_to(&mut x, &mut y, 1, &mut layer_ids);
+        path.push_lines_to(&mut x, &mut y, 1, &mut ids);
 
         let orig_len = x.len();
 
-        assert_eq!(layer_ids[..layer_ids.len() - 1], vec![Some(1); layer_ids.len() - 1]);
-        assert_eq!(layer_ids[layer_ids.len() - 1], None);
+        assert_eq!(ids[..ids.len() - 1], vec![Some(1); ids.len() - 1]);
+        assert_eq!(ids[ids.len() - 1], None);
 
         for (&x, &y) in x.iter().zip(y.iter()) {
             assert!((Point::new(x, y).len() - radius).abs() <= 0.1);
@@ -1351,7 +1351,7 @@ mod tests {
         x.clear();
         y.clear();
 
-        translated_path.push_lines_to(&mut x, &mut y, 0, &mut layer_ids);
+        translated_path.push_lines_to(&mut x, &mut y, 0, &mut ids);
 
         for (&x, &y) in x.iter().zip(y.iter()) {
             assert!((Point::new(x - dx, y - dy).len() - radius).abs() <= 0.1);
@@ -1363,7 +1363,7 @@ mod tests {
         x.clear();
         y.clear();
 
-        scaled_path.push_lines_to(&mut x, &mut y, 0, &mut layer_ids);
+        scaled_path.push_lines_to(&mut x, &mut y, 0, &mut ids);
 
         for (&x, &y) in x.iter().zip(y.iter()) {
             assert!((Point::new(x, y).len() - s * radius).abs() <= 0.1);
@@ -1408,9 +1408,9 @@ mod tests {
 
         let mut x = Vec::new();
         let mut y = Vec::new();
-        let mut layer_ids = Vec::new();
+        let mut ids = Vec::new();
 
-        path.push_lines_to(&mut x, &mut y, 1, &mut layer_ids);
+        path.push_lines_to(&mut x, &mut y, 1, &mut ids);
 
         let mut points: Vec<_> = x.iter().zip(y.iter()).map(|(&x, &y)| Point::new(x, y)).collect();
         points.pop(); // Remove duplicate point.

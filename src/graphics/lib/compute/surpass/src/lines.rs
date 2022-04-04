@@ -44,42 +44,35 @@ impl LinesBuilder {
     #[allow(clippy::len_without_is_empty)]
     #[inline]
     pub fn len(&self) -> usize {
-        if self.lines.layer_ids.len() <= self.cached_until.get() {
+        if self.lines.ids.len() <= self.cached_until.get() {
             self.cached_len.get()
         } else {
             let new_len = self.cached_len.get()
-                + self.lines.layer_ids[self.cached_until.get()..]
+                + self.lines.ids[self.cached_until.get()..]
                     .iter()
-                    .filter(|layer_id| layer_id.is_some())
+                    .filter(|id| id.is_some())
                     .count();
 
             self.cached_len.set(new_len);
-            self.cached_until.set(self.lines.layer_ids.len());
+            self.cached_until.set(self.lines.ids.len());
 
             new_len
         }
     }
 
     #[inline]
-    pub fn push_path(&mut self, layer_id: u32, path: &Path) {
-        path.push_lines_to(
-            &mut self.lines.x,
-            &mut self.lines.y,
-            layer_id,
-            &mut self.lines.layer_ids,
-        );
+    pub fn push_path(&mut self, id: u32, path: &Path) {
+        path.push_lines_to(&mut self.lines.x, &mut self.lines.y, id, &mut self.lines.ids);
 
-        self.lines
-            .layer_ids
-            .resize(self.lines.x.len().checked_sub(1).unwrap_or_default(), Some(layer_id));
+        self.lines.ids.resize(self.lines.x.len().checked_sub(1).unwrap_or_default(), Some(id));
 
-        if self.lines.layer_ids.last().map(Option::is_some).unwrap_or_default() {
-            self.lines.layer_ids.push(None);
+        if self.lines.ids.last().map(Option::is_some).unwrap_or_default() {
+            self.lines.ids.push(None);
         }
     }
 
     #[cfg(test)]
-    pub fn push(&mut self, layer_id: u32, segment: [crate::Point; 2]) {
+    pub fn push(&mut self, id: u32, segment: [crate::Point; 2]) {
         let new_point_needed =
             if let (Some(&x), Some(&y)) = (self.lines.x.last(), self.lines.y.last()) {
                 let last_point = crate::Point { x, y };
@@ -97,21 +90,21 @@ impl LinesBuilder {
         self.lines.x.push(segment[1].x);
         self.lines.y.push(segment[1].y);
 
-        if self.lines.layer_ids.len() >= 2 {
-            match self.lines.layer_ids[self.lines.layer_ids.len() - 2] {
-                Some(last_layer_id) if last_layer_id != layer_id => {
-                    self.lines.layer_ids.push(Some(layer_id));
-                    self.lines.layer_ids.push(None);
+        if self.lines.ids.len() >= 2 {
+            match self.lines.ids[self.lines.ids.len() - 2] {
+                Some(last_id) if last_id != id => {
+                    self.lines.ids.push(Some(id));
+                    self.lines.ids.push(None);
                 }
                 _ => {
-                    self.lines.layer_ids.pop();
-                    self.lines.layer_ids.push(Some(layer_id));
-                    self.lines.layer_ids.push(None);
+                    self.lines.ids.pop();
+                    self.lines.ids.push(Some(id));
+                    self.lines.ids.push(None);
                 }
             }
         } else {
-            self.lines.layer_ids.push(Some(layer_id));
-            self.lines.layer_ids.push(None);
+            self.lines.ids.push(Some(id));
+            self.lines.ids.push(None);
         }
     }
 
@@ -121,18 +114,18 @@ impl LinesBuilder {
     {
         let len = self.lines.x.len();
         let mut del = 0;
-        let mut prev_layer_id = None;
+        let mut prev_id = None;
 
         for i in 0..len {
-            // `None` layer IDs will always belong to the previous layer ID.
-            // Thus, if a layer is removed here, its None will be removed as well.
+            // `None` IDs will always belong to the previous ID.
+            // Thus, if an ID is removed here, its None will be removed as well.
 
-            let layer_id = self.lines.layer_ids[i];
-            let should_retain = layer_id
-                .or(prev_layer_id)
+            let id = self.lines.ids[i];
+            let should_retain = id
+                .or(prev_id)
                 .map(&mut f)
-                .expect("consecutive None values should not exist in layer_ids");
-            prev_layer_id = layer_id;
+                .expect("consecutive None values should not exist in ids");
+            prev_id = id;
 
             if !should_retain {
                 del += 1;
@@ -142,14 +135,14 @@ impl LinesBuilder {
             if del > 0 {
                 self.lines.x.swap(i - del, i);
                 self.lines.y.swap(i - del, i);
-                self.lines.layer_ids.swap(i - del, i);
+                self.lines.ids.swap(i - del, i);
             }
         }
 
         if del > 0 {
             self.lines.x.truncate(len - del);
             self.lines.y.truncate(len - del);
-            self.lines.layer_ids.truncate(len - del);
+            self.lines.ids.truncate(len - del);
         }
     }
 
@@ -165,29 +158,28 @@ impl LinesBuilder {
         let transform = self.lines.transform;
         let ps_layers = self.lines.x.par_windows(2).with_min_len(MIN_LEN).zip_eq(
             self.lines.y.par_windows(2).with_min_len(MIN_LEN).zip_eq(
-                self.lines.layer_ids
-                    [..self.lines.layer_ids.len().checked_sub(1).unwrap_or_default()]
+                self.lines.ids[..self.lines.ids.len().checked_sub(1).unwrap_or_default()]
                     .par_iter()
                     .with_min_len(MIN_LEN),
             ),
         );
-        let par_iter = ps_layers.map(|(xs, (ys, &layer_id))| {
+        let par_iter = ps_layers.map(|(xs, (ys, &id))| {
             let p0x = xs[0];
             let p0y = ys[0];
             let p1x = xs[1];
             let p1y = ys[1];
 
-            if layer_id.is_none() {
+            if id.is_none() {
                 return Default::default();
             }
 
-            let layer = layer_id.map(&layers).unwrap_or_default();
+            let layer = id.map(&layers).unwrap_or_default();
 
             if let Some(Layer { is_enabled: false, .. }) = layer {
                 return Default::default();
             }
 
-            let order = match layer.as_ref().and_then(|layer| layer.order).or(layer_id) {
+            let order = match layer.as_ref().and_then(|layer| layer.order).or(id) {
                 Some(order) => order,
                 None => return Default::default(),
             };
@@ -279,7 +271,7 @@ pub struct Lines {
     pub x: Vec<f32>,
     pub y: Vec<f32>,
     transform: Option<[f32; 6]>,
-    pub layer_ids: Vec<Option<u32>>,
+    pub ids: Vec<Option<u32>>,
     pub orders: Vec<u32>,
     pub x0: Vec<f32>,
     pub y0: Vec<f32>,
