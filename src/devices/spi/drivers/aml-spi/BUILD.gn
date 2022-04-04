@@ -35,6 +35,7 @@ group("common") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxc",
   ]
 }

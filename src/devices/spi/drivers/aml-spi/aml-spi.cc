@@ -23,6 +23,7 @@
 #include <memory>
 
 #include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 
 #include "registers.h"
 #include "src/devices/spi/drivers/aml-spi/aml_spi_bind.h"
@@ -66,8 +67,7 @@ void AmlSpi::DumpState() {
 zx::status<cpp20::span<uint8_t>> AmlSpi::GetVmoSpan(uint32_t chip_select, uint32_t vmo_id,
                                                     uint64_t offset, uint64_t size,
                                                     uint32_t right) {
-  vmo_store::StoredVmo<OwnedVmoInfo>* const vmo_info =
-      chips_[chip_select].registered_vmos->GetVmo(vmo_id);
+  vmo_store::StoredVmo<OwnedVmoInfo>* const vmo_info = registered_vmos(chip_select)->GetVmo(vmo_id);
   if (!vmo_info) {
     return zx::error(ZX_ERR_NOT_FOUND);
   }
@@ -257,6 +257,8 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
     return ZX_ERR_INVALID_ARGS;
   }
 
+  fbl::AutoLock lock(&bus_lock_);
+
   SetThreadProfile();
 
   const size_t exchange_size = txdata_size ? txdata_size : rxdata_size;
@@ -284,7 +286,7 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
     IntReg::Get().FromValue(0).set_tcen(1).WriteTo(&mmio_);
   }
 
-  chips_[cs].gpio.Write(0);
+  gpio(cs).Write(0);
 
   // Only use 64-bit words if we will be able to reset the controller.
   if (reset_) {
@@ -295,7 +297,7 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
 
   IntReg::Get().FromValue(0).WriteTo(&mmio_);
 
-  chips_[cs].gpio.Write(1);
+  gpio(cs).Write(1);
 
   if (out_rxdata && out_rxdata_actual) {
     *out_rxdata_actual = rxdata_size;
@@ -330,7 +332,8 @@ zx_status_t AmlSpi::SpiImplRegisterVmo(uint32_t chip_select, uint32_t vmo_id, zx
     return status;
   }
 
-  return chips_[chip_select].registered_vmos->RegisterWithKey(vmo_id, std::move(stored_vmo));
+  fbl::AutoLock lock(&vmo_lock_);
+  return registered_vmos(chip_select)->RegisterWithKey(vmo_id, std::move(stored_vmo));
 }
 
 zx_status_t AmlSpi::SpiImplUnregisterVmo(uint32_t chip_select, uint32_t vmo_id, zx::vmo* out_vmo) {
@@ -338,8 +341,9 @@ zx_status_t AmlSpi::SpiImplUnregisterVmo(uint32_t chip_select, uint32_t vmo_id, 
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  vmo_store::StoredVmo<OwnedVmoInfo>* const vmo_info =
-      chips_[chip_select].registered_vmos->GetVmo(vmo_id);
+  fbl::AutoLock lock(&vmo_lock_);
+
+  vmo_store::StoredVmo<OwnedVmoInfo>* const vmo_info = registered_vmos(chip_select)->GetVmo(vmo_id);
   if (!vmo_info) {
     return ZX_ERR_NOT_FOUND;
   }
@@ -349,7 +353,7 @@ zx_status_t AmlSpi::SpiImplUnregisterVmo(uint32_t chip_select, uint32_t vmo_id, 
     return status;
   }
 
-  auto result = chips_[chip_select].registered_vmos->Unregister(vmo_id);
+  auto result = registered_vmos(chip_select)->Unregister(vmo_id);
   if (result.is_error()) {
     return result.status_value();
   }
@@ -359,7 +363,8 @@ zx_status_t AmlSpi::SpiImplUnregisterVmo(uint32_t chip_select, uint32_t vmo_id, 
 }
 
 void AmlSpi::SpiImplReleaseRegisteredVmos(uint32_t chip_select) {
-  chips_[chip_select].registered_vmos.emplace(vmo_store::Options{});
+  fbl::AutoLock lock(&vmo_lock_);
+  registered_vmos(chip_select).emplace(vmo_store::Options{});
 }
 
 zx_status_t AmlSpi::SpiImplTransmitVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
@@ -367,6 +372,8 @@ zx_status_t AmlSpi::SpiImplTransmitVmo(uint32_t chip_select, uint32_t vmo_id, ui
   if (chip_select >= SpiImplGetChipSelectCount()) {
     return ZX_ERR_OUT_OF_RANGE;
   }
+
+  fbl::AutoLock lock(&vmo_lock_);
 
   zx::status<cpp20::span<const uint8_t>> buffer =
       GetVmoSpan(chip_select, vmo_id, offset, size, SPI_VMO_RIGHT_READ);
@@ -383,6 +390,8 @@ zx_status_t AmlSpi::SpiImplReceiveVmo(uint32_t chip_select, uint32_t vmo_id, uin
     return ZX_ERR_OUT_OF_RANGE;
   }
 
+  fbl::AutoLock lock(&vmo_lock_);
+
   zx::status<cpp20::span<uint8_t>> buffer =
       GetVmoSpan(chip_select, vmo_id, offset, size, SPI_VMO_RIGHT_WRITE);
   if (buffer.is_error()) {
@@ -397,6 +406,8 @@ zx_status_t AmlSpi::SpiImplExchangeVmo(uint32_t chip_select, uint32_t tx_vmo_id,
   if (chip_select >= SpiImplGetChipSelectCount()) {
     return ZX_ERR_OUT_OF_RANGE;
   }
+
+  fbl::AutoLock lock(&vmo_lock_);
 
   zx::status<cpp20::span<uint8_t>> tx_buffer =
       GetVmoSpan(chip_select, tx_vmo_id, tx_offset, size, SPI_VMO_RIGHT_READ);
@@ -518,7 +529,10 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  spi->InitRegisters();
+  {
+    fbl::AutoLock lock(&spi->bus_lock_);
+    spi->InitRegisters();
+  }
 
   char devname[32];
   sprintf(devname, "aml-spi-%u", config.bus_id);

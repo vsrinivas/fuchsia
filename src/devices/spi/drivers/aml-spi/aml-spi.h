@@ -7,6 +7,7 @@
 #include <fuchsia/hardware/spiimpl/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/stdcompat/span.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/status.h>
 
@@ -14,6 +15,7 @@
 
 #include <ddktl/device.h>
 #include <fbl/array.h>
+#include <fbl/mutex.h>
 #include <soc/aml-common/aml-spi.h>
 
 #include "src/lib/vmo_store/vmo_store.h"
@@ -80,31 +82,45 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
         config_(config) {}
 
   static fbl::Array<ChipInfo> InitChips(amlspi_config_t* config, zx_device_t* device);
-  void DumpState();
+  void DumpState() TA_REQ(bus_lock_);
 
-  void Exchange8(const uint8_t* txdata, uint8_t* out_rxdata, size_t size);
-  void Exchange64(const uint8_t* txdata, uint8_t* out_rxdata, size_t size);
+  void Exchange8(const uint8_t* txdata, uint8_t* out_rxdata, size_t size) TA_REQ(bus_lock_);
+  void Exchange64(const uint8_t* txdata, uint8_t* out_rxdata, size_t size) TA_REQ(bus_lock_);
 
   void SetThreadProfile();
 
-  void WaitForTransferComplete();
+  void WaitForTransferComplete() TA_REQ(bus_lock_);
 
-  void InitRegisters();
+  void InitRegisters() TA_REQ(bus_lock_);
 
   // Checks size against the registered VMO size and returns a Span with offset applied. Returns a
   // Span with data set to nullptr if vmo_id wasn't found. Returns a Span with size set to zero if
   // offset and/or size are invalid.
   zx::status<cpp20::span<uint8_t>> GetVmoSpan(uint32_t chip_select, uint32_t vmo_id,
-                                              uint64_t offset, uint64_t size, uint32_t right);
+                                              uint64_t offset, uint64_t size, uint32_t right)
+      TA_REQ(vmo_lock_);
 
-  fdf::MmioBuffer mmio_;
+  // Shims to support thread annotations on ChipInfo members.
+  const ddk::GpioProtocolClient& gpio(uint32_t chip_select) TA_REQ(bus_lock_) {
+    return chips_[chip_select].gpio;
+  }
+
+  std::optional<SpiVmoStore>& registered_vmos(uint32_t chip_select) TA_REQ(vmo_lock_) {
+    return chips_[chip_select].registered_vmos;
+  }
+
+  fdf::MmioBuffer mmio_ TA_GUARDED(bus_lock_);
   fidl::WireSyncClient<fuchsia_hardware_registers::Device> reset_;
   const uint32_t reset_mask_;
-  fbl::Array<ChipInfo> chips_;
-  bool need_reset_ = false;
+  const fbl::Array<ChipInfo> chips_;
+  bool need_reset_ TA_GUARDED(bus_lock_) = false;
   zx::profile thread_profile_;
   zx::interrupt interrupt_;
   const amlspi_config_t config_;
+  // Protects mmio_ and need_reset_.
+  fbl::Mutex bus_lock_;
+  // Protects registered_vmos members of chips_.
+  fbl::Mutex vmo_lock_;
 };
 
 }  // namespace spi
