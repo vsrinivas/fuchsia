@@ -165,5 +165,42 @@ TEST_F(FileTest, NidAndBlkaddrAllocFree) {
   test_file_vn = nullptr;
 }
 
+TEST_F(FileTest, FileReadExceedFileSize) {
+  srand(testing::UnitTest::GetInstance()->random_seed());
+
+  fbl::RefPtr<fs::Vnode> test_file;
+  ASSERT_EQ(root_dir_->Create("test", S_IFREG, &test_file), ZX_OK);
+
+  fbl::RefPtr<VnodeF2fs> test_file_vn = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_file));
+  File *test_file_ptr = static_cast<File *>(test_file_vn.get());
+
+  uint32_t data_size = kPageSize * 7 / 4;
+  uint32_t read_location = kPageSize * 5 / 4;
+
+  char w_buf[data_size];
+  char r_buf[read_location + kPageSize];
+
+  for (size_t i = 0; i < data_size; ++i) {
+    w_buf[i] = static_cast<char>(rand() % 128);
+  }
+
+  // Write data
+  FileTester::AppendToFile(test_file_ptr, w_buf, data_size);
+  ASSERT_EQ(test_file_ptr->GetSize(), data_size);
+
+  size_t out;
+  // Read first part of file
+  ASSERT_EQ(test_file_ptr->Read(r_buf, read_location, 0, &out), ZX_OK);
+  ASSERT_EQ(out, read_location);
+  // Read excess file size, then check if actual read size does not exceed the end of file
+  ASSERT_EQ(test_file_ptr->Read(&(r_buf[read_location]), kPageSize, read_location, &out), ZX_OK);
+  ASSERT_EQ(out, data_size - read_location);
+
+  ASSERT_EQ(memcmp(r_buf, w_buf, data_size), 0);
+
+  ASSERT_EQ(test_file_vn->Close(), ZX_OK);
+  test_file_vn = nullptr;
+}
+
 }  // namespace
 }  // namespace f2fs

@@ -307,7 +307,6 @@ zx_status_t File::Read(void *data, size_t len, size_t off, size_t *out_actual) {
   size_t off_in_block = off % kBlockSize;
   size_t off_in_buf = 0;
   fbl::RefPtr<Page> data_page;
-  size_t left = len;
   uint64_t npages = (GetSize() + kBlockSize - 1) / kBlockSize;
 
   if (off >= GetSize()) {
@@ -318,6 +317,8 @@ zx_status_t File::Read(void *data, size_t len, size_t off, size_t *out_actual) {
   if (TestFlag(InodeInfoFlag::kInlineData)) {
     return ReadInline(data, len, off, out_actual);
   }
+
+  size_t left = std::min(len, GetSize() - off);
 
   for (pgoff_t n = blk_start; n <= blk_end; ++n) {
     bool is_empty_page = false;
@@ -331,10 +332,6 @@ zx_status_t File::Read(void *data, size_t len, size_t off, size_t *out_actual) {
     }
 
     size_t cur_len = std::min(static_cast<size_t>(kBlockSize - off_in_block), left);
-    if (n == npages - 1) {
-      if (GetSize() % kBlockSize > 0)
-        cur_len = std::min(cur_len, static_cast<size_t>(GetSize() % kBlockSize));
-    }
 
     if (is_empty_page) {
       memset(static_cast<char *>(data) + off_in_buf, 0, cur_len);

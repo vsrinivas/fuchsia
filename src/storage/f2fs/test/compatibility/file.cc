@@ -492,5 +492,50 @@ TEST_F(FileCompatibilityTest, FileRenameTestFuchsiaToHost) {
   }
 }
 
+TEST_F(FileCompatibilityTest, FileReadExceedFileSizeOnFuchsia) {
+  srand(testing::UnitTest::GetInstance()->random_seed());
+
+  constexpr uint32_t kDataSize = 7 * 1024;      // 7kb
+  constexpr uint32_t kReadLocation = 5 * 1024;  // 5kb
+
+  char w_buf[kDataSize];
+  for (size_t i = 0; i < kDataSize; ++i) {
+    w_buf[i] = static_cast<char>(rand() % 128);
+  }
+
+  // write on Host
+  {
+    host_operator_->Mkfs();
+    host_operator_->Mount();
+
+    auto umount = fit::defer([&] { host_operator_->Unmount(); });
+
+    host_operator_->Mkdir("/alpha", 0755);
+
+    auto bravo_file = host_operator_->Open("/alpha/bravo", O_RDWR | O_CREAT, 0644);
+    ASSERT_TRUE(bravo_file->is_valid());
+
+    ASSERT_EQ(bravo_file->Write(w_buf, sizeof(w_buf)), static_cast<ssize_t>(sizeof(w_buf)));
+  }
+
+  // verify on Fuchsia, with trying read excess file size
+  {
+    target_operator_->Fsck();
+    target_operator_->Mount();
+
+    auto umount = fit::defer([&] { target_operator_->Unmount(); });
+
+    auto bravo_file = target_operator_->Open("/alpha/bravo", O_RDWR, 0644);
+    ASSERT_TRUE(bravo_file->is_valid());
+
+    char r_buf[kReadLocation + kPageSize];
+    ASSERT_EQ(bravo_file->Read(r_buf, kReadLocation), static_cast<ssize_t>(kReadLocation));
+    ASSERT_EQ(bravo_file->Read(&(r_buf[kReadLocation]), kPageSize),
+              static_cast<ssize_t>(kDataSize - kReadLocation));
+
+    ASSERT_EQ(memcmp(r_buf, w_buf, kDataSize), 0);
+  }
+}
+
 }  // namespace
 }  // namespace f2fs

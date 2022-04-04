@@ -407,7 +407,7 @@ uint8_t *File::InlineDataPtr(Page *page) {
 }
 
 zx_status_t File::ReadInline(void *data, size_t len, size_t off, size_t *out_actual) {
-  fbl::RefPtr<Page> inline_page;
+  fbl::RefPtr<NodePage> inline_page;
   if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret != ZX_OK) {
     return ret;
   }
@@ -464,7 +464,7 @@ zx_status_t File::ConvertInlineData() {
 }
 
 zx_status_t File::WriteInline(const void *data, size_t len, size_t offset, size_t *out_actual) {
-  fbl::RefPtr<Page> inline_page;
+  fbl::RefPtr<NodePage> inline_page;
   if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret != ZX_OK) {
     return ret;
   }
@@ -490,7 +490,7 @@ zx_status_t File::WriteInline(const void *data, size_t len, size_t offset, size_
 }
 
 zx_status_t File::TruncateInline(size_t len) {
-  fbl::RefPtr<Page> inline_page;
+  fbl::RefPtr<NodePage> inline_page;
   if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret != ZX_OK) {
     return ret;
   }
