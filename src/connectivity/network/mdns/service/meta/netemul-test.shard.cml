@@ -101,12 +101,6 @@
             to: "#test-driver",
         },
         {
-            directory: "config-data",
-            from: "parent",
-            to: "#local-mdns",
-            subdir: "local-mdns",
-        },
-        {
             protocol: [
                 "fuchsia.net.interfaces.State",
                 "fuchsia.posix.socket.Provider",
@@ -138,12 +132,6 @@
             protocol: "fuchsia.net.mdns.Publisher",
             from: "#remote-mdns",
             to: "#publisher",
-        },
-        {
-            directory: "config-data",
-            from: "parent",
-            to: "#remote-mdns",
-            subdir: "remote-mdns",
         },
         {
             protocol: [
