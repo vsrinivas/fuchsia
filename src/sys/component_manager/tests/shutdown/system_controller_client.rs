@@ -7,7 +7,7 @@ use {
     tracing::error,
 };
 
-#[fuchsia::component(logging_tags = ["system_controller_consumer"])]
+#[fuchsia::main(logging_tags = ["system_controller_consumer"])]
 async fn main() -> Result<(), anyhow::Error> {
     let shutdown = component_client::connect_to_protocol::<fuchsia_sys2::SystemControllerMarker>()
         .expect("Failed to connect to fuchsia.sys2.SystemController");

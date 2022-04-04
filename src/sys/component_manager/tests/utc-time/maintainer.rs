@@ -21,7 +21,7 @@ const EXPECTED_BACKSTOP_TIME_NANOS: i64 = 1589910459000000000;
 /// Time to set in the UTC clock, as an offset above backstop time.
 const TEST_OFFSET: Duration = Duration::from_minutes(2);
 
-#[fuchsia::component(logging_minimum_severity = "warn")]
+#[fuchsia::main(logging_minimum_severity = "warn")]
 async fn main() {
     debug!("requesting fuchsia.time.Maintenance");
     let time_maintenance_proxy = client::connect_to_protocol::<ftime::MaintenanceMarker>().unwrap();

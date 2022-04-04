@@ -23,7 +23,7 @@ struct Account {
     balance: i64,
 }
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     let mut args = env::args().skip(1);
     let name = args.next().expect("name arg");

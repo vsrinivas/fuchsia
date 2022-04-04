@@ -44,7 +44,7 @@ lazy_static! {
         },);
 }
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     info!("started");
 

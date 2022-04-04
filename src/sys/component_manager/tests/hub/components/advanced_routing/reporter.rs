@@ -4,7 +4,7 @@
 
 use hub_report::*;
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     expect_dir_listing("/parent_hub/children", vec!["echo_server", "reporter"]).await;
 

@@ -8,7 +8,7 @@ use fuchsia_component::client;
 use fuchsia_zircon::{Rights, Signals};
 use tracing::*;
 
-#[fuchsia::component(logging_minimum_severity = "warn")]
+#[fuchsia::main(logging_minimum_severity = "warn")]
 async fn main() {
     let clock = fuchsia_runtime::duplicate_utc_clock_handle(Rights::READ | Rights::WAIT).unwrap();
     fasync::OnSignals::new(&clock, Signals::CLOCK_STARTED).await.unwrap();

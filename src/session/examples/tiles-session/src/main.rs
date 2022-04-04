@@ -48,7 +48,7 @@ struct RootView {
 // The maximum number of concurrent services to serve.
 const NUM_CONCURRENT_REQUESTS: usize = 5;
 
-#[fuchsia::component(logging = true)]
+#[fuchsia::main(logging = true)]
 async fn main() -> Result<(), Error> {
     let result = inner_main().await;
     if let Err(e) = result {
@@ -59,7 +59,7 @@ async fn main() -> Result<(), Error> {
 }
 
 // TODO(fxbug.dev/89425): Ideally we wouldn't need to have separate inner_main() and main()
-// functions in order to catch and log top-level errors.  Instead, the #[fuchsia::component] macro
+// functions in order to catch and log top-level errors.  Instead, the #[fuchsia::main] macro
 // could catch and log the error.
 async fn inner_main() -> Result<(), Error> {
     let (internal_sender, mut internal_receiver) =

@@ -47,7 +47,7 @@ enum IncomingService {
 // [END enum]
 
 // [START main]
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     // Initialize the outgoing services provided by this component
     let mut fs = ServiceFs::new_local();

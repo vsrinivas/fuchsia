@@ -7,7 +7,7 @@ use {
     fuchsia_zircon::AsHandleRef, tracing::*,
 };
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     info!("started");
 

@@ -6,7 +6,7 @@ use config_lib::Config;
 use fidl_fidl_examples_routing_echo::EchoMarker;
 use fuchsia_component::client::connect_to_protocol;
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     let Config { echo_string, echo_string_vector, echo_bool, echo_num } = Config::from_args();
 

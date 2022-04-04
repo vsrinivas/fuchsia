@@ -4,7 +4,7 @@
 
 use {futures::future::pending, tracing::info};
 
-#[fuchsia::component(logging_tags = ["simple_component"])]
+#[fuchsia::main(logging_tags = ["simple_component"])]
 /// Simple program that never terminates
 async fn main() {
     info!("Child created!");

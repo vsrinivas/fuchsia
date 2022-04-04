@@ -7,7 +7,7 @@ use {
     fuchsia_component::client::connect_to_protocol, hub_report::*,
 };
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     test_realm_protocol().await;
     test_lifecycle_controller_protocol().await;

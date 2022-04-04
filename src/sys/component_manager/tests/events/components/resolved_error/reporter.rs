@@ -12,7 +12,7 @@ use {
     fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at_dir_root},
 };
 
-#[fuchsia::component(logging_tags = ["resolveed_error_reporter"])]
+#[fuchsia::main(logging_tags = ["resolveed_error_reporter"])]
 async fn main() {
     // Track all the starting child components.
     let event_source = EventSource::new().unwrap();

@@ -9,7 +9,7 @@ use {
     fuchsia_zircon as zx, futures::StreamExt, tracing::*,
 };
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     info!("start");
 

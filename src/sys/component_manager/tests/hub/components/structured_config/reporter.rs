@@ -4,7 +4,7 @@
 
 use hub_report::*;
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     let config_path = "/hub/resolved/config";
 

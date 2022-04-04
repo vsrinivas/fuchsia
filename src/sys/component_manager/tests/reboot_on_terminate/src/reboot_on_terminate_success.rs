@@ -11,7 +11,7 @@ use {
     tracing::*,
 };
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     info!("start");
 

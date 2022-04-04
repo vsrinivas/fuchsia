@@ -7,7 +7,7 @@ use fuchsia_component::server::ServiceFs;
 use futures::StreamExt;
 use tracing::info;
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     // Retrieve config, recording it in the component's inspect
     let inspector = fuchsia_inspect::component::inspector();

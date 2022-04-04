@@ -42,7 +42,7 @@ async fn call_trigger(directory: &fio::DirectoryProxy, paths: &Vec<String>) {
 /// Those directories contain a `Trigger` service that should be accessible when opening the
 /// directory.
 /// It sends "Saw: /path/to/dir on /some_moniker" for each successful read.
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     let event_source = EventSource::new().unwrap();
     let mut event_stream =

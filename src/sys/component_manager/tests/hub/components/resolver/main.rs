@@ -4,7 +4,7 @@
 
 use hub_report::*;
 
-#[fuchsia::component(logging_tags = [ "resolver" ])]
+#[fuchsia::main(logging_tags = [ "resolver" ])]
 async fn main() {
     expect_dir_listing(
         "/hub/children/child_a",

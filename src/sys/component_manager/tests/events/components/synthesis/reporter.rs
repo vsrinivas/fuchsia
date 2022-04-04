@@ -14,7 +14,7 @@ use {
     tracing::*,
 };
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     let event_source = EventSource::new().unwrap();
     let mut event_stream =

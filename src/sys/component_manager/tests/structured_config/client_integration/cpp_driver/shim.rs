@@ -46,7 +46,7 @@ async fn connect_to_puppet(
     Ok(puppet)
 }
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> anyhow::Result<()> {
     // Create the RealmBuilder and start the driver.
     let builder = RealmBuilder::new().await?;

@@ -13,7 +13,7 @@ use {
     tracing::warn,
 };
 
-#[fuchsia::component]
+#[fuchsia::main]
 pub async fn main() -> Result<()> {
     // Create a Hub object
     let hub = Hub::from_namespace()?;

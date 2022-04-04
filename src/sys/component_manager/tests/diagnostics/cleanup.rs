@@ -9,7 +9,7 @@ use fidl_fuchsia_component_decl as fdecl;
 use fuchsia_component::client;
 use fuchsia_component_test::ScopedInstanceFactory;
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     let mut reader = ArchiveReader::new();
     reader.add_selector("<component_manager>:root");

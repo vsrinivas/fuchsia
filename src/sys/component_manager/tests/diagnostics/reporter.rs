@@ -16,7 +16,7 @@ async fn read_file<'a>(root_proxy: &'a fio::DirectoryProxy, path: &'a str) -> St
     res.expect("Unable to read file.")
 }
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     let data = ArchiveReader::new()
         .add_selector("<component_manager>:root")

@@ -17,7 +17,7 @@ use fuchsia_inspect::component;
 
 mod reverser;
 
-#[fuchsia::component(logging_tags = ["inspect_rust_codelab", "part2"])]
+#[fuchsia::main(logging_tags = ["inspect_rust_codelab", "part2"])]
 async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
 

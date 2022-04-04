@@ -7,7 +7,7 @@ use {
     fuchsia_component::client, fuchsia_zircon as zx, tracing::info,
 };
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     // The `echo` channel should be closed with an epitaph because routing failed (see
     // echo_realm.cml)

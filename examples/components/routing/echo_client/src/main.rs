@@ -10,7 +10,7 @@ use tracing;
 // [END imports]
 
 // [START main_body]
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), anyhow::Error> {
     // Parse arguments, removing binary name
     let mut args: Vec<String> = std::env::args().collect();

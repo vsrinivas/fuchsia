@@ -8,7 +8,7 @@ use {
     fuchsia_component::client::connect_to_protocol,
 };
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     // Track all the starting components.
     let event_source = EventSource::new().unwrap();

@@ -90,7 +90,7 @@ fn fizzbuzz(n: u32) -> String {
         .join(" ")
 }
 
-#[fuchsia::component(logging_tags = ["inspect_rust_codelab", "fizzbuzz"])]
+#[fuchsia::main(logging_tags = ["inspect_rust_codelab", "fizzbuzz"])]
 async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
 

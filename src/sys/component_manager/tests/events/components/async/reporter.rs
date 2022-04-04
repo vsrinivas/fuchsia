@@ -10,7 +10,7 @@ use {
     fuchsia_component_test::ScopedInstance,
 };
 
-#[fuchsia::component(logging_tags = ["async_reporter"])]
+#[fuchsia::main(logging_tags = ["async_reporter"])]
 async fn main() {
     // Track all the starting child components.
     let event_source = EventSource::new().unwrap();

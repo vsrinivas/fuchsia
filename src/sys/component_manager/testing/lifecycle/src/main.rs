@@ -13,7 +13,7 @@ use {
     tracing::{error, info},
 };
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     // Take the lifecycle handle provided by the runner
     match fruntime::take_startup_handle(HandleInfo::new(HandleType::Lifecycle, 0)) {

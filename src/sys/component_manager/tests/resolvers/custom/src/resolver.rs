@@ -153,7 +153,7 @@ fn build_decl() -> fmem::Data {
     )
 }
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let mut service_fs = ServiceFs::new_local();
     service_fs

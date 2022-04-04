@@ -30,7 +30,7 @@ enum IncomingService {
     // ... more services here
 }
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_unified_service(IncomingService::Svc);

@@ -18,7 +18,7 @@ enum IncomingRequest {
     Echo(fecho::EchoRequestStream),
 }
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     let echo = client::connect_to_protocol_at::<fecho::EchoMarker>("/svc_for_sys").unwrap();
     info!("call echo");

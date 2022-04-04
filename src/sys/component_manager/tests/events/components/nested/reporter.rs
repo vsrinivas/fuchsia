@@ -4,7 +4,7 @@
 
 use component_events::{events::EventSource, matcher::EventMatcher, sequence::*};
 
-#[fuchsia::component(logging_tags = ["nested_reporter"])]
+#[fuchsia::main(logging_tags = ["nested_reporter"])]
 async fn main() {
     // Track all the starting child components.
     let event_source = EventSource::new().unwrap();

@@ -7,7 +7,7 @@ use anyhow::{self, Error};
 use tracing;
 
 /// Creates a simple session that just prints "Hello World" to the syslog.
-#[fuchsia::component(logging = true)]
+#[fuchsia::main(logging = true)]
 async fn main() -> Result<(), Error> {
     tracing::info!("Hello World!");
 

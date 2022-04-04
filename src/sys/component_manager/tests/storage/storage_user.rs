@@ -4,7 +4,7 @@
 
 use std::fs::*;
 
-#[fuchsia::component]
+#[fuchsia::main]
 fn main() {
     // Write a file to the storage directory of this component
     let expected_content = "hippos_are_neat";

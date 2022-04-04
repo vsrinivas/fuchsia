@@ -21,7 +21,7 @@ use {
 /// lifecycle_timeout_unresponsive_integration_test can cause this component to
 /// start and get a failure to connect to a capability that this component says
 /// it provides, but actually does not.
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     // Spawn this in its own task so that we can run the ServiceFs below.
     fasync::Task::spawn(async move {

@@ -8,7 +8,7 @@ use {
 };
 
 /// Connects to the Trigger protocol, sends a request, and exits.
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     info!("Rendezvous starting");
     let trigger = component::connect_to_protocol::<test_protocol::TriggerMarker>()

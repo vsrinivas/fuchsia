@@ -8,7 +8,7 @@ use {
     session_manager_lib::session_manager::SessionManager, tracing::info,
 };
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let realm = connect_to_protocol::<fcomponent::RealmMarker>()?;
     // Start the startup session, if any, and serve services exposed by session manager.

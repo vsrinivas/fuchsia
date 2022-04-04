@@ -8,7 +8,7 @@ use {
     futures::{StreamExt, TryStreamExt},
 };
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {

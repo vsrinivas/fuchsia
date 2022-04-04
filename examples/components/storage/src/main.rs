@@ -26,7 +26,7 @@ lazy_static! {
     static ref INSPECTOR: Inspector = Inspector::new();
 }
 
-#[fuchsia::component(logging = true)]
+#[fuchsia::main(logging = true)]
 async fn main() -> Result<(), Error> {
     info!("Initializing and serving inspect on servicefs");
     let mut fs = ServiceFs::new();

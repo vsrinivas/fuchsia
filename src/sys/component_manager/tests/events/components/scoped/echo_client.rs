@@ -7,7 +7,7 @@ use {
     fuchsia_component::client::connect_to_protocol,
 };
 
-#[fuchsia::component(logging_tags = ["scoped_echo_client"])]
+#[fuchsia::main(logging_tags = ["scoped_echo_client"])]
 async fn main() {
     let echo = connect_to_protocol::<fecho::EchoMarker>().expect("error connecting to echo");
 

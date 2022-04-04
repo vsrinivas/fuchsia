@@ -35,7 +35,7 @@ fn usage() -> String {
     )
 }
 
-#[fuchsia::component(logging_tags = ["inspect_rust_codelab", "client"])]
+#[fuchsia::main(logging_tags = ["inspect_rust_codelab", "client"])]
 async fn main() -> Result<(), Error> {
     let args = Args::load().unwrap_or_else(|| {
         error!("Invalid args. {}", usage());

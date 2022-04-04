@@ -7,7 +7,7 @@ use fidl_fidl_examples_routing_echo::EchoMarker;
 use fuchsia_component::client::connect_to_protocol;
 use tracing;
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), anyhow::Error> {
     // Parse arguments, removing binary name
     let mut args: Vec<String> = std::env::args().collect();

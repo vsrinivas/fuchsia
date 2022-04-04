@@ -10,7 +10,7 @@ use futures::join;
 use futures::prelude::*;
 
 // [START main]
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let echo_launcher =
         connect_to_protocol::<EchoLauncherMarker>().context("Failed to connect to echo service")?;

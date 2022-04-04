@@ -13,7 +13,7 @@ use {
 /// Name of the collection that contains BankAccount service providers.
 const ACCOUNT_PROVIDERS_COLLECTION: &str = "account_providers";
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     // Create two BankAccount providers into the `account_providers` collection.
     // The providers are not eagerly started. The test should start them as needed.

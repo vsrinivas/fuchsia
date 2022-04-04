@@ -12,7 +12,7 @@ use {
     std::sync::{Arc, Mutex},
 };
 
-#[fuchsia::component(logging_tags = ["child_for_stress_test"])]
+#[fuchsia::main(logging_tags = ["child_for_stress_test"])]
 async fn main() -> Result<(), Error> {
     const URL: &str =
         "fuchsia-pkg://fuchsia.com/component-manager-stress-tests#meta/child-for-stress-test.cm";

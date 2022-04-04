@@ -5,7 +5,7 @@
 use fuchsia_component::server::ServiceFs;
 use futures::stream::StreamExt;
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     let mut fs = ServiceFs::new();
     fs.take_and_serve_directory_handle().expect("serve svc");

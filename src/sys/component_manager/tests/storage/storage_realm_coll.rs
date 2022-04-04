@@ -11,7 +11,7 @@ use {
     std::fs::{read_dir, DirEntry},
 };
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     // Create the dynamic child
     let realm = connect_to_protocol::<fcomponent::RealmMarker>().unwrap();

@@ -40,7 +40,7 @@ const ELEMENT_COLLECTION_NAME: &str = "elements";
 /// The maximum number of concurrent requests.
 const NUM_CONCURRENT_REQUESTS: usize = 5;
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let realm = connect_to_protocol::<fcomponent::RealmMarker>()
         .expect("Failed to connect to Realm service");

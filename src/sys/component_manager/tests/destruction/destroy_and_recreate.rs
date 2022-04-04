@@ -14,7 +14,7 @@ use {
     tracing::*,
 };
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     info!("Started collection realm");
     let realm = client::connect_to_protocol::<fcomponent::RealmMarker>()

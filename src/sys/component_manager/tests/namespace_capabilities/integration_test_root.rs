@@ -4,7 +4,7 @@
 
 use {fidl_fidl_test_components as ftest, fuchsia_component::client, tracing::*};
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     // This root component connects to the trigger.
     // The trigger checks all component-manager-namespace capabilities routed to it.

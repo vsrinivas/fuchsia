@@ -7,7 +7,7 @@ use tracing::info;
 // [END imports]
 
 // [START main]
-#[fuchsia::component(logging = true)]
+#[fuchsia::main(logging = true)]
 async fn main() -> Result<(), anyhow::Error> {
     // Read program arguments, and strip off binary name
     let mut args: Vec<String> = std::env::args().collect();

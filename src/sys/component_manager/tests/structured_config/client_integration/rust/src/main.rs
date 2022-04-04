@@ -13,7 +13,7 @@ enum IncomingRequest {
     Puppet(ConfigReceiverPuppetRequestStream),
 }
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     let mut fs = ServiceFs::new_local();
     let inspector = fuchsia_inspect::component::inspector();

@@ -10,7 +10,7 @@ use futures::prelude::*;
 // [END imports]
 
 // [START main]
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     // Connect to the Echo protocol, which is assumed to be in the component's environment
     let echo = connect_to_protocol::<EchoMarker>().context("Failed to connect to echo service")?;
