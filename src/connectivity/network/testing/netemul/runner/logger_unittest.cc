@@ -25,11 +25,11 @@ class LoggerTest : public gtest::TestWithEnvironmentFixture {
   fuchsia::sys::LaunchInfo MakeLoggerLaunchInfo() {
     fuchsia::sys::LaunchInfo ret;
     ret.url = kLoggerUrl;
-    // --consume-own-logs is necessary so that the archivist will shut down; without the flag
+    // --v1 consume-own-logs is necessary so that the archivist will shut down; without the flag
     // it will connect to the environment's LogSink which in this case is itself, which is
     // fine until it's time to shut down the archivist. At that point it still sees a live client,
     // itself.
-    ret.arguments = std::vector{std::string{"--consume-own-logs"}};
+    ret.arguments = std::vector{std::string{"--v1"}, std::string{"consume-own-logs"}};
     return ret;
   }
 

@@ -4,12 +4,8 @@
     ],
     "program": {
         "args": [
-            "--enable-component-event-provider",
-            "--enable-klog",
-            "--enable-log-connector",
-            "--install-controller",
-            "--config-path",
-            "/pkg/data/embedding-config.json"
+            "--v1",
+            "with-klog"
         ],
         "binary": "bin/archivist"
     },

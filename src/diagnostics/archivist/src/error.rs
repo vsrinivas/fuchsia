@@ -6,7 +6,6 @@ use crate::logs::error::LogsError;
 use fidl::prelude::*;
 use fidl_fuchsia_diagnostics::{self, BatchIteratorControlHandle};
 use fuchsia_zircon_status::Status as ZxStatus;
-use std::path::PathBuf;
 use thiserror::Error;
 use tracing::warn;
 
@@ -20,12 +19,6 @@ pub enum Error {
 
     #[error(transparent)]
     Inspect(#[from] fuchsia_inspect::Error),
-
-    #[error("Failed to parse config at path {0}")]
-    ParseConfig(PathBuf),
-
-    #[error("Failed to parse service config at path {0}")]
-    ParseServiceConfig(PathBuf),
 
     #[error("Encountered a diagnostics data repository node with more than one artifact container. {0:?}")]
     MultipleArtifactContainers(Vec<String>),

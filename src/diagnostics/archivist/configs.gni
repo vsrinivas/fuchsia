@@ -1,0 +1,47 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+default_config = {
+  bind_services = [
+    "fuchsia.component.DetectBinder",
+    "fuchsia.component.KcounterBinder",
+    "fuchsia.component.LogStatsBinder",
+    "fuchsia.component.PersistenceBinder",
+    "fuchsia.component.SamplerBinder",
+  ]
+  consume_own_logs = false
+  enable_component_event_provider = true
+  enable_event_source = true
+  enable_klog = true
+  enable_log_connector = true
+  install_controller = false
+  listen_to_lifecycle = true
+  log_to_debuglog = true
+  logs_max_cached_original_bytes = 4194304
+  num_threads = 4
+  pipelines_path = "/config/data"
+}
+
+embedded_config = {
+  forward_variables_from(default_config, "*")
+
+  bind_services = []
+  enable_component_event_provider = false
+  enable_klog = false
+  enable_log_connector = false
+  log_to_debuglog = false
+  num_threads = 1
+}
+
+no_detect_config = {
+  forward_variables_from(default_config, "*")
+
+  bind_services -= [ "fuchsia.component.DetectBinder" ]
+}
+
+no_service_config = {
+  forward_variables_from(default_config, "*")
+
+  bind_services = []
+}
