@@ -411,7 +411,8 @@ impl Task {
     // TODO(lindkvist): This should do a proper check for the capability in the namespace.
     // TODO(lindkvist): `capability` should be a type, just like we do for signals.
     pub fn has_capability(&self, _capability: u32) -> bool {
-        false
+        // TODO(qsr): For now, implements root has all capability.
+        self.creds.read().is_superuser()
     }
 
     pub fn can_signal(&self, target: &Task, unchecked_signal: &UncheckedSignal) -> bool {
@@ -938,5 +939,16 @@ mod test {
         assert_ne!(current_task.get_pid(), child_task.get_pid());
         assert_ne!(current_task.get_tid(), child_task.get_tid());
         assert_eq!(current_task.get_pid(), child_task.parent);
+    }
+
+    #[::fuchsia::test]
+    fn test_root_capabilities() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        *current_task.creds.write() =
+            Credentials::from_passwd("root:x:0:0").expect("Credentials::from_passwd");
+        assert!(current_task.has_capability(CAP_SYS_ADMIN));
+        *current_task.creds.write() =
+            Credentials::from_passwd("foo:x:1:1").expect("Credentials::from_passwd");
+        assert!(!current_task.has_capability(CAP_SYS_ADMIN));
     }
 }

@@ -1049,6 +1049,9 @@ mod tests {
     #[::fuchsia::test]
     fn test_kill_invalid_task() {
         let (_kernel, task1) = create_kernel_and_task();
+        // Task must not have the kill capability.
+        *task1.creds.write() =
+            Credentials::from_passwd("foo:x:1:1").expect("Credentials::from_passwd");
         let task2 = task1
             .clone_task(
                 0,
