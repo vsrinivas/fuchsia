@@ -8,13 +8,28 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/json_parser/json_parser.h"
 #include "src/virtualization/tests/guest_test.h"
+
+namespace {
 
 using testing::HasSubstr;
 
-static constexpr size_t kVirtioBalloonPageCount = 256;
-static constexpr size_t kVirtioConsoleMessageCount = 100;
-static constexpr char kVirtioRngUtil[] = "virtio_rng_test_util";
+constexpr size_t kVirtioBalloonPageCount = 256;
+constexpr size_t kVirtioConsoleMessageCount = 100;
+constexpr char kVirtioRngUtil[] = "virtio_rng_test_util";
+
+constexpr uint64_t kOneKibibyte = 1ul << 10;
+constexpr uint64_t kOneMebibyte = 1ul << 20;
+constexpr uint64_t kOneGibibyte = 1ul << 30;
+
+// Memory tests moderately increase the VM's guest memory above the default so that they can
+// validate that the guest memory is configurable.
+#if __aarch64__
+constexpr uint64_t kGuestMemoryForMemoryTests = kOneGibibyte + 512 * kOneMebibyte;
+#else
+constexpr uint64_t kGuestMemoryForMemoryTests = 4 * kOneGibibyte + 512 * kOneMebibyte;
+#endif
 
 template <class T>
 using CoreGuestTest = GuestTest<T>;
@@ -124,3 +139,64 @@ TYPED_TEST(CoreGuestTest, RealTimeClock) {
       << "Guest time (" << guest_timestamp << ") and host time (" << host_timestamp
       << ") differ by more than 5 minutes.";
 }
+
+template <typename T>
+class CustomizableMemoryGuest : public T {
+ public:
+  explicit CustomizableMemoryGuest(async::Loop& loop) : T(loop) {}
+
+  zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override {
+    zx_status_t status = T::LaunchInfo(url, cfg);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    cfg->set_guest_memory(kGuestMemoryForMemoryTests);
+
+    return ZX_OK;
+  }
+};
+
+using CustomizableMemoryDebianGuestTest = GuestTest<CustomizableMemoryGuest<DebianEnclosedGuest>>;
+TEST_F(CustomizableMemoryDebianGuestTest, DebianSystemMemoryConfigurable) {
+  std::string result;
+  ASSERT_EQ(this->Execute({"cat /proc/meminfo | grep MemTotal | awk '{print $2}'"}, {}, &result),
+            ZX_OK);
+
+  uint64_t system_memory = std::stoull(result) * kOneKibibyte;
+
+  // Linux doesn't report the actual amount of system memory via meminfo, and we don't
+  // currently emulate SMBIOS allowing us to use dmidecode. For now, we can just assume
+  // that the Linux kernel isn't taking up more than 300 mebibytes giving moderate
+  // confidence that this works.
+  uint64_t memory_leeway = 300 * kOneMebibyte;
+  EXPECT_THAT(system_memory + memory_leeway, ::testing::Gt(kGuestMemoryForMemoryTests));
+}
+
+using CustomizableMemoryZirconGuestTest = GuestTest<CustomizableMemoryGuest<ZirconEnclosedGuest>>;
+TEST_F(CustomizableMemoryZirconGuestTest, ZirconSystemMemoryConfigurable) {
+  std::string result;
+  ASSERT_EQ(this->Execute({"memgraph"}, {}, &result), ZX_OK);
+
+  json_parser::JSONParser parser;
+  rapidjson::Document memgraph = parser.ParseFromString(result, "memgraph");
+  ASSERT_FALSE(parser.HasError()) << parser.error_str();
+  ASSERT_TRUE(memgraph.IsArray());
+
+  uint64_t system_memory = 0;
+  std::string physmem("physmem");
+  for (auto& entry : memgraph.GetArray()) {
+    if (entry.HasMember("name") && entry["name"].GetString() == physmem) {
+      system_memory = entry["size_bytes"].GetUint64();
+    }
+  }
+
+  ASSERT_NE(0ul, system_memory) << "Couldn't find physmem entry in memgraph output";
+
+  // Zircon may or may not allow the first MiB to be used for as guest memory, so expect that
+  // reported memory is within one MiB of expected memory.
+  uint64_t memory_leeway = kOneMebibyte;
+  EXPECT_THAT(system_memory + memory_leeway, ::testing::Gt(kGuestMemoryForMemoryTests));
+}
+
+}  // namespace
