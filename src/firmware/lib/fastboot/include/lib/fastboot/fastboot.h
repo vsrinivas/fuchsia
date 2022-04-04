@@ -5,6 +5,7 @@
 #ifndef SRC_FIRMWARE_LIB_FASTBOOT_INCLUDE_LIB_FASTBOOT_FASTBOOT_H_
 #define SRC_FIRMWARE_LIB_FASTBOOT_INCLUDE_LIB_FASTBOOT_FASTBOOT_H_
 
+#include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.paver/cpp/wire.h>
 #include <lib/fzl/owned-vmo-mapper.h>
@@ -90,10 +91,13 @@ class __EXPORT Fastboot {
   zx::status<> Flash(const std::string &command, Transport *transport);
   zx::status<> SetActive(const std::string &command, Transport *transport);
   zx::status<> Reboot(const std::string &command, Transport *transport);
+  zx::status<> RebootBootloader(const std::string &command, Transport *transport);
   zx::status<> Continue(const std::string &command, Transport *transport);
 
   void ClearDownload();
   zx::status<fidl::WireSyncClient<fuchsia_paver::Paver>> ConnectToPaver();
+  zx::status<fidl::WireSyncClient<fuchsia_hardware_power_statecontrol::Admin>>
+  ConnectToPowerStateControl();
   zx::status<fidl::WireSyncClient<fuchsia_paver::BootManager>> FindBootManager();
   zx::status<> WriteFirmware(fuchsia_paver::wire::Configuration config,
                              std::string_view firmware_type, Transport *transport,

@@ -17,12 +17,12 @@ source_set("lib") {
   ]
   public_configs = [ ":include" ]
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_llcpp",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/zxc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_llcpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",

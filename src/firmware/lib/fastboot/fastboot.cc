@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
 #include <fidl/fuchsia.paver/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -138,6 +137,10 @@ const std::vector<Fastboot::CommandEntry>& Fastboot::GetCommandTable() {
       {
           .name = "continue",
           .cmd = &Fastboot::Continue,
+      },
+      {
+          .name = "reboot-bootloader",
+          .cmd = &Fastboot::RebootBootloader,
       },
   });
   return *kCommandTable;
@@ -475,7 +478,8 @@ zx::status<> Fastboot::SetActive(const std::string& command, Transport* transpor
   return SendResponse(ResponseType::kOkay, "", transport);
 }
 
-zx::status<> Fastboot::Reboot(const std::string& command, Transport* transport) {
+zx::status<fidl::WireSyncClient<fuchsia_hardware_power_statecontrol::Admin>>
+Fastboot::ConnectToPowerStateControl() {
   auto svc_root = GetSvcRoot();
   if (svc_root.is_error()) {
     return zx::error(svc_root.status_value());
@@ -483,6 +487,15 @@ zx::status<> Fastboot::Reboot(const std::string& command, Transport* transport) 
 
   auto connect_result =
       service::ConnectAt<fuchsia_hardware_power_statecontrol::Admin>(*svc_root.value());
+  if (connect_result.is_error()) {
+    return zx::error(connect_result.status_value());
+  }
+
+  return zx::ok(fidl::BindSyncClient(std::move(connect_result.value())));
+}
+
+zx::status<> Fastboot::Reboot(const std::string& command, Transport* transport) {
+  auto connect_result = ConnectToPowerStateControl();
   if (connect_result.is_error()) {
     return SendResponse(ResponseType::kFail,
                         "Failed to connect to power state control service: ", transport,
@@ -496,8 +509,8 @@ zx::status<> Fastboot::Reboot(const std::string& command, Transport* transport) 
     return ret;
   }
 
-  auto admin_client = fidl::BindSyncClient(std::move(connect_result.value()));
-  auto resp = admin_client->Reboot(fuchsia_hardware_power_statecontrol::RebootReason::kUserRequest);
+  auto resp = connect_result.value()->Reboot(
+      fuchsia_hardware_power_statecontrol::RebootReason::kUserRequest);
   if (!resp.ok()) {
     return zx::error(resp.status());
   }
@@ -513,6 +526,36 @@ zx::status<> Fastboot::Continue(const std::string& command, Transport* transport
   }
 
   return Reboot(command, transport);
+}
+
+zx::status<> Fastboot::RebootBootloader(const std::string& command, Transport* transport) {
+  zx::status<> ret = SendResponse(
+      ResponseType::kInfo,
+      "userspace fastboot cannot reboot to bootloader, rebooting to recovery instead", transport);
+  if (ret.is_error()) {
+    return ret;
+  }
+
+  auto connect_result = ConnectToPowerStateControl();
+  if (connect_result.is_error()) {
+    return SendResponse(ResponseType::kFail,
+                        "Failed to connect to power state control service: ", transport,
+                        zx::error(connect_result.status_value()));
+  }
+
+  // Send an okay response regardless of the result. Because once system reboots, we have
+  // no chance to send any response.
+  ret = SendResponse(ResponseType::kOkay, "", transport);
+  if (ret.is_error()) {
+    return ret;
+  }
+
+  auto resp = connect_result.value()->RebootToRecovery();
+  if (!resp.ok()) {
+    return zx::error(resp.status());
+  }
+
+  return zx::ok();
 }
 
 }  // namespace fastboot

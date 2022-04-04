@@ -610,6 +610,7 @@ class FastbootRebootTest : public zxtest::Test,
 
   fidl::ClientEnd<fuchsia_io::Directory>& svc_chan() { return svc_local_; }
   bool reboot_triggered() { return reboot_triggered_; }
+  bool reboot_recovery_triggered() { return reboot_recovery_triggered_; }
 
  private:
   void Reboot(RebootRequestView request, RebootCompleter::Sync& completer) override {
@@ -618,7 +619,11 @@ class FastbootRebootTest : public zxtest::Test,
   }
 
   void RebootToRecovery(RebootToRecoveryRequestView request,
-                        RebootToRecoveryCompleter::Sync& completer) override {}
+                        RebootToRecoveryCompleter::Sync& completer) override {
+    reboot_recovery_triggered_ = true;
+    completer.ReplySuccess();
+  }
+
   void PowerFullyOn(PowerFullyOnRequestView request,
                     PowerFullyOnCompleter::Sync& completer) override {}
   void RebootToBootloader(RebootToBootloaderRequestView request,
@@ -633,6 +638,7 @@ class FastbootRebootTest : public zxtest::Test,
   fidl::ClientEnd<fuchsia_io::Directory> svc_local_;
 
   bool reboot_triggered_ = false;
+  bool reboot_recovery_triggered_ = false;
 };
 
 TEST_F(FastbootRebootTest, Reboot) {
@@ -660,6 +666,20 @@ TEST_F(FastbootRebootTest, Continue) {
   ASSERT_EQ(transport.GetOutPackets().size(), 2ULL);
   ASSERT_EQ(transport.GetOutPackets().back(), "OKAY");
   ASSERT_TRUE(reboot_triggered());
+}
+
+TEST_F(FastbootRebootTest, RebootBootloader) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+  std::string command = "reboot-bootloader";
+  TestTransport transport;
+  transport.AddInPacket(command);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+
+  // One info message plus one OKAY message
+  ASSERT_EQ(transport.GetOutPackets().size(), 2ULL);
+  ASSERT_EQ(transport.GetOutPackets().back(), "OKAY");
+  ASSERT_TRUE(reboot_recovery_triggered());
 }
 
 }  // namespace
