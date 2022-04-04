@@ -208,7 +208,7 @@ protocol AudioCore {
         volume float32;
     });
 
-    /// Queries the decibal value that maps to a volume percentage [0, 1] for a particular `usage`.
+    /// Queries the decibel value that maps to a volume percentage [0, 1] for a particular `usage`.
     /// This is the same mapping as used by the VolumeControl from `BindUsageVolumeControl`.
     @transitional
     GetDbFromVolume(struct {
