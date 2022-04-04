@@ -24,7 +24,7 @@ void fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::
       ::test_union::
           kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal};
   return messenger().TwoWay(
-      _encoder.EncodeTransactionalMessage(),
+      _encoder.GetMessage(),
       ::fidl::internal::MakeResponseContext<
           ::test_union::TestProtocol::
               StrictXUnionHenceResponseMayBeStackAllocated>(
@@ -44,7 +44,7 @@ void fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::
       ::test_union::
           kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal};
   return messenger().TwoWay(
-      _encoder.EncodeTransactionalMessage(),
+      _encoder.GetMessage(),
       ::fidl::internal::MakeResponseContext<
           ::test_union::TestProtocol::
               FlexibleXUnionHenceResponseMustBeHeapAllocated>(
@@ -81,13 +81,13 @@ void fidl::internal::NaturalCompleterBase<
       &::fidl::internal::ChannelTransport::VTable,
       ::test_union::
           kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal};
-  _messenger.SendReply(
-      _encoder.EncodeTransactionalMessage(
-          ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-              ::test_union::TestProtocol::
-                  StrictXUnionHenceResponseMayBeStackAllocated>>::
-              IntoDomainObject(std::move(response))),
-      ::fidl::internal::OutgoingTransportContext{});
+  _encoder.EncodeBody(
+      ::fidl::internal::NaturalMessageConverter<
+          ::fidl::Response<::test_union::TestProtocol::
+                               StrictXUnionHenceResponseMayBeStackAllocated>>::
+          IntoDomainObject(std::move(response)));
+  _messenger.SendReply(_encoder.GetMessage(),
+                       ::fidl::internal::OutgoingTransportContext{});
 }
 
 void fidl::internal::NaturalCompleterBase<
@@ -101,13 +101,13 @@ void fidl::internal::NaturalCompleterBase<
       &::fidl::internal::ChannelTransport::VTable,
       ::test_union::
           kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal};
-  _messenger.SendReply(
-      _encoder.EncodeTransactionalMessage(
-          ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-              ::test_union::TestProtocol::
-                  FlexibleXUnionHenceResponseMustBeHeapAllocated>>::
-              IntoDomainObject(std::move(response))),
-      ::fidl::internal::OutgoingTransportContext{});
+  _encoder.EncodeBody(
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+          ::test_union::TestProtocol::
+              FlexibleXUnionHenceResponseMustBeHeapAllocated>>::
+          IntoDomainObject(std::move(response)));
+  _messenger.SendReply(_encoder.GetMessage(),
+                       ::fidl::internal::OutgoingTransportContext{});
 }
 
 #ifdef __Fuchsia__

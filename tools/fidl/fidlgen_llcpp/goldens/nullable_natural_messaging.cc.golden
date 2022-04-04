@@ -15,11 +15,11 @@ void fidl::internal::NaturalClientImpl<::test_nullable::SimpleProtocol>::Add(
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_nullable::kSimpleProtocol_Add_Ordinal};
+  _encoder.EncodeBody(::fidl::internal::NaturalMessageConverter<
+                      ::fidl::Request<::test_nullable::SimpleProtocol::Add>>::
+                          IntoDomainObject(std::move(request)));
   return messenger().TwoWay(
-      _encoder.EncodeTransactionalMessage(
-          ::fidl::internal::NaturalMessageConverter<
-              ::fidl::Request<::test_nullable::SimpleProtocol::Add>>::
-              IntoDomainObject(std::move(request))),
+      _encoder.GetMessage(),
       ::fidl::internal::MakeResponseContext<
           ::test_nullable::SimpleProtocol::Add>(
           ::test_nullable::kSimpleProtocol_Add_Ordinal, std::move(_callback)));
@@ -50,12 +50,11 @@ void fidl::internal::
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_nullable::kSimpleProtocol_Add_Ordinal};
-  _messenger.SendReply(
-      _encoder.EncodeTransactionalMessage(
-          ::fidl::internal::NaturalMessageConverter<
-              ::fidl::Response<::test_nullable::SimpleProtocol::Add>>::
-              IntoDomainObject(std::move(response))),
-      ::fidl::internal::OutgoingTransportContext{});
+  _encoder.EncodeBody(::fidl::internal::NaturalMessageConverter<
+                      ::fidl::Response<::test_nullable::SimpleProtocol::Add>>::
+                          IntoDomainObject(std::move(response)));
+  _messenger.SendReply(_encoder.GetMessage(),
+                       ::fidl::internal::OutgoingTransportContext{});
 }
 
 #ifdef __Fuchsia__

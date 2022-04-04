@@ -57,8 +57,7 @@ fidl::internal::NaturalClientImpl<::test_versions::Protocol>::Foo() const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_versions::kProtocol_Foo_Ordinal};
-  ::fidl::Status status =
-      messenger().OneWay(_encoder.EncodeTransactionalMessage());
+  ::fidl::Status status = messenger().OneWay(_encoder.GetMessage());
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_versions {

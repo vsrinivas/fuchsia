@@ -14,11 +14,11 @@ void fidl::internal::NaturalClientImpl<::test_error::Example>::Foo(
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_error::kExample_foo_Ordinal};
+  _encoder.EncodeBody(
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<
+          ::test_error::Example::Foo>>::IntoDomainObject(std::move(request)));
   return messenger().TwoWay(
-      _encoder.EncodeTransactionalMessage(
-          ::fidl::internal::NaturalMessageConverter<
-              ::fidl::Request<::test_error::Example::Foo>>::
-              IntoDomainObject(std::move(request))),
+      _encoder.GetMessage(),
       ::fidl::internal::MakeResponseContext<::test_error::Example::Foo>(
           ::test_error::kExample_foo_Ordinal, std::move(_callback)));
 }
@@ -47,10 +47,10 @@ void fidl::internal::NaturalCompleterBase<::test_error::Example::Foo>::Reply(
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_error::kExample_foo_Ordinal};
-  _messenger.SendReply(_encoder.EncodeTransactionalMessage(
-                           ::fidl::internal::NaturalMessageConverter<
-                               ::fidl::Response<::test_error::Example::Foo>>::
-                               IntoDomainObject(std::move(response))),
+  _encoder.EncodeBody(
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+          ::test_error::Example::Foo>>::IntoDomainObject(std::move(response)));
+  _messenger.SendReply(_encoder.GetMessage(),
                        ::fidl::internal::OutgoingTransportContext{});
 }
 

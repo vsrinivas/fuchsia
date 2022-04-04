@@ -17,7 +17,7 @@ void fidl::internal::
       &::fidl::internal::ChannelTransport::VTable,
       ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal};
   return messenger().TwoWay(
-      _encoder.EncodeTransactionalMessage(),
+      _encoder.GetMessage(),
       ::fidl::internal::MakeResponseContext<
           ::test_transitivedependenciescompose::Top::GetFoo>(
           ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal,
@@ -51,12 +51,12 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal};
-  _messenger.SendReply(
-      _encoder.EncodeTransactionalMessage(
-          ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-              ::test_transitivedependenciescompose::Top::GetFoo>>::
-              IntoDomainObject(std::move(response))),
-      ::fidl::internal::OutgoingTransportContext{});
+  _encoder.EncodeBody(
+      ::fidl::internal::NaturalMessageConverter<
+          ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo>>::
+          IntoDomainObject(std::move(response)));
+  _messenger.SendReply(_encoder.GetMessage(),
+                       ::fidl::internal::OutgoingTransportContext{});
 }
 
 #ifdef __Fuchsia__

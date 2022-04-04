@@ -128,10 +128,11 @@ void {{ .NaturalCompleterBase.NoLeading }}::Reply(
 
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena->get());
-  ::fidl::OutgoingMessage _msg = _encoder.EncodeTransactionalMessage(
-    {{- if .HasResponsePayload }}
-      {{ .NaturalResponseConverter }}::IntoDomainObject(std::move(response))
-    {{ end }});
+  {{- if .HasResponsePayload }}
+  _encoder.EncodeBody(
+      {{ .NaturalResponseConverter }}::IntoDomainObject(std::move(response)));
+  {{- end }}
+  ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   _messenger.SendReply(::fdf::internal::MoveToArena(_msg, *_arena), std::move(_context));
 }
 {{- end }}

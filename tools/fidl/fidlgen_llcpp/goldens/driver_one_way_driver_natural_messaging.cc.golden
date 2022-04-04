@@ -22,10 +22,10 @@ fidl::internal::NaturalClientImpl<::test_driveroneway::OneWay>::Send(
           ::fidl::internal::OutgoingTransportContext::Create<
               ::fidl::internal::DriverTransport>(_arena->get()),
   };
-  ::fidl::OutgoingMessage _msg = _encoder.EncodeTransactionalMessage(
-      ::fidl::internal::NaturalMessageConverter<
-          ::fidl::Request<::test_driveroneway::OneWay::Send>>::
-          IntoDomainObject(std::move(request)));
+  _encoder.EncodeBody(::fidl::internal::NaturalMessageConverter<
+                      ::fidl::Request<::test_driveroneway::OneWay::Send>>::
+                          IntoDomainObject(std::move(request)));
+  ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::Status status = messenger().OneWay(
       ::fdf::internal::MoveToArena(_msg, *_arena), std::move(_options));
   return ::fidl::internal::ToFitxResult(status);

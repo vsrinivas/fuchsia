@@ -30,10 +30,10 @@ void fidl::internal::NaturalClientImpl<::test_drivertwoway::TwoWay>::Add(
           ::fidl::internal::OutgoingTransportContext::Create<
               ::fidl::internal::DriverTransport>(_arena->get()),
   };
-  ::fidl::OutgoingMessage _msg = _encoder.EncodeTransactionalMessage(
-      ::fidl::internal::NaturalMessageConverter<
-          ::fidl::Request<::test_drivertwoway::TwoWay::Add>>::
-          IntoDomainObject(std::move(request)));
+  _encoder.EncodeBody(::fidl::internal::NaturalMessageConverter<
+                      ::fidl::Request<::test_drivertwoway::TwoWay::Add>>::
+                          IntoDomainObject(std::move(request)));
+  ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   return messenger().TwoWay(::fdf::internal::MoveToArena(_msg, *_arena),
                             response_context, std::move(_options));
 }
@@ -69,10 +69,10 @@ void fidl::internal::NaturalCompleterBase<::test_drivertwoway::TwoWay::Add>::
   ::fidl::internal::OutgoingTransportContext _context =
       ::fidl::internal::OutgoingTransportContext::Create<
           ::fidl::internal::DriverTransport>(_arena->get());
-  ::fidl::OutgoingMessage _msg = _encoder.EncodeTransactionalMessage(
-      ::fidl::internal::NaturalMessageConverter<
-          ::fidl::Response<::test_drivertwoway::TwoWay::Add>>::
-          IntoDomainObject(std::move(response)));
+  _encoder.EncodeBody(::fidl::internal::NaturalMessageConverter<
+                      ::fidl::Response<::test_drivertwoway::TwoWay::Add>>::
+                          IntoDomainObject(std::move(response)));
+  ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   _messenger.SendReply(::fdf::internal::MoveToArena(_msg, *_arena),
                        std::move(_context));
 }

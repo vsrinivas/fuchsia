@@ -162,10 +162,12 @@ void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
     {{- template "Method:ClientAsyncRequestArgumentsWithResult:Helper" . }}) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }} };
-  return messenger().TwoWay(_encoder.EncodeTransactionalMessage(
-        {{- if .HasRequestPayload }}
-          {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request))
-        {{ end }}),
+  {{- if .HasRequestPayload }}
+  _encoder.EncodeBody(
+      {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request)));
+  {{- end }}
+  return messenger().TwoWay(
+      _encoder.GetMessage(),
       ::fidl::internal::MakeResponseContext<{{ .Marker }}>({{ .OrdinalName }}, std::move(_callback))
   );
 }
@@ -180,10 +182,11 @@ void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
     {{- template "Method:ClientRequestArgumentsOneWay:Helper" . }}) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }} };
-  ::fidl::Status status = messenger().OneWay(_encoder.EncodeTransactionalMessage(
-      {{- if .HasRequestPayload }}
-        {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request))
-      {{ end }}));
+  {{- if .HasRequestPayload }}
+  _encoder.EncodeBody(
+      {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request)));
+  {{ end }}
+  ::fidl::Status status = messenger().OneWay(_encoder.GetMessage());
   return ::fidl::internal::ToFitxResult(status);
 }
 {{ end }}

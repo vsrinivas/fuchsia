@@ -15,11 +15,12 @@ namespace test_inheritancewithrecursivedecl {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_inheritancewithrecursivedecl::kParent_First_Ordinal};
-  ::fidl::Status status =
-      messenger().OneWay(_encoder.EncodeTransactionalMessage(
-          ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-              ::test_inheritancewithrecursivedecl::Parent::First>>::
-              IntoDomainObject(std::move(request))));
+  _encoder.EncodeBody(
+      ::fidl::internal::NaturalMessageConverter<
+          ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>>::
+          IntoDomainObject(std::move(request)));
+
+  ::fidl::Status status = messenger().OneWay(_encoder.GetMessage());
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_inheritancewithrecursivedecl {
@@ -111,11 +112,12 @@ namespace test_inheritancewithrecursivedecl {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_inheritancewithrecursivedecl::kChild_First_Ordinal};
-  ::fidl::Status status =
-      messenger().OneWay(_encoder.EncodeTransactionalMessage(
-          ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-              ::test_inheritancewithrecursivedecl::Child::First>>::
-              IntoDomainObject(std::move(request))));
+  _encoder.EncodeBody(
+      ::fidl::internal::NaturalMessageConverter<
+          ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>>::
+          IntoDomainObject(std::move(request)));
+
+  ::fidl::Status status = messenger().OneWay(_encoder.GetMessage());
   return ::fidl::internal::ToFitxResult(status);
 }
 
@@ -126,11 +128,12 @@ namespace test_inheritancewithrecursivedecl {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_inheritancewithrecursivedecl::kChild_Second_Ordinal};
-  ::fidl::Status status =
-      messenger().OneWay(_encoder.EncodeTransactionalMessage(
-          ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-              ::test_inheritancewithrecursivedecl::Child::Second>>::
-              IntoDomainObject(std::move(request))));
+  _encoder.EncodeBody(
+      ::fidl::internal::NaturalMessageConverter<
+          ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>>::
+          IntoDomainObject(std::move(request)));
+
+  ::fidl::Status status = messenger().OneWay(_encoder.GetMessage());
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_inheritancewithrecursivedecl {

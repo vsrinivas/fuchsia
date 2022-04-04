@@ -26,36 +26,28 @@ class NaturalMessageEncoder final {
 
   NaturalBodyEncoder& body_encoder() { return body_encoder_; }
 
-  // Encode |payload| as part of a request/response message.
+  // Encode |payload| as the body of a request/response message.
   //
-  // To reducing branching in generated code, |payload| may be |std::nullopt|, in
-  // which case the message will be encoded without a payload (header-only
-  // messages).
+  // This method is not necessary if the request/response does not have a body.
   //
-  // Return an outgoing message representing the encoded header plus body.
-  // Handle ownership will be transferred to the outgoing message.
+  // |GetMessage| is used to extract the encoded message.
   // Do not encode another value until the message is sent.
-  template <typename Payload = const cpp17::nullopt_t&>
-  fidl::OutgoingMessage EncodeTransactionalMessage(Payload&& payload = cpp17::nullopt) {
-    // When the caller omits the |payload| argument, it will default to
-    // |cpp17::nullopt|, which is of type |cpp17::nullopt_t|.
-    constexpr bool kHasPayload = !std::is_same_v<cpp20::remove_cvref_t<Payload>, cpp17::nullopt_t>;
-    if constexpr (kHasPayload) {
-      body_encoder().Alloc(
-          NaturalEncodingInlineSize<Payload, NaturalCodingConstraintEmpty>(&body_encoder()));
-      NaturalCodingTraits<Payload, NaturalCodingConstraintEmpty>::Encode(
-          &body_encoder(), &payload, sizeof(fidl_message_header_t), kRecursionDepthInitial);
-      return GetMessage();
-    } else {
-      return GetMessage();
-    }
+  // Do not move the encoder object until the message is sent.
+  template <typename Payload>
+  void EncodeBody(Payload&& payload) {
+    body_encoder().Alloc(
+        NaturalEncodingInlineSize<Payload, NaturalCodingConstraintEmpty>(&body_encoder()));
+    NaturalCodingTraits<Payload, NaturalCodingConstraintEmpty>::Encode(
+        &body_encoder(), &payload, sizeof(fidl_message_header_t), kRecursionDepthInitial);
   }
 
   void Reset(uint64_t ordinal);
 
- private:
+  // Return an outgoing message representing the encoded header plus body.
+  // Handle ownership will be transferred to the outgoing message.
   fidl::OutgoingMessage GetMessage();
 
+ private:
   NaturalBodyEncoder body_encoder_;
 
   void EncodeMessageHeader(uint64_t ordinal);
