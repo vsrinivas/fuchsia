@@ -471,11 +471,6 @@ TEST_P(VirtioBlockTest, SyncNonZeroSector) {
 }
 
 TEST_P(VirtioBlockTest, Id) {
-  // TODO(fxbug.dev/95529): Enable this test for the rust device.
-  if (IsRustComponent()) {
-    GTEST_SKIP();
-  }
-
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_GET_ID,
   };
@@ -498,11 +493,6 @@ TEST_P(VirtioBlockTest, Id) {
 }
 
 TEST_P(VirtioBlockTest, IdLengthIncorrect) {
-  // TODO(fxbug.dev/95529): Enable this test for the rust device.
-  if (IsRustComponent()) {
-    GTEST_SKIP();
-  }
-
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_GET_ID,
   };

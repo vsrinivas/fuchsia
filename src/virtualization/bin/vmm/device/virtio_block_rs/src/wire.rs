@@ -13,6 +13,7 @@ pub const VIRTIO_BLOCK_SECTOR_SIZE: u64 = 512;
 pub const VIRTIO_BLK_T_IN: u32 = 0;
 pub const VIRTIO_BLK_T_OUT: u32 = 1;
 pub const VIRTIO_BLK_T_FLUSH: u32 = 4;
+pub const VIRTIO_BLK_T_GET_ID: u32 = 8;
 pub const VIRTIO_BLK_T_DISCARD: u32 = 11;
 pub const VIRTIO_BLK_T_WRITE_ZEROES: u32 = 13;
 
@@ -20,6 +21,8 @@ pub const VIRTIO_BLK_T_WRITE_ZEROES: u32 = 13;
 const VIRTIO_BLK_S_OK: u8 = 0;
 const VIRTIO_BLK_S_IOERR: u8 = 1;
 const VIRTIO_BLK_S_UNSUPP: u8 = 2;
+
+pub const VIRTIO_BLK_ID_LEN: usize = 20;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum VirtioBlockStatus {

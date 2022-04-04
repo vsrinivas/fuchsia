@@ -6,7 +6,7 @@ use {
     crate::backend::{BlockBackend, DeviceAttrs, Request, Sector},
     crate::wire,
     anyhow::anyhow,
-    std::io::Read,
+    std::io::{Read, Write},
     thiserror::Error,
     virtio_device::chain::{ReadableChain, WritableChain},
     virtio_device::mem::{DeviceRange, DriverMem},
@@ -129,11 +129,14 @@ fn read_header<'a, 'b, N: DriverNotify, M: DriverMem>(
 pub struct BlockDevice {
     backend: Box<dyn BlockBackend>,
     device_attrs: DeviceAttrs,
+    id: String,
 }
 
 impl BlockDevice {
-    pub async fn new(backend: Box<dyn BlockBackend>) -> Result<Self, anyhow::Error> {
-        Ok(Self { device_attrs: backend.get_attrs().await?, backend })
+    pub async fn new(id: String, backend: Box<dyn BlockBackend>) -> Result<Self, anyhow::Error> {
+        // FIDL already enforces this upper bound.
+        assert!(id.len() <= wire::VIRTIO_BLK_ID_LEN);
+        Ok(Self { device_attrs: backend.get_attrs().await?, backend, id })
     }
 
     /// Returns the cached `DeviceAttrs` for this device.
@@ -155,6 +158,7 @@ impl BlockDevice {
                 wire::VIRTIO_BLK_T_IN => self.read(header, chain).await?,
                 wire::VIRTIO_BLK_T_OUT => self.write(header, chain).await?,
                 wire::VIRTIO_BLK_T_FLUSH => self.flush(header, chain).await?,
+                wire::VIRTIO_BLK_T_GET_ID => self.get_id(chain)?,
                 _ => {
                     // If the command is unsupported we need to seek the chain to the final writable
                     // status byte.
@@ -300,6 +304,34 @@ impl BlockDevice {
             Ok((chain, wire::VirtioBlockStatus::Ok))
         }
     }
+
+    fn get_id<'a, 'b, N: DriverNotify, M: DriverMem>(
+        &self,
+        chain: ReadableChain<'a, 'b, N, M>,
+    ) -> Result<(WritableChain<'a, 'b, N, M>, wire::VirtioBlockStatus), anyhow::Error> {
+        let mut chain = WritableChain::from_incomplete_readable(chain)?;
+
+        // Section 5.2.6.1: The length of `data` MUST be 20 bytes for VIRTIO_BLK_T_GET_ID requests.
+        if chain.remaining()? != wire::VIRTIO_BLK_ID_LEN + 1 {
+            return writable_chain_error(chain, wire::VirtioBlockStatus::IoError);
+        }
+
+        // The device ID string is a NUL-padded ASCII string up to 20 bytes long. If the string is
+        // 20 bytes long then there is no NUL terminator.
+        let mut id_buf = [0u8; wire::VIRTIO_BLK_ID_LEN];
+
+        // We truncated the id upon creation, so this should always be a valid size.
+        let id_len = self.id.len();
+        assert!(id_len <= wire::VIRTIO_BLK_ID_LEN);
+        id_buf[..id_len].copy_from_slice(self.id.as_bytes());
+        chain.write_all(&id_buf)?;
+
+        // We already validated the size of the writable chain and we need to have written the
+        // entire data buffer for the id (including null trailing bytes), so this should always
+        // hold.
+        assert!(chain.remaining()? == 1);
+        Ok((chain, wire::VirtioBlockStatus::Ok))
+    }
 }
 
 #[cfg(test)]
@@ -405,6 +437,11 @@ mod tests {
         );
     }
 
+    fn read_returned_range<'a>(_: &'a IdentityDriverMem, range: (u64, u32)) -> &'a [u8] {
+        let (data, len) = range;
+        unsafe { std::slice::from_raw_parts::<u8>(data as usize as *const u8, len as usize) }
+    }
+
     fn check_returned_range(range: (u64, u32), color: u8) {
         let (data, len) = range;
         let slice =
@@ -447,7 +484,7 @@ mod tests {
 
         // Process the chain.
         let (backend, controller) = MemoryBackend::new();
-        let device = BlockDevice::new(Box::new(backend)).await?;
+        let device = BlockDevice::new("device-id".to_string(), Box::new(backend)).await?;
 
         // Fill some sectors in the backend.
         controller.color_sector(Sector::from_raw_sector(0), 0xaa);
@@ -494,7 +531,7 @@ mod tests {
 
         // Process the chain.
         let (backend, controller) = MemoryBackend::new();
-        let device = BlockDevice::new(Box::new(backend)).await?;
+        let device = BlockDevice::new("device-id".to_string(), Box::new(backend)).await?;
 
         // Fill some sectors in the backend.
         controller.color_sector(Sector::from_raw_sector(0), 0xaa);
@@ -544,7 +581,7 @@ mod tests {
 
         // Process the chain.
         let (backend, _) = MemoryBackend::new();
-        let device = BlockDevice::new(Box::new(backend)).await?;
+        let device = BlockDevice::new("device-id".to_string(), Box::new(backend)).await?;
 
         // Process the request.
         device.process_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem)).await?;
@@ -590,7 +627,7 @@ mod tests {
 
         // Process the request.
         let (backend, controller) = MemoryBackend::new();
-        let device = BlockDevice::new(Box::new(backend)).await?;
+        let device = BlockDevice::new("device-id".to_string(), Box::new(backend)).await?;
         device.process_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem)).await?;
 
         // Validate returned chain. We should only have a single status byte written.
@@ -635,7 +672,7 @@ mod tests {
 
         // Process the chain.
         let (backend, _) = MemoryBackend::new();
-        let device = BlockDevice::new(Box::new(backend)).await?;
+        let device = BlockDevice::new("device-id".to_string(), Box::new(backend)).await?;
 
         // Process the request.
         device.process_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem)).await?;
@@ -679,7 +716,7 @@ mod tests {
 
         // Process the chain.
         let (backend, _) = MemoryBackend::new();
-        let device = BlockDevice::new(Box::new(backend)).await?;
+        let device = BlockDevice::new("device-id".to_string(), Box::new(backend)).await?;
 
         // Process the request.
         device.process_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem)).await?;
@@ -692,6 +729,97 @@ mod tests {
         let mut iter = returned.data_iter();
         check_returned_range(iter.next().unwrap(), 0x00);
         check_returned_status(iter.next().unwrap(), wire::VirtioBlockStatus::Unsupported);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_id() -> Result<(), anyhow::Error> {
+        let mem = IdentityDriverMem::new();
+        let mut state = TestQueue::new(32, &mem);
+        state
+            .fake_queue
+            .publish(
+                ChainBuilder::new()
+                    // Header
+                    .readable(
+                        std::slice::from_ref(&wire::VirtioBlockHeader {
+                            request_type: wire::LE32::new(wire::VIRTIO_BLK_T_GET_ID),
+                            reserved: wire::LE32::new(0),
+                            sector: wire::LE64::new(0),
+                        }),
+                        &mem,
+                    )
+                    .writable(wire::VIRTIO_BLK_ID_LEN as u32, &mem)
+                    // Status byte
+                    .writable(1, &mem)
+                    .build(),
+            )
+            .unwrap();
+
+        // Process the chain.
+        let (backend, _) = MemoryBackend::new();
+        let device = BlockDevice::new("device-id".to_string(), Box::new(backend)).await?;
+
+        // Process the request.
+        device.process_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem)).await?;
+
+        // Validate returned chain.
+        let returned = state.fake_queue.next_used().unwrap();
+        assert_eq!(wire::VIRTIO_BLK_ID_LEN + 1, returned.written() as usize);
+
+        // ID should be returned with null bytes filling out the remaining bytes.
+        let mut iter = returned.data_iter();
+        let actual_id = read_returned_range(&mem, iter.next().unwrap());
+        let expected_id: [u8; wire::VIRTIO_BLK_ID_LEN] = [
+            b'd', b'e', b'v', b'i', b'c', b'e', b'-', b'i', b'd', b'\0', b'\0', b'\0', b'\0',
+            b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0',
+        ];
+        assert_eq!(actual_id, expected_id);
+        check_returned_status(iter.next().unwrap(), wire::VirtioBlockStatus::Ok);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_id_short_buffer() -> Result<(), anyhow::Error> {
+        let (backend, _) = MemoryBackend::new();
+        let device = BlockDevice::new("device-id".to_string(), Box::new(backend)).await?;
+        for buf_size in [wire::VIRTIO_BLK_ID_LEN as u32 - 1, wire::VIRTIO_BLK_ID_LEN as u32 + 1] {
+            let mem = IdentityDriverMem::new();
+            let mut state = TestQueue::new(32, &mem);
+            state
+                .fake_queue
+                .publish(
+                    ChainBuilder::new()
+                        // Header
+                        .readable(
+                            std::slice::from_ref(&wire::VirtioBlockHeader {
+                                request_type: wire::LE32::new(wire::VIRTIO_BLK_T_GET_ID),
+                                reserved: wire::LE32::new(0),
+                                sector: wire::LE64::new(0),
+                            }),
+                            &mem,
+                        )
+                        .writable(buf_size, &mem)
+                        // Status byte
+                        .writable(1, &mem)
+                        .build(),
+                )
+                .unwrap();
+
+            // Process the request.
+            device
+                .process_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem))
+                .await?;
+
+            // Validate returned chain.
+            let returned = state.fake_queue.next_used().unwrap();
+            assert_eq!(buf_size + 1, returned.written());
+
+            // Verify failure.
+            let mut iter = returned.data_iter();
+            check_returned_range(iter.next().unwrap(), 0);
+            check_returned_status(iter.next().unwrap(), wire::VirtioBlockStatus::IoError);
+        }
         Ok(())
     }
 }

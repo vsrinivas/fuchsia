@@ -41,7 +41,7 @@ async fn run_virtio_block(
     mut virtio_block_fidl: VirtioBlockRequestStream,
 ) -> Result<(), anyhow::Error> {
     // Receive start info as first message.
-    let (start_info, _id, _mode, format, client, responder) = virtio_block_fidl
+    let (start_info, id, _mode, format, client, responder) = virtio_block_fidl
         .try_next()
         .await?
         .ok_or(anyhow!("Failed to read fidl message from the channel."))?
@@ -52,7 +52,7 @@ async fn run_virtio_block(
     let (device_builder, guest_mem) = machina_virtio_device::from_start_info(start_info)?;
 
     let backend = create_backend(format, client)?;
-    let block_device = BlockDevice::new(backend).await?;
+    let block_device = BlockDevice::new(id, backend).await?;
     responder.send(
         block_device.attrs().capacity.to_bytes().unwrap(),
         block_device.attrs().block_size.unwrap_or(wire::VIRTIO_BLOCK_SECTOR_SIZE as u32),
