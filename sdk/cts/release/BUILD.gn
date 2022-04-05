@@ -20,6 +20,10 @@ compatibility_test_suite("canary_tests") {
 
 compatibility_test_suite("current_milestone_tests") {
   path = "//prebuilt/cts/current_milestone/$host_platform/cts"
+
+  # TODO(fxbug.dev/96650): Host tool tests did not exist in CTS when the last
+  # milestone release branched. Delete this when the next release branches.
+  disable_host_tests = true
 }
 
 if (is_host) {
