@@ -4,13 +4,6 @@
 
 #include "src/virtualization/bin/vmm/arch/x64/decode.h"
 
-#include <lib/syslog/cpp/macros.h>
-#include <string.h>
-#include <zircon/syscalls/hypervisor.h>
-#include <zircon/syscalls/port.h>
-
-#include "src/virtualization/bin/vmm/arch/x64/page_table.h"
-
 namespace {
 
 constexpr uint8_t kRexRMask = 1u << 2;

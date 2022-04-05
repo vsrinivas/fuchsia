@@ -30,13 +30,13 @@ zx_status_t PerformMemAccess(const zx_packet_guest_mem_t& mem, IoMapping* device
     case InstructionType::kWrite:
       switch (inst.access_size) {
         case 1:
-          status = inst_write<uint8_t>(&inst, &mmio.u8);
+          status = inst.Write(mmio.u8).status_value();
           break;
         case 2:
-          status = inst_write<uint16_t>(&inst, &mmio.u16);
+          status = inst.Write(mmio.u16).status_value();
           break;
         case 4:
-          status = inst_write<uint32_t>(&inst, &mmio.u32);
+          status = inst.Write(mmio.u32).status_value();
           break;
         default:
           return ZX_ERR_NOT_SUPPORTED;
@@ -53,11 +53,11 @@ zx_status_t PerformMemAccess(const zx_packet_guest_mem_t& mem, IoMapping* device
       }
       switch (inst.access_size) {
         case 1:
-          return inst_read<uint8_t>(&inst, mmio.u8);
+          return inst.Read(mmio.u8).status_value();
         case 2:
-          return inst_read<uint16_t>(&inst, mmio.u16);
+          return inst.Read(mmio.u16).status_value();
         case 4:
-          return inst_read<uint32_t>(&inst, mmio.u32);
+          return inst.Read(mmio.u32).status_value();
         default:
           return ZX_ERR_NOT_SUPPORTED;
       }
@@ -69,7 +69,7 @@ zx_status_t PerformMemAccess(const zx_packet_guest_mem_t& mem, IoMapping* device
       }
       switch (inst.access_size) {
         case 1:
-          return inst_test8(&inst, static_cast<uint8_t>(inst.imm), mmio.u8);
+          return inst.Test8(static_cast<uint8_t>(inst.imm), mmio.u8).status_value();
         default:
           return ZX_ERR_NOT_SUPPORTED;
       }
@@ -81,13 +81,13 @@ zx_status_t PerformMemAccess(const zx_packet_guest_mem_t& mem, IoMapping* device
       }
       switch (inst.access_size) {
         case 1:
-          status = inst_or<uint8_t>(&inst, static_cast<uint8_t>(inst.imm), &mmio.u8);
+          status = inst.Or(static_cast<uint8_t>(inst.imm), mmio.u8).status_value();
           break;
         case 2:
-          status = inst_or<uint16_t>(&inst, static_cast<uint16_t>(inst.imm), &mmio.u16);
+          status = inst.Or(static_cast<uint16_t>(inst.imm), mmio.u16).status_value();
           break;
         case 4:
-          status = inst_or<uint32_t>(&inst, inst.imm, &mmio.u32);
+          status = inst.Or(inst.imm, mmio.u32).status_value();
           break;
         default:
           return ZX_ERR_NOT_SUPPORTED;

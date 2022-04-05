@@ -5,7 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_ARCH_X64_DECODE_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_ARCH_X64_DECODE_H_
 
-#include <zircon/types.h>
+#include <zircon/syscalls/hypervisor.h>
 
 #include "src/virtualization/bin/vmm/arch/x64/page_table.h"
 
@@ -27,46 +27,9 @@ enum class InstructionType : uint8_t {
   kLogicalOr,
 };
 
-using zx_vcpu_state_t = struct zx_vcpu_state;
-
-// Stores info from a decoded instruction.
-struct Instruction {
-  InstructionType type;
-  uint8_t access_size;
-  uint32_t imm;
-  uint64_t* reg;
-  uint64_t* flags;
-};
-
-zx::status<Instruction> DecodeInstruction(InstructionSpan span, uint8_t default_operand_size,
-                                          zx_vcpu_state_t& vcpu_state);
-
-template <typename T>
-static inline T get_inst_val(const Instruction* inst) {
-  return static_cast<T>(inst->reg != nullptr ? *inst->reg : inst->imm);
-}
-
-template <typename T>
-static inline zx_status_t inst_read(const Instruction* inst, T value) {
-  if (inst->type != InstructionType::kRead || inst->access_size != sizeof(T)) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  *inst->reg = value;
-  return ZX_OK;
-}
-
-template <typename T>
-static inline zx_status_t inst_write(const Instruction* inst, T* value) {
-  if (inst->type != InstructionType::kWrite || inst->access_size != sizeof(T)) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  *value = get_inst_val<T>(inst);
-  return ZX_OK;
-}
-
-// Returns the flags that are assigned to the x86 flags register by an
-// 8-bit TEST instruction for the given two operand values.
-static inline uint16_t x86_flags_for_test8(uint8_t value1, uint8_t value2) {
+// Returns the flags that are assigned to the x86 flags register by an 8-bit
+// TEST instruction for the given two operand values.
+static inline uint16_t X86FlagsForTest8(uint8_t value1, uint8_t value2) {
   // TEST cannot set the overflow flag (bit 11).
   uint16_t ax_reg;
   __asm__ volatile(
@@ -76,42 +39,76 @@ static inline uint16_t x86_flags_for_test8(uint8_t value1, uint8_t value2) {
       : [i1] "r"(value1), [i2] "r"(value2)
       : "cc");
   // Extract the value of the %ah register from the %ax register.
-  return (uint16_t)(ax_reg >> 8);
+  return static_cast<uint16_t>(ax_reg >> 8);
 }
 
-static inline zx_status_t inst_test8(const Instruction* inst, uint8_t inst_val, uint8_t value) {
-  if (inst->type != InstructionType::kTest || inst->access_size != 1u ||
-      get_inst_val<uint8_t>(inst) != inst_val) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  *inst->flags &= ~X86_FLAGS_STATUS;
-  *inst->flags |= x86_flags_for_test8(inst_val, value);
-  return ZX_OK;
-}
-
-// Instead of trying to define the x86 "or" operation in C (and, in particular, trying to calculate
-// the various output flags), we simply run the "or" instruction directly and capture the flags.
+// Instead of trying to define the x86 "or" operation in C (and, in particular,
+// trying to calculate the various output flags), we simply run the "or"
+// instruction directly and capture the flags.
 template <typename T>
-static inline uint16_t x86_simulate_or(T immediate, T* memory) {
+static inline uint16_t X86SimulateOr(T immediate, T& memory) {
   uint16_t ax_reg;
   __asm__(
       "or %[i1], %[i2];"
       "lahf"
-      : "=a"(ax_reg), [i2] "+r"(*memory)
+      : "=a"(ax_reg), [i2] "+r"(memory)
       : [i1] "r"(immediate)
       : "cc");
   return static_cast<uint16_t>(ax_reg >> 8);
 }
 
-template <typename T>
-static inline zx_status_t inst_or(const Instruction* inst, T inst_val, T* value) {
-  if (inst->type != InstructionType::kLogicalOr || inst->access_size != sizeof(T) ||
-      get_inst_val<T>(inst) != inst_val) {
-    return ZX_ERR_NOT_SUPPORTED;
+// Stores info from a decoded instruction.
+struct Instruction {
+  InstructionType type;
+  uint8_t access_size;
+  uint32_t imm;
+  uint64_t* reg;
+  uint64_t* flags;
+
+  template <typename T>
+  T Value() const {
+    return static_cast<T>(reg != nullptr ? *reg : imm);
   }
-  *inst->flags &= ~X86_FLAGS_STATUS;
-  *inst->flags |= x86_simulate_or(inst_val, value);
-  return ZX_OK;
-}
+
+  template <typename T>
+  zx::status<> Read(T value) const {
+    if (type != InstructionType::kRead || access_size != sizeof(T)) {
+      return zx::error(ZX_ERR_NOT_SUPPORTED);
+    }
+    *reg = value;
+    return zx::ok();
+  }
+
+  template <typename T>
+  zx::status<> Write(T& value) const {
+    if (type != InstructionType::kWrite || access_size != sizeof(T)) {
+      return zx::error(ZX_ERR_NOT_SUPPORTED);
+    }
+    value = Value<T>();
+    return zx::ok();
+  }
+
+  zx::status<> Test8(uint8_t inst_val, uint8_t value) const {
+    if (type != InstructionType::kTest || access_size != 1u || Value<uint8_t>() != inst_val) {
+      return zx::error(ZX_ERR_NOT_SUPPORTED);
+    }
+    *flags &= ~X86_FLAGS_STATUS;
+    *flags |= X86FlagsForTest8(inst_val, value);
+    return zx::ok();
+  }
+
+  template <typename T>
+  zx::status<> Or(T inst_val, T& value) const {
+    if (type != InstructionType::kLogicalOr || access_size != sizeof(T) || Value<T>() != inst_val) {
+      return zx::error(ZX_ERR_NOT_SUPPORTED);
+    }
+    *flags &= ~X86_FLAGS_STATUS;
+    *flags |= X86SimulateOr(inst_val, value);
+    return zx::ok();
+  }
+};
+
+zx::status<Instruction> DecodeInstruction(InstructionSpan span, uint8_t default_operand_size,
+                                          zx_vcpu_state_t& vcpu_state);
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_ARCH_X64_DECODE_H_
