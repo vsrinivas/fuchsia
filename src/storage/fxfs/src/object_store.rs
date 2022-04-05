@@ -78,7 +78,7 @@ use {
 // Exposed for serialized_types.
 pub use allocator::{AllocatorInfo, AllocatorKey, AllocatorValue};
 pub use extent_record::{ExtentKey, ExtentValue};
-pub use journal::{JournalRecord, SuperBlock, SuperBlockRecord, SuperBlockV1, SuperBlockV2};
+pub use journal::{JournalRecord, SuperBlock, SuperBlockRecord};
 pub use object_record::{ObjectKey, ObjectValue};
 
 /// StoreObjectHandle stores an owner that must implement this trait, which allows the handle to get
@@ -87,19 +87,6 @@ pub trait HandleOwner: AsRef<ObjectStore> + Send + Sync + 'static {
     type Buffer: DataBuffer;
 
     fn create_data_buffer(&self, object_id: u64, initial_size: u64) -> Self::Buffer;
-}
-
-/// `uuid` was added to [`StoreInfo`] after this version.
-#[derive(Serialize, Deserialize, Versioned)]
-pub struct StoreInfoV1 {
-    last_object_id: u64,
-    layers: Vec<u64>,
-    root_directory_object_id: u64,
-    graveyard_directory_object_id: u64,
-    object_count: u64,
-    mutations_key: Option<WrappedKeys>,
-    mutations_cipher_offset: u64,
-    encrypted_mutations_object_id: u64,
 }
 
 // StoreInfo stores information about the object store.  This is stored within the parent object
@@ -150,22 +137,6 @@ impl StoreInfo {
         if self.guid == [0; 16] {
             let guid = Uuid::new_v4();
             self.guid = *guid.as_bytes();
-        }
-    }
-}
-
-impl From<StoreInfoV1> for StoreInfo {
-    fn from(other: StoreInfoV1) -> Self {
-        Self {
-            guid: Default::default(),
-            last_object_id: other.last_object_id,
-            layers: other.layers,
-            root_directory_object_id: other.root_directory_object_id,
-            graveyard_directory_object_id: other.graveyard_directory_object_id,
-            object_count: other.object_count,
-            mutations_key: other.mutations_key,
-            mutations_cipher_offset: other.mutations_cipher_offset,
-            encrypted_mutations_object_id: other.encrypted_mutations_object_id,
         }
     }
 }
@@ -833,7 +804,7 @@ impl ObjectStore {
             } = item_ref
             {
                 let device_range = *device_offset..*device_offset + (range.end - range.start);
-                allocator.deallocate(transaction, device_range).await?;
+                allocator.deallocate(transaction, self.store_object_id(), device_range).await?;
                 delete_extent_mutation = Some(Mutation::merge_object(
                     ObjectKey::extent(search_key.object_id, *attribute_id, 0..range.end),
                     ObjectValue::deleted_extent(),

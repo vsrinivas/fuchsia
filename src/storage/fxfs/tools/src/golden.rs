@@ -170,7 +170,7 @@ pub async fn check_images(image_root: Option<String>) -> Result<(), Error> {
         println!("------------------------------------------------------------------------");
         if let Err(e) = check_image(path_buf.as_path()).await {
             bail!(
-                "Failed to validate golden image {} with the latest code: {}",
+                "Failed to validate golden image {} with the latest code: {:?}",
                 path_buf.display(),
                 e
             )

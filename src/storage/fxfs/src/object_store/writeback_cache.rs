@@ -694,6 +694,7 @@ mod tests {
         async fn allocate(
             &self,
             _transaction: &mut Transaction<'_>,
+            _store_object_id: u64,
             _len: u64,
         ) -> Result<Range<u64>, Error> {
             unreachable!();
@@ -706,6 +707,7 @@ mod tests {
         async fn deallocate(
             &self,
             _transaction: &mut Transaction<'_>,
+            _object_id: u64,
             _device_range: Range<u64>,
         ) -> Result<u64, Error> {
             unreachable!();
@@ -714,6 +716,7 @@ mod tests {
         async fn mark_allocated(
             &self,
             _transaction: &mut Transaction<'_>,
+            _store_object_id: u64,
             _device_range: Range<u64>,
         ) -> Result<(), Error> {
             unreachable!();

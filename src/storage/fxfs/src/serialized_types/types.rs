@@ -6,8 +6,7 @@ use crate::{
     lsm_tree::LayerInfo,
     object_store::{
         transaction::Mutation, AllocatorInfo, AllocatorKey, AllocatorValue, EncryptedMutations,
-        JournalRecord, ObjectKey, ObjectValue, StoreInfo, StoreInfoV1, SuperBlock,
-        SuperBlockRecord, SuperBlockV1, SuperBlockV2,
+        JournalRecord, ObjectKey, ObjectValue, StoreInfo, SuperBlock, SuperBlockRecord,
     },
     serialized_types::{versioned_type, Version, Versioned, VersionedLatest},
 };
@@ -18,9 +17,8 @@ use crate::{
 /// both rewritten, all versions should match this value.
 ///
 /// Last breaking change:
-///  v5:  Recombining extents from their own tree into the object tree.
-///       This can't be done with on-the-fly struct upgrading because we removed structs.
-pub const LATEST_VERSION: Version = Version { major: 8, minor: 0 };
+///  v9:  Track the ObjectStore ID for all allocation extents so we can delete encrypted volumes.
+pub const LATEST_VERSION: Version = Version { major: 9, minor: 0 };
 
 versioned_type! {
     2.. => AllocatorInfo,
@@ -29,7 +27,7 @@ versioned_type! {
     1.. => AllocatorKey,
 }
 versioned_type! {
-    1.. => AllocatorValue,
+    9.. => AllocatorValue,
 }
 versioned_type! {
     5.. => EncryptedMutations,
@@ -51,12 +49,10 @@ versioned_type! {
 }
 versioned_type! {
     8.. => StoreInfo,
-    5.. => StoreInfoV1,
 }
 versioned_type! {
     7.. => SuperBlock,
-    6.. => SuperBlockV2,
-    1.. => SuperBlockV1,
+    6.. => SuperBlock,
 }
 versioned_type! {
     5.. => SuperBlockRecord,

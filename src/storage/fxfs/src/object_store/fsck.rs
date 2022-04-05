@@ -15,7 +15,8 @@ use {
         object_handle::{ObjectHandle, ObjectHandleExt, INVALID_OBJECT_ID},
         object_store::{
             allocator::{
-                Allocator, AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator,
+                filter_tombstones, Allocator, AllocatorKey, AllocatorValue, CoalescingIterator,
+                SimpleAllocator,
             },
             constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
             filesystem::{Filesystem, FxFilesystem},
@@ -170,7 +171,7 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     fsck.verbose("Verifying allocations...");
     let layer_set = allocator.tree().layer_set();
     let mut merger = layer_set.merger();
-    let iter = merger.seek(Bound::Unbounded).await?;
+    let iter = filter_tombstones(Box::new(merger.seek(Bound::Unbounded).await?)).await?;
     let mut actual = CoalescingIterator::new(Box::new(iter)).await?;
     let mut expected =
         CoalescingIterator::new(fsck.allocations.seek(Bound::Unbounded).await?).await?;
@@ -187,6 +188,11 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
         match expected.get() {
             None => extra_allocations.push(actual_item.into()),
             Some(expected_item) => {
+                if actual_item.key.device_range.start > expected_item.key.device_range.start {
+                    fsck.error(FsckError::MissingAllocation(expected_item.into()))?;
+                    expected.advance().await?;
+                    continue;
+                }
                 let r = &expected_item.key.device_range;
                 allocated_bytes += (r.end - r.start) as i64;
                 if actual_item != expected_item {

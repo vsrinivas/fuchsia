@@ -6,7 +6,7 @@ use {
     crate::{
         lsm_tree::types::ItemRef,
         object_store::{
-            allocator::{AllocatorKey, AllocatorValue},
+            allocator::{AllocationRefCount, AllocatorKey, AllocatorValue},
             ObjectDescriptor,
         },
     },
@@ -49,12 +49,12 @@ impl FsckIssue {
 #[allow(dead_code)]
 pub struct Allocation {
     range: Range<u64>,
-    ref_count: i64,
+    refs: AllocationRefCount,
 }
 
 impl From<ItemRef<'_, AllocatorKey, AllocatorValue>> for Allocation {
     fn from(item: ItemRef<'_, AllocatorKey, AllocatorValue>) -> Self {
-        Self { range: item.key.device_range.clone(), ref_count: item.value.delta }
+        Self { range: item.key.device_range.clone(), refs: item.value.refs.clone() }
     }
 }
 

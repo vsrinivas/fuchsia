@@ -12,7 +12,8 @@ use {
         object_handle::{ObjectHandle, Writer, INVALID_OBJECT_ID},
         object_store::{
             allocator::{
-                Allocator, AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator,
+                filter_tombstones, AllocationRefCount, Allocator, AllocatorKey, AllocatorValue,
+                CoalescingIterator, SimpleAllocator,
             },
             directory::Directory,
             extent_record::ExtentValue,
@@ -209,7 +210,7 @@ async fn test_extra_allocation() {
         let end =
             round_down(TEST_DEVICE_BLOCK_SIZE as u64 * TEST_DEVICE_BLOCK_COUNT, fs.block_size());
         fs.allocator()
-            .mark_allocated(&mut transaction, end - fs.block_size()..end)
+            .mark_allocated(&mut transaction, 4, end - fs.block_size()..end)
             .await
             .expect("mark_allocated failed");
         transaction.commit().await.expect("commit failed");
@@ -243,7 +244,7 @@ async fn test_misaligned_allocation() {
         let end =
             round_down(TEST_DEVICE_BLOCK_SIZE as u64 * TEST_DEVICE_BLOCK_COUNT, fs.block_size());
         fs.allocator()
-            .mark_allocated(&mut transaction, end - fs.block_size() + 1..end)
+            .mark_allocated(&mut transaction, 99, end - fs.block_size() + 1..end)
             .await
             .expect("mark_allocated failed");
         transaction.commit().await.expect("commit failed");
@@ -297,7 +298,7 @@ async fn test_malformed_allocation() {
             );
             let item = Item::new(
                 AllocatorKey { device_range: end..end - fs.block_size() },
-                AllocatorValue { delta: 1 },
+                AllocatorValue { refs: AllocationRefCount::Delta(1) },
             );
             writer.write(item.as_item_ref()).await.expect("write failed");
             writer.flush().await.expect("flush failed");
@@ -451,7 +452,11 @@ async fn test_allocation_mismatch() {
         let range = {
             let layer_set = allocator.tree().layer_set();
             let mut merger = layer_set.merger();
-            let iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
+            let iter = filter_tombstones(Box::new(
+                merger.seek(Bound::Unbounded).await.expect("seek failed"),
+            ))
+            .await
+            .expect("filter failed");
             let ItemRef { key: AllocatorKey { device_range }, .. } =
                 iter.get().expect("missing item");
             device_range.clone()
@@ -481,18 +486,26 @@ async fn test_missing_allocation() {
         let key = {
             let layer_set = allocator.tree().layer_set();
             let mut merger = layer_set.merger();
-            let iter = CoalescingIterator::new(Box::new(
-                merger.seek(Bound::Unbounded).await.expect("seek failed"),
-            ))
+            let iter = CoalescingIterator::new(
+                filter_tombstones(Box::new(
+                    merger.seek(Bound::Unbounded).await.expect("seek failed"),
+                ))
+                .await
+                .expect("filter failed"),
+            )
             .await
             .expect("new failed");
             let ItemRef { key, .. } = iter.get().expect("missing item");
+            // 'key' points at the first allocation record, which will be for the super blocks.
             key.clone()
         };
         let lower_bound = key.lower_bound_for_merge_into();
         allocator
             .tree()
-            .merge_into(Item::new(key, AllocatorValue { delta: -1 }), &lower_bound)
+            .merge_into(
+                Item::new(key, AllocatorValue { refs: AllocationRefCount::Delta(-1) }),
+                &lower_bound,
+            )
             .await;
     }
     // We intentionally don't remount here, since the above tree mutation wouldn't persist
@@ -696,7 +709,10 @@ async fn test_unexpected_record_in_layer_file() {
         install_items_in_store(
             &fs,
             store.as_ref(),
-            vec![Item::new(ObjectKey::object(0), AllocatorValue { delta: 100000 })],
+            vec![Item::new(
+                ObjectKey::object(0),
+                AllocatorValue { refs: AllocationRefCount::Delta(100000) },
+            )],
         )
         .await;
     }
@@ -1160,6 +1176,7 @@ async fn test_file_length_mismatch() {
 #[fasync::run_singlethreaded(test)]
 async fn test_spurious_extents() {
     let mut test = FsckTest::new().await;
+    const SPURIOUS_OFFSET: u64 = 100 << 20;
 
     {
         let fs = test.filesystem();
@@ -1175,14 +1192,14 @@ async fn test_spurious_extents() {
             store.store_object_id(),
             Mutation::insert_object(
                 ObjectKey::extent(555, 0, 0..4096),
-                ObjectValue::Extent(ExtentValue::new(0)),
+                ObjectValue::Extent(ExtentValue::new(SPURIOUS_OFFSET)),
             ),
         );
         transaction.add(
             store.store_object_id(),
             Mutation::insert_object(
                 ObjectKey::extent(store.root_directory_object_id(), 0, 0..4096),
-                ObjectValue::Extent(ExtentValue::new(0)),
+                ObjectValue::Extent(ExtentValue::new(SPURIOUS_OFFSET)),
             ),
         );
         transaction.commit().await.expect("commit failed");

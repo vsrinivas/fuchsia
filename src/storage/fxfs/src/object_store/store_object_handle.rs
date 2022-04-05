@@ -93,7 +93,10 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         let old_end =
             round_up(self.txn_get_size(transaction), self.block_size()).ok_or(FxfsError::TooBig)?;
         let new_size = old_end + device_range.end - device_range.start;
-        self.store().allocator().mark_allocated(transaction, device_range.clone()).await?;
+        self.store()
+            .allocator()
+            .mark_allocated(transaction, self.store().store_object_id(), device_range.clone())
+            .await?;
         transaction.add_with_object(
             self.store().store_object_id,
             Mutation::replace_or_insert_object(
@@ -269,7 +272,9 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                             extent_key
                         );
                     }
-                    allocator.deallocate(transaction, range).await?;
+                    allocator
+                        .deallocate(transaction, self.store().store_object_id(), range)
+                        .await?;
                     deallocated += overlap.end - overlap.start;
                 } else {
                     break;
@@ -466,7 +471,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         let mut writes = FuturesOrdered::new();
         while !buf.is_empty() {
             let device_range = allocator
-                .allocate(transaction, buf.len() as u64)
+                .allocate(transaction, self.store().store_object_id(), buf.len() as u64)
                 .await
                 .context("allocation failed")?;
             if trace {
@@ -805,7 +810,11 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             let device_range = self
                 .store()
                 .allocator()
-                .allocate(transaction, allocate_end - file_range.start)
+                .allocate(
+                    transaction,
+                    self.store().store_object_id(),
+                    allocate_end - file_range.start,
+                )
                 .await
                 .context("Allocation failed")?;
             allocated += device_range.end - device_range.start;

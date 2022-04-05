@@ -12,13 +12,13 @@ use {
             layers_from_handles,
             skip_list_layer::SkipListLayer,
             types::{
-                BoxedLayerIterator, Item, ItemRef, Layer, LayerIterator, MutableLayer, NextKey,
-                OrdLowerBound, OrdUpperBound, RangeKey,
+                BoxedLayerIterator, Item, ItemRef, Layer, LayerIterator, LayerIteratorFilter,
+                MutableLayer, NextKey, OrdLowerBound, OrdUpperBound, RangeKey,
             },
             LSMTree,
         },
         metrics::{traits::Metric as _, UintMetric},
-        object_handle::{ObjectHandle, ObjectHandleExt},
+        object_handle::{ObjectHandle, ObjectHandleExt, INVALID_OBJECT_ID},
         object_store::{
             constants::MAX_SERIALIZED_RECORD_SIZE,
             filesystem::{ApplyContext, ApplyMode, Filesystem, Mutations, SyncOptions},
@@ -66,9 +66,13 @@ pub trait Allocator: ReservationOwner {
     /// device range allocated.
     /// The allocated range may be short (e.g. due to fragmentation), in which case the caller can
     /// simply call allocate again until they have enough blocks.
+    ///
+    /// We also store the object store ID of the store that the allocation should be assigned to so
+    /// that we have a means to delete encrypted stores without needing the encryption key.
     async fn allocate(
         &self,
         transaction: &mut Transaction<'_>,
+        object_id: u64,
         len: u64,
     ) -> Result<Range<u64>, Error>;
 
@@ -76,6 +80,7 @@ pub trait Allocator: ReservationOwner {
     async fn deallocate(
         &self,
         transaction: &mut Transaction<'_>,
+        object_id: u64,
         device_range: Range<u64>,
     ) -> Result<u64, Error>;
 
@@ -84,6 +89,7 @@ pub trait Allocator: ReservationOwner {
     async fn mark_allocated(
         &self,
         transaction: &mut Transaction<'_>,
+        object_id: u64,
         device_range: Range<u64>,
     ) -> Result<(), Error>;
 
@@ -333,13 +339,71 @@ impl RangeKey for AllocatorKey {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Versioned)]
+pub enum AllocationRefCount {
+    // Tombstone variant indicating an extent is no longer allocated.
+    None,
+    // Used when we know there are no possible allocations below us in the stack.
+    // (e.g. on the first allocation of an extent.)
+    // This variant also tracks the owning ObjectStore for the extent.
+    Abs { count: u64, owner_object_id: u64 },
+    // Denotes addition or removal of references to an existing allocation.
+    Delta(i64),
+}
+
+impl AllocationRefCount {
+    /// Merges two reference counts (for the same range and owner).
+    pub fn merge(newer: &AllocationRefCount, older: &AllocationRefCount) -> Result<Self, Error> {
+        use AllocationRefCount::{Abs, Delta, None};
+        Ok(match (newer, older) {
+            (Abs { count, owner_object_id }, _) => {
+                Abs { count: *count, owner_object_id: *owner_object_id }
+            }
+            (Delta(x), Abs { count, owner_object_id }) => {
+                let count = (*count as i64 + *x).try_into()?;
+                if count == 0 {
+                    None
+                } else {
+                    Abs { count, owner_object_id: *owner_object_id }
+                }
+            }
+            (Delta(x), Delta(y)) => Delta(*x + *y),
+            (None, _) => None,
+            (x, None) => x.clone(),
+        })
+    }
+
+    pub fn is_abs(&self) -> bool {
+        matches!(self, AllocationRefCount::Abs { .. })
+    }
+}
+
+/// Allocations are "owned" by a single ObjectStore and are reference counted
+/// (for future snapshot/clone support).
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Versioned)]
 pub struct AllocatorValue {
-    // This is the delta on a reference count for the extent.
-    pub delta: i64,
+    /// Reference count for the allocated range.
+    /// (A zero reference count is treated as a 'tombstone', indicating that older
+    /// values in the LSM Tree for this range should be ignored).
+    pub refs: AllocationRefCount,
+}
+
+impl AllocatorValue {
+    pub fn merge(newer: &AllocatorValue, older: &AllocatorValue) -> Result<Self, Error> {
+        Ok(Self { refs: AllocationRefCount::merge(&newer.refs, &older.refs)? })
+    }
 }
 
 pub type AllocatorItem = Item<AllocatorKey, AllocatorValue>;
 
+/// Wraps the iterator in a filter that removes tombstone records.
+/// This is only valid if the iterator we're wrapping represents all tree layers.
+/// If the iterator has data below it, removing tombstones may incorrectly "revive"
+/// deleted allocations.
+pub async fn filter_tombstones(
+    iter: BoxedLayerIterator<'_, AllocatorKey, AllocatorValue>,
+) -> Result<BoxedLayerIterator<'_, AllocatorKey, AllocatorValue>, Error> {
+    Ok(Box::new(iter.filter(|i| i.value.refs != AllocationRefCount::None).await?))
+}
 #[derive(Debug, Default, Clone, Deserialize, Serialize, Versioned)]
 pub struct AllocatorInfo {
     pub layers: Vec<u64>,
@@ -576,10 +640,12 @@ impl Allocator for SimpleAllocator {
     async fn allocate(
         &self,
         transaction: &mut Transaction<'_>,
+        owner_object_id: u64,
         mut len: u64,
     ) -> Result<Range<u64>, Error> {
         assert_eq!(len % self.block_size, 0);
         len = std::cmp::min(len, self.max_extent_size_bytes);
+        debug_assert_ne!(owner_object_id, INVALID_OBJECT_ID);
 
         // Make sure we have space reserved before we try and find the space.
         let reservation = if let Some(reservation) = transaction.allocator_reservation {
@@ -645,7 +711,8 @@ impl Allocator for SimpleAllocator {
                 .push((self.reserved_allocations.clone() as Arc<dyn Layer<_, _>>).into());
             tree.add_all_layers_to_layer_set(&mut layer_set);
             let mut merger = layer_set.merger();
-            let mut iter = merger.seek(Bound::Unbounded).await?;
+            let mut iter =
+                filter_tombstones(Box::new(merger.seek(Bound::Unbounded).await?)).await?;
             let mut last_offset = 0;
             loop {
                 match iter.get() {
@@ -683,7 +750,7 @@ impl Allocator for SimpleAllocator {
 
         let item = AllocatorItem::new(
             AllocatorKey { device_range: result.clone() },
-            AllocatorValue { delta: 1 },
+            AllocatorValue { refs: AllocationRefCount::Abs { count: 1, owner_object_id } },
         );
         self.reserved_allocations.insert(item.clone()).await;
         assert!(transaction.add(self.object_id(), Mutation::allocation(item)).is_none());
@@ -694,8 +761,10 @@ impl Allocator for SimpleAllocator {
     async fn mark_allocated(
         &self,
         transaction: &mut Transaction<'_>,
+        owner_object_id: u64,
         device_range: Range<u64>,
     ) -> Result<(), Error> {
+        debug_assert_ne!(owner_object_id, INVALID_OBJECT_ID);
         {
             let len = device_range.length().map_err(|_| FxfsError::InvalidArgs)?;
 
@@ -711,7 +780,10 @@ impl Allocator for SimpleAllocator {
             }
             inner.uncommitted_allocated_bytes += len;
         }
-        let item = AllocatorItem::new(AllocatorKey { device_range }, AllocatorValue { delta: 1 });
+        let item = AllocatorItem::new(
+            AllocatorKey { device_range },
+            AllocatorValue { refs: AllocationRefCount::Abs { count: 1, owner_object_id } },
+        );
         self.reserved_allocations.insert(item.clone()).await;
         transaction.add(self.object_id(), Mutation::allocation(item));
         Ok(())
@@ -722,7 +794,7 @@ impl Allocator for SimpleAllocator {
             self.object_id(),
             Mutation::allocation_ref(AllocatorItem::new(
                 AllocatorKey { device_range },
-                AllocatorValue { delta: 1 },
+                AllocatorValue { refs: AllocationRefCount::Delta(1) },
             )),
         );
     }
@@ -730,6 +802,7 @@ impl Allocator for SimpleAllocator {
     async fn deallocate(
         &self,
         transaction: &mut Transaction<'_>,
+        owner_object_id: u64,
         mut dealloc_range: Range<u64>,
     ) -> Result<u64, Error> {
         log::debug!("deallocate {:?}", dealloc_range);
@@ -748,14 +821,17 @@ impl Allocator for SimpleAllocator {
         // iterators until it encounters a key whose lower-bound is not greater than the search
         // key).  The upper bound is used to search each individual layer, and we want to start with
         // an extent that covers the first byte of the range we're deallocating.
-        let mut iter = merger
-            .seek(Bound::Included(&AllocatorKey { device_range: 0..dealloc_range.start + 1 }))
-            .await?;
+        let mut iter = filter_tombstones(Box::new(
+            merger
+                .seek(Bound::Included(&AllocatorKey { device_range: 0..dealloc_range.start + 1 }))
+                .await?,
+        ))
+        .await?;
         let mut deallocated = 0;
         let mut mutation = None;
         while let Some(ItemRef {
             key: AllocatorKey { device_range, .. },
-            value: AllocatorValue { delta, .. },
+            value: AllocatorValue { refs, .. },
             ..
         }) = iter.get()
         {
@@ -765,7 +841,8 @@ impl Allocator for SimpleAllocator {
                     .context("Attempt to deallocate unallocated range"));
             }
             let end = std::cmp::min(device_range.end, dealloc_range.end);
-            if *delta == 1 {
+            if let AllocationRefCount::Abs { count: 1, owner_object_id: store_object_id } = refs {
+                debug_assert_eq!(owner_object_id, *store_object_id);
                 // In this branch, we know that we're freeing data, so we want an Allocator
                 // mutation.
                 if let Some(Mutation::AllocatorRef(_)) = mutation {
@@ -775,7 +852,7 @@ impl Allocator for SimpleAllocator {
                     None => {
                         mutation = Some(Mutation::allocation(Item::new(
                             AllocatorKey { device_range: dealloc_range.start..end },
-                            AllocatorValue { delta: -1 },
+                            AllocatorValue { refs: AllocationRefCount::None },
                         )));
                     }
                     Some(Mutation::Allocator(AllocatorMutation(AllocatorItem { key, .. }))) => {
@@ -792,9 +869,10 @@ impl Allocator for SimpleAllocator {
                 }
                 match &mut mutation {
                     None => {
+                        // TODO(https://fxbug.dev/96806): Combine with Mutation::allocation.
                         mutation = Some(Mutation::allocation_ref(Item::new(
                             AllocatorKey { device_range: dealloc_range.start..end },
-                            AllocatorValue { delta: -1 },
+                            AllocatorValue { refs: AllocationRefCount::Delta(-1) },
                         )));
                     }
                     Some(Mutation::AllocatorRef(AllocatorMutation(AllocatorItem {
@@ -893,14 +971,17 @@ impl Allocator for SimpleAllocator {
         match mutation {
             Mutation::Allocator(AllocatorMutation(AllocatorItem {
                 key: AllocatorKey { device_range },
-                value: AllocatorValue { delta },
+                value: AllocatorValue { refs, .. },
                 ..
             })) => {
                 if !device_range.valid() {
                     return Ok(false);
                 }
-                if *delta < 0 {
-                    checksum_list.mark_deallocated(journal_offset, device_range.clone());
+                match refs {
+                    AllocationRefCount::Delta(x) if *x < 0 => {
+                        checksum_list.mark_deallocated(journal_offset, device_range.clone());
+                    }
+                    _ => {}
                 }
             }
             _ => {}
@@ -931,10 +1012,12 @@ impl Mutations for SimpleAllocator {
                 // allocations and merging into the tree.  These barriers are present whilst we use
                 // skip_list_layer's commit_and_wait method, rather than just commit.
                 let len = item.key.device_range.length().unwrap();
-                if item.value.delta < 0 {
+                if item.value.refs == AllocationRefCount::None {
                     if context.mode.is_live() {
                         let mut item = item.clone();
-                        item.value.delta = 1;
+                        // Note that the point of this reservation is to avoid premature reuse.
+                        // We use Delta(1) to ensure that the ref count doesn't decrement to 0.
+                        item.value.refs = AllocationRefCount::Delta(1);
                         self.reserved_allocations.insert(item).await;
                     }
 
@@ -961,7 +1044,7 @@ impl Mutations for SimpleAllocator {
                 }
                 let lower_bound = item.key.lower_bound_for_merge_into();
                 self.tree.merge_into(item.clone(), &lower_bound).await;
-                if item.value.delta > 0 {
+                if let AllocationRefCount::Abs { count: 1, .. } = item.value.refs {
                     if context.mode.is_live() {
                         self.reserved_allocations.erase(&item.key).await;
                     }
@@ -1014,7 +1097,7 @@ impl Mutations for SimpleAllocator {
     fn drop_mutation(&self, mutation: Mutation, transaction: &Transaction<'_>) {
         match mutation {
             Mutation::Allocator(AllocatorMutation(item)) => {
-                if item.value.delta > 0 {
+                if let AllocationRefCount::Abs { count: 1, .. } = item.value.refs {
                     let mut inner = self.inner.lock().unwrap();
                     let len = item.key.device_range.length().unwrap();
                     inner.uncommitted_allocated_bytes -= len;
@@ -1070,9 +1153,11 @@ impl Mutations for SimpleAllocator {
         let layer_set = self.tree.immutable_layer_set();
         {
             let mut merger = layer_set.merger();
+            let iter = filter_tombstones(Box::new(merger.seek(Bound::Unbounded).await?)).await?;
+            let iter = CoalescingIterator::new(iter).await?;
             self.tree
                 .compact_with_iterator(
-                    CoalescingIterator::new(Box::new(merger.seek(Bound::Unbounded).await?)).await?,
+                    iter,
                     DirectWriter::new(&layer_object_handle, txn_options),
                     layer_object_handle.block_size(),
                 )
@@ -1142,7 +1227,7 @@ impl Mutations for SimpleAllocator {
 // -1 and +2 records. To address this, we add another stage that applies after merging which
 // coalesces records after they have been emitted.  This is a bit simpler than merging because the
 // records cannot overlap, so it's just a question of merging adjacent records if they happen to
-// have the same delta.
+// have the same delta and object_id.
 
 pub struct CoalescingIterator<'a> {
     iter: BoxedLayerIterator<'a, AllocatorKey, AllocatorValue>,
@@ -1174,10 +1259,9 @@ impl LayerIterator<AllocatorKey, AllocatorValue> for CoalescingIterator<'_> {
                 Some(right) => {
                     // The two records cannot overlap.
                     assert!(left.key.device_range.end <= right.key.device_range.start);
-                    // We can only coalesce the records if they are touching and have the same
-                    // delta.
+                    // We can only coalesce records if they are touching and have the same value.
                     if left.key.device_range.end < right.key.device_range.start
-                        || left.value.delta != right.value.delta
+                        || left.value != *right.value
                     {
                         return Ok(());
                     }
@@ -1203,8 +1287,10 @@ mod tests {
             },
             object_store::{
                 allocator::{
-                    merge::merge, Allocator, AllocatorKey, AllocatorValue, CoalescingIterator,
-                    SimpleAllocator,
+                    filter_tombstones,
+                    merge::merge,
+                    AllocationRefCount::{Abs, Delta},
+                    Allocator, AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator,
                 },
                 filesystem::{Filesystem, Mutations},
                 testing::fake_filesystem::FakeFilesystem,
@@ -1226,8 +1312,14 @@ mod tests {
     async fn test_coalescing_iterator() {
         let skip_list = SkipListLayer::new(100);
         let items = [
-            Item::new(AllocatorKey { device_range: 0..100 }, AllocatorValue { delta: 1 }),
-            Item::new(AllocatorKey { device_range: 100..200 }, AllocatorValue { delta: 1 }),
+            Item::new(
+                AllocatorKey { device_range: 0..100 },
+                AllocatorValue { refs: Abs { count: 1, owner_object_id: 99 } },
+            ),
+            Item::new(
+                AllocatorKey { device_range: 100..200 },
+                AllocatorValue { refs: Abs { count: 1, owner_object_id: 99 } },
+            ),
         ];
         skip_list.insert(items[1].clone()).await;
         skip_list.insert(items[0].clone()).await;
@@ -1238,7 +1330,10 @@ mod tests {
         let ItemRef { key, value, .. } = iter.get().expect("get failed");
         assert_eq!(
             (key, value),
-            (&AllocatorKey { device_range: 0..200 }, &AllocatorValue { delta: 1 })
+            (
+                &AllocatorKey { device_range: 0..200 },
+                &AllocatorValue { refs: Abs { count: 1, owner_object_id: 99 } }
+            )
         );
         iter.advance().await.expect("advance failed");
         assert!(iter.get().is_none());
@@ -1248,18 +1343,24 @@ mod tests {
     async fn test_merge_and_coalesce_across_three_layers() {
         let lsm_tree = LSMTree::new(merge);
         lsm_tree
-            .insert(Item::new(AllocatorKey { device_range: 100..200 }, AllocatorValue { delta: 2 }))
+            .insert(Item::new(
+                AllocatorKey { device_range: 100..200 },
+                AllocatorValue { refs: Abs { count: 2, owner_object_id: 99 } },
+            ))
             .await;
         lsm_tree.seal().await;
         lsm_tree
             .insert(Item::new(
                 AllocatorKey { device_range: 100..200 },
-                AllocatorValue { delta: -1 },
+                AllocatorValue { refs: Delta(-1) },
             ))
             .await;
         lsm_tree.seal().await;
         lsm_tree
-            .insert(Item::new(AllocatorKey { device_range: 0..100 }, AllocatorValue { delta: 1 }))
+            .insert(Item::new(
+                AllocatorKey { device_range: 0..100 },
+                AllocatorValue { refs: Abs { count: 1, owner_object_id: 99 } },
+            ))
             .await;
 
         let layer_set = lsm_tree.layer_set();
@@ -1272,7 +1373,62 @@ mod tests {
         let ItemRef { key, value, .. } = iter.get().expect("get failed");
         assert_eq!(
             (key, value),
-            (&AllocatorKey { device_range: 0..200 }, &AllocatorValue { delta: 1 })
+            (
+                &AllocatorKey { device_range: 0..200 },
+                &AllocatorValue { refs: Abs { count: 1, owner_object_id: 99 } }
+            )
+        );
+        iter.advance().await.expect("advance failed");
+        assert!(iter.get().is_none());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_merge_and_coalesce_wont_merge_across_object_id() {
+        let lsm_tree = LSMTree::new(merge);
+        lsm_tree
+            .insert(Item::new(
+                AllocatorKey { device_range: 100..200 },
+                AllocatorValue { refs: Abs { count: 2, owner_object_id: 99 } },
+            ))
+            .await;
+        lsm_tree.seal().await;
+        lsm_tree
+            .insert(Item::new(
+                AllocatorKey { device_range: 100..200 },
+                AllocatorValue { refs: Delta(-1) },
+            ))
+            .await;
+        lsm_tree.seal().await;
+        lsm_tree
+            .insert(Item::new(
+                AllocatorKey { device_range: 0..100 },
+                AllocatorValue { refs: Abs { count: 1, owner_object_id: 98 } },
+            ))
+            .await;
+
+        let layer_set = lsm_tree.layer_set();
+        let mut merger = layer_set.merger();
+        let mut iter = CoalescingIterator::new(Box::new(
+            merger.seek(Bound::Unbounded).await.expect("seek failed"),
+        ))
+        .await
+        .expect("new failed");
+        let ItemRef { key, value, .. } = iter.get().expect("get failed");
+        assert_eq!(
+            (key, value),
+            (
+                &AllocatorKey { device_range: 0..100 },
+                &AllocatorValue { refs: Abs { count: 1, owner_object_id: 98 } }
+            )
+        );
+        iter.advance().await.expect("advance failed");
+        let ItemRef { key, value, .. } = iter.get().expect("get failed");
+        assert_eq!(
+            (key, value),
+            (
+                &AllocatorKey { device_range: 100..200 },
+                &AllocatorValue { refs: Abs { count: 1, owner_object_id: 99 } }
+            )
         );
         iter.advance().await.expect("advance failed");
         assert!(iter.get().is_none());
@@ -1289,7 +1445,10 @@ mod tests {
     async fn check_allocations(allocator: &SimpleAllocator, expected_allocations: &[Range<u64>]) {
         let layer_set = allocator.tree.layer_set();
         let mut merger = layer_set.merger();
-        let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
+        let mut iter =
+            filter_tombstones(Box::new(merger.seek(Bound::Unbounded).await.expect("seek failed")))
+                .await
+                .expect("filter failed");
         let mut found = 0;
         while let Some(ItemRef { key: AllocatorKey { device_range }, .. }) = iter.get() {
             let mut l = device_range.length().expect("Invalid range");
@@ -1324,16 +1483,23 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_allocations() {
+        const STORE_OBJECT_ID: u64 = 99;
         let (fs, allocator, _) = test_fs().await;
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         let mut device_ranges = Vec::new();
         device_ranges.push(
-            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed"),
+            allocator
+                .allocate(&mut transaction, STORE_OBJECT_ID, fs.block_size())
+                .await
+                .expect("allocate failed"),
         );
         assert_eq!(device_ranges.last().unwrap().length().expect("Invalid range"), fs.block_size());
         device_ranges.push(
-            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed"),
+            allocator
+                .allocate(&mut transaction, STORE_OBJECT_ID, fs.block_size())
+                .await
+                .expect("allocate failed"),
         );
         assert_eq!(device_ranges.last().unwrap().length().expect("Invalid range"), fs.block_size());
         assert_eq!(overlap(&device_ranges[0], &device_ranges[1]), 0);
@@ -1341,7 +1507,10 @@ mod tests {
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         device_ranges.push(
-            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed"),
+            allocator
+                .allocate(&mut transaction, STORE_OBJECT_ID, fs.block_size())
+                .await
+                .expect("allocate failed"),
         );
         assert_eq!(device_ranges[2].length().unwrap(), fs.block_size());
         assert_eq!(overlap(&device_ranges[0], &device_ranges[2]), 0);
@@ -1353,13 +1522,14 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_allocate_more_than_max_size() {
+        const STORE_OBJECT_ID: u64 = 99;
         let (fs, allocator, _) = test_fs().await;
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         let mut device_ranges = Vec::new();
         device_ranges.push(
             allocator
-                .allocate(&mut transaction, fs.device().size())
+                .allocate(&mut transaction, STORE_OBJECT_ID, fs.device().size())
                 .await
                 .expect("allocate failed"),
         );
@@ -1374,17 +1544,23 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_deallocations() {
+        const STORE_OBJECT_ID: u64 = 99;
         let (fs, allocator, _) = test_fs().await;
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
-        let device_range1 =
-            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed");
+        let device_range1 = allocator
+            .allocate(&mut transaction, STORE_OBJECT_ID, fs.block_size())
+            .await
+            .expect("allocate failed");
         assert_eq!(device_range1.length().expect("Invalid range"), fs.block_size());
         transaction.commit().await.expect("commit failed");
 
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
-        allocator.deallocate(&mut transaction, device_range1).await.expect("deallocate failed");
+        allocator
+            .deallocate(&mut transaction, STORE_OBJECT_ID, device_range1)
+            .await
+            .expect("deallocate failed");
         transaction.commit().await.expect("commit failed");
 
         check_allocations(&allocator, &[]).await;
@@ -1392,17 +1568,25 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_mark_allocated() {
+        const STORE_OBJECT_ID: u64 = 99;
         let (fs, allocator, _) = test_fs().await;
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         let mut device_ranges = Vec::new();
         device_ranges.push(0..fs.block_size());
         allocator
-            .mark_allocated(&mut transaction, device_ranges.last().unwrap().clone())
+            .mark_allocated(
+                &mut transaction,
+                STORE_OBJECT_ID,
+                device_ranges.last().unwrap().clone(),
+            )
             .await
             .expect("mark_allocated failed");
         device_ranges.push(
-            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed"),
+            allocator
+                .allocate(&mut transaction, STORE_OBJECT_ID, fs.block_size())
+                .await
+                .expect("allocate failed"),
         );
         assert_eq!(device_ranges.last().unwrap().length().expect("Invalid range"), fs.block_size());
         assert_eq!(overlap(&device_ranges[0], &device_ranges[1]), 0);
@@ -1413,18 +1597,28 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_flush() {
+        const STORE_OBJECT_ID: u64 = 99;
         let (fs, allocator, _) = test_fs().await;
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         let mut device_ranges = Vec::new();
         device_ranges.push(
-            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed"),
+            allocator
+                .allocate(&mut transaction, STORE_OBJECT_ID, fs.block_size())
+                .await
+                .expect("allocate failed"),
         );
         device_ranges.push(
-            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed"),
+            allocator
+                .allocate(&mut transaction, STORE_OBJECT_ID, fs.block_size())
+                .await
+                .expect("allocate failed"),
         );
         device_ranges.push(
-            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed"),
+            allocator
+                .allocate(&mut transaction, STORE_OBJECT_ID, fs.block_size())
+                .await
+                .expect("allocate failed"),
         );
         transaction.commit().await.expect("commit failed");
 
@@ -1440,7 +1634,10 @@ mod tests {
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         device_ranges.push(
-            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed"),
+            allocator
+                .allocate(&mut transaction, STORE_OBJECT_ID, fs.block_size())
+                .await
+                .expect("allocate failed"),
         );
         for r in &device_ranges[..3] {
             assert_eq!(overlap(r, device_ranges.last().unwrap()), 0);
@@ -1451,6 +1648,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_dropped_transaction() {
+        const STORE_OBJECT_ID: u64 = 99;
         let (fs, allocator, _) = test_fs().await;
         let allocated_range = {
             let mut transaction = fs
@@ -1458,7 +1656,10 @@ mod tests {
                 .new_transaction(&[], Options::default())
                 .await
                 .expect("new_transaction failed");
-            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed")
+            allocator
+                .allocate(&mut transaction, STORE_OBJECT_ID, fs.block_size())
+                .await
+                .expect("allocate failed")
         };
         // After dropping the transaction and attempting to allocate again, we should end up with
         // the same range because the reservation should have been released.
@@ -1468,13 +1669,17 @@ mod tests {
             .await
             .expect("new_transaction failed");
         assert_eq!(
-            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed"),
+            allocator
+                .allocate(&mut transaction, STORE_OBJECT_ID, fs.block_size())
+                .await
+                .expect("allocate failed"),
             allocated_range
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_allocated_bytes() {
+        const STORE_OBJECT_ID: u64 = 99;
         let (fs, allocator, _) = test_fs().await;
         assert_eq!(allocator.get_allocated_bytes(), 0);
 
@@ -1487,7 +1692,7 @@ mod tests {
                 .await
                 .expect("new_transaction failed");
             let range = allocator
-                .allocate(&mut transaction, allocated_bytes)
+                .allocate(&mut transaction, STORE_OBJECT_ID, allocated_bytes)
                 .await
                 .expect("allocate failed");
             transaction.commit().await.expect("commit failed");
@@ -1501,7 +1706,10 @@ mod tests {
                 .new_transaction(&[], Options::default())
                 .await
                 .expect("new_transaction failed");
-            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed");
+            allocator
+                .allocate(&mut transaction, STORE_OBJECT_ID, fs.block_size())
+                .await
+                .expect("allocate failed");
 
             // Prior to commiiting, the count of allocated bytes shouldn't change.
             assert_eq!(allocator.get_allocated_bytes(), allocated_bytes);
@@ -1514,7 +1722,10 @@ mod tests {
         let deallocate_range = allocated_range.start + 20..allocated_range.end - 20;
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
-        allocator.deallocate(&mut transaction, deallocate_range).await.expect("deallocate failed");
+        allocator
+            .deallocate(&mut transaction, STORE_OBJECT_ID, deallocate_range)
+            .await
+            .expect("deallocate failed");
 
         // Before committing, there should be no change.
         assert_eq!(allocator.get_allocated_bytes(), allocated_bytes);

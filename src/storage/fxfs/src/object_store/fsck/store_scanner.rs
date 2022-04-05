@@ -7,7 +7,7 @@ use {
         lsm_tree::types::{Item, ItemRef, LayerIterator, MutableLayer},
         object_handle::INVALID_OBJECT_ID,
         object_store::{
-            allocator::{self, AllocatorKey, AllocatorValue},
+            allocator::{self, AllocationRefCount, AllocatorKey, AllocatorValue},
             extent_record::{ExtentKey, ExtentValue, DEFAULT_DATA_ATTRIBUTE_ID},
             fsck::{
                 errors::{FsckError, FsckFatal, FsckIssue, FsckWarning},
@@ -585,7 +585,9 @@ async fn scan_extents<'a, F: Fn(&FsckIssue)>(
                     AllocatorKey {
                         device_range: *device_offset..*device_offset + range.end - range.start,
                     },
-                    AllocatorValue { delta: 1 },
+                    AllocatorValue {
+                        refs: AllocationRefCount::Abs { count: 1, owner_object_id: store_id },
+                    },
                 );
                 let lower_bound = item.key.lower_bound_for_merge_into();
                 fsck.allocations.merge_into(item, &lower_bound, allocator::merge::merge).await;

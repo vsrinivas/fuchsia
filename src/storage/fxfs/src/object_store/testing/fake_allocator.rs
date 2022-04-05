@@ -48,6 +48,7 @@ impl Allocator for FakeAllocator {
     async fn allocate(
         &self,
         _transaction: &mut Transaction<'_>,
+        _store_object_id: u64,
         len: u64,
     ) -> Result<Range<u64>, Error> {
         let mut inner = self.0.lock().unwrap();
@@ -64,6 +65,7 @@ impl Allocator for FakeAllocator {
     async fn deallocate(
         &self,
         _transaction: &mut Transaction<'_>,
+        _object_id: u64,
         device_range: Range<u64>,
     ) -> Result<u64, Error> {
         let mut inner = self.0.lock().unwrap();
@@ -77,6 +79,7 @@ impl Allocator for FakeAllocator {
     async fn mark_allocated(
         &self,
         _transaction: &mut Transaction<'_>,
+        _store_object_id: u64,
         device_range: Range<u64>,
     ) -> Result<(), Error> {
         let mut inner = self.0.lock().unwrap();
