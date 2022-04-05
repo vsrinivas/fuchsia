@@ -34,7 +34,7 @@ async fn run() -> Result<(), Error> {
     Ok(())
 }
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     run().await.unwrap_or_else(|e| fx_log_err!("Failed to run ssh-key-manager: {:?}", e));
 }
