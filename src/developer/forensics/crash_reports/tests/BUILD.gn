@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/components/fuchsia_unittest_component.gni")
 
 visibility = [ ":*" ]
 
@@ -318,18 +319,14 @@ resource("test_data") {
 ###############################################################################
 # COMPONENTS
 ###############################################################################
-fuchsia_component("annotation_map_unittest") {
-  testonly = true
-
-  manifest = "meta/annotation_map_unittest.cmx"
-
+fuchsia_unittest_component("annotation_map_unittest") {
   deps = [ ":annotation_map_unittest_exe" ]
 }
 
 fuchsia_component("config_unittest") {
   testonly = true
 
-  manifest = "meta/config_unittest.cmx"
+  manifest = "meta/config_unittest.cml"
 
   deps = [ ":config_unittest_exe" ]
 }
@@ -337,7 +334,7 @@ fuchsia_component("config_unittest") {
 fuchsia_component("crash_register_unittest") {
   testonly = true
 
-  manifest = "meta/crash_register_unittest.cmx"
+  manifest = "meta/crash_register_unittest.cml"
 
   deps = [ ":crash_register_unittest_exe" ]
 }
@@ -345,24 +342,16 @@ fuchsia_component("crash_register_unittest") {
 fuchsia_component("crash_reporter_unittest") {
   testonly = true
 
-  manifest = "meta/crash_reporter_unittest.cmx"
+  manifest = "meta/crash_reporter_unittest.cml"
 
   deps = [ ":crash_reporter_unittest_exe" ]
 }
 
-fuchsia_component("crash_server_unittest") {
-  testonly = true
-
-  manifest = "meta/crash_server_unittest.cmx"
-
+fuchsia_unittest_component("crash_server_unittest") {
   deps = [ ":crash_server_unittest_exe" ]
 }
 
-fuchsia_component("dart_module_parser_unittest") {
-  testonly = true
-
-  manifest = "meta/dart_module_parser_unittest.cml"
-
+fuchsia_unittest_component("dart_module_parser_unittest") {
   deps = [ ":dart_module_parser_unittest_exe" ]
 }
 
@@ -374,68 +363,56 @@ fuchsia_component("default_annotations_unittest") {
   deps = [ ":default_annotations_unittest_exe" ]
 }
 
-fuchsia_component("reporting_policy_watcher_unittest") {
-  testonly = true
-
-  manifest = "meta/reporting_policy_watcher_unittest.cmx"
-
-  deps = [ ":reporting_policy_watcher_unittest_exe" ]
-}
-
-fuchsia_component("inspect_manager_unittest") {
-  testonly = true
-
-  manifest = "meta/inspect_manager_unittest.cmx"
-
+fuchsia_unittest_component("inspect_manager_unittest") {
   deps = [ ":inspect_manager_unittest_exe" ]
 }
 
 fuchsia_component("queue_unittest") {
   testonly = true
 
-  manifest = "meta/queue_unittest.cmx"
+  manifest = "meta/queue_unittest.cml"
 
   deps = [ ":queue_unittest_exe" ]
 }
 
-fuchsia_component("report_util_unittest") {
-  testonly = true
-
-  manifest = "meta/report_util_unittest.cmx"
-
+fuchsia_unittest_component("report_util_unittest") {
   deps = [ ":report_util_unittest_exe" ]
 }
 
-fuchsia_component("sized_data_reader_unittest") {
+fuchsia_component("reporting_policy_watcher_unittest") {
   testonly = true
 
-  manifest = "meta/sized_data_reader_unittest.cmx"
+  manifest = "meta/reporting_policy_watcher_unittest.cml"
 
+  deps = [ ":reporting_policy_watcher_unittest_exe" ]
+}
+
+fuchsia_unittest_component("sized_data_reader_unittest") {
   deps = [ ":sized_data_reader_unittest_exe" ]
 }
 
 fuchsia_component("snapshot_manager_unittest") {
   testonly = true
 
-  manifest = "meta/snapshot_manager_unittest.cmx"
+  manifest = "meta/snapshot_manager_unittest.cml"
 
   deps = [ ":snapshot_manager_unittest_exe" ]
-}
-
-fuchsia_component("store_unittest") {
-  testonly = true
-
-  manifest = "meta/store_unittest.cmx"
-
-  deps = [ ":store_unittest_exe" ]
 }
 
 fuchsia_component("store_metadata_unittest") {
   testonly = true
 
-  manifest = "meta/store_metadata_unittest.cmx"
+  manifest = "meta/store_metadata_unittest.cml"
 
   deps = [ ":store_metadata_unittest_exe" ]
+}
+
+fuchsia_component("store_unittest") {
+  testonly = true
+
+  manifest = "meta/store_unittest.cml"
+
+  deps = [ ":store_unittest_exe" ]
 }
 
 ###############################################################################
