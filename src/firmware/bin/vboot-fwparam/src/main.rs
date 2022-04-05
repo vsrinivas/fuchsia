@@ -104,7 +104,7 @@ fn find_chromeos_acpi_device() -> Result<chrome_acpi::DeviceProxy, anyhow::Error
         .context("Connecting to chromeos_acpi device")?)
 }
 
-#[fuchsia::component(logging = true)]
+#[fuchsia::main(logging = true)]
 async fn main() {
     if let Err(e) = real_main().await {
         fx_log_err!("Error: {:?}", e);

@@ -64,7 +64,7 @@ async fn fastboot_session<T: Read + Write>(stream: &mut T) -> Result<(), anyhow:
     }
 }
 
-#[fuchsia::component(logging = true)]
+#[fuchsia::main(logging = true)]
 async fn main() -> Result<(), anyhow::Error> {
     let addrs: [SocketAddr; 2] = [
         (Ipv6Addr::UNSPECIFIED, FASTBOOT_PORT).into(),

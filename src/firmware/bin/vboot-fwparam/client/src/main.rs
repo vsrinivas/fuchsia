@@ -45,7 +45,7 @@ enum SubCommand {
     Set(SetArgs),
 }
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     let args: Args = argh::from_env();
     run_cmd(args).await.unwrap_or_else(|e| {
