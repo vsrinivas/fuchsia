@@ -20,6 +20,7 @@
         use_default_loader: { type: "bool" },
 
         // Perform decompression in a sandboxed component.
+        // TODO(fxbug.dev/96844): This should be the only supported config; remove this flag.
         sandbox_decompression: { type: "bool" },
 
         // Normally the partition limits (minfs-max-bytes and blofs-max-bytes) apply only to
