@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/components/fuchsia_unittest_component.gni")
 
 visibility = [ ":*" ]
 
@@ -268,7 +269,7 @@ resource("test_data_zip") {
 fuchsia_component("archive_unittest") {
   testonly = true
 
-  manifest = "meta/archive_unittest.cmx"
+  manifest = "meta/archive_unittest.cml"
 
   deps = [
     ":archive_unittest_exe",
@@ -276,82 +277,54 @@ fuchsia_component("archive_unittest") {
   ]
 }
 
-fuchsia_component("bridge_unittest") {
-  testonly = true
-
-  manifest = "meta/bridge_unittest.cmx"
-
+fuchsia_unittest_component("bridge_unittest") {
   deps = [ ":bridge_unittest_exe" ]
 }
 
-fuchsia_component("caching_ptr_unittest") {
-  testonly = true
-
-  manifest = "meta/caching_ptr_unittest.cmx"
-
+fuchsia_unittest_component("caching_ptr_unittest") {
   deps = [ ":caching_ptr_unittest_exe" ]
 }
 
-fuchsia_component("channel_provider_ptr_unittest") {
-  testonly = true
-
-  manifest = "meta/channel_provider_ptr_unittest.cmx"
-
+fuchsia_unittest_component("channel_provider_ptr_unittest") {
   deps = [ ":channel_provider_ptr_unittest_exe" ]
 }
 
-fuchsia_component("cobalt_unittest") {
-  testonly = true
-
-  manifest = "meta/cobalt_unittest.cmx"
-
+fuchsia_unittest_component("cobalt_unittest") {
   deps = [ ":cobalt_unittest_exe" ]
 }
 
 fuchsia_component("component_unittest") {
   testonly = true
 
-  manifest = "meta/component_unittest.cmx"
+  manifest = "meta/component_unittest.cml"
 
   deps = [ ":component_unittest_exe" ]
 }
 
-fuchsia_component("hanging_get_ptr_unittest") {
-  testonly = true
-
-  manifest = "meta/hanging_get_ptr_unittest.cmx"
-
+fuchsia_unittest_component("hanging_get_ptr_unittest") {
   deps = [ ":hanging_get_ptr_unittest_exe" ]
 }
 
 fuchsia_component("inspect_node_manager_unittest") {
   testonly = true
 
-  manifest = "meta/inspect_node_manager_unittest.cmx"
+  manifest = "meta/inspect_node_manager_unittest.cml"
 
   deps = [ ":inspect_node_manager_unittest_exe" ]
 }
 
-fuchsia_component("inspect_protocol_stats_unittest") {
-  testonly = true
-
-  manifest = "meta/inspect_protocol_stats_unittest.cmx"
-
+fuchsia_unittest_component("inspect_protocol_stats_unittest") {
   deps = [ ":inspect_protocol_stats_unittest_exe" ]
 }
 
-fuchsia_component("log_format_unittest") {
-  testonly = true
-
-  manifest = "meta/log_format_unittest.cmx"
-
+fuchsia_unittest_component("log_format_unittest") {
   deps = [ ":log_format_unittest_exe" ]
 }
 
 fuchsia_component("oneshot_ptr_unittest") {
   testonly = true
 
-  manifest = "meta/oneshot_ptr_unittest.cmx"
+  manifest = "meta/oneshot_ptr_unittest.cml"
 
   deps = [ ":oneshot_ptr_unittest_exe" ]
 }
@@ -359,7 +332,7 @@ fuchsia_component("oneshot_ptr_unittest") {
 fuchsia_component("previous_boot_file_unittest") {
   testonly = true
 
-  manifest = "meta/previous_boot_file_unittest.cmx"
+  manifest = "meta/previous_boot_file_unittest.cml"
 
   deps = [ ":previous_boot_file_unittest_exe" ]
 }
@@ -367,23 +340,19 @@ fuchsia_component("previous_boot_file_unittest") {
 fuchsia_component("promise_unittest") {
   testonly = true
 
-  manifest = "meta/promise_unittest.cmx"
+  manifest = "meta/promise_unittest.cml"
 
   deps = [ ":promise_unittest_exe" ]
 }
 
-fuchsia_component("time_unittest") {
-  testonly = true
-
-  manifest = "meta/time_unittest.cmx"
-
+fuchsia_unittest_component("time_unittest") {
   deps = [ ":time_unittest_exe" ]
 }
 
 fuchsia_component("utc_time_provider_unittest") {
   testonly = true
 
-  manifest = "meta/utc_time_provider_unittest.cmx"
+  manifest = "meta/utc_time_provider_unittest.cml"
 
   deps = [ ":utc_time_provider_unittest_exe" ]
 }
