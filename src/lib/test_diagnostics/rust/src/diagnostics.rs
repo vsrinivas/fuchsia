@@ -11,7 +11,7 @@ use {
     },
     fidl_fuchsia_test_manager as ftest_manager, fuchsia_async as fasync,
     futures::Stream,
-    futures::{channel::mpsc, stream::BoxStream, SinkExt, StreamExt},
+    futures::{channel::mpsc, stream::BoxStream, AsyncReadExt, SinkExt, StreamExt},
     pin_project::pin_project,
     serde_json,
     std::{
@@ -195,7 +195,27 @@ impl ArchiveLogStream {
                                 }
                             };
                         }
-                        _ => {}
+                        DiagnosticsData::Socket(socket) => {
+                            // hack, probably get a good value from diagnostic bridge lib somewhere
+                            let mut buffer = Vec::with_capacity(32000);
+                            let read_sock_result: Result<_, Error> = async {
+                                let mut async_sock = fasync::Socket::from_socket(socket)?;
+                                async_sock.read_to_end(&mut buffer).await.map_err(Error::from)
+                            }
+                            .await;
+                            if let Err(e) = read_sock_result {
+                                let _ = sender
+                                    .send(Err(format_err!("Error reading socket: {:?}", e)))
+                                    .await;
+                                continue;
+                            }
+                            let _ = match serde_json::from_slice(&buffer) {
+                                Ok(data) => sender.send(Ok(data)).await,
+                                Err(e) => {
+                                    sender.send(Err(format_err!("Malformed json: {:?}", e))).await
+                                }
+                            };
+                        }
                     }
                 }
             }
@@ -317,6 +337,7 @@ mod tests {
                 ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorMarker,
                 ArchiveIteratorRequest, DiagnosticsData, InlineData,
             },
+            futures::AsyncWriteExt,
             std::collections::VecDeque,
         };
 
@@ -328,6 +349,7 @@ mod tests {
         async fn spawn_archive_iterator_server(
             server_end: ServerEnd<ArchiveIteratorMarker>,
             with_error: bool,
+            with_socket: bool,
         ) {
             let mut request_stream = server_end.into_stream().expect("got stream");
             let mut values = vec![1, 2, 3].into_iter();
@@ -356,27 +378,47 @@ mod tests {
                             continue;
                         }
                         let json_data = get_json_data(value);
-                        let result = ArchiveIteratorEntry {
-                            diagnostics_data: Some(DiagnosticsData::Inline(InlineData {
-                                data: json_data,
-                                truncated_chars: 0,
-                            })),
-                            ..ArchiveIteratorEntry::EMPTY
-                        };
-                        responder.send(&mut Ok(vec![result])).expect("send response");
+                        match with_socket {
+                            false => {
+                                let result = ArchiveIteratorEntry {
+                                    diagnostics_data: Some(DiagnosticsData::Inline(InlineData {
+                                        data: json_data,
+                                        truncated_chars: 0,
+                                    })),
+                                    ..ArchiveIteratorEntry::EMPTY
+                                };
+                                responder.send(&mut Ok(vec![result])).expect("send response");
+                            }
+                            true => {
+                                let sock_opts = fidl::SocketOpts::STREAM;
+                                let (socket, tx_socket) =
+                                    fidl::Socket::create(sock_opts).expect("create socket");
+                                let mut tx_socket = fasync::Socket::from_socket(tx_socket)
+                                    .expect("create async socket");
+                                let response = ArchiveIteratorEntry {
+                                    diagnostics_data: Some(DiagnosticsData::Socket(socket)),
+                                    ..ArchiveIteratorEntry::EMPTY
+                                };
+                                responder.send(&mut Ok(vec![response])).expect("send response");
+                                tx_socket
+                                    .write_all(json_data.as_bytes())
+                                    .await
+                                    .expect("write to socket");
+                            }
+                        }
                     }
                 }
             }
         }
 
-        #[fasync::run_singlethreaded(test)]
-        async fn archive_stream_returns_logs() {
+        async fn archive_stream_returns_logs(use_socket: bool) {
             let (mut log_stream, iterator) = create_log_stream().expect("got log stream");
             let server_end = match iterator {
                 ftest_manager::LogsIterator::Archive(server_end) => server_end,
                 _ => panic!("unexpected logs iterator server end"),
             };
-            fasync::Task::spawn(spawn_archive_iterator_server(server_end, false)).detach();
+            fasync::Task::spawn(spawn_archive_iterator_server(server_end, false, use_socket))
+                .detach();
             assert_eq!(log_stream.next().await.unwrap().expect("got ok result").msg(), Some("1"));
             assert_eq!(log_stream.next().await.unwrap().expect("got ok result").msg(), Some("2"));
             assert_eq!(log_stream.next().await.unwrap().expect("got ok result").msg(), Some("3"));
@@ -384,14 +426,34 @@ mod tests {
         }
 
         #[fasync::run_singlethreaded(test)]
-        async fn archive_stream_can_return_errors() {
+        async fn archive_stream_returns_logs_inline() {
+            archive_stream_returns_logs(false).await;
+        }
+
+        #[fasync::run_singlethreaded(test)]
+        async fn archive_stream_returns_logs_socket() {
+            archive_stream_returns_logs(true).await;
+        }
+
+        async fn archive_stream_can_return_errors(use_socket: bool) {
             let (mut log_stream, iterator) = create_log_stream().expect("got log stream");
             let server_end = match iterator {
                 ftest_manager::LogsIterator::Archive(server_end) => server_end,
                 _ => panic!("unexpected logs iterator server end"),
             };
-            fasync::Task::spawn(spawn_archive_iterator_server(server_end, true)).detach();
+            fasync::Task::spawn(spawn_archive_iterator_server(server_end, true, use_socket))
+                .detach();
             assert_matches!(log_stream.next().await, Some(Err(_)));
+        }
+
+        #[fasync::run_singlethreaded(test)]
+        async fn archive_stream_can_return_errors_inline() {
+            archive_stream_can_return_errors(false).await;
+        }
+
+        #[fasync::run_singlethreaded(test)]
+        async fn archive_stream_can_return_errors_socket() {
+            archive_stream_can_return_errors(true).await;
         }
 
         #[fasync::run_singlethreaded(test)]
