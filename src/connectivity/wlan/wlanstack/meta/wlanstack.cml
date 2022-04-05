@@ -4,4 +4,8 @@
         runner: "elf",
         binary: "bin/wlanstack",
     },
+    config: {
+        wep_supported: { type: "bool" },
+        wpa1_supported: { type: "bool" },
+    },
 }

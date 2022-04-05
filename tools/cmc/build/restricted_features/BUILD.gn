@@ -39,6 +39,7 @@ group("structured_config") {
     "//examples/components/config/cpp:*",
     "//examples/components/config/rust:*",
     "//sdk/lib/sys/component/cpp/tests:*",
+    "//src/connectivity/wlan/wlanstack:*",
     "//src/diagnostics/detect:*",
     "//src/diagnostics/sampler:*",
     "//src/proc/bin/galaxies/stardroid:*",

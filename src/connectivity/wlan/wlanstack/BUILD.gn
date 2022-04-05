@@ -90,9 +90,15 @@ rustc_binary("bin") {
   ]
 }
 
-fuchsia_component("wlanstack-comp") {
+# TODO(91927): fuchsia_component_manifest will soon be unnecessary and can folded into the component
+fuchsia_component_manifest("wlanstack-manifest") {
   component_name = "wlanstack"
   manifest = "meta/wlanstack.cml"
+  restricted_features = [ "structured_config" ]
+}
+
+fuchsia_component("wlanstack-comp") {
+  cm_label = ":wlanstack-manifest"
   deps = [
     ":bin",
     ":wlan_metrics_registry",
@@ -108,11 +114,33 @@ fuchsia_component("wlanstack-legacy-privacy-comp") {
   ]
 }
 
+fuchsia_structured_config_values("wlanstack-values") {
+  cm_label = ":wlanstack-manifest"
+  values = {
+    wep_supported = false
+    wpa1_supported = false
+  }
+}
+
+fuchsia_structured_config_values("wlanstack-legacy-privacy-values") {
+  cm_label = ":wlanstack-manifest"
+  values = {
+    wep_supported = true
+    wpa1_supported = true
+  }
+}
+
 fuchsia_package("wlanstack") {
   deps = [
     ":wlanstack-comp",
     ":wlanstack-legacy-privacy-comp",
+    ":wlanstack-values",
   ]
+}
+
+fuchsia_package("wlanstack-legacy-privacy") {
+  package_name = "wlanstack"
+  deps = [ ":wlanstack-legacy-privacy-comp" ]
 }
 
 core_shard("wlanstack-core-shard") {

@@ -244,6 +244,7 @@ shared_deps = [
   "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor_component",
   "//src/connectivity/wlan/wlanstack:wlanstack-comp",
   "//src/connectivity/wlan/wlanstack:wlanstack-legacy-privacy-comp",
+  "//src/connectivity/wlan/wlanstack:wlanstack-values",
   "//src/sys/stash:stash_secure_v2",
 ]
 
