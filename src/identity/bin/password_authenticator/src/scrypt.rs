@@ -3,10 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::keys::{EnrolledKey, Key, KeyEnrollment, KeyError, KeyRetrieval, KEY_LEN},
+    crate::keys::{
+        EnrolledKey, Key, KeyEnrollment, KeyEnrollmentError, KeyRetrieval, KeyRetrievalError,
+        KEY_LEN,
+    },
     async_trait::async_trait,
     fuchsia_zircon as zx,
+    log::error,
     serde::{Deserialize, Serialize},
+    thiserror::Error,
 };
 
 /// Parameters used with the scrypt key-derivation function.  These match the parameters
@@ -19,12 +24,35 @@ pub struct ScryptParams {
     p: u32,
 }
 
+#[derive(Error, Debug)]
+pub enum ScryptError {
+    #[error("Invalid scrypt params: {0}")]
+    InvalidParams(#[source] scrypt::errors::InvalidParams),
+    #[error("Output buffer too small: {0}")]
+    BufferTooSmall(#[source] scrypt::errors::InvalidOutputLen),
+}
+
 impl ScryptParams {
     pub fn new() -> Self {
         // Generate a new random salt
         let mut salt = [0u8; 16];
         zx::cprng_draw(&mut salt);
         ScryptParams { salt, log_n: 15, r: 8, p: 1 }
+    }
+
+    /// Apply the scrypt key derivation function on the provided secret `bytes`, using the
+    /// difficulty parameters and salt provided by `self`.
+    pub fn scrypt(&self, bytes: &[u8]) -> Result<Key, ScryptError> {
+        let params = scrypt::Params::new(self.log_n, self.r, self.p).map_err(|err| {
+            error!("Invalid scrypt params: {}", err);
+            ScryptError::InvalidParams(err)
+        })?;
+        let mut output = [0u8; KEY_LEN];
+        scrypt::scrypt(&bytes, &self.salt, &params, &mut output).map_err(|err| {
+            error!("scrypt output buffer too small: {}", err);
+            ScryptError::BufferTooSmall(err)
+        })?;
+        Ok(output)
     }
 }
 
@@ -46,26 +74,25 @@ impl From<ScryptParams> for ScryptKeySource {
 
 #[async_trait]
 impl KeyEnrollment<ScryptParams> for ScryptKeySource {
-    async fn enroll_key(&self, password: &str) -> Result<EnrolledKey<ScryptParams>, KeyError> {
-        let s = self.scrypt_params;
-        let params =
-            scrypt::Params::new(s.log_n, s.r, s.p).map_err(|_| KeyError::KeyEnrollmentError)?;
-        let mut output = [0u8; KEY_LEN];
-        scrypt::scrypt(password.as_bytes(), &s.salt, &params, &mut output)
-            .map_err(|_| KeyError::KeyEnrollmentError)?;
+    async fn enroll_key(
+        &mut self,
+        password: &str,
+    ) -> Result<EnrolledKey<ScryptParams>, KeyEnrollmentError> {
+        let output = self
+            .scrypt_params
+            .scrypt(password.as_bytes())
+            .map_err(|_| KeyEnrollmentError::ParamsError)?;
         Ok(EnrolledKey { key: output, enrollment_data: self.scrypt_params.clone() })
     }
 }
 
 #[async_trait]
 impl KeyRetrieval for ScryptKeySource {
-    async fn retrieve_key(&self, password: &str) -> Result<Key, KeyError> {
-        let s = self.scrypt_params;
-        let params =
-            scrypt::Params::new(s.log_n, s.r, s.p).map_err(|_| KeyError::KeyRetrievalError)?;
-        let mut output = [0u8; KEY_LEN];
-        scrypt::scrypt(password.as_bytes(), &s.salt, &params, &mut output)
-            .map_err(|_| KeyError::KeyRetrievalError)?;
+    async fn retrieve_key(&self, password: &str) -> Result<Key, KeyRetrievalError> {
+        let output = self
+            .scrypt_params
+            .scrypt(password.as_bytes())
+            .map_err(|_| KeyRetrievalError::ParamsError)?;
         Ok(output)
     }
 }
@@ -92,7 +119,7 @@ pub mod test {
 
     #[fuchsia::test]
     async fn test_enroll_key() {
-        let ks = ScryptKeySource::from(TEST_SCRYPT_PARAMS);
+        let mut ks = ScryptKeySource::from(TEST_SCRYPT_PARAMS);
         let enrolled_key = ks.enroll_key(TEST_SCRYPT_PASSWORD).await.expect("enroll scrypt");
         assert_eq!(enrolled_key.key, TEST_SCRYPT_KEY);
         assert_matches!(enrolled_key.enrollment_data, TEST_SCRYPT_PARAMS);

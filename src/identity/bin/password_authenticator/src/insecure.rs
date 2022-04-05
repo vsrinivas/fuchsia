@@ -7,7 +7,10 @@
 //! which implementations need to be re-written with production versions and removed.
 
 use {
-    crate::keys::{EnrolledKey, Key, KeyEnrollment, KeyError, KeyRetrieval, KEY_LEN},
+    crate::keys::{
+        EnrolledKey, Key, KeyEnrollment, KeyEnrollmentError, KeyRetrieval, KeyRetrievalError,
+        KEY_LEN,
+    },
     async_trait::async_trait,
 };
 
@@ -27,22 +30,25 @@ pub struct NullKeyParams;
 
 #[async_trait]
 impl KeyEnrollment<NullKeyParams> for NullKeySource {
-    async fn enroll_key(&self, password: &str) -> Result<EnrolledKey<NullKeyParams>, KeyError> {
+    async fn enroll_key(
+        &mut self,
+        password: &str,
+    ) -> Result<EnrolledKey<NullKeyParams>, KeyEnrollmentError> {
         if password == INSECURE_EMPTY_PASSWORD {
             Ok(EnrolledKey { key: INSECURE_EMPTY_KEY.clone(), enrollment_data: NullKeyParams {} })
         } else {
-            Err(KeyError::PasswordError)
+            Err(KeyEnrollmentError::PasswordError)
         }
     }
 }
 
 #[async_trait]
 impl KeyRetrieval for NullKeySource {
-    async fn retrieve_key(&self, password: &str) -> Result<Key, KeyError> {
+    async fn retrieve_key(&self, password: &str) -> Result<Key, KeyRetrievalError> {
         if password == INSECURE_EMPTY_PASSWORD {
             Ok(INSECURE_EMPTY_KEY.clone())
         } else {
-            Err(KeyError::PasswordError)
+            Err(KeyRetrievalError::PasswordError)
         }
     }
 }
@@ -53,7 +59,7 @@ mod test {
 
     #[fuchsia::test]
     async fn test_enroll_key() {
-        let ks = NullKeySource;
+        let mut ks = NullKeySource;
 
         // Enrolling the empty password should succeed and yield an empty enrollment_data
         // and the null key.
@@ -62,7 +68,7 @@ mod test {
         assert_eq!(enrolled_key.enrollment_data, NullKeyParams {});
 
         // Enrolling any non-empty password should fail.
-        assert_matches!(ks.enroll_key("nonempty").await, Err(KeyError::PasswordError));
+        assert_matches!(ks.enroll_key("nonempty").await, Err(KeyEnrollmentError::PasswordError));
     }
 
     #[fuchsia::test]
@@ -72,6 +78,6 @@ mod test {
         let res = ks.retrieve_key("").await;
         assert_matches!(res, Ok(INSECURE_EMPTY_KEY));
         // Retrieving any non-empty password should fail.
-        assert_matches!(ks.retrieve_key("nonempty").await, Err(KeyError::PasswordError));
+        assert_matches!(ks.retrieve_key("nonempty").await, Err(KeyRetrievalError::PasswordError));
     }
 }

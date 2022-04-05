@@ -4,8 +4,8 @@
 
 use {async_trait::async_trait, fidl_fuchsia_identity_account as faccount, thiserror::Error};
 
-#[derive(Debug, Error)]
-pub enum KeyError {
+#[derive(Error, Debug)]
+pub enum KeyEnrollmentError {
     // TODO(zarvox): remove once NullKey support is removed
     // This is only needed for NullKeySource -- once we no longer have a key derivation that
     // would otherwise ignore the password provided, we can simply handle all authentication
@@ -14,11 +14,22 @@ pub enum KeyError {
     #[error("Password did not meet precondition")]
     PasswordError,
 
-    #[error("Failed to enroll key")]
-    KeyEnrollmentError,
+    #[error("Invalid parameters provided")]
+    ParamsError,
+}
 
-    #[error("Failed to retrieve key from password")]
-    KeyRetrievalError,
+#[derive(Error, Debug)]
+pub enum KeyRetrievalError {
+    // TODO(zarvox): remove once NullKey support is removed
+    // This is only needed for NullKeySource -- once we no longer have a key derivation that
+    // would otherwise ignore the password provided, we can simply handle all authentication
+    // failures by letting the resulting derived-key simply not match what the partition will
+    // require to be unsealed.
+    #[error("Password did not meet precondition")]
+    PasswordError,
+
+    #[error("Invalid parameters provided")]
+    ParamsError,
 }
 
 /// The size, in bytes of a key.
@@ -40,7 +51,7 @@ pub struct EnrolledKey<T> {
 #[async_trait]
 pub trait KeyEnrollment<T> {
     /// Enroll a key using this key derivation scheme with the given password.
-    async fn enroll_key(&self, password: &str) -> Result<EnrolledKey<T>, KeyError>;
+    async fn enroll_key(&mut self, password: &str) -> Result<EnrolledKey<T>, KeyEnrollmentError>;
 }
 
 /// The `KeyRetrieval` trait provides a mechanism for deriving a key from a password.
@@ -49,15 +60,23 @@ pub trait KeyEnrollment<T> {
 pub trait KeyRetrieval {
     /// Retrieve a key using this key derivation scheme with the given password.
     /// The returned key will be 256 bits long.
-    async fn retrieve_key(&self, password: &str) -> Result<Key, KeyError>;
+    async fn retrieve_key(&self, password: &str) -> Result<Key, KeyRetrievalError>;
 }
 
-impl From<KeyError> for faccount::Error {
-    fn from(e: KeyError) -> Self {
+impl From<KeyEnrollmentError> for faccount::Error {
+    fn from(e: KeyEnrollmentError) -> Self {
         match e {
-            KeyError::PasswordError => faccount::Error::FailedAuthentication,
-            KeyError::KeyRetrievalError => faccount::Error::Internal,
-            KeyError::KeyEnrollmentError => faccount::Error::Internal,
+            KeyEnrollmentError::PasswordError => faccount::Error::FailedAuthentication,
+            KeyEnrollmentError::ParamsError => faccount::Error::Internal,
+        }
+    }
+}
+
+impl From<KeyRetrievalError> for faccount::Error {
+    fn from(e: KeyRetrievalError) -> Self {
+        match e {
+            KeyRetrievalError::PasswordError => faccount::Error::FailedAuthentication,
+            KeyRetrievalError::ParamsError => faccount::Error::Internal,
         }
     }
 }

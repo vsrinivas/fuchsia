@@ -10,7 +10,7 @@ use crate::{
     constants::{ACCOUNT_LABEL, FUCHSIA_DATA_GUID},
     disk_management::{DiskError, DiskManager, EncryptedBlockDevice, Partition},
     insecure::{NullKeySource, INSECURE_EMPTY_PASSWORD},
-    keys::{Key, KeyEnrollment, KeyError, KeyRetrieval},
+    keys::{Key, KeyEnrollment, KeyRetrieval, KeyRetrievalError},
     scrypt::ScryptKeySource,
     Options,
 };
@@ -239,7 +239,7 @@ where
         &self,
         meta: &AccountMetadata,
         password: &str,
-    ) -> Result<Key, KeyError> {
+    ) -> Result<Key, KeyRetrievalError> {
         match meta.authenticator_metadata() {
             AuthenticatorMetadata::NullKey(_) => NullKeySource.retrieve_key(&password).await,
             AuthenticatorMetadata::ScryptOnly(s_meta) => {
@@ -504,7 +504,7 @@ where
                 .await
                 .map(|enrolled_key| (enrolled_key.key, enrolled_key.enrollment_data.into())),
             EnrollmentScheme::Scrypt => {
-                let key_source = ScryptKeySource::new();
+                let mut key_source = ScryptKeySource::new();
                 key_source
                     .enroll_key(&password)
                     .await
