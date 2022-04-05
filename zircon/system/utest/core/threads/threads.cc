@@ -690,7 +690,7 @@ TEST(Threads, SuspendStopsThread) {
       start_thread(threads_test_atomic_store, const_cast<int*>(&value), &thread, &thread_h));
 
   while (atomic_load(&value) != kTestAtomicSetValue) {
-    zx_nanosleep(0);
+    zx_thread_legacy_yield(0ull);
   }
 
   // Suspend the thread and wait for the suspend to happen.
@@ -707,7 +707,7 @@ TEST(Threads, SuspendStopsThread) {
   // Let the thread resume and then wait for it to reset the value.
   ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
   while (atomic_load(&value) != kTestAtomicSetValue) {
-    zx_thread_legacy_yield(0);
+    zx_thread_legacy_yield(0ull);
   }
 
   // Clean up.
@@ -830,7 +830,7 @@ TEST(Threads, StartSuspendedThread) {
   ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_RUNNING, ZX_TIME_INFINITE, NULL), ZX_OK);
   while (value != kTestAtomicSetValue) {
-    zx_nanosleep(0);
+    zx_thread_legacy_yield(0ull);
   }
 
   // Clean up.
@@ -856,7 +856,7 @@ TEST(Threads, StartSuspendedAndResumedThread) {
   ASSERT_TRUE(starter.StartThread(threads_test_atomic_store, &value));
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_RUNNING, ZX_TIME_INFINITE, NULL), ZX_OK);
   while (value != 1) {
-    zx_nanosleep(0);
+    zx_thread_legacy_yield(0ull);
   }
 
   // Clean up.
@@ -1963,7 +1963,7 @@ TEST(Threads, SyscallDebuggerModifyResult) {
   ASSERT_EQ(arg.status, ZX_ERR_CANCELED);
 }
 
-TEST(Threads, YieldWithZeroOptionIsOk) { ASSERT_OK(zx_thread_legacy_yield(0)); }
+TEST(Threads, YieldWithZeroOptionIsOk) { ASSERT_OK(zx_thread_legacy_yield(0ull)); }
 
 TEST(Threads, YieldWithNonZeroOptionIsInvalidArgs) {
   ASSERT_STATUS(zx_thread_legacy_yield(std::numeric_limits<uint32_t>::max()), ZX_ERR_INVALID_ARGS);
