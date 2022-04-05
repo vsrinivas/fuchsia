@@ -21,22 +21,22 @@
 namespace {
 
 zx_status_t PerformMemAccess(const zx_packet_guest_mem_t& mem, IoMapping* device_mapping,
-                             const Instruction* inst) {
-  TRACE_DURATION("machina", "mmio", "addr", mem.addr, "access_size", inst->access_size);
+                             const Instruction& inst) {
+  TRACE_DURATION("machina", "mmio", "addr", mem.addr, "access_size", inst.access_size);
 
   zx_status_t status;
-  IoValue mmio = {inst->access_size, {.u64 = 0}};
-  switch (inst->type) {
+  IoValue mmio = {inst.access_size, {.u64 = 0}};
+  switch (inst.type) {
     case InstructionType::kWrite:
-      switch (inst->access_size) {
+      switch (inst.access_size) {
         case 1:
-          status = inst_write<uint8_t>(inst, &mmio.u8);
+          status = inst_write<uint8_t>(&inst, &mmio.u8);
           break;
         case 2:
-          status = inst_write<uint16_t>(inst, &mmio.u16);
+          status = inst_write<uint16_t>(&inst, &mmio.u16);
           break;
         case 4:
-          status = inst_write<uint32_t>(inst, &mmio.u32);
+          status = inst_write<uint32_t>(&inst, &mmio.u32);
           break;
         default:
           return ZX_ERR_NOT_SUPPORTED;
@@ -51,13 +51,13 @@ zx_status_t PerformMemAccess(const zx_packet_guest_mem_t& mem, IoMapping* device
       if (status != ZX_OK) {
         return status;
       }
-      switch (inst->access_size) {
+      switch (inst.access_size) {
         case 1:
-          return inst_read<uint8_t>(inst, mmio.u8);
+          return inst_read<uint8_t>(&inst, mmio.u8);
         case 2:
-          return inst_read<uint16_t>(inst, mmio.u16);
+          return inst_read<uint16_t>(&inst, mmio.u16);
         case 4:
-          return inst_read<uint32_t>(inst, mmio.u32);
+          return inst_read<uint32_t>(&inst, mmio.u32);
         default:
           return ZX_ERR_NOT_SUPPORTED;
       }
@@ -67,9 +67,9 @@ zx_status_t PerformMemAccess(const zx_packet_guest_mem_t& mem, IoMapping* device
       if (status != ZX_OK) {
         return status;
       }
-      switch (inst->access_size) {
+      switch (inst.access_size) {
         case 1:
-          return inst_test8(inst, static_cast<uint8_t>(inst->imm), mmio.u8);
+          return inst_test8(&inst, static_cast<uint8_t>(inst.imm), mmio.u8);
         default:
           return ZX_ERR_NOT_SUPPORTED;
       }
@@ -79,15 +79,15 @@ zx_status_t PerformMemAccess(const zx_packet_guest_mem_t& mem, IoMapping* device
       if (status != ZX_OK) {
         return status;
       }
-      switch (inst->access_size) {
+      switch (inst.access_size) {
         case 1:
-          status = inst_or<uint8_t>(inst, static_cast<uint8_t>(inst->imm), &mmio.u8);
+          status = inst_or<uint8_t>(&inst, static_cast<uint8_t>(inst.imm), &mmio.u8);
           break;
         case 2:
-          status = inst_or<uint16_t>(inst, static_cast<uint16_t>(inst->imm), &mmio.u16);
+          status = inst_or<uint16_t>(&inst, static_cast<uint16_t>(inst.imm), &mmio.u16);
           break;
         case 4:
-          status = inst_or<uint32_t>(inst, inst->imm, &mmio.u32);
+          status = inst_or<uint32_t>(&inst, inst.imm, &mmio.u32);
           break;
         default:
           return ZX_ERR_NOT_SUPPORTED;
@@ -120,11 +120,10 @@ zx_status_t Vcpu::ArchHandleMem(const zx_packet_guest_mem_t& mem, IoMapping* dev
   }
 
   // Decode the instruction the guest was attempting to perform.
-  Instruction inst;
-  status = inst_decode(span, mem.default_operand_size, &vcpu_state, &inst);
-  if (status != ZX_OK) {
+  auto inst = DecodeInstruction(span, mem.default_operand_size, vcpu_state);
+  if (inst.is_error()) {
     std::string value;
-    for (uint8_t i = 0; i < mem.instruction_size; i++) {
+    for (uint8_t i = 0; i < span.size(); i++) {
       fxl::StringAppendf(&value, " %hhx", span[i]);
     }
     FX_LOGS(ERROR) << "Unsupported instruction:" << value;
@@ -132,13 +131,13 @@ zx_status_t Vcpu::ArchHandleMem(const zx_packet_guest_mem_t& mem, IoMapping* dev
   }
 
   // Perform the access.
-  status = PerformMemAccess(mem, device_mapping, &inst);
+  status = PerformMemAccess(mem, device_mapping, *inst);
   if (status != ZX_OK) {
     return status;
   }
 
   // If the operation was write-only and didn't change registers or flags, we are done.
-  if (inst.type == InstructionType::kWrite) {
+  if (inst->type == InstructionType::kWrite) {
     return ZX_OK;
   }
 

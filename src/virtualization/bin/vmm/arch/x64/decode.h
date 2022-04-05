@@ -38,8 +38,8 @@ struct Instruction {
   uint64_t* flags;
 };
 
-zx_status_t inst_decode(InstructionSpan span, uint8_t default_operand_size,
-                        zx_vcpu_state_t* vcpu_state, Instruction* inst);
+zx::status<Instruction> DecodeInstruction(InstructionSpan span, uint8_t default_operand_size,
+                                          zx_vcpu_state_t& vcpu_state);
 
 template <typename T>
 static inline T get_inst_val(const Instruction* inst) {
