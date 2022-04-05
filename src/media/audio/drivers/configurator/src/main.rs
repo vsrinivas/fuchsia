@@ -15,7 +15,7 @@ mod testing;
 use crate::configurator::Configurator;
 use crate::default::DefaultConfigurator;
 
-#[fuchsia::component(logging = true)]
+#[fuchsia::main(logging = true)]
 async fn main() -> Result<(), anyhow::Error> {
     component::health().set_ok();
     tracing::trace!("Initialized.");
