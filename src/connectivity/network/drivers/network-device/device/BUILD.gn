@@ -110,7 +110,7 @@ test("microbenchmarks_bin") {
 
 fuchsia_unittest_package("network-device-microbenchmarks") {
   deps = [ ":microbenchmarks_bin" ]
-  manifest = "meta/network-device-microbenchmarks.cmx"
+  manifest = "meta/network-device-microbenchmarks.cml"
 }
 
 group("tests") {

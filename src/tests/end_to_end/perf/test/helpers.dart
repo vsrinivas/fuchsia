@@ -54,6 +54,11 @@ class PerfTestHelper {
   // write their results.
   static const String componentOutputPath = '/tmp/results.fuchsiaperf.json';
 
+  // Pathname to which components run via runTestComponentV2() should
+  // write their results.
+  static const String componentV2OutputPath =
+      '/custom_artifacts/results.fuchsiaperf.json';
+
   sl4f.Sl4f sl4fDriver;
   sl4f.Performance performance;
   sl4f.Dump dump;
@@ -137,7 +142,7 @@ class PerfTestHelper {
 
   // Runs a component and publishes the performance test results that
   // it produces, which the component should write to the file
-  // componentOutputPath.
+  // componentOutputPath.  This uses Components V1.
   Future<void> runTestComponent(
       {@required String packageName,
       @required String componentName,
@@ -163,6 +168,47 @@ class PerfTestHelper {
     } finally {
       // Clean up: remove the output tree.
       final result = await sl4fDriver.ssh.run('rm -r /tmp/r/sys/r/$realmName');
+      expect(result.exitCode, equals(0));
+    }
+  }
+
+  // Runs a component and publishes the performance test results that
+  // it produces, which the component should write to the file
+  // componentV2OutputPath.  This uses Components V2.
+  Future<void> runTestComponentV2(
+      {@required String packageName,
+      @required String componentName,
+      @required String commandArgs}) async {
+    // Make a name for the output directory that is very likely to be
+    // unique.
+    final timestamp = DateTime.now().microsecondsSinceEpoch;
+    final String targetOutputDir = '/tmp/perftest_$timestamp';
+
+    final result = await sl4fDriver.ssh.run('mkdir $targetOutputDir');
+    expect(result.exitCode, equals(0));
+
+    try {
+      final String command = 'run-test-suite'
+          ' fuchsia-pkg://fuchsia.com/$packageName#meta/$componentName'
+          ' --deprecated-output-directory $targetOutputDir -- $commandArgs';
+      final result = await sl4fDriver.ssh.run(command);
+      expect(result.exitCode, equals(0));
+
+      // Search for the output file within the directory structure
+      // produced by run-test-suite.
+      final findResult = await sl4fDriver.ssh
+          .run('find $targetOutputDir -name results.fuchsiaperf.json');
+      final String findOutput = findResult.stdout.trim();
+      expect(findOutput, isNot(equals('')));
+      final List<String> targetOutputFiles = findOutput.split('\n');
+      expect(targetOutputFiles.length, equals(1));
+
+      final File localResultsFile = await storage.dumpFile(
+          targetOutputFiles[0], 'results', 'fuchsiaperf_full.json');
+      await processResultsSummarized([localResultsFile]);
+    } finally {
+      // Clean up: remove the output tree.
+      final result = await sl4fDriver.ssh.run('rm -r $targetOutputDir');
       expect(result.exitCode, equals(0));
     }
   }
