@@ -23,7 +23,9 @@
 
 namespace fboot = fuchsia_boot;
 namespace fdata = fuchsia_data;
-namespace fdf = fuchsia_driver_framework;
+namespace fdf {
+using namespace fuchsia_driver_framework;
+}
 namespace fio = fuchsia_io;
 namespace flogger = fuchsia_logger;
 namespace frunner = fuchsia_component_runner;

@@ -16,7 +16,9 @@
 #include "src/devices/lib/compat/symbols.h"
 #include "src/devices/misc/drivers/compat/devfs_vnode.h"
 
-namespace fdf = fuchsia_driver_framework;
+namespace fdf {
+using namespace fuchsia_driver_framework;
+}
 namespace fcd = fuchsia_component_decl;
 
 namespace {

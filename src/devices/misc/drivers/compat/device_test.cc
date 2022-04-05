@@ -23,7 +23,9 @@
 #include "src/devices/misc/drivers/compat/devfs_vnode.h"
 #include "src/devices/misc/drivers/compat/driver.h"
 
-namespace fdf = fuchsia_driver_framework;
+namespace fdf {
+using namespace fuchsia_driver_framework;
+}
 namespace fio = fuchsia_io;
 namespace frunner = fuchsia_component_runner;
 

@@ -21,7 +21,9 @@
 #include "src/devices/misc/drivers/compat/loader.h"
 
 namespace fboot = fuchsia_boot;
-namespace fdf = fuchsia_driver_framework;
+namespace fdf {
+using namespace fuchsia_driver_framework;
+}
 namespace fio = fuchsia_io;
 namespace fldsvc = fuchsia_ldsvc;
 
@@ -74,7 +76,8 @@ Driver::Driver(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf::Node>
       ns_(std::move(ns)),
       logger_(std::move(logger)),
       url_(url),
-      device_(device, ops, this, std::nullopt, inner_logger_, dispatcher) {
+      device_(device, ops, this, std::nullopt, inner_logger_, dispatcher),
+      sysmem_(this) {
   device_.Bind(std::move(node));
   global_driver_list.AddDriver(this);
 }

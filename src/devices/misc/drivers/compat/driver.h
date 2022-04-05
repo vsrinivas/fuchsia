@@ -18,6 +18,7 @@
 #include "src/devices/lib/driver2/logger.h"
 #include "src/devices/lib/driver2/namespace.h"
 #include "src/devices/misc/drivers/compat/device.h"
+#include "src/devices/misc/drivers/compat/sysmem.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 namespace compat {
@@ -56,6 +57,8 @@ class Driver {
   Device& GetDevice() { return device_; }
   const driver::Namespace& driver_namespace() { return ns_; }
   async_dispatcher_t* dispatcher() { return dispatcher_; }
+  Sysmem& sysmem() { return sysmem_; }
+  driver::Logger& logger() { return logger_; }
 
  private:
   // Run the driver at `driver_path`.
@@ -99,6 +102,8 @@ class Driver {
 
   const std::string url_;
   Device device_;
+  // TODO(fxbug.dev/93333): remove this once we have proper composite support.
+  Sysmem sysmem_;
 
   void* library_ = nullptr;
   zx_driver_rec_t* record_ = nullptr;

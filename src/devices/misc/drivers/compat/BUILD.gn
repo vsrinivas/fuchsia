@@ -30,13 +30,17 @@ source_set("lib") {
     "driver.h",
     "loader.cc",
     "loader.h",
+    "sysmem.cc",
+    "sysmem.h",
   ]
   deps = [ "//src/devices/lib/compat" ]
   public_deps = [
     "fidl:fuchsia.driver.compat_llcpp",
+    "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_llcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//sdk/lib/stdcompat",
     "//src/devices/lib/driver2:devfs_exporter",
     "//src/devices/lib/driver2:llcpp",
@@ -147,6 +151,7 @@ executable("unittests") {
     "device_test.cc",
     "driver_test.cc",
     "loader_test.cc",
+    "sysmem_test.cc",
     "v1_test.h",
   ]
   deps = [
