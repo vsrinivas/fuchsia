@@ -7,10 +7,12 @@
 
 #include <array>
 
-#include "base/memory/scoped_refptr.h"
-#include "base/sequence_checker.h"
+// Fuchsia change: Remove libraries in favor of "chromium_utils.h"
+// #include "base/memory/scoped_refptr.h"
+// #include "media/gpu/media_gpu_export.h"
+// #include "base/sequence_checker.h"
+#include "chromium_utils.h"
 #include "media/filters/vp9_parser.h"
-#include "media/gpu/media_gpu_export.h"
 
 namespace media {
 

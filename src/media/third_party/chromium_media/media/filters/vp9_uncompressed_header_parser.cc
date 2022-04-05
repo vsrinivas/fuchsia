@@ -6,7 +6,8 @@
 
 #include <type_traits>
 
-#include "base/logging.h"
+// Fuchsia change: Remove libraries in favor of "chromium_utils.h"
+// #include "base/logging.h"
 
 namespace media {
 
@@ -783,8 +784,9 @@ void Vp9UncompressedHeaderParser::SetupPastIndependence(Vp9FrameHeader* fhdr) {
 void Vp9UncompressedHeaderParser::ReadLoopFilterParams() {
   Vp9LoopFilterParams& loop_filter = context_->loop_filter_;
 
-  loop_filter.level = reader_.ReadLiteral(6);
-  loop_filter.sharpness = reader_.ReadLiteral(3);
+  // Fuchsia change: static_cast to remedy implicit-int-conversion
+  loop_filter.level = static_cast<uint8_t>(reader_.ReadLiteral(6));
+  loop_filter.sharpness = static_cast<uint8_t>(reader_.ReadLiteral(3));
   loop_filter.delta_update = false;
 
   loop_filter.delta_enabled = reader_.ReadBool();
@@ -794,13 +796,17 @@ void Vp9UncompressedHeaderParser::ReadLoopFilterParams() {
       for (size_t i = 0; i < Vp9RefType::VP9_FRAME_MAX; i++) {
         loop_filter.update_ref_deltas[i] = reader_.ReadBool();
         if (loop_filter.update_ref_deltas[i])
-          loop_filter.ref_deltas[i] = reader_.ReadSignedLiteral(6);
+          // Fuchsia change: static_cast to remedy implicit-int-conversion
+          loop_filter.ref_deltas[i] =
+              static_cast<int8_t>(reader_.ReadSignedLiteral(6));
       }
 
       for (size_t i = 0; i < Vp9LoopFilterParams::kNumModeDeltas; i++) {
         loop_filter.update_mode_deltas[i] = reader_.ReadBool();
         if (loop_filter.update_mode_deltas[i])
-          loop_filter.mode_deltas[i] = reader_.ReadSignedLiteral(6);
+          // Fuchsia change: static_cast to remedy implicit-int-conversion
+          loop_filter.mode_deltas[i] =
+              static_cast<int8_t>(reader_.ReadSignedLiteral(6));
       }
     }
   }
@@ -809,7 +815,8 @@ void Vp9UncompressedHeaderParser::ReadLoopFilterParams() {
 // 6.2.9 Quantization params syntax
 void Vp9UncompressedHeaderParser::ReadQuantizationParams(
     Vp9QuantizationParams* quants) {
-  quants->base_q_idx = reader_.ReadLiteral(8);
+  // Fuchsia change: static_cast to remedy implicit-int-conversion
+  quants->base_q_idx = static_cast<uint8_t>(reader_.ReadLiteral(8));
 
   quants->delta_q_y_dc = ReadDeltaQ();
   quants->delta_q_uv_dc = ReadDeltaQ();
@@ -819,7 +826,8 @@ void Vp9UncompressedHeaderParser::ReadQuantizationParams(
 // 6.2.10 Delta quantizer syntax
 int8_t Vp9UncompressedHeaderParser::ReadDeltaQ() {
   if (reader_.ReadBool())
-    return reader_.ReadSignedLiteral(4);
+    // Fuchsia change: static_cast to remedy implicit-int-conversion
+    return static_cast<int8_t>(reader_.ReadSignedLiteral(4));
   return 0;
 }
 
@@ -857,7 +865,8 @@ bool Vp9UncompressedHeaderParser::ReadSegmentationParams() {
         int16_t data = 0;
         segmentation.feature_enabled[i][j] = reader_.ReadBool();
         if (segmentation.feature_enabled[i][j]) {
-          data = reader_.ReadLiteral(kFeatureDataBits[j]);
+          // Fuchsia change: static_cast to remedy implicit-int-conversion
+          data = static_cast<int16_t>(reader_.ReadLiteral(kFeatureDataBits[j]));
           if (kFeatureDataSigned[j])
             if (reader_.ReadBool()) {
               // 7.2.9
@@ -878,7 +887,9 @@ bool Vp9UncompressedHeaderParser::ReadSegmentationParams() {
 
 // 6.2.12 Probability syntax
 uint8_t Vp9UncompressedHeaderParser::ReadProb() {
-  return reader_.ReadBool() ? reader_.ReadLiteral(8) : kVp9MaxProb;
+  // Fuchsia change: static_cast to remedy implicit-int-conversion
+  return reader_.ReadBool() ? static_cast<uint8_t>(reader_.ReadLiteral(8))
+                            : kVp9MaxProb;
 }
 
 // 6.2.13 Tile info syntax
@@ -889,7 +900,8 @@ bool Vp9UncompressedHeaderParser::ReadTileInfo(Vp9FrameHeader* fhdr) {
   int max_log2_tile_cols = GetMaxLog2TileCols(sb64_cols);
 
   int max_ones = max_log2_tile_cols - min_log2_tile_cols;
-  fhdr->tile_cols_log2 = min_log2_tile_cols;
+  // Fuchsia change: static_cast to remedy implicit-int-conversion
+  fhdr->tile_cols_log2 = static_cast<uint8_t>(min_log2_tile_cols);
   while (max_ones-- && reader_.ReadBool())
     fhdr->tile_cols_log2++;
 
@@ -944,7 +956,8 @@ bool Vp9UncompressedHeaderParser::Parse(const uint8_t* stream,
 
   fhdr->show_existing_frame = reader_.ReadBool();
   if (fhdr->show_existing_frame) {
-    fhdr->frame_to_show_map_idx = reader_.ReadLiteral(3);
+    // Fuchsia change: static_cast to remedy implicit-int-conversion
+    fhdr->frame_to_show_map_idx = static_cast<uint8_t>(reader_.ReadLiteral(3));
     fhdr->show_frame = true;
 
     if (!reader_.ConsumeTrailingBits()) {
@@ -979,7 +992,8 @@ bool Vp9UncompressedHeaderParser::Parse(const uint8_t* stream,
       fhdr->intra_only = reader_.ReadBool();
 
     if (!fhdr->error_resilient_mode)
-      fhdr->reset_frame_context = reader_.ReadLiteral(2);
+      // Fuchsia change: static_cast to remedy implicit-int-conversion
+      fhdr->reset_frame_context = static_cast<uint8_t>(reader_.ReadLiteral(2));
 
     if (fhdr->intra_only) {
       if (!VerifySyncCode())
@@ -994,18 +1008,22 @@ bool Vp9UncompressedHeaderParser::Parse(const uint8_t* stream,
         fhdr->subsampling_x = fhdr->subsampling_y = 1;
       }
 
-      fhdr->refresh_frame_flags = reader_.ReadLiteral(8);
+      // Fuchsia change: static_cast to remedy implicit-int-conversion
+      fhdr->refresh_frame_flags = static_cast<uint8_t>(reader_.ReadLiteral(8));
 
       ReadFrameSize(fhdr);
       ReadRenderSize(fhdr);
     } else {
-      fhdr->refresh_frame_flags = reader_.ReadLiteral(8);
+      // Fuchsia change: static_cast to remedy implicit-int-conversion
+      fhdr->refresh_frame_flags = static_cast<uint8_t>(reader_.ReadLiteral(8));
 
       static_assert(std::extent<decltype(fhdr->ref_frame_sign_bias)>() >=
                         Vp9RefType::VP9_FRAME_LAST + kVp9NumRefsPerFrame,
                     "ref_frame_sign_bias is not big enough");
       for (size_t i = 0; i < kVp9NumRefsPerFrame; i++) {
-        fhdr->ref_frame_idx[i] = reader_.ReadLiteral(kVp9NumRefFramesLog2);
+        // Fuchsia change: static_cast to remedy implicit-int-conversion
+        fhdr->ref_frame_idx[i] =
+            static_cast<uint8_t>(reader_.ReadLiteral(kVp9NumRefFramesLog2));
         fhdr->ref_frame_sign_bias[Vp9RefType::VP9_FRAME_LAST + i] =
             reader_.ReadBool();
 
@@ -1075,8 +1093,9 @@ bool Vp9UncompressedHeaderParser::Parse(const uint8_t* stream,
     fhdr->frame_parallel_decoding_mode = reader_.ReadBool();
   }
 
+  // Fuchsia change: static_cast to remedy implicit-int-conversion
   fhdr->frame_context_idx_to_save_probs = fhdr->frame_context_idx =
-      reader_.ReadLiteral(kVp9NumFrameContextsLog2);
+      static_cast<uint8_t>(reader_.ReadLiteral(kVp9NumFrameContextsLog2));
 
   if (fhdr->IsIntra() || fhdr->error_resilient_mode) {
     SetupPastIndependence(fhdr);

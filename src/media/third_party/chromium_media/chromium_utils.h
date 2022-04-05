@@ -2,17 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_LIB_VIDEO_UTILS_H264_CHROMIUM_UTILS_H_
-#define SRC_MEDIA_LIB_VIDEO_UTILS_H264_CHROMIUM_UTILS_H_
+#ifndef SRC_MEDIA_THIRD_PARTY_CHROMIUM_MEDIA_CHROMIUM_UTILS_H_
+#define SRC_MEDIA_THIRD_PARTY_CHROMIUM_MEDIA_CHROMIUM_UTILS_H_
 
+#include <algorithm>
+#include <deque>
 #include <memory>
 #include <optional>
 
+#include <lib/fit/function.h>
 #include <lib/stdcompat/span.h>
-#include <safemath/checked_math.h>
-#include <zircon/compiler.h>
-
 #include <lib/syslog/cpp/macros.h>
+#include <safemath/safe_math.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
+#include <zircon/compiler.h>
+#include "safemath/safe_conversions.h"
 #include "time_delta.h"
 
 #define MEDIA_EXPORT
@@ -29,6 +33,10 @@
 #define CHECK FX_CHECK
 #ifndef DLOG
 #define DLOG FX_DLOGS
+#endif
+
+#ifndef VLOG
+#define VLOG FX_VLOGS
 #endif
 
 #define FORCE_ALL_LOGS 0
@@ -49,6 +57,10 @@
 
 #define WARN_UNUSED_RESULT __WARN_UNUSED_RESULT
 #define FALLTHROUGH __FALLTHROUGH
+
+#define SEQUENCE_CHECKER(name) static_assert(true, "")
+#define DCHECK_CALLED_ON_VALID_SEQUENCE(name, ...)
+#define DETACH_FROM_SEQUENCE(name)
 
 #define DISALLOW_COPY_AND_ASSIGN(TypeName) \
   TypeName(const TypeName&) = delete;      \
@@ -80,6 +92,52 @@ template <typename T>
 using CheckedNumeric = safemath::internal::CheckedNumeric<T>;
 using safemath::checked_cast;
 using safemath::IsValueInRangeForNumericType;
+
+template <typename Dst, typename Src>
+constexpr Dst strict_cast(Src value) {
+  return static_cast<Dst>(value);
+}
+
+// base/callback_forward.h
+using OnceClosure = fit::callback<void()>;
+
+// base/containers/circular_deque.h
+template <typename T>
+using circular_deque = std::deque<T>;
+
+// base/memory/weak_ptr.h
+template <typename T>
+using WeakPtr = std::weak_ptr<T>;
+
+template <typename T>
+using WeakPtrFactory = fxl::WeakPtrFactory<T>;
+
+// base/cxx17_backports.h
+using std::clamp;
+
+// base/sys_byteorder.h
+inline uint16_t NetToHost16(uint16_t x) {
+  return __builtin_bswap16(x);
+}
+inline uint32_t NetToHost32(uint32_t x) {
+  return __builtin_bswap32(x);
+}
+inline uint64_t NetToHost64(uint64_t x) {
+  return __builtin_bswap64(x);
+}
+
+// Converts the bytes in |x| from host to network order (endianness), and
+// returns the result.
+inline uint16_t HostToNet16(uint16_t x) {
+  return __builtin_bswap16(x);
+}
+inline uint32_t HostToNet32(uint32_t x) {
+  return __builtin_bswap32(x);
+}
+inline uint64_t HostToNet64(uint64_t x) {
+  return __builtin_bswap64(x);
+}
+
 }  // namespace base
 
 namespace media {
@@ -94,4 +152,4 @@ enum {
 
 }  // namespace media
 
-#endif  // SRC_MEDIA_LIB_VIDEO_UTILS_H264_CHROMIUM_UTILS_H_
+#endif  // SRC_MEDIA_THIRD_PARTY_CHROMIUM_MEDIA_CHROMIUM_UTILS_H_

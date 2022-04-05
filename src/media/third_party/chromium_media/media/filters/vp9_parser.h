@@ -18,13 +18,17 @@
 
 #include <memory>
 
-#include "base/callback.h"
-#include "base/containers/circular_deque.h"
-#include "base/memory/weak_ptr.h"
+// Fuchsia change: Remove libraries in favor of "chromium_utils.h"
+// #include "base/callback.h"
+// #include "base/containers/circular_deque.h"
+// #include "base/memory/weak_ptr.h"
+// #include "media/base/media_export.h"
+// #include "ui/gfx/geometry/size.h"
+#include <lib/fit/function.h>
+#include "chromium_utils.h"
+#include "geometry.h"
 #include "media/base/decrypt_config.h"
-#include "media/base/media_export.h"
 #include "media/base/video_color_space.h"
-#include "ui/gfx/geometry/size.h"
 
 namespace media {
 
@@ -271,8 +275,8 @@ class MEDIA_EXPORT Vp9Parser {
  public:
   // If context update is needed after decoding a frame, the client must
   // execute this callback, passing the updated context state.
-  using ContextRefreshCallback =
-      base::OnceCallback<void(const Vp9FrameContext&)>;
+  // Fuchsia change: use fit::function instead of base::OnceCallback
+  using ContextRefreshCallback = fit::function<void(const Vp9FrameContext&)>;
 
   // ParseNextFrame() return values. See documentation for ParseNextFrame().
   enum Result {
@@ -487,7 +491,8 @@ class MEDIA_EXPORT Vp9Parser {
   // Set on ctor if the client needs to call the ContextRefreshCallback obtained
   // via GetContextRefreshCb() with the updated Vp9FrameContext; otherwise
   // VP9Parser will update it internally.
-  const bool needs_external_context_update_;
+  const bool needs_external_context_update_
+      __attribute__((unused));  // Fuchsia change: unused variable
 
   // FrameInfo for the remaining frames in the current superframe to be parsed.
   base::circular_deque<FrameInfo> frames_;

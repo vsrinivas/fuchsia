@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_LIB_VIDEO_UTILS_H264_TIME_DELTA_H_
-#define SRC_MEDIA_LIB_VIDEO_UTILS_H264_TIME_DELTA_H_
+#ifndef SRC_MEDIA_THIRD_PARTY_CHROMIUM_MEDIA_TIME_DELTA_H_
+#define SRC_MEDIA_THIRD_PARTY_CHROMIUM_MEDIA_TIME_DELTA_H_
 
 #include <stdint.h>
 #include <time.h>
@@ -115,4 +115,4 @@ void PrintTo(const TimeDelta& time_delta, ::std::ostream* os);
 
 }  // namespace base
 
-#endif  // SRC_MEDIA_LIB_VIDEO_UTILS_H264_TIME_DELTA_H_
+#endif  // SRC_MEDIA_THIRD_PARTY_CHROMIUM_MEDIA_TIME_DELTA_H_

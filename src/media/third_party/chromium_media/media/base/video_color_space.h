@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_BASE_VIDEO_COLOR_SPACE_H_
-#define SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_BASE_VIDEO_COLOR_SPACE_H_
+#ifndef MEDIA_BASE_VIDEO_COLOR_SPACE_H_
+#define MEDIA_BASE_VIDEO_COLOR_SPACE_H_
 
 #include "chromium_utils.h"
 
@@ -122,4 +122,4 @@ class MEDIA_EXPORT VideoColorSpace {
 
 }  // namespace media
 
-#endif
+#endif  // MEDIA_BASE_VIDEO_COLOR_SPACE_H_

@@ -6,14 +6,15 @@
 
 #include <memory>
 
-#include "base/bind.h"
-#include "base/feature_list.h"
-#include "base/logging.h"
-#include "build/build_config.h"
-#include "build/chromeos_buildflags.h"
-#include "media/base/limits.h"
-#include "media/base/media_switches.h"
-#include "media/gpu/vp9_decoder.h"
+// Fuchsia change: Remove libraries in favor of "chromium_utils.h"
+// #include "base/bind.h"
+// #include "base/feature_list.h"
+// #include "base/logging.h"
+// #include "build/build_config.h"
+// #include "build/chromeos_buildflags.h"
+// #include "media/base/media_switches.h"
+// #include "media/base/limits.h"
+#include "chromium_utils.h"
 
 namespace media {
 
@@ -30,12 +31,13 @@ bool GetSpatialLayerFrameSize(const DecoderBuffer& decoder_buffer,
 // On windows, currently only d3d11 supports decoding VP9 kSVC stream, we
 // shouldn't combine the switch kD3D11Vp9kSVCHWDecoding to kVp9kSVCHWDecoding
 // due to we want keep returning false to MediaCapability.
-#if BUILDFLAG(IS_WIN)
+// Fuchsia change: Don't support windows
+#if 0
   if (!base::FeatureList::IsEnabled(media::kD3D11Vp9kSVCHWDecoding)) {
     DLOG(ERROR) << "Vp9 k-SVC hardware decoding is disabled";
     return false;
   }
-#else
+#elif 0
   if (!base::FeatureList::IsEnabled(media::kVp9kSVCHWDecoding)) {
     DLOG(ERROR) << "Vp9 k-SVC hardware decoding is disabled";
     return false;
@@ -348,7 +350,8 @@ void VP9Decoder::UpdateFrameContext(
     return;
   }
 
-  std::move(context_refresh_cb).Run(frame_ctx);
+  // Fuchsia changes: Swap .Run for operator()
+  context_refresh_cb(frame_ctx);
 }
 
 VP9Decoder::VP9Accelerator::Status VP9Decoder::DecodeAndOutputPicture(
@@ -360,9 +363,11 @@ VP9Decoder::VP9Accelerator::Status VP9Decoder::DecodeAndOutputPicture(
   Vp9Parser::ContextRefreshCallback context_refresh_cb =
       parser_.GetContextRefreshCb(pic->frame_hdr->frame_context_idx);
   if (context_refresh_cb) {
-    done_cb =
-        base::BindOnce(&VP9Decoder::UpdateFrameContext, base::Unretained(this),
-                       pic, std::move(context_refresh_cb));
+    // Fuchsia changes: swap base::BindOnce with lambda
+    done_cb = [this, pic,
+               context_refresh_cb = std::move(context_refresh_cb)]() mutable {
+      this->UpdateFrameContext(pic, std::move(context_refresh_cb));
+    };
   }
 
   const Vp9Parser::Context& context = parser_.context();
@@ -401,9 +406,12 @@ VideoCodecProfile VP9Decoder::GetProfile() const {
   return profile_;
 }
 
+// Fuchsia change: currently only support 8-bit color depth
+#if 0
 uint8_t VP9Decoder::GetBitDepth() const {
   return bit_depth_;
 }
+#endif
 
 size_t VP9Decoder::GetRequiredNumOfPictures() const {
   constexpr size_t kPicsInPipeline = limits::kMaxVideoFrames + 1;

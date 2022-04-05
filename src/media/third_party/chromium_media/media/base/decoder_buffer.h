@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_BASE_DECODER_BUFFER_H_
-#define SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_BASE_DECODER_BUFFER_H_
+#ifndef MEDIA_BASE_DECODER_BUFFER_H_
+#define MEDIA_BASE_DECODER_BUFFER_H_
 
 #include <vector>
 
@@ -30,6 +30,10 @@ class DecoderBuffer {
   }
   const uint8_t* data() const { return data_.data(); }
   size_t data_size() const { return data_.size(); }
+
+  const uint8_t* side_data() const { return side_data_.get(); }
+  size_t side_data_size() const { return side_data_size_; }
+
   const DecryptConfig* decrypt_config() const { return nullptr; }
 
   const CodecBuffer* codec_buffer() const { return maybe_codec_buffer_; }
@@ -48,7 +52,12 @@ class DecoderBuffer {
   // If codec_buffer_, ~return_input_packet_ will recycle the input packet, so
   // the portion of codec_buffer_ can be re-used.
   fit::deferred_callback return_input_packet_;
+
+  // Side data. Used for alpha channel in VPx, and for text cues.
+  size_t side_data_size_;
+  std::unique_ptr<uint8_t[]> side_data_;
 };
 
 }  // namespace media
-#endif  // SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_BASE_DECODER_BUFFER_H_
+
+#endif  // MEDIA_BASE_DECODER_BUFFER_H_

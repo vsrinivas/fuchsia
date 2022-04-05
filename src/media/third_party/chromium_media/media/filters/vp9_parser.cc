@@ -13,15 +13,22 @@
 
 #include <algorithm>
 
-#include "base/bind.h"
-#include "base/callback_helpers.h"
-#include "base/containers/circular_deque.h"
-#include "base/cxx17_backports.h"
-#include "base/logging.h"
-#include "base/numerics/safe_conversions.h"
-#include "base/sys_byteorder.h"
-#include "media/filters/vp9_compressed_header_parser.h"
+// Fuchsia change: Remove libraries in favor of "chromium_utils.h"
+//#include "base/bind.h"
+//#include "base/callback_helpers.h"
+//#include "base/containers/circular_deque.h"
+//#include "base/cxx17_backports.h"
+//#include "base/logging.h"
+//#include "base/numerics/safe_conversions.h"
+//#include "base/sys_byteorder.h"
+#include "chromium_utils.h"
+
+// Fuchsia change: Don't support compressed headers
+// #include "media/filters/vp9_compressed_header_parser.h"
+#include "media/base/subsample_entry.h"
 #include "media/filters/vp9_uncompressed_header_parser.h"
+
+#define LOG FX_DLOGS
 
 namespace media {
 
@@ -216,7 +223,8 @@ std::unique_ptr<DecryptConfig> SplitSubsamples(
     // in this subsample, in which case we have to start from midway through
     // the clear section.
     if (*extra_clear_subsample_bytes) {
-      subsample_clear = *extra_clear_subsample_bytes;
+      // Fuchsia change: added static cast
+      subsample_clear = static_cast<uint32_t>(*extra_clear_subsample_bytes);
     }
 
     if (subsample_clear > frame_size) {
@@ -472,8 +480,11 @@ void Vp9Parser::Context::Vp9FrameContextManager::SetNeedsClientUpdate() {
 Vp9Parser::ContextRefreshCallback
 Vp9Parser::Context::Vp9FrameContextManager::GetUpdateCb() {
   if (needs_client_update_) {
-    return base::BindOnce(&Vp9FrameContextManager::UpdateFromClient,
-                          weak_ptr_factory_.GetWeakPtr());
+    // Fuchsia change: use lambda instead of base::BindOnce
+    return [weak_ptr = weak_ptr_factory_.GetWeakPtr()](
+               const Vp9FrameContext& context) {
+      weak_ptr->UpdateFromClient(context);
+    };
   }
 
   return {};
@@ -627,6 +638,8 @@ bool Vp9Parser::ParseUncompressedHeader(const FrameInfo& frame_info,
 
 bool Vp9Parser::ParseCompressedHeader(const FrameInfo& frame_info,
                                       Result* result) {
+// Fuchsia change: Don't support compressed headers
+#if 0
   *result = kInvalidStream;
   size_t frame_context_idx = curr_frame_header_.frame_context_idx;
   const Context::Vp9FrameContextManager& context_to_load =
@@ -676,6 +689,7 @@ bool Vp9Parser::ParseCompressedHeader(const FrameInfo& frame_info,
         context_.MarkFrameContextForUpdate(frame_context_idx);
     }
   }
+#endif
   return false;
 }
 
@@ -1046,17 +1060,20 @@ void Vp9Parser::SetupLoopFilter() {
     if (!loop_filter.delta_enabled) {
       memset(loop_filter.lvl[i], level, sizeof(loop_filter.lvl[i]));
     } else {
-      loop_filter.lvl[i][Vp9RefType::VP9_FRAME_INTRA][0] = ClampLf(
-          level + loop_filter.ref_deltas[Vp9RefType::VP9_FRAME_INTRA] * scale);
+      // Fuchsia change: added static_cast
+      loop_filter.lvl[i][Vp9RefType::VP9_FRAME_INTRA][0] = static_cast<uint8_t>(
+          ClampLf(level +
+                  loop_filter.ref_deltas[Vp9RefType::VP9_FRAME_INTRA] * scale));
       loop_filter.lvl[i][Vp9RefType::VP9_FRAME_INTRA][1] = 0;
 
       for (size_t type = Vp9RefType::VP9_FRAME_LAST;
            type < Vp9RefType::VP9_FRAME_MAX; ++type) {
         for (size_t mode = 0; mode < Vp9LoopFilterParams::kNumModeDeltas;
              ++mode) {
-          loop_filter.lvl[i][type][mode] =
+          // Fuchsia change: added static_cast
+          loop_filter.lvl[i][type][mode] = static_cast<uint8_t>(
               ClampLf(level + loop_filter.ref_deltas[type] * scale +
-                      loop_filter.mode_deltas[mode] * scale);
+                      loop_filter.mode_deltas[mode] * scale));
         }
       }
     }

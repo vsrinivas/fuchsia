@@ -7,7 +7,9 @@
 #include <stdint.h>
 #include <cstring>
 
-#include "base/sys_byteorder.h"
+// Fuchsia change: Remove libraries in favor of "chromium_utils.h"
+// #include "base/sys_byteorder.h"
+#include "chromium_utils.h"
 
 namespace {
 const int kRegWidthInBits = sizeof(uint64_t) * 8;

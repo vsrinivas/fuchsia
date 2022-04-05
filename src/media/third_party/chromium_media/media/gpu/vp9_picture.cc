@@ -12,6 +12,8 @@ VP9Picture::VP9Picture() : frame_hdr(new Vp9FrameHeader()) {}
 
 VP9Picture::~VP9Picture() = default;
 
+// Fuchsia change: Remove AsV4L2VP9Picture and AsVaapiVP9Picture
+#if 0
 V4L2VP9Picture* VP9Picture::AsV4L2VP9Picture() {
   return nullptr;
 }
@@ -19,6 +21,7 @@ V4L2VP9Picture* VP9Picture::AsV4L2VP9Picture() {
 VaapiVP9Picture* VP9Picture::AsVaapiVP9Picture() {
   return nullptr;
 }
+#endif
 
 scoped_refptr<VP9Picture> VP9Picture::Duplicate() {
   scoped_refptr<VP9Picture> ret = CreateDuplicate();

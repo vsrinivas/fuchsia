@@ -5,11 +5,12 @@
 #ifndef MEDIA_FILTERS_VP9_UNCOMPRESSED_HEADER_PARSER_H_
 #define MEDIA_FILTERS_VP9_UNCOMPRESSED_HEADER_PARSER_H_
 
-#include "base/memory/raw_ptr.h"
+// Fuchsia change: Remove libraries in favor of "chromium_utils.h"
+// #include "base/memory/raw_ptr.h"
+// #include "media/base/media_export.h"
+#include "chromium_utils.h"
 #include "media/filters/vp9_parser.h"
 #include "media/filters/vp9_raw_bits_reader.h"
-
-#include "media/base/media_export.h"
 
 namespace media {
 
@@ -49,7 +50,8 @@ class MEDIA_EXPORT Vp9UncompressedHeaderParser {
   // Raw bits reader for uncompressed frame header.
   Vp9RawBitsReader reader_;
 
-  raw_ptr<Vp9Parser::Context> context_;
+  // Fuchsia change: Swap raw_ptr for *
+  Vp9Parser::Context* context_;
 };
 
 }  // namespace media

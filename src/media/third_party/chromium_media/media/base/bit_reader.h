@@ -8,9 +8,13 @@
 #include <stdint.h>
 #include <string>
 
-#include "base/compiler_specific.h"
+#include <stdint.h>
+#include <string>
+
+// Fuchsia change: Remove libraries in favor of "chromium_utils.h"
+// #include "base/compiler_specific.h"
+// #include "media/base/media_export.h"
 #include "media/base/bit_reader_core.h"
-#include "media/base/media_export.h"
 
 namespace media {
 

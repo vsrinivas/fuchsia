@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_LIB_VIDEO_UTILS_H264_GEOMETRY_H_
-#define SRC_MEDIA_LIB_VIDEO_UTILS_H264_GEOMETRY_H_
+#ifndef SRC_MEDIA_THIRD_PARTY_CHROMIUM_MEDIA_GEOMETRY_H_
+#define SRC_MEDIA_THIRD_PARTY_CHROMIUM_MEDIA_GEOMETRY_H_
 
 #include <stdint.h>
 
@@ -24,6 +24,21 @@ class Size {
 
   void set_width(int width) { width_ = std::max(0, width); }
   void set_height(int height) { height_ = std::max(0, height); }
+
+  void SetSize(int width, int height) {
+    set_width(width);
+    set_height(height);
+  }
+
+  void SetToMin(const Size& other) {
+    width_ = std::min(width_, other.width_);
+    height_ = std::min(height_, other.height_);
+  }
+
+  void SetToMax(const Size& other) {
+    width_ = std::max(width_, other.width_);
+    height_ = std::max(height_, other.height_);
+  }
 
   bool IsEmpty() const { return width_ == 0 || height_ == 0; }
   std::string ToString() { return std::string(); }
@@ -88,6 +103,9 @@ class Rect {
   constexpr int height() const { return size_.height(); }
   void set_height(int height) { size_.set_height(height); }
 
+  constexpr int right() const { return x() + width(); }
+  constexpr int bottom() const { return y() + height(); }
+
   constexpr const Point& origin() const { return origin_; }
   void set_origin(const Point& origin) { origin_ = origin; }
 
@@ -95,6 +113,16 @@ class Rect {
   void set_size(const Size& size) {
     set_width(size.width());
     set_height(size.height());
+  }
+
+  bool Contains(int point_x, int point_y) const {
+    return (point_x >= x()) && (point_x < right()) && (point_y >= y()) &&
+           (point_y < bottom());
+  }
+
+  bool Contains(const Rect& rect) const {
+    return (rect.x() >= x() && rect.right() <= right() && rect.y() >= y() &&
+            rect.bottom() <= bottom());
   }
 
   std::string ToString() const {
@@ -122,4 +150,4 @@ inline bool operator!=(const Rect& lhs, const Rect& rhs) {
 
 }  // namespace gfx
 
-#endif  // SRC_MEDIA_LIB_VIDEO_UTILS_H264_GEOMETRY_H_
+#endif  // SRC_MEDIA_THIRD_PARTY_CHROMIUM_MEDIA_GEOMETRY_H_

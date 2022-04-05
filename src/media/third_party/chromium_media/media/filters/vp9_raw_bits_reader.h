@@ -10,7 +10,9 @@
 
 #include <memory>
 
-#include "media/base/media_export.h"
+// Fuchsia change: Remove libraries in favor of "chromium_utils.h"
+// #include "media/base/media_export.h"
+#include "chromium_utils.h"
 
 namespace media {
 

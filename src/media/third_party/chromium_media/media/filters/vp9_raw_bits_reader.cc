@@ -8,7 +8,9 @@
 
 #include <memory>
 
-#include "base/check_op.h"
+// Fuchsia change: Remove libraries in favor of "chromium_utils.h"
+// #include "base/check_op.h"
+#include "chromium_utils.h"
 #include "media/base/bit_reader.h"
 
 namespace media {
@@ -56,7 +58,8 @@ size_t Vp9RawBitsReader::GetBytesRead() const {
 
 bool Vp9RawBitsReader::ConsumeTrailingBits() {
   DCHECK(reader_);
-  int bits_left = GetBytesRead() * 8 - reader_->bits_read();
+  // Fuchsia change: added static cast
+  int bits_left = static_cast<int>(GetBytesRead() * 8 - reader_->bits_read());
   return ReadLiteral(bits_left) == 0;
 }
 

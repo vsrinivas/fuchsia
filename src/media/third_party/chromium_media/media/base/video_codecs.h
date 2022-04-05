@@ -2,8 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_BASE_VIDEO_CODECS_H_
-#define SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_BASE_VIDEO_CODECS_H_
+#ifndef MEDIA_BASE_VIDEO_CODECS_H_
+#define MEDIA_BASE_VIDEO_CODECS_H_
+
+#include "chromium_utils.h"
+
+#include <string>
 
 namespace media {
 
@@ -64,6 +68,8 @@ enum VideoCodecProfile {
   VIDEO_CODEC_PROFILE_MAX = DOLBYVISION_PROFILE9,
 };
 
+std::string MEDIA_EXPORT GetProfileName(VideoCodecProfile profile);
+
 }  // namespace media
 
-#endif  // SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_BASE_VIDEO_CODECS_H_
+#endif  // MEDIA_BASE_VIDEO_CODECS_H_

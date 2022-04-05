@@ -11,13 +11,16 @@
 #include <memory>
 #include <vector>
 
-#include "base/callback_forward.h"
-#include "base/memory/ref_counted.h"
+// Fuchsia change: Remove libraries in favor of "chromium_utils.h"
+// #include "base/callback_forward.h"
+// #include "base/memory/ref_counted.h"
+// #include "ui/gfx/geometry/size.h"
+#include "chromium_utils.h"
+#include "geometry.h"
 #include "media/filters/vp9_parser.h"
 #include "media/gpu/accelerated_video_decoder.h"
 #include "media/gpu/vp9_picture.h"
 #include "media/gpu/vp9_reference_frame_vector.h"
-#include "ui/gfx/geometry/size.h"
 
 namespace media {
 
@@ -133,7 +136,8 @@ class MEDIA_GPU_EXPORT VP9Decoder : public AcceleratedVideoDecoder {
   gfx::Size GetPicSize() const override;
   gfx::Rect GetVisibleRect() const override;
   VideoCodecProfile GetProfile() const override;
-  uint8_t GetBitDepth() const override;
+  // Fuchsia change: currently only support 8-bit color depth
+  // uint8_t GetBitDepth() const override;
   size_t GetRequiredNumOfPictures() const override;
   size_t GetNumReferenceFrames() const override;
 

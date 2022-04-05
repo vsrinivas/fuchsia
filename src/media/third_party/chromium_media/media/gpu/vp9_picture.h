@@ -6,13 +6,47 @@
 #define MEDIA_GPU_VP9_PICTURE_H_
 
 #include <memory>
+#include <optional>  // Fuchsia change: include optional library
 
 #include "media/filters/vp9_parser.h"
 #include "media/gpu/codec_picture.h"
-#include "media/video/video_encode_accelerator.h"
-#include "third_party/abseil-cpp/absl/types/optional.h"
+// Fuchsia change: Remove libraries in favor of "chromium_utils.h"/"geometry.h"
+//#include "media/video/video_encode_accelerator.h"
+//#include "third_party/abseil-cpp/absl/types/optional.h"
+#include "chromium_utils.h"
+#include "geometry.h"
 
 namespace media {
+
+// Fuchsia change: Include Vp9Metadata
+struct MEDIA_EXPORT Vp9Metadata final {
+  Vp9Metadata();
+  ~Vp9Metadata();
+  Vp9Metadata(const Vp9Metadata&);
+
+  // True iff this layer frame is dependent on previously coded frame(s).
+  bool inter_pic_predicted = false;
+  // True iff this frame only references TL0 frames.
+  bool temporal_up_switch = false;
+  // True iff frame is referenced by upper spatial layer frame.
+  bool referenced_by_upper_spatial_layers = false;
+  // True iff frame is dependent on directly lower spatial layer frame.
+  bool reference_lower_spatial_layers = false;
+  // True iff frame is last layer frame of picture.
+  bool end_of_picture = true;
+
+  // The temporal index for this frame.
+  uint8_t temporal_idx = 0;
+  // The spatial index for this frame.
+  uint8_t spatial_idx = 0;
+  // The resolutions of active spatial layers, filled if and only if keyframe or
+  // the number of active spatial layers is changed.
+  std::vector<gfx::Size> spatial_layer_resolutions;
+
+  // The differences between the picture id of this frame and picture ids
+  // of reference frames, only be filled for non key frames.
+  std::vector<uint8_t> p_diffs;
+};
 
 class V4L2VP9Picture;
 class VaapiVP9Picture;
@@ -25,8 +59,11 @@ class MEDIA_GPU_EXPORT VP9Picture : public CodecPicture {
   VP9Picture& operator=(const VP9Picture&) = delete;
 
   // TODO(tmathmeyer) remove these and just use static casts everywhere.
+// Fuchsia change: Remove AsV4L2VP9Picture and AsVaapiVP9Picture
+#if 0
   virtual V4L2VP9Picture* AsV4L2VP9Picture();
   virtual VaapiVP9Picture* AsVaapiVP9Picture();
+#endif
 
   // Create a duplicate instance and copy the data to it. It is used to support
   // VP9 show_existing_frame feature. Return the scoped_refptr pointing to the
@@ -35,7 +72,8 @@ class MEDIA_GPU_EXPORT VP9Picture : public CodecPicture {
 
   std::unique_ptr<Vp9FrameHeader> frame_hdr;
 
-  absl::optional<Vp9Metadata> metadata_for_encoding;
+  // Fuchsia change: use std::optional instead of absl::optional
+  std::optional<Vp9Metadata> metadata_for_encoding;
 
  protected:
   ~VP9Picture() override;
