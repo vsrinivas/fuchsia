@@ -1,0 +1,74 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.lowpan.thread;
+
+using fuchsia.lowpan;
+
+/// Protocol for connecting to [`Meshcop`] on a LoWPAN device.
+@discoverable
+protocol MeshcopConnector {
+    /// Connects to the [`Meshcop`] protocol on the
+    /// named LoWPAN interface.
+    ///
+    /// The name of the interface can be learned by calling
+    /// [`fuchsia.lowpan/Lookup.GetDevices`].
+    ///
+    /// If there is an error in processing this request
+    /// the given channel is closed and an epitaph code used
+    /// to describe the reason for the failure:
+    ///
+    /// * `ZX_ERR_INVALID_ARGUMENT`: The given interface name
+    ///   was not formatted correctly or otherwise invalid.
+    /// * `ZX_ERR_NOT_FOUND`: No interface was found with the
+    ///   given name.
+    /// * `ZX_ERR_NOT_SUPPORTED`: The interface exists but
+    ///   does not support this protocol.
+    Connect(resource struct {
+        name fuchsia.lowpan.InterfaceName;
+        server_end server_end:Meshcop;
+    });
+};
+
+/// Methods associated with the Mesh Commissioning Protocol (Meshcop).
+protocol Meshcop {
+    /// Updates the TXT record information associated with the Meshcop border
+    /// agent DNS-SD entry. This allows additional information about the
+    /// device to be discoverable on the local network when acting as a
+    /// border agent.
+    ///
+    /// Functionally equivalent to `ot-br-posix`'s
+    /// [`UpdateVendorMeshCopTxtEntries`][1].
+    ///
+    /// Typically, the following keys are updated:
+    ///
+    /// * `vn`: Vendor Name
+    /// * `mn`: Model Name
+    /// * `vo`: Vendor OUI
+    /// * `vd`/`vcd`: Vendor-specific Data
+    ///
+    /// See table 8-4 in section 8.4.1.1.2 of the Thread 1.2 specification for
+    /// a detailed explanation of all the keys and their values.
+    ///
+    /// Any error that prevents the operation from completing successfully
+    /// (such as being provided with invalid keys) will result in the
+    /// protocol being closed.
+    ///
+    /// [1]: https://github.com/openthread/ot-br-posix/blob/0b5c6e1ecb8152ef6cea57c09b8a37a020fc4d6f/src/dbus/server/introspect.xml#L196-L210
+    UpdateTxtEntries(struct {
+        txt_entries vector< struct {
+            /// The key string for this TXT entry.
+            ///
+            /// Must not contain the character `=`.
+            /// Maximum theoretical length is 254 bytes.
+            key string:254;
+
+            /// The binary value associated with this key.
+            ///
+            /// Maximum theoretical length is 253 bytes, which is two bytes less
+            /// than the TXT record maximum length to account for a single-byte
+            /// key and key/value separator byte.
+            value bytes:253;
+        }>:32;
+    }) -> ();
+};

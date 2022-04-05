@@ -77,6 +77,12 @@ impl<T: Driver> ServeTo<DriverRequestStream> for T {
                                 Err(err) => warn!("into_stream() failed: {:?}", err),
                             }
                         }
+                        if let Some(server_end) = protocols.meshcop {
+                            match server_end.into_stream() {
+                                Ok(stream) => futures.push(self.serve_to(stream)),
+                                Err(err) => warn!("into_stream() failed: {:?}", err),
+                            }
+                        }
                         if let Some(server_end) = protocols.counters {
                             if let Some(stream) = server_end.into_stream().ok() {
                                 futures.push(self.serve_to(stream));

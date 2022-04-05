@@ -19,7 +19,8 @@
             "fuchsia.lowpan.experimental.DeviceRouterExtraConnector",
             "fuchsia.lowpan.experimental.LegacyJoiningConnector",
             "fuchsia.lowpan.test.DeviceTestConnector",
-            "fuchsia.lowpan.thread.DatasetConnector"
+            "fuchsia.lowpan.thread.DatasetConnector",
+            "fuchsia.lowpan.thread.MeshcopConnector"
         ]
     }
 }

@@ -26,7 +26,8 @@ use lowpan_driver_common::lowpan_fidl::{
     EnergyScanConnectorRequest, EnergyScanConnectorRequestStream,
     ExperimentalDeviceConnectorRequest, ExperimentalDeviceConnectorRequestStream,
     ExperimentalDeviceExtraConnectorRequest, ExperimentalDeviceExtraConnectorRequestStream,
-    LegacyJoiningConnectorRequest, LegacyJoiningConnectorRequestStream, MAX_LOWPAN_DEVICES,
+    LegacyJoiningConnectorRequest, LegacyJoiningConnectorRequestStream, MeshcopConnectorRequest,
+    MeshcopConnectorRequestStream, MAX_LOWPAN_DEVICES,
 };
 use lowpan_driver_common::{AsyncCondition, ZxStatus};
 use parking_lot::Mutex;
@@ -181,6 +182,7 @@ impl_serve_to_driver!(
     LegacyJoiningConnectorRequest,
     thread_legacy_joining
 );
+impl_serve_to_driver!(MeshcopConnectorRequestStream, MeshcopConnectorRequest, meshcop);
 impl_serve_to_driver!(EnergyScanConnectorRequestStream, EnergyScanConnectorRequest, energy_scan);
 
 impl_serve_to_driver!(

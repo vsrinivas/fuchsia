@@ -35,6 +35,7 @@ enum IncomingService {
     DeviceTestConnector(DeviceTestConnectorRequestStream),
     LegacyJoiningConnector(LegacyJoiningConnectorRequestStream),
     DatasetConnector(DatasetConnectorRequestStream),
+    MeshcopConnector(MeshcopConnectorRequestStream),
     EnergyScanConnector(EnergyScanConnectorRequestStream),
     ExperimentalDeviceConnector(ExperimentalDeviceConnectorRequestStream),
     ExperimentalDeviceExtraConnector(ExperimentalDeviceExtraConnectorRequestStream),
@@ -87,6 +88,7 @@ async fn main() -> Result<(), Error> {
         .add_fidl_service(IncomingService::DatasetConnector)
         .add_fidl_service(IncomingService::ExperimentalDeviceConnector)
         .add_fidl_service(IncomingService::ExperimentalDeviceExtraConnector)
+        .add_fidl_service(IncomingService::MeshcopConnector)
         .add_fidl_service(IncomingService::EnergyScanConnector);
 
     fs.take_and_serve_directory_handle()?;
@@ -105,6 +107,7 @@ async fn main() -> Result<(), Error> {
             IncomingService::DeviceTestConnector(stream) => service.serve_to(stream).await,
             IncomingService::LegacyJoiningConnector(stream) => service.serve_to(stream).await,
             IncomingService::DatasetConnector(stream) => service.serve_to(stream).await,
+            IncomingService::MeshcopConnector(stream) => service.serve_to(stream).await,
             IncomingService::EnergyScanConnector(stream) => service.serve_to(stream).await,
             IncomingService::ExperimentalDeviceConnector(stream) => service.serve_to(stream).await,
             IncomingService::ExperimentalDeviceExtraConnector(stream) => {

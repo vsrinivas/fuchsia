@@ -10,6 +10,7 @@ use anyhow::Error;
 use core::future::ready;
 use futures::stream::BoxStream;
 use futures::{FutureExt, StreamExt, TryStreamExt};
+use log::warn;
 
 /// Trait for implementing a LoWPAN Device Driver.
 #[async_trait]
@@ -261,6 +262,34 @@ pub trait Driver: Send + Sync {
     ///
     /// [3]: https://openthread.io/reference/group/api-operational-dataset#otdatasetsetactivetlvs
     async fn set_active_dataset_tlvs(&self, _dataset: &[u8]) -> ZxResult {
+        Err(ZxStatus::NOT_SUPPORTED)
+    }
+
+    /// Updates the TXT record information associated with the Meshcop border
+    /// agent DNS-SD entry. This allows additional information about the
+    /// device to be discoverable on the local network when acting as a
+    /// border agent.
+    ///
+    /// Functionally equivalent to `ot-br-posix`'s
+    /// [`UpdateVendorMeshCopTxtEntries`][1].
+    ///
+    /// Typically, the following keys are updated:
+    ///
+    /// * `vn`: Vendor Name
+    /// * `mn`: Model Name
+    /// * `vo`: Vendor OUI
+    /// * `vd`/`vcd`: Vendor-specific Data
+    ///
+    /// See table 8-4 in section 8.4.1.1.2 of the Thread 1.2 specification for
+    /// a detailed explanation of all the keys and their values.
+    ///
+    /// Any error that prevents the operation from completing successfully
+    /// (such as being provided with invalid keys) will result in the
+    /// protocol being closed.
+    ///
+    /// [1]: https://github.com/openthread/ot-br-posix/blob/0b5c6e1ecb8152ef6cea57c09b8a37a020fc4d6f/src/dbus/server/introspect.xml#L196-L210
+    async fn meshcop_update_txt_entries(&self, _txt_entries: Vec<(String, Vec<u8>)>) -> ZxResult {
+        warn!("meshcop_update_txt_entries: Not supported by this device.");
         Err(ZxStatus::NOT_SUPPORTED)
     }
 }
@@ -1068,6 +1097,40 @@ impl<T: Driver> ServeTo<DatasetRequestStream> for T {
         } else {
             Ok(())
         }
+    }
+}
+
+#[async_trait()]
+impl<T: Driver> ServeTo<MeshcopRequestStream> for T {
+    async fn serve_to(&self, request_stream: MeshcopRequestStream) -> anyhow::Result<()> {
+        let request_control_handle = request_stream.control_handle();
+
+        let closure = |command| async {
+            match command {
+                MeshcopRequest::UpdateTxtEntries { txt_entries, responder, .. } => {
+                    self.meshcop_update_txt_entries(
+                        txt_entries.into_iter().map(|x| (x.key, x.value)).collect(),
+                    )
+                    .err_into::<Error>()
+                    .and_then(|()| ready(responder.send().map_err(Error::from)))
+                    .await
+                    .context("error in UpdateTxtEntries request")?;
+                }
+            }
+            Result::<(), Error>::Ok(())
+        };
+
+        request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.map_err(
+            |err| {
+                fx_log_err!("Error serving MeshcopRequestStream: {:?}", err);
+
+                if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+                    request_control_handle.shutdown_with_epitaph(*epitaph);
+                }
+
+                err
+            },
+        )
     }
 }
 
