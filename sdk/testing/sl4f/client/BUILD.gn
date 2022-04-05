@@ -8,7 +8,6 @@ import("//build/dart/test.gni")
 import("//build/testing/host_test_data.gni")
 
 dart_library("client") {
-  null_safe = true
   package_name = "sl4f"
 
   sdk_category = "partner"

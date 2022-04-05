@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
+// @dart=2.9
+
 import 'time_delta.dart';
 import 'time_point.dart';
 
@@ -17,7 +20,7 @@ class Model {
   ///
   /// If [start] or [end] is null, then the time interval to select is infinite
   /// in that direction.
-  Model slice(TimePoint? start, TimePoint? end) {
+  Model slice(TimePoint start, TimePoint end) {
     final result = Model();
 
     // The various event types have references to other events, which we will
@@ -29,10 +32,14 @@ class Model {
     // Step 1: Populate the model with new event objects. These events will have
     // references into the old model.
     for (final process in processes) {
-      final newProcess = Process(process.pid, name: process.name);
+      final newProcess = Process()
+        ..pid = process.pid
+        ..name = process.name;
       result.processes.add(newProcess);
       for (final thread in process.threads) {
-        final newThread = Thread(thread.tid, name: thread.name);
+        final newThread = Thread()
+          ..tid = thread.tid
+          ..name = thread.name;
         newProcess.threads.add(newThread);
         for (final event in thread.events) {
           // Exclude any event that starts or ends outside of the specified range.
@@ -40,57 +47,66 @@ class Model {
               (end != null && event.start > end)) {
             continue;
           }
-          Event? newEvent;
+          Event newEvent;
           if (event is InstantEvent) {
-            newEvent = InstantEvent(event.scope, event.category, event.name,
-                event.start, event.pid, event.tid, Map.from(event.args));
+            newEvent = InstantEvent()
+              ..category = event.category
+              ..name = event.name
+              ..start = event.start
+              ..pid = event.pid
+              ..tid = event.tid
+              ..args = Map.from(event.args)
+              ..scope = event.scope;
           } else if (event is CounterEvent) {
-            newEvent = CounterEvent(event.id, event.category, event.name,
-                event.start, event.pid, event.tid, Map.from(event.args));
+            newEvent = CounterEvent()
+              ..category = event.category
+              ..name = event.name
+              ..start = event.start
+              ..pid = event.pid
+              ..tid = event.tid
+              ..args = Map.from(event.args)
+              ..id = event.id;
           } else if (event is DurationEvent) {
-            if (end != null && event.duration! > end - event.start) {
+            if (end != null && event.duration > end - event.start) {
               continue;
             }
-            newEvent = DurationEvent(
-                event.duration,
-                event.parent,
-                event.childDurations,
-                event.childFlows,
-                event.category,
-                event.name,
-                event.start,
-                event.pid,
-                event.tid,
-                Map.from(event.args));
+            newEvent = DurationEvent()
+              ..category = event.category
+              ..name = event.name
+              ..start = event.start
+              ..pid = event.pid
+              ..tid = event.tid
+              ..args = Map.from(event.args)
+              ..duration = event.duration
+              ..parent = event.parent
+              ..childDurations = event.childDurations
+              ..childFlows = event.childFlows;
           } else if (event is AsyncEvent) {
-            if (end != null && event.duration! > end - event.start) {
+            if (end != null && event.duration > end - event.start) {
               continue;
             }
-            newEvent = AsyncEvent(
-                event.id,
-                event.duration,
-                event.category,
-                event.name,
-                event.start,
-                event.pid,
-                event.tid,
-                Map.from(event.args));
+            newEvent = AsyncEvent()
+              ..category = event.category
+              ..name = event.name
+              ..start = event.start
+              ..pid = event.pid
+              ..tid = event.tid
+              ..args = Map.from(event.args)
+              ..id = event.id
+              ..duration = event.duration;
           } else if (event is FlowEvent) {
-            newEvent = FlowEvent(
-                event.id,
-                event.phase,
-                event.enclosingDuration,
-                event.previousFlow,
-                event.nextFlow,
-                event.category,
-                event.name,
-                event.start,
-                event.pid,
-                event.tid,
-                Map.from(event.args));
-          }
-          if (newEvent == null) {
-            throw FormatException('Unknown event type: $event');
+            newEvent = FlowEvent()
+              ..category = event.category
+              ..name = event.name
+              ..start = event.start
+              ..pid = event.pid
+              ..tid = event.tid
+              ..args = Map.from(event.args)
+              ..id = event.id
+              ..phase = event.phase
+              ..enclosingDuration = event.enclosingDuration
+              ..previousFlow = event.previousFlow
+              ..nextFlow = event.nextFlow;
           }
           newThread.events.add(newEvent);
           correspondingEvent[event] = newEvent;
@@ -134,13 +150,10 @@ class Process {
   int pid;
 
   /// The process name of this [Process].
-  String name;
+  String name = '';
 
   /// A list of [Thread]s that belong to this [Process].
-  List<Thread> threads;
-
-  Process(this.pid, {this.name = '', List<Thread>? threads})
-      : threads = threads ?? [];
+  List<Thread> threads = [];
 }
 
 /// Represents a Thread in the trace model.
@@ -149,13 +162,10 @@ class Thread {
   int tid;
 
   /// The thread name of this [Thread].
-  String name;
+  String name = '';
 
   /// A list of [Event]s that belong to this [Thread].
-  List<Event> events;
-
-  Thread(this.tid, {this.name = '', List<Event>? events})
-      : events = events ?? [];
+  List<Event> events = [];
 }
 
 /// A base class for all trace events in the trace model.  Contains
@@ -178,17 +188,6 @@ abstract class Event {
 
   /// Extra arguments that the [Event] contains.
   Map<String, dynamic> args = {};
-
-  Event(this.category, this.name, this.start, this.pid, this.tid, this.args);
-
-  Event.fromJson(Map<String, dynamic> json)
-      : category = json['cat']!,
-        name = json['name']!,
-        start =
-            TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(json['ts']!)),
-        pid = json['pid']!,
-        tid = json['tid']!.toInt(),
-        args = json['args'] ?? {};
 }
 
 /// Represents all different scopes for [InstantEvent]s.
@@ -198,50 +197,12 @@ enum InstantEventScope { thread, process, global }
 /// moment in time.
 class InstantEvent extends Event {
   InstantEventScope scope;
-
-  InstantEvent(
-      this.scope, category, name, start, pid, tid, Map<String, dynamic> args)
-      : super(category, name, start, pid, tid, args);
-  InstantEvent.fromJson(Map<String, dynamic> json)
-      : scope = (() {
-          final scopeField = json['s'];
-          if (scopeField != null && !(scopeField is String)) {
-            throw FormatException(
-                'Expected $scopeField to have field "s" of type String');
-          }
-          return {
-                'g': InstantEventScope.global,
-                'p': InstantEventScope.process,
-                't': InstantEventScope.thread
-              }[scopeField] ??
-              (throw FormatException(
-                  'Expected "s" (scope) field of $scopeField value in {"g", "p", "t"}'));
-        })(),
-        super.fromJson(json);
 }
 
 /// Represents a counter event.
 class CounterEvent extends Event {
-  int? id;
-
-  CounterEvent(
-      this.id, category, name, start, pid, tid, Map<String, dynamic> args)
-      : super(category, name, start, pid, tid, args);
-
-  CounterEvent.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
-    if (json.containsKey('id')) {
-      if (json['id'] is int) {
-        id = json['id'];
-      } else if (json['id'] is String) {
-        id = int.tryParse(json['id']);
-      }
-      if (id == null) {
-        throw FormatException(
-            'Expected $json with "id" field set to be of type int '
-            'or a string that parses as an int');
-      }
-    }
-  }
+  /// Note that [id] is nullable for [CounterEvent]s.
+  int id;
 }
 
 /// Represents a duration event.  Durations describe work which is happening
@@ -253,50 +214,20 @@ class CounterEvent extends Event {
 class DurationEvent extends Event {
   /// The duration of the [DurationEvent].  The "dur" field for complete events,
   /// and end['ts'] - begin['ts'] for begin/end pairs.
-  TimeDelta? duration;
+  TimeDelta duration;
 
   /// The [DurationEvent]'s parent [DurationEvent] in the duration stack.  [null]
   /// if the event has no parent event (i.e. it is the base of the duration
   /// stack).
-  DurationEvent? parent;
+  DurationEvent parent;
 
   /// A list of [DurationEvent]s that are children of this [DurationEvent].
   /// I.e., this event is their parent.
-  List<DurationEvent> childDurations;
+  List<DurationEvent> childDurations = [];
 
   /// A list of [FlowEvent]s that have this [DurationEvent] as their enclosing
   /// duration.
-  List<FlowEvent> childFlows;
-
-  DurationEvent(
-      this.duration,
-      this.parent,
-      this.childDurations,
-      this.childFlows,
-      category,
-      name,
-      start,
-      pid,
-      tid,
-      Map<String, dynamic> args)
-      : super(category, name, start, pid, tid, args);
-
-  DurationEvent.fromJson(Map<String, dynamic> json)
-      : duration = (() {
-          final microseconds = json['dur'];
-          if (microseconds == null) {
-            return null;
-          }
-          if (!(microseconds is double || microseconds is int)) {
-            throw FormatException(
-                'Expected $json to have field "dur" of type double or int');
-          }
-          return TimeDelta.fromMicroseconds(microseconds);
-        })(),
-        parent = null,
-        childDurations = [],
-        childFlows = [],
-        super.fromJson(json);
+  List<FlowEvent> childFlows = [];
 }
 
 /// Represents an async event.  Asynchronous events describe work which is
@@ -306,14 +237,7 @@ class AsyncEvent extends Event {
   int id;
 
   /// The duration of the async begin/end pair.
-  TimeDelta? duration;
-
-  AsyncEvent(this.id, this.duration, category, name, start, pid, tid,
-      Map<String, dynamic> args)
-      : super(category, name, start, pid, tid, args);
-
-  AsyncEvent.fromJson(this.id, Map<String, dynamic> json)
-      : super.fromJson(json);
+  TimeDelta duration;
 }
 
 /// Represents all different phases of flow events.
@@ -344,23 +268,9 @@ class FlowEvent extends Event {
 
   /// The previous flow event in the flow sequence.  Will be null for begin flow
   /// events, and will never be null for step and end flow events.
-  FlowEvent? previousFlow;
+  FlowEvent previousFlow;
 
   /// The next flow event in the flow sequence.  Will never be null for begin and
   /// step flow events, and will be null for end flow events.
-  FlowEvent? nextFlow;
-
-  FlowEvent(this.id, this.phase, this.enclosingDuration, this.previousFlow,
-      this.nextFlow, category, name, start, pid, tid, Map<String, dynamic> args)
-      : super(category, name, start, pid, tid, args);
-
-  FlowEvent.fromJson(this.id, this.enclosingDuration, Map<String, dynamic> json)
-      : phase = (() {
-          return {
-            's': FlowEventPhase.start,
-            't': FlowEventPhase.step,
-            'f': FlowEventPhase.end
-          }[json['ph']]!;
-        })(),
-        super.fromJson(json);
+  FlowEvent nextFlow;
 }

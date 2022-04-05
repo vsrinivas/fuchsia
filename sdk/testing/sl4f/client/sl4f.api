@@ -8149,134 +8149,6 @@
     "trace_model.dart": {
       "ClassDeclarationImpl": {
         "AsyncEvent": {
-          "ConstructorDeclarationImpl": {
-            "AsyncEvent": {
-              "FieldFormalParameterImpl": {
-                "this.duration": {
-                  "name": "this.duration",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "this.id": {
-                  "name": "this.id",
-                  "type": "FieldFormalParameterImpl"
-                }
-              },
-              "SimpleFormalParameterImpl": {
-                "args": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "args",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "Map<String, dynamic>"
-                },
-                "category": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "category",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
-                "name": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "name",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
-                "pid": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "pid",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
-                "start": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "start",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
-                "tid": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "tid",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                }
-              },
-              "name": "AsyncEvent",
-              "type": "ConstructorDeclarationImpl"
-            },
-            "AsyncEvent.fromJson": {
-              "FieldFormalParameterImpl": {
-                "this.id": {
-                  "name": "this.id",
-                  "type": "FieldFormalParameterImpl"
-                }
-              },
-              "SimpleFormalParameterImpl": {
-                "json": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "json",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "Map<String, dynamic>"
-                }
-              },
-              "name": "AsyncEvent.fromJson",
-              "type": "ConstructorDeclarationImpl"
-            }
-          },
           "ExtendsClause": {
             "name": "Event",
             "type": "extends"
@@ -8288,7 +8160,7 @@
               "isLate": false,
               "name": "duration",
               "type": "VariableDeclarationImpl",
-              "varType": "TimeDelta?"
+              "varType": "TimeDelta"
             },
             "id": {
               "isConst": false,
@@ -8303,124 +8175,6 @@
           "type": "ClassDeclarationImpl"
         },
         "CounterEvent": {
-          "ConstructorDeclarationImpl": {
-            "CounterEvent": {
-              "FieldFormalParameterImpl": {
-                "this.id": {
-                  "name": "this.id",
-                  "type": "FieldFormalParameterImpl"
-                }
-              },
-              "SimpleFormalParameterImpl": {
-                "args": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "args",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "Map<String, dynamic>"
-                },
-                "category": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "category",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
-                "name": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "name",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
-                "pid": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "pid",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
-                "start": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "start",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
-                "tid": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "tid",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                }
-              },
-              "name": "CounterEvent",
-              "type": "ConstructorDeclarationImpl"
-            },
-            "CounterEvent.fromJson": {
-              "SimpleFormalParameterImpl": {
-                "json": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "json",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "Map<String, dynamic>"
-                }
-              },
-              "name": "CounterEvent.fromJson",
-              "type": "ConstructorDeclarationImpl"
-            }
-          },
           "ExtendsClause": {
             "name": "Event",
             "type": "extends"
@@ -8432,143 +8186,13 @@
               "isLate": false,
               "name": "id",
               "type": "VariableDeclarationImpl",
-              "varType": "int?"
+              "varType": "int"
             }
           },
           "name": "CounterEvent",
           "type": "ClassDeclarationImpl"
         },
         "DurationEvent": {
-          "ConstructorDeclarationImpl": {
-            "DurationEvent": {
-              "FieldFormalParameterImpl": {
-                "this.childDurations": {
-                  "name": "this.childDurations",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "this.childFlows": {
-                  "name": "this.childFlows",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "this.duration": {
-                  "name": "this.duration",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "this.parent": {
-                  "name": "this.parent",
-                  "type": "FieldFormalParameterImpl"
-                }
-              },
-              "SimpleFormalParameterImpl": {
-                "args": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "args",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "Map<String, dynamic>"
-                },
-                "category": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "category",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
-                "name": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "name",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
-                "pid": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "pid",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
-                "start": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "start",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
-                "tid": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "tid",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                }
-              },
-              "name": "DurationEvent",
-              "type": "ConstructorDeclarationImpl"
-            },
-            "DurationEvent.fromJson": {
-              "SimpleFormalParameterImpl": {
-                "json": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "json",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "Map<String, dynamic>"
-                }
-              },
-              "name": "DurationEvent.fromJson",
-              "type": "ConstructorDeclarationImpl"
-            }
-          },
           "ExtendsClause": {
             "name": "Event",
             "type": "extends"
@@ -8596,7 +8220,7 @@
               "isLate": false,
               "name": "duration",
               "type": "VariableDeclarationImpl",
-              "varType": "TimeDelta?"
+              "varType": "TimeDelta"
             },
             "parent": {
               "isConst": false,
@@ -8604,65 +8228,13 @@
               "isLate": false,
               "name": "parent",
               "type": "VariableDeclarationImpl",
-              "varType": "DurationEvent?"
+              "varType": "DurationEvent"
             }
           },
           "name": "DurationEvent",
           "type": "ClassDeclarationImpl"
         },
         "Event": {
-          "ConstructorDeclarationImpl": {
-            "Event": {
-              "FieldFormalParameterImpl": {
-                "this.args": {
-                  "name": "this.args",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "this.category": {
-                  "name": "this.category",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "this.name": {
-                  "name": "this.name",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "this.pid": {
-                  "name": "this.pid",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "this.start": {
-                  "name": "this.start",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "this.tid": {
-                  "name": "this.tid",
-                  "type": "FieldFormalParameterImpl"
-                }
-              },
-              "name": "Event",
-              "type": "ConstructorDeclarationImpl"
-            },
-            "Event.fromJson": {
-              "SimpleFormalParameterImpl": {
-                "json": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "json",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "Map<String, dynamic>"
-                }
-              },
-              "name": "Event.fromJson",
-              "type": "ConstructorDeclarationImpl"
-            }
-          },
           "VariableDeclarationImpl": {
             "args": {
               "isConst": false,
@@ -8717,150 +8289,6 @@
           "type": "ClassDeclarationImpl"
         },
         "FlowEvent": {
-          "ConstructorDeclarationImpl": {
-            "FlowEvent": {
-              "FieldFormalParameterImpl": {
-                "this.enclosingDuration": {
-                  "name": "this.enclosingDuration",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "this.id": {
-                  "name": "this.id",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "this.nextFlow": {
-                  "name": "this.nextFlow",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "this.phase": {
-                  "name": "this.phase",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "this.previousFlow": {
-                  "name": "this.previousFlow",
-                  "type": "FieldFormalParameterImpl"
-                }
-              },
-              "SimpleFormalParameterImpl": {
-                "args": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "args",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "Map<String, dynamic>"
-                },
-                "category": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "category",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
-                "name": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "name",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
-                "pid": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "pid",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
-                "start": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "start",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
-                "tid": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "tid",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                }
-              },
-              "name": "FlowEvent",
-              "type": "ConstructorDeclarationImpl"
-            },
-            "FlowEvent.fromJson": {
-              "FieldFormalParameterImpl": {
-                "this.enclosingDuration": {
-                  "name": "this.enclosingDuration",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "this.id": {
-                  "name": "this.id",
-                  "type": "FieldFormalParameterImpl"
-                }
-              },
-              "SimpleFormalParameterImpl": {
-                "json": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "json",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "Map<String, dynamic>"
-                }
-              },
-              "name": "FlowEvent.fromJson",
-              "type": "ConstructorDeclarationImpl"
-            }
-          },
           "ExtendsClause": {
             "name": "Event",
             "type": "extends"
@@ -8888,7 +8316,7 @@
               "isLate": false,
               "name": "nextFlow",
               "type": "VariableDeclarationImpl",
-              "varType": "FlowEvent?"
+              "varType": "FlowEvent"
             },
             "phase": {
               "isConst": false,
@@ -8904,131 +8332,13 @@
               "isLate": false,
               "name": "previousFlow",
               "type": "VariableDeclarationImpl",
-              "varType": "FlowEvent?"
+              "varType": "FlowEvent"
             }
           },
           "name": "FlowEvent",
           "type": "ClassDeclarationImpl"
         },
         "InstantEvent": {
-          "ConstructorDeclarationImpl": {
-            "InstantEvent": {
-              "FieldFormalParameterImpl": {
-                "this.scope": {
-                  "name": "this.scope",
-                  "type": "FieldFormalParameterImpl"
-                }
-              },
-              "SimpleFormalParameterImpl": {
-                "args": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "args",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "Map<String, dynamic>"
-                },
-                "category": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "category",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
-                "name": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "name",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
-                "pid": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "pid",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
-                "start": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "start",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
-                "tid": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "tid",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                }
-              },
-              "name": "InstantEvent",
-              "type": "ConstructorDeclarationImpl"
-            },
-            "InstantEvent.fromJson": {
-              "SimpleFormalParameterImpl": {
-                "json": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "json",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "Map<String, dynamic>"
-                }
-              },
-              "name": "InstantEvent.fromJson",
-              "type": "ConstructorDeclarationImpl"
-            }
-          },
           "ExtendsClause": {
             "name": "Event",
             "type": "extends"
@@ -9076,7 +8386,7 @@
                   "isRequiredPositional": true,
                   "name": "end",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "TimePoint?"
+                  "varType": "TimePoint"
                 },
                 "start": {
                   "isConst": false,
@@ -9090,7 +8400,7 @@
                   "isRequiredPositional": true,
                   "name": "start",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "TimePoint?"
+                  "varType": "TimePoint"
                 }
               },
               "isAbstract": false,
@@ -9117,38 +8427,6 @@
           "type": "ClassDeclarationImpl"
         },
         "Process": {
-          "ConstructorDeclarationImpl": {
-            "Process": {
-              "FieldFormalParameterImpl": {
-                "this.name": {
-                  "name": "this.name",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "this.pid": {
-                  "name": "this.pid",
-                  "type": "FieldFormalParameterImpl"
-                }
-              },
-              "SimpleFormalParameterImpl": {
-                "threads": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": true,
-                  "isOptionalNamed": true,
-                  "isOptionalPositional": false,
-                  "isPositional": false,
-                  "isRequired": false,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": false,
-                  "name": "threads",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "List<Thread>?"
-                }
-              },
-              "name": "Process",
-              "type": "ConstructorDeclarationImpl"
-            }
-          },
           "VariableDeclarationImpl": {
             "name": {
               "isConst": false,
@@ -9179,38 +8457,6 @@
           "type": "ClassDeclarationImpl"
         },
         "Thread": {
-          "ConstructorDeclarationImpl": {
-            "Thread": {
-              "FieldFormalParameterImpl": {
-                "this.name": {
-                  "name": "this.name",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "this.tid": {
-                  "name": "this.tid",
-                  "type": "FieldFormalParameterImpl"
-                }
-              },
-              "SimpleFormalParameterImpl": {
-                "events": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": true,
-                  "isOptionalNamed": true,
-                  "isOptionalPositional": false,
-                  "isPositional": false,
-                  "isRequired": false,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": false,
-                  "name": "events",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "List<Event>?"
-                }
-              },
-              "name": "Thread",
-              "type": "ConstructorDeclarationImpl"
-            }
-          },
           "VariableDeclarationImpl": {
             "events": {
               "isConst": false,
