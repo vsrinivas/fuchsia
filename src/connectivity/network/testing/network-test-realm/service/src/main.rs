@@ -22,6 +22,7 @@ use fidl_fuchsia_posix_socket as fposix_socket;
 use fuchsia_async::{self as fasync, futures::StreamExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
 use futures::{FutureExt as _, SinkExt as _, TryFutureExt as _, TryStreamExt as _};
+use futures_lite::FutureExt as _;
 use log::{error, warn};
 use std::collections::HashMap;
 use std::convert::TryFrom as _;
@@ -729,6 +730,30 @@ async fn create_icmp_socket(
     })?)
 }
 
+async fn bind_udp_socket(
+    domain: fposix_socket::Domain,
+    connector: &HermeticNetworkConnector,
+) -> Result<fasync::net::UdpSocket, fntr::Error> {
+    let socket =
+        create_socket(domain, fposix_socket::DatagramSocketProtocol::Udp, connector).await?;
+    let address: std::net::SocketAddr = (
+        match domain {
+            fposix_socket::Domain::Ipv4 => std::net::IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED),
+            fposix_socket::Domain::Ipv6 => std::net::IpAddr::V6(std::net::Ipv6Addr::UNSPECIFIED),
+        },
+        0,
+    )
+        .into();
+    let () = socket.bind(&address.into()).map_err(|e| {
+        error!("error binding socket to address {:?}: {:?}", address, e);
+        fntr::Error::Internal
+    })?;
+    Ok(fasync::net::UdpSocket::from_socket(socket.into()).map_err(|e| {
+        error!("error converting socket to fuchsia_async::net::UdpSocket: {:?}", e);
+        fntr::Error::Internal
+    })?)
+}
+
 /// Returns the scope ID needed for the provided `address`.
 ///
 /// See https://tools.ietf.org/html/rfc2553#section-3.3 for more information.
@@ -941,6 +966,30 @@ impl Controller {
                 let mut result = self.stop_stub().await;
                 responder.send(&mut result)?;
             }
+            fntr::ControllerRequest::PollUdp {
+                target,
+                payload,
+                timeout,
+                num_retries,
+                responder,
+            } => {
+                let mut rx_buffer = vec![0; fntr::MAX_UDP_POLL_LENGTH.into()];
+                let fnet_ext::SocketAddress(target) = target.into();
+                let result = self
+                    .poll_udp(
+                        target,
+                        &payload,
+                        zx::Duration::from_nanos(timeout),
+                        num_retries,
+                        &mut rx_buffer,
+                    )
+                    .await;
+                let mut result = result.map(|num_bytes| {
+                    rx_buffer.truncate(num_bytes);
+                    rx_buffer
+                });
+                responder.send(&mut result)?;
+            }
             fntr::ControllerRequest::Ping {
                 target,
                 payload_length,
@@ -1082,6 +1131,7 @@ impl Controller {
                     fntr::Error::Internal
                 }
                 fntr::Error::AddressInUse
+                | fntr::Error::AddressUnreachable
                 | fntr::Error::AddressNotAvailable
                 | fntr::Error::AlreadyExists
                 | fntr::Error::ComponentNotFound
@@ -1117,6 +1167,97 @@ impl Controller {
                 DestroyChildError::Internal => fntr::Error::Internal,
                 DestroyChildError::NotRunning => fntr::Error::StubNotRunning,
             })
+    }
+
+    async fn poll_udp(
+        &self,
+        target: std::net::SocketAddr,
+        payload: &[u8],
+        timeout: zx::Duration,
+        num_retries: u16,
+        rx_buffer: &mut [u8],
+    ) -> Result<usize, fntr::Error> {
+        let hermetic_network_connector = self
+            .hermetic_network_connector
+            .as_ref()
+            .ok_or(fntr::Error::HermeticNetworkRealmNotRunning)?;
+
+        let socket = bind_udp_socket(
+            match &target {
+                std::net::SocketAddr::V4(_) => fposix_socket::Domain::Ipv4,
+                std::net::SocketAddr::V6(_) => fposix_socket::Domain::Ipv6,
+            },
+            hermetic_network_connector,
+        )
+        .await?;
+
+        let socket = &socket;
+
+        let fold_result = async_utils::fold::try_fold_while(
+            futures::stream::iter(0..num_retries)
+                .then(|_| socket.send_to(payload, target))
+                .map_err(|e| {
+                    // TODO(https://github.com/rust-lang/rust/issues/86442): once
+                    // std::io::ErrorKind::HostUnreachable is stable, we should use that instead.
+                    match e.raw_os_error() {
+                        Some(libc::EHOSTUNREACH) => fntr::Error::AddressUnreachable,
+                        Some(_) | None => {
+                            error!("error while sending udp datagram to {:?}: {:?}", target, e);
+                            fntr::Error::Internal
+                        }
+                    }
+                }),
+            rx_buffer,
+            |rx_buffer, num_bytes_sent| async move {
+                if num_bytes_sent < payload.len() {
+                    error!(
+                        "expected to send full payload length {}, sent {} bytes instead",
+                        payload.len(),
+                        num_bytes_sent
+                    );
+                    return Err(fntr::Error::Internal);
+                }
+
+                let timelimited_socket_receive = socket
+                    .recv_from(rx_buffer)
+                    .map(Ok)
+                    .or(fasync::Timer::new(timeout).map(Err))
+                    .await;
+
+                match timelimited_socket_receive
+                {
+                    Ok(received_result) => {
+                        let (received, from_addr) = received_result.map_err(|e| {
+                            error!("error while receiving udp datagram: {:?}", e);
+                            fntr::Error::Internal
+                        })?;
+                        if from_addr != target {
+                            warn!(
+                                "received udp datagram from {:?} while listening for datagrams\
+                                 from {:?}",
+                                from_addr,
+                                target,
+                            );
+                            return Ok(async_utils::fold::FoldWhile::Continue(rx_buffer));
+                        }
+                        Ok(async_utils::fold::FoldWhile::Done(received))
+                    }
+                    Err((/* timed out */)) => {
+                        Ok(async_utils::fold::FoldWhile::Continue(rx_buffer))
+                    }
+                }
+            },
+        )
+        .await?;
+
+        match fold_result {
+            async_utils::fold::FoldResult::StreamEnded(_rx_buffer) => {
+                Err(fntr::Error::TimeoutExceeded)
+            }
+            async_utils::fold::FoldResult::ShortCircuited(num_bytes_received) => {
+                Ok(num_bytes_received)
+            }
+        }
     }
 
     /// Pings the `target` using a socket created on the hermetic Netstack.
@@ -1250,6 +1391,7 @@ impl Controller {
                 }
                 fntr::Error::AddressInUse
                 | fntr::Error::AddressNotAvailable
+                | fntr::Error::AddressUnreachable
                 | fntr::Error::AlreadyExists
                 | fntr::Error::ComponentNotFound
                 | fntr::Error::Internal

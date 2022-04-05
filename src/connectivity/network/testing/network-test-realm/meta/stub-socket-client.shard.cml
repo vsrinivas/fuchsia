@@ -1,0 +1,19 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Base manifest for test stubs that:
+//  - Forwards stdout and stderr streams to LogSink.
+//  - Routes the capabilities needed to create sockets.
+{
+    include: [ "syslog/elf_stdio.shard.cml" ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.netstack.Netstack",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "parent",
+        },
+    ],
+}

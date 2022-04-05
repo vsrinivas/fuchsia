@@ -8,6 +8,9 @@ using fuchsia.net.interfaces;
 using fuchsia.url;
 using zx;
 
+// Arbitrarily chosen to satisfy testing use cases and avoid IP fragmentation.
+const MAX_UDP_POLL_LENGTH uint16 = 1024;
+
 /// Standard error codes for the `Controller` protocol.
 type Error = strict enum {
     /// The controller encountered an unspecified error while performing the
@@ -34,6 +37,8 @@ type Error = strict enum {
     ADDRESS_IN_USE = 10;
     /// The resource already exists.
     ALREADY_EXISTS = 11;
+    /// The target address is unreachable (e.g. no route exists to it).
+    ADDRESS_UNREACHABLE = 12;
 };
 
 /// A controller for creating and manipulating the Network Test Realm.
@@ -164,6 +169,33 @@ protocol Controller {
         interface_name string:<fuchsia.net.interfaces.INTERFACE_NAME_LENGTH, optional>;
         timeout zx.duration;
     }) -> (struct {}) error Error;
+
+    /// Polls the specified socket address with UDP datagrams containing the specified payload
+    /// using a socket provided by the hermetic Netstack.
+    ///
+    /// Waits for a single reply from the target address and returns it.
+    ///
+    /// + request `target` the socket address to poll.
+    /// + request `payload` the content to place in the UDP datagram.
+    /// + request `timeout` a timeout in nanoseconds to wait for a reply, per retry.
+    /// + request `num_retries` the number of poll attempts to make before giving up and returning
+    ///     an error.
+    /// * error `HERMETIC_NETWORK_REALM_NOT_RUNNING` if there is no running
+    ///     hermetic network realm.
+    /// * error `ADDRESS_UNREACHABLE` if all poll attempts expire without successfully receiving
+    ///     a reply from the target address, and no route was found to the target address.
+    /// * error `TIMEOUT_EXCEEDED` if the target address was routable, but all of the retry
+    ///     attempts expire without successfully receiving a reply from the target address.
+    /// * error `INTERNAL` for internal errors, including failure to create a socket or other
+    ///     failures to send/receive datagrams from the target address.
+    PollUdp(struct {
+        target fuchsia.net.SocketAddress;
+        payload bytes:MAX_UDP_POLL_LENGTH;
+        timeout zx.duration;
+        num_retries uint16;
+    }) -> (struct {
+        payload bytes:MAX_UDP_POLL_LENGTH;
+    }) error Error;
 
     /// Joins a multicast group.
     ///

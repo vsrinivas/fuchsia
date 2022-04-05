@@ -9,7 +9,9 @@ use anyhow::Context as _;
 use ffx_core::ffx_plugin;
 use ffx_net_test_realm_args as ntr_args;
 use fidl_fuchsia_developer_remotecontrol as fremotecontrol;
+use fidl_fuchsia_net_ext as fnet_ext;
 use fidl_fuchsia_net_test_realm as fntr;
+use log::error;
 
 const NET_TEST_REALM_CONTROLLER_SELECTOR_SUFFIX: &str = ":expose:fuchsia.net.test.realm.Controller";
 
@@ -50,22 +52,22 @@ async fn handle_command(
     controller: fntr::ControllerProxy,
     command: ntr_args::Subcommand,
 ) -> anyhow::Result<()> {
-    let (result_fut, method_name) = match command {
+    let (result, method_name) = match command {
         ntr_args::Subcommand::AddInterface(ntr_args::AddInterface { mac_address, name }) => {
-            (controller.add_interface(&mut mac_address.into(), &name), "add_interface")
+            (controller.add_interface(&mut mac_address.into(), &name).await, "add_interface")
         }
         ntr_args::Subcommand::JoinMulticastGroup(ntr_args::JoinMulticastGroup {
             address,
             interface_id,
         }) => (
-            controller.join_multicast_group(&mut address.into(), interface_id),
+            controller.join_multicast_group(&mut address.into(), interface_id).await,
             "join_multicast_group",
         ),
         ntr_args::Subcommand::LeaveMulticastGroup(ntr_args::LeaveMulticastGroup {
             address,
             interface_id,
         }) => (
-            controller.leave_multicast_group(&mut address.into(), interface_id),
+            controller.leave_multicast_group(&mut address.into(), interface_id).await,
             "leave_multicast_group",
         ),
         ntr_args::Subcommand::Ping(ntr_args::Ping {
@@ -74,25 +76,58 @@ async fn handle_command(
             timeout,
             interface_name,
         }) => (
-            controller.ping(&mut target.into(), payload_length, interface_name.as_deref(), timeout),
+            controller
+                .ping(&mut target.into(), payload_length, interface_name.as_deref(), timeout)
+                .await,
             "ping",
+        ),
+        ntr_args::Subcommand::PollUdp(ntr_args::PollUdp {
+            target,
+            payload,
+            timeout,
+            num_retries,
+        }) => (
+            async move {
+                controller
+                    .poll_udp(
+                        &mut fnet_ext::SocketAddress(target).into(),
+                        payload.as_bytes(),
+                        timeout,
+                        num_retries,
+                    )
+                    .await
+                    .map(|ntr_result| {
+                        ntr_result.and_then(|bytes| {
+                            let received = std::str::from_utf8(&bytes).map_err(|e| {
+                                error!("error parsing {:?} as utf8: {:?}", bytes, e);
+                                fntr::Error::Internal
+                            })?;
+                            println!("{}", received);
+                            Ok(())
+                        })
+                    })
+            }
+            .await,
+            "poll_udp",
         ),
         ntr_args::Subcommand::StartHermeticNetworkRealm(ntr_args::StartHermeticNetworkRealm {
             netstack,
-        }) => (controller.start_hermetic_network_realm(netstack), "start_hermetic_network_realm"),
+        }) => (
+            controller.start_hermetic_network_realm(netstack).await,
+            "start_hermetic_network_realm",
+        ),
         ntr_args::Subcommand::StartStub(ntr_args::StartStub { component_url }) => {
-            (controller.start_stub(&component_url), "start_stub")
+            (controller.start_stub(&component_url).await, "start_stub")
         }
         ntr_args::Subcommand::StopHermeticNetworkRealm(ntr_args::StopHermeticNetworkRealm {}) => {
-            (controller.stop_hermetic_network_realm(), "stop_hermetic_network_realm")
+            (controller.stop_hermetic_network_realm().await, "stop_hermetic_network_realm")
         }
         ntr_args::Subcommand::StopStub(ntr_args::StopStub {}) => {
-            (controller.stop_stub(), "stop_stub")
+            (controller.stop_stub().await, "stop_stub")
         }
     };
 
-    result_fut
-        .await
+    result
         .context(format!("{} failed", method_name))?
         .map_err(|e| anyhow::format_err!("{} error: {:?}", method_name, e))
 }
@@ -211,6 +246,36 @@ mod test {
                 assert_eq!(Some(INTERFACE_NAME.to_string()), interface_name);
                 assert_eq!(expected_timeout, timeout);
                 responder.send(&mut Ok(())).expect("failed to send Ping response");
+            },
+        )
+        .await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn poll_udp() {
+        let expected_port = 1234;
+        let expected_target = (std::net::Ipv4Addr::LOCALHOST, expected_port).into();
+        let expected_timeout = 1000;
+        let expected_payload = "hello";
+        let expected_num_retries = 10;
+        net_test_realm_command_test(
+            ntr_args::Subcommand::PollUdp(ntr_args::PollUdp {
+                target: expected_target,
+                payload: expected_payload.to_string(),
+                timeout: expected_timeout,
+                num_retries: expected_num_retries,
+            }),
+            |request| {
+                let (target, payload, timeout, num_retries, responder) =
+                    request.into_poll_udp().expect("expected request of type PollUdp");
+                assert_eq!(
+                    fnet_ext::SocketAddress::from(target),
+                    fnet_ext::SocketAddress(expected_target)
+                );
+                assert_eq!(payload, expected_payload.as_bytes());
+                assert_eq!(timeout, expected_timeout);
+                assert_eq!(num_retries, expected_num_retries);
+                responder.send(&mut Ok(payload)).expect("failed to send PollUdp response");
             },
         )
         .await;

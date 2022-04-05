@@ -15,7 +15,7 @@ use fidl_fuchsia_net_test_realm as fntr;
     name = "net-test-realm",
     description = "Manage a running Network Test Realm",
     note = "This plugin acts as a thin wrapper around the Network Test Realm Controller protocol.
-For more specific information regarding each subcommand, see the underlying protocol definition: 
+For more specific information regarding each subcommand, see the underlying protocol definition:
 https://osscs.corp.google.com/fuchsia/fuchsia/+/main:src/connectivity/network/testing/network-test-realm/fidl/controller.fidl"
 )]
 pub struct Command {
@@ -36,6 +36,7 @@ pub enum Subcommand {
     JoinMulticastGroup(JoinMulticastGroup),
     LeaveMulticastGroup(LeaveMulticastGroup),
     Ping(Ping),
+    PollUdp(PollUdp),
     StartHermeticNetworkRealm(StartHermeticNetworkRealm),
     StartStub(StartStub),
     StopHermeticNetworkRealm(StopHermeticNetworkRealm),
@@ -132,6 +133,28 @@ pub struct Ping {
     #[argh(option)]
     /// the name of the source interface.
     pub interface_name: Option<String>,
+}
+
+#[derive(argh::FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "poll-udp")]
+/// Polls the specified socket address with UDP datagrams containing the specified payload.
+/// Waits for a single reply from the target address and prints it to stdout.
+pub struct PollUdp {
+    #[argh(positional)]
+    /// the socket to which to send datagrams
+    pub target: std::net::SocketAddr,
+
+    #[argh(positional)]
+    /// the datagram to send
+    pub payload: String,
+
+    #[argh(positional)]
+    /// the timeout in nanos to wait for a reply, per retry.
+    pub timeout: i64,
+
+    #[argh(positional)]
+    /// the number of attempts to make
+    pub num_retries: u16,
 }
 
 fn parse_netstack_type(value: &str) -> Result<fntr::Netstack, String> {

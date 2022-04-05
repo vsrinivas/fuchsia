@@ -18,12 +18,14 @@ use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
 use fidl_fuchsia_net_stack as fstack;
 use fidl_fuchsia_net_test_realm as fntr;
+use fidl_fuchsia_posix_socket as fposix_socket;
 use fuchsia_zircon as zx;
 use futures::StreamExt as _;
-use net_declare::{fidl_ip_v4, fidl_ip_v6, fidl_mac, fidl_subnet};
+use net_declare::{fidl_ip_v4, fidl_ip_v6, fidl_mac, fidl_socket_addr, fidl_subnet};
 use netstack_testing_common::realms::{KnownServiceProvider, Netstack2, TestSandboxExt as _};
 use netstack_testing_macros::variants_test;
 use packet::ParsablePacket as _;
+use std::convert::TryInto as _;
 use test_case::test_case;
 
 const INTERFACE1_MAC_ADDRESS: fnet::MacAddress = fidl_mac!("02:03:04:05:06:07");
@@ -31,7 +33,8 @@ const INTERFACE2_MAC_ADDRESS: fnet::MacAddress = fidl_mac!("05:06:07:08:09:10");
 const INTERFACE1_NAME: &'static str = "iface1";
 const INTERFACE2_NAME: &'static str = "iface2";
 const EXPECTED_INTERFACE_NAME: &'static str = "added-interface";
-const FAKE_STUB_URL: &'static str = "#meta/test-stub.cm";
+const IPV4_STUB_URL: &'static str = "#meta/unreliable-echo-v4.cm";
+const IPV6_STUB_URL: &'static str = "#meta/unreliable-echo-v6.cm";
 const TEST_STUB_MONIKER_REGEX: &'static str = ".*/stubs:test-stub$";
 
 const DEFAULT_IPV4_TARGET_SUBNET: fnet::Subnet = fidl_subnet!("192.168.255.1/16");
@@ -725,12 +728,97 @@ async fn start_stub() {
         .expect("start_hermetic_network_realm error");
 
     network_test_realm
-        .start_stub(FAKE_STUB_URL)
+        .start_stub(IPV4_STUB_URL)
         .await
         .expect("start_stub failed")
         .expect("start_stub error");
 
     assert!(has_stub(&realm).await);
+}
+
+#[test_case(fposix_socket::Domain::Ipv4 ; "IPv4")]
+#[test_case(fposix_socket::Domain::Ipv6 ; "IPv6")]
+#[fuchsia_async::run_singlethreaded(test)]
+async fn poll_udp(domain: fposix_socket::Domain) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let realm =
+        create_netstack_realm("start_stub", &sandbox).expect("failed to create netstack realm");
+
+    let network_test_realm = realm
+        .connect_to_protocol::<fntr::ControllerMarker>()
+        .expect("failed to connect to network test realm controller");
+
+    network_test_realm
+        .start_hermetic_network_realm(fntr::Netstack::V2)
+        .await
+        .expect("start_hermetic_network_realm failed")
+        .expect("start_hermetic_network_realm error");
+
+    network_test_realm
+        .start_stub(match domain {
+            fposix_socket::Domain::Ipv4 => IPV4_STUB_URL,
+            fposix_socket::Domain::Ipv6 => IPV6_STUB_URL,
+        })
+        .await
+        .expect("start_stub failed")
+        .expect("start_stub error");
+
+    assert!(has_stub(&realm).await, "expected has_stub(&realm) to be true");
+
+    let payload = "hello".as_bytes();
+    let mut poll_addr = fnet_ext::SocketAddress(match domain {
+        fposix_socket::Domain::Ipv4 => unreliable_echo::socket_addr_v4(),
+        fposix_socket::Domain::Ipv6 => unreliable_echo::socket_addr_v6(),
+    })
+    .into();
+    let response = network_test_realm
+        .poll_udp(&mut poll_addr, payload, zx::Duration::from_millis(10).into_nanos(), 6000)
+        .await
+        .expect("poll_udp FIDL error")
+        .expect("poll_udp error");
+    assert_eq!(response, payload);
+
+    network_test_realm.stop_stub().await.expect("stop_stub failed").expect("stop_stub error");
+
+    assert!(!has_stub(&realm).await, "expected has_stub(&realm) to be false");
+
+    let response = network_test_realm
+        .poll_udp(&mut poll_addr, payload, zx::Duration::from_millis(10).into_nanos(), 100)
+        .await
+        .expect("poll_udp FIDL error");
+    assert_eq!(response, Err(fntr::Error::TimeoutExceeded));
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn poll_udp_unreachable() {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let realm =
+        create_netstack_realm("start_stub", &sandbox).expect("failed to create netstack realm");
+
+    let network_test_realm = realm
+        .connect_to_protocol::<fntr::ControllerMarker>()
+        .expect("failed to connect to network test realm controller");
+
+    network_test_realm
+        .start_hermetic_network_realm(fntr::Netstack::V2)
+        .await
+        .expect("start_hermetic_network_realm failed")
+        .expect("start_hermetic_network_realm error");
+
+    // 203.0.113.0/24 is reserved for documentation only, so no address in this subnet
+    // should be routable/reachable. See https://www.rfc-editor.org/rfc/rfc5737.html.
+    let mut poll_addr = fidl_socket_addr!("203.0.113.1:10000");
+
+    let response = network_test_realm
+        .poll_udp(
+            &mut poll_addr,
+            "test payload".as_bytes(),
+            zx::Duration::from_millis(10).into_nanos(),
+            100,
+        )
+        .await
+        .expect("poll_udp FIDL error");
+    assert_eq!(response, Err(fntr::Error::AddressUnreachable));
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -761,7 +849,7 @@ async fn start_stub_with_existing_stub() {
         .expect("failed to subscribe to EventSource");
 
     network_test_realm
-        .start_stub(FAKE_STUB_URL)
+        .start_stub(IPV4_STUB_URL)
         .await
         .expect("start_stub failed")
         .expect("start_stub error");
@@ -778,7 +866,7 @@ async fn start_stub_with_existing_stub() {
         .expect("initial test-stub observe start event error");
 
     network_test_realm
-        .start_stub(FAKE_STUB_URL)
+        .start_stub(IPV4_STUB_URL)
         .await
         .expect("start_stub replace failed")
         .expect("start_stub replace error");
@@ -795,10 +883,23 @@ async fn start_stub_with_existing_stub() {
     // result it needs to be in a different statement.
     let component_events::events::StoppedPayload { status } =
         stopped_event.result().expect("test-stub observe stop event error");
-    assert_eq!(
-        *status,
-        component_events::events::ExitStatus::Crash(zx::Status::PEER_CLOSED.into_raw())
-    );
+    let raw_status = match *status {
+        component_events::events::ExitStatus::Clean => {
+            // The component is expected to have a nonzero exit status due to it having been killed
+            // rather than being allowed to exit normally.
+            panic!("got ExitStatus::Clean, expected Crash")
+        }
+        component_events::events::ExitStatus::Crash(i) => i,
+    };
+    let component_error =
+        match raw_status.try_into().ok().and_then(fcomponent::Error::from_primitive) {
+            None => panic!(
+                "expected {:?} to match a fuchsia.component.Error value",
+                zx::Status::from_raw(raw_status)
+            ),
+            Some(e) => e,
+        };
+    assert_eq!(component_error, fcomponent::Error::InstanceDied);
 
     let component_events::events::StartedPayload {} = event_matcher
         .clone()
@@ -872,7 +973,7 @@ async fn start_stub_with_no_hermetic_network_realm() {
         .expect("failed to connect to network test realm controller");
 
     assert_eq!(
-        network_test_realm.start_stub(FAKE_STUB_URL).await.expect("failed to call start_stub"),
+        network_test_realm.start_stub(IPV4_STUB_URL).await.expect("failed to call start_stub"),
         Err(fntr::Error::HermeticNetworkRealmNotRunning),
     );
 }
@@ -894,7 +995,7 @@ async fn stop_stub() {
         .expect("start_hermetic_network_realm error");
 
     network_test_realm
-        .start_stub(FAKE_STUB_URL)
+        .start_stub(IPV4_STUB_URL)
         .await
         .expect("start_stub failed")
         .expect("start_stub error");
