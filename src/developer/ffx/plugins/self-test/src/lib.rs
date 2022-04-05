@@ -37,7 +37,8 @@ pub async fn selftest(cmd: SelftestCommand) -> Result<()> {
         component::include_target::test_list,
         debug::include_target::test_debug_run_crasher,
         target::include_target::test_list,
-        target::include_target::test_get_ssh_address_includes_port
+        target::include_target::test_get_ssh_address_includes_port,
+        target::include_target::test_target_show
     ];
 
     let mut tests = default_tests;

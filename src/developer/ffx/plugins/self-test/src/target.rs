@@ -94,4 +94,18 @@ pub mod include_target {
 
         Ok(())
     }
+
+    pub(crate) async fn test_target_show() -> Result<()> {
+        let target_nodename = get_target_nodename().await?;
+
+        let isolate = Isolate::new("target-show").await?;
+
+        let out = isolate.ffx(&["--target", &target_nodename, "target", "show"]).await?;
+
+        ensure!(out.status.success(), "status is unexpected: {:?}", out);
+        ensure!(!out.stdout.is_empty(), "stdout is unexpectedly empty: {:?}", out);
+        ensure!(out.stderr.lines().count() == 0, "stderr is unexpected: {:?}", out);
+
+        Ok(())
+    }
 }
