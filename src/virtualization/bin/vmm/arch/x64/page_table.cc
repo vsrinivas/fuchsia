@@ -120,7 +120,7 @@ zx::status<> ReadInstruction(const PhysMem& phys_mem, zx_gpaddr_t cr3_addr, zx_v
   size_t page_offset = rip_addr & PAGE_OFFSET_MASK_4KB;
   size_t limit = std::min(span.size(), PAGE_SIZE - page_offset);
   auto begin = page->begin() + page_offset;
-  std::copy(begin, begin + limit, span.begin());
+  std::copy_n(begin, limit, span.begin());
 
   // If the read is not split across pages, return.
   if (limit == span.size()) {
@@ -133,6 +133,6 @@ zx::status<> ReadInstruction(const PhysMem& phys_mem, zx_gpaddr_t cr3_addr, zx_v
   }
 
   begin = page->begin();
-  std::copy(begin, begin + span.size() - limit, span.begin() + limit);
+  std::copy_n(begin, span.size() - limit, span.begin() + limit);
   return zx::ok();
 }

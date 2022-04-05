@@ -7,6 +7,8 @@
 
 #include <zircon/types.h>
 
+#include "src/virtualization/bin/vmm/arch/x64/page_table.h"
+
 #define X86_FLAGS_STATUS (FLAG_OF | FLAG_SF | FLAG_ZF | FLAG_PF | FLAG_RESERVED | FLAG_CF)
 
 enum Flag {
@@ -36,7 +38,7 @@ struct Instruction {
   uint64_t* flags;
 };
 
-zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, uint8_t default_operand_size,
+zx_status_t inst_decode(InstructionSpan span, uint8_t default_operand_size,
                         zx_vcpu_state_t* vcpu_state, Instruction* inst);
 
 template <typename T>

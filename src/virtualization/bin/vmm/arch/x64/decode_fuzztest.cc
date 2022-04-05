@@ -14,8 +14,9 @@ namespace {
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   FuzzedDataProvider provider(data, size);
-  std::vector<uint8_t> inst_buf =
+  std::vector<uint8_t> buffer =
       provider.ConsumeBytes<uint8_t>(provider.ConsumeIntegralInRange<uint32_t>(0, 32));
+  InstructionSpan span(buffer.data(), buffer.size());
   uint8_t default_operand_size = provider.ConsumeBool() ? 2 : 4;
   zx_vcpu_state_t vcpu_state = {
       provider.ConsumeIntegral<uint64_t>(), provider.ConsumeIntegral<uint64_t>(),
@@ -29,8 +30,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
       provider.ConsumeIntegral<uint64_t>(),
   };
   Instruction inst = {};
-  inst_decode(inst_buf.data(), static_cast<uint32_t>(inst_buf.size()), default_operand_size,
-              &vcpu_state, &inst);
+  inst_decode(span, default_operand_size, &vcpu_state, &inst);
   return 0;
 }
 

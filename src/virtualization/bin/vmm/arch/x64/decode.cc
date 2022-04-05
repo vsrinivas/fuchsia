@@ -137,40 +137,40 @@ static uint64_t* select_register(zx_vcpu_state_t* vcpu_state, uint8_t register_i
   }
 }
 
-static zx_status_t deconstruct_instruction(const uint8_t* inst_buf, uint32_t inst_len,
-                                           uint16_t* opcode, uint8_t* mod_rm, uint8_t* sib) {
-  if (inst_len == 0) {
+static zx_status_t deconstruct_instruction(const InstructionSpan& span, uint16_t* opcode,
+                                           uint8_t* mod_rm, uint8_t* sib) {
+  if (span.empty()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  switch (inst_buf[0]) {
+  switch (span[0]) {
     case 0x0f:
-      if (inst_len < 3) {
+      if (span.size() < 3) {
         return ZX_ERR_NOT_SUPPORTED;
       }
       // Use memcpy instead of casting, otherwise we may cause an unaligned
       // access, resulting in undefined behaviour.
-      memcpy(opcode, inst_buf, sizeof(uint16_t));
-      *mod_rm = inst_buf[2];
+      memcpy(opcode, span.data(), sizeof(uint16_t));
+      *mod_rm = span[2];
       if (!has_sib_byte(*mod_rm)) {
         *sib = 0;
-      } else if (inst_len < 4) {
+      } else if (span.size() < 4) {
         return ZX_ERR_NOT_SUPPORTED;
       } else {
-        *sib = inst_buf[3];
+        *sib = span[3];
       }
       break;
     default:
-      if (inst_len < 2) {
+      if (span.size() < 2) {
         return ZX_ERR_OUT_OF_RANGE;
       }
-      *opcode = inst_buf[0];
-      *mod_rm = inst_buf[1];
+      *opcode = span[0];
+      *mod_rm = span[1];
       if (!has_sib_byte(*mod_rm)) {
         *sib = 0;
-      } else if (inst_len < 3) {
+      } else if (span.size() < 3) {
         return ZX_ERR_NOT_SUPPORTED;
       } else {
-        *sib = inst_buf[2];
+        *sib = span[2];
       }
       break;
   }
@@ -180,12 +180,12 @@ static zx_status_t deconstruct_instruction(const uint8_t* inst_buf, uint32_t ins
 // Decode an instruction used in a memory access to determine the register used
 // as a source or destination. There's no need to decode memory operands because
 // the faulting address is already known.
-zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, uint8_t default_operand_size,
+zx_status_t inst_decode(InstructionSpan span, uint8_t default_operand_size,
                         zx_vcpu_state_t* vcpu_state, Instruction* inst) {
-  if (inst_len == 0) {
+  if (span.empty()) {
     return ZX_ERR_BAD_STATE;
   }
-  if (inst_len > kMaxInstructionSize) {
+  if (span.size() > kMaxInstructionSize) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   if (default_operand_size != 2 && default_operand_size != 4) {
@@ -196,13 +196,12 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, uint8_t defa
   }
 
   // Parse 66H prefix.
-  bool h66 = is_h66_prefix(inst_buf[0]);
+  bool h66 = is_h66_prefix(span[0]);
   if (h66) {
-    if (inst_len == 1) {
+    if (span.size() == 1) {
       return ZX_ERR_BAD_STATE;
     }
-    inst_buf++;
-    inst_len--;
+    span = span.subspan(1);
   }
   // Parse REX prefix.
   //
@@ -212,12 +211,11 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, uint8_t defa
   bool rex = false;
   bool rex_r = false;
   bool rex_w = false;
-  if (is_rex_prefix(inst_buf[0])) {
+  if (is_rex_prefix(span[0])) {
     rex = true;
-    rex_r = inst_buf[0] & kRexRMask;
-    rex_w = inst_buf[0] & kRexWMask;
-    inst_buf++;
-    inst_len--;
+    rex_r = span[0] & kRexRMask;
+    rex_w = span[0] & kRexWMask;
+    span = span.subspan(1);
   }
   // Technically this is valid, but no sane compiler should emit it.
   if (h66 && rex_w) {
@@ -227,7 +225,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, uint8_t defa
   uint16_t opcode;
   uint8_t mod_rm;
   uint8_t sib;
-  zx_status_t status = deconstruct_instruction(inst_buf, inst_len, &opcode, &mod_rm, &sib);
+  zx_status_t status = deconstruct_instruction(span, &opcode, &mod_rm, &sib);
   if (status != ZX_OK) {
     return status;
   }
@@ -244,7 +242,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, uint8_t defa
     case 0x81: {
       const bool w = opcode & kWMask;
       const uint8_t imm_size = immediate_size(h66, w, default_operand_size);
-      if (inst_len != sib_size + disp_size + imm_size + 2u) {
+      if (span.size() != sib_size + disp_size + imm_size + 2u) {
         return ZX_ERR_OUT_OF_RANGE;
       }
       if (register_id(mod_rm, /*rex_r=*/false) != 1) {
@@ -255,14 +253,14 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, uint8_t defa
       inst->imm = 0;
       inst->reg = NULL;
       inst->flags = &vcpu_state->rflags;
-      memcpy(&inst->imm, inst_buf + sib_size + disp_size + 2, imm_size);
+      memcpy(&inst->imm, span.data() + sib_size + disp_size + 2, imm_size);
       return ZX_OK;
     }
     // Move r to r/m.
     // 1000 100w : mod reg r/m
     case 0x88:
     case 0x89: {
-      if (inst_len != sib_size + disp_size + 2u) {
+      if (span.size() != sib_size + disp_size + 2u) {
         return ZX_ERR_OUT_OF_RANGE;
       }
       const bool w = opcode & kWMask;
@@ -277,7 +275,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, uint8_t defa
     // 1000 101w : mod reg r/m
     case 0x8a:
     case 0x8b: {
-      if (inst_len != sib_size + disp_size + 2u) {
+      if (span.size() != sib_size + disp_size + 2u) {
         return ZX_ERR_OUT_OF_RANGE;
       }
       const bool w = opcode & kWMask;
@@ -294,7 +292,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, uint8_t defa
     case 0xc7: {
       const bool w = opcode & kWMask;
       const uint8_t imm_size = immediate_size(h66, w, default_operand_size);
-      if (inst_len != sib_size + disp_size + imm_size + 2u) {
+      if (span.size() != sib_size + disp_size + imm_size + 2u) {
         return ZX_ERR_OUT_OF_RANGE;
       }
       if ((mod_rm & kModRMRegMask) != 0) {
@@ -305,7 +303,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, uint8_t defa
       inst->imm = 0;
       inst->reg = NULL;
       inst->flags = NULL;
-      memcpy(&inst->imm, inst_buf + sib_size + disp_size + 2, imm_size);
+      memcpy(&inst->imm, span.data() + sib_size + disp_size + 2, imm_size);
       return ZX_OK;
     }
     // Move (16-bit) with zero-extend r/m to r.
@@ -315,7 +313,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, uint8_t defa
       }
     // Move (8-bit) with zero-extend r/m to r.
     case 0xb60f: {
-      if (inst_len != sib_size + disp_size + 3u) {
+      if (span.size() != sib_size + disp_size + 3u) {
         return ZX_ERR_OUT_OF_RANGE;
       }
       const bool w = opcode & (kWMask << 8);
@@ -338,7 +336,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, uint8_t defa
       if (h66) {
         return ZX_ERR_BAD_STATE;
       }
-      if (inst_len != sib_size + disp_size + 3u) {
+      if (span.size() != sib_size + disp_size + 3u) {
         return ZX_ERR_OUT_OF_RANGE;
       }
       if ((mod_rm & kModRMRegMask) != 0) {
@@ -349,7 +347,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, uint8_t defa
       inst->imm = 0;
       inst->reg = NULL;
       inst->flags = &vcpu_state->rflags;
-      memcpy(&inst->imm, inst_buf + sib_size + disp_size + 2, 1);
+      memcpy(&inst->imm, span.data() + sib_size + disp_size + 2, 1);
       return ZX_OK;
     default:
       return ZX_ERR_NOT_SUPPORTED;

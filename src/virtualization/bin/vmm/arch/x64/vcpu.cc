@@ -121,8 +121,7 @@ zx_status_t Vcpu::ArchHandleMem(const zx_packet_guest_mem_t& mem, IoMapping* dev
 
   // Decode the instruction the guest was attempting to perform.
   Instruction inst;
-  status =
-      inst_decode(span.data(), mem.instruction_size, mem.default_operand_size, &vcpu_state, &inst);
+  status = inst_decode(span, mem.default_operand_size, &vcpu_state, &inst);
   if (status != ZX_OK) {
     std::string value;
     for (uint8_t i = 0; i < mem.instruction_size; i++) {
