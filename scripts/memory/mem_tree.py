@@ -16,7 +16,9 @@ group_specs = [
     ["[stacks]", "thrd_t:0x.*|initial-thread|pthread_t:0x.*"],
     ["[data]", "data[0-9]*:.*"],
     ["[blobs]", "blob-[0-9a-f]+"],
-    ["uncompressed-bootfs", "uncompressed-bootfs"],
+    ["[inactive-blobs]", "inactive-blob-[0-9a-f]+"],
+    ["[mrkls]", "mrkl-[0-9a-f]+"],
+    ["[uncompressed-bootfs]", "uncompressed-bootfs"],
 ]
 
 for gs in group_specs:

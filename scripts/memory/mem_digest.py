@@ -6,10 +6,107 @@
 
 import argparse
 import functools
+import re
 import sys
 
 from digest import Digest
 from snapshot import Snapshot
+
+group_specs = [
+    ["[scudo]", "scudo:.*"],
+    ["[relro]", "relro:.*"],
+    ["[stacks]", "thrd_t:0x.*|initial-thread|pthread_t:0x.*"],
+    ["[data]", "data[0-9]*:.*"],
+    ["[blobs]", "blob-[0-9a-f]+"],
+    ["[inactive-blobs]", "inactive-blob-[0-9a-f]+"],
+    ["[mrkls]", "mrkl-[0-9a-f]+"],
+    ["[uncompressed-bootfs]", "uncompressed-bootfs"],
+]
+
+for gs in group_specs:
+    gs[1] = re.compile(gs[1])
+
+
+def output_html(buckets):
+    nodes = []
+    node_id = 1
+    snaphot_name = 'Snapshot'
+    for b in buckets:
+        if b.size == 0:
+            continue
+        nodes.append([b.name, snaphot_name, 0])
+        for processes, vmos in b.processes.items():
+            process_name = "[%d] %s" % (node_id, ",".join([p.name for p in processes]))
+            node_id += 1
+            nodes.append([process_name, b.name, 0])
+            groups = {}
+            for v in vmos:
+                group_name = None
+                for gs in group_specs:
+                    if gs[1].match(v.name):
+                        if gs[0] in groups:
+                            group_name = groups[gs[0]]
+                        else:
+                            group_name = "[%d] %s" % (node_id, gs[0])
+                            node_id += 1
+                            groups[gs[0]] = group_name
+                            nodes.append([group_name, process_name, 0])
+                        break
+                vmo_name = "%s<%d>" % (v.name, v.koid)
+                nodes.append([
+                    vmo_name,
+                    process_name if group_name is None else group_name,
+                    v.committed_bytes
+                ])
+    template = '''\
+<html>
+  <head>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+      google.charts.load('current', {'packages':['treemap']});
+      google.charts.setOnLoadCallback(drawChart);
+
+      function drawChart() {
+        var data = google.visualization.arrayToDataTable([
+          ['Process','Parent','Size (MB)'],
+          ['Snapshot',null,0],
+            %s
+        ]);
+
+        tree = new google.visualization.TreeMap(document.getElementById('chart_div'));
+
+        tree.draw(data, {
+          headerHeight: 15,
+          fontColor: 'black',
+          generateTooltip: showTooltip,
+          maxDepth: 2,
+          enableHighlight: true,
+          minHighlightColor: '#8c6bb1',
+          midHighlightColor: '#9ebcda',
+          maxHighlightColor: '#edf8fb',
+          minColor: '#009688',
+          midColor: '#f7f7f7',
+          maxColor: '#ee8100'
+        });
+
+        function showTooltip(row, size, value) {
+          return '<div style="background:#fd9; padding:10px; border-style:solid">' + data.getValue(row, 0) + ' ' + size.toFixed(2) + 'MB</div>';
+        }
+
+      }
+    </script>
+  </head>
+  <body>
+    <div id="chart_div" style="width: 100%%; height: 100%%;"></div>
+  </body>
+</html>
+'''
+    node_strings = '\n'.join([
+        "[\'%s\',\'%s\',%.2g]," % (n[0], n[1], round(n[2] / (1024.0 * 1024), 2))
+        for n in nodes
+    ])
+    print(template % node_strings)
+
 
 
 def main(args):
@@ -22,6 +119,8 @@ def main(args):
     if (args.output == "csv"):
         for bucket in buckets:
             print("%s, %d" % (bucket.name, bucket.size))
+    elif (args.output == "html"):
+        output_html(buckets)
     else:
         total = 0
         for bucket in buckets:
@@ -98,7 +197,7 @@ def get_arg_parser():
     parser.add_argument("-s", "--snapshot")
     parser.add_argument("-d", "--digest")
     parser.add_argument(
-        "-o", "--output", default="human", choices=["csv", "human"])
+        "-o", "--output", default="human", choices=["csv", "human", "html"])
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("-vv", "--extra_verbose", action="store_true")
     return parser
