@@ -21,6 +21,10 @@ pub use crate::{
     epoch::ParseEpochError,
     hash::HashError,
     image::{Image, ImageClass, ImageType, OpenImageError},
+    images::{
+        BootSlot, BootSlotImagePackage, FirmwareImagePackage, ImageMetadata, ImagePackage,
+        ImagePackagesError, ImagePackagesManifest, VersionedImagePackagesManifest,
+    },
     images::{ImageList, ResolveImagesError, UnverifiedImageList},
     name::VerifyNameError,
     packages::{
@@ -47,6 +51,11 @@ impl UpdatePackage {
     /// Verifies that the package's name/variant is "update/0".
     pub async fn verify_name(&self) -> Result<(), VerifyNameError> {
         name::verify(&self.proxy).await
+    }
+
+    /// Loads the image packages manifest, or determines that it is not present.
+    pub async fn image_packages(&self) -> Result<ImagePackagesManifest, ImagePackagesError> {
+        images::image_packages(&self.proxy).await
     }
 
     /// Searches for the requested images in the update package, returning the resolved sequence of
