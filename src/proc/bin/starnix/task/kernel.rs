@@ -95,12 +95,13 @@ impl Kernel {
     /// Opens a device file (driver) identified by `dev`.
     pub fn open_device(
         &self,
+        current_task: &CurrentTask,
         node: &FsNode,
         flags: OpenFlags,
         dev: DeviceType,
         mode: DeviceMode,
     ) -> Result<Box<dyn FileOps>, Errno> {
         let registry = self.device_registry.read();
-        registry.open_device(node, flags, dev, mode)
+        registry.open_device(current_task, node, flags, dev, mode)
     }
 }

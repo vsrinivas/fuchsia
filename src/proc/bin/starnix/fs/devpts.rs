@@ -95,6 +95,7 @@ impl WithStaticDeviceId for DevPtmx {
 impl DeviceOps for DevPtmx {
     fn open(
         &self,
+        _current_task: &CurrentTask,
         _id: DeviceType,
         _node: &FsNode,
         _flags: OpenFlags,
@@ -240,6 +241,7 @@ impl DevPts {
 impl DeviceOps for DevPts {
     fn open(
         &self,
+        _current_task: &CurrentTask,
         id: DeviceType,
         _node: &FsNode,
         _flags: OpenFlags,
@@ -352,24 +354,23 @@ mod tests {
     }
 
     fn open_component(
-        kernel: &Kernel,
+        task: &CurrentTask,
         fs: &FileSystemHandle,
         name: &FsStr,
     ) -> Result<FileHandle, Errno> {
         let component = fs.root().component_lookup(name)?;
         Ok(FileObject::new_anonymous(
-            component.node.open(kernel, OpenFlags::RDONLY)?,
+            component.node.open(task, OpenFlags::RDONLY)?,
             component.node.clone(),
             OpenFlags::RDWR,
         ))
     }
 
     fn open_ptmx_and_unlock(
-        kernel: &Kernel,
         task: &CurrentTask,
         fs: &FileSystemHandle,
     ) -> Result<FileHandle, Errno> {
-        let file = open_component(kernel, fs, b"ptmx")?;
+        let file = open_component(task, fs, b"ptmx")?;
 
         // Unlock terminal
         ioctl::<i32>(task, &file, TIOCSPTLCK, &0)?;
@@ -383,7 +384,7 @@ mod tests {
         let fs = dev_pts_fs(&kernel);
         let root = fs.root();
         root.component_lookup(b"0").unwrap_err();
-        let _ptmx = open_ptmx_and_unlock(&kernel, &task, &fs)?;
+        let _ptmx = open_ptmx_and_unlock(&task, &fs)?;
         root.component_lookup(b"0")?;
 
         Ok(())
@@ -395,8 +396,8 @@ mod tests {
         let fs = dev_pts_fs(&kernel);
         let root = fs.root();
         root.component_lookup(b"0").unwrap_err();
-        let ptmx = open_ptmx_and_unlock(&kernel, &task, &fs)?;
-        let _pts = open_component(&kernel, &fs, b"0")?;
+        let ptmx = open_ptmx_and_unlock(&task, &fs)?;
+        let _pts = open_component(&task, &fs, b"0")?;
         std::mem::drop(ptmx);
         root.component_lookup(b"0").unwrap_err();
 
@@ -409,9 +410,9 @@ mod tests {
         let fs = dev_pts_fs(&kernel);
         let root = fs.root();
 
-        let _ptmx0 = open_ptmx_and_unlock(&kernel, &task, &fs)?;
-        let mut _ptmx1 = open_ptmx_and_unlock(&kernel, &task, &fs)?;
-        let _ptmx2 = open_ptmx_and_unlock(&kernel, &task, &fs)?;
+        let _ptmx0 = open_ptmx_and_unlock(&task, &fs)?;
+        let mut _ptmx1 = open_ptmx_and_unlock(&task, &fs)?;
+        let _ptmx2 = open_ptmx_and_unlock(&task, &fs)?;
 
         root.component_lookup(b"0")?;
         root.component_lookup(b"1")?;
@@ -420,7 +421,7 @@ mod tests {
         std::mem::drop(_ptmx1);
         root.component_lookup(b"1").unwrap_err();
 
-        _ptmx1 = open_ptmx_and_unlock(&kernel, &task, &fs)?;
+        _ptmx1 = open_ptmx_and_unlock(&task, &fs)?;
         root.component_lookup(b"1")?;
 
         Ok(())
@@ -428,14 +429,14 @@ mod tests {
 
     #[::fuchsia::test]
     fn opening_inexistant_replica_fails() -> Result<(), anyhow::Error> {
-        let (kernel, _task) = create_kernel_and_task();
+        let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
         let pts = fs.root().create_node(
             b"custom_pts",
             FileMode::IFCHR | FileMode::from_bits(0o666),
             DeviceType::new(DEVPTS_FIRST_MAJOR, 0),
         )?;
-        assert!(pts.node.open(&kernel, OpenFlags::RDONLY).is_err());
+        assert!(pts.node.open(&task, OpenFlags::RDONLY).is_err());
 
         Ok(())
     }
@@ -445,7 +446,7 @@ mod tests {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
         let root = fs.root();
-        let ptmx = open_ptmx_and_unlock(&kernel, &task, &fs)?;
+        let ptmx = open_ptmx_and_unlock(&task, &fs)?;
         root.component_lookup(b"0")?;
         root.unlink(b"0", UnlinkKind::NonDirectory)?;
         root.component_lookup(b"0").unwrap_err();
@@ -460,10 +461,10 @@ mod tests {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
 
-        let ptmx = open_ptmx_and_unlock(&kernel, &task, &fs)?;
+        let ptmx = open_ptmx_and_unlock(&task, &fs)?;
         ptmx.ioctl(&task, 42, UserAddress::default()).unwrap_err();
 
-        let pts_file = open_component(&kernel, &fs, b"0")?;
+        let pts_file = open_component(&task, &fs, b"0")?;
         pts_file.ioctl(&task, 42, UserAddress::default()).unwrap_err();
 
         Ok(())
@@ -473,8 +474,8 @@ mod tests {
     fn test_tiocgptn_ioctl() -> Result<(), anyhow::Error> {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
-        let ptmx0 = open_ptmx_and_unlock(&kernel, &task, &fs)?;
-        let ptmx1 = open_ptmx_and_unlock(&kernel, &task, &fs)?;
+        let ptmx0 = open_ptmx_and_unlock(&task, &fs)?;
+        let ptmx1 = open_ptmx_and_unlock(&task, &fs)?;
 
         let pts0 = ioctl::<u32>(&task, &ptmx0, TIOCGPTN, &0)?;
         assert_eq!(pts0, 0);
@@ -487,12 +488,12 @@ mod tests {
 
     #[::fuchsia::test]
     fn test_new_terminal_is_locked() -> Result<(), anyhow::Error> {
-        let (kernel, _task) = create_kernel_and_task();
+        let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
-        let _ptmx_file = open_component(&kernel, &fs, b"ptmx")?;
+        let _ptmx_file = open_component(&task, &fs, b"ptmx")?;
 
         let pts = fs.root().component_lookup(b"0")?;
-        assert_eq!(pts.node.open(&kernel, OpenFlags::RDONLY).map(|_| ()).unwrap_err(), EIO);
+        assert_eq!(pts.node.open(&task, OpenFlags::RDONLY).map(|_| ()).unwrap_err(), EIO);
 
         Ok(())
     }
@@ -501,20 +502,20 @@ mod tests {
     fn test_lock_ioctls() -> Result<(), anyhow::Error> {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
-        let ptmx = open_ptmx_and_unlock(&kernel, &task, &fs)?;
+        let ptmx = open_ptmx_and_unlock(&task, &fs)?;
         let pts = fs.root().component_lookup(b"0")?;
 
         // Check that the lock is not set.
         assert_eq!(ioctl::<i32>(&task, &ptmx, TIOCGPTLCK, &0)?, 0);
         // /dev/pts/0 can be opened
-        pts.node.open(&kernel, OpenFlags::RDONLY)?;
+        pts.node.open(&task, OpenFlags::RDONLY)?;
 
         // Lock the terminal
         ioctl::<i32>(&task, &ptmx, TIOCSPTLCK, &42)?;
         // Check that the lock is set.
         assert_eq!(ioctl::<i32>(&task, &ptmx, TIOCGPTLCK, &0)?, 1);
         // /dev/pts/0 cannot be opened
-        pts.node.open(&kernel, OpenFlags::RDONLY).map(|_| ()).unwrap_err();
+        pts.node.open(&task, OpenFlags::RDONLY).map(|_| ()).unwrap_err();
 
         Ok(())
     }

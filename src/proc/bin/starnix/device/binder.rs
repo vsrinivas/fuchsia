@@ -40,6 +40,7 @@ impl BinderDev {
 impl DeviceOps for BinderDev {
     fn open(
         &self,
+        _current_task: &CurrentTask,
         _id: DeviceType,
         _node: &FsNode,
         _flags: OpenFlags,

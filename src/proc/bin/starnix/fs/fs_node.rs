@@ -300,7 +300,11 @@ impl FsNode {
         &*self.ops.as_ref()
     }
 
-    pub fn open(&self, kernel: &Kernel, flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+    pub fn open(
+        &self,
+        current_task: &CurrentTask,
+        flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
         // If O_PATH is set, there is no need to create a real FileOps because
         // most file operations are disabled.
         if flags.contains(OpenFlags::PATH) {
@@ -315,8 +319,16 @@ impl FsNode {
         };
 
         match mode & FileMode::IFMT {
-            FileMode::IFCHR => kernel.open_device(self, flags, rdev, DeviceMode::Char),
-            FileMode::IFBLK => kernel.open_device(self, flags, rdev, DeviceMode::Block),
+            FileMode::IFCHR => {
+                current_task.kernel().open_device(current_task, self, flags, rdev, DeviceMode::Char)
+            }
+            FileMode::IFBLK => current_task.kernel().open_device(
+                current_task,
+                self,
+                flags,
+                rdev,
+                DeviceMode::Block,
+            ),
             FileMode::IFIFO => Ok(Pipe::open(self.fifo.as_ref().unwrap(), flags)),
             // UNIX domain sockets can't be opened.
             FileMode::IFSOCK => error!(ENXIO),

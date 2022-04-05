@@ -320,7 +320,7 @@ mod tests {
         let current_task = create_task(&kernel, "main-task");
         let writer_task = create_task(&kernel, "writer-task");
 
-        let (pipe_out, pipe_in) = new_pipe(&kernel).unwrap();
+        let (pipe_out, pipe_in) = new_pipe(&current_task).unwrap();
 
         let test_string = "hello startnix".to_string();
         let test_bytes = test_string.as_bytes();
@@ -369,7 +369,7 @@ mod tests {
 
         let (kernel, current_task) = create_kernel_and_task();
 
-        let (pipe_out, pipe_in) = new_pipe(&kernel).unwrap();
+        let (pipe_out, pipe_in) = new_pipe(&current_task).unwrap();
 
         let test_string = "hello startnix".to_string();
         let test_bytes = test_string.as_bytes();

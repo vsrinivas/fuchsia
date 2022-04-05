@@ -4,6 +4,7 @@
 
 use crate::device::mem::*;
 use crate::fs::{FileOps, FsNode};
+use crate::task::*;
 use crate::types::*;
 
 use std::collections::{btree_map::Entry, BTreeMap};
@@ -25,6 +26,7 @@ pub trait WithStaticDeviceId {
 pub trait DeviceOps: Send + Sync {
     fn open(
         &self,
+        _current_task: &CurrentTask,
         _id: DeviceType,
         _node: &FsNode,
         _flags: OpenFlags,
@@ -72,6 +74,7 @@ impl DeviceFamilyRegistry {
     /// Opens a device file corresponding to the device identifier `dev`.
     pub fn open(
         &self,
+        current_task: &CurrentTask,
         dev: DeviceType,
         node: &FsNode,
         flags: OpenFlags,
@@ -80,7 +83,7 @@ impl DeviceFamilyRegistry {
             .get(&dev.minor())
             .or(self.default_device.as_ref())
             .ok_or_else(|| errno!(ENODEV))?
-            .open(dev, node, flags)
+            .open(current_task, dev, node, flags)
     }
 }
 
@@ -157,6 +160,7 @@ impl DeviceRegistry {
     /// Opens a device file corresponding to the device identifier `dev`.
     pub fn open_device(
         &self,
+        current_task: &CurrentTask,
         node: &FsNode,
         flags: OpenFlags,
         dev: DeviceType,
@@ -167,7 +171,7 @@ impl DeviceRegistry {
                 .char_devices
                 .get(&dev.major())
                 .ok_or_else(|| errno!(ENODEV))?
-                .open(dev, node, flags),
+                .open(current_task, dev, node, flags),
             DeviceMode::Block => error!(ENODEV),
         }
     }
@@ -177,6 +181,7 @@ impl DeviceRegistry {
 mod tests {
     use super::*;
     use crate::fs::FsNodeOps;
+    use crate::testing::*;
 
     #[::fuchsia::test]
     fn registry_fails_to_add_duplicate_device() {
@@ -195,6 +200,8 @@ mod tests {
 
     #[::fuchsia::test]
     fn registry_opens_device() {
+        let (_kernel, current_task) = create_kernel_and_task();
+
         let mut registry = DeviceRegistry::new();
         registry.register_chrdev_static_id(DevNull).unwrap();
 
@@ -202,34 +209,56 @@ mod tests {
 
         // Fail to open non-existent device.
         assert!(registry
-            .open_device(&node, OpenFlags::RDONLY, DeviceType::ZERO, DeviceMode::Char)
+            .open_device(
+                &current_task,
+                &node,
+                OpenFlags::RDONLY,
+                DeviceType::ZERO,
+                DeviceMode::Char
+            )
             .is_err());
 
         // Fail to open in wrong mode.
         assert!(registry
-            .open_device(&node, OpenFlags::RDONLY, DeviceType::NULL, DeviceMode::Block)
+            .open_device(
+                &current_task,
+                &node,
+                OpenFlags::RDONLY,
+                DeviceType::NULL,
+                DeviceMode::Block
+            )
             .is_err());
 
         // Open in correct mode.
         let _ = registry
-            .open_device(&node, OpenFlags::RDONLY, DeviceType::NULL, DeviceMode::Char)
+            .open_device(
+                &current_task,
+                &node,
+                OpenFlags::RDONLY,
+                DeviceType::NULL,
+                DeviceMode::Char,
+            )
             .expect("opens device");
     }
 
     #[::fuchsia::test]
     fn test_dynamic_misc() {
+        let (_kernel, current_task) = create_kernel_and_task();
+
         let mut registry = DeviceRegistry::new();
         let device_type = registry.register_misc_chrdev(DevNull).unwrap();
         assert_eq!(device_type.major(), MISC_MAJOR);
 
         let node = FsNode::new_root(PlaceholderFsNodeOps);
         let _ = registry
-            .open_device(&node, OpenFlags::RDONLY, device_type, DeviceMode::Char)
+            .open_device(&current_task, &node, OpenFlags::RDONLY, device_type, DeviceMode::Char)
             .expect("opens device");
     }
 
     #[::fuchsia::test]
     fn registry_opens_default_device() {
+        let (_kernel, current_task) = create_kernel_and_task();
+
         let mut registry = DeviceRegistry::new();
         registry.register_default_chrdev(DevNull, 1).unwrap();
 
@@ -237,10 +266,22 @@ mod tests {
 
         // Open in correct mode.
         let _ = registry
-            .open_device(&node, OpenFlags::RDONLY, DeviceType::new(1, 0), DeviceMode::Char)
+            .open_device(
+                &current_task,
+                &node,
+                OpenFlags::RDONLY,
+                DeviceType::new(1, 0),
+                DeviceMode::Char,
+            )
             .expect("opens device");
         let _ = registry
-            .open_device(&node, OpenFlags::RDONLY, DeviceType::new(1, 1), DeviceMode::Char)
+            .open_device(
+                &current_task,
+                &node,
+                OpenFlags::RDONLY,
+                DeviceType::new(1, 1),
+                DeviceMode::Char,
+            )
             .expect("opens device");
     }
 }

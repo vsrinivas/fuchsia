@@ -720,7 +720,7 @@ impl CurrentTask {
             }
         }
 
-        name.open(&*self.kernel(), flags)
+        name.open(self, flags)
     }
 
     /// A wrapper for FsContext::lookup_parent_at that resolves the given

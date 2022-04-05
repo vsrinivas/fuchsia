@@ -790,7 +790,7 @@ pub fn sys_pipe2(
     if flags & !(O_CLOEXEC | supported_file_flags.bits()) != 0 {
         return error!(EINVAL);
     }
-    let (read, write) = new_pipe(current_task.kernel())?;
+    let (read, write) = new_pipe(current_task)?;
 
     let file_flags = OpenFlags::from_bits_truncate(flags & supported_file_flags.bits());
     read.update_file_flags(file_flags, supported_file_flags);
@@ -876,7 +876,7 @@ pub fn sys_memfd_create(
     if flags & !MFD_CLOEXEC != 0 {
         not_implemented!("memfd_create: flags: {}", flags);
     }
-    let file = new_memfd(current_task.kernel(), OpenFlags::RDWR)?;
+    let file = new_memfd(current_task, OpenFlags::RDWR)?;
     let mut fd_flags = FdFlags::empty();
     if flags & MFD_CLOEXEC != 0 {
         fd_flags |= FdFlags::CLOEXEC;

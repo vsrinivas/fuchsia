@@ -521,7 +521,7 @@ mod test {
 
     #[::fuchsia::test]
     fn test_tree() -> Result<(), anyhow::Error> {
-        let (kernel, current_task) = create_kernel_and_task();
+        let (_kernel, current_task) = create_kernel_and_task();
         let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE;
         let (server, client) = zx::Channel::create().expect("failed to create channel pair");
         fdio::open("/pkg", rights, server).expect("failed to open /pkg");
@@ -539,7 +539,7 @@ mod test {
         let mut context = LookupContext::default();
         let _test_file = root
             .lookup_child(&current_task, &mut context, b"bin/hello_starnix")?
-            .open(&*kernel, OpenFlags::RDONLY)?;
+            .open(&current_task, OpenFlags::RDONLY)?;
         Ok(())
     }
 
