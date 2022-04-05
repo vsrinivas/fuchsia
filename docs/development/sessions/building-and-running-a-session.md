@@ -9,12 +9,12 @@ information on sessions, see
 
 To boot into a session, do the following:
 
-1. For a session to run at boot you need to configure the product build with
-the session's URL. Identify the component URL for your session:
+1. For a session to run at boot you need to create a configuration file with the
+session component URL.
 
-   <pre><code>
-       fuchsia-pkg://fuchsia.com/<var>pkg-name</var>#meta/<var>your_session.cm</var>
-   </code></pre>
+   <pre><code>{
+       "session_url": "fuchsia-pkg://fuchsia.com/<var>pkg-name</var>#meta/<var>your_session.cm</var>"
+   }</code></pre>
 
    Replace the following:
    * <var>pkg-name</var>: the package name
@@ -25,15 +25,21 @@ the session's URL. Identify the component URL for your session:
    [`fuchsia-pkg`](/docs/reference/components/url.md#fuchsia-pkg) and
    [Package name](/docs/concepts/packages/package_url.md#package-name).
 
-1. Run the following command to include `session_manager` and `your_session`
-   in your base image, configuring `session_manager` to start your session:
+1.  In the `BUILD.gn` file, include the configuration file for the session
+component
 
-   <pre class="prettyprint"><code class="devsite-terminal">
-      fx set <var>product</var>.<var>board</var> \
-         --with-base=//src/session/bin/session_manager \
-         --with-base=<var>//path/to/your/session</var> \
-         --args=product_config.session_url="fuchsia-pkg://fuchsia.com/<var>pkg-name</var>#meta/<var>your_session.cm</var>"
-   </code></pre>
+   ```json
+   import("//src/session/build/session_manager.gni")
+
+   session_manager_package("your_session_manager_package") {
+       config = "path/to/config.json"
+   }
+   ```
+
+1. Run the following command to include the `session_manager` and `your_session`
+   in your base image:
+
+   <pre class="prettyprint"><code class="devsite-terminal">fx set <var>product</var>.<var>board</var> --with-base=<var>//path/to/your/session</var>,<var>//path/to/your/session:your_session_manager_package</var></code></pre>
 
    Note: Selecting a product that already has a session manager package will
    result in a build error because the packages will conflict. The `core`
@@ -60,15 +66,15 @@ World Session](/docs/development/sessions/writing-a-hello-world-session.md).
 
 There are cases when you don't want your session to launch at boot but still
 want to be able to launch it from the command line. `session_manager` needs
-to be running to launch a session. The `session_manager` target
+to be running to launch a session. The `session_manager_for_dev` target
 ensures `session_manager` itself starts, but does not launch a session.
 
 To launch a session from the command line, do the following:
 
-1. Add the `session_manager` target in the base dependency set, in
+1. Add the `session_manager_for_dev` target in the base dependency set, in
 addition to the session target.
 
-   <pre class="prettyprint"><code class="devsite-terminal">fx set <var>product</var>.<var>board</var> --with-base=//src/session/bin/session_manager --with=<var>//path/to/your/session</var></code></pre>
+   <pre class="prettyprint"><code class="devsite-terminal">fx set <var>product</var>.<var>board</var> --with-base=//src/session/bin/session_manager:session_manager_for_dev --with=<var>//path/to/your/session</var></code></pre>
 
    `fx list-products` and `fx list-boards` will show lists of the products and
    boards available to be used in the `fx set` command. For more information on

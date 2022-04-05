@@ -65,6 +65,30 @@ moment to explore the following lines of code from `hello-world-session.cml`:
    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/session/examples/hello-world-session/meta/hello-world-session.cml" region_tag="capabilities_block" adjust_indentation="auto" %}
    ```
 
+## Create a session config {#create-a-session-config}
+
+`session_manager` needs to know to which session component to launch at startup.
+To do this create a session config JSON file in the `meta` directory that
+contains the URL of the session component.
+
+Component URLs follow the format:
+
+<pre><code>fuchsia-pkg://fuchsia.com/<var>package_name</var>#meta/<var>your_session.cm</var></code></pre>
+
+Notice that the path points to a `.cm` file. `.cm` files are compiled versions
+of `.cml` files that are generated when `fx build` is run. So, in this case, the
+component URL is:
+
+```none
+fuchsia-pkg://fuchsia.com/hello-world-session#meta/hello-world-session.cm
+```
+
+The whole session config file looks like this:
+
+```json
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/session/examples/hello-world-session/meta/hello-world-session-config.json" adjust_indentation="auto" %}
+```
+
 ## Writing a session in Rust {#writing-a-session-in-rust}
 
 Now you can write the implementation for the session component. Inside the
@@ -86,6 +110,27 @@ There are similar macros for `error` and `warn`.
 The last file to modify is the `BUILD.gn`. This tells the compiler how to build
 the the session component.
 
+### Imports {#imports}
+
+The file starts by importing GN templates that are used in this `BUILD.gn`. To
+build a session component, import `session_manager.gni`:
+
+```gn
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/session/examples/hello-world-session/BUILD.gn" region_tag="session_import" adjust_indentation="auto" %}
+```
+
+### Session manager package {#session-config}
+
+The added import statement gives the `BUILD.gn` access to the
+`session_manager_package` template. This template creates a `session_manager`
+package which is configured to start the session URL in the above config.
+
+Add the `session_manager_package` to the `BUILD.gn` file:
+
+```gn
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/session/examples/hello-world-session/BUILD.gn" region_tag="session_manager_package" adjust_indentation="auto" %}
+```
+
 ### Rust binary {#rust-binary}
 
 The next section describes the actual Rust binary. It tells the compiler what
@@ -105,35 +150,16 @@ and what dependencies the package and component have:
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/session/examples/hello-world-session/BUILD.gn" region_tag="component_package" adjust_indentation="auto" %}
 ```
 
-## Identify the session URL {#identify-the-session-url}
-
-`session_manager` needs to know to which session component to launch at startup,
-and is configured by providing the component URL of the session.
-
-Component URLs follow the format:
-
-<pre><code>fuchsia-pkg://fuchsia.com/<var>package_name</var>#meta/<var>component_name.cm</var></code></pre>
-
-Notice that the path points to a `.cm` file. `.cm` files are compiled versions
-of `.cml` files that are generated when `fx build` is run. So, in this case, the
-component URL is:
-
-```none
-fuchsia-pkg://fuchsia.com/hello-world-session#meta/hello-world-session.cm
-```
-
 ## Building the session {#building-the-session}
 
 To build the session `fx set` must first be used to configure the build so that
 `session_manager`, your session component, and the session config are included
-in the base package set. This is done using the `--with-base` flag. The session
-URL must also be configured, which is done using the `--args` flag.
+in the base package set. This is done using the `--with-base` flag.
 
 ```posix-terminal
 fx set core.x64 \
-    --with-base //src/session/bin/session_manager \
     --with-base {{ '<var label="session path">//path/to/your/session</var>' }} \
-    --args=product_config.session_url = "fuchsia-pkg://fuchsia.com/<var>package_name</var>#meta/<var>component_name</var>.cm"
+    --with-base {{ '<var label="config path">//path/to/your/session:your_session_manager_package</var>' }}
 ```
 
 If you are using the example project from the `//src/session/examples` directory,
@@ -141,9 +167,8 @@ the `fx set` command would be:
 
 ```posix-terminal
 fx set core.x64 \
-    --with-base //src/session/bin/session_manager \
     --with-base //src/session/examples/hello-world-session \
-    --args=product_config.session_url = "fuchsia-pkg://fuchsia.com/hello-world-session#meta/hello-world-session.cm"
+    --with-base //src/session/examples/hello-world-session:hello-world-session-manager
 ```
 
 Once that's done and built `session_manager` should automatically start your
