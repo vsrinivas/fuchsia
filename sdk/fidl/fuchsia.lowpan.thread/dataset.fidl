@@ -75,4 +75,25 @@ protocol Dataset {
     SetActiveTlvs(struct {
         dataset OperationalDatasetTlvs;
     }) -> ();
+
+    /// Requests that all nodes on the current network attach to the thread
+    /// network described by given dataset.
+    ///
+    /// Functionally equivalent to `ot-br-posix`'s [`AttachAllNodesTo`][4].
+    ///
+    /// If this device is not currently provisioned, then calling this method
+    /// is equivalent to calling [`SetActiveTlvs()`].
+    ///
+    /// The transition of all nodes to the new network may take as long as
+    /// five minutes.
+    ///
+    /// This method returns once the transition has been scheduled successfully.
+    /// Any error that prevents the scheduling of this operation from
+    /// completing successfully (such as being provided with an incomplete
+    /// dataset) will result in the protocol being closed.
+    ///
+    /// [4]: https://github.com/openthread/ot-br-posix/blob/0b5c6e1ecb8152ef6cea57c09b8a37a020fc4d6f/src/dbus/server/introspect.xml#L67-L73
+    AttachAllNodesTo(struct {
+        dataset OperationalDatasetTlvs;
+    }) -> ();
 };

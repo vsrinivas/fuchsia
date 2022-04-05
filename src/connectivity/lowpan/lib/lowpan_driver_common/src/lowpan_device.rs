@@ -265,6 +265,28 @@ pub trait Driver: Send + Sync {
         Err(ZxStatus::NOT_SUPPORTED)
     }
 
+    /// Requests that all nodes on the current network attach to the thread
+    /// network described by given dataset.
+    ///
+    /// Functionally equivalent to `ot-br-posix`'s [`AttachAllNodesTo`][4].
+    ///
+    /// If this device is not currently provisioned, then calling this method
+    /// is equivalent to calling [`SetActiveTlvs()`].
+    ///
+    /// The transition of all nodes to the new network may take as long as
+    /// five minutes.
+    ///
+    /// This method returns once the transition has been scheduled successfully.
+    /// Any error that prevents the operation from completing successfully
+    /// (such as being provided with an incomplete dataset) will result in the
+    /// protocol being closed.
+    ///
+    /// [4]: https://github.com/openthread/ot-br-posix/blob/0b5c6e1ecb8152ef6cea57c09b8a37a020fc4d6f/src/dbus/server/introspect.xml#L67-L73
+    async fn attach_all_nodes_to(&self, _dataset: &[u8]) -> ZxResult {
+        warn!("attach_all_nodes_to: Not supported by this device.");
+        Err(ZxStatus::NOT_SUPPORTED)
+    }
+
     /// Updates the TXT record information associated with the Meshcop border
     /// agent DNS-SD entry. This allows additional information about the
     /// device to be discoverable on the local network when acting as a
@@ -1066,6 +1088,13 @@ impl<T: Driver> ServeTo<DatasetRequestStream> for T {
 
         let closure = |command| async {
             match command {
+                DatasetRequest::AttachAllNodesTo { dataset, responder, .. } => {
+                    self.attach_all_nodes_to(&dataset)
+                        .err_into::<Error>()
+                        .and_then(|_| ready(responder.send().map_err(Error::from)))
+                        .await
+                        .context("error in attach_all_nodes_to request")?;
+                }
                 DatasetRequest::GetActiveTlvs { responder, .. } => {
                     self.get_active_dataset_tlvs()
                         .err_into::<Error>()
