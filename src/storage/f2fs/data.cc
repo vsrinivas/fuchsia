@@ -16,7 +16,7 @@ void VnodeF2fs::SetDataBlkaddr(DnodeOfData *dn, block_t new_addr) {
 
   node_page->WaitOnWriteback();
 
-  Node *rn = static_cast<Node *>(node_page->GetAddress());
+  Node *rn = node_page->GetAddress<Node>();
 
   // Get physical address of data block
   uint32_t *addr_array = BlkaddrInNode(*rn);

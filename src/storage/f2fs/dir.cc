@@ -83,7 +83,7 @@ DirEntry *Dir::FindInBlock(fbl::RefPtr<Page> dentry_page, std::string_view name,
                            uint64_t *max_slots, f2fs_hash_t namehash, fbl::RefPtr<Page> *res_page) {
   DirEntry *de;
   uint32_t bit_pos, end_pos, next_pos;
-  DentryBlock *dentry_blk = static_cast<DentryBlock *>(dentry_page->GetAddress());
+  DentryBlock *dentry_blk = dentry_page->GetAddress<DentryBlock>();
   int slots;
 
   bit_pos = FindNextBit(dentry_blk->dentry_bitmap, kNrDentryInBlock, 0);
@@ -253,7 +253,7 @@ DirEntry *Dir::ParentDir(fbl::RefPtr<Page> *out) {
 #if 0  // porting needed
   // dentry_blk = kmap(page);
 #endif
-  dentry_blk = static_cast<DentryBlock *>((*out)->GetAddress());
+  dentry_blk = (*out)->GetAddress<DentryBlock>();
   de = &dentry_blk->dentry[1];
   (*out)->Unlock();
   return de;
@@ -301,7 +301,7 @@ void Dir::InitDentInode(VnodeF2fs *vnode, NodePage *ipage) {
   ipage->WaitOnWriteback();
 
   // copy name info. to this inode page
-  Node *rn = static_cast<Node *>(ipage->GetAddress());
+  Node *rn = ipage->GetAddress<Node>();
   std::string_view name = vnode->GetNameView();
   // double check |name|
   ZX_DEBUG_ASSERT(IsValidNameLength(name));
@@ -441,7 +441,7 @@ zx_status_t Dir::AddLink(std::string_view name, VnodeF2fs *vnode) {
         return err;
       }
 
-      dentry_blk = static_cast<DentryBlock *>(dentry_page->GetAddress());
+      dentry_blk = dentry_page->GetAddress<DentryBlock>();
       bit_pos = RoomForFilename(dentry_blk, slots);
       if (bit_pos < kNrDentryInBlock) {
         // porting needed
@@ -501,7 +501,7 @@ void Dir::DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
   page->Lock();
   page->WaitOnWriteback();
 
-  dentry_blk = static_cast<DentryBlock *>(page->GetAddress());
+  dentry_blk = page->GetAddress<DentryBlock>();
   bit_pos = static_cast<uint32_t>(dentry - dentry_blk->dentry);
   for (int i = 0; i < slots; ++i) {
     TestAndClearBit(bit_pos + i, dentry_blk->dentry_bitmap);
@@ -565,7 +565,7 @@ zx_status_t Dir::MakeEmpty(VnodeF2fs *vnode) {
 #if 0  // porting needed
   // kaddr = kmap_atomic(dentry_page);
 #endif
-  DentryBlock *dentry_blk = static_cast<DentryBlock *>(dentry_page->GetAddress());
+  DentryBlock *dentry_blk = dentry_page->GetAddress<DentryBlock>();
 
   DirEntry *de = &dentry_blk->dentry[0];
   de->name_len = CpuToLe(static_cast<uint16_t>(1));
@@ -612,7 +612,7 @@ bool Dir::IsEmptyDir() {
 #if 0  // porting needed
     // kaddr = kmap_atomic(dentry_page);
 #endif
-    dentry_blk = static_cast<DentryBlock *>(dentry_page->GetAddress());
+    dentry_blk = dentry_page->GetAddress<DentryBlock>();
     if (bidx == 0)
       bit_pos = 2;
     else
@@ -660,7 +660,7 @@ zx_status_t Dir::Readdir(fs::VdirCookie *cookie, void *dirents, size_t len, size
       continue;
 
     start_bit_pos = bit_pos;
-    dentry_blk = static_cast<DentryBlock *>(dentry_page->GetAddress());
+    dentry_blk = dentry_page->GetAddress<DentryBlock>();
     while (bit_pos < kNrDentryInBlock) {
       d_type = DT_UNKNOWN;
       bit_pos = FindNextBit(dentry_blk->dentry_bitmap, kNrDentryInBlock, bit_pos);

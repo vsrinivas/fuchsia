@@ -422,8 +422,8 @@ inline void F2fsPutDnode(DnodeOfData *dn) {
 
 inline bool RawIsInode(Node &node) { return node.footer.nid == node.footer.ino; }
 
-inline bool IsInode(NodePage &page) {
-  Node *p = static_cast<Node *>(page.GetAddress());
+inline bool IsInode(Page &page) {
+  Node *p = page.GetAddress<Node>();
   return RawIsInode(*p);
 }
 
@@ -440,7 +440,7 @@ inline uint32_t *BlkaddrInNode(Node &node) {
 inline block_t DatablockAddr(NodePage *node_page, uint64_t offset) {
   Node *raw_node;
   uint32_t *addr_array;
-  raw_node = static_cast<Node *>(node_page->GetAddress());
+  raw_node = node_page->GetAddress<Node>();
   addr_array = BlkaddrInNode(*raw_node);
   return LeToCpu(addr_array[offset]);
 }

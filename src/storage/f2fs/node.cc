@@ -359,7 +359,7 @@ void NodeManager::GetNodeInfo(nid_t nid, NodeInfo &out) {
   if (i < 0) {
     // Fill NodeInfo from nat page
     GetCurrentNatPage(start_nid, &page);
-    nat_blk = static_cast<NatBlock *>(page->GetAddress());
+    nat_blk = page->GetAddress<NatBlock>();
     ne = nat_blk->entries[nid - start_nid];
 
     NodeInfoFromRawNat(out, ne);
@@ -588,7 +588,7 @@ zx::status<uint32_t> NodeManager::TruncateNodes(DnodeOfData &dn, uint32_t nofs, 
   uint32_t child_nofs = 0, freed = 0;
   nid_t child_nid;
   DnodeOfData rdn = dn;
-  Node *rn = static_cast<Node *>(page->GetAddress());
+  Node *rn = page->GetAddress<Node>();
   if (depth < 3) {
     for (auto i = ofs; i < kNidsPerBlock; ++i, ++freed) {
       child_nid = LeToCpu(rn->in.nid[i]);
@@ -705,7 +705,7 @@ zx_status_t NodeManager::TruncateInodeBlocks(VnodeF2fs &vnode, pgoff_t from) {
   ipage->Unlock();
 
   auto level = *node_path;
-  Node *rn = static_cast<Node *>(ipage->GetAddress());
+  Node *rn = ipage->GetAddress<Node>();
   switch (level) {
     case 0:
     case 1:
@@ -1185,7 +1185,7 @@ void NodeManager::RemoveFreeNid(nid_t nid) {
 }
 
 int NodeManager::ScanNatPage(Page &nat_page, nid_t start_nid) {
-  NatBlock *nat_blk = static_cast<NatBlock *>(nat_page.GetAddress());
+  NatBlock *nat_blk = nat_page.GetAddress<NatBlock>();
   block_t blk_addr;
   int fcnt = 0;
 
@@ -1346,8 +1346,8 @@ zx_status_t NodeManager::RecoverInodePage(NodePage &page) {
   ipage->SetUptodate();
   ipage->FillNodeFooter(ino, ino, 0, true);
 
-  src = static_cast<Node *>(page.GetAddress());
-  dst = static_cast<Node *>(ipage->GetAddress());
+  src = page.GetAddress<Node>();
+  dst = ipage->GetAddress<Node>();
 
   memcpy(dst, src, reinterpret_cast<uint64_t>(&src->i.i_ext) - reinterpret_cast<uint64_t>(&src->i));
   dst->i.i_size = 0;
@@ -1376,7 +1376,7 @@ zx_status_t NodeManager::RestoreNodeSummary(uint32_t segno, SummaryBlock &sum) {
       return ret;
     }
 
-    Node *rn = static_cast<Node *>(page->GetAddress());
+    Node *rn = page->GetAddress<Node>();
     sum_entry->nid = rn->footer.nid;
     sum_entry->version = 0;
     sum_entry->ofs_in_node = 0;
@@ -1483,7 +1483,7 @@ void NodeManager::FlushNatEntries() {
           // get nat block with dirty flag, increased reference
           // count, mapped and lock
           GetNextNatPage(start_nid, &page);
-          nat_blk = static_cast<NatBlock *>(page->GetAddress());
+          nat_blk = page->GetAddress<NatBlock>();
         }
 
         ZX_ASSERT(nat_blk);

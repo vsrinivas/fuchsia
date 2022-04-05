@@ -336,8 +336,8 @@ zx_status_t File::Read(void *data, size_t len, size_t off, size_t *out_actual) {
     if (is_empty_page) {
       memset(static_cast<char *>(data) + off_in_buf, 0, cur_len);
     } else {
-      memcpy(static_cast<char *>(data) + off_in_buf,
-             static_cast<char *>(data_page->GetAddress()) + off_in_block, cur_len);
+      memcpy(static_cast<char *>(data) + off_in_buf, data_page->GetAddress<char>() + off_in_block,
+             cur_len);
     }
 
     off_in_buf += cur_len;
@@ -424,7 +424,7 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
 
     Page *data_page = data_pages[index].get();
 
-    memcpy(static_cast<char *>(data_page->GetAddress()) + off_in_block,
+    memcpy(data_page->GetAddress<char>() + off_in_block,
            static_cast<const char *>(data) + off_in_buf, cur_len);
 
     off_in_block = 0;

@@ -115,7 +115,7 @@ TEST_F(FileTest, NidAndBlkaddrAllocFree) {
   nid_set.insert(test_file_ptr->Ino());
   fbl::RefPtr<NodePage> ipage;
   ASSERT_EQ(fs_->GetNodeManager().GetNodePage(test_file_ptr->Ino(), &ipage), ZX_OK);
-  Inode *inode = &(static_cast<Node *>(ipage->GetAddress())->i);
+  Inode *inode = &(ipage->GetAddress<Node>()->i);
 
   for (int i = 0; i < kNidsPerInode; ++i) {
     if (inode->i_nid[i] != 0U)
@@ -130,7 +130,7 @@ TEST_F(FileTest, NidAndBlkaddrAllocFree) {
   for (int i = 0; i < 2; ++i) {
     fbl::RefPtr<NodePage> direct_node_page;
     ASSERT_EQ(fs_->GetNodeManager().GetNodePage(inode->i_nid[i], &direct_node_page), ZX_OK);
-    DirectNode *direct_node = &(static_cast<Node *>(direct_node_page->GetAddress())->dn);
+    DirectNode *direct_node = &(direct_node_page->GetAddress<Node>()->dn);
 
     for (int j = 0; j < kAddrsPerBlock; j++) {
       ASSERT_NE(direct_node->addr[j], kNullAddr);

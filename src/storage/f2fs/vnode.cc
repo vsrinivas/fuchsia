@@ -93,7 +93,7 @@ zx_status_t VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) 
     return ZX_ERR_NOT_FOUND;
   }
 
-  Node *rn = static_cast<Node *>(node_page->GetAddress());
+  Node *rn = node_page->GetAddress<Node>();
   Inode &ri = rn->i;
 
   if (S_ISDIR(ri.i_mode)) {
@@ -319,7 +319,7 @@ void VnodeF2fs::UpdateInode(Page *node_page) {
 
   node_page->WaitOnWriteback();
 
-  rn = static_cast<Node *>(node_page->GetAddress());
+  rn = node_page->GetAddress<Node>();
   ri = &(rn->i);
 
   ri->i_mode = CpuToLe(GetMode());
@@ -408,7 +408,7 @@ zx_status_t VnodeF2fs::DoTruncate(size_t len) {
 
 int VnodeF2fs::TruncateDataBlocksRange(DnodeOfData *dn, int count) {
   int nr_free = 0, ofs = dn->ofs_in_node;
-  Node *raw_node = static_cast<Node *>(dn->node_page->GetAddress());
+  Node *raw_node = dn->node_page->GetAddress<Node>();
   uint32_t *addr = BlkaddrInNode(*raw_node) + ofs;
   pgoff_t start = dn->node_page->StartBidxOfNode() + ofs;
   pgoff_t end = start + count;

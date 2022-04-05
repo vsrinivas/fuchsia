@@ -777,7 +777,7 @@ void SegmentManager::ChangeCurseg(CursegType type, bool reuse) {
   if (reuse) {
     fbl::RefPtr<Page> sum_page;
     GetSumPage(new_segno, &sum_page);
-    sum_node = static_cast<SummaryBlock *>(sum_page->GetAddress());
+    sum_node = sum_page->GetAddress<SummaryBlock>();
     memcpy(curseg->sum_blk, sum_node, kSumEntrySize);
     Page::PutPage(std::move(sum_page), true);
   }
@@ -1058,7 +1058,7 @@ zx_status_t SegmentManager::ReadCompactedSummaries() {
   start = StartSumBlock();
 
   fs_->GetMetaPage(start++, &page);
-  kaddr = static_cast<uint8_t *>(page->GetAddress());
+  kaddr = page->GetAddress<uint8_t>();
 
   // Step 1: restore nat cache
   seg_i = CURSEG_I(CursegType::kCursegHotData);
@@ -1096,7 +1096,7 @@ zx_status_t SegmentManager::ReadCompactedSummaries() {
       Page::PutPage(std::move(page), true);
 
       fs_->GetMetaPage(start++, &page);
-      kaddr = static_cast<uint8_t *>(page->GetAddress());
+      kaddr = page->GetAddress<uint8_t>();
       offset = 0;
     }
   }
@@ -1131,7 +1131,7 @@ zx_status_t SegmentManager::ReadNormalSummaries(int type) {
   }
 
   fs_->GetMetaPage(blk_addr, &new_page);
-  sum = static_cast<SummaryBlock *>(new_page->GetAddress());
+  sum = new_page->GetAddress<SummaryBlock>();
 
   if (IsNodeSeg(static_cast<CursegType>(type))) {
     if (ckpt.ckpt_flags & kCpUmountFlag) {
@@ -1186,7 +1186,7 @@ void SegmentManager::WriteCompactedSummaries(block_t blkaddr) {
   int written_size = 0;
 
   fs_->GrabMetaPage(blkaddr++, &page);
-  uint8_t *vaddr = static_cast<uint8_t *>(page->GetAddress());
+  uint8_t *vaddr = page->GetAddress<uint8_t>();
 
   // Step 1: write nat cache
   seg_i = CURSEG_I(CursegType::kCursegHotData);
@@ -1214,7 +1214,7 @@ void SegmentManager::WriteCompactedSummaries(block_t blkaddr) {
     for (int j = 0; j < blkoff; ++j) {
       if (!page) {
         fs_->GrabMetaPage(blkaddr++, &page);
-        vaddr = static_cast<uint8_t *>(page->GetAddress());
+        vaddr = page->GetAddress<uint8_t>();
         written_size = 0;
         page->SetDirty();
       }
@@ -1381,7 +1381,7 @@ void SegmentManager::FlushSitEntries() {
 
           // read sit block that will be updated
           GetNextSitPage(start, &page);
-          raw_sit = static_cast<SitBlock *>(page->GetAddress());
+          raw_sit = page->GetAddress<SitBlock>();
         }
 
         // udpate entry in SIT block
@@ -1515,7 +1515,7 @@ void SegmentManager::BuildSitEntries() {
     if (!got_it) {
       fbl::RefPtr<Page> page;
       GetCurrentSitPage(start, &page);
-      sit_blk = static_cast<SitBlock *>(page->GetAddress());
+      sit_blk = page->GetAddress<SitBlock>();
       sit = sit_blk->entries[SitEntryOffset(start)];
       Page::PutPage(std::move(page), true);
     }

@@ -209,7 +209,7 @@ TEST_F(DirEntryCacheTest, CacheDataValidation) {
 
     // To validate cached parent ino, read a page for cached index
     ASSERT_EQ(root_dir_->FindDataPage(element->GetDataPageIndex(), &page), ZX_OK);
-    DentryBlock *dentry_block = static_cast<DentryBlock *>(page->GetAddress());
+    DentryBlock *dentry_block = page->GetAddress<DentryBlock>();
 
     uint32_t bit_pos = FindNextBit(dentry_block->dentry_bitmap, kNrDentryInBlock, 0);
     while (bit_pos < kNrDentryInBlock) {

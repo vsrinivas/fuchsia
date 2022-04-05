@@ -27,7 +27,7 @@ FsyncInodeEntry *F2fs::GetFsyncInode(list_node_t *head, nid_t ino) {
 }
 
 zx_status_t F2fs::RecoverDentry(NodePage *ipage, VnodeF2fs *vnode) {
-  Node *raw_node = static_cast<Node *>(ipage->GetAddress());
+  Node *raw_node = ipage->GetAddress<Node>();
   Inode *raw_inode = &(raw_node->i);
   fbl::RefPtr<VnodeF2fs> dir_refptr;
   Dir *dir;
@@ -61,7 +61,7 @@ out:
 }
 
 zx_status_t F2fs::RecoverInode(VnodeF2fs *vnode, NodePage *node_page) {
-  struct Node *raw_node = static_cast<Node *>(node_page->GetAddress());
+  struct Node *raw_node = node_page->GetAddress<Node>();
   struct Inode *raw_inode = &(raw_node->i);
 
   vnode->SetMode(LeToCpu(raw_inode->i_mode));
@@ -206,7 +206,7 @@ void F2fs::CheckIndexInPrevNodes(block_t blkaddr) {
     fbl::RefPtr<Page> sum_page;
     GetSegmentManager().GetSumPage(segno, &sum_page);
     SummaryBlock *sum_node;
-    sum_node = static_cast<SummaryBlock *>(sum_page->GetAddress());
+    sum_node = sum_page->GetAddress<SummaryBlock>();
     sum = sum_node->entries[blkoff];
     Page::PutPage(std::move(sum_page), true);
   }

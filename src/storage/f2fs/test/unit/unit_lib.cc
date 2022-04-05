@@ -219,7 +219,7 @@ void FileTester::CheckChildrenInBlock(Dir *vn, uint64_t bidx,
   }
 
   ASSERT_EQ(vn->FindDataPage(bidx, &page), ZX_OK);
-  DentryBlock *dentry_blk = reinterpret_cast<DentryBlock *>(page->GetAddress());
+  DentryBlock *dentry_blk = page->GetAddress<DentryBlock>();
 
   uint32_t bit_pos = FindNextBit(dentry_blk->dentry_bitmap, kNrDentryInBlock, 0);
   while (bit_pos < kNrDentryInBlock) {
@@ -273,7 +273,7 @@ void FileTester::ReadFromFile(File *file, void *data, size_t len, size_t off) {
 void MapTester::CheckNodeLevel(F2fs *fs, VnodeF2fs *vn, int level) {
   fbl::RefPtr<NodePage> ipage;
   ASSERT_EQ(fs->GetNodeManager().GetNodePage(vn->Ino(), &ipage), ZX_OK);
-  Inode *inode = &(static_cast<Node *>(ipage->GetAddress())->i);
+  Inode *inode = &(ipage->GetAddress<Node>()->i);
 
   int i;
   for (i = 0; i < level; ++i)

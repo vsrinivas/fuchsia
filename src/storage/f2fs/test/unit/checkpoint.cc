@@ -55,7 +55,7 @@ void ReadCheckpoint(F2fs *fs, block_t cp_addr, fbl::RefPtr<Page> *cp_out) {
     fs->GetMetaPage(cp_addr, &cp_page[i]);
     ASSERT_NE(cp_page[i], nullptr);
     // Check header CRC
-    cp_block = static_cast<Checkpoint *>(cp_page[i]->GetAddress());
+    cp_block = cp_page[i]->GetAddress<Checkpoint>();
     ASSERT_NE(cp_block, nullptr);
     crc_offset = LeToCpu(cp_block->checksum_offset);
     ASSERT_LT(crc_offset, blk_size);
@@ -87,12 +87,12 @@ void GetLastCheckpoint(F2fs *fs, uint32_t expect_cp_position, bool after_mkfs,
 
   cp_addr = LeToCpu(fsb.cp_blkaddr);
   ReadCheckpoint(fs, cp_addr, &cp_page1);
-  cp_block1 = static_cast<Checkpoint *>(cp_page1->GetAddress());
+  cp_block1 = cp_page1->GetAddress<Checkpoint>();
 
   if (!after_mkfs) {
     cp_addr += 1 << LeToCpu(fsb.log_blocks_per_seg);
     ReadCheckpoint(fs, cp_addr, &cp_page2);
-    cp_block2 = static_cast<Checkpoint *>(cp_page2->GetAddress());
+    cp_block2 = cp_page2->GetAddress<Checkpoint>();
   }
 
   if (after_mkfs) {
@@ -191,7 +191,7 @@ void CheckpointTestVersion(F2fs *fs, uint32_t expect_cp_position, uint32_t expec
   fbl::RefPtr<Page> cp_page = nullptr;
 
   GetLastCheckpoint(fs, expect_cp_position, after_mkfs, &cp_page);
-  cp = static_cast<Checkpoint *>(cp_page->GetAddress());
+  cp = cp_page->GetAddress<Checkpoint>();
 
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
@@ -204,7 +204,7 @@ void CheckpointTestNatBitmap(F2fs *fs, uint32_t expect_cp_position, uint32_t exp
 
   // 1. Get last checkpoint
   GetLastCheckpoint(fs, expect_cp_position, after_mkfs, &cp_page);
-  Checkpoint *cp = static_cast<Checkpoint *>(cp_page->GetAddress());
+  Checkpoint *cp = cp_page->GetAddress<Checkpoint>();
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   // 2. Get NAT version bitmap
@@ -267,7 +267,7 @@ void CheckpointTestSitBitmap(F2fs *fs, uint32_t expect_cp_position, uint32_t exp
 
   // 1. Get last checkpoint
   GetLastCheckpoint(fs, expect_cp_position, after_mkfs, &cp_page);
-  Checkpoint *cp = static_cast<Checkpoint *>(cp_page->GetAddress());
+  Checkpoint *cp = cp_page->GetAddress<Checkpoint>();
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   // 2. Get SIT version bitmap
@@ -315,7 +315,7 @@ void CheckpointTestAddOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint32_
 
   // 1. Get last checkpoint
   GetLastCheckpoint(fs, expect_cp_position, after_mkfs, &cp_page);
-  Checkpoint *cp = static_cast<Checkpoint *>(cp_page->GetAddress());
+  Checkpoint *cp = cp_page->GetAddress<Checkpoint>();
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   uint32_t orphan_inos = kOrphansPerBlock * kOrphanInodeBlockCnt;
@@ -341,7 +341,7 @@ void CheckpointTestAddOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint32_
       fs->GetMetaPage(start_blk + i, &page);
       OrphanBlock *orphan_blk;
 
-      orphan_blk = static_cast<OrphanBlock *>(page->GetAddress());
+      orphan_blk = page->GetAddress<OrphanBlock>();
       for (block_t j = 0; j < LeToCpu(orphan_blk->entry_count); ++j) {
         nid_t ino = LeToCpu(orphan_blk->ino[j]);
         cp_inos.push_back(ino);
@@ -392,7 +392,7 @@ void CheckpointTestRemoveOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint
 
   // 1. Get last checkpoint
   GetLastCheckpoint(fs, expect_cp_position, after_mkfs, &cp_page);
-  Checkpoint *cp = static_cast<Checkpoint *>(cp_page->GetAddress());
+  Checkpoint *cp = cp_page->GetAddress<Checkpoint>();
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   uint32_t orphan_inos = kOrphansPerBlock * kOrphanInodeBlockCnt;
@@ -419,7 +419,7 @@ void CheckpointTestRemoveOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint
       fs->GetMetaPage(start_blk + i, &page);
       OrphanBlock *orphan_blk;
 
-      orphan_blk = static_cast<OrphanBlock *>(page->GetAddress());
+      orphan_blk = page->GetAddress<OrphanBlock>();
       for (block_t j = 0; j < LeToCpu(orphan_blk->entry_count); ++j) {
         nid_t ino = LeToCpu(orphan_blk->ino[j]);
         cp_inos.push_back(ino);
@@ -468,7 +468,7 @@ void CheckpointTestRecoverOrphanInode(F2fs *fs, uint32_t expect_cp_position, uin
 
   // 1. Get last checkpoint
   GetLastCheckpoint(fs, expect_cp_position, after_mkfs, &cp_page);
-  Checkpoint *cp = static_cast<Checkpoint *>(cp_page->GetAddress());
+  Checkpoint *cp = cp_page->GetAddress<Checkpoint>();
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   uint32_t orphan_inos = kOrphansPerBlock;
@@ -535,7 +535,7 @@ void CheckpointTestCompactedSummaries(F2fs *fs, uint32_t expect_cp_position, uin
 
   // 1. Get last checkpoint
   GetLastCheckpoint(fs, expect_cp_position, after_mkfs, &cp_page);
-  Checkpoint *cp = static_cast<Checkpoint *>(cp_page->GetAddress());
+  Checkpoint *cp = cp_page->GetAddress<Checkpoint>();
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   if (!after_mkfs) {
@@ -617,7 +617,7 @@ void CheckpointTestNormalSummaries(F2fs *fs, uint32_t expect_cp_position, uint32
 
   // 1. Get last checkpoint
   GetLastCheckpoint(fs, expect_cp_position, after_mkfs, &cp_page);
-  Checkpoint *cp = static_cast<Checkpoint *>(cp_page->GetAddress());
+  Checkpoint *cp = cp_page->GetAddress<Checkpoint>();
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   if (!after_mkfs) {
@@ -694,7 +694,7 @@ void CheckpointTestSitJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
 
   // 1. Get last checkpoint
   GetLastCheckpoint(fs, expect_cp_position, after_mkfs, &cp_page);
-  Checkpoint *cp = static_cast<Checkpoint *>(cp_page->GetAddress());
+  Checkpoint *cp = cp_page->GetAddress<Checkpoint>();
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   if (!after_mkfs) {
@@ -765,7 +765,7 @@ void CheckpointTestNatJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
 
   // 1. Get last checkpoint
   GetLastCheckpoint(fs, expect_cp_position, after_mkfs, &cp_page);
-  Checkpoint *cp = static_cast<Checkpoint *>(cp_page->GetAddress());
+  Checkpoint *cp = cp_page->GetAddress<Checkpoint>();
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   if (!after_mkfs) {

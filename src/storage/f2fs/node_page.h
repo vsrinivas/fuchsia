@@ -42,7 +42,7 @@ class NodePage : public Page, public fbl::Recyclable<NodePage> {
   nid_t GetNid(size_t off, bool is_inode);
 
  private:
-  Node &GetRawNode() { return *static_cast<Node *>(GetAddress()); }
+  Node &GetRawNode() { return *GetAddress<Node>(); }
   static constexpr uint32_t kOfsInode = 0;
   static constexpr uint32_t kOfsDirectNode1 = 1;
   static constexpr uint32_t kOfsDirectNode2 = 2;

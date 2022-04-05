@@ -13,7 +13,7 @@ uint32_t Dir::MaxInlineDentry() const {
 }
 
 uint8_t *Dir::InlineDentryBitmap(Page *page) {
-  Node *rn = static_cast<Node *>(page->GetAddress());
+  Node *rn = page->GetAddress<Node>();
   Inode &ri = rn->i;
   return reinterpret_cast<uint8_t *>(
       &ri.i_addr[GetExtraISize() / sizeof(uint32_t) + kInlineStartOffset]);
@@ -169,7 +169,7 @@ zx_status_t Dir::ConvertInlineDir() {
   page->WaitOnWriteback();
   page->ZeroUserSegment(0, kPageSize);
 
-  DentryBlock *dentry_blk = static_cast<DentryBlock *>(page->GetAddress());
+  DentryBlock *dentry_blk = page->GetAddress<DentryBlock>();
 
   Page *ipage = dn.inode_page.get();
   // copy data from inline dentry block to new dentry block
@@ -400,7 +400,7 @@ zx_status_t Dir::ReadInlineDir(fs::VdirCookie *cookie, void *dirents, size_t len
 }
 
 uint8_t *File::InlineDataPtr(Page *page) {
-  Node *rn = static_cast<Node *>(page->GetAddress());
+  Node *rn = page->GetAddress<Node>();
   Inode &ri = rn->i;
   return reinterpret_cast<uint8_t *>(
       &ri.i_addr[GetExtraISize() / sizeof(uint32_t) + kInlineStartOffset]);

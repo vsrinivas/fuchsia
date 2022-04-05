@@ -186,7 +186,7 @@ zx_status_t F2fs::RecoverOrphanInodes() {
 
     OrphanBlock *orphan_blk;
 
-    orphan_blk = static_cast<OrphanBlock *>(page->GetAddress());
+    orphan_blk = page->GetAddress<OrphanBlock>();
     uint32_t entry_count = LeToCpu(orphan_blk->entry_count);
     // TODO: Need to set NeedChkp flag to repair the fs when fsck repair is available.
     // For now, we trigger assertion.
@@ -239,7 +239,7 @@ void F2fs::WriteOrphanInodes(block_t start_blk) {
     }
     if (!page) {
       GrabMetaPage(start_blk, &page);
-      orphan_blk = static_cast<OrphanBlock *>(page->GetAddress());
+      orphan_blk = page->GetAddress<OrphanBlock>();
       memset(orphan_blk, 0, sizeof(*orphan_blk));
       page->SetDirty();
     }
@@ -274,7 +274,7 @@ zx_status_t F2fs::ValidateCheckpoint(block_t cp_addr, uint64_t *version, fbl::Re
   GetMetaPage(cp_addr, &cp_page_1);
 
   // get the version number
-  cp_block = static_cast<Checkpoint *>(cp_page_1->GetAddress());
+  cp_block = cp_page_1->GetAddress<Checkpoint>();
   crc_offset = LeToCpu(cp_block->checksum_offset);
   if (crc_offset >= blk_size) {
     return ZX_ERR_BAD_STATE;
@@ -291,7 +291,7 @@ zx_status_t F2fs::ValidateCheckpoint(block_t cp_addr, uint64_t *version, fbl::Re
   cp_addr += LeToCpu(cp_block->cp_pack_total_block_count) - 1;
   GetMetaPage(cp_addr, &cp_page_2);
 
-  cp_block = static_cast<Checkpoint *>(cp_page_2->GetAddress());
+  cp_block = cp_page_2->GetAddress<Checkpoint>();
   crc_offset = LeToCpu(cp_block->checksum_offset);
   if (crc_offset >= blk_size) {
     return ZX_ERR_BAD_STATE;
@@ -350,7 +350,7 @@ zx_status_t F2fs::GetValidCheckpoint() {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  cp_block = static_cast<Checkpoint *>(cur_page->GetAddress());
+  cp_block = cur_page->GetAddress<Checkpoint>();
   memcpy(&superblock_info_->GetCheckpoint(), cp_block, blk_size);
 
   std::vector<FsBlock> checkpoint_trailer(fsb.cp_payload);

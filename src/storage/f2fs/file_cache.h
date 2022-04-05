@@ -91,10 +91,11 @@ class Page : public PageRefCounted<Page>,
   static void PutPage(fbl::RefPtr<Page> &&page, bool unlock);
   zx_status_t VmoOpUnlock();
   zx_status_t VmoOpLock(bool commit = false);
-  void *GetAddress() const {
+  template <typename T = void>
+  T *GetAddress() const {
     // TODO: |address_| needs to be atomically mapped in a on-demand manner.
     ZX_DEBUG_ASSERT(IsMapped());
-    return reinterpret_cast<void *>(address_);
+    return reinterpret_cast<T *>(address_);
   }
 
   bool IsUptodate() const { return TestFlag(PageFlag::kPageUptodate); }
@@ -155,7 +156,7 @@ class Page : public PageRefCounted<Page>,
 
   void ZeroUserSegment(uint64_t start, uint64_t end) {
     if (start < end && end <= BlockSize()) {
-      std::memset(reinterpret_cast<uint8_t *>(GetAddress()) + start, 0, end - start);
+      std::memset(GetAddress<uint8_t>() + start, 0, end - start);
     }
   }
 
@@ -188,7 +189,7 @@ class Page : public PageRefCounted<Page>,
   }
 
   // A virtual address mapped to |vmo_|. It is valid only when IsMapped() returns true.
-  // It is unmapped when there is no reference to a clean page (not dirty)
+  // It is unmapped when there is no reference to a clean page
   zx_vaddr_t address_ = 0;
   // It is used to track the status of a page by using PageFlag
   std::array<std::atomic_flag, static_cast<uint8_t>(PageFlag::kPageFlagSize)> flags_ = {

@@ -34,7 +34,7 @@ void VgetFaultInjetionAndTest(F2fs &fs, Dir &root_dir, std::string_view name, T 
   // fault injection
   fbl::RefPtr<NodePage> node_page;
   ASSERT_EQ(fs.GetNodeManager().GetNodePage(nid, &node_page), ZX_OK);
-  Node *rn = static_cast<Node *>(node_page->GetAddress());
+  Node *rn = node_page->GetAddress<Node>();
 
   fault_injection(rn);
 
