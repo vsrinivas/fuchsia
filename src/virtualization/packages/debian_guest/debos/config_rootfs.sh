@@ -110,7 +110,7 @@ systemctl enable guest_interaction_daemon.service
 
 # Mount the test utils and guest interaction daemon on start up.
 cat >> /etc/fstab << EOF
-/dev/vdb /test_utils ext2 ro 0 0
+/dev/vdb /test_utils auto ro 0 0
 /dev/vdc /guest_interaction romfs ro 0 0
 EOF
 
