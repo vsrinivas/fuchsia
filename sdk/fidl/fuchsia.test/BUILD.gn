@@ -6,7 +6,7 @@ import("//build/fidl/fidl.gni")
 import("//tools/fidl/measure-tape/measure_tape.gni")
 
 fidl("fuchsia.test") {
-  sdk_category = "internal"
+  sdk_category = "partner"
 
   sources = [ "suite.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]

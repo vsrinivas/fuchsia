@@ -123,7 +123,7 @@ protocol Suite {
     ///
     /// `tests` may contain duplicate elements, in which case the same test is
     /// run multiple times as indicated.
-    /// Closing `test_listener` marks the end of this call.
+    /// Closing `listener` marks the end of this call.
     Run(resource struct {
         tests vector<Invocation>:MAX;
         options RunOptions;
