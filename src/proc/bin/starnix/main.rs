@@ -25,7 +25,7 @@ mod vmex_resource;
 #[cfg(test)]
 mod testing;
 
-#[fuchsia::component(logging_tags = ["starnix"])]
+#[fuchsia::main(logging_tags = ["starnix"])]
 async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
