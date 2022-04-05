@@ -43,11 +43,11 @@ pub async fn create_product_bundle(cmd: &CreateCommand) -> Result<()> {
     let name = format!("{}.{}", &build_info.product, &build_info.board).to_owned();
     let device_refs = vec![cmd.device_name.clone()];
     let images_vec = vec![ImageBundle {
-        base_uri: path_relative_to_dir(&cmd.images, &cmd.out),
+        base_uri: format!("file:/{}", path_relative_to_dir(&cmd.images, &cmd.out)),
         format: "files".to_owned(),
     }];
     let packages_vec = vec![PackageBundle {
-        repo_uri: path_relative_to_dir(&cmd.packages, &cmd.out),
+        repo_uri: format!("file:/{}", path_relative_to_dir(&cmd.packages, &cmd.out)),
         format: "files".to_owned(),
         blob_uri: None,
     }];
