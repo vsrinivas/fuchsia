@@ -4,7 +4,7 @@
 
 #![warn(clippy::all)]
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     tracing::info!("Hello, world!");
 }

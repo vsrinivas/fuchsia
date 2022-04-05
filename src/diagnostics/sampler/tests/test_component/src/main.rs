@@ -14,7 +14,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     let mut fs = ServiceFs::new();
     let inspector = component::inspector();

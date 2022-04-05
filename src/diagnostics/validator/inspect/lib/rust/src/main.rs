@@ -615,7 +615,7 @@ fn make_diagnostics_dir<T: ServiceObjTrait>(fs: &mut ServiceFs<T>) -> Arc<Simple
     dir
 }
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     info!("Puppet starting");
 

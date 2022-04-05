@@ -5,7 +5,7 @@
 
 use diagnostics_log::{self, Interest, PublishOptions, Severity};
 
-#[fuchsia::component(logging = false)]
+#[fuchsia::main(logging = false)]
 async fn main() {
     let _ = diagnostics_log::init_publishing(PublishOptions {
         interest: Interest { min_severity: Some(Severity::Debug), ..Interest::EMPTY },

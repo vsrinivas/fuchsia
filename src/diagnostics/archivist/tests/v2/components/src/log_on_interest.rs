@@ -11,7 +11,7 @@ use fuchsia_component::server::ServiceFs;
 use futures::StreamExt;
 use tracing::{debug, error, info, warn};
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     tracing::dispatcher::get_default(|dispatcher| {

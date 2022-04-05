@@ -52,7 +52,7 @@ struct Opt {
     test_invalid_unicode: bool,
 }
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let Opt {
         puppet_url,

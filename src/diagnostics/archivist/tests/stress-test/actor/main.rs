@@ -24,7 +24,7 @@ struct WorkerData {
     pub subscription: Subscription<Logs>,
 }
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<()> {
     // Create a WorkerData singleton
     let accessor_proxy = connect_to_protocol::<ArchiveAccessorMarker>()

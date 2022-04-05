@@ -13,7 +13,7 @@ mod ipc;
 mod logs; // this module will DoS the test infrastructure as is
 mod time;
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let mut crit = FuchsiaCriterion::new(Criterion::default());
     // logs::benches(&mut crit);

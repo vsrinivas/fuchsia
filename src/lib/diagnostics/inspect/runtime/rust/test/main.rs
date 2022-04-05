@@ -8,7 +8,7 @@ use fuchsia_inspect::*;
 use futures::prelude::*;
 
 #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let root = component::inspector().root();
     root.record_int("int", 3);

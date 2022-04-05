@@ -23,7 +23,7 @@ enum CreateChildArgs {
     Kcounter(kcounter::CommandLine),
 }
 
-#[fuchsia::component(logging = false)]
+#[fuchsia::main(logging = false)]
 async fn main() -> Result<(), Error> {
     let log_tag = match std::env::args().nth(1).as_ref().map(|s| s.as_str()) {
         Some(log_stats::PROGRAM_NAME) => log_stats::PROGRAM_NAME,

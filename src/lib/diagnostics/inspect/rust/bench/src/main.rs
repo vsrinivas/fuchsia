@@ -719,7 +719,7 @@ fn writer_benchmark(iterations: usize) {
     }
 }
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     trace_provider_create_with_fdio();
     let args: Args = argh::from_env();

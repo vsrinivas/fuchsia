@@ -96,7 +96,7 @@ impl FromStr for DiffType {
     }
 }
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let mut results = results::Results::new();
     let Opt { output, puppet_urls, version, diff_type, test_archive, .. } = argh::from_env();

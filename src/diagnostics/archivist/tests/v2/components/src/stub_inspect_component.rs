@@ -10,7 +10,7 @@ use fuchsia_inspect::{component, health::Reporter};
 use futures::StreamExt;
 use tracing::info;
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     component::health().set_ok();

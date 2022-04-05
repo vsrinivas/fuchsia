@@ -20,7 +20,7 @@ struct Opt {
     puppet_url: String,
 }
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let Opt { puppet_url } = argh::from_env();
     let app = launch(&launcher().unwrap(), puppet_url.to_string(), None)?;

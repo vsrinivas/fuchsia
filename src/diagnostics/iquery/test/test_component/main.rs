@@ -55,7 +55,7 @@ struct Options {
 }
 
 #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let opts = Options::from_args();
     if opts.rows == 0 || opts.columns == 0 {
