@@ -80,14 +80,15 @@ class EchoClientApp {
 
   void EchoMinimal(::std::string forward_to_server,
                    fidl::ClientCallback<Echo::EchoMinimal> callback) {
-    client_->EchoMinimal(std::move(forward_to_server), std::move(callback));
+    client_->EchoMinimal(std::move(forward_to_server)).ThenExactlyOnce(std::move(callback));
   }
 
   void EchoMinimalWithError(::std::string forward_to_server, RespondWith result_variant,
                             fidl::ClientCallback<Echo::EchoMinimalWithError> callback) {
-    client_->EchoMinimalWithError(
-        EchoEchoMinimalWithErrorRequest(std::move(forward_to_server), result_variant),
-        std::move(callback));
+    client_
+        ->EchoMinimalWithError(
+            EchoEchoMinimalWithErrorRequest(std::move(forward_to_server), result_variant))
+        .ThenExactlyOnce(std::move(callback));
   }
 
   zx_status_t EchoMinimalNoRetVal(::std::string forward_to_server) {
@@ -100,17 +101,17 @@ class EchoClientApp {
 
   void EchoStruct(Struct value, ::std::string forward_to_server,
                   fidl::ClientCallback<Echo::EchoStruct> callback) {
-    client_->EchoStruct(EchoEchoStructRequest(std::move(value), std::move(forward_to_server)),
-                        std::move(callback));
+    client_->EchoStruct(EchoEchoStructRequest(std::move(value), std::move(forward_to_server)))
+        .ThenExactlyOnce(std::move(callback));
   }
 
   void EchoStructWithError(Struct value, default_enum err, ::std::string forward_to_server,
                            RespondWith result_variant,
                            fidl::ClientCallback<Echo::EchoStructWithError> callback) {
-    client_->EchoStructWithError(
-        EchoEchoStructWithErrorRequest(std::move(value), err, std::move(forward_to_server),
-                                       result_variant),
-        std::move(callback));
+    client_
+        ->EchoStructWithError(EchoEchoStructWithErrorRequest(
+            std::move(value), err, std::move(forward_to_server), result_variant))
+        .ThenExactlyOnce(std::move(callback));
   }
 
   zx_status_t EchoStructNoRetVal(Struct value, ::std::string forward_to_server) {
@@ -124,19 +125,20 @@ class EchoClientApp {
 
   void EchoNamedStruct(fidl_test_imported::SimpleStruct value, ::std::string forward_to_server,
                        fidl::ClientCallback<Echo::EchoNamedStruct> callback) {
-    client_->EchoNamedStruct(
-        fidl_test_imported::RequestStruct(std::move(value), std::move(forward_to_server)),
-        std::move(callback));
+    client_
+        ->EchoNamedStruct(
+            fidl_test_imported::RequestStruct(std::move(value), std::move(forward_to_server)))
+        .ThenExactlyOnce(std::move(callback));
   }
 
   void EchoNamedStructWithError(fidl_test_imported::SimpleStruct value, uint32_t err,
                                 ::std::string forward_to_server,
                                 fidl_test_imported::WantResponse result_variant,
                                 fidl::ClientCallback<Echo::EchoNamedStructWithError> callback) {
-    client_->EchoNamedStructWithError(
-        fidl_test_imported::ErrorableRequestStruct(std::move(value), err,
-                                                   std::move(forward_to_server), result_variant),
-        std::move(callback));
+    client_
+        ->EchoNamedStructWithError(fidl_test_imported::ErrorableRequestStruct(
+            std::move(value), err, std::move(forward_to_server), result_variant))
+        .ThenExactlyOnce(std::move(callback));
   }
 
   zx_status_t EchoNamedStructNoRetVal(fidl_test_imported::SimpleStruct value,
@@ -151,72 +153,73 @@ class EchoClientApp {
 
   void EchoArrays(ArraysStruct value, ::std::string forward_to_server,
                   fidl::ClientCallback<Echo::EchoArrays> callback) {
-    client_->EchoArrays(EchoEchoArraysRequest(std::move(value), forward_to_server),
-                        std::move(callback));
+    client_->EchoArrays(EchoEchoArraysRequest(std::move(value), forward_to_server))
+        .ThenExactlyOnce(std::move(callback));
   }
 
   void EchoArraysWithError(ArraysStruct value, default_enum err, ::std::string forward_to_server,
                            RespondWith result_variant,
                            fidl::ClientCallback<Echo::EchoArraysWithError> callback) {
-    client_->EchoArraysWithError(
-        EchoEchoArraysWithErrorRequest(std::move(value), err, std::move(forward_to_server),
-                                       result_variant),
-        std::move(callback));
+    client_
+        ->EchoArraysWithError(EchoEchoArraysWithErrorRequest(
+            std::move(value), err, std::move(forward_to_server), result_variant))
+        .ThenExactlyOnce(std::move(callback));
   }
 
   void EchoVectors(VectorsStruct value, ::std::string forward_to_server,
                    fidl::ClientCallback<Echo::EchoVectors> callback) {
-    client_->EchoVectors(EchoEchoVectorsRequest(std::move(value), std::move(forward_to_server)),
-                         std::move(callback));
+    client_->EchoVectors(EchoEchoVectorsRequest(std::move(value), std::move(forward_to_server)))
+        .ThenExactlyOnce(std::move(callback));
   }
 
   void EchoVectorsWithError(VectorsStruct value, default_enum err, ::std::string forward_to_server,
                             RespondWith result_variant,
                             fidl::ClientCallback<Echo::EchoVectorsWithError> callback) {
-    client_->EchoVectorsWithError(
-        EchoEchoVectorsWithErrorRequest(std::move(value), err, std::move(forward_to_server),
-                                        result_variant),
-        std::move(callback));
+    client_
+        ->EchoVectorsWithError(EchoEchoVectorsWithErrorRequest(
+            std::move(value), err, std::move(forward_to_server), result_variant))
+        .ThenExactlyOnce(std::move(callback));
   }
 
   void EchoTable(AllTypesTable value, ::std::string forward_to_server,
                  fidl::ClientCallback<Echo::EchoTable> callback) {
-    return client_->EchoTable(EchoEchoTableRequest(std::move(value), forward_to_server),
-                              std::move(callback));
+    return client_->EchoTable(EchoEchoTableRequest(std::move(value), forward_to_server))
+        .ThenExactlyOnce(std::move(callback));
   }
 
   void EchoTableWithError(AllTypesTable value, default_enum err, ::std::string forward_to_server,
                           RespondWith result_variant,
                           fidl::ClientCallback<Echo::EchoTableWithError> callback) {
-    return client_->EchoTableWithError(
-        EchoEchoTableWithErrorRequest(std::move(value), err, forward_to_server, result_variant),
-        std::move(callback));
+    return client_
+        ->EchoTableWithError(
+            EchoEchoTableWithErrorRequest(std::move(value), err, forward_to_server, result_variant))
+        .ThenExactlyOnce(std::move(callback));
   }
 
   void EchoXunions(::std::vector<AllTypesXunion> value, ::std::string forward_to_server,
                    fidl::ClientCallback<Echo::EchoXunions> callback) {
-    client_->EchoXunions(EchoEchoXunionsRequest(std::move(value), std::move(forward_to_server)),
-                         std::move(callback));
+    client_->EchoXunions(EchoEchoXunionsRequest(std::move(value), std::move(forward_to_server)))
+        .ThenExactlyOnce(std::move(callback));
   }
 
   void EchoXunionsWithError(::std::vector<AllTypesXunion> value, default_enum err,
                             ::std::string forward_to_server, RespondWith result_variant,
                             fidl::ClientCallback<Echo::EchoXunionsWithError> callback) {
-    client_->EchoXunionsWithError(
-        EchoEchoXunionsWithErrorRequest(std::move(value), err, std::move(forward_to_server),
-                                        result_variant),
-        std::move(callback));
+    client_
+        ->EchoXunionsWithError(EchoEchoXunionsWithErrorRequest(
+            std::move(value), err, std::move(forward_to_server), result_variant))
+        .ThenExactlyOnce(std::move(callback));
   }
 
   void EchoTablePayload(fidl_test_compatibility::RequestTable payload,
                         fidl::ClientCallback<Echo::EchoTablePayload> callback) {
-    client_->EchoTablePayload(std::move(payload), std::move(callback));
+    client_->EchoTablePayload(std::move(payload)).ThenExactlyOnce(std::move(callback));
   }
 
   void EchoTablePayloadWithError(
       fidl_test_compatibility::EchoEchoTablePayloadWithErrorRequest payload,
       fidl::ClientCallback<Echo::EchoTablePayloadWithError> callback) {
-    client_->EchoTablePayloadWithError(std::move(payload), std::move(callback));
+    client_->EchoTablePayloadWithError(std::move(payload)).ThenExactlyOnce(std::move(callback));
   }
 
   zx_status_t EchoTablePayloadNoRetVal(fidl_test_compatibility::RequestTable payload) {
@@ -230,29 +233,31 @@ class EchoClientApp {
   void EchoTableRequestComposed(
       ::fidl_test_imported::ComposedEchoTableRequestComposedRequest payload,
       fidl::ClientCallback<Echo::EchoTableRequestComposed> callback) {
-    client_->EchoTableRequestComposed(std::move(payload), std::move(callback));
+    client_->EchoTableRequestComposed(std::move(payload)).ThenExactlyOnce(std::move(callback));
   }
 
   void EchoUnionPayload(fidl_test_compatibility::RequestUnion payload,
                         fidl::ClientCallback<Echo::EchoUnionPayload> callback) {
-    return client_->EchoUnionPayload(std::move(payload), std::move(callback));
+    return client_->EchoUnionPayload(std::move(payload)).ThenExactlyOnce(std::move(callback));
   }
 
   void EchoUnionPayloadWithError(
       fidl_test_compatibility::EchoEchoUnionPayloadWithErrorRequest payload,
       fidl::ClientCallback<Echo::EchoUnionPayloadWithError> callback) {
-    return client_->EchoUnionPayloadWithError(std::move(payload), std::move(callback));
+    return client_->EchoUnionPayloadWithError(std::move(payload))
+        .ThenExactlyOnce(std::move(callback));
   }
 
   void EchoUnionResponseWithErrorComposed(
       int64_t value, bool want_absolute_value, ::std::string forward_to_server, uint32_t result_err,
       fidl_test_imported::WantResponse result_variant,
       fidl::ClientCallback<Echo::EchoUnionResponseWithErrorComposed> callback) {
-    client_->EchoUnionResponseWithErrorComposed(
-        fidl_test_imported::ComposedEchoUnionResponseWithErrorComposedRequest(
-            value, want_absolute_value, std::move(forward_to_server), result_err,
-            std::move(result_variant)),
-        std::move(callback));
+    client_
+        ->EchoUnionResponseWithErrorComposed(
+            fidl_test_imported::ComposedEchoUnionResponseWithErrorComposedRequest(
+                value, want_absolute_value, std::move(forward_to_server), result_err,
+                std::move(result_variant)))
+        .ThenExactlyOnce(std::move(callback));
   }
 
   zx_status_t EchoUnionPayloadNoRetVal(fidl_test_compatibility::RequestUnion payload) {

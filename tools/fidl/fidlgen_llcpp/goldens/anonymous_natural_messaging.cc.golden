@@ -8,11 +8,9 @@ namespace test_anonymous {
 
 #ifdef __Fuchsia__
 }  // namespace test_anonymous
-void fidl::internal::NaturalClientImpl<::test_anonymous::SomeProtocol>::
-    SomeMethod(
-        ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod> request,
-        ::fidl::ClientCallback<::test_anonymous::SomeProtocol::SomeMethod>&&
-            _callback) const {
+::fidl::internal::NaturalThenable<::test_anonymous::SomeProtocol::SomeMethod>
+fidl::internal::NaturalClientImpl<::test_anonymous::SomeProtocol>::SomeMethod(
+    ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
@@ -20,12 +18,15 @@ void fidl::internal::NaturalClientImpl<::test_anonymous::SomeProtocol>::
       ::fidl::internal::NaturalMessageConverter<
           ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>>::
           IntoDomainObject(std::move(request)));
-  return messenger().TwoWay(
-      _encoder.GetMessage(),
-      ::fidl::internal::MakeResponseContext<
-          ::test_anonymous::SomeProtocol::SomeMethod>(
-          ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal,
-          std::move(_callback)));
+  return ::fidl::internal::NaturalThenable<
+      ::test_anonymous::SomeProtocol::SomeMethod>(
+      messenger().client_base(), {}, std::move(_encoder),
+      [](::fidl::internal::ThenableBase* base,
+         ::fidl::internal::NaturalMessageEncoder& encoder,
+         ::fidl::internal::ResponseContext* response_context) {
+        ::fidl::OutgoingMessage msg = encoder.GetMessage();
+        return base->SendTwoWay(msg, response_context);
+      });
 }
 
 namespace test_anonymous {

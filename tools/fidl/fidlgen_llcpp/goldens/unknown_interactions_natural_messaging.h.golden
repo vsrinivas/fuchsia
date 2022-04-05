@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/internal/natural_server_messenger.h>
+#include <lib/fidl/cpp/internal/thenable.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -132,13 +133,13 @@ class ::fidl::internal::NaturalClientImpl<::test_unknowninteractions::Example>
     final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  void StrictTwoWay(
-      ::fidl::ClientCallback<
-          ::test_unknowninteractions::Example::StrictTwoWay>&& _callback) const;
+  ::fidl::internal::NaturalThenable<
+      ::test_unknowninteractions::Example::StrictTwoWay>
+  StrictTwoWay() const;
 
-  void FlexibleTwoWay(::fidl::ClientCallback<
-                      ::test_unknowninteractions::Example::FlexibleTwoWay>&&
-                          _callback) const;
+  ::fidl::internal::NaturalThenable<
+      ::test_unknowninteractions::Example::FlexibleTwoWay>
+  FlexibleTwoWay() const;
 
   ::fitx::result<::fidl::Error> StrictOneWay() const;
 

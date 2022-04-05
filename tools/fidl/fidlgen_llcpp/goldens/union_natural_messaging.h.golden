@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/internal/natural_server_messenger.h>
+#include <lib/fidl/cpp/internal/thenable.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -147,16 +148,14 @@ class ::fidl::internal::NaturalClientImpl<::test_union::TestProtocol> final
     : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  void StrictXUnionHenceResponseMayBeStackAllocated(
-      ::fidl::ClientCallback<::test_union::TestProtocol::
-                                 StrictXUnionHenceResponseMayBeStackAllocated>&&
-          _callback) const;
+  ::fidl::internal::NaturalThenable<
+      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
+  StrictXUnionHenceResponseMayBeStackAllocated() const;
 
-  void FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      ::fidl::ClientCallback<
-          ::test_union::TestProtocol::
-              FlexibleXUnionHenceResponseMustBeHeapAllocated>&& _callback)
-      const;
+  ::fidl::internal::NaturalThenable<
+      ::test_union::TestProtocol::
+          FlexibleXUnionHenceResponseMustBeHeapAllocated>
+  FlexibleXUnionHenceResponseMustBeHeapAllocated() const;
 };
 namespace test_union {
 #endif  // __Fuchsia__

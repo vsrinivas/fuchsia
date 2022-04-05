@@ -54,18 +54,20 @@ TEST(DriverTransport, NaturalSendDriverClientEnd) {
   fidl_handle_t server_handle = endpoints->server.handle()->get();
 
   sync_completion_t done;
-  client->SendDriverTransportEnd(
-      fidl::Request<test_transport::SendDriverTransportEndTest::SendDriverTransportEnd>(
-          std::move(endpoints->client), std::move(endpoints->server)),
-      [&](fdf::Result<::test_transport::SendDriverTransportEndTest::SendDriverTransportEnd>&
-              result) {
-        ASSERT_TRUE(result.is_ok());
-        ASSERT_TRUE(result->c().is_valid());
-        ASSERT_EQ(client_handle, result->c().handle()->get());
-        ASSERT_TRUE(result->s().is_valid());
-        ASSERT_EQ(server_handle, result->s().handle()->get());
-        sync_completion_signal(&done);
-      });
+  client
+      ->SendDriverTransportEnd(
+          fidl::Request<test_transport::SendDriverTransportEndTest::SendDriverTransportEnd>(
+              std::move(endpoints->client), std::move(endpoints->server)))
+      .ThenExactlyOnce(
+          [&](fdf::Result<::test_transport::SendDriverTransportEndTest::SendDriverTransportEnd>&
+                  result) {
+            ASSERT_TRUE(result.is_ok());
+            ASSERT_TRUE(result->c().is_valid());
+            ASSERT_EQ(client_handle, result->c().handle()->get());
+            ASSERT_TRUE(result->s().is_valid());
+            ASSERT_EQ(server_handle, result->s().handle()->get());
+            sync_completion_signal(&done);
+          });
 
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 }

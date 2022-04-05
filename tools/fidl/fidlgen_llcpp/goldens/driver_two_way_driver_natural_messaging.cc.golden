@@ -4,25 +4,25 @@ namespace test_drivertwoway {
     989730524426044687lu;
 #ifdef __Fuchsia__
 }  // namespace test_drivertwoway
-void fidl::internal::NaturalClientImpl<::test_drivertwoway::TwoWay>::Add(
-    ::fidl::Request<::test_drivertwoway::TwoWay::Add> request,
-    ::fidl::ClientCallback<::test_drivertwoway::TwoWay::Add>&& _callback)
-    const {
+::fidl::internal::NaturalThenable<::test_drivertwoway::TwoWay::Add>
+fidl::internal::NaturalClientImpl<::test_drivertwoway::TwoWay>::Add(
+    ::fidl::Request<::test_drivertwoway::TwoWay::Add> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::DriverTransport::VTable,
       ::test_drivertwoway::kTwoWay_Add_Ordinal};
 
-  auto response_context =
-      ::fidl::internal::MakeResponseContext<::test_drivertwoway::TwoWay::Add>(
-          ::test_drivertwoway::kTwoWay_Add_Ordinal, std::move(_callback));
-
   auto _arena = fdf::Arena::Create(0, "");
   if (!_arena.is_ok()) {
-    return messenger().TwoWay(
-        ::fidl::OutgoingMessage(::fidl::Status::TransportError(
-            _arena.status_value(),
-            ::fdf::internal::kFailedToCreateDriverArena)),
-        response_context);
+    return ::fidl::internal::NaturalThenable<::test_drivertwoway::TwoWay::Add>(
+        messenger().client_base(), {}, std::move(_encoder),
+        [status = _arena.status_value()](
+            ::fidl::internal::ThenableBase* base,
+            ::fidl::internal::NaturalMessageEncoder&,
+            ::fidl::internal::ResponseContext* response_context) {
+          ::fidl::OutgoingMessage msg{::fidl::Status::TransportError(
+              status, ::fdf::internal::kFailedToCreateDriverArena)};
+          base->SendTwoWay(msg, response_context);
+        });
   }
 
   ::fidl::WriteOptions _options = {
@@ -33,9 +33,17 @@ void fidl::internal::NaturalClientImpl<::test_drivertwoway::TwoWay>::Add(
   _encoder.EncodeBody(::fidl::internal::NaturalMessageConverter<
                       ::fidl::Request<::test_drivertwoway::TwoWay::Add>>::
                           IntoDomainObject(std::move(request)));
-  ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
-  return messenger().TwoWay(::fdf::internal::MoveToArena(_msg, *_arena),
-                            response_context, std::move(_options));
+  return ::fidl::internal::NaturalThenable<::test_drivertwoway::TwoWay::Add>(
+      messenger().client_base(), std::move(_options), std::move(_encoder),
+      [arena = std::move(*_arena)](
+          ::fidl::internal::ThenableBase* base,
+          ::fidl::internal::NaturalMessageEncoder& encoder,
+          ::fidl::internal::ResponseContext* response_context) {
+        ::fidl::OutgoingMessage msg = encoder.GetMessage();
+        ::fidl::OutgoingMessage arena_msg =
+            ::fdf::internal::MoveToArena(msg, arena);
+        return base->SendTwoWay(arena_msg, response_context);
+      });
 }
 
 namespace test_drivertwoway {

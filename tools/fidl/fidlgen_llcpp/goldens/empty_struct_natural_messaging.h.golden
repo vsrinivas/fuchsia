@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/internal/natural_server_messenger.h>
+#include <lib/fidl/cpp/internal/thenable.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -95,11 +96,11 @@ class ::fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>
     final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  void SendAndReceive(
+  ::fidl::internal::NaturalThenable<
+      ::test_emptystruct::EmptyProtocol::SendAndReceive>
+  SendAndReceive(
       ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>
-          request,
-      ::fidl::ClientCallback<
-          ::test_emptystruct::EmptyProtocol::SendAndReceive>&& _callback) const;
+          request) const;
 
   ::fitx::result<::fidl::Error> Send(
       ::fidl::Request<::test_emptystruct::EmptyProtocol::Send> request) const;

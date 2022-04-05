@@ -80,14 +80,12 @@ namespace test_protocollayouts {
 
 #ifdef __Fuchsia__
 }  // namespace test_protocollayouts
-void fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
-    TwoWayAnonComposed(
-        ::fidl::Request<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
-            request,
-        ::fidl::ClientCallback<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>&&
-            _callback) const {
+::fidl::internal::NaturalThenable<
+    ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
+fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
+    TwoWayAnonComposed(::fidl::Request<
+                       ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
+                           request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_protocollayouts::kMainProtocol_TwoWayAnonComposed_Ordinal};
@@ -95,22 +93,24 @@ void fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<
           ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>>::
           IntoDomainObject(std::move(request)));
-  return messenger().TwoWay(
-      _encoder.GetMessage(),
-      ::fidl::internal::MakeResponseContext<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>(
-          ::test_protocollayouts::kMainProtocol_TwoWayAnonComposed_Ordinal,
-          std::move(_callback)));
+  return ::fidl::internal::NaturalThenable<
+      ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>(
+      messenger().client_base(), {}, std::move(_encoder),
+      [](::fidl::internal::ThenableBase* base,
+         ::fidl::internal::NaturalMessageEncoder& encoder,
+         ::fidl::internal::ResponseContext* response_context) {
+        ::fidl::OutgoingMessage msg = encoder.GetMessage();
+        return base->SendTwoWay(msg, response_context);
+      });
 }
 
-void fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
+::fidl::internal::NaturalThenable<
+    ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
+fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
     TwoWayAnonComposedWithError(
         ::fidl::Request<
             ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
-            request,
-        ::fidl::ClientCallback<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>&&
-            _callback) const {
+            request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_protocollayouts::
@@ -119,23 +119,24 @@ void fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<
           ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>>::
           IntoDomainObject(std::move(request)));
-  return messenger().TwoWay(
-      _encoder.GetMessage(),
-      ::fidl::internal::MakeResponseContext<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>(
-          ::test_protocollayouts::
-              kMainProtocol_TwoWayAnonComposedWithError_Ordinal,
-          std::move(_callback)));
+  return ::fidl::internal::NaturalThenable<
+      ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>(
+      messenger().client_base(), {}, std::move(_encoder),
+      [](::fidl::internal::ThenableBase* base,
+         ::fidl::internal::NaturalMessageEncoder& encoder,
+         ::fidl::internal::ResponseContext* response_context) {
+        ::fidl::OutgoingMessage msg = encoder.GetMessage();
+        return base->SendTwoWay(msg, response_context);
+      });
 }
 
-void fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
+::fidl::internal::NaturalThenable<
+    ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
+fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
     TwoWayNamedComposed(
         ::fidl::Request<
             ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
-            request,
-        ::fidl::ClientCallback<
-            ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>&&
-            _callback) const {
+            request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_protocollayouts::kMainProtocol_TwoWayNamedComposed_Ordinal};
@@ -143,22 +144,24 @@ void fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<
           ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>>::
           IntoDomainObject(std::move(request)));
-  return messenger().TwoWay(
-      _encoder.GetMessage(),
-      ::fidl::internal::MakeResponseContext<
-          ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>(
-          ::test_protocollayouts::kMainProtocol_TwoWayNamedComposed_Ordinal,
-          std::move(_callback)));
+  return ::fidl::internal::NaturalThenable<
+      ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>(
+      messenger().client_base(), {}, std::move(_encoder),
+      [](::fidl::internal::ThenableBase* base,
+         ::fidl::internal::NaturalMessageEncoder& encoder,
+         ::fidl::internal::ResponseContext* response_context) {
+        ::fidl::OutgoingMessage msg = encoder.GetMessage();
+        return base->SendTwoWay(msg, response_context);
+      });
 }
 
-void fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
+::fidl::internal::NaturalThenable<
+    ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
+fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
     TwoWayNamedComposedWithError(
         ::fidl::Request<
             ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
-            request,
-        ::fidl::ClientCallback<::test_protocollayouts::MainProtocol::
-                                   TwoWayNamedComposedWithError>&& _callback)
-        const {
+            request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_protocollayouts::
@@ -167,22 +170,23 @@ void fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<
           ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>>::
           IntoDomainObject(std::move(request)));
-  return messenger().TwoWay(
-      _encoder.GetMessage(),
-      ::fidl::internal::MakeResponseContext<
-          ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>(
-          ::test_protocollayouts::
-              kMainProtocol_TwoWayNamedComposedWithError_Ordinal,
-          std::move(_callback)));
+  return ::fidl::internal::NaturalThenable<
+      ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>(
+      messenger().client_base(), {}, std::move(_encoder),
+      [](::fidl::internal::ThenableBase* base,
+         ::fidl::internal::NaturalMessageEncoder& encoder,
+         ::fidl::internal::ResponseContext* response_context) {
+        ::fidl::OutgoingMessage msg = encoder.GetMessage();
+        return base->SendTwoWay(msg, response_context);
+      });
 }
 
-void fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
+::fidl::internal::NaturalThenable<
+    ::test_protocollayouts::MainProtocol::TwoWayImport>
+fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
     TwoWayImport(
         ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayImport>
-            request,
-        ::fidl::ClientCallback<
-            ::test_protocollayouts::MainProtocol::TwoWayImport>&& _callback)
-        const {
+            request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_protocollayouts::kMainProtocol_TwoWayImport_Ordinal};
@@ -190,22 +194,24 @@ void fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
       ::fidl::internal::NaturalMessageConverter<
           ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayImport>>::
           IntoDomainObject(std::move(request)));
-  return messenger().TwoWay(
-      _encoder.GetMessage(),
-      ::fidl::internal::MakeResponseContext<
-          ::test_protocollayouts::MainProtocol::TwoWayImport>(
-          ::test_protocollayouts::kMainProtocol_TwoWayImport_Ordinal,
-          std::move(_callback)));
+  return ::fidl::internal::NaturalThenable<
+      ::test_protocollayouts::MainProtocol::TwoWayImport>(
+      messenger().client_base(), {}, std::move(_encoder),
+      [](::fidl::internal::ThenableBase* base,
+         ::fidl::internal::NaturalMessageEncoder& encoder,
+         ::fidl::internal::ResponseContext* response_context) {
+        ::fidl::OutgoingMessage msg = encoder.GetMessage();
+        return base->SendTwoWay(msg, response_context);
+      });
 }
 
-void fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
+::fidl::internal::NaturalThenable<
+    ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
+fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
     TwoWayImportWithError(
         ::fidl::Request<
             ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
-            request,
-        ::fidl::ClientCallback<
-            ::test_protocollayouts::MainProtocol::TwoWayImportWithError>&&
-            _callback) const {
+            request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_protocollayouts::kMainProtocol_TwoWayImportWithError_Ordinal};
@@ -213,21 +219,23 @@ void fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<
           ::test_protocollayouts::MainProtocol::TwoWayImportWithError>>::
           IntoDomainObject(std::move(request)));
-  return messenger().TwoWay(
-      _encoder.GetMessage(),
-      ::fidl::internal::MakeResponseContext<
-          ::test_protocollayouts::MainProtocol::TwoWayImportWithError>(
-          ::test_protocollayouts::kMainProtocol_TwoWayImportWithError_Ordinal,
-          std::move(_callback)));
+  return ::fidl::internal::NaturalThenable<
+      ::test_protocollayouts::MainProtocol::TwoWayImportWithError>(
+      messenger().client_base(), {}, std::move(_encoder),
+      [](::fidl::internal::ThenableBase* base,
+         ::fidl::internal::NaturalMessageEncoder& encoder,
+         ::fidl::internal::ResponseContext* response_context) {
+        ::fidl::OutgoingMessage msg = encoder.GetMessage();
+        return base->SendTwoWay(msg, response_context);
+      });
 }
 
-void fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
+::fidl::internal::NaturalThenable<
+    ::test_protocollayouts::MainProtocol::TwoWayLocal>
+fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
     TwoWayLocal(
         ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayLocal>
-            request,
-        ::fidl::ClientCallback<
-            ::test_protocollayouts::MainProtocol::TwoWayLocal>&& _callback)
-        const {
+            request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_protocollayouts::kMainProtocol_TwoWayLocal_Ordinal};
@@ -235,22 +243,24 @@ void fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
       ::fidl::internal::NaturalMessageConverter<
           ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayLocal>>::
           IntoDomainObject(std::move(request)));
-  return messenger().TwoWay(
-      _encoder.GetMessage(),
-      ::fidl::internal::MakeResponseContext<
-          ::test_protocollayouts::MainProtocol::TwoWayLocal>(
-          ::test_protocollayouts::kMainProtocol_TwoWayLocal_Ordinal,
-          std::move(_callback)));
+  return ::fidl::internal::NaturalThenable<
+      ::test_protocollayouts::MainProtocol::TwoWayLocal>(
+      messenger().client_base(), {}, std::move(_encoder),
+      [](::fidl::internal::ThenableBase* base,
+         ::fidl::internal::NaturalMessageEncoder& encoder,
+         ::fidl::internal::ResponseContext* response_context) {
+        ::fidl::OutgoingMessage msg = encoder.GetMessage();
+        return base->SendTwoWay(msg, response_context);
+      });
 }
 
-void fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
+::fidl::internal::NaturalThenable<
+    ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
+fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
     TwoWayLocalWithError(
         ::fidl::Request<
             ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
-            request,
-        ::fidl::ClientCallback<
-            ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>&&
-            _callback) const {
+            request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_protocollayouts::kMainProtocol_TwoWayLocalWithError_Ordinal};
@@ -258,20 +268,22 @@ void fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<
           ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>>::
           IntoDomainObject(std::move(request)));
-  return messenger().TwoWay(
-      _encoder.GetMessage(),
-      ::fidl::internal::MakeResponseContext<
-          ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>(
-          ::test_protocollayouts::kMainProtocol_TwoWayLocalWithError_Ordinal,
-          std::move(_callback)));
+  return ::fidl::internal::NaturalThenable<
+      ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>(
+      messenger().client_base(), {}, std::move(_encoder),
+      [](::fidl::internal::ThenableBase* base,
+         ::fidl::internal::NaturalMessageEncoder& encoder,
+         ::fidl::internal::ResponseContext* response_context) {
+        ::fidl::OutgoingMessage msg = encoder.GetMessage();
+        return base->SendTwoWay(msg, response_context);
+      });
 }
 
-void fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
+::fidl::internal::NaturalThenable<
+    ::test_protocollayouts::MainProtocol::TwoWayAnon>
+fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
     TwoWayAnon(::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnon>
-                   request,
-               ::fidl::ClientCallback<
-                   ::test_protocollayouts::MainProtocol::TwoWayAnon>&&
-                   _callback) const {
+                   request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_protocollayouts::kMainProtocol_TwoWayAnon_Ordinal};
@@ -279,22 +291,24 @@ void fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
       ::fidl::internal::NaturalMessageConverter<
           ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnon>>::
           IntoDomainObject(std::move(request)));
-  return messenger().TwoWay(
-      _encoder.GetMessage(),
-      ::fidl::internal::MakeResponseContext<
-          ::test_protocollayouts::MainProtocol::TwoWayAnon>(
-          ::test_protocollayouts::kMainProtocol_TwoWayAnon_Ordinal,
-          std::move(_callback)));
+  return ::fidl::internal::NaturalThenable<
+      ::test_protocollayouts::MainProtocol::TwoWayAnon>(
+      messenger().client_base(), {}, std::move(_encoder),
+      [](::fidl::internal::ThenableBase* base,
+         ::fidl::internal::NaturalMessageEncoder& encoder,
+         ::fidl::internal::ResponseContext* response_context) {
+        ::fidl::OutgoingMessage msg = encoder.GetMessage();
+        return base->SendTwoWay(msg, response_context);
+      });
 }
 
-void fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
+::fidl::internal::NaturalThenable<
+    ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
+fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
     TwoWayAnonWithError(
         ::fidl::Request<
             ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
-            request,
-        ::fidl::ClientCallback<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>&&
-            _callback) const {
+            request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_protocollayouts::kMainProtocol_TwoWayAnonWithError_Ordinal};
@@ -302,12 +316,15 @@ void fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<
           ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>>::
           IntoDomainObject(std::move(request)));
-  return messenger().TwoWay(
-      _encoder.GetMessage(),
-      ::fidl::internal::MakeResponseContext<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>(
-          ::test_protocollayouts::kMainProtocol_TwoWayAnonWithError_Ordinal,
-          std::move(_callback)));
+  return ::fidl::internal::NaturalThenable<
+      ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>(
+      messenger().client_base(), {}, std::move(_encoder),
+      [](::fidl::internal::ThenableBase* base,
+         ::fidl::internal::NaturalMessageEncoder& encoder,
+         ::fidl::internal::ResponseContext* response_context) {
+        ::fidl::OutgoingMessage msg = encoder.GetMessage();
+        return base->SendTwoWay(msg, response_context);
+      });
 }
 
 ::fitx::result<::fidl::Error> fidl::internal::

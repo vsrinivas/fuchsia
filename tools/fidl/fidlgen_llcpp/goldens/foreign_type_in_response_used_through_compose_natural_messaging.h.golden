@@ -11,6 +11,7 @@
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/internal/natural_server_messenger.h>
+#include <lib/fidl/cpp/internal/thenable.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -72,9 +73,9 @@ class ::fidl::internal::NaturalClientImpl<
     final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  void GetFoo(::fidl::ClientCallback<
-              ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&&
-                  _callback) const;
+  ::fidl::internal::NaturalThenable<
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+  GetFoo() const;
 };
 namespace test_foreigntypeinresponseusedthroughcompose {
 #endif  // __Fuchsia__

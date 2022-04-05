@@ -304,8 +304,7 @@ Now we present some examples using the types and FIDL definition above:
 //
 
 // Natural API, async, response has a body.
-client->Greet(
-    {std::string("hi")},
+client->Greet({std::string("hi")}).Then(
     [] (fidl::Result<fuchsia_example::Speak::Greet>& result) {
       // fidl::Result<fuchsia_example::Speak::Greet> =
       //     fitx::result<
@@ -319,7 +318,7 @@ client->Greet(
     });
 
 // Natural API, async, response has no body.
-client->EmptyAck(
+client->EmptyAck().Then(
     [] (fidl::Result<fuchsia_example::Speak::Greet>& result) {
       // fidl::Result<fuchsia_example::Speak::Greet> =
       //     fitx::result<fidl::Error>;
@@ -333,8 +332,7 @@ client->EmptyAck(
 //
 
 // Natural API, async, response has a body that's not empty struct
-client->TryGreet(
-    {std::string("hi")},
+client->TryGreet({std::string("hi")}).Then(
     [] (fidl::Result<fuchsia_example::Speak::TryGreet>& result) {
       // fidl::Result<fuchsia_example::Speak::TryGreet> =
       //     fitx::result<
@@ -356,7 +354,7 @@ client->TryGreet(
     });
 
 // Natural API, async, response has a body that's empty struct
-client->TryEmptyAck(
+client->TryEmptyAck().Then(
     [] (fidl::Result<fuchsia_example::Speak::TryGreet>& result) {
       // fidl::Result<fuchsia_example::Speak::TryGreet> =
       //     fitx::result<fidl::AnyErrorIn<fuchsia_example::Speak::TryEmptyAck>>;
@@ -444,8 +442,7 @@ fidl::StringView foo = result->foo;
 fidl::Client client(std::move(client_end), dispatcher);
 
 // Wire API, async
-client.wire()->Greet(
-    fidl::StringView("hi"),
+client.wire()->Greet(fidl::StringView("hi")).Then(
     [] (fidl::WireUnownedResult<fuchsia_examples::Speak::Greet>& result) {
       // Check error
       bool ok = result.ok();
@@ -642,13 +639,14 @@ class fidl::AnyErrorIn<ErrorSyntaxFlexible> {
   std::string FormatDescription();
 };
 
-client->ErrorSyntaxFlexible([] (fidl::Result<ErrorSyntaxFlexible>& result) {
-  if (result.is_error()) {
-    if (result.error_value().is_unknown_interaction()) {
-      // The server doesn't recognize this flexible method.
-    }
-  }
-});
+client->ErrorSyntaxFlexible().Then(
+    [] (fidl::Result<ErrorSyntaxFlexible>& result) {
+      if (result.is_error()) {
+        if (result.error_value().is_unknown_interaction()) {
+          // The server doesn't recognize this flexible method.
+        }
+      }
+    });
 ```
 
 ### Domain object compile time validations

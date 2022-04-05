@@ -62,9 +62,8 @@ class ::fidl::internal::NaturalClientImpl<::test_drivertwoway::TwoWay> final
     : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  void Add(::fidl::Request<::test_drivertwoway::TwoWay::Add> request,
-           ::fidl::ClientCallback<::test_drivertwoway::TwoWay::Add>&& _callback)
-      const;
+  ::fidl::internal::NaturalThenable<::test_drivertwoway::TwoWay::Add> Add(
+      ::fidl::Request<::test_drivertwoway::TwoWay::Add> request) const;
 };
 namespace test_drivertwoway {
 #endif  // __Fuchsia__

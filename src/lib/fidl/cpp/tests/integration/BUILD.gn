@@ -41,6 +41,7 @@ test("fidl_cpp_gen_api_tests_bin") {
   output_name = "fidl_cpp_gen_api_tests"
   sources = [
     "any_error_in_test.cc",
+    "client_gen_api_test.cc",
     "server_gen_api_test.cc",
   ]
   deps = [
@@ -49,6 +50,7 @@ test("fidl_cpp_gen_api_tests_bin") {
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/sync:sync-cpp",
     "//zircon/system/ulib/zxtest",
   ]
 }

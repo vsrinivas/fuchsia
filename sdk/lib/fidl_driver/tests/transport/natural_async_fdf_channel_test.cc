@@ -48,15 +48,15 @@ TEST(DriverTransport, NaturalSendFdfChannelAsync) {
   fdf_handle_t handle = channel_pair->end0.get();
 
   libsync::Completion completion;
-  client->SendFdfChannel(
-      std::move(channel_pair->end0),
-      [&completion,
-       handle](fdf::Result<::test_transport::SendFdfChannelTest::SendFdfChannel>& result) {
-        ASSERT_TRUE(result.is_ok());
-        ASSERT_TRUE(result->h().is_valid());
-        ASSERT_EQ(handle, result->h().get());
-        completion.Signal();
-      });
+  client->SendFdfChannel(std::move(channel_pair->end0))
+      .ThenExactlyOnce(
+          [&completion,
+           handle](fdf::Result<::test_transport::SendFdfChannelTest::SendFdfChannel>& result) {
+            ASSERT_TRUE(result.is_ok());
+            ASSERT_TRUE(result->h().is_valid());
+            ASSERT_EQ(handle, result->h().get());
+            completion.Signal();
+          });
 
   ASSERT_OK(completion.Wait());
 }

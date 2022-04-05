@@ -101,11 +101,11 @@ var (
 	NaturalMethodTypes      = internalNs.member("NaturalMethodTypes")
 
 	// Client types
-	NaturalClientImpl             = internalNs.member("NaturalClientImpl")
-	NaturalClientCallbackTraits   = internalNs.member("ClientCallbackTraits")
-	NaturalClientCallback         = fidlNs.member("ClientCallback")
-	NaturalClientResponseCallback = fidlNs.member("ClientResponseCallback")
-	NaturalAsyncEventHandler      = transportNs.member("AsyncEventHandler")
+	NaturalClientImpl           = internalNs.member("NaturalClientImpl")
+	NaturalClientCallbackTraits = internalNs.member("ClientCallbackTraits")
+	NaturalClientCallback       = fidlNs.member("ClientCallback")
+	NaturalThenable             = internalNs.member("NaturalThenable")
+	NaturalAsyncEventHandler    = transportNs.member("AsyncEventHandler")
 
 	// NaturalEventHandlerInterface is shared between sync and async event handling.
 	NaturalEventHandlerInterface = internalNs.member("NaturalEventHandlerInterface")
@@ -489,24 +489,24 @@ func newWireMethod(name string, wireTypes wireTypeNames, protocolMarker name, me
 }
 
 type unifiedMethod struct {
-	NaturalRequest             name
-	NaturalRequestConverter    name
-	RequestMessageTraits       name
-	NaturalResponse            name
-	NaturalResponseConverter   name
-	NaturalResult              name
-	NaturalAnyErrorIn          name
-	ResponseMessageTraits      name
-	NaturalEvent               name
-	NaturalEventConverter      name
-	EventMessageTraits         name
-	ClientCallbackTraits       name
-	ClientResponseCallbackType name
-	NaturalMethodTypes         name
-	NaturalRequestAlias        name
-	NaturalCompleterAlias      name
-	NaturalCompleter           name
-	NaturalCompleterBase       name
+	NaturalRequest           name
+	NaturalRequestConverter  name
+	RequestMessageTraits     name
+	NaturalResponse          name
+	NaturalResponseConverter name
+	NaturalResult            name
+	NaturalAnyErrorIn        name
+	ResponseMessageTraits    name
+	NaturalEvent             name
+	NaturalEventConverter    name
+	EventMessageTraits       name
+	ClientCallbackTraits     name
+	NaturalThenable          name
+	NaturalMethodTypes       name
+	NaturalRequestAlias      name
+	NaturalCompleterAlias    name
+	NaturalCompleter         name
+	NaturalCompleterBase     name
 }
 
 func newUnifiedMethod(methodMarker name, unifiedTypes unifiedMessagingDetails) unifiedMethod {
@@ -517,24 +517,24 @@ func newUnifiedMethod(methodMarker name, unifiedTypes unifiedMessagingDetails) u
 	naturalEvent := NaturalEvent.template(methodMarker)
 	common := unifiedTypes.NaturalServer.nest(methodMarker.Self())
 	return unifiedMethod{
-		NaturalRequest:             naturalRequest,
-		NaturalRequestConverter:    NaturalMessageConverter.template(naturalRequest),
-		RequestMessageTraits:       MessageTraits.template(naturalRequest),
-		NaturalResponse:            naturalResponse,
-		NaturalResponseConverter:   NaturalMessageConverter.template(naturalResponse),
-		NaturalResult:              naturalResult,
-		NaturalAnyErrorIn:          naturalAnyErrorIn,
-		ResponseMessageTraits:      MessageTraits.template(naturalResponse),
-		NaturalEvent:               naturalEvent,
-		NaturalEventConverter:      NaturalMessageConverter.template(naturalEvent),
-		EventMessageTraits:         MessageTraits.template(naturalEvent),
-		ClientCallbackTraits:       NaturalClientCallbackTraits.template(methodMarker),
-		ClientResponseCallbackType: NaturalClientResponseCallback.template(methodMarker),
-		NaturalMethodTypes:         NaturalMethodTypes.template(methodMarker),
-		NaturalRequestAlias:        common.appendName("Request"),
-		NaturalCompleterAlias:      common.appendName("Completer"),
-		NaturalCompleter:           NaturalCompleter.template(methodMarker),
-		NaturalCompleterBase:       NaturalCompleterBase.template(methodMarker),
+		NaturalRequest:           naturalRequest,
+		NaturalRequestConverter:  NaturalMessageConverter.template(naturalRequest),
+		RequestMessageTraits:     MessageTraits.template(naturalRequest),
+		NaturalResponse:          naturalResponse,
+		NaturalResponseConverter: NaturalMessageConverter.template(naturalResponse),
+		NaturalResult:            naturalResult,
+		NaturalAnyErrorIn:        naturalAnyErrorIn,
+		ResponseMessageTraits:    MessageTraits.template(naturalResponse),
+		NaturalEvent:             naturalEvent,
+		NaturalEventConverter:    NaturalMessageConverter.template(naturalEvent),
+		EventMessageTraits:       MessageTraits.template(naturalEvent),
+		ClientCallbackTraits:     NaturalClientCallbackTraits.template(methodMarker),
+		NaturalThenable:          NaturalThenable.template(methodMarker),
+		NaturalMethodTypes:       NaturalMethodTypes.template(methodMarker),
+		NaturalRequestAlias:      common.appendName("Request"),
+		NaturalCompleterAlias:    common.appendName("Completer"),
+		NaturalCompleter:         NaturalCompleter.template(methodMarker),
+		NaturalCompleterBase:     NaturalCompleterBase.template(methodMarker),
 	}
 }
 
@@ -603,6 +603,13 @@ func (m Method) WireCompleterArg() string {
 
 func (m Method) NaturalCompleterArg() string {
 	return m.appendName("Completer").nest("Sync").Name()
+}
+
+func (m Method) NaturalRequestArg(argName string) string {
+	if m.HasRequestPayload {
+		return fmt.Sprintf("%s %s", m.NaturalRequest, argName)
+	}
+	return ""
 }
 
 func (m Method) NaturalResultBase() string {

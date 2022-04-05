@@ -10,6 +10,7 @@
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/internal/natural_server_messenger.h>
+#include <lib/fidl/cpp/internal/thenable.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -227,20 +228,19 @@ class ::fidl::internal::NaturalClientImpl<
     final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  void ComposedCallWhichMayFail(
+  ::fidl::internal::NaturalThenable<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
+  ComposedCallWhichMayFail(
       ::fidl::Request<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
-          request,
-      ::fidl::ClientCallback<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                 ComposedCallWhichMayFail>&& _callback) const;
+          request) const;
 
-  void CallWhichMayFail(
+  ::fidl::internal::NaturalThenable<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+  CallWhichMayFail(
       ::fidl::Request<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
-          request,
-      ::fidl::ClientCallback<
-          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&&
-          _callback) const;
+          request) const;
 };
 namespace test_errorsyntax {
 #endif  // __Fuchsia__

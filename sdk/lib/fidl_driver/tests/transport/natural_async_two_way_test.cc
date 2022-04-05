@@ -49,11 +49,12 @@ TEST(DriverTransport, NaturalTwoWayAsync) {
   auto bind_and_run_on_dispatcher_thread = [&] {
     client.Bind(std::move(client_end), dispatcher->get());
 
-    client->TwoWay(kRequestPayload, [&](fdf::Result<::test_transport::TwoWayTest::TwoWay>& result) {
-      ASSERT_TRUE(result.is_ok());
-      ASSERT_EQ(kResponsePayload, result->payload());
-      sync_completion_signal(&called);
-    });
+    client->TwoWay(kRequestPayload)
+        .ThenExactlyOnce([&](fdf::Result<::test_transport::TwoWayTest::TwoWay>& result) {
+          ASSERT_TRUE(result.is_ok());
+          ASSERT_EQ(kResponsePayload, result->payload());
+          sync_completion_signal(&called);
+        });
   };
   async::PostTask(dispatcher->async_dispatcher(), bind_and_run_on_dispatcher_thread);
   ASSERT_OK(sync_completion_wait(&called, ZX_TIME_INFINITE));
@@ -86,11 +87,12 @@ TEST(DriverTransport, NaturalTwoWayAsyncShared) {
   client.Bind(std::move(client_end), dispatcher->get());
 
   sync_completion_t done;
-  client->TwoWay(kRequestPayload, [&](fdf::Result<::test_transport::TwoWayTest::TwoWay>& result) {
-    ASSERT_TRUE(result.is_ok());
-    ASSERT_EQ(kResponsePayload, result->payload());
-    sync_completion_signal(&done);
-  });
+  client->TwoWay(kRequestPayload)
+      .ThenExactlyOnce([&](fdf::Result<::test_transport::TwoWayTest::TwoWay>& result) {
+        ASSERT_TRUE(result.is_ok());
+        ASSERT_EQ(kResponsePayload, result->payload());
+        sync_completion_signal(&done);
+      });
 
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 }

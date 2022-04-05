@@ -113,7 +113,10 @@ inline ::fitx::result<::fidl::Error> ToFitxResult(::fidl::Status result) {
 //
 // It is of the form:
 //
-//     void Callback(::fidl::Result<Method>&);
+//     void Callback(Result<Method>&);
+//
+// where |Result| is a result type of the protocol's transport
+// (e.g. |fidl::Result| in Zircon channel messaging).
 //
 template <typename Method>
 using ClientCallback = typename internal::NaturalMethodTypes<Method>::ResultCallback;

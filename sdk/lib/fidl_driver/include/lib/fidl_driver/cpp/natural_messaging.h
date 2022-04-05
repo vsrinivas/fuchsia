@@ -7,6 +7,7 @@
 
 #include <lib/fdf/cpp/arena.h>
 #include <lib/fidl/cpp/internal/natural_server_messenger.h>
+#include <lib/fidl/cpp/internal/thenable.h>
 #include <lib/fidl/llcpp/internal/server_details.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl_driver/cpp/natural_client.h>

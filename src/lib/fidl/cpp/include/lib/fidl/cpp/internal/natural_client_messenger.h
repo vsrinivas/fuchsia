@@ -43,6 +43,8 @@ class NaturalClientMessenger {
   // Any send-time errors are propagated via the return value.
   fidl::Status OneWay(fidl::OutgoingMessage message, fidl::WriteOptions write_options = {}) const;
 
+  fidl::internal::ClientBase* client_base() const { return client_base_; }
+
  private:
   // The client messaging implementation.
   fidl::internal::ClientBase* client_base_;

@@ -92,16 +92,6 @@ class {{ .WireWeakSyncClientImpl }} final : public {{ .WireWeakOnewayClientImpl 
 
 
 
-{{- define "Method:ClientAsyncRequestArgumentsWithResult:Helper" -}}
-{{ if .HasRequestPayload }}{{ .NaturalRequest }} request, {{ end }}
-{{ printf "%s&& _callback" .CallbackType }}
-{{- end }}
-
-{{- define "Method:ClientRequestArgumentsOneWay:Helper" -}}
-{{ if .HasRequestPayload }}{{ .NaturalRequest }} request{{ end }}
-{{- end }}
-
-
 {{- define "Protocol:Client:NaturalMessagingHeader" }}
 {{- IfdefFuchsia -}}
 
@@ -129,14 +119,13 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
 
   {{- range .TwoWayMethods }}
   {{- .Docs }}
-  void {{ .Name }}({{ template "Method:ClientAsyncRequestArgumentsWithResult:Helper" . }}) const;
+  {{ .NaturalThenable }} {{ .Name }}({{ .NaturalRequestArg "request" }}) const;
 {{ "" }}
   {{- end }}
 
   {{- range .OneWayMethods }}
   {{- .Docs }}
-  ::fitx::result<::fidl::Error> {{ .Name }}(
-      {{- template "Method:ClientRequestArgumentsOneWay:Helper" . }}) const;
+  ::fitx::result<::fidl::Error> {{ .Name }}({{ .NaturalRequestArg "request" }}) const;
 {{ "" }}
   {{- end }}
 };
@@ -158,18 +147,24 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
 {{- template "Method:Response:NaturalMessagingSource" . }}
 
 {{- EnsureNamespace "" }}
-void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
-    {{- template "Method:ClientAsyncRequestArgumentsWithResult:Helper" . }}) const {
+{{ .NaturalThenable }}
+{{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}({{ .NaturalRequestArg "request" }}) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }} };
   {{- if .HasRequestPayload }}
   _encoder.EncodeBody(
       {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request)));
   {{- end }}
-  return messenger().TwoWay(
-      _encoder.GetMessage(),
-      ::fidl::internal::MakeResponseContext<{{ .Marker }}>({{ .OrdinalName }}, std::move(_callback))
-  );
+  return {{ .NaturalThenable }}(
+      messenger().client_base(), {}, std::move(_encoder),
+      [] (
+          ::fidl::internal::ThenableBase* base,
+          ::fidl::internal::NaturalMessageEncoder& encoder,
+          ::fidl::internal::ResponseContext* response_context
+      ) {
+        ::fidl::OutgoingMessage msg = encoder.GetMessage();
+        return base->SendTwoWay(msg, response_context);
+      });
 }
 
 {{ end }}
@@ -178,8 +173,7 @@ void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
 
 {{- EnsureNamespace "" }}
 ::fitx::result<::fidl::Error>
-{{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
-    {{- template "Method:ClientRequestArgumentsOneWay:Helper" . }}) const {
+{{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}({{ .NaturalRequestArg "request" }}) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }} };
   {{- if .HasRequestPayload }}

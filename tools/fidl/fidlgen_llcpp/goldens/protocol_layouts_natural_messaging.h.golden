@@ -10,6 +10,7 @@
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/internal/natural_server_messenger.h>
+#include <lib/fidl/cpp/internal/thenable.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -1152,76 +1153,67 @@ class ::fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>
     final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  void TwoWayAnonComposed(
+  ::fidl::internal::NaturalThenable<
+      ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
+  TwoWayAnonComposed(
       ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
-          request,
-      ::fidl::ClientCallback<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>&& _callback)
-      const;
+          request) const;
 
-  void TwoWayAnonComposedWithError(
+  ::fidl::internal::NaturalThenable<
+      ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
+  TwoWayAnonComposedWithError(
       ::fidl::Request<
           ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
-          request,
-      ::fidl::ClientCallback<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>&&
-          _callback) const;
+          request) const;
 
-  void TwoWayNamedComposed(
+  ::fidl::internal::NaturalThenable<
+      ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
+  TwoWayNamedComposed(
       ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
-          request,
-      ::fidl::ClientCallback<
-          ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>&&
-          _callback) const;
+          request) const;
 
-  void TwoWayNamedComposedWithError(
+  ::fidl::internal::NaturalThenable<
+      ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
+  TwoWayNamedComposedWithError(
       ::fidl::Request<
           ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
-          request,
-      ::fidl::ClientCallback<
-          ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>&&
-          _callback) const;
+          request) const;
 
-  void TwoWayImport(
+  ::fidl::internal::NaturalThenable<
+      ::test_protocollayouts::MainProtocol::TwoWayImport>
+  TwoWayImport(
       ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayImport>
-          request,
-      ::fidl::ClientCallback<
-          ::test_protocollayouts::MainProtocol::TwoWayImport>&& _callback)
-      const;
+          request) const;
 
-  void TwoWayImportWithError(
+  ::fidl::internal::NaturalThenable<
+      ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
+  TwoWayImportWithError(
       ::fidl::Request<
           ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
-          request,
-      ::fidl::ClientCallback<
-          ::test_protocollayouts::MainProtocol::TwoWayImportWithError>&&
-          _callback) const;
+          request) const;
 
-  void TwoWayLocal(
-      ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayLocal>
-          request,
-      ::fidl::ClientCallback<
-          ::test_protocollayouts::MainProtocol::TwoWayLocal>&& _callback) const;
+  ::fidl::internal::NaturalThenable<
+      ::test_protocollayouts::MainProtocol::TwoWayLocal>
+  TwoWayLocal(::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayLocal>
+                  request) const;
 
-  void TwoWayLocalWithError(
+  ::fidl::internal::NaturalThenable<
+      ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
+  TwoWayLocalWithError(
       ::fidl::Request<
           ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
-          request,
-      ::fidl::ClientCallback<
-          ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>&&
-          _callback) const;
+          request) const;
 
-  void TwoWayAnon(
-      ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnon> request,
-      ::fidl::ClientCallback<::test_protocollayouts::MainProtocol::TwoWayAnon>&&
-          _callback) const;
+  ::fidl::internal::NaturalThenable<
+      ::test_protocollayouts::MainProtocol::TwoWayAnon>
+  TwoWayAnon(::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnon>
+                 request) const;
 
-  void TwoWayAnonWithError(
+  ::fidl::internal::NaturalThenable<
+      ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
+  TwoWayAnonWithError(
       ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
-          request,
-      ::fidl::ClientCallback<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>&&
-          _callback) const;
+          request) const;
 
   ::fitx::result<::fidl::Error> OneWayAnonComposed(
       ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnonComposed>

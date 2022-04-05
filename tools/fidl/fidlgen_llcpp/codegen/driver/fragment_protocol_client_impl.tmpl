@@ -71,14 +71,13 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
 
   {{- range .TwoWayMethods }}
   {{- .Docs }}
-  void {{ .Name }}({{ template "Method:ClientAsyncRequestArgumentsWithResult:Helper" . }}) const;
+  {{ .NaturalThenable }} {{ .Name }}({{ .NaturalRequestArg "request" }}) const;
 {{ "" }}
   {{- end }}
 
   {{- range .OneWayMethods }}
   {{- .Docs }}
-  ::fitx::result<::fidl::Error> {{ .Name }}(
-      {{- template "Method:ClientRequestArgumentsOneWay:Helper" . }}) const;
+  ::fitx::result<::fidl::Error> {{ .Name }}({{ .NaturalRequestArg "request" }}) const;
 {{ "" }}
   {{- end }}
 };
@@ -96,19 +95,24 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
 {{- template "Method:Response:NaturalMessagingSource" . }}
 
 {{- EnsureNamespace "" }}
-void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
-    {{- template "Method:ClientAsyncRequestArgumentsWithResult:Helper" . }}) const {
+{{ .NaturalThenable }}
+{{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}({{ .NaturalRequestArg "request" }}) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::DriverTransport::VTable, {{ .OrdinalName }} };
 
-  auto response_context = ::fidl::internal::MakeResponseContext<{{ .Marker }}>({{ .OrdinalName }}, std::move(_callback));
-
   auto _arena = fdf::Arena::Create(0, "");
   if (!_arena.is_ok()) {
-    return messenger().TwoWay(
-      ::fidl::OutgoingMessage(
-        ::fidl::Status::TransportError(_arena.status_value(), ::fdf::internal::kFailedToCreateDriverArena)),
-      response_context);
+    return {{ .NaturalThenable }}(
+        messenger().client_base(), {}, std::move(_encoder),
+        [status = _arena.status_value()] (
+            ::fidl::internal::ThenableBase* base,
+            ::fidl::internal::NaturalMessageEncoder&,
+            ::fidl::internal::ResponseContext* response_context
+        ) {
+          ::fidl::OutgoingMessage msg{
+              ::fidl::Status::TransportError(status, ::fdf::internal::kFailedToCreateDriverArena)};
+          base->SendTwoWay(msg, response_context);
+        });
   }
 
   ::fidl::WriteOptions _options = {
@@ -119,12 +123,17 @@ void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
   _encoder.EncodeBody(
       {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request)));
   {{- end }}
-  ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
-  return messenger().TwoWay(
-      ::fdf::internal::MoveToArena(_msg, *_arena),
-      response_context,
-      std::move(_options)
-  );
+  return {{ .NaturalThenable }}(
+      messenger().client_base(), std::move(_options), std::move(_encoder),
+      [arena = std::move(*_arena)] (
+          ::fidl::internal::ThenableBase* base,
+          ::fidl::internal::NaturalMessageEncoder& encoder,
+          ::fidl::internal::ResponseContext* response_context
+      ) {
+        ::fidl::OutgoingMessage msg = encoder.GetMessage();
+        ::fidl::OutgoingMessage arena_msg = ::fdf::internal::MoveToArena(msg, arena);
+        return base->SendTwoWay(arena_msg, response_context);
+      });
 }
 
 {{ end }}
@@ -133,8 +142,7 @@ void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
 
 {{- EnsureNamespace "" }}
 ::fitx::result<::fidl::Error>
-{{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
-    {{- template "Method:ClientRequestArgumentsOneWay:Helper" . }}) const {
+{{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}({{ .NaturalRequestArg "request" }}) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::DriverTransport::VTable, {{ .OrdinalName }} };
 

@@ -51,15 +51,15 @@ TEST(DriverTransport, NaturalSendZirconHandleAsync) {
   zx_handle_t handle = ev.get();
 
   libsync::Completion completion;
-  client->SendZirconHandle(
-      std::move(ev),
-      [&completion,
-       handle](fdf::Result<::test_transport::SendZirconHandleTest::SendZirconHandle>& result) {
-        ASSERT_TRUE(result.is_ok());
-        ASSERT_TRUE(result->h().is_valid());
-        ASSERT_EQ(handle, result->h().get());
-        completion.Signal();
-      });
+  client->SendZirconHandle(std::move(ev))
+      .ThenExactlyOnce(
+          [&completion,
+           handle](fdf::Result<::test_transport::SendZirconHandleTest::SendZirconHandle>& result) {
+            ASSERT_TRUE(result.is_ok());
+            ASSERT_TRUE(result->h().is_valid());
+            ASSERT_EQ(handle, result->h().get());
+            completion.Signal();
+          });
 
   ASSERT_OK(completion.Wait());
 }

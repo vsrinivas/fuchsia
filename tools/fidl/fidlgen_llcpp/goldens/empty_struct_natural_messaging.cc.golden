@@ -14,13 +14,12 @@ namespace test_emptystruct {
 
 #ifdef __Fuchsia__
 }  // namespace test_emptystruct
-void fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>::
+::fidl::internal::NaturalThenable<
+    ::test_emptystruct::EmptyProtocol::SendAndReceive>
+fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>::
     SendAndReceive(
         ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>
-            request,
-        ::fidl::ClientCallback<
-            ::test_emptystruct::EmptyProtocol::SendAndReceive>&& _callback)
-        const {
+            request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal};
@@ -28,12 +27,15 @@ void fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>::
       ::fidl::internal::NaturalMessageConverter<
           ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>>::
           IntoDomainObject(std::move(request)));
-  return messenger().TwoWay(
-      _encoder.GetMessage(),
-      ::fidl::internal::MakeResponseContext<
-          ::test_emptystruct::EmptyProtocol::SendAndReceive>(
-          ::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal,
-          std::move(_callback)));
+  return ::fidl::internal::NaturalThenable<
+      ::test_emptystruct::EmptyProtocol::SendAndReceive>(
+      messenger().client_base(), {}, std::move(_encoder),
+      [](::fidl::internal::ThenableBase* base,
+         ::fidl::internal::NaturalMessageEncoder& encoder,
+         ::fidl::internal::ResponseContext* response_context) {
+        ::fidl::OutgoingMessage msg = encoder.GetMessage();
+        return base->SendTwoWay(msg, response_context);
+      });
 }
 
 ::fitx::result<::fidl::Error>

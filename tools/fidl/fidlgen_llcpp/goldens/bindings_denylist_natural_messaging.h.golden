@@ -10,6 +10,7 @@
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/internal/natural_server_messenger.h>
+#include <lib/fidl/cpp/internal/thenable.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -163,10 +164,10 @@ class ::fidl::internal::NaturalClientImpl<
     final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  void LibfuzzerNeedsNonemptyProtocol(
-      ::fidl::ClientCallback<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                                 LibfuzzerNeedsNonemptyProtocol>&& _callback)
-      const;
+  ::fidl::internal::NaturalThenable<
+      ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+          LibfuzzerNeedsNonemptyProtocol>
+  LibfuzzerNeedsNonemptyProtocol() const;
 };
 #endif  // __Fuchsia__
 
@@ -1058,42 +1059,35 @@ class ::fidl::internal::NaturalClientImpl<
     final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  void OnlyDenyDart(
+  ::fidl::internal::NaturalThenable<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+  OnlyDenyDart(
       ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
-          request,
-      ::fidl::ClientCallback<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&& _callback)
-      const;
+          request) const;
 
-  void OnlyDenyGo(
+  ::fidl::internal::NaturalThenable<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+  OnlyDenyGo(
       ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
-          request,
-      ::fidl::ClientCallback<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>&& _callback)
-      const;
+          request) const;
 
-  void OnlyDenyLibfuzzer(
-      ::fidl::Request<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
-          request,
-      ::fidl::ClientCallback<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&&
-          _callback) const;
+  ::fidl::internal::NaturalThenable<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+  OnlyDenyLibfuzzer(::fidl::Request<
+                    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+                        request) const;
 
-  void OnlyDenyRust(
+  ::fidl::internal::NaturalThenable<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+  OnlyDenyRust(
       ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
-          request,
-      ::fidl::ClientCallback<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&& _callback)
-      const;
+          request) const;
 
-  void OnlyDenySyzkaller(
-      ::fidl::Request<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
-          request,
-      ::fidl::ClientCallback<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&&
-          _callback) const;
+  ::fidl::internal::NaturalThenable<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+  OnlyDenySyzkaller(::fidl::Request<
+                    ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+                        request) const;
 };
 namespace test_bindingsdenylist {
 #endif  // __Fuchsia__

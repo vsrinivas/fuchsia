@@ -10,6 +10,7 @@
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/internal/natural_server_messenger.h>
+#include <lib/fidl/cpp/internal/thenable.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -906,64 +907,56 @@ class ::fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>
     final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  void TwoWayComposed(
+  ::fidl::internal::NaturalThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposed>
+  TwoWayComposed(
       ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposed>
-          request,
-      ::fidl::ClientCallback<
-          ::test_protocolpayloads::MainProtocol::TwoWayComposed>&& _callback)
-      const;
+          request) const;
 
-  void TwoWayComposedWithError(
+  ::fidl::internal::NaturalThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
+  TwoWayComposedWithError(
       ::fidl::Request<
           ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
-          request,
-      ::fidl::ClientCallback<
-          ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>&&
-          _callback) const;
+          request) const;
 
-  void TwoWayLocal(
+  ::fidl::internal::NaturalThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocal>
+  TwoWayLocal(
       ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocal>
-          request,
-      ::fidl::ClientCallback<
-          ::test_protocolpayloads::MainProtocol::TwoWayLocal>&& _callback)
-      const;
+          request) const;
 
-  void TwoWayLocalWithError(
+  ::fidl::internal::NaturalThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
+  TwoWayLocalWithError(
       ::fidl::Request<
           ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
-          request,
-      ::fidl::ClientCallback<
-          ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>&&
-          _callback) const;
+          request) const;
 
-  void TwoWayImport(
+  ::fidl::internal::NaturalThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayImport>
+  TwoWayImport(
       ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImport>
-          request,
-      ::fidl::ClientCallback<
-          ::test_protocolpayloads::MainProtocol::TwoWayImport>&& _callback)
-      const;
+          request) const;
 
-  void TwoWayImportWithError(
+  ::fidl::internal::NaturalThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
+  TwoWayImportWithError(
       ::fidl::Request<
           ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
-          request,
-      ::fidl::ClientCallback<
-          ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>&&
-          _callback) const;
+          request) const;
 
-  void TwoWayAnon(
-      ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnon>
-          request,
-      ::fidl::ClientCallback<
-          ::test_protocolpayloads::MainProtocol::TwoWayAnon>&& _callback) const;
+  ::fidl::internal::NaturalThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnon>
+  TwoWayAnon(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnon>
+                 request) const;
 
-  void TwoWayAnonWithError(
+  ::fidl::internal::NaturalThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
+  TwoWayAnonWithError(
       ::fidl::Request<
           ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
-          request,
-      ::fidl::ClientCallback<
-          ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>&&
-          _callback) const;
+          request) const;
 
   ::fitx::result<::fidl::Error> OneWayComposed(
       ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayComposed>
