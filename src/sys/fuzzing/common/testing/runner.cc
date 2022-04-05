@@ -22,16 +22,6 @@ FakeRunner::FakeRunner(ExecutorPtr executor) : Runner(executor), workflow_(this)
 
 void FakeRunner::AddDefaults(Options* options) {}
 
-void FakeRunner::set_result(FuzzResult result) {
-  Runner::set_result(result);
-  result_ = result;
-}
-
-void FakeRunner::set_result_input(const Input& input) {
-  Runner::set_result_input(input);
-  result_input_ = input.Duplicate();
-}
-
 zx_status_t FakeRunner::AddToCorpus(CorpusType corpus_type, Input input) {
   auto* corpus = corpus_type == CorpusType::SEED ? &seed_corpus_ : &live_corpus_;
   corpus->push_back(std::move(input));
@@ -108,8 +98,6 @@ Status FakeRunner::CollectStatus() { return CopyStatus(status_); }
 
 ZxPromise<Artifact> FakeRunner::Run() {
   return fpromise::make_promise([this]() -> ZxResult<Artifact> {
-    Runner::set_result(result_);
-    Runner::set_result_input(result_input_);
     if (error_ != ZX_OK) {
       return fpromise::error(error_);
     }

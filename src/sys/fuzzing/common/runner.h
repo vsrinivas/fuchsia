@@ -45,8 +45,6 @@ class Runner {
 
   // Accessors.
   const ExecutorPtr& executor() const { return executor_; }
-  FuzzResult result() const { return result_; }
-  Input result_input() const { return result_input_.Duplicate(); }
 
   // Adds default values to unspecified options that are needed by objects of this class.
   virtual void AddDefaults(Options* options) = 0;
@@ -121,17 +119,11 @@ class Runner {
 
   explicit Runner(ExecutorPtr executor);
 
-  virtual void set_result(FuzzResult result) { result_ = result; }
-  virtual void set_result_input(const Input& input) { result_input_ = input.Duplicate(); }
-
   // These methods allow specific runners to implement actions that should be performed at the start
   // or end of a workflow. They are called automatically by |Workflow|. The runners may also create
   // additional tasks constrained to the workflow's |scope|.
   virtual void StartWorkflow(Scope& scope) {}
   virtual void FinishWorkflow() {}
-
-  // Resets the error state for subsequent actions.
-  virtual void ClearErrors();
 
   // Collects the current status, labels it with the given |reason|, and sends it all attached
   //|Monitor|s.
@@ -143,12 +135,8 @@ class Runner {
   void FinishMonitoring();
 
   ExecutorPtr executor_;
-  Scope scope_;
-
-  // Result variables.
-  FuzzResult result_ = FuzzResult::NO_ERRORS;
-  Input result_input_;
   MonitorClients monitors_;
+  Scope scope_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(Runner);
 };

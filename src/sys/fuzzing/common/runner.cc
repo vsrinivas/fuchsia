@@ -54,9 +54,4 @@ void Runner::UpdateMonitors(UpdateReason reason) {
   monitors_.Update(reason);
 }
 
-void Runner::ClearErrors() {
-  result_ = FuzzResult::NO_ERRORS;
-  result_input_.Clear();
-}
-
 }  // namespace fuzzing

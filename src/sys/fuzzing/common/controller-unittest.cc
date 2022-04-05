@@ -290,32 +290,9 @@ TEST_F(ControllerTest, AddMonitor) {
   EXPECT_EQ(monitor.reason(), UpdateReason::PULSE);
 }
 
-TEST_F(ControllerTest, GetResults) {
-  ControllerPtr controller;
-  Bind(controller.NewRequest(dispatcher()));
-
-  Artifact artifact(FuzzResult::DEATH, {0xde, 0xad, 0xbe, 0xef});
-  runner()->set_result(artifact.fuzz_result());
-  runner()->set_result_input(artifact.input());
-
-  Bridge<FidlArtifact> bridge;
-  controller->GetResults([completer = std::move(bridge.completer)](FuzzResult fuzz_result,
-                                                                   FidlInput fidl_input) mutable {
-    completer.complete_ok(MakeFidlArtifact(fuzz_result, std::move(fidl_input)));
-  });
-  FUZZING_EXPECT_OK(bridge.consumer.promise_or(fpromise::error())
-                        .or_else([] { return fpromise::error(ZX_ERR_CANCELED); })
-                        .and_then([&](FidlArtifact& fidl_artifact) {
-                          return AsyncSocketRead(executor(), std::move(fidl_artifact));
-                        }),
-                    std::move(artifact));
-  RunUntilIdle();
-}
-
-TEST_F(ControllerTest, Execute) {
+TEST_F(ControllerTest, ExecuteAndGetResults) {
   ControllerPtr controller;
   Bind(controller.NewRequest());
-  // ::fuchsia::fuzzer::Controller_Execute_Result result;
   Input input({0xde, 0xad, 0xbe, 0xef});
 
   runner()->set_error(ZX_ERR_WRONG_TYPE);
@@ -332,6 +309,20 @@ TEST_F(ControllerTest, Execute) {
   controller->Execute(AsyncSocketWrite(executor(), input.Duplicate()),
                       ZxBind<FuzzResult>(std::move(bridge2.completer)));
   FUZZING_EXPECT_OK(bridge2.consumer.promise(), FuzzResult::OOM);
+  RunUntilIdle();
+
+  Bridge<FidlArtifact> bridge3;
+  controller->GetResults([completer = std::move(bridge3.completer)](FuzzResult fuzz_result,
+                                                                    FidlInput fidl_input) mutable {
+    completer.complete_ok(MakeFidlArtifact(fuzz_result, std::move(fidl_input)));
+  });
+  Artifact artifact(FuzzResult::OOM, input.Duplicate());
+  FUZZING_EXPECT_OK(bridge3.consumer.promise_or(fpromise::error())
+                        .or_else([] { return fpromise::error(ZX_ERR_CANCELED); })
+                        .and_then([&](FidlArtifact& fidl_artifact) {
+                          return AsyncSocketRead(executor(), std::move(fidl_artifact));
+                        }),
+                    std::move(artifact));
   RunUntilIdle();
 }
 

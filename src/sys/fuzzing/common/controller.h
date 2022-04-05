@@ -66,11 +66,12 @@ class ControllerImpl : public Controller {
   // Returns a promise to configure the runner if needed.
   ZxPromise<> Initialize();
 
-  bool initialized_ = false;
   fidl::Binding<Controller> binding_;
   ExecutorPtr executor_;
   RunnerPtr runner_;
   OptionsPtr options_;
+  bool initialized_ = false;
+  Artifact artifact_;
   Scope scope_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(ControllerImpl);

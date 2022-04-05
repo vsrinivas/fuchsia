@@ -35,10 +35,8 @@ class FakeRunner final : public Runner {
   void set_seed_corpus(std::vector<Input>&& seed_corpus) { seed_corpus_ = std::move(seed_corpus); }
   void set_live_corpus(std::vector<Input>&& live_corpus) { live_corpus_ = std::move(live_corpus); }
 
-  // These overrides forward to the base class, but also stash a copy of their parameters locally in
-  // this class. This lets |Run| reapply them after the base class calls |ClearErrors|.
-  void set_result(FuzzResult result) override;
-  void set_result_input(const Input& input) override;
+  void set_result(FuzzResult result) { result_ = result; }
+  void set_result_input(const Input& input) { result_input_ = input.Duplicate(); }
 
   void AddDefaults(Options* options) override;
   zx_status_t AddToCorpus(CorpusType corpus_type, Input input) override;

@@ -84,7 +84,6 @@ ZxPromise<Input> SimpleFixedRunner::Minimize(Input input) {
            auto max_runs = options_->runs();
            // Minimize: just try to remove bytes and see if it still crashes.
            for (; max_runs == 0 || run_ < max_runs; ++run_) {
-             ClearErrors();
              bool found = false;
              for (size_t i = 0; i < size; ++i) {
                Input next;
@@ -133,8 +132,6 @@ ZxPromise<Input> SimpleFixedRunner::Cleanse(Input input) {
              cleansed = artifact.take_input();
              if (artifact.fuzz_result() == FuzzResult::NO_ERRORS) {
                data[i] = original;
-             } else {
-               ClearErrors();
              }
            }
            return fpromise::ok(std::move(cleansed));
@@ -272,10 +269,7 @@ Artifact SimpleFixedRunner::TestOne(Input input) {
   for (size_t i = 0; i < num_candidates; ++i) {
     // Crash if the pattern is found in the data.
     if (memcmp(&data[i], kPattern, pat_size) == 0) {
-      auto artifact = Artifact(FuzzResult::CRASH, std::move(input));
-      set_result(artifact.fuzz_result());
-      set_result_input(artifact.input());
-      return artifact;
+      return Artifact(FuzzResult::CRASH, std::move(input));
     }
   }
   return Artifact(FuzzResult::NO_ERRORS, std::move(input));

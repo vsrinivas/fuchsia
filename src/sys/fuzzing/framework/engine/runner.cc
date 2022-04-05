@@ -700,7 +700,6 @@ ZxPromise<Artifact> RunnerImpl::TestInputs(PostProcessing mode, InputsPtr collec
             // If collecting errors, clear errors and continue. Simulate already having attempted to
             // |detect_leaks| to true to skip analysis and leak detection.
             collect_errors->emplace_back(std::move(input));
-            ClearErrors();
             detect_leaks = true;
             run = nullptr;
           } else {
@@ -988,7 +987,6 @@ void RunnerImpl::Disconnect() {
 void RunnerImpl::Reset() {
   generated_.Clear();
   processed_.Clear();
-  ClearErrors();
   generated_.Reset();
   processed_.Reset();
 }

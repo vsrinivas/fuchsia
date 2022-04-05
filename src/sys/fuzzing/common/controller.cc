@@ -40,6 +40,7 @@ void ControllerImpl::AddDefaults() {
 
 ZxPromise<> ControllerImpl::Initialize() {
   FX_CHECK(runner_);
+  artifact_ = Artifact();
   return fpromise::make_promise(
              [this, configure = ZxFuture<>()](Context& context) mutable -> ZxResult<> {
                if (initialized_) {
@@ -148,18 +149,25 @@ void ControllerImpl::AddMonitor(fidl::InterfaceHandle<Monitor> monitor,
 }
 
 void ControllerImpl::GetResults(GetResultsCallback callback) {
-  callback(runner_->result(), AsyncSocketWrite(executor_, runner_->result_input()));
+  const auto& input = artifact_.input();
+  callback(artifact_.fuzz_result(), AsyncSocketWrite(executor_, input.Duplicate()));
 }
 
 void ControllerImpl::Execute(FidlInput fidl_input, ExecuteCallback callback) {
-  auto task =
-      Initialize()
-          .and_then(AsyncSocketRead(executor_, std::move(fidl_input)))
-          .and_then([this](Input& received) { return runner_->Execute(std::move(received)); })
-          .then([callback = std::move(callback)](ZxResult<FuzzResult>& result) {
-            callback(std::move(result));
-          })
-          .wrap_with(scope_);
+  auto task = Initialize()
+                  .and_then(AsyncSocketRead(executor_, std::move(fidl_input)))
+                  .and_then([this](Input& received) {
+                    artifact_ = Artifact(FuzzResult::NO_ERRORS, received.Duplicate());
+                    return runner_->Execute(std::move(received));
+                  })
+                  .then([this, callback = std::move(callback)](ZxResult<FuzzResult>& result) {
+                    if (result.is_ok()) {
+                      auto input = artifact_.take_input();
+                      artifact_ = Artifact(result.value(), std::move(input));
+                    }
+                    callback(std::move(result));
+                  })
+                  .wrap_with(scope_);
   executor_->schedule_task(std::move(task));
 }
 
@@ -169,6 +177,7 @@ void ControllerImpl::Minimize(FidlInput fidl_input, MinimizeCallback callback) {
           .and_then(AsyncSocketRead(executor_, std::move(fidl_input)))
           .and_then([this](Input& received) { return runner_->Minimize(std::move(received)); })
           .and_then([this](Input& input) {
+            artifact_ = Artifact(FuzzResult::NO_ERRORS, input.Duplicate());
             return fpromise::ok(AsyncSocketWrite(executor_, std::move(input)));
           })
           .then([callback = std::move(callback)](ZxResult<FidlInput>& result) {
@@ -184,6 +193,7 @@ void ControllerImpl::Cleanse(FidlInput fidl_input, CleanseCallback callback) {
           .and_then(AsyncSocketRead(executor_, std::move(fidl_input)))
           .and_then([this](Input& received) { return runner_->Cleanse(std::move(received)); })
           .and_then([this](Input& input) {
+            artifact_ = Artifact(FuzzResult::NO_ERRORS, input.Duplicate());
             return fpromise::ok(AsyncSocketWrite(executor_, std::move(input)));
           })
           .then([callback = std::move(callback)](ZxResult<FidlInput>& result) {
@@ -197,6 +207,7 @@ void ControllerImpl::Fuzz(FuzzCallback callback) {
   auto task = Initialize()
                   .and_then(runner_->Fuzz())
                   .and_then([this](Artifact& artifact) {
+                    artifact_ = artifact.Duplicate();
                     return fpromise::ok(AsyncSocketWrite(executor_, std::move(artifact)));
                   })
                   .then([callback = std::move(callback)](ZxResult<FidlArtifact>& result) {
