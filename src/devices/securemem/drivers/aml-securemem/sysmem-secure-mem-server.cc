@@ -5,6 +5,7 @@
 #include "sysmem-secure-mem-server.h"
 
 #include <lib/async-loop/default.h>
+#include <lib/fdf/dispatcher.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fit/defer.h>
 
@@ -14,16 +15,15 @@
 
 #include "log.h"
 
-SysmemSecureMemServer::SysmemSecureMemServer(thrd_t ddk_dispatcher_thread,
+SysmemSecureMemServer::SysmemSecureMemServer(const fdf_dispatcher_t* fdf_dispatcher,
                                              zx::channel tee_client_channel)
-    : ddk_dispatcher_thread_(ddk_dispatcher_thread),
-      loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+    : fdf_dispatcher_(fdf_dispatcher), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   ZX_DEBUG_ASSERT(tee_client_channel);
   tee_connection_.Bind(std::move(tee_client_channel));
 }
 
 SysmemSecureMemServer::~SysmemSecureMemServer() {
-  ZX_DEBUG_ASSERT(thrd_current() == ddk_dispatcher_thread_);
+  ZX_DEBUG_ASSERT(fdf_dispatcher_get_current_dispatcher() == fdf_dispatcher_);
   ZX_DEBUG_ASSERT(!is_protect_memory_range_active_);
   ZX_DEBUG_ASSERT(is_loop_done_ || !was_thread_started_);
   if (was_thread_started_) {
@@ -47,7 +47,7 @@ zx_status_t SysmemSecureMemServer::BindAsync(zx::channel sysmem_secure_mem_serve
   ZX_DEBUG_ASSERT(sysmem_secure_mem_server);
   ZX_DEBUG_ASSERT(sysmem_secure_mem_server_thread);
   ZX_DEBUG_ASSERT(secure_mem_server_done);
-  ZX_DEBUG_ASSERT(thrd_current() == ddk_dispatcher_thread_);
+  ZX_DEBUG_ASSERT(fdf_dispatcher_get_current_dispatcher() == fdf_dispatcher_);
   zx_status_t status = loop_.StartThread("sysmem_secure_mem_server_loop", &loop_thread_);
   if (status != ZX_OK) {
     LOG(ERROR, "loop_.StartThread() failed - status: %d", status);
@@ -56,8 +56,8 @@ zx_status_t SysmemSecureMemServer::BindAsync(zx::channel sysmem_secure_mem_serve
   was_thread_started_ = true;
   // This probably goes without saying, but it's worth pointing out that the loop_thread_ must be
   // separate from the ddk_dispatcher_thread_ so that TEEC_* calls made on the loop_thread_ can be
-  // served by the ddk_dispatcher_thread_ without deadlock.
-  ZX_DEBUG_ASSERT(ddk_dispatcher_thread_ != loop_thread_);
+  // served by the fdf dispatcher without deadlock.
+  ZX_DEBUG_ASSERT(thrd_current() != loop_thread_);
   closure_queue_.SetDispatcher(loop_.dispatcher(), loop_thread_);
   *sysmem_secure_mem_server_thread = loop_thread_;
   secure_mem_server_done_ = std::move(secure_mem_server_done);
@@ -66,7 +66,7 @@ zx_status_t SysmemSecureMemServer::BindAsync(zx::channel sysmem_secure_mem_serve
     zx_status_t status = fidl::BindSingleInFlightOnly<SysmemSecureMemServer>(
         loop_.dispatcher(), std::move(sysmem_secure_mem_server), this,
         [this](SysmemSecureMemServer* sysmem_secure_mem_server) {
-          // This can get called from the ddk_dispatcher_thread_ if
+          // This can get called from the fdf dispatcher if
           // we're doing loop_.Shutdown() to unbind an llcpp server (so
           // far the only way to unbind an llcpp server).  However, in
           // this case the call to EnsureLoopDone() will idempotently do
@@ -87,7 +87,7 @@ zx_status_t SysmemSecureMemServer::BindAsync(zx::channel sysmem_secure_mem_serve
 void SysmemSecureMemServer::StopAsync() {
   // The only way to unbind an llcpp server is to Shutdown() the loop, but before we can do that we
   // have to Quit() the loop.
-  ZX_DEBUG_ASSERT(thrd_current() == ddk_dispatcher_thread_);
+  ZX_DEBUG_ASSERT(fdf_dispatcher_get_current_dispatcher() == fdf_dispatcher_);
   ZX_DEBUG_ASSERT(was_thread_started_);
   PostToLoop([this] {
     ZX_DEBUG_ASSERT(thrd_current() == loop_thread_);
@@ -129,7 +129,7 @@ void SysmemSecureMemServer::SetPhysicalSecureHeaps(
 
 void SysmemSecureMemServer::PostToLoop(fit::closure to_run) {
   // For now this is only expected to be called from ddk_dispatcher_thread_.
-  ZX_DEBUG_ASSERT(thrd_current() == ddk_dispatcher_thread_);
+  ZX_DEBUG_ASSERT(fdf_dispatcher_get_current_dispatcher() == fdf_dispatcher_);
   closure_queue_.Enqueue(std::move(to_run));
 }
 

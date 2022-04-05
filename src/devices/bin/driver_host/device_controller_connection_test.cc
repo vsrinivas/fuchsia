@@ -70,7 +70,6 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
   auto driver = Driver::Create(drv.get());
   ASSERT_OK(driver.status_value());
 
-
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&ctx, "test", *std::move(driver), &dev));
 

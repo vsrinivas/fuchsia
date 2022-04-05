@@ -131,8 +131,10 @@ zx_status_t VirtualAudioControlImpl::SendControl(zx::channel control_request_cha
   // VirtualAudioControlImpl is a singleton so just save the binding in a list. Using the default
   // dispatcher means that we will be running on the same that drives all of our peer devices in the
   // /dev/test device host. We should ensure there are no long VirtualAudioControl operations.
-  bindings_.AddBinding(this, fidl::InterfaceRequest<fuchsia::virtualaudio::Control>(
-                                 std::move(control_request_channel)));
+  bindings_.AddBinding(
+      this,
+      fidl::InterfaceRequest<fuchsia::virtualaudio::Control>(std::move(control_request_channel)),
+      dispatcher_);
   return ZX_OK;
 }
 
@@ -149,7 +151,8 @@ zx_status_t VirtualAudioControlImpl::SendInput(zx::channel input_request_channel
   // /dev/test device host. We should be mindful of this if doing long VirtualAudioInput operations.
   input_bindings_.AddBinding(
       VirtualAudioDeviceImpl::Create(this, true),
-      fidl::InterfaceRequest<fuchsia::virtualaudio::Input>(std::move(input_request_channel)));
+      fidl::InterfaceRequest<fuchsia::virtualaudio::Input>(std::move(input_request_channel)),
+      dispatcher_);
 
   auto* binding = input_bindings_.bindings().back().get();
   binding->impl()->SetBinding(binding);
@@ -169,7 +172,8 @@ zx_status_t VirtualAudioControlImpl::SendOutput(zx::channel output_request_chann
   // operations.
   output_bindings_.AddBinding(
       VirtualAudioDeviceImpl::Create(this, false),
-      fidl::InterfaceRequest<fuchsia::virtualaudio::Output>(std::move(output_request_channel)));
+      fidl::InterfaceRequest<fuchsia::virtualaudio::Output>(std::move(output_request_channel)),
+      dispatcher_);
 
   auto* binding = output_bindings_.bindings().back().get();
   binding->impl()->SetBinding(binding);

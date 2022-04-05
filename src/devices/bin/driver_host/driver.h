@@ -33,7 +33,7 @@ class Driver : public fbl::RefCounted<Driver> {
 
   zx_driver_t* zx_driver() const { return zx_driver_; }
 
-  fdf::UnownedDispatcher dispatcher() { return dispatcher_.borrow(); }
+  fdf::UnownedDispatcher dispatcher() const { return dispatcher_.borrow(); }
 
  private:
   zx_driver_t* zx_driver_;

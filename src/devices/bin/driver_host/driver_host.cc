@@ -712,8 +712,9 @@ StatusOrConn DriverHostControllerConnection::CreateProxyDevice(CreateDeviceReque
       .coordinator_client = coordinator.Clone(),
   };
 
-  status = drv->CreateOp(&creation_context, driver, creation_context.parent, "proxy",
-                         proxy.proxy_args.data(), proxy.parent_proxy.release());
+  status =
+      drv->CreateOp(&creation_context, creation_context.parent->driver, creation_context.parent,
+                    "proxy", proxy.proxy_args.data(), proxy.parent_proxy.release());
 
   // Suppress a warning about dummy device being in a bad state.  The
   // message is spurious in this case, since the dummy parent never

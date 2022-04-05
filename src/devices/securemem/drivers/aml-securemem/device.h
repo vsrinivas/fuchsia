@@ -56,7 +56,7 @@ class AmlogicSecureMemDevice : public AmlogicSecureMemDeviceBase,
 
   zx_status_t CreateAndServeSysmemTee();
 
-  thrd_t ddk_dispatcher_thread_ = {};
+  fdf_dispatcher_t* fdf_dispatcher_ = nullptr;
   ddk::PDevProtocolClient pdev_proto_client_;
   ddk::SysmemProtocolClient sysmem_proto_client_;
   ddk::TeeProtocolClient tee_proto_client_;
@@ -78,7 +78,7 @@ class AmlogicSecureMemDevice : public AmlogicSecureMemDeviceBase,
   bool is_suspend_mexec_ = false;
 
   // Last on purpose.
-  ClosureQueue ddk_loop_closure_queue_;
+  ClosureQueue fdf_dispatcher_closure_queue_;
 };
 
 }  // namespace amlogic_secure_mem

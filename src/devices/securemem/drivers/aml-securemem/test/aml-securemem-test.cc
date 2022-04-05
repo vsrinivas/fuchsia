@@ -6,9 +6,12 @@
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
-#include <lib/async-loop/default.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fake_ddk/fake_ddk.h>
+#include <lib/fdf/cpp/dispatcher.h>
+#include <lib/fdf/internal.h>
 #include <lib/fpromise/result.h>
+#include <lib/sync/cpp/completion.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/resource.h>
 #include <zircon/limits.h>
@@ -107,7 +110,7 @@ class FakeTee : public ddk::TeeProtocol<FakeTee> {
 
 class AmlogicSecureMemTest : public zxtest::Test {
  protected:
-  AmlogicSecureMemTest() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {
+  AmlogicSecureMemTest() {
     pdev_.UseFakeBti();
 
     static constexpr size_t kNumBindFragments = 3;
@@ -116,6 +119,7 @@ class AmlogicSecureMemTest : public zxtest::Test {
                                                   kNumBindFragments);
     fragments[0] = pdev_.fragment();
     fragments[1].name = "sysmem";
+
     fragments[1].protocols.emplace_back(fake_ddk::ProtocolEntry{
         ZX_PROTOCOL_SYSMEM, *reinterpret_cast<const fake_ddk::Protocol*>(sysmem_.proto())});
     fragments[2].name = "tee";
@@ -124,7 +128,20 @@ class AmlogicSecureMemTest : public zxtest::Test {
 
     ddk_.SetFragments(std::move(fragments));
 
-    ASSERT_OK(amlogic_secure_mem::AmlogicSecureMemDevice::Create(nullptr, parent()));
+    // We initialize this in a dispatcher thread so that fdf_dispatcher_get_current_dispatcher
+    // works. This dispatcher isn't actually used in the test.
+    fdf_internal_push_driver(reinterpret_cast<void*>(0x12345678));
+    auto dispatcher = fdf::Dispatcher::Create(0);
+    fdf_internal_pop_driver();
+    ASSERT_OK(dispatcher.status_value());
+    dispatcher_ = *std::move(dispatcher);
+
+    libsync::Completion completion;
+    async::PostTask(dispatcher_.async_dispatcher(), [&]() {
+      ASSERT_OK(amlogic_secure_mem::AmlogicSecureMemDevice::Create(nullptr, parent()));
+      completion.Signal();
+    });
+    completion.Wait();
   }
 
   void TearDown() override {
@@ -134,7 +151,12 @@ class AmlogicSecureMemTest : public zxtest::Test {
     // given what aml-securemem is.
 
     ddk::SuspendTxn txn(dev()->zxdev(), DEV_POWER_STATE_D3COLD, false, DEVICE_SUSPEND_REASON_MEXEC);
-    dev()->DdkSuspend(std::move(txn));
+    libsync::Completion completion;
+    async::PostTask(dispatcher_.async_dispatcher(), [&]() {
+      dev()->DdkSuspend(std::move(txn));
+      completion.Signal();
+    });
+    completion.Wait();
   }
 
   zx_device_t* parent() { return reinterpret_cast<zx_device_t*>(&ctx_); }
@@ -142,13 +164,12 @@ class AmlogicSecureMemTest : public zxtest::Test {
   amlogic_secure_mem::AmlogicSecureMemDevice* dev() { return ctx_.dev.get(); }
 
  private:
-  // Default dispatcher for the test thread.  Not used to actually dispatch in these tests so far.
-  async::Loop loop_;
   Binder ddk_;
   fake_pdev::FakePDev pdev_;
   FakeSysmem sysmem_;
   FakeTee tee_;
   Context ctx_ = {};
+  fdf::Dispatcher dispatcher_;
 };
 
 TEST_F(AmlogicSecureMemTest, GetSecureMemoryPhysicalAddressBadVmo) {

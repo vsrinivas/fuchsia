@@ -14,6 +14,7 @@
 #include <lib/ddk/driver.h>
 #include <lib/fit/function.h>
 #include <lib/fpromise/result.h>
+#include <lib/sync/cpp/completion.h>
 #include <lib/trace/event.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
@@ -128,125 +129,222 @@ struct zx_device
   void CloseAllConnections();
 
   void InitOp() {
-    DriverStackManager dsm(driver.get());
+    libsync::Completion completion;
 
-    TraceLabelBuffer trace_label;
-    TRACE_DURATION("driver_host:driver-hooks", get_trace_label("init", &trace_label));
-    Dispatch(ops_->init);
+    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+      TraceLabelBuffer trace_label;
+      TRACE_DURATION("driver_host:driver-hooks", get_trace_label("init", &trace_label));
+      Dispatch(ops_->init);
+      completion.Signal();
+    });
+
+    completion.Wait();
   }
 
   zx_status_t OpenOp(zx_device_t** dev_out, uint32_t flags) {
-    DriverStackManager dsm(driver.get());
+    libsync::Completion completion;
+    zx_status_t status;
 
-    TraceLabelBuffer trace_label;
-    TRACE_DURATION("driver_host:driver-hooks", get_trace_label("open", &trace_label));
-    return Dispatch(ops_->open, ZX_OK, dev_out, flags);
+    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+      TraceLabelBuffer trace_label;
+      TRACE_DURATION("driver_host:driver-hooks", get_trace_label("open", &trace_label));
+      status = Dispatch(ops_->open, ZX_OK, dev_out, flags);
+      completion.Signal();
+    });
+
+    completion.Wait();
+    return status;
   }
 
   zx_status_t CloseOp(uint32_t flags) {
-    DriverStackManager dsm(driver.get());
+    libsync::Completion completion;
+    zx_status_t status;
 
-    TraceLabelBuffer trace_label;
-    TRACE_DURATION("driver_host:driver-hooks", get_trace_label("close", &trace_label));
-    return Dispatch(ops_->close, ZX_OK, flags);
+    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+      TraceLabelBuffer trace_label;
+      TRACE_DURATION("driver_host:driver-hooks", get_trace_label("close", &trace_label));
+      status = Dispatch(ops_->close, ZX_OK, flags);
+      completion.Signal();
+    });
+
+    completion.Wait();
+    return status;
   }
 
   void UnbindOp() {
-    DriverStackManager dsm(driver.get());
+    libsync::Completion completion;
 
-    TraceLabelBuffer trace_label;
-    TRACE_DURATION("driver_host:driver-hooks", get_trace_label("unbind", &trace_label));
-    Dispatch(ops_->unbind);
+    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+      TraceLabelBuffer trace_label;
+      TRACE_DURATION("driver_host:driver-hooks", get_trace_label("unbind", &trace_label));
+      Dispatch(ops_->unbind);
+      completion.Signal();
+    });
+
+    completion.Wait();
   }
 
   zx_status_t ServiceConnectOp(const char* service_name, fdf_handle_t channel) {
-    DriverStackManager dsm(driver.get());
+    libsync::Completion completion;
+    zx_status_t status;
 
-    return Dispatch(ops_->service_connect, ZX_OK, service_name, channel);
+    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+      status = Dispatch(ops_->service_connect, ZX_OK, service_name, channel);
+      completion.Signal();
+    });
+
+    completion.Wait();
+    return status;
   }
 
   void ReleaseOp() {
-    DriverStackManager dsm(driver.get());
+    libsync::Completion completion;
 
-    TraceLabelBuffer trace_label;
-    TRACE_DURATION("driver_host:driver-hooks", get_trace_label("release", &trace_label));
-    Dispatch(ops_->release);
+    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+      TraceLabelBuffer trace_label;
+      TRACE_DURATION("driver_host:driver-hooks", get_trace_label("release", &trace_label));
+      Dispatch(ops_->release);
+      completion.Signal();
+    });
+
+    completion.Wait();
   }
 
   void SuspendNewOp(uint8_t requested_state, bool enable_wake, uint8_t suspend_reason) {
-    DriverStackManager dsm(driver.get());
+    libsync::Completion completion;
 
-    TraceLabelBuffer trace_label;
-    TRACE_DURATION("driver_host:driver-hooks", get_trace_label("suspend", &trace_label));
-    Dispatch(ops_->suspend, requested_state, enable_wake, suspend_reason);
+    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+      TraceLabelBuffer trace_label;
+      TRACE_DURATION("driver_host:driver-hooks", get_trace_label("suspend", &trace_label));
+      Dispatch(ops_->suspend, requested_state, enable_wake, suspend_reason);
+      completion.Signal();
+    });
+
+    completion.Wait();
   }
 
   zx_status_t SetPerformanceStateOp(uint32_t requested_state, uint32_t* out_state) {
-    DriverStackManager dsm(driver.get());
+    libsync::Completion completion;
+    zx_status_t status;
 
-    TraceLabelBuffer trace_label;
-    TRACE_DURATION("driver_host:driver-hooks",
-                   get_trace_label("set_performance_state", &trace_label));
-    return Dispatch(ops_->set_performance_state, ZX_ERR_NOT_SUPPORTED, requested_state, out_state);
+    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+      TraceLabelBuffer trace_label;
+      TRACE_DURATION("driver_host:driver-hooks",
+                     get_trace_label("set_performance_state", &trace_label));
+      status =
+          Dispatch(ops_->set_performance_state, ZX_ERR_NOT_SUPPORTED, requested_state, out_state);
+      completion.Signal();
+    });
+
+    completion.Wait();
+    return status;
   }
 
   zx_status_t ConfigureAutoSuspendOp(bool enable, uint8_t requested_state) {
-    DriverStackManager dsm(driver.get());
+    libsync::Completion completion;
+    zx_status_t status;
 
-    TraceLabelBuffer trace_label;
-    TRACE_DURATION("driver_host:driver-hooks", get_trace_label("conf_auto_suspend", &trace_label));
-    return Dispatch(ops_->configure_auto_suspend, ZX_ERR_NOT_SUPPORTED, enable, requested_state);
+    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+      TraceLabelBuffer trace_label;
+      TRACE_DURATION("driver_host:driver-hooks",
+                     get_trace_label("conf_auto_suspend", &trace_label));
+      status =
+          Dispatch(ops_->configure_auto_suspend, ZX_ERR_NOT_SUPPORTED, enable, requested_state);
+      completion.Signal();
+    });
+
+    completion.Wait();
+    return status;
   }
 
   void ResumeNewOp(uint32_t requested_state) {
-    DriverStackManager dsm(driver.get());
+    libsync::Completion completion;
 
-    TraceLabelBuffer trace_label;
-    TRACE_DURATION("driver_host:driver-hooks", get_trace_label("resume", &trace_label));
-    Dispatch(ops_->resume, requested_state);
+    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+      TraceLabelBuffer trace_label;
+      TRACE_DURATION("driver_host:driver-hooks", get_trace_label("resume", &trace_label));
+      Dispatch(ops_->resume, requested_state);
+      completion.Signal();
+    });
+
+    completion.Wait();
   }
 
   zx_status_t ReadOp(void* buf, size_t count, zx_off_t off, size_t* actual) {
-    DriverStackManager dsm(driver.get());
+    libsync::Completion completion;
+    zx_status_t status;
 
-    TraceLabelBuffer trace_label;
-    TRACE_DURATION("driver_host:driver-hooks", get_trace_label("read", &trace_label));
-    inspect_->ReadOpStats().Update();
-    return Dispatch(ops_->read, ZX_ERR_NOT_SUPPORTED, buf, count, off, actual);
+    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+      TraceLabelBuffer trace_label;
+      TRACE_DURATION("driver_host:driver-hooks", get_trace_label("read", &trace_label));
+      inspect_->ReadOpStats().Update();
+      status = Dispatch(ops_->read, ZX_ERR_NOT_SUPPORTED, buf, count, off, actual);
+      completion.Signal();
+    });
+
+    completion.Wait();
+    return status;
   }
 
   zx_status_t WriteOp(const void* buf, size_t count, zx_off_t off, size_t* actual) {
-    DriverStackManager dsm(driver.get());
+    libsync::Completion completion;
+    zx_status_t status;
 
-    TraceLabelBuffer trace_label;
-    TRACE_DURATION("driver_host:driver-hooks", get_trace_label("write", &trace_label));
-    inspect_->WriteOpStats().Update();
-    return Dispatch(ops_->write, ZX_ERR_NOT_SUPPORTED, buf, count, off, actual);
+    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+      TraceLabelBuffer trace_label;
+      TRACE_DURATION("driver_host:driver-hooks", get_trace_label("write", &trace_label));
+      inspect_->WriteOpStats().Update();
+      status = Dispatch(ops_->write, ZX_ERR_NOT_SUPPORTED, buf, count, off, actual);
+      completion.Signal();
+    });
+
+    completion.Wait();
+    return status;
   }
 
   zx_off_t GetSizeOp() {
-    DriverStackManager dsm(driver.get());
+    libsync::Completion completion;
+    zx_off_t size;
 
-    TraceLabelBuffer trace_label;
-    TRACE_DURATION("driver_host:driver-hooks", get_trace_label("get_size", &trace_label));
-    return Dispatch(ops_->get_size, 0lu);
+    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+      TraceLabelBuffer trace_label;
+      TRACE_DURATION("driver_host:driver-hooks", get_trace_label("get_size", &trace_label));
+      size = Dispatch(ops_->get_size, 0lu);
+      completion.Signal();
+    });
+
+    completion.Wait();
+    return size;
   }
 
   zx_status_t MessageOp(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    DriverStackManager dsm(driver.get());
+    libsync::Completion completion;
+    zx_status_t status;
 
-    TraceLabelBuffer trace_label;
-    TRACE_DURATION("driver_host:driver-hooks", get_trace_label("message", &trace_label));
-    inspect_->MessageOpStats().Update();
-    return Dispatch(ops_->message, ZX_ERR_NOT_SUPPORTED, msg, txn);
+    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+      TraceLabelBuffer trace_label;
+      TRACE_DURATION("driver_host:driver-hooks", get_trace_label("message", &trace_label));
+      inspect_->MessageOpStats().Update();
+      status = Dispatch(ops_->message, ZX_ERR_NOT_SUPPORTED, msg, txn);
+      completion.Signal();
+    });
+
+    completion.Wait();
+    return status;
   }
 
   void ChildPreReleaseOp(void* child_ctx) {
-    DriverStackManager dsm(driver.get());
+    libsync::Completion completion;
 
-    TraceLabelBuffer trace_label;
-    TRACE_DURATION("driver_host:driver-hooks", get_trace_label("child_pre_release", &trace_label));
-    Dispatch(ops_->child_pre_release, child_ctx);
+    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+      TraceLabelBuffer trace_label;
+      TRACE_DURATION("driver_host:driver-hooks",
+                     get_trace_label("child_pre_release", &trace_label));
+      Dispatch(ops_->child_pre_release, child_ctx);
+      completion.Signal();
+    });
+
+    completion.Wait();
   }
 
   void set_bind_conn(fit::callback<void(zx_status_t)>);

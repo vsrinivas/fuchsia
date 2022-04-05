@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/closure-queue/closure_queue.h>
+#include <lib/fdf/dispatcher.h>
 #include <threads.h>
 
 #include <optional>
@@ -21,7 +22,7 @@ class SysmemSecureMemServer : public fidl::WireServer<fuchsia_sysmem::SecureMem>
  public:
   using SecureMemServerDone = fit::callback<void(bool is_success)>;
 
-  SysmemSecureMemServer(thrd_t ddk_dispatcher_thread, zx::channel loopback_tee_client);
+  SysmemSecureMemServer(const fdf_dispatcher_t* fdf_dispatcher, zx::channel loopback_tee_client);
   ~SysmemSecureMemServer() override;
 
   zx_status_t BindAsync(zx::channel sysmem_secure_mem_server,
@@ -50,7 +51,7 @@ class SysmemSecureMemServer : public fidl::WireServer<fuchsia_sysmem::SecureMem>
   // Call secmem TA to setup the one physical secure heap that's configured by sysmem.
   zx_status_t ProtectMemoryRange(uint64_t physical_address, uint64_t size_bytes);
 
-  thrd_t ddk_dispatcher_thread_ = {};
+  const fdf_dispatcher_t* fdf_dispatcher_ = nullptr;
   fuchsia::tee::ApplicationSyncPtr tee_connection_ = {};
   async::Loop loop_;
   thrd_t loop_thread_ = {};

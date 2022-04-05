@@ -41,6 +41,7 @@ source_set("common") {
     "scheduler_profile.cc",
     "tracing.cc",
     "zx_device.cc",
+    "zx_driver.cc",
   ]
 
   deps = [
@@ -72,6 +73,7 @@ source_set("common") {
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/sync:sync-cpp",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
     "//zircon/system/ulib/zircon-internal",

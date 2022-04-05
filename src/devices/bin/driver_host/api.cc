@@ -100,118 +100,121 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
 
   zx::vmo inspect(args->inspect_vmo);
 
-  {
-    auto api_ctx = internal::ContextForApi();
-    fbl::AutoLock lock(&api_ctx->api_lock());
+  auto api_ctx = internal::ContextForApi();
+  fbl::AutoLock lock(&api_ctx->api_lock());
 
-    fbl::RefPtr<Driver> driver;
-    auto* current = static_cast<Driver*>(const_cast<void*>(fdf_internal_get_current_driver()));
-    if (current != nullptr && current->zx_driver() == drv) {
-      // We try retrieve the current driver instance from the driver runtime first. If we are
-      // currently in a driver hook such as |bind| or |create| this will yield us the correct
-      // driver. It should also yeild us the correct driver in most other cases, however it's
-      // possible that it will yield the wrong driver if a device is added inside of a banjo call -
-      // this is why we also double check that the zx_driver objects line up.
-      driver = fbl::RefPtr<Driver>(current);
-    } else {
-      // Otherwise we fall back to assuming the driver is not in bind or create, and therefore the
-      // device being added is from the same driver instance as the parent. This can incorrectly
-      // occur if the driver adds a device to it's original parent inside of a dedicated thread it
-      // spawned.
-      driver = parent->driver;
-    }
+  fbl::RefPtr<Driver> driver;
+  auto* current = static_cast<Driver*>(const_cast<void*>(fdf_internal_get_current_driver()));
+  if (current != nullptr && current->zx_driver() == drv) {
+    // We try retrieve the current driver instance from the driver runtime first. If we are
+    // currently in a driver hook such as |bind| or |create| this will yield us the correct
+    // driver. It should also yeild us the correct driver in most other cases, however it's
+    // possible that it will yield the wrong driver if a device is added inside of a banjo call -
+    // this is why we also double check that the zx_driver objects line up.
+    driver = fbl::RefPtr<Driver>(current);
+  } else {
+    // Otherwise we fall back to assuming the driver is not in bind or create, and therefore the
+    // device being added is from the same driver instance as the parent. This can incorrectly
+    // occur if the driver adds a device to it's original parent inside of a dedicated thread it
+    // spawned.
+    driver = parent->driver;
+  }
 
-    r = api_ctx->DeviceCreate(std::move(driver), args->name, args->ctx, args->ops, &dev);
-    if (r != ZX_OK) {
-      return r;
-    }
-    if (args->proto_id) {
-      dev->set_protocol_id(args->proto_id);
-      dev->protocol_ops = args->proto_ops;
-    }
-    if (args->fidl_protocol_offers) {
-      dev->set_fidl_offers({args->fidl_protocol_offers, args->fidl_protocol_offer_count});
-    }
-    if (args->flags & DEVICE_ADD_NON_BINDABLE) {
-      dev->set_flag(DEV_FLAG_UNBINDABLE);
-    }
-    if (args->flags & DEVICE_ADD_ALLOW_MULTI_COMPOSITE) {
-      dev->set_flag(DEV_FLAG_ALLOW_MULTI_COMPOSITE);
-    }
+  r = api_ctx->DeviceCreate(std::move(driver), args->name, args->ctx, args->ops, &dev);
+  if (r != ZX_OK) {
+    return r;
+  }
+  if (args->proto_id) {
+    dev->set_protocol_id(args->proto_id);
+    dev->protocol_ops = args->proto_ops;
+  }
+  if (args->fidl_protocol_offers) {
+    dev->set_fidl_offers({args->fidl_protocol_offers, args->fidl_protocol_offer_count});
+  }
+  if (args->flags & DEVICE_ADD_NON_BINDABLE) {
+    dev->set_flag(DEV_FLAG_UNBINDABLE);
+  }
+  if (args->flags & DEVICE_ADD_ALLOW_MULTI_COMPOSITE) {
+    dev->set_flag(DEV_FLAG_ALLOW_MULTI_COMPOSITE);
+  }
 
-    if (!args->power_states) {
-      // TODO(fxbug.dev/34081): Remove when all drivers declare power states
-      // Temporarily allocate working and non-working power states
-      r = dev->SetPowerStates(internal::kDeviceDefaultPowerStates,
-                              std::size(internal::kDeviceDefaultPowerStates));
-    } else {
-      r = dev->SetPowerStates(args->power_states, args->power_state_count);
-    }
-    if (r != ZX_OK) {
-      return r;
-    }
+  if (!args->power_states) {
+    // TODO(fxbug.dev/34081): Remove when all drivers declare power states
+    // Temporarily allocate working and non-working power states
+    r = dev->SetPowerStates(internal::kDeviceDefaultPowerStates,
+                            std::size(internal::kDeviceDefaultPowerStates));
+  } else {
+    r = dev->SetPowerStates(args->power_states, args->power_state_count);
+  }
+  if (r != ZX_OK) {
+    return r;
+  }
 
-    if (args->performance_states && (args->performance_state_count != 0)) {
-      r = dev->SetPerformanceStates(args->performance_states, args->performance_state_count);
-    } else {
-      r = dev->SetPerformanceStates(internal::kDeviceDefaultPerfStates,
-                                    std::size(internal::kDeviceDefaultPerfStates));
-    }
+  if (args->performance_states && (args->performance_state_count != 0)) {
+    r = dev->SetPerformanceStates(args->performance_states, args->performance_state_count);
+  } else {
+    r = dev->SetPerformanceStates(internal::kDeviceDefaultPerfStates,
+                                  std::size(internal::kDeviceDefaultPerfStates));
+  }
 
-    if (r != ZX_OK) {
-      return r;
-    }
+  if (r != ZX_OK) {
+    return r;
+  }
 
-    // Set default system to device power state mapping. This can be later
-    // updated by the system power manager.
-    r = dev->SetSystemPowerStateMapping(internal::kDeviceDefaultStateMapping);
-    if (r != ZX_OK) {
-      return r;
-    }
+  // Set default system to device power state mapping. This can be later
+  // updated by the system power manager.
+  r = dev->SetSystemPowerStateMapping(internal::kDeviceDefaultStateMapping);
+  if (r != ZX_OK) {
+    return r;
+  }
 
-    fidl::ClientEnd<fio::Directory> outgoing_dir(zx::channel(args->outgoing_dir_channel));
-    if (outgoing_dir && !(args->flags & DEVICE_ADD_MUST_ISOLATE)) {
-      // It is only valid to provide outgoing_dir if child is meant to be spawned in another driver
-      // host.
-      return ZX_ERR_INVALID_ARGS;
-    }
+  fidl::ClientEnd<fio::Directory> outgoing_dir(zx::channel(args->outgoing_dir_channel));
+  if (outgoing_dir && !(args->flags & DEVICE_ADD_MUST_ISOLATE)) {
+    // It is only valid to provide outgoing_dir if child is meant to be spawned in another driver
+    // host.
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-    // out must be set before calling DeviceAdd().
-    // DeviceAdd() may result in child devices being created before it returns,
-    // and those children may call ops on the device before device_add() returns.
-    // This leaked-ref will be accounted below.
+  // out must be set before calling DeviceAdd().
+  // DeviceAdd() may result in child devices being created before it returns,
+  // and those children may call ops on the device before device_add() returns.
+  // This leaked-ref will be accounted below.
+  if (out) {
+    *out = dev.get();
+  }
+  if (args->flags & DEVICE_ADD_MUST_ISOLATE) {
+    r = api_ctx->DeviceAdd(dev, parent_ref, args, std::move(inspect), std::move(client_remote),
+                           std::move(outgoing_dir));
+  } else if (args->flags & DEVICE_ADD_INSTANCE) {
+    dev->set_flag(DEV_FLAG_INSTANCE | DEV_FLAG_UNBINDABLE);
+    // Set props and proxy args to null just in case:
+    args->str_prop_count = 0;
+    args->prop_count = 0;
+    args->proxy_args = nullptr;
+    r = api_ctx->DeviceAdd(dev, parent_ref, args, zx::vmo(), zx::channel() /* client_remote */,
+                           fidl::ClientEnd<fio::Directory>());
+  } else {
+    args->proxy_args = nullptr;
+    r = api_ctx->DeviceAdd(dev, parent_ref, args, std::move(inspect),
+                           zx::channel() /* client_remote */, fidl::ClientEnd<fio::Directory>());
+  }
+  if (r != ZX_OK) {
     if (out) {
-      *out = dev.get();
+      *out = nullptr;
     }
-    if (args->flags & DEVICE_ADD_MUST_ISOLATE) {
-      r = api_ctx->DeviceAdd(dev, parent_ref, args, std::move(inspect), std::move(client_remote),
-                             std::move(outgoing_dir));
-    } else if (args->flags & DEVICE_ADD_INSTANCE) {
-      dev->set_flag(DEV_FLAG_INSTANCE | DEV_FLAG_UNBINDABLE);
-      // Set props and proxy args to null just in case:
-      args->str_prop_count = 0;
-      args->prop_count = 0;
-      args->proxy_args = nullptr;
-      r = api_ctx->DeviceAdd(dev, parent_ref, args, zx::vmo(), zx::channel() /* client_remote */,
-                             fidl::ClientEnd<fio::Directory>());
-    } else {
-      args->proxy_args = nullptr;
-      r = api_ctx->DeviceAdd(dev, parent_ref, args, std::move(inspect),
-                             zx::channel() /* client_remote */, fidl::ClientEnd<fio::Directory>());
-    }
-    if (r != ZX_OK) {
-      if (out) {
-        *out = nullptr;
-      }
-      dev.reset();
-    }
+    dev.reset();
   }
 
   if (dev && client_remote.is_valid()) {
-    // This needs to be called outside the api lock, as device_open will be called
-    internal::ContextForApi()->DeviceConnect(
-        dev, fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable,
-        std::move(client_remote));
+    async::PostTask(
+        internal::ContextForApi()->loop().dispatcher(),
+        [dev, client_remote = std::move(client_remote)]() mutable {
+          // This needs to be called async because it would otherwise re-entrantly call
+          // back into the driver.
+          internal::ContextForApi()->DeviceConnect(
+              dev, fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable,
+              std::move(client_remote));
+        });
 
     // Leak the reference that was written to |out|, it will be recovered in device_remove().
     // For device instances we mimic the behavior of |open| by not leaking the reference,

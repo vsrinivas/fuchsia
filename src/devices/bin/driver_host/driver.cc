@@ -8,13 +8,14 @@
 
 #include <fbl/ref_ptr.h>
 
+#include "lib/fdf/dispatcher.h"
 #include "src/devices/bin/driver_host/driver_stack_manager.h"
 
 zx::status<fbl::RefPtr<Driver>> Driver::Create(zx_driver_t* zx_driver) {
   auto driver = fbl::MakeRefCounted<Driver>(zx_driver);
 
   DriverStackManager dsm(driver.get());
-  auto dispatcher = fdf::Dispatcher::Create(0);
+  auto dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS);
   if (dispatcher.is_error()) {
     return dispatcher.take_error();
   }

@@ -98,50 +98,19 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
 
   bool has_run_unit_tests_op() const { return ops_->run_unit_tests != nullptr; }
 
-  zx_status_t InitOp(const fbl::RefPtr<Driver>& driver) {
-    DriverStackManager dsm(driver.get());
-
-    return ops_->init(&ctx_);
-  }
+  zx_status_t InitOp(const fbl::RefPtr<Driver>& driver);
 
   zx_status_t BindOp(internal::BindContext* bind_context, const fbl::RefPtr<Driver>& driver,
-                     const fbl::RefPtr<zx_device_t>& device) const {
-    DriverStackManager dsm(driver.get());
-
-    fbl::StringBuffer<32> trace_label;
-    trace_label.AppendPrintf("%s:bind", name_);
-    TRACE_DURATION("driver_host:driver-hooks", trace_label.data());
-
-    internal::set_bind_context(bind_context);
-    auto status = ops_->bind(ctx_, device.get());
-    internal::set_bind_context(nullptr);
-    return status;
-  }
+                     const fbl::RefPtr<zx_device_t>& device) const;
 
   zx_status_t CreateOp(internal::CreationContext* creation_context,
                        const fbl::RefPtr<Driver>& driver, const fbl::RefPtr<zx_device_t>& parent,
-                       const char* name, const char* args, zx_handle_t rpc_channel) const {
-    DriverStackManager dsm(driver.get());
+                       const char* name, const char* args, zx_handle_t rpc_channel) const;
 
-    internal::set_creation_context(creation_context);
-    auto status = ops_->create(ctx_, parent.get(), name, args, rpc_channel);
-    internal::set_creation_context(nullptr);
-    return status;
-  }
-
-  void ReleaseOp(const fbl::RefPtr<Driver>& driver) const {
-    DriverStackManager dsm(driver.get());
-
-    // TODO(kulakowski/teisenbe) Consider poisoning the ops_ table on release.
-    ops_->release(ctx_);
-  }
+  void ReleaseOp(const fbl::RefPtr<Driver>& driver) const;
 
   bool RunUnitTestsOp(const fbl::RefPtr<zx_device_t>& parent, const fbl::RefPtr<Driver>& driver,
-                      zx::channel test_output) const {
-    DriverStackManager dsm(driver.get());
-
-    return ops_->run_unit_tests(ctx_, parent.get(), test_output.release());
-  }
+                      zx::channel test_output) const;
 
   zx_status_t ReconfigureLogger(cpp20::span<const char* const> tags) const;
 

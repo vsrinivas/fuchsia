@@ -9,6 +9,7 @@
 #include <lib/async/default.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/fdf/dispatcher.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls/object.h>
 
@@ -36,8 +37,9 @@ zx_status_t AmlogicSecureMemDevice::Create(void* ctx, zx_device_t* parent) {
 }
 
 zx_status_t AmlogicSecureMemDevice::Bind() {
-  ddk_dispatcher_thread_ = thrd_current();
-  ddk_loop_closure_queue_.SetDispatcher(async_get_default_dispatcher(), ddk_dispatcher_thread_);
+  fdf_dispatcher_ = fdf_dispatcher_get_current_dispatcher();
+  fdf_dispatcher_closure_queue_.SetDispatcher(fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_),
+                                              0);
 
   zx_status_t status = ZX_OK;
   status = ddk::PDevProtocolClient::CreateFromDevice(parent(), "pdev", &pdev_proto_client_);
@@ -106,14 +108,14 @@ void AmlogicSecureMemDevice::DdkSuspend(ddk::SuspendTxn txn) {
     is_suspend_mexec_ = true;
 
     // We'd like this to be able to suspend async, but instead since DdkSuspend() is a sync call, we
-    // have to pump the ddk_loop_closure_queue_ below (so far).
+    // have to pump the fdf_dispatcher_closure_queue_ below (so far).
     sysmem_secure_mem_server_->StopAsync();
 
     // TODO(dustingreen): If DdkSuspend() becomes async, consider not running closures directly
     // here.  Or, if llcpp server binding permits unbind by an owner of the binding without
     // requiring the whole dispatcher to shutdown, consider not running closures directly here.
     while (sysmem_secure_mem_server_) {
-      ddk_loop_closure_queue_.RunOneHere();
+      fdf_dispatcher_closure_queue_.RunOneHere();
     }
   }
 
@@ -187,7 +189,7 @@ zx_status_t AmlogicSecureMemDevice::CreateAndServeSysmemTee() {
     LOG(ERROR, "optee: tee_client_.ConnectToApplication() failed - status: %d", status);
     return status;
   }
-  sysmem_secure_mem_server_.emplace(ddk_dispatcher_thread_, std::move(tee_device_client));
+  sysmem_secure_mem_server_.emplace(fdf_dispatcher_, std::move(tee_device_client));
   zx::channel sysmem_secure_mem_client;
   zx::channel sysmem_secure_mem_server;
   status = zx::channel::create(0, &sysmem_secure_mem_client, &sysmem_secure_mem_server);
@@ -199,8 +201,8 @@ zx_status_t AmlogicSecureMemDevice::CreateAndServeSysmemTee() {
       std::move(sysmem_secure_mem_server), &sysmem_secure_mem_server_thread_,
       [this](bool is_success) {
         ZX_DEBUG_ASSERT(thrd_current() == sysmem_secure_mem_server_thread_);
-        ddk_loop_closure_queue_.Enqueue([this, is_success] {
-          ZX_DEBUG_ASSERT(thrd_current() == ddk_dispatcher_thread_);
+        fdf_dispatcher_closure_queue_.Enqueue([this, is_success] {
+          ZX_DEBUG_ASSERT(fdf_dispatcher_get_current_dispatcher() == fdf_dispatcher_);
           // Else the current lambda wouldn't be running.
           ZX_DEBUG_ASSERT(sysmem_secure_mem_server_);
           if (!is_success) {
@@ -241,7 +243,7 @@ zx_status_t AmlogicSecureMemDevice::CreateAndServeSysmemTee() {
           sysmem_secure_mem_server_.reset();
           LOG(DEBUG, "Done serving fuchsia::sysmem::Tee");
           // TODO(dustingreen): If DdkSuspend() were async, we could potentially finish the suspend
-          // here instead of pumping ddk_loop_closure_queue_ until !sysmem_secure_mem_server_.
+          // here instead of pumping fdf_dispatcher_closure_queue_ until !sysmem_secure_mem_server_.
           // Similar for an async DdkUnbind() (assuming that ever needs to be handled in this
           // driver).
         });

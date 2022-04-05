@@ -752,8 +752,8 @@ void DriverHostContext::DeviceSystemSuspend(const fbl::RefPtr<zx_device>& dev, u
       enum_lock_acquire();
       {
         api_lock_.Release();
-        dev->ops()->suspend(dev->ctx, static_cast<uint8_t>(new_state_info.dev_state),
-                            new_state_info.wakeup_enable, suspend_reason);
+        dev->SuspendNewOp(static_cast<uint8_t>(new_state_info.dev_state),
+                          new_state_info.wakeup_enable, suspend_reason);
         api_lock_.Acquire();
       }
       enum_lock_release();

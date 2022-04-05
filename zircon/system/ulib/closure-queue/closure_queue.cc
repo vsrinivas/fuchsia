@@ -67,7 +67,6 @@ std::shared_ptr<ClosureQueue::Impl> ClosureQueue::Impl::Create(async_dispatcher_
 ClosureQueue::Impl::Impl(async_dispatcher_t* dispatcher, thrd_t dispatcher_thread)
     : dispatcher_(dispatcher), dispatcher_thread_(dispatcher_thread) {
   ZX_DEBUG_ASSERT(dispatcher_);
-  ZX_DEBUG_ASSERT(dispatcher_thread);
 }
 
 ClosureQueue::Impl::~Impl() {
@@ -120,7 +119,9 @@ void ClosureQueue::Impl::StopAndClear() {
   // is on the dispatcher_thread_.  It's fine to ~ClosureQueue on a different
   // thread as long as we've previously run StopAndClear() on
   // dispatcher_thread_.
-  ZX_DEBUG_ASSERT(thrd_current() == dispatcher_thread_);
+  if (dispatcher_thread_) {
+    ZX_DEBUG_ASSERT(thrd_current() == dispatcher_thread_);
+  }
   local_pending.swap(pending_);
   local_pending_on_dispatcher_thread.swap(pending_on_dispatcher_thread_);
   dispatcher_ = nullptr;
@@ -142,7 +143,9 @@ bool ClosureQueue::Impl::is_stopped() {
 // unrelated tasks/work that needs to run on the current thread has a chance to
 // run.
 void ClosureQueue::Impl::TryRunAll() {
-  ZX_DEBUG_ASSERT(thrd_current() == dispatcher_thread_);
+  if (dispatcher_thread_) {
+    ZX_DEBUG_ASSERT(thrd_current() == dispatcher_thread_);
+  }
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
     // StopAndClear() can only be called on the dispatcher_thread_, so we're
@@ -159,8 +162,7 @@ void ClosureQueue::Impl::TryRunAll() {
     // used.
   }  // ~lock
   while (!pending_on_dispatcher_thread_.empty()) {
-    fit::closure local_to_run =
-        std::move(pending_on_dispatcher_thread_.front());
+    fit::closure local_to_run = std::move(pending_on_dispatcher_thread_.front());
     pending_on_dispatcher_thread_.pop();
     local_to_run();
     // local_to_run() may have run StopAndClear().
@@ -173,7 +175,9 @@ void ClosureQueue::Impl::TryRunAll() {
 }
 
 void ClosureQueue::Impl::RunOneHere() {
-  ZX_DEBUG_ASSERT(thrd_current() == dispatcher_thread_);
+  if (dispatcher_thread_) {
+    ZX_DEBUG_ASSERT(thrd_current() == dispatcher_thread_);
+  }
   fit::closure local_to_run;
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
