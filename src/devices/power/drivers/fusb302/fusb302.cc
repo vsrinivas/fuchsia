@@ -604,7 +604,7 @@ zx_status_t Fusb302::InitInspect() {
 }
 
 zx_status_t Fusb302::Create(void* context, zx_device_t* parent) {
-  ddk::I2cChannel i2c(parent, "i2c");
+  ddk::I2cProtocolClient i2c(parent, "i2c");
   if (!i2c.is_valid()) {
     zxlogf(ERROR, "Failed to get I2C");
     return ZX_ERR_INTERNAL;
@@ -626,7 +626,7 @@ zx_status_t Fusb302::Create(void* context, zx_device_t* parent) {
   }
 
   fbl::AllocChecker ac;
-  std::unique_ptr<Fusb302> device(new (&ac) Fusb302(parent, i2c, std::move(irq)));
+  std::unique_ptr<Fusb302> device(new (&ac) Fusb302(parent, std::move(i2c), std::move(irq)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

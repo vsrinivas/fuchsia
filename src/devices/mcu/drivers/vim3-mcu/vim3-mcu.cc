@@ -32,7 +32,7 @@ zx_status_t StmMcu::Create(void* ctx, zx_device_t* parent) {
   }
 
   fbl::AllocChecker ac;
-  std::unique_ptr<StmMcu> device(new (&ac) StmMcu(parent, i2c));
+  std::unique_ptr<StmMcu> device(new (&ac) StmMcu(parent, std::move(i2c)));
   if (!ac.check()) {
     zxlogf(ERROR, "StmMcu alloc failed");
     return ZX_ERR_NO_MEMORY;

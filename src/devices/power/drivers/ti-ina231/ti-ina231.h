@@ -31,7 +31,7 @@ class Ina231Device : public DeviceType,
       : DeviceType(parent),
         shunt_resistor_uohms_(shunt_resistor_uohms),
         loop_(&kAsyncLoopConfigNeverAttachToThread),
-        i2c_(i2c) {}
+        i2c_(std::move(i2c)) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 

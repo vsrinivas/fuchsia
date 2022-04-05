@@ -21,7 +21,8 @@ using DeviceType = ddk::Device<Shtv3Device, ddk::Messageable<temperature_fidl::D
 
 class Shtv3Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TEMPERATURE> {
  public:
-  Shtv3Device(zx_device_t* parent, ddk::I2cChannel i2c) : DeviceType(parent), i2c_(i2c) {}
+  Shtv3Device(zx_device_t* parent, ddk::I2cChannel i2c)
+      : DeviceType(parent), i2c_(std::move(i2c)) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 

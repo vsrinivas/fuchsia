@@ -64,7 +64,7 @@ class Tcs3400Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_I
   Tcs3400Device(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClient gpio,
                 zx::port port)
       : DeviceType(device),
-        i2c_(i2c),
+        i2c_(std::move(i2c)),
         gpio_(gpio),
         port_(std::move(port)),
         loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}

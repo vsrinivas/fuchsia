@@ -905,7 +905,7 @@ TEST(Tcs3400Test, TooManyI2cErrors) {
   ddk::GpioProtocolClient gpio;
   zx::port port;
   ASSERT_OK(zx::port::create(0, &port));
-  Tcs3400Device device(fake_parent.get(), i2c, gpio, std::move(port));
+  Tcs3400Device device(fake_parent.get(), std::move(i2c), gpio, std::move(port));
 
   fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &parameters,
                            sizeof(metadata::LightSensorParams));

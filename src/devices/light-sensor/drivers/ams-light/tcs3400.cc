@@ -541,7 +541,8 @@ zx::status<Tcs3400Device*> Tcs3400Device::CreateAndGetDevice(void* ctx, zx_devic
     return zx::error(status);
   }
 
-  auto dev = std::make_unique<tcs::Tcs3400Device>(parent, channel, gpio, std::move(port));
+  auto dev =
+      std::make_unique<tcs::Tcs3400Device>(parent, std::move(channel), gpio, std::move(port));
   status = dev->Bind();
   if (status != ZX_OK) {
     zxlogf(ERROR, "bind failed: %d", status);

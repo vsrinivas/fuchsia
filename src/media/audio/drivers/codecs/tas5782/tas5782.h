@@ -28,10 +28,13 @@ class Tas5782 : public SimpleCodecServer {
  public:
   static zx_status_t Create(zx_device_t* parent);
 
-  explicit Tas5782(zx_device_t* device, const ddk::I2cChannel& i2c,
+  explicit Tas5782(zx_device_t* device, ddk::I2cChannel i2c,
                    const ddk::GpioProtocolClient& codec_reset,
                    const ddk::GpioProtocolClient& codec_mute)
-      : SimpleCodecServer(device), i2c_(i2c), codec_reset_(codec_reset), codec_mute_(codec_mute) {}
+      : SimpleCodecServer(device),
+        i2c_(std::move(i2c)),
+        codec_reset_(codec_reset),
+        codec_mute_(codec_mute) {}
 
   // Implementation for SimpleCodecServer.
   zx_status_t Shutdown() override;

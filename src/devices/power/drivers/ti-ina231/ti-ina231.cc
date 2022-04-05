@@ -75,7 +75,8 @@ zx_status_t Ina231Device::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  auto dev = std::make_unique<Ina231Device>(parent, metadata.shunt_resistance_microohm, i2c);
+  auto dev =
+      std::make_unique<Ina231Device>(parent, metadata.shunt_resistance_microohm, std::move(i2c));
   if ((status = dev->Init(metadata)) != ZX_OK) {
     return status;
   }

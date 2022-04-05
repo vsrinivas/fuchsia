@@ -29,7 +29,7 @@ class Tas58xx : public SimpleCodecServer,
  public:
   static zx_status_t Create(zx_device_t* parent);
 
-  explicit Tas58xx(zx_device_t* device, const ddk::I2cChannel& i2c);
+  explicit Tas58xx(zx_device_t* device, ddk::I2cChannel i2c);
 
   // Implementation for SimpleCodecServer.
   zx_status_t Shutdown() override;

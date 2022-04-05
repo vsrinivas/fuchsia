@@ -91,7 +91,7 @@ zx::status<Gt6853Device*> Gt6853Device::CreateAndGetDevice(void* ctx, zx_device_
   }
 
   std::unique_ptr<Gt6853Device> device =
-      std::make_unique<Gt6853Device>(parent, i2c, interrupt_gpio, reset_gpio);
+      std::make_unique<Gt6853Device>(parent, std::move(i2c), interrupt_gpio, reset_gpio);
   if (!device) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }

@@ -146,7 +146,7 @@ zx_status_t Gt92xxDevice::Create(zx_device_t* device) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  auto goodix_dev = std::make_unique<Gt92xxDevice>(device, i2c, int_gpio, reset_gpio);
+  auto goodix_dev = std::make_unique<Gt92xxDevice>(device, std::move(i2c), int_gpio, reset_gpio);
 
   zx_status_t status = goodix_dev->Init();
   if (status != ZX_OK) {

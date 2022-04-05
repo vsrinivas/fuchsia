@@ -23,7 +23,7 @@ class Gt92xxTest : public Gt92xxDevice {
  public:
   Gt92xxTest(ddk::I2cChannel i2c, ddk::GpioProtocolClient intr, ddk::GpioProtocolClient reset,
              zx_device_t* parent)
-      : Gt92xxDevice(parent, i2c, intr, reset) {}
+      : Gt92xxDevice(parent, std::move(i2c), intr, reset) {}
 
   void Running(bool run) { Gt92xxDevice::running_.store(run); }
 
@@ -83,7 +83,7 @@ TEST(GoodixTest, Init) {
   ddk::I2cChannel i2c(mock_i2c.GetProto());
 
   auto fake_parent = MockDevice::FakeRootParent();
-  Gt92xxTest device(i2c, intr, reset, fake_parent.get());
+  Gt92xxTest device(std::move(i2c), intr, reset, fake_parent.get());
 
   mock_i2c
       .ExpectWrite({static_cast<uint8_t>(GT_REG_CONFIG_DATA >> 8),
@@ -122,7 +122,7 @@ TEST(GoodixTest, InitForceConfig) {
   ddk::I2cChannel i2c(mock_i2c.GetProto());
 
   auto fake_parent = MockDevice::FakeRootParent();
-  Gt92xxTest device(i2c, intr, reset, fake_parent.get());
+  Gt92xxTest device(std::move(i2c), intr, reset, fake_parent.get());
 
   fbl::Vector conf_data = Gt92xxDevice::GetConfData();
   EXPECT_NE(conf_data[sizeof(uint16_t)], 0x00);
@@ -168,7 +168,7 @@ TEST(GoodixTest, TestReport) {
   ddk::I2cChannel i2c(mock_i2c.GetProto());
 
   auto fake_parent = MockDevice::FakeRootParent();
-  Gt92xxTest device(i2c, intr_mock.GetProto(), reset_mock.GetProto(), fake_parent.get());
+  Gt92xxTest device(std::move(i2c), intr_mock.GetProto(), reset_mock.GetProto(), fake_parent.get());
   EXPECT_OK(device.StartThread());
   zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
 

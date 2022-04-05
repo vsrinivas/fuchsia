@@ -74,12 +74,13 @@ class Gt6853Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_IN
     kIspAddr = 0xc000,
   };
 
-  Gt6853Device(zx_device_t* parent, ddk::I2cChannel i2c) : Gt6853Device(parent, i2c, {}, {}) {}
+  Gt6853Device(zx_device_t* parent, ddk::I2cChannel i2c)
+      : Gt6853Device(parent, std::move(i2c), {}, {}) {}
 
   Gt6853Device(zx_device_t* parent, ddk::I2cChannel i2c, ddk::GpioProtocolClient interrupt_gpio,
                ddk::GpioProtocolClient reset_gpio)
       : DeviceType(parent),
-        i2c_(i2c),
+        i2c_(std::move(i2c)),
         interrupt_gpio_(interrupt_gpio),
         reset_gpio_(reset_gpio),
         loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}

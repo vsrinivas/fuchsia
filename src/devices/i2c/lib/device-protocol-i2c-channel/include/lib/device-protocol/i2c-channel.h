@@ -64,16 +64,22 @@ class I2cChannelBase {
   }
 };
 
-class I2cChannel : public I2cChannelBase, public I2cProtocolClient {
+class I2cChannel : public I2cChannelBase {
  public:
   I2cChannel() = default;
 
-  I2cChannel(const i2c_protocol_t* proto) : I2cProtocolClient(proto) {}
+  I2cChannel(const i2c_protocol_t* proto) : banjo_client_(proto) {}
 
-  I2cChannel(zx_device_t* parent) : I2cProtocolClient(parent) {}
+  I2cChannel(zx_device_t* parent) : banjo_client_(parent) {}
 
   I2cChannel(zx_device_t* parent, const char* fragment_name)
-      : I2cProtocolClient(parent, fragment_name) {}
+      : banjo_client_(parent, fragment_name) {}
+
+  I2cChannel(I2cChannel&&) = default;
+  I2cChannel& operator=(I2cChannel&&) = default;
+
+  I2cChannel(const I2cChannel&) = delete;
+  I2cChannel& operator=(const I2cChannel&) = delete;
 
   ~I2cChannel() override = default;
 
@@ -83,6 +89,21 @@ class I2cChannel : public I2cChannelBase, public I2cProtocolClient {
     GetProto(&proto);
     return i2c_write_read_sync(&proto, tx_buf, tx_len, rx_buf, rx_len);
   }
+
+  void GetProto(i2c_protocol_t* proto) const { banjo_client_.GetProto(proto); }
+  bool is_valid() const { return banjo_client_.is_valid(); }
+
+  void Transact(const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
+                void* cookie) const {
+    banjo_client_.Transact(op_list, op_count, callback, cookie);
+  }
+
+  zx_status_t GetMaxTransferSize(uint64_t* out_size) const {
+    return banjo_client_.GetMaxTransferSize(out_size);
+  }
+
+ private:
+  I2cProtocolClient banjo_client_;
 };
 
 class I2cFidlChannel : public I2cChannelBase {

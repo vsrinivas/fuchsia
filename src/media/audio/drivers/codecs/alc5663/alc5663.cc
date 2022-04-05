@@ -286,7 +286,7 @@ zx_status_t EnableAudioOutput(Alc5663Client* client) {
 }
 
 Alc5663Device::Alc5663Device(zx_device_t* parent, ddk::I2cChannel channel)
-    : DeviceType(parent), client_(channel) {}
+    : DeviceType(parent), client_(std::move(channel)) {}
 
 zx_status_t Alc5663Device::InitializeDevice() {
   // Reset the device.
@@ -408,7 +408,7 @@ zx_status_t Alc5663Device::Bind(zx_device_t* parent, Alc5663Device** created_dev
 
   // Create the codec device.
   fbl::AllocChecker ac;
-  auto device = std::unique_ptr<Alc5663Device>(new (&ac) Alc5663Device(parent, channel));
+  auto device = std::unique_ptr<Alc5663Device>(new (&ac) Alc5663Device(parent, std::move(channel)));
   if (!ac.check()) {
     zxlogf(ERROR, "alc5663: out of memory attempting to allocate device");
     return ZX_ERR_NO_MEMORY;

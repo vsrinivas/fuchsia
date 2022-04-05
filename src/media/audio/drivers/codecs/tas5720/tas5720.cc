@@ -317,7 +317,7 @@ zx_status_t tas5720_bind(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  return SimpleCodecServer::CreateAndAddToDdk<Tas5720>(parent, i2c);
+  return SimpleCodecServer::CreateAndAddToDdk<Tas5720>(parent, std::move(i2c));
 }
 
 static zx_driver_ops_t driver_ops = []() {

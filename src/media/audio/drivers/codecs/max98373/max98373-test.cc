@@ -37,9 +37,9 @@ class Max98373Test : public zxtest::Test {
 };
 
 struct Max98373Codec : public Max98373 {
-  explicit Max98373Codec(const ddk::I2cChannel& i2c, const ddk::GpioProtocolClient& codec_reset,
+  explicit Max98373Codec(ddk::I2cChannel i2c, const ddk::GpioProtocolClient& codec_reset,
                          zx_device_t* parent)
-      : Max98373(parent, i2c, codec_reset) {}
+      : Max98373(parent, std::move(i2c), codec_reset) {}
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
 };
 

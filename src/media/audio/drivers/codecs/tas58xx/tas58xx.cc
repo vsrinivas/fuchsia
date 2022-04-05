@@ -76,8 +76,8 @@ static const audio::DaiSupportedFormats kSupportedDaiDaiFormats = {
     .bits_per_sample = kSupportedDaiBitsPerSample,
 };
 
-Tas58xx::Tas58xx(zx_device_t* device, const ddk::I2cChannel& i2c)
-    : SimpleCodecServer(device), i2c_(i2c) {
+Tas58xx::Tas58xx(zx_device_t* device, ddk::I2cChannel i2c)
+    : SimpleCodecServer(device), i2c_(std::move(i2c)) {
   size_t actual = 0;
   auto status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &metadata_,
                                     sizeof(metadata_), &actual);
@@ -197,7 +197,7 @@ zx_status_t Tas58xx::Create(zx_device_t* parent) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  return SimpleCodecServer::CreateAndAddToDdk<Tas58xx>(parent, i2c);
+  return SimpleCodecServer::CreateAndAddToDdk<Tas58xx>(parent, std::move(i2c));
 }
 
 Info Tas58xx::GetInfo() {

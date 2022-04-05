@@ -37,7 +37,7 @@ zx_status_t Shtv3Device::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  auto dev = std::make_unique<Shtv3Device>(parent, i2c);
+  auto dev = std::make_unique<Shtv3Device>(parent, std::move(i2c));
   zx_status_t status = dev->Init();
   if (status != ZX_OK) {
     return status;

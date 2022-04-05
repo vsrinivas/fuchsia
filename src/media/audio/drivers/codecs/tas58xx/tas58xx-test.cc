@@ -23,7 +23,8 @@ namespace audio_fidl = ::fuchsia::hardware::audio;
 namespace signal_fidl = ::fuchsia::hardware::audio::signalprocessing;
 
 struct Tas58xxCodec : public Tas58xx {
-  explicit Tas58xxCodec(zx_device_t* parent, const ddk::I2cChannel& i2c) : Tas58xx(parent, i2c) {}
+  explicit Tas58xxCodec(zx_device_t* parent, ddk::I2cChannel i2c)
+      : Tas58xx(parent, std::move(i2c)) {}
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
   uint64_t GetTopologyId() { return Tas58xx::GetTopologyId(); }
   uint64_t GetAglPeId() { return Tas58xx::GetAglPeId(); }

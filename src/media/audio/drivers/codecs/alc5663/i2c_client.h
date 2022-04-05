@@ -49,7 +49,7 @@ class I2cClient {
   using AddressType = AddressIntType;
 
   // Create an I2cClient backed by the given channel.
-  explicit I2cClient(ddk::I2cChannel channel) : channel_(channel) {}
+  explicit I2cClient(ddk::I2cChannel channel) : channel_(std::move(channel)) {}
 
   template <typename ValueType>
   zx_status_t Read(AddressIntType addr, ValueType* result);

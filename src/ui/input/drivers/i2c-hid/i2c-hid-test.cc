@@ -278,14 +278,14 @@ class I2cHidTest : public zxtest::Test {
 };
 
 TEST_F(I2cHidTest, HidTestBind) {
-  ASSERT_OK(device_->Bind(channel_));
+  ASSERT_OK(device_->Bind(std::move(channel_)));
   ASSERT_OK(ddk_.WaitUntilInitComplete());
   EXPECT_TRUE(ddk_.init_reply().has_value());
   EXPECT_OK(ddk_.init_reply().value());
 }
 
 TEST_F(I2cHidTest, HidTestQuery) {
-  ASSERT_OK(device_->Bind(channel_));
+  ASSERT_OK(device_->Bind(std::move(channel_)));
   ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
 
   StartHidBus();
@@ -307,7 +307,7 @@ TEST_F(I2cHidTest, HidTestReadReportDesc) {
   report_desc[3] = 5;
 
   fake_i2c_hid_.SetReportDescriptor(report_desc);
-  ASSERT_OK(device_->Bind(channel_));
+  ASSERT_OK(device_->Bind(std::move(channel_)));
 
   ASSERT_OK(device_->HidbusGetDescriptor(HID_DESCRIPTION_TYPE_REPORT, returned_report_desc,
                                          sizeof(returned_report_desc), &returned_report_desc_len));
@@ -332,7 +332,7 @@ TEST(I2cHidTest, HidTestReportDescFailureLifetimeTest) {
   channel_ = ddk::I2cChannel(fake_i2c_hid_.GetProto());
 
   fake_i2c_hid_.SetHidDescriptorFailure(ZX_ERR_TIMED_OUT);
-  ASSERT_OK(device_->Bind(channel_));
+  ASSERT_OK(device_->Bind(std::move(channel_)));
 
   EXPECT_OK(ddk_.WaitUntilRemove());
   EXPECT_TRUE(ddk_.Ok());
@@ -343,7 +343,7 @@ TEST(I2cHidTest, HidTestReportDescFailureLifetimeTest) {
 }
 
 TEST_F(I2cHidTest, HidTestReadReport) {
-  ASSERT_OK(device_->Bind(channel_));
+  ASSERT_OK(device_->Bind(std::move(channel_)));
   ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
 
   StartHidBus();
@@ -366,7 +366,7 @@ TEST_F(I2cHidTest, HidTestReadReport) {
 }
 
 TEST_F(I2cHidTest, HidTestBadReportLen) {
-  ASSERT_OK(device_->Bind(channel_));
+  ASSERT_OK(device_->Bind(std::move(channel_)));
   ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
 
   StartHidBus();
@@ -396,7 +396,7 @@ TEST_F(I2cHidTest, HidTestReadReportNoIrq) {
   fake_i2c_hid_.SetInterrupt(zx::interrupt());
   irq_.reset();
 
-  ASSERT_OK(device_->Bind(channel_));
+  ASSERT_OK(device_->Bind(std::move(channel_)));
   ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
 
   StartHidBus();
@@ -423,7 +423,7 @@ TEST_F(I2cHidTest, HidTestDedupeReportsNoIrq) {
   fake_i2c_hid_.SetInterrupt(zx::interrupt());
   irq_.reset();
 
-  ASSERT_OK(device_->Bind(channel_));
+  ASSERT_OK(device_->Bind(std::move(channel_)));
   ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
 
   StartHidBus();
@@ -491,7 +491,7 @@ TEST_F(I2cHidTest, HidTestDedupeReportsNoIrq) {
 }
 
 TEST_F(I2cHidTest, HidTestSetReport) {
-  ASSERT_OK(device_->Bind(channel_));
+  ASSERT_OK(device_->Bind(std::move(channel_)));
   ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
 
   // Any arbitrary values or vector length could be used here.

@@ -139,7 +139,8 @@ zx_status_t Max98373::Create(zx_device_t* parent) {
     }
 
     // No GPIO control.
-    return SimpleCodecServer::CreateAndAddToDdk<Max98373>(parent, i2c, ddk::GpioProtocolClient{});
+    return SimpleCodecServer::CreateAndAddToDdk<Max98373>(parent, std::move(i2c),
+                                                          ddk::GpioProtocolClient{});
   }
 
   ddk::I2cChannel i2c(parent, "i2c");
@@ -154,7 +155,7 @@ zx_status_t Max98373::Create(zx_device_t* parent) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  return SimpleCodecServer::CreateAndAddToDdk<Max98373>(parent, i2c, gpio);
+  return SimpleCodecServer::CreateAndAddToDdk<Max98373>(parent, std::move(i2c), gpio);
 }
 
 Info Max98373::GetInfo() {

@@ -25,7 +25,7 @@ class TiTca6408a : public DeviceType, public ddk::GpioImplProtocol<TiTca6408a, d
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   TiTca6408a(zx_device_t* parent, ddk::I2cChannel i2c, uint32_t pin_index_offset)
-      : DeviceType(parent), i2c_(i2c), pin_index_offset_(pin_index_offset) {}
+      : DeviceType(parent), i2c_(std::move(i2c)), pin_index_offset_(pin_index_offset) {}
 
   void DdkRelease() { delete this; }
 

@@ -20,8 +20,8 @@ namespace audio {
 
 class Tas5720 : public SimpleCodecServer {
  public:
-  explicit Tas5720(zx_device_t* device, const ddk::I2cChannel& i2c)
-      : SimpleCodecServer(device), i2c_(i2c) {}
+  explicit Tas5720(zx_device_t* device, ddk::I2cChannel i2c)
+      : SimpleCodecServer(device), i2c_(std::move(i2c)) {}
   virtual ~Tas5720() = default;
 
   // Implementation for SimpleCodecServer.

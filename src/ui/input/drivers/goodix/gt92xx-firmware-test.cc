@@ -210,7 +210,7 @@ class Gt92xxTest : public Gt92xxDevice {
  public:
   Gt92xxTest(ddk::I2cChannel i2c, ddk::GpioProtocolClient intr, ddk::GpioProtocolClient reset,
              zx_device_t* parent)
-      : Gt92xxDevice(parent, i2c, intr, reset) {}
+      : Gt92xxDevice(parent, std::move(i2c), intr, reset) {}
 
   void Running(bool run) { Gt92xxDevice::running_.store(run); }
 

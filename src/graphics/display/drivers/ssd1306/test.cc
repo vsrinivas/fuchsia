@@ -28,7 +28,7 @@ TEST(Ssd1306Test, LifetimeTest) {
   auto fake_parent = MockDevice::FakeRootParent();
   auto device = new Ssd1306(fake_parent.get());
 
-  ASSERT_OK(device->Bind(i2c_channel));
+  ASSERT_OK(device->Bind(std::move(i2c_channel)));
   device_async_remove(device->zxdev());
   mock_ddk::ReleaseFlaggedDevices(fake_parent.get());
 

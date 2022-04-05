@@ -100,7 +100,8 @@ zx_status_t Tas5782::Create(zx_device_t* parent) {
   ddk::GpioProtocolClient gpio_reset(parent, "gpio-reset");
   ddk::GpioProtocolClient gpio_mute(parent, "gpio-mute");
 
-  return SimpleCodecServer::CreateAndAddToDdk<Tas5782>(parent, i2c, gpio_reset, gpio_mute);
+  return SimpleCodecServer::CreateAndAddToDdk<Tas5782>(parent, std::move(i2c), gpio_reset,
+                                                       gpio_mute);
 }
 
 Info Tas5782::GetInfo() {

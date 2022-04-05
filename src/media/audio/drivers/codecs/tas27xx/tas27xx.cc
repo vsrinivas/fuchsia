@@ -47,7 +47,7 @@ bool Tas27xx::InErrorState() {
 Tas27xx::Tas27xx(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClient fault_gpio,
                  bool vsense, bool isense)
     : SimpleCodecServer(device),
-      i2c_(i2c),
+      i2c_(std::move(i2c)),
       fault_gpio_(fault_gpio),
       ena_vsens_(vsense),
       ena_isens_(isense) {
@@ -484,7 +484,7 @@ zx_status_t tas27xx_bind(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  return SimpleCodecServer::CreateAndAddToDdk<Tas27xx>(parent, i2c, gpio, false, false);
+  return SimpleCodecServer::CreateAndAddToDdk<Tas27xx>(parent, std::move(i2c), gpio, false, false);
 }
 
 static zx_driver_ops_t driver_ops = []() {

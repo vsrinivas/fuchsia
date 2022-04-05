@@ -21,7 +21,7 @@ namespace {
 TEST(I2cClient, Client8Bits) {
   mock_i2c::MockI2c i2c;
   ddk::I2cChannel channel{i2c.GetProto()};
-  I2cClient<uint8_t> client(channel);
+  I2cClient<uint8_t> client(std::move(channel));
 
   // Write to I2C bus.
   i2c.ExpectWriteStop({0xaa, 0x11});
@@ -40,7 +40,7 @@ TEST(I2cClient, Client8Bits) {
 TEST(I2cClient, Client16Bits) {
   mock_i2c::MockI2c i2c;
   ddk::I2cChannel channel{i2c.GetProto()};
-  I2cClient<uint16_t> client(channel);
+  I2cClient<uint16_t> client(std::move(channel));
 
   // Write to I2C bus.
   i2c.ExpectWriteStop({0xaa, 0xbb, 0x11, 0x22});
@@ -59,7 +59,7 @@ TEST(I2cClient, Client16Bits) {
 TEST(I2cClient, ClientMixedAddrDataSize) {
   mock_i2c::MockI2c i2c;
   ddk::I2cChannel channel{i2c.GetProto()};
-  I2cClient<uint8_t> client(channel);
+  I2cClient<uint8_t> client(std::move(channel));
 
   // Write to I2C bus.
   i2c.ExpectWriteStop({0xaa, 0x11, 0x22});
@@ -84,7 +84,7 @@ struct TestReg {
 TEST(I2cClient, ReadRegister) {
   mock_i2c::MockI2c i2c;
   ddk::I2cChannel channel{i2c.GetProto()};
-  I2cClient<uint8_t> client(channel);
+  I2cClient<uint8_t> client(std::move(channel));
 
   // Exepect read from the address (0xaa).
   i2c.ExpectWrite({0xaa});
@@ -98,7 +98,7 @@ TEST(I2cClient, ReadRegister) {
 TEST(I2cClient, WriteRegister) {
   mock_i2c::MockI2c i2c;
   ddk::I2cChannel channel{i2c.GetProto()};
-  I2cClient<uint8_t> client(channel);
+  I2cClient<uint8_t> client(std::move(channel));
 
   i2c.ExpectWriteStop({0xaa, 0x11, 0x22});
   TestReg result{/*data=*/0x1122};
@@ -108,7 +108,7 @@ TEST(I2cClient, WriteRegister) {
 TEST(I2cClient, MapRegister) {
   mock_i2c::MockI2c i2c;
   ddk::I2cChannel channel{i2c.GetProto()};
-  I2cClient<uint8_t> client(channel);
+  I2cClient<uint8_t> client(std::move(channel));
 
   i2c.ExpectWrite({0xaa});
   i2c.ExpectReadStop({0x11, 0x22});

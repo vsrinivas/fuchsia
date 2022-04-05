@@ -31,10 +31,10 @@ audio::DaiFormat GetDefaultDaiFormat() {
 }  // namespace
 
 struct Tas5782Codec : public Tas5782 {
-  explicit Tas5782Codec(zx_device_t* parent, const ddk::I2cChannel& i2c,
+  explicit Tas5782Codec(zx_device_t* parent, ddk::I2cChannel i2c,
                         const ddk::GpioProtocolClient& codec_reset,
                         const ddk::GpioProtocolClient& codec_mute)
-      : Tas5782(parent, i2c, codec_reset, codec_mute) {
+      : Tas5782(parent, std::move(i2c), codec_reset, codec_mute) {
     initialized_ = true;
   }
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
