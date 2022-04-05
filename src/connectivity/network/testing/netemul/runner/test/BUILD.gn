@@ -202,7 +202,9 @@ fuchsia_test_component("multiple-guests-test") {
 
 fuchsia_test_package("netemul-guest-test") {
   test_specs = {
-    environments = guest_envs
+    environments =
+        # TODO(fxbug.dev/96878): Re-add nelson once the test flakes are fixed.
+        guest_envs + [ nelson_env ] - [ nelson_env ]
   }
   test_components = [
     ":guest-test",
