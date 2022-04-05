@@ -5,9 +5,7 @@
     features: [
         "binder",
     ],
-    init_args: [],
-    init_binary_path: "",
-    init_environ: [],
+    init: [],
     init_user: "root:x:0:0",
     kernel_cmdline: "androidboot.hardware=starnix",
     mounts: [

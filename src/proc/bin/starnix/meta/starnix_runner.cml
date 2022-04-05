@@ -84,25 +84,8 @@
             max_count: 100,
         },
 
-        // The arguments for the `init` task, if such a task exists.
-        init_args: {
-            type: "vector",
-            element: {
-                type: "string",
-                max_size: 256,
-            },
-            max_count: 100,
-        },
-
-        // A path to a binary, inside of the system image, that is expected to run as the first task
-        // in the galaxy.
-        init_binary_path: {
-            type: "string",
-            max_size: 1024,
-        },
-
-        // The environment for the `init` task.
-        init_environ: {
+        // The arguments for the `init` task. The first argument must be an absolute path to the binary. Specify an empty vector to not start an init task.
+        init: {
             type: "vector",
             element: {
                 type: "string",

@@ -94,18 +94,13 @@ pub fn create_galaxy(
     // Only return an init task if there was an init binary path. The task struct is still used
     // to initialize the system up until this point, regardless of whether or not there is an
     // actual init to be run.
-    let init_task = if CONFIG.init_binary_path.is_empty() {
+    let init_task = if CONFIG.init.is_empty() {
         // A task must have an exit code, so set it here to simulate the init task having run.
         *init_task.exit_code.lock() = Some(0);
         None
     } else {
-        let mut argv = vec![to_cstr(&CONFIG.init_binary_path)];
-        argv.extend(CONFIG.init_args.iter().map(to_cstr));
-        init_task.exec(
-            argv[0].clone(),
-            argv.clone(),
-            CONFIG.init_environ.iter().map(to_cstr).collect(),
-        )?;
+        let argv: Vec<_> = CONFIG.init.iter().map(to_cstr).collect();
+        init_task.exec(argv[0].clone(), argv.clone(), vec![])?;
         Some(init_task)
     };
 
@@ -165,7 +160,8 @@ fn mount_apexes(init_task: &CurrentTask) -> Result<(), Error> {
 
 fn create_init_task(kernel: &Arc<Kernel>, fs: &Arc<FsContext>) -> Result<CurrentTask, Error> {
     let credentials = Credentials::from_passwd(&CONFIG.init_user)?;
-    let name = to_cstr(&CONFIG.init_binary_path);
+    let name =
+        if CONFIG.init.is_empty() { to_cstr(&String::new()) } else { to_cstr(&CONFIG.init[0]) };
     let init_task = Task::create_process_without_parent(kernel, name, fs.clone())?;
     *init_task.creds.write() = credentials;
     Ok(init_task)
