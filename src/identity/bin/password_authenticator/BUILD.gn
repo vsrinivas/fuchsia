@@ -98,7 +98,7 @@ fuchsia_component("component_scrypt_or_null_for_test") {
 
 fuchsia_package("password_authenticator") {
   deps = [
-    ":component_scrypt_or_null",
+    ":component_scrypt",
     "//src/storage/bin/minfs",
   ]
 }
