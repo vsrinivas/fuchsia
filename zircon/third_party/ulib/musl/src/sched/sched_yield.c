@@ -2,6 +2,6 @@
 #include <zircon/syscalls.h>
 
 int sched_yield() {
-  _zx_nanosleep(0ull);
+  _zx_thread_legacy_yield(0ul);
   return 0;
 }
