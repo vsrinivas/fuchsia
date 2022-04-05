@@ -64,7 +64,7 @@ if (is_host) {
   }
 
   group("fastboot") {
-    deps = [ ":lib" ]
+    public_deps = [ ":lib" ]
   }
 
   group("tests") {

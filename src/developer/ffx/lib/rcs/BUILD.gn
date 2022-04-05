@@ -23,7 +23,7 @@ rustc_library("lib") {
 
 group("rcs") {
   testonly = true
-  deps = [ ":lib" ]
+  public_deps = [ ":lib" ]
 }
 
 group("tests") {

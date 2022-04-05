@@ -28,7 +28,7 @@ rustc_library("lib") {
 }
 
 group("diagnostics") {
-  deps = [ ":lib" ]
+  public_deps = [ ":lib" ]
 }
 
 group("tests") {

@@ -96,7 +96,7 @@ rustc_library("lib") {
 }
 
 group("server") {
-  deps = [ ":lib" ]
+  public_deps = [ ":lib" ]
 }
 
 fuchsia_unittest_component("wayland_server_unit_tests") {
