@@ -239,6 +239,17 @@ zx_status_t zxio_create_with_type(zxio_storage_t* storage, zxio_object_type_t ty
           storage, std::move(event),
           fidl::ClientEnd<fuchsia_posix_socket::SynchronousDatagramSocket>(std::move(client)));
     }
+    case ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET: {
+      zx::socket socket(va_arg(args, zx_handle_t));
+      zx::channel client(va_arg(args, zx_handle_t));
+      zx_info_socket_t* info = va_arg(args, zx_info_socket_t*);
+      if (!socket.is_valid() || !client.is_valid() || storage == nullptr || info == nullptr) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      return zxio_datagram_socket_init(
+          storage, std::move(socket),
+          fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket>(std::move(client)), *info);
+    }
     case ZXIO_OBJECT_TYPE_DIR: {
       zx::handle control(va_arg(args, zx_handle_t));
       if (!control.is_valid() || storage == nullptr) {

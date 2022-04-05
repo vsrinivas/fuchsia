@@ -43,6 +43,17 @@ using zxio_synchronous_datagram_socket_t = struct zxio_synchronous_datagram_sock
   fidl::WireSyncClient<fuchsia_posix_socket::SynchronousDatagramSocket> client;
 };
 
+// datagram socket (channel backed) --------------------------------------------
+
+// A |zxio_t| backend that uses a fuchsia.posix.socket.DatagramSocket object.
+using zxio_datagram_socket_t = struct zxio_datagram_socket {
+  zxio_t io;
+
+  zxio_pipe_t pipe;
+
+  fidl::WireSyncClient<fuchsia_posix_socket::DatagramSocket> client;
+};
+
 // stream socket (channel backed) --------------------------------------------
 
 // A |zxio_t| backend that uses a fuchsia.posix.socket.StreamSocket object.

@@ -35,6 +35,14 @@ table/member fuchsia.io/ConnectionOptions.protocols fuchsia.io/NodeProtocols
 table/member fuchsia.io/ConnectionOptions.rights_request fuchsia.io/RightsRequest
 table fuchsia.io/ConnectionOptions
 table fuchsia.io/ConnectorInfo
+struct/member fuchsia.io/DatagramSocket.rx_meta_buf_size uint64
+struct/member fuchsia.io/DatagramSocket.socket zx/handle:<SOCKET,zx.TRANSFER,zx.READ,zx.WRITE,zx.WAIT,zx.INSPECT>
+struct/member fuchsia.io/DatagramSocket.tx_meta_buf_size uint64
+resource struct fuchsia.io/DatagramSocket
+table/member fuchsia.io/DatagramSocketInfo.rx_meta_buf_size uint64
+table/member fuchsia.io/DatagramSocketInfo.socket zx/handle:SOCKET
+table/member fuchsia.io/DatagramSocketInfo.tx_meta_buf_size uint64
+resource table fuchsia.io/DatagramSocketInfo
 struct/member fuchsia.io/Device.unused zx/handle:<EVENTPAIR,optional>
 resource struct fuchsia.io/Device
 table/member fuchsia.io/DeviceInfo.unused zx/handle:EVENTPAIR
@@ -410,6 +418,7 @@ bits/member fuchsia.io/NodeAttributesQuery.MODIFICATION_TIME 64
 bits/member fuchsia.io/NodeAttributesQuery.PROTOCOLS 1
 bits/member fuchsia.io/NodeAttributesQuery.STORAGE_SIZE 8
 strict bits fuchsia.io/NodeAttributesQuery uint64
+union/member fuchsia.io/NodeInfo.datagram_socket fuchsia.io/DatagramSocket
 union/member fuchsia.io/NodeInfo.device fuchsia.io/Device
 union/member fuchsia.io/NodeInfo.directory fuchsia.io/DirectoryObject
 union/member fuchsia.io/NodeInfo.file fuchsia.io/FileObject
@@ -423,6 +432,7 @@ union/member fuchsia.io/NodeInfo.tty fuchsia.io/Tty
 union/member fuchsia.io/NodeInfo.vmofile fuchsia.io/Vmofile
 resource strict union fuchsia.io/NodeInfo
 bits/member fuchsia.io/NodeProtocols.CONNECTOR 1
+bits/member fuchsia.io/NodeProtocols.DATAGRAM_SOCKET 512
 bits/member fuchsia.io/NodeProtocols.DEVICE 268435456
 bits/member fuchsia.io/NodeProtocols.DIRECTORY 2
 bits/member fuchsia.io/NodeProtocols.FILE 4
@@ -484,6 +494,7 @@ resource struct fuchsia.io/RawSocket
 table/member fuchsia.io/RawSocketInfo.event zx/handle:EVENTPAIR
 resource table fuchsia.io/RawSocketInfo
 union/member fuchsia.io/Representation.connector fuchsia.io/ConnectorInfo
+union/member fuchsia.io/Representation.datagram_socket fuchsia.io/DatagramSocketInfo
 union/member fuchsia.io/Representation.device fuchsia.io/DeviceInfo
 union/member fuchsia.io/Representation.directory fuchsia.io/DirectoryInfo
 union/member fuchsia.io/Representation.file fuchsia.io/FileInfo

@@ -258,6 +258,9 @@ uint32_t ToIo1ModeFileType(zxio_node_protocols_t protocols) {
   if (protocols & ZXIO_NODE_PROTOCOL_SYNCHRONOUS_DATAGRAM_SOCKET) {
     return S_IFSOCK;
   }
+  if (protocols & ZXIO_NODE_PROTOCOL_DATAGRAM_SOCKET) {
+    return S_IFSOCK;
+  }
   if (protocols & ZXIO_NODE_PROTOCOL_RAW_SOCKET) {
     return S_IFSOCK;
   }

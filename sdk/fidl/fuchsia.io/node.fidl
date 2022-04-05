@@ -80,6 +80,16 @@ type NodeInfo = strict resource union {
         /// See [`fuchsia.posix.socket.packet.Socket`] for details.
         event zx.handle:<EVENTPAIR, zx.rights.TRANSFER | zx.rights.WAIT>;
     };
+
+    /// The connection composes  [`fuchsia.posix.socket/DatagramSocket`].
+   13: datagram_socket resource struct {
+        /// See [`fuchsia.posix.socket.DatagramSocket`] for details.
+        socket zx.handle:<SOCKET, zx.rights.TRANSFER | zx.RIGHTS_IO | zx.rights.WAIT | zx.rights.INSPECT>;
+        /// Size of the buffer used to receive Tx metadata.
+        tx_meta_buf_size uint64;
+        /// Size of the buffer used to receive Rx metadata.
+        rx_meta_buf_size uint64;
+    };
 };
 
 /// The fields of 'attributes' which are used to update the Node are indicated

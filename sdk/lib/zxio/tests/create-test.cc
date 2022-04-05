@@ -111,6 +111,24 @@ TEST(CreateWithTypeInvalidStorageClosesHandles, StreamSocket) {
   EXPECT_EQ(pending & ZX_CHANNEL_PEER_CLOSED, ZX_CHANNEL_PEER_CLOSED);
 }
 
+TEST(CreateWithTypeInvalidStorageClosesHandles, DatagramSocket) {
+  zx::socket socket0, socket1;
+  ASSERT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &socket0, &socket1));
+  zx::channel channel0, channel1;
+  ASSERT_OK(zx::channel::create(0, &channel0, &channel1));
+
+  ASSERT_EQ(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET, socket0.release(),
+                                  channel0.release(), nullptr),
+            ZX_ERR_INVALID_ARGS);
+
+  zx_signals_t pending = 0;
+  ASSERT_EQ(socket1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  EXPECT_EQ(pending & ZX_SOCKET_PEER_CLOSED, ZX_SOCKET_PEER_CLOSED);
+
+  ASSERT_EQ(channel1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  EXPECT_EQ(pending & ZX_CHANNEL_PEER_CLOSED, ZX_CHANNEL_PEER_CLOSED);
+}
+
 TEST(CreateWithTypeInvalidStorageClosesHandles, Pipe) {
   zx::socket socket0, socket1;
   ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &socket0, &socket1));

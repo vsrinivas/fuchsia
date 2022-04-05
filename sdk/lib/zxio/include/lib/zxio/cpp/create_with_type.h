@@ -25,6 +25,13 @@ inline zx_status_t CreateSynchronousDatagramSocket(
                                event.release(), client.TakeChannel().release());
 }
 
+inline zx_status_t CreateDatagramSocket(
+    zxio_storage_t* storage, zx::socket socket,
+    fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client, zx_info_socket_t& info) {
+  return zxio_create_with_type(storage, ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET, socket.release(),
+                               client.TakeChannel().release(), &info);
+}
+
 inline zx_status_t CreateDirectory(zxio_storage_t* storage,
                                    fidl::ClientEnd<fuchsia_io::Directory> directory) {
   return zxio_create_with_type(storage, ZXIO_OBJECT_TYPE_DIR, directory.TakeChannel().release());

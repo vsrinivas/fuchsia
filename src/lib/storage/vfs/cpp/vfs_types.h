@@ -133,10 +133,11 @@ enum class VnodeProtocol : uint32_t {
   kTty,
   kSynchronousDatagramSocket,
   kStreamSocket,
+  kDatagramSocket,
   // Note: when appending more members, adjust |kVnodeProtocolCount| accordingly.
 };
 
-constexpr size_t kVnodeProtocolCount = static_cast<uint32_t>(VnodeProtocol::kStreamSocket) + 1;
+constexpr size_t kVnodeProtocolCount = static_cast<uint32_t>(VnodeProtocol::kDatagramSocket) + 1;
 
 // A collection of |VnodeProtocol|s, stored internally as a bit-field.
 // The N-th bit corresponds to the N-th element in the |VnodeProtocol| enum, under zero-based index.
@@ -430,6 +431,12 @@ class VnodeRepresentation {
     zx::socket socket = {};
   };
 
+  struct DatagramSocket {
+    zx::socket socket = {};
+    uint64_t tx_meta_buf_size = {};
+    uint64_t rx_meta_buf_size = {};
+  };
+
   VnodeRepresentation() = default;
 
   // Forwards the constructor arguments into the underlying |std::variant|. This allows
@@ -484,13 +491,17 @@ class VnodeRepresentation {
     return std::holds_alternative<SynchronousDatagramSocket>(variants_);
   }
 
+  DatagramSocket& datagram_socket() { return std::get<DatagramSocket>(variants_); }
+
+  bool is_datagram_socket() const { return std::holds_alternative<DatagramSocket>(variants_); }
+
   StreamSocket& stream_socket() { return std::get<StreamSocket>(variants_); }
 
   bool is_stream_socket() const { return std::holds_alternative<StreamSocket>(variants_); }
 
  private:
   using Variants = std::variant<std::monostate, Connector, File, Directory, Pipe, Memory, Device,
-                                Tty, SynchronousDatagramSocket, StreamSocket>;
+                                Tty, SynchronousDatagramSocket, StreamSocket, DatagramSocket>;
 
   Variants variants_ = {};
 };

@@ -60,6 +60,10 @@ type NodeProtocols = strict bits : uint64 {
     /// The connection will speak the [`fuchsia.posix.socket.packet/Socket`] protocol.
     PACKET_SOCKET = 0x100;
 
+    /// The datagram socket representation of a node.
+    /// The connection will speak the [`fuchsia.posix.socket/DatagramSocket`] protocol.
+    DATAGRAM_SOCKET = 0x200;
+
     @deprecated("devices will be services in the future")
     DEVICE = 0x10000000;
 

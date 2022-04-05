@@ -184,6 +184,15 @@ void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::SynchronousDatagramSocket>) {
       info.set_synchronous_datagram_socket({.event = std::move(repr.event)});
       callback(std::move(info));
+    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::DatagramSocket>) {
+      fio::wire::DatagramSocket datagram_socket = {
+          .socket = std::move(repr.socket),
+          .tx_meta_buf_size = repr.tx_meta_buf_size,
+          .rx_meta_buf_size = repr.rx_meta_buf_size,
+      };
+      info.set_datagram_socket(
+          fidl::ObjectView<fio::wire::DatagramSocket>::FromExternal(&datagram_socket));
+      callback(std::move(info));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::StreamSocket>) {
       info.set_stream_socket({.socket = std::move(repr.socket)});
       callback(std::move(info));
@@ -230,6 +239,13 @@ ConnectionInfoConverter::ConnectionInfoConverter(VnodeRepresentation representat
       synchronous_datagram_socket.set_event(std::move(repr.event));
       info.set_representation(arena, fio::wire::Representation::WithSynchronousDatagramSocket(
                                          arena, std::move(synchronous_datagram_socket)));
+    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::DatagramSocket>) {
+      fio::wire::DatagramSocketInfo datagram_socket(arena);
+      datagram_socket.set_socket(std::move(repr.socket));
+      datagram_socket.set_tx_meta_buf_size(arena, repr.tx_meta_buf_size);
+      datagram_socket.set_rx_meta_buf_size(arena, repr.rx_meta_buf_size);
+      info.set_representation(
+          arena, fio::wire::Representation::WithDatagramSocket(arena, std::move(datagram_socket)));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::StreamSocket>) {
       fio::wire::StreamSocketInfo stream_socket(arena);
       stream_socket.set_socket(std::move(repr.socket));

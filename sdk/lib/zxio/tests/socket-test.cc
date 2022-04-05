@@ -218,6 +218,106 @@ TEST_F(StreamSocketTest, CreateWithTypeWrapper) {
 
 namespace {
 
+class DatagramSocketServer final
+    : public fidl::testing::WireTestBase<fuchsia_posix_socket::DatagramSocket> {
+ public:
+  DatagramSocketServer() = default;
+
+  void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) final {
+    ADD_FAILURE("unexpected message received: %s", name.c_str());
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void CloseDeprecated(CloseDeprecatedRequestView request,
+                       CloseDeprecatedCompleter::Sync& completer) override {
+    completer.Reply(ZX_OK);
+    completer.Close(ZX_OK);
+  }
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+    completer.ReplySuccess();
+    completer.Close(ZX_OK);
+  }
+};
+
+class DatagramSocketTest : public zxtest::Test {
+ public:
+  void SetUp() final {
+    ASSERT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &socket_, &peer_));
+    ASSERT_OK(socket_.get_info(ZX_INFO_SOCKET, &info_, sizeof(info_), nullptr, nullptr));
+
+    zx::status server_end = fidl::CreateEndpoints(&client_end_);
+    ASSERT_OK(server_end.status_value());
+
+    fidl::BindServer(control_loop_.dispatcher(), std::move(*server_end), &server_);
+    control_loop_.StartThread("control");
+  }
+
+  void Init() {
+    ASSERT_OK(zxio_datagram_socket_init(&storage_, TakeSocket(), TakeClientEnd(), info()));
+    zxio_ = &storage_.io;
+  }
+
+  void TearDown() final {
+    if (zxio_) {
+      ASSERT_OK(zxio_close(zxio_));
+    }
+    control_loop_.Shutdown();
+  }
+
+  zx_info_socket_t& info() { return info_; }
+  zx::socket TakeSocket() { return std::move(socket_); }
+  fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> TakeClientEnd() {
+    return std::move(client_end_);
+  }
+  zxio_storage_t* storage() { return &storage_; }
+  zxio_t* zxio() { return zxio_; }
+
+ private:
+  zxio_storage_t storage_;
+  zxio_t* zxio_{nullptr};
+  zx_info_socket_t info_;
+  zx::socket socket_, peer_;
+  fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client_end_;
+  DatagramSocketServer server_;
+  async::Loop control_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
+};
+
+}  // namespace
+
+TEST_F(DatagramSocketTest, Basic) { Init(); }
+
+TEST_F(DatagramSocketTest, Release) {
+  Init();
+
+  zx_handle_t handle = ZX_HANDLE_INVALID;
+  EXPECT_OK(zxio_release(zxio(), &handle));
+  EXPECT_NE(handle, ZX_HANDLE_INVALID);
+
+  EXPECT_OK(zx_handle_close(handle));
+}
+
+TEST_F(DatagramSocketTest, Borrow) {
+  Init();
+
+  zx_handle_t handle = ZX_HANDLE_INVALID;
+  EXPECT_OK(zxio_borrow(zxio(), &handle));
+  EXPECT_NE(handle, ZX_HANDLE_INVALID);
+}
+
+TEST_F(DatagramSocketTest, CreateWithType) {
+  ASSERT_OK(zxio_create_with_type(storage(), ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET,
+                                  TakeSocket().release(), TakeClientEnd().TakeChannel().release(),
+                                  &info()));
+  ASSERT_OK(zxio_close(&storage()->io));
+}
+
+TEST_F(DatagramSocketTest, CreateWithTypeWrapper) {
+  ASSERT_OK(zxio::CreateDatagramSocket(storage(), TakeSocket(), TakeClientEnd(), info()));
+  ASSERT_OK(zxio_close(&storage()->io));
+}
+
+namespace {
+
 class RawSocketServer final : public fidl::testing::WireTestBase<fuchsia_posix_socket_raw::Socket> {
  public:
   RawSocketServer() = default;

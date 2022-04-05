@@ -101,6 +101,7 @@ pub enum Kind {
     StreamSocket,
     RawSocket,
     PacketSocket,
+    DatagramSocket,
     Unknown,
 }
 
@@ -118,6 +119,7 @@ impl Kind {
             fio::NodeInfo::StreamSocket(_) => Kind::StreamSocket,
             fio::NodeInfo::RawSocket(_) => Kind::RawSocket,
             fio::NodeInfo::PacketSocket(_) => Kind::PacketSocket,
+            fio::NodeInfo::DatagramSocket(_) => Kind::DatagramSocket,
         }
     }
 
@@ -149,6 +151,7 @@ impl Kind {
             fio::Representation::StreamSocket(_) => Kind::StreamSocket,
             fio::Representation::RawSocket(_) => Kind::RawSocket,
             fio::Representation::PacketSocket(_) => Kind::PacketSocket,
+            fio::Representation::DatagramSocket(_) => Kind::DatagramSocket,
             _ => Kind::Unknown,
         }
     }

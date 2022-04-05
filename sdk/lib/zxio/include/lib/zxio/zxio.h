@@ -80,6 +80,11 @@ ZXIO_EXPORT zx_status_t zxio_create_with_info(zx_handle_t handle,
 //     |zx_handle_t| channel for the client end of the
 //     fuchsia.posix.socket.SynchronousDatagramSocket protocol
 //
+//  ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET:
+//     |zx_handle_t| socket for the data plane of the socket
+//     |zx_handle_t| channel for the client end of the fuchsia.posix.socket.DatagramSocket protocol
+//     |zx_info_socket_t*| information about the socket
+//
 //  ZXIO_OBJECT_TYPE_DIR:
 //     |zx_handle_t| channel for the client end of the fuchsia.io.Directory protocol
 //

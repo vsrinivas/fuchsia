@@ -142,6 +142,7 @@ typedef uint32_t zxio_object_type_t;
 #define ZXIO_OBJECT_TYPE_STREAM_SOCKET                ((zxio_object_type_t)12)
 #define ZXIO_OBJECT_TYPE_RAW_SOCKET                   ((zxio_object_type_t)13)
 #define ZXIO_OBJECT_TYPE_PACKET_SOCKET                ((zxio_object_type_t)14)
+#define ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET              ((zxio_object_type_t)15)
 // clang-format on
 
 // File and directory access ---------------------------------------------------
@@ -160,6 +161,7 @@ typedef uint64_t zxio_node_protocols_t;
 #define ZXIO_NODE_PROTOCOL_SYNCHRONOUS_DATAGRAM_SOCKET ((zxio_node_protocols_t)1ul << 5)
 #define ZXIO_NODE_PROTOCOL_STREAM_SOCKET ((zxio_node_protocols_t)1ul << 6)
 #define ZXIO_NODE_PROTOCOL_RAW_SOCKET ((zxio_node_protocols_t)1ul << 7)
+#define ZXIO_NODE_PROTOCOL_DATAGRAM_SOCKET ((zxio_node_protocols_t)1ul << 8)
 #define ZXIO_NODE_PROTOCOL_DEVICE ((zxio_node_protocols_t)0x10000000ul)
 #define ZXIO_NODE_PROTOCOL_TTY ((zxio_node_protocols_t)0x20000000ul)
 
@@ -167,7 +169,8 @@ typedef uint64_t zxio_node_protocols_t;
   (ZXIO_NODE_PROTOCOL_CONNECTOR | ZXIO_NODE_PROTOCOL_DIRECTORY | ZXIO_NODE_PROTOCOL_FILE | \
    ZXIO_NODE_PROTOCOL_MEMORY | ZXIO_NODE_PROTOCOL_PIPE |                                   \
    ZXIO_NODE_PROTOCOL_SYNCHRONOUS_DATAGRAM_SOCKET | ZXIO_NODE_PROTOCOL_STREAM_SOCKET |     \
-   ZXIO_NODE_PROTOCOL_RAW_SOCKET | ZXIO_NODE_PROTOCOL_DEVICE | ZXIO_NODE_PROTOCOL_TTY)
+   ZXIO_NODE_PROTOCOL_RAW_SOCKET | ZXIO_NODE_PROTOCOL_DATAGRAM_SOCKET |                    \
+   ZXIO_NODE_PROTOCOL_DEVICE | ZXIO_NODE_PROTOCOL_TTY)
 
 typedef uint64_t zxio_id_t;
 

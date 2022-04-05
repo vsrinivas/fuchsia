@@ -29,6 +29,9 @@ zxio_node_protocols_t ToZxioNodeProtocols(NodeProtocols protocols) {
   if (protocols & NodeProtocols::kSynchronousDatagramSocket) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_SYNCHRONOUS_DATAGRAM_SOCKET;
   }
+  if (protocols & NodeProtocols::kDatagramSocket) {
+    zxio_protocols |= ZXIO_NODE_PROTOCOL_DATAGRAM_SOCKET;
+  }
   if (protocols & NodeProtocols::kStreamSocket) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_STREAM_SOCKET;
   }
@@ -64,6 +67,9 @@ NodeProtocols ToIo2NodeProtocols(zxio_node_protocols_t zxio_protocols) {
   }
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_SYNCHRONOUS_DATAGRAM_SOCKET) {
     protocols |= NodeProtocols::kSynchronousDatagramSocket;
+  }
+  if (zxio_protocols & ZXIO_NODE_PROTOCOL_DATAGRAM_SOCKET) {
+    protocols |= NodeProtocols::kDatagramSocket;
   }
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_STREAM_SOCKET) {
     protocols |= NodeProtocols::kStreamSocket;

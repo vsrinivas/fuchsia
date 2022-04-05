@@ -567,6 +567,92 @@ type DatagramSocketRecvControlData = table {
     1: network NetworkSocketRecvControlData;
 };
 
+/// Metadata of a received datagram.
+type RecvMsgMeta = table {
+    /// The from address of the datagram.
+    1: from fuchsia.net.SocketAddress;
+    /// Ancillary control message data describing the datagram.
+    2: control DatagramSocketRecvControlData;
+    /// The length of the payload, in bytes.
+    3: payload_len uint16;
+};
+
+/// Metadata of a sent datagram.
+type SendMsgMeta = table {
+    /// The destination address, if specified.
+    1: to fuchsia.net.SocketAddress;
+    /// Ancillary control message data used for sending the payload.
+    2: control DatagramSocketSendControlData;
+};
+
+/// Matches the definition in //zircon/system/public/zircon/types.h.
+const ZX_WAIT_MANY_MAXIMUM_ITEMS uint32 = 64;
+
+/// A datagram socket.
+///
+/// This type's [`fuchsia.io.Node/Describe`] method returns a zircon socket which can be
+/// used to perform unacknowledged IO.
+protocol DatagramSocket {
+    compose BaseDatagramSocket;
+
+    /// Validates that data can be sent.
+    ///
+    /// + request `args` the requested disposition of data to be sent.
+    /// - response the constraints sent data must satisfy.
+    /// * error the error code indicating the reason for validation failure.
+    SendMsgPreflight(table {
+        /// The destination address.
+        ///
+        /// If absent, interpreted as the method receiver's connected address and
+        /// causes the connected address to be returned.
+        ///
+        /// Required if the method receiver is not connected.
+        1: to fuchsia.net.SocketAddress;
+    }) -> (resource table {
+        /// The validated destination address.
+        ///
+        /// Present only in response to an unset `to` addreess.
+        1: to fuchsia.net.SocketAddress;
+        /// Represents the validity of this structure.
+        ///
+        /// The structure is invalid if any of the elements' peer is closed.
+        /// Datagrams sent with the associated metadata after invalidation will be
+        /// silently dropped.
+        2: validity vector<zx.handle:<EVENTPAIR, zx.RIGHTS_BASIC>>:ZX_WAIT_MANY_MAXIMUM_ITEMS;
+        /// The maximum datagram size that can be sent.
+        ///
+        /// Datagrams exceeding this will be silently dropped.
+        3: maximum_size uint32;
+    }) error fuchsia.posix.Errno;
+
+    /// Returns the set of requested control messages.
+    ///
+    /// - response the set of currently requested control messages.
+    RecvMsgPostflight() -> (resource table {
+        /// Represents the validity of this structure.
+        ///
+        /// The structure is invalid if the peer is closed.
+        1: validity zx.handle:<EVENTPAIR, zx.RIGHTS_BASIC>;
+        /// Identifies whether the `SO_TIMESTAMP` or `SO_TIMESTAMPNS` control messages are
+        /// requested.
+        2: timestamp TimestampOption;
+        /// Identifies the status (requested or not) of up to 32 control messages.
+        /// This set size should be large enough to signal the status of all cmsgs supported
+        /// by POSIX systems as of 2022. If that changes, the set can be extended by adding
+        /// additional bits fields.
+        3: requests @generated_name("CmsgRequests") flexible bits : uint32 {
+            /// Identifies whether the `IP_RECVTOS` control message is requested.
+            IP_TOS = 0x1;
+            /// Identifies whether the `IP_RECVTTL` control message is requested.
+            IP_TTL = 0x2;
+            /// Identifies whether the `IPV6_RECVTCLASS` control message is requested.
+            IPV6_TCLASS = 0x4;
+            /// Identifies whether the `IPV6_RECVHOPLIMIT` control message is requested.
+            IPV6_HOPLIMIT = 0x8;
+        };
+    }) error fuchsia.posix.Errno;
+};
+
 /// A synchronous datagram socket.
 ///
 /// This protocol defines synchronous methods for sending and receiving datagram
