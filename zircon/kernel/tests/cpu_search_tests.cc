@@ -318,9 +318,10 @@ static bool cpu_search_set_test_2() {
   EXPECT_EQ(cpu1, cluster_set.clusters[0].members[1]);
 
   {
-    // The search set for CPU 0 should have two entries.
+    // The search set for CPU 0 should have two entries with CPU 0 as the first entry.
     CpuSearchSetTestAccess::DoInitialize(&search_set, cpu0, cpu_count, cluster_set, map);
     EXPECT_EQ(cpu_count, search_set.cpu_count());
+    EXPECT_EQ(cpu0, search_set.const_iterator().begin()->cpu);
 
     // Check that each CPU is in the search set.
     cpu_mask_t cpu_set = 0;
@@ -332,9 +333,10 @@ static bool cpu_search_set_test_2() {
   }
 
   {
-    // The search set for CPU 1 should have two entries.
+    // The search set for CPU 1 should have two entries with CPU 1 as the first entry.
     CpuSearchSetTestAccess::DoInitialize(&search_set, cpu1, cpu_count, cluster_set, map);
     EXPECT_EQ(cpu_count, search_set.cpu_count());
+    EXPECT_EQ(cpu1, search_set.const_iterator().begin()->cpu);
 
     // Check that each CPU is in the search set.
     cpu_mask_t cpu_set = 0;
@@ -376,9 +378,10 @@ static bool cpu_search_set_test_4() {
   EXPECT_EQ(cpu3, cluster_set.clusters[1].members[1]);
 
   {
-    // The search set for CPU 0 should have four entries.
+    // The search set for CPU 0 should have four entries with CPU 0 as the first entry.
     CpuSearchSetTestAccess::DoInitialize(&search_set, cpu0, cpu_count, cluster_set, map);
     EXPECT_EQ(cpu_count, search_set.cpu_count());
+    EXPECT_EQ(cpu0, search_set.const_iterator().begin()->cpu);
 
     // Check that each CPU is in the search set.
     cpu_mask_t cpu_set = 0;
@@ -390,9 +393,10 @@ static bool cpu_search_set_test_4() {
   }
 
   {
-    // The search set for CPU 3 should have four entries.
+    // The search set for CPU 3 should have four entries with CPU 3 as the first entry.
     CpuSearchSetTestAccess::DoInitialize(&search_set, cpu3, cpu_count, cluster_set, map);
     EXPECT_EQ(cpu_count, search_set.cpu_count());
+    EXPECT_EQ(cpu3, search_set.const_iterator().begin()->cpu);
 
     // Check that each CPU is in the search set.
     cpu_mask_t cpu_set = 0;
@@ -431,9 +435,10 @@ static bool cpu_search_set_test_max() {
   EXPECT_EQ(cpu_max, cluster_set.clusters[0].members[cpu_max]);
 
   {
-    // The search set for CPU 0 should have max entries.
+    // The search set for CPU 0 should have max entries with CPU 0 as the first entry.
     CpuSearchSetTestAccess::DoInitialize(&search_set, cpu0, cpu_count, cluster_set, map);
     EXPECT_EQ(cpu_count, search_set.cpu_count());
+    EXPECT_EQ(cpu0, search_set.const_iterator().begin()->cpu);
 
     // Check that each CPU is in the search set.
     cpu_mask_t cpu_set = 0;
@@ -445,9 +450,11 @@ static bool cpu_search_set_test_max() {
   }
 
   {
-    // The search set for the last CPU should have max entries.
+    // The search set for the last CPU should have max entries with last CPU as
+    // the first entry.
     CpuSearchSetTestAccess::DoInitialize(&search_set, cpu_max, cpu_count, cluster_set, map);
     EXPECT_EQ(cpu_count, search_set.cpu_count());
+    EXPECT_EQ(cpu_max, search_set.const_iterator().begin()->cpu);
 
     // Check that each CPU is in the search set.
     cpu_mask_t cpu_set = 0;

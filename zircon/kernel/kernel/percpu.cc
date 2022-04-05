@@ -90,7 +90,6 @@ void percpu::InitializeSecondariesBegin(uint32_t /*init_level*/) {
         const SchedPerformanceScale scale =
             ffl::FromRatio(performance_class[i] + 1, max_performance_class + 1);
         processor_index_[i]->scheduler.InitializePerformanceScale(scale);
-        CpuSearchSet::SetPerfScale(i, scale.raw_value());
         dprintf(INFO, "CPU %2u: %s\n", i, Format(scale).c_str());
       }
     } else {

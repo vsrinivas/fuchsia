@@ -813,10 +813,10 @@ cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
         return a < b;
       }
 
-      // Only consider crossing cluster boundaries if the current candidate is
-      // above the threshold.
-      return b_predicted_queue_time_ns > kInterClusterThreshold &&
-             a_predicted_queue_time_ns < b_predicted_queue_time_ns;
+      // When crossing a cluster boundary, compare both the candidate and
+      // current target to the threshold.
+      return a_predicted_queue_time_ns <= kInterClusterThreshold &&
+             b_predicted_queue_time_ns > kInterClusterThreshold;
     } else {
       const SchedUtilization utilization = thread->scheduler_state().deadline_.utilization;
       const SchedUtilization scaled_utilization_a = queue_a->ScaleUp(utilization);
