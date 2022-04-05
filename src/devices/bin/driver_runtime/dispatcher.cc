@@ -18,6 +18,8 @@
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
 
+#include <string>
+
 #include "src/devices/bin/driver_runtime/driver_context.h"
 #include "src/devices/lib/log/log.h"
 
@@ -110,7 +112,9 @@ fdf_status_t Dispatcher::CreateWithLoop(uint32_t options, const char* scheduler_
     return ZX_ERR_INVALID_ARGS;
   }
   if (allow_sync_calls) {
-    zx_status_t status = loop->StartThread();
+    static int number = 0;
+    auto name = "fdf-dispatcher-thread-" + std::to_string(number++);
+    zx_status_t status = loop->StartThread(name.c_str());
     if (status != ZX_OK) {
       return status;
     }
