@@ -45,6 +45,8 @@ class MagmaClientContext : public magma_encoder_context_t {
 
   magma_status_t get_fd_for_buffer(magma_buffer_t buffer, int* fd_out);
 
+  std::mutex& mutex() { return m_mutex_; }
+
   static magma_status_t magma_device_import(void* self, magma_handle_t device_channel,
                                             magma_device_t* device_out);
   static magma_status_t magma_query(void* self, magma_device_t device, uint64_t id,
@@ -53,10 +55,41 @@ class MagmaClientContext : public magma_encoder_context_t {
                                                  magma_handle_t* handle_out);
   static magma_status_t magma_poll(void* self, magma_poll_item_t* items, uint32_t count, uint64_t timeout_ns);
 
+  static void set_thread_local_context_lock(std::unique_lock<std::mutex>* lock) {
+    t_lock = lock;
+  }
+
+  static std::unique_lock<std::mutex>* get_thread_local_context_lock() {
+    return t_lock;
+  }
+
   magma_device_import_client_proc_t magma_device_import_enc_;
   magma_query_client_proc_t magma_query_enc_;
   magma_poll_client_proc_t magma_poll_enc_;
+
+  std::mutex m_mutex_;
+  static thread_local std::unique_lock<std::mutex>* t_lock;
 };
+
+// This makes the mutex lock available to decoding methods that can take time
+// (eg magma_poll), to prevent one thread from locking out others.
+class ContextLock {
+public:
+  ContextLock(MagmaClientContext* context) : m_context_(context), m_lock_(context->mutex()) {
+    m_context_->set_thread_local_context_lock(&m_lock_);
+  }
+
+  ~ContextLock() {
+    m_context_->set_thread_local_context_lock(nullptr);
+  }
+
+private:
+  MagmaClientContext* m_context_;
+  std::unique_lock<std::mutex> m_lock_;
+};
+
+// static
+thread_local std::unique_lock<std::mutex>* MagmaClientContext::t_lock;
 
 MagmaClientContext::MagmaClientContext(AddressSpaceStream* stream)
     : magma_encoder_context_t(stream, new ChecksumCalculator) {
@@ -267,6 +300,9 @@ magma_status_t MagmaClientContext::magma_poll(void* self, magma_poll_item_t* ite
        if (status != MAGMA_STATUS_TIMED_OUT)
           return status;
 
+       // Not ready, allow other threads to work in with us
+       get_thread_local_context_lock()->unlock();
+
        std::this_thread::yield();
 
        int64_t time_now = static_cast<int64_t>(get_ns_monotonic(false));
@@ -279,12 +315,16 @@ magma_status_t MagmaClientContext::magma_poll(void* self, magma_poll_item_t* ite
 
        if (time_now >= abs_timeout_ns)
           break;
+
+       get_thread_local_context_lock()->lock();
     }
 
     return MAGMA_STATUS_TIMED_OUT;
 }
 
-magma_client_context_t* GetMagmaContext() {
+// We have a singleton client context for all threads.  We want all client
+// threads served by a single server RenderThread.
+MagmaClientContext* GetMagmaContext() {
   static MagmaClientContext* s_context;
   static std::once_flag once_flag;
 
@@ -317,7 +357,10 @@ magma_client_context_t* GetMagmaContext() {
 }
 
 // Used in magma_entry.cpp
-#define GET_CONTEXT magma_client_context_t* ctx = GetMagmaContext()
+// Always lock around the encoding methods because we have a singleton context.
+#define GET_CONTEXT \
+  MagmaClientContext* ctx = GetMagmaContext(); \
+  ContextLock lock(ctx)
 
 #include "gen/magma_entry.cpp"
 
