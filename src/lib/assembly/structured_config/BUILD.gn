@@ -32,7 +32,7 @@ fuchsia_component("pass_with_config") {
 }
 
 fuchsia_structured_config_values("pass_with_config_values") {
-  cm_target = ":pass_with_config"
+  cm_label = ":pass_with_config"
   values_source = "meta/test_with_config_values.json5"
 }
 

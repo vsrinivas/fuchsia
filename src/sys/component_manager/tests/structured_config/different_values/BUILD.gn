@@ -38,19 +38,19 @@ fuchsia_component_manifest("receiver_manifest") {
 
 fuchsia_component("receiver_component") {
   testonly = true
-  cm_target = ":receiver_manifest"
+  cm_label = ":receiver_manifest"
   deps = [ "//src/sys/component_manager/tests/structured_config/client_integration/rust:bin" ]
 }
 
 fuchsia_structured_config_values("values_with_true") {
   testonly = true
-  cm_target = ":receiver_manifest"
+  cm_label = ":receiver_manifest"
   values_source = "config/values_with_true.json5"
 }
 
 fuchsia_structured_config_values("values_with_false") {
   testonly = true
-  cm_target = ":receiver_manifest"
+  cm_label = ":receiver_manifest"
   values_source = "config/values_with_false.json5"
 }
 

@@ -76,7 +76,7 @@ fuchsia_component_manifest("sampler-manifest") {
 }
 
 fuchsia_component("sampler-component") {
-  cm_target = ":sampler-manifest"
+  cm_label = ":sampler-manifest"
   deps = [
     "//src/diagnostics/config/sampler:sampler-config-data",
     "//src/diagnostics/launcher:bin",
@@ -85,16 +85,16 @@ fuchsia_component("sampler-component") {
 
 fuchsia_structured_config_values("sampler-prod-config") {
   values_source = "configs/default.json5"
-  cm_target = ":sampler-manifest"
+  cm_label = ":sampler-manifest"
 }
 
 fuchsia_structured_config_values("sampler-test-config") {
   values_source = "configs/integration-test.json5"
-  cm_target = ":sampler-manifest"
+  cm_label = ":sampler-manifest"
 }
 
 fuchsia_structured_config_rust_lib("sampler-component-config") {
-  cm_target = ":sampler-manifest"
+  cm_label = ":sampler-manifest"
 }
 
 fuchsia_package("sampler") {

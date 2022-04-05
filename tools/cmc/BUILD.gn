@@ -105,7 +105,7 @@ fuchsia_component_manifest("example_component_manifest") {
 }
 
 fuchsia_component("example_component") {
-  cm_target = ":example_component_manifest"
+  cm_label = ":example_component_manifest"
   deps = [ ":example_component_config_values" ]
   testonly = true
   check_references = false
@@ -131,7 +131,7 @@ install_host_tools("install") {
 
 fuchsia_structured_config_values("example_component_config_values") {
   testonly = true
-  cm_target = ":example_component_manifest"
+  cm_label = ":example_component_manifest"
   values = {
     my_flag = true
     my_uint8 = 42

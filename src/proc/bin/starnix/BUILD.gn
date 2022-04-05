@@ -227,7 +227,7 @@ if (target_cpu == "x64") {
 
   # The starnix runner configuration library, used by the Rust binary to parse configuration.
   fuchsia_structured_config_rust_lib("starnix_runner_config") {
-    cm_target = ":starnix_runner_manifest"
+    cm_label = ":starnix_runner_manifest"
   }
 
   resource("starnix-test-files") {

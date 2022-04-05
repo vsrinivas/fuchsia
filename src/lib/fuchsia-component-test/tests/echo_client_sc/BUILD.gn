@@ -26,17 +26,17 @@ fuchsia_component_manifest("manifest") {
 }
 
 fuchsia_component("component") {
-  cm_target = ":manifest"
+  cm_label = ":manifest"
   deps = [ ":bin" ]
 }
 
 fuchsia_structured_config_values("config_values") {
   values_source = "config/default.json5"
-  cm_target = ":manifest"
+  cm_label = ":manifest"
 }
 
 fuchsia_structured_config_rust_lib("config_lib") {
-  cm_target = ":manifest"
+  cm_label = ":manifest"
 }
 
 group("echo_client_sc") {

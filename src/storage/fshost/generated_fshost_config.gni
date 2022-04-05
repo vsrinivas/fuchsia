@@ -113,7 +113,7 @@ template("generated_fshost_config") {
   }
 
   fuchsia_structured_config_values(target_name) {
-    cm_target = ":$_manifest_target"
+    cm_label = ":$_manifest_target"
     values = {
       # Defaults
       blobfs = true

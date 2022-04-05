@@ -33,18 +33,18 @@ fuchsia_component_manifest("manifest") {
 fuchsia_structured_config_rust_lib("config_lib") {
   testonly = true
   name = "receiver_config"
-  cm_target = ":manifest"
+  cm_label = ":manifest"
 }
 
 fuchsia_component("component") {
   testonly = true
-  cm_target = ":manifest"
+  cm_label = ":manifest"
   deps = [ ":bin" ]
 }
 
 fuchsia_structured_config_values("values") {
   testonly = true
-  cm_target = ":manifest"
+  cm_label = ":manifest"
   values_source = "../config/values.json5"
 }
 

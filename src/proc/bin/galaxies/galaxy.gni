@@ -32,12 +32,12 @@ template("starnix_galaxy_package") {
   }
 
   fuchsia_component(component_target) {
-    cm_target = ":${manifest_target}"
+    cm_label = ":${manifest_target}"
     deps = [ "//src/proc/bin/starnix:starnix_runner_bin" ]
   }
 
   fuchsia_structured_config_values(config_target) {
-    cm_target = ":${manifest_target}"
+    cm_label = ":${manifest_target}"
     values_source = invoker.config
   }
 

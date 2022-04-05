@@ -440,7 +440,7 @@ fuchsia_component("test-fshost-comp") {
     ":fshost",
     "//src/security/policy/zxcrypt:null",
   ]
-  cm_target = ":test-fshost-manifest"
+  cm_label = ":test-fshost-manifest"
 }
 
 group("test-fshost") {
@@ -479,7 +479,7 @@ fuchsia_component("test-fshost-no-watcher-comp") {
     ":fshost",
     "//src/security/policy/zxcrypt:null",
   ]
-  cm_target = ":test-fshost-no-watcher-manifest"
+  cm_label = ":test-fshost-no-watcher-manifest"
 }
 
 group("test-fshost-no-watcher") {
@@ -563,7 +563,7 @@ fuchsia_component_manifest("fshost_manifest") {
 }
 
 fuchsia_structured_config_cpp_elf_lib("fshost_config") {
-  cm_target = ":fshost_manifest"
+  cm_label = ":fshost_manifest"
 }
 
 group("bootfs") {

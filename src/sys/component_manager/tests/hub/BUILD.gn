@@ -80,12 +80,12 @@ fuchsia_component_manifest("structured_config_reporter_manifest") {
 fuchsia_component("structured_config_reporter") {
   testonly = true
   deps = [ "components:structured_config_reporter_bin" ]
-  cm_target = ":structured_config_reporter_manifest"
+  cm_label = ":structured_config_reporter_manifest"
 }
 
 fuchsia_structured_config_values("structured_config_reporter_values") {
   testonly = true
-  cm_target = ":structured_config_reporter_manifest"
+  cm_label = ":structured_config_reporter_manifest"
   values_source = "components/structured_config/config/reporter.json5"
 }
 

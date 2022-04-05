@@ -45,12 +45,12 @@ import("//tools/configc/build/config.gni")
 # }
 #
 # fuchsia_component("my_component") {
-#   cm_target = ":my_component_manifest"
+#   cm_label = ":my_component_manifest"
 #   deps = [ ... ]
 # }
 #
 # fuchsia_structured_config_values("my_component_config") {
-#   cm_target = ":my_component_manifest"
+#   cm_label = ":my_component_manifest"
 #   values = "config/my_component.json5"
 # }
 # ```
@@ -69,9 +69,9 @@ import("//tools/configc/build/config.gni")
 #
 # Parameters
 #
-#   cm_target (required)
-#     The fuchsia_component_manifest target for which the definition file will be generated.
-#     Type: GN target
+#   cm_label (required)
+#     The label of the fuchsia_component_manifest target for which the file will be generated.
+#     Type: GN label, e.g. `:my_component_manifest`
 #
 #   values_source -or- values (required)
 #     file: The JSON5 file containing the concrete values for the generated file.
@@ -89,8 +89,8 @@ import("//tools/configc/build/config.gni")
 template("fuchsia_structured_config_values") {
   if (current_toolchain == default_toolchain) {
     assert(
-        defined(invoker.cm_target),
-        "must provide a component manifest target with a configuration declaration")
+        defined(invoker.cm_label),
+        "must provide a component manifest label with a configuration declaration")
 
     _source_defined = defined(invoker.values_source)
     _values_defined = defined(invoker.values)
@@ -114,7 +114,7 @@ template("fuchsia_structured_config_values") {
     }
 
     # TODO(https://fxbug.dev/86798) allow defining manifest in separate gn mod from config
-    component_outputs = get_target_outputs(invoker.cm_target)
+    component_outputs = get_target_outputs(invoker.cm_label)
     compiled_manifest = component_outputs[0]
 
     if (defined(invoker.component_name)) {
@@ -139,7 +139,7 @@ template("fuchsia_structured_config_values") {
       }
       deps += [
                 ":$manifest_resource_target",
-                "${invoker.cm_target}",
+                "${invoker.cm_label}",
               ] + _value_file_deps
     }
 
@@ -188,12 +188,12 @@ template("fuchsia_structured_config_values") {
 # }
 #
 # fuchsia_component("my_component") {
-#   cm_target = ":my_component_manifest"
+#   cm_label = ":my_component_manifest"
 #   deps = [ ... ]
 # }
 #
 # fuchsia_structured_config_rust_lib("my_component_config_lib") {
-#   cm_target = ":my_component_manifest"
+#   cm_label = ":my_component_manifest"
 # }
 # ```
 #
@@ -223,9 +223,9 @@ template("fuchsia_structured_config_values") {
 #
 # Parameters
 #
-#   cm_target (required)
-#     The fuchsia_component_manifest target for which the definition file will be generated.
-#     Type: GN target
+#   cm_label (required)
+#     The label of the fuchsia_component_manifest target for which the file will be generated.
+#     Type: GN label, e.g. `:my_component_manifest`
 #
 #   name (optional)
 #     Name for the generated Rust library. If not specified, the target name is used.
@@ -252,11 +252,10 @@ template("fuchsia_structured_config_rust_lib") {
   rust_source_target = "${target_name}_rust_config_lib_source"
 
   if (current_toolchain == default_toolchain) {
-    assert(defined(invoker.cm_target),
-           "must provide a component manifest target")
+    assert(defined(invoker.cm_label), "must provide a component manifest label")
 
     # TODO(https://fxbug.dev/86798) allow defining manifest in separate gn mod from config
-    manifest_outputs = get_target_outputs(invoker.cm_target)
+    manifest_outputs = get_target_outputs(invoker.cm_label)
     compiled_manifest = manifest_outputs[0]
 
     # generate the client library FIDL source
@@ -264,7 +263,7 @@ template("fuchsia_structured_config_rust_lib") {
       forward_variables_from(invoker, [ "testonly" ])
       name = fidl_library_name
       compiled_manifest = compiled_manifest
-      deps = [ "${invoker.cm_target}" ]
+      deps = [ invoker.cm_label ]
 
       # prevent manifest from getting into package this way
       metadata = {
@@ -277,7 +276,7 @@ template("fuchsia_structured_config_rust_lib") {
       forward_variables_from(invoker, [ "testonly" ])
       fidl_library_name = fidl_library_name
       compiled_manifest = compiled_manifest
-      deps = [ "${invoker.cm_target}" ]
+      deps = [ invoker.cm_label ]
 
       # prevent manifest from getting into package this way
       metadata = {
@@ -359,12 +358,12 @@ template("fuchsia_structured_config_rust_lib") {
 # }
 #
 # fuchsia_component("my_component") {
-#   cm_target = ":my_component_manifest"
+#   cm_label = ":my_component_manifest"
 #   deps = [ ... ]
 # }
 #
 # fuchsia_structured_config_cpp_elf_lib("my_component_config_lib") {
-#   cm_target = ":my_component_manifest"
+#   cm_label = ":my_component_manifest"
 # }
 # ```
 #
@@ -394,9 +393,9 @@ template("fuchsia_structured_config_rust_lib") {
 #
 # Parameters
 #
-#   cm_target (required)
-#     The fuchsia_component_manifest target for which the definition file will be generated.
-#     Type: GN target
+#   cm_label (required)
+#     The label of the fuchsia_component_manifest target for which the file will be generated.
+#     Type: GN label, e.g. `:my_component_manifest`
 #
 #   namespace (optional)
 #     Namespace used by the generated C++ library. If not specified, the target name is used.
@@ -431,11 +430,10 @@ template("fuchsia_structured_config_cpp_elf_lib") {
   cpp_elf_headers_target = "${target_name}_cpp_elf_config_lib_headers"
 
   if (current_toolchain == default_toolchain) {
-    assert(defined(invoker.cm_target),
-           "must provide a component manifest target")
+    assert(defined(invoker.cm_label), "must provide a component manifest label")
 
     # TODO(https://fxbug.dev/86798) allow defining manifest in separate gn mod from config
-    manifest_outputs = get_target_outputs(invoker.cm_target)
+    manifest_outputs = get_target_outputs(invoker.cm_label)
     compiled_manifest = manifest_outputs[0]
 
     # generate the client library FIDL source
@@ -443,7 +441,7 @@ template("fuchsia_structured_config_cpp_elf_lib") {
       forward_variables_from(invoker, [ "testonly" ])
       name = fidl_library_name
       compiled_manifest = compiled_manifest
-      deps = [ "${invoker.cm_target}" ]
+      deps = [ invoker.cm_label ]
     }
 
     # generate the C++ source
@@ -453,7 +451,7 @@ template("fuchsia_structured_config_cpp_elf_lib") {
       fidl_library_name = fidl_library_name
       compiled_manifest = compiled_manifest
       flavor = "elf"
-      deps = [ "${invoker.cm_target}" ]
+      deps = [ invoker.cm_label ]
     }
   } else {
     group(fidl_source_target) {
@@ -541,12 +539,12 @@ template("fuchsia_structured_config_cpp_elf_lib") {
 # }
 #
 # fuchsia_component("my_component") {
-#   cm_target = ":my_component_manifest"
+#   cm_label = ":my_component_manifest"
 #   deps = [ ... ]
 # }
 #
 # fuchsia_structured_config_cpp_driver_lib("my_component_config_lib") {
-#   cm_target = ":my_component_manifest"
+#   cm_label = ":my_component_manifest"
 # }
 # ```
 #
@@ -581,9 +579,9 @@ template("fuchsia_structured_config_cpp_elf_lib") {
 #
 # Parameters
 #
-#   cm_target (required)
-#     The fuchsia_component_manifest target for which the definition file will be generated.
-#     Type: GN target
+#   cm_label (required)
+#     The label of the fuchsia_component_manifest target for which the file will be generated.
+#     Type: GN label, e.g. `:my_component_manifest`
 #
 #   namespace (optional)
 #     Namespace used by the generated C++ library. If not specified, the target name is used.
@@ -618,11 +616,10 @@ template("fuchsia_structured_config_cpp_driver_lib") {
   cpp_driver_headers_target = "${target_name}_cpp_driver_config_lib_headers"
 
   if (current_toolchain == default_toolchain) {
-    assert(defined(invoker.cm_target),
-           "must provide a component manifest target")
+    assert(defined(invoker.cm_label), "must provide a component manifest label")
 
     # TODO(https://fxbug.dev/86798) allow defining manifest in separate gn mod from config
-    manifest_outputs = get_target_outputs(invoker.cm_target)
+    manifest_outputs = get_target_outputs(invoker.cm_label)
     compiled_manifest = manifest_outputs[0]
 
     # generate the client library FIDL source
@@ -630,7 +627,7 @@ template("fuchsia_structured_config_cpp_driver_lib") {
       forward_variables_from(invoker, [ "testonly" ])
       name = fidl_library_name
       compiled_manifest = compiled_manifest
-      deps = [ "${invoker.cm_target}" ]
+      deps = [ invoker.cm_label ]
     }
 
     # generate the C++ source
@@ -640,7 +637,7 @@ template("fuchsia_structured_config_cpp_driver_lib") {
       fidl_library_name = fidl_library_name
       compiled_manifest = compiled_manifest
       flavor = "driver"
-      deps = [ "${invoker.cm_target}" ]
+      deps = [ invoker.cm_label ]
     }
   } else {
     group(fidl_source_target) {

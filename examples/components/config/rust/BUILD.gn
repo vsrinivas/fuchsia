@@ -31,23 +31,23 @@ fuchsia_component_manifest("manifest") {
 }
 
 fuchsia_component("component") {
-  cm_target = ":manifest"
+  cm_label = ":manifest"
   deps = [ ":bin" ]
 }
 
 fuchsia_structured_config_rust_lib("example_config") {
-  cm_target = ":manifest"
+  cm_label = ":manifest"
 }
 
 fuchsia_structured_config_values("values") {
-  cm_target = ":manifest"
+  cm_label = ":manifest"
   values = {
     greeting = config_example_rust_greeting
   }
 }
 
 fuchsia_structured_config_values("values_from_json_file") {
-  cm_target = ":manifest"
+  cm_label = ":manifest"
   values_source = "../config_example_default_values.json5"
 }
 

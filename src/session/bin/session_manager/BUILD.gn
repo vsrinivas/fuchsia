@@ -81,7 +81,7 @@ fuchsia_component_manifest("manifest") {
 }
 
 fuchsia_structured_config_rust_lib("session_manager_config") {
-  cm_target = ":manifest"
+  cm_label = ":manifest"
 }
 
 rustc_binary("bin") {
@@ -102,7 +102,7 @@ rustc_binary("bin") {
 }
 
 fuchsia_component("session_manager_comp") {
-  cm_target = ":manifest"
+  cm_label = ":manifest"
   deps = [ ":bin" ]
 }
 

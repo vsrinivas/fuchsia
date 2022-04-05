@@ -47,19 +47,19 @@ fuchsia_component_manifest("receiver_manifest") {
 
 fuchsia_driver_component("receiver_component") {
   testonly = true
-  cm_target = ":receiver_manifest"
+  cm_label = ":receiver_manifest"
   deps = [ ":receiver_driver" ]
   info = "receiver-info.json"
 }
 
 fuchsia_structured_config_cpp_driver_lib("receiver_config") {
   testonly = true
-  cm_target = ":receiver_manifest"
+  cm_label = ":receiver_manifest"
 }
 
 fuchsia_structured_config_values("values") {
   testonly = true
-  cm_target = ":receiver_component"
+  cm_label = ":receiver_component"
   values_source = "//src/sys/component_manager/tests/structured_config/client_integration/config/values.json5"
 }
 

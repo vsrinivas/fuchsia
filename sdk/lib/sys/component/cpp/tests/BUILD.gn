@@ -130,18 +130,18 @@ fuchsia_component_manifest("echo_server_sc_manifest") {
 
 fuchsia_component("echo_server_sc") {
   testonly = true
-  cm_target = ":echo_server_sc_manifest"
+  cm_label = ":echo_server_sc_manifest"
   deps = [ ":echo_server_sc_bin" ]
 }
 
 fuchsia_structured_config_cpp_elf_lib("echo_server_config_lib") {
   testonly = true
-  cm_target = ":echo_server_sc_manifest"
+  cm_label = ":echo_server_sc_manifest"
 }
 
 fuchsia_structured_config_values("echo_server_default_config") {
   testonly = true
-  cm_target = ":echo_server_sc_manifest"
+  cm_label = ":echo_server_sc_manifest"
   values = {
     my_flag = true
     my_uint8 = 255
