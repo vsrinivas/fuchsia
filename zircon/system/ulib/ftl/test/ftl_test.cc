@@ -20,10 +20,24 @@ constexpr uint32_t kPageSize = 4096;
 constexpr uint32_t kPagesPerBlock = 64;
 
 // 50 blocks means 3200 pages, which is enough to have several map pages.
-constexpr ftl::VolumeOptions kDefaultOptions = {50,        2,          kPageSize* kPagesPerBlock,
-                                                kPageSize, kSpareSize, 0};
+constexpr ftl::VolumeOptions kDefaultOptions = {.num_blocks = 50,
+                                                .max_bad_blocks = 2,
+                                                .block_size = kPageSize * kPagesPerBlock,
+                                                .page_size = kPageSize,
+                                                .eb_size = kSpareSize,
+                                                .flags = 0};
+
 // Don't sprinkle in errors by default.
-constexpr TestOptions kBoringTestOptions = {-1, -1, 0, false, true, -1, false, std::nullopt};
+constexpr TestOptions kBoringTestOptions = {
+    .ecc_error_interval = -1,
+    .bad_block_interval = -1,
+    .bad_block_burst = 0,
+    .use_half_size = false,
+    .save_config_data = true,
+    .power_failure_delay = -1,
+    .emulate_half_write_on_power_failure = false,
+    .ftl_logger = std::nullopt,
+};
 
 TEST(FtlTest, IncompleteWriteWithValidity) {
   uint8_t spare[kSpareSize];
@@ -290,6 +304,143 @@ TEST(FtlTest, MapPageEccFailure) {
   uint32_t phys_page1_new = kInvalidPage;
   ASSERT_EQ(0, FtlnMapGetPpn(ftl, kMappingsPerMpn, &phys_page1_new));
   ASSERT_EQ(phys_page1_new, kInvalidPage);
+}
+
+// Purposely generates a high garbage level by interleaving which vpages get written, stops after
+// partial volume and map blocks to waste that space as well.
+void FillWithGarbage(FtlShell* ftl, uint32_t num_blocks) {
+  uint8_t buf[kPageSize];
+  memcpy(buf, "abc123", 6);
+  ftl::Volume* volume = ftl->volume();
+  // First write every page in order.
+  for (uint32_t i = 0; i < ftl->num_pages(); ++i) {
+    ASSERT_EQ(ZX_OK, volume->Write(i, 1, buf));
+  }
+
+  // Now exhaust any breathing room by replacing 1 page from each volume block.
+  uint32_t page = 0;
+  for (uint32_t num_writes = ftl->num_pages(); num_writes < kPagesPerBlock * num_blocks;
+       ++num_writes) {
+    ASSERT_EQ(ZX_OK, volume->Write(page, 1, buf));
+    page += kPagesPerBlock;
+    if (page >= ftl->num_pages()) {
+      // If we go off the end, we'll now replace the second page of each physical block.
+      page = (page % kPagesPerBlock) + 1;
+    }
+  }
+
+  // If we happen to end on a complete volume block, add another write.
+  if (std::max(kPagesPerBlock * num_blocks, ftl->num_pages()) % kPagesPerBlock == 0) {
+    ASSERT_EQ(ZX_OK, volume->Write(page, 1, buf));
+  }
+}
+
+// Ensure we can remount after filling with garbage.
+TEST(FtlTest, HighGarbageLevelRemount) {
+  FtlShell ftl_shell;
+  auto driver = std::make_unique<NdmRamDriver>(kDefaultOptions, kBoringTestOptions);
+  ASSERT_EQ(nullptr, driver->Init());
+  ASSERT_TRUE(ftl_shell.InitWithDriver(std::move(driver)));
+  ASSERT_NO_FATAL_FAILURE(FillWithGarbage(&ftl_shell, kDefaultOptions.num_blocks));
+
+  // Flush and remount. Not enough map pages to fill the map block.
+  ftl::Volume* volume = ftl_shell.volume();
+  ASSERT_EQ(ZX_OK, volume->Flush());
+  ASSERT_EQ(nullptr, volume->ReAttach());
+  FTLN ftl = reinterpret_cast<FTLN>(
+      reinterpret_cast<ftl::VolumeImpl*>(volume)->GetInternalVolumeForTest());
+  // The FTL maintains this minimum number of free blocks. During mount it will need to grab 2 of
+  // them, one for new map pages, one for new volume pages, which means that we'll need to recycle
+  // and reclaim blocks, first of which it will try to recover are the half-finished map block and
+  // volume block. This should be true if we've generated enough "garbage" in the volume.
+  EXPECT_LE(ftl->num_free_blks, static_cast<uint32_t>(FTLN_MIN_FREE_BLKS));
+
+  // Ensure that we can perform a read.
+  uint8_t buf[kPageSize];
+  ASSERT_EQ(ZX_OK, volume->Read(1, 1, buf));
+}
+
+// It is a critical invariant that the erase list is the last thing written at shutdown and then
+// erased before any other mutating operations at mount. We fill the volume with garbage first to
+// trigger block recycles on mount, which should never happen before the erase list is removed.
+TEST(FtlTest, EraseListLastAndFirst) {
+  std::mutex lock;
+  uint32_t last_write_page = 0;
+  uint32_t first_mutation_page = 0;
+  NdmRamDriver::Op first_mutation_type = NdmRamDriver::Op::Read;
+  bool first_mutation_done = false;
+
+  FtlShell ftl_shell;
+  auto driver = std::make_unique<NdmRamDriver>(kDefaultOptions, kBoringTestOptions);
+  driver->set_operation_callback([&](NdmRamDriver::Op op, uint32_t page) {
+    std::lock_guard l(lock);
+    // Exclude the 2 blocks used for ndm metadata.
+    if (page / kPagesPerBlock > kDefaultOptions.num_blocks - 3) {
+      return 0;
+    }
+    if ((op == NdmRamDriver::Op::Write || op == NdmRamDriver::Op::Erase) && !first_mutation_done) {
+      first_mutation_done = true;
+      first_mutation_type = op;
+      first_mutation_page = page;
+    }
+    if (op == NdmRamDriver::Op::Write) {
+      last_write_page = page;
+    }
+    return 0;
+  });
+  ASSERT_EQ(nullptr, driver->Init());
+  NdmRamDriver* unowned_driver = driver.get();
+  ASSERT_TRUE(ftl_shell.InitWithDriver(std::move(driver)));
+
+  ASSERT_NO_FATAL_FAILURE(FillWithGarbage(&ftl_shell, kDefaultOptions.num_blocks));
+  ftl::Volume* volume = ftl_shell.volume();
+  ASSERT_EQ(ZX_OK, volume->Flush());
+
+  // Recycle the map page which eagerly erases. This way there is something for the erase list to
+  // contain. Do it twice since we need at least 2 erased blocks to write out an erase list.
+  FTLN ftl = reinterpret_cast<FTLN>(
+      reinterpret_cast<ftl::VolumeImpl*>(volume)->GetInternalVolumeForTest());
+  uint32_t meta_page = ftl->num_map_pgs - 1;
+  uint32_t phys_map_page = ftl->mpns[0];
+  ASSERT_NE(0xFFFFFFFFu, phys_map_page);
+  ASSERT_EQ(0, FtlnRecycleMapBlk(ftl, phys_map_page / kPagesPerBlock));
+  ASSERT_NE(phys_map_page, ftl->mpns[0]);
+  phys_map_page = ftl->mpns[0];
+  ASSERT_NE(0xFFFFFFFFu, phys_map_page);
+  ASSERT_EQ(0, FtlnRecycleMapBlk(ftl, phys_map_page / kPagesPerBlock));
+  ASSERT_NE(phys_map_page, ftl->mpns[0]);
+
+  // Erase list gets written during unmount.
+  volume->Unmount();
+
+  uint32_t last_write_unmount = 0;
+  {
+    // Save the last mutation from unmount, which should be a write.
+    std::lock_guard l(lock);
+    last_write_unmount = last_write_page;
+
+    // Reset the first_mutation bit so that it will recapture on mount.
+    first_mutation_done = false;
+  }
+
+  // Get the spare for it.
+  uint8_t spare_buf[kSpareSize];
+  ASSERT_EQ(ZX_OK, unowned_driver->NandRead(last_write_unmount, 1, nullptr, spare_buf));
+  // It is a meta-page, which can only be an erase or continuation of an erase page.
+  ASSERT_NE(static_cast<uint32_t>(-1), GET_SA_BC(spare_buf));
+  ASSERT_EQ(meta_page, GET_SA_VPN(spare_buf));
+
+  // Remount. Verify that first mutation was the deletion.
+  ASSERT_EQ(nullptr, volume->ReAttach());
+  uint8_t page_buf[kPageSize];
+  ASSERT_EQ(ZX_OK, volume->Write(0, 1, page_buf));
+  {
+    std::lock_guard l(lock);
+    // First mutation should be to the block containing the erase list.
+    ASSERT_TRUE(first_mutation_done);
+    ASSERT_EQ(NdmRamDriver::Op::Erase, first_mutation_type);
+    ASSERT_EQ(last_write_unmount / kPagesPerBlock, first_mutation_page / kPagesPerBlock);
+  }
 }
 
 }  // namespace

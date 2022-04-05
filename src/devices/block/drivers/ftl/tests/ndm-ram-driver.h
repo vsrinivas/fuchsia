@@ -10,6 +10,7 @@
 #include <zircon/types.h>
 
 #include <cstdint>
+#include <functional>
 #include <limits>
 
 #include <fbl/array.h>
@@ -51,6 +52,12 @@ struct TestOptions {
 // Ram-backed driver for testing purposes.
 class NdmRamDriver final : public ftl::NdmBaseDriver {
  public:
+  enum Op {
+    Read,
+    Write,
+    Erase,
+  };
+
   explicit NdmRamDriver(const ftl::VolumeOptions& options) : NdmRamDriver(options, {}) {}
   NdmRamDriver(const ftl::VolumeOptions& options, const TestOptions& test_options)
       : NdmBaseDriver(test_options.ftl_logger.value_or(ftl::DefaultLogger())),
@@ -71,6 +78,12 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
     test_options_.power_failure_delay = delay;
     power_failure_delay_ = 0;
     power_failure_triggered_ = false;
+  }
+
+  // Set a callback to be run on every individual page read, write, and erase. If the callback
+  // returns a non-zero value, that will be returned for the operation with no action performed.
+  void set_operation_callback(std::function<int(Op, uint32_t)> operation_callback) {
+    operation_callback_ = std::move(operation_callback);
   }
 
   // Access flags for a given page.
@@ -137,6 +150,8 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
   int power_failure_delay_ = 0;
 
   uint32_t num_bad_blocks_ = 0;
+
+  std::function<int(Op, uint32_t)> operation_callback_;
 };
 
 #endif  // SRC_DEVICES_BLOCK_DRIVERS_FTL_TESTS_NDM_RAM_DRIVER_H_

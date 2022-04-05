@@ -126,10 +126,16 @@ int NdmRamDriver::NandWrite(uint32_t start_page, uint32_t page_count, const void
 
 // Returns kNdmOk or kNdmError. kNdmError triggers marking the block as bad.
 int NdmRamDriver::NandErase(uint32_t page_num) {
+  ZX_ASSERT(page_num < options_.block_size * options_.num_blocks);
+  if (operation_callback_) {
+    if (int result = operation_callback_(Op::Erase, page_num); result != 0) {
+      return result;
+    }
+  }
+
   if (power_failure_triggered_) {
     return ftl::kNdmFatalError;
   }
-  ZX_ASSERT(page_num < options_.block_size * options_.num_blocks);
 
   if (ShouldTriggerPowerFailure()) {
     OnErasePowerFailure(page_num);
@@ -187,6 +193,12 @@ bool NdmRamDriver::IsEmptyPage(uint32_t page_num, const uint8_t* data, const uin
 
 int NdmRamDriver::ReadPage(uint32_t page_num, uint8_t* data, uint8_t* spare) {
   ZX_ASSERT(page_num < options_.block_size * options_.num_blocks);
+  if (operation_callback_) {
+    if (int result = operation_callback_(Op::Read, page_num); result != 0) {
+      return result;
+    }
+  }
+
   if (power_failure_triggered_) {
     return ftl::kNdmFatalError;
   }
@@ -222,6 +234,11 @@ int NdmRamDriver::ReadPage(uint32_t page_num, uint8_t* data, uint8_t* spare) {
 
 int NdmRamDriver::WritePage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) {
   ZX_ASSERT(page_num < options_.block_size * options_.num_blocks);
+  if (operation_callback_) {
+    if (int result = operation_callback_(Op::Write, page_num); result != 0) {
+      return result;
+    }
+  }
 
   if (power_failure_triggered_) {
     return ftl::kNdmFatalError;
