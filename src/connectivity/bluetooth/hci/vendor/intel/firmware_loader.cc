@@ -49,9 +49,8 @@ FirmwareLoader::LoadStatus FirmwareLoader::LoadBseq(const void* firmware, const 
     }
     offset++;
     BufferView command_view = file.view(offset);
-    PacketView<bt::hci_spec::CommandHeader> command(&command_view);
-    command = PacketView<bt::hci_spec::CommandHeader>(&command_view,
-                                                      command.header().parameter_total_size);
+    PacketView<bt::hci_spec::CommandHeader> command(&command_view,
+                                                    command.header().parameter_total_size);
     offset += command.size();
     if (!patched && le16toh(command.header().opcode) == kLoadPatch) {
       patched = true;
