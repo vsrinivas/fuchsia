@@ -33,7 +33,7 @@ if (is_host) {
   }
 
   group("fms") {
-    deps = [ ":lib" ]
+    public_deps = [ ":lib" ]
   }
 
   group("tests") {

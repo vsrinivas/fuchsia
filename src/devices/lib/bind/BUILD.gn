@@ -9,7 +9,7 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_staticlib.gni")
 
 group("bind") {
-  deps = [ ":lib" ]
+  public_deps = [ ":lib" ]
 }
 
 rustc_staticlib("bind-lib") {

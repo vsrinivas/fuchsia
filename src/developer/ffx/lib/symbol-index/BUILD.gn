@@ -28,7 +28,7 @@ if (is_host) {
   }
 
   group("symbol-index") {
-    deps = [ ":lib" ]
+    public_deps = [ ":lib" ]
   }
   group("tests") {
     testonly = true

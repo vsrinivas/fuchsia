@@ -17,5 +17,5 @@ if (is_host) {
 
 group("test_list") {
   testonly = true
-  deps = [ ":lib($host_toolchain)" ]
+  public_deps = [ ":lib($host_toolchain)" ]
 }
