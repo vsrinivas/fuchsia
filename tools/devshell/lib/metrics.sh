@@ -23,6 +23,11 @@ _METRICS_GA_PROPERTY_ID="UA-127897021-6"
 _METRICS_TRACK_ALL_ARGS=( "emu" "set" "fidlcat" "run-test" "run-test-component" "run-host-tests" )
 _METRICS_TRACK_RESULTS=( "set" "build" )
 _METRICS_ALLOWS_CUSTOM_REPORTING=( "test" )
+# If args match the below, then track capture group 1
+_METRICS_TRACK_REGEX=(
+    "^run (fuchsia-pkg:\/\/[[:graph:]]*)"
+    "^shell (run fuchsia-pkg:\/\/[[:graph:]]*)"
+)
 # We collect metrics when these operations happen without capturing all of
 # their args.
 _METRICS_TRACK_COMMAND_OPS=(
@@ -181,7 +186,7 @@ _METRICS_TRACK_UNKNOWN_OPS=( "shell" )
 # old versions of Bash, particularly in the one in MacOS. The alternative is to
 # make them global first via the assignments above and marking they readonly
 # later.
-readonly _METRICS_GA_PROPERTY_ID _METRICS_TRACK_ALL_ARGS _METRICS_TRACK_RESULTS _METRICS_ALLOWS_CUSTOM_REPORTING _METRICS_TRACK_COMMAND_OPS _METRICS_TRACK_UNKNOWN_OPS
+readonly _METRICS_GA_PROPERTY_ID _METRICS_TRACK_ALL_ARGS _METRICS_TRACK_RESULTS _METRICS_ALLOWS_CUSTOM_REPORTING _METRICS_TRACK_REGEX _METRICS_TRACK_COMMAND_OPS _METRICS_TRACK_UNKNOWN_OPS
 
 # To properly enable unit testing, METRICS_CONFIG is not read-only
 METRICS_CONFIG="${FUCHSIA_DIR}/.fx-metrics-config"
@@ -207,6 +212,18 @@ function __is_in {
   shift
   while [[ $# -gt 0 ]]; do
     if [[ "$1" == "$v" ]]; then
+      return 0
+    fi
+    shift
+  done
+  return 1
+}
+
+function __is_in_regex {
+  local v="$1"
+  shift
+  while [[ $# -gt 0 ]]; do
+    if [[ $v =~ $1 ]]; then
       return 0
     fi
     shift
@@ -375,6 +392,8 @@ function track-command-execution {
     # anything larger than 100 characters is an invalid execution and/or not
     # what we want to track.
     args=${args:0:100}
+  elif __is_in_regex "${subcommand} ${args}" "${_METRICS_TRACK_REGEX[@]}"; then
+    args="${BASH_REMATCH[1]}"
   elif [ -n "${subcommand_op}" ]; then
     if __is_in "${subcommand} ${subcommand_op}" \
         "${_METRICS_TRACK_COMMAND_OPS[@]}"; then

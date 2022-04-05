@@ -206,4 +206,46 @@ TEST_metrics_no_custom_track() {
   done
 }
 
+TEST_metrics_run_url() {
+  # `fx run <url> arg1 arg2` will track "run <url>"
+  local cmd="run"
+  local url="fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx"
+  local arg="$url arg1 arg2"
+  track-command-execution "${cmd}" "${arg}"
+  track-command-finished "200" "0" "${cmd}" "$arg"
+  verify_execution_event ${cmd}
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${metrics_log}" "el=${url}"
+
+  # `fx shell run <url> arg1 arg2` will track "shell run <url>"
+  local cmd="shell"
+  local arg="run $url arg1 arg2"
+  track-command-execution "${cmd}" "${arg}"
+  track-command-finished "200" "0" "${cmd}" "$arg"
+  verify_execution_event ${cmd}
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${metrics_log}" "el=run ${url}"
+
+  # `fx run <invalid-url> ...` will just track "shell run"
+  local cmd="run"
+  local arg="invalid-url arg1 arg2"
+  track-command-execution "${cmd}" "${arg}"
+  track-command-finished "200" "0" "${cmd}" "$arg"
+  verify_execution_event ${cmd}
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${metrics_log}" "el= "
+
+  for f in "${mycurl}".mock_state*; do
+    if btf::does-mock-args-contain "${f}" "--data-urlencode" "el=${arg}"; \
+        then
+      btf::_fail 1 \
+        "Too many execution arguments in calls to curl. fx ${cmd} should \
+            track precisely one argument: ${mycurl}.mock_state*"
+    fi
+    if btf::does-mock-args-contain "${f}" "--data-urlencode" "el=${subcmd}"; then
+      return 0  # success
+    fi
+  done
+  btf::_fail 1 \
+      "Could not find execution arguments in calls to curl. fx ${cmd} \
+          should track all arguments: ${mycurl}.mock_state*"
+}
+
 BT_RUN_TESTS "$@"
