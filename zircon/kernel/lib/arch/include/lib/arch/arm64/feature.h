@@ -300,13 +300,13 @@ ARCH_ARM64_SYSREG(ArmIdAa64Pfr0El1, "ID_AA64PFR0_EL1");
 // [arm/v8]: D13.2.120 Translation Control Register (EL1)
 // [arm/v8]: D13.2.121 Translation Control Register (EL2)
 enum class ArmPhysicalAddressSize {
-  k32Bits = 0b000,
-  k36Bits = 0b001,
-  k40Bits = 0b010,
-  k42Bits = 0b011,
-  k44Bits = 0b100,
-  k48Bits = 0b101,
-  k52Bits = 0b110,
+  k32Bits = 0b0000,
+  k36Bits = 0b0001,
+  k40Bits = 0b0010,
+  k42Bits = 0b0011,
+  k44Bits = 0b0100,
+  k48Bits = 0b0101,
+  k52Bits = 0b0110,
 };
 
 // ID_AA64MMFR0_EL1, AArch64 Memory Model Feature Register 0
