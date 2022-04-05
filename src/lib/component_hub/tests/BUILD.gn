@@ -10,8 +10,10 @@ rustc_test("integration_test_bin") {
   name = "component_hub_integration_test"
   edition = "2018"
   deps = [
+    "//examples/components/routing/fidl:echo-rustc",
     "//src/lib/component_hub",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//src/sys/lib/moniker",
   ]
 
@@ -49,5 +51,6 @@ fuchsia_test_package("component_hub_integration_tests") {
   deps = [
     ":foo",
     ":test_config_values",
+    "//examples/components/routing/echo_server:echo_server_component",
   ]
 }

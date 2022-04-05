@@ -11,6 +11,10 @@
             name: "foo",
             url: "#meta/foo.cm",
         },
+        {
+            name: "echo_server",
+            url: "#meta/echo_server.cm",
+        },
     ],
     capabilities: [
         {
@@ -31,6 +35,10 @@
         // This capability isn't actually being used.
         // `select` should still be able to find it.
         { protocol: "fuchsia.foo.Bar" },
+        {
+            protocol: "fidl.examples.routing.echo.Echo",
+            from: "#echo_server",
+        },
     ],
     expose: [
         // These capabilities aren't actually being served.

@@ -36,6 +36,7 @@ rustc_library("component_hub") {
   test_deps = [ "//third_party/rust_crates:tempfile" ]
 
   sources = [
+    "src/doctor.rs",
     "src/io.rs",
     "src/lib.rs",
     "src/list.rs",

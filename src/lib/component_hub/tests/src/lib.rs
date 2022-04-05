@@ -4,7 +4,9 @@
 
 use {
     component_hub::io::Directory,
-    component_hub::{list, select, show},
+    component_hub::{doctor, list, select, show},
+    fidl_fidl_examples_routing_echo as fecho,
+    fuchsia_component::client::connect_to_protocol,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     regex::Regex,
     std::path::PathBuf,
@@ -31,15 +33,28 @@ async fn list() {
     assert_eq!(name, "test_root");
     assert_eq!(moniker.to_string(), "/test");
     assert!(Regex::new(URL_REGEX).unwrap().is_match(&url));
-    assert_eq!(children.len(), 1);
+    assert_eq!(children.len(), 2);
 
-    let list::Component { name, moniker, is_cmx, is_running, url, children } =
-        children.get(0).unwrap();
+    let list::Component {
+        name,
+        moniker,
+        is_cmx,
+        is_running: _,
+        url: _url,
+        children: echo_server_children,
+    } = children.get(0).unwrap();
+    assert_eq!(name, "echo_server");
+    assert_eq!(moniker.to_string(), "/test/echo_server");
+    // assert!(!is_running); // This is not supposed to be running, but running the doctor test first might cause this to fail.
+    assert!(!is_cmx);
+    assert!(echo_server_children.is_empty());
+
+    let list::Component { name, is_cmx, is_running: _, moniker, url: _url, children } =
+        children.get(1).unwrap();
     assert_eq!(name, "foo");
     assert_eq!(moniker.to_string(), "/test/foo");
-    assert!(!is_running);
+    // assert!(!is_running);
     assert!(!is_cmx);
-    assert_eq!(url, "#meta/foo.cm");
     assert!(children.is_empty());
 }
 
@@ -63,7 +78,13 @@ async fn show() {
 
     // capabilities are sorted alphabetically
     assert_eq!(
-        &vec!["fuchsia.foo.Bar", "fuchsia.logger.LogSink", "hub", "pkg"],
+        &vec![
+            "fidl.examples.routing.echo.Echo",
+            "fuchsia.foo.Bar",
+            "fuchsia.logger.LogSink",
+            "hub",
+            "pkg"
+        ],
         &resolved.incoming_capabilities
     );
 
@@ -122,4 +143,49 @@ async fn clone() {
     let hub_path = PathBuf::from("/hub");
     let hub_dir = Directory::from_namespace(hub_path).unwrap();
     assert!(hub_dir.clone().is_ok());
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn doctor() {
+    let hub_path = PathBuf::from("/hub");
+    let hub_dir = Directory::from_namespace(&hub_path).unwrap();
+
+    let mut doctor_self =
+        doctor::DoctorComponent::from_moniker(AbsoluteMoniker::parse_str("/").unwrap(), &hub_dir)
+            .await
+            .unwrap();
+
+    assert!(!doctor_self.failed);
+
+    let self_exposed_outgoing_check_res = doctor_self.check_exposed_outgoing_capabilities();
+
+    assert!(!self_exposed_outgoing_check_res.success);
+    assert_eq!(
+        self_exposed_outgoing_check_res.missing_outgoing,
+        vec!["fuchsia.foo.Bar".to_string(), "minfs".to_string()]
+    );
+    assert!(self_exposed_outgoing_check_res.missing_exposed.is_empty());
+
+    let echo = connect_to_protocol::<fecho::EchoMarker>().expect("error connecting to echo server");
+    let echoed = echo.echo_string(Some("hippos")).await.expect("echo_string failed");
+
+    assert_eq!(echoed.unwrap(), "hippos");
+
+    let mut doctor_echo_server = doctor::DoctorComponent::from_moniker(
+        AbsoluteMoniker::parse_str("/echo_server").unwrap(),
+        &hub_dir,
+    )
+    .await
+    .unwrap();
+
+    assert!(!doctor_echo_server.failed);
+
+    let echo_server_exposed_outgoing_check_res =
+        doctor_echo_server.check_exposed_outgoing_capabilities();
+
+    assert!(!echo_server_exposed_outgoing_check_res.success);
+
+    // TODO(fxb/96477) Doctor should ignore the "hub" capability.
+    assert_eq!(echo_server_exposed_outgoing_check_res.missing_outgoing, vec!["hub".to_string()]);
+    assert!(echo_server_exposed_outgoing_check_res.missing_exposed.is_empty());
 }
