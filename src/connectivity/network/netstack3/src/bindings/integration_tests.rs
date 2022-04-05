@@ -24,9 +24,8 @@ use netstack3_core::{
     context::EventContext,
     get_all_ip_addr_subnets,
     icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
-    initialize_device, AddableEntryEither, BufferUdpContext, Ctx, DeviceId,
-    DeviceLayerEventDispatcher, IpExt, IpSockCreationError, Ipv6DeviceConfiguration,
-    StackStateBuilder, UdpBoundId, UdpContext,
+    AddableEntryEither, BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, IpExt,
+    IpSockCreationError, Ipv6DeviceConfiguration, StackStateBuilder, UdpBoundId, UdpContext,
 };
 use packet::{Buf, BufferMut, Serializer};
 use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
@@ -34,6 +33,7 @@ use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
 use crate::bindings::{
     context::Lockable,
     devices::{CommonInfo, DeviceInfo, DeviceSpecificInfo, Devices, EthernetInfo, LoopbackInfo},
+    enable_device,
     socket::datagram::{IcmpEcho, SocketCollectionIpExt, Udp},
     util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _, TryIntoFidl as _},
     BindingsContextImpl, BindingsDispatcher, DeviceStatusNotifier, LockableContext,
@@ -578,7 +578,7 @@ impl TestSetupBuilder {
                         .state
                         .add_loopback_device(DEFAULT_LOOPBACK_MTU)
                         .expect("add loopback device");
-                    initialize_device(ctx, loopback);
+                    enable_device(ctx, loopback);
                 })
                 .await;
 

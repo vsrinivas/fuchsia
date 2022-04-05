@@ -366,6 +366,8 @@ pub(super) fn send_ip_frame<
     local_addr: SpecifiedAddr<A>,
     body: S,
 ) -> Result<(), S> {
+    sync_ctx.increment_counter("ethernet::send_ip_frame");
+
     trace!("ethernet::send_ip_frame: local_addr = {:?}; device = {:?}", local_addr, device_id);
 
     let state = &mut sync_ctx.get_state_mut_with(device_id).link;
@@ -757,9 +759,6 @@ impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
         next_hop: SpecifiedAddr<Ipv6Addr>,
         body: S,
     ) -> Result<(), S> {
-        // `device_id` must not be uninitialized.
-        assert!(self.is_device_usable(device_id));
-
         // TODO(joshlf): Wire `SpecifiedAddr` through the `ndp` module.
         send_ip_frame(self, device_id, next_hop, body)
     }
@@ -986,8 +985,10 @@ mod tests {
         },
         testutil::{
             add_arp_or_ndp_table_entry, assert_empty, get_counter_val, new_rng,
-            DummyEventDispatcherBuilder, FakeCryptoRng, TestIpExt, DUMMY_CONFIG_V4,
+            DummyEventDispatcher, DummyEventDispatcherBuilder, FakeCryptoRng, TestIpExt,
+            DUMMY_CONFIG_V4,
         },
+        StackStateBuilder,
     };
 
     struct DummyEthernetCtx {
@@ -1077,11 +1078,7 @@ mod tests {
         type DeviceId = DummyDeviceId;
     }
 
-    impl IpLinkDeviceContext<EthernetLinkDevice, EthernetTimerId<DummyDeviceId>> for DummyCtx {
-        fn is_device_usable(&self, _device: DummyDeviceId) -> bool {
-            unimplemented!()
-        }
-    }
+    impl IpLinkDeviceContext<EthernetLinkDevice, EthernetTimerId<DummyDeviceId>> for DummyCtx {}
 
     fn contains_addr<A: IpAddress>(
         ctx: &crate::testutil::DummyCtx,
@@ -1166,8 +1163,8 @@ mod tests {
     }
 
     #[specialize_ip]
-    fn test_receive_ip_frame<I: Ip>(initialize: bool) {
-        // Should only receive a frame if the device is initialized
+    fn test_receive_ip_frame<I: Ip>(enable: bool) {
+        // Should only receive a frame if the device is enabled.
 
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build();
@@ -1182,81 +1179,98 @@ mod tests {
         let mac_bytes = config.local_mac.bytes();
         bytes[0..6].copy_from_slice(&mac_bytes);
 
-        if initialize {
-            crate::device::initialize_device(&mut ctx, device);
-        }
+        let expected_received = if enable {
+            crate::device::testutil::enable_device(&mut ctx, device);
+            1
+        } else {
+            0
+        };
 
-        // Will panic if we do not initialize.
         crate::device::receive_frame(&mut ctx, device, Buf::new(bytes, ..))
             .expect("error receiving frame");
 
-        // If we did not initialize, we would not reach here since
-        // `receive_frame` would have panicked.
         #[ipv4]
-        assert_eq!(get_counter_val(&mut ctx, "receive_ipv4_packet"), 1);
+        assert_eq!(get_counter_val(&mut ctx, "receive_ipv4_packet"), expected_received);
+
         #[ipv6]
-        assert_eq!(get_counter_val(&mut ctx, "receive_ipv6_packet"), 1);
+        assert_eq!(get_counter_val(&mut ctx, "receive_ipv6_packet"), expected_received);
     }
 
     #[ip_test]
-    #[should_panic(expected = "assertion failed: is_device_initialized(&ctx.state, device)")]
-    fn receive_frame_uninitialized<I: Ip>() {
+    fn receive_frame_disabled<I: Ip>() {
         test_receive_ip_frame::<I>(false);
     }
 
     #[ip_test]
-    fn receive_frame_initialized<I: Ip>() {
+    fn receive_frame_enabled<I: Ip>() {
         test_receive_ip_frame::<I>(true);
     }
 
     #[specialize_ip]
-    fn test_send_ip_frame<I: Ip>(initialize: bool) {
-        // Should only send a frame if the device is initialized
+    fn test_send_ip_frame<I: Ip>(enable: bool) {
+        // Should only send a frame if the device is enabled.
 
         let config = I::DUMMY_CONFIG;
-        let mut ctx = DummyEventDispatcherBuilder::default().build();
+        let mut stack_builder = StackStateBuilder::default();
+        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
+        ipv6_config.dad_transmits = None;
+        ipv6_config.max_router_solicitations = None;
+        stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
+        let mut ctx: crate::testutil::DummyCtx =
+            Ctx::new(stack_builder.build(), DummyEventDispatcher::default(), Default::default());
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
 
+        let expected_sent = if enable {
+            crate::device::testutil::enable_device(&mut ctx, device);
+            1
+        } else {
+            0
+        };
+
         #[ipv4]
-        let mut bytes = dns_request_v4::ETHERNET_FRAME.bytes.to_vec();
+        {
+            let addr = SpecifiedAddr::new(dns_request_v4::IPV4_PACKET.metadata.dst_ip).unwrap();
+            crate::device::insert_static_arp_table_entry(
+                &mut ctx,
+                device,
+                addr.get(),
+                config.remote_mac,
+            )
+            .expect("insert static ARP entry");
+
+            crate::ip::device::send_ip_frame::<Ipv4, _, _, _>(
+                &mut ctx,
+                device,
+                addr,
+                Buf::new(dns_request_v4::IPV4_PACKET.bytes.to_vec(), ..),
+            )
+            .expect("error sending IPv4 frame")
+        };
 
         #[ipv6]
-        let mut bytes = dns_request_v6::ETHERNET_FRAME.bytes.to_vec();
-
-        let mac_bytes = config.local_mac.bytes();
-        bytes[6..12].copy_from_slice(&mac_bytes);
-
-        if initialize {
-            crate::device::initialize_device(&mut ctx, device);
-        }
-
-        // Will panic if we do not initialize.
-        match config.remote_ip.into() {
-            IpAddr::V4(addr) => crate::ip::device::send_ip_frame::<Ipv4, _, _, _>(
+        {
+            let addr = UnicastAddr::new(dns_request_v6::IPV6_PACKET.metadata.dst_ip).unwrap();
+            crate::device::insert_ndp_table_entry(&mut ctx, device, addr, config.remote_mac.get())
+                .expect("insert static NDP entry");
+            crate::ip::device::send_ip_frame::<Ipv6, _, _, _>(
                 &mut ctx,
                 device,
-                addr,
-                Buf::new(bytes, ..),
+                addr.into_specified(),
+                Buf::new(dns_request_v6::IPV6_PACKET.bytes.to_vec(), ..),
             )
-            .expect("error sending IPv4 frame"),
-            IpAddr::V6(addr) => crate::ip::device::send_ip_frame::<Ipv6, _, _, _>(
-                &mut ctx,
-                device,
-                addr,
-                Buf::new(bytes, ..),
-            )
-            .expect("error sending IPv6 frame"),
-        }
+            .expect("error sending IPv6 frame")
+        };
+
+        assert_eq!(get_counter_val(&mut ctx, "ethernet::send_ip_frame"), expected_sent);
     }
 
     #[ip_test]
-    #[should_panic(expected = "assertion failed: is_device_usable")]
-    fn test_send_frame_uninitialized<I: Ip>() {
+    fn test_send_frame_disabled<I: Ip>() {
         test_send_ip_frame::<I>(false);
     }
 
     #[ip_test]
-    fn test_send_frame_initialized<I: Ip>() {
+    fn test_send_frame_enabled<I: Ip>() {
         test_send_ip_frame::<I>(true);
     }
 
@@ -1265,19 +1279,7 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let device =
             ctx.state.add_ethernet_device(DUMMY_CONFIG_V4.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::initialize_device(&mut ctx, device);
-    }
-
-    #[test]
-    #[should_panic(expected = "assertion failed: state.is_uninitialized()")]
-    fn initialize_multiple() {
-        let mut ctx = DummyEventDispatcherBuilder::default().build();
-        let device =
-            ctx.state.add_ethernet_device(DUMMY_CONFIG_V4.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::initialize_device(&mut ctx, device);
-
-        // Should panic since we are already initialized.
-        crate::device::initialize_device(&mut ctx, device);
+        crate::device::testutil::enable_device(&mut ctx, device);
     }
 
     fn is_routing_enabled<I: Ip>(ctx: &crate::testutil::DummyCtx, device: DeviceId) -> bool {
@@ -1483,7 +1485,7 @@ mod tests {
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::initialize_device(&mut ctx, device);
+        crate::device::testutil::enable_device(&mut ctx, device);
 
         let ip1 = I::get_other_ip_address(1);
         let ip2 = I::get_other_ip_address(2);
@@ -1573,7 +1575,7 @@ mod tests {
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::initialize_device(&mut ctx, device);
+        crate::device::testutil::enable_device(&mut ctx, device);
 
         let ip1 = I::get_other_ip_address(1);
         let ip2 = I::get_other_ip_address(2);
@@ -1674,7 +1676,7 @@ mod tests {
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::initialize_device(&mut ctx, device);
+        crate::device::testutil::enable_device(&mut ctx, device);
 
         let multicast_addr = get_multicast_addr::<I>();
 
@@ -1718,7 +1720,7 @@ mod tests {
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::initialize_device(&mut ctx, device);
+        crate::device::testutil::enable_device(&mut ctx, device);
 
         let multicast_addr = get_multicast_addr::<I>();
 
@@ -1739,7 +1741,7 @@ mod tests {
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::initialize_device(&mut ctx, device);
+        crate::device::testutil::enable_device(&mut ctx, device);
 
         let ip1 = SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 1, 0, 0, 0, 1])).unwrap();
         let ip2 = SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 2, 0, 0, 0, 1])).unwrap();
@@ -1794,7 +1796,7 @@ mod tests {
             DeviceIdInner::Ethernet(device).into()
         );
 
-        crate::device::initialize_device(&mut ctx, device.into());
+        crate::device::testutil::enable_device(&mut ctx, device.into());
         // Verify that there is a single assigned address.
         assert_eq!(
             ctx.state

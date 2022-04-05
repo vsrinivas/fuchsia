@@ -56,8 +56,9 @@ use log::trace;
 pub use crate::{
     data_structures::{Entry, IdMap, IdMapCollection, IdMapCollectionKey},
     device::{
-        initialize_device, ndp::NdpConfiguration, receive_frame, remove_device,
-        set_ipv4_configuration, set_ipv6_configuration, DeviceId, DeviceLayerEventDispatcher,
+        get_ipv4_configuration, get_ipv6_configuration, ndp::NdpConfiguration, receive_frame,
+        remove_device, set_ipv4_configuration, set_ipv6_configuration, DeviceId,
+        DeviceLayerEventDispatcher,
     },
     error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError},
     ip::{
@@ -227,29 +228,11 @@ pub struct StackState<I: Instant> {
 
 impl<I: Instant> StackState<I> {
     /// Add a new ethernet device to the device layer.
-    ///
-    /// `add_ethernet_device` only makes the netstack aware of the device. The
-    /// device still needs to be initialized. A device MUST NOT be used until it
-    /// has been initialized. The netstack promises not to generate any outbound
-    /// traffic on the device until [`initialize_device`] has been called.
-    ///
-    /// See [`initialize_device`] for more information.
-    ///
-    /// [`initialize_device`]: crate::device::initialize_device
     pub fn add_ethernet_device(&mut self, mac: UnicastAddr<Mac>, mtu: u32) -> DeviceId {
         self.device.add_ethernet_device(mac, mtu)
     }
 
     /// Add a new loopback device to the device layer.
-    ///
-    /// `add_loopback_device` only makes the netstack aware of the device. The
-    /// device still needs to be initialized. A device MUST NOT be used until it
-    /// has been initialized. The netstack will not generate any outbound
-    /// traffic on the device until [`initialize_device`] has been called.
-    ///
-    /// See [`initialize_device`] for more information.
-    ///
-    /// [`initialize_device`]: crate::device::initialize_device
     pub fn add_loopback_device(&mut self, mtu: u32) -> Result<DeviceId, NetstackError> {
         self.device.add_loopback_device(mtu).map_err(Into::into)
     }
@@ -602,7 +585,7 @@ mod tests {
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::initialize_device(&mut ctx, device);
+        crate::device::testutil::enable_device(&mut ctx, device);
 
         let ip: IpAddr = I::get_other_ip_address(1).get().into();
         let prefix = config.subnet.prefix();

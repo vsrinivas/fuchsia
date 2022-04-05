@@ -195,9 +195,24 @@ impl<I: Instant> Default for Ipv4DeviceState<I> {
     }
 }
 
+impl<I: Instant> AsRef<IpDeviceState<I, Ipv4>> for Ipv4DeviceState<I> {
+    fn as_ref(&self) -> &IpDeviceState<I, Ipv4> {
+        &self.ip_state
+    }
+}
+
+impl<I: Instant> AsRef<IpDeviceConfiguration> for Ipv4DeviceState<I> {
+    fn as_ref(&self) -> &IpDeviceConfiguration {
+        &self.config.ip_config
+    }
+}
+
 /// Configurations common to all IP devices.
 #[derive(Clone)]
 pub struct IpDeviceConfiguration {
+    /// Is IP enabled for this device.
+    pub ip_enabled: bool,
+
     /// Is a Group Messaging Protocol (GMP) enabled for this device?
     ///
     /// If `gmp_enabled` is false, multicast groups will still be added to
@@ -210,7 +225,7 @@ pub struct IpDeviceConfiguration {
 
 impl Default for IpDeviceConfiguration {
     fn default() -> IpDeviceConfiguration {
-        IpDeviceConfiguration { gmp_enabled: false }
+        IpDeviceConfiguration { ip_enabled: false, gmp_enabled: false }
     }
 }
 
@@ -276,6 +291,18 @@ impl<I: Instant> Default for Ipv6DeviceState<I> {
             ip_state: Default::default(),
             config: Default::default(),
         }
+    }
+}
+
+impl<I: Instant> AsRef<IpDeviceState<I, Ipv6>> for Ipv6DeviceState<I> {
+    fn as_ref(&self) -> &IpDeviceState<I, Ipv6> {
+        &self.ip_state
+    }
+}
+
+impl<I: Instant> AsRef<IpDeviceConfiguration> for Ipv6DeviceState<I> {
+    fn as_ref(&self) -> &IpDeviceConfiguration {
+        &self.config.ip_config
     }
 }
 

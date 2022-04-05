@@ -3069,7 +3069,7 @@ mod tests {
             .state
             .add_loopback_device(u16::MAX.into())
             .expect("create the loopback interface");
-        crate::device::initialize_device(net.context(LOCAL_CTX_NAME), loopback_device_id);
+        crate::device::testutil::enable_device(net.context(LOCAL_CTX_NAME), loopback_device_id);
 
         let conn = I::new_icmp_connection(
             net.context(LOCAL_CTX_NAME),

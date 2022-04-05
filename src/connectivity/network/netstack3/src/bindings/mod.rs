@@ -54,11 +54,11 @@ use net_types::ip::{AddrSubnet, AddrSubnetEither, Ip, Ipv4, Ipv6};
 use netstack3_core::{
     add_ip_addr_subnet, add_route,
     context::{EventContext, InstantContext, RngContext, TimerContext},
-    handle_timer, icmp, initialize_device, remove_device, set_ipv4_configuration,
-    set_ipv6_configuration, AddableEntryEither, BlanketCoreContext, BufferUdpContext, Ctx,
-    DeviceId, DeviceLayerEventDispatcher, EventDispatcher, IpDeviceConfiguration, IpExt,
-    IpSockCreationError, Ipv4DeviceConfiguration, Ipv6DeviceConfiguration, TimerId, UdpBoundId,
-    UdpConnId, UdpContext, UdpListenerId,
+    get_ipv4_configuration, get_ipv6_configuration, handle_timer, icmp, remove_device,
+    set_ipv4_configuration, set_ipv6_configuration, AddableEntryEither, BlanketCoreContext,
+    BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, EventDispatcher,
+    IpDeviceConfiguration, IpExt, IpSockCreationError, Ipv4DeviceConfiguration,
+    Ipv6DeviceConfiguration, TimerId, UdpBoundId, UdpConnId, UdpContext, UdpListenerId,
 };
 
 /// Default MTU for loopback.
@@ -495,6 +495,22 @@ trait InterfaceControl {
     fn disable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error>;
 }
 
+fn enable_device<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
+    device_id: DeviceId,
+) {
+    set_ipv4_configuration(ctx, device_id, {
+        let mut config = get_ipv4_configuration(ctx, device_id);
+        config.ip_config.ip_enabled = true;
+        config
+    });
+    set_ipv6_configuration(ctx, device_id, {
+        let mut config = get_ipv6_configuration(ctx, device_id);
+        config.ip_config.ip_enabled = true;
+        config
+    });
+}
+
 impl<D, C> InterfaceControl for Ctx<D, C>
 where
     D: EventDispatcher + AsRef<Devices> + AsMut<Devices>,
@@ -560,7 +576,7 @@ where
                     .expect("interfaces worker not running");
 
                 // don't forget to initialize the device in core!
-                initialize_device(self, core_id);
+                enable_device(self, core_id);
                 Ok(())
             }
             Err(toggle_error) => {
@@ -740,12 +756,13 @@ impl NetstackSeed {
                     })
                 })
                 .expect("error adding loopback device");
-            initialize_device(ctx, loopback);
             // Don't need DAD and IGMP/MLD on loopback.
             set_ipv4_configuration(
                 ctx,
                 loopback,
-                Ipv4DeviceConfiguration { ip_config: IpDeviceConfiguration { gmp_enabled: false } },
+                Ipv4DeviceConfiguration {
+                    ip_config: IpDeviceConfiguration { ip_enabled: true, gmp_enabled: false },
+                },
             );
             set_ipv6_configuration(
                 ctx,
@@ -753,7 +770,7 @@ impl NetstackSeed {
                 Ipv6DeviceConfiguration {
                     dad_transmits: None,
                     max_router_solicitations: None,
-                    ip_config: IpDeviceConfiguration { gmp_enabled: false },
+                    ip_config: IpDeviceConfiguration { ip_enabled: true, gmp_enabled: false },
                 },
             );
             add_ip_addr_subnet(

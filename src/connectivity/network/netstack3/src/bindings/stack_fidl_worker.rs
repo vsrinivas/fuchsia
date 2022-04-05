@@ -6,7 +6,7 @@ use std::ops::DerefMut as _;
 
 use super::{
     devices::{CommonInfo, DeviceSpecificInfo, Devices, EthernetInfo, LoopbackInfo},
-    ethernet_worker,
+    enable_device, ethernet_worker,
     util::{IntoFidl, TryFromFidlWithContext as _, TryIntoCore as _, TryIntoFidlWithContext as _},
     DeviceStatusNotifier, InterfaceControl as _, InterfaceEventProducerFactory, Lockable,
     LockableContext, MutableDeviceState as _,
@@ -23,8 +23,7 @@ use futures::{TryFutureExt as _, TryStreamExt as _};
 use log::{debug, error};
 use net_types::{ethernet::Mac, SpecifiedAddr, UnicastAddr};
 use netstack3_core::{
-    add_ip_addr_subnet, add_route, del_ip_addr, del_route, get_all_routes, initialize_device,
-    AddableEntryEither, Ctx,
+    add_ip_addr_subnet, add_route, del_ip_addr, del_route, get_all_routes, AddableEntryEither, Ctx,
 };
 
 pub(crate) struct StackFidlWorker<C> {
@@ -226,7 +225,7 @@ where
         // it using the new core_id.
         let devices: &Devices = ctx.dispatcher.as_ref();
         if let Some(core_id) = devices.get_core_id(id) {
-            initialize_device(&mut ctx, core_id);
+            enable_device(ctx.deref_mut(), core_id);
         }
         Ok(id)
     }

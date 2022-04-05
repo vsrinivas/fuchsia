@@ -1346,6 +1346,10 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>, C: Blank
     frame_dst: FrameDestination,
     mut buffer: B,
 ) {
+    if !crate::ip::device::is_ip_device_enabled::<Ipv4, _>(ctx, device) {
+        return;
+    }
+
     increment_counter!(ctx, "receive_ipv4_packet");
     trace!("receive_ip_packet({})", device);
 
@@ -1546,6 +1550,10 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>, C: Blank
     frame_dst: FrameDestination,
     mut buffer: B,
 ) {
+    if !crate::ip::device::is_ip_device_enabled::<Ipv6, _>(ctx, device) {
+        return;
+    }
+
     increment_counter!(ctx, "receive_ipv6_packet");
     trace!("receive_ipv6_packet({})", device);
 
@@ -3352,7 +3360,7 @@ mod tests {
     fn test_invalid_icmpv4_in_ipv6() {
         let ip_config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::from_config(ip_config.clone()).build();
-        let device = DeviceId::new_ethernet(1);
+        let device = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;
 
         let ic_config = Ipv4::DUMMY_CONFIG;
@@ -3376,9 +3384,11 @@ mod tests {
             .serialize_vec_outer()
             .unwrap();
 
+        crate::device::testutil::enable_device(&mut ctx, device);
         receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
 
         // Should not have dispatched the packet.
+        assert_eq!(get_counter_val(&mut ctx, "receive_ipv6_packet"), 1);
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 0);
 
         // In IPv6, the next header value (ICMP(v4)) would have been considered
@@ -3524,7 +3534,7 @@ mod tests {
             crate::context::testutil::DummyCtx::default(),
         );
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::initialize_device(&mut ctx, device);
+        crate::device::testutil::enable_device(&mut ctx, device);
 
         let frame_dst = FrameDestination::Unicast;
 
@@ -3591,7 +3601,7 @@ mod tests {
         let cfg = DUMMY_CONFIG_V6;
         let mut ctx = DummyEventDispatcherBuilder::from_config(cfg.clone()).build();
         let device = ctx.state.add_ethernet_device(cfg.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::initialize_device(&mut ctx, device);
+        crate::device::testutil::enable_device(&mut ctx, device);
 
         let ip: Ipv6Addr = cfg.local_mac.to_ipv6_link_local().addr().get();
         let buf = Buf::new(vec![0; 10], ..)

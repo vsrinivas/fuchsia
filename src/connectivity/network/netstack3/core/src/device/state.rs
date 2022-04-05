@@ -4,54 +4,12 @@
 
 //! State maintained by the device layer.
 
-use core::fmt::Debug;
-
 use crate::{ip::device::state::DualStackIpDeviceState, Instant};
-
-/// Initialization status of a device.
-#[derive(Debug, PartialEq, Eq)]
-pub(crate) enum InitializationStatus {
-    /// The device is not yet initialized and MUST NOT be used.
-    Uninitialized,
-
-    /// The device is initialized and can operate as normal.
-    Initialized,
-}
-
-impl Default for InitializationStatus {
-    fn default() -> InitializationStatus {
-        InitializationStatus::Uninitialized
-    }
-}
-
-/// Common state across devices.
-#[derive(Default)]
-pub(crate) struct CommonDeviceState {
-    /// The device's initialization status.
-    initialization_status: InitializationStatus,
-}
-
-impl CommonDeviceState {
-    pub(crate) fn is_initialized(&self) -> bool {
-        self.initialization_status == InitializationStatus::Initialized
-    }
-
-    pub(crate) fn is_uninitialized(&self) -> bool {
-        self.initialization_status == InitializationStatus::Uninitialized
-    }
-
-    pub(crate) fn set_initialization_status(&mut self, status: InitializationStatus) {
-        self.initialization_status = status;
-    }
-}
 
 /// Device state.
 ///
 /// `D` is the device-specific state.
 pub(crate) struct DeviceState<D> {
-    /// Device-independant state.
-    pub(crate) common: CommonDeviceState,
-
     /// Device-specific state.
     pub(crate) device: D,
 }
@@ -59,7 +17,7 @@ pub(crate) struct DeviceState<D> {
 impl<D> DeviceState<D> {
     /// Creates a new `DeviceState` with a device-specific state `device`.
     pub(crate) fn new(device: D) -> Self {
-        Self { common: CommonDeviceState::default(), device }
+        Self { device }
     }
 }
 

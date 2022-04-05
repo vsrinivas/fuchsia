@@ -44,7 +44,7 @@ use crate::{
         link::LinkDevice,
         loopback::LoopbackDeviceState,
         ndp::{NdpHandler, NdpPacketHandler},
-        state::{CommonDeviceState, DeviceState, InitializationStatus, IpLinkDeviceState},
+        state::{DeviceState, IpLinkDeviceState},
     },
     error::{ExistsError, NotFoundError, NotSupportedError},
     ip::{
@@ -57,7 +57,7 @@ use crate::{
         },
         IpDeviceId, IpDeviceIdContext,
     },
-    BlanketCoreContext, BufferDispatcher, Ctx, EventDispatcher, Instant, StackState,
+    BlanketCoreContext, BufferDispatcher, Ctx, EventDispatcher, Instant,
 };
 
 /// An execution context which provides a `DeviceId` type for various device
@@ -80,6 +80,9 @@ impl<D, I: Ip> RecvIpFrameMeta<D, I> {
 
 /// The context provided by the device layer to a particular IP device
 /// implementation.
+///
+/// A blanket implementation is provided for all types that implement
+/// the inherited traits.
 pub(crate) trait IpLinkDeviceContext<D: LinkDevice, TimerId>:
     DeviceIdContext<D>
     + CounterContext
@@ -92,18 +95,23 @@ pub(crate) trait IpLinkDeviceContext<D: LinkDevice, TimerId>:
     + FrameContext<EmptyBuf, <Self as DeviceIdContext<D>>::DeviceId>
     + FrameContext<Buf<Vec<u8>>, <Self as DeviceIdContext<D>>::DeviceId>
 {
-    /// Is `device` usable?
-    ///
-    /// That is, is it either initializing or initialized?
-    fn is_device_usable(&self, device: <Self as DeviceIdContext<D>>::DeviceId) -> bool;
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext>
-    IpLinkDeviceContext<EthernetLinkDevice, EthernetTimerId<EthernetDeviceId>> for Ctx<D, C>
+impl<
+        D: LinkDevice,
+        TimerId,
+        C: DeviceIdContext<D>
+            + CounterContext
+            + RngContext
+            + DualStateContext<
+                IpLinkDeviceState<<Self as InstantContext>::Instant, D::State>,
+                <Self as RngContext>::Rng,
+                <Self as DeviceIdContext<D>>::DeviceId,
+            > + TimerContext<TimerId>
+            + FrameContext<EmptyBuf, <Self as DeviceIdContext<D>>::DeviceId>
+            + FrameContext<Buf<Vec<u8>>, <Self as DeviceIdContext<D>>::DeviceId>,
+    > IpLinkDeviceContext<D, TimerId> for C
 {
-    fn is_device_usable(&self, device: EthernetDeviceId) -> bool {
-        is_device_usable(&self.state, device.into())
-    }
 }
 
 /// `IpLinkDeviceContext` with an extra `B: BufferMut` parameter.
@@ -201,10 +209,8 @@ fn iter_devices<D: EventDispatcher, C: BlanketCoreContext>(
 
     ethernet
         .iter()
-        .filter_map(|(id, state)| state.common.is_initialized().then(|| DeviceId::new_ethernet(id)))
-        .chain(loopback.iter().filter_map(|state| {
-            state.common.is_initialized().then(|| DeviceIdInner::Loopback.into())
-        }))
+        .map(|(id, _state)| DeviceId::new_ethernet(id))
+        .chain(loopback.iter().map(|_state| DeviceIdInner::Loopback.into()))
 }
 
 fn get_mtu<D: EventDispatcher, C: BlanketCoreContext>(ctx: &Ctx<D, C>, device: DeviceId) -> u32 {
@@ -299,9 +305,6 @@ fn send_ip_frame<
     local_addr: SpecifiedAddr<A>,
     body: S,
 ) -> Result<(), S> {
-    // `device` must not be uninitialized.
-    assert!(is_device_usable(&ctx.state, device));
-
     match device.inner() {
         DeviceIdInner::Ethernet(id) => self::ethernet::send_ip_frame(ctx, id, local_addr, body),
         DeviceIdInner::Loopback => self::loopback::send_ip_frame(ctx, local_addr, body),
@@ -674,65 +677,11 @@ pub trait DeviceLayerEventDispatcher<B: BufferMut> {
     /// original serializer is returned in the `Err` variant. All other errors
     /// (for example, errors in allocating a buffer) are silently ignored and
     /// reported as success.
-    ///
-    /// Note, until `device` has been initialized, the netstack promises to not
-    /// send any outbound traffic to it. See [`initialize_device`] for more
-    /// information.
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
         device: DeviceId,
         frame: S,
     ) -> Result<(), S>;
-}
-
-/// Is `device` usable?
-///
-/// That is, is it either initializing or initialized?
-pub(crate) fn is_device_usable<I: crate::Instant>(state: &StackState<I>, device: DeviceId) -> bool {
-    !get_common_device_state(state, device).is_uninitialized()
-}
-
-/// Is `device` initialized?
-pub(crate) fn is_device_initialized<I: crate::Instant>(
-    state: &StackState<I>,
-    device: DeviceId,
-) -> bool {
-    get_common_device_state(state, device).is_initialized()
-}
-
-/// Initialize a device.
-///
-/// `initialize_device` will start soliciting IPv6 routers on the link if
-/// `device` is configured to be a host. If it is configured to be an
-/// advertising interface, it will start sending periodic router advertisements.
-///
-/// `initialize_device` MUST be called after adding the device to the netstack.
-/// A device MUST NOT be used until it has been initialized.
-///
-/// This initialize step is kept separated from the device creation/allocation
-/// step so that implementations have a chance to do some work (such as updating
-/// implementation specific IDs or state, configure the device or driver, etc.)
-/// before the device is actually initialized and used by this netstack.
-///
-/// See [`StackState::add_ethernet_device`] for information about adding
-/// ethernet devices.
-///
-/// # Panics
-///
-/// Panics if `device` is already initialized.
-pub fn initialize_device<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
-    device: DeviceId,
-) {
-    let state = get_common_device_state_mut(&mut ctx.state, device);
-
-    // `device` must currently be uninitialized.
-    assert!(state.is_uninitialized());
-
-    get_common_device_state_mut(&mut ctx.state, device)
-        .set_initialization_status(InitializationStatus::Initialized);
-
-    crate::ip::device::enable_ipv6_device(ctx, device)
 }
 
 /// Remove a device from the device layer.
@@ -771,18 +720,11 @@ pub fn remove_device<D: EventDispatcher, C: BlanketCoreContext>(
 }
 
 /// Receive a device layer frame from the network.
-///
-/// # Panics
-///
-/// Panics if `device` is not initialized.
 pub fn receive_frame<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
     ctx: &mut Ctx<D, C>,
     device: DeviceId,
     buffer: B,
 ) -> Result<(), NotSupportedError> {
-    // `device` must be initialized.
-    assert!(is_device_initialized(&ctx.state, device));
-
     match device.inner() {
         DeviceIdInner::Ethernet(id) => Ok(self::ethernet::receive_frame(ctx, id, buffer)),
         DeviceIdInner::Loopback => Err(NotSupportedError),
@@ -807,18 +749,11 @@ pub(crate) fn set_promiscuous_mode<D: EventDispatcher, C: BlanketCoreContext>(
 ///
 /// For IPv6, this function also joins the solicited-node multicast group and
 /// begins performing Duplicate Address Detection (DAD).
-///
-/// # Panics
-///
-/// Panics if `device` is not initialized.
 pub(crate) fn add_ip_addr_subnet<D: EventDispatcher, C: BlanketCoreContext, A: IpAddress>(
     ctx: &mut Ctx<D, C>,
     device: DeviceId,
     addr_sub: AddrSubnet<A>,
 ) -> Result<(), ExistsError> {
-    // `device` must be initialized.
-    assert!(is_device_initialized(&ctx.state, device));
-
     trace!("add_ip_addr_subnet: adding addr {:?} to device {:?}", addr_sub, device);
 
     match addr_sub.into() {
@@ -834,18 +769,11 @@ pub(crate) fn add_ip_addr_subnet<D: EventDispatcher, C: BlanketCoreContext, A: I
 }
 
 /// Removes an IP address and associated subnet from this device.
-///
-/// # Panics
-///
-/// Panics if `device` is not initialized.
 pub(crate) fn del_ip_addr<D: EventDispatcher, C: BlanketCoreContext, A: IpAddress>(
     ctx: &mut Ctx<D, C>,
     device: DeviceId,
     addr: &SpecifiedAddr<A>,
 ) -> Result<(), NotFoundError> {
-    // `device` must be initialized.
-    assert!(is_device_initialized(&ctx.state, device));
-
     trace!("del_ip_addr: removing addr {:?} from device {:?}", addr, device);
 
     match Into::into(*addr) {
@@ -862,51 +790,7 @@ impl<D: EventDispatcher, C: BlanketCoreContext, I: Ip> IpDeviceIdContext<I> for 
     type DeviceId = DeviceId;
 
     fn loopback_id(&self) -> Option<DeviceId> {
-        self.state
-            .device
-            .loopback
-            .as_ref()
-            .and_then(|state| state.common.is_initialized().then(|| DeviceIdInner::Loopback.into()))
-    }
-}
-
-/// Get a reference to the common device state for a `device`.
-fn get_common_device_state<I: crate::Instant>(
-    state: &StackState<I>,
-    device: DeviceId,
-) -> &CommonDeviceState {
-    match device.inner() {
-        DeviceIdInner::Ethernet(EthernetDeviceId(id)) => {
-            &state
-                .device
-                .ethernet
-                .get(id)
-                .unwrap_or_else(|| panic!("no such Ethernet device: {}", id))
-                .common
-        }
-        DeviceIdInner::Loopback => {
-            &state.device.loopback.as_ref().expect("no loopback device").common
-        }
-    }
-}
-
-/// Get a mutable reference to the common device state for a `device`.
-fn get_common_device_state_mut<I: crate::Instant>(
-    state: &mut StackState<I>,
-    device: DeviceId,
-) -> &mut CommonDeviceState {
-    match device.inner() {
-        DeviceIdInner::Ethernet(EthernetDeviceId(id)) => {
-            &mut state
-                .device
-                .ethernet
-                .get_mut(id)
-                .unwrap_or_else(|| panic!("no such Ethernet device: {}", id))
-                .common
-        }
-        DeviceIdInner::Loopback => {
-            &mut state.device.loopback.as_mut().expect("no loopback device").common
-        }
+        self.state.device.loopback.as_ref().map(|_state| DeviceIdInner::Loopback.into())
     }
 }
 
@@ -981,6 +865,22 @@ pub fn set_ndp_configuration<D: EventDispatcher, C: BlanketCoreContext>(
             Err(NotSupportedError)
         }
     }
+}
+
+/// Gets the IPv4 Configuration for a `device`.
+pub fn get_ipv4_configuration<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &Ctx<D, C>,
+    device: DeviceId,
+) -> Ipv4DeviceConfiguration {
+    crate::ip::device::get_ipv4_configuration(ctx, device)
+}
+
+/// Gets the IPv6 Configuration for a `device`.
+pub fn get_ipv6_configuration<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &Ctx<D, C>,
+    device: DeviceId,
+) -> Ipv6DeviceConfiguration {
+    crate::ip::device::get_ipv6_configuration(ctx, device)
 }
 
 /// Updates the IPv4 Configuration for a `device`.
@@ -1083,6 +983,22 @@ pub(crate) mod testutil {
     ) {
         crate::device::receive_frame(ctx, device, buffer).unwrap()
     }
+
+    pub fn enable_device<D: EventDispatcher, C: BlanketCoreContext>(
+        ctx: &mut Ctx<D, C>,
+        device: DeviceId,
+    ) {
+        crate::ip::device::set_ipv4_configuration(ctx, device, {
+            let mut config = crate::ip::device::get_ipv4_configuration(ctx, device);
+            config.ip_config.ip_enabled = true;
+            config
+        });
+        crate::ip::device::set_ipv6_configuration(ctx, device, {
+            let mut config = crate::ip::device::get_ipv6_configuration(ctx, device);
+            config.ip_config.ip_enabled = true;
+            config
+        });
+    }
 }
 
 #[cfg(test)]
@@ -1104,6 +1020,8 @@ mod tests {
 
         let loopback_device =
             ctx.state.add_loopback_device(55 /* mtu */).expect("error adding loopback device");
+        check(&ctx, &[loopback_device][..]);
+
         let DummyEventDispatcherConfig {
             subnet: _,
             local_ip: _,
@@ -1112,12 +1030,6 @@ mod tests {
             remote_mac: _,
         } = DUMMY_CONFIG_V4;
         let ethernet_device = ctx.state.add_ethernet_device(local_mac, 0 /* mtu */);
-        check(&ctx, &[][..]);
-
-        initialize_device(&mut ctx, loopback_device);
-        check(&ctx, &[loopback_device][..]);
-
-        initialize_device(&mut ctx, ethernet_device);
         check(&ctx, &[ethernet_device, loopback_device][..]);
     }
 }

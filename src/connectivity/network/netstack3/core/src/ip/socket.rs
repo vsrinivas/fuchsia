@@ -1148,7 +1148,7 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::from_config(cfg).build();
         let loopback_device_id =
             ctx.state.add_loopback_device(u16::MAX.into()).expect("create the loopback interface");
-        crate::device::initialize_device(&mut ctx, loopback_device_id);
+        crate::device::testutil::enable_device(&mut ctx, loopback_device_id);
 
         let NewSocketTestCase { local_ip_type, remote_ip_type, expected_result, device_type } =
             test_case;
@@ -1515,7 +1515,7 @@ mod tests {
 
         let loopback_device_id =
             ctx.state.add_loopback_device(u16::MAX.into()).expect("create the loopback interface");
-        crate::device::initialize_device(&mut ctx, loopback_device_id);
+        crate::device::testutil::enable_device(&mut ctx, loopback_device_id);
 
         let (expected_from_ip, from_ip) = match from_addr_type {
             AddressType::LocallyOwned => (local_ip, Some(local_ip)),

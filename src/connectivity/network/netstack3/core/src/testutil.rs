@@ -509,7 +509,7 @@ impl DummyEventDispatcherBuilder {
             .enumerate()
             .map(|(idx, (mac, ip_subnet))| {
                 let id = ctx.state.add_ethernet_device(mac, Ipv6::MINIMUM_LINK_MTU.into());
-                crate::device::initialize_device(&mut ctx, id);
+                crate::device::testutil::enable_device(&mut ctx, id);
                 match ip_subnet {
                     Some((IpAddr::V4(ip), SubnetEither::V4(subnet))) => {
                         let addr_sub = AddrSubnet::new(ip, subnet.prefix()).unwrap();
