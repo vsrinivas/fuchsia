@@ -25,29 +25,21 @@ zx_status_t AddDeviceImpl(BlockDeviceManager& manager, FilesystemMounter* mounte
 }  // namespace
 
 std::vector<Watcher> Watcher::CreateWatchers() {
+  std::pair<const char*, AddDeviceCallback> types[] = {
+      {"/dev/class/block", AddDeviceImpl<BlockDevice>},
+      {"/dev/class/nand", AddDeviceImpl<NandDevice>},
+  };
   std::vector<Watcher> ret;
-  for (size_t i = 0; i < kWatcherTypeMax; i++) {
-    fbl::unique_fd dirfd(open(kWatcherPaths[i], O_DIRECTORY | O_RDONLY));
+  for (auto& [path, callback] : types) {
+    fbl::unique_fd dirfd(open(path, O_DIRECTORY | O_RDONLY));
     if (!dirfd) {
-      FX_LOGS(ERROR) << "failed to open " << kWatcherPaths[i] << ": " << strerror(errno);
+      FX_LOGS(ERROR) << "failed to open " << path << ": " << strerror(errno);
       continue;
     }
 
     fdio_cpp::FdioCaller caller(std::move(dirfd));
 
-    AddDeviceCallback callback;
-    switch (static_cast<WatcherType>(i)) {
-      case WatcherType::kWatcherTypeBlock:
-        callback = AddDeviceImpl<BlockDevice>;
-        break;
-      case WatcherType::kWatcherTypeNand:
-        callback = AddDeviceImpl<NandDevice>;
-        break;
-      default:
-        ZX_ASSERT_MSG(false, "Invalid watcher type %zu", i);
-    }
-
-    ret.emplace_back(Watcher(static_cast<WatcherType>(i), std::move(caller), std::move(callback)));
+    ret.emplace_back(Watcher(path, std::move(caller), std::move(callback)));
   }
 
   return ret;

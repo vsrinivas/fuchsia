@@ -249,12 +249,11 @@ bool BlockWatcher::Callback(Watcher& watcher, int dirfd, fio::wire::WatchEvent e
   zx_status_t status = watcher.AddDevice(device_manager_, &mounter_, std::move(device_fd));
   if (status == ZX_ERR_NOT_SUPPORTED) {
     // The femu tests watch for the following message and will need updating if this changes.
-    FX_LOGS(INFO) << "" << kWatcherPaths[watcher.type()] << "/" << name
-                  << " ignored (not supported)";
+    FX_LOGS(INFO) << "" << watcher.path() << "/" << name << " ignored (not supported)";
   } else if (status != ZX_OK) {
     // There's not much we can do if this fails - we want to keep seeing future block device
     // events, so we just log loudly that we failed to do something.
-    FX_LOGS(ERROR) << "" << kWatcherPaths[watcher.type()] << "/" << name
+    FX_LOGS(ERROR) << "" << watcher.path() << "/" << name
                    << " failed: " << zx_status_get_string(status);
   }
 

@@ -16,20 +16,6 @@
 
 namespace fshost {
 
-enum WatcherType {
-  kWatcherTypeBlock = 0,
-  kWatcherTypeNand,
-  kWatcherTypeMax,
-};
-
-inline constexpr const char* kWatcherPaths[] = {
-    "/dev/class/block",
-    "/dev/class/nand",
-};
-
-static_assert(std::size(kWatcherPaths) == WatcherType::kWatcherTypeMax,
-              "Each watcher type must have a path");
-
 class Watcher {
  public:
   zx_status_t ReinitWatcher();
@@ -45,16 +31,16 @@ class Watcher {
   // |callback| should return true if it receives an idle event and the block watcher is paused.
   void ProcessWatchMessages(cpp20::span<uint8_t> buf, WatcherCallback callback);
   zx_status_t AddDevice(BlockDeviceManager& manager, FilesystemMounter* mounter, fbl::unique_fd fd);
-  WatcherType type() const { return type_; }
+  const char* path() { return path_; }
   bool ignore_existing() const { return ignore_existing_; }
   fidl::UnownedClientEnd<fuchsia_io::DirectoryWatcher> borrow_watcher() {
     return watcher_.borrow();
   }
 
  private:
-  Watcher(WatcherType type, fdio_cpp::FdioCaller caller, AddDeviceCallback callback)
-      : type_(type), caller_(std::move(caller)), add_device_(std::move(callback)) {}
-  WatcherType type_;
+  Watcher(const char* path, fdio_cpp::FdioCaller caller, AddDeviceCallback callback)
+      : path_(path), caller_(std::move(caller)), add_device_(std::move(callback)) {}
+  const char* path_;
   fdio_cpp::FdioCaller caller_;
   AddDeviceCallback add_device_;
   fidl::ClientEnd<fuchsia_io::DirectoryWatcher> watcher_;
