@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.lowpan.thread") {
-  sdk_category = "internal"
+  sdk_category = "partner"
 
   sources = [
     "dataset.fidl",
