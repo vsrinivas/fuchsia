@@ -43,7 +43,7 @@ func TestAEMUCommandBuilder(t *testing.T) {
 	check(t, expected{
 		cmd: []string{
 			"./bin/emulator",
-			"-feature", "GLDirectMem,VirtioInput,Vulkan",
+			"-feature", "GLDirectMem,HostComposition,VirtioInput,Vulkan",
 			"-gpu", "swiftshader_indirect",
 			"-no-window",
 			"-fuchsia",
@@ -64,7 +64,7 @@ func TestAEMUCommandBuilder(t *testing.T) {
 	check(t, expected{
 		cmd: []string{
 			"./bin/emulator",
-			"-feature", "GLDirectMem,KVM,VirtioInput,Vulkan",
+			"-feature", "GLDirectMem,HostComposition,KVM,VirtioInput,Vulkan",
 			"-gpu", "swiftshader_indirect",
 			"-no-window",
 			"-fuchsia",
@@ -94,7 +94,7 @@ func TestAEMUCommandBuilder(t *testing.T) {
 	check(t, expected{
 		cmd: []string{
 			"./bin/emulator",
-			"-feature", "GLDirectMem,KVM,VirtioInput,Vulkan",
+			"-feature", "GLDirectMem,HostComposition,KVM,VirtioInput,Vulkan",
 			"-gpu", "swiftshader_indirect",
 			"-no-window",
 			"-fuchsia",
@@ -122,7 +122,7 @@ func TestAEMUCommandBuilder(t *testing.T) {
 	check(t, expected{
 		cmd: []string{
 			"./bin/emulator",
-			"-feature", "GLDirectMem,KVM,VirtioInput,Vulkan",
+			"-feature", "GLDirectMem,HostComposition,KVM,VirtioInput,Vulkan",
 			"-gpu", "swiftshader_indirect",
 			"-no-window",
 			"-fuchsia",
@@ -159,7 +159,7 @@ func TestAEMUCommandBuilder(t *testing.T) {
 	check(t, expected{
 		cmd: []string{
 			"./bin/emulator",
-			"-feature", "GLDirectMem,KVM,VirtioInput,Vulkan",
+			"-feature", "GLDirectMem,HostComposition,KVM,VirtioInput,Vulkan",
 			"-gpu", "swiftshader_indirect",
 			"-no-window",
 			"-fuchsia",
@@ -194,7 +194,7 @@ func TestAEMUCommandBuilder(t *testing.T) {
 	check(t, expected{
 		cmd: []string{
 			"./bin/emulator",
-			"-feature", "GLDirectMem,KVM,VirtioInput,Vulkan",
+			"-feature", "GLDirectMem,HostComposition,KVM,VirtioInput,Vulkan",
 			"-gpu", "swiftshader_indirect",
 			"-no-window",
 			"-fuchsia",

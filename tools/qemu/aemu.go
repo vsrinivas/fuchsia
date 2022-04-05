@@ -22,6 +22,7 @@ func NewAEMUCommandBuilder() *AEMUCommandBuilder {
 	// Default values for AEMU
 	a.SetFeature("GLDirectMem")
 	a.SetFeature("VirtioInput")
+	a.SetFeature("HostComposition")
 
 	a.SetGPU("swiftshader_indirect")
 

@@ -143,6 +143,7 @@
         {{/if}}
         "VirtioInput",
         "GLDirectMem",
+        "HostComposition",
         "Vulkan",
         "RefCountPipe"
     ],

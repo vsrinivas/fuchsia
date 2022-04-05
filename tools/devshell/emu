@@ -331,7 +331,7 @@ if (( AUDIO )); then
   ARGS+=("-soundhw" "hda")
 fi
 
-FEATURES="VirtioInput,GLDirectMem"
+FEATURES="VirtioInput,GLDirectMem,HostComposition"
 
 if [[ "$POINTING_DEVICE" == "mouse" ]]; then
   ARGS+=("-device" "virtio-mouse-pci")
