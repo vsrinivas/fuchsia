@@ -30,6 +30,7 @@ test("fidl_driver_transport_tests_bin") {
     "death_test_helper.cc",
     "death_test_helper.h",
     "natural_async_driver_transport_end_test.cc",
+    "natural_async_fdf_channel_test.cc",
     "natural_async_two_way_test.cc",
     "natural_async_zircon_handle_test.cc",
     "natural_one_way_test.cc",
@@ -40,6 +41,7 @@ test("fidl_driver_transport_tests_bin") {
     "wire_async_two_way_test.cc",
     "wire_async_zircon_handle_test.cc",
     "wire_one_way_test.cc",
+    "wire_sync_fdf_channel_test.cc",
     "wire_sync_two_way_test.cc",
     "wire_sync_zircon_handle_test.cc",
   ]
