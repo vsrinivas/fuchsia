@@ -11,6 +11,7 @@
 #include <deque>
 #include <mutex>
 
+#include "src/developer/forensics/feedback_data/log_source.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/encoder.h"
 #include "src/developer/forensics/utils/redact/redactor.h"
 #include "src/developer/forensics/utils/storage_size.h"
@@ -34,7 +35,7 @@ namespace system_log_recorder {
 //
 // Note: Both the buffer and the block overcommit, i.e. if not full, the last message will be
 // pushed entirely, even if it means going overbound.
-class LogMessageStore {
+class LogMessageStore : public LogSink {
  public:
   LogMessageStore(StorageSize max_block_capacity, StorageSize max_buffer_capacity,
                   std::unique_ptr<RedactorBase> redactor, std::unique_ptr<Encoder> encoder);
@@ -42,7 +43,7 @@ class LogMessageStore {
   // May add the encoded log message to the store:
   // * The message is dropped if the store has reached its maximum capacity, returning false.
   // * The message is omitted if it is the same one as the previous one in the store.
-  bool Add(::fpromise::result<fuchsia::logger::LogMessage, std::string> log);
+  bool Add(LogSink::MessageOr message) override;
 
   // |str| will be the final message in the consumed buffer, after the dropped and repeated
   // messages.

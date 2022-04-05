@@ -144,6 +144,9 @@ struct SnapshotVersion {
 // terminated system log recording.
 constexpr char kDoNotLaunchSystemLogRecorder[] = "/tmp/do_not_launch_system_log_recorder.txt";
 
+// The name of the protocol to use to read Feedback data from the Archive.
+constexpr char kArchiveAccessorName[] = "fuchsia.diagnostics.FeedbackArchiveAccessor";
+
 }  // namespace feedback_data
 }  // namespace forensics
 

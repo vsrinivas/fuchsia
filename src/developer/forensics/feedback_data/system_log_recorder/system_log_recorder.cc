@@ -29,24 +29,11 @@ SystemLogRecorder::SystemLogRecorder(async_dispatcher_t* archive_dispatcher,
       logs_dir_(write_parameters.logs_dir),
       store_(write_parameters.total_log_size / write_parameters.max_num_files,
              write_parameters.max_write_size, std::move(redactor), std::move(encoder)),
-      archive_accessor_(archive_dispatcher, services, fuchsia::diagnostics::DataType::LOGS,
-                        fuchsia::diagnostics::StreamMode::SNAPSHOT_THEN_SUBSCRIBE),
+      log_source_(archive_dispatcher, services, &store_),
       writer_(logs_dir_, write_parameters.max_num_files, &store_) {}
 
 void SystemLogRecorder::Start() {
-  archive_accessor_.Collect([this](fuchsia::diagnostics::FormattedContent chunk) {
-    auto log_messages =
-        diagnostics::accessor2logger::ConvertFormattedContentToLogMessages(std::move(chunk));
-    if (log_messages.is_error()) {
-      store_.Add(::fpromise::error(log_messages.take_error()));
-      return;
-    }
-
-    for (auto& log_message : log_messages.value()) {
-      store_.Add(std::move(log_message));
-    }
-  });
-
+  log_source_.Start();
   periodic_write_task_.Post(write_dispatcher_);
 
   async::PostDelayedTask(
@@ -67,7 +54,7 @@ void SystemLogRecorder::Flush(const std::optional<std::string> message) {
 
 void SystemLogRecorder::StopAndDeleteLogs() {
   // Stop collecting logs.
-  archive_accessor_.StopCollect();
+  log_source_.Stop();
   periodic_write_task_.Cancel();
 
   // Consume the data currently in the store to flush it.

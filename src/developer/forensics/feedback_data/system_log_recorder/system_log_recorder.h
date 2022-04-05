@@ -9,7 +9,7 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/time.h>
 
-#include "src/developer/forensics/feedback_data/archive_accessor_ptr.h"
+#include "src/developer/forensics/feedback_data/log_source.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/encoder.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/log_message_store.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/writer.h"
@@ -48,7 +48,7 @@ class SystemLogRecorder {
   const std::string logs_dir_;
 
   LogMessageStore store_;
-  ArchiveAccessor archive_accessor_;
+  LogSource log_source_;
   SystemLogWriter writer_;
 
   async::TaskClosureMethod<SystemLogRecorder, &SystemLogRecorder::PeriodicWriteTask>

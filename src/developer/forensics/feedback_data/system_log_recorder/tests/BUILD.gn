@@ -69,6 +69,7 @@ executable("system_log_recorder_unittest_exe") {
   sources = [ "system_log_recorder_unittest.cc" ]
 
   deps = [
+    "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data/system_log_recorder:reader",
     "//src/developer/forensics/feedback_data/system_log_recorder:src",
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:decoder",

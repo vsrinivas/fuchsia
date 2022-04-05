@@ -52,7 +52,7 @@ source_set("src") {
     "//sdk/fidl/fuchsia.process.lifecycle",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
-    "//src/developer/forensics/feedback_data:archive_accessor",
+    "//src/developer/forensics/feedback_data:log_source",
     "//src/developer/forensics/utils:logs",
     "//src/developer/forensics/utils:storage_size",
     "//src/developer/forensics/utils/redact",

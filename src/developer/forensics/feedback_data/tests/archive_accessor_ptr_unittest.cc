@@ -18,6 +18,7 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/forensics/feedback_data/attachments/types.h"
+#include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/stubs/diagnostics_archive.h"
 #include "src/developer/forensics/testing/stubs/diagnostics_batch_iterator.h"

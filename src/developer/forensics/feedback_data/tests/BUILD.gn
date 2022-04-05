@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/components/fuchsia_unittest_component.gni")
 import("//build/config.gni")
 
 visibility = [ ":*" ]
@@ -17,6 +18,7 @@ executable("archive_accessor_ptr_unittest_exe") {
 
   deps = [
     "//sdk/lib/sys/cpp/testing:cpp",
+    "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data/attachments:attachment_providers",
     "//src/developer/forensics/feedback_data/attachments:types",
     "//src/developer/forensics/testing:gpretty_printers",
@@ -206,6 +208,7 @@ executable("inspect_data_budget_unittest_exe") {
   sources = [ "inspect_data_budget_unittest.cc" ]
 
   deps = [
+    "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data:inspect_budget",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
@@ -226,6 +229,7 @@ executable("inspect_unittest_exe") {
 
   deps = [
     "//sdk/lib/sys/cpp/testing:cpp",
+    "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data/attachments:attachment_providers",
     "//src/developer/forensics/feedback_data/attachments:types",
     "//src/developer/forensics/testing:gpretty_printers",
@@ -233,6 +237,25 @@ executable("inspect_unittest_exe") {
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:diagnostics",
     "//src/developer/forensics/utils:errors",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("log_source_unittest_exe") {
+  testonly = true
+
+  sources = [ "log_source_unittest.cc" ]
+
+  deps = [
+    "//sdk/lib/sys/cpp/testing:cpp",
+    "//src/developer/forensics/feedback_data:log_source",
+    "//src/developer/forensics/testing:gpretty_printers",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:log_message",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:diagnostics",
+    "//src/developer/forensics/utils:logs",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
@@ -331,6 +354,8 @@ executable("system_log_unittest_exe") {
   sources = [ "system_log_unittest.cc" ]
 
   deps = [
+    "//src/developer/forensics/feedback_data:archive_accessor",
+    "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data/attachments:attachment_providers",
     "//src/developer/forensics/feedback_data/attachments:types",
     "//src/developer/forensics/testing:gpretty_printers",
@@ -489,6 +514,10 @@ fuchsia_component("inspect_unittest") {
   deps = [ ":inspect_unittest_exe" ]
 }
 
+fuchsia_unittest_component("log_source_unittest") {
+  deps = [ ":log_source_unittest_exe" ]
+}
+
 fuchsia_component("metadata_unittest") {
   testonly = true
 
@@ -552,6 +581,7 @@ fuchsia_test_package("feedback-data-tests") {
     ":default_annotations_unittest",
     ":inspect_data_budget_unittest",
     ":inspect_unittest",
+    ":log_source_unittest",
     ":metadata_unittest",
     ":kernel_log_ptr_integration_test",
     ":product_info_provider_unittest",

@@ -16,6 +16,7 @@
 #include "src/developer/forensics/testing/log_message.h"
 #include "src/developer/forensics/utils/log_format.h"
 #include "src/developer/forensics/utils/redact/redactor.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics {
 namespace feedback_data {

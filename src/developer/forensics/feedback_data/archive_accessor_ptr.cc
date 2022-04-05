@@ -13,6 +13,7 @@
 
 #include <src/lib/fostr/fidl/fuchsia/diagnostics/formatting.h>
 
+#include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/developer/forensics/utils/fit/promise.h"
 #include "src/developer/forensics/utils/fit/timeout.h"

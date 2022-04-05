@@ -52,12 +52,13 @@ void LogMessageStore::AddToBuffer(const std::string& str) {
   buffer_stats_.Use(StorageSize::Bytes(encoded.size()));
 }
 
-bool LogMessageStore::Add(::fpromise::result<fuchsia::logger::LogMessage, std::string> log) {
+bool LogMessageStore::Add(LogSink::MessageOr message) {
   TRACE_DURATION("feedback:io", "LogMessageStore::Add");
 
   std::lock_guard<std::mutex> lk(mtx_);
 
-  const auto& log_msg = (log.is_ok()) ? redactor_->Redact(log.value().msg) : log.error();
+  const auto& log_msg =
+      (message.is_ok()) ? redactor_->Redact(message.value().msg) : message.error();
 
   // 1. Early return if the incoming message is the same as last time.
   if (last_pushed_message_ == log_msg) {
@@ -84,7 +85,8 @@ bool LogMessageStore::Add(::fpromise::result<fuchsia::logger::LogMessage, std::s
   }
 
   // 4. Serialize incoming message.
-  const std::string str = (log.is_ok()) ? Format(log.value()) : FormatError(log.error());
+  const std::string str =
+      (message.is_ok()) ? Format(message.value()) : FormatError(message.error());
 
   // 5. Push the incoming message if below the limit or there is no rate limit; otherwise drop it.
   if (!buffer_rate_limit_ || buffer_stats_.CanUse(StorageSize::Bytes(str.size()))) {
