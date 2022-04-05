@@ -327,6 +327,15 @@ async fn add_del_interface_address_deprecated<N: Netstack>(name: &str) {
 
 // Regression test which asserts that racing an address removal and interface
 // removal doesn't cause a Netstack panic.
+//
+// TODO(https://fxbug.dev/37717): this test fails against netstack3 because of apparent race
+// conditions producing error logs:
+// ----------------xxxxx----------------
+// [sandbox/netemul:40-del_interface_and_address_ns3_eth/netstack][netstack3::bindings] ERROR:
+// [src/connectivity/network/netstack3/src/bindings/mod.rs(305)] Tried to send frame on device that
+// is not listed: Ethernet(0)
+//
+// ----------------xxxxx----------------
 #[variants_test]
 async fn remove_interface_and_address<E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
