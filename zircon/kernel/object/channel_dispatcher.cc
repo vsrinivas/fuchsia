@@ -46,6 +46,7 @@ namespace {
 // TODO(cpu): This limit can be lower but mojo's ChannelTest.PeerStressTest sends
 // about 3K small messages. Switching to size limit is more reasonable.
 constexpr size_t kMaxPendingMessageCount = 3500;
+constexpr size_t kWarnPendingMessageCount = kMaxPendingMessageCount / 2;
 
 // This value is part of the zx_channel_call contract.
 constexpr uint32_t kMinKernelGeneratedTxid = 0x80000000u;
@@ -63,17 +64,20 @@ zx_status_t ChannelDispatcher::Create(KernelHandle<ChannelDispatcher>* handle0,
                                       zx_rights_t* rights) {
   fbl::AllocChecker ac;
   auto holder0 = fbl::AdoptRef(new (&ac) PeerHolder<ChannelDispatcher>());
-  if (!ac.check())
+  if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
+  }
   auto holder1 = holder0;
 
   KernelHandle new_handle0(fbl::AdoptRef(new (&ac) ChannelDispatcher(ktl::move(holder0))));
-  if (!ac.check())
+  if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
+  }
 
   KernelHandle new_handle1(fbl::AdoptRef(new (&ac) ChannelDispatcher(ktl::move(holder1))));
-  if (!ac.check())
+  if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
+  }
 
   new_handle0.dispatcher()->InitPeer(new_handle1.dispatcher());
   new_handle1.dispatcher()->InitPeer(new_handle0.dispatcher());
@@ -149,8 +153,9 @@ void ChannelDispatcher::set_owner(zx_koid_t new_owner) {
   // pay the cost of grabbing the lock when the endpoint moves
   // from the process to channel; the one that we must get right
   // is from channel to new owner.
-  if (new_owner == ZX_KOID_INVALID)
+  if (new_owner == ZX_KOID_INVALID) {
     return;
+  }
 
   Guard<Mutex> guard{get_lock()};
   owner_ = new_owner;
@@ -183,34 +188,31 @@ zx_status_t ChannelDispatcher::Read(zx_koid_t owner, uint32_t* msg_size, uint32_
 
   Guard<Mutex> guard{get_lock()};
 
-  if (owner != owner_)
+  if (owner != owner_) {
     return ZX_ERR_BAD_HANDLE;
+  }
 
   if (messages_.is_empty()) {
     return peer() ? ZX_ERR_SHOULD_WAIT : ZX_ERR_PEER_CLOSED;
-  } else if (messages_.size() == kMaxPendingMessageCount / 2) {
-    auto process = ProcessDispatcher::GetCurrent();
-    char pname[ZX_MAX_NAME_LEN];
-    process->get_name(pname);
-    printf("KERN: warning! channel (%zu) has %zu messages (%s) (read).\n", get_koid(),
-           messages_.size(), pname);
   }
 
   *msg_size = messages_.front().data_size();
   *msg_handle_count = messages_.front().num_handles();
-  zx_status_t rv = ZX_OK;
+  zx_status_t status = ZX_OK;
   if (*msg_size > max_size || *msg_handle_count > max_handle_count) {
-    if (!may_discard)
+    if (!may_discard) {
       return ZX_ERR_BUFFER_TOO_SMALL;
-    rv = ZX_ERR_BUFFER_TOO_SMALL;
+    }
+    status = ZX_ERR_BUFFER_TOO_SMALL;
   }
 
   *msg = messages_.pop_front();
 
-  if (messages_.is_empty())
+  if (messages_.is_empty()) {
     UpdateStateLocked(ZX_CHANNEL_READABLE, 0u);
+  }
 
-  return rv;
+  return status;
 }
 
 zx_status_t ChannelDispatcher::Write(zx_koid_t owner, MessagePacketPtr msg) {
@@ -222,13 +224,20 @@ zx_status_t ChannelDispatcher::Write(zx_koid_t owner, MessagePacketPtr msg) {
   // Failing this test is only possible if this process has two threads racing:
   // one thread is issuing channel_write() and one thread is moving the handle
   // to another process.
-  if (owner != owner_)
+  if (owner != owner_) {
     return ZX_ERR_BAD_HANDLE;
+  }
 
-  if (!peer())
+  if (!peer()) {
     return ZX_ERR_PEER_CLOSED;
+  }
 
   AssertHeld(*peer()->get_lock());
+
+  if (peer()->TryWriteToMessageWaiter(msg)) {
+    return ZX_OK;
+  }
+
   peer()->WriteSelf(ktl::move(msg));
 
   return ZX_OK;
@@ -256,8 +265,9 @@ zx_status_t ChannelDispatcher::Call(zx_koid_t owner, MessagePacketPtr msg, zx_ti
     Guard<Mutex> guard{get_lock()};
 
     // See Write() for an explanation of this test.
-    if (owner != owner_)
+    if (owner != owner_) {
       return ZX_ERR_BAD_HANDLE;
+    }
 
     if (!peer()) {
       waiter->EndWait(reply);
@@ -332,53 +342,66 @@ zx_status_t ChannelDispatcher::ResumeInterruptedCall(MessageWaiter* waiter,
     // Otherwise, the status is ZX_ERR_TIMED_OUT and it
     // is our job to remove the waiter from the list.
     zx_status_t status = waiter->EndWait(reply);
-    if (status == ZX_ERR_TIMED_OUT)
+    if (status == ZX_ERR_TIMED_OUT) {
       waiters_.erase(*waiter);
+    }
     return status;
   }
+}
+
+bool ChannelDispatcher::TryWriteToMessageWaiter(MessagePacketPtr& msg) {
+  canary_.Assert();
+
+  if (waiters_.is_empty()) {
+    return false;
+  }
+
+  // If the far side has "call" waiters waiting for replies, see if this message's txid matches one
+  // of them.  If so, deliver it.  Note, because callers use a kernel generated txid we can skip
+  // checking the list if this message's txid isn't kernel generated.
+  const zx_txid_t txid = msg->get_txid();
+  if (!IsKernelGeneratedTxid(txid)) {
+    return false;
+  }
+
+  for (auto& waiter : waiters_) {
+    // (3C) Deliver message to waiter.
+    // Remove waiter from list.
+    if (waiter.get_txid() == txid) {
+      waiters_.erase(waiter);
+      waiter.Deliver(ktl::move(msg));
+      return true;
+    }
+  }
+
+  return false;
 }
 
 void ChannelDispatcher::WriteSelf(MessagePacketPtr msg) {
   canary_.Assert();
 
-  if (!waiters_.is_empty()) {
-    // If the far side has "call" waiters waiting for replies, see if this message's txid matches
-    // one of them.  If so, deliver it.  Note, because callers use a kernel generated txid we can
-    // skip checking the list if this message's txid isn't kernel generated.
-    const zx_txid_t txid = msg->get_txid();
-    if (IsKernelGeneratedTxid(txid)) {
-      for (auto& waiter : waiters_) {
-        // (3C) Deliver message to waiter.
-        // Remove waiter from list.
-        if (waiter.get_txid() == txid) {
-          waiters_.erase(waiter);
-          waiter.Deliver(ktl::move(msg));
-          return;
-        }
-      }
-    }
-  }
-
   messages_.push_back(ktl::move(msg));
-  if (messages_.size() > max_message_count_) {
-    max_message_count_ = messages_.size();
+  const size_t size = messages_.size();
+  if (size > max_message_count_) {
+    max_message_count_ = size;
   }
-
-  if (messages_.size() == kMaxPendingMessageCount / 2) {
-    // TODO(cpu): Remove this hack. See comment in kMaxPendingMessageCount definition.
-    auto process = ProcessDispatcher::GetCurrent();
-    char pname[ZX_MAX_NAME_LEN];
-    process->get_name(pname);
-    printf("KERN: warning! channel (%zu) has %zu messages (%s) (write).\n", get_koid(),
-           messages_.size(), pname);
-  } else if (messages_.size() > kMaxPendingMessageCount) {
-    auto process = ProcessDispatcher::GetCurrent();
-    char pname[ZX_MAX_NAME_LEN];
-    process->get_name(pname);
-    printf("KERN: channel (%zu) has %zu messages (%s) (write). Raising exception\n", get_koid(),
-           messages_.size(), pname);
-    Thread::Current::SignalPolicyException(ZX_EXCP_POLICY_CODE_CHANNEL_FULL_WRITE, 0u);
-    kcounter_add(channel_full, 1);
+  // TODO(cpu): Remove this hack. See comment in kMaxPendingMessageCount definition.
+  if (size >= kWarnPendingMessageCount) {
+    if (size == kWarnPendingMessageCount) {
+      const auto* process = ProcessDispatcher::GetCurrent();
+      char pname[ZX_MAX_NAME_LEN];
+      process->get_name(pname);
+      printf("KERN: warning! channel (%zu) has %zu messages (%s) (write).\n", get_koid(), size,
+             pname);
+    } else if (size > kMaxPendingMessageCount) {
+      const auto* process = ProcessDispatcher::GetCurrent();
+      char pname[ZX_MAX_NAME_LEN];
+      process->get_name(pname);
+      printf("KERN: channel (%zu) has %zu messages (%s) (write). Raising exception.\n", get_koid(),
+             size, pname);
+      Thread::Current::SignalPolicyException(ZX_EXCP_POLICY_CODE_CHANNEL_FULL_WRITE, 0u);
+      kcounter_add(channel_full, 1);
+    }
   }
 
   UpdateStateLocked(0u, ZX_CHANNEL_READABLE);

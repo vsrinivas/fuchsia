@@ -92,8 +92,14 @@ class ChannelDispatcher final
     zx_status_t status_;
   };
 
-  uint64_t get_message_count() const TA_REQ(get_lock()) { return messages_.size(); }
-  uint64_t get_max_message_count() const TA_REQ(get_lock()) { return max_message_count_; }
+  struct MessageCounts {
+    uint64_t current{};
+    uint64_t max{};
+  };
+  MessageCounts get_message_counts() const TA_EXCL(get_lock()) {
+    Guard<Mutex> guard{get_lock()};
+    return {messages_.size(), max_message_count_};
+  }
 
   // Returns the number of times a channel reached the max pending message count,
   // |kMaxPendingMessageCount|.
@@ -109,9 +115,15 @@ class ChannelDispatcher final
   using MessageList = fbl::SizedDoublyLinkedList<MessagePacketPtr>;
   using WaiterList = fbl::DoublyLinkedList<MessageWaiter*>;
 
+  explicit ChannelDispatcher(fbl::RefPtr<PeerHolder<ChannelDispatcher>> holder);
+
   void RemoveWaiter(MessageWaiter* waiter);
 
-  explicit ChannelDispatcher(fbl::RefPtr<PeerHolder<ChannelDispatcher>> holder);
+  // Attempt to deliver the message to a waiting MessageWaiter.
+  //
+  // Returns true and takes ownership of |msg| iff the message was delivered.
+  bool TryWriteToMessageWaiter(MessagePacketPtr& msg) TA_REQ(get_lock());
+
   void WriteSelf(MessagePacketPtr msg) TA_REQ(get_lock());
 
   // Generate a unique txid to be used in a channel call.

@@ -214,14 +214,10 @@ void DumpProcessChannels(fbl::RefPtr<ProcessDispatcher> process,
       [&](zx_handle_t handle, zx_rights_t rights, const Dispatcher* disp) {
         if (disp->get_type() == ZX_OBJ_TYPE_CHANNEL) {
           auto chan = DownCastDispatcher<const ChannelDispatcher>(disp);
-          uint64_t koid, peer_koid, count, max_count;
-          {
-            Guard<Mutex> guard{chan->get_lock()};
-            koid = chan->get_koid();
-            peer_koid = chan->get_related_koid();
-            count = chan->get_message_count();
-            max_count = chan->get_max_message_count();
-          }
+          const uint64_t koid = chan->get_koid();
+          const uint64_t peer_koid = chan->get_related_koid();
+          const ChannelDispatcher::MessageCounts counts = chan->get_message_counts();
+
           if (koid_filter != ZX_KOID_INVALID && koid_filter != koid && koid_filter != peer_koid)
             return ZX_OK;
           if (!printed_header) {
@@ -230,7 +226,7 @@ void DumpProcessChannels(fbl::RefPtr<ProcessDispatcher> process,
             printed_header = true;
           }
           printf("    chan %7" PRIu64 " %7" PRIu64 " count %" PRIu64 " max %" PRIu64 "\n", koid,
-                 peer_koid, count, max_count);
+                 peer_koid, counts.current, counts.max);
         }
         return ZX_OK;
       });

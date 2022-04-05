@@ -266,7 +266,7 @@ class SoloDispatcher : public Dispatcher {
   explicit SoloDispatcher(zx_signals_t signals = 0u) : Dispatcher(signals) {}
 
   // Related koid is overridden by subclasses, like thread and process.
-  zx_koid_t get_related_koid() const override TA_REQ(get_lock()) { return 0ULL; }
+  zx_koid_t get_related_koid() const override { return ZX_KOID_INVALID; }
   bool is_waitable() const final { return default_rights() & ZX_RIGHT_WAIT; }
 
   zx_status_t user_signal_self(uint32_t clear_mask, uint32_t set_mask) final {
@@ -340,7 +340,7 @@ class PeeredDispatcher : public Dispatcher {
       : Dispatcher(signals), holder_(ktl::move(holder)) {}
   virtual ~PeeredDispatcher() = default;
 
-  zx_koid_t get_related_koid() const final TA_REQ(get_lock()) { return peer_koid_; }
+  zx_koid_t get_related_koid() const final { return peer_koid_; }
   bool is_waitable() const final { return default_rights() & ZX_RIGHT_WAIT; }
 
   zx_status_t user_signal_self(uint32_t clear_mask,
@@ -394,9 +394,9 @@ class PeeredDispatcher : public Dispatcher {
     return peer_ == nullptr;
   }
 
+ protected:
   Lock<Mutex>* get_lock() const final { return holder_->get_lock(); }
 
- protected:
   // Initialize this dispatcher's peer field.
   //
   // This method is logically part of the class constructor and must be called exactly once, during
@@ -418,7 +418,7 @@ class PeeredDispatcher : public Dispatcher {
  private:
   fbl::RefPtr<Self> peer_ TA_GUARDED(get_lock());
   // After InitPeer is called, this field is logically const.
-  zx_koid_t peer_koid_ = ZX_KOID_INVALID;
+  zx_koid_t peer_koid_{ZX_KOID_INVALID};
 
   const fbl::RefPtr<PeerHolder<Self>> holder_;
 };
