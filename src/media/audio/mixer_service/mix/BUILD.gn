@@ -28,10 +28,15 @@ source_set("mix") {
     "pipeline_stage.h",
     "producer_stage.h",
     "ptr_decls.h",
+    "ring_buffer_producer_stage.cc",
+    "ring_buffer_producer_stage.h",
     "thread.h",
   ]
 
-  public_deps = [ "//src/media/audio/mixer_service/common" ]
+  public_deps = [
+    "//src/media/audio/mixer_service/common",
+    "//zircon/system/ulib/fzl",
+  ]
 
   deps = [
     "//sdk/lib/fit",
@@ -47,6 +52,7 @@ executable("mix_unittests") {
     "packet_queue_producer_stage_unittest.cc",
     "packet_view_unittest.cc",
     "pipeline_stage_unittest.cc",
+    "ring_buffer_producer_stage_unittest.cc",
   ]
 
   deps = [

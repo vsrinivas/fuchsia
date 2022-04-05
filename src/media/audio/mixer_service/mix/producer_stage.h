@@ -7,6 +7,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <memory>
 #include <string_view>
 #include <utility>
 
@@ -29,14 +30,19 @@ class ProducerStage : public PipelineStage {
   TimelineFunction ref_time_to_frac_presentation_frame() const final {
     return ref_time_to_frac_presentation_frame_;
   }
+  AudioClock& reference_clock() final { return *audio_clock_; }
 
  protected:
-  ProducerStage(std::string_view name, Format format,
+  ProducerStage(std::string_view name, Format format, std::unique_ptr<AudioClock> audio_clock,
                 TimelineFunction ref_time_to_frac_presentation_frame)
       : PipelineStage(name, format),
-        ref_time_to_frac_presentation_frame_(ref_time_to_frac_presentation_frame) {}
+        audio_clock_(std::move(audio_clock)),
+        ref_time_to_frac_presentation_frame_(ref_time_to_frac_presentation_frame) {
+    FX_CHECK(audio_clock_);
+  }
 
  private:
+  std::unique_ptr<AudioClock> audio_clock_;
   TimelineFunction ref_time_to_frac_presentation_frame_;
 };
 

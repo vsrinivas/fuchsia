@@ -25,8 +25,8 @@ class PacketQueueProducerStage : public ProducerStage {
  public:
   PacketQueueProducerStage(Format format, std::unique_ptr<AudioClock> audio_clock,
                            TimelineFunction ref_time_to_frac_presentation_frame = {})
-      : ProducerStage("PacketQueueProducerStage", format, ref_time_to_frac_presentation_frame),
-        audio_clock_(std::move(audio_clock)) {}
+      : ProducerStage("PacketQueueProducerStage", format, std::move(audio_clock),
+                      ref_time_to_frac_presentation_frame) {}
 
   // Registers a callback to invoke when a packet underflows.
   // The duration estimates how late the packet was relative to the system monotonic clock.
@@ -45,9 +45,6 @@ class PacketQueueProducerStage : public ProducerStage {
   void push(PacketView packet, fit::callback<void()> on_destroy_callback = {}) {
     pending_packet_queue_.emplace_back(packet, std::move(on_destroy_callback));
   }
-
-  // Implements `PipelineStage`.
-  AudioClock& reference_clock() final { return *audio_clock_; }
 
  protected:
   // Implements `PipelineStage`.
@@ -81,8 +78,6 @@ class PacketQueueProducerStage : public ProducerStage {
 
   // Reports underflow of `underlow_frame_count`.
   void ReportUnderflow(Fixed underlow_frame_count);
-
-  std::unique_ptr<AudioClock> audio_clock_;
 
   std::deque<PendingPacket> pending_packet_queue_;
 
