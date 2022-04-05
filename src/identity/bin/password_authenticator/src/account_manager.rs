@@ -243,7 +243,7 @@ where
         match meta.authenticator_metadata() {
             AuthenticatorMetadata::NullKey(_) => NullKeySource.retrieve_key(&password).await,
             AuthenticatorMetadata::ScryptOnly(s_meta) => {
-                let key_source = ScryptKeySource::new_with_params(s_meta.scrypt_params);
+                let key_source = ScryptKeySource::from(s_meta.scrypt_params);
                 key_source.retrieve_key(&password).await
             }
         }

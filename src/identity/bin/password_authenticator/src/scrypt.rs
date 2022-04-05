@@ -36,9 +36,11 @@ impl ScryptKeySource {
     pub fn new() -> ScryptKeySource {
         ScryptKeySource { scrypt_params: ScryptParams::new() }
     }
+}
 
-    pub fn new_with_params(scrypt_params: ScryptParams) -> ScryptKeySource {
-        ScryptKeySource { scrypt_params }
+impl From<ScryptParams> for ScryptKeySource {
+    fn from(item: ScryptParams) -> Self {
+        ScryptKeySource { scrypt_params: item }
     }
 }
 
@@ -90,7 +92,7 @@ pub mod test {
 
     #[fuchsia::test]
     async fn test_enroll_key() {
-        let ks = ScryptKeySource::new_with_params(TEST_SCRYPT_PARAMS);
+        let ks = ScryptKeySource::from(TEST_SCRYPT_PARAMS);
         let enrolled_key = ks.enroll_key(TEST_SCRYPT_PASSWORD).await.expect("enroll scrypt");
         assert_eq!(enrolled_key.key, TEST_SCRYPT_KEY);
         assert_matches!(enrolled_key.enrollment_data, TEST_SCRYPT_PARAMS);
@@ -98,7 +100,7 @@ pub mod test {
 
     #[fuchsia::test]
     async fn test_retrieve_key_weak_for_tests() {
-        let ks = ScryptKeySource::new_with_params(TEST_SCRYPT_PARAMS);
+        let ks = ScryptKeySource::from(TEST_SCRYPT_PARAMS);
         let key = ks.retrieve_key(TEST_SCRYPT_PASSWORD).await.expect("retrieve_key");
         assert_eq!(key, TEST_SCRYPT_KEY);
     }
@@ -116,7 +118,7 @@ pub mod test {
     #[fuchsia::test]
     async fn test_retrieve_key_full_strength() {
         // Tests the full-strength key derivation against separately-verified constants.
-        let ks = ScryptKeySource::new_with_params(FULL_STRENGTH_SCRYPT_PARAMS);
+        let ks = ScryptKeySource::from(FULL_STRENGTH_SCRYPT_PARAMS);
         let key = ks.retrieve_key(GOLDEN_SCRYPT_PASSWORD).await.expect("retrieve_key");
         assert_eq!(key, GOLDEN_SCRYPT_KEY);
     }
