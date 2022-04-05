@@ -21,8 +21,7 @@ namespace virtual_audio {
 class VirtualAudioStream;
 
 class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
-                               public fuchsia::virtualaudio::Output,
-                               public std::enable_shared_from_this<VirtualAudioDeviceImpl> {
+                               public fuchsia::virtualaudio::Output {
  public:
   static constexpr char kDefaultDeviceName[] = "Virtual_Audio_Device_(default)";
   static constexpr char kDefaultManufacturerName[] =
@@ -77,7 +76,7 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   static constexpr bool kDefaultHardwired = false;
   static constexpr bool kDefaultPlugCanNotify = true;
 
-  static std::shared_ptr<VirtualAudioDeviceImpl> Create(VirtualAudioControlImpl* owner,
+  static std::unique_ptr<VirtualAudioDeviceImpl> Create(VirtualAudioControlImpl* owner,
                                                         bool is_input);
 
   // Execute the given task on the FIDL channel's main dispatcher thread. Used to deliver callbacks
@@ -85,9 +84,9 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   void PostToDispatcher(fit::closure task_to_post);
 
   void SetBinding(fidl::Binding<fuchsia::virtualaudio::Input,
-                                std::shared_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding);
+                                std::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding);
   void SetBinding(fidl::Binding<fuchsia::virtualaudio::Output,
-                                std::shared_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding);
+                                std::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding);
 
   virtual bool CreateStream(zx_device_t* devnode);
   void RemoveStream();
@@ -167,13 +166,13 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   bool is_input_;
 
   // When the binding is closed, it is removed from the (ControlImpl-owned) BindingSet that contains
-  // it, which in turn deletes the associated impl (since the binding holds a shared_ptr<impl>, not
+  // it, which in turn deletes the associated impl (since the binding holds a unique_ptr<impl>, not
   // an impl*). Something might get dispatched from other thread at around this time, so we enqueue
   // them (ClosureQueue) and use StopAndClear to cancel them during ~DeviceImpl (in RemoveStream).
   fidl::Binding<fuchsia::virtualaudio::Input,
-                std::shared_ptr<virtual_audio::VirtualAudioDeviceImpl>>* input_binding_ = nullptr;
+                std::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* input_binding_ = nullptr;
   fidl::Binding<fuchsia::virtualaudio::Output,
-                std::shared_ptr<virtual_audio::VirtualAudioDeviceImpl>>* output_binding_ = nullptr;
+                std::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* output_binding_ = nullptr;
 
   // Don't initialize here or in ctor; do it all in Init() so ResetConfiguration has same effect.
   std::string device_name_;
@@ -206,7 +205,7 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   // Mimics <lib/closure-queue/closure_queue.h> but does not require running all tasks from
   // the same thread. This assumes a "concurrent and synchronized" model -- see RFC 126.
   // Tasks are run on the given dispatcher in the order they are enqueued.
-  class TaskQueue : public std::enable_shared_from_this<TaskQueue> {
+  class TaskQueue {
    public:
     explicit TaskQueue(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
@@ -217,7 +216,7 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
       // Wrap in an async::TaskClosure so the task can be canceled before it runs,
       // then wrap with a closure that destroys the async::TaskClosure after the task runs.
       auto task = std::make_shared<async::TaskClosure>();
-      task->set_handler([this, self = shared_from_this(), task, fn = std::move(fn)]() {
+      task->set_handler([this, task, fn = std::move(fn)]() {
         fn();
         pending_.erase(task);
       });
@@ -239,7 +238,8 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
     std::unordered_set<std::shared_ptr<async::TaskClosure>> pending_;
   };
 
-  std::shared_ptr<TaskQueue> task_queue_;
+  // The optional enables this to be emplaced when stream_ is created, minimizing memory churn.
+  std::optional<TaskQueue> task_queue_;
 };
 
 }  // namespace virtual_audio
