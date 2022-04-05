@@ -71,7 +71,6 @@ struct DnodeOfData {
   fbl::RefPtr<NodePage> node_page = nullptr;   // cached direct node page
   nid_t nid = 0;                               // node id of the direct node block
   uint32_t ofs_in_node = 0;                    // data offset in the node page
-  bool inode_page_locked = false;              // inode page is locked or not
   block_t data_blkaddr = 0;                    // block address of the node block
 };
 

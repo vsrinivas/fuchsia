@@ -345,12 +345,6 @@ void MapTester::CheckDnodeOfData(DnodeOfData *dn, nid_t exp_nid, pgoff_t exp_ind
   ASSERT_EQ(dn->nid, exp_nid);
   ASSERT_EQ(dn->ofs_in_node, uint64_t{1});
   ASSERT_EQ(dn->data_blkaddr, block_t{0});
-
-  if (is_inode) {
-    ASSERT_TRUE(dn->inode_page_locked);
-  } else {
-    ASSERT_FALSE(dn->inode_page_locked);
-  }
 }
 
 bool MapTester::IsCachedNat(NodeManager &node_manager, nid_t n) {

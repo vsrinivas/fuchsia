@@ -425,7 +425,7 @@ int VnodeF2fs::TruncateDataBlocksRange(DnodeOfData *dn, int count) {
   if (nr_free) {
     InvalidatePages(start, end);
     dn->node_page->SetDirty();
-    Vfs()->GetNodeManager().SyncInodePage(*dn);
+    dn->vnode->MarkInodeDirty();
   }
   dn->ofs_in_node = ofs;
   return nr_free;
@@ -567,6 +567,9 @@ void VnodeF2fs::MarkInodeDirty() {
     return;
   }
   if (IsNode() || IsMeta()) {
+    return;
+  }
+  if (!GetNlink()) {
     return;
   }
   ZX_ASSERT(Vfs()->GetVCache().AddDirty(this) == ZX_OK);

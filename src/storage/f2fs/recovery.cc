@@ -275,8 +275,9 @@ void F2fs::DoRecoverData(VnodeF2fs *vnode, NodePage *page, block_t blkaddr) {
 
   // write node page in place
   GetSegmentManager().SetSummary(&sum, dn.nid, 0, 0);
-  if (IsInode(*(dn.node_page)))
-    GetNodeManager().SyncInodePage(dn);
+  if (IsInode(*(dn.node_page))) {
+    dn.vnode->MarkInodeDirty();
+  }
 
   dn.node_page->CopyNodeFooterFrom(*page);
   dn.node_page->FillNodeFooter(dn.nid, ni.ino, page->OfsOfNode(), false);

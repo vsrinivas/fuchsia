@@ -32,7 +32,7 @@ zx_status_t VnodeF2fs::ReserveNewBlock(DnodeOfData *dn) {
 
   SetDataBlkaddr(dn, kNewAddr);
   dn->data_blkaddr = kNewAddr;
-  Vfs()->GetNodeManager().SyncInodePage(*dn);
+  dn->vnode->MarkInodeDirty();
   return ZX_OK;
 }
 
@@ -139,7 +139,7 @@ void VnodeF2fs::UpdateExtentCache(block_t blk_addr, DnodeOfData *dn) {
     return;
   } while (false);
 
-  Vfs()->GetNodeManager().SyncInodePage(*dn);
+  dn->vnode->MarkInodeDirty();
 }
 
 zx_status_t VnodeF2fs::FindDataPage(pgoff_t index, fbl::RefPtr<Page> *out) {

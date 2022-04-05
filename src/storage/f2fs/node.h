@@ -119,11 +119,10 @@ class NodeManager {
     dn.inode_page = std::move(ipage);
     dn.node_page = std::move(npage);
     dn.nid = nid;
-    dn.inode_page_locked = 0;
   }
 
   void GetNodeInfo(nid_t nid, NodeInfo &out);
-  void SyncInodePage(DnodeOfData &dn);
+
   // It flushes all dirty node Pages that meet |operation|.if_page.
   // It also removes dirty vnodes from the dirty list when there is no dirty Page for their vnodes
   // and data. To ensure there is no access to the vnodes, it is called with LockType::kFileOp held

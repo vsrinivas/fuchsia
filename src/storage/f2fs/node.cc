@@ -476,7 +476,6 @@ zx_status_t NodeManager::GetDnodeOfData(DnodeOfData &dn, pgoff_t index, bool rea
 
   parent = npage[0];
   dn.inode_page = npage[0];
-  dn.inode_page_locked = true;
 
   if (level != 0) {
     nids[1] = parent->GetNid(offset[0], true);
@@ -502,7 +501,6 @@ zx_status_t NodeManager::GetDnodeOfData(DnodeOfData &dn, pgoff_t index, bool rea
       // TODO: Read ahead Pages
     }
     if (i == 1) {
-      dn.inode_page_locked = false;
       parent->Unlock();
     } else {
       Page::PutPage(std::move(parent), true);
@@ -542,7 +540,7 @@ void NodeManager::TruncateNode(DnodeOfData &dn) {
     fs_->RemoveOrphanInode(dn.nid);
     fs_->DecValidInodeCount();
   } else {
-    SyncInodePage(dn);
+    dn.vnode->MarkInodeDirty();
   }
 
   dn.node_page->Invalidate();
@@ -803,7 +801,6 @@ zx_status_t NodeManager::RemoveInodePage(VnodeF2fs *vnode) {
 
     vnode->ClearXattrNid();
     SetNewDnode(dn, vnode, ipage, node_page, nid);
-    dn.inode_page_locked = true;
     TruncateNode(dn);
   }
   if (vnode->GetBlocks() == 1) {
@@ -868,7 +865,7 @@ zx_status_t NodeManager::NewNodePage(DnodeOfData &dn, uint32_t ofs, fbl::RefPtr<
   SetNodeAddr(new_ni, kNewAddr);
 
   dn.node_page = *out;
-  SyncInodePage(dn);
+  dn.vnode->MarkInodeDirty();
 
   (*out)->SetDirty();
   (*out)->SetColdNode(*dn.vnode);
@@ -919,27 +916,6 @@ Page *NodeManager::GetNodePageRa(Page *parent, int start) {
   return nullptr;
 }
 #endif
-
-void NodeManager::SyncInodePage(DnodeOfData &dn) {
-  if (!dn.vnode->GetNlink()) {
-    return;
-  }
-
-  dn.vnode->MarkInodeDirty();
-  if (IsInode(*dn.node_page) || dn.inode_page == dn.node_page) {
-    dn.vnode->UpdateInode(dn.node_page.get());
-  } else if (dn.inode_page) {
-    if (!dn.inode_page_locked) {
-      dn.inode_page->Lock();
-    }
-    dn.vnode->UpdateInode(dn.inode_page.get());
-    if (!dn.inode_page_locked) {
-      dn.inode_page->Unlock();
-    }
-  } else {
-    dn.vnode->WriteInode(false);
-  }
-}
 
 pgoff_t NodeManager::SyncNodePages(WritebackOperation &operation) {
   if (superblock_info_->GetPageCount(CountType::kDirtyNodes) == 0 && !operation.bReleasePages) {
