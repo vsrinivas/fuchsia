@@ -11,14 +11,14 @@ use {
         metrics::{
             fetch::{Fetcher, FileDataFetcher},
             metric_value::{MetricValue, Problem},
-            ExpressionContext, Metric, MetricState, Metrics, ValueSource,
+            ExpressionContext, ExpressionTree, Function, Metric, MetricState, Metrics, ValueSource,
         },
         plugins::{register_plugins, Plugin},
     },
     crate::{evaluate_int_math, metric_value_to_int},
     anyhow::{bail, Error},
     fidl_fuchsia_feedback::MAX_CRASH_SIGNATURE_LENGTH,
-    serde::{self, Deserialize},
+    serde::{self, Deserialize, Serialize},
     std::{cell::RefCell, collections::HashMap, convert::TryFrom},
 };
 
@@ -129,9 +129,9 @@ pub(crate) type Actions = HashMap<String, ActionsSchema>;
 pub(crate) type ActionsSchema = HashMap<String, Action>;
 
 /// Action represent actions that can be taken using an evaluated value(s).
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(tag = "type")]
-pub(crate) enum Action {
+pub enum Action {
     Warning(Warning),
     Gauge(Gauge),
     Snapshot(Snapshot),
@@ -153,12 +153,16 @@ pub(crate) fn validate_actions(actions: &ActionsSchema) -> Result<(), Error> {
 }
 
 /// Action that is triggered if a predicate is met.
-#[derive(Clone, Debug)]
-pub(crate) struct Warning {
-    pub trigger: ValueSource, // A wrapped expression to evaluate which determines if this action triggers.
-    pub print: String,        // What to print if trigger is true
-    pub file_bug: Option<String>, // Describes where bugs should be filed if this action triggers.
-    pub tag: Option<String>,  // An optional tag to associate with this Action
+#[derive(Clone, Debug, Serialize, PartialEq)]
+pub struct Warning {
+    /// A wrapped expression to evaluate which determines if this action triggers.
+    pub trigger: ValueSource,
+    /// What to print if trigger is true.
+    pub print: String,
+    /// Describes where bugs should be filed if this action triggers.
+    pub file_bug: Option<String>,
+    /// An optional tag to associate with this Action.
+    pub tag: Option<String>,
 }
 
 impl<'de> Deserialize<'de> for Warning {
@@ -186,11 +190,14 @@ impl<'de> Deserialize<'de> for Warning {
 }
 
 /// Action that displays percentage of value.
-#[derive(Clone, Debug)]
-pub(crate) struct Gauge {
-    pub value: ValueSource,     // Value to surface
-    pub format: Option<String>, // Opaque type that determines how value should be formatted (e.g. percentage)
-    pub tag: Option<String>,    // An optional tag to associate with this Action
+#[derive(Clone, Debug, Serialize, PartialEq)]
+pub struct Gauge {
+    /// Value to surface.
+    pub value: ValueSource,
+    /// Opaque type that determines how value should be formatted (e.g. percentage).
+    pub format: Option<String>,
+    /// An optional tag to associate with this Action.
+    pub tag: Option<String>,
 }
 
 impl<'de> Deserialize<'de> for Gauge {
@@ -216,12 +223,15 @@ impl<'de> Deserialize<'de> for Gauge {
 }
 
 /// Action that displays percentage of value.
-#[derive(Clone, Debug)]
-pub(crate) struct Snapshot {
-    pub trigger: ValueSource, // Take snapshot when this is true
-    pub repeat: ValueSource, // A wrapped expression evaluating to time delay before repeated triggers
-    pub signature: String,   // Sent in the crash report
-                             // There's no tag option because snapshot conditions are always news worth seeing.
+#[derive(Clone, Debug, Serialize, PartialEq)]
+pub struct Snapshot {
+    /// Take snapshot when this is true.
+    pub trigger: ValueSource,
+    /// A wrapped expression evaluating to time delay before repeated triggers.
+    pub repeat: ValueSource,
+    /// Sent in the crash report.
+    pub signature: String,
+    // There's no tag option because snapshot conditions are always news worth seeing.
 }
 
 impl<'de> Deserialize<'de> for Snapshot {
@@ -247,6 +257,10 @@ impl<'de> Deserialize<'de> for Snapshot {
         );
         let repeat_value =
             MetricValue::Int(evaluate_int_math(&repeat_string).map_err(serde::de::Error::custom)?);
+
+        // If the metric value cannot be converted to int, throw an error.
+        metric_value_to_int(repeat_value.clone()).map_err(serde::de::Error::custom)?;
+
         let repeat =
             ValueSource { metric: repeat_metric, cached_value: RefCell::new(Some(repeat_value)) };
 
@@ -279,6 +293,46 @@ impl Action {
             Action::Gauge(action) => action.tag.clone(),
             Action::Snapshot(_) => None,
         }
+    }
+
+    /// Creates a [Warning] with a trigger evaluating to Bool(true) and its cache pre-populated.
+    pub fn new_synthetic_warning(print: String) -> Action {
+        let trigger_true = get_trigger_true();
+        Action::Warning(Warning { trigger: trigger_true, print, file_bug: None, tag: None })
+    }
+
+    /// Creates a [Gauge] with the cache value pre-populated.
+    /// This only supports string values.
+    pub fn new_synthetic_string_gauge(
+        raw_value: String,
+        format: Option<String>,
+        tag: Option<String>,
+    ) -> Action {
+        let value = ValueSource {
+            metric: Metric::Eval(ExpressionContext {
+                raw_expression: format!("'{}'", raw_value),
+                parsed_expression: ExpressionTree::Value(MetricValue::String(raw_value.clone())),
+            }),
+            cached_value: RefCell::new(Some(MetricValue::String(raw_value))),
+        };
+        Action::Gauge(Gauge { value, format, tag })
+    }
+}
+
+fn get_trigger_true() -> ValueSource {
+    let eval_true = MetricValue::Bool(true);
+    ValueSource {
+        metric: Metric::Eval(ExpressionContext {
+            raw_expression: "0==0".to_string(),
+            parsed_expression: ExpressionTree::Function(
+                Function::Equals,
+                vec![
+                    ExpressionTree::Value(MetricValue::Int(0)),
+                    ExpressionTree::Value(MetricValue::Int(0)),
+                ],
+            ),
+        }),
+        cached_value: RefCell::new(Some(eval_true)),
     }
 }
 

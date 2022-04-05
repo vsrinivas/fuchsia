@@ -5,14 +5,14 @@
 use {
     super::{unhandled_type, Lambda},
     diagnostics_hierarchy::{ArrayContent, Property as DiagnosticProperty},
-    serde::Deserialize,
+    serde::{Deserialize, Serialize},
     serde_json::Value as JsonValue,
 };
 
 /// The calculated or selected value of a Metric.
 ///
 /// Problem means that the value could not be calculated.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Serialize)]
 pub enum MetricValue {
     // Ensure every variant of MetricValue is tested in metric_value_traits().
     // TODO(cphoenix): Support u64.
@@ -27,7 +27,7 @@ pub enum MetricValue {
 }
 
 /// Some kind of problematic non-value. In most cases, this should be treated as a thrown error.
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Serialize)]
 pub enum Problem {
     Missing(String),
     /// Multiple errors were encountered in evaluating the expression.

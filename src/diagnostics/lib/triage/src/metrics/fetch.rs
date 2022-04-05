@@ -11,6 +11,7 @@ use {
     lazy_static::lazy_static,
     regex::Regex,
     selectors::{self, VerboseError},
+    serde::{self, Serialize},
     serde_derive::Deserialize,
     serde_json::{map::Map as JsonMap, Value as JsonValue},
     std::{collections::HashMap, convert::TryFrom, str::FromStr, sync::Arc},
@@ -156,7 +157,7 @@ impl<'a> TrialDataFetcher<'a> {
 }
 
 /// Selector type used to determine how to query target file.
-#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Serialize)]
 pub enum SelectorType {
     /// Selector for Inspect Tree ("inspect.json" files).
     Inspect,
@@ -172,11 +173,13 @@ impl FromStr for SelectorType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SelectorString {
     pub(crate) full_selector: String,
     pub selector_type: SelectorType,
     body: String,
+
+    #[serde(skip_serializing)]
     parsed_selector: Selector,
 }
 

@@ -5,7 +5,7 @@
 use {
     super::Plugin,
     crate::{
-        act::ActionResults,
+        act::Action,
         metrics::{
             fetch::{FileDataFetcher, SelectorString},
             metric_value::MetricValue,
@@ -28,9 +28,8 @@ impl Plugin for MemoryPlugin {
         "Memory Summary"
     }
 
-    fn run(&self, inputs: &FileDataFetcher<'_>) -> ActionResults {
-        let mut results = ActionResults::new();
-        results.set_sort_gauges(false);
+    fn run_structured(&self, inputs: &FileDataFetcher<'_>) -> Vec<Action> {
+        let mut results = Vec::new();
         let val = match inputs
             .inspect
             .fetch(&SelectorString::try_from(SELECTOR.to_string()).expect("invalid selector"))
@@ -67,7 +66,7 @@ impl Plugin for MemoryPlugin {
                         match parsed{
                             Some(parsed) => Some((name, value, mult*parsed)),
                             None => {
-                                results.add_warning(format!("[DEBUG: BAD DATA] Could not parse '{}' as a valid size. Something is wrong with the output of memory_monitor.", value));
+                                results.push(Action::new_synthetic_warning(format!("[DEBUG: BAD DATA] Could not parse '{}' as a valid size. Something is wrong with the output of memory_monitor.", value)));
                                 None
                             }
                         }
@@ -79,7 +78,7 @@ impl Plugin for MemoryPlugin {
             .sorted_by(|a, b| a.2.partial_cmp(&b.2).unwrap())
             .rev()
             .for_each(|entry| {
-                results.add_gauge(format!("{}: {}", entry.0, entry.1));
+                results.push(Action::new_synthetic_string_gauge(entry.1.to_string(), None, Some(entry.0.to_string())));
             });
 
         results

@@ -4,7 +4,7 @@
 
 use {
     super::{helpers::analyze_logs, Plugin},
-    crate::{act::ActionResults, metrics::fetch::FileDataFetcher},
+    crate::{act::Action, metrics::fetch::FileDataFetcher},
     regex::Regex,
     std::collections::BTreeSet,
 };
@@ -20,8 +20,8 @@ impl Plugin for SandboxErrorsPlugin {
         "Sandbox Errors"
     }
 
-    fn run(&self, inputs: &FileDataFetcher<'_>) -> ActionResults {
-        let mut results = ActionResults::new();
+    fn run_structured(&self, inputs: &FileDataFetcher<'_>) -> Vec<Action> {
+        let mut results = Vec::new();
 
         let mut error_tuples: BTreeSet<(String, String)> = BTreeSet::new();
         let err_ref = &mut error_tuples;
@@ -36,10 +36,10 @@ impl Plugin for SandboxErrorsPlugin {
         });
 
         for (name, service) in error_tuples.iter() {
-            results.add_warning(format!(
+            results.push(Action::new_synthetic_warning(format!(
                 "[WARNING]: {} tried to use {}, which was not declared in its sandbox",
                 name, service
-            ));
+            )));
         }
         results
     }

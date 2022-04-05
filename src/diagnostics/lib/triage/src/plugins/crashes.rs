@@ -4,7 +4,7 @@
 
 use {
     super::Plugin,
-    crate::{act::ActionResults, metrics::fetch::FileDataFetcher},
+    crate::{act::Action, metrics::fetch::FileDataFetcher},
     regex::Regex,
 };
 
@@ -19,8 +19,8 @@ impl Plugin for CrashesPlugin {
         "Process Crashes"
     }
 
-    fn run(&self, inputs: &FileDataFetcher<'_>) -> ActionResults {
-        let mut results = ActionResults::new();
+    fn run_structured(&self, inputs: &FileDataFetcher<'_>) -> Vec<Action> {
+        let mut results = Vec::new();
 
         let re = Regex::new(r"\[(\d+)\.(\d+)\].*(?:CRASH:|fatal :)\s*([\w\-_\s\.]+)")
             .expect("regex compilation");
@@ -33,13 +33,13 @@ impl Plugin for CrashesPlugin {
                     let formatted_time =
                         format!("{}h{}m{}.{}s", s / 3600, s % 3600 / 60, s % 60, ms);
 
-                    results.add_warning(format!(
+                    results.push(Action::new_synthetic_warning(format!(
                         "[WARNING]: {} crashed at {} [{}.{}]",
                         captures.get(3).unwrap().as_str(),
                         formatted_time,
                         s,
                         ms,
-                    ));
+                    )));
                 }
                 _ => {}
             };

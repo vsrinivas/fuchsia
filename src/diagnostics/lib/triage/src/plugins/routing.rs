@@ -4,7 +4,7 @@
 
 use {
     super::{helpers::analyze_logs, Plugin},
-    crate::{act::ActionResults, metrics::fetch::FileDataFetcher},
+    crate::{act::Action, metrics::fetch::FileDataFetcher},
     regex::Regex,
 };
 
@@ -19,8 +19,8 @@ impl Plugin for RoutingErrorsPlugin {
         "Routing Errors"
     }
 
-    fn run(&self, inputs: &FileDataFetcher<'_>) -> ActionResults {
-        let mut results = ActionResults::new();
+    fn run_structured(&self, inputs: &FileDataFetcher<'_>) -> Vec<Action> {
+        let mut results = Vec::new();
 
         let re = Regex::new(r".*\[([^:]+):[0-9]+\] ERROR.*Failed to route protocol `([^`]+)` with target component `([^`]+)`.*").expect("regex compilation failed");
         analyze_logs(inputs, re, |mut pattern_match| {
@@ -30,28 +30,28 @@ impl Plugin for RoutingErrorsPlugin {
                         (moniker.into(), protocol.into(), name.into())
                     }
                     _ => {
-                        results.add_warning(
+                        results.push(Action::new_synthetic_warning(
                             "[DEBUG: BAD DATA] Routing Errors plugin encountered a bug analyzing \
                     log line, capture group missing"
                                 .to_string(),
-                        );
+                        ));
                         return;
                     }
                 };
             if pattern_match.len() == 0 {
-                results.add_warning(
+                results.push(Action::new_synthetic_warning(
                     "[DEBUG: BAD DATA] Routing Errors plugin encountered a bug analyzing log \
                 line, capture group missing"
                         .to_string(),
-                );
+                ));
                 return;
             }
             let log_line: &str = pattern_match.remove(0).into();
-            results.add_warning(format!(
+            results.push(Action::new_synthetic_warning(format!(
                 "[WARNING]: Error routing capability \"{}\" to component identified as \"{}\" \
                  with moniker \"{}\". Original error log:\n{}",
                 protocol, name, moniker, log_line
-            ));
+            )));
         });
         results
     }

@@ -28,6 +28,7 @@ lib_deps = [
 
 library_sources = [
   "src/act.rs",
+  "src/act_structured.rs",
   "src/config.rs",
   "src/lib.rs",
   "src/metrics.rs",

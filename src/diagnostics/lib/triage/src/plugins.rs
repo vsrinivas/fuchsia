@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{act::ActionResults, metrics::fetch::FileDataFetcher};
+use crate::{
+    act::{Action, ActionResults},
+    metrics::{fetch::FileDataFetcher, metric_value::MetricValue},
+};
 
 mod crashes;
 mod helpers;
@@ -22,7 +25,32 @@ pub trait Plugin {
     fn display_name(&self) -> &'static str;
 
     /// Run the plugin on the given inputs to produce results.
-    fn run(&self, inputs: &FileDataFetcher<'_>) -> ActionResults;
+    fn run(&self, inputs: &FileDataFetcher<'_>) -> ActionResults {
+        let mut results = ActionResults::new();
+        results.set_sort_gauges(false);
+        let structured_results = self.run_structured(inputs);
+        for action in structured_results {
+            match action {
+                Action::Warning(warning) => {
+                    results.add_warning(warning.print);
+                }
+                Action::Gauge(gauge) => {
+                    if let Some(metric_value) = gauge.value.cached_value.into_inner() {
+                        if let MetricValue::String(raw_value) = metric_value {
+                            if let Some(tag) = gauge.tag {
+                                results.add_gauge(format!("{}: {}", tag, raw_value));
+                            }
+                        }
+                    }
+                }
+                _ => (),
+            }
+        }
+        results
+    }
+
+    /// Run the plugin on the given inputs to produce results keyed by name.
+    fn run_structured(&self, inputs: &FileDataFetcher<'_>) -> Vec<Action>;
 }
 
 /// Retrieve the list of all plugins registered with this library.

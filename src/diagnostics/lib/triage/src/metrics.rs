@@ -12,13 +12,13 @@ use {
     fetch::{Fetcher, FileDataFetcher, SelectorString, TrialDataFetcher},
     metric_value::{MetricValue, Problem},
     regex::Regex,
-    serde::{Deserialize, Deserializer},
+    serde::{Deserialize, Deserializer, Serialize},
     std::{cell::RefCell, clone::Clone, cmp::min, collections::HashMap, convert::TryFrom},
     variable::VariableName,
 };
 
 /// The contents of a single Metric. Metrics produce a value for use in Actions or other Metrics.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub(crate) enum Metric {
     /// Selector tells where to find a value in the Inspect data. The
     /// first non-empty option is returned.
@@ -45,7 +45,7 @@ impl std::fmt::Display for Metric {
 
 /// Contains a Metric and the resulting MetricValue if the Metric has been evaluated at least once.
 /// If the Metric has not been evaluated at least once the metric_value contains None.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct ValueSource {
     pub(crate) metric: Metric,
     pub cached_value: RefCell<Option<MetricValue>>,
@@ -82,7 +82,7 @@ pub struct MetricState<'a> {
     now: Option<i64>,
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Serialize)]
 pub enum MathFunction {
     Add,
     Sub,
@@ -97,7 +97,7 @@ pub enum MathFunction {
     Min,
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Serialize)]
 pub enum Function {
     Math(MathFunction),
     // Equals and NotEq can apply to bools and strings, and handle int/float without needing
@@ -134,7 +134,7 @@ pub enum Function {
 
 /// Lambda stores a function; its parameters and body are evaluated lazily.
 /// Lambda's are created by evaluating the "Fn()" expression.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Serialize)]
 pub struct Lambda {
     parameters: Vec<String>,
     body: ExpressionTree,
@@ -185,7 +185,7 @@ enum ShortCircuitBehavior {
 /// ExpressionTree represents the parsed body of an Eval Metric. It applies
 /// a function to sub-expressions, or holds a Problem, the name of a
 /// Metric, a vector of expressions, or a basic Value.
-#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Serialize)]
 pub(crate) enum ExpressionTree {
     // Some operators have arity 1 or 2, some have arity N.
     // For symmetry/readability, I use the same operand-spec Vec<Expression> for all.
@@ -198,7 +198,7 @@ pub(crate) enum ExpressionTree {
 
 /// ExpressionContext represents a wrapper class which contains a DSL string
 /// representing an expression and the resulting parsed ExpressionTree
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub(crate) struct ExpressionContext {
     pub(crate) raw_expression: String,
     pub(crate) parsed_expression: ExpressionTree,
@@ -312,6 +312,17 @@ impl<'a> MetricState<'a> {
     /// Create an initialized MetricState.
     pub fn new(metrics: &'a Metrics, fetcher: Fetcher<'a>, now: Option<i64>) -> MetricState<'a> {
         MetricState { metrics, fetcher, now }
+    }
+
+    /// Forcefully evaluate all [Metric]s to populate the cached values.
+    pub fn evaluate_all_metrics(&self) {
+        for (namespace, metrics) in self.metrics.iter() {
+            for (_name, value_source) in metrics.iter() {
+                if let Metric::Eval(expression) = &value_source.metric {
+                    self.evaluate(&namespace, &expression.parsed_expression);
+                }
+            }
+        }
     }
 
     /// Any [name] found in the trial's "values" uses the corresponding value, regardless of
