@@ -54,7 +54,7 @@ fuchsia_package("inspect-example-rust") {
   deps = [
     ":server_component",
     "//examples/components/routing:echo_realm",
-    "//examples/components/routing/echo_client:echo_client_component",
+    "//examples/components/routing/rust/echo_client:echo_client_component",
   ]
 }
 

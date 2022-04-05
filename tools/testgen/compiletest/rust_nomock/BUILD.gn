@@ -37,7 +37,7 @@ fuchsia_test_package("integration_test_pkg") {
   test_components = [ ":echo_server_test" ]
   deps = [
     ":echo_server_test",
-    "//examples/components/routing/echo_server:echo_server_component",
+    "//examples/components/routing/rust/echo_server:echo_server_component",
   ]
 }
 

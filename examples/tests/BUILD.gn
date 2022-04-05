@@ -199,7 +199,7 @@ fuchsia_test_package("example-tests") {
     ":run-closes-channel-example",
     ":run-hangs-example",
     ":test-with-stderr",
-    "//examples/components/routing/echo_server:echo_server_component",
+    "//examples/components/routing/rust/echo_server:echo_server_component",
   ]
 }
 

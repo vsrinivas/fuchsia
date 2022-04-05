@@ -60,7 +60,7 @@ fuchsia_package("inspect-example-cpp") {
   deps = [
     ":server_component",
     "//examples/components/routing:echo_realm",
-    "//examples/components/routing/echo_client:echo_client_component",
+    "//examples/components/routing/cpp/echo_client:echo_client_component",
   ]
 }
 

@@ -7,7 +7,7 @@ import("//build/rust/rustc_test.gni")
 
 # [START example_snippet]
 rustc_test("bin") {
-  name = "echo_integration_test"
+  name = "echo_integration_test_rust"
   edition = "2018"
 
   deps = [
@@ -28,8 +28,9 @@ fuchsia_component("echo_integration_test_component") {
   deps = [ ":bin" ]
 }
 
-fuchsia_test_package("echo_integration_test") {
+fuchsia_test_package("echo_integration_test_rust") {
   test_components = [ ":echo_integration_test_component" ]
-  deps = [ "//examples/components/routing/echo_server:echo_server_component" ]
+  deps =
+      [ "//examples/components/routing/rust/echo_server:echo_server_component" ]
 }
 # [END example_snippet]

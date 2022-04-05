@@ -1,0 +1,36 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// [START example_snippet]
+{
+    // [START_EXCLUDE]
+    include: [
+        // Enable logging on stdout
+        "syslog/elf_stdio.shard.cml",
+    ],
+
+    // [START program_args]
+    // Information about the program to run.
+    program: {
+        // Use the built-in ELF runner.
+        runner: "elf",
+
+        // The binary to run for this component.
+        binary: "bin/echo_client_cpp",
+
+        // Program arguments
+        args: [ "Hello Fuchsia!" ],
+    },
+
+    // [END program_args]
+
+    // [END_EXCLUDE]
+
+    // Capabilities used by this component.
+    use: [
+        { protocol: "fidl.examples.routing.echo.Echo" },
+    ],
+}
+
+// [END example_snippet]

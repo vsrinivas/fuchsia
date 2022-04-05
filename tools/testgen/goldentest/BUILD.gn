@@ -24,7 +24,7 @@ group("tests") {
 # To generate new golden ex: cpp_mock
 # fx set core.qemu-x64 --with //examples/components/echo:echo-example --with //tools/testgen/goldentest:tests
 # fx build
-# ./out/default/host_x64/testgen -l ./out/default/obj/examples/components/routing/echo_server/cml/echo_server_component_manifest_compile/echo_server.cm -o tools/testgen/goldentest/cpp_mock -c -m
+# ./out/default/host_x64/testgen -l ./out/default/obj/examples/components/routing/rust/echo_server/cml/echo_server_component_manifest_compile/echo_server.cm -o tools/testgen/goldentest/cpp_mock -c -m
 if (is_host) {
   _tools_out = "${target_gen_dir}/goldentest/host_tools"
   host_test_data("copy_testgen") {
@@ -36,20 +36,20 @@ if (is_host) {
   _example_out = "${target_gen_dir}/goldentest/echo"
   host_test_data("copy_echo_server_component") {
     sources = [ get_label_info(
-                    "//examples/components/routing/echo_server:echo_server_component(${target_toolchain})",
+                    "//examples/components/routing/rust/echo_server:echo_server_component(${target_toolchain})",
                     "target_out_dir") +
                 "/echo_server_component_manifest/echo_server.cm" ]
     outputs = [ "${_example_out}/{{source_file_part}}" ]
-    deps = [ "//examples/components/routing/echo_server:echo_server_component(${target_toolchain})" ]
+    deps = [ "//examples/components/routing/rust/echo_server:echo_server_component(${target_toolchain})" ]
   }
 
   host_test_data("copy_echo_client_component") {
     sources = [ get_label_info(
-                    "//examples/components/routing/echo_client:echo_client_component(${target_toolchain})",
+                    "//examples/components/routing/rust/echo_client:echo_client_component(${target_toolchain})",
                     "target_out_dir") +
                 "/echo_client_component_manifest/echo_client.cm" ]
     outputs = [ "${_example_out}/{{source_file_part}}" ]
-    deps = [ "//examples/components/routing/echo_client:echo_client_component(${target_toolchain})" ]
+    deps = [ "//examples/components/routing/rust/echo_client:echo_client_component(${target_toolchain})" ]
   }
 
   _golden_rust_mock_path = "${target_gen_dir}/rust_mock"

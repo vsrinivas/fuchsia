@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -7,7 +7,9 @@
     // [START_EXCLUDE]
     include: [
         "inspect/client.shard.cml",
-        "syslog/client.shard.cml",
+
+        // Enable logging on stdout
+        "syslog/elf_stdio.shard.cml",
     ],
 
     // Information about the program to run.
@@ -16,7 +18,7 @@
         runner: "elf",
 
         // The binary to run for this component.
-        binary: "bin/echo_server",
+        binary: "bin/echo_server_cpp",
     },
 
     // [END_EXCLUDE]
@@ -30,14 +32,6 @@
             protocol: "fidl.examples.routing.echo.Echo",
             from: "self",
         },
-
-        // [START_EXCLUDE]
-        {
-            directory: "hub",
-            from: "framework",
-        },
-
-        // [END_EXCLUDE]
     ],
 }
 

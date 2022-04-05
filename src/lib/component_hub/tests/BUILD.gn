@@ -51,6 +51,6 @@ fuchsia_test_package("component_hub_integration_tests") {
   deps = [
     ":foo",
     ":test_config_values",
-    "//examples/components/routing/echo_server:echo_server_component",
+    "//src/sys/component_manager/testing/echo_server",
   ]
 }

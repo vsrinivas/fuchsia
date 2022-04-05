@@ -26,25 +26,25 @@ fuchsia_component("rust-component") {
 fuchsia_component("echo_client_component") {
   component_name = "echo_client"
   manifest = "meta/echo_client.cml"
-  deps = [ "//examples/components/routing/echo_client" ]
+  deps = [ "//examples/components/routing/rust/echo_client" ]
 }
 
 fuchsia_component("echo_client_legacy_component") {
   component_name = "echo_client"
   manifest = "meta/echo_client.cmx"
-  deps = [ "//examples/components/routing/echo_client" ]
+  deps = [ "//examples/components/routing/rust/echo_client" ]
 }
 
 fuchsia_component("echo_server_component") {
   component_name = "echo_server"
   manifest = "meta/echo_server.cml"
-  deps = [ "//examples/components/routing/echo_server" ]
+  deps = [ "//examples/components/routing/rust/echo_server" ]
 }
 
 fuchsia_component("echo_server_legacy_component") {
   component_name = "echo_server"
   manifest = "meta/echo_server.cmx"
-  deps = [ "//examples/components/routing/echo_server" ]
+  deps = [ "//examples/components/routing/rust/echo_server" ]
 }
 
 # Run with `fx test realm-builder-examples`.

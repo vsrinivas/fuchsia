@@ -186,6 +186,9 @@ async fn doctor() {
     assert!(!echo_server_exposed_outgoing_check_res.success);
 
     // TODO(fxb/96477) Doctor should ignore the "hub" capability.
-    assert_eq!(echo_server_exposed_outgoing_check_res.missing_outgoing, vec!["hub".to_string()]);
+    assert_eq!(
+        echo_server_exposed_outgoing_check_res.missing_outgoing,
+        vec!["fuchsia.component.Binder".to_string(), "hub".to_string()]
+    );
     assert!(echo_server_exposed_outgoing_check_res.missing_exposed.is_empty());
 }

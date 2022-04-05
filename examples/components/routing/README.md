@@ -19,9 +19,18 @@ $ fx build
 Use `ffx component create` to create the component instances inside a restricted
 realm for development purposes:
 
-```bash
-$ ffx component create /core/ffx-laboratory:echo_realm fuchsia-pkg://fuchsia.com/components-routing-example#meta/echo_realm.cm
-```
+-   **C++**
+
+    ```bash
+    $ ffx component create /core/ffx-laboratory:echo_realm fuchsia-pkg://fuchsia.com/components-routing-example-cpp#meta/echo_realm.cm
+    ```
+
+-   **Rust**
+
+    ```bash
+    $ ffx component create /core/ffx-laboratory:echo_realm fuchsia-pkg://fuchsia.com/components-routing-example-rust#meta/echo_realm.cm
+    ```
+
 
 Start the client component instance by passing its moniker to
 `ffx component start`:
@@ -36,19 +45,34 @@ When the above command is run, you can see the following output with `fx log`:
 [echo_client] INFO: Server response: Hello Fuchsia!
 ```
 
+After running the example, you can remove the example realm using
+`ffx component destroy`:
+
+```bash
+$ ffx component destroy /core/ffx-laboratory:echo_realm
+```
+
 ## Testing
 
 Integration tests for echo server are available in the `echo_integration_test`
 package. Use the `ffx test run` command to run the tests on a target device:
 
-```bash
-$ ffx test run fuchsia-pkg://fuchsia.com/echo_integration_test#meta/echo_integration_test.cm
-```
+-   **C++**
+
+    ```bash
+    $ ffx test run fuchsia-pkg://fuchsia.com/echo_integration_test_cpp#meta/echo_integration_test.cm
+    ```
+
+-   **Rust**
+
+    ```bash
+    $ ffx test run fuchsia-pkg://fuchsia.com/echo_integration_test_rust#meta/echo_integration_test.cm
+    ```
 
 You should see the integration tests execute and pass:
 
 ```
-Running test 'fuchsia-pkg://fuchsia.com/echo_integration_test#meta/echo_integration_test.cm'
+Running test 'fuchsia-pkg://fuchsia.com/echo_integration_test#meta/echo_integration_test_rust.cm'
 [RUNNING]	echo_integration_test
 [PASSED]	echo_integration_test
 

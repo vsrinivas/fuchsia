@@ -6,14 +6,14 @@
 {
     // [START_EXCLUDE]
     include: [
-        "//src/sys/test_runners/rust/default.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
         "syslog/client.shard.cml",
     ],
 
     // Information about the program to run.
     program: {
         // The binary to run for this component.
-        binary: "bin/echo_integration_test",
+        binary: "bin/echo_integration_test_cpp",
     },
 
     // [END_EXCLUDE]
