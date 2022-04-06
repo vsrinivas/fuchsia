@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Context as _;
+use anyhow::{anyhow, Context as _};
 use async_utils::stream::FlattenUnorderedExt as _;
+use component_events::events::{self, Event as _};
 use fidl::endpoints::Proxy as _;
 use fidl::endpoints::{ControlHandle as _, RequestStream as _};
 use fidl_fuchsia_component as fcomponent;
@@ -145,9 +146,29 @@ async fn handle_runner_request(
                 // Keep around the handles to the virtual networks and endpoints we created, so
                 // that they're not cleaned up before test execution is complete.
                 _network_environment,
+                test_stopped_fut,
                 component_epitaph,
             ) = match test_setup(program, namespace).await {
                 Ok((env, svc_dir)) => {
+                    // Retrieve the component event stream from the test root so we can observe its
+                    // `stopped` lifecycle event.
+                    let event_source = events::EventSource::from_proxy(
+                        connect_to_protocol_at_dir_root::<fsys2::EventSourceMarker>(&svc_dir)
+                            .context("connect to protocol")?,
+                    );
+                    let mut event_stream = event_source
+                        .subscribe(vec![events::EventSubscription::new(vec![
+                            events::Stopped::NAME,
+                        ])])
+                        .await
+                        .context("failed to subscribe to `Stopped` events")?;
+                    let test_stopped_fut = async move {
+                        component_events::matcher::EventMatcher::ok()
+                            .moniker(".")
+                            .wait::<events::Stopped>(&mut event_stream)
+                            .await
+                    };
+
                     // Proxy `fuchsia.test/Suite` requests at the test root's outgoing directory,
                     // where the test manager will expect to be able to access it, to the '/svc'
                     // directory in the test root's namespace, where the protocol was routed from
@@ -157,7 +178,8 @@ async fn handle_runner_request(
                     );
                     let _: &mut ServiceFsDir<'_, _> =
                         fs.dir("svc").add_proxy_service_to::<ftest::SuiteMarker, ()>(svc_dir);
-                    (Some(env), zx::Status::OK)
+
+                    (Some(env), Some(test_stopped_fut), zx::Status::OK)
                 }
                 Err(e) => {
                     error!("failed to set up test {}: {:?}", resolved_url, e);
@@ -177,7 +199,11 @@ async fn handle_runner_request(
                         fs.dir("svc").add_fidl_service(|stream: ftest::SuiteRequestStream| {
                             stream.control_handle().shutdown()
                         });
-                    (None, zx::Status::from_raw(fcomponent::Error::InstanceCannotStart as i32))
+                    (
+                        None,
+                        None,
+                        zx::Status::from_raw(fcomponent::Error::InstanceCannotStart as i32),
+                    )
                 }
             };
             let serve_test_suite = fs
@@ -209,8 +235,32 @@ async fn handle_runner_request(
                     }
                 };
                 control_handle.shutdown_with_epitaph(component_epitaph);
+                // TODO(https://fxbug.dev/81036): remove this once
+                // `ControlHandle::shutdown_with_epitaph` actually closes the underlying
+                // channel.
+                drop(request_stream);
             } else {
                 warn!("component manager dropped client end of component controller channel");
+            }
+
+            if let Some(fut) = test_stopped_fut {
+                // Wait until we observe the test root's `stopped` event to drop the handle to
+                // the network environment, so that we are ensured the entire test realm has
+                // completed orderly shutdown by the time we are removing interfaces. This
+                // prevents spurious test failures from the virtual network being torn down
+                // while some components in the test realm may still be running.
+                let stopped_event = fut.await.context("observe stopped event")?;
+                let events::StoppedPayload { status } = stopped_event
+                    .result()
+                    .map_err(|e| anyhow!("error on component stopped event: {:?}", e))?;
+                match status {
+                    events::ExitStatus::Clean => {}
+                    events::ExitStatus::Crash(status) => warn!(
+                        "test '{}' crashed: {:?}",
+                        resolved_url,
+                        fcomponent::Error::from_primitive(*status as u32)
+                    ),
+                }
             }
         }
     }
