@@ -23,6 +23,7 @@ fidl("fuchsia.component.decl") {
     "events.fidl",
     "expose.fidl",
     "offer.fidl",
+    "overview.fidl",
     "program.fidl",
     "relative_refs.fidl",
     "types.fidl",

@@ -12,6 +12,7 @@ fidl("fuchsia.sysmem2") {
     "format_modifier.fidl",
     "heap.fidl",
     "image_formats.fidl",
+    "overview.fidl",
     "results.fidl",
     "usages.fidl",
   ]

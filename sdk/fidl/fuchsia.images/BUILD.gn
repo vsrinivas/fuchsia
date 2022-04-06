@@ -12,6 +12,7 @@ fidl("fuchsia.images") {
     "image_info.fidl",
     "image_pipe2.fidl",
     "memory_type.fidl",
+    "overview.fidl",
     "presentation_info.fidl",
   ]
 

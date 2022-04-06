@@ -13,6 +13,7 @@ fidl("fuchsia.web") {
     "debug.fidl",
     "frame.fidl",
     "navigation.fidl",
+    "overview.fidl",
     "url_request_rewrite_rules.fidl",
   ]
 

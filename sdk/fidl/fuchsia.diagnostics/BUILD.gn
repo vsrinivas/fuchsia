@@ -11,6 +11,7 @@ fidl("fuchsia.diagnostics") {
     "format.fidl",
     "interest.fidl",
     "log_settings.fidl",
+    "overview.fidl",
     "reader.fidl",
     "selector.fidl",
     "severity.fidl",

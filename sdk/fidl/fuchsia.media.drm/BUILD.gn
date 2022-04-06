@@ -11,6 +11,7 @@ fidl("fuchsia.media.drm") {
     "content_decryption.fidl",
     "error.fidl",
     "license_session.fidl",
+    "overview.fidl",
     "properties.fidl",
     "provisioning.fidl",
     "services.fidl",

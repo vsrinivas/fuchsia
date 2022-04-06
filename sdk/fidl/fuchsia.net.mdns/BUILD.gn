@@ -18,6 +18,7 @@ fidl("fuchsia.net.mdns") {
 
   sources = [
     "mdns.fidl",
+    "overview.fidl",
     "proxy_host_publisher.fidl",
     "service_instance_publisher.fidl",
   ]

@@ -9,6 +9,7 @@ fidl("fuchsia.device") {
   sources = [
     "controller.fidl",
     "name-provider.fidl",
+    "overview.fidl",
   ]
   public_deps = [ "//zircon/vdso/zx" ]
 }

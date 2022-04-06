@@ -9,6 +9,7 @@ fidl("fuchsia.camera2") {
 
   sources = [
     "manager.fidl",
+    "overview.fidl",
     "stream.fidl",
   ]
 

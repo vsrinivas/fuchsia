@@ -10,6 +10,7 @@ fidl("fuchsia.mediastreams") {
     "compression.fidl",
     "encryption.fidl",
     "media_format.fidl",
+    "overview.fidl",
     "video_format.fidl",
   ]
 

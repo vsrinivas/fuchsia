@@ -13,6 +13,7 @@ fidl("fuchsia.media.audio") {
   sources = [
     "effects_controller.fidl",
     "gain_control.fidl",
+    "overview.fidl",
     "volume_control.fidl",
   ]
   public_deps = [ "//zircon/vdso/zx" ]

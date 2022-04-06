@@ -9,6 +9,7 @@ fidl("fuchsia.mem") {
   api = "fuchsia.mem.api"
   sources = [
     "buffer.fidl",
+    "overview.fidl",
     "range.fidl",
   ]
   public_deps = [ "//zircon/vdso/zx" ]

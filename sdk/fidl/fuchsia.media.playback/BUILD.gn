@@ -11,6 +11,7 @@ fidl("fuchsia.media.playback") {
   sdk_category = "partner"
 
   sources = [
+    "overview.fidl",
     "player.fidl",
     "problem.fidl",
     "seeking_reader.fidl",

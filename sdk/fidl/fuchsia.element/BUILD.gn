@@ -11,6 +11,7 @@ fidl("fuchsia.element") {
     "annotations.fidl",
     "element_manager.fidl",
     "graphical_presenter.fidl",
+    "overview.fidl",
   ]
 
   public_deps = [

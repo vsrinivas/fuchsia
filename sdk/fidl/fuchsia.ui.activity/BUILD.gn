@@ -12,6 +12,7 @@ fidl("fuchsia.ui.activity") {
 
   sources = [
     "activity.fidl",
+    "overview.fidl",
     "provider.fidl",
     "state.fidl",
     "tracker.fidl",

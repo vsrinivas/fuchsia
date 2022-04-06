@@ -10,6 +10,7 @@ fidl("fuchsia.legacymetrics") {
   sources = [
     "event.fidl",
     "metrics_recorder.fidl",
+    "overview.fidl",
   ]
 
   public_deps = [ "//zircon/vdso/zx" ]

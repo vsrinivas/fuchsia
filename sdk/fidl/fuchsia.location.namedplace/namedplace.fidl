@@ -4,6 +4,7 @@
 /// Protocols and types related to named places. Named places include cities,
 /// countries, regions, etc. This specifically excludes protocols and types
 /// related to latitude and longitude.
+@available(added=7)
 library fuchsia.location.namedplace;
 
 /// Represents a regulatory region. These values should generally be chosen

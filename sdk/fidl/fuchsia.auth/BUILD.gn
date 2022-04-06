@@ -21,6 +21,7 @@ fidl("fuchsia.auth") {
     "attestation_signer.fidl",
     "auth_provider.fidl",
     "common.fidl",
+    "overview.fidl",
     "token_manager.fidl",
   ]
 

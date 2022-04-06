@@ -9,6 +9,7 @@ fidl("fuchsia.component.resolution") {
 
   sources = [
     "component.fidl",
+    "overview.fidl",
     "package.fidl",
     "resolver.fidl",
   ]

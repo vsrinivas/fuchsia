@@ -11,6 +11,7 @@ fidl("fuchsia.ui.views") {
     "commands.fidl",
     "flatland_tokens.fidl",
     "focuser.fidl",
+    "overview.fidl",
     "view.fidl",
     "view_ref.fidl",
     "view_ref_focused.fidl",

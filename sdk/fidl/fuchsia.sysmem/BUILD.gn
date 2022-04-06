@@ -17,6 +17,7 @@ fidl("fuchsia.sysmem") {
     "formats_deprecated.fidl",
     "image_formats.fidl",
     "image_formats_deprecated.fidl",
+    "overview.fidl",
     "secure_mem.fidl",
     "usages.fidl",
   ]

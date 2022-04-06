@@ -11,6 +11,7 @@ fidl("fuchsia.ui.input3") {
     "events.fidl",
     "keyboard.fidl",
     "modifiers.fidl",
+    "overview.fidl",
   ]
 
   public_deps = [

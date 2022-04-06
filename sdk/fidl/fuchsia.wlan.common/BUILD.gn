@@ -12,6 +12,7 @@ fidl("fuchsia.wlan.common") {
 
   sources = [
     "driver_features.fidl",
+    "overview.fidl",
     "wlan_common.fidl",
   ]
 

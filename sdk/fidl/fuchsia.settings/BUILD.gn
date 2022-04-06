@@ -18,6 +18,7 @@ fidl("fuchsia.settings") {
     "keyboard.fidl",
     "light.fidl",
     "night_mode.fidl",
+    "overview.fidl",
     "privacy.fidl",
     "settings.fidl",
     "setup.fidl",

@@ -9,6 +9,7 @@ fidl("fuchsia.accessibility.semantics") {
 
   sources = [
     "node.fidl",
+    "overview.fidl",
     "semantics_manager.fidl",
   ]
 

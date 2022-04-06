@@ -10,6 +10,7 @@ fidl("fuchsia.camera3") {
   sources = [
     "device.fidl",
     "device_watcher.fidl",
+    "overview.fidl",
     "stream.fidl",
   ]
 

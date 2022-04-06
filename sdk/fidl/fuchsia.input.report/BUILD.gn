@@ -15,6 +15,7 @@ fidl("fuchsia.input.report") {
     "keyboard.fidl",
     "led.fidl",
     "mouse.fidl",
+    "overview.fidl",
     "report.fidl",
     "sensor.fidl",
     "touch.fidl",

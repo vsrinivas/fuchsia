@@ -8,6 +8,7 @@ fidl("fuchsia.thermal") {
   sdk_category = "partner"
   sources = [
     "client_state.fidl",
+    "overview.fidl",
     "thermal.fidl",
   ]
 }

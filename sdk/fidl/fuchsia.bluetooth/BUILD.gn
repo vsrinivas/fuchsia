@@ -15,6 +15,7 @@ fidl("fuchsia.bluetooth") {
     "device_class.fidl",
     "device_name.fidl",
     "id.fidl",
+    "overview.fidl",
     "uuid.fidl",
   ]
 }

@@ -35,6 +35,7 @@
 ///   should) be introduced. For example, if one client of [`GlobalMouse`]
 ///   requires additional fields that are really about view-local hit data, it
 ///   would be reasonable to mint a new augmentation.
+@available(added=7)
 library fuchsia.ui.pointer.augment;
 
 using fuchsia.ui.pointer as pointer;

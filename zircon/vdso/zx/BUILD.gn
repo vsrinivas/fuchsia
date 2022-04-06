@@ -6,6 +6,7 @@ import("//build/fidl/fidl.gni")
 
 fidl("zx") {
   sources = [
+    "../overview.fidl",
     "../rights.fidl",
     "../zx_common.fidl",
   ]

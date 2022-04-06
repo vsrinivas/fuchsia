@@ -9,6 +9,7 @@
 ///
 /// Through the `Discovery` protocol, clients can discover what media targets
 /// are available on the network, and select them to render media sessions.
+@available(added=7)
 library fuchsia.media.target;
 
 using fuchsia.media;

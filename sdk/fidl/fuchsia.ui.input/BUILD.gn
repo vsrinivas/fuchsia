@@ -22,6 +22,7 @@ fidl("fuchsia.ui.input") {
     "input_event_constants.fidl",
     "input_events.fidl",
     "input_reports.fidl",
+    "overview.fidl",
     "pointer_capture.fidl",
     "text_editing.fidl",
     "text_input.fidl",

@@ -12,6 +12,7 @@ fidl("fuchsia.lowpan.device") {
     "device.fidl",
     "energy_scanner.fidl",
     "misc.fidl",
+    "overview.fidl",
     "provisioning_params.fidl",
   ]
 

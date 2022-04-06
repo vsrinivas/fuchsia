@@ -21,5 +21,6 @@ fidl("fuchsia.cobalt") {
   sources = [
     "cobalt.fidl",
     "cobalt_controller.fidl",
+    "overview.fidl",
   ]
 }

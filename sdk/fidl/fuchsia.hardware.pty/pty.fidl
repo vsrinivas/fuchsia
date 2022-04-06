@@ -10,6 +10,7 @@
 /// first Client PTY *must* be 0, and it is the only Client PTY that is allowed
 /// to create additional Client PTYs, receive Events, etc. It is the
 /// Controlling PTY.
+@available(added=7)
 library fuchsia.hardware.pty;
 
 using fuchsia.device;

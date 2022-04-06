@@ -10,6 +10,7 @@ fidl("fuchsia.net") {
   api = "fuchsia.net.api"
   sources = [
     "net.fidl",
+    "overview.fidl",
     "socket.fidl",
   ]
 }

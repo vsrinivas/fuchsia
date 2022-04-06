@@ -33,6 +33,7 @@ all_syscall_fidl_files = [
   "msi.fidl",
   "mtrace.fidl",
   "object.fidl",
+  "overview.fidl",
   "pager.fidl",
   "pc.fidl",
   "pci.fidl",

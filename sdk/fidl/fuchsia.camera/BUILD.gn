@@ -16,6 +16,7 @@ fidl("fuchsia.camera") {
   sources = [
     "camera.fidl",
     "manager.fidl",
+    "overview.fidl",
   ]
 
   public_deps = [ "//sdk/fidl/fuchsia.sysmem" ]

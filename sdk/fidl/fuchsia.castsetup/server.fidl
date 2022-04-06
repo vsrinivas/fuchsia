@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-/// For internal Google use only.
-/// This API is not to be used within the Fuchsia tree.
 library fuchsia.castsetup;
 
 /// Specifies the required security for a client of the API.

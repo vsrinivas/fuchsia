@@ -12,6 +12,7 @@ fidl("fuchsia.bluetooth.le") {
     "advertising_data.fidl",
     "central.fidl",
     "connection_options.fidl",
+    "overview.fidl",
     "peer.fidl",
     "peripheral.fidl",
     "types_deprecated.fidl",

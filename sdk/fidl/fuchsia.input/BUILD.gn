@@ -10,6 +10,7 @@ fidl("fuchsia.input") {
   sources = [
     "keymap.fidl",
     "keys.fidl",
+    "overview.fidl",
   ]
 
   public_deps = []

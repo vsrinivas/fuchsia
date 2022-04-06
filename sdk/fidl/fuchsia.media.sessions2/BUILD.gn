@@ -13,6 +13,7 @@ fidl("fuchsia.media.sessions2") {
   sources = [
     "discovery.fidl",
     "images.fidl",
+    "overview.fidl",
     "player.fidl",
     "publisher.fidl",
   ]

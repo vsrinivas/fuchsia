@@ -9,6 +9,7 @@ fidl("fuchsia.update") {
 
   sources = [
     "commit.fidl",
+    "overview.fidl",
     "update.fidl",
   ]
   public_deps = [ "//zircon/vdso/zx" ]

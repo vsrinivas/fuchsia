@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 /// Types which are useful across multiple location libraries.
+@available(added=7)
 library fuchsia.location;
 
 /// Describes possible errors.

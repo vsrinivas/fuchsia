@@ -14,6 +14,7 @@
 ///
 /// The default implementation of this service in Fuchsia is Cobalt. For more
 /// details on how to use these interfaces with Cobalt, see README.md.
+@available(added=7)
 library fuchsia.metrics;
 
 /// The maximum size of a single Event is 100 KB.

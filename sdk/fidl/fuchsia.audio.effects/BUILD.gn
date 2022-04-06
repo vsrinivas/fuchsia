@@ -7,6 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.audio.effects") {
   sources = [
     "creator.fidl",
+    "overview.fidl",
     "processor.fidl",
   ]
 

@@ -9,6 +9,7 @@ fidl("fuchsia.castsetup") {
 
   sources = [
     "cast_setup.fidl",
+    "overview.fidl",
     "server.fidl",
   ]
 }

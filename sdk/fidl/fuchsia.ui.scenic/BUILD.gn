@@ -17,6 +17,7 @@ fidl("fuchsia.ui.scenic") {
   sources = [
     "commands.fidl",
     "events.fidl",
+    "overview.fidl",
     "scenic.fidl",
     "session.fidl",
     "snapshot.fidl",

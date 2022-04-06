@@ -21,6 +21,7 @@ fidl("fuchsia.io") {
     "node-protocols.fidl",
     "node.fidl",
     "node2.fidl",
+    "overview.fidl",
     "rights-abilities.fidl",
   ]
 

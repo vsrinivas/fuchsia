@@ -10,6 +10,7 @@ fidl("fuchsia.ui.composition") {
   sources = [
     "allocator.fidl",
     "flatland.fidl",
+    "overview.fidl",
     "screenshot.fidl",
   ]
 

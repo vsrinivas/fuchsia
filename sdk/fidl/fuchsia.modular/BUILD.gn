@@ -18,6 +18,7 @@ fidl("fuchsia.modular") {
     "module_data.fidl",
     "module_manifest.fidl",
     "module_state.fidl",
+    "overview.fidl",
     "puppet_master.fidl",
     "session_restart_controller.fidl",
     "session_shell.fidl",

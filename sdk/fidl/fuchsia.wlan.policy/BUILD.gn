@@ -14,6 +14,7 @@ fidl("fuchsia.wlan.policy") {
   sources = [
     "access_point_provider.fidl",
     "client_provider.fidl",
+    "overview.fidl",
     "types.fidl",
   ]
 

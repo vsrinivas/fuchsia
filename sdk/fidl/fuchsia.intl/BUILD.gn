@@ -16,6 +16,7 @@ fidl("fuchsia.intl") {
   sources = [
     "calendar.fidl",
     "intl.fidl",
+    "overview.fidl",
     "property_provider.fidl",
     "time_zones.fidl",
   ]

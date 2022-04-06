@@ -1,36 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-/// Cobalt is the Fuchsia service used to log, collect and analyze metrics.
-/// The two main pillars of Cobalt are protecting user privacy and providing
-/// high-quality, aggregate metrics to serve system and component software
-/// developers' needs.
-///
-/// This file contains interfaces that allow clients to log Events to
-/// Cobalt.
-///
-/// To use Cobalt, you must have a Project and one or more Metrics registered
-/// with the Cobalt registration system. You must also register one or more
-/// Reports in order to see the results of your logging aggregated over
-/// all Fuchsia devices. Registration of Projects, Metrics and Reports consists
-/// of entries in the YAML files in this repo:
-/// https:///cobalt-analytics.googlesource.com/config/.
-/// In a Garnet checkout that is mapped to ///third_party/cobalt_config.
-/// Each registered object has an integer ID and those IDs are used as
-/// parameters in the methods in this file.
-///
-/// While Cobalt's code and registration files are open source, the running
-/// system being managed by the Cobalt team is currently intended to be used by
-/// software engineers at Google in order to collect metrics in a way that
-/// preserves our users' privacy. If you are a Google software engineer
-/// please see our internal [user guide](http://go/fuchsia-cobalt-userguide) or
-/// ask for assistance from the Cobalt [team](http://go/fuchsia-cobalt#comms).
-///
-/// Usage: First use LoggerFactory to get a Logger for your
-/// project. Then you log Events using the Log*() methods.
-/// Events are accumulated by the cobalt FIDL service and periodically
-/// Observations, derived from the logged Events, are sent to the Cobalt server,
-/// where they are used to generate Reports.
 library fuchsia.cobalt;
 
 /// The maximum size of a single Event is 100 KB.

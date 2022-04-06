@@ -9,6 +9,7 @@ fidl("fuchsia.settings.policy") {
 
   sources = [
     "error.fidl",
+    "overview.fidl",
     "volume_policy.fidl",
   ]
 

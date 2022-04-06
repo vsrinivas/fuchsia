@@ -11,6 +11,7 @@ fidl("fuchsia.component") {
     "binder.fidl",
     "constants.fidl",
     "error.fidl",
+    "overview.fidl",
     "realm.fidl",
     "types.fidl",
   ]

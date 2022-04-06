@@ -10,6 +10,7 @@ fidl("fuchsia.ui.app") {
   sdk_category = "partner"
 
   sources = [
+    "overview.fidl",
     "view.fidl",
     "view_config.fidl",
     "view_provider.fidl",

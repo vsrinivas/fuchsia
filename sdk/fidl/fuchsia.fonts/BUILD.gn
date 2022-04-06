@@ -10,6 +10,7 @@ fidl("fuchsia.fonts") {
   sources = [
     "events.fidl",
     "font_provider.fidl",
+    "overview.fidl",
     "provider.fidl",
     "styles.fidl",
   ]

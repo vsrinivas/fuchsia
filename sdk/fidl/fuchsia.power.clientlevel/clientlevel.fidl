@@ -1,7 +1,7 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
+@available(added=7)
 library fuchsia.power.clientlevel;
 
 /// A value that represents the type of client using the protocol.

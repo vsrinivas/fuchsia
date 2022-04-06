@@ -9,6 +9,7 @@ fidl("fuchsia.ui.pointer") {
 
   sources = [
     "mouse.fidl",
+    "overview.fidl",
     "state.fidl",
     "touch.fidl",
     "view.fidl",

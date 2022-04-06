@@ -17,6 +17,7 @@ fidl("fuchsia.feedback") {
     "data_register.fidl",
     "device_id_provider.fidl",
     "last_reboot_info.fidl",
+    "overview.fidl",
   ]
 
   public_deps = [

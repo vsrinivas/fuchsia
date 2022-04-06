@@ -11,6 +11,7 @@ fidl("fuchsia.hardware.power.statecontrol") {
 
   sources = [
     "admin.fidl",
+    "overview.fidl",
     "reboot_reason.fidl",
   ]
 

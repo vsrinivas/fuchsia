@@ -23,6 +23,7 @@ fidl("fuchsia.sys") {
     "job_provider.fidl",
     "launcher.fidl",
     "loader.fidl",
+    "overview.fidl",
     "runner.fidl",
     "service_provider.fidl",
     "types.fidl",
