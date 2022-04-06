@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//src/diagnostics/archivist/build/pipeline.gni")
+import("//src/diagnostics/archivist/tests/v2/configs.gni")
 
 rustc_test("integration_tests_bin") {
   output_name = "archivist_integration_tests"
@@ -82,32 +83,52 @@ rustc_test("integration_tests_bin") {
   ]
 }
 
-fuchsia_component("archivist_for_integration_with_log_connector") {
-  component_name = "archivist_with_log_connector"
-  testonly = true
-  deps = [ "//src/diagnostics/archivist:bin" ]
+fuchsia_component_manifest("with-log-connector-manifest") {
   manifest = "meta/archivist_for_integration_with_log_connector.cml"
+  component_name = "archivist_with_log_connector"
+  restricted_features = [ "structured_config" ]
 }
 
-fuchsia_component("archivist_with_klog") {
-  component_name = "archivist_with_klog"
+fuchsia_component("archivist-for-integration-with-log-connector") {
+  cm_label = ":with-log-connector-manifest"
   testonly = true
   deps = [ "//src/diagnostics/archivist:bin" ]
+}
+
+fuchsia_component_manifest("with-klog-manifest") {
   manifest = "meta/archivist_with_klog.cml"
+  component_name = "archivist_with_klog"
+  restricted_features = [ "structured_config" ]
 }
 
-fuchsia_component("archivist_for_integration") {
-  component_name = "archivist"
+fuchsia_component("archivist-with-klog") {
+  cm_label = ":with-klog-manifest"
   testonly = true
   deps = [ "//src/diagnostics/archivist:bin" ]
+}
+
+fuchsia_component_manifest("for-integration-manifest") {
   manifest = "meta/archivist_for_integration.cml"
+  component_name = "archivist"
+  restricted_features = [ "structured_config" ]
+}
+
+fuchsia_component("archivist-for-integration") {
+  cm_label = ":for-integration-manifest"
+  testonly = true
+  deps = [ "//src/diagnostics/archivist:bin" ]
+}
+
+fuchsia_component_manifest("small-caches-manifest") {
+  manifest = "meta/archivist-with-small-caches.cml"
+  component_name = "archivist-with-small-caches"
+  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_component("archivist-with-small-caches") {
-  component_name = "archivist-with-small-caches"
+  cm_label = ":small-caches-manifest"
   testonly = true
   deps = [ "//src/diagnostics/archivist:bin" ]
-  manifest = "meta/archivist-with-small-caches.cml"
 }
 
 fuchsia_component("archivist_integration_tests") {
@@ -116,40 +137,52 @@ fuchsia_component("archivist_integration_tests") {
   manifest = "meta/archivist_integration_tests.cml"
 }
 
-resource("test_archivist_config") {
-  sources = [ "configs/archivist_config.json" ]
-  outputs = [ "data/config/archivist_config.json" ]
+fuchsia_structured_config_values("archivist-for-integration-config") {
+  cm_label = ":for-integration-manifest"
+  values = archivist_for_integration_config
 }
 
-resource("small-caches-config") {
-  sources = [ "configs/small-caches-config.json" ]
-  outputs = [ "data/config/small-caches-config.json" ]
+fuchsia_structured_config_values("archivist-with-small-caches-config") {
+  cm_label = ":small-caches-manifest"
+  values = small_caches_config
+}
+
+fuchsia_structured_config_values("archivist-with-klog-config") {
+  cm_label = ":with-klog-manifest"
+  values = with_klog_config
+}
+
+fuchsia_structured_config_values("archivist-with-log-connector-config") {
+  cm_label = ":with-log-connector-manifest"
+  values = with_log_connector_config
 }
 
 resource("filter_feedback") {
-  sources = [ "configs/static_selectors.cfg" ]
+  sources = [ "configs/pipelines/static_selectors.cfg" ]
   outputs = [ "data/config/pipelines/feedback/static_selectors.cfg" ]
 }
 
 resource("do_not_filter_feedback") {
-  sources = [ "configs/DISABLE_FILTERING.txt" ]
+  sources = [ "configs/pipelines/DISABLE_FILTERING.txt" ]
   outputs = [ "data/config/pipelines/feedback/DISABLE_FILTERING.txt" ]
 }
 
 resource("configure_legacy_metrics_pipeline") {
-  sources = [ "configs/legacy_selectors.cfg" ]
+  sources = [ "configs/pipelines/legacy_selectors.cfg" ]
   outputs = [ "data/config/pipelines/legacy_metrics/legacy_selectors.cfg" ]
 }
 
 fuchsia_test_package("archivist-integration-tests-v2") {
   test_components = [ ":archivist_integration_tests" ]
   deps = [
+    ":archivist-for-integration",
+    ":archivist-for-integration-config",
+    ":archivist-for-integration-with-log-connector",
+    ":archivist-with-klog",
+    ":archivist-with-klog-config",
+    ":archivist-with-log-connector-config",
     ":archivist-with-small-caches",
-    ":archivist_for_integration",
-    ":archivist_for_integration_with_log_connector",
-    ":archivist_with_klog",
-    ":small-caches-config",
-    ":test_archivist_config",
+    ":archivist-with-small-caches-config",
     "components",
     "//src/diagnostics/iquery/test/test_component",
   ]
@@ -158,27 +191,27 @@ fuchsia_test_package("archivist-integration-tests-v2") {
 fuchsia_package("archivist-with-feedback-filtering") {
   testonly = true
   deps = [
-    ":archivist_for_integration",
+    ":archivist-for-integration",
+    ":archivist-for-integration-config",
     ":filter_feedback",
-    ":test_archivist_config",
   ]
 }
 
 fuchsia_package("archivist-with-feedback-filtering-disabled") {
   testonly = true
   deps = [
-    ":archivist_for_integration",
+    ":archivist-for-integration",
+    ":archivist-for-integration-config",
     ":do_not_filter_feedback",
-    ":test_archivist_config",
   ]
 }
 
 fuchsia_package("archivist-with-legacy-metrics") {
   testonly = true
   deps = [
-    ":archivist_for_integration",
+    ":archivist-for-integration",
+    ":archivist-for-integration-config",
     ":configure_legacy_metrics_pipeline",
-    ":test_archivist_config",
   ]
 }
 

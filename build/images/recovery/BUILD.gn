@@ -42,8 +42,10 @@ recovery_base = {
     "//bundles/drivers:usb-peripheral-stack",
     "//bundles/drivers:utils",
   ]
-  bootfs_labels +=
-      [ "//src/sys/component_manager:component_manager_bootfs_config" ]
+  bootfs_labels += [
+    "//src/sys/component_manager:component_manager_bootfs_config",
+    "//src/diagnostics/archivist:default-service-config",
+  ]
 
   if (custom_signing_script != "") {
     zbi_signing_script = custom_signing_script
@@ -208,8 +210,10 @@ assemble_system("recovery-fdr") {
     "//bundles/drivers:usb-host-stack",
     "//bundles/drivers:usb-peripheral-stack",
   ]
-  bootfs_labels +=
-      [ "//src/sys/component_manager:component_manager_bootfs_config" ]
+  bootfs_labels += [
+    "//src/diagnostics/archivist:default-service-config",
+    "//src/sys/component_manager:component_manager_bootfs_config",
+  ]
 
   sysmgr_golden = "sysmgr-fdr-golden.json"
 

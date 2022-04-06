@@ -84,6 +84,7 @@ template("assemble_network_conformance_system") {
       "//bundles/drivers:bootstrap",
       "//src/sys/bin/psutils",
       "//src/sys/component_manager:component_manager_bootfs_config",
+      "//src/diagnostics/archivist:default-service-config",
     ]
 
     # TODO(https://fxbug.dev/81569): Move this metadata to assemble_system.gni.

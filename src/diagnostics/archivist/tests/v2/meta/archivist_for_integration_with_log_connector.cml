@@ -6,12 +6,6 @@
     ],
     program: {
         binary: "bin/archivist",
-        args: [
-            "--enable-event-source",
-            "--enable-log-connector",
-            "--config-path",
-            "/pkg/data/config/archivist_config.json",
-        ],
     },
     use: [
         {
