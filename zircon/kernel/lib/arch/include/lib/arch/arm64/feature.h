@@ -291,6 +291,12 @@ struct ArmIdAa64Pfr0El1 : public SysRegBase<ArmIdAa64Pfr0El1> {
 };
 ARCH_ARM64_SYSREG(ArmIdAa64Pfr0El1, "ID_AA64PFR0_EL1");
 
+// ASID size.
+enum class ArmAsidSize {
+  k8bits = 0b0000,
+  k16bits = 0b0010,
+};
+
 // Physical address size.
 //
 // The same encoding is used by several registers, including system registers TCR_EL1.IPS,
@@ -326,22 +332,11 @@ struct ArmIdAa64Mmfr0El1 : public SysRegBase<ArmIdAa64Mmfr0El1> {
   DEF_FIELD(19, 16, big_end_el0);  // Mixed-endian support for EL0 only
   DEF_FIELD(15, 12, sns_mem);      // Secure and Non-secure Memory distinguished
   DEF_FIELD(11, 8, big_end);       // Mixed-endian support
-  DEF_FIELD(7, 4, asid_bits);      // Number of ASID bits
+  DEF_ENUM_FIELD(ArmAsidSize, 7, 4, asid_bits);            // Number of ASID bits
   DEF_ENUM_FIELD(ArmPhysicalAddressSize, 3, 0, pa_range);  // Supported Physical Address range
 };
 
 ARCH_ARM64_SYSREG(ArmIdAa64Mmfr0El1, "id_aa64mmfr0_el1");
-
-// VMID size.
-//
-// When FEAT_VMID16 is implemented, VTTBR_EL2[63:48] contains the 16-bit VMID.
-//
-// When an implementation supports a 16-bit VMID, VTCR_EL2.VS selects whether
-// the top 8 bits of the VMID are used.
-enum class ArmVmidSize {
-  k8bits = 0b0000,
-  k16bits = 0b0010,
-};
 
 // ID_AA64MMFR1_EL1, AArch64 Memory Model Feature Register 1
 //
@@ -361,7 +356,7 @@ struct ArmIdAa64Mmfr1El1 : public SysRegBase<ArmIdAa64Mmfr1El1> {
   DEF_FIELD(19, 16, lo);        // Limited ordering regions (FEAT_LOR)
   DEF_FIELD(15, 12, hpds);      // Hierarchical Permission Disables (FEAT_HPDS, FEAT_HPDS2)
   DEF_FIELD(11, 8, vh);         // Virtualization Host Extensions (FEAT_VHE)
-  DEF_ENUM_FIELD(ArmVmidSize, 7, 4, vmid_bits);  // Number of VMID bits (FEAT_VMID16)
+  DEF_ENUM_FIELD(ArmAsidSize, 7, 4, vmid_bits);  // Number of VMID bits (FEAT_VMID16)
   DEF_FIELD(3, 0, hafdbs);  // Hardware updates to access flag and dirty state (FEAT_HAFDBS)
 };
 
