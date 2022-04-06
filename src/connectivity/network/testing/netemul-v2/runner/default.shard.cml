@@ -17,7 +17,7 @@
         },
         { protocol: "fuchsia.sys2.EventSource" },
         {
-            event: [ "stopped" ],
+            event: [ "destroyed" ],
             from: "framework",
         },
     ],

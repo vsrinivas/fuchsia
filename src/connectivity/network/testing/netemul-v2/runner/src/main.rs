@@ -151,21 +151,22 @@ async fn handle_runner_request(
             ) = match test_setup(program, namespace).await {
                 Ok((env, svc_dir)) => {
                     // Retrieve the component event stream from the test root so we can observe its
-                    // `stopped` lifecycle event.
+                    // `destroyed` lifecycle event. The test root will only be destroyed once all
+                    // its child components have stopped.
                     let event_source = events::EventSource::from_proxy(
                         connect_to_protocol_at_dir_root::<fsys2::EventSourceMarker>(&svc_dir)
                             .context("connect to protocol")?,
                     );
                     let mut event_stream = event_source
                         .subscribe(vec![events::EventSubscription::new(vec![
-                            events::Stopped::NAME,
+                            events::Destroyed::NAME,
                         ])])
                         .await
-                        .context("failed to subscribe to `Stopped` events")?;
+                        .context("failed to subscribe to `Destroyed` events")?;
                     let test_stopped_fut = async move {
                         component_events::matcher::EventMatcher::ok()
                             .moniker(".")
-                            .wait::<events::Stopped>(&mut event_stream)
+                            .wait::<events::Destroyed>(&mut event_stream)
                             .await
                     };
 
@@ -244,23 +245,15 @@ async fn handle_runner_request(
             }
 
             if let Some(fut) = test_stopped_fut {
-                // Wait until we observe the test root's `stopped` event to drop the handle to
+                // Wait until we observe the test root's `destroyed` event to drop the handle to
                 // the network environment, so that we are ensured the entire test realm has
                 // completed orderly shutdown by the time we are removing interfaces. This
                 // prevents spurious test failures from the virtual network being torn down
                 // while some components in the test realm may still be running.
-                let stopped_event = fut.await.context("observe stopped event")?;
-                let events::StoppedPayload { status } = stopped_event
+                let destroyed_event = fut.await.context("observe destroyed event")?;
+                let events::DestroyedPayload {} = destroyed_event
                     .result()
-                    .map_err(|e| anyhow!("error on component stopped event: {:?}", e))?;
-                match status {
-                    events::ExitStatus::Clean => {}
-                    events::ExitStatus::Crash(status) => warn!(
-                        "test '{}' crashed: {:?}",
-                        resolved_url,
-                        fcomponent::Error::from_primitive(*status as u32)
-                    ),
-                }
+                    .map_err(|e| anyhow!("error on component destroyed event: {:?}", e))?;
             }
         }
     }
