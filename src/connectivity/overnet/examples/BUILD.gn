@@ -40,9 +40,12 @@ fuchsia_test_component("overnet_interface_passing_test") {
   ]
 }
 
-fuchsia_unittest_component("overnet_socket_passing_test") {
-  deps = [ "socket_passing:component" ]
-  manifest = "meta/overnet_socket_passing_test.cmx"
+fuchsia_test_component("overnet_socket_passing_test") {
+  manifest = "meta/overnet-socket-passing-test.cml"
+  deps = [
+    "socket_passing:server",
+    "socket_passing:test-driver",
+  ]
 }
 
 fuchsia_unittest_component("overnet_event_pair_test") {
