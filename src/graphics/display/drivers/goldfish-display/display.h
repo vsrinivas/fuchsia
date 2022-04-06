@@ -25,6 +25,7 @@
 #include <fbl/mutex.h>
 
 #include "src/devices/lib/goldfish/pipe_io/pipe_io.h"
+#include "src/graphics/display/drivers/goldfish-display/render_control.h"
 
 namespace goldfish {
 
@@ -136,28 +137,9 @@ class Display : public DisplayType,
     config_stamp_t config_stamp = {.value = INVALID_CONFIG_STAMP_VALUE};
   };
 
-  int32_t GetFbParam(uint32_t param, int32_t default_value);
-  using ColorBufferId = uint32_t;
-  zx::status<ColorBufferId> CreateColorBuffer(uint32_t width, uint32_t height, uint32_t format);
-  zx_status_t OpenColorBuffer(ColorBufferId id);
-  zx_status_t CloseColorBuffer(ColorBufferId id);
-
-  // Zero means success; non-zero value means the call failed.
-  using RcResult = int32_t;
-  zx::status<RcResult> SetColorBufferVulkanMode(ColorBufferId id, uint32_t mode);
-  zx::status<RcResult> UpdateColorBuffer(ColorBufferId id, const fzl::PinnedVmo& pinned_vmo,
-                                         uint32_t width, uint32_t height, uint32_t format,
-                                         size_t size);
-  zx_status_t FbPost(uint32_t id);
-  using DisplayId = uint32_t;
-  zx::status<DisplayId> CreateDisplay();
-  zx::status<RcResult> DestroyDisplay(DisplayId display_id);
-  zx::status<RcResult> SetDisplayColorBuffer(DisplayId display_id, uint32_t id);
-  zx::status<RcResult> SetDisplayPose(DisplayId display_id, int32_t x, int32_t y, uint32_t w,
-                                      uint32_t h);
-
   zx_status_t ImportVmoImage(image_t* image, zx::vmo vmo, size_t offset);
-  zx_status_t PresentColorBuffer(DisplayId display_id, const DisplayConfig& display_config);
+  zx_status_t PresentColorBuffer(RenderControl::DisplayId display_id,
+                                 const DisplayConfig& display_config);
   zx_status_t SetupDisplay(uint64_t id);
 
   void TeardownDisplay(uint64_t id);
@@ -166,7 +148,7 @@ class Display : public DisplayType,
   fbl::Mutex lock_;
   ddk::GoldfishControlProtocolClient control_ TA_GUARDED(lock_);
   ddk::GoldfishPipeProtocolClient pipe_ TA_GUARDED(lock_);
-  std::unique_ptr<PipeIo> pipe_io_;
+  std::unique_ptr<RenderControl> rc_;
 
   std::map<uint64_t, Device> devices_;
   fbl::Mutex flush_lock_;

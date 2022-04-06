@@ -46,7 +46,10 @@ fuchsia_driver_component("goldfish-display") {
 source_set("common") {
   visibility = [ ":*" ]
   configs += [ "//build/config:all_source" ]
-  sources = []
+  sources = [
+    "render_control.cc",
+    "render_control.h",
+  ]
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.display.controller:fuchsia.hardware.display.controller_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.goldfish.control:fuchsia.hardware.goldfish.control_banjo_cpp",
