@@ -16,6 +16,7 @@
 #include <threads.h>
 #include <zircon/types.h>
 
+#include <list>
 #include <map>
 #include <memory>
 
@@ -81,11 +82,10 @@ class Display : public DisplayType,
     constexpr uint32_t dummy_fr = 60;
     ZX_DEBUG_ASSERT(devices_.empty());
     for (int i = 0; i < num_devices; i++) {
-      Device device;
+      auto& device = devices_[i + 1];
       device.width = dummy_width;
       device.height = dummy_height;
       device.refresh_rate_hz = dummy_fr;
-      devices_[i + 1] = device;
     }
   }
   void RemoveDevices() {
@@ -105,20 +105,6 @@ class Display : public DisplayType,
     uint32_t format = 0;
     zx::vmo vmo;
     fzl::PinnedVmo pinned_vmo;
-
-    zx::eventpair sync_event;
-    std::unique_ptr<async::WaitOnce> async_wait;
-  };
-  struct Device {
-    uint32_t width = 0;
-    uint32_t height = 0;
-    uint32_t x = 0;
-    uint32_t y = 0;
-    uint32_t refresh_rate_hz = 60;
-    uint32_t host_display_id = 0;
-    float scale = 1.0;
-    zx::time expected_next_flush = zx::time::infinite_past();
-    config_stamp_t latest_config_stamp = {.value = INVALID_CONFIG_STAMP_VALUE};
   };
 
   struct DisplayConfig {
@@ -137,9 +123,35 @@ class Display : public DisplayType,
     config_stamp_t config_stamp = {.value = INVALID_CONFIG_STAMP_VALUE};
   };
 
+  struct Device {
+    uint32_t width = 0;
+    uint32_t height = 0;
+    uint32_t x = 0;
+    uint32_t y = 0;
+    uint32_t refresh_rate_hz = 60;
+    uint32_t host_display_id = 0;
+    float scale = 1.0;
+    zx::time expected_next_flush = zx::time::infinite_past();
+    config_stamp_t latest_config_stamp = {.value = INVALID_CONFIG_STAMP_VALUE};
+
+    // The next display config to be posted through renderControl protocol.
+    std::optional<DisplayConfig> incoming_config = std::nullopt;
+
+    // Queues the async wait of goldfish sync device for each frame that is
+    // posted (rendered) but hasn't finished rendering.
+    //
+    // Every time there's a new frame posted through renderControl protocol,
+    // a WaitOnce waiting on the sync event for the latest config will be
+    // appended to the queue. When a frame has finished rendering on host, all
+    // the pending Waits that are queued no later than the frame's async Wait
+    // (including the frame's Wait itself) will be popped out from the queue
+    // and destroyed.
+    std::list<async::WaitOnce> pending_config_waits = {};
+  };
+
   zx_status_t ImportVmoImage(image_t* image, zx::vmo vmo, size_t offset);
-  zx_status_t PresentColorBuffer(RenderControl::DisplayId display_id,
-                                 const DisplayConfig& display_config);
+  zx_status_t PresentDisplayConfig(RenderControl::DisplayId display_id,
+                                   const DisplayConfig& display_config);
   zx_status_t SetupDisplay(uint64_t id);
 
   void TeardownDisplay(uint64_t id);
@@ -153,8 +165,6 @@ class Display : public DisplayType,
   std::map<uint64_t, Device> devices_;
   fbl::Mutex flush_lock_;
   ddk::DisplayControllerInterfaceProtocolClient dc_intf_ TA_GUARDED(flush_lock_);
-
-  std::map<uint64_t, DisplayConfig> pending_config_;
 
   async::Loop loop_;
 

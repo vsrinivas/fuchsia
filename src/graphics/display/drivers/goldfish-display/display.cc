@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <vector>
 
@@ -147,17 +148,22 @@ zx_status_t Display::Bind() {
         continue;
       }
 
-      devices_[next_display_id++] = device;
+      auto& new_device = devices_[next_display_id++];
+      new_device.width = device.width;
+      new_device.height = device.height;
+      new_device.x = device.x;
+      new_device.y = device.y;
+      new_device.refresh_rate_hz = device.refresh_rate_hz;
+      new_device.scale = device.scale;
     }
   }
 
   // Create primary device if needed.
   if (devices_.empty()) {
-    Device device;
+    auto& device = devices_[kPrimaryDisplayId];
     device.width = static_cast<uint32_t>(rc_->GetFbParam(FB_WIDTH, 1024));
     device.height = static_cast<uint32_t>(rc_->GetFbParam(FB_HEIGHT, 768));
     device.refresh_rate_hz = static_cast<uint32_t>(rc_->GetFbParam(FB_FPS, 60));
-    devices_[kPrimaryDisplayId] = device;
   }
 
   // Set up display and set up flush task for each device.
@@ -293,10 +299,10 @@ void Display::DisplayControllerImplReleaseImage(image_t* image) {
   }
 
   async::PostTask(loop_.dispatcher(), [this, color_buffer] {
-    for (auto& kv : pending_config_) {
-      if (kv.second.color_buffer == color_buffer) {
-        kv.second.color_buffer = nullptr;
-        kv.second.config_stamp = {.value = INVALID_CONFIG_STAMP_VALUE};
+    for (auto& kv : devices_) {
+      if (kv.second.incoming_config.has_value() &&
+          kv.second.incoming_config->color_buffer == color_buffer) {
+        kv.second.incoming_config = std::nullopt;
       }
     }
     delete color_buffer;
@@ -382,14 +388,11 @@ uint32_t Display::DisplayControllerImplCheckConfiguration(const display_config_t
   return CONFIG_DISPLAY_OK;
 }
 
-zx_status_t Display::PresentColorBuffer(RenderControl::DisplayId display_id,
-                                        const DisplayConfig& display_config) {
+zx_status_t Display::PresentDisplayConfig(RenderControl::DisplayId display_id,
+                                          const DisplayConfig& display_config) {
   auto* color_buffer = display_config.color_buffer;
   if (!color_buffer) {
-    return ZX_HANDLE_INVALID;
-  }
-  if (color_buffer->sync_event.is_valid()) {
-    return ZX_ERR_SHOULD_WAIT;
+    return ZX_OK;
   }
 
   zx::eventpair event_display, event_sync_device;
@@ -398,28 +401,49 @@ zx_status_t Display::PresentColorBuffer(RenderControl::DisplayId display_id,
     zxlogf(ERROR, "%s: zx_eventpair_create failed: %d", kTag, status);
     return status;
   }
-  color_buffer->sync_event = std::move(event_display);
 
-  // Set up async wait.
-  color_buffer->async_wait =
-      std::make_unique<async::WaitOnce>(color_buffer->sync_event.get(), ZX_EVENTPAIR_SIGNALED, 0u);
-  color_buffer->async_wait->Begin(
-      loop_.dispatcher(), [this, display_id, pending_config_stamp = display_config.config_stamp,
-                           color_buffer](async_dispatcher_t* dispatcher, async::WaitOnce* wait,
-                                         zx_status_t status, const zx_packet_signal_t* signal) {
-        TRACE_DURATION("gfx", "Display::SyncEventHandler", "color_buffer", color_buffer->id);
-        if (status == ZX_ERR_CANCELED) {
-          zxlogf(INFO, "Wait cancelled.\n");
-          return;
-        }
-        ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "Invalid wait status: %d\n", status);
+  auto& device = devices_[display_id];
 
-        color_buffer->async_wait.reset();
-        color_buffer->sync_event.reset();
-        devices_[display_id].latest_config_stamp = {
-            .value = std::max(devices_[display_id].latest_config_stamp.value,
-                              pending_config_stamp.value)};
-      });
+  // Set up async wait for the goldfish sync event. The zx::eventpair will be
+  // stored in the async wait callback, which will be destroyed only when the
+  // event is signaled or the wait is cancelled.
+  device.pending_config_waits.emplace_back(event_display.get(), ZX_EVENTPAIR_SIGNALED, 0);
+  auto& wait = device.pending_config_waits.back();
+
+  wait.Begin(loop_.dispatcher(), [event = std::move(event_display), &device,
+                                  pending_config_stamp = display_config.config_stamp](
+                                     async_dispatcher_t* dispatcher, async::WaitOnce* current_wait,
+                                     zx_status_t status, const zx_packet_signal_t*) {
+    TRACE_DURATION("gfx", "Display::SyncEventHandler", "config_stamp", pending_config_stamp.value);
+    if (status == ZX_ERR_CANCELED) {
+      zxlogf(INFO, "Wait for config stamp %lu cancelled.", pending_config_stamp.value);
+      return;
+    }
+    ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "Invalid wait status: %d\n", status);
+
+    // When the eventpair in |current_wait| is signalled, all the pending waits
+    // that are queued earlier than that eventpair will be removed from the list
+    // and the async WaitOnce will be cancelled.
+    // Note that the cancelled waits will return early and will not reach here.
+    ZX_DEBUG_ASSERT(std::any_of(device.pending_config_waits.begin(),
+                                device.pending_config_waits.end(),
+                                [current_wait](const async::WaitOnce& wait) {
+                                  return wait.object() == current_wait->object();
+                                }));
+    // Remove all the pending waits that are queued earlier than the current
+    // wait, and the current wait itself. In WaitOnce, the callback is moved to
+    // stack before current wait is removed, so it's safe to remove any item in
+    // the list.
+    for (auto it = device.pending_config_waits.begin(); it != device.pending_config_waits.end();) {
+      if (it->object() == current_wait->object()) {
+        device.pending_config_waits.erase(it);
+        break;
+      }
+      it = device.pending_config_waits.erase(it);
+    }
+    device.latest_config_stamp = {
+        .value = std::max(device.latest_config_stamp.value, pending_config_stamp.value)};
+  });
 
   // Update host-writeable display buffers before presenting.
   if (color_buffer->pinned_vmo.region_count() > 0) {
@@ -465,7 +489,7 @@ zx_status_t Display::PresentColorBuffer(RenderControl::DisplayId display_id,
 void Display::DisplayControllerImplApplyConfiguration(const display_config_t** display_configs,
                                                       size_t display_count,
                                                       const config_stamp_t* config_stamp) {
-  for (auto it : devices_) {
+  for (const auto& it : devices_) {
     uint64_t handle = 0;
     for (unsigned i = 0; i < display_count; i++) {
       if (display_configs[i]->display_id == it.first) {
@@ -483,13 +507,10 @@ void Display::DisplayControllerImplApplyConfiguration(const display_config_t** d
       // buffers.
       async::PostTask(
           loop_.dispatcher(), [this, display_id = it.first, config_stamp = *config_stamp] {
-            if (pending_config_[display_id].color_buffer &&
-                pending_config_[display_id].color_buffer->async_wait) {
-              pending_config_[display_id].color_buffer->async_wait->Cancel();
-            }
-            pending_config_.erase(display_id);
             if (devices_.find(display_id) != devices_.end()) {
               auto& device = devices_[display_id];
+              device.pending_config_waits.clear();
+              device.incoming_config = std::nullopt;
               device.latest_config_stamp = {
                   .value = std::max(device.latest_config_stamp.value, config_stamp.value)};
             }
@@ -528,7 +549,7 @@ void Display::DisplayControllerImplApplyConfiguration(const display_config_t** d
     if (color_buffer) {
       async::PostTask(loop_.dispatcher(),
                       [this, config_stamp = *config_stamp, color_buffer, display_id = it.first] {
-                        pending_config_[display_id] = {
+                        devices_[display_id].incoming_config = {
                             .color_buffer = color_buffer,
                             .config_stamp = config_stamp,
                         };
@@ -642,13 +663,8 @@ void Display::FlushDisplay(async_dispatcher_t* dispatcher, uint64_t display_id) 
   zx::duration period = zx::sec(1) / device.refresh_rate_hz;
   zx::time expected_next_flush = device.expected_next_flush + period;
 
-  DisplayConfig pending_config = {};
-  if (pending_config_.find(display_id) != pending_config_.end()) {
-    pending_config = pending_config_[display_id];
-  }
-
-  if (pending_config.color_buffer) {
-    zx_status_t status = PresentColorBuffer(display_id, pending_config);
+  if (device.incoming_config.has_value()) {
+    zx_status_t status = PresentDisplayConfig(display_id, *device.incoming_config);
     ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_SHOULD_WAIT);
   }
 
