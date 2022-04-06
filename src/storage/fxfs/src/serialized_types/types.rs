@@ -17,8 +17,10 @@ use crate::{
 /// both rewritten, all versions should match this value.
 ///
 /// Last breaking change:
-///  v9:  Track the ObjectStore ID for all allocation extents so we can delete encrypted volumes.
-pub const LATEST_VERSION: Version = Version { major: 9, minor: 0 };
+///  v9:   Track the ObjectStore ID for all allocation extents so we can delete encrypted volumes.
+///  v10:  Remove AllocationRef mutation type immediately after v9. Backwards compatibility
+///        provides no functional value..
+pub const LATEST_VERSION: Version = Version { major: 10, minor: 0 };
 
 versioned_type! {
     2.. => AllocatorInfo,

@@ -130,8 +130,6 @@ pub enum Mutation {
     EncryptedObjectStore(Box<[u8]>),
     ObjectStoreInfo(StoreInfoMutation),
     Allocator(AllocatorMutation),
-    // Like an Allocator mutation, but without any change in allocated counts.
-    AllocatorRef(AllocatorMutation),
     // Indicates the beginning of a flush.  This would typically involve sealing a tree.
     BeginFlush,
     // Indicates the end of a flush.  This would typically involve replacing the immutable layers
@@ -168,10 +166,6 @@ impl Mutation {
 
     pub fn allocation(item: AllocatorItem) -> Self {
         Mutation::Allocator(AllocatorMutation(item))
-    }
-
-    pub fn allocation_ref(item: AllocatorItem) -> Self {
-        Mutation::AllocatorRef(AllocatorMutation(item))
     }
 
     pub fn root_directory(oid: u64) -> Self {

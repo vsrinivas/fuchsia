@@ -792,7 +792,7 @@ impl Allocator for SimpleAllocator {
     fn add_ref(&self, transaction: &mut Transaction<'_>, device_range: Range<u64>) {
         transaction.add(
             self.object_id(),
-            Mutation::allocation_ref(AllocatorItem::new(
+            Mutation::allocation(AllocatorItem::new(
                 AllocatorKey { device_range },
                 AllocatorValue { refs: AllocationRefCount::Delta(1) },
             )),
@@ -843,9 +843,14 @@ impl Allocator for SimpleAllocator {
             let end = std::cmp::min(device_range.end, dealloc_range.end);
             if let AllocationRefCount::Abs { count: 1, owner_object_id: store_object_id } = refs {
                 debug_assert_eq!(owner_object_id, *store_object_id);
-                // In this branch, we know that we're freeing data, so we want an Allocator
-                // mutation.
-                if let Some(Mutation::AllocatorRef(_)) = mutation {
+                // In this branch, we know that we're freeing data.
+                if matches!(
+                    mutation,
+                    Some(Mutation::Allocator(AllocatorMutation(AllocatorItem {
+                        value: AllocatorValue { refs: AllocationRefCount::Abs { .. } },
+                        ..
+                    })))
+                ) {
                     transaction.add(self.object_id(), mutation.take().unwrap());
                 }
                 match &mut mutation {
@@ -862,22 +867,24 @@ impl Allocator for SimpleAllocator {
                 }
                 deallocated += end - dealloc_range.start;
             } else {
-                // In this branch, we know that we're not freeing data, so we want an AllocatorRef
-                // mutation.
-                if let Some(Mutation::Allocator(_)) = mutation {
+                // In this branch, we know that we're not freeing data.
+                if matches!(
+                    mutation,
+                    Some(Mutation::Allocator(AllocatorMutation(AllocatorItem {
+                        value: AllocatorValue { refs: AllocationRefCount::Delta(_) },
+                        ..
+                    })))
+                ) {
                     transaction.add(self.object_id(), mutation.take().unwrap());
                 }
                 match &mut mutation {
                     None => {
-                        // TODO(https://fxbug.dev/96806): Combine with Mutation::allocation.
-                        mutation = Some(Mutation::allocation_ref(Item::new(
+                        mutation = Some(Mutation::allocation(Item::new(
                             AllocatorKey { device_range: dealloc_range.start..end },
                             AllocatorValue { refs: AllocationRefCount::Delta(-1) },
                         )));
                     }
-                    Some(Mutation::AllocatorRef(AllocatorMutation(AllocatorItem {
-                        key, ..
-                    }))) => {
+                    Some(Mutation::Allocator(AllocatorMutation(AllocatorItem { key, .. }))) => {
                         key.device_range.end = end;
                     }
                     _ => unreachable!(),
@@ -1057,11 +1064,6 @@ impl Mutations for SimpleAllocator {
                         }
                     }
                 }
-            }
-            Mutation::AllocatorRef(AllocatorMutation(mut item)) => {
-                item.sequence = context.checkpoint.file_offset;
-                let lower_bound = item.key.lower_bound_for_merge_into();
-                self.tree.merge_into(item, &lower_bound).await;
             }
             Mutation::BeginFlush => {
                 {
