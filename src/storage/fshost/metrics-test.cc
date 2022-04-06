@@ -49,11 +49,11 @@ cobalt_client::MetricOptions MakeMetricOptionsFromId(uint32_t metric_id) {
 
 constexpr auto kCorruptionMetricId = static_cast<EventIntType>(fs_metrics::Event::kDataCorruption);
 
-TEST_F(MetricsTest, LogMinfsDataCorruption) {
+TEST_F(MetricsTest, LogDataDataCorruption) {
   FsHostMetricsCobalt metrics(std::move(collector_));
   ASSERT_EQ(logger_->counters().find(MakeMetricOptionsFromId(kCorruptionMetricId)),
             logger_->counters().end());
-  metrics.LogMinfsCorruption();
+  metrics.LogDataCorruption();
   // Nothing is logged until flushed.
   ASSERT_EQ(logger_->counters().find(MakeMetricOptionsFromId(kCorruptionMetricId)),
             logger_->counters().end());
@@ -68,7 +68,7 @@ TEST_F(MetricsTest, LogMinfsDataCorruption) {
 
 TEST_F(MetricsTest, MultipleFlushWorks) {
   FsHostMetricsCobalt metrics(std::move(collector_));
-  metrics.LogMinfsCorruption();
+  metrics.LogDataCorruption();
 
   // Logger is not working
   logger_->fail_logging(true);
@@ -101,7 +101,7 @@ TEST_F(MetricsTest, MultipleFlushWorks) {
 
 TEST_F(MetricsTest, FlushDoesNotHangIfLoggerNotWorking) {
   FsHostMetricsCobalt metrics(std::move(collector_));
-  metrics.LogMinfsCorruption();
+  metrics.LogDataCorruption();
 
   // Logger is not working
   logger_->fail_logging(true);
@@ -126,12 +126,12 @@ TEST_F(MetricsTest, FlushDoesNotHangIfLoggerNotWorking) {
 
 TEST_F(MetricsTest, DestroyImmediatelySucceeds) {
   FsHostMetricsCobalt metrics(std::move(collector_));
-  metrics.LogMinfsCorruption();
+  metrics.LogDataCorruption();
 }
 
 TEST_F(MetricsTest, SuccessWithNullCollector) {
   FsHostMetricsCobalt metrics(nullptr);
-  metrics.LogMinfsCorruption();
+  metrics.LogDataCorruption();
   // Sleep allows some time for thread to run.
   sleep(1);
   metrics.Flush();

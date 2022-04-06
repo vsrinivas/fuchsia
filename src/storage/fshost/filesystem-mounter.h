@@ -91,7 +91,7 @@ class FilesystemMounter {
   bool TryStartDelayedVfs();
 
   std::shared_ptr<FshostBootArgs> boot_args() { return fshost_.boot_args(); }
-  void ReportMinfsCorruption();
+  void ReportDataPartitionCorrupted();
 
   bool BlobMounted() const { return blob_mounted_; }
   bool DataMounted() const { return data_mounted_; }

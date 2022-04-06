@@ -8,7 +8,7 @@ namespace fshost {
 
 class FsHostMetricsStub : public FsHostMetrics {
  public:
-  void LogMinfsCorruption() override {}
+  void LogDataCorruption() override {}
 
   void Flush() override {}
 };

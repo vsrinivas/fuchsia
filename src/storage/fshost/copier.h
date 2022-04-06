@@ -51,6 +51,8 @@ class Copier {
 
   const DirectoryEntries& entries() const { return entries_; }
 
+  bool empty() const { return entries_.empty(); }
+
  private:
   DirectoryEntries entries_;
 };

@@ -200,30 +200,32 @@ class SimpleMatcher : public BlockDeviceManager::Matcher {
   const PartitionLimit limit_;
 };
 
-// Matches a data partition, which is a Minfs partition backed by zxcrypt.
-class MinfsMatcher : public BlockDeviceManager::Matcher {
+// Matches a data partition, which is a mutable filesystem (e.g. minfs, Fxfs) optionally backed by
+// zxcrypt.
+class DataPartitionMatcher : public BlockDeviceManager::Matcher {
  public:
   using PartitionNames = std::set<std::string, std::less<>>;
   enum class ZxcryptVariant {
-    // A regular minfs partition backed by zxcrypt.
+    // A regular data partition backed by zxcrypt.
     kNormal,
-    // A minfs partition not backed by zxcrypt.
+    // A data partition not backed by zxcrypt.
     kNoZxcrypt,
-    // Only attach and unseal the zxcrypt partition; doesn't mount minfs.
+    // Only attach and unseal the zxcrypt partition; doesn't mount the filesystem.
     kZxcryptOnly
   };
 
   struct Variant {
     ZxcryptVariant zxcrypt = ZxcryptVariant::kNormal;
-    bool format_minfs_on_corruption = true;
+    fs_management::DiskFormat format = fs_management::kDiskFormatMinfs;
+    bool format_data_on_corruption = true;
   };
 
   static constexpr std::string_view kZxcryptSuffix = "/zxcrypt/unsealed/block";
 
-  MinfsMatcher(const PartitionMapMatcher& map, PartitionNames partition_names,
-               std::string_view preferred_name,
-               const fuchsia_hardware_block_partition::wire::Guid& type_guid, Variant variant,
-               PartitionLimit limit)
+  DataPartitionMatcher(const PartitionMapMatcher& map, PartitionNames partition_names,
+                       std::string_view preferred_name,
+                       const fuchsia_hardware_block_partition::wire::Guid& type_guid,
+                       Variant variant, PartitionLimit limit)
       : map_(map),
         partition_names_(std::move(partition_names)),
         preferred_name_(preferred_name),
@@ -239,7 +241,13 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
       variant.zxcrypt = ZxcryptVariant::kNormal;
     }
 
-    variant.format_minfs_on_corruption = config.format_minfs_on_corruption;
+    if (config.data_filesystem_binary_path.find("fxfs") != std::string::npos) {
+      variant.format = fs_management::kDiskFormatFxfs;
+    } else if (config.data_filesystem_binary_path.find("f2fs") != std::string::npos) {
+      variant.format = fs_management::kDiskFormatF2fs;
+    }
+
+    variant.format_data_on_corruption = config.format_data_on_corruption;
     return variant;
   }
 
@@ -250,10 +258,9 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
           !memcmp(&device.GetTypeGuid(), &type_guid_, sizeof(type_guid_))) {
         switch (variant_.zxcrypt) {
           case ZxcryptVariant::kNormal:
-            return map_.ramdisk_required() ? fs_management::kDiskFormatMinfs
-                                           : fs_management::kDiskFormatZxcrypt;
+            return map_.ramdisk_required() ? variant_.format : fs_management::kDiskFormatZxcrypt;
           case ZxcryptVariant::kNoZxcrypt:
-            return fs_management::kDiskFormatMinfs;
+            return variant_.format;
           case ZxcryptVariant::kZxcryptOnly:
             return fs_management::kDiskFormatZxcrypt;
         }
@@ -261,7 +268,7 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
     } else if (variant_.zxcrypt == ZxcryptVariant::kNormal &&
                device.topological_path() == expected_inner_path_ &&
                !memcmp(&device.GetTypeGuid(), &type_guid_, sizeof(type_guid_))) {
-      return fs_management::kDiskFormatMinfs;
+      return variant_.format;
     }
     return fs_management::kDiskFormatUnknown;
   }
@@ -315,7 +322,7 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
       }
       reformat_ = false;
     }
-    zx_status_t status = device.Add(variant_.format_minfs_on_corruption);
+    zx_status_t status = device.Add(variant_.format_data_on_corruption);
     if (status != ZX_OK) {
       return status;
     }
@@ -394,7 +401,7 @@ class BootpartMatcher : public BlockDeviceManager::Matcher {
   }
 };
 
-MinfsMatcher::PartitionNames GetMinfsPartitionNames(bool include_legacy) {
+DataPartitionMatcher::PartitionNames GetDataPartitionNames(bool include_legacy) {
   if (include_legacy) {
     return {std::string(kDataPartitionLabel), "minfs", "fuchsia-data"};
   } else {
@@ -405,7 +412,7 @@ MinfsMatcher::PartitionNames GetMinfsPartitionNames(bool include_legacy) {
 }  // namespace
 
 BlockDeviceManager::BlockDeviceManager(const fshost_config::Config* config) : config_(*config) {
-  static constexpr fuchsia_hardware_block_partition::wire::Guid minfs_type_guid = GUID_DATA_VALUE;
+  static constexpr fuchsia_hardware_block_partition::wire::Guid data_type_guid = GUID_DATA_VALUE;
 
   if (config_.bootpart) {
     matchers_.push_back(std::make_unique<BootpartMatcher>());
@@ -427,17 +434,18 @@ BlockDeviceManager::BlockDeviceManager(const fshost_config::Config* config) : co
   // apply_limits_to_ramdisk is set.
   PartitionLimit blobfs_limit{.apply_to_ramdisk = config_.apply_limits_to_ramdisk,
                               .max_bytes = config_.blobfs_max_bytes};
-  PartitionLimit minfs_limit{.apply_to_ramdisk = config_.apply_limits_to_ramdisk,
-                             .max_bytes = config_.minfs_max_bytes};
+  PartitionLimit data_limit{.apply_to_ramdisk = config_.apply_limits_to_ramdisk,
+                            .max_bytes = config_.data_max_bytes};
 
   if (!config_.netboot) {
     // GPT partitions:
     if (config_.durable) {
       static constexpr fuchsia_hardware_block_partition::wire::Guid durable_type_guid =
           GPT_DURABLE_TYPE_GUID;
-      matchers_.push_back(std::make_unique<MinfsMatcher>(
-          *gpt, MinfsMatcher::PartitionNames{GPT_DURABLE_NAME}, std::string_view(),
-          durable_type_guid, MinfsMatcher::GetVariantFromConfig(config_), PartitionLimit()));
+      matchers_.push_back(std::make_unique<DataPartitionMatcher>(
+          *gpt, DataPartitionMatcher::PartitionNames{GPT_DURABLE_NAME}, std::string_view(),
+          durable_type_guid, DataPartitionMatcher::GetVariantFromConfig(config_),
+          PartitionLimit()));
       gpt_required = true;
     }
     if (config_.factory) {
@@ -454,11 +462,11 @@ BlockDeviceManager::BlockDeviceManager(const fshost_config::Config* config) : co
           fs_management::kDiskFormatBlobfs, blobfs_limit));
       fvm_required = true;
     }
-    if (config_.minfs) {
-      matchers_.push_back(std::make_unique<MinfsMatcher>(
-          *fvm, GetMinfsPartitionNames(config_.allow_legacy_data_partition_names),
-          kDataPartitionLabel, minfs_type_guid, MinfsMatcher::GetVariantFromConfig(config_),
-          minfs_limit));
+    if (config_.data) {
+      matchers_.push_back(std::make_unique<DataPartitionMatcher>(
+          *fvm, GetDataPartitionNames(config_.allow_legacy_data_partition_names),
+          kDataPartitionLabel, data_type_guid, DataPartitionMatcher::GetVariantFromConfig(config_),
+          data_limit));
       fvm_required = true;
     }
   }
@@ -473,11 +481,12 @@ BlockDeviceManager::BlockDeviceManager(const fshost_config::Config* config) : co
                                                               /*ramdisk_required=*/false);
 
       if (config_.zxcrypt_non_ramdisk) {
-        matchers_.push_back(std::make_unique<MinfsMatcher>(
-            *non_ramdisk_fvm, GetMinfsPartitionNames(config_.allow_legacy_data_partition_names),
-            kDataPartitionLabel, minfs_type_guid,
-            MinfsMatcher::Variant{.zxcrypt = MinfsMatcher::ZxcryptVariant::kZxcryptOnly},
-            minfs_limit));
+        matchers_.push_back(std::make_unique<DataPartitionMatcher>(
+            *non_ramdisk_fvm, GetDataPartitionNames(config_.allow_legacy_data_partition_names),
+            kDataPartitionLabel, data_type_guid,
+            DataPartitionMatcher::Variant{.zxcrypt =
+                                              DataPartitionMatcher::ZxcryptVariant::kZxcryptOnly},
+            data_limit));
       }
     }
     matchers_.push_back(std::move(fvm));

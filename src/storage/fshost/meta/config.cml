@@ -33,12 +33,12 @@
         // partitions unless "apply-limits-to-ramdisk" is set.
         blobfs_max_bytes: { type: "uint64" },
 
-        // Maximum number of bytes a minfs partition can grow to. This applies only to non-ramdisk
+        // Maximum number of bytes the data partition can grow to. This applies only to non-ramdisk
         // partitions unless "apply-limits-to-ramdisk" is set.
-        minfs_max_bytes: { type: "uint64" },
+        data_max_bytes: { type: "uint64" },
 
-        // Automatically formats minfs if it is found to be corrupted.
-        format_minfs_on_corruption: { type: "bool" },
+        // Automatically formats the data partition if it is found to be corrupted.
+        format_data_on_corruption: { type: "bool" },
 
         // If enabled, users can change the data partition from the default minfs filesystem to
         // either fxfs or f2fs by writing "fxfs" or "f2fs" to /data/fs_switch and then rebooting.
@@ -78,8 +78,8 @@
         // Enables MBR devices.
         mbr: { type: "bool" },
 
-        // Enables minfs partition.
-        minfs: { type: "bool" },
+        // Enables data partitions.
+        data: { type: "bool" },
 
         // Disables everything except fvm, gpt and bootpart.
         netboot: { type: "bool" },

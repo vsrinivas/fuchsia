@@ -35,7 +35,7 @@ class FsHostMetricsCobalt : public FsHostMetrics {
   // Returns a pointer to the underlying |cobalt_client::Collector| instance.
   cobalt_client::Collector* mutable_collector() { return collector_.get(); }
 
-  void LogMinfsCorruption() override;
+  void LogDataCorruption() override;
 
   // Repeatedly attempt to flush to cobalt until success.
   //

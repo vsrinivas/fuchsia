@@ -301,8 +301,8 @@ bool FilesystemMounter::TryStartDelayedVfs() {
   return false;
 }
 
-void FilesystemMounter::ReportMinfsCorruption() {
-  fshost_.mutable_metrics()->LogMinfsCorruption();
+void FilesystemMounter::ReportDataPartitionCorrupted() {
+  fshost_.mutable_metrics()->LogDataCorruption();
   fshost_.FlushMetrics();
   fshost_.FileReport(FsManager::ReportReason::kMinfsCorrupted);
 }

@@ -304,7 +304,7 @@ TEST(AddDeviceTestCase, AddInvalidMinfsDeviceWithFormatOnCorruptionEnabled) {
     }
   };
   auto config = fshost::DefaultConfig();
-  EXPECT_TRUE(config.format_minfs_on_corruption);
+  EXPECT_TRUE(config.format_data_on_corruption);
   BlockDeviceManager manager(&config);
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
   EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
@@ -328,7 +328,7 @@ TEST(AddDeviceTestCase, AddInvalidMinfsDeviceWithFormatOnCorruptionDisabled) {
     }
   };
   auto config = fshost::DefaultConfig();
-  config.format_minfs_on_corruption = false;
+  config.format_data_on_corruption = false;
   BlockDeviceManager manager(&config);
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
   EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);

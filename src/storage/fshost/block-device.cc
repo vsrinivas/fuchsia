@@ -64,6 +64,8 @@
 namespace fshost {
 namespace {
 
+using fs_management::DiskFormat;
+
 const char kAllowAuthoringFactoryConfigFile[] = "/boot/config/allow-authoring-factory";
 
 // return value is ignored
@@ -267,7 +269,7 @@ BlockDevice::BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd,
       content_format_(fs_management::kDiskFormatUnknown),
       topological_path_(GetTopologicalPath(fd_.get())) {}
 
-fs_management::DiskFormat BlockDevice::content_format() const {
+DiskFormat BlockDevice::content_format() const {
   if (content_format_ != fs_management::kDiskFormatUnknown) {
     return content_format_;
   }
@@ -275,9 +277,9 @@ fs_management::DiskFormat BlockDevice::content_format() const {
   return content_format_;
 }
 
-fs_management::DiskFormat BlockDevice::GetFormat() { return format_; }
+DiskFormat BlockDevice::GetFormat() { return format_; }
 
-void BlockDevice::SetFormat(fs_management::DiskFormat format) { format_ = format; }
+void BlockDevice::SetFormat(DiskFormat format) { format_ = format; }
 
 const std::string& BlockDevice::partition_name() const {
   if (!partition_name_.empty()) {
@@ -544,72 +546,74 @@ zx_status_t BlockDevice::CheckFilesystem() {
     return status;
   }
 
+  const std::array<DiskFormat, 3> kFormatsToCheck = {
+      fs_management::kDiskFormatMinfs,
+      fs_management::kDiskFormatF2fs,
+      fs_management::kDiskFormatFxfs,
+  };
+  if (std::find(kFormatsToCheck.begin(), kFormatsToCheck.end(), format_) == kFormatsToCheck.end()) {
+    FX_LOGS(INFO) << "Skipping consistency checker for partition of type "
+                  << DiskFormatString(format_);
+    return ZX_OK;
+  }
+
+  zx::ticks before = zx::ticks::now();
+  auto timer = fit::defer([before]() {
+    auto after = zx::ticks::now();
+    auto duration = fzl::TicksToNs(after - before);
+    FX_LOGS(INFO) << "fsck took " << duration.to_secs() << "." << duration.to_msecs() % 1000
+                  << " seconds";
+  });
+  FX_LOGS(INFO) << "fsck of " << DiskFormatString(format_) << " partition started";
+
   switch (format_) {
-    case fs_management::kDiskFormatBlobfs: {
-      FX_LOGS(INFO) << "Skipping blobfs consistency checker.";
-      return ZX_OK;
+    case fs_management::kDiskFormatF2fs:
+    case fs_management::kDiskFormatFxfs: {
+      std::string binary_path = device_config_->data_filesystem_binary_path;
+      FX_LOGS(INFO) << "Starting fsck with binary " << binary_path;
+      status = CheckCustomFilesystem(binary_path);
+      break;
     }
-
-    case fs_management::kDiskFormatFactoryfs: {
-      FX_LOGS(INFO) << "Skipping factory consistency checker.";
-      return ZX_OK;
-    }
-
     case fs_management::kDiskFormatMinfs: {
-      zx::ticks before = zx::ticks::now();
-      auto timer = fit::defer([before]() {
-        auto after = zx::ticks::now();
-        auto duration = fzl::TicksToNs(after - before);
-        FX_LOGS(INFO) << "fsck took " << duration.to_secs() << "." << duration.to_msecs() % 1000
-                      << " seconds";
-      });
-      FX_LOGS(INFO) << "fsck of data partition started";
-
-      if (!device_config_->data_filesystem_binary_path.empty()) {
-        std::string binary_path = device_config_->data_filesystem_binary_path;
-        FX_LOGS(INFO) << "Using " << binary_path;
-        status = CheckCustomFilesystem(std::move(binary_path));
-      } else {
-        uint64_t device_size = info.block_size * info.block_count / minfs::kMinfsBlockSize;
-        auto device_or = minfs::FdToBlockDevice(fd_);
-        if (device_or.is_error()) {
-          FX_LOGS(ERROR) << "Cannot convert fd to block device: " << device_or.error_value();
-          return device_or.error_value();
-        }
-        auto bc_or =
-            minfs::Bcache::Create(std::move(device_or.value()), static_cast<uint32_t>(device_size));
-        if (bc_or.is_error()) {
-          FX_LOGS(ERROR) << "Could not initialize minfs bcache.";
-          return bc_or.error_value();
-        }
-        status = minfs::Fsck(std::move(bc_or.value()), minfs::FsckOptions{.repair = true})
-                     .status_value();
+      // With minfs, we can run the library directly without needing to start a new process.
+      uint64_t device_size = info.block_size * info.block_count / minfs::kMinfsBlockSize;
+      auto device_or = minfs::FdToBlockDevice(fd_);
+      if (device_or.is_error()) {
+        FX_LOGS(ERROR) << "Cannot convert fd to block device: " << device_or.error_value();
+        return device_or.error_value();
       }
-
-      if (status != ZX_OK) {
-        FX_LOGS(ERROR) << "\n--------------------------------------------------------------\n"
-                          "|\n"
-                          "|   WARNING: fshost fsck failure!\n"
-                          "|   Corrupt "
-                       << fs_management::DiskFormatString(format_)
-                       << " filesystem\n"
-                          "|\n"
-                          "|   If your system was shutdown cleanly (via 'dm poweroff'\n"
-                          "|   or an OTA), report this device to the local-storage\n"
-                          "|   team. Please file bugs with logs before and after reboot.\n"
-                          "|\n"
-                          "--------------------------------------------------------------";
-        MaybeDumpMetadata(fd_.duplicate(), {.disk_format = fs_management::kDiskFormatMinfs});
-        mounter_->ReportMinfsCorruption();
-      } else {
-        FX_LOGS(INFO) << "fsck of " << fs_management::DiskFormatString(format_) << " completed OK";
+      auto bc_or =
+          minfs::Bcache::Create(std::move(device_or.value()), static_cast<uint32_t>(device_size));
+      if (bc_or.is_error()) {
+        FX_LOGS(ERROR) << "Could not initialize minfs bcache.";
+        return bc_or.error_value();
       }
-      return status;
+      status =
+          minfs::Fsck(std::move(bc_or.value()), minfs::FsckOptions{.repair = true}).status_value();
+      break;
     }
     default:
-      FX_LOGS(ERROR) << "Not checking unknown filesystem";
-      return ZX_ERR_NOT_SUPPORTED;
+      __builtin_unreachable();
   }
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "\n--------------------------------------------------------------\n"
+                      "|\n"
+                      "|   WARNING: fshost fsck failure!\n"
+                      "|   Corrupt "
+                   << DiskFormatString(format_)
+                   << " filesystem\n"
+                      "|\n"
+                      "|   Please file a bug to the Storage component in http://fxbug.dev,\n"
+                      "|   including a device snapshot collected with `ffx target snapshot` if\n"
+                      "|   possible.\n"
+                      "|\n"
+                      "--------------------------------------------------------------";
+    MaybeDumpMetadata(fd_.duplicate(), {.disk_format = format_});
+    mounter_->ReportDataPartitionCorrupted();
+  } else {
+    FX_LOGS(INFO) << "fsck of " << DiskFormatString(format_) << " completed OK";
+  }
+  return status;
 }
 
 zx_status_t BlockDevice::FormatFilesystem() {
@@ -628,36 +632,43 @@ zx_status_t BlockDevice::FormatFilesystem() {
       FX_LOGS(ERROR) << "Not formatting factoryfs.";
       return ZX_ERR_NOT_SUPPORTED;
     }
-    case fs_management::kDiskFormatMinfs: {
+    case fs_management::kDiskFormatFxfs:
+    case fs_management::kDiskFormatF2fs: {
       const auto binary_path = device_config_->data_filesystem_binary_path;
-      if (!binary_path.empty()) {
-        FX_LOGS(INFO) << "Formatting using " << binary_path;
-        status = FormatCustomFilesystem(binary_path);
-        if (status != ZX_OK) {
-          FX_LOGS(ERROR) << "Failed to format: " << zx_status_get_string(status);
-          return status;
-        }
-      } else {
-        FX_LOGS(INFO) << "Formatting minfs.";
-        uint64_t blocks = info.block_size * info.block_count / minfs::kMinfsBlockSize;
-        auto device_or = minfs::FdToBlockDevice(fd_);
-        if (device_or.is_error()) {
-          FX_LOGS(ERROR) << "Cannot convert fd to block device: " << device_or.error_value();
-          return status;
-        }
-        auto bc_or =
-            minfs::Bcache::Create(std::move(device_or.value()), static_cast<uint32_t>(blocks));
-        if (bc_or.is_error()) {
-          FX_LOGS(ERROR) << "Could not initialize minfs bcache.";
-          return bc_or.error_value();
-        }
-        minfs::MountOptions options = {};
-        if (status = minfs::Mkfs(options, bc_or.value().get()).status_value(); status != ZX_OK) {
-          FX_LOGS(ERROR) << "Could not format minfs filesystem.";
-          return status;
-        }
-        FX_LOGS(INFO) << "Minfs filesystem re-formatted. Expect data loss.";
+      if (binary_path.empty()) {
+        FX_LOGS(ERROR) << "Attempting to format a filesystem that requires an external binary, but "
+                       << "data_filesystem_binary_path is not specified; this is most likely a "
+                       << "misconfiguration.";
+        return ZX_ERR_BAD_STATE;
       }
+      FX_LOGS(INFO) << "Formatting using " << binary_path;
+      status = FormatCustomFilesystem(binary_path);
+      if (status != ZX_OK) {
+        FX_LOGS(ERROR) << "Failed to format: " << zx_status_get_string(status);
+      }
+      return status;
+    }
+    case fs_management::kDiskFormatMinfs: {
+      // With minfs, we can run the library directly without needing to start a new process.
+      FX_LOGS(INFO) << "Formatting minfs.";
+      uint64_t blocks = info.block_size * info.block_count / minfs::kMinfsBlockSize;
+      auto device_or = minfs::FdToBlockDevice(fd_);
+      if (device_or.is_error()) {
+        FX_LOGS(ERROR) << "Cannot convert fd to block device: " << device_or.error_value();
+        return status;
+      }
+      auto bc_or =
+          minfs::Bcache::Create(std::move(device_or.value()), static_cast<uint32_t>(blocks));
+      if (bc_or.is_error()) {
+        FX_LOGS(ERROR) << "Could not initialize minfs bcache.";
+        return bc_or.error_value();
+      }
+      minfs::MountOptions options = {};
+      if (status = minfs::Mkfs(options, bc_or.value().get()).status_value(); status != ZX_OK) {
+        FX_LOGS(ERROR) << "Could not format minfs filesystem.";
+        return status;
+      }
+      FX_LOGS(INFO) << "Minfs filesystem re-formatted. Expect data loss.";
       return ZX_OK;
     }
     default:
@@ -711,7 +722,7 @@ zx_status_t BlockDevice::MountFilesystem() {
       zx_status_t status = MountData(&options, std::move(block_device));
       if (status != ZX_OK) {
         FX_LOGS(ERROR) << "Failed to mount data partition: " << zx_status_get_string(status) << ".";
-        MaybeDumpMetadata(fd_.duplicate(), {.disk_format = fs_management::kDiskFormatMinfs});
+        MaybeDumpMetadata(fd_.duplicate(), {.disk_format = format_});
         return status;
       }
       mounter_->TryStartDelayedVfs();
@@ -858,8 +869,11 @@ zx_status_t BlockDeviceInterface::Add(bool format_on_corruption) {
       }
       return MountFilesystem();
     }
+    case fs_management::kDiskFormatFxfs:
+    case fs_management::kDiskFormatF2fs:
     case fs_management::kDiskFormatMinfs: {
-      FX_LOGS(INFO) << "mounting data partition: format on corruption is "
+      FX_LOGS(INFO) << "mounting data partition with format " << DiskFormatString(GetFormat())
+                    << ": format on corruption is "
                     << (format_on_corruption ? "enabled" : "disabled");
       if (zx_status_t status = CheckFilesystem(); status != ZX_OK) {
         if (!format_on_corruption) {
@@ -886,8 +900,6 @@ zx_status_t BlockDeviceInterface::Add(bool format_on_corruption) {
     case fs_management::kDiskFormatFat:
     case fs_management::kDiskFormatVbmeta:
     case fs_management::kDiskFormatUnknown:
-    case fs_management::kDiskFormatFxfs:
-    case fs_management::kDiskFormatF2fs:
     case fs_management::kDiskFormatCount:
       return ZX_ERR_NOT_SUPPORTED;
   }
@@ -1011,7 +1023,7 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
     }
   }
 
-  uint64_t slice_count = device_config_->minfs_max_bytes / slice_size;
+  uint64_t slice_count = device_config_->data_max_bytes / slice_size;
 
   if (slice_count == 0) {
     auto query_result = fidl::WireCall(volume_client)->GetVolumeInfo();
@@ -1043,8 +1055,10 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
     slice_count = std::min(slices_available, std::max<uint64_t>(response->manager->slice_count / 10,
                                                                 slice_target / slice_size));
   }
-  // Account for the slice zxcrypt uses.
-  --slice_count;
+  if (topological_path_.find("zxcrypt") != std::string::npos) {
+    // Account for the slice zxcrypt uses.
+    --slice_count;
+  }
   FX_LOGS(INFO) << "Allocating " << slice_count << " slices (" << slice_count * slice_size
                 << " bytes) for " << binary_path << " partition";
 
@@ -1072,7 +1086,13 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
     }
   }
 
-  // Now mount and then copy all the data back.
+  // If there's any data to copy, mount and then copy all the data back.
+  if (copier.empty()) {
+    content_format_ = format_;
+    return ZX_OK;
+  }
+  FX_LOGS(INFO) << "Copying data from old partition...";
+
   if (zx_status_t status = fdio_fd_clone(fd_.get(), &handle); status != ZX_OK) {
     FX_LOGS(ERROR) << "fdio_fd_clone failed";
     return status;
@@ -1114,6 +1134,7 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
                                  fuchsia_io::wire::OpenFlags::kPosixExecutable,
                              0, fidl::StringView("root"), std::move(root_server));
       !resp.ok()) {
+    FX_LOGS(ERROR) << "Failed to open export root: " << resp.status_string();
     return resp.status();
   }
 
@@ -1125,7 +1146,7 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
   }
 
   if (zx_status_t status = copier.Write(std::move(fd)); status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to copy data";
+    FX_LOGS(ERROR) << "Failed to copy data: " << zx_status_get_string(status);
     return status;
   }
 
@@ -1134,7 +1155,8 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
     FX_LOGS(WARNING) << "Unmount failed: " << status.status_string();
   }
 
-  content_format_ = fs_management::kDiskFormatUnknown;
+  FX_LOGS(INFO) << "Copying data complete.";
+  content_format_ = format_;
 
   return ZX_OK;
 }

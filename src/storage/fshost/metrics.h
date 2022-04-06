@@ -18,8 +18,8 @@ class FsHostMetrics {
   FsHostMetrics& operator=(FsHostMetrics&&) = delete;
   virtual ~FsHostMetrics() = default;
 
-  // This method logs an event describing a corrupted MinFs filesystem, detected on mount or fsck.
-  virtual void LogMinfsCorruption() = 0;
+  // This method logs an event describing a corrupted data partition, detected on mount or fsck.
+  virtual void LogDataCorruption() = 0;
 
   // Repeatedly attempt to flush to cobalt until success.
   //

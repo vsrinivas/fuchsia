@@ -67,7 +67,7 @@ TEST(BlockDeviceManager, BlobfsLimit) {
 
 TEST(BlockDeviceManager, MinfsLimit) {
   auto config = DefaultConfig();
-  config.minfs_max_bytes = 7654321;
+  config.data_max_bytes = 7654321;
   BlockDeviceManager manager(&config);
 
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());

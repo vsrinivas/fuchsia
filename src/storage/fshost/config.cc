@@ -12,8 +12,8 @@ fshost_config::Config DefaultConfig() {
   config.bootpart = true;
   config.fvm = true;
   config.gpt = true;
-  config.minfs = true;
-  config.format_minfs_on_corruption = true;
+  config.data = true;
+  config.format_data_on_corruption = true;
   config.allow_legacy_data_partition_names = true;
   return config;
 }
@@ -26,18 +26,18 @@ fshost_config::Config EmptyConfig() {
       .blobfs_max_bytes = 0,
       .bootpart = false,
       .check_filesystems = false,
+      .data = false,
       .data_filesystem_binary_path = "",
+      .data_max_bytes = 0,
       .durable = false,
       .factory = false,
-      .format_minfs_on_corruption = false,
+      .format_data_on_corruption = false,
       .fs_switch = false,
       .fvm = false,
       .fvm_ramdisk = false,
       .gpt = false,
       .gpt_all = false,
       .mbr = false,
-      .minfs = false,
-      .minfs_max_bytes = 0,
       .nand = false,
       .netboot = false,
       .no_zxcrypt = false,

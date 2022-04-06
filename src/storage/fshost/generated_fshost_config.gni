@@ -115,16 +115,16 @@ template("generated_fshost_config") {
       blobfs = true
       blobfs_max_bytes = 0
       bootpart = true
+      data = true
       data_filesystem_binary_path = ""
+      data_max_bytes = 0
       durable = false
       factory = false
-      format_minfs_on_corruption = true
+      format_data_on_corruption = true
       fs_switch = false
       fvm = true
       gpt = true
       mbr = false
-      minfs = true
-      minfs_max_bytes = 0
       nand = false
       netboot = false
 
@@ -155,12 +155,12 @@ template("generated_fshost_config") {
       }
       if (defined(invoker.minfs_maximum_runtime_bytes_override)) {
         # This can be overridden by the invoker but defaults to the file one if undefined.
-        minfs_max_bytes = invoker.minfs_maximum_runtime_bytes_override
+        data_max_bytes = invoker.minfs_maximum_runtime_bytes_override
       } else if (minfs_maximum_runtime_bytes != "") {
-        minfs_max_bytes = minfs_maximum_runtime_bytes
+        data_max_bytes = minfs_maximum_runtime_bytes
       }
       if (!format_minfs_on_corruption) {
-        format_minfs_on_corruption = false
+        format_data_on_corruption = false
       }
       if (invoker.fs_switch) {
         fs_switch = true

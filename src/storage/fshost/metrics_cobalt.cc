@@ -54,7 +54,7 @@ FsHostMetricsCobalt::~FsHostMetricsCobalt() {
   thread_.join();
 }
 
-void FsHostMetricsCobalt::LogMinfsCorruption() {
+void FsHostMetricsCobalt::LogDataCorruption() {
   if (collector_) {
     counters_[fs_metrics::Event::kDataCorruption]->Increment();
   }
