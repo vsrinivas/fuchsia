@@ -697,15 +697,18 @@ receiver is a program.
 
 #### ANSI Color
 
-Use of color is allowed with the following caveats
+Use of color is allowed, with the following caveats:
 
-- Enabling/disabling color output based on terminal information (i.e. whether it
-  supports color) is encouraged, but that's not always possible (so it's not
-  required)
-  - Always allow the user to override color use (they can disable it)
+- Suppressing color:
+  - When possible, check whether the terminal supports color, and suppress color
+    output if not.
+  - Always allow the user to manually suppress color output, e.g. with a
+    `--no-color` flag and/or by setting the `NO_COLOR` environment variable
+    ([no-color.org](http://no-color.org)).
 - When using color, be sure to use colors that are distinct for readers who may
   not be able to see a full range of color (e.g. color-blindness).
-- Never rely on color to convey information. Only use color as an enhancement.
+  - The best way to do this is to stick to the standard [8/16 colors](https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797#8-16-colors). It's easy for users to remap these, unlike the [256 colors](https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797#256-colors).
+- Never rely solely on color to convey information. Only use color as an enhancement.
   Seeing the color must not be needed for correct interpretation of the output.
 
 ### Stderr
