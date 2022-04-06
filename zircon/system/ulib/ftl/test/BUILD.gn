@@ -45,12 +45,3 @@ source_set("ftl-workload-fuzzer") {
     "//zircon/system/ulib/ftl:private_headers",
   ]
 }
-
-source_set("ftl-read-write-fuzzer") {
-  sources = [ "ftl_read_write_fuzzer.cc" ]
-  deps = [
-    "//src/devices/block/drivers/ftl/tests:shared",
-    "//zircon/system/ulib/ftl",
-    "//zircon/system/ulib/ftl:private_headers",
-  ]
-}

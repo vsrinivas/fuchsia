@@ -22,14 +22,7 @@ fuzzer("ftl-workload-fuzzer") {
   options = [ "close_fd_mask=1" ]
 }
 
-fuzzer("ftl-read-write-fuzzer") {
-  deps = [ "//zircon/system/ulib/ftl/test:ftl-read-write-fuzzer" ]
-}
-
 fuzzer_package("ftl-fuzzers") {
-  cpp_fuzzers = [
-    ":ftl-workload-fuzzer",
-    ":ftl-read-write-fuzzer",
-  ]
+  cpp_fuzzers = [ ":ftl-workload-fuzzer" ]
   fuzz_host = true
 }
