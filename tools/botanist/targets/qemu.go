@@ -7,6 +7,7 @@ package targets
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -51,6 +52,9 @@ const (
 	// No host-side disk blocks are allocated on extension (by use of the `fvm`
 	// host tool), so the operation is cheap regardless of the size we extend to.
 	storageFullMinSize int64 = 10000000000 // 10Gb
+
+	// Minimum number of bytes of entropy bits required for the kernel's PRNG.
+	minEntropyBytes uint = 32 // 256 bits
 )
 
 // qemuTargetMapping maps the Fuchsia target name to the name recognized by QEMU.
@@ -338,6 +342,12 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	qemuCmd.AddKernelArg("kernel.lockup-detector.heartbeat-period-ms=0")
 	qemuCmd.AddKernelArg("kernel.lockup-detector.heartbeat-age-threshold-ms=0")
 	qemuCmd.AddKernelArg("kernel.lockup-detector.heartbeat-age-fatal-threshold-ms=0")
+
+	// Add entropy to simulate bootloader entropy.
+	entropy := make([]byte, minEntropyBytes)
+	if _, err := rand.Read(entropy); err == nil {
+		qemuCmd.AddKernelArg("kernel.entropy-mixin=" + hex.EncodeToString(entropy))
+	}
 	// Do not print colors.
 	qemuCmd.AddKernelArg("TERM=dumb")
 	if t.config.Target == "x64" {
