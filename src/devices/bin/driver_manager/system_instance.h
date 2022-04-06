@@ -41,7 +41,6 @@ class SystemInstance : public FsProvider {
   void InstallDevFsIntoNamespace();
 
   void ServiceStarter(Coordinator* coordinator);
-  int WaitForSystemAvailable(Coordinator* coordinator);
 
  private:
   zx_status_t InitializeDriverHostSvcDir();
