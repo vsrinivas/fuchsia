@@ -13,13 +13,19 @@
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
+#include <zircon/assert.h>
 
+#include <algorithm>
+#include <iterator>
 #include <memory>
+#include <string>
 
+#include "fuchsia/session/cpp/fidl.h"
 #include "lib/stdcompat/string_view.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/modular/bin/basemgr/basemgr_impl.h"
 #include "src/modular/bin/basemgr/child_listener.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
@@ -30,9 +36,26 @@
 
 // Command-line command to delete the persistent configuration.
 constexpr std::string_view kDeletePersistentConfigCommand = "delete_persistent_config";
+
 // Command-line flag that specifies the name of a v2 child that basemgr will
 // start and monitor for crashes.
 constexpr std::string_view kEagerChildFlag = "eager-child";
+
+// Command-line flag that specifies the name of a v2 child that basemgr will
+// start and monitor for crashes. Unlike `eager-child`, child components specified
+// with this flag will yield a session restart if the component can not be
+// started.
+constexpr std::string_view kCriticalChildFlag = "critical-child";
+
+// Command-line flag that specifies the base used for calculating exponential
+// backoff delay. Value should be a positive integer, in minutes. Default value
+// is 2.
+constexpr std::string_view kBackoffBaseFlag = "backoff-base-minutes";
+
+// Base number used for calculating exponential backoff delay. The idea here
+// is that the delay, in minutes, would equal kBackoffBase ^ attempt. This
+// is used exclusively for child components marked as "eager".
+constexpr std::string_view kBackoffBase = "2";
 
 fit::deferred_action<fit::closure> SetupCobalt(bool enable_cobalt, async_dispatcher_t* dispatcher,
                                                sys::ComponentContext* component_context) {
@@ -76,21 +99,21 @@ class LifecycleHandler : public fuchsia::process::lifecycle::Lifecycle {
 };
 
 std::unique_ptr<modular::BasemgrImpl> CreateBasemgrImpl(
-    modular::ModularConfigAccessor config_accessor, std::vector<cpp17::string_view> eager_children,
-    sys::ComponentContext* component_context, modular::BasemgrInspector* inspector,
-    async::Loop* loop) {
+    modular::ModularConfigAccessor config_accessor, std::vector<modular::Child> children,
+    size_t backoff_base, sys::ComponentContext* component_context,
+    modular::BasemgrInspector* inspector, async::Loop* loop) {
   fit::deferred_action<fit::closure> cobalt_cleanup = SetupCobalt(
       config_accessor.basemgr_config().enable_cobalt(), loop->dispatcher(), component_context);
 
   auto child_listener = std::make_unique<modular::ChildListener>(
-      component_context->svc().get(), loop->dispatcher(), std::move(eager_children));
+      component_context->svc().get(), loop->dispatcher(), std::move(children), backoff_base);
 
   return std::make_unique<modular::BasemgrImpl>(
       std::move(config_accessor), component_context->outgoing(), inspector,
       component_context->svc()->Connect<fuchsia::sys::Launcher>(),
       component_context->svc()->Connect<fuchsia::ui::policy::Presenter>(),
       component_context->svc()->Connect<fuchsia::hardware::power::statecontrol::Admin>(),
-      std::move(child_listener),
+      component_context->svc()->Connect<fuchsia::session::Restarter>(), std::move(child_listener),
       /*on_shutdown=*/
       [loop, cobalt_cleanup = std::move(cobalt_cleanup), component_context]() mutable {
         cobalt_cleanup.call();
@@ -128,8 +151,27 @@ std::string GetUsage() {
     ]
     ```
 
-    If the child fails to start or crashes, basemgr will attempt to restart it
-    3 times. If this fails, then basemgr will restart the system.
+    basemgr will attempt to start the child 3 total times. After the 3rd attempt,
+    basemgr will move on and no future attempts will be made.
+
+    Note: This field is mutually exclusive with --critical-child. A child can't
+    be marked as both eager and critical.
+
+  --critical-child
+
+    Similar setup as --eager-child, except that these components are critical
+    to the session. Unlike with eager children, basemgr will only attempt one
+    connection. If basemgr can't establish a connection with a critical
+    child or if the child crashes at any point, basemgr will restart the session.
+
+    Note: This field is mutually exclusive with --eager-child. A child can't
+    be marked as both eager and critical.
+
+  --backoff-base-minutes
+
+    Specifies the base used for calculating exponential backoff delay. Value
+    should be a positive integer, in minutes. Default value is 2.
+
 
 basemgr cannot be launched from the shell. Please use `basemgr_launcher` or `run`.
 )";
@@ -179,9 +221,39 @@ int main(int argc, const char** argv) {
   inspector->AddConfig(config_reader.GetConfig());
 
   // Child components to start.
-  auto children = command_line.GetOptionValues(kEagerChildFlag);
-  auto basemgr_impl = CreateBasemgrImpl(modular::ModularConfigAccessor(config_result.take_value()),
-                                        children, component_context.get(), inspector.get(), &loop);
+  std::vector<modular::Child> children = {};
+  auto critical_children = command_line.GetOptionValues(kCriticalChildFlag);
+  std::transform(
+      critical_children.cbegin(), critical_children.cend(), std::back_inserter(children),
+      [](const std::string_view& name) { return modular::Child{.name = name, .critical = true}; });
+
+  auto eager_children = command_line.GetOptionValues(kEagerChildFlag);
+  std::transform(eager_children.cbegin(), eager_children.cend(), std::back_inserter(children),
+                 [&critical_children](const std::string_view& name) {
+                   bool is_marked_critical =
+                       std::find_if(critical_children.begin(), critical_children.end(),
+                                    [=](std::string_view other) { return other == name; }) !=
+                       critical_children.end();
+                   if (is_marked_critical) {
+                     FX_LOGS(ERROR) << "Exiting because child name " << name.data()
+                                    << " marked as both --critical-child and --eager-child";
+                     exit(EXIT_FAILURE);
+                   }
+
+                   return modular::Child{.name = name, .critical = false};
+                 });
+
+  auto backoff_base_str = command_line.GetOptionValueWithDefault(kBackoffBaseFlag, kBackoffBase);
+  size_t backoff_base = 0;
+  if (!fxl::StringToNumberWithError(backoff_base_str, &backoff_base)) {
+    FX_LOGS(ERROR) << "Exiting because " << kBackoffBaseFlag
+                   << " was set to non-numeric value: " << kBackoffBase;
+    return EXIT_FAILURE;
+  }
+
+  auto basemgr_impl =
+      CreateBasemgrImpl(modular::ModularConfigAccessor(config_result.take_value()), children,
+                        backoff_base, component_context.get(), inspector.get(), &loop);
 
   LifecycleHandler lifecycle_handler{basemgr_impl.get(), &loop};
 

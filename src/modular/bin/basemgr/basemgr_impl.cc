@@ -12,6 +12,7 @@
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/time.h>
 
+#include "fuchsia/session/cpp/fidl.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/bin/basemgr/child_listener.h"
@@ -71,6 +72,7 @@ BasemgrImpl::BasemgrImpl(modular::ModularConfigAccessor config_accessor,
                          BasemgrInspector* inspector, fuchsia::sys::LauncherPtr launcher,
                          fuchsia::ui::policy::PresenterPtr presenter,
                          fuchsia::hardware::power::statecontrol::AdminPtr device_administrator,
+                         fuchsia::session::RestarterPtr session_restarter,
                          std::unique_ptr<ChildListener> child_listener,
                          fit::function<void()> on_shutdown)
     : config_accessor_(std::move(config_accessor)),
@@ -80,6 +82,7 @@ BasemgrImpl::BasemgrImpl(modular::ModularConfigAccessor config_accessor,
       presenter_(std::move(presenter)),
       child_listener_(std::move(child_listener)),
       device_administrator_(std::move(device_administrator)),
+      session_restarter_(std::move(session_restarter)),
       on_shutdown_(std::move(on_shutdown)),
       session_provider_("SessionProvider"),
       executor_(async_get_default_dispatcher()) {
@@ -105,7 +108,7 @@ void BasemgrImpl::Start() {
 
   // Start listening to child components if a listener is set.
   if (child_listener_) {
-    child_listener_->StartListening(device_administrator_.get());
+    child_listener_->StartListening(session_restarter_.get());
   }
 
   auto start_session_result = StartSession();

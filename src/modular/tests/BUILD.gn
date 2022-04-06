@@ -438,6 +438,7 @@ rustc_test("basemgr_v2_test_bin") {
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal-rustc",
+    "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
@@ -457,8 +458,13 @@ fuchsia_component("basemgr-v2-test") {
   deps = [ ":basemgr_v2_test_bin" ]
 }
 
-fuchsia_component("basemgr-with-children") {
-  manifest = "meta/basemgr_with_children.cml"
+fuchsia_component("basemgr-with-eager-children") {
+  manifest = "meta/basemgr_with_eager_children.cml"
+  deps = [ "//src/modular/bin/basemgr:basemgr_bin" ]
+}
+
+fuchsia_component("basemgr-with-critical-children") {
+  manifest = "meta/basemgr_with_critical_children.cml"
   deps = [ "//src/modular/bin/basemgr:basemgr_bin" ]
 }
 
@@ -472,7 +478,8 @@ fuchsia_test_package("basemgr_v2_test") {
   test_components = [ ":basemgr-v2-test" ]
 
   deps = [
-    ":basemgr-with-children",
+    ":basemgr-with-critical-children",
+    ":basemgr-with-eager-children",
     "//src/cobalt/bin/testing/mock_cobalt:component_v2",
     "//src/modular/bin/basemgr:component_v2",
   ]

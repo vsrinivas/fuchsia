@@ -5,9 +5,9 @@
 use {
     anyhow::{anyhow, Error},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_hardware_power_statecontrol as fhpower,
-    fidl_fuchsia_io as fio, fidl_fuchsia_modular_internal as fmodular, fidl_fuchsia_sys as fsys,
-    fuchsia_async as fasync,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio,
+    fidl_fuchsia_modular_internal as fmodular, fidl_fuchsia_session as fsession,
+    fidl_fuchsia_sys as fsys, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
         Capability, ChildOptions, ChildRef, LocalComponentHandles, RealmBuilder, Ref, Route,
@@ -18,7 +18,6 @@ use {
 };
 
 const BASEMGR_URL: &str = "#meta/basemgr.cm";
-const BASEMGR_WITH_CHILDREN_URL: &str = "#meta/basemgr-with-children.cm";
 const MOCK_COBALT_URL: &str = "#meta/mock_cobalt.cm";
 const SESSIONMGR_URL: &str = "fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx";
 
@@ -133,6 +132,9 @@ impl TestFixture {
                 Route::new()
                     .capability(Capability::protocol_by_name("fuchsia.tracing.provider.Registry"))
                     .capability(Capability::protocol_by_name("fuchsia.ui.policy.Presenter"))
+                    .capability(Capability::protocol_by_name(
+                        "fuchsia.hardware.power.statecontrol.Admin",
+                    ))
                     .from(&placeholder)
                     .to(&basemgr),
             )
@@ -162,16 +164,14 @@ impl TestFixture {
         Ok(self)
     }
 
-    // Vend a placeholder implementation `fuchsia.hardware.power.statecontrol.Admin`
+    // Vend a placeholder implementation `fuchsia.session.Restarter`
     // because this test doesn't expect to have this protocol exercised.
-    async fn route_placeholder_admin(self) -> Result<TestFixture, Error> {
+    async fn route_placeholder_restarter(self) -> Result<TestFixture, Error> {
         let () = self
             .builder
             .add_route(
                 Route::new()
-                    .capability(Capability::protocol_by_name(
-                        "fuchsia.hardware.power.statecontrol.Admin",
-                    ))
+                    .capability(Capability::protocol_by_name("fuchsia.session.Restarter"))
                     .from(&self.placeholder)
                     .to(&self.basemgr),
             )
@@ -185,7 +185,7 @@ impl TestFixture {
 async fn test_launch_sessionmgr() -> Result<(), Error> {
     // Add a local component that serves `fuchsia.sys.Launcher` to the realm.
     let (launch_info_sender, launch_info_receiver) = mpsc::channel(1);
-    let fixture = TestFixture::new(BASEMGR_URL).await?.route_placeholder_admin().await?;
+    let fixture = TestFixture::new(BASEMGR_URL).await?.route_placeholder_restarter().await?;
 
     let sys_launcher = fixture
         .builder
@@ -261,18 +261,20 @@ async fn sys_launcher_local_child(
 // This allows us to use a local component implementation to assert that basemgr
 // does in fact connect to expected Binder path.
 #[fuchsia::test]
-async fn test_launch_v2_children() -> Result<(), Error> {
+async fn test_launch_v2_eager_children() -> Result<(), Error> {
     const NUM_TRIES: usize = 2;
-    const CHILDREN: [&str; 2] = ["foo", "bar"];
-    let fixture = TestFixture::new(BASEMGR_WITH_CHILDREN_URL)
+    const BASEMGR_WITH_EAGER_CHILDREN_URL: &str = "#meta/basemgr-with-eager-children.cm";
+    const EAGER_CHILDREN: [&str; 2] = ["foo", "bar"];
+
+    let fixture = TestFixture::new(BASEMGR_WITH_EAGER_CHILDREN_URL)
         .await?
-        .route_placeholder_admin()
+        .route_placeholder_restarter()
         .await?
         .route_noop_sys_launcher()
         .await?;
 
     let mut child_restart_futs = vec![];
-    for child_name in CHILDREN.iter() {
+    for child_name in EAGER_CHILDREN.iter() {
         let binder_path = format!("fuchsia.component.Binder.{}", child_name);
 
         // The function |basemgr_child_impl| is structured such that when it
@@ -328,22 +330,25 @@ async fn test_launch_v2_children() -> Result<(), Error> {
     Ok(())
 }
 
-// Tests that failure to connect to children will yield a system reboot.
+// Tests that failure to connect to critical children will yield a session restart.
 // This is accomplished by *not* routing `fuchsia.component.Binder` to the
-// basemgr component. basemgr will encounter PEER_CLOSED and after exhausting
-// all of its retry attempts, trigger a reboot by calling
-// |fuchsia.hardware.power.statecontrol/Admin.Reboot|.
+// basemgr component. basemgr will encounter PEER_CLOSED and trigger a session
+// restart by calling |fuchsia.session/Restarter.Restart|.
 #[fuchsia::test]
-async fn test_reboots_system_after_max_attempts() -> Result<(), Error> {
-    let fixture =
-        TestFixture::new(BASEMGR_WITH_CHILDREN_URL).await?.route_noop_sys_launcher().await?;
+async fn test_restart_session_after_critical_child_crashes() -> Result<(), Error> {
+    const BASEMGR_WITH_CRITICAL_CHILDREN_URL: &str = "#meta/basemgr-with-critical-children.cm";
 
-    let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
-    let local_admin = fixture
+    let fixture = TestFixture::new(BASEMGR_WITH_CRITICAL_CHILDREN_URL)
+        .await?
+        .route_noop_sys_launcher()
+        .await?;
+
+    let (restart_sender, restart_receiver) = mpsc::channel(1);
+    let local_restarter = fixture
         .builder
         .add_local_child(
-            "local_admin",
-            move |handles| Box::pin(local_admin_impl(shutdown_sender.clone(), handles)),
+            "local_restarter",
+            move |handles| Box::pin(local_restarter_impl(restart_sender.clone(), handles)),
             ChildOptions::new(),
         )
         .await?;
@@ -351,18 +356,16 @@ async fn test_reboots_system_after_max_attempts() -> Result<(), Error> {
         .builder
         .add_route(
             Route::new()
-                .capability(Capability::protocol_by_name(
-                    "fuchsia.hardware.power.statecontrol.Admin",
-                ))
-                .from(&local_admin)
+                .capability(Capability::protocol_by_name("fuchsia.session.Restarter"))
+                .from(&local_restarter)
                 .to(&fixture.basemgr),
         )
         .await?;
 
     let instance = fixture.builder.build().await?;
 
-    let shutdown_requested = shutdown_receiver.take(1).next().await.unwrap();
-    assert!(shutdown_requested);
+    let restart_requested = restart_receiver.take(1).next().await.unwrap();
+    assert!(restart_requested);
 
     // We have to destroy the instance after the test assertion because
     // basemgr teardown will be spammy with error logs due to closing sessionmgr's
@@ -417,21 +420,18 @@ async fn basemgr_child_impl(
     Ok(())
 }
 
-async fn local_admin_impl(
-    reboot_sender: mpsc::Sender<bool>,
+async fn local_restarter_impl(
+    restart_sender: mpsc::Sender<bool>,
     handles: LocalComponentHandles,
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
-    fs.dir("svc").add_fidl_service(move |mut stream: fhpower::AdminRequestStream| {
-        let mut reboot_sender = reboot_sender.clone();
+    fs.dir("svc").add_fidl_service(move |mut stream: fsession::RestarterRequestStream| {
+        let mut restart_sender = restart_sender.clone();
         fasync::Task::local(async move {
             while let Some(request) = stream.try_next().await.unwrap() {
                 match request {
-                    fhpower::AdminRequest::Reboot { .. } => {
-                        reboot_sender.try_send(true).expect("failed to send message");
-                    }
-                    _ => {
-                        panic!("Unexpected request: {:?}", request);
+                    fsession::RestarterRequest::Restart { .. } => {
+                        restart_sender.try_send(true).expect("failed to send message");
                     }
                 }
             }

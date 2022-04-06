@@ -22,6 +22,7 @@
 #include <memory>
 #include <optional>
 
+#include "fuchsia/session/cpp/fidl.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/basemgr/child_listener.h"
 #include "src/modular/bin/basemgr/inspector.h"
@@ -73,6 +74,7 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
                        BasemgrInspector* inspector, fuchsia::sys::LauncherPtr launcher,
                        fuchsia::ui::policy::PresenterPtr presenter,
                        fuchsia::hardware::power::statecontrol::AdminPtr device_administrator,
+                       fuchsia::session::RestarterPtr session_restarter_,
                        std::unique_ptr<ChildListener> child_listener,
                        fit::function<void()> on_shutdown);
 
@@ -149,6 +151,10 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   // Used to trigger device reboot.
   fuchsia::hardware::power::statecontrol::AdminPtr device_administrator_;
+
+  // Used to trigger session restart.
+  fuchsia::session::RestarterPtr session_restarter_;
+
   fit::function<void()> on_shutdown_;
 
   // Holds the presentation service.

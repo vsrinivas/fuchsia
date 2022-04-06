@@ -14,7 +14,7 @@
 #include <memory>
 #include <string>
 
-#include "fuchsia/hardware/power/statecontrol/cpp/fidl.h"
+#include "fuchsia/session/cpp/fidl.h"
 #include "lib/async/cpp/task.h"
 #include "lib/async/dispatcher.h"
 #include "lib/fit/function.h"
@@ -24,9 +24,19 @@
 
 namespace modular {
 
-// Max number of times to try to start a child component before rebooting the
-// system.
+// Max number of times to try to start an eager child component before giving
+// up.
 constexpr size_t kMaxCrashRecoveryLimit = 3;
+
+// A child component in which basemgr should attempt to start.
+struct Child {
+  // The child name as written in this component's manifest.
+  cpp17::string_view name;
+
+  // Flag used to determine if this child is critical. If it is, then
+  // basemgr will restart the session if the child fails to start 3 times.
+  bool critical = false;
+};
 
 // |ChildListener| starts and monitor child components.
 //
@@ -40,14 +50,14 @@ constexpr size_t kMaxCrashRecoveryLimit = 3;
 class ChildListener final {
  public:
   ChildListener(sys::ServiceDirectory* svc, async_dispatcher_t* dispatcher,
-                const std::vector<cpp17::string_view>& child_names);
+                const std::vector<Child>& children, size_t backoff_base);
 
   // Start all child components as passed in the constructor. This method
   // will try to establish a connection with each child up to
-  // |kMaxCrashRecoveryLimit| times. If this limit is reached then the system
-  // will reboot using the connection to `fuchsia.hardware.power.statecontrol.Admin`
-  // passed with |administrator|.
-  void StartListening(fuchsia::hardware::power::statecontrol::Admin* administrator);
+  // |kMaxCrashRecoveryLimit| times. For children marked as critical, then the
+  // session will restart using the connection to `fuchsia.session.Restarter`
+  // passed with |session_restarter|.
+  void StartListening(fuchsia::session::Restarter* session_restarter);
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(ChildListener);
 
@@ -61,27 +71,33 @@ class ChildListener final {
     // in the ServiceDirectory associated with the enclosing |ChildListener|
     // object.
     // An empty |path| value will yield undefined behavior.
-    ChildListenerImpl(std::string name, std::string path);
+    ChildListenerImpl(Child child, std::string path);
 
     fit::closure Connect(sys::ServiceDirectory* svc, async_dispatcher_t* dispatcher,
                          fit::function<void(zx_status_t)> on_error);
 
     const std::string& GetPath() const;
 
-    const std::string& GetName() const;
+    cpp17::string_view GetName() const;
+
+    bool IsCritical() const;
 
    private:
-    std::string name_;
+    Child child_;
     std::string path_;
+
     fuchsia::component::BinderPtr binder_;
     fxl::WeakPtrFactory<ChildListenerImpl> weak_factory_;
   };
 
-  void ConnectToChild(size_t attempt, ChildListenerImpl* impl,
-                      fuchsia::hardware::power::statecontrol::Admin* administrator);
+  void ConnectToCriticalChild(ChildListenerImpl* impl,
+                              fuchsia::session::Restarter* session_restarter);
+
+  void ConnectToEagerChild(ChildListenerImpl* impl, size_t attempt);
 
   sys::ServiceDirectory* const svc_ = nullptr;      // Not owned.
   async_dispatcher_t* const dispatcher_ = nullptr;  // Not owned.
+  size_t backoff_base_;
   // |ChildListenerImpl needs to be wrapped in a std::unique_ptr because
   // the type is neither moveable nor copyable.
   std::vector<std::unique_ptr<ChildListenerImpl>> impls_ = {};

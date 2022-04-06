@@ -25,6 +25,7 @@
             protocol: [
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.session.Restarter",
                 "fuchsia.sys.Launcher",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.policy.Presenter",

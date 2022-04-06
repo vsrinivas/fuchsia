@@ -13,6 +13,7 @@ executable("basemgr_bin") {
     ":lib",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
     "//sdk/fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.session",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
@@ -39,6 +40,7 @@ source_set("basemgr_impl") {
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/fidl/fuchsia.process.lifecycle",
+    "//sdk/fidl/fuchsia.session",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/lib/fit",
@@ -109,6 +111,7 @@ source_set("lib") {
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+    "//sdk/fidl/fuchsia.session",
     "//src/lib/files",
     "//src/lib/fsl",
     "//src/modular/bin/basemgr/cobalt",
