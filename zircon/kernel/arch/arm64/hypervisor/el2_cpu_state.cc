@@ -122,7 +122,9 @@ zx::status<> El2CpuState::OnTask(void* context, cpu_num_t cpu_num) {
   auto cpu_state = static_cast<El2CpuState*>(context);
   El2TranslationTable& table = cpu_state->table_;
   El2Stack& stack = cpu_state->stacks_[cpu_num];
-  zx_status_t status = arm64_el2_on(table.Base(), stack.Top());
+  auto tcr = cpu_state->tcr_.reg_value();
+  auto vtcr = cpu_state->vtcr_.reg_value();
+  zx_status_t status = arm64_el2_on(table.Base(), stack.Top(), tcr, vtcr);
   if (status != ZX_OK) {
     dprintf(CRITICAL, "Failed to turn EL2 on for CPU %u\n", cpu_num);
     return zx::error(status);
@@ -169,6 +171,13 @@ zx_status_t El2CpuState::Create(ktl::unique_ptr<El2CpuState>* out) {
     }
   }
   cpu_state->stacks_ = ktl::move(el2_stacks);
+
+  // Setup TCR_EL2 and VTCR_EL2.
+  auto address_size = arch::ArmIdAa64Mmfr0El1::Read().pa_range();
+  cpu_state->tcr_.set_reg_value(MMU_TCR_EL2_FLAGS);
+  cpu_state->tcr_.set_ps(address_size);
+  cpu_state->vtcr_.set_reg_value(MMU_VTCR_EL2_FLAGS);
+  cpu_state->vtcr_.set_ps(address_size);
 
   // Setup EL2 for all online CPUs.
   cpu_state->cpu_mask_ = hypervisor::percpu_exec(OnTask, cpu_state.get());

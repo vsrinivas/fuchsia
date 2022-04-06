@@ -7,6 +7,8 @@
 #ifndef ZIRCON_KERNEL_ARCH_ARM64_HYPERVISOR_EL2_CPU_STATE_PRIV_H_
 #define ZIRCON_KERNEL_ARCH_ARM64_HYPERVISOR_EL2_CPU_STATE_PRIV_H_
 
+#include <lib/arch/arm64/system.h>
+
 #include <arch/aspace.h>
 #include <fbl/array.h>
 #include <hypervisor/id_allocator.h>
@@ -55,6 +57,9 @@ class El2CpuState {
   cpu_mask_t cpu_mask_ = 0;
   El2TranslationTable table_;
   fbl::Array<El2Stack> stacks_;
+
+  arch::ArmTcrEl2 tcr_;
+  arch::ArmVtcrEl2 vtcr_;
 
   El2CpuState() = default;
 

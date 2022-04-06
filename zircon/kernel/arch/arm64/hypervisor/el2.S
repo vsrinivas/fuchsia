@@ -22,12 +22,7 @@
 #define ESR_EL2_EC_SHIFT                26
 #define ESR_EL2_ISS_MASK                0x01ffffff
 
-#define XTCR_EL2_PS_SHIFT               16
-
 #define MDCR_EL2_TDOSA                  BIT_32(10)
-
-// NOTE(abdulla): This excludes the top bit, as it is too large for VTCR_EL2.PS.
-#define ID_AA64MMFR0_EL1_PARANGE_MASK   0x07
 
 .section .text.el2,"ax",@progbits
 .align 12
@@ -334,7 +329,7 @@ FUNCTION_LABEL(arm64_el2_exec_table)
     entry_invalid_exception
     entry_invalid_exception
 
-// zx_status_t arm64_el2_on(zx_paddr_t ttbr0, zx_paddr_t stack_top);
+// zx_status_t arm64_el2_on(zx_paddr_t ttbr0, zx_paddr_t stack_top, uint64_t tcr, uint64_t vtcr);
 //
 // |stack_top| must point to the physical address of a contiguous stack.
 FUNCTION(arm64_el2_on)
@@ -348,22 +343,11 @@ FUNCTION_LABEL(el2_hvc_on)
     // Setup the EL2 stack pointer.
     mov sp, x1
 
-    // Load PARange from ID_AA64MMFR0_EL1.
-    mrs reg_xt, id_aa64mmfr0_el1
-    and reg_xt, reg_xt, ID_AA64MMFR0_EL1_PARANGE_MASK
-    lsl reg_xt, reg_xt, XTCR_EL2_PS_SHIFT
+    // Setup the EL2 translation control.
+    msr tcr_el2, x2
 
     // Setup the virtualisation translation control.
-    movlit reg_xs, MMU_VTCR_EL2_FLAGS
-    // Combine MMU_VTCR_EL2_FLAGS with xTCR_EL2.PS.
-    orr reg_xs, reg_xs, reg_xt
-    msr vtcr_el2, reg_xs
-
-    // Setup the EL2 translation control.
-    movlit reg_xs, MMU_TCR_EL2_FLAGS
-    // Combine MMU_TCR_EL2_FLAGS with xTCR_EL2.PS.
-    orr reg_xs, reg_xs, reg_xt
-    msr tcr_el2, reg_xs
+    msr vtcr_el2, x3
 
     // Setup the EL2 memory attributes.
     movlit reg_xs, MMU_MAIR_VAL
