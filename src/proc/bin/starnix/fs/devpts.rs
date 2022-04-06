@@ -441,163 +441,146 @@ mod tests {
     }
 
     #[::fuchsia::test]
-    fn opening_ptmx_creates_pts() -> Result<(), anyhow::Error> {
+    fn opening_ptmx_creates_pts() {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
         let root = fs.root();
         root.component_lookup(b"0").unwrap_err();
-        let _ptmx = open_ptmx_and_unlock(&task, &fs)?;
-        root.component_lookup(b"0")?;
-
-        Ok(())
+        let _ptmx = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
+        root.component_lookup(b"0").expect("pty");
     }
 
     #[::fuchsia::test]
-    fn closing_ptmx_closes_pts() -> Result<(), anyhow::Error> {
+    fn closing_ptmx_closes_pts() {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
         let root = fs.root();
         root.component_lookup(b"0").unwrap_err();
-        let ptmx = open_ptmx_and_unlock(&task, &fs)?;
-        let _pts = open_file(&task, &fs, b"0")?;
+        let ptmx = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
+        let _pts = open_file(&task, &fs, b"0").expect("open file");
         std::mem::drop(ptmx);
         root.component_lookup(b"0").unwrap_err();
-
-        Ok(())
     }
 
     #[::fuchsia::test]
-    fn pts_are_reused() -> Result<(), anyhow::Error> {
+    fn pts_are_reused() {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
         let root = fs.root();
 
-        let _ptmx0 = open_ptmx_and_unlock(&task, &fs)?;
-        let mut _ptmx1 = open_ptmx_and_unlock(&task, &fs)?;
-        let _ptmx2 = open_ptmx_and_unlock(&task, &fs)?;
+        let _ptmx0 = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
+        let mut _ptmx1 = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
+        let _ptmx2 = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
 
-        root.component_lookup(b"0")?;
-        root.component_lookup(b"1")?;
-        root.component_lookup(b"2")?;
+        root.component_lookup(b"0").expect("component_lookup");
+        root.component_lookup(b"1").expect("component_lookup");
+        root.component_lookup(b"2").expect("component_lookup");
 
         std::mem::drop(_ptmx1);
         root.component_lookup(b"1").unwrap_err();
 
-        _ptmx1 = open_ptmx_and_unlock(&task, &fs)?;
-        root.component_lookup(b"1")?;
-
-        Ok(())
+        _ptmx1 = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
+        root.component_lookup(b"1").expect("component_lookup");
     }
 
     #[::fuchsia::test]
-    fn opening_inexistant_replica_fails() -> Result<(), anyhow::Error> {
+    fn opening_inexistant_replica_fails() {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
-        let pts = fs.root().create_node(
-            b"custom_pts",
-            FileMode::IFCHR | FileMode::from_bits(0o666),
-            DeviceType::new(DEVPTS_FIRST_MAJOR, 0),
-        )?;
+        let pts = fs
+            .root()
+            .create_node(
+                b"custom_pts",
+                FileMode::IFCHR | FileMode::from_bits(0o666),
+                DeviceType::new(DEVPTS_FIRST_MAJOR, 0),
+            )
+            .expect("custom_pts");
         assert!(pts.node.open(&task, OpenFlags::RDONLY).is_err());
-
-        Ok(())
     }
 
     #[::fuchsia::test]
-    fn deleting_pts_nodes_do_not_crash() -> Result<(), anyhow::Error> {
+    fn deleting_pts_nodes_do_not_crash() {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
         let root = fs.root();
-        let ptmx = open_ptmx_and_unlock(&task, &fs)?;
-        root.component_lookup(b"0")?;
-        root.unlink(b"0", UnlinkKind::NonDirectory)?;
+        let ptmx = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
+        root.component_lookup(b"0").expect("component_lookup");
+        root.unlink(b"0", UnlinkKind::NonDirectory).expect("unlink");
         root.component_lookup(b"0").unwrap_err();
 
         std::mem::drop(ptmx);
-
-        Ok(())
     }
 
     #[::fuchsia::test]
-    fn test_unknown_ioctl() -> Result<(), anyhow::Error> {
+    fn test_unknown_ioctl() {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
 
-        let ptmx = open_ptmx_and_unlock(&task, &fs)?;
-        ptmx.ioctl(&task, 42, UserAddress::default()).unwrap_err();
+        let ptmx = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
+        assert_eq!(ptmx.ioctl(&task, 42, UserAddress::default()), Err(EINVAL));
 
-        let pts_file = open_file(&task, &fs, b"0")?;
-        pts_file.ioctl(&task, 42, UserAddress::default()).unwrap_err();
-
-        Ok(())
+        let pts_file = open_file(&task, &fs, b"0").expect("open file");
+        assert_eq!(pts_file.ioctl(&task, 42, UserAddress::default()), Err(EINVAL));
     }
 
     #[::fuchsia::test]
-    fn test_tiocgptn_ioctl() -> Result<(), anyhow::Error> {
+    fn test_tiocgptn_ioctl() {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
-        let ptmx0 = open_ptmx_and_unlock(&task, &fs)?;
-        let ptmx1 = open_ptmx_and_unlock(&task, &fs)?;
+        let ptmx0 = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
+        let ptmx1 = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
 
-        let pts0 = ioctl::<u32>(&task, &ptmx0, TIOCGPTN, &0)?;
+        let pts0 = ioctl::<u32>(&task, &ptmx0, TIOCGPTN, &0).expect("ioctl");
         assert_eq!(pts0, 0);
 
-        let pts1 = ioctl::<u32>(&task, &ptmx1, TIOCGPTN, &0)?;
+        let pts1 = ioctl::<u32>(&task, &ptmx1, TIOCGPTN, &0).expect("ioctl");
         assert_eq!(pts1, 1);
-
-        Ok(())
     }
 
     #[::fuchsia::test]
-    fn test_new_terminal_is_locked() -> Result<(), anyhow::Error> {
+    fn test_new_terminal_is_locked() {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
-        let _ptmx_file = open_file(&task, &fs, b"ptmx")?;
+        let _ptmx_file = open_file(&task, &fs, b"ptmx").expect("open file");
 
-        let pts = fs.root().component_lookup(b"0")?;
+        let pts = fs.root().component_lookup(b"0").expect("component_lookup");
         assert_eq!(pts.node.open(&task, OpenFlags::RDONLY).map(|_| ()), Err(EIO));
-
-        Ok(())
     }
 
     #[::fuchsia::test]
-    fn test_lock_ioctls() -> Result<(), anyhow::Error> {
+    fn test_lock_ioctls() {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
-        let ptmx = open_ptmx_and_unlock(&task, &fs)?;
-        let pts = fs.root().component_lookup(b"0")?;
+        let ptmx = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
+        let pts = fs.root().component_lookup(b"0").expect("component_lookup");
 
         // Check that the lock is not set.
-        assert_eq!(ioctl::<i32>(&task, &ptmx, TIOCGPTLCK, &0)?, 0);
+        assert_eq!(ioctl::<i32>(&task, &ptmx, TIOCGPTLCK, &0), Ok(0));
         // /dev/pts/0 can be opened
-        pts.node.open(&task, OpenFlags::RDONLY)?;
+        pts.node.open(&task, OpenFlags::RDONLY).expect("open");
 
         // Lock the terminal
-        ioctl::<i32>(&task, &ptmx, TIOCSPTLCK, &42)?;
+        ioctl::<i32>(&task, &ptmx, TIOCSPTLCK, &42).expect("ioctl");
         // Check that the lock is set.
-        assert_eq!(ioctl::<i32>(&task, &ptmx, TIOCGPTLCK, &0)?, 1);
+        assert_eq!(ioctl::<i32>(&task, &ptmx, TIOCGPTLCK, &0), Ok(1));
         // /dev/pts/0 cannot be opened
-        pts.node.open(&task, OpenFlags::RDONLY).map(|_| ()).unwrap_err();
-
-        Ok(())
+        assert_eq!(pts.node.open(&task, OpenFlags::RDONLY).map(|_| ()), Err(EIO));
     }
 
     #[::fuchsia::test]
-    fn test_ptmx_blksize() -> Result<(), anyhow::Error> {
+    fn test_ptmx_blksize() {
         let (kernel, _task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
-        let ptmx = fs.root().component_lookup(b"ptmx")?;
-        let stat = ptmx.node.stat()?;
+        let ptmx = fs.root().component_lookup(b"ptmx").expect("component_lookup");
+        let stat = ptmx.node.stat().expect("stat");
         assert_eq!(stat.st_blksize, BLOCK_SIZE);
-
-        Ok(())
     }
 
     #[::fuchsia::test]
-    fn test_attach_terminal_when_open() -> Result<(), anyhow::Error> {
+    fn test_attach_terminal_when_open() {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
-        let _opened_main = open_ptmx_and_unlock(&task, &fs)?;
+        let _opened_main = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
         // Opening the main terminal should not set the terminal of the session.
         assert!(task
             .thread_group
@@ -609,7 +592,8 @@ mod tests {
             .is_none());
         // Opening the terminal should not set the terminal of the session with the NOCTTY flag.
         let _opened_replica2 =
-            open_file_with_flags(&task, &fs, b"0", OpenFlags::RDWR | OpenFlags::NOCTTY)?;
+            open_file_with_flags(&task, &fs, b"0", OpenFlags::RDWR | OpenFlags::NOCTTY)
+                .expect("open file");
         assert!(task
             .thread_group
             .process_group
@@ -620,7 +604,8 @@ mod tests {
             .is_none());
 
         // Opening the replica terminal should set the terminal of the session.
-        let _opened_replica2 = open_file_with_flags(&task, &fs, b"0", OpenFlags::RDWR)?;
+        let _opened_replica2 =
+            open_file_with_flags(&task, &fs, b"0", OpenFlags::RDWR).expect("open file");
         assert!(task
             .thread_group
             .process_group
@@ -629,12 +614,10 @@ mod tests {
             .controlling_terminal
             .read()
             .is_some());
-
-        Ok(())
     }
 
     #[::fuchsia::test]
-    fn test_attach_terminal() -> Result<(), anyhow::Error> {
+    fn test_attach_terminal() {
         let (kernel, task1) = create_kernel_and_task();
         let task2 = task1
             .clone_task(
@@ -646,32 +629,30 @@ mod tests {
         task2.thread_group.setsid().expect("setsid");
 
         let fs = dev_pts_fs(&kernel);
-        let opened_main = open_ptmx_and_unlock(&task1, &fs)?;
-        let opened_replica = open_file(&task2, &fs, b"0")?;
+        let opened_main = open_ptmx_and_unlock(&task1, &fs).expect("ptmx");
+        let opened_replica = open_file(&task2, &fs, b"0").expect("open file");
 
         assert_eq!(ioctl::<i32>(&task1, &opened_main, TIOCGPGRP, &0), Err(ENOTTY));
         assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCGPGRP, &0), Err(ENOTTY));
 
         ioctl::<u32>(&task1, &opened_main, TIOCSCTTY, &0).unwrap();
         assert_eq!(
-            ioctl::<i32>(&task1, &opened_main, TIOCGPGRP, &0)?,
-            task1.thread_group.process_group.read().leader
+            ioctl::<i32>(&task1, &opened_main, TIOCGPGRP, &0),
+            Ok(task1.thread_group.process_group.read().leader)
         );
         assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCGPGRP, &0), Err(ENOTTY));
 
         ioctl::<u32>(&task2, &opened_replica, TIOCSCTTY, &0).unwrap();
         assert_eq!(
-            ioctl::<i32>(&task2, &opened_replica, TIOCGPGRP, &0)?,
-            task2.thread_group.process_group.read().leader
+            ioctl::<i32>(&task2, &opened_replica, TIOCGPGRP, &0),
+            Ok(task2.thread_group.process_group.read().leader)
         );
-
-        Ok(())
     }
 
     #[::fuchsia::test]
-    fn test_steal_terminal() -> Result<(), anyhow::Error> {
+    fn test_steal_terminal() {
         let (kernel, task1) = create_kernel_and_task();
-        *task1.creds.write() = Credentials::from_passwd("nobody:x:1:1")?;
+        *task1.creds.write() = Credentials::from_passwd("nobody:x:1:1").expect("credentials");
 
         let task2 = task1
             .clone_task(
@@ -682,15 +663,16 @@ mod tests {
             .expect("clone process");
 
         let fs = dev_pts_fs(&kernel);
-        let _opened_main = open_ptmx_and_unlock(&task1, &fs)?;
+        let _opened_main = open_ptmx_and_unlock(&task1, &fs).expect("ptmx");
         let wo_opened_replica =
-            open_file_with_flags(&task1, &fs, b"0", OpenFlags::WRONLY | OpenFlags::NOCTTY)?;
+            open_file_with_flags(&task1, &fs, b"0", OpenFlags::WRONLY | OpenFlags::NOCTTY)
+                .expect("open file");
         assert!(!wo_opened_replica.can_read());
 
         // FD must be readable for setting the terminal.
         assert_eq!(ioctl::<u32>(&task1, &wo_opened_replica, TIOCSCTTY, &0), Err(EPERM));
 
-        let opened_replica = open_file(&task2, &fs, b"0")?;
+        let opened_replica = open_file(&task2, &fs, b"0").expect("open file");
         // Task must be session leader for setting the terminal.
         assert_eq!(ioctl::<u32>(&task2, &opened_replica, TIOCSCTTY, &0), Err(EINVAL));
 
@@ -709,7 +691,7 @@ mod tests {
         assert_eq!(ioctl::<u32>(&task2, &opened_replica, TIOCSCTTY, &1), Err(EPERM));
 
         // One can steal a terminal with the CAP_SYS_ADMIN capacility
-        *task2.creds.write() = Credentials::from_passwd("root:x:0:0")?;
+        *task2.creds.write() = Credentials::from_passwd("root:x:0:0").expect("credentials");
         // But not without specifying that one wants to steal it.
         assert_eq!(ioctl::<u32>(&task2, &opened_replica, TIOCSCTTY, &0), Err(EPERM));
         ioctl::<u32>(&task2, &opened_replica, TIOCSCTTY, &1).expect("Associate terminal to task2");
@@ -722,11 +704,10 @@ mod tests {
             .controlling_terminal
             .read()
             .is_none());
-        Ok(())
     }
 
     #[::fuchsia::test]
-    fn test_set_foreground_process() -> Result<(), anyhow::Error> {
+    fn test_set_foreground_process() {
         let (kernel, init) = create_kernel_and_task();
         let task1 = init
             .clone_task(
@@ -749,8 +730,8 @@ mod tests {
         assert_ne!(task2_pgid, task1.thread_group.process_group.read().leader);
 
         let fs = dev_pts_fs(&kernel);
-        let _opened_main = open_ptmx_and_unlock(&init, &fs)?;
-        let opened_replica = open_file(&task2, &fs, b"0")?;
+        let _opened_main = open_ptmx_and_unlock(&init, &fs).expect("ptmx");
+        let opened_replica = open_file(&task2, &fs, b"0").expect("open file");
 
         // Cannot change the foreground process group if the terminal is not the controlling
         // terminal
@@ -760,8 +741,8 @@ mod tests {
         ioctl::<u32>(&task1, &opened_replica, TIOCSCTTY, &0).unwrap();
         // The foreground process group should be the one of task1
         assert_eq!(
-            ioctl::<i32>(&task1, &opened_replica, TIOCGPGRP, &0)?,
-            task1.thread_group.process_group.read().leader
+            ioctl::<i32>(&task1, &opened_replica, TIOCGPGRP, &0),
+            Ok(task1.thread_group.process_group.read().leader)
         );
 
         // Cannot change the foreground process group to a negative pid.
@@ -802,12 +783,10 @@ mod tests {
                 .foregound_process_group,
             task2_pgid
         );
-
-        Ok(())
     }
 
     #[::fuchsia::test]
-    fn test_detach_session() -> Result<(), anyhow::Error> {
+    fn test_detach_session() {
         let (kernel, task1) = create_kernel_and_task();
         let task2 = task1
             .clone_task(
@@ -819,8 +798,8 @@ mod tests {
         task2.thread_group.setsid().expect("setsid");
 
         let fs = dev_pts_fs(&kernel);
-        let _opened_main = open_ptmx_and_unlock(&task1, &fs)?;
-        let opened_replica = open_file(&task1, &fs, b"0")?;
+        let _opened_main = open_ptmx_and_unlock(&task1, &fs).expect("ptmx");
+        let opened_replica = open_file(&task1, &fs, b"0").expect("open file");
 
         // Cannot detach the controlling terminal when none is attached terminal
         assert_eq!(ioctl::<i32>(&task1, &opened_replica, TIOCNOTTY, &0), Err(ENOTTY));
@@ -840,7 +819,5 @@ mod tests {
             .controlling_terminal
             .read()
             .is_none());
-
-        Ok(())
     }
 }
