@@ -140,17 +140,6 @@ pub trait SceneManager: Send {
     async fn add_touch_handler(&self, mut assembly: InputPipelineAssembly)
         -> InputPipelineAssembly;
 
-    /// Annotates `assembly` with an additional pipeline stage.
-    ///
-    /// # Parameters
-    /// - `assembly`: An [`InputPipelineAssembly`] which represents a partially-constructed input pipeline.
-    // TODO(fxbug.dev/87519): delete when Gfx version is deleted.
-    async fn add_mouse_handler(
-        &self,
-        position_sender: futures::channel::mpsc::Sender<input_pipeline::CursorMessage>,
-        mut assembly: InputPipelineAssembly,
-    ) -> InputPipelineAssembly;
-
     // Supports the implementation of fuchsia.ui.pointerinjector.configurator.Setup.GetViewRefs()
     fn get_pointerinjection_view_refs(&self) -> (ui_views::ViewRef, ui_views::ViewRef);
 

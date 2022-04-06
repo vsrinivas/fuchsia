@@ -19,7 +19,6 @@ pub mod click_drag_handler;
 pub mod dead_keys_handler;
 pub mod display_ownership;
 pub mod factory_reset_handler;
-pub mod gfx_mouse_handler;
 pub mod gfx_touch_handler;
 pub mod ime_handler;
 pub mod input_handler;

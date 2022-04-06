@@ -191,7 +191,6 @@ async fn build_input_pipeline_assembly(
         } else {
             let locked_scene_manager = scene_manager.lock().await;
             assembly = locked_scene_manager.add_touch_handler(assembly).await;
-            assembly = locked_scene_manager.add_mouse_handler(sender, assembly).await;
         }
 
         // Keep this handler last because it keeps performance measurement counters

@@ -376,25 +376,6 @@ impl SceneManager for FlatlandSceneManager {
         panic!("add_touch_handler() not implemented for Flatland.  See build_input_pipeline() in input_pipeline.rs");
     }
 
-    async fn add_mouse_handler(
-        &self,
-        _cursor_sender: futures::channel::mpsc::Sender<input_pipeline::CursorMessage>,
-        assembly: InputPipelineAssembly,
-    ) -> InputPipelineAssembly {
-        fx_log_warn!("fxbug.dev/86554: add_mouse_handler() not implemented");
-
-        // TODO(fxbug.dev/86554): need to implement a "FlatlandMouseHandler" type that uses the
-        // injector APIs.
-        /*
-        let logical_size = self.layout_info.logical_size.unwrap();
-        let pixel_scale = self.layout_info.pixel_scale.unwrap();
-
-        let width_pixels : f32 = (logical_size.width * pixel_scale.width) as f32;
-        let height_pixels : f32 = (logical_size.height * pixel_scale.height) as f32;
-        */
-        assembly
-    }
-
     fn get_pointerinjector_viewport_watcher_subscription(&self) -> InjectorViewportSubscriber {
         self.viewport_hanging_get.lock().new_subscriber()
     }
