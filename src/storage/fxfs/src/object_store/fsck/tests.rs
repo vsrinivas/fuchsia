@@ -518,7 +518,6 @@ async fn test_missing_allocation() {
         test.errors()[..],
         [
             FsckIssue::Error(FsckError::MissingAllocation(..)),
-            FsckIssue::Error(FsckError::AllocatedBytesMismatch(..))
         ]
     );
 }

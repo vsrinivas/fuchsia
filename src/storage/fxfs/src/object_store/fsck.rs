@@ -175,7 +175,7 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     let mut actual = CoalescingIterator::new(Box::new(iter)).await?;
     let mut expected =
         CoalescingIterator::new(fsck.allocations.seek(Bound::Unbounded).await?).await?;
-    let mut allocated_bytes = 0;
+    let mut expected_allocated_bytes = 0;
     let mut extra_allocations: Vec<errors::Allocation> = vec![];
     let bs = filesystem.block_size();
     while let Some(actual_item) = actual.get() {
@@ -188,13 +188,18 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
         match expected.get() {
             None => extra_allocations.push(actual_item.into()),
             Some(expected_item) => {
-                if actual_item.key.device_range.start > expected_item.key.device_range.start {
+                if actual_item.key.device_range.end <= expected_item.key.device_range.start {
+                    extra_allocations.push(actual_item.into());
+                    actual.advance().await?;
+                    continue;
+                }
+                let r = &expected_item.key.device_range;
+                expected_allocated_bytes += (r.end - r.start) as i64;
+                if expected_item.key.device_range.end <= actual_item.key.device_range.start {
                     fsck.error(FsckError::MissingAllocation(expected_item.into()))?;
                     expected.advance().await?;
                     continue;
                 }
-                let r = &expected_item.key.device_range;
-                allocated_bytes += (r.end - r.start) as i64;
                 if actual_item != expected_item {
                     fsck.error(FsckError::AllocationMismatch(
                         expected_item.into(),
@@ -206,8 +211,9 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
         try_join!(actual.advance(), expected.advance())?;
     }
     fsck.verbose(format!(
-        "{}/{} bytes allocated",
-        allocated_bytes,
+        "Found {} bytes allocated (expected {} bytes). Total device size is {} bytes.",
+        allocator.get_allocated_bytes(),
+        expected_allocated_bytes,
         filesystem.device().block_count() * filesystem.device().block_size() as u64
     ));
     if !extra_allocations.is_empty() {
@@ -216,9 +222,9 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     if let Some(item) = expected.get() {
         fsck.error(FsckError::MissingAllocation(item.into()))?;
     }
-    if allocated_bytes as u64 != allocator.get_allocated_bytes() {
+    if expected_allocated_bytes as u64 != allocator.get_allocated_bytes() {
         fsck.error(FsckError::AllocatedBytesMismatch(
-            allocated_bytes as u64,
+            expected_allocated_bytes as u64,
             allocator.get_allocated_bytes(),
         ))?;
     }
