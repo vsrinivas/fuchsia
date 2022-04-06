@@ -84,7 +84,7 @@ class ScopedChild final {
   fidl::InterfacePtr<Interface> Connect(
       const std::string& interface_name = Interface::Name_) const {
     fidl::InterfacePtr<Interface> result;
-    zx_status_t status = Connect<Interface>(result.NewRequest());
+    zx_status_t status = Connect(interface_name, result.NewRequest().TakeChannel());
     ZX_ASSERT_MSG(status == ZX_OK, "Connect to protocol %s on the exposed dir of %s failed: %s",
                   interface_name.c_str(), child_ref_.name.c_str(), zx_status_get_string(status));
     return std::move(result);
@@ -96,9 +96,9 @@ class ScopedChild final {
   fidl::SynchronousInterfacePtr<Interface> ConnectSync(
       const std::string& interface_name = Interface::Name_) const {
     fidl::SynchronousInterfacePtr<Interface> result;
-    ZX_ASSERT_MSG(Connect<Interface>(result.NewRequest()) == ZX_OK,
-                  "Connect to protocol %s on the exposed dir of %s failed", interface_name.c_str(),
-                  child_ref_.name.c_str());
+    zx_status_t status = Connect(interface_name, result.NewRequest().TakeChannel());
+    ZX_ASSERT_MSG(status == ZX_OK, "Connect to protocol %s on the exposed dir of %s failed",
+                  interface_name.c_str(), child_ref_.name.c_str());
     return std::move(result);
   }
 
