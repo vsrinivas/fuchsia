@@ -9,9 +9,13 @@
 //! API for setting and getting values while maintaining extra information about
 //! the number of values of certain types present in the map.
 
+#[todo_unused::todo_unused("https://fxbug.dev/96320")]
 use alloc::collections::{hash_map, HashMap};
-use core::{hash::Hash, num::NonZeroUsize};
+#[todo_unused::todo_unused("https://fxbug.dev/96320")]
+use core::hash::Hash;
+use core::num::NonZeroUsize;
 
+#[todo_unused::todo_unused("https://fxbug.dev/96320")]
 use const_unwrap::const_unwrap_option;
 use derivative::Derivative;
 
@@ -63,6 +67,7 @@ pub(crate) trait Tagged {
 /// In addition to keys and values, this map stores the number of values
 /// present in the map for all descendants of each key. These counts are
 /// separated into buckets for different tags of type `V::Tag`.
+#[todo_unused::todo_unused("https://fxbug.dev/96320")]
 #[derive(Derivative, Debug)]
 #[derivative(Default(bound = ""))]
 pub(crate) struct SocketMap<A: Hash + Eq, V: Tagged> {
@@ -70,6 +75,7 @@ pub(crate) struct SocketMap<A: Hash + Eq, V: Tagged> {
     len: usize,
 }
 
+#[todo_unused::todo_unused("https://fxbug.dev/96320")]
 #[derive(Derivative, Debug)]
 #[derivative(Default(bound = ""))]
 struct MapValue<V: Tagged> {
@@ -89,14 +95,17 @@ struct DescendantCounts<T, const INLINE_SIZE: usize = 1> {
 
 /// An entry for a key in a map that has a value.
 #[cfg_attr(test, derive(Debug))]
+#[todo_unused::todo_unused("https://fxbug.dev/96320")]
 pub(crate) struct OccupiedEntry<'a, A: Hash + Eq, V: Tagged>(&'a mut SocketMap<A, V>, A);
 
 /// An entry for a key in a map that does not have a value.
 #[cfg_attr(test, derive(Debug))]
+#[todo_unused::todo_unused("https://fxbug.dev/96320")]
 pub(crate) struct VacantEntry<'a, A: Hash + Eq, V: Tagged>(&'a mut SocketMap<A, V>, A);
 
 /// An entry in a map that can be used to manipulate the value in-place.
 #[cfg_attr(test, derive(Debug))]
+#[todo_unused::todo_unused("https://fxbug.dev/96320")]
 pub(crate) enum Entry<'a, A: Hash + Eq, V: Tagged> {
     // NB: Both `OccupiedEntry` and `VacantEntry` store a reference to the map
     // and a key directly since they need access to the entire map to update
@@ -108,12 +117,14 @@ pub(crate) enum Entry<'a, A: Hash + Eq, V: Tagged> {
     Vacant(VacantEntry<'a, A, V>),
 }
 
+#[todo_unused::todo_unused("https://fxbug.dev/96320")]
 impl<A, V> SocketMap<A, V>
 where
     A: IterShadows + Hash + Eq,
     V: Tagged,
 {
     /// Gets a reference to the value associated with the given key, if any.
+    #[todo_unused::todo_unused("https://fxbug.dev/96320")]
     pub fn get(&self, key: &A) -> Option<&V> {
         let Self { map, len: _ } = self;
         map.get(key).and_then(|MapValue { value, descendant_counts: _ }| value.as_ref())
@@ -124,6 +135,7 @@ where
     /// This is similar to the API provided by [`HashMap::entry`]. Callers can
     /// match on the result to perform different actions depending on whether
     /// the map has a value for the key or not.
+    #[todo_unused::todo_unused("https://fxbug.dev/96320")]
     pub fn entry(&mut self, key: A) -> Entry<'_, A, V> {
         let Self { map, len: _ } = self;
         match map.get(&key) {
@@ -140,6 +152,7 @@ where
     ///
     /// If there is a value for key `key`, removes it and returns it. Otherwise
     /// returns None.
+    #[todo_unused::todo_unused("https://fxbug.dev/96320")]
     pub fn remove(&mut self, key: &A) -> Option<V>
     where
         A: Clone,
@@ -181,6 +194,7 @@ where
     /// those keys for which `key` is one of their shadows, then calling
     /// [`Tagged::tag`] on the value for each of those keys, and then computing
     /// the number of occurrences for each tag.
+    #[todo_unused::todo_unused("https://fxbug.dev/96320")]
     pub fn descendant_counts(
         &self,
         key: &A,
@@ -193,14 +207,14 @@ where
     }
 
     /// Returns an iterator over the keys and values in the map.
-    #[cfg(test)]
-    fn iter(&self) -> impl Iterator<Item = (&'_ A, &'_ V)> {
+    pub(crate) fn iter(&self) -> impl Iterator<Item = (&'_ A, &'_ V)> {
         let Self { map, len: _ } = self;
         map.iter().filter_map(|(a, MapValue { value, descendant_counts: _ })| {
             value.as_ref().map(|v| (a, v))
         })
     }
 
+    #[todo_unused::todo_unused("https://fxbug.dev/96320")]
     fn increment_descendant_counts(
         map: &mut HashMap<A, MapValue<V>>,
         shadows: A::IterShadows,
@@ -212,6 +226,7 @@ where
         }
     }
 
+    #[todo_unused::todo_unused("https://fxbug.dev/96320")]
     fn update_descendant_counts(
         map: &mut HashMap<A, MapValue<V>>,
         shadows: A::IterShadows,
@@ -227,6 +242,7 @@ where
         }
     }
 
+    #[todo_unused::todo_unused("https://fxbug.dev/96320")]
     fn decrement_descendant_counts(
         map: &mut HashMap<A, MapValue<V>>,
         shadows: A::IterShadows,
@@ -246,8 +262,10 @@ where
     }
 }
 
+#[todo_unused::todo_unused("https://fxbug.dev/96320")]
 impl<'a, K: Eq + Hash + IterShadows, V: Tagged> OccupiedEntry<'a, K, V> {
     /// Retrieves the value referenced by this entry.
+    #[todo_unused::todo_unused("https://fxbug.dev/96320")]
     pub(crate) fn get(&self) -> &V {
         let Self(SocketMap { map, len: _ }, key) = self;
         let MapValue { descendant_counts: _, value } = map.get(key).unwrap();
@@ -261,6 +279,7 @@ impl<'a, K: Eq + Hash + IterShadows, V: Tagged> OccupiedEntry<'a, K, V> {
     /// Runs the provided callback on the value referenced by this entry.
     ///
     /// Returns the result of the callback.
+    #[todo_unused::todo_unused("https://fxbug.dev/96320")]
     pub(crate) fn map_mut<R>(&mut self, apply: impl FnOnce(&mut V) -> R) -> R {
         let Self(SocketMap { map, len: _ }, key) = self;
         // unwrap() calls are guaranteed safe by OccupiedEntry invariant.
@@ -275,8 +294,10 @@ impl<'a, K: Eq + Hash + IterShadows, V: Tagged> OccupiedEntry<'a, K, V> {
     }
 }
 
+#[todo_unused::todo_unused("https://fxbug.dev/96320")]
 impl<'a, K: Eq + Hash + IterShadows, V: Tagged> VacantEntry<'a, K, V> {
     /// Inserts a value for the key referenced by this entry.
+    #[todo_unused::todo_unused("https://fxbug.dev/96320")]
     pub(crate) fn insert(self, value: V) {
         let Self(SocketMap { map, len }, key) = self;
         let iter_shadows = key.iter_shadows();
@@ -289,9 +310,11 @@ impl<'a, K: Eq + Hash + IterShadows, V: Tagged> VacantEntry<'a, K, V> {
 }
 
 impl<T: Eq, const INLINE_SIZE: usize> DescendantCounts<T, INLINE_SIZE> {
+    #[todo_unused::todo_unused("https://fxbug.dev/96320")]
     const ONE: NonZeroUsize = const_unwrap_option(NonZeroUsize::new(1));
 
     /// Increments the count for the given tag.
+    #[todo_unused::todo_unused("https://fxbug.dev/96320")]
     fn increment(&mut self, tag: T) {
         let Self { counts } = self;
         match counts.iter_mut().find_map(|(t, count)| (t == &tag).then(|| count)) {
@@ -305,6 +328,7 @@ impl<T: Eq, const INLINE_SIZE: usize> DescendantCounts<T, INLINE_SIZE> {
     /// # Panics
     ///
     /// Panics if there is no count for the given tag.
+    #[todo_unused::todo_unused("https://fxbug.dev/96320")]
     fn decrement(&mut self, tag: T) {
         let Self { counts } = self;
         let (index, count) = counts
@@ -319,6 +343,7 @@ impl<T: Eq, const INLINE_SIZE: usize> DescendantCounts<T, INLINE_SIZE> {
         }
     }
 
+    #[todo_unused::todo_unused("https://fxbug.dev/96320")]
     fn is_empty(&self) -> bool {
         let Self { counts } = self;
         counts.is_empty()

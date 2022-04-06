@@ -7,7 +7,6 @@
 mod id_map;
 mod id_map_collection;
 pub(crate) mod ref_counted_hash_map;
-#[cfg(test)] // TODO(https://fxbug.dev/96320): remove [cfg(test)]
 pub(crate) mod socketmap;
 pub(crate) mod token_bucket;
 
