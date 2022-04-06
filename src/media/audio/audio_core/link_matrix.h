@@ -102,6 +102,7 @@ class LinkMatrix {
 
   std::mutex lock_;
 
+  // We allow sources and dests with empty LinkSets, but remove them if expressly Unlinked.
   std::unordered_map<const AudioObject*, LinkSet> sources_ FXL_GUARDED_BY(lock_);
   std::unordered_map<const AudioObject*, LinkSet> dests_ FXL_GUARDED_BY(lock_);
 };

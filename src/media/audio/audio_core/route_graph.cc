@@ -74,6 +74,9 @@ void RouteGraph::RemoveDeviceFromRoutes(AudioDevice* device) {
     return;
   }
 
+  // Unlink the device (don't just tell its sources/dests to Unlink) so LinkMatrix fully removes it.
+  link_matrix_.Unlink(*device);
+
   devices_.erase(it);
   UpdateGraphForDeviceChange();
 }

@@ -394,14 +394,37 @@ TEST_F(LinkMatrixTest, LinkCounts) {
 
   auto source1 = std::make_shared<MockObject>(AudioObject::Type::AudioRenderer);
   auto source2 = std::make_shared<MockObject>(AudioObject::Type::AudioRenderer);
-  auto dest = std::make_shared<MockObject>(AudioObject::Type::Output);
+  auto source3 = std::make_shared<MockObject>(AudioObject::Type::Input);
 
-  under_test.LinkObjects(source1, dest, std::make_shared<FakeLoudnessTransform>());
-  under_test.LinkObjects(source2, dest, std::make_shared<FakeLoudnessTransform>());
+  auto dest1 = std::make_shared<MockObject>(AudioObject::Type::Output);
+  auto dest2 = std::make_shared<MockObject>(AudioObject::Type::AudioCapturer);
+
+  under_test.LinkObjects(source1, dest1, std::make_shared<FakeLoudnessTransform>());
+  under_test.LinkObjects(source2, dest1, std::make_shared<FakeLoudnessTransform>());
+
+  // AreLinked() is not const. Call a few times with odd params, to verify no effect on LinkCounts.
+  EXPECT_FALSE(under_test.AreLinked(*source1, *source2));
+  EXPECT_FALSE(under_test.AreLinked(*dest1, *source1));
+  EXPECT_FALSE(under_test.AreLinked(*source1, *dest2));
+  EXPECT_FALSE(under_test.AreLinked(*source3, *dest2));
+  EXPECT_FALSE(under_test.AreLinked(*source3, *source3));
+
   EXPECT_EQ(under_test.SourceLinkCount(*source1), 0u);
-  EXPECT_EQ(under_test.SourceLinkCount(*dest), 2u);
+  EXPECT_EQ(under_test.SourceLinkCount(*source2), 0u);
+  EXPECT_EQ(under_test.SourceLinkCount(*source3), 0u);
+  EXPECT_EQ(under_test.SourceLinkCount(*dest1), 2u);
+  EXPECT_EQ(under_test.SourceLinkCount(*dest2), 0u);
+
   EXPECT_EQ(under_test.DestLinkCount(*source1), 1u);
   EXPECT_EQ(under_test.DestLinkCount(*source2), 1u);
+  EXPECT_EQ(under_test.DestLinkCount(*source3), 0u);
+  EXPECT_EQ(under_test.DestLinkCount(*dest1), 0u);
+  EXPECT_EQ(under_test.DestLinkCount(*dest2), 0u);
+
+  under_test.Unlink(*dest1);
+  EXPECT_EQ(under_test.SourceLinkCount(*dest1), 0u);
+  EXPECT_EQ(under_test.DestLinkCount(*source1), 0u);
+  EXPECT_EQ(under_test.DestLinkCount(*source2), 0u);
 }
 
 }  // namespace
