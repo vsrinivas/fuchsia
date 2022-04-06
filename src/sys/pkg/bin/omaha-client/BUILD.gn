@@ -108,9 +108,13 @@ rustc_binary("bin") {
   ]
 }
 
-fuchsia_component("component") {
+fuchsia_component_manifest("manifest") {
   component_name = "omaha-client-service"
   manifest = "meta/omaha-client-service.cml"
+}
+
+fuchsia_component("component") {
+  cm_label = ":manifest"
   deps = [ ":bin" ]
 }
 
