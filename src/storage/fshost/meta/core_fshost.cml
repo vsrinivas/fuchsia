@@ -119,47 +119,19 @@
             as: "blob",
         },
         {
-            directory: "minfs",
-            from: "self",
-        },
-        {
-            directory: "minfs-not-delayed",
-            from: "self",
-        },
-        {
-            directory: "pkgfs",
-            from: "self",
-        },
-        {
-            directory: "pkgfs-packages",
-            from: "self",
-        },
-        {
-            directory: "system",
-            from: "self",
-        },
-        {
-            directory: "config-data",
-            from: "self",
-        },
-        {
-            directory: "root-ssl-certificates",
-            from: "self",
-        },
-        {
-            directory: "build-info",
-            from: "self",
-        },
-        {
-            directory: "pkgfs-not-delayed",
-            from: "self",
-        },
-        {
-            directory: "system-not-delayed",
-            from: "self",
-        },
-        {
-            directory: "bin-not-delayed",
+            directory: [
+                "bin-not-delayed",
+                "build-info",
+                "config-data",
+                "minfs",
+                "minfs-not-delayed",
+                "pkgfs",
+                "pkgfs-not-delayed",
+                "pkgfs-packages",
+                "root-ssl-certificates",
+                "system",
+                "system-not-delayed",
+            ],
             from: "self",
         },
         {
