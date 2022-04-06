@@ -43,7 +43,7 @@ impl TestManagerArgs {
     }
 }
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     info!("started");
     let args: TestManagerArgs = std::env::args().try_into()?;

@@ -139,7 +139,7 @@ enum IncomingServices {
     // ... more services here
 }
 
-#[fuchsia::component(logging_tags = ["component_test_runner"])]
+#[fuchsia::main(logging_tags = ["component_test_runner"])]
 async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(IncomingServices::Runner);

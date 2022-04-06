@@ -16,7 +16,7 @@ use {
     thiserror::Error,
 };
 
-#[fuchsia::component(logging = true)]
+#[fuchsia::main(logging = true)]
 async fn main() -> Result<(), anyhow::Error> {
     info!("started");
     let mut fs = ServiceFs::new_local();

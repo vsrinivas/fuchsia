@@ -12,7 +12,7 @@ enum IncomingRequest {
     Echo(EchoRequestStream),
 }
 
-#[fuchsia::component(logging = false)]
+#[fuchsia::main(logging = false)]
 async fn main() -> Result<(), anyhow::Error> {
     let mut service_fs = ServiceFs::new_local();
     service_fs.dir("svc").add_fidl_service(IncomingRequest::Echo);

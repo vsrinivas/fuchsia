@@ -16,7 +16,7 @@ use {
     test::StressTest,
 };
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<()> {
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(move |stream| {

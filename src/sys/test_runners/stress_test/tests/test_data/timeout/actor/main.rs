@@ -11,7 +11,7 @@ use {
     stress_test_actor::{actor_loop, Action},
 };
 
-#[fuchsia::component(logging = false)]
+#[fuchsia::main(logging = false)]
 pub async fn main() -> Result<()> {
     // TODO(84952): This syntax is complex and can be simplified using Rust macros.
     actor_loop((), vec![Action { name: "takes_too_long", run: takes_too_long }]).await

@@ -15,7 +15,7 @@ use {
 
 const ECHO_TEXT: &'static str = "This is a test";
 
-#[fuchsia::component(logging = false)]
+#[fuchsia::main(logging = false)]
 pub async fn main() -> Result<()> {
     // Connect to the Echo protocol
     let echo = connect_to_protocol::<EchoMarker>()?;

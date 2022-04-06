@@ -71,7 +71,7 @@ struct Args {
     test_args: Vec<String>,
 }
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     let args = argh::from_env();
 

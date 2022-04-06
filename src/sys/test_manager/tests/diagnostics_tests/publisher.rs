@@ -16,7 +16,7 @@ use {
     tracing::info,
 };
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     info!("Started diagnostics publisher");
     let mut fs = ServiceFs::new();

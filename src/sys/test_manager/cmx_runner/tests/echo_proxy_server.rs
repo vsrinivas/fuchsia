@@ -27,7 +27,7 @@ async fn run_echo_server(mut stream: EchoRequestStream) -> Result<(), Error> {
     Ok(())
 }
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {

@@ -21,7 +21,7 @@ use {
 
 const LEGACY_URL_KEY: &'static str = "legacy_url";
 
-#[fuchsia::component]
+#[fuchsia::main]
 fn main() -> Result<(), anyhow::Error> {
     info!("started");
     let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;

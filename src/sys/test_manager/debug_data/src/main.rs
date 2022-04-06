@@ -23,7 +23,7 @@ use log::info;
 /// Timeout after Finish() is sent for a set to process events.
 const TIMEOUT_AFTER_FINISH: zx::Duration = zx::Duration::from_seconds(20);
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     info!("started");
 

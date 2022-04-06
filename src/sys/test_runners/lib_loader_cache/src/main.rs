@@ -15,7 +15,7 @@ use {
 /// Run with 3 threads as all test runners will share the instance of this component.
 /// We want to be able to serve `LibraryLoaderCacheBuilder` on one thread and `LibraryLoaderCache`
 /// on other two threads.
-#[fuchsia::component(threads = 3)]
+#[fuchsia::main(threads = 3)]
 async fn main() -> Result<(), anyhow::Error> {
     info!("started");
     let mut fs = ServiceFs::new();
