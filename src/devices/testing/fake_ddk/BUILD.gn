@@ -129,7 +129,6 @@ zx_library("fake_ddk") {
     "//src/graphics/display/lib/designware/test/*",
     "//src/graphics/lib/magma/tests/unit_tests/*",
     "//src/media/audio/drivers/aml-g12-pdm/test/*",
-    "//src/media/audio/drivers/codecs/alc5663/tests/*",
     "//src/media/audio/drivers/intel-hda/controller/*",
     "//src/media/audio/drivers/usb-audio/tests/*",
     "//src/media/audio/lib/simple-audio-stream/tests/*",

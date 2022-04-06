@@ -17,7 +17,7 @@ test("alc5663-test") {
   include_dirs = [ ".." ]
   deps = [
     "//src/devices/i2c/testing/mock-i2c",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//src/media/audio/drivers/codecs/alc5663:shared",
     "//zircon/system/ulib/zxtest",
   ]

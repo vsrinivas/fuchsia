@@ -7,7 +7,6 @@
 #include <fuchsia/hardware/i2c/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <zircon/errors.h>
 
 #include <cassert>
@@ -20,6 +19,7 @@
 
 #include "alc5663_registers.h"
 #include "fake_i2c.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace audio::alc5663 {
 namespace {
@@ -265,20 +265,17 @@ SystemClockConfig SystemClockFrequencies(FakeAlc5663* hardware, uint32_t mclk_fr
 
 // Fake ALC5663 codec hardware and associated infrastructure.
 struct FakeAlc5663Hardware {
-  std::unique_ptr<fake_ddk::Bind> fake_ddk;
+  std::shared_ptr<MockDevice> fake_parent;
   zx_device_t* parent;  // Parent I2C bus.
   std::unique_ptr<FakeAlc5663> codec;
 };
 
 // Set up the fake DDK instance `ddk` to export the given I2C protocol.
 FakeAlc5663Hardware CreateFakeAlc5663() {
-  static constexpr size_t kNumBindFragments = 1;
   FakeAlc5663Hardware result{};
 
   // Create the fake DDK.
-  result.fake_ddk = std::make_unique<fake_ddk::Bind>();
-  fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumBindFragments],
-                                                kNumBindFragments);
+  result.fake_parent = MockDevice::FakeRootParent();
 
   // Create the fake hardware device.
   result.codec = std::make_unique<FakeAlc5663>();
@@ -289,13 +286,10 @@ FakeAlc5663Hardware CreateFakeAlc5663() {
   // the fake hardware.
 
   auto proto = result.codec->GetProto();
-  fragments[0].name = "i2c000";
-  fragments[0].protocols.emplace_back(
-      fake_ddk::ProtocolEntry{ZX_PROTOCOL_I2C, {proto.ops, proto.ctx}});
-  result.fake_ddk->SetFragments(std::move(fragments));
+  result.fake_parent->AddProtocol(ZX_PROTOCOL_I2C, proto.ops, proto.ctx, "i2c000");
 
   // Expose the parent device.
-  result.parent = fake_ddk::kFakeParent;
+  result.parent = result.fake_parent.get();
 
   return result;
 }
@@ -369,15 +363,16 @@ TEST(Alc5663, BindUnbind) {
   // Create device.
   Alc5663Device* device;
   ASSERT_OK(Alc5663Device::Bind(hardware.parent, &device));
+  EXPECT_EQ(hardware.fake_parent->child_count(), 1);
 
   // Ensure the device was reset.
   EXPECT_EQ(hardware.codec->state(), FakeAlc5663::State::kReady);
 
   // Shutdown
   device->DdkAsyncRemove();
-  EXPECT_OK(hardware.fake_ddk->WaitUntilRemove());
-  device->DdkRelease();
-  EXPECT_TRUE(hardware.fake_ddk->Ok());
+  // Calls DdkRelease() on device.
+  EXPECT_OK(mock_ddk::ReleaseFlaggedDevices(hardware.fake_parent.get()));
+  EXPECT_EQ(hardware.fake_parent->child_count(), 0);
 }
 
 TEST(Alc5663, InvalidVendor) {
@@ -419,9 +414,8 @@ TEST(Alc5663, CheckClocksConfigured) {
 
   // Shutdown
   device->DdkAsyncRemove();
-  EXPECT_OK(hardware.fake_ddk->WaitUntilRemove());
-  device->DdkRelease();
-  EXPECT_TRUE(hardware.fake_ddk->Ok());
+  EXPECT_OK(mock_ddk::ReleaseFlaggedDevices(hardware.fake_parent.get()));
+  EXPECT_EQ(hardware.fake_parent->child_count(), 0);
 }
 
 TEST(Alc5663, CheckOutputsEnabled) {
@@ -456,9 +450,8 @@ TEST(Alc5663, CheckOutputsEnabled) {
 
   // Shutdown
   device->DdkAsyncRemove();
-  EXPECT_OK(hardware.fake_ddk->WaitUntilRemove());
-  device->DdkRelease();
-  EXPECT_TRUE(hardware.fake_ddk->Ok());
+  EXPECT_OK(mock_ddk::ReleaseFlaggedDevices(hardware.fake_parent.get()));
+  EXPECT_EQ(hardware.fake_parent->child_count(), 0);
 }
 
 }  // namespace

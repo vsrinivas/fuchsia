@@ -10,7 +10,6 @@
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fit/function.h>
 
 #include <ddktl/device.h>
@@ -18,6 +17,8 @@
 #include <fbl/string_buffer.h>
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
+
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace audio::alc5663 {
 
