@@ -16,8 +16,6 @@ rustc_binary("echo_example_rust") {
   with_unit_tests = true
 
   deps = [
-    "//src/lib/diagnostics/inspect/runtime/rust",
-    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

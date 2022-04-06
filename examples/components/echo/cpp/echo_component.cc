@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "examples/components/echo/cpp/echo_component.h"
-
+// [START greeting]
 #include <numeric>
 
 namespace echo {
@@ -32,3 +32,4 @@ std::string greeting(std::vector<std::string>& names) {
 }
 
 }  // namespace echo
+// [END greeting]

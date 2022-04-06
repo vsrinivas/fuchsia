@@ -5,8 +5,8 @@
 // [START manifest]
 {
     include: [
-        "inspect/client.shard.cml",
-        "syslog/client.shard.cml",
+        // Enable logging on stdout
+        "syslog/elf_stdio.shard.cml",
     ],
 
     // Information about the program to run.

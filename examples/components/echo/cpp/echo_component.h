@@ -5,6 +5,7 @@
 #ifndef EXAMPLES_COMPONENTS_ECHO_CPP_ECHO_COMPONENT_H_
 #define EXAMPLES_COMPONENTS_ECHO_CPP_ECHO_COMPONENT_H_
 
+// [START greeting]
 #include <string>
 #include <vector>
 
@@ -13,5 +14,6 @@ namespace echo {
 std::string greeting(std::vector<std::string>& names);
 
 }  // namespace echo
+// [END greeting]
 
 #endif  // EXAMPLES_COMPONENTS_ECHO_CPP_ECHO_COMPONENT_H_

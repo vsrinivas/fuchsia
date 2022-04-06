@@ -20,15 +20,15 @@ for development purposes:
 
 -  **C++**
 
-```bash
-ffx component run fuchsia-pkg://fuchsia.com/echo-example#meta/echo_cpp.cm
-```
+    ```bash
+    $ ffx component run fuchsia-pkg://fuchsia.com/echo-example#meta/echo_cpp.cm
+    ```
 
 -  **Rust**
 
-```bash
-$ ffx component run fuchsia-pkg://fuchsia.com/echo-example#meta/echo_rust.cm
-```
+    ```bash
+    $ ffx component run fuchsia-pkg://fuchsia.com/echo-example#meta/echo_rust.cm
+    ```
 
 When the above command is run, you can see the following output with `fx log`:
 
@@ -43,41 +43,40 @@ Use the `ffx test run` command to run the tests on a target device:
 
 -  **C++**
 
-```bash
-$ ffx test run fuchsia-pkg://fuchsia.com/echo-cpp-unittests#meta/echo-cpp-unittests.cm
-```
+    ```bash
+    $ ffx test run fuchsia-pkg://fuchsia.com/echo-cpp-unittests#meta/echo-cpp-unittests.cm
+    ```
 
-You should see each of the unit tests execute and pass:
+    You should see each of the unit tests execute and pass:
 
-```
-[RUNNING]       EchoTest.TestGreetOne
-[PASSED]        EchoTest.TestGreetOne
-[RUNNING]       EchoTest.TestGreetTwo
-[PASSED]        EchoTest.TestGreetTwo
-[RUNNING]       EchoTest.TestGreetThree
-[PASSED]        EchoTest.TestGreetThree
+    ```
+    [RUNNING]       EchoTest.TestGreetOne
+    [PASSED]        EchoTest.TestGreetOne
+    [RUNNING]       EchoTest.TestGreetTwo
+    [PASSED]        EchoTest.TestGreetTwo
+    [RUNNING]       EchoTest.TestGreetThree
+    [PASSED]        EchoTest.TestGreetThree
 
-3 out of 3 tests passed...
-fuchsia-pkg://fuchsia.com/echo-cpp-unittests#meta/echo-cpp-unittests.cm completed with result: PASSED
-```
+    3 out of 3 tests passed...
+    fuchsia-pkg://fuchsia.com/echo-cpp-unittests#meta/echo-cpp-unittests.cm completed with result: PASSED
+    ```
 
 -  **Rust**
 
-```bash
-$ ffx test run fuchsia-pkg://fuchsia.com/echo-rust-unittests#meta/echo-rust-unittests.cm
-```
+    ```bash
+    $ ffx test run fuchsia-pkg://fuchsia.com/echo-rust-unittests#meta/echo-rust-unittests.cm
+    ```
 
-You should see each of the unit tests execute and pass:
+    You should see each of the unit tests execute and pass:
 
-```
-Running test 'fuchsia-pkg://fuchsia.com/echo-rust-unittests#meta/echo-rust-unittests.cm'
-[RUNNING]	tests::test_greet_one
-[RUNNING]	tests::test_greet_two
-[RUNNING]	tests::test_greet_three
-[PASSED]	tests::test_greet_one
-[PASSED]	tests::test_greet_two
-[PASSED]	tests::test_greet_three
+    ```
+    Running test 'fuchsia-pkg://fuchsia.com/echo-rust-unittests#meta/echo-rust-unittests.cm'
+    [RUNNING]	tests::test_greet_one
+    [RUNNING]	tests::test_greet_two
+    [RUNNING]	tests::test_greet_three
+    [PASSED]	tests::test_greet_one
+    [PASSED]	tests::test_greet_two
+    [PASSED]	tests::test_greet_three
 
-3 out of 3 tests passed...
-```
-
+    3 out of 3 tests passed...
+    ```
