@@ -59,8 +59,16 @@ class Guest {
   // Returns zx_system_get_page_size aligned guest memory.
   static uint64_t GetPageAlignedGuestMemory(uint64_t guest_memory);
 
+  // Attempts to page align the start and end of a guest memory region. Returns false if the
+  // resulting region is zero (or less) pages long.
+  static bool PageAlignGuestMemoryRegion(GuestMemoryRegion& region);
+
+  // Returns a non-overlapping list of restricted memory regions, ordered by base address.
+  static cpp20::span<const GuestMemoryRegion> GetDefaultRestrictionsForArchitecture();
+
   // Generates guest memory regions with total size |guest_memory|, avoiding any device memory.
   static bool GenerateGuestMemoryRegions(uint64_t guest_memory,
+                                         cpp20::span<const GuestMemoryRegion> restrictions,
                                          std::vector<GuestMemoryRegion>* regions);
 
   const IoMappingList& mappings() const { return mappings_; }

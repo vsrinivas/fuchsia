@@ -109,6 +109,11 @@ constexpr uint32_t trap_kind(TrapType type) {
 }  // namespace
 
 // Static.
+cpp20::span<const GuestMemoryRegion> Guest::GetDefaultRestrictionsForArchitecture() {
+  return kRestrictedRegions;
+}
+
+// Static.
 uint64_t Guest::GetPageAlignedGuestMemory(uint64_t guest_memory) {
   const uint32_t page_size = zx_system_get_page_size();
   uint32_t page_alignment = guest_memory % page_size;
@@ -124,41 +129,82 @@ uint64_t Guest::GetPageAlignedGuestMemory(uint64_t guest_memory) {
 }
 
 // Static.
+bool Guest::PageAlignGuestMemoryRegion(GuestMemoryRegion& region) {
+  const uint32_t page_size = zx_system_get_page_size();
+
+  // This guest region is bounded by restricted regions, so size cannot be increased. If this
+  // region is smaller than a page this region must just be discarded.
+  if (region.size < page_size) {
+    return false;
+  }
+
+  zx_gpaddr_t start = region.base;
+  zx_gpaddr_t end = region.base + region.size;
+
+  // Round the starting address up to the nearest page, and the ending address down to the nearest
+  // page.
+  if (start % page_size != 0) {
+    start += page_size - (start % page_size);
+  }
+  if (end % page_size != 0) {
+    end -= end % page_size;
+  }
+
+  // Require a valid region to be at least a single page in size after adjustments. Both start and
+  // end have just been page aligned.
+  if (start >= end) {
+    return false;
+  }
+
+  region.base = start;
+  region.size = end - start;
+
+  return true;
+}
+
+// Static.
 bool Guest::GenerateGuestMemoryRegions(uint64_t guest_memory,
+                                       cpp20::span<const GuestMemoryRegion> restrictions,
                                        std::vector<GuestMemoryRegion>* regions) {
   // Special case where there's no restrictions. Currently this isn't true for any production
   // architecture due to the need to assign dynamic device addresses.
-  if (kRestrictedRegions.empty()) {
+  if (restrictions.empty()) {
     regions->push_back({.base = 0x0, .size = guest_memory});
     return true;
   }
 
   bool first_region = true;
   GuestMemoryRegion current_region;
-  auto restriction = kRestrictedRegions.begin();
-  auto next_range = [&]() -> bool {
+  auto restriction = restrictions.begin();
+  fit::function<bool()> next_range = [&]() -> bool {
     if (first_region) {
       first_region = false;
       if (restriction->base != 0) {
         current_region = {0x0, restriction->base};
-        return true;
+      } else {
+        return next_range();
       }
+    } else {
+      if (restriction->size == kGuestMemoryAllRemainingRange) {
+        return false;  // No remaining valid guest memory regions.
+      }
+
+      // The current unrestricted region extends from the end of the current restriction to the
+      // start of the next restriction, or if this is the last restriction it extends to a very
+      // large number.
+      zx_gpaddr_t unrestricted_base_address = restriction->base + restriction->size;
+      uint64_t unrestricted_size = std::next(restriction) == restrictions.end()
+                                       ? kGuestMemoryAllRemainingRange - unrestricted_base_address
+                                       : std::next(restriction)->base - unrestricted_base_address;
+
+      current_region = {unrestricted_base_address, unrestricted_size};
+      restriction++;
     }
 
-    if (restriction->size == kGuestMemoryAllRemainingRange) {
-      return false;  // No remaining valid guest memory regions.
+    if (!Guest::PageAlignGuestMemoryRegion(current_region)) {
+      return next_range();
     }
 
-    // The current unrestricted region extends from the end of the current restriction to the
-    // start of the next restriction, or if this is the last restriction it extends to a very
-    // large number.
-    zx_gpaddr_t unrestricted_base_address = restriction->base + restriction->size;
-    uint64_t unrestricted_size = std::next(restriction) == kRestrictedRegions.end()
-                                     ? kGuestMemoryAllRemainingRange - unrestricted_base_address
-                                     : std::next(restriction)->base - unrestricted_base_address;
-
-    current_region = {unrestricted_base_address, unrestricted_size};
-    restriction++;
     return true;
   };
 
@@ -196,7 +242,8 @@ zx_status_t Guest::Init(uint64_t guest_memory) {
   guest_memory = Guest::GetPageAlignedGuestMemory(guest_memory);
 
   // Generate guest memory regions, avoiding device memory.
-  if (!Guest::GenerateGuestMemoryRegions(guest_memory, &memory_regions_)) {
+  if (!Guest::GenerateGuestMemoryRegions(
+          guest_memory, Guest::GetDefaultRestrictionsForArchitecture(), &memory_regions_)) {
     FX_PLOGS(ERROR, ZX_ERR_INVALID_ARGS) << "Failed to place guest memory avoiding device memory "
                                             "ranges. Try requesting less memory.";
   }

@@ -26,6 +26,10 @@ MATCHER(GuestMemoryRegionEq, "") {
   return first.base == second.base && first.size == second.size;
 }
 
+MATCHER_P(GuestMemoryRegionEq, expected, "") {
+  return arg.base == expected.base && arg.size == expected.size;
+}
+
 TEST(GuestTest, GuestMemoryPageAligned) {
   const uint32_t page_size = zx_system_get_page_size();
   const uint64_t expected_guest_memory = static_cast<uint64_t>(page_size) * 10;
@@ -43,12 +47,56 @@ TEST(GuestTest, RoundUpUnalignedGuestMemory) {
             Guest::GetPageAlignedGuestMemory(expected_guest_memory - page_size / 2));
 }
 
+TEST(GuestTest, PageAlignGuestMemoryRegion) {
+  const uint64_t page_size = zx_system_get_page_size();
+
+  // Page aligned.
+  GuestMemoryRegion region = {page_size, page_size};
+  EXPECT_TRUE(Guest::PageAlignGuestMemoryRegion(region));
+  EXPECT_THAT(region, GuestMemoryRegionEq(GuestMemoryRegion{page_size, page_size}));
+
+  // End is not page aligned, so round it down.
+  region = {page_size, page_size * 3 + page_size / 2};
+  EXPECT_TRUE(Guest::PageAlignGuestMemoryRegion(region));
+  EXPECT_THAT(region, GuestMemoryRegionEq(GuestMemoryRegion{page_size, page_size * 3}));
+
+  // Start is not page aligned, so round it up (remember that the second field is size, not the
+  // ending address which is why it will also change here).
+  region = {page_size / 2, page_size * 3 + page_size / 2};
+  EXPECT_TRUE(Guest::PageAlignGuestMemoryRegion(region));
+  EXPECT_THAT(region, GuestMemoryRegionEq(GuestMemoryRegion{page_size, page_size * 3}));
+
+  // After page aligning this is a zero length region, so drop it.
+  region = {page_size / 2, page_size / 2};
+  EXPECT_FALSE(Guest::PageAlignGuestMemoryRegion(region));
+
+  // After page aligning this would be a negative length region, so drop it.
+  region = {page_size / 2, page_size / 4};
+  EXPECT_FALSE(Guest::PageAlignGuestMemoryRegion(region));
+}
+
+TEST(GuestTest, PageAlignedMemoryGivesCorrectTotal) {
+  const uint64_t page_size = zx_system_get_page_size();
+
+  // Restrict memory between page 2 1/2 and page 4 1/2. This should result in guest memory placed in
+  // pages [0, 1], and pages [5, 7] (which is 5 pages in total).
+  const uint64_t guest_memory = page_size * 5;
+  const GuestMemoryRegion restrictions[] = {{page_size * 2 + page_size / 2, page_size * 2}};
+
+  std::vector<GuestMemoryRegion> regions;
+  EXPECT_TRUE(Guest::GenerateGuestMemoryRegions(guest_memory, restrictions, &regions));
+  EXPECT_THAT(regions,
+              Pointwise(GuestMemoryRegionEq(), {GuestMemoryRegion{0, page_size * 2},
+                                                GuestMemoryRegion{page_size * 5, page_size * 3}}));
+}
+
 TEST(GuestTest, GetGuestMemoryRegion) {
   // Four GiB of guest memory will extend beyond the PCI device region for x86, but not for arm64.
   const uint64_t guest_memory = Guest::GetPageAlignedGuestMemory(1ul << 32);
 
   std::vector<GuestMemoryRegion> regions;
-  EXPECT_TRUE(Guest::GenerateGuestMemoryRegions(guest_memory, &regions));
+  EXPECT_TRUE(Guest::GenerateGuestMemoryRegions(
+      guest_memory, Guest::GetDefaultRestrictionsForArchitecture(), &regions));
 
 #if __x86_64__
   const GuestMemoryRegion kExpected[] = {
@@ -69,7 +117,8 @@ TEST(GuestTest, GetTooLargeGuestMemoryRegion) {
   // The kFirstDynamicDeviceAddr restriction extends to +INF, so requesting enough memory
   // to overlap with kFirstDynamicDeviceAddr will always fail.
   std::vector<GuestMemoryRegion> regions;
-  EXPECT_FALSE(Guest::GenerateGuestMemoryRegions(guest_memory, &regions));
+  EXPECT_FALSE(Guest::GenerateGuestMemoryRegions(
+      guest_memory, Guest::GetDefaultRestrictionsForArchitecture(), &regions));
 }
 
 }  // namespace
