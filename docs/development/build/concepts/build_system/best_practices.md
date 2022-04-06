@@ -549,6 +549,16 @@ message = "My favorite output is $output"
 # GN won't let you subscript an rvalue.
 ```
 
+Additionally, `get_target_outputs()` has a few painful limitations:
+
+*   Only `copy()`, `generated_file()`, and `action()` targets are supported.
+*   Only targets defined in the same `BUILD.gn` file may be queried.
+
+As a result, often you will find one target's output path hard-coded in another
+`BUILD.gn` file. This creates a brittle contract. When the contract breaks,
+troubleshooting the breakage is difficult. Please try to avoid doing this when you
+can, and add a lot of inline documentation when you can't.
+
 ### Checking if type is string
 
 Though GN doesn't allow for comprehensive type checking, you can check that a variable
