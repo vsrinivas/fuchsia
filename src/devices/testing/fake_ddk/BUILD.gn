@@ -134,7 +134,6 @@ zx_library("fake_ddk") {
     "//src/media/audio/drivers/usb-audio/tests/*",
     "//src/media/audio/lib/simple-audio-stream/tests/*",
     "//src/media/drivers/amlogic_decoder/tests/unit_tests/*",
-    "//src/ui/backlight/drivers/ti-lp8556/*",
     "//src/ui/input/drivers/focaltech/*",
     "//src/ui/input/drivers/gt6853/*",
     "//src/ui/input/drivers/hid-buttons/*",

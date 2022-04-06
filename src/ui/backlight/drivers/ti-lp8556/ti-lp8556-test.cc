@@ -9,7 +9,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/metadata.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/mock-i2c/mock-i2c.h>
 #include <lib/stdcompat/span.h>
@@ -21,6 +20,7 @@
 #include <zxtest/zxtest.h>
 
 #include "sdk/lib/inspect/testing/cpp/zxtest/inspect.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace {
 
@@ -37,6 +37,7 @@ class Lp8556DeviceTest : public zxtest::Test, public inspect::InspectTestHelper 
  public:
   Lp8556DeviceTest()
       : mock_regs_(ddk_mock::MockMmioRegRegion(mock_reg_array_, kMmioRegSize, kMmioRegCount)),
+        fake_parent_(MockDevice::FakeRootParent()),
         loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
 
   void SetUp() {
@@ -44,27 +45,31 @@ class Lp8556DeviceTest : public zxtest::Test, public inspect::InspectTestHelper 
 
     fbl::AllocChecker ac;
     dev_ = fbl::make_unique_checked<Lp8556Device>(
-        &ac, fake_ddk::kFakeParent, ddk::I2cChannel(mock_i2c_.GetProto()), std::move(mmio));
+        &ac, fake_parent_.get(), ddk::I2cChannel(mock_i2c_.GetProto()), std::move(mmio));
     ASSERT_TRUE(ac.check());
 
-    const auto message_op = [](void* ctx, fidl_incoming_msg_t* msg,
-                               fidl_txn_t* txn) -> zx_status_t {
-      DdkTransaction transaction(txn);
-      static_cast<Lp8556Device*>(ctx)->DdkMessage(fidl::IncomingMessage::FromEncodedCMessage(msg),
-                                                  transaction);
-      return transaction.Status();
-    };
-    ASSERT_OK(messenger_.SetMessageOp(dev_.get(), message_op));
+    auto backlight_endpoints = fidl::CreateEndpoints<fuchsia_hardware_backlight::Device>();
+    fidl::BindServer(
+        loop_.dispatcher(), std::move(backlight_endpoints->server),
+        static_cast<fidl::WireServer<fuchsia_hardware_backlight::Device>*>(dev_.get()));
+    backlight_client_ = std::move(backlight_endpoints->client);
+
+    auto power_sensor_endpoints = fidl::CreateEndpoints<fuchsia_hardware_power_sensor::Device>();
+    fidl::BindServer(
+        loop_.dispatcher(), std::move(power_sensor_endpoints->server),
+        static_cast<fidl::WireServer<fuchsia_hardware_power_sensor::Device>*>(dev_.get()));
+    power_sensor_client_ = std::move(power_sensor_endpoints->client);
+
     ASSERT_OK(loop_.StartThread("lp8556-client-thread"));
   }
 
   void TestLifecycle() {
-    fake_ddk::Bind ddk;
     EXPECT_OK(dev_->DdkAdd("ti-lp8556"));
+    EXPECT_EQ(fake_parent_->child_count(), 1);
     dev_->DdkAsyncRemove();
-    EXPECT_TRUE(ddk.Ok());
-    dev_->DdkRelease();
+    EXPECT_OK(mock_ddk::ReleaseFlaggedDevices(fake_parent_.get()));  // Calls DdkRelease() on dev_.
     __UNUSED auto ptr = dev_.release();
+    EXPECT_EQ(fake_parent_->child_count(), 0);
   }
 
   void VerifyGetBrightness(bool power, double brightness) {
@@ -111,21 +116,23 @@ class Lp8556DeviceTest : public zxtest::Test, public inspect::InspectTestHelper 
 
  protected:
   fidl::WireSyncClient<fuchsia_hardware_backlight::Device> client() {
-    return fidl::WireSyncClient<fuchsia_hardware_backlight::Device>(std::move(messenger_.local()));
+    return fidl::WireSyncClient<fuchsia_hardware_backlight::Device>(std::move(backlight_client_));
   }
 
   fidl::WireSyncClient<fuchsia_hardware_power_sensor::Device> sensorSyncClient() {
     return fidl::WireSyncClient<fuchsia_hardware_power_sensor::Device>(
-        std::move(messenger_.local()));
+        std::move(power_sensor_client_));
   }
 
   mock_i2c::MockI2c mock_i2c_;
   std::unique_ptr<Lp8556Device> dev_;
   ddk_mock::MockMmioRegRegion mock_regs_;
+  std::shared_ptr<MockDevice> fake_parent_;
 
  private:
   ddk_mock::MockMmioReg mock_reg_array_[kMmioRegCount];
-  fake_ddk::FidlMessenger messenger_;
+  fidl::ClientEnd<fuchsia_hardware_backlight::Device> backlight_client_;
+  fidl::ClientEnd<fuchsia_hardware_power_sensor::Device> power_sensor_client_;
   async::Loop loop_;
 };
 
@@ -166,15 +173,8 @@ TEST_F(Lp8556DeviceTest, InitRegisters) {
   //     0x01, 0x85, 0xa2, 0x30, 0xa3, 0x32, 0xa5, 0x54, 0xa7, 0xf4, 0xa9, 0x60, 0xae, 0x09,
   // };
 
-  fake_ddk::Bind ddk;
-  static constexpr const uint32_t kNumberOfFragments = 1;
-  fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumberOfFragments],
-                                                kNumberOfFragments);
-  fragments[0].name = "pdev";
-  fragments[0].protocols.emplace_back(
-      fake_ddk::ProtocolEntry{ZX_PROTOCOL_PDEV, fake_ddk::Protocol{nullptr, nullptr}});
-  ddk.SetFragments(std::move(fragments));
-  ddk.SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
+  fake_parent_->AddProtocol(ZX_PROTOCOL_PDEV, nullptr, nullptr, "pdev");
+  fake_parent_->SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
 
   mock_i2c_.ExpectWriteStop({0x01, 0x85})
       .ExpectWriteStop({0xa2, 0x30})
@@ -202,8 +202,6 @@ TEST_F(Lp8556DeviceTest, InitRegisters) {
 }
 
 TEST_F(Lp8556DeviceTest, InitNoRegisters) {
-  fake_ddk::Bind ddk;
-
   mock_i2c_.ExpectWrite({kCfg2Reg})
       .ExpectReadStop({kCfg2Default})
       .ExpectWrite({kCurrentLsbReg})
@@ -227,15 +225,9 @@ TEST_F(Lp8556DeviceTest, InitInvalidRegisters) {
       0x01, 0x85, 0xa2, 0x30, 0xa3, 0x32, 0xa5, 0x54, 0xa7, 0xf4, 0xa9, 0x60, 0xae,
   };
 
-  fake_ddk::Bind ddk;
-  static constexpr const uint32_t kNumberOfFragments = 1;
-  fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumberOfFragments],
-                                                kNumberOfFragments);
-  fragments[0].name = "pdev";
-  fragments[0].protocols.emplace_back(
-      fake_ddk::ProtocolEntry{ZX_PROTOCOL_PDEV, fake_ddk::Protocol{nullptr, nullptr}});
-  ddk.SetFragments(std::move(fragments));
-  ddk.SetMetadata(DEVICE_METADATA_PRIVATE, kInitialRegisterValues, sizeof(kInitialRegisterValues));
+  fake_parent_->AddProtocol(ZX_PROTOCOL_PDEV, nullptr, nullptr, "pdev");
+  fake_parent_->SetMetadata(DEVICE_METADATA_PRIVATE, kInitialRegisterValues,
+                            sizeof(kInitialRegisterValues));
 
   EXPECT_NOT_OK(dev_->Init());
 
@@ -246,15 +238,9 @@ TEST_F(Lp8556DeviceTest, InitInvalidRegisters) {
 TEST_F(Lp8556DeviceTest, InitTooManyRegisters) {
   constexpr uint8_t kInitialRegisterValues[514] = {};
 
-  fake_ddk::Bind ddk;
-  static constexpr const uint32_t kNumberOfFragments = 1;
-  fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumberOfFragments],
-                                                kNumberOfFragments);
-  fragments[0].name = "pdev";
-  fragments[0].protocols.emplace_back(
-      fake_ddk::ProtocolEntry{ZX_PROTOCOL_PDEV, fake_ddk::Protocol{nullptr, nullptr}});
-  ddk.SetFragments(std::move(fragments));
-  ddk.SetMetadata(DEVICE_METADATA_PRIVATE, kInitialRegisterValues, sizeof(kInitialRegisterValues));
+  fake_parent_->AddProtocol(ZX_PROTOCOL_PDEV, nullptr, nullptr, "pdev");
+  fake_parent_->SetMetadata(DEVICE_METADATA_PRIVATE, kInitialRegisterValues,
+                            sizeof(kInitialRegisterValues));
 
   EXPECT_NOT_OK(dev_->Init());
 
@@ -278,15 +264,8 @@ TEST_F(Lp8556DeviceTest, OverwriteStickyRegister) {
       .register_count = 4,
   };
 
-  fake_ddk::Bind ddk;
-  static constexpr const uint32_t kNumberOfFragments = 1;
-  fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumberOfFragments],
-                                                kNumberOfFragments);
-  fragments[0].name = "pdev";
-  fragments[0].protocols.emplace_back(
-      fake_ddk::ProtocolEntry{ZX_PROTOCOL_PDEV, fake_ddk::Protocol{nullptr, nullptr}});
-  ddk.SetFragments(std::move(fragments));
-  ddk.SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
+  fake_parent_->AddProtocol(ZX_PROTOCOL_PDEV, nullptr, nullptr, "pdev");
+  fake_parent_->SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
 
   mock_i2c_.ExpectWriteStop({kBacklightBrightnessLsbReg, 0xab})
       .ExpectWriteStop({kBacklightBrightnessMsbReg, 0xcd})
@@ -332,15 +311,8 @@ TEST_F(Lp8556DeviceTest, ReadDefaultCurrentScale) {
       .register_count = 0,
   };
 
-  fake_ddk::Bind ddk;
-  static constexpr const uint32_t kNumberOfFragments = 1;
-  fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumberOfFragments],
-                                                kNumberOfFragments);
-  fragments[0].name = "pdev";
-  fragments[0].protocols.emplace_back(
-      fake_ddk::ProtocolEntry{ZX_PROTOCOL_PDEV, fake_ddk::Protocol{nullptr, nullptr}});
-  ddk.SetFragments(std::move(fragments));
-  ddk.SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
+  fake_parent_->AddProtocol(ZX_PROTOCOL_PDEV, nullptr, nullptr, "pdev");
+  fake_parent_->SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
 
   mock_i2c_.ExpectWrite({kCfg2Reg})
       .ExpectReadStop({kCfg2Default})
@@ -374,15 +346,8 @@ TEST_F(Lp8556DeviceTest, SetCurrentScale) {
       .register_count = 0,
   };
 
-  fake_ddk::Bind ddk;
-  static constexpr const uint32_t kNumberOfFragments = 1;
-  fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumberOfFragments],
-                                                kNumberOfFragments);
-  fragments[0].name = "pdev";
-  fragments[0].protocols.emplace_back(
-      fake_ddk::ProtocolEntry{ZX_PROTOCOL_PDEV, fake_ddk::Protocol{nullptr, nullptr}});
-  ddk.SetFragments(std::move(fragments));
-  ddk.SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
+  fake_parent_->AddProtocol(ZX_PROTOCOL_PDEV, nullptr, nullptr, "pdev");
+  fake_parent_->SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
 
   mock_i2c_.ExpectWrite({kCfg2Reg})
       .ExpectReadStop({kCfg2Default})
@@ -425,19 +390,12 @@ TEST_F(Lp8556DeviceTest, SetAbsoluteBrightnessScaleReset) {
       .register_count = 0,
   };
 
-  fake_ddk::Bind ddk;
-  static constexpr const uint32_t kNumberOfFragments = 1;
-  fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumberOfFragments],
-                                                kNumberOfFragments);
-  fragments[0].name = "pdev";
-  fragments[0].protocols.emplace_back(
-      fake_ddk::ProtocolEntry{ZX_PROTOCOL_PDEV, fake_ddk::Protocol{nullptr, nullptr}});
-  ddk.SetFragments(std::move(fragments));
-  ddk.SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
+  fake_parent_->AddProtocol(ZX_PROTOCOL_PDEV, nullptr, nullptr, "pdev");
+  fake_parent_->SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
 
   constexpr double kMaxBrightnessInNits = 350.0;
-  ddk.SetMetadata(DEVICE_METADATA_BACKLIGHT_MAX_BRIGHTNESS_NITS, &kMaxBrightnessInNits,
-                  sizeof(kMaxBrightnessInNits));
+  fake_parent_->SetMetadata(DEVICE_METADATA_BACKLIGHT_MAX_BRIGHTNESS_NITS, &kMaxBrightnessInNits,
+                            sizeof(kMaxBrightnessInNits));
 
   mock_i2c_.ExpectWrite({kCfg2Reg})
       .ExpectReadStop({kCfg2Default})
