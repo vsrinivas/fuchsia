@@ -36,8 +36,6 @@ group("tests") {
     # This is included to make sure changes to fuchsia_async (or elsewhere)
     # don't break the WASM build.
     "//src/diagnostics/lib/triage/wasm:wasm",
-
-    # "transit_bench",
   ]
 }
 
