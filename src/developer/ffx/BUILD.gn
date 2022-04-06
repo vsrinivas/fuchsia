@@ -61,6 +61,7 @@ if (is_host) {
       "//src/developer/ffx/plugins/triage:ffx_triage",
       "//src/developer/ffx/plugins/version:ffx_version",
       "//src/developer/ffx/plugins/wlan:ffx_wlan",
+      "//src/storage/ffx:ffx_storage",
       "//src/sys/run_test_suite/ffx/test:ffx_test",
     ]
 

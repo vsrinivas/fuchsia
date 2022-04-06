@@ -2,12 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
 group("blackout") {
   testonly = true
-  public_deps = [
-    "blobfs-checkerboard",
-    "minfs-fsck",
-  ]
+  public_deps = [ "blobfs-checkerboard" ]
+}
+
+ffx_plugin("ffx_storage_blackout") {
+  version = "0.1.0"
+  edition = "2018"
+
+  args_sources = [ "src/args.rs" ]
+
+  plugin_deps =
+      [ "blobfs-checkerboard:ffx_storage_blackout_blobfs_checkerboard" ]
 }
 
 group("tests") {

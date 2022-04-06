@@ -11,7 +11,6 @@ if (is_host) {
     deps = [
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:rand",
-      "//third_party/rust_crates:structopt",
       "//third_party/rust_crates:thiserror",
     ]
 

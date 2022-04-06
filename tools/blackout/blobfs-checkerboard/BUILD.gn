@@ -4,33 +4,17 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/developer/ffx/build/ffx_plugin.gni")
 
-if (is_host) {
-  rustc_binary("blackout-blobfs-checkerboard-host") {
-    output_name = "blackout_blobfs_checkerboard_host"
-    testonly = true
-    edition = "2018"
-    deps = [
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:structopt",
-      "//tools/blackout/blackout-host",
-    ]
-    source_root = "src/host.rs"
-    sources = [ "src/host.rs" ]
-
-    with_unit_tests = true
-    test_environments = [
-      {
-        dimensions = {
-          testbed = "pwr_sherlock"
-          pool = "fuchsia.tests.power-failure"
-          device_type = "Sherlock"
-        }
-        tags = [ "power-failure-sherlock" ]
-        netboot = true
-      },
-    ]
-  }
+ffx_plugin("ffx_storage_blackout_blobfs_checkerboard") {
+  version = "0.1.0"
+  edition = "2018"
+  args_sources = [ "src/args.rs" ]
+  sources = [ "src/lib.rs" ]
+  deps = [
+    "//third_party/rust_crates:anyhow",
+    "//tools/blackout/blackout-host",
+  ]
 }
 
 rustc_binary("blackout-blobfs-checkerboard-target-bin") {
@@ -69,16 +53,12 @@ fuchsia_package("blackout-blobfs-checkerboard-target") {
 
 group("blobfs-checkerboard") {
   testonly = true
-  public_deps = [
-    ":blackout-blobfs-checkerboard-host($host_toolchain)",
-    ":blackout-blobfs-checkerboard-target",
-  ]
+  public_deps = [ ":blackout-blobfs-checkerboard-target" ]
 }
 
 group("integration") {
   testonly = true
   public_deps = [
-    ":blackout-blobfs-checkerboard-host_test($host_toolchain)",
     ":blackout-blobfs-checkerboard-target",
     "//garnet/packages/prod:run",
   ]

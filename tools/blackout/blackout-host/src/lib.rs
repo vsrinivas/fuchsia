@@ -16,7 +16,6 @@ use {
         rc::Rc,
         time::Duration,
     },
-    structopt::StructOpt,
     thiserror::Error,
 };
 
@@ -110,8 +109,7 @@ pub enum BlackoutError {
 /// the device after a certain amount of time using a configured reboot mechanism. By default, it
 /// runs one iteration of this test. Options are provided for running the test until failure or
 /// running the test N times and collecting failure statistics.
-#[derive(Clone, StructOpt)]
-#[structopt(rename_all = "kebab-case")]
+#[derive(Clone)]
 pub struct CommonOpts {
     /// The block device on the target device to use for testing. WARNING: the test can (and likely
     /// will!) format this device. Don't use a main system partition!
@@ -126,28 +124,22 @@ pub struct CommonOpts {
     ///
     /// One will be randomly generated if not provided. When performing the same test multiple times
     /// in one run, a new seed will be generated for each run if one was not provided.
-    #[structopt(short, long)]
     pub seed: Option<u64>,
     /// Path to a power relay for cutting the power to a device. Probably the highest-numbered
     /// /dev/ttyUSB[N]. If in doubt, try removing it and seeing what disappears from /dev. When a
     /// relay is provided, the harness automatically switches to use hardware reboots.
-    #[structopt(short, long)]
     pub relay: Option<PathBuf>,
     /// Run the test N number of times, collecting statistics on the number of failures.
-    #[structopt(short, long)]
     pub iterations: Option<u64>,
     /// Run the test until a verification failure is detected, then exit.
-    #[structopt(short = "f", long, requires = "iterations")]
     pub run_until_failure: bool,
     /// Path to the ssh private key to use when authenticating with the target device. If neither
     /// this flag or the --ssh-agent flag is set, the test will open `$FUCHSIA_DIR/.ssh/pkey` if
     /// `$FUCHSIA_DIR` exists, otherwise it will attempt to open `$CWD/.ssh/pkey`. If none of these
     /// attempts succeed the test will fail to run.
-    #[structopt(short = "k", long)]
     pub ssh_key: Option<String>,
     /// Use the ssh agent to authenticate with the target device. If both this option and --ssh-key
     /// are provided, --ssk-key will take precedence.
-    #[structopt(short = "a", long)]
     pub ssh_agent: bool,
 }
 
@@ -253,15 +245,8 @@ impl fmt::Display for Test {
 }
 
 impl UnconfiguredTest {
-    /// Collect command line options for configuring the test steps. This uses the [`CommonOpts`]
-    /// struct with StructOpt.
-    pub fn collect_options(self) -> Test {
-        self.add_options(CommonOpts::from_args())
-    }
-
     /// Add the set of common options manually. This can be used if additional options need to be
-    /// collected at run time that aren't one of the common options. The CommonOpts struct can be
-    /// flattened into the defined CLI using structopt (see their docs for how).
+    /// collected at run time that aren't one of the common options.
     pub fn add_options(self, opts: CommonOpts) -> Test {
         Test {
             target: opts.target,
