@@ -152,7 +152,7 @@ and expose it for use by the parent realm:
 `echo-server/meta/echo_server.cml`:
 
 ```json5
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/echo_server/meta/echo_server.cml" region_tag="example_snippet" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/rust/echo_server/meta/echo_server.cml" region_tag="example_snippet" adjust_indentation="auto" %}
 ```
 
 ### Implement the server
@@ -163,7 +163,7 @@ following code:
 `echo-server/src/main.rs`:
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/echo_server/src/main.rs" region_tag="imports" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/rust/echo_server/src/main.rs" region_tag="imports" adjust_indentation="auto" %}
 ```
 
 <aside class="key-point">
@@ -179,7 +179,7 @@ Add the following code to `main()` to serve the `Echo` protocol:
 `echo-server/src/main.rs`:
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/echo_server/src/main.rs" region_tag="main_body" adjust_indentation="auto" highlight="1,2,3,4,14,15,23,24,25,26,27" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/rust/echo_server/src/main.rs" region_tag="main_body" adjust_indentation="auto" highlight="1,2,3,4,14,15,23,24,25,26,27" %}
 ```
 
 This code performs the following steps to serve the `Echo` protocol:
@@ -196,7 +196,7 @@ requests:
 `echo-server/src/main.rs`:
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/echo_server/src/main.rs" region_tag="handler" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/rust/echo_server/src/main.rs" region_tag="handler" adjust_indentation="auto" %}
 ```
 
 Each request in the `EchoRequestStream` is typed by the method name
@@ -236,7 +236,7 @@ Configure the client's component manifest to request the
 `echo-client/meta/echo_client.cml`:
 
 ```json5
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/echo_client/meta/echo_client.cml" region_tag="example_snippet" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/rust/echo_client/meta/echo_client.cml" region_tag="example_snippet" adjust_indentation="auto" %}
 ```
 
 ### Implement the client
@@ -247,7 +247,7 @@ to the server. Add the following program arguments to `echo_client.cml`:
 `echo-client/meta/echo_client.cml`:
 
 ```json5
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/echo_client/meta/echo_client.cml" region_tag="program_args" adjust_indentation="auto" highlight="9,10" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/rust/echo_client/meta/echo_client.cml" region_tag="program_args" adjust_indentation="auto" highlight="9,10" %}
 ```
 
 Open the `main.rs` source file and replace the import statements with the
@@ -256,7 +256,7 @@ following code:
 `echo-client/src/main.rs`:
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/echo_client/src/main.rs" region_tag="imports" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/rust/echo_client/src/main.rs" region_tag="imports" adjust_indentation="auto" %}
 ```
 
 Add the following code to `main()` to connect to the `Echo` protocol and send
@@ -265,7 +265,7 @@ a request:
 `echo-client/src/main.rs`:
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/echo_client/src/main.rs" region_tag="main_body" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/rust/echo_client/src/main.rs" region_tag="main_body" adjust_indentation="auto" %}
 ```
 
 The `EchoMarker` provides a wrapper to connect to the exposed capability by

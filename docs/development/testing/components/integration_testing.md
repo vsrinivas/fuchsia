@@ -32,7 +32,7 @@ The `echo_integration_test` package contains the following components:
 - **echo_server** - Component under test
 
 ```json5
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/integration_tests/meta/echo_integration_test.cml" region_tag="example_snippet" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/integration_tests/rust/meta/echo_integration_test.cml" region_tag="example_snippet" adjust_indentation="auto" %}
 ```
 
 The test controller component contains the test case logic, and interacts with
@@ -55,7 +55,7 @@ See the following `BUILD.gn` file that defines the `fuchsia_test_package()`
 target for this example:
 
 ```gn
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/integration_tests/BUILD.gn" region_tag="example_snippet" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/integration_tests/rust/BUILD.gn" region_tag="example_snippet" adjust_indentation="auto" %}
 ```
 
 All components under test are included in the same **hermetic test package**.

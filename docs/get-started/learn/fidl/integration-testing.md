@@ -141,7 +141,7 @@ protocol capability to the test component.
 `echo-integration/meta/echo_integration.cml`:
 
 ```json5
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/integration_tests/meta/echo_integration_test.cml" region_tag="example_snippet" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/integration_tests/rust/meta/echo_integration_test.cml" region_tag="example_snippet" adjust_indentation="auto" %}
 ```
 
 Notice that the `echo-server` instance comes from the same package as the
@@ -172,7 +172,7 @@ Add the following contents to the `src/lib.rs` file:
 `echo-integration/src/lib.rs`:
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/integration_tests/src/lib.rs" region_tag="example_snippet" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/integration_tests/rust/src/lib.rs" region_tag="example_snippet" adjust_indentation="auto" %}
 ```
 
 <aside class="key-point">
