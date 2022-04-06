@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {async_trait::async_trait, fidl_fuchsia_identity_account as faccount, thiserror::Error};
+use {
+    async_trait::async_trait, fidl_fuchsia_identity_account as faccount,
+    fidl_fuchsia_identity_credential as fcred, thiserror::Error,
+};
 
 #[derive(Error, Debug)]
 pub enum KeyEnrollmentError {
@@ -16,6 +19,15 @@ pub enum KeyEnrollmentError {
 
     #[error("Invalid parameters provided")]
     ParamsError,
+
+    #[error("Failed connecting to credential manager: {0}")]
+    CredentialManagerConnectionError(#[from] anyhow::Error),
+
+    #[error("Failed during FIDL call: {0}")]
+    FidlError(#[from] fidl::Error),
+
+    #[error("Credential manager error: {0:?}")]
+    CredentialManagerError(fcred::CredentialError),
 }
 
 #[derive(Error, Debug)]
@@ -30,6 +42,18 @@ pub enum KeyRetrievalError {
 
     #[error("Invalid parameters provided")]
     ParamsError,
+
+    #[error("Failed connecting to credential manager: {0}")]
+    CredentialManagerConnectionError(#[from] anyhow::Error),
+
+    #[error("Failed during FIDL call: {0}")]
+    FidlError(#[from] fidl::Error),
+
+    #[error("Credential manager error: {0:?}")]
+    CredentialManagerError(fcred::CredentialError),
+
+    #[error("Credential manager returned invalid data")]
+    InvalidCredentialManagerDataError,
 }
 
 /// The size, in bytes of a key.
@@ -63,11 +87,27 @@ pub trait KeyRetrieval {
     async fn retrieve_key(&self, password: &str) -> Result<Key, KeyRetrievalError>;
 }
 
+fn to_faccount_error(err: fcred::CredentialError) -> faccount::Error {
+    // This can't be a From impl because this crate implements neither the source nor target type.
+    match err {
+        fcred::CredentialError::InvalidSecret => faccount::Error::FailedAuthentication,
+        fcred::CredentialError::TooManyAttempts => faccount::Error::Resource,
+        fcred::CredentialError::CorruptedMetadata => faccount::Error::Internal,
+        fcred::CredentialError::InvalidLabel => faccount::Error::Internal,
+        fcred::CredentialError::NoFreeLabel => faccount::Error::Resource,
+        fcred::CredentialError::UnsupportedOperation => faccount::Error::Internal,
+        _ => faccount::Error::Internal,
+    }
+}
+
 impl From<KeyEnrollmentError> for faccount::Error {
     fn from(e: KeyEnrollmentError) -> Self {
         match e {
             KeyEnrollmentError::PasswordError => faccount::Error::FailedAuthentication,
             KeyEnrollmentError::ParamsError => faccount::Error::Internal,
+            KeyEnrollmentError::CredentialManagerConnectionError(_) => faccount::Error::Resource,
+            KeyEnrollmentError::FidlError(_) => faccount::Error::Resource,
+            KeyEnrollmentError::CredentialManagerError(err) => to_faccount_error(err),
         }
     }
 }
@@ -77,6 +117,10 @@ impl From<KeyRetrievalError> for faccount::Error {
         match e {
             KeyRetrievalError::PasswordError => faccount::Error::FailedAuthentication,
             KeyRetrievalError::ParamsError => faccount::Error::Internal,
+            KeyRetrievalError::CredentialManagerConnectionError(_) => faccount::Error::Resource,
+            KeyRetrievalError::FidlError(_) => faccount::Error::Resource,
+            KeyRetrievalError::CredentialManagerError(err) => to_faccount_error(err),
+            KeyRetrievalError::InvalidCredentialManagerDataError => faccount::Error::Internal,
         }
     }
 }

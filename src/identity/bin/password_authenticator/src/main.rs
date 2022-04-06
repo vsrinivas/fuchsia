@@ -10,6 +10,7 @@ mod disk_management;
 mod insecure;
 mod keys;
 mod options;
+mod pinweaver;
 mod scrypt;
 #[cfg(test)]
 mod testing;
