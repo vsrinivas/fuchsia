@@ -225,7 +225,7 @@ void PreprocessValue(fidl::AnyArena& allocator, uint32_t param_type, const TEEC_
     value.set_b(allocator, teec_value.b);
   }
 
-  out_parameter->set_value(allocator, std::move(value));
+  *out_parameter = fuchsia_tee::wire::Parameter::WithValue(allocator, std::move(value));
 }
 
 TEEC_Result PreprocessTemporaryMemref(fidl::AnyArena& allocator, uint32_t param_type,
@@ -276,7 +276,7 @@ TEEC_Result PreprocessTemporaryMemref(fidl::AnyArena& allocator, uint32_t param_
   buffer.set_offset(allocator, 0);
   buffer.set_size(allocator, temp_memory_ref.size);
 
-  out_parameter->set_buffer(allocator, std::move(buffer));
+  *out_parameter = fuchsia_tee::wire::Parameter::WithBuffer(allocator, std::move(buffer));
   return TEEC_SUCCESS;
 }
 
@@ -313,7 +313,7 @@ TEEC_Result PreprocessWholeMemref(fidl::AnyArena& allocator,
   buffer.set_offset(allocator, 0);
   buffer.set_size(allocator, shared_mem->size);
 
-  out_parameter->set_buffer(allocator, std::move(buffer));
+  *out_parameter = fuchsia_tee::wire::Parameter::WithBuffer(allocator, std::move(buffer));
   return TEEC_SUCCESS;
 }
 
@@ -365,7 +365,7 @@ TEEC_Result PreprocessPartialMemref(fidl::AnyArena& allocator, uint32_t param_ty
   buffer.set_offset(allocator, memory_ref.offset);
   buffer.set_size(allocator, memory_ref.size);
 
-  out_parameter->set_buffer(allocator, std::move(buffer));
+  *out_parameter = fuchsia_tee::wire::Parameter::WithBuffer(allocator, std::move(buffer));
   return TEEC_SUCCESS;
 }
 
@@ -388,7 +388,7 @@ TEEC_Result PreprocessOperation(fidl::AnyArena& allocator, const TEEC_Operation*
 
     switch (param_type) {
       case TEEC_NONE:
-        parameter.set_none({});
+        parameter = fuchsia_tee::wire::Parameter::WithNone({});
         break;
       case TEEC_VALUE_INPUT:
       case TEEC_VALUE_OUTPUT:

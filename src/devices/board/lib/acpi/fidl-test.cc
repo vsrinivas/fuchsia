@@ -11,6 +11,7 @@
 
 #include <zxtest/zxtest.h>
 
+#include "fidl/fuchsia.hardware.acpi/cpp/wire_types.h"
 #include "lib/fake-resource/resource.h"
 #include "src/devices/board/lib/acpi/acpi.h"
 #include "src/devices/board/lib/acpi/test/mock-acpi.h"
@@ -195,7 +196,7 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeInteger) {
   facpi::Object obj;
   ACPI_OBJECT out;
   fidl::Arena<> alloc;
-  obj.set_integer_val(alloc, 42);
+  obj = facpi::Object::WithIntegerVal(alloc, 42);
 
   auto status = helper.DecodeObject(obj, &out);
   ASSERT_OK(status.status_value());
@@ -216,7 +217,7 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeString) {
   facpi::Object obj;
   ACPI_OBJECT out;
   fidl::Arena<> alloc;
-  obj.set_string_val(alloc, "test string");
+  obj = facpi::Object::WithStringVal(alloc, "test string");
   auto status = helper.DecodeObject(obj, &out);
   ASSERT_OK(status.status_value());
   ASSERT_NO_FATAL_FAILURE(CheckEq(out, ACPI_OBJECT{
@@ -238,8 +239,9 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeBuffer) {
   ACPI_OBJECT out;
   fidl::Arena<> alloc;
   static constexpr uint8_t kBuffer[] = {0x12, 0x34, 0x56, 0x78, 0x76, 0x54, 0x32, 0x10};
-  obj.set_buffer_val(alloc, fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t *>(kBuffer),
-                                                                    std::size(kBuffer)));
+  obj = facpi::Object::WithBufferVal(
+      alloc,
+      fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t *>(kBuffer), std::size(kBuffer)));
   auto status = helper.DecodeObject(obj, &out);
   ASSERT_OK(status.status_value());
   ASSERT_NO_FATAL_FAILURE(CheckEq(out, ACPI_OBJECT{
@@ -263,7 +265,7 @@ TEST_F(FidlEvaluateObjectTest, TestDecodePowerResource) {
   facpi::PowerResource power;
   power.resource_order = 9;
   power.system_level = 32;
-  obj.set_power_resource_val(alloc, power);
+  obj = facpi::Object::WithPowerResourceVal(alloc, power);
   auto status = helper.DecodeObject(obj, &out);
   ASSERT_OK(status.status_value());
   ASSERT_NO_FATAL_FAILURE(CheckEq(out, ACPI_OBJECT{
@@ -288,7 +290,7 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeProcessorVal) {
   processor.pblk_address = 0xd00dfeed;
   processor.pblk_length = 0xabc;
   processor.id = 7;
-  obj.set_processor_val(alloc, processor);
+  obj = facpi::Object::WithProcessorVal(alloc, processor);
   auto status = helper.DecodeObject(obj, &out);
   ASSERT_OK(status.status_value());
   ASSERT_NO_FATAL_FAILURE(CheckEq(out, ACPI_OBJECT{
@@ -316,7 +318,7 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeReference) {
   facpi::Handle ref;
   ref.object_type = facpi::ObjectType::kDevice;
   ref.path = "PCI0.I2C0";
-  obj.set_reference_val(alloc, ref);
+  obj = facpi::Object::WithReferenceVal(alloc, ref);
 
   auto status = helper.DecodeObject(obj, &out);
   ASSERT_OK(status.status_value());
@@ -345,7 +347,7 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeParentReferenceFails) {
   facpi::Handle ref;
   ref.object_type = facpi::ObjectType::kDevice;
   ref.path = "\\";
-  obj.set_reference_val(alloc, ref);
+  obj = facpi::Object::WithReferenceVal(alloc, ref);
 
   auto status = helper.DecodeObject(obj, &out);
   ASSERT_EQ(status.status_value(), AE_ACCESS);
@@ -362,13 +364,13 @@ TEST_F(FidlEvaluateObjectTest, TestDecodePackage) {
   ACPI_OBJECT out;
   fidl::Arena<> alloc;
 
-  obj.set_integer_val(alloc, 32);
+  obj = facpi::Object::WithIntegerVal(alloc, 32);
   elements.emplace_back(obj);
-  obj.set_string_val(alloc, "test string");
+  obj = facpi::Object::WithStringVal(alloc, "test string");
   elements.emplace_back(obj);
 
   list.value = fidl::VectorView<facpi::Object>::FromExternal(elements);
-  obj.set_package_val(alloc, list);
+  obj = facpi::Object::WithPackageVal(alloc, list);
 
   auto status = helper.DecodeObject(obj, &out);
   ASSERT_OK(status.status_value());
@@ -401,15 +403,12 @@ TEST_F(FidlEvaluateObjectTest, TestDecodePackage) {
 TEST_F(FidlEvaluateObjectTest, TestDecodeParameters) {
   fidl::Arena<> alloc;
   std::vector<facpi::Object> params;
-  facpi::Object object;
-  object.set_integer_val(alloc, 32);
-  params.emplace_back(object);
-  object.set_string_val(alloc, "hello");
-  params.emplace_back(object);
+  params.emplace_back(facpi::Object::WithIntegerVal(alloc, 32));
+  params.emplace_back(facpi::Object::WithStringVal(alloc, "hello"));
   constexpr uint8_t kData[] = {1, 2, 3};
-  object.set_buffer_val(alloc, fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t *>(kData),
-                                                                       std::size(kData)));
-  params.emplace_back(object);
+  params.emplace_back(facpi::Object::WithBufferVal(
+      alloc,
+      fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t *>(kData), std::size(kData))));
 
   auto view = fidl::VectorView<facpi::Object>::FromExternal(params);
   acpi::EvaluateObjectFidlHelper helper(&acpi_, acpi_.GetDeviceRoot(), "\\",
@@ -438,8 +437,7 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeInt) {
   auto result = helper.EncodeObject(alloc, &obj);
   ASSERT_OK(result.zx_status_value());
 
-  facpi::Object expected;
-  expected.set_integer_val(alloc, 320);
+  facpi::Object expected = facpi::Object::WithIntegerVal(alloc, 320);
   ASSERT_NO_FATAL_FAILURE(CheckEq(result.value(), expected));
 }
 
@@ -456,8 +454,7 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeString) {
   auto result = helper.EncodeObject(alloc, &obj);
   ASSERT_OK(result.zx_status_value());
 
-  facpi::Object expected;
-  expected.set_string_val(alloc, "abc");
+  facpi::Object expected = facpi::Object::WithStringVal(alloc, "abc");
   ASSERT_NO_FATAL_FAILURE(CheckEq(result.value(), expected));
 }
 
@@ -475,9 +472,9 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeBuffer) {
   auto result = helper.EncodeObject(alloc, &obj);
   ASSERT_OK(result.zx_status_value());
 
-  facpi::Object expected;
-  expected.set_buffer_val(alloc, fidl::VectorView<uint8_t>::FromExternal(
-                                     const_cast<uint8_t *>(kBuffer), std::size(kBuffer)));
+  facpi::Object expected = facpi::Object::WithBufferVal(
+      alloc,
+      fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t *>(kBuffer), std::size(kBuffer)));
   ASSERT_NO_FATAL_FAILURE(CheckEq(result.value(), expected));
 }
 
@@ -498,12 +495,11 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeProcessorVal) {
   };
   auto result = helper.EncodeObject(alloc, &obj);
   ASSERT_OK(result.zx_status_value());
-  facpi::Object expected;
   facpi::Processor processor;
   processor.pblk_address = 0xd00dfeed;
   processor.pblk_length = 0xabc;
   processor.id = 7;
-  expected.set_processor_val(alloc, processor);
+  facpi::Object expected = facpi::Object::WithProcessorVal(alloc, processor);
 
   ASSERT_NO_FATAL_FAILURE(CheckEq(result.value(), expected));
 }
@@ -526,7 +522,7 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeReference) {
   facpi::Handle ref;
   ref.object_type = facpi::ObjectType::kDevice;
   ref.path = "\\_SB_.PCI0.I2C0";
-  expected.set_reference_val(alloc, ref);
+  expected = facpi::Object::WithReferenceVal(alloc, ref);
 
   auto result = helper.EncodeObject(alloc, &obj);
   ASSERT_OK(result.zx_status_value());
@@ -581,16 +577,13 @@ TEST_F(FidlEvaluateObjectTest, TestEncodePackage) {
   auto result = helper.EncodeObject(alloc, &obj);
   ASSERT_OK(result.zx_status_value());
   std::vector<facpi::Object> elements;
-  facpi::Object expected;
   facpi::ObjectList list;
 
-  expected.set_integer_val(alloc, 32);
-  elements.emplace_back(expected);
-  expected.set_string_val(alloc, "test string");
-  elements.emplace_back(expected);
+  elements.emplace_back(facpi::Object::WithIntegerVal(alloc, 32));
+  elements.emplace_back(facpi::Object::WithStringVal(alloc, "test string"));
 
   list.value = fidl::VectorView<facpi::Object>::FromExternal(elements);
-  expected.set_package_val(alloc, list);
+  auto expected = facpi::Object::WithPackageVal(alloc, list);
 
   ASSERT_NO_FATAL_FAILURE(CheckEq(result.value(), expected));
 }
@@ -607,8 +600,7 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeReturnValue) {
   ASSERT_FALSE(result.value().is_err());
   auto &object = result.value().response().result;
   // Expect a value of this size to be encoded in-line.
-  fuchsia_hardware_acpi::wire::Object expected;
-  expected.set_integer_val(alloc, 47);
+  auto expected = facpi::Object::WithIntegerVal(alloc, 47);
   ASSERT_NO_FATAL_FAILURE(CheckEq(object.object(), expected));
 }
 

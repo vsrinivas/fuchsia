@@ -184,15 +184,12 @@ class OnlyLlcpp {
   bool is_x() const {
     return ordinal_ == ::test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::kX;
   }
+
   static OnlyLlcpp WithX(uint32_t val) {
     OnlyLlcpp result;
-    result.set_x(std::move(val));
+    result.ordinal_ = ::test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::kX;
+    result.envelope_.As<uint32_t>().set_data(std::move(val));
     return result;
-  }
-
-  void set_x(uint32_t elem) {
-    ordinal_ = ::test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::kX;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
   uint32_t& x() {
@@ -260,23 +257,18 @@ class DenyEachBindingOnlyDenySyzkallerResult {
            ::test_bindingsdenylist::wire::
                DenyEachBindingOnlyDenySyzkallerResult::Ordinal::kResponse;
   }
+
   static DenyEachBindingOnlyDenySyzkallerResult WithResponse(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse
           val) {
     DenyEachBindingOnlyDenySyzkallerResult result;
-    result.set_response(std::move(val));
-    return result;
-  }
-
-  void set_response(
-      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse
-          elem) {
-    ordinal_ = ::test_bindingsdenylist::wire::
+    result.ordinal_ = ::test_bindingsdenylist::wire::
         DenyEachBindingOnlyDenySyzkallerResult::Ordinal::kResponse;
-    envelope_
+    result.envelope_
         .As<::test_bindingsdenylist::wire::
                 DenyEachBindingOnlyDenySyzkallerResponse>()
-        .set_data(std::move(elem));
+        .set_data(std::move(val));
+    return result;
   }
 
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse&
@@ -305,16 +297,13 @@ class DenyEachBindingOnlyDenySyzkallerResult {
            ::test_bindingsdenylist::wire::
                DenyEachBindingOnlyDenySyzkallerResult::Ordinal::kErr;
   }
+
   static DenyEachBindingOnlyDenySyzkallerResult WithErr(uint32_t val) {
     DenyEachBindingOnlyDenySyzkallerResult result;
-    result.set_err(std::move(val));
-    return result;
-  }
-
-  void set_err(uint32_t elem) {
-    ordinal_ = ::test_bindingsdenylist::wire::
+    result.ordinal_ = ::test_bindingsdenylist::wire::
         DenyEachBindingOnlyDenySyzkallerResult::Ordinal::kErr;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
+    result.envelope_.As<uint32_t>().set_data(std::move(val));
+    return result;
   }
 
   uint32_t& err() {
@@ -388,21 +377,17 @@ class DenyEachBindingOnlyDenyRustResult {
            ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::
                Ordinal::kResponse;
   }
+
   static DenyEachBindingOnlyDenyRustResult WithResponse(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse val) {
     DenyEachBindingOnlyDenyRustResult result;
-    result.set_response(std::move(val));
-    return result;
-  }
-
-  void set_response(
-      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse elem) {
-    ordinal_ = ::test_bindingsdenylist::wire::
+    result.ordinal_ = ::test_bindingsdenylist::wire::
         DenyEachBindingOnlyDenyRustResult::Ordinal::kResponse;
-    envelope_
+    result.envelope_
         .As<::test_bindingsdenylist::wire::
                 DenyEachBindingOnlyDenyRustResponse>()
-        .set_data(std::move(elem));
+        .set_data(std::move(val));
+    return result;
   }
 
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse&
@@ -430,16 +415,13 @@ class DenyEachBindingOnlyDenyRustResult {
     return ordinal_ == ::test_bindingsdenylist::wire::
                            DenyEachBindingOnlyDenyRustResult::Ordinal::kErr;
   }
+
   static DenyEachBindingOnlyDenyRustResult WithErr(uint32_t val) {
     DenyEachBindingOnlyDenyRustResult result;
-    result.set_err(std::move(val));
-    return result;
-  }
-
-  void set_err(uint32_t elem) {
-    ordinal_ = ::test_bindingsdenylist::wire::
+    result.ordinal_ = ::test_bindingsdenylist::wire::
         DenyEachBindingOnlyDenyRustResult::Ordinal::kErr;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
+    result.envelope_.As<uint32_t>().set_data(std::move(val));
+    return result;
   }
 
   uint32_t& err() {
@@ -512,23 +494,18 @@ class DenyEachBindingOnlyDenyLibfuzzerResult {
            ::test_bindingsdenylist::wire::
                DenyEachBindingOnlyDenyLibfuzzerResult::Ordinal::kResponse;
   }
+
   static DenyEachBindingOnlyDenyLibfuzzerResult WithResponse(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse
           val) {
     DenyEachBindingOnlyDenyLibfuzzerResult result;
-    result.set_response(std::move(val));
-    return result;
-  }
-
-  void set_response(
-      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse
-          elem) {
-    ordinal_ = ::test_bindingsdenylist::wire::
+    result.ordinal_ = ::test_bindingsdenylist::wire::
         DenyEachBindingOnlyDenyLibfuzzerResult::Ordinal::kResponse;
-    envelope_
+    result.envelope_
         .As<::test_bindingsdenylist::wire::
                 DenyEachBindingOnlyDenyLibfuzzerResponse>()
-        .set_data(std::move(elem));
+        .set_data(std::move(val));
+    return result;
   }
 
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse&
@@ -557,16 +534,13 @@ class DenyEachBindingOnlyDenyLibfuzzerResult {
            ::test_bindingsdenylist::wire::
                DenyEachBindingOnlyDenyLibfuzzerResult::Ordinal::kErr;
   }
+
   static DenyEachBindingOnlyDenyLibfuzzerResult WithErr(uint32_t val) {
     DenyEachBindingOnlyDenyLibfuzzerResult result;
-    result.set_err(std::move(val));
-    return result;
-  }
-
-  void set_err(uint32_t elem) {
-    ordinal_ = ::test_bindingsdenylist::wire::
+    result.ordinal_ = ::test_bindingsdenylist::wire::
         DenyEachBindingOnlyDenyLibfuzzerResult::Ordinal::kErr;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
+    result.envelope_.As<uint32_t>().set_data(std::move(val));
+    return result;
   }
 
   uint32_t& err() {
@@ -638,20 +612,16 @@ class DenyEachBindingOnlyDenyGoResult {
     return ordinal_ == ::test_bindingsdenylist::wire::
                            DenyEachBindingOnlyDenyGoResult::Ordinal::kResponse;
   }
+
   static DenyEachBindingOnlyDenyGoResult WithResponse(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse val) {
     DenyEachBindingOnlyDenyGoResult result;
-    result.set_response(std::move(val));
-    return result;
-  }
-
-  void set_response(
-      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse elem) {
-    ordinal_ = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::
-        Ordinal::kResponse;
-    envelope_
+    result.ordinal_ = ::test_bindingsdenylist::wire::
+        DenyEachBindingOnlyDenyGoResult::Ordinal::kResponse;
+    result.envelope_
         .As<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse>()
-        .set_data(std::move(elem));
+        .set_data(std::move(val));
+    return result;
   }
 
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse& response() {
@@ -676,16 +646,13 @@ class DenyEachBindingOnlyDenyGoResult {
     return ordinal_ == ::test_bindingsdenylist::wire::
                            DenyEachBindingOnlyDenyGoResult::Ordinal::kErr;
   }
+
   static DenyEachBindingOnlyDenyGoResult WithErr(uint32_t val) {
     DenyEachBindingOnlyDenyGoResult result;
-    result.set_err(std::move(val));
+    result.ordinal_ = ::test_bindingsdenylist::wire::
+        DenyEachBindingOnlyDenyGoResult::Ordinal::kErr;
+    result.envelope_.As<uint32_t>().set_data(std::move(val));
     return result;
-  }
-
-  void set_err(uint32_t elem) {
-    ordinal_ = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::
-        Ordinal::kErr;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
   uint32_t& err() {
@@ -757,21 +724,17 @@ class DenyEachBindingOnlyDenyDartResult {
            ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult::
                Ordinal::kResponse;
   }
+
   static DenyEachBindingOnlyDenyDartResult WithResponse(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse val) {
     DenyEachBindingOnlyDenyDartResult result;
-    result.set_response(std::move(val));
-    return result;
-  }
-
-  void set_response(
-      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse elem) {
-    ordinal_ = ::test_bindingsdenylist::wire::
+    result.ordinal_ = ::test_bindingsdenylist::wire::
         DenyEachBindingOnlyDenyDartResult::Ordinal::kResponse;
-    envelope_
+    result.envelope_
         .As<::test_bindingsdenylist::wire::
                 DenyEachBindingOnlyDenyDartResponse>()
-        .set_data(std::move(elem));
+        .set_data(std::move(val));
+    return result;
   }
 
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse&
@@ -799,16 +762,13 @@ class DenyEachBindingOnlyDenyDartResult {
     return ordinal_ == ::test_bindingsdenylist::wire::
                            DenyEachBindingOnlyDenyDartResult::Ordinal::kErr;
   }
+
   static DenyEachBindingOnlyDenyDartResult WithErr(uint32_t val) {
     DenyEachBindingOnlyDenyDartResult result;
-    result.set_err(std::move(val));
-    return result;
-  }
-
-  void set_err(uint32_t elem) {
-    ordinal_ = ::test_bindingsdenylist::wire::
+    result.ordinal_ = ::test_bindingsdenylist::wire::
         DenyEachBindingOnlyDenyDartResult::Ordinal::kErr;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
+    result.envelope_.As<uint32_t>().set_data(std::move(val));
+    return result;
   }
 
   uint32_t& err() {

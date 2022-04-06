@@ -167,7 +167,8 @@ void TestEffectsV2::Create(CreateRequestView request, CreateCompleter::Sync& com
   inputs[0].format().sample_format = ASF::kFloat;
   inputs[0].format().channel_count = effect.input_channels;
   inputs[0].format().frames_per_second = effect.frames_per_second;
-  inputs[0].format().channel_layout.set_placeholder(0);
+  inputs[0].format().channel_layout =
+      fuchsia_mediastreams::wire::AudioChannelLayout::WithPlaceholder(0);
 
   fidl::VectorView<fuchsia_audio_effects::wire::OutputConfiguration> outputs(arena, 1);
   outputs[0].Allocate(arena);
@@ -176,7 +177,8 @@ void TestEffectsV2::Create(CreateRequestView request, CreateCompleter::Sync& com
   outputs[0].format().sample_format = ASF::kFloat;
   outputs[0].format().channel_count = effect.output_channels;
   outputs[0].format().frames_per_second = effect.frames_per_second;
-  outputs[0].format().channel_layout.set_placeholder(0);
+  outputs[0].format().channel_layout =
+      fuchsia_mediastreams::wire::AudioChannelLayout::WithPlaceholder(0);
   outputs[0].set_latency_frames(arena, effect.latency_frames);
   outputs[0].set_ring_out_frames(arena, effect.ring_out_frames);
 

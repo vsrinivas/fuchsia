@@ -277,15 +277,12 @@ class Union {
   bool is_x() const {
     return ordinal_ == ::test_versions::wire::Union::Ordinal::kX;
   }
+
   static Union WithX(uint32_t val) {
     Union result;
-    result.set_x(std::move(val));
+    result.ordinal_ = ::test_versions::wire::Union::Ordinal::kX;
+    result.envelope_.As<uint32_t>().set_data(std::move(val));
     return result;
-  }
-
-  void set_x(uint32_t elem) {
-    ordinal_ = ::test_versions::wire::Union::Ordinal::kX;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
   uint32_t& x() {

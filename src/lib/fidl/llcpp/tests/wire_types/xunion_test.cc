@@ -22,20 +22,20 @@ TEST(XUnionPayload, Primitive) {
     llcpp_test::wire::TestUnion test_union;
     EXPECT_TRUE(test_union.has_invalid_tag());
     int32_t primitive = 5;
-    test_union.set_primitive(std::move(primitive));
+    test_union = llcpp_test::wire::TestUnion::WithPrimitive(primitive);
     EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kPrimitive, test_union.Which());
     EXPECT_EQ(5, test_union.primitive());
   }
   {
     llcpp_test::wire::TestUnion test_union;
     EXPECT_TRUE(test_union.has_invalid_tag());
-    test_union.set_primitive(5);
+    test_union = llcpp_test::wire::TestUnion::WithPrimitive(5);
     EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kPrimitive, test_union.Which());
     EXPECT_EQ(5, test_union.primitive());
   }
   {
     int32_t primitive = 5;
-    auto test_union = llcpp_test::wire::TestUnion::WithPrimitive(std::move(primitive));
+    auto test_union = llcpp_test::wire::TestUnion::WithPrimitive(primitive);
     EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kPrimitive, test_union.Which());
     EXPECT_EQ(5, test_union.primitive());
   }
@@ -48,7 +48,7 @@ TEST(XUnionPayload, WhichDisallowedWhenUninitialized) {
 
 TEST(XUnionPayload, Struct) {
   llcpp_test::wire::CopyableStruct copyable{.x = 5};
-  auto test_xunion = llcpp_test::wire::TestXUnion::WithCopyable(std::move(copyable));
+  auto test_xunion = llcpp_test::wire::TestXUnion::WithCopyable(copyable);
   EXPECT_EQ(llcpp_test::wire::TestXUnion::Tag::kCopyable, test_xunion.Which());
 }
 
@@ -57,12 +57,12 @@ TEST(XUnionPayload, CopyableStruct) {
     llcpp_test::wire::TestUnion test_union;
     EXPECT_TRUE(test_union.has_invalid_tag());
     llcpp_test::wire::CopyableStruct copyable_struct{.x = 5};
-    test_union.set_copyable(std::move(copyable_struct));
+    test_union = llcpp_test::wire::TestUnion::WithCopyable(copyable_struct);
     EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kCopyable, test_union.Which());
   }
   {
     llcpp_test::wire::CopyableStruct copyable_struct{.x = 5};
-    auto test_union = llcpp_test::wire::TestUnion::WithCopyable(std::move(copyable_struct));
+    auto test_union = llcpp_test::wire::TestUnion::WithCopyable(copyable_struct);
     EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kCopyable, test_union.Which());
   }
 }
@@ -72,7 +72,7 @@ TEST(XUnionPayload, MoveOnlyStruct) {
     llcpp_test::wire::TestUnion test_union;
     EXPECT_TRUE(test_union.has_invalid_tag());
     llcpp_test::wire::MoveOnlyStruct move_only_struct{.h = zx::handle()};
-    test_union.set_move_only(std::move(move_only_struct));
+    test_union = llcpp_test::wire::TestUnion::WithMoveOnly(std::move(move_only_struct));
     EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kMoveOnly, test_union.Which());
   }
   {
@@ -82,7 +82,7 @@ TEST(XUnionPayload, MoveOnlyStruct) {
     ASSERT_EQ(ZX_OK, zx::event::create(0, &event));
     llcpp_test::wire::MoveOnlyStruct move_only_struct{.h = std::move(event)};
     EXPECT_NE(ZX_HANDLE_INVALID, move_only_struct.h.get());
-    test_union.set_move_only(std::move(move_only_struct));
+    test_union = llcpp_test::wire::TestUnion::WithMoveOnly(std::move(move_only_struct));
     EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kMoveOnly, test_union.Which());
     EXPECT_EQ(ZX_HANDLE_INVALID, move_only_struct.h.get());
     EXPECT_NE(ZX_HANDLE_INVALID, test_union.move_only().h.get());
@@ -123,7 +123,8 @@ TEST(MoveUnion, NoDoubleDestructPayload) {
         reinterpret_cast<llcpp_test::wire::TestUnion*>(dangerous_buffer);
     llcpp_test::wire::TestUnion union_with_absent_handle;
     llcpp_test::wire::MoveOnlyStruct move_only_struct{.h = zx::handle()};
-    union_with_absent_handle.set_move_only(std::move(move_only_struct));
+    union_with_absent_handle =
+        llcpp_test::wire::TestUnion::WithMoveOnly(std::move(move_only_struct));
     // Manually running the move constructor.
     new (test_union) llcpp_test::wire::TestUnion(std::move(union_with_absent_handle));
   }

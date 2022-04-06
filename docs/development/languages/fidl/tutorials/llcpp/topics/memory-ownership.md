@@ -31,16 +31,18 @@ These are non-owning views that only keep a reference and do not manage the
 object lifetime. The lifetime of the objects must be managed externally. That
 means that the referenced objects must outlive the views.
 
-Conceptually speaking, it helps to think of unions as pointers.
-For example, just as `T* my_pointer;` creates an invalid pointer that must be
-initialized before use, default constructing a wire union also leads
-to an invalid object (except for the purpose of sending an empty absent
-union).
-
 For memory safety reasons tables are immutable. The default constructor for a
 table returns an empty table. To create a table with fields you must use a
 builder. The members of tables may be mutable but you can't add or remove
 members after creation.
+
+For simplicity and consistency with tables, unions are also immutable. Their
+default constructor puts them in the absent state. It's a runtime error to send
+an absent union unless the union is marked `optional` in the library definition.
+To get a union `Foo` with a member `bar` call the static factory function
+`Foo::WithBar(...)`.The arguments are either the value (for values inlined into
+the envelope), a `fidl::ObjectView` of the value (for larger values) or an
+arena and constructor arguments for the value.
 
 ### fidl::StringView
 

@@ -113,18 +113,13 @@ void SysmemSecureMemServer::GetPhysicalSecureHeaps(
 void SysmemSecureMemServer::SetPhysicalSecureHeaps(
     SetPhysicalSecureHeapsRequestView request, SetPhysicalSecureHeapsCompleter::Sync& completer) {
   ZX_DEBUG_ASSERT(thrd_current() == loop_thread_);
-  // must out-live |complete|
-  fuchsia_sysmem::wire::SecureMemSetPhysicalSecureHeapsResult result;
   zx_status_t status = SetPhysicalSecureHeapsInternal(request->heaps);
   if (status != ZX_OK) {
     // Logging handled in `SetPhysicalSecureHeapsInternal`
-    result.set_err(status);
-    completer.Reply(std::move(result));
+    completer.ReplyError(status);
     return;
   }
-  fuchsia_sysmem::wire::SecureMemSetPhysicalSecureHeapsResponse response;
-  result.set_response(response);
-  completer.Reply(std::move(result));
+  completer.ReplySuccess();
 }
 
 void SysmemSecureMemServer::PostToLoop(fit::closure to_run) {

@@ -87,9 +87,12 @@ Status IntelDsp::ParseNhlt() {
   uint64_t nhlt_query_func_index = 1;
 
   auto uuid_buf = fidl::VectorView<uint8_t>::FromExternal(nhlt_query_uuid.bytes, acpi::kUuidBytes);
-  args[0].set_buffer_val(fidl::ObjectView<fidl::VectorView<uint8_t>>::FromExternal(&uuid_buf));
-  args[1].set_integer_val(fidl::ObjectView<uint64_t>::FromExternal(&nhlt_query_revid));
-  args[2].set_integer_val(fidl::ObjectView<uint64_t>::FromExternal(&nhlt_query_func_index));
+  args[0] = fuchsia_hardware_acpi::wire::Object::WithBufferVal(
+      fidl::ObjectView<fidl::VectorView<uint8_t>>::FromExternal(&uuid_buf));
+  args[1] = fuchsia_hardware_acpi::wire::Object::WithIntegerVal(
+      fidl::ObjectView<uint64_t>::FromExternal(&nhlt_query_revid));
+  args[2] = fuchsia_hardware_acpi::wire::Object::WithIntegerVal(
+      fidl::ObjectView<uint64_t>::FromExternal(&nhlt_query_func_index));
   auto& acpi = controller_->acpi().borrow();
   auto result = acpi->EvaluateObject(
       "_DSM", fuchsia_hardware_acpi::wire::EvaluateObjectMode::kParseResources,

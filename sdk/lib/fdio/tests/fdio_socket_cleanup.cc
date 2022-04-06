@@ -75,9 +75,8 @@ TEST(SocketCleanup, SynchronousDatagram) {
   zx::eventpair client_event, server_event;
   ASSERT_OK(zx::eventpair::create(0, &client_event, &server_event));
 
-  fuchsia_io::wire::SynchronousDatagramSocket dgram_info{.event = std::move(client_event)};
-  fuchsia_io::wire::NodeInfo node_info;
-  node_info.set_synchronous_datagram_socket(std::move(dgram_info));
+  fuchsia_io::wire::NodeInfo node_info =
+      fuchsia_io::wire::NodeInfo::WithSynchronousDatagramSocket({.event = std::move(client_event)});
 
   ASSERT_NO_FATAL_FAILURE(
       ServeAndExerciseFileDescriptionTeardown(std::move(node_info), std::move(endpoints.value())));
@@ -97,8 +96,8 @@ TEST(SocketCleanup, Stream) {
   ASSERT_OK(zx::socket::create(0, &client_socket, &server_socket));
 
   fuchsia_io::wire::StreamSocket stream_info{.socket = std::move(client_socket)};
-  fuchsia_io::wire::NodeInfo node_info;
-  node_info.set_stream_socket(std::move(stream_info));
+  fuchsia_io::wire::NodeInfo node_info =
+      fuchsia_io::wire::NodeInfo::WithStreamSocket(std::move(stream_info));
 
   ASSERT_NO_FATAL_FAILURE(
       ServeAndExerciseFileDescriptionTeardown(std::move(node_info), std::move(endpoints.value())));

@@ -542,30 +542,18 @@ class UnionSmallArray {
   bool is_a() const {
     return ordinal_ == ::test_arrays::wire::UnionSmallArray::Ordinal::kA;
   }
+
   static UnionSmallArray WithA(
       ::fidl::ObjectView<::fidl::Array<uint32_t, 2>> val) {
     UnionSmallArray result;
-    result.set_a(val);
+    result.ordinal_ = ::test_arrays::wire::UnionSmallArray::Ordinal::kA;
+    result.envelope_.As<::fidl::Array<uint32_t, 2>>().set_data(std::move(val));
     return result;
   }
 
   template <typename... Args>
   static UnionSmallArray WithA(::fidl::AnyArena& allocator, Args&&... args) {
-    UnionSmallArray result;
-    result.set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(
-        allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>> elem) {
-    ordinal_ = ::test_arrays::wire::UnionSmallArray::Ordinal::kA;
-    envelope_.As<::fidl::Array<uint32_t, 2>>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_a(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::test_arrays::wire::UnionSmallArray::Ordinal::kA;
-    set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(
+    return WithA(::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(
         allocator, std::forward<Args>(args)...));
   }
 
@@ -618,30 +606,19 @@ class UnionLargeArray {
   bool is_a() const {
     return ordinal_ == ::test_arrays::wire::UnionLargeArray::Ordinal::kA;
   }
+
   static UnionLargeArray WithA(
       ::fidl::ObjectView<::fidl::Array<uint32_t, 100>> val) {
     UnionLargeArray result;
-    result.set_a(val);
+    result.ordinal_ = ::test_arrays::wire::UnionLargeArray::Ordinal::kA;
+    result.envelope_.As<::fidl::Array<uint32_t, 100>>().set_data(
+        std::move(val));
     return result;
   }
 
   template <typename... Args>
   static UnionLargeArray WithA(::fidl::AnyArena& allocator, Args&&... args) {
-    UnionLargeArray result;
-    result.set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(
-        allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>> elem) {
-    ordinal_ = ::test_arrays::wire::UnionLargeArray::Ordinal::kA;
-    envelope_.As<::fidl::Array<uint32_t, 100>>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_a(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::test_arrays::wire::UnionLargeArray::Ordinal::kA;
-    set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(
+    return WithA(::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(
         allocator, std::forward<Args>(args)...));
   }
 

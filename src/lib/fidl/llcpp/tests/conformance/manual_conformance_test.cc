@@ -15,6 +15,7 @@
 
 #include <gtest/gtest.h>
 
+#include "fidl/fidl.test.misc/cpp/wire_types.h"
 #include "src/lib/fidl/llcpp/tests/conformance/conformance_utils.h"
 
 namespace llcpp_misc = ::fidl_test_misc;
@@ -46,9 +47,11 @@ TEST(InlineXUnionInStruct, Success) {
     llcpp_misc::wire::InlineXUnionInStruct input;
     llcpp_misc::wire::SimpleUnion simple_union;
     int64_t i64 = 0xdeadbeef;
-    simple_union.set_i64(fidl::ObjectView<int64_t>::FromExternal(&i64));
+    simple_union =
+        llcpp_misc::wire::SimpleUnion::WithI64(fidl::ObjectView<int64_t>::FromExternal(&i64));
     input.before = fidl::StringView::FromExternal(before);
-    input.xu.set_su(fidl::ObjectView<llcpp_misc::wire::SimpleUnion>::FromExternal(&simple_union));
+    input.xu = llcpp_misc::wire::SampleXUnion::WithSu(
+        fidl::ObjectView<llcpp_misc::wire::SimpleUnion>::FromExternal(&simple_union));
     input.after = fidl::StringView::FromExternal(after);
     fidl::unstable::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(
         fidl::internal::WireFormatVersion::kV1, &input);
@@ -100,7 +103,7 @@ TEST(PrimitiveInXUnionInStruct, Success) {
   {
     llcpp_misc::wire::InlineXUnionInStruct input;
     input.before = fidl::StringView::FromExternal(before);
-    input.xu.set_i(integer);
+    input.xu = llcpp_misc::wire::SampleXUnion::WithI(integer);
     input.after = fidl::StringView::FromExternal(after);
     fidl::unstable::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(
         fidl::internal::WireFormatVersion::kV1, &input);
@@ -140,7 +143,7 @@ TEST(SampleXUnion, Success) {
   // encode
   {
     llcpp_misc::wire::SampleXUnion xu;
-    xu.set_i(integer);
+    xu = llcpp_misc::wire::SampleXUnion::WithI(integer);
     fidl::unstable::OwnedEncodedMessage<llcpp_misc::wire::SampleXUnion> encoded(
         fidl::internal::WireFormatVersion::kV1, &xu);
     ASSERT_TRUE(encoded.ok()) << encoded.FormatDescription();
@@ -357,7 +360,7 @@ TEST(ComplexTable, Success) {
     llcpp_misc::wire::SimpleTable simple_table(allocator);
     simple_table.set_x(allocator, table_x).set_y(allocator, table_y);
     llcpp_misc::wire::SampleXUnion xu;
-    xu.set_i(xunion_i);
+    xu = llcpp_misc::wire::SampleXUnion::WithI(xunion_i);
     fidl::StringView strings_vector[]{
         fidl::StringView::FromExternal(before),
         fidl::StringView::FromExternal(after),

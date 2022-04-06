@@ -468,10 +468,8 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<
         describe(zx::error(ZX_ERR_NO_MEMORY));
         return;
       }
-      fio::wire::NodeInfo node_info;
       fio::wire::DirectoryObject directory;
-      node_info.set_directory(directory);
-      describe(zx::ok(std::move(node_info)));
+      describe(zx::ok(fio::wire::NodeInfo::WithDirectory(directory)));
       DcIostate::Bind(std::move(ios), std::move(ipc));
     } else if (dn->service_dir) {
       fidl::WireCall(dn->service_dir)
@@ -743,10 +741,8 @@ void DcIostate::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& comp
 }
 
 void DcIostate::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
-  fio::wire::NodeInfo node_info;
   fio::wire::DirectoryObject directory;
-  node_info.set_directory(directory);
-  completer.Reply(std::move(node_info));
+  completer.Reply(fio::wire::NodeInfo::WithDirectory(directory));
 }
 
 void DcIostate::Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) {

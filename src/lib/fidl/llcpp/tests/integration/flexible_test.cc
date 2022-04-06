@@ -211,18 +211,16 @@ class Server : fidl::WireServer<test::ReceiveFlexibleEnvelope>, private async_wa
                                  GetUnknownXUnionMoreBytesCompleter::Sync& completer) override {
     test::wire::FlexibleXUnion xunion;
     fidl::Array<uint8_t, 30> array = {};
-    xunion.set_want_more_than_30_bytes(
-        fidl::ObjectView<fidl::Array<uint8_t, 30>>::FromExternal(&array));
-    completer.Reply(std::move(xunion));
+    completer.Reply(test::wire::FlexibleXUnion::WithWantMoreThan30Bytes(
+        fidl::ObjectView<fidl::Array<uint8_t, 30>>::FromExternal(&array)));
   }
 
   void GetUnknownXUnionMoreHandles(GetUnknownXUnionMoreHandlesRequestView request,
                                    GetUnknownXUnionMoreHandlesCompleter::Sync& completer) override {
     test::wire::FlexibleXUnion xunion;
     fidl::Array<zx::handle, 4> array = {};
-    xunion.set_want_more_than_4_handles(
-        fidl::ObjectView<fidl::Array<zx::handle, 4>>::FromExternal(&array));
-    completer.Reply(std::move(xunion));
+    completer.Reply(test::wire::FlexibleXUnion::WithWantMoreThan4Handles(
+        fidl::ObjectView<fidl::Array<zx::handle, 4>>::FromExternal(&array)));
   }
 
   void GetUnknownTableMoreBytes(GetUnknownTableMoreBytesRequestView request,

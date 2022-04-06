@@ -85,7 +85,7 @@ static fidl::VectorView<fuchsia_tee::wire::Parameter> CreateParameters(fidl::Any
     value.set_b(allocator, b);
     value.set_c(allocator, c);
 
-    parameters[i].set_value(allocator, std::move(value));
+    parameters[i] = fuchsia_tee::wire::Parameter::WithValue(allocator, std::move(value));
   }
   return parameters;
 }

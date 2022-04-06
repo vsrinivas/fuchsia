@@ -25,9 +25,9 @@ TEST(StartArgsTest, ProgramValue) {
   fidl::Arena arena;
   fidl::VectorView<fdata::wire::DictionaryEntry> program_entries(arena, 2);
   program_entries[0].key.Set(arena, "key-for-str");
-  program_entries[0].value.set_str(arena, "value-for-str");
+  program_entries[0].value = fdata::wire::DictionaryValue::WithStr(arena, "value-for-str");
   program_entries[1].key.Set(arena, "key-for-strvec");
-  program_entries[1].value.set_str_vec(arena);
+  program_entries[1].value = fdata::wire::DictionaryValue::WithStrVec(arena);
   fdata::wire::Dictionary program(arena);
   program.set_entries(arena, std::move(program_entries));
 

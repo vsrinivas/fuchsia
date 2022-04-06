@@ -183,9 +183,6 @@ func (b *unownedBuilder) visitTable(value gidlir.Record, decl *gidlmixer.TableDe
 func (b *unownedBuilder) visitUnion(value gidlir.Record, decl *gidlmixer.UnionDecl) string {
 	containerVar := b.newVar()
 
-	b.write(
-		"%s %s;\n", declName(decl), containerVar)
-
 	for _, field := range value.Fields {
 		if field.Key.IsUnknown() {
 			panic("LLCPP does not support constructing unknown fields")
@@ -198,12 +195,11 @@ func (b *unownedBuilder) visitUnion(value gidlir.Record, decl *gidlmixer.UnionDe
 		storageVar := b.newVar()
 		b.write("auto %s = std::move(%s);\n", storageVar, fieldVar)
 		if fieldDecl.IsInlinableInEnvelope() {
-			b.write(
-				"%s.set_%s(%s);\n", containerVar, field.Key.Name, storageVar)
-
+			b.write("%s %s = %s::With%s(%s);\n",
+				declName(decl), containerVar, declName(decl), fidlgen.ToUpperCamelCase(field.Key.Name), storageVar)
 		} else {
-			b.write(
-				"%s.set_%s(fidl::ObjectView<%s>::FromExternal(&%s));\n", containerVar, field.Key.Name, typeName(fieldDecl), storageVar)
+			b.write("%s %s = %s::With%s(fidl::ObjectView<%s>::FromExternal(&%s));\n",
+				declName(decl), containerVar, declName(decl), fidlgen.ToUpperCamelCase(field.Key.Name), typeName(fieldDecl), storageVar)
 		}
 	}
 	return fmt.Sprintf("std::move(%s)", containerVar)

@@ -63,7 +63,6 @@ static void sent_fake_at_msg(zx::channel& channel, uint8_t* resp, uint32_t resp_
 void AtDevice::SnoopCtrlMsg(uint8_t* snoop_data, uint32_t snoop_data_len,
                             fidl_tel_snoop::wire::Direction direction) {
   if (GetCtrlSnoopChannel()) {
-    fidl_tel_snoop::wire::Message snoop_msg;
     fidl_tel_snoop::wire::QmiMessage msg;
     uint32_t current_length =
         std::min(static_cast<std::size_t>(snoop_data_len), sizeof(msg.opaque_bytes));
@@ -71,7 +70,7 @@ void AtDevice::SnoopCtrlMsg(uint8_t* snoop_data, uint32_t snoop_data_len,
     msg.direction = direction;
     msg.timestamp = zx_clock_get_monotonic();
     memcpy(msg.opaque_bytes.data_, snoop_data, current_length);
-    snoop_msg.set_qmi_message(
+    auto snoop_msg = fidl_tel_snoop::wire::Message::WithQmiMessage(
         fidl::ObjectView<fidl_tel_snoop::wire::QmiMessage>::FromExternal(&msg));
     zxlogf(INFO, "at-fake-transport: snoop msg %u %u %u %u sent", msg.opaque_bytes.data_[0],
            msg.opaque_bytes.data_[1], msg.opaque_bytes.data_[2], msg.opaque_bytes.data_[3]);

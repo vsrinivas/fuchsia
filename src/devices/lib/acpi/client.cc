@@ -54,9 +54,12 @@ zx::status<Object> Client::CallDsm(Uuid uuid, uint64_t revision, uint64_t func_i
                                    std::optional<fuchsia_hardware_acpi::wire::Object> params) {
   std::array<fuchsia_hardware_acpi::wire::Object, 4> args;
   auto uuid_buf = fidl::VectorView<uint8_t>::FromExternal(uuid.bytes, kUuidBytes);
-  args[0].set_buffer_val(fidl::ObjectView<fidl::VectorView<uint8_t>>::FromExternal(&uuid_buf));
-  args[1].set_integer_val(fidl::ObjectView<uint64_t>::FromExternal(&revision));
-  args[2].set_integer_val(fidl::ObjectView<uint64_t>::FromExternal(&func_index));
+  args[0] = fuchsia_hardware_acpi::wire::Object::WithBufferVal(
+      fidl::ObjectView<fidl::VectorView<uint8_t>>::FromExternal(&uuid_buf));
+  args[1] = fuchsia_hardware_acpi::wire::Object::WithIntegerVal(
+      fidl::ObjectView<uint64_t>::FromExternal(&revision));
+  args[2] = fuchsia_hardware_acpi::wire::Object::WithIntegerVal(
+      fidl::ObjectView<uint64_t>::FromExternal(&func_index));
 
   int argc = 3;
   if (params != std::nullopt) {

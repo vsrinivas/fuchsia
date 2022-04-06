@@ -464,13 +464,10 @@ std::optional<Configuration> GetActiveConfiguration(const abr::Client& abr_clien
 //
 // |variant| must outlive the returned WriteFirmwareResult.
 WriteFirmwareResult CreateWriteFirmwareResult(std::variant<zx_status_t, bool>* variant) {
-  WriteFirmwareResult result;
   if (std::holds_alternative<zx_status_t>(*variant)) {
-    result.set_status(std::get<zx_status_t>(*variant));
-  } else {
-    result.set_unsupported(std::get<bool>(*variant));
+    return WriteFirmwareResult::WithStatus(std::get<zx_status_t>(*variant));
   }
-  return result;
+  return WriteFirmwareResult::WithUnsupported(std::get<bool>(*variant));
 }
 
 }  // namespace

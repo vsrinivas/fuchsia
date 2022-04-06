@@ -699,15 +699,12 @@ class UnionMember {
   bool is_union_data() const {
     return ordinal_ == ::test_anonymous::wire::UnionMember::Ordinal::kUnionData;
   }
+
   static UnionMember WithUnionData(uint8_t val) {
     UnionMember result;
-    result.set_union_data(std::move(val));
+    result.ordinal_ = ::test_anonymous::wire::UnionMember::Ordinal::kUnionData;
+    result.envelope_.As<uint8_t>().set_data(std::move(val));
     return result;
-  }
-
-  void set_union_data(uint8_t elem) {
-    ordinal_ = ::test_anonymous::wire::UnionMember::Ordinal::kUnionData;
-    envelope_.As<uint8_t>().set_data(std::move(elem));
   }
 
   uint8_t& union_data() {
@@ -764,29 +761,17 @@ class Expression {
   bool is_value() const {
     return ordinal_ == ::test_anonymous::wire::Expression::Ordinal::kValue;
   }
+
   static Expression WithValue(::fidl::ObjectView<uint64_t> val) {
     Expression result;
-    result.set_value(val);
+    result.ordinal_ = ::test_anonymous::wire::Expression::Ordinal::kValue;
+    result.envelope_.As<uint64_t>().set_data(std::move(val));
     return result;
   }
 
   template <typename... Args>
   static Expression WithValue(::fidl::AnyArena& allocator, Args&&... args) {
-    Expression result;
-    result.set_value(
-        ::fidl::ObjectView<uint64_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_value(::fidl::ObjectView<uint64_t> elem) {
-    ordinal_ = ::test_anonymous::wire::Expression::Ordinal::kValue;
-    envelope_.As<uint64_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_value(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::test_anonymous::wire::Expression::Ordinal::kValue;
-    set_value(
+    return WithValue(
         ::fidl::ObjectView<uint64_t>(allocator, std::forward<Args>(args)...));
   }
 
@@ -802,32 +787,19 @@ class Expression {
   bool is_bin_op() const {
     return ordinal_ == ::test_anonymous::wire::Expression::Ordinal::kBinOp;
   }
+
   static Expression WithBinOp(
       ::fidl::ObjectView<::test_anonymous::wire::OverrideTest> val) {
     Expression result;
-    result.set_bin_op(val);
+    result.ordinal_ = ::test_anonymous::wire::Expression::Ordinal::kBinOp;
+    result.envelope_.As<::test_anonymous::wire::OverrideTest>().set_data(
+        std::move(val));
     return result;
   }
 
   template <typename... Args>
   static Expression WithBinOp(::fidl::AnyArena& allocator, Args&&... args) {
-    Expression result;
-    result.set_bin_op(::fidl::ObjectView<::test_anonymous::wire::OverrideTest>(
-        allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_bin_op(
-      ::fidl::ObjectView<::test_anonymous::wire::OverrideTest> elem) {
-    ordinal_ = ::test_anonymous::wire::Expression::Ordinal::kBinOp;
-    envelope_.As<::test_anonymous::wire::OverrideTest>().set_data(
-        std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_bin_op(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::test_anonymous::wire::Expression::Ordinal::kBinOp;
-    set_bin_op(::fidl::ObjectView<::test_anonymous::wire::OverrideTest>(
+    return WithBinOp(::fidl::ObjectView<::test_anonymous::wire::OverrideTest>(
         allocator, std::forward<Args>(args)...));
   }
 
@@ -844,36 +816,21 @@ class Expression {
     return ordinal_ ==
            ::test_anonymous::wire::Expression::Ordinal::kFunctionApplication;
   }
+
   static Expression WithFunctionApplication(
       ::fidl::ObjectView<::test_anonymous::wire::FunctionApplication> val) {
     Expression result;
-    result.set_function_application(val);
+    result.ordinal_ =
+        ::test_anonymous::wire::Expression::Ordinal::kFunctionApplication;
+    result.envelope_.As<::test_anonymous::wire::FunctionApplication>().set_data(
+        std::move(val));
     return result;
   }
 
   template <typename... Args>
   static Expression WithFunctionApplication(::fidl::AnyArena& allocator,
                                             Args&&... args) {
-    Expression result;
-    result.set_function_application(
-        ::fidl::ObjectView<::test_anonymous::wire::FunctionApplication>(
-            allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_function_application(
-      ::fidl::ObjectView<::test_anonymous::wire::FunctionApplication> elem) {
-    ordinal_ =
-        ::test_anonymous::wire::Expression::Ordinal::kFunctionApplication;
-    envelope_.As<::test_anonymous::wire::FunctionApplication>().set_data(
-        std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_function_application(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ =
-        ::test_anonymous::wire::Expression::Ordinal::kFunctionApplication;
-    set_function_application(
+    return WithFunctionApplication(
         ::fidl::ObjectView<::test_anonymous::wire::FunctionApplication>(
             allocator, std::forward<Args>(args)...));
   }
@@ -942,19 +899,16 @@ class SomeProtocolSomeMethodResult {
     return ordinal_ == ::test_anonymous::wire::SomeProtocolSomeMethodResult::
                            Ordinal::kResponse;
   }
+
   static SomeProtocolSomeMethodResult WithResponse(
       ::test_anonymous::wire::SomeProtocolSomeMethodResponse val) {
     SomeProtocolSomeMethodResult result;
-    result.set_response(std::move(val));
+    result.ordinal_ = ::test_anonymous::wire::SomeProtocolSomeMethodResult::
+        Ordinal::kResponse;
+    result.envelope_
+        .As<::test_anonymous::wire::SomeProtocolSomeMethodResponse>()
+        .set_data(std::move(val));
     return result;
-  }
-
-  void set_response(
-      ::test_anonymous::wire::SomeProtocolSomeMethodResponse elem) {
-    ordinal_ = ::test_anonymous::wire::SomeProtocolSomeMethodResult::Ordinal::
-        kResponse;
-    envelope_.As<::test_anonymous::wire::SomeProtocolSomeMethodResponse>()
-        .set_data(std::move(elem));
   }
 
   ::test_anonymous::wire::SomeProtocolSomeMethodResponse& response() {
@@ -977,18 +931,15 @@ class SomeProtocolSomeMethodResult {
     return ordinal_ ==
            ::test_anonymous::wire::SomeProtocolSomeMethodResult::Ordinal::kErr;
   }
+
   static SomeProtocolSomeMethodResult WithErr(
       ::test_anonymous::wire::SomeProtocolSomeMethodError val) {
     SomeProtocolSomeMethodResult result;
-    result.set_err(std::move(val));
-    return result;
-  }
-
-  void set_err(::test_anonymous::wire::SomeProtocolSomeMethodError elem) {
-    ordinal_ =
+    result.ordinal_ =
         ::test_anonymous::wire::SomeProtocolSomeMethodResult::Ordinal::kErr;
-    envelope_.As<::test_anonymous::wire::SomeProtocolSomeMethodError>()
-        .set_data(std::move(elem));
+    result.envelope_.As<::test_anonymous::wire::SomeProtocolSomeMethodError>()
+        .set_data(std::move(val));
+    return result;
   }
 
   ::test_anonymous::wire::SomeProtocolSomeMethodError& err() {

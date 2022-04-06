@@ -1356,42 +1356,27 @@ class MainProtocolTwoWayImportWithErrorResult {
            ::test_protocollayouts::wire::
                MainProtocolTwoWayImportWithErrorResult::Ordinal::kResponse;
   }
+
   static MainProtocolTwoWayImportWithErrorResult WithResponse(
       ::fidl::ObjectView<
           ::test_protocollayouts_imported::wire::ImportUnionPayload>
           val) {
     MainProtocolTwoWayImportWithErrorResult result;
-    result.set_response(val);
+    result.ordinal_ = ::test_protocollayouts::wire::
+        MainProtocolTwoWayImportWithErrorResult::Ordinal::kResponse;
+    result.envelope_
+        .As<::test_protocollayouts_imported::wire::ImportUnionPayload>()
+        .set_data(std::move(val));
     return result;
   }
 
   template <typename... Args>
   static MainProtocolTwoWayImportWithErrorResult WithResponse(
       ::fidl::AnyArena& allocator, Args&&... args) {
-    MainProtocolTwoWayImportWithErrorResult result;
-    result.set_response(
+    return WithResponse(
         ::fidl::ObjectView<
             ::test_protocollayouts_imported::wire::ImportUnionPayload>(
             allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_response(::fidl::ObjectView<
-                    ::test_protocollayouts_imported::wire::ImportUnionPayload>
-                        elem) {
-    ordinal_ = ::test_protocollayouts::wire::
-        MainProtocolTwoWayImportWithErrorResult::Ordinal::kResponse;
-    envelope_.As<::test_protocollayouts_imported::wire::ImportUnionPayload>()
-        .set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::test_protocollayouts::wire::
-        MainProtocolTwoWayImportWithErrorResult::Ordinal::kResponse;
-    set_response(::fidl::ObjectView<
-                 ::test_protocollayouts_imported::wire::ImportUnionPayload>(
-        allocator, std::forward<Args>(args)...));
   }
 
   ::test_protocollayouts_imported::wire::ImportUnionPayload& response() {
@@ -1417,16 +1402,13 @@ class MainProtocolTwoWayImportWithErrorResult {
            ::test_protocollayouts::wire::
                MainProtocolTwoWayImportWithErrorResult::Ordinal::kErr;
   }
+
   static MainProtocolTwoWayImportWithErrorResult WithErr(uint32_t val) {
     MainProtocolTwoWayImportWithErrorResult result;
-    result.set_err(std::move(val));
-    return result;
-  }
-
-  void set_err(uint32_t elem) {
-    ordinal_ = ::test_protocollayouts::wire::
+    result.ordinal_ = ::test_protocollayouts::wire::
         MainProtocolTwoWayImportWithErrorResult::Ordinal::kErr;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
+    result.envelope_.As<uint32_t>().set_data(std::move(val));
+    return result;
   }
 
   uint32_t& err() {
@@ -1497,16 +1479,13 @@ class MainProtocolTwoWayAnonWithErrorResponse {
     return ordinal_ == ::test_protocollayouts::wire::
                            MainProtocolTwoWayAnonWithErrorResponse::Ordinal::kB;
   }
+
   static MainProtocolTwoWayAnonWithErrorResponse WithB(bool val) {
     MainProtocolTwoWayAnonWithErrorResponse result;
-    result.set_b(std::move(val));
-    return result;
-  }
-
-  void set_b(bool elem) {
-    ordinal_ = ::test_protocollayouts::wire::
+    result.ordinal_ = ::test_protocollayouts::wire::
         MainProtocolTwoWayAnonWithErrorResponse::Ordinal::kB;
-    envelope_.As<bool>().set_data(std::move(elem));
+    result.envelope_.As<bool>().set_data(std::move(val));
+    return result;
   }
 
   bool& b() {
@@ -1575,43 +1554,25 @@ class MainProtocolTwoWayAnonWithErrorResult {
            ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult::
                Ordinal::kResponse;
   }
+
   static MainProtocolTwoWayAnonWithErrorResult WithResponse(
       ::fidl::ObjectView<
           ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse>
           val) {
     MainProtocolTwoWayAnonWithErrorResult result;
-    result.set_response(val);
+    result.ordinal_ = ::test_protocollayouts::wire::
+        MainProtocolTwoWayAnonWithErrorResult::Ordinal::kResponse;
+    result.envelope_
+        .As<::test_protocollayouts::wire::
+                MainProtocolTwoWayAnonWithErrorResponse>()
+        .set_data(std::move(val));
     return result;
   }
 
   template <typename... Args>
   static MainProtocolTwoWayAnonWithErrorResult WithResponse(
       ::fidl::AnyArena& allocator, Args&&... args) {
-    MainProtocolTwoWayAnonWithErrorResult result;
-    result.set_response(
-        ::fidl::ObjectView<::test_protocollayouts::wire::
-                               MainProtocolTwoWayAnonWithErrorResponse>(
-            allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_response(
-      ::fidl::ObjectView<
-          ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse>
-          elem) {
-    ordinal_ = ::test_protocollayouts::wire::
-        MainProtocolTwoWayAnonWithErrorResult::Ordinal::kResponse;
-    envelope_
-        .As<::test_protocollayouts::wire::
-                MainProtocolTwoWayAnonWithErrorResponse>()
-        .set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::test_protocollayouts::wire::
-        MainProtocolTwoWayAnonWithErrorResult::Ordinal::kResponse;
-    set_response(
+    return WithResponse(
         ::fidl::ObjectView<::test_protocollayouts::wire::
                                MainProtocolTwoWayAnonWithErrorResponse>(
             allocator, std::forward<Args>(args)...));
@@ -1642,16 +1603,13 @@ class MainProtocolTwoWayAnonWithErrorResult {
     return ordinal_ == ::test_protocollayouts::wire::
                            MainProtocolTwoWayAnonWithErrorResult::Ordinal::kErr;
   }
+
   static MainProtocolTwoWayAnonWithErrorResult WithErr(uint32_t val) {
     MainProtocolTwoWayAnonWithErrorResult result;
-    result.set_err(std::move(val));
-    return result;
-  }
-
-  void set_err(uint32_t elem) {
-    ordinal_ = ::test_protocollayouts::wire::
+    result.ordinal_ = ::test_protocollayouts::wire::
         MainProtocolTwoWayAnonWithErrorResult::Ordinal::kErr;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
+    result.envelope_.As<uint32_t>().set_data(std::move(val));
+    return result;
   }
 
   uint32_t& err() {
@@ -1723,42 +1681,27 @@ class MainProtocolOnImportWithErrorResult {
            ::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult::
                Ordinal::kResponse;
   }
+
   static MainProtocolOnImportWithErrorResult WithResponse(
       ::fidl::ObjectView<
           ::test_protocollayouts_imported::wire::ImportTablePayload>
           val) {
     MainProtocolOnImportWithErrorResult result;
-    result.set_response(val);
+    result.ordinal_ = ::test_protocollayouts::wire::
+        MainProtocolOnImportWithErrorResult::Ordinal::kResponse;
+    result.envelope_
+        .As<::test_protocollayouts_imported::wire::ImportTablePayload>()
+        .set_data(std::move(val));
     return result;
   }
 
   template <typename... Args>
   static MainProtocolOnImportWithErrorResult WithResponse(
       ::fidl::AnyArena& allocator, Args&&... args) {
-    MainProtocolOnImportWithErrorResult result;
-    result.set_response(
+    return WithResponse(
         ::fidl::ObjectView<
             ::test_protocollayouts_imported::wire::ImportTablePayload>(
             allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_response(::fidl::ObjectView<
-                    ::test_protocollayouts_imported::wire::ImportTablePayload>
-                        elem) {
-    ordinal_ = ::test_protocollayouts::wire::
-        MainProtocolOnImportWithErrorResult::Ordinal::kResponse;
-    envelope_.As<::test_protocollayouts_imported::wire::ImportTablePayload>()
-        .set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::test_protocollayouts::wire::
-        MainProtocolOnImportWithErrorResult::Ordinal::kResponse;
-    set_response(::fidl::ObjectView<
-                 ::test_protocollayouts_imported::wire::ImportTablePayload>(
-        allocator, std::forward<Args>(args)...));
   }
 
   ::test_protocollayouts_imported::wire::ImportTablePayload& response() {
@@ -1783,16 +1726,13 @@ class MainProtocolOnImportWithErrorResult {
     return ordinal_ == ::test_protocollayouts::wire::
                            MainProtocolOnImportWithErrorResult::Ordinal::kErr;
   }
+
   static MainProtocolOnImportWithErrorResult WithErr(uint32_t val) {
     MainProtocolOnImportWithErrorResult result;
-    result.set_err(std::move(val));
-    return result;
-  }
-
-  void set_err(uint32_t elem) {
-    ordinal_ = ::test_protocollayouts::wire::
+    result.ordinal_ = ::test_protocollayouts::wire::
         MainProtocolOnImportWithErrorResult::Ordinal::kErr;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
+    result.envelope_.As<uint32_t>().set_data(std::move(val));
+    return result;
   }
 
   uint32_t& err() {
@@ -1866,42 +1806,24 @@ class MainProtocolOnAnonWithErrorResult {
            ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult::
                Ordinal::kResponse;
   }
+
   static MainProtocolOnAnonWithErrorResult WithResponse(
       ::fidl::ObjectView<
           ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>
           val) {
     MainProtocolOnAnonWithErrorResult result;
-    result.set_response(val);
+    result.ordinal_ = ::test_protocollayouts::wire::
+        MainProtocolOnAnonWithErrorResult::Ordinal::kResponse;
+    result.envelope_
+        .As<::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>()
+        .set_data(std::move(val));
     return result;
   }
 
   template <typename... Args>
   static MainProtocolOnAnonWithErrorResult WithResponse(
       ::fidl::AnyArena& allocator, Args&&... args) {
-    MainProtocolOnAnonWithErrorResult result;
-    result.set_response(
-        ::fidl::ObjectView<
-            ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>(
-            allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_response(
-      ::fidl::ObjectView<
-          ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>
-          elem) {
-    ordinal_ = ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult::
-        Ordinal::kResponse;
-    envelope_
-        .As<::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>()
-        .set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult::
-        Ordinal::kResponse;
-    set_response(
+    return WithResponse(
         ::fidl::ObjectView<
             ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>(
             allocator, std::forward<Args>(args)...));
@@ -1930,16 +1852,13 @@ class MainProtocolOnAnonWithErrorResult {
     return ordinal_ == ::test_protocollayouts::wire::
                            MainProtocolOnAnonWithErrorResult::Ordinal::kErr;
   }
+
   static MainProtocolOnAnonWithErrorResult WithErr(uint32_t val) {
     MainProtocolOnAnonWithErrorResult result;
-    result.set_err(std::move(val));
+    result.ordinal_ = ::test_protocollayouts::wire::
+        MainProtocolOnAnonWithErrorResult::Ordinal::kErr;
+    result.envelope_.As<uint32_t>().set_data(std::move(val));
     return result;
-  }
-
-  void set_err(uint32_t elem) {
-    ordinal_ = ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult::
-        Ordinal::kErr;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
   uint32_t& err() {
@@ -2005,16 +1924,13 @@ class MainProtocolTwoWayAnonRequest {
     return ordinal_ == ::test_protocollayouts::wire::
                            MainProtocolTwoWayAnonRequest::Ordinal::kB;
   }
+
   static MainProtocolTwoWayAnonRequest WithB(bool val) {
     MainProtocolTwoWayAnonRequest result;
-    result.set_b(std::move(val));
+    result.ordinal_ = ::test_protocollayouts::wire::
+        MainProtocolTwoWayAnonRequest::Ordinal::kB;
+    result.envelope_.As<bool>().set_data(std::move(val));
     return result;
-  }
-
-  void set_b(bool elem) {
-    ordinal_ = ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest::
-        Ordinal::kB;
-    envelope_.As<bool>().set_data(std::move(elem));
   }
 
   bool& b() {
@@ -2072,16 +1988,13 @@ class MainProtocolOnAnonRequest {
     return ordinal_ ==
            ::test_protocollayouts::wire::MainProtocolOnAnonRequest::Ordinal::kB;
   }
+
   static MainProtocolOnAnonRequest WithB(bool val) {
     MainProtocolOnAnonRequest result;
-    result.set_b(std::move(val));
-    return result;
-  }
-
-  void set_b(bool elem) {
-    ordinal_ =
+    result.ordinal_ =
         ::test_protocollayouts::wire::MainProtocolOnAnonRequest::Ordinal::kB;
-    envelope_.As<bool>().set_data(std::move(elem));
+    result.envelope_.As<bool>().set_data(std::move(val));
+    return result;
   }
 
   bool& b() {
@@ -2138,15 +2051,13 @@ class LocalUnionPayload {
     return ordinal_ ==
            ::test_protocollayouts::wire::LocalUnionPayload::Ordinal::kB;
   }
+
   static LocalUnionPayload WithB(bool val) {
     LocalUnionPayload result;
-    result.set_b(std::move(val));
+    result.ordinal_ =
+        ::test_protocollayouts::wire::LocalUnionPayload::Ordinal::kB;
+    result.envelope_.As<bool>().set_data(std::move(val));
     return result;
-  }
-
-  void set_b(bool elem) {
-    ordinal_ = ::test_protocollayouts::wire::LocalUnionPayload::Ordinal::kB;
-    envelope_.As<bool>().set_data(std::move(elem));
   }
 
   bool& b() {
@@ -2208,37 +2119,21 @@ class MainProtocolTwoWayLocalWithErrorResult {
            ::test_protocollayouts::wire::
                MainProtocolTwoWayLocalWithErrorResult::Ordinal::kResponse;
   }
+
   static MainProtocolTwoWayLocalWithErrorResult WithResponse(
       ::fidl::ObjectView<::test_protocollayouts::wire::LocalUnionPayload> val) {
     MainProtocolTwoWayLocalWithErrorResult result;
-    result.set_response(val);
+    result.ordinal_ = ::test_protocollayouts::wire::
+        MainProtocolTwoWayLocalWithErrorResult::Ordinal::kResponse;
+    result.envelope_.As<::test_protocollayouts::wire::LocalUnionPayload>()
+        .set_data(std::move(val));
     return result;
   }
 
   template <typename... Args>
   static MainProtocolTwoWayLocalWithErrorResult WithResponse(
       ::fidl::AnyArena& allocator, Args&&... args) {
-    MainProtocolTwoWayLocalWithErrorResult result;
-    result.set_response(
-        ::fidl::ObjectView<::test_protocollayouts::wire::LocalUnionPayload>(
-            allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_response(
-      ::fidl::ObjectView<::test_protocollayouts::wire::LocalUnionPayload>
-          elem) {
-    ordinal_ = ::test_protocollayouts::wire::
-        MainProtocolTwoWayLocalWithErrorResult::Ordinal::kResponse;
-    envelope_.As<::test_protocollayouts::wire::LocalUnionPayload>().set_data(
-        std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::test_protocollayouts::wire::
-        MainProtocolTwoWayLocalWithErrorResult::Ordinal::kResponse;
-    set_response(
+    return WithResponse(
         ::fidl::ObjectView<::test_protocollayouts::wire::LocalUnionPayload>(
             allocator, std::forward<Args>(args)...));
   }
@@ -2263,16 +2158,13 @@ class MainProtocolTwoWayLocalWithErrorResult {
            ::test_protocollayouts::wire::
                MainProtocolTwoWayLocalWithErrorResult::Ordinal::kErr;
   }
+
   static MainProtocolTwoWayLocalWithErrorResult WithErr(uint32_t val) {
     MainProtocolTwoWayLocalWithErrorResult result;
-    result.set_err(std::move(val));
-    return result;
-  }
-
-  void set_err(uint32_t elem) {
-    ordinal_ = ::test_protocollayouts::wire::
+    result.ordinal_ = ::test_protocollayouts::wire::
         MainProtocolTwoWayLocalWithErrorResult::Ordinal::kErr;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
+    result.envelope_.As<uint32_t>().set_data(std::move(val));
+    return result;
   }
 
   uint32_t& err() {
@@ -2343,37 +2235,21 @@ class MainProtocolOnLocalWithErrorResult {
            ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult::
                Ordinal::kResponse;
   }
+
   static MainProtocolOnLocalWithErrorResult WithResponse(
       ::fidl::ObjectView<::test_protocollayouts::wire::LocalTablePayload> val) {
     MainProtocolOnLocalWithErrorResult result;
-    result.set_response(val);
+    result.ordinal_ = ::test_protocollayouts::wire::
+        MainProtocolOnLocalWithErrorResult::Ordinal::kResponse;
+    result.envelope_.As<::test_protocollayouts::wire::LocalTablePayload>()
+        .set_data(std::move(val));
     return result;
   }
 
   template <typename... Args>
   static MainProtocolOnLocalWithErrorResult WithResponse(
       ::fidl::AnyArena& allocator, Args&&... args) {
-    MainProtocolOnLocalWithErrorResult result;
-    result.set_response(
-        ::fidl::ObjectView<::test_protocollayouts::wire::LocalTablePayload>(
-            allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_response(
-      ::fidl::ObjectView<::test_protocollayouts::wire::LocalTablePayload>
-          elem) {
-    ordinal_ = ::test_protocollayouts::wire::
-        MainProtocolOnLocalWithErrorResult::Ordinal::kResponse;
-    envelope_.As<::test_protocollayouts::wire::LocalTablePayload>().set_data(
-        std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::test_protocollayouts::wire::
-        MainProtocolOnLocalWithErrorResult::Ordinal::kResponse;
-    set_response(
+    return WithResponse(
         ::fidl::ObjectView<::test_protocollayouts::wire::LocalTablePayload>(
             allocator, std::forward<Args>(args)...));
   }
@@ -2397,16 +2273,13 @@ class MainProtocolOnLocalWithErrorResult {
     return ordinal_ == ::test_protocollayouts::wire::
                            MainProtocolOnLocalWithErrorResult::Ordinal::kErr;
   }
+
   static MainProtocolOnLocalWithErrorResult WithErr(uint32_t val) {
     MainProtocolOnLocalWithErrorResult result;
-    result.set_err(std::move(val));
-    return result;
-  }
-
-  void set_err(uint32_t elem) {
-    ordinal_ = ::test_protocollayouts::wire::
+    result.ordinal_ = ::test_protocollayouts::wire::
         MainProtocolOnLocalWithErrorResult::Ordinal::kErr;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
+    result.envelope_.As<uint32_t>().set_data(std::move(val));
+    return result;
   }
 
   uint32_t& err() {

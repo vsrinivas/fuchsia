@@ -17,6 +17,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "fidl/fuchsia.data/cpp/wire_types.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
@@ -172,7 +173,7 @@ class DriverHostTest : public testing::Test {
 
     fidl::VectorView<fdata::wire::DictionaryEntry> program_entries(arena, 1);
     program_entries[0].key.Set(arena, "binary");
-    program_entries[0].value.set_str(arena, "driver/library.so");
+    program_entries[0].value = fdata::wire::DictionaryValue::WithStr(arena, "driver/library.so");
 
     auto outgoing_dir_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     EXPECT_TRUE(outgoing_dir_endpoints.is_ok());
@@ -481,7 +482,7 @@ TEST_F(DriverHostTest, Start_InvalidBinary) {
       });
   fidl::VectorView<fdata::wire::DictionaryEntry> program_entries(arena, 1);
   program_entries[0].key.Set(arena, "binary");
-  program_entries[0].value.set_str(arena, "driver/library.so");
+  program_entries[0].value = fdata::wire::DictionaryValue::WithStr(arena, "driver/library.so");
 
   auto driver_endpoints = fidl::CreateEndpoints<fdf::Driver>();
   ASSERT_TRUE(driver_endpoints.is_ok());

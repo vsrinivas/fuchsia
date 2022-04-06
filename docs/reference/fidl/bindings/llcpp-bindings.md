@@ -232,7 +232,7 @@ definition. Reserved fields do not have any generated code.
 `JsonValue` provides the following methods:
 
 * `JsonValue()`: Default constructor. The constructed union is initially in an
-  "invalid" state until a variant is set. The `WithFoo` constructors should be
+  "absent" state until a variant is set. The `WithFoo` constructors should be
   preferred whenever possible.
 * `~JsonValue()`: Destructor that clears the underlying union data.
 * `JsonValue(JsonValue&&)`: Default move constructor.
@@ -252,10 +252,6 @@ definition. Reserved fields do not have any generated code.
 * `int32_t& int_value()` and `fidl::StringView& string_value()`: Mutable
   accessor methods for each variant. These methods will fail if `JsonValue` does
   not have the specified variant set
-* `void set_int_value(fidl::ObjectView<int32_t> value)` and `void
-  set_string_value(fidl::ObjectView<fidl::StringView>&& value)`: Setter
-  methods for each variant. These setters will overwrite the previously selected
-  member, if any.
 * `Tag Which() const`: returns the current [tag][union-lexicon] of the
   `JsonValue`. Calling this method without first setting the variant leads to an
   assertion error.

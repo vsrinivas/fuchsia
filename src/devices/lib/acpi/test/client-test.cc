@@ -48,10 +48,8 @@ class AcpiClientTest : public zxtest::Test {
       if (response_ == std::nullopt) {
         sync.ReplyError(facpi::Status::kError);
       } else {
-        facpi::EncodedObject reply;
         auto object = fidl::ObjectView<facpi::Object>::FromExternal(&response_.value());
-        reply.set_object(object);
-        sync.ReplySuccess(std::move(reply));
+        sync.ReplySuccess(facpi::EncodedObject::WithObject(object));
       }
     });
   }
@@ -74,8 +72,7 @@ TEST_F(AcpiClientTest, TestCallDsmFails) {
 
 TEST_F(AcpiClientTest, TestCallDsmSucceeds) {
   fidl::Arena<> alloc;
-  facpi::Object obj;
-  obj.set_integer_val(alloc, 320);
+  facpi::Object obj = facpi::Object::WithIntegerVal(alloc, 320);
   response_.emplace(obj);
   auto client = server_.CreateClient(loop_.dispatcher());
   ASSERT_OK(client.status_value());

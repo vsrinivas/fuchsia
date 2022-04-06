@@ -29,8 +29,7 @@ void PayloadStreamer::RegisterVmo(RegisterVmoRequestView request,
 void PayloadStreamer::ReadData(ReadDataRequestView request, ReadDataCompleter::Sync& completer) {
   fuchsia_paver::wire::ReadResult result = {};
   if (!vmo_) {
-    result.set_err(ZX_ERR_BAD_STATE);
-    completer.Reply(std::move(result));
+    completer.Reply(fuchsia_paver::wire::ReadResult::WithErr(ZX_ERR_BAD_STATE));
     return;
   }
 
@@ -40,14 +39,13 @@ void PayloadStreamer::ReadData(ReadDataRequestView request, ReadDataCompleter::S
 
   if (to_read == 0) {
     eof_reached_ = true;
-    result.set_eof(eof_reached_);
-    completer.Reply(std::move(result));
+    completer.Reply(fuchsia_paver::wire::ReadResult::WithEof(eof_reached_));
   } else {
     // completer.Reply must be called from within this else block since otherwise
     // |info| will go out of scope
     fuchsia_paver::wire::ReadInfo info{.offset = 0, .size = static_cast<uint64_t>(to_read)};
-    result.set_info(fidl::ObjectView<fuchsia_paver::wire::ReadInfo>::FromExternal(&info));
-    completer.Reply(std::move(result));
+    completer.Reply(fuchsia_paver::wire::ReadResult::WithInfo(
+        fidl::ObjectView<fuchsia_paver::wire::ReadInfo>::FromExternal(&info)));
   }
 }
 

@@ -81,7 +81,7 @@ bool CobaltLogger::Log(const MetricOptions& metric_info, const HistogramBucket* 
   // Safe because is read only.
   auto int_histogram = fidl::VectorView<HistogramBucket>::FromExternal(
       const_cast<HistogramBucket*>(buckets), bucket_count);
-  event.payload.set_int_histogram(
+  event.payload = fuchsia_cobalt::wire::EventPayload::WithIntHistogram(
       fidl::ObjectView<fidl::VectorView<HistogramBucket>>::FromExternal(&int_histogram));
 
   auto log_result = logger_->LogCobaltEvent(std::move(event));
@@ -97,7 +97,7 @@ bool CobaltLogger::Log(const MetricOptions& metric_info, RemoteCounter::Type cou
   }
   auto event = MetricIntoToCobaltEvent(metric_info);
   fuchsia_cobalt::wire::CountEvent event_count{.period_duration_micros = 0, .count = count};
-  event.payload.set_event_count(
+  event.payload = fuchsia_cobalt::wire::EventPayload::WithEventCount(
       fidl::ObjectView<fuchsia_cobalt::wire::CountEvent>::FromExternal(&event_count));
 
   auto log_result = logger_->LogCobaltEvent(std::move(event));
@@ -113,7 +113,8 @@ bool CobaltLogger::LogInteger(const MetricOptions& metric_info, RemoteCounter::T
   }
 
   auto event = MetricIntoToCobaltEvent(metric_info);
-  event.payload.set_memory_bytes_used(fidl::ObjectView<RemoteCounter::Type>::FromExternal(&value));
+  event.payload = fuchsia_cobalt::wire::EventPayload::WithMemoryBytesUsed(
+      fidl::ObjectView<RemoteCounter::Type>::FromExternal(&value));
 
   // Cobalt 1.0 does not support integer. The closest to integer is memory
   // usage. So, we use MemoryUsage until we have a better support for integer(in

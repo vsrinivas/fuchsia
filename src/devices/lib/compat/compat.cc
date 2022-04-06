@@ -173,8 +173,6 @@ fpromise::promise<void, zx_status_t> Child::ExportToDevfs(driver::DevfsExporter&
 std::vector<fuchsia_component_decl::wire::Offer> Child::CreateOffers(fidl::ArenaBase& arena) {
   std::vector<fuchsia_component_decl::wire::Offer> offers;
   for (auto& instance : instances_) {
-    fcd::wire::Ref ref;
-    ref.set_self(fcd::wire::SelfRef());
     fcd::wire::OfferDirectory dir_offer(arena);
     dir_offer.set_source_name(arena, arena, instance->service_name());
     dir_offer.set_target_name(arena, arena, std::string(instance->service_name()) + "-default");
@@ -182,9 +180,7 @@ std::vector<fuchsia_component_decl::wire::Offer> Child::CreateOffers(fidl::Arena
     dir_offer.set_subdir(arena, arena, instance->instance_name());
     dir_offer.set_dependency_type(fcd::wire::DependencyType::kStrong);
 
-    fcd::wire::Offer offer;
-    offer.set_directory(arena, std::move(dir_offer));
-    offers.push_back(std::move(offer));
+    offers.push_back(fcd::wire::Offer::WithDirectory(arena, std::move(dir_offer)));
   }
   return offers;
 }

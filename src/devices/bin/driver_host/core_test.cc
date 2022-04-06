@@ -34,17 +34,13 @@ class FakeCoordinator : public fidl::WireServer<fuchsia_device_manager::Coordina
   }
 
   void AddDevice(AddDeviceRequestView request, AddDeviceCompleter::Sync& completer) override {
-    fuchsia_device_manager::wire::CoordinatorAddDeviceResult response;
-    response.set_err(ZX_ERR_NOT_SUPPORTED);
-    completer.Reply(std::move(response));
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
   void ScheduleRemove(ScheduleRemoveRequestView request,
                       ScheduleRemoveCompleter::Sync& completer) override {}
   void AddCompositeDevice(AddCompositeDeviceRequestView request,
                           AddCompositeDeviceCompleter::Sync& completer) override {
-    fuchsia_device_manager::wire::CoordinatorAddCompositeDeviceResult response;
-    response.set_err(ZX_ERR_NOT_SUPPORTED);
-    completer.Reply(std::move(response));
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
   void AddDeviceGroup(AddDeviceGroupRequestView request,
                       AddDeviceGroupCompleter::Sync& completer) override {
@@ -53,37 +49,25 @@ class FakeCoordinator : public fidl::WireServer<fuchsia_device_manager::Coordina
   }
   void BindDevice(BindDeviceRequestView request, BindDeviceCompleter::Sync& completer) override {
     bind_count_++;
-    fuchsia_device_manager::wire::CoordinatorBindDeviceResult response;
-    response.set_err(ZX_OK);
-    completer.Reply(std::move(response));
+    completer.ReplyError(ZX_OK);
   }
   void GetTopologicalPath(GetTopologicalPathRequestView request,
                           GetTopologicalPathCompleter::Sync& completer) override {
-    fuchsia_device_manager::wire::CoordinatorGetTopologicalPathResult response;
-    response.set_err(ZX_ERR_NOT_SUPPORTED);
-    completer.Reply(std::move(response));
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
   void LoadFirmware(LoadFirmwareRequestView request,
                     LoadFirmwareCompleter::Sync& completer) override {
-    fuchsia_device_manager::wire::CoordinatorLoadFirmwareResult response;
-    response.set_err(ZX_ERR_NOT_SUPPORTED);
-    completer.Reply(std::move(response));
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
   void GetMetadata(GetMetadataRequestView request, GetMetadataCompleter::Sync& completer) override {
-    fuchsia_device_manager::wire::CoordinatorGetMetadataResult response;
-    response.set_err(ZX_ERR_NOT_SUPPORTED);
-    completer.Reply(std::move(response));
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
   void GetMetadataSize(GetMetadataSizeRequestView request,
                        GetMetadataSizeCompleter::Sync& completer) override {
-    fuchsia_device_manager::wire::CoordinatorGetMetadataSizeResult response;
-    response.set_err(ZX_ERR_NOT_SUPPORTED);
-    completer.Reply(std::move(response));
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
   void AddMetadata(AddMetadataRequestView request, AddMetadataCompleter::Sync& completer) override {
-    fuchsia_device_manager::wire::CoordinatorAddMetadataResult response;
-    response.set_err(ZX_ERR_NOT_SUPPORTED);
-    completer.Reply(std::move(response));
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
   void ScheduleUnbindChildren(ScheduleUnbindChildrenRequestView request,
                               ScheduleUnbindChildrenCompleter::Sync& completer) override {}

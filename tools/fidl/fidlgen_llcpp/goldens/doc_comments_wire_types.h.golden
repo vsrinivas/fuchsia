@@ -301,18 +301,15 @@ class StrictUnion {
   bool is_field() const {
     return ordinal_ == ::test_doccomments::wire::StrictUnion::Ordinal::kField;
   }
-  static StrictUnion WithField(int32_t val) {
-    StrictUnion result;
-    result.set_field(std::move(val));
-    return result;
-  }
 
   /// union member comment #1
   ///
   /// union member comment #3
-  void set_field(int32_t elem) {
-    ordinal_ = ::test_doccomments::wire::StrictUnion::Ordinal::kField;
-    envelope_.As<int32_t>().set_data(std::move(elem));
+  static StrictUnion WithField(int32_t val) {
+    StrictUnion result;
+    result.ordinal_ = ::test_doccomments::wire::StrictUnion::Ordinal::kField;
+    result.envelope_.As<int32_t>().set_data(std::move(val));
+    return result;
   }
 
   /// union member comment #1
@@ -377,18 +374,15 @@ class FlexibleUnion {
   bool is_field() const {
     return ordinal_ == ::test_doccomments::wire::FlexibleUnion::Ordinal::kField;
   }
-  static FlexibleUnion WithField(int32_t val) {
-    FlexibleUnion result;
-    result.set_field(std::move(val));
-    return result;
-  }
 
   /// union member comment #1
   ///
   /// union member comment #3
-  void set_field(int32_t elem) {
-    ordinal_ = ::test_doccomments::wire::FlexibleUnion::Ordinal::kField;
-    envelope_.As<int32_t>().set_data(std::move(elem));
+  static FlexibleUnion WithField(int32_t val) {
+    FlexibleUnion result;
+    result.ordinal_ = ::test_doccomments::wire::FlexibleUnion::Ordinal::kField;
+    result.envelope_.As<int32_t>().set_data(std::move(val));
+    return result;
   }
 
   /// union member comment #1

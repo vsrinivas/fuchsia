@@ -60,46 +60,27 @@ class {{ .Name }} {
   bool is_{{ .Name }}() const { return ordinal_ == {{ .WireOrdinalName }}; }
 
   {{- if .Type.InlineInEnvelope }}
+  {{ .Docs }}
   static {{ $.Name }} With{{ .UpperCamelCaseName }}({{ .Type }} val) {
     {{ $.Name }} result;
-    result.set_{{ .Name }}(std::move(val));
+    result.ordinal_ = {{ .WireOrdinalName }};
+    result.envelope_.As<{{ .Type }}>().set_data(std::move(val));
     return result;
   }
   {{- else }}
+  {{ .Docs }}
   static {{ $.Name }} With{{ .UpperCamelCaseName }}(::fidl::ObjectView<{{ .Type }}> val) {
     {{ $.Name }} result;
-    result.set_{{ .Name }}(val);
+    result.ordinal_ = {{ .WireOrdinalName }};
+    result.envelope_.As<{{ .Type }}>().set_data(std::move(val));
     return result;
   }
 
+  {{ .Docs }}
   template <typename... Args>
   static {{ $.Name }} With{{ .UpperCamelCaseName }}(::fidl::AnyArena& allocator, Args&&... args) {
-    {{ $.Name }} result;
-    result.set_{{ .Name }}(::fidl::ObjectView<{{ .Type }}>(allocator,
-                           std::forward<Args>(args)...));
-    return result;
-  }
-  {{- end }}
-
-  {{- if .Type.InlineInEnvelope }}
-{{ "" }}
-  {{- .Docs }}
-  void set_{{ .Name }}({{ .Type }} elem) {
-    ordinal_ = {{ .WireOrdinalName }};
-    envelope_.As<{{ .Type }}>().set_data(std::move(elem));
-  }
-  {{- else }}
-{{ "" }}
-  {{- .Docs }}
-  void set_{{ .Name }}(::fidl::ObjectView<{{ .Type }}> elem) {
-    ordinal_ = {{ .WireOrdinalName }};
-    envelope_.As<{{ .Type }}>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_{{ .Name }}(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = {{ .WireOrdinalName }};
-    set_{{ .Name }}(::fidl::ObjectView<{{ .Type }}>(allocator, std::forward<Args>(args)...));
+    return With{{ .UpperCamelCaseName }}(::fidl::ObjectView<{{ .Type }}>(allocator,
+                                         std::forward<Args>(args)...));
   }
   {{- end }}
 

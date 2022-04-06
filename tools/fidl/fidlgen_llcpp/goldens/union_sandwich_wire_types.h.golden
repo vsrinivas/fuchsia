@@ -68,16 +68,13 @@ class UnionSize8Alignment4 {
     return ordinal_ ==
            ::test_unionsandwich::wire::UnionSize8Alignment4::Ordinal::kVariant;
   }
+
   static UnionSize8Alignment4 WithVariant(uint32_t val) {
     UnionSize8Alignment4 result;
-    result.set_variant(std::move(val));
-    return result;
-  }
-
-  void set_variant(uint32_t elem) {
-    ordinal_ =
+    result.ordinal_ =
         ::test_unionsandwich::wire::UnionSize8Alignment4::Ordinal::kVariant;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
+    result.envelope_.As<uint32_t>().set_data(std::move(val));
+    return result;
   }
 
   uint32_t& variant() {
@@ -137,33 +134,20 @@ class UnionSize36Alignment4 {
     return ordinal_ ==
            ::test_unionsandwich::wire::UnionSize36Alignment4::Ordinal::kVariant;
   }
+
   static UnionSize36Alignment4 WithVariant(
       ::fidl::ObjectView<::fidl::Array<uint8_t, 32>> val) {
     UnionSize36Alignment4 result;
-    result.set_variant(val);
+    result.ordinal_ =
+        ::test_unionsandwich::wire::UnionSize36Alignment4::Ordinal::kVariant;
+    result.envelope_.As<::fidl::Array<uint8_t, 32>>().set_data(std::move(val));
     return result;
   }
 
   template <typename... Args>
   static UnionSize36Alignment4 WithVariant(::fidl::AnyArena& allocator,
                                            Args&&... args) {
-    UnionSize36Alignment4 result;
-    result.set_variant(::fidl::ObjectView<::fidl::Array<uint8_t, 32>>(
-        allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_variant(::fidl::ObjectView<::fidl::Array<uint8_t, 32>> elem) {
-    ordinal_ =
-        ::test_unionsandwich::wire::UnionSize36Alignment4::Ordinal::kVariant;
-    envelope_.As<::fidl::Array<uint8_t, 32>>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_variant(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ =
-        ::test_unionsandwich::wire::UnionSize36Alignment4::Ordinal::kVariant;
-    set_variant(::fidl::ObjectView<::fidl::Array<uint8_t, 32>>(
+    return WithVariant(::fidl::ObjectView<::fidl::Array<uint8_t, 32>>(
         allocator, std::forward<Args>(args)...));
   }
 
@@ -224,33 +208,20 @@ class UnionSize12Alignment4 {
     return ordinal_ ==
            ::test_unionsandwich::wire::UnionSize12Alignment4::Ordinal::kVariant;
   }
+
   static UnionSize12Alignment4 WithVariant(
       ::fidl::ObjectView<::fidl::Array<uint8_t, 6>> val) {
     UnionSize12Alignment4 result;
-    result.set_variant(val);
+    result.ordinal_ =
+        ::test_unionsandwich::wire::UnionSize12Alignment4::Ordinal::kVariant;
+    result.envelope_.As<::fidl::Array<uint8_t, 6>>().set_data(std::move(val));
     return result;
   }
 
   template <typename... Args>
   static UnionSize12Alignment4 WithVariant(::fidl::AnyArena& allocator,
                                            Args&&... args) {
-    UnionSize12Alignment4 result;
-    result.set_variant(::fidl::ObjectView<::fidl::Array<uint8_t, 6>>(
-        allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_variant(::fidl::ObjectView<::fidl::Array<uint8_t, 6>> elem) {
-    ordinal_ =
-        ::test_unionsandwich::wire::UnionSize12Alignment4::Ordinal::kVariant;
-    envelope_.As<::fidl::Array<uint8_t, 6>>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_variant(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ =
-        ::test_unionsandwich::wire::UnionSize12Alignment4::Ordinal::kVariant;
-    set_variant(::fidl::ObjectView<::fidl::Array<uint8_t, 6>>(
+    return WithVariant(::fidl::ObjectView<::fidl::Array<uint8_t, 6>>(
         allocator, std::forward<Args>(args)...));
   }
 
@@ -311,38 +282,22 @@ class UnionSize24Alignment8 {
     return ordinal_ ==
            ::test_unionsandwich::wire::UnionSize24Alignment8::Ordinal::kVariant;
   }
+
   static UnionSize24Alignment8 WithVariant(
       ::fidl::ObjectView<::test_unionsandwich::wire::StructSize16Alignment8>
           val) {
     UnionSize24Alignment8 result;
-    result.set_variant(val);
+    result.ordinal_ =
+        ::test_unionsandwich::wire::UnionSize24Alignment8::Ordinal::kVariant;
+    result.envelope_.As<::test_unionsandwich::wire::StructSize16Alignment8>()
+        .set_data(std::move(val));
     return result;
   }
 
   template <typename... Args>
   static UnionSize24Alignment8 WithVariant(::fidl::AnyArena& allocator,
                                            Args&&... args) {
-    UnionSize24Alignment8 result;
-    result.set_variant(
-        ::fidl::ObjectView<::test_unionsandwich::wire::StructSize16Alignment8>(
-            allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_variant(
-      ::fidl::ObjectView<::test_unionsandwich::wire::StructSize16Alignment8>
-          elem) {
-    ordinal_ =
-        ::test_unionsandwich::wire::UnionSize24Alignment8::Ordinal::kVariant;
-    envelope_.As<::test_unionsandwich::wire::StructSize16Alignment8>().set_data(
-        std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_variant(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ =
-        ::test_unionsandwich::wire::UnionSize24Alignment8::Ordinal::kVariant;
-    set_variant(
+    return WithVariant(
         ::fidl::ObjectView<::test_unionsandwich::wire::StructSize16Alignment8>(
             allocator, std::forward<Args>(args)...));
   }

@@ -227,18 +227,16 @@ EvaluateObjectFidlHelper::EncodeResourcesReturnValue(fidl::AnyArena& alloc, ACPI
   for (size_t i = 0; i < resources.size(); i++) {
     result[i] = std::move(resources[i]);
   }
-  fuchsia_hardware_acpi::wire::EncodedObject encoded;
-  encoded.set_resources(alloc, result);
+  auto encoded = fuchsia_hardware_acpi::wire::EncodedObject::WithResources(alloc, result);
   fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResponse response;
   response.result = std::move(encoded);
-  fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult ret;
-  ret.set_response(alloc, std::move(response));
+  auto ret = fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult::WithResponse(
+      alloc, std::move(response));
   return acpi::ok(std::move(ret));
 }
 
 acpi::status<fuchsia_hardware_acpi::wire::Resource> EvaluateObjectFidlHelper::EncodeMmioResource(
     fidl::AnyArena& alloc, ACPI_RESOURCE* resource) {
-  fuchsia_hardware_acpi::wire::Resource res;
   zx_paddr_t paddr;
   size_t size;
   switch (resource->Type) {
@@ -267,9 +265,7 @@ acpi::status<fuchsia_hardware_acpi::wire::Resource> EvaluateObjectFidlHelper::En
       .offset = page_offset,
       .size = size,
   };
-
-  res.set_mmio(alloc, std::move(range));
-  return acpi::ok(std::move(res));
+  return acpi::ok(fuchsia_hardware_acpi::wire::Resource::WithMmio(alloc, std::move(range)));
 }
 
 acpi::status<fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult>
@@ -282,14 +278,13 @@ EvaluateObjectFidlHelper::EncodeReturnValue(fidl::AnyArena& alloc, ACPI_OBJECT* 
       return result.take_error();
     }
 
-    encoded.set_object(alloc, result.value());
+    encoded = fuchsia_hardware_acpi::wire::EncodedObject::WithObject(alloc, result.value());
   }
 
   fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResponse response;
   response.result = std::move(encoded);
-  fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult ret;
-  ret.set_response(alloc, std::move(response));
-  return acpi::ok(std::move(ret));
+  return acpi::ok(fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult::WithResponse(
+      alloc, std::move(response)));
 }
 
 acpi::status<fuchsia_hardware_acpi::wire::Object> EvaluateObjectFidlHelper::EncodeObject(
@@ -297,13 +292,13 @@ acpi::status<fuchsia_hardware_acpi::wire::Object> EvaluateObjectFidlHelper::Enco
   fuchsia_hardware_acpi::wire::Object result;
   switch (value->Type) {
     case ACPI_TYPE_INTEGER: {
-      result.set_integer_val(alloc, value->Integer.Value);
+      result = fuchsia_hardware_acpi::wire::Object::WithIntegerVal(alloc, value->Integer.Value);
       break;
     }
     case ACPI_TYPE_STRING: {
       fidl::StringView sv;
       sv.Set(alloc, cpp17::string_view(value->String.Pointer, value->String.Length));
-      result.set_string_val(alloc, sv);
+      result = fuchsia_hardware_acpi::wire::Object::WithStringVal(alloc, sv);
       break;
     }
     case ACPI_TYPE_PACKAGE: {
@@ -318,21 +313,21 @@ acpi::status<fuchsia_hardware_acpi::wire::Object> EvaluateObjectFidlHelper::Enco
       }
       fuchsia_hardware_acpi::wire::ObjectList list;
       list.value = view;
-      result.set_package_val(alloc, list);
+      result = fuchsia_hardware_acpi::wire::Object::WithPackageVal(alloc, list);
       break;
     }
     case ACPI_TYPE_BUFFER: {
       fidl::VectorView<uint8_t> data;
       data.Allocate(alloc, value->Buffer.Length);
       memcpy(data.mutable_data(), value->Buffer.Pointer, value->Buffer.Length);
-      result.set_buffer_val(alloc, data);
+      result = fuchsia_hardware_acpi::wire::Object::WithBufferVal(alloc, data);
       break;
     }
     case ACPI_TYPE_POWER: {
       fuchsia_hardware_acpi::wire::PowerResource power;
       power.resource_order = value->PowerResource.ResourceOrder;
       power.system_level = value->PowerResource.SystemLevel;
-      result.set_power_resource_val(alloc, power);
+      result = fuchsia_hardware_acpi::wire::Object::WithPowerResourceVal(alloc, power);
       break;
     }
     case ACPI_TYPE_PROCESSOR: {
@@ -340,7 +335,7 @@ acpi::status<fuchsia_hardware_acpi::wire::Object> EvaluateObjectFidlHelper::Enco
       processor.id = value->Processor.ProcId;
       processor.pblk_address = value->Processor.PblkAddress;
       processor.pblk_length = value->Processor.PblkLength;
-      result.set_processor_val(alloc, processor);
+      result = fuchsia_hardware_acpi::wire::Object::WithProcessorVal(alloc, processor);
       break;
     }
     case ACPI_TYPE_LOCAL_REFERENCE: {
@@ -363,7 +358,7 @@ acpi::status<fuchsia_hardware_acpi::wire::Object> EvaluateObjectFidlHelper::Enco
       fidl::StringView sv;
       sv.Set(alloc, cpp17::string_view(handle_path.value()));
       hnd.path = sv;
-      result.set_reference_val(alloc, hnd);
+      result = fuchsia_hardware_acpi::wire::Object::WithReferenceVal(alloc, hnd);
       break;
     }
     default:

@@ -285,9 +285,10 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
 
     fidl::VectorView<fdata::wire::DictionaryEntry> program_entries(arena, 2);
     program_entries[0].key.Set(arena, "binary");
-    program_entries[0].value.set_str(arena, arena, driver.binary);
+    program_entries[0].value = fdata::wire::DictionaryValue::WithStr(arena, driver.binary);
     program_entries[1].key.Set(arena, "colocate");
-    program_entries[1].value.set_str(arena, arena, driver.colocate ? "true" : "false");
+    program_entries[1].value =
+        fdata::wire::DictionaryValue::WithStr(arena, driver.colocate ? "true" : "false");
 
     fdata::wire::Dictionary program(arena);
     program.set_entries(arena, std::move(program_entries));
@@ -296,7 +297,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
     EXPECT_EQ(ZX_OK, outgoing_endpoints.status_value());
 
     frunner::wire::ComponentStartInfo start_info(arena);
-    start_info.set_resolved_url(arena, arena, driver.url)
+    start_info.set_resolved_url(arena, driver.url)
         .set_program(arena, std::move(program))
         .set_ns(arena)
         .set_outgoing_dir(std::move(outgoing_endpoints->server))

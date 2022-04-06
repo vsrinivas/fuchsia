@@ -29,9 +29,7 @@ class ChromeosAcpiTest : public InspectTestHelper, public zxtest::Test {
         std::vector<std::string> keys(values_.size());
         std::transform(values_.begin(), values_.end(), keys.begin(),
                        [](auto& pair) { return pair.first; });
-        facpi::EncodedObject result;
-        result.set_object(arena_, ToPackage(keys));
-        completer.ReplySuccess(std::move(result));
+        completer.ReplySuccess(facpi::EncodedObject::WithObject(arena_, ToPackage(keys)));
         return;
       }
       auto pair = values_.find(std::string(request->path.data(), request->path.size()));
@@ -40,9 +38,7 @@ class ChromeosAcpiTest : public InspectTestHelper, public zxtest::Test {
         return;
       }
 
-      facpi::EncodedObject result;
-      result.set_object(arena_, pair->second);
-      completer.ReplySuccess(std::move(result));
+      completer.ReplySuccess(facpi::EncodedObject::WithObject(arena_, pair->second));
     });
   }
 
@@ -70,27 +66,20 @@ class ChromeosAcpiTest : public InspectTestHelper, public zxtest::Test {
 
   void TearDown() override {}
 
-  facpi::Object MakeObject(std::string val) {
+  facpi::Object MakeObject(const std::string& val) {
     facpi::Object ret;
     fidl::StringView view;
     view.Set(arena_, val);
-    ret.set_string_val(arena_, view);
-    return ret;
+    return facpi::Object::WithStringVal(arena_, view);
   }
 
-  facpi::Object MakeObject(uint64_t val) {
-    facpi::Object ret;
-    ret.set_integer_val(arena_, val);
-    return ret;
-  }
+  facpi::Object MakeObject(uint64_t val) { return facpi::Object::WithIntegerVal(arena_, val); }
 
   facpi::Object MakeObject(cpp20::span<uint8_t> buf) {
-    facpi::Object ret;
     fidl::VectorView<uint8_t> data;
     data.Allocate(arena_, buf.size());
     memcpy(data.mutable_data(), buf.data(), buf.size());
-    ret.set_buffer_val(arena_, data);
-    return ret;
+    return facpi::Object::WithBufferVal(arena_, data);
   }
 
   template <typename T>
@@ -106,9 +95,7 @@ class ChromeosAcpiTest : public InspectTestHelper, public zxtest::Test {
     facpi::ObjectList list{
         .value = result,
     };
-    facpi::Object obj;
-    obj.set_package_val(arena_, list);
-    return obj;
+    return facpi::Object::WithPackageVal(arena_, list);
   }
 
  protected:

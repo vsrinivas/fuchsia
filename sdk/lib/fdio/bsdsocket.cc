@@ -212,7 +212,6 @@ int socket(int domain, int type, int protocol) {
         return ERRNO(EINVAL);
       }
       frawsocket::wire::ProtocolAssociation proto_assoc;
-      frawsocket::wire::Empty empty;
       uint8_t sock_protocol = static_cast<uint8_t>(protocol);
       // Sockets created with IPPROTO_RAW are only used to send packets as per
       // https://linux.die.net/man/7/raw,
@@ -221,9 +220,9 @@ int socket(int domain, int type, int protocol) {
       //   send any IP protocol that is specified in the passed header. Receiving
       //   of all IP protocols via IPPROTO_RAW is not possible using raw sockets.
       if (protocol == IPPROTO_RAW) {
-        proto_assoc.set_unassociated(empty);
+        proto_assoc = frawsocket::wire::ProtocolAssociation::WithUnassociated({});
       } else {
-        proto_assoc.set_associated(sock_protocol);
+        proto_assoc = frawsocket::wire::ProtocolAssociation::WithAssociated(sock_protocol);
       }
       auto result = provider->Socket(sock_domain, proto_assoc);
       auto status = result.status();

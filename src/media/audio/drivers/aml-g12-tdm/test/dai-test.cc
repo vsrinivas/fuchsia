@@ -36,7 +36,7 @@ fuchsia_hardware_audio::wire::DaiFormat GetDefaultDaiFormat() {
   fuchsia_hardware_audio::wire::DaiFormat format;
   format.number_of_channels = 2;
   format.sample_format = fuchsia_hardware_audio::wire::DaiSampleFormat::kPcmSigned;
-  format.frame_format.set_frame_format_standard(
+  format.frame_format = fuchsia_hardware_audio::wire::DaiFrameFormat::WithFrameFormatStandard(
       fuchsia_hardware_audio::wire::DaiFrameFormatStandard::kI2S);
   format.frame_rate = 48'000;
   format.bits_per_slot = 16;

@@ -12,6 +12,8 @@
 
 #include <zxtest/zxtest.h>
 
+#include "zircon/errors.h"
+
 namespace {
 
 constexpr char kFileData[] = "lalalala";
@@ -38,22 +40,16 @@ class FakePayloadStream : public fidl::WireServer<fuchsia_paver::PayloadStream> 
   }
 
   void ReadError(ReadDataCompleter::Sync& completer) {
-    fuchsia_paver::wire::ReadResult result;
-    result.set_err(ZX_ERR_INTERNAL);
-    completer.Reply(std::move(result));
+    completer.Reply(fuchsia_paver::wire::ReadResult::WithErr(ZX_ERR_INTERNAL));
   }
 
   void ReadEof(ReadDataCompleter::Sync& completer) {
-    fuchsia_paver::wire::ReadResult result;
-    result.set_eof(true);
-    completer.Reply(std::move(result));
+    completer.Reply(fuchsia_paver::wire::ReadResult::WithEof(true));
   }
 
   void ReadData(ReadDataRequestView request, ReadDataCompleter::Sync& completer) override {
     if (!vmo_) {
-      fuchsia_paver::wire::ReadResult result;
-      result.set_err(ZX_ERR_BAD_STATE);
-      completer.Reply(std::move(result));
+      completer.Reply(fuchsia_paver::wire::ReadResult::WithErr(ZX_ERR_BAD_STATE));
       return;
     }
 

@@ -299,15 +299,12 @@ class UnionWithHandle {
     return ordinal_ ==
            ::test_handlesintypes::wire::UnionWithHandle::Ordinal::kH;
   }
+
   static UnionWithHandle WithH(::zx::vmo val) {
     UnionWithHandle result;
-    result.set_h(std::move(val));
+    result.ordinal_ = ::test_handlesintypes::wire::UnionWithHandle::Ordinal::kH;
+    result.envelope_.As<::zx::vmo>().set_data(std::move(val));
     return result;
-  }
-
-  void set_h(::zx::vmo elem) {
-    ordinal_ = ::test_handlesintypes::wire::UnionWithHandle::Ordinal::kH;
-    envelope_.As<::zx::vmo>().set_data(std::move(elem));
   }
 
   ::zx::vmo& h() {

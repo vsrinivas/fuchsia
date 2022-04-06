@@ -730,9 +730,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
           resp = fidl_test_compatibility::wire::ResponseUnion::WithUnsigned_(
               allocator, request->unsigned_().value);
         }
-        wire::EchoEchoUnionPayloadWithErrorResult res;
-        res.set_response(allocator, std::move(resp));
-        completer.Reply(std::move(res));
+        completer.ReplySuccess(resp);
       }
     } else {
       EchoClientApp app(forward_to_server);
@@ -838,9 +836,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
         resp = fidl_test_imported::wire::ComposedEchoUnionResponseWithErrorComposedResponse::
             WithSigned_(std::move(obj_view));
       }
-      fidl_test_imported::wire::ComposedEchoUnionResponseWithErrorComposedResult res;
-      res.set_response(allocator, std::move(resp));
-      completer.Reply(std::move(res));
+      completer.ReplySuccess(resp);
     } else {
       EchoClientApp app(request->forward_to_server);
       auto result =

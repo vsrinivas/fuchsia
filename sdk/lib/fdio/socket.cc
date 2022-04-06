@@ -47,7 +47,7 @@ struct SocketAddress {
           return ZX_ERR_INVALID_ARGS;
         }
         const auto& s = *reinterpret_cast<const struct sockaddr_in*>(addr);
-        address_.set_ipv4(
+        address_ = fnet::wire::SocketAddress::WithIpv4(
             fidl::ObjectView<fnet::wire::Ipv4SocketAddress>::FromExternal(&storage_.ipv4));
         static_assert(sizeof(storage_.ipv4.address.addr) == sizeof(s.sin_addr.s_addr),
                       "size of IPv4 addresses should be the same");
@@ -60,7 +60,7 @@ struct SocketAddress {
           return ZX_ERR_INVALID_ARGS;
         }
         const auto& s = *reinterpret_cast<const struct sockaddr_in6*>(addr);
-        address_.set_ipv6(
+        address_ = fnet::wire::SocketAddress::WithIpv6(
             fidl::ObjectView<fnet::wire::Ipv6SocketAddress>::FromExternal(&storage_.ipv6));
         static_assert(decltype(storage_.ipv6.address.addr)::size() ==
                           std::size(decltype(s.sin6_addr.s6_addr){}),
@@ -106,10 +106,11 @@ struct PacketInfo {
         packet_info_.interface_id = s.sll_ifindex;
         switch (s.sll_halen) {
           case 0:
-            packet_info_.addr.set_none(fpacketsocket::wire::Empty());
+            packet_info_.addr =
+                fpacketsocket::wire::HardwareAddress::WithNone(fpacketsocket::wire::Empty());
             break;
           case ETH_ALEN:
-            packet_info_.addr.set_eui48(
+            packet_info_.addr = fpacketsocket::wire::HardwareAddress::WithEui48(
                 fidl::ObjectView<fnet::wire::MacAddress>::FromExternal(&eui48_storage_));
             static_assert(decltype(eui48_storage_.octets)::size() == ETH_ALEN,
                           "eui48 address must have the same size as ETH_ALEN");
@@ -844,9 +845,9 @@ int16_t SetSockOptProcessor::Get(fsocket::wire::OptionalUint8& out) {
     return EINVAL;
   }
   if (i == -1) {
-    out.set_unset({});
+    out = fsocket::wire::OptionalUint8::WithUnset({});
   } else {
-    out.set_value(static_cast<uint8_t>(i));
+    out = fsocket::wire::OptionalUint8::WithValue(static_cast<uint8_t>(i));
   }
   return 0;
 }
@@ -859,7 +860,7 @@ struct OptionalUint8CharAllowed {
 template <>
 int16_t SetSockOptProcessor::Get(OptionalUint8CharAllowed& out) {
   if (optlen_ == sizeof(uint8_t)) {
-    out.inner.set_value(*static_cast<const uint8_t*>(optval_));
+    out.inner = fsocket::wire::OptionalUint8::WithValue(*static_cast<const uint8_t*>(optval_));
     return 0;
   }
   return Get(out.inner);
@@ -1613,9 +1614,9 @@ struct BaseNetworkSocket : public BaseSocket<T> {
               return proc.Process<int32_t>([this](int32_t value) {
                 fsocket::wire::OptionalUint32 opt;
                 if (value < 0) {
-                  opt.set_unset({});
+                  opt = fsocket::wire::OptionalUint32::WithUnset({});
                 } else {
-                  opt.set_value(static_cast<uint32_t>(value));
+                  opt = fsocket::wire::OptionalUint32::WithValue(static_cast<uint32_t>(value));
                 }
                 return client()->SetTcpLinger(opt);
               });
@@ -2268,9 +2269,10 @@ zx_status_t socket_with_event<RawSocket>::setsockopt(int level, int optname, con
               frawsocket::wire::Ipv6ChecksumConfiguration config;
 
               if (value < 0) {
-                config.set_disabled(frawsocket::wire::Empty{});
+                config = frawsocket::wire::Ipv6ChecksumConfiguration::WithDisabled(
+                    frawsocket::wire::Empty{});
               } else {
-                config.set_offset(value);
+                config = frawsocket::wire::Ipv6ChecksumConfiguration::WithOffset(value);
               }
 
               return zxio_socket_with_event().client->SetIpv6Checksum(config);
@@ -2768,19 +2770,21 @@ struct packet_socket : public base_socket_with_event<PacketSocket> {
         // protocol association is optional.
         break;
       case ETH_P_ALL:
-        proto_assoc.set_all(fpacketsocket::wire::Empty());
+        proto_assoc =
+            fpacketsocket::wire::ProtocolAssociation::WithAll(fpacketsocket::wire::Empty());
         break;
       default:
-        proto_assoc.set_specified(protocol);
+        proto_assoc = fpacketsocket::wire::ProtocolAssociation::WithSpecified(protocol);
         break;
     }
 
     fpacketsocket::wire::BoundInterfaceId interface_id;
     uint64_t ifindex = sll.sll_ifindex;
     if (ifindex == 0) {
-      interface_id.set_all(fpacketsocket::wire::Empty());
+      interface_id = fpacketsocket::wire::BoundInterfaceId::WithAll(fpacketsocket::wire::Empty());
     } else {
-      interface_id.set_specified(fidl::ObjectView<uint64_t>::FromExternal(&ifindex));
+      interface_id = fpacketsocket::wire::BoundInterfaceId::WithSpecified(
+          fidl::ObjectView<uint64_t>::FromExternal(&ifindex));
     }
 
     const fidl::WireResult response =

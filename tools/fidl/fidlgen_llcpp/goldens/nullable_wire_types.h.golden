@@ -117,15 +117,12 @@ class SimpleUnion {
   bool is_a() const {
     return ordinal_ == ::test_nullable::wire::SimpleUnion::Ordinal::kA;
   }
+
   static SimpleUnion WithA(int32_t val) {
     SimpleUnion result;
-    result.set_a(std::move(val));
+    result.ordinal_ = ::test_nullable::wire::SimpleUnion::Ordinal::kA;
+    result.envelope_.As<int32_t>().set_data(std::move(val));
     return result;
-  }
-
-  void set_a(int32_t elem) {
-    ordinal_ = ::test_nullable::wire::SimpleUnion::Ordinal::kA;
-    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   int32_t& a() {
@@ -140,15 +137,12 @@ class SimpleUnion {
   bool is_b() const {
     return ordinal_ == ::test_nullable::wire::SimpleUnion::Ordinal::kB;
   }
+
   static SimpleUnion WithB(float val) {
     SimpleUnion result;
-    result.set_b(std::move(val));
+    result.ordinal_ = ::test_nullable::wire::SimpleUnion::Ordinal::kB;
+    result.envelope_.As<float>().set_data(std::move(val));
     return result;
-  }
-
-  void set_b(float elem) {
-    ordinal_ = ::test_nullable::wire::SimpleUnion::Ordinal::kB;
-    envelope_.As<float>().set_data(std::move(elem));
   }
 
   float& b() {

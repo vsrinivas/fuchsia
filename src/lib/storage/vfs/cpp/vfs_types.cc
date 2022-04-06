@@ -153,49 +153,39 @@ void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
                            fit::callback<void(fio::wire::NodeInfo&&)> callback) {
   representation.visit([&](auto&& repr) {
     using T = std::decay_t<decltype(repr)>;
-    fio::wire::NodeInfo info;
     if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Connector>) {
-      fio::wire::Service service;
-      info.set_service(service);
-      callback(std::move(info));
+      callback(fio::wire::NodeInfo::WithService({}));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::File>) {
       fio::wire::FileObject file = {.event = std::move(repr.observer),
                                     .stream = std::move(repr.stream)};
-      info.set_file(fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file));
-      callback(std::move(info));
+      callback(fio::wire::NodeInfo::WithFile(
+          fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file)));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Directory>) {
-      fio::wire::DirectoryObject directory;
-      info.set_directory(directory);
-      callback(std::move(info));
+      callback(fio::wire::NodeInfo::WithDirectory({}));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Pipe>) {
-      info.set_pipe({.socket = std::move(repr.socket)});
-      callback(std::move(info));
+      callback(fio::wire::NodeInfo::WithPipe({.socket = std::move(repr.socket)}));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Memory>) {
       fio::wire::Vmofile vmofile = {
           .vmo = std::move(repr.vmo), .offset = repr.offset, .length = repr.length};
-      info.set_vmofile(fidl::ObjectView<fio::wire::Vmofile>::FromExternal(&vmofile));
-      callback(std::move(info));
+      callback(fio::wire::NodeInfo::WithVmofile(
+          fidl::ObjectView<fio::wire::Vmofile>::FromExternal(&vmofile)));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Device>) {
-      info.set_device(fio::wire::Device{});
-      callback(std::move(info));
+      callback(fio::wire::NodeInfo::WithDevice({}));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Tty>) {
-      info.set_tty({.event = std::move(repr.event)});
-      callback(std::move(info));
+      callback(fio::wire::NodeInfo::WithTty({.event = std::move(repr.event)}));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::SynchronousDatagramSocket>) {
-      info.set_synchronous_datagram_socket({.event = std::move(repr.event)});
-      callback(std::move(info));
+      callback(
+          fio::wire::NodeInfo::WithSynchronousDatagramSocket({.event = std::move(repr.event)}));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::DatagramSocket>) {
       fio::wire::DatagramSocket datagram_socket = {
           .socket = std::move(repr.socket),
           .tx_meta_buf_size = repr.tx_meta_buf_size,
           .rx_meta_buf_size = repr.rx_meta_buf_size,
       };
-      info.set_datagram_socket(
-          fidl::ObjectView<fio::wire::DatagramSocket>::FromExternal(&datagram_socket));
-      callback(std::move(info));
+      callback(fio::wire::NodeInfo::WithDatagramSocket(
+          fidl::ObjectView<fio::wire::DatagramSocket>::FromExternal(&datagram_socket)));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::StreamSocket>) {
-      info.set_stream_socket({.socket = std::move(repr.socket)});
-      callback(std::move(info));
+      callback(fio::wire::NodeInfo::WithStreamSocket({.socket = std::move(repr.socket)}));
     } else {
       ZX_PANIC("Representation variant is not initialized");
     }

@@ -180,9 +180,8 @@ func (a *allocatorBuilder) visitTable(value gidlir.Record, decl *gidlmixer.Table
 
 func (a *allocatorBuilder) visitUnion(value gidlir.Record, decl *gidlmixer.UnionDecl, isPointer bool) string {
 	union := a.assignNew(typeNameIgnoreNullable(decl), isPointer, "")
-	op := "."
 	if isPointer {
-		op = "->"
+		panic("Optional unions are accessed the same way as non-optional unions in LLCPP, without pointer indirection")
 	}
 
 	if len(value.Fields) == 1 {
@@ -196,9 +195,9 @@ func (a *allocatorBuilder) visitUnion(value gidlir.Record, decl *gidlmixer.Union
 		}
 		fieldRhs := a.visit(field.Value, fieldDecl)
 		if fieldDecl.IsInlinableInEnvelope() {
-			a.write("%s%sset_%s(%s);\n", union, op, fidlgen.ToSnakeCase(field.Key.Name), fieldRhs)
+			a.write("%s = %s::With%s(%s);\n", union, typeNameIgnoreNullable(decl), fidlgen.ToUpperCamelCase(field.Key.Name), fieldRhs)
 		} else {
-			a.write("%s%sset_%s(%s, %s);\n", union, op, fidlgen.ToSnakeCase(field.Key.Name), a.allocatorVar, fieldRhs)
+			a.write("%s = %s::With%s(%s, %s);\n", union, typeNameIgnoreNullable(decl), fidlgen.ToUpperCamelCase(field.Key.Name), a.allocatorVar, fieldRhs)
 		}
 	}
 

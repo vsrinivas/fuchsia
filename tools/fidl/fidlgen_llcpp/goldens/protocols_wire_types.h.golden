@@ -312,42 +312,24 @@ class WithErrorSyntaxResponseAsStructResult {
            ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
                Ordinal::kResponse;
   }
+
   static WithErrorSyntaxResponseAsStructResult WithResponse(
       ::fidl::ObjectView<
           ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse>
           val) {
     WithErrorSyntaxResponseAsStructResult result;
-    result.set_response(val);
+    result.ordinal_ = ::test_protocols::wire::
+        WithErrorSyntaxResponseAsStructResult::Ordinal::kResponse;
+    result.envelope_
+        .As<::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse>()
+        .set_data(std::move(val));
     return result;
   }
 
   template <typename... Args>
   static WithErrorSyntaxResponseAsStructResult WithResponse(
       ::fidl::AnyArena& allocator, Args&&... args) {
-    WithErrorSyntaxResponseAsStructResult result;
-    result.set_response(
-        ::fidl::ObjectView<
-            ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse>(
-            allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_response(
-      ::fidl::ObjectView<
-          ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse>
-          elem) {
-    ordinal_ = ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
-        Ordinal::kResponse;
-    envelope_
-        .As<::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse>()
-        .set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
-        Ordinal::kResponse;
-    set_response(
+    return WithResponse(
         ::fidl::ObjectView<
             ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse>(
             allocator, std::forward<Args>(args)...));
@@ -375,16 +357,13 @@ class WithErrorSyntaxResponseAsStructResult {
     return ordinal_ == ::test_protocols::wire::
                            WithErrorSyntaxResponseAsStructResult::Ordinal::kErr;
   }
+
   static WithErrorSyntaxResponseAsStructResult WithErr(uint32_t val) {
     WithErrorSyntaxResponseAsStructResult result;
-    result.set_err(std::move(val));
+    result.ordinal_ = ::test_protocols::wire::
+        WithErrorSyntaxResponseAsStructResult::Ordinal::kErr;
+    result.envelope_.As<uint32_t>().set_data(std::move(val));
     return result;
-  }
-
-  void set_err(uint32_t elem) {
-    ordinal_ = ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
-        Ordinal::kErr;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
   uint32_t& err() {
@@ -464,20 +443,16 @@ class WithErrorSyntaxHandleInResultResult {
            ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
                Ordinal::kResponse;
   }
+
   static WithErrorSyntaxHandleInResultResult WithResponse(
       ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse val) {
     WithErrorSyntaxHandleInResultResult result;
-    result.set_response(std::move(val));
-    return result;
-  }
-
-  void set_response(
-      ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse elem) {
-    ordinal_ = ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
-        Ordinal::kResponse;
-    envelope_
+    result.ordinal_ = ::test_protocols::wire::
+        WithErrorSyntaxHandleInResultResult::Ordinal::kResponse;
+    result.envelope_
         .As<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>()
-        .set_data(std::move(elem));
+        .set_data(std::move(val));
+    return result;
   }
 
   ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse& response() {
@@ -502,16 +477,13 @@ class WithErrorSyntaxHandleInResultResult {
     return ordinal_ == ::test_protocols::wire::
                            WithErrorSyntaxHandleInResultResult::Ordinal::kErr;
   }
+
   static WithErrorSyntaxHandleInResultResult WithErr(uint32_t val) {
     WithErrorSyntaxHandleInResultResult result;
-    result.set_err(std::move(val));
+    result.ordinal_ = ::test_protocols::wire::
+        WithErrorSyntaxHandleInResultResult::Ordinal::kErr;
+    result.envelope_.As<uint32_t>().set_data(std::move(val));
     return result;
-  }
-
-  void set_err(uint32_t elem) {
-    ordinal_ = ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
-        Ordinal::kErr;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
   uint32_t& err() {
@@ -588,20 +560,16 @@ class WithErrorSyntaxErrorAsPrimitiveResult {
            ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
                Ordinal::kResponse;
   }
+
   static WithErrorSyntaxErrorAsPrimitiveResult WithResponse(
       ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse val) {
     WithErrorSyntaxErrorAsPrimitiveResult result;
-    result.set_response(std::move(val));
-    return result;
-  }
-
-  void set_response(
-      ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse elem) {
-    ordinal_ = ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
-        Ordinal::kResponse;
-    envelope_
+    result.ordinal_ = ::test_protocols::wire::
+        WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kResponse;
+    result.envelope_
         .As<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse>()
-        .set_data(std::move(elem));
+        .set_data(std::move(val));
+    return result;
   }
 
   ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse& response() {
@@ -626,16 +594,13 @@ class WithErrorSyntaxErrorAsPrimitiveResult {
     return ordinal_ == ::test_protocols::wire::
                            WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kErr;
   }
+
   static WithErrorSyntaxErrorAsPrimitiveResult WithErr(uint32_t val) {
     WithErrorSyntaxErrorAsPrimitiveResult result;
-    result.set_err(std::move(val));
+    result.ordinal_ = ::test_protocols::wire::
+        WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kErr;
+    result.envelope_.As<uint32_t>().set_data(std::move(val));
     return result;
-  }
-
-  void set_err(uint32_t elem) {
-    ordinal_ = ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
-        Ordinal::kErr;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
   uint32_t& err() {
@@ -697,15 +662,12 @@ class TheUnion {
   bool is_v() const {
     return ordinal_ == ::test_protocols::wire::TheUnion::Ordinal::kV;
   }
+
   static TheUnion WithV(uint32_t val) {
     TheUnion result;
-    result.set_v(std::move(val));
+    result.ordinal_ = ::test_protocols::wire::TheUnion::Ordinal::kV;
+    result.envelope_.As<uint32_t>().set_data(std::move(val));
     return result;
-  }
-
-  void set_v(uint32_t elem) {
-    ordinal_ = ::test_protocols::wire::TheUnion::Ordinal::kV;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
   uint32_t& v() {
@@ -765,19 +727,16 @@ class WithErrorSyntaxErrorAsEnumResult {
     return ordinal_ == ::test_protocols::wire::
                            WithErrorSyntaxErrorAsEnumResult::Ordinal::kResponse;
   }
+
   static WithErrorSyntaxErrorAsEnumResult WithResponse(
       ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse val) {
     WithErrorSyntaxErrorAsEnumResult result;
-    result.set_response(std::move(val));
-    return result;
-  }
-
-  void set_response(
-      ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse elem) {
-    ordinal_ = ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
+    result.ordinal_ = ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
         Ordinal::kResponse;
-    envelope_.As<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>()
-        .set_data(std::move(elem));
+    result.envelope_
+        .As<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>()
+        .set_data(std::move(val));
+    return result;
   }
 
   ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse& response() {
@@ -802,17 +761,15 @@ class WithErrorSyntaxErrorAsEnumResult {
     return ordinal_ == ::test_protocols::wire::
                            WithErrorSyntaxErrorAsEnumResult::Ordinal::kErr;
   }
+
   static WithErrorSyntaxErrorAsEnumResult WithErr(
       ::test_protocols::wire::ErrorEnum val) {
     WithErrorSyntaxErrorAsEnumResult result;
-    result.set_err(std::move(val));
-    return result;
-  }
-
-  void set_err(::test_protocols::wire::ErrorEnum elem) {
-    ordinal_ =
+    result.ordinal_ =
         ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::Ordinal::kErr;
-    envelope_.As<::test_protocols::wire::ErrorEnum>().set_data(std::move(elem));
+    result.envelope_.As<::test_protocols::wire::ErrorEnum>().set_data(
+        std::move(val));
+    return result;
   }
 
   ::test_protocols::wire::ErrorEnum& err() {

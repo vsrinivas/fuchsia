@@ -328,7 +328,7 @@ class DriverTest : public gtest::TestLoopFixture {
 
     fidl::VectorView<fdata::wire::DictionaryEntry> program_entries(arena, 1);
     program_entries[0].key.Set(arena, "compat");
-    program_entries[0].value.set_str(arena, "driver/v1_test.so");
+    program_entries[0].value = fdata::wire::DictionaryValue::WithStr(arena, "driver/v1_test.so");
     fdata::wire::Dictionary program(arena);
     program.set_entries(arena, std::move(program_entries));
 

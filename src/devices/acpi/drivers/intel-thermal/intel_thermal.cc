@@ -241,9 +241,7 @@ void IntelThermal::SetTripCelsius(SetTripCelsiusRequestView request,
   std::scoped_lock lock(lock_);
 
   fidl::Arena<> arena;
-  facpi::Object arg;
-  uint64_t decikelvin = CelsiusToDecikelvin(request->temp);
-  arg.set_integer_val(arena, decikelvin);
+  facpi::Object arg = facpi::Object::WithIntegerVal(arena, CelsiusToDecikelvin(request->temp));
   auto result =
       acpi_.borrow()->EvaluateObject("PAT0", facpi::EvaluateObjectMode::kPlainObject,
                                      fidl::VectorView<facpi::Object>::FromExternal(&arg, 1));

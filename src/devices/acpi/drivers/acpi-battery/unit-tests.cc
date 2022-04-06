@@ -123,15 +123,11 @@ class AcpiBatteryTest : public InspectTestHelper, public zxtest::Test {
   }
 
   facpi::Object MakeObject(uint64_t intval) {
-    facpi::Object ret;
-    ret.set_integer_val(arena_, intval);
-    return ret;
+    return facpi::Object::WithIntegerVal(arena_, intval);
   }
 
   facpi::Object MakeObject(const char* strval) {
-    facpi::Object ret;
-    ret.set_string_val(arena_, fidl::StringView::FromExternal(strval));
-    return ret;
+    return facpi::Object::WithStringVal(arena_, fidl::StringView::FromExternal(strval));
   }
 
   void CheckInfo() {

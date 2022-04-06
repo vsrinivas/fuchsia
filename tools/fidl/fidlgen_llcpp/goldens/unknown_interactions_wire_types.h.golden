@@ -71,20 +71,16 @@ class ExampleFlexibleTwoWayResult {
     return ordinal_ == ::test_unknowninteractions::wire::
                            ExampleFlexibleTwoWayResult::Ordinal::kResponse;
   }
+
   static ExampleFlexibleTwoWayResult WithResponse(
       ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse val) {
     ExampleFlexibleTwoWayResult result;
-    result.set_response(std::move(val));
-    return result;
-  }
-
-  void set_response(
-      ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse elem) {
-    ordinal_ = ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult::
-        Ordinal::kResponse;
-    envelope_
+    result.ordinal_ = ::test_unknowninteractions::wire::
+        ExampleFlexibleTwoWayResult::Ordinal::kResponse;
+    result.envelope_
         .As<::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse>()
-        .set_data(std::move(elem));
+        .set_data(std::move(val));
+    return result;
   }
 
   ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse& response() {
@@ -107,16 +103,13 @@ class ExampleFlexibleTwoWayResult {
     return ordinal_ == ::test_unknowninteractions::wire::
                            ExampleFlexibleTwoWayResult::Ordinal::kTransportErr;
   }
+
   static ExampleFlexibleTwoWayResult WithTransportErr(int32_t val) {
     ExampleFlexibleTwoWayResult result;
-    result.set_transport_err(std::move(val));
+    result.ordinal_ = ::test_unknowninteractions::wire::
+        ExampleFlexibleTwoWayResult::Ordinal::kTransportErr;
+    result.envelope_.As<int32_t>().set_data(std::move(val));
     return result;
-  }
-
-  void set_transport_err(int32_t elem) {
-    ordinal_ = ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult::
-        Ordinal::kTransportErr;
-    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   int32_t& transport_err() {

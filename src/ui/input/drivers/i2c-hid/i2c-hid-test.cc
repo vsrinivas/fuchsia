@@ -222,11 +222,9 @@ class I2cHidTest : public zxtest::Test {
         [](acpi::mock::Device::EvaluateObjectRequestView view,
            acpi::mock::Device::EvaluateObjectCompleter::Sync& completer) {
           fidl::Arena<> alloc;
-          fuchsia_hardware_acpi::wire::Object obj;
-          // Always use address 0x01. This should match FakeI2cHid::kHidDescCommand.
-          obj.set_integer_val(alloc, 0x1);
-          fuchsia_hardware_acpi::wire::EncodedObject encoded;
-          encoded.set_object(alloc, obj);
+
+          auto encoded = fuchsia_hardware_acpi::wire::EncodedObject::WithObject(
+              alloc, fuchsia_hardware_acpi::wire::Object::WithIntegerVal(alloc, 0x01));
 
           completer.ReplySuccess(std::move(encoded));
           ASSERT_TRUE(completer.result_of_reply().ok());

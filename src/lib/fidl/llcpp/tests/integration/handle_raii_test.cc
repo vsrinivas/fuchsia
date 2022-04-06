@@ -86,10 +86,10 @@ class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> 
                       GetHandleUnionCompleter::Sync& completer) override {
     test::wire::HandleUnion u;
     if (request->field == 1) {
-      u.set_h1(zx::event());
+      u = test::wire::HandleUnion::WithH1(zx::event());
       zx::event::create(0, &u.h1());
     } else if (request->field == 2) {
-      u.set_h2(test::wire::HandleStruct());
+      u = test::wire::HandleUnion::WithH2(test::wire::HandleStruct());
       zx::event::create(0, &u.h2().h);
     }
     completer.Reply(std::move(u));
@@ -100,9 +100,9 @@ class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> 
     if (request->field == 1) {
       zx::event event;
       zx::event::create(0, &event);
-      u.u.set_h1(std::move(event));
+      u.u = test::wire::HandleUnion::WithH1(std::move(event));
     } else if (request->field == 2) {
-      u.u.set_h2(test::wire::HandleStruct());
+      u.u = test::wire::HandleUnion::WithH2(test::wire::HandleStruct());
       zx::event::create(0, &u.u.h2().h);
     }
     completer.Reply(std::move(u));
@@ -159,9 +159,9 @@ class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> 
     if (request->field == 1) {
       zx::event event;
       zx::event::create(0, &event);
-      u.set_h1(std::move(event));
+      u = test::wire::HandleUnion::WithH1(std::move(event));
     } else if (request->field == 2) {
-      u.set_h2(test::wire::HandleStruct());
+      u = test::wire::HandleUnion::WithH2(test::wire::HandleStruct());
       zx::event::create(0, &u.h2().h);
     }
     completer.Reply(std::move(u));
@@ -175,9 +175,9 @@ class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> 
       if (request->field == 1) {
         zx::event event;
         zx::event::create(0, &event);
-        u->u.set_h1(std::move(event));
+        u->u = test::wire::HandleUnion::WithH1(std::move(event));
       } else if (request->field == 2) {
-        u->u.set_h2(test::wire::HandleStruct());
+        u->u = test::wire::HandleUnion::WithH2(test::wire::HandleStruct());
         zx::event::create(0, &u->u.h2().h);
       }
       completer.Reply(u);
@@ -229,9 +229,9 @@ class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> 
       if (request->field == 1) {
         zx::event event;
         zx::event::create(0, &event);
-        reply.u.set_h1(std::move(event));
+        reply.u = test::wire::HandleUnion::WithH1(std::move(event));
       } else if (request->field == 2) {
-        reply.u.set_h2(test::wire::HandleStruct());
+        reply.u = test::wire::HandleUnion::WithH2(test::wire::HandleStruct());
         zx::event::create(0, &reply.u.h2().h);
       }
     }

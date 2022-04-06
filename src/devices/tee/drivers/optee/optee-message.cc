@@ -194,14 +194,14 @@ zx_status_t Message::CreateOutputParameterSet(
 
     switch (optee_param.attribute) {
       case MessageParam::kAttributeTypeNone: {
-        (*out_parameter_set)[i].set_none({});
+        (*out_parameter_set)[i] = fuchsia_tee::wire::Parameter::WithNone({});
         break;
       }
       case MessageParam::kAttributeTypeValueInput:
       case MessageParam::kAttributeTypeValueOutput:
       case MessageParam::kAttributeTypeValueInOut:
-        (*out_parameter_set)[i].set_value(allocator,
-                                          CreateOutputValueParameter(allocator, optee_param));
+        (*out_parameter_set)[i] = fuchsia_tee::wire::Parameter::WithValue(
+            allocator, CreateOutputValueParameter(allocator, optee_param));
         break;
       case MessageParam::kAttributeTypeTempMemInput:
       case MessageParam::kAttributeTypeTempMemOutput:
@@ -211,7 +211,8 @@ zx_status_t Message::CreateOutputParameterSet(
             status != ZX_OK) {
           return status;
         }
-        (*out_parameter_set)[i].set_buffer(allocator, std::move(buffer));
+        (*out_parameter_set)[i] =
+            fuchsia_tee::wire::Parameter::WithBuffer(allocator, std::move(buffer));
         break;
       }
       case MessageParam::kAttributeTypeRegMemInput:

@@ -76,36 +76,28 @@ void SpiChild::ExchangeVector(ExchangeVectorRequestView request,
 }
 
 void SpiChild::RegisterVmo(RegisterVmoRequestView request, RegisterVmoCompleter::Sync& completer) {
-  sharedmemory::wire::SharedVmoRegisterRegisterVmoResult result;
-  sharedmemory::wire::SharedVmoRegisterRegisterVmoResponse response = {};
   zx_status_t status =
       spi_.RegisterVmo(cs_, request->vmo_id, std::move(request->vmo.vmo), request->vmo.offset,
                        request->vmo.size, static_cast<uint32_t>(request->rights));
   if (status == ZX_OK) {
-    result.set_response(std::move(response));
+    completer.ReplySuccess();
   } else {
-    result.set_err(status);
+    completer.ReplyError(status);
   }
-  completer.Reply(std::move(result));
 }
 
 void SpiChild::UnregisterVmo(UnregisterVmoRequestView request,
                              UnregisterVmoCompleter::Sync& completer) {
-  sharedmemory::wire::SharedVmoRegisterUnregisterVmoResult result;
-  sharedmemory::wire::SharedVmoRegisterUnregisterVmoResponse response = {};
-  zx_status_t status = spi_.UnregisterVmo(cs_, request->vmo_id, &response.vmo);
+  zx::vmo vmo;
+  zx_status_t status = spi_.UnregisterVmo(cs_, request->vmo_id, &vmo);
   if (status == ZX_OK) {
-    result.set_response(std::move(response));
+    completer.ReplySuccess(std::move(vmo));
   } else {
-    result.set_err(status);
+    completer.ReplyError(status);
   }
-  completer.Reply(std::move(result));
 }
 
 void SpiChild::Transmit(TransmitRequestView request, TransmitCompleter::Sync& completer) {
-  sharedmemory::wire::SharedVmoIoTransmitResult result;
-  sharedmemory::wire::SharedVmoIoTransmitResponse response = {};
-
   zx_status_t status;
   if (shutdown_) {
     status = ZX_ERR_CANCELED;
@@ -116,17 +108,13 @@ void SpiChild::Transmit(TransmitRequestView request, TransmitCompleter::Sync& co
   }
 
   if (status == ZX_OK) {
-    result.set_response(std::move(response));
+    completer.ReplySuccess();
   } else {
-    result.set_err(status);
+    completer.ReplyError(status);
   }
-  completer.Reply(std::move(result));
 }
 
 void SpiChild::Receive(ReceiveRequestView request, ReceiveCompleter::Sync& completer) {
-  sharedmemory::wire::SharedVmoIoReceiveResult result;
-  sharedmemory::wire::SharedVmoIoReceiveResponse response = {};
-
   zx_status_t status;
   if (shutdown_) {
     status = ZX_ERR_CANCELED;
@@ -137,17 +125,13 @@ void SpiChild::Receive(ReceiveRequestView request, ReceiveCompleter::Sync& compl
   }
 
   if (status == ZX_OK) {
-    result.set_response(std::move(response));
+    completer.ReplySuccess();
   } else {
-    result.set_err(status);
+    completer.ReplyError(status);
   }
-  completer.Reply(std::move(result));
 }
 
 void SpiChild::Exchange(ExchangeRequestView request, ExchangeCompleter::Sync& completer) {
-  sharedmemory::wire::SharedVmoIoExchangeResult result;
-  sharedmemory::wire::SharedVmoIoExchangeResponse response = {};
-
   zx_status_t status;
   if (shutdown_) {
     status = ZX_ERR_CANCELED;
@@ -161,11 +145,10 @@ void SpiChild::Exchange(ExchangeRequestView request, ExchangeCompleter::Sync& co
   }
 
   if (status == ZX_OK) {
-    result.set_response(std::move(response));
+    completer.ReplySuccess();
   } else {
-    result.set_err(status);
+    completer.ReplyError(status);
   }
-  completer.Reply(std::move(result));
 }
 
 zx_status_t SpiChild::SpiTransmit(const uint8_t* txdata_list, size_t txdata_count) {

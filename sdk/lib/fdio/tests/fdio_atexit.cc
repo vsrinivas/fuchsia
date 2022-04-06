@@ -31,9 +31,7 @@ class Server final : public fidl::testing::WireTestBase<fuchsia_posix_socket::St
     if (status != ZX_OK) {
       return completer.Close(status);
     }
-    fuchsia_io::wire::NodeInfo info;
-    info.set_stream_socket(std::move(stream_socket));
-    completer.Reply(std::move(info));
+    completer.Reply(fuchsia_io::wire::NodeInfo::WithStreamSocket(std::move(stream_socket)));
   }
 
   void Accept(AcceptRequestView request, AcceptCompleter::Sync& completer) override {

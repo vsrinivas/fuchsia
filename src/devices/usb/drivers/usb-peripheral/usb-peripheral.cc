@@ -832,7 +832,6 @@ void UsbPeripheral::SetConfiguration(SetConfigurationRequestView request,
                                      SetConfigurationCompleter::Sync& completer) {
   zxlogf(DEBUG, "%s", __func__);
   ZX_ASSERT(!request->config_descriptors.empty());
-  peripheral::wire::DeviceSetConfigurationResult response;
   uint8_t index = 0;
   for (auto& func_descs : request->config_descriptors) {
     auto descriptor = fbl::MakeRefCounted<UsbConfiguration>();
@@ -842,22 +841,19 @@ void UsbPeripheral::SetConfiguration(SetConfigurationRequestView request,
       fbl::AutoLock lock(&lock_);
       if (shutting_down_) {
         zxlogf(ERROR, "%s: cannot set configuration while clearing functions", __func__);
-        response.set_err(ZX_ERR_BAD_STATE);
-        completer.Reply(std::move(response));
+        completer.ReplyError(ZX_ERR_BAD_STATE);
         return;
       }
     }
 
     if (func_descs.count() == 0) {
-      response.set_err(ZX_ERR_INVALID_ARGS);
-      completer.Reply(std::move(response));
+      completer.ReplyError(ZX_ERR_INVALID_ARGS);
       return;
     }
 
     zx_status_t status = SetDeviceDescriptor(std::move(request->device_desc));
     if (status != ZX_OK) {
-      response.set_err(status);
-      completer.Reply(std::move(response));
+      completer.ReplyError(status);
       return;
     }
     for (auto func_desc : func_descs) {
@@ -867,13 +863,10 @@ void UsbPeripheral::SetConfiguration(SetConfigurationRequestView request,
   }
   zx_status_t status = BindFunctions();
   if (status != ZX_OK) {
-    response.set_err(status);
-    completer.Reply(std::move(response));
+    completer.ReplyError(status);
     return;
   }
-  peripheral::wire::DeviceSetConfigurationResponse resp;
-  response.set_response(std::move(resp));
-  completer.Reply(std::move(response));
+  completer.ReplySuccess();
 }
 
 zx_status_t UsbPeripheral::SetDeviceDescriptor(DeviceDescriptor desc) {

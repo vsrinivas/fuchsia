@@ -72,43 +72,25 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResult {
                            ExampleUseOfErrorSyntaxCallWhichMayFailResult::
                                Ordinal::kResponse;
   }
+
   static ExampleUseOfErrorSyntaxCallWhichMayFailResult WithResponse(
       ::fidl::ObjectView<::test_errorsyntax::wire::
                              ExampleUseOfErrorSyntaxCallWhichMayFailResponse>
           val) {
     ExampleUseOfErrorSyntaxCallWhichMayFailResult result;
-    result.set_response(val);
+    result.ordinal_ = ::test_errorsyntax::wire::
+        ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kResponse;
+    result.envelope_
+        .As<::test_errorsyntax::wire::
+                ExampleUseOfErrorSyntaxCallWhichMayFailResponse>()
+        .set_data(std::move(val));
     return result;
   }
 
   template <typename... Args>
   static ExampleUseOfErrorSyntaxCallWhichMayFailResult WithResponse(
       ::fidl::AnyArena& allocator, Args&&... args) {
-    ExampleUseOfErrorSyntaxCallWhichMayFailResult result;
-    result.set_response(
-        ::fidl::ObjectView<::test_errorsyntax::wire::
-                               ExampleUseOfErrorSyntaxCallWhichMayFailResponse>(
-            allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_response(
-      ::fidl::ObjectView<::test_errorsyntax::wire::
-                             ExampleUseOfErrorSyntaxCallWhichMayFailResponse>
-          elem) {
-    ordinal_ = ::test_errorsyntax::wire::
-        ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kResponse;
-    envelope_
-        .As<::test_errorsyntax::wire::
-                ExampleUseOfErrorSyntaxCallWhichMayFailResponse>()
-        .set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::test_errorsyntax::wire::
-        ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kResponse;
-    set_response(
+    return WithResponse(
         ::fidl::ObjectView<::test_errorsyntax::wire::
                                ExampleUseOfErrorSyntaxCallWhichMayFailResponse>(
             allocator, std::forward<Args>(args)...));
@@ -143,16 +125,13 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResult {
            ::test_errorsyntax::wire::
                ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kErr;
   }
+
   static ExampleUseOfErrorSyntaxCallWhichMayFailResult WithErr(uint32_t val) {
     ExampleUseOfErrorSyntaxCallWhichMayFailResult result;
-    result.set_err(std::move(val));
-    return result;
-  }
-
-  void set_err(uint32_t elem) {
-    ordinal_ = ::test_errorsyntax::wire::
+    result.ordinal_ = ::test_errorsyntax::wire::
         ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kErr;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
+    result.envelope_.As<uint32_t>().set_data(std::move(val));
+    return result;
   }
 
   uint32_t& err() {

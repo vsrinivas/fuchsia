@@ -101,8 +101,9 @@ TEST(AllocationExamples, ExternalObject) {
   fidl::StringView str("hello");
   // |object_view| is a view to the string view.
   fidl::ObjectView object_view = fidl::ObjectView<fidl::StringView>::FromExternal(&str);
-  fuchsia_examples::wire::JsonValue val;
-  val.set_string_value(object_view);
+  fuchsia_examples::wire::JsonValue val =
+      fuchsia_examples::wire::JsonValue::WithStringValue(object_view);
+  ASSERT_TRUE(val.is_string_value());
 }
 // [END external-object]
 

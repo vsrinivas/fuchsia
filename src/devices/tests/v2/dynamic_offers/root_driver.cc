@@ -89,8 +89,7 @@ class RootDriver : public fidl::WireServer<ft::Handshake> {
     protocol.set_target_name(
         arena, fidl::StringView::FromExternal(fidl::DiscoverableProtocolName<ft::Handshake>));
     protocol.set_dependency_type(fcd::wire::DependencyType::kStrong);
-    fcd::wire::Offer offer;
-    offer.set_protocol(arena, std::move(protocol));
+    fcd::wire::Offer offer = fcd::wire::Offer::WithProtocol(arena, std::move(protocol));
 
     // Set the properties of the node that a driver will bind to.
     fdf::wire::NodeProperty property(arena);
