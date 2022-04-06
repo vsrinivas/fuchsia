@@ -246,6 +246,7 @@ where
                 let key_source = ScryptKeySource::from(s_meta.scrypt_params);
                 key_source.retrieve_key(&password).await
             }
+            AuthenticatorMetadata::Pinweaver(_) => unimplemented!(),
         }
     }
 

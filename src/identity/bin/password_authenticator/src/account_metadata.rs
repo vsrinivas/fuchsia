@@ -4,7 +4,8 @@
 
 use {
     crate::{
-        account_manager::AccountId, insecure::NullKeyParams, options::Options, scrypt::ScryptParams,
+        account_manager::AccountId, insecure::NullKeyParams, options::Options,
+        pinweaver::PinweaverParams, scrypt::ScryptParams,
     },
     async_trait::async_trait,
     fidl_fuchsia_identity_account as faccount, fidl_fuchsia_io as fio, fuchsia_zircon as zx,
@@ -82,13 +83,23 @@ pub struct ScryptOnlyMetadata {
     pub scrypt_params: ScryptParams,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct PinweaverMetadata {
+    /// The parameters to be used with pinweaver
+    pub pinweaver_params: PinweaverParams,
+}
+
 /// An enumeration of all supported authenticator metadata types.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum AuthenticatorMetadata {
     NullKey(NullAuthMetadata),
     ScryptOnly(ScryptOnlyMetadata),
+    Pinweaver(PinweaverMetadata),
 }
+
+// Implement converting each backend's enrollment data into an AuthenticatorMetadata, to be saved
+// after enrolling a key.
 
 impl From<NullKeyParams> for AuthenticatorMetadata {
     fn from(_item: NullKeyParams) -> AuthenticatorMetadata {
@@ -99,6 +110,33 @@ impl From<NullKeyParams> for AuthenticatorMetadata {
 impl From<ScryptParams> for AuthenticatorMetadata {
     fn from(item: ScryptParams) -> AuthenticatorMetadata {
         AuthenticatorMetadata::ScryptOnly(ScryptOnlyMetadata { scrypt_params: item })
+    }
+}
+
+impl From<PinweaverParams> for AuthenticatorMetadata {
+    fn from(item: PinweaverParams) -> AuthenticatorMetadata {
+        AuthenticatorMetadata::Pinweaver(PinweaverMetadata { pinweaver_params: item })
+    }
+}
+
+// Symmetrically, implement converting each AuthenticatorMetadata variant back into the backend's
+// enrollment data, to be used when removing a key.
+
+impl From<NullAuthMetadata> for NullKeyParams {
+    fn from(_item: NullAuthMetadata) -> NullKeyParams {
+        NullKeyParams {}
+    }
+}
+
+impl From<ScryptOnlyMetadata> for ScryptParams {
+    fn from(item: ScryptOnlyMetadata) -> ScryptParams {
+        item.scrypt_params
+    }
+}
+
+impl From<PinweaverMetadata> for PinweaverParams {
+    fn from(item: PinweaverMetadata) -> PinweaverParams {
+        item.pinweaver_params
     }
 }
 
@@ -123,6 +161,7 @@ impl AccountMetadata {
         match self.authenticator_metadata {
             AuthenticatorMetadata::NullKey(_) => options.allow_null,
             AuthenticatorMetadata::ScryptOnly(_) => options.allow_scrypt,
+            AuthenticatorMetadata::Pinweaver(_) => options.allow_pinweaver,
         }
     }
 
@@ -276,7 +315,10 @@ impl AccountMetadataStore for DataDirAccountMetadataStore {
 pub mod test {
     use {
         super::*,
-        crate::scrypt::test::{FULL_STRENGTH_SCRYPT_PARAMS, TEST_SCRYPT_PARAMS},
+        crate::{
+            pinweaver::test::TEST_PINWEAVER_CREDENTIAL_LABEL,
+            scrypt::test::{FULL_STRENGTH_SCRYPT_PARAMS, TEST_SCRYPT_PARAMS},
+        },
         assert_matches::assert_matches,
         lazy_static::lazy_static,
         tempfile::TempDir,
@@ -307,15 +349,42 @@ pub mod test {
                 }),
             }
         }
+
+        /// Generate a new AccountMetadata for the pinweaver key scheme
+        pub fn test_new_pinweaver(name: String) -> AccountMetadata {
+            let meta = AuthenticatorMetadata::Pinweaver(PinweaverMetadata {
+                pinweaver_params: PinweaverParams {
+                    scrypt_params: ScryptParams::new(),
+                    credential_label: TEST_PINWEAVER_CREDENTIAL_LABEL,
+                },
+            });
+            AccountMetadata { name, authenticator_metadata: meta }
+        }
+
+        /// Create a new Pinweaver AccountMetadata using the same weak scrypt parameters and fixed
+        /// salt as test_new_weak_scrypt above.  Combined with a known high-entropy key, this
+        /// enables deterministic tests.
+        pub fn test_new_weak_pinweaver(name: String) -> AccountMetadata {
+            AccountMetadata {
+                name,
+                authenticator_metadata: AuthenticatorMetadata::Pinweaver(PinweaverMetadata {
+                    pinweaver_params: PinweaverParams {
+                        scrypt_params: TEST_SCRYPT_PARAMS,
+                        credential_label: TEST_PINWEAVER_CREDENTIAL_LABEL,
+                    },
+                }),
+            }
+        }
     }
 
     // This is the user name we include in all test metadata objects
     pub const TEST_NAME: &str = "Test Display Name";
 
-    // These are both valid golden metadata we expect to be able to load.  Note that
+    // These are all valid golden metadata we expect to be able to load.
     const NULL_KEY_AND_NAME_DATA: &[u8] =
         br#"{"name":"Display Name","authenticator_metadata":{"type":"NullKey"}}"#;
     const SCRYPT_KEY_AND_NAME_DATA: &[u8] = br#"{"name":"Display Name","authenticator_metadata":{"type":"ScryptOnly","scrypt_params":{"salt":[198,228,57,32,90,251,238,12,194,62,68,106,218,187,24,246],"log_n":15,"r":8,"p":1}}}"#;
+    const PINWEAVER_KEY_AND_NAME_DATA: &[u8] = br#"{"name":"Display Name","authenticator_metadata":{"type":"Pinweaver","pinweaver_params":{"scrypt_params":{"salt":[198,228,57,32,90,251,238,12,194,62,68,106,218,187,24,246],"log_n":15,"r":8,"p":1},"credential_label":1}}}"#;
 
     // This is invalid; it's missing the required authenticator_metadata key.
     // We'll check that we fail to load it.
@@ -326,6 +395,8 @@ pub mod test {
             AccountMetadata::test_new_weak_scrypt(TEST_NAME.into());
         pub static ref TEST_NULL_METADATA: AccountMetadata =
             AccountMetadata::test_new_null(TEST_NAME.into(),);
+        pub static ref TEST_PINWEAVER_METADATA: AccountMetadata =
+            AccountMetadata::test_new_weak_pinweaver(TEST_NAME.into());
     }
 
     async fn write_test_file_in_dir(
@@ -420,17 +491,31 @@ pub mod test {
         let deserialized = serde_json::from_slice::<AccountMetadata>(SCRYPT_KEY_AND_NAME_DATA)
             .expect("Deserialize password-only auth metadata");
         assert_eq!(&deserialized.name, "Display Name");
-
         assert_eq!(
             deserialized.authenticator_metadata,
             AuthenticatorMetadata::ScryptOnly(ScryptOnlyMetadata {
                 scrypt_params: FULL_STRENGTH_SCRYPT_PARAMS,
             })
         );
-
         let reserialized = serde_json::to_vec::<AccountMetadata>(&deserialized)
             .expect("Reserialize password-only auth metadata");
         assert_eq!(reserialized, SCRYPT_KEY_AND_NAME_DATA);
+
+        let deserialized = serde_json::from_slice::<AccountMetadata>(PINWEAVER_KEY_AND_NAME_DATA)
+            .expect("Deserialize golden pinweaver auth metadata");
+        assert_eq!(&deserialized.name, "Display Name");
+        assert_eq!(
+            deserialized.authenticator_metadata,
+            AuthenticatorMetadata::Pinweaver(PinweaverMetadata {
+                pinweaver_params: PinweaverParams {
+                    scrypt_params: FULL_STRENGTH_SCRYPT_PARAMS,
+                    credential_label: TEST_PINWEAVER_CREDENTIAL_LABEL,
+                },
+            })
+        );
+        let reserialized = serde_json::to_vec::<AccountMetadata>(&deserialized)
+            .expect("Reserialize pinweaver auth metadata");
+        assert_eq!(reserialized, PINWEAVER_KEY_AND_NAME_DATA);
     }
 
     #[fuchsia::test]
@@ -442,6 +527,12 @@ pub mod test {
         assert_eq!(deserialized.name(), "Display Name");
 
         let content = AccountMetadata::test_new_scrypt("Display Name".into());
+        let serialized = serde_json::to_vec(&content).unwrap();
+        let deserialized = serde_json::from_slice::<AccountMetadata>(&serialized).unwrap();
+        assert_eq!(content, deserialized);
+        assert_eq!(deserialized.name(), "Display Name");
+
+        let content = AccountMetadata::test_new_pinweaver("Display Name".into());
         let serialized = serde_json::to_vec(&content).unwrap();
         let deserialized = serde_json::from_slice::<AccountMetadata>(&serialized).unwrap();
         assert_eq!(content, deserialized);
