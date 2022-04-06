@@ -3455,9 +3455,9 @@ zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
   // see if we're shrinking or expanding the vmo
   if (s < size_) {
     // shrinking
-    uint64_t start = s;
-    uint64_t end = size_;
-    uint64_t len = end - start;
+    const uint64_t start = s;
+    const uint64_t end = size_;
+    const uint64_t len = end - start;
 
     // bail if there are any pinned pages in the range we're trimming
     if (AnyPagesPinnedLocked(start, len)) {
@@ -3467,17 +3467,73 @@ zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
     // unmap all of the pages in this range on all the mapping regions
     RangeChangeUpdateLocked(start, len, RangeChangeOp::Unmap);
 
+    // Resolve any outstanding page requests tracked by the page source that are now out-of-bounds.
     if (page_source_) {
       // Tell the page source that any non-resident pages that are now out-of-bounds
       // were supplied, to ensure that any reads of those pages get woken up.
       zx_status_t status = page_list_.ForEveryPageAndGapInRange(
           [](const auto* p, uint64_t off) { return ZX_ERR_NEXT; },
-          [&](uint64_t gap_start, uint64_t gap_end) {
+          [this](uint64_t gap_start, uint64_t gap_end) {
             page_source_->OnPagesSupplied(gap_start, gap_end);
             return ZX_ERR_NEXT;
           },
           start, end);
       DEBUG_ASSERT(status == ZX_OK);
+
+      // If DIRTY requests are supported, also tell the page source that any non-Dirty pages that
+      // are now out-of-bounds were dirtied (without actually dirtying them), to ensure that any
+      // threads blocked on DIRTY requests for those pages get woken up.
+      if (is_source_preserving_page_content_locked() &&
+          page_source_->ShouldTrapDirtyTransitions()) {
+        // First resolve requests in the range before supply_zero_offset_.
+        if (start < supply_zero_offset_) {
+          const uint64_t end_offset = ktl::min(supply_zero_offset_, end);
+          status = page_list_.ForEveryPageAndContiguousRunInRange(
+              [](const VmPageOrMarker* p, uint64_t off) {
+                // A marker is a clean zero page and might have an outstanding DIRTY request. An
+                // actual page that is not Dirty already might have an outstanding DIRTY request.
+                if (p->IsMarker() || !is_page_dirty(p->Page())) {
+                  return true;
+                }
+                // Otherwise the page should already be Dirty.
+                DEBUG_ASSERT(is_page_dirty(p->Page()));
+                return false;
+              },
+              [](const VmPageOrMarker* p, uint64_t off) {
+                // Nothing to update for the page as we're not actually marking it Dirty.
+                return ZX_ERR_NEXT;
+              },
+              [this](uint64_t start, uint64_t end) {
+                // Resolve any DIRTY requests in this contiguous range.
+                page_source_->OnPagesDirtied(start, end - start);
+                return ZX_ERR_NEXT;
+              },
+              start, end_offset);
+          // We don't expect an error from the traversal.
+          DEBUG_ASSERT(status == ZX_OK);
+        }
+
+        // Now resolve requests starting at supply_zero_offset_.
+        if (supply_zero_offset_ < end) {
+          const uint64_t start_offset = ktl::max(start, supply_zero_offset_);
+          status = page_list_.ForEveryPageAndGapInRange(
+              [](const VmPageOrMarker* p, uint64_t off) {
+                // No markers exist beyond supply_zero_offset_.
+                DEBUG_ASSERT(p->IsPage());
+                // Any committed page beyond supply_zero_offset_ should already be Dirty.
+                DEBUG_ASSERT(is_page_dirty(p->Page()));
+                return ZX_ERR_NEXT;
+              },
+              [this](uint64_t gap_start, uint64_t gap_end) {
+                // Resolve any DIRTY requests in this gap.
+                page_source_->OnPagesDirtied(gap_start, gap_end - gap_start);
+                return ZX_ERR_NEXT;
+              },
+              start_offset, end);
+          // We don't expect an error from the traversal.
+          DEBUG_ASSERT(status == ZX_OK);
+        }
+      }
     }
 
     // If the page source is preserving content, supply_zero_offset_ might need updating.
@@ -3517,9 +3573,9 @@ zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
     }
     // expanding
     // figure the starting and ending page offset that is affected
-    uint64_t start = size_;
-    uint64_t end = s;
-    uint64_t len = end - start;
+    const uint64_t start = size_;
+    const uint64_t end = s;
+    const uint64_t len = end - start;
 
     // inform all our children or mapping that there's new bits
     RangeChangeUpdateLocked(start, len, RangeChangeOp::Unmap);

@@ -2045,4 +2045,97 @@ TEST(PagerWriteback, ResizeWriteback) {
   ASSERT_TRUE(check_buffer_data(vmo, 0, 3, expected.data(), true));
 }
 
+// Tests that a resize down unblocks outstanding DIRTY requests that are out-of-bounds.
+TEST(PagerWriteback, ResizeWithOutstandingDirtyRequests) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(5, ZX_VMO_RESIZABLE | ZX_VMO_TRAP_DIRTY, &vmo));
+
+  // Supply page 1 as a zero page marker.
+  zx::vmo vmo_src;
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo_src));
+  ASSERT_OK(pager.pager().supply_pages(vmo->vmo(), zx_system_get_page_size(),
+                                       zx_system_get_page_size(), vmo_src, 0));
+
+  // Supply page 3 as an actual page.
+  ASSERT_TRUE(pager.SupplyPages(vmo, 3, 1));
+
+  // Resize the VMO up so there's a non-zero range that will be supplied as zero.
+  ASSERT_TRUE(vmo->Resize(6));
+
+  // The new "page" at the end should be indicated dirty and zero.
+  zx_vmo_dirty_range_t range = {.offset = 5, .length = 1, .options = ZX_VMO_DIRTY_RANGE_IS_ZERO};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Try to write to page 1 which is a zero marker.
+  TestThread t1([vmo]() -> bool {
+    uint8_t data = 0xaa;
+    return vmo->vmo().write(&data, zx_system_get_page_size(), sizeof(data)) == ZX_ERR_OUT_OF_RANGE;
+  });
+
+  // Try to write to page 3 which is an actual clean page.
+  TestThread t2([vmo]() -> bool {
+    uint8_t data = 0xbb;
+    return vmo->vmo().write(&data, 3 * zx_system_get_page_size(), sizeof(data)) ==
+           ZX_ERR_OUT_OF_RANGE;
+  });
+
+  // Try to write to page 5 which is a gap in the newly extended range.
+  TestThread t3([vmo]() -> bool {
+    uint8_t data = 0xcc;
+    return vmo->vmo().write(&data, 5 * zx_system_get_page_size(), sizeof(data)) ==
+           ZX_ERR_OUT_OF_RANGE;
+  });
+
+  // Try to read page 2 which is a non-resident page.
+  TestThread t4([vmo]() -> bool {
+    uint8_t data;
+    return vmo->vmo().read(&data, 2 * zx_system_get_page_size(), sizeof(data)) ==
+           ZX_ERR_OUT_OF_RANGE;
+  });
+
+  // All four threads should block.
+  ASSERT_TRUE(t1.Start());
+  ASSERT_TRUE(t1.WaitForBlocked());
+  ASSERT_TRUE(t2.Start());
+  ASSERT_TRUE(t2.WaitForBlocked());
+  ASSERT_TRUE(t3.Start());
+  ASSERT_TRUE(t3.WaitForBlocked());
+  ASSERT_TRUE(t4.Start());
+  ASSERT_TRUE(t4.WaitForBlocked());
+
+  // We should see dirty requests for pages 1, 3 and 5.
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 3, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 5, 1, ZX_TIME_INFINITE));
+
+  // We should see a read request for page 2.
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 2, 1, ZX_TIME_INFINITE));
+
+  // No more requests seen.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+
+  // Now resize down so that the pages all four threads are waiting for become out-of-bounds.
+  ASSERT_TRUE(vmo->Resize(1));
+
+  // All four threads should now see ZX_ERR_OUT_OF_RANGE returned for their reads/writes.
+  ASSERT_TRUE(t1.Wait());
+  ASSERT_TRUE(t2.Wait());
+  ASSERT_TRUE(t3.Wait());
+  ASSERT_TRUE(t4.Wait());
+
+  // Trying to resolve the dirty and read requests we previously saw should fail.
+  ASSERT_FALSE(pager.DirtyPages(vmo, 1, 1));
+  ASSERT_FALSE(pager.DirtyPages(vmo, 3, 1));
+  ASSERT_FALSE(pager.DirtyPages(vmo, 5, 1));
+  ASSERT_FALSE(pager.SupplyPages(vmo, 2, 1));
+
+  // The VMO has no dirty pages.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+}
+
 }  // namespace pager_tests

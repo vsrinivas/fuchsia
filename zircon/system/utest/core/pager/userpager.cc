@@ -88,22 +88,22 @@ bool Vmo::Resize(uint64_t new_page_count) {
   // If we're growing the VMO, tear down the old mapping and create a new one to be able to access
   // the new range.
   if (new_size > size_) {
-    if ((status = zx::vmar::root_self()->unmap(base_addr_, size_)) != ZX_OK) {
+    if (size_ > 0 && (status = zx::vmar::root_self()->unmap(base_addr_, size_)) != ZX_OK) {
       fprintf(stderr, "vmar unmap failed with %s\n", zx_status_get_string(status));
       return false;
     }
 
     zx_vaddr_t addr;
-    if ((status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo_, 0,
-                                             new_size, &addr)) != ZX_OK) {
+    if (new_size > 0 && (status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0,
+                                                             vmo_, 0, new_size, &addr)) != ZX_OK) {
       fprintf(stderr, "vmar map failed with %s\n", zx_status_get_string(status));
       return false;
     }
 
-    size_ = new_size;
     base_ = reinterpret_cast<uint64_t*>(addr);
     base_addr_ = addr;
   }
+  size_ = new_size;
   return true;
 }
 
