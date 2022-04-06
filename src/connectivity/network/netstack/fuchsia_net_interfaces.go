@@ -373,12 +373,10 @@ func interfaceWatcherEventLoop(eventChan <-chan interfaceEvent, watcherChan <-ch
 					return cmpInterfaceAddress(ifAddr, addresses[i].GetValue()) <= 0
 				})
 				if i == len(addresses) || cmpInterfaceAddress(ifAddr, addresses[i].GetValue()) != 0 {
-					if event.strict {
-						panic(fmt.Sprintf("address removed event for non-existent address: %#v", event))
-					} else {
-						_ = syslog.WarnTf(watcherProtocolName, "address removed event for non-existent address: %#v", event)
-						break
-					}
+					// TODO(https://fxbug.dev/93825): Panic when the address being removed
+					// isn't assigned or tentative when `event.strict` is true.
+					_ = syslog.WarnTf(watcherProtocolName, "address removed event for non-existent address: %#v", event)
+					break
 				}
 				addresses = append(addresses[:i], addresses[i+1:]...)
 				properties.SetAddresses(addresses)
