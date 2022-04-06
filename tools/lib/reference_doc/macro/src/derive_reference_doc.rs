@@ -17,6 +17,9 @@ pub fn impl_derive_reference_doc(ast: syn::DeriveInput) -> Result<TokenStream2, 
         .indent_headers
         .unwrap_or_else(|| doc.map(|docstr| get_last_markdown_header_depth(&docstr)).unwrap_or(0));
 
+    let generics = &ast.generics;
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
     // Forward the struct-level `fields_as` value and optionally `indent_headers` to all field attributes.
     match &mut parsed.data {
         ast::Data::Struct(fields) => {
@@ -169,7 +172,9 @@ pub fn impl_derive_reference_doc(ast: syn::DeriveInput) -> Result<TokenStream2, 
     }
 
     Ok(quote! {
-        impl ::reference_doc::MarkdownReferenceDocGenerator for #name {
+        impl #impl_generics ::reference_doc::MarkdownReferenceDocGenerator
+            for #name #ty_generics #where_clause
+        {
             fn get_reference_doc_markdown() -> String {
                 #parsed
             }

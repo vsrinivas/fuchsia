@@ -69,6 +69,16 @@ mod tests {
         Bar,
     }
 
+    /// # Works with generic
+    ///
+    /// This object contains generics and works fine.
+    #[derive(ReferenceDoc)]
+    struct TopLevelGeneric<D: MarkdownReferenceDocGenerator> {
+        /// A generic value.
+        #[reference_doc(recurse)]
+        val: D,
+    }
+
     #[test]
     fn test_reference_doc() {
         assert_eq!(
@@ -133,6 +143,37 @@ This should display fields as a list.
 
 
 "#,
+        );
+    }
+
+    #[test]
+    fn test_reference_doc_with_generics() {
+        assert_eq!(
+            &TopLevelGeneric::<ReferenceDocTestObject1>::get_reference_doc_markdown(),
+            r#"# Works with generic
+
+This object contains generics and works fine.
+
+## `val` {#val}
+
+_`object`_
+
+A generic value.
+
+### `an_int` {#an_int}
+
+_`number`_
+
+This will appear when documenting this field specifically.
+
+#### A super indented header!
+
+
+This will appear after describing the fields.
+
+
+
+"#
         );
     }
 }
