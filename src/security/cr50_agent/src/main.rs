@@ -78,7 +78,7 @@ async fn find_cr50() -> Result<TpmDeviceProxy, Error> {
     return Err(anyhow!("No TPM with correct identification found!"));
 }
 
-#[fuchsia::component(logging = true)]
+#[fuchsia::main(logging = true)]
 async fn main() -> Result<(), anyhow::Error> {
     let mut service_fs = ServiceFs::new_local();
 
