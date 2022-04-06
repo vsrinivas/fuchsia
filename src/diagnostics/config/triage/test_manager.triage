@@ -1,0 +1,50 @@
+// Errors that pertain to test_manager and dependencies.
+// Note test_manager is only on _eng builds.
+// File issues at: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=component%3ATestArchitecture%3EPlatform
+{
+    act: {
+        log_drain_timeout: {
+            type: "Warning",
+            trigger: "SyslogHas('Test manager timeout draining logs')",
+            print: "Test manager timed out draining logs",
+        },
+        realm_destroy_timeout: {
+            type: "Warning",
+            trigger: "SyslogHas('Test manager timeout destroying realm')",
+            print: "Test manager timed out draining logs",
+        },
+        debug_data_timeout: {
+            type: "Warning",
+            trigger: "SyslogHas('Debug data timeout invoked')",
+            print: "Debug data timed out waiting for events from test realms",
+        },
+    },
+    test: {
+        log_drain_timeout_yes: {
+            yes: [
+                "log_drain_timeout",
+            ],
+            syslog: "[00027.554290][39107][39109][test_manager] WARNING: Test manager timeout draining logs",
+        },
+        realm_destroy_timeout_yes: {
+            yes: [
+                "realm_destroy_timeout",
+            ],
+            syslog: "[00027.554290][39107][39109][test_manager] WARNING: Test manager timeout destroying realm",
+        },
+        debug_data_timeout_yes: {
+            yes: [
+                "debug_data_timeout",
+            ],
+            syslog: "[00027.554290][39107][39109][debug_data] WARNING: Debug data timeout invoked",
+        },
+        no_warnings: {
+            no: [
+                "log_drain_timeout",
+                "realm_destroy_timeout",
+                "debug_data_timeout",
+            ],
+            syslog: "[00027.554290][39107][39109][test_manager] WARNING: Draining logs failed",
+        },
+    },
+}

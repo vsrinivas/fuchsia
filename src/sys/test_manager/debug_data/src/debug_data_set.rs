@@ -384,6 +384,9 @@ mod inner {
             let timeout = self.timeout_after_finish;
             self.finish_timeout_task = Some(fasync::Task::spawn(async move {
                 fasync::Timer::new(timeout).await;
+                // This log is detected in triage. Update the config in
+                // src/diagnostics/config/triage/test_manager.triage when changing this log.
+                warn!("Debug data timeout invoked");
                 sender_clone.close_channel();
                 on_capability_event_clone.lock().await.take().map(|callback| callback(false));
             }));

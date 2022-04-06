@@ -1494,12 +1494,24 @@ impl RunningSuite {
             .logs_iterator_task
             .unwrap_or_else(|| fasync::Task::spawn(futures::future::ready(Ok(()))));
         let (logs_iterator_res, teardown_res) = futures::future::join(
-            logs_iterator_task
-                .map_err(|e| TeardownError::Other(e))
-                .on_timeout(TEARDOWN_TIMEOUT, || Err(TeardownError::Timeout)),
-            destroy_waiter
-                .map_err(|e| TeardownError::Other(e))
-                .on_timeout(TEARDOWN_TIMEOUT, || Err(TeardownError::Timeout)),
+            logs_iterator_task.map_err(|e| TeardownError::Other(e)).on_timeout(
+                TEARDOWN_TIMEOUT,
+                || {
+                    // This log is detected in triage. Update the config in
+                    // src/diagnostics/config/triage/test_manager.triage when changing this log.
+                    warn!("Test manager timeout draining logs");
+                    Err(TeardownError::Timeout)
+                },
+            ),
+            destroy_waiter.map_err(|e| TeardownError::Other(e)).on_timeout(
+                TEARDOWN_TIMEOUT,
+                || {
+                    // This log is detected in triage. Update the config in
+                    // src/diagnostics/config/triage/test_manager.triage when changing this log.
+                    warn!("Test manager timeout destroying realm");
+                    Err(TeardownError::Timeout)
+                },
+            ),
         )
         .await;
         let logs_iterator_res = match logs_iterator_res {
