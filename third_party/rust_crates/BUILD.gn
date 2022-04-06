@@ -9860,6 +9860,7 @@ rust_library("scrypt-v0_8_0") {
   crate_name = "scrypt"
   crate_root = "//third_party/rust_crates/vendor/scrypt/src/lib.rs"
   output_name = "scrypt-1834e042454c996"
+  configs += [ "//build/config:optimize_speed" ]
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",

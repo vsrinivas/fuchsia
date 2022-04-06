@@ -517,6 +517,12 @@ rustflags = ["--cfg=integer128", "--cfg=must_use_return", "--cfg=maybe_uninit"]
 rustflags = []
 env_vars = ["OUT_DIR=../../../compat/proc-macro-nested", "PATH_SEPARATOR=/"]
 
+# We always want to optimize scrypt for speed, because a single key derivation
+# that takes 150 msec when speed-optimized takes 20 seconds (!) when not
+# optimized, and that's a terrible experience for checking passwords.
+[gn.package.scrypt."0.8.0"]
+configs = [ "//build/config:optimize_speed" ]
+
 [gn.package.serde."1.0.116"]
 rustflags = ["--cfg=ops_bound", "--cfg=core_reverse", "--cfg=de_boxed_c_str", "--cfg=de_boxed_path", "--cfg=de_rc_dst", "--cfg=core_duration", "--cfg=integer128", "--cfg=range_inclusive", "--cfg=num_nonzero", "--cfg=core_try_from", "--cfg=num_nonzero_signed", "--cfg=std_atomic64", "--cfg=std_atomic"]
 
