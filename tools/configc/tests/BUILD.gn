@@ -1,0 +1,58 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/packages/package_metadata.gni")
+import("//build/python/python_binary.gni")
+import("//build/python/python_host_test.gni")
+import("//build/testing/host_test.gni")
+
+python_binary("bin") {
+  testonly = true
+  main_source = "test_validate_fails_without_config.py"
+  sources = []
+}
+bin_output = get_target_outputs(":bin")
+bin_output = bin_output[0]
+
+configc_label = "//tools/configc:install"
+configc_path = "$root_build_dir/host-tools/configc"
+configc_output = "$target_out_dir/configc"
+host_test_data("test_configc") {
+  testonly = true
+  sources = [ configc_path ]
+  outputs = [ configc_output ]
+  deps = [ configc_label ]
+}
+
+package_label = "//examples/assembly/structured_config/configured_by_assembly:configured_by_assembly($default_toolchain)"
+package_out_dir = get_label_info(package_label, "target_out_dir")
+package_manifest =
+    "$package_out_dir/configured_by_assembly/package_manifest.json"
+meta_far = "$package_out_dir/configured_by_assembly/meta.far"
+
+host_test_data("test_data") {
+  sources = [
+    meta_far,
+    package_manifest,
+  ]
+  deps = [ package_label ]
+}
+
+host_test("fail_validate_without_config") {
+  binary_path = python_exe_src
+  args = [
+    rebase_path(bin_output, root_build_dir),
+    "--configc-bin",
+    rebase_path(configc_output, root_build_dir),
+    "--package",
+    rebase_path(package_manifest, root_build_dir),
+  ]
+  deps = [
+    ":bin",
+    ":test_configc",
+    ":test_data",
+    "//build/python:interpreter",
+    package_label,
+  ]
+}

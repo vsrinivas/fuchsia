@@ -6,6 +6,7 @@ mod client_cpp;
 mod client_fidl;
 mod client_rust;
 mod cvf;
+mod validate_package;
 
 use anyhow::Error;
 use argh::FromArgs;
@@ -13,6 +14,7 @@ use client_cpp::GenerateCppSource;
 use client_fidl::GenerateFidlSource;
 use client_rust::GenerateRustSource;
 use cvf::GenerateValueFile;
+use validate_package::ValidatePackage;
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Tool for compiling structured configuration artifacts
@@ -28,6 +30,7 @@ enum Subcommand {
     GenerateFidlSource(GenerateFidlSource),
     GenerateRustSource(GenerateRustSource),
     GenerateCppSource(GenerateCppSource),
+    ValidatePackage(ValidatePackage),
 }
 
 fn main() -> Result<(), Error> {
@@ -38,5 +41,6 @@ fn main() -> Result<(), Error> {
         Subcommand::GenerateFidlSource(cmd) => cmd.generate(),
         Subcommand::GenerateRustSource(cmd) => cmd.generate(),
         Subcommand::GenerateCppSource(cmd) => cmd.generate(),
+        Subcommand::ValidatePackage(cmd) => cmd.validate(),
     }
 }

@@ -15,6 +15,7 @@ if (is_host) {
 
     deps = [
       "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
+      "//src/lib/assembly/validate_product",
       "//src/lib/fidl/rust/fidl",
       "//src/sys/lib/cm_rust",
       "//third_party/rust_crates:anyhow",
@@ -31,6 +32,7 @@ if (is_host) {
       "src/client_rust.rs",
       "src/cvf.rs",
       "src/main.rs",
+      "src/validate_package.rs",
     ]
   }
 }
@@ -141,4 +143,11 @@ group("tests") {
     ":fidl_config_lib_golden_test",
     ":rust_config_lib_golden_test",
   ]
+}
+
+if (is_host) {
+  group("host_tests") {
+    testonly = true
+    deps = [ "tests:fail_validate_without_config" ]
+  }
 }
