@@ -562,12 +562,21 @@ async fn get_tuf_client(
     let raw_signed_meta = {
         // FIXME(http://fxbug.dev/92126) we really should be initializing trust, rather than just
         // trusting 1.root.json.
-        let mut md = tuf_repo
+        let md = tuf_repo
             .fetch_metadata(&MetadataPath::from_role(&Role::Root), MetadataVersion::Number(1))
-            .await?;
+            .await;
+
+        let mut metadata = match md {
+            Err(_) => {
+                tuf_repo
+                    .fetch_metadata(&MetadataPath::from_role(&Role::Root), MetadataVersion::None)
+                    .await?
+            }
+            Ok(meta) => meta,
+        };
 
         let mut buf = Vec::new();
-        md.read_to_end(&mut buf).await.context("reading metadata")?;
+        metadata.read_to_end(&mut buf).await.context("reading metadata")?;
 
         RawSignedMetadata::<Json, _>::new(buf)
     };
@@ -611,9 +620,15 @@ pub trait RepositoryBackend: std::fmt::Debug {
 mod test {
     use {
         super::*,
-        crate::test_utils::{make_readonly_empty_repository, make_repository, repo_key},
+        crate::test_utils::{
+            make_readonly_empty_repository, make_repository, repo_key, repo_private_key,
+        },
         camino::Utf8Path,
         pretty_assertions::assert_eq,
+        std::fs::create_dir_all,
+        tuf::{
+            database::Database, repo_builder::RepoBuilder, repository::FileSystemRepositoryBuilder,
+        },
     };
     const ROOT_VERSION: u32 = 1;
     const REPO_NAME: &str = "fake-repo";
@@ -715,6 +730,49 @@ mod test {
                 ..RepositoryPackage::EMPTY
             },],
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_get_tuf_client() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
+        let metadata_dir = dir.join("repository");
+        create_dir_all(&metadata_dir).unwrap();
+
+        let mut repo = FileSystemRepositoryBuilder::<Json>::new(metadata_dir.clone())
+            .targets_prefix("targets")
+            .build()
+            .unwrap();
+
+        let key = repo_private_key();
+        let metadata = RepoBuilder::create(&mut repo)
+            .trusted_root_keys(&[&key])
+            .trusted_targets_keys(&[&key])
+            .trusted_snapshot_keys(&[&key])
+            .trusted_timestamp_keys(&[&key])
+            .commit()
+            .await
+            .unwrap();
+
+        let database = Database::from_trusted_metadata(&metadata).unwrap();
+
+        RepoBuilder::from_database(&mut repo, &database)
+            .trusted_root_keys(&[&key])
+            .trusted_targets_keys(&[&key])
+            .trusted_snapshot_keys(&[&key])
+            .trusted_timestamp_keys(&[&key])
+            .stage_root()
+            .unwrap()
+            .commit()
+            .await
+            .unwrap();
+
+        let backend = PmRepository::new(dir.to_path_buf());
+        assert!(Repository::new("name", Box::new(backend)).await.is_ok());
+
+        std::fs::remove_file(dir.join("repository").join("1.root.json")).unwrap();
+        let backend = PmRepository::new(dir.to_path_buf());
+        assert!(Repository::new("name", Box::new(backend)).await.is_ok());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
