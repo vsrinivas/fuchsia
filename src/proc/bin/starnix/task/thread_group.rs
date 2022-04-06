@@ -9,6 +9,7 @@ use std::collections::HashSet;
 use std::ffi::CStr;
 use std::sync::Arc;
 
+use crate::device::terminal::*;
 use crate::signals::*;
 use crate::task::*;
 use crate::types::*;
@@ -263,6 +264,117 @@ impl ThreadGroup {
         } else {
             self.process.set_name(name).map_err(|status| from_status_like_fdio!(status))
         }
+    }
+
+    /// Returns whether |session| is the controlling session inside of |controlling_session|.
+    fn is_controlling_session(
+        &self,
+        session: &Arc<Session>,
+        controlling_session: &Option<ControllingSession>,
+    ) -> bool {
+        controlling_session
+            .as_ref()
+            .map(|cs| cs.session.upgrade().as_ref() == Some(session))
+            .unwrap_or(false)
+    }
+
+    pub fn get_foreground_process_group(
+        &self,
+        terminal: &Arc<Terminal>,
+        is_main: bool,
+    ) -> Result<pid_t, Errno> {
+        let process_group = self.process_group.read();
+        let controlling_session = terminal.get_controlling_session(is_main);
+
+        // "When fd does not refer to the controlling terminal of the calling
+        // process, -1 is returned" - tcgetpgrp(3)
+        if !self.is_controlling_session(&process_group.session, &controlling_session) {
+            return error!(ENOTTY);
+        }
+        Ok(controlling_session.as_ref().unwrap().foregound_process_group)
+    }
+
+    pub fn set_foreground_process_group(
+        &self,
+        terminal: &Arc<Terminal>,
+        is_main: bool,
+        pgid: pid_t,
+    ) -> Result<(), Errno> {
+        // Keep locks to ensure atomicity.
+        let process_group = self.process_group.read();
+        let mut controlling_session = terminal.get_controlling_session_mut(is_main);
+
+        // TODO(qsr): Handle SIGTTOU
+
+        // tty must be the controlling terminal.
+        if !self.is_controlling_session(&process_group.session, &controlling_session) {
+            return error!(ENOTTY);
+        }
+
+        // pgid must be positive.
+        if pgid < 0 {
+            return error!(EINVAL);
+        }
+
+        let new_process_group = self.kernel.pids.read().get_process_group(pgid).ok_or(ESRCH)?;
+        if new_process_group.session != process_group.session {
+            return error!(EPERM);
+        }
+
+        *controlling_session =
+            controlling_session.as_ref().unwrap().set_foregound_process_group(pgid);
+        Ok(())
+    }
+
+    pub fn set_controlling_terminal(
+        &self,
+        current_task: &CurrentTask,
+        terminal: &Arc<Terminal>,
+        is_main: bool,
+        steal: bool,
+        is_readable: bool,
+    ) -> Result<(), Errno> {
+        // Keep locks to ensure atomicity.
+        let process_group = self.process_group.read();
+        let mut controlling_terminal = process_group.session.controlling_terminal.write();
+        let mut controlling_session = terminal.get_controlling_session_mut(is_main);
+
+        // "The calling process must be a session leader and not have a
+        // controlling terminal already." - tty_ioctl(4)
+        if process_group.session.leader != self.leader || controlling_terminal.is_some() {
+            return error!(EINVAL);
+        }
+
+        let has_admin = current_task.has_capability(CAP_SYS_ADMIN);
+
+        // "If this terminal is already the controlling terminal of a different
+        // session group, then the ioctl fails with EPERM, unless the caller
+        // has the CAP_SYS_ADMIN capability and arg equals 1, in which case the
+        // terminal is stolen, and all processes that had it as controlling
+        // terminal lose it." - tty_ioctl(4)
+        match &*controlling_session {
+            Some(cs) => {
+                if let Some(other_session) = cs.session.upgrade() {
+                    if other_session != process_group.session {
+                        if !has_admin || !steal {
+                            return error!(EPERM);
+                        }
+
+                        // Steal the TTY away. Unlike TIOCNOTTY, don't send signals.
+                        *other_session.controlling_terminal.write() = None;
+                    }
+                }
+            }
+            _ => {}
+        }
+
+        if !is_readable && !has_admin {
+            return error!(EPERM);
+        }
+
+        *controlling_terminal = Some(ControllingTerminal::new(terminal.clone(), is_main));
+        *controlling_session = ControllingSession::new(&process_group.session);
+        Ok(())
     }
 }
 

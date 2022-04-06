@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use parking_lot::{Mutex, RwLock};
+use parking_lot::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::collections::{BTreeSet, HashMap};
 use std::sync::{Arc, Weak};
 
 use crate::fs::devpts::*;
 use crate::fs::*;
+use crate::task::*;
 use crate::types::*;
 
 /// Global state of the devpts filesystem.
@@ -58,17 +59,74 @@ pub struct Terminal {
 
     /// |true| is the terminal is locked.
     pub locked: RwLock<bool>,
+
+    /// The controlling sessions for the main and replica side of the terminal.
+    main_controlling_session: RwLock<Option<ControllingSession>>,
+    replica_controlling_session: RwLock<Option<ControllingSession>>,
 }
 
 impl Terminal {
     pub fn new(state: Arc<TTYState>, id: u32) -> Self {
-        Self { state, id, locked: RwLock::new(true) }
+        Self {
+            state,
+            id,
+            locked: RwLock::new(true),
+            main_controlling_session: RwLock::new(None),
+            replica_controlling_session: RwLock::new(None),
+        }
+    }
+
+    /// Returns the controlling session of the terminal. |is_main| is used to choose whether the
+    /// caller needs the controlling session of the main part of the terminal or the replica.
+    pub fn get_controlling_session<'a>(
+        &'a self,
+        is_main: bool,
+    ) -> RwLockReadGuard<'a, Option<ControllingSession>> {
+        return if is_main {
+            self.main_controlling_session.read()
+        } else {
+            self.replica_controlling_session.read()
+        };
+    }
+
+    /// Returns a mutable reference to the session of the terminal. |is_main| is used to choose
+    /// whether the caller needs the controlling session of the main part of the terminal or the
+    /// replica.
+
+    pub fn get_controlling_session_mut<'a>(
+        &'a self,
+        is_main: bool,
+    ) -> RwLockWriteGuard<'a, Option<ControllingSession>> {
+        return if is_main {
+            self.main_controlling_session.write()
+        } else {
+            self.replica_controlling_session.write()
+        };
     }
 }
 
 impl Drop for Terminal {
     fn drop(&mut self) {
         self.state.release_terminal(self.id).unwrap()
+    }
+}
+
+/// The controlling session of a terminal. Is is associated to a single side of the terminal,
+/// either main or replica.
+pub struct ControllingSession {
+    /// The controlling session.
+    pub session: Weak<Session>,
+    /// The foreground process group.
+    pub foregound_process_group: pid_t,
+}
+
+impl ControllingSession {
+    pub fn new(session: &Arc<Session>) -> Option<Self> {
+        Some(Self { session: Arc::downgrade(session), foregound_process_group: session.leader })
+    }
+
+    pub fn set_foregound_process_group(&self, foregound_process_group: pid_t) -> Option<Self> {
+        Some(Self { session: self.session.clone(), foregound_process_group })
     }
 }
 

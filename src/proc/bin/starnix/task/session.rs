@@ -6,6 +6,7 @@ use parking_lot::RwLock;
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use crate::device::terminal::*;
 use crate::types::*;
 
 pub struct Session {
@@ -14,6 +15,9 @@ pub struct Session {
 
     /// The process groups in the session
     pub process_groups: RwLock<HashSet<pid_t>>,
+
+    /// The controlling terminal of the session.
+    pub controlling_terminal: RwLock<Option<ControllingTerminal>>,
 }
 
 impl PartialEq for Session {
@@ -27,7 +31,11 @@ impl Session {
         let mut process_groups = HashSet::new();
         process_groups.insert(leader);
 
-        Arc::new(Session { leader, process_groups: RwLock::new(process_groups) })
+        Arc::new(Session {
+            leader,
+            process_groups: RwLock::new(process_groups),
+            controlling_terminal: RwLock::new(None),
+        })
     }
 
     /// Removes the process group from the session. Returns whether the session is empty.
@@ -35,5 +43,19 @@ impl Session {
         let mut process_groups = self.process_groups.write();
         process_groups.remove(&pid);
         return process_groups.is_empty();
+    }
+}
+
+/// The controlling terminal of a session.
+pub struct ControllingTerminal {
+    /// The controlling terminal.
+    pub terminal: Arc<Terminal>,
+    /// Whether the session is associated to the main or replica side of the terminal.
+    pub is_main: bool,
+}
+
+impl ControllingTerminal {
+    pub fn new(terminal: Arc<Terminal>, is_main: bool) -> Self {
+        Self { terminal, is_main }
     }
 }

@@ -190,40 +190,24 @@ impl FileOps for DevPtmxFile {
         match request {
             TIOCGPTN => {
                 // Get the therminal id.
-                if user_addr.is_null() {
-                    return error!(EINVAL);
-                }
-                let addr = UserRef::<u32>::new(user_addr);
                 let value: u32 = self.terminal.id as u32;
-                current_task.mm.write_object(addr, &value)?;
+                current_task.mm.write_object(UserRef::<u32>::new(user_addr), &value)?;
                 Ok(SUCCESS)
             }
             TIOCGPTLCK => {
                 // Get the lock status.
-                if user_addr.is_null() {
-                    return error!(EINVAL);
-                }
-                let addr = UserRef::<i32>::new(user_addr);
                 let value = if *self.terminal.locked.read() { 1 } else { 0 };
-                current_task.mm.write_object(addr, &value)?;
+                current_task.mm.write_object(UserRef::<i32>::new(user_addr), &value)?;
                 Ok(SUCCESS)
             }
             TIOCSPTLCK => {
                 // Lock/Unlock the terminal.
-                if user_addr.is_null() {
-                    return error!(EINVAL);
-                }
-                let addr = UserRef::<i32>::new(user_addr);
                 let mut value = 0;
-                current_task.mm.read_object(addr, &mut value)?;
+                current_task.mm.read_object(UserRef::<i32>::new(user_addr), &mut value)?;
                 *self.terminal.locked.write() = value != 0;
                 Ok(SUCCESS)
             }
-
-            _ => {
-                tracing::error!("ptmx received unknown ioctl request 0x{:08x}", request);
-                error!(EINVAL)
-            }
+            _ => shared_ioctl(&self.terminal, true, _file, current_task, request, user_addr),
         }
     }
 }
@@ -256,12 +240,12 @@ impl DeviceOps for DevPts {
 }
 
 struct DevPtsFile {
-    _terminal: Arc<Terminal>,
+    terminal: Arc<Terminal>,
 }
 
 impl DevPtsFile {
     pub fn new(terminal: Arc<Terminal>) -> Self {
-        Self { _terminal: terminal }
+        Self { terminal }
     }
 }
 
@@ -324,18 +308,67 @@ impl FileOps for DevPtsFile {
 
     fn ioctl(
         &self,
-        _file: &FileObject,
-        _current_task: &CurrentTask,
-        _request: u32,
-        _user_addr: UserAddress,
+        file: &FileObject,
+        current_task: &CurrentTask,
+        request: u32,
+        user_addr: UserAddress,
     ) -> Result<SyscallResult, Errno> {
-        error!(EOPNOTSUPP)
+        shared_ioctl(&self.terminal, false, file, current_task, request, user_addr)
+    }
+}
+
+/// The ioctl behaviour common to main and replica terminal file descriptors.
+fn shared_ioctl(
+    terminal: &Arc<Terminal>,
+    is_main: bool,
+    file: &FileObject,
+    current_task: &CurrentTask,
+    request: u32,
+    user_addr: UserAddress,
+) -> Result<SyscallResult, Errno> {
+    match request {
+        TIOCSCTTY => {
+            // Make the given terminal the controlling terminal of the calling process.
+            let mut steal = 0;
+            current_task.mm.read_object(UserRef::<i32>::new(user_addr), &mut steal)?;
+            current_task.thread_group.set_controlling_terminal(
+                current_task,
+                terminal,
+                is_main,
+                steal == 1,
+                file.can_read(),
+            )?;
+            Ok(SUCCESS)
+        }
+        TIOCGPGRP => {
+            // Get the foreground process group.
+            let pgid = current_task.thread_group.get_foreground_process_group(terminal, is_main)?;
+            current_task.mm.write_object(UserRef::<pid_t>::new(user_addr), &pgid)?;
+            Ok(SUCCESS)
+        }
+        TIOCSPGRP => {
+            // Set the foreground process group.
+            let mut pgid = 0;
+            current_task.mm.read_object(UserRef::<pid_t>::new(user_addr), &mut pgid)?;
+
+            current_task.thread_group.set_foreground_process_group(terminal, is_main, pgid)?;
+            Ok(SUCCESS)
+        }
+        _ => {
+            tracing::error!(
+                "{} received unknown ioctl request 0x{:08x}",
+                if is_main { "ptmx" } else { "pts" },
+                request
+            );
+            error!(EINVAL)
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::auth::Credentials;
     use crate::testing::*;
 
     fn ioctl<T: zerocopy::AsBytes + zerocopy::FromBytes + Copy>(
@@ -353,24 +386,33 @@ mod tests {
         Ok(result)
     }
 
-    fn open_component(
+    fn open_file_with_flags(
+        task: &CurrentTask,
+        fs: &FileSystemHandle,
+        name: &FsStr,
+        flags: OpenFlags,
+    ) -> Result<FileHandle, Errno> {
+        let component = fs.root().component_lookup(name)?;
+        Ok(FileObject::new_anonymous(
+            component.node.open(task, flags)?,
+            component.node.clone(),
+            flags,
+        ))
+    }
+
+    fn open_file(
         task: &CurrentTask,
         fs: &FileSystemHandle,
         name: &FsStr,
     ) -> Result<FileHandle, Errno> {
-        let component = fs.root().component_lookup(name)?;
-        Ok(FileObject::new_anonymous(
-            component.node.open(task, OpenFlags::RDONLY)?,
-            component.node.clone(),
-            OpenFlags::RDWR,
-        ))
+        open_file_with_flags(task, fs, name, OpenFlags::RDWR | OpenFlags::NOCTTY)
     }
 
     fn open_ptmx_and_unlock(
         task: &CurrentTask,
         fs: &FileSystemHandle,
     ) -> Result<FileHandle, Errno> {
-        let file = open_component(task, fs, b"ptmx")?;
+        let file = open_file(task, fs, b"ptmx")?;
 
         // Unlock terminal
         ioctl::<i32>(task, &file, TIOCSPTLCK, &0)?;
@@ -397,7 +439,7 @@ mod tests {
         let root = fs.root();
         root.component_lookup(b"0").unwrap_err();
         let ptmx = open_ptmx_and_unlock(&task, &fs)?;
-        let _pts = open_component(&task, &fs, b"0")?;
+        let _pts = open_file(&task, &fs, b"0")?;
         std::mem::drop(ptmx);
         root.component_lookup(b"0").unwrap_err();
 
@@ -464,7 +506,7 @@ mod tests {
         let ptmx = open_ptmx_and_unlock(&task, &fs)?;
         ptmx.ioctl(&task, 42, UserAddress::default()).unwrap_err();
 
-        let pts_file = open_component(&task, &fs, b"0")?;
+        let pts_file = open_file(&task, &fs, b"0")?;
         pts_file.ioctl(&task, 42, UserAddress::default()).unwrap_err();
 
         Ok(())
@@ -490,10 +532,10 @@ mod tests {
     fn test_new_terminal_is_locked() -> Result<(), anyhow::Error> {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
-        let _ptmx_file = open_component(&task, &fs, b"ptmx")?;
+        let _ptmx_file = open_file(&task, &fs, b"ptmx")?;
 
         let pts = fs.root().component_lookup(b"0")?;
-        assert_eq!(pts.node.open(&task, OpenFlags::RDONLY).map(|_| ()).unwrap_err(), EIO);
+        assert_eq!(pts.node.open(&task, OpenFlags::RDONLY).map(|_| ()), Err(EIO));
 
         Ok(())
     }
@@ -527,6 +569,179 @@ mod tests {
         let ptmx = fs.root().component_lookup(b"ptmx")?;
         let stat = ptmx.node.stat()?;
         assert_eq!(stat.st_blksize, BLOCK_SIZE);
+
+        Ok(())
+    }
+
+    #[::fuchsia::test]
+    fn test_attach_terminal() -> Result<(), anyhow::Error> {
+        let (kernel, task1) = create_kernel_and_task();
+        let task2 = task1
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+        task2.thread_group.setsid().expect("setsid");
+
+        let fs = dev_pts_fs(&kernel);
+        let opened_main = open_ptmx_and_unlock(&task1, &fs)?;
+        let opened_replica = open_file(&task2, &fs, b"0")?;
+
+        assert_eq!(ioctl::<i32>(&task1, &opened_main, TIOCGPGRP, &0), Err(ENOTTY));
+        assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCGPGRP, &0), Err(ENOTTY));
+
+        ioctl::<u32>(&task1, &opened_main, TIOCSCTTY, &0).unwrap();
+        assert_eq!(
+            ioctl::<i32>(&task1, &opened_main, TIOCGPGRP, &0)?,
+            task1.thread_group.process_group.read().leader
+        );
+        assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCGPGRP, &0), Err(ENOTTY));
+
+        ioctl::<u32>(&task2, &opened_replica, TIOCSCTTY, &0).unwrap();
+        assert_eq!(
+            ioctl::<i32>(&task2, &opened_replica, TIOCGPGRP, &0)?,
+            task2.thread_group.process_group.read().leader
+        );
+
+        Ok(())
+    }
+
+    #[::fuchsia::test]
+    fn test_steal_terminal() -> Result<(), anyhow::Error> {
+        let (kernel, task1) = create_kernel_and_task();
+        *task1.creds.write() = Credentials::from_passwd("nobody:x:1:1")?;
+
+        let task2 = task1
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+
+        let fs = dev_pts_fs(&kernel);
+        let _opened_main = open_ptmx_and_unlock(&task1, &fs)?;
+        let wo_opened_replica =
+            open_file_with_flags(&task1, &fs, b"0", OpenFlags::WRONLY | OpenFlags::NOCTTY)?;
+        assert!(!wo_opened_replica.can_read());
+
+        // FD must be readable for setting the terminal.
+        assert_eq!(ioctl::<u32>(&task1, &wo_opened_replica, TIOCSCTTY, &0), Err(EPERM));
+
+        let opened_replica = open_file(&task2, &fs, b"0")?;
+        // Task must be session leader for setting the terminal.
+        assert_eq!(ioctl::<u32>(&task2, &opened_replica, TIOCSCTTY, &0), Err(EINVAL));
+
+        // Associate terminal to task1.
+        ioctl::<u32>(&task1, &opened_replica, TIOCSCTTY, &0).expect("Associate terminal to task1");
+
+        // One cannot associate a terminal to a process that has already one
+        assert_eq!(ioctl::<u32>(&task1, &opened_replica, TIOCSCTTY, &0), Err(EINVAL));
+
+        task2.thread_group.setsid().expect("setsid");
+
+        // One cannot associate a terminal that is already associated with another process.
+        assert_eq!(ioctl::<u32>(&task2, &opened_replica, TIOCSCTTY, &0), Err(EPERM));
+
+        // One cannot steal a terminal without the CAP_SYS_ADMIN capacility
+        assert_eq!(ioctl::<u32>(&task2, &opened_replica, TIOCSCTTY, &1), Err(EPERM));
+
+        // One can steal a terminal with the CAP_SYS_ADMIN capacility
+        *task2.creds.write() = Credentials::from_passwd("root:x:0:0")?;
+        // But not without specifying that one wants to steal it.
+        assert_eq!(ioctl::<u32>(&task2, &opened_replica, TIOCSCTTY, &0), Err(EPERM));
+        ioctl::<u32>(&task2, &opened_replica, TIOCSCTTY, &1).expect("Associate terminal to task2");
+
+        assert!(task1
+            .thread_group
+            .process_group
+            .read()
+            .session
+            .controlling_terminal
+            .read()
+            .is_none());
+        Ok(())
+    }
+
+    #[::fuchsia::test]
+    fn test_set_foreground_process() -> Result<(), anyhow::Error> {
+        let (kernel, init) = create_kernel_and_task();
+        let task1 = init
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+        task1.thread_group.setsid().expect("setsid");
+        let task2 = task1
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+        task2.thread_group.setpgid(&task2, 0).expect("setpgid");
+        let task2_pgid = task2.thread_group.process_group.read().leader;
+
+        assert_ne!(task2_pgid, task1.thread_group.process_group.read().leader);
+
+        let fs = dev_pts_fs(&kernel);
+        let _opened_main = open_ptmx_and_unlock(&init, &fs)?;
+        let opened_replica = open_file(&task2, &fs, b"0")?;
+
+        // Cannot change the foreground process group if the terminal is not the controlling
+        // terminal
+        assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCSPGRP, &task2_pgid), Err(ENOTTY));
+
+        // Attach terminal to task1 and task2 session.
+        ioctl::<u32>(&task1, &opened_replica, TIOCSCTTY, &0).unwrap();
+        // The foreground process group should be the one of task1
+        assert_eq!(
+            ioctl::<i32>(&task1, &opened_replica, TIOCGPGRP, &0)?,
+            task1.thread_group.process_group.read().leader
+        );
+
+        // Cannot change the foreground process group to a negative pid.
+        assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCSPGRP, &-1), Err(EINVAL));
+
+        // Cannot change the foreground process group to a invalid process group.
+        assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCSPGRP, &255), Err(ESRCH));
+
+        // Cannot change the foreground process group to a process group in another session.
+        assert_eq!(
+            ioctl::<i32>(
+                &task2,
+                &opened_replica,
+                TIOCSPGRP,
+                &init.thread_group.process_group.read().leader
+            ),
+            Err(EPERM)
+        );
+
+        // Set the foregound process to task2 process group
+        ioctl::<i32>(&task2, &opened_replica, TIOCSPGRP, &task2_pgid).unwrap();
+
+        // Check that the foreground process has been changed.
+        assert_eq!(
+            task1
+                .thread_group
+                .process_group
+                .read()
+                .session
+                .controlling_terminal
+                .read()
+                .as_ref()
+                .unwrap()
+                .terminal
+                .get_controlling_session(false)
+                .as_ref()
+                .unwrap()
+                .foregound_process_group,
+            task2_pgid
+        );
 
         Ok(())
     }
