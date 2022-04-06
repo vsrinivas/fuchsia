@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_wasm_library.gni")
 
 import("//src/diagnostics/wasm/wasm_bindings.gni")
 
@@ -16,7 +17,10 @@ group("example") {
 
 group("tests") {
   testonly = true
-  deps = [ ":wasm-example-unittests" ]
+  deps = [
+    ":test_wasm_exists",
+    ":wasm-example-unittests",
+  ]
 }
 
 # We need to specify configs
@@ -28,22 +32,37 @@ config("env") {
   ]
 }
 
-rustc_library("lib") {
-  name = "example_lib"
-  edition = "2018"
-  disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
+lib_sources = [ "src/lib.rs" ]
+lib_deps = [ "//third_party/rust_crates:wasm-bindgen" ]
 
-  configs += [ ":env" ]
+if (current_toolchain == unknown_wasm32_toolchain) {
+  rustc_wasm_library("lib") {
+    output_name = "example_lib"
+    edition = "2018"
 
-  deps = [ "//third_party/rust_crates:wasm-bindgen" ]
+    configs += [ ":env" ]
 
-  sources = [ "src/lib.rs" ]
+    deps = lib_deps
+
+    sources = lib_sources
+  }
+} else {
+  rustc_library("lib") {
+    edition = "2018"
+    disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
+
+    configs += [ ":env" ]
+
+    deps = lib_deps
+
+    sources = lib_sources
+  }
 }
 
 rustc_test("example_lib_tests") {
   edition = "2018"
 
-  sources = [ "src/lib.rs" ]
+  sources = lib_sources
 
   deps = [ "//src/lib/fuchsia" ]
 }
@@ -55,4 +74,12 @@ fuchsia_unittest_package("wasm-example-unittests") {
 wasm_bindings("lib_wasm") {
   target = ":lib"
   target_output_name = "example_lib"
+}
+
+copy("test_wasm_exists") {
+  dep_path = get_label_info(":lib($unknown_wasm32_toolchain)", "root_out_dir")
+  sources = [ "${dep_path}/libexample_lib.wasm" ]
+  outputs = [ "${root_out_dir}/test_wasm_exists_libexample_lib.wasm" ]
+
+  deps = [ ":lib($unknown_wasm32_toolchain)" ]
 }

@@ -40,6 +40,9 @@ target_platform = "${target_os}-${target_cpu}"
 if (current_cpu == "") {
   current_cpu = target_cpu
 }
+if (current_cpu == "wasm32") {
+  current_os = "unknown"
+}
 if (current_os == "") {
   current_os = target_os
 }
@@ -64,7 +67,7 @@ host_arm64_toolchain = "//build/toolchain:host_arm64"
 host_toolchain_for_target_cpu = "//build/toolchain:host_${target_cpu}"
 linux_x64_toolchain = "//build/toolchain:linux_x64"
 linux_arm64_toolchain = "//build/toolchain:linux_arm64"
-unknown_wasm32_toolchain = "//build/toolchain:unknown_wasm32"
+unknown_wasm32_toolchain = "//build/toolchain:unknown_wasm32-shared"
 
 host_out_dir = get_label_info("//anything($host_toolchain)", "root_out_dir")
 
@@ -2675,6 +2678,8 @@ if (toolchain_variant.with_shared || toolchain_variant.is_pic_default) {
             output_extension = "dylib"
           } else if (current_os == "win") {
             output_extension = "dll"
+          } else if (current_os == "unknown" && current_cpu == "wasm32") {
+            output_extension = "wasm"
           } else {
             output_extension = "so"
           }

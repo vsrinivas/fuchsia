@@ -43,7 +43,7 @@ template("wasm_bindings") {
     target = invoker.target
     deps += [ "${target}($unknown_wasm32_toolchain)" ]
     dep_out_dir =
-        get_label_info("${target}($unknown_wasm32_toolchain)", "target_out_dir")
+        get_label_info("${target}($unknown_wasm32_toolchain)", "root_out_dir")
 
     if (defined(invoker.target_output_name)) {
       dep_name = invoker.target_output_name

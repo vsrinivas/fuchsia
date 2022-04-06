@@ -9,11 +9,13 @@ import("//build/rust/rustc_test.gni")
 #
 # Parameters
 #
-#   output_name (optional)
-#   name (optional, deprecated)
+#   output_name (required)
+#   name (required, deprecated)
 #     Name of the crate as defined in its manifest file. If not specified, it is
 #     assumed to be the same as the target name. All dashes will be replaced
 #     with underscores in the library name: <name_underscored>
+#
+#     Note: This is required for now, see fxbug.dev/97058.
 #
 #   edition (optional)
 #     Edition of the Rust language to be used.
@@ -96,6 +98,8 @@ import("//build/rust/rustc_test.gni")
 template("rustc_wasm_library") {
   assert(!(defined(invoker.output_name) && defined(invoker.name)),
          "Only one of output_name and name may be specified.")
+  assert(defined(invoker.output_name) || defined(invoker.name),
+         "output_name must be specified for WASM libraries.")
   package_name = target_name
   if (defined(invoker.output_name)) {
     package_name = invoker.output_name
@@ -131,7 +135,7 @@ template("rustc_wasm_library") {
   }
 
   rustc_artifact(target_name) {
-    target_type = "rust_library"
+    target_type = "shared_library"
     crate_root = source_root
     clippy_crate_type = "cdylib"
     crate_name = crate_name
@@ -144,6 +148,7 @@ template("rustc_wasm_library") {
                                "visibility",
                              ])
       output_name = crate_name
+      crate_type = "cdylib"
     }
 
     assert(
