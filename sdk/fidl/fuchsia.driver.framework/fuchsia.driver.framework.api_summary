@@ -1,6 +1,13 @@
+enum/member fuchsia.driver.framework/Condition.ACCEPT 0
+enum/member fuchsia.driver.framework/Condition.REJECT 1
+strict enum fuchsia.driver.framework/Condition uint32
 struct/member fuchsia.driver.framework/DeviceGroupNode.name string:128
-struct/member fuchsia.driver.framework/DeviceGroupNode.properties vector<fuchsia.driver.framework/NodeProperty>:64
+struct/member fuchsia.driver.framework/DeviceGroupNode.properties vector<fuchsia.driver.framework/DeviceGroupProperty>:64
 struct fuchsia.driver.framework/DeviceGroupNode
+struct/member fuchsia.driver.framework/DeviceGroupProperty.condition fuchsia.driver.framework/Condition
+struct/member fuchsia.driver.framework/DeviceGroupProperty.key fuchsia.driver.framework/NodePropertyKey
+struct/member fuchsia.driver.framework/DeviceGroupProperty.values vector<fuchsia.driver.framework/NodePropertyValue>:64
+struct fuchsia.driver.framework/DeviceGroupProperty
 protocol/member fuchsia.driver.framework/Driver.Stop()
 protocol fuchsia.driver.framework/Driver
 protocol/member fuchsia.driver.framework/DriverHost.Start(fuchsia.driver.framework/DriverStartArgs start_args,server_end:fuchsia.driver.framework/Driver driver)

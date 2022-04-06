@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.device.manager/cpp/wire.h>
+#include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/driver.h>
@@ -16,6 +17,8 @@
 #include "zx_device.h"
 
 namespace {
+
+namespace fdf = fuchsia_driver_framework;
 
 using TestAddDeviceGroupCallback =
     fit::function<void(fuchsia_device_manager::wire::DeviceGroupDescriptor)>;
@@ -300,33 +303,42 @@ TEST_F(CoreTest, AddDeviceGroup) {
         EXPECT_EQ(10, device_group.props.at(0).value);
 
         // Check the device group string properties.
-        EXPECT_EQ(1, device_group.str_props.count());
-        EXPECT_STREQ("plover", device_group.str_props.at(0).key.data());
+        ASSERT_EQ(1, device_group.str_props.count());
+        EXPECT_STREQ("plover", device_group.str_props.at(0).key.get());
         EXPECT_EQ(10, device_group.str_props.at(0).value.int_value());
 
-        EXPECT_EQ(2, device_group.fragments.count());
+        ASSERT_EQ(2, device_group.fragments.count());
 
         // Checking the first fragment.
         auto fragment_result_1 = device_group.fragments.at(0);
-        EXPECT_STREQ("fragment-1", fragment_result_1.name.data());
-        EXPECT_EQ(2, fragment_result_1.properties.count());
+        EXPECT_STREQ("fragment-1", fragment_result_1.name.get());
+        ASSERT_EQ(2, fragment_result_1.properties.count());
 
-        EXPECT_EQ(2, fragment_result_1.properties.at(0).key().int_value());
-        EXPECT_EQ(1, fragment_result_1.properties.at(0).value().int_value());
+        EXPECT_EQ(2, fragment_result_1.properties.at(0).key.int_value());
+        EXPECT_EQ(fdf::wire::Condition::kAccept, fragment_result_1.properties.at(0).condition);
+        ASSERT_EQ(1, fragment_result_1.properties.at(0).values.count());
+        EXPECT_EQ(1, fragment_result_1.properties.at(0).values.at(0).int_value());
 
-        EXPECT_EQ(10, fragment_result_1.properties.at(1).key().int_value());
-        EXPECT_EQ(3, fragment_result_1.properties.at(1).value().int_value());
+        EXPECT_EQ(10, fragment_result_1.properties.at(1).key.int_value());
+        EXPECT_EQ(fdf::wire::Condition::kAccept, fragment_result_1.properties.at(1).condition);
+        ASSERT_EQ(1, fragment_result_1.properties.at(1).values.count());
+        EXPECT_EQ(3, fragment_result_1.properties.at(1).values.at(0).int_value());
 
         // Checking the second fragment.
         auto fragment_result_2 = device_group.fragments.at(1);
-        EXPECT_STREQ("fragment-2", fragment_result_2.name.data());
-        EXPECT_EQ(2, fragment_result_2.properties.count());
+        EXPECT_STREQ("fragment-2", fragment_result_2.name.get());
+        ASSERT_EQ(2, fragment_result_2.properties.count());
 
-        EXPECT_EQ(12, fragment_result_2.properties.at(0).key().int_value());
-        EXPECT_EQ(1, fragment_result_2.properties.at(0).value().int_value());
+        auto fragment_2_property_1 = fragment_result_2.properties.at(0);
+        EXPECT_EQ(12, fragment_2_property_1.key.int_value());
+        EXPECT_EQ(fdf::wire::Condition::kAccept, fragment_2_property_1.condition);
+        ASSERT_EQ(1, fragment_2_property_1.values.count());
+        EXPECT_EQ(1, fragment_2_property_1.values.at(0).int_value());
 
-        EXPECT_STREQ("curlew", fragment_result_2.properties.at(1).key().string_value().data());
-        EXPECT_STREQ("willet", fragment_result_2.properties.at(1).value().enum_value().data());
+        EXPECT_STREQ("curlew", fragment_result_2.properties.at(1).key.string_value().get());
+        EXPECT_EQ(fdf::wire::Condition::kAccept, fragment_result_2.properties.at(0).condition);
+        ASSERT_EQ(1, fragment_result_2.properties.at(1).values.count());
+        EXPECT_STREQ("willet", fragment_result_2.properties.at(1).values.at(0).enum_value().get());
       };
 
   coordinator_.set_device_group_callback(std::move(test_callback));

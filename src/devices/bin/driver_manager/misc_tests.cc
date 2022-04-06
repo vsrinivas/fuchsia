@@ -560,8 +560,8 @@ TEST(MiscTestCase, AddDeviceGroup) {
   fidl::VectorView<fuchsia_device_manager::wire::DeviceStrProperty> str_props(allocator, 2);
   str_props[0] = fuchsia_device_manager::wire::DeviceStrProperty{
       fidl::StringView(allocator, "scoter"),
-      fuchsia_device_manager::wire::PropertyValue::WithStrValue(fidl::ObjectView<fidl::StringView>(
-          allocator, fidl::StringView(allocator, "bufflehead")))};
+      fuchsia_device_manager::wire::PropertyValue::WithStrValue(
+          allocator, fidl::StringView(allocator, "bufflehead"))};
   str_props[1] = fuchsia_device_manager::wire::DeviceStrProperty{
       fidl::StringView(allocator, "merganser"),
       fuchsia_device_manager::wire::PropertyValue::WithIntValue(1000)};
@@ -570,18 +570,23 @@ TEST(MiscTestCase, AddDeviceGroup) {
   props[0] = fuchsia_device_manager::wire::DeviceProperty{1, 0, 1};
   props[1] = fuchsia_device_manager::wire::DeviceProperty{2, 0, 1};
 
-  fidl::VectorView<fdf::wire::NodeProperty> node_properties(allocator, 2);
-  node_properties[0] = fdf::wire::NodeProperty(allocator);
-  node_properties[0].set_key(fidl::ObjectView<fdf::wire::NodePropertyKey>(
-      allocator, fdf::wire::NodePropertyKey::WithIntValue(100)));
-  node_properties[0].set_value(fidl::ObjectView<fdf::wire::NodePropertyValue>(
-      allocator, fdf::wire::NodePropertyValue::WithBoolValue(false)));
+  fidl::VectorView<fdf::wire::DeviceGroupProperty> node_properties(allocator, 2);
 
-  node_properties[1] = fdf::wire::NodeProperty(allocator);
-  node_properties[1].set_key(fidl::ObjectView<fdf::wire::NodePropertyKey>(
-      allocator, fdf::wire::NodePropertyKey::WithIntValue(5)));
-  node_properties[1].set_value(fidl::ObjectView<fdf::wire::NodePropertyValue>(
-      allocator, fdf::wire::NodePropertyValue::WithIntValue(20)));
+  auto prop_vals_1 = fidl::VectorView<fdf::wire::NodePropertyValue>(allocator, 1);
+  prop_vals_1[0] = fdf::wire::NodePropertyValue::WithBoolValue(false);
+  node_properties[0] = fdf::wire::DeviceGroupProperty{
+      .key = fdf::wire::NodePropertyKey::WithIntValue(100),
+      .condition = fdf::wire::Condition::kAccept,
+      .values = prop_vals_1,
+  };
+
+  auto prop_vals_2 = fidl::VectorView<fdf::wire::NodePropertyValue>(allocator, 1);
+  prop_vals_2[0] = fdf::wire::NodePropertyValue::WithIntValue(20);
+  node_properties[1] = fdf::wire::DeviceGroupProperty{
+      .key = fdf::wire::NodePropertyKey::WithIntValue(5),
+      .condition = fdf::wire::Condition::kAccept,
+      .values = prop_vals_2,
+  };
 
   fidl::VectorView<fdf::wire::DeviceGroupNode> fragments(allocator, 1);
   fragments[0] = fdf::wire::DeviceGroupNode{

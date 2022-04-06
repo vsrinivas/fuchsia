@@ -1867,15 +1867,18 @@ mod tests {
 
         let test_task = async move {
             let node_properties = vec![
-                fdf::NodeProperty {
-                    key: Some(fdf::NodePropertyKey::IntValue(1)),
-                    value: Some(fdf::NodePropertyValue::IntValue(200)),
-                    ..fdf::NodeProperty::EMPTY
+                fdf::DeviceGroupProperty {
+                    key: fdf::NodePropertyKey::IntValue(1),
+                    condition: fdf::Condition::Accept,
+                    values: vec![
+                        fdf::NodePropertyValue::IntValue(200),
+                        fdf::NodePropertyValue::IntValue(150),
+                    ],
                 },
-                fdf::NodeProperty {
-                    key: Some(fdf::NodePropertyKey::StringValue("lapwing".to_string())),
-                    value: Some(fdf::NodePropertyValue::StringValue("plover".to_string())),
-                    ..fdf::NodeProperty::EMPTY
+                fdf::DeviceGroupProperty {
+                    key: fdf::NodePropertyKey::StringValue("lapwing".to_string()),
+                    condition: fdf::Condition::Accept,
+                    values: vec![fdf::NodePropertyValue::StringValue("plover".to_string())],
                 },
             ];
 
@@ -1974,15 +1977,18 @@ mod tests {
 
         let test_task = async move {
             let node_properties = vec![
-                fdf::NodeProperty {
-                    key: Some(fdf::NodePropertyKey::IntValue(1)),
-                    value: Some(fdf::NodePropertyValue::IntValue(200)),
-                    ..fdf::NodeProperty::EMPTY
+                fdf::DeviceGroupProperty {
+                    key: fdf::NodePropertyKey::IntValue(1),
+                    condition: fdf::Condition::Accept,
+                    values: vec![
+                        fdf::NodePropertyValue::IntValue(200),
+                        fdf::NodePropertyValue::IntValue(150),
+                    ],
                 },
-                fdf::NodeProperty {
-                    key: Some(fdf::NodePropertyKey::StringValue("lapwing".to_string())),
-                    value: Some(fdf::NodePropertyValue::StringValue("plover".to_string())),
-                    ..fdf::NodeProperty::EMPTY
+                fdf::DeviceGroupProperty {
+                    key: fdf::NodePropertyKey::StringValue("lapwing".to_string()),
+                    condition: fdf::Condition::Accept,
+                    values: vec![fdf::NodePropertyValue::StringValue("plover".to_string())],
                 },
             ];
 
@@ -2099,15 +2105,18 @@ mod tests {
 
         let test_task = async move {
             let node_properties = vec![
-                fdf::NodeProperty {
-                    key: Some(fdf::NodePropertyKey::IntValue(1)),
-                    value: Some(fdf::NodePropertyValue::IntValue(200)),
-                    ..fdf::NodeProperty::EMPTY
+                fdf::DeviceGroupProperty {
+                    key: fdf::NodePropertyKey::IntValue(1),
+                    condition: fdf::Condition::Accept,
+                    values: vec![
+                        fdf::NodePropertyValue::IntValue(200),
+                        fdf::NodePropertyValue::IntValue(150),
+                    ],
                 },
-                fdf::NodeProperty {
-                    key: Some(fdf::NodePropertyKey::StringValue("lapwing".to_string())),
-                    value: Some(fdf::NodePropertyValue::StringValue("plover".to_string())),
-                    ..fdf::NodeProperty::EMPTY
+                fdf::DeviceGroupProperty {
+                    key: fdf::NodePropertyKey::StringValue("lapwing".to_string()),
+                    condition: fdf::Condition::Accept,
+                    values: vec![fdf::NodePropertyValue::StringValue("plover".to_string())],
                 },
             ];
 
@@ -2118,10 +2127,10 @@ mod tests {
 
             proxy.add_device_group("test/path", &mut nodes.iter_mut()).await.unwrap().unwrap();
 
-            let duplicate_node_properties = vec![fdf::NodeProperty {
-                key: Some(fdf::NodePropertyKey::IntValue(200)),
-                value: Some(fdf::NodePropertyValue::IntValue(2)),
-                ..fdf::NodeProperty::EMPTY
+            let duplicate_node_properties = vec![fdf::DeviceGroupProperty {
+                key: fdf::NodePropertyKey::IntValue(200),
+                condition: fdf::Condition::Accept,
+                values: vec![fdf::NodePropertyValue::IntValue(2)],
             }];
 
             let duplicate_nodes = &mut [fdf::DeviceGroupNode {
@@ -2172,15 +2181,18 @@ mod tests {
 
         let test_task = async move {
             let node_properties = vec![
-                fdf::NodeProperty {
-                    key: Some(fdf::NodePropertyKey::IntValue(20)),
-                    value: Some(fdf::NodePropertyValue::IntValue(200)),
-                    ..fdf::NodeProperty::EMPTY
+                fdf::DeviceGroupProperty {
+                    key: fdf::NodePropertyKey::IntValue(20),
+                    condition: fdf::Condition::Accept,
+                    values: vec![
+                        fdf::NodePropertyValue::IntValue(200),
+                        fdf::NodePropertyValue::IntValue(150),
+                    ],
                 },
-                fdf::NodeProperty {
-                    key: Some(fdf::NodePropertyKey::IntValue(20)),
-                    value: Some(fdf::NodePropertyValue::StringValue("plover".to_string())),
-                    ..fdf::NodeProperty::EMPTY
+                fdf::DeviceGroupProperty {
+                    key: fdf::NodePropertyKey::IntValue(20),
+                    condition: fdf::Condition::Accept,
+                    values: vec![fdf::NodePropertyValue::StringValue("plover".to_string())],
                 },
             ];
 

@@ -134,17 +134,21 @@ fuchsia_device_manager::wire::DeviceStrProperty convert_device_str_prop(
   return str_property;
 }
 
+// TODO(fxb/96714): Support condition and values list in device_group_desc_t.
 fdf::wire::DeviceGroupNode convert_device_group_node(fidl::AnyArena& allocator,
                                                      device_group_fragment_t fragment) {
-  fidl::VectorView<fdf::wire::NodeProperty> properties(
+  fidl::VectorView<fdf::wire::DeviceGroupProperty> properties(
       allocator, fragment.props_count + fragment.str_props_count);
 
   for (size_t i = 0; i < fragment.props_count; i++) {
-    fidl::WireTableBuilder<fdf::wire::NodeProperty> builder =
-        fdf::wire::NodeProperty::Builder(allocator);
-    builder.key(fdf::wire::NodePropertyKey::WithIntValue(fragment.props[i].id));
-    builder.value(fdf::wire::NodePropertyValue::WithIntValue(fragment.props[i].value));
-    properties[i] = builder.Build();
+    auto prop_vals = fidl::VectorView<fdf::wire::NodePropertyValue>(allocator, 1);
+    prop_vals[0] = fdf::wire::NodePropertyValue::WithIntValue(fragment.props[i].value);
+
+    properties[i] = fdf::wire::DeviceGroupProperty{
+        .key = fdf::wire::NodePropertyKey::WithIntValue(fragment.props[i].id),
+        .condition = fdf::wire::Condition::kAccept,
+        .values = prop_vals,
+    };
   }
 
   size_t index = fragment.props_count;
@@ -152,39 +156,41 @@ fdf::wire::DeviceGroupNode convert_device_group_node(fidl::AnyArena& allocator,
     auto str_property = fragment.str_props[i];
     ZX_ASSERT(property_value_type_valid(str_property.property_value.value_type));
 
-    fidl::WireTableBuilder<fdf::wire::NodeProperty> builder =
-        fdf::wire::NodeProperty::Builder(allocator);
-
     auto property_key =
         fdf::wire::NodePropertyKey::WithStringValue(allocator, allocator, str_property.key);
-    builder.key(property_key);
+
+    auto prop_vals = fidl::VectorView<fdf::wire::NodePropertyValue>(allocator, 1);
 
     switch (str_property.property_value.value_type) {
       case ZX_DEVICE_PROPERTY_VALUE_INT: {
-        builder.value(
-            fdf::wire::NodePropertyValue::WithIntValue(str_property.property_value.value.int_val));
+        prop_vals[0] =
+            fdf::wire::NodePropertyValue::WithIntValue(str_property.property_value.value.int_val);
         break;
       }
       case ZX_DEVICE_PROPERTY_VALUE_STRING: {
         auto property_val = fidl::ObjectView<fidl::StringView>(
             allocator, allocator, str_property.property_value.value.str_val);
-        builder.value(fdf::wire::NodePropertyValue::WithStringValue(property_val));
+        prop_vals[0] = fdf::wire::NodePropertyValue::WithStringValue(property_val);
         break;
       }
       case ZX_DEVICE_PROPERTY_VALUE_BOOL: {
-        builder.value(fdf::wire::NodePropertyValue::WithBoolValue(
-            str_property.property_value.value.bool_val));
+        prop_vals[0] =
+            fdf::wire::NodePropertyValue::WithBoolValue(str_property.property_value.value.bool_val);
         break;
       }
       case ZX_DEVICE_PROPERTY_VALUE_ENUM: {
         auto property_val = fidl::ObjectView<fidl::StringView>(
             allocator, allocator, str_property.property_value.value.enum_val);
-        builder.value(fdf::wire::NodePropertyValue::WithEnumValue(property_val));
+        prop_vals[0] = fdf::wire::NodePropertyValue::WithEnumValue(property_val);
         break;
       }
     }
 
-    properties[index + i] = builder.Build();
+    properties[index + i] = fdf::wire::DeviceGroupProperty{
+        .key = property_key,
+        .condition = fdf::wire::Condition::kAccept,
+        .values = prop_vals,
+    };
   }
 
   return fdf::wire::DeviceGroupNode{

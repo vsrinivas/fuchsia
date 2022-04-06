@@ -3,9 +3,33 @@
 // found in the LICENSE file.
 library fuchsia.driver.framework;
 
+/// Represents the conditions for evaluating the device
+/// group properties.
+type Condition = strict enum {
+    ACCEPT = 0;
+    REJECT = 1;
+};
+
+/// Represents a device group node property.
+type DeviceGroupProperty = struct {
+    /// Property key.
+    key NodePropertyKey;
+
+    /// Condition for evaluating the property values in
+    /// the matching process. The values are accepted or
+    /// rejected based on the condition.
+    condition Condition;
+
+    /// A list of property values. Must not be empty. The property
+    /// values must be the same type.
+    values vector<NodePropertyValue>:MAX_PROPERTY_COUNT;
+};
+
 /// Struct that represents a node in a device group.
 // TODO(fxb/93766): Support property transformation.
 type DeviceGroupNode = struct {
     name string:MAX_NODE_NAME_LENGTH;
-    properties vector<NodeProperty>:MAX_PROPERTY_COUNT;
+
+    /// Properties of the node. Keys must be unique.
+    properties vector<DeviceGroupProperty>:MAX_PROPERTY_COUNT;
 };
