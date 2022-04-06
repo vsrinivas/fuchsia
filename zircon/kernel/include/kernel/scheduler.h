@@ -68,16 +68,18 @@ class Scheduler {
 
   // The threshold for cross-cluster work stealing. Queues with an estimated
   // runtime below this value are not stolen from if the target and destination
-  // CPUs are in different logical clusters. This tunable value approximates the
-  // cost of cross-cluster migration due to cache misses, assuming a task has
-  // high cache affinity in its current cluster.
-  static constexpr SchedDuration kInterClusterThreshold = SchedUs(75);
+  // CPUs are in different logical clusters. In a performance-balanced system,
+  // this tunable value approximates the cost of cross-cluster migration due to
+  // cache misses, assuming a task has high cache affinity in its current
+  // cluster. This tunable may be increased to limit cross-cluster spill over.
+  static constexpr SchedDuration kInterClusterThreshold = SchedMs(8);
 
   // The threshold for early termination when searching for a CPU to place a
   // task. Queues with an estimated runtime below this value are sufficiently
-  // unloaded. This tunable value approximates the cost of intra-cluster
-  // migration due to cache misses, assuming a task has high cache affinity with
-  // the last CPU it ran on.
+  // unloaded. In a performance-balanced system, this tunable value approximates
+  // the cost of intra-cluster migration due to cache misses, assuming a task
+  // has high cache affinity with the last CPU it ran on. This tunable may be
+  // increased to limit intra-cluster spill over.
   static constexpr SchedDuration kIntraClusterThreshold = SchedUs(25);
 
   // The per-CPU deadline utilization limit to attempt to honor when selecting a
