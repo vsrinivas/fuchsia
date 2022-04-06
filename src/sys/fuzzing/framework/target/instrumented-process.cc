@@ -2,27 +2,46 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/sys/cpp/service_directory.h>
-#include <lib/syslog/cpp/macros.h>
+#include <lib/sync/completion.h>
+#include <zircon/time.h>
 
-#include "process.h"
+#include <memory>
+
+#include "src/lib/fxl/macros.h"
+#include "src/sys/fuzzing/common/component-context.h"
+#include "src/sys/fuzzing/framework/target/process.h"
 
 namespace fuzzing {
 
 // This class extends |Process| by automatically connecting in a public default constructor. The
 // class is instantiated as a singleton below, and lives as long as the process. All other
 // fuzzing-related code executed in the target runs as result of the singleton's constructor.
-class InstrumentedProcess : public Process {
+class InstrumentedProcess final {
  public:
   InstrumentedProcess() {
     Process::InstallHooks();
-    auto svc = sys::ServiceDirectory::CreateFromNamespace();
-    InstrumentationSyncPtr proxy;
-    svc->Connect(proxy.NewRequest());
-    Process::Connect(std::move(proxy));
+    context_ = ComponentContext::CreateAuxillary();
+    process_ = std::make_unique<Process>(context_->executor());
+    auto sync = std::make_shared<sync_completion_t>();
+    auto handler = context_->MakeRequestHandler<Instrumentation>();
+    auto task = process_->Connect(std::move(handler))
+                    .and_then([sync] {
+                      sync_completion_signal(sync.get());
+                      return fpromise::ok();
+                    })
+                    .and_then(process_->Run());
+    context_->ScheduleTask(std::move(task));
+    context_->Run();
+    sync_completion_wait(sync.get(), ZX_TIME_INFINITE);
   }
 
-  ~InstrumentedProcess() override { FX_NOTREACHED(); }
+  ~InstrumentedProcess() { FX_NOTREACHED(); }
+
+ private:
+  std::unique_ptr<ComponentContext> context_;
+  std::unique_ptr<Process> process_;
+
+  FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(InstrumentedProcess);
 };
 
 namespace {

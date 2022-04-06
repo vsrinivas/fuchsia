@@ -8,11 +8,11 @@
 namespace fuzzing {
 
 zx_status_t RunCoverageForwarder() {
-  ComponentContext context;
-  CoverageForwarder forwarder(context.executor());
-  context.AddPublicService(forwarder.GetInstrumentationHandler());
-  context.AddPublicService(forwarder.GetCoverageProviderHandler());
-  return context.Run();
+  auto context = ComponentContext::Create();
+  CoverageForwarder forwarder(context->executor());
+  context->AddPublicService(forwarder.GetInstrumentationHandler());
+  context->AddPublicService(forwarder.GetCoverageProviderHandler());
+  return context->Run();
 }
 
 }  // namespace fuzzing

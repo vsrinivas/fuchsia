@@ -11,15 +11,13 @@
 
 namespace fuzzing {
 
-RelayImpl::RelayImpl() : executor_(MakeExecutor(loop_.dispatcher())) {}
+RelayImpl::RelayImpl(ExecutorPtr executor) : executor_(std::move(executor)) {}
 
 fidl::InterfaceRequestHandler<Relay> RelayImpl::GetHandler() {
   return [this](fidl::InterfaceRequest<Relay> request) {
     bindings_.AddBinding(this, std::move(request), executor_->dispatcher());
   };
 }
-
-zx_status_t RelayImpl::Run() { return loop_.Run(); }
 
 void RelayImpl::SetTestData(SignaledBuffer test_data, SetTestDataCallback callback) {
   auto completer = std::move(completer_);

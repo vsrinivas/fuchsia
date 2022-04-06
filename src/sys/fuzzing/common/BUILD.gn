@@ -16,6 +16,7 @@ source_set("common") {
     "async-eventpair.h",
     "async-socket.cc",
     "async-socket.h",
+    "component-context.cc",
     "component-context.h",
     "controller-provider.cc",
     "controller-provider.h",

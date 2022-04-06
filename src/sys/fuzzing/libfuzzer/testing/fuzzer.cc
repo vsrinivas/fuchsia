@@ -4,47 +4,43 @@
 
 #include "src/sys/fuzzing/libfuzzer/testing/fuzzer.h"
 
-#include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
 
-#include <memory>
 #include <random>
 
-#include <sanitizer/common_interface_defs.h>
-#include <sanitizer/lsan_interface.h>
 #include <test/fuzzer/cpp/fidl.h>
 
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/result.h"
-#include "src/sys/fuzzing/common/sancov.h"
 #include "src/sys/fuzzing/common/testing/sanitizer.h"
+#include "src/sys/fuzzing/libfuzzer/testing/feedback.h"
 
 namespace fuzzing {
 
+using ::test::fuzzer::Relay;
 using ::test::fuzzer::RelayPtr;
 using ::test::fuzzer::SignaledBuffer;
 
-TestFuzzer::TestFuzzer() : executor_(MakeExecutor(loop_.dispatcher())), eventpair_(executor_) {}
+TestFuzzer::TestFuzzer() {
+  context_ = ComponentContext::Create();
+  eventpair_ = std::make_unique<AsyncEventPair>(context_->executor());
+}
 
 int TestFuzzer::TestOneInput(const uint8_t *data, size_t size) {
   zx_status_t retval = ZX_ERR_SHOULD_WAIT;
   auto task = fpromise::make_promise([this, relay = RelayPtr(), connect = Future<SignaledBuffer>()](
                                          Context &context) mutable -> ZxResult<> {
                 // First, connect to the unit test via the relay, if necessary.
-                if (eventpair_.IsConnected() && !relay) {
+                if (eventpair_->IsConnected() && !relay) {
                   return fpromise::ok();
                 }
                 if (!relay) {
-                  auto context = sys::ComponentContext::Create();
-                  auto status = context->svc()->Connect(relay.NewRequest(executor_->dispatcher()));
-                  if (status != ZX_OK) {
-                    FX_LOGS(ERROR)
-                        << "Failed to connect to relay: " << zx_status_get_string(status);
-                    return fpromise::error(status);
-                  }
+                  auto handler = context_->MakeRequestHandler<Relay>();
+                  auto executor = context_->executor();
+                  handler(relay.NewRequest(executor->dispatcher()));
                 }
                 if (!connect) {
                   Bridge<SignaledBuffer> bridge;
@@ -60,7 +56,7 @@ int TestFuzzer::TestOneInput(const uint8_t *data, size_t size) {
                 auto signaled_buffer = connect.take_value();
                 test_input_buffer_.LinkReserved(std::move(signaled_buffer.test_input));
                 feedback_buffer_.LinkMirrored(std::move(signaled_buffer.feedback));
-                eventpair_.Pair(std::move(signaled_buffer.eventpair));
+                eventpair_->Pair(std::move(signaled_buffer.eventpair));
                 relay->Finish();
                 return fpromise::ok();
               })
@@ -69,11 +65,11 @@ int TestFuzzer::TestOneInput(const uint8_t *data, size_t size) {
                     test_input_buffer_.Write(data, size);
                     // Notify the unit test that the test input is ready, and wait for its
                     // notification that feedback is ready.
-                    return AsZxResult(eventpair_.SignalPeer(0, kStart));
+                    return AsZxResult(eventpair_->SignalPeer(0, kStart));
                   })
-                  .and_then(eventpair_.WaitFor(kStart))
+                  .and_then(eventpair_->WaitFor(kStart))
                   .and_then([this](const zx_signals_t &observed) {
-                    return AsZxResult(eventpair_.SignalSelf(observed, 0));
+                    return AsZxResult(eventpair_->SignalSelf(observed, 0));
                   })
                   .and_then([this]() -> ZxResult<> {
                     const auto *feedback =
@@ -90,7 +86,7 @@ int TestFuzzer::TestOneInput(const uint8_t *data, size_t size) {
                     switch (feedback->result) {
                       case FuzzResult::NO_ERRORS:
                         // Notify the unit test that the fuzzer completed the run.
-                        eventpair_.SignalPeer(0, kFinish);
+                        eventpair_->SignalPeer(0, kFinish);
                         return fpromise::ok();
                       case FuzzResult::BAD_MALLOC:
                         printf("DEDUP_TOKEN: BAD_MALLOC\n");
@@ -131,11 +127,11 @@ int TestFuzzer::TestOneInput(const uint8_t *data, size_t size) {
   // Compare with async-test.h. Unlike a real fuzzer, this fake fuzzer runs its async loop on the
   // current thread. To make |LLVMFuzzerTestOneInput| synchronous, this method needs to periodically
   // kick the loop until the promise above completes.
-  executor_->schedule_task(std::move(task));
-  loop_.RunUntilIdle();
+  context_->ScheduleTask(std::move(task));
+  context_->RunUntilIdle();
   while (retval == ZX_ERR_SHOULD_WAIT) {
     zx::nanosleep(zx::deadline_after(zx::msec(10)));
-    loop_.RunUntilIdle();
+    context_->RunUntilIdle();
   }
   // See the comment on the |FuzzResult::EXIT| case above. It is safe to call exit() here.
   if (retval == ZX_ERR_STOP) {

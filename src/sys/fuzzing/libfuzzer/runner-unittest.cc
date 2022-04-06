@@ -4,7 +4,6 @@
 
 #include "src/sys/fuzzing/libfuzzer/runner.h"
 
-#include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
@@ -13,11 +12,13 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
 #include "src/sys/fuzzing/common/async-eventpair.h"
+#include "src/sys/fuzzing/common/component-context.h"
 #include "src/sys/fuzzing/common/runner-unittest.h"
 #include "src/sys/fuzzing/libfuzzer/testing/feedback.h"
 
 namespace fuzzing {
 
+using ::test::fuzzer::Relay;
 using ::test::fuzzer::RelayPtr;
 using ::test::fuzzer::SignaledBuffer;
 
@@ -49,6 +50,7 @@ class LibFuzzerRunnerTest : public RunnerTest {
   void SetUp() override {
     RunnerTest::SetUp();
     runner_ = LibFuzzerRunner::MakePtr(executor());
+    context_ = ComponentContext::CreateWithExecutor(executor());
     eventpair_ = std::make_unique<AsyncEventPair>(executor());
     test_input_buffer_.Reserve(kDefaultMaxInputSize);
     feedback_buffer_.Mirror(&feedback_, sizeof(feedback_));
@@ -95,12 +97,8 @@ class LibFuzzerRunnerTest : public RunnerTest {
                      Context& context, const zx_status_t& status) mutable -> ZxResult<> {
           // Connect to the fuzzer via the relay.
           if (!relay) {
-            auto context = sys::ComponentContext::Create();
-            auto status = context->svc()->Connect(relay.NewRequest(executor()->dispatcher()));
-            if (status != ZX_OK) {
-              FX_LOGS(ERROR) << "Failed to connect to relay: " << zx_status_get_string(status);
-              return fpromise::error(status);
-            }
+            auto handler = context_->MakeRequestHandler<Relay>();
+            handler(relay.NewRequest(executor()->dispatcher()));
           }
           if (!connect) {
             // Exchange shared objects with the fuzzer via the relay.
@@ -174,6 +172,7 @@ class LibFuzzerRunnerTest : public RunnerTest {
 
  private:
   RunnerPtr runner_;
+  std::unique_ptr<ComponentContext> context_;
   std::unique_ptr<AsyncEventPair> eventpair_;
   SharedMemory test_input_buffer_;
   SharedMemory feedback_buffer_;

@@ -9,12 +9,12 @@
 namespace fuzzing {
 
 zx_status_t RunTestEngine() {
-  ComponentContext context;
-  ControllerProviderImpl provider(context.executor());
-  auto runner = SimpleFixedRunner::MakePtr(context.executor());
+  auto context = ComponentContext::Create();
+  ControllerProviderImpl provider(context->executor());
+  auto runner = SimpleFixedRunner::MakePtr(context->executor());
   auto task = provider.Run(std::move(runner));
-  context.ScheduleTask(std::move(task));
-  return context.Run();
+  context->ScheduleTask(std::move(task));
+  return context->Run();
 }
 
 }  // namespace fuzzing

@@ -7,15 +7,11 @@
 
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/sync/completion.h>
-
-#include <vector>
 
 #include <test/fuzzer/cpp/fidl.h>
 
 #include "src/lib/fxl/macros.h"
 #include "src/sys/fuzzing/common/async-types.h"
-#include "testing/fidl/async_loop_for_test.h"
 
 namespace fuzzing {
 
@@ -24,7 +20,7 @@ using ::test::fuzzer::SignaledBuffer;
 
 class RelayImpl : public Relay {
  public:
-  RelayImpl();
+  explicit RelayImpl(ExecutorPtr executor);
   ~RelayImpl() override = default;
 
   // FIDL methods.
@@ -33,11 +29,7 @@ class RelayImpl : public Relay {
   void WatchTestData(WatchTestDataCallback callback) override;
   void Finish() override;
 
-  // Run the relay. This method does not return until the loop quits.
-  zx_status_t Run();
-
  private:
-  fidl::test::AsyncLoopForTest loop_;
   fidl::BindingSet<Relay> bindings_;
   ExecutorPtr executor_;
   Completer<SignaledBuffer> completer_;

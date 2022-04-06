@@ -8,11 +8,11 @@
 namespace fuzzing {
 
 zx_status_t RunLLVMTargetAdapter(const std::vector<std::string>& args) {
-  ComponentContext context;
-  LLVMTargetAdapter adapter(context.executor());
+  auto context = ComponentContext::Create();
+  LLVMTargetAdapter adapter(context->executor());
   adapter.SetParameters(args);
-  context.AddPublicService(adapter.GetHandler());
-  return context.Run();
+  context->AddPublicService(adapter.GetHandler());
+  return context->Run();
 }
 
 }  // namespace fuzzing

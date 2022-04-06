@@ -6,9 +6,9 @@
 #define SRC_SYS_FUZZING_COMMON_COMPONENT_CONTEXT_H_
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/outgoing_directory.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
@@ -21,27 +21,27 @@ namespace fuzzing {
 // behaviors, such as making an |async::Loop| and scheduling a primary task on an |async::Executor|.
 class ComponentContext final {
  public:
-  // By default, run on the current thread.
-  ComponentContext() : ComponentContext(/* use_thread */ false) {}
+  // This constructor is rarely used directly. Instead, most clients create a
+  // component context using one of |Create...| static methods below.
+  using LoopPtr = std::unique_ptr<async::Loop>;
+  using ServiceDirectoryPtr = std::shared_ptr<sys::ServiceDirectory>;
+  using OutgoingDirectoryPtr = std::shared_ptr<sys::OutgoingDirectory>;
+  ComponentContext(LoopPtr loop, ExecutorPtr executor, ServiceDirectoryPtr svc,
+                   OutgoingDirectoryPtr outgoing);
+  ~ComponentContext();
 
-  explicit ComponentContext(bool use_thread) : use_thread_(use_thread) {
-    if (use_thread_) {
-      loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-    } else {
-      loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
-    }
-    auto context = sys::ComponentContext::Create();
-    svc_ = context->svc();
-    outgoing_ = context->outgoing();
-    executor_ = MakeExecutor(loop_->dispatcher());
-  }
+  // Creates a component context. This method consumes startup handles in order to serve FIDL
+  // protocols, and can therefore be called at most once per process.
+  static std::unique_ptr<ComponentContext> Create();
 
-  ~ComponentContext() {
-    if (use_thread_) {
-      loop_->Shutdown();
-      loop_->JoinThreads();
-    }
-  }
+  // Creates an "auxiliary" context that does not have an outgoing directory. Such a context can
+  // only be used for creating FIDL clients, but does not consume any startup handles and thus does
+  // not preclude creating other component contexts.
+  static std::unique_ptr<ComponentContext> CreateAuxillary();
+
+  // Creates a context that does not own its |executor|'s loop. This is useful for tests which
+  // provide and executor from a test loop.
+  static std::unique_ptr<ComponentContext> CreateWithExecutor(ExecutorPtr executor);
 
   const ExecutorPtr& executor() const { return executor_; }
 
@@ -66,18 +66,17 @@ class ComponentContext final {
     executor_->schedule_task(std::move(task));
   }
 
-  // Runs the message loop on the current thread. This method should be called exactly once.
-  zx_status_t Run() {
-    outgoing_->ServeFromStartupInfo(loop_->dispatcher());
-    return use_thread_ ? loop_->StartThread() : loop_->Run();
-  }
+  // Runs the message loop on the current thread. This method should only be called at most once.
+  zx_status_t Run();
+
+  // Runs until there are no tasks that can make progress.
+  zx_status_t RunUntilIdle();
 
  private:
-  bool use_thread_;
-  std::unique_ptr<async::Loop> loop_;
-  std::shared_ptr<sys::ServiceDirectory> svc_;
-  std::shared_ptr<sys::OutgoingDirectory> outgoing_;
+  LoopPtr loop_;
   ExecutorPtr executor_;
+  ServiceDirectoryPtr svc_;
+  OutgoingDirectoryPtr outgoing_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(ComponentContext);
 };
