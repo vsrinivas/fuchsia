@@ -1,0 +1,40 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/elf_stdio.shard.cml" ],
+    program: {
+        binary: "bin/overnetstack",
+        args: [
+            "--udp",
+            "--mdns-connect",
+            "--mdns-publish",
+        ],
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.overnet.ServiceConsumer",
+                "fuchsia.overnet.ServicePublisher",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.net.mdns.Publisher",
+                "fuchsia.net.mdns.Subscriber",
+                "fuchsia.posix.socket.Provider",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.overnet.ServiceConsumer",
+                "fuchsia.overnet.ServicePublisher",
+            ],
+            from: "self",
+        },
+    ],
+}

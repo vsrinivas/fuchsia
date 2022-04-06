@@ -63,10 +63,7 @@ group("fidl") {
 
 group("overnet") {
   testonly = true
-  public_deps = [
-    "//src/connectivity/overnet/examples/echo:overnet-echo",
-    "//src/connectivity/overnet/examples/interface_passing:overnet-interface-passing",
-  ]
+  public_deps = [ "//src/connectivity/overnet/examples/interface_passing:overnet-interface-passing" ]
 }
 
 group("benchmark") {

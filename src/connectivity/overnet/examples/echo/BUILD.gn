@@ -10,7 +10,6 @@ group("echo") {
   deps = [
     ":bin",
     ":bin($host_toolchain)",
-    ":overnet-echo",
   ]
 }
 
@@ -35,12 +34,12 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_component("component") {
-  component_name = "overnet_echo"
+fuchsia_component("test-driver") {
   deps = [ ":bin" ]
-  manifest = "meta/overnet_echo.cmx"
+  manifest = "meta/test-driver.cml"
 }
 
-fuchsia_package("overnet-echo") {
-  deps = [ ":component" ]
+fuchsia_component("server") {
+  deps = [ ":bin" ]
+  manifest = "meta/server.cml"
 }

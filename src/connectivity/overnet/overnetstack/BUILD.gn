@@ -73,7 +73,7 @@ fuchsia_package("overnetstack") {
   deps = [ ":component" ]
 }
 
-fuchsia_component("component-with-udp") {
+fuchsia_component("component-with-udp-legacy") {
   component_name = "overnetstack-with-udp"
 
   deps = [
@@ -81,6 +81,16 @@ fuchsia_component("component-with-udp") {
     ":certificates",
   ]
   manifest = "meta/overnetstack-with-udp.cmx"
+}
+
+fuchsia_component("component-with-udp") {
+  component_name = "overnetstack-with-udp"
+
+  deps = [
+    ":bin",
+    ":certificates",
+  ]
+  manifest = "meta/overnetstack-with-udp.cml"
 }
 
 fuchsia_unittest_package("overnetstack-tests") {

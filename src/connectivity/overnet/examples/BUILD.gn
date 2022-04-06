@@ -14,9 +14,27 @@ group("examples") {
   ]
 }
 
-fuchsia_unittest_component("overnet_echo_test") {
-  deps = [ "echo:component" ]
-  manifest = "meta/overnet_echo_test.cmx"
+fuchsia_test_component("device-name-provider-client") {
+  manifest = "meta/device-name-provider-client.cml"
+  deps = [ "//src/bringup/bin/device-name-provider" ]
+}
+
+fuchsia_test_component("device-name-provider-server") {
+  manifest = "meta/device-name-provider-server.cml"
+  deps = [ "//src/bringup/bin/device-name-provider" ]
+}
+
+fuchsia_test_component("overnet_echo_test") {
+  manifest = "meta/overnet-echo-test.cml"
+  deps = [
+    ":device-name-provider-client",
+    ":device-name-provider-server",
+    "echo:server",
+    "echo:test-driver",
+    "//src/connectivity/network/mdns/service:component",
+    "//src/connectivity/network/testing/netemul-v2/configurable-netstack",
+    "//src/connectivity/overnet/overnetstack:component-with-udp",
+  ]
 }
 
 fuchsia_unittest_component("overnet_interface_passing_test") {
@@ -47,7 +65,7 @@ fuchsia_test_package("overnet-examples-tests") {
     "//src/connectivity/network/testing/netemul/runner:mock-device-settings",
     "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
     "//src/connectivity/network/tests:device_name_provider",
-    "//src/connectivity/overnet/overnetstack:component-with-udp",
+    "//src/connectivity/overnet/overnetstack:component-with-udp-legacy",
   ]
 }
 
