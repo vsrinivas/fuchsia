@@ -621,11 +621,21 @@ static void arm_resource_dispatcher_init_hook(unsigned int rl) {
 LK_INIT_HOOK(arm_resource_init, arm_resource_dispatcher_init_hook, LK_INIT_LEVEL_HEAP)
 
 void topology_init() {
+  // Check MPIDR_EL1.MT to determine how to interpret AFF0 (i.e. cpu_id). For
+  // now, assume that MT is set consistently across all PEs in the system. When
+  // MT is set, use the next affinity level for the first cache depth element.
+  // This approach should be adjusted if we find examples of systems that do not
+  // set MT uniformly, and may require delaying cache-aware load balancing until
+  // all PEs are initialized.
+  const bool cpu_id_is_thread_id = __arm_rsr64("mpidr_el1") & (1 << 24);
+  printf("topology_init: MPIDR_EL1.MT=%d\n", cpu_id_is_thread_id);
+
   // This platform initializes the topology earlier than this standard hook.
   // Setup the CPU distance map with the already initialized topology.
   const auto processor_count =
       static_cast<uint>(system_topology::GetSystemTopology().processor_count());
-  CpuDistanceMap::Initialize(processor_count, [](cpu_num_t from_id, cpu_num_t to_id) {
+  CpuDistanceMap::Initialize(processor_count, [cpu_id_is_thread_id](cpu_num_t from_id,
+                                                                    cpu_num_t to_id) {
     using system_topology::Node;
     using system_topology::Graph;
 
@@ -648,7 +658,14 @@ void topology_init() {
     const zbi_topology_arm_info_t& from_info = from_node->entity.processor.architecture_info.arm;
     const zbi_topology_arm_info_t& to_info = to_node->entity.processor.architecture_info.arm;
 
-    // Return the maximum cache depth that is not shared by the CPUs.
+    // Return the maximum cache depth not shared when multithreaded.
+    if (cpu_id_is_thread_id) {
+      return ktl::max({1 * int{from_info.cluster_1_id != to_info.cluster_1_id},
+                       2 * int{from_info.cluster_2_id != to_info.cluster_2_id},
+                       3 * int{from_info.cluster_3_id != to_info.cluster_3_id}});
+    }
+
+    // Return the maximum cache depth not shared when single threaded.
     return ktl::max({1 * int{from_info.cpu_id != to_info.cpu_id},
                      2 * int{from_info.cluster_1_id != to_info.cluster_1_id},
                      3 * int{from_info.cluster_2_id != to_info.cluster_2_id},
