@@ -187,78 +187,194 @@ Note: For more details on the GN syntax of the component build rules, see the
 In this exercise, you'll build and run a basic component that reads the program
 arguments and echoes a greeting out the system log.
 
-To begin, create a project scaffold for a new Rust component called `echo-args`
-under the `//vendor/fuchsia-codelab` directory:
+To begin, create a project scaffold for a new component called `echo-args` under
+the `//vendor/fuchsia-codelab` directory:
 
-```posix-terminal
-fx create component --path vendor/fuchsia-codelab/echo-args --lang rust
-```
+* {Rust}
+
+  ```posix-terminal
+  fx create component --path vendor/fuchsia-codelab/echo-args --lang rust
+  ```
+
+* {C++}
+
+  ```posix-terminal
+  fx create component --path vendor/fuchsia-codelab/echo-args --lang cpp
+  ```
 
 This creates a project directory structure with a basic component template:
 
-```none {:.devsite-disable-click-to-copy}
-echo-args
-  |- BUILD.gn
-  |- meta
-  |   |- echo_args.cml
-  |
-  |- src
-      |- main.rs
-```
+* {Rust}
 
-* `BUILD.gn`: GN build targets for the executable binaries, component, and
-  package.
-* `meta/echo_args.cml`: Manifest declaring the component's executable and
-  required capabilities.
-* `src/main.rs`: Source code for the Rust executable binary and unit tests.
+  ```none {:.devsite-disable-click-to-copy}
+  echo-args
+    |- BUILD.gn
+    |- meta
+    |   |- echo_args.cml
+    |
+    |- src
+        |- main.rs
+  ```
+
+  * `BUILD.gn`: GN build targets for the executable binaries, component, and
+    package.
+  * `meta/echo_args.cml`: Manifest declaring the component's executable and
+    required capabilities.
+  * `src/main.rs`: Source code for the Rust executable binary and unit tests.
+
+* {C++}
+
+  ```none {:.devsite-disable-click-to-copy}
+  echo-args
+    |- BUILD.gn
+    |- meta
+    |   |- echo_args.cml
+    |
+    |- echo_args.cc
+    |- echo_args.h
+    |- echo_args_unittest.cc
+    |- main.cc
+  ```
+
+  * `BUILD.gn`: GN build targets for the executable binaries, component, and
+    package.
+  * `meta/echo_args.cml`: Manifest declaring the component's executable and
+    required capabilities.
+  * `echo_args.cc`: Source code for the C++ component functionality.
+  * `echo_args_unittest.cc`: Source code for the C++ unit tests.
+  * `main.cc`: Source code for the C++ executable binary main entry point.
 
 ### Add program arguments
 
-Open the `echo_args.cml` component manifest file in your editor and locate the
-`program` block. This defines the attributes of the component's executable.
-Add an `args` array to supply the list of names to greet:
+Open the component manifest file in your editor and locate the `program` block.
+This defines the attributes of the component's executable. Add an `args` array
+to supply the list of names to greet:
 
-`echo-args/meta/echo_args.cml`:
+* {Rust}
 
-```json5
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/rust/meta/echo.cml" region_tag="manifest" adjust_indentation="auto" highlight="15,16,17,18,19,21,22" %}
-```
+  `echo-args/meta/echo_args.cml`:
+
+  ```json5
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/rust/meta/echo.cml" region_tag="manifest" adjust_indentation="auto" highlight="15,16,17,18,19,21,22" %}
+  ```
+
+* {C++}
+
+  `echo-args/meta/echo_args.cml`:
+
+  ```json5
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/cpp/meta/echo.cml" region_tag="manifest" adjust_indentation="auto" highlight="15,16,17,18,19,21,22" %}
+  ```
+
+Update the manifest includes to provide logging support on stdout:
+
+* {Rust}
+
+  `echo-args/meta/echo_args.cml`:
+
+  ```json5
+  {
+    include: [
+        "inspect/client.shard.cml",
+        // Enable logging on stdout
+        "syslog/elf_stdio.shard.cml",
+    ],
+
+    // ...
+  }
+  ```
+
+* {C++}
+
+  `echo-args/meta/echo_args.cml`:
+
+  ```json5
+  {
+    include: [
+        "inspect/client.shard.cml",
+        // Enable logging on stdout
+        "syslog/elf_stdio.shard.cml",
+    ],
+
+    // ...
+  }
+  ```
 
 ### Log the arguments
 
-Open the `main.rs` source file and replace the import statements with the
-following code:
+Open the source file for the main executable and replace the import statements
+with the following code:
 
-`echo-args/src/main.rs`:
+* {Rust}
 
-```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/rust/src/main.rs" region_tag="imports" adjust_indentation="auto" %}
-```
+  `echo-args/src/main.rs`:
+
+  ```rust
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/rust/src/main.rs" region_tag="imports" adjust_indentation="auto" %}
+  ```
+
+* {C++}
+
+  `echo-args/main.cc`:
+
+  ```cpp
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/cpp/main.cc" region_tag="imports" adjust_indentation="auto" %}
+
+  #include "vendor/fuchsia-codelab/echo-args/echo_args.h"
+  ```
 
 Replace the `main()` function with the following code:
 
-`echo-args/src/main.rs`:
+* {Rust}
 
-```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/rust/src/main.rs" region_tag="main" adjust_indentation="auto" %}
-```
+  `echo-args/src/main.rs`:
 
-<aside class="key-point">
-The <code>fuchsia::main</code> attribute removes some common boilerplate
-for component execution in Rust, such as initializing logging or async execution
-behavior.
-</aside>
+  ```rust
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/rust/src/main.rs" region_tag="main" adjust_indentation="auto" %}
+  ```
+
+  <aside class="key-point">
+  The <code>fuchsia::main</code> attribute removes some common boilerplate
+  for component execution in Rust, such as initializing logging or async execution
+  behavior.
+  </aside>
+
+* {C++}
+
+  `echo-args/main.cc`:
+
+  ```cpp
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/cpp/main.cc" region_tag="main" adjust_indentation="auto" %}
+  ```
 
 This code reads the program arguments and passes them to a function called
 `greeting()` to generate a response for the syslog entry.
 
 Add the following code to implement the `greeting()` function:
 
-`echo-args/src/main.rs`:
+* {Rust}
 
-```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/rust/src/main.rs" region_tag="greeting" adjust_indentation="auto" %}
-```
+  `echo-args/src/main.rs`:
+
+  ```rust
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/rust/src/main.rs" region_tag="greeting" adjust_indentation="auto" %}
+  ```
+
+* {C++}
+
+  `echo-args/echo_args.h`:
+
+  ```cpp
+  #include "vendor/fuchsia-codelab/echo-args/echo_args.h"
+
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/cpp/echo_component.h" region_tag="greeting" adjust_indentation="auto" %}
+  ```
+
+  `echo-args/echo_args.cc`:
+
+  ```cpp
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/cpp/echo_component.cc" region_tag="greeting" adjust_indentation="auto" %}
+  ```
 
 This function creates a simple string from the list of provided arguments based
 on the length of the list.

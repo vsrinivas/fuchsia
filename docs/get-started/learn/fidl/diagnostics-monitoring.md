@@ -220,89 +220,164 @@ Component inspection allows you to publish diagnostic information from your
 components to assist in debugging. You'll use the Inspect API to track some
 usage statistics for the echo server component.
 
-Update the `handle_echo_request()` handler function in `main.rs` to accept a new
-struct containing numeric Inspect properties for request count and bytes
-processed. The handler increments these properties on each incoming request:
+Update the `echo_server` request handler to accept a new struct containing
+numeric Inspect properties for request count and bytes processed.
+The handler increments these properties on each incoming request:
 
-`echo-server/src/main.rs`:
+* {Rust}
 
-```rust
-// Inspect properties managed by the server
-struct EchoConnectionStats {
-    total_requests: fuchsia_inspect::UintProperty,
-    bytes_processed: fuchsia_inspect::UintProperty,
-}
+  `echo-server/src/main.rs`:
 
-// Handler for incoming service requests
-async fn handle_echo_request(mut stream: EchoRequestStream, stats: &EchoConnectionStats) {
-    while let Some(event) = stream.try_next().await.expect("failed to serve echo service") {
-        let EchoRequest::EchoString { value, responder } = event;
-        responder.send(value.as_ref().map(|s| &**s)).expect("failed to send echo response");
+  ```rust
+  // Inspect properties managed by the server
+  struct EchoConnectionStats {
+      total_requests: fuchsia_inspect::UintProperty,
+      bytes_processed: fuchsia_inspect::UintProperty,
+  }
 
-        if let Some(message) = value {
-            // Update Inspect property values
-            stats.total_requests.add(1);
-            stats.bytes_processed.add(message.len() as u64);
-        }
+  // Handler for incoming service requests
+  async fn handle_echo_request(mut stream: EchoRequestStream, stats: &EchoConnectionStats) {
+      while let Some(event) = stream.try_next().await.expect("failed to serve echo service") {
+          let EchoRequest::EchoString { value, responder } = event;
+          responder.send(value.as_ref().map(|s| &**s)).expect("failed to send echo response");
+
+          if let Some(message) = value {
+              // Update Inspect property values
+              stats.total_requests.add(1);
+              stats.bytes_processed.add(message.len() as u64);
+          }
+      }
+  }
+  ```
+
+* {C++}
+
+  `echo-server/main.cc`:
+
+  ```cpp
+  struct EchoConnectionStats {
+    inspect::UintProperty bytes_processed;
+    inspect::UintProperty total_requests;
+  };
+
+  // Handler for incoming service requests
+  class EchoImplementation : public fidl::examples::routing::echo::Echo {
+  public:
+    void EchoString(fidl::StringPtr value, EchoStringCallback callback) override {
+      stats_->total_requests.Add(1);
+      stats_->bytes_processed.Add(value->size());
+      callback(std::move(value));
     }
-}
-```
+    fidl::examples::routing::echo::Echo_EventSender* event_sender_;
+    std::unique_ptr<EchoConnectionStats> stats_;
+  };
+  ```
 
 Add the following code to `main()` to initialize the Inspect propertes and pass
 them to the updated handler:
 
-`echo-server/src/main.rs`:
+* {Rust}
 
-```rust
-async fn main() -> Result<(), anyhow::Error> {
+  `echo-server/src/main.rs`:
+
+  ```rust
+  async fn main() -> Result<(), anyhow::Error> {
+      // ...
+
+      // Component is serving and ready to handle incoming requests
+      component::health().set_ok();
+
+      {{ '<strong>' }}// Create request tracking properties {{ '</strong>' }}
+      {{ '<strong>' }}let root_node = component::inspector().root(); {{ '</strong>' }}
+      {{ '<strong>' }}let stats = EchoConnectionStats { {{ '</strong>' }}
+          {{ '<strong>' }}total_requests: root_node.create_uint("total_requests", 0), {{ '</strong>' }}
+          {{ '<strong>' }}bytes_processed: root_node.create_uint("bytes_processed", 0), {{ '</strong>' }}
+      {{ '<strong>' }}}; {{ '</strong>' }}
+
+      {{ '<strong>' }}// Attach request handler for incoming requests {{ '</strong>' }}
+      {{ '<strong>' }}service_fs {{ '</strong>' }}
+          {{ '<strong>' }}.for_each_concurrent(None, |request: IncomingRequest| async { {{ '</strong>' }}
+              {{ '<strong>' }}match request { {{ '</strong>' }}
+                  {{ '<strong>' }}IncomingRequest::Echo(stream) => handle_echo_request(stream, &stats).await, {{ '</strong>' }}
+              {{ '<strong>' }}} {{ '</strong>' }}
+          {{ '<strong>' }}}) {{ '</strong>' }}
+          {{ '<strong>' }}.await; {{ '</strong>' }}
+
+      Ok(())
+  }
+  ```
+
+* {C++}
+
+  `echo-server/main.cc`:
+
+  ```cpp
+  int main(int argc, const char** argv) {
     // ...
 
-    // Component is serving and ready to handle incoming requests
-    component::health().set_ok();
+    // Serve the Echo protocol
+    EchoImplementation echo_instance;
+    fidl::Binding<fidl::examples::routing::echo::Echo> binding(&echo_instance);
+    echo_instance.event_sender_ = &binding.events();
 
     {{ '<strong>' }}// Create request tracking properties {{ '</strong>' }}
-    {{ '<strong>' }}let root_node = component::inspector().root(); {{ '</strong>' }}
-    {{ '<strong>' }}let stats = EchoConnectionStats { {{ '</strong>' }}
-        {{ '<strong>' }}total_requests: root_node.create_uint("total_requests", 0), {{ '</strong>' }}
-        {{ '<strong>' }}bytes_processed: root_node.create_uint("bytes_processed", 0), {{ '</strong>' }}
-    {{ '<strong>' }}}; {{ '</strong>' }}
+    {{ '<strong>' }}inspect::Node& root_node = inspector.root(); {{ '</strong>' }}
+    {{ '<strong>' }}auto total_requests = root_node.CreateUint("total_requests", 0); {{ '</strong>' }}
+    {{ '<strong>' }}auto bytes_processed = root_node.CreateUint("bytes_processed", 0); {{ '</strong>' }}
+    {{ '<strong>' }}echo_instance.stats_ = std::make_unique<EchoConnectionStats>(EchoConnectionStats{ {{ '</strong>' }}
+      {{ '<strong>' }}std::move(bytes_processed), {{ '</strong>' }}
+      {{ '<strong>' }}std::move(total_requests), {{ '</strong>' }}
+    {{ '<strong>' }}}); {{ '</strong>' }}
 
-    {{ '<strong>' }}// Attach request handler for incoming requests {{ '</strong>' }}
-    {{ '<strong>' }}service_fs {{ '</strong>' }}
-        {{ '<strong>' }}.for_each_concurrent(None, |request: IncomingRequest| async { {{ '</strong>' }}
-            {{ '<strong>' }}match request { {{ '</strong>' }}
-                {{ '<strong>' }}IncomingRequest::Echo(stream) => handle_echo_request(stream, &stats).await, {{ '</strong>' }}
-            {{ '<strong>' }}} {{ '</strong>' }}
-        {{ '<strong>' }}}) {{ '</strong>' }}
-        {{ '<strong>' }}.await; {{ '</strong>' }}
+    fidl::InterfaceRequestHandler<fidl::examples::routing::echo::Echo> handler =
+        [&](fidl::InterfaceRequest<fidl::examples::routing::echo::Echo> request) {
+          binding.Bind(std::move(request));
+        };
+    context->outgoing()->AddPublicService(std::move(handler));
 
-    Ok(())
-}
-```
+    // ...
+  }
+  ```
 
 <aside class="key-point">
 <b>Health checks</b>
-<p>The component template includes code that sets the
-<code>component::health()</code> status. This is a standardized inspection
-metric for component health, which provides a convenient way to report whether
-your component is running well or experiencing an issue. You'll find this status
-reported under <code>fuchsia.inspect.Health</code> in the Inspect tree.</p>
+<p>The component template includes code that sets the component health status.
+This is a standardized inspection metric for component health, which provides a
+convenient way to report whether your component is running well or experiencing
+an issue. You'll find this status reported under
+<code>fuchsia.inspect.Health</code> in the Inspect tree.</p>
 <p>For more details on this metric, see
 <a href="/docs/concepts/diagnostics/inspect/health">Health check</a>.</p>
 </aside>
 
-Finally, update the imports in `main.rs` to include the new Inspect libraries:
+Finally, update the imports to include the new Inspect libraries:
 
-`echo-server/src/main.rs`:
+* {Rust}
 
-```rust
-use anyhow::{self, Context};
-use fidl_fidl_examples_routing_echo::{EchoRequest, EchoRequestStream};
-use fuchsia_component::server::ServiceFs;
-use fuchsia_inspect::{component, health::Reporter};
-use fuchsia_inspect::NumericProperty;
-use futures::prelude::*;
-```
+  `echo-server/src/main.rs`:
+
+  ```rust
+  use anyhow::{self, Context};
+  use fidl_fidl_examples_routing_echo::{EchoRequest, EchoRequestStream};
+  use fuchsia_component::server::ServiceFs;
+  use fuchsia_inspect::{component, health::Reporter};
+  use fuchsia_inspect::NumericProperty;
+  use futures::prelude::*;
+  ```
+
+* {C++}
+
+  `echo-server/main.cc`:
+
+  ```cpp
+  #include <fidl/examples/routing/echo/cpp/fidl.h>
+  #include <lib/async-loop/cpp/loop.h>
+  #include <lib/async-loop/default.h>
+  #include <lib/fidl/cpp/binding.h>
+  #include <lib/inspect/cpp/inspect.h>
+  #include <lib/sys/cpp/component_context.h>
+  #include <lib/sys/inspect/cpp/component.h>
+  ```
 
 Run `fx build` again to rebuild the component:
 

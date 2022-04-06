@@ -104,15 +104,26 @@ The `fidl()` library target creates individual binding targets for each
 supported language. Due to the nature of GN, these bindings are not generated
 at build time unless they are included as a dependency.
 
-See the following example `BUILD.gn` snippet that includes the generated Rust
-bindings target for the `fuchsia.examples` library (`fuchsia.examples-rustc`):
+See the following example `BUILD.gn` snippet that includes the generated
+bindings target for the `fuchsia.examples` library:
 
-```gn
-deps = [
-  "fidl/fuchsia.examples:fuchsia.examples-rustc",
-  ...
-]
-```
+* {Rust}
+
+  ```gn
+  deps = [
+    "fidl/fuchsia.examples:fuchsia.examples-rustc",
+    ...
+  ]
+  ```
+
+* {C++}
+
+  ```gn
+  deps = [
+    "fidl/fuchsia.examples:fuchsia.examples",
+    ...
+  ]
+  ```
 
 ## Exercise: Echo FIDL Library
 
@@ -159,68 +170,135 @@ The `fidl()` GN target compiles the FIDL interface and generates additional
 build targets to provide the bindings in various languages. To examine the
 bindings, you must compile the individual targets.
 
-Compile the `fidl.examples.routing.echo` bindings for Rust:
+Compile the `fidl.examples.routing.echo` bindings:
 
-```posix-terminal
-fx build vendor/fuchsia-codelab/echo-fidl:echo-rustc
-```
+* {Rust}
 
-Use GN to locate the generated source file for the target and open it in an
+  ```posix-terminal
+  fx build vendor/fuchsia-codelab/echo-fidl:echo-rustc
+  ```
+
+* {C++}
+
+  ```posix-terminal
+  fx build vendor/fuchsia-codelab/echo-fidl:echo
+  ```
+
+Use GN to locate the generated source files for the target and open them in an
 editor:
 
-```posix-terminal
-fx gn desc out/default/ vendor/fuchsia-codelab/echo-fidl:echo-rustc sources
-```
+* {Rust}
 
-Explore the contents of the file. Below is a summary of some of the key
+  ```posix-terminal
+  fx gn desc out/default/ vendor/fuchsia-codelab/echo-fidl:echo-rustc sources
+  ```
+
+* {C++}
+
+  ```posix-terminal
+  fx gn desc out/default/ vendor/fuchsia-codelab/echo-fidl:echo_hlcpp sources
+  ```
+
+Explore the contents of these files. Below is a summary of some of the key
 generated interfaces:
 
-<table>
-  <tr>
-   <th><strong>Interface</strong>
-   </th>
-   <th><strong>Description</strong>
-   </th>
-  </tr>
-  <tr>
-   <td><code>EchoMarker</code>
-   </td>
-   <td>Used to open a proxy and request stream for a given protocol.
-   </td>
-  </tr>
-  <tr>
-   <td><code>EchoProxy</code>
-   </td>
-   <td>Asynchronous client that transforms protocol methods into FIDL request messages sent over the IPC channel.
-   </td>
-  </tr>
-  <tr>
-   <td><code>EchoSynchronousProxy</code>
-   </td>
-   <td>Synchronous client that transforms protocol methods into FIDL request messages sent over the IPC channel.
-   </td>
-  </tr>
-  <tr>
-   <td><code>EchoRequest</code>
-   </td>
-   <td>Structured types for handling incoming requests for each protocol method.
-   </td>
-  </tr>
-  <tr>
-   <td><code>EchoRequestStream</code>
-   </td>
-   <td>Stream to handle incoming FIDL request messages over the IPC channel.
-   </td>
-  </tr>
-  <tr>
-   <td><code>EchoEchoStringResponder</code>
-   </td>
-   <td>Callback to send a return value for each proxy request as a FIDL response message.
-   </td>
-  </tr>
-</table>
+* {Rust}
 
+  <table>
+    <tr>
+    <th><strong>Interface</strong>
+    </th>
+    <th><strong>Description</strong>
+    </th>
+    </tr>
+    <tr>
+    <td><code>EchoMarker</code>
+    </td>
+    <td>Used to open a proxy and request stream for a given protocol.
+    </td>
+    </tr>
+    <tr>
+    <td><code>EchoProxy</code>
+    </td>
+    <td>
+      Asynchronous client that transforms protocol methods into FIDL request
+      messages sent over the IPC channel.
+    </td>
+    </tr>
+    <tr>
+    <td><code>EchoSynchronousProxy</code>
+    </td>
+    <td>
+      Synchronous client that transforms protocol methods into FIDL request
+      messages sent over the IPC channel.
+    </td>
+    </tr>
+    <tr>
+    <td><code>EchoRequest</code>
+    </td>
+    <td>
+      Structured types for handling incoming requests for each protocol method.
+    </td>
+    </tr>
+    <tr>
+    <td><code>EchoRequestStream</code>
+    </td>
+    <td>
+      Stream to handle incoming FIDL request messages over the IPC channel.
+    </td>
+    </tr>
+    <tr>
+    <td><code>EchoEchoStringResponder</code>
+    </td>
+    <td>
+      Callback to send a return value for each proxy request as a FIDL response
+      message.
+    </td>
+    </tr>
+  </table>
 
+* {C++}
+
+  <table>
+    <tr>
+    <th><strong>Interface</strong>
+    </th>
+    <th><strong>Description</strong>
+    </th>
+    </tr>
+    <tr>
+    <td><code>EchoPtr</code>
+    </td>
+    <td>
+      Asynchronous client that transforms protocol methods into FIDL request
+      messages sent over the IPC channel.
+    </td>
+    </tr>
+    <tr>
+    <td><code>EchoSyncPtr</code>
+    </td>
+    <td>
+      Synchronous client that transforms protocol methods into FIDL request
+      messages sent over the IPC channel.
+    </td>
+    </tr>
+    <tr>
+    <td><code>Echo</code>
+    </td>
+    <td>
+      Abstract class for a server component to override and handle incoming FIDL
+      requests.
+    </td>
+    </tr>
+    <tr>
+    <td><code>EchoStringCallback</code>
+    </td>
+    <td>
+      Callback to send a return value for each request as a FIDL response
+      message.
+    </td>
+    </tr>
+  </table>
 
 <aside class="key-point">
 <b>Asynchronous vs. synchronous clients</b>

@@ -12,36 +12,71 @@ cases remain hermetic.
 
 Below is an example component manifest for a simple integration test component:
 
-`meta/integration_tests.cml`:
+* {Rust}
 
-```json5
-{
-    include: [
-        "syslog/client.shard.cml",
-        "//src/sys/test_runners/rust/default.shard.cml",
-    ],
-    program: {
-        binary: "bin/client_test",
-    },
-    children: [
-        {
-            name: "service",
-            url: "fuchsia-pkg://fuchsia.com/foo-package-tests#meta/mock_service.cm",
-        },
-        {
-            name: "client",
-            url: "fuchsia-pkg://fuchsia.com/foo-package-tests#meta/foo_client.cm",
-        },
-    ],
-    offer: [
-        {
-            protocol: "fuchsia.example.Foo",
-            from: "#service",
-            to: [ "#client" ],
-        },
-    ],
-}
-```
+  `meta/integration_tests.cml`:
+
+  ```json5
+  {
+      include: [
+          "syslog/client.shard.cml",
+          "//src/sys/test_runners/rust/default.shard.cml",
+      ],
+      program: {
+          binary: "bin/client_test",
+      },
+      children: [
+          {
+              name: "service",
+              url: "fuchsia-pkg://fuchsia.com/foo-package-tests#meta/mock_service.cm",
+          },
+          {
+              name: "client",
+              url: "fuchsia-pkg://fuchsia.com/foo-package-tests#meta/foo_client.cm",
+          },
+      ],
+      offer: [
+          {
+              protocol: "fuchsia.example.Foo",
+              from: "#service",
+              to: [ "#client" ],
+          },
+      ],
+  }
+  ```
+
+* {C++}
+
+  `meta/integration_tests.cml`:
+
+  ```json5
+  {
+      include: [
+          "syslog/client.shard.cml",
+          "//src/sys/test_runners/gtest/default.shard.cml",
+      ],
+      program: {
+          binary: "bin/client_test",
+      },
+      children: [
+          {
+              name: "service",
+              url: "fuchsia-pkg://fuchsia.com/foo-package-tests#meta/mock_service.cm",
+          },
+          {
+              name: "client",
+              url: "fuchsia-pkg://fuchsia.com/foo-package-tests#meta/foo_client.cm",
+          },
+      ],
+      offer: [
+          {
+              protocol: "fuchsia.example.Foo",
+              from: "#service",
+              to: [ "#client" ],
+          },
+      ],
+  }
+  ```
 
 This test component declaration contains the following key elements:
 
@@ -108,28 +143,54 @@ Framework and run those tests in a FEMU environment.
 To begin, create a new integration test scaffold under the `echo-integration`
 directory:
 
-```posix-terminal
-fx create component test \
-   --path vendor/fuchsia-codelab/echo-integration --lang rust
-```
+* {Rust}
 
-This creates a project directory structure with an integration test component
-template:
+  ```posix-terminal
+  fx create component test \
+    --path vendor/fuchsia-codelab/echo-integration --lang rust
+  ```
 
-```none {:.devsite-disable-click-to-copy}
-echo-integration
-  |- BUILD.gn
-  |- meta
-  |   |- echo_integration.cml
-  |
-  |- src
-      |- lib.rs
-```
+  This creates a project directory structure with an integration test component
+  template:
 
-* `BUILD.gn`: GN build targets for the test binaries, component, and package.
-* `meta/echo_integration.cml`: Manifest declaring the components under test
-  and their capabilities.
-* `src/lib.rs`: Source code for the Rust integration tests.
+  ```none {:.devsite-disable-click-to-copy}
+  echo-integration
+    |- BUILD.gn
+    |- meta
+    |   |- echo_integration.cml
+    |
+    |- src
+        |- lib.rs
+  ```
+
+  * `BUILD.gn`: GN build targets for the test binaries, component, and package.
+  * `meta/echo_integration.cml`: Manifest declaring the components under test
+    and their capabilities.
+  * `src/lib.rs`: Source code for the Rust integration tests.
+
+* {C++}
+
+  ```posix-terminal
+  fx create component test \
+    --path vendor/fuchsia-codelab/echo-integration --lang cpp
+  ```
+
+  This creates a project directory structure with an integration test component
+  template:
+
+  ```none {:.devsite-disable-click-to-copy}
+  echo-integration
+    |- BUILD.gn
+    |- meta
+    |   |- echo_integration.cml
+    |
+    |- echo_integration.cc
+  ```
+
+  * `BUILD.gn`: GN build targets for the test binaries, component, and package.
+  * `meta/echo_integration.cml`: Manifest declaring the components under test
+    and their capabilities.
+  * `echo_integration.cc`: Source code for the C++ integration tests.
 
 ### Update the test component manifest
 
@@ -138,11 +199,21 @@ dependencies, such as the Rust test runner. Update the `echo_integration.cml`
 file to declare the `echo-server` component as a child and route the `Echo`
 protocol capability to the test component.
 
-`echo-integration/meta/echo_integration.cml`:
+* {Rust}
 
-```json5
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/integration_tests/rust/meta/echo_integration_test.cml" region_tag="example_snippet" adjust_indentation="auto" %}
-```
+  `echo-integration/meta/echo_integration.cml`:
+
+  ```json5
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/integration_tests/rust/meta/echo_integration_test.cml" region_tag="example_snippet" adjust_indentation="auto" %}
+  ```
+
+* {C++}
+
+  `echo-integration/meta/echo_integration.cml`:
+
+  ```json5
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/integration_tests/cpp/meta/echo_integration_test.cml" region_tag="example_snippet" adjust_indentation="auto" %}
+  ```
 
 Notice that the `echo-server` instance comes from the same package as the
 integration test. This practice promotes test packages that are **hermetic** by
@@ -167,36 +238,65 @@ The integration test connects to the `Echo` protocol exposed by the
 `echo-server` in the same way as the client component, sends a string request,
 and validates the expected response.
 
-Add the following contents to the `src/lib.rs` file:
+Add the following code to implement an integration test:
 
-`echo-integration/src/lib.rs`:
+* {Rust}
 
-```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/integration_tests/rust/src/lib.rs" region_tag="example_snippet" adjust_indentation="auto" %}
-```
+  `echo-integration/src/lib.rs`:
 
-<aside class="key-point">
-The <code>fuchsia::test</code> attribute removes some common boilerplate for
-component tests in Rust, such as initializing logging for each test case.
-</aside>
+  ```rust
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/integration_tests/rust/src/lib.rs" region_tag="example_snippet" adjust_indentation="auto" %}
+  ```
 
-Include the Rust bindings for the `Echo` protocol to the `BUILD.gn` file as a
+  <aside class="key-point">
+  The <code>fuchsia::test</code> attribute removes some common boilerplate for
+  component tests in Rust, such as initializing logging for each test case.
+  </aside>
+
+* {C++}
+
+  `echo-integration/echo_integration.cc`:
+
+  ```cpp
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/integration_tests/cpp/echo_integration_test.cc" region_tag="example_snippet" adjust_indentation="auto" %}
+  ```
+
+Include the FIDL bindings for the `Echo` protocol to the `BUILD.gn` file as a
 dependency:
 
-`echo-integration/BUILD.gn`:
+* {Rust}
 
-```gn
-rustc_test("bin") {
-  name = "echo-integration"
+  `echo-integration/BUILD.gn`:
 
-  deps = [
-    {{ '<strong>' }}"//vendor/fuchsia-codelab/echo-fidl:echo-rustc",{{ '</strong>' }}
-    ...
-  ]
+  ```gn
+  rustc_test("bin") {
+    name = "echo-integration"
 
-  sources = [ "src/lib.rs" ]
-}
-```
+    deps = [
+      {{ '<strong>' }}"//vendor/fuchsia-codelab/echo-fidl:echo-rustc",{{ '</strong>' }}
+      ...
+    ]
+
+    sources = [ "src/lib.rs" ]
+  }
+  ```
+
+* {C++}
+
+  `echo-integration/BUILD.gn`:
+
+  ```gn
+  executable("bin") {
+    name = "echo-integration"
+
+    deps = [
+      {{ '<strong>' }}"//vendor/fuchsia-codelab/echo-fidl:echo",{{ '</strong>' }}
+      ...
+    ]
+
+    sources = [ "echo_integration.cc" ]
+  }
+  ```
 
 ### Update the build configuration
 
