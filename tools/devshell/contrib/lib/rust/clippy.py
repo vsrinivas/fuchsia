@@ -69,7 +69,12 @@ def main():
             continue
         with open(clippy_output) as f:
             for line in f:
-                lint = json.loads(line)
+                try:
+                    lint = json.loads(line)
+                except json.decoder.JSONDecodeError:
+                    print(f"Malformed output: {clippy_output}")
+                    returncode = 1
+                    continue
                 # filter out "n warnings emitted" messages
                 if not lint["spans"]:
                     continue

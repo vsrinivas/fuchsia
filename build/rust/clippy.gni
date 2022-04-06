@@ -48,11 +48,6 @@ template("clippy") {
       edition = "${invoker.edition}"
     }
 
-    level = "A"
-    if (clippy_warn) {
-      level = "W"
-    }
-
     _jq = "//prebuilt/third_party/jq/${host_platform}/bin/jq"
 
     args = [
@@ -68,8 +63,6 @@ template("clippy") {
       "--",
       "$rebased_rustc_prefix/clippy-driver",
       rebase_path(invoker.crate_root, root_build_dir),
-      "-${level}clippy::all",
-      "-Dclippy::correctness",
       "--target=$rust_target",
       "--edition=$edition",
       "--cfg=rust_panic=\"${rust_panic}\"",
@@ -77,6 +70,18 @@ template("clippy") {
       "--crate-type=${invoker.clippy_crate_type}",
       "-Ldependency=host_x64",  # Needed for proc macros
     ]
+    if (clippy_force_warn) {
+      args += [ "--force-warn=clippy::all" ]
+    } else {
+      _level = "A"
+      if (clippy_warn) {
+        _level = "W"
+      }
+      args += [
+        "-${_level}clippy::all",
+        "-Dclippy::correctness",
+      ]
+    }
     args += invoker.rustflags
   }
 }
