@@ -789,7 +789,7 @@ zx_status_t TerminaEnclosedGuest::WaitForSystemReady(zx::time deadline) {
   if (status != ZX_OK) {
     return status;
   }
-  status = MountDeviceInGuest(*maitred_, "/dev/vdd", "/tmp/test_utils", "ext2", MS_RDONLY);
+  status = MountDeviceInGuest(*maitred_, "/dev/vdd", "/tmp/test_utils", "romfs", MS_RDONLY);
   if (status != ZX_OK) {
     return status;
   }
