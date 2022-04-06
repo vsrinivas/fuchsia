@@ -31,11 +31,11 @@
 #include <region-alloc/region-alloc.h>
 
 #include "acpi-private.h"
-#include "acpi/acpi.h"
-#include "acpi/manager.h"
 #include "errors.h"
 #include "methods.h"
-#include "src/devices/board/drivers/x86/acpi/resources.h"
+#include "src/devices/board/lib/acpi/acpi.h"
+#include "src/devices/board/lib/acpi/manager.h"
+#include "src/devices/board/lib/acpi/resources.h"
 
 // This file contains the implementation for the code supporting the in-progress userland
 // pci bus driver.

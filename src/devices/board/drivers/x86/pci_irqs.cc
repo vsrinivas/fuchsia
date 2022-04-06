@@ -14,9 +14,9 @@
 #include <acpica/acpi.h>
 
 #include "acpi-private.h"
-#include "acpi/status.h"
-#include "acpi/util.h"
 #include "pci.h"
+#include "src/devices/board/lib/acpi/status.h"
+#include "src/devices/board/lib/acpi/util.h"
 
 // Legacy PCI device functions have a single interrupt that was traditionally
 // wired directly into the interrupt controller. There are only four interrupt

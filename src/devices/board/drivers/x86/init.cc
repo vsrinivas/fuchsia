@@ -8,10 +8,10 @@
 #include <acpica/acpi.h>
 
 #include "acpi-private.h"
-#include "acpi/acpi.h"
-#include "acpi/util.h"
 #include "dev.h"
 #include "errors.h"
+#include "src/devices/board/lib/acpi/acpi.h"
+#include "src/devices/board/lib/acpi/util.h"
 #include "x86.h"
 
 #define ACPI_MAX_INIT_TABLES 32

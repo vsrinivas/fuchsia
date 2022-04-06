@@ -9,9 +9,9 @@
 #include <lib/ddk/device.h>
 #include <zircon/compiler.h>
 
-#include "acpi/acpi-impl.h"
-#include "acpi/acpi.h"
-#include "acpi/manager.h"
+#include "src/devices/board/lib/acpi/acpi-impl.h"
+#include "src/devices/board/lib/acpi/acpi.h"
+#include "src/devices/board/lib/acpi/manager.h"
 #include "x86.h"
 
 zx_status_t publish_acpi_devices(acpi::Manager* manager, zx_device_t* parent,

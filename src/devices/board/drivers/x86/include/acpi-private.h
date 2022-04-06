@@ -10,9 +10,9 @@
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 
-#include "acpi/status.h"
-#include "acpi/util.h"
-#include "src/devices/board/drivers/x86/acpi/resources.h"
+#include "src/devices/board/lib/acpi/resources.h"
+#include "src/devices/board/lib/acpi/status.h"
+#include "src/devices/board/lib/acpi/util.h"
 
 #define MAX_NAMESPACE_DEPTH 100
 

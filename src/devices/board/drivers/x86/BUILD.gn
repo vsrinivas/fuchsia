@@ -20,10 +20,7 @@ group("x86") {
 }
 
 config("config") {
-  visibility = [
-    ":*",
-    "acpi/*",
-  ]
+  visibility = [ ":*" ]
 
   include_dirs = [
     "include",
@@ -122,7 +119,6 @@ fuchsia_driver("platform-bus-x86-driver") {
     ":goldfish_control_2_bind_header",
     ":smbios",
     ":x64-bind",
-    "acpi",
     "//sdk/banjo/fuchsia.hardware.hidbus:fuchsia.hardware.hidbus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.pciroot:fuchsia.hardware.pciroot_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
@@ -134,6 +130,7 @@ fuchsia_driver("platform-bus-x86-driver") {
     "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_llcpp",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//src/devices/board/lib/acpi",
     "//src/devices/lib/driver",
     "//src/devices/lib/iommu",
     "//src/devices/pci/lib/pci",
@@ -214,8 +211,5 @@ bootfs_test("x86-board-bootfs-test") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":x64-bind_test",
-    "acpi:tests",
-  ]
+  deps = [ ":x64-bind_test" ]
 }

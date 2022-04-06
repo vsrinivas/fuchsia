@@ -14,12 +14,12 @@
 #include <acpica/acpi.h>
 
 #include "acpi-private.h"
-#include "acpi/acpi.h"
-#include "acpi/device.h"
-#include "acpi/status.h"
 #include "methods.h"
 #include "pci.h"
-#include "src/devices/board/drivers/x86/acpi/resources.h"
+#include "src/devices/board/lib/acpi/acpi.h"
+#include "src/devices/board/lib/acpi/device.h"
+#include "src/devices/board/lib/acpi/resources.h"
+#include "src/devices/board/lib/acpi/status.h"
 
 #define PCI_HID ((char*)"PNP0A03")
 #define PCIE_HID ((char*)"PNP0A08")

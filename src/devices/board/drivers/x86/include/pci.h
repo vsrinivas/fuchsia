@@ -18,8 +18,8 @@
 #include <acpica/actypes.h>
 
 #include "acpi-private.h"
-#include "acpi/acpi.h"
-#include "acpi/pci.h"
+#include "src/devices/board/lib/acpi/acpi.h"
+#include "src/devices/board/lib/acpi/pci.h"
 
 __BEGIN_CDECLS
 // It would be nice to use the hwreg library here, but these structs should be kept

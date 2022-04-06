@@ -17,8 +17,8 @@
 #include <fbl/macros.h>
 #include <fbl/vector.h>
 
-#include "acpi/acpi.h"
-#include "acpi/manager.h"
+#include "src/devices/board/lib/acpi/acpi.h"
+#include "src/devices/board/lib/acpi/manager.h"
 #include "src/devices/lib/iommu/iommu.h"
 
 namespace x86 {

@@ -19,11 +19,11 @@
 #include <acpica/acpi.h>
 
 #include "acpi-private.h"
-#include "acpi/device.h"
 #include "dev.h"
 #include "errors.h"
 #include "pci.h"
 #include "pci_allocators.h"
+#include "src/devices/board/lib/acpi/device.h"
 #include "src/devices/lib/iommu/iommu.h"
 
 static zx_status_t pciroot_op_get_bti(void* /*context*/, uint32_t bdf, uint32_t index,

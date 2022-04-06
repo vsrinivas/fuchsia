@@ -10,6 +10,6 @@
 
 #include <acpica/acpi.h>
 
-#include "src/devices/board/drivers/x86/acpi/status.h"
+#include "src/devices/board/lib/acpi/status.h"
 
 #endif  // SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_ERRORS_H_
