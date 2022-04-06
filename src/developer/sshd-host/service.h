@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#include "constants.h"
 #include "src/lib/fsl/tasks/fd_waiter.h"
 
 namespace sshd_host {
@@ -19,7 +20,6 @@ namespace sshd_host {
 constexpr zx_rights_t kChildJobRights =
     ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_DESTROY | ZX_RIGHT_MANAGE_JOB;
 
-constexpr char kAuthorizedKeysBootloaderFileName[] = "ssh.authorized_keys";
 constexpr char kSshDirectory[] = "/data/ssh";
 constexpr char kAuthorizedKeysPath[] = "/data/ssh/authorized_keys";
 

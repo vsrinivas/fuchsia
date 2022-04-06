@@ -19,6 +19,7 @@ source_set("lib") {
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_llcpp",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
+    "//src/developer/sshd-host:sshd_constants",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/zxc",
   ]

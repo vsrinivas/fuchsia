@@ -682,6 +682,64 @@ TEST_F(FastbootRebootTest, RebootBootloader) {
   ASSERT_TRUE(reboot_recovery_triggered());
 }
 
+TEST_F(FastbootFlashTest, UnknownOemCommand) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+  std::string command = "oem unknown";
+  TestTransport transport;
+  transport.AddInPacket(command);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+  const std::vector<std::string>& sent_packets = transport.GetOutPackets();
+  ASSERT_EQ(sent_packets.size(), 1ULL);
+  ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
+TEST_F(FastbootFlashTest, OemAddStagedBootloaderFile) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+  std::vector<uint8_t> download_content(256, 1);
+  ASSERT_NO_FATAL_FAILURE(DownloadData(fastboot, download_content));
+  paver_test::FakePaver& fake_paver = paver();
+  fake_paver.set_expected_payload_size(download_content.size());
+
+  std::string command =
+      "oem add-staged-bootloader-file " + std::string(sshd_host::kAuthorizedKeysBootloaderFileName);
+  TestTransport transport;
+
+  transport.AddInPacket(command);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+  std::vector<std::string> expected_packets = {"OKAY"};
+  ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+
+  ASSERT_EQ(fake_paver.GetCommandTrace(),
+            std::vector<paver_test::Command>{paver_test::Command::kWriteDataFile});
+  ASSERT_EQ(fake_paver.data_file_path(), sshd_host::kAuthorizedKeyPathInData);
+}
+
+TEST_F(FastbootFlashTest, OemAddStagedBootloaderFileInvalidNumberOfArguments) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+  std::string command = "oem add-staged-bootloader-file";
+  TestTransport transport;
+  transport.AddInPacket(command);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+  const std::vector<std::string>& sent_packets = transport.GetOutPackets();
+  ASSERT_EQ(sent_packets.size(), 1ULL);
+  ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
+TEST_F(FastbootFlashTest, OemAddStagedBootloaderFileUnsupportedFile) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+  std::string command = "oem add-staged-bootloader-file unknown";
+  TestTransport transport;
+  transport.AddInPacket(command);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+  const std::vector<std::string>& sent_packets = transport.GetOutPackets();
+  ASSERT_EQ(sent_packets.size(), 1ULL);
+  ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
 }  // namespace
 
 }  // namespace fastboot

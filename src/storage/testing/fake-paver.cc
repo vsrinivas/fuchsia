@@ -4,6 +4,8 @@
 
 #include "fake-paver.h"
 
+#include <lib/fzl/vmo-mapper.h>
+
 namespace paver_test {
 
 zx_status_t FakePaver::Connect(async_dispatcher_t* dispatcher,
@@ -257,6 +259,7 @@ void FakePaver::WriteDataFile(WriteDataFileRequestView request,
                               WriteDataFileCompleter::Sync& completer) {
   fbl::AutoLock al(&lock_);
   AppendCommand(Command::kWriteDataFile);
+  data_file_path_ = std::string(request->filename.data(), request->filename.size());
   auto status = request->payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
   completer.Reply(status);
 }
@@ -311,6 +314,11 @@ fuchsia_paver::wire::Configuration FakePaver::last_asset_config() const {
 fuchsia_paver::wire::Asset FakePaver::last_asset() const {
   fbl::AutoLock al(&lock_);
   return last_asset_;
+}
+
+const std::string& FakePaver::data_file_path() const {
+  fbl::AutoLock al(&lock_);
+  return data_file_path_;
 }
 
 void FakePaver::set_supported_firmware_type(std::string type) {

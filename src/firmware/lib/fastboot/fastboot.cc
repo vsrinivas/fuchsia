@@ -69,10 +69,9 @@ zx::status<> SendDataResponse(size_t data_size, Transport* transport) {
 
 bool MatchCommand(const std::string_view cmd, std::string_view ref) {
   if (cmd.compare(0, strlen(kOemPrefix), kOemPrefix) == 0) {
-    // TODO(217597389): Once we need to support "oem " commands, figure out
-    // how to do the command matching. For now return false whenever we see
-    // an oem command.
-    return false;
+    // For oem commands, we require that arguments are separated by spaces. The first argument after
+    // oem specifies the command type. `ref` should look like "oem <command name>".
+    return cmd.compare(0, cmd.find(" ", sizeof(kOemPrefix)), ref, 0, ref.size()) == 0;
   } else {
     // find the first occurrence of ":". if there isn't, return value will be
     // string::npos, which will lead to full string comparison.
@@ -141,6 +140,10 @@ const std::vector<Fastboot::CommandEntry>& Fastboot::GetCommandTable() {
       {
           .name = "reboot-bootloader",
           .cmd = &Fastboot::RebootBootloader,
+      },
+      {
+          .name = "oem add-staged-bootloader-file",
+          .cmd = &Fastboot::OemAddStagedBootloaderFile,
       },
   });
   return *kCommandTable;
@@ -556,6 +559,50 @@ zx::status<> Fastboot::RebootBootloader(const std::string& command, Transport* t
   }
 
   return zx::ok();
+}
+
+zx::status<> Fastboot::OemAddStagedBootloaderFile(const std::string& command,
+                                                  Transport* transport) {
+  std::vector<std::string_view> args =
+      fxl::SplitString(command, " ", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+
+  if (args.size() != 3) {
+    return SendResponse(ResponseType::kFail, "Invalid number of arguments", transport);
+  }
+
+  if (args[2] != sshd_host::kAuthorizedKeysBootloaderFileName) {
+    return SendResponse(ResponseType::kFail, "Unsupported file: " + std::string(args[2]),
+                        transport);
+  }
+
+  auto paver_client_res = ConnectToPaver();
+  if (paver_client_res.is_error()) {
+    return SendResponse(ResponseType::kFail, "Failed to connect to paver", transport,
+                        zx::error(paver_client_res.status_value()));
+  }
+
+  // Connect to the data sink
+  auto data_sink_endpoints = fidl::CreateEndpoints<fuchsia_paver::DataSink>();
+  if (data_sink_endpoints.is_error()) {
+    return SendResponse(ResponseType::kFail, "Unable to create data sink endpoint", transport,
+                        zx::error(data_sink_endpoints.status_value()));
+  }
+  auto [data_sink_local, data_sink_remote] = std::move(*data_sink_endpoints);
+  paver_client_res.value()->FindDataSink(std::move(data_sink_remote));
+  auto data_sink = fidl::BindSyncClient(std::move(data_sink_local));
+
+  fuchsia_mem::wire::Buffer buf;
+  buf.size = download_vmo_mapper_.size();
+  buf.vmo = download_vmo_mapper_.Release();
+  auto ret = data_sink->WriteDataFile(
+      fidl::StringView::FromExternal(sshd_host::kAuthorizedKeyPathInData), std::move(buf));
+  zx_status_t status = ret.ok() ? ret.value().status : ret.status();
+  if (status != ZX_OK) {
+    return SendResponse(ResponseType::kFail, "Failed to write ssh key", transport,
+                        zx::error(status));
+  }
+
+  return SendResponse(ResponseType::kOkay, "", transport);
 }
 
 }  // namespace fastboot

@@ -17,9 +17,9 @@
 #include <string_view>
 #include <unordered_map>
 
-namespace fastboot {
+#include "src/developer/sshd-host/constants.h"
 
-constexpr char kSshKeyFilePath[] = "ssh/authorized_keys";
+namespace fastboot {
 
 // Communication between the fastboot host and device is in the unit of
 // "packet". Each fastboot command and response message (INFO, OKAY, FAIL,
@@ -93,6 +93,7 @@ class __EXPORT Fastboot {
   zx::status<> Reboot(const std::string &command, Transport *transport);
   zx::status<> RebootBootloader(const std::string &command, Transport *transport);
   zx::status<> Continue(const std::string &command, Transport *transport);
+  zx::status<> OemAddStagedBootloaderFile(const std::string &command, Transport *transport);
 
   void ClearDownload();
   zx::status<fidl::WireSyncClient<fuchsia_paver::Paver>> ConnectToPaver();

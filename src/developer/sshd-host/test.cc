@@ -148,7 +148,7 @@ TEST_F(SshdHostBootItemTest, TestKeyFileExistsNoBootloaderFile) {
 TEST_F(SshdHostBootItemTest, TestBootloaderFileProvisioningNoKeyFile) {
   constexpr char kAuthorizedKeysPayload[] = "authorized_keys_file_data_new";
 
-  fake_items_->SetFile(kAuthorizedKeysBootloaderFileName, kAuthorizedKeysPayload,
+  fake_items_->SetFile(kAuthorizedKeysBootloaderFileName.data(), kAuthorizedKeysPayload,
                        strlen(kAuthorizedKeysPayload));
 
   remove_authorized_keys();
@@ -165,7 +165,7 @@ TEST_F(SshdHostBootItemTest, TestBootloaderFileProvisioningNoKeyFile) {
 TEST_F(SshdHostBootItemTest, TestBootloaderFileProvisioningSshDirNoKeyFile) {
   constexpr char kAuthorizedKeysPayload[] = "authorized_keys_file_data_new";
 
-  fake_items_->SetFile(kAuthorizedKeysBootloaderFileName, kAuthorizedKeysPayload,
+  fake_items_->SetFile(kAuthorizedKeysBootloaderFileName.data(), kAuthorizedKeysPayload,
                        strlen(kAuthorizedKeysPayload));
 
   remove_authorized_keys();
@@ -184,7 +184,7 @@ TEST_F(SshdHostBootItemTest, TestBootloaderFileNotProvisionedWithExistingKeyFile
   write_authorized_keys(kAuthorizedKeysPayload, strlen(kAuthorizedKeysPayload));
 
   constexpr char kAuthorizedKeysBootItemPayload[] = "new authorized_keys_file_data";
-  fake_items_->SetFile(kAuthorizedKeysBootloaderFileName, kAuthorizedKeysBootItemPayload,
+  fake_items_->SetFile(kAuthorizedKeysBootloaderFileName.data(), kAuthorizedKeysBootItemPayload,
                        strlen(kAuthorizedKeysBootItemPayload));
 
   zx_status_t status = provision_authorized_keys_from_bootloader_file(

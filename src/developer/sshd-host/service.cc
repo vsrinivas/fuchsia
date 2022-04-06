@@ -55,7 +55,9 @@ zx_status_t provision_authorized_keys_from_bootloader_file(
   }
 
   zx::vmo vmo;
-  status = boot_items->GetBootloaderFile(kAuthorizedKeysBootloaderFileName, &vmo);
+  status = boot_items->GetBootloaderFile(std::string(kAuthorizedKeysBootloaderFileName.data(),
+                                                     kAuthorizedKeysBootloaderFileName.size()),
+                                         &vmo);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Provisioning keys from boot item: GetBootloaderFile failed with: "
                    << zx_status_get_string(status);

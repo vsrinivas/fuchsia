@@ -10,6 +10,10 @@ group("tests") {
   deps = [ ":sshd-host-tests" ]
 }
 
+source_set("sshd_constants") {
+  sources = [ "constants.h" ]
+}
+
 source_set("lib") {
   sources = [ "service.cc" ]
   public_deps = [
