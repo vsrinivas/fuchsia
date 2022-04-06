@@ -37,8 +37,14 @@ fuchsia_test_package("insntrace_tests") {
   test_components = [ ":insntrace_integration_tests_component" ]
   test_specs = {
     environments = [
-      nuc_env,
-      emu_env,
+      # TODO(fxbug.dev/97097): The test is flaky on NUC; we should remove
+      # the "flaky" label after the bug is solved.
+      {
+        dimensions = {
+          device_type = "Intel NUC Kit NUC7i5DNHE"
+        }
+        tags = [ "flaky" ]
+      },
     ]
   }
 }
