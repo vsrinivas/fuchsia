@@ -942,7 +942,16 @@ Makes clippy targets fail to build when any "deny" lints are found
 
 **Current value (from the default):** `false`
 
-From //build/rust/config.gni:52
+From //build/rust/config.gni:57
+
+### clippy_force_warn
+Force the lint level for all clippy lints to "warn".
+Note: this overrides both source attributes and our default lint levels, and
+should only be used to collect stats about clippy lints in our source tree.
+
+**Current value (from the default):** `false`
+
+From //build/rust/config.gni:54
 
 ### clippy_warn
 Set the lint level for all clippy lints to "warn".
@@ -3763,7 +3772,7 @@ looks for the standard library
 
 **Current value (from the default):** `"//prebuilt/third_party/rust/linux-x64"`
 
-From //build/rust/config.gni:59
+From //build/rust/config.gni:64
 
 ### rust_toolchain_triple_suffix
 Sets the fuchsia toolchain target triple suffix (after arch)
