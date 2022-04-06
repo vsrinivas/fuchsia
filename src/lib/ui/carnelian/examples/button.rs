@@ -9,6 +9,7 @@ use argh::FromArgs;
 use carnelian::{
     app::Config,
     color::Color,
+    derive_handle_message,
     drawing::{load_font, measure_text_width, DisplayRotation, FontFace},
     input::{self},
     make_app_assistant, make_message,
@@ -23,8 +24,8 @@ use carnelian::{
         },
         scene::{Scene, SceneBuilder},
     },
-    App, AppAssistant, AppSender, Message, MessageTarget, Point, Size, ViewAssistant,
-    ViewAssistantContext, ViewAssistantPtr, ViewKey,
+    App, AppAssistant, AppSender, MessageTarget, Point, Size, ViewAssistant, ViewAssistantContext,
+    ViewAssistantPtr, ViewKey,
 };
 use euclid::size2;
 use fuchsia_zircon::Time;
@@ -389,6 +390,26 @@ impl ButtonViewAssistant {
             (self.column_main_alignment_index + 1) % MAIN_AXIS_ALIGNMENTS.len();
         self.scene_details = None;
     }
+
+    fn handle_button_message(&mut self, button_message: &ButtonMessages) {
+        match button_message {
+            ButtonMessages::Pressed(value) => {
+                println!("value = {:#?}", value);
+                self.set_red_light(!self.red_light);
+            }
+            ButtonMessages::Resize => {
+                let t = Instant::now().duration_since(self.animation_start).as_millis() % 3000;
+                let f = t as f32 / 3000.0;
+                let angle = f * PI * 2.0;
+                let ratio = angle.sin();
+                self.resize_indicator(size2(
+                    self.original_indicator_size.width + ratio * 80.0,
+                    self.indicator_size.height,
+                ));
+                self.app_sender.request_render(self.view_key);
+            }
+        }
+    }
 }
 
 impl ViewAssistant for ButtonViewAssistant {
@@ -403,27 +424,7 @@ impl ViewAssistant for ButtonViewAssistant {
         Some(&mut self.scene_details.as_mut().unwrap().scene)
     }
 
-    fn handle_message(&mut self, message: Message) {
-        if let Some(button_message) = message.downcast_ref::<ButtonMessages>() {
-            match button_message {
-                ButtonMessages::Pressed(value) => {
-                    println!("value = {:#?}", value);
-                    self.set_red_light(!self.red_light);
-                }
-                ButtonMessages::Resize => {
-                    let t = Instant::now().duration_since(self.animation_start).as_millis() % 3000;
-                    let f = t as f32 / 3000.0;
-                    let angle = f * PI * 2.0;
-                    let ratio = angle.sin();
-                    self.resize_indicator(size2(
-                        self.original_indicator_size.width + ratio * 80.0,
-                        self.indicator_size.height,
-                    ));
-                    self.app_sender.request_render(self.view_key);
-                }
-            }
-        }
-    }
+    derive_handle_message!(ButtonMessages => handle_button_message);
 
     fn handle_pointer_event(
         &mut self,

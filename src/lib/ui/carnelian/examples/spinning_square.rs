@@ -6,6 +6,7 @@ use anyhow::{Context as _, Error};
 use carnelian::{
     app::Config,
     color::Color,
+    derive_handle_message_with_default,
     drawing::{path_for_rectangle, path_for_rounded_rectangle},
     input::{self},
     render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Path, Style},
@@ -23,7 +24,7 @@ use fidl_test_placeholders::{EchoMarker, EchoRequest, EchoRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_zircon::Time;
 use futures::prelude::*;
-use std::{any::Any, f32::consts::PI};
+use std::f32::consts::PI;
 
 struct SpinningSquareAppAssistant {
     app_sender: AppSender,
@@ -114,6 +115,15 @@ impl SpinningSquareFacet {
     fn clone_square_path(&self) -> Path {
         self.square_path.as_ref().expect("square_path").clone()
     }
+
+    fn handle_toggle_rounded_message(&mut self, _msg: &ToggleRoundedMessage) {
+        self.rounded = !self.rounded;
+        self.square_path = None;
+    }
+
+    fn handle_other_message(&mut self, _msg: &carnelian::Message) {
+        println!("handle_other_message");
+    }
 }
 
 impl Facet for SpinningSquareFacet {
@@ -174,12 +184,7 @@ impl Facet for SpinningSquareFacet {
         Ok(())
     }
 
-    fn handle_message(&mut self, msg: Box<dyn Any>) {
-        if let Some(_) = msg.downcast_ref::<ToggleRoundedMessage>() {
-            self.rounded = !self.rounded;
-            self.square_path = None;
-        }
-    }
+    derive_handle_message_with_default!(handle_other_message, ToggleRoundedMessage => handle_toggle_rounded_message);
 
     fn calculate_size(&self, _available: Size) -> Size {
         self.size
