@@ -87,11 +87,25 @@ impl MessageFilter {
         } else {
             !log_message
                 .tags()
-                .map(|tags| tags.iter().any(|tag| self.tags.contains(tag)))
+                .map(|tags| {
+                    tags.iter().any(|tag| self.tags.contains(tag) || self.include_tag_prefix(tag))
+                })
                 .unwrap_or(false)
         };
 
         !(reject_pid || reject_tid || reject_severity || reject_tags)
+    }
+
+    // Rust uses tags of the form "<foo>::<bar>" so if we have a filter for "<foo>" we should
+    // include messages that have "<foo>" as a prefix.
+    fn include_tag_prefix(&self, tag: &str) -> bool {
+        if tag.contains("::") {
+            self.tags.iter().any(|t| {
+                tag.len() > t.len() + 2 && &tag[t.len()..t.len() + 2] == "::" && tag.starts_with(t)
+            })
+        } else {
+            false
+        }
     }
 }
 
@@ -102,7 +116,7 @@ mod tests {
     use super::*;
     use crate::{events::types::ComponentIdentifier, identity::ComponentIdentity};
 
-    fn test_message() -> LogsData {
+    fn test_message_with_tag(tag: Option<&str>) -> LogsData {
         let identity = ComponentIdentity::from_identifier_and_url(
             ComponentIdentifier::Legacy {
                 moniker: vec!["bogus", "specious-at-best.cmx"].into(),
@@ -110,13 +124,20 @@ mod tests {
             },
             "fuchsia-pkg://not-a-package",
         );
-        diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+        let mut builder = diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
             timestamp_nanos: fuchsia_zircon::Time::from_nanos(1).into(),
             component_url: Some(identity.url.clone()),
             moniker: identity.to_string(),
             severity: Severity::Info,
-        })
-        .build()
+        });
+        if let Some(tag) = tag {
+            builder = builder.add_tag(tag);
+        }
+        builder.build()
+    }
+
+    fn test_message() -> LogsData {
+        test_message_with_tag(None)
     }
 
     #[fuchsia::test]
@@ -277,6 +298,49 @@ mod tests {
             filter.should_send(&message),
             true,
             "the filter should have sent {:#?}",
+            message
+        );
+    }
+
+    #[fuchsia::test]
+    fn should_send_prefix_tag() {
+        let message = test_message_with_tag(Some("foo::bar::baz"));
+
+        let mut filter = MessageFilter::default();
+        filter.tags = vec!["foo".to_string()].into_iter().collect();
+
+        assert_eq!(
+            filter.should_send(&message),
+            true,
+            "the filter should have sent {:#?}",
+            message
+        );
+
+        let message2 = test_message_with_tag(Some("foobar"));
+        assert_eq!(
+            filter.should_send(&message2),
+            false,
+            "the filter should not have sent {:#?}",
+            message2
+        );
+
+        let mut filter = MessageFilter::default();
+        filter.tags = vec!["foo::bar".to_string()].into_iter().collect();
+
+        assert_eq!(
+            filter.should_send(&message),
+            true,
+            "the filter should have sent {:#?}",
+            message
+        );
+
+        let mut filter = MessageFilter::default();
+        filter.tags = vec!["foo::ba".to_string()].into_iter().collect();
+
+        assert_eq!(
+            filter.should_send(&message),
+            false,
+            "the filter should not have sent {:#?}",
             message
         );
     }
