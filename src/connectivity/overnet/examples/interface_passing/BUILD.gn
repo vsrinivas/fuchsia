@@ -10,7 +10,6 @@ group("interface_passing") {
   deps = [
     ":bin",
     ":bin($host_toolchain)",
-    ":overnet-interface-passing",
     "service",
   ]
 }
@@ -36,12 +35,14 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_component("component") {
-  component_name = "overnet_interface_passing"
+fuchsia_component("test-driver") {
+  component_name = "overnet-interface-passing-test-driver"
   deps = [ ":bin" ]
-  manifest = "meta/overnet_interface_passing.cmx"
+  manifest = "meta/test-driver.cml"
 }
 
-fuchsia_package("overnet-interface-passing") {
-  deps = [ ":component" ]
+fuchsia_component("server") {
+  component_name = "overnet-interface-passing-server"
+  deps = [ ":bin" ]
+  manifest = "meta/server.cml"
 }

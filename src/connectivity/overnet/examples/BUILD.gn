@@ -27,19 +27,17 @@ fuchsia_test_component("device-name-provider-server") {
 fuchsia_test_component("overnet_echo_test") {
   manifest = "meta/overnet-echo-test.cml"
   deps = [
-    ":device-name-provider-client",
-    ":device-name-provider-server",
     "echo:server",
     "echo:test-driver",
-    "//src/connectivity/network/mdns/service:component",
-    "//src/connectivity/network/testing/netemul-v2/configurable-netstack",
-    "//src/connectivity/overnet/overnetstack:component-with-udp",
   ]
 }
 
-fuchsia_unittest_component("overnet_interface_passing_test") {
-  deps = [ "interface_passing:component" ]
-  manifest = "meta/overnet_interface_passing_test.cmx"
+fuchsia_test_component("overnet_interface_passing_test") {
+  manifest = "meta/overnet-interface-passing-test.cml"
+  deps = [
+    "interface_passing:server",
+    "interface_passing:test-driver",
+  ]
 }
 
 fuchsia_unittest_component("overnet_socket_passing_test") {
@@ -60,6 +58,17 @@ fuchsia_test_package("overnet-examples-tests") {
     ":overnet_event_pair_test",
   ]
   deps = [
+    ":device-name-provider-client",
+    ":device-name-provider-server",
+    "//src/connectivity/network/mdns/service:component",
+    "//src/connectivity/network/testing/netemul-v2/configurable-netstack",
+    "//src/connectivity/overnet/overnetstack:component-with-udp",
+  ]
+
+  # Dependencies for tests that use the v1 netemul runner.
+  #
+  # TODO(https://fxbug.dev/96132): remove these.
+  deps += [
     "//src/connectivity/network/mdns/service:component-legacy",
     "//src/connectivity/network/netstack:component-debug-legacy",
     "//src/connectivity/network/testing/netemul/runner:mock-device-settings",

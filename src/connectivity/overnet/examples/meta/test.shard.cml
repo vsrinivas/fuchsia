@@ -1,0 +1,183 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/connectivity/network/testing/netemul-v2/runner/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        networks: [
+            {
+                name: "net",
+                endpoints: [
+                    { name: "client-ep" },
+                    { name: "server-ep" },
+                ],
+            },
+        ],
+        netstacks: [
+            {
+                name: "client",
+                interfaces: [
+                    {
+                        name: "client-ep",
+                        static_ips: [ "192.168.0.2/24" ],
+                    },
+                ],
+            },
+            {
+                name: "server",
+                interfaces: [
+                    {
+                        name: "server-ep",
+                        static_ips: [ "192.168.0.1/24" ],
+                    },
+                ],
+            },
+        ],
+        start: [ "server" ],
+    },
+    children: [
+        // ================== local node ==================
+        {
+            name: "client-netstack",
+            url: "#meta/configurable-netstack.cm",
+        },
+        {
+            name: "client-overnetstack",
+            url: "#meta/overnetstack-with-udp.cm",
+        },
+        {
+            name: "client-mdns",
+            url: "#meta/mdns.cm",
+        },
+        {
+            name: "client-name-provider",
+            url: "#meta/device-name-provider-client.cm",
+        },
+
+        // ================== remote node ==================
+        {
+            name: "server-netstack",
+            url: "#meta/configurable-netstack.cm",
+        },
+        {
+            name: "server-overnetstack",
+            url: "#meta/overnetstack-with-udp.cm",
+        },
+        {
+            name: "server-mdns",
+            url: "#meta/mdns.cm",
+        },
+        {
+            name: "server-name-provider",
+            url: "#meta/device-name-provider-server.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#test-driver",
+        },
+        {
+            protocol: "fuchsia.netemul.ConfigurableNetstack",
+            from: "#client-netstack",
+            path: "/svc/client",
+        },
+        {
+            protocol: "fuchsia.netemul.ConfigurableNetstack",
+            from: "#server-netstack",
+            path: "/svc/server",
+        },
+    ],
+    offer: [
+        // ================== local node ==================
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#client-mdns",
+                "#client-name-provider",
+                "#client-netstack",
+                "#client-overnetstack",
+                "#test-driver",
+            ],
+        },
+        {
+            protocol: "fuchsia.overnet.ServiceConsumer",
+            from: "#client-overnetstack",
+            to: "#test-driver",
+        },
+        {
+            protocol: "fuchsia.posix.socket.Provider",
+            from: "#client-netstack",
+            to: "#client-overnetstack",
+        },
+        {
+            protocol: "fuchsia.device.NameProvider",
+            from: "#client-name-provider",
+            to: "#client-mdns",
+        },
+        {
+            protocol: [
+                "fuchsia.net.mdns.Publisher",
+                "fuchsia.net.mdns.Subscriber",
+            ],
+            from: "#client-mdns",
+            to: "#client-overnetstack",
+        },
+        {
+            protocol: [
+                "fuchsia.net.interfaces.State",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#client-netstack",
+            to: "#client-mdns",
+        },
+
+        // ================== remote node ==================
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#server",
+                "#server-mdns",
+                "#server-name-provider",
+                "#server-netstack",
+                "#server-overnetstack",
+            ],
+        },
+        {
+            protocol: "fuchsia.overnet.ServicePublisher",
+            from: "#server-overnetstack",
+            to: "#server",
+        },
+        {
+            protocol: "fuchsia.posix.socket.Provider",
+            from: "#server-netstack",
+            to: "#server-overnetstack",
+        },
+        {
+            protocol: "fuchsia.device.NameProvider",
+            from: "#server-name-provider",
+            to: "#server-mdns",
+        },
+        {
+            protocol: [
+                "fuchsia.net.mdns.Publisher",
+                "fuchsia.net.mdns.Subscriber",
+            ],
+            from: "#server-mdns",
+            to: "#server-overnetstack",
+        },
+        {
+            protocol: [
+                "fuchsia.net.interfaces.State",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#server-netstack",
+            to: "#server-mdns",
+        },
+    ],
+}

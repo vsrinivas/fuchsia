@@ -29,7 +29,6 @@ group("all") {
     "//garnet/packages/examples:escher",
     "//garnet/packages/examples:fidl",
     "//garnet/packages/examples:http",
-    "//garnet/packages/examples:overnet",
     "//garnet/packages/examples:rust",
     "//garnet/packages/examples:scenic",
     "//garnet/packages/examples:tcp",
@@ -59,11 +58,6 @@ group("fidl") {
     "//examples/fidl/rust:echo-rust-client-sync",
     "//examples/fidl/rust/server:echo-rust-server",
   ]
-}
-
-group("overnet") {
-  testonly = true
-  public_deps = [ "//src/connectivity/overnet/examples/interface_passing:overnet-interface-passing" ]
 }
 
 group("benchmark") {

@@ -6,11 +6,11 @@
     children: [
         {
             name: "test-driver",
-            url: "#meta/overnet-echo-test-driver.cm",
+            url: "#meta/overnet-interface-passing-test-driver.cm",
         },
         {
             name: "server",
-            url: "#meta/overnet-echo-server.cm",
+            url: "#meta/overnet-interface-passing-server.cm",
         },
     ],
 }
