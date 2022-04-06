@@ -101,7 +101,6 @@ void arm64_el1_exception_base();
 void arm64_sync_exception(iframe_t* iframe, uint exception_flags, uint32_t esr);
 
 void platform_irq(iframe_t* frame);
-void platform_fiq(iframe_t* frame);
 } // extern C
 
 arm64_context_switch_frame* arm64_get_context_switch_frame(Thread* thread);

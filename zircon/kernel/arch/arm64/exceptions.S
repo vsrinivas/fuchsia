@@ -237,29 +237,8 @@ mark_lr_sp_inaccessible
     restore_percpu_ptr x9
     mov x1, #0
 .endif
-    msr daifclr, #1 // reenable fiqs once elr, spsr, and fixed regs have been saved
     mov x0, sp
     bl  arm64_irq
-    msr daifset, #1 // disable fiqs to protect elr and spsr restore
-.if \from_lower_el_64
-    b   arm64_exc_shared_restore_lower_el
-.else
-    b   arm64_exc_shared_restore
-.endif
-.endm
-
-.macro fiq_exception, from_lower_el_64
-    start_isr_func_cfi
-    regsave
-.if \from_lower_el_64
-    restore_fixed_regs x9
-    mov x1, #ARM64_EXCEPTION_FLAG_LOWER_EL
-.else
-    restore_percpu_ptr x9
-    mov x1, #0
-.endif
-    mov x0, sp
-    bl  platform_fiq
 .if \from_lower_el_64
     b   arm64_exc_shared_restore_lower_el
 .else
@@ -355,7 +334,7 @@ END_FUNCTION(arm64_el1_irq_current_el_SPx)
 
 .org 0x300
 LOCAL_FUNCTION_LABEL(arm64_el1_fiq_current_el_SPx)
-    fiq_exception 0 // same EL, arm64
+    invalid_exception 0x12
 END_FUNCTION(arm64_el1_fiq_current_el_SPx)
 
 .org 0x380
@@ -376,7 +355,7 @@ END_FUNCTION(arm64_el1_irq_lower_el_64)
 
 .org 0x500
 LOCAL_FUNCTION_LABEL(arm64_el1_fiq_lower_el_64)
-    fiq_exception 1 // lower EL, arm64
+    invalid_exception 0x22
 END_FUNCTION(arm64_el1_fiq_lower_el_64)
 
 .org 0x580

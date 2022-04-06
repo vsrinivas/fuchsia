@@ -106,8 +106,6 @@ static void default_init_percpu() {}
 
 static void default_handle_irq(iframe_t* frame) {}
 
-static void default_handle_fiq(iframe_t* frame) {}
-
 static void default_shutdown() {}
 
 static void default_shutdown_cpu() {}
@@ -149,7 +147,6 @@ static const struct pdev_interrupt_ops default_ops = {
     .init_percpu_early = default_init_percpu_early,
     .init_percpu = default_init_percpu,
     .handle_irq = default_handle_irq,
-    .handle_fiq = default_handle_fiq,
     .shutdown = default_shutdown,
     .shutdown_cpu = default_shutdown_cpu,
     .msi_is_supported = default_msi_is_supported,
@@ -193,8 +190,6 @@ void interrupt_send_ipi(cpu_mask_t target, mp_ipi_t ipi) { intr_ops->send_ipi(ta
 void interrupt_init_percpu() { intr_ops->init_percpu(); }
 
 void platform_irq(iframe_t* frame) { intr_ops->handle_irq(frame); }
-
-void platform_fiq(iframe_t* frame) { intr_ops->handle_fiq(frame); }
 
 void pdev_register_interrupts(const struct pdev_interrupt_ops* ops) {
   intr_ops = ops;

@@ -288,8 +288,6 @@ static void gic_handle_irq(iframe_t* frame) {
   ktrace_tiny(TAG_IRQ_EXIT, (vector << 8) | cpu);
 }
 
-static void gic_handle_fiq(iframe_t* frame) { PANIC_UNIMPLEMENTED; }
-
 static void gic_send_ipi(cpu_mask_t logical_target, mp_ipi_t ipi) {
   const cpu_mask_t target = mask_translator.LogicalMaskToGic(logical_target);
 
@@ -416,7 +414,6 @@ static const struct pdev_interrupt_ops gic_ops = {
     .init_percpu_early = gic_init_percpu_early,
     .init_percpu = gic_init_percpu,
     .handle_irq = gic_handle_irq,
-    .handle_fiq = gic_handle_fiq,
     .shutdown = gic_shutdown,
     .shutdown_cpu = gic_shutdown_cpu,
     .msi_is_supported = arm_gicv2m_msi_is_supported,
