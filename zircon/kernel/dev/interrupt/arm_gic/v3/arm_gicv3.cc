@@ -44,23 +44,6 @@ vaddr_t arm_gicv3_gic_base = 0;
 uint64_t arm_gicv3_gicd_offset = 0;
 uint64_t arm_gicv3_gicr_offset = 0;
 uint64_t arm_gicv3_gicr_stride = 0;
-
-//
-// IMX8M Errata: e11171: CA53: Cannot support single-core runtime wakeup
-
-// According to the GIC500 specification and the Arm Trusted Firmware design, when a CPU
-// core enters the deepest CPU idle state (power-down), it must disable the GIC500 CPU
-// interface and set the Redistributor register to indicate that this CPU is in sleep state.
-
-// On NXP IMX8M, However, if the CPU core is in WFI or power-down with CPU interface disabled,
-// another core cannot wake-up the powered-down core using SGI interrupt.
-
-// One workaround is to use another A53 core for the IRQ0 which is controlled by the IOMUX
-// GPR to generate an external interrupt to wake-up the powered-down core.
-// The SW workaround is implemented into default BSP release. The workaround commit tag is
-// “MLK-16804-04 driver: irqchip: Add IPI SW workaround for imx8mq" on the linux-imx project
-static uint64_t mx8_gpr_virt = 0;
-
 static uint32_t ipi_base = 0;
 
 // this header uses the arm_gicv3_gic_* variables above
@@ -249,18 +232,6 @@ static zx_status_t arm_gic_sgi(unsigned int irq, unsigned int flags, unsigned in
     }
 
     gic_write_sgi1r(val);
-    // Work around
-    if (mx8_gpr_virt) {
-      uint32_t regVal;
-      // pending irq32 to wakeup core
-      regVal = *(volatile uint32_t*)(mx8_gpr_virt + 0x4);
-      regVal |= (1 << 12);
-      *(volatile uint32_t*)(mx8_gpr_virt + 0x4) = regVal;
-      // delay
-      spin(50);
-      regVal &= ~(1 << 12);
-      *(volatile uint32_t*)(mx8_gpr_virt + 0x4) = regVal;
-    }
   }
 
   return ZX_OK;
@@ -534,12 +505,6 @@ void ArmGicInitEarly(const dcfg_arm_gicv3_driver_t& config) {
   ASSERT(config.mmio_phys);
 
   LTRACE_ENTRY;
-
-  if (config.mx8_gpr_phys) {
-    printf("arm-gic-v3: Applying Errata e11171 for NXP MX8!\n");
-    mx8_gpr_virt = periph_paddr_to_vaddr(config.mx8_gpr_phys);
-    ASSERT(mx8_gpr_virt);
-  }
 
   mmio_phys = config.mmio_phys;
   arm_gicv3_gic_base = periph_paddr_to_vaddr(mmio_phys);

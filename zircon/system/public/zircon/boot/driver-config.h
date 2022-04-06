@@ -69,10 +69,10 @@ typedef struct {
   uint64_t gicd_offset;
   uint64_t gicr_offset;
   uint64_t gicr_stride;
-  uint64_t mx8_gpr_phys;
+  uint64_t reserved0;
   uint32_t ipi_base;
   uint8_t optional;
-  uint8_t reserved[3];
+  uint8_t reserved1[3];
 } dcfg_arm_gicv3_driver_t;
 
 // for KDRV_ARM_GENERIC_TIMER

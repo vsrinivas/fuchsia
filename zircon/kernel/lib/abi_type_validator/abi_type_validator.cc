@@ -547,10 +547,10 @@ VALIDATE_FIELD_OFFSET_SIZE(dcfg_arm_gicv3_driver_t, mmio_phys, 0, 8);
 VALIDATE_FIELD_OFFSET_SIZE(dcfg_arm_gicv3_driver_t, gicd_offset, 8, 8);
 VALIDATE_FIELD_OFFSET_SIZE(dcfg_arm_gicv3_driver_t, gicr_offset, 16, 8);
 VALIDATE_FIELD_OFFSET_SIZE(dcfg_arm_gicv3_driver_t, gicr_stride, 24, 8);
-VALIDATE_FIELD_OFFSET_SIZE(dcfg_arm_gicv3_driver_t, mx8_gpr_phys, 32, 8);
+VALIDATE_FIELD_OFFSET_SIZE(dcfg_arm_gicv3_driver_t, reserved0, 32, 8);
 VALIDATE_FIELD_OFFSET_SIZE(dcfg_arm_gicv3_driver_t, ipi_base, 40, 4);
 VALIDATE_FIELD_OFFSET_SIZE(dcfg_arm_gicv3_driver_t, optional, 44, 1);
-VALIDATE_FIELD_OFFSET_SIZE(dcfg_arm_gicv3_driver_t, reserved, 45, 3);
+VALIDATE_FIELD_OFFSET_SIZE(dcfg_arm_gicv3_driver_t, reserved1, 45, 3);
 
 VALIDATE_TYPE_SIZE_ALIGNMENT(dcfg_arm_generic_timer_driver_t, 16, 4);
 VALIDATE_FIELD_OFFSET_SIZE(dcfg_arm_generic_timer_driver_t, irq_phys, 0, 4);
