@@ -1,4 +1,4 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -6,21 +6,23 @@ import("//build/rust/rustc_macro.gni")
 
 rustc_macro("macro") {
   edition = "2018"
-  name = "cml_macro"
+  name = "reference_doc_macro"
   source_root = "src/lib.rs"
 
   deps = [
-    "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:darling",
     "//third_party/rust_crates:proc-macro2",
     "//third_party/rust_crates:quote",
     "//third_party/rust_crates:syn",
   ]
 
   sources = [
-    "src/common.rs",
-    "src/derive_checked_vec.rs",
-    "src/derive_one_or_many.rs",
-    "src/derive_reference.rs",
+    "src/derive_reference_doc.rs",
     "src/lib.rs",
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "derive-reference-doc-tests" ]
 }

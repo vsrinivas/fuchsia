@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+pub use reference_doc_macro::ReferenceDoc;
+
 /// Trait added by using `derive(ReferenceDoc)]`.
 pub trait MarkdownReferenceDocGenerator {
     /// Returns a Markdown representation of the reference docs for the

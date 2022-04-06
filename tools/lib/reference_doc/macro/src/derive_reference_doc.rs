@@ -169,7 +169,7 @@ pub fn impl_derive_reference_doc(ast: syn::DeriveInput) -> Result<TokenStream2, 
     }
 
     Ok(quote! {
-        impl MarkdownReferenceDocGenerator for #name {
+        impl ::reference_doc::MarkdownReferenceDocGenerator for #name {
             fn get_reference_doc_markdown() -> String {
                 #parsed
             }

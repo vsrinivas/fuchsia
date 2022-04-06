@@ -10,9 +10,8 @@
 //! `cmc` is the Component Manifest Compiler.
 
 use anyhow::{ensure, Error};
-pub use cml::{
-    self, error, one_or_many, reference_doc::MarkdownReferenceDocGenerator, translate, Document,
-};
+pub use cml::{self, error, one_or_many, translate, Document};
+use reference_doc::MarkdownReferenceDocGenerator;
 use std::fs;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;

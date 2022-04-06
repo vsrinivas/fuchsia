@@ -10,7 +10,6 @@
 
 pub mod error;
 pub mod one_or_many;
-pub mod reference_doc;
 
 #[allow(unused)] // A test-only macro is defined outside of a test builds.
 pub mod translate;
@@ -18,10 +17,10 @@ pub mod translate;
 use {
     crate::error::Error,
     crate::one_or_many::OneOrMany,
-    crate::reference_doc::MarkdownReferenceDocGenerator,
-    cml_macro::{CheckedVec, OneOrMany, Reference, ReferenceDoc},
+    cml_macro::{CheckedVec, OneOrMany, Reference},
     fidl_fuchsia_io as fio,
     lazy_static::lazy_static,
+    reference_doc::ReferenceDoc,
     serde::{de, Deserialize},
     serde_json::{Map, Value},
     std::{

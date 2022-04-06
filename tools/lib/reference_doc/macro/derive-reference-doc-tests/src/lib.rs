@@ -8,8 +8,9 @@
 
 mod tests {
     use {
-        cml::reference_doc::MarkdownReferenceDocGenerator, cml_macro::ReferenceDoc,
-        pretty_assertions::assert_eq, std::collections::HashMap,
+        pretty_assertions::assert_eq,
+        reference_doc::{MarkdownReferenceDocGenerator, ReferenceDoc},
+        std::collections::HashMap,
     };
 
     /// # Big picture
