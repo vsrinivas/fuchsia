@@ -14,8 +14,10 @@ import dataclasses
 import enum
 import itertools
 import os
+import random
 import re
 import shlex
+import string
 import subprocess
 import sys
 
@@ -680,7 +682,7 @@ def main_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--label", required=True, help="The wrapped target's label")
     parser.add_argument(
-        "--trace-output", required=True, help="Where to store the trace")
+        "--trace-output-prefix", required=True, help="Prefix to where to store the trace, this script adds a random suffix to mitigate name collisions, see https://fxbug.dev/95360.")
     parser.add_argument(
         "--target-type",
         choices=["action", "action_foreach"],
@@ -792,15 +794,18 @@ def main():
     # Identify the intended tool from the original command.
     script = command.tool
 
+    rand_suffix = ''.join(random.choices(string.ascii_lowercase, k=10))
+    trace_output = args.trace_output_prefix + '.' + rand_suffix
+
     # Ensure trace_output directory exists
-    trace_output_dir = os.path.dirname(args.trace_output)
+    trace_output_dir = os.path.dirname(trace_output)
     os.makedirs(trace_output_dir, exist_ok=True)
 
     retval = subprocess.call(
         [
             args.fsatrace_path,
             "rwmdt",
-            args.trace_output,
+            trace_output,
             "--",
         ] + command.tokens)
 
@@ -930,7 +935,7 @@ def main():
     # match them.
 
     raw_trace = ""
-    with open(args.trace_output, "r") as trace:
+    with open(trace_output, "r") as trace:
         raw_trace = trace.read()
 
     # Parse trace file.
