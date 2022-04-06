@@ -47,7 +47,10 @@ class CpuSearchSet {
 
   size_t cpu_count() const { return cpu_count_; }
 
-  size_t cluster() const { return ordered_cpus_[0].cluster; }
+  size_t cluster() const {
+    DEBUG_ASSERT(!cluster_set_.cpu_to_cluster_map.is_empty());
+    return cluster_set_.cpu_to_cluster_map[this_cpu_].cluster->id;
+  }
 
   // Sets the relative performance scale for the given CPU.
   static void SetPerfScale(cpu_num_t cpu, int64_t perf_scale) {

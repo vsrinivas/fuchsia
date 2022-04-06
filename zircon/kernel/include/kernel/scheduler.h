@@ -71,7 +71,7 @@ class Scheduler {
   // this tunable value approximates the cost of cross-cluster migration due to
   // cache misses, assuming a task has high cache affinity in its current
   // cluster. This tunable may be increased to limit cross-cluster spill over.
-  static constexpr SchedDuration kInterClusterThreshold = SchedMs(8);
+  static constexpr SchedDuration kInterClusterThreshold = SchedMs(2);
 
   // The threshold for early termination when searching for a CPU to place a
   // task. Queues with an estimated runtime below this value are sufficiently
