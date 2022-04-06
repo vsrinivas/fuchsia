@@ -47,6 +47,12 @@ link_output_rspfile("fdio-rspfile") {
 }
 
 toolchain_utils_action("no-static-ctor") {
+  max_ctors = 0
+  if (current_cpu == "arm64") {
+    # Known constructor on arm `init_have_lse_atomics` from libclang_rt.builtins
+    max_ctors = 1
+  }
+
   testonly = true
   script = "no-static-ctor.sh"
   utils = [ "readelf" ]
@@ -58,5 +64,6 @@ toolchain_utils_action("no-static-ctor") {
     "@" + rebase_path(fdio_rspfile, root_build_dir),
     rebase_path(outputs[0], root_build_dir),
     rebase_path(depfile, root_build_dir),
+    "$max_ctors",
   ]
 }

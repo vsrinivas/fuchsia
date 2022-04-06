@@ -12,7 +12,7 @@ usage() {
   exit 2
 }
 
-if [ $# -ne 4 ]; then
+if [ $# -ne 5 ]; then
   usage
 fi
 
@@ -20,6 +20,7 @@ readonly READELF="$1"
 BINARY="$2"
 readonly STAMPFILE="$3"
 readonly DEPFILE="$4"
+readonly MAX_CTORS="$5"
 
 # Expand @RSPFILE syntax.
 case "$BINARY" in
@@ -49,8 +50,9 @@ check() {
       exit 1
     fi
     ((init_arraysz /= 8))
-    if ((init_arraysz != 0)); then
+    if [[ $init_arraysz -gt $MAX_CTORS ]]; then
       echo >&2 "*** at least $init_arraysz static constructors found in $BINARY"
+      echo >&2 "Expected to find no more than $MAX_CTORS"
       exit 1
     fi
   fi
