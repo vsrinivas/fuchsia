@@ -27,14 +27,18 @@ pub fn dev_pts_fs(kernel: &Kernel) -> &FileSystemHandle {
     kernel.dev_pts_fs.get_or_init(|| init_devpts(kernel))
 }
 
-pub fn create_pts_node(fs: &FileSystemHandle, id: u32) -> Result<(), Errno> {
+pub fn create_pts_node(fs: &FileSystemHandle, task: &CurrentTask, id: u32) -> Result<(), Errno> {
     let device_type = get_device_type_for_pts(id);
     let pts = fs.root().create_node(
         id.to_string().as_bytes(),
-        FileMode::IFCHR | FileMode::from_bits(0o666),
+        FileMode::IFCHR | FileMode::from_bits(0o620),
         device_type,
     )?;
-    pts.node.info_write().blksize = BLOCK_SIZE;
+    let mut info = pts.node.info_write();
+    info.blksize = BLOCK_SIZE;
+    info.uid = task.creds.read().euid;
+    // TODO(qsr): set gid to the tty group
+    info.gid = 0;
     Ok(())
 }
 
@@ -95,12 +99,12 @@ impl WithStaticDeviceId for DevPtmx {
 impl DeviceOps for DevPtmx {
     fn open(
         &self,
-        _current_task: &CurrentTask,
+        current_task: &CurrentTask,
         _id: DeviceType,
         _node: &FsNode,
         _flags: OpenFlags,
     ) -> Result<Box<dyn FileOps>, Errno> {
-        let terminal = self.state.get_next_terminal()?;
+        let terminal = self.state.get_next_terminal(current_task)?;
 
         Ok(Box::new(DevPtmxFile::new(self.fs.clone(), terminal)))
     }
@@ -568,12 +572,18 @@ mod tests {
     }
 
     #[::fuchsia::test]
-    fn test_ptmx_blksize() {
-        let (kernel, _task) = create_kernel_and_task();
+    fn test_ptmx_stats() {
+        let (kernel, task) = create_kernel_and_task();
+        *task.creds.write() = Credentials::from_passwd("nobody:x:22:22").expect("credentials");
         let fs = dev_pts_fs(&kernel);
-        let ptmx = fs.root().component_lookup(b"ptmx").expect("component_lookup");
-        let stat = ptmx.node.stat().expect("stat");
-        assert_eq!(stat.st_blksize, BLOCK_SIZE);
+        let ptmx = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
+        let ptmx_stat = ptmx.node().stat().expect("stat");
+        assert_eq!(ptmx_stat.st_blksize, BLOCK_SIZE);
+        let pts = open_file(&task, &fs, b"0").expect("open file");
+        let pts_stats = pts.node().stat().expect("stat");
+        assert_eq!(pts_stats.st_mode & FileMode::PERMISSIONS.bits(), 0o620);
+        assert_eq!(pts_stats.st_uid, 22);
+        // TODO(qsr): Check that gid is tty.
     }
 
     #[::fuchsia::test]
