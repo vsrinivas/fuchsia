@@ -99,8 +99,6 @@ fuchsia_component("component") {
   manifest = "meta/bt-gap.cmx"
 }
 
-# TODO(fxbug.dev/72960): This v2 component is not yet used in production - it currently exists for
-# testing scenarios only.
 fuchsia_component("component-v2") {
   component_name = "bt-gap"
   manifest = "meta/bt-gap.cml"
