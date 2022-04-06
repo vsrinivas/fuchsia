@@ -376,6 +376,41 @@ impl ThreadGroup {
         *controlling_session = ControllingSession::new(&process_group.session);
         Ok(())
     }
+
+    pub fn release_controlling_terminal(
+        &self,
+        _current_task: &CurrentTask,
+        terminal: &Arc<Terminal>,
+        is_main: bool,
+    ) -> Result<(), Errno> {
+        // Keep locks to ensure atomicity.
+        let process_group = self.process_group.read();
+        let mut controlling_terminal = process_group.session.controlling_terminal.write();
+        let mut controlling_session = terminal.get_controlling_session_mut(is_main);
+
+        // tty must be the controlling terminal.
+        if !self.is_controlling_session(&process_group.session, &controlling_session) {
+            return error!(ENOTTY);
+        }
+
+        // "If the process was session leader, then send SIGHUP and SIGCONT to the foreground
+        // process group and all processes in the current session lose their controlling terminal."
+        // - tty_ioctl(4)
+
+        // Remove tty as the controlling tty for each process in the session, then
+        // send them SIGHUP and SIGCONT.
+
+        let _foreground_process_group_id =
+            controlling_session.as_ref().unwrap().foregound_process_group;
+        *controlling_terminal = None;
+        *controlling_session = None;
+
+        if process_group.session.leader == self.leader {
+            // TODO(qsr): If the process is the session leader, send signals.
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]

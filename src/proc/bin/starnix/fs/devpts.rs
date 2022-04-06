@@ -351,6 +351,15 @@ fn shared_ioctl(
             )?;
             Ok(SUCCESS)
         }
+        TIOCNOTTY => {
+            // Release the controlling terminal.
+            current_task.thread_group.release_controlling_terminal(
+                current_task,
+                terminal,
+                is_main,
+            )?;
+            Ok(SUCCESS)
+        }
         TIOCGPGRP => {
             // Get the foreground process group.
             let pgid = current_task.thread_group.get_foreground_process_group(terminal, is_main)?;
@@ -793,6 +802,44 @@ mod tests {
                 .foregound_process_group,
             task2_pgid
         );
+
+        Ok(())
+    }
+
+    #[::fuchsia::test]
+    fn test_detach_session() -> Result<(), anyhow::Error> {
+        let (kernel, task1) = create_kernel_and_task();
+        let task2 = task1
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+        task2.thread_group.setsid().expect("setsid");
+
+        let fs = dev_pts_fs(&kernel);
+        let _opened_main = open_ptmx_and_unlock(&task1, &fs)?;
+        let opened_replica = open_file(&task1, &fs, b"0")?;
+
+        // Cannot detach the controlling terminal when none is attached terminal
+        assert_eq!(ioctl::<i32>(&task1, &opened_replica, TIOCNOTTY, &0), Err(ENOTTY));
+
+        ioctl::<i32>(&task2, &opened_replica, TIOCSCTTY, &0).expect("set controlling terminal");
+
+        // Cannot detach the controlling terminal when not the session leader.
+        assert_eq!(ioctl::<i32>(&task1, &opened_replica, TIOCNOTTY, &0), Err(ENOTTY));
+
+        // Detach the terminal
+        ioctl::<i32>(&task2, &opened_replica, TIOCNOTTY, &0).expect("detach terminal");
+        assert!(task2
+            .thread_group
+            .process_group
+            .read()
+            .session
+            .controlling_terminal
+            .read()
+            .is_none());
 
         Ok(())
     }
