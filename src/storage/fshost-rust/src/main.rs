@@ -13,7 +13,7 @@ use {
 
 mod service;
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     log::info!("fshost started");
 

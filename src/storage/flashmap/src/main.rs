@@ -25,7 +25,7 @@ enum IncomingRequest {
     FlashmapManager(ManagerRequestStream),
 }
 
-#[fuchsia::component(logging = true)]
+#[fuchsia::main(logging = true)]
 async fn main() -> Result<(), anyhow::Error> {
     let mut service_fs = ServiceFs::new_local();
 
