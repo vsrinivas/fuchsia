@@ -34,7 +34,6 @@ source_set("launcher") {
 source_set("fshost-registry") {
   sources = [
     "admin-server.cc",
-    "deprecated-loader-service.cc",
     "fs-manager.cc",
     "fshost-boot-args.cc",
     "lifecycle.cc",
@@ -310,10 +309,7 @@ fuchsia_unittest_component("fshost-test") {
 # This is a separate test executable because loader_service_test_fixture uses gtest, but other
 # tests here use zxtest.
 test("fshost_loader_service_test") {
-  sources = [
-    "deprecated-loader-service-test.cc",
-    "pkgfs-loader-service-test.cc",
-  ]
+  sources = [ "pkgfs-loader-service-test.cc" ]
   deps = [
     ":block-watcher",
     ":fshost-registry",
@@ -576,8 +572,6 @@ group("bootfs") {
 integration_test_config = {
   # Some of the tests require us to be able to match against multiple GPT devices.
   gpt_all = true
-
-  use_default_loader = true
 
   # The test BlockDeviceManagerIntegration.MaxSize verifies that the minfs "max runtime bytes" gets
   # applied correctly. It checks that the max size in FVM is set to this value. The

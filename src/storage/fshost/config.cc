@@ -42,7 +42,6 @@ fshost_config::Config EmptyConfig() {
       .netboot = false,
       .no_zxcrypt = false,
       .sandbox_decompression = false,
-      .use_default_loader = false,
       .zxcrypt_non_ramdisk = false,
   };
   return config;

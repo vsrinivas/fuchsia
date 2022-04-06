@@ -20,7 +20,6 @@
 #include <iterator>
 #include <map>
 
-#include "src/lib/loader_service/loader_service.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/storage/fshost/delayed-outdir.h"
 #include "src/storage/fshost/fdio.h"
@@ -44,7 +43,7 @@ class FsManager {
 
   zx_status_t Initialize(fidl::ServerEnd<fuchsia_io::Directory> dir_request,
                          fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle_request,
-                         std::shared_ptr<loader::LoaderServiceBase> loader, BlockWatcher& watcher);
+                         BlockWatcher& watcher);
 
   // TODO(fxbug.dev/39588): delete this
   // Starts servicing the delayed portion of the outgoing directory, called once
@@ -170,7 +169,6 @@ class FsManager {
   };
 
   zx_status_t SetupOutgoingDirectory(fidl::ServerEnd<fuchsia_io::Directory> dir_request,
-                                     std::shared_ptr<loader::LoaderServiceBase> loader,
                                      BlockWatcher& watcher);
 
   zx_status_t SetupLifecycleServer(

@@ -16,9 +16,6 @@
         // Enables all GPT devices.
         gpt_all: { type: "bool" },
 
-        // Use the default loader rather than a custom one.
-        use_default_loader: { type: "bool" },
-
         // Perform decompression in a sandboxed component.
         // TODO(fxbug.dev/96844): This should be the only supported config; remove this flag.
         sandbox_decompression: { type: "bool" },

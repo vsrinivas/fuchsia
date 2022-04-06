@@ -36,7 +36,6 @@
             protocol: [
                 "fuchsia.fshost.Admin",
                 "fuchsia.fshost.BlockWatcher",
-                "fuchsia.fshost.Loader",
             ],
         },
     ],
@@ -86,17 +85,6 @@
                 "fuchsia.fshost.Admin",
                 "fuchsia.fshost.BlockWatcher",
             ],
-            from: "self",
-        },
-
-        // This service name is breaking the convention whereby the directory entry
-        // name matches the protocol name. This is an implementation of
-        // fuchsia.ldsvc.Loader, and is renamed to make it easier to identify that
-        // this implementation comes from fshost.
-        // TODO(fxbug.dev/34633): This service is deprecated and should only be routed to
-        // devcoordinator
-        {
-            protocol: "fuchsia.fshost.Loader",
             from: "self",
         },
     ],

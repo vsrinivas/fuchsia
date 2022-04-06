@@ -40,7 +40,6 @@
 #include "metrics.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
 #include "src/lib/storage/vfs/cpp/service.h"
-#include "src/storage/fshost/deprecated-loader-service.h"
 
 namespace fio = fuchsia_io;
 
@@ -176,37 +175,6 @@ zx_status_t BindNamespace(fidl::ClientEnd<fio::Directory> fs_root_client) {
   return ZX_OK;
 }
 
-std::shared_ptr<loader::LoaderServiceBase> SetUpLoaderService(const async::Loop& loop) {
-  // Set up the fshost loader service, which can load libraries from either /system/lib or
-  // /boot/lib.
-  // TODO(fxbug.dev/34633): This loader is DEPRECATED and should be deleted. Do not add new
-  // usages.
-  fbl::unique_fd root_fd;
-  if (zx_status_t status =
-          fdio_open_fd("/",
-                       static_cast<uint32_t>(fio::wire::OpenFlags::kDirectory |
-                                             fio::wire::OpenFlags::kRightReadable |
-                                             fio::wire::OpenFlags::kRightExecutable),
-                       root_fd.reset_and_get_address());
-      status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to open namespace root: " << zx_status_get_string(status);
-    return nullptr;
-  }
-  auto loader =
-      DeprecatedBootSystemLoaderService::Create(loop.dispatcher(), std::move(root_fd), "fshost");
-
-  // Replace default loader service with a connection to our own.
-  // TODO(bryanhenry): This is unnecessary and will be removed in a subsequent change. Left in to
-  // minimize behavior differences per change.
-  auto conn = loader->Connect();
-  if (conn.is_error()) {
-    FX_LOGS(ERROR) << "failed to create loader connection: " << conn.status_string();
-    return nullptr;
-  }
-  zx_handle_close(dl_set_loader_service(std::move(conn)->TakeChannel().release()));
-  return loader;
-}
-
 int Main(bool disable_block_watcher, bool ignore_component_config) {
   auto boot_args = FshostBootArgs::Create();
   auto config = DefaultConfig();
@@ -216,20 +184,6 @@ int Main(bool disable_block_watcher, bool ignore_component_config) {
   ApplyBootArgsToConfig(config, *boot_args);
 
   FX_LOGS(INFO) << "Config: " << config;
-
-  async::Loop loader_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  std::shared_ptr<loader::LoaderServiceBase> loader;
-  if (!config.use_default_loader) {
-    zx_status_t status = loader_loop.StartThread("fshost-loader");
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "failed to start loader thread: " << zx_status_get_string(status);
-      return EXIT_FAILURE;
-    }
-    loader = SetUpLoaderService(loader_loop);
-    if (!loader) {
-      return EXIT_FAILURE;
-    }
-  }
 
   // Initialize the local filesystem in isolation.
   fidl::ServerEnd<fio::Directory> dir_request{
@@ -246,8 +200,8 @@ int Main(bool disable_block_watcher, bool ignore_component_config) {
 
   BlockWatcher watcher(fs_manager, &config);
 
-  zx_status_t status = fs_manager.Initialize(std::move(dir_request), std::move(lifecycle_request),
-                                             std::move(loader), watcher);
+  zx_status_t status =
+      fs_manager.Initialize(std::move(dir_request), std::move(lifecycle_request), watcher);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Cannot initialize FsManager: " << zx_status_get_string(status);
     return EXIT_FAILURE;

@@ -77,10 +77,6 @@ declare_args() {
 #     [string] If set, this option overrides the global build arg for minfs_maximum_runtime_bytes.
 #     See the related global build arg for more information.
 #
-#   use_default_loader (optional; default: false)
-#     [boolean] If set, use the system default loader service. Otherwise, fshost sets up it's own
-#     loader service.
-#
 #   sandbox_decompression (optional; default: true)
 #     [boolean] Use the sandboxed decompressor for blobfs decompression, instead of doing
 #     decompression in-process.
@@ -145,8 +141,6 @@ template("generated_fshost_config") {
       fvm_ramdisk = defined(invoker.fvm_ramdisk) && invoker.fvm_ramdisk
       sandbox_decompression = !defined(invoker.sandbox_decompression) ||
                               invoker.sandbox_decompression
-      use_default_loader =
-          defined(invoker.use_default_loader) && invoker.use_default_loader
       zxcrypt_non_ramdisk = fvm_ramdisk
 
       # Final template argument allows setting arbitrary values which need to override

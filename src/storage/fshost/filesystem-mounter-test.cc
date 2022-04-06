@@ -44,7 +44,7 @@ class FilesystemMounterHarness : public testing::Test {
   FsManager& manager() {
     if (!watcher_) {
       watcher_.emplace(manager_, &config_);
-      EXPECT_OK(manager_.Initialize({}, {}, nullptr, *watcher_));
+      EXPECT_OK(manager_.Initialize({}, {}, *watcher_));
       manager_.ReadyForShutdown();
     }
     return manager_;

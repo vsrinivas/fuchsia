@@ -111,25 +111,12 @@ zx_status_t FsManager::SetupLifecycleServer(
 // Sets up the outgoing directory, and runs it on the PA_DIRECTORY_REQUEST
 // handle if it exists. See fshost.cml for a list of what's in the directory.
 zx_status_t FsManager::SetupOutgoingDirectory(fidl::ServerEnd<fuchsia_io::Directory> dir_request,
-                                              std::shared_ptr<loader::LoaderServiceBase> loader,
                                               BlockWatcher& watcher) {
   auto outgoing_dir = fbl::MakeRefCounted<fs::PseudoDir>();
 
-  // Add loader and admin services to the vfs
+  // Add admin services to the vfs
   svc_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
 
-  if (loader) {
-    // This service name is breaking the convention whereby the directory entry
-    // name matches the protocol name. This is an implementation of
-    // fuchsia.ldsvc.Loader, and is renamed to make it easier to identify that
-    // this implementation comes from fshost.
-    svc_dir_->AddEntry(
-        "fuchsia.fshost.Loader",
-        fbl::MakeRefCounted<fs::Service>([loader](fidl::ServerEnd<fuchsia_ldsvc::Loader> chan) {
-          loader->Bind(std::move(chan));
-          return ZX_OK;
-        }));
-  }
   svc_dir_->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fshost::Admin>,
                      AdminServer::Create(this, global_loop_->dispatcher()));
 
@@ -191,7 +178,7 @@ zx_status_t FsManager::SetupOutgoingDirectory(fidl::ServerEnd<fuchsia_io::Direct
 zx_status_t FsManager::Initialize(
     fidl::ServerEnd<fuchsia_io::Directory> dir_request,
     fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle_request,
-    std::shared_ptr<loader::LoaderServiceBase> loader, BlockWatcher& watcher) {
+    BlockWatcher& watcher) {
   global_loop_->StartThread("root-dispatcher");
 
   zx_status_t status =
@@ -229,7 +216,7 @@ zx_status_t FsManager::Initialize(
   }
 
   if (dir_request.is_valid()) {
-    status = SetupOutgoingDirectory(std::move(dir_request), std::move(loader), watcher);
+    status = SetupOutgoingDirectory(std::move(dir_request), watcher);
     if (status != ZX_OK) {
       return status;
     }

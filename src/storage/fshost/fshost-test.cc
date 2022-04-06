@@ -50,7 +50,7 @@ TEST(FsManagerTestCase, ShutdownBeforeReadyFails) {
   FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
   auto config = EmptyConfig();
   BlockWatcher watcher(manager, &config);
-  ASSERT_EQ(manager.Initialize({}, {}, nullptr, watcher), ZX_OK);
+  ASSERT_EQ(manager.Initialize({}, {}, watcher), ZX_OK);
 
   sync_completion_t callback_called;
   manager.Shutdown([callback_called = &callback_called](zx_status_t status) {
@@ -70,7 +70,7 @@ TEST(FsManagerTestCase, ShutdownSignalsCompletion) {
   FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
   auto config = EmptyConfig();
   BlockWatcher watcher(manager, &config);
-  ASSERT_EQ(manager.Initialize({}, {}, nullptr, watcher), ZX_OK);
+  ASSERT_EQ(manager.Initialize({}, {}, watcher), ZX_OK);
 
   manager.ReadyForShutdown();
   // The manager should not have exited yet: No one has asked for the shutdown.
@@ -107,7 +107,7 @@ TEST(FsManagerTestCase, LifecycleStop) {
   FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
   auto config = DefaultConfig();
   BlockWatcher watcher(manager, &config);
-  ASSERT_EQ(manager.Initialize({}, std::move(lifecycle_server), nullptr, watcher), ZX_OK);
+  ASSERT_EQ(manager.Initialize({}, std::move(lifecycle_server), watcher), ZX_OK);
 
   manager.ReadyForShutdown();
   // The manager should not have exited yet: No one has asked for an unmount.
@@ -159,7 +159,7 @@ TEST(FsManagerTestCase, InstallFsAfterShutdownWillFail) {
   FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
   auto config = EmptyConfig();
   BlockWatcher watcher(manager, &config);
-  ASSERT_EQ(manager.Initialize({}, {}, nullptr, watcher), ZX_OK);
+  ASSERT_EQ(manager.Initialize({}, {}, watcher), ZX_OK);
 
   manager.ReadyForShutdown();
   manager.Shutdown([](zx_status_t status) { EXPECT_EQ(status, ZX_OK); });
@@ -191,7 +191,7 @@ TEST(FsManagerTestCase, ReportFailureOnUncleanUnmount) {
   FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
   auto config = EmptyConfig();
   BlockWatcher watcher(manager, &config);
-  ASSERT_EQ(manager.Initialize({}, {}, nullptr, watcher), ZX_OK);
+  ASSERT_EQ(manager.Initialize({}, {}, watcher), ZX_OK);
 
   auto export_root = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_EQ(export_root.status_value(), ZX_OK);
