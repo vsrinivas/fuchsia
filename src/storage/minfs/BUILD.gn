@@ -11,8 +11,6 @@ static_library("minfs") {
   visibility = [
     "//src/devices/block/bin/disk-inspect",
     "//src/storage/*",
-    "//zircon/system/utest/fvm",
-    "//zircon/system/utest/minfs-micro-benchmark",
     "//zircon/tools/minfs",
   ]
   public = [
@@ -21,6 +19,7 @@ static_library("minfs") {
     "fsck.h",
     "metrics.h",
     "minfs.h",
+    "mount.h",
     "transaction_limits.h",
   ]
   sources = [
@@ -114,6 +113,7 @@ static_library("minfs") {
       "inspector_superblock.h",
       "minfs_inspect_tree.cc",
       "minfs_target.cc",
+      "mount.cc",
       "resizeable_vmo_buffer.cc",
       "service/admin.cc",
       "service/admin.h",
