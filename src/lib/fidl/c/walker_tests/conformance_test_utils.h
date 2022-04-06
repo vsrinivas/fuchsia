@@ -82,7 +82,7 @@ bool EncodeSuccess(FidlWireFormatVersion wire_format_version, FidlType* value,
 
   // Linearize the built objects using LLCPP encode -> decode.
   fidl::unstable::OwnedEncodedMessage<FidlType> llcpp_encoded(
-      fidl::internal::WireFormatVersion::kV1, value);
+      fidl::internal::WireFormatVersion::kV2, value);
   auto& outgoing_msg = llcpp_encoded.GetOutgoingMessage();
   auto copied_bytes = outgoing_msg.CopyBytes();
   fidl::unstable::DecodedMessage<FidlType> llcpp_decoded(

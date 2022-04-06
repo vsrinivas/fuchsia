@@ -200,7 +200,7 @@ class OutgoingMessage : public ::fidl::Status {
   template <typename FidlType>
   void Encode(FidlType* data) {
     is_transactional_ = fidl::IsFidlTransactionalMessage<FidlType>::value;
-    EncodeImpl(fidl::internal::WireFormatVersion::kV1, fidl::TypeTraits<FidlType>::kType, data);
+    EncodeImpl(fidl::internal::WireFormatVersion::kV2, fidl::TypeTraits<FidlType>::kType, data);
   }
 
   template <typename FidlType>
@@ -874,7 +874,7 @@ class DecodedMessage<FidlType, Transport,
   DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
                  typename Transport::HandleMetadata* handle_metadata = nullptr,
                  uint32_t handle_actual = 0)
-      : Base(::fidl::internal::WireFormatVersion::kV1,
+      : Base(::fidl::internal::WireFormatVersion::kV2,
              ::fidl::IncomingMessage::Create(
                  bytes, byte_actual, handles, handle_metadata, handle_actual,
                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
