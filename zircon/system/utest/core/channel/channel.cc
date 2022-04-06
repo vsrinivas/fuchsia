@@ -1480,5 +1480,44 @@ TEST(ChannelTest, ReadFaultDoesNotLeakHandles) {
   }
 }
 
+// This test verifies that when a channel reader+waiter races with a channel writer, the reader will
+// never be told the channel is readable when it's not.
+TEST(ChannelTest, NoSpuriousReadableSignalWhenRacing) {
+  static constexpr size_t kAttempts = 10000;
+
+  auto writer = [](std::atomic<bool>& running, std::atomic<uint64_t>& attempt, zx::channel b) {
+    uint64_t curr;
+    while (running.load() && (curr = attempt.load()) < kAttempts) {
+      char msg[1]{};
+      b.write(0, &msg, sizeof(msg), nullptr, 0);
+      // Wait for the next attempt.
+      while (running.load() && attempt.load() == curr) {
+      }
+    }
+  };
+
+  std::atomic<bool> running{true};
+  std::atomic<uint64_t> attempt{0};
+  zx::channel a;
+  zx::channel b;
+  ASSERT_OK(zx::channel::create(0, &a, &b));
+  std::thread w(writer, std::ref(running), std::ref(attempt), std::move(b));
+  auto cleanup = fit::defer([&]() {
+    running.store(false);
+    w.join();
+  });
+
+  for (size_t x = 0; x < kAttempts; ++x) {
+    attempt.store(x);
+    char msg[1];
+    zx_status_t status = a.read(0, &msg, nullptr, sizeof(msg), 0, nullptr, nullptr);
+    if (status == ZX_ERR_SHOULD_WAIT) {
+      ASSERT_OK(a.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr));
+      ASSERT_OK(a.read(0, &msg, nullptr, sizeof(msg), 0, nullptr, nullptr));
+    }
+  }
+  attempt.store(kAttempts);
+}
+
 }  // namespace
 }  // namespace channel

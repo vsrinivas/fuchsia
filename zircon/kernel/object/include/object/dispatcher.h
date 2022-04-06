@@ -222,16 +222,49 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
   // At construction, the object is asserting |signals|.
   explicit Dispatcher(zx_signals_t signals);
 
-  // Notify others of a change in signals (possibly waking them). (Clearing satisfied signals or
-  // setting satisfiable signals should not wake anyone.)
+  // Update this object's signal state and notify matching observers.
+  //
+  // Clear the signals specified by |clear|, set the signals specified by |set|, then invoke each
+  // observer that's waiting on one or more of the signals in |set|.
+  //
+  // Note, clearing a signal or setting a signal that was already set will not cause an observer to
+  // be notified.
   //
   // May only be called when |is_waitable| reports true.
-  void UpdateState(zx_signals_t clear_mask, zx_signals_t set_mask) TA_EXCL(get_lock());
-  void UpdateStateLocked(zx_signals_t clear_mask, zx_signals_t set_mask) TA_REQ(get_lock());
+  void UpdateState(zx_signals_t clear, zx_signals_t set) TA_EXCL(get_lock());
+  void UpdateStateLocked(zx_signals_t clear, zx_signals_t set) TA_REQ(get_lock());
 
-  zx_signals_t GetSignalsStateLocked() const TA_REQ(get_lock()) { return signals_; }
+  // Clear the signals specified by |signals|.
+  void ClearSignals(zx_signals_t signals) {
+    signals_.fetch_and(~signals, ktl::memory_order_acq_rel);
+  }
 
-  // Dispatcher subtypes should use this lock to protect their internal state.
+  // Raise (set) signals specified by |signals| without notifying observers.
+  //
+  // Returns the old value.
+  zx_signals_t RaiseSignalsLocked(zx_signals_t signals) TA_REQ(get_lock()) {
+    return signals_.fetch_or(signals, ktl::memory_order_acq_rel);
+  }
+
+  // Notify the observers waiting on one or more |signals|.
+  //
+  // unlike UpdateState and UpdateStateLocked, this method does not modify the stored signal state.
+  void NotifyObserversLocked(zx_signals_t signals) TA_REQ(get_lock());
+
+  // Returns the stored signal state.
+  zx_signals_t GetSignalsStateLocked() const TA_REQ(get_lock()) {
+    return signals_.load(ktl::memory_order_acquire);
+  }
+
+  // This lock protects most, but not all, of Dispatcher's state as well as some of the state of
+  // types derived from Dispatcher.
+  //
+  // One purpose of this lock is to maintain the following |observers_| and |signals_| invariant:
+  //
+  //   * When not held, there must be no |observers_| matching any of the active |signals_|.
+  //
+  // Note, there is one operation on |signals_| that may be performed without holding this lock,
+  // clearing (i.e. deasserting) signals.  See the comment at |signals_|.
   virtual Lock<Mutex>* get_lock() const = 0;
 
  private:
@@ -243,7 +276,47 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
   const zx_koid_t koid_;
   ktl::atomic<uint32_t> handle_count_;
 
-  zx_signals_t signals_ TA_GUARDED(get_lock());
+  // |signals_| is the set of currently active signals.
+  //
+  // There are several high-level operations in which the signal state is accessed.  Some of these
+  // operations require holding |get_lock()| and some do not.  See the comment at |get_lock()|.
+  //
+  // 1. Adding, removing, or canceling an observer - These operations involve access to both
+  // signals_ and observers_ and must be performed while holding get_lock().
+  //
+  // 2. Updating signal state - This is a composite operation consisting of two sub-operations:
+  //
+  //    a. Clearing signals - Because no observer may be triggered by deasserting (clearing) a
+  //    signal, it is not necessary to hold |get_lock()| while clearing.  Simply clearing signals
+  //    does not need to access observers_.
+  //
+  //    b. Raising (setting) signals and notifying matched observers - This operation must appear
+  //    atomic to and cannot overlap with any of the operations in #1 above.  |get_lock()| must be
+  //    held for the duration of this operation.
+  //
+  // Regardless of whether the operation requires holding |get_lock()| or not, access to this field
+  // should use acquire/release memory ordering.  That is, use memory_order_acquire for read,
+  // memory_order_release for write, and memory_order_acq_rel for read-modify-write.  To understand
+  // why it's important to use acquire/release, consider the following (contrived) example:
+  //
+  //   RelaxedAtomic<bool> ready;
+  //
+  //   void T1() {
+  //     // Wait for T2 to clear the signals.
+  //     while (d.PollSignals() & kMask) {
+  //     }
+  //     // Now that we've seen there are no signals we can be confident that ready is true.
+  //     ASSERT(ready.load());
+  //   }
+  //
+  //   void T2() {
+  //     ready.store(true);
+  //     d.ClearSignals(kMask);
+  //   }
+  //
+  // In the example above, T1's ASSERT may fire if PollSignals or ClearSignals were to use relaxed
+  // memory order for accessing signals_.
+  ktl::atomic<zx_signals_t> signals_;
 
   // List of observers watching for changes in signals on this dispatcher.
   fbl::DoublyLinkedList<SignalObserver*> observers_ TA_GUARDED(get_lock());

@@ -92,8 +92,9 @@ zx_status_t Dispatcher::AddObserver(SignalObserver* observer, const Handle* hand
   if (trigger_mode == Dispatcher::TriggerMode::Level) {
     // If the currently active signals already match the desired signals,
     // just execute the match now.
-    if ((signals_ & signals) != 0) {
-      observer->OnMatch(signals_);
+    const zx_signals_t active_signals = signals_.load(ktl::memory_order_acquire);
+    if ((active_signals & signals) != 0) {
+      observer->OnMatch(active_signals);
       return ZX_OK;
     }
   }
@@ -115,7 +116,7 @@ bool Dispatcher::RemoveObserver(SignalObserver* observer, zx_signals_t* signals)
   Guard<Mutex> guard{get_lock()};
 
   if (signals != nullptr) {
-    *signals = signals_;
+    *signals = signals_.load(ktl::memory_order_acquire);
   }
 
   if (observer->InContainer()) {
@@ -132,6 +133,8 @@ void Dispatcher::Cancel(const Handle* handle) {
 
   Guard<Mutex> guard{get_lock()};
 
+  const zx_signals_t signals = signals_.load(ktl::memory_order_acquire);
+
   // Cancel all observers that registered on "handle".
   for (auto it = observers_.begin(); it != observers_.end(); /* nothing */) {
     if (it->handle_ != handle) {
@@ -143,7 +146,7 @@ void Dispatcher::Cancel(const Handle* handle) {
     auto to_remove = it;
     ++it;
     observers_.erase(to_remove);
-    to_remove->OnCancel(signals_);
+    to_remove->OnCancel(signals);
   }
 }
 
@@ -152,6 +155,8 @@ bool Dispatcher::CancelByKey(const Handle* handle, const void* port, uint64_t ke
   ZX_DEBUG_ASSERT(is_waitable());
 
   Guard<Mutex> guard{get_lock()};
+
+  const zx_signals_t signals = signals_.load(ktl::memory_order_acquire);
 
   // Cancel all observers that registered on "handle" that match the given key.
   bool remove_performed = false;
@@ -165,7 +170,7 @@ bool Dispatcher::CancelByKey(const Handle* handle, const void* port, uint64_t ke
     auto to_remove = it;
     ++it;
     observers_.erase(to_remove);
-    to_remove->OnCancel(signals_);
+    to_remove->OnCancel(signals);
     remove_performed = true;
   }
 
@@ -175,26 +180,20 @@ bool Dispatcher::CancelByKey(const Handle* handle, const void* port, uint64_t ke
 void Dispatcher::UpdateState(zx_signals_t clear_mask, zx_signals_t set_mask) {
   canary_.Assert();
 
+  if (set_mask == 0) {
+    ClearSignals(clear_mask);
+    return;
+  }
+
   Guard<Mutex> guard{get_lock()};
 
   UpdateStateLocked(clear_mask, set_mask);
 }
 
-void Dispatcher::UpdateStateLocked(zx_signals_t clear_mask, zx_signals_t set_mask) {
-  ZX_DEBUG_ASSERT(is_waitable());
-
-  auto previous_signals = signals_;
-  signals_ &= ~clear_mask;
-  signals_ |= set_mask;
-
-  if (previous_signals == signals_) {
-    return;
-  }
-
-  // Update signal observers.
+void Dispatcher::NotifyObserversLocked(zx_signals_t signals) {
   for (auto it = observers_.begin(); it != observers_.end(); /* nothing */) {
     // Ignore observers that don't need to be notified.
-    if ((it->triggering_signals_ & signals_) == 0) {
+    if ((it->triggering_signals_ & signals) == 0) {
       ++it;
       continue;
     }
@@ -202,11 +201,32 @@ void Dispatcher::UpdateStateLocked(zx_signals_t clear_mask, zx_signals_t set_mas
     auto to_remove = it;
     ++it;
     observers_.erase(to_remove);
-    to_remove->OnMatch(signals_);
+    to_remove->OnMatch(signals);
   }
+}
+
+void Dispatcher::UpdateStateLocked(zx_signals_t clear_mask, zx_signals_t set_mask) {
+  ZX_DEBUG_ASSERT(is_waitable());
+
+  zx_signals_t previous = signals_.load(ktl::memory_order_acquire);
+  zx_signals_t updated;
+  do {
+    updated = (previous & ~clear_mask) | set_mask;
+  } while (!signals_.compare_exchange_strong(previous, updated, ktl::memory_order_acq_rel,
+                                             ktl::memory_order_relaxed));
+
+  // Did we assert any new signals?  Because an observer can only be triggered when a signal
+  // transitions from inactive to active, there is no need to look for matching observers unless we
+  // have newly active signals.
+  const zx_signals_t newly_active = set_mask & ~previous;
+  if (newly_active == 0) {
+    return;
+  }
+
+  NotifyObserversLocked(updated);
 }
 
 zx_signals_t Dispatcher::PollSignals() const {
   Guard<Mutex> guard{get_lock()};
-  return signals_;
+  return GetSignalsStateLocked();
 }

@@ -96,8 +96,8 @@ class ChannelDispatcher final
     uint64_t current{};
     uint64_t max{};
   };
-  MessageCounts get_message_counts() const TA_EXCL(get_lock()) {
-    Guard<Mutex> guard{get_lock()};
+  MessageCounts get_message_counts() const TA_EXCL(&channel_lock_) {
+    Guard<Mutex> guard{&channel_lock_};
     return {messages_.size(), max_message_count_};
   }
 
@@ -129,17 +129,38 @@ class ChannelDispatcher final
   // Generate a unique txid to be used in a channel call.
   zx_txid_t GenerateTxid() TA_REQ(get_lock());
 
-  MessageList messages_ TA_GUARDED(get_lock());
-  uint64_t max_message_count_ TA_GUARDED(get_lock()) = 0;
+  // By using a dedicated lock to protect the fields accessed by Read, we can
+  // avoid acquiring |get_lock()| in the Read path.  Why do we care?
+  // |get_lock()| is held when raising signals and notifying matching observers.
+  // And there can be a lot of matching observers.  By use two locks and never
+  // acquiring |get_lock()| in the Read path we can allow Read to execute
+  // concurrently with the observer notification.
+  //
+  // When acquiring both |get_lock()| and |channel_lock_| be sure to acquire
+  // |get_lock()| first.
+  mutable DECLARE_MUTEX(ChannelDispatcher) channel_lock_ TA_ACQ_AFTER(get_lock());
+  MessageList messages_ TA_GUARDED(channel_lock_);
+  uint64_t max_message_count_ TA_GUARDED(channel_lock_) = 0;
+
   // Tracks the process that is allowed to issue calls, for example write
   // to the opposite end. Without it, one can see writes out of order with
   // respect of the previous and current owner. We avoid locking and updating
   // the |owner_| if the new owner is kernel, which happens when the endpoint
   // is written into a channel or during process destruction.
-  zx_koid_t owner_ TA_GUARDED(get_lock()) = ZX_KOID_INVALID;
-
-  uint32_t txid_ TA_GUARDED(get_lock()) = 0;
+  //
+  // The locking protocol for this field is a little tricky.  The Read method,
+  // which only ever acquires the channel_lock_, must read this field.  The
+  // Write method also needs to read this field, however, it needs to do so
+  // before it would otherwise need to acquire the channel_lock_.  So to avoid
+  // having Write prematurely acquire and release the channel_lock_, we instead
+  // require that either |get_lock()| or channel_lock_ are held when reading
+  // this field and both are held when writing it.
+  zx_koid_t owner_ = ZX_KOID_INVALID;
   WaiterList waiters_ TA_GUARDED(get_lock());
+  uint32_t txid_ TA_GUARDED(get_lock()) = 0;
+  // True if the this object's peer has been closed.  This field exists so that
+  // |Read| can check for peer closed without having to acquire |get_lock()|.
+  bool peer_has_closed_ TA_GUARDED(channel_lock_) = false;
 };
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_CHANNEL_DISPATCHER_H_

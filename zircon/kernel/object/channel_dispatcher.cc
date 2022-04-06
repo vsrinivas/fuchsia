@@ -18,7 +18,6 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <kernel/auto_preempt_disabler.h>
 #include <kernel/event.h>
 #include <object/handle.h>
 #include <object/message_packet.h>
@@ -157,7 +156,8 @@ void ChannelDispatcher::set_owner(zx_koid_t new_owner) {
     return;
   }
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<Mutex> get_lock_guard{get_lock()};
+  Guard<Mutex> messages_guard{&channel_lock_};
   owner_ = new_owner;
 }
 
@@ -167,6 +167,11 @@ void ChannelDispatcher::set_owner(zx_koid_t new_owner) {
 // right->get_lock(), which occurs above in on_zero_handles.
 void ChannelDispatcher::OnPeerZeroHandlesLocked() {
   canary_.Assert();
+
+  {
+    Guard<Mutex> messages_guard{&channel_lock_};
+    peer_has_closed_ = true;
+  }
 
   UpdateStateLocked(ZX_CHANNEL_WRITABLE, ZX_CHANNEL_PEER_CLOSED);
   // (3B) Abort any waiting Call operations
@@ -179,6 +184,7 @@ void ChannelDispatcher::OnPeerZeroHandlesLocked() {
   }
 }
 
+// This method should never acquire |get_lock()|.  See the comment at |channel_lock_| for details.
 zx_status_t ChannelDispatcher::Read(zx_koid_t owner, uint32_t* msg_size, uint32_t* msg_handle_count,
                                     MessagePacketPtr* msg, bool may_discard) {
   canary_.Assert();
@@ -186,14 +192,14 @@ zx_status_t ChannelDispatcher::Read(zx_koid_t owner, uint32_t* msg_size, uint32_
   auto max_size = *msg_size;
   auto max_handle_count = *msg_handle_count;
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<Mutex> guard{&channel_lock_};
 
   if (owner != owner_) {
     return ZX_ERR_BAD_HANDLE;
   }
 
   if (messages_.is_empty()) {
-    return peer() ? ZX_ERR_SHOULD_WAIT : ZX_ERR_PEER_CLOSED;
+    return peer_has_closed_ ? ZX_ERR_PEER_CLOSED : ZX_ERR_SHOULD_WAIT;
   }
 
   *msg_size = messages_.front().data_size();
@@ -207,9 +213,8 @@ zx_status_t ChannelDispatcher::Read(zx_koid_t owner, uint32_t* msg_size, uint32_
   }
 
   *msg = messages_.pop_front();
-
   if (messages_.is_empty()) {
-    UpdateStateLocked(ZX_CHANNEL_READABLE, 0u);
+    ClearSignals(ZX_CHANNEL_READABLE);
   }
 
   return status;
@@ -218,7 +223,6 @@ zx_status_t ChannelDispatcher::Read(zx_koid_t owner, uint32_t* msg_size, uint32_
 zx_status_t ChannelDispatcher::Write(zx_koid_t owner, MessagePacketPtr msg) {
   canary_.Assert();
 
-  AutoPreemptDisabler preempt_disable;
   Guard<Mutex> guard{get_lock()};
 
   // Failing this test is only possible if this process has two threads racing:
@@ -261,7 +265,6 @@ zx_status_t ChannelDispatcher::Call(zx_koid_t owner, MessagePacketPtr msg, zx_ti
   }
 
   {
-    AutoPreemptDisabler preempt_disable;
     Guard<Mutex> guard{get_lock()};
 
     // See Write() for an explanation of this test.
@@ -380,31 +383,56 @@ bool ChannelDispatcher::TryWriteToMessageWaiter(MessagePacketPtr& msg) {
 void ChannelDispatcher::WriteSelf(MessagePacketPtr msg) {
   canary_.Assert();
 
-  messages_.push_back(ktl::move(msg));
-  const size_t size = messages_.size();
-  if (size > max_message_count_) {
-    max_message_count_ = size;
-  }
-  // TODO(cpu): Remove this hack. See comment in kMaxPendingMessageCount definition.
-  if (size >= kWarnPendingMessageCount) {
-    if (size == kWarnPendingMessageCount) {
-      const auto* process = ProcessDispatcher::GetCurrent();
-      char pname[ZX_MAX_NAME_LEN];
-      process->get_name(pname);
-      printf("KERN: warning! channel (%zu) has %zu messages (%s) (write).\n", get_koid(), size,
-             pname);
-    } else if (size > kMaxPendingMessageCount) {
-      const auto* process = ProcessDispatcher::GetCurrent();
-      char pname[ZX_MAX_NAME_LEN];
-      process->get_name(pname);
-      printf("KERN: channel (%zu) has %zu messages (%s) (write). Raising exception.\n", get_koid(),
-             size, pname);
-      Thread::Current::SignalPolicyException(ZX_EXCP_POLICY_CODE_CHANNEL_FULL_WRITE, 0u);
-      kcounter_add(channel_full, 1);
+  // Once we've acquired the channel_lock_ we're going to make a copy of the previously active
+  // signals and raise the READABLE signal before dropping the lock.  After we've dropped the lock,
+  // we'll notify observers using the previously active signals plus READABLE.
+  //
+  // There are several things to note about this sequence:
+  //
+  // 1. We must hold channel_lock_ while updating the stored signals (RaiseSignalsLocked) to
+  // synchronize with thread adding, removing, or canceling observers otherwise we may create a
+  // spurious READABLE signal (see NoSpuriousReadableSignalWhenRacing test).
+  //
+  // 2. We must release the channel_lock_ before notifying observers to ensure that Read can execute
+  // concurrently with NotifyObserversLocked, which is a potentially long running call.
+  //
+  // 3. We can skip the call to NotifyObserversLocked if the previously active signals contained
+  // READABLE (because there can't be any observers still waiting for READABLE if that signal is
+  // already active).
+  zx_signals_t previous_signals;
+  {
+    Guard<Mutex> guard{&channel_lock_};
+
+    messages_.push_back(ktl::move(msg));
+    previous_signals = RaiseSignalsLocked(ZX_CHANNEL_READABLE);
+    const size_t size = messages_.size();
+    if (size > max_message_count_) {
+      max_message_count_ = size;
+    }
+    // TODO(cpu): Remove this hack. See comment in kMaxPendingMessageCount definition.
+    if (size >= kWarnPendingMessageCount) {
+      if (size == kWarnPendingMessageCount) {
+        const auto* process = ProcessDispatcher::GetCurrent();
+        char pname[ZX_MAX_NAME_LEN];
+        process->get_name(pname);
+        printf("KERN: warning! channel (%zu) has %zu messages (%s) (write).\n", get_koid(), size,
+               pname);
+      } else if (size > kMaxPendingMessageCount) {
+        const auto* process = ProcessDispatcher::GetCurrent();
+        char pname[ZX_MAX_NAME_LEN];
+        process->get_name(pname);
+        printf("KERN: channel (%zu) has %zu messages (%s) (write). Raising exception.\n",
+               get_koid(), size, pname);
+        Thread::Current::SignalPolicyException(ZX_EXCP_POLICY_CODE_CHANNEL_FULL_WRITE, 0u);
+        kcounter_add(channel_full, 1);
+      }
     }
   }
 
-  UpdateStateLocked(0u, ZX_CHANNEL_READABLE);
+  // Don't bother waking observers if ZX_CHANNEL_READABLE was already active.
+  if ((previous_signals & ZX_CHANNEL_READABLE) == 0) {
+    NotifyObserversLocked(previous_signals | ZX_CHANNEL_READABLE);
+  }
 }
 
 ChannelDispatcher::MessageWaiter::~MessageWaiter() {
