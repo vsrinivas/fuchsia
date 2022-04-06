@@ -225,15 +225,26 @@ impl DevPts {
 impl DeviceOps for DevPts {
     fn open(
         &self,
-        _current_task: &CurrentTask,
+        current_task: &CurrentTask,
         id: DeviceType,
         _node: &FsNode,
-        _flags: OpenFlags,
+        flags: OpenFlags,
     ) -> Result<Box<dyn FileOps>, Errno> {
         let pts_id = (id.major() - DEVPTS_FIRST_MAJOR) * 256 + id.minor();
         let terminal = self.state.terminals.read().get(&pts_id).ok_or(EIO)?.upgrade().ok_or(EIO)?;
         if *terminal.locked.read() {
             return error!(EIO);
+        }
+        if !flags.contains(OpenFlags::NOCTTY) {
+            // Opening a replica sets the process' controlling TTY when possible. An error indicates it cannot
+            // be set, and is ignored silently.
+            let _ = current_task.thread_group.set_controlling_terminal(
+                current_task,
+                &terminal,
+                false, /* is_main */
+                false, /* steal */
+                flags.can_read(),
+            );
         }
         Ok(Box::new(DevPtsFile::new(terminal)))
     }
@@ -412,7 +423,7 @@ mod tests {
         task: &CurrentTask,
         fs: &FileSystemHandle,
     ) -> Result<FileHandle, Errno> {
-        let file = open_file(task, fs, b"ptmx")?;
+        let file = open_file_with_flags(task, fs, b"ptmx", OpenFlags::RDWR)?;
 
         // Unlock terminal
         ioctl::<i32>(task, &file, TIOCSPTLCK, &0)?;
@@ -569,6 +580,46 @@ mod tests {
         let ptmx = fs.root().component_lookup(b"ptmx")?;
         let stat = ptmx.node.stat()?;
         assert_eq!(stat.st_blksize, BLOCK_SIZE);
+
+        Ok(())
+    }
+
+    #[::fuchsia::test]
+    fn test_attach_terminal_when_open() -> Result<(), anyhow::Error> {
+        let (kernel, task) = create_kernel_and_task();
+        let fs = dev_pts_fs(&kernel);
+        let _opened_main = open_ptmx_and_unlock(&task, &fs)?;
+        // Opening the main terminal should not set the terminal of the session.
+        assert!(task
+            .thread_group
+            .process_group
+            .read()
+            .session
+            .controlling_terminal
+            .read()
+            .is_none());
+        // Opening the terminal should not set the terminal of the session with the NOCTTY flag.
+        let _opened_replica2 =
+            open_file_with_flags(&task, &fs, b"0", OpenFlags::RDWR | OpenFlags::NOCTTY)?;
+        assert!(task
+            .thread_group
+            .process_group
+            .read()
+            .session
+            .controlling_terminal
+            .read()
+            .is_none());
+
+        // Opening the replica terminal should set the terminal of the session.
+        let _opened_replica2 = open_file_with_flags(&task, &fs, b"0", OpenFlags::RDWR)?;
+        assert!(task
+            .thread_group
+            .process_group
+            .read()
+            .session
+            .controlling_terminal
+            .read()
+            .is_some());
 
         Ok(())
     }
