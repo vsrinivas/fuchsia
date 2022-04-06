@@ -214,17 +214,23 @@ bool TraceReader::ReadInitializationRecord(Chunk& record, RecordHeader header) {
 
 bool TraceReader::ReadStringRecord(Chunk& record, RecordHeader header) {
   auto index = StringRecordFields::StringIndex::Get<trace_string_index_t>(header);
-  if (index < TRACE_ENCODED_STRING_REF_MIN_INDEX || index > TRACE_ENCODED_STRING_REF_MAX_INDEX) {
-    ReportError("Invalid string index");
-    return false;
-  }
 
   auto length = StringRecordFields::StringLength::Get<size_t>(header);
   std::optional string_view = record.ReadString(length);
   if (!string_view.has_value()) {
+    fbl::String errorMessage = fbl::StringPrintf(
+        "Failed to parse a string of length %lu registered with string index: '%d'", length, index);
+    ReportError(errorMessage);
     return false;
   }
   fbl::String string(string_view.value());
+
+  if (index < TRACE_ENCODED_STRING_REF_MIN_INDEX || index > TRACE_ENCODED_STRING_REF_MAX_INDEX) {
+    fbl::String errorMessage = fbl::StringPrintf(
+        "String: '%s' registered with invalid string index: '%d'", string.c_str(), index);
+    ReportError(errorMessage);
+    return false;
+  }
 
   RegisterString(index, string);
   record_consumer_(Record(Record::String{index, std::move(string)}));
@@ -240,10 +246,12 @@ bool TraceReader::ReadThreadRecord(Chunk& record, RecordHeader header) {
 
   std::optional process_koid = record.ReadUint64();
   if (!process_koid.has_value()) {
+    ReportError("Thread record has invalid process koid");
     return false;
   }
   std::optional thread_koid = record.ReadUint64();
   if (!thread_koid.has_value()) {
+    ReportError("Thread record has invalid thread koid");
     return false;
   }
 
@@ -266,19 +274,23 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
   }
   const trace_ticks_t timestamp = timestamp_opt.value();
   ProcessThread process_thread;
-  if (!DecodeThreadRef(record, thread_ref, &process_thread)) {
-    return false;
-  }
   fbl::String category;
-  if (!DecodeStringRef(record, category_ref, &category)) {
-    return false;
-  }
   fbl::String name;
-  if (!DecodeStringRef(record, name_ref, &name)) {
-    return false;
-  }
   fbl::Vector<Argument> arguments;
-  if (!ReadArguments(record, argument_count, &arguments)) {
+  if (!DecodeThreadRef(record, thread_ref, &process_thread) ||
+      !DecodeStringRef(record, category_ref, &category) ||
+      !DecodeStringRef(record, name_ref, &name) ||
+      !ReadArguments(record, argument_count, &arguments)) {
+    auto errorMessage = fbl::StringPrintf(
+        "Invalid event: Event {\n"
+        "    Type: %d\n"
+        "    ArgumentCount: %lu\n"
+        "    ThreadRef: %u (%s)\n"
+        "    CategoryRef: %u (%s)\n"
+        "    NameRef: %u (%s)\n}",
+        static_cast<uint32_t>(type), argument_count, thread_ref, process_thread.ToString().c_str(),
+        category_ref, category.c_str(), name_ref, name.c_str());
+    ReportError(errorMessage);
     return false;
   }
 
@@ -795,7 +807,8 @@ bool TraceReader::DecodeStringRef(Chunk& chunk, trace_encoded_string_ref_t strin
 
   auto it = current_provider_->string_table.find(string_ref);
   if (it == current_provider_->string_table.end()) {
-    ReportError("String ref not in table");
+    fbl::String errorMessage = fbl::StringPrintf("String ref: '%d' not in table", string_ref);
+    ReportError(errorMessage);
     return false;
   }
   *out_string = it->second.string;
