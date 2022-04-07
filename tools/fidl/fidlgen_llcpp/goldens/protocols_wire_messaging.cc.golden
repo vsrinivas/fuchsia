@@ -2967,11 +2967,6 @@ void ::fidl::internal::TransactionalRequest<
   fidl_init_txn_header(&header, 0,
                        ::test_protocols::kWithProtocolEnds_ClientEnds_Ordinal);
 }
-
-void ::fidl::WireRequest<
-    ::test_protocols::WithProtocolEnds::ClientEnds>::_CloseHandles() {
-  in.reset();
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2981,11 +2976,6 @@ void ::fidl::internal::TransactionalResponse<
   fidl_init_txn_header(&header, 0,
                        ::test_protocols::kWithProtocolEnds_ClientEnds_Ordinal);
 }
-
-void ::fidl::WireResponse<
-    ::test_protocols::WithProtocolEnds::ClientEnds>::_CloseHandles() {
-  out.reset();
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2995,11 +2985,6 @@ void ::fidl::internal::TransactionalRequest<
   fidl_init_txn_header(&header, 0,
                        ::test_protocols::kWithProtocolEnds_ServerEnds_Ordinal);
 }
-
-void ::fidl::WireRequest<
-    ::test_protocols::WithProtocolEnds::ServerEnds>::_CloseHandles() {
-  in.reset();
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3008,11 +2993,6 @@ void ::fidl::internal::TransactionalResponse<
     ::test_protocols::WithProtocolEnds::ServerEnds>::_InitHeader() {
   fidl_init_txn_header(&header, 0,
                        ::test_protocols::kWithProtocolEnds_ServerEnds_Ordinal);
-}
-
-void ::fidl::WireResponse<
-    ::test_protocols::WithProtocolEnds::ServerEnds>::_CloseHandles() {
-  out.reset();
 }
 #endif  // __Fuchsia__
 
@@ -3024,11 +3004,6 @@ void ::fidl::internal::TransactionalRequest<
       &header, 0,
       ::test_protocols::kWithProtocolEnds_StructContainingEnds_Ordinal);
 }
-
-void ::fidl::WireRequest<
-    ::test_protocols::WithProtocolEnds::StructContainingEnds>::_CloseHandles() {
-  in._CloseHandles();
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3038,11 +3013,6 @@ void ::fidl::internal::TransactionalResponse<
   fidl_init_txn_header(
       &header, 0,
       ::test_protocols::kWithProtocolEnds_StructContainingEnds_Ordinal);
-}
-
-void ::fidl::WireResponse<
-    ::test_protocols::WithProtocolEnds::StructContainingEnds>::_CloseHandles() {
-  out._CloseHandles();
 }
 #endif  // __Fuchsia__
 
@@ -3752,11 +3722,6 @@ void ::fidl::internal::TransactionalRequest<
       &header, 0,
       ::test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal);
 }
-
-void ::fidl::WireRequest<
-    ::test_protocols::HandleRightsProtocol::NoResponseMethod>::_CloseHandles() {
-  h.reset();
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3766,11 +3731,6 @@ void ::fidl::internal::TransactionalRequest<
   fidl_init_txn_header(
       &header, 0,
       ::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal);
-}
-
-void ::fidl::WireRequest<
-    ::test_protocols::HandleRightsProtocol::ResponseMethod>::_CloseHandles() {
-  h.reset();
 }
 #endif  // __Fuchsia__
 
@@ -3782,11 +3742,6 @@ void ::fidl::internal::TransactionalResponse<
       &header, 0,
       ::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal);
 }
-
-void ::fidl::WireResponse<
-    ::test_protocols::HandleRightsProtocol::ResponseMethod>::_CloseHandles() {
-  h.reset();
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3795,11 +3750,6 @@ void ::fidl::internal::TransactionalEvent<
     ::test_protocols::HandleRightsProtocol::AnEvent>::_InitHeader() {
   fidl_init_txn_header(&header, 0,
                        ::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal);
-}
-
-void ::fidl::WireEvent<
-    ::test_protocols::HandleRightsProtocol::AnEvent>::_CloseHandles() {
-  h.reset();
 }
 #endif  // __Fuchsia__
 
@@ -4954,11 +4904,6 @@ void ::fidl::internal::TransactionalResponse<
   fidl_init_txn_header(
       &header, 0, ::test_protocols::kWithErrorSyntax_HandleInResult_Ordinal);
 }
-
-void ::fidl::WireResponse<
-    ::test_protocols::WithErrorSyntax::HandleInResult>::_CloseHandles() {
-  result._CloseHandles();
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -6005,11 +5950,6 @@ void ::fidl::internal::TransactionalRequest<
   fidl_init_txn_header(&header, 0,
                        ::test_protocols::kChannelProtocol_TakeHandle_Ordinal);
 }
-
-void ::fidl::WireRequest<
-    ::test_protocols::ChannelProtocol::TakeHandle>::_CloseHandles() {
-  h.reset();
-}
 #endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalResponse<
@@ -6025,11 +5965,6 @@ void ::fidl::internal::TransactionalRequest<
   fidl_init_txn_header(&header, 0,
                        ::test_protocols::kChannelProtocol_MutateSocket_Ordinal);
 }
-
-void ::fidl::WireRequest<
-    ::test_protocols::ChannelProtocol::MutateSocket>::_CloseHandles() {
-  a.reset();
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -6038,11 +5973,6 @@ void ::fidl::internal::TransactionalResponse<
     ::test_protocols::ChannelProtocol::MutateSocket>::_InitHeader() {
   fidl_init_txn_header(&header, 0,
                        ::test_protocols::kChannelProtocol_MutateSocket_Ordinal);
-}
-
-void ::fidl::WireResponse<
-    ::test_protocols::ChannelProtocol::MutateSocket>::_CloseHandles() {
-  b.reset();
 }
 #endif  // __Fuchsia__
 

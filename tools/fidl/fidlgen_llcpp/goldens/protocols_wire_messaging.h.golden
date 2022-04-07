@@ -3707,7 +3707,6 @@ struct ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds> final
   WireRequest() = default;
   using ResponseType =
       ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>;
-  void _CloseHandles();
 };
 
 template <>
@@ -3746,7 +3745,6 @@ struct ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>
       : ::test_protocols::wire::WithProtocolEndsClientEndsTopResponse{
             .out = std::move(out)} {}
   WireResponse() = default;
-  void _CloseHandles();
 };
 
 template <>
@@ -3783,7 +3781,6 @@ struct ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds> final
   WireRequest() = default;
   using ResponseType =
       ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>;
-  void _CloseHandles();
 };
 
 template <>
@@ -3822,7 +3819,6 @@ struct ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>
       : ::test_protocols::wire::WithProtocolEndsServerEndsTopResponse{
             .out = std::move(out)} {}
   WireResponse() = default;
-  void _CloseHandles();
 };
 
 template <>
@@ -3860,7 +3856,6 @@ struct ::fidl::WireRequest<
   WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<
       ::test_protocols::WithProtocolEnds::StructContainingEnds>;
-  void _CloseHandles();
 };
 
 template <>
@@ -3899,7 +3894,6 @@ struct ::fidl::WireResponse<
       : ::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse{
             .out = std::move(out)} {}
   WireResponse() = default;
-  void _CloseHandles();
 };
 
 template <>
@@ -5738,7 +5732,6 @@ struct ::fidl::WireRequest<
       : ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest{
             .h = std::move(h)} {}
   WireRequest() = default;
-  void _CloseHandles();
 };
 
 template <>
@@ -5777,7 +5770,6 @@ struct ::fidl::WireRequest<
   WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<
       ::test_protocols::HandleRightsProtocol::ResponseMethod>;
-  void _CloseHandles();
 };
 
 template <>
@@ -5816,7 +5808,6 @@ struct ::fidl::WireResponse<
       : ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse{
             .h = std::move(h)} {}
   WireResponse() = default;
-  void _CloseHandles();
 };
 
 template <>
@@ -5851,7 +5842,6 @@ struct ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent> final
       : ::test_protocols::wire::HandleRightsProtocolAnEventRequest{
             .h = std::move(h)} {}
   WireEvent() = default;
-  void _CloseHandles();
 };
 
 template <>
@@ -6936,7 +6926,6 @@ struct ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>
       : ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse{
             .result = std::move(result)} {}
   WireResponse() = default;
-  void _CloseHandles();
 };
 
 template <>
@@ -9108,7 +9097,6 @@ struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle> final
       : ::test_protocols::wire::ChannelProtocolTakeHandleRequest{
             .h = std::move(h)} {}
   WireRequest() = default;
-  void _CloseHandles();
 };
 
 template <>
@@ -9161,7 +9149,6 @@ struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>
   WireRequest() = default;
   using ResponseType =
       ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>;
-  void _CloseHandles();
 };
 
 template <>
@@ -9197,7 +9184,6 @@ struct ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>
       : ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse{
             .b = std::move(b)} {}
   WireResponse() = default;
-  void _CloseHandles();
 };
 
 template <>

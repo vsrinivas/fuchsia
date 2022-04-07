@@ -18,6 +18,10 @@ type VectorStruct = resource struct {
     v vector<HandleStruct>;
 };
 
+type HandleTable = resource table {
+    1: h zx.handle:EVENT;
+};
+
 type HandleUnion = strict resource union {
     1: h zx.handle:EVENT;
 };
@@ -69,6 +73,7 @@ protocol HandleProvider {
     GetHandleUnion() -> (resource struct {
         value HandleUnionStruct;
     });
+    SwapHandle(HandleTable) -> (HandleUnion);
 };
 
 protocol EnumMethods {

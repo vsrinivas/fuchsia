@@ -29,10 +29,6 @@ struct {{ .WireRequest }} final {{- if .HasRequestPayload }} : public {{ .Reques
     {{- if and .HasResponse .ResponseArgs }}
   using ResponseType = {{ .WireResponse }};
     {{- end }}
-
-  {{- if .Request.IsResource }}
-  void _CloseHandles();
-  {{- end }}
 };
 
 template<>
@@ -83,14 +79,6 @@ struct {{ .WireTransactionalRequest }} final {
   void {{ .WireTransactionalRequest }}::_InitHeader() {
     fidl_init_txn_header(&header, 0, {{ .OrdinalName }});
   }
-
-  {{ if .Request.IsResource }}
-    void {{ .WireRequest }}::_CloseHandles() {
-      {{- range .RequestArgs }}
-        {{- CloseHandles . false false }}
-      {{- end }}
-    }
-  {{- end }}
 {{- if .Request.IsResource }}
 {{- EndifFuchsia -}}
 {{- end }}

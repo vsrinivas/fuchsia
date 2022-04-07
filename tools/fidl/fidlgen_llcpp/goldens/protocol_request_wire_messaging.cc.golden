@@ -716,11 +716,6 @@ void ::fidl::internal::TransactionalResponse<
   fidl_init_txn_header(&header, 0,
                        ::test_protocolrequest::kParent_GetChild_Ordinal);
 }
-
-void ::fidl::WireResponse<
-    ::test_protocolrequest::Parent::GetChild>::_CloseHandles() {
-  c.reset();
-}
 #endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalRequest<
@@ -736,11 +731,6 @@ void ::fidl::internal::TransactionalResponse<
   fidl_init_txn_header(&header, 0,
                        ::test_protocolrequest::kParent_GetChildRequest_Ordinal);
 }
-
-void ::fidl::WireResponse<
-    ::test_protocolrequest::Parent::GetChildRequest>::_CloseHandles() {
-  r.reset();
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -750,11 +740,6 @@ void ::fidl::internal::TransactionalRequest<
   fidl_init_txn_header(&header, 0,
                        ::test_protocolrequest::kParent_TakeChild_Ordinal);
 }
-
-void ::fidl::WireRequest<
-    ::test_protocolrequest::Parent::TakeChild>::_CloseHandles() {
-  c.reset();
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -763,11 +748,6 @@ void ::fidl::internal::TransactionalRequest<
     ::test_protocolrequest::Parent::TakeChildRequest>::_InitHeader() {
   fidl_init_txn_header(
       &header, 0, ::test_protocolrequest::kParent_TakeChildRequest_Ordinal);
-}
-
-void ::fidl::WireRequest<
-    ::test_protocolrequest::Parent::TakeChildRequest>::_CloseHandles() {
-  r.reset();
 }
 #endif  // __Fuchsia__
 

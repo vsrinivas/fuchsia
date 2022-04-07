@@ -25,10 +25,6 @@ struct {{ .WireResponse }} final {{- if .HasResponsePayload }} : public {{ .Resp
   {{- end -}}{}
   {{- end }}
   {{ .WireResponse.Self }}() = default;
-
-  {{- if .Response.IsResource }}
-  void _CloseHandles();
-  {{- end }}
 };
 
 template<>
@@ -74,14 +70,6 @@ struct {{ .WireTransactionalResponse }} final {
   void {{ .WireTransactionalResponse }}::_InitHeader() {
     fidl_init_txn_header(&header, 0, {{ .OrdinalName }});
   }
-
-  {{ if .Response.IsResource }}
-    void {{ .WireResponse }}::_CloseHandles() {
-      {{- range .ResponseArgs }}
-        {{- CloseHandles . false false }}
-      {{- end }}
-    }
-  {{- end }}
 {{- if .Response.IsResource }}
 {{- EndifFuchsia -}}
 {{- end }}

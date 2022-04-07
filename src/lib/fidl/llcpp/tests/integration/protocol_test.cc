@@ -294,6 +294,12 @@ class HandleProviderServer : public fidl::WireServer<test::HandleProvider> {
     test::wire::HandleUnionStruct s = {.u = test::wire::HandleUnion::WithH(std::move(h))};
     completer.Reply(std::move(s));
   }
+
+  void SwapHandle(SwapHandleRequestView request, SwapHandleCompleter::Sync& completer) override {
+    zx::event h;
+    zx::event::create(0, &h);
+    completer.Reply(test::wire::HandleUnion::WithH(std::move(h)));
+  }
 };
 
 class HandleTest : public ::zxtest::Test {
@@ -333,6 +339,29 @@ TEST_F(HandleTest, HandleClosedAfterHandleStructMove) {
 
   // A move of a struct holding a handle will move the handle from the result, resulting in a close
   { auto release = std::move(result->value); }  // ~HandleStruct
+
+  // Only remaining handle should be the dupe.
+  ASSERT_EQ(GetHandleCount(dupe.borrow()), 1u);
+}
+
+TEST_F(HandleTest, HandleCloseForTableAndUnionPayload) {
+  fidl::Arena allocator;
+  zx::event h;
+  zx::event::create(0, &h);
+  auto client = TakeClient();
+  auto result =
+      client->SwapHandle(test::wire::HandleTable::Builder(allocator).h(std::move(h)).Build());
+
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->is_h());
+  ASSERT_TRUE(result->h().is_valid());
+
+  // Dupe the event so we can get the handle count after move.
+  zx::event dupe;
+  ASSERT_EQ(result->h().duplicate(ZX_RIGHT_SAME_RIGHTS, &dupe), ZX_OK);
+
+  // A move of a union holding a handle will move the handle from the result, resulting in a close
+  { auto release = std::move(result->h()); }  // ~HandleUnion
 
   // Only remaining handle should be the dupe.
   ASSERT_EQ(GetHandleCount(dupe.borrow()), 1u);

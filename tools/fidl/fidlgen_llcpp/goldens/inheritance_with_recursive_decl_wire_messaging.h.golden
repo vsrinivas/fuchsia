@@ -76,7 +76,6 @@ struct ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>
       : ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest{
             .request = std::move(request)} {}
   WireRequest() = default;
-  void _CloseHandles();
 };
 
 template <>
@@ -435,7 +434,6 @@ struct ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>
       : ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest{
             .request = std::move(request)} {}
   WireRequest() = default;
-  void _CloseHandles();
 };
 
 template <>
@@ -472,7 +470,6 @@ struct ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>
       : ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest{
             .request = std::move(request)} {}
   WireRequest() = default;
-  void _CloseHandles();
 };
 
 template <>

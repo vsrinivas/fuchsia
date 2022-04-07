@@ -25,10 +25,6 @@
     {{- end -}}{}
     {{- end }}
     {{ .WireEvent.Self }}() = default;
-
-    {{- if .Response.IsResource }}
-    void _CloseHandles();
-    {{- end }}
   };
 
   template<>
@@ -74,15 +70,6 @@
     void {{ .WireTransactionalEvent }}::_InitHeader() {
       fidl_init_txn_header(&header, 0, {{ .OrdinalName }});
     }
-
-    {{ if .Response.IsResource }}
-      void {{ .WireEvent }}::_CloseHandles() {
-        {{- range .ResponseArgs }}
-          {{- CloseHandles . false false }}
-        {{- end }}
-      }
-    {{- end }}
-
   {{- if .Response.IsResource }}
   {{- EndifFuchsia -}}
   {{- end }}

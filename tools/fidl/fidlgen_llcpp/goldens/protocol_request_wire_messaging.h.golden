@@ -115,7 +115,6 @@ struct ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild> final
       : ::test_protocolrequest::wire::ParentGetChildTopResponse{
             .c = std::move(c)} {}
   WireResponse() = default;
-  void _CloseHandles();
 };
 
 template <>
@@ -172,7 +171,6 @@ struct ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>
       : ::test_protocolrequest::wire::ParentGetChildRequestTopResponse{
             .r = std::move(r)} {}
   WireResponse() = default;
-  void _CloseHandles();
 };
 
 template <>
@@ -207,7 +205,6 @@ struct ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild> final
                                                                  std::move(c)} {
   }
   WireRequest() = default;
-  void _CloseHandles();
 };
 
 template <>
@@ -241,7 +238,6 @@ struct ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>
       : ::test_protocolrequest::wire::ParentTakeChildRequestRequest{
             .r = std::move(r)} {}
   WireRequest() = default;
-  void _CloseHandles();
 };
 
 template <>
