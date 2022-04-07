@@ -1,0 +1,35 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/drivers.gni")
+
+driver_bind_rules("acpi-arm64-bind") {
+  rules = "acpi-arm64.bind"
+  header_output = "acpi-arm64-bind.h"
+  deps = [
+    "//src/devices/bind/fuchsia.arm.platform",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+fuchsia_driver("acpi-arm64-driver") {
+  output_name = "acpi-arm64"
+  sources = [ "acpi-arm64.cc" ]
+  deps = [
+    ":acpi-arm64-bind",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+fuchsia_driver_component("acpi-arm64") {
+  component_name = "acpi-arm64"
+  deps = [ ":acpi-arm64-driver" ]
+  info = "acpi-arm64-info.json"
+  colocate = true
+  root_resource = true
+}

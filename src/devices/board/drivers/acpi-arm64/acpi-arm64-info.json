@@ -1,0 +1,9 @@
+{
+    "short_description": "ACPI ARM64 board driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Board"
+    ]
+}
