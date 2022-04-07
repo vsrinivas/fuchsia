@@ -36,9 +36,9 @@ pub fn sys_write(
     file.write(&current_task, &[UserBuffer { address, length }])
 }
 
-pub fn sys_close(current_task: &CurrentTask, fd: FdNumber) -> Result<SyscallResult, Errno> {
+pub fn sys_close(current_task: &CurrentTask, fd: FdNumber) -> Result<(), Errno> {
     current_task.files.close(fd)?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_lseek(
@@ -161,24 +161,24 @@ pub fn sys_fstatfs(
     current_task: &CurrentTask,
     fd: FdNumber,
     user_buf: UserRef<statfs>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let file = current_task.files.get(fd)?;
     let stat = file.fs.statfs()?;
     current_task.mm.write_object(user_buf, &stat)?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_statfs(
     current_task: &CurrentTask,
     user_path: UserCString,
     user_buf: UserRef<statfs>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let node = lookup_at(&current_task, FdNumber::AT_FDCWD, user_path, LookupFlags::default())?;
     let file_system = node.entry.node.fs();
     let stat = file_system.statfs()?;
     current_task.mm.write_object(user_buf, &stat)?;
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 /// A convenient wrapper for Task::open_file_at.
@@ -309,7 +309,7 @@ pub fn sys_faccessat(
     dir_fd: FdNumber,
     user_path: UserCString,
     mode: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     // These values are defined in libc headers rather than in UAPI headers.
     const F_OK: u32 = 0;
     const X_OK: u32 = 1;
@@ -324,7 +324,7 @@ pub fn sys_faccessat(
     let node = &name.entry.node;
 
     if mode == F_OK {
-        return Ok(SUCCESS);
+        return Ok(());
     }
 
     // TODO(security): These access checks are not quite correct because
@@ -342,7 +342,7 @@ pub fn sys_faccessat(
         return error!(EACCES);
     }
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_getdents(
@@ -369,32 +369,29 @@ pub fn sys_getdents64(
     Ok(sink.actual())
 }
 
-pub fn sys_chdir(
-    current_task: &CurrentTask,
-    user_path: UserCString,
-) -> Result<SyscallResult, Errno> {
+pub fn sys_chdir(current_task: &CurrentTask, user_path: UserCString) -> Result<(), Errno> {
     let name = lookup_at(current_task, FdNumber::AT_FDCWD, user_path, LookupFlags::default())?;
     if !name.entry.node.is_dir() {
         return error!(ENOTDIR);
     }
     current_task.fs.chdir(name);
-    Ok(SUCCESS)
+    Ok(())
 }
 
-pub fn sys_fchdir(current_task: &CurrentTask, fd: FdNumber) -> Result<SyscallResult, Errno> {
+pub fn sys_fchdir(current_task: &CurrentTask, fd: FdNumber) -> Result<(), Errno> {
     let file = current_task.files.get(fd)?;
     if !file.name.entry.node.is_dir() {
         return error!(ENOTDIR);
     }
     current_task.fs.chdir(file.name.clone());
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_access(
     current_task: &CurrentTask,
     user_path: UserCString,
     mode: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     sys_faccessat(current_task, FdNumber::AT_FDCWD, user_path, mode)
 }
 
@@ -402,7 +399,7 @@ pub fn sys_stat(
     current_task: &CurrentTask,
     user_path: UserCString,
     buffer: UserRef<stat_t>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     // TODO(fxbug.dev/91430): Add the `AT_NO_AUTOMOUNT` flag once it is supported in
     // `sys_newfstatat`.
     sys_newfstatat(current_task, FdNumber::AT_FDCWD, user_path, buffer, 0)
@@ -412,7 +409,7 @@ pub fn sys_lstat(
     current_task: &CurrentTask,
     user_path: UserCString,
     buffer: UserRef<stat_t>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     // TODO(fxbug.dev/91430): Add the `AT_NO_AUTOMOUNT` flag once it is supported in
     // `sys_newfstatat`.
     sys_newfstatat(current_task, FdNumber::AT_FDCWD, user_path, buffer, AT_SYMLINK_NOFOLLOW)
@@ -422,11 +419,11 @@ pub fn sys_fstat(
     current_task: &CurrentTask,
     fd: FdNumber,
     buffer: UserRef<stat_t>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let file = current_task.files.get(fd)?;
     let result = file.node().stat()?;
     current_task.mm.write_object(buffer, &result)?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_newfstatat(
@@ -435,7 +432,7 @@ pub fn sys_newfstatat(
     user_path: UserCString,
     buffer: UserRef<stat_t>,
     flags: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     if flags & !(AT_SYMLINK_NOFOLLOW | AT_EMPTY_PATH) != 0 {
         // TODO(fxbug.dev/91430): Support the `AT_NO_AUTOMOUNT` flag.
         not_implemented!("newfstatat: flags 0x{:x}", flags);
@@ -445,7 +442,7 @@ pub fn sys_newfstatat(
     let name = lookup_at(current_task, dir_fd, user_path, flags)?;
     let result = name.entry.node.stat()?;
     current_task.mm.write_object(buffer, &result)?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_readlinkat(
@@ -490,31 +487,27 @@ pub fn sys_truncate(
     current_task: &CurrentTask,
     user_path: UserCString,
     length: off_t,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let length = length.try_into().map_err(|_| errno!(EINVAL))?;
     let name = lookup_at(current_task, FdNumber::AT_FDCWD, user_path, LookupFlags::default())?;
     // TODO: Check for writability.
     name.entry.node.truncate(length)?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
-pub fn sys_ftruncate(
-    current_task: &CurrentTask,
-    fd: FdNumber,
-    length: off_t,
-) -> Result<SyscallResult, Errno> {
+pub fn sys_ftruncate(current_task: &CurrentTask, fd: FdNumber, length: off_t) -> Result<(), Errno> {
     let length = length.try_into().map_err(|_| errno!(EINVAL))?;
     let file = current_task.files.get(fd)?;
     // TODO: Check for writability.
     file.node().truncate(length)?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_mkdir(
     current_task: &CurrentTask,
     user_path: UserCString,
     mode: FileMode,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     sys_mkdirat(current_task, FdNumber::AT_FDCWD, user_path, mode)
 }
 
@@ -523,12 +516,12 @@ pub fn sys_mkdirat(
     dir_fd: FdNumber,
     user_path: UserCString,
     mode: FileMode,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let mode = current_task.fs.apply_umask(mode & FileMode::ALLOW_ALL);
     lookup_parent_at(current_task, dir_fd, user_path, |parent, basename| {
         parent.create_node(basename, FileMode::IFDIR | mode, DeviceType::NONE)
     })?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_mknodat(
@@ -537,7 +530,7 @@ pub fn sys_mknodat(
     user_path: UserCString,
     mode: FileMode,
     dev: DeviceType,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let file_type = match mode & FileMode::IFMT {
         FileMode::IFREG
         | FileMode::IFCHR
@@ -551,7 +544,7 @@ pub fn sys_mknodat(
     lookup_parent_at(current_task, dir_fd, user_path, |parent, basename| {
         parent.create_node(basename, mode, dev)
     })?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_linkat(
@@ -561,7 +554,7 @@ pub fn sys_linkat(
     new_dir_fd: FdNumber,
     new_user_path: UserCString,
     flags: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     if flags & !(AT_SYMLINK_FOLLOW | AT_EMPTY_PATH) != 0 {
         not_implemented!("linkat: flags 0x{:x}", flags);
         return error!(EINVAL);
@@ -580,20 +573,14 @@ pub fn sys_linkat(
         parent.entry.link(basename, &target.entry.node)
     })?;
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
-pub fn sys_rmdir(
-    current_task: &CurrentTask,
-    user_path: UserCString,
-) -> Result<SyscallResult, Errno> {
+pub fn sys_rmdir(current_task: &CurrentTask, user_path: UserCString) -> Result<(), Errno> {
     sys_unlinkat(current_task, FdNumber::AT_FDCWD, user_path, AT_REMOVEDIR)
 }
 
-pub fn sys_unlink(
-    current_task: &CurrentTask,
-    user_path: UserCString,
-) -> Result<SyscallResult, Errno> {
+pub fn sys_unlink(current_task: &CurrentTask, user_path: UserCString) -> Result<(), Errno> {
     sys_unlinkat(current_task, FdNumber::AT_FDCWD, user_path, 0)
 }
 
@@ -602,7 +589,7 @@ pub fn sys_unlinkat(
     dir_fd: FdNumber,
     user_path: UserCString,
     flags: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     if flags & !AT_REMOVEDIR != 0 {
         return error!(EINVAL);
     }
@@ -611,14 +598,14 @@ pub fn sys_unlinkat(
     lookup_parent_at(current_task, dir_fd, user_path, |parent, basename| {
         parent.unlink(basename, kind)
     })?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_rename(
     current_task: &CurrentTask,
     old_user_path: UserCString,
     new_user_path: UserCString,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     sys_renameat(current_task, FdNumber::AT_FDCWD, old_user_path, FdNumber::AT_FDCWD, new_user_path)
 }
 
@@ -628,7 +615,7 @@ pub fn sys_renameat(
     old_user_path: UserCString,
     new_dir_fd: FdNumber,
     new_user_path: UserCString,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let lookup = |dir_fd, user_path| {
         lookup_parent_at(current_task, dir_fd, user_path, |parent, basename| {
             Ok((parent, basename.to_vec()))
@@ -643,28 +630,24 @@ pub fn sys_renameat(
     }
 
     DirEntry::rename(&old_parent, &old_basename, &new_parent, &new_basename)?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_chmod(
     current_task: &CurrentTask,
     user_path: UserCString,
     mode: FileMode,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     sys_fchmodat(current_task, FdNumber::AT_FDCWD, user_path, mode)
 }
 
-pub fn sys_fchmod(
-    current_task: &CurrentTask,
-    fd: FdNumber,
-    mode: FileMode,
-) -> Result<SyscallResult, Errno> {
+pub fn sys_fchmod(current_task: &CurrentTask, fd: FdNumber, mode: FileMode) -> Result<(), Errno> {
     if mode & FileMode::IFMT != FileMode::EMPTY {
         return error!(EINVAL);
     }
     let file = current_task.files.get(fd)?;
     file.name.entry.node.chmod(mode);
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_fchmodat(
@@ -672,13 +655,13 @@ pub fn sys_fchmodat(
     dir_fd: FdNumber,
     user_path: UserCString,
     mode: FileMode,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     if mode & FileMode::IFMT != FileMode::EMPTY {
         return error!(EINVAL);
     }
     let name = lookup_at(current_task, dir_fd, user_path, LookupFlags::default())?;
     name.entry.node.chmod(mode);
-    Ok(SUCCESS)
+    Ok(())
 }
 
 fn maybe_uid(id: u32) -> Option<uid_t> {
@@ -694,11 +677,11 @@ pub fn sys_fchown(
     fd: FdNumber,
     owner: u32,
     group: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let file = current_task.files.get(fd)?;
     // TODO(security): Needs permission check
     file.name.entry.node.chown(maybe_uid(owner), maybe_uid(group));
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_fchownat(
@@ -708,11 +691,11 @@ pub fn sys_fchownat(
     owner: u32,
     group: u32,
     flags: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let flags = LookupFlags::from_bits(flags, AT_EMPTY_PATH | AT_SYMLINK_NOFOLLOW)?;
     let name = lookup_at(current_task, dir_fd, user_path, flags)?;
     name.entry.node.chown(maybe_uid(owner), maybe_uid(group));
-    Ok(SUCCESS)
+    Ok(())
 }
 
 fn read_xattr_name<'a>(
@@ -793,7 +776,7 @@ fn do_setxattr(
     value_addr: UserAddress,
     size: usize,
     flags: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let op = match flags {
         0 => XattrOp::Set,
         XATTR_CREATE => XattrOp::Create,
@@ -804,8 +787,7 @@ fn do_setxattr(
     let name = read_xattr_name(current_task, name_addr, &mut name)?;
     let mut value = vec![0u8; size];
     current_task.mm.read_memory(value_addr, &mut value)?;
-    node.entry.node.set_xattr(name, &value, op)?;
-    Ok(SUCCESS)
+    node.entry.node.set_xattr(name, &value, op)
 }
 
 pub fn sys_fsetxattr(
@@ -815,7 +797,7 @@ pub fn sys_fsetxattr(
     value_addr: UserAddress,
     size: usize,
     flags: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let file = current_task.files.get(fd)?;
     do_setxattr(current_task, &file.name, name_addr, value_addr, size, flags)
 }
@@ -827,7 +809,7 @@ pub fn sys_lsetxattr(
     value_addr: UserAddress,
     size: usize,
     flags: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let node = lookup_at(current_task, FdNumber::AT_FDCWD, path_addr, LookupFlags::no_follow())?;
     do_setxattr(current_task, &node, name_addr, value_addr, size, flags)
 }
@@ -839,7 +821,7 @@ pub fn sys_setxattr(
     value_addr: UserAddress,
     size: usize,
     flags: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let node = lookup_at(current_task, FdNumber::AT_FDCWD, path_addr, LookupFlags::default())?;
     do_setxattr(current_task, &node, name_addr, value_addr, size, flags)
 }
@@ -848,18 +830,17 @@ fn do_removexattr(
     current_task: &CurrentTask,
     node: &NamespaceNode,
     name_addr: UserCString,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let mut name = vec![0u8; XATTR_NAME_MAX as usize + 1];
     let name = read_xattr_name(current_task, name_addr, &mut name)?;
-    node.entry.node.remove_xattr(name)?;
-    Ok(SUCCESS)
+    node.entry.node.remove_xattr(name)
 }
 
 pub fn sys_removexattr(
     current_task: &CurrentTask,
     path_addr: UserCString,
     name_addr: UserCString,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let node = lookup_at(current_task, FdNumber::AT_FDCWD, path_addr, LookupFlags::default())?;
     do_removexattr(current_task, &node, name_addr)
 }
@@ -868,7 +849,7 @@ pub fn sys_lremovexattr(
     current_task: &CurrentTask,
     path_addr: UserCString,
     name_addr: UserCString,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let node = lookup_at(current_task, FdNumber::AT_FDCWD, path_addr, LookupFlags::no_follow())?;
     do_removexattr(current_task, &node, name_addr)
 }
@@ -877,7 +858,7 @@ pub fn sys_fremovexattr(
     current_task: &CurrentTask,
     fd: FdNumber,
     name_addr: UserCString,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let file = current_task.files.get(fd)?;
     do_removexattr(current_task, &file.name, name_addr)
 }
@@ -961,10 +942,7 @@ fn get_fd_flags(flags: u32) -> FdFlags {
     }
 }
 
-pub fn sys_pipe(
-    current_task: &CurrentTask,
-    user_pipe: UserRef<FdNumber>,
-) -> Result<SyscallResult, Errno> {
+pub fn sys_pipe(current_task: &CurrentTask, user_pipe: UserRef<FdNumber>) -> Result<(), Errno> {
     sys_pipe2(current_task, user_pipe, 0)
 }
 
@@ -972,7 +950,7 @@ pub fn sys_pipe2(
     current_task: &CurrentTask,
     user_pipe: UserRef<FdNumber>,
     flags: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let supported_file_flags = OpenFlags::NONBLOCK | OpenFlags::DIRECT;
     if flags & !(O_CLOEXEC | supported_file_flags.bits()) != 0 {
         return error!(EINVAL);
@@ -992,7 +970,7 @@ pub fn sys_pipe2(
     let user_pipe = user_pipe.next();
     current_task.mm.write_object(user_pipe, &fd_write)?;
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_ioctl(
@@ -1010,7 +988,7 @@ pub fn sys_symlinkat(
     user_target: UserCString,
     new_dir_fd: FdNumber,
     user_path: UserCString,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let mut buf = [0u8; PATH_MAX as usize];
     let target = current_task.mm.read_c_string(user_target, &mut buf)?;
     if target.len() == 0 {
@@ -1031,7 +1009,7 @@ pub fn sys_symlinkat(
         }
         parent.symlink(basename, target)
     })?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_dup(current_task: &CurrentTask, oldfd: FdNumber) -> Result<FdNumber, Errno> {
@@ -1089,7 +1067,7 @@ pub fn sys_mount(
     filesystemtype_addr: UserCString,
     flags: u32,
     _data_addr: UserAddress,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let flags = MountFlags::from_bits(flags).ok_or_else(|| {
         not_implemented!(
             "unsupported mount flags: {:#x}",
@@ -1125,7 +1103,7 @@ pub fn sys_mount(
         target.mount(fs, flags)?;
     }
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_eventfd(current_task: &CurrentTask, value: u32) -> Result<FdNumber, Errno> {
@@ -1179,13 +1157,13 @@ pub fn sys_timerfd_gettime<'a>(
     current_task: &CurrentTask,
     fd: FdNumber,
     user_current_value: UserRef<itimerspec>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let file = current_task.files.get(fd)?;
     let timer_file = file.downcast_file::<TimerFile>().ok_or_else(|| errno!(EBADF))?;
     let timer_info = timer_file.current_timer_spec();
     current_task.mm.write_object(user_current_value, &timer_info)?;
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_timerfd_settime(
@@ -1194,7 +1172,7 @@ pub fn sys_timerfd_settime(
     flags: u32,
     user_new_value: UserRef<itimerspec>,
     user_old_value: UserRef<itimerspec>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     if flags & !(TFD_TIMER_ABSTIME) != 0 {
         not_implemented!("timerfd_settime: flags 0x{:x}", flags);
         return error!(EINVAL);
@@ -1211,7 +1189,7 @@ pub fn sys_timerfd_settime(
         current_task.mm.write_object(user_old_value, &old_timer_spec)?;
     }
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_epoll_create(current_task: &CurrentTask, size: i32) -> Result<FdNumber, Errno> {
@@ -1237,7 +1215,7 @@ pub fn sys_epoll_ctl(
     op: u32,
     fd: FdNumber,
     event: UserRef<EpollEvent>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let file = current_task.files.get(epfd)?;
     let epoll_file = file.downcast_file::<EpollFileObject>().ok_or_else(|| errno!(EINVAL))?;
 
@@ -1264,7 +1242,7 @@ pub fn sys_epoll_ctl(
         EPOLL_CTL_DEL => epoll_file.delete(&current_task, &ctl_file)?,
         _ => return error!(EINVAL),
     }
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_epoll_wait(
@@ -1415,13 +1393,9 @@ pub fn sys_poll(
     poll(current_task, user_fds, num_fds, None, timeout)
 }
 
-pub fn sys_flock(
-    _ctx: &CurrentTask,
-    _fd: FdNumber,
-    _operation: i32,
-) -> Result<SyscallResult, Errno> {
+pub fn sys_flock(_ctx: &CurrentTask, _fd: FdNumber, _operation: i32) -> Result<(), Errno> {
     not_implemented!("flock not implemented");
-    Ok(SUCCESS)
+    Ok(())
 }
 
 #[cfg(test)]
@@ -1550,7 +1524,7 @@ mod tests {
 
         let user_path = UserCString::new(path_addr);
 
-        assert_eq!(sys_statfs(&current_task, user_path, user_stat), Ok(SUCCESS));
+        assert_eq!(sys_statfs(&current_task, user_path, user_stat), Ok(()));
 
         let mut returned_stat = statfs::default();
         current_task.mm.read_object(user_stat, &mut returned_stat).expect("failed to read struct");

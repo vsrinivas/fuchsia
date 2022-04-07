@@ -141,9 +141,9 @@ pub fn sys_mprotect(
     addr: UserAddress,
     length: usize,
     prot: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     current_task.mm.protect(addr, length, mmap_prot_to_vm_opt(prot))?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_mremap(
@@ -163,9 +163,9 @@ pub fn sys_munmap(
     current_task: &CurrentTask,
     addr: UserAddress,
     length: usize,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     current_task.mm.unmap(addr, length)?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_msync(
@@ -173,12 +173,12 @@ pub fn sys_msync(
     addr: UserAddress,
     length: usize,
     _flags: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     not_implemented!("msync not implemented");
     // Perform some basic validation of the address range given to satisfy gvisor tests that
     // use msync as a way to probe whether a page is mapped or not.
     current_task.mm.ensure_mapped(addr, length)?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_madvise(
@@ -186,9 +186,9 @@ pub fn sys_madvise(
     addr: UserAddress,
     length: usize,
     advice: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     current_task.mm.madvise(addr, length, advice)?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_brk(current_task: &CurrentTask, addr: UserAddress) -> Result<UserAddress, Errno> {
@@ -316,7 +316,7 @@ mod tests {
         let (_kernel, current_task) = create_kernel_and_task();
 
         let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
-        assert_eq!(sys_munmap(&current_task, mapped_address, *PAGE_SIZE as usize), Ok(SUCCESS));
+        assert_eq!(sys_munmap(&current_task, mapped_address, *PAGE_SIZE as usize), Ok(()));
 
         // Verify that the memory is no longer readable.
         let mut data: [u8; 5] = [0; 5];
@@ -329,8 +329,8 @@ mod tests {
         let (_kernel, current_task) = create_kernel_and_task();
 
         let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
-        assert_eq!(sys_munmap(&current_task, mapped_address, *PAGE_SIZE as usize), Ok(SUCCESS));
-        assert_eq!(sys_munmap(&current_task, mapped_address, *PAGE_SIZE as usize), Ok(SUCCESS));
+        assert_eq!(sys_munmap(&current_task, mapped_address, *PAGE_SIZE as usize), Ok(()));
+        assert_eq!(sys_munmap(&current_task, mapped_address, *PAGE_SIZE as usize), Ok(()));
     }
 
     /// It is an error to call munmap with a length of 0.
@@ -364,10 +364,7 @@ mod tests {
         let (_kernel, current_task) = create_kernel_and_task();
 
         let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
-        assert_eq!(
-            sys_munmap(&current_task, mapped_address, (*PAGE_SIZE as usize) / 2),
-            Ok(SUCCESS)
-        );
+        assert_eq!(sys_munmap(&current_task, mapped_address, (*PAGE_SIZE as usize) / 2), Ok(()));
 
         // Verify that memory can't be read in either half of the page.
         let mut data: [u8; 5] = [0; 5];
@@ -384,10 +381,7 @@ mod tests {
         let (_kernel, current_task) = create_kernel_and_task();
 
         let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE * 2);
-        assert_eq!(
-            sys_munmap(&current_task, mapped_address, (*PAGE_SIZE as usize) + 1),
-            Ok(SUCCESS)
-        );
+        assert_eq!(sys_munmap(&current_task, mapped_address, (*PAGE_SIZE as usize) + 1), Ok(()));
 
         // Verify that neither page is readable.
         let mut data: [u8; 5] = [0; 5];
@@ -404,10 +398,7 @@ mod tests {
         let (_kernel, current_task) = create_kernel_and_task();
 
         let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE * 2);
-        assert_eq!(
-            sys_munmap(&current_task, mapped_address, (*PAGE_SIZE as usize) - 1),
-            Ok(SUCCESS)
-        );
+        assert_eq!(sys_munmap(&current_task, mapped_address, (*PAGE_SIZE as usize) - 1), Ok(()));
 
         // Verify that the second page is still readable.
         let mut data: [u8; 5] = [0; 5];
@@ -426,7 +417,7 @@ mod tests {
         let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE * 3);
         assert_eq!(
             sys_munmap(&current_task, mapped_address + *PAGE_SIZE, *PAGE_SIZE as usize),
-            Ok(SUCCESS)
+            Ok(())
         );
 
         // Verify that the first and third pages are still readable.
@@ -456,7 +447,7 @@ mod tests {
         let max_address = *mapped_addresses.iter().max().unwrap();
         let unmap_length = (max_address - min_address) + *PAGE_SIZE as usize;
 
-        assert_eq!(sys_munmap(&current_task, min_address, unmap_length), Ok(SUCCESS));
+        assert_eq!(sys_munmap(&current_task, min_address, unmap_length), Ok(()));
 
         // Verify that none of the mapped pages are readable.
         let mut data: [u8; 5] = [0; 5];
@@ -471,36 +462,27 @@ mod tests {
 
         // Map 3 pages and test that ranges covering these pages return no error.
         let addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE * 3);
-        assert_eq!(sys_msync(&current_task, addr, *PAGE_SIZE as usize * 3, 0), Ok(SUCCESS));
-        assert_eq!(sys_msync(&current_task, addr, *PAGE_SIZE as usize * 2, 0), Ok(SUCCESS));
-        assert_eq!(
-            sys_msync(&current_task, addr + *PAGE_SIZE, *PAGE_SIZE as usize * 2, 0),
-            Ok(SUCCESS)
-        );
+        assert_eq!(sys_msync(&current_task, addr, *PAGE_SIZE as usize * 3, 0), Ok(()));
+        assert_eq!(sys_msync(&current_task, addr, *PAGE_SIZE as usize * 2, 0), Ok(()));
+        assert_eq!(sys_msync(&current_task, addr + *PAGE_SIZE, *PAGE_SIZE as usize * 2, 0), Ok(()));
 
         // Unmap the middle page and test that ranges covering that page return ENOMEM.
         sys_munmap(&current_task, addr + *PAGE_SIZE, *PAGE_SIZE as usize).expect("unmap middle");
-        assert_eq!(sys_msync(&current_task, addr, *PAGE_SIZE as usize, 0), Ok(SUCCESS));
+        assert_eq!(sys_msync(&current_task, addr, *PAGE_SIZE as usize, 0), Ok(()));
         assert_eq!(sys_msync(&current_task, addr, *PAGE_SIZE as usize * 3, 0), error!(ENOMEM));
         assert_eq!(sys_msync(&current_task, addr, *PAGE_SIZE as usize * 2, 0), error!(ENOMEM));
         assert_eq!(
             sys_msync(&current_task, addr + *PAGE_SIZE, *PAGE_SIZE as usize * 2, 0),
             error!(ENOMEM)
         );
-        assert_eq!(
-            sys_msync(&current_task, addr + *PAGE_SIZE * 2, *PAGE_SIZE as usize, 0),
-            Ok(SUCCESS)
-        );
+        assert_eq!(sys_msync(&current_task, addr + *PAGE_SIZE * 2, *PAGE_SIZE as usize, 0), Ok(()));
 
         // Map the middle page back and test that ranges covering the three pages
         // (spanning multiple ranges) return no error.
         assert_eq!(map_memory(&current_task, addr + *PAGE_SIZE, *PAGE_SIZE), addr + *PAGE_SIZE);
-        assert_eq!(sys_msync(&current_task, addr, *PAGE_SIZE as usize * 3, 0), Ok(SUCCESS));
-        assert_eq!(sys_msync(&current_task, addr, *PAGE_SIZE as usize * 2, 0), Ok(SUCCESS));
-        assert_eq!(
-            sys_msync(&current_task, addr + *PAGE_SIZE, *PAGE_SIZE as usize * 2, 0),
-            Ok(SUCCESS)
-        );
+        assert_eq!(sys_msync(&current_task, addr, *PAGE_SIZE as usize * 3, 0), Ok(()));
+        assert_eq!(sys_msync(&current_task, addr, *PAGE_SIZE as usize * 2, 0), Ok(()));
+        assert_eq!(sys_msync(&current_task, addr + *PAGE_SIZE, *PAGE_SIZE as usize * 2, 0), Ok(()));
     }
 
     /// Shrinks an entire range.
@@ -567,7 +549,7 @@ mod tests {
         // Map 3 pages, unmap the middle, then map the middle again. This will leave us with
         // 3 contiguous mappings.
         let addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE * 3);
-        assert_eq!(sys_munmap(&current_task, addr + *PAGE_SIZE, *PAGE_SIZE as usize), Ok(SUCCESS));
+        assert_eq!(sys_munmap(&current_task, addr + *PAGE_SIZE, *PAGE_SIZE as usize), Ok(()));
         assert_eq!(map_memory(&current_task, addr + *PAGE_SIZE, *PAGE_SIZE), addr + *PAGE_SIZE);
 
         fill_page(&current_task, addr, 'a');
@@ -602,7 +584,7 @@ mod tests {
         fill_page(&current_task, addr, 'a');
         fill_page(&current_task, addr + *PAGE_SIZE, 'b');
         fill_page(&current_task, addr + *PAGE_SIZE * 2, 'c');
-        assert_eq!(sys_munmap(&current_task, addr + *PAGE_SIZE, *PAGE_SIZE as usize), Ok(SUCCESS));
+        assert_eq!(sys_munmap(&current_task, addr + *PAGE_SIZE, *PAGE_SIZE as usize), Ok(()));
 
         // Grow the first page in-place into the middle.
         assert_eq!(

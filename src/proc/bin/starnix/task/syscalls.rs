@@ -64,7 +64,7 @@ pub fn sys_execve(
     user_path: UserCString,
     user_argv: UserRef<UserCString>,
     user_environ: UserRef<UserCString>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let mut buf = [0u8; PATH_MAX as usize];
     let path = CString::new(current_task.mm.read_c_string(user_path, &mut buf)?)
         .map_err(|_| errno!(EINVAL))?;
@@ -81,7 +81,7 @@ pub fn sys_execve(
     };
     strace!(current_task, "execve({:?}, argv={:?}, environ={:?})", path, argv, environ);
     current_task.exec(path, argv, environ)?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_getpid(current_task: &CurrentTask) -> Result<pid_t, Errno> {
@@ -116,14 +116,10 @@ pub fn sys_getpgid(current_task: &CurrentTask, pid: pid_t) -> Result<pid_t, Errn
     Ok(get_task_or_current(current_task, pid)?.thread_group.process_group.read().leader)
 }
 
-pub fn sys_setpgid(
-    current_task: &CurrentTask,
-    pid: pid_t,
-    pgid: pid_t,
-) -> Result<SyscallResult, Errno> {
+pub fn sys_setpgid(current_task: &CurrentTask, pid: pid_t, pgid: pid_t) -> Result<(), Errno> {
     let task = get_task_or_current(current_task, pid)?;
     current_task.thread_group.setpgid(&task, pgid)?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_getuid(current_task: &CurrentTask) -> Result<uid_t, Errno> {
@@ -147,12 +143,12 @@ pub fn sys_getresuid(
     ruid_addr: UserRef<uid_t>,
     euid_addr: UserRef<uid_t>,
     suid_addr: UserRef<uid_t>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let creds = current_task.creds.read();
     current_task.mm.write_object(ruid_addr, &creds.uid)?;
     current_task.mm.write_object(euid_addr, &creds.euid)?;
     current_task.mm.write_object(suid_addr, &creds.saved_uid)?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_getresgid(
@@ -160,24 +156,24 @@ pub fn sys_getresgid(
     ruid_addr: UserRef<uid_t>,
     euid_addr: UserRef<uid_t>,
     suid_addr: UserRef<uid_t>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let creds = current_task.creds.read();
     current_task.mm.write_object(ruid_addr, &creds.uid)?;
     current_task.mm.write_object(euid_addr, &creds.euid)?;
     current_task.mm.write_object(suid_addr, &creds.saved_uid)?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
-pub fn sys_exit(current_task: &CurrentTask, exit_code: i32) -> Result<SyscallResult, Errno> {
+pub fn sys_exit(current_task: &CurrentTask, exit_code: i32) -> Result<(), Errno> {
     info!(target: "exit", "{:?} exit({})", current_task, exit_code);
     *current_task.exit_code.lock() = Some(exit_code);
-    Ok(SUCCESS)
+    Ok(())
 }
 
-pub fn sys_exit_group(current_task: &CurrentTask, exit_code: i32) -> Result<SyscallResult, Errno> {
+pub fn sys_exit_group(current_task: &CurrentTask, exit_code: i32) -> Result<(), Errno> {
     info!(target: "exit", "{:?} exit_group({})", current_task, exit_code);
     current_task.thread_group.exit(exit_code);
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_sched_getscheduler(_ctx: &CurrentTask, _pid: i32) -> Result<u32, Errno> {
@@ -189,14 +185,14 @@ pub fn sys_sched_getaffinity(
     _pid: pid_t,
     cpusetsize: u32,
     user_mask: UserAddress,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let mask: u64 = u64::MAX;
     if cpusetsize < (std::mem::size_of_val(&mask) as u32) {
         return error!(EINVAL);
     }
 
     current_task.mm.write_memory(user_mask, &mask.to_ne_bytes())?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_sched_setaffinity(
@@ -204,7 +200,7 @@ pub fn sys_sched_setaffinity(
     _pid: pid_t,
     cpusetsize: u32,
     user_mask: UserAddress,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let mut mask: u64 = 0;
     if cpusetsize < (std::mem::size_of_val(&mask) as u32) {
         return error!(EINVAL);
@@ -213,18 +209,18 @@ pub fn sys_sched_setaffinity(
     current_task.mm.read_memory(user_mask, &mut mask.as_bytes_mut())?;
     // Currently, we ignore the mask and act as if the system reset the mask
     // immediately to allowing all CPUs.
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_getitimer(
     current_task: &CurrentTask,
     which: u32,
     user_curr_value: UserRef<itimerval>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let itimers = current_task.thread_group.itimers.read();
     let timer = itimers.get(which as usize).ok_or(errno!(EINVAL))?;
     current_task.mm.write_object(user_curr_value, timer)?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_setitimer(
@@ -232,7 +228,7 @@ pub fn sys_setitimer(
     which: u32,
     user_new_value: UserRef<itimerval>,
     user_old_value: UserRef<itimerval>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let mut new_value = itimerval::default();
     current_task.mm.read_object(user_new_value, &mut new_value)?;
 
@@ -245,7 +241,7 @@ pub fn sys_setitimer(
         current_task.mm.write_object(user_old_value, &old_value)?;
     }
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_prctl(
@@ -269,12 +265,12 @@ pub fn sys_prctl(
             let name = current_task.mm.read_c_string(name, &mut buf)?;
             let name = CString::new(name).map_err(|_| errno!(EINVAL))?;
             current_task.mm.set_mapping_name(addr, length, name)?;
-            Ok(SUCCESS)
+            Ok(0.into())
         }
         PR_SET_DUMPABLE => {
             let mut dumpable = current_task.mm.dumpable.lock();
             *dumpable = if arg2 == 1 { DumpPolicy::USER } else { DumpPolicy::DISABLE };
-            Ok(SUCCESS)
+            Ok(0.into())
         }
         PR_GET_DUMPABLE => {
             let dumpable = current_task.mm.dumpable.lock();
@@ -285,17 +281,17 @@ pub fn sys_prctl(
         }
         PR_SET_PDEATHSIG => {
             not_implemented!("PR_SET_PDEATHSIG");
-            Ok(SUCCESS)
+            Ok(0.into())
         }
         PR_GET_NAME => {
             let name = current_task.command.read();
             let addr = UserAddress::from(arg2);
             current_task.mm.write_memory(addr, name.to_bytes_with_nul())?;
-            Ok(SUCCESS)
+            Ok(0.into())
         }
         PR_SET_PTRACER => {
             not_implemented!("prctl(PR_SET_PTRACER, {})", arg2);
-            Ok(SUCCESS)
+            Ok(0.into())
         }
         _ => {
             not_implemented!("prctl: Unknown option: 0x{:x}", option);
@@ -308,15 +304,15 @@ pub fn sys_arch_prctl(
     current_task: &mut CurrentTask,
     code: u32,
     addr: UserAddress,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     match code {
         ARCH_SET_FS => {
             current_task.registers.fs_base = addr.ptr() as u64;
-            Ok(SUCCESS)
+            Ok(())
         }
         ARCH_SET_GS => {
             current_task.registers.gs_base = addr.ptr() as u64;
-            Ok(SUCCESS)
+            Ok(())
         }
         _ => {
             not_implemented!("arch_prctl: Unknown code: code=0x{:x} addr={}", code, addr);
@@ -337,7 +333,7 @@ pub fn sys_getrusage(
     current_task: &CurrentTask,
     who: i32,
     user_usage: UserRef<rusage>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     const RUSAGE_SELF: i32 = crate::types::uapi::RUSAGE_SELF as i32;
     const RUSAGE_THREAD: i32 = crate::types::uapi::RUSAGE_THREAD as i32;
     // TODO(fxb/76811): Implement proper rusage.
@@ -353,14 +349,14 @@ pub fn sys_getrusage(
         current_task.mm.write_object(user_usage, &usage)?;
     }
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_getrlimit(
     current_task: &CurrentTask,
     resource: u32,
     user_rlimit: UserRef<rlimit>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let limit = match resource {
         resource if resource == RLIMIT_NOFILE => {
             Ok(rlimit { rlim_cur: RLIMIT_NOFILE_MAX, rlim_max: RLIMIT_NOFILE_MAX })
@@ -379,7 +375,7 @@ pub fn sys_getrlimit(
         }
     }?;
     current_task.mm.write_object(user_rlimit, &limit)?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_futex(
@@ -390,7 +386,7 @@ pub fn sys_futex(
     _utime: UserRef<timespec>,
     addr2: UserAddress,
     value3: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     // TODO: Distinguish between public and private futexes.
     let _is_private = op & FUTEX_PRIVATE_FLAG != 0;
 
@@ -436,23 +432,23 @@ pub fn sys_futex(
             return error!(ENOSYS);
         }
     }
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_capget(
     _ctx: &CurrentTask,
     _user_header: UserRef<__user_cap_header_struct>,
     _user_data: UserRef<__user_cap_data_struct>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     not_implemented!("Stubbed capget has no effect.");
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_setgroups(
     current_task: &CurrentTask,
     size: usize,
     groups_addr: UserAddress,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     if size > NGROUPS_MAX as usize {
         return error!(EINVAL);
     }
@@ -463,7 +459,7 @@ pub fn sys_setgroups(
         return error!(EPERM);
     }
     creds.groups = groups;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_getgroups(
@@ -528,23 +524,14 @@ mod tests {
     fn test_prctl_get_set_dumpable() {
         let (_kernel, current_task) = create_kernel_and_task();
 
-        assert_eq!(
-            SyscallResult::from(0),
-            sys_prctl(&current_task, PR_GET_DUMPABLE, 0, 0, 0, 0).expect("failed to get dumpable"),
-        );
+        sys_prctl(&current_task, PR_GET_DUMPABLE, 0, 0, 0, 0).expect("failed to get dumpable");
 
         sys_prctl(&current_task, PR_SET_DUMPABLE, 1, 0, 0, 0).expect("failed to set dumpable");
-        assert_eq!(
-            SyscallResult::from(1),
-            sys_prctl(&current_task, PR_GET_DUMPABLE, 0, 0, 0, 0).expect("failed to get dumpable"),
-        );
+        sys_prctl(&current_task, PR_GET_DUMPABLE, 0, 0, 0, 0).expect("failed to get dumpable");
 
         // SUID_DUMP_ROOT not supported.
         sys_prctl(&current_task, PR_SET_DUMPABLE, 2, 0, 0, 0).expect("failed to set dumpable");
-        assert_eq!(
-            SyscallResult::from(0),
-            sys_prctl(&current_task, PR_GET_DUMPABLE, 0, 0, 0, 0).expect("failed to get dumpable"),
-        );
+        sys_prctl(&current_task, PR_GET_DUMPABLE, 0, 0, 0, 0).expect("failed to get dumpable");
     }
 
     #[::fuchsia::test]
@@ -568,7 +555,7 @@ mod tests {
     fn test_get_affinity_size() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
-        assert_eq!(sys_sched_getaffinity(&current_task, 1, u32::MAX, mapped_address), Ok(SUCCESS));
+        assert_eq!(sys_sched_getaffinity(&current_task, 1, u32::MAX, mapped_address), Ok(()));
         assert_eq!(sys_sched_getaffinity(&current_task, 1, 1, mapped_address), Err(EINVAL));
     }
 
@@ -576,7 +563,7 @@ mod tests {
     fn test_set_affinity_size() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
-        assert_eq!(sys_sched_setaffinity(&current_task, 1, u32::MAX, mapped_address), Ok(SUCCESS));
+        assert_eq!(sys_sched_setaffinity(&current_task, 1, u32::MAX, mapped_address), Ok(()));
         assert_eq!(sys_sched_setaffinity(&current_task, 1, 1, mapped_address), Err(EINVAL));
     }
 }

@@ -20,7 +20,7 @@ pub fn sys_rt_sigaction(
     user_action: UserRef<sigaction_t>,
     user_old_action: UserRef<sigaction_t>,
     sigset_size: usize,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     if sigset_size != std::mem::size_of::<sigset_t>() {
         return error!(EINVAL);
     }
@@ -53,7 +53,7 @@ pub fn sys_rt_sigaction(
         current_task.mm.write_object(user_old_action, &old_action)?;
     }
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_rt_sigprocmask(
@@ -62,7 +62,7 @@ pub fn sys_rt_sigprocmask(
     user_set: UserRef<sigset_t>,
     user_old_set: UserRef<sigset_t>,
     sigset_size: usize,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     if sigset_size != std::mem::size_of::<sigset_t>() {
         return error!(EINVAL);
     }
@@ -87,7 +87,7 @@ pub fn sys_rt_sigprocmask(
 
     // If set is null, how is ignored and the mask is not updated.
     if user_set.is_null() {
-        return Ok(SUCCESS);
+        return Ok(());
     }
 
     let signal_mask = match how {
@@ -99,14 +99,14 @@ pub fn sys_rt_sigprocmask(
     };
     signal_state.set_signal_mask(signal_mask);
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_sigaltstack(
     current_task: &CurrentTask,
     user_ss: UserRef<sigaltstack_t>,
     user_old_ss: UserRef<sigaltstack_t>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let mut signal_state = current_task.signals.write();
     let on_signal_stack = signal_state
         .alt_stack
@@ -143,14 +143,14 @@ pub fn sys_sigaltstack(
         }
     }
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_rt_sigsuspend(
     current_task: &mut CurrentTask,
     user_mask: UserRef<sigset_t>,
     sigset_size: usize,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     if sigset_size != std::mem::size_of::<sigset_t>() {
         return error!(EINVAL);
     }
@@ -161,7 +161,7 @@ pub fn sys_rt_sigsuspend(
     let waiter = Waiter::new();
     current_task.wait_with_temporary_mask(mask, |current_task| waiter.wait(current_task))?;
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 fn send_unchecked_signal(task: &Task, unchecked_signal: &UncheckedSignal) -> Result<(), Errno> {
@@ -200,7 +200,7 @@ pub fn sys_kill(
     current_task: &CurrentTask,
     pid: pid_t,
     unchecked_signal: UncheckedSignal,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     match pid {
         pid if pid > 0 => {
             // "If pid is positive, then signal sig is sent to the process with
@@ -264,7 +264,7 @@ pub fn sys_kill(
         }
     };
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_tgkill(
@@ -272,7 +272,7 @@ pub fn sys_tgkill(
     tgid: pid_t,
     tid: pid_t,
     unchecked_signal: UncheckedSignal,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     // Linux returns EINVAL when the tgid or tid <= 0.
     if tgid <= 0 || tid <= 0 {
         return error!(EINVAL);
@@ -288,7 +288,7 @@ pub fn sys_tgkill(
     }
 
     send_unchecked_signal(&target, &unchecked_signal)?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_rt_sigreturn(current_task: &mut CurrentTask) -> Result<SyscallResult, Errno> {
@@ -302,7 +302,7 @@ pub fn sys_rt_tgsigqueueinfo(
     tid: pid_t,
     unchecked_signal: UncheckedSignal,
     siginfo_ref: UserAddress,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let mut siginfo_mem = [0u8; SI_MAX_SIZE as usize];
     current_task.mm.read_memory(siginfo_ref, &mut siginfo_mem)?;
 
@@ -337,7 +337,7 @@ pub fn sys_rt_tgsigqueueinfo(
     }
 
     send_unchecked_signal_info(&target, &unchecked_signal, signal_info)?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 /// Sends a signal to all thread groups in `thread_groups`.
@@ -435,7 +435,7 @@ pub fn sys_waitid(
     id: i32,
     user_info: UserAddress,
     options: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     // waitid requires at least one of these options.
     if options & (WEXITED | WSTOPPED | WCONTINUED) == 0 {
         return error!(EINVAL);
@@ -464,7 +464,7 @@ pub fn sys_waitid(
         current_task.mm.write_memory(user_info, &siginfo.as_siginfo_bytes())?;
     }
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_wait4(
@@ -652,7 +652,7 @@ mod tests {
 
         assert_eq!(
             sys_rt_sigprocmask(&current_task, how, set, old_set, std::mem::size_of::<sigset_t>()),
-            Ok(SUCCESS)
+            Ok(())
         );
 
         let mut old_mask = sigset_t::default();
@@ -676,7 +676,7 @@ mod tests {
 
         assert_eq!(
             sys_rt_sigprocmask(&current_task, how, set, old_set, std::mem::size_of::<sigset_t>()),
-            Ok(SUCCESS)
+            Ok(())
         );
         assert_eq!(current_task.signals.read().mask, original_mask);
     }
@@ -705,7 +705,7 @@ mod tests {
 
         assert_eq!(
             sys_rt_sigprocmask(&current_task, how, set, old_set, std::mem::size_of::<sigset_t>()),
-            Ok(SUCCESS)
+            Ok(())
         );
 
         let mut old_mask = sigset_t::default();
@@ -738,7 +738,7 @@ mod tests {
 
         assert_eq!(
             sys_rt_sigprocmask(&current_task, how, set, old_set, std::mem::size_of::<sigset_t>()),
-            Ok(SUCCESS)
+            Ok(())
         );
 
         let mut old_mask = sigset_t::default();
@@ -771,7 +771,7 @@ mod tests {
 
         assert_eq!(
             sys_rt_sigprocmask(&current_task, how, set, old_set, std::mem::size_of::<sigset_t>()),
-            Ok(SUCCESS)
+            Ok(())
         );
 
         let mut old_mask = sigset_t::default();
@@ -804,7 +804,7 @@ mod tests {
 
         assert_eq!(
             sys_rt_sigprocmask(&current_task, how, set, old_set, std::mem::size_of::<sigset_t>()),
-            Ok(SUCCESS)
+            Ok(())
         );
 
         let mut old_mask = sigset_t::default();
@@ -837,7 +837,7 @@ mod tests {
 
         assert_eq!(
             sys_rt_sigprocmask(&current_task, how, set, old_set, std::mem::size_of::<sigset_t>()),
-            Ok(SUCCESS)
+            Ok(())
         );
 
         let mut old_mask = sigset_t::default();
@@ -909,7 +909,7 @@ mod tests {
                 old_action_ref,
                 std::mem::size_of::<sigset_t>()
             ),
-            Ok(SUCCESS)
+            Ok(())
         );
 
         let mut old_action = sigaction_t::default();
@@ -945,7 +945,7 @@ mod tests {
                 UserRef::<sigaction_t>::default(),
                 std::mem::size_of::<sigset_t>(),
             ),
-            Ok(SUCCESS)
+            Ok(())
         );
 
         assert_eq!(current_task.thread_group.signal_actions.get(SIGINT), original_action,);
@@ -956,7 +956,7 @@ mod tests {
     fn test_kill_same_task() {
         let (_kernel, current_task) = create_kernel_and_task();
 
-        assert_eq!(sys_kill(&current_task, current_task.id, SIGINT.into()), Ok(SUCCESS));
+        assert_eq!(sys_kill(&current_task, current_task.id, SIGINT.into()), Ok(()));
     }
 
     /// A task should be able to signal its own thread group.
@@ -979,7 +979,7 @@ mod tests {
             )
             .expect("clone process");
 
-        assert_eq!(sys_kill(&task1, 0, SIGINT.into()), Ok(SUCCESS));
+        assert_eq!(sys_kill(&task1, 0, SIGINT.into()), Ok(()));
         assert_eq!(task1.signals.read().queued_count(SIGINT), 1);
         assert_eq!(task2.signals.read().queued_count(SIGINT), 1);
         assert_eq!(init_task.signals.read().queued_count(SIGINT), 0);
@@ -1005,7 +1005,7 @@ mod tests {
             )
             .expect("clone process");
 
-        assert_eq!(sys_kill(&task1, -task1.id, SIGINT.into()), Ok(SUCCESS));
+        assert_eq!(sys_kill(&task1, -task1.id, SIGINT.into()), Ok(()));
         assert_eq!(task1.signals.read().queued_count(SIGINT), 1);
         assert_eq!(task2.signals.read().queued_count(SIGINT), 1);
         assert_eq!(init_task.signals.read().queued_count(SIGINT), 0);
@@ -1031,7 +1031,7 @@ mod tests {
             )
             .expect("clone process");
 
-        assert_eq!(sys_kill(&task1, -1, SIGINT.into()), Ok(SUCCESS));
+        assert_eq!(sys_kill(&task1, -1, SIGINT.into()), Ok(()));
         assert_eq!(task1.signals.read().queued_count(SIGINT), 0);
         assert_eq!(task2.signals.read().queued_count(SIGINT), 1);
         assert_eq!(init_task.signals.read().queued_count(SIGINT), 0);
@@ -1128,13 +1128,13 @@ mod tests {
                 UserRef::default(),
                 std::mem::size_of::<sigset_t>()
             ),
-            Ok(SUCCESS)
+            Ok(())
         );
-        assert_eq!(sys_kill(&current_task, current_task.id, SIGIO.into()), Ok(SUCCESS));
+        assert_eq!(sys_kill(&current_task, current_task.id, SIGIO.into()), Ok(()));
         assert_eq!(current_task.signals.read().queued_count(SIGIO), 1);
 
         // A second signal should not increment the number of pending signals.
-        assert_eq!(sys_kill(&current_task, current_task.id, SIGIO.into()), Ok(SUCCESS));
+        assert_eq!(sys_kill(&current_task, current_task.id, SIGIO.into()), Ok(()));
         assert_eq!(current_task.signals.read().queued_count(SIGIO), 1);
     }
 
@@ -1160,13 +1160,13 @@ mod tests {
                 UserRef::default(),
                 std::mem::size_of::<sigset_t>()
             ),
-            Ok(SUCCESS)
+            Ok(())
         );
-        assert_eq!(sys_kill(&current_task, current_task.id, SIGRTMIN.into()), Ok(SUCCESS));
+        assert_eq!(sys_kill(&current_task, current_task.id, SIGRTMIN.into()), Ok(()));
         assert_eq!(current_task.signals.read().queued_count(SIGRTMIN), 1);
 
         // A second signal should increment the number of pending signals.
-        assert_eq!(sys_kill(&current_task, current_task.id, SIGRTMIN.into()), Ok(SUCCESS));
+        assert_eq!(sys_kill(&current_task, current_task.id, SIGRTMIN.into()), Ok(()));
         assert_eq!(current_task.signals.read().queued_count(SIGRTMIN), 2);
     }
 
@@ -1280,7 +1280,7 @@ mod tests {
                 UncheckedSignal::from(SIGIO),
                 addr
             ),
-            Ok(SUCCESS)
+            Ok(())
         );
         assert_eq!(second_current.signals.read().queued_count(SIGIO), 1);
 

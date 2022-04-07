@@ -10,7 +10,6 @@ use super::*;
 use crate::fs::buffers::*;
 use crate::fs::*;
 use crate::logging::{not_implemented, strace};
-use crate::syscalls::*;
 use crate::task::*;
 use crate::types::*;
 
@@ -142,7 +141,7 @@ pub fn sys_bind(
     fd: FdNumber,
     user_socket_address: UserAddress,
     address_length: usize,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let file = current_task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     let address = parse_socket_address(&current_task, user_socket_address, address_length)?;
@@ -174,18 +173,14 @@ pub fn sys_bind(
         }
     }
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
-pub fn sys_listen(
-    current_task: &CurrentTask,
-    fd: FdNumber,
-    backlog: i32,
-) -> Result<SyscallResult, Errno> {
+pub fn sys_listen(current_task: &CurrentTask, fd: FdNumber, backlog: i32) -> Result<(), Errno> {
     let file = current_task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     socket.listen(backlog)?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_accept(
@@ -235,7 +230,7 @@ pub fn sys_connect(
     fd: FdNumber,
     user_socket_address: UserAddress,
     address_length: usize,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let client_file = current_task.files.get(fd)?;
     let client_socket = client_file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     let address = parse_socket_address(&current_task, user_socket_address, address_length)?;
@@ -267,7 +262,7 @@ pub fn sys_connect(
     // because as far as I can tell, removing a socket from the queue does not actually trigger
     // FdEvents on anything.
     client_socket.connect(&listening_socket, current_task.as_ucred())?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 fn write_socket_address(
@@ -293,14 +288,14 @@ pub fn sys_getsockname(
     fd: FdNumber,
     user_socket_address: UserAddress,
     user_address_length: UserRef<socklen_t>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let file = current_task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     let address_bytes = socket.getsockname();
 
     write_socket_address(&current_task, user_socket_address, user_address_length, &address_bytes)?;
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_getpeername(
@@ -308,14 +303,14 @@ pub fn sys_getpeername(
     fd: FdNumber,
     user_socket_address: UserAddress,
     user_address_length: UserRef<socklen_t>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let file = current_task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     let address_bytes = socket.getpeername()?;
 
     write_socket_address(&current_task, user_socket_address, user_address_length, &address_bytes)?;
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_socketpair(
@@ -324,7 +319,7 @@ pub fn sys_socketpair(
     socket_type: u32,
     _protocol: u32,
     user_sockets: UserRef<[FdNumber; 2]>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let flags = socket_type & (SOCK_NONBLOCK | SOCK_CLOEXEC);
     let domain = parse_socket_domain(domain)?;
     if domain != SocketDomain::Unix {
@@ -352,7 +347,7 @@ pub fn sys_socketpair(
     strace!(current_task, "socketpair -> [{:#x}, {:#x}]", fds[0].raw(), fds[1].raw());
     current_task.mm.write_object(user_sockets, &fds)?;
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 fn recvmsg_internal(
@@ -659,7 +654,7 @@ pub fn sys_getsockopt(
     optname: u32,
     user_optval: UserAddress,
     user_optlen: UserRef<socklen_t>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let file = current_task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
 
@@ -674,7 +669,7 @@ pub fn sys_getsockopt(
     current_task.mm.write_memory(user_optval, &opt_value)?;
     current_task.mm.write_object(user_optlen, &actual_optlen)?;
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_setsockopt(
@@ -684,7 +679,7 @@ pub fn sys_setsockopt(
     optname: u32,
     user_optval: UserAddress,
     optlen: socklen_t,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let file = current_task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
 
@@ -694,14 +689,10 @@ pub fn sys_setsockopt(
         optname,
         UserBuffer { address: user_optval, length: optlen as usize },
     )?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
-pub fn sys_shutdown(
-    current_task: &CurrentTask,
-    fd: FdNumber,
-    how: u32,
-) -> Result<SyscallResult, Errno> {
+pub fn sys_shutdown(current_task: &CurrentTask, fd: FdNumber, how: u32) -> Result<(), Errno> {
     let file = current_task.files.get(fd)?;
     let socket = file.node().socket().ok_or(errno!(ENOTSOCK))?;
     let how = match how {
@@ -711,7 +702,7 @@ pub fn sys_shutdown(
         _ => return error!(EINVAL),
     };
     socket.shutdown(how)?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 #[cfg(test)]

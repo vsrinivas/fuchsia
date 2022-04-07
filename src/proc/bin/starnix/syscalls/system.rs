@@ -12,10 +12,7 @@ use crate::syscalls::*;
 use crate::task::Waiter;
 use crate::types::*;
 
-pub fn sys_uname(
-    current_task: &CurrentTask,
-    name: UserRef<utsname_t>,
-) -> Result<SyscallResult, Errno> {
+pub fn sys_uname(current_task: &CurrentTask, name: UserRef<utsname_t>) -> Result<(), Errno> {
     fn init_array(fixed: &mut [u8; 65], init: &'static str) {
         let init_bytes = init.as_bytes();
         let len = init.len();
@@ -35,7 +32,7 @@ pub fn sys_uname(
     init_array(&mut result.version, "starnix");
     init_array(&mut result.machine, "x86_64");
     current_task.mm.write_object(name, &result)?;
-    return Ok(SUCCESS);
+    return Ok(());
 }
 
 pub fn sys_getrandom(
@@ -56,7 +53,7 @@ pub fn sys_reboot(
     magic2: u32,
     cmd: u32,
     _arg: UserAddress,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     if magic != LINUX_REBOOT_MAGIC1
         || (magic2 != LINUX_REBOOT_MAGIC2
             && magic2 != LINUX_REBOOT_MAGIC2A
@@ -76,9 +73,9 @@ pub fn sys_clock_getres(
     current_task: &CurrentTask,
     which_clock: i32,
     tp_addr: UserRef<timespec>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     if tp_addr.is_null() {
-        return Ok(SUCCESS);
+        return Ok(());
     }
 
     let tv = match which_clock as u32 {
@@ -95,14 +92,15 @@ pub fn sys_clock_getres(
             timespec { tv_sec: 0, tv_nsec: 1 }
         }
     };
-    current_task.mm.write_object(tp_addr, &tv).map(|_| SUCCESS)
+    current_task.mm.write_object(tp_addr, &tv)?;
+    Ok(())
 }
 
 pub fn sys_clock_gettime(
     current_task: &CurrentTask,
     which_clock: i32,
     tp_addr: UserRef<timespec>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let nanos = if which_clock < 0 {
         get_dynamic_clock(current_task, which_clock)?
     } else {
@@ -117,14 +115,15 @@ pub fn sys_clock_gettime(
         }
     };
     let tv = timespec { tv_sec: nanos / NANOS_PER_SECOND, tv_nsec: nanos % NANOS_PER_SECOND };
-    return current_task.mm.write_object(tp_addr, &tv).map(|_| SUCCESS);
+    current_task.mm.write_object(tp_addr, &tv)?;
+    Ok(())
 }
 
 pub fn sys_gettimeofday(
     current_task: &CurrentTask,
     user_tv: UserRef<timeval>,
     user_tz: UserRef<timezone>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     if !user_tv.is_null() {
         let tv = timeval_from_time(utc_time());
         current_task.mm.write_object(user_tv, &tv)?;
@@ -132,14 +131,14 @@ pub fn sys_gettimeofday(
     if !user_tz.is_null() {
         not_implemented!("gettimeofday does not implement tz argument");
     }
-    return Ok(SUCCESS);
+    return Ok(());
 }
 
 pub fn sys_nanosleep(
     current_task: &CurrentTask,
     user_request: UserRef<timespec>,
     user_remaining: UserRef<timespec>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<(), Errno> {
     let mut request = timespec::default();
     current_task.mm.read_object(user_request, &mut request)?;
     let deadline = zx::Time::after(duration_from_timespec(request)?);
@@ -150,10 +149,10 @@ pub fn sys_nanosleep(
                 timespec_from_duration(std::cmp::max(zx::Duration::from_nanos(0), deadline - now));
             current_task.mm.write_object(user_remaining, &remaining)?;
         }
-        Err(err) if err == ETIMEDOUT => return Ok(SUCCESS),
+        Err(err) if err == ETIMEDOUT => return Ok(()),
         non_eintr => non_eintr?,
     }
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn sys_unknown(_ctx: &CurrentTask, syscall_number: u64) -> Result<SyscallResult, Errno> {

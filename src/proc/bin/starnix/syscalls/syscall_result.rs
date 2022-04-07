@@ -86,3 +86,9 @@ impl From<usize> for SyscallResult {
         SyscallResult(value as u64)
     }
 }
+
+impl From<()> for SyscallResult {
+    fn from(_value: ()) -> Self {
+        SyscallResult(0)
+    }
+}
