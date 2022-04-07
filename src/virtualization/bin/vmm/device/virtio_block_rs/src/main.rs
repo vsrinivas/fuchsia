@@ -88,7 +88,7 @@ async fn run_virtio_block(
     Ok(())
 }
 
-#[fuchsia::component(logging = true, threads = 1)]
+#[fuchsia::main(logging = true, threads = 1)]
 async fn main() -> Result<(), anyhow::Error> {
     let mut fs = server::ServiceFs::new();
     fs.dir("svc").add_fidl_service(|stream: VirtioBlockRequestStream| stream);
