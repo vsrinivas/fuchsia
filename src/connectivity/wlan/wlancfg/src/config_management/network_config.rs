@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::client::{connection_quality::SignalData, types as client_types},
+    crate::client::{bss_selection::SignalData, types as client_types},
     arbitrary::Arbitrary,
     fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_async as fasync, fuchsia_zircon as zx,
     std::{

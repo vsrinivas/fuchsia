@@ -5,7 +5,7 @@
 
 use {
     crate::{
-        client::{connection_quality::SignalData, types as client_types},
+        client::{bss_selection::SignalData, types as client_types},
         config_management::{
             Credential, NetworkConfig, NetworkConfigError, NetworkIdentifier, PastConnectionData,
             PastConnectionList, SavedNetworksManagerApi, ScanResultType,

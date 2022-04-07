@@ -4,11 +4,8 @@
 
 use {
     crate::{
-        client::{
-            connection_quality::{BssQualityData, SignalData, EWMA_SMOOTHING_FACTOR},
-            network_selection, sme_credential_from_policy, types,
-        },
-        config_management::{PastConnectionData, PastConnectionList, SavedNetworksManagerApi},
+        client::{bss_selection, network_selection, sme_credential_from_policy, types},
+        config_management::{PastConnectionData, SavedNetworksManagerApi},
         telemetry::{DisconnectInfo, TelemetryEvent, TelemetrySender},
         util::{
             listener::{
@@ -198,7 +195,7 @@ pub struct PeriodicConnectionStats {
     pub id: types::NetworkIdentifier,
     /// Iface ID that the connection is on.
     pub iface_id: u16,
-    pub quality_data: BssQualityData,
+    pub quality_data: bss_selection::BssQualityData,
 }
 
 pub type ConnectionStatsSender = mpsc::UnboundedSender<PeriodicConnectionStats>;
@@ -685,11 +682,8 @@ async fn connected_state(
 ) -> Result<State, ExitReason> {
     debug!("Entering connected state");
     let mut connect_start_time = fasync::Time::now();
-    let mut signal_data = SignalData::new(
-        options.latest_ap_state.rssi_dbm,
-        options.latest_ap_state.snr_db,
-        EWMA_SMOOTHING_FACTOR,
-    );
+
+    // Initialize connection data
     let past_connections = common_options
         .saved_networks_manager
         .get_past_connections(
@@ -698,6 +692,16 @@ async fn connected_state(
             &options.latest_ap_state.bssid,
         )
         .await;
+    let mut bss_quality_data = bss_selection::BssQualityData::new(
+        bss_selection::SignalData::new(
+            options.latest_ap_state.rssi_dbm,
+            options.latest_ap_state.snr_db,
+            bss_selection::EWMA_SMOOTHING_FACTOR,
+        ),
+        options.latest_ap_state.channel,
+        past_connections,
+    );
+
     // Keep track of the connection's average signal strength for future scoring.
     let mut avg_rssi = SignalStrengthAverage::new();
 
@@ -728,7 +732,7 @@ async fn connected_state(
                                 &options,
                                 connect_start_time,
                                 types::DisconnectReason::DisconnectDetectedFromSme,
-                                signal_data.clone(),
+                                bss_quality_data.signal_data.clone(),
                             ).await;
 
                             !fidl_info.is_sme_reconnecting
@@ -754,21 +758,28 @@ async fn connected_state(
                             !connected
                         }
                         fidl_sme::ConnectTransactionEvent::OnSignalReport { ind } => {
+                            // Update connection data
                             options.latest_ap_state.rssi_dbm = ind.rssi_dbm;
                             options.latest_ap_state.snr_db = ind.snr_db;
+                            bss_quality_data.signal_data.update_with_new_measurement(ind.rssi_dbm, ind.snr_db);
                             avg_rssi.add(DecibelMilliWatt(ind.rssi_dbm));
-
                             let current_connection = &options.currently_fulfilled_request.target;
                             handle_connection_stats(
                                 &mut common_options.telemetry_sender,
                                 &mut common_options.stats_sender,
                                 common_options.iface_id,
                                 current_connection.network.clone(),
-                                &mut signal_data,
                                 ind,
-                                options.latest_ap_state.channel,
-                                past_connections.clone(),
+                                bss_quality_data.clone()
                             ).await;
+
+                            // Evaluate current BSS, and determine if roaming future should be
+                            // triggered.
+                            let (_bss_score, roam_reasons) = bss_selection::evaluate_current_bss(bss_quality_data.clone());
+                            if !roam_reasons.is_empty() {
+                                // TODO(haydennix): Trigger roaming future, which must be idempotent
+                                // since repeated calls are likely.
+                            }
                             false
                         }
                         fidl_sme::ConnectTransactionEvent::OnChannelSwitched { info } => {
@@ -819,7 +830,7 @@ async fn connected_state(
                             &options,
                             connect_start_time,
                             reason,
-                            signal_data
+                            bss_quality_data.signal_data
                         ).await;
                         let latest_ap_state = options.latest_ap_state;
                         let options = DisconnectingOptions {
@@ -853,7 +864,7 @@ async fn connected_state(
                                 &options,
                                 connect_start_time,
                                 disconnect_reason,
-                                signal_data
+                                bss_quality_data.signal_data
                             ).await;
 
 
@@ -888,33 +899,25 @@ async fn connected_state(
     }
 }
 
-/// Update the EWMA signal data and velocity based on the most recent data point and update
-/// IfaceManager with the updated connection quality data.
+/// Update IfaceManager with the updated connection quality data.
 async fn handle_connection_stats(
     telemetry_sender: &mut TelemetrySender,
     stats_sender: &mut ConnectionStatsSender,
     iface_id: u16,
     id: types::NetworkIdentifier,
-    signal_data: &mut SignalData,
     ind: fidl_internal::SignalReportIndication,
-    channel: types::WlanChan,
-    past_connections_list: PastConnectionList,
+    bss_quality_data: bss_selection::BssQualityData,
 ) {
-    signal_data.update_with_new_measurement(ind.rssi_dbm, ind.snr_db);
-    let quality_data = BssQualityData {
-        signal_data: signal_data.clone(),
-        channel,
-        // Phy rates are not available yet. Use the actual values here once they are available.
-        phy_rates: (0, 0),
-        past_connections_list,
-    };
-    let connection_stats = PeriodicConnectionStats { id, iface_id, quality_data };
+    let connection_stats =
+        PeriodicConnectionStats { id, iface_id, quality_data: bss_quality_data.clone() };
     stats_sender.unbounded_send(connection_stats).unwrap_or_else(|e| {
         error!("Failed to send periodic connection stats from the connected state: {}", e);
     });
     // Send RSSI and RSSI velocity metrics
-    telemetry_sender
-        .send(TelemetryEvent::OnSignalReport { ind, rssi_velocity: signal_data.rssi_velocity });
+    telemetry_sender.send(TelemetryEvent::OnSignalReport {
+        ind,
+        rssi_velocity: bss_quality_data.signal_data.rssi_velocity,
+    });
 }
 
 async fn record_disconnect(
@@ -922,7 +925,7 @@ async fn record_disconnect(
     options: &ConnectedOptions,
     connect_start_time: fasync::Time,
     reason: types::DisconnectReason,
-    signal_data: SignalData,
+    signal_data: bss_selection::SignalData,
 ) {
     let curr_time = fasync::Time::now();
     let uptime = curr_time - connect_start_time;
@@ -972,7 +975,7 @@ mod tests {
         crate::{
             config_management::{
                 network_config::{self, AddAndGetRecent, Credential, FailureReason},
-                SavedNetworksManager,
+                PastConnectionList, SavedNetworksManager,
             },
             telemetry::{TelemetryEvent, TelemetrySender},
             util::{
@@ -1424,10 +1427,10 @@ mod tests {
                 disconnect_time: fasync::Time::now(),
                 connection_uptime: zx::Duration::from_minutes(0),
                 disconnect_reason: types::DisconnectReason::DisconnectDetectedFromSme,
-                signal_data_at_disconnect: SignalData::new(
+                signal_data_at_disconnect: bss_selection::SignalData::new(
                     bss_description.rssi_dbm,
                     bss_description.snr_db,
-                    EWMA_SMOOTHING_FACTOR,
+                    bss_selection::EWMA_SMOOTHING_FACTOR,
                 ),
                 // TODO: record average phy rate over connection once available
                 average_tx_rate: 0,
@@ -2834,10 +2837,10 @@ mod tests {
                 disconnect_time,
                 connection_uptime: zx::Duration::from_hours(12),
                 disconnect_reason: types::DisconnectReason::FidlStopClientConnectionsRequest,
-                signal_data_at_disconnect: SignalData::new(
+                signal_data_at_disconnect: bss_selection::SignalData::new(
                     bss_description.rssi_dbm,
                     bss_description.snr_db,
-                    EWMA_SMOOTHING_FACTOR,
+                    bss_selection::EWMA_SMOOTHING_FACTOR,
                 ),
                 // TODO: record average phy rate over connection once available
                 average_tx_rate: 0,
@@ -2928,10 +2931,10 @@ mod tests {
                 disconnect_time,
                 connection_uptime: zx::Duration::from_hours(12),
                 disconnect_reason: types::DisconnectReason::DisconnectDetectedFromSme,
-                signal_data_at_disconnect: SignalData::new(
+                signal_data_at_disconnect: bss_selection::SignalData::new(
                     bss_description.rssi_dbm,
                     bss_description.snr_db,
-                    EWMA_SMOOTHING_FACTOR,
+                    bss_selection::EWMA_SMOOTHING_FACTOR,
                 ),
                 // TODO: record average phy rate over connection once available
                 average_tx_rate: 0,
@@ -3160,10 +3163,10 @@ mod tests {
                 disconnect_time,
                 connection_uptime: zx::Duration::from_hours(5),
                 disconnect_reason: types::DisconnectReason::DisconnectDetectedFromSme,
-                signal_data_at_disconnect: SignalData::new(
+                signal_data_at_disconnect: bss_selection::SignalData::new(
                     bss_description.rssi_dbm,
                     bss_description.snr_db,
-                    EWMA_SMOOTHING_FACTOR,
+                    bss_selection::EWMA_SMOOTHING_FACTOR,
                 ),
                 average_tx_rate: 0,
             },
@@ -3435,10 +3438,10 @@ mod tests {
                 disconnect_time,
                 connection_uptime: zx::Duration::from_hours(12),
                 disconnect_reason: types::DisconnectReason::ProactiveNetworkSwitch,
-                signal_data_at_disconnect: SignalData::new(
+                signal_data_at_disconnect: bss_selection::SignalData::new(
                     bss_description.rssi_dbm,
                     bss_description.snr_db,
-                    EWMA_SMOOTHING_FACTOR,
+                    bss_selection::EWMA_SMOOTHING_FACTOR,
                 ),
                 // TODO: record average phy rate over connection once available
                 average_tx_rate: 0,

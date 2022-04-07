@@ -84,7 +84,7 @@ rustc_library("lib") {
     "src/access_point/mod.rs",
     "src/access_point/state_machine.rs",
     "src/access_point/types.rs",
-    "src/client/connection_quality.rs",
+    "src/client/bss_selection.rs",
     "src/client/mod.rs",
     "src/client/network_selection.rs",
     "src/client/scan.rs",
