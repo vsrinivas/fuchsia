@@ -26,13 +26,13 @@ use net_types::{
     SpecifiedAddr,
 };
 use netstack3_core::{
-    connect_udp, get_udp_conn_info, get_udp_listener_info, icmp, listen_udp, remove_udp_conn,
-    remove_udp_listener, send_udp, send_udp_conn, send_udp_listener, BlanketCoreContext,
-    BufferDispatcher, BufferUdpContext, BufferUdpStateContext, Ctx, EventDispatcher, IdMap,
-    IdMapCollection, IdMapCollectionKey, IpExt, IpSockCreationError, IpSockSendError,
-    LocalAddressError, TransportIpContext, UdpBoundId, UdpConnId, UdpConnInfo, UdpContext,
-    UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError, UdpSockCreationError,
-    UdpStateContext,
+    connect_udp, create_udp_unbound, get_udp_conn_info, get_udp_listener_info, icmp, listen_udp,
+    remove_udp_conn, remove_udp_listener, send_udp, send_udp_conn, send_udp_listener,
+    BlanketCoreContext, BufferDispatcher, BufferUdpContext, BufferUdpStateContext, Ctx,
+    EventDispatcher, IdMap, IdMapCollection, IdMapCollectionKey, IpExt, IpSockCreationError,
+    IpSockSendError, LocalAddressError, TransportIpContext, UdpBoundId, UdpConnId, UdpConnInfo,
+    UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError,
+    UdpSockCreationError, UdpStateContext,
 };
 use packet::{Buf, BufferMut, SerializeError};
 use packet_formats::{
@@ -263,7 +263,10 @@ impl<I: IpExt, C: UdpStateContext<I>> TransportState<I, C> for Udp {
         remote_ip: SpecifiedAddr<I::Addr>,
         remote_id: Self::RemoteIdentifier,
     ) -> Result<Self::ConnId, Self::CreateConnError> {
-        connect_udp(ctx, local_ip, local_id, remote_ip, remote_id)
+        // TODO(https://fxbug.dev/96573): Track the unbound socket separately to
+        // allow attaching state, like socket options, to it.
+        let unbound = create_udp_unbound(ctx);
+        connect_udp(ctx, unbound, local_ip, local_id, remote_ip, remote_id)
     }
 
     fn create_listener(
@@ -271,7 +274,8 @@ impl<I: IpExt, C: UdpStateContext<I>> TransportState<I, C> for Udp {
         addr: Option<SpecifiedAddr<I::Addr>>,
         port: Option<Self::LocalIdentifier>,
     ) -> Result<Self::ListenerId, Self::CreateListenerError> {
-        listen_udp(ctx, addr, port)
+        let unbound = create_udp_unbound(ctx);
+        listen_udp(ctx, unbound, addr, port)
     }
 
     fn get_conn_info(

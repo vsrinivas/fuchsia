@@ -75,11 +75,11 @@ pub use crate::{
     },
     transport::{
         udp::{
-            connect_udp, get_udp_conn_info, get_udp_listener_info, listen_udp, remove_udp_conn,
-            remove_udp_listener, send_udp, send_udp_conn, send_udp_listener, BufferUdpContext,
-            BufferUdpStateContext, UdpBoundId, UdpConnId, UdpConnInfo, UdpContext, UdpListenerId,
-            UdpListenerInfo, UdpSendError, UdpSendListenerError, UdpSockCreationError,
-            UdpStateContext,
+            connect_udp, create_udp_unbound, get_udp_conn_info, get_udp_listener_info, listen_udp,
+            remove_udp_conn, remove_udp_listener, send_udp, send_udp_conn, send_udp_listener,
+            BufferUdpContext, BufferUdpStateContext, UdpBoundId, UdpConnId, UdpConnInfo,
+            UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError,
+            UdpSockCreationError, UdpStateContext, UdpUnboundId,
         },
         TransportStateBuilder,
     },
