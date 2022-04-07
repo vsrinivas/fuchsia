@@ -303,6 +303,7 @@ __BEGIN_CDECLS
 #define PDEV_PID_ARM_ISP            0x01
 #define PDEV_PID_GDC                0x02
 #define PDEV_PID_GE2D               0x03
+#define PDEV_PID_ACPI_BOARD         0x04
 #define PDEV_DID_ARM_MALI_IV009     0x01
 #define PDEV_DID_ARM_MALI_IV010     0x02
 #define PDEV_DID_ARM_MAGMA_MALI     0x03
