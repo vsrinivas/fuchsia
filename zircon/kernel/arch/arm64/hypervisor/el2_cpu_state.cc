@@ -180,6 +180,8 @@ zx_status_t El2CpuState::Create(ktl::unique_ptr<El2CpuState>* out) {
   cpu_state->vtcr_.set_ps(address_size);
   if (arch::ArmIdAa64Mmfr1El1::Read().vmid_bits() == arch::ArmAsidSize::k16bits) {
     cpu_state->vtcr_.set_vs(true);
+  } else {
+    cpu_state->vmid_allocator_.Reset(UINT8_MAX);
   }
 
   // Setup EL2 for all online CPUs.
@@ -194,9 +196,9 @@ zx_status_t El2CpuState::Create(ktl::unique_ptr<El2CpuState>* out) {
 
 El2CpuState::~El2CpuState() { mp_sync_exec(MP_IPI_TARGET_MASK, cpu_mask_, el2_off_task, nullptr); }
 
-zx::status<uint16_t> El2CpuState::AllocVmid() { return id_allocator_.Alloc(); }
+zx::status<uint16_t> El2CpuState::AllocVmid() { return vmid_allocator_.Alloc(); }
 
-zx::status<> El2CpuState::FreeVmid(uint16_t vmid) { return id_allocator_.Free(vmid); }
+zx::status<> El2CpuState::FreeVmid(uint16_t vmid) { return vmid_allocator_.Free(vmid); }
 
 zx::status<uint16_t> alloc_vmid() {
   Guard<Mutex> guard(GuestMutex::Get());

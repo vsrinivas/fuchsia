@@ -53,13 +53,13 @@ class El2CpuState {
   zx::status<> FreeVmid(uint16_t vmid);
 
  private:
-  hypervisor::IdAllocator<uint16_t, 64> id_allocator_;
-  cpu_mask_t cpu_mask_ = 0;
   El2TranslationTable table_;
   fbl::Array<El2Stack> stacks_;
-
   arch::ArmTcrEl2 tcr_;
   arch::ArmVtcrEl2 vtcr_;
+
+  cpu_mask_t cpu_mask_ = 0;
+  hypervisor::IdAllocator<uint16_t, UINT16_MAX> vmid_allocator_;
 
   El2CpuState() = default;
 
