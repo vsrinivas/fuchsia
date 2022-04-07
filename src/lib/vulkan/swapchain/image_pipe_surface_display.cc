@@ -39,6 +39,42 @@ const char* const kTag = "ImagePipeSurfaceDisplay";
 ImagePipeSurfaceDisplay::ImagePipeSurfaceDisplay()
     : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
+// Attempt to connect to /svc/fuchsia.hardware.display.Provider (not the device
+// node) in case that was injected for testing.
+static fuchsia::hardware::display::ControllerPtr ConnectToControllerFromService(
+    async_dispatcher_t* dispatcher, zx::channel* device_client_out) {
+  fuchsia::hardware::display::ProviderSyncPtr provider;
+  zx_status_t status = fdio_service_connect("/svc/fuchsia.hardware.display.Provider",
+                                            provider.NewRequest().TakeChannel().release());
+
+  if (status != ZX_OK) {
+    return {};
+  }
+
+  zx_status_t status2 = ZX_OK;
+  zx::channel device_server, device_client;
+  status = zx::channel::create(0, &device_server, &device_client);
+  if (status != ZX_OK) {
+    fprintf(stderr, "%s: Failed to create device channel %d (%s)\n", kTag, status,
+            zx_status_get_string(status));
+    return {};
+  }
+  fuchsia::hardware::display::ControllerPtr controller;
+  status = provider->OpenController(std::move(device_server), controller.NewRequest(dispatcher),
+                                    &status2);
+  if (status != ZX_OK) {
+    // If the path isn't injected the failure will happen at this point.
+    return {};
+  }
+
+  if (status2 != ZX_OK) {
+    fprintf(stderr, "Couldn't connect to display controller: %s\n", zx_status_get_string(status2));
+    return {};
+  }
+  *device_client_out = std::move(device_client);
+  return controller;
+}
+
 bool ImagePipeSurfaceDisplay::Init() {
   zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
                                             sysmem_allocator_.NewRequest().TakeChannel().release());
@@ -50,84 +86,89 @@ bool ImagePipeSurfaceDisplay::Init() {
 
   sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
 
-  // Probe /dev/class/display-controller/ for a display controller name.
-  // When the display driver restarts it comes up with a new one (e.g. '001'
-  // instead of '000'). For now, simply take the first file found in the
-  // directory.
-  const char kDir[] = "/dev/class/display-controller";
-  std::string filename;
+  display_controller_ = ConnectToControllerFromService(loop_.dispatcher(), &dc_device_);
+  if (!display_controller_) {
+    // Probe /dev/class/display-controller/ for a display controller name.
+    // When the display driver restarts it comes up with a new one (e.g. '001'
+    // instead of '000'). For now, simply take the first file found in the
+    // directory.
+    const char kDir[] = "/dev/class/display-controller";
+    std::string filename;
 
-  {
-    DIR* dir = opendir("/dev/class/display-controller");
-    if (!dir) {
-      fprintf(stderr, "%s: Can't open directory: %s: %s\n", kTag, kDir, strerror(errno));
+    {
+      DIR* dir = opendir(kDir);
+      if (!dir) {
+        fprintf(stderr, "%s: Can't open directory: %s: %s\n", kTag, kDir, strerror(errno));
+        return false;
+      }
+
+      errno = 0;
+      for (;;) {
+        dirent* entry = readdir(dir);
+        if (!entry) {
+          if (errno != 0) {
+            // An error occurred while reading the directory.
+            fprintf(stderr, "%s: Warning: error while reading %s: %s\n", kTag, kDir,
+                    strerror(errno));
+          }
+          break;
+        }
+        // Skip over '.' and '..' if present.
+        if (entry->d_name[0] == '.' &&
+            (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")))
+          continue;
+
+        filename = std::string(kDir) + "/" + entry->d_name;
+        break;
+      }
+      closedir(dir);
+    }
+
+    if (filename.empty()) {
+      fprintf(stderr, "%s: No display controller.\n", kTag);
       return false;
     }
 
-    errno = 0;
-    for (;;) {
-      dirent* entry = readdir(dir);
-      if (!entry) {
-        if (errno != 0) {
-          // An error occured while reading the directory.
-          fprintf(stderr, "%s: Warning: error while reading %s: %s\n", kTag, kDir, strerror(errno));
-        }
-        break;
-      }
-      // Skip over '.' and '..' if present.
-      if (entry->d_name[0] == '.' && (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")))
-        continue;
-
-      filename = std::string(kDir) + "/" + entry->d_name;
-      break;
+    fbl::unique_fd fd(open(filename.c_str(), O_RDWR));
+    if (!fd) {
+      fprintf(stderr, "%s: Could not open display controller: %s\n", kTag, strerror(errno));
+      return false;
     }
-    closedir(dir);
-  }
 
-  if (filename.empty()) {
-    fprintf(stderr, "%s: No display controller.\n", kTag);
-    return false;
-  }
+    zx::channel device_server, device_client;
+    status = zx::channel::create(0, &device_server, &device_client);
+    if (status != ZX_OK) {
+      fprintf(stderr, "%s: Failed to create device channel %d (%s)\n", kTag, status,
+              zx_status_get_string(status));
+      return false;
+    }
 
-  fbl::unique_fd fd(open(filename.c_str(), O_RDWR));
-  if (!fd) {
-    fprintf(stderr, "%s: Could not open display controller: %s\n", kTag, strerror(errno));
-    return false;
-  }
+    zx::channel dc_server, dc_client;
+    status = zx::channel::create(0, &dc_server, &dc_client);
+    if (status != ZX_OK) {
+      fprintf(stderr, "%s: Failed to create controller channel %d (%s)\n", kTag, status,
+              zx_status_get_string(status));
+      return false;
+    }
 
-  zx::channel device_server, device_client;
-  status = zx::channel::create(0, &device_server, &device_client);
-  if (status != ZX_OK) {
-    fprintf(stderr, "%s: Failed to create device channel %d (%s)\n", kTag, status,
-            zx_status_get_string(status));
-    return false;
-  }
+    fdio_cpp::FdioCaller caller(std::move(fd));
+    zx_status_t fidl_status = fuchsia_hardware_display_ProviderOpenController(
+        caller.borrow_channel(), device_server.release(), dc_server.release(), &status);
+    if (fidl_status != ZX_OK) {
+      fprintf(stderr, "%s: Failed to call service handle %d (%s)\n", kTag, fidl_status,
+              zx_status_get_string(fidl_status));
+      return false;
+    }
+    if (status != ZX_OK) {
+      fprintf(stderr, "%s: Failed to open controller %d (%s)\n", kTag, status,
+              zx_status_get_string(status));
+      return false;
+    }
 
-  zx::channel dc_server, dc_client;
-  status = zx::channel::create(0, &dc_server, &dc_client);
-  if (status != ZX_OK) {
-    fprintf(stderr, "%s: Failed to create controller channel %d (%s)\n", kTag, status,
-            zx_status_get_string(status));
-    return false;
-  }
+    dc_device_ = std::move(device_client);
 
-  fdio_cpp::FdioCaller caller(std::move(fd));
-  zx_status_t fidl_status = fuchsia_hardware_display_ProviderOpenController(
-      caller.borrow_channel(), device_server.release(), dc_server.release(), &status);
-  if (fidl_status != ZX_OK) {
-    fprintf(stderr, "%s: Failed to call service handle %d (%s)\n", kTag, fidl_status,
-            zx_status_get_string(fidl_status));
-    return false;
+    display_controller_.Bind(std::move(dc_client), loop_.dispatcher());
   }
-  if (status != ZX_OK) {
-    fprintf(stderr, "%s: Failed to open controller %d (%s)\n", kTag, status,
-            zx_status_get_string(status));
-    return false;
-  }
-
-  dc_device_ = std::move(device_client);
-
-  display_controller_.Bind(std::move(dc_client), loop_.dispatcher());
 
   display_controller_.set_error_handler(
       fit::bind_member(this, &ImagePipeSurfaceDisplay::ControllerError));
