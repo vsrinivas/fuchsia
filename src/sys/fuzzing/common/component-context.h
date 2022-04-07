@@ -56,7 +56,9 @@ class ComponentContext final {
   template <typename Interface>
   fidl::InterfaceRequestHandler<Interface> MakeRequestHandler() {
     return [svc = svc_](fidl::InterfaceRequest<Interface> request) {
-      svc->Connect(std::move(request));
+      auto status = svc->Connect(std::move(request));
+      FX_CHECK(status == ZX_OK) << "failed to connect to " << Interface::Name_ << ": "
+                                << zx_status_get_string(status);
     };
   }
 

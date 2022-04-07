@@ -214,11 +214,8 @@ void Process::InstallHooks() {
   std::atexit([]() { ExitHook(); });
 }
 
-Promise<> Process::Connect() {
-  FX_DCHECK(handler_);
-  if (!instrumentation_) {
-    handler_(instrumentation_.NewRequest(executor_->dispatcher()));
-  }
+Promise<> Process::Connect(fidl::InterfaceRequestHandler<Instrumentation> handler) {
+  handler(instrumentation_.NewRequest(executor_->dispatcher()));
 
   // Create the eventpair.
   InstrumentedProcess instrumented;

@@ -36,24 +36,57 @@ test("fatal_unittests_bin") {
   ]
 }
 
-fuchsia_component("unittests") {
-  visibility = [ ":*" ]
-  testonly = true
+fuchsia_test_component("unittests") {
   manifest = "meta/unittests.cml"
-  deps = [ ":unittests_bin" ]
+  deps = [
+    ":unittests_bin",
+    "testing/data:corpus",
+  ]
 }
 
-fuchsia_component("fatal-unittests") {
-  visibility = [ ":*" ]
-  testonly = true
+fuchsia_test_component("fatal-unittests") {
   manifest = "meta/fatal-unittests.cml"
   deps = [ ":fatal_unittests_bin" ]
 }
 
+fuchsia_test_component("test-engine") {
+  manifest = "meta/test-engine.cml"
+  deps = [ "testing:engine" ]
+}
+
+fuchsia_test_component("test-fuzzer") {
+  manifest = "meta/test-fuzzer.cml"
+  deps = [
+    "testing:test-fuzzer",
+    "testing/data:corpus",
+  ]
+}
+
+fuchsia_test_component("test-fuzzer-uninstrumented") {
+  manifest = "meta/test-fuzzer-uninstrumented.cml"
+  deps = [
+    "testing:test-fuzzer-uninstrumented",
+    "testing/data:corpus",
+  ]
+}
+
+# This component contains an integration test that uses a test "engine" that uses fixed inputs to
+# drive a simple test fuzzer, thereby imitating the auto-generated fuzzer tests that run in CQ.
+fuchsia_test_component("fuzzer-test-realm") {
+  manifest = "meta/fuzzer-test-realm.cml"
+  deps = [
+    ":test-engine",
+    ":test-fuzzer-uninstrumented",
+    "//src/sys/fuzzing/framework/coverage",
+  ]
+}
+
 fuchsia_test_package("default-tests") {
   package_name = "component-fuzzing-framework-tests"
-  test_components = [ ":unittests" ]
-  deps = [ "testing/data:corpus" ]
+  test_components = [
+    ":unittests",
+    ":fuzzer-test-realm",
+  ]
 }
 
 fuchsia_test_package("fatal-tests") {

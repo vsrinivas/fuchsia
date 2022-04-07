@@ -32,7 +32,7 @@ using ::fuchsia::fuzzer::Options;
 constexpr uint32_t kNumModules = 4;
 
 // Generates some simple |modules|. |Collect| requires at least one module, so this initializes the
-// first one. This method should be called *before* instantiating a |TestProcess|.
+// first one. This method should be called *before* instantiating a |Process|.
 std::vector<FakeFrameworkModule> CreateModulesAndInitFirst() {
   std::vector<FakeFrameworkModule> modules;
   for (uint32_t i = 0; i < kNumModules; ++i) {
@@ -43,21 +43,6 @@ std::vector<FakeFrameworkModule> CreateModulesAndInitFirst() {
   return modules;
 }
 
-// This class simply exposes some protected methods for testing. Notably, it does NOT automatically
-// connect to a |fuchsia.fuzzer.ProcessProxy| or call |Process::InstallHooks|, as
-// |InstrumentedProcess| does.
-class TestProcess final : public Process {
- public:
-  explicit TestProcess(ExecutorPtr executor) : Process(std::move(executor)) {}
-  ~TestProcess() override = default;
-  using Process::AddModules;
-  using Process::Connect;
-  using Process::malloc_limit;
-  using Process::next_purge;
-  using Process::options;
-  using Process::Run;
-};
-
 // The unit test base class.
 class ProcessTest : public AsyncTest {
  protected:
@@ -65,7 +50,7 @@ class ProcessTest : public AsyncTest {
     AsyncTest::SetUp();
     // Create and destroy a process. This will "consume" any extra modules added if the unit test
     // itself is instrumented.
-    { TestProcess process(executor()); }
+    { Process process(executor()); }
     pool_ = ModulePool::MakePtr();
   }
 
@@ -76,11 +61,10 @@ class ProcessTest : public AsyncTest {
     return proxy;
   }
 
-  // Returns a |TestProcess| that is |Connect|ed to the given |proxy|.
-  std::unique_ptr<TestProcess> MakeProcess(std::unique_ptr<FakeProcessProxy>& proxy) {
-    auto process = std::make_unique<TestProcess>(executor());
-    process->set_handler(proxy->GetHandler());
-    FUZZING_EXPECT_OK(process->Connect());
+  // Returns a |Process| that is |Connect|ed to the given |proxy|.
+  std::unique_ptr<Process> MakeProcess(std::unique_ptr<FakeProcessProxy>& proxy) {
+    auto process = std::make_unique<Process>(executor());
+    FUZZING_EXPECT_OK(process->Connect(proxy->GetHandler()));
     FUZZING_EXPECT_OK(proxy->AwaitSent(kSync));
     RunUntilIdle();
     executor()->schedule_task(process->AddModules());

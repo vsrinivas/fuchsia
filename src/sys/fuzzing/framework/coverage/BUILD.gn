@@ -16,7 +16,6 @@ source_set("coverage-lib") {
     "provider.h",
   ]
   public_deps = [
-    "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
     "//src/sys/fuzzing/common",
     "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
@@ -30,10 +29,13 @@ source_set("coverage-lib") {
 }
 
 executable("coverage-bin") {
-  output_name = "component_fuzzing_provider"
+  output_name = "component_fuzzing_coverage"
   testonly = true
   sources = [ "coverage-main.cc" ]
-  deps = [ ":coverage-lib" ]
+  deps = [
+    ":coverage-lib",
+    "//sdk/lib/sys/cpp",
+  ]
 }
 
 fuchsia_component("coverage") {

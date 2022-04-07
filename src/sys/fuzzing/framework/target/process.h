@@ -59,16 +59,22 @@ using PCsInfo = ModuleInfo<const uintptr_t>;
 
 // This class represents a target process being fuzzed. It is a singleton in each process, and its
 // methods are typically invoked through various callbacks.
-class Process {
+class Process final {
  public:
-  virtual ~Process();
-
-  void set_handler(fidl::InterfaceRequestHandler<Instrumentation> handler) {
-    handler_ = std::move(handler);
-  }
+  explicit Process(ExecutorPtr executor);
+  ~Process();
 
   // Adds defaults to unspecified options.
   static void AddDefaults(Options* options);
+
+  // Installs the hook functions above in the process' overall global, static context. The methods
+  // used, e.g. |__sanitizer_set_death_callback|, do not have corresponding methods to unset the
+  // hooks, so there is no corresponding "UninstallHooks". As a result, this method can only be
+  // called once per process; subsequent calls will panic.
+  static void InstallHooks();
+
+  // Returns a promise to connects to the |Coverage| component and begin fuzzing.
+  Promise<> Connect(fidl::InterfaceRequestHandler<Instrumentation> handler);
 
   // Adds the counters and PCs associated with modules for this process. Invoked via the
   // |__sanitizer_cov_*_init| functions.
@@ -85,22 +91,10 @@ class Process {
   void OnDeath();
   void OnExit();
 
- protected:
-  explicit Process(ExecutorPtr executor);
-
   // Accessors for unit testing.
   const Options& options() const { return options_; }
   size_t malloc_limit() const { return malloc_limit_; }
   zx::time next_purge() const { return next_purge_; }
-
-  // Installs the hook functions above in the process' overall global, static context. The methods
-  // used, e.g. |__sanitizer_set_death_callback|, do not have corresponding methods to unset the
-  // hooks, so there is no corresponding "UninstallHooks". As a result, this method can only be
-  // called once per process; subsequent calls will panic.
-  static void InstallHooks();
-
-  // Returns a promise to connects to the |Coverage| component and begin fuzzing.
-  Promise<> Connect();
 
   // Returns a promise to send complete pending modules to the coverage component. This promise does
   // not return unless there is an error.
@@ -148,7 +142,6 @@ class Process {
   static bool AcquireCrashState();
 
   ExecutorPtr executor_;
-  fidl::InterfaceRequestHandler<Instrumentation> handler_;
   InstrumentationPtr instrumentation_;
   AsyncEventPair eventpair_;
 

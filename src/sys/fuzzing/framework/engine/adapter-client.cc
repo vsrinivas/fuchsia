@@ -26,7 +26,7 @@ void TargetAdapterClient::Configure(const OptionsPtr& options) {
 Promise<> TargetAdapterClient::Connect() {
   return fpromise::make_promise([this, handling = Future<>(),
                                  connect = Future<>()](Context& context) mutable -> Result<> {
-           // Check if the channel is valid and its peer is connected.
+           // Return success if the channel is valid and its peer is already connected.
            if (ptr_.is_bound() &&
                ptr_.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite_past(),
                                        nullptr) == ZX_ERR_TIMED_OUT) {
@@ -43,11 +43,9 @@ Promise<> TargetAdapterClient::Connect() {
            }
            FX_CHECK(handling.is_ok());
            if (!connect) {
-             connect = fpromise::make_promise([this] {
-               Bridge<> bridge;
-               ptr_->Connect(eventpair_.Create(), test_input_.Share(), bridge.completer.bind());
-               return bridge.consumer.promise_or(fpromise::error());
-             });
+             Bridge<> bridge;
+             ptr_->Connect(eventpair_.Create(), test_input_.Share(), bridge.completer.bind());
+             connect = bridge.consumer.promise_or(fpromise::error());
            }
            if (!connect(context)) {
              return fpromise::pending();
@@ -80,7 +78,7 @@ std::vector<std::string> TargetAdapterClient::GetSeedCorpusDirectories(
 }
 
 Promise<> TargetAdapterClient::TestOneInput(const Input& test_input) {
-  test_input_.Clear();
+  FX_CHECK(test_input_.size() == 0);
   test_input_.Write(test_input.data(), test_input.size());
   return Connect()
       .or_else([] { return fpromise::error(ZX_ERR_CANCELED); })
@@ -94,8 +92,11 @@ Promise<> TargetAdapterClient::TestOneInput(const Input& test_input) {
         }
         return fpromise::error();
       })
+      .inspect([this](const Result<>& result) { test_input_.Clear(); })
       .wrap_with(scope_);
 }
+
+void TargetAdapterClient::Clear() { test_input_.Clear(); }
 
 void TargetAdapterClient::Disconnect() {
   eventpair_.Reset();

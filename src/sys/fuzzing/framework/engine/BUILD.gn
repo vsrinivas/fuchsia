@@ -101,7 +101,7 @@ source_set("unittests") {
   ]
   deps = [
     ":testing",
-    "../testing:target",
+    "../testing:test-target",
     "//src/lib/files",
     "//src/sys/fuzzing/common:runner-unittests",
   ]
@@ -117,7 +117,7 @@ source_set("fatal-unittests") {
   ]
   deps = [
     ":testing",
-    "../testing:target",
+    "../testing:test-target",
     "//src/sys/fuzzing/common:runner-fatal-unittests",
   ]
 }

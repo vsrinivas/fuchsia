@@ -8,7 +8,10 @@ source_set("target") {
   testonly = true
   sources = [ "instrumented-process.cc" ]
   public_deps = [ ":no_hooks" ]
-  deps = [ "//sdk/lib/sys/cpp" ]
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//zircon/system/ulib/sync",
+  ]
 }
 
 # Version of the `target` library that does not install hooks, and can be used for testing.
@@ -52,6 +55,5 @@ source_set("unittests") {
     "../testing",
     "//src/sys/fuzzing/common/testing",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/sync",
   ]
 }

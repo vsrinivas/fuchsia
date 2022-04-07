@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/fuzzer/cpp/fidl.h>
-#include <lib/fidl/cpp/interface_request.h>
-#include <lib/sys/cpp/component_context.h>
 #include <stddef.h>
 
 #include <memory>
 
 #include <gtest/gtest.h>
 
+#include "src/sys/fuzzing/common/component-context.h"
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/options.h"
+#include "src/sys/fuzzing/common/testing/async-test.h"
 #include "src/sys/fuzzing/framework/engine/adapter-client.h"
 #include "src/sys/fuzzing/framework/engine/corpus.h"
 
@@ -20,63 +19,75 @@
 
 namespace fuzzing {
 
-using fuchsia::fuzzer::Options;
-using fuchsia::fuzzer::TargetAdapterSyncPtr;
-
-// Test fixtures
-
-std::unique_ptr<TargetAdapterClient> GetClient() {
-  auto client = std::make_unique<TargetAdapterClient>();
-  fidl::InterfaceRequestHandler<TargetAdapter> handler =
-      [](fidl::InterfaceRequest<TargetAdapter> request) {
-        auto context = sys::ComponentContext::Create();
-        context->svc()->Connect(std::move(request));
-      };
-  client->SetHandler(std::move(handler));
-  auto options = MakeOptions();
-  TargetAdapterClient::AddDefaults(options.get());
-  client->Configure(std::move(options));
-  return client;
-}
-
-// Unit tests
-
-TEST(FuzzerTest, EmptyInputs) {
-  auto client = GetClient();
-  Input input;
-  EXPECT_EQ(client->Start(&input), ZX_OK);
-  client->AwaitFinish();
-  EXPECT_TRUE(client->is_connected());
-}
-
-TEST(FuzzerTest, EmptyInputs) {
-  auto client = GetClient();
-  Input input;
-  for (size_t i = 0; i < 3; ++i) {
-    EXPECT_EQ(client->Start(&input), ZX_OK);
-    client->AwaitFinish();
-    EXPECT_TRUE(client->is_connected());
+class FuzzerTest : public AsyncTest {
+ protected:
+  void SetUp() override {
+    AsyncTest::SetUp();
+    options_ = MakeOptions();
   }
+
+  const OptionsPtr& options() const { return options_; }
+
+  std::unique_ptr<TargetAdapterClient> MakeClient() {
+    auto context = ComponentContext::CreateWithExecutor(executor());
+    auto client = std::make_unique<TargetAdapterClient>(context->executor());
+    client->set_handler(context->MakeRequestHandler<TargetAdapter>());
+    TargetAdapterClient::AddDefaults(options_.get());
+    client->Configure(options_);
+    return client;
+  }
+
+ private:
+  OptionsPtr options_;
+};
+
+TEST_F(FuzzerTest, EmptyInputs) {
+  auto client = MakeClient();
+
+  // Should be able to handle empty inputs and repeated inputs.
+  Input input;
+  auto task = client->TestOneInput(input).and_then(client->TestOneInput(input));
+  FUZZING_EXPECT_OK(std::move(task));
+  RunUntilIdle();
 }
 
-TEST(FuzzerTest, SeedCorpus) {
-  auto options = MakeOptions();
+TEST_F(FuzzerTest, SeedCorpus) {
+  auto client = MakeClient();
+
+  std::vector<std::string> parameters;
+  FUZZING_EXPECT_OK(client->GetParameters(), &parameters);
+  RunUntilIdle();
+
+  auto seed_corpus_dirs = client->GetSeedCorpusDirectories(parameters);
+  Corpus seed_corpus;
+  auto options = this->options();
   Corpus::AddDefaults(options.get());
-  auto client = GetClient();
+  seed_corpus.Configure(options);
+  seed_corpus.Load(seed_corpus_dirs);
 
-  auto parameters = client->GetParameters();
-  std::vector<std::string> seed_corpus_dirs;
-  std::copy_if(
-      parameters.begin(), parameters.end(), std::back_inserter(seed_corpus_dirs),
-      [](const std::string& parameter) { return !parameter.empty() && parameter[0] != '-'; });
-  seed_corpus_->Load(seed_corpus_dirs);
-
-  Input input;
-  for (size_t i = 0; corpus.At(i, &input); ++i) {
-    EXPECT_EQ(client->Start(&input), ZX_OK);
-    client->AwaitFinish();
-    EXPECT_TRUE(client->is_connected());
-  }
+  // Ensure only one call to |TestOneInput| is active at a time.
+  auto task = fpromise::make_promise(
+      [&, i = size_t(0), test_one = Future<>()](Context& context) mutable -> Result<> {
+        while (true) {
+          if (!test_one) {
+            Input input;
+            if (!seed_corpus.At(i, &input)) {
+              return fpromise::ok();
+            }
+            test_one = client->TestOneInput(input);
+          }
+          if (!test_one(context)) {
+            return fpromise::pending();
+          }
+          if (test_one.is_error()) {
+            return fpromise::error();
+          }
+          test_one = nullptr;
+          ++i;
+        }
+      });
+  FUZZING_EXPECT_OK(std::move(task));
+  RunUntilIdle();
 }
 
 }  // namespace fuzzing

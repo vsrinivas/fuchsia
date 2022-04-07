@@ -31,8 +31,8 @@ source_set("testing") {
   deps = [ "//sdk/lib/fdio" ]
 }
 
-executable("target") {
-  output_name = "component_fuzzing_test_target"
+executable("test-target") {
+  output_name = "component_fuzzing_framework_test_target"
   visibility = [ "//src/sys/fuzzing/*" ]
   testonly = true
   sources = [ "target-main.cc" ]
@@ -43,9 +43,28 @@ executable("target") {
   ]
 }
 
-executable("test-engine-bin") {
+executable("test-fuzzer") {
+  testonly = true
+  output_name = "component_fuzzing_framework_test_fuzzer"
+  sources = [ "fuzzer.cc" ]
+  deps = [
+    "//src/sys/fuzzing/common/testing:sanitizer",
+    "//src/sys/fuzzing/framework/adapters:llvm",
+    "//src/sys/fuzzing/framework/target",
+  ]
+  exclude_toolchain_tags = [ "instrumented" ]
+}
+
+executable("test-fuzzer-uninstrumented") {
+  testonly = true
+  output_name = "component_fuzzing_framework_test_fuzzer_uninstrumented"
+  sources = [ "fuzzer.cc" ]
+  deps = [ "//src/sys/fuzzing/framework/adapters:llvm" ]
+  exclude_toolchain_tags = [ "instrumented" ]
+}
+
+executable("engine") {
   output_name = "component_fuzzing_test_engine"
-  visibility = [ ":*" ]
   testonly = true
   sources = [ "engine.cc" ]
   deps = [
@@ -54,11 +73,7 @@ executable("test-engine-bin") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/fuzzing/common",
+    "//src/sys/fuzzing/common/testing",
     "//third_party/googletest:gtest",
   ]
-}
-
-fuchsia_test_component("test-engine") {
-  manifest = "../meta/test-engine.cml"
-  deps = [ ":test-engine-bin" ]
 }

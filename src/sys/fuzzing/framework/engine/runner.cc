@@ -800,7 +800,6 @@ Promise<bool, FuzzResult> RunnerImpl::RunOne(const Input& input) {
                all_done = false;
              } else if (future.is_error()) {
                auto target_id = future.error();
-               futures_.clear();
                return fpromise::error(target_id);
              } else {
                leak_suspected |= future.value();
@@ -810,9 +809,12 @@ Promise<bool, FuzzResult> RunnerImpl::RunOne(const Input& input) {
              suspended_ = context.suspend_task();
              return fpromise::pending();
            }
-           futures_.clear();
            return fpromise::ok(leak_suspected);
          })
+      .inspect([this](const Result<bool, uint64_t>& ignored) {
+        futures_.clear();
+        target_adapter_.Clear();
+      })
       .or_else([this](const uint64_t& target_id) { return GetFuzzResult(target_id); });
 }
 

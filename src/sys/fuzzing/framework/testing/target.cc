@@ -28,7 +28,7 @@ zx::process TestTarget::Launch() {
   FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
 
   // Spawn the new process in the new job.
-  const char* argv[2] = {"/pkg/bin/component_fuzzing_test_target", nullptr};
+  const char* argv[2] = {"/pkg/bin/component_fuzzing_framework_test_target", nullptr};
   fdio_spawn_action_t actions[] = {
       {
           .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
