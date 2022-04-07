@@ -159,14 +159,6 @@ test("mdns_test") {
   }
 }
 
-# TODO(https://fxbug.dev/90433): remove once integration tests no longer rely on
-# the legacy MDNS component.
-fuchsia_component("component-legacy") {
-  component_name = "mdns"
-  deps = [ ":bin" ]
-  manifest = "meta/mdns.cmx"
-}
-
 fuchsia_component("component") {
   component_name = "mdns"
   deps = [ ":bin" ]
