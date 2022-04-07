@@ -33,28 +33,31 @@ source_set("lib") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.boot",
     "//sdk/fidl/fuchsia.hardware.virtioconsole:fuchsia.hardware.virtioconsole_llcpp",
-    "//sdk/fidl/fuchsia.kernel",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
     "//sdk/lib/fdio",
-    "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zircon-internal",
-    "//zircon/system/ulib/zx",
   ]
 
   public_deps = [
+    # console_launcher.h has #include <fidl/fuchsia.boot/cpp/wire.h>
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+
+    # virtcon-setup.h has #include <fidl/fuchsia.virtualconsole/cpp/wire.h>
     "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole_llcpp",
+
+    # console_launcher.h has #include <fbl/unique_fd.h>
+    # console_launcher.h has #include <lib/zx/status.h>
     "//zircon/system/ulib/fbl",
+
+    # autorun.h has #include <lib/zx/job.h>
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 executable("bin") {
@@ -64,18 +67,13 @@ executable("bin") {
 
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/sys/lib/stdout-to-debuglog/cpp",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 component_manifest_resources("meta") {

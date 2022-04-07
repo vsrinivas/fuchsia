@@ -5,17 +5,13 @@
 #include "src/bringup/bin/console-launcher/autorun.h"
 
 #include <fcntl.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
-#include <lib/fdio/unsafe.h>
-#include <lib/fdio/watcher.h>
-#include <lib/zx/debuglog.h>
-#include <lib/zx/process.h>
 #include <zircon/processargs.h>
+#include <zircon/status.h>
 
 #include <array>
 
-#include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 
 namespace autorun {
@@ -83,18 +79,30 @@ zx_status_t WaitForSystemAvailable() {
 
 zx_status_t Run(const char* process_name, const zx::unowned_job& job, const char* const* args,
                 zx::handle stdio, zx::process* out_process) {
-  fdio_spawn_action_t actions[2] = {};
-  actions[0].action = FDIO_SPAWN_ACTION_SET_NAME;
-  actions[0].name.data = process_name;
-  actions[1].action = FDIO_SPAWN_ACTION_ADD_HANDLE;
-  actions[1].h = {.id = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO | 0), .handle = stdio.release()};
+  fdio_spawn_action_t actions[] = {
+      {
+          .action = FDIO_SPAWN_ACTION_SET_NAME,
+          .name =
+              {
+                  .data = process_name,
+              },
+      },
+      {
+          .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+          .h =
+              {
+                  .id = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO | 0),
+                  .handle = stdio.release(),
+              },
+      },
+  };
 
   uint32_t flags = FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO;
 
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   zx::process process;
-  zx_status_t status = fdio_spawn_etc(job->get(), flags, args[0], args, nullptr, 2, actions,
-                                      process.reset_and_get_address(), err_msg);
+  zx_status_t status = fdio_spawn_etc(job->get(), flags, args[0], args, nullptr, std::size(actions),
+                                      actions, process.reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
     return status;
   }
@@ -108,7 +116,7 @@ zx_status_t Run(const char* process_name, const zx::unowned_job& job, const char
 zx_status_t AutoRun::SetupBootCmd(std::string cmd, const zx::job& job, zx::handle stdio) {
   boot_thread_ = std::thread(
       [cmd = std::move(cmd), job = zx::unowned_job(job), stdio = std::move(stdio)]() mutable {
-        ArgumentVector args = ArgumentVector::FromCmdline(cmd.data());
+        ArgumentVector args = ArgumentVector::FromCmdline(cmd.c_str());
         args.Print("autorun");
 
         zx::process process;
@@ -135,7 +143,7 @@ zx_status_t AutoRun::SetupSystemCmd(std::string cmd, const zx::job& job, zx::han
           return;
         }
 
-        ArgumentVector args = ArgumentVector::FromCmdline(cmd.data());
+        ArgumentVector args = ArgumentVector::FromCmdline(cmd.c_str());
         args.Print("autorun");
         zx::process process;
         status = Run("autorun:system", job, args.argv(), std::move(stdio), &process);

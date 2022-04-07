@@ -28,8 +28,8 @@ TEST(SystemInstanceTest, CheckBootArgParsing) {
   fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   boot_server.CreateClient(loop.dispatcher(), &boot_args);
 
-  std::optional<console_launcher::Arguments> args = console_launcher::GetArguments(boot_args);
-  ASSERT_TRUE(args.has_value());
+  zx::status args = console_launcher::GetArguments(boot_args.client_end());
+  ASSERT_OK(args.status_value());
 
   ASSERT_TRUE(args->run_shell);
   ASSERT_TRUE(args->is_virtio);
@@ -52,8 +52,8 @@ TEST(SystemInstanceTest, CheckBootArgDefaultStrings) {
   fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   boot_server.CreateClient(loop.dispatcher(), &boot_args);
 
-  std::optional<console_launcher::Arguments> args = console_launcher::GetArguments(boot_args);
-  ASSERT_TRUE(args.has_value());
+  zx::status args = console_launcher::GetArguments(boot_args.client_end());
+  ASSERT_OK(args.status_value());
 
   ASSERT_FALSE(args->run_shell);
   ASSERT_FALSE(args->is_virtio);

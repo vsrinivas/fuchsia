@@ -27,7 +27,7 @@ struct Arguments {
   std::string autorun_system;
 };
 
-std::optional<Arguments> GetArguments(const fidl::WireSyncClient<fuchsia_boot::Arguments>& client);
+zx::status<Arguments> GetArguments(const fidl::ClientEnd<fuchsia_boot::Arguments>& client);
 
 class ConsoleLauncher {
  public:
@@ -38,10 +38,6 @@ class ConsoleLauncher {
   zx::job& shell_job() { return shell_job_; }
 
  private:
-  // If the console is a virtio connection, then speak the fuchsia.hardware.virtioconsole.Device
-  // interface to get the real fuchsia.io.File connection
-  std::optional<fbl::unique_fd> GetVirtioFd(const Arguments& args, fbl::unique_fd device_fd);
-
   zx::process shell_process_;
   // WARNING: This job is created directly from the root job with no additional job policy
   // restrictions. We only create it when 'console.shell' is enabled to help protect against

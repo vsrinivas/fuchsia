@@ -5,37 +5,25 @@
 #include "src/bringup/bin/console-launcher/console_launcher.h"
 
 #include <fcntl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
 #include <fidl/fuchsia.hardware.virtioconsole/cpp/wire.h>
-#include <fuchsia/boot/cpp/fidl.h>
-#include <fuchsia/kernel/cpp/fidl.h>
-#include <lib/fdio/directory.h>
+#include <fidl/fuchsia.kernel/cpp/wire.h>
+#include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/fd.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
-#include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fit/defer.h>
-#include <lib/sys/cpp/service_directory.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/global.h>
 #include <lib/zircon-internal/paths.h>
 #include <zircon/compiler.h>
-
-#include <fbl/algorithm.h>
+#include <zircon/status.h>
 
 namespace console_launcher {
 
 namespace {
-
-// Get the root job from the root job service.
-zx_status_t GetRootJob(zx::job* root_job) {
-  auto svc_dir = sys::ServiceDirectory::CreateFromNamespace();
-  fuchsia::kernel::RootJobSyncPtr root_job_ptr;
-  zx_status_t status = svc_dir->Connect(root_job_ptr.NewRequest());
-  if (status != ZX_OK) {
-    return status;
-  }
-  return root_job_ptr->Get(root_job);
-}
 
 // Wait for the requested file.  Its parent directory must exist.
 zx_status_t WaitForFile(const char* path, zx::time deadline) {
@@ -82,14 +70,18 @@ zx_status_t WaitForFile(const char* path, zx::time deadline) {
 zx::status<ConsoleLauncher> ConsoleLauncher::Create() {
   ConsoleLauncher launcher;
 
-  zx::job root_job;
   // TODO(fxbug.dev/33957): Remove all uses of the root job.
-  zx_status_t status = GetRootJob(&root_job);
-  if (status != ZX_OK) {
-    FX_LOGF(ERROR, nullptr, "Failed to get root job: %s", zx_status_get_string(status));
-    return zx::error(status);
+  zx::status client_end = service::Connect<fuchsia_kernel::RootJob>();
+  if (client_end.is_error()) {
+    FX_LOGF(ERROR, nullptr, "Failed to get root job: %s", client_end.status_string());
+    return client_end.take_error();
   }
-  status = zx::job::create(root_job, 0u, &launcher.shell_job_);
+  fidl::WireResult result = fidl::WireCall(client_end.value())->Get();
+  if (!result.ok()) {
+    FX_LOGF(ERROR, nullptr, "Failed to get root job: %s", result.FormatDescription().c_str());
+    return zx::error(result.status());
+  }
+  zx_status_t status = zx::job::create(result.value().job, 0u, &launcher.shell_job_);
   if (status != ZX_OK) {
     FX_LOGF(ERROR, nullptr, "Failed to create shell_job: %s", zx_status_get_string(status));
     return zx::error(status);
@@ -103,20 +95,21 @@ zx::status<ConsoleLauncher> ConsoleLauncher::Create() {
   return zx::ok(std::move(launcher));
 }
 
-std::optional<Arguments> GetArguments(const fidl::WireSyncClient<fuchsia_boot::Arguments>& client) {
+zx::status<Arguments> GetArguments(const fidl::ClientEnd<fuchsia_boot::Arguments>& client) {
   Arguments ret;
 
   fuchsia_boot::wire::BoolPair bool_keys[]{
-      {fidl::StringView{"console.shell"}, false},
-      {fidl::StringView{"kernel.shell"}, false},
-      {fidl::StringView{"console.is_virtio"}, false},
-      {fidl::StringView{"devmgr.log-to-debuglog"}, false},
+      {"console.shell", false},
+      {"kernel.shell", false},
+      {"console.is_virtio", false},
+      {"devmgr.log-to-debuglog", false},
   };
-  auto bool_resp =
-      client->GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(bool_keys));
+  const fidl::WireResult bool_resp = fidl::WireCall(client)->GetBools(
+      fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(bool_keys));
   if (!bool_resp.ok()) {
-    printf("console-launcher: failed to get boot bools\n");
-    return std::nullopt;
+    printf("console-launcher: failed to get boot bools: %s\n",
+           bool_resp.FormatDescription().c_str());
+    return zx::error(bool_resp.status());
   }
 
   ret.run_shell = bool_resp->values[0];
@@ -126,15 +119,16 @@ std::optional<Arguments> GetArguments(const fidl::WireSyncClient<fuchsia_boot::A
   ret.log_to_debuglog = bool_resp->values[3];
 
   fidl::StringView vars[]{
-      fidl::StringView{"TERM"},
-      fidl::StringView{"console.path"},
-      fidl::StringView{"zircon.autorun.boot"},
-      fidl::StringView{"zircon.autorun.system"},
+      "TERM",
+      "console.path",
+      "zircon.autorun.boot",
+      "zircon.autorun.system",
   };
-  auto resp = client->GetStrings(fidl::VectorView<fidl::StringView>::FromExternal(vars));
+  const fidl::WireResult resp =
+      fidl::WireCall(client)->GetStrings(fidl::VectorView<fidl::StringView>::FromExternal(vars));
   if (!resp.ok()) {
-    printf("console-launcher: failed to get console path\n");
-    return std::nullopt;
+    printf("console-launcher: failed to get console path: %s\n", resp.FormatDescription().c_str());
+    return zx::error(resp.status());
   }
 
   if (resp->values[0].is_null()) {
@@ -152,45 +146,7 @@ std::optional<Arguments> GetArguments(const fidl::WireSyncClient<fuchsia_boot::A
     ret.autorun_system = std::string{resp->values[3].data(), resp->values[3].size()};
   }
 
-  return ret;
-}
-
-std::optional<fbl::unique_fd> ConsoleLauncher::GetVirtioFd(const Arguments& args,
-                                                           fbl::unique_fd device_fd) {
-  zx::channel virtio_channel;
-  zx_status_t status =
-      fdio_get_service_handle(device_fd.release(), virtio_channel.reset_and_get_address());
-  if (status != ZX_OK) {
-    printf("console-launcher: failed to get console handle '%s'\n", args.device.data());
-    return std::nullopt;
-  }
-
-  zx::channel local, remote;
-  status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    printf("console-launcher: failed to create channel for console '%s'\n", args.device.data());
-    return std::nullopt;
-  }
-
-  fidl::WireSyncClient<fuchsia_hardware_virtioconsole::Device> virtio_client(
-      std::move(virtio_channel));
-  virtio_client->GetChannel(std::move(remote));
-
-  fdio_t* fdio;
-  status = fdio_create(local.release(), &fdio);
-  if (status != ZX_OK) {
-    printf("console-launcher: failed to setup fdio for console '%s'\n", args.device.data());
-    return std::nullopt;
-  }
-
-  fbl::unique_fd fd(fdio_bind_to_fd(fdio, -1, 3));
-  if (!fd.is_valid()) {
-    fdio_unsafe_release(fdio);
-    printf("console-launcher: failed to transfer fdio for console '%s'\n", args.device.data());
-    return std::nullopt;
-  }
-
-  return fd;
+  return zx::ok(ret);
 }
 
 zx_status_t ConsoleLauncher::LaunchShell(const Arguments& args) {
@@ -199,42 +155,62 @@ zx_status_t ConsoleLauncher::LaunchShell(const Arguments& args) {
     return ZX_OK;
   }
 
-  zx_status_t status = WaitForFile(args.device.data(), zx::time::infinite());
+  zx_status_t status = WaitForFile(args.device.c_str(), zx::time::infinite());
   if (status != ZX_OK) {
     FX_LOGS(INFO) << "console-launcher: failed to wait for console";
-    printf("console-launcher: failed to wait for console '%s' (%s)\n", args.device.data(),
+    printf("console-launcher: failed to wait for console '%s' (%s)\n", args.device.c_str(),
            zx_status_get_string(status));
     return status;
   }
 
-  fbl::unique_fd fd(open(args.device.data(), O_RDWR));
+  fbl::unique_fd fd(open(args.device.c_str(), O_RDWR));
   if (!fd.is_valid()) {
-    printf("console-launcher: failed to open console '%s'\n", args.device.data());
+    printf("console-launcher: failed to open console '%s': %s\n", args.device.c_str(),
+           strerror(errno));
     return ZX_ERR_INVALID_ARGS;
   }
 
+  // If the console is a virtio connection, then speak the fuchsia.hardware.virtioconsole.Device
+  // interface to get the real fuchsia.io.File connection
+  //
   // TODO(fxbug.dev/33183): Clean this up once devhost stops speaking fuchsia.io.File
   // on behalf of drivers.  Once that happens, the virtio-console driver
   // should just speak that instead of this shim interface.
   if (args.is_virtio) {
-    std::optional<fbl::unique_fd> result = GetVirtioFd(args, std::move(fd));
-    if (!result) {
-      return ZX_ERR_INTERNAL;
+    zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
+    if (endpoints.is_error()) {
+      printf("console-launcher: failed to create channel for console '%s': %s\n",
+             args.device.c_str(), endpoints.status_string());
+      return endpoints.status_value();
     }
-    fd = std::move(*result);
+    fdio_cpp::FdioCaller caller(std::move(fd));
+    const fidl::WireResult result =
+        fidl::WireCall(caller.borrow_as<fuchsia_hardware_virtioconsole::Device>())
+            ->GetChannel(std::move(endpoints->server));
+    if (!result.ok()) {
+      return result.status();
+    }
+    zx_status_t status =
+        fdio_fd_create(endpoints->client.TakeChannel().release(), fd.reset_and_get_address());
+    if (status != ZX_OK) {
+      printf("console-launcher: failed to setup fdio for console '%s': %s\n", args.device.c_str(),
+             zx_status_get_string(status));
+      return status;
+    }
   }
 
   const char* argv[] = {ZX_SHELL_DEFAULT, nullptr};
-  const char* environ[] = {args.term.data(), nullptr};
+  const char* environ[] = {args.term.c_str(), nullptr};
 
   std::vector<fdio_spawn_action_t> actions;
   // Add an action to set the new process name.
-  {
-    fdio_spawn_action_t name = {};
-    name.action = FDIO_SPAWN_ACTION_SET_NAME;
-    name.name.data = "sh:console";
-    actions.push_back(std::move(name));
-  }
+  actions.emplace_back(fdio_spawn_action_t{
+      .action = FDIO_SPAWN_ACTION_SET_NAME,
+      .name =
+          {
+              .data = "sh:console",
+          },
+  });
 
   // Get our current namespace so we can pass it to the shell process.
   fdio_flat_namespace_t* flat = nullptr;
@@ -249,20 +225,25 @@ zx_status_t ConsoleLauncher::LaunchShell(const Arguments& args) {
     if (strcmp(flat->path[i], "/system-delayed") == 0) {
       continue;
     }
-    fdio_spawn_action_t add_dir = {};
-    add_dir.action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY;
-    add_dir.ns.handle = flat->handle[i];
-    add_dir.ns.prefix = flat->path[i];
-    actions.push_back(std::move(add_dir));
+    actions.emplace_back(fdio_spawn_action_t{
+        .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+        .ns =
+            {
+                .prefix = flat->path[i],
+                .handle = flat->handle[i],
+            },
+    });
   }
 
   // Add an action to transfer the STDIO handle.
-  {
-    fdio_spawn_action_t stdio = {};
-    stdio.action = FDIO_SPAWN_ACTION_TRANSFER_FD;
-    stdio.fd = {.local_fd = fd.release(), .target_fd = FDIO_FLAG_USE_FOR_STDIO};
-    actions.push_back(std::move(stdio));
-  }
+  actions.emplace_back(fdio_spawn_action_t{
+      .action = FDIO_SPAWN_ACTION_TRANSFER_FD,
+      .fd =
+          {
+              .local_fd = fd.release(),
+              .target_fd = FDIO_FLAG_USE_FOR_STDIO,
+          },
+  });
 
   uint32_t flags = FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO & ~FDIO_SPAWN_CLONE_NAMESPACE;
 
