@@ -5,11 +5,6 @@
 import("//build/components.gni")
 import("//build/test.gni")
 
-fuchsia_test_component("device_name_provider") {
-  manifest = "meta/device_name_provider.cmx"
-  deps = [ "//src/bringup/bin/device-name-provider" ]
-}
-
 test("name_provider_service_not_present_test") {
   sources = [ "name_provider_service_not_present_test.cc" ]
 
