@@ -20,6 +20,7 @@ mod seq_file;
 mod simple_file;
 mod symlink_node;
 mod vmo_file;
+mod xattr;
 
 pub mod buffers;
 pub mod devpts;
@@ -56,3 +57,4 @@ pub use seq_file::*;
 pub use simple_file::*;
 pub use symlink_node::*;
 pub use vmo_file::*;
+pub use xattr::*;

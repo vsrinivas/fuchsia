@@ -37,14 +37,33 @@ impl FileSystemOps for Arc<TmpFs> {
 impl TmpFs {
     pub fn new() -> FileSystemHandle {
         let fs = FileSystem::new_with_permanent_entries(Arc::new(TmpFs(())));
-        fs.set_root(TmpfsDirectory);
+        fs.set_root(TmpfsDirectory::new());
         fs
     }
 }
 
-struct TmpfsDirectory;
+struct TmpfsDirectory {
+    xattrs: MemoryXattrStorage,
+}
 
+impl TmpfsDirectory {
+    fn new() -> Self {
+        Self { xattrs: MemoryXattrStorage::default() }
+    }
+}
+
+fn create_node(
+    parent: &FsNode,
+    node: Box<dyn FsNodeOps>,
+    mode: FileMode,
+) -> Result<FsNodeHandle, Errno> {
+    let node = parent.fs().create_node(node, mode);
+    let _ = node.set_xattr(b"security.selinux", b"u:object_r:tmpfs:s0", XattrOp::Create);
+    Ok(node)
+}
 impl FsNodeOps for TmpfsDirectory {
+    fs_node_impl_xattr_delegate!(self, self.xattrs);
+
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(MemoryDirectoryFile::new()))
     }
@@ -55,7 +74,7 @@ impl FsNodeOps for TmpfsDirectory {
 
     fn mkdir(&self, node: &FsNode, _name: &FsStr) -> Result<FsNodeHandle, Errno> {
         node.info_write().link_count += 1;
-        Ok(node.fs().create_node(Box::new(TmpfsDirectory), FileMode::IFDIR))
+        create_node(node, Box::new(TmpfsDirectory::new()), FileMode::IFDIR)
     }
 
     fn mknod(&self, node: &FsNode, _name: &FsStr, mode: FileMode) -> Result<FsNodeHandle, Errno> {
@@ -67,7 +86,7 @@ impl FsNodeOps for TmpfsDirectory {
             FileMode::IFSOCK => Box::new(SpecialNode),
             _ => return error!(EACCES),
         };
-        Ok(node.fs().create_node(ops, mode))
+        create_node(node, ops, mode)
     }
 
     fn create_symlink(
@@ -76,7 +95,7 @@ impl FsNodeOps for TmpfsDirectory {
         _name: &FsStr,
         target: &FsStr,
     ) -> Result<FsNodeHandle, Errno> {
-        Ok(node.fs().create_node(Box::new(SymlinkNode::new(target)), FileMode::IFLNK))
+        create_node(node, Box::new(SymlinkNode::new(target)), FileMode::IFLNK)
     }
 
     fn link(&self, _node: &FsNode, _name: &FsStr, child: &FsNodeHandle) -> Result<(), Errno> {

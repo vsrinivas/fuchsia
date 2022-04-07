@@ -121,6 +121,7 @@ gvisor_tests = [
   "uidgid_test",
   "unlink_test",
   "wait_test",
+  "xattr_test",
 ]
 
 foreach(test_name, gvisor_tests) {

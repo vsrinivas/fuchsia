@@ -3,42 +3,14 @@
 // found in the LICENSE file.
 
 use fuchsia_zircon::{self as zx, HandleBased};
-use parking_lot::Mutex;
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use super::*;
-use crate::fs::{fileops_impl_nonblocking, fileops_impl_seekable, fs_node_impl_xattr_delegate};
 use crate::logging::impossible_error;
 use crate::mm::vmo::round_up_to_system_page_size;
 use crate::task::CurrentTask;
 use crate::types::*;
 use crate::vmex_resource::VMEX_RESOURCE;
-
-#[derive(Default)]
-struct MemoryXattrStorage {
-    xattrs: Mutex<HashMap<FsString, FsString>>,
-}
-impl MemoryXattrStorage {
-    fn set_xattr(&self, name: &FsStr, value: &FsStr, op: XattrOp) -> Result<(), Errno> {
-        let mut xattrs = self.xattrs.lock();
-        let entry = xattrs.entry(name.to_owned());
-        match entry {
-            Entry::Vacant(_) if op == XattrOp::Replace => return error!(ENODATA),
-            Entry::Occupied(_) if op == XattrOp::Create => return error!(EEXIST),
-            Entry::Vacant(v) => {
-                v.insert(value.to_owned());
-            }
-            Entry::Occupied(mut o) => {
-                let s = o.get_mut();
-                s.clear();
-                s.extend_from_slice(value);
-            }
-        };
-        Ok(())
-    }
-}
 
 pub struct VmoFileNode {
     /// The memory that backs this file.

@@ -200,8 +200,21 @@ pub trait FsNodeOps: Send + Sync {
         Ok(node.info())
     }
 
+    /// Get an extended attribute on the node.
+    fn get_xattr(&self, _name: &FsStr) -> Result<FsString, Errno> {
+        error!(ENOTSUP)
+    }
+
     /// Set an extended attribute on the node.
     fn set_xattr(&self, _name: &FsStr, _value: &FsStr, _op: XattrOp) -> Result<(), Errno> {
+        error!(ENOTSUP)
+    }
+
+    fn remove_xattr(&self, _name: &FsStr) -> Result<(), Errno> {
+        error!(ENOTSUP)
+    }
+
+    fn list_xattrs(&self) -> Result<Vec<FsString>, Errno> {
         error!(ENOTSUP)
     }
 }
@@ -224,6 +237,13 @@ macro_rules! fs_node_impl_symlink {
 /// object.
 macro_rules! fs_node_impl_xattr_delegate {
     ($self:ident, $delegate:expr) => {
+        fn get_xattr(
+            &$self,
+            name: &crate::fs::FsStr,
+        ) -> Result<FsString, crate::types::Errno> {
+            $delegate.get_xattr(name)
+        }
+
         fn set_xattr(
             &$self,
             name: &crate::fs::FsStr,
@@ -231,6 +251,19 @@ macro_rules! fs_node_impl_xattr_delegate {
             op: crate::fs::XattrOp,
         ) -> Result<(), crate::types::Errno> {
             $delegate.set_xattr(name, value, op)
+        }
+
+        fn remove_xattr(
+            &$self,
+            name: &crate::fs::FsStr,
+        ) -> Result<(), crate::types::Errno> {
+            $delegate.remove_xattr(name)
+        }
+
+        fn list_xattrs(
+            &$self,
+        ) -> Result<Vec<crate::fs::FsString>, crate::types::Errno> {
+            $delegate.list_xattrs()
         }
     };
     ($delegate:expr) => { fs_node_impl_xattr_delegate(self, $delegate) };
@@ -446,8 +479,20 @@ impl FsNode {
         })
     }
 
+    pub fn get_xattr(&self, name: &FsStr) -> Result<FsString, Errno> {
+        self.ops().get_xattr(name)
+    }
+
     pub fn set_xattr(&self, name: &FsStr, value: &FsStr, op: XattrOp) -> Result<(), Errno> {
         self.ops().set_xattr(name, value, op)
+    }
+
+    pub fn remove_xattr(&self, name: &FsStr) -> Result<(), Errno> {
+        self.ops().remove_xattr(name)
+    }
+
+    pub fn list_xattrs(&self) -> Result<Vec<FsString>, Errno> {
+        self.ops().list_xattrs()
     }
 
     pub fn info(&self) -> RwLockReadGuard<'_, FsNodeInfo> {

@@ -165,6 +165,7 @@ if (target_cpu == "x64") {
       "fs/sysfs.rs",
       "fs/tmpfs.rs",
       "fs/vmo_file.rs",
+      "fs/xattr.rs",
       "loader.rs",
       "logging.rs",
       "main.rs",

@@ -5,6 +5,7 @@
 use crate::fs::*;
 use crate::logging::not_implemented;
 use crate::task::*;
+use crate::types::as_any::AsAny;
 use crate::types::*;
 use zerocopy::AsBytes;
 
@@ -23,12 +24,12 @@ impl SeLinuxFs {
         let fs = FileSystem::new_with_permanent_entries(SeLinuxFs);
         fs.set_root(ROMemoryDirectory);
         let root = fs.root();
-        root.add_node_ops(b"load", mode!(IFREG, 0600), SimpleFileNode::new(|| Ok(SeLoad)))?;
-        root.add_node_ops(b"enforce", mode!(IFREG, 0644), SimpleFileNode::new(|| Ok(SeEnforce)))?;
+        root.add_node_ops(b"load", mode!(IFREG, 0600), SeLinuxNode::new(|| Ok(SeLoad)))?;
+        root.add_node_ops(b"enforce", mode!(IFREG, 0644), SeLinuxNode::new(|| Ok(SeEnforce)))?;
         root.add_node_ops(
             b"checkreqprot",
             mode!(IFREG, 0644),
-            SimpleFileNode::new(|| Ok(SeCheckReqProt)),
+            SeLinuxNode::new(|| Ok(SeCheckReqProt)),
         )?;
         root.add_node_ops(
             b"deny_unknown",
@@ -54,6 +55,77 @@ impl SeLinuxFs {
     }
 }
 
+pub struct SeLinuxNode<F, O>
+where
+    F: Fn() -> Result<O, Errno>,
+    O: FileOps,
+{
+    open: F,
+}
+impl<F, O> SeLinuxNode<F, O>
+where
+    F: Fn() -> Result<O, Errno> + Send + Sync,
+    O: FileOps + 'static,
+{
+    pub fn new(open: F) -> SeLinuxNode<F, O> {
+        Self { open }
+    }
+}
+impl<F, O> FsNodeOps for SeLinuxNode<F, O>
+where
+    F: Fn() -> Result<O, Errno> + Send + Sync,
+    O: FileOps + 'static,
+{
+    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+        Ok(Box::new((self.open)()?))
+    }
+
+    fn truncate(&self, _node: &FsNode, _length: u64) -> Result<(), Errno> {
+        // TODO(tbodt): Is this right? This is the minimum to handle O_TRUNC
+        Ok(())
+    }
+}
+
+trait SeLinuxFile {
+    fn write(&self, data: Vec<u8>) -> Result<(), Errno>;
+    fn read(&self) -> Result<Vec<u8>, Errno> {
+        error!(ENOSYS)
+    }
+}
+
+impl<T: SeLinuxFile + Send + Sync + AsAny + 'static> FileOps for T {
+    fileops_impl_seekable!();
+    fileops_impl_nonblocking!();
+
+    fn write_at(
+        &self,
+        _file: &FileObject,
+        current_task: &CurrentTask,
+        offset: usize,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        if offset != 0 {
+            return error!(EINVAL);
+        }
+        let size = UserBuffer::get_total_length(data)?;
+        let mut buf = vec![0u8; size];
+        current_task.mm.read_all(&data, &mut buf)?;
+        self.write(buf)?;
+        Ok(size)
+    }
+
+    fn read_at(
+        &self,
+        _file: &FileObject,
+        current_task: &CurrentTask,
+        _offset: usize,
+        buffer: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        let data = self.read()?;
+        current_task.mm.write_all(buffer, &data)
+    }
+}
+
 /// The C-style struct exposed to userspace by the /sys/fs/selinux/status file.
 /// Defined here (instead of imported through bindgen) as selinux headers are not exposed through
 /// kernel uapi headers.
@@ -73,102 +145,32 @@ struct selinux_status_t {
 }
 
 struct SeLoad;
-impl FileOps for SeLoad {
-    fileops_impl_seekable!();
-    fileops_impl_nonblocking!();
-
-    fn write_at(
-        &self,
-        _file: &FileObject,
-        current_task: &CurrentTask,
-        offset: usize,
-        data: &[UserBuffer],
-    ) -> Result<usize, Errno> {
-        if offset != 0 {
-            return error!(EINVAL);
-        }
-        let size = UserBuffer::get_total_length(data)?;
-        let mut buf = vec![0u8; size];
-        current_task.mm.read_all(&data, &mut buf)?;
-        not_implemented!("got selinux policy, length {}, ignoring", size);
-        Ok(size)
-    }
-
-    fn read_at(
-        &self,
-        _file: &FileObject,
-        _current_task: &CurrentTask,
-        _offset: usize,
-        _data: &[UserBuffer],
-    ) -> Result<usize, Errno> {
-        error!(ENOSYS)
+impl SeLinuxFile for SeLoad {
+    fn write(&self, data: Vec<u8>) -> Result<(), Errno> {
+        not_implemented!("got selinux policy, length {}, ignoring", data.len());
+        Ok(())
     }
 }
 
 struct SeEnforce;
-impl FileOps for SeEnforce {
-    fileops_impl_seekable!();
-    fileops_impl_nonblocking!();
-
-    fn write_at(
-        &self,
-        _file: &FileObject,
-        current_task: &CurrentTask,
-        offset: usize,
-        data: &[UserBuffer],
-    ) -> Result<usize, Errno> {
-        if offset != 0 {
-            return error!(EINVAL);
-        }
-        let size = UserBuffer::get_total_length(data)?;
-        let mut buf = vec![0u8; size];
-        current_task.mm.read_all(&data, &mut buf)?;
-        let enforce = parse_int(&buf)?;
+impl SeLinuxFile for SeEnforce {
+    fn write(&self, data: Vec<u8>) -> Result<(), Errno> {
+        let enforce = parse_int(&data)?;
         not_implemented!("selinux setenforce: {}", enforce);
-        Ok(size)
+        Ok(())
     }
-    fn read_at(
-        &self,
-        _file: &FileObject,
-        current_task: &CurrentTask,
-        _offset: usize,
-        data: &[UserBuffer],
-    ) -> Result<usize, Errno> {
-        // Don't pretend that selinux is enforced until it is implemented.
-        current_task.mm.write_all(data, b"0\n")
+
+    fn read(&self) -> Result<Vec<u8>, Errno> {
+        Ok(b"0\n".to_vec())
     }
 }
 
 struct SeCheckReqProt;
-impl FileOps for SeCheckReqProt {
-    fileops_impl_seekable!();
-    fileops_impl_nonblocking!();
-
-    fn write_at(
-        &self,
-        _file: &FileObject,
-        current_task: &CurrentTask,
-        offset: usize,
-        data: &[UserBuffer],
-    ) -> Result<usize, Errno> {
-        if offset != 0 {
-            return error!(EINVAL);
-        }
-        let size = UserBuffer::get_total_length(data)?;
-        let mut buf = vec![0u8; size];
-        current_task.mm.read_all(&data, &mut buf)?;
-        let checkreqprot = parse_int(&buf)?;
+impl SeLinuxFile for SeCheckReqProt {
+    fn write(&self, data: Vec<u8>) -> Result<(), Errno> {
+        let checkreqprot = parse_int(&data)?;
         not_implemented!("selinux checkreqprot: {}", checkreqprot);
-        Ok(size)
-    }
-    fn read_at(
-        &self,
-        _file: &FileObject,
-        _current_task: &CurrentTask,
-        _offset: usize,
-        _data: &[UserBuffer],
-    ) -> Result<usize, Errno> {
-        error!(ENOSYS)
+        Ok(())
     }
 }
 
