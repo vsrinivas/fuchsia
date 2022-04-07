@@ -17,22 +17,49 @@ namespace fctest = fuchsia::component::test;
 namespace fcdecl = fuchsia::component::decl;
 namespace fio = fuchsia::io;
 
+// Conversion functions for |fuchsia.component.decl| types.
+std::shared_ptr<fcdecl::Ref> CreateFidlChildRef(std::string_view name);
+std::shared_ptr<fcdecl::Ref> CreateFidlParentRef();
+
+std::shared_ptr<fcdecl::Offer> CreateFidlProtocolOfferDecl(std::string_view source_name,
+                                                           std::shared_ptr<fcdecl::Ref> source,
+                                                           std::string_view target_name,
+                                                           std::shared_ptr<fcdecl::Ref> target);
+std::shared_ptr<fcdecl::Offer> CreateFidlServiceOfferDecl(std::string_view source_name,
+                                                          std::shared_ptr<fcdecl::Ref> source,
+                                                          std::string_view target_name,
+                                                          std::shared_ptr<fcdecl::Ref> target);
+std::shared_ptr<fcdecl::Offer> CreateFidlDirectoryOfferDecl(
+    std::string_view source_name, std::shared_ptr<fcdecl::Ref> source, std::string_view target_name,
+    std::shared_ptr<fcdecl::Ref> target, std::string_view subdir, fio::Operations rights);
+
+std::shared_ptr<fcdecl::Offer> CreateFidlStorageOfferDecl(std::string_view source_name,
+                                                          std::shared_ptr<fcdecl::Ref> source,
+                                                          std::string_view target_name,
+                                                          std::shared_ptr<fcdecl::Ref> target);
+
+// Conversion functions for |fuchsia.component.test| types.
 std::shared_ptr<fctest::ChildOptions> CreateFidlChildOptions(fcdecl::StartupMode startup_mode,
-                                                             std::string environment);
-std::shared_ptr<fcdecl::Ref> CreateFidlChildRef(std::string name);
-std::shared_ptr<fctest::Capability2> CreateFidlProtocolCapability(std::string name, std::string as,
+                                                             std::string_view environment);
+
+std::shared_ptr<fctest::Capability2> CreateFidlProtocolCapability(std::string_view name,
+                                                                  std::string_view as,
                                                                   fcdecl::DependencyType type,
-                                                                  std::string path);
-std::shared_ptr<fctest::Capability2> CreateFidlProtocolCapability(std::string name);
-std::shared_ptr<fctest::Capability2> CreateFidlServiceCapability(std::string name, std::string as,
-                                                                 std::string path);
-std::shared_ptr<fctest::Capability2> CreateFidlServiceCapability(std::string name);
-std::shared_ptr<fctest::Capability2> CreateFidlDirectoryCapability(std::string name, std::string as,
-                                                                   fcdecl::DependencyType type,
-                                                                   std::string subdir,
-                                                                   fio::Operations rights,
-                                                                   std::string path);
-std::shared_ptr<fctest::Capability2> CreateFidlDirectoryCapability(std::string name);
+                                                                  std::string_view path);
+
+std::shared_ptr<fctest::Capability2> CreateFidlProtocolCapability(std::string_view name);
+
+std::shared_ptr<fctest::Capability2> CreateFidlServiceCapability(std::string_view name,
+                                                                 std::string_view as,
+                                                                 std::string_view path);
+
+std::shared_ptr<fctest::Capability2> CreateFidlServiceCapability(std::string_view name);
+
+std::shared_ptr<fctest::Capability2> CreateFidlDirectoryCapability(
+    std::string_view name, std::string_view as, fcdecl::DependencyType type,
+    std::string_view subdir, fio::Operations rights, std::string_view path);
+
+std::shared_ptr<fctest::Capability2> CreateFidlDirectoryCapability(std::string_view name);
 
 }  // namespace tests
 }  // namespace component

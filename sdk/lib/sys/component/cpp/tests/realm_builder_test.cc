@@ -5,17 +5,21 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/component/cpp/fidl.h>
+#include <fuchsia/component/decl/cpp/fidl.h>
 #include <fuchsia/examples/cpp/fidl.h>
+#include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/fidl/cpp/comparison.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fit/function.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
+#include <lib/sys/component/cpp/tests/utils.h>
 #include <lib/sys/cpp/component_context.h>
 #include <string.h>
 #include <zircon/assert.h>
@@ -24,15 +28,19 @@
 
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <sstream>
 
 #include <gtest/gtest.h>
+#include <src/lib/fostr/fidl/fuchsia/component/decl/formatting.h>
 #include <src/lib/testing/loop_fixture/real_loop_fixture.h>
 #include <test/placeholders/cpp/fidl.h>
 
 namespace {
 
 using namespace component_testing;
+
+namespace fdecl = fuchsia::component::decl;
 
 constexpr char kEchoServerUrl[] =
     "fuchsia-pkg://fuchsia.com/component_cpp_tests#meta/echo_server.cm";
@@ -595,4 +603,71 @@ TEST(DirectoryContentsUnittest, PanicWhenGivenInvalidPath) {
       "");
 }
 
+class PlaceholderComponent : public LocalComponent {
+ public:
+  PlaceholderComponent() = default;
+
+  void Start(std::unique_ptr<LocalComponentHandles> handles) override {}
+};
+
+constexpr char kRoutingTestChildName[] = "foobar";
+
+class RealmBuilderRoutingParameterizedFixture
+    : public testing::TestWithParam<std::pair<Capability, std::shared_ptr<fdecl::Offer>>> {};
+
+TEST_P(RealmBuilderRoutingParameterizedFixture, RoutedCapabilitiesYieldExpectedOfferClauses) {
+  auto realm_builder = RealmBuilder::Create();
+  PlaceholderComponent placeholder;
+  realm_builder.AddLocalChild(kRoutingTestChildName, &placeholder);
+
+  auto param = GetParam();
+  auto capability = param.first;
+  realm_builder.AddRoute(Route{.capabilities = {capability},
+                               .source = ParentRef{},
+                               .targets = {ChildRef{kRoutingTestChildName}}});
+
+  auto root_decl = realm_builder.GetRealmDecl();
+
+  ASSERT_EQ(root_decl.offers().size(), 1ul);
+
+  const fdecl::Offer& actual = root_decl.offers().at(0);
+  const fdecl::Offer& expected = *param.second;
+
+  EXPECT_TRUE(fidl::Equals(actual, expected)) << "Actual: " << actual << std::endl
+                                              << "Expected: " << expected << std::endl;
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    RealmBuilderRoutingTest, RealmBuilderRoutingParameterizedFixture,
+    testing::Values(
+        std::make_pair(Protocol{.name = "foo", .as = "bar"},
+                       component::tests::CreateFidlProtocolOfferDecl(
+                           /*source_name=*/"foo",
+                           /*source=*/component::tests::CreateFidlParentRef(),
+                           /*target_name=*/"bar",
+                           /*target=*/component::tests::CreateFidlChildRef(kRoutingTestChildName))),
+        std::make_pair(Service{.name = "foo", .as = "bar"},
+                       component::tests::CreateFidlServiceOfferDecl(
+                           /*source_name=*/"foo",
+                           /*source=*/component::tests::CreateFidlParentRef(),
+                           /*target_name=*/"bar",
+                           /*target=*/component::tests::CreateFidlChildRef(kRoutingTestChildName))),
+        std::make_pair(Directory{.name = "foo",
+                                 .as = "bar",
+                                 .subdir = "sub",
+                                 .rights = fuchsia::io::RW_STAR_DIR,
+                                 .path = "/foo"},
+                       component::tests::CreateFidlDirectoryOfferDecl(
+                           /*source_name=*/"foo",
+                           /*source=*/component::tests::CreateFidlParentRef(),
+                           /*target_name=*/"bar",
+                           /*target=*/component::tests::CreateFidlChildRef(kRoutingTestChildName),
+                           /*subdir=*/"sub",
+                           /*rights=*/fuchsia::io::RW_STAR_DIR)),
+        std::make_pair(
+            Storage{.name = "foo", .as = "bar", .path = "/foo"},
+            component::tests::CreateFidlStorageOfferDecl(
+                /*source_name=*/"foo", /*source=*/component::tests::CreateFidlParentRef(),
+                /*target_name=*/"bar",
+                /*target=*/component::tests::CreateFidlChildRef(kRoutingTestChildName)))));
 }  // namespace

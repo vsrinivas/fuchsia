@@ -137,6 +137,22 @@ Realm& Realm::ReplaceConfigValue(const std::string& name, const std::string& key
   return *this;
 }
 
+fuchsia::component::decl::Component Realm::GetComponentDecl(const std::string& child_name) {
+  fuchsia::component::test::Realm_GetComponentDecl_Result result;
+  ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
+      "Realm/GetComponentDecl", realm_proxy_->GetComponentDecl(child_name, &result), result);
+
+  return std::move(result.response().component_decl);
+}
+
+fuchsia::component::decl::Component Realm::GetRealmDecl() {
+  fuchsia::component::test::Realm_GetRealmDecl_Result result;
+  ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK("Realm/GetRealmDecl",
+                                           realm_proxy_->GetRealmDecl(&result), result);
+
+  return std::move(result.response().component_decl);
+}
+
 Realm::Realm(fuchsia::component::test::RealmSyncPtr realm_proxy,
              std::shared_ptr<internal::LocalComponentRunner::Builder> runner_builder,
              std::vector<std::string> scope)
@@ -264,6 +280,12 @@ RealmBuilder& RealmBuilder::ReplaceConfigValue(const std::string& name, const st
   root_.ReplaceConfigValue(name, key, std::move(value));
   return *this;
 }
+
+fuchsia::component::decl::Component RealmBuilder::GetComponentDecl(const std::string& child_name) {
+  return root_.GetComponentDecl(child_name);
+}
+
+fuchsia::component::decl::Component RealmBuilder::GetRealmDecl() { return root_.GetRealmDecl(); }
 
 RealmRoot RealmBuilder::Build(async_dispatcher* dispatcher) {
   if (dispatcher == nullptr) {

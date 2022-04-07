@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/test.gni")
+import("//src/lib/fostr/build/fostr_fidl.gni")
 
 group("tests") {
   testonly = true
@@ -82,13 +83,16 @@ executable("realm_builder_test_bin") {
   sources = [ "realm_builder_test.cc" ]
 
   deps = [
+    ":test_utils",
     "//examples/fidl/fuchsia.examples:fuchsia.examples",
     "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.component.decl",
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fostr/fidl/fuchsia.component.decl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/testing/fidl:placeholders",

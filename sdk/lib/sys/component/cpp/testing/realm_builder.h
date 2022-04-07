@@ -7,6 +7,7 @@
 
 #include <fuchsia/component/config/cpp/fidl.h>
 #include <fuchsia/component/cpp/fidl.h>
+#include <fuchsia/component/decl/cpp/fidl.h>
 #include <fuchsia/component/runner/cpp/fidl.h>
 #include <fuchsia/component/test/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
@@ -152,6 +153,12 @@ class Realm final {
   /// Replaces the value of a given configuration field
   Realm& ReplaceConfigValue(const std::string& name, const std::string& key, ConfigValue value);
 
+  /// Fetches the Component decl of the given child.
+  fuchsia::component::decl::Component GetComponentDecl(const std::string& child_name);
+
+  /// Fetches the Component decl of this Realm.
+  fuchsia::component::decl::Component GetRealmDecl();
+
   friend class RealmBuilder;
 
  private:
@@ -213,14 +220,20 @@ class RealmBuilder final {
   // See |Realm.AddRoute| for more details.
   RealmBuilder& AddRoute(Route route);
 
-  /// Offers a directory capability to a component in this realm.
+  /// Offers a directory capability to a component for the root realm.
   // See |Realm.RouteReadOnlyDirectory| for more details.
   RealmBuilder& RouteReadOnlyDirectory(const std::string& name, std::vector<Ref> to,
                                        DirectoryContents directory);
 
-  /// Replaces the value of a given configuration field
+  /// Replaces the value of a given configuration field for the root realm.
   RealmBuilder& ReplaceConfigValue(const std::string& name, const std::string& key,
                                    ConfigValue value);
+
+  /// Fetches the Component decl of the given child of the root realm.
+  fuchsia::component::decl::Component GetComponentDecl(const std::string& child_name);
+
+  /// Fetches the Component decl of this root realm.
+  fuchsia::component::decl::Component GetRealmDecl();
 
   // Build the realm root prepared by the associated builder methods, e.g. |AddComponent|.
   // |dispatcher| must be non-null, or |async_get_default_dispatcher| must be

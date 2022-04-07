@@ -57,9 +57,17 @@ struct Directory final {
   cpp17::optional<std::string_view> path = cpp17::nullopt;
 };
 
+// A storage capability.
+// See: https://fuchsia.dev/fuchsia-src/concepts/components/v2/capabilities/storage.
+struct Storage final {
+  std::string_view name;
+  cpp17::optional<std::string_view> as = cpp17::nullopt;
+  cpp17::optional<std::string_view> path = cpp17::nullopt;
+};
+
 // A capability to be routed from one component to another.
 // See: https://fuchsia.dev/fuchsia-src/concepts/components/v2/capabilities
-using Capability = cpp17::variant<Protocol, Service, Directory>;
+using Capability = cpp17::variant<Protocol, Service, Directory, Storage>;
 
 // [START mock_handles_cpp]
 // Handles provided to mock component.
