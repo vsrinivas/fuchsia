@@ -1421,7 +1421,7 @@ impl Controller {
     }
 }
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let mut fs = fuchsia_component::server::ServiceFs::new_local();
     let _: &mut fuchsia_component::server::ServiceFsDir<'_, _> =

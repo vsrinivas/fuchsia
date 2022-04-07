@@ -1763,7 +1763,7 @@ pub async fn run<M: Mode>() -> Result<(), anyhow::Error> {
     let opt: Opt = argh::from_env();
     let Opt { allow_virtual_devices, min_severity: LogLevel(min_severity), config_data } = &opt;
 
-    // Use the diagnostics_log library directly rather than e.g. the #[fuchsia::component] macro on
+    // Use the diagnostics_log library directly rather than e.g. the #[fuchsia::main] macro on
     // the main function, so that we can specify the logging severity level at runtime based on a
     // command line argument.
     diagnostics_log::init!(

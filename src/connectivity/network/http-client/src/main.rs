@@ -404,7 +404,7 @@ fn spawn_server(stream: net_http::LoaderRequestStream) {
     .detach();
 }
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> Result<(), anyhow::Error> {
     let mut fs = ServiceFs::new();
     let _: &mut ServiceFsDir<'_, _> = fs.dir("svc").add_fidl_service(spawn_server);
