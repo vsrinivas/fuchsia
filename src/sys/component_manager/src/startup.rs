@@ -7,6 +7,10 @@ use {
     cm_types::Url,
 };
 
+// Used when component manager is started with the "--boot" flag by userboot.
+const BOOT_CONFIG: &str = "/boot/config/component_manager";
+const BOOT_ROOT_COMPONENT_URL: &str = "fuchsia-boot:///#meta/root.cm";
+
 /// Command line arguments that control component_manager's behavior. Use [Arguments::from_args()]
 /// or [Arguments::new()] to create an instance.
 // structopt would be nice to use here but the binary size impact from clap - which it depends on -
@@ -21,6 +25,11 @@ pub struct Arguments {
 
     /// Whether to have component manager host bootfs (which backs the '/boot' directory).
     pub host_bootfs: bool,
+
+    /// Whether component manager should apply the default boot arguments. This is passed by
+    /// userboot when loading the root component manager to avoid hardcoding component manager
+    /// specific logic in userboot.
+    pub boot: bool,
 }
 
 impl Arguments {
@@ -53,6 +62,15 @@ impl Arguments {
                 }
             } else if arg == "--host_bootfs" {
                 args.host_bootfs = true;
+            } else if arg == "--boot" {
+                args = Arguments {
+                    root_component_url: Some(
+                        Url::new(BOOT_ROOT_COMPONENT_URL.to_string()).unwrap(),
+                    ),
+                    config: BOOT_CONFIG.to_string(),
+                    host_bootfs: true,
+                    boot: true,
+                };
             } else if arg.starts_with("--") {
                 return Err(format_err!("Unrecognized flag: {}", arg));
             } else {
@@ -97,6 +115,7 @@ mod tests {
     lazy_static! {
         static ref CONFIG_FILENAME: fn() -> String = || String::from("foo");
         static ref CONFIG_FLAG: fn() -> String = || String::from("--config");
+        static ref BOOT_FLAG: fn() -> String = || String::from("--boot");
         static ref DUMMY_URL: fn() -> Url =
             || Url::new("fuchsia-pkg://fuchsia.com/pkg#meta/component.cm".to_owned()).unwrap();
         static ref DUMMY_URL_AS_STR: fn() -> String = || DUMMY_URL().as_str().to_owned();
@@ -162,6 +181,21 @@ mod tests {
             Arguments::new(vec![CONFIG_FLAG(), CONFIG_FILENAME()])
                 .expect("Unexpected error with no URL"),
             Arguments { config: CONFIG_FILENAME(), ..Default::default() }
+        );
+    }
+
+    #[fuchsia::test]
+    fn boot_argument_sets_defaults() {
+        let expected_arguments = Arguments {
+            root_component_url: Some(Url::new(BOOT_ROOT_COMPONENT_URL.to_string()).unwrap()),
+            config: BOOT_CONFIG.to_string(),
+            host_bootfs: true,
+            boot: true,
+        };
+
+        assert_eq!(
+            Arguments::new(vec![BOOT_FLAG()]).expect("Failed to parse arguments"),
+            expected_arguments
         );
     }
 }

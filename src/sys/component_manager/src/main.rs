@@ -74,7 +74,7 @@ fn main() {
     // Enable tracing in Component Manager
     trace_provider::trace_provider_create_with_fdio();
 
-    let (runtime_config, bootfs_svc) = build_runtime_config();
+    let (runtime_config, bootfs_svc, boot_defaults) = build_runtime_config();
 
     match runtime_config.log_destination {
         finternal::LogDestination::Syslog => {
@@ -86,6 +86,9 @@ fn main() {
     }
 
     info!("Component manager is starting up...");
+    if boot_defaults {
+        info!("Component manager was started with boot defaults");
+    }
 
     let num_threads = runtime_config.num_threads;
 
@@ -111,7 +114,7 @@ fn main() {
 /// Loads component_manager's config.
 ///
 /// This function panics on failure because the logger is not initialized yet.
-fn build_runtime_config() -> (RuntimeConfig, Option<BootfsSvc>) {
+fn build_runtime_config() -> (RuntimeConfig, Option<BootfsSvc>, bool) {
     let args = match startup::Arguments::from_args() {
         Ok(args) => args,
         Err(err) => {
@@ -155,10 +158,10 @@ fn build_runtime_config() -> (RuntimeConfig, Option<BootfsSvc>) {
     }
 
     match (config.root_component_url.as_ref(), args.root_component_url.as_ref()) {
-        (Some(_url), None) => (config, bootfs_svc),
+        (Some(_url), None) => (config, bootfs_svc, args.boot),
         (None, Some(url)) => {
             config.root_component_url = Some(url.clone());
-            (config, bootfs_svc)
+            (config, bootfs_svc, args.boot)
         }
         (None, None) => {
             panic!(
