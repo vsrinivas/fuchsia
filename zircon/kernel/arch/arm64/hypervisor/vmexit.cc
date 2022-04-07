@@ -298,8 +298,8 @@ static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestS
       packet->type = ZX_PKT_TYPE_GUEST_VCPU;
       packet->guest_vcpu.type = ZX_PKT_GUEST_VCPU_INTERRUPT;
       if (sgi.all_but_local) {
-        auto vpid = BITS(guest_state->system_state.vmpidr_el2, 8, 0);
-        packet->guest_vcpu.interrupt.mask = ~(static_cast<uint64_t>(1) << vpid);
+        auto vpid = BITS(guest_state->vmpidr_el2, 16, 0);
+        packet->guest_vcpu.interrupt.mask = ~(1ul << vpid);
       } else {
         packet->guest_vcpu.interrupt.mask = sgi.target_list;
       }

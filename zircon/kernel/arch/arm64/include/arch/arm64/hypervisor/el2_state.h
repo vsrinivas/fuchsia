@@ -70,7 +70,6 @@
 #define SS_VBAR_EL1         (SS_TTBR1_EL1 + 8)
 #define SS_ELR_EL2          (SS_VBAR_EL1 + 8)
 #define SS_SPSR_EL2         (SS_ELR_EL2 + 8)
-#define SS_VMPIDR_EL2       (SS_SPSR_EL2 + 8)
 
 #define ES_RESUME           0
 
@@ -79,13 +78,14 @@
 #define GS_NUM_REGS         31
 #define GS_FP_STATE         (GS_X(GS_NUM_REGS) + 8)
 #define GS_SYSTEM_STATE     (GS_FP_STATE + FS_FPCR + 8)
-#define GS_CNTV_CTL_EL0     (GS_SYSTEM_STATE + SS_VMPIDR_EL2 + 8)
+#define GS_CNTV_CTL_EL0     (GS_SYSTEM_STATE + SS_SPSR_EL2 + 8)
 #define GS_CNTV_CVAL_EL0    (GS_CNTV_CTL_EL0 + 8)
 #define GS_ESR_EL2          (GS_CNTV_CVAL_EL0 + 8)
 #define GS_FAR_EL2          (GS_ESR_EL2 + 8)
 #define GS_HPFAR_EL2        (GS_FAR_EL2 + 8)
+#define GS_VMPIDR_EL2       (GS_HPFAR_EL2 + 8)
 
-#define HS_XREGS            (GS_HPFAR_EL2 + 16)
+#define HS_XREGS            (GS_VMPIDR_EL2 + 16)
 // NOTE(abdulla): This differs from GS_X in that it calculates a value relative
 // to host_state.x, and not relative to El2State.
 #define HS_X(num)           ((num) * 8)
@@ -149,7 +149,6 @@ struct SystemState {
 
   uint64_t elr_el2;
   algn32_t spsr_el2;
-  uint64_t vmpidr_el2;
 };
 
 struct GuestState {
@@ -163,6 +162,7 @@ struct GuestState {
   algn32_t esr_el2;
   uint64_t far_el2;
   uint64_t hpfar_el2;
+  uint64_t vmpidr_el2;
 
   // Get the guest's exception level (EL).
   //
@@ -226,7 +226,6 @@ static_assert(offsetof(SystemState, ttbr1_el1) == SS_TTBR1_EL1);
 static_assert(offsetof(SystemState, vbar_el1) == SS_VBAR_EL1);
 static_assert(offsetof(SystemState, elr_el2) == SS_ELR_EL2);
 static_assert(offsetof(SystemState, spsr_el2) == SS_SPSR_EL2);
-static_assert(offsetof(SystemState, vmpidr_el2) == SS_VMPIDR_EL2);
 
 static_assert(offsetof(El2State, resume) == ES_RESUME);
 
@@ -237,6 +236,7 @@ static_assert(offsetof(El2State, guest_state.fp_state.q) == GS_FP_STATE + FS_Q0)
 static_assert(offsetof(El2State, guest_state.system_state) == GS_SYSTEM_STATE);
 static_assert(offsetof(El2State, guest_state.cntv_ctl_el0) == GS_CNTV_CTL_EL0);
 static_assert(offsetof(El2State, guest_state.cntv_cval_el0) == GS_CNTV_CVAL_EL0);
+static_assert(offsetof(El2State, guest_state.vmpidr_el2) == GS_VMPIDR_EL2);
 static_assert(offsetof(El2State, guest_state.esr_el2) == GS_ESR_EL2);
 static_assert(offsetof(El2State, guest_state.far_el2) == GS_FAR_EL2);
 static_assert(offsetof(El2State, guest_state.hpfar_el2) == GS_HPFAR_EL2);

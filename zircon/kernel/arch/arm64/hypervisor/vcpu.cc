@@ -34,8 +34,9 @@ static constexpr uint32_t kSpsrDaif = 0b1111 << 6;
 static constexpr uint32_t kSpsrEl1h = 0b0101;
 static constexpr uint32_t kSpsrNzcv = 0b1111 << 28;
 
-static uint64_t vmpidr_of(uint8_t vpid, uint64_t mpidr) {
-  return (vpid - 1) | (mpidr & 0xffffff00fe000000);
+static uint64_t vmpidr_of(uint16_t vpid) {
+  constexpr uint64_t res1 = 1ul << 31;
+  return (vpid - 1) | res1;
 }
 
 template <typename F>
@@ -198,9 +199,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
 
   vcpu->el2_state_->guest_state.system_state.elr_el2 = entry;
   vcpu->el2_state_->guest_state.system_state.spsr_el2 = kSpsrDaif | kSpsrEl1h;
-  const uint64_t mpidr = __arm_rsr64("mpidr_el1");
-  vcpu->el2_state_->guest_state.system_state.vmpidr_el2 = vmpidr_of(*vpid, mpidr);
-  vcpu->el2_state_->host_state.system_state.vmpidr_el2 = mpidr;
+  vcpu->el2_state_->guest_state.vmpidr_el2 = vmpidr_of(*vpid);
   const uint8_t num_lrs = gic_get_num_lrs();
   vcpu->el2_state_->ich_state.num_aprs = num_aprs(gic_get_num_pres());
   vcpu->el2_state_->ich_state.num_lrs = num_lrs;

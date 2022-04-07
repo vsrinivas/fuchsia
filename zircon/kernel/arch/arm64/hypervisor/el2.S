@@ -101,7 +101,6 @@ reg_xa  .req x11
 
     system_register \inst, SS_ELR_EL2, elr_el2
     system_register \inst, SS_SPSR_EL2, spsr_el2
-    system_register \inst, SS_VMPIDR_EL2, vmpidr_el2
 .endm
 
 .macro host_state inst, off
@@ -146,6 +145,8 @@ reg_xa  .req x11
     msr cntv_cval_el0, reg_xt
     ldr reg_xt, [reg_xs, GS_CNTV_CTL_EL0]
     msr cntv_ctl_el0, reg_xt
+    ldr reg_xt, [reg_xs, GS_VMPIDR_EL2]
+    msr vmpidr_el2, reg_xt
 .endm
 
 .macro guest_exit_state
