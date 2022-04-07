@@ -64,6 +64,10 @@ wlan_fullmac_impl_protocol_ops_t wlan_interface_proto_ops = {
         [](void* ctx, const wlan_fullmac_scan_req_t* req) {
           return static_cast<WlanInterface*>(ctx)->StartScan(req);
         },
+    .connect_req =
+        [](void* ctx, const wlan_fullmac_connect_req_t* req) {
+          return static_cast<WlanInterface*>(ctx)->ConnectReq(req);
+        },
     .join_req =
         [](void* ctx, const wlan_fullmac_join_req_t* req) {
           return static_cast<WlanInterface*>(ctx)->JoinReq(req);

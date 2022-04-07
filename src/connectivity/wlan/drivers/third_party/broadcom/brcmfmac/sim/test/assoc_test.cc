@@ -95,6 +95,9 @@ class AssocTest : public SimTest {
   void StartDisassoc();
   void DisassocFromAp();
 
+  // Run the unified connect flow
+  void StartConnect();
+
   // Re-association, skips join => auth steps.
   void ReAssoc();
 
@@ -149,6 +152,8 @@ class AssocTest : public SimTest {
 
     // Track number of association responses
     size_t assoc_resp_count = 0;
+    // Track number of connection responses
+    size_t connect_resp_count = 0;
     // Track number of disassociation confs (initiated from self)
     size_t disassoc_conf_count = 0;
     // Track number of disassoc indications (initiated from AP)
@@ -224,6 +229,7 @@ class AssocTest : public SimTest {
   wlan_fullmac_impl_ifc_protocol sme_protocol_ = {.ops = &sme_ops_, .ctx = this};
 
   // Event handlers
+  void OnConnectConf(const wlan_fullmac_connect_confirm_t* resp);
   void OnJoinConf(const wlan_fullmac_join_confirm_t* resp);
   void OnAuthConf(const wlan_fullmac_auth_confirm_t* resp);
   void OnAssocConf(const wlan_fullmac_assoc_confirm_t* resp);
@@ -244,6 +250,10 @@ wlan_fullmac_impl_ifc_protocol_ops_t AssocTest::sme_ops_ = {
     .on_scan_end =
         [](void* cookie, const wlan_fullmac_scan_end_t* end) {
           // Ignore
+        },
+    .connect_conf =
+        [](void* cookie, const wlan_fullmac_connect_confirm_t* resp) {
+          static_cast<AssocTest*>(cookie)->OnConnectConf(resp);
         },
     .join_conf =
         [](void* cookie, const wlan_fullmac_join_confirm_t* resp) {
@@ -329,6 +339,7 @@ void AssocTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
   ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
   context_.assoc_resp_count = 0;
+  context_.connect_resp_count = 0;
   context_.disassoc_conf_count = 0;
   context_.deauth_ind_count = 0;
   context_.disassoc_ind_count = 0;
@@ -353,6 +364,34 @@ void AssocTest::DisassocFromAp() {
   // Disassoc the STA
   for (auto ap : aps_) {
     ap->DisassocSta(my_mac, kDefaultApDisassocReason);
+  }
+}
+
+void AssocTest::OnConnectConf(const wlan_fullmac_connect_confirm_t* resp) {
+  context_.connect_resp_count++;
+  EXPECT_EQ(resp->result_code, context_.expected_results.front());
+
+  if (!context_.expected_wmm_param.empty()) {
+    EXPECT_GT(resp->association_ies_count, 0ul);
+    bool contains_wmm_param = false;
+    for (size_t offset = 0;
+         offset < resp->association_ies_count - context_.expected_wmm_param.size(); offset++) {
+      if (memcmp(resp->association_ies_list + offset, &context_.expected_wmm_param[0],
+                 context_.expected_wmm_param.size()) == 0) {
+        contains_wmm_param = true;
+        break;
+      }
+    }
+    EXPECT_TRUE(contains_wmm_param);
+  }
+
+  context_.expected_results.pop_front();
+  context_.expected_wmm_param.clear();
+
+  if (start_disassoc_) {
+    env_->ScheduleNotification([this] { StartDisassoc(); }, zx::msec(200));
+  } else if (start_deauth_) {
+    env_->ScheduleNotification([this] { StartDeauth(); }, zx::msec(200));
   }
 }
 
@@ -446,6 +485,18 @@ void AssocTest::StartAssoc() {
   join_req.selected_bss.ies_count = context_.ies.size();
   join_req.selected_bss.channel = context_.tx_info.channel;
   client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
+}
+
+void AssocTest::StartConnect() {
+  // Send connect request
+  wlan_fullmac_connect_req connect_req = {};
+  std::memcpy(connect_req.selected_bss.bssid, context_.bssid.byte, ETH_ALEN);
+  connect_req.selected_bss.ies_list = context_.ies.data();
+  connect_req.selected_bss.ies_count = context_.ies.size();
+  connect_req.selected_bss.channel = context_.tx_info.channel;
+  connect_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
+  connect_req.connect_failure_timeout = 1000;  // ~1s (although value is ignored for now)
+  client_ifc_.if_impl_ops_->connect_req(client_ifc_.if_impl_ctx_, &connect_req);
 }
 
 // Verify that we get a signal report when associated.
@@ -835,6 +886,27 @@ TEST_F(AssocTest, SimpleTest) {
   env_->Run(kTestDuration);
 
   EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ((int64_t)context_.signal_ind_count,
+            kTestDuration.get() / BRCMF_SIGNAL_REPORT_TIMER_DUR_MS);
+}
+
+// Verify that we can successfully associate to a fake AP using the new connect API.
+TEST_F(AssocTest, SimpleConnectTest) {
+  // Create our device instance
+  Init();
+
+  // Start up our fake AP
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  ap.EnableBeacon(zx::msec(100));
+  aps_.push_back(&ap);
+
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
+
+  env_->ScheduleNotification([this] { StartConnect(); }, zx::msec(10));
+
+  env_->Run(kTestDuration);
+
+  EXPECT_EQ(context_.connect_resp_count, 1U);
   EXPECT_EQ((int64_t)context_.signal_ind_count,
             kTestDuration.get() / BRCMF_SIGNAL_REPORT_TIMER_DUR_MS);
 }

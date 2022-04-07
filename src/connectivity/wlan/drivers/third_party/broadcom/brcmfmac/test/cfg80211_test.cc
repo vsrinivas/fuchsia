@@ -80,7 +80,7 @@ TEST(Cfg80211, Classify8021d_PayloadTooSmall) {
   ASSERT_EQ(priority, 0);
 }
 
-TEST(Cfg80211, SetAssocConfWmmParam) {
+TEST(Cfg80211, SetConfWmmParam) {
   uint8_t ie[] = {
       0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24,  // Supported rates
       // WMM param
@@ -101,13 +101,13 @@ TEST(Cfg80211, SetAssocConfWmmParam) {
   cfg.conn_info.resp_ie_len = sizeof(ie);
 
   wlan_fullmac_assoc_confirm_t confirm;
-  set_assoc_conf_wmm_param(&cfg, &confirm);
+  set_conf_wmm_param(&cfg, &confirm.wmm_param_present, confirm.wmm_param);
   EXPECT_TRUE(confirm.wmm_param_present);
   EXPECT_EQ(memcmp(confirm.wmm_param, expected_wmm_param, sizeof(expected_wmm_param)), 0);
   EXPECT_EQ(sizeof(expected_wmm_param), WLAN_WMM_PARAM_LEN);
 }
 
-TEST(Cfg80211, SetAssocConfWmmParam_WmmParamNotPresent) {
+TEST(Cfg80211, SetConfWmmParam_WmmParamNotPresent) {
   uint8_t ie[] = {
       0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24,  // Supported rates
   };
@@ -116,7 +116,7 @@ TEST(Cfg80211, SetAssocConfWmmParam_WmmParamNotPresent) {
   cfg.conn_info.resp_ie_len = sizeof(ie);
 
   wlan_fullmac_assoc_confirm_t confirm;
-  set_assoc_conf_wmm_param(&cfg, &confirm);
+  set_conf_wmm_param(&cfg, &confirm.wmm_param_present, confirm.wmm_param);
   EXPECT_FALSE(confirm.wmm_param_present);
 }
 

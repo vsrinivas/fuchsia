@@ -547,6 +547,13 @@ uint8_t brcmf_cfg80211_classify8021d(const uint8_t* data, size_t size);
 // TODO: Move to core.h
 zx_status_t brcmf_netdev_open(struct net_device* ndev);
 
+// Helper functions to share association logic between two APIs.
+// TODO(fxbug.dev/88275): Remove once we're fully using ConnectReq.
+wlan_join_result_t brcmf_if_join_req_impl(net_device* ndev, const bss_description_t& sme_bss);
+wlan_auth_result_t brcmf_if_auth_req_impl(net_device* ndev, const uint8_t peer_sta_address[6],
+                                          const wlan_auth_type_t auth_type);
+status_code_t brcmf_if_init_assoc_req(net_device* ndev, const wlan_fullmac_assoc_req_t* req);
+
 // Protocol ops implementations.
 
 zx_status_t brcmf_if_start(net_device* ndev, const wlan_fullmac_impl_ifc_protocol_t* ifc,
@@ -595,9 +602,9 @@ void brcmf_if_wmm_status_req(net_device* ndev);
 // is 0 length. In either case, it returns an empty vector.
 std::vector<uint8_t> brcmf_find_ssid_in_ies(const uint8_t* ie, size_t ie_len);
 
-// If the WMM parameter IE (used for QoS) is available from the association response, set its
-// body into the Association Confirm message.
-void set_assoc_conf_wmm_param(const brcmf_cfg80211_info* cfg,
-                              wlan_fullmac_assoc_confirm_t* confirm);
+// If the WMM parameter IE (used for QoS) is available from the association result, set its
+// body into the Confirm message.
+void set_conf_wmm_param(const brcmf_cfg80211_info* cfg, bool* wmm_param_present,
+                        uint8_t wmm_param[18]);
 void brcmf_cfg80211_handle_eapol_frame(struct brcmf_if* ifp, const void* data, size_t size);
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CFG80211_H_
