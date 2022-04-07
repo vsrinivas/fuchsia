@@ -234,7 +234,7 @@ void DirectoryConnection::Open(OpenRequestView request, OpenCompleter::Sync& com
 
   if (!PrevalidateFlags(flags)) {
     FS_PRETTY_TRACE_DEBUG("[DirectoryOpen] prevalidate failed",
-                          ", incoming flags: ", request->flags, ", path: ", request->path.data());
+                          ", incoming flags: ", request->flags, ", path: ", request->path);
     return write_error(std::move(request->object), ZX_ERR_INVALID_ARGS);
   }
 
@@ -255,7 +255,7 @@ void DirectoryConnection::Open(OpenRequestView request, OpenCompleter::Sync& com
   }
 
   FS_PRETTY_TRACE_DEBUG("[DirectoryOpen] our options: ", options(),
-                        ", incoming options: ", open_options, ", path: ", request->path.data());
+                        ", incoming options: ", open_options, ", path: ", request->path);
   if (options().flags.node_reference) {
     return write_error(std::move(request->object), ZX_ERR_BAD_HANDLE);
   }
@@ -273,8 +273,7 @@ void DirectoryConnection::Open(OpenRequestView request, OpenCompleter::Sync& com
 }
 
 void DirectoryConnection::Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) {
-  FS_PRETTY_TRACE_DEBUG("[DirectoryUnlink] our options: ", options(),
-                        ", name: ", request->name.data());
+  FS_PRETTY_TRACE_DEBUG("[DirectoryUnlink] our options: ", options(), ", name: ", request->name);
 
   if (options().flags.node_reference) {
     completer.ReplyError(ZX_ERR_BAD_HANDLE);
@@ -345,8 +344,8 @@ void DirectoryConnection::GetToken(GetTokenRequestView request,
 }
 
 void DirectoryConnection::Rename(RenameRequestView request, RenameCompleter::Sync& completer) {
-  FS_PRETTY_TRACE_DEBUG("[DirectoryRename] our options: ", options(),
-                        ", src: ", request->src.data(), ", dst: ", request->dst.data());
+  FS_PRETTY_TRACE_DEBUG("[DirectoryRename] our options: ", options(), ", src: ", request->src,
+                        ", dst: ", request->dst);
 
   if (request->src.empty() || request->dst.empty()) {
     completer.ReplyError(ZX_ERR_INVALID_ARGS);
@@ -371,8 +370,8 @@ void DirectoryConnection::Rename(RenameRequestView request, RenameCompleter::Syn
 }
 
 void DirectoryConnection::Link(LinkRequestView request, LinkCompleter::Sync& completer) {
-  FS_PRETTY_TRACE_DEBUG("[DirectoryLink] our options: ", options(), ", src: ", request->src.data(),
-                        ", dst: ", request->dst.data());
+  FS_PRETTY_TRACE_DEBUG("[DirectoryLink] our options: ", options(), ", src: ", request->src,
+                        ", dst: ", request->dst);
 
   // |fuchsia.io/Directory.Rename| only specified the token to be a generic handle; casting it here.
   zx::event token(request->dst_parent_token.release());
