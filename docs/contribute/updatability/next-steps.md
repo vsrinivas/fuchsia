@@ -1,11 +1,8 @@
-# Platform evolution next steps
+# Platform updatability next steps
 
-Fuchsia is [designed to evolve](how.md). However it's also a work in progress.
+Fuchsia is [designed to update](how.md). However it's also a work in progress.
 This section highlights some of the work that is ongoing or hasn’t started yet
-that will promote Fuchsia’s ability to evolve. This document will be updated
-over time to reflect Fuchsia’s progress.
-
-_Last updated: September 2021_
+that will promote Fuchsia’s ability to change and update.
 
 ## Versioning and compatibility metadata throughout the surface
 
@@ -34,7 +31,7 @@ _Last updated: September 2021_
 
 While Fuchsia ABIs are largely defined in FIDL, there are still some legacy ABIs
 that are defined in other terms that don’t have the same affordances for
-evolution.
+updatability.
 
 - While syscalls are defined in FIDL, some of their input and output types are
   still defined as C structures in Zircon headers. For instance
@@ -80,7 +77,7 @@ sandbox of component instances, and expresses sandboxes in terms of
 The legacy Component Framework (`appmgr`) supported
 [sandbox features][cmx-sandbox] that allowed access to certain global namespaces
 and would expose components to platform implementation details that had no
-affordances for evolution such as versioning or transition support. The new
+affordances for updatability such as versioning or transition support. The new
 Component Framework either enforces [isolation][cf-design-isolation] or forbids
 access to these namespaces entirely. For instance the [hub] becomes
 hierarchically contained, only offering information about the component’s realm
@@ -94,19 +91,19 @@ Currently the team is focused on
 ## Deprecate unlisted platform ABIs
 
 The fullness of the platform surface should be strictly defined, and expressed
-in terms such as FIDL that afford for evolution via such mechanisms as
+in terms such as FIDL that afford for updatability via such mechanisms as
 versioning and support for transitions. Currently there exist some aspects of
 the platform surface that don’t meet these requirements.
 
 - [Retrieving build information][build-info] uses a modern FIDL protocol.
   [Previously][build-info-old] this was done using a now-deprecated `appmgr`
   sandbox feature, which offered this information to components using raw file
-  access that did not afford for evolution. This is now deprecated, new usage is
-  [discouraged][cfv2-sys-migration-build-info], but there are still a few
+  access that did not afford for updatability. This is now deprecated, new usage
+  is [discouraged][cfv2-sys-migration-build-info], but there are still a few
   allowlisted legacy usages remaining.
 - Some out-of-tree component testing frameworks launch
   [test doubles][test-double] for platform components by specifying their
-  [`fuchsia-pkg://` launch URLs][package-url]. These URLs don’t have evolution
+  [`fuchsia-pkg://` launch URLs][package-url]. These URLs don’t have updatability
   affordances. Instead out-of-tree components find themselves exposed to
   platform implementation details such as the names of specific packages
   containing specific components that implement certain platform capabilities.
@@ -119,7 +116,7 @@ the platform surface that don’t meet these requirements.
   protocol that is implemented to the specification of a
   [pre-existing system][sl4a]. This decision accelerated porting a
   [large inventory of connectivity tests][acts]. However the JSON-RPC/HTTPS
-  protocol doesn’t have the same affordances for evolution as those found in
+  protocol doesn’t have the same affordances for updatability as those found in
   FIDL and that benefit `ffx` plugins, nor does it have a schema. Therefore
   moving forward we should not support SL4F for system automation by out-of-tree
   tests, and introduce an alternative solution.
@@ -144,7 +141,7 @@ don’t make for good public contracts.
   selector. Monikers may expose platform implementation details such as the
   [topology] and names of platform components. Hierarchy and property selectors
   may also be considered implementation details, and in addition don’t have
-  evolution mechanisms. These are known instances of out-of-tree components in
+  updatability mechanisms. These are known instances of out-of-tree components in
   Fuchsia-based products that use diagnostics selectors to read system
   diagnostics information at runtime. These components are exposed to platform
   implementation details and often break when these details change. Clients of
@@ -156,7 +153,7 @@ don’t make for good public contracts.
   internal hierarchy of [Inspect] properties or as unstructured text in logs.
   Most platform components that do this don’t promise a particular schema for
   this information. Even Inspect which has structure and types doesn’t have all
-  the evolution affordances found in FIDL for instance. Therefore processing
+  the updatability affordances found in FIDL for instance. Therefore processing
   platform diagnostics offline, such as in a tool that’s not provided by the SDK
   or in a product-specific dashboard, is bound to break.
 - Performance tools such as [tracing], [CPU performance monitoring][cpu-trace],
@@ -171,8 +168,8 @@ Several [SDK tools][sdk-tools] are offered to Fuchsia developers, most
 importantly [`ffx`][ffx] and its many
 [commands][ffx-reference]. The new
 `ffx` tool interacts between the host and a Fuchsia target in terms defined in
-FIDL, which affords for evolution. However some legacy tools are still offered
-to out-of-tree developers that don’t have the same evolution affordances.
+FIDL, which affords for updatability. However some legacy tools are still offered
+to out-of-tree developers that don’t have the same updatability affordances.
 
 - SSH is supported (such as with the [`fssh` tool][fssh] and provides the host
   with a developer experience similar to a remote root shell on a target Fuchsia
@@ -183,7 +180,7 @@ to out-of-tree developers that don’t have the same evolution affordances.
   the intended platform surface.
 - Certain developer features ([example][fxb-82740]) are exposed to developers as
   legacy shell components rather than as `ffx` commands. This exposes developers
-  to platform implementation details that can’t easily evolve such as the names
+  to platform implementation details that can’t easily change such as the names
   of packages and components, and expresses inputs and outputs as human-readable
   text rather than typed and structured data.
 - Some `ffx` commands, for instance [`ffx component`][ffx-component], expose
@@ -205,7 +202,7 @@ even if CTS coverage never reaches 100% of the platform surface.
 
 ## Further reading
 
-- [Platform evolution best practices](best-practices.md)
+- [Platform updatability best practices](best-practices.md)
 
 [acts]: https://android.googlesource.com/platform/tools/test/connectivity/+/HEAD/acts
 [archiveaccessor]: https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#ArchiveAccessor

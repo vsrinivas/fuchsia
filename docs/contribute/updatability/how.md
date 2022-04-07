@@ -1,12 +1,12 @@
-# Fuchsia platform evolution
+# Fuchsia platform updatability
 
-## What is platform evolution?
+## What is platform updatability?
 
 Fuchsia is built from the kernel up to meet the needs of today's growing
 ecosystem of connected devices. [Product owners][glossary.product-owner] may
 create different [products][glossary.product] on top of the Fuchsia platform to
-meet user needs. Product requirements evolve over time, and so Fuchsia must be
-able to evolve with them.
+meet user needs. Product requirements change over time, and so Fuchsia must be
+able to change to meet them.
 
 New platform releases may deliver new features and bug fixes. Product owners
 that integrate with the Fuchsia platform may then need to rebase their existing
@@ -17,15 +17,15 @@ product being assembled, the product owner may not be able to port existing
 application software to new platform versions, and must rely on existing
 application prebuilts continuing to work against new platform prebuilts.
 
-Fuchsia is designed to enable the various elements of the platform to evolve
-over time while supporting existing and new products. Different software vendors
-that are involved in the product lifecycle may have their own development and
-release schedules independent of each other. This document explains the
-mechanisms that support this decoupled evolution.
+Fuchsia is designed to enable the various elements of the platform to change
+and update over time while supporting existing and new products. Different
+software vendors that are involved in the product lifecycle may have their own
+development and release schedules independent of each other. This document
+explains the mechanisms that support this decoupled updatability.
 
-## How does platform evolution work?
+## How does platform updatability work?
 
-Fuchsia has multiple mechanisms that promote the platform’s ability to evolve
+Fuchsia has multiple mechanisms that promote the platform’s ability to update
 over time. Below we survey the most prominent mechanisms and some of their
 applications.
 
@@ -59,7 +59,7 @@ in a number of programming languages. The toolchain is designed to make it easy
 to extend support for more languages.
 
 FIDL is designed to support cross-version compatibility and to ease interface
-evolution. FIDL has [compatibility guarantees][fidl-compatibility] and lists
+changes. FIDL has [compatibility guarantees][fidl-compatibility] and lists
 exactly what changes are binary-compatible (ABI-stable) and/or source-compatible
 (API-stable).
 
@@ -73,8 +73,8 @@ forward compatibility. These are sometimes referred to as soft transitions.
 - Developers may [rename types without breaking ABI compatibility][rfc-0048].
 
 By defining much of the Fuchsia system interface in terms of FIDL, especially
-the parts that are expected to evolve over time, Fuchsia can take greater
-advantage of FIDL’s special affordances for evolution.
+the parts that are expected to change over time, Fuchsia can take greater
+advantage of FIDL’s special affordances for revisioning.
 
 ### Versioning and compatibility metadata
 
@@ -128,7 +128,7 @@ to its child that’s offered by one component or another, changing the
 implementation details over time, but leaving the shape of the sandbox
 unchanged.
 
-Sandboxing promotes loose coupling and allows implementation details to evolve
+Sandboxing promotes loose coupling and allows implementation details to change
 without their clients being aware. For instance when
 [Netstack3 replaces Netstack2][roadmap-netstack3], components that use
 networking capabilities ideally won’t notice the difference. This also helps
@@ -153,7 +153,7 @@ direct file access. Alternatively developers may package their own font files.
 ### Enforcement
 
 If the use of a given interface between two systems can be circumvented, then
-the two systems may become more tightly coupled and lose the ability to evolve
+the two systems may become more tightly coupled and lose the ability to change
 independently of each other. Fuchsia uses various mechanisms to enforce that
 platform interfaces are observed and respected.
 
@@ -161,7 +161,7 @@ platform interfaces are observed and respected.
   syscall ABI. However that ABI is between the kernel and the vDSO. Applications
   are required to call into the vDSO’s exported symbols, not to perform syscalls
   directly. Since the kernel and the vDSO may be versioned together, requiring
-  applications to call into the vDSO allows the syscall ABI to evolve
+  applications to call into the vDSO allows the syscall ABI to change
   seamlessly, undetected by application developers. To
   [enforce][vdso-enforcement] this property, the kernel checks the caller’s
   address at syscall entry points and ensures that it falls within the range
@@ -173,7 +173,7 @@ platform interfaces are observed and respected.
   components are [not allowed to create processes directly][fsi-job-policy] and
   instead may be offered a
   [process launcher behind a FIDL protocol][process-launcher-fidl]. This allows
-  details of program loading to evolve over time.
+  details of program loading to change over time.
 - Any filesystem directory may be used as the root of a process namespace. These
   namespaces ensure that programs have access only to a known and enumerated set
   of files, preventing them from forming unintended ABIs. To ensure that
@@ -182,8 +182,8 @@ platform interfaces are observed and respected.
 
 ## Further reading
 
-- [Platform evolution next steps](next-steps.md)
-- [Platform evolution best practices](best-practices.md)
+- [Platform updatability next steps](next-steps.md)
+- [Platform updatability best practices](best-practices.md)
 
 [acts]: https://android.googlesource.com/platform/tools/test/connectivity/+/HEAD/acts
 [archiveaccessor]: https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#ArchiveAccessor

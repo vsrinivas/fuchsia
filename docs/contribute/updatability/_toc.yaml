@@ -6,9 +6,9 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "How does platform evolution work"
-  path: /docs/contribute/evolution/how.md
+- title: "How does platform updatability work"
+  path: /docs/contribute/updatability/how.md
 - title: "Next steps"
-  path: /docs/contribute/evolution/next-steps.md
+  path: /docs/contribute/updatability/next-steps.md
 - title: "Best practices"
-  path: /docs/contribute/evolution/best-practices.md
+  path: /docs/contribute/updatability/best-practices.md

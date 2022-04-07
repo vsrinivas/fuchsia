@@ -1,7 +1,7 @@
-# Platform evolution best practices
+# Platform updatability best practices
 
 <span class="compare-better">Recommended</span>: Use [FIDL] types and protocols
-to define interfaces between any two things that may evolve separately. Leverage
+to define interfaces between any two things that may update separately. Leverage
 the [FIDL rubric][fidl-rubric] where applicable.
 
 - FIDL has [versioning annotations][rfc-0083].
@@ -12,11 +12,11 @@ the [FIDL rubric][fidl-rubric] where applicable.
   [renaming types][rfc-0048].
 
 <span class="compare-worse">Not recommended</span>: Avoid languages other than
-FIDL to define interfaces where independent evolution matters. These include:
+FIDL to define interfaces where independent updates matter. These include:
 plain text, JSON, and protocol buffers.
 
 When reviewing alternatives, ask yourself what affordances they have for
-evolution.
+updatability.
 
 - Is there a schema for the data?
 - Can the schema change over time, while providing backward/forward
@@ -26,7 +26,7 @@ evolution.
 - Is the wire format stable?
 
 <span class="compare-better">Recommended</span>: Be careful when designing
-platform APIs and ABIs for use outside the platform. Design for evolution, find
+platform APIs and ABIs for use outside the platform. Design for updatability, find
 ways to enforce that your clients use the intended interfaces, and don’t offer
 ways to circumvent the interface.
 
