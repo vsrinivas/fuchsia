@@ -102,6 +102,7 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
     "//src/media/audio/drivers/intel-hda/controller/*",
     "//third_party/alacritty/alacritty_terminal/*",
     "//third_party/crashpad/*",
+    "//zircon/third_party/uapp/dash/*",
   ]
 
   args = [ "detect_leaks=0" ]

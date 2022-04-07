@@ -66,6 +66,9 @@ executable("dash") {
     "//zircon/third_party/ulib/linenoise",
   ]
 
+  # TODO(fxbug.dev/97323): Remove this after fixing the leak.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
   # TODO(https://fxbug.dev/41901): Resolve this UB and remove.
   #
   # ../../zircon/third_party/uapp/dash/src/memalloc.c:229:23: runtime error: index 1856 out of bounds for type 'char [504]'
