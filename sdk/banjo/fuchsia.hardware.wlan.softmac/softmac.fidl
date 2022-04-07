@@ -69,12 +69,12 @@ type WlanSoftmacInfo = struct {
     band_cap_count uint8;
 };
 
+/// These flags are used as a bitfield.
 type WlanRxInfoFlags = strict enum : uint32 {
     /// The FCS for the received frame was invalid.
     FCS_INVALID = 0x1;
     /// Padding was added after the MAC header to align the frame body to 4 bytes.
     FRAME_BODY_PADDING_4 = 0x2;
-    // Bits 2-31 reserved
 };
 
 type WlanRxInfo = struct {
@@ -417,7 +417,7 @@ protocol WlanSoftmac {
         st zx.status;
     });
 
-    /// Notifies MAC and PHY that the peer has been de-associated.
+    /// Notifies MAC and PHY that the peer has been disassociated.
     ClearAssoc(struct {
         peer_addr ieee80211.MacAddr;
     }) -> (struct {

@@ -53,6 +53,7 @@ const WLAN_MAX_OP_RATES uint32 = 12;
 
 type WlanFullmacConnectReq = struct {
     selected_bss fuchsia.wlan.internal.BssDescription;
+    // Timeout specified in beacon interval.
     connect_failure_timeout uint32;
 
     /// Additional parameters specific to the authentication exchange.
@@ -77,6 +78,7 @@ type WlanFullmacConnectConfirm = struct {
 
 type WlanFullmacJoinReq = struct {
     selected_bss fuchsia.wlan.internal.BssDescription;
+    // Timeout specified in beacon intervals.
     join_failure_timeout uint32;
     nav_sync_delay uint32;
     num_op_rates uint64;
@@ -93,6 +95,7 @@ type WlanAuthType = strict enum : uint8 {
 type WlanFullmacAuthReq = struct {
     peer_sta_address ieee80211.MacAddr;
     auth_type WlanAuthType;
+    // Timeout specified in beacon intervals.
     auth_failure_timeout uint32;
 
     // Used to pass an SAE password when SAE_DRIVER_AUTH is in use.
@@ -120,6 +123,7 @@ type WlanFullmacAssocReq = struct {
 
 type WlanFullmacAssocInd = struct {
     peer_sta_address ieee80211.MacAddr;
+    // Interval specified in time units.
     listen_interval uint16;
     ssid ieee80211.CSsid;
     rsne_len uint64;
@@ -130,7 +134,7 @@ type WlanFullmacAssocInd = struct {
 
 type WlanFullmacDisassocReq = struct {
     peer_sta_address ieee80211.MacAddr;
-    reason_code uint16;
+    reason_code ieee80211.ReasonCode;
 };
 
 type WlanFullmacResetReq = struct {
@@ -330,7 +334,7 @@ type WlanFullmacAssocResp = struct {
 };
 
 type WlanFullmacDisassocConfirm = struct {
-    status int32;
+    status zx.status;
 };
 
 type WlanFullmacDisassocIndication = struct {
@@ -769,7 +773,7 @@ protocol WlanFullmacImplIfc {
         frame WlanFullmacSaeFrame;
     }) -> ();
     OnWmmStatusResp(struct {
-        s zx.status;
+        status zx.status;
         wmm_params fuchsia.hardware.wlan.associnfo.WlanWmmParams;
     }) -> ();
 
