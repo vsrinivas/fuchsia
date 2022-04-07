@@ -154,7 +154,8 @@ zx_status_t resolve_name(const char* name, size_t name_len, zx::vmo* out_executa
       fdio_service_connect_by_name(fidl::DiscoverableProtocolName<fprocess::Resolver>,
                                    endpoints->server.TakeChannel().release());
   if (status != ZX_OK) {
-    report_error(err_msg, "failed to connect to resolver service: %d", status);
+    report_error(err_msg, "failed to connect to resolver service: %d (%s)", status,
+                 zx_status_get_string(status));
     return ZX_ERR_INTERNAL;
   }
 
@@ -162,13 +163,15 @@ zx_status_t resolve_name(const char* name, size_t name_len, zx::vmo* out_executa
 
   status = response.status();
   if (status != ZX_OK) {
-    report_error(err_msg, "failed to send resolver request: %d", status);
+    report_error(err_msg, "failed to send resolver request: %d (%s)", status,
+                 zx_status_get_string(status));
     return ZX_ERR_INTERNAL;
   }
 
   status = response->status;
   if (status != ZX_OK) {
-    report_error(err_msg, "failed to resolve %.*s: %d", name_len, name, status);
+    report_error(err_msg, "failed to resolve %.*s: %d (%s)", name_len, name, status,
+                 zx_status_get_string(status));
     return status;
   }
 
@@ -248,7 +251,8 @@ zx_status_t handle_interpreters(zx::vmo* executable, zx::channel* ldsvc,
     memset(line, 0, sizeof(line));
     zx_status_t status = executable->read(line, 0, sizeof(line));
     if (status != ZX_OK) {
-      report_error(err_msg, "error reading executable vmo: %d", status);
+      report_error(err_msg, "error reading executable vmo: %d (%s)", status,
+                   zx_status_get_string(status));
       return status;
     }
 
@@ -490,7 +494,8 @@ zx_status_t send_handles_and_namespace(const fidl::WireSyncClient<fprocess::Laun
     status =
         zx_handle_duplicate(job, ZX_RIGHT_SAME_RIGHTS, handle_info->handle.reset_and_get_address());
     if (status != ZX_OK) {
-      report_error(err_msg, "failed to duplicate job: %d", status);
+      report_error(err_msg, "failed to duplicate job: %d (%s)", status,
+                   zx_status_get_string(status));
       return status;
     }
   }
@@ -587,7 +592,8 @@ zx_status_t send_handles_and_namespace(const fidl::WireSyncClient<fprocess::Laun
         continue;
       }
       if (status != ZX_OK) {
-        report_error(err_msg, "failed to clone fd %d: %d", fd, status);
+        report_error(err_msg, "failed to clone fd %d: %d (%s)", fd, status,
+                     zx_status_get_string(status));
         return status;
       }
       auto* handle_info = handle_infos.AddNext();
@@ -604,7 +610,8 @@ zx_status_t send_handles_and_namespace(const fidl::WireSyncClient<fprocess::Laun
           utc_clock, ZX_RIGHT_READ | ZX_RIGHT_WAIT | ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER,
           handle_info->handle.reset_and_get_address());
       if (status != ZX_OK) {
-        report_error(err_msg, "failed to clone UTC clock: %d", status);
+        report_error(err_msg, "failed to clone UTC clock: %d (%s)", status,
+                     zx_status_get_string(status));
         return status;
       }
     }
@@ -613,7 +620,7 @@ zx_status_t send_handles_and_namespace(const fidl::WireSyncClient<fprocess::Laun
   ZX_DEBUG_ASSERT(handle_infos.used() <= handle_capacity);
   status = launcher->AddHandles(handle_infos.vector_view()).status();
   if (status != ZX_OK) {
-    report_error(err_msg, "failed to send handles: %d", status);
+    report_error(err_msg, "failed to send handles: %d (%s)", status, zx_status_get_string(status));
     return status;
   }
 
@@ -630,7 +637,7 @@ zx_status_t send_handles_and_namespace(const fidl::WireSyncClient<fprocess::Laun
   ZX_DEBUG_ASSERT(names.used() == name_count);
   status = launcher->AddNames(names.vector_view()).status();
   if (status != ZX_OK) {
-    report_error(err_msg, "failed send namespace: %d", status);
+    report_error(err_msg, "failed send namespace: %d (%s)", status, zx_status_get_string(status));
     return status;
   }
 
@@ -793,7 +800,8 @@ zx_status_t spawn_vmo_impl(zx_handle_t job, uint32_t flags, zx::vmo executable_v
   if ((flags & FDIO_SPAWN_DEFAULT_LDSVC) != 0) {
     status = dl_clone_loader_service(ldsvc.reset_and_get_address());
     if (status != ZX_OK) {
-      report_error(err_msg, "failed to clone library loader service: %d", status);
+      report_error(err_msg, "failed to clone library loader service: %d (%s)", status,
+                   zx_status_get_string(status));
       return status;
     }
   }
@@ -832,7 +840,8 @@ zx_status_t spawn_vmo_impl(zx_handle_t job, uint32_t flags, zx::vmo executable_v
   status = fdio_service_connect_by_name(fidl::DiscoverableProtocolName<fprocess::Launcher>,
                                         launcher_endpoints->server.TakeChannel().release());
   if (status != ZX_OK) {
-    report_error(err_msg, "failed to connect to launcher service: %d", status);
+    report_error(err_msg, "failed to connect to launcher service: %d (%s)", status,
+                 zx_status_get_string(status));
     return status;
   }
 
@@ -857,7 +866,8 @@ zx_status_t spawn_vmo_impl(zx_handle_t job, uint32_t flags, zx::vmo executable_v
     status =
         launcher->AddArgs(fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(args)).status();
     if (status != ZX_OK) {
-      report_error(err_msg, "failed to send argument vector: %d", status);
+      report_error(err_msg, "failed to send argument vector: %d (%s)", status,
+                   zx_status_get_string(status));
       return status;
     }
   }
@@ -876,7 +886,8 @@ zx_status_t spawn_vmo_impl(zx_handle_t job, uint32_t flags, zx::vmo executable_v
     status = launcher->AddEnvirons(fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(env))
                  .status();
     if (status != ZX_OK) {
-      report_error(err_msg, "failed to send environment: %d", status);
+      report_error(err_msg, "failed to send environment: %d (%s)", status,
+                   zx_status_get_string(status));
       return status;
     }
   } else if ((flags & FDIO_SPAWN_CLONE_ENVIRON) != 0) {
@@ -909,7 +920,8 @@ zx_status_t spawn_vmo_impl(zx_handle_t job, uint32_t flags, zx::vmo executable_v
   if (!shared_dirs.empty() || (flags & FDIO_SPAWN_CLONE_NAMESPACE) != 0) {
     status = fdio_ns_export_root(&flat);
     if (status != ZX_OK) {
-      report_error(err_msg, "Could not make copy of root namespace: %d", status);
+      report_error(err_msg, "Could not make copy of root namespace: %d (%s)", status,
+                   zx_status_get_string(status));
       return status;
     }
 
@@ -936,14 +948,16 @@ zx_status_t spawn_vmo_impl(zx_handle_t job, uint32_t flags, zx::vmo executable_v
   launch_info.name = fidl::StringView::FromExternal(process_name, process_name_size);
   status = zx_handle_duplicate(job, ZX_RIGHT_SAME_RIGHTS, launch_info.job.reset_and_get_address());
   if (status != ZX_OK) {
-    report_error(err_msg, "failed to duplicate job handle: %d", status);
+    report_error(err_msg, "failed to duplicate job handle: %d (%s)", status,
+                 zx_status_get_string(status));
     return status;
   }
 
   fidl::WireResult reply = launcher->Launch(std::move(launch_info));
   status = reply.status();
   if (status != ZX_OK) {
-    report_error(err_msg, "failed to send launch message: %d", status);
+    report_error(err_msg, "failed to send launch message: %d (%s)", status,
+                 zx_status_get_string(status));
     return status;
   }
 
