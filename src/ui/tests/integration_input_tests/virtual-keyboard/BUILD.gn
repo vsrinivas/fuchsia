@@ -18,16 +18,21 @@ executable("virtual-keyboard-test-bin") {
   deps = [
     ":test.virtualkeyboard",
     "//sdk/fidl/fuchsia.accessibility.semantics",
+    "//sdk/fidl/fuchsia.buildinfo",
+    "//sdk/fidl/fuchsia.cobalt",
+    "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.fonts",
-    "//sdk/fidl/fuchsia.hardware.display",
     "//sdk/fidl/fuchsia.input.virtualkeyboard",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.memorypressure",
-    "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/fidl/fuchsia.netstack",
+    "//sdk/fidl/fuchsia.posix.socket",
+    "//sdk/fidl/fuchsia.scheduler",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.tracing.provider",
     "//sdk/fidl/fuchsia.ui.accessibility.view",
     "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.focus",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.pointerinjector",
     "//sdk/fidl/fuchsia.ui.policy",
@@ -36,6 +41,7 @@ executable("virtual-keyboard-test-bin") {
     "//sdk/fidl/fuchsia.web",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/ui/scenic/cpp",
@@ -53,7 +59,7 @@ executable("virtual-keyboard-test-bin") {
 
 fuchsia_component("virtual-keyboard-test-component") {
   testonly = true
-  manifest = "meta/virtual-keyboard-test.cmx"
+  manifest = "meta/virtual-keyboard-test.cml"
   deps = [ ":virtual-keyboard-test-bin" ]
 }
 
@@ -61,8 +67,9 @@ fuchsia_test_package("virtual-keyboard-test") {
   test_components = [ ":virtual-keyboard-test-component" ]
   deps = [
     "//src/connectivity/network/netstack:component-legacy",
+    "//src/developer/build_info/testing:fake-build-info-component",
     "//src/ui/bin/root_presenter:component_v1_for_test",
-    "//src/ui/scenic:component",
+    "//src/ui/tests/integration_input_tests:scenic-test-realm",
   ]
   test_specs = {
     environments = [

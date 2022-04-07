@@ -3,26 +3,34 @@
 // found in the LICENSE file.
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
+#include <fuchsia/buildinfo/cpp/fidl.h>
+#include <fuchsia/cobalt/cpp/fidl.h>
+#include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/fonts/cpp/fidl.h>
-#include <fuchsia/hardware/display/cpp/fidl.h>
 #include <fuchsia/input/virtualkeyboard/cpp/fidl.h>
 #include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/memorypressure/cpp/fidl.h>
 #include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
-#include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/posix/socket/cpp/fidl.h>
+#include <fuchsia/scheduler/cpp/fidl.h>
+#include <fuchsia/sysmem/cpp/fidl.h>
+#include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/ui/accessibility/view/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
+#include <fuchsia/ui/focus/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <fuchsia/web/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
+#include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/sys/cpp/testing/enclosing_environment.h>
-#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
@@ -63,176 +71,181 @@ using test::virtualkeyboard::InputPositionListener;
 using ScenicEvent = fuchsia::ui::scenic::Event;
 using GfxEvent = fuchsia::ui::gfx::Event;
 
+// Types imported for the realm_builder library.
+using component_testing::ChildRef;
+using component_testing::LocalComponent;
+using component_testing::LocalComponentHandles;
+using component_testing::ParentRef;
+using component_testing::Protocol;
+using component_testing::RealmRoot;
+using component_testing::Route;
+using RealmBuilder = component_testing::RealmBuilder;
+
+// Alias for Component child name as provided to Realm Builder.
+using ChildName = std::string;
+
+// Alias for Component Legacy URL as provided to Realm Builder.
+using LegacyUrl = std::string;
+
 // Max timeout in failure cases.
 // Set this as low as you can that still works across all test platforms.
 constexpr zx::duration kTimeout = zx::min(5);
 
-// Common services for each test.
-std::map<std::string, std::string> LocalServices() {
-  return {
-      // Root presenter protocols.
-      {"fuchsia.input.virtualkeyboard.Manager",
-       "fuchsia-pkg://fuchsia.com/virtual-keyboard-test#meta/root_presenter.cmx"},
-      {"fuchsia.input.virtualkeyboard.ControllerCreator",
-       "fuchsia-pkg://fuchsia.com/virtual-keyboard-test#meta/root_presenter.cmx"},
-      {"fuchsia.ui.input.InputDeviceRegistry",
-       "fuchsia-pkg://fuchsia.com/virtual-keyboard-test#meta/root_presenter.cmx"},
-      {"fuchsia.ui.policy.Presenter",
-       "fuchsia-pkg://fuchsia.com/virtual-keyboard-test#meta/root_presenter.cmx"},
-      {fuchsia::ui::accessibility::view::Registry::Name_,
-       "fuchsia-pkg://fuchsia.com/virtual-keyboard-test#meta/root_presenter.cmx"},
-      // Scenic protocols.
-      {"fuchsia.ui.scenic.Scenic",
-       "fuchsia-pkg://fuchsia.com/virtual-keyboard-test#meta/scenic.cmx"},
-      {"fuchsia.ui.pointerinjector.Registry",
-       "fuchsia-pkg://fuchsia.com/virtual-keyboard-test#meta/scenic.cmx"},
-      {"fuchsia.ui.focus.FocusChainListenerRegistry",
-       "fuchsia-pkg://fuchsia.com/virtual-keyboard-test#meta/scenic.cmx"},
-      // IME protocols.
-      {fuchsia::ui::input::ImeService::Name_,
-       "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cmx"},
-      {fuchsia::ui::input::ImeVisibilityService::Name_,
-       "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cmx"},
-      {fuchsia::ui::input3::Keyboard::Name_,
-       "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cmx"},
-      // Netstack protocols.
-      {fuchsia::netstack::Netstack::Name_,
-       "fuchsia-pkg://fuchsia.com/virtual-keyboard-test#meta/netstack.cmx"},
-      {fuchsia::net::interfaces::State::Name_,
-       "fuchsia-pkg://fuchsia.com/virtual-keyboard-test#meta/netstack.cmx"},
-      // Misc protocols.
-      {"fuchsia.cobalt.LoggerFactory",
-       "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx"},
-      {"fuchsia.hardware.display.Provider",
-       "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"},
-      {fuchsia::fonts::Provider::Name_, "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx"},
-      {fuchsia::intl::PropertyProvider::Name_,
-       "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cmx"},
-      {fuchsia::memorypressure::Provider::Name_,
-       "fuchsia-pkg://fuchsia.com/memory_monitor#meta/memory_monitor.cmx"},
-      {fuchsia::accessibility::semantics::SemanticsManager::Name_,
-       "fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cmx"},
-      {fuchsia::web::ContextProvider::Name_,
-       "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx"},
-  };
+constexpr auto kRootPresenter = "root_presenter";
+constexpr auto kScenicTestRealm = "scenic-test-realm";
+constexpr auto kResponseListener = "response_listener";
+
+enum class TapLocation { kTopLeft, kTopRight };
+
+// The type used to measure UTC time. The integer value here does not matter so
+// long as it differs from the ZX_CLOCK_MONOTONIC=0 defined by Zircon.
+using time_utc = zx::basic_time<1>;
+
+void AddBaseComponents(RealmBuilder* realm_builder) {
+  realm_builder->AddLegacyChild(
+      kRootPresenter, "fuchsia-pkg://fuchsia.com/virtual-keyboard-test#meta/root_presenter.cmx");
+  realm_builder->AddChild(
+      kScenicTestRealm,
+      "fuchsia-pkg://fuchsia.com/virtual-keyboard-test#meta/scenic-test-realm.cm");
 }
 
-// Allow these global services from outside the test environment.
-std::vector<std::string> GlobalServices() {
-  return {"fuchsia.vulkan.loader.Loader", "fuchsia.sysmem.Allocator",
-          "fuchsia.scheduler.ProfileProvider"};
+void AddBaseRoutes(RealmBuilder* realm_builder) {
+  // Capabilities routed from test_manager to components in realm.
+  realm_builder->AddRoute(
+      Route{.capabilities = {Protocol{fuchsia::logger::LogSink::Name_},
+                             Protocol{fuchsia::vulkan::loader::Loader::Name_},
+                             Protocol{fuchsia::scheduler::ProfileProvider::Name_},
+                             Protocol{fuchsia::sysmem::Allocator::Name_},
+                             Protocol{fuchsia::tracing::provider::Registry::Name_}},
+            .source = ParentRef(),
+            .targets = {ChildRef{kScenicTestRealm}}});
+  realm_builder->AddRoute(
+      Route{.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_}},
+            .source = ParentRef(),
+            .targets = {ChildRef{kRootPresenter}}});
+
+  // Capabilities routed between siblings in realm.
+  realm_builder->AddRoute(
+      Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_},
+                             Protocol{fuchsia::ui::pointerinjector::Registry::Name_},
+                             Protocol{fuchsia::ui::focus::FocusChainListenerRegistry::Name_}},
+            .source = ChildRef{kScenicTestRealm},
+            .targets = {ChildRef{kRootPresenter}}});
+
+  // Capabilities routed up to test driver (this component).
+  realm_builder->AddRoute(
+      Route{.capabilities = {Protocol{fuchsia::input::virtualkeyboard::Manager::Name_},
+                             Protocol{fuchsia::input::virtualkeyboard::ControllerCreator::Name_},
+                             Protocol{fuchsia::ui::input::InputDeviceRegistry::Name_},
+                             Protocol{fuchsia::ui::accessibility::view::Registry::Name_},
+                             Protocol{fuchsia::ui::policy::Presenter::Name_}},
+            .source = ChildRef{kRootPresenter},
+            .targets = {ParentRef()}});
+  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
+                                .source = ChildRef{kScenicTestRealm},
+                                .targets = {ParentRef()}});
 }
 
-class WebEngineTest : public gtest::TestWithEnvironmentFixture, public InputPositionListener {
+// Combines all vectors in `vecs` into one.
+template <typename T>
+std::vector<T> merge(std::initializer_list<std::vector<T>> vecs) {
+  std::vector<T> result;
+  for (auto v : vecs) {
+    result.insert(result.end(), v.begin(), v.end());
+  }
+  return result;
+}
+
+// This component implements the interface for a RealmBuilder
+// LocalComponent and the test.virtualkeyboard.InputPositionListener
+// protocol.
+class InputPositionListenerServer : public InputPositionListener, public LocalComponent {
+ public:
+  explicit InputPositionListenerServer(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+
+  // |test::virtualkeyboard::InputPositionListener|
+  void Notify(test::virtualkeyboard::BoundingBox bounding_box) override {
+    input_position_ = std::move(bounding_box);
+  }
+
+  // |LocalComponent::Start|
+  void Start(std::unique_ptr<LocalComponentHandles> local_handles) override {
+    // When this component starts, add a binding to the test.touch.ResponseListener
+    // protocol to this component's outgoing directory.
+    FX_CHECK(local_handles->outgoing()->AddPublicService(
+                 fidl::InterfaceRequestHandler<InputPositionListener>([this](auto request) {
+                   bindings_.AddBinding(this, std::move(request), dispatcher_);
+                 })) == ZX_OK);
+    local_handle_ = std::move(local_handles);
+  }
+
+  const std::optional<test::virtualkeyboard::BoundingBox>& input_position() const {
+    return input_position_;
+  }
+
+ private:
+  async_dispatcher_t* dispatcher_ = nullptr;
+  std::unique_ptr<LocalComponentHandles> local_handle_;
+  std::optional<test::virtualkeyboard::BoundingBox> input_position_;
+  fidl::BindingSet<InputPositionListener> bindings_;
+};
+
+class VirtualKeyboardBase : public gtest::RealLoopFixture {
  protected:
-  explicit WebEngineTest() {
-    auto services = TestWithEnvironment::CreateServices();
+  VirtualKeyboardBase()
+      : realm_builder_(std::make_unique<RealmBuilder>(RealmBuilder::Create())), realm_() {}
 
-    // Key part of service setup: have this test component vend the |InputPositionListener| service
-    // in the constructed environment.
-    {
-      const zx_status_t is_ok =
-          services->AddService<InputPositionListener>(input_position_listener_.GetHandler(this));
-      FX_CHECK(is_ok == ZX_OK);
-    }
+  ~VirtualKeyboardBase() override {
+    FX_CHECK(injection_count_ > 0) << "injection expected but didn't happen.";
+  }
 
-    // Add common services.
-    for (const auto& [name, url] : LocalServices()) {
-      const zx_status_t is_ok = services->AddServiceWithLaunchInfo({.url = url}, name);
-      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << name;
-    }
-
-    // Enable services from outside this test.
-    for (const auto& service : GlobalServices()) {
-      const zx_status_t is_ok = services->AllowParentService(service);
-      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << service;
-    }
-
-    test_env_ = CreateNewEnclosingEnvironment("touch_input_test_env", std::move(services));
-
-    WaitForEnclosingEnvToStart(test_env_.get());
-
-    FX_LOGS(INFO) << "Created test environment.";
-
-    // Get the display dimensions
-    auto scenic = test_env_->ConnectToService<fuchsia::ui::scenic::Scenic>();
-    scenic->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) {
-      if (display_info.width_in_px > 0 && display_info.height_in_px > 0) {
-        display_width_ = display_info.width_in_px;
-        display_height_ = display_info.height_in_px;
-        FX_LOGS(INFO) << "Got display_width = " << *display_width_
-                      << " and display_height = " << *display_height_;
-      }
-    });
-    RunLoopUntil([this] { return display_width_.has_value() && display_height_.has_value(); });
-
+  void SetUp() override {
     // Post a "just in case" quit task, if the test hangs.
     async::PostDelayedTask(
         dispatcher(),
         [] { FX_LOGS(FATAL) << "\n\n>> Test did not complete in time, terminating.  <<\n\n"; },
         kTimeout);
+
+    BuildRealm(this->GetTestComponents(), this->GetTestRoutes(), this->GetTestV2Components());
+
+    // Get the display dimensions
+    scenic_ = realm()->Connect<fuchsia::ui::scenic::Scenic>();
+    scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) {
+      display_width_ = display_info.width_in_px;
+      display_height_ = display_info.height_in_px;
+      FX_LOGS(INFO) << "Got display_width = " << *display_width_
+                    << " and display_height = " << *display_height_;
+    });
+    RunLoopUntil([this] { return display_width_.has_value() && display_height_.has_value(); });
   }
 
+  // Subclass should implement this method to add components to the test realm
+  // next to the base ones added.
+  virtual std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() { return {}; }
+
+  // Subclass should implement this method to add capability routes to the test
+  // realm next to the base ones added.
+  virtual std::vector<Route> GetTestRoutes() { return {}; }
+
+  // Subclass should implement this method to add components to the test realm
+  // next to the base ones added.
+  virtual std::vector<std::pair<ChildName, std::string>> GetTestV2Components() { return {}; }
+
+  // Launches the test client by connecting to fuchsia.ui.app.ViewProvider protocol.
+  // This method should only be invoked if this protocol has been exposed from
+  // the root of the test realm. After establishing a connection, this method
+  // listens for the client is_rendering signal and calls |on_is_rendering| when it arrives.
   void LaunchChromium() {
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
     // Instruct Root Presenter to present test's View.
-    auto root_presenter = test_env_->ConnectToService<fuchsia::ui::policy::Presenter>();
+    auto root_presenter = realm()->Connect<fuchsia::ui::policy::Presenter>();
     root_presenter->PresentOrReplaceView(std::move(view_holder_token),
                                          /* presentation */ nullptr);
 
-    // Start client app inside the test environment.
-    // Note well. We launch the client component directly, and ask for its ViewProvider service
-    // directly, to closely model production setup.
-    fuchsia::sys::LaunchInfo launch_info{
-        .url =
-            "fuchsia-pkg://fuchsia.com/web-virtual-keyboard-client#meta/"
-            "web-virtual-keyboard-client.cmx"};
-    // Create a point-to-point offer-use connection between parent and child.
-    child_services_ = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
-    client_component_ = test_env_->CreateComponent(std::move(launch_info));
-
-    auto view_provider = child_services_->Connect<fuchsia::ui::app::ViewProvider>();
+    auto view_provider = realm()->Connect<fuchsia::ui::app::ViewProvider>();
     view_provider->CreateView(std::move(view_token.value), /* in */ nullptr,
                               /* out */ nullptr);
-  }
-
-  // Injects an input event, and posts a task to retry after `kTapRetryInterval`.
-  //
-  // We post the retry task because the first input event we send to WebEngine may be lost.
-  // There is no guarantee that, just because the web app has returned the location of the
-  // input box, that Chromium is actually ready to receive events from Scenic.
-  void TryInject(int32_t x, int32_t y) {
-    InjectInput(x, y);
-    inject_retry_task_.emplace(
-        [this, x, y](auto dispatcher, auto task, auto status) { TryInject(x, y); });
-    FX_CHECK(inject_retry_task_->PostDelayed(dispatcher(), kTapRetryInterval) == ZX_OK);
-  }
-
-  void CancelInject() { inject_retry_task_.reset(); }
-
-  // Guaranteed to be initialized after SetUp().
-  uint32_t display_width() const { return *display_width_; }
-  uint32_t display_height() const { return *display_height_; }
-  const std::optional<test::virtualkeyboard::BoundingBox>& input_position() const {
-    return input_position_;
-  }
-
-  sys::testing::EnclosingEnvironment* test_env() { return test_env_.get(); }
-  fuchsia::sys::ComponentControllerPtr& client_component() { return client_component_; }
-  sys::ServiceDirectory& child_services() { return *child_services_; }
-
- private:
-  // The typical latency on devices we've tested is ~60 msec. The retry interval is chosen to be
-  // a) Long enough that it's unlikely that we send a new tap while a previous tap is still being
-  //    processed. That is, it should be far more likely that a new tap is sent because the first
-  //    tap was lost, than because the system is just running slowly.
-  // b) Short enough that we don't slow down tryjobs.
-  static constexpr auto kTapRetryInterval = zx::sec(1);
-
-  // |test::virtualkeyboard::InputPositionListener|
-  void Notify(test::virtualkeyboard::BoundingBox bounding_box) override {
-    input_position_ = bounding_box;
   }
 
   // Inject directly into Root Presenter, using fuchsia.ui.input FIDLs.
@@ -250,7 +263,7 @@ class WebEngineTest : public gtest::TestWithEnvironmentFixture, public InputPosi
 
     // Register it against Root Presenter.
     fuchsia::ui::input::DeviceDescriptor device{.touchscreen = std::move(parameters)};
-    auto registry = test_env_->ConnectToService<fuchsia::ui::input::InputDeviceRegistry>();
+    auto registry = realm()->Connect<fuchsia::ui::input::InputDeviceRegistry>();
     fuchsia::ui::input::InputDevicePtr connection;
     registry->RegisterDevice(std::move(device), connection.NewRequest());
 
@@ -272,24 +285,230 @@ class WebEngineTest : public gtest::TestWithEnvironmentFixture, public InputPosi
       connection->DispatchReport(std::move(report));
     }
 
-    FX_LOGS(INFO) << "*** Tap injected";
+    ++injection_count_;
+    FX_LOGS(INFO) << "*** Tap injected, count: " << injection_count_;
   }
 
-  fidl::BindingSet<test::virtualkeyboard::InputPositionListener> input_position_listener_;
-  std::unique_ptr<sys::testing::EnclosingEnvironment> test_env_;
+  fuchsia::sys::ComponentControllerPtr& client_component() { return client_component_; }
+  sys::ServiceDirectory& child_services() { return *child_services_; }
+
+  RealmBuilder* builder() { return realm_builder_.get(); }
+  RealmRoot* realm() { return realm_.get(); }
+
+  InputPositionListenerServer* response_listener() { return response_listener_.get(); }
+
+  // Guaranteed to be initialized after SetUp().
+  uint32_t display_width() const { return *display_width_; }
+  uint32_t display_height() const { return *display_height_; }
+
+ private:
+  void BuildRealm(const std::vector<std::pair<ChildName, LegacyUrl>>& components,
+                  const std::vector<Route>& routes,
+                  const std::vector<std::pair<ChildName, std::string>>& v2_components) {
+    // Key part of service setup: have this test component vend the
+    // |ResponseListener| service in the constructed realm.
+    response_listener_ = std::make_unique<InputPositionListenerServer>(dispatcher());
+    builder()->AddLocalChild(kResponseListener, response_listener_.get());
+
+    // Add all components shared by each test to the realm.
+    AddBaseComponents(builder());
+
+    // Add components specific for this test case to the realm.
+    for (const auto& [name, component] : components) {
+      builder()->AddLegacyChild(name, component);
+    }
+
+    for (const auto& [name, component] : v2_components) {
+      builder()->AddChild(name, component);
+    }
+
+    // Add the necessary routing for each of the base components added above.
+    AddBaseRoutes(builder());
+
+    // Add the necessary routing for each of the extra components added above.
+    for (const auto& route : routes) {
+      builder()->AddRoute(route);
+    }
+
+    // Finally, build the realm using the provided components and routes.
+    realm_ = std::make_unique<RealmRoot>(builder()->Build());
+  }
+
+  std::unique_ptr<RealmBuilder> realm_builder_;
+  std::unique_ptr<RealmRoot> realm_;
+
+  std::unique_ptr<InputPositionListenerServer> response_listener_;
+
+  std::unique_ptr<scenic::Session> session_;
+
+  int injection_count_ = 0;
+
+  fuchsia::ui::scenic::ScenicPtr scenic_;
 
   std::optional<uint32_t> display_width_;
   std::optional<uint32_t> display_height_;
-  std::optional<test::virtualkeyboard::BoundingBox> input_position_;
+
+  // Test view and child view's ViewHolder.
+  std::unique_ptr<scenic::ViewHolder> view_holder_;
+  std::unique_ptr<scenic::View> view_;
 
   fuchsia::sys::ComponentControllerPtr client_component_;
   std::shared_ptr<sys::ServiceDirectory> child_services_;
+};
+
+class WebEngineTest : public VirtualKeyboardBase {
+ protected:
+  std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
+    return {
+        std::make_pair(kWebVirtualKeyboardClient, kWebVirtualKeyboardUrl),
+        std::make_pair(kFontsProvider, kFontsProviderUrl),
+        std::make_pair(kTextManager, kTextManagerUrl),
+        std::make_pair(kIntl, kIntlUrl),
+        std::make_pair(kMemoryPressureProvider, kMemoryPressureProviderUrl),
+        std::make_pair(kNetstack, kNetstackUrl),
+        std::make_pair(kWebContextProvider, kWebContextProviderUrl),
+        std::make_pair(kSemanticsManager, kSemanticsManagerUrl),
+    };
+  }
+
+  std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
+    return {
+        std::make_pair(kBuildInfoProvider, kBuildInfoProviderUrl),
+    };
+  }
+
+  std::vector<Route> GetTestRoutes() override {
+    return merge({GetWebEngineRoutes(ChildRef{kWebVirtualKeyboardClient}),
+                  {
+                      {.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
+                       .source = ChildRef{kWebVirtualKeyboardClient},
+                       .targets = {ParentRef()}},
+                  }});
+  }
+
+  // Injects an input event, and posts a task to retry after `kTapRetryInterval`.
+  //
+  // We post the retry task because the first input event we send to WebEngine may be lost.
+  // There is no guarantee that, just because the web app has returned the location of the
+  // input box, that Chromium is actually ready to receive events from Scenic.
+  void TryInject(int32_t x, int32_t y) {
+    InjectInput(x, y);
+    inject_retry_task_.emplace(
+        [this, x, y](auto dispatcher, auto task, auto status) { TryInject(x, y); });
+    FX_CHECK(inject_retry_task_->PostDelayed(dispatcher(), kTapRetryInterval) == ZX_OK);
+  }
+
+  void CancelInject() { inject_retry_task_.reset(); }
+
+  // Routes needed to setup Chromium client.
+  static std::vector<Route> GetWebEngineRoutes(ChildRef target) {
+    return {
+        {.capabilities = {Protocol{test::virtualkeyboard::InputPositionListener::Name_}},
+         .source = ChildRef{kResponseListener},
+         .targets = {target}},
+        {.capabilities = {Protocol{fuchsia::fonts::Provider::Name_}},
+         .source = ChildRef{kFontsProvider},
+         .targets = {target}},
+        {.capabilities = {Protocol{fuchsia::ui::input3::Keyboard::Name_},
+                          Protocol{fuchsia::ui::input::ImeService::Name_},
+                          Protocol{fuchsia::ui::input::ImeVisibilityService::Name_}},
+         .source = ChildRef{kTextManager},
+         .targets = {target}},
+        {.capabilities = {Protocol{fuchsia::intl::PropertyProvider::Name_}},
+         .source = ChildRef{kIntl},
+         .targets = {target, ChildRef{kSemanticsManager}}},
+        {.capabilities = {Protocol{fuchsia::input::virtualkeyboard::Manager::Name_},
+                          Protocol{fuchsia::input::virtualkeyboard::ControllerCreator::Name_}},
+         .source = ChildRef{kRootPresenter},
+         .targets = {ChildRef{kWebVirtualKeyboardClient}}},
+        {.capabilities = {Protocol{fuchsia::memorypressure::Provider::Name_}},
+         .source = ChildRef{kMemoryPressureProvider},
+         .targets = {target}},
+        {.capabilities = {Protocol{fuchsia::posix::socket::Provider::Name_},
+                          Protocol{fuchsia::netstack::Netstack::Name_},
+                          Protocol{fuchsia::net::interfaces::State::Name_}},
+         .source = ChildRef{kNetstack},
+         .targets = {target}},
+        {.capabilities = {Protocol{fuchsia::accessibility::semantics::SemanticsManager::Name_}},
+         .source = ChildRef{kSemanticsManager},
+         .targets = {target}},
+        {.capabilities = {Protocol{fuchsia::web::ContextProvider::Name_}},
+         .source = ChildRef{kWebContextProvider},
+         .targets = {target}},
+        {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_},
+                          Protocol{fuchsia::ui::focus::FocusChainListenerRegistry::Name_}},
+         .source = ChildRef{kScenicTestRealm},
+         .targets = {ChildRef{kSemanticsManager}}},
+        {.capabilities = {Protocol{fuchsia::cobalt::LoggerFactory::Name_}},
+         .source = ChildRef{kScenicTestRealm},
+         .targets = {ChildRef{kMemoryPressureProvider}}},
+        {.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},
+         .source = ParentRef(),
+         .targets = {ChildRef{kMemoryPressureProvider}, ChildRef{kWebVirtualKeyboardClient}}},
+        {.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_},
+                          Protocol{fuchsia::scheduler::ProfileProvider::Name_}},
+         .source = ParentRef(),
+         .targets = {ChildRef{kMemoryPressureProvider}}},
+        {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
+         .source = ChildRef{kScenicTestRealm},
+         .targets = {target}},
+        {.capabilities = {Protocol{fuchsia::buildinfo::Provider::Name_}},
+         .source = ChildRef{kBuildInfoProvider},
+         .targets = {target, ChildRef{kWebContextProvider}}},
+    };
+  }
+
+  static constexpr auto kWebVirtualKeyboardClient = "web_virtual_keyboard_client";
+  static constexpr auto kWebVirtualKeyboardUrl =
+      "fuchsia-pkg://fuchsia.com/web-virtual-keyboard-client#meta/"
+      "web-virtual-keyboard-client.cmx";
+
+ private:
+  static constexpr auto kFontsProvider = "fonts_provider";
+  static constexpr auto kFontsProviderUrl = "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx";
+
+  static constexpr auto kTextManager = "text_manager";
+  static constexpr auto kTextManagerUrl =
+      "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cmx";
+
+  static constexpr auto kIntl = "intl";
+  static constexpr auto kIntlUrl =
+      "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cmx";
+
+  static constexpr auto kMemoryPressureProvider = "memory_pressure_provider";
+  static constexpr auto kMemoryPressureProviderUrl =
+      "fuchsia-pkg://fuchsia.com/memory_monitor#meta/memory_monitor.cmx";
+
+  static constexpr auto kNetstack = "netstack";
+  static constexpr auto kNetstackUrl =
+      "fuchsia-pkg://fuchsia.com/virtual-keyboard-test#meta/netstack.cmx";
+
+  static constexpr auto kWebContextProvider = "web_context_provider";
+  static constexpr auto kWebContextProviderUrl =
+      "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx";
+
+  static constexpr auto kSemanticsManager = "semantics_manager";
+  static constexpr auto kSemanticsManagerUrl =
+      "fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cmx";
+
+  static constexpr auto kBuildInfoProvider = "build_info_provider";
+  static constexpr auto kBuildInfoProviderUrl =
+      "fuchsia-pkg://fuchsia.com/virtual-keyboard-test#meta/fake_build_info.cm";
+
+  // The typical latency on devices we've tested is ~60 msec. The retry interval is chosen to be
+  // a) Long enough that it's unlikely that we send a new tap while a previous tap is still being
+  //    processed. That is, it should be far more likely that a new tap is sent because the first
+  //    tap was lost, than because the system is just running slowly.
+  // b) Short enough that we don't slow down tryjobs.
+  //
+  // The first property is important to avoid skewing the latency metrics that we collect.
+  // For an explanation of why a tap might be lost, see the documentation for TryInject().
+  static constexpr auto kTapRetryInterval = zx::sec(1);
 
   std::optional<async::Task> inject_retry_task_;
 };
 
-// TODO(fxbug.dev/96697): Fix and re-enable test.
-TEST_F(WebEngineTest, DISABLED_ShowAndHideKeyboard) {
+TEST_F(WebEngineTest, ShowAndHideKeyboard) {
   LaunchChromium();
   client_component().events().OnTerminated = [](int64_t return_code,
                                                 fuchsia::sys::TerminationReason reason) {
@@ -302,8 +521,7 @@ TEST_F(WebEngineTest, DISABLED_ShowAndHideKeyboard) {
 
   FX_LOGS(INFO) << "Getting initial keyboard state";
   std::optional<bool> is_keyboard_visible;
-  auto virtualkeyboard_manager =
-      test_env()->ConnectToService<fuchsia::input::virtualkeyboard::Manager>();
+  auto virtualkeyboard_manager = realm()->Connect<fuchsia::input::virtualkeyboard::Manager>();
   virtualkeyboard_manager->WatchTypeAndVisibility(
       [&is_keyboard_visible](auto text_type, auto is_visible) {
         is_keyboard_visible = is_visible;
@@ -313,10 +531,10 @@ TEST_F(WebEngineTest, DISABLED_ShowAndHideKeyboard) {
   is_keyboard_visible.reset();
 
   FX_LOGS(INFO) << "Getting input box position";
-  RunLoopUntil([this]() { return input_position().has_value(); });
+  RunLoopUntil([this]() { return response_listener()->input_position().has_value(); });
 
   FX_LOGS(INFO) << "Tapping _inside_ input box";
-  auto input_pos = *input_position();
+  auto input_pos = *response_listener()->input_position();
   int32_t input_center_x = (input_pos.x0 + input_pos.x1) / 2;
   int32_t input_center_y = (input_pos.y0 + input_pos.y1) / 2;
   TryInject(input_center_x, input_center_y);
