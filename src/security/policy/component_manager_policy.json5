@@ -262,7 +262,6 @@
                 capability: "directory",
                 target_monikers: [
                     "/bootstrap",
-                    "/bootstrap/base_resolver",
                     "/bootstrap/fshost",
                     "/core",
                     "/core/appmgr",

@@ -868,10 +868,7 @@
 
         // -- End Archivist offers --
         {
-            directory: [
-                "minfs",
-                "pkgfs-packages",
-            ],
+            directory: "pkgfs-packages",
             from: "#fshost",
             to: "#base_resolver",
         },

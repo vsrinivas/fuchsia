@@ -20,11 +20,6 @@
             rights: [ "rx*" ],
             path: "/blob",
         },
-        {
-            directory: "minfs",
-            rights: [ "r*" ],
-            path: "/minfs",
-        },
     ],
     use: [
         {
@@ -46,10 +41,6 @@
         },
         {
             directory: "blob",
-            from: "self",
-        },
-        {
-            directory: "minfs",
             from: "self",
         },
     ],

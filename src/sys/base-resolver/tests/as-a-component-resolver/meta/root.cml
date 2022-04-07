@@ -33,11 +33,6 @@
             to: "#base_resolver",
         },
         {
-            directory: "minfs",
-            from: "#fake_blobfs_and_boot_args",
-            to: "#base_resolver",
-        },
-        {
             protocol: "fuchsia.boot.Arguments",
             from: "#fake_blobfs_and_boot_args",
             to: "#base_resolver",

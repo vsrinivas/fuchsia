@@ -20,14 +20,6 @@
             rights: [ "rx*" ],
             path: "/pkgfs/packages",
         },
-        {
-            directory: "minfs",
-            rights: [
-                "enumerate",
-                "traverse",
-            ],
-            path: "/minfs",
-        },
     ],
     expose: [
         {
