@@ -31,7 +31,7 @@ use zerocopy::ByteSlice;
 
 use crate::{
     context::{CounterContext, InstantContext, StateContext},
-    data_structures::{token_bucket::TokenBucket, IdMapCollectionKey},
+    data_structures::{token_bucket::TokenBucket, IdMap, IdMapCollectionKey},
     device::ndp::NdpPacketHandler,
     device::FrameDestination,
     ip::{
@@ -81,6 +81,9 @@ pub enum Icmpv6ErrorCode {
 }
 
 pub(crate) struct IcmpState<A: IpAddress, Instant, S> {
+    // This will be used to store state for unbound sockets, like socket
+    // options.
+    unbound: IdMap<()>,
     conns: ConnSocketMap<IcmpAddr<A>, IcmpConn<S>>,
     error_send_bucket: TokenBucket<Instant>,
 }
@@ -127,6 +130,7 @@ impl Icmpv4StateBuilder {
     pub(crate) fn build<Instant, S>(self) -> Icmpv4State<Instant, S> {
         Icmpv4State {
             inner: IcmpState {
+                unbound: IdMap::default(),
                 conns: ConnSocketMap::default(),
                 error_send_bucket: TokenBucket::new(self.errors_per_second),
             },
@@ -186,6 +190,7 @@ impl Icmpv6StateBuilder {
     pub(crate) fn build<Instant, S>(self) -> Icmpv6State<Instant, S> {
         Icmpv6State {
             inner: IcmpState {
+                unbound: IdMap::default(),
                 conns: ConnSocketMap::default(),
                 error_send_bucket: TokenBucket::new(self.errors_per_second),
             },
@@ -217,6 +222,36 @@ pub(crate) struct IcmpAddr<A: IpAddress> {
     local_addr: SpecifiedAddr<A>,
     remote_addr: SpecifiedAddr<A>,
     icmp_id: u16,
+}
+
+/// An identifier for an unbound ICMP socket.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub struct IcmpUnboundId<I: Ip>(usize, IpVersionMarker<I>);
+
+impl<I: Ip> IcmpUnboundId<I> {
+    fn new(id: usize) -> IcmpUnboundId<I> {
+        IcmpUnboundId(id, IpVersionMarker::default())
+    }
+}
+
+impl<I: Ip> Into<usize> for IcmpUnboundId<I> {
+    fn into(self) -> usize {
+        let Self(id, _marker) = self;
+        id
+    }
+}
+
+impl<I: Ip> IdMapCollectionKey for IcmpUnboundId<I> {
+    const VARIANT_COUNT: usize = 1;
+
+    fn get_variant(&self) -> usize {
+        0
+    }
+
+    fn get_id(&self) -> usize {
+        let Self(id, _marker) = *self;
+        id
+    }
 }
 
 #[derive(Clone)]
@@ -2234,28 +2269,64 @@ pub enum IcmpSockCreationError {
     SockAddrConflict,
 }
 
-/// Creates a new ICMPv4 connection.
+/// Creates a new unbound ICMPv4 socket.
+pub fn create_icmpv4_unbound<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
+) -> IcmpUnboundId<Ipv4> {
+    create_icmpv4_unbound_inner(ctx)
+}
+
+// TODO(https://fxbug.dev/48578): Make this the external function (replacing the
+// existing `create_icmpv4_unbound`) once the ICMP context traits are part of
+// the public API.
+fn create_icmpv4_unbound_inner<C: InnerIcmpv4Context>(ctx: &mut C) -> IcmpUnboundId<Ipv4> {
+    let state: &mut IcmpState<_, _, _> = ctx.get_state_mut();
+    IcmpUnboundId::new(state.unbound.push(()))
+}
+
+/// Creates a new unbound ICMPv6 socket.
+pub fn create_icmpv6_unbound<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
+) -> IcmpUnboundId<Ipv6> {
+    create_icmpv6_unbound_inner(ctx)
+}
+
+// TODO(https://fxbug.dev/48578): Make this the external function (replacing the
+// existing `create_icmpv6_unbound`) once the ICMP context traits are part of
+// the public API.
+fn create_icmpv6_unbound_inner<C: InnerIcmpv6Context>(ctx: &mut C) -> IcmpUnboundId<Ipv6> {
+    let state: &mut IcmpState<_, _, _> = ctx.get_state_mut();
+    IcmpUnboundId::new(state.unbound.push(()))
+}
+
+/// Connects an unbound ICMPv4 socket.
 ///
-/// Creates a new ICMPv4 connection with the provided parameters `local_addr`,
-/// `remote_addr` and `icmp_id`, and returns its newly-allocated ID. If
-/// `local_addr` is `None`, one will be chosen automatically.
+/// Replaces `id` with a new ICMPv4 connection with the provided parameters
+/// `local_addr`, `remote_addr` and `icmp_id`, and returns its newly-allocated
+/// ID. If `local_addr` is `None`, one will be chosen automatically.
 ///
 /// If a connection with the conflicting parameters already exists, the call
 /// fails and returns [`IcmpSockCreationError::SockAddrConflict`].
-pub fn new_icmpv4_connection<D: EventDispatcher, C: BlanketCoreContext>(
+///
+/// # Panics
+///
+/// Panics if `id` is an invalid [`IcmpUnboundId`].
+pub fn connect_icmpv4<D: EventDispatcher, C: BlanketCoreContext>(
     ctx: &mut Ctx<D, C>,
+    id: IcmpUnboundId<Ipv4>,
     local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
     remote_addr: SpecifiedAddr<Ipv4Addr>,
     icmp_id: u16,
 ) -> Result<IcmpConnId<Ipv4>, IcmpSockCreationError> {
-    new_icmpv4_connection_inner(ctx, local_addr, remote_addr, icmp_id)
+    connect_icmpv4_inner(ctx, id, local_addr, remote_addr, icmp_id)
 }
 
-// TODO(joshlf): Make this the external function (replacing the existing
-// `new_icmpv4_connection`) once the ICMP context traits are part of the public
-// API.
-fn new_icmpv4_connection_inner<C: InnerIcmpv4Context>(
+// TODO(https://fxbug.dev/48578): Make this the external function (replacing the
+// existing `connect_icmpv4`) once the ICMP context traits are part of the
+// public API.
+fn connect_icmpv4_inner<C: InnerIcmpv4Context>(
     sync_ctx: &mut C,
+    id: IcmpUnboundId<Ipv4>,
     local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
     remote_addr: SpecifiedAddr<Ipv4Addr>,
     icmp_id: u16,
@@ -2268,32 +2339,38 @@ fn new_icmpv4_connection_inner<C: InnerIcmpv4Context>(
         UnroutableBehavior::Close,
         None,
     )?;
-    let state: &mut IcmpState<_, _, _> = sync_ctx.get_state_mut();
-    Ok(new_icmp_connection_inner(&mut state.conns, remote_addr, icmp_id, ip)?)
+    let IcmpState { unbound, conns, error_send_bucket: _ } = sync_ctx.get_state_mut();
+    Ok(connect_icmp_inner(unbound, conns, id, remote_addr, icmp_id, ip)?)
 }
 
-/// Creates a new ICMPv4 connection.
+/// Connects an unbound ICMPv6 socket.
 ///
-/// Creates a new ICMPv4 connection with the provided parameters `local_addr`,
-/// `remote_addr` and `icmp_id`, and returns its newly-allocated ID. If
-/// `local_addr` is `None`, one will be chosen automatically.
+/// Replaces `id` with a new ICMPv6 connection with the provided parameters
+/// `local_addr`, `remote_addr` and `icmp_id`, and returns its newly-allocated
+/// ID. If `local_addr` is `None`, one will be chosen automatically.
 ///
 /// If a connection with the conflicting parameters already exists, the call
 /// fails and returns [`IcmpSockCreationError::SockAddrConflict`].
-pub fn new_icmpv6_connection<D: EventDispatcher, C: BlanketCoreContext>(
+///
+/// # Panics
+///
+/// Panics if `id` is an invalid [`IcmpUnboundId`].
+pub fn connect_icmpv6<D: EventDispatcher, C: BlanketCoreContext>(
     ctx: &mut Ctx<D, C>,
+    id: IcmpUnboundId<Ipv6>,
     local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
     remote_addr: SpecifiedAddr<Ipv6Addr>,
     icmp_id: u16,
 ) -> Result<IcmpConnId<Ipv6>, IcmpSockCreationError> {
-    new_icmpv6_connection_inner(ctx, local_addr, remote_addr, icmp_id)
+    connect_icmpv6_inner(ctx, id, local_addr, remote_addr, icmp_id)
 }
 
-// TODO(joshlf): Make this the external function (replacing the existing
-// `new_icmpv6_connection`) once the ICMP context traits are part of the public
-// API.
-fn new_icmpv6_connection_inner<C: InnerIcmpv6Context>(
+// TODO(https://fxbug.dev/48578): Make this the external function (replacing the
+// existing `connect_icmpv6`) once the ICMP context traits are part of the
+// public API.
+fn connect_icmpv6_inner<C: InnerIcmpv6Context>(
     sync_ctx: &mut C,
+    id: IcmpUnboundId<Ipv6>,
     local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
     remote_addr: SpecifiedAddr<Ipv6Addr>,
     icmp_id: u16,
@@ -2306,12 +2383,14 @@ fn new_icmpv6_connection_inner<C: InnerIcmpv6Context>(
         UnroutableBehavior::Close,
         None,
     )?;
-    let state: &mut IcmpState<_, _, _> = sync_ctx.get_state_mut();
-    Ok(new_icmp_connection_inner(&mut state.conns, remote_addr, icmp_id, ip)?)
+    let IcmpState { unbound, conns, error_send_bucket: _ } = sync_ctx.get_state_mut();
+    Ok(connect_icmp_inner(unbound, conns, id, remote_addr, icmp_id, ip)?)
 }
 
-fn new_icmp_connection_inner<I: IcmpIpExt + IpExt, S: IpSocket<I>>(
+fn connect_icmp_inner<I: IcmpIpExt + IpExt, S: IpSocket<I>>(
+    unbound: &mut IdMap<()>,
     conns: &mut ConnSocketMap<IcmpAddr<I::Addr>, IcmpConn<S>>,
+    id: IcmpUnboundId<I>,
     remote_addr: SpecifiedAddr<I::Addr>,
     icmp_id: u16,
     ip: S,
@@ -2320,6 +2399,7 @@ fn new_icmp_connection_inner<I: IcmpIpExt + IpExt, S: IpSocket<I>>(
     if conns.get_id_by_addr(&addr).is_some() {
         return Err(IcmpSockCreationError::SockAddrConflict);
     }
+    unbound.remove(id.into()).expect("invalid ICMP unbound ID");
     Ok(IcmpConnId::new(conns.insert(addr, IcmpConn { icmp_id, ip })))
 }
 
@@ -2381,7 +2461,8 @@ mod tests {
             remote_addr: SpecifiedAddr<Ipv4Addr>,
             icmp_id: u16,
         ) -> Result<IcmpConnId<Ipv4>, IcmpSockCreationError> {
-            new_icmpv4_connection(ctx, local_addr, remote_addr, icmp_id)
+            let unbound = create_icmpv4_unbound(ctx);
+            connect_icmpv4(ctx, unbound, local_addr, remote_addr, icmp_id)
         }
 
         fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
@@ -2401,7 +2482,8 @@ mod tests {
             remote_addr: SpecifiedAddr<Ipv6Addr>,
             icmp_id: u16,
         ) -> Result<IcmpConnId<Ipv6>, IcmpSockCreationError> {
-            new_icmpv6_connection(ctx, local_addr, remote_addr, icmp_id)
+            let unbound = create_icmpv6_unbound(ctx);
+            connect_icmpv6(ctx, unbound, local_addr, remote_addr, icmp_id)
         }
 
         fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
@@ -3447,9 +3529,11 @@ mod tests {
             // 0. If this assertion fails in the future, that isn't necessarily
             // evidence of a bug; we may just have to update this test to
             // accommodate whatever new ID allocation scheme is being used.
+            let unbound = create_icmpv4_unbound_inner(&mut ctx);
             assert_eq!(
-                new_icmpv4_connection_inner(
+                connect_icmpv4_inner(
                     &mut ctx,
+                    unbound,
                     Some(DUMMY_CONFIG_V4.local_ip),
                     DUMMY_CONFIG_V4.remote_ip,
                     ICMP_ID
@@ -3753,14 +3837,16 @@ mod tests {
             crate::testutil::set_logger_for_test();
 
             let mut ctx = Dummyv6Ctx::default();
+            let unbound = create_icmpv6_unbound_inner(&mut ctx);
             // NOTE: This assertion is not a correctness requirement. It's just
             // that the rest of this test assumes that the new connection has ID
             // 0. If this assertion fails in the future, that isn't necessarily
             // evidence of a bug; we may just have to update this test to
             // accommodate whatever new ID allocation scheme is being used.
             assert_eq!(
-                new_icmpv6_connection_inner(
+                connect_icmpv6_inner(
                     &mut ctx,
+                    unbound,
                     Some(DUMMY_CONFIG_V6.local_ip),
                     DUMMY_CONFIG_V6.remote_ip,
                     ICMP_ID

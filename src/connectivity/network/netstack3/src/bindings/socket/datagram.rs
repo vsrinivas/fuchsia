@@ -548,7 +548,8 @@ impl IcmpEchoIpExt for Ipv4 {
         local_id: Option<<IcmpEcho as TransportState<Self, Ctx<D, C>>>::LocalIdentifier>,
         remote_addr: SpecifiedAddr<Self::Addr>,
     ) -> Result<icmp::IcmpConnId<Self>, icmp::IcmpSockCreationError> {
-        icmp::new_icmpv4_connection(ctx, local_addr, remote_addr, local_id.unwrap_or_default())
+        let unbound = icmp::create_icmpv4_unbound(ctx);
+        icmp::connect_icmpv4(ctx, unbound, local_addr, remote_addr, local_id.unwrap_or_default())
     }
 
     fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
@@ -569,7 +570,8 @@ impl IcmpEchoIpExt for Ipv6 {
         local_id: Option<<IcmpEcho as TransportState<Self, Ctx<D, C>>>::LocalIdentifier>,
         remote_addr: SpecifiedAddr<Self::Addr>,
     ) -> Result<icmp::IcmpConnId<Self>, icmp::IcmpSockCreationError> {
-        icmp::new_icmpv6_connection(ctx, local_addr, remote_addr, local_id.unwrap_or_default())
+        let unbound = icmp::create_icmpv6_unbound(ctx);
+        icmp::connect_icmpv6(ctx, unbound, local_addr, remote_addr, local_id.unwrap_or_default())
     }
 
     fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
