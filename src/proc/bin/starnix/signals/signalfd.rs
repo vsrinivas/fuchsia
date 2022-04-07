@@ -16,8 +16,12 @@ pub struct SignalFd {
 }
 
 impl SignalFd {
-    pub fn new(kernel: &Kernel, mask: sigset_t) -> FileHandle {
-        Anon::new_file(anon_fs(kernel), Box::new(SignalFd { mask }), OpenFlags::RDONLY)
+    pub fn new(kernel: &Kernel, mask: sigset_t, flags: u32) -> FileHandle {
+        let mut open_flags = OpenFlags::RDONLY;
+        if flags & SFD_NONBLOCK != 0 {
+            open_flags |= OpenFlags::NONBLOCK;
+        }
+        Anon::new_file(anon_fs(kernel), Box::new(SignalFd { mask }), open_flags)
     }
 }
 

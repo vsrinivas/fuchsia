@@ -516,7 +516,7 @@ pub fn sys_signalfd4(
         not_implemented!("changing mask of a signalfd");
         return error!(EINVAL);
     }
-    if flags & !SFD_CLOEXEC != 0 {
+    if flags & !(SFD_CLOEXEC | SFD_NONBLOCK) != 0 {
         return error!(EINVAL);
     }
     if mask_size != std::mem::size_of::<sigset_t>() {
@@ -525,7 +525,7 @@ pub fn sys_signalfd4(
 
     let mut mask: sigset_t = 0;
     current_task.mm.read_object(mask_addr, &mut mask)?;
-    let signalfd = SignalFd::new(current_task.kernel(), mask);
+    let signalfd = SignalFd::new(current_task.kernel(), mask, flags);
     let flags = if flags & SFD_CLOEXEC != 0 { FdFlags::CLOEXEC } else { FdFlags::empty() };
     let fd = current_task.files.add_with_flags(signalfd, flags)?;
     Ok(fd)
