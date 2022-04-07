@@ -205,7 +205,9 @@ static bool vmaspace_alloc_smoke_test() {
 }
 
 // Touch mappings in an aspace and ensure we can correctly harvest the accessed bits.
-static bool vmaspace_accessed_test() {
+// This test takes an optional tag that is placed in the top byte of the address when performing a
+// user_copy.
+static bool vmaspace_accessed_test(uint8_t tag) {
   BEGIN_TEST;
 
   AutoVmScannerDisable scanner_disable;
@@ -217,7 +219,7 @@ static bool vmaspace_accessed_test() {
   zx_status_t status =
       make_committed_pager_vmo(1, /*trap_dirty=*/false, /*resizable=*/false, &page, &vmo);
   ASSERT_EQ(ZX_OK, status);
-  auto mem = testing::UserMemory::Create(vmo);
+  auto mem = testing::UserMemory::Create(vmo, tag);
 
   ASSERT_EQ(ZX_OK, mem->CommitAndMap(PAGE_SIZE));
 
@@ -268,6 +270,14 @@ static bool vmaspace_accessed_test() {
 
   END_TEST;
 }
+
+static bool vmaspace_accessed_test_untagged() { return vmaspace_accessed_test(0); }
+
+#if defined(__aarch64__)
+// Rerun the `vmaspace_accessed_test` tests with tags in the top byte of user pointers. This tests
+// that the subsequent accessed faults are handled successfully, even if the FAR contains a tag.
+static bool vmaspace_accessed_test_tagged() { return vmaspace_accessed_test(0xAB); }
+#endif
 
 // Ensure that if a user requested VMO read/write operation would hit a page that has had its
 // accessed bits harvested that any resulting fault (on ARM) can be handled.
@@ -1724,7 +1734,10 @@ VM_UNITTEST(vmm_alloc_contiguous_missing_flag_commit_fails)
 VM_UNITTEST(vmm_alloc_contiguous_zero_size_fails)
 VM_UNITTEST(vmaspace_create_smoke_test)
 VM_UNITTEST(vmaspace_alloc_smoke_test)
-VM_UNITTEST(vmaspace_accessed_test)
+VM_UNITTEST(vmaspace_accessed_test_untagged)
+#if defined(__aarch64__)
+VM_UNITTEST(vmaspace_accessed_test_tagged)
+#endif
 VM_UNITTEST(vmaspace_usercopy_accessed_fault_test)
 VM_UNITTEST(vmaspace_free_unaccessed_page_tables_test)
 VM_UNITTEST(vmaspace_merge_mapping_test)

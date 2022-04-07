@@ -344,7 +344,7 @@ static void arm64_data_abort_handler(iframe_t* iframe, uint exception_flags, uin
   if ((dfsc & 0b111100) == 0b001000) {
     arch_enable_ints();
     exceptions_access.Add(1);
-    zx_status_t err = vmm_accessed_fault_handler(far);
+    zx_status_t err = vmm_accessed_fault_handler(arch_detag_ptr(far));
     arch_disable_ints();
     if (err >= 0) {
       return;

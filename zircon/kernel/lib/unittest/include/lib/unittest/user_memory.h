@@ -30,12 +30,20 @@ namespace testing {
 class UserMemory {
  public:
   static ktl::unique_ptr<UserMemory> Create(size_t size);
-  static ktl::unique_ptr<UserMemory> Create(fbl::RefPtr<VmObject> vmo);
+  static ktl::unique_ptr<UserMemory> Create(fbl::RefPtr<VmObject> vmo, uint8_t tag = 0);
   static ktl::unique_ptr<UserMemory> CreateInAspace(fbl::RefPtr<VmObject> vmo,
-                                                    fbl::RefPtr<VmAspace>& aspace);
+                                                    fbl::RefPtr<VmAspace>& aspace, uint8_t tag = 0);
   virtual ~UserMemory();
 
-  vaddr_t base() const { return mapping_->base(); }
+  vaddr_t base() const {
+    vaddr_t base = mapping_->base();
+#if defined(__aarch64__)
+    base |= static_cast<vaddr_t>(tag_) << kTbiBit;
+#endif
+    return base;
+  }
+
+  uint8_t tag() const { return tag_; }
 
   const fbl::RefPtr<VmObject>& vmo() const { return vmo_; }
 
@@ -88,11 +96,14 @@ class UserMemory {
   }
 
  private:
-  UserMemory(fbl::RefPtr<VmMapping> mapping, fbl::RefPtr<VmObject> vmo)
-      : mapping_(ktl::move(mapping)), vmo_(ktl::move(vmo)) {}
+  UserMemory(fbl::RefPtr<VmMapping> mapping, fbl::RefPtr<VmObject> vmo, uint8_t tag)
+      : mapping_(ktl::move(mapping)), vmo_(ktl::move(vmo)), tag_(tag) {}
 
   fbl::RefPtr<VmMapping> mapping_;
   fbl::RefPtr<VmObject> vmo_;
+
+  // This is really only used on aarch64.
+  uint8_t tag_;
 
   // User memory here is going to be touched directly by the kernel and will not have the option to
   // fault in memory that should get reclaimed by the scanner. Therefore as long as we are using any

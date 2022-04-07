@@ -17,7 +17,7 @@ UserMemory::~UserMemory() {
 
 // static
 ktl::unique_ptr<UserMemory> UserMemory::CreateInAspace(fbl::RefPtr<VmObject> vmo,
-                                                       fbl::RefPtr<VmAspace> &aspace) {
+                                                       fbl::RefPtr<VmAspace> &aspace, uint8_t tag) {
   size_t size = vmo->size();
 
   DEBUG_ASSERT(aspace);
@@ -44,7 +44,7 @@ ktl::unique_ptr<UserMemory> UserMemory::CreateInAspace(fbl::RefPtr<VmObject> vmo
   });
 
   fbl::AllocChecker ac;
-  ktl::unique_ptr<UserMemory> mem(new (&ac) UserMemory(mapping, vmo));
+  ktl::unique_ptr<UserMemory> mem(new (&ac) UserMemory(mapping, vmo, tag));
   if (!ac.check()) {
     unittest_printf("failed to allocate from heap\n");
     return nullptr;
@@ -56,11 +56,11 @@ ktl::unique_ptr<UserMemory> UserMemory::CreateInAspace(fbl::RefPtr<VmObject> vmo
 }
 
 // static
-ktl::unique_ptr<UserMemory> UserMemory::Create(fbl::RefPtr<VmObject> vmo) {
+ktl::unique_ptr<UserMemory> UserMemory::Create(fbl::RefPtr<VmObject> vmo, uint8_t tag) {
   fbl::RefPtr<VmAspace> aspace(Thread::Current::Get()->aspace());
   DEBUG_ASSERT(aspace);
 
-  return CreateInAspace(ktl::move(vmo), aspace);
+  return CreateInAspace(ktl::move(vmo), aspace, tag);
 }
 
 // static
