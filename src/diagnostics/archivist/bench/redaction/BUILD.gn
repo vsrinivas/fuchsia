@@ -19,5 +19,5 @@ archivist_optimized_binary("bin") {
 
 fuchsia_package_with_single_component("archivist-redaction-benchmarks") {
   deps = [ ":bin" ]
-  manifest = "meta/archivist-redaction-benchmarks.cmx"
+  manifest = "meta/archivist-redaction-benchmarks.cml"
 }

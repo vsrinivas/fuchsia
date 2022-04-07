@@ -14,9 +14,9 @@ void main() {
 
   test('selectors_benchmarks', () async {
     final helper = await PerfTestHelper.make();
-    await helper.runTestComponent(
+    await helper.runTestComponentV2(
         packageName: 'selectors-benchmarks',
-        componentName: 'selectors-benchmarks.cmx',
-        commandArgs: PerfTestHelper.componentOutputPath);
+        componentName: 'selectors-benchmarks.cm',
+        commandArgs: PerfTestHelper.componentV2OutputPath);
   }, timeout: Timeout.none);
 }

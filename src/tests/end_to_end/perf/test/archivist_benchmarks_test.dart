@@ -14,25 +14,25 @@ void main() {
 
   test('archivist_redaction_benchmarks', () async {
     final helper = await PerfTestHelper.make();
-    await helper.runTestComponent(
+    await helper.runTestComponentV2(
         packageName: 'archivist-redaction-benchmarks',
-        componentName: 'archivist-redaction-benchmarks.cmx',
-        commandArgs: PerfTestHelper.componentOutputPath);
+        componentName: 'archivist-redaction-benchmarks.cm',
+        commandArgs: PerfTestHelper.componentV2OutputPath);
   }, timeout: Timeout.none);
 
   test('archivist_logging_benchmarks', () async {
     final helper = await PerfTestHelper.make();
-    await helper.runTestComponent(
+    await helper.runTestComponentV2(
         packageName: 'archivist-logging-benchmarks',
-        componentName: 'archivist-logging-benchmarks.cmx',
-        commandArgs: PerfTestHelper.componentOutputPath);
+        componentName: 'archivist-logging-benchmarks.cm',
+        commandArgs: PerfTestHelper.componentV2OutputPath);
   }, timeout: Timeout.none);
 
   test('archivist_formatter_benchmarks', () async {
     final helper = await PerfTestHelper.make();
-    await helper.runTestComponent(
+    await helper.runTestComponentV2(
         packageName: 'archivist-formatter-benchmarks',
-        componentName: 'archivist-formatter-benchmarks.cmx',
-        commandArgs: PerfTestHelper.componentOutputPath);
+        componentName: 'archivist-formatter-benchmarks.cm',
+        commandArgs: PerfTestHelper.componentV2OutputPath);
   }, timeout: Timeout.none);
 }
