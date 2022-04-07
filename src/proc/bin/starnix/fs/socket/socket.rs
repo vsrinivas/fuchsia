@@ -4,24 +4,20 @@
 
 use fuchsia_zircon as zx;
 use std::collections::VecDeque;
-use zerocopy::{AsBytes, FromBytes};
 
 use super::*;
 
 use crate::fs::buffers::*;
 use crate::fs::*;
 use crate::task::*;
+use crate::types::as_any::*;
 use crate::types::*;
 
-use parking_lot::Mutex;
 use std::sync::Arc;
 
-// From unix.go in gVisor.
-const SOCKET_MIN_SIZE: usize = 4 << 10;
-const SOCKET_DEFAULT_SIZE: usize = 208 << 10;
-const SOCKET_MAX_SIZE: usize = 4 << 20;
-
-trait SocketOps: Send + Sync {
+pub trait SocketOps: Send + Sync + AsAny {
+    /// Connect the `socket` to the listening `peer`. On success
+    /// a new socket is created and added to the accept queue.
     fn connect(
         &self,
         socket: &SocketHandle,
@@ -29,68 +25,126 @@ trait SocketOps: Send + Sync {
         credentials: ucred,
     ) -> Result<(), Errno>;
 
+    /// Start listening at the bound address for `connect` calls.
     fn listen(&self, socket: &Socket, backlog: i32) -> Result<(), Errno>;
 
+    /// Returns the eariest socket on the accept queue of this
+    /// listening socket. Returns EAGAIN if the queue is empty.
     fn accept(&self, socket: &Socket, credentials: ucred) -> Result<SocketHandle, Errno>;
-}
 
-fn create_socket_ops(_domain: SocketDomain, socket_type: SocketType) -> Box<dyn SocketOps> {
-    match socket_type {
-        SocketType::Stream | SocketType::SeqPacket => ConnectionedSocket::new(),
-        SocketType::Datagram | SocketType::Raw => ConnectionlessSocket::new(),
-    }
-}
+    /// Binds this socket to a `socket_address`.
+    ///
+    /// Returns an error if the socket could not be bound.
+    fn bind(&self, socket: &Socket, socket_address: SocketAddress) -> Result<(), Errno>;
 
-enum SocketState {
-    /// The socket has not been connected.
-    Disconnected,
+    /// Reads the specified number of bytes from the socket, if possible.
+    ///
+    /// # Parameters
+    /// - `task`: The task to which the user buffers belong (i.e., the task to which the read bytes
+    ///           are written.
+    /// - `user_buffers`: The buffers to write the read data into.
+    ///
+    /// Returns the number of bytes that were written to the user buffers, as well as any ancillary
+    /// data associated with the read messages.
+    fn read(
+        &self,
+        socket: &Socket,
+        task: &Task,
+        user_buffers: &mut UserBufferIterator<'_>,
+        flags: SocketMessageFlags,
+    ) -> Result<MessageReadInfo, Errno>;
 
-    /// The socket has had `listen` called and can accept incoming connections.
-    Listening(AcceptQueue),
+    /// Writes the data in the provided user buffers to this socket.
+    ///
+    /// # Parameters
+    /// - `task`: The task to which the user buffers belong, used to read the memory.
+    /// - `user_buffers`: The data to write to the socket.
+    /// - `ancillary_data`: Optional ancillary data (a.k.a., control message) to write.
+    ///
+    /// Returns the number of bytes that were read from the user buffers and written to the socket,
+    /// not counting the ancillary data.
+    fn write(
+        &self,
+        socket: &Socket,
+        task: &Task,
+        user_buffers: &mut UserBufferIterator<'_>,
+        dest_address: &mut Option<SocketAddress>,
+        ancillary_data: &mut Vec<AncillaryData>,
+    ) -> Result<usize, Errno>;
 
-    /// The socket is connected to a peer.
-    Connected(SocketHandle),
+    /// Queues an asynchronous wait for the specified `events`
+    /// on the `waiter`. Note that no wait occurs until a
+    /// wait functions is called on the `waiter`.
+    ///
+    /// # Parameters
+    /// - `waiter`: The Waiter that can be waited on, for example by
+    ///             calling Waiter::wait_until.
+    /// - `events`: The events that will trigger the waiter to wake up.
+    /// - `handler`: A handler that will be called on wake-up.
+    /// Returns a WaitKey that can be used to cancel the wait with
+    /// `cancel_wait`
+    fn wait_async(
+        &self,
+        socket: &Socket,
+        waiter: &Arc<Waiter>,
+        events: FdEvents,
+        handler: EventHandler,
+    ) -> WaitKey;
 
-    /// The socket is closed.
-    Closed,
-}
+    /// Cancel a wait previously set up with `wait_async`.
+    /// Returns `true` if the wait was actually cancelled.
+    /// If the wait has already been triggered, this returns `false`.
+    fn cancel_wait(&self, socket: &Socket, key: WaitKey) -> bool;
 
-pub struct SocketInner {
-    /// The `MessageQueue` that contains messages sent to this socket.
-    messages: MessageQueue,
+    /// Return the events that are currently active on the `socket`.
+    fn query_events(&self, socket: &Socket) -> FdEvents;
 
-    /// This queue will be notified on reads, writes, disconnects etc.
-    waiters: WaitQueue,
+    /// Shuts down this socket according to how, preventing any future reads and/or writes.
+    ///
+    /// Used by the shutdown syscalls.
+    fn shutdown(&self, socket: &Socket, how: SocketShutdownFlags) -> Result<(), Errno>;
 
-    /// The address that this socket has been bound to, if it has been bound.
-    address: Option<SocketAddress>,
+    /// Close this socket.
+    ///
+    /// Called by SocketFile when the file descriptor that is holding this
+    /// socket is closed.
+    ///
+    /// Close differs from shutdown in two ways. First, close will call
+    /// mark_peer_closed_with_unread_data if this socket has unread data,
+    /// which changes how read() behaves on that socket. Second, close
+    /// transitions the internal state of this socket to Closed, which breaks
+    /// the reference cycle that exists in the connected state.
+    fn close(&self, socket: &Socket);
 
-    /// Whether this end of the socket has been shut down and can no longer receive message. It is
-    /// still possible to send messages to the peer, if it exists and hasn't also been shut down.
-    is_shutdown: bool,
+    /// Returns the name of this socket.
+    ///
+    /// The name is derived from the address and domain. A socket
+    /// will always have a name, even if it is not bound to an address.
+    fn getsockname(&self, socket: &Socket) -> Vec<u8>;
 
-    /// Whether the peer had unread data when it was closed. In this case, reads should return
-    /// ECONNRESET instead of 0 (eof).
-    peer_closed_with_unread_data: bool,
+    /// Returns the name of the peer of this socket, if such a peer exists.
+    ///
+    /// Returns an error if the socket is not connected.
+    fn getpeername(&self, socket: &Socket) -> Result<Vec<u8>, Errno>;
 
-    /// See SO_RCVTIMEO.
-    receive_timeout: Option<zx::Duration>,
+    /// Sets socket-specific options.
+    fn setsockopt(
+        &self,
+        socket: &Socket,
+        task: &Task,
+        level: u32,
+        optname: u32,
+        user_opt: UserBuffer,
+    ) -> Result<(), Errno>;
 
-    /// See SO_SNDTIMEO.
-    send_timeout: Option<zx::Duration>,
+    /// Retrieves socket-specific options.
+    fn getsockopt(&self, socket: &Socket, level: u32, optname: u32) -> Result<Vec<u8>, Errno>;
 
-    /// See SO_LINGER.
-    pub linger: uapi::linger,
+    /// Used for specifying timeouts for `recvmsg`.
+    fn get_receive_timeout(&self, socket: &Socket) -> Option<zx::Duration>;
 
-    /// See SO_PASSCRED.
-    pub passcred: bool,
-
-    /// Unix credentials of the owner of this socket, for SO_PEERCRED.
-    credentials: Option<ucred>,
-
-    /// Socket state: a queue if this is a listening socket, or a peer if this is a connected
-    /// socket.
-    state: SocketState,
+    /// Used for specifying timeouts for `sendmsg`.
+    fn get_send_timeout(&self, socket: &Socket) -> Option<zx::Duration>;
 }
 
 /// A `Socket` represents one endpoint of a bidirectional communication channel.
@@ -102,11 +156,15 @@ pub struct Socket {
 
     /// The type of this socket.
     pub socket_type: SocketType,
-
-    inner: Mutex<SocketInner>,
 }
 
 pub type SocketHandle = Arc<Socket>;
+
+fn create_socket_ops(domain: SocketDomain, socket_type: SocketType) -> Box<dyn SocketOps> {
+    match domain {
+        SocketDomain::Unix => Box::new(UnixSocket::new(socket_type)),
+    }
+}
 
 impl Socket {
     /// Creates a new unbound socket.
@@ -114,47 +172,7 @@ impl Socket {
     /// # Parameters
     /// - `domain`: The domain of the socket (e.g., `AF_UNIX`).
     pub fn new(domain: SocketDomain, socket_type: SocketType) -> SocketHandle {
-        Arc::new(Socket {
-            ops: create_socket_ops(domain, socket_type),
-            domain,
-            socket_type,
-            inner: Mutex::new(SocketInner {
-                messages: MessageQueue::new(SOCKET_DEFAULT_SIZE),
-                waiters: WaitQueue::default(),
-                address: None,
-                is_shutdown: false,
-                peer_closed_with_unread_data: false,
-                receive_timeout: None,
-                send_timeout: None,
-                linger: uapi::linger::default(),
-                passcred: false,
-                credentials: None,
-                state: SocketState::Disconnected,
-            }),
-        })
-    }
-
-    /// Creates a pair of connected sockets.
-    ///
-    /// # Parameters
-    /// - `domain`: The domain of the socket (e.g., `AF_UNIX`).
-    /// - `socket_type`: The type of the socket (e.g., `SOCK_STREAM`).
-    pub fn new_pair(
-        kernel: &Kernel,
-        domain: SocketDomain,
-        socket_type: SocketType,
-        credentials: ucred,
-        open_flags: OpenFlags,
-    ) -> (FileHandle, FileHandle) {
-        let left = Socket::new(domain, socket_type);
-        let right = Socket::new(domain, socket_type);
-        left.lock().state = SocketState::Connected(right.clone());
-        left.lock().credentials = Some(credentials.clone());
-        right.lock().state = SocketState::Connected(left.clone());
-        right.lock().credentials = Some(credentials);
-        let left = Socket::new_file(kernel, left, open_flags);
-        let right = Socket::new_file(kernel, right, open_flags);
-        (left, right)
+        Arc::new(Socket { ops: create_socket_ops(domain, socket_type), domain, socket_type })
     }
 
     /// Creates a `FileHandle` where the associated `FsNode` contains a socket.
@@ -171,31 +189,20 @@ impl Socket {
         FileObject::new_anonymous(SocketFile::new(socket), node, open_flags)
     }
 
-    /// Returns the name of this socket.
-    ///
-    /// The name is derived from the address and domain. A socket
-    /// will always have a name, even if it is not bound to an address.
+    pub fn downcast_socket<T>(&self) -> Option<&T>
+    where
+        T: 'static,
+    {
+        let ops = &*self.ops;
+        ops.as_any().downcast_ref::<T>()
+    }
+
     pub fn getsockname(&self) -> Vec<u8> {
-        let inner = self.lock();
-        if let Some(address) = &inner.address {
-            address.to_bytes()
-        } else {
-            SocketAddress::default_for_domain(self.domain).to_bytes()
-        }
+        self.ops.getsockname(self)
     }
 
-    /// Returns the name of the peer of this socket, if such a peer exists.
-    ///
-    /// Returns an error if the socket is not connected.
     pub fn getpeername(&self) -> Result<Vec<u8>, Errno> {
-        let peer = self.lock().peer().ok_or_else(|| errno!(ENOTCONN))?.clone();
-        Ok(peer.getsockname())
-    }
-
-    fn peer_cred(&self) -> Option<ucred> {
-        let peer = self.lock().peer()?.clone();
-        let peer = peer.lock();
-        peer.credentials.clone()
+        self.ops.getpeername(self)
     }
 
     pub fn setsockopt(
@@ -205,167 +212,23 @@ impl Socket {
         optname: u32,
         user_opt: UserBuffer,
     ) -> Result<(), Errno> {
-        fn read<T: Default + AsBytes + FromBytes>(
-            task: &Task,
-            user_opt: UserBuffer,
-        ) -> Result<T, Errno> {
-            let user_ref = UserRef::<T>::new(user_opt.address);
-            if user_opt.length < user_ref.len() {
-                return error!(EINVAL);
-            }
-            let mut value = T::default();
-            task.mm.read_object(user_ref, &mut value)?;
-            Ok(value)
-        }
-
-        let read_timeval = || {
-            let duration = duration_from_timeval(read::<timeval>(task, user_opt)?)?;
-            Ok(if duration == zx::Duration::default() { None } else { Some(duration) })
-        };
-
-        match level {
-            SOL_SOCKET => match optname {
-                SO_RCVTIMEO => {
-                    self.set_receive_timeout(read_timeval()?);
-                }
-                SO_SNDTIMEO => {
-                    self.set_send_timeout(read_timeval()?);
-                }
-                SO_SNDBUF => {
-                    let requested_capacity = read::<socklen_t>(task, user_opt)? as usize;
-                    // See StreamUnixSocketPairTest.SetSocketSendBuf for why we multiply by 2 here.
-                    self.set_send_capacity(requested_capacity * 2);
-                }
-                SO_RCVBUF => {
-                    let requested_capacity = read::<socklen_t>(task, user_opt)? as usize;
-                    self.set_receive_capacity(requested_capacity);
-                }
-                SO_LINGER => {
-                    let mut linger = read::<uapi::linger>(task, user_opt)?;
-                    if linger.l_onoff != 0 {
-                        linger.l_onoff = 1;
-                    }
-                    self.set_linger(linger);
-                }
-                SO_PASSCRED => {
-                    let passcred = read::<u32>(task, user_opt)?;
-                    self.set_passcred(passcred != 0);
-                }
-                _ => return error!(ENOPROTOOPT),
-            },
-            _ => return error!(ENOPROTOOPT),
-        }
-        Ok(())
+        self.ops.setsockopt(self, task, level, optname, user_opt)
     }
 
     pub fn getsockopt(&self, level: u32, optname: u32) -> Result<Vec<u8>, Errno> {
-        let opt_value = match level {
-            SOL_SOCKET => match optname {
-                SO_TYPE => self.socket_type.as_raw().to_ne_bytes().to_vec(),
-                // TODO(tbodt): Update when internet sockets exist
-                SO_DOMAIN => AF_UNIX.to_ne_bytes().to_vec(),
-                SO_PEERCRED => self
-                    .peer_cred()
-                    .unwrap_or(ucred { pid: 0, uid: uid_t::MAX, gid: gid_t::MAX })
-                    .as_bytes()
-                    .to_owned(),
-                SO_PEERSEC => "unconfined".as_bytes().to_vec(),
-                SO_RCVTIMEO => {
-                    let duration = self.get_receive_timeout().unwrap_or(zx::Duration::default());
-                    timeval_from_duration(duration).as_bytes().to_owned()
-                }
-                SO_SNDTIMEO => {
-                    let duration = self.get_send_timeout().unwrap_or(zx::Duration::default());
-                    timeval_from_duration(duration).as_bytes().to_owned()
-                }
-                SO_ACCEPTCONN => {
-                    if self.is_listening() { 1u32 } else { 0u32 }.to_ne_bytes().to_vec()
-                }
-                SO_SNDBUF => (self.get_send_capacity() as socklen_t).to_ne_bytes().to_vec(),
-                SO_RCVBUF => (self.get_receive_capacity() as socklen_t).to_ne_bytes().to_vec(),
-                SO_LINGER => self.get_linger().as_bytes().to_vec(),
-                _ => return error!(ENOPROTOOPT),
-            },
-            _ => return error!(ENOPROTOOPT),
-        };
-        Ok(opt_value)
+        self.ops.getsockopt(self, level, optname)
     }
 
     pub fn get_receive_timeout(&self) -> Option<zx::Duration> {
-        self.lock().receive_timeout
-    }
-
-    fn set_receive_timeout(&self, value: Option<zx::Duration>) {
-        self.lock().receive_timeout = value;
+        self.ops.get_receive_timeout(self)
     }
 
     pub fn get_send_timeout(&self) -> Option<zx::Duration> {
-        self.lock().send_timeout
+        self.ops.get_send_timeout(self)
     }
 
-    fn set_send_timeout(&self, value: Option<zx::Duration>) {
-        self.lock().send_timeout = value;
-    }
-
-    fn get_receive_capacity(&self) -> usize {
-        self.lock().messages.capacity()
-    }
-
-    fn set_receive_capacity(&self, requested_capacity: usize) {
-        self.lock().set_capacity(requested_capacity);
-    }
-
-    fn get_send_capacity(&self) -> usize {
-        if let Some(peer) = self.lock().peer() {
-            peer.lock().messages.capacity()
-        } else {
-            0
-        }
-    }
-
-    fn set_send_capacity(&self, requested_capacity: usize) {
-        if let Some(peer) = self.lock().peer() {
-            peer.lock().set_capacity(requested_capacity);
-        }
-    }
-
-    /// Locks and returns the inner state of the Socket.
-    fn lock(&self) -> parking_lot::MutexGuard<'_, SocketInner> {
-        self.inner.lock()
-    }
-
-    /// Binds this socket to a `socket_address`.
-    ///
-    /// Returns an error if the socket could not be bound.
     pub fn bind(&self, socket_address: SocketAddress) -> Result<(), Errno> {
-        self.lock().bind(socket_address)
-    }
-
-    pub fn bind_socket_to_node(
-        &self,
-        socket: &SocketHandle,
-        address: SocketAddress,
-        node: &Arc<FsNode>,
-    ) -> Result<(), Errno> {
-        let mut inner = socket.lock();
-        inner.bind(address)?;
-        node.set_socket(socket.clone());
-        Ok(())
-    }
-
-    fn get_linger(&self) -> uapi::linger {
-        let inner = self.lock();
-        inner.linger
-    }
-
-    fn set_linger(&self, linger: uapi::linger) {
-        let mut inner = self.lock();
-        inner.linger = linger;
-    }
-
-    fn set_passcred(&self, passcred: bool) {
-        let mut inner = self.lock();
-        inner.passcred = passcred;
+        self.ops.bind(self, socket_address)
     }
 
     pub fn connect(
@@ -384,82 +247,27 @@ impl Socket {
         self.ops.accept(self, credentials)
     }
 
-    pub fn is_listening(&self) -> bool {
-        match self.lock().state {
-            SocketState::Listening(_) => true,
-            _ => false,
-        }
-    }
-
-    fn check_type_for_connect(
-        &self,
-        peer: &Socket,
-        peer_address: &Option<SocketAddress>,
-    ) -> Result<(), Errno> {
-        if self.domain != peer.domain || self.socket_type != peer.socket_type {
-            // According to ConnectWithWrongType in accept_bind_test, abstract
-            // UNIX domain sockets return ECONNREFUSED rather than EPROTOTYPE.
-            // TODO(tbodt): it's possible this entire file is only applicable to UNIX domain
-            // sockets, in which case this can be simplified.
-            if let Some(address) = peer_address {
-                if address.is_abstract_unix() {
-                    return error!(ECONNREFUSED);
-                }
-            }
-            return error!(EPROTOTYPE);
-        }
-        Ok(())
-    }
-
-    /// Reads the specified number of bytes from the socket, if possible.
-    ///
-    /// # Parameters
-    /// - `task`: The task to which the user buffers belong (i.e., the task to which the read bytes
-    ///           are written.
-    /// - `user_buffers`: The buffers to write the read data into.
-    ///
-    /// Returns the number of bytes that were written to the user buffers, as well as any ancillary
-    /// data associated with the read messages.
     pub fn read(
         &self,
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
         flags: SocketMessageFlags,
     ) -> Result<MessageReadInfo, Errno> {
-        self.lock().read(task, user_buffers, self.socket_type, flags)
+        self.ops.read(self, task, user_buffers, flags)
     }
 
     /// Reads all the available messages out of this socket, blocking if no messages are immediately
     /// available.
     ///
-    /// Returns `Err` if the socket was shutdown.
+    /// Returns `Err` if the socket was shutdown or not a UnixSocket.
     pub fn blocking_read_kernel(&self) -> Result<Vec<Message>, Errno> {
-        loop {
-            let mut inner = self.lock();
-            let messages = inner.read_kernel()?;
-            if !messages.is_empty() {
-                return Ok(messages);
-            }
-            let waiter = Waiter::new();
-            inner.waiters.wait_async_events(
-                &waiter,
-                FdEvents::POLLIN | FdEvents::POLLHUP,
-                WaitCallback::none(),
-            );
-            drop(inner);
-            waiter.wait_kernel(zx::Time::INFINITE)?;
+        if let Some(socket) = self.downcast_socket::<UnixSocket>() {
+            socket.blocking_read_kernel(self)
+        } else {
+            error!(EOPNOTSUPP)
         }
     }
 
-    /// Writes the data in the provided user buffers to this socket.
-    ///
-    /// # Parameters
-    /// - `task`: The task to which the user buffers belong, used to read the memory.
-    /// - `user_buffers`: The data to write to the socket.
-    /// - `ancillary_data`: Optional ancillary data (a.k.a., control message) to write.
-    ///
-    /// Returns the number of bytes that were read from the user buffers and written to the socket,
-    /// not counting the ancillary data.
     pub fn write(
         &self,
         task: &Task,
@@ -467,32 +275,7 @@ impl Socket {
         dest_address: &mut Option<SocketAddress>,
         ancillary_data: &mut Vec<AncillaryData>,
     ) -> Result<usize, Errno> {
-        let (peer, local_address, creds) = {
-            let inner = self.lock();
-            (
-                inner.peer().ok_or_else(|| errno!(EPIPE))?.clone(),
-                inner.address.clone(),
-                inner.credentials.clone(),
-            )
-        };
-
-        // TODO allow non-connected datagrams
-        if dest_address.is_some() {
-            return error!(EISCONN);
-        }
-        let mut peer = peer.lock();
-        if peer.passcred {
-            if let Some(creds) = creds {
-                ancillary_data
-                    .push(AncillaryData::Unix(UnixControlData::Credentials(creds.clone())));
-            } else {
-                let credentials = task.creds.read();
-                let creds =
-                    ucred { pid: task.get_pid(), uid: credentials.uid, gid: credentials.gid };
-                ancillary_data.push(AncillaryData::Unix(UnixControlData::Credentials(creds)));
-            }
-        }
-        peer.write(task, user_buffers, local_address, ancillary_data, self.socket_type)
+        self.ops.write(self, task, user_buffers, dest_address, ancillary_data)
     }
 
     /// Writes the provided message into this socket. If the write succeeds, all the bytes were
@@ -501,14 +284,13 @@ impl Socket {
     /// # Parameters
     /// - `message`: The message to write.
     ///
-    /// Returns an error if the socket is not connected.
+    /// Returns an error if the socket is not connected or not a UnixSocket.
     pub fn write_kernel(&self, message: Message) -> Result<(), Errno> {
-        let peer = {
-            let inner = self.lock();
-            inner.peer().ok_or_else(|| errno!(EPIPE))?.clone()
-        };
-        let mut peer = peer.lock();
-        peer.write_kernel(message)
+        if let Some(socket) = self.downcast_socket::<UnixSocket>() {
+            socket.write_kernel(message)
+        } else {
+            error!(EOPNOTSUPP)
+        }
     }
 
     pub fn wait_async(
@@ -517,420 +299,42 @@ impl Socket {
         events: FdEvents,
         handler: EventHandler,
     ) -> WaitKey {
-        let mut inner = self.lock();
-
-        let present_events = inner.query_events();
-        if events & present_events {
-            waiter.wake_immediately(present_events.mask(), handler)
-        } else {
-            inner.waiters.wait_async_mask(waiter, events.mask(), handler)
-        }
+        self.ops.wait_async(self, waiter, events, handler)
     }
 
     pub fn cancel_wait(&self, key: WaitKey) -> bool {
-        let mut inner = self.lock();
-        inner.waiters.cancel_wait(key)
+        self.ops.cancel_wait(self, key)
     }
 
     pub fn query_events(&self) -> FdEvents {
-        // Note that self.lock() must be dropped before acquiring peer.inner.lock() to avoid
-        // potential deadlocks.
-        let (mut present_events, peer) = {
-            let inner = self.lock();
-            (inner.query_events(), inner.peer().map(|p| p.clone()))
-        };
-
-        if let Some(peer) = peer {
-            let peer_inner = peer.inner.lock();
-            let peer_events = peer_inner.messages.query_events();
-            if peer_events & FdEvents::POLLOUT {
-                present_events |= FdEvents::POLLOUT;
-            }
-        }
-
-        present_events
+        self.ops.query_events(self)
     }
 
-    /// Shuts down this socket according to how, preventing any future reads and/or writes.
-    ///
-    /// Used by the shutdown syscalls.
     pub fn shutdown(&self, how: SocketShutdownFlags) -> Result<(), Errno> {
-        let peer = {
-            let mut inner = self.lock();
-            let peer = inner.peer().ok_or_else(|| errno!(ENOTCONN))?.clone();
-            if how.contains(SocketShutdownFlags::READ) {
-                inner.shutdown_one_end();
-            }
-            peer
-        };
-        if how.contains(SocketShutdownFlags::WRITE) {
-            peer.lock().shutdown_one_end();
-        }
-        Ok(())
+        self.ops.shutdown(self, how)
     }
 
-    /// Close this socket.
-    ///
-    /// Called by SocketFile when the file descriptor that is holding this
-    /// socket is closed.
-    ///
-    /// Close differs from shutdown in two ways. First, close will call
-    /// mark_peer_closed_with_unread_data if this socket has unread data,
-    /// which changes how read() behaves on that socket. Second, close
-    /// transitions the internal state of this socket to Closed, which breaks
-    /// the reference cycle that exists in the connected state.
     pub fn close(&self) {
-        let (maybe_peer, has_unread) = {
-            let mut inner = self.lock();
-            let maybe_peer = inner.peer().map(Arc::clone);
-            inner.shutdown_one_end();
-            (maybe_peer, !inner.messages.is_empty())
-        };
-        // If this is a connected socket type, also shut down the connected peer.
-        if self.socket_type == SocketType::Stream || self.socket_type == SocketType::SeqPacket {
-            if let Some(peer) = maybe_peer {
-                let mut peer_inner = peer.lock();
-                if has_unread {
-                    peer_inner.peer_closed_with_unread_data = true;
-                }
-                peer_inner.shutdown_one_end();
-            }
-        }
-        self.lock().state = SocketState::Closed;
+        self.ops.close(self)
     }
 }
 
-impl SocketInner {
-    pub fn bind(&mut self, socket_address: SocketAddress) -> Result<(), Errno> {
-        if self.address.is_some() {
-            return error!(EINVAL);
-        }
-        self.address = Some(socket_address);
-        Ok(())
-    }
-
-    fn set_capacity(&mut self, requested_capacity: usize) {
-        let capacity = requested_capacity.clamp(SOCKET_MIN_SIZE, SOCKET_MAX_SIZE);
-        let capacity = std::cmp::max(capacity, self.messages.len());
-        // We have validated capacity sufficiently that set_capacity should always succeed.
-        self.messages.set_capacity(capacity).unwrap();
-    }
-
-    /// Returns the socket that is connected to this socket, if such a peer exists. Returns
-    /// ENOTCONN otherwise.
-    fn peer(&self) -> Option<&SocketHandle> {
-        match &self.state {
-            SocketState::Connected(peer) => Some(peer),
-            _ => None,
-        }
-    }
-
-    /// Reads the the contents of this socket into `UserBufferIterator`.
-    ///
-    /// Will stop reading if a message with ancillary data is encountered (after the message with
-    /// ancillary data has been read).
-    ///
-    /// # Parameters
-    /// - `task`: The task to read memory from.
-    /// - `user_buffers`: The `UserBufferIterator` to write the data to.
-    ///
-    /// Returns the number of bytes that were read into the buffer, and any ancillary data that was
-    /// read from the socket.
-    fn read(
-        &mut self,
-        task: &Task,
-        user_buffers: &mut UserBufferIterator<'_>,
-        socket_type: SocketType,
-        flags: SocketMessageFlags,
-    ) -> Result<MessageReadInfo, Errno> {
-        if self.peer_closed_with_unread_data {
-            return error!(ECONNRESET);
-        }
-        if self.is_shutdown {
-            return Ok(MessageReadInfo::default());
-        }
-        let info = if socket_type == SocketType::Stream {
-            if flags.contains(SocketMessageFlags::PEEK) {
-                self.messages.peek_stream(task, user_buffers)?
-            } else {
-                self.messages.read_stream(task, user_buffers)?
-            }
-        } else {
-            if flags.contains(SocketMessageFlags::PEEK) {
-                self.messages.peek_datagram(task, user_buffers)?
-            } else {
-                self.messages.read_datagram(task, user_buffers)?
-            }
-        };
-        if info.message_length == 0 && !self.is_shutdown {
-            return error!(EAGAIN);
-        }
-        if info.bytes_read > 0 {
-            self.waiters.notify_events(FdEvents::POLLOUT);
-        }
-
-        Ok(info)
-    }
-
-    /// Reads all the available messages out of this socket.
-    ///
-    /// An empty vector is returned if no data is immediately available.
-    /// An `Err` is returned if the socket was shutdown.
-    pub fn read_kernel(&mut self) -> Result<Vec<Message>, Errno> {
-        let bytes_read = self.messages.len();
-        let messages = self.messages.take_messages();
-
-        // Only signal a broken pipe once the messages have been drained.
-        if messages.is_empty() && self.is_shutdown {
-            return error!(EPIPE);
-        }
-
-        if bytes_read > 0 {
-            self.waiters.notify_events(FdEvents::POLLOUT);
-        }
-
-        Ok(messages)
-    }
-
-    /// Writes the the contents of `UserBufferIterator` into this socket.
-    ///
-    /// # Parameters
-    /// - `task`: The task to read memory from.
-    /// - `user_buffers`: The `UserBufferIterator` to read the data from.
-    /// - `ancillary_data`: Any ancillary data to write to the socket. Note that the ancillary data
-    ///                     will only be written if the entirety of the requested write completes.
-    ///
-    /// Returns the number of bytes that were written to the socket.
-    fn write(
-        &mut self,
-        task: &Task,
-        user_buffers: &mut UserBufferIterator<'_>,
-        address: Option<SocketAddress>,
-        ancillary_data: &mut Vec<AncillaryData>,
-        socket_type: SocketType,
-    ) -> Result<usize, Errno> {
-        if self.is_shutdown {
-            return error!(EPIPE);
-        }
-        let bytes_written = if socket_type == SocketType::Stream {
-            self.messages.write_stream(task, user_buffers, address, ancillary_data)?
-        } else {
-            self.messages.write_datagram(task, user_buffers, address, ancillary_data)?
-        };
-        if bytes_written > 0 {
-            self.waiters.notify_events(FdEvents::POLLIN);
-        }
-        Ok(bytes_written)
-    }
-
-    /// Writes the provided message into this socket. If the write succeeds, all the bytes were
-    /// written.
-    ///
-    /// # Parameters
-    /// - `message`: The message to write.
-    ///
-    /// Returns an error if the socket is not connected.
-    fn write_kernel(&mut self, message: Message) -> Result<(), Errno> {
-        if self.is_shutdown {
-            return error!(EPIPE);
-        }
-
-        let bytes_written = message.data.len();
-        self.messages.write_message(message);
-
-        if bytes_written > 0 {
-            self.waiters.notify_events(FdEvents::POLLIN);
-        }
-
-        Ok(())
-    }
-
-    fn shutdown_one_end(&mut self) {
-        self.is_shutdown = true;
-        self.waiters.notify_events(FdEvents::POLLIN | FdEvents::POLLOUT | FdEvents::POLLHUP);
-    }
-
-    fn query_events(&self) -> FdEvents {
-        let mut present_events = FdEvents::empty();
-        let local_events = self.messages.query_events();
-        if local_events & FdEvents::POLLIN {
-            present_events = FdEvents::POLLIN;
-        }
-
-        match &self.state {
-            SocketState::Listening(queue) => {
-                if queue.sockets.len() > 0 {
-                    present_events |= FdEvents::POLLIN;
-                }
-            }
-            SocketState::Closed => {
-                present_events |= FdEvents::POLLHUP;
-            }
-            _ => {}
-        }
-
-        present_events
-    }
-}
-
-struct AcceptQueue {
-    sockets: VecDeque<SocketHandle>,
-    backlog: usize,
+pub struct AcceptQueue {
+    pub sockets: VecDeque<SocketHandle>,
+    pub backlog: usize,
 }
 
 impl AcceptQueue {
-    fn new(backlog: usize) -> AcceptQueue {
+    pub fn new(backlog: usize) -> AcceptQueue {
         AcceptQueue { sockets: VecDeque::with_capacity(backlog), backlog }
     }
 
-    fn set_backlog(&mut self, backlog: usize) -> Result<(), Errno> {
+    pub fn set_backlog(&mut self, backlog: usize) -> Result<(), Errno> {
         if self.sockets.len() > backlog {
             return error!(EINVAL);
         }
         self.backlog = backlog;
         Ok(())
-    }
-}
-
-struct ConnectionedSocket;
-
-impl ConnectionedSocket {
-    fn new() -> Box<dyn SocketOps> {
-        Box::new(ConnectionedSocket)
-    }
-}
-
-impl SocketOps for ConnectionedSocket {
-    /// Initiate a connection from this socket to the given server socket.
-    ///
-    /// The given `socket` must be in a listening state.
-    ///
-    /// If there is enough room the listening socket's queue of incoming connections, this socket
-    /// is connected to a new socket, which is placed in the queue for the listening socket to
-    /// accept.
-    ///
-    /// Returns an error if the connection cannot be established (e.g., if one of the sockets is
-    /// already connected).
-    fn connect(
-        &self,
-        socket: &SocketHandle,
-        peer: &SocketHandle,
-        credentials: ucred,
-    ) -> Result<(), Errno> {
-        // Only hold one lock at a time until we make sure the lock ordering is right: client
-        // before listener
-        match peer.lock().state {
-            SocketState::Listening(_) => {}
-            _ => return error!(ECONNREFUSED),
-        }
-        let mut client = socket.lock();
-        match client.state {
-            SocketState::Disconnected => {}
-            SocketState::Connected(_) => return error!(EISCONN),
-            _ => return error!(EINVAL),
-        };
-        let mut listener = peer.lock();
-        // Must check this again because we released the listener lock for a moment
-        let queue = match &listener.state {
-            SocketState::Listening(queue) => queue,
-            _ => return error!(ECONNREFUSED),
-        };
-
-        socket.check_type_for_connect(peer, &listener.address)?;
-
-        if queue.sockets.len() >= queue.backlog {
-            return error!(EAGAIN);
-        }
-
-        let server = Socket::new(peer.domain, peer.socket_type);
-        server.lock().messages.set_capacity(listener.messages.capacity())?;
-
-        client.state = SocketState::Connected(server.clone());
-        client.credentials = Some(credentials);
-        {
-            let mut server = server.lock();
-            server.state = SocketState::Connected(socket.clone());
-            server.address = listener.address.clone();
-        }
-
-        // We already checked that the socket is in Listening state...but the borrow checker cannot
-        // be convinced that it's ok to combine these checks
-        let queue = match listener.state {
-            SocketState::Listening(ref mut queue) => queue,
-            _ => panic!("something changed the server socket state while I held a lock on it"),
-        };
-        queue.sockets.push_back(server);
-        listener.waiters.notify_events(FdEvents::POLLIN);
-        Ok(())
-    }
-
-    /// Listen for incoming connections on this socket.
-    ///
-    /// Returns an error if the socket is not bound.
-    fn listen(&self, socket: &Socket, backlog: i32) -> Result<(), Errno> {
-        let mut inner = socket.lock();
-        let is_bound = inner.address.is_some();
-        let backlog = if backlog < 0 { 1024 } else { backlog as usize };
-        match &mut inner.state {
-            SocketState::Disconnected if is_bound => {
-                inner.state = SocketState::Listening(AcceptQueue::new(backlog));
-                Ok(())
-            }
-            SocketState::Listening(queue) => {
-                queue.set_backlog(backlog)?;
-                Ok(())
-            }
-            _ => error!(EINVAL),
-        }
-    }
-
-    /// Accept an incoming connection on this socket, with the provided credentials.
-    ///
-    /// The socket holds a queue of incoming connections. This function reads the first entry from
-    /// the queue (if any) and creates and returns the server end of the connection.
-    ///
-    /// Returns an error if the socket is not listening or if the queue is empty.
-    fn accept(&self, socket: &Socket, credentials: ucred) -> Result<SocketHandle, Errno> {
-        let mut inner = socket.lock();
-        let queue = match &mut inner.state {
-            SocketState::Listening(queue) => queue,
-            _ => return error!(EINVAL),
-        };
-        let socket = queue.sockets.pop_front().ok_or(errno!(EAGAIN))?;
-        socket.lock().credentials = Some(credentials);
-        Ok(socket)
-    }
-}
-
-struct ConnectionlessSocket;
-
-impl ConnectionlessSocket {
-    fn new() -> Box<dyn SocketOps> {
-        Box::new(ConnectionlessSocket)
-    }
-}
-
-impl SocketOps for ConnectionlessSocket {
-    fn connect(
-        &self,
-        socket: &SocketHandle,
-        peer: &SocketHandle,
-        _credentials: ucred,
-    ) -> Result<(), Errno> {
-        {
-            let peer_inner = peer.lock();
-            socket.check_type_for_connect(peer, &peer_inner.address)?;
-        }
-        socket.lock().state = SocketState::Connected(peer.clone());
-        Ok(())
-    }
-
-    fn listen(&self, _socket: &Socket, _backlog: i32) -> Result<(), Errno> {
-        error!(EOPNOTSUPP)
-    }
-
-    fn accept(&self, _socket: &Socket, _credentials: ucred) -> Result<SocketHandle, Errno> {
-        error!(EOPNOTSUPP)
     }
 }
 
@@ -976,7 +380,15 @@ mod tests {
         let (_kernel, current_task) = create_kernel_and_task();
         let bind_address = SocketAddress::Unix(b"dgram_test".to_vec());
         let rec_dgram = Socket::new(SocketDomain::Unix, SocketType::Datagram);
-        rec_dgram.lock().passcred = true;
+
+        let passcred: u32 = 1;
+        let opt_size = std::mem::size_of::<u32>();
+        let user_address = map_memory(&current_task, UserAddress::default(), opt_size as u64);
+        let opt_ref = UserRef::<u32>::new(user_address);
+        current_task.mm.write_object(opt_ref, &passcred).unwrap();
+        let opt_buf = UserBuffer { address: user_address, length: opt_size };
+        rec_dgram.setsockopt(&current_task, SOL_SOCKET, SO_PASSCRED, opt_buf).unwrap();
+
         rec_dgram.bind(bind_address).expect("failed to bind datagram socket");
 
         let xfer_value: u64 = 1234567819;

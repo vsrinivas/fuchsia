@@ -222,7 +222,11 @@ impl DirEntry {
     ) -> Result<DirEntryHandle, Errno> {
         self.create_entry(name, mode, DeviceType::NONE, || {
             let node = self.node.mknod(name, mode)?;
-            socket.bind_socket_to_node(&socket, socket_address, &node)?;
+            if let Some(unix_socket) = socket.downcast_socket::<UnixSocket>() {
+                unix_socket.bind_socket_to_node(&socket, socket_address, &node)?;
+            } else {
+                return error!(ENOTSUP);
+            }
             Ok(node)
         })
     }

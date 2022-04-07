@@ -327,10 +327,13 @@ pub fn sys_socketpair(
 ) -> Result<SyscallResult, Errno> {
     let flags = socket_type & (SOCK_NONBLOCK | SOCK_CLOEXEC);
     let domain = parse_socket_domain(domain)?;
+    if domain != SocketDomain::Unix {
+        return error!(EAFNOSUPPORT);
+    }
     let socket_type = parse_socket_type(domain, socket_type)?;
     let open_flags = socket_flags_to_open_flags(flags);
 
-    let (left, right) = Socket::new_pair(
+    let (left, right) = UnixSocket::new_pair(
         &current_task.thread_group.kernel,
         domain,
         socket_type,
