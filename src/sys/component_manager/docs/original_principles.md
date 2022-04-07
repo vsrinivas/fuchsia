@@ -62,7 +62,7 @@ violate least privilege.
 #### What's implemented today
 
 The component framework provides capability routing as the main form of access
-control. It requires every capability[^framework-exception] to be explicitly
+control. It requires every capability[*](#framework-exception) to be explicitly
 declared in a route thereby granting the capability to children. By employing
 capability routing, a parent component defines the sandboxes for its children.
 
@@ -93,20 +93,20 @@ Fuchsia, and likewise component framework, should operate
 
 #### What's implemented today
 
-Since capabilities are only[^framework-exception] provided by the parent, there
-is no global namespace from which to acquire capabilities or operate on objects.
-Example: what looks to a component like its POSIX filesystem is derived from the
-parent's declaration of the component's sandbox.
+Since capabilities are only[*](#framework-exception) provided by the parent,
+there is no global namespace from which to acquire capabilities or operate on
+objects. Example: what looks to a component like its POSIX filesystem is derived
+from the parent's declaration of the component's sandbox.
 
 Component framework, except in the case of a few privileged
-APIs,[^peer-exception] does not reveal to components the identity of their
+APIs,[*][peer-exception] does not reveal to components the identity of their
 peers. This prevents components from misusing peer identity to build ambient
 authorities.
 
 Framework capabilities are a form of limited ambient authority because any
 component can access them. However, this ambient authority is safe because the
 scope of these capabilities is limited to the component's own
-realm.[^framework-exception]
+realm.[*](#framework-exception)
 
 #### The vision that wasn't implemented
 
@@ -237,7 +237,7 @@ itself or uses from Zircon:
     memory (though they may decide to exchange [shared VMOs][docs-vmo]).
 
 Component framework does not reveal the identity of a component's
-peers.[^peer-exception]
+peers.[*](#peer-exception)
 
 #### The vision that wasn't implemented
 
@@ -554,7 +554,7 @@ descendants and not about their own ancestors.
 
 Components are, faithful, faithful to encapsulation. Parents have access to the
 identities and exposed capabilities of their children, but not to their
-grandchildren, barring some privileged APIs.[^peer-exception]
+grandchildren, barring some privileged APIs.[*](#peer-exception)
 
 As discussed in [Sandboxing](#sandboxing), there are no safeguards against
 malicious parents that would offer their children a compromised capability. This
@@ -694,7 +694,7 @@ addition, some of the existing documentation could benefit from some love. The
 examples we have are fairly basic and limited to C++ and rust. We could probably
 benefit from more sophisticated or realistic examples.
 
-### Gaps in the vision
+## Gaps in the vision
 
 The component framework provides abstractions over parts of Zircon but these
 abstractions are different than Zircon and they do not capture all the features
@@ -712,32 +712,42 @@ The component framework does little to promote compatibility with software
 written with a traditional program model. This was probably intentional, but
 it's likely we'll decide to incorporate some of these features in the future.
 
-[^framework-exception]: The framework (through component manager) does give
-    access to some capabilities not specifically granted by
-    the parent, for example: -
-    [`fuchsia.component.Realm`][fidl-realm], which allows a
-    component to control the lifecycle of its children. -
-    Component-scoped event streams, which allow components
-    to receive lifecycle events about children. - Access to
-    its own package through `/pkg`, which every component
-    gets even without having to request it -
-    [`hub`][docs-hub], which allows its client to traverse
-    part of component topology rooted at a particular realm,
-    meaning that it can observe and access the services of
-    all components within that realm.
+## Appendix
 
-    Nevertheless, thanks to the invariant that framework
-    capabilities never provide access to capabilities from
-    the containing environment, these capabilities do not
-    violate [least privilege](#least-privilege),
-    [no ambient authority](#no-ambient-authority), or
-    [encapsulation](#encapsulation).
-[^peer-exception]: There are some privileged APIs (hub, realm-scoped event
-    streams) that expose internal information about a component,
-    such as its relative moniker, URL, or outgoing directory.
-    However, these APIs are locked down and only usable by
-    non-production or specially privileged components like
-    `archivist` or `debug_data`.
+### Framework capabilities {#framework-exception}
+
+The framework (through component manager) gives access to some capabilities not
+specifically granted by the parent, for example:
+
+-   [`fuchsia.component.Realm`][fidl-realm], which
+    allows a component to control the lifecycle of its
+    children.
+-   Component-scoped event streams, which allow
+    components to receive lifecycle events about
+    children. - Access to its own package through
+    `/pkg`, which every component gets even without
+    having to request it
+-   [`hub`][docs-hub], which allows its client to
+    traverse part of component topology rooted at a
+    particular realm, meaning that it can observe and
+    access the services of all components within that
+    realm.
+
+Nevertheless, thanks to the invariant that framework
+capabilities never provide access to capabilities from
+the containing environment, these capabilities do not
+violate [least privilege](#least-privilege),
+[no ambient authority](#no-ambient-authority), or
+[encapsulation](#encapsulation).
+
+### APIs that expose peer info {#peer-exception}
+
+There are some privileged APIs (hub, realm-scoped event streams) that expose
+internal information about a component, such as its relative moniker, URL, or
+outgoing directory. However, these APIs are locked down and only usable by
+non-production or specially privileged components like `archivist` or
+`debug_data`.
+
 [^declarative-exception]: There is a limit to how much of the topology can be
     statically validated. When the exploration reaches a
     collection, in general it has to stop because the
