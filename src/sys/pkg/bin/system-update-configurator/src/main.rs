@@ -17,7 +17,7 @@ mod service;
 
 /// main() entry point to this binary that is actually a library aggregated with other binaries in
 /// the //src/sys/pkg/bin/grand-swd-binary.
-#[fuchsia::component(logging = true)]
+#[fuchsia::main(logging = true)]
 pub async fn main() -> Result<(), Error> {
     info!("starting system-update-configurator");
 

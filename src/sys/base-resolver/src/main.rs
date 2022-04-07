@@ -19,7 +19,7 @@ use {
 
 mod pkg_cache_resolver;
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() -> anyhow::Result<()> {
     info!("started");
 

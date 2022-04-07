@@ -10,7 +10,7 @@ use {
     std::sync::Arc,
 };
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     let outgoing_handle =
         fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleType::DirectoryRequest.into())
