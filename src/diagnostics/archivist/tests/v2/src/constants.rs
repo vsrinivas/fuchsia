@@ -2,13 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub const ARCHIVIST_WITH_FEEDBACK_FILTERING: &str = "#meta/archivist-with-feedback-filtering.cm";
+pub const ARCHIVIST_WITH_FEEDBACK_FILTERING: &str =
+    "fuchsia-pkg://fuchsia.com/archivist-with-feedback-filtering#meta/archivist.cm";
 pub const ARCHIVIST_WITH_FEEDBACK_FILTERING_DISABLED: &str =
-    "#meta/archivist-with-feedback-filtering-disabled.cm";
-pub const ARCHIVIST_WITH_SMALL_CACHES: &str = "#meta/archivist-with-small-caches.cm";
-pub const ARCHIVIST_WITH_LEGACY_METRICS: &str = "#meta/archivist-with-legacy-metrics-filtering.cm";
-pub const INTEGRATION_ARCHIVIST_URL: &str = "#meta/archivist.cm";
-pub const ARCHIVIST_WITH_KLOG_URL: &str = "#meta/archivist_with_klog.cm";
+    "fuchsia-pkg://fuchsia.com/archivist-with-feedback-filtering-disabled#meta/archivist.cm";
+pub const ARCHIVIST_WITH_SMALL_CACHES: &str =
+    "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/archivist-with-small-caches.cm";
+pub const ARCHIVIST_WITH_LEGACY_METRICS: &str =
+    "fuchsia-pkg://fuchsia.com/archivist-with-legacy-metrics#meta/archivist.cm";
+pub const INTEGRATION_ARCHIVIST_URL: &str =
+    "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/archivist.cm";
+pub const ARCHIVIST_WITH_KLOG_URL: &str =
+    "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/archivist_with_klog.cm";
 pub const COMPONENT_WITH_CHILDREN_URL: &str =
     "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/component_with_children.cm";
 pub const IQUERY_TEST_COMPONENT_URL: &str =

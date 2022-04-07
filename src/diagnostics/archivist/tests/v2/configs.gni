@@ -24,18 +24,3 @@ with_log_connector_config = {
   forward_variables_from(archivist_for_integration_config, "*")
   enable_log_connector = true
 }
-
-with_feedback_filtering = {
-  forward_variables_from(archivist_for_integration_config, "*")
-  pipelines_path = "/pkg/data/config/pipelines/feedback_filtered"
-}
-
-with_legacy_metrics_filtering = {
-  forward_variables_from(archivist_for_integration_config, "*")
-  pipelines_path = "/pkg/data/config/pipelines/legacy_metrics_filtered"
-}
-
-with_feedback_filtering_disabled = {
-  forward_variables_from(archivist_for_integration_config, "*")
-  pipelines_path = "/pkg/data/config/pipelines/feedback_filtering_disabled"
-}
