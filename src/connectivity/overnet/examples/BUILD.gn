@@ -48,9 +48,12 @@ fuchsia_test_component("overnet_socket_passing_test") {
   ]
 }
 
-fuchsia_unittest_component("overnet_event_pair_test") {
-  deps = [ "event_pair:component" ]
-  manifest = "meta/overnet_event_pair_test.cmx"
+fuchsia_test_component("overnet_event_pair_test") {
+  manifest = "meta/overnet-event-pair-test.cml"
+  deps = [
+    "event_pair:server",
+    "event_pair:test-driver",
+  ]
 }
 
 fuchsia_test_package("overnet-examples-tests") {
@@ -67,24 +70,9 @@ fuchsia_test_package("overnet-examples-tests") {
     "//src/connectivity/network/testing/netemul-v2/configurable-netstack",
     "//src/connectivity/overnet/overnetstack:component-with-udp",
   ]
-
-  # Dependencies for tests that use the v1 netemul runner.
-  #
-  # TODO(https://fxbug.dev/96132): remove these.
-  deps += [
-    "//src/connectivity/network/mdns/service:component-legacy",
-    "//src/connectivity/network/netstack:component-debug-legacy",
-    "//src/connectivity/network/testing/netemul/runner:mock-device-settings",
-    "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
-    "//src/connectivity/network/tests:device_name_provider",
-    "//src/connectivity/overnet/overnetstack:component-with-udp-legacy",
-  ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    ":overnet-examples-tests",
-    "//src/connectivity/network/testing/netemul/runner/runner:netemul-runner",
-  ]
+  deps = [ ":overnet-examples-tests" ]
 }

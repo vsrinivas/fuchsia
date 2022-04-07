@@ -10,7 +10,6 @@ group("event_pair") {
   deps = [
     ":bin",
     ":bin($host_toolchain)",
-    ":overnet-event-pair",
     "service",
   ]
 }
@@ -35,12 +34,14 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_component("component") {
-  component_name = "overnet_event_pair"
+fuchsia_component("test-driver") {
+  component_name = "overnet-event-pair-test-driver"
   deps = [ ":bin" ]
-  manifest = "meta/overnet_event_pair.cmx"
+  manifest = "meta/test-driver.cml"
 }
 
-fuchsia_package("overnet-event-pair") {
-  deps = [ ":component" ]
+fuchsia_component("server") {
+  component_name = "overnet-event-pair-server"
+  deps = [ ":bin" ]
+  manifest = "meta/server.cml"
 }
