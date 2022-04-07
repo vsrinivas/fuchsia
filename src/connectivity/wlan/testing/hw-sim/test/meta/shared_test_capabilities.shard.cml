@@ -9,6 +9,10 @@
             url: "#meta/stash_secure.cm",
         },
         {
+            name: "wlanstack",
+            url: "#meta/wlanstack.cm",
+        },
+        {
             name: "wlancfg",
             url: "#meta/wlancfg.cm",
         },

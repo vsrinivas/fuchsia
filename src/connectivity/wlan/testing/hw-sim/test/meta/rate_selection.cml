@@ -5,9 +5,5 @@
             name: "test_driver",
             url: "fuchsia-pkg://fuchsia.com/rate-selection#meta/rate-selection-driver.cm",
         },
-        {
-            name: "wlanstack",
-            url: "#meta/wlanstack.cm",
-        },
     ],
 }

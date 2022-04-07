@@ -3,11 +3,7 @@
     children: [
         {
             name: "test_driver",
-            url: "fuchsia-pkg://fuchsia.com/wlan-hw-sim-test#meta/set-country-driver.cm",
-        },
-        {
-            name: "wlanstack",
-            url: "#meta/wlanstack.cm",
+            url: "#meta/set-country-driver.cm",
         },
     ],
 }

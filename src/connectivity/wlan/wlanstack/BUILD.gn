@@ -25,6 +25,7 @@ rustc_binary("bin") {
 
   deps = [
     ":wlan_metrics_registry_rustlib",
+    ":wlanstack_config",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -105,15 +106,6 @@ fuchsia_component("wlanstack-comp") {
   ]
 }
 
-fuchsia_component("wlanstack-legacy-privacy-comp") {
-  component_name = "wlanstack-legacy-privacy"
-  manifest = "meta/wlanstack_legacy_privacy.cml"
-  deps = [
-    ":bin",
-    ":wlan_metrics_registry",
-  ]
-}
-
 fuchsia_structured_config_values("wlanstack-values") {
   cm_label = ":wlanstack-manifest"
   values = {
@@ -130,17 +122,23 @@ fuchsia_structured_config_values("wlanstack-legacy-privacy-values") {
   }
 }
 
+fuchsia_structured_config_rust_lib("wlanstack_config") {
+  cm_label = ":wlanstack-manifest"
+}
+
 fuchsia_package("wlanstack") {
   deps = [
     ":wlanstack-comp",
-    ":wlanstack-legacy-privacy-comp",
     ":wlanstack-values",
   ]
 }
 
 fuchsia_package("wlanstack-legacy-privacy") {
   package_name = "wlanstack"
-  deps = [ ":wlanstack-legacy-privacy-comp" ]
+  deps = [
+    ":wlanstack-comp",
+    ":wlanstack-legacy-privacy-values",
+  ]
 }
 
 core_shard("wlanstack-core-shard") {

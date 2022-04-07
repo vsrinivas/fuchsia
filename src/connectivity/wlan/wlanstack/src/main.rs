@@ -27,6 +27,7 @@ use futures::prelude::*;
 use log::info;
 use std::sync::Arc;
 use wlan_sme;
+use wlanstack_config;
 
 use crate::device::IfaceMap;
 
@@ -53,18 +54,26 @@ impl From<ServiceCfg> for wlan_sme::Config {
     }
 }
 
+impl From<wlanstack_config::Config> for ServiceCfg {
+    fn from(cfg: wlanstack_config::Config) -> Self {
+        Self { wep_supported: cfg.wep_supported, wpa1_supported: cfg.wpa1_supported }
+    }
+}
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     // Initialize logging with a tag that can be used to select these logs for forwarding to console
     syslog::init_with_tags(&["wlan"]).expect("Syslog init should not fail");
 
     info!("Starting");
-    let cfg: ServiceCfg = argh::from_env();
-    info!("{:?}", cfg);
 
     let mut fs = ServiceFs::new_local();
     let inspector = Inspector::new_with_size(inspect::VMO_SIZE_BYTES);
     inspect_runtime::serve(&inspector, &mut fs)?;
+
+    let cfg: ServiceCfg =
+        wlanstack_config::Config::from_args().record_to_inspect(inspector.root()).into();
+    info!("{:?}", cfg);
 
     let persistence_proxy = fuchsia_component::client::connect_to_protocol_at_path::<
         fidl_fuchsia_diagnostics_persist::DataPersistenceMarker,
@@ -134,32 +143,4 @@ async fn serve_fidl(
     });
     fdio_server.await;
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parse_svc_cfg_wep() {
-        let cfg = ServiceCfg::from_args(&["bin/app"], &["--wep-supported"]).unwrap();
-        assert!(cfg.wep_supported);
-    }
-
-    #[test]
-    fn parse_svc_cfg_default() {
-        let cfg = ServiceCfg::from_args(&["bin/app"], &[]).unwrap();
-        assert!(!cfg.wep_supported);
-    }
-
-    #[test]
-    fn svc_to_sme_cfg() {
-        let svc_cfg = ServiceCfg::from_args(&["bin/app"], &[]).unwrap();
-        let sme_cfg: wlan_sme::Config = svc_cfg.into();
-        assert!(!sme_cfg.wep_supported);
-
-        let svc_cfg = ServiceCfg::from_args(&["bin/app"], &["--wep-supported"]).unwrap();
-        let sme_cfg: wlan_sme::Config = svc_cfg.into();
-        assert!(sme_cfg.wep_supported);
-    }
 }

@@ -243,9 +243,47 @@ shared_deps = [
   "//src/connectivity/wlan/wlancfg:service",
   "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor_component",
   "//src/connectivity/wlan/wlanstack:wlanstack-comp",
-  "//src/connectivity/wlan/wlanstack:wlanstack-legacy-privacy-comp",
-  "//src/connectivity/wlan/wlanstack:wlanstack-values",
   "//src/sys/stash:stash_secure_v2",
+]
+
+hw_sim_test_components_for_all_privacies = [
+  ":connect-to-open-network",
+  ":connect-to-wpa2-network",
+  ":connect-to-wpa3-network",
+  ":connect-with-failed-association",
+  ":connect-with-wrong-credential-type",
+  ":ethernet-tx-rx",
+  ":handle-tx-event-hooks",
+  ":multi-ifaces",
+  ":multiple-clients-ap",
+  ":open-ap-connect",
+  ":reconnect-to-wpa2-network",
+  ":run-without-regulatory-manager",
+  ":set-country",
+  ":sim-client-vs-sim-ap",
+  ":simulate-scan",
+  ":verify-ethernet",
+  ":verify-wlan-inspect",
+]
+
+hw_sim_deps_for_all_privacies = [
+  ":connect-to-open-network-driver",
+  ":connect-to-wpa2-network-driver",
+  ":connect-to-wpa3-network-driver",
+  ":connect-with-failed-association-driver",
+  ":connect-with-wrong-credential-type-driver",
+  ":ethernet-tx-rx-driver",
+  ":handle-tx-event-hooks-driver",
+  ":multi-ifaces-driver",
+  ":multiple-clients-ap-driver",
+  ":open-ap-connect-driver",
+  ":reconnect-to-wpa2-network-driver",
+  ":run-without-regulatory-manager-driver",
+  ":set-country-driver",
+  ":sim-client-vs-sim-ap-driver",
+  ":simulate-scan-driver",
+  ":verify-ethernet-driver",
+  ":verify-wlan-inspect-driver",
 ]
 
 fuchsia_test_package("wlan-hw-sim-test") {
@@ -254,52 +292,35 @@ fuchsia_test_package("wlan-hw-sim-test") {
       max_severity = "ERROR"
     }
   }
-  test_components = [
-    ":configure-legacy-privacy-off",
-    ":connect-to-wpa2-network",
-    ":connect-to-wpa3-network",
-    ":connect-with-failed-association",
-    ":connect-with-wrong-credential-type",
-    ":ethernet-tx-rx",
-    ":handle-tx-event-hooks",
-    ":multi-ifaces",
-    ":multiple-clients-ap",
-    ":open-ap-connect",
-    ":reconnect-to-wpa2-network",
-    ":run-without-regulatory-manager",
-    ":set-country",
-    ":sim-client-vs-sim-ap",
-    ":simulate-scan",
-    ":verify-ethernet",
-    ":verify-wlan-inspect",
-    ":configure-legacy-privacy-on",
-    ":connect-to-open-network",
-    ":connect-to-wpa1-network",
-    ":connect-with-bad-password",
-  ]
+  test_components = [ ":configure-legacy-privacy-off" ]
+  test_components += hw_sim_test_components_for_all_privacies
   deps = [
     ":configure-legacy-privacy-off-driver",
-    ":configure-legacy-privacy-on-driver",
-    ":connect-to-open-network-driver",
-    ":connect-to-wpa1-network-driver",
-    ":connect-to-wpa2-network-driver",
-    ":connect-to-wpa3-network-driver",
-    ":connect-with-bad-password-driver",
-    ":connect-with-failed-association-driver",
-    ":connect-with-wrong-credential-type-driver",
-    ":ethernet-tx-rx-driver",
-    ":handle-tx-event-hooks-driver",
-    ":multi-ifaces-driver",
-    ":multiple-clients-ap-driver",
-    ":open-ap-connect-driver",
-    ":reconnect-to-wpa2-network-driver",
-    ":run-without-regulatory-manager-driver",
-    ":set-country-driver",
-    ":sim-client-vs-sim-ap-driver",
-    ":simulate-scan-driver",
-    ":verify-ethernet-driver",
-    ":verify-wlan-inspect-driver",
+    "//src/connectivity/wlan/wlanstack:wlanstack-values",
   ]
+  deps += hw_sim_deps_for_all_privacies
+  deps += shared_deps
+}
+
+fuchsia_test_package("wlan-hw-sim-test-legacy-privacy") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  test_components = [
+    ":connect-with-bad-password",
+    ":connect-to-wpa1-network",
+    ":configure-legacy-privacy-on",
+  ]
+  test_components += hw_sim_test_components_for_all_privacies
+  deps = [
+    ":configure-legacy-privacy-on-driver",
+    ":connect-to-wpa1-network-driver",
+    ":connect-with-bad-password-driver",
+    "//src/connectivity/wlan/wlanstack:wlanstack-legacy-privacy-values",
+  ]
+  deps += hw_sim_deps_for_all_privacies
   deps += shared_deps
 }
 
@@ -325,7 +346,10 @@ fuchsia_test_package("rate-selection-package") {
   }
 
   test_components = [ ":rate-selection" ]
-  deps = [ ":rate-selection-driver" ]
+  deps = [
+    ":rate-selection-driver",
+    "//src/connectivity/wlan/wlanstack:wlanstack-values",
+  ]
   deps += shared_deps
 }
 
@@ -334,5 +358,6 @@ group("tests") {
   deps = [
     ":rate-selection-package",
     ":wlan-hw-sim-test",
+    ":wlan-hw-sim-test-legacy-privacy",
   ]
 }
