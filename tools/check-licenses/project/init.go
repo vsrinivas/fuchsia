@@ -6,7 +6,6 @@ package project
 
 import (
 	"io/fs"
-	"log"
 	"path/filepath"
 )
 
@@ -53,10 +52,7 @@ func initializeReadmes() error {
 					}
 
 					if _, err := NewProject(currentPath, projectRoot); err != nil {
-						// Don't error out with these custom README.fuchsia files, so we don't break rollers.
-						log.Printf("Found issue with custom README.fuchsia file: %v: %v\n", currentPath, err)
-
-						return nil
+						return err
 					}
 				}
 				return nil

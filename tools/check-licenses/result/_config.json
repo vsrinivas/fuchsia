@@ -1,7 +1,7 @@
 {
     "result": {
         "fuchsiaDir": "{FUCHSIA_DIR}",
-        "outDir": "{OUT_DIR}",
+        "outputdir": "{OUT_DIR}",
         "outputs": [
             "summary.csv",
             "summary_diff.csv",
@@ -9,8 +9,7 @@
             "license_texts_grouped_by_project_deduped.txt",
             "license_all_grouped_by_license_pattern_deduped.txt",
             "license_meta_grouped_by_license_pattern_deduped.txt",
-            "license_texts_grouped_by_license_pattern_deduped.txt",
-            "license_texts_grouped_by_license_pattern_deduped.html"
+            "license_texts_grouped_by_license_pattern_deduped.txt"
         ],
         "templates": [
             {

@@ -6,7 +6,7 @@ package checklicenses
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"runtime/trace"
 	"time"
 
@@ -15,57 +15,54 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/license"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/project"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/result"
-	"go.fuchsia.dev/fuchsia/tools/check-licenses/result/world"
 )
 
 func Execute(ctx context.Context, config *CheckLicensesConfig) error {
 	start := time.Now()
 
 	startInitialize := time.Now()
-	log.Print("Initializing... ")
+	fmt.Print("Initializing... ")
 	if err := initialize(config); err != nil {
-		log.Println("Error!")
+		fmt.Println("Error!")
 		return err
 	}
-	log.Printf("Done. [%v]\n", time.Since(startInitialize))
+	fmt.Printf("Done. [%v]\n", time.Since(startInitialize))
 
 	r := trace.StartRegion(ctx, "filetree.NewFileTree("+config.Target+")")
 	startFileTree := time.Now()
-	log.Print("Discovering files and folders... ")
+	fmt.Print("Discovering files and folders... ")
 	_, err := filetree.NewFileTree(config.Target, nil)
 	if err != nil {
-		log.Println("Error!")
+		fmt.Println("Error!")
 		return err
 	}
-	log.Printf("Done. [%v]\n", time.Since(startFileTree))
+	fmt.Printf("Done. [%v]\n", time.Since(startFileTree))
 	r.End()
 
 	r = trace.StartRegion(ctx, "project.AnalyzeLicenses")
 	startAnalyze := time.Now()
-	log.Printf("Searching for license texts [%v projects]... ", len(project.AllProjects))
+	fmt.Printf("Searching for license texts [%v projects]... ", len(project.AllProjects))
 	err = project.AnalyzeLicenses()
 	if err != nil {
-		log.Println("Error!")
+		fmt.Println("Error!")
 		return err
 	}
-
-	log.Printf("Done. [%v]\n", time.Since(startAnalyze))
+	fmt.Printf("Done. [%v]\n", time.Since(startAnalyze))
 	r.End()
 
 	r = trace.StartRegion(ctx, "result.SaveResults")
 	startSaveResults := time.Now()
-
-	log.Print("Saving results... ")
+	fmt.Print("Saving results... ")
 	var s string
 	s, err = result.SaveResults()
 	if err != nil {
 		return err
 	}
-	log.Printf("Done. [%v]\n", time.Since(startSaveResults))
+	fmt.Printf("Done. [%v]\n", time.Since(startSaveResults))
 	r.End()
 
-	log.Printf("\nTotal runtime: %v\n============\n", time.Since(start))
-	log.Println(s)
+	fmt.Printf("\nTotal runtime: %v\n============\n", time.Since(start))
+	fmt.Println(s)
 	return nil
 }
 
@@ -83,9 +80,6 @@ func initialize(c *CheckLicensesConfig) error {
 		return err
 	}
 	if err := result.Initialize(c.Result); err != nil {
-		return err
-	}
-	if err := world.Initialize(c.World); err != nil {
 		return err
 	}
 

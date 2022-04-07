@@ -15,11 +15,11 @@ import (
 
 // Generate output files for every template defined in the config file.
 func expandTemplates() (string, error) {
-	if Config.OutDir == "" {
+	if Config.OutputDir == "" {
 		return "", nil
 	}
 
-	outDir := filepath.Join(Config.OutDir, "out")
+	outDir := filepath.Join(Config.OutputDir, "out")
 	if _, err := os.Stat(outDir); os.IsNotExist(err) {
 		err := os.Mkdir(outDir, 0755)
 		if err != nil {

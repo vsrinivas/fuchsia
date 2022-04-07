@@ -35,8 +35,8 @@ func AnalyzeLicenses() error {
 		}
 
 		// Analyze the copyright headers in the files in each project.
-		sort.Sort(file.Order(p.SearchableFiles))
-		for _, f := range p.SearchableFiles {
+		sort.Sort(file.Order(p.Files))
+		for _, f := range p.Files {
 			if len(f.Text) == 0 {
 				continue
 			}

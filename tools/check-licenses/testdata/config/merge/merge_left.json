@@ -1,0 +1,15 @@
+{
+  "skipFiles": ["a", "b", "c"],
+  "skipDirs": ["1", "2", "3"],
+  "stopLicensePropagation": ["a", "b", "c"],
+  "strictTextExtensionList": ["1", "2", "3"],
+  "textExtensionList": ["a", "b", "c"],
+  "prohibitedLicenseTypes" :["1", "2", "3"],
+  "outputFilePrefix": "NOTICE",
+  "outputFileExtensions": ["txt.gz"],
+  "singleLicenseFiles": ["a", "b", "c"],
+  "licensePatternDir": "tools/check-licenses/golden/patterns",
+  "baseDir": ".",
+  "target": "all",
+  "logLevel": "verbose"
+}

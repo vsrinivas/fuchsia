@@ -22,7 +22,6 @@ type Project struct {
 	Root            string
 	ReadmePath      string
 	Files           []*file.File
-	SearchableFiles []*file.File
 	LicenseFileType file.FileType
 	RegularFileType file.FileType
 	CustomFields    []string
@@ -237,16 +236,16 @@ func (p *Project) AddFiles(filepaths []string) error {
 			continue
 		}
 
+		ext := filepath.Ext(path)
+		if _, ok := file.Config.Extensions[ext]; !ok {
+			continue
+		}
+
 		f, err := file.NewFile(path, p.RegularFileType)
 		if err != nil {
 			return err
 		}
 		p.Files = append(p.Files, f)
-
-		ext := filepath.Ext(path)
-		if _, ok := file.Config.Extensions[ext]; ok {
-			p.SearchableFiles = append(p.SearchableFiles, f)
-		}
 	}
 	return nil
 }

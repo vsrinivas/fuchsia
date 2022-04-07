@@ -1,0 +1,23 @@
+{
+  "skipFiles": [],
+  "skipDirs": [],
+  "stopLicensePropagation": [],
+  "strictTextExtensionList": [],
+  "textExtensionList": [],
+  "maxReadSize": 6144,
+  "prohibitedLicenseTypes" :[],
+  "exitOnProhibitedLicenseTypes": true,
+  "exitOnUnlicensedFiles": true,
+  "strictAnalysis": true,
+  "outputLicenseFile": true,
+  "outputFilePrefix": "NOTICE",
+  "outputFileExtensions": [
+      "html.gz"
+  ],
+  "singleLicenseFiles": [],
+  "customProjectLicenses" : [],
+  "licensePatternDir": "tools/check-licenses/golden/patterns",
+  "baseDir": ".",
+  "target": "all",
+  "logLevel": "verbose"
+}

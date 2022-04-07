@@ -1,6 +1,5 @@
 {
     "target": "{FUCHSIA_DIR}",
-    "outputdir": "{OUT_DIR}",
     "includes": [
         {
             "paths": [
@@ -8,7 +7,6 @@
                 "{FUCHSIA_DIR}/tools/check-licenses/license/_config.json",
                 "{FUCHSIA_DIR}/tools/check-licenses/project/_config.json",
                 "{FUCHSIA_DIR}/tools/check-licenses/result/_config.json",
-                "{FUCHSIA_DIR}/tools/check-licenses/result/world/_config.json",
                 "{FUCHSIA_DIR}/tools/check-licenses/file/_config.json"
             ],
             "notes": [

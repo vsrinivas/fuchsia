@@ -109,7 +109,6 @@ func (gn *Gn) Gen(ctx context.Context) (*GnDeps, error) {
 	args := []string{
 		"gen",
 		gn.outDir,
-		"--all",
 		"--ide=json",
 	}
 
@@ -139,6 +138,7 @@ func (gn *Gn) Gen(ctx context.Context) (*GnDeps, error) {
 		return nil, fmt.Errorf("Failed to unmarshal project.json file [%v]: %v\n", projectFile, err)
 	}
 	return gnDeps, nil
+
 }
 
 // Converts a GN label string (such as those returned by Dependencies) and strips any target names
@@ -183,5 +183,6 @@ func isDir(str string) bool {
 	if os.IsNotExist(err) {
 		return false
 	}
+	fmt.Printf("something weird happened: %v\n", err)
 	return false
 }

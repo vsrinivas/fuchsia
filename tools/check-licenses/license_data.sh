@@ -8,4 +8,4 @@ shift 1
 readonly tool="$1"
 shift 1
 
-"${tool}" $*
+"${tool}" --base_dir ${dir} $*

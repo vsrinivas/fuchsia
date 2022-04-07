@@ -6,7 +6,6 @@ package world
 
 import (
 	"sort"
-	"strings"
 )
 
 // Group the license texts based on the patterns that they matched.
@@ -46,15 +45,6 @@ type ProjectMap struct {
 	// Sorted lists to produce deterministic results.
 	SortedNames []string
 	SortedPaths []string
-}
-
-func (pm *ProjectMap) LicenseTextHTML() string {
-	result := string(pm.LicenseText)
-	result = strings.ReplaceAll(result, "<", "&lt;")
-	result = strings.ReplaceAll(result, ">", "&gt;")
-	result = strings.ReplaceAll(result, "&", "&amp;")
-	result = strings.ReplaceAll(result, `"`, "&quot;")
-	return result
 }
 
 func NewProjectMap(data []byte) *ProjectMap {

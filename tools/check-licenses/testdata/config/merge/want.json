@@ -1,0 +1,23 @@
+{
+  "skipFiles": ["a", "b", "c", "d", "e", "f"],
+  "skipDirs": ["1", "2", "3", "4", "5", "6"],
+  "stopLicensePropagation": ["a", "b", "c", "d", "e", "f"],
+  "strictTextExtensionList": ["1", "2", "3", "4", "5", "6"],
+  "textExtensionList": ["a", "b", "c", "d", "e", "f"],
+  "maxReadSize": 6144,
+  "prohibitedLicenseTypes" :["1", "2", "3", "4", "5", "6"],
+  "exitOnProhibitedLicenseTypes": true,
+  "exitOnUnlicensedFiles": true,
+  "strictAnalysis": true,
+  "outputLicenseFile": true,
+  "outputFilePrefix": "NOTICE",
+  "outputFileExtensions": ["txt.gz", "html.gz"],
+  "singleLicenseFiles": ["a", "b", "c", "d", "e", "f"],
+  "licensePatternDir": "tools/check-licenses/golden/patterns",
+  "licenseAllowList": {},
+  "baseDir": ".",
+  "outDir": ".",
+  "buildDir": "out/default",
+  "target": "all",
+  "logLevel": "verbose"
+}
