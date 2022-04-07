@@ -8,6 +8,8 @@
 toc:
 - title: "Overview"
   path: /docs/concepts/ui/index.md
+- title: "User interface client"
+  path: /docs/concepts/ui/ui-client.md
 - title: "Scenic"
   section:
   - title: "Overview"
