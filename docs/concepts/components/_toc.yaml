@@ -49,8 +49,6 @@ toc:
       path: /docs/concepts/components/diagnostics/logs/attribution.md
 - title: "Internals"
   section:
-  - title: "Component Framework design principles"
-    path: /docs/concepts/components/v2/design_principles.md
   - title: "Component manifest design principles"
     path: /docs/contribute/governance/rfcs/0093_component_manifest_design_principles.md
 - title: "Analogies and Comparisons"

@@ -42,7 +42,6 @@ modern component framework. For details on legacy components, see
 
 ## Internals
 
--   [Component Framework design principles](design_principles.md)
 -   [Component manifest design principles][rfc0093]
 -   [Components vs. processes](components_vs_processes.md): how the concepts
     differ.

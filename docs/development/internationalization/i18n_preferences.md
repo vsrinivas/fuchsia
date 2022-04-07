@@ -117,8 +117,8 @@ requirements, or some combination of the above.
 Fuchsia has no ambient or system locale. Locale and other i18n preferences
 depend on the context in which a component is running. This is in contrast to
 other operating systems, which may have APIs to obtain global or default locale
-settings. See Fuchsia's design principle of
-[no ambient authority](/docs/concepts/components/v2/design_principles.md#no-ambient-authority).
+settings, following Fuchsia's design principle of
+[no ambient authority](/docs/concepts/principles/secure.md)
 
 In runtimes where the standard library offers access to some default locale (for
 example, `Platform.localeName` in Dart and Flutter), it is the responsibility of

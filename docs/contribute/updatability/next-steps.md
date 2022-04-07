@@ -78,11 +78,11 @@ The legacy Component Framework (`appmgr`) supported
 [sandbox features][cmx-sandbox] that allowed access to certain global namespaces
 and would expose components to platform implementation details that had no
 affordances for updatability such as versioning or transition support. The new
-Component Framework either enforces [isolation][cf-design-isolation] or forbids
+Component Framework either enforces [isolation][principles-secure] or forbids
 access to these namespaces entirely. For instance the [hub] becomes
 hierarchically contained, only offering information about the component’s realm
 and its children but never of its parent, since a global hub is a form of
-[ambient authority][cf-design-ambient].
+[ambient authority][principles-secure].
 
 The [components v2 migration][cfv2-migration] is an ongoing multi-year effort.
 Currently the team is focused on
@@ -209,8 +209,6 @@ even if CTS coverage never reaches 100% of the platform surface.
 [build-info]: /docs/development/build/build_information.md
 [build-info-old]: https://fuchsia.googlesource.com/fuchsia/+/1b21e5d7b36df3f5dde647684dd321f1aee21372/docs/development/build/build_information.md
 [capabilities]: /docs/concepts/components/v2/capabilities/README.md
-[cf-design-ambient]: /docs/concepts/components/v2/design_principles.md#no-ambient-authority
-[cf-design-isolation]: /docs/concepts/components/v2/design_principles.md#isolation
 [cf-intro]: /docs/concepts/components/v2/introduction.md
 [cfv2-migration]: /docs/contribute/open_projects/components/migration.md
 [cfv2-sys-migration]: /docs/development/components/v2/migration/README.md
@@ -252,5 +250,6 @@ even if CTS coverage never reaches 100% of the platform surface.
 [topology]: /docs/concepts/components/v2/topology.md
 [tracing]: /docs/concepts/kernel/tracing-system.md
 [trf]: /docs/development/testing/components/test_runner_framework.md
+[principles-secure]: /docs/concepts/principles/secure.md
 [workstation-oot]: /docs/contribute/roadmap/2021/workstation_out_of_tree.md
 [zx-object-get-info]: /docs/reference/syscalls/object_get_info.md

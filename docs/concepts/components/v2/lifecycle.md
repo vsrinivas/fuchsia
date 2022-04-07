@@ -6,8 +6,8 @@ Component instances progress through four major lifecycle events: create, start,
 stop, destroy and purge.
 
 Component instances may retain isolated persistent state on a storage medium
-while they are not running, which helps them maintain the
-[illusion of continuity][principle-continuity] across restarts.
+while they are not running, which can be used to help them maintain continuity
+across restarts.
 
 ## Creating a component instance {#creating}
 
@@ -54,9 +54,10 @@ Note: For more details on running components during development, see
 Starting a component instance loads and runs the component's program and
 provides it access to the capabilities that it requires.
 
-[Every component runs for a reason][principle-accountability]. The component
-framework only starts a component instance when it has work to do, such as when
-another component requests to use its instance's capabilities.
+The most common reason for starting a component instance is when another
+component requests to use one of its instance's exposed capabilities. However,
+there are other ways to start a component, such as the
+[`ffx component start`][ref-ffx-start] command.
 
 Once started, a component instance continues to run until it is
 [stopped](#stopping).
@@ -153,7 +154,6 @@ fx list-packages --base
 [doc-topology]: topology.md
 [doc-run]: /docs/development/components/run.md
 [handler-example]: /examples/components/lifecycle
-[principle-accountability]: design_principles.md#accountability
-[principle-continuity]: design_principles.md#illusion-of-continuity
 [realm.fidl]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#Realm
+[ref-start]: /docs/reference/tools/sdk/ffx#start
 [binder.fidl]: https://fuchsia.dev/reference/fidl/fuchsia.component#Binder
