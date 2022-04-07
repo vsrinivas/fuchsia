@@ -2,9 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//src/proc/bin/galaxies/galaxy.gni")
 
 starnix_galaxy_package("stardroid_test") {
   config = "config.json5"
   system_image = "//prebuilt/starnix/android-image-amd64/system.img"
+  deps = [ ":testcases_image" ]
+}
+
+# The filesystem image containing tests built in the Android tree but not included in the system
+# image.
+resource("testcases_image") {
+  sources = [ "//prebuilt/starnix/android-image-amd64/starnix_testcases.img" ]
+  outputs = [ "data/testcases.img" ]
 }

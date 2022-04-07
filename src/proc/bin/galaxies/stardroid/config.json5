@@ -17,6 +17,8 @@
         "/data/tmp:tmpfs",
         "/dev/pts:devpts",
         "/proc:proc",
+        "/sys:sysfs",
+        "/sys/fs/selinux:selinuxfs",
     ],
     name: "stardroid",
     startup_file_path: "",

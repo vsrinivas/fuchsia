@@ -43,7 +43,7 @@ pub async fn start_component(
     mut start_info: ComponentStartInfo,
     controller: ServerEnd<ComponentControllerMarker>,
 ) -> Result<(), Error> {
-    let galaxy = create_galaxy(&mut start_info.outgoing_dir)?;
+    let galaxy = create_galaxy(&mut start_info.outgoing_dir).context("failed to create galaxy")?;
     info!(
         "start_component: {}\narguments: {:?}\nmanifest: {:?}",
         start_info.resolved_url.clone().unwrap_or("<unknown>".to_string()),

@@ -11,6 +11,8 @@ import("//build/components.gni")
 # `config` (required, string): path to a JSON configuration file.
 #
 # `system_image` (optional, string): path to a system image file for the galaxy.
+#
+# `deps` (optional, list of targets): additional dependencies.
 template("starnix_galaxy_package") {
   assert(defined(invoker.config),
          "must define `config` as a path to JSON file with startup config")
@@ -69,6 +71,9 @@ template("starnix_galaxy_package") {
     ]
     if (has_system_image) {
       deps += [ ":${system_image_target}" ]
+    }
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
     }
   }
 }

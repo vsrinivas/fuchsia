@@ -1,0 +1,6 @@
+{
+    include: [ "//src/proc/tests/android/stardroid_test.shard.cml" ],
+    program: {
+        binary: "data/tests/binderLibTestLauncher.sh",
+    },
+}
