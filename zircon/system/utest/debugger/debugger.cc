@@ -227,16 +227,15 @@ TEST(DebuggerTests, DebuggerThreadListTest) {
 TEST(DebuggerTests, PropertyProcessDebugAddrTest) {
   zx_handle_t self = zx_process_self();
 
-  // We shouldn't be able to set it.
-  uintptr_t debug_addr = 42;
-  zx_status_t status =
-      zx_object_set_property(self, ZX_PROP_PROCESS_DEBUG_ADDR, &debug_addr, sizeof(debug_addr));
-  ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED);
-
   // Some minimal verification that the value is correct.
-
-  status =
+  uintptr_t debug_addr;
+  zx_status_t status =
       zx_object_get_property(self, ZX_PROP_PROCESS_DEBUG_ADDR, &debug_addr, sizeof(debug_addr));
+  ASSERT_EQ(status, ZX_OK);
+
+  // DEBUG_ADDR can be set multiple times.
+  status =
+      zx_object_set_property(self, ZX_PROP_PROCESS_DEBUG_ADDR, &debug_addr, sizeof(debug_addr));
   ASSERT_EQ(status, ZX_OK);
 
   // These are all dsos we link with. See BUILD.gn.
