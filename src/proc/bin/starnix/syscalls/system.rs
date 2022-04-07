@@ -50,6 +50,28 @@ pub fn sys_getrandom(
     Ok(size)
 }
 
+pub fn sys_reboot(
+    current_task: &CurrentTask,
+    magic: u32,
+    magic2: u32,
+    cmd: u32,
+    _arg: UserAddress,
+) -> Result<SyscallResult, Errno> {
+    if magic != LINUX_REBOOT_MAGIC1
+        || (magic2 != LINUX_REBOOT_MAGIC2
+            && magic2 != LINUX_REBOOT_MAGIC2A
+            && magic2 != LINUX_REBOOT_MAGIC2B
+            && magic2 != LINUX_REBOOT_MAGIC2C)
+    {
+        return error!(EINVAL);
+    }
+    if !current_task.has_capability(CAP_SYS_BOOT) {
+        return error!(EPERM);
+    }
+    // TODO(tbodt): only shut down the current Kernel rather than panicking the entire process
+    panic!("starnix reboot({:#x})", cmd);
+}
+
 pub fn sys_clock_getres(
     current_task: &CurrentTask,
     which_clock: i32,
