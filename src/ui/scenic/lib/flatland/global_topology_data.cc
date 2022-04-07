@@ -425,13 +425,20 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
         if (const auto hit_region_vec = hit_regions.find(transform);
             hit_region_vec != hit_regions.end()) {
           for (const auto& region : hit_region_vec->second) {
-            const auto hit_region = region.region;
+            const auto rect = region.region;
+            const bool semantically_invisible =
+                region.hit_test ==
+                fuchsia::ui::composition::HitTestInteraction::SEMANTICALLY_INVISIBLE;
 
-            // TODO(fxbug.dev/92476): Handle semantic invisibility.
+            // Deliver a hit in all cases except for when it is a semantic hit test and the region
+            // is semantically invisible.
+            if (is_semantic_hit_test && semantically_invisible) {
+              continue;
+            }
 
             // Instead of clipping the hit region with the clip region, simply check if the hit
             // point is in both.
-            if (utils::RectFContainsPoint(hit_region, x, y) &&
+            if (utils::RectFContainsPoint(rect, x, y) &&
                 utils::RectFContainsPoint(clip_region, x, y)) {
               hits.push_back(utils::ExtractKoid(*(local_root->second)));
               break;

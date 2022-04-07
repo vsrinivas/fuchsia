@@ -26,6 +26,7 @@ using flatland::TransformHandle;
 namespace {
 
 constexpr TransformHandle::InstanceId kLinkInstanceId = 0;
+constexpr float kEpsilon = 1e-3f;
 
 // Gets the test-standard link handle to link to a graph rooted at |instance_id:0|.
 TransformHandle GetLinkHandle(uint64_t instance_id) { return {kLinkInstanceId, instance_id}; }
@@ -354,6 +355,68 @@ TEST(GlobalTopologyDataTest, HitTest_OneView) {
   {
     auto result = hit_tester(0, {0, 0}, true);
     EXPECT_EQ(result.hits.size(), 0u);
+  }
+}
+
+// Place two hit regions (1x1 each) in the view (2x1).
+// The left hit region is semantically VISIBLE.
+// The right hit region is semantically INVISIBLE.
+// -------------------
+// |Vis     |Invis   |
+// |        |        |
+// |        |        |
+// |        |        |
+// -------------------
+TEST(GlobalTopologyDataTest, HitTest_SemanticVisibility) {
+  UberStruct::InstanceMap uber_structs;
+  GlobalTopologyData::LinkTopologyMap links;
+
+  auto [control_ref1, view_ref1] = scenic::ViewRefPair::New();
+  const zx_koid_t view_ref1_koid = utils::ExtractKoid(view_ref1);
+  const uint32_t kWidth = 2, kHeight = 1;
+
+  const TransformHandle view_ref1_root_transform = {1, 0};
+  const TransformGraph::TopologyVector vectors[] = {{{view_ref1_root_transform, 0}}};  // 1:0
+  const fuchsia::math::RectF semantically_visible_hit_region = {0, 0, 1, 1};
+  const fuchsia::math::RectF semantically_invisible_hit_region = {1, 0, 1, 1};
+
+  {
+    auto uber_struct = std::make_unique<UberStruct>();
+    uber_struct->local_topology = vectors[0];
+    uber_struct->view_ref = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref1));
+    TransformClipRegion clip_region = {.x = 0, .y = 0, .width = kWidth, .height = kHeight};
+    uber_struct->local_clip_regions.try_emplace(view_ref1_root_transform, std::move(clip_region));
+    uber_struct->local_hit_regions_map[view_ref1_root_transform] = {
+        {.region = semantically_visible_hit_region,
+         .hit_test = fuchsia::ui::composition::HitTestInteraction::DEFAULT},
+        {.region = semantically_invisible_hit_region,
+         .hit_test = fuchsia::ui::composition::HitTestInteraction::SEMANTICALLY_INVISIBLE}};
+
+    uber_structs[vectors[0][0].handle.GetInstanceId()] = std::move(uber_struct);
+  }
+
+  auto hit_tester = GenerateHitTester(uber_structs, links, kLinkInstanceId, {1, 0}, {});
+
+  for (float x = 0; x <= kWidth; x += 0.1) {
+    for (float y = 0; y <= kHeight; y += 0.1) {
+      auto default_result = hit_tester(view_ref1_koid, {x, y}, false);
+      auto semantic_result = hit_tester(view_ref1_koid, {x, y}, true);
+
+      if (utils::RectFContainsPoint(semantically_visible_hit_region, x, y)) {
+        // In the semantically VISIBLE portion.
+        ASSERT_EQ(default_result.hits.size(), 1u);
+        EXPECT_EQ(default_result.hits[0], view_ref1_koid);
+
+        ASSERT_EQ(semantic_result.hits.size(), 1u);
+        EXPECT_EQ(semantic_result.hits[0], view_ref1_koid);
+      } else if (utils::RectFContainsPoint(semantically_invisible_hit_region, x, y)) {
+        // In the semantically INVISIBLE portion.
+        ASSERT_EQ(default_result.hits.size(), 1u);
+        EXPECT_EQ(default_result.hits[0], view_ref1_koid);
+
+        EXPECT_EQ(semantic_result.hits.size(), 0u);
+      }
+    }
   }
 }
 
