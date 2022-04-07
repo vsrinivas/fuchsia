@@ -280,8 +280,7 @@ void BufferCollage::RemoveCollection(uint32_t id) {
 
   auto it = collection_views_.find(id);
   if (it == collection_views_.end()) {
-    FX_LOGS(ERROR) << "Invalid collection ID " << id << ".";
-    Stop();
+    FX_LOGS(INFO) << "Skipping RemoveCollection for already-removed collection ID " << id;
     return;
   }
   auto& collection_view = it->second;
