@@ -119,4 +119,4 @@ static zx_driver_ops_t bt_hci_passthrough_driver_ops = {
 };
 
 // This should be the last driver queried, so we match any transport.
-ZIRCON_DRIVER(bt_hci_passthrough, bt_hci_passthrough_driver_ops, "fuchsia", "*0.1");
+ZIRCON_DRIVER(bt_hci_passthrough, bt_hci_passthrough_driver_ops, "fuchsia", "0.1");
