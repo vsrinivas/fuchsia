@@ -48,10 +48,7 @@ source_set("vk_headers") {
 # Spinel sources
 #
 source_set("vk") {
-  public_configs = [
-    ":config",
-    ":config_debug_utils",
-  ]
+  public_configs = [ ":config_disable_trace" ]
   sources = [
     "allocator.c",
     "allocator.h",
