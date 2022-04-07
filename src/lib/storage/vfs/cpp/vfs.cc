@@ -69,7 +69,7 @@ Vfs::OpenResult Vfs::Open(fbl::RefPtr<Vnode> vndir, std::string_view path,
 Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, std::string_view path,
                                 VnodeConnectionOptions options, Rights parent_rights,
                                 uint32_t mode) {
-  FS_PRETTY_TRACE_DEBUG("VfsOpen: path='", Path(path.data(), path.size()), "' options=", options);
+  FS_PRETTY_TRACE_DEBUG("VfsOpen: path='", path, "' options=", options);
   zx_status_t r;
   if ((r = PrevalidateOptions(options)) != ZX_OK) {
     return r;
@@ -164,7 +164,7 @@ Vfs::TraversePathResult Vfs::TraversePathFetchVnode(fbl::RefPtr<Vnode> vndir,
 
 Vfs::TraversePathResult Vfs::TraversePathFetchVnodeLocked(fbl::RefPtr<Vnode> vndir,
                                                           std::string_view path) {
-  FS_PRETTY_TRACE_DEBUG("VfsTraversePathFetchVnode: path='", Path(path.data(), path.size()));
+  FS_PRETTY_TRACE_DEBUG("VfsTraversePathFetchVnode: path='", path, "'");
   if (zx_status_t result = Vfs::Walk(vndir, path, &vndir, &path); result != ZX_OK) {
     return result;
   }

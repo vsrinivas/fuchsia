@@ -22,17 +22,10 @@
 #include <lib/fidl/llcpp/string_view.h>
 #endif  // __Fuchsia__
 
-// Debug-only header defining utility functions for logging flags and paths.
+// Debug-only header defining utility functions for logging flags and strings.
 // May be used on both Fuchsia and host-only builds.
 
 namespace fs {
-
-// Marker type for pretty-printing flags
-struct Path {
-  Path(const char* path, size_t size) : str(path), size(size) {}
-  const char* str;
-  size_t size;
-};
 
 namespace debug_internal {
 
@@ -96,15 +89,15 @@ void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, const char* str) {
 }
 
 template <size_t N>
-void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, Path path) {
-  sb->Append(path.str, path.size);
+void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, std::string_view view) {
+  sb->Append(view.data(), view.size());
 }
 
 #ifdef __Fuchsia__
 
 template <size_t N>
-void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, fidl::StringView path) {
-  sb->Append(path.data(), path.size());
+void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, fidl::StringView view) {
+  sb->Append(view.data(), view.size());
 }
 
 template <size_t N>
