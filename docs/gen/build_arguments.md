@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1717
+From //build/config/BUILDCONFIG.gn:1720
 
 ### allow_legacy_data_partition_names
 Set to true to enable legacy data partition names.
@@ -1542,7 +1542,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1464
+From //build/config/BUILDCONFIG.gn:1467
 
 ### extra_vbmeta_descriptors
 Additional VBMeta Descriptors to add to the vbmeta image during assembly.
@@ -2624,7 +2624,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1286
+From //build/config/BUILDCONFIG.gn:1289
 
 ### launch_basemgr_on_boot
 Indicates whether to start basemgr.cmx on boot.
@@ -3990,7 +3990,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1707
+From //build/config/BUILDCONFIG.gn:1710
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3999,7 +3999,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1712
+From //build/config/BUILDCONFIG.gn:1715
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -4049,7 +4049,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1510
+From //build/config/BUILDCONFIG.gn:1513
 
 ### size_checker_input
 The input to the size checker.
@@ -4341,7 +4341,7 @@ for details and documentation for each field.
 }
 ```
 
-From //build/config/BUILDCONFIG.gn:97
+From //build/config/BUILDCONFIG.gn:100
 
 ### tsan_default_options
 Default [ThreadSanitizer](https://clang.llvm.org/docs/ThreadSanitizer.html)
@@ -4391,7 +4391,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1494
+From //build/config/BUILDCONFIG.gn:1497
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -4986,7 +4986,7 @@ This allows testing for a Zircon-specific toolchain with:
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:114
+From //build/config/BUILDCONFIG.gn:117
 
 ### zircon_tracelog
 Where to emit a tracelog from Zircon's GN run. No trace will be produced if
