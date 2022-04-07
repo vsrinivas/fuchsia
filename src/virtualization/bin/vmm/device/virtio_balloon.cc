@@ -40,6 +40,10 @@ class BalloonStream : public StreamBase {
       }
     }
   }
+  void DoNoOp() {
+    for (; queue_.NextChain(&chain_); chain_.Return())
+      ;
+  }
 
  private:
   // Handle balloon inflate/deflate requests. From Virtio 1.0, Section 5.5.6:
@@ -151,10 +155,14 @@ class VirtioBalloonImpl : public DeviceBase<VirtioBalloonImpl>,
   void NotifyQueue(uint16_t queue) override {
     switch (static_cast<Queue>(queue)) {
       case Queue::INFLATE:
-        inflate_stream_.DoBalloon(phys_mem_.vmo(), ZX_VMO_OP_DECOMMIT);
+        // Use the zero op to inflate as it's more flexible depending on what type of vmo phys_mem_
+        // is, and is otherwise as efficient as decommit.
+        inflate_stream_.DoBalloon(phys_mem_.vmo(), ZX_VMO_OP_ZERO);
         break;
       case Queue::DEFLATE:
-        deflate_stream_.DoBalloon(phys_mem_.vmo(), ZX_VMO_OP_COMMIT);
+        // Nothing to be done on deflate, as the guest uses the pages they will be demand allocated
+        // into the VMO.
+        deflate_stream_.DoNoOp();
         break;
       case Queue::STATS:
         stats_stream_.DoStats();
