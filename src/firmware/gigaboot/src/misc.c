@@ -9,30 +9,10 @@
 
 #include "osboot.h"
 
-static efi_guid AcpiTableGUID = ACPI_TABLE_GUID;
-static efi_guid Acpi2TableGUID = ACPI_20_TABLE_GUID;
 static efi_guid SmbiosTableGUID = SMBIOS_TABLE_GUID;
 static efi_guid Smbios3TableGUID = SMBIOS3_TABLE_GUID;
-static uint8_t ACPI_RSD_PTR[8] = "RSD PTR ";
 static uint8_t SmbiosAnchor[4] = "_SM_";
 static uint8_t Smbios3Anchor[5] = "_SM3_";
-
-uint64_t find_acpi_root(efi_handle img, efi_system_table* sys) {
-  efi_configuration_table* cfgtab = sys->ConfigurationTable;
-  for (size_t i = 0; i < sys->NumberOfTableEntries; i++) {
-    if (xefi_cmp_guid(&cfgtab[i].VendorGuid, &AcpiTableGUID) &&
-        xefi_cmp_guid(&cfgtab[i].VendorGuid, &Acpi2TableGUID)) {
-      // not an ACPI table
-      continue;
-    }
-    if (memcmp(cfgtab[i].VendorTable, ACPI_RSD_PTR, 8)) {
-      // not the Root Description Pointer
-      continue;
-    }
-    return (uint64_t)cfgtab[i].VendorTable;
-  }
-  return 0;
-}
 
 uint64_t find_smbios(efi_handle img, efi_system_table* sys) {
   efi_configuration_table* cfgtab = sys->ConfigurationTable;

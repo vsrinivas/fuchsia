@@ -41,7 +41,7 @@ size_t strlen_16(char16_t* str);
 
 char16_t* xefi_devpath_to_str(efi_device_path_protocol* path);
 
-int xefi_cmp_guid(efi_guid* guid1, efi_guid* guid2);
+int xefi_cmp_guid(const efi_guid* guid1, const efi_guid* guid2);
 
 // Convenience wrappers for Open/Close protocol for use by
 // UEFI app code that's not a driver model participant

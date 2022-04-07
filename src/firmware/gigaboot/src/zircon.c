@@ -15,6 +15,7 @@
 #include <efi/protocol/graphics-output.h>
 #include <efi/runtime-services.h>
 
+#include "acpi.h"
 #include "osboot.h"
 
 static efi_guid zircon_guid = ZIRCON_VENDOR_GUID;
@@ -260,7 +261,7 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
   }
 
   // pass ACPI root pointer
-  uint64_t rsdp = find_acpi_root(img, sys);
+  acpi_rsdp_t* rsdp = load_acpi_rsdp(gSys->ConfigurationTable, gSys->NumberOfTableEntries);
   if (rsdp != 0) {
     result =
         zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_ACPI_RSDP, 0, 0, &rsdp, sizeof(rsdp));

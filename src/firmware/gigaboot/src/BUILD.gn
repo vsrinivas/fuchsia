@@ -16,6 +16,7 @@ config("config") {
 source_set("src") {
   sources = [
     "abr.c",
+    "acpi.c",
     "avb.c",
     "bootimg.c",
     "cmdline.c",
@@ -70,6 +71,8 @@ if (!is_mac) {
     # on ":src" directly instead.
     sources = [
       "abr.c",
+      "acpi.c",
+      "acpi_test.cc",
       "avb.c",
       "avb_test.cc",
       "bootbyte_fake.cc",

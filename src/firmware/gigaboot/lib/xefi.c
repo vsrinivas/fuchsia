@@ -137,7 +137,7 @@ char16_t* xefi_devpath_to_str(efi_device_path_protocol* path) {
   return prot->ConvertDevicePathToText(path, false, false);
 }
 
-int xefi_cmp_guid(efi_guid* guid1, efi_guid* guid2) {
+int xefi_cmp_guid(const efi_guid* guid1, const efi_guid* guid2) {
   return memcmp(guid1, guid2, sizeof(efi_guid));
 }
 
