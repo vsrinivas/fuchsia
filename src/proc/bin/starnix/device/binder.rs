@@ -161,6 +161,9 @@ struct BinderProcess {
     thread_pool: RwLock<ThreadPool>,
     /// Handle table of remote binder objects.
     handles: Mutex<HandleTable>,
+    /// A queue for commands that could not be scheduled on any existing binder threads. Binder
+    /// threads that exhaust their own queue will read from this one.
+    command_queue: Mutex<VecDeque<Command>>,
     /// When there are no commands in a thread's and the process' command queue, a binder thread can
     /// register with this [`WaitQueue`] to be notified when commands are available.
     waiters: Mutex<WaitQueue>,
@@ -173,8 +176,17 @@ impl BinderProcess {
             shared_memory: Mutex::new(None),
             thread_pool: RwLock::new(ThreadPool::default()),
             handles: Mutex::new(HandleTable::default()),
+            command_queue: Mutex::new(VecDeque::new()),
             waiters: Mutex::new(WaitQueue::default()),
         }
+    }
+}
+
+impl BinderProcess {
+    /// Enqueues `command` for the process and wakes up any thread that is waiting for commands.
+    pub fn enqueue_command(&self, command: Command) {
+        self.command_queue.lock().push_back(command);
+        self.waiters.lock().notify_events(FdEvents::POLLIN);
     }
 }
 
@@ -846,9 +858,12 @@ impl BinderDriver {
                         address: UserAddress::from(input.read_buffer),
                         length: input.read_size as usize,
                     };
-                    input.read_consumed =
-                        self.handle_thread_read(current_task, &*binder_thread, &read_buffer)?
-                            as u64;
+                    input.read_consumed = self.handle_thread_read(
+                        current_task,
+                        &*binder_proc,
+                        &*binder_thread,
+                        &read_buffer,
+                    )? as u64;
                 }
 
                 // Write back to the calling thread how much data was read/written.
@@ -1008,10 +1023,7 @@ impl BinderDriver {
         if let Some(target_thread) = target_thread {
             target_thread.write().enqueue_command(command);
         } else {
-            panic!(concat!(
-                "no thread available for refcount command. ",
-                "process-level command queuing not implemented.",
-            ));
+            target_proc.enqueue_command(command);
         }
 
         Ok(())
@@ -1099,10 +1111,7 @@ impl BinderDriver {
         if let Some(target_thread) = target_thread_pool.find_available_thread() {
             target_thread.write().enqueue_command(command);
         } else {
-            panic!(concat!(
-                "no thread available for transaction command. ",
-                "process-level command queuing not implemented.",
-            ));
+            target_proc.enqueue_command(command);
         }
         Ok(())
     }
@@ -1154,17 +1163,29 @@ impl BinderDriver {
     fn handle_thread_read(
         &self,
         current_task: &CurrentTask,
+        binder_proc: &BinderProcess,
         binder_thread: &BinderThread,
         read_buffer: &UserBuffer,
     ) -> Result<usize, Errno> {
         loop {
+            // THREADING: Always acquire the [`BinderProcess::command_queue`] lock before the
+            // [`BinderThread::state`] lock or else it may lead to deadlock.
+            let mut proc_command_queue = binder_proc.command_queue.lock();
             let mut thread_state = binder_thread.write();
-            if let Some(command) = thread_state.command_queue.front() {
+
+            // Select which command queue to read from, preferring the thread-local one.
+            let command_queue = if !thread_state.command_queue.is_empty() {
+                &mut thread_state.command_queue
+            } else {
+                &mut *proc_command_queue
+            };
+
+            if let Some(command) = command_queue.front() {
                 // Attempt to write the command to the thread's buffer.
                 let bytes_written = command.write_to_memory(&current_task.mm, read_buffer)?;
 
                 // SAFETY: There is an item in the queue since we're in the `Some` branch.
-                match thread_state.command_queue.pop_front().unwrap() {
+                match command_queue.pop_front().unwrap() {
                     Command::Transaction(t) => {
                         // A transaction has begun, push it onto the transaction stack.
                         thread_state.transactions.push(t);
@@ -1183,6 +1204,7 @@ impl BinderDriver {
             let waiter = Waiter::new();
             thread_state.waiter = Some(waiter.clone());
             drop(thread_state);
+            drop(proc_command_queue);
 
             // Put this thread to sleep.
             scopeguard::defer! {
@@ -1418,8 +1440,13 @@ impl BinderDriver {
         handler: EventHandler,
     ) -> WaitKey {
         let (binder_proc, binder_thread) = self.get_proc_and_thread(current_task);
+
+        // THREADING: Always acquire the [`BinderProcess::command_queue`] lock before the
+        // [`BinderThread::state`] lock or else it may lead to deadlock.
+        let proc_command_queue = binder_proc.command_queue.lock();
         let thread_state = binder_thread.write();
-        if thread_state.command_queue.is_empty() {
+
+        if proc_command_queue.is_empty() && thread_state.command_queue.is_empty() {
             binder_proc.waiters.lock().wait_async_events(waiter, events, handler)
         } else {
             waiter.wake_immediately(FdEvents::POLLIN.mask(), handler)
