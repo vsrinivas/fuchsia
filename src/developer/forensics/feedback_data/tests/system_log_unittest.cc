@@ -9,6 +9,7 @@
 #include <lib/fpromise/result.h>
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/syslog/cpp/log_level.h>
 #include <lib/zx/time.h>
 
 #include <memory>
@@ -197,7 +198,9 @@ class SimpleRedactor : public RedactorBase {
 
  private:
   std::string& Redact(std::string& text) override {
-    text = "REDACTED";
+    if (text.find("ERRORS ERR") == text.npos && text.find("Offset") == text.npos) {
+      text = "REDACTED";
+    }
     return text;
   }
 
@@ -221,10 +224,224 @@ TEST_F(CollectLogDataTest, Succeed_AppliesRedaction) {
   const AttachmentValue& logs = result.value();
   ASSERT_EQ(logs.State(), AttachmentValue::State::kComplete);
   ASSERT_STREQ(logs.Value().c_str(), R"([01234.000][00200][00300][tag_1, tag_a] INFO: REDACTED
-[01234.000][00200][00300][tag_2] INFO: REDACTED
-[01234.000][00200][00300][tag_3] INFO: REDACTED
+!!! MESSAGE REPEATED 2 MORE TIMES !!!
 !!! Failed to format chunk: Failed to parse content as JSON. Offset 1: Invalid value. !!!
 !!! Failed to format chunk: Failed to parse content as JSON. Offset 0: Invalid value. !!!
+)");
+}
+
+LogSink::MessageOr ToMessage(const std::string& msg) {
+  return ::fit::ok(fuchsia::logger::LogMessage{
+      .pid = 100,
+      .tid = 101,
+      .time = (zx::sec(1) + zx::msec(10)).get(),
+      .severity = syslog::LOG_INFO,
+      .dropped_logs = 0,
+      .tags = {"tag1", "tag2"},
+      .msg = msg,
+  });
+}
+
+LogSink::MessageOr ToMessage(const std::string& msg, const zx::duration time) {
+  return ::fit::ok(fuchsia::logger::LogMessage{
+      .pid = 100,
+      .tid = 101,
+      .time = time.get(),
+      .severity = syslog::LOG_INFO,
+      .dropped_logs = 0,
+      .tags = {"tag1", "tag2"},
+      .msg = msg,
+  });
+}
+
+LogSink::MessageOr ToError(const std::string& error) { return ::fit::error(error); }
+
+TEST(LogBufferTest, AddDoesNotReachCapcity) {
+  IdentityRedactor redactor(inspect::BoolProperty{});
+
+  LogBuffer buffer(StorageSize::Megabytes(100), &redactor);
+
+  EXPECT_TRUE(buffer.Add(ToMessage("log 1")));
+
+  EXPECT_TRUE(buffer.Add(ToMessage("log 2")));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 2")));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 2")));
+
+  EXPECT_TRUE(buffer.Add(ToMessage("log 3")));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 3")));
+
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 1")));
+
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 2")));
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 2")));
+
+  EXPECT_TRUE(buffer.Add(ToMessage("log 4")));
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 3")));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 4")));
+
+  EXPECT_EQ(buffer.ToString(), R"([00001.010][00100][00101][tag1, tag2] INFO: log 1
+[00001.010][00100][00101][tag1, tag2] INFO: log 2
+!!! MESSAGE REPEATED 2 MORE TIMES !!!
+[00001.010][00100][00101][tag1, tag2] INFO: log 3
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+!!! Failed to format chunk: ERRORS ERR 1 !!!
+!!! Failed to format chunk: ERRORS ERR 2 !!!
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+[00001.010][00100][00101][tag1, tag2] INFO: log 4
+!!! Failed to format chunk: ERRORS ERR 3 !!!
+[00001.010][00100][00101][tag1, tag2] INFO: log 4
+)");
+}
+
+TEST(LogBufferTest, AddReachesCapcity) {
+  IdentityRedactor redactor(inspect::BoolProperty{});
+
+  // 100 bytes is approximately enough to store 2 log messages.
+  LogBuffer buffer(StorageSize::Bytes(100), &redactor);
+
+  EXPECT_TRUE(buffer.Add(ToMessage("log 1")));
+
+  EXPECT_TRUE(buffer.Add(ToMessage("log 2")));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 2")));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 2")));
+
+  EXPECT_EQ(buffer.ToString(), R"([00001.010][00100][00101][tag1, tag2] INFO: log 1
+[00001.010][00100][00101][tag1, tag2] INFO: log 2
+!!! MESSAGE REPEATED 2 MORE TIMES !!!
+)");
+
+  EXPECT_TRUE(buffer.Add(ToMessage("log 3")));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 3")));
+
+  EXPECT_EQ(buffer.ToString(), R"([00001.010][00100][00101][tag1, tag2] INFO: log 2
+!!! MESSAGE REPEATED 2 MORE TIMES !!!
+[00001.010][00100][00101][tag1, tag2] INFO: log 3
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+)");
+
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 1")));
+
+  EXPECT_EQ(buffer.ToString(), R"([00001.010][00100][00101][tag1, tag2] INFO: log 3
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+!!! Failed to format chunk: ERRORS ERR 1 !!!
+)");
+
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 2")));
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 2")));
+
+  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 1 !!!
+!!! Failed to format chunk: ERRORS ERR 2 !!!
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+)");
+
+  EXPECT_TRUE(buffer.Add(ToMessage("log 4")));
+
+  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 2 !!!
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+[00001.010][00100][00101][tag1, tag2] INFO: log 4
+)");
+
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 3")));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 4")));
+
+  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 3 !!!
+[00001.010][00100][00101][tag1, tag2] INFO: log 4
+)");
+}
+
+TEST(LogBufferTest, AddMaintainsOrder) {
+  IdentityRedactor redactor(inspect::BoolProperty{});
+
+  // 100 bytes is approximately enough to store 2 log messages.
+  LogBuffer buffer(StorageSize::Bytes(100), &redactor);
+
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 0")));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 1", zx::sec(20))));
+
+  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 0 !!!
+[00020.000][00100][00101][tag1, tag2] INFO: log 1
+)");
+
+  EXPECT_TRUE(buffer.Add(ToMessage("log 2", zx::sec(18))));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 2", zx::sec(18))));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 2", zx::sec(19))));
+
+  EXPECT_EQ(buffer.ToString(), R"([00018.000][00100][00101][tag1, tag2] INFO: log 2
+!!! MESSAGE REPEATED 2 MORE TIMES !!!
+[00020.000][00100][00101][tag1, tag2] INFO: log 1
+)");
+
+  EXPECT_TRUE(buffer.Add(ToMessage("log 3", zx::sec(21))));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 3", zx::sec(21))));
+
+  EXPECT_EQ(buffer.ToString(), R"([00020.000][00100][00101][tag1, tag2] INFO: log 1
+[00021.000][00100][00101][tag1, tag2] INFO: log 3
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+)");
+
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 1")));
+
+  EXPECT_EQ(buffer.ToString(), R"([00021.000][00100][00101][tag1, tag2] INFO: log 3
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+!!! Failed to format chunk: ERRORS ERR 1 !!!
+)");
+
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 2")));
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 2")));
+
+  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 1 !!!
+!!! Failed to format chunk: ERRORS ERR 2 !!!
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+)");
+
+  EXPECT_TRUE(buffer.Add(ToMessage("log 4", zx::sec(20))));
+
+  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 1 !!!
+!!! Failed to format chunk: ERRORS ERR 2 !!!
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+)");
+
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 3")));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 4", zx::sec(22))));
+
+  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 3 !!!
+[00022.000][00100][00101][tag1, tag2] INFO: log 4
+)");
+}
+
+TEST(LogBufferTest, RedactsLogs) {
+  SimpleRedactor redactor;
+
+  LogBuffer buffer(StorageSize::Megabytes(100), &redactor);
+
+  EXPECT_TRUE(buffer.Add(ToMessage("log 1")));
+
+  EXPECT_TRUE(buffer.Add(ToMessage("log 2")));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 2")));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 2")));
+
+  EXPECT_TRUE(buffer.Add(ToMessage("log 3")));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 3")));
+
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 1")));
+
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 2")));
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 2")));
+
+  EXPECT_TRUE(buffer.Add(ToMessage("log 4")));
+
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 3")));
+
+  EXPECT_TRUE(buffer.Add(ToMessage("log 4")));
+
+  EXPECT_EQ(buffer.ToString(), R"([00001.010][00100][00101][tag1, tag2] INFO: REDACTED
+!!! MESSAGE REPEATED 5 MORE TIMES !!!
+!!! Failed to format chunk: ERRORS ERR 1 !!!
+!!! Failed to format chunk: ERRORS ERR 2 !!!
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+[00001.010][00100][00101][tag1, tag2] INFO: REDACTED
+!!! Failed to format chunk: ERRORS ERR 3 !!!
+[00001.010][00100][00101][tag1, tag2] INFO: REDACTED
 )");
 }
 
