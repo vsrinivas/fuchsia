@@ -167,6 +167,21 @@ group("bootstrap-zedboot") {
   ]
 }
 
+# Group including any tooling that is necessary for hardware testing and
+# validation. These enable hardware validation by allowing users
+# to exercise and manipulate the device hardware and drivers.
+# TODO(https://fxbug.dev/97363): Make sure that this bundle is tested.
+group("hardware_testing") {
+  testonly = true
+  deps = [
+    "//bundles/drivers:utils",
+    "//garnet/packages/prod:hwstress",
+    "//garnet/packages/prod:sbase",
+    "//src/ui/light/bin/lights-cli",
+    "//src/ui/tools/print-input-report",
+  ]
+}
+
 # Debugging tools installed on the boot image.
 group("debugging") {
   deps = [
