@@ -290,6 +290,9 @@ TEST_F(SourceGainTest, GainCaching) { GainCachingChecks(); }
 TEST_F(DestGainTest, GainCaching) { GainCachingChecks(); }
 
 void GainBase::VerifyMinGain(float first_gain_db, float second_gain_db) {
+  SCOPED_TRACE("VerifyMinGain(" + std::to_string(first_gain_db) + ", " +
+               std::to_string(second_gain_db) + ")");
+
   SetGain(first_gain_db);
   SetOtherGain(second_gain_db);
 
@@ -330,6 +333,9 @@ TEST_F(SourceGainTest, GainIsLimitedToMin) { MinGainChecks(); }
 TEST_F(DestGainTest, GainIsLimitedToMin) { MinGainChecks(); }
 
 void GainBase::VerifyMaxGain(float first_gain_db, float second_gain_db) {
+  SCOPED_TRACE("VerifyMaxGain(" + std::to_string(first_gain_db) + ", " +
+               std::to_string(second_gain_db) + ")");
+
   SetGain(first_gain_db);
   SetOtherGain(second_gain_db);
 
