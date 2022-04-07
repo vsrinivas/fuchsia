@@ -40,8 +40,7 @@ pub struct BudgetConfig {
     /// This takes apart the widely shared resource in their own budget.
     #[serde(default)]
     pub resource_budgets: Vec<ResourceBudget>,
-    /// The maximum amount of bytes that all the budgets summed together must
-    /// fall beneath.
+    /// The total amount of bytes equal to the sum of all individual budgets.
     #[serde(default)]
     pub total_budget_bytes: Option<u64>,
 }
@@ -187,7 +186,7 @@ fn verify_budgets_with_tools(args: SizeCheckArgs, tools: Box<dyn ToolProvider>) 
         anyhow::bail!(errors::ffx_error_with_code!(2, "FAILED: Size budget(s) exceeded"));
     }
 
-    // Ensure that the sum of all the budgets falls beneath the maximum.
+    // Ensure that the sum of all the budgets equals total budget bytes.
     if let Some(total) = config.total_budget_bytes {
         let mut sum_of_budgets = 0u64;
         for budget in &config.package_set_budgets {
@@ -196,8 +195,12 @@ fn verify_budgets_with_tools(args: SizeCheckArgs, tools: Box<dyn ToolProvider>) 
         for budget in &config.resource_budgets {
             sum_of_budgets += budget.budget_bytes;
         }
-        if sum_of_budgets > total {
-            anyhow::bail!("Sum of budgets exceeds maximum: sum={}, max={}", sum_of_budgets, total);
+        if sum_of_budgets != total {
+            anyhow::bail!(
+                "Sum of budgets doesn't match total budget bytes: sum={}, total={}",
+                sum_of_budgets,
+                total
+            );
         }
     }
 
@@ -550,7 +553,53 @@ mod tests {
             Box::new(FakeToolProvider::default()),
         );
         assert_eq!(err.exit_code(), 1);
-        assert_failed(err, "Sum of budgets exceeds maximum:");
+        assert_failed(err, "Sum of budgets doesn't match total budget bytes:");
+    }
+
+    #[test]
+    fn fails_because_falls_short_of_maximum_budget() {
+        let test_fs = TestFs::new();
+        test_fs.write(
+            "size_budgets.json",
+            json!({
+            "package_set_budgets":[
+                {
+                    "name": "Software Delivery",
+                    "budget_bytes": 27,
+                    "creep_budget_bytes": 2i32,
+                    "merge":false,
+                    "packages": [],
+                },
+                {
+                    "name": "Component Framework",
+                    "budget_bytes": 51i32,
+                    "creep_budget_bytes": 2i32,
+                    "merge":false,
+                    "packages": [],
+                }
+            ],
+            "resource_budgets":[
+                {
+                    "name": "Misc",
+                    "budget_bytes": 20,
+                    "creep_budget_bytes": 2i32,
+                    "paths": [],
+                },
+            ],
+            "total_budget_bytes": 100}),
+        );
+        test_fs.write("blobs.json", json!([]));
+        let err = verify_budgets_with_tools(
+            SizeCheckArgs {
+                blobfs_layout: BlobFSLayout::Compact,
+                budgets: test_fs.path("size_budgets.json"),
+                blob_sizes: [test_fs.path("blobs.json")].to_vec(),
+                gerrit_output: None,
+            },
+            Box::new(FakeToolProvider::default()),
+        );
+        assert_eq!(err.exit_code(), 1);
+        assert_failed(err, "Sum of budgets doesn't match total budget bytes:");
     }
 
     #[test]
