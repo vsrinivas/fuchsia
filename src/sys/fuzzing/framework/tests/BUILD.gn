@@ -1,0 +1,20 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+
+test("framework-integration-tests") {
+  output_name = "component_fuzzing_framework_tests"
+  sources = [ "framework-integration-test.cc" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/sys/fuzzing/common",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+    "//src/sys/fuzzing/testing",
+    "//third_party/googletest:gtest",
+  ]
+}

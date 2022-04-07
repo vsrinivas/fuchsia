@@ -18,7 +18,7 @@ namespace fuzzing {
 // fuzzing-related code executed in the target runs as result of the singleton's constructor.
 class InstrumentedProcess final {
  public:
-  InstrumentedProcess() : context_(/* use_thread */ true) {
+  InstrumentedProcess() {
     Process::InstallHooks();
     context_ = ComponentContext::CreateAuxillary();
     process_ = std::make_unique<Process>(context_->executor());

@@ -63,6 +63,19 @@ source_set("engine-lib") {
   ]
 }
 
+executable("engine-bin") {
+  output_name = "component_fuzzing_engine"
+  testonly = true
+  sources = [ "engine.cc" ]
+  deps = [ ":engine-lib" ]
+}
+
+fuchsia_component("engine") {
+  testonly = true
+  manifest = "../meta/engine.cml"
+  deps = [ ":engine-bin" ]
+}
+
 # Tests and test support.
 
 source_set("testing") {

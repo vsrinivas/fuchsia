@@ -422,7 +422,6 @@ void RunnerImpl::StartWorkflow(Scope& scope) {
 void RunnerImpl::FinishWorkflow() {
   generated_.Clear();
   processed_.Clear();
-  Disconnect();
   stopped_ = true;
   UpdateMonitors(UpdateReason::DONE);
 }
@@ -798,12 +797,12 @@ Promise<bool, FuzzResult> RunnerImpl::RunOne(const Input& input) {
            for (auto& future : futures_) {
              if (!future(context)) {
                all_done = false;
-             } else if (future.is_error()) {
-               auto target_id = future.error();
-               return fpromise::error(target_id);
-             } else {
-               leak_suspected |= future.value();
+               continue;
              }
+             if (future.is_error()) {
+               return fpromise::error(future.error());
+             }
+             leak_suspected |= future.value();
            }
            if (!all_done) {
              suspended_ = context.suspend_task();

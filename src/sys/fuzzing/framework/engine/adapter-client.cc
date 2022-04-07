@@ -26,23 +26,14 @@ void TargetAdapterClient::Configure(const OptionsPtr& options) {
 Promise<> TargetAdapterClient::Connect() {
   return fpromise::make_promise([this, handling = Future<>(),
                                  connect = Future<>()](Context& context) mutable -> Result<> {
-           // Return success if the channel is valid and its peer is already connected.
-           if (ptr_.is_bound() &&
-               ptr_.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite_past(),
-                                       nullptr) == ZX_ERR_TIMED_OUT) {
-             return fpromise::ok();
-           }
-           if (!handling) {
-             handling = fpromise::make_promise([this]() -> Result<> {
-               handler_(ptr_.NewRequest(executor_->dispatcher()));
-               return fpromise::ok();
-             });
-           }
-           if (!handling(context)) {
-             return fpromise::pending();
-           }
-           FX_CHECK(handling.is_ok());
            if (!connect) {
+             if (eventpair_.IsConnected()) {
+               return fpromise::ok();
+             }
+             handler_(ptr_.NewRequest(executor_->dispatcher()));
+
+             ptr_.set_error_handler([](zx_status_t status) {});
+
              Bridge<> bridge;
              ptr_->Connect(eventpair_.Create(), test_input_.Share(), bridge.completer.bind());
              connect = bridge.consumer.promise_or(fpromise::error());
@@ -81,16 +72,18 @@ Promise<> TargetAdapterClient::TestOneInput(const Input& test_input) {
   FX_CHECK(test_input_.size() == 0);
   test_input_.Write(test_input.data(), test_input.size());
   return Connect()
+      .inspect([](const Result<>& result) {})
       .or_else([] { return fpromise::error(ZX_ERR_CANCELED); })
       .and_then([this]() -> ZxResult<> { return AsZxResult(eventpair_.SignalSelf(kFinish, 0)); })
       .and_then([this]() -> ZxResult<> { return AsZxResult(eventpair_.SignalPeer(0, kStart)); })
       .and_then(eventpair_.WaitFor(kFinish))
       .and_then([](const zx_signals_t& observed) -> ZxResult<> { return fpromise::ok(); })
-      .or_else([](const zx_status_t& status) {
+      .or_else([](const zx_status_t& status) -> Result<> {
         if (status != ZX_ERR_PEER_CLOSED) {
           FX_LOGS(ERROR) << "Target adapter returned error: " << zx_status_get_string(status);
+          return fpromise::error();
         }
-        return fpromise::error();
+        return fpromise::ok();
       })
       .inspect([this](const Result<>& result) { test_input_.Clear(); })
       .wrap_with(scope_);

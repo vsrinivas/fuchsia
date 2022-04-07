@@ -54,6 +54,15 @@ fuchsia_test_component("test-engine") {
   deps = [ "testing:engine" ]
 }
 
+fuchsia_test_component("integration-tests") {
+  visibility = [ ":*" ]
+  manifest = "meta/integration-tests.cml"
+  deps = [
+    "tests:framework-integration-tests",
+    "//src/sys/fuzzing/framework/engine:engine-bin",
+  ]
+}
+
 fuchsia_test_component("test-fuzzer") {
   manifest = "meta/test-fuzzer.cml"
   deps = [
@@ -67,6 +76,17 @@ fuchsia_test_component("test-fuzzer-uninstrumented") {
   deps = [
     "testing:test-fuzzer-uninstrumented",
     "testing/data:corpus",
+  ]
+}
+
+# This component contains an integration test that uses the "real" fuzzing engine that generates
+# inputs to drive a simple test fuzzer, thereby imitating a real fuzzer.
+fuchsia_test_component("fuzzer-realm") {
+  manifest = "meta/fuzzer-realm.cml"
+  deps = [
+    ":integration-tests",
+    ":test-fuzzer",
+    "//src/sys/fuzzing/framework/coverage",
   ]
 }
 
@@ -85,6 +105,7 @@ fuchsia_test_package("default-tests") {
   package_name = "component-fuzzing-framework-tests"
   test_components = [
     ":unittests",
+    ":fuzzer-realm",
     ":fuzzer-test-realm",
   ]
 }
