@@ -14,11 +14,11 @@ use crate::logging::not_implemented;
 use crate::mm::vmo::round_up_to_increment;
 use crate::mm::{DesiredAddress, MappedVmo, MappingOptions, MemoryManager, UserMemoryCursor};
 use crate::syscalls::{SyscallResult, SUCCESS};
-use crate::task::{CurrentTask, EventHandler, Kernel, WaitKey, WaitQueue, Waiter};
+use crate::task::{CurrentTask, EventHandler, Kernel, WaitCallback, WaitKey, WaitQueue, Waiter};
 use crate::types::*;
 use bitflags::bitflags;
 use fuchsia_zircon as zx;
-use parking_lot::{Mutex, RwLock};
+use parking_lot::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use slab::Slab;
 use std::collections::{BTreeMap, VecDeque};
 use std::sync::{Arc, Weak};
@@ -158,9 +158,12 @@ struct BinderProcess {
     /// transactions to copy data once from the sender process into the receiver process.
     shared_memory: Mutex<Option<SharedMemory>>,
     /// The set of threads that are interacting with the binder driver.
-    thread_pool: ThreadPool,
+    thread_pool: RwLock<ThreadPool>,
     /// Handle table of remote binder objects.
     handles: Mutex<HandleTable>,
+    /// When there are no commands in a thread's and the process' command queue, a binder thread can
+    /// register with this [`WaitQueue`] to be notified when commands are available.
+    waiters: Mutex<WaitQueue>,
 }
 
 impl BinderProcess {
@@ -168,8 +171,9 @@ impl BinderProcess {
         Self {
             pid,
             shared_memory: Mutex::new(None),
-            thread_pool: ThreadPool::new(),
-            handles: Mutex::new(HandleTable::new()),
+            thread_pool: RwLock::new(ThreadPool::default()),
+            handles: Mutex::new(HandleTable::default()),
+            waiters: Mutex::new(WaitQueue::default()),
         }
     }
 }
@@ -327,60 +331,45 @@ impl<'a> SharedBuffer<'a> {
 }
 
 /// The set of threads that are interacting with the binder driver for a given process.
-#[derive(Debug)]
-struct ThreadPool(RwLock<BTreeMap<pid_t, Arc<BinderThread>>>);
+#[derive(Debug, Default)]
+struct ThreadPool(BTreeMap<pid_t, Arc<BinderThread>>);
 
 impl ThreadPool {
-    fn new() -> Self {
-        Self(RwLock::new(BTreeMap::new()))
-    }
-
-    fn find_or_register_thread(&self, tid: pid_t) -> Arc<BinderThread> {
-        self.0.write().entry(tid).or_insert_with(|| Arc::new(BinderThread::new(tid))).clone()
+    fn find_or_register_thread(
+        &mut self,
+        binder_proc: &Arc<BinderProcess>,
+        tid: pid_t,
+    ) -> Arc<BinderThread> {
+        self.0.entry(tid).or_insert_with(|| Arc::new(BinderThread::new(binder_proc, tid))).clone()
     }
 
     fn find_thread(&self, tid: pid_t) -> Result<Arc<BinderThread>, Errno> {
-        self.0.read().get(&tid).cloned().ok_or_else(|| errno!(ENOENT))
+        self.0.get(&tid).cloned().ok_or_else(|| errno!(ENOENT))
     }
 
-    /// Finds the first available binder thread that has registered with the driver.
+    /// Finds the first available binder thread that is registered with the driver, is not in the
+    /// middle of a transaction, and has no work to do.
     fn find_available_thread(&self) -> Option<Arc<BinderThread>> {
-        self.0.read().iter().find_map(|(_, thread)| {
-            if thread.state.read().intersects(ThreadState::BINDER_THREAD) {
-                Some(thread.clone())
-            } else {
-                None
-            }
-        })
-    }
-
-    /// Finds the first available binder thread that can handle a transaction. The thread must not
-    /// be in the middle of handling another transaction, and must be registered with the binder
-    /// driver. If a thread is found, its state is marked as [`ThreadState::HANDLING_TRANSACTION`].
-    fn find_thread_for_transaction(&self) -> Option<Arc<BinderThread>> {
-        self.0.read().iter().find_map(|(_, thread)| {
-            let mut state = thread.state.write();
-            if state.intersects(ThreadState::BINDER_THREAD)
-                && !state.contains(ThreadState::HANDLING_TRANSACTION)
-            {
-                state.insert(ThreadState::HANDLING_TRANSACTION);
-                Some(thread.clone())
-            } else {
-                None
-            }
-        })
+        self.0
+            .values()
+            .find(|thread| {
+                let thread_state = thread.read();
+                thread_state
+                    .registration
+                    .intersects(RegistrationState::MAIN | RegistrationState::REGISTERED)
+                    && thread_state.command_queue.is_empty()
+                    && thread_state.waiter.is_some()
+                    && thread_state.transactions.is_empty()
+            })
+            .cloned()
     }
 }
 
 /// Table containing handles to remote binder objects.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct HandleTable(Slab<BinderObjectProxy>);
 
 impl HandleTable {
-    fn new() -> Self {
-        Self(Slab::new())
-    }
-
     /// Inserts a new proxy to a remote binder object and retrieves a handle to it.
     fn insert(&mut self, object: BinderObjectProxy) -> Handle {
         Handle::Object { index: self.0.insert(object) }
@@ -412,59 +401,76 @@ impl HandleTable {
 #[derive(Debug)]
 struct BinderThread {
     tid: pid_t,
-    /// The state of the thread.
-    state: RwLock<ThreadState>,
-    /// The binder driver uses this queue to communicate with a binder thread. When a binder thread
-    /// issues a [`BINDER_IOCTL_WRITE_READ`] ioctl, it will read from this command queue.
-    command_queue: Mutex<VecDeque<Command>>,
-    /// The stack of transactions that are active for this thread.
-    transactions: RwLock<Vec<Transaction>>,
-    /// When there are no commands in the command queue, the binder thread can register with this
-    /// [`WaitQueue`] to be notified when commands are available.
-    waiters: Mutex<WaitQueue>,
+    /// The mutable state of the binder thread, protected by a single lock.
+    state: RwLock<BinderThreadState>,
 }
 
 impl BinderThread {
-    fn new(tid: pid_t) -> Self {
+    fn new(binder_proc: &Arc<BinderProcess>, tid: pid_t) -> Self {
+        Self { tid, state: RwLock::new(BinderThreadState::new(binder_proc)) }
+    }
+
+    /// Acquire a reader lock to the binder thread's mutable state.
+    pub fn read<'a>(&'a self) -> RwLockReadGuard<'a, BinderThreadState> {
+        self.state.read()
+    }
+
+    /// Acquire a writer lock to the binder thread's mutable state.
+    pub fn write<'a>(&'a self) -> RwLockWriteGuard<'a, BinderThreadState> {
+        self.state.write()
+    }
+}
+
+/// The mutable state of a binder thread.
+#[derive(Debug)]
+struct BinderThreadState {
+    /// The process this thread belongs to.
+    process: Weak<BinderProcess>,
+    /// The registered state of the thread.
+    registration: RegistrationState,
+    /// The stack of transactions that are active for this thread.
+    transactions: Vec<Transaction>,
+    /// The binder driver uses this queue to communicate with a binder thread. When a binder thread
+    /// issues a [`BINDER_IOCTL_WRITE_READ`] ioctl, it will read from this command queue.
+    command_queue: VecDeque<Command>,
+    /// The [`Waiter`] object the binder thread is waiting on when there are no commands in the
+    /// command queue. If `None`, the binder thread is not currently waiting.
+    waiter: Option<Arc<Waiter>>,
+}
+
+impl BinderThreadState {
+    fn new(binder_proc: &Arc<BinderProcess>) -> Self {
         Self {
-            tid,
-            state: RwLock::new(ThreadState::empty()),
-            transactions: RwLock::new(Vec::new()),
-            command_queue: Mutex::new(VecDeque::new()),
-            waiters: Mutex::new(WaitQueue::default()),
+            process: Arc::downgrade(binder_proc),
+            registration: RegistrationState::empty(),
+            transactions: Vec::new(),
+            command_queue: VecDeque::new(),
+            waiter: None,
         }
     }
 
     /// Enqueues `command` for the thread and wakes it up if necessary.
-    fn enqueue_command(&self, command: Command) {
-        self.command_queue.lock().push_back(command);
-        self.waiters.lock().notify_events(FdEvents::POLLIN);
+    pub fn enqueue_command(&mut self, command: Command) {
+        self.command_queue.push_back(command);
+        if let Some(waiter) = self.waiter.take() {
+            // Wake up the thread that is waiting.
+            waiter.wake_immediately(FdEvents::POLLIN.mask(), WaitCallback::none());
+        }
+        // Notify any threads that are waiting on events from the binder driver FD.
+        if let Some(binder_proc) = self.process.upgrade() {
+            binder_proc.waiters.lock().notify_events(FdEvents::POLLIN);
+        }
     }
 }
 
 bitflags! {
-    /// The state of a thread.
-    struct ThreadState: u32 {
+    /// The registration state of a thread.
+    struct RegistrationState: u32 {
         /// The thread is the main binder thread.
         const MAIN = 1;
 
         /// The thread is an auxiliary binder thread.
         const REGISTERED = 1 << 2;
-
-        /// The thread is waiting for commands.
-        const WAITING_FOR_COMMAND = 1 << 3;
-
-        /// The thread is currently handling a transaction.
-        const HANDLING_TRANSACTION = 1 << 4;
-
-        /// The thread is a main or auxiliary binder thread.
-        const BINDER_THREAD = Self::MAIN.bits | Self::REGISTERED.bits;
-    }
-}
-
-impl Default for ThreadState {
-    fn default() -> Self {
-        ThreadState::empty()
     }
 }
 
@@ -712,8 +718,33 @@ impl BinderDriver {
         self.procs.read().get(&pid).cloned().ok_or_else(|| errno!(ENOENT))
     }
 
-    fn find_or_register_process(&self, pid: pid_t) -> Arc<BinderProcess> {
-        self.procs.write().entry(pid).or_insert_with(|| Arc::new(BinderProcess::new(pid))).clone()
+    /// Returns the binder process and thread states that represent the `current_task`.
+    fn get_proc_and_thread(
+        &self,
+        current_task: &CurrentTask,
+    ) -> (Arc<BinderProcess>, Arc<BinderThread>) {
+        let binder_proc = self
+            .procs
+            .write()
+            .entry(current_task.get_pid())
+            .or_insert_with(|| Arc::new(BinderProcess::new(current_task.get_pid())))
+            .clone();
+        let binder_thread = binder_proc
+            .thread_pool
+            .write()
+            .find_or_register_thread(&binder_proc, current_task.get_tid());
+        (binder_proc, binder_thread)
+    }
+
+    /// Creates the binder process state to represent a process with `pid`.
+    #[cfg(test)]
+    fn create_process(&self, pid: pid_t) -> Arc<BinderProcess> {
+        let binder_process = Arc::new(BinderProcess::new(pid));
+        assert!(
+            self.procs.write().insert(pid, binder_process.clone()).is_none(),
+            "process with same pid created"
+        );
+        binder_process
     }
 
     fn get_context_manager(&self) -> Result<Arc<BinderProcess>, Errno> {
@@ -766,7 +797,7 @@ impl BinderDriver {
 
                 // TODO: Read the flat_binder_object when ioctl is BINDER_IOCTL_SET_CONTEXT_MGR_EXT.
 
-                let binder_proc = self.find_or_register_process(current_task.get_pid());
+                let (binder_proc, _) = self.get_proc_and_thread(current_task);
                 *self.context_manager.write() = Some(Arc::downgrade(&binder_proc));
                 Ok(SUCCESS)
             }
@@ -781,9 +812,7 @@ impl BinderDriver {
                 let mut input = binder_write_read::new_zeroed();
                 current_task.mm.read_object(user_ref, &mut input)?;
 
-                let binder_proc = self.find_or_register_process(current_task.get_pid());
-                let binder_thread =
-                    binder_proc.thread_pool.find_or_register_thread(current_task.get_tid());
+                let (binder_proc, binder_thread) = self.get_proc_and_thread(current_task);
 
                 // We will be writing this back to userspace, don't trust what the client gave us.
                 input.write_consumed = 0;
@@ -907,14 +936,17 @@ impl BinderDriver {
         command: binder_driver_command_protocol,
         binder_thread: &Arc<BinderThread>,
     ) -> Result<(), Errno> {
-        let mut state = binder_thread.state.write();
-        if state.intersects(ThreadState::BINDER_THREAD) {
+        let mut thread_state = binder_thread.write();
+        if thread_state
+            .registration
+            .intersects(RegistrationState::MAIN | RegistrationState::REGISTERED)
+        {
             // This thread is already registered.
             error!(EINVAL)
         } else {
-            *state |= match command {
-                binder_driver_command_protocol_BC_ENTER_LOOPER => ThreadState::MAIN,
-                binder_driver_command_protocol_BC_REGISTER_LOOPER => ThreadState::REGISTERED,
+            thread_state.registration |= match command {
+                binder_driver_command_protocol_BC_ENTER_LOOPER => RegistrationState::MAIN,
+                binder_driver_command_protocol_BC_REGISTER_LOOPER => RegistrationState::REGISTERED,
                 _ => unreachable!(),
             };
             Ok(())
@@ -946,32 +978,41 @@ impl BinderDriver {
             FlatBinderObject::Local { object } => object,
         };
 
+        let command = match command {
+            binder_driver_command_protocol_BC_INCREFS => Command::AcquireRef(Ref::Weak, object),
+            binder_driver_command_protocol_BC_ACQUIRE => Command::AcquireRef(Ref::Strong, object),
+            binder_driver_command_protocol_BC_DECREFS => Command::ReleaseRef(Ref::Weak, object),
+            binder_driver_command_protocol_BC_RELEASE => Command::ReleaseRef(Ref::Strong, object),
+            _ => unreachable!(),
+        };
+
+        // Hold the lock for the thread pool until the target thread has a command queued.
+        let target_thread_pool = target_proc.thread_pool.read();
+
         // Select a thread to handle this refcount task.
         let target_thread = {
             // Prefer using a thread that is part of this transaction, if it exists.
-            if let Some(tid) = binder_thread.transactions.read().last().and_then(|transaction| {
+            if let Some(tid) = binder_thread.read().transactions.last().and_then(|transaction| {
                 if transaction.peer_pid == target_proc.pid {
                     Some(transaction.peer_tid)
                 } else {
                     None
                 }
             }) {
-                target_proc.thread_pool.find_thread(tid)?
+                Some(target_thread_pool.find_thread(tid)?)
             } else {
-                target_proc.thread_pool.find_available_thread().expect(concat!(
-                    "no thread available for command. ",
-                    "process-level command queuing not implemented.",
-                ))
+                target_thread_pool.find_available_thread()
             }
         };
 
-        target_thread.enqueue_command(match command {
-            binder_driver_command_protocol_BC_INCREFS => Command::AcquireRef(Ref::Weak, object),
-            binder_driver_command_protocol_BC_ACQUIRE => Command::AcquireRef(Ref::Strong, object),
-            binder_driver_command_protocol_BC_DECREFS => Command::ReleaseRef(Ref::Weak, object),
-            binder_driver_command_protocol_BC_RELEASE => Command::ReleaseRef(Ref::Strong, object),
-            _ => unreachable!(),
-        });
+        if let Some(target_thread) = target_thread {
+            target_thread.write().enqueue_command(command);
+        } else {
+            panic!(concat!(
+                "no thread available for refcount command. ",
+                "process-level command queuing not implemented.",
+            ));
+        }
 
         Ok(())
     }
@@ -1020,27 +1061,15 @@ impl BinderDriver {
         let (data_buffer, offsets_buffer) =
             self.copy_transaction_buffers(current_task, binder_proc, &target_proc, &data)?;
 
-        // Find a thread to handle the transaction.
-        // TODO: Deal with no threads available.
-        let target_thread = target_proc.thread_pool.find_thread_for_transaction().unwrap();
-
-        let target_euid = current_task
-            .kernel()
-            .pids
-            .read()
-            .get_task(target_thread.tid)
-            .map(|t| t.creds.read().euid)
-            .ok_or_else(|| errno!(ENOENT))?;
-
         if data.flags & transaction_flags_TF_ONE_WAY != 0 {
             // The caller is not expecting a reply.
-            binder_thread.enqueue_command(Command::TransactionComplete);
+            binder_thread.write().enqueue_command(Command::TransactionComplete);
         } else {
             // Create a new transaction on the sender so that they can wait on a reply.
-            binder_thread.transactions.write().push(Transaction {
+            binder_thread.write().transactions.push(Transaction {
                 peer_pid: target_proc.pid,
-                peer_tid: target_thread.tid,
-                peer_euid: target_euid,
+                peer_tid: 0,
+                peer_euid: 0,
 
                 object: FlatBinderObject::Remote { handle },
                 code: data.code,
@@ -1051,8 +1080,7 @@ impl BinderDriver {
             });
         }
 
-        // Write the transaction to the target process.
-        target_thread.enqueue_command(Command::Transaction(Transaction {
+        let command = Command::Transaction(Transaction {
             peer_pid: binder_proc.pid,
             peer_tid: binder_thread.tid,
             peer_euid: current_task.creds.read().euid,
@@ -1063,7 +1091,19 @@ impl BinderDriver {
 
             data_buffer,
             offsets_buffer,
-        }));
+        });
+
+        let target_thread_pool = target_proc.thread_pool.read();
+
+        // Find a thread to handle the transaction, or use the process' command queue.
+        if let Some(target_thread) = target_thread_pool.find_available_thread() {
+            target_thread.write().enqueue_command(command);
+        } else {
+            panic!(concat!(
+                "no thread available for transaction command. ",
+                "process-level command queuing not implemented.",
+            ));
+        }
         Ok(())
     }
 
@@ -1079,10 +1119,10 @@ impl BinderDriver {
 
         // Find the process and thread that initiated the transaction. This reply is for them.
         let (target_proc, target_thread) = {
-            let mut transactions = binder_thread.transactions.write();
-            let transaction = transactions.last_mut().ok_or_else(|| errno!(EINVAL))?;
+            let inner = binder_thread.read();
+            let transaction = inner.transactions.last().ok_or_else(|| errno!(EINVAL))?;
             let target_proc = self.find_process(transaction.peer_pid)?;
-            let target_thread = target_proc.thread_pool.find_thread(transaction.peer_tid)?;
+            let target_thread = target_proc.thread_pool.read().find_thread(transaction.peer_tid)?;
             (target_proc, target_thread)
         };
 
@@ -1091,7 +1131,7 @@ impl BinderDriver {
             self.copy_transaction_buffers(current_task, binder_proc, &target_proc, &data)?;
 
         // Schedule the transaction on the target process' command queue.
-        target_thread.enqueue_command(Command::Reply(Transaction {
+        target_thread.write().enqueue_command(Command::Reply(Transaction {
             peer_pid: binder_proc.pid,
             peer_tid: binder_thread.tid,
             peer_euid: current_task.creds.read().euid,
@@ -1105,7 +1145,7 @@ impl BinderDriver {
         }));
 
         // Schedule the transaction complete command on the caller's command queue.
-        binder_thread.enqueue_command(Command::TransactionComplete);
+        binder_thread.write().enqueue_command(Command::TransactionComplete);
 
         Ok(())
     }
@@ -1118,25 +1158,20 @@ impl BinderDriver {
         read_buffer: &UserBuffer,
     ) -> Result<usize, Errno> {
         loop {
-            let mut command_queue = binder_thread.command_queue.lock();
-            if let Some(command) = command_queue.front() {
+            let mut thread_state = binder_thread.write();
+            if let Some(command) = thread_state.command_queue.front() {
                 // Attempt to write the command to the thread's buffer.
                 let bytes_written = command.write_to_memory(&current_task.mm, read_buffer)?;
 
                 // SAFETY: There is an item in the queue since we're in the `Some` branch.
-                match command_queue.pop_front().unwrap() {
+                match thread_state.command_queue.pop_front().unwrap() {
                     Command::Transaction(t) => {
                         // A transaction has begun, push it onto the transaction stack.
-                        binder_thread.transactions.write().push(t);
+                        thread_state.transactions.push(t);
                     }
                     Command::Reply(_) | Command::TransactionComplete => {
                         // A transaction is complete, pop it from the transaction stack.
-                        let mut state = binder_thread.state.write();
-                        let mut transactions = binder_thread.transactions.write();
-                        transactions.pop();
-                        if transactions.is_empty() {
-                            state.remove(ThreadState::HANDLING_TRANSACTION);
-                        }
+                        thread_state.transactions.pop();
                     }
                     Command::AcquireRef(_, _) | Command::ReleaseRef(_, _) => {}
                 }
@@ -1144,20 +1179,15 @@ impl BinderDriver {
                 return Ok(bytes_written);
             }
 
-            // No commands readily available to read. Register with the wait queue.
+            // No commands readily available to read. Wait for work.
             let waiter = Waiter::new();
-            binder_thread.waiters.lock().wait_async_events(
-                &waiter,
-                FdEvents::POLLIN,
-                Box::new(|_| {}),
-            );
-            drop(command_queue);
+            thread_state.waiter = Some(waiter.clone());
+            drop(thread_state);
 
             // Put this thread to sleep.
             scopeguard::defer! {
-                binder_thread.state.write().remove(ThreadState::WAITING_FOR_COMMAND);
+                binder_thread.write().waiter = None
             }
-            binder_thread.state.write().insert(ThreadState::WAITING_FOR_COMMAND);
             waiter.wait(current_task)?;
         }
     }
@@ -1343,7 +1373,7 @@ impl BinderDriver {
         mapping_options: MappingOptions,
         filename: NamespaceNode,
     ) -> Result<MappedVmo, Errno> {
-        let binder_proc = self.find_or_register_process(current_task.get_pid());
+        let (binder_proc, _) = self.get_proc_and_thread(current_task);
 
         // Do not support mapping shared memory more than once.
         let mut shared_memory = binder_proc.shared_memory.lock();
@@ -1387,20 +1417,18 @@ impl BinderDriver {
         events: FdEvents,
         handler: EventHandler,
     ) -> WaitKey {
-        let binder_proc = self.find_or_register_process(current_task.get_pid());
-        let binder_thread = binder_proc.thread_pool.find_or_register_thread(current_task.get_tid());
-        let command_queue = binder_thread.command_queue.lock();
-        if command_queue.is_empty() {
-            binder_thread.waiters.lock().wait_async_events(waiter, events, handler)
+        let (binder_proc, binder_thread) = self.get_proc_and_thread(current_task);
+        let thread_state = binder_thread.write();
+        if thread_state.command_queue.is_empty() {
+            binder_proc.waiters.lock().wait_async_events(waiter, events, handler)
         } else {
             waiter.wake_immediately(FdEvents::POLLIN.mask(), handler)
         }
     }
 
     fn cancel_wait(&self, current_task: &CurrentTask, _waiter: &Arc<Waiter>, key: WaitKey) -> bool {
-        let binder_proc = self.find_or_register_process(current_task.get_pid());
-        let binder_thread = binder_proc.thread_pool.find_or_register_thread(current_task.get_tid());
-        let result = binder_thread.waiters.lock().cancel_wait(key);
+        let (binder_proc, _) = self.get_proc_and_thread(current_task);
+        let result = binder_proc.waiters.lock().cancel_wait(key);
         result
     }
 }
@@ -1455,7 +1483,7 @@ mod tests {
     #[fuchsia::test]
     fn handle_0_fails_when_context_manager_is_not_set() {
         let driver = BinderDriver::new();
-        let binder_proc = driver.find_or_register_process(1);
+        let binder_proc = driver.create_process(1);
         assert_eq!(
             driver
                 .find_object_and_owner_for_handle(&*binder_proc, 0.into())
@@ -1467,9 +1495,9 @@ mod tests {
     #[fuchsia::test]
     fn handle_0_succeeds_when_context_manager_is_set() {
         let driver = BinderDriver::new();
-        let context_manager = driver.find_or_register_process(1);
+        let context_manager = driver.create_process(1);
         *driver.context_manager.write() = Some(Arc::downgrade(&context_manager));
-        let binder_proc = driver.find_or_register_process(2);
+        let binder_proc = driver.create_process(2);
         let (object, owning_proc) = driver
             .find_object_and_owner_for_handle(&*binder_proc, 0.into())
             .expect("failed to find handle 0");
@@ -1480,7 +1508,7 @@ mod tests {
     #[fuchsia::test]
     fn fail_to_retrieve_non_existing_handle() {
         let driver = BinderDriver::new();
-        let binder_proc = driver.find_or_register_process(1);
+        let binder_proc = driver.create_process(1);
         assert_eq!(
             driver
                 .find_object_and_owner_for_handle(&*binder_proc, 3.into())
@@ -1492,8 +1520,8 @@ mod tests {
     #[fuchsia::test]
     fn retrieve_existing_handle() {
         let driver = BinderDriver::new();
-        let proc_1 = driver.find_or_register_process(1);
-        let proc_2 = driver.find_or_register_process(2);
+        let proc_1 = driver.create_process(1);
+        let proc_2 = driver.create_process(2);
         let expected_object = BinderObject {
             weak_ref_addr: UserAddress::from(0xffffffffffffffff),
             strong_ref_addr: UserAddress::from(0x1111111111111111),
@@ -1631,10 +1659,10 @@ mod tests {
 
         // Register a binder process that represents `task1`. This is the source process: data will
         // be copied out of process ID 1 into process ID 2's shared memory.
-        let proc1 = driver.find_or_register_process(1);
+        let proc1 = driver.create_process(1);
 
         // Initialize process 2 with shared memory in the driver.
-        let proc2 = driver.find_or_register_process(2);
+        let proc2 = driver.create_process(2);
         let vmo = zx::Vmo::create(VMO_LENGTH as u64).expect("failed to create VMO");
         *proc2.shared_memory.lock() = Some(
             SharedMemory::map(&vmo, BASE_ADDR, VMO_LENGTH).expect("failed to map shared memory"),
@@ -1712,8 +1740,8 @@ mod tests {
     #[fuchsia::test]
     fn transaction_translate_binder_leaving_process() {
         let driver = BinderDriver::new();
-        let sender = driver.find_or_register_process(1);
-        let receiver = driver.find_or_register_process(2);
+        let sender = driver.create_process(1);
+        let receiver = driver.create_process(2);
 
         let binder_object = BinderObject {
             weak_ref_addr: UserAddress::from(0x0000000000000010),
@@ -1763,8 +1791,8 @@ mod tests {
     #[fuchsia::test]
     fn transaction_translate_binder_handle_entering_owning_process() {
         let driver = BinderDriver::new();
-        let sender = driver.find_or_register_process(1);
-        let receiver = driver.find_or_register_process(2);
+        let sender = driver.create_process(1);
+        let receiver = driver.create_process(2);
 
         let binder_object = BinderObject {
             weak_ref_addr: UserAddress::from(0x0000000000000010),
@@ -1808,9 +1836,9 @@ mod tests {
     #[fuchsia::test]
     fn transaction_translate_binder_handle_passed_between_non_owning_processes() {
         let driver = BinderDriver::new();
-        let sender = driver.find_or_register_process(1);
-        let receiver = driver.find_or_register_process(2);
-        let owner = driver.find_or_register_process(3);
+        let sender = driver.create_process(1);
+        let receiver = driver.create_process(2);
+        let owner = driver.create_process(3);
 
         let binder_object = BinderObject {
             weak_ref_addr: UserAddress::from(0x0000000000000010),
