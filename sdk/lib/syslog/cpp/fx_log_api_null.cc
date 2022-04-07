@@ -6,11 +6,8 @@
 #include "macros.h"
 
 namespace syslog_backend {
+
 bool fx_log_compat_no_interest_listener() { return true; }
 bool fx_log_compat_flush_record(LogBuffer* buffer) { return false; }
 
-int fx_log_compat_reconfigure(syslog::LogSettings& settings,
-                              const std::initializer_list<std::string>& tags) {
-  return -1;
-}
 }  // namespace syslog_backend

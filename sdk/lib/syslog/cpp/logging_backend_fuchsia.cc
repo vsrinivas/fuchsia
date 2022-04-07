@@ -29,6 +29,7 @@
 #include "logging_backend_fuchsia_private.h"
 #include "logging_backend_shared.h"
 #include "macros.h"
+
 namespace syslog_backend {
 
 // Returns true if we are running in the DDK.
@@ -39,12 +40,6 @@ bool fx_log_compat_no_interest_listener();
 // Flushes a record to the legacy fx_logger, if available.
 // Returns true on success.
 bool fx_log_compat_flush_record(LogBuffer* buffer);
-
-// Attempts to reconfigure the legacy fx_logger if available.
-// Returns the file descriptor if one was configured.
-// A return value of -1 indicates that no file was opened.
-int fx_log_compat_reconfigure(syslog::LogSettings& settings,
-                              const std::initializer_list<std::string>& tags);
 
 bool HasStructuredBackend() { return true; }
 

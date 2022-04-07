@@ -10,6 +10,7 @@
 #include "macros.h"
 
 namespace syslog_backend {
+
 bool fx_log_compat_no_interest_listener() { return false; }
 bool fx_log_compat_flush_record(LogBuffer* buffer) {
   auto header = MsgHeader::CreatePtr(buffer);
@@ -26,25 +27,6 @@ bool fx_log_compat_flush_record(LogBuffer* buffer) {
     fx_logger_log(logger, header->severity, nullptr, header->c_str());
   }
   return true;
-}
-
-int fx_log_compat_reconfigure(syslog::LogSettings& settings,
-                              const std::initializer_list<std::string>& tags) {
-  const char* ctags[FX_LOG_MAX_TAGS];
-  size_t num_tags = 0;
-  for (auto& tag : tags) {
-    ctags[num_tags++] = tag.c_str();
-    if (num_tags >= FX_LOG_MAX_TAGS)
-      break;
-  }
-  int fd = -1;
-  fx_logger_config_t config = {.min_severity = settings.min_log_level,
-                               .console_fd = fd,
-                               .log_service_channel = ZX_HANDLE_INVALID,
-                               .tags = ctags,
-                               .num_tags = num_tags};
-  fx_log_reconfigure(&config);
-  return fd;
 }
 
 }  // namespace syslog_backend
