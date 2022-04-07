@@ -2,12 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.gpu.magma;
-
-using fuchsia.url;
-using zx;
-using fuchsia.memorypressure;
-
 /// Magma is the GPU driver design for Fuchsia.
 ///
 /// Magma has two driver components: a hardware-specific library loaded into each application’s
@@ -17,7 +11,14 @@ using fuchsia.memorypressure;
 ///
 /// Some names have a numeric suffix (eg, Query2); the number is a detail of how the protocols
 /// have evolved, and can be ignored.
-///
+library fuchsia.gpu.magma;
+
+using fuchsia.url;
+using zx;
+using fuchsia.memorypressure;
+
+/// Types of information about the hardware and driver that can be queried from the Magma system
+/// driver. Vendor-specific ID numbers may be used, but those IDs will be listed elsewhere.
 type QueryId = strict enum {
     VENDOR_ID = 0;
     DEVICE_ID = 1;
