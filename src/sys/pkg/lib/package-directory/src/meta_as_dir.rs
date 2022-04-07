@@ -113,7 +113,7 @@ impl vfs::directory::entry_container::Directory for MetaAsDir {
         (TraversalPosition, Box<(dyn vfs::directory::dirents_sink::Sealed + 'static)>),
         zx::Status,
     > {
-        crate::read_dirents(
+        vfs::directory::read_dirents::read_dirents(
             &crate::get_dir_children(self.root_dir.meta_files.keys().map(|s| s.as_str()), "meta/"),
             pos,
             sink,

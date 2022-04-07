@@ -8,11 +8,7 @@ use {
     std::{collections::HashSet, convert::TryInto as _, sync::Arc},
     vfs::{
         common::send_on_open_with_error,
-        directory::{
-            dirents_sink::AppendResult,
-            entry::{DirectoryEntry, EntryInfo},
-            traversal_position::TraversalPosition,
-        },
+        directory::entry::{DirectoryEntry, EntryInfo},
         path::Path as VfsPath,
     },
 };
@@ -156,48 +152,6 @@ fn get_dir_children<'a>(
     res
 }
 
-// Implements vfs::directory::entry_container::Directory::read_dirents given `entries`, a sorted
-// list of all the Directory's entries.
-async fn read_dirents<'a>(
-    entries: &'a [(EntryInfo, String)],
-    pos: &'a TraversalPosition,
-    mut sink: Box<(dyn vfs::directory::dirents_sink::Sink + 'static)>,
-) -> Result<
-    (TraversalPosition, Box<(dyn vfs::directory::dirents_sink::Sealed + 'static)>),
-    zx::Status,
-> {
-    let starting_position = match pos {
-        TraversalPosition::End => {
-            return Ok((TraversalPosition::End, sink.seal()));
-        }
-        TraversalPosition::Name(_) => {
-            // The VFS should never send this to us, since we never return it here.
-            unreachable!();
-        }
-        TraversalPosition::Start => {
-            match sink.append(&EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory), ".") {
-                AppendResult::Ok(new_sink) => sink = new_sink,
-                AppendResult::Sealed(sealed) => {
-                    return Ok((TraversalPosition::Start, sealed));
-                }
-            };
-            0 as usize
-        }
-        TraversalPosition::Index(i) => crate::u64_to_usize_safe(*i),
-    };
-
-    for i in starting_position..entries.len() {
-        let (info, name) = &entries[i];
-        match sink.append(info, name) {
-            AppendResult::Ok(new_sink) => sink = new_sink,
-            AppendResult::Sealed(sealed) => {
-                return Ok((TraversalPosition::Index(crate::usize_to_u64_safe(i)), sealed));
-            }
-        }
-    }
-    Ok((TraversalPosition::End, sink.seal()))
-}
-
 #[cfg(test)]
 async fn verify_open_adjusts_flags(
     entry: &Arc<dyn DirectoryEntry>,
@@ -229,7 +183,7 @@ mod tests {
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         futures::StreamExt,
         std::any::Any,
-        vfs::directory::dirents_sink::{self, Sealed, Sink},
+        vfs::directory::dirents_sink::{self, AppendResult, Sealed, Sink},
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -478,70 +432,5 @@ mod tests {
         fn open(self: Box<Self>) -> Box<dyn Any> {
             self
         }
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn read_dirents_start() {
-        let entries = get_dir_children(["resource", "meta/file"], "");
-
-        let (start_pos, sealed) =
-            read_dirents(&entries, &TraversalPosition::Start, Box::new(FakeSink::new(0)))
-                .await
-                .expect("read_dirents failed");
-        assert_eq!(FakeSink::from_sealed(sealed).entries, vec![]);
-        assert_eq!(start_pos, TraversalPosition::Start);
-
-        let (end_pos, sealed) =
-            read_dirents(&entries, &TraversalPosition::Start, Box::new(FakeSink::new(3)))
-                .await
-                .expect("read_dirents failed");
-        assert_eq!(
-            FakeSink::from_sealed(sealed).entries,
-            vec![
-                (".".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),
-                ("meta".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),
-                ("resource".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::File))
-            ]
-        );
-        assert_eq!(end_pos, TraversalPosition::End);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn read_dirents_end() {
-        let entries = get_dir_children(["resource", "meta/file"], "");
-
-        let (pos, sealed) =
-            read_dirents(&entries, &TraversalPosition::End, Box::new(FakeSink::new(3)))
-                .await
-                .expect("read_dirents failed");
-        assert_eq!(FakeSink::from_sealed(sealed).entries, vec![]);
-        assert_eq!(pos, TraversalPosition::End);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn read_dirents_index() {
-        let entries = get_dir_children(["resource", "meta/file"], "");
-
-        let (pos, sealed) =
-            read_dirents(&entries, &TraversalPosition::Start, Box::new(FakeSink::new(2)))
-                .await
-                .expect("read_dirents failed");
-        assert_eq!(
-            FakeSink::from_sealed(sealed).entries,
-            vec![
-                (".".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),
-                ("meta".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),
-            ]
-        );
-        assert_eq!(pos, TraversalPosition::Index(1));
-
-        let (end_pos, sealed) = read_dirents(&entries, &pos, Box::new(FakeSink::new(2)))
-            .await
-            .expect("read_dirents failed");
-        assert_eq!(
-            FakeSink::from_sealed(sealed).entries,
-            vec![("resource".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::File))]
-        );
-        assert_eq!(end_pos, TraversalPosition::End);
     }
 }
