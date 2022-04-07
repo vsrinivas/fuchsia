@@ -178,6 +178,9 @@ zx_status_t El2CpuState::Create(ktl::unique_ptr<El2CpuState>* out) {
   cpu_state->tcr_.set_ps(address_size);
   cpu_state->vtcr_.set_reg_value(MMU_VTCR_EL2_FLAGS);
   cpu_state->vtcr_.set_ps(address_size);
+  if (arch::ArmIdAa64Mmfr1El1::Read().vmid_bits() == arch::ArmAsidSize::k16bits) {
+    cpu_state->vtcr_.set_vs(true);
+  }
 
   // Setup EL2 for all online CPUs.
   cpu_state->cpu_mask_ = hypervisor::percpu_exec(OnTask, cpu_state.get());
