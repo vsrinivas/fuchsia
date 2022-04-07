@@ -311,7 +311,6 @@ config("fidl-wire-deprecated-mutable-tables") {
     "//src/devices/board/lib/acpi",
     "//src/devices/board/lib/acpi:acpi-test",
     "//src/devices/i2c/drivers/i2c:i2c-test-bin",
-    "//src/devices/lib/compat",
     "//src/devices/lib/driver2:llcpp_test",
     "//src/devices/lib/fidl-metadata",
     "//src/devices/light-sensor/drivers/ams-light:ams-light-driver",
