@@ -9,10 +9,10 @@
 QEMU=./prebuilt/third_party/qemu/linux-x64/bin/qemu-system-aarch64
 UEFI=/usr/share/qemu-efi-aarch64/QEMU_EFI.fd
 DIR=$(dirname $0)
-DISK=$DIR/../../out/default/obj/build/images/disk.raw
+DISK=$DIR/../../out/core.arm64/obj/build/images/disk.raw
 
 ${QEMU} \
-  -cpu max -smp 1 -m 512 \
+  -cpu max -smp 4 -m 512 \
   -machine virt-2.12 \
   -nographic \
   -bios ${UEFI} \
