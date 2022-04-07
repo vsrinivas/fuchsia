@@ -14,9 +14,9 @@
 
 namespace {
 
-void ignore_msr(VmxPage* msr_bitmaps_page, bool ignore_writes, uint32_t msr) {
+void IgnoreMsr(const VmxPage& msr_bitmaps_page, uint32_t msr) {
   // From Volume 3, Section 24.6.9.
-  uint8_t* msr_bitmaps = msr_bitmaps_page->VirtualAddress<uint8_t>();
+  uint8_t* msr_bitmaps = msr_bitmaps_page.VirtualAddress<uint8_t>();
   if (msr >= 0xc0000000) {
     msr_bitmaps += 1 << 10;
   }
@@ -28,11 +28,9 @@ void ignore_msr(VmxPage* msr_bitmaps_page, bool ignore_writes, uint32_t msr) {
   // Ignore reads to the MSR.
   msr_bitmaps[msr_byte] &= static_cast<uint8_t>(~(1u << msr_bit));
 
-  if (ignore_writes) {
-    // Ignore writes to the MSR.
-    msr_bitmaps += 2 << 10;
-    msr_bitmaps[msr_byte] &= static_cast<uint8_t>(~(1u << msr_bit));
-  }
+  // Ignore writes to the MSR.
+  msr_bitmaps += 2 << 10;
+  msr_bitmaps[msr_byte] &= static_cast<uint8_t>(~(1u << msr_bit));
 }
 
 }  // namespace
@@ -68,19 +66,19 @@ zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
     return status;
   }
 
-  ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_PAT);
-  ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_EFER);
-  ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_FS_BASE);
-  ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_GS_BASE);
-  ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_KERNEL_GS_BASE);
-  ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_STAR);
-  ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_LSTAR);
-  ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_FMASK);
-  ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_TSC_ADJUST);
-  ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_TSC_AUX);
-  ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_SYSENTER_CS);
-  ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_SYSENTER_ESP);
-  ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_SYSENTER_EIP);
+  IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_PAT);
+  IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_EFER);
+  IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_FS_BASE);
+  IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_GS_BASE);
+  IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_KERNEL_GS_BASE);
+  IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_STAR);
+  IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_LSTAR);
+  IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_FMASK);
+  IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_TSC_ADJUST);
+  IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_TSC_AUX);
+  IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_SYSENTER_CS);
+  IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_SYSENTER_ESP);
+  IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_SYSENTER_EIP);
 
   *out = ktl::move(guest);
   return ZX_OK;
