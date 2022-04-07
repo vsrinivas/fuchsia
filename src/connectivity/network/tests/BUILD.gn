@@ -33,6 +33,34 @@ test("netstack_bsdsocket_c_api_test") {
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/fbl",
   ]
+}
+
+test("netstack_dgramsocket_c_api_test") {
+  sources = [
+    "dgramsocket_test.cc",
+    "util.cc",
+    "util.h",
+  ]
+
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
+test("netstack_streamsocket_c_api_test") {
+  sources = [
+    "streamsocket_test.cc",
+    "util.cc",
+    "util.h",
+  ]
+
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//zircon/system/ulib/fbl",
+  ]
 
   if (is_fuchsia) {
     deps += [
@@ -78,48 +106,89 @@ test("netstack_rawsocket_c_api_test") {
   ]
 }
 
-netstack_tests_with_fast_udp = [
-  "bsdsocket_c_api",
-  "fuchsia_c_api",
+netstack_socket_tests_without_manifest = [
+  "netstack_dgramsocket_c_api_test",
+  "netstack_streamsocket_c_api_test",
+  "netstack_bsdsocket_c_api_test",
 ]
 
-netstack_tests = netstack_tests_with_fast_udp + [
-                   "packetsocket_c_api",
-                   "rawsocket_c_api",
-                 ]
-
-tests = [ "name_provider_service_not_present" ]
-
-foreach(test, netstack_tests) {
-  tests += [ "netstack_${test}" ]
-}
-
-foreach(test, tests) {
-  name = "${test}_test"
-  fuchsia_unittest_component("${name}_component") {
-    component_name = name
-    deps = [ ":${name}" ]
-    manifest = "meta/${name}.cml"
+foreach(test, netstack_socket_tests_without_manifest) {
+  fuchsia_unittest_component("${test}_component") {
+    component_name = test
+    deps = [
+      ":${test}",
+      ":socket_test_includes",
+    ]
   }
 }
 
-tests_with_fast_udp = []
+expect_includes("socket_test_includes") {
+  includes = [
+    "//src/connectivity/network/dns/meta/client.shard.cml",
+    "//src/connectivity/network/netstack/meta/client-debug.shard.cml",
+    "//src/sys/test_runners/gtest/default.shard.cml",
+    "//sdk/lib/syslog/client.shard.cml",
+  ]
+}
 
-foreach(test, netstack_tests_with_fast_udp) {
+name_provider_test_name = "name_provider_service_not_present_test"
+
+fuchsia_unittest_component("${name_provider_test_name}_component") {
+  component_name = name_provider_test_name
+  deps = [
+    ":${name_provider_test_name}",
+    ":name_provider_includes",
+  ]
+}
+
+expect_includes("name_provider_includes") {
+  includes = [
+    "//src/sys/test_runners/gtest/default.shard.cml",
+    "//sdk/lib/syslog/client.shard.cml",
+  ]
+}
+
+netstack_tests_without_manifest =
+    netstack_socket_tests_without_manifest + [ name_provider_test_name ]
+
+netstack_tests_with_manifest = [
+  "netstack_packetsocket_c_api_test",
+  "netstack_fuchsia_c_api_test",
+  "netstack_rawsocket_c_api_test",
+]
+
+foreach(test, netstack_tests_with_manifest) {
+  fuchsia_unittest_component("${test}_component") {
+    component_name = test
+    deps = [ ":${test}" ]
+    manifest = "meta/${test}.cml"
+  }
+}
+
+tests_with_fast_udp = [
+  "bsdsocket_c_api_test",
+  "dgramsocket_c_api_test",
+  "fuchsia_c_api_test",
+]
+
+netstack_tests_with_fast_udp = []
+
+foreach(test, tests_with_fast_udp) {
   name = "netstack_with_fast_udp_${test}"
-  tests_with_fast_udp += [ name ]
-  component_name = "${name}_test"
-  fuchsia_unittest_component("${component_name}_component") {
-    component_name = component_name
-    deps = [ ":netstack_${test}_test" ]
-    manifest = "meta/${component_name}.cml"
+  netstack_tests_with_fast_udp += [ name ]
+  fuchsia_unittest_component("${name}_component") {
+    component_name = name
+    deps = [ ":netstack_${test}" ]
+    manifest = "meta/${name}.cml"
   }
 }
 
 fuchsia_test_package("netstack-c-api-tests") {
   test_components = []
-  foreach(test, tests + tests_with_fast_udp) {
-    test_components += [ ":${test}_test_component" ]
+  foreach(test,
+          netstack_tests_without_manifest + netstack_tests_with_manifest +
+              netstack_tests_with_fast_udp) {
+    test_components += [ ":${test}_component" ]
   }
 
   deps = [
@@ -150,8 +219,10 @@ group("tests") {
   if (host_os == "linux") {
     public_deps += [
       ":netstack_bsdsocket_c_api_test($host_toolchain)",
+      ":netstack_dgramsocket_c_api_test($host_toolchain)",
       ":netstack_packetsocket_c_api_test($host_toolchain)",
       ":netstack_rawsocket_c_api_test($host_toolchain)",
+      ":netstack_streamsocket_c_api_test($host_toolchain)",
     ]
   }
 }

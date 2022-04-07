@@ -3,10 +3,8 @@
 // found in the LICENSE file.
 {
     include: [
+        "//src/connectivity/network/netstack/meta/client-with-fast-udp-debug.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
         "syslog/client.shard.cml",
     ],
-    program: {
-        binary: "test/name_provider_service_not_present_test",
-    },
 }

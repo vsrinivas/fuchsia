@@ -3,12 +3,8 @@
 // found in the LICENSE file.
 {
     include: [
-        "//src/connectivity/network/dns/meta/client.shard.cml",
         "//src/connectivity/network/netstack/meta/client-debug.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
         "syslog/client.shard.cml",
     ],
-    program: {
-        binary: "test/netstack_bsdsocket_c_api_test",
-    },
 }
