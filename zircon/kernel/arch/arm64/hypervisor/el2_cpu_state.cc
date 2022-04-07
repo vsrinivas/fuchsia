@@ -71,13 +71,13 @@ void El2TranslationTable::Reset() {
   }
 }
 
-zx_status_t El2TranslationTable::Init() {
+zx::status<> El2TranslationTable::Init() {
   // Create the address space.
   el2_aspace_.emplace(/*base=*/0, /*size=*/kEl2PhysAddressSize, ArmAspaceType::kHypervisor);
   zx_status_t status = el2_aspace_->Init();
   if (status != ZX_OK) {
     el2_aspace_.reset();
-    return status;
+    return zx::error(status);
   }
 
   // Map in all conventional physical memory read/write.
@@ -92,7 +92,7 @@ zx_status_t El2TranslationTable::Init() {
         ARCH_MMU_FLAG_CACHED | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_READ, nullptr);
     if (status != ZX_OK) {
       Reset();
-      return status;
+      return zx::error(status);
     }
   }
 
@@ -106,15 +106,15 @@ zx_status_t El2TranslationTable::Init() {
                                 ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_EXECUTE);
   if (status != ZX_OK) {
     Reset();
-    return status;
+    return zx::error(status);
   }
 
-  return ZX_OK;
+  return zx::ok();
 }
 
 zx_paddr_t El2TranslationTable::Base() const { return el2_aspace_->arch_table_phys(); }
 
-zx_status_t El2Stack::Alloc() { return page_.Alloc(0).status_value(); }
+zx::status<> El2Stack::Alloc() { return page_.Alloc(0); }
 
 zx_paddr_t El2Stack::Top() const { return page_.PhysicalAddress() + PAGE_SIZE; }
 
@@ -144,30 +144,28 @@ static void el2_off_task(void* arg) {
 }
 
 // static
-zx_status_t El2CpuState::Create(ktl::unique_ptr<El2CpuState>* out) {
+zx::status<ktl::unique_ptr<El2CpuState>> El2CpuState::Create() {
   fbl::AllocChecker ac;
   ktl::unique_ptr<El2CpuState> cpu_state(new (&ac) El2CpuState);
   if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
 
   // Initialise the EL2 translation table.
-  zx_status_t status = cpu_state->table_.Init();
-  if (status != ZX_OK) {
-    return status;
+  if (auto result = cpu_state->table_.Init(); result.is_error()) {
+    return result.take_error();
   }
 
   // Allocate EL2 stack for each CPU.
   size_t num_cpus = arch_max_num_cpus();
   El2Stack* stacks = new (&ac) El2Stack[num_cpus];
   if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
   fbl::Array<El2Stack> el2_stacks(stacks, num_cpus);
   for (auto& stack : el2_stacks) {
-    status = stack.Alloc();
-    if (status != ZX_OK) {
-      return status;
+    if (auto result = stack.Alloc(); result.is_error()) {
+      return result.take_error();
     }
   }
   cpu_state->stacks_ = ktl::move(el2_stacks);
@@ -187,11 +185,10 @@ zx_status_t El2CpuState::Create(ktl::unique_ptr<El2CpuState>* out) {
   // Setup EL2 for all online CPUs.
   cpu_state->cpu_mask_ = hypervisor::percpu_exec(OnTask, cpu_state.get());
   if (cpu_state->cpu_mask_ != mp_get_online_mask()) {
-    return ZX_ERR_NOT_SUPPORTED;
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  *out = ktl::move(cpu_state);
-  return ZX_OK;
+  return zx::ok(ktl::move(cpu_state));
 }
 
 El2CpuState::~El2CpuState() { mp_sync_exec(MP_IPI_TARGET_MASK, cpu_mask_, el2_off_task, nullptr); }
@@ -203,9 +200,11 @@ zx::status<> El2CpuState::FreeVmid(uint16_t vmid) { return vmid_allocator_.Free(
 zx::status<uint16_t> alloc_vmid() {
   Guard<Mutex> guard(GuestMutex::Get());
   if (num_guests == 0) {
-    if (zx_status_t status = El2CpuState::Create(&el2_cpu_state); status != ZX_OK) {
-      return zx::error(status);
+    auto cpu_state = El2CpuState::Create();
+    if (cpu_state.is_error()) {
+      return cpu_state.take_error();
     }
+    el2_cpu_state = ktl::move(*cpu_state);
   }
   num_guests++;
   return el2_cpu_state->AllocVmid();

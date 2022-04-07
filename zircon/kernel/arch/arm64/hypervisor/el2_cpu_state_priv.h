@@ -22,7 +22,7 @@ class El2TranslationTable {
   El2TranslationTable() = default;
   ~El2TranslationTable();
 
-  zx_status_t Init();
+  zx::status<> Init();
   zx_paddr_t Base() const;
 
  private:
@@ -35,7 +35,7 @@ class El2TranslationTable {
 // Represents a stack for use with EL2/
 class El2Stack {
  public:
-  zx_status_t Alloc();
+  zx::status<> Alloc();
   zx_paddr_t Top() const;
 
  private:
@@ -45,7 +45,7 @@ class El2Stack {
 // Maintains the EL2 state for each CPU.
 class El2CpuState {
  public:
-  static zx_status_t Create(ktl::unique_ptr<El2CpuState>* out);
+  static zx::status<ktl::unique_ptr<El2CpuState>> Create();
   ~El2CpuState();
 
   // Allocate/free a VMID.
