@@ -1,0 +1,37 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+
+if (is_host) {
+  rustc_binary("shush") {
+    with_unit_tests = true
+    deps = [
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:lazy_static",
+      "//third_party/rust_crates:log",
+      "//third_party/rust_crates:proc-macro2",
+      "//third_party/rust_crates:regex",
+      "//third_party/rust_crates:rustfix",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_json",
+      "//third_party/rust_crates:syn",
+    ]
+    sources = [
+      "src/allow.rs",
+      "src/fix.rs",
+      "src/lint.rs",
+      "src/main.rs",
+      "src/owners.rs",
+      "src/span.rs",
+    ]
+  }
+
+  copy("install") {
+    sources = [ "$root_out_dir/shush" ]
+    deps = [ ":shush" ]
+    outputs = [ "$root_build_dir/host-tools/{{source_file_part}}" ]
+  }
+}
