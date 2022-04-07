@@ -81,7 +81,7 @@ int MkDirAll(const std::string_view dir_name) {
     if (slash != 0u && dir[slash] == '/') {
       dir[slash] = '\0';
       if (mkdir(dir, 0755) && errno != EEXIST) {
-        return false;
+        return errno;
       }
       dir[slash] = '/';
     }
