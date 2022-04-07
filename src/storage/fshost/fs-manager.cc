@@ -15,8 +15,6 @@
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zircon-internal/debug.h>
-#include <lib/zircon-internal/thread_annotations.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

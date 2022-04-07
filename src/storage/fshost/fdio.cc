@@ -10,7 +10,6 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zircon-internal/paths.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/job.h>
@@ -88,7 +87,6 @@ zx_status_t DevmgrLauncher::LaunchWithLoader(const zx::job& job, const char* nam
   if (getenv(LDSO_TRACE_CMDLINE)) {
     env.push_back(LDSO_TRACE_ENV);
   }
-  env.push_back(ZX_SHELL_ENV_PATH);
   while (initial_envp && initial_envp[0]) {
     env.push_back(*initial_envp++);
   }

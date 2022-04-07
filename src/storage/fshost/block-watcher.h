@@ -59,11 +59,11 @@ class BlockWatcher {
 
   std::mutex lock_;
   // pause_count_ == -1 means shut down.
-  int pause_count_ TA_GUARDED(lock_) = 0;
+  int pause_count_ __TA_GUARDED(lock_) = 0;
   // Notified when watcher thread should resume, or when watcher thread is paused.
   std::condition_variable_any pause_condition_;
   zx::event pause_event_;
-  bool is_paused_ TA_GUARDED(lock_) = false;
+  bool is_paused_ __TA_GUARDED(lock_) = false;
 
   FilesystemMounter mounter_;
   BlockDeviceManager device_manager_;

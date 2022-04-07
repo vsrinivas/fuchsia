@@ -9,7 +9,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/job.h>
@@ -217,7 +216,7 @@ class FsManager {
   fbl::RefPtr<fs::PseudoDir> diagnostics_dir_;
 
   std::mutex lock_;
-  bool shutdown_called_ TA_GUARDED(lock_) = false;
+  bool shutdown_called_ __TA_GUARDED(lock_) = false;
   sync_completion_t shutdown_;
   sync_completion_t ready_for_shutdown_;
 
