@@ -75,7 +75,10 @@ sdk://fidl/fuchsia.location.namedplace
 sdk://fidl/fuchsia.location.position
 sdk://fidl/fuchsia.location.sensor
 sdk://fidl/fuchsia.logger
+sdk://fidl/fuchsia.lowpan
 sdk://fidl/fuchsia.lowpan.bootstrap
+sdk://fidl/fuchsia.lowpan.device
+sdk://fidl/fuchsia.lowpan.thread
 sdk://fidl/fuchsia.math
 sdk://fidl/fuchsia.media
 sdk://fidl/fuchsia.media.audio
