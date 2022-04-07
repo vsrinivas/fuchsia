@@ -16,25 +16,25 @@ namespace hypervisor {
 
 // Allocates architecture-specific resource IDs.
 //
-// |T| is the type of the ID, and is an integral type.
-// |N| is the maximum value of an ID.
-template <typename T, T N>
+// `T` is the type of the ID, and is an integral type.
+// `Max` is the maximum value of an ID.
+template <typename T, T Max>
 class IdAllocator {
  public:
-  IdAllocator() {
-    zx_status_t status = bitmap_.Reset(N);
+  IdAllocator() { Reset(); }
+
+  // Resets the allocator, and sets a new `max_size`, where `max_size` <= `Max`.
+  void Reset(T max_size = Max) {
+    zx_status_t status = bitmap_.Reset(max_size);
     // We use bitmap::FixedStorage, so allocation cannot fail.
     ZX_DEBUG_ASSERT(status == ZX_OK);
   }
 
   zx::status<T> Alloc() {
     size_t first_unset;
-    bool all_set = bitmap_.Get(0, N, &first_unset);
+    bool all_set = bitmap_.Get(0, bitmap_.size(), &first_unset);
     if (all_set) {
       return zx::error(ZX_ERR_NO_RESOURCES);
-    }
-    if (first_unset >= N) {
-      return zx::error(ZX_ERR_OUT_OF_RANGE);
     }
     zx_status_t status = bitmap_.SetOne(first_unset);
     if (status != ZX_OK) {
@@ -52,7 +52,7 @@ class IdAllocator {
   }
 
  private:
-  bitmap::RawBitmapGeneric<bitmap::FixedStorage<N>> bitmap_;
+  bitmap::RawBitmapGeneric<bitmap::FixedStorage<Max>> bitmap_;
 };
 
 }  // namespace hypervisor

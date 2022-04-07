@@ -11,6 +11,7 @@
 #include <zircon/types.h>
 
 #include <hypervisor/guest_physical_address_space.h>
+#include <hypervisor/id_allocator.h>
 #include <hypervisor/interrupt_tracker.h>
 #include <hypervisor/trap_map.h>
 #include <vm/pmm.h>
@@ -388,6 +389,39 @@ static bool guest_physical_address_space_write_combining() {
   END_TEST;
 }
 
+static bool id_allocator_reset_to_size() {
+  BEGIN_TEST;
+
+  constexpr uint8_t kSize = sizeof(size_t);
+  hypervisor::IdAllocator<uint8_t, UINT8_MAX> allocator;
+  allocator.Reset(kSize);
+
+  // Allocate until all IDs are used.
+  for (uint8_t i = 1; i <= kSize; i++) {
+    auto id = allocator.Alloc();
+    EXPECT_EQ(ZX_OK, id.status_value());
+    EXPECT_EQ(i, *id);
+  }
+
+  // Allocate when no IDs are free.
+  auto id = allocator.Alloc();
+  EXPECT_EQ(ZX_ERR_NO_RESOURCES, id.status_value());
+
+  // Free an ID that was never allocated.
+  auto result = allocator.Free(kSize + 1);
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.status_value());
+
+  // Free a random ID, and then check that it gets reallocated.
+  constexpr uint8_t kIdx = kSize / 2;
+  result = allocator.Free(kIdx);
+  EXPECT_EQ(ZX_OK, result.status_value());
+  id = allocator.Alloc();
+  EXPECT_EQ(ZX_OK, id.status_value());
+  EXPECT_EQ(kIdx, *id);
+
+  END_TEST;
+}
+
 static bool interrupt_bitmap() {
   BEGIN_TEST;
 
@@ -528,6 +562,7 @@ HYPERVISOR_UNITTEST(guest_physical_address_space_map_interrupt_controller)
 HYPERVISOR_UNITTEST(guest_physical_address_space_uncached)
 HYPERVISOR_UNITTEST(guest_physical_address_space_uncached_device)
 HYPERVISOR_UNITTEST(guest_physical_address_space_write_combining)
+HYPERVISOR_UNITTEST(id_allocator_reset_to_size)
 HYPERVISOR_UNITTEST(interrupt_bitmap)
 HYPERVISOR_UNITTEST(trap_map_insert_trap_intersecting)
 HYPERVISOR_UNITTEST(trap_map_insert_trap_out_of_range)
