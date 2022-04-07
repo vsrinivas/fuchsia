@@ -24,3 +24,50 @@ flutter_app("parent-view") {
     "//third_party/dart-pkg/pub/args",
   ]
 }
+
+# The following build targets build new packages that use the same parent-view
+# flutter app but specify arguments at launch.
+# TODO(fxb/97018): Replace parent-view with CFv2 manifest and consolidate
+# different build targets to config changes.
+
+flutter_app("parent-view-disabled-hittest") {
+  main_dart = "parent_view.dart"
+  manifest = "pubspec.yaml"
+  meta = [
+    {
+      path = rebase_path("meta/parent-view-disabled-hittest.cmx")
+      dest = "parent-view-disabled-hittest.cmx"
+    },
+  ]
+  deps = [
+    "//sdk/dart/fuchsia_scenic_flutter",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/dart/zircon",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/pub/args",
+  ]
+}
+
+flutter_app("parent-view-show-overlay") {
+  main_dart = "parent_view.dart"
+  manifest = "pubspec.yaml"
+  meta = [
+    {
+      path = rebase_path("meta/parent-view-show-overlay.cmx")
+      dest = "parent-view-show-overlay.cmx"
+    },
+  ]
+  deps = [
+    "//sdk/dart/fuchsia_scenic_flutter",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/dart/zircon",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/pub/args",
+  ]
+}

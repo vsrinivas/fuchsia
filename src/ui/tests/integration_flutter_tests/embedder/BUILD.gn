@@ -20,18 +20,24 @@ group("tests") {
     "//src/ui/bin/text:text_manager",
     "//src/ui/tests/integration_flutter_tests/embedder/child-view",
     "//src/ui/tests/integration_flutter_tests/embedder/parent-view",
+    "//src/ui/tests/integration_flutter_tests/embedder/parent-view:parent-view-disabled-hittest",
+    "//src/ui/tests/integration_flutter_tests/embedder/parent-view:parent-view-show-overlay",
   ]
 }
 
 fuchsia_unittest_package("flutter-embedder-test") {
-  manifest = "meta/flutter-embedder-test.cmx"
+  manifest = "meta/flutter-embedder-test.cml"
   deps = [
     ":flutter-embedder-test-bin",
     "//src/connectivity/network/netstack:component-legacy",
+    "//src/lib/fuchsia-component-test/realm_builder_server:fuchsia-component-test",
     "//src/ui/bin/root_presenter:component_v1_for_test",
     "//src/ui/scenic:component",
     "//src/ui/tests/integration_flutter_tests/embedder/child-view",
     "//src/ui/tests/integration_flutter_tests/embedder/parent-view",
+    "//src/ui/tests/integration_flutter_tests/embedder/parent-view:parent-view-disabled-hittest",
+    "//src/ui/tests/integration_flutter_tests/embedder/parent-view:parent-view-show-overlay",
+    "//src/ui/tests/integration_input_tests:scenic-test-realm",
   ]
   test_specs = {
     log_settings = {
@@ -48,25 +54,26 @@ test("flutter-embedder-test-bin") {
   ]
   output_name = "flutter-embedder-test"
   deps = [
+    "//sdk/fidl/fuchsia.accessibility.semantics",
+    "//sdk/fidl/fuchsia.hardware.display",
+    "//sdk/fidl/fuchsia.logger",
+    "//sdk/fidl/fuchsia.scheduler",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.tracing.provider",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.input",
-    "//src/lib/testing/loop_fixture",
-
-    # TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-    "//sdk/fidl/fuchsia.ui.lifecycle",
+    "//sdk/fidl/fuchsia.ui.pointerinjector",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.vulkan.loader",
     "//sdk/lib/fit",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/testing/views",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/zx",
   ]
 }

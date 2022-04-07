@@ -29,7 +29,7 @@ fx build
 ### Run
 
 ```
-ffx test flutter-embedder-test
+ffx test run fuchsia-pkg://fuchsia.com/flutter-embedder-test#meta/flutter-embedder-test.cm
 ```
 
 ## Implementation Details

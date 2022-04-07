@@ -5,15 +5,18 @@
 #ifndef SRC_UI_TESTS_INTEGRATION_FLUTTER_TESTS_EMBEDDER_FLUTTER_EMBEDDER_TEST_H_
 #define SRC_UI_TESTS_INTEGRATION_FLUTTER_TESTS_EMBEDDER_FLUTTER_EMBEDDER_TEST_H_
 
-#include <fuchsia/ui/lifecycle/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/ui/scenic/cpp/resources.h>
+#include <lib/ui/scenic/cpp/session.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
@@ -21,11 +24,74 @@
 
 #include <vector>
 
-#include "src/lib/ui/base_view/embedded_view_utils.h"
+// TODO(fxb/97309): Break color.h dependency.
 #include "src/ui/testing/views/color.h"
-#include "src/ui/testing/views/embedder_view.h"
 
 namespace flutter_embedder_test {
+
+struct ViewContext {
+  scenic::SessionPtrAndListenerRequest session_and_listener_request;
+  fuchsia::ui::views::ViewToken view_token;
+};
+
+class EmbedderView : public fuchsia::ui::scenic::SessionListener {
+ public:
+  EmbedderView(ViewContext context, fuchsia::ui::views::ViewHolderToken view_holder_token)
+      : binding_(this, std::move(context.session_and_listener_request.second)),
+        session_(std::move(context.session_and_listener_request.first)),
+        view_(&session_, std::move(context.view_token), "View"),
+        top_node_(&session_),
+        view_holder_(&session_, std::move(view_holder_token), "ViewHolder") {
+    binding_.set_error_handler([](zx_status_t status) {
+      FX_LOGS(FATAL) << "Session listener binding: " << zx_status_get_string(status);
+    });
+    view_.AddChild(top_node_);
+    // Call |Session::Present| in order to flush events having to do with
+    // creation of |view_| and |top_node_|.
+    session_.Present(0, [](auto) {});
+  }
+
+  void EmbedView(std::function<void(fuchsia::ui::gfx::ViewState)> view_state_changed_callback) {
+    view_state_changed_callback_ = std::move(view_state_changed_callback);
+    top_node_.Attach(view_holder_);
+    session_.Present(0, [](auto) {});
+  }
+
+ private:
+  // |fuchsia::ui::scenic::SessionListener|
+  void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) override {
+    for (const auto& event : events) {
+      if (event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx &&
+          event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged) {
+        const auto& evt = event.gfx().view_properties_changed();
+
+        view_holder_.SetViewProperties(evt.properties);
+        session_.Present(0, [](auto) {});
+
+      } else if (event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx &&
+                 event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewStateChanged) {
+        const auto& evt = event.gfx().view_state_changed();
+        if (evt.view_holder_id == view_holder_.id()) {
+          // Clients of |EmbedderView| *must* set a view state changed
+          // callback.  Failure to do so is a usage error.
+          FX_CHECK(view_state_changed_callback_);
+          view_state_changed_callback_(evt.state);
+        }
+      }
+    }
+  }
+
+  // |fuchsia::ui::scenic::SessionListener|
+  void OnScenicError(std::string error) override { FX_LOGS(FATAL) << "OnScenicError: " << error; }
+
+  fidl::Binding<fuchsia::ui::scenic::SessionListener> binding_;
+  scenic::Session session_;
+  scenic::View view_;
+  scenic::EntityNode top_node_;
+  std::optional<fuchsia::ui::gfx::ViewProperties> embedded_view_properties_;
+  scenic::ViewHolder view_holder_;
+  std::function<void(fuchsia::ui::gfx::ViewState)> view_state_changed_callback_;
+};
 
 /// Defines a list of services that are injected into the test environment. Unlike the
 /// injected-services in CMX which are injected per test package, these are injected per test and
@@ -39,38 +105,11 @@ constexpr zx::duration kScreenshotTimeout = zx::sec(10);
 // Timeout to fail the test if it goes beyond this duration.
 constexpr zx::duration kTestTimeout = zx::min(1);
 
-class FlutterEmbedderTest : public gtest::TestWithEnvironmentFixture {
+class FlutterEmbedderTest : public ::loop_fixture::RealLoop, public ::testing::Test {
  public:
-  // |testing::Test|
-  void SetUp() override {
-    TestWithEnvironmentFixture::SetUp();
-
-    // Create test-specific launchable services.
-    auto services = TestWithEnvironmentFixture::CreateServices();
-    for (const auto& service_info : GetInjectedServices()) {
-      zx_status_t status =
-          services->AddServiceWithLaunchInfo({.url = service_info.second}, service_info.first);
-      FX_CHECK(status == ZX_OK) << "Failed to add service " << service_info.first;
-    }
-
-    environment_ = CreateNewEnclosingEnvironment("flutter-embedder-tests", std::move(services),
-                                                 {.inherit_parent_services = true});
-    WaitForEnclosingEnvToStart(environment());
-
-    FX_VLOGS(1) << "Created test environment.";
-
-    // Connects to scenic lifecycle controller in order to shutdown scenic at the end of the test.
-    // This ensures the correct ordering of shutdown under CFv1: first scenic, then the fake display
-    // controller.
-    //
-    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-    environment_->ConnectToService<fuchsia::ui::lifecycle::LifecycleController>(
-        scenic_lifecycle_controller_.NewRequest());
-
-    environment_->ConnectToService(scenic_.NewRequest());
-    scenic_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
-    });
+  FlutterEmbedderTest() : realm_builder_(component_testing::RealmBuilder::Create()) {
+    FX_VLOGS(1) << "Setting up base realm";
+    SetUpRealmBase();
 
     // Post a "just in case" quit task, if the test hangs.
     async::PostDelayedTask(
@@ -79,52 +118,24 @@ class FlutterEmbedderTest : public gtest::TestWithEnvironmentFixture {
         kTestTimeout);
   }
 
-  // |testing::Test|
-  void TearDown() override {
-    // Avoid spurious errors since we are about to kill scenic.
-    //
-    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-    scenic_.set_error_handler(nullptr);
+  ViewContext CreatePresentationContext() {
+    FX_CHECK(scenic()) << "Scenic is not connected.";
 
-    zx_status_t terminate_status = scenic_lifecycle_controller_->Terminate();
-    FX_CHECK(terminate_status == ZX_OK)
-        << "Failed to terminate Scenic with status: " << zx_status_get_string(terminate_status);
+    return {
+        .session_and_listener_request = scenic::CreateScenicSessionPtrAndListenerRequest(scenic()),
+        .view_token = CreatePresentationViewToken(),
+    };
   }
-
-  sys::testing::EnclosingEnvironment* environment() { return environment_.get(); }
 
   fuchsia::ui::views::ViewToken CreatePresentationViewToken() {
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
-    auto presenter = environment()->ConnectToService<fuchsia::ui::policy::Presenter>();
+    auto presenter = realm_->Connect<fuchsia::ui::policy::Presenter>();
     presenter.set_error_handler(
         [](zx_status_t status) { FAIL() << "presenter: " << zx_status_get_string(status); });
     presenter->PresentView(std::move(view_holder_token), nullptr);
 
     return std::move(view_token);
-  }
-
-  void RunAppWithArgs(const std::string& component_url,
-                      const std::vector<std::string>& component_args = {}) {
-    scenic::EmbeddedViewInfo flutter_runner = scenic::LaunchComponentAndCreateView(
-        environment()->launcher_ptr(), component_url, component_args);
-    flutter_runner.controller.events().OnTerminated = [](auto...) { FAIL(); };
-
-    // Present the view.
-    embedder_view_.emplace(scenic::ViewContext{
-        .session_and_listener_request =
-            scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get()),
-        .view_token = CreatePresentationViewToken(),
-    });
-
-    // Embed the view.
-    bool is_rendering = false;
-    embedder_view_->EmbedView(std::move(flutter_runner),
-                              [&is_rendering](fuchsia::ui::gfx::ViewState view_state) {
-                                is_rendering = view_state.is_rendering;
-                              });
-    RunLoopUntil([&is_rendering] { return is_rendering; });
-    FX_LOGS(INFO) << "Launched component: " << component_url;
   }
 
   scenic::Screenshot TakeScreenshot() {
@@ -141,6 +152,8 @@ class FlutterEmbedderTest : public gtest::TestWithEnvironmentFixture {
 
     return scenic::Screenshot(screenshot_out);
   }
+
+  void BuildRealmAndLaunchApp(const std::string& component_url);
 
   bool TakeScreenshotUntil(scenic::Color color,
                            fit::function<void(std::map<scenic::Color, size_t>)> callback = nullptr,
@@ -171,7 +184,7 @@ class FlutterEmbedderTest : public gtest::TestWithEnvironmentFixture {
     FX_LOGS(INFO) << "Injecting input... ";
     // Register it against Root Presenter.
     fuchsia::ui::input::DeviceDescriptor device{.touchscreen = std::move(parameters)};
-    auto registry = environment()->ConnectToService<fuchsia::ui::input::InputDeviceRegistry>();
+    auto registry = realm_->Connect<fuchsia::ui::input::InputDeviceRegistry>();
     fuchsia::ui::input::InputDevicePtr connection;
     registry->RegisterDevice(std::move(device), connection.NewRequest());
 
@@ -194,14 +207,18 @@ class FlutterEmbedderTest : public gtest::TestWithEnvironmentFixture {
   }
 
  private:
-  const std::unique_ptr<sys::ComponentContext> component_context_;
-  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
+  fuchsia::ui::scenic::Scenic* scenic() { return scenic_.get(); }
 
-  fuchsia::ui::lifecycle::LifecycleControllerSyncPtr scenic_lifecycle_controller_;
+  void SetUpRealmBase();
+  const std::unique_ptr<sys::ComponentContext> component_context_;
+
   fuchsia::ui::scenic::ScenicPtr scenic_;
 
   // Wrapped in optional since the view is not created until the middle of SetUp
-  std::optional<scenic::EmbedderView> embedder_view_;
+  std::optional<EmbedderView> embedder_view_;
+  sys::testing::experimental::RealmBuilder realm_builder_;
+  std::unique_ptr<sys::testing::experimental::RealmRoot> realm_;
+  std::unique_ptr<sys::ComponentContext> context_;
 };
 
 }  // namespace flutter_embedder_test
