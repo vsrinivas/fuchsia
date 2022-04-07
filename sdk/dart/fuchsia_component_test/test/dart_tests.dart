@@ -20,6 +20,9 @@ import 'package:fuchsia_services/services.dart' as services;
 
 import 'package:test/test.dart';
 
+import 'dart:convert' show utf8;
+import 'dart:typed_data';
+
 const String v1EchoClientUrl =
     'fuchsia-pkg://fuchsia.com/dart_realm_builder_unittests#meta/echo_client.cmx';
 const String v2EchoClientUrl = '#meta/echo_client.cm';
@@ -27,6 +30,7 @@ const String v1EchoServerUrl =
     'fuchsia-pkg://fuchsia.com/dart_realm_builder_unittests#meta/echo_server.cmx';
 const String v2EchoServerUrl = '#meta/echo_server.cm';
 const String v2EchoServerWithBinderUrl = '#meta/echo_server_with_binder.cm';
+const String v2EchoClientStructuredConfigUrl = '#meta/echo_client_sc.cm';
 
 void checkCommonExceptions(Exception err, StackTrace stacktrace) {
   if (err is fidl.MethodException<fcomponent.Error>) {
@@ -102,7 +106,7 @@ void main() {
 
     group('basic RealmBuilder tests', () {
       test('protocol and directory capabilities', () async {
-        late final RealmInstance? realmInstance;
+        RealmInstance? realmInstance;
         try {
           final builder = await RealmBuilder.create();
 
@@ -137,7 +141,7 @@ void main() {
           expect(testString, reply);
 
           final lifecycleController =
-              await realmInstance.root.connectToProtocolInDirPath(
+              realmInstance.root.connectToProtocolInDirPath(
             fsys2.LifecycleControllerProxy(),
             'hub/debug',
           );
@@ -147,13 +151,13 @@ void main() {
           rethrow;
         } finally {
           if (realmInstance != null) {
-            await realmInstance.root.close();
+            realmInstance.root.close();
           }
         }
       });
 
-      test('connectRequestToNamedProtocol', () async {
-        late final RealmInstance? realmInstance;
+      test('connectToNamedProtocol', () async {
+        RealmInstance? realmInstance;
         try {
           final builder = await RealmBuilder.create();
 
@@ -175,7 +179,7 @@ void main() {
           realmInstance = await builder.build();
 
           final echo = fecho.EchoProxy();
-          realmInstance.root.connectRequestToNamedProtocolAtExposedDir(
+          realmInstance.root.connectToNamedProtocolAtExposedDir(
             fecho.Echo.$serviceName,
             echo.ctrl.request().passChannel()!,
           );
@@ -185,13 +189,13 @@ void main() {
           expect(testString, reply);
         } finally {
           if (realmInstance != null) {
-            await realmInstance.root.close();
+            realmInstance.root.close();
           }
         }
       });
 
       test('connectToProtocol using legacy component', () async {
-        late final RealmInstance? realmInstance;
+        RealmInstance? realmInstance;
         try {
           final builder = await RealmBuilder.create();
 
@@ -220,14 +224,14 @@ void main() {
           expect(testString, reply);
         } finally {
           if (realmInstance != null) {
-            await realmInstance.root.close();
+            realmInstance.root.close();
           }
         }
       });
     });
 
     test('connect to child in subrealm', () async {
-      late final RealmInstance? realmInstance;
+      RealmInstance? realmInstance;
       try {
         const subRealmName = 'sub_realm';
 
@@ -268,7 +272,7 @@ void main() {
         realmInstance = await realmBuilder.build();
 
         final echo = fecho.EchoProxy();
-        realmInstance.root.connectRequestToNamedProtocolAtExposedDir(
+        realmInstance.root.connectToNamedProtocolAtExposedDir(
           fecho.Echo.$serviceName,
           echo.ctrl.request().passChannel()!,
         );
@@ -278,74 +282,66 @@ void main() {
         expect(testString, reply);
       } finally {
         if (realmInstance != null) {
-          await realmInstance.root.close();
+          realmInstance.root.close();
         }
       }
     });
 
-    // TODO(richkadel): Testing storage from the dart test is not feasible
-    // until Dart RealmBuilder supports local child implementations.
-    // The code to open the Storage capability seems viable, once there is a
-    // way to route the StorageCapability to a Dart component of this test.
-    // test('storage', () async {
-    //   late final RealmInstance? realmInstance;
-    //   try {
-    //     final builder = await RealmBuilder.create();
+    test('storage', () async {
+      RealmInstance? realmInstance;
+      try {
+        final builder = await RealmBuilder.create();
 
-    //     await builder.addRoute(Route()
-    //       ..capability(StorageCapability('data'))
-    //       ..from(Ref.parent())
-    //       ..to(localChild));
+        const localStorageClientName = 'localStorageUser';
 
-    //     realmInstance = await builder.build();
+        final localChildCompleter = Completer();
+        final localStorageClient = await builder.addLocalChild(
+          localStorageClientName,
+          options: ChildOptions()..eager(),
+          onRun: (handles, onStop) async {
+            var dataDir = handles.cloneFromNamespace('data');
+            final exampleFile = fio.FileProxy();
+            await dataDir.open(
+                fio.OpenFlags.rightReadable |
+                    fio.OpenFlags.rightWritable |
+                    fio.OpenFlags.create |
+                    fio.OpenFlags.describe,
+                fio.modeTypeFile,
+                'example_file',
+                fidl.InterfaceRequest<fio.Node>(
+                    exampleFile.ctrl.request().passChannel()));
 
-    // TODO(richkadel): Move the rest of this logic into the local child
-    // implementation...
+            const exampleData = 'example data';
+            final encodedData = utf8.encode(exampleData);
+            await exampleFile.write(utf8.encode(exampleData) as Uint8List);
+            await exampleFile.seek(fio.SeekOrigin.start, 0);
+            final fileContents =
+                utf8.decode(await exampleFile.read(encodedData.length));
 
-    //     var dataDir = fio.DirectoryProxy();
-    //     await realmInstance.root.exposedDir.open(
-    //         fio.OpenFlags.rightReadable | fio.OpenFlags.rightWritable,
-    //         fio.modeTypeDirectory,
-    //         'data',
-    //         fidl.InterfaceRequest<fio.Node>(
-    //             dataDir.ctrl.request().passChannel()));
+            if (exampleData != fileContents) {
+              localChildCompleter.completeError(
+                Exception('Wrote "$exampleData" but read back "$fileContents"'),
+              );
+              return;
+            }
+            localChildCompleter.complete(); // success!
+          },
+        );
 
-    //     log.info('dataDir: ${await dataDir.describe()}');
+        await builder.addRoute(Route()
+          ..capability(StorageCapability('data')..path = '/data')
+          ..from(Ref.parent())
+          ..to(Ref.child(localStorageClient)));
 
-    //     final exampleFile = fio.File2Proxy();
-    //     await dataDir.open(
-    //         fio.OpenFlags.rightReadable |
-    //             fio.OpenFlags.rightWritable |
-    //             fio.OpenFlags.create,
-    //         fio.modeTypeFile,
-    //         'example_file',
-    //         fidl.InterfaceRequest<fio.Node>(
-    //             exampleFile.ctrl.request().passChannel()));
+        realmInstance = await builder.build();
 
-    //     final fileDescription = await exampleFile.describe2(
-    //         fio.ConnectionInfoQuery.representation |
-    //             fio.ConnectionInfoQuery.rights |
-    //             fio.ConnectionInfoQuery.availableOperations);
-    //     log.info('exampleFile: $fileDescription');
-
-    //     const exampleData = 'example data';
-
-    //    // The following imports are required for string to utf8 conversion.
-    //    //   import 'dart:convert' show utf8;
-    //    //   import 'dart:typed_data';
-
-    //     final encodedData = utf8.encode(exampleData);
-    //     await exampleFile.write(utf8.encode(exampleData) as Uint8List);
-    //     await exampleFile.seek(fio.SeekOrigin.start, 0);
-    //     final fileContents =
-    //         utf8.decode(await exampleFile.read(encodedData.length));
-    //     expect(exampleData, fileContents);
-    //   } finally {
-    //     if (realmInstance != null) {
-    //       await realmInstance.root.close();
-    //     }
-    //   }
-    // });
+        await localChildCompleter.future;
+      } finally {
+        if (realmInstance != null) {
+          realmInstance.root.close();
+        }
+      }
+    });
 
     group('API checks', () {
       test('default ChildOptions', () {
@@ -409,7 +405,7 @@ void main() {
         expect(scopedInstance.childName, startsWith('auto-'));
         final nodeInfo = await scopedInstance.exposedDir.describe();
         expect(nodeInfo.$tag, fio.NodeInfoTag.directory);
-        expect(scopedInstance.close(), completes);
+        scopedInstance.close();
       });
     });
 
@@ -441,7 +437,7 @@ void main() {
 
     test('replace component decl', () async {
       final eventStreamBinding = fsys2.EventStreamBinding();
-      late final RealmInstance? realmInstance;
+      RealmInstance? realmInstance;
       try {
         final builder = await RealmBuilder.create();
 
@@ -482,7 +478,7 @@ void main() {
         // not start automatically.
         realmInstance = await builder.build();
 
-        final echo = await realmInstance.root.connectToProtocolAtPath(
+        final echo = realmInstance.root.connectToProtocolAtPath(
           fecho.EchoProxy(),
           'renamedEchoService',
         );
@@ -496,7 +492,7 @@ void main() {
         rethrow;
       } finally {
         if (realmInstance != null) {
-          await realmInstance.root.close();
+          realmInstance.root.close();
         }
         eventStreamBinding.close();
       }
@@ -504,8 +500,8 @@ void main() {
 
     test('start by binding', () async {
       final eventStreamBinding = fsys2.EventStreamBinding();
-      late final RealmInstance? realmInstance;
-      late final String? serverMoniker;
+      RealmInstance? realmInstance;
+      String? serverMoniker;
       try {
         final builder = await RealmBuilder.create();
 
@@ -559,7 +555,6 @@ void main() {
           OnEvent(
             started: (String moniker) {
               if (moniker == serverMoniker) {
-                log.info('start completed for $moniker');
                 completeWaitForStart.complete();
               }
             },
@@ -582,17 +577,13 @@ void main() {
             '${scopedInstance.childName}/$serverName';
 
         // Start the server
-        /*serverBinder=*/ await scopedInstance.connectToProtocolAtPath(
+        /*serverBinder=*/ scopedInstance.connectToProtocolAtPath(
           fcomponent.BinderProxy(),
           serverBinder,
         );
 
-        log.info('connected to server Binder; waiting for start event');
-
         // Wait for the server "started" event
         await completeWaitForStart.future;
-
-        log.info('got start');
 
         // Note, since this test abruptly stopped the child component, a
         // non-zero (error) status is likely.
@@ -601,7 +592,7 @@ void main() {
         rethrow;
       } finally {
         if (realmInstance != null) {
-          await realmInstance.root.close();
+          realmInstance.root.close();
         }
         eventStreamBinding.close();
       }
@@ -609,7 +600,7 @@ void main() {
 
     test('route echo between two v2 components', () async {
       final eventStreamBinding = fsys2.EventStreamBinding();
-      late final RealmInstance? realmInstance;
+      RealmInstance? realmInstance;
       try {
         final builder = await RealmBuilder.create();
 
@@ -699,10 +690,251 @@ void main() {
         rethrow;
       } finally {
         if (realmInstance != null) {
-          await realmInstance.root.close();
+          realmInstance.root.close();
         }
         eventStreamBinding.close();
       }
     });
+
+    test('replace config', () async {
+      RealmInstance? realmInstance;
+      try {
+        final builder = await RealmBuilder.create();
+
+        const echoServerName = 'localEchoServer';
+        const echoClientName = 'v2EchoClient';
+
+        final v2EchoClientStructuredConfig = await builder.addChild(
+          echoClientName,
+          v2EchoClientStructuredConfigUrl,
+          ChildOptions()..eager(),
+        );
+
+        // NOTE: Important! This test updates the default configuration values
+        // in the successful calls to `replaceConfigValue...()` below (after the
+        // try/catch blocks).
+        //
+        // If this test was changed to run the EchoClient without first
+        // replacing some configurations, the EchoClient's default configuration
+        // values (as presently implemented) cause EchoClient to generate a
+        // string that exceeds the `echoString()` FIDL API's [MAX_STRING_LENGTH]
+        // (presently only 32, as declared in `echo.fidl`). This would cause the
+        // client to crash with a FIDL error, and the request would never reach
+        // the server.
+
+        final echoRequestReceived = Completer<String?>();
+
+        final localEchoServer = await builder.addLocalChild(
+          echoServerName,
+          onRun: (handles, onStop) async {
+            LocalEcho(handles, echoRequestReceived: echoRequestReceived);
+
+            // Keep the component alive until the test is complete
+            await onStop.future;
+          },
+        );
+
+        // fail to replace a config field in a component that doesn't have a config schema
+        var caught = false;
+        try {
+          await builder.replaceConfigValueBool(
+              localEchoServer, 'echo_bool', false);
+        } on fidl.MethodException<fctest.RealmBuilderError2> catch (err) {
+          expect(err.value, fctest.RealmBuilderError2.noConfigSchema);
+          caught = true;
+        } finally {
+          expect(caught, true);
+        }
+
+        // fail to replace a field that doesn't exist
+        caught = false;
+        try {
+          await builder.replaceConfigValueString(
+              v2EchoClientStructuredConfig, 'doesnt_exist', 'test');
+        } on fidl.MethodException<fctest.RealmBuilderError2> catch (err) {
+          expect(err.value, fctest.RealmBuilderError2.noSuchConfigField);
+          caught = true;
+        } finally {
+          expect(caught, true);
+        }
+
+        // fail to replace a field with the wrong type
+        caught = false;
+        try {
+          await builder.replaceConfigValueString(
+              v2EchoClientStructuredConfig, 'echo_bool', 'test');
+        } on fidl.MethodException<fctest.RealmBuilderError2> catch (err) {
+          expect(err.value, fctest.RealmBuilderError2.configValueInvalid);
+          caught = true;
+        } finally {
+          expect(caught, true);
+        }
+
+        // fail to replace a string that violates max_len
+        final longString = 'F' * 20;
+        caught = false;
+        try {
+          await builder.replaceConfigValueString(
+              v2EchoClientStructuredConfig, 'echo_string', longString);
+        } on fidl.MethodException<fctest.RealmBuilderError2> catch (err) {
+          expect(err.value, fctest.RealmBuilderError2.configValueInvalid);
+          caught = true;
+        } finally {
+          expect(caught, true);
+        }
+
+        // fail to replace a vector whose string element violates max_len
+        caught = false;
+        try {
+          await builder.replaceConfigValueStringVector(
+              v2EchoClientStructuredConfig, 'echo_string_vector', [longString]);
+        } on fidl.MethodException<fctest.RealmBuilderError2> catch (err) {
+          expect(err.value, fctest.RealmBuilderError2.configValueInvalid);
+          caught = true;
+        } finally {
+          expect(caught, true);
+        }
+
+        // fail to replace a vector that violates max_count
+        caught = false;
+        try {
+          await builder.replaceConfigValueStringVector(
+            v2EchoClientStructuredConfig,
+            'echo_string_vector',
+            ['a', 'b', 'c', 'd'],
+          );
+        } on fidl.MethodException<fctest.RealmBuilderError2> catch (err) {
+          expect(err.value, fctest.RealmBuilderError2.configValueInvalid);
+          caught = true;
+        } finally {
+          expect(caught, true);
+        }
+
+        // succeed at replacing all fields with proper constraints
+        await builder.replaceConfigValueString(
+            v2EchoClientStructuredConfig, 'echo_string', 'Foobar!');
+        await builder.replaceConfigValueStringVector(
+            v2EchoClientStructuredConfig,
+            'echo_string_vector',
+            ['Hey', 'Folks']);
+        await builder.replaceConfigValueBool(
+            v2EchoClientStructuredConfig, 'echo_bool', true);
+        await builder.replaceConfigValueUint64(
+            v2EchoClientStructuredConfig, 'echo_num', 42);
+
+        // Route logging to children
+        await builder.addRoute(Route()
+          ..capability(ProtocolCapability(flogger.LogSink.$serviceName))
+          ..from(Ref.parent())
+          ..to(Ref.child(localEchoServer))
+          ..to(Ref.child(v2EchoClientStructuredConfig)));
+
+        // Route the echo service from server to client
+        await builder.addRoute(Route()
+          ..capability(ProtocolCapability(fecho.Echo.$serviceName))
+          ..from(Ref.child(localEchoServer))
+          ..to(Ref.child(v2EchoClientStructuredConfig)));
+
+        // Route the framework's EventSource so the test can await the echo
+        // client's termination and verify a successful exit status.
+        await builder.addRoute(Route()
+          ..capability(ProtocolCapability(fsys2.EventSource.$serviceName))
+          ..from(Ref.framework())
+          ..to(Ref.parent()));
+
+        // Connect to the framework's EventSource.
+        final eventSource = fsys2.EventSourceProxy();
+        await (services.Incoming.fromSvcPath()..connectToService(eventSource))
+            .close();
+
+        // The EchoClient at the referenced URL should be using this string:
+        const echoClientStructuredConfigRequest =
+            'Foobar!, Hey, Folks, true, 42';
+
+        // Start the realm instance.
+        realmInstance = await builder.build();
+
+        final requestedEchoString = await echoRequestReceived.future;
+
+        expect(requestedEchoString, echoClientStructuredConfigRequest);
+      } on Exception catch (err, stacktrace) {
+        checkCommonExceptions(err, stacktrace);
+        rethrow;
+      } finally {
+        if (realmInstance != null) {
+          realmInstance.root.close();
+        }
+      }
+    });
+
+    group('local child tests', () {
+      test('local server', () async {
+        RealmInstance? realmInstance;
+        try {
+          final builder = await RealmBuilder.create();
+
+          const echoServerName = 'localEchoServer';
+
+          final localEchoServer = await builder.addLocalChild(
+            echoServerName,
+            onRun: (handles, onStop) async {
+              LocalEcho(handles);
+              // Keep the component alive until the test is complete
+              await onStop.future;
+            },
+          );
+
+          await builder.addRoute(Route()
+            ..capability(ProtocolCapability(fecho.Echo.$serviceName))
+            ..from(Ref.child(localEchoServer))
+            ..to(Ref.parent()));
+
+          realmInstance = await builder.build();
+
+          final echo = realmInstance.root
+              .connectToProtocolAtExposedDir(fecho.EchoProxy());
+          const testString = 'ECHO...Echo...echo...(echo)...';
+
+          final reply = await echo.echoString(testString);
+
+          expect(testString, reply);
+        } on Exception catch (err, stacktrace) {
+          checkCommonExceptions(err, stacktrace);
+          rethrow;
+        } finally {
+          if (realmInstance != null) {
+            realmInstance.root.close();
+          }
+        }
+      });
+    });
   });
+}
+
+class LocalEcho extends fecho.Echo {
+  final LocalComponentHandles handles;
+
+  final Completer<String?>? echoRequestReceived;
+
+  final echoBinding = fecho.EchoBinding();
+
+  LocalEcho(this.handles, {this.echoRequestReceived}) {
+    services.Outgoing()
+      ..serve(
+          fidl.InterfaceRequest<fio.Node>(handles.outgoingDir.passChannel()!))
+      ..addPublicService(
+        (fidl.InterfaceRequest<fecho.Echo> connector) {
+          echoBinding.bind(this, connector);
+        },
+        fecho.Echo.$serviceName,
+      );
+  }
+
+  @override
+  Future<String?> echoString(String? str) async {
+    if (echoRequestReceived != null) {
+      echoRequestReceived!.complete(str);
+    }
+    return str;
+  }
 }

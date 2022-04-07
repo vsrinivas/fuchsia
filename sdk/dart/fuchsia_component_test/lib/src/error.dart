@@ -15,6 +15,10 @@ class RealmBuilderError implements Exception {
   }
 }
 
+class BuildAlreadyCalled extends RealmBuilderError {
+  BuildAlreadyCalled() : super('LocalComponentRunner already built');
+}
+
 class MissingSource extends RealmBuilderError {
   MissingSource() : super('route is missing source');
 }

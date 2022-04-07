@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:typed_data';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
@@ -10,6 +11,7 @@ import 'package:fidl/fidl.dart' as fidl;
 import 'package:fidl_fuchsia_component/fidl_async.dart' as fcomponent;
 import 'package:fidl_fuchsia_component_config/fidl_async.dart' as fconfig;
 import 'package:fidl_fuchsia_component_decl/fidl_async.dart' as fdecl;
+import 'package:fidl_fuchsia_diagnostics_types/fidl_async.dart' as fdiagtypes;
 import 'package:fidl_fuchsia_component_test/fidl_async.dart' as ftest;
 import 'package:fidl_fuchsia_io/fidl_async.dart' as fio;
 import 'package:fidl_fuchsia_sys2/fidl_async.dart' as fsys2;
@@ -19,6 +21,8 @@ import 'package:fuchsia_services/services.dart' as services;
 import 'package:zircon/zircon.dart';
 
 import 'error.dart';
+import 'local_component_handles.dart';
+import 'internal/local_component.dart';
 import 'internal/local_component_runner.dart';
 
 /// The default name of the child component collection that contains built
@@ -26,6 +30,14 @@ import 'internal/local_component_runner.dart';
 const defaultCollectionName = 'realm_builder';
 
 const realmBuilderServerChildName = 'realm_builder_server';
+
+fconfig.ValueSpec _singleValue(fconfig.SingleValue value) {
+  return fconfig.ValueSpec(value: fconfig.Value.withSingle(value));
+}
+
+fconfig.ValueSpec _vectorValue(fconfig.VectorValue value) {
+  return fconfig.ValueSpec(value: fconfig.Value.withVector(value));
+}
 
 /// The properties for a child being added to a realm
 class ChildOptions {
@@ -82,12 +94,13 @@ class ScopedInstanceFactory {
   }
 
   Future<ScopedInstance> newNamedInstance(String childName, String url) async {
-    late final fcomponent.RealmProxy realm;
-    if (realmProxy != null) {
-      realm = realmProxy!;
+    late final fcomponent.RealmProxy realmProxy;
+    if (this.realmProxy != null) {
+      realmProxy = this.realmProxy!;
     } else {
-      realm = fcomponent.RealmProxy();
-      await (services.Incoming.fromSvcPath()..connectToService(realm)).close();
+      realmProxy = fcomponent.RealmProxy();
+      await (services.Incoming.fromSvcPath()..connectToService(realmProxy))
+          .close();
     }
 
     final collectionRef = fdecl.CollectionRef(name: _collectionName);
@@ -98,7 +111,7 @@ class ScopedInstanceFactory {
     );
     final childArgs = fcomponent.CreateChildArgs();
 
-    await realm.createChild(
+    await realmProxy.createChild(
       collectionRef,
       childDecl,
       childArgs,
@@ -110,13 +123,13 @@ class ScopedInstanceFactory {
     );
 
     final exposedDir = fio.DirectoryProxy();
-    await realm.openExposedDir(
+    await realmProxy.openExposedDir(
       childRef,
       exposedDir.ctrl.request(),
     );
 
     return ScopedInstance._(
-      realm,
+      realmProxy,
       childName,
       _collectionName,
       exposedDir,
@@ -180,18 +193,18 @@ class ScopedInstance {
   }
 
   /// Connects to an instance of a FIDL protocol hosted in the component's
-  /// exposed directory using the given [serverEnd].
+  /// exposed directory using the given [serverEnd]. Any proxy of the same
+  /// protocol type is also required, in order to get the protocol name.
   void connectRequestToProtocolAtExposedDir<P>(
-      fidl.AsyncProxyController<P> serverEnd) {
-    connectRequestToNamedProtocolAtExposedDir(
-      serverEnd.$serviceName ?? serverEnd.$interfaceName!,
-      serverEnd.request().passChannel()!,
-    );
+      fidl.InterfaceRequest<P> serverEnd, fidl.AsyncProxy<P> anyProxy) {
+    final ctrl = anyProxy.ctrl;
+    final protocolName = ctrl.$serviceName ?? ctrl.$interfaceName!;
+    connectToNamedProtocolAtExposedDir(protocolName, serverEnd.passChannel()!);
   }
 
   /// Connects to an instance of a FIDL protocol called [protocolName] hosted in
   /// the component's exposed directory, using the given [serverEnd].
-  void connectRequestToNamedProtocolAtExposedDir(
+  void connectToNamedProtocolAtExposedDir(
       String protocolName, Channel serverEnd) {
     services.Incoming.withDirectory(exposedDir)
         .connectToServiceByNameWithChannel(protocolName, serverEnd);
@@ -199,10 +212,10 @@ class ScopedInstance {
 
   /// Connects to an instance of a FIDL protocol called [protocolName] hosted at
   /// the absolute path from the exposed directory.
-  Future<T> connectToProtocolAtPath<T extends fidl.AsyncProxy>(
-      T proxy, String protocolPath) async {
+  T connectToProtocolAtPath<T extends fidl.AsyncProxy>(
+      T proxy, String protocolPath) {
     var serverEnd = proxy.ctrl.request().passChannel();
-    await exposedDir.open(
+    exposedDir.open(
       fio.OpenFlags.rightReadable | fio.OpenFlags.rightWritable,
       fio.modeTypeService,
       protocolPath,
@@ -213,7 +226,7 @@ class ScopedInstance {
 
   /// Connects to an instance of a FIDL protocol hosted at the protocol name,
   /// in the given directory.
-  Future<T> connectToProtocolInDirPath<T extends fidl.AsyncProxy>(
+  T connectToProtocolInDirPath<T extends fidl.AsyncProxy>(
     T proxy,
     String dirPath,
   ) {
@@ -228,8 +241,16 @@ class ScopedInstance {
   /// goes out of scope).
   ///
   /// This will ensure that the message goes out to the realm.
-  Future<void> close() {
-    return _realm.destroyChild(fdecl.ChildRef(
+  ///
+  /// Note: `destroyChild()`s returned Future may not complete immediately.
+  /// The process of destroying a component and its children includes various
+  /// confirmations, with time-outs in case a component doesn't stop cleanly.
+  /// This `close()` method sends the `destroyChild()` request and returns
+  /// without waiting for confirmation. It returns `void` instead of the
+  /// [Future] so callers are discouraged from awaiting the close(), which can
+  /// be the source of non-deterministic delays and/or timeouts.
+  void close() {
+    _realm.destroyChild(fdecl.ChildRef(
       name: childName,
       collection: collectionName,
     ));
@@ -720,6 +741,12 @@ class Route {
   int get hashCode => _capabilities.hashCode + _from.hashCode + _to.hashCode;
 }
 
+typedef OnRun = Future<void> Function(LocalComponentHandles, Completer);
+typedef OnKill = Future<void> Function(LocalComponentHandles);
+typedef OnOnPublishDiagnostics = Stream<fdiagtypes.ComponentDiagnostics>
+    Function(LocalComponentHandles);
+typedef OnStop = Future<void> Function(LocalComponentHandles);
+
 /// A running instance of a created realm. Important: When a RealmInstance is no
 /// longer needed, the root [ScopedInstance] must be closed--by calling
 /// root.close()--to ensure the child component is not leaked. When closed, the
@@ -733,11 +760,14 @@ class RealmInstance {
 }
 
 class SubRealmBuilder {
-  ftest.RealmProxy realm;
+  ftest.RealmProxy realmProxy;
   List<String> realmPath;
 
+  // Required for builder API but not yet implemented or used.
+  final _localComponentRunnerBuilder = LocalComponentRunnerBuilder();
+
   SubRealmBuilder({
-    required this.realm,
+    required this.realmProxy,
     required this.realmPath,
   });
 
@@ -747,22 +777,64 @@ class SubRealmBuilder {
   Future<SubRealmBuilder> addChildRealm(String name,
       [ChildOptions? options]) async {
     final childRealm = ftest.RealmProxy();
-    await realm.addChildRealm(
+    await realmProxy.addChildRealm(
       name,
       (options ?? ChildOptions()).toFidlType(),
       childRealm.ctrl.request(),
     );
     final childPath = realmPath.toList()..add(name);
     return SubRealmBuilder(
-      realm: childRealm,
+      realmProxy: childRealm,
       realmPath: childPath,
     );
+  }
+
+  /// Adds a local component to the realm. the [onRun] callback will be called
+  /// when the component starts. Other [ComponentController] callbacks are
+  /// optional.
+  ///
+  /// The [ComponentController] binding must be closed to indicate to Component
+  /// Manager that the [LocalComponent] has stopped. If [onStop] is not
+  /// provided, the default implementation will automatically close the
+  /// [ComponentController] binding. If [onRun] completes before [onStop] (if
+  /// called) the [ComponentController] binding will be closed automatically. If
+  /// [onStop] is provided, the caller can close the [ComponentController]
+  /// binding by calling [LocalComponentHandles.close()].
+  ///
+  /// [onRun] is given the [LocalComponentHandles] (to access its namespace,
+  /// outgoing directory, and [ComponentController]), and a [Completer] that
+  /// is completed if [ComponentController.stop()] is called. The caller can
+  /// await the `onStopCompleter` allow the component to continue to remain
+  /// active until the `stop()` is received.
+  Future<ChildRef> addLocalChild(
+    String name, {
+    required OnRun onRun,
+    OnKill? onKill,
+    OnOnPublishDiagnostics? onOnPublishDiagnostics,
+    OnStop? onStop,
+    ChildOptions? options,
+  }) async {
+    await realmProxy.addLocalChild(
+      name,
+      (options ?? ChildOptions()).toFidlType(),
+    );
+    final childPath = realmPath + [name];
+    _localComponentRunnerBuilder.registerLocalComponent(
+      LocalComponent(
+        childPath.join('/'),
+        onRun,
+        onKill,
+        onOnPublishDiagnostics,
+        onStop,
+      ),
+    );
+    return ChildRef(name, realmPath);
   }
 
   /// Adds a new component to the realm by URL.
   Future<ChildRef> addChild(String name, String url,
       [ChildOptions? options]) async {
-    await realm.addChild(
+    await realmProxy.addChild(
       name,
       url,
       (options ?? ChildOptions()).toFidlType(),
@@ -773,7 +845,7 @@ class SubRealmBuilder {
   /// Adds a new legacy component to the realm.
   Future<ChildRef> addLegacyChild(String name, String legacyUrl,
       [ChildOptions? options]) async {
-    await realm.addLegacyChild(
+    await realmProxy.addLegacyChild(
       name,
       legacyUrl,
       (options ?? ChildOptions()).toFidlType(),
@@ -784,7 +856,7 @@ class SubRealmBuilder {
   /// Adds a new component to the realm with the given component declaration
   Future<ChildRef> addChildFromDecl(String name, fdecl.Component decl,
       [ChildOptions? options]) async {
-    await realm.addChildFromDecl(
+    await realmProxy.addChildFromDecl(
       name,
       decl,
       (options ?? ChildOptions()).toFidlType(),
@@ -795,7 +867,7 @@ class SubRealmBuilder {
   /// Returns a copy the decl for a child in this realm
   Future<fdecl.Component> getComponentDecl(ChildRef childRef) {
     childRef.checkScope(realmPath);
-    return realm.getComponentDecl(childRef.name);
+    return realmProxy.getComponentDecl(childRef.name);
   }
 
   /// Replaces the decl for a child of this realm
@@ -804,17 +876,17 @@ class SubRealmBuilder {
     fdecl.Component decl,
   ) {
     childRef.checkScope(realmPath);
-    return realm.replaceComponentDecl(childRef.name, decl);
+    return realmProxy.replaceComponentDecl(childRef.name, decl);
   }
 
   /// Returns a copy the decl for a child in this realm
   Future<fdecl.Component> getRealmDecl() {
-    return realm.getRealmDecl();
+    return realmProxy.getRealmDecl();
   }
 
   /// Replaces the decl for this realm
   Future<void> replaceRealmDecl(fdecl.Component decl) {
-    return realm.replaceRealmDecl(decl);
+    return realmProxy.replaceRealmDecl(decl);
   }
 
   /// Replaces a value of a given configuration field
@@ -824,7 +896,268 @@ class SubRealmBuilder {
     fconfig.ValueSpec value,
   ) {
     childRef.checkScope(realmPath);
-    return realm.replaceConfigValue(childRef.name, key, value);
+    return realmProxy.replaceConfigValue(childRef.name, key, value);
+  }
+
+  /// Replaces a boolean value of a given configuration field
+  Future<void> replaceConfigValueBool(
+    ChildRef childRef,
+    String key,
+    // ignore: avoid_positional_boolean_parameters
+    bool value,
+  ) {
+    return replaceConfigValue(
+      childRef,
+      key,
+      _singleValue(fconfig.SingleValue.withBool(value)),
+    );
+  }
+
+  /// Replaces a uint8 value of a given configuration field
+  Future<void> replaceConfigValueUint8(
+    ChildRef childRef,
+    String key,
+    int value,
+  ) {
+    return replaceConfigValue(
+      childRef,
+      key,
+      _singleValue(fconfig.SingleValue.withUint8(value)),
+    );
+  }
+
+  /// Replaces a uint16 value of a given configuration field
+  Future<void> replaceConfigValueUint16(
+    ChildRef childRef,
+    String key,
+    int value,
+  ) {
+    return replaceConfigValue(
+      childRef,
+      key,
+      _singleValue(fconfig.SingleValue.withUint16(value)),
+    );
+  }
+
+  /// Replaces a uint32 value of a given configuration field
+  Future<void> replaceConfigValueUint32(
+    ChildRef childRef,
+    String key,
+    int value,
+  ) {
+    return replaceConfigValue(
+      childRef,
+      key,
+      _singleValue(fconfig.SingleValue.withUint32(value)),
+    );
+  }
+
+  /// Replaces a uint64 value of a given configuration field
+  Future<void> replaceConfigValueUint64(
+    ChildRef childRef,
+    String key,
+    int value,
+  ) {
+    return replaceConfigValue(
+      childRef,
+      key,
+      _singleValue(fconfig.SingleValue.withUint64(value)),
+    );
+  }
+
+  /// Replaces a int8 value of a given configuration field
+  Future<void> replaceConfigValueInt8(
+    ChildRef childRef,
+    String key,
+    int value,
+  ) {
+    return replaceConfigValue(
+      childRef,
+      key,
+      _singleValue(fconfig.SingleValue.withInt8(value)),
+    );
+  }
+
+  /// Replaces a int16 value of a given configuration field
+  Future<void> replaceConfigValueInt16(
+    ChildRef childRef,
+    String key,
+    int value,
+  ) {
+    return replaceConfigValue(
+      childRef,
+      key,
+      _singleValue(fconfig.SingleValue.withInt16(value)),
+    );
+  }
+
+  /// Replaces a int32 value of a given configuration field
+  Future<void> replaceConfigValueInt32(
+    ChildRef childRef,
+    String key,
+    int value,
+  ) {
+    return replaceConfigValue(
+      childRef,
+      key,
+      _singleValue(fconfig.SingleValue.withInt32(value)),
+    );
+  }
+
+  /// Replaces a int64 value of a given configuration field
+  Future<void> replaceConfigValueInt64(
+    ChildRef childRef,
+    String key,
+    int value,
+  ) {
+    return replaceConfigValue(
+      childRef,
+      key,
+      _singleValue(fconfig.SingleValue.withInt64(value)),
+    );
+  }
+
+  /// Replaces a string value of a given configuration field
+  Future<void> replaceConfigValueString(
+    ChildRef childRef,
+    String key,
+    String value,
+  ) {
+    return replaceConfigValue(
+      childRef,
+      key,
+      _singleValue(fconfig.SingleValue.withString$(value)),
+    );
+  }
+
+  /// Replaces a boolean vector value of a given configuration field
+  Future<void> replaceConfigValueBoolVector(
+    ChildRef childRef,
+    String key,
+    List<bool> value,
+  ) {
+    return replaceConfigValue(
+      childRef,
+      key,
+      _vectorValue(fconfig.VectorValue.withBoolVector(value)),
+    );
+  }
+
+  /// Replaces a uint8 vector value of a given configuration field
+  Future<void> replaceConfigValueUint8Vector(
+    ChildRef childRef,
+    String key,
+    Uint8List value,
+  ) {
+    return replaceConfigValue(
+      childRef,
+      key,
+      _vectorValue(fconfig.VectorValue.withUint8Vector(value)),
+    );
+  }
+
+  /// Replaces a uint16 vector value of a given configuration field
+  Future<void> replaceConfigValueUint16Vector(
+    ChildRef childRef,
+    String key,
+    Uint16List value,
+  ) {
+    return replaceConfigValue(
+      childRef,
+      key,
+      _vectorValue(fconfig.VectorValue.withUint16Vector(value)),
+    );
+  }
+
+  /// Replaces a uint32 vector value of a given configuration field
+  Future<void> replaceConfigValueUint32Vector(
+    ChildRef childRef,
+    String key,
+    Uint32List value,
+  ) {
+    return replaceConfigValue(
+      childRef,
+      key,
+      _vectorValue(fconfig.VectorValue.withUint32Vector(value)),
+    );
+  }
+
+  /// Replaces a uint64 vector value of a given configuration field
+  Future<void> replaceConfigValueUint64Vector(
+    ChildRef childRef,
+    String key,
+    Uint64List value,
+  ) {
+    return replaceConfigValue(
+      childRef,
+      key,
+      _vectorValue(fconfig.VectorValue.withUint64Vector(value)),
+    );
+  }
+
+  /// Replaces a int8 vector value of a given configuration field
+  Future<void> replaceConfigValueInt8Vector(
+    ChildRef childRef,
+    String key,
+    Int8List value,
+  ) {
+    return replaceConfigValue(
+      childRef,
+      key,
+      _vectorValue(fconfig.VectorValue.withInt8Vector(value)),
+    );
+  }
+
+  /// Replaces a int16 vector value of a given configuration field
+  Future<void> replaceConfigValueInt16Vector(
+    ChildRef childRef,
+    String key,
+    Int16List value,
+  ) {
+    return replaceConfigValue(
+      childRef,
+      key,
+      _vectorValue(fconfig.VectorValue.withInt16Vector(value)),
+    );
+  }
+
+  /// Replaces a int32 vector value of a given configuration field
+  Future<void> replaceConfigValueInt32Vector(
+    ChildRef childRef,
+    String key,
+    Int32List value,
+  ) {
+    return replaceConfigValue(
+      childRef,
+      key,
+      _vectorValue(fconfig.VectorValue.withInt32Vector(value)),
+    );
+  }
+
+  /// Replaces a int64 vector value of a given configuration field
+  Future<void> replaceConfigValueInt64Vector(
+    ChildRef childRef,
+    String key,
+    Int64List value,
+  ) {
+    return replaceConfigValue(
+      childRef,
+      key,
+      _vectorValue(fconfig.VectorValue.withInt64Vector(value)),
+    );
+  }
+
+  /// Replaces a string vector value of a given configuration field
+  Future<void> replaceConfigValueStringVector(
+    ChildRef childRef,
+    String key,
+    List<String> value,
+  ) {
+    return replaceConfigValue(
+      childRef,
+      key,
+      _vectorValue(fconfig.VectorValue.withStringVector(value)),
+    );
   }
 
   /// Adds a route between components within the realm
@@ -840,7 +1173,7 @@ class SubRealmBuilder {
       target.checkScope(realmPath);
     }
     if (capabilities.isNotEmpty) {
-      await realm.addRoute(
+      await realmProxy.addRoute(
         capabilities.map((c) => c.toFidlType()).toList(),
         source.toFidlType(),
         to.map((Ref ref) => ref.toFidlType()).toList(),
@@ -865,9 +1198,6 @@ class RealmBuilder {
   late final SubRealmBuilder _rootRealm;
 
   late final ftest.BuilderProxy _builder;
-
-  // Required for builder API but not yet implemented or used.
-  final _localComponentRunner = LocalComponentRunner();
 
   /// The realm will be launched in the collection named [collectionName].
   final String collectionName;
@@ -918,11 +1248,11 @@ class RealmBuilder {
   }
 
   RealmBuilder._(
-    ftest.RealmProxy realm,
+    ftest.RealmProxy realmProxy,
     this._builder,
     this.collectionName,
   ) {
-    _rootRealm = SubRealmBuilder(realm: realm, realmPath: []);
+    _rootRealm = SubRealmBuilder(realmProxy: realmProxy, realmPath: []);
   }
 
   SubRealmBuilder get rootRealm => _rootRealm;
@@ -936,6 +1266,25 @@ class RealmBuilder {
     return rootRealm.addChildRealm(
       name,
       options ?? ChildOptions(),
+    );
+  }
+
+  /// Adds a new component to the realm by URL.
+  Future<ChildRef> addLocalChild(
+    String name, {
+    required OnRun onRun,
+    OnKill? onKill,
+    OnOnPublishDiagnostics? onOnPublishDiagnostics,
+    OnStop? onStop,
+    ChildOptions? options,
+  }) {
+    return rootRealm.addLocalChild(
+      name,
+      onRun: onRun,
+      onKill: onKill,
+      onOnPublishDiagnostics: onOnPublishDiagnostics,
+      onStop: onStop,
+      options: options ?? ChildOptions(),
     );
   }
 
@@ -1002,6 +1351,187 @@ class RealmBuilder {
     return rootRealm.replaceConfigValue(childRef, key, value);
   }
 
+  /// Replaces a boolean value of a given configuration field
+  Future<void> replaceConfigValueBool(
+    ChildRef childRef,
+    String key,
+    // ignore: avoid_positional_boolean_parameters
+    bool value,
+  ) {
+    return rootRealm.replaceConfigValueBool(childRef, key, value);
+  }
+
+  /// Replaces a uint8 value of a given configuration field
+  Future<void> replaceConfigValueUint8(
+    ChildRef childRef,
+    String key,
+    int value,
+  ) {
+    return rootRealm.replaceConfigValueUint8(childRef, key, value);
+  }
+
+  /// Replaces a uint16 value of a given configuration field
+  Future<void> replaceConfigValueUint16(
+    ChildRef childRef,
+    String key,
+    int value,
+  ) {
+    return rootRealm.replaceConfigValueUint16(childRef, key, value);
+  }
+
+  /// Replaces a uint32 value of a given configuration field
+  Future<void> replaceConfigValueUint32(
+    ChildRef childRef,
+    String key,
+    int value,
+  ) {
+    return rootRealm.replaceConfigValueUint32(childRef, key, value);
+  }
+
+  /// Replaces a uint64 value of a given configuration field
+  Future<void> replaceConfigValueUint64(
+    ChildRef childRef,
+    String key,
+    int value,
+  ) {
+    return rootRealm.replaceConfigValueUint64(childRef, key, value);
+  }
+
+  /// Replaces a int8 value of a given configuration field
+  Future<void> replaceConfigValueInt8(
+    ChildRef childRef,
+    String key,
+    int value,
+  ) {
+    return rootRealm.replaceConfigValueInt8(childRef, key, value);
+  }
+
+  /// Replaces a int16 value of a given configuration field
+  Future<void> replaceConfigValueInt16(
+    ChildRef childRef,
+    String key,
+    int value,
+  ) {
+    return rootRealm.replaceConfigValueInt16(childRef, key, value);
+  }
+
+  /// Replaces a int32 value of a given configuration field
+  Future<void> replaceConfigValueInt32(
+    ChildRef childRef,
+    String key,
+    int value,
+  ) {
+    return rootRealm.replaceConfigValueInt32(childRef, key, value);
+  }
+
+  /// Replaces a int64 value of a given configuration field
+  Future<void> replaceConfigValueInt64(
+    ChildRef childRef,
+    String key,
+    int value,
+  ) {
+    return rootRealm.replaceConfigValueInt64(childRef, key, value);
+  }
+
+  /// Replaces a string value of a given configuration field
+  Future<void> replaceConfigValueString(
+    ChildRef childRef,
+    String key,
+    String value,
+  ) {
+    return rootRealm.replaceConfigValueString(childRef, key, value);
+  }
+
+  /// Replaces a boolean vector value of a given configuration field
+  Future<void> replaceConfigValueBoolVector(
+    ChildRef childRef,
+    String key,
+    List<bool> value,
+  ) {
+    return rootRealm.replaceConfigValueBoolVector(childRef, key, value);
+  }
+
+  /// Replaces a uint8 vector value of a given configuration field
+  Future<void> replaceConfigValueUint8Vector(
+    ChildRef childRef,
+    String key,
+    Uint8List value,
+  ) {
+    return rootRealm.replaceConfigValueUint8Vector(childRef, key, value);
+  }
+
+  /// Replaces a uint16 vector value of a given configuration field
+  Future<void> replaceConfigValueUint16Vector(
+    ChildRef childRef,
+    String key,
+    Uint16List value,
+  ) {
+    return rootRealm.replaceConfigValueUint16Vector(childRef, key, value);
+  }
+
+  /// Replaces a uint32 vector value of a given configuration field
+  Future<void> replaceConfigValueUint32Vector(
+    ChildRef childRef,
+    String key,
+    Uint32List value,
+  ) {
+    return rootRealm.replaceConfigValueUint32Vector(childRef, key, value);
+  }
+
+  /// Replaces a uint64 vector value of a given configuration field
+  Future<void> replaceConfigValueUint64Vector(
+    ChildRef childRef,
+    String key,
+    Uint64List value,
+  ) {
+    return rootRealm.replaceConfigValueUint64Vector(childRef, key, value);
+  }
+
+  /// Replaces a int8 vector value of a given configuration field
+  Future<void> replaceConfigValueInt8Vector(
+    ChildRef childRef,
+    String key,
+    Int8List value,
+  ) {
+    return rootRealm.replaceConfigValueInt8Vector(childRef, key, value);
+  }
+
+  /// Replaces a int16 vector value of a given configuration field
+  Future<void> replaceConfigValueInt16Vector(
+    ChildRef childRef,
+    String key,
+    Int16List value,
+  ) {
+    return rootRealm.replaceConfigValueInt16Vector(childRef, key, value);
+  }
+
+  /// Replaces a int32 vector value of a given configuration field
+  Future<void> replaceConfigValueInt32Vector(
+    ChildRef childRef,
+    String key,
+    Int32List value,
+  ) {
+    return rootRealm.replaceConfigValueInt32Vector(childRef, key, value);
+  }
+
+  /// Replaces a int64 vector value of a given configuration field
+  Future<void> replaceConfigValueInt64Vector(
+    ChildRef childRef,
+    String key,
+    Int64List value,
+  ) {
+    return rootRealm.replaceConfigValueInt64Vector(childRef, key, value);
+  }
+
+  /// Replaces a string vector value of a given configuration field
+  Future<void> replaceConfigValueStringVector(
+    ChildRef childRef,
+    String key,
+    List<String> value,
+  ) {
+    return rootRealm.replaceConfigValueStringVector(childRef, key, value);
+  }
+
   /// Adds a route between components within the realm
   Future<void> addRoute(Route route) {
     return rootRealm.addRoute(route);
@@ -1009,9 +1539,11 @@ class RealmBuilder {
 
   /// Returns the [RealmInstance] so the test can interact with its child
   /// components.
-  Future<RealmInstance> build() async {
-    final rootUrl = await builder.build(_localComponentRunner.wrap());
+  Future<RealmInstance> build({String? childName}) async {
+    final rootUrl =
+        await builder.build(rootRealm._localComponentRunnerBuilder.build());
     final root = await ScopedInstance.create(
+      childName: childName,
       collectionName: collectionName,
       url: rootUrl,
     );

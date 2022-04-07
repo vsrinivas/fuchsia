@@ -3,5 +3,6 @@
 // found in the LICENSE file.
 
 /// A framework for testing Fuchsia components.
-export 'src/realm_builder.dart';
 export 'src/error.dart';
+export 'src/local_component_handles.dart';
+export 'src/realm_builder.dart';
