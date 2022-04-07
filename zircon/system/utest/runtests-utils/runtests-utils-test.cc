@@ -489,21 +489,21 @@ TEST(DiscoverAndRunTests, DiscoverAndRunTestsWithSyslogOutput) {
 }  // namespace runtests
 
 int main(int argc, char** argv) {
-  int result;
-
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  if (loop.StartThread() != ZX_OK) {
-    fprintf(stderr, "Error: Cannot initialize local memfs loop\n");
+  if (zx_status_t status = loop.StartThread(); status != ZX_OK) {
+    fprintf(stderr, "Error: Cannot initialize local memfs loop: %s\n",
+            zx_status_get_string(status));
     return -1;
   }
 
   memfs_filesystem_t* fs;
-  if (memfs_install_at(loop.dispatcher(), runtests::kMemFsRoot, &fs) != ZX_OK) {
-    fprintf(stderr, "Error: Cannot install local memfs\n");
+  if (zx_status_t status = memfs_install_at(loop.dispatcher(), runtests::kMemFsRoot, &fs);
+      status != ZX_OK) {
+    fprintf(stderr, "Error: Cannot install local memfs: %s\n", zx_status_get_string(status));
     return -1;
   }
 
-  result = zxtest::RunAllTests(argc, argv);
+  const int result = zxtest::RunAllTests(argc, argv);
 
   sync_completion_t unmounted;
   memfs_free_filesystem(fs, &unmounted);
