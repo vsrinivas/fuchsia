@@ -867,7 +867,8 @@ static zx_status_t handle_kvm_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     case kKvmSystemTimeMsr:
       vmcs->Invalidate();
       if ((guest_paddr & 1) != 0) {
-        return pv_clock_reset_clock(pv_clock, gpas, guest_paddr & ~static_cast<zx_paddr_t>(1));
+        return pv_clock_reset_clock(pv_clock, gpas, guest_paddr & ~static_cast<zx_paddr_t>(1))
+            .status_value();
       } else {
         pv_clock_stop_clock(pv_clock);
       }
@@ -875,7 +876,7 @@ static zx_status_t handle_kvm_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     case kKvmBootTimeOld:
     case kKvmBootTime:
       vmcs->Invalidate();
-      return pv_clock_update_boot_time(gpas, guest_paddr);
+      return pv_clock_update_boot_time(gpas, guest_paddr).status_value();
     default:
       local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
       return ZX_OK;
@@ -1097,9 +1098,9 @@ static zx_status_t handle_vmcall(const ExitInfo& exit_info, AutoVmcs* vmcs,
         guest_state->rax = VmCallStatus::NOT_SUPPORTED;
         break;
       }
-      zx_status_t status = pv_clock_populate_offset(gpas, info.arg[0]);
-      if (status != ZX_OK) {
-        dprintf(INFO, "hypervisor: Failed to populate lock offset with error %d\n", status);
+      if (auto result = pv_clock_populate_offset(gpas, info.arg[0]); result.is_error()) {
+        dprintf(INFO, "hypervisor: Failed to populate lock offset with error %d\n",
+                result.status_value());
         guest_state->rax = VmCallStatus::FAULT;
         break;
       }

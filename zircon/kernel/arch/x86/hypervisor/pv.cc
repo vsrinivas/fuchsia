@@ -66,38 +66,38 @@ void calculate_scale_factor(uint64_t tsc_freq, uint32_t* mul, int8_t* shift) {
 
 }  // namespace
 
-zx_status_t pv_clock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gpas,
-                                      zx_vaddr_t guest_paddr) {
+zx::status<> pv_clock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gpas,
+                                       zx_vaddr_t guest_paddr) {
   // Zircon does not maintain a UTC or local time to set a meaningful boot time
   // hence the value is fixed at zero.
   auto guest_ptr = gpas->CreateGuestPtr(guest_paddr, sizeof(pv_clock_boot_time),
                                         "pv_clock-boot-time-guest-mapping");
   if (guest_ptr.is_error()) {
-    return guest_ptr.status_value();
+    return guest_ptr.take_error();
   }
   auto boot_time = guest_ptr->as<pv_clock_boot_time>();
   if (boot_time == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
   memset(boot_time, 0, sizeof(*boot_time));
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t pv_clock_reset_clock(PvClockState* pv_clock,
-                                 hypervisor::GuestPhysicalAddressSpace* gpas,
-                                 zx_vaddr_t guest_paddr) {
+zx::status<> pv_clock_reset_clock(PvClockState* pv_clock,
+                                  hypervisor::GuestPhysicalAddressSpace* gpas,
+                                  zx_vaddr_t guest_paddr) {
   auto guest_ptr = gpas->CreateGuestPtr(guest_paddr, sizeof(pv_clock_system_time),
                                         "pv_clock-system-time-guest-mapping");
   if (guest_ptr.is_error()) {
-    return guest_ptr.status_value();
+    return guest_ptr.take_error();
   }
   pv_clock->system_time = guest_ptr->as<pv_clock_system_time>();
   if (pv_clock->system_time == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
   memset(pv_clock->system_time, 0, sizeof(*pv_clock->system_time));
   pv_clock->guest_ptr = ktl::move(*guest_ptr);
-  return ZX_OK;
+  return zx::ok();
 }
 
 void pv_clock_update_system_time(PvClockState* pv_clock,
@@ -130,16 +130,16 @@ void pv_clock_stop_clock(PvClockState* pv_clock) {
   pv_clock->guest_ptr.reset();
 }
 
-zx_status_t pv_clock_populate_offset(hypervisor::GuestPhysicalAddressSpace* gpas,
-                                     zx_vaddr_t guest_paddr) {
+zx::status<> pv_clock_populate_offset(hypervisor::GuestPhysicalAddressSpace* gpas,
+                                      zx_vaddr_t guest_paddr) {
   auto guest_ptr =
       gpas->CreateGuestPtr(guest_paddr, sizeof(PvClockOffset), "pv_clock-offset-guest-mapping");
   if (guest_ptr.is_error()) {
-    return guest_ptr.status_value();
+    return guest_ptr.take_error();
   }
   auto offset = guest_ptr->as<PvClockOffset>();
   if (offset == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
   memset(offset, 0, sizeof(*offset));
   // Zircon does not maintain a UTC or local time. We populate offset using the
@@ -149,5 +149,5 @@ zx_status_t pv_clock_populate_offset(hypervisor::GuestPhysicalAddressSpace* gpas
   offset->sec = time / ZX_SEC(1);
   offset->nsec = time % ZX_SEC(1);
   offset->tsc = tsc;
-  return ZX_OK;
+  return zx::ok();
 }
