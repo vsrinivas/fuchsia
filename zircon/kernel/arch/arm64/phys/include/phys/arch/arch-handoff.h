@@ -32,6 +32,10 @@ struct ArchPhysHandoff {
 
   // (ZBI_TYPE_KERNEL_DRIVER, KDRV_GENERIC_32BIT_WATCHDOG) payload.
   ktl::optional<dcfg_generic_32bit_watchdog_t> generic_32bit_watchdog_driver;
+
+  // ZBI_TYPE_ACPI_RSDP payload.
+  // Physical address of the ACPI RSDP (Root System Descriptor Pointer).
+  ktl::optional<uint64_t> acpi_rsdp;
 };
 
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_PHYS_INCLUDE_PHYS_ARCH_ARCH_HANDOFF_H_

@@ -86,6 +86,9 @@ static size_t arena_count = 0;
 static ktl::atomic<int> panic_started;
 static ktl::atomic<int> halted;
 
+extern uint64_t bootloader_acpi_rsdp;
+uint64_t bootloader_acpi_rsdp = 0;
+
 namespace {
 
 lazy_init::LazyInit<RamMappableCrashlog, lazy_init::CheckType::None,
@@ -390,6 +393,10 @@ static void ProcessPhysHandoff() {
             nvram.base, nvram.length);
     allocate_persistent_ram(nvram.base, nvram.length);
     boot_reserve_add_range(nvram.base, nvram.length);
+  }
+
+  if (gPhysHandoff->arch_handoff.acpi_rsdp) {
+    bootloader_acpi_rsdp = gPhysHandoff->arch_handoff.acpi_rsdp.value();
   }
 
   process_mem_ranges(gPhysHandoff->mem_config.get());

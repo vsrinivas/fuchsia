@@ -4,6 +4,7 @@
 
 #include "zircon/system/ulib/acpica/osfuchsia.h"
 
+#include <lib/ddk/debug.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
@@ -64,6 +65,8 @@ ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer() {
   zx_paddr_t acpi_rsdp, smbios;
   zx_status_t zx_status = zx_pc_firmware_tables(root_resource_handle, &acpi_rsdp, &smbios);
   if (zx_status == ZX_OK && acpi_rsdp != 0) {
+    zxlogf(ERROR, "RSDP: 0x%lx", acpi_rsdp);
+
     return acpi_rsdp;
   }
 

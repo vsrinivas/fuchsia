@@ -24,6 +24,11 @@ void HandoffPrep::ArchSummarizeMiscZbiItem(const zbi_header_t& header,
   ArchPhysHandoff& arch_handoff = handoff_->arch_handoff;
 
   switch (header.type) {
+    case ZBI_TYPE_ACPI_RSDP:
+      ZX_ASSERT(payload.size() >= sizeof(uint64_t));
+      arch_handoff.acpi_rsdp = *reinterpret_cast<const uint64_t*>(payload.data());
+      SaveForMexec(header, payload);
+      break;
     case ZBI_TYPE_KERNEL_DRIVER: {
       switch (header.extra) {
         // TODO(fxbug.dev/87958): Move me to userspace.

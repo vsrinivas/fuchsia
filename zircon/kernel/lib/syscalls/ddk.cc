@@ -347,6 +347,10 @@ zx_status_t sys_msi_create(zx_handle_t msi_alloc, uint32_t options, uint32_t msi
   return out->make(ktl::move(msi_handle), rights);
 }
 
+#ifdef ARCH_ARM64
+extern uint64_t bootloader_acpi_rsdp;
+#endif
+
 // zx_status_t zx_pc_firmware_tables
 zx_status_t sys_pc_firmware_tables(zx_handle_t hrsrc, user_out_ptr<zx_paddr_t> acpi_rsdp,
                                    user_out_ptr<zx_paddr_t> smbios) {
@@ -363,6 +367,14 @@ zx_status_t sys_pc_firmware_tables(zx_handle_t hrsrc, user_out_ptr<zx_paddr_t> a
     return status;
   }
 
+  return ZX_OK;
+#elif ARCH_ARM64
+  if (!bootloader_acpi_rsdp) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if ((status = acpi_rsdp.copy_to_user(bootloader_acpi_rsdp))) {
+    return status;
+  }
   return ZX_OK;
 #endif
   return ZX_ERR_NOT_SUPPORTED;
