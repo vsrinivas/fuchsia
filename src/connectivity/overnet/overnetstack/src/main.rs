@@ -155,7 +155,7 @@ impl<T> Drop for Precious<T> {
     }
 }
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main(opt: Opts) -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
     let mut svc_dir = fs.dir("svc");
