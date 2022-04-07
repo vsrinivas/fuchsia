@@ -307,7 +307,7 @@ zx_status_t RleBitmapBase<T>::SetInternal(T bitoff, T bitmax, FreeList* free_lis
       break;
     }
 
-    max = std::max(max, itr->bitoff + itr->bitlen);
+    max = std::max<T>(max, itr->bitoff + itr->bitlen);
     num_bits_ += max - elem.bitoff - itr->bitlen - elem.bitlen;
     elem.bitlen = max - elem.bitoff;
     auto to_erase = itr;
