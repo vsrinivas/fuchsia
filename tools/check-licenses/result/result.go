@@ -89,19 +89,23 @@ func SaveResults() (string, error) {
 		}
 	}
 
-	s, err = expandTemplates()
-	if err != nil {
-		return "", err
+	if Config.OutputLicenseFile {
+		s, err = expandTemplates()
+		if err != nil {
+			return "", err
+		}
+		b.WriteString(s)
+	} else {
+		b.WriteString("Not expanding templates.\n")
 	}
-	b.WriteString(s)
 
 	if err = writeFile("summary", []byte(b.String())); err != nil {
 		return "", err
 	}
 
 	b.WriteString("\n")
-	if Config.OutputDir != "" {
-		b.WriteString(fmt.Sprintf("Full summary and output files -> %s\n", Config.OutputDir))
+	if Config.OutDir != "" {
+		b.WriteString(fmt.Sprintf("Full summary and output files -> %s\n", Config.OutDir))
 	} else {
 		b.WriteString("Set the 'outputdir' arg in the config file to save detailed information to disk.\n")
 	}
@@ -125,9 +129,9 @@ func savePackageInfo(pkgName string, c interface{}, m MetricsInterface) (string,
 	for _, k := range keys {
 		fmt.Fprintf(&b, "%s%s: %s\n", indent, k, strconv.Itoa(counts[k]))
 	}
-	if Config.OutputDir != "" {
-		if _, err := os.Stat(Config.OutputDir); os.IsNotExist(err) {
-			err := os.Mkdir(Config.OutputDir, 0755)
+	if Config.OutDir != "" {
+		if _, err := os.Stat(Config.OutDir); os.IsNotExist(err) {
+			err := os.Mkdir(Config.OutDir, 0755)
 			if err != nil {
 				return "", err
 			}
@@ -168,7 +172,7 @@ func saveMetrics(pkg string, m MetricsInterface) error {
 }
 
 func writeFile(path string, data []byte) error {
-	path = filepath.Join(Config.OutputDir, path)
+	path = filepath.Join(Config.OutDir, path)
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
 	}
@@ -189,7 +193,7 @@ func compressGZ(path string) error {
 	if err := zw.Close(); err != nil {
 		return err
 	}
-	path, err = filepath.Rel(Config.OutputDir, path)
+	path, err = filepath.Rel(Config.OutDir, path)
 	if err != nil {
 		return err
 	}

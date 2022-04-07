@@ -1,5 +1,0 @@
-{
-	"category": "example.lic",
-	"pattern": "(?s)Copyright .*",
-	"valid license": "true"
-}

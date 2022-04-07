@@ -10,8 +10,9 @@ type FileMetrics struct {
 }
 
 const (
-	RepeatedFileTraversal = "Files that were access multiple times during traversal"
-	NumFiles              = "All Files"
+	RepeatedFileTraversal    = "Files that were access multiple times during traversal"
+	NumFiles                 = "All Files"
+	NumPotentialLicenseFiles = "Files that may have license information"
 )
 
 var Metrics *FileMetrics

@@ -1,5 +1,0 @@
-{
-	"category": "example.lic",
-	"pattern": "Example([\\s\\\\#\\*\\/]|\\^L)*Pattern([\\s\\\\#\\*\\/]|\\^L)*newline",
-	"valid license": "true"
-}
