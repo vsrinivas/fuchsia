@@ -68,6 +68,7 @@ async fn serve_fidl(
     client_listener_msgs: mpsc::UnboundedReceiver<util::listener::ClientListenerMessage>,
     ap_listener_msgs: mpsc::UnboundedReceiver<util::listener::ApMessage>,
     regulatory_receiver: oneshot::Receiver<()>,
+    telemetry_sender: TelemetrySender,
 ) -> Result<Void, Error> {
     // Wait a bit for the country code to be set before serving the policy APIs.
     let regulatory_listener_timeout =
@@ -119,6 +120,7 @@ async fn serve_fidl(
                 Arc::clone(&network_selector),
                 client_provider_lock.clone(),
                 reqs,
+                telemetry_sender.clone(),
             ))
             .detach()
         })
@@ -392,6 +394,7 @@ async fn run_all_futures() -> Result<(), Error> {
         client_receiver,
         ap_receiver,
         regulatory_receiver,
+        telemetry_sender.clone(),
     );
 
     let dev_watcher_fut = watcher_proxy

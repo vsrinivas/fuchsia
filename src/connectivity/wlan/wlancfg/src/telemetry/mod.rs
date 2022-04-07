@@ -52,6 +52,9 @@ use {
 
 // Include a timeout on stats calls so that if the driver deadlocks, telemtry doesn't get stuck.
 const GET_IFACE_STATS_TIMEOUT: zx::Duration = zx::Duration::from_seconds(5);
+// If there are commands to turn off then turn on client connections within this amount of time
+// through the policy API, it is likely that a user intended to restart WLAN connections.
+const USER_RESTART_TIME_THRESHOLD: zx::Duration = zx::Duration::from_seconds(5);
 
 #[derive(Clone, Debug)]
 pub struct TelemetrySender {
@@ -216,6 +219,10 @@ pub enum TelemetryEvent {
     /// Notify telemetry that there was a decision to look for networks to roam to after evaluating
     /// the existing connection.
     RoamingScan,
+    // Notify telemetry of an API request to start client connections.
+    StartClientConnectionsRequest,
+    // Notify telemetry of an API request to stop client connections.
+    StopClientConnectionsRequest,
     /// Notify telemetry that its experiment group has changed and that a new metrics logger must
     /// be created.
     UpdateExperiment {
@@ -675,6 +682,11 @@ pub struct Telemetry {
 
     // Storage for recalling what experiments are currently active.
     experiments: experiment::Experiments,
+
+    // For keeping track of how long client connections were disabled when turning client
+    // connections off and on again. None if a command to turn off client connections has never
+    // been sent or if client connections are on.
+    last_disabled_client_connections: Option<fasync::Time>,
 }
 
 impl Telemetry {
@@ -733,6 +745,7 @@ impl Telemetry {
                 persistence_req_sender.clone(),
             ),
             experiments: experiment::Experiments::new(),
+            last_disabled_client_connections: None,
         }
     }
 
@@ -1025,6 +1038,20 @@ impl Telemetry {
             }
             TelemetryEvent::RoamingScan => {
                 self.stats_logger.log_roaming_scan_metrics().await;
+            }
+            TelemetryEvent::StartClientConnectionsRequest => {
+                if let Some(disabled_time) = self.last_disabled_client_connections {
+                    let disabled_duration = fasync::Time::now() - disabled_time;
+                    self.stats_logger.log_start_client_connections_request(disabled_duration).await
+                }
+                self.last_disabled_client_connections = None;
+            }
+            TelemetryEvent::StopClientConnectionsRequest => {
+                // Do not change the time if the request to turn off connections comes in when
+                // client connections are already stopped.
+                if self.last_disabled_client_connections.is_none() {
+                    self.last_disabled_client_connections = Some(fasync::Time::now());
+                }
             }
             TelemetryEvent::UpdateExperiment { experiment } => {
                 let cobalt_1dot1_svc = match connect_to_metrics_logger_factory().await {
@@ -2276,6 +2303,18 @@ impl StatsLogger {
             1,
             &[],
         );
+    }
+
+    async fn log_start_client_connections_request(&mut self, disabled_duration: zx::Duration) {
+        if disabled_duration < USER_RESTART_TIME_THRESHOLD {
+            log_cobalt_1dot1!(
+                self.cobalt_1dot1_proxy,
+                log_occurrence,
+                metrics::CLIENT_CONNECTIONS_STOP_AND_START_METRIC_ID,
+                1,
+                &[],
+            );
+        }
     }
 
     async fn log_signal_report_metrics(
@@ -5357,6 +5396,101 @@ mod tests {
             test_helper.get_logged_metrics(metrics::POLICY_PROACTIVE_ROAMING_SCAN_COUNTS_METRIC_ID);
         assert_eq!(metrics.len(), 1);
         assert_eq!(metrics[0].payload, MetricEventPayload::Count(1));
+    }
+
+    #[fuchsia::test]
+    fn test_restart_metric_start_client_connections_request_sent_first() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        // Send a start client connections event and then a stop and start corresponding to a
+        // restart. The first start client connections should not count for the metric.
+        test_helper.telemetry_sender.send(TelemetryEvent::StartClientConnectionsRequest);
+        test_helper.advance_by(2.seconds(), test_fut.as_mut());
+        test_helper.telemetry_sender.send(TelemetryEvent::StopClientConnectionsRequest);
+        test_helper.advance_by(1.seconds(), test_fut.as_mut());
+        test_helper.telemetry_sender.send(TelemetryEvent::StartClientConnectionsRequest);
+
+        // Check that exactly 1 restart client connections event was logged to cobalt.
+        test_helper.drain_cobalt_events(&mut test_fut);
+        let metrics =
+            test_helper.get_logged_metrics(metrics::CLIENT_CONNECTIONS_STOP_AND_START_METRIC_ID);
+        assert_eq!(metrics.len(), 1);
+        assert_eq!(metrics[0].payload, MetricEventPayload::Count(1));
+    }
+
+    #[fuchsia::test]
+    fn test_restart_metric_stop_client_connections_request_sent_first() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        // Send stop and start events corresponding to restarting client connections.
+        test_helper.telemetry_sender.send(TelemetryEvent::StopClientConnectionsRequest);
+        test_helper.advance_by(3.seconds(), test_fut.as_mut());
+        test_helper.telemetry_sender.send(TelemetryEvent::StartClientConnectionsRequest);
+        // Check that 1 restart client connection event has been logged to cobalt.
+        test_helper.drain_cobalt_events(&mut test_fut);
+        let metrics =
+            test_helper.get_logged_metrics(metrics::CLIENT_CONNECTIONS_STOP_AND_START_METRIC_ID);
+        assert_eq!(metrics.len(), 1);
+        assert_eq!(metrics[0].payload, MetricEventPayload::Count(1));
+
+        // Stop and start client connections quickly again.
+        test_helper.advance_by(20.seconds(), test_fut.as_mut());
+        test_helper.telemetry_sender.send(TelemetryEvent::StopClientConnectionsRequest);
+        test_helper.advance_by(1.seconds(), test_fut.as_mut());
+        test_helper.telemetry_sender.send(TelemetryEvent::StartClientConnectionsRequest);
+        // Check that 1 more event has been logged.
+        test_helper.drain_cobalt_events(&mut test_fut);
+        let metrics =
+            test_helper.get_logged_metrics(metrics::CLIENT_CONNECTIONS_STOP_AND_START_METRIC_ID);
+        assert_eq!(metrics.len(), 2);
+        assert_eq!(metrics[1].payload, MetricEventPayload::Count(1));
+    }
+
+    #[fuchsia::test]
+    fn test_restart_metric_stop_client_connections_request_long_time_not_counted() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        // Send a stop and start with some time in between, then a quick stop and start.
+        test_helper.telemetry_sender.send(TelemetryEvent::StopClientConnectionsRequest);
+        test_helper.advance_by(30.seconds(), test_fut.as_mut());
+        test_helper.telemetry_sender.send(TelemetryEvent::StartClientConnectionsRequest);
+        test_helper.advance_by(2.seconds(), test_fut.as_mut());
+        // Check that a restart was not logged since some time passed between requests.
+        test_helper.drain_cobalt_events(&mut test_fut);
+        let metrics =
+            test_helper.get_logged_metrics(metrics::CLIENT_CONNECTIONS_STOP_AND_START_METRIC_ID);
+        assert!(metrics.is_empty());
+
+        // Send another stop and start that do correspond to a restart.
+        test_helper.telemetry_sender.send(TelemetryEvent::StopClientConnectionsRequest);
+        test_helper.advance_by(1.seconds(), test_fut.as_mut());
+        test_helper.telemetry_sender.send(TelemetryEvent::StartClientConnectionsRequest);
+        // Check that exactly 1 restart client connections event was logged to cobalt.
+        test_helper.drain_cobalt_events(&mut test_fut);
+        let metrics =
+            test_helper.get_logged_metrics(metrics::CLIENT_CONNECTIONS_STOP_AND_START_METRIC_ID);
+        assert_eq!(metrics.len(), 1);
+        assert_eq!(metrics[0].payload, MetricEventPayload::Count(1));
+    }
+
+    #[fuchsia::test]
+    fn test_restart_metric_extra_stop_client_connections_ignored() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        // Stop client connections well before starting it again.
+        test_helper.telemetry_sender.send(TelemetryEvent::StopClientConnectionsRequest);
+        test_helper.advance_by(10.seconds(), test_fut.as_mut());
+
+        // Send another stop client connections shortly before a start request. The second request
+        // should should not cause a metric to be logged, since connections were already off.
+        test_helper.telemetry_sender.send(TelemetryEvent::StopClientConnectionsRequest);
+        test_helper.advance_by(1.seconds(), test_fut.as_mut());
+        test_helper.telemetry_sender.send(TelemetryEvent::StartClientConnectionsRequest);
+
+        test_helper.drain_cobalt_events(&mut test_fut);
+        let metrics =
+            test_helper.get_logged_metrics(metrics::CLIENT_CONNECTIONS_STOP_AND_START_METRIC_ID);
+        assert!(metrics.is_empty());
     }
 
     #[fuchsia::test]

@@ -10,6 +10,7 @@ use {
             Credential, NetworkConfigError, NetworkIdentifier, SaveError, SavedNetworksManagerApi,
         },
         mode_management::iface_manager_api::IfaceManagerApi,
+        telemetry::{TelemetryEvent, TelemetrySender},
         util::listener,
     },
     anyhow::{format_err, Error},
@@ -54,6 +55,7 @@ pub async fn serve_provider_requests(
     network_selector: Arc<network_selection::NetworkSelector>,
     client_provider_lock: Arc<Mutex<()>>,
     mut requests: fidl_policy::ClientProviderRequestStream,
+    telemetry_sender: TelemetrySender,
 ) {
     let mut controller_reqs = FuturesUnordered::new();
 
@@ -71,7 +73,8 @@ pub async fn serve_provider_requests(
                         saved_networks.clone(),
                         Arc::clone(&network_selector),
                         client_provider_guard,
-                        req
+                        req,
+                        telemetry_sender.clone(),
                     );
                     controller_reqs.push(fut);
                 } else {
@@ -106,6 +109,7 @@ async fn handle_provider_request(
     network_selector: Arc<network_selection::NetworkSelector>,
     client_provider_guard: MutexGuard<'_, ()>,
     req: fidl_policy::ClientProviderRequest,
+    telemetry_sender: TelemetrySender,
 ) -> Result<(), fidl::Error> {
     match req {
         fidl_policy::ClientProviderRequest::GetController { requests, updates, .. } => {
@@ -116,6 +120,7 @@ async fn handle_provider_request(
                 network_selector,
                 client_provider_guard,
                 requests,
+                telemetry_sender,
             )
             .await?;
             Ok(())
@@ -148,6 +153,7 @@ async fn handle_client_requests(
     network_selector: Arc<network_selection::NetworkSelector>,
     client_provider_guard: MutexGuard<'_, ()>,
     requests: ClientRequests,
+    telemetry_sender: TelemetrySender,
 ) -> Result<(), fidl::Error> {
     let mut request_stream = requests.into_stream()?;
     while let Some(request) = request_stream.try_next().await? {
@@ -175,11 +181,13 @@ async fn handle_client_requests(
                 }
             }
             fidl_policy::ClientControllerRequest::StartClientConnections { responder } => {
+                telemetry_sender.send(TelemetryEvent::StartClientConnectionsRequest);
                 let response =
                     handle_client_request_start_client_connections(iface_manager.clone()).await;
                 responder.send(response)?
             }
             fidl_policy::ClientControllerRequest::StopClientConnections { responder } => {
+                telemetry_sender.send(TelemetryEvent::StopClientConnectionsRequest);
                 let response =
                     handle_client_request_stop_client_connections(iface_manager.clone()).await;
                 responder.send(response)?
@@ -715,7 +723,8 @@ mod tests {
         update_sender: mpsc::UnboundedSender<listener::ClientListenerMessage>,
         listener_updates: mpsc::UnboundedReceiver<listener::ClientListenerMessage>,
         client_provider_lock: Arc<Mutex<()>>,
-        _telemetry_receiver: mpsc::Receiver<TelemetryEvent>,
+        telemetry_sender: TelemetrySender,
+        telemetry_receiver: mpsc::Receiver<TelemetryEvent>,
     }
 
     // setup channels and proxies needed for the tests to use use the Client Provider and
@@ -743,7 +752,7 @@ mod tests {
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             persistence_req_sender,
-            TelemetrySender::new(telemetry_sender),
+            TelemetrySender::new(telemetry_sender.clone()),
         ));
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -769,7 +778,8 @@ mod tests {
             update_sender,
             listener_updates,
             client_provider_lock: Arc::new(Mutex::new(())),
-            _telemetry_receiver: telemetry_receiver,
+            telemetry_sender: TelemetrySender::new(telemetry_sender),
+            telemetry_receiver,
         }
     }
 
@@ -785,6 +795,7 @@ mod tests {
             Arc::clone(&test_values.network_selector),
             test_values.client_provider_lock,
             test_values.requests,
+            test_values.telemetry_sender,
         );
         pin_mut!(serve_fut);
 
@@ -829,6 +840,7 @@ mod tests {
             Arc::clone(&test_values.network_selector),
             test_values.client_provider_lock,
             test_values.requests,
+            test_values.telemetry_sender,
         );
         pin_mut!(serve_fut);
 
@@ -878,6 +890,7 @@ mod tests {
             Arc::clone(&test_values.network_selector),
             test_values.client_provider_lock,
             test_values.requests,
+            test_values.telemetry_sender,
         );
         pin_mut!(serve_fut);
 
@@ -928,6 +941,7 @@ mod tests {
             Arc::clone(&test_values.network_selector),
             test_values.client_provider_lock,
             test_values.requests,
+            test_values.telemetry_sender,
         );
         pin_mut!(serve_fut);
 
@@ -977,6 +991,7 @@ mod tests {
             Arc::clone(&test_values.network_selector),
             test_values.client_provider_lock,
             test_values.requests,
+            test_values.telemetry_sender,
         );
         pin_mut!(serve_fut);
 
@@ -1017,6 +1032,7 @@ mod tests {
             Arc::clone(&test_values.network_selector),
             test_values.client_provider_lock,
             test_values.requests,
+            test_values.telemetry_sender,
         );
         pin_mut!(serve_fut);
 
@@ -1057,6 +1073,7 @@ mod tests {
             Arc::clone(&test_values.network_selector),
             test_values.client_provider_lock,
             test_values.requests,
+            test_values.telemetry_sender,
         );
         pin_mut!(serve_fut);
 
@@ -1109,6 +1126,7 @@ mod tests {
             Arc::clone(&test_values.network_selector),
             test_values.client_provider_lock,
             requests,
+            test_values.telemetry_sender,
         );
         pin_mut!(serve_fut);
 
@@ -1149,6 +1167,7 @@ mod tests {
             Arc::clone(&test_values.network_selector),
             test_values.client_provider_lock,
             test_values.requests,
+            test_values.telemetry_sender,
         );
         pin_mut!(serve_fut);
 
@@ -1182,7 +1201,7 @@ mod tests {
     #[fuchsia::test]
     fn start_and_stop_client_connections() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = test_setup(true);
+        let mut test_values = test_setup(true);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             test_values.update_sender,
@@ -1190,6 +1209,7 @@ mod tests {
             Arc::clone(&test_values.network_selector),
             test_values.client_provider_lock,
             test_values.requests,
+            test_values.telemetry_sender,
         );
         pin_mut!(serve_fut);
 
@@ -1210,6 +1230,11 @@ mod tests {
             exec.run_until_stalled(&mut start_fut),
             Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
         );
+
+        // A message should be sent to telemetry.
+        assert_variant!(test_values.telemetry_receiver.try_next(), Ok(Some(event)) => {
+            assert_variant!(event, TelemetryEvent::StartClientConnectionsRequest);
+        });
 
         // Perform a connect operation.
         let connect_fut = controller.connect(&mut fidl_policy::NetworkIdentifier {
@@ -1237,6 +1262,11 @@ mod tests {
         // Run the serve future until it stalls and expect the client to disconnect
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
+        // A message should be sent to telemetry.
+        assert_variant!(test_values.telemetry_receiver.try_next(), Ok(Some(event)) => {
+            assert_variant!(event, TelemetryEvent::StopClientConnectionsRequest);
+        });
+
         // Request should be acknowledged.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(
@@ -1259,6 +1289,7 @@ mod tests {
             Arc::clone(&test_values.network_selector),
             test_values.client_provider_lock,
             test_values.requests,
+            test_values.telemetry_sender,
         );
         pin_mut!(serve_fut);
 
@@ -1315,6 +1346,7 @@ mod tests {
             network_selector,
             test_values.client_provider_lock,
             requests,
+            test_values.telemetry_sender,
         );
         pin_mut!(serve_fut);
 
@@ -1380,6 +1412,7 @@ mod tests {
             network_selector,
             test_values.client_provider_lock,
             requests,
+            test_values.telemetry_sender,
         );
         pin_mut!(serve_fut);
 
@@ -1445,7 +1478,7 @@ mod tests {
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             persistence_req_sender,
-            TelemetrySender::new(telemetry_sender),
+            TelemetrySender::new(telemetry_sender.clone()),
         ));
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -1468,6 +1501,7 @@ mod tests {
             network_selector,
             Arc::new(Mutex::new(())),
             requests,
+            TelemetrySender::new(telemetry_sender),
         );
         pin_mut!(serve_fut);
 
@@ -1537,6 +1571,7 @@ mod tests {
             network_selector,
             test_values.client_provider_lock,
             requests,
+            test_values.telemetry_sender,
         );
         pin_mut!(serve_fut);
 
@@ -1589,7 +1624,7 @@ mod tests {
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             persistence_req_sender,
-            TelemetrySender::new(telemetry_sender),
+            TelemetrySender::new(telemetry_sender.clone()),
         ));
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -1612,6 +1647,7 @@ mod tests {
             network_selector,
             Arc::new(Mutex::new(())),
             requests,
+            TelemetrySender::new(telemetry_sender),
         );
         pin_mut!(serve_fut);
 
@@ -1749,6 +1785,7 @@ mod tests {
             network_selector,
             test_values.client_provider_lock,
             requests,
+            test_values.telemetry_sender,
         );
         pin_mut!(serve_fut);
 
@@ -1808,6 +1845,7 @@ mod tests {
             test_values.network_selector,
             test_values.client_provider_lock,
             test_values.requests,
+            test_values.telemetry_sender,
         );
         pin_mut!(serve_fut);
 
@@ -1861,6 +1899,7 @@ mod tests {
             test_values.network_selector,
             test_values.client_provider_lock,
             test_values.requests,
+            test_values.telemetry_sender,
         );
         pin_mut!(serve_fut);
 
@@ -1942,6 +1981,7 @@ mod tests {
             test_values.network_selector,
             test_values.client_provider_lock,
             test_values.requests,
+            test_values.telemetry_sender,
         );
         pin_mut!(serve_fut);
 
@@ -2071,7 +2111,7 @@ mod tests {
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             persistence_req_sender,
-            TelemetrySender::new(telemetry_sender),
+            TelemetrySender::new(telemetry_sender.clone()),
         ));
         let iface_manager = Arc::new(Mutex::new(FakeIfaceManagerNoIfaces {}));
 
@@ -2086,6 +2126,7 @@ mod tests {
             network_selector,
             Arc::new(Mutex::new(())),
             requests,
+            TelemetrySender::new(telemetry_sender),
         );
         pin_mut!(serve_fut);
 
@@ -2178,6 +2219,7 @@ mod tests {
             test_values.network_selector.clone(),
             test_values.client_provider_lock.clone(),
             test_values.requests,
+            test_values.telemetry_sender.clone(),
         );
         pin_mut!(serve_fut);
 
@@ -2201,6 +2243,7 @@ mod tests {
             test_values.network_selector.clone(),
             test_values.client_provider_lock.clone(),
             requests,
+            test_values.telemetry_sender,
         );
         pin_mut!(second_serve_fut);
 
