@@ -9,6 +9,7 @@ use {
         object_store::{
             allocator::Reservation,
             constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
+            filesystem::{ApplyContext, ApplyMode, Filesystem, Mutations},
             journal::{
                 handle::Handle,
                 reader::{JournalReader, ReadResult},
@@ -16,13 +17,13 @@ use {
                 JournalCheckpoint,
             },
             object_record::ObjectItem,
-            transaction::Options,
-            ObjectStore, StoreObjectHandle,
+            transaction::{AssocObj, Options},
+            Mutation, ObjectStore, StoreObjectHandle,
         },
         range::RangeExt,
         serialized_types::{Versioned, VersionedLatest},
     },
-    anyhow::{bail, ensure, Error},
+    anyhow::{bail, ensure, Context, Error},
     serde::{Deserialize, Serialize},
     std::{
         collections::HashMap,
@@ -176,6 +177,50 @@ impl SuperBlock {
         }
     }
 
+    /// Read one of the SuperBlock instances from the filesystem's underlying device.
+    pub async fn read(
+        filesystem: Arc<dyn Filesystem>,
+        target_super_block: SuperBlockCopy,
+    ) -> Result<(SuperBlock, SuperBlockCopy, Arc<ObjectStore>), Error> {
+        let device = filesystem.device();
+        let (super_block, mut reader) = SuperBlock::read_header(device, target_super_block)
+            .await
+            .context("Failed to read superblocks")?;
+
+        let root_parent = ObjectStore::new_empty(
+            None,
+            super_block.root_parent_store_object_id,
+            filesystem.clone(),
+        );
+        root_parent.set_graveyard_directory_object_id(
+            super_block.root_parent_graveyard_directory_object_id,
+        );
+
+        loop {
+            let (mutation, sequence) = match reader.next_item().await? {
+                SuperBlockItem::End => break,
+                SuperBlockItem::Object(item) => {
+                    (Mutation::insert_object(item.key, item.value), item.sequence)
+                }
+            };
+            root_parent
+                .apply_mutation(
+                    mutation,
+                    &ApplyContext {
+                        mode: ApplyMode::Replay,
+                        checkpoint: JournalCheckpoint {
+                            file_offset: sequence,
+                            ..Default::default()
+                        },
+                    },
+                    AssocObj::None,
+                )
+                .await;
+        }
+
+        Ok((super_block, target_super_block, root_parent))
+    }
+
     /// Shreds the super-block, rendering it unreadable.  This is used in mkfs to ensure that we
     /// wipe out any stale super-blocks when rewriting Fxfs.
     /// This isn't a secure shred in any way, it just ensures the super-block is not recognized as a
@@ -191,7 +236,7 @@ impl SuperBlock {
 
     /// Read the super-block header, and return it and a reader that produces the records that are
     /// to be replayed in to the root parent object store.
-    pub async fn read(
+    async fn read_header(
         device: Arc<dyn Device>,
         target_super_block: SuperBlockCopy,
     ) -> Result<(SuperBlock, ItemReader), Error> {
@@ -226,7 +271,7 @@ impl SuperBlock {
         Ok((super_block, ItemReader { reader }))
     }
 
-    /// Writes the super-block and the records from the root parent store.
+    /// Writes the super-block and the records from the root parent store to |handle|.
     pub(super) async fn write<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
         &self,
         root_parent_store: &'a ObjectStore,
@@ -356,7 +401,7 @@ mod tests {
                 journal::{journal_handle_options, JournalCheckpoint},
                 testing::{fake_allocator::FakeAllocator, fake_filesystem::FakeFilesystem},
                 transaction::{Options, TransactionHandler},
-                HandleOptions, ObjectHandle, ObjectStore, StoreObjectHandle,
+                FxFilesystem, HandleOptions, ObjectHandle, ObjectStore, StoreObjectHandle,
             },
             serialized_types::LATEST_VERSION,
         },
@@ -491,11 +536,11 @@ mod tests {
         assert!(handle.get_size() > MIN_SUPER_BLOCK_SIZE);
 
         let mut written_super_block_a =
-            SuperBlock::read(fs.device(), SuperBlockCopy::A).await.expect("read failed");
+            SuperBlock::read_header(fs.device(), SuperBlockCopy::A).await.expect("read failed");
 
         assert_eq!(written_super_block_a.0, super_block_a);
         let written_super_block_b =
-            SuperBlock::read(fs.device(), SuperBlockCopy::B).await.expect("read failed");
+            SuperBlock::read_header(fs.device(), SuperBlockCopy::B).await.expect("read failed");
         assert_eq!(written_super_block_b.0, super_block_b);
 
         // Check that the records match what we expect in the root parent store.
@@ -538,8 +583,111 @@ mod tests {
             .await
             .expect("write failed");
         let super_block =
-            SuperBlock::read(fs.device(), SuperBlockCopy::A).await.expect("read failed");
+            SuperBlock::read_header(fs.device(), SuperBlockCopy::A).await.expect("read failed");
         // Ensure a GUID has been assigned.
         assert_ne!(super_block.0.guid, [0; 16]);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_init_wipes_superblocks() {
+        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
+
+        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let root_store = fs.root_store();
+        // Generate enough work to induce a journal flush and thus a new superblock being written.
+        for _ in 0..8000 {
+            let mut transaction = fs
+                .clone()
+                .new_transaction(&[], Options::default())
+                .await
+                .expect("new_transaction failed");
+            ObjectStore::create_object(
+                &root_store,
+                &mut transaction,
+                HandleOptions::default(),
+                None,
+            )
+            .await
+            .expect("create_object failed");
+            transaction.commit().await.expect("commit failed");
+        }
+        fs.close().await.expect("Close failed");
+        let device = fs.take_device().await;
+        device.reopen();
+
+        SuperBlock::read_header(device.clone(), SuperBlockCopy::A).await.expect("read failed");
+        SuperBlock::read_header(device.clone(), SuperBlockCopy::B).await.expect("read failed");
+
+        // Re-initialize the filesystem.  The A block should be reset and the B block should be
+        // wiped.
+        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        fs.close().await.expect("Close failed");
+        let device = fs.take_device().await;
+        device.reopen();
+
+        SuperBlock::read_header(device.clone(), SuperBlockCopy::A).await.expect("read failed");
+        SuperBlock::read_header(device.clone(), SuperBlockCopy::B)
+            .await
+            .map(|_| ())
+            .expect_err("Super-block B was readable after a re-format");
+    }
+    #[fasync::run_singlethreaded(test)]
+    async fn test_alternating_super_blocks() {
+        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
+
+        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        fs.close().await.expect("Close failed");
+        let device = fs.take_device().await;
+        device.reopen();
+
+        let (super_block_a, _) =
+            SuperBlock::read_header(device.clone(), SuperBlockCopy::A).await.expect("read failed");
+
+        // The second super-block won't be valid at this time so there's no point reading it.
+
+        let fs = FxFilesystem::open(device).await.expect("open failed");
+        let root_store = fs.root_store();
+        // Generate enough work to induce a journal flush.
+        for _ in 0..8000 {
+            let mut transaction = fs
+                .clone()
+                .new_transaction(&[], Options::default())
+                .await
+                .expect("new_transaction failed");
+            ObjectStore::create_object(
+                &root_store,
+                &mut transaction,
+                HandleOptions::default(),
+                None,
+            )
+            .await
+            .expect("create_object failed");
+            transaction.commit().await.expect("commit failed");
+        }
+        fs.close().await.expect("Close failed");
+        let device = fs.take_device().await;
+        device.reopen();
+
+        let (super_block_a_after, _) =
+            SuperBlock::read_header(device.clone(), SuperBlockCopy::A).await.expect("read failed");
+        let (super_block_b_after, _) =
+            SuperBlock::read_header(device.clone(), SuperBlockCopy::B).await.expect("read failed");
+
+        // It's possible that multiple super-blocks were written, so cater for that.
+
+        // The sequence numbers should be one apart.
+        assert_eq!(
+            (super_block_b_after.generation as i64 - super_block_a_after.generation as i64).abs(),
+            1
+        );
+
+        // At least one super-block should have been written.
+        assert!(
+            std::cmp::max(super_block_a_after.generation, super_block_b_after.generation)
+                > super_block_a.generation
+        );
+
+        // They should have the same oddness.
+        assert_eq!(super_block_a_after.generation & 1, super_block_a.generation & 1);
     }
 }

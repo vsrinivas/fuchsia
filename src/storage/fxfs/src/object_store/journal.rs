@@ -32,19 +32,19 @@ use {
             constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
             directory::Directory,
             extent_record::{ExtentKey, DEFAULT_DATA_ATTRIBUTE_ID},
-            filesystem::{ApplyContext, ApplyMode, Filesystem, Mutations, SyncOptions},
+            filesystem::{ApplyContext, ApplyMode, Filesystem, SyncOptions},
             graveyard::Graveyard,
             journal::{
                 checksum_list::ChecksumList,
                 handle::Handle,
                 reader::{JournalReader, ReadResult},
-                super_block::{SuperBlockCopy, SuperBlockItem},
+                super_block::SuperBlockCopy,
                 writer::JournalWriter,
             },
             object_manager::ObjectManager,
             object_record::{AttributeKey, ObjectKey, ObjectKeyData},
             transaction::{
-                AssocObj, Mutation, ObjectStoreMutation, Options, Transaction, TxnMutation,
+                Mutation, ObjectStoreMutation, Options, Transaction, TxnMutation,
                 TRANSACTION_MAX_JOURNAL_USAGE,
             },
             HandleOptions, Item, LockState, ObjectStore, StoreObjectHandle,
@@ -300,50 +300,6 @@ impl Journal {
         self.inner.lock().unwrap().super_block.super_block_journal_file_offset
     }
 
-    async fn load_superblock(
-        &self,
-        filesystem: Arc<dyn Filesystem>,
-        target_super_block: SuperBlockCopy,
-    ) -> Result<(SuperBlock, SuperBlockCopy, Arc<ObjectStore>), Error> {
-        let device = filesystem.device();
-        let (super_block, mut reader) = SuperBlock::read(device, target_super_block)
-            .await
-            .context("Failed to read superblocks")?;
-
-        let root_parent = ObjectStore::new_empty(
-            None,
-            super_block.root_parent_store_object_id,
-            filesystem.clone(),
-        );
-        root_parent.set_graveyard_directory_object_id(
-            super_block.root_parent_graveyard_directory_object_id,
-        );
-
-        loop {
-            let (mutation, sequence) = match reader.next_item().await? {
-                SuperBlockItem::End => break,
-                SuperBlockItem::Object(item) => {
-                    (Mutation::insert_object(item.key, item.value), item.sequence)
-                }
-            };
-            root_parent
-                .apply_mutation(
-                    mutation,
-                    &ApplyContext {
-                        mode: ApplyMode::Replay,
-                        checkpoint: JournalCheckpoint {
-                            file_offset: sequence,
-                            ..Default::default()
-                        },
-                    },
-                    AssocObj::None,
-                )
-                .await;
-        }
-
-        Ok((super_block, target_super_block, root_parent))
-    }
-
     /// Reads the latest super-block, and then replays journaled records.
     pub async fn replay(
         &self,
@@ -352,8 +308,8 @@ impl Journal {
     ) -> Result<(), Error> {
         trace_duration!("Journal::replay");
         let (super_block, current_super_block, root_parent) = match futures::join!(
-            self.load_superblock(filesystem.clone(), SuperBlockCopy::A),
-            self.load_superblock(filesystem.clone(), SuperBlockCopy::B)
+            SuperBlock::read(filesystem.clone(), SuperBlockCopy::A),
+            SuperBlock::read(filesystem.clone(), SuperBlockCopy::B)
         ) {
             (Err(e1), Err(e2)) => {
                 bail!("Failed to load both superblocks due to {:?}\nand\n{:?}", e1, e2)
@@ -1244,7 +1200,6 @@ mod tests {
                 directory::Directory,
                 filesystem::{Filesystem, FxFilesystem, SyncOptions},
                 fsck::fsck,
-                journal::super_block::{SuperBlock, SuperBlockCopy},
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectStore,
             },
@@ -1254,110 +1209,6 @@ mod tests {
     };
 
     const TEST_DEVICE_BLOCK_SIZE: u32 = 512;
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_init_wipes_superblocks() {
-        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
-
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
-        let root_store = fs.root_store();
-        // Generate enough work to induce a journal flush and thus a new superblock being written.
-        for _ in 0..8000 {
-            let mut transaction = fs
-                .clone()
-                .new_transaction(&[], Options::default())
-                .await
-                .expect("new_transaction failed");
-            ObjectStore::create_object(
-                &root_store,
-                &mut transaction,
-                HandleOptions::default(),
-                None,
-            )
-            .await
-            .expect("create_object failed");
-            transaction.commit().await.expect("commit failed");
-        }
-        fs.close().await.expect("Close failed");
-        let device = fs.take_device().await;
-        device.reopen();
-
-        SuperBlock::read(device.clone(), SuperBlockCopy::A).await.expect("read failed");
-        SuperBlock::read(device.clone(), SuperBlockCopy::B).await.expect("read failed");
-
-        // Re-initialize the filesystem.  The A block should be reset and the B block should be
-        // wiped.
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
-        fs.close().await.expect("Close failed");
-        let device = fs.take_device().await;
-        device.reopen();
-
-        SuperBlock::read(device.clone(), SuperBlockCopy::A).await.expect("read failed");
-        SuperBlock::read(device.clone(), SuperBlockCopy::B)
-            .await
-            .map(|_| ())
-            .expect_err("Super-block B was readable after a re-format");
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_alternating_super_blocks() {
-        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
-
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
-        fs.close().await.expect("Close failed");
-        let device = fs.take_device().await;
-        device.reopen();
-
-        let (super_block_a, _) =
-            SuperBlock::read(device.clone(), SuperBlockCopy::A).await.expect("read failed");
-
-        // The second super-block won't be valid at this time so there's no point reading it.
-
-        let fs = FxFilesystem::open(device).await.expect("open failed");
-        let root_store = fs.root_store();
-        // Generate enough work to induce a journal flush.
-        for _ in 0..8000 {
-            let mut transaction = fs
-                .clone()
-                .new_transaction(&[], Options::default())
-                .await
-                .expect("new_transaction failed");
-            ObjectStore::create_object(
-                &root_store,
-                &mut transaction,
-                HandleOptions::default(),
-                None,
-            )
-            .await
-            .expect("create_object failed");
-            transaction.commit().await.expect("commit failed");
-        }
-        fs.close().await.expect("Close failed");
-        let device = fs.take_device().await;
-        device.reopen();
-
-        let (super_block_a_after, _) =
-            SuperBlock::read(device.clone(), SuperBlockCopy::A).await.expect("read failed");
-        let (super_block_b_after, _) =
-            SuperBlock::read(device.clone(), SuperBlockCopy::B).await.expect("read failed");
-
-        // It's possible that multiple super-blocks were written, so cater for that.
-
-        // The sequence numbers should be one apart.
-        assert_eq!(
-            (super_block_b_after.generation as i64 - super_block_a_after.generation as i64).abs(),
-            1
-        );
-
-        // At leaast one super-block should have been written.
-        assert!(
-            std::cmp::max(super_block_a_after.generation, super_block_b_after.generation)
-                > super_block_a.generation
-        );
-
-        // They should have the same oddness.
-        assert_eq!(super_block_a_after.generation & 1, super_block_a.generation & 1);
-    }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_replay() {
