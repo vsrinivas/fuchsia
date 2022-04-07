@@ -20,7 +20,7 @@ guest_packages = [
 linux_tests_label = "//src/virtualization/packages/debian_guest:tests"
 resource("debian_tests_img") {
   sources = [ get_label_info(linux_tests_label, "target_out_dir") +
-              "/debian/tests.romfs" ]
+              "/debian/tests.img" ]
   outputs = [ "data/linux_tests.img" ]
   deps = [ linux_tests_label ]
 }
@@ -564,7 +564,6 @@ romfs_image("extras") {
   deps = [
     "//src/graphics/lib/magma/tests/integration:virtmagma_conformance_tests(${linux_exe_toolchain})",
     "//src/graphics/lib/magma/tests_linux/unit_tests:virtmagma_vulkan_unit_tests(${linux_exe_toolchain})",
-    "//src/virtualization/tests/virtio_vsock_test_util(${linux_exe_toolchain})",
   ]
 
   inputs = [
