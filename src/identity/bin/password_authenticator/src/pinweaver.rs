@@ -232,7 +232,6 @@ impl<CM> PinweaverKeyEnroller<CM>
 where
     CM: CredManager,
 {
-    #[allow(unused)]
     pub fn new(credential_manager: CM) -> PinweaverKeyEnroller<CM> {
         PinweaverKeyEnroller { scrypt_params: ScryptParams::new(), credential_manager }
     }
@@ -288,7 +287,6 @@ impl<CM> PinweaverKeyRetriever<CM>
 where
     CM: CredManager,
 {
-    #[allow(unused)]
     pub fn new(
         pinweaver_params: PinweaverParams,
         credential_manager: CM,

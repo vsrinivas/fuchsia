@@ -25,8 +25,10 @@ use io_util::directory::open_in_namespace;
 use log::{error, info};
 
 use crate::{
-    account_manager::AccountManager, account_metadata::DataDirAccountMetadataStore,
-    disk_management::DevDiskManager, options::Options,
+    account_manager::{AccountManager, EnvCredManagerProvider},
+    account_metadata::DataDirAccountMetadataStore,
+    disk_management::DevDiskManager,
+    options::Options,
 };
 
 enum Services {
@@ -64,7 +66,9 @@ async fn main() -> Result<(), Error> {
     // TODO(zarvox): someday, make an inspect entry for this failure mode
     drop(cleanup_res);
 
-    let account_manager = AccountManager::new(options, disk_manager, account_metadata_store);
+    let cred_manager_provider = EnvCredManagerProvider {};
+    let account_manager =
+        AccountManager::new(options, disk_manager, account_metadata_store, cred_manager_provider);
 
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(Services::AccountManager);

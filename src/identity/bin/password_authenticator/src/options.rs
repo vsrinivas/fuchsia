@@ -29,9 +29,6 @@ impl Options {
         // At least one type of account must be supported.
         if !(self.allow_null || self.allow_scrypt || self.allow_pinweaver) {
             Err(anyhow!("Command line options did not allow any types of account"))
-        } else if self.allow_pinweaver {
-            // TODO(zarvox): Remove this check when pinweaver is supported.
-            Err(anyhow!("Pinweaver is not yet supported"))
         } else {
             Ok(())
         }
@@ -49,12 +46,18 @@ pub mod test {
             .validate()
             .is_err());
         // Allowing a single type is valid
+        assert!(Options { allow_null: true, allow_scrypt: false, allow_pinweaver: false }
+            .validate()
+            .is_ok());
         assert!(Options { allow_null: false, allow_scrypt: true, allow_pinweaver: false }
             .validate()
             .is_ok());
-        // Today, allowing pinweaver is invalid
         assert!(Options { allow_null: false, allow_scrypt: false, allow_pinweaver: true }
             .validate()
-            .is_err());
+            .is_ok());
+        // Mixing and matching is fine
+        assert!(Options { allow_null: true, allow_scrypt: true, allow_pinweaver: true }
+            .validate()
+            .is_ok());
     }
 }

@@ -62,6 +62,8 @@ extern "C" {
 }
 
 enum Config {
+    #[allow(unused)]
+    PinweaverOrScrypt,
     ScryptOrNull,
     ScryptOnly,
 }
@@ -75,8 +77,9 @@ impl TestEnv {
         let builder = RealmBuilder::new().await.unwrap();
         builder.driver_test_realm_setup().await.unwrap();
         let manifest = match config {
+            Config::PinweaverOrScrypt => "fuchsia-pkg://fuchsia.com/password-authenticator-integration-tests#meta/password-authenticator-pinweaver-or-scrypt.cm",
             Config::ScryptOrNull => "fuchsia-pkg://fuchsia.com/password-authenticator-integration-tests#meta/password-authenticator-scrypt-or-null.cm",
-            Config::ScryptOnly => "fuchsia-pkg://fuchsia.com/password-authenticator-integration-tests#meta/password-authenticator-scrypt.cm"
+            Config::ScryptOnly => "fuchsia-pkg://fuchsia.com/password-authenticator-integration-tests#meta/password-authenticator-scrypt.cm",
         };
         let password_authenticator = builder
             .add_child("password_authenticator", manifest, ChildOptions::new())

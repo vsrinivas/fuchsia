@@ -83,6 +83,12 @@ fuchsia_component("component_scrypt_or_null") {
   deps = [ ":bin" ]
 }
 
+fuchsia_component("component_pinweaver_or_scrypt") {
+  component_name = "password-authenticator"
+  manifest = "meta/password-authenticator-pinweaver-or-scrypt.cml"
+  deps = [ ":bin" ]
+}
+
 # Define test components for each flag combination using different
 # component names so that an integration test can include more than
 # one.
@@ -97,6 +103,13 @@ fuchsia_component("component_scrypt_or_null_for_test") {
   testonly = true
   component_name = "password-authenticator-scrypt-or-null"
   manifest = "meta/password-authenticator-scrypt-or-null.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("component_pinweaver_or_scrypt_for_test") {
+  testonly = true
+  component_name = "password-authenticator-pinweaver-or-scrypt"
+  manifest = "meta/password-authenticator-pinweaver-or-scrypt.cml"
   deps = [ ":bin" ]
 }
 
