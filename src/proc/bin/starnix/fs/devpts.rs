@@ -344,13 +344,12 @@ fn shared_ioctl(
     match request {
         TIOCSCTTY => {
             // Make the given terminal the controlling terminal of the calling process.
-            let mut steal = 0;
-            current_task.mm.read_object(UserRef::<i32>::new(user_addr), &mut steal)?;
+            let steal = !user_addr.is_null();
             current_task.thread_group.set_controlling_terminal(
                 current_task,
                 terminal,
                 is_main,
-                steal == 1,
+                steal,
                 file.can_read(),
             )?;
             Ok(SUCCESS)
@@ -408,6 +407,14 @@ mod tests {
         let mut result = *value;
         task.mm.read_object(address_ref, &mut result)?;
         Ok(result)
+    }
+
+    fn set_controlling_terminal(
+        task: &CurrentTask,
+        file: &FileHandle,
+        steal: bool,
+    ) -> Result<SyscallResult, Errno> {
+        file.ioctl(&task, TIOCSCTTY, UserAddress::from(if steal { 1 } else { 0 }))
     }
 
     fn open_file_with_flags(
@@ -645,14 +652,14 @@ mod tests {
         assert_eq!(ioctl::<i32>(&task1, &opened_main, TIOCGPGRP, &0), Err(ENOTTY));
         assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCGPGRP, &0), Err(ENOTTY));
 
-        ioctl::<u32>(&task1, &opened_main, TIOCSCTTY, &0).unwrap();
+        set_controlling_terminal(&task1, &opened_main, false).unwrap();
         assert_eq!(
             ioctl::<i32>(&task1, &opened_main, TIOCGPGRP, &0),
             Ok(task1.thread_group.process_group.read().leader)
         );
         assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCGPGRP, &0), Err(ENOTTY));
 
-        ioctl::<u32>(&task2, &opened_replica, TIOCSCTTY, &0).unwrap();
+        set_controlling_terminal(&task2, &opened_replica, false).unwrap();
         assert_eq!(
             ioctl::<i32>(&task2, &opened_replica, TIOCGPGRP, &0),
             Ok(task2.thread_group.process_group.read().leader)
@@ -680,31 +687,33 @@ mod tests {
         assert!(!wo_opened_replica.can_read());
 
         // FD must be readable for setting the terminal.
-        assert_eq!(ioctl::<u32>(&task1, &wo_opened_replica, TIOCSCTTY, &0), Err(EPERM));
+        assert_eq!(set_controlling_terminal(&task1, &wo_opened_replica, false), Err(EPERM));
 
         let opened_replica = open_file(&task2, &fs, b"0").expect("open file");
         // Task must be session leader for setting the terminal.
-        assert_eq!(ioctl::<u32>(&task2, &opened_replica, TIOCSCTTY, &0), Err(EINVAL));
+        assert_eq!(set_controlling_terminal(&task2, &opened_replica, false), Err(EINVAL));
 
         // Associate terminal to task1.
-        ioctl::<u32>(&task1, &opened_replica, TIOCSCTTY, &0).expect("Associate terminal to task1");
+        set_controlling_terminal(&task1, &opened_replica, false)
+            .expect("Associate terminal to task1");
 
         // One cannot associate a terminal to a process that has already one
-        assert_eq!(ioctl::<u32>(&task1, &opened_replica, TIOCSCTTY, &0), Err(EINVAL));
+        assert_eq!(set_controlling_terminal(&task1, &opened_replica, false), Err(EINVAL));
 
         task2.thread_group.setsid().expect("setsid");
 
         // One cannot associate a terminal that is already associated with another process.
-        assert_eq!(ioctl::<u32>(&task2, &opened_replica, TIOCSCTTY, &0), Err(EPERM));
+        assert_eq!(set_controlling_terminal(&task2, &opened_replica, false), Err(EPERM));
 
         // One cannot steal a terminal without the CAP_SYS_ADMIN capacility
-        assert_eq!(ioctl::<u32>(&task2, &opened_replica, TIOCSCTTY, &1), Err(EPERM));
+        assert_eq!(set_controlling_terminal(&task2, &opened_replica, true), Err(EPERM));
 
         // One can steal a terminal with the CAP_SYS_ADMIN capacility
         *task2.creds.write() = Credentials::from_passwd("root:x:0:0").expect("credentials");
         // But not without specifying that one wants to steal it.
-        assert_eq!(ioctl::<u32>(&task2, &opened_replica, TIOCSCTTY, &0), Err(EPERM));
-        ioctl::<u32>(&task2, &opened_replica, TIOCSCTTY, &1).expect("Associate terminal to task2");
+        assert_eq!(set_controlling_terminal(&task2, &opened_replica, false), Err(EPERM));
+        set_controlling_terminal(&task2, &opened_replica, true)
+            .expect("Associate terminal to task2");
 
         assert!(task1
             .thread_group
@@ -748,7 +757,7 @@ mod tests {
         assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCSPGRP, &task2_pgid), Err(ENOTTY));
 
         // Attach terminal to task1 and task2 session.
-        ioctl::<u32>(&task1, &opened_replica, TIOCSCTTY, &0).unwrap();
+        set_controlling_terminal(&task1, &opened_replica, false).unwrap();
         // The foreground process group should be the one of task1
         assert_eq!(
             ioctl::<i32>(&task1, &opened_replica, TIOCGPGRP, &0),
@@ -814,7 +823,7 @@ mod tests {
         // Cannot detach the controlling terminal when none is attached terminal
         assert_eq!(ioctl::<i32>(&task1, &opened_replica, TIOCNOTTY, &0), Err(ENOTTY));
 
-        ioctl::<i32>(&task2, &opened_replica, TIOCSCTTY, &0).expect("set controlling terminal");
+        set_controlling_terminal(&task2, &opened_replica, false).expect("set controlling terminal");
 
         // Cannot detach the controlling terminal when not the session leader.
         assert_eq!(ioctl::<i32>(&task1, &opened_replica, TIOCNOTTY, &0), Err(ENOTTY));
