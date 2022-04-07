@@ -20,42 +20,41 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/staticanalysis"
 )
 
-// ClippyAnalyzer implements the ClippyAnalyzer interface for Clippy, a Rust linter.
-//
-// Clippy runs within the build system because it needs access to each Rust
-// library's full dependency tree, and it outputs files within the build
-// directory containing Clippy findings, so this checker reads findings from
-// those files (and assumes they've already been built) rather than running
-// Clippy itself.
-type ClippyAnalyzer struct {
+type analyzer struct {
 	buildDir      string
 	checkoutDir   string
 	pythonPath    string
 	clippyTargets []build.ClippyTarget
 }
 
-var _ staticanalysis.Analyzer = &ClippyAnalyzer{}
-
-func New(checkoutDir string, modules *build.Modules) (*ClippyAnalyzer, error) {
-	return &ClippyAnalyzer{
+// New returns an analyzer implementing the Analyzer interface for Clippy, a
+// Rust linter.
+//
+// Clippy runs within the build system because it needs access to each Rust
+// library's full dependency tree, and it outputs files within the build
+// directory containing Clippy findings, so this checker reads findings from
+// those files (and assumes they've already been built) rather than running
+// Clippy itself.
+func New(checkoutDir string, modules *build.Modules) (staticanalysis.Analyzer, error) {
+	return &analyzer{
 		buildDir:      modules.BuildDir(),
 		checkoutDir:   checkoutDir,
 		clippyTargets: modules.ClippyTargets(),
 	}, nil
 }
 
-func (c *ClippyAnalyzer) Analyze(ctx context.Context, path string) ([]*staticanalysis.Finding, error) {
-	buildRelPath, err := filepath.Rel(c.buildDir, filepath.Join(c.checkoutDir, path))
+func (a *analyzer) Analyze(ctx context.Context, path string) ([]*staticanalysis.Finding, error) {
+	buildRelPath, err := filepath.Rel(a.buildDir, filepath.Join(a.checkoutDir, path))
 	if err != nil {
 		return nil, err
 	}
-	clippyTarget, hasClippy := c.clippyTargetForFile(buildRelPath)
+	clippyTarget, hasClippy := a.clippyTargetForFile(buildRelPath)
 	if !hasClippy {
 		return nil, nil
 	}
 
 	// Make sure the Clippy output file was built.
-	outputPath := filepath.Join(c.buildDir, clippyTarget.Output)
+	outputPath := filepath.Join(a.buildDir, clippyTarget.Output)
 	if _, err := os.Stat(outputPath); errors.Is(err, os.ErrNotExist) {
 		// TODO(olivernewman): consider making these failures blocking once
 		// we're confident that the configuration is correct and the files
@@ -90,7 +89,7 @@ func (c *ClippyAnalyzer) Analyze(ctx context.Context, path string) ([]*staticana
 			continue
 		}
 
-		spanPath, err := staticanalysis.BuildPathToCheckoutPath(primarySpan.FileName, c.buildDir, c.checkoutDir)
+		spanPath, err := staticanalysis.BuildPathToCheckoutPath(primarySpan.FileName, a.buildDir, a.checkoutDir)
 		if err != nil {
 			return nil, err
 		}
@@ -122,7 +121,7 @@ func (c *ClippyAnalyzer) Analyze(ctx context.Context, path string) ([]*staticana
 				if !span.Primary || span.SuggestedReplacement == "" {
 					continue
 				}
-				replacementPath, err := staticanalysis.BuildPathToCheckoutPath(span.FileName, c.buildDir, c.checkoutDir)
+				replacementPath, err := staticanalysis.BuildPathToCheckoutPath(span.FileName, a.buildDir, a.checkoutDir)
 				if err != nil {
 					return nil, err
 				}
@@ -187,8 +186,8 @@ func (c *ClippyAnalyzer) Analyze(ctx context.Context, path string) ([]*staticana
 // clippyTargetForFile returns the Clippy output target for the library that a
 // given source file is included in. If the file is not associated with any
 // Clippy target, returns false.
-func (c *ClippyAnalyzer) clippyTargetForFile(buildRelPath string) (target build.ClippyTarget, ok bool) {
-	for _, target := range c.clippyTargets {
+func (a *analyzer) clippyTargetForFile(buildRelPath string) (target build.ClippyTarget, ok bool) {
+	for _, target := range a.clippyTargets {
 		for _, source := range target.Sources {
 			// Assumes each file only feeds into a single clippy target.
 			if source == buildRelPath {

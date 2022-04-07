@@ -212,7 +212,7 @@ func TestAnalyzer(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			analyzer := ClippyAnalyzer{
+			analyzer := analyzer{
 				checkoutDir:   checkoutDir,
 				buildDir:      buildDir,
 				clippyTargets: test.clippyTargets,
