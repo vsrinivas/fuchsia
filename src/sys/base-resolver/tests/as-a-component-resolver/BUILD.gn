@@ -41,33 +41,12 @@ fuchsia_component("root") {
   manifest = "meta/root.cml"
 }
 
-rustc_binary("fake_pkgfs_bin") {
+rustc_binary("fake_dependencies_bin") {
   testonly = true
-  name = "base_resolver_fake_pkgfs_bin"
-  source_root = "fake_pkgfs.rs"
+  name = "base_resolver_fake_dependencies_bin"
+  source_root = "fake_dependencies.rs"
   deps = [
     "//garnet/lib/rust/io_util",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia",
-    "//src/lib/fuchsia-runtime",
-    "//src/sys/base-resolver:fake_pkgfs",
-    "//third_party/rust_crates:futures",
-  ]
-  sources = [ "fake_pkgfs.rs" ]
-}
-
-fuchsia_component("fake-pkgfs") {
-  testonly = true
-  manifest = "meta/fake-pkgfs.cml"
-  deps = [ ":fake_pkgfs_bin" ]
-}
-
-rustc_binary("fake_blobfs_and_boot_args_bin") {
-  testonly = true
-  name = "base_resolver_fake_blobfs_and_boot_args_bin"
-  source_root = "fake_blobfs_and_boot_args.rs"
-  deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -82,15 +61,15 @@ rustc_binary("fake_blobfs_and_boot_args_bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
   ]
-  sources = [ "fake_blobfs_and_boot_args.rs" ]
+  sources = [ "fake_dependencies.rs" ]
 }
 
-fuchsia_component("fake-blobfs-and-boot-args") {
+fuchsia_component("fake-dependencies") {
   testonly = true
-  manifest = "meta/fake-blobfs-and-boot-args.cml"
+  manifest = "meta/fake-dependencies.cml"
   deps = [
     ":driver_test_realm",
-    ":fake_blobfs_and_boot_args_bin",
+    ":fake_dependencies_bin",
     "//src/storage/bin/blobfs",
     "//src/sys/pkg/bin/pm:pm_bin",
   ]
@@ -137,8 +116,7 @@ fidl("test.ping") {
 fuchsia_test_package("base-resolver-tests") {
   test_components = [ ":root" ]
   deps = [
-    ":fake-blobfs-and-boot-args",
-    ":fake-pkgfs",
+    ":fake-dependencies",
     ":integration-test",
     ":mock-component",
     ":mock-pkg-cache-component",

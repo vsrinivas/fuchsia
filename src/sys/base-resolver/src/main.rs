@@ -209,7 +209,6 @@ mod tests {
     use {
         super::*,
         assert_matches::assert_matches,
-        fake_pkgfs::{Entry, MockDir, MockFile},
         fidl::encoding::encode_persistent_with_context,
         fidl::endpoints::{create_proxy, ServerEnd},
         fidl::prelude::*,
@@ -223,12 +222,13 @@ mod tests {
     /// are set in the Open request.
     struct FlagVerifier(fio::OpenFlags);
 
-    impl Entry for FlagVerifier {
+    impl vfs::directory::entry::DirectoryEntry for FlagVerifier {
         fn open(
             self: Arc<Self>,
+            _scope: vfs::execution_scope::ExecutionScope,
             flags: fio::OpenFlags,
             _mode: u32,
-            _path: &str,
+            _path: vfs::path::Path,
             server_end: ServerEnd<fio::NodeMarker>,
         ) {
             let status = if flags & self.0 != self.0 { Status::INVALID_ARGS } else { Status::OK };
@@ -242,18 +242,25 @@ mod tests {
                 .expect("failed to send OnOpen event");
             control_handle.shutdown_with_epitaph(status);
         }
+
+        fn entry_info(&self) -> vfs::directory::entry::EntryInfo {
+            vfs::directory::entry::EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)
+        }
     }
 
-    fn serve_pkgfs(pseudo_dir: Arc<dyn Entry>) -> Result<fio::DirectoryProxy, anyhow::Error> {
+    fn serve_pkgfs(
+        pseudo_dir: Arc<dyn vfs::directory::entry::DirectoryEntry>,
+    ) -> fio::DirectoryProxy {
         let (proxy, server_end) = create_proxy::<fio::DirectoryMarker>()
-            .context("failed to create DirectoryProxy/Server pair")?;
-        pseudo_dir.open(
+            .expect("failed to create DirectoryProxy/Server pair");
+        let () = pseudo_dir.open(
+            vfs::execution_scope::ExecutionScope::new(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
-            fio::MODE_TYPE_DIRECTORY,
-            ".",
+            0,
+            vfs::path::Path::dot(),
             ServerEnd::new(server_end.into_channel()),
         );
-        Ok(proxy)
+        proxy
     }
 
     #[fuchsia::test]
@@ -263,11 +270,11 @@ mod tests {
         let flag_verifier = Arc::new(FlagVerifier(
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         ));
-        let pkgfs_dir = serve_pkgfs(Arc::new(
-            MockDir::new()
-                .add_entry("test-package", Arc::new(MockDir::new().add_entry("0", flag_verifier))),
-        ))
-        .expect("failed to serve pkgfs");
+        let pkgfs_dir = serve_pkgfs(vfs::pseudo_directory! {
+            "test-package" => vfs::pseudo_directory! {
+                "0" => flag_verifier,
+            }
+        });
 
         let package =
             resolve_package(&pkg_url, &pkgfs_dir).await.expect("failed to resolve package");
@@ -282,7 +289,8 @@ mod tests {
     async fn fails_to_resolve_package_unsupported_repo() {
         let pkg_url = PkgUrl::new_package("fuchsia.ca".into(), "/test-package".into(), None)
             .expect("failed to create test PkgUrl");
-        let pkgfs_dir = serve_pkgfs(Arc::new(MockDir::new())).expect("failed to serve pkgfs");
+        let pkgfs_dir = serve_pkgfs(vfs::pseudo_directory! {});
+
         assert_matches!(
             resolve_package(&pkg_url, &pkgfs_dir).await,
             Err(ResolverError::UnsupportedRepo)
@@ -291,7 +299,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn fails_to_resolve_component_invalid_url() {
-        let pkgfs_dir = serve_pkgfs(Arc::new(MockDir::new())).expect("failed to serve pkgfs");
+        let pkgfs_dir = serve_pkgfs(vfs::pseudo_directory! {});
         assert_matches!(
             resolve_component("fuchsia://fuchsia.com/foo#meta/bar.cm", &pkgfs_dir).await,
             Err(ResolverError::InvalidUrl(_))
@@ -322,7 +330,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn fails_to_resolve_component_package_not_found() {
-        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs()).expect("failed to serve pkgfs");
+        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs());
         assert_matches!(
             resolve_component("fuchsia-pkg://fuchsia.com/missing-package#meta/foo.cm", &pkgfs_dir)
                 .await,
@@ -332,7 +340,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn fails_to_resolve_component_missing_manifest() {
-        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs()).expect("failed to serve pkgfs");
+        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs());
         assert_matches!(
             resolve_component("fuchsia-pkg://fuchsia.com/test-package#meta/bar.cm", &pkgfs_dir)
                 .await,
@@ -342,7 +350,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn resolves_component_vmo_manifest() {
-        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs()).expect("failed to serve pkgfs");
+        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs());
         assert_matches!(
             resolve_component("fuchsia-pkg://fuchsia.com/test-package#meta/vmo.cm", &pkgfs_dir)
                 .await,
@@ -352,7 +360,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn resolves_component_file_manifest() {
-        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs()).expect("failed to serve pkgfs");
+        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs());
         assert_matches!(
             resolve_component("fuchsia-pkg://fuchsia.com/test-package#meta/foo.cm", &pkgfs_dir)
                 .await,
@@ -365,7 +373,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn resolves_component_with_config() {
-        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs()).unwrap();
+        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs());
         let component = resolve_component(
             "fuchsia-pkg://fuchsia.com/test-package#meta/foo-with-config.cm",
             &pkgfs_dir,
@@ -377,7 +385,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn fails_to_resolve_component_missing_config_values() {
-        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs()).unwrap();
+        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs());
         let error = resolve_component(
             "fuchsia-pkg://fuchsia.com/test-package#meta/foo-without-config.cm",
             &pkgfs_dir,
@@ -389,7 +397,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn fails_to_resolve_component_bad_config_source() {
-        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs()).unwrap();
+        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs());
         let error = resolve_component(
             "fuchsia-pkg://fuchsia.com/test-package#meta/foo-with-bad-config.cm",
             &pkgfs_dir,
@@ -399,90 +407,81 @@ mod tests {
         assert_matches!(error, ResolverError::InvalidConfigSource);
     }
 
-    fn build_fake_pkgfs() -> Arc<MockDir> {
+    fn build_fake_pkgfs() -> Arc<dyn vfs::directory::entry::DirectoryEntry> {
         let cm_bytes = encode_persistent_with_context(
             &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
             &mut fdecl::Component::EMPTY.clone(),
         )
         .expect("failed to encode ComponentDecl FIDL");
-        Arc::new(
-            MockDir::new().add_entry(
-                "test-package",
-                Arc::new(
-                    MockDir::new().add_entry(
-                        "0",
-                        Arc::new(
-                            MockDir::new().add_entry(
-                                "meta",
-                                Arc::new(
-                                    MockDir::new()
-                                        .add_entry(
-                                            "foo.cm",
-                                            Arc::new(MockFile::new(cm_bytes.clone())),
-                                        )
-                                        .add_entry(
-                                            "foo-with-config.cm",
-                                            Arc::new(MockFile::new(
-                                                encode_persistent_with_context(&fidl::encoding::Context{wire_format_version: fidl::encoding::WireFormatVersion::V2},&mut fdecl::Component {
-                                                    config: Some(fdecl::ConfigSchema {
-                                                        value_source: Some(
-                                                            fdecl::ConfigValueSource::PackagePath(
-                                                                "meta/foo-with-config.cvf"
-                                                                    .to_string(),
-                                                            ),
-                                                        ),
-                                                        ..fdecl::ConfigSchema::EMPTY
-                                                    }),
-                                                    ..fdecl::Component::EMPTY
-                                                })
-                                                .unwrap(),
-                                            )),
-                                        )
-                                        .add_entry(
-                                            "foo-with-config.cvf",
-                                            Arc::new(MockFile::new(
-                                                encode_persistent_with_context(&fidl::encoding::Context{wire_format_version: fidl::encoding::WireFormatVersion::V2},&mut fconfig::ValuesData {
-                                                    ..fconfig::ValuesData::EMPTY
-                                                })
-                                                .unwrap(),
-                                            )),
-                                        )
-                                        .add_entry(
-                                            "foo-with-bad-config.cm",
-                                            Arc::new(MockFile::new(
-                                                encode_persistent_with_context(&fidl::encoding::Context{wire_format_version: fidl::encoding::WireFormatVersion::V2},&mut fdecl::Component {
-                                                    config: Some(fdecl::ConfigSchema {
-                                                        ..fdecl::ConfigSchema::EMPTY
-                                                    }),
-                                                    ..fdecl::Component::EMPTY
-                                                })
-                                                .unwrap(),
-                                            )),
-                                        )
-                                        .add_entry(
-                                            "foo-without-config.cm",
-                                            Arc::new(MockFile::new(
-                                                encode_persistent_with_context(&fidl::encoding::Context{wire_format_version: fidl::encoding::WireFormatVersion::V2},&mut fdecl::Component {
-                                                    config: Some(fdecl::ConfigSchema {
-                                                        value_source: Some(
-                                                            fdecl::ConfigValueSource::PackagePath(
-                                                                "doesnt-exist.cvf".to_string(),
-                                                            ),
-                                                        ),
-                                                        ..fdecl::ConfigSchema::EMPTY
-                                                    }),
-                                                    ..fdecl::Component::EMPTY
-                                                })
-                                                .unwrap(),
-                                            )),
-                                        )
-                                        .add_entry("vmo.cm", Arc::new(MockFile::new(cm_bytes))),
-                                ),
-                            ),
+
+        vfs::pseudo_directory! {
+            "test-package" => vfs::pseudo_directory! {
+                "0" => vfs::pseudo_directory! {
+                    "meta" => vfs::pseudo_directory! {
+                        "foo.cm" => vfs::file::vmo::asynchronous::read_only_const(&cm_bytes),
+                        "foo-with-config.cm" => vfs::file::vmo::asynchronous::read_only_const(
+                            &encode_persistent_with_context(
+                                &fidl::encoding::Context {
+                                    wire_format_version: fidl::encoding::WireFormatVersion::V2
+                                },
+                                &mut fdecl::Component {
+                                    config: Some(fdecl::ConfigSchema {
+                                        value_source: Some(
+                                            fdecl::ConfigValueSource::PackagePath(
+                                                "meta/foo-with-config.cvf".to_string(),
+                                            ),
+                                        ),
+                                        ..fdecl::ConfigSchema::EMPTY
+                                    }),
+                                    ..fdecl::Component::EMPTY
+                                }
+                            ).unwrap()
                         ),
-                    ),
-                ),
-            ),
-        )
+                        "foo-with-config.cvf" => vfs::file::vmo::asynchronous::read_only_const(
+                            &encode_persistent_with_context(
+                                &fidl::encoding::Context {
+                                    wire_format_version: fidl::encoding::WireFormatVersion::V2
+                                },
+                                &mut fconfig::ValuesData {
+                                    ..fconfig::ValuesData::EMPTY
+                                }
+                            ).unwrap()
+                        ),
+                        "foo-with-bad-config.cm" => vfs::file::vmo::asynchronous::read_only_const(
+                            &encode_persistent_with_context(
+                                &fidl::encoding::Context {
+                                    wire_format_version: fidl::encoding::WireFormatVersion::V2
+                                },
+                                &mut fdecl::Component {
+                                    config: Some(fdecl::ConfigSchema {
+                                        ..fdecl::ConfigSchema::EMPTY
+                                    }),
+                                    ..fdecl::Component::EMPTY
+                                }
+                            ).unwrap()
+                        ),
+                        "foo-without-config.cm" => vfs::file::vmo::asynchronous::read_only_const(
+                            &encode_persistent_with_context(
+                                &fidl::encoding::Context {
+                                    wire_format_version: fidl::encoding::WireFormatVersion::V2
+                                },
+                                &mut fdecl::Component {
+                                    config: Some(fdecl::ConfigSchema {
+                                        value_source: Some(
+                                            fdecl::ConfigValueSource::PackagePath(
+                                                "doesnt-exist.cvf".to_string(),
+                                            ),
+                                        ),
+                                        ..fdecl::ConfigSchema::EMPTY
+                                    }),
+                                    ..fdecl::Component::EMPTY
+                                }
+                            ).unwrap()
+                        ),
+                        "vmo.cm" => vfs::file::vmo::asynchronous::read_only_const(&cm_bytes),
+                    }
+                }
+            }
+        }
     }
 }

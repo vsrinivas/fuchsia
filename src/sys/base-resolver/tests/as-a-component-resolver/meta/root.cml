@@ -5,12 +5,8 @@
     include: [ "//src/sys/test_manager/system-test.shard.cml" ],
     children: [
         {
-            name: "fake_pkgfs",
-            url: "#meta/fake-pkgfs.cm",
-        },
-        {
-            name: "fake_blobfs_and_boot_args",
-            url: "#meta/fake-blobfs-and-boot-args.cm",
+            name: "fake_dependencies",
+            url: "#meta/fake-dependencies.cm",
         },
         {
             name: "base_resolver",
@@ -23,24 +19,22 @@
     ],
     offer: [
         {
-            directory: "pkgfs-packages",
-            from: "#fake_pkgfs",
-            to: "#base_resolver",
-        },
-        {
-            directory: "blob",
-            from: "#fake_blobfs_and_boot_args",
+            directory: [
+                "blob",
+                "pkgfs-packages",
+            ],
+            from: "#fake_dependencies",
             to: "#base_resolver",
         },
         {
             protocol: "fuchsia.boot.Arguments",
-            from: "#fake_blobfs_and_boot_args",
+            from: "#fake_dependencies",
             to: "#base_resolver",
         },
         {
             storage: "tmp",
             from: "parent",
-            to: "#fake_blobfs_and_boot_args",
+            to: "#fake_dependencies",
         },
         {
             protocol: [
@@ -49,15 +43,14 @@
                 "fuchsia.sys.Launcher",
             ],
             from: "parent",
-            to: "#fake_blobfs_and_boot_args",
+            to: "#fake_dependencies",
         },
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [
                 "#base_resolver",
-                "#fake_blobfs_and_boot_args",
-                "#fake_pkgfs",
+                "#fake_dependencies",
                 "#integration_test",
             ],
         },

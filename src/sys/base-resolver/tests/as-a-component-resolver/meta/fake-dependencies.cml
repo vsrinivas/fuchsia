@@ -11,7 +11,7 @@
     ],
     program: {
         runner: "elf",
-        binary: "bin/base_resolver_fake_blobfs_and_boot_args_bin",
+        binary: "bin/base_resolver_fake_dependencies_bin",
     },
     capabilities: [
         { protocol: "fuchsia.boot.Arguments" },
@@ -19,6 +19,11 @@
             directory: "blob",
             rights: [ "rx*" ],
             path: "/blob",
+        },
+        {
+            directory: "pkgfs-packages",
+            rights: [ "rx*" ],
+            path: "/pkgfs-packages",
         },
     ],
     use: [
@@ -40,7 +45,10 @@
             from: "self",
         },
         {
-            directory: "blob",
+            directory: [
+                "blob",
+                "pkgfs-packages",
+            ],
             from: "self",
         },
     ],

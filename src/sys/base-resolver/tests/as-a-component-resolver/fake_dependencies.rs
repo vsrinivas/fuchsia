@@ -60,6 +60,15 @@ async fn main() {
         },
         "blob" =>
             vfs::remote::remote_dir(blobfs.root_dir_proxy().expect("get blobfs root dir")),
+        "pkgfs-packages" => vfs::pseudo_directory! {
+            "mock-package" => vfs::pseudo_directory! {
+                "0" => vfs::remote::remote_dir(io_util::directory::open_in_namespace(
+                    "/pkg",
+                    fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+                )
+                .unwrap())
+            }
+        }
     };
 
     let scope = vfs::execution_scope::ExecutionScope::new();
