@@ -63,3 +63,24 @@ fx shell camera-gym-ctl --set-description=0
 
 #### Turn on descriptions
 fx shell camera-gym-ctl --set-description=1
+
+### How to Capture a Frame in Manual Mode
+
+Caveat (b/200839146): The current frame capture feature only works while a single stream is running.
+Trying to do so with multiple streams running at the same time will result capturing from a stream
+randomly selected from all of those running.
+
+#### Capture a frame
+fx shell camera-gym-ctl --capture-frame=0
+
+#### Review how many frames were captured
+fx shell ls /data/r/sys/r/session-0/fuchsia.com:camera-gym:0#meta:camera-gym-manual.cmx/.
+
+#### Copy out frames that were captured
+cd /my_dest_dir/.
+fx scp "[$(fx get-device-addr)]:"/data/r/sys/r/session-0/fuchsia.com:camera-gym:0#meta:camera-gym-manual.cmx/image_\* .
+
+#### Post process NV12 raw dumps to PNG and view the PNG images
+ls -1 image*.nv12 | sed -e 's@\(.*_\)\([0-9][0-9]*x[0-9][0-9]*\)\(.*\).nv12@ffmpeg -f rawvideo -pixel_format nv12 -video_size \2 -i \1\2\3.nv12 \1\2\3.png@' > CONVERT.SH
+. CONVERT.SH
+eog *.png

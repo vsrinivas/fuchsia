@@ -36,6 +36,8 @@ source_set("lib") {
     "buffer_collage.h",
     "controller_receiver.cc",
     "controller_receiver.h",
+    "frame_capture.cc",
+    "frame_capture.h",
     "lifecycle_impl.cc",
     "lifecycle_impl.h",
     "moving_window.cc",
