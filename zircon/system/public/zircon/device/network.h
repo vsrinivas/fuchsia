@@ -67,7 +67,7 @@ typedef struct buffer_descriptor {
 
   // Offset of payload in VMO region.
   //
-  // For data-carrying buffer, the payload always starts |inner_offset| after
+  // For data-carrying buffer, the payload always starts |head_length| after
   // the VMO |offset|.
   uint16_t head_length;
   // The number of bytes available at the end of this buffer after
@@ -77,7 +77,7 @@ typedef struct buffer_descriptor {
   //
   // Set by Client on Tx and by Device on Rx for data-carrying buffers. For
   // scratch Rx space buffers, |data_length| is the total available space,
-  // starting from |inner_offset|.
+  // starting from |head_length|.
   uint32_t data_length;
 
   // Inbound flags, set by Client on Tx and by Server on Rx.
