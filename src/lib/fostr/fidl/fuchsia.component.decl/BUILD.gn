@@ -1,0 +1,15 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/lib/fostr/build/fostr_fidl.gni")
+
+fostr_fidl("fuchsia.component.decl") {
+  fidl_target = "//sdk/fidl/fuchsia.component.decl"
+
+  deps = [
+    "//src/lib/fostr/fidl/fuchsia.data",
+    "//src/lib/fostr/fidl/fuchsia.io",
+    "//src/lib/fostr/fidl/fuchsia.url",
+  ]
+}
