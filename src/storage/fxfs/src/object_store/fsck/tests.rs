@@ -85,6 +85,11 @@ impl FsckTest {
             do_slow_passes: true,
             verbose: false,
             on_error: |err| {
+                if err.is_error() {
+                    eprintln!("Fsck error: {:?}", &err);
+                } else {
+                    println!("Fsck warning: {:?}", &err);
+                }
                 self.errors.lock().unwrap().push(err.clone());
             },
         };
