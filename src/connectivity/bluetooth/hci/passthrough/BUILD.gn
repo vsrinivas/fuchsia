@@ -40,7 +40,6 @@ fuchsia_driver_component("driver") {
   deps = [ ":fuchsia_driver" ]
   info = "driver-info.json"
   colocate = true
-  fallback = true
 }
 
 fuchsia_driver_package("passthrough") {

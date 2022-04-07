@@ -734,8 +734,7 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
       LOG("booting from usb");
       // TODO(fxbug.dev/44586): remove devmgr.bind-eager once better driver
       // prioritisation exists.
-      static const char* usb_boot_args =
-          "boot.usb=true devmgr.bind-eager=fuchsia-boot:///#meta/usb-composite.cm";
+      static const char* usb_boot_args = "boot.usb=true devmgr.bind-eager=usb_composite";
       cmdline_append(usb_boot_args, strlen(usb_boot_args));
     }
 

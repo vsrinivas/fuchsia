@@ -30,7 +30,6 @@ fuchsia_driver_component("serial-async") {
   component_name = "serial-async"
   deps = [ ":serial-async-driver" ]
   colocate = true
-  fallback = true
 }
 
 source_set("common") {
