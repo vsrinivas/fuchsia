@@ -54,6 +54,9 @@ fuchsia_package("validate_structured_config_packaging") {
     ":pass_with_config_values",
     ":pass_without_config",
   ]
+
+  # This package intentionally includes invalidly configured components for testing purposes.
+  validate_structured_config = false
 }
 
 if (is_host) {

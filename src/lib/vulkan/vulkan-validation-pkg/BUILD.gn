@@ -74,10 +74,10 @@ if (current_toolchain == target_toolchain) {
   # Generate a cml that includes a specific version of vulkan-validation-pkg.
   action("cml") {
     # This boils down to a _pm target.
-    target_outputs = get_target_outputs(":validation-server-pkg")
+    merkle_file = get_label_info(":validation-server-pkg", "target_out_dir") +
+                  "/validation-server-pkg/meta.far.merkle"
 
     # The meta.far.merkle file contains the current package hash.
-    merkle_file = target_outputs[2]
     deps = [ ":validation-server-pkg" ]
     script = "make_validation_client_cml.py"
     sources = [

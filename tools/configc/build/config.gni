@@ -303,3 +303,47 @@ template("cpp_config_client_lib_source") {
     }
   }
 }
+
+# Validate a package's components' configuration (if any).
+#
+# Parameters
+#
+#   package_manifest (path)
+#     Path to the output of the `pm_build()` template.
+#
+#   deps (optional)
+#   metadata (optional)
+#   testonly (optional)
+#   visibility (optional)
+#     Standard GN meaning.
+template("validate_packaged_config") {
+  assert(defined(invoker.package_manifest), "must provide an input manifest")
+  _package_manifest = invoker.package_manifest
+  _meta_far = get_path_info(_package_manifest, "dir") + "/meta.far"
+  _stamp = "${target_out_dir}/${target_name}.configc.stamp"
+  compiled_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "metadata",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    tool = "//tools/configc"
+    tool_output_name = "configc"
+
+    inputs = [
+      _package_manifest,
+      _meta_far,
+    ]
+    outputs = [ _stamp ]
+
+    args = [
+      "validate-package",
+      rebase_path(_package_manifest, root_build_dir),
+      "--stamp",
+      rebase_path(_stamp, root_build_dir),
+    ]
+  }
+}

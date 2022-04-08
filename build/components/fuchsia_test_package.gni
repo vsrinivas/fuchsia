@@ -172,6 +172,9 @@ template("fuchsia_test_package") {
       deps += invoker.test_components
       deps += test_deps
       testonly = true
+
+      # test packages won't be configured by assembly tools, so we can check their config earlier
+      validate_structured_config = true
     }
   } else {
     group(target_name) {

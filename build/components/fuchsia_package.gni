@@ -8,6 +8,7 @@ import("//build/images/args.gni")
 import("//build/packages/package_metadata.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 import("//tools/cmc/build/cmc.gni")
+import("//tools/configc/build/config.gni")
 
 # Defines a Fuchsia package.
 # See: https://fuchsia.dev/fuchsia-src/development/components/build
@@ -66,6 +67,15 @@ import("//tools/cmc/build/cmc.gni")
 #     Type: boolean
 #     Default: false
 #
+#   validate_structured_config (optional)
+#     If true, check that component manifests which declare config schemas have been
+#     packaged with the resources needed to resolve them at runtime. Only useful for
+#     those packages which fully generate their configuration during the build. If a
+#     component has configuration provided by assembly tooling, that happens after the
+#     package is built and this should be set to false to prevent spurious errors.
+#     Type: boolean
+#     Default: true
+#
 #   system_image_package_allowed_in_extra_deps (optional)
 #     Used internally to implement fuchsia_system_package(), do not use!
 #     If defined, this is a fuchsia_system_package(), and the argument value
@@ -104,6 +114,12 @@ template("fuchsia_package") {
       package_name = invoker.package_name
     }
 
+    _files = {
+      fini_manifest = "$target_out_dir/${target_name}_manifest"
+      package_out_dir = "$target_out_dir/$target_name"
+      package_manifest = "$package_out_dir/package_manifest.json"
+    }
+
     # Generate the "meta/package" file
     meta_package_target = "${target_name}_meta_package"
     generate_meta_package(meta_package_target) {
@@ -114,7 +130,6 @@ template("fuchsia_package") {
 
     # Generate package manifest
     package_manifest_target = "${target_name}_manifest"
-    package_manifest_file = "$target_out_dir/${target_name}_manifest"
     fini_manifest(package_manifest_target) {
       forward_variables_from(invoker,
                              [
@@ -126,7 +141,7 @@ template("fuchsia_package") {
       }
       deps += [ ":$meta_package_target" ]
       visibility = [ ":*" ]
-      outputs = [ package_manifest_file ]
+      outputs = [ _files.fini_manifest ]
     }
 
     # Verify ELF binaries
@@ -136,9 +151,23 @@ template("fuchsia_package") {
       package_manifest_verify_target = "${target_name}.verify"
       verify_manifest_elf_binaries(package_manifest_verify_target) {
         forward_variables_from(invoker, [ "testonly" ])
-        manifest = package_manifest_file
+        manifest = _files.fini_manifest
         check_unstripped_files = true
         deps = [ ":$package_manifest_target" ]
+      }
+    }
+
+    _pm_build_target = "${target_name}.pm"
+    _validate_structured_config = true
+    if (defined(invoker.validate_structured_config)) {
+      _validate_structured_config = invoker.validate_structured_config
+    }
+    if (_validate_structured_config) {
+      _validate_config_target = "${target_name}.validate_config"
+      validate_packaged_config(_validate_config_target) {
+        forward_variables_from(invoker, [ "testonly" ])
+        package_manifest = _files.package_manifest
+        deps = [ ":$_pm_build_target" ]
       }
     }
 
@@ -154,13 +183,14 @@ template("fuchsia_package") {
     }
 
     # Build package
-    pm_build(target_name) {
+    pm_build(_pm_build_target) {
       forward_variables_from(invoker,
                              [
                                "deps",
                                "testonly",
                                "visibility",
                              ])
+      package_out_dir = _files.package_out_dir
       manifest = ":$package_manifest_target"
       metadata = {
         if (defined(invoker.metadata)) {
@@ -195,7 +225,7 @@ template("fuchsia_package") {
         system_image_package_info = [
           {
             label = get_label_info(":$target_name", "label_with_toolchain")
-            fini_manifest = rebase_path(package_manifest_file, root_build_dir)
+            fini_manifest = rebase_path(_files.fini_manifest, root_build_dir)
             if (_is_system_package) {
               system_image_package_allowed_in_extra_deps =
                   _is_system_package_allowed_in_extra_deps
@@ -212,9 +242,8 @@ template("fuchsia_package") {
             # `package_output_manifest` metadata key.
             system_image_extra_package_manifest = [
               {
-                package_manifest = rebase_path(
-                        "${target_out_dir}/${target_name}/package_manifest.json",
-                        root_build_dir)
+                package_manifest =
+                    rebase_path(_files.package_manifest, root_build_dir)
                 label = get_label_info(":$target_name", "label_with_toolchain")
               },
             ]
@@ -230,6 +259,18 @@ template("fuchsia_package") {
       }
       if (verify_elf) {
         deps += [ ":$package_manifest_verify_target" ]
+      }
+    }
+
+    group(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      public_deps = [ ":$_pm_build_target" ]
+      if (_validate_structured_config) {
+        deps = [ ":$_validate_config_target" ]
       }
     }
   } else {

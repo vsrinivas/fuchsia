@@ -118,6 +118,9 @@ template("pm_archive") {
 #     See https://fuchsia.dev/fuchsia-src/concepts/packages/package_url#repository
 #     for more details.
 #
+#   package_out_dir (default: "$target_out_dir/$target_name")
+#     [path] The directory into which package artifacts should be placed.
+#
 #   deps (optional)
 #   test (optional)
 #   visibility (optional)
@@ -127,6 +130,7 @@ template("pm_build") {
                          [
                            "package_api_level",
                            "package_name",
+                           "package_out_dir",
                            "repository",
                          ])
   if (!defined(package_api_level)) {
@@ -141,18 +145,20 @@ template("pm_build") {
     repository = "fuchsia.com"
   }
 
-  pkg_out_dir = "$target_out_dir/$target_name"
-  pkg_output_manifest = "$pkg_out_dir/package_manifest.json"
+  if (!defined(package_out_dir)) {
+    package_out_dir = "$target_out_dir/$target_name"
+  }
+  pkg_output_manifest = "$package_out_dir/package_manifest.json"
 
   metadata_target_name = "${target_name}_metadata"
   define_package_metadata(metadata_target_name) {
     package_name = package_name
     snapshot_entry = "$package_name/0=" +
-                     rebase_path("$pkg_out_dir/blobs.json", root_build_dir)
-    blob_manifest = "$pkg_out_dir/blobs.manifest"
+                     rebase_path("$package_out_dir/blobs.json", root_build_dir)
+    blob_manifest = "$package_out_dir/blobs.manifest"
     meta_far_merkle_index_entry =
         "$package_name/0=" +
-        rebase_path("$pkg_out_dir/meta.far.merkle", root_build_dir)
+        rebase_path("$package_out_dir/meta.far.merkle", root_build_dir)
     package_output_manifest = pkg_output_manifest
   }
 
@@ -172,7 +178,7 @@ template("pm_build") {
     pkg_manifest_file = pkg_manifest_outputs[0]
     deps += [ invoker.manifest ]
     inputs = [ pkg_manifest_file ]
-    depfile = "$pkg_out_dir/meta.far.d"
+    depfile = "$package_out_dir/meta.far.d"
 
     metadata = {
       if (defined(invoker.metadata)) {
@@ -184,19 +190,19 @@ template("pm_build") {
 
     outputs = [
       # produced by seal, must be listed first because of depfile rules.
-      "$pkg_out_dir/meta.far",
+      "$package_out_dir/meta.far",
 
       # update
-      "$pkg_out_dir/meta/contents",
+      "$package_out_dir/meta/contents",
 
       # seal
-      "$pkg_out_dir/meta.far.merkle",
+      "$package_out_dir/meta.far.merkle",
 
       # package blob json manifest
-      "$pkg_out_dir/blobs.json",
+      "$package_out_dir/blobs.json",
 
       # package blob manifest
-      "$pkg_out_dir/blobs.manifest",
+      "$package_out_dir/blobs.manifest",
 
       # package output manifest
       pkg_output_manifest,
@@ -204,7 +210,7 @@ template("pm_build") {
 
     args = [
       "-o",
-      rebase_path(pkg_out_dir, root_build_dir),
+      rebase_path(package_out_dir, root_build_dir),
       "-m",
       rebase_path(pkg_manifest_file, root_build_dir),
       "-n",
