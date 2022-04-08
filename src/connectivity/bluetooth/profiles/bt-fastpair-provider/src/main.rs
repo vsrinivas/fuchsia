@@ -5,6 +5,7 @@
 use anyhow::Error;
 use tracing::info;
 
+mod error;
 mod gatt_service;
 mod types;
 

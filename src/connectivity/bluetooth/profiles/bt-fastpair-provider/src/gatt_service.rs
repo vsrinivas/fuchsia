@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{format_err, Context as _, Error};
+use anyhow::Context as _;
 use core::{
     pin::Pin,
     task::{Context, Poll},
@@ -19,6 +19,8 @@ use futures::ready;
 use futures::stream::{FusedStream, Stream, StreamExt};
 use std::str::FromStr;
 use tracing::{trace, warn};
+
+use crate::error::Error;
 
 /// The UUID of the Fast Pair Service.
 const FAST_PAIR_SERVICE_UUID: u16 = 0xFE2C;
@@ -181,8 +183,7 @@ impl GattService {
 
         if let Err(e) = server_svc.publish_service(info, service_client).await? {
             warn!("Couldn't set up Fast Pair GATT Service: {:?}", e);
-            // TODO(fxbug.dev/94166): Define component-local Error type and use it here.
-            return Err(format_err!("{:?}", e));
+            return Err(e.into());
         }
 
         Ok(service_stream)

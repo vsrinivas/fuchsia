@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{format_err, Error};
 use std::convert::TryFrom;
+
+use crate::error::Error;
 
 /// Represents the 24-bit Model ID assigned to a Fast Pair device upon registration.
 #[derive(Debug, Copy, Clone)]
@@ -15,7 +16,7 @@ impl TryFrom<u32> for ModelId {
     fn try_from(src: u32) -> Result<Self, Self::Error> {
         // u24::MAX
         if src > 0xffffff {
-            return Err(format_err!("Invalid Model ID: {}", src));
+            return Err(Error::InvalidModelId(src));
         }
 
         Ok(Self(src))
