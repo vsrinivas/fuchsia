@@ -24,7 +24,7 @@ if (is_host) {
     sources = [ get_label_info(
                     "//tools/testgen/compiletest/rust_nomock:echo_server_test(${target_toolchain})",
                     "target_out_dir") +
-                "/echo_server_test_manifest/echo_server_test.cm" ]
+                "/echo_server_test_component_manifest/echo_server_test.cm" ]
     outputs = [ "${_example_out}/{{source_file_part}}" ]
     deps = [ "//tools/testgen/compiletest/rust_nomock:echo_server_test(${target_toolchain})" ]
   }
@@ -33,7 +33,7 @@ if (is_host) {
     sources = [ get_label_info(
                     "//tools/testgen/compiletest/rust_mock:echo_client_test(${target_toolchain})",
                     "target_out_dir") +
-                "/echo_client_test_manifest/echo_client_test.cm" ]
+                "/echo_client_test_component_manifest/echo_client_test.cm" ]
     outputs = [ "${_example_out}/{{source_file_part}}" ]
     deps = [ "//tools/testgen/compiletest/rust_mock:echo_client_test(${target_toolchain})" ]
   }

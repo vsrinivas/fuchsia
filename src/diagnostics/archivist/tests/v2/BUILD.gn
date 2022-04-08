@@ -131,6 +131,42 @@ fuchsia_component("archivist-with-small-caches") {
   deps = [ "//src/diagnostics/archivist:bin" ]
 }
 
+fuchsia_component_manifest("with-feedback-filtering-manifest") {
+  manifest = "meta/archivist_for_integration.cml"
+  component_name = "archivist-with-feedback-filtering"
+  restricted_features = [ "structured_config" ]
+}
+
+fuchsia_component("archivist-with-feedback-filtering") {
+  cm_label = ":with-feedback-filtering-manifest"
+  testonly = true
+  deps = [ "//src/diagnostics/archivist:bin" ]
+}
+
+fuchsia_component_manifest("with-legacy-metrics-filtering-manifest") {
+  manifest = "meta/archivist_for_integration.cml"
+  component_name = "archivist-with-legacy-metrics-filtering"
+  restricted_features = [ "structured_config" ]
+}
+
+fuchsia_component("archivist-with-legacy-metrics-filtering") {
+  cm_label = ":with-legacy-metrics-filtering-manifest"
+  testonly = true
+  deps = [ "//src/diagnostics/archivist:bin" ]
+}
+
+fuchsia_component_manifest("with-feedback-filtering-disabled-manifest") {
+  manifest = "meta/archivist_for_integration.cml"
+  component_name = "archivist-with-feedback-filtering-disabled"
+  restricted_features = [ "structured_config" ]
+}
+
+fuchsia_component("archivist-with-feedback-filtering-disabled") {
+  cm_label = ":with-feedback-filtering-disabled-manifest"
+  testonly = true
+  deps = [ "//src/diagnostics/archivist:bin" ]
+}
+
 fuchsia_component("archivist_integration_tests") {
   testonly = true
   deps = [ ":integration_tests_bin" ]
@@ -157,19 +193,38 @@ fuchsia_structured_config_values("archivist-with-log-connector-config") {
   values = with_log_connector_config
 }
 
+fuchsia_structured_config_values("archivist-with-feedback-filtering-config") {
+  cm_label = ":with-feedback-filtering-manifest"
+  values = with_feedback_filtering
+}
+
+fuchsia_structured_config_values(
+    "archivist-with-legacy-metrics-filtering-config") {
+  cm_label = ":with-legacy-metrics-filtering-manifest"
+  values = with_legacy_metrics_filtering
+}
+
+fuchsia_structured_config_values(
+    "archivist-with-feedback-filtering-disabled-config") {
+  cm_label = ":with-feedback-filtering-disabled-manifest"
+  values = with_feedback_filtering_disabled
+}
+
 resource("filter_feedback") {
   sources = [ "configs/pipelines/static_selectors.cfg" ]
-  outputs = [ "data/config/pipelines/feedback/static_selectors.cfg" ]
+  outputs = [
+    "data/config/pipelines/feedback_filtered/feedback/static_selectors.cfg",
+  ]
 }
 
 resource("do_not_filter_feedback") {
   sources = [ "configs/pipelines/DISABLE_FILTERING.txt" ]
-  outputs = [ "data/config/pipelines/feedback/DISABLE_FILTERING.txt" ]
+  outputs = [ "data/config/pipelines/feedback_filtering_disabled/feedback/DISABLE_FILTERING.txt" ]
 }
 
 resource("configure_legacy_metrics_pipeline") {
   sources = [ "configs/pipelines/legacy_selectors.cfg" ]
-  outputs = [ "data/config/pipelines/legacy_metrics/legacy_selectors.cfg" ]
+  outputs = [ "data/config/pipelines/legacy_metrics_filtered/legacy_metrics/legacy_selectors.cfg" ]
 }
 
 fuchsia_test_package("archivist-integration-tests-v2") {
@@ -178,49 +233,26 @@ fuchsia_test_package("archivist-integration-tests-v2") {
     ":archivist-for-integration",
     ":archivist-for-integration-config",
     ":archivist-for-integration-with-log-connector",
+    ":archivist-with-feedback-filtering",
+    ":archivist-with-feedback-filtering-config",
+    ":archivist-with-feedback-filtering-disabled",
+    ":archivist-with-feedback-filtering-disabled-config",
     ":archivist-with-klog",
     ":archivist-with-klog-config",
+    ":archivist-with-legacy-metrics-filtering",
+    ":archivist-with-legacy-metrics-filtering-config",
     ":archivist-with-log-connector-config",
     ":archivist-with-small-caches",
     ":archivist-with-small-caches-config",
+    ":configure_legacy_metrics_pipeline",
+    ":do_not_filter_feedback",
+    ":filter_feedback",
     "components",
     "//src/diagnostics/iquery/test/test_component",
   ]
 }
 
-fuchsia_package("archivist-with-feedback-filtering") {
-  testonly = true
-  deps = [
-    ":archivist-for-integration",
-    ":archivist-for-integration-config",
-    ":filter_feedback",
-  ]
-}
-
-fuchsia_package("archivist-with-feedback-filtering-disabled") {
-  testonly = true
-  deps = [
-    ":archivist-for-integration",
-    ":archivist-for-integration-config",
-    ":do_not_filter_feedback",
-  ]
-}
-
-fuchsia_package("archivist-with-legacy-metrics") {
-  testonly = true
-  deps = [
-    ":archivist-for-integration",
-    ":archivist-for-integration-config",
-    ":configure_legacy_metrics_pipeline",
-  ]
-}
-
 group("tests") {
   testonly = true
-  deps = [
-    ":archivist-integration-tests-v2",
-    ":archivist-with-feedback-filtering",
-    ":archivist-with-feedback-filtering-disabled",
-    ":archivist-with-legacy-metrics",
-  ]
+  deps = [ ":archivist-integration-tests-v2" ]
 }

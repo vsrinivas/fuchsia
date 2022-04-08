@@ -293,8 +293,7 @@ template("fuchsia_component") {
                                "testonly",
                              ])
       sources = get_target_outputs(cm_label)
-      outputs =
-          [ "$target_out_dir/${target_name}_manifest/{{source_file_part}}" ]
+      outputs = [ "$target_out_dir/${target_name}_component_manifest/{{source_file_part}}" ]
 
       if (!defined(deps)) {
         deps = []
