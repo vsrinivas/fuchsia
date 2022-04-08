@@ -38,6 +38,8 @@
 
 namespace pci {
 
+// TODO(fxbug.dev/93333): Remove this once DFv2 is stabilised.
+#ifndef ENABLE_DFV2
 static const zx_bind_inst_t sysmem_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
 };
@@ -45,6 +47,7 @@ static const zx_bind_inst_t sysmem_match[] = {
 static const device_fragment_part_t sysmem_fragment[] = {
     {std::size(sysmem_match), sysmem_match},
 };
+#endif
 
 namespace {  // anon namespace.  Externals do not need to know about DeviceImpl
 
@@ -169,6 +172,8 @@ zx_status_t Device::CreateCompositeDevice() {
            zx_status_get_string(status));
   }
 
+  // TODO(fxbug.dev/93333): Remove this once DFv2 is stabilised.
+#ifndef ENABLE_DFV2
   const zx_bind_inst_t pci_fragment_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
       BI_ABORT_IF(NE, BIND_PCI_VID, vendor_id_),
@@ -216,6 +221,9 @@ zx_status_t Device::CreateCompositeDevice() {
   char composite_name[ZX_DEVICE_NAME_MAX];
   snprintf(composite_name, sizeof(composite_name), "pci-%s", cfg_->addr());
   return DdkAddComposite(composite_name, &composite_desc);
+#else
+  return status;
+#endif
 }
 
 zx_status_t Device::Create(zx_device_t* parent, std::unique_ptr<Config>&& config,
