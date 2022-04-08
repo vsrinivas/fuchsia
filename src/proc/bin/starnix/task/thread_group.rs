@@ -166,20 +166,18 @@ impl ThreadGroup {
     pub fn exit(&self, exit_status: i32) {
         let mut terminating = self.terminating.lock();
         if *terminating {
-            // The thread group is already terminating and the SIGKILL signals have already been
-            // sent to all threads in the thread group.
+            // The thread group is already terminating and all threads in the thread group have
+            // already been interrupted.
             return;
         }
         *terminating = true;
 
-        // Send a SIGKILL signal to each task.
+        // Interrupt each task.
         let pids = self.kernel.pids.read();
         for tid in &*self.tasks.read() {
             if let Some(task) = pids.get_task(*tid) {
-                // NOTE: It's possible for a task calling `sys_exit` to race with this,
-                // which could lead to an unexpected exit code.
                 *task.exit_status.lock() = Some(exit_status);
-                send_signal(&*task, SignalInfo::default(SIGKILL));
+                task.interrupt();
             }
         }
     }

@@ -214,9 +214,7 @@ pub fn send_signal(task: &Task, siginfo: SignalInfo) {
     {
         // Wake the task. Note that any potential signal handler will be executed before
         // the task returns from the suspend (from the perspective of user space).
-        if let Some(waiter) = &signal_state.waiter {
-            waiter.interrupt();
-        }
+        task.interrupt_with_signal_state(&signal_state);
     }
 }
 

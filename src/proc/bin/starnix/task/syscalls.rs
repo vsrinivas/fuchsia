@@ -166,7 +166,9 @@ pub fn sys_getresgid(
 
 pub fn sys_exit(current_task: &CurrentTask, exit_code: i32) -> Result<(), Errno> {
     info!(target: "exit", "{:?} exit({})", current_task, exit_code);
-    *current_task.exit_status.lock() = Some((exit_code & 0xff) << 8);
+    // Only change the current exit status if this has not been already set by exit_group, as
+    // otherwise it is prioritary.
+    let _: i32 = *current_task.exit_status.lock().get_or_insert((exit_code & 0xff) << 8);
     Ok(())
 }
 
