@@ -411,13 +411,14 @@ fn wait_on_pid(
     let mut wait_result = Ok(());
     loop {
         let mut wait_queue = current_task.thread_group.child_exit_waiters.lock();
+        let has_child = current_task.thread_group.has_child(selector);
         if let Some(zombie) =
             current_task.thread_group.get_zombie_child(selector, options & WNOWAIT == 0)
         {
             return Ok(Some(zombie));
         }
 
-        if !current_task.thread_group.has_child(selector) {
+        if !has_child {
             return error!(ECHILD);
         }
 
@@ -455,7 +456,12 @@ pub fn sys_waitid(
     let task_selector = match id_type {
         P_PID => ProcessSelector::Pid(id),
         P_ALL => ProcessSelector::Any,
-        P_PIDFD | P_PGID => {
+        P_PGID => ProcessSelector::Pgid(if id == 0 {
+            current_task.thread_group.process_group.read().leader
+        } else {
+            id
+        }),
+        P_PIDFD => {
             not_implemented!("unsupported waitpid id_type {:?}", id_type);
             return error!(ENOSYS);
         }
@@ -479,10 +485,14 @@ pub fn sys_wait4(
     options: u32,
     user_rusage: UserRef<rusage>,
 ) -> Result<pid_t, Errno> {
-    let selector = if pid == -1 {
+    let selector = if pid == 0 {
+        ProcessSelector::Pgid(current_task.thread_group.process_group.read().leader)
+    } else if pid == -1 {
         ProcessSelector::Any
     } else if pid > 0 {
         ProcessSelector::Pid(pid)
+    } else if pid < -1 {
+        ProcessSelector::Pgid(-pid)
     } else {
         not_implemented!("unimplemented wait4 pid selector {}", pid);
         return error!(ENOSYS);
@@ -1242,7 +1252,7 @@ mod tests {
         assert!(
             sys_kill(&current_task, current_task.get_pid(), UncheckedSignal::from(SIGCHLD)).is_ok()
         );
-        let zombie = ZombieProcess { pid: 0, uid: 0, parent: 3, wait_status: 1 << 8 };
+        let zombie = ZombieProcess { pid: 0, pgid: 0, uid: 0, wait_status: 1 << 8 };
         current_task.thread_group.zombie_children.lock().push(zombie.clone());
         assert_eq!(wait_on_pid(&current_task, ProcessSelector::Any, 0), Ok(Some(zombie)));
     }
@@ -1271,6 +1281,74 @@ mod tests {
         let mut wstatus: i32 = 0;
         current_task.mm.read_object(address_ref, &mut wstatus).expect("read memory");
         assert_eq!(wstatus, 128 + SIGKILL.number() as i32);
+    }
+
+    #[::fuchsia::test]
+    fn test_wait4_by_pgid() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let child1 = current_task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("new process");
+        let child1_pid = child1.id;
+        child1.thread_group.exit(42);
+        std::mem::drop(child1);
+        let child2 = current_task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("new process");
+        child2.thread_group.setsid().expect("setsid");
+        let child2_pid = child2.id;
+        child2.thread_group.exit(42);
+        std::mem::drop(child2);
+
+        assert_eq!(
+            sys_wait4(&current_task, -child2_pid, UserRef::default(), 0, UserRef::default()),
+            Ok(child2_pid)
+        );
+        assert_eq!(
+            sys_wait4(&current_task, 0, UserRef::default(), 0, UserRef::default()),
+            Ok(child1_pid)
+        );
+    }
+
+    #[::fuchsia::test]
+    fn test_waitid_by_pgid() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let child1 = current_task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("new process");
+        let child1_pid = child1.id;
+        child1.thread_group.exit(42);
+        std::mem::drop(child1);
+        let child2 = current_task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("new process");
+        child2.thread_group.setsid().expect("setsid");
+        let child2_pid = child2.id;
+        child2.thread_group.exit(42);
+        std::mem::drop(child2);
+
+        let address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE as u64);
+        assert_eq!(sys_waitid(&current_task, P_PGID, child2_pid, address, WEXITED), Ok(()));
+        // The previous wait matched child2, only child1 should be in the available zombies.
+        assert_eq!(current_task.thread_group.zombie_children.lock()[0].pid, child1_pid);
+
+        assert_eq!(sys_waitid(&current_task, P_PGID, 0, address, WEXITED), Ok(()));
     }
 
     #[::fuchsia::test]

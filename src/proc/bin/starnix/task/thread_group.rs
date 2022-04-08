@@ -87,19 +87,21 @@ impl Drop for ThreadGroup {
 
 /// A selector that can match a process. Works as a representation of the pid argument to syscalls
 /// like wait and kill.
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum ProcessSelector {
     /// Matches any process at all.
     Any,
     /// Matches only the process with the specified pid
     Pid(pid_t),
+    /// Matches all the processes in the given process group
+    Pgid(pid_t),
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ZombieProcess {
     pub pid: pid_t,
+    pub pgid: pid_t,
     pub uid: uid_t,
-    pub parent: pid_t,
     /// This is the value returned by waitpid(2).
     pub wait_status: i32,
 }
@@ -108,8 +110,8 @@ impl ZombieProcess {
     pub fn new(thread_group: &ThreadGroup, credentials: &Credentials, wait_status: i32) -> Self {
         ZombieProcess {
             pid: thread_group.leader,
+            pgid: thread_group.process_group.read().leader,
             uid: credentials.uid,
-            parent: *thread_group.parent.read(),
             wait_status,
         }
     }
@@ -307,15 +309,20 @@ impl ThreadGroup {
             let mut terminating = self.terminating.lock();
             *terminating = true;
 
+            // Before unregistering this object from other places, register the zombie.
+            let parent_opt = self.kernel.pids.read().get_thread_group(*self.parent.read());
+            if let Some(parent) = parent_opt.as_ref() {
+                let zombie =
+                    self.zombie_leader.lock().take().expect("Failed to capture zombie leader.");
+                parent.zombie_children.lock().push(zombie);
+            }
+
+            // Unregister this object.
+            self.kernel.pids.write().remove_thread_group(self.leader);
             self.leave_process_group(&self.process_group.read());
 
-            let zombie =
-                self.zombie_leader.lock().take().expect("Failed to capture zombie leader.");
-
-            self.kernel.pids.write().remove_thread_group(self.leader);
-
-            if let Some(parent) = self.kernel.pids.read().get_thread_group(zombie.parent) {
-                parent.zombie_children.lock().push(zombie);
+            // Send signals
+            if let Some(parent) = parent_opt.as_ref() {
                 // TODO: Should this be zombie_leader.exit_signal?
                 if let Some(signal_target) = get_signal_target(&parent, &SIGCHLD.into()) {
                     send_signal(&signal_target, SignalInfo::default(SIGCHLD));
@@ -363,6 +370,9 @@ impl ThreadGroup {
                     None
                 }
             }
+            ProcessSelector::Pgid(pid) => {
+                zombie_children.iter().position(|zombie| zombie.pgid == pid)
+            }
             ProcessSelector::Pid(pid) => {
                 zombie_children.iter().position(|zombie| zombie.pid == pid)
             }
@@ -376,23 +386,17 @@ impl ThreadGroup {
         })
     }
 
-    /// Checks whether the thread group has a thread group identified by `selector`. A thread group
-    /// is a child if it was created by one of the threads in the thread group but does not belong
-    /// to the thread group (different process).
+    /// Checks whether the thread group has child thread group identified by `selector`.
     pub fn has_child(&self, selector: ProcessSelector) -> bool {
-        let children = self.children.read();
-        let thread_group_tasks = self.tasks.read();
         match selector {
-            ProcessSelector::Any => {
-                for child_tid in &*children {
-                    if !thread_group_tasks.contains(&child_tid) {
-                        return true;
-                    }
+            ProcessSelector::Any => !self.children.read().is_empty(),
+            ProcessSelector::Pid(pid) => self.children.read().get(&pid).is_some(),
+            ProcessSelector::Pgid(pgid) => {
+                if let Some(process_group) = self.kernel.pids.read().get_process_group(pgid) {
+                    !self.children.read().is_disjoint(&process_group.thread_groups.read())
+                } else {
+                    false
                 }
-                return false;
-            }
-            ProcessSelector::Pid(pid) => {
-                return children.get(&pid).is_some() && !thread_group_tasks.contains(&pid);
             }
         }
     }
