@@ -21,7 +21,16 @@ source_set("acpica-fuchsia") {
 
   public_configs = [ ":acpica-config" ]
 
-  sources = [ "osfuchsia.cc" ]
+  sources = [
+    "ioport.cc",
+    "irq.cc",
+    "mmio.cc",
+    "mutex.cc",
+    "osfuchsia.cc",
+    "pci.cc",
+    "semaphore.cc",
+    "task.cc",
+  ]
 
   defines = [ "_ALL_SOURCE" ]
 
