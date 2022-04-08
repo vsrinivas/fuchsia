@@ -11,19 +11,17 @@ use {
     fuchsia_async::{self as fasync, futures::TryFutureExt, futures::TryStreamExt},
     fuchsia_component::client::connect_to_protocol,
     fuchsia_url::pkg_url::PkgUrl,
-    fuchsia_zircon::sys,
+    fuchsia_zircon::{self as zx, sys},
     fuchsia_zircon_status as zx_status,
+    lazy_static::lazy_static,
     std::convert::TryFrom,
     std::io::{self, Write},
 };
 
-#[cfg(target_arch = "x86_64")]
-const DEFAULT_GUEST_MEM_SIZE: u64 = 1 << 32;
-
-// Reduce the default maximum memory usage on ARM64, due to the lack of memory
-// on the devices we test against.
-#[cfg(target_arch = "aarch64")]
-const DEFAULT_GUEST_MEM_SIZE: u64 = 1 << 30;
+lazy_static! {
+    static ref DEFAULT_GUEST_MEM_SIZE: u64 =
+        zx::system_get_physmem() - std::cmp::min(zx::system_get_physmem() / 2, 1 << 31);
+}
 
 pub fn parse_vmm_args(arguments: &arguments::LaunchArgs) -> GuestConfig {
     // FIDL requires we make a GuestConfig::EMPTY before trying to update fields
@@ -33,7 +31,7 @@ pub fn parse_vmm_args(arguments: &arguments::LaunchArgs) -> GuestConfig {
         guest_config.cmdline_add = Some(arguments.cmdline_add.clone())
     };
     guest_config.default_net = Some(arguments.default_net);
-    guest_config.guest_memory = Some(arguments.memory.unwrap_or(DEFAULT_GUEST_MEM_SIZE));
+    guest_config.guest_memory = Some(arguments.memory.unwrap_or(*DEFAULT_GUEST_MEM_SIZE));
     // There are no assumptions made by this unsafe block; it is only unsafe due to FFI.
     guest_config.cpus = Some(
         arguments.cpus.unwrap_or(unsafe { u8::try_from(sys::zx_system_get_num_cpus()).unwrap() }),

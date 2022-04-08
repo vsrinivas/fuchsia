@@ -25,13 +25,13 @@ namespace {
 
 using fuchsia::virtualization::GuestConfig;
 
-#if __aarch64__
-// Reduce the default maximum memory usage on ARM64, due to the lack of memory
-// on the devices we test against.
-constexpr uint64_t kDefaultMemory = 1ul << 30;
-#else
-constexpr uint64_t kDefaultMemory = 1ul << 32;
-#endif
+uint64_t GetDefaultGuestMemory() {
+  const uint64_t host_memory = zx_system_get_physmem();
+  const uint64_t max_reserved_host_memory = (1ul << 31);  // 2 GiB.
+
+  // Reserve half the host memory up to 2 GiB, and allow the rest to be used by the guest.
+  return host_memory - std::min(host_memory / 2, max_reserved_host_memory);
+}
 
 // This is a locally administered MAC address (first byte 0x02) mixed with the
 // Google Organizationally Unique Identifier (00:1a:11). The host gets ff:ff:ff
@@ -332,7 +332,7 @@ std::unordered_map<std::string, std::unique_ptr<OptionHandler>> GetCmdlineOption
                                       &GuestConfig::mutable_cmdline_add));
   handlers.emplace("memory", std::make_unique<GuestMemoryOptionHandler>(
                                  &GuestConfig::has_guest_memory, &GuestConfig::mutable_guest_memory,
-                                 kDefaultMemory));
+                                 GetDefaultGuestMemory()));
   handlers.emplace(
       "cpus", std::make_unique<NumCpusOptionHandler>(
                   &GuestConfig::has_cpus, &GuestConfig::mutable_cpus, zx_system_get_num_cpus()));
@@ -402,7 +402,7 @@ void PrintCommandLineUsage(const char* program_name) {
   std::cerr << "\t--default-net           Enable a default net device (defaults to true)\n";
   std::cerr << "\t--memory=[bytes]        Allocate 'bytes' of memory for the guest.\n";
   std::cerr << "\t                        The suffixes 'k', 'M', and 'G' are accepted\n";
-  std::cerr << "\t                        (default " << kDefaultMemory << " bytes)\n";
+  std::cerr << "\t                        (default " << GetDefaultGuestMemory() << " bytes)\n";
   std::cerr << "\t--interrupt=[spec]      Adds a hardware interrupt mapping to the guest\n";
   std::cerr << "\t--virtio-balloon        Enable virtio-balloon (default)\n";
   std::cerr << "\t--virtio-console        Enable virtio-console (default)\n";
