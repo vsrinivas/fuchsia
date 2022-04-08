@@ -12,13 +12,18 @@
 const efi_guid kAcpiTableGuid = ACPI_TABLE_GUID;
 const efi_guid kAcpi20TableGuid = ACPI_20_TABLE_GUID;
 const uint8_t kAcpiRsdpSignature[8] = "RSD PTR ";
+const uint8_t kRsdtSignature[ACPI_TABLE_SIGNATURE_SIZE] = "RSDT";
+const uint8_t kXsdtSignature[ACPI_TABLE_SIGNATURE_SIZE] = "XSDT";
+const uint8_t kScprSignature[ACPI_TABLE_SIGNATURE_SIZE] = "SPCR";
+const uint8_t kMadtSignature[ACPI_TABLE_SIGNATURE_SIZE] = "APIC";
 
 // Computes the checksum of an ACPI table, which is just the sum of the bytes
 // in the table. The table is valid if the checksum is zero.
-uint8_t acpi_checksum(uint8_t* bytes, uint32_t length) {
+uint8_t acpi_checksum(void* bytes, uint32_t length) {
   uint8_t checksum = 0;
+  uint8_t* data = (uint8_t*)bytes;
   for (uint32_t i = 0; i < length; i++) {
-    checksum += bytes[i];
+    checksum += data[i];
   }
   return checksum;
 }
@@ -45,16 +50,70 @@ acpi_rsdp_t* load_acpi_rsdp(efi_configuration_table* entries, size_t num_entries
 
   // Verify the checksum of this table. Both V1 and V2 RSDPs should pass the
   // V1 checksum, which only covers the first 20 bytes of the table.
-  if (acpi_checksum((uint8_t*)rsdp, ACPI_RSDP_V1_SIZE)) {
+  if (acpi_checksum(rsdp, ACPI_RSDP_V1_SIZE)) {
     printf("RSDP V1 checksum failed\n");
     return NULL;
   }
   // V2 RSDPs should additionally pass a checksum of the entire table.
   if (rsdp->revision > 0) {
-    if (acpi_checksum((uint8_t*)rsdp, rsdp->length)) {
+    if (acpi_checksum(rsdp, rsdp->length)) {
       printf("RSDP V2 checksum failed\n");
       return NULL;
     }
   }
   return rsdp;
+}
+
+// Loads the ACPI table with the given signature.
+acpi_sdt_hdr_t* load_table_with_signature(acpi_rsdp_t* rsdp, uint8_t* signature) {
+  uint8_t sdt_entry_size = sizeof(uint32_t);
+  acpi_sdt_hdr_t* sdt_table = NULL;
+
+  // Find the appropriate system description table, depending on the ACPI
+  // version in use.
+  if (rsdp->revision > 0) {
+    sdt_table = (acpi_sdt_hdr_t*)rsdp->xsdt_address;
+    if (memcmp(sdt_table->signature, kXsdtSignature, sizeof(kXsdtSignature))) {
+      printf("XSDT signature is incorrect\n");
+      return NULL;
+    }
+    // XSDT uses 64-bit physical addresses.
+    sdt_entry_size = sizeof(uint64_t);
+  } else {
+    sdt_table = (acpi_sdt_hdr_t*)((efi_physical_addr)rsdp->rsdt_address);
+    if (memcmp(sdt_table->signature, kRsdtSignature, sizeof(kRsdtSignature))) {
+      printf("RSDT signature is incorrect\n");
+      return NULL;
+    }
+    // RSDT uses 32-bit physical addresses.
+    sdt_entry_size = sizeof(uint32_t);
+  }
+
+  // Verify the system description table is correct.
+  if (acpi_checksum(sdt_table, sdt_table->length)) {
+    printf("SDT checksum is incorrect\n");
+    return NULL;
+  }
+
+  // Search the entries in the system description table for the table with the
+  // requested signature.
+  uint32_t num_entries = (sdt_table->length - sizeof(acpi_sdt_hdr_t)) / sdt_entry_size;
+  for (uint32_t i = 0; i < num_entries; i++) {
+    acpi_sdt_hdr_t* entry;
+    if (sdt_entry_size == 4) {
+      uint32_t* entries = (uint32_t*)(sdt_table + 1);
+      entry = (acpi_sdt_hdr_t*)((uint64_t)entries[i]);
+    } else {
+      uint64_t* entries = (uint64_t*)(sdt_table + 1);
+      entry = (acpi_sdt_hdr_t*)entries[i];
+    }
+    if (!memcmp(entry->signature, signature, ACPI_TABLE_SIGNATURE_SIZE)) {
+      if (acpi_checksum(entry, entry->length)) {
+        printf("table checksum is incorrect\n");
+        return NULL;
+      }
+      return entry;
+    }
+  }
+  return NULL;
 }
