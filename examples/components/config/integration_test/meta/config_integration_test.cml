@@ -4,34 +4,13 @@
 {
     include: [
         "//src/sys/test_runners/rust/default.shard.cml",
+        "sys/component/realm_builder.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/config_integration_test",
     },
-    children: [
-        {
-            name: "config_cpp",
-            url: "#meta/config_cpp.cm",
-            startup: "eager",
-        },
-        {
-            name: "config_rust",
-            url: "#meta/config_rust.cm",
-            startup: "eager",
-        },
-    ],
     use: [
         { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
-    ],
-    offer: [
-        {
-            protocol: [ "fuchsia.logger.LogSink" ],
-            from: "parent",
-            to: [
-                "#config_cpp",
-                "#config_rust",
-            ],
-        },
     ],
 }

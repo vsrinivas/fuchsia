@@ -4,9 +4,10 @@
 
 use anyhow::{self, Error};
 use diagnostics_reader::{ArchiveReader, Inspect};
+use fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, Ref, Route};
 use fuchsia_inspect::assert_data_tree;
 
-async fn assert_inspect_config(selector: &str) {
+async fn assert_inspect_config(selector: &str, expected_greeting: &'static str) {
     let inspector = ArchiveReader::new()
         .add_selector(selector)
         .with_minimum_schema_count(1)
@@ -22,19 +23,60 @@ async fn assert_inspect_config(selector: &str) {
 
     assert_data_tree!(inspector, root: {
         config: {
-            greeting: "World"
+            greeting: expected_greeting
         }
     })
 }
 
+async fn run_test(url: &str, name: &str, replace_config_value: bool) {
+    let builder = RealmBuilder::new().await.unwrap();
+    let config_component = builder.add_child(name, url, ChildOptions::new().eager()).await.unwrap();
+
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&config_component),
+        )
+        .await
+        .unwrap();
+
+    let expected_greeting = if replace_config_value {
+        builder
+            .replace_config_value_string(&config_component, "greeting", "Fuchsia")
+            .await
+            .unwrap();
+        "Fuchsia"
+    } else {
+        "World"
+    };
+
+    let _instance = builder.build().await.unwrap();
+    let selector = format!("*/{}:root", name);
+    assert_inspect_config(&selector, expected_greeting).await;
+}
+
 #[fuchsia::test]
 async fn inspect_cpp() -> Result<(), Error> {
-    assert_inspect_config("config_cpp:root").await;
+    run_test("#meta/config_cpp.cm", "config_cpp", false).await;
+    Ok(())
+}
+
+#[fuchsia::test]
+async fn inspect_cpp_replace() -> Result<(), Error> {
+    run_test("#meta/config_cpp.cm", "config_cpp_replace", true).await;
     Ok(())
 }
 
 #[fuchsia::test]
 async fn inspect_rust() -> Result<(), Error> {
-    assert_inspect_config("config_rust:root").await;
+    run_test("#meta/config_rust.cm", "config_rust", false).await;
+    Ok(())
+}
+
+#[fuchsia::test]
+async fn inspect_rust_replace() -> Result<(), Error> {
+    run_test("#meta/config_rust.cm", "config_rust_replace", true).await;
     Ok(())
 }

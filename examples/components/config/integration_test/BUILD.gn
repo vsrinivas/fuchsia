@@ -13,6 +13,7 @@ rustc_test("bin") {
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component-test",
     "//third_party/rust_crates:anyhow",
   ]
 
