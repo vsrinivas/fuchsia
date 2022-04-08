@@ -15,12 +15,12 @@ namespace hypervisor {
 template <typename T, T N>
 class VpidAllocator {
  public:
-  zx::status<T> AllocVpid() {
+  zx::status<T> Alloc() {
     Guard<Mutex> lock{&mutex_};
     return allocator_.Alloc();
   }
 
-  zx::status<> FreeVpid(T vpid) {
+  zx::status<> Free(T vpid) {
     Guard<Mutex> lock{&mutex_};
     return allocator_.Free(vpid);
   }

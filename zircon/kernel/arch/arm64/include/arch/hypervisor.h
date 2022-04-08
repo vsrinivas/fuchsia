@@ -53,8 +53,8 @@ class Guest {
   hypervisor::TrapMap* Traps() { return &traps_; }
   uint16_t Vmid() const { return vmid_; }
 
-  zx::status<uint16_t> AllocVpid() { return vpid_allocator_.AllocVpid(); }
-  zx::status<> FreeVpid(uint16_t vpid) { return vpid_allocator_.FreeVpid(vpid); }
+  zx::status<uint16_t> AllocVpid() { return vpid_allocator_.Alloc(); }
+  zx::status<> FreeVpid(uint16_t vpid) { return vpid_allocator_.Free(vpid); }
 
  private:
   hypervisor::GuestPhysicalAddressSpace gpas_;
