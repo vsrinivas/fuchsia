@@ -121,7 +121,7 @@ abstract class SettingsState implements TaskService {
   void showWiFiSettings();
   void connectToNetwork([String password]);
   void setTargetNetwork(NetworkInformation network);
-  void removeNetwork(String network);
+  void removeNetwork(NetworkInformation network);
   void increaseVolume();
   void decreaseVolume();
   void toggleMute();

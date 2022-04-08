@@ -25,7 +25,7 @@ class WiFiService implements TaskService {
   late ClientStateUpdatesMonitor _monitor;
   StreamSubscription? _scanForNetworksSubscription;
   policy.ScanResultIteratorProxy? _scanResultIteratorProvider;
-  StreamSubscription? _connectToWPA2NetworkSubscription;
+  StreamSubscription? _connectToNetworkSubscription;
   StreamSubscription? _savedNetworksSubscription;
   StreamSubscription? _removeNetworkSubscription;
   StreamSubscription? _startClientConnectionsSubscription;
@@ -72,7 +72,7 @@ class WiFiService implements TaskService {
   Future<void> stop() async {
     _scanTimer?.cancel();
     await _scanForNetworksSubscription?.cancel();
-    await _connectToWPA2NetworkSubscription?.cancel();
+    await _connectToNetworkSubscription?.cancel();
     await _savedNetworksSubscription?.cancel();
     await _removeNetworkSubscription?.cancel();
     await _startClientConnectionsSubscription?.cancel();
@@ -200,7 +200,7 @@ class WiFiService implements TaskService {
 
   Future<void> connectToNetwork(String password) async {
     try {
-      _connectToWPA2NetworkSubscription = () async {
+      _connectToNetworkSubscription = () async {
         final credential = _targetNetwork.isOpen
             ? policy.Credential.withNone(policy.Empty())
             : policy.Credential.withPassword(
@@ -272,13 +272,14 @@ class WiFiService implements TaskService {
         .listen((_) {});
   }
 
-  // TODO(fxb/79885): Pass security type to ensure removing correct network
-  Future<void> remove(String network) async {
+  Future<void> remove(NetworkInformation network) async {
     try {
       _removeNetworkSubscription = () async {
-        final ssid = utf8.encode(network);
-        final foundNetwork = _savedNetworks.firstWhereOrNull(
-            (savedNetwork) => listEquals(savedNetwork.id?.ssid, ssid));
+        final ssid = network.ssid;
+        final securityType = network.securityType;
+        final foundNetwork = _savedNetworks.firstWhereOrNull((savedNetwork) =>
+            listEquals(savedNetwork.id?.ssid, ssid) &&
+            savedNetwork.id?.type == securityType);
 
         if (foundNetwork == null) {
           throw Exception('$network not found in saved networks.');
@@ -438,4 +439,7 @@ class NetworkInformation {
   bool get isWPA2 => _securityType == policy.SecurityType.wpa2;
 
   bool get isWPA3 => _securityType == policy.SecurityType.wpa3;
+
+  policy.SecurityType get securityType =>
+      _securityType ?? policy.SecurityType.none;
 }

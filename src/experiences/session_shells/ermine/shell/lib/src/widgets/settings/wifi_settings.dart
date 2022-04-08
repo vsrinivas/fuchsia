@@ -41,6 +41,7 @@ class WiFiSettings extends StatelessWidget {
                         primary: false,
                         itemCount: savedNetworks.length,
                         itemBuilder: (context, index) {
+                          final network = savedNetworks[index];
                           final networkName = savedNetworks[index].name;
                           bool currentNetwork =
                               networkName == state.currentNetwork;
@@ -77,7 +78,7 @@ class WiFiSettings extends StatelessWidget {
                                 return [
                                   PopupMenuItem(
                                     child: Text(Strings.forget),
-                                    value: networkName,
+                                    value: network,
                                   ),
                                 ];
                               },
