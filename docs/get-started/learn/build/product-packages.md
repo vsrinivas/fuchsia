@@ -29,7 +29,7 @@ Packages in a build configuration are assigned to one of three dependency sets:
 
 ![Diagram showing how packages live in the base, cache, or universe dependency
 sets of the build configuration. This set determines how new versions of the
-package get resolved.](images/packages.png){: width="645"}
+package get resolved.](/docs/get-started/images/build/packages.png){: width="645"}
 
 <aside class="key-point">
 Fuchsia devices revert to the packages built into the system image on reboot.
@@ -111,7 +111,7 @@ following steps:
 
 ![Diagram showing how during development, the developer tools publish packages
 to the TUF repository, which notifies the Fuchsia device to resolve the latest
-version.](images/package-resolution.png){: width="644"}
+version.](/docs/get-started/images/build/package-resolution.png){: width="644"}
 
 Developer tools such as `fx build` publish package updates to a local package
 repository as part of the build process. The **dependency set** where your

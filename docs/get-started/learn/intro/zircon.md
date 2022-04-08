@@ -1,128 +1,12 @@
 # Zircon fundamentals
 
-[Zircon][glossary.zircon] is the core that powers Fuchsia.
-It is composed of a kernel and a small set of userspace services, drivers,
-and libraries necessary for core system functions such as booting.
+<<../../_common/intro/_zircon_intro.md>>
 
-Although [Zircon][glossary.zircon] applies many of the concepts popularized by
-microkernels, it does not strive to be minimal. Instead, the microkernel
-architecture of Zircon enables Fuchsia to reduce the amount of trusted code
-running in the system to a few core functions:
+<<../../_common/intro/_zircon_syscall.md>>
 
-* Memory management
-* Scheduling
-* Inter-process communication
+<<../../_common/intro/_zircon_processes.md>>
 
-![Data table showing a comparison between kernel services in Fuchsia and a
-typical operating system, indicating Fuchsia includes fewer services in its
-kernel.](images/kernel-services.png){: width="799"}
-
-## System calls
-
-User space code interacts with the objects in kernel space using
-**system calls**. Zircon has system calls to perform low-level operations such
-as:
-
-*   Memory management
-*   Task and process management
-*   Inter-process communication (IPC) and synchronization
-*   Exception handling
-*   Hardware support services (clocks, entropy, device I/O)
-
-<aside class="key-point">
-  <p>Zircon has fewer system calls than POSIX-oriented operating systems due to
-  services like filesystems and drivers being hosted outside the kernel. See the
-  full list of available Zircon system calls in the
-  <a href="/docs/reference/syscalls.md"> reference documentation.</a></p>
-</aside>
-
-User space processes access system calls through `libzircon.so` — a
-[virtual Dynamic Shared Object (vDSO)][glossary.virtual-dynamic-shared-object].
-The Zircon vDSO is a shared library in ELF format that the kernel maps into the
-address space of each new process. This library is considered "virtual" because
-it is exposed directly by the kernel image rather than being loaded from a file.
-
-Most system calls operate directly with one or more [handles][glossary.handle]
-— process-local references to objects living in kernel space represented as a
-32-bit integer (`zx_handle_t`). Each handle declares the privileges, or
-**rights**, the holder has to perform actions on the handle itself or the
-referenced object.
-
-<aside class="key-point">
- <b>Handles vs. file descriptors</b>
- <p>Similar to POSIX file descriptors, handles are references to a specific
- kernel object and they play a role in granting capabilities. However, Zircon
- handles are slightly more flexible with rights applied to the handle rather
- than the calling process. It is possible for a single process to have two
- different handles to the same kernel object with different rights.</p>
-
- <p>In addition, handles cannot be referenced by name and Zircon does not
- reserve any identifiers for common streams like stdin and stdout.</p>
-
- <p>For more details, see <a href="/docs/concepts/kernel/handles.md">
- Zircon handles</a>.</p>
-</aside>
-
-## Jobs, processes and threads
-
-Zircon exposes three main kernel objects for running code:
-
-* [Thread](/docs/reference/kernel_objects/thread.md):
-  Thread of execution within a given address space.
-* [Process](/docs/reference/kernel_objects/process.md):
-  Set of executable instructions run in a private, isolated address space.
-* [Job](/docs/reference/kernel_objects/job.md):
-  Group of related processes and jobs. All jobs form a single rooted tree.
-
-![Tree diagram illustrating Fuchsia's process hierarchy. Processes are
-grouped into jobs, which are ultimately owned by the Root Job.]
-(images/processes-jobs.png){: width="549"}
-
-Processes form the basis for system capabilities. Each process is granted a set
-of capabilities through the various handles it holds.
-
-Fuchsia software may or may not run within the confines of a single process.
-Jobs allow "applications" that are composed of more than one process to be
-controlled as a single entity.
-
-## Inter-process communication
-
-Since processes are isolated by default, the kernel needs to provide a way for
-them to securely communicate with each other. Zircon includes the following
-kernel object types for inter-process communication (IPC):
-
-* [Event](/docs/reference/kernel_objects/event.md):
-  Signaling interface between two processes.
-* [Socket](/docs/reference/kernel_objects/socket.md):
-  Streaming data transport, similar to a pipe.
-* [Stream](/docs/reference/kernel_objects/stream.md):
-  Streaming data transport that is seekable, like a file.
-* [Channel](/docs/reference/kernel_objects/channel.md):
-  Message-based transport capable of passing both data and a set of handles.
-* [FIFO](/docs/reference/kernel_objects/fifo.md):
-  Control plane for shared memory access, optimized for small data payloads.
-
-Among these objects, channels are uniquely suited to assist in launching new
-processes because they are capable of transferring handles (and therefore,
-capabilities) across to another process.
-
-Channels have exactly two endpoint handles, each owned by a separate process.
-Only the owners may read or write messages, but ownership of an endpoint may
-be transferred from one process to another. When handles are written into a
-channel, they are removed from the sending process. When a message with handles
-is read from a channel, the handles are added to the receiving process.
-
-![Diagram showing how processes communicate through shared objects found in the
-kernel. The most common of these connections is the channel.]
-(images/ipc.png){: width="582"}
-
-Note: You can find more of Zircon's deep technical details in the
-[kernel documentation](/docs/concepts/kernel/README.md).
-
-Zircon channels are the basis for service-level IPC protocols described by
-the [Fuchsia Interface Definition Language (FIDL)][glossary.FIDL]. FIDL
-protocols are the primary method of IPC used by Fuchsia programs. You will
-explore creating and consuming FIDL protocols in more detail later on.
+<<../../_common/intro/_zircon_ipc.md>>
 
 ## Exercise: Jobs and processes
 
@@ -203,9 +87,3 @@ security model.
   device startup</a> and map how the initial processes align with the
   <code>ps</code> output on the emulator.</p>
 </aside>
-
-
-[glossary.FIDL]: /docs/glossary/README.md#FIDL
-[glossary.zircon]: /docs/glossary/README.md#zircon
-[glossary.virtual-dynamic-shared-object]: /docs/glossary/README.md#virtual-dynamic-shared-object
-[glossary.handle]: /docs/glossary/README.md#handle

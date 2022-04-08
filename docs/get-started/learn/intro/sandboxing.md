@@ -1,83 +1,11 @@
 {% import 'docs/_common/_doc_widgets.md' as widgets %}
 # Software isolation model
 
-In this section, you will learn how the Zircon kernel objects enable Fuchsia to
-follow the **principle of least privilege**, isolating processes and granting
-them only the capabilities they require.
+<<../../_common/intro/_sandboxing_intro.md>>
 
-## Sandboxing
+<<../../_common/intro/_sandboxing_sandboxing.md>>
 
-When a new process is created, it has no capabilities. The process relies
-entirely on its creator to provide capabilities through the set of
-[handles][glossary.handle] passed to it. One might also say that an empty
-process has no **ambient authority**.
-
-Because of this, processes are usually created with some initial resources
-and capabilities. The `fuchsia.process.Launcher` protocol provides the
-low-level interface to create new processes on the system from an executable
-and a set of kernel object handles. Most software uses the component framework,
-which simplifies the work of setting up a new process to execute some code with
-a standard set of initial capabilities. You will explore components in more
-detail later on.
-
-
-<aside class="key-point">
-  <b>Handles have rights</b>
-  <p>Previously you saw that handles are unique references to objects in the
-  kernel. Each handle also contains the rights the handle has to perform
-  certain actions, such as <code>ZX_RIGHT_READ</code>,
-  <code>ZX_RIGHT_WRITE</code>, or <code>ZX_RIGHT_EXECUTE</code>.</p>
-
-  <p>During process creation, the rights of each handle can be reduced to suit
-  the requirements (and restrictions) of the new process using the
-  <code>zx_handle_replace()</code> or <code>zx_handle_duplicate()</code>
-   operations.
-
-  <p>The creating process can then write the new handles across the IPC channel
-  to set the initial capabilities of the new process.</p>
-</aside>
-
-
-Some initial handles given to a process are directories that the process mounts
-into its **namespace**.
-
-## Namespaces
-
-The namespace of a process contains its private view of the world, and controls
-how much of the Fuchsia system the process can influence. This effectively
-defines the rules of the sandbox in which that process runs.
-
-Namespaces are populated with various resource objects, including:
-
-* **Files**: Objects which contain binary data.
-* **Directories**: Objects which contain other objects.
-* **Sockets**: Objects which establish connections when opened, like named
-  pipes.
-* **Protocols and services**: Objects which provide structured services when
-  opened.
-* **Devices**: Objects which provide access to hardware resources.
-
-The ​​creator of the process populates the contents of a namespace based on the
-set of required capabilities. A process cannot add objects to its own
-namespace, as this would essentially amount to that process self-granting the
-capabilities to access those objects.
-
-<aside class="key-point">
-  <b>No global filesystem</b>
-  <p>In many ways, the contents of a namespace resemble the filesystem resources
-  exposed by POSIX-oriented operating systems where "everything is a file".
-  However, there are some very important differences to keep in mind.<p>
-
-  <p>Namespaces are defined per-process and unlike other operating systems,
-  Fuchsia does not have a "root filesystem". Instead, the path location
-  <code>/</code> refers to the root of its private namespace. This also
-  means Fuchsia does not have a concept of chroot environments, since every
-  process effectively has its own private "root".
-
-  <p>This also affects directory traversal, and how filesystem servers resolve
-  paths containing <code>../.</code> For more details, see
-  <a href="/docs/concepts/filesystems/dotdot">dot-dot considered harmful</a>.<p>
-</aside>
+<<../../_common/intro/_sandboxing_namespaces.md>>
 
 ## Exercise: Namespaces
 
@@ -197,5 +125,3 @@ later on.
   <p>Take a look at the other directory entries in the hub and see what else
   you can discover!</p>
 </aside>
-
-[glossary.handle]: /docs/glossary/README.md#handle

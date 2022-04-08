@@ -1,98 +1,10 @@
 # Declaring components
 
-Every component has a declaration that describes the component's attributes and
-capabilities. For components that are distributed in packages, the declaration
-is expressed using a **component manifest file** and loaded with the help of a
-**component resolver**.
+<<../../_common/components/_declaring_intro.md>>
 
-![Diagram showing how components are declared using a "component manifest." The
-manifest is compiled by the developer tools and resolved onto the device at
-runtime.](images/component-manifest.png){: width="836"}
+<<../../_common/components/_declaring_manifests.md>>
 
-You declare components using component manifest language (CML) files. At build
-time, the Component Manifest Compiler (`cmc`) tool validates and compiles the
-manifest source into a binary format (`.cm`) and stores it in the component's
-package. At runtime, component resolvers load the binary manifest into a
-[ComponentDecl](https://fuchsia.dev/reference/fidl/fuchsia.sys2#ComponentDecl)
-FIDL structure for [Component Manager](/docs/glossary/README.md#Component-Manager).
-
-## Component manifests
-
-CML files are [JSON5](https://json5.org/){: .external} files that end with a
-`.cml` extension. Below is an example CML manifest file for a simple component
-running an ELF binary that prints a "Hello, World" message to the system log:
-
-```json5
-{
-    // Information about the program to run.
-    program: {
-        // Use the built-in ELF runner.
-        runner: "elf",
-        // The binary to run for this component.
-        binary: "bin/hello",
-        // Program arguments
-        args: [
-            "Hello",
-            "World!",
-        ],
-    },
-
-    // Capabilities used by this component.
-    use: [
-        { protocol: "fuchsia.logger.LogSink" },
-    ],
-}
-```
-
-This file declares two main sections of information about the component:
-
-Note: For more details on component manifests, see
-[component manifests](/docs/concepts/components/v2/component_manifests.md).
-
-* `program`: Describes the executable information such as the binary file,
-  program arguments, and the associated runtime. In this example, a binary
-  written in C++ or Rust is compiled as an ELF executable and uses the built-in
-  [ELF runner](/docs/concepts/components/v2/elf_runner.md).
-* `use`: Declares the capabilities this component requires to run. In this
-  example, the `fuchsia.logger.LogSink` protocol enables the component to write
-  messages to the system log (`syslog`).
-
-## Manifest shards
-
-Some collections of capabilities represent use case requirements that are common
-to many components in the system, such as logging. To simplify including these
-capabilities in your components, the framework abstracts them into
-**manifest shards** that can be included in your CML source file.
-
-Below is an equivalent CML to the previous example. In this case, the necessary
-logging capabilities are provided by including
-`diagnostics/syslog/client.shard.cml` instead of declaring
-`fuchsia.logger.LogSink` explicitly:
-
-```json5
-{
-    include: [ "syslog/client.shard.cml" ],
-
-    // Information about the program to run.
-    program: {
-        // Use the built-in ELF runner.
-        runner: "elf",
-        // The binary to run for this component.
-        binary: "bin/hello-world",
-        // Program arguments
-        args: [
-            "Hello",
-            "World!",
-        ],
-    },
-}
-```
-
-<aside class="key-point">
-To review the merged CML output with all includes resolved, run the
-<code>fx cmc include</code> command with your manifest. For more details, see
-the <a href="/docs/reference/tools/sdk/cmc.md"> reference documentation</a>.
-</aside>
+<<../../_common/components/_declaring_shards.md>>
 
 ## Building components
 

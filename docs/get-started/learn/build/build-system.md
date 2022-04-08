@@ -95,7 +95,7 @@ the build configuration you provide to `fx set`.
 
 ![Data table showing build configurations separated into "product" and "board"
 layers. Each describes a different set of functional elements provided to the
-final build.](images/build-configuration.png){: width="570"}
+final build.](/docs/get-started/images/build/build-configuration.png){: width="570"}
 
 Boards define the architecture that the build targets, which may affect what
 drivers are included and influence device specific kernel parameters.

@@ -100,7 +100,7 @@ Control Service (RCS) on the target to enable you to send additional commands.
 
 ![Diagram showing how "ffx" is a developer tool that communicates with the
 Remote Control Service (RCS) on the Fuchsia Device.]
-(images/ffx-rcs.png){: width="591"}
+(/docs/get-started/images/build/ffx-rcs.png){: width="591"}
 
 
 Note: For a complete list of the developer commands supported by `ffx`, see
