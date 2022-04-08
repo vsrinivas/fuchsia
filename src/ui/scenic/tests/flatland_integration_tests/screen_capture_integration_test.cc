@@ -8,8 +8,11 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_creation_tokens.h>
 #include <lib/ui/scenic/cpp/view_identity.h>
+#include <sys/types.h>
 #include <zircon/status.h>
 
+#include <cstdint>
+#include <iostream>
 #include <utility>
 
 #include <gmock/gmock.h>
@@ -20,7 +23,7 @@
 #include "src/ui/scenic/lib/allocation/buffer_collection_import_export_tokens.h"
 #include "src/ui/scenic/lib/allocation/mock_buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/buffers/util.h"
-#include "src/ui/scenic/lib/screenshot/screenshot.h"
+#include "src/ui/scenic/lib/screen_capture/screen_capture.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 #include "src/ui/scenic/tests/utils/scenic_realm_builder.h"
 #include "src/ui/scenic/tests/utils/utils.h"
@@ -28,37 +31,34 @@
 
 namespace integration_tests {
 
-using allocation::BufferCollectionImporter;
 using flatland::MapHostPointer;
 using fuchsia::math::SizeU;
 using fuchsia::math::Vec;
 using fuchsia::ui::composition::ChildViewWatcher;
 using fuchsia::ui::composition::ContentId;
-using fuchsia::ui::composition::CreateImageArgs;
 using fuchsia::ui::composition::Flatland;
 using fuchsia::ui::composition::FlatlandDisplay;
+using fuchsia::ui::composition::FrameInfo;
+using fuchsia::ui::composition::GetNextFrameArgs;
 using fuchsia::ui::composition::ParentViewportWatcher;
 using fuchsia::ui::composition::RegisterBufferCollectionArgs;
 using fuchsia::ui::composition::RegisterBufferCollectionUsage;
-using fuchsia::ui::composition::Screenshot;
-using fuchsia::ui::composition::ScreenshotError;
+using fuchsia::ui::composition::ScreenCapture;
+using fuchsia::ui::composition::ScreenCaptureConfig;
+using fuchsia::ui::composition::ScreenCaptureError;
 using fuchsia::ui::composition::TransformId;
-using fuchsia::ui::composition::ViewBoundProtocols;
 using fuchsia::ui::composition::ViewportProperties;
-using fuchsia::ui::views::ViewCreationToken;
-using fuchsia::ui::views::ViewportCreationToken;
 using fuchsia::ui::views::ViewRef;
-using testing::_;
-using RealmRoot = component_testing::RealmRoot;
+using RealmRoot = sys::testing::experimental::RealmRoot;
 
-class ScreenshotIntegrationTest : public gtest::RealLoopFixture {
+class ScreenCaptureIntegrationTest : public gtest::RealLoopFixture {
  public:
-  ScreenshotIntegrationTest()
+  ScreenCaptureIntegrationTest()
       : realm_(ScenicRealmBuilder()
                    .AddRealmProtocol(fuchsia::ui::composition::Flatland::Name_)
                    .AddRealmProtocol(fuchsia::ui::composition::FlatlandDisplay::Name_)
                    .AddRealmProtocol(fuchsia::ui::composition::Allocator::Name_)
-                   .AddRealmProtocol(fuchsia::ui::composition::Screenshot::Name_)
+                   .AddRealmProtocol(fuchsia::ui::composition::ScreenCapture::Name_)
                    .Build()) {
     auto context = sys::ComponentContext::Create();
     context->svc()->Connect(sysmem_allocator_.NewRequest());
@@ -125,13 +125,14 @@ class ScreenshotIntegrationTest : public gtest::RealLoopFixture {
     child_session_->SetRootTransform(kChildRootTransform);
     BlockingPresent(child_session_);
 
-    // Create Screenshot client.
-    screenshot_ = realm_.Connect<fuchsia::ui::composition::Screenshot>();
-    screenshot_.set_error_handler(
-        [](zx_status_t status) { FAIL() << "Lost connection to screenshot"; });
+    // Create ScreenCapture client.
+    screen_capture_ = realm_.Connect<fuchsia::ui::composition::ScreenCapture>();
+    screen_capture_.set_error_handler(
+        [](zx_status_t status) { FAIL() << "Lost connection to ScreenCapture"; });
   }
 
-  flatland::SysmemTokens CreateSysmemTokens(fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
+  static flatland::SysmemTokens CreateSysmemTokens(
+      fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
     fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
     zx_status_t status = sysmem_allocator->AllocateSharedCollection(local_token.NewRequest());
     EXPECT_EQ(status, ZX_OK);
@@ -152,9 +153,8 @@ class ScreenshotIntegrationTest : public gtest::RealLoopFixture {
     flatland.events().OnFramePresented = nullptr;
   }
 
-  fuchsia::sysmem::BufferCollectionConstraints CreateDefaultConstraints(uint32_t buffer_count,
-                                                                        uint32_t width,
-                                                                        uint32_t height) {
+  static fuchsia::sysmem::BufferCollectionConstraints CreateDefaultConstraints(
+      uint32_t buffer_count, uint32_t width, uint32_t height) {
     fuchsia::sysmem::BufferCollectionConstraints constraints;
     constraints.has_buffer_memory_constraints = true;
     constraints.buffer_memory_constraints.cpu_domain_supported = true;
@@ -184,7 +184,8 @@ class ScreenshotIntegrationTest : public gtest::RealLoopFixture {
 
   fuchsia::sysmem::BufferCollectionInfo_2 CreateBufferCollectionInfoWithConstraints(
       fuchsia::sysmem::BufferCollectionConstraints constraints,
-      allocation::BufferCollectionExportToken export_token, RegisterBufferCollectionUsage usage) {
+      allocation::BufferCollectionExportToken export_token,
+      RegisterBufferCollectionUsage usage) const {
     // Create Buffer Collection for image to add to scene graph.
     RegisterBufferCollectionArgs args = {};
 
@@ -216,13 +217,45 @@ class ScreenshotIntegrationTest : public gtest::RealLoopFixture {
     return buffer_collection_info;
   }
 
+  // This function calls GetNextFrame().
+  fit::result<FrameInfo, ScreenCaptureError> CaptureScreen(
+      fuchsia::ui::composition::ScreenCapturePtr& screencapturer) {
+    zx::event event;
+    zx::event dup;
+    zx_status_t status = zx::event::create(0, &event);
+    EXPECT_EQ(status, ZX_OK);
+    event.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
+
+    GetNextFrameArgs gnf_args;
+    gnf_args.set_event(std::move(dup));
+
+    fit::result<FrameInfo, ScreenCaptureError> response;
+    bool alloc_result = false;
+    screencapturer->GetNextFrame(
+        std::move(gnf_args),
+        [&response, &alloc_result](fit::result<FrameInfo, ScreenCaptureError> result) {
+          response = std::move(result);
+          alloc_result = true;
+        });
+
+    RunLoopUntil([&alloc_result] { return alloc_result; });
+
+    if (response.is_ok()) {
+      zx::duration kEventDelay = zx::msec(5000);
+      status = event.wait_one(ZX_EVENT_SIGNALED, zx::deadline_after(kEventDelay), nullptr);
+      EXPECT_EQ(status, ZX_OK);
+    }
+
+    return response;
+  }
+
   const TransformId kChildRootTransform{.value = 1};
   static constexpr uint32_t kBytesPerPixel = 4;
   static constexpr zx::duration kEventDelay = zx::msec(5000);
 
-  static constexpr uint32_t red = (255U << 8) | (255U);
+  static constexpr uint32_t red = (255U << 24) | (255U);
   static constexpr uint32_t green = (255U << 16) | (255U);
-  static constexpr uint32_t blue = (255U << 24) | (255U);
+  static constexpr uint32_t blue = (255U << 8) | (255U);
   static constexpr uint32_t yellow = green | blue;
 
   RealmRoot realm_;
@@ -232,7 +265,7 @@ class ScreenshotIntegrationTest : public gtest::RealLoopFixture {
   fuchsia::ui::composition::FlatlandDisplayPtr flatland_display_;
   fuchsia::ui::composition::FlatlandPtr root_session_;
   fuchsia::ui::composition::FlatlandPtr child_session_;
-  fuchsia::ui::composition::ScreenshotPtr screenshot_;
+  fuchsia::ui::composition::ScreenCapturePtr screen_capture_;
   fuchsia::ui::views::ViewRef root_view_ref_;
 
   uint32_t display_width_ = 0;
@@ -304,7 +337,7 @@ void WriteToSysmemBuffer(const std::vector<uint32_t>& write_values,
                      memcpy(vmo_host, write_values.data(), sizeof(uint32_t) * write_values.size());
                    } else {
                      // Copy over row-by-row.
-                     for (uint32_t i = 0; i < image_height; ++i) {
+                     for (size_t i = 0; i < image_height; ++i) {
                        memcpy(vmo_host + (i * bytes_per_row), &write_values[i * image_width],
                               valid_bytes_per_row);
                      }
@@ -321,47 +354,29 @@ void WriteToSysmemBuffer(const std::vector<uint32_t>& write_values,
 }
 
 // This function returns a linear buffer of pixels of size width * height.
-std::vector<uint32_t> TakeAndExtractScreenshot(
-    fuchsia::ui::composition::ScreenshotPtr& screenshotter, uint32_t image_id,
-    fuchsia::ui::composition::Rotation rotation,
-    fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info, uint32_t buffer_collection_idx,
-    uint32_t kBytesPerPixel, uint32_t render_target_width, uint32_t render_target_height) {
-  fuchsia::ui::composition::TakeScreenshotArgs ts_args;
-  ts_args.set_image_id(image_id);
-  ts_args.set_rotation(rotation);
-  zx::event event;
-  zx::event dup;
-  zx_status_t status = zx::event::create(0, &event);
-  EXPECT_EQ(status, ZX_OK);
-  event.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
-  ts_args.set_event(std::move(dup));
-
-  screenshotter->TakeScreenshot(
-      std::move(ts_args), [](fuchsia::ui::composition::Screenshot_TakeScreenshot_Result result) {
-        EXPECT_FALSE(result.is_err());
-      });
-
-  zx::duration kEventDelay = zx::msec(5000);
-  status = event.wait_one(ZX_EVENT_SIGNALED, zx::deadline_after(kEventDelay), nullptr);
-  EXPECT_EQ(status, ZX_OK);
-
-  // Copy Screenshot output for inspection. Note that the stride of the buffer may be different than
-  // the width of the image, if the width of the image is not a multiple of 64.
+std::vector<uint32_t> ExtractScreenCapture(
+    const fit::result<FrameInfo, ScreenCaptureError>& frame_result,
+    fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info, uint32_t kBytesPerPixel,
+    uint32_t render_target_width, uint32_t render_target_height) {
+  EXPECT_FALSE(frame_result.is_error());
+  uint32_t buffer_id = frame_result.value().buffer_id();
+  // Copy ScreenCapture output for inspection. Note that the stride of the buffer may be different
+  // than the width of the image, if the width of the image is not a multiple of 64.
   //
   // For instance, is the original image were 1024x600, the new width is 600. 600*4=2400 bytes,
-  // which is not a multiple of 64. The next multiple would be 2432, which would mean the buffer is
-  // actually a 608x1024 "pixel" buffer, since 2432/4=608. We must account for that 8 byte padding
-  // when copying the bytes over to be inspected.
-  EXPECT_EQ(ZX_OK, buffer_collection_info.buffers[buffer_collection_idx].vmo.op_range(
+  // which is not a multiple of 64. The next multiple would be 2432, which would mean the buffer
+  // is actually a 608x1024 "pixel" buffer, since 2432/4=608. We must account for that 8 byte
+  // padding when copying the bytes over to be inspected.
+  EXPECT_EQ(ZX_OK, buffer_collection_info.buffers[buffer_id].vmo.op_range(
                        ZX_CACHE_FLUSH_DATA | ZX_VMO_OP_CACHE_INVALIDATE, 0,
                        buffer_collection_info.settings.buffer_settings.size_bytes, nullptr, 0));
 
   uint32_t pixels_per_row =
       GetPixelsPerRow(buffer_collection_info.settings, kBytesPerPixel, render_target_width);
   std::vector<uint32_t> read_values;
-  read_values.resize(render_target_width * render_target_height);
+  read_values.resize(static_cast<size_t>(render_target_width) * render_target_height);
 
-  MapHostPointer(buffer_collection_info, buffer_collection_idx,
+  MapHostPointer(buffer_collection_info, buffer_id,
                  [&read_values, kBytesPerPixel, pixels_per_row, render_target_width,
                   render_target_height](uint8_t* vmo_host, uint32_t num_bytes) {
                    uint32_t bytes_per_row = pixels_per_row * kBytesPerPixel;
@@ -371,9 +386,10 @@ std::vector<uint32_t> TakeAndExtractScreenshot(
 
                    if (bytes_per_row == valid_bytes_per_row) {
                      // Fast path.
-                     memcpy(&read_values[0], vmo_host, bytes_per_row * render_target_height);
+                     memcpy(read_values.data(), vmo_host,
+                            static_cast<size_t>(bytes_per_row) * render_target_height);
                    } else {
-                     for (uint32_t i = 0; i < render_target_height; ++i) {
+                     for (size_t i = 0; i < render_target_height; ++i) {
                        memcpy(&read_values[i * render_target_width], vmo_host + (i * bytes_per_row),
                               valid_bytes_per_row);
                      }
@@ -383,7 +399,7 @@ std::vector<uint32_t> TakeAndExtractScreenshot(
   return read_values;
 }
 
-TEST_F(ScreenshotIntegrationTest, DISABLED_SingleColor_Unrotated_Screenshot) {
+TEST_F(ScreenCaptureIntegrationTest, SingleColorUnrotatedScreenshot) {
   const uint32_t image_width = display_width_;
   const uint32_t image_height = display_height_;
   const uint32_t render_target_width = display_width_;
@@ -395,8 +411,8 @@ TEST_F(ScreenshotIntegrationTest, DISABLED_SingleColor_Unrotated_Screenshot) {
 
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info =
       CreateBufferCollectionInfoWithConstraints(
-          CreateDefaultConstraints(1, image_width, image_height), std::move(ref_pair.export_token),
-          RegisterBufferCollectionUsage::DEFAULT);
+          CreateDefaultConstraints(/*buffer_count=*/1, image_width, image_height),
+          std::move(ref_pair.export_token), RegisterBufferCollectionUsage::DEFAULT);
 
   std::vector<uint32_t> write_values;
   write_values.assign(num_pixels_, green);
@@ -409,46 +425,45 @@ TEST_F(ScreenshotIntegrationTest, DISABLED_SingleColor_Unrotated_Screenshot) {
                                    {0, 0}, 2, 2);
   BlockingPresent(child_session_);
 
-  // The scene graph is now ready for screenshotting!
+  // The scene graph is now ready for screencapturing!
 
-  // Create buffer collection to render into for TakeScreenshot().
+  // Create buffer collection to render into for GetNextFrame().
   allocation::BufferCollectionImportExportTokens scr_ref_pair =
       allocation::BufferCollectionImportExportTokens::New();
 
-  fuchsia::sysmem::BufferCollectionInfo_2 scr_buffer_collection_info =
+  fuchsia::sysmem::BufferCollectionInfo_2 sc_buffer_collection_info =
       CreateBufferCollectionInfoWithConstraints(
-          CreateDefaultConstraints(1, render_target_width, render_target_height),
+          CreateDefaultConstraints(/*buffer_count=*/1, render_target_width, render_target_height),
           std::move(scr_ref_pair.export_token), RegisterBufferCollectionUsage::SCREENSHOT);
 
-  // Create image in Screenshot client.
-  CreateImageArgs scr_args;
-  scr_args.set_image_id(1);
-  scr_args.set_import_token(std::move(scr_ref_pair.import_token));
-  scr_args.set_vmo_index(0);
-  scr_args.set_size({render_target_width, render_target_height});
+  // Configure buffers in ScreenCapture client.
+  ScreenCaptureConfig sc_args;
+  sc_args.set_import_token(std::move(scr_ref_pair.import_token));
+  sc_args.set_buffer_count(sc_buffer_collection_info.buffer_count);
+  sc_args.set_size({render_target_width, render_target_height});
 
   bool alloc_result = false;
-  screenshot_->CreateImage(
-      std::move(scr_args),
-      [&alloc_result](fuchsia::ui::composition::Screenshot_CreateImage_Result result) {
-        EXPECT_FALSE(result.is_err());
-        alloc_result = true;
-      });
+  screen_capture_->Configure(std::move(sc_args),
+                             [&alloc_result](fit::result<void, ScreenCaptureError> result) {
+                               EXPECT_FALSE(result.is_error());
+                               alloc_result = true;
+                             });
 
   RunLoopUntil([&alloc_result] { return alloc_result; });
 
   // Take Screenshot!
-  const auto& read_values = TakeAndExtractScreenshot(
-      screenshot_, 1, fuchsia::ui::composition::Rotation::CW_0_DEGREES, scr_buffer_collection_info,
-      0, kBytesPerPixel, render_target_width, render_target_height);
+  const auto& cs_result = CaptureScreen(screen_capture_);
+  const auto& read_values =
+      ExtractScreenCapture(cs_result, sc_buffer_collection_info, kBytesPerPixel,
+                           render_target_width, render_target_height);
 
   EXPECT_EQ(read_values.size(), write_values.size());
 
   // Compare read and write values.
   uint32_t num_green = 0;
 
-  for (size_t i = 0; i < read_values.size(); i++) {
-    if (read_values[i] == green)
+  for (unsigned int read_value : read_values) {
+    if (read_value == green)
       num_green++;
   }
 
@@ -466,7 +481,7 @@ TEST_F(ScreenshotIntegrationTest, DISABLED_SingleColor_Unrotated_Screenshot) {
 //          GGGGGGGG
 //          RRRRRRRR
 //          RRRRRRRR
-TEST_F(ScreenshotIntegrationTest, DISABLED_MultiColor_180DegreeRotation_Screenshot) {
+TEST_F(ScreenCaptureIntegrationTest, MultiColor180DegreeRotationScreenshot) {
   const uint32_t image_width = display_width_;
   const uint32_t image_height = display_height_;
   const uint32_t render_target_width = display_width_;
@@ -502,36 +517,36 @@ TEST_F(ScreenshotIntegrationTest, DISABLED_MultiColor_180DegreeRotation_Screensh
 
   // The scene graph is now ready for screenshotting!
 
-  // Create buffer collection to render into for TakeScreenshot().
+  // Create buffer collection to render into for GetNextFrame().
   allocation::BufferCollectionImportExportTokens scr_ref_pair =
       allocation::BufferCollectionImportExportTokens::New();
 
-  fuchsia::sysmem::BufferCollectionInfo_2 scr_buffer_collection_info =
+  fuchsia::sysmem::BufferCollectionInfo_2 sc_buffer_collection_info =
       CreateBufferCollectionInfoWithConstraints(
-          CreateDefaultConstraints(1, render_target_width, render_target_height),
+          CreateDefaultConstraints(/*buffer_count=*/1, render_target_width, render_target_height),
           std::move(scr_ref_pair.export_token), RegisterBufferCollectionUsage::SCREENSHOT);
 
-  // Create image in Screenshot client.
-  CreateImageArgs scr_args;
-  scr_args.set_image_id(1);
-  scr_args.set_import_token(std::move(scr_ref_pair.import_token));
-  scr_args.set_vmo_index(0);
-  scr_args.set_size({render_target_width, render_target_height});
+  // Configure buffers in ScreenCapture client.
+  ScreenCaptureConfig sc_args;
+  sc_args.set_import_token(std::move(scr_ref_pair.import_token));
+  sc_args.set_buffer_count(sc_buffer_collection_info.buffer_count);
+  sc_args.set_size({render_target_width, render_target_height});
+  sc_args.set_rotation(fuchsia::ui::composition::Rotation::CW_180_DEGREES);
 
   bool alloc_result = false;
-  screenshot_->CreateImage(
-      std::move(scr_args),
-      [&alloc_result](fuchsia::ui::composition::Screenshot_CreateImage_Result result) {
-        EXPECT_FALSE(result.is_err());
-        alloc_result = true;
-      });
+  screen_capture_->Configure(std::move(sc_args),
+                             [&alloc_result](fit::result<void, ScreenCaptureError> result) {
+                               EXPECT_FALSE(result.is_error());
+                               alloc_result = true;
+                             });
 
   RunLoopUntil([&alloc_result] { return alloc_result; });
 
   // Take Screenshot!
-  const auto& read_values = TakeAndExtractScreenshot(
-      screenshot_, 1, fuchsia::ui::composition::Rotation::CW_180_DEGREES,
-      scr_buffer_collection_info, 0, kBytesPerPixel, render_target_width, render_target_height);
+  const auto& cs_result = CaptureScreen(screen_capture_);
+  const auto& read_values =
+      ExtractScreenCapture(cs_result, sc_buffer_collection_info, kBytesPerPixel,
+                           render_target_width, render_target_height);
 
   EXPECT_EQ(read_values.size(), write_values.size());
 
@@ -570,7 +585,7 @@ TEST_F(ScreenshotIntegrationTest, DISABLED_MultiColor_180DegreeRotation_Screensh
 //          BBGG
 //          BBGG
 //          BBGG
-TEST_F(ScreenshotIntegrationTest, DISABLED_MultiColor_90DegreeRotation_Screenshot) {
+TEST_F(ScreenCaptureIntegrationTest, MultiColor90DegreeRotationScreenshot) {
   const uint32_t image_width = display_width_;
   const uint32_t image_height = display_height_;
   const uint32_t render_target_width = display_height_;
@@ -635,36 +650,36 @@ TEST_F(ScreenshotIntegrationTest, DISABLED_MultiColor_90DegreeRotation_Screensho
 
   // The scene graph is now ready for screenshotting!
 
-  // Create buffer collection to render into for TakeScreenshot().
+  // Create buffer collection to render into for GetNextFrame().
   allocation::BufferCollectionImportExportTokens scr_ref_pair =
       allocation::BufferCollectionImportExportTokens::New();
 
-  fuchsia::sysmem::BufferCollectionInfo_2 scr_buffer_collection_info =
+  fuchsia::sysmem::BufferCollectionInfo_2 sc_buffer_collection_info =
       CreateBufferCollectionInfoWithConstraints(
-          CreateDefaultConstraints(1, render_target_width, render_target_height),
+          CreateDefaultConstraints(/*buffer_count=*/1, render_target_width, render_target_height),
           std::move(scr_ref_pair.export_token), RegisterBufferCollectionUsage::SCREENSHOT);
 
-  // Create image in Screenshot client.
-  CreateImageArgs scr_args;
-  scr_args.set_image_id(1);
-  scr_args.set_import_token(std::move(scr_ref_pair.import_token));
-  scr_args.set_vmo_index(0);
-  scr_args.set_size({render_target_width, render_target_height});
+  // Configure buffers in ScreenCapture client.
+  ScreenCaptureConfig sc_args;
+  sc_args.set_import_token(std::move(scr_ref_pair.import_token));
+  sc_args.set_buffer_count(sc_buffer_collection_info.buffer_count);
+  sc_args.set_size({render_target_width, render_target_height});
+  sc_args.set_rotation(fuchsia::ui::composition::Rotation::CW_90_DEGREES);
 
   bool alloc_result = false;
-  screenshot_->CreateImage(
-      std::move(scr_args),
-      [&alloc_result](fuchsia::ui::composition::Screenshot_CreateImage_Result result) {
-        EXPECT_FALSE(result.is_err());
-        alloc_result = true;
-      });
+  screen_capture_->Configure(std::move(sc_args),
+                             [&alloc_result](fit::result<void, ScreenCaptureError> result) {
+                               EXPECT_FALSE(result.is_error());
+                               alloc_result = true;
+                             });
 
   RunLoopUntil([&alloc_result] { return alloc_result; });
 
   // Take Screenshot!
-  const auto& read_values = TakeAndExtractScreenshot(
-      screenshot_, 1, fuchsia::ui::composition::Rotation::CW_90_DEGREES, scr_buffer_collection_info,
-      0, kBytesPerPixel, render_target_width, render_target_height);
+  const auto& cs_result = CaptureScreen(screen_capture_);
+  const auto& read_values =
+      ExtractScreenCapture(cs_result, sc_buffer_collection_info, kBytesPerPixel,
+                           render_target_width, render_target_height);
 
   EXPECT_EQ(read_values.size(), write_values.size());
 
@@ -723,7 +738,7 @@ TEST_F(ScreenshotIntegrationTest, DISABLED_MultiColor_90DegreeRotation_Screensho
 //          RRYY
 //          RRYY
 //          RRYY
-TEST_F(ScreenshotIntegrationTest, DISABLED_MultiColor_270DegreeRotation_Screenshot) {
+TEST_F(ScreenCaptureIntegrationTest, MultiColor270DegreeRotationScreenshot) {
   const uint32_t image_width = display_width_;
   const uint32_t image_height = display_height_;
   const uint32_t render_target_width = display_height_;
@@ -788,36 +803,36 @@ TEST_F(ScreenshotIntegrationTest, DISABLED_MultiColor_270DegreeRotation_Screensh
 
   // The scene graph is now ready for screenshotting!
 
-  // Create buffer collection to render into for TakeScreenshot().
+  // Create buffer collection to render into for GetNextFrame().
   allocation::BufferCollectionImportExportTokens scr_ref_pair =
       allocation::BufferCollectionImportExportTokens::New();
 
-  fuchsia::sysmem::BufferCollectionInfo_2 scr_buffer_collection_info =
+  fuchsia::sysmem::BufferCollectionInfo_2 sc_buffer_collection_info =
       CreateBufferCollectionInfoWithConstraints(
-          CreateDefaultConstraints(1, render_target_width, render_target_height),
+          CreateDefaultConstraints(/*buffer_count=*/1, render_target_width, render_target_height),
           std::move(scr_ref_pair.export_token), RegisterBufferCollectionUsage::SCREENSHOT);
 
-  // Create image in Screenshot client.
-  CreateImageArgs scr_args;
-  scr_args.set_image_id(1);
-  scr_args.set_import_token(std::move(scr_ref_pair.import_token));
-  scr_args.set_vmo_index(0);
-  scr_args.set_size({render_target_width, render_target_height});
+  // Configure buffers in ScreenCapture client.
+  ScreenCaptureConfig sc_args;
+  sc_args.set_import_token(std::move(scr_ref_pair.import_token));
+  sc_args.set_buffer_count(sc_buffer_collection_info.buffer_count);
+  sc_args.set_size({render_target_width, render_target_height});
+  sc_args.set_rotation(fuchsia::ui::composition::Rotation::CW_270_DEGREES);
 
   bool alloc_result = false;
-  screenshot_->CreateImage(
-      std::move(scr_args),
-      [&alloc_result](fuchsia::ui::composition::Screenshot_CreateImage_Result result) {
-        EXPECT_FALSE(result.is_err());
-        alloc_result = true;
-      });
+  screen_capture_->Configure(std::move(sc_args),
+                             [&alloc_result](fit::result<void, ScreenCaptureError> result) {
+                               EXPECT_FALSE(result.is_error());
+                               alloc_result = true;
+                             });
 
   RunLoopUntil([&alloc_result] { return alloc_result; });
 
   // Take Screenshot!
-  const auto& read_values = TakeAndExtractScreenshot(
-      screenshot_, 1, fuchsia::ui::composition::Rotation::CW_270_DEGREES,
-      scr_buffer_collection_info, 0, kBytesPerPixel, render_target_width, render_target_height);
+  const auto& cs_result = CaptureScreen(screen_capture_);
+  const auto& read_values =
+      ExtractScreenCapture(cs_result, sc_buffer_collection_info, kBytesPerPixel,
+                           render_target_width, render_target_height);
 
   EXPECT_EQ(read_values.size(), write_values.size());
 
@@ -859,7 +874,7 @@ TEST_F(ScreenshotIntegrationTest, DISABLED_MultiColor_270DegreeRotation_Screensh
   EXPECT_EQ(bottom_left_correct, pixel_color_count);
 }
 
-TEST_F(ScreenshotIntegrationTest, FilledRect_Screenshot) {
+TEST_F(ScreenCaptureIntegrationTest, FilledRectScreenshot) {
   const uint32_t image_width = display_width_;
   const uint32_t image_height = display_height_;
   const uint32_t render_target_width = display_width_;
@@ -880,50 +895,153 @@ TEST_F(ScreenshotIntegrationTest, FilledRect_Screenshot) {
   child_session_->AddChild(kChildRootTransform, kTransformId);
   BlockingPresent(child_session_);
 
-  // The scene graph is now ready for screenshotting!
+  // The scene graph is now ready for screencapturing!
 
-  // Create buffer collection to render into for TakeScreenshot().
+  // Create buffer collection to render into for GetNextFrame().
   allocation::BufferCollectionImportExportTokens scr_ref_pair =
       allocation::BufferCollectionImportExportTokens::New();
 
-  fuchsia::sysmem::BufferCollectionInfo_2 scr_buffer_collection_info =
+  fuchsia::sysmem::BufferCollectionInfo_2 sc_buffer_collection_info =
       CreateBufferCollectionInfoWithConstraints(
-          CreateDefaultConstraints(1, render_target_width, render_target_height),
+          CreateDefaultConstraints(/*buffer_count=*/1, render_target_width, render_target_height),
           std::move(scr_ref_pair.export_token), RegisterBufferCollectionUsage::SCREENSHOT);
 
-  // Create image in Screenshot client.
-  CreateImageArgs scr_args;
-  scr_args.set_image_id(1);
-  scr_args.set_import_token(std::move(scr_ref_pair.import_token));
-  scr_args.set_vmo_index(0);
-  scr_args.set_size({render_target_width, render_target_height});
+  // Configure buffers in ScreenCapture client.
+  ScreenCaptureConfig sc_args;
+  sc_args.set_import_token(std::move(scr_ref_pair.import_token));
+  sc_args.set_size({render_target_width, render_target_height});
+  sc_args.set_buffer_count(sc_buffer_collection_info.buffer_count);
 
   bool alloc_result = false;
-  screenshot_->CreateImage(
-      std::move(scr_args),
-      [&alloc_result](fuchsia::ui::composition::Screenshot_CreateImage_Result result) {
-        EXPECT_FALSE(result.is_err());
-        alloc_result = true;
-      });
+  screen_capture_->Configure(std::move(sc_args),
+                             [&alloc_result](fit::result<void, ScreenCaptureError> result) {
+                               EXPECT_FALSE(result.is_error());
+                               alloc_result = true;
+                             });
 
   RunLoopUntil([&alloc_result] { return alloc_result; });
 
   // Take Screenshot!
-  const auto& read_values = TakeAndExtractScreenshot(
-      screenshot_, 1, fuchsia::ui::composition::Rotation::CW_0_DEGREES, scr_buffer_collection_info,
-      0, kBytesPerPixel, render_target_width, render_target_height);
+  const auto& cs_result = CaptureScreen(screen_capture_);
+  const auto& read_values =
+      ExtractScreenCapture(cs_result, sc_buffer_collection_info, kBytesPerPixel,
+                           render_target_width, render_target_height);
 
   EXPECT_EQ(read_values.size(), num_pixels_);
 
   // Compare read and write values.
   uint32_t num_fuchsia_count = 0;
 
-  for (size_t i = 0; i < read_values.size(); i++) {
-    if (read_values[i] == 0xFFFF00FF)
+  for (unsigned int read_value : read_values) {
+    if (read_value == 0xFFFF00FF)
       num_fuchsia_count++;
   }
 
   EXPECT_EQ(num_fuchsia_count, num_pixels_);
+}
+
+TEST_F(ScreenCaptureIntegrationTest, ChangeFilledRectScreenshots) {
+  const uint32_t image_width = display_width_;
+  const uint32_t image_height = display_height_;
+  const uint32_t render_target_width = display_width_;
+  const uint32_t render_target_height = display_height_;
+
+  const ContentId kFilledRectId = {1};
+  const TransformId kTransformId = {2};
+
+  // Create a red rectangle.
+  child_session_->CreateFilledRect(kFilledRectId);
+  child_session_->SetSolidFill(kFilledRectId, {1, 0, 0, 1}, {image_width, image_height});
+
+  // Associate the rect with a transform.
+  child_session_->CreateTransform(kTransformId);
+  child_session_->SetContent(kTransformId, kFilledRectId);
+
+  // Attach the transform to the scene
+  child_session_->AddChild(kChildRootTransform, kTransformId);
+  BlockingPresent(child_session_);
+
+  // The scene graph is now ready for screencapturing!
+
+  // Create buffer collection to render into for GetNextFrame().
+  allocation::BufferCollectionImportExportTokens scr_ref_pair =
+      allocation::BufferCollectionImportExportTokens::New();
+
+  fuchsia::sysmem::BufferCollectionInfo_2 sc_buffer_collection_info =
+      CreateBufferCollectionInfoWithConstraints(
+          CreateDefaultConstraints(/*buffer_count=*/2, render_target_width, render_target_height),
+          std::move(scr_ref_pair.export_token), RegisterBufferCollectionUsage::SCREENSHOT);
+
+  // Configure buffers in ScreenCapture client.
+  ScreenCaptureConfig sc_args;
+  sc_args.set_import_token(std::move(scr_ref_pair.import_token));
+  sc_args.set_size({render_target_width, render_target_height});
+  sc_args.set_buffer_count(sc_buffer_collection_info.buffer_count);
+
+  bool alloc_result = false;
+  screen_capture_->Configure(std::move(sc_args),
+                             [&alloc_result](fit::result<void, ScreenCaptureError> result) {
+                               EXPECT_FALSE(result.is_error());
+                               alloc_result = true;
+                             });
+
+  RunLoopUntil([&alloc_result] { return alloc_result; });
+
+  // Take Screenshot!
+  const auto& cs_result = CaptureScreen(screen_capture_);
+  const auto& read_values =
+      ExtractScreenCapture(cs_result, sc_buffer_collection_info, kBytesPerPixel,
+                           render_target_width, render_target_height);
+
+  EXPECT_EQ(read_values.size(), num_pixels_);
+
+  // Compare read and write values.
+  uint32_t num_red_count = 0;
+
+  for (unsigned int read_value : read_values) {
+    // Output is ARGB
+    if (read_value == 0xFFFF0000)
+      num_red_count++;
+  }
+
+  EXPECT_EQ(num_red_count, num_pixels_);
+
+  // Now change the color of the screen.
+
+  const ContentId kFilledRectId2 = {2};
+  const TransformId kTransformId2 = {3};
+
+  // Create a blue rectangle.
+  child_session_->CreateFilledRect(kFilledRectId2);
+  child_session_->SetSolidFill(kFilledRectId2, {0, 0, 1, 1}, {image_width, image_height});
+
+  // Associate the rect with a transform.
+  child_session_->CreateTransform(kTransformId2);
+  child_session_->SetContent(kTransformId2, kFilledRectId2);
+
+  // Attach the transform to the scene
+  child_session_->AddChild(kChildRootTransform, kTransformId2);
+  BlockingPresent(child_session_);
+
+  // The scene graph is now ready for screencapturing!
+
+  // Take Screenshot!
+  const auto& cs_result2 = CaptureScreen(screen_capture_);
+  const auto& read_values2 =
+      ExtractScreenCapture(cs_result2, sc_buffer_collection_info, kBytesPerPixel,
+                           render_target_width, render_target_height);
+
+  EXPECT_EQ(read_values2.size(), num_pixels_);
+
+  // Compare read and write values.
+  uint32_t num_blue_count = 0;
+
+  for (unsigned int read_value : read_values2) {
+    if (read_value == 0xFF0000FF)
+      num_blue_count++;
+  }
+
+  EXPECT_EQ(num_blue_count, num_pixels_);
 }
 
 }  // namespace integration_tests

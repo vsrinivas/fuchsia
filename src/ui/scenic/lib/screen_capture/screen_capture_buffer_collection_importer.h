@@ -2,25 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_SCENIC_LIB_SCREENSHOT_SCREENSHOT_BUFFER_COLLECTION_IMPORTER_H_
-#define SRC_UI_SCENIC_LIB_SCREENSHOT_SCREENSHOT_BUFFER_COLLECTION_IMPORTER_H_
+#ifndef SRC_UI_SCENIC_LIB_SCREEN_CAPTURE_SCREEN_CAPTURE_BUFFER_COLLECTION_IMPORTER_H_
+#define SRC_UI_SCENIC_LIB_SCREEN_CAPTURE_SCREEN_CAPTURE_BUFFER_COLLECTION_IMPORTER_H_
 
 #include <fuchsia/sysmem/cpp/fidl.h>
 
 #include <unordered_set>
 
-#include "src/ui/lib/escher/escher.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
 
 #include <vulkan/vulkan.hpp>
 
-namespace screenshot {
+namespace screen_capture {
 
-class ScreenshotBufferCollectionImporter : public allocation::BufferCollectionImporter {
+class ScreenCaptureBufferCollectionImporter : public allocation::BufferCollectionImporter {
  public:
-  explicit ScreenshotBufferCollectionImporter(std::shared_ptr<flatland::VkRenderer> renderer);
-  ~ScreenshotBufferCollectionImporter() override;
+  explicit ScreenCaptureBufferCollectionImporter(std::shared_ptr<flatland::VkRenderer> renderer);
+  ~ScreenCaptureBufferCollectionImporter() override;
 
   // |BufferCollectionImporter|
   bool ImportBufferCollection(
@@ -47,6 +46,6 @@ class ScreenshotBufferCollectionImporter : public allocation::BufferCollectionIm
   std::unordered_set<allocation::GlobalBufferCollectionId> buffer_collection_infos_;
 };
 
-}  // namespace screenshot
+}  // namespace screen_capture
 
-#endif  // SRC_UI_SCENIC_LIB_SCREENSHOT_SCREENSHOT_BUFFER_COLLECTION_IMPORTER_H_
+#endif  // SRC_UI_SCENIC_LIB_SCREEN_CAPTURE_SCREEN_CAPTURE_BUFFER_COLLECTION_IMPORTER_H_

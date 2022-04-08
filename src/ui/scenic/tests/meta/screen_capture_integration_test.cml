@@ -4,7 +4,7 @@
 {
     include: [ "//src/ui/scenic/tests/meta/scenic_integration_test_base.shard.cml" ],
     program: {
-        binary: "bin/screenshot_integration_test_bin",
+        binary: "bin/screen_capture_integration_test_bin",
     },
     use: [
         {

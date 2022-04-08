@@ -74,7 +74,7 @@ group("tests") {
     ":input_unittests",
     ":scenic_unittests",
     ":scheduling_unittests",
-    ":screenshot_unittests",
+    ":screen_capture_unittests",
     "lib/focus/tests",
     "lib/gfx/tests",
     "lib/gfx/tests:mock_pose_buffer_provider",
@@ -272,9 +272,14 @@ fuchsia_unittest_package("scheduling_unittests") {
   deps = [ "lib/scheduling/tests:unittests" ] + scenic_test_deps
 }
 
-fuchsia_unittest_package("screenshot_unittests") {
-  manifest = "meta/screenshot_unittests.cmx"
-  deps = [ "lib/screenshot/tests:unittests" ] + scenic_test_deps
+fuchsia_unittest_package("screen_capture_unittests") {
+  manifest = "meta/screen_capture_unittests.cmx"
+  deps = [ "lib/screen_capture/tests:unittests" ] + scenic_test_deps
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 # For migration purposes only.  To be moved to src/ui/scenic/bin:scenic

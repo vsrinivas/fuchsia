@@ -69,7 +69,7 @@
             "fuchsia.tracing.controller.Controller",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.composition.Allocator",
-            "fuchsia.ui.composition.Screenshot",
+            "fuchsia.ui.composition.ScreenCapture",
             "fuchsia.ui.input.InputDevice",
             "fuchsia.ui.input.InputDeviceRegistry",
             "fuchsia.ui.policy.Presenter",

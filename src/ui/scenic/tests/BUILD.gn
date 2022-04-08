@@ -11,7 +11,7 @@ group("tests") {
     ":flatland_integration_tests",
     ":gfx_integration_tests",
     ":observer_integration_tests",
-    ":screenshot_integration_test",
+    ":screen_capture_integration_test",
   ]
 }
 
@@ -334,23 +334,23 @@ fuchsia_test_component("observer_registry_integration_test") {
   deps = [ ":observer_registry_integration_test_bin" ]
 }
 
-executable("screenshot_integration_test_bin") {
+executable("screen_capture_integration_test_bin") {
   testonly = true
-  sources = [ "flatland_integration_tests/screenshot_integration_test.cc" ]
+  sources = [ "flatland_integration_tests/screen_capture_integration_test.cc" ]
   deps = [
     ":common_deps",
     "//sdk//fidl/fuchsia.ui.composition",
     "//src/ui/scenic/lib/allocation:allocation",
-    "//src/ui/scenic/lib/screenshot:screenshot",
+    "//src/ui/scenic/lib/screen_capture:screen_capture",
     "//src/ui/scenic/lib/utils:utils",
     "//zircon/system/ulib/fbl",
   ]
 }
 
-fuchsia_test_component("screenshot_integration_test") {
-  component_name = "screenshot_integration_test"
-  manifest = "meta/screenshot_integration_test.cml"
-  deps = [ ":screenshot_integration_test_bin" ]
+fuchsia_test_component("screen_capture_integration_test") {
+  component_name = "screen_capture_integration_test"
+  manifest = "meta/screen_capture_integration_test.cml"
+  deps = [ ":screen_capture_integration_test_bin" ]
 }
 
 executable("flatland_mouse_integration_test_bin") {
@@ -397,7 +397,7 @@ fuchsia_test_package("flatland_integration_tests") {
   test_components = [
     ":flatland_touch_integration_test",
     ":flatland_focus_integration_test",
-    ":screenshot_integration_test",
+    ":screen_capture_integration_test",
     ":flatland_mouse_integration_test",
   ]
   test_specs = {

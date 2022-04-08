@@ -14,7 +14,8 @@
 #include "src/ui/scenic/lib/flatland/renderer/null_renderer.h"
 #include "src/ui/scenic/lib/flatland/renderer/tests/common.h"
 #include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
-#include "src/ui/scenic/lib/screenshot/screenshot.h"
+// TODO(97242): Remove dependency on screep_capture.
+#include "src/ui/scenic/lib/screen_capture/screen_capture.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
 #include <glm/gtc/constants.hpp>
@@ -1008,7 +1009,7 @@ VK_TEST_F(VulkanRendererTest, RotationRenderTest) {
                  });
 
   // Now let's update the renderable so it is rotated 90 deg.
-  auto renderables_90deg = screenshot::Screenshot::RotateRenderables(
+  auto renderables_90deg = screen_capture::ScreenCapture::RotateRenderables(
       {renderable}, fuchsia::ui::composition::Rotation::CW_90_DEGREES, kTargetWidthFlipped,
       kTargetHeightFlipped);
   // Render the renderable to the render target.
@@ -1052,7 +1053,7 @@ VK_TEST_F(VulkanRendererTest, RotationRenderTest) {
       });
 
   // Now let's update the renderable so it is rotated 180 deg.
-  auto renderables_180deg = screenshot::Screenshot::RotateRenderables(
+  auto renderables_180deg = screen_capture::ScreenCapture::RotateRenderables(
       {renderable}, fuchsia::ui::composition::Rotation::CW_180_DEGREES, 16, 8);
   // Render the renderable to the render target.
   renderer.Render(render_target, std::move(renderables_180deg), {renderable_texture});
@@ -1094,7 +1095,7 @@ VK_TEST_F(VulkanRendererTest, RotationRenderTest) {
                  });
 
   // Now let's update the renderable so it is rotated 270 deg.
-  auto renderables_270deg = screenshot::Screenshot::RotateRenderables(
+  auto renderables_270deg = screen_capture::ScreenCapture::RotateRenderables(
       {renderable}, fuchsia::ui::composition::Rotation::CW_270_DEGREES, kTargetWidthFlipped,
       kTargetHeightFlipped);
   // Render the renderable to the render target.

@@ -1,0 +1,129 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.ui.composition;
+
+using fuchsia.math;
+using zx;
+
+/// The possible errors from the ScreenCapture protocol.
+type ScreenCaptureError = flexible enum {
+    /// One or more required arguments are missing in the table argument.
+    MISSING_ARGS = 1;
+    /// One or more of the arguments was not valid.
+    INVALID_ARGS = 2;
+    /// A general error occurred during the method call.
+    BAD_OPERATION = 3;
+    /// Error that is returned if [`GetNextFrame`] is called when all of the VMOs in the
+    /// BufferCollection have been rendered to. [`ReleaseFrame`] must be called before a
+    /// successful call to GetNextFrame can be made.
+    BUFFER_FULL = 4;
+};
+
+/// The rotation to be applied to the image.
+///
+/// If a given display is rotated, say, 270 degrees according to its
+/// `display_info` config file, then applying the equal and opposite rotation,
+/// [`CW_270_DEGREES`], should cancel the display rotation leading to a
+/// correctly rendered screenshot.
+///
+/// Clients should allocate an image according to the final dimensions they
+/// ultimately want to use, i.e. after rotation. These would be identical
+/// to the `width` and `height` values found in the `display_info` config file.
+type Rotation = strict enum {
+    CW_0_DEGREES = 0;
+    CW_90_DEGREES = 1;
+    CW_180_DEGREES = 2;
+    CW_270_DEGREES = 3;
+};
+
+/// The arguments passed into the [`Configure`] call. Note that not all fields are necessary.
+type ScreenCaptureConfig = resource table {
+    /// The import token referencing a BufferCollection registered with
+    /// Allocator. Required.
+    1: import_token BufferCollectionImportToken;
+    /// The size of the image in pixels. Required.
+    2: size fuchsia.math.SizeU;
+    /// The number of buffers in the BufferCollection. Required.
+    // TODO(fxbug.dev/97057): Get buffer_count from the importer and remove this.
+    3: buffer_count uint32;
+    /// The rotation to be applied to the stream of images. Optional; if absent no rotation is
+    /// applied.
+    4: rotation Rotation;
+    // TODO(fxbug.dev/97057): Add an option to exclude cursor capture.
+};
+
+/// The arguments passed into the [`GetNextFrame`] call. All fields are necessary.
+type GetNextFrameArgs = resource table {
+    /// The event that will signal when the requested frame has been rendered. Required.
+    1: event zx.handle:EVENT;
+};
+
+/// Metadata about the frame rendered by [`GetNextFrame`].
+type FrameInfo = resource table {
+    /// The index of the VMO where the requested frame has been rendered. Required.
+    1: buffer_id uint32;
+};
+
+
+/// This protocol provides a low-level ScreenCapture API for clients to use.
+/// ScreenCapture clients should familiarize themselves with the
+/// [`fuchsia.sysmem/BufferCollection`] and [`fuchsia.ui.composition/Allocator`] protocols
+/// as those are necessary to create the BufferCollections and images ScreenCapture uses.
+@discoverable
+protocol ScreenCapture {
+    /// Clients should first use the Allocator protocol to register a
+    /// BufferCollection. This function will fail with BAD_OPERATION unless all clients of the
+    /// BufferCollection have set their constraints.
+    ///
+    /// Afterwards, clients should create and configure the images that will
+    /// eventually be rendered to using this method. All the buffers in the
+    /// collection from 0 to (buffer_count-1) may be used for screen capture.
+    ///
+    /// Clients are responsible for determining the rotation of the display,
+    /// and applying the corrective rotation. For instance, if the display is
+    /// mounted 90 degrees clockwise (the "top" is on the right, when looking
+    /// at the display), then the client should specify a 270 degree rotation
+    /// to account for it.
+    ///
+    /// Similarly, the clients are responsible for specifying a buffer big
+    /// enough for the rotated image. If the buffer is too small, a best effort
+    /// attempt will be made to render the image.
+    ///
+    /// Finally, clients request the server to render the current screen to the
+    /// shared buffers using [`GetNextFrame`].
+    ///
+    /// [`Configure`] can be called again with a new BufferCollectionImportToken
+    /// if the client wishes to change any of the configuration settings. In
+    /// this case all the buffers from the previous call to [`Configure`] will
+    /// be released.
+    Configure(ScreenCaptureConfig) -> (struct {}) error ScreenCaptureError;
+
+    /// Following a successful call to [`Configure`], clients can call
+    /// GetNextFrame. This will populate a buffer with the most recent frame.
+    ///
+    /// Clients should wait on the zx::event they pass for successful
+    /// completion of the screenshot. It is not guaranteed that the screenshot
+    /// will be completed by the time this function returns.
+    ///
+    /// The requested image will be in the BufferCollection that the client set
+    /// up in the VMO at the index specified by buffer_id.
+    ///
+    /// When ScreenCapture is used to provide a stream, the rate that the
+    /// client calls GetNextFrame will drive the frame rate.
+    ///
+    /// Errors:
+    /// BAD_OPERATION if Configure was not called, or not called successfully
+    /// MISSING_ARGS if a required argument is not present
+    /// BUFFER_FULL if all buffers in the BufferCollection are in use. In this case, ReleaseFrame
+    /// must be called to make a buffer available before this function can be called successfully.
+    // TODO(fxbug.dev/97057): Add a way to notify clients of the display
+    // refresh rate, perhaps through the Display API.
+    GetNextFrame(GetNextFrameArgs) -> (FrameInfo) error ScreenCaptureError;
+
+    /// Once the client no longer needs an image, they can call ReleaseFrame on
+    /// the VMO index of the buffer so that the server can reuse it in the future.
+    ReleaseFrame(struct {
+        buffer_id uint32;
+    }) -> (struct {}) error ScreenCaptureError;
+};

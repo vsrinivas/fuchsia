@@ -7,8 +7,8 @@
 
 #include <gtest/gtest.h>
 
-#include "../screenshot.h"
-#include "../screenshot_buffer_collection_importer.h"
+#include "../screen_capture.h"
+#include "../screen_capture_buffer_collection_importer.h"
 #include "src/ui/lib/escher/test/common/gtest_escher.h"
 #include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "src/ui/scenic/lib/allocation/allocator.h"
@@ -20,30 +20,28 @@
 using allocation::BufferCollectionImporter;
 using fuchsia::sysmem::PixelFormatType;
 
-namespace screenshot {
-namespace test {
+namespace screen_capture::test {
 
-class ScreenshotBufferCollectionTest : public scenic_impl::gfx::test::VkSessionTest {
+class ScreenCaptureBufferCollectionTest : public scenic_impl::gfx::test::VkSessionTest {
  public:
   void SetUp() override {
     VkSessionTest::SetUp();
-    renderer_ =
-        std::make_shared<flatland::VkRenderer>(escher()->GetWeakPtr());
-    importer_ = std::make_unique<ScreenshotBufferCollectionImporter>(renderer_);
+    renderer_ = std::make_shared<flatland::VkRenderer>(escher()->GetWeakPtr());
+    importer_ = std::make_unique<ScreenCaptureBufferCollectionImporter>(renderer_);
   }
 
  protected:
   std::shared_ptr<flatland::VkRenderer> renderer_;
-  std::shared_ptr<ScreenshotBufferCollectionImporter> importer_;
+  std::shared_ptr<ScreenCaptureBufferCollectionImporter> importer_;
 };
 
-class ScreenshotBCTestParameterized : public ScreenshotBufferCollectionTest,
-                                      public testing::WithParamInterface<PixelFormatType> {};
+class ScreenCaptureBCTestParameterized : public ScreenCaptureBufferCollectionTest,
+                                         public testing::WithParamInterface<PixelFormatType> {};
 
-INSTANTIATE_TEST_SUITE_P(, ScreenshotBCTestParameterized,
+INSTANTIATE_TEST_SUITE_P(, ScreenCaptureBCTestParameterized,
                          testing::Values(PixelFormatType::BGRA32, PixelFormatType::R8G8B8A8));
 
-VK_TEST_F(ScreenshotBufferCollectionTest, ImportAndReleaseBufferCollection) {
+VK_TEST_F(ScreenCaptureBufferCollectionTest, ImportAndReleaseBufferCollection) {
   // Create Sysmem tokens.
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = utils::CreateSysmemAllocatorSyncPtr();
   fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
@@ -65,7 +63,7 @@ VK_TEST_F(ScreenshotBufferCollectionTest, ImportAndReleaseBufferCollection) {
   // Cleanup.
   importer_->ReleaseBufferCollection(collection_id);
 }
-VK_TEST_P(ScreenshotBCTestParameterized, ImportBufferImage) {
+VK_TEST_P(ScreenCaptureBCTestParameterized, ImportBufferImage) {
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
   const auto pixel_format = GetParam();
   // Create Sysmem tokens.
@@ -79,7 +77,7 @@ VK_TEST_P(ScreenshotBCTestParameterized, ImportBufferImage) {
   status = local_token->Sync();
   EXPECT_EQ(status, ZX_OK);
 
-  // Import into ScreenshotBufferCollectionImporter.
+  // Import into ScreenCaptureBufferCollectionImporter.
   auto collection_id = allocation::GenerateUniqueBufferCollectionId();
   bool result = importer_->ImportBufferCollection(collection_id, sysmem_allocator.get(),
                                                   std::move(dup_token));
@@ -137,7 +135,7 @@ VK_TEST_P(ScreenshotBCTestParameterized, ImportBufferImage) {
   importer_->ReleaseBufferCollection(collection_id);
 }
 
-VK_TEST_F(ScreenshotBufferCollectionTest, ImportBufferCollection_ErrorCases) {
+VK_TEST_F(ScreenCaptureBufferCollectionTest, ImportBufferCollection_ErrorCases) {
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = utils::CreateSysmemAllocatorSyncPtr();
 
   const auto collection_id = allocation::GenerateUniqueBufferCollectionId();
@@ -188,5 +186,4 @@ VK_TEST_F(ScreenshotBufferCollectionTest, ImportBufferCollection_ErrorCases) {
   importer_->ReleaseBufferCollection(collection_id);
 }
 
-}  // namespace test
-}  // namespace screenshot
+}  // namespace screen_capture::test

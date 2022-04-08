@@ -9,15 +9,16 @@ group("tests") {
 }
 
 executable("unittests") {
-  output_name = "screenshot_unittests"
+  output_name = "screen_capture_unittests"
 
   testonly = true
 
   sources = [
-    "screenshot_buffer_collection_unittests.cc",
-    "screenshot_unittest.cc",
+    "screen_capture_buffer_collection_unittests.cc",
+    "screen_capture_unittest.cc",
 
-    # Registers a global Escher environment for trsting.
+    # TODO(97244): Remove unnecessary file run_all_unittests
+    # Registers a global Escher environment for testing.
     "run_all_unittests.cc",
   ]
 
@@ -28,7 +29,7 @@ executable("unittests") {
     "//src/ui/lib/display:hdcp_client",
     "//src/ui/scenic/lib/allocation",
     "//src/ui/scenic/lib/gfx/tests:testing_deps",
-    "//src/ui/scenic/lib/screenshot",
+    "//src/ui/scenic/lib/screen_capture",
     "//src/ui/scenic/lib/utils",
     "//third_party/googletest:gmock",
   ]

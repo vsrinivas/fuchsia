@@ -8,7 +8,7 @@ use fidl::endpoints::{ClientEnd, Proxy};
 use fidl_fuchsia_sysmem::{AllocatorMarker as SysmemAllocatorMarker, *};
 use fidl_fuchsia_ui_app::{ViewConfig, ViewMarker, ViewProviderMarker};
 use fidl_fuchsia_ui_composition::{
-    self as ui_comp, AllocatorMarker as ScenicAllocatorMarker, ScreenshotMarker,
+    self as ui_comp, AllocatorMarker as ScenicAllocatorMarker, ScreenCaptureMarker,
 };
 use fidl_fuchsia_ui_policy::PresenterMarker;
 use fidl_fuchsia_ui_scenic::{ScenicMarker, ScreenshotData};
@@ -107,17 +107,16 @@ impl ScenicFacade {
         let display_info = scenic.get_display_info().await.context("Failed to get display info")?;
         let width = display_info.width_in_px;
         let height = display_info.height_in_px;
-        const IMAGE_ID: Option<u64> = Some(1);
 
         // Connect to the relevant protocols.
-        let screenshotter = app::client::connect_to_protocol::<ScreenshotMarker>()
+        let screencapturer = app::client::connect_to_protocol::<ScreenCaptureMarker>()
             .context("Failed to connect to screenshot")?;
         let sysmem_allocator = app::client::connect_to_protocol::<SysmemAllocatorMarker>()
             .context("Failed to connect to sysmem allocator")?;
         let scenic_allocator = app::client::connect_to_protocol::<ScenicAllocatorMarker>()
             .context("Failed to connect to scenic allocator")?;
 
-        // First, create a sysmem BufferCollectionInfo. This will be used by us and the Screenshot
+        // First, create a sysmem BufferCollectionInfo. This will be used by us and the ScreenCapture
         // server to coordinate image requirements via the Allocator protocol.
         let (local_token, local_token_request) =
             fidl::endpoints::create_proxy::<BufferCollectionTokenMarker>()?;
@@ -135,7 +134,7 @@ impl ScenicFacade {
         let local_clientend_token =
             ClientEnd::new(local_token.into_channel().unwrap().into_zx_channel());
 
-        // Create BufferCollection{Import,Export}Token eventpair. We will pass one end to Allocator and the other to Screenshot.
+        // Create BufferCollection{Import,Export}Token eventpair. We will pass one end to Allocator and the other to ScreenCapture.
         let (import_token, export_token) =
             fidl::EventPair::create().context("Failed to create event pair")?;
         let import_token = ui_comp::BufferCollectionImportToken { value: import_token };
@@ -213,67 +212,54 @@ impl ScenicFacade {
         }
         buffer_collection.close()?;
 
-        // With a valid BufferCollectionInfo, we can now tell Screenshot to render into its VMO.
+        // With a valid BufferCollectionInfo, we can now tell ScreenCapture to render into its VMO.
 
-        let args = ui_comp::CreateImageArgs {
-            image_id: IMAGE_ID,
+        let args = ui_comp::ScreenCaptureConfig {
             import_token: Some(import_token),
-            vmo_index: Some(0),
             size: Some(fidl_fuchsia_math::SizeU { width: width, height: height }),
-            ..ui_comp::CreateImageArgs::EMPTY
+            buffer_count: Some(scr_bc_info.buffer_count),
+            ..ui_comp::ScreenCaptureConfig::EMPTY
         };
-        let _ = screenshotter.create_image(args).await;
+        let _ = screencapturer.configure(args).await;
 
-        let screenshot_done_event: fuchsia_zircon::Event = fidl::Event::create().unwrap();
-        let dup_screenshot_done_event =
-            screenshot_done_event.duplicate_handle(zx::Rights::SAME_RIGHTS).unwrap();
+        let screencapture_done_event: fuchsia_zircon::Event = fidl::Event::create().unwrap();
+        let dup_screencapture_done_event =
+            screencapture_done_event.duplicate_handle(zx::Rights::SAME_RIGHTS).unwrap();
 
-        let args = ui_comp::TakeScreenshotArgs {
-            image_id: IMAGE_ID,
-            rotation: Some(ui_comp::Rotation::Cw0Degrees),
-            event: Some(screenshot_done_event),
-            ..ui_comp::TakeScreenshotArgs::EMPTY
+        let gnf_args = ui_comp::GetNextFrameArgs {
+            event: Some(screencapture_done_event),
+            ..ui_comp::GetNextFrameArgs::EMPTY
         };
 
-        match screenshotter.take_screenshot(args).await {
+        let buffer_id: u32;
+        match screencapturer.get_next_frame(gnf_args).await {
             Err(e) => {
-                return Err(format_err!("Screenshot.TakeScreenshot() failed with FIDL err: {}", e));
+                return Err(format_err!(
+                    "ScreenCapture.GetNextFrame() failed with FIDL err: {}",
+                    e
+                ));
             }
             Ok(Err(val)) => {
-                return Err(format_err!("Screenshot.TakeScreenshot() failed with err: {:?}", val));
+                return Err(format_err!("ScreenCapture.GetNextFrame() failed with err: {:?}", val));
             }
-            Ok(_) => {}
+            Ok(Ok(val)) => {
+                buffer_id = val.buffer_id.unwrap();
+            }
         }
 
-        match dup_screenshot_done_event
+        match dup_screencapture_done_event
             .wait_handle(zx::Signals::EVENT_SIGNALED, zx::Time::after(5.seconds()))
         {
             Err(e) => {
                 return Err(format_err!(
-                    "Screenshot.TakeScreenshot() event wait failed with err: {}",
+                    "ScreenCapture.GetNextFrame() event wait failed with err: {}",
                     e
                 ));
             }
             Ok(_) => {}
         }
 
-        match screenshotter
-            .remove_image(ui_comp::RemoveImageArgs {
-                image_id: IMAGE_ID,
-                ..ui_comp::RemoveImageArgs::EMPTY
-            })
-            .await
-        {
-            Err(e) => {
-                return Err(format_err!("Screenshot.RemoveImage() failed with FIDL err: {}", e));
-            }
-            Ok(Err(val)) => {
-                return Err(format_err!("Screenshot.RemoveImage() failed with err: {:?}", val));
-            }
-            Ok(_) => {}
-        }
-
-        // Copy Screenshot output for inspection. Note that the stride of the buffer may be
+        // Copy ScreenCapture output for inspection. Note that the stride of the buffer may be
         // different than the width of the image, if the width of the image is not a multiple of 64,
         // or some other power of 2.
         //
@@ -294,7 +280,7 @@ impl ScenicFacade {
             alpha_format: fidl_fuchsia_images::AlphaFormat::Opaque,
         };
 
-        let image_vmo = scr_bc_info.buffers[0]
+        let image_vmo = scr_bc_info.buffers[buffer_id as usize]
             .vmo
             .as_ref()
             .ok_or(format_err!("No VMOs returned in BufferCollectionInfo"))?

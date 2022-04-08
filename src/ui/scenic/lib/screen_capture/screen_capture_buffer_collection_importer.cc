@@ -2,37 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "screenshot_buffer_collection_importer.h"
+#include "screen_capture_buffer_collection_importer.h"
 
 #include <lib/async/default.h>
 #include <lib/trace/event.h>
-
-#include "src/ui/lib/escher/flatland/rectangle_compositor.h"
-#include "src/ui/lib/escher/impl/naive_image.h"
-#include "src/ui/lib/escher/impl/vulkan_utils.h"
-#include "src/ui/lib/escher/resources/resource_manager.h"
-#include "src/ui/lib/escher/resources/resource_recycler.h"
-#include "src/ui/lib/escher/util/image_utils.h"
 
 namespace {
 // Image formats supported by Scenic in a priority order.
 const vk::Format kSupportedImageFormats[] = {vk::Format::eR8G8B8A8Srgb, vk::Format::eB8G8R8A8Srgb};
 }  // anonymous namespace
 
-namespace screenshot {
+namespace screen_capture {
 
-ScreenshotBufferCollectionImporter::ScreenshotBufferCollectionImporter(
+ScreenCaptureBufferCollectionImporter::ScreenCaptureBufferCollectionImporter(
     std::shared_ptr<flatland::VkRenderer> renderer)
     : dispatcher_(async_get_default_dispatcher()), renderer_(renderer) {}
 
-ScreenshotBufferCollectionImporter::~ScreenshotBufferCollectionImporter() {
+ScreenCaptureBufferCollectionImporter::~ScreenCaptureBufferCollectionImporter() {
   for (auto& id : buffer_collection_infos_) {
     renderer_->ReleaseBufferCollection(id);
   }
   buffer_collection_infos_.clear();
 }
 
-bool ScreenshotBufferCollectionImporter::ImportBufferCollection(
+bool ScreenCaptureBufferCollectionImporter::ImportBufferCollection(
     allocation::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
@@ -47,8 +40,8 @@ bool ScreenshotBufferCollectionImporter::ImportBufferCollection(
     return false;
   }
 
-  bool success = renderer_->RegisterRenderTargetCollection(collection_id, sysmem_allocator,
-                                                           std::move(token));
+  bool success =
+      renderer_->RegisterRenderTargetCollection(collection_id, sysmem_allocator, std::move(token));
   if (!success) {
     ReleaseBufferCollection(collection_id);
     FX_LOGS(WARNING) << __func__ << " failed, could not register with VkRenderer";
@@ -60,7 +53,7 @@ bool ScreenshotBufferCollectionImporter::ImportBufferCollection(
   return true;
 }
 
-void ScreenshotBufferCollectionImporter::ReleaseBufferCollection(
+void ScreenCaptureBufferCollectionImporter::ReleaseBufferCollection(
     allocation::GlobalBufferCollectionId collection_id) {
   auto collection_itr = buffer_collection_infos_.find(collection_id);
 
@@ -75,7 +68,7 @@ void ScreenshotBufferCollectionImporter::ReleaseBufferCollection(
   renderer_->DeregisterRenderTargetCollection(collection_id);
 }
 
-bool ScreenshotBufferCollectionImporter::ImportBufferImage(
+bool ScreenCaptureBufferCollectionImporter::ImportBufferImage(
     const allocation::ImageMetadata& metadata) {
   // The metadata can't have an invalid collection id.
   if (metadata.collection_id == allocation::kInvalidId) {
@@ -113,8 +106,8 @@ bool ScreenshotBufferCollectionImporter::ImportBufferImage(
   return true;
 }
 
-void ScreenshotBufferCollectionImporter::ReleaseBufferImage(allocation::GlobalImageId image_id) {
+void ScreenCaptureBufferCollectionImporter::ReleaseBufferImage(allocation::GlobalImageId image_id) {
   renderer_->ReleaseBufferImage(image_id);
 }
 
-}  // namespace screenshot
+}  // namespace screen_capture

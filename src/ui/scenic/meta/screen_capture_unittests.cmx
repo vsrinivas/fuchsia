@@ -12,7 +12,7 @@
         "syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/screenshot_unittests"
+        "binary": "bin/screen_capture_unittests"
     },
     "sandbox": {
         "services": [
