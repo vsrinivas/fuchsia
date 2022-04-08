@@ -34,7 +34,7 @@
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/intrusive_single_list.h>
 
-#if !defined(__x86_64__) && !defined(__x86__)
+#if !defined(__x86_64__)
 #error "Unsupported architecture"
 #endif
 

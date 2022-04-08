@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ACFUCHSIA_H_
+#define ACFUCHSIA_H_
 
 #include <stdbool.h>
 #include <threads.h>
@@ -16,9 +17,6 @@
 
 #if __x86_64__
 #define ACPI_MACHINE_WIDTH 64
-#elif __x86__
-#define ACPI_MACHINE_WIDTH 32
-#define ACPI_USE_NATIVE_DIVIDE
 #else
 #error Unexpected architecture
 #endif
@@ -62,3 +60,5 @@ __END_CDECLS
 
 #define ACPI_ACQUIRE_GLOBAL_LOCK(FacsPtr, Acq) Acq = _acpica_acquire_global_lock(FacsPtr)
 #define ACPI_RELEASE_GLOBAL_LOCK(FacsPtr, Pnd) Pnd = _acpica_release_global_lock(FacsPtr)
+
+#endif  // ACFUCHSIA_H_
