@@ -75,6 +75,9 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 	if err != nil {
 		return nil, err
 	}
+	if err := clearTraces(); err != nil {
+		return nil, fmt.Errorf("clearing legacy fsatrace shms: %v", err)
+	}
 	artifacts, err := buildImpl(ctx, &subprocess.Runner{}, staticSpec, contextSpec, modules, platform)
 	if err != nil && artifacts != nil && artifacts.FailureSummary == "" {
 		// Fall back to using the error text as the failure summary if the
@@ -569,4 +572,24 @@ func gnCheckGenerated(ctx context.Context, r subprocessRunner, gn, checkoutDir, 
 		return stdoutBuf.String(), fmt.Errorf("error running `gn check`: %w", err)
 	}
 	return stdoutBuf.String(), nil
+}
+
+// clearTraces removes all legacy shms by fsatrace.
+//
+// Note this function does this naively, and it's not safe to do this when other
+// fsatraces are running.
+//
+// This is a temporary workaround until we have a proper fix, see:
+// https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=95360#c29
+func clearTraces() error {
+	traces, err := filepath.Glob("/dev/shm/_fsatrace*")
+	if err != nil {
+		return err
+	}
+	for _, trace := range traces {
+		if err := os.Remove(trace); err != nil {
+			return err
+		}
+	}
+	return nil
 }
