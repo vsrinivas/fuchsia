@@ -1,9 +1,33 @@
 {
-    include: [ "//src/connectivity/wlan/wlanstack/meta/wlanstack.shard.cml" ],
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
     program: {
         runner: "elf",
         binary: "bin/wlanstack",
     },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.wlan.device.service.DeviceService" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.diagnostics.persist.DataPersistence-wlan",
+                "fuchsia.metrics.MetricEventLoggerFactory",
+                "fuchsia.wlan.device.service.DeviceMonitor",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.wlan.device.service.DeviceService" ],
+            from: "self",
+        },
+    ],
     config: {
         wep_supported: { type: "bool" },
         wpa1_supported: { type: "bool" },

@@ -1,5 +1,46 @@
 {
-    include: [ "//src/connectivity/wlan/wlanstack/meta/shared.core_shard.cml" ],
+    use: [
+        {
+            protocol: [ "fuchsia.wlan.device.service.DeviceService" ],
+            from: "#wlanstack",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.stash.SecureStore",
+            from: "#stash_secure",
+            to: "#wlanstack",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#wlanstack",
+        },
+        {
+            protocol: "fuchsia.wlan.device.service.DeviceMonitor",
+            from: "#wlandevicemonitor",
+            to: "#wlanstack",
+            dependency: "weak",
+        },
+        {
+            protocol: "fuchsia.diagnostics.persist.DataPersistence-wlan",
+            from: "#diagnostics-persistence",
+            to: "#wlanstack",
+        },
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.metrics.MetricEventLoggerFactory",
+            ],
+            from: "#cobalt",
+            to: "#wlanstack",
+        },
+        {
+            protocol: [ "fuchsia.wlan.device.service.DeviceService" ],
+            from: "#wlanstack",
+            to: [ "#wlandevicemonitor" ],
+        },
+    ],
     children: [
         {
             name: "wlanstack",
