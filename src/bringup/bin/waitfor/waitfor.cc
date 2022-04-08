@@ -111,41 +111,38 @@ zx_status_t watchcb(int dirfd, int event, const char* fn, void* cookie) {
 // any other error is fatal
 
 zx_status_t expr_topo(const char* arg, int fd) {
-  char topo[1024 + 1];
-
   fdio_t* io = fdio_unsafe_fd_to_io(fd);
-  if (io == NULL) {
+  if (io == nullptr) {
     return ZX_ERR_NEXT;
   }
-  zx_status_t call_status = ZX_OK;
-  size_t path_len;
-  auto resp = fidl::WireCall<fuchsia_device::Controller>(
-                  zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
-                  ->GetTopologicalPath();
-  zx_status_t status = resp.status();
-
-  if (resp->result.is_err()) {
-    call_status = resp->result.err();
-  } else {
-    path_len = resp->result.response().path.size();
-    auto& r = resp->result.response();
-    memcpy(topo, r.path.data(), r.path.size());
-  }
+  const fidl::WireResult result = fidl::WireCall<fuchsia_device::Controller>(
+                                      zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
+                                      ->GetTopologicalPath();
   fdio_unsafe_release(io);
-  if (status != ZX_OK || call_status != ZX_OK) {
-    fprintf(stderr, "waitfor: warning: cannot read topo path\n");
-    return ZX_ERR_NEXT;
+  if (!result.ok()) {
+    fprintf(stderr, "waitfor: warning: cannot request topological path: %s\n",
+            result.FormatDescription().c_str());
+    return result.status();
   }
-  topo[path_len] = 0;
-
-  if (verbose) {
-    fprintf(stderr, "waitfor: topo='%s'\n", topo);
-  }
-  size_t len = strlen(arg);
-  if ((path_len < len) || strncmp(arg, topo, len)) {
-    return ZX_ERR_NEXT;
-  } else {
-    return ZX_OK;
+  const fidl::WireResponse response = result.value();
+  switch (response.result.Which()) {
+    case fuchsia_device::wire::ControllerGetTopologicalPathResult::Tag::kErr: {
+      const zx_status_t status = response.result.err();
+      fprintf(stderr, "waitfor: warning: failed to get topological path: %s\n",
+              zx_status_get_string(status));
+      return status;
+    }
+    case fuchsia_device::wire::ControllerGetTopologicalPathResult::Tag::kResponse: {
+      const std::string_view got = response.result.response().path.get();
+      const std::string_view expected(arg);
+      if (verbose) {
+        fprintf(stderr, "waitfor: topological path='%s'\n", std::string(got).c_str());
+      }
+      if (got == expected) {
+        return ZX_OK;
+      }
+      return ZX_ERR_NEXT;
+    }
   }
 }
 
