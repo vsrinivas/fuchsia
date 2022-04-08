@@ -8,10 +8,7 @@ import("//src/devices/bus/drivers/pci/pci.gni")
 
 group("tests") {
   testonly = true
-  deps = []
-  if (target_cpu == "x64") {
-    deps += [ ":x86-acpi-tests" ]
-  }
+  deps = [ ":acpi-board-lib-tests" ]
 }
 
 shared_public_deps = [
@@ -86,6 +83,6 @@ test("acpi-test") {
   configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
-fuchsia_unittest_package("x86-acpi-tests") {
+fuchsia_unittest_package("acpi-board-lib-tests") {
   deps = [ ":acpi-test" ]
 }

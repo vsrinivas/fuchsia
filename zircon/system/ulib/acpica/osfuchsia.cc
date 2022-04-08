@@ -12,7 +12,7 @@
 
 #include <acpica/acpi.h>
 
-#if !defined(__x86_64__)
+#if !defined(__x86_64__) && !defined(__aarch64__)
 #error "Unsupported architecture"
 #endif
 

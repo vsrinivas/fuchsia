@@ -13,6 +13,7 @@
 
 #include "zircon/system/ulib/acpica/osfuchsia.h"
 
+#ifdef __x86_64__
 // Essentially, we're using a bitmap here to represent each individual I/O port, so that we can
 // keep track of which I/O ports are allowed and which are not by the kernel.
 
@@ -179,3 +180,15 @@ ACPI_STATUS AcpiIoPortSetup() {
   }
   return AE_OK;
 }
+
+#elif defined(__aarch64__)
+
+ACPI_STATUS AcpiIoPortSetup() { return AE_OK; }
+ACPI_STATUS AcpiOsReadPort(ACPI_IO_ADDRESS Address, UINT32* Value, UINT32 Width) {
+  return AE_NOT_IMPLEMENTED;
+}
+ACPI_STATUS AcpiOsWritePort(ACPI_IO_ADDRESS Address, UINT32 Value, UINT32 Width) {
+  return AE_NOT_IMPLEMENTED;
+}
+
+#endif

@@ -17,6 +17,8 @@
 
 #if __x86_64__
 #define ACPI_MACHINE_WIDTH 64
+#elif __aarch64__
+#define ACPI_MACHINE_WIDTH 64
 #else
 #error Unexpected architecture
 #endif
