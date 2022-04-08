@@ -8,7 +8,7 @@ use fuchsia_async as fasync;
 use futures::{StreamExt as _, TryStreamExt as _};
 use log::info;
 
-#[fuchsia::component]
+#[fuchsia::main]
 async fn main() {
     let result = unreliable_echo().await;
     panic!("unreliable-echo unexpectedly finished with result {:?}", result);

@@ -18,9 +18,6 @@ pub use fidl_fuchsia_diagnostics::{Interest, Severity};
 pub use fuchsia_macro::{main, test};
 use std::future::Future;
 
-// TODO(https://fxbug.dev/96425) Remove this alias when all components migrated to new name.
-pub use self::main as component;
-
 #[cfg(not(target_os = "fuchsia"))]
 mod host;
 
