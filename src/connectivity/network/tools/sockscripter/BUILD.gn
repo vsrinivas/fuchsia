@@ -70,5 +70,4 @@ fuchsia_unittest_package("sockscripter-unittest") {
 fuchsia_shell_package("package") {
   package_name = "sockscripter"
   deps = [ ":bin" ]
-  manifest = "meta/sockscripter.cmx"
 }
