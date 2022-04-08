@@ -14,9 +14,6 @@ PowerWellRef::PowerWellRef() {}
 
 PowerWellRef::PowerWellRef(Power* power, PowerWell power_well)
     : power_(power), power_well_(power_well) {
-  if (power_->power_well1_refs_++ == 0) {
-    power_->SetPowerWell1Enable(true);
-  }
   if (power_well_ == PowerWell2 && power_->power_well2_refs_++ == 0) {
     power_->SetPowerWell2Enable(true);
   }
@@ -40,17 +37,11 @@ PowerWellRef::~PowerWellRef() {
   if (power_well_ == PowerWell2 && --power_->power_well2_refs_ == 0) {
     power_->SetPowerWell2Enable(false);
   }
-  if (--power_->power_well1_refs_ == 0) {
-    power_->SetPowerWell1Enable(false);
-  }
 }
 
 Power::Power(Controller* controller) : controller_(controller) {}
 
 void Power::Resume() {
-  if (power_well1_refs_ > 0) {
-    SetPowerWell1Enable(true);
-  }
   if (power_well2_refs_ > 0) {
     SetPowerWell2Enable(true);
   }
@@ -64,39 +55,6 @@ PowerWellRef Power::GetPipePowerWellRef(registers::Pipe pipe) {
 
 PowerWellRef Power::GetDdiPowerWellRef(registers::Ddi ddi) {
   return PowerWellRef(this, ddi == registers::DDI_A ? PowerWell1 : PowerWell2);
-}
-
-void Power::SetPowerWell1Enable(bool enable) {
-  auto power_well = registers::PowerWellControl2::Get().ReadFrom(controller_->mmio_space());
-  power_well.set_power_well_1_request(enable);
-  power_well.set_misc_io_power_state(enable);
-  power_well.WriteTo(controller_->mmio_space());
-
-  if (enable) {
-    if (!WAIT_ON_US(registers::PowerWellControl2 ::Get()
-                        .ReadFrom(controller_->mmio_space())
-                        .power_well_1_state(),
-                    10)) {
-      zxlogf(ERROR, "Power Well 1 failed to enable");
-      return;
-    }
-    if (!WAIT_ON_US(registers::PowerWellControl2 ::Get()
-                        .ReadFrom(controller_->mmio_space())
-                        .misc_io_power_state(),
-                    10)) {
-      zxlogf(ERROR, "Misc IO power failed to enable");
-      return;
-    }
-    if (!WAIT_ON_US(
-            registers::FuseStatus ::Get().ReadFrom(controller_->mmio_space()).pg1_dist_status(),
-            5)) {
-      zxlogf(ERROR, "Power Well 1 distribution failed");
-      return;
-    }
-  } else {
-    // Unconditionally sleep when disabling power well 1, as per the docs
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
-  }
 }
 
 void Power::SetPowerWell2Enable(bool enable) {

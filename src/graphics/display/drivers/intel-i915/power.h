@@ -47,10 +47,8 @@ class Power {
   PowerWellRef GetDdiPowerWellRef(registers::Ddi ddi);
 
  private:
-  void SetPowerWell1Enable(bool enable);
   void SetPowerWell2Enable(bool enable);
 
-  int32_t power_well1_refs_ = 0;
   int32_t power_well2_refs_ = 0;
   Controller* controller_;
 
