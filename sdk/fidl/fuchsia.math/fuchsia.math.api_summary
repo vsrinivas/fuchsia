@@ -55,4 +55,7 @@ struct fuchsia.math/Transform
 struct/member fuchsia.math/Vec.x int32
 struct/member fuchsia.math/Vec.y int32
 struct fuchsia.math/Vec
+struct/member fuchsia.math/VecF.x float32
+struct/member fuchsia.math/VecF.y float32
+struct fuchsia.math/VecF
 library fuchsia.math
