@@ -12,7 +12,7 @@ use {
         object_handle::{ObjectHandle, Writer, INVALID_OBJECT_ID},
         object_store::{
             allocator::{
-                filter_tombstones, AllocationRefCount, Allocator, AllocatorKey, AllocatorValue,
+                filter_tombstones, Allocator, AllocatorItem, AllocatorKey, AllocatorValue,
                 CoalescingIterator, SimpleAllocator,
             },
             directory::Directory,
@@ -303,7 +303,7 @@ async fn test_malformed_allocation() {
             );
             let item = Item::new(
                 AllocatorKey { device_range: end..end - fs.block_size() },
-                AllocatorValue { refs: AllocationRefCount::Delta(1) },
+                AllocatorValue::Abs { count: 2, owner_object_id: 9 },
             );
             writer.write(item.as_item_ref()).await.expect("write failed");
             writer.flush().await.expect("flush failed");
@@ -472,7 +472,13 @@ async fn test_allocation_mismatch() {
             .new_transaction(&[], Options::default())
             .await
             .expect("new_transaction failed");
-        allocator.add_ref(&mut transaction, range);
+        transaction.add(
+            allocator.object_id(),
+            Mutation::allocation(AllocatorItem::new(
+                AllocatorKey { device_range: range },
+                AllocatorValue::Abs { count: 2, owner_object_id: 9 },
+            )),
+        );
         transaction.commit().await.expect("commit failed");
     }
 
@@ -505,13 +511,7 @@ async fn test_missing_allocation() {
             key.clone()
         };
         let lower_bound = key.lower_bound_for_merge_into();
-        allocator
-            .tree()
-            .merge_into(
-                Item::new(key, AllocatorValue { refs: AllocationRefCount::Delta(-1) }),
-                &lower_bound,
-            )
-            .await;
+        allocator.tree().merge_into(Item::new(key, AllocatorValue::None), &lower_bound).await;
     }
     // We intentionally don't remount here, since the above tree mutation wouldn't persist
     // otherwise.
@@ -700,7 +700,7 @@ async fn test_overlapping_keys_in_layer_file() {
 #[fasync::run_singlethreaded(test)]
 async fn test_unexpected_record_in_layer_file() {
     let mut test = FsckTest::new().await;
-
+    // This test relies on the value below being something that doesn't deserialize to a valid ObjectValue.
     {
         let fs = test.filesystem();
         let root_volume = root_volume(&fs).await.unwrap();
@@ -708,10 +708,7 @@ async fn test_unexpected_record_in_layer_file() {
         install_items_in_store(
             &fs,
             store.as_ref(),
-            vec![Item::new(
-                ObjectKey::object(0),
-                AllocatorValue { refs: AllocationRefCount::Delta(100000) },
-            )],
+            vec![Item::new(ObjectKey::object(0), 0xffffffffu32)],
         )
         .await;
     }

@@ -58,10 +58,6 @@ impl Allocator for FakeAllocator {
         Ok(result)
     }
 
-    fn add_ref(&self, _transaction: &mut Transaction<'_>, _device_range: Range<u64>) {
-        unreachable!();
-    }
-
     async fn deallocate(
         &self,
         _transaction: &mut Transaction<'_>,

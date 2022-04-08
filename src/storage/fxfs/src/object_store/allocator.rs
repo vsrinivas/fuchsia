@@ -93,9 +93,6 @@ pub trait Allocator: ReservationOwner {
         device_range: Range<u64>,
     ) -> Result<(), Error>;
 
-    /// Adds a reference to the given device range which must already be allocated.
-    fn add_ref(&self, transaction: &mut Transaction<'_>, device_range: Range<u64>);
-
     /// Cast to super-trait.
     fn as_mutations(self: Arc<Self>) -> Arc<dyn Mutations>;
 
@@ -338,59 +335,16 @@ impl RangeKey for AllocatorKey {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Versioned)]
-pub enum AllocationRefCount {
-    // Tombstone variant indicating an extent is no longer allocated.
-    None,
-    // Used when we know there are no possible allocations below us in the stack.
-    // (e.g. on the first allocation of an extent.)
-    // This variant also tracks the owning ObjectStore for the extent.
-    Abs { count: u64, owner_object_id: u64 },
-    // Denotes addition or removal of references to an existing allocation.
-    Delta(i64),
-}
-
-impl AllocationRefCount {
-    /// Merges two reference counts (for the same range and owner).
-    pub fn merge(newer: &AllocationRefCount, older: &AllocationRefCount) -> Result<Self, Error> {
-        use AllocationRefCount::{Abs, Delta, None};
-        Ok(match (newer, older) {
-            (Abs { count, owner_object_id }, _) => {
-                Abs { count: *count, owner_object_id: *owner_object_id }
-            }
-            (Delta(x), Abs { count, owner_object_id }) => {
-                let count = (*count as i64 + *x).try_into()?;
-                if count == 0 {
-                    None
-                } else {
-                    Abs { count, owner_object_id: *owner_object_id }
-                }
-            }
-            (Delta(x), Delta(y)) => Delta(*x + *y),
-            (None, _) => None,
-            (x, None) => x.clone(),
-        })
-    }
-
-    pub fn is_abs(&self) -> bool {
-        matches!(self, AllocationRefCount::Abs { .. })
-    }
-}
-
 /// Allocations are "owned" by a single ObjectStore and are reference counted
 /// (for future snapshot/clone support).
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Versioned)]
-pub struct AllocatorValue {
-    /// Reference count for the allocated range.
-    /// (A zero reference count is treated as a 'tombstone', indicating that older
-    /// values in the LSM Tree for this range should be ignored).
-    pub refs: AllocationRefCount,
-}
-
-impl AllocatorValue {
-    pub fn merge(newer: &AllocatorValue, older: &AllocatorValue) -> Result<Self, Error> {
-        Ok(Self { refs: AllocationRefCount::merge(&newer.refs, &older.refs)? })
-    }
+pub enum AllocatorValue {
+    // Tombstone variant indicating an extent is no longer allocated.
+    None,
+    // Used when we know there are no possible allocations below us in the stack.
+    // This is currently all the time. We used to have a related Delta type but
+    // it has been removed due to correctness issues (https://fxbug.dev/97223).
+    Abs { count: u64, owner_object_id: u64 },
 }
 
 pub type AllocatorItem = Item<AllocatorKey, AllocatorValue>;
@@ -402,7 +356,7 @@ pub type AllocatorItem = Item<AllocatorKey, AllocatorValue>;
 pub async fn filter_tombstones(
     iter: BoxedLayerIterator<'_, AllocatorKey, AllocatorValue>,
 ) -> Result<BoxedLayerIterator<'_, AllocatorKey, AllocatorValue>, Error> {
-    Ok(Box::new(iter.filter(|i| i.value.refs != AllocationRefCount::None).await?))
+    Ok(Box::new(iter.filter(|i| *i.value != AllocatorValue::None).await?))
 }
 #[derive(Debug, Default, Clone, Deserialize, Serialize, Versioned)]
 pub struct AllocatorInfo {
@@ -745,7 +699,7 @@ impl Allocator for SimpleAllocator {
 
         let item = AllocatorItem::new(
             AllocatorKey { device_range: result.clone() },
-            AllocatorValue { refs: AllocationRefCount::Abs { count: 1, owner_object_id } },
+            AllocatorValue::Abs { count: 1, owner_object_id },
         );
         self.reserved_allocations.insert(item.clone()).await;
         assert!(transaction.add(self.object_id(), Mutation::allocation(item)).is_none());
@@ -777,21 +731,11 @@ impl Allocator for SimpleAllocator {
         }
         let item = AllocatorItem::new(
             AllocatorKey { device_range },
-            AllocatorValue { refs: AllocationRefCount::Abs { count: 1, owner_object_id } },
+            AllocatorValue::Abs { count: 1, owner_object_id },
         );
         self.reserved_allocations.insert(item.clone()).await;
         transaction.add(self.object_id(), Mutation::allocation(item));
         Ok(())
-    }
-
-    fn add_ref(&self, transaction: &mut Transaction<'_>, device_range: Range<u64>) {
-        transaction.add(
-            self.object_id(),
-            Mutation::allocation(AllocatorItem::new(
-                AllocatorKey { device_range },
-                AllocatorValue { refs: AllocationRefCount::Delta(1) },
-            )),
-        );
     }
 
     async fn deallocate(
@@ -824,35 +768,20 @@ impl Allocator for SimpleAllocator {
         .await?;
         let mut deallocated = 0;
         let mut mutation = None;
-        while let Some(ItemRef {
-            key: AllocatorKey { device_range, .. },
-            value: AllocatorValue { refs, .. },
-            ..
-        }) = iter.get()
-        {
+        while let Some(ItemRef { key: AllocatorKey { device_range, .. }, value, .. }) = iter.get() {
             if device_range.start > dealloc_range.start {
                 // We expect the entire range to be allocated.
                 bail!(anyhow!(FxfsError::Inconsistent)
                     .context("Attempt to deallocate unallocated range"));
             }
             let end = std::cmp::min(device_range.end, dealloc_range.end);
-            if let AllocationRefCount::Abs { count: 1, owner_object_id: store_object_id } = refs {
+            if let AllocatorValue::Abs { count: 1, owner_object_id: store_object_id } = value {
                 debug_assert_eq!(owner_object_id, *store_object_id);
-                // In this branch, we know that we're freeing data.
-                if matches!(
-                    mutation,
-                    Some(Mutation::Allocator(AllocatorMutation(AllocatorItem {
-                        value: AllocatorValue { refs: AllocationRefCount::Abs { .. } },
-                        ..
-                    })))
-                ) {
-                    transaction.add(self.object_id(), mutation.take().unwrap());
-                }
                 match &mut mutation {
                     None => {
                         mutation = Some(Mutation::allocation(Item::new(
                             AllocatorKey { device_range: dealloc_range.start..end },
-                            AllocatorValue { refs: AllocationRefCount::None },
+                            AllocatorValue::None,
                         )));
                     }
                     Some(Mutation::Allocator(AllocatorMutation(AllocatorItem { key, .. }))) => {
@@ -862,28 +791,7 @@ impl Allocator for SimpleAllocator {
                 }
                 deallocated += end - dealloc_range.start;
             } else {
-                // In this branch, we know that we're not freeing data.
-                if matches!(
-                    mutation,
-                    Some(Mutation::Allocator(AllocatorMutation(AllocatorItem {
-                        value: AllocatorValue { refs: AllocationRefCount::Delta(_) },
-                        ..
-                    })))
-                ) {
-                    transaction.add(self.object_id(), mutation.take().unwrap());
-                }
-                match &mut mutation {
-                    None => {
-                        mutation = Some(Mutation::allocation(Item::new(
-                            AllocatorKey { device_range: dealloc_range.start..end },
-                            AllocatorValue { refs: AllocationRefCount::Delta(-1) },
-                        )));
-                    }
-                    Some(Mutation::Allocator(AllocatorMutation(AllocatorItem { key, .. }))) => {
-                        key.device_range.end = end;
-                    }
-                    _ => unreachable!(),
-                }
+                panic!("Unexpected AllocatorValue variant: {:?}", value);
             }
             if end == dealloc_range.end {
                 break;
@@ -973,14 +881,14 @@ impl Allocator for SimpleAllocator {
         match mutation {
             Mutation::Allocator(AllocatorMutation(AllocatorItem {
                 key: AllocatorKey { device_range },
-                value: AllocatorValue { refs, .. },
+                value,
                 ..
             })) => {
                 if !device_range.valid() {
                     return Ok(false);
                 }
-                match refs {
-                    AllocationRefCount::Delta(x) if *x < 0 => {
+                match value {
+                    AllocatorValue::None => {
                         checksum_list.mark_deallocated(journal_offset, device_range.clone());
                     }
                     _ => {}
@@ -1014,12 +922,12 @@ impl Mutations for SimpleAllocator {
                 // allocations and merging into the tree.  These barriers are present whilst we use
                 // skip_list_layer's commit_and_wait method, rather than just commit.
                 let len = item.key.device_range.length().unwrap();
-                if item.value.refs == AllocationRefCount::None {
+                if item.value == AllocatorValue::None {
                     if context.mode.is_live() {
                         let mut item = item.clone();
                         // Note that the point of this reservation is to avoid premature reuse.
-                        // We use Delta(1) to ensure that the ref count doesn't decrement to 0.
-                        item.value.refs = AllocationRefCount::Delta(1);
+                        item.value =
+                            AllocatorValue::Abs { count: 1, owner_object_id: INVALID_OBJECT_ID };
                         self.reserved_allocations.insert(item).await;
                     }
 
@@ -1046,7 +954,7 @@ impl Mutations for SimpleAllocator {
                 }
                 let lower_bound = item.key.lower_bound_for_merge_into();
                 self.tree.merge_into(item.clone(), &lower_bound).await;
-                if let AllocationRefCount::Abs { count: 1, .. } = item.value.refs {
+                if let AllocatorValue::Abs { count: 1, .. } = item.value {
                     if context.mode.is_live() {
                         self.reserved_allocations.erase(&item.key).await;
                     }
@@ -1094,7 +1002,7 @@ impl Mutations for SimpleAllocator {
     fn drop_mutation(&self, mutation: Mutation, transaction: &Transaction<'_>) {
         match mutation {
             Mutation::Allocator(AllocatorMutation(item)) => {
-                if let AllocationRefCount::Abs { count: 1, .. } = item.value.refs {
+                if let AllocatorValue::Abs { count: 1, .. } = item.value {
                     let mut inner = self.inner.lock().unwrap();
                     let len = item.key.device_range.length().unwrap();
                     inner.uncommitted_allocated_bytes -= len;
@@ -1284,10 +1192,8 @@ mod tests {
             },
             object_store::{
                 allocator::{
-                    filter_tombstones,
-                    merge::merge,
-                    AllocationRefCount::{Abs, Delta},
-                    Allocator, AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator,
+                    filter_tombstones, merge::merge, Allocator, AllocatorKey, AllocatorValue,
+                    CoalescingIterator, SimpleAllocator,
                 },
                 filesystem::{Filesystem, Mutations},
                 testing::fake_filesystem::FakeFilesystem,
@@ -1311,11 +1217,11 @@ mod tests {
         let items = [
             Item::new(
                 AllocatorKey { device_range: 0..100 },
-                AllocatorValue { refs: Abs { count: 1, owner_object_id: 99 } },
+                AllocatorValue::Abs { count: 1, owner_object_id: 99 },
             ),
             Item::new(
                 AllocatorKey { device_range: 100..200 },
-                AllocatorValue { refs: Abs { count: 1, owner_object_id: 99 } },
+                AllocatorValue::Abs { count: 1, owner_object_id: 99 },
             ),
         ];
         skip_list.insert(items[1].clone()).await;
@@ -1329,7 +1235,7 @@ mod tests {
             (key, value),
             (
                 &AllocatorKey { device_range: 0..200 },
-                &AllocatorValue { refs: Abs { count: 1, owner_object_id: 99 } }
+                &AllocatorValue::Abs { count: 1, owner_object_id: 99 }
             )
         );
         iter.advance().await.expect("advance failed");
@@ -1342,21 +1248,14 @@ mod tests {
         lsm_tree
             .insert(Item::new(
                 AllocatorKey { device_range: 100..200 },
-                AllocatorValue { refs: Abs { count: 2, owner_object_id: 99 } },
-            ))
-            .await;
-        lsm_tree.seal().await;
-        lsm_tree
-            .insert(Item::new(
-                AllocatorKey { device_range: 100..200 },
-                AllocatorValue { refs: Delta(-1) },
+                AllocatorValue::Abs { count: 1, owner_object_id: 99 },
             ))
             .await;
         lsm_tree.seal().await;
         lsm_tree
             .insert(Item::new(
                 AllocatorKey { device_range: 0..100 },
-                AllocatorValue { refs: Abs { count: 1, owner_object_id: 99 } },
+                AllocatorValue::Abs { count: 1, owner_object_id: 99 },
             ))
             .await;
 
@@ -1372,7 +1271,7 @@ mod tests {
             (key, value),
             (
                 &AllocatorKey { device_range: 0..200 },
-                &AllocatorValue { refs: Abs { count: 1, owner_object_id: 99 } }
+                &AllocatorValue::Abs { count: 1, owner_object_id: 99 }
             )
         );
         iter.advance().await.expect("advance failed");
@@ -1385,21 +1284,14 @@ mod tests {
         lsm_tree
             .insert(Item::new(
                 AllocatorKey { device_range: 100..200 },
-                AllocatorValue { refs: Abs { count: 2, owner_object_id: 99 } },
-            ))
-            .await;
-        lsm_tree.seal().await;
-        lsm_tree
-            .insert(Item::new(
-                AllocatorKey { device_range: 100..200 },
-                AllocatorValue { refs: Delta(-1) },
+                AllocatorValue::Abs { count: 1, owner_object_id: 99 },
             ))
             .await;
         lsm_tree.seal().await;
         lsm_tree
             .insert(Item::new(
                 AllocatorKey { device_range: 0..100 },
-                AllocatorValue { refs: Abs { count: 1, owner_object_id: 98 } },
+                AllocatorValue::Abs { count: 1, owner_object_id: 98 },
             ))
             .await;
 
@@ -1415,7 +1307,7 @@ mod tests {
             (key, value),
             (
                 &AllocatorKey { device_range: 0..100 },
-                &AllocatorValue { refs: Abs { count: 1, owner_object_id: 98 } }
+                &AllocatorValue::Abs { count: 1, owner_object_id: 98 },
             )
         );
         iter.advance().await.expect("advance failed");
@@ -1424,7 +1316,7 @@ mod tests {
             (key, value),
             (
                 &AllocatorKey { device_range: 100..200 },
-                &AllocatorValue { refs: Abs { count: 1, owner_object_id: 99 } }
+                &AllocatorValue::Abs { count: 1, owner_object_id: 99 }
             )
         );
         iter.advance().await.expect("advance failed");

@@ -10,7 +10,7 @@ use crate::{
         },
         types::Item,
     },
-    object_store::allocator::{AllocationRefCount, AllocatorKey, AllocatorValue},
+    object_store::allocator::{AllocatorKey, AllocatorValue},
 };
 
 pub fn merge(
@@ -52,69 +52,65 @@ pub fn merge(
             return MergeResult::EmitLeft;
         }
     }
-    /*  Case 3: Overlap with same start
-     *    L:    |------------|
-     *    R:    |-----------------|
-     */
     if left.key().device_range.start == right.key().device_range.start {
-        if left.layer_index < right.layer_index {
-            // left is newer than right
-            let value = AllocatorValue::merge(left.value(), right.value()).unwrap();
-            return MergeResult::Other {
-                emit: None,
-                left: if value.refs == AllocationRefCount::Delta(0) {
-                    Discard
-                } else {
-                    Replace(Item {
-                        key: left.key().clone(),
-                        value,
-                        sequence: std::cmp::min(left.sequence(), right.sequence()),
-                    })
-                },
-                right: if left.key().device_range.end == right.key().device_range.end {
-                    Discard
-                } else {
-                    Replace(Item {
-                        key: AllocatorKey {
-                            device_range: left.key().device_range.end..right.key().device_range.end,
-                        },
-                        value: right.value().clone(),
-                        sequence: right.sequence(),
-                    })
-                },
-            };
-        } else if matches!(right.value().refs, AllocationRefCount::Delta(_)) {
-            // right is a newer Delta than left
-            let value = AllocatorValue::merge(right.value(), left.value()).unwrap();
-            return MergeResult::Other {
-                emit: None,
-                left: if value.refs == AllocationRefCount::Delta(0) {
-                    Discard
-                } else {
-                    Replace(Item {
-                        key: left.key().clone(),
-                        value,
-                        sequence: std::cmp::min(left.sequence(), right.sequence()),
-                    })
-                },
-                right: if left.key().device_range.end == right.key().device_range.end {
-                    Discard
-                } else {
-                    Replace(Item {
-                        key: AllocatorKey {
-                            device_range: left.key().device_range.end..right.key().device_range.end,
-                        },
-                        value: right.value().clone(),
-                        sequence: right.sequence(),
-                    })
-                },
-            };
+        /*  Case 3: Overlap with same start
+         *    L:    |------------|
+         *    R:    |-----------------|
+         */
+        if left.key().device_range.end < right.key().device_range.end {
+            // The newer value eclipses the older.
+            if left.layer_index < right.layer_index {
+                return MergeResult::Other {
+                    emit: None,
+                    left: Keep,
+                    right: if left.key().device_range.end == right.key().device_range.end {
+                        Discard
+                    } else {
+                        Replace(Item {
+                            key: AllocatorKey {
+                                device_range: left.key().device_range.end
+                                    ..right.key().device_range.end,
+                            },
+                            value: right.value().clone(),
+                            sequence: right.sequence(),
+                        })
+                    },
+                };
+            } else {
+                // right is a newer Abs/None than left
+                return MergeResult::Other { emit: None, left: Discard, right: Keep };
+            }
+
+        /*  Case 4: Overlap with same start
+         *    L:    |-----------------|
+         *    R:    |------------|
+         */
         } else {
-            // right is a newer Abs/None than left
-            return MergeResult::Other { emit: None, left: Discard, right: Keep };
+            // The newer value eclipses the older.
+            if right.layer_index < left.layer_index {
+                return MergeResult::Other {
+                    emit: None,
+                    left: if right.key().device_range.end == left.key().device_range.end {
+                        Discard
+                    } else {
+                        Replace(Item {
+                            key: AllocatorKey {
+                                device_range: right.key().device_range.end
+                                    ..left.key().device_range.end,
+                            },
+                            value: left.value().clone(),
+                            sequence: left.sequence(),
+                        })
+                    },
+                    right: Keep,
+                };
+            } else {
+                // right is a newer Abs/None than left
+                return MergeResult::Other { emit: None, left: Keep, right: Discard };
+            }
         }
     }
-    /*  Case 4: Split off left prefix
+    /*  Case 5: Split off left prefix
      *    L:    |-----...
      *    R:         |-----...
      */
@@ -148,10 +144,7 @@ mod tests {
             },
             object_handle::INVALID_OBJECT_ID,
             object_store::allocator::{
-                filter_tombstones,
-                merge::merge,
-                AllocationRefCount::{self, Abs, Delta},
-                AllocatorKey, AllocatorValue,
+                filter_tombstones, merge::merge, AllocatorKey, AllocatorValue, AllocatorValue::Abs,
             },
         },
         fuchsia_async as fasync,
@@ -160,22 +153,14 @@ mod tests {
 
     // Tests merge logic given (range, delta and object_id) for left, right and expected output.
     async fn test_merge(
-        left: (Range<u64>, AllocationRefCount),
-        right: (Range<u64>, AllocationRefCount),
-        expected: &[(Range<u64>, AllocationRefCount)],
+        left: (Range<u64>, AllocatorValue),
+        right: (Range<u64>, AllocatorValue),
+        expected: &[(Range<u64>, AllocatorValue)],
     ) {
         let tree = LSMTree::new(merge);
-        tree.insert(Item::new(
-            AllocatorKey { device_range: right.0 },
-            AllocatorValue { refs: right.1 },
-        ))
-        .await;
+        tree.insert(Item::new(AllocatorKey { device_range: right.0 }, right.1)).await;
         tree.seal().await;
-        tree.insert(Item::new(
-            AllocatorKey { device_range: left.0 },
-            AllocatorValue { refs: left.1 },
-        ))
-        .await;
+        tree.insert(Item::new(AllocatorKey { device_range: left.0 }, left.1)).await;
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter =
@@ -184,7 +169,7 @@ mod tests {
                 .expect("filter failed");
         for e in expected {
             let ItemRef { key, value, .. } = iter.get().expect("get failed");
-            assert_eq!((key, &value.refs), (&AllocatorKey { device_range: e.0.clone() }, &e.1));
+            assert_eq!((key, value), (&AllocatorKey { device_range: e.0.clone() }, &e.1));
             iter.advance().await.expect("advance failed");
         }
         assert!(iter.get().is_none());
@@ -216,18 +201,23 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_identical() {
         test_merge(
-            (0..100, Delta(1)),
+            (0..100, Abs { count: 2, owner_object_id: 1 }),
             (0..100, Abs { count: 1, owner_object_id: 1 }),
             &[(0..100, Abs { count: 2, owner_object_id: 1 })],
         )
         .await;
-        test_merge((0..100, Delta(-1)), (0..100, Abs { count: 1, owner_object_id: 1 }), &[]).await;
+        test_merge(
+            (0..100, AllocatorValue::None),
+            (0..100, Abs { count: 1, owner_object_id: 1 }),
+            &[],
+        )
+        .await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_left_smaller_than_right_with_same_start() {
         test_merge(
-            (0..100, Delta(1)),
+            (0..100, Abs { count: 2, owner_object_id: 1 }),
             (0..200, Abs { count: 1, owner_object_id: 1 }),
             &[
                 (0..100, Abs { count: 2, owner_object_id: 1 }),
@@ -236,7 +226,7 @@ mod tests {
         )
         .await;
         test_merge(
-            (0..100, Delta(-1)),
+            (0..100, AllocatorValue::None),
             (0..200, Abs { count: 1, owner_object_id: 1 }),
             &[(100..200, Abs { count: 1, owner_object_id: 1 })],
         )
@@ -246,12 +236,11 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_left_starts_before_right_with_overlap() {
         test_merge(
-            (0..200, Delta(1)),
+            (0..200, Abs { count: 2, owner_object_id: 1 }),
             (100..150, Abs { count: 1, owner_object_id: 1 }),
             &[
-                (0..100, Delta(1)),
-                (100..150, Abs { count: 2, owner_object_id: 1 }),
-                (150..200, Delta(1)),
+                (0..100, Abs { count: 2, owner_object_id: 1 }),
+                (100..200, Abs { count: 2, owner_object_id: 1 }),
             ],
         )
         .await;
@@ -262,46 +251,55 @@ mod tests {
         // Case 1
         test_merge(
             (0..100, Abs { count: 1, owner_object_id: 1 }),
-            (200..300, Delta(1)),
-            &[(0..100, Abs { count: 1, owner_object_id: 1 }), (200..300, Delta(1))],
+            (200..300, Abs { count: 1, owner_object_id: 2 }),
+            &[
+                (0..100, Abs { count: 1, owner_object_id: 1 }),
+                (200..300, Abs { count: 1, owner_object_id: 2 }),
+            ],
         )
         .await;
         // Case 2
         test_merge(
             (0..100, Abs { count: 1, owner_object_id: 1 }),
-            (100..200, Delta(1)),
-            &[(0..100, Abs { count: 1, owner_object_id: 1 }), (100..200, Delta(1))],
+            (100..200, Abs { count: 1, owner_object_id: 2 }),
+            &[
+                (0..100, Abs { count: 1, owner_object_id: 1 }),
+                (100..200, Abs { count: 1, owner_object_id: 2 }),
+            ],
         )
         .await;
         // Case 3
         test_merge(
             (0..100, Abs { count: 1, owner_object_id: 1 }),
-            (0..100, Delta(1)),
+            (0..100, Abs { count: 1, owner_object_id: 2 }),
             &[(0..100, Abs { count: 1, owner_object_id: 1 })],
         )
         .await;
         // Case 4
         test_merge(
             (0..100, Abs { count: 1, owner_object_id: 1 }),
-            (0..200, Delta(1)),
-            &[(0..100, Abs { count: 1, owner_object_id: 1 }), (100..200, Delta(1))],
+            (0..200, Abs { count: 1, owner_object_id: 2 }),
+            &[
+                (0..100, Abs { count: 1, owner_object_id: 1 }),
+                (100..200, Abs { count: 1, owner_object_id: 2 }),
+            ],
         )
         .await;
         // Case 5
         test_merge(
             (0..200, Abs { count: 1, owner_object_id: 1 }),
-            (0..100, Delta(1)),
+            (0..100, Abs { count: 1, owner_object_id: 2 }),
             &[(0..200, Abs { count: 1, owner_object_id: 1 })],
         )
         .await;
         // Case 6
         test_merge(
             (0..100, Abs { count: 1, owner_object_id: 1 }),
-            (50..150, Delta(1)),
+            (50..150, Abs { count: 1, owner_object_id: 2 }),
             &[
                 (0..50, Abs { count: 1, owner_object_id: 1 }),
                 (50..100, Abs { count: 1, owner_object_id: 1 }),
-                (100..150, Delta(1)),
+                (100..150, Abs { count: 1, owner_object_id: 2 }),
             ],
         )
         .await;
@@ -320,26 +318,27 @@ mod tests {
         let lower_bound = AllocatorKey::lower_bound_for_merge_into(&key);
         let tree = LSMTree::new(merge);
         tree.merge_into(
-            Item::new(key.clone(), AllocatorValue { refs: Abs { count: 1, owner_object_id: 1 } }),
+            Item::new(key.clone(), AllocatorValue::Abs { count: 1, owner_object_id: 1 }),
             &lower_bound,
         )
         .await;
         tree.seal().await;
-        tree.merge_into(Item::new(key.clone(), AllocatorValue { refs: Delta(1) }), &lower_bound)
-            .await;
-        tree.seal().await;
-        tree.merge_into(Item::new(key.clone(), AllocatorValue { refs: Delta(-2) }), &lower_bound)
-            .await;
         tree.merge_into(
-            Item::new(key.clone(), AllocatorValue { refs: Abs { count: 1, owner_object_id: 2 } }),
+            Item::new(key.clone(), AllocatorValue::Abs { count: 2, owner_object_id: 1 }),
             &lower_bound,
         )
         .await;
         tree.seal().await;
-        tree.merge_into(Item::new(key.clone(), AllocatorValue { refs: Delta(-1) }), &lower_bound)
-            .await;
+        tree.merge_into(Item::new(key.clone(), AllocatorValue::None), &lower_bound).await;
         tree.merge_into(
-            Item::new(key.clone(), AllocatorValue { refs: Abs { count: 1, owner_object_id: 1 } }),
+            Item::new(key.clone(), AllocatorValue::Abs { count: 1, owner_object_id: 2 }),
+            &lower_bound,
+        )
+        .await;
+        tree.seal().await;
+        tree.merge_into(Item::new(key.clone(), AllocatorValue::None), &lower_bound).await;
+        tree.merge_into(
+            Item::new(key.clone(), AllocatorValue::Abs { count: 1, owner_object_id: 1 }),
             &lower_bound,
         )
         .await;
@@ -347,10 +346,7 @@ mod tests {
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
         let ItemRef { key: k, value, .. } = iter.get().expect("get failed");
-        assert_eq!(
-            (k, value),
-            (&key, &AllocatorValue { refs: Abs { count: 1, owner_object_id: 1 } })
-        );
+        assert_eq!((k, value), (&key, &AllocatorValue::Abs { count: 1, owner_object_id: 1 }));
         iter.advance().await.expect("advance failed");
         assert!(iter.get().is_none());
     }
@@ -361,7 +357,7 @@ mod tests {
         // |1-1-1-1|
         tree.insert(Item {
             key: AllocatorKey { device_range: 0..100 },
-            value: AllocatorValue { refs: Abs { count: 1, owner_object_id: INVALID_OBJECT_ID } },
+            value: AllocatorValue::Abs { count: 1, owner_object_id: INVALID_OBJECT_ID },
             sequence: 1u64,
         })
         .await;
@@ -369,14 +365,14 @@ mod tests {
         // |1|0|1-1|
         tree.insert(Item {
             key: AllocatorKey { device_range: 25..50 },
-            value: AllocatorValue { refs: Delta(-1) },
+            value: AllocatorValue::None,
             sequence: 2u64,
         })
         .await;
         // |1|0|1|2|
         tree.insert(Item {
             key: AllocatorKey { device_range: 75..100 },
-            value: AllocatorValue { refs: Delta(1) },
+            value: AllocatorValue::Abs { count: 2, owner_object_id: INVALID_OBJECT_ID },
             sequence: 3u64,
         })
         .await;
@@ -389,23 +385,23 @@ mod tests {
         assert_eq!(iter.get().unwrap().key, &AllocatorKey { device_range: 0..25 });
         assert_eq!(
             iter.get().unwrap().value,
-            &AllocatorValue { refs: Abs { count: 1, owner_object_id: INVALID_OBJECT_ID } }
+            &AllocatorValue::Abs { count: 1, owner_object_id: INVALID_OBJECT_ID }
         );
         assert_eq!(iter.get().unwrap().sequence, 1u64);
         iter.advance().await.expect("advance failed");
         assert_eq!(iter.get().unwrap().key, &AllocatorKey { device_range: 50..75 });
         assert_eq!(
             iter.get().unwrap().value,
-            &AllocatorValue { refs: Abs { count: 1, owner_object_id: INVALID_OBJECT_ID } }
+            &AllocatorValue::Abs { count: 1, owner_object_id: INVALID_OBJECT_ID }
         );
         assert_eq!(iter.get().unwrap().sequence, 1u64);
         iter.advance().await.expect("advance failed");
         assert_eq!(iter.get().unwrap().key, &AllocatorKey { device_range: 75..100 });
         assert_eq!(
             iter.get().unwrap().value,
-            &AllocatorValue { refs: Abs { count: 2, owner_object_id: INVALID_OBJECT_ID } }
+            &AllocatorValue::Abs { count: 2, owner_object_id: INVALID_OBJECT_ID }
         );
-        assert_eq!(iter.get().unwrap().sequence, 1u64);
+        assert_eq!(iter.get().unwrap().sequence, 3u64);
         iter.advance().await.expect("advance failed");
         assert!(iter.get().is_none());
     }
