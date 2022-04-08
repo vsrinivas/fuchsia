@@ -18,7 +18,12 @@ use {
 };
 
 fn main() -> Result<(), anyhow::Error> {
+    #[cfg(feature = "gtest")]
     fuchsia_syslog::init_with_tags(&["gtest_runner"])?;
+
+    #[cfg(feature = "gunit")]
+    fuchsia_syslog::init_with_tags(&["gunit_runner"])?;
+
     fx_log_info!("started");
     let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
     // We will divide this directory up and pass to  tests as /test_result so that they can write

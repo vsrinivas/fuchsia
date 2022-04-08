@@ -4,6 +4,21 @@
 
 import("//build/components.gni")
 
+# We don't have gunit in-tree, so this main function will replace all gunit
+# flags with gtest flags and run the tests using gtest framework.
+source_set("gunit_main") {
+  testonly = true
+
+  sources = [ "gunit_main.cc" ]
+
+  deps = [
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:test_settings",
+  ]
+
+  public_deps = [ "//third_party/googletest:gtest" ]
+}
+
 executable("echo_gtest_client") {
   testonly = true
   sources = [ "echo_test.cc" ]
@@ -26,6 +41,30 @@ fuchsia_component("echo_gtest_client_component") {
   deps = [ ":echo_gtest_client" ]
 }
 
+# Generates two executables. One for gtest and other for gunit.
+template("executable_gtest_gunit") {
+  gtest_target = "gtest_${target_name}"
+  gunit_target = "gunit_${target_name}"
+
+  executable(gtest_target) {
+    forward_variables_from(invoker, "*")
+
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ "//src/lib/fxl/test:gtest_main" ]
+  }
+
+  executable(gunit_target) {
+    forward_variables_from(invoker, "*")
+
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ ":gunit_main" ]
+  }
+}
+
 executable("death_gtest") {
   testonly = true
   sources = [ "death_test.cc" ]
@@ -43,14 +82,11 @@ fuchsia_component("death_gtest_component") {
   deps = [ ":death_gtest" ]
 }
 
-executable("gtest_runner_no_tests") {
+executable_gtest_gunit("runner_no_tests") {
   testonly = true
   sources = [ "empty_test_file.cc" ]
 
-  deps = [
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-  ]
+  deps = [ "//src/lib/testing/loop_fixture" ]
 }
 
 fuchsia_component("empty_test_component") {
@@ -60,14 +96,11 @@ fuchsia_component("empty_test_component") {
   deps = [ ":gtest_runner_no_tests" ]
 }
 
-executable("gtest_runner_sample_tests") {
+executable_gtest_gunit("runner_sample_tests") {
   testonly = true
   sources = [ "sample_tests.cc" ]
 
-  deps = [
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-  ]
+  deps = [ "//src/lib/testing/loop_fixture" ]
 }
 
 fuchsia_component("gtest_runner_sample_tests_component") {
@@ -79,7 +112,14 @@ fuchsia_component("gtest_runner_sample_tests_component") {
 
 executable("gtest_runner_test_with_custom_args") {
   testonly = true
-  sources = [ "test_with_custom_args.cc" ]
+  sources = [ "gtest_with_custom_args.cc" ]
+
+  deps = [ "//src/lib/testing/loop_fixture" ]
+}
+
+executable("gunit_runner_test_with_custom_args") {
+  testonly = true
+  sources = [ "gunit_with_custom_args.cc" ]
 
   deps = [ "//src/lib/testing/loop_fixture" ]
 }
@@ -91,14 +131,11 @@ fuchsia_component("gtest_runner_test_with_custom_args_component") {
   deps = [ ":gtest_runner_test_with_custom_args" ]
 }
 
-executable("gtest_runner_test_with_environ") {
+executable_gtest_gunit("runner_test_with_environ") {
   testonly = true
   sources = [ "test_with_environ.cc" ]
 
-  deps = [
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-  ]
+  deps = [ "//src/lib/testing/loop_fixture" ]
 }
 
 fuchsia_component("gtest_runner_test_with_environ_component") {
@@ -108,23 +145,19 @@ fuchsia_component("gtest_runner_test_with_environ_component") {
   deps = [ ":gtest_runner_test_with_environ" ]
 }
 
-executable("huge_gtest_runner_example") {
-  output_name = "huge_gtest_runner_example"
+executable_gtest_gunit("huge_runner_example") {
   testonly = true
   sources = [ "huge_gtest.cc" ]
-
-  deps = [ "//src/lib/fxl/test:gtest_main" ]
 }
 
 fuchsia_component("huge_gtest_component") {
   testonly = true
   manifest = "meta/huge_gtest.cml"
   component_name = "huge_gtest"
-  deps = [ ":huge_gtest_runner_example" ]
+  deps = [ ":gtest_huge_runner_example" ]
 }
 
-executable("concurrency_test_driver_bin") {
-  output_name = "concurrency_test_driver_gtest"
+executable("concurrency_test_driver_gtest") {
   testonly = true
   sources = [ "concurrency_test_driver.cc" ]
 
@@ -143,19 +176,30 @@ fuchsia_component("concurrency_test_driver_component") {
   testonly = true
   manifest = "meta/concurrency-test-driver.cml"
   component_name = "concurrency-test-driver"
-  deps = [ ":concurrency_test_driver_bin" ]
+  deps = [ ":concurrency_test_driver_gtest" ]
 }
 
-group("all_bins") {
+group("gtest_all_bins") {
   testonly = true
   deps = [
     ":death_gtest",
     ":echo_gtest_client",
+    ":gtest_huge_runner_example",
     ":gtest_runner_no_tests",
     ":gtest_runner_sample_tests",
     ":gtest_runner_test_with_custom_args",
     ":gtest_runner_test_with_environ",
-    ":huge_gtest_runner_example",
+  ]
+}
+
+group("gunit_all_bins") {
+  testonly = true
+  deps = [
+    ":gunit_huge_runner_example",
+    ":gunit_runner_no_tests",
+    ":gunit_runner_sample_tests",
+    ":gunit_runner_test_with_custom_args",
+    ":gunit_runner_test_with_environ",
   ]
 }
 

@@ -88,6 +88,28 @@ In order to use this runner, add the following to your component manifest:
 
 By default GoogleTest test cases run serially (one test case at a time).
 
+#### GoogleTest (Gunit) runner {#gunit-runner}
+
+A runner for tests written in C/C++ using the GUnit framework.
+Use this for all tests written using the gUnit flavor of GoogleTest.
+
+Note: Gtest and Gunit testing framework differ in flag names, so we have a
+separate runner for gunit.
+
+Common GoogleTest features are supported, such as disabling tests, running
+only specified tests, running the same test multiple times, etc'.
+Standard output, standard error, and logs are captured from the test.
+
+In order to use this runner, add the following to your component manifest:
+
+```json5
+{
+    include: [ "//src/sys/test_runners/gunit/default.shard.cml" ]
+}
+```
+
+By default test cases run serially (one test case at a time).
+
 #### Rust runner {#rust-runner}
 
 A runner for tests written in the Rust programming language and following Rust
@@ -302,6 +324,35 @@ given glob patterns will be executed.
 - **--gtest_repeat** - See [Running test multiple times](#running_test_multiple_times).
 - **--gtest_output** - Emitting gtest json output is not supported.
 - **--gtest_list_tests** - Listing test cases is not supported.
+
+#### GoogleTest (Gunit) runner {#gunit-runner-custom-arg}
+
+Note the following known behavior change:
+
+**--gunit_break_on_failure**: As each test case is executed in a different process,
+this flag will not work.
+
+The following flags are restricted and the test fails if any are passed as
+fuchsia.test.Suite provides equivalent functionality that replaces them.
+
+- **--gunit_filter** - Instead use:
+
+```posix-terminal
+ fx test --test-filter=<glob_pattern> <test_url>
+```
+
+`--test-filter` may be specified multiple times. Tests that match any of the
+given glob patterns will be executed.
+
+- **--gunit_also_run_disabled_tests** - Instead use:
+
+```posix-terminal
+ fx test --also-run-disabled-tests <test_url>
+```
+
+- **--gunit_repeat** - See [Running test multiple times](#running_test_multiple_times).
+- **--gunit_output** - Emitting gtest json/xml output is not supported.
+- **--gunit_list_tests** - Listing test cases is not supported.
 
 #### Rust runner {#rust-runner-custom-arg}
 

@@ -257,13 +257,27 @@ const PREFIXES_TO_EXCLUDE: [&[u8]; 10] = [
 ];
 const SOCKET_BUFFER_SIZE: usize = 4096;
 
+#[cfg(feature = "gtest")]
+macro_rules! test_flag {
+    ($f: expr) => {
+        concat!("--gtest_", $f)
+    };
+}
+
+#[cfg(feature = "gunit")]
+macro_rules! test_flag {
+    ($f: expr) => {
+        concat!("--gunit_", $f)
+    };
+}
+
 lazy_static! {
     static ref RESTRICTED_FLAGS: Vec<&'static str> = vec![
-        "--gtest_filter",
-        "--gtest_output",
-        "--gtest_also_run_disabled_tests",
-        "--gtest_list_tests",
-        "--gtest_repeat"
+        test_flag!("filter"),
+        test_flag!("output"),
+        test_flag!("also_run_disabled_tests"),
+        test_flag!("list_tests"),
+        test_flag!("repeat")
     ];
 }
 
@@ -363,12 +377,12 @@ impl TestServer {
         let test_list_path = Path::new("/test_data").join(test_list_file);
 
         let mut args = vec![
-            format!("--gtest_filter={}", test),
-            format!("--gtest_output=json:{}", test_list_path.display()),
+            format!(test_flag!("filter={}"), test),
+            format!(test_flag!("output=json:{}"), test_list_path.display()),
         ];
 
         if run_options.include_disabled_tests.unwrap_or(false) {
-            args.push("--gtest_also_run_disabled_tests".to_owned());
+            args.push(test_flag!("also_run_disabled_tests").to_owned());
         }
 
         let (test_stdout, stdout_client) =
@@ -583,8 +597,8 @@ async fn get_tests(
     let test_list_path = Path::new("/test_data").join(test_list_file);
 
     let args = vec![
-        "--gtest_list_tests".to_owned(),
-        format!("--gtest_output=json:{}", test_list_path.display()),
+        test_flag!("list_tests").to_owned(),
+        format!(test_flag!("output=json:{}"), test_list_path.display()),
     ];
 
     // Load bearing to hold job guard.
@@ -718,6 +732,20 @@ mod tests {
         uuid::Uuid,
     };
 
+    #[cfg(feature = "gtest")]
+    macro_rules! test_bin_name {
+        ($f: expr) => {
+            concat!("bin/", "gtest_", $f)
+        };
+    }
+
+    #[cfg(feature = "gunit")]
+    macro_rules! test_bin_name {
+        ($f: expr) => {
+            concat!("bin/", "gunit_", $f)
+        };
+    }
+
     struct TestDataDir {
         dir_name: String,
     }
@@ -747,10 +775,10 @@ mod tests {
     #[test]
     fn validate_args_test() {
         let restricted_flags = vec![
-            "--gtest_filter",
-            "--gtest_filter=mytest",
-            "--gtest_output",
-            "--gtest_output=json",
+            test_flag!("filter"),
+            test_flag!("filter=mytest"),
+            test_flag!("output"),
+            test_flag!("output=json"),
         ];
 
         for flag in restricted_flags {
@@ -762,7 +790,7 @@ mod tests {
             }
         }
 
-        let allowed_flags = vec!["--gtest_anyotherflag", "--anyflag", "--mycustomflag"];
+        let allowed_flags = vec![test_flag!("anyotherflag"), "--anyflag", "--mycustomflag"];
 
         for flag in allowed_flags {
             let args = vec![flag.to_string()];
@@ -775,7 +803,7 @@ mod tests {
         test_component(
             "fuchsia-pkg://fuchsia.com/sample_test#test.cm",
             "test.cm",
-            "bin/gtest_runner_sample_tests",
+            test_bin_name!("runner_sample_tests"),
             vec![],
         )
         .await
@@ -857,7 +885,7 @@ mod tests {
         let component = test_component(
             "fuchsia-pkg://fuchsia.com/test_with_custom_args#test.cm",
             "test.cm",
-            "bin/gtest_runner_test_with_custom_args",
+            test_bin_name!("runner_test_with_custom_args"),
             vec!["--my_custom_arg".to_owned()],
         )
         .await?;
@@ -880,7 +908,7 @@ mod tests {
         let component = test_component(
             "fuchsia-pkg://fuchsia.com/sample_test#test.cm",
             "test.cm",
-            "bin/gtest_runner_no_tests",
+            test_bin_name!("runner_no_tests"),
             vec![],
         )
         .await?;
@@ -899,7 +927,7 @@ mod tests {
         let component = test_component(
             "fuchsia-pkg://fuchsia.com/huge_test#test.cm",
             "test.cm",
-            "bin/huge_gtest_runner_example",
+            test_bin_name!("huge_runner_example"),
             vec![],
         )
         .await?;
@@ -956,9 +984,8 @@ mod tests {
         collect_listener_event(run_listener).await.context("Failed to collect results")
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn run_multiple_tests() -> Result<(), Error> {
-        fuchsia_syslog::init_with_tags(&["gtest_runner_test"]).expect("cannot init logger");
         let events = run_tests(
             names_to_invocation(vec![
                 "SampleTest1.SimpleFail",
@@ -1005,14 +1032,12 @@ mod tests {
         Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn run_test_with_custom_arg() -> Result<(), Error> {
-        fuchsia_syslog::init_with_tags(&["gtest_runner_test"]).expect("cannot init logger");
-
         let component = test_component(
             "fuchsia-pkg://fuchsia.com/test_with_arg#test.cm",
             "test.cm",
-            "bin/gtest_runner_test_with_custom_args",
+            test_bin_name!("runner_test_with_custom_args"),
             vec!["--my_custom_arg".to_owned()],
         )
         .await?;
@@ -1043,9 +1068,8 @@ mod tests {
         Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn run_multiple_tests_parallel() -> Result<(), Error> {
-        fuchsia_syslog::init_with_tags(&["gtest_runner_test"]).expect("cannot init logger");
         let mut events = run_tests(
             names_to_invocation(vec![
                 "SampleTest1.SimpleFail",
@@ -1107,9 +1131,8 @@ mod tests {
         Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn run_disabled_tests_exclude() -> Result<(), Error> {
-        fuchsia_syslog::init_with_tags(&["gtest_runner_test"]).expect("cannot init logger");
         let events = run_tests(
             names_to_invocation(vec![
                 "SampleDisabled.DISABLED_TestPass",

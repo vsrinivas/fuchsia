@@ -26,6 +26,10 @@
             url: "fuchsia-pkg://fuchsia.com/gtest-runner#meta/gtest-runner.cm",
         },
         {
+            name: "gunit_runner",
+            url: "fuchsia-pkg://fuchsia.com/gunit-runner#meta/gunit-runner.cm",
+        },
+        {
             name: "legacy_test_runner",
             url: "fuchsia-pkg://fuchsia.com/legacy-test-runner#meta/legacy-test-runner.cm",
         },
@@ -221,6 +225,7 @@
                 "#elf_test_runner",
                 "#go_test_runner",
                 "#gtest_runner",
+                "#gunit_runner",
                 "#inspect_test_runner",
                 "#legacy_test_runner",
                 "#lib_loader_cache",
@@ -270,6 +275,7 @@
                 "#elf_test_runner",
                 "#go_test_runner",
                 "#gtest_runner",
+                "#gunit_runner",
                 "#netemul_test_runner",
                 "#rust_test_runner",
                 "#starnix_test_runners",
@@ -283,6 +289,7 @@
                 "#elf_test_runner",
                 "#go_test_runner",
                 "#gtest_runner",
+                "#gunit_runner",
                 "#rust_test_runner",
                 "#starnix_test_runners",
             ],
@@ -333,6 +340,7 @@
             from: "self",
             to: [
                 "#gtest_runner",
+                "#gunit_runner",
                 "#rust_test_runner",
                 "#starnix_test_runners",
                 "#system-tests",

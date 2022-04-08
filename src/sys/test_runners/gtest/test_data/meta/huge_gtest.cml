@@ -1,9 +1,9 @@
 {
     include: [
-        "syslog/client.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/huge_gtest_runner_example",
+        binary: "bin/gtest_huge_runner_example",
     },
 }

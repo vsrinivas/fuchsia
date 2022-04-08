@@ -18,6 +18,10 @@
                     from: "#gtest_runner",
                 },
                 {
+                    runner: "gunit_runner",
+                    from: "#gunit_runner",
+                },
+                {
                     runner: "netemul_test_runner",
                     from: "#netemul_test_runner",
                 },
@@ -97,6 +101,10 @@
                 {
                     runner: "gtest_runner",
                     from: "#gtest_runner",
+                },
+                {
+                    runner: "gunit_runner",
+                    from: "#gunit_runner",
                 },
                 {
                     runner: "netemul_test_runner",

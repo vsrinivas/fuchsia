@@ -1,0 +1,40 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+fuchsia_component("gunit-runner-component") {
+  testonly = true
+  manifest = "meta/gunit_runner.cml"
+  component_name = "gunit-runner"
+  deps = [ "//src/sys/test_runners/gtest:gunit_bin" ]
+}
+
+fuchsia_package("gunit-runner") {
+  testonly = true
+  deps = [ ":gunit-runner-component" ]
+}
+
+group("gunit") {
+  testonly = true
+  deps = [ ":gunit-runner" ]
+}
+
+fuchsia_unittest_package("gunit-runner-tests") {
+  deps = [
+    "//src/sys/test_runners/gtest:gunit_bin_test",
+    "//src/sys/test_runners/gtest/test_data:gunit_all_bins",
+    "//src/sys/test_runners/lib_loader_cache:lib_loader_runner_cache_cmp",
+  ]
+  manifest = "meta/gunit_runner_bin_test.cml"
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":gunit-runner-tests",
+    "tests",
+  ]
+}
