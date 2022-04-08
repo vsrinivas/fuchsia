@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fidl/cpp/internal/natural_client_messenger.h>
-#include <lib/fidl/cpp/unified_messaging.h>
 #include <lib/fidl/llcpp/client_base.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/message.h>
@@ -12,8 +10,6 @@
 #include <array>
 
 #include <zxtest/zxtest.h>
-
-#include "test_messages.h"
 
 namespace {
 
@@ -23,12 +19,40 @@ class TestProtocol {
   TestProtocol() = delete;
 };
 
+constexpr uint64_t kTestOrdinal = 0x1234567812345678;
+
+// |GoodMessage| is a helper to create a valid FIDL transactional message.
+class GoodMessage {
+ public:
+  GoodMessage() : message_(MakeMessage(&content_)) {
+    fidl_init_txn_header(&content_, 0, kTestOrdinal);
+  }
+
+  fidl::OutgoingMessage& message() { return message_; }
+
+ private:
+  static fidl::OutgoingMessage MakeMessage(fidl_message_header_t* content) {
+    fidl_outgoing_msg_t c_msg = {
+        .type = FIDL_OUTGOING_MSG_TYPE_BYTE,
+        .byte =
+            {
+                .bytes = reinterpret_cast<uint8_t*>(content),
+                .num_bytes = sizeof(content_),
+            },
+    };
+    return fidl::OutgoingMessage::FromEncodedCMessage(&c_msg);
+  }
+
+  FIDL_ALIGNDECL fidl_message_header_t content_ = {};
+  fidl::OutgoingMessage message_;
+};
+
 }  // namespace
 
 namespace fidl {
 
 template <>
-class AsyncEventHandler<TestProtocol> : public fidl::internal::AsyncEventHandler {};
+class WireAsyncEventHandler<TestProtocol> : public fidl::internal::AsyncEventHandler {};
 
 }  // namespace fidl
 
@@ -50,9 +74,10 @@ class FakeClientImpl {
   fidl::ServerEnd<TestProtocol>& server_end() { return server_end_; }
 
   fidl::IncomingMessage ReadFromServer() {
-    return fidl::MessageRead(server_end_.channel(),
-                             fidl::BufferSpan(read_buffer_.data(), read_buffer_.size()), nullptr,
-                             nullptr, 0);
+    return fidl::MessageRead(
+        server_end_.channel(),
+        fidl::BufferSpan(read_buffer_.data(), static_cast<uint32_t>(read_buffer_.size())), nullptr,
+        nullptr, 0);
   }
 
  private:
@@ -62,7 +87,7 @@ class FakeClientImpl {
 };
 
 class FakeWireEventDispatcher
-    : public fidl::internal::IncomingEventDispatcher<fidl::AsyncEventHandler<TestProtocol>> {
+    : public fidl::internal::IncomingEventDispatcher<fidl::WireAsyncEventHandler<TestProtocol>> {
  public:
   FakeWireEventDispatcher() : IncomingEventDispatcher(nullptr) {}
 
@@ -73,8 +98,6 @@ class FakeWireEventDispatcher
     ZX_PANIC("Never used in this test");
   }
 };
-
-constexpr uint64_t kTestOrdinal = 0x1234567812345678;
 
 // A response context for recording errors and cancellation.
 class MockResponseContext : public fidl::internal::ResponseContext {
@@ -109,9 +132,9 @@ class MockResponseContext : public fidl::internal::ResponseContext {
   cpp17::optional<fidl::Status> last_error_ = cpp17::nullopt;
 };
 
-class NaturalClientMessengerTest : public zxtest::Test {
+class ClientBaseTest : public zxtest::Test {
  public:
-  NaturalClientMessengerTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {
+  ClientBaseTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {
     zx::status endpoints = fidl::CreateEndpoints<TestProtocol>();
     ZX_ASSERT(endpoints.is_ok());
 
@@ -123,30 +146,28 @@ class NaturalClientMessengerTest : public zxtest::Test {
                      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromDispatcherThread);
 
     impl_ = std::make_unique<FakeClientImpl>(&controller_.get(), std::move(endpoints->server));
-    messenger_.emplace(fidl::internal::NaturalClientMessenger{&controller_.get()});
   }
 
  protected:
   async::Loop& loop() { return loop_; }
   FakeClientImpl* impl() { return impl_.get(); }
   fidl::internal::ClientController& controller() { return controller_; }
-  fidl::internal::NaturalClientMessenger& messenger() { return messenger_.value(); }
+  fidl::internal::ClientBase& client_base() { return controller_.get(); }
   MockResponseContext& context() { return context_; }
 
  private:
   async::Loop loop_;
   fidl::internal::ClientController controller_;
   std::unique_ptr<FakeClientImpl> impl_;
-  std::optional<fidl::internal::NaturalClientMessenger> messenger_;
   MockResponseContext context_;
 };
 
-TEST_F(NaturalClientMessengerTest, TwoWay) {
+TEST_F(ClientBaseTest, TwoWay) {
   GoodMessage good;
 
   EXPECT_EQ(0, impl()->GetTransactionCount());
   EXPECT_EQ(0, context().num_errors());
-  messenger().TwoWay(good.message(), &context());
+  client_base().SendTwoWay(good.message(), &context());
   loop().RunUntilIdle();
   EXPECT_EQ(1, impl()->GetTransactionCount());
   EXPECT_FALSE(context().canceled());
@@ -160,7 +181,7 @@ TEST_F(NaturalClientMessengerTest, TwoWay) {
   impl()->ForgetAsyncTxn(&context());
 }
 
-TEST_F(NaturalClientMessengerTest, TwoWayUnbound) {
+TEST_F(ClientBaseTest, TwoWayUnbound) {
   GoodMessage good;
 
   controller().Unbind();
@@ -172,7 +193,7 @@ TEST_F(NaturalClientMessengerTest, TwoWayUnbound) {
   EXPECT_EQ(0, impl()->GetTransactionCount());
   EXPECT_FALSE(context().canceled());
   EXPECT_EQ(0, context().num_errors());
-  messenger().TwoWay(good.message(), &context());
+  client_base().SendTwoWay(good.message(), &context());
   loop().RunUntilIdle();
   EXPECT_EQ(0, impl()->GetTransactionCount());
   EXPECT_TRUE(context().canceled());
@@ -180,11 +201,11 @@ TEST_F(NaturalClientMessengerTest, TwoWayUnbound) {
   EXPECT_FALSE(context().last_error().has_value());
 }
 
-TEST_F(NaturalClientMessengerTest, OneWay) {
+TEST_F(ClientBaseTest, OneWay) {
   GoodMessage good;
 
   EXPECT_EQ(0, impl()->GetTransactionCount());
-  fidl::Status result = messenger().OneWay(good.message());
+  fidl::Status result = client_base().SendOneWay(good.message());
   loop().RunUntilIdle();
   EXPECT_OK(result.status());
   EXPECT_EQ(0, impl()->GetTransactionCount());
@@ -195,7 +216,7 @@ TEST_F(NaturalClientMessengerTest, OneWay) {
   EXPECT_EQ(0, incoming.header()->txid);
 }
 
-TEST_F(NaturalClientMessengerTest, OneWayUnbound) {
+TEST_F(ClientBaseTest, OneWayUnbound) {
   GoodMessage good;
 
   controller().Unbind();
@@ -205,7 +226,7 @@ TEST_F(NaturalClientMessengerTest, OneWayUnbound) {
   EXPECT_STATUS(ZX_ERR_PEER_CLOSED, incoming.status());
 
   EXPECT_EQ(0, impl()->GetTransactionCount());
-  fidl::Status result = messenger().OneWay(good.message());
+  fidl::Status result = client_base().SendOneWay(good.message());
 
   loop().RunUntilIdle();
   EXPECT_EQ(ZX_ERR_CANCELED, result.status());

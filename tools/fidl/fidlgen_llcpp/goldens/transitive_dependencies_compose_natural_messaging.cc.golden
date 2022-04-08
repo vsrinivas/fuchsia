@@ -17,7 +17,7 @@ fidl::internal::NaturalClientImpl<
       ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal};
   return ::fidl::internal::NaturalThenable<
       ::test_transitivedependenciescompose::Top::GetFoo>(
-      messenger().client_base(), {}, std::move(_encoder),
+      &client_base(), {}, std::move(_encoder),
       [](::fidl::internal::ThenableBase* base,
          ::fidl::internal::NaturalMessageEncoder& encoder,
          ::fidl::internal::ResponseContext* response_context) {
@@ -49,7 +49,6 @@ void fidl::internal::NaturalCompleterBase<
     ::test_transitivedependenciescompose::Top::GetFoo>::
     Reply(::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo>&&
               response) {
-  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal};
@@ -57,8 +56,8 @@ void fidl::internal::NaturalCompleterBase<
       ::fidl::internal::NaturalMessageConverter<
           ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo>>::
           IntoDomainObject(std::move(response)));
-  _messenger.SendReply(_encoder.GetMessage(),
-                       ::fidl::internal::OutgoingTransportContext{});
+  ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
+  SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
 #ifdef __Fuchsia__

@@ -20,7 +20,8 @@ namespace test_placementofattributes {
           ::test_placementofattributes::ExampleProtocol::Method>>::
           IntoDomainObject(std::move(request)));
 
-  ::fidl::Status status = messenger().OneWay(_encoder.GetMessage());
+  ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
+  ::fidl::Status status = client_base().SendOneWay(_encoded_message);
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_placementofattributes {

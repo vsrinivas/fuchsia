@@ -6,7 +6,6 @@
 #define LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_NATURAL_MESSAGING_H_
 
 #include <lib/fdf/cpp/arena.h>
-#include <lib/fidl/cpp/internal/natural_server_messenger.h>
 #include <lib/fidl/cpp/internal/thenable.h>
 #include <lib/fidl/llcpp/internal/server_details.h>
 #include <lib/fidl/llcpp/message.h>

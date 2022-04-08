@@ -156,7 +156,7 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
       {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request)));
   {{- end }}
   return {{ .NaturalThenable }}(
-      messenger().client_base(), {}, std::move(_encoder),
+      &client_base(), {}, std::move(_encoder),
       [] (
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -180,7 +180,8 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
   _encoder.EncodeBody(
       {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request)));
   {{ end }}
-  ::fidl::Status status = messenger().OneWay(_encoder.GetMessage());
+  ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
+  ::fidl::Status status = client_base().SendOneWay(_encoded_message);
   return ::fidl::internal::ToFitxResult(status);
 }
 {{ end }}

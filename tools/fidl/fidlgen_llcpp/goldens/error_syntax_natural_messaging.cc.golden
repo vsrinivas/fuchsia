@@ -29,7 +29,7 @@ fidl::internal::NaturalClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax>::
               ComposedCallWhichMayFail>>::IntoDomainObject(std::move(request)));
   return ::fidl::internal::NaturalThenable<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>(
-      messenger().client_base(), {}, std::move(_encoder),
+      &client_base(), {}, std::move(_encoder),
       [](::fidl::internal::ThenableBase* base,
          ::fidl::internal::NaturalMessageEncoder& encoder,
          ::fidl::internal::ResponseContext* response_context) {
@@ -54,7 +54,7 @@ fidl::internal::NaturalClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax>::
           IntoDomainObject(std::move(request)));
   return ::fidl::internal::NaturalThenable<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(
-      messenger().client_base(), {}, std::move(_encoder),
+      &client_base(), {}, std::move(_encoder),
       [](::fidl::internal::ThenableBase* base,
          ::fidl::internal::NaturalMessageEncoder& encoder,
          ::fidl::internal::ResponseContext* response_context) {
@@ -86,7 +86,6 @@ void fidl::internal::NaturalCompleterBase<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::
     Reply(::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::
                                ComposedCallWhichMayFail>&& response) {
-  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_errorsyntax::
@@ -96,8 +95,8 @@ void fidl::internal::NaturalCompleterBase<
           ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::
                                ComposedCallWhichMayFail>>::
           IntoDomainObject(std::move(response)));
-  _messenger.SendReply(_encoder.GetMessage(),
-                       ::fidl::internal::OutgoingTransportContext{});
+  ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
+  SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
 void fidl::internal::NaturalCompleterBase<
@@ -105,7 +104,6 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::fidl::Response<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&&
               response) {
-  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
@@ -113,8 +111,8 @@ void fidl::internal::NaturalCompleterBase<
       ::fidl::internal::NaturalMessageConverter<::fidl::Response<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>::
           IntoDomainObject(std::move(response)));
-  _messenger.SendReply(_encoder.GetMessage(),
-                       ::fidl::internal::OutgoingTransportContext{});
+  ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
+  SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
 #ifdef __Fuchsia__

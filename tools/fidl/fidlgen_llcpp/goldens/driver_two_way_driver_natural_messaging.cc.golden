@@ -14,7 +14,7 @@ fidl::internal::NaturalClientImpl<::test_drivertwoway::TwoWay>::Add(
   auto _arena = fdf::Arena::Create(0, "");
   if (!_arena.is_ok()) {
     return ::fidl::internal::NaturalThenable<::test_drivertwoway::TwoWay::Add>(
-        messenger().client_base(), {}, std::move(_encoder),
+        &client_base(), {}, std::move(_encoder),
         [status = _arena.status_value()](
             ::fidl::internal::ThenableBase* base,
             ::fidl::internal::NaturalMessageEncoder&,
@@ -34,7 +34,7 @@ fidl::internal::NaturalClientImpl<::test_drivertwoway::TwoWay>::Add(
                       ::fidl::Request<::test_drivertwoway::TwoWay::Add>>::
                           IntoDomainObject(std::move(request)));
   return ::fidl::internal::NaturalThenable<::test_drivertwoway::TwoWay::Add>(
-      messenger().client_base(), std::move(_options), std::move(_encoder),
+      &client_base(), std::move(_options), std::move(_encoder),
       [arena = std::move(*_arena)](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -61,16 +61,15 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 
 void fidl::internal::NaturalCompleterBase<::test_drivertwoway::TwoWay::Add>::
     Reply(::fidl::Response<::test_drivertwoway::TwoWay::Add>&& response) {
-  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::DriverTransport::VTable,
       ::test_drivertwoway::kTwoWay_Add_Ordinal};
 
   auto _arena = fdf::Arena::Create(0, "");
   if (!_arena.is_ok()) {
-    _messenger.SendReply(::fidl::OutgoingMessage(::fidl::Status::TransportError(
-                             _arena.status_value())),
-                         {});
+    ::fidl::OutgoingMessage _failure{
+        ::fidl::Status::TransportError(_arena.status_value())};
+    SendReply(&_failure, {});
     return;
   }
 
@@ -81,8 +80,9 @@ void fidl::internal::NaturalCompleterBase<::test_drivertwoway::TwoWay::Add>::
                       ::fidl::Response<::test_drivertwoway::TwoWay::Add>>::
                           IntoDomainObject(std::move(response)));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
-  _messenger.SendReply(::fdf::internal::MoveToArena(_msg, *_arena),
-                       std::move(_context));
+  ::fidl::OutgoingMessage _arena_msg =
+      ::fdf::internal::MoveToArena(_msg, *_arena);
+  SendReply(&_arena_msg, std::move(_context));
 }
 #ifdef __Fuchsia__
 

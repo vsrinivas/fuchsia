@@ -103,7 +103,7 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
   auto _arena = fdf::Arena::Create(0, "");
   if (!_arena.is_ok()) {
     return {{ .NaturalThenable }}(
-        messenger().client_base(), {}, std::move(_encoder),
+        &client_base(), {}, std::move(_encoder),
         [status = _arena.status_value()] (
             ::fidl::internal::ThenableBase* base,
             ::fidl::internal::NaturalMessageEncoder&,
@@ -124,7 +124,7 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
       {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request)));
   {{- end }}
   return {{ .NaturalThenable }}(
-      messenger().client_base(), std::move(_options), std::move(_encoder),
+      &client_base(), std::move(_options), std::move(_encoder),
       [arena = std::move(*_arena)] (
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -161,9 +161,8 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
       {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request)));
   {{- end }}
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
-  ::fidl::Status status = messenger().OneWay(
-      ::fdf::internal::MoveToArena(_msg, *_arena),
-      std::move(_options));
+  ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, *_arena);
+  ::fidl::Status status = client_base().SendOneWay(_arena_msg, std::move(_options));
   return ::fidl::internal::ToFitxResult(status);
 }
 {{ end }}

@@ -72,7 +72,8 @@ class NaturalClientImpl<TestProtocol> : public NaturalClientBase {
 
   void SomeNaturalMethod() const {
     GoodMessage msg;
-    fidl::Status result = messenger().OneWay(msg.message());
+    fidl::OutgoingMessage outgoing = msg.message();
+    fidl::Status result = client_base().SendOneWay(outgoing);
     EXPECT_OK(result.status());
   }
 };
