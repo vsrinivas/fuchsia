@@ -93,7 +93,7 @@ pub fn sys_gettid(current_task: &CurrentTask) -> Result<pid_t, Errno> {
 }
 
 pub fn sys_getppid(current_task: &CurrentTask) -> Result<pid_t, Errno> {
-    Ok(current_task.parent)
+    Ok(*current_task.thread_group.parent.read())
 }
 
 fn get_task_or_current(current_task: &CurrentTask, pid: pid_t) -> Result<Arc<Task>, Errno> {

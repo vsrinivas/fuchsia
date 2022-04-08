@@ -5,7 +5,6 @@
 use fuchsia_zircon as zx;
 use parking_lot::{Mutex, RwLock};
 use std::cmp;
-use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::ffi::CString;
 use std::fmt;
@@ -76,13 +75,6 @@ pub struct Task {
     /// The thread group to which this task belongs.
     pub thread_group: Arc<ThreadGroup>,
 
-    /// The parent task, if any.
-    pub parent: pid_t,
-
-    /// The children of this task.
-    pub children: RwLock<HashSet<pid_t>>,
-
-    // TODO: The children of this task.
     /// A handle to the underlying Zircon thread object.
     pub thread: zx::Thread,
 
@@ -113,44 +105,6 @@ pub struct Task {
 
     /// The exit code that this task exited with.
     pub exit_code: Mutex<Option<i32>>,
-
-    /// Child tasks that have exited, but not yet been waited for.
-    pub zombie_children: Mutex<Vec<ZombieTask>>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct ZombieTask {
-    pub id: pid_t,
-    pub uid: uid_t,
-    pub parent: pid_t,
-    pub exit_code: i32,
-    // TODO: Do we need exit_signal?
-}
-
-impl ZombieTask {
-    /// Converts the given exit code to a status code suitable for returning from wait syscalls.
-    pub fn wait_status(&self) -> i32 {
-        let exit_code = self.exit_code;
-        (exit_code & 0xff) << 8
-    }
-
-    pub fn as_signal_info(&self) -> SignalInfo {
-        SignalInfo::new(
-            SIGCHLD,
-            CLD_EXITED,
-            SignalDetail::SigChld { pid: self.id, uid: self.uid, status: self.wait_status() },
-        )
-    }
-}
-
-/// A selector that can match a task. Works as a representation of the pid argument to syscalls
-/// like wait and kill.
-#[derive(Clone, Copy)]
-pub enum TaskSelector {
-    /// Matches any process at all.
-    Any,
-    /// Matches only the process with the specified pid
-    Pid(pid_t),
 }
 
 impl Task {
@@ -165,7 +119,6 @@ impl Task {
         comm: CString,
         argv: Vec<CString>,
         thread_group: Arc<ThreadGroup>,
-        parent: pid_t,
         thread: zx::Thread,
         files: Arc<FdTable>,
         mm: Arc<MemoryManager>,
@@ -179,8 +132,6 @@ impl Task {
             command: RwLock::new(comm),
             argv: RwLock::new(argv),
             thread_group,
-            parent,
-            children: RwLock::new(HashSet::new()),
             thread,
             files,
             mm,
@@ -191,7 +142,6 @@ impl Task {
             signals: Default::default(),
             exit_signal,
             exit_code: Mutex::new(None),
-            zombie_children: Mutex::new(vec![]),
         })
     }
 
@@ -212,6 +162,7 @@ impl Task {
 
         let (thread, thread_group, mm) = create_zircon_process(
             kernel,
+            None,
             pid,
             process_group,
             SignalActions::default(),
@@ -223,7 +174,6 @@ impl Task {
             initial_name,
             Vec::new(),
             thread_group,
-            1,
             thread,
             FdTable::new(),
             mm,
@@ -311,6 +261,7 @@ impl Task {
             };
             create_zircon_process(
                 kernel,
+                Some(&self.thread_group),
                 pid,
                 self.thread_group.process_group.read().clone(),
                 signal_actions,
@@ -318,14 +269,11 @@ impl Task {
             )?
         };
 
-        let parent_pid = if clone_thread { self.parent } else { self.id };
-
         let child = Self::new(
             pid,
             comm.clone(),
             self.argv.read().clone(),
             thread_group,
-            parent_pid,
             thread,
             files,
             mm,
@@ -356,8 +304,6 @@ impl Task {
             child.mm.write_object(user_child_tid, &child.id)?;
         }
 
-        self.children.write().insert(child.id);
-
         Ok(child)
     }
 
@@ -384,9 +330,6 @@ impl Task {
     fn destroy(self: &Arc<Self>) {
         let _ignored = self.clear_child_tid_if_needed();
         self.thread_group.remove(self);
-        if let Some(parent) = self.get_task(self.parent) {
-            parent.remove_child(self.id);
-        }
     }
 
     pub fn get_task(&self, pid: pid_t) -> Option<Arc<Task>> {
@@ -436,69 +379,6 @@ impl Task {
         }
 
         false
-    }
-
-    pub fn as_zombie(&self) -> ZombieTask {
-        ZombieTask {
-            id: self.id,
-            uid: self.creds.read().uid,
-            parent: self.parent,
-            exit_code: self.exit_code.lock().unwrap_or(-1),
-            //.expect("a process should not be exiting without an exit code"),
-            // TODO(tbodt): This expect condition can currently trip if the process crashes.
-            // There needs to be an exit code of some kind in this case too.
-        }
-    }
-
-    /// Removes and returns any zombie task with the specified `pid`, if such a zombie exists.
-    pub fn get_zombie_child(
-        &self,
-        selector: TaskSelector,
-        should_remove_zombie: bool,
-    ) -> Option<ZombieTask> {
-        let mut zombie_children = self.zombie_children.lock();
-        match selector {
-            TaskSelector::Any => {
-                if zombie_children.len() > 0 {
-                    Some(zombie_children.len() - 1)
-                } else {
-                    None
-                }
-            }
-            TaskSelector::Pid(pid) => zombie_children.iter().position(|zombie| zombie.id == pid),
-        }
-        .map(|pos| {
-            if should_remove_zombie {
-                zombie_children.remove(pos)
-            } else {
-                zombie_children[pos].clone()
-            }
-        })
-    }
-
-    /// Checks whether the task has a child task identified by `selector`. A task is a child
-    /// if it was created by one of the threads in the thread group but does not belong to the
-    /// thread group (different process).
-    pub fn has_child(&self, selector: TaskSelector) -> bool {
-        let children = self.children.read();
-        let thread_group_tasks = self.thread_group.tasks.read();
-        match selector {
-            TaskSelector::Any => {
-                for child_tid in &*children {
-                    if !thread_group_tasks.contains(&child_tid) {
-                        return true;
-                    }
-                }
-                return false;
-            }
-            TaskSelector::Pid(pid) => {
-                return children.get(&pid).is_some() && !thread_group_tasks.contains(&pid);
-            }
-        }
-    }
-
-    fn remove_child(&self, pid: pid_t) {
-        self.children.write().remove(&pid);
     }
 }
 
@@ -925,7 +805,7 @@ mod test {
         *thread.exit_code.lock() = Some(0);
         assert_eq!(current_task.get_pid(), thread.get_pid());
         assert_ne!(current_task.get_tid(), thread.get_tid());
-        assert_eq!(current_task.parent, thread.parent);
+        assert_eq!(current_task.thread_group.leader, thread.thread_group.leader);
 
         let child_task = current_task
             .clone_task(
@@ -938,7 +818,7 @@ mod test {
         *child_task.exit_code.lock() = Some(0);
         assert_ne!(current_task.get_pid(), child_task.get_pid());
         assert_ne!(current_task.get_tid(), child_task.get_tid());
-        assert_eq!(current_task.get_pid(), child_task.parent);
+        assert_eq!(current_task.get_pid(), *child_task.thread_group.parent.read());
     }
 
     #[::fuchsia::test]

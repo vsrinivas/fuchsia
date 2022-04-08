@@ -212,6 +212,7 @@ pub fn create_zircon_thread(
 /// memory manager to use for the returned thread.
 pub fn create_zircon_process(
     kernel: &Arc<Kernel>,
+    parent: Option<&ThreadGroup>,
     pid: pid_t,
     process_group: Arc<ProcessGroup>,
     signal_actions: Arc<SignalActions>,
@@ -227,8 +228,14 @@ pub fn create_zircon_process(
     let mm =
         Arc::new(MemoryManager::new(root_vmar).map_err(|status| from_status_like_fdio!(status))?);
 
-    let thread_group =
-        Arc::new(ThreadGroup::new(kernel.clone(), process, pid, process_group, signal_actions));
+    let thread_group = Arc::new(ThreadGroup::new(
+        kernel.clone(),
+        process,
+        parent,
+        pid,
+        process_group,
+        signal_actions,
+    ));
 
     Ok((thread, thread_group, mm))
 }

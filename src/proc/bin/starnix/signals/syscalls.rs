@@ -205,7 +205,10 @@ pub fn sys_kill(
         pid if pid > 0 => {
             // "If pid is positive, then signal sig is sent to the process with
             // the ID specified by pid."
-            let target = current_task.get_task(pid).ok_or(errno!(ESRCH))?;
+            let target_thread_group =
+                &current_task.get_task(pid).ok_or(errno!(ESRCH))?.thread_group;
+            let target =
+                get_signal_target(target_thread_group, &unchecked_signal).ok_or(errno!(ESRCH))?;
             if !current_task.can_signal(&target, &unchecked_signal) {
                 return error!(EPERM);
             }
@@ -394,9 +397,9 @@ where
 /// - `options`: The options passed to the wait syscall.
 fn wait_on_pid(
     current_task: &CurrentTask,
-    selector: TaskSelector,
+    selector: ProcessSelector,
     options: u32,
-) -> Result<Option<ZombieTask>, Errno> {
+) -> Result<Option<ZombieProcess>, Errno> {
     if options & !(WNOHANG | WNOWAIT) != 0 {
         not_implemented!("unsupported wait options: {:#x}", options);
         if options & !(WUNTRACED | WEXITED | WCONTINUED | WNOHANG | WNOWAIT) != 0 {
@@ -408,11 +411,13 @@ fn wait_on_pid(
     let mut wait_result = Ok(());
     loop {
         let mut wait_queue = current_task.thread_group.child_exit_waiters.lock();
-        if let Some(zombie) = current_task.get_zombie_child(selector, options & WNOWAIT == 0) {
+        if let Some(zombie) =
+            current_task.thread_group.get_zombie_child(selector, options & WNOWAIT == 0)
+        {
             return Ok(Some(zombie));
         }
 
-        if !current_task.has_child(selector) {
+        if !current_task.thread_group.has_child(selector) {
             return error!(ECHILD);
         }
 
@@ -420,8 +425,8 @@ fn wait_on_pid(
             return Ok(None);
         }
         // Return any error encountered during previous iteration's wait. This is done after the
-        // zombie task has been dequeued to make sure that the zombie task is returned even if the
-        // wait was interrupted.
+        // zombie process has been dequeued to make sure that the zombie process is returned even
+        // if the wait was interrupted.
         wait_result?;
         wait_queue.wait_async(&waiter);
         std::mem::drop(wait_queue);
@@ -448,8 +453,8 @@ pub fn sys_waitid(
     // manpage they should be valid only in waitid.
 
     let task_selector = match id_type {
-        P_PID => TaskSelector::Pid(id),
-        P_ALL => TaskSelector::Any,
+        P_PID => ProcessSelector::Pid(id),
+        P_ALL => ProcessSelector::Any,
         P_PIDFD | P_PGID => {
             not_implemented!("unsupported waitpid id_type {:?}", id_type);
             return error!(ENOSYS);
@@ -459,8 +464,8 @@ pub fn sys_waitid(
 
     // wait_on_pid returns None if the task was not waited on. In that case, we don't write out a
     // siginfo. This seems weird but is the correct behavior according to the waitid(2) man page.
-    if let Some(zombie_task) = wait_on_pid(current_task, task_selector, options)? {
-        let siginfo = zombie_task.as_signal_info();
+    if let Some(zombie_process) = wait_on_pid(current_task, task_selector, options)? {
+        let siginfo = zombie_process.as_signal_info();
         current_task.mm.write_memory(user_info, &siginfo.as_siginfo_bytes())?;
     }
 
@@ -475,16 +480,16 @@ pub fn sys_wait4(
     user_rusage: UserRef<rusage>,
 ) -> Result<pid_t, Errno> {
     let selector = if pid == -1 {
-        TaskSelector::Any
+        ProcessSelector::Any
     } else if pid > 0 {
-        TaskSelector::Pid(pid)
+        ProcessSelector::Pid(pid)
     } else {
         not_implemented!("unimplemented wait4 pid selector {}", pid);
         return error!(ENOSYS);
     };
 
-    if let Some(zombie_task) = wait_on_pid(current_task, selector, options)? {
-        let status = zombie_task.wait_status();
+    if let Some(zombie_process) = wait_on_pid(current_task, selector, options)? {
+        let status = zombie_process.wait_status();
 
         if !user_rusage.is_null() {
             let usage = rusage::default();
@@ -499,7 +504,7 @@ pub fn sys_wait4(
             current_task.mm.write_object(user_wstatus, &status)?;
         }
 
-        Ok(zombie_task.id)
+        Ok(zombie_process.pid)
     } else {
         Ok(0)
     }
@@ -1227,9 +1232,9 @@ mod tests {
         assert!(
             sys_kill(&current_task, current_task.get_pid(), UncheckedSignal::from(SIGCHLD)).is_ok()
         );
-        // Verify that ECHILD is returned because there is no zombie task and no children to block
-        // waiting for.
-        assert_eq!(wait_on_pid(&current_task, TaskSelector::Any, 0), Err(ECHILD));
+        // Verify that ECHILD is returned because there is no zombie process and no children to
+        // block waiting for.
+        assert_eq!(wait_on_pid(&current_task, ProcessSelector::Any, 0), Err(ECHILD));
     }
 
     #[::fuchsia::test]
@@ -1239,9 +1244,9 @@ mod tests {
         assert!(
             sys_kill(&current_task, current_task.get_pid(), UncheckedSignal::from(SIGCHLD)).is_ok()
         );
-        let zombie = ZombieTask { id: 0, uid: 0, parent: 3, exit_code: 1 };
-        current_task.zombie_children.lock().push(zombie.clone());
-        assert_eq!(wait_on_pid(&current_task, TaskSelector::Any, 0), Ok(Some(zombie)));
+        let zombie = ZombieProcess { pid: 0, uid: 0, parent: 3, exit_code: 1 };
+        current_task.thread_group.zombie_children.lock().push(zombie.clone());
+        assert_eq!(wait_on_pid(&current_task, ProcessSelector::Any, 0), Ok(Some(zombie)));
     }
 
     #[::fuchsia::test]

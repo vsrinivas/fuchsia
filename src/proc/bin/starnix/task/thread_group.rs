@@ -9,6 +9,7 @@ use std::collections::HashSet;
 use std::ffi::CStr;
 use std::sync::Arc;
 
+use crate::auth::Credentials;
 use crate::device::terminal::*;
 use crate::signals::*;
 use crate::task::*;
@@ -28,6 +29,12 @@ pub struct ThreadGroup {
     /// or teach zx::process to share address spaces.
     pub process: zx::Process,
 
+    /// The parent thread group.
+    ///
+    /// The value needs to be writable so that it can be re-parent to the correct subreaper is the
+    /// parent ends before the child.
+    pub parent: RwLock<pid_t>,
+
     /// The lead task of this thread group.
     ///
     /// The lead task is typically the initial thread created in the thread group.
@@ -36,13 +43,20 @@ pub struct ThreadGroup {
     /// The tasks in the thread group.
     pub tasks: RwLock<HashSet<pid_t>>,
 
+    /// The children of this thread group.
+    pub children: RwLock<HashSet<pid_t>>,
+
     /// The IDs used to perform shell job control.
     pub process_group: RwLock<Arc<ProcessGroup>>,
 
     /// The itimers for this thread group.
     pub itimers: RwLock<[itimerval; 3]>,
 
-    zombie_leader: Mutex<Option<ZombieTask>>,
+    /// WaitQueue for updates to the zombie_children lists of tasks in this group.
+    /// Child tasks that have exited, but not yet been waited for.
+    pub zombie_children: Mutex<Vec<ZombieProcess>>,
+
+    zombie_leader: Mutex<Option<ZombieProcess>>,
 
     /// WaitQueue for updates to the zombie_children lists of tasks in this group.
     pub child_exit_waiters: Mutex<WaitQueue>,
@@ -61,10 +75,65 @@ impl PartialEq for ThreadGroup {
     }
 }
 
+impl Drop for ThreadGroup {
+    fn drop(&mut self) {
+        if let Some(parent) = self.kernel.pids.read().get_thread_group(*self.parent.read()) {
+            parent.children.write().remove(&self.leader);
+        }
+        // TODO(qsr): Reparent children to the first parent that has the PR_SET_CHILD_SUBREAPER
+        // property.
+    }
+}
+
+/// A selector that can match a process. Works as a representation of the pid argument to syscalls
+/// like wait and kill.
+#[derive(Clone, Copy)]
+pub enum ProcessSelector {
+    /// Matches any process at all.
+    Any,
+    /// Matches only the process with the specified pid
+    Pid(pid_t),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ZombieProcess {
+    pub pid: pid_t,
+    pub uid: uid_t,
+    pub parent: pid_t,
+    pub exit_code: i32,
+    // TODO: Do we need exit_signal?
+}
+
+impl ZombieProcess {
+    pub fn new(thread_group: &ThreadGroup, credentials: &Credentials, exit_code: i32) -> Self {
+        ZombieProcess {
+            pid: thread_group.leader,
+            uid: credentials.uid,
+            parent: *thread_group.parent.read(),
+            exit_code,
+        }
+    }
+
+    /// Converts the given exit code to a status code suitable for returning from wait syscalls.
+    pub fn wait_status(&self) -> i32 {
+        let exit_code = self.exit_code;
+        (exit_code & 0xff) << 8
+    }
+
+    pub fn as_signal_info(&self) -> SignalInfo {
+        SignalInfo::new(
+            SIGCHLD,
+            CLD_EXITED,
+            SignalDetail::SigChld { pid: self.pid, uid: self.uid, status: self.wait_status() },
+        )
+    }
+}
+
 impl ThreadGroup {
     pub fn new(
         kernel: Arc<Kernel>,
         process: zx::Process,
+        parent: Option<&ThreadGroup>,
         leader: pid_t,
         process_group: Arc<ProcessGroup>,
         signal_actions: Arc<SignalActions>,
@@ -73,13 +142,23 @@ impl ThreadGroup {
         tasks.insert(leader);
         process_group.thread_groups.write().insert(leader);
 
+        let parent_id = if let Some(parent_tg) = parent {
+            parent_tg.children.write().insert(leader);
+            parent_tg.leader
+        } else {
+            leader
+        };
+
         ThreadGroup {
             kernel,
             process,
+            parent: RwLock::new(parent_id),
             leader,
             process_group: RwLock::new(process_group),
             tasks: RwLock::new(tasks),
+            children: RwLock::new(HashSet::new()),
             itimers: Default::default(),
+            zombie_children: Mutex::new(vec![]),
             zombie_leader: Mutex::new(None),
             child_exit_waiters: Mutex::default(),
             terminating: Mutex::new(false),
@@ -134,14 +213,15 @@ impl ThreadGroup {
     pub fn setpgid(&self, target: &Task, pgid: pid_t) -> Result<(), Errno> {
         // The target process must be either the current process of a child of the current process
         let target_thread_group = &target.thread_group;
-        if target_thread_group.leader != self.leader && target.parent != self.leader {
+        let is_target_current_process_child = *target_thread_group.parent.read() == self.leader;
+        if target_thread_group.leader != self.leader && !is_target_current_process_child {
             return error!(ESRCH);
         }
 
         // If the target process is a child of the current task, it must not have executed one of the exec
         // function. Keep target_did_exec lock until the end of this function to prevent a race.
         let target_did_exec;
-        if target.parent == self.leader {
+        if is_target_current_process_child {
             target_did_exec = target_thread_group.did_exec.read();
             if *target_did_exec {
                 return error!(EACCES);
@@ -216,7 +296,11 @@ impl ThreadGroup {
         tasks.remove(&task.id);
 
         if task.id == self.leader {
-            *self.zombie_leader.lock() = Some(task.as_zombie());
+            *self.zombie_leader.lock() = Some(ZombieProcess::new(
+                self,
+                &task.creds.read(),
+                task.exit_code.lock().unwrap_or(-1),
+            ));
         }
 
         tasks.is_empty()
@@ -234,11 +318,13 @@ impl ThreadGroup {
 
             self.kernel.pids.write().remove_thread_group(self.leader);
 
-            if let Some(parent) = self.kernel.pids.read().get_task(zombie.parent) {
+            if let Some(parent) = self.kernel.pids.read().get_thread_group(zombie.parent) {
                 parent.zombie_children.lock().push(zombie);
                 // TODO: Should this be zombie_leader.exit_signal?
-                send_signal(&parent, SignalInfo::default(SIGCHLD));
-                parent.thread_group.child_exit_waiters.lock().notify_all();
+                if let Some(signal_target) = get_signal_target(&parent, &SIGCHLD.into()) {
+                    send_signal(&signal_target, SignalInfo::default(SIGCHLD));
+                }
+                parent.child_exit_waiters.lock().notify_all();
             }
 
             // TODO: Set the error_code on the Zircon process object. Currently missing a way
@@ -263,6 +349,55 @@ impl ThreadGroup {
             self.process.set_name(name).map_err(|status| from_status_like_fdio!(status))
         } else {
             self.process.set_name(name).map_err(|status| from_status_like_fdio!(status))
+        }
+    }
+
+    /// Removes and returns any zombie task with the specified `pid`, if such a zombie exists.
+    pub fn get_zombie_child(
+        &self,
+        selector: ProcessSelector,
+        should_remove_zombie: bool,
+    ) -> Option<ZombieProcess> {
+        let mut zombie_children = self.zombie_children.lock();
+        match selector {
+            ProcessSelector::Any => {
+                if zombie_children.len() > 0 {
+                    Some(zombie_children.len() - 1)
+                } else {
+                    None
+                }
+            }
+            ProcessSelector::Pid(pid) => {
+                zombie_children.iter().position(|zombie| zombie.pid == pid)
+            }
+        }
+        .map(|pos| {
+            if should_remove_zombie {
+                zombie_children.remove(pos)
+            } else {
+                zombie_children[pos].clone()
+            }
+        })
+    }
+
+    /// Checks whether the thread group has a thread group identified by `selector`. A thread group
+    /// is a child if it was created by one of the threads in the thread group but does not belong
+    /// to the thread group (different process).
+    pub fn has_child(&self, selector: ProcessSelector) -> bool {
+        let children = self.children.read();
+        let thread_group_tasks = self.tasks.read();
+        match selector {
+            ProcessSelector::Any => {
+                for child_tid in &*children {
+                    if !thread_group_tasks.contains(&child_tid) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            ProcessSelector::Pid(pid) => {
+                return children.get(&pid).is_some() && !thread_group_tasks.contains(&pid);
+            }
         }
     }
 
