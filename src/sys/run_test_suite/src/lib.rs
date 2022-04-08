@@ -13,7 +13,7 @@ use {
     },
     fuchsia_async as fasync,
     futures::{channel::mpsc, future::join_all, prelude::*, stream::FuturesUnordered, StreamExt},
-    log::{debug, error, warn},
+    log::{debug, error, info, warn},
     std::collections::{HashMap, HashSet, VecDeque},
     std::convert::TryInto,
     std::fmt,
@@ -446,7 +446,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
                     diagnostics::LogCollectionOutcome::Passed => {}
                 },
                 Err(e) => {
-                    println!("Failed to collect logs: {:?}", e);
+                    warn!("Failed to collect logs: {:?}", e);
                 }
             }
         }
@@ -726,8 +726,10 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
 
     let handle_run_events_fut = async move {
         loop {
+            info!("Waiting for run events!");
             let events = run_controller_ref.get_events().await?;
             if events.len() == 0 {
+                info!("Done collecting run events!");
                 return Ok(());
             }
 
