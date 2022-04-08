@@ -342,6 +342,7 @@ source_set("snapshot_manager") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/feedback/annotations",
     "//src/developer/forensics/utils:sized_data",
     "//src/developer/forensics/utils:storage_size",
     "//src/lib/timekeeper",

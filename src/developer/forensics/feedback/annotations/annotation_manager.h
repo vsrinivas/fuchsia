@@ -24,7 +24,8 @@ class AnnotationManager {
                     NonPlatformAnnotationProvider* non_platform_provider = nullptr,
                     std::vector<DynamicSyncAnnotationProvider*> dynamic_sync_providers = {});
 
-  // Returns the annotations that are immediately available.
+  // Returns the annotations that are immediately available regardless of whether they're static or
+  // dynamic.
   //
   // This is useful when annotations can't be waited, e.g. component startup /
   // shutdown, and the annotation aggregate data that are ready to be used because it never changes,

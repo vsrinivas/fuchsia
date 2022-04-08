@@ -16,6 +16,7 @@
 
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/snapshot_manager.h"
+#include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/testing/stubs/data_provider.h"
 #include "src/developer/forensics/testing/stubs/loader.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
@@ -37,8 +38,9 @@ class CrashServerTest : public UnitTestFixture {
  protected:
   CrashServerTest()
       : data_provider_server_(std::make_unique<stubs::DataProviderReturnsEmptySnapshot>()),
-        snapshot_manager_(dispatcher(), &clock_, data_provider_server_.get(), zx::min(0),
-                          kGarbageCollectedSnapshotsPath, StorageSize::Bytes(0u),
+        annotation_manager_({}),
+        snapshot_manager_(dispatcher(), &clock_, data_provider_server_.get(), &annotation_manager_,
+                          zx::min(0), kGarbageCollectedSnapshotsPath, StorageSize::Bytes(0u),
                           StorageSize::Bytes(0u)),
         tags_() {
     RunLoopUntilIdle();
@@ -60,6 +62,7 @@ class CrashServerTest : public UnitTestFixture {
 
   timekeeper::TestClock clock_;
   std::unique_ptr<stubs::DataProviderBase> data_provider_server_;
+  feedback::AnnotationManager annotation_manager_;
   SnapshotManager snapshot_manager_;
   LogTags tags_;
   std::unique_ptr<CrashServer> crash_server_;

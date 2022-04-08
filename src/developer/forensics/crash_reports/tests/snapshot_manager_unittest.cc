@@ -19,6 +19,7 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/forensics/crash_reports/errors.h"
+#include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/testing/gmatchers.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/stubs/data_provider.h"
@@ -44,6 +45,18 @@ const std::map<std::string, std::string> kDefaultAnnotations = {
     {"annotation.key.two", "annotation.value.two"},
 };
 
+// Annotation keys and values that are expected to be present when the annotation manager is called
+// directly by the snapshot manager.
+constexpr std::array<const char*, 2> kManagedAnnotationsKeys = {
+    "managed.key.one",
+    "managed.key.two",
+};
+
+constexpr std::array<const char*, 2> kManagedAnnotationsValues = {
+    "managed.value.one",
+    "managed.value.two",
+};
+
 const std::string kDefaultArchiveKey = "snapshot.key";
 
 template <typename K, typename V>
@@ -65,6 +78,11 @@ class SnapshotManagerTest : public UnitTestFixture {
         clock_(),
         executor_(dispatcher()),
         snapshot_manager_(nullptr),
+        annotation_manager_({kManagedAnnotationsKeys[0], kManagedAnnotationsKeys[1]},
+                            {
+                                {kManagedAnnotationsKeys[0], kManagedAnnotationsValues[0]},
+                                {kManagedAnnotationsKeys[1], kManagedAnnotationsValues[1]},
+                            }),
         path_(files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt")) {}
 
  protected:
@@ -75,9 +93,9 @@ class SnapshotManagerTest : public UnitTestFixture {
   void SetUpSnapshotManager(StorageSize max_annotations_size, StorageSize max_archives_size) {
     FX_CHECK(data_provider_server_);
     clock_.Set(zx::time(0u));
-    snapshot_manager_ =
-        std::make_unique<SnapshotManager>(dispatcher(), &clock_, data_provider_server_.get(),
-                                          kWindow, path_, max_annotations_size, max_archives_size);
+    snapshot_manager_ = std::make_unique<SnapshotManager>(
+        dispatcher(), &clock_, data_provider_server_.get(), &annotation_manager_, kWindow, path_,
+        max_annotations_size, max_archives_size);
   }
 
   std::set<std::string> ReadGarbageCollectedSnapshots() {
@@ -120,6 +138,7 @@ class SnapshotManagerTest : public UnitTestFixture {
 
  private:
   std::unique_ptr<stubs::DataProviderBase> data_provider_server_;
+  feedback::AnnotationManager annotation_manager_;
   files::ScopedTempDir tmp_dir_;
   std::string path_;
 };
@@ -250,6 +269,8 @@ TEST_F(SnapshotManagerTest, Check_AnnotationsMaxSizeIsEnforced) {
               UnorderedElementsAreArray({
                   Pair("debug.snapshot.error", "garbage collected"),
                   Pair("debug.snapshot.present", "false"),
+                  Pair(kManagedAnnotationsKeys[0], kManagedAnnotationsValues[0]),
+                  Pair(kManagedAnnotationsKeys[1], kManagedAnnotationsValues[1]),
               }));
   EXPECT_THAT(ReadGarbageCollectedSnapshots(), UnorderedElementsAreArray({
                                                    uuid1.value(),
@@ -280,6 +301,8 @@ TEST_F(SnapshotManagerTest, Check_Release) {
                 UnorderedElementsAreArray({
                     Pair("debug.snapshot.error", "garbage collected"),
                     Pair("debug.snapshot.present", "false"),
+                    Pair(kManagedAnnotationsKeys[0], kManagedAnnotationsValues[0]),
+                    Pair(kManagedAnnotationsKeys[1], kManagedAnnotationsValues[1]),
                 }));
     EXPECT_FALSE(snapshot.LockArchive());
   }
@@ -338,10 +361,13 @@ TEST_F(SnapshotManagerTest, Check_Timeout) {
 
   ASSERT_TRUE(uuid.has_value());
   auto snapshot = snapshot_manager_->GetSnapshot(uuid.value());
-  EXPECT_THAT(snapshot.LockAnnotations()->Raw(), UnorderedElementsAreArray({
-                                                     Pair("debug.snapshot.error", "timeout"),
-                                                     Pair("debug.snapshot.present", "false"),
-                                                 }));
+  EXPECT_THAT(snapshot.LockAnnotations()->Raw(),
+              UnorderedElementsAreArray({
+                  Pair("debug.snapshot.error", "timeout"),
+                  Pair("debug.snapshot.present", "false"),
+                  Pair(kManagedAnnotationsKeys[0], kManagedAnnotationsValues[0]),
+                  Pair(kManagedAnnotationsKeys[1], kManagedAnnotationsValues[1]),
+              }));
   EXPECT_FALSE(snapshot.LockArchive());
 }
 
@@ -349,10 +375,13 @@ TEST_F(SnapshotManagerTest, Check_UuidForNoSnapshotUuid) {
   SetUpDefaultDataProviderServer();
   SetUpDefaultSnapshotManager();
   auto snapshot = snapshot_manager_->GetSnapshot(SnapshotManager::UuidForNoSnapshotUuid());
-  EXPECT_THAT(snapshot.LockAnnotations()->Raw(), UnorderedElementsAreArray({
-                                                     Pair("debug.snapshot.error", "missing uuid"),
-                                                     Pair("debug.snapshot.present", "false"),
-                                                 }));
+  EXPECT_THAT(snapshot.LockAnnotations()->Raw(),
+              UnorderedElementsAreArray({
+                  Pair("debug.snapshot.error", "missing uuid"),
+                  Pair("debug.snapshot.present", "false"),
+                  Pair(kManagedAnnotationsKeys[0], kManagedAnnotationsValues[0]),
+                  Pair(kManagedAnnotationsKeys[1], kManagedAnnotationsValues[1]),
+              }));
   EXPECT_FALSE(snapshot.LockArchive());
 }
 
@@ -372,6 +401,8 @@ TEST_F(SnapshotManagerTest, Check_Shutdown) {
               IsSupersetOf({
                   Pair("debug.snapshot.error", "system shutdown"),
                   Pair("debug.snapshot.present", "false"),
+                  Pair(kManagedAnnotationsKeys[0], kManagedAnnotationsValues[0]),
+                  Pair(kManagedAnnotationsKeys[1], kManagedAnnotationsValues[1]),
               }));
   EXPECT_FALSE(snapshot.LockArchive());
 
@@ -386,6 +417,8 @@ TEST_F(SnapshotManagerTest, Check_Shutdown) {
               IsSupersetOf({
                   Pair("debug.snapshot.error", "system shutdown"),
                   Pair("debug.snapshot.present", "false"),
+                  Pair(kManagedAnnotationsKeys[0], kManagedAnnotationsValues[0]),
+                  Pair(kManagedAnnotationsKeys[1], kManagedAnnotationsValues[1]),
               }));
   EXPECT_FALSE(snapshot.LockArchive());
 }
@@ -396,10 +429,13 @@ TEST_F(SnapshotManagerTest, Check_DefaultToNotPersisted) {
 
   std::string uuid("UNKNOWN");
   auto snapshot = snapshot_manager_->GetSnapshot(uuid);
-  EXPECT_THAT(snapshot.LockAnnotations()->Raw(), UnorderedElementsAreArray({
-                                                     Pair("debug.snapshot.error", "not persisted"),
-                                                     Pair("debug.snapshot.present", "false"),
-                                                 }));
+  EXPECT_THAT(snapshot.LockAnnotations()->Raw(),
+              UnorderedElementsAreArray({
+                  Pair("debug.snapshot.error", "not persisted"),
+                  Pair("debug.snapshot.present", "false"),
+                  Pair(kManagedAnnotationsKeys[0], kManagedAnnotationsValues[0]),
+                  Pair(kManagedAnnotationsKeys[1], kManagedAnnotationsValues[1]),
+              }));
   EXPECT_FALSE(snapshot.LockArchive());
 }
 
@@ -426,6 +462,8 @@ TEST_F(SnapshotManagerTest, Check_ReadPreviouslyGarbageCollected) {
                 UnorderedElementsAreArray({
                     Pair("debug.snapshot.error", "garbage collected"),
                     Pair("debug.snapshot.present", "false"),
+                    Pair(kManagedAnnotationsKeys[0], kManagedAnnotationsValues[0]),
+                    Pair(kManagedAnnotationsKeys[1], kManagedAnnotationsValues[1]),
                 }));
     EXPECT_FALSE(snapshot.LockArchive());
   }
@@ -440,6 +478,8 @@ TEST_F(SnapshotManagerTest, Check_ReadPreviouslyGarbageCollected) {
                 UnorderedElementsAreArray({
                     Pair("debug.snapshot.error", "garbage collected"),
                     Pair("debug.snapshot.present", "false"),
+                    Pair(kManagedAnnotationsKeys[0], kManagedAnnotationsValues[0]),
+                    Pair(kManagedAnnotationsKeys[1], kManagedAnnotationsValues[1]),
                 }));
     EXPECT_FALSE(snapshot.LockArchive());
   }

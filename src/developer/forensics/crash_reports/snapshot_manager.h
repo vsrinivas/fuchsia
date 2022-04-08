@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "src/developer/forensics/crash_reports/snapshot.h"
+#include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/utils/storage_size.h"
 #include "src/lib/timekeeper/clock.h"
 
@@ -41,6 +42,7 @@ class SnapshotManager {
  public:
   SnapshotManager(async_dispatcher_t* dispatcher, timekeeper::Clock* clock,
                   fuchsia::feedback::DataProvider* data_provider,
+                  feedback::AnnotationManager* annotation_manager,
                   zx::duration shared_request_window,
                   const std::string& garbage_collected_snapshots_path,
                   StorageSize max_annotations_size, StorageSize max_archives_size);
@@ -140,6 +142,7 @@ class SnapshotManager {
   timekeeper::Clock* clock_;
 
   fuchsia::feedback::DataProvider* data_provider_;
+  feedback::AnnotationManager* annotation_manager_;
 
   zx::duration shared_request_window_;
 
