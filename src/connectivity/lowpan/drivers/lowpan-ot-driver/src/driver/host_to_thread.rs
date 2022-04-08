@@ -4,17 +4,19 @@
 
 use super::*;
 use lowpan_driver_common::spinel::*;
+use std::net::Ipv6Addr;
+use std::num::NonZeroU16;
 
 use anyhow::{Context as _, Error};
 
 use futures::prelude::*;
-use lowpan_driver_common::net::NetworkInterfaceEvent;
+use lowpan_driver_common::net::{Ipv6PacketMatcherRule, NetworkInterfaceEvent};
 use lowpan_driver_common::spinel::Subnet;
 
 use packet::ParsablePacket;
 use packet_formats::icmp::mld::MldPacket;
 use packet_formats::icmp::{IcmpParseArgs, Icmpv6Packet};
-use packet_formats::ip::{IpPacket, Ipv6Proto};
+use packet_formats::ip::{IpPacket, IpProto, Ipv6Proto};
 use packet_formats::ipv6::Ipv6Packet;
 
 /// Callbacks from netstack and other on-host systems.
@@ -234,6 +236,35 @@ where
     ///
     /// Returns true if the packet should be forwarded to the thread network, false otherwise.
     async fn intercept_from_host(&self, mut packet_bytes: &[u8]) -> bool {
+        const LINK_LOCAL_MDNS_MULTICAST_GROUP: Ipv6Addr =
+            Ipv6Addr::new(0xff02, 0, 0, 0, 0, 0, 0, 0xfb);
+        const MDNS_PORT: u16 = 5353;
+        const MDNS_MATCHER: Ipv6PacketMatcherRule = Ipv6PacketMatcherRule {
+            proto: Some(Ipv6Proto::Proto(IpProto::Udp)),
+            local_port: NonZeroU16::new(MDNS_PORT),
+            local_address: Subnet { addr: Ipv6Addr::UNSPECIFIED, prefix_len: 0 },
+            remote_port: NonZeroU16::new(MDNS_PORT),
+            remote_address: Subnet { addr: LINK_LOCAL_MDNS_MULTICAST_GROUP, prefix_len: 128 },
+        };
+
+        // TODO(fxbug.dev/93289): Once bug 93289 is addressed, we can remove this filter.
+        if MDNS_MATCHER.match_outbound_packet(packet_bytes) {
+            fn ascii_dump(data: &[u8]) -> String {
+                let vec = data
+                    .iter()
+                    .map(|&x| if x.is_ascii() && x > 31 { x } else { b'.' })
+                    .flat_map(std::ascii::escape_default)
+                    .collect::<Vec<_>>();
+                std::str::from_utf8(&vec).unwrap().to_string()
+            }
+
+            debug!(
+                "Dropping mDNS traffic destined for thread network: {}",
+                ascii_dump(packet_bytes)
+            );
+            return false;
+        }
+
         match Ipv6Packet::parse(&mut packet_bytes, ()) {
             Ok(packet) => match packet.proto() {
                 Ipv6Proto::Icmpv6 => {
