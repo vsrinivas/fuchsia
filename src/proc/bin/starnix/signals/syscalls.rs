@@ -489,7 +489,7 @@ pub fn sys_wait4(
     };
 
     if let Some(zombie_process) = wait_on_pid(current_task, selector, options)? {
-        let status = zombie_process.wait_status();
+        let status = zombie_process.wait_status;
 
         if !user_rusage.is_null() {
             let usage = rusage::default();
@@ -499,8 +499,6 @@ pub fn sys_wait4(
         }
 
         if !user_wstatus.is_null() {
-            // TODO(fxb/76976): Return proper status.
-            not_implemented!("wait4 does not set signal info in wstatus");
             current_task.mm.write_object(user_wstatus, &status)?;
         }
 
@@ -1244,9 +1242,35 @@ mod tests {
         assert!(
             sys_kill(&current_task, current_task.get_pid(), UncheckedSignal::from(SIGCHLD)).is_ok()
         );
-        let zombie = ZombieProcess { pid: 0, uid: 0, parent: 3, exit_code: 1 };
+        let zombie = ZombieProcess { pid: 0, uid: 0, parent: 3, wait_status: 1 << 8 };
         current_task.thread_group.zombie_children.lock().push(zombie.clone());
         assert_eq!(wait_on_pid(&current_task, ProcessSelector::Any, 0), Ok(Some(zombie)));
+    }
+
+    #[::fuchsia::test]
+    fn test_exit_status() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mut child = current_task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+
+        // Send SigKill to the child.
+        send_signal(&child, SignalInfo::default(SIGKILL));
+        dequeue_signal(&mut child);
+        std::mem::drop(child);
+
+        // Retrieve the exit status.
+        let address =
+            map_memory(&current_task, UserAddress::default(), std::mem::size_of::<i32>() as u64);
+        let address_ref = UserRef::<i32>::new(address);
+        sys_wait4(&current_task, -1, address_ref, 0, UserRef::default()).expect("wait4");
+        let mut wstatus: i32 = 0;
+        current_task.mm.read_object(address_ref, &mut wstatus).expect("read memory");
+        assert_eq!(wstatus, 128 + SIGKILL.number() as i32);
     }
 
     #[::fuchsia::test]

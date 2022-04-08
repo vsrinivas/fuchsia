@@ -47,7 +47,6 @@ pub fn create_kernel_and_task_with_fs(fs: Arc<FsContext>) -> (Arc<Kernel>, Curre
 
     let task = Task::create_process_without_parent(&kernel, CString::new("test-task").unwrap(), fs)
         .expect("failed to create first task");
-    *task.exit_code.lock() = Some(0);
 
     (kernel, task)
 }
@@ -62,7 +61,6 @@ pub fn create_task(kernel: &Arc<Kernel>, task_name: &str) -> CurrentTask {
         create_pkgfs(),
     )
     .expect("failed to create second task");
-    *task.exit_code.lock() = Some(0);
     task
 }
 

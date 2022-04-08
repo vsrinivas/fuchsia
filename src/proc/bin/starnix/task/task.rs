@@ -103,8 +103,8 @@ pub struct Task {
     /// The signal this task generates on exit.
     pub exit_signal: Option<Signal>,
 
-    /// The exit code that this task exited with.
-    pub exit_code: Mutex<Option<i32>>,
+    /// The exit status that this task exited with. See waitpid(2).
+    pub exit_status: Mutex<Option<i32>>,
 }
 
 impl Task {
@@ -141,7 +141,7 @@ impl Task {
             clear_child_tid: Mutex::new(UserRef::default()),
             signals: Default::default(),
             exit_signal,
-            exit_code: Mutex::new(None),
+            exit_status: Mutex::new(None),
         })
     }
 
@@ -801,8 +801,6 @@ mod test {
                 UserRef::new(UserAddress::default()),
             )
             .expect("clone thread");
-        // Set an exit code to not panic when task is dropped and moved to the zombie state.
-        *thread.exit_code.lock() = Some(0);
         assert_eq!(current_task.get_pid(), thread.get_pid());
         assert_ne!(current_task.get_tid(), thread.get_tid());
         assert_eq!(current_task.thread_group.leader, thread.thread_group.leader);
@@ -814,8 +812,6 @@ mod test {
                 UserRef::new(UserAddress::default()),
             )
             .expect("clone process");
-        // Set an exit code to not panic when task is dropped and moved to the zombie state.
-        *child_task.exit_code.lock() = Some(0);
         assert_ne!(current_task.get_pid(), child_task.get_pid());
         assert_ne!(current_task.get_tid(), child_task.get_tid());
         assert_eq!(current_task.get_pid(), *child_task.thread_group.parent.read());

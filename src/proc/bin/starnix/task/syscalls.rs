@@ -166,13 +166,13 @@ pub fn sys_getresgid(
 
 pub fn sys_exit(current_task: &CurrentTask, exit_code: i32) -> Result<(), Errno> {
     info!(target: "exit", "{:?} exit({})", current_task, exit_code);
-    *current_task.exit_code.lock() = Some(exit_code);
+    *current_task.exit_status.lock() = Some((exit_code & 0xff) << 8);
     Ok(())
 }
 
 pub fn sys_exit_group(current_task: &CurrentTask, exit_code: i32) -> Result<(), Errno> {
     info!(target: "exit", "{:?} exit_group({})", current_task, exit_code);
-    current_task.thread_group.exit(exit_code);
+    current_task.thread_group.exit((exit_code & 0xff) << 8);
     Ok(())
 }
 

@@ -165,10 +165,10 @@ fn run_exception_loop(
 
         dequeue_signal(current_task);
 
-        if let Some(exit_code) = *current_task.exit_code.lock() {
-            strace!(current_task, "exiting with status {:#x}", exit_code);
+        if let Some(exit_status) = *current_task.exit_status.lock() {
+            strace!(current_task, "exiting with status {:#x}", exit_status);
             exception.set_exception_state(&ZX_EXCEPTION_STATE_THREAD_EXIT)?;
-            return Ok(exit_code);
+            return Ok(exit_status);
         }
 
         // Handle the debug address after the thread is set up to continue, because
