@@ -99,6 +99,10 @@ pub trait CredManager {
     /// credential label returned from a previous call to `add`.  Returns the high-entropy secret
     /// if the low-entropy secret and credential label match.
     async fn retrieve(&self, le_secret: &Key, cred_label: Label) -> Result<Key, KeyRetrievalError>;
+
+    /// Remove any information associated with the credential label `cred_label` and release any
+    /// resources.  Returns an error if removing the key pair failed, and unit on success.
+    async fn remove(&mut self, cred_label: Label) -> Result<(), KeyEnrollmentError>;
 }
 
 lazy_static! {
@@ -204,6 +208,23 @@ impl CredManager for CredentialManagerProxy {
                 }
             })?
     }
+
+    /// Makes a request to the CredentialManager server represented by self to remove the
+    /// credential identified by `cred_label`, releasing any storage associated with it and
+    /// making it invalid to use with future `retrieve` calls (unless returned as the result of a
+    /// new call to `add`).  On failure, propagates the error from the FIDL call.
+    async fn remove(&mut self, cred_label: Label) -> Result<(), KeyEnrollmentError> {
+        self.remove_credential(cred_label)
+            .await
+            .map_err(|err| {
+                error!("CredentialManager#RemoveCredential: couldn't send FIDL request: {:?}", err);
+                KeyEnrollmentError::FidlError(err)
+            })?
+            .map_err(|err| {
+                error!("CredentialManager#RemoveCredential: couldn't remove credential: {:?}", err);
+                KeyEnrollmentError::CredentialManagerError(err)
+            })
+    }
 }
 
 /// Key enrollment data for the pinweaver key source.  Provides sufficient context to retrieve a
@@ -272,6 +293,15 @@ where
                 credential_label: label.clone(),
             },
         })
+    }
+
+    async fn remove_key(
+        &mut self,
+        enrollment_data: PinweaverParams,
+    ) -> Result<(), KeyEnrollmentError> {
+        // Tell the credential manager to remove the credential identified by the credential label
+        let cm = &mut self.credential_manager;
+        cm.remove(enrollment_data.credential_label).await
     }
 }
 
@@ -461,6 +491,17 @@ pub mod test {
                 }
             }
         }
+
+        async fn remove(&mut self, cred_label: Label) -> Result<(), KeyEnrollmentError> {
+            let mut creds = self.creds.lock().unwrap();
+            let prev = creds.remove(&cred_label);
+            match prev {
+                Some(_) => Ok(()),
+                None => Err(KeyEnrollmentError::CredentialManagerError(
+                    fcred::CredentialError::InvalidLabel,
+                )),
+            }
+        }
     }
 
     pub const TEST_PINWEAVER_CREDENTIAL_LABEL: Label = 1u64;
@@ -562,6 +603,16 @@ pub mod test {
     }
 
     #[fuchsia::test]
+    async fn test_remove_key() {
+        let creds = Arc::new(Mutex::new(HashMap::new()));
+        let mcm = MockCredManager::new_with_creds(creds.clone());
+        let mut pw_enroller = PinweaverKeyEnroller::new(mcm);
+        let enrolled_key = pw_enroller.enroll_key(TEST_SCRYPT_PASSWORD).await.expect("enroll");
+        let remove_res = pw_enroller.remove_key(enrolled_key.enrollment_data).await;
+        assert_matches!(remove_res, Ok(()));
+    }
+
+    #[fuchsia::test]
     async fn test_roundtrip() {
         // Enroll a key and get the enrollment data.
         let creds = Arc::new(Mutex::new(HashMap::new()));
@@ -571,10 +622,29 @@ pub mod test {
         let account_key = enrolled_key.key;
         let enrollment_data = enrolled_key.enrollment_data;
 
+        // Retrieve the key, and verify it matches.
         let mcm2 = MockCredManager::new_with_creds(creds.clone());
         let pw_retriever = PinweaverKeyRetriever::new(enrollment_data, mcm2);
         let key_retrieved =
             pw_retriever.retrieve_key(TEST_SCRYPT_PASSWORD).await.expect("retrieve");
         assert_eq!(key_retrieved, account_key);
+
+        // Remove the key.
+        let remove_res = pw_enroller.remove_key(enrollment_data).await;
+        assert_matches!(remove_res, Ok(()));
+
+        // Retrieving the key again should fail.
+        let retrieve_res = pw_retriever.retrieve_key(TEST_SCRYPT_PASSWORD).await;
+        assert_matches!(
+            retrieve_res,
+            Err(KeyRetrievalError::CredentialManagerError(fcred::CredentialError::InvalidLabel))
+        );
+
+        // Removing the key again should fail.
+        let remove_res2 = pw_enroller.remove_key(enrollment_data).await;
+        assert_matches!(
+            remove_res2,
+            Err(KeyEnrollmentError::CredentialManagerError(fcred::CredentialError::InvalidLabel))
+        );
     }
 }

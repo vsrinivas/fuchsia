@@ -40,6 +40,13 @@ impl KeyEnrollment<NullKeyParams> for NullKeySource {
             Err(KeyEnrollmentError::PasswordError)
         }
     }
+
+    async fn remove_key(
+        &mut self,
+        _enrollment_data: NullKeyParams,
+    ) -> Result<(), KeyEnrollmentError> {
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -79,5 +86,12 @@ mod test {
         assert_matches!(res, Ok(INSECURE_EMPTY_KEY));
         // Retrieving any non-empty password should fail.
         assert_matches!(ks.retrieve_key("nonempty").await, Err(KeyRetrievalError::PasswordError));
+    }
+
+    #[fuchsia::test]
+    async fn test_remove_key() {
+        let mut ks = NullKeySource;
+        let res = ks.remove_key(NullKeyParams {}).await;
+        assert_matches!(res, Ok(()));
     }
 }

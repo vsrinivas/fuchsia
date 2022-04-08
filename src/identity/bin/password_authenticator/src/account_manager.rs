@@ -295,6 +295,37 @@ where
         }
     }
 
+    /// Remove the key from the key source specified in `meta`s authenticator metadata.
+    /// This is expected to succeed trivially for the Null and Scrypt key sources, since they have
+    /// no resources to dispose, and to make a call to Credential Manager for the Pinweaver key
+    /// source.
+    async fn remove_key_for_account(
+        &self,
+        meta: &AccountMetadata,
+    ) -> Result<(), KeyEnrollmentError> {
+        match meta.authenticator_metadata() {
+            AuthenticatorMetadata::NullKey(n_meta) => {
+                NullKeySource.remove_key(n_meta.clone().into()).await
+            }
+            AuthenticatorMetadata::ScryptOnly(s_meta) => {
+                let mut key_source = ScryptKeySource::from(s_meta.scrypt_params);
+                key_source.remove_key(s_meta.clone().into()).await
+            }
+            AuthenticatorMetadata::Pinweaver(p_meta) => {
+                let cred_manager =
+                    self.cred_manager_provider.new_cred_manager().map_err(|err| {
+                        error!(
+                            "remove_key_for_account: could not get credential manager: {:?}",
+                            err
+                        );
+                        KeyEnrollmentError::CredentialManagerConnectionError(err)
+                    })?;
+                let mut key_source = PinweaverKeyEnroller::new(cred_manager);
+                key_source.remove_key(p_meta.clone().into()).await
+            }
+        }
+    }
+
     /// Authenticates an account and serves the Account FIDL protocol over the `account` channel.
     /// The `id` is verified to be present.
     /// The only id that we accept is GLOBAL_ACCOUNT_ID.
@@ -647,8 +678,9 @@ where
         // To remove an account, we need to:
         // 1. lock the account, if it was unlocked
         // 2. remove the metadata from the account metadata store
-        // 3. (best effort) shred the backing volume
-        // 4. mark the account as fully removed (and thus eligible to be provisioned again)
+        // 3. (best effort) remove the keys from the key source
+        // 4. (best effort) shred the backing volume
+        // 5. mark the account as fully removed (and thus eligible to be provisioned again)
         //
         // We hold the accounts lock throughout, since it will exclude concurrent access to both
         // the accounts hashmap and our direct access to the zxcrypt partition.
@@ -688,13 +720,37 @@ where
         // Remove the account from the account metadata store.  Once this completes, the account
         // removal is guaranteed to have succeeded -- everything after that is best-effort cleanup.
         let mut ams_locked = self.account_metadata_store.lock().await;
+        let account_metadata = ams_locked
+            .load(&id)
+            .await
+            .map_err(|err| {
+                error!("remove_account: couldn't load account metadata for account ID {}", &id);
+                err
+            })?
+            .ok_or_else(|| {
+                error!("remove_account: no account metadata for account ID {}", &id);
+                faccount::Error::NotFound
+            })?;
         ams_locked.remove(&id).await.map_err(|err| {
             error!("remove_account: couldn't remove account metadata for account ID {}", &id);
             err
         })?;
         drop(ams_locked);
 
-        // step 3: (best effort) shred the backing volume
+        // step 3: (best effort) remove the key from the key source
+        // For key sources that have no resources attached, this will succeed trivially.
+        // For key sources that do have resources attached, we will make an attempt to destroy
+        // those resources, but if that attempt fails, we carry on anyway and will eventually
+        // report success to the user.
+        let _remove_res = self.remove_key_for_account(&account_metadata).await.map_err(|err| {
+            // Log the failure, but ignore the result.
+            warn!(
+                "remove_account: couldn't remove enrolled key for account ID {}: {} (ignored)",
+                &id, err
+            );
+        });
+
+        // step 4: (best effort) shred the backing volume
         // Try to shred the backing volume, waiting for completion, but ignoring errors.
         // The metadata removal is sufficient to make the volume no longer unsealable, so we
         // should not return a failure if we make it to here.  We should block though, because if
@@ -729,7 +785,7 @@ where
             }
         }
 
-        // step 4: mark the account as fully removed (and thus eligible to be provisioned again)
+        // step 5: mark the account as fully removed (and thus eligible to be provisioned again)
         // Mark that we've finished deprovisioning this user by releasing the self.accounts lock
         // and returning success.
         drop(accounts_locked);
@@ -2147,6 +2203,30 @@ mod test {
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
             DEFAULT_OPTIONS,
+            disk_manager,
+            account_metadata_store,
+            cred_manager_provider,
+        );
+
+        let account_ids_before = account_manager.get_account_ids().await.expect("get account ids");
+        assert_eq!(account_ids_before, vec![GLOBAL_ACCOUNT_ID]);
+
+        account_manager.remove_account(GLOBAL_ACCOUNT_ID, true).await.expect("remove_account");
+
+        let account_ids = account_manager.get_account_ids().await.expect("get account ids");
+        assert_eq!(account_ids, Vec::<u64>::new());
+    }
+
+    #[fuchsia::test]
+    async fn test_remove_account_remove_key_fails_but_remove_account_succeeds() {
+        let disk_manager = MockDiskManager::new()
+            .with_partition(make_formatted_account_partition(TEST_PINWEAVER_ACCOUNT_KEY));
+        let account_metadata_store =
+            MemoryAccountMetadataStore::new().with_pinweaver_account(&GLOBAL_ACCOUNT_ID);
+        // This cred manager will not know about the label `TEST_PINWEAVER_CREDENTIAL_LABEL`.
+        let cred_manager_provider = MockCredManagerProvider::new();
+        let account_manager = AccountManager::new(
+            PINWEAVER_ONLY_OPTIONS,
             disk_manager,
             account_metadata_store,
             cred_manager_provider,

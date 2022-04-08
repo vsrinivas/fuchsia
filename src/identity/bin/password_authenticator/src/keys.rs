@@ -69,20 +69,24 @@ pub struct EnrolledKey<T> {
     pub enrollment_data: T,
 }
 
-/// The `KeyEnrollment` trait provides a mechanism for generating a new key to be retrievable
-/// when presented with the initially-given password.  This can include additional data specific
-/// to the enrollment scheme.
+/// The `KeyEnrollment` trait provides a mechanism for generating a new key to be retrievable when
+/// presented with the initially-given password, as well as (symmetrically) to dispose of a key
+/// and any resources associated with it.  Enrollment may return additional data specific to the
+/// enrollment scheme for the purpose of identifying the key.
 #[async_trait]
 pub trait KeyEnrollment<T> {
-    /// Enroll a key using this key derivation scheme with the given password.
+    /// Enroll a key using this key enrollment scheme with the given password.
     async fn enroll_key(&mut self, password: &str) -> Result<EnrolledKey<T>, KeyEnrollmentError>;
+
+    /// Remove the key specified, releasing any resources associated with the enrolled key.
+    async fn remove_key(&mut self, enrollment_data: T) -> Result<(), KeyEnrollmentError>;
 }
 
-/// The `KeyRetrieval` trait provides a mechanism for deriving a key from a password.
-/// The returned key is suitable for use with a zxcrypt volume.
+/// The `KeyRetrieval` trait provides a mechanism for retrieving a key given a password provided
+/// at enrollment time.  The returned key is suitable for use with a zxcrypt volume.
 #[async_trait]
 pub trait KeyRetrieval {
-    /// Retrieve a key using this key derivation scheme with the given password.
+    /// Retrieve a key using this key scheme with the given password.
     /// The returned key will be 256 bits long.
     async fn retrieve_key(&self, password: &str) -> Result<Key, KeyRetrievalError>;
 }

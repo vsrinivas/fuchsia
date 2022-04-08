@@ -84,6 +84,13 @@ impl KeyEnrollment<ScryptParams> for ScryptKeySource {
             .map_err(|_| KeyEnrollmentError::ParamsError)?;
         Ok(EnrolledKey { key: output, enrollment_data: self.scrypt_params.clone() })
     }
+
+    async fn remove_key(
+        &mut self,
+        _enrollment_data: ScryptParams,
+    ) -> Result<(), KeyEnrollmentError> {
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -123,6 +130,14 @@ pub mod test {
         let enrolled_key = ks.enroll_key(TEST_SCRYPT_PASSWORD).await.expect("enroll scrypt");
         assert_eq!(enrolled_key.key, TEST_SCRYPT_KEY);
         assert_matches!(enrolled_key.enrollment_data, TEST_SCRYPT_PARAMS);
+    }
+
+    #[fuchsia::test]
+    async fn test_remove_key() {
+        let mut ks = ScryptKeySource::from(TEST_SCRYPT_PARAMS);
+        let enrolled_key = ks.enroll_key(TEST_SCRYPT_PASSWORD).await.expect("enroll scrypt");
+        let res = ks.remove_key(enrolled_key.enrollment_data).await;
+        assert_matches!(res, Ok(()));
     }
 
     #[fuchsia::test]
