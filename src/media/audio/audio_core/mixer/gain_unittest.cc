@@ -96,7 +96,7 @@ class GainBase : public testing::Test {
     printf("\n");
   }
 
-  // Overridden by SourceGainControl and DestGainControl
+  // Overridden by SourceDestGainControl and DestSourceGainControl
   virtual void SetGain(float gain_db) = 0;
   virtual void SetOtherGain(float gain_db) = 0;
   virtual void SetGainWithRamp(float gain_db, zx::duration duration,
@@ -110,7 +110,7 @@ class GainBase : public testing::Test {
 
   virtual void CompleteRamp() = 0;
 
-  // Used by SourceGainTest and DestGainTest
+  // Used by SourceDestGainTest and DestSourceGainTest
   void TestUnityGain(float first_gain_db, float second_gain_db);
   void UnityChecks();
   void GainCachingChecks();
@@ -120,7 +120,6 @@ class GainBase : public testing::Test {
   void MaxGainChecks();
   void SourceMuteChecks();
 
-  // Used by SourceGainRampTest and DestGainRampTest
   void TestRampWithNoDuration();
   void TestRampWithDuration();
   void TestRampIntoSilence();
@@ -136,7 +135,15 @@ class GainBase : public testing::Test {
   void TestRampsForSilence();
   void TestRampsForNonSilence();
 
-  // Used by SourceGainScaleArrayTest and DestGainScaleArrayTest
+  // These precise scale tests produce a scale array from two controls.
+  // The returned max value ignores the "internal" control.
+  enum class AdjustmentControlPosition {
+    First,
+    Second,
+    None,
+  };
+  virtual AdjustmentControlPosition adjustment_control_position() const = 0;
+
   void TestCalculateScaleArrayNoRamp();
   void TestCalculateScaleArray();
   void TestScaleArrayLongRamp();
@@ -156,8 +163,9 @@ class GainBase : public testing::Test {
   TimelineRate rate_1khz_output_;
 };
 
-// Used so that identical testing is done on the source-gain and dest-gain portions of Gain.
-class SourceGainControl : public GainBase {
+// Used so that identical testing is done on each pair of gain controls.
+
+class SourceDestGainControl : public GainBase {
  protected:
   void SetGain(float gain_db) override { gain_.SetSourceGain(gain_db); }
   void SetOtherGain(float gain_db) override { gain_.SetDestGain(gain_db); }
@@ -175,8 +183,13 @@ class SourceGainControl : public GainBase {
   float GetOtherPartialGainDb() override { return gain_.GetDestGainDb(); }
 
   void CompleteRamp() override { gain_.CompleteSourceRamp(); }
+
+  AdjustmentControlPosition adjustment_control_position() const override {
+    return AdjustmentControlPosition::None;
+  }
 };
-class DestGainControl : public GainBase {
+
+class DestSourceGainControl : public GainBase {
  protected:
   void SetGain(float gain_db) override { gain_.SetDestGain(gain_db); }
   void SetOtherGain(float gain_db) override { gain_.SetSourceGain(gain_db); }
@@ -194,22 +207,68 @@ class DestGainControl : public GainBase {
   float GetOtherPartialGainDb() override { return gain_.GetSourceGainDb(); }
 
   void CompleteRamp() override { gain_.CompleteDestRamp(); }
+
+  AdjustmentControlPosition adjustment_control_position() const override {
+    return AdjustmentControlPosition::None;
+  }
+};
+
+class SourceAdjustmentGainControl : public GainBase {
+ protected:
+  void SetGain(float gain_db) override { gain_.SetSourceGain(gain_db); }
+  void SetOtherGain(float gain_db) override { gain_.SetGainAdjustment(gain_db); }
+  void SetGainWithRamp(float gain_db, zx::duration duration,
+                       fuchsia::media::audio::RampType ramp_type =
+                           fuchsia::media::audio::RampType::SCALE_LINEAR) override {
+    gain_.SetSourceGainWithRamp(gain_db, duration, ramp_type);
+  }
+  void SetOtherGainWithRamp(float gain_db, zx::duration duration,
+                            fuchsia::media::audio::RampType ramp_type =
+                                fuchsia::media::audio::RampType::SCALE_LINEAR) override {
+    gain_.SetGainAdjustmentWithRamp(gain_db, duration, ramp_type);
+  }
+  float GetPartialGainDb() override { return gain_.GetSourceGainDb(); }
+  float GetOtherPartialGainDb() override { return gain_.GetGainAdjustmentDb(); }
+
+  void CompleteRamp() override { gain_.CompleteSourceRamp(); }
+
+  AdjustmentControlPosition adjustment_control_position() const override {
+    return AdjustmentControlPosition::Second;
+  }
+};
+
+class AdjustmentSourceGainControl : public GainBase {
+ protected:
+  void SetGain(float gain_db) override { gain_.SetGainAdjustment(gain_db); }
+  void SetOtherGain(float gain_db) override { gain_.SetSourceGain(gain_db); }
+  void SetGainWithRamp(float gain_db, zx::duration duration,
+                       fuchsia::media::audio::RampType ramp_type =
+                           fuchsia::media::audio::RampType::SCALE_LINEAR) override {
+    gain_.SetGainAdjustmentWithRamp(gain_db, duration, ramp_type);
+  }
+  void SetOtherGainWithRamp(float gain_db, zx::duration duration,
+                            fuchsia::media::audio::RampType ramp_type =
+                                fuchsia::media::audio::RampType::SCALE_LINEAR) override {
+    gain_.SetSourceGainWithRamp(gain_db, duration, ramp_type);
+  }
+  float GetPartialGainDb() override { return gain_.GetGainAdjustmentDb(); }
+  float GetOtherPartialGainDb() override { return gain_.GetSourceGainDb(); }
+
+  void CompleteRamp() override { gain_.CompleteAdjustmentRamp(); }
+
+  AdjustmentControlPosition adjustment_control_position() const override {
+    return AdjustmentControlPosition::First;
+  }
 };
 
 // General (non-specific to source or dest) gain checks
-class GainTest : public SourceGainControl {};
+class GainTest : public SourceDestGainControl {};
 
-// Gain checks that can be source/dest inverted, and thus are run both ways
-class SourceGainTest : public SourceGainControl {};
-class DestGainTest : public DestGainControl {};
-
-// Checks of gain-ramping behavior
-class SourceGainRampTest : public SourceGainControl {};
-class DestGainRampTest : public DestGainControl {};
-
-// Precise calculation checks, of CalculateScaleArray with gain-ramping
-class SourceGainScaleArrayTest : public SourceGainControl {};
-class DestGainScaleArrayTest : public DestGainControl {};
+// Gain checks that can be source/dest inverted.
+class SourceDestGainTest : public SourceDestGainControl {};
+class DestSourceGainTest : public DestSourceGainControl {};
+class SourceAdjustmentGainTest : public SourceAdjustmentGainControl {};
+class AdjustmentSourceGainTest : public AdjustmentSourceGainControl {};
 
 // Test the defaults upon construction
 TEST_F(GainTest, Defaults) {
@@ -236,8 +295,10 @@ void GainBase::UnityChecks() {
   TestUnityGain(-kMaxGainDb, kMaxGainDb);
 }
 // Do source and destination gains correctly combine to produce unity scaling?
-TEST_F(SourceGainTest, Unity) { UnityChecks(); }
-TEST_F(DestGainTest, Unity) { UnityChecks(); }
+TEST_F(SourceDestGainTest, Unity) { UnityChecks(); }
+TEST_F(DestSourceGainTest, Unity) { UnityChecks(); }
+TEST_F(SourceAdjustmentGainTest, Unity) { UnityChecks(); }
+TEST_F(AdjustmentSourceGainTest, Unity) { UnityChecks(); }
 
 void GainBase::GainCachingChecks() {
   Gain expect_gain;
@@ -286,8 +347,10 @@ void GainBase::GainCachingChecks() {
 }
 // Gain caches any previously set source gain, using it if needed.
 // This verifies the default and caching behavior of the Gain object
-TEST_F(SourceGainTest, GainCaching) { GainCachingChecks(); }
-TEST_F(DestGainTest, GainCaching) { GainCachingChecks(); }
+TEST_F(SourceDestGainTest, GainCaching) { GainCachingChecks(); }
+TEST_F(DestSourceGainTest, GainCaching) { GainCachingChecks(); }
+TEST_F(SourceAdjustmentGainTest, GainCaching) { GainCachingChecks(); }
+TEST_F(AdjustmentSourceGainTest, GainCaching) { GainCachingChecks(); }
 
 void GainBase::VerifyMinGain(float first_gain_db, float second_gain_db) {
   SCOPED_TRACE("VerifyMinGain(" + std::to_string(first_gain_db) + ", " +
@@ -329,8 +392,10 @@ void GainBase::MinGainChecks() {
 }
 // System independently limits source gain and dest gain to kMinGainDb (-160dB).
 // Assert scale is zero, if either (or combo) are kMinGainDb or less.
-TEST_F(SourceGainTest, GainIsLimitedToMin) { MinGainChecks(); }
-TEST_F(DestGainTest, GainIsLimitedToMin) { MinGainChecks(); }
+TEST_F(SourceDestGainTest, GainIsLimitedToMin) { MinGainChecks(); }
+TEST_F(DestSourceGainTest, GainIsLimitedToMin) { MinGainChecks(); }
+TEST_F(SourceAdjustmentGainTest, GainIsLimitedToMin) { MinGainChecks(); }
+TEST_F(AdjustmentSourceGainTest, GainIsLimitedToMin) { MinGainChecks(); }
 
 void GainBase::VerifyMaxGain(float first_gain_db, float second_gain_db) {
   SCOPED_TRACE("VerifyMaxGain(" + std::to_string(first_gain_db) + ", " +
@@ -364,8 +429,10 @@ void GainBase::MaxGainChecks() {
 }
 // System only limits source gain and dest gain to kMaxGainDb (+24dB) when they are combined.
 // Assert scale is max, if either (or combo) are kMaxGainDb or more.
-TEST_F(SourceGainTest, GainIsLimitedToMax) { MaxGainChecks(); }
-TEST_F(DestGainTest, GainIsLimitedToMax) { MaxGainChecks(); }
+TEST_F(SourceDestGainTest, GainIsLimitedToMax) { MaxGainChecks(); }
+TEST_F(DestSourceGainTest, GainIsLimitedToMax) { MaxGainChecks(); }
+TEST_F(SourceAdjustmentGainTest, GainIsLimitedToMax) { MaxGainChecks(); }
+TEST_F(AdjustmentSourceGainTest, GainIsLimitedToMax) { MaxGainChecks(); }
 
 void GainBase::SourceMuteChecks() {
   SetGain(0.0f);
@@ -410,8 +477,10 @@ void GainBase::SourceMuteChecks() {
   EXPECT_LE(gain_.GetGainDb(), kMinGainDb);
 }
 // source_mute control should affect IsSilent, IsUnity, IsRamping and GetGainScale appropriately.
-TEST_F(SourceGainTest, SourceMuteOverridesGainAndRamp) { SourceMuteChecks(); }
-TEST_F(DestGainTest, SourceMuteOverridesGainAndRamp) { SourceMuteChecks(); }
+TEST_F(SourceDestGainTest, SourceMuteOverridesGainAndRamp) { SourceMuteChecks(); }
+TEST_F(DestSourceGainTest, SourceMuteOverridesGainAndRamp) { SourceMuteChecks(); }
+TEST_F(SourceAdjustmentGainTest, SourceMuteOverridesGainAndRamp) { SourceMuteChecks(); }
+TEST_F(AdjustmentSourceGainTest, SourceMuteOverridesGainAndRamp) { SourceMuteChecks(); }
 
 // Ramp-related tests
 //
@@ -429,8 +498,14 @@ void GainBase::TestRampWithNoDuration() {
   EXPECT_FALSE(gain_.IsSilent());
 }
 // Setting a ramp with zero duration is the same as an immediate gain change.
-TEST_F(SourceGainRampTest, SetRampWithNoDurationChangesCurrentGain) { TestRampWithNoDuration(); }
-TEST_F(DestGainRampTest, SetRampWithNoDurationChangesCurrentGain) { TestRampWithNoDuration(); }
+TEST_F(SourceDestGainTest, SetRampWithNoDurationChangesCurrentGain) { TestRampWithNoDuration(); }
+TEST_F(DestSourceGainTest, SetRampWithNoDurationChangesCurrentGain) { TestRampWithNoDuration(); }
+TEST_F(SourceAdjustmentGainTest, SetRampWithNoDurationChangesCurrentGain) {
+  TestRampWithNoDuration();
+}
+TEST_F(AdjustmentSourceGainTest, SetRampWithNoDurationChangesCurrentGain) {
+  TestRampWithNoDuration();
+}
 
 // Setting a ramp with non-zero duration does not take effect until Advance.
 void GainBase::TestRampWithDuration() {
@@ -448,8 +523,14 @@ void GainBase::TestRampWithDuration() {
   EXPECT_TRUE(gain_.IsRamping());
 }
 // Setting a ramp with non-zero duration does not take effect until Advance.
-TEST_F(SourceGainRampTest, SetRampWithDurationDoesntChangeCurrentGain) { TestRampWithDuration(); }
-TEST_F(DestGainRampTest, SetRampWithDurationDoesntChangeCurrentGain) { TestRampWithDuration(); }
+TEST_F(SourceDestGainTest, SetRampWithDurationDoesntChangeCurrentGain) { TestRampWithDuration(); }
+TEST_F(DestSourceGainTest, SetRampWithDurationDoesntChangeCurrentGain) { TestRampWithDuration(); }
+TEST_F(SourceAdjustmentGainTest, SetRampWithDurationDoesntChangeCurrentGain) {
+  TestRampWithDuration();
+}
+TEST_F(AdjustmentSourceGainTest, SetRampWithDurationDoesntChangeCurrentGain) {
+  TestRampWithDuration();
+}
 
 void GainBase::TestRampIntoSilence() {
   SetGain(0.0f);
@@ -468,8 +549,10 @@ void GainBase::TestRampIntoSilence() {
   EXPECT_FALSE(gain_.IsUnity());
 }
 // If we are ramping-down and already silent, IsSilent should remain true.
-TEST_F(SourceGainRampTest, RampFromNonSilenceToSilenceIsNotSilent) { TestRampIntoSilence(); }
-TEST_F(DestGainRampTest, RampFromNonSilenceToSilenceIsNotSilent) { TestRampIntoSilence(); }
+TEST_F(SourceDestGainTest, RampFromNonSilenceToSilenceIsNotSilent) { TestRampIntoSilence(); }
+TEST_F(DestSourceGainTest, RampFromNonSilenceToSilenceIsNotSilent) { TestRampIntoSilence(); }
+TEST_F(SourceAdjustmentGainTest, RampFromNonSilenceToSilenceIsNotSilent) { TestRampIntoSilence(); }
+TEST_F(AdjustmentSourceGainTest, RampFromNonSilenceToSilenceIsNotSilent) { TestRampIntoSilence(); }
 
 void GainBase::TestRampOutOfSilence() {
   // Combined, we start in silence...
@@ -500,8 +583,10 @@ void GainBase::TestRampOutOfSilence() {
   EXPECT_FALSE(gain_.IsUnity());
 }
 // If we are ramping-down and already silent, IsSilent should remain true.
-TEST_F(SourceGainRampTest, RampFromSilenceToNonSilenceIsNotSilent) { TestRampOutOfSilence(); }
-TEST_F(DestGainRampTest, RampFromSilenceToNonSilenceIsNotSilent) { TestRampOutOfSilence(); }
+TEST_F(SourceDestGainTest, RampFromSilenceToNonSilenceIsNotSilent) { TestRampOutOfSilence(); }
+TEST_F(DestSourceGainTest, RampFromSilenceToNonSilenceIsNotSilent) { TestRampOutOfSilence(); }
+TEST_F(SourceAdjustmentGainTest, RampFromSilenceToNonSilenceIsNotSilent) { TestRampOutOfSilence(); }
+TEST_F(AdjustmentSourceGainTest, RampFromSilenceToNonSilenceIsNotSilent) { TestRampOutOfSilence(); }
 
 void GainBase::TestRampFromSilenceToSilence() {
   // Both start and end are at/below kMinGainDb -- ramping up
@@ -518,8 +603,14 @@ void GainBase::TestRampFromSilenceToSilence() {
   EXPECT_FALSE(gain_.IsRamping());
 }
 // If the beginning and end of a ramp are both at/below min gain, it isn't ramping.
-TEST_F(SourceGainRampTest, RampFromSilenceToSilenceIsNotRamping) { TestRampFromSilenceToSilence(); }
-TEST_F(DestGainRampTest, RampFromSilenceToSilenceIsNotRamping) { TestRampFromSilenceToSilence(); }
+TEST_F(SourceDestGainTest, RampFromSilenceToSilenceIsNotRamping) { TestRampFromSilenceToSilence(); }
+TEST_F(DestSourceGainTest, RampFromSilenceToSilenceIsNotRamping) { TestRampFromSilenceToSilence(); }
+TEST_F(SourceAdjustmentGainTest, RampFromSilenceToSilenceIsNotRamping) {
+  TestRampFromSilenceToSilence();
+}
+TEST_F(AdjustmentSourceGainTest, RampFromSilenceToSilenceIsNotRamping) {
+  TestRampFromSilenceToSilence();
+}
 
 void GainBase::TestRampsCombineForSilence() {
   // Both start and end are at/below kMinGainDb -- ramping up
@@ -538,8 +629,14 @@ void GainBase::TestRampsCombineForSilence() {
   EXPECT_TRUE(gain_.IsRamping());
 }
 // If the beginning and end of a ramp are both at/below min gain, it isn't ramping.
-TEST_F(SourceGainRampTest, RampsCombineForSilenceIsNotSilent) { TestRampsCombineForSilence(); }
-TEST_F(DestGainRampTest, RampsCombineForSilenceIsNotSilent) { TestRampsCombineForSilence(); }
+TEST_F(SourceDestGainTest, RampsCombineForSilenceIsNotSilent) { TestRampsCombineForSilence(); }
+TEST_F(DestSourceGainTest, RampsCombineForSilenceIsNotSilent) { TestRampsCombineForSilence(); }
+TEST_F(SourceAdjustmentGainTest, RampsCombineForSilenceIsNotSilent) {
+  TestRampsCombineForSilence();
+}
+TEST_F(AdjustmentSourceGainTest, RampsCombineForSilenceIsNotSilent) {
+  TestRampsCombineForSilence();
+}
 
 void GainBase::TestRampUnity() {
   SetGain(Gain::kUnityGainDb);
@@ -556,8 +653,10 @@ void GainBase::TestRampUnity() {
   EXPECT_TRUE(gain_.IsRamping());
 }
 // If a ramp is active/pending, then IsUnity should never be true.
-TEST_F(SourceGainRampTest, RampIsNeverUnity) { TestRampUnity(); }
-TEST_F(DestGainRampTest, RampIsNeverUnity) { TestRampUnity(); }
+TEST_F(SourceDestGainTest, RampIsNeverUnity) { TestRampUnity(); }
+TEST_F(DestSourceGainTest, RampIsNeverUnity) { TestRampUnity(); }
+TEST_F(SourceAdjustmentGainTest, RampIsNeverUnity) { TestRampUnity(); }
+TEST_F(AdjustmentSourceGainTest, RampIsNeverUnity) { TestRampUnity(); }
 
 void GainBase::TestFlatRamp() {
   SetGain(Gain::kUnityGainDb);
@@ -575,8 +674,10 @@ void GainBase::TestFlatRamp() {
   EXPECT_TRUE(gain_.IsUnity());
 }
 // If the beginning and end of a ramp are the same, it isn't ramping.
-TEST_F(SourceGainRampTest, FlatIsntRamping) { TestFlatRamp(); }
-TEST_F(DestGainRampTest, FlatIsntRamping) { TestFlatRamp(); }
+TEST_F(SourceDestGainTest, FlatIsntRamping) { TestFlatRamp(); }
+TEST_F(DestSourceGainTest, FlatIsntRamping) { TestFlatRamp(); }
+TEST_F(SourceAdjustmentGainTest, FlatIsntRamping) { TestFlatRamp(); }
+TEST_F(AdjustmentSourceGainTest, FlatIsntRamping) { TestFlatRamp(); }
 
 void GainBase::TestRampWithMute() {
   SetGain(0.0f);
@@ -597,8 +698,10 @@ void GainBase::TestRampWithMute() {
   EXPECT_TRUE(gain_.IsRamping());
 }
 // If the beginning and end of a ramp are the same, it isn't ramping.
-TEST_F(SourceGainRampTest, MuteOverridesRamp) { TestRampWithMute(); }
-TEST_F(DestGainRampTest, MuteOverridesRamp) { TestRampWithMute(); }
+TEST_F(SourceDestGainTest, MuteOverridesRamp) { TestRampWithMute(); }
+TEST_F(DestSourceGainTest, MuteOverridesRamp) { TestRampWithMute(); }
+TEST_F(SourceAdjustmentGainTest, MuteOverridesRamp) { TestRampWithMute(); }
+TEST_F(AdjustmentSourceGainTest, MuteOverridesRamp) { TestRampWithMute(); }
 
 void GainBase::TestAdvance() {
   SetGain(-150.0f);
@@ -614,8 +717,10 @@ void GainBase::TestAdvance() {
   EXPECT_FALSE(gain_.IsRamping());
 }
 // Upon Advance, we should see a change in the instantaneous GetGainScale().
-TEST_F(SourceGainRampTest, AdvanceChangesGain) { TestAdvance(); }
-TEST_F(DestGainRampTest, AdvanceChangesGain) { TestAdvance(); }
+TEST_F(SourceDestGainTest, AdvanceChangesGain) { TestAdvance(); }
+TEST_F(DestSourceGainTest, AdvanceChangesGain) { TestAdvance(); }
+TEST_F(SourceAdjustmentGainTest, AdvanceChangesGain) { TestAdvance(); }
+TEST_F(AdjustmentSourceGainTest, AdvanceChangesGain) { TestAdvance(); }
 
 void GainBase::TestSetGainCancelsRamp() {
   SetGain(-60.0f);
@@ -636,8 +741,10 @@ void GainBase::TestSetGainCancelsRamp() {
   EXPECT_FLOAT_EQ(gain_.GetGainDb(), -20.0f);
 }
 // Setting a static gain during ramping should cancel the ramp
-TEST_F(SourceGainRampTest, SetSourceGainCancelsRamp) { TestSetGainCancelsRamp(); }
-TEST_F(DestGainRampTest, SetSourceGainCancelsRamp) { TestSetGainCancelsRamp(); }
+TEST_F(SourceDestGainTest, SetSourceGainCancelsRamp) { TestSetGainCancelsRamp(); }
+TEST_F(DestSourceGainTest, SetSourceGainCancelsRamp) { TestSetGainCancelsRamp(); }
+TEST_F(SourceAdjustmentGainTest, SetSourceGainCancelsRamp) { TestSetGainCancelsRamp(); }
+TEST_F(AdjustmentSourceGainTest, SetSourceGainCancelsRamp) { TestSetGainCancelsRamp(); }
 
 void GainBase::TestRampsForSilence() {
   // Flat ramp reverts to static gain combination
@@ -667,8 +774,10 @@ void GainBase::TestRampsForSilence() {
   EXPECT_TRUE(gain_.IsSilent());
 }
 // Setting a static gain during ramping should cancel the ramp
-TEST_F(SourceGainRampTest, WhenIsSilentShouldBeTrue) { TestRampsForSilence(); }
-TEST_F(DestGainRampTest, WhenIsSilentShouldBeTrue) { TestRampsForSilence(); }
+TEST_F(SourceDestGainTest, WhenIsSilentShouldBeTrue) { TestRampsForSilence(); }
+TEST_F(DestSourceGainTest, WhenIsSilentShouldBeTrue) { TestRampsForSilence(); }
+TEST_F(SourceAdjustmentGainTest, WhenIsSilentShouldBeTrue) { TestRampsForSilence(); }
+TEST_F(AdjustmentSourceGainTest, WhenIsSilentShouldBeTrue) { TestRampsForSilence(); }
 
 void GainBase::TestRampsForNonSilence() {
   // Above the silence threshold, ramping downward
@@ -699,8 +808,10 @@ void GainBase::TestRampsForNonSilence() {
 
   EXPECT_FALSE(gain_.IsSilent());
 }
-TEST_F(SourceGainRampTest, WhenIsSilentShouldBeFalse) { TestRampsForNonSilence(); }
-TEST_F(DestGainRampTest, WhenIsSilentShouldBeFalse) { TestRampsForNonSilence(); }
+TEST_F(SourceDestGainTest, WhenIsSilentShouldBeFalse) { TestRampsForNonSilence(); }
+TEST_F(DestSourceGainTest, WhenIsSilentShouldBeFalse) { TestRampsForNonSilence(); }
+TEST_F(SourceAdjustmentGainTest, WhenIsSilentShouldBeFalse) { TestRampsForNonSilence(); }
+TEST_F(AdjustmentSourceGainTest, WhenIsSilentShouldBeFalse) { TestRampsForNonSilence(); }
 
 // ScaleArray-related tests
 //
@@ -711,41 +822,71 @@ void GainBase::TestCalculateScaleArrayNoRamp() {
 
   auto max_gain_scale =
       gain_.CalculateScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
-  Gain::AScale expect_scale = gain_.GetGainScale();
 
-  EXPECT_THAT(scale_arr, Each(FloatEq(expect_scale)));
-  EXPECT_FLOAT_EQ(max_gain_scale, expect_scale);
+  EXPECT_THAT(scale_arr, Each(FloatEq(Gain::DbToScale(-110.0f))));
+
+  switch (adjustment_control_position()) {
+    case AdjustmentControlPosition::None:
+      EXPECT_FLOAT_EQ(max_gain_scale, Gain::DbToScale(-110.0f));
+      break;
+    case AdjustmentControlPosition::First:
+      EXPECT_FLOAT_EQ(max_gain_scale, Gain::DbToScale(-68.0f));
+      break;
+    case AdjustmentControlPosition::Second:
+      EXPECT_FLOAT_EQ(max_gain_scale, Gain::DbToScale(-42.0f));
+      break;
+  }
 
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsRamping());
   EXPECT_FALSE(gain_.IsSilent());
 }
 // If no ramp, all vals returned by CalculateScaleArray should equal GetGainScale().
-TEST_F(SourceGainScaleArrayTest, CalculateScaleArrayNoRampEqualsGetScale) {
+TEST_F(SourceDestGainTest, CalculateScaleArrayNoRampEqualsGetScale) {
   TestCalculateScaleArrayNoRamp();
 }
-TEST_F(DestGainScaleArrayTest, CalculateScaleArrayNoRampEqualsGetScale) {
+TEST_F(DestSourceGainTest, CalculateScaleArrayNoRampEqualsGetScale) {
+  TestCalculateScaleArrayNoRamp();
+}
+TEST_F(SourceAdjustmentGainTest, CalculateScaleArrayNoRampEqualsGetScale) {
+  TestCalculateScaleArrayNoRamp();
+}
+TEST_F(AdjustmentSourceGainTest, CalculateScaleArrayNoRampEqualsGetScale) {
   TestCalculateScaleArrayNoRamp();
 }
 
 void GainBase::TestCalculateScaleArray() {
   Gain::AScale scale_arr[6];
-  Gain::AScale expect_arr[6] = {1.00f, 0.82f, 0.64f, 0.46f, 0.28f, 0.10f};
+  Gain::AScale expect_arr[6] = {0.5f, 0.42f, 0.34f, 0.26f, 0.18f, 0.10f};
 
-  SetGainWithRamp(-20, zx::msec(5));
+  SetGain(Gain::ScaleToDb(0.5f));
+  SetGainWithRamp(Gain::ScaleToDb(0.1f), zx::msec(5));
+
   auto max_gain_scale =
       gain_.CalculateScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
 
   EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
-  EXPECT_FLOAT_EQ(max_gain_scale, expect_arr[0]);
+
+  switch (adjustment_control_position()) {
+    case AdjustmentControlPosition::None:
+    case AdjustmentControlPosition::Second:
+      EXPECT_FLOAT_EQ(max_gain_scale, 0.5f);
+      break;
+    case AdjustmentControlPosition::First:
+      // The internal control is ramping, while source and dest are unity.
+      EXPECT_FLOAT_EQ(max_gain_scale, 1.0f);
+      break;
+  }
 
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsRamping());
   EXPECT_FALSE(gain_.IsSilent());
 }
 // Validate when ramp and CalculateScaleArray are identical length.
-TEST_F(SourceGainScaleArrayTest, CalculateScaleArrayRamp) { TestCalculateScaleArray(); }
-TEST_F(DestGainScaleArrayTest, CalculateScaleArrayRamp) { TestCalculateScaleArray(); }
+TEST_F(SourceDestGainTest, CalculateScaleArrayRamp) { TestCalculateScaleArray(); }
+TEST_F(DestSourceGainTest, CalculateScaleArrayRamp) { TestCalculateScaleArray(); }
+TEST_F(SourceAdjustmentGainTest, CalculateScaleArrayRamp) { TestCalculateScaleArray(); }
+TEST_F(AdjustmentSourceGainTest, CalculateScaleArrayRamp) { TestCalculateScaleArray(); }
 
 void GainBase::TestScaleArrayLongRamp() {
   Gain::AScale scale_arr[4];  // At 1kHz this is less than the ramp duration.
@@ -763,8 +904,8 @@ void GainBase::TestScaleArrayLongRamp() {
   EXPECT_FALSE(gain_.IsSilent());
 }
 // Validate when ramp duration is greater than CalculateScaleArray.
-TEST_F(SourceGainScaleArrayTest, CalculateScaleArrayLongRamp) { TestScaleArrayLongRamp(); }
-TEST_F(DestGainScaleArrayTest, CalculateScaleArrayLongRamp) { TestScaleArrayLongRamp(); }
+TEST_F(SourceDestGainTest, CalculateScaleArrayLongRamp) { TestScaleArrayLongRamp(); }
+TEST_F(DestSourceGainTest, CalculateScaleArrayLongRamp) { TestScaleArrayLongRamp(); }
 
 void GainBase::TestScaleArrayShortRamp() {
   Gain::AScale scale_arr[9];  // At 1kHz this is longer than the ramp duration.
@@ -782,8 +923,8 @@ void GainBase::TestScaleArrayShortRamp() {
   EXPECT_FALSE(gain_.IsSilent());
 }
 // Validate when ramp duration is shorter than CalculateScaleArray.
-TEST_F(SourceGainScaleArrayTest, CalculateScaleArrayShortRamp) { TestScaleArrayShortRamp(); }
-TEST_F(DestGainScaleArrayTest, CalculateScaleArrayShortRamp) { TestScaleArrayShortRamp(); }
+TEST_F(SourceDestGainTest, CalculateScaleArrayShortRamp) { TestScaleArrayShortRamp(); }
+TEST_F(DestSourceGainTest, CalculateScaleArrayShortRamp) { TestScaleArrayShortRamp(); }
 
 void GainBase::TestScaleArrayWithoutAdvance() {
   SetGainWithRamp(-123.45678f, zx::msec(9));
@@ -800,12 +941,8 @@ void GainBase::TestScaleArrayWithoutAdvance() {
   EXPECT_THAT(scale_arr, Pointwise(FloatEq(), scale_arr2));
 }
 // Successive CalculateScaleArray calls without Advance should return same results.
-TEST_F(SourceGainScaleArrayTest, CalculateScaleArrayWithoutAdvance) {
-  TestScaleArrayWithoutAdvance();
-}
-TEST_F(DestGainScaleArrayTest, CalculateScaleArrayWithoutAdvance) {
-  TestScaleArrayWithoutAdvance();
-}
+TEST_F(SourceDestGainTest, CalculateScaleArrayWithoutAdvance) { TestScaleArrayWithoutAdvance(); }
+TEST_F(DestSourceGainTest, CalculateScaleArrayWithoutAdvance) { TestScaleArrayWithoutAdvance(); }
 
 void GainBase::TestScaleArrayBigAdvance() {
   Gain::AScale scale_arr[6];
@@ -831,8 +968,8 @@ void GainBase::TestScaleArrayBigAdvance() {
   EXPECT_FALSE(gain_.IsUnity());
 }
 // Advances that exceed ramp durations should lead to end-to-ramp conditions.
-TEST_F(SourceGainScaleArrayTest, CalculateScaleArrayBigAdvance) { TestScaleArrayBigAdvance(); }
-TEST_F(DestGainScaleArrayTest, CalculateScaleArrayBigAdvance) { TestScaleArrayBigAdvance(); }
+TEST_F(SourceDestGainTest, CalculateScaleArrayBigAdvance) { TestScaleArrayBigAdvance(); }
+TEST_F(DestSourceGainTest, CalculateScaleArrayBigAdvance) { TestScaleArrayBigAdvance(); }
 
 void GainBase::TestRampCompletion() {
   Gain::AScale scale_arr[6];
@@ -887,8 +1024,8 @@ void GainBase::TestRampCompletion() {
 }
 
 // Completing a ramp should fast-forward any in-process ramps.
-TEST_F(SourceGainScaleArrayTest, CompleteSourceRamp) { TestRampCompletion(); }
-TEST_F(DestGainScaleArrayTest, CompleteDestRamp) { TestRampCompletion(); }
+TEST_F(SourceDestGainTest, CompleteSourceRamp) { TestRampCompletion(); }
+TEST_F(DestSourceGainTest, CompleteDestRamp) { TestRampCompletion(); }
 
 void GainBase::TestAdvanceHalfwayThroughRamp() {
   Gain::AScale scale_arr[4];  // At 1kHz this is less than the ramp duration.
@@ -934,8 +1071,8 @@ void GainBase::TestAdvanceHalfwayThroughRamp() {
   EXPECT_FALSE(gain_.IsSilent());
 }
 // After partial Advance through a ramp, instantaneous gain should be accurate.
-TEST_F(SourceGainScaleArrayTest, AdvanceHalfwayThroughRamp) { TestAdvanceHalfwayThroughRamp(); }
-TEST_F(DestGainScaleArrayTest, AdvanceHalfwayThroughRamp) { TestAdvanceHalfwayThroughRamp(); }
+TEST_F(SourceDestGainTest, AdvanceHalfwayThroughRamp) { TestAdvanceHalfwayThroughRamp(); }
+TEST_F(DestSourceGainTest, AdvanceHalfwayThroughRamp) { TestAdvanceHalfwayThroughRamp(); }
 
 // After partial Advance through a ramp, followed by a second ramp, the second ramp
 // ramp should start where the first ramp left off.
@@ -969,8 +1106,8 @@ void GainBase::TestSuccessiveRamps() {
 }
 // After partial Advance through a ramp, followed by a second ramp, the second ramp
 // ramp should start where the first ramp left off.
-TEST_F(SourceGainScaleArrayTest, TwoRamps) { TestSuccessiveRamps(); }
-TEST_F(DestGainScaleArrayTest, TwoRamps) { TestSuccessiveRamps(); }
+TEST_F(SourceDestGainTest, TwoRamps) { TestSuccessiveRamps(); }
+TEST_F(DestSourceGainTest, TwoRamps) { TestSuccessiveRamps(); }
 
 void GainBase::TestCombinedRamps() {
   Gain::AScale scale_arr[11];
@@ -1023,8 +1160,8 @@ void GainBase::TestCombinedRamps() {
 }
 
 // Test that source-ramping and dest-ramping combines correctly
-TEST_F(SourceGainScaleArrayTest, CombinedRamps) { TestCombinedRamps(); }
-TEST_F(DestGainScaleArrayTest, CombinedRamps) { TestCombinedRamps(); }
+TEST_F(SourceDestGainTest, CombinedRamps) { TestCombinedRamps(); }
+TEST_F(DestSourceGainTest, CombinedRamps) { TestCombinedRamps(); }
 
 void GainBase::TestCrossFades() {
   Gain::AScale scale_arr[11];
@@ -1073,8 +1210,8 @@ void GainBase::TestCrossFades() {
 }
 // Check two coincident ramps that offset each other. Because scale-linear ramping is not
 // equal-power, the result won't be constant-gain, but it will have a predictable shape.
-TEST_F(SourceGainScaleArrayTest, CrossFades) { TestCrossFades(); }
-TEST_F(DestGainScaleArrayTest, CrossFades) { TestCrossFades(); }
+TEST_F(SourceDestGainTest, CrossFades) { TestCrossFades(); }
+TEST_F(DestSourceGainTest, CrossFades) { TestCrossFades(); }
 
 void GainBase::TestScaleArrayForMinScale() {
   Gain::AScale scale_arr[6];
@@ -1110,8 +1247,8 @@ void GainBase::TestScaleArrayForMinScale() {
   EXPECT_FALSE(gain_.IsRamping());  // entirely below mute threshold, regardless of other stage
 }
 // Setting a static gain during ramping should cancel the ramp
-TEST_F(SourceGainScaleArrayTest, ScaleBelowMinShouldBeMuteScale) { TestScaleArrayForMinScale(); }
-TEST_F(DestGainScaleArrayTest, ScaleBelowMinShouldBeMuteScale) { TestScaleArrayForMinScale(); }
+TEST_F(SourceDestGainTest, ScaleBelowMinShouldBeMuteScale) { TestScaleArrayForMinScale(); }
+TEST_F(DestSourceGainTest, ScaleBelowMinShouldBeMuteScale) { TestScaleArrayForMinScale(); }
 
 // Tests for Set{Min,Max}Gain.
 

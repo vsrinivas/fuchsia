@@ -18,24 +18,6 @@
 
 namespace media::audio {
 
-// Smoothly change gain from its current value to end_gain_db, over the specified duration.
-struct GainRamp {
-  // The target gain for this ramp, in decibels.
-  float end_gain_db;
-  zx::duration duration;
-  fuchsia::media::audio::RampType ramp_type;
-};
-
-// A command to realize gain changes (potentially multiple in tight succession) on connected links.
-struct StreamGainCommand {
-  // Gain to be set immediately, in decibels.
-  std::optional<float> gain_db;
-  // A ramp with which to apply a subsequent gain change, after setting the 'gain_db' above.
-  std::optional<GainRamp> ramp;
-  // Independent of gain_db or ramping, is this stream muted.
-  std::optional<bool> mute;
-};
-
 class AudioRenderer : public BaseRenderer,
                       public fuchsia::media::audio::GainControl,
                       public StreamVolume {
@@ -96,6 +78,27 @@ class AudioRenderer : public BaseRenderer,
   void SetMuteInternal(bool muted);
 
   void SerializeWithPause(fit::closure callback);
+
+  // GainRamp/StreamGainCommand are used by PostStreamGainMute, while doing Play/Pause/SetGain.
+  // Smoothly change gain from its current value to end_gain_db, over the specified duration.
+  struct GainRamp {
+    // The target gain for this ramp, in decibels.
+    float end_gain_db;
+    zx::duration duration;
+    fuchsia::media::audio::RampType ramp_type = fuchsia::media::audio::RampType::SCALE_LINEAR;
+  };
+  // A command to realize gain changes.
+  struct StreamGainCommand {
+    // Gain to be set immediately, in decibels.
+    std::optional<float> gain_db;
+    // A ramp with which to apply a subsequent gain change, after setting the 'gain_db' above.
+    std::optional<GainRamp> ramp;
+    // Independent of gain_db or ramping, is this stream muted.
+    std::optional<bool> mute;
+    // Which GainControl should this command apply to?
+    enum class Control { SOURCE, ADJUSTMENT };
+    Control control = Control::SOURCE;
+  };
   void PostStreamGainMute(StreamGainCommand gain_command);
 
   float stream_gain_db_ = 0.0f;
@@ -107,7 +110,6 @@ class AudioRenderer : public BaseRenderer,
   // Set when pause is ramping, cleared when the ramp is finished.
   // Must be accessed on the FIDL thread only.
   struct PauseRampState {
-    float prior_stream_gain_db;            // gain to restore after the pause ramp is complete
     std::vector<PauseCallback> callbacks;  // Pause calls in flight
     std::vector<fit::closure> queued;      // closures to run on completion
   };

@@ -454,8 +454,8 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream) {
       auto dest_frames_per_dest_ref_clock_nsec =
           ReferenceClockToIntegralFrames(cur_mix_job_.dest_ref_clock_to_frac_dest_frame).rate();
 
-      // Check whether we are still ramping
-      float local_gain_db;
+      // Check whether we are still ramping.
+      float gain_db_to_report;
       const bool ramping = bookkeeping.gain.IsRamping();
       if (ramping) {
         // TODO(fxbug.dev/94160): make less error-prone
@@ -463,9 +463,9 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream) {
             bookkeeping.scale_arr.get(),
             std::min(dest_frames - dest_offset, Mixer::Bookkeeping::kScaleArrLen),
             dest_frames_per_dest_ref_clock_nsec);
-        local_gain_db = Gain::ScaleToDb(scale_arr_max);
+        gain_db_to_report = Gain::ScaleToDb(scale_arr_max);
       } else {
-        local_gain_db = bookkeeping.gain.GetGainDb();
+        gain_db_to_report = bookkeeping.gain.GetUnadjustedGainDb();
       }
 
       StageMetricsTimer timer("Mixer::Mix");
@@ -492,7 +492,7 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream) {
 
       // Total applied gain: previously applied gain, plus any gain added at this stage.
       float total_applied_gain_db =
-          Gain::CombineGains(source_buffer->total_applied_gain_db(), local_gain_db);
+          Gain::CombineGains(source_buffer->total_applied_gain_db(), gain_db_to_report);
       // Record the max applied gain of any source stream.
       cur_mix_job_.total_applied_gain_db =
           std::max(cur_mix_job_.total_applied_gain_db, total_applied_gain_db);

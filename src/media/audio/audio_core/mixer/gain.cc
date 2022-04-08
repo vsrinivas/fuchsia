@@ -144,7 +144,8 @@ Gain::AScale Gain::CalculateScaleArray(AScale* scale_arr, int64_t num_frames,
     for (int64_t idx = 0; idx < num_frames; ++idx) {
       scale_arr[idx] = scale;
     }
-    return scale;
+    // The max must ignore the adjustment control.
+    return GetUnadjustedGainScale();
   }
 
   // Accumulate from Source.
@@ -176,76 +177,118 @@ Gain::AScale Gain::CalculateScaleArray(AScale* scale_arr, int64_t num_frames,
     }
   }
 
+  // Compute the max of the combination of source and dest.
   AScale max_scale = kMuteScale;
-  // Apply gain limits; normalize sub-kMinScale values to kMuteScale; return the max scale value.
+  for (int64_t idx = 0; idx < num_frames; ++idx) {
+    max_scale = std::max(max_scale, scale_arr[idx]);
+  }
+  if (max_scale <= kMinScale) {
+    max_scale = kMuteScale;
+  } else {
+    max_scale = std::clamp(max_scale, min_gain_scale_, max_gain_scale_);
+  }
+
+  // Accumulate from adjustment.
+  if (adjustment_.IsRamping()) {
+    adjustment_.AccumulateScaleArrayForRamp(scale_arr, num_frames,
+                                            destination_frames_per_reference_tick);
+  } else {
+    auto db = adjustment_.GainDb();
+    auto scale = (db <= kMinGainDb) ? kMuteScale : DbToScale(db);
+    if (scale != 1.0f) {
+      for (int64_t idx = 0; idx < num_frames; ++idx) {
+        scale_arr[idx] *= scale;
+      }
+    }
+  }
+
+  // Apply gain limits and normalize sub-kMinScale values to kMuteScale.
   for (int64_t idx = 0; idx < num_frames; ++idx) {
     if (scale_arr[idx] <= kMinScale) {
       scale_arr[idx] = kMuteScale;
     } else {
       scale_arr[idx] = std::clamp(scale_arr[idx], min_gain_scale_, max_gain_scale_);
     }
-    max_scale = std::max(max_scale, scale_arr[idx]);
   }
 
   return max_scale;
 }
 
-// Calculate a stream's gain-scale multiplier from source and dest gains in
-// dB. Optimize to avoid doing the full calculation unless we must.
 Gain::AScale Gain::GetGainScale() {
   TRACE_DURATION("audio", "Gain::GetGainScale");
 
-  // Note: mute toggles are not exposed for Dest.
   if (source_.IsMuted()) {
     return kMuteScale;
   }
 
   auto source_gain_db = source_.GainDb();
   auto dest_gain_db = dest_.GainDb();
+  auto gain_adjustment_db = adjustment_.GainDb();
+  AScale combined_scale;
 
-  // Use the cached value if nothing changed.
-  if (cached_source_gain_db_ == source_gain_db && cached_dest_gain_db_ == dest_gain_db) {
-    if constexpr (kLogGainScaleCalculation) {
-      FX_LOGS(INFO) << "Gain(" << this
-                    << ") reused existing combined gain scale: " << cached_combined_gain_scale_;
-    }
-    return cached_combined_gain_scale_;
-  }
-
-  if (dest_gain_db + source_gain_db == kUnityGainDb) {
-    // If sum of the source and dest cancel each other, the combined is kUnityScale.
-    cached_combined_gain_scale_ = kUnityScale;
-  } else if (source_gain_db <= kMinGainDb || dest_gain_db <= kMinGainDb) {
-    // If source or dest are at the mute point, then silence the stream.
-    cached_combined_gain_scale_ = kMuteScale;
+  if (source_gain_db <= kMinGainDb || dest_gain_db <= kMinGainDb ||
+      gain_adjustment_db <= kMinGainDb) {
+    // If any control is below the mute threshold, silence the stream.
+    combined_scale = kMuteScale;
   } else {
-    float effective_gain_db = source_gain_db + dest_gain_db;
+    float effective_gain_db = source_gain_db + dest_gain_db + gain_adjustment_db;
     // Likewise, silence the stream if the combined gain is at the mute point.
     if (effective_gain_db <= kMinGainDb) {
-      cached_combined_gain_scale_ = kMuteScale;
+      combined_scale = kMuteScale;
     } else if (effective_gain_db >= kMaxGainDb) {
-      cached_combined_gain_scale_ = kMaxScale;
+      combined_scale = kMaxScale;
+    } else if (effective_gain_db == kUnityGainDb) {
+      combined_scale = kUnityScale;
     } else {
       // Else, we really do need to compute the combined gain-scale.
-      cached_combined_gain_scale_ = DbToScale(effective_gain_db);
+      combined_scale = DbToScale(effective_gain_db);
     }
   }
 
   // Apply gain limits.
-  if (cached_combined_gain_scale_ > kMuteScale) {
-    cached_combined_gain_scale_ =
-        std::clamp(cached_combined_gain_scale_, min_gain_scale_, max_gain_scale_);
+  if (combined_scale > kMuteScale) {
+    combined_scale = std::clamp(combined_scale, min_gain_scale_, max_gain_scale_);
   }
 
-  if constexpr (kLogGainScaleCalculation) {
-    FX_LOGS(INFO) << "Gain(" << this << ") new gain_scale: " << cached_combined_gain_scale_;
+  return combined_scale;
+}
+
+// Like GetGainScale, but ignore the adjustment control.
+Gain::AScale Gain::GetUnadjustedGainScale() {
+  TRACE_DURATION("audio", "Gain::GetUnadjustedGainScale");
+
+  if (source_.IsMuted()) {
+    return kMuteScale;
   }
 
-  // Cache inputs for the next call.
-  cached_source_gain_db_ = source_gain_db;
-  cached_dest_gain_db_ = dest_gain_db;
+  auto source_gain_db = source_.GainDb();
+  auto dest_gain_db = dest_.GainDb();
+  AScale combined_scale;
 
-  return cached_combined_gain_scale_;
+  if (source_gain_db <= kMinGainDb || dest_gain_db <= kMinGainDb) {
+    // If any control is below the mute threshold, silence the stream.
+    combined_scale = kMuteScale;
+  } else {
+    float effective_gain_db = source_gain_db + dest_gain_db;
+    // Likewise, silence the stream if the combined gain is at the mute point.
+    if (effective_gain_db <= kMinGainDb) {
+      combined_scale = kMuteScale;
+    } else if (effective_gain_db >= kMaxGainDb) {
+      combined_scale = kMaxScale;
+    } else if (effective_gain_db == kUnityGainDb) {
+      combined_scale = kUnityScale;
+    } else {
+      // Else, we really do need to compute the combined gain-scale.
+      combined_scale = DbToScale(effective_gain_db);
+    }
+  }
+
+  // Apply gain limits.
+  if (combined_scale > kMuteScale) {
+    combined_scale = std::clamp(combined_scale, min_gain_scale_, max_gain_scale_);
+  }
+
+  return combined_scale;
 }
 
 }  // namespace media::audio
