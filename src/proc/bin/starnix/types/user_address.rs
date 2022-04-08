@@ -167,6 +167,12 @@ impl<T> UserRef<T> {
     }
 }
 
+impl<T> From<UserAddress> for UserRef<T> {
+    fn from(user_address: UserAddress) -> Self {
+        Self::new(user_address)
+    }
+}
+
 impl<T> ops::Deref for UserRef<T> {
     type Target = UserAddress;
 
@@ -206,5 +212,17 @@ impl ops::Deref for UserCString {
 impl fmt::Display for UserCString {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.addr().fmt(f)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{UserAddress, UserRef};
+
+    #[::fuchsia::test]
+    fn test_into() {
+        assert_eq!(UserRef::<u32>::default(), UserAddress::default().into());
+        let user_address = UserAddress::from(32);
+        assert_eq!(UserRef::<i32>::new(user_address), user_address.into());
     }
 }
