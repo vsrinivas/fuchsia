@@ -16,6 +16,7 @@ use {
             component::{ComponentInstance, ExtendedInstance, StartReason, WeakComponentInstance},
             error::ModelError,
             hooks::{Event, EventPayload},
+            routing::service::FilteredServiceProvider,
             storage,
         },
     },
@@ -312,7 +313,7 @@ impl CapabilityProvider for NamespaceCapabilityProvider {
 }
 
 /// Returns an instance of the default capability provider for the capability at `source`, if supported.
-fn get_default_provider(
+async fn get_default_provider(
     target: WeakComponentInstance,
     source: &CapabilitySource,
 ) -> Option<Box<dyn CapabilityProvider>> {
@@ -336,6 +337,50 @@ fn get_default_provider(
             Some(path) => Some(Box::new(NamespaceCapabilityProvider { path: path.clone() })),
             _ => None,
         },
+        CapabilitySource::FilteredService {
+            capability,
+            component,
+            source_instance_filter,
+            instance_name_source_to_target,
+        } => {
+            // First get the base service capability provider
+            match capability.source_path() {
+                Some(path) => {
+                    let base_capability_provider = Box::new(DefaultComponentCapabilityProvider {
+                        target,
+                        source: component.clone(),
+                        name: capability
+                            .source_name()
+                            .expect("capability with source path should have a name")
+                            .clone(),
+                        path: path.clone(),
+                    });
+
+                    match component.upgrade() {
+                        Ok(source_component) => {
+                            match FilteredServiceProvider::new(
+                                &source_component,
+                                source_instance_filter.clone(),
+                                instance_name_source_to_target.clone(),
+                                base_capability_provider,
+                            )
+                            .await
+                            {
+                                Ok(filtered_service_provider) => {
+                                    Some(Box::new(filtered_service_provider))
+                                }
+                                _ => None,
+                            }
+                        }
+                        Err(e) => {
+                            error!("Error upgrading source component when creating FilteredServiceProvider: {}", e);
+                            None
+                        }
+                    }
+                }
+                _ => None,
+            }
+        }
         CapabilitySource::Framework { .. }
         | CapabilitySource::Capability { .. }
         | CapabilitySource::Builtin { .. }
@@ -354,7 +399,8 @@ fn get_default_provider(
 async fn open_capability_at_source(open_request: OpenRequest<'_>) -> Result<(), ModelError> {
     let OpenRequest { flags, open_mode, relative_path, source, target, server_chan } = open_request;
 
-    let capability_provider = Arc::new(Mutex::new(get_default_provider(target.as_weak(), &source)));
+    let capability_provider =
+        Arc::new(Mutex::new(get_default_provider(target.as_weak(), &source).await));
 
     let event = Event::new(
         &target,
@@ -363,6 +409,7 @@ async fn open_capability_at_source(open_request: OpenRequest<'_>) -> Result<(), 
             capability_provider: capability_provider.clone(),
         }),
     );
+
     // Get a capability provider from the tree
     target.hooks.dispatch(&event).await?;
 
@@ -391,6 +438,9 @@ async fn open_capability_at_source(open_request: OpenRequest<'_>) -> Result<(), 
                     default_capability_provider: {:?}",
                     source
                 );
+            }
+            CapabilitySource::FilteredService { .. } => {
+                return Err(ModelError::unsupported("filtered service"));
             }
             CapabilitySource::Framework { capability, component } => {
                 return Err(RoutingError::capability_from_framework_not_found(

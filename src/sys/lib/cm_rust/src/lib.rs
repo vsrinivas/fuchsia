@@ -350,6 +350,36 @@ pub struct OfferEventStreamDecl {
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NameMapping {
+    pub source_name: String,
+    pub target_name: String,
+}
+
+impl NativeIntoFidl<fdecl::NameMapping> for NameMapping {
+    fn native_into_fidl(self) -> fdecl::NameMapping {
+        fdecl::NameMapping { source_name: self.source_name, target_name: self.target_name }
+    }
+}
+
+impl FidlIntoNative<NameMapping> for fdecl::NameMapping {
+    fn fidl_into_native(self) -> NameMapping {
+        NameMapping { source_name: self.source_name, target_name: self.target_name }
+    }
+}
+
+impl NativeIntoFidl<Vec<fdecl::NameMapping>> for Vec<NameMapping> {
+    fn native_into_fidl(self) -> Vec<fdecl::NameMapping> {
+        self.into_iter().map(|s| s.native_into_fidl()).collect()
+    }
+}
+
+impl FidlIntoNative<Vec<NameMapping>> for Vec<fdecl::NameMapping> {
+    fn fidl_into_native(self) -> Vec<NameMapping> {
+        self.into_iter().map(|s| s.fidl_into_native()).collect()
+    }
+}
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fdecl::OfferService")]
 pub struct OfferServiceDecl {
@@ -358,6 +388,7 @@ pub struct OfferServiceDecl {
     pub target: OfferTarget,
     pub target_name: CapabilityName,
     pub source_instance_filter: Option<Vec<String>>,
+    pub renamed_instances: Option<Vec<NameMapping>>,
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -2316,6 +2347,20 @@ mod tests {
                         target_name: Some("mynetstack".to_string()),
                         ..fdecl::OfferService::EMPTY
                     }),
+                    fdecl::Offer::Service(fdecl::OfferService {
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                        source_name: Some("netstack3".to_string()),
+                        target: Some(fdecl::Ref::Child(
+                           fdecl::ChildRef {
+                               name: "echo".to_string(),
+                               collection: None,
+                           }
+                        )),
+                        target_name: Some("mynetstack".to_string()),
+                        source_instance_filter: Some(vec!["allowedinstance".to_string()]),
+                        renamed_instances: Some(vec![fdecl::NameMapping{source_name: "default".to_string(), target_name: "allowedinstance".to_string()}]),
+                        ..fdecl::OfferService::EMPTY
+                    }),
                     fdecl::Offer::EventStream (
                         fdecl::OfferEventStream {
                             source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
@@ -2642,6 +2687,7 @@ mod tests {
                                     source: OfferSource::Parent,
                                     source_name: "netstack1".try_into().unwrap(),
                                     source_instance_filter: None,
+                                    renamed_instances: None,
                             target: OfferTarget::static_child("echo".to_string()),
                             target_name: "mynetstack".try_into().unwrap(),
                         }),
@@ -2649,6 +2695,15 @@ mod tests {
                                     source: OfferSource::Parent,
                                     source_name: "netstack2".try_into().unwrap(),
                                     source_instance_filter: None,
+                                    renamed_instances: None,
+                            target: OfferTarget::static_child("echo".to_string()),
+                            target_name: "mynetstack".try_into().unwrap(),
+                        }),
+                        OfferDecl::Service(OfferServiceDecl {
+                                    source: OfferSource::Parent,
+                                    source_name: "netstack3".try_into().unwrap(),
+                                    source_instance_filter: Some(vec!["allowedinstance".to_string()]),
+                                    renamed_instances: Some(vec![NameMapping{source_name: "default".to_string(), target_name: "allowedinstance".to_string()}]),
                             target: OfferTarget::static_child("echo".to_string()),
                             target_name: "mynetstack".try_into().unwrap(),
                         }),

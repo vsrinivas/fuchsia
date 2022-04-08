@@ -16,10 +16,10 @@ use {
         CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName, ComponentDecl,
         DependencyType, DictionaryValue, EventDecl, EventMode, ExposeDecl, ExposeDirectoryDecl,
         ExposeProtocolDecl, ExposeRunnerDecl, ExposeServiceDecl, ExposeSource, ExposeTarget,
-        OfferDecl, OfferDirectoryDecl, OfferEventDecl, OfferProtocolDecl, OfferRunnerDecl,
-        OfferServiceDecl, OfferSource, OfferTarget, ProgramDecl, ProtocolDecl, RegistrationSource,
-        RunnerDecl, RunnerRegistration, ServiceDecl, UseDecl, UseDirectoryDecl, UseEventDecl,
-        UseProtocolDecl, UseServiceDecl, UseSource,
+        NameMapping, OfferDecl, OfferDirectoryDecl, OfferEventDecl, OfferProtocolDecl,
+        OfferRunnerDecl, OfferServiceDecl, OfferSource, OfferTarget, ProgramDecl, ProtocolDecl,
+        RegistrationSource, RunnerDecl, RunnerRegistration, ServiceDecl, UseDecl, UseDirectoryDecl,
+        UseEventDecl, UseProtocolDecl, UseServiceDecl, UseSource,
     },
     cm_rust_testing::{
         ChildDeclBuilder, ComponentDeclBuilder, DirectoryDeclBuilder, EnvironmentDeclBuilder,
@@ -44,7 +44,7 @@ use {
         route_capability, RouteRequest, RouteSource,
     },
     std::{
-        collections::HashSet,
+        collections::{HashMap, HashSet},
         convert::{TryFrom, TryInto},
         marker::PhantomData,
         path::{Path, PathBuf},
@@ -324,6 +324,8 @@ macro_rules! instantiate_common_routing_tests {
             test_route_service_from_parent,
             test_route_service_from_child,
             test_route_service_from_sibling,
+            test_route_filtered_service_from_sibling,
+            test_route_renamed_service_instance_from_sibling,
             test_use_builtin_from_grandparent,
             test_invalid_use_from_component_manager,
             test_invalid_offer_from_component_manager,
@@ -3957,6 +3959,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source: OfferSource::Self_,
                         source_name: "foo".into(),
                         source_instance_filter: None,
+                        renamed_instances: None,
                         target_name: "foo".into(),
                         target: OfferTarget::static_child("b".to_string()),
                     }))
@@ -4078,6 +4081,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source: OfferSource::static_child("c".into()),
                         source_name: "foo".into(),
                         source_instance_filter: None,
+                        renamed_instances: None,
                         target_name: "foo".into(),
                         target: OfferTarget::static_child("b".to_string()),
                     }))
@@ -4122,6 +4126,175 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     source_path.expect("missing source path"),
                     "/svc/foo".parse::<CapabilityPath>().unwrap()
                 );
+                assert!(Arc::ptr_eq(&component.upgrade().unwrap(), &c_component));
+            }
+            _ => panic!("bad capability source"),
+        };
+    }
+
+    ///   a
+    ///  / \
+    /// b   c
+    ///
+    /// a: offer to b with service instance filter set from child c
+    /// b: use from parent
+    /// c: expose from self
+    pub async fn test_route_filtered_service_from_sibling(&self) {
+        let use_decl = UseServiceDecl {
+            dependency_type: DependencyType::Strong,
+            source: UseSource::Parent,
+            source_name: "foo".into(),
+            target_path: CapabilityPath::try_from("/foo").unwrap(),
+        };
+        let source_instance_filter = Some(vec!["service_instance_0".to_string()]);
+        let renamed_instances = Some(vec![]);
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .offer(OfferDecl::Service(OfferServiceDecl {
+                        source: OfferSource::static_child("c".into()),
+                        source_name: "foo".into(),
+                        source_instance_filter: source_instance_filter,
+                        renamed_instances: renamed_instances,
+                        target_name: "foo".into(),
+                        target: OfferTarget::static_child("b".to_string()),
+                    }))
+                    .add_lazy_child("b")
+                    .add_lazy_child("c")
+                    .build(),
+            ),
+            ("b", ComponentDeclBuilder::new().use_(use_decl.clone().into()).build()),
+            (
+                "c",
+                ComponentDeclBuilder::new()
+                    .expose(ExposeDecl::Service(ExposeServiceDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "foo".into(),
+                        target_name: "foo".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .service(ServiceDecl {
+                        name: "foo".into(),
+                        source_path: Some("/svc/foo".try_into().unwrap()),
+                    })
+                    .build(),
+            ),
+        ];
+        let model = T::new("a", components).build().await;
+        let b_component = model.look_up_instance(&vec!["b"].into()).await.expect("b instance");
+        let c_component = model.look_up_instance(&vec!["c"].into()).await.expect("c instance");
+        let (source, _route) = route_capability(RouteRequest::UseService(use_decl), &b_component)
+            .await
+            .expect("failed to route service");
+
+        // Verify this source comes from `c`.
+        match source {
+            RouteSource::Service(CapabilitySourceInterface::<
+                <<T as RoutingTestModelBuilder>::Model as RoutingTestModel>::C,
+            >::FilteredService {
+                capability: ComponentCapability::Service(ServiceDecl { name, source_path }),
+                component,
+                source_instance_filter,
+                instance_name_source_to_target,
+            }) => {
+                assert_eq!(name, CapabilityName("foo".into()));
+                assert_eq!(
+                    source_path.expect("missing source path"),
+                    "/svc/foo".parse::<CapabilityPath>().unwrap()
+                );
+                assert_eq!(source_instance_filter, vec!["service_instance_0".to_string()]);
+                assert_eq!(instance_name_source_to_target, HashMap::new());
+
+                assert!(Arc::ptr_eq(&component.upgrade().unwrap(), &c_component));
+            }
+            _ => panic!("bad capability source"),
+        };
+    }
+
+    ///   a
+    ///  / \
+    /// b   c
+    ///
+    /// a: offer to b with a service instance renamed from child c
+    /// b: use from parent
+    /// c: expose from self
+    pub async fn test_route_renamed_service_instance_from_sibling(&self) {
+        let use_decl = UseServiceDecl {
+            dependency_type: DependencyType::Strong,
+            source: UseSource::Parent,
+            source_name: "foo".into(),
+            target_path: CapabilityPath::try_from("/foo").unwrap(),
+        };
+        let source_instance_filter = Some(vec![]);
+        let renamed_instances = Some(vec![NameMapping {
+            source_name: "instance_0".to_string(),
+            target_name: "renamed_instance_0".to_string(),
+        }]);
+        let expected_rename_map = {
+            let mut m = HashMap::new();
+            m.insert("instance_0".to_string(), "renamed_instance_0".to_string());
+            m
+        };
+
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .offer(OfferDecl::Service(OfferServiceDecl {
+                        source: OfferSource::static_child("c".into()),
+                        source_name: "foo".into(),
+                        source_instance_filter: source_instance_filter,
+                        renamed_instances: renamed_instances,
+                        target_name: "foo".into(),
+                        target: OfferTarget::static_child("b".to_string()),
+                    }))
+                    .add_lazy_child("b")
+                    .add_lazy_child("c")
+                    .build(),
+            ),
+            ("b", ComponentDeclBuilder::new().use_(use_decl.clone().into()).build()),
+            (
+                "c",
+                ComponentDeclBuilder::new()
+                    .expose(ExposeDecl::Service(ExposeServiceDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "foo".into(),
+                        target_name: "foo".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .service(ServiceDecl {
+                        name: "foo".into(),
+                        source_path: Some("/svc/foo".try_into().unwrap()),
+                    })
+                    .build(),
+            ),
+        ];
+        let model = T::new("a", components).build().await;
+        let b_component = model.look_up_instance(&vec!["b"].into()).await.expect("b instance");
+        let c_component = model.look_up_instance(&vec!["c"].into()).await.expect("c instance");
+        let (source, _route) = route_capability(RouteRequest::UseService(use_decl), &b_component)
+            .await
+            .expect("failed to route service");
+
+        // Verify this source comes from `c`.
+        match source {
+            RouteSource::Service(CapabilitySourceInterface::<
+                <<T as RoutingTestModelBuilder>::Model as RoutingTestModel>::C,
+            >::FilteredService {
+                capability: ComponentCapability::Service(ServiceDecl { name, source_path }),
+                component,
+                source_instance_filter,
+                instance_name_source_to_target,
+            }) => {
+                assert_eq!(name, CapabilityName("foo".into()));
+                assert_eq!(
+                    source_path.expect("missing source path"),
+                    "/svc/foo".parse::<CapabilityPath>().unwrap()
+                );
+                assert_eq!(source_instance_filter, Vec::<String>::new());
+                assert_eq!(instance_name_source_to_target, expected_rename_map);
+
                 assert!(Arc::ptr_eq(&component.upgrade().unwrap(), &c_component));
             }
             _ => panic!("bad capability source"),

@@ -22,7 +22,7 @@ use {
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     log::warn,
     moniker::AbsoluteMoniker,
-    std::{collections::HashSet, path::PathBuf, sync::Arc},
+    std::{collections::HashMap, collections::HashSet, path::PathBuf, sync::Arc},
     tracing::error,
     vfs::{
         common::send_on_open_with_error,
@@ -49,15 +49,18 @@ pub struct FilteredServiceProvider {
     /// Set of service instance names that are available to the target component.
     source_instance_filter: HashSet<String>,
 
+    /// Mapping of service instance names in the source component to new names in the target.
+    instance_name_source_to_target: HashMap<String, String>,
+
     /// The underlying un-filtered service capability provider.
     source_service_provider: Box<dyn CapabilityProvider>,
 }
 
 impl FilteredServiceProvider {
-    #[cfg(test)]
     pub async fn new(
         source_component: &Arc<ComponentInstance>,
         source_instances: Vec<String>,
+        instance_name_source_to_target: HashMap<String, String>,
         source_service_provider: Box<dyn CapabilityProvider>,
     ) -> Result<Self, ModelError> {
         let execution_scope =
@@ -65,6 +68,7 @@ impl FilteredServiceProvider {
         Ok(FilteredServiceProvider {
             execution_scope,
             source_instance_filter: source_instances.into_iter().collect(),
+            instance_name_source_to_target,
             source_service_provider,
         })
     }
@@ -75,11 +79,16 @@ impl FilteredServiceProvider {
 pub struct FilteredServiceDirectory {
     source_instance_filter: HashSet<String>,
     source_dir_proxy: fio::DirectoryProxy,
+    instance_name_source_to_target: HashMap<String, String>,
+    instance_name_target_to_source: HashMap<String, String>,
 }
 
 impl FilteredServiceDirectory {
     /// Returns true if the requested path matches an allowed instance.
     pub fn path_matches_allowed_instance(self: &Self, path: &String) -> bool {
+        if path.is_empty() {
+            return false;
+        }
         self.source_instance_filter.is_empty() || self.source_instance_filter.contains(path)
     }
 }
@@ -94,7 +103,12 @@ impl DirectoryEntry for FilteredServiceDirectory {
         path: vfs::path::Path,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
-        let path_string = path.clone().into_string();
+        let input_path_string = path.clone().into_string();
+        let path_string = self
+            .instance_name_target_to_source
+            .get(&input_path_string)
+            .map_or(input_path_string, |source_str| source_str.clone());
+
         if self.path_matches_allowed_instance(&path_string) {
             if let Err(e) = self.source_dir_proxy.open(flags, mode, &path_string, server_end) {
                 error!(
@@ -138,24 +152,31 @@ impl Directory for FilteredServiceDirectory {
             Ok(dirent_vec) => {
                 for dirent in dirent_vec {
                     let entry_name = dirent.name;
+                    let target_entry_name = self
+                        .instance_name_source_to_target
+                        .get(&entry_name)
+                        .map_or(&entry_name, |t_name| t_name);
                     // Only reveal allowed source instances,
-                    if !self.path_matches_allowed_instance(&entry_name.clone()) {
+                    if !self.path_matches_allowed_instance(&target_entry_name.clone()) {
                         continue;
                     }
                     if let Some(next_entry_name) = next_entry {
-                        if &entry_name < next_entry_name {
+                        if target_entry_name < next_entry_name {
                             continue;
                         }
                     }
                     sink = match sink.append(
                         &EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory),
-                        &entry_name,
+                        target_entry_name,
                     ) {
                         dirents_sink::AppendResult::Ok(sink) => sink,
                         dirents_sink::AppendResult::Sealed(sealed) => {
                             // There is not enough space to return this entry. Record it as the next
                             // entry to start at for subsequent calls.
-                            return Ok((TraversalPosition::Name(entry_name), sealed));
+                            return Ok((
+                                TraversalPosition::Name(target_entry_name.clone()),
+                                sealed,
+                            ));
                         }
                     }
                 }
@@ -233,9 +254,40 @@ impl CapabilityProvider for FilteredServiceProvider {
             )
             .await?;
 
+        let instance_name_target_to_source = {
+            let mut m = HashMap::new();
+            // We want to ensure that there is a one-to-one mapping from
+            // source to target names. This is validated by cm_fidl_validator, so we
+            // can safely panic and not proceed if that is violated here.
+            let mut existing_values = HashSet::<String>::new();
+            for (k, v) in self.instance_name_source_to_target.iter() {
+                if m.insert(v.clone(), k.clone()).is_some() {
+                    panic!(
+                        "duplicate target name found in instance_name_source_to_target, name: {}",
+                        v
+                    );
+                }
+                if !existing_values.insert(k.clone()) {
+                    panic!(
+                        "duplicate source name found in instance_name_source_to_target, name: {}",
+                        k
+                    );
+                }
+            }
+            m
+        };
+        // Arc to FilteredServiceDirectory will stay in scope and will usable by the caller
+        // because the underlying implementation of Arc<FilteredServiceDirectory>.open
+        // does one of 3 things depending on the path argument.
+        // 1. We open an actual instance, which forwards the open call to the directory entry in the source (original unfiltered) service providing instance.
+        // 2. The path is unknown/ not in the directory and we error.
+        // 3. we call ImmutableConnection::create_connection with self as one of the arguments.
+        // In case 3 the directory will stay in scope until the server_end channel is closed.
         Arc::new(FilteredServiceDirectory {
             source_instance_filter: self.source_instance_filter,
             source_dir_proxy: source_service_proxy,
+            instance_name_target_to_source,
+            instance_name_source_to_target: self.instance_name_source_to_target,
         })
         .open(
             self.execution_scope.clone(),
@@ -247,6 +299,7 @@ impl CapabilityProvider for FilteredServiceProvider {
         Ok(())
     }
 }
+
 /// Serves a Service directory that allows clients to list instances in a collection
 /// and to open instances.
 ///
@@ -930,6 +983,7 @@ mod tests {
             FilteredServiceProvider::new(
                 &test.model.root(),
                 vec!["default".to_string(), "two".to_string()],
+                HashMap::new(),
                 Box::new(source_provider),
             )
             .await
@@ -1014,6 +1068,7 @@ mod tests {
             FilteredServiceProvider::new(
                 &test.model.root(),
                 vec!["default".to_string(), "two".to_string()],
+                HashMap::new(),
                 Box::new(source_provider),
             )
             .await

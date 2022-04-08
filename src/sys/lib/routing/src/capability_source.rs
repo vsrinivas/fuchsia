@@ -24,6 +24,7 @@ use {
     derivative::Derivative,
     from_enum::FromEnum,
     std::{
+        collections::HashMap,
         fmt,
         path::PathBuf,
         sync::{Arc, Weak},
@@ -69,6 +70,12 @@ pub enum CapabilitySourceInterface<C: ComponentInstanceInterface> {
         collection_name: String,
         component: WeakComponentInstanceInterface<C>,
     },
+    FilteredService {
+        capability: ComponentCapability,
+        component: WeakComponentInstanceInterface<C>,
+        source_instance_filter: Vec<String>,
+        instance_name_source_to_target: HashMap<String, String>,
+    },
 }
 
 impl<C: ComponentInstanceInterface> CapabilitySourceInterface<C> {
@@ -82,6 +89,7 @@ impl<C: ComponentInstanceInterface> CapabilitySourceInterface<C> {
             Self::Namespace { capability, .. } => capability.can_be_in_namespace(),
             Self::Capability { .. } => true,
             Self::Collection { capability, .. } => capability.can_be_in_namespace(),
+            Self::FilteredService { capability, .. } => capability.can_be_in_namespace(),
         }
     }
 
@@ -93,6 +101,7 @@ impl<C: ComponentInstanceInterface> CapabilitySourceInterface<C> {
             Self::Namespace { capability, .. } => capability.source_name(),
             Self::Capability { .. } => None,
             Self::Collection { capability, .. } => Some(capability.source_name()),
+            Self::FilteredService { capability, .. } => capability.source_name(),
         }
     }
 
@@ -104,6 +113,7 @@ impl<C: ComponentInstanceInterface> CapabilitySourceInterface<C> {
             Self::Namespace { capability, .. } => capability.type_name(),
             Self::Capability { source_capability, .. } => source_capability.type_name(),
             Self::Collection { capability, .. } => capability.type_name(),
+            Self::FilteredService { capability, .. } => capability.type_name(),
         }
     }
 
@@ -112,6 +122,7 @@ impl<C: ComponentInstanceInterface> CapabilitySourceInterface<C> {
             Self::Component { component, .. }
             | Self::Framework { component, .. }
             | Self::Capability { component, .. }
+            | Self::FilteredService { component, .. }
             | Self::Collection { component, .. } => {
                 WeakExtendedInstanceInterface::Component(component.clone())
             }
@@ -146,6 +157,9 @@ impl<C: ComponentInstanceInterface> fmt::Display for CapabilitySourceInterface<C
                         "{} from collection '#{}' of component '{}'",
                         capability, collection_name, &component.abs_moniker
                     )
+                }
+                Self::FilteredService { capability, component, .. } => {
+                    format!("{} '{}'", capability, component.abs_moniker)
                 }
             }
         )

@@ -23,6 +23,7 @@ use {
     derivative::Derivative,
     from_enum::FromEnum,
     moniker::{AbsoluteMoniker, ChildMoniker, ChildMonikerBase},
+    std::collections::HashMap,
     std::{marker::PhantomData, sync::Arc},
 };
 
@@ -380,8 +381,43 @@ where
         match Offer::route(offer_decl, offer_target, &sources, visitor, mapper).await? {
             OfferResult::Source(source) => return Ok(source),
             OfferResult::OfferFromChild(offer, component) => {
+                let offer_decl: OfferDecl = offer.clone().into();
+
                 let (expose, component) = change_directions(offer, component).await?;
-                self.route_from_expose(expose, component, sources, visitor, mapper).await
+
+                let capability_source =
+                    self.route_from_expose(expose, component, sources, visitor, mapper).await?;
+                if let OfferDecl::Service(offer_service_decl) = offer_decl {
+                    if offer_service_decl.source_instance_filter.is_some()
+                        || offer_service_decl.renamed_instances.is_some()
+                    {
+                        // TODO(https://fxbug.dev/97147) support collection sources as well.
+                        if let CapabilitySourceInterface::Component { capability, component } =
+                            capability_source
+                        {
+                            return Ok(CapabilitySourceInterface::<C>::FilteredService {
+                                capability: capability,
+                                component: component,
+                                source_instance_filter: offer_service_decl
+                                    .source_instance_filter
+                                    .unwrap_or(vec![]),
+                                instance_name_source_to_target: offer_service_decl
+                                    .renamed_instances
+                                    .map_or(HashMap::new(), |mappings| {
+                                        let mut m = HashMap::new();
+                                        for mapping in mappings.iter() {
+                                            m.insert(
+                                                mapping.source_name.clone(),
+                                                mapping.target_name.clone(),
+                                            );
+                                        }
+                                        m
+                                    }),
+                            });
+                        }
+                    }
+                }
+                Ok(capability_source)
             }
             OfferResult::OfferFromCollection(offer_decl, collection_component, collection_name) => {
                 Ok(CapabilitySourceInterface::<C>::Collection {
@@ -1062,16 +1098,53 @@ where
             match offer.source() {
                 OfferSource::Self_ => {
                     let target_capabilities = target.lock_resolved_state().await?.capabilities();
-                    return Ok(OfferResult::Source(CapabilitySourceInterface::<C>::Component {
-                        capability: sources.find_component_source(
-                            offer.source_name(),
-                            target.abs_moniker(),
-                            &target_capabilities,
-                            visitor,
-                            mapper,
-                        )?,
-                        component: target.as_weak(),
-                    }));
+                    let component_capability = sources.find_component_source(
+                        offer.source_name(),
+                        target.abs_moniker(),
+                        &target_capabilities,
+                        visitor,
+                        mapper,
+                    )?;
+                    // if offerdecl is for a filtered service return the associated filterd source.
+                    return match offer.into() {
+                        OfferDecl::Service(offer_service_decl) => {
+                            if offer_service_decl.source_instance_filter.is_some()
+                                || offer_service_decl.renamed_instances.is_some()
+                            {
+                                Ok(OfferResult::Source(
+                                    CapabilitySourceInterface::<C>::FilteredService {
+                                        capability: component_capability,
+                                        component: target.as_weak(),
+                                        source_instance_filter: offer_service_decl
+                                            .source_instance_filter
+                                            .unwrap_or(vec![]),
+                                        instance_name_source_to_target: offer_service_decl
+                                            .renamed_instances
+                                            .map_or(HashMap::new(), |mappings| {
+                                                mappings
+                                                    .into_iter()
+                                                    .map(|mapping| {
+                                                        (
+                                                            mapping.source_name.clone(),
+                                                            mapping.target_name.clone(),
+                                                        )
+                                                    })
+                                                    .collect()
+                                            }),
+                                    },
+                                ))
+                            } else {
+                                Ok(OfferResult::Source(CapabilitySourceInterface::<C>::Component {
+                                    capability: component_capability,
+                                    component: target.as_weak(),
+                                }))
+                            }
+                        }
+                        _ => Ok(OfferResult::Source(CapabilitySourceInterface::<C>::Component {
+                            capability: component_capability,
+                            component: target.as_weak(),
+                        })),
+                    };
                 }
                 OfferSource::Framework => {
                     return Ok(OfferResult::Source(CapabilitySourceInterface::<C>::Framework {

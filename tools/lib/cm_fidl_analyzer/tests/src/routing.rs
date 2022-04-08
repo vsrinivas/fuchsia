@@ -468,6 +468,7 @@ mod tests {
                         source: OfferSource::Self_,
                         source_name: "foo".into(),
                         source_instance_filter: None,
+                        renamed_instances: None,
                         target_name: "foo".into(),
                         target: OfferTarget::static_child("b".to_string()),
                     }))
@@ -516,6 +517,7 @@ mod tests {
                         source: OfferSource::Self_,
                         source_name: "foo".into(),
                         source_instance_filter: None,
+                        renamed_instances: None,
                         target_name: "foo".into(),
                         target: OfferTarget::static_child("b".to_string()),
                     }))
@@ -617,6 +619,7 @@ mod tests {
                         source: OfferSource::static_child("c".into()),
                         source_name: "foo".into(),
                         source_instance_filter: None,
+                        renamed_instances: None,
                         target_name: "foo".into(),
                         target: OfferTarget::static_child("b".to_string()),
                     }))

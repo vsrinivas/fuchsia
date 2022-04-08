@@ -1324,6 +1324,35 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
+    fn validate_filtered_service_fields(
+        &mut self,
+        decl_type: &str,
+        source_instance_filter: Option<&Vec<String>>,
+        renamed_instances: Option<&Vec<fdecl::NameMapping>>,
+    ) {
+        if let Some(source_instance_filter) = source_instance_filter {
+            if source_instance_filter.is_empty() {
+                // if the  source_instance_filter is empty the offered service will have 0 instances,
+                // which means the offer shouldn't have been created at all.
+                self.errors.push(Error::invalid_field(decl_type, "source_instance_filter"));
+            }
+        }
+        if let Some(renamed_instances) = renamed_instances {
+            // Should be a one-to-one relationship between source names and target names in the mapping
+            // list.
+            let mut seen_target_names = HashSet::<String>::new();
+            let mut seen_source_names = HashSet::<String>::new();
+            for mapping in renamed_instances {
+                if !seen_target_names.insert(mapping.target_name.clone())
+                    || !seen_source_names.insert(mapping.source_name.clone())
+                {
+                    self.errors.push(Error::invalid_field(decl_type, "renamed_instances"));
+                    break;
+                }
+            }
+        }
+    }
+
     fn validate_source_capability(
         &mut self,
         capability: &fdecl::CapabilityRef,
@@ -1631,6 +1660,11 @@ impl<'a> ValidationContext<'a> {
                     o.source_name.as_ref(),
                     o.target.as_ref(),
                     o.target_name.as_ref(),
+                );
+                self.validate_filtered_service_fields(
+                    decl,
+                    o.source_instance_filter.as_ref(),
+                    o.renamed_instances.as_ref(),
                 );
                 match offer_type {
                     OfferType::Static => {
@@ -5657,6 +5691,54 @@ mod tests {
                 Error::extraneous_field("OfferRunner", "target.child.collection"),
                 Error::extraneous_field("OfferResolver", "source.child.collection"),
                 Error::extraneous_field("OfferResolver", "target.child.collection"),
+            ])),
+        },
+        test_validate_offers_invalid_filtered_service_fields => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.offers = Some(vec![
+                    fdecl::Offer::Service(fdecl::OfferService {
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                        source_name: Some("fuchsia.logger.Log".to_string()),
+                        target: Some(fdecl::Ref::Child(
+                            fdecl::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            }
+                        )),
+                        target_name: Some("fuchsia.logger.Log".to_string()),
+                        source_instance_filter: Some(vec![]),
+                        ..fdecl::OfferService::EMPTY
+                    }),
+                    fdecl::Offer::Service(fdecl::OfferService {
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                        source_name: Some("fuchsia.logger.Log".to_string()),
+                        target: Some(fdecl::Ref::Child(
+                            fdecl::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            }
+                        )),
+                        target_name: Some("fuchsia.logger.Log".to_string()),
+                        renamed_instances: Some(vec![fdecl::NameMapping{source_name: "a".to_string(), target_name: "b".to_string()}, fdecl::NameMapping{source_name: "c".to_string(), target_name: "b".to_string()}]),
+                        ..fdecl::OfferService::EMPTY
+                    })
+                ]);
+                decl.children = Some(vec![
+                    fdecl::Child {
+                        name: Some("logger".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
+                        startup: Some(fdecl::StartupMode::Lazy),
+                        on_terminate: None,
+                        environment: None,
+                        ..fdecl::Child::EMPTY
+                    },
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_field("OfferService", "source_instance_filter"),
+                Error::invalid_field("OfferService", "renamed_instances"),
             ])),
         },
         test_validate_offers_invalid_identifiers => {

@@ -45,7 +45,7 @@ use {
     fidl_fidl_examples_routing_echo::{self as echo},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem,
-    fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{join, lock::Mutex, StreamExt, TryStreamExt},
     log::*,
     maplit::hashmap,
@@ -2322,6 +2322,7 @@ async fn route_service_from_parent_collection() {
                     source: OfferSource::Collection("coll".to_string()),
                     source_name: "foo".into(),
                     source_instance_filter: None,
+                    renamed_instances: None,
                     target_name: "foo".into(),
                     target: OfferTarget::static_child("b".to_string()),
                 }))
@@ -2375,6 +2376,7 @@ async fn list_service_instances_from_collection() {
                     source: OfferSource::Collection("coll".to_string()),
                     source_name: "foo".into(),
                     source_instance_filter: None,
+                    renamed_instances: None,
                     target_name: "foo".into(),
                     target: OfferTarget::static_child("client".to_string()),
                 }))
@@ -2494,6 +2496,7 @@ async fn use_service_from_sibling_collection() {
                     source: OfferSource::static_child("c".to_string()),
                     source_name: "my.service.Service".into(),
                     source_instance_filter: None,
+                    renamed_instances: None,
                     target: OfferTarget::static_child("b".to_string()),
                     target_name: "my.service.Service".into(),
                 }))
@@ -2632,4 +2635,177 @@ async fn use_service_from_sibling_collection() {
             }
         }
     );
+}
+
+///   a
+/// / | \
+/// b c d
+///
+/// a: offer service from c to b with filter parameters set on offer
+/// b: expose service
+/// c: use service (with filter)
+/// d: use service (with instance renamed)
+#[fuchsia::test]
+async fn use_filtered_service_from_sibling() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Service(OfferServiceDecl {
+                    source: OfferSource::static_child("b".to_string()),
+                    source_name: "my.service.Service".into(),
+                    source_instance_filter: Some(vec!["variantinstance".to_string()]),
+                    renamed_instances: None,
+                    target: OfferTarget::static_child("c".to_string()),
+                    target_name: "my.service.Service".into(),
+                }))
+                .offer(OfferDecl::Service(OfferServiceDecl {
+                    source: OfferSource::static_child("b".to_string()),
+                    source_name: "my.service.Service".into(),
+                    source_instance_filter: None, //Some(vec!["variantinstance".to_string()]),
+                    renamed_instances: Some(vec![NameMapping {
+                        source_name: "default".to_string(),
+                        target_name: "renamed_default".to_string(),
+                    }]),
+                    target: OfferTarget::static_child("d".to_string()),
+                    target_name: "my.service.Service".into(),
+                }))
+                .add_child(ChildDeclBuilder::new_lazy_child("b"))
+                .add_child(ChildDeclBuilder::new_lazy_child("c"))
+                .add_child(ChildDeclBuilder::new_lazy_child("d"))
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .expose(ExposeDecl::Service(ExposeServiceDecl {
+                    source: ExposeSource::Self_,
+                    source_name: "my.service.Service".into(),
+                    target_name: "my.service.Service".into(),
+                    target: ExposeTarget::Parent,
+                }))
+                .service(ServiceDecl {
+                    name: "my.service.Service".into(),
+                    source_path: Some("/svc/my.service.Service".try_into().unwrap()),
+                })
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Service(UseServiceDecl {
+                    dependency_type: DependencyType::Strong,
+                    source: UseSource::Parent,
+                    source_name: "my.service.Service".into(),
+                    target_path: "/svc/my.service.Service".try_into().unwrap(),
+                }))
+                .build(),
+        ),
+        (
+            "d",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Service(UseServiceDecl {
+                    dependency_type: DependencyType::Strong,
+                    source: UseSource::Parent,
+                    source_name: "my.service.Service".into(),
+                    target_path: "/svc/my.service.Service".try_into().unwrap(),
+                }))
+                .build(),
+        ),
+    ];
+
+    let (directory_entry, mut receiver) = create_service_directory_entry::<echo::EchoMarker>();
+    let instance_dir = pseudo_directory! {
+        "echo" => directory_entry,
+    };
+    let test = RoutingTestBuilder::new("a", components)
+        .add_outgoing_path(
+            "b",
+            "/svc/my.service.Service/default".try_into().unwrap(),
+            instance_dir.clone(),
+        )
+        .add_outgoing_path(
+            "b",
+            "/svc/my.service.Service/variantinstance".try_into().unwrap(),
+            instance_dir,
+        )
+        .build()
+        .await;
+
+    // Check that instance c only has access to the filtered service instance.
+    let namespace_c = test.bind_and_get_namespace(vec!["c"].into()).await;
+    let dir_c = capability_util::take_dir_from_namespace(&namespace_c, "/svc").await;
+    let service_dir_c = io_util::directory::open_directory(
+        &dir_c,
+        "my.service.Service",
+        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
+    )
+    .await
+    .expect("failed to open service");
+    let entries: HashSet<String> = files_async::readdir(&service_dir_c)
+        .await
+        .expect("failed to read entries")
+        .into_iter()
+        .map(|d| d.name)
+        .collect();
+    assert_eq!(entries.len(), 1);
+    assert!(entries.contains("variantinstance"));
+    capability_util::add_dir_to_namespace(&namespace_c, "/svc", dir_c).await;
+
+    // Check that instance d connects to the renamed instances correctly
+    let namespace_d = test.bind_and_get_namespace(vec!["d"].into()).await;
+    let dir_d = capability_util::take_dir_from_namespace(&namespace_d, "/svc").await;
+    let service_dir_d = io_util::directory::open_directory(
+        &dir_d,
+        "my.service.Service",
+        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
+    )
+    .await
+    .expect("failed to open service");
+    let entries: HashSet<String> = files_async::readdir(&service_dir_d)
+        .await
+        .expect("failed to read entries")
+        .into_iter()
+        .map(|d| d.name)
+        .collect();
+    assert_eq!(entries.len(), 2);
+    assert!(entries.contains("renamed_default"));
+    assert!(entries.contains("variantinstance"));
+    capability_util::add_dir_to_namespace(&namespace_d, "/svc", dir_d).await;
+
+    let _server_handle = fasync::Task::spawn(async move {
+        while let Some(echo::EchoRequest::EchoString { value, responder }) = receiver.next().await {
+            responder.send(value.as_ref().map(|v| v.as_str())).expect("failed to send reply");
+        }
+    });
+    test.check_use(
+        vec!["c"].into(),
+        CheckUse::Service {
+            path: "/svc/my.service.Service".try_into().unwrap(),
+            instance: "variantinstance".to_string(),
+            member: "echo".to_string(),
+            expected_res: ExpectedResult::Ok,
+        },
+    )
+    .await;
+    test.check_use(
+        vec!["d"].into(),
+        CheckUse::Service {
+            path: "/svc/my.service.Service".try_into().unwrap(),
+            instance: "renamed_default".to_string(),
+            member: "echo".to_string(),
+            expected_res: ExpectedResult::Ok,
+        },
+    )
+    .await;
+    test.check_use(
+        vec!["d"].into(),
+        CheckUse::Service {
+            path: "/svc/my.service.Service".try_into().unwrap(),
+            instance: "variantinstance".to_string(),
+            member: "echo".to_string(),
+            expected_res: ExpectedResult::Ok,
+        },
+    )
+    .await;
 }

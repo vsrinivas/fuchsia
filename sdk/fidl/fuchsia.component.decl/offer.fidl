@@ -33,6 +33,17 @@ type DependencyType = strict enum {
     WEAK_FOR_MIGRATION = 3;
 };
 
+
+/// Type used to create a mapping between 2 names. Used to rename service or component instances
+/// in FIDL declarations.
+type NameMapping = struct {
+    /// Name used in the source instance.
+    source_name name;
+
+    /// Name used in the target instance.
+    target_name name;
+};
+
 /// Declares a service offered by a component to one of its children, which may
 /// have been offered by the component's containing realm, the component itself,
 /// or one of its other children.
@@ -58,6 +69,9 @@ type OfferService = table {
     /// If this is not set that means all instances from the source service are 
     /// offered.
     5: source_instance_filter vector<string:MAX_NAME_LENGTH>:MAX;
+
+    /// List of renamed service instances.
+    6: renamed_instances vector<NameMapping>:MAX;
 };
 
 /// Declares a protocol offered by a component to one of its children,

@@ -151,6 +151,9 @@ const fuchsia.component.decl/MAX_NAME_LENGTH uint32 100
 const fuchsia.component.decl/MAX_NUM_EVENT_STREAM_SUBSCRIPTIONS uint64 100
 const fuchsia.component.decl/MAX_PATH_LENGTH uint32 1024
 const fuchsia.component.decl/MAX_URL_SCHEME_LENGTH uint32 100
+struct/member fuchsia.component.decl/NameMapping.source_name string:100
+struct/member fuchsia.component.decl/NameMapping.target_name string:100
+struct fuchsia.component.decl/NameMapping
 union/member fuchsia.component.decl/Offer.directory fuchsia.component.decl/OfferDirectory
 union/member fuchsia.component.decl/Offer.event fuchsia.component.decl/OfferEvent
 union/member fuchsia.component.decl/Offer.event_stream fuchsia.component.decl/OfferEventStream
@@ -197,6 +200,7 @@ table/member fuchsia.component.decl/OfferRunner.source_name string:100
 table/member fuchsia.component.decl/OfferRunner.target fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/OfferRunner.target_name string:100
 table fuchsia.component.decl/OfferRunner
+table/member fuchsia.component.decl/OfferService.renamed_instances vector<fuchsia.component.decl/NameMapping>
 table/member fuchsia.component.decl/OfferService.source fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/OfferService.source_instance_filter vector<string:100>
 table/member fuchsia.component.decl/OfferService.source_name string:100
