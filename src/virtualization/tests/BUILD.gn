@@ -269,6 +269,7 @@ executable("virtualization_core_tests") {
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/json_parser",
     "//third_party/googletest:gmock",
+    "//third_party/re2",
   ]
 }
 

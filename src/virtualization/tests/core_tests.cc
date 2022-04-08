@@ -7,6 +7,7 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <re2/re2.h>
 
 #include "src/lib/json_parser/json_parser.h"
 #include "src/virtualization/tests/guest_test.h"
@@ -157,13 +158,22 @@ class CustomizableMemoryGuest : public T {
   }
 };
 
-using CustomizableMemoryDebianGuestTest = GuestTest<CustomizableMemoryGuest<DebianEnclosedGuest>>;
-TEST_F(CustomizableMemoryDebianGuestTest, DebianSystemMemoryConfigurable) {
-  std::string result;
-  ASSERT_EQ(this->Execute({"cat /proc/meminfo | grep MemTotal | awk '{print $2}'"}, {}, &result),
-            ZX_OK);
+using LinuxCustomizableMemoryGuestTypes =
+    ::testing::Types<CustomizableMemoryGuest<DebianEnclosedGuest>,
+                     CustomizableMemoryGuest<TerminaEnclosedGuest>>;
 
-  uint64_t system_memory = std::stoull(result) * kOneKibibyte;
+template <class T>
+using CustomizableMemoryLinuxGuestTest = GuestTest<T>;
+TYPED_TEST_SUITE(CustomizableMemoryLinuxGuestTest, LinuxCustomizableMemoryGuestTypes);
+
+TYPED_TEST(CustomizableMemoryLinuxGuestTest, LinuxSystemMemoryConfigurable) {
+  std::string result;
+  ASSERT_EQ(this->Execute({"cat", "/proc/meminfo"}, {}, &result), ZX_OK);
+
+  std::string sizestr;
+  RE2::PartialMatch(result, R"(MemTotal:\s+(\d+)\skB)", &sizestr);
+
+  uint64_t system_memory = std::stoull(sizestr) * kOneKibibyte;
 
   // Linux doesn't report the actual amount of system memory via meminfo, and we don't
   // currently emulate SMBIOS allowing us to use dmidecode. For now, we can just assume
