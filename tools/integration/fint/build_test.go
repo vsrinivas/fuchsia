@@ -34,7 +34,6 @@ type fakeBuildModules struct {
 	pbinSets         []build.PrebuiltBinarySet
 	testSpecs        []build.TestSpec
 	tools            build.Tools
-	zbiTests         []build.ZBITest
 }
 
 func (m fakeBuildModules) Archives() []build.Archive                     { return m.archives }
@@ -44,7 +43,6 @@ func (m fakeBuildModules) Images() []build.Image                         { retur
 func (m fakeBuildModules) PrebuiltBinarySets() []build.PrebuiltBinarySet { return m.pbinSets }
 func (m fakeBuildModules) TestSpecs() []build.TestSpec                   { return m.testSpecs }
 func (m fakeBuildModules) Tools() build.Tools                            { return m.tools }
-func (m fakeBuildModules) ZBITests() []build.ZBITest                     { return m.zbiTests }
 
 func TestBuild(t *testing.T) {
 	checkoutDir := t.TempDir()
@@ -480,73 +478,6 @@ func TestBuild(t *testing.T) {
 				}),
 			},
 			expectErr: true,
-		},
-		{
-			name: "zbi tests",
-			staticSpec: &fintpb.Static{
-				TargetArch:      fintpb.Static_ARM64,
-				IncludeZbiTests: true,
-			},
-			modules: fakeBuildModules{
-				zbiTests: []build.ZBITest{
-					{
-						Name:        "foo",
-						Label:       "//src/foo",
-						DeviceTypes: []string{"AEMU"},
-						Path:        "foo.zbi",
-					},
-					{
-						Name:        "bar",
-						Label:       "//src/bar",
-						DeviceTypes: []string{"Intel NUC Kit NUC7i5DNHE"},
-						Path:        "bar.zbi",
-					},
-				},
-				images: []build.Image{
-					{
-						Name:  qemuKernelImageName,
-						Label: "//src/foo",
-						Path:  "foo-qemu-kernel",
-					},
-					{
-						Name: "fastboot",
-						Path: "fastboot",
-					},
-					{
-						Name:            "zircon-a",
-						PaveZedbootArgs: []string{"--boot", "--zircona"},
-						Path:            "zircona",
-					},
-					{
-						Name:            "zircon-r",
-						PaveZedbootArgs: []string{"--zirconr"},
-						Path:            "zirconr",
-					},
-				},
-			},
-			expectedTargets: []string{"foo.zbi", "bar.zbi", "foo-qemu-kernel", "zircona", "zirconr"},
-			expectedArtifacts: &fintpb.BuildArtifacts{
-				BuiltZedbootImages: []*structpb.Struct{
-					mustStructPB(t, build.Image{
-						Name:            "zircon-a",
-						PaveZedbootArgs: []string{"--boot", "--zircona", "--zirconb"},
-						Path:            "zircona",
-					}),
-					mustStructPB(t, build.Image{
-						Name:            "zircon-r",
-						PaveZedbootArgs: []string{"--zirconr"},
-						Path:            "zirconr",
-					}),
-				},
-				ZbiTestQemuKernelImages: map[string]*structpb.Struct{
-					"foo": mustStructPB(t, build.Image{
-						Name:  qemuKernelImageName,
-						Label: "//src/foo",
-						Path:  "foo-qemu-kernel",
-						Type:  "kernel",
-					}),
-				},
-			},
 		},
 	}
 	for _, tc := range testCases {

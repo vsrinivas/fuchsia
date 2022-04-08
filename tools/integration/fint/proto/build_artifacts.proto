@@ -47,48 +47,40 @@ message BuildArtifacts {
   // maintain a copy of the images.json schema here.
   repeated google.protobuf.Struct built_archives = 3;
 
-  // Zedboot paving images built for ZBI tests. Only populated if ZBI tests were
-  // built.
-  repeated google.protobuf.Struct built_zedboot_images = 4;
-
-  // Mapping from ZBI test name to QEMU kernel image for the test. Only
-  // populated if ZBI tests were built.
-  map<string, google.protobuf.Struct> zbi_test_qemu_kernel_images = 5;
-
   // Absolute path to the Ninja log file.
-  string ninja_log_path = 6;
+  string ninja_log_path = 4;
 
   // Absolute path to a Ninja graph file.
-  string ninja_graph_path = 7;
+  string ninja_graph_path = 5;
 
   // Absolute path to a Ninja compdb file.
-  string ninja_compdb_path = 8;
+  string ninja_compdb_path = 6;
 
   // The duration taken by the ninja build step.
-  int32 ninja_duration_seconds = 9;
+  int32 ninja_duration_seconds = 7;
 
   // Various ninja build data
-  NinjaActionMetrics ninja_action_metrics = 10;
+  NinjaActionMetrics ninja_action_metrics = 8;
 
   // Mapping from user-friendly title to absolute path for important log files
   // that should be presented by the infrastructure for humans to read. We
   // reference the logs by path rather than inlining the contents in the
   // protobuf because the logs may be very long and inlining them would make it
   // very hard for humans to read the output proto.
-  map<string, string> log_files = 11;
+  map<string, string> log_files = 9;
 
   // Files to upload to cloud storage even if the build fails, to help with
   // debugging and understanding build performance. Files produced by ninja
   // targets themselves should *not* be uploaded via this mechanism, use
   // artifactory instead.
-  repeated DebugFile debug_files = 12;
+  repeated DebugFile debug_files = 10;
 
   // Whether an analysis of the build graph determined that the changed files do
   // not affect the build.
-  bool build_not_affected = 13;
+  bool build_not_affected = 11;
 
   // Names, as they appear in tests.json, of tests affected by the change under
   // tests. This is determined by doing a build graph analysis of the files
   // reported in the `changed_files` context spec field.
-  repeated string affected_tests = 14;
+  repeated string affected_tests = 12;
 }
