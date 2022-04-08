@@ -1669,8 +1669,14 @@ zx_status_t ArmArchVmAspace::Destroy() {
           pt_pages_);
   }
 
+  // Need a DSB to synchronize any page table updates prior to flushing the TLBs.
+  __dsb(ARM_MB_ISH);
+
   // Flush the ASID or VMID associated with this aspace
   FlushAsid();
+
+  // Need a DSB to ensure all other cpus have fully processed the TLB flush.
+  __dsb(ARM_MB_ISH);
 
   // Free any ASID.
   if (type_ == ArmAspaceType::kUser) {
