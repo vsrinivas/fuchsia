@@ -75,6 +75,7 @@
             protocol: [
                 "fuchsia.boot.FactoryItems",
                 "fuchsia.boot.RootResource",
+                "fuchsia.kernel.Counter",
                 "fuchsia.kernel.RootJobForInspect",
                 "fuchsia.kernel.Stats",
                 "fuchsia.process.Launcher",

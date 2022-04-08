@@ -186,6 +186,7 @@
                 "fuchsia.boot.ReadOnlyLog",
                 "fuchsia.boot.RootResource",
                 "fuchsia.exception.Handler",
+                "fuchsia.kernel.Counter",
                 "fuchsia.kernel.HypervisorResource",
                 "fuchsia.kernel.RootJobForInspect",
                 "fuchsia.kernel.Stats",

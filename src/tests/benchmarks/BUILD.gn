@@ -26,5 +26,5 @@ executable("kernel-boot-stats") {
 fuchsia_package_with_single_component("kernel-boot-benchmarks") {
   testonly = true
   deps = [ ":kernel-boot-stats" ]
-  manifest = "meta/kernel-boot-benchmarks.cmx"
+  manifest = "meta/kernel-boot-benchmarks.cml"
 }
