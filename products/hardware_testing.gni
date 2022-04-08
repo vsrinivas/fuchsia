@@ -1,0 +1,17 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This product configuration is based on the core config but brings in
+# additional utilities that allow users to manipulate and exercise hardware
+# for testing purposes.
+
+import("//products/core.gni")
+
+cache_package_labels += [
+  "//bundles/drivers:utils",
+  "//garnet/packages/prod:hwstress",
+  "//garnet/packages/prod:sbase",
+  "//src/ui/light/bin/lights-cli",
+  "//src/ui/tools/print-input-report",
+]
