@@ -7,10 +7,14 @@
         { protocol: "fuchsia.hardware.pty.Device" },
     ],
     use: [
-        { protocol: "fuchsia.boot.Arguments" },
-        { protocol: "fuchsia.boot.WriteOnlyLog" },
-        { protocol: "fuchsia.kernel.DebugResource" },
-        { protocol: "fuchsia.logger.Log" },
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.kernel.DebugResource",
+                "fuchsia.logger.Log",
+            ],
+        },
     ],
     expose: [
         {
