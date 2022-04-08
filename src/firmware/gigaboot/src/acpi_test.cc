@@ -445,4 +445,248 @@ TEST(Acpi, TopologyFromMadtSuccess) {
   }
 }
 
+TEST(Acpi, GicDriverFromMadtNoGicd) {
+  auto efi_config_table = EfiConfigTable(2, 0);
+  auto madt = (acpi_madt_t *)efi_config_table.AddMadtTable();
+  EXPECT_NE(madt, nullptr);
+
+  auto gicc1 = acpi_madt_gicc_t{
+      .type = kInterruptControllerTypeGicc,
+      .length = sizeof(acpi_madt_gicc_t),
+      .cpu_interface_number = 0xf,
+      .mpidr = 0x4000030201,
+  };
+  efi_config_table.AddInterruptControllerToMadt(madt, &gicc1, sizeof(gicc1));
+
+  dcfg_arm_gicv2_driver_t v2;
+  dcfg_arm_gicv3_driver_t v3;
+  EXPECT_EQ(gic_driver_from_madt(madt, &v2, &v3), 0);
+}
+
+TEST(Acpi, GicDriverFromMadtV2NoGicc) {
+  auto efi_config_table = EfiConfigTable(2, 0);
+  auto madt = (acpi_madt_t *)efi_config_table.AddMadtTable();
+  EXPECT_NE(madt, nullptr);
+
+  auto gicd = acpi_madt_gicd_t{
+      .type = kInterruptControllerTypeGicd,
+      .length = sizeof(acpi_madt_gicd_t),
+      .gic_version = 0x2,
+  };
+  efi_config_table.AddInterruptControllerToMadt(madt, &gicd, sizeof(gicd));
+
+  auto gic_msi = acpi_madt_gic_msi_t{
+      .type = kInterruptControllerTypeGicMsiFrame,
+      .length = sizeof(acpi_madt_gic_msi_t),
+      .physical_base_address = 0x40000,
+  };
+  efi_config_table.AddInterruptControllerToMadt(madt, &gic_msi, sizeof(gic_msi));
+
+  dcfg_arm_gicv2_driver_t v2;
+  dcfg_arm_gicv3_driver_t v3;
+  EXPECT_EQ(gic_driver_from_madt(madt, &v2, &v3), 0);
+}
+
+TEST(Acpi, GicDriverFromMadtV2NoGicMsi) {
+  auto efi_config_table = EfiConfigTable(2, 0);
+  auto madt = (acpi_madt_t *)efi_config_table.AddMadtTable();
+  EXPECT_NE(madt, nullptr);
+
+  auto gicd = acpi_madt_gicd_t{
+      .type = kInterruptControllerTypeGicd,
+      .length = sizeof(acpi_madt_gicd_t),
+      .gic_version = 0x2,
+  };
+  efi_config_table.AddInterruptControllerToMadt(madt, &gicd, sizeof(gicd));
+
+  auto gicc = acpi_madt_gicc_t{
+      .type = kInterruptControllerTypeGicc,
+      .length = sizeof(acpi_madt_gicc_t),
+      .cpu_interface_number = 0xf,
+      .mpidr = 0x4000030201,
+  };
+  efi_config_table.AddInterruptControllerToMadt(madt, &gicc, sizeof(gicc));
+
+  dcfg_arm_gicv2_driver_t v2;
+  dcfg_arm_gicv3_driver_t v3;
+  EXPECT_EQ(gic_driver_from_madt(madt, &v2, &v3), 0);
+}
+
+TEST(Acpi, GicDriverFromMadtV2GiccFirst) {
+  auto efi_config_table = EfiConfigTable(2, 0);
+  auto madt = (acpi_madt_t *)efi_config_table.AddMadtTable();
+  EXPECT_NE(madt, nullptr);
+
+  auto gicc = acpi_madt_gicc_t{
+      .type = kInterruptControllerTypeGicc,
+      .length = sizeof(acpi_madt_gicc_t),
+      .cpu_interface_number = 0xf,
+      .physical_base_address = 0x10000,
+      .mpidr = 0x4000030201,
+  };
+  efi_config_table.AddInterruptControllerToMadt(madt, &gicc, sizeof(gicc));
+
+  auto gicd = acpi_madt_gicd_t{
+      .type = kInterruptControllerTypeGicd,
+      .length = sizeof(acpi_madt_gicd_t),
+      .physical_base_address = 0x30000,
+      .gic_version = 0x2,
+  };
+  efi_config_table.AddInterruptControllerToMadt(madt, &gicd, sizeof(gicd));
+
+  auto gic_msi = acpi_madt_gic_msi_t{
+      .type = kInterruptControllerTypeGicMsiFrame,
+      .length = sizeof(acpi_madt_gic_msi_t),
+      .physical_base_address = 0x40000,
+  };
+  efi_config_table.AddInterruptControllerToMadt(madt, &gic_msi, sizeof(gic_msi));
+
+  dcfg_arm_gicv2_driver_t v2;
+  dcfg_arm_gicv3_driver_t v3;
+  EXPECT_EQ(gic_driver_from_madt(madt, &v2, &v3), 2);
+
+  dcfg_arm_gicv2_driver_t expected = {
+      .mmio_phys = 0x10000,
+      .msi_frame_phys = 0x40000,
+      .gicd_offset = 0x20000,
+      .gicc_offset = 0x0,
+      .ipi_base = 0,
+      .optional = true,
+      .use_msi = true,
+  };
+  ASSERT_EQ(memcmp(&expected, &v2, sizeof(dcfg_arm_gicv2_driver_t)), 0);
+}
+
+TEST(Acpi, GicDriverFromMadtV2GicdFirst) {
+  auto efi_config_table = EfiConfigTable(2, 0);
+  auto madt = (acpi_madt_t *)efi_config_table.AddMadtTable();
+  EXPECT_NE(madt, nullptr);
+
+  auto gicc = acpi_madt_gicc_t{
+      .type = kInterruptControllerTypeGicc,
+      .length = sizeof(acpi_madt_gicc_t),
+      .cpu_interface_number = 0xf,
+      .physical_base_address = 0x30000,
+      .mpidr = 0x4000030201,
+  };
+  efi_config_table.AddInterruptControllerToMadt(madt, &gicc, sizeof(gicc));
+
+  auto gicd = acpi_madt_gicd_t{
+      .type = kInterruptControllerTypeGicd,
+      .length = sizeof(acpi_madt_gicd_t),
+      .physical_base_address = 0x20000,
+      .gic_version = 0x2,
+  };
+  efi_config_table.AddInterruptControllerToMadt(madt, &gicd, sizeof(gicd));
+
+  auto gic_msi = acpi_madt_gic_msi_t{
+      .type = kInterruptControllerTypeGicMsiFrame,
+      .length = sizeof(acpi_madt_gic_msi_t),
+      .physical_base_address = 0x40000,
+  };
+  efi_config_table.AddInterruptControllerToMadt(madt, &gic_msi, sizeof(gic_msi));
+
+  dcfg_arm_gicv2_driver_t v2;
+  dcfg_arm_gicv3_driver_t v3;
+  EXPECT_EQ(gic_driver_from_madt(madt, &v2, &v3), 2);
+
+  dcfg_arm_gicv2_driver_t expected = {
+      .mmio_phys = 0x20000,
+      .msi_frame_phys = 0x40000,
+      .gicd_offset = 0x0,
+      .gicc_offset = 0x10000,
+      .ipi_base = 0,
+      .optional = true,
+      .use_msi = true,
+  };
+  ASSERT_EQ(memcmp(&expected, &v2, sizeof(dcfg_arm_gicv2_driver_t)), 0);
+}
+
+TEST(Acpi, GicDriverFromMadtV3NoGicr) {
+  auto efi_config_table = EfiConfigTable(2, 0);
+  auto madt = (acpi_madt_t *)efi_config_table.AddMadtTable();
+  EXPECT_NE(madt, nullptr);
+
+  auto gicd = acpi_madt_gicd_t{
+      .type = kInterruptControllerTypeGicd,
+      .length = sizeof(acpi_madt_gicd_t),
+      .gic_version = 0x3,
+  };
+  efi_config_table.AddInterruptControllerToMadt(madt, &gicd, sizeof(gicd));
+
+  dcfg_arm_gicv2_driver_t v2;
+  dcfg_arm_gicv3_driver_t v3;
+  EXPECT_EQ(gic_driver_from_madt(madt, &v2, &v3), 0);
+}
+
+TEST(Acpi, GicDriverFromMadtV3GicdFirst) {
+  auto efi_config_table = EfiConfigTable(2, 0);
+  auto madt = (acpi_madt_t *)efi_config_table.AddMadtTable();
+  EXPECT_NE(madt, nullptr);
+
+  auto gicd = acpi_madt_gicd_t{
+      .type = kInterruptControllerTypeGicd,
+      .length = sizeof(acpi_madt_gicd_t),
+      .physical_base_address = 0x20000,
+      .gic_version = 0x3,
+  };
+  efi_config_table.AddInterruptControllerToMadt(madt, &gicd, sizeof(gicd));
+
+  auto gicr = acpi_madt_gicr_t{
+      .type = kInterruptControllerTypeGicr,
+      .length = sizeof(acpi_madt_gicr_t),
+      .discovery_range_base_address = 0xf0000,
+  };
+  efi_config_table.AddInterruptControllerToMadt(madt, &gicr, sizeof(gicr));
+
+  dcfg_arm_gicv2_driver_t v2;
+  dcfg_arm_gicv3_driver_t v3;
+  EXPECT_EQ(gic_driver_from_madt(madt, &v2, &v3), 3);
+
+  dcfg_arm_gicv3_driver_t expected = {
+      .mmio_phys = 0x20000,
+      .gicd_offset = 0x0,
+      .gicr_offset = 0xd0000,
+      .gicr_stride = kGicrDefaultStride,
+      .ipi_base = 0,
+      .optional = true,
+  };
+  ASSERT_EQ(memcmp(&expected, &v3, sizeof(dcfg_arm_gicv3_driver_t)), 0);
+}
+
+TEST(Acpi, GicDriverFromMadtV3GicrFirst) {
+  auto efi_config_table = EfiConfigTable(2, 0);
+  auto madt = (acpi_madt_t *)efi_config_table.AddMadtTable();
+  EXPECT_NE(madt, nullptr);
+
+  auto gicd = acpi_madt_gicd_t{
+      .type = kInterruptControllerTypeGicd,
+      .length = sizeof(acpi_madt_gicd_t),
+      .physical_base_address = 0x80000,
+      .gic_version = 0x3,
+  };
+  efi_config_table.AddInterruptControllerToMadt(madt, &gicd, sizeof(gicd));
+
+  auto gicr = acpi_madt_gicr_t{
+      .type = kInterruptControllerTypeGicr,
+      .length = sizeof(acpi_madt_gicr_t),
+      .discovery_range_base_address = 0x10000,
+  };
+  efi_config_table.AddInterruptControllerToMadt(madt, &gicr, sizeof(gicr));
+
+  dcfg_arm_gicv2_driver_t v2;
+  dcfg_arm_gicv3_driver_t v3;
+  EXPECT_EQ(gic_driver_from_madt(madt, &v2, &v3), 3);
+
+  dcfg_arm_gicv3_driver_t expected = {
+      .mmio_phys = 0x10000,
+      .gicd_offset = 0x70000,
+      .gicr_offset = 0x0,
+      .gicr_stride = kGicrDefaultStride,
+      .ipi_base = 0,
+      .optional = true,
+  };
+  ASSERT_EQ(memcmp(&expected, &v3, sizeof(dcfg_arm_gicv3_driver_t)), 0);
+}
+
 }  // namespace

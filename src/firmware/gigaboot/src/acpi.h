@@ -22,6 +22,9 @@ extern const uint8_t kSpcrSignature[ACPI_TABLE_SIGNATURE_SIZE];
 extern const uint8_t kMadtSignature[ACPI_TABLE_SIGNATURE_SIZE];
 extern const uint8_t kInterruptControllerTypeGicc;
 extern const uint8_t kInterruptControllerTypeGicd;
+extern const uint8_t kInterruptControllerTypeGicMsiFrame;
+extern const uint8_t kInterruptControllerTypeGicr;
+extern const uint64_t kGicrDefaultStride;
 
 __BEGIN_CDECLS
 
@@ -130,6 +133,27 @@ typedef struct __attribute__((packed)) {
 } acpi_madt_gicd_t;
 _Static_assert(sizeof(acpi_madt_gicd_t) == 24, "MADT GICD is the wrong size");
 
+typedef struct __attribute__((packed)) {
+  uint8_t type;
+  uint8_t length;
+  uint16_t reserved;
+  uint32_t gic_msi_frame_id;
+  uint64_t physical_base_address;
+  uint32_t flags;
+  uint16_t spi_count;
+  uint16_t spi_base;
+} acpi_madt_gic_msi_t;
+_Static_assert(sizeof(acpi_madt_gic_msi_t) == 24, "MADT GIC MSI is the wrong size");
+
+typedef struct __attribute__((packed)) {
+  uint8_t type;
+  uint8_t length;
+  uint16_t reserved;
+  uint64_t discovery_range_base_address;
+  uint32_t discovery_range_length;
+} acpi_madt_gicr_t;
+_Static_assert(sizeof(acpi_madt_gicr_t) == 16, "MADT GICR is the wrong size");
+
 // Loads the Root System Description Pointer from UEFI.
 // Returns NULL if UEFI contains no such entry in its configuration table.
 acpi_rsdp_t* load_acpi_rsdp(efi_configuration_table* entries, size_t num_entries);
@@ -147,6 +171,11 @@ void uart_driver_from_spcr(acpi_spcr_t* spcr, dcfg_simple_t* uart_driver);
 // Use the data in the MADT table to construct a CPU topology.
 // Returns the number of cores found, 0 if there are no supported cores.
 uint8_t topology_from_madt(acpi_madt_t* madt, zbi_topology_node_t* nodes, uint8_t max_nodes);
+
+// Use the data in the MADT table to construct a GIC configuration.
+// Returns the version of the GIC that was found, 0 if there was an error.
+uint8_t gic_driver_from_madt(acpi_madt_t* madt, dcfg_arm_gicv2_driver_t* v2_cfg,
+                             dcfg_arm_gicv3_driver_t* v3_cfg);
 
 __END_CDECLS
 
