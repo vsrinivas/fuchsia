@@ -260,6 +260,12 @@ group("flate2") {
   public_deps = [ ":flate2-v1_0_14" ]
 }
 
+if (!(current_os == "fuchsia")) {
+  group("fs_extra") {
+    deps = [ ":fs_extra-v1_2_0" ]
+  }
+}
+
 group("futures") {
   public_deps = [ ":futures-v0_3_19" ]
 }
@@ -4408,6 +4414,29 @@ rust_library("fragile-v1_0_0") {
     "--edition=2018",
     "-Cmetadata=4fff0e17f0e7f677",
     "-Cextra-filename=-4fff0e17f0e7f677",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("fs_extra-v1_2_0") {
+  crate_name = "fs_extra"
+  crate_root = "//third_party/rust_crates/vendor/fs_extra/src/lib.rs"
+  output_name = "fs_extra-ea7c546e9eec1d22"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=ea7c546e9eec1d22",
+    "-Cextra-filename=-ea7c546e9eec1d22",
   ]
 
   visibility = [ ":*" ]
