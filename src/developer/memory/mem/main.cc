@@ -29,10 +29,14 @@
 #include "src/developer/memory/metrics/digest.h"
 #include "src/developer/memory/metrics/printer.h"
 #include "src/developer/memory/metrics/summary.h"
+#include "src/developer/memory/metrics/watcher.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 
 using namespace memory;
+
+const zx::duration kHighWaterPollFrequency = zx::msec(500);
+const uint64_t kHighWaterThreshold = 10ul * 1024 * 1024;
 
 // Returns a Digester using the memory monitor configuration if available.
 std::vector<BucketMatch> GetBucketMatchesFromConfig() {
@@ -102,7 +106,7 @@ int Mem(const fxl::CommandLine& command_line) {
         return EXIT_FAILURE;
       }
     }
-    uint64_t repeat = 0;
+    int64_t repeat = 0;  // int64_t to be compatible with zx::sec() below.
     std::string repeat_value;
     if (command_line.GetOptionValue("repeat", &repeat_value)) {
       if (!fxl::StringToNumberWithError(repeat_value, &repeat)) {
@@ -147,6 +151,31 @@ int Mem(const fxl::CommandLine& command_line) {
     return EXIT_SUCCESS;
   }
 
+  if (command_line.HasOption("watch")) {
+    int64_t watch = 0;  // int64_t to be compatible with zx::sec() below.
+    std::string watch_value;
+    if (command_line.GetOptionValue("watch", &watch_value)) {
+      if (!fxl::StringToNumberWithError(watch_value, &watch)) {
+        std::cerr << "Invalid value for --watch: " << watch_value;
+        return EXIT_FAILURE;
+      }
+    }
+    async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+    trace::TraceProviderWithFdio trace_provider(loop.dispatcher(), "mem --watch");
+    Capture capture;
+    Watcher watcher(
+        kHighWaterPollFrequency, kHighWaterThreshold, loop.dispatcher(),
+        [&capture_state](Capture* c, CaptureLevel l) {
+          return Capture::GetCapture(c, capture_state, l);
+        },
+        [&capture](const Capture& c) { capture = c; });
+
+    loop.Run(zx::clock::get_monotonic() + zx::sec(watch));
+    printer.PrintCapture(capture);
+    std::cout << std::endl;
+    return EXIT_SUCCESS;
+  }
+
   Capture capture;
   s = Capture::GetCapture(&capture, capture_state, VMO);
   if (s != ZX_OK) {
@@ -186,6 +215,8 @@ int main(int argc, const char** argv) {
                  " [default]  Human readable representation of process and vmo groups\n"
                  " --trace    Enable tracing support\n"
                  " --print    Machine readable representation of process and vmos\n"
+                 " --watch=N  Prints machine readable representation of process and vmos at the\n"
+                 "            point of highest memory pressure in the next N seconds.\n"
                  " --output   CSV of process memory\n"
                  "            --repeat=N Runs forever, outputing every N seconds\n"
                  "            --pid=N    Output vmo groups of process pid instead\n"
