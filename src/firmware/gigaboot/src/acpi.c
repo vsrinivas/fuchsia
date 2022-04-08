@@ -18,11 +18,14 @@ const uint8_t kRsdtSignature[ACPI_TABLE_SIGNATURE_SIZE] = "RSDT";
 const uint8_t kXsdtSignature[ACPI_TABLE_SIGNATURE_SIZE] = "XSDT";
 const uint8_t kSpcrSignature[ACPI_TABLE_SIGNATURE_SIZE] = "SPCR";
 const uint8_t kMadtSignature[ACPI_TABLE_SIGNATURE_SIZE] = "APIC";
+const uint8_t kFadtSignature[ACPI_TABLE_SIGNATURE_SIZE] = "FACP";
 const uint8_t kInterruptControllerTypeGicc = 0xb;
 const uint8_t kInterruptControllerTypeGicd = 0xc;
 const uint8_t kInterruptControllerTypeGicMsiFrame = 0xd;
 const uint8_t kInterruptControllerTypeGicr = 0xe;
 const uint64_t kGicrDefaultStride = 0x20000;
+const uint8_t kPsciCompliant = 0x1;
+const uint8_t kPsciUseHvc = 0x2;
 
 // Computes the checksum of an ACPI table, which is just the sum of the bytes
 // in the table. The table is valid if the checksum is zero.
@@ -307,4 +310,12 @@ uint8_t gic_driver_from_madt(acpi_madt_t* madt, dcfg_arm_gicv2_driver_t* v2_cfg,
       break;
   }
   return gicd->gic_version;
+}
+
+int psci_driver_from_fadt(acpi_fadt_t* fadt, dcfg_arm_psci_driver_t* cfg) {
+  if ((fadt->arm_boot_arch & kPsciCompliant) == 0) {
+    return -1;
+  }
+  cfg->use_hvc = fadt->arm_boot_arch & kPsciUseHvc;
+  return 0;
 }

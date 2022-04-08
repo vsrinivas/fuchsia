@@ -689,4 +689,28 @@ TEST(Acpi, GicDriverFromMadtV3GicrFirst) {
   ASSERT_EQ(memcmp(&expected, &v3, sizeof(dcfg_arm_gicv3_driver_t)), 0);
 }
 
+TEST(Acpi, PsciDriverFromFadtNotPsciCompliant) {
+  auto fadt = acpi_fadt_t{};
+  dcfg_arm_psci_driver_t cfg;
+  EXPECT_EQ(psci_driver_from_fadt(&fadt, &cfg), -1);
+}
+
+TEST(Acpi, PsciDriverFromFadtNoHvc) {
+  auto fadt = acpi_fadt_t{
+      .arm_boot_arch = (uint16_t)kPsciCompliant,
+  };
+  dcfg_arm_psci_driver_t cfg;
+  EXPECT_EQ(psci_driver_from_fadt(&fadt, &cfg), 0);
+  EXPECT_EQ(cfg.use_hvc, 0);
+}
+
+TEST(Acpi, PsciDriverFromFadtUseHvc) {
+  auto fadt = acpi_fadt_t{
+      .arm_boot_arch = (uint16_t)(kPsciCompliant | kPsciUseHvc),
+  };
+  dcfg_arm_psci_driver_t cfg;
+  EXPECT_EQ(psci_driver_from_fadt(&fadt, &cfg), 0);
+  EXPECT_NE(cfg.use_hvc, 0);
+}
+
 }  // namespace
