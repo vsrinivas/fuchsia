@@ -14,7 +14,7 @@ Magma service drivers are found under:
 
 * [src/graphics/drivers](/src/graphics/drivers)
 
-Magma client drivers are third party codebases.  Open source client drivers typically live in [third_party/mesa](/third_party/mesa).
+Magma client drivers are third party codebases.  Open source client drivers typically live in [third_party/mesa](https://fuchsia.googlesource.com/third_party/mesa).
 
 ### Coding Conventions and Formatting
 
