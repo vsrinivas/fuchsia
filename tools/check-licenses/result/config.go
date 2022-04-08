@@ -5,13 +5,14 @@
 package result
 
 type ResultConfig struct {
-	FuchsiaDir      string      `json:"fuchsiaDir"`
-	OutputDir       string      `json:"outputdir"`
-	Outputs         []string    `json:"outputs"`
-	Templates       []*Template `json:"templates"`
-	Zip             bool        `json:"zip"`
-	ExitOnError     bool        `json:"exitOnError"`
-	GnGenOutputFile string      `json:"gnGenOutputFile"`
+	FuchsiaDir        string      `json:"fuchsiaDir"`
+	OutDir            string      `json:"outDir"`
+	Outputs           []string    `json:"outputs"`
+	Templates         []*Template `json:"templates"`
+	Zip               bool        `json:"zip"`
+	ExitOnError       bool        `json:"exitOnError"`
+	GnGenOutputFile   string      `json:"gnGenOutputFile"`
+	OutputLicenseFile bool        `json:"outputLicenseFile"`
 
 	DiffNotice string `json:"diffnotice"`
 }
@@ -30,8 +31,9 @@ var Config *ResultConfig
 
 func NewConfig() *ResultConfig {
 	return &ResultConfig{
-		Outputs:   make([]string, 0),
-		Templates: make([]*Template, 0),
+		Outputs:           make([]string, 0),
+		Templates:         make([]*Template, 0),
+		OutputLicenseFile: true,
 	}
 }
 
@@ -39,8 +41,8 @@ func (c *ResultConfig) Merge(other *ResultConfig) {
 	if c.FuchsiaDir == "" {
 		c.FuchsiaDir = other.FuchsiaDir
 	}
-	if c.OutputDir == "" {
-		c.OutputDir = other.OutputDir
+	if c.OutDir == "" {
+		c.OutDir = other.OutDir
 	}
 	c.Templates = append(c.Templates, other.Templates...)
 	c.Outputs = append(c.Outputs, other.Outputs...)
@@ -52,4 +54,5 @@ func (c *ResultConfig) Merge(other *ResultConfig) {
 	if c.GnGenOutputFile == "" {
 		c.GnGenOutputFile = other.GnGenOutputFile
 	}
+	c.OutputLicenseFile = c.OutputLicenseFile || other.OutputLicenseFile
 }
