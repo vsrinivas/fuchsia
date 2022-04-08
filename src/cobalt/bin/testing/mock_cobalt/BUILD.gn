@@ -53,6 +53,5 @@ fuchsia_package("mock_cobalt") {
 }
 
 fuchsia_unittest_package("mock-cobalt-tests") {
-  manifest = "meta/mock-cobalt-unittests.cmx"
   deps = [ ":bin_test" ]
 }
