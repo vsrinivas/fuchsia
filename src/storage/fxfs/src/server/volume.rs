@@ -669,7 +669,7 @@ mod tests {
         {
             let root_volume = root_volume(&filesystem).await.unwrap();
             let volume =
-                root_volume.new_volume("vol", Arc::new(InsecureCrypt::new())).await.unwrap();
+                root_volume.new_volume("vol", Some(Arc::new(InsecureCrypt::new()))).await.unwrap();
             let mut transaction = filesystem
                 .clone()
                 .new_transaction(&[], Options::default())
@@ -728,5 +728,16 @@ mod tests {
         filesystem.close().await.expect("close filesystem failed");
         let device = filesystem.take_device().await;
         device.ensure_unique();
+    }
+
+    #[fasync::run(10, test)]
+    async fn test_unencrypted_volume() {
+        let fixture = TestFixture::new_unencrypted().await;
+        let root = fixture.root();
+
+        let f = open_file_checked(&root, fio::OpenFlags::CREATE, fio::MODE_TYPE_FILE, "foo").await;
+        close_file_checked(f).await;
+
+        fixture.close().await;
     }
 }

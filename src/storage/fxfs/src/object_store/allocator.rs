@@ -524,26 +524,21 @@ impl SimpleAllocator {
     }
 
     /// Creates a new (empty) allocator.
-    pub async fn create(&self) -> Result<(), Error> {
+    pub async fn create(&self, transaction: &mut Transaction<'_>) -> Result<(), Error> {
         // Mark the allocator as opened before creating the file because creating a new
         // transaction requires a reservation.
         assert_eq!(std::mem::replace(&mut self.inner.lock().unwrap().opened, true), false);
 
         let filesystem = self.filesystem.upgrade().unwrap();
         let root_store = filesystem.root_store();
-        let mut transaction = filesystem
-            .clone()
-            .new_transaction(&[], Options { skip_journal_checks: true, ..Default::default() })
-            .await?;
         ObjectStore::create_object_with_id(
             &root_store,
-            &mut transaction,
+            transaction,
             self.object_id(),
             HandleOptions::default(),
             None,
         )
         .await?;
-        transaction.commit().await?;
         Ok(())
     }
 
@@ -1479,7 +1474,13 @@ mod tests {
         store.set_graveyard_directory_object_id(store.get_next_object_id());
         fs.object_manager().set_root_store(store.clone());
         fs.object_manager().init_metadata_reservation();
-        allocator.create().await.expect("create failed");
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        allocator.create(&mut transaction).await.expect("create failed");
+        transaction.commit().await.expect("commit failed");
         (fs, allocator, store)
     }
 

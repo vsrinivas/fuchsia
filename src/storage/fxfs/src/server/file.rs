@@ -725,7 +725,7 @@ mod tests {
             fixture.close().await
         };
 
-        let fixture = TestFixture::open(reused_device, false).await;
+        let fixture = TestFixture::open(reused_device, false, true).await;
         let root = fixture.root();
 
         let file =
@@ -757,7 +757,7 @@ mod tests {
 
         let input = "hello, world!";
         let reused_device = {
-            let fixture = TestFixture::open(DeviceHolder::new(device), true).await;
+            let fixture = TestFixture::open(DeviceHolder::new(device), true, true).await;
             let root = fixture.root();
 
             let file = open_file_checked(
@@ -782,7 +782,7 @@ mod tests {
             fixture.close().await
         };
 
-        let fixture = TestFixture::open(reused_device, false).await;
+        let fixture = TestFixture::open(reused_device, false, true).await;
         let root = fixture.root();
 
         let file =
@@ -804,7 +804,7 @@ mod tests {
     async fn test_writes_persist() {
         let mut device = DeviceHolder::new(FakeDevice::new(8192, 512));
         for i in 0..2 {
-            let fixture = TestFixture::open(device, /*format=*/ i == 0).await;
+            let fixture = TestFixture::open(device, /*format=*/ i == 0, true).await;
             let root = fixture.root();
 
             let flags = if i == 0 {

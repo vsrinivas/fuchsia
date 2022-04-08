@@ -18,7 +18,7 @@ pub async fn mkfs(device: DeviceHolder, crypt: Arc<dyn Crypt>) -> Result<(), Err
         // expect instead of propagating errors here, since otherwise we could drop |fs| before
         // close is called, which leads to confusing and unrelated error messages.
         let root_volume = root_volume(&fs).await.expect("Open root_volume failed");
-        root_volume.new_volume("default", crypt).await.expect("Create volume failed");
+        root_volume.new_volume("default", Some(crypt)).await.expect("Create volume failed");
     }
     fs.close().await?;
     Ok(())

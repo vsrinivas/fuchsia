@@ -58,8 +58,8 @@ impl Graveyard {
         })
     }
 
-    /// Creates a graveyard object in `store`.
-    pub fn create<'a>(transaction: &mut Transaction<'a>, store: &'a ObjectStore) {
+    /// Creates a graveyard object in `store`.  Returns the object ID for the graveyard object.
+    pub fn create(transaction: &mut Transaction<'_>, store: &ObjectStore) -> u64 {
         let object_id = store.get_next_object_id();
         let now = Timestamp::now();
         transaction.add(
@@ -75,7 +75,7 @@ impl Graveyard {
                 },
             ),
         );
-        transaction.add(store.store_object_id, Mutation::graveyard_directory(object_id));
+        object_id
     }
 
     /// Starts an asynchronous task to reap the graveyard for all entries older than

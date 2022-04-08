@@ -9,9 +9,8 @@ use {
         object_store::{
             directory::Directory,
             filesystem::{Filesystem, FxFilesystem},
-            graveyard::Graveyard,
             transaction::{Options, TransactionHandler},
-            HandleOptions, ObjectDescriptor, ObjectStore,
+            NewChildStoreOptions, ObjectDescriptor, ObjectStore,
         },
     },
     anyhow::{anyhow, bail, Context, Error},
@@ -42,35 +41,17 @@ impl RootVolume {
     pub async fn new_volume(
         &self,
         volume_name: &str,
-        crypt: Arc<dyn Crypt>,
+        crypt: Option<Arc<dyn Crypt>>,
     ) -> Result<Arc<ObjectStore>, Error> {
         let root_store = self.filesystem.root_store();
         let store;
-        let store_handle;
         let mut transaction =
             self.filesystem.clone().new_transaction(&[], Options::default()).await?;
 
-        store_handle = ObjectStore::create_object(
-            &root_store,
-            &mut transaction,
-            HandleOptions::default(),
-            None,
-        )
-        .await?;
-
-        store = ObjectStore::new_encrypted(root_store, store_handle, crypt).await?;
+        store = root_store
+            .new_child_store(&mut transaction, NewChildStoreOptions { crypt, ..Default::default() })
+            .await?;
         store.set_trace(self.filesystem.trace());
-
-        let object_id = store.get_next_object_id();
-
-        // TODO(fxbug.dev/96081): Creating the store here writes the store-info later, so we should
-        // set the graveyard object ID before that happens.  Creating the graveyard also queues a
-        // mutation to set the graveyard object ID, which is unnececessary.  We should consider
-        // changing this so that the graveyard and root directory are created when the store is
-        // created.
-        store.set_graveyard_directory_object_id(object_id);
-
-        Graveyard::create(&mut transaction, &store);
 
         // We must register the store here because create will add mutations for the store.
         self.filesystem.object_manager().add_store(store.clone());
@@ -101,40 +82,40 @@ impl RootVolume {
     pub async fn volume(
         &self,
         volume_name: &str,
-        crypt: Arc<dyn Crypt>,
+        crypt: Option<Arc<dyn Crypt>>,
     ) -> Result<Arc<ObjectStore>, Error> {
         let object_id =
             match self.volume_directory().lookup(volume_name).await?.ok_or(FxfsError::NotFound)? {
                 (object_id, ObjectDescriptor::Volume) => object_id,
                 _ => bail!(anyhow!(FxfsError::Inconsistent).context("Expected volume")),
             };
-        let store = self.filesystem.object_manager().open_store(object_id, crypt).await?;
+        let store = self.filesystem.object_manager().store(object_id)?;
         store.set_trace(self.filesystem.trace());
+        if let Some(crypt) = crypt {
+            store.unlock(crypt).await?;
+        } else if store.is_locked() {
+            bail!(FxfsError::AccessDenied);
+        }
         Ok(store)
     }
 
     pub async fn open_or_create_volume(
         &self,
         volume_name: &str,
-        crypt: Arc<dyn Crypt>,
+        crypt: Option<Arc<dyn Crypt>>,
     ) -> Result<Arc<ObjectStore>, Error> {
         let volume = match self.volume(volume_name, crypt.clone()).await {
-            Ok(volume) => {
-                // Ensure that we assign a GUID to the volume's ObjectStore if it doesn't have one.
-                // This can happen if the associated StoreInfo on disk is a previous version.
-                volume.ensure_guid();
-                Ok(volume)
-            }
+            Ok(volume) => volume,
             Err(e) => {
                 let cause = e.root_cause().downcast_ref::<FxfsError>().cloned();
                 if let Some(FxfsError::NotFound) = cause {
                     // Create a new volume with a randomly generated GUID.
-                    self.new_volume(volume_name, crypt).await
+                    self.new_volume(volume_name, crypt).await?
                 } else {
-                    Err(e)
+                    return Err(e);
                 }
             }
-        }?;
+        };
         volume.record_metrics(volume_name);
         Ok(volume)
     }
@@ -185,7 +166,7 @@ mod tests {
         let filesystem = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
         root_volume
-            .volume("vol", Arc::new(InsecureCrypt::new()))
+            .volume("vol", Some(Arc::new(InsecureCrypt::new())))
             .await
             .err()
             .expect("Volume shouldn't exist");
@@ -199,8 +180,10 @@ mod tests {
         let crypt = Arc::new(InsecureCrypt::new());
         {
             let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
-            let store =
-                root_volume.new_volume("vol", crypt.clone()).await.expect("new_volume failed");
+            let store = root_volume
+                .new_volume("vol", Some(crypt.clone()))
+                .await
+                .expect("new_volume failed");
             let mut transaction = filesystem
                 .clone()
                 .new_transaction(&[], Options::default())
@@ -222,7 +205,7 @@ mod tests {
             device.reopen();
             let filesystem = FxFilesystem::open(device).await.expect("open failed");
             let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
-            let volume = root_volume.volume("vol", crypt).await.expect("volume failed");
+            let volume = root_volume.volume("vol", Some(crypt)).await.expect("volume failed");
             let root_directory = Directory::open(&volume, volume.root_directory_object_id())
                 .await
                 .expect("open failed");

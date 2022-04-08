@@ -30,7 +30,6 @@ use {
         object_store::{
             allocator::{Allocator, SimpleAllocator},
             constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
-            directory::Directory,
             extent_record::{ExtentKey, DEFAULT_DATA_ATTRIBUTE_ID},
             filesystem::{ApplyContext, ApplyMode, Filesystem, SyncOptions},
             graveyard::Graveyard,
@@ -47,7 +46,7 @@ use {
                 Mutation, ObjectStoreMutation, Options, Transaction, TxnMutation,
                 TRANSACTION_MAX_JOURNAL_USAGE,
             },
-            HandleOptions, Item, LockState, ObjectStore, StoreObjectHandle,
+            HandleOptions, Item, LockState, NewChildStoreOptions, ObjectStore, StoreObjectHandle,
         },
         round::{round_down, round_up},
         serialized_types::{Version, Versioned, LATEST_VERSION},
@@ -637,15 +636,15 @@ impl Journal {
             .new_transaction(&[], Options { skip_journal_checks: true, ..Default::default() })
             .await?;
         root_store = root_parent
-            .create_child_store_with_id(&mut transaction, INIT_ROOT_STORE_OBJECT_ID)
+            .new_child_store(
+                &mut transaction,
+                NewChildStoreOptions { object_id: INIT_ROOT_STORE_OBJECT_ID, ..Default::default() },
+            )
             .await
-            .context("create root store")?;
+            .context("new_child_store")?;
         self.objects.set_root_store(root_store.clone());
 
-        // Note that creating an allocator requires a transaction to create an object...
-        // ...which requires a Journal ...which must be allocated.
-        // We get away with this because we can be lazy persisting the allocator.
-        allocator.create().await?;
+        allocator.create(&mut transaction).await?;
 
         // Create the super-block objects...
         super_block_a_handle = ObjectStore::create_object_with_id(
@@ -689,15 +688,12 @@ impl Journal {
             .await
             .context("preallocate journal")?;
 
-        // The graveyards.
-        Graveyard::create(&mut transaction, &root_parent);
-        Graveyard::create(&mut transaction, &root_store);
+        // Write the root store object info.
+        root_store.create(&mut transaction).await?;
 
-        // The root directory for the root store.
-        let root_directory = Directory::create(&mut transaction, &root_store)
-            .await
-            .context("create root directory")?;
-        root_store.set_root_directory_object_id(&mut transaction, root_directory.object_id());
+        // The root parent graveyard.
+        root_parent
+            .set_graveyard_directory_object_id(Graveyard::create(&mut transaction, &root_parent));
 
         transaction.commit().await?;
 

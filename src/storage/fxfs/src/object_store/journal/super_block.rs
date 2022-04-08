@@ -397,11 +397,11 @@ mod tests {
             lsm_tree::types::LayerIterator,
             object_store::{
                 constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
-                filesystem::Filesystem,
+                filesystem::{Filesystem, FxFilesystem},
                 journal::{journal_handle_options, JournalCheckpoint},
                 testing::{fake_allocator::FakeAllocator, fake_filesystem::FakeFilesystem},
                 transaction::{Options, TransactionHandler},
-                FxFilesystem, HandleOptions, ObjectHandle, ObjectStore, StoreObjectHandle,
+                HandleOptions, NewChildStoreOptions, ObjectHandle, ObjectStore, StoreObjectHandle,
             },
             serialized_types::LATEST_VERSION,
         },
@@ -421,15 +421,20 @@ mod tests {
         fs.object_manager().init_metadata_reservation();
         let root_parent_store = ObjectStore::new_empty(None, 3, fs.clone());
         fs.object_manager().set_root_parent_store(root_parent_store.clone());
+        let root_store;
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())
             .await
             .expect("new_transaction failed");
-        let root_store = root_parent_store
-            .create_child_store_with_id(&mut transaction, 4)
+        root_store = root_parent_store
+            .new_child_store(
+                &mut transaction,
+                NewChildStoreOptions { object_id: 4, ..Default::default() },
+            )
             .await
-            .expect("create_child_store failed");
+            .expect("new_child_store failed");
+        root_store.create(&mut transaction).await.expect("create failed");
         fs.object_manager().set_root_store(root_store.clone());
 
         let handle_a; // extend will borrow handle and needs to outlive transaction.

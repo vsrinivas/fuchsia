@@ -44,13 +44,14 @@ use {
         object_store::{
             extent_record::{Checksums, DEFAULT_DATA_ATTRIBUTE_ID},
             filesystem::{ApplyContext, ApplyMode, Filesystem, Mutations},
+            graveyard::Graveyard,
             journal::{checksum_list::ChecksumList, JournalCheckpoint},
             object_manager::{ObjectManager, ReservationUpdate},
             object_record::{AttributeKey, EncryptionKeys, ObjectKeyData, ObjectKind},
             store_object_handle::DirectWriter,
             transaction::{
-                AssocObj, AssociatedObject, LockKey, Mutation, NoOrd, ObjectStoreMutation,
-                Operation, Options, StoreInfoMutation, Transaction,
+                AssocObj, AssociatedObject, LockKey, Mutation, ObjectStoreMutation, Operation,
+                Options, Transaction,
             },
         },
         range::RangeExt,
@@ -131,14 +132,6 @@ impl StoreInfo {
         let guid = Uuid::new_v4();
         Self { guid: *guid.as_bytes(), ..Default::default() }
     }
-
-    /// Ensure that the [`StoreInfo`] has a valid GUID. If unset, a new GUID will be generated.
-    fn ensure_guid(&mut self) {
-        if self.guid == [0; 16] {
-            let guid = Uuid::new_v4();
-            self.guid = *guid.as_bytes();
-        }
-    }
 }
 
 // TODO(fxbug.dev/95972): We should test or put checks in place to ensure this limit isn't exceeded.
@@ -151,6 +144,16 @@ const MAX_ENCRYPTED_MUTATIONS_SIZE: usize = 8 * journal::DEFAULT_RECLAIM_SIZE as
 pub struct HandleOptions {
     /// If true, transactions used by this handle will skip journal space checks.
     skip_journal_checks: bool,
+}
+
+#[derive(Default)]
+pub struct NewChildStoreOptions {
+    /// The store is unencrypted if store is none.
+    pub crypt: Option<Arc<dyn Crypt>>,
+
+    /// Specifies the object ID in the root store to be used for the store.  If set to
+    /// INVALID_OBJECT_ID (the default and typical case), a suitable ID will be chosen.
+    pub object_id: u64,
 }
 
 #[derive(Debug, Default, Deserialize, Serialize, Versioned)]
@@ -203,8 +206,6 @@ impl EncryptedMutations {
 struct ReplayInfo {
     last_object_id: u64,
     object_count_delta: i64,
-    root_directory: Option<u64>,
-    graveyard_directory: Option<u64>,
 
     // Encrypted mutations consist of an array of log offsets (1 per mutation), followed by the
     // mutations.
@@ -238,28 +239,6 @@ impl StoreOrReplayInfo {
             StoreOrReplayInfo::Info(StoreInfo { last_object_id, .. }) => last_object_id,
             StoreOrReplayInfo::Replay(replay_info) => {
                 &mut replay_info.front_mut().unwrap().last_object_id
-            }
-        }
-    }
-
-    fn set_root_directory(&mut self, oid: u64) {
-        match self {
-            StoreOrReplayInfo::Info(StoreInfo { root_directory_object_id, .. }) => {
-                *root_directory_object_id = oid
-            }
-            StoreOrReplayInfo::Replay(replay_info) => {
-                replay_info.front_mut().unwrap().root_directory = Some(oid);
-            }
-        }
-    }
-
-    fn set_graveyard_directory(&mut self, oid: u64) {
-        match self {
-            StoreOrReplayInfo::Info(StoreInfo { graveyard_directory_object_id, .. }) => {
-                *graveyard_directory_object_id = oid
-            }
-            StoreOrReplayInfo::Replay(replay_info) => {
-                replay_info.front_mut().unwrap().graveyard_directory = Some(oid);
             }
         }
     }
@@ -321,6 +300,7 @@ impl StoreOrReplayInfo {
     }
 }
 
+#[derive(Clone)]
 enum LockState {
     Locked,
     Unencrypted,
@@ -425,48 +405,73 @@ impl ObjectStore {
         )
     }
 
-    /// Creating an encrypted store is a multi-step process:
+    /// Create a child store. It is a multi-step process:
     ///
-    ///   1. Create an object for the store.
-    ///   2. Call `ObjectStore::new_encrypted`.
-    ///   3. Call `ObjectStore::create` to write the store.
-    ///   4. If successful, register the store with object_manager.
+    ///   1. Call `ObjectStore::new_child_store`.
+    ///   2. Register the store with the object-manager.
+    ///   3. Call `ObjectStore::create` to write the store-info.
     ///
-    /// It requires the first three steps to be separate because of lifetime issues when working
-    /// with a transaction.
-    async fn new_encrypted(
-        parent_store: Arc<ObjectStore>,
-        handle: StoreObjectHandle<ObjectStore>,
-        crypt: Arc<dyn Crypt>,
+    /// If the procedure fails, care must be taken to unregister store with the object-manager.
+    ///
+    /// The steps have to be separate because of lifetime issues when working with a transaction.
+    async fn new_child_store(
+        self: &Arc<Self>,
+        transaction: &mut Transaction<'_>,
+        options: NewChildStoreOptions,
     ) -> Result<Arc<Self>, Error> {
-        let filesystem = parent_store.filesystem();
-        let (wrapped_keys, unwrapped_keys) =
-            crypt.create_key(handle.object_id(), KeyPurpose::Metadata).await?;
-        let store = Self::new(
-            Some(parent_store),
-            handle.object_id(),
-            filesystem.clone(),
-            Some(StoreInfo { mutations_key: Some(wrapped_keys), ..StoreInfo::new_with_guid() }),
-            Some(StreamCipher::new(&unwrapped_keys[0], 0)),
-            LockState::Unlocked(crypt),
-        );
+        let handle = if options.object_id != INVALID_OBJECT_ID {
+            ObjectStore::create_object_with_id(
+                self,
+                transaction,
+                options.object_id,
+                HandleOptions::default(),
+                None,
+            )
+            .await?
+        } else {
+            ObjectStore::create_object(self, transaction, HandleOptions::default(), None).await?
+        };
+        let filesystem = self.filesystem();
+        let store = if let Some(crypt) = options.crypt {
+            let (wrapped_keys, unwrapped_keys) =
+                crypt.create_key(handle.object_id(), KeyPurpose::Metadata).await?;
+            Self::new(
+                Some(self.clone()),
+                handle.object_id(),
+                filesystem.clone(),
+                Some(StoreInfo { mutations_key: Some(wrapped_keys), ..StoreInfo::new_with_guid() }),
+                Some(StreamCipher::new(&unwrapped_keys[0], 0)),
+                LockState::Unlocked(crypt),
+            )
+        } else {
+            Self::new(
+                Some(self.clone()),
+                handle.object_id(),
+                filesystem.clone(),
+                Some(StoreInfo::new_with_guid()),
+                None,
+                LockState::Unencrypted,
+            )
+        };
         assert!(store.store_info_handle.set(handle).is_ok());
         Ok(store)
     }
 
-    /// Actually creates the store in a transaction.  This will create a root directory for the
-    /// store.  See `new_encrypted` above.
+    /// Actually creates the store in a transaction.  This will also create a root directory and
+    /// graveyard directory for the store.  See `new_child_store` above.
     async fn create<'a>(
         self: &'a Arc<Self>,
         transaction: &mut Transaction<'a>,
     ) -> Result<(), Error> {
         let buf = {
-            // Create a root directory.
+            // Create a root directory and graveyard directory.
+            let graveyard_directory_object_id = Graveyard::create(transaction, &self);
             let root_directory = Directory::create(transaction, &self).await?;
 
             let mut store_info = self.store_info.lock().unwrap();
             let mut store_info = store_info.info_mut().unwrap();
 
+            store_info.graveyard_directory_object_id = graveyard_directory_object_id;
             store_info.root_directory_object_id = root_directory.object_id();
 
             let mut serialized_info = Vec::new();
@@ -523,42 +528,28 @@ impl ObjectStore {
         self.store_info.lock().unwrap().info().unwrap().root_directory_object_id
     }
 
-    fn set_root_directory_object_id<'a>(&'a self, transaction: &mut Transaction<'a>, oid: u64) {
-        transaction.add(self.store_object_id, Mutation::root_directory(oid));
-    }
-
     fn graveyard_directory_object_id(&self) -> u64 {
         self.store_info.lock().unwrap().info().unwrap().graveyard_directory_object_id
     }
 
-    fn set_graveyard_directory_object_id<'a>(&'a self, oid: u64) {
-        self.store_info.lock().unwrap().info_mut().unwrap().graveyard_directory_object_id = oid;
+    fn set_graveyard_directory_object_id(&self, oid: u64) {
+        assert_eq!(
+            std::mem::replace(
+                &mut self
+                    .store_info
+                    .lock()
+                    .unwrap()
+                    .info_mut()
+                    .unwrap()
+                    .graveyard_directory_object_id,
+                oid
+            ),
+            INVALID_OBJECT_ID
+        );
     }
 
     pub fn object_count(&self) -> u64 {
         self.store_info.lock().unwrap().info().unwrap().object_count
-    }
-
-    /// Creates an unencrypted child store and registers it with the object-manager.  The caller
-    /// must handle cleaning up (e.g. unregistering the store) if the transaction doesn't commit.
-    async fn create_child_store_with_id<'a>(
-        self: &'a Arc<Self>,
-        transaction: &mut Transaction<'a>,
-        object_id: u64,
-    ) -> Result<Arc<ObjectStore>, Error> {
-        let handle = ObjectStore::create_object_with_id(
-            self,
-            transaction,
-            object_id,
-            HandleOptions::default(),
-            None,
-        )
-        .await?;
-        let fs = self.filesystem.upgrade().unwrap();
-        let store = Self::new_empty(Some(self.clone()), handle.object_id(), fs.clone());
-        assert!(store.store_info_handle.set(handle).is_ok());
-        fs.object_manager().add_store(store.clone());
-        Ok(store)
     }
 
     /// Returns the crypt object for the store. Returns None if the store is unencrypted. This will
@@ -862,12 +853,6 @@ impl ObjectStore {
         self.store_info.lock().unwrap().info().unwrap().clone()
     }
 
-    /// Ensure this ObjectStore has a GUID assigned to its associated StoreInfo. Used to upgrade
-    /// existing on-disk structures which may not have a GUID when originally created.
-    fn ensure_guid(&self) {
-        self.store_info.lock().unwrap().info_mut().unwrap().ensure_guid();
-    }
-
     /// Returns None if called during journal replay.
     pub fn store_info_handle_object_id(&self) -> Option<u64> {
         self.store_info_handle.get().map(|h| h.object_id())
@@ -917,12 +902,6 @@ impl ObjectStore {
                 } else {
                     info.object_count =
                         info.object_count.saturating_add(replay_info.object_count_delta as u64);
-                }
-                if let Some(oid) = replay_info.root_directory {
-                    info.root_directory_object_id = oid;
-                }
-                if let Some(oid) = replay_info.graveyard_directory {
-                    info.graveyard_directory_object_id = oid;
                 }
                 encrypted_mutations.extend(std::mem::take(&mut replay_info.encrypted_mutations));
             }
@@ -1079,6 +1058,10 @@ impl ObjectStore {
         // up unbounded memory usage: unlock -> make changes with no intervening flush -> lock ->
         // flush.
         Ok(())
+    }
+
+    fn lock_state(&self) -> LockState {
+        self.lock_state.lock().unwrap().clone()
     }
 
     fn is_locked(&self) -> bool {
@@ -1242,14 +1225,6 @@ impl Mutations for ObjectStore {
                     }
                 }
             }
-            Mutation::ObjectStoreInfo(info) => match info {
-                StoreInfoMutation::RootDirectory(NoOrd(oid)) => {
-                    self.store_info.lock().unwrap().set_root_directory(oid)
-                }
-                StoreInfoMutation::GraveyardDirectory(NoOrd(oid)) => {
-                    self.store_info.lock().unwrap().set_graveyard_directory(oid)
-                }
-            },
             Mutation::BeginFlush => {
                 self.tree.seal().await;
                 self.store_info.lock().unwrap().begin_flush();
@@ -1690,7 +1665,7 @@ mod tests {
         let store_id = {
             let root_volume = root_volume(&fs).await.expect("root_volume failed");
             root_volume
-                .new_volume("test", Arc::new(InsecureCrypt::new()))
+                .new_volume("test", Some(Arc::new(InsecureCrypt::new())))
                 .await
                 .expect("new_volume failed")
                 .store_object_id()
@@ -1931,7 +1906,8 @@ mod tests {
 
             let object_id = {
                 let root_volume = root_volume(&fs).await.expect("root_volume failed");
-                let store = root_volume.volume("test", crypt.clone()).await.expect("volume failed");
+                let store =
+                    root_volume.volume("test", Some(crypt.clone())).await.expect("volume failed");
                 let root_directory = Directory::open(&store, store.root_directory_object_id())
                     .await
                     .expect("open failed");
@@ -1962,7 +1938,8 @@ mod tests {
                 let crypt = crypt.clone();
                 async move {
                     let root_volume = root_volume(&fs).await.expect("root_volume failed");
-                    let volume = root_volume.volume("test", crypt).await.expect("volume failed");
+                    let volume =
+                        root_volume.volume("test", Some(crypt)).await.expect("volume failed");
 
                     let object = ObjectStore::open_object(
                         &volume,
@@ -2000,7 +1977,7 @@ mod tests {
             {
                 let root_volume = root_volume(&fs).await.expect("root_volume failed");
                 let _volume =
-                    root_volume.volume("test", crypt.clone()).await.expect("volume failed");
+                    root_volume.volume("test", Some(crypt.clone())).await.expect("volume failed");
 
                 // This should do a normal flush and remove the encrypted file.
                 fs.object_manager().flush().await.expect("flush failed");
@@ -2022,8 +1999,10 @@ mod tests {
 
         {
             let root_volume = root_volume(&fs).await.expect("root_volume failed");
-            let _store =
-                root_volume.new_volume("test", crypt.clone()).await.expect("new_volume failed");
+            let _store = root_volume
+                .new_volume("test", Some(crypt.clone()))
+                .await
+                .expect("new_volume failed");
         }
 
         // Run a few iterations so that we test changes with the stream cipher offset.

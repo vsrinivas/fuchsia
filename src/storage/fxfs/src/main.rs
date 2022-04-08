@@ -114,7 +114,7 @@ async fn main() -> Result<(), Error> {
                 OpenOptions { trace: verbose, read_only: readonly, ..Default::default() },
             )
             .await?;
-            let server = FxfsServer::new(fs, "default", crypt).await?;
+            let server = FxfsServer::new(fs, "default", Some(crypt)).await?;
             let startup_handle =
                 fuchsia_runtime::take_startup_handle(HandleType::DirectoryRequest.into())
                     .ok_or(MissingStartupHandle)?;

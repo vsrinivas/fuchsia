@@ -25,7 +25,6 @@ use {
             hash_map::{Entry, HashMap},
             BTreeSet,
         },
-        ops::{Deref, DerefMut},
         sync::{Arc, Mutex},
         task::{Poll, Waker},
         vec::Vec,
@@ -128,7 +127,6 @@ pub trait TransactionHandler: Send + Sync {
 pub enum Mutation {
     ObjectStore(ObjectStoreMutation),
     EncryptedObjectStore(Box<[u8]>),
-    ObjectStoreInfo(StoreInfoMutation),
     Allocator(AllocatorMutation),
     // Indicates the beginning of a flush.  This would typically involve sealing a tree.
     BeginFlush,
@@ -160,20 +158,8 @@ impl Mutation {
         })
     }
 
-    pub fn store_info(store_info: StoreInfoMutation) -> Self {
-        Mutation::ObjectStoreInfo(store_info)
-    }
-
     pub fn allocation(item: AllocatorItem) -> Self {
         Mutation::Allocator(AllocatorMutation(item))
-    }
-
-    pub fn root_directory(oid: u64) -> Self {
-        Mutation::ObjectStoreInfo(StoreInfoMutation::RootDirectory(NoOrd(oid)))
-    }
-
-    pub fn graveyard_directory(oid: u64) -> Self {
-        Mutation::ObjectStoreInfo(StoreInfoMutation::GraveyardDirectory(NoOrd(oid)))
     }
 }
 
@@ -214,50 +200,6 @@ impl PartialEq for ObjectStoreMutation {
 }
 
 impl Eq for ObjectStoreMutation {}
-
-// NoOrd is used to wrap values that shouldn't be used for comparing mutations, so that it's
-// possible to replace a mutation with a different mutation.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct NoOrd<T>(pub T);
-
-impl<T> Ord for NoOrd<T> {
-    fn cmp(&self, _other: &Self) -> Ordering {
-        Ordering::Equal
-    }
-}
-
-impl<T> PartialOrd for NoOrd<T> {
-    fn partial_cmp(&self, _other: &Self) -> Option<Ordering> {
-        Some(Ordering::Equal)
-    }
-}
-
-impl<T> PartialEq for NoOrd<T> {
-    fn eq(&self, _other: &Self) -> bool {
-        true
-    }
-}
-
-impl<T> Eq for NoOrd<T> {}
-
-impl<T> Deref for NoOrd<T> {
-    type Target = T;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<T> DerefMut for NoOrd<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
-pub enum StoreInfoMutation {
-    RootDirectory(NoOrd<u64>),
-    GraveyardDirectory(NoOrd<u64>),
-}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AllocatorMutation(pub AllocatorItem);

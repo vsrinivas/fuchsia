@@ -740,7 +740,7 @@ pub(super) async fn scan_store<F: Fn(&FsckIssue)>(
                     fsck.warning(FsckWarning::OrphanedObject(store_id, oid))?;
                 }
             }
-            ScannedObject::Etc(..) => {
+            ScannedObject::Etc(_) => {
                 other += 1;
             }
             ScannedObject::Tombstone => {

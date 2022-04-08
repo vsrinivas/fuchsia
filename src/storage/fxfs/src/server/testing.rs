@@ -39,19 +39,30 @@ impl From<State> for (OpenFxFilesystem, FxVolumeAndRoot) {
 pub struct TestFixture {
     scope: ExecutionScope,
     state: Option<State>,
+    encrypted: bool,
 }
 
 impl TestFixture {
     pub async fn new() -> Self {
-        Self::open(DeviceHolder::new(FakeDevice::new(16384, 512)), true).await
+        Self::open(DeviceHolder::new(FakeDevice::new(16384, 512)), true, true).await
     }
 
-    pub async fn open(device: DeviceHolder, format: bool) -> Self {
+    pub async fn new_unencrypted() -> Self {
+        Self::open(DeviceHolder::new(FakeDevice::new(16384, 512)), true, false).await
+    }
+
+    pub async fn open(device: DeviceHolder, format: bool, encrypted: bool) -> Self {
         let (filesystem, volume) = if format {
             let filesystem = FxFilesystem::new_empty(device).await.unwrap();
             let root_volume = root_volume(&filesystem).await.unwrap();
             let vol = FxVolumeAndRoot::new(
-                root_volume.new_volume("vol", Arc::new(InsecureCrypt::new())).await.unwrap(),
+                root_volume
+                    .new_volume(
+                        "vol",
+                        if encrypted { Some(Arc::new(InsecureCrypt::new())) } else { None },
+                    )
+                    .await
+                    .unwrap(),
                 0,
             )
             .await
@@ -61,7 +72,13 @@ impl TestFixture {
             let filesystem = FxFilesystem::open(device).await.unwrap();
             let root_volume = root_volume(&filesystem).await.unwrap();
             let vol = FxVolumeAndRoot::new(
-                root_volume.volume("vol", Arc::new(InsecureCrypt::new())).await.unwrap(),
+                root_volume
+                    .volume(
+                        "vol",
+                        if encrypted { Some(Arc::new(InsecureCrypt::new())) } else { None },
+                    )
+                    .await
+                    .unwrap(),
                 0,
             )
             .await
@@ -80,7 +97,7 @@ impl TestFixture {
             Path::dot(),
             ServerEnd::new(server_end.into_channel()),
         );
-        Self { scope, state: Some(State { filesystem, volume, root }) }
+        Self { scope, state: Some(State { filesystem, volume, root }), encrypted }
     }
 
     /// Closes the test fixture, shutting down the filesystem. Returns the device, which can be
@@ -124,7 +141,7 @@ impl TestFixture {
         let filesystem = FxFilesystem::open(device).await.expect("open failed");
         fsck_with_options(
             &filesystem,
-            Some(Arc::new(InsecureCrypt::new())),
+            if self.encrypted { Some(Arc::new(InsecureCrypt::new())) } else { None },
             FsckOptions {
                 fail_on_warning: true,
                 halt_on_error: false,

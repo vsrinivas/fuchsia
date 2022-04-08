@@ -647,7 +647,7 @@ mod tests {
     async fn test_create_dir_persists() {
         let mut device = DeviceHolder::new(FakeDevice::new(8192, 512));
         for i in 0..2 {
-            let fixture = TestFixture::open(device, /*format=*/ i == 0).await;
+            let fixture = TestFixture::open(device, /*format=*/ i == 0, true).await;
             let root = fixture.root();
 
             let flags = if i == 0 {

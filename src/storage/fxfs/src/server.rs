@@ -89,7 +89,7 @@ impl FxfsServer {
     pub async fn new(
         fs: OpenFxFilesystem,
         volume_name: &str,
-        crypt: Arc<dyn Crypt>,
+        crypt: Option<Arc<dyn Crypt>>,
     ) -> Result<Arc<Self>, Error> {
         let root_volume = root_volume(&fs).await?;
         let unique_id = zx::Event::create().expect("Failed to create event");
@@ -285,7 +285,7 @@ mod tests {
     async fn test_lifecycle() -> Result<(), Error> {
         let device = DeviceHolder::new(FakeDevice::new(16384, 512));
         let filesystem = FxFilesystem::new_empty(device).await?;
-        let server = FxfsServer::new(filesystem, "root", Arc::new(InsecureCrypt::new()))
+        let server = FxfsServer::new(filesystem, "root", Some(Arc::new(InsecureCrypt::new())))
             .await
             .expect("Create server failed");
 

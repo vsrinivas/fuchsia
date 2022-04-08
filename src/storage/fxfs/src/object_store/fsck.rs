@@ -24,7 +24,7 @@ use {
             object_record::{ObjectKey, ObjectValue},
             transaction::{LockKey, TransactionHandler},
             volume::root_volume,
-            HandleOptions, ObjectStore, StoreInfo, MAX_STORE_INFO_SERIALIZED_SIZE,
+            HandleOptions, LockState, ObjectStore, StoreInfo, MAX_STORE_INFO_SERIALIZED_SIZE,
         },
         serialized_types::VersionedLatest,
     },
@@ -82,6 +82,10 @@ pub fn default_options() -> FsckOptions<impl Fn(&FsckIssue)> {
 //
 // TODO(fxbug.dev/96075): This currently takes a write lock on the filesystem.  It would be nice if
 // we could take a snapshot.
+//
+// TODO(fxbug.dev/97324): For now this takes a single crypt service to be used for all encrypted
+// filesystems that aren't locked, but this will have to change as and when we support multiple
+// encrypted volumes.
 pub async fn fsck(
     filesystem: &Arc<FxFilesystem>,
     crypt: Option<Arc<dyn Crypt>>,
@@ -318,13 +322,27 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
         filesystem: &FxFilesystem,
         store_id: u64,
         root_store_root_objects: &mut Vec<u64>,
-        crypt: Option<Arc<dyn Crypt>>,
+        mut crypt: Option<Arc<dyn Crypt>>,
     ) -> Result<(), Error> {
-        // TODO(fxbug.dev/92275): Support checking the extents of a child store when we don't have
-        // the crypt object.
-        let crypt = crypt.expect("fsck without crypt is not yet supported");
-
         let root_store = filesystem.root_store();
+        let store =
+            filesystem.object_manager().store(store_id).context("open_store failed").unwrap();
+
+        match store.lock_state() {
+            LockState::Locked => {
+                if crypt.is_none() {
+                    // We can't check this store.
+                    log::info!("Skipping locked encrypted store: {}", store_id);
+                    return Ok(());
+                }
+                store.unlock(crypt.clone().unwrap()).await?;
+            }
+            LockState::Unencrypted => crypt = None,
+            LockState::Unlocked(c) => {
+                // Use the crypt associated with the store.
+                crypt = Some(c)
+            }
+        }
 
         // Manually open the store so we can do our own validation.  Later, we will call open_store
         // to get a regular ObjectStore wrapper.
@@ -361,18 +379,10 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
                 &root_store,
                 store_id,
                 layer_file_object_id,
-                crypt.as_ref(),
+                crypt.as_deref(),
             )
             .await?;
         }
-
-        // TODO(fxbug.dev/92275): This will panic if the store is already unlocked.
-        let store = filesystem
-            .object_manager()
-            .open_store(store_id, crypt)
-            .await
-            .context("open_store failed")
-            .unwrap();
 
         store_scanner::scan_store(self, store.as_ref(), &store.root_objects())
             .await
@@ -390,14 +400,14 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
         root_store: &Arc<ObjectStore>,
         store_object_id: u64,
         layer_file_object_id: u64,
-        crypt: &dyn Crypt,
+        crypt: Option<&dyn Crypt>,
     ) -> Result<(), Error> {
         let layer_file = self.assert(
             ObjectStore::open_object(
                 root_store,
                 layer_file_object_id,
                 HandleOptions::default(),
-                Some(crypt),
+                crypt,
             )
             .await,
             FsckFatal::MissingLayerFile(store_object_id, layer_file_object_id),
