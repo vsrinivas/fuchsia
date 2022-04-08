@@ -3,10 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/pkg/bin/grand-swd-binary/gsb.gni")
 
-rustc_binary("bin") {
+rustc_library("lib") {
   name = "pkg_cache"
   with_unit_tests = true
   edition = "2018"
@@ -63,6 +64,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:tempfile",
   ]
 
+  source_root = "src/main.rs"
   sources = [
     "src/base_packages.rs",
     "src/cache_service.rs",
@@ -81,6 +83,15 @@ rustc_binary("bin") {
     "src/retained_packages_service.rs",
     "src/test_utils.rs",
   ]
+
+  visibility = [
+    ":*",
+    "//src/sys/pkg/bin/grand-swd-binary:*",
+  ]
+}
+
+grand_swd_binary("bin") {
+  output_name = "pkg_cache"
 }
 
 fuchsia_component("component") {
@@ -103,7 +114,7 @@ fuchsia_component("pkg-cache-test") {
   testonly = true
   manifest = "meta/pkg-cache-bin-test.cml"
   deps = [
-    ":bin_test",
+    ":lib_test",
     "//src/sys/pkg/bin/pm:pm_bin",
   ]
 }

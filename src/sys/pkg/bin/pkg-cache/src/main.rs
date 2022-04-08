@@ -10,6 +10,7 @@ use {
     fidl::endpoints::DiscoverableProtocolMarker as _,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_update::CommitStatusProviderMarker,
+    fuchsia_async as fasync,
     fuchsia_async::{futures::join, Task},
     fuchsia_cobalt::{CobaltConnector, ConnectionType},
     fuchsia_component::client::connect_to_protocol,
@@ -40,17 +41,18 @@ pub struct Args {
     ignore_system_image: bool,
 }
 
-#[fuchsia_async::run_singlethreaded]
-async fn main() -> Result<(), Error> {
+// pkg-cache is conceptually a binary, but is linked together as a library with other SWD binaries
+// to save space via blob deduplication.
+pub fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["pkg-cache"]).expect("can't init logger");
     fuchsia_trace_provider::trace_provider_create_with_fdio();
 
-    main_inner().await.map_err(|err| {
-        // Use anyhow to print the error chain.
+    let mut executor = fasync::LocalExecutor::new().context("error creating executor")?;
+    executor.run_singlethreaded(main_inner().map_err(|err| {
         let err = anyhow!(err);
         fx_log_err!("error running pkg-cache: {:#}", err);
         err
-    })
+    }))
 }
 
 async fn main_inner() -> Result<(), Error> {

@@ -12,6 +12,7 @@ rustc_binary("grand-swd-binary") {
   edition = "2018"
 
   deps = [
+    "//src/sys/pkg/bin/pkg-cache:lib",
     "//src/sys/pkg/bin/pkg-resolver:lib",
     "//src/sys/pkg/bin/system-update-committer:lib",
     "//src/sys/pkg/bin/system-update-configurator:lib",

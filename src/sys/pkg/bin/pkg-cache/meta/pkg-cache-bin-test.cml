@@ -10,7 +10,7 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/pkg_cache_bin_test",
+        binary: "bin/pkg_cache_lib_test",
     },
     use: [
         {
