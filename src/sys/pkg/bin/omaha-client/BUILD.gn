@@ -4,8 +4,9 @@
 
 import("//build/components.gni")
 import("//build/config.gni")
-import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//src/sys/core/build/core_shard.gni")
+import("//src/sys/pkg/bin/grand-swd-binary/gsb.gni")
 
 # TODO(fxbug.dev/92844): Remove this config.gni.
 import("//src/sys/pkg/bin/omaha-client/omcl_policy_config.gni")
@@ -21,9 +22,8 @@ core_shard("omaha-client-service-core-shard") {
   shard_file = "meta/omaha_client_service.core_shard.cml"
 }
 
-rustc_binary("bin") {
-  output_name = "omaha_client_service"
-
+rustc_library("lib") {
+  name = "omaha_client_service"
   with_unit_tests = true
   edition = "2018"
 
@@ -84,6 +84,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:proptest",
   ]
 
+  source_root = "src/main.rs"
   sources = [
     "src/api_metrics.rs",
     "src/app_set.rs",
@@ -108,6 +109,15 @@ rustc_binary("bin") {
     "src/storage/stash.rs",
     "src/timer.rs",
   ]
+
+  visibility = [
+    ":*",
+    "//src/sys/pkg/bin/grand-swd-binary:*",
+  ]
+}
+
+grand_swd_binary("bin") {
+  output_name = "omaha_client_service"
 }
 
 fuchsia_component_manifest("manifest") {
@@ -150,7 +160,7 @@ fuchsia_component("omaha-client-service-bin-tests-test-driver") {
   testonly = true
   component_name = "test-driver"
   manifest = "meta/test-driver.cml"
-  deps = [ ":bin_test" ]
+  deps = [ ":lib_test" ]
 }
 
 fuchsia_unittest_package("omaha-client-service-bin-tests") {

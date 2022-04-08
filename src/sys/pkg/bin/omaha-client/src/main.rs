@@ -33,7 +33,7 @@ mod timer;
 
 use configuration::{ChannelSource, ClientConfiguration};
 
-fn main() -> Result<(), Error> {
+pub fn main() -> Result<(), Error> {
     fuchsia_syslog::init().expect("Can't init logger");
     info!("Starting omaha client...");
 

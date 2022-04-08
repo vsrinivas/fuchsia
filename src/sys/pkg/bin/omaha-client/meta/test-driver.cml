@@ -7,7 +7,7 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/omaha_client_service_bin_test",
+        binary: "bin/omaha_client_service_lib_test",
     },
     use: [
         {

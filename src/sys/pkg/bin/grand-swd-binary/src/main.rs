@@ -9,6 +9,7 @@ fn main() -> Result<(), anyhow::Error> {
         .context("unable to determine grand-swd-binary binary name")?;
 
     match program {
+        Program::OmahaClient => omaha_client_service::main(),
         Program::PkgCache => pkg_cache::main(),
         Program::PkgResolver => pkg_resolver::main(),
         Program::SystemUpdateCommitter => system_update_committer::main(),
@@ -27,6 +28,7 @@ fn find_program(mut args: impl Iterator<Item = OsString>) -> Result<Program, Fin
         .into_owned();
 
     match name.as_str() {
+        "omaha_client_service" => Ok(Program::OmahaClient),
         "pkg_cache" => Ok(Program::PkgCache),
         "pkg_resolver" => Ok(Program::PkgResolver),
         "system_update_committer" => Ok(Program::SystemUpdateCommitter),
@@ -37,6 +39,7 @@ fn find_program(mut args: impl Iterator<Item = OsString>) -> Result<Program, Fin
 
 #[derive(Debug, PartialEq, Eq)]
 enum Program {
+    OmahaClient,
     PkgCache,
     PkgResolver,
     SystemUpdateCommitter,
@@ -79,6 +82,7 @@ mod tests {
             Ok(Program::SystemUpdateConfigurator)
         );
         assert_eq!(find_program(args!("/pkg/bin/pkg_cache")), Ok(Program::PkgCache));
+        assert_eq!(find_program(args!("/pkg/bin/omaha_client_service")), Ok(Program::OmahaClient));
     }
 
     #[test]
