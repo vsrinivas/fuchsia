@@ -78,7 +78,6 @@ group("tests") {
     "lib/focus/tests",
     "lib/gfx/tests",
     "lib/gfx/tests:mock_pose_buffer_provider",
-    "lib/gfx/tests/rotated_square_test",
     "lib/scenic/util/tests",
     "lib/view_tree:geometry_provider",
     "lib/view_tree:observer_registry",
