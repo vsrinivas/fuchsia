@@ -38,7 +38,7 @@ declare_args() {
   fs_switch = false
 
   # Set to true to enable legacy data partition names.
-  allow_legacy_data_partition_names = true
+  allow_legacy_data_partition_names = false
 
   # Make fshost watch for NAND devices.
   fshost_watch_for_nand = false

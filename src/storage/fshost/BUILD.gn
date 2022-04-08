@@ -578,6 +578,9 @@ integration_test_config = {
 
   apply_limits_to_ramdisk = true
   check_filesystems = true
+
+  # The BlockDeviceManagerIntegration.SetPartitionName test needs this.
+  allow_legacy_data_partition_names = true
 }
 
 generated_fshost_config("integration_test_config") {

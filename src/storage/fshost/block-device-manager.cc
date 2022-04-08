@@ -253,9 +253,11 @@ class DataPartitionMatcher : public BlockDeviceManager::Matcher {
 
   fs_management::DiskFormat Match(const BlockDeviceInterface& device) override {
     if (expected_inner_path_.empty()) {
-      if (map_.IsChild(device) &&
-          partition_names_.find(device.partition_name()) != partition_names_.end() &&
-          !memcmp(&device.GetTypeGuid(), &type_guid_, sizeof(type_guid_))) {
+      if (map_.IsChild(device) && !memcmp(&device.GetTypeGuid(), &type_guid_, sizeof(type_guid_))) {
+        if (partition_names_.find(device.partition_name()) == partition_names_.end()) {
+          FX_LOGS(INFO) << "Ignoring data partition with label '" << device.partition_name() << "'";
+          return fs_management::kDiskFormatUnknown;
+        }
         switch (variant_.zxcrypt) {
           case ZxcryptVariant::kNormal:
             return map_.ramdisk_required() ? variant_.format : fs_management::kDiskFormatZxcrypt;

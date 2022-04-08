@@ -14,7 +14,7 @@ fshost_config::Config DefaultConfig() {
   config.gpt = true;
   config.data = true;
   config.format_data_on_corruption = true;
-  config.allow_legacy_data_partition_names = true;
+  config.allow_legacy_data_partition_names = false;
   return config;
 }
 
