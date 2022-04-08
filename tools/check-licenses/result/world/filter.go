@@ -32,7 +32,6 @@ func (w *World) FilterProjects() error {
 			if err != nil {
 				return err
 			}
-			fmt.Printf("%v\n", gndeps)
 			if err := w.FilterProjectsUsingGn(gn, gndeps); err != nil {
 				return err
 			}
@@ -119,6 +118,7 @@ func (w *World) FilterProjectsUsingGn(gn *Gn, gnDeps *GnDeps) error {
 			if p, ok := fileMap[i]; ok {
 				projectsMap[p] = true
 			}
+
 		}
 		for _, d := range t.Deps {
 			d = gn.LabelToDirectory(d)

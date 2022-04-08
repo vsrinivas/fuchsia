@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,9 +6,9 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -21,36 +21,114 @@ import (
 )
 
 var (
-	configFile = flag.String("config_file", "tools/check-licenses/config/config.json", "Comma separated list of paths to json files.")
-	pproffile  = flag.String("pprof", "", "generate file that can be parsed by go tool pprof")
-	tracefile  = flag.String("trace", "", "generate file that can be parsed by go tool trace")
+	// The config files are baked into the root config file in the below "defaultConfigFile" file.
+	// No one in fuchsia.git should have to provide a config file to check-licenses.
+	// However, there are targets in other repos that rely on this argument, so leave it here
+	// until v2 has been enabled.
+	// TODO: replace "defaultConfigFile" with configFile after v2 has been enabled.
+	configFile = flag.String("config_file", "{FUCHSIA_DIR}/tools/check-licenses/_config.json", "Deprecated, but kept around for backwards compatibility.")
 
-	skipDirs  = flag.String("skip_dirs", "", "Comma separated list of directory names to skip when traversing a directory tree. This arg is added to the list of skipdirs in the config file.")
-	skipFiles = flag.String("skip_files", "", "Comma separated list of file names to skip when traversing a directory tree. This arg is added to the list of skipfiles in the config file.")
+	defaultConfigFile = flag.String("default_config_file", "{FUCHSIA_DIR}/tools/check-licenses/_config.json", "Default config file.")
 
-	prohibitedLicenseTypes       = flag.String("prohibited_license_types", "", "Comma separated list of license types that are prohibited. This arg is added to the list of prohibitedLicenseTypes in the config file.")
-	exitOnDirRestrictedLicense   = flag.Bool("exit_on_dir_restricted_license", true, "If true, exits if it encounters a license used outside of its allowed directories.")
-	exitOnProhibitedLicenseTypes = flag.Bool("exit_on_prohibited_license_types", true, "If true, exits if it encounters a prohibited license type.")
-	exitOnUnlicensedFiles        = flag.Bool("exit_on_unlicensed_files", true, "If true, exits if it encounters files that are unlicensed.")
+	diffTarget = flag.String("diff_target", "", "Notice file to diff the current licenses against")
 
-	licensePatternDir = flag.String("license_pattern_dir", "", "Location of directory containing pattern files for all licenses that may exist in the given code base.")
-	noticeTxtFiles    = flag.String("notice_txt", "", "Comma separated list of NOTICE.txt files to parse, in addition to those listed in config.json.")
-	licenseAllowList  = flag.String("license_allow_list", "", "Map of license pattern file (.lic) to list of directories where the license can be used.")
+	fuchsiaDir = flag.String("fuchsia_dir", os.Getenv("FUCHSIA_DIR"), "Location of the fuchsia root directory (//).")
+	buildDir   = flag.String("build_dir", os.Getenv("FUCHSIA_BUILD_DIR"), "Location of GN build directory.")
+	outDir     = flag.String("out_dir", "/tmp/check-licenses", "Directory to write outputs to.")
 
-	logLevel          = flag.Int("log_level", 0, "Log level")
-	baseDir           = flag.String("base_dir", "", "Root location to begin directory traversal.")
-	outDir            = flag.String("out_dir", "", "Directory to write outputs to.")
-	outputLicenseFile = flag.Bool("output_license_file", true, "If true, outputs a license file with all the licenses for the project.")
-	summaryFile       = flag.String("summary_file", "", "If set, outputs a CSV summary of all licenses for the project.")
-	target            = flag.String("target", "", "Analyze the dependency tree of a specific GN build target.")
-	buildDir          = flag.String("build_dir", os.Getenv("FUCHSIA_BUILD_DIR"), "Location of GN build directory.")
-	gnPath            = flag.String("gn_path", "", "Path to GN executable. Required when target is specified.")
+	gnPath = flag.String("gn_path", "{FUCHSIA_DIR}/prebuilt/third_party/gn/linux-x64/gn", "Path to GN executable. Required when target is specified.")
 
-	defaultConfig = flag.String("default", os.Getenv("FUCHSIA_DIR")+"/tools/check-licenses/_config.json", "Default config file, used for check-licenses v2.")
+	logLevel  = flag.Int("log_level", 2, "Log level. Set to 0 for no logs, 1 to log to a file, 2 to log to stdout.")
+	pproffile = flag.String("pprof", "", "generate file that can be parsed by go tool pprof")
+	tracefile = flag.String("trace", "", "generate file that can be parsed by go tool trace")
+
+	outputLicenseFile = flag.Bool("output_license_file", true, "Flag for enabling template expansions.")
 )
 
 func mainImpl() error {
+	var err error
+
 	flag.Parse()
+
+	// fuchsiaDir
+	fuchsiaDirUpdate := ""
+	if *fuchsiaDir == "" {
+		// TODO: Update CQ to provide the fuchsia home directory.
+		//return fmt.Errorf("--fuchsia_dir cannot be empty.")
+		*fuchsiaDir = "."
+	}
+	if fuchsiaDirUpdate, err = filepath.Abs(*fuchsiaDir); err != nil {
+		return err
+	}
+	checklicenses.ConfigVars["{FUCHSIA_DIR}"] = fuchsiaDirUpdate
+
+	// target
+	target := ""
+	if flag.NArg() > 1 {
+		return fmt.Errorf("check-licenses takes a maximum of 1 positional argument (filepath or gn target), got %v\n", flag.NArg())
+	}
+	if flag.NArg() == 1 {
+		target = flag.Arg(0)
+	}
+	if isPath(target) {
+		var err error
+		if target, err = filepath.Abs(target); err != nil {
+			return err
+		}
+	}
+	checklicenses.ConfigVars["{TARGET}"] = target
+
+	// diffTarget
+	diffTargetUpdate := ""
+	if *diffTarget != "" {
+		if diffTargetUpdate, err = filepath.Abs(*diffTarget); err != nil {
+			return err
+		}
+	}
+	checklicenses.ConfigVars["{DIFF_TARGET}"] = diffTargetUpdate
+
+	// buildDir
+	buildDirUpdate := ""
+	if *buildDir == "" && *outputLicenseFile {
+		return fmt.Errorf("--build_dir cannot be empty.")
+	}
+	if buildDirUpdate, err = filepath.Abs(*buildDir); err != nil {
+		return err
+	}
+	checklicenses.ConfigVars["{BUILD_DIR}"] = buildDirUpdate
+
+	// outDir
+	outDirUpdate := ""
+	if *outDir != "" {
+		if outDirUpdate, err = filepath.Abs(*outDir); err != nil {
+			return err
+		}
+	}
+	checklicenses.ConfigVars["{OUT_DIR}"] = outDirUpdate
+
+	// gnPath
+	gnPathUpdate := *gnPath
+	if *gnPath == "" {
+		return fmt.Errorf("--gn_path cannot be empty.")
+	}
+	gnPathUpdate = strings.ReplaceAll(gnPathUpdate, "{FUCHSIA_DIR}", fuchsiaDirUpdate)
+	checklicenses.ConfigVars["{GN_PATH}"] = gnPathUpdate
+
+	// logLevel
+	w, err := getLogWriters(*logLevel, outDirUpdate)
+	if err != nil {
+		return err
+	}
+	log.SetOutput(w)
+
+	configFileUpdate := strings.ReplaceAll(*defaultConfigFile, "{FUCHSIA_DIR}", fuchsiaDirUpdate)
+	config, err := checklicenses.NewCheckLicensesConfig(configFileUpdate)
+	if err != nil {
+		return err
+	}
+	config.Result.OutputLicenseFile = *outputLicenseFile
+
+	// Tracing
 	if *tracefile != "" {
 		f, err := os.Create(*tracefile)
 		if err != nil {
@@ -74,168 +152,62 @@ func mainImpl() error {
 		defer pprof.StopCPUProfile()
 	}
 
-	// TODO(jcecil): incorporate https://godoc.org/github.com/golang/glog
-	if *logLevel == 0 {
-		log.SetOutput(ioutil.Discard)
+	if err := os.Chdir(*fuchsiaDir); err != nil {
+		return err
 	}
 
-	config := &checklicenses.Config{}
-
-	if *configFile != "" {
-		split := strings.Split(*configFile, ",")
-		for _, path := range split {
-			if path != "" {
-				c, err := checklicenses.NewConfig(path)
-				if err != nil {
-					return fmt.Errorf("failed to initialize config %s: %s", path, err)
-				}
-				config.Merge(c)
-			}
-		}
-	}
-
-	if *skipDirs != "" {
-		split := strings.Split(*skipDirs, ",")
-		for _, s := range split {
-			if s != "" {
-				config.SkipDirs = append(config.SkipDirs, s)
-			}
-		}
-	}
-
-	config.SkipDirs = append(config.SkipDirs, additionalSkipDirs...)
-
-	if *skipFiles != "" {
-		split := strings.Split(*skipFiles, ",")
-		for _, s := range split {
-			if s != "" {
-				config.SkipFiles = append(config.SkipFiles, s)
-			}
-		}
-	}
-
-	// TODO(b/172070492): Remove this list once completed.
-	for _, f := range additionalSkipFiles {
-		config.SkipFiles = append(config.SkipFiles, strings.ToLower(f))
-	}
-
-	if *prohibitedLicenseTypes != "" {
-		split := strings.Split(*prohibitedLicenseTypes, ",")
-		for _, s := range split {
-			if s != "" {
-				config.ProhibitedLicenseTypes = append(config.ProhibitedLicenseTypes, s)
-			}
-		}
-	}
-
-	if *noticeTxtFiles != "" {
-		split := strings.Split(*noticeTxtFiles, ",")
-		for _, s := range split {
-			if s != "" {
-				config.NoticeTxtFiles = append(config.NoticeTxtFiles, s)
-			}
-		}
-	}
-
-	if *licenseAllowList != "" {
-		blob := []byte(*licenseAllowList)
-		result := make(map[string][]string)
-		err := json.Unmarshal(blob, &result)
-		if err != nil {
-			return fmt.Errorf("failed to initialize license allow list: %s", err)
-		}
-
-		for k, v := range result {
-			if _, ok := config.LicenseAllowList[k]; !ok {
-				config.LicenseAllowList[k] = []string{}
-			}
-			config.LicenseAllowList[k] = append(config.LicenseAllowList[k], v...)
-		}
-	}
-
-	// TODO(fxb/42986): Remove ExitOnProhibitedLicenseTypes and ExitOnUnlicensedFiles
-	// flags once fxb/42986 is completed.
-	config.ExitOnProhibitedLicenseTypes = *exitOnProhibitedLicenseTypes
-	config.ExitOnUnlicensedFiles = *exitOnUnlicensedFiles
-	config.ExitOnDirRestrictedLicense = *exitOnDirRestrictedLicense
-
-	config.OutputLicenseFile = *outputLicenseFile
-	if *summaryFile != "" {
-		config.SummaryFile = *summaryFile
-	}
-
-	if *licensePatternDir != "" {
-		if info, err := os.Stat(*licensePatternDir); os.IsNotExist(err) && info.IsDir() {
-			return fmt.Errorf("license pattern directory path %q does not exist!", *licensePatternDir)
-		}
-		config.LicensePatternDir = *licensePatternDir
-	}
-
-	if *baseDir != "" {
-		info, err := os.Stat(*baseDir)
-		if os.IsNotExist(err) {
-			return fmt.Errorf("base directory path %q does not exist!", *baseDir)
-		}
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() {
-			return fmt.Errorf("base directory path %q is not a directory!", *baseDir)
-		}
-		config.BaseDir = *baseDir
-	}
-
-	if *outDir != "" {
-		info, err := os.Stat(*outDir)
-		if os.IsNotExist(err) {
-			return fmt.Errorf("out directory path %q does not exist!", *outDir)
-		}
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() {
-			return fmt.Errorf("out directory path %q is not a directory!", *outDir)
-		}
-		config.OutDir = *outDir
-	}
-
-	config.BuildDir = *buildDir
-	if *gnPath != "" {
-		_, err := os.Stat(*gnPath)
-		if os.IsNotExist(err) {
-			return fmt.Errorf("GN path %q does not exist!", *gnPath)
-		}
-		if err != nil {
-			return err
-		}
-		config.GnPath = *gnPath
-	} else {
-		prebuilt := os.Getenv("PREBUILT_3P_DIR")
-		hostPlatform := os.Getenv("HOST_PLATFORM")
-		if prebuilt != "" && hostPlatform != "" {
-			config.GnPath = filepath.Join(prebuilt, "gn", hostPlatform, "gn")
-		}
-	}
-
-	if *target != "" {
-		if config.GnPath == "" {
-			return fmt.Errorf("A target was specified but no path to GN was given")
-		}
-		config.Target = *target
-	}
-
-	// v2 codepath
-	/*
-		config_v2, err := checklicenses.NewCheckLicensesConfig(*defaultConfig)
-		if err != nil {
-			return err
-		}
-		if err := checklicenses.Execute(context.Background(), config_v2); err != nil {
-	*/
-	if err := checklicenses.Run(context.Background(), config); err != nil {
+	if err := checklicenses.Execute(context.Background(), config); err != nil {
 		return fmt.Errorf("failed to analyze the given directory: %v", err)
 	}
 	return nil
+}
+
+func isPath(target string) bool {
+	if strings.HasPrefix(target, "//") {
+		return false
+	}
+	if strings.HasPrefix(target, ":") {
+		return false
+	}
+	if target == "" {
+		return false
+	}
+	return true
+}
+
+func getLogWriters(logLevel int, outDir string) (io.Writer, error) {
+	logTargets := []io.Writer{}
+	if logLevel == 0 {
+		// Default: logLevel == 0
+		// Discard all non-error logs.
+		logTargets = append(logTargets, ioutil.Discard)
+	} else {
+		if logLevel == 1 && outDir != "" {
+			// logLevel == 1
+			// Write all logs to a log file.
+			if _, err := os.Stat(outDir); os.IsNotExist(err) {
+				err := os.Mkdir(outDir, 0755)
+				if err != nil {
+					return nil, fmt.Errorf("Failed to create out directory [%v]: %v\n", outDir, err)
+				}
+			}
+			logfilePath := filepath.Join(outDir, "logs")
+			f, err := os.OpenFile(logfilePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+			if err != nil {
+				return nil, fmt.Errorf("Failed to create log file [%v]: %v\n", logfilePath, err)
+			}
+			defer f.Close()
+			logTargets = append(logTargets, f)
+		}
+		if logLevel == 2 {
+			// logLevel == 2
+			// Write all logs to a log file and stdout.
+			logTargets = append(logTargets, os.Stdout)
+		}
+	}
+	w := io.MultiWriter(logTargets...)
+
+	return w, nil
 }
 
 func main() {

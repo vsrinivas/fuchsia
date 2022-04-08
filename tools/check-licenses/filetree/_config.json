@@ -6,6 +6,7 @@
             {
                 "paths": [
                     "src/connectivity/telephony/lib/qmi-protocol/tests",
+                    "zircon/system/ulib/utf_conversion/test/utf_conversion-fuzzer.cc",
                     "sdk/cts/tests/pkg/fdio/test_bins/echo_arguments.sh",
                     "src/security/fcrypto/test/hmac-fuzzer.cc",
                     "src/sys/component_manager/testing/lib.rs",

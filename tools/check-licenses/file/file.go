@@ -66,6 +66,9 @@ func NewFile(path string, ft FileType) (*File, error) {
 	}
 
 	plusVal(NumFiles, path)
+	if Config.Extensions[filepath.Ext(path)] {
+		plusVal(NumPotentialLicenseFiles, path)
+	}
 	f := &File{
 		Name: filepath.Base(path),
 		Path: path,
