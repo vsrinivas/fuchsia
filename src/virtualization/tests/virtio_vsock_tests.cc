@@ -12,8 +12,7 @@
 #include "guest_test.h"
 
 template <class T>
-class DISABLED_VsockGuestTest : public GuestTest<T>,
-                                public fuchsia::virtualization::HostVsockAcceptor {
+class VsockGuestTest : public GuestTest<T>, public fuchsia::virtualization::HostVsockAcceptor {
  public:
   struct IncomingRequest {
     uint32_t src_cid;
@@ -23,6 +22,10 @@ class DISABLED_VsockGuestTest : public GuestTest<T>,
   };
 
   std::vector<IncomingRequest> requests;
+
+  std::mutex mutex_;
+  std::condition_variable cv_;
+  bool listen_complete_ = false;
 
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
               AcceptCallback callback) override {
@@ -62,6 +65,11 @@ class DISABLED_VsockGuestTest : public GuestTest<T>,
     zx_status_t out_status;
     ASSERT_EQ(vsock_endpoint->Listen(8000, binding.NewBinding(), &out_status), ZX_OK);
     ASSERT_EQ(out_status, ZX_OK);
+    {
+      std::unique_lock lock(mutex_);
+      listen_complete_ = true;
+    }
+    cv_.notify_one();
     ASSERT_EQ(binding.WaitForMessage(), ZX_OK);
     ASSERT_TRUE(requests.size() == 1);
     ASSERT_EQ(requests[0].src_cid, this->GetGuestCid());
@@ -117,11 +125,14 @@ class DISABLED_VsockGuestTest : public GuestTest<T>,
 // driver has known bugs that need fixing.
 using GuestTypes = ::testing::Types<DebianEnclosedGuest, TerminaEnclosedGuest>;
 
-TYPED_TEST_SUITE(DISABLED_VsockGuestTest, GuestTypes);
+TYPED_TEST_SUITE(VsockGuestTest, GuestTypes);
 
-TYPED_TEST(DISABLED_VsockGuestTest, ConnectDisconnect) {
+TYPED_TEST(VsockGuestTest, ConnectDisconnect) {
   auto handle = std::async(std::launch::async, [this] { this->TestThread(); });
-
+  {
+    std::unique_lock lock(this->mutex_);
+    this->cv_.wait(lock, [&] { return this->listen_complete_; });
+  }
   std::string result;
   EXPECT_EQ(this->RunUtil("virtio_vsock_test_util", {}, &result), ZX_OK);
 
