@@ -65,6 +65,7 @@ tags=( )
 exclude_tags=( )
 flags=""
 select_filters=( )
+output_format="text"
 
 # Flag parsing.
 while [[ "$1" =~ ^- ]]; do
@@ -90,8 +91,12 @@ while [[ "$1" =~ ^- ]]; do
     tags+=( "$1" )
     ;;
   --exclude-tag)
-  shift
+    shift
     exclude_tags+=( "$1" )
+    ;;
+  --output-format)
+    shift
+    output_format="$1"
     ;;
   --test)
     testit="yes"
@@ -176,6 +181,8 @@ if [ -z "${select_filters}" ]; then
   do
     flags="${flags} --exclude-tag ${tag}"
   done
+
+  flags="${flags} --output-format ${output_format}"
 
   if [[ ! -f "$triage_exe" ]]; then
     echo "Building Triage..."

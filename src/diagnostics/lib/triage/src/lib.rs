@@ -4,6 +4,7 @@
 
 use {
     crate::act::ActionContext,
+    crate::act_structured::StructuredActionContext,
     crate::metrics::{metric_value::MetricValue, MetricState},
     anyhow::{bail, Error},
     injectable_time::{MonotonicTime, TimeSource},
@@ -18,7 +19,8 @@ pub(crate) mod plugins; // Plugins for additional analysis.
 pub(crate) mod result_format; // Formats the triage results.
 pub(crate) mod validate; // Check config - including that metrics/triggers work correctly.
 
-pub use act::{ActionResults, SnapshotTrigger, WarningVec};
+pub use act::{Action, ActionResults, SnapshotTrigger, WarningVec};
+pub use act_structured::TriageOutput;
 pub use config::{ActionTagDirective, DataFetcher, DiagnosticData, ParseResult, Source};
 pub use result_format::ActionResultFormatter;
 
@@ -60,6 +62,23 @@ pub fn analyze(
     let mut action_context =
         ActionContext::new(&parse_result.metrics, &parse_result.actions, diagnostic_data, now);
     Ok(action_context.process().clone())
+}
+
+/// Analyze all DiagnosticData against loaded configs and generate the corresponding TriageOutput.
+/// A single TriageOutput instance is returned regardless of the length of DiagnosticData.
+pub fn analyze_structured(
+    diagnostic_data: &Vec<DiagnosticData>,
+    parse_result: &ParseResult,
+) -> Result<TriageOutput, Error> {
+    parse_result.reset_state();
+    let now = time_from_snapshot(diagnostic_data);
+    let mut structured_action_context = StructuredActionContext::new(
+        &parse_result.metrics,
+        &parse_result.actions,
+        diagnostic_data,
+        now,
+    );
+    Ok(structured_action_context.process().clone())
 }
 
 // Do not call this from WASM - WASM does not provde a monotonic clock.

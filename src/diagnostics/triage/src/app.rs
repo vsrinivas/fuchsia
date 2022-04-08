@@ -7,8 +7,11 @@ use {
         config::{self, OutputFormat, ProgramStateHolder},
         Options,
     },
-    anyhow::{Context as _, Error},
-    triage::{analyze, ActionResultFormatter, ActionResults},
+    anyhow::{bail, Context as _, Error},
+    triage::{
+        analyze, analyze_structured, ActionResultFormatter, ActionResults, DiagnosticData,
+        ParseResult, TriageOutput,
+    },
 };
 
 /// The entry point for the CLI app.
@@ -24,17 +27,49 @@ impl App {
 
     /// Runs the App.
     ///
-    /// This method consumes self and returns a [RunResult] which can be used
-    /// to examine results. If an error occurs during the running of the app
+    /// This method consumes self and calls run_structured or run_unstructured
+    /// depending on if structured output is in options. It then collects the results
+    /// and writes the results to the dest. If an error occurs during the running of the app
     /// it will be returned as an Error.
-    pub fn run(self) -> Result<RunResult, Error> {
+    pub fn run(self, dest: &mut dyn std::io::Write) -> Result<bool, Error> {
         // TODO(fxbug.dev/50449): Use 'argh' crate.
         let ProgramStateHolder { parse_result, diagnostic_data, output_format } =
-            config::initialize(self.options)?;
+            config::initialize(self.options.clone())?;
 
+        match output_format {
+            OutputFormat::Structured => {
+                let structured_run_result = self.run_structured(diagnostic_data, parse_result)?;
+                structured_run_result.write_report(dest)?;
+                Ok(structured_run_result.has_warnings())
+            }
+            OutputFormat::Text => {
+                let run_result =
+                    self.run_unstructured(diagnostic_data, parse_result, output_format)?;
+                run_result.write_report(dest)?;
+                Ok(run_result.has_warnings())
+            }
+        }
+    }
+
+    fn run_unstructured(
+        self,
+        diagnostic_data: Vec<DiagnosticData>,
+        parse_result: ParseResult,
+        output_format: OutputFormat,
+    ) -> Result<RunResult, Error> {
         let action_results = analyze(&diagnostic_data, &parse_result)?;
 
         Ok(RunResult::new(output_format, action_results))
+    }
+
+    fn run_structured(
+        self,
+        diagnostic_data: Vec<DiagnosticData>,
+        parse_result: ParseResult,
+    ) -> Result<StructuredRunResult, Error> {
+        let triage_output = analyze_structured(&diagnostic_data, &parse_result)?;
+
+        Ok(StructuredRunResult { triage_output })
     }
 }
 
@@ -60,10 +95,33 @@ impl RunResult {
     ///
     /// This method can be used to output the results to a file or stdout.
     pub fn write_report(&self, dest: &mut dyn std::io::Write) -> Result<(), Error> {
+        if self.output_format != OutputFormat::Text {
+            bail!("BUG: Incorrect output format requested");
+        }
+
         let results_formatter = ActionResultFormatter::new(&self.action_results);
-        let output = match self.output_format {
-            OutputFormat::Text => results_formatter.to_text(),
-        };
+        let output = results_formatter.to_text();
+        dest.write_fmt(format_args!("{}\n", output)).context("failed to write to destination")?;
+        Ok(())
+    }
+}
+
+/// The result of calling App::run_structured.
+pub struct StructuredRunResult {
+    triage_output: TriageOutput,
+}
+
+impl StructuredRunResult {
+    /// Returns true if at least one error in TriageOutput.
+    pub fn has_warnings(&self) -> bool {
+        self.triage_output.has_triggered_warning()
+    }
+
+    /// Writes the contents of the run_structured to the provided writer.
+    ///
+    /// This method can be used to output the results to a file or stdout.
+    pub fn write_report(&self, dest: &mut dyn std::io::Write) -> Result<(), Error> {
+        let output = serde_json::to_string(&self.triage_output)?;
         dest.write_fmt(format_args!("{}\n", output)).context("failed to write to destination")?;
         Ok(())
     }
@@ -71,7 +129,10 @@ impl RunResult {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, triage::ActionResults};
+    use {
+        super::*,
+        triage::{Action, ActionResults},
+    };
 
     #[fuchsia::test]
     fn test_output_text_no_warnings() -> Result<(), Error> {
@@ -114,6 +175,74 @@ mod tests {
 
         let output = String::from_utf8(dest)?;
         assert_eq!("Gauges\n------\ngauge\n\nNo actions were triggered. All targets OK.\n", output);
+
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    fn test_structured_output_no_warnings() -> Result<(), Error> {
+        let triage_output = TriageOutput::new(Vec::new());
+        let structured_run_result = StructuredRunResult { triage_output };
+
+        let mut dest = vec![];
+        structured_run_result.write_report(&mut dest)?;
+
+        let output = String::from_utf8(dest)?;
+        assert_eq!(
+            "{\"actions\":{},\"metrics\":{},\"plugin_results\":{},\"triage_errors\":[]}\n",
+            output
+        );
+
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    fn test_structured_output_with_warnings() -> Result<(), Error> {
+        let mut triage_output = TriageOutput::new(vec!["file".to_string()]);
+        triage_output.add_action(
+            "file".to_string(),
+            "warning_name".to_string(),
+            Action::new_synthetic_warning("fail".to_string()),
+        );
+        let structured_run_result = StructuredRunResult { triage_output };
+
+        let mut dest = vec![];
+        structured_run_result.write_report(&mut dest)?;
+
+        let output = String::from_utf8(dest)?;
+        assert_eq!(
+            "{\"actions\":{\"file\":{\"warning_name\":{\"type\":\"Warning\",\"trigger\":\
+        {\"metric\":{\"Eval\":{\"raw_expression\":\"0==0\",\"parsed_expression\":{\"Function\":\
+        [\"Equals\",[{\"Value\":{\"Int\":0}},{\"Value\":{\"Int\":0}}]]}}},\"cached_value\":\
+        {\"Bool\":true}},\"print\":\"fail\",\"file_bug\":null,\"tag\":null}}},\"metrics\":\
+        {\"file\":{}},\"plugin_results\":{},\"triage_errors\":[]}\n",
+            output
+        );
+
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    fn test_structured_output_with_gauges() -> Result<(), Error> {
+        let mut triage_output = TriageOutput::new(vec!["file".to_string()]);
+        triage_output.add_action(
+            "file".to_string(),
+            "gauge_name".to_string(),
+            Action::new_synthetic_string_gauge("gauge".to_string(), None, None),
+        );
+        let structured_run_result = StructuredRunResult { triage_output };
+
+        let mut dest = vec![];
+        structured_run_result.write_report(&mut dest)?;
+
+        let output = String::from_utf8(dest)?;
+        assert_eq!(
+            "{\"actions\":{\"file\":{\"gauge_name\":{\"type\":\"Gauge\",\"value\":{\"metric\":\
+            {\"Eval\":{\"raw_expression\":\"'gauge'\",\"parsed_expression\":{\"Value\":\
+            {\"String\":\"gauge\"}}}},\"cached_value\":{\"String\":\"gauge\"}},\"format\":null,\
+            \"tag\":null}}},\"metrics\":{\"file\":{}},\"plugin_results\":{},\"triage_errors\":[]}\n",
+            output
+        );
 
         Ok(())
     }

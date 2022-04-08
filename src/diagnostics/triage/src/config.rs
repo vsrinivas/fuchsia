@@ -11,9 +11,10 @@ use {
 };
 
 // TODO(fxbug.dev/50451): Add support for CSV.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum OutputFormat {
     Text,
+    Structured,
 }
 
 impl FromStr for OutputFormat {
@@ -21,7 +22,11 @@ impl FromStr for OutputFormat {
     fn from_str(output_format: &str) -> Result<Self, Self::Err> {
         match output_format {
             "text" => Ok(OutputFormat::Text),
-            incorrect => Err(format_err!("Invalid output type '{}' - must be 'text'", incorrect)),
+            "structured" => Ok(OutputFormat::Structured),
+            incorrect => Err(format_err!(
+                "Invalid output type '{}' - must be 'text' or 'structured",
+                incorrect
+            )),
         }
     }
 }
@@ -35,7 +40,7 @@ pub struct ProgramStateHolder {
 
 /// Parses the inspect.json file and all the config files.
 pub fn initialize(options: Options) -> Result<ProgramStateHolder, Error> {
-    let Options { data_directory, output_format, config_files, tags, exclude_tags, .. } = options;
+    let Options { data_directory, output_format, config_files, tags, exclude_tags } = options;
 
     if config_files.len() == 0 {
         bail!("Need at least one config file; use --config");
@@ -57,6 +62,7 @@ mod test {
     #[fuchsia::test]
     fn output_format_from_string() -> Result<(), Error> {
         assert_eq!(OutputFormat::from_str("text")?, OutputFormat::Text);
+        assert_eq!(OutputFormat::from_str("structured")?, OutputFormat::Structured);
         assert!(OutputFormat::from_str("").is_err(), "Should have returned 'Err' on ''");
         assert!(OutputFormat::from_str("CSV").is_err(), "Should have returned 'Err' on 'CSV'");
         assert!(OutputFormat::from_str("Text").is_err(), "Should have returned 'Err' on 'Text'");

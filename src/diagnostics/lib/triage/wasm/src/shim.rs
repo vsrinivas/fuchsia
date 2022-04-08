@@ -5,6 +5,7 @@
 use {
     anyhow::{bail, Error},
     num_traits::cast::FromPrimitive,
+    serde_json5,
     std::collections::HashMap,
     triage::{ActionResultFormatter, ActionTagDirective, DiagnosticData, ParseResult, Source},
 };
@@ -77,16 +78,29 @@ impl TriageManager {
         context_handle: Handle,
     ) -> Result<String, Error> {
         let context: Context = take_value!(self, &context_handle, Value::Context);
-
         let mut targets: Vec<Target> = Vec::new();
         for handle in target_handles.iter() {
             let target: Target = take_value!(self, &handle, Value::Target);
             targets.push(target);
         }
-
         let results = triage::analyze(&targets, &context)?;
         let results_formatter = ActionResultFormatter::new(&results);
         Ok(results_formatter.to_text())
+    }
+
+    pub fn analyze_structured(
+        &mut self,
+        target_handles: &[Handle],
+        context_handle: Handle,
+    ) -> Result<String, Error> {
+        let context: Context = take_value!(self, &context_handle, Value::Context);
+        let mut targets: Vec<Target> = Vec::new();
+        for handle in target_handles.iter() {
+            let target: Target = take_value!(self, &handle, Value::Target);
+            targets.push(target);
+        }
+        let structured_results = triage::analyze_structured(&targets, &context)?;
+        Ok(serde_json5::to_string(&structured_results)?)
     }
 
     fn insert(&mut self, value: Value) -> Handle {

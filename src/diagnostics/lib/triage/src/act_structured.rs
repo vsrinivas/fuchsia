@@ -45,14 +45,36 @@ impl TriageOutput {
         TriageOutput { actions, metrics, triage_errors: Vec::new(), plugin_results: HashMap::new() }
     }
 
-    pub(crate) fn add_error(&mut self, error: String) {
+    /// Add an error generated while creating TriageOutput
+    pub fn add_error(&mut self, error: String) {
         self.triage_errors.push(error);
     }
 
-    pub(crate) fn add_action(&mut self, namespace: String, name: String, action: Action) {
+    /// Add an Action to processing during TriageOutput
+    pub fn add_action(&mut self, namespace: String, name: String, action: Action) {
         if let Some(actions_map) = self.actions.get_mut(&namespace) {
             actions_map.insert(name, action);
         }
+    }
+
+    /// Returns true if any triggered [Warning]s are generated while building the [TriageOutput]
+    /// false otherwise.
+    pub fn has_triggered_warning(&self) -> bool {
+        for (_namespace, actions_map) in &self.actions {
+            for (_name, action) in actions_map {
+                match action {
+                    Action::Warning(warning) => {
+                        if let Some(MetricValue::Bool(true)) =
+                            *warning.trigger.cached_value.borrow()
+                        {
+                            return true;
+                        }
+                    }
+                    _ => (),
+                }
+            }
+        }
+        false
     }
 }
 
@@ -64,11 +86,9 @@ pub struct StructuredActionContext<'a> {
 }
 
 impl<'a> StructuredActionContext<'a> {
-    // TODO(fxbug.dev/96685): Remove when library calls implemented.
-    #[allow(dead_code)]
     pub(crate) fn new(
         metrics: &'a Metrics,
-        actions: &'a mut Actions,
+        actions: &'a Actions,
         diagnostic_data: &'a Vec<DiagnosticData>,
         now: Option<i64>,
     ) -> StructuredActionContext<'a> {
@@ -87,8 +107,6 @@ impl<'a> StructuredActionContext<'a> {
     }
 }
 
-// TODO(fxbug.dev/96685): Remove when library calls implemented.
-#[allow(dead_code)]
 impl StructuredActionContext<'_> {
     // TODO(fxbug.dev/96685): This must be refactored into `build`.
     // remove the unnecessary code blocks after refactor.

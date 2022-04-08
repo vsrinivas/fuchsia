@@ -11,7 +11,7 @@ mod test;
 
 use {crate::config::OutputFormat, structopt::StructOpt};
 
-#[derive(StructOpt, Debug)]
+#[derive(StructOpt, Debug, Clone)]
 pub struct Options {
     /// Config files
     #[structopt(long = "config")]

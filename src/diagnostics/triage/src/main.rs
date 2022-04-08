@@ -17,9 +17,8 @@ fn report_failure(e: Error) {
 
 fn run_app() -> Result<i32, Error> {
     let app = App::new(Options::from_args());
-    let results = app.run()?;
-    results.write_report(&mut std::io::stdout())?;
-    Ok(match results.has_warnings() {
+    let results = app.run(&mut std::io::stdout())?;
+    Ok(match results {
         true => 1,
         false => 0,
     })
