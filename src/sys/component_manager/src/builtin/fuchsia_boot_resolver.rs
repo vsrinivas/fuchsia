@@ -75,7 +75,10 @@ impl FuchsiaBootResolver {
         let cm_path = if package_path == "." {
             res.to_string()
         } else {
-            Path::new(package_path).join(res).into_os_string().into_string().unwrap()
+            // Until packages are formally supported in bootfs, including a package path
+            // is an invalid fuchsia-boot url.
+            // TODO(fxb/92916)
+            return Err(fsys::ResolverError::InvalidArgs);
         };
 
         // Read the component manifest (.cm file) from the bootfs directory.
@@ -224,13 +227,13 @@ mod tests {
 
     #[fuchsia::test]
     async fn hello_world_test() -> Result<(), Error> {
-        let root = pseudo_directory! {
-            "packages" => pseudo_directory! {
-                "hello-world" => remote_dir(
-                    open_in_namespace("/pkg", fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE).unwrap(),
-                ),
-            },
-        };
+        let root = remote_dir(
+            open_in_namespace(
+                "/pkg",
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+            )
+            .unwrap(),
+        );
         let (_task, bootfs) = serve_vfs_dir(root);
         let resolver = FuchsiaBootResolver::new_from_directory(bootfs);
 
@@ -241,7 +244,7 @@ mod tests {
             "fuchsia-boot:///#meta/root.cm".to_string(),
         );
 
-        let url = "fuchsia-boot:///packages/hello-world#meta/hello-world-rust.cm";
+        let url = "fuchsia-boot:///#meta/hello-world-rust.cm";
         let component = resolver.resolve(url, &root).await?;
 
         // Check that both the returned component manifest and the component manifest in
@@ -278,7 +281,7 @@ mod tests {
         assert_eq!(decl.program, expected_program);
 
         let ResolvedPackage { url: package_url, directory: package_dir, .. } = package.unwrap();
-        assert_eq!(package_url.unwrap(), "fuchsia-boot:///packages/hello-world");
+        assert_eq!(package_url.unwrap(), "fuchsia-boot:///");
 
         let dir_proxy = package_dir.unwrap().into_proxy().unwrap();
         let path = Path::new("meta/hello-world-rust.cm");
@@ -298,6 +301,9 @@ mod tests {
             .await
             .expect("failed to open executable file");
 
+        let url = "fuchsia-boot:///contains/a/package#meta/hello-world-rust.cm";
+        let err = resolver.resolve(url, &root).await.unwrap_err();
+        assert_matches!(err, ResolverError::MalformedUrl { .. });
         Ok(())
     }
 
