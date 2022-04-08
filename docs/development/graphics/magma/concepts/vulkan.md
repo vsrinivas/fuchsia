@@ -139,18 +139,8 @@ There are two options for displaying your rendered output:
 
 You can use a custom version of the [WSI swapchain](https://www.khronos.org/registry/vulkan/specs/1.0-extensions/html/vkspec.html#_wsi_swapchain){: .external}.
 
-For details on the magma customization, refer to the
-[vkcube](/src/graphics/examples/vkcube) example.
-
-## Interaction with the graphics console
-
-The magma display driver supports toggling ownership between the main display owner, and the graphics console.
-
-Currently, on system startup the gfxconsole owns the display.
-
-When a Vulkan application starts, it will take over the display.
-
-To toggle display ownership between the Vulkan app and the gfxconsole, press alt-esc.
+For details on the Fuchsia customization, refer to the
+[vkcube](/src/graphics/examples/vkcube) example.  Note that swapchain support for option 1 has been removed.
 
 ## Reporting issues
 
@@ -161,7 +151,7 @@ If nothing works afterward, please file that as an issue as well.
 
 ### Gpu fault
 
-Looks something like the following. This can happen due to user error or driver bug. Please make sure your app has no validation layer issues.
+Looks something like the following. This can happen due to user error or driver bug. Please make sure your app has no Vulkan validation layer issues.
 
 If you believe your app is innocent, please file a Magma ticket and include at least this portion of the log, plus ideally a recipe to repro:
 
@@ -199,10 +189,6 @@ Again, may be an application error or driver bug. If you believe your app is inn
 > ---- device dump end ----
 > [WARNING] resetting render engine
 ```
-
-## Demo
-
-The magma build includes a spinning cube demo 'vkcube', which you can copy over to your Fuchsia system and execute via `netruncmd`.
 
 [cml]: /docs/concepts/components/v2/component_manifests.md
 [cmx]: /docs/concepts/components/v1/component_manifests.md
