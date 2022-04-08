@@ -16,6 +16,8 @@ source_set("mix") {
   ]
 
   sources = [
+    "custom_stage.cc",
+    "custom_stage.h",
     "detached_thread.cc",
     "detached_thread.h",
     "mix_thread.cc",
@@ -51,6 +53,7 @@ executable("mix_unittests") {
   testonly = true
 
   sources = [
+    "custom_stage_unittest.cc",
     "packet_queue_producer_stage_unittest.cc",
     "packet_view_unittest.cc",
     "pipeline_stage_unittest.cc",
@@ -60,7 +63,9 @@ executable("mix_unittests") {
 
   deps = [
     ":mix",
+    "//sdk/fidl/fuchsia.audio.effects",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
   ]
 }

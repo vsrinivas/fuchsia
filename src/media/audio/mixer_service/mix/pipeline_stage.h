@@ -157,6 +157,12 @@ class PipelineStage {
   // Returns the stage's format.
   const Format& format() const { return format_; }
 
+  // Returns the stage's next read frame.
+  std::optional<Fixed> next_read_frame() { return next_read_frame_; }
+
+  // Sets the stage's thread. It is safe to call this method on any thread.
+  void set_thread(ThreadPtr thread) { std::atomic_store(&thread_, std::move(thread)); }
+
   // Returns the thread which currently controls this stage.
   // It is safe to call this method on any thread, but if not called from thread(),
   // the returned value may change concurrently.
