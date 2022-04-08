@@ -12,18 +12,23 @@ use {
     async_trait::async_trait,
     chacha20::{ChaCha20, Key},
     rand::RngCore,
-    serde::{Deserialize, Serialize},
+    serde::{
+        de::{Error as SerdeError, Visitor},
+        Deserialize, Deserializer, Serialize, Serializer,
+    },
+    std::convert::TryInto,
     xts_mode::{get_tweak_default, Xts128},
 };
 
-const KEY_SIZE: usize = 256 / 8;
+pub const KEY_SIZE: usize = 256 / 8;
+pub const WRAPPED_KEY_SIZE: usize = KEY_SIZE + 16;
 
 // The xts-mode crate expects a sector size. Fxfs will always use a block size >= 512 bytes, so we
 // just assume a sector size of 512 bytes, which will work fine even if a different block size is
 // used by Fxfs or the underlying device.
 const SECTOR_SIZE: u64 = 512;
 
-type KeyBytes = [u8; KEY_SIZE];
+pub type KeyBytes = [u8; KEY_SIZE];
 
 pub struct UnwrappedKey {
     id: u64,
@@ -52,6 +57,69 @@ impl UnwrappedKey {
 
 pub type UnwrappedKeys = Vec<UnwrappedKey>;
 
+#[repr(transparent)]
+#[derive(Clone, Debug, PartialEq)]
+pub struct WrappedKeyBytes(pub [u8; WRAPPED_KEY_SIZE]);
+
+impl std::ops::Deref for WrappedKeyBytes {
+    type Target = [u8; WRAPPED_KEY_SIZE];
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for WrappedKeyBytes {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+// Because default impls of Serialize/Deserialize for [T; N] are only defined for N in 0..=32, we
+// have to define them ourselves.
+impl Serialize for WrappedKeyBytes {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_bytes(&self[..])
+    }
+}
+
+impl<'de> Deserialize<'de> for WrappedKeyBytes {
+    fn deserialize<D>(deserializer: D) -> Result<WrappedKeyBytes, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct WrappedKeyVisitor;
+
+        impl<'d> Visitor<'d> for WrappedKeyVisitor {
+            type Value = WrappedKeyBytes;
+
+            fn expecting(&self, formatter: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                formatter.write_str("Expected wrapped keys to be 48 bytes")
+            }
+
+            fn visit_bytes<E>(self, bytes: &[u8]) -> Result<WrappedKeyBytes, E>
+            where
+                E: SerdeError,
+            {
+                self.visit_byte_buf(bytes.to_vec())
+            }
+
+            fn visit_byte_buf<E>(self, bytes: Vec<u8>) -> Result<WrappedKeyBytes, E>
+            where
+                E: SerdeError,
+            {
+                let orig_len = bytes.len();
+                let bytes: [u8; WRAPPED_KEY_SIZE] =
+                    bytes.try_into().map_err(|_| SerdeError::invalid_length(orig_len, &self))?;
+                Ok(WrappedKeyBytes(bytes))
+            }
+        }
+        deserializer.deserialize_byte_buf(WrappedKeyVisitor)
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct WrappedKey {
     /// The identifier of the wrapping key.  The identifier has meaning to whatever is doing the
@@ -61,7 +129,9 @@ pub struct WrappedKey {
     pub key_id: u64,
     /// AES 256 requires a 512 bit key, which is made of two 256 bit keys, one for the data and one
     /// for the tweak.  Both those keys are derived from the single 256 bit key we have here.
-    pub key: [u8; 32],
+    /// Since the key is wrapped with AES-GCM-SIV, there are an additional 16 bytes paid per key (so
+    /// the actual key material is 32 bytes once unwrapped).
+    pub key: WrappedKeyBytes,
 }
 
 /// To support key rolling and clones, a file can have more than one key.
@@ -72,25 +142,6 @@ impl std::ops::Deref for WrappedKeys {
     type Target = [WrappedKey];
     fn deref(&self) -> &Self::Target {
         &self.0
-    }
-}
-
-#[derive(Serialize, Debug, Deserialize)]
-pub struct WrappedKeysV1 {
-    pub wrapping_key_id: u64,
-    pub keys: Vec<(/* id= */ u64, [u8; 32])>,
-}
-
-impl From<WrappedKeysV1> for WrappedKeys {
-    fn from(value: WrappedKeysV1) -> Self {
-        let wrapping_key_id = value.wrapping_key_id;
-        Self(
-            value
-                .keys
-                .into_iter()
-                .map(|(id, key)| WrappedKey { wrapping_key_id, key_id: id, key })
-                .collect(),
-        )
     }
 }
 
@@ -246,13 +297,14 @@ impl Crypt for InsecureCrypt {
         let mut rng = rand::thread_rng();
         let mut key: KeyBytes = [0; KEY_SIZE];
         rng.fill_bytes(&mut key);
-        let mut wrapped: KeyBytes = [0; KEY_SIZE];
+        let mut wrapped: WrappedKeyBytes = WrappedKeyBytes([0; WRAPPED_KEY_SIZE]);
         let owner_bytes = owner.to_le_bytes();
         let (wrap_xor, wrapping_key_id) = match purpose {
             KeyPurpose::Data => (&DATA_WRAP_XOR, 0),
             KeyPurpose::Metadata => (&METADATA_WRAP_XOR, 1),
         };
-        for i in 0..wrapped.len() {
+        // This intentionally leaves the extra bytes in the wrapped key as zero.  They are unused.
+        for i in 0..key.len() {
             let j = i % wrap_xor.len();
             wrapped[i] = key[i] ^ wrap_xor[j] ^ owner_bytes[j];
         }

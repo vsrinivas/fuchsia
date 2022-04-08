@@ -18,9 +18,7 @@ async fn main() -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(Services::Crypt).add_fidl_service(Services::CryptManagement);
     fs.take_and_serve_directory_handle()?;
 
-    // TDOO(fxbug.dev/94587): Disable this flag when we want to switch to real crypto algorithms.
-    // Doing so is a breaking change.
-    const USE_LEGACY_STUBBED_CRYPTO: bool = true;
+    const USE_LEGACY_STUBBED_CRYPTO: bool = false;
     let crypt = CryptService::new(USE_LEGACY_STUBBED_CRYPTO);
 
     const MAX_CONCURRENT: usize = 10_000;

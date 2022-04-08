@@ -17,9 +17,8 @@ use crate::{
 /// both rewritten, all versions should match this value.
 ///
 /// Last breaking change:
-///  v11:  Remove StoreInfoMutation.
-///  v12:  Dropped Delta support.
-pub const LATEST_VERSION: Version = Version { major: 12, minor: 0 };
+///  v13:  Enable wrapping object keys with AES-GCM-SIV.
+pub const LATEST_VERSION: Version = Version { major: 13, minor: 0 };
 
 versioned_type! {
     2.. => AllocatorInfo,
@@ -52,7 +51,7 @@ versioned_type! {
     8.. => StoreInfo,
 }
 versioned_type! {
-    12.. => SuperBlock,
+    13.. => SuperBlock,
 }
 versioned_type! {
     5.. => SuperBlockRecord,

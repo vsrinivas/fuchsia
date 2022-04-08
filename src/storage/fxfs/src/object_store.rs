@@ -998,7 +998,8 @@ impl ObjectStore {
 
         let unwrapped_keys = crypt
             .unwrap_keys(store_info.mutations_key.as_ref().unwrap(), self.store_object_id)
-            .await?;
+            .await
+            .context("Failed to unwrap mutations keys")?;
         let mut mutations_cipher =
             StreamCipher::new(&unwrapped_keys[0], store_info.mutations_cipher_offset);
 

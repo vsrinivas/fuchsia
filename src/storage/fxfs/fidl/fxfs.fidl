@@ -26,7 +26,7 @@ protocol Crypt {
         purpose KeyPurpose;
     }) -> (struct {
         wrapping_key_id uint64;
-        wrapped_key bytes:32;
+        wrapped_key bytes:48;
         unwrapped_key bytes:32;
     }) error zx.status;
 
@@ -37,7 +37,7 @@ protocol Crypt {
     UnwrapKey(struct {
         wrapping_key_id uint64;
         owner uint64;
-        key bytes:32;
+        key bytes:48;
     }) -> (struct {
         unwrapped_key bytes:32;
     }) error zx.status;

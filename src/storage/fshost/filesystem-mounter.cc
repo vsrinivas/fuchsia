@@ -32,9 +32,14 @@ namespace fshost {
 
 namespace fio = fuchsia_io;
 
-constexpr unsigned char kInsecureCryptKey[32] = {
+constexpr unsigned char kInsecureCryptDataKey[32] = {
     0x0,  0x1,  0x2,  0x3,  0x4,  0x5,  0x6,  0x7,  0x8,  0x9,  0xa,  0xb,  0xc,  0xd,  0xe,  0xf,
     0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+};
+
+constexpr unsigned char kInsecureCryptMetadataKey[32] = {
+    0xff, 0xfe, 0xfd, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8, 0xf7, 0xf6, 0xf5, 0xf4, 0xf3, 0xf2, 0xf1, 0xf0,
+    0xef, 0xee, 0xed, 0xec, 0xeb, 0xea, 0xe9, 0xe8, 0xe7, 0xe6, 0xe5, 0xe4, 0xe3, 0xe2, 0xe1, 0xe0,
 };
 
 zx::status<> FilesystemMounter::LaunchFsComponent(zx::channel block_device,
@@ -324,9 +329,16 @@ zx::status<> FilesystemMounter::MaybeInitCryptClient() {
   }
   auto client = fidl::BindSyncClient(std::move(management_endpoints_or->client));
   // TODO(fxbug.dev/94587): A hardware source should be used for keys.
-  unsigned char key[32] = {0};
-  std::copy(std::begin(kInsecureCryptKey), std::end(kInsecureCryptKey), key);
-  if (auto result = client->AddWrappingKey(0, fidl::VectorView<unsigned char>::FromExternal(key));
+  unsigned char key0[32] = {0};
+  unsigned char key1[32] = {0};
+  std::copy(std::begin(kInsecureCryptDataKey), std::end(kInsecureCryptDataKey), key0);
+  std::copy(std::begin(kInsecureCryptMetadataKey), std::end(kInsecureCryptMetadataKey), key1);
+  if (auto result = client->AddWrappingKey(0, fidl::VectorView<unsigned char>::FromExternal(key0));
+      !result.ok()) {
+    FX_LOGS(ERROR) << "Failed to add wrapping key: " << zx_status_get_string(result.status());
+    return zx::error(result.status());
+  }
+  if (auto result = client->AddWrappingKey(1, fidl::VectorView<unsigned char>::FromExternal(key1));
       !result.ok()) {
     FX_LOGS(ERROR) << "Failed to add wrapping key: " << zx_status_get_string(result.status());
     return zx::error(result.status());
@@ -335,9 +347,10 @@ zx::status<> FilesystemMounter::MaybeInitCryptClient() {
     FX_LOGS(ERROR) << "Failed to set active data key: " << zx_status_get_string(result.status());
     return zx::error(result.status());
   }
-  if (auto result = client->SetActiveKey(fuchsia_fxfs::wire::KeyPurpose::kMetadata, 0);
+  if (auto result = client->SetActiveKey(fuchsia_fxfs::wire::KeyPurpose::kMetadata, 1);
       !result.ok()) {
-    FX_LOGS(ERROR) << "Failed to set active data key: " << zx_status_get_string(result.status());
+    FX_LOGS(ERROR) << "Failed to set active metadata key: "
+                   << zx_status_get_string(result.status());
     return zx::error(result.status());
   }
   return zx::ok();

@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::crypt::{Crypt, KeyPurpose, UnwrappedKey, UnwrappedKeys, WrappedKey, WrappedKeys},
+    crate::crypt::{
+        Crypt, KeyPurpose, UnwrappedKey, UnwrappedKeys, WrappedKey, WrappedKeyBytes, WrappedKeys,
+        KEY_SIZE,
+    },
     anyhow::{anyhow, bail, Error},
     async_trait::async_trait,
     fidl_fuchsia_fxfs::{CryptProxy, KeyPurpose as FidlKeyPurpose},
@@ -29,6 +32,20 @@ impl From<KeyPurpose> for FidlKeyPurpose {
     }
 }
 
+impl RemoteCrypt {
+    async fn unwrap_key(&self, key: &WrappedKey, owner: u64) -> Result<UnwrappedKey, Error> {
+        let unwrapped = self
+            .client
+            .unwrap_key(key.wrapping_key_id, owner, &key.key[..])
+            .await?
+            .map_err(|e| anyhow!(e))?;
+        if unwrapped.len() != KEY_SIZE {
+            bail!("Unexpected key length");
+        }
+        Ok(UnwrappedKey::new(key.key_id, unwrapped.try_into().unwrap()))
+    }
+}
+
 #[async_trait]
 impl Crypt for RemoteCrypt {
     async fn create_key(
@@ -44,30 +61,21 @@ impl Crypt for RemoteCrypt {
                 // TODO(fxbug.dev/96131): For key rolling, we need to assign a key ID which doesn't
                 // already exist for the object.
                 key_id: 0,
-                key: key.try_into().map_err(|_| anyhow!("Unexpected key length"))?,
+                key: WrappedKeyBytes(
+                    key.try_into().map_err(|_| anyhow!("Unexpected wrapped key length"))?,
+                ),
             }]),
             vec![UnwrappedKey::new(
                 0,
-                unwrapped_key.try_into().map_err(|_| anyhow!("Unexpected key length"))?,
+                unwrapped_key.try_into().map_err(|_| anyhow!("Unexpected unwrapped key length"))?,
             )],
         ))
     }
 
     async fn unwrap_keys(&self, keys: &WrappedKeys, owner: u64) -> Result<UnwrappedKeys, Error> {
-        let unwrap_key = |key: WrappedKey| async move {
-            let unwrapped = self
-                .client
-                .unwrap_key(key.wrapping_key_id, owner, &key.key[..])
-                .await?
-                .map_err(|e| anyhow!(e))?;
-            if unwrapped.len() != 32 {
-                bail!("Unexpected key length");
-            }
-            Ok(UnwrappedKey::new(key.key_id, unwrapped.try_into().unwrap()))
-        };
         let mut futures = vec![];
-        for key in keys.iter().cloned() {
-            futures.push(unwrap_key(key));
+        for key in keys.iter() {
+            futures.push(self.unwrap_key(&key, owner));
         }
         let results = futures::future::join_all(futures).await;
         let mut keys = vec![];
