@@ -394,11 +394,11 @@ mod tests {
     use {
         super::CACHE_READ_AHEAD_SIZE,
         crate::{
+            filesystem::{Filesystem, FxFilesystem, OpenFxFilesystem},
             lsm_tree::types::{ItemRef, LayerIterator},
             object_handle::{GetProperties, ObjectHandle, ReadObjectHandle, WriteObjectHandle},
             object_store::{
                 extent_record::ExtentValue,
-                filesystem::{Filesystem, FxFilesystem, OpenFxFilesystem},
                 object_record::{AttributeKey, ObjectKey, ObjectKeyData, ObjectValue, Timestamp},
                 transaction::{Options, TransactionHandler},
                 CachingObjectHandle, HandleOptions, ObjectStore,

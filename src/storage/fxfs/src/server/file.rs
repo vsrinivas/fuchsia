@@ -5,10 +5,9 @@
 use {
     crate::{
         async_enter,
+        filesystem::SyncOptions,
         object_handle::{GetProperties, ObjectHandle, ReadObjectHandle, WriteObjectHandle},
-        object_store::{
-            filesystem::SyncOptions, CachingObjectHandle, StoreObjectHandle, Timestamp,
-        },
+        object_store::{CachingObjectHandle, StoreObjectHandle, Timestamp},
         round::{round_down, round_up},
         server::{
             directory::FxDirectory,
@@ -528,8 +527,8 @@ impl File for FxFile {
 mod tests {
     use {
         crate::{
+            filesystem::Filesystem,
             object_handle::INVALID_OBJECT_ID,
-            object_store::filesystem::Filesystem,
             server::testing::{close_file_checked, open_file_checked, TestFixture},
         },
         anyhow::format_err,

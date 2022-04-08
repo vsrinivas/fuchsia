@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::object_store::filesystem::{FxFilesystem, OpenFxFilesystem, OpenOptions},
+    crate::filesystem::{FxFilesystem, OpenFxFilesystem, OpenOptions},
     anyhow::Error,
     storage_device::DeviceHolder,
 };

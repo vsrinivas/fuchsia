@@ -4,9 +4,9 @@
 
 use {
     crate::{
+        filesystem::{self, Filesystem, Info, SyncOptions},
         object_store::{
             allocator::Allocator,
-            filesystem::{self, Filesystem, Info, SyncOptions},
             graveyard::Graveyard,
             journal::JournalCheckpoint,
             object_manager::ObjectManager,

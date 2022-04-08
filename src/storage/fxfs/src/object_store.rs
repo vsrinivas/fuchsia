@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod allocator;
+pub mod allocator;
 pub mod caching_object_handle;
 pub mod constants;
 pub mod directory;
 mod extent_record;
-pub mod filesystem;
 pub mod fsck;
-mod graveyard;
-mod journal;
+pub mod graveyard;
+pub mod journal;
 mod merge;
-mod object_manager;
+pub mod object_manager;
 mod object_record;
 mod store_object_handle;
 #[cfg(test)]
@@ -24,7 +23,6 @@ mod writeback_cache;
 
 pub use caching_object_handle::CachingObjectHandle;
 pub use directory::Directory;
-pub use filesystem::FxFilesystem;
 pub use object_record::{ObjectDescriptor, Timestamp};
 pub use store_object_handle::StoreObjectHandle;
 
@@ -34,6 +32,7 @@ use {
         data_buffer::{DataBuffer, MemDataBuffer},
         debug_assert_not_too_long,
         errors::FxfsError,
+        filesystem::{ApplyContext, ApplyMode, Filesystem, Mutations},
         lsm_tree::{
             layers_from_handles,
             types::{BoxedLayerIterator, Item, ItemRef, LayerIterator, LayerIteratorFilter},
@@ -43,7 +42,6 @@ use {
         object_handle::{ObjectHandle, ObjectHandleExt, WriteObjectHandle, INVALID_OBJECT_ID},
         object_store::{
             extent_record::{Checksums, DEFAULT_DATA_ATTRIBUTE_ID},
-            filesystem::{ApplyContext, ApplyMode, Filesystem, Mutations},
             graveyard::Graveyard,
             journal::{checksum_list::ChecksumList, JournalCheckpoint},
             object_manager::{ObjectManager, ReservationUpdate},
@@ -484,7 +482,7 @@ impl ObjectStore {
         self.store_info_handle.get().unwrap().txn_write(transaction, 0u64, buf.as_ref()).await
     }
 
-    fn set_trace(&self, trace: bool) {
+    pub fn set_trace(&self, trace: bool) {
         let old_value = self.trace.swap(trace, Ordering::Relaxed);
         if trace != old_value {
             log::info!(
@@ -1563,12 +1561,12 @@ mod tests {
         crate::{
             crypt::{Crypt, InsecureCrypt},
             errors::FxfsError,
+            filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem, SyncOptions},
             lsm_tree::types::{Item, ItemRef, LayerIterator},
             object_handle::{ObjectHandle, ReadObjectHandle, WriteObjectHandle},
             object_store::{
                 directory::Directory,
                 extent_record::{ExtentKey, ExtentValue},
-                filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem, SyncOptions},
                 fsck::fsck,
                 object_record::{AttributeKey, ObjectKey, ObjectKeyData, ObjectValue},
                 transaction::{Options, TransactionHandler},

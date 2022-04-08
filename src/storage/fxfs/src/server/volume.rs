@@ -397,10 +397,10 @@ mod tests {
     use {
         crate::{
             crypt::InsecureCrypt,
+            filesystem::FxFilesystem,
             object_handle::{ObjectHandle, ObjectHandleExt},
             object_store::{
                 directory::ObjectDescriptor,
-                filesystem::FxFilesystem,
                 transaction::{Options, TransactionHandler},
                 volume::root_volume,
                 HandleOptions, ObjectStore,

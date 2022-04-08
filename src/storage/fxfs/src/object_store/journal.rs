@@ -25,13 +25,13 @@ use {
     crate::{
         debug_assert_not_too_long,
         errors::FxfsError,
+        filesystem::{ApplyContext, ApplyMode, Filesystem, SyncOptions},
         metrics::{traits::Metric as _, UintMetric},
         object_handle::ObjectHandle,
         object_store::{
             allocator::{Allocator, SimpleAllocator},
             constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
             extent_record::{ExtentKey, DEFAULT_DATA_ATTRIBUTE_ID},
-            filesystem::{ApplyContext, ApplyMode, Filesystem, SyncOptions},
             graveyard::Graveyard,
             journal::{
                 checksum_list::ChecksumList,
@@ -1191,10 +1191,10 @@ impl Journal {
 mod tests {
     use {
         crate::{
+            filesystem::{Filesystem, FxFilesystem, SyncOptions},
             object_handle::{ObjectHandle, ReadObjectHandle, WriteObjectHandle},
             object_store::{
                 directory::Directory,
-                filesystem::{Filesystem, FxFilesystem, SyncOptions},
                 fsck::fsck,
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectStore,

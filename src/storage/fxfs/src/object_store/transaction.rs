@@ -768,7 +768,7 @@ impl Drop for WriteGuard<'_> {
 mod tests {
     use {
         super::{LockKey, LockManager, LockState, Mutation, Options, TransactionHandler},
-        crate::object_store::filesystem::FxFilesystem,
+        crate::filesystem::FxFilesystem,
         fuchsia_async as fasync,
         futures::{channel::oneshot::channel, future::FutureExt, join},
         std::{sync::Mutex, task::Poll, time::Duration},

@@ -495,10 +495,10 @@ mod tests {
         super::remove,
         crate::{
             errors::FxfsError,
+            filesystem::{Filesystem, FxFilesystem, Mutations, SyncOptions},
             object_handle::{ObjectHandle, ReadObjectHandle, WriteObjectHandle},
             object_store::{
                 directory::{replace_child, Directory, ReplacedChild},
-                filesystem::{Filesystem, FxFilesystem, Mutations, SyncOptions},
                 object_record::Timestamp,
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectDescriptor, ObjectStore,

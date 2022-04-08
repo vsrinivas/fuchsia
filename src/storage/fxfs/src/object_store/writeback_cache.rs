@@ -595,9 +595,9 @@ mod tests {
         super::{Flushable, FlushableData, StorageReservation, WritebackCache},
         crate::{
             data_buffer::MemDataBuffer,
+            filesystem::Mutations,
             object_store::{
                 allocator::{Allocator, AllocatorInfo, Reservation, ReservationOwner},
-                filesystem::Mutations,
                 journal::checksum_list::ChecksumList,
                 transaction::{Mutation, Transaction},
             },

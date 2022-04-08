@@ -5,6 +5,7 @@
 use {
     crate::{
         crypt::{Crypt, InsecureCrypt},
+        filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem, OpenOptions},
         lsm_tree::{
             simple_persistent_layer::SimplePersistentLayerWriter,
             types::{Item, ItemRef, Key, LayerIterator, LayerWriter, Value},
@@ -17,7 +18,6 @@ use {
             },
             directory::Directory,
             extent_record::ExtentValue,
-            filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem, OpenOptions},
             fsck::{
                 errors::{FsckError, FsckFatal, FsckIssue, FsckWarning},
                 fsck_with_options, FsckOptions,

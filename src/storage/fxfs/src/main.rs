@@ -12,11 +12,9 @@ use {
     fuchsia_syslog, fuchsia_zircon as zx,
     fxfs::{
         crypt::{Crypt, InsecureCrypt},
+        filesystem::OpenOptions,
         mkfs, mount,
-        object_store::{
-            filesystem::OpenOptions,
-            fsck::{self},
-        },
+        object_store::fsck::{self},
         remote_crypt::RemoteCrypt,
         serialized_types::LATEST_VERSION,
         server::FxfsServer,

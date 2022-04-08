@@ -6,9 +6,9 @@ use {
     crate::{
         crypt::Crypt,
         errors::FxfsError,
+        filesystem::{Filesystem, FxFilesystem},
         object_store::{
             directory::Directory,
-            filesystem::{Filesystem, FxFilesystem},
             transaction::{Options, TransactionHandler},
             NewChildStoreOptions, ObjectDescriptor, ObjectStore,
         },
@@ -149,9 +149,9 @@ mod tests {
         super::root_volume,
         crate::{
             crypt::InsecureCrypt,
+            filesystem::{Filesystem, FxFilesystem, SyncOptions},
             object_store::{
                 directory::Directory,
-                filesystem::{Filesystem, FxFilesystem, SyncOptions},
                 transaction::{Options, TransactionHandler},
             },
         },

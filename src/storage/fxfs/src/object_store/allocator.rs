@@ -8,6 +8,7 @@ use {
     crate::{
         debug_assert_not_too_long,
         errors::FxfsError,
+        filesystem::{ApplyContext, ApplyMode, Filesystem, Mutations, SyncOptions},
         lsm_tree::{
             layers_from_handles,
             skip_list_layer::SkipListLayer,
@@ -21,7 +22,6 @@ use {
         object_handle::{ObjectHandle, ObjectHandleExt, INVALID_OBJECT_ID},
         object_store::{
             constants::MAX_SERIALIZED_RECORD_SIZE,
-            filesystem::{ApplyContext, ApplyMode, Filesystem, Mutations, SyncOptions},
             journal::checksum_list::ChecksumList,
             object_manager::ReservationUpdate,
             store_object_handle::DirectWriter,
@@ -1185,6 +1185,7 @@ impl LayerIterator<AllocatorKey, AllocatorValue> for CoalescingIterator<'_> {
 mod tests {
     use {
         crate::{
+            filesystem::{Filesystem, Mutations},
             lsm_tree::{
                 skip_list_layer::SkipListLayer,
                 types::{Item, ItemRef, Layer, LayerIterator, MutableLayer},
@@ -1195,7 +1196,6 @@ mod tests {
                     filter_tombstones, merge::merge, Allocator, AllocatorKey, AllocatorValue,
                     CoalescingIterator, SimpleAllocator,
                 },
-                filesystem::{Filesystem, Mutations},
                 testing::fake_filesystem::FakeFilesystem,
                 transaction::{Options, TransactionHandler},
                 ObjectStore,

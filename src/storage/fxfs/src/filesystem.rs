@@ -13,7 +13,6 @@ use {
             graveyard::Graveyard,
             journal::{super_block::SuperBlock, Journal, JournalCheckpoint, JournalOptions},
             object_manager::ObjectManager,
-            trace_duration,
             transaction::{
                 AssocObj, LockKey, LockManager, MetadataReservation, Mutation, Options, ReadGuard,
                 Transaction, TransactionHandler, TransactionLocks, WriteGuard,
@@ -22,6 +21,7 @@ use {
             volume::VOLUMES_DIRECTORY,
             ObjectStore,
         },
+        trace_duration,
     },
     anyhow::{Context, Error},
     async_trait::async_trait,

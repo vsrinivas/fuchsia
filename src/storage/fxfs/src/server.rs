@@ -5,10 +5,8 @@
 use {
     crate::{
         crypt::Crypt,
-        object_store::{
-            filesystem::{Filesystem, Info, OpenFxFilesystem},
-            volume::root_volume,
-        },
+        filesystem::{Filesystem, Info, OpenFxFilesystem},
+        object_store::volume::root_volume,
         serialized_types::LATEST_VERSION,
         server::volume::FxVolumeAndRoot,
     },
@@ -273,7 +271,7 @@ impl FsInspect for FxfsServer {
 #[cfg(test)]
 mod tests {
     use {
-        crate::{crypt::InsecureCrypt, object_store::FxFilesystem, server::FxfsServer},
+        crate::{crypt::InsecureCrypt, filesystem::FxFilesystem, server::FxfsServer},
         anyhow::Error,
         fidl_fuchsia_fs::AdminMarker,
         fidl_fuchsia_io as fio, fuchsia_async as fasync,

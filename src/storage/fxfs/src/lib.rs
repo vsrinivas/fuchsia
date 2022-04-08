@@ -13,6 +13,7 @@
 pub mod crypt;
 mod data_buffer;
 pub mod errors;
+pub mod filesystem;
 mod lsm_tree;
 pub mod metrics;
 pub mod mkfs;

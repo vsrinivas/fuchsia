@@ -5,11 +5,11 @@
 use {
     crate::{
         errors::FxfsError,
+        filesystem::{ApplyContext, ApplyMode, Filesystem, Mutations},
         lsm_tree::types::LayerIterator,
         object_store::{
             allocator::Reservation,
             constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
-            filesystem::{ApplyContext, ApplyMode, Filesystem, Mutations},
             journal::{
                 handle::Handle,
                 reader::{JournalReader, ReadResult},
@@ -394,10 +394,10 @@ mod tests {
     use {
         super::{SuperBlock, SuperBlockCopy, SuperBlockItem, MIN_SUPER_BLOCK_SIZE},
         crate::{
+            filesystem::{Filesystem, FxFilesystem},
             lsm_tree::types::LayerIterator,
             object_store::{
                 constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
-                filesystem::{Filesystem, FxFilesystem},
                 journal::{journal_handle_options, JournalCheckpoint},
                 testing::{fake_allocator::FakeAllocator, fake_filesystem::FakeFilesystem},
                 transaction::{Options, TransactionHandler},

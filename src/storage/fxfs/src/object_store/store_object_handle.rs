@@ -1234,13 +1234,13 @@ mod tests {
     use {
         crate::{
             crypt::{Crypt, InsecureCrypt},
+            filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem},
             lsm_tree::types::{ItemRef, LayerIterator},
             object_handle::{
                 GetProperties, ObjectHandle, ObjectProperties, ReadObjectHandle, WriteObjectHandle,
             },
             object_store::{
                 extent_record::ExtentValue,
-                filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem},
                 object_record::{AttributeKey, ObjectKey, ObjectKeyData, ObjectValue, Timestamp},
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectStore, StoreObjectHandle,

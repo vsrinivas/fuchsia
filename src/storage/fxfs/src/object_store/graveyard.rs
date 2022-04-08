@@ -252,9 +252,9 @@ impl<'a, 'b> GraveyardIterator<'a, 'b> {
 mod tests {
     use {
         super::Graveyard,
-        crate::object_store::{
+        crate::{
             filesystem::{Filesystem, FxFilesystem, SyncOptions},
-            transaction::{Options, TransactionHandler},
+            object_store::transaction::{Options, TransactionHandler},
         },
         assert_matches::assert_matches,
         fuchsia_async as fasync,

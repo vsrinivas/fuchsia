@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        crypt::Crypt,
-        object_store::{volume::root_volume, FxFilesystem},
-    },
+    crate::{crypt::Crypt, filesystem::FxFilesystem, object_store::volume::root_volume},
     anyhow::Error,
     std::sync::Arc,
     storage_device::DeviceHolder,

@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::object_store::{
-        allocator::{Allocator, AllocatorInfo, Reservation, ReservationOwner},
+    crate::{
         filesystem::{ApplyContext, Mutations},
-        journal::checksum_list::ChecksumList,
-        transaction::{AssocObj, Mutation, Transaction},
+        object_store::{
+            allocator::{Allocator, AllocatorInfo, Reservation, ReservationOwner},
+            journal::checksum_list::ChecksumList,
+            transaction::{AssocObj, Mutation, Transaction},
+        },
     },
     anyhow::Error,
     async_trait::async_trait,

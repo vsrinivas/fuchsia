@@ -7,10 +7,10 @@ use {
     chrono::{TimeZone, Utc},
     fxfs::{
         crypt::Crypt,
+        filesystem::OpenFxFilesystem,
         object_handle::{GetProperties, ObjectHandle, ReadObjectHandle, WriteObjectHandle},
         object_store::{
             directory::replace_child,
-            filesystem::OpenFxFilesystem,
             fsck::{self},
             transaction::{Options, TransactionHandler},
             volume::root_volume,
