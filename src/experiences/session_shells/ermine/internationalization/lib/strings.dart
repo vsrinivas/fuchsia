@@ -1160,6 +1160,18 @@ class Strings {
         name: 'incorrect password',
         desc: 'The label for "Incorrect Password" text field.',
       );
+  static String get failedToTurnOnWifi => Intl.message(
+        'Failed to turn on Wi-Fi.',
+        name: 'failedToTurnOnWifi',
+        desc:
+            'Tooltip text for the wifi toggle warning icon when turning on wifi fails.',
+      );
+  static String get failedToTurnOffWifi => Intl.message(
+        'Failed to turn off Wi-Fi.',
+        name: 'failedToTurnOffWifi',
+        desc:
+            'Tooltip text for the wifi toggle warning icon when turning off wifi fails.',
+      );
 
   /// Lookup message given it's name.
   static String? lookup(String name) {

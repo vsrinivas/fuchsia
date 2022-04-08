@@ -31,13 +31,15 @@ class WiFiService implements TaskService {
   StreamSubscription? _startClientConnectionsSubscription;
   StreamSubscription? _stopClientConnectionsSubscription;
 
-  Timer? _timer;
+  Timer? _scanTimer;
   int scanIntervalInSeconds = 20;
   final _scannedNetworks = <policy.ScanResult>{};
   NetworkInformation _targetNetwork = NetworkInformation();
   final _savedNetworks = <policy.NetworkConfig>{};
   bool _clientConnectionsEnabled = false;
   final _networksWithFailedCredentials = <policy.NetworkConfig>{};
+  Stopwatch? _toggleTimer;
+  Timer? _toggleTimerObserver;
 
   WiFiService();
 
@@ -58,19 +60,25 @@ class WiFiService implements TaskService {
 
     await getSavedNetworks();
 
-    _timer = Timer.periodic(
+    _scanTimer = Timer.periodic(
         Duration(seconds: scanIntervalInSeconds), (_) => scanForNetworks());
+
+    _toggleTimer = Stopwatch();
+    _toggleTimerObserver = Timer.periodic(
+        Duration(milliseconds: 100), (_) => observeToggleTimer());
   }
 
   @override
   Future<void> stop() async {
-    _timer?.cancel();
+    _scanTimer?.cancel();
     await _scanForNetworksSubscription?.cancel();
     await _connectToWPA2NetworkSubscription?.cancel();
     await _savedNetworksSubscription?.cancel();
     await _removeNetworkSubscription?.cancel();
     await _startClientConnectionsSubscription?.cancel();
     await _stopClientConnectionsSubscription?.cancel();
+    _toggleTimer?.stop();
+    _toggleTimerObserver?.cancel();
     dispose();
   }
 
@@ -98,8 +106,24 @@ class WiFiService implements TaskService {
     } else {
       _stopClientConnections();
     }
+    _toggleTimer?.reset();
+    _toggleTimer?.start();
+    _toggleTimerObserver = Timer.periodic(
+        Duration(milliseconds: 100), (_) => observeToggleTimer());
     onChanged();
   }
+
+  void observeToggleTimer() async {
+    // Trigger onChanged when timer is between 0 and 6 seconds,
+    // otherwise stop observing until toggle called again.
+    if (toggleMillisecondsPassed >= 0 && toggleMillisecondsPassed < 6000) {
+      onChanged();
+    } else {
+      _toggleTimerObserver?.cancel();
+    }
+  }
+
+  int get toggleMillisecondsPassed => _toggleTimer?.elapsedMilliseconds ?? -1;
 
   Future<void> _startClientConnections() async {
     if (_stopClientConnectionsSubscription != null) {

@@ -24,12 +24,7 @@ class WiFiSettings extends StatelessWidget {
           Expanded(
             child: SettingDetails(
               title: Strings.wifi,
-              // TODO(cwhitten): Uncomment switch when fxb/90428 is fixed.
-              /*trailing: Switch(
-                value: state.clientConnectionsEnabled,
-                onChanged: (value) =>
-                    state.setClientConnectionsEnabled(enabled: value),
-              ),*/
+              trailing: _buildWifiToggle(context),
               onBack: state.showAllSettings,
               child: SingleChildScrollView(
                 child: Column(
@@ -215,5 +210,54 @@ class WiFiSettings extends StatelessWidget {
   void _enterPassword(TextEditingController textController) {
     state.connectToNetwork(textController.text);
     textController.clear();
+  }
+
+  Widget _buildWifiToggle(BuildContext context) {
+    final clientConnectionsFailure =
+        state.clientConnectionsEnabled != state.clientConnectionsMonitor;
+    final timePassed = state.wifiToggleMillisecondsPassed;
+
+    return Row(
+      children: [
+        // Show loading indicator if client state mismatch has occured 0.5 - 5 seconds
+        if (timePassed >= 500 && timePassed < 5000 && clientConnectionsFailure)
+          SizedBox(
+            child: CircularProgressIndicator(),
+            height: 24,
+            width: 24,
+          ),
+        // Show warning icon if client state mismatch is longer than 5 seconds
+        if (timePassed >= 5000 && clientConnectionsFailure)
+          _buildWarningIcon(context),
+        SizedBox(width: 24),
+        Switch(
+          value: state.clientConnectionsMonitor,
+          onChanged: (clientConnectionsFailure && timePassed <= 5000)
+              ? null
+              : (value) => state.setClientConnectionsEnabled(enabled: value),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWarningIcon(BuildContext context) {
+    String tooltipWarning = '';
+    // Case where toggle is off but client state shows enabled
+    if (state.clientConnectionsEnabled == true &&
+        state.clientConnectionsMonitor == false) {
+      tooltipWarning = Strings.failedToTurnOnWifi;
+    }
+    // Case where toggle is on but client state shows disabled
+    if (state.clientConnectionsEnabled == false &&
+        state.clientConnectionsMonitor == true) {
+      tooltipWarning = Strings.failedToTurnOffWifi;
+    }
+    return Tooltip(
+      message: tooltipWarning,
+      child: Icon(
+        Icons.warning,
+        color: Colors.red[300],
+      ),
+    );
   }
 }

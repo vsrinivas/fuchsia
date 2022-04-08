@@ -84,6 +84,8 @@ abstract class SettingsState implements TaskService {
   TextEditingController get networkPasswordTextController;
   String get currentNetwork;
   bool get clientConnectionsEnabled;
+  bool get clientConnectionsMonitor;
+  int get wifiToggleMillisecondsPassed;
 
   factory SettingsState.from(
       {required Map<String, Set<String>> shortcutBindings}) {

@@ -190,6 +190,18 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
       _clientConnectionsEnabled.value = value;
   final Observable<bool> _clientConnectionsEnabled = Observable<bool>(true);
 
+  @override
+  bool get clientConnectionsMonitor => _clientConnectionsMonitor.value;
+  set clientConnectionsMonitor(bool value) =>
+      _clientConnectionsMonitor.value = value;
+  final Observable<bool> _clientConnectionsMonitor = Observable<bool>(true);
+
+  @override
+  int get wifiToggleMillisecondsPassed => _wifiToggleMillisecondsPassed.value;
+  set wifiToggleMillisecondsPassed(int value) =>
+      _wifiToggleMillisecondsPassed.value = value;
+  final Observable<int> _wifiToggleMillisecondsPassed = Observable<int>(0);
+
   final List<String> _timezones;
 
   @override
@@ -328,6 +340,8 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
           ..removeWhere((network) => network.name.isEmpty);
         currentNetwork = wifiService.currentNetwork;
         clientConnectionsEnabled = wifiService.clientConnectionsEnabled;
+        clientConnectionsMonitor = wifiService.connectionsEnabled;
+        wifiToggleMillisecondsPassed = wifiService.toggleMillisecondsPassed;
       });
     };
   }
