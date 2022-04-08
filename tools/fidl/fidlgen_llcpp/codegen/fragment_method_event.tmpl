@@ -113,11 +113,11 @@ class {{ .NaturalEventConverter }} {
  public:
   static {{ .NaturalEvent }} FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(*o.result().err().take()));
+      return ::fitx::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
       {{- if .Result.ValueParameters }}
-        return ::fitx::ok(std::move(*o.result().response().take()));
+        return ::fitx::ok(std::move(o.result().response().value()));
       {{- else }}
         return ::fitx::ok();
       {{- end }}

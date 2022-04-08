@@ -64,6 +64,10 @@ class TableWithAttributes {
   const cpp17::optional<int64_t>& x() const { return storage_.x; }
   ::cpp17::optional<int64_t>& x() { return storage_.x; }
 
+  TableWithAttributes(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : TableWithAttributes(Storage_{}) {}
+
  private:
   struct Storage_ final {
     ::cpp17::optional<int64_t> x{};
@@ -117,6 +121,9 @@ class SimpleTable {
 
   const cpp17::optional<int64_t>& y() const { return storage_.y; }
   ::cpp17::optional<int64_t>& y() { return storage_.y; }
+
+  SimpleTable(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : SimpleTable(Storage_{}) {}
 
  private:
   struct Storage_ final {
@@ -180,6 +187,10 @@ class ReverseOrdinalTable {
   const cpp17::optional<int64_t>& x() const { return storage_.x; }
   ::cpp17::optional<int64_t>& x() { return storage_.x; }
 
+  ReverseOrdinalTable(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ReverseOrdinalTable(Storage_{}) {}
+
  private:
   struct Storage_ final {
     ::cpp17::optional<int64_t> z{};
@@ -236,6 +247,9 @@ class OlderSimpleTable {
 
   const cpp17::optional<int64_t>& x() const { return storage_.x; }
   ::cpp17::optional<int64_t>& x() { return storage_.x; }
+
+  OlderSimpleTable(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : OlderSimpleTable(Storage_{}) {}
 
  private:
   struct Storage_ final {
@@ -294,6 +308,9 @@ class NewerSimpleTable {
   const cpp17::optional<int64_t>& z() const { return storage_.z; }
   ::cpp17::optional<int64_t>& z() { return storage_.z; }
 
+  NewerSimpleTable(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : NewerSimpleTable(Storage_{}) {}
+
  private:
   struct Storage_ final {
     ::cpp17::optional<int64_t> x{};
@@ -346,6 +363,9 @@ class ExtensionTable {
   }
 
   bool IsEmpty() const { return true; }
+
+  ExtensionTable(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ExtensionTable(Storage_{}) {}
 
  private:
   struct Storage_ final {};
@@ -617,6 +637,10 @@ class SixtyFourOrdinalTable {
   ::cpp17::optional<::test_table::ExtensionTable>& v64() {
     return storage_.v64;
   }
+
+  SixtyFourOrdinalTable(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : SixtyFourOrdinalTable(Storage_{}) {}
 
  private:
   struct Storage_ final {
@@ -915,6 +939,9 @@ class EmptyTable {
   }
 
   bool IsEmpty() const { return true; }
+
+  EmptyTable(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : EmptyTable(Storage_{}) {}
 
  private:
   struct Storage_ final {};

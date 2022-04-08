@@ -122,8 +122,13 @@ class WithProtocolEndsServerEndsTopResponse {
   WithProtocolEndsServerEndsTopResponse(
       ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> out) noexcept
       : storage_({.out = std::move(out)}) {}
-  WithProtocolEndsServerEndsTopResponse()
-      : WithProtocolEndsServerEndsTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |WithProtocolEndsServerEndsTopResponse| only if all of
+  // its members are default constructible.
+  WithProtocolEndsServerEndsTopResponse() = default;
+#pragma clang diagnostic pop
 
   WithProtocolEndsServerEndsTopResponse(
       WithProtocolEndsServerEndsTopResponse&&) noexcept = default;
@@ -138,9 +143,15 @@ class WithProtocolEndsServerEndsTopResponse {
     return storage_.out;
   }
 
+  WithProtocolEndsServerEndsTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : WithProtocolEndsServerEndsTopResponse(Storage_{
+            .out = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> out{};
+    ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> out;
   };
 
   Storage_ storage_;
@@ -176,8 +187,13 @@ class WithProtocolEndsServerEndsRequest {
   WithProtocolEndsServerEndsRequest(
       ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> in) noexcept
       : storage_({.in = std::move(in)}) {}
-  WithProtocolEndsServerEndsRequest()
-      : WithProtocolEndsServerEndsRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |WithProtocolEndsServerEndsRequest| only if all of its
+  // members are default constructible.
+  WithProtocolEndsServerEndsRequest() = default;
+#pragma clang diagnostic pop
 
   WithProtocolEndsServerEndsRequest(
       WithProtocolEndsServerEndsRequest&&) noexcept = default;
@@ -192,9 +208,15 @@ class WithProtocolEndsServerEndsRequest {
     return storage_.in;
   }
 
+  WithProtocolEndsServerEndsRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : WithProtocolEndsServerEndsRequest(Storage_{
+            .in = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> in{};
+    ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> in;
   };
 
   Storage_ storage_;
@@ -230,8 +252,13 @@ class WithProtocolEndsClientEndsTopResponse {
   WithProtocolEndsClientEndsTopResponse(
       ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> out) noexcept
       : storage_({.out = std::move(out)}) {}
-  WithProtocolEndsClientEndsTopResponse()
-      : WithProtocolEndsClientEndsTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |WithProtocolEndsClientEndsTopResponse| only if all of
+  // its members are default constructible.
+  WithProtocolEndsClientEndsTopResponse() = default;
+#pragma clang diagnostic pop
 
   WithProtocolEndsClientEndsTopResponse(
       WithProtocolEndsClientEndsTopResponse&&) noexcept = default;
@@ -246,9 +273,15 @@ class WithProtocolEndsClientEndsTopResponse {
     return storage_.out;
   }
 
+  WithProtocolEndsClientEndsTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : WithProtocolEndsClientEndsTopResponse(Storage_{
+            .out = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> out{};
+    ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> out;
   };
 
   Storage_ storage_;
@@ -284,8 +317,13 @@ class WithProtocolEndsClientEndsRequest {
   WithProtocolEndsClientEndsRequest(
       ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> in) noexcept
       : storage_({.in = std::move(in)}) {}
-  WithProtocolEndsClientEndsRequest()
-      : WithProtocolEndsClientEndsRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |WithProtocolEndsClientEndsRequest| only if all of its
+  // members are default constructible.
+  WithProtocolEndsClientEndsRequest() = default;
+#pragma clang diagnostic pop
 
   WithProtocolEndsClientEndsRequest(
       WithProtocolEndsClientEndsRequest&&) noexcept = default;
@@ -300,9 +338,15 @@ class WithProtocolEndsClientEndsRequest {
     return storage_.in;
   }
 
+  WithProtocolEndsClientEndsRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : WithProtocolEndsClientEndsRequest(Storage_{
+            .in = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> in{};
+    ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> in;
   };
 
   Storage_ storage_;
@@ -336,8 +380,13 @@ class WithErrorSyntax_ResponseAsStruct_Response {
   WithErrorSyntax_ResponseAsStruct_Response(int64_t a, int64_t b,
                                             int64_t c) noexcept
       : storage_({.a = std::move(a), .b = std::move(b), .c = std::move(c)}) {}
-  WithErrorSyntax_ResponseAsStruct_Response()
-      : WithErrorSyntax_ResponseAsStruct_Response(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |WithErrorSyntax_ResponseAsStruct_Response| only if
+  // all of its members are default constructible.
+  WithErrorSyntax_ResponseAsStruct_Response() = default;
+#pragma clang diagnostic pop
 
   WithErrorSyntax_ResponseAsStruct_Response(
       WithErrorSyntax_ResponseAsStruct_Response&&) noexcept = default;
@@ -377,11 +426,19 @@ class WithErrorSyntax_ResponseAsStruct_Response {
 
   int64_t& c() { return storage_.c; }
 
+  WithErrorSyntax_ResponseAsStruct_Response(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : WithErrorSyntax_ResponseAsStruct_Response(Storage_{
+            .a = {},
+            .b = {},
+            .c = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    int64_t a{};
-    int64_t b{};
-    int64_t c{};
+    int64_t a = {};
+    int64_t b = {};
+    int64_t c = {};
   };
 
   Storage_ storage_;
@@ -421,20 +478,27 @@ class WithErrorSyntax_ResponseAsStruct_Result {
     kErr = 2,       // 0x2
   };
 
-  // Create an unknown value of this union.
-  WithErrorSyntax_ResponseAsStruct_Result()
-      : storage_(std::make_shared<Storage_>()) {}
-
   WithErrorSyntax_ResponseAsStruct_Result(
-      WithErrorSyntax_ResponseAsStruct_Result&&) noexcept = default;
+      WithErrorSyntax_ResponseAsStruct_Result&& other) noexcept
+      : WithErrorSyntax_ResponseAsStruct_Result(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
   WithErrorSyntax_ResponseAsStruct_Result& operator=(
-      WithErrorSyntax_ResponseAsStruct_Result&&) noexcept = default;
+      WithErrorSyntax_ResponseAsStruct_Result&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   WithErrorSyntax_ResponseAsStruct_Result(
       const WithErrorSyntax_ResponseAsStruct_Result& other) noexcept
       : WithErrorSyntax_ResponseAsStruct_Result(other.CloneStorage_()) {}
   WithErrorSyntax_ResponseAsStruct_Result& operator=(
       const WithErrorSyntax_ResponseAsStruct_Result& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -450,7 +514,8 @@ class WithErrorSyntax_ResponseAsStruct_Result {
   constexpr ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag
   Which() const {
     return WithErrorSyntax_ResponseAsStruct_Result::IndexToTag(
-        storage_->index());
+               storage_->index())
+        .value();
   }
   static WithErrorSyntax_ResponseAsStruct_Result WithResponse(
       ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response val) {
@@ -475,6 +540,10 @@ class WithErrorSyntax_ResponseAsStruct_Result {
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  WithErrorSyntax_ResponseAsStruct_Result(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -509,9 +578,9 @@ class WithErrorSyntax_ResponseAsStruct_Result {
     }
   }
 
-  static constexpr ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result::
-      Tag
-      IndexToTag(size_t index) {
+  static constexpr cpp17::optional<
+      ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
@@ -519,10 +588,8 @@ class WithErrorSyntax_ResponseAsStruct_Result {
       case 2:
         return ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
             kErr;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
-            kResponse;
+        return cpp17::nullopt;
     }
   }
 };
@@ -540,8 +607,13 @@ class WithErrorSyntaxResponseAsStructTopResponse {
   WithErrorSyntaxResponseAsStructTopResponse(
       ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result result) noexcept
       : storage_({.result = std::move(result)}) {}
-  WithErrorSyntaxResponseAsStructTopResponse()
-      : WithErrorSyntaxResponseAsStructTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |WithErrorSyntaxResponseAsStructTopResponse| only if
+  // all of its members are default constructible.
+  WithErrorSyntaxResponseAsStructTopResponse() = default;
+#pragma clang diagnostic pop
 
   WithErrorSyntaxResponseAsStructTopResponse(
       WithErrorSyntaxResponseAsStructTopResponse&&) noexcept = default;
@@ -578,9 +650,16 @@ class WithErrorSyntaxResponseAsStructTopResponse {
     return storage_.result;
   }
 
+  WithErrorSyntaxResponseAsStructTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : WithErrorSyntaxResponseAsStructTopResponse(Storage_{
+            .result =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result result{};
+    ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result result;
   };
 
   Storage_ storage_;
@@ -613,8 +692,13 @@ class WithErrorSyntax_HandleInResult_Response {
       : storage_(std::move(storage)) {}
   WithErrorSyntax_HandleInResult_Response(::zx::handle h) noexcept
       : storage_({.h = std::move(h)}) {}
-  WithErrorSyntax_HandleInResult_Response()
-      : WithErrorSyntax_HandleInResult_Response(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |WithErrorSyntax_HandleInResult_Response| only if all
+  // of its members are default constructible.
+  WithErrorSyntax_HandleInResult_Response() = default;
+#pragma clang diagnostic pop
 
   WithErrorSyntax_HandleInResult_Response(
       WithErrorSyntax_HandleInResult_Response&&) noexcept = default;
@@ -625,9 +709,15 @@ class WithErrorSyntax_HandleInResult_Response {
 
   ::zx::handle& h() { return storage_.h; }
 
+  WithErrorSyntax_HandleInResult_Response(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : WithErrorSyntax_HandleInResult_Response(Storage_{
+            .h = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::zx::handle h{};
+    ::zx::handle h;
   };
 
   Storage_ storage_;
@@ -667,18 +757,24 @@ class WithErrorSyntax_HandleInResult_Result {
     kErr = 2,       // 0x2
   };
 
-  // Create an unknown value of this union.
-  WithErrorSyntax_HandleInResult_Result()
-      : storage_(std::make_shared<Storage_>()) {}
-
   WithErrorSyntax_HandleInResult_Result(
-      WithErrorSyntax_HandleInResult_Result&&) noexcept = default;
+      WithErrorSyntax_HandleInResult_Result&& other) noexcept
+      : WithErrorSyntax_HandleInResult_Result(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
   WithErrorSyntax_HandleInResult_Result& operator=(
-      WithErrorSyntax_HandleInResult_Result&&) noexcept = default;
+      WithErrorSyntax_HandleInResult_Result&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
 
   constexpr ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag Which()
       const {
-    return WithErrorSyntax_HandleInResult_Result::IndexToTag(storage_->index());
+    return WithErrorSyntax_HandleInResult_Result::IndexToTag(storage_->index())
+        .value();
   }
   static WithErrorSyntax_HandleInResult_Result WithResponse(
       ::test_protocols::WithErrorSyntax_HandleInResult_Response val) {
@@ -703,6 +799,10 @@ class WithErrorSyntax_HandleInResult_Result {
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  WithErrorSyntax_HandleInResult_Result(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -736,7 +836,8 @@ class WithErrorSyntax_HandleInResult_Result {
     }
   }
 
-  static constexpr ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag
+  static constexpr cpp17::optional<
+      ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
@@ -745,10 +846,8 @@ class WithErrorSyntax_HandleInResult_Result {
       case 2:
         return ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag::
             kErr;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag::
-            kResponse;
+        return cpp17::nullopt;
     }
   }
 };
@@ -770,8 +869,13 @@ class WithErrorSyntaxHandleInResultTopResponse {
   WithErrorSyntaxHandleInResultTopResponse(
       ::test_protocols::WithErrorSyntax_HandleInResult_Result result) noexcept
       : storage_({.result = std::move(result)}) {}
-  WithErrorSyntaxHandleInResultTopResponse()
-      : WithErrorSyntaxHandleInResultTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |WithErrorSyntaxHandleInResultTopResponse| only if all
+  // of its members are default constructible.
+  WithErrorSyntaxHandleInResultTopResponse() = default;
+#pragma clang diagnostic pop
 
   WithErrorSyntaxHandleInResultTopResponse(
       WithErrorSyntaxHandleInResultTopResponse&&) noexcept = default;
@@ -787,9 +891,16 @@ class WithErrorSyntaxHandleInResultTopResponse {
     return storage_.result;
   }
 
+  WithErrorSyntaxHandleInResultTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : WithErrorSyntaxHandleInResultTopResponse(Storage_{
+            .result =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_protocols::WithErrorSyntax_HandleInResult_Result result{};
+    ::test_protocols::WithErrorSyntax_HandleInResult_Result result;
   };
 
   Storage_ storage_;
@@ -821,8 +932,13 @@ class WithErrorSyntax_ErrorAsPrimitive_Response {
       : storage_(std::move(storage)) {}
   WithErrorSyntax_ErrorAsPrimitive_Response(uint8_t __reserved) noexcept
       : storage_({.__reserved = std::move(__reserved)}) {}
-  WithErrorSyntax_ErrorAsPrimitive_Response()
-      : WithErrorSyntax_ErrorAsPrimitive_Response(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |WithErrorSyntax_ErrorAsPrimitive_Response| only if
+  // all of its members are default constructible.
+  WithErrorSyntax_ErrorAsPrimitive_Response() = default;
+#pragma clang diagnostic pop
 
   WithErrorSyntax_ErrorAsPrimitive_Response(
       WithErrorSyntax_ErrorAsPrimitive_Response&&) noexcept = default;
@@ -853,6 +969,12 @@ class WithErrorSyntax_ErrorAsPrimitive_Response {
   uint8_t __reserved() const { return storage_.__reserved; }
 
   uint8_t& __reserved() { return storage_.__reserved; }
+
+  WithErrorSyntax_ErrorAsPrimitive_Response(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : WithErrorSyntax_ErrorAsPrimitive_Response(Storage_{
+            .__reserved = 0u,
+        }) {}
 
  private:
   struct Storage_ final {
@@ -890,20 +1012,27 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
     kErr = 2,       // 0x2
   };
 
-  // Create an unknown value of this union.
-  WithErrorSyntax_ErrorAsPrimitive_Result()
-      : storage_(std::make_shared<Storage_>()) {}
-
   WithErrorSyntax_ErrorAsPrimitive_Result(
-      WithErrorSyntax_ErrorAsPrimitive_Result&&) noexcept = default;
+      WithErrorSyntax_ErrorAsPrimitive_Result&& other) noexcept
+      : WithErrorSyntax_ErrorAsPrimitive_Result(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
   WithErrorSyntax_ErrorAsPrimitive_Result& operator=(
-      WithErrorSyntax_ErrorAsPrimitive_Result&&) noexcept = default;
+      WithErrorSyntax_ErrorAsPrimitive_Result&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   WithErrorSyntax_ErrorAsPrimitive_Result(
       const WithErrorSyntax_ErrorAsPrimitive_Result& other) noexcept
       : WithErrorSyntax_ErrorAsPrimitive_Result(other.CloneStorage_()) {}
   WithErrorSyntax_ErrorAsPrimitive_Result& operator=(
       const WithErrorSyntax_ErrorAsPrimitive_Result& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -919,7 +1048,8 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
   constexpr ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag
   Which() const {
     return WithErrorSyntax_ErrorAsPrimitive_Result::IndexToTag(
-        storage_->index());
+               storage_->index())
+        .value();
   }
   static WithErrorSyntax_ErrorAsPrimitive_Result WithResponse(
       ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response val) {
@@ -944,6 +1074,10 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  WithErrorSyntax_ErrorAsPrimitive_Result(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -978,9 +1112,9 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
     }
   }
 
-  static constexpr ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
-      Tag
-      IndexToTag(size_t index) {
+  static constexpr cpp17::optional<
+      ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
@@ -988,10 +1122,8 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
       case 2:
         return ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
             kErr;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
-            kResponse;
+        return cpp17::nullopt;
     }
   }
 };
@@ -1009,8 +1141,13 @@ class WithErrorSyntaxErrorAsPrimitiveTopResponse {
   WithErrorSyntaxErrorAsPrimitiveTopResponse(
       ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result result) noexcept
       : storage_({.result = std::move(result)}) {}
-  WithErrorSyntaxErrorAsPrimitiveTopResponse()
-      : WithErrorSyntaxErrorAsPrimitiveTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |WithErrorSyntaxErrorAsPrimitiveTopResponse| only if
+  // all of its members are default constructible.
+  WithErrorSyntaxErrorAsPrimitiveTopResponse() = default;
+#pragma clang diagnostic pop
 
   WithErrorSyntaxErrorAsPrimitiveTopResponse(
       WithErrorSyntaxErrorAsPrimitiveTopResponse&&) noexcept = default;
@@ -1047,9 +1184,16 @@ class WithErrorSyntaxErrorAsPrimitiveTopResponse {
     return storage_.result;
   }
 
+  WithErrorSyntaxErrorAsPrimitiveTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : WithErrorSyntaxErrorAsPrimitiveTopResponse(Storage_{
+            .result =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result result{};
+    ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result result;
   };
 
   Storage_ storage_;
@@ -1080,8 +1224,13 @@ class WithErrorSyntax_ErrorAsEnum_Response {
       : storage_(std::move(storage)) {}
   WithErrorSyntax_ErrorAsEnum_Response(uint8_t __reserved) noexcept
       : storage_({.__reserved = std::move(__reserved)}) {}
-  WithErrorSyntax_ErrorAsEnum_Response()
-      : WithErrorSyntax_ErrorAsEnum_Response(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |WithErrorSyntax_ErrorAsEnum_Response| only if all of
+  // its members are default constructible.
+  WithErrorSyntax_ErrorAsEnum_Response() = default;
+#pragma clang diagnostic pop
 
   WithErrorSyntax_ErrorAsEnum_Response(
       WithErrorSyntax_ErrorAsEnum_Response&&) noexcept = default;
@@ -1112,6 +1261,12 @@ class WithErrorSyntax_ErrorAsEnum_Response {
   uint8_t __reserved() const { return storage_.__reserved; }
 
   uint8_t& __reserved() { return storage_.__reserved; }
+
+  WithErrorSyntax_ErrorAsEnum_Response(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : WithErrorSyntax_ErrorAsEnum_Response(Storage_{
+            .__reserved = 0u,
+        }) {}
 
  private:
   struct Storage_ final {
@@ -1147,9 +1302,14 @@ class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse {
   WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(
       ::std::string ret) noexcept
       : storage_({.ret = std::move(ret)}) {}
-  WithAndWithoutRequestResponseWithRequestWithResponseTopResponse()
-      : WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(
-            Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a
+  // |WithAndWithoutRequestResponseWithRequestWithResponseTopResponse| only if
+  // all of its members are default constructible.
+  WithAndWithoutRequestResponseWithRequestWithResponseTopResponse() = default;
+#pragma clang diagnostic pop
 
   WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(
       WithAndWithoutRequestResponseWithRequestWithResponseTopResponse&&) noexcept =
@@ -1190,9 +1350,16 @@ class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse {
 
   ::std::string& ret() { return storage_.ret; }
 
+  WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(
+            Storage_{
+                .ret = {},
+            }) {}
+
  private:
   struct Storage_ final {
-    ::std::string ret{};
+    ::std::string ret;
   };
 
   Storage_ storage_;
@@ -1228,9 +1395,14 @@ class WithAndWithoutRequestResponseWithRequestWithResponseRequest {
   WithAndWithoutRequestResponseWithRequestWithResponseRequest(
       ::std::string arg) noexcept
       : storage_({.arg = std::move(arg)}) {}
-  WithAndWithoutRequestResponseWithRequestWithResponseRequest()
-      : WithAndWithoutRequestResponseWithRequestWithResponseRequest(
-            Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a
+  // |WithAndWithoutRequestResponseWithRequestWithResponseRequest| only if all
+  // of its members are default constructible.
+  WithAndWithoutRequestResponseWithRequestWithResponseRequest() = default;
+#pragma clang diagnostic pop
 
   WithAndWithoutRequestResponseWithRequestWithResponseRequest(
       WithAndWithoutRequestResponseWithRequestWithResponseRequest&&) noexcept =
@@ -1271,9 +1443,15 @@ class WithAndWithoutRequestResponseWithRequestWithResponseRequest {
 
   ::std::string& arg() { return storage_.arg; }
 
+  WithAndWithoutRequestResponseWithRequestWithResponseRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : WithAndWithoutRequestResponseWithRequestWithResponseRequest(Storage_{
+            .arg = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::std::string arg{};
+    ::std::string arg;
   };
 
   Storage_ storage_;
@@ -1309,8 +1487,14 @@ class WithAndWithoutRequestResponseWithRequestNoResponseRequest {
   WithAndWithoutRequestResponseWithRequestNoResponseRequest(
       ::std::string arg) noexcept
       : storage_({.arg = std::move(arg)}) {}
-  WithAndWithoutRequestResponseWithRequestNoResponseRequest()
-      : WithAndWithoutRequestResponseWithRequestNoResponseRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a
+  // |WithAndWithoutRequestResponseWithRequestNoResponseRequest| only if all of
+  // its members are default constructible.
+  WithAndWithoutRequestResponseWithRequestNoResponseRequest() = default;
+#pragma clang diagnostic pop
 
   WithAndWithoutRequestResponseWithRequestNoResponseRequest(
       WithAndWithoutRequestResponseWithRequestNoResponseRequest&&) noexcept =
@@ -1351,9 +1535,15 @@ class WithAndWithoutRequestResponseWithRequestNoResponseRequest {
 
   ::std::string& arg() { return storage_.arg; }
 
+  WithAndWithoutRequestResponseWithRequestNoResponseRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : WithAndWithoutRequestResponseWithRequestNoResponseRequest(Storage_{
+            .arg = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::std::string arg{};
+    ::std::string arg;
   };
 
   Storage_ storage_;
@@ -1389,9 +1579,14 @@ class WithAndWithoutRequestResponseWithRequestEmptyResponseRequest {
   WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
       ::std::string arg) noexcept
       : storage_({.arg = std::move(arg)}) {}
-  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest()
-      : WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
-            Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a
+  // |WithAndWithoutRequestResponseWithRequestEmptyResponseRequest| only if all
+  // of its members are default constructible.
+  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest() = default;
+#pragma clang diagnostic pop
 
   WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
       WithAndWithoutRequestResponseWithRequestEmptyResponseRequest&&) noexcept =
@@ -1432,9 +1627,15 @@ class WithAndWithoutRequestResponseWithRequestEmptyResponseRequest {
 
   ::std::string& arg() { return storage_.arg; }
 
+  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(Storage_{
+            .arg = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::std::string arg{};
+    ::std::string arg;
   };
 
   Storage_ storage_;
@@ -1468,8 +1669,13 @@ class WithAndWithoutRequestResponseOnWithResponseRequest {
       : storage_(std::move(storage)) {}
   WithAndWithoutRequestResponseOnWithResponseRequest(::std::string ret) noexcept
       : storage_({.ret = std::move(ret)}) {}
-  WithAndWithoutRequestResponseOnWithResponseRequest()
-      : WithAndWithoutRequestResponseOnWithResponseRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |WithAndWithoutRequestResponseOnWithResponseRequest|
+  // only if all of its members are default constructible.
+  WithAndWithoutRequestResponseOnWithResponseRequest() = default;
+#pragma clang diagnostic pop
 
   WithAndWithoutRequestResponseOnWithResponseRequest(
       WithAndWithoutRequestResponseOnWithResponseRequest&&) noexcept = default;
@@ -1503,9 +1709,15 @@ class WithAndWithoutRequestResponseOnWithResponseRequest {
 
   ::std::string& ret() { return storage_.ret; }
 
+  WithAndWithoutRequestResponseOnWithResponseRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : WithAndWithoutRequestResponseOnWithResponseRequest(Storage_{
+            .ret = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::std::string ret{};
+    ::std::string ret;
   };
 
   Storage_ storage_;
@@ -1539,9 +1751,14 @@ class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse {
   WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
       ::std::string ret) noexcept
       : storage_({.ret = std::move(ret)}) {}
-  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse()
-      : WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
-            Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a
+  // |WithAndWithoutRequestResponseNoRequestWithResponseTopResponse| only if all
+  // of its members are default constructible.
+  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse() = default;
+#pragma clang diagnostic pop
 
   WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
       WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&&) noexcept =
@@ -1582,9 +1799,15 @@ class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse {
 
   ::std::string& ret() { return storage_.ret; }
 
+  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(Storage_{
+            .ret = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::std::string ret{};
+    ::std::string ret;
   };
 
   Storage_ storage_;
@@ -1617,8 +1840,13 @@ class TransitionalRequestTopResponse {
       : storage_(std::move(storage)) {}
   TransitionalRequestTopResponse(int64_t y) noexcept
       : storage_({.y = std::move(y)}) {}
-  TransitionalRequestTopResponse()
-      : TransitionalRequestTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |TransitionalRequestTopResponse| only if all of its
+  // members are default constructible.
+  TransitionalRequestTopResponse() = default;
+#pragma clang diagnostic pop
 
   TransitionalRequestTopResponse(TransitionalRequestTopResponse&&) noexcept =
       default;
@@ -1648,9 +1876,15 @@ class TransitionalRequestTopResponse {
 
   int64_t& y() { return storage_.y; }
 
+  TransitionalRequestTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : TransitionalRequestTopResponse(Storage_{
+            .y = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    int64_t y{};
+    int64_t y = {};
   };
 
   Storage_ storage_;
@@ -1679,7 +1913,13 @@ class TransitionalRequestRequest {
       : storage_(std::move(storage)) {}
   TransitionalRequestRequest(int64_t x) noexcept
       : storage_({.x = std::move(x)}) {}
-  TransitionalRequestRequest() : TransitionalRequestRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |TransitionalRequestRequest| only if all of its
+  // members are default constructible.
+  TransitionalRequestRequest() = default;
+#pragma clang diagnostic pop
 
   TransitionalRequestRequest(TransitionalRequestRequest&&) noexcept = default;
   TransitionalRequestRequest& operator=(TransitionalRequestRequest&&) noexcept =
@@ -1707,9 +1947,15 @@ class TransitionalRequestRequest {
 
   int64_t& x() { return storage_.x; }
 
+  TransitionalRequestRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : TransitionalRequestRequest(Storage_{
+            .x = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    int64_t x{};
+    int64_t x = {};
   };
 
   Storage_ storage_;
@@ -1738,7 +1984,13 @@ class TransitionalOneWayRequest {
       : storage_(std::move(storage)) {}
   TransitionalOneWayRequest(int64_t x) noexcept
       : storage_({.x = std::move(x)}) {}
-  TransitionalOneWayRequest() : TransitionalOneWayRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |TransitionalOneWayRequest| only if all of its members
+  // are default constructible.
+  TransitionalOneWayRequest() = default;
+#pragma clang diagnostic pop
 
   TransitionalOneWayRequest(TransitionalOneWayRequest&&) noexcept = default;
   TransitionalOneWayRequest& operator=(TransitionalOneWayRequest&&) noexcept =
@@ -1764,9 +2016,15 @@ class TransitionalOneWayRequest {
 
   int64_t& x() { return storage_.x; }
 
+  TransitionalOneWayRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : TransitionalOneWayRequest(Storage_{
+            .x = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    int64_t x{};
+    int64_t x = {};
   };
 
   Storage_ storage_;
@@ -1795,7 +2053,13 @@ class TransitionalEventRequest {
       : storage_(std::move(storage)) {}
   TransitionalEventRequest(int64_t x) noexcept
       : storage_({.x = std::move(x)}) {}
-  TransitionalEventRequest() : TransitionalEventRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |TransitionalEventRequest| only if all of its members
+  // are default constructible.
+  TransitionalEventRequest() = default;
+#pragma clang diagnostic pop
 
   TransitionalEventRequest(TransitionalEventRequest&&) noexcept = default;
   TransitionalEventRequest& operator=(TransitionalEventRequest&&) noexcept =
@@ -1821,9 +2085,15 @@ class TransitionalEventRequest {
 
   int64_t& x() { return storage_.x; }
 
+  TransitionalEventRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : TransitionalEventRequest(Storage_{
+            .x = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    int64_t x{};
+    int64_t x = {};
   };
 
   Storage_ storage_;
@@ -1853,15 +2123,24 @@ class TheUnion {
     kV = 1,  // 0x1
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-
   // Create an unknown value of this union.
   TheUnion() : storage_(std::make_shared<Storage_>()) {}
 
-  TheUnion(TheUnion&&) noexcept = default;
-  TheUnion& operator=(TheUnion&&) noexcept = default;
+  TheUnion(TheUnion&& other) noexcept
+      : TheUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  TheUnion& operator=(TheUnion&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   TheUnion(const TheUnion& other) noexcept : TheUnion(other.CloneStorage_()) {}
   TheUnion& operator=(const TheUnion& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -1873,7 +2152,7 @@ class TheUnion {
   }
 
   constexpr ::test_protocols::TheUnion::Tag Which() const {
-    return TheUnion::IndexToTag(storage_->index());
+    return TheUnion::IndexToTag(storage_->index()).value();
   }
   static TheUnion WithV(uint32_t val) {
     return TheUnion(
@@ -1886,6 +2165,9 @@ class TheUnion {
   ::fidl::internal::UnionMemberView<1, Storage_> v() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
+  TheUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -1915,7 +2197,8 @@ class TheUnion {
     }
   }
 
-  static constexpr ::test_protocols::TheUnion::Tag IndexToTag(size_t index) {
+  static constexpr cpp17::optional<::test_protocols::TheUnion::Tag> IndexToTag(
+      size_t index) {
     switch (index) {
       case 1:
         return ::test_protocols::TheUnion::Tag::kV;
@@ -1937,8 +2220,13 @@ class MethodWithUnionUnionMethodRequest {
       : storage_(std::move(storage)) {}
   MethodWithUnionUnionMethodRequest(::test_protocols::TheUnion u) noexcept
       : storage_({.u = std::move(u)}) {}
-  MethodWithUnionUnionMethodRequest()
-      : MethodWithUnionUnionMethodRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |MethodWithUnionUnionMethodRequest| only if all of its
+  // members are default constructible.
+  MethodWithUnionUnionMethodRequest() = default;
+#pragma clang diagnostic pop
 
   MethodWithUnionUnionMethodRequest(
       MethodWithUnionUnionMethodRequest&&) noexcept = default;
@@ -1970,9 +2258,15 @@ class MethodWithUnionUnionMethodRequest {
 
   ::test_protocols::TheUnion& u() { return storage_.u; }
 
+  MethodWithUnionUnionMethodRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : MethodWithUnionUnionMethodRequest(Storage_{
+            .u = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_protocols::TheUnion u{};
+    ::test_protocols::TheUnion u;
   };
 
   Storage_ storage_;
@@ -2001,7 +2295,13 @@ class SyscallProtocolMethodCRequest {
       : storage_(std::move(storage)) {}
   SyscallProtocolMethodCRequest(int64_t a, int64_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  SyscallProtocolMethodCRequest() : SyscallProtocolMethodCRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |SyscallProtocolMethodCRequest| only if all of its
+  // members are default constructible.
+  SyscallProtocolMethodCRequest() = default;
+#pragma clang diagnostic pop
 
   SyscallProtocolMethodCRequest(SyscallProtocolMethodCRequest&&) noexcept =
       default;
@@ -2035,10 +2335,17 @@ class SyscallProtocolMethodCRequest {
 
   int64_t& b() { return storage_.b; }
 
+  SyscallProtocolMethodCRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : SyscallProtocolMethodCRequest(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    int64_t a{};
-    int64_t b{};
+    int64_t a = {};
+    int64_t b = {};
   };
 
   Storage_ storage_;
@@ -2079,7 +2386,13 @@ class ProtocolEnds {
                   .server = std::move(server),
                   .client_opt = std::move(client_opt),
                   .server_opt = std::move(server_opt)}) {}
-  ProtocolEnds() : ProtocolEnds(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ProtocolEnds| only if all of its members are default
+  // constructible.
+  ProtocolEnds() = default;
+#pragma clang diagnostic pop
 
   ProtocolEnds(ProtocolEnds&&) noexcept = default;
   ProtocolEnds& operator=(ProtocolEnds&&) noexcept = default;
@@ -2120,12 +2433,20 @@ class ProtocolEnds {
     return storage_.server_opt;
   }
 
+  ProtocolEnds(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ProtocolEnds(Storage_{
+            .client = {},
+            .server = {},
+            .client_opt = {},
+            .server_opt = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> client{};
-    ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> server{};
-    ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> client_opt{};
-    ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> server_opt{};
+    ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> client;
+    ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> server;
+    ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> client_opt;
+    ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> server_opt;
   };
 
   Storage_ storage_;
@@ -2175,8 +2496,13 @@ class WithProtocolEndsStructContainingEndsTopResponse {
   WithProtocolEndsStructContainingEndsTopResponse(
       ::test_protocols::ProtocolEnds out) noexcept
       : storage_({.out = std::move(out)}) {}
-  WithProtocolEndsStructContainingEndsTopResponse()
-      : WithProtocolEndsStructContainingEndsTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |WithProtocolEndsStructContainingEndsTopResponse| only
+  // if all of its members are default constructible.
+  WithProtocolEndsStructContainingEndsTopResponse() = default;
+#pragma clang diagnostic pop
 
   WithProtocolEndsStructContainingEndsTopResponse(
       WithProtocolEndsStructContainingEndsTopResponse&&) noexcept = default;
@@ -2187,9 +2513,15 @@ class WithProtocolEndsStructContainingEndsTopResponse {
 
   ::test_protocols::ProtocolEnds& out() { return storage_.out; }
 
+  WithProtocolEndsStructContainingEndsTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : WithProtocolEndsStructContainingEndsTopResponse(Storage_{
+            .out = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_protocols::ProtocolEnds out{};
+    ::test_protocols::ProtocolEnds out;
   };
 
   Storage_ storage_;
@@ -2224,8 +2556,13 @@ class WithProtocolEndsStructContainingEndsRequest {
   WithProtocolEndsStructContainingEndsRequest(
       ::test_protocols::ProtocolEnds in) noexcept
       : storage_({.in = std::move(in)}) {}
-  WithProtocolEndsStructContainingEndsRequest()
-      : WithProtocolEndsStructContainingEndsRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |WithProtocolEndsStructContainingEndsRequest| only if
+  // all of its members are default constructible.
+  WithProtocolEndsStructContainingEndsRequest() = default;
+#pragma clang diagnostic pop
 
   WithProtocolEndsStructContainingEndsRequest(
       WithProtocolEndsStructContainingEndsRequest&&) noexcept = default;
@@ -2236,9 +2573,15 @@ class WithProtocolEndsStructContainingEndsRequest {
 
   ::test_protocols::ProtocolEnds& in() { return storage_.in; }
 
+  WithProtocolEndsStructContainingEndsRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : WithProtocolEndsStructContainingEndsRequest(Storage_{
+            .in = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_protocols::ProtocolEnds in{};
+    ::test_protocols::ProtocolEnds in;
   };
 
   Storage_ storage_;
@@ -2285,7 +2628,13 @@ class ManyParametersFifteenRequest {
                   .p13 = std::move(p13),
                   .p14 = std::move(p14),
                   .p15 = std::move(p15)}) {}
-  ManyParametersFifteenRequest() : ManyParametersFifteenRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ManyParametersFifteenRequest| only if all of its
+  // members are default constructible.
+  ManyParametersFifteenRequest() = default;
+#pragma clang diagnostic pop
 
   ManyParametersFifteenRequest(ManyParametersFifteenRequest&&) noexcept =
       default;
@@ -2371,23 +2720,43 @@ class ManyParametersFifteenRequest {
 
   bool& p15() { return storage_.p15; }
 
+  ManyParametersFifteenRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ManyParametersFifteenRequest(Storage_{
+            .p1 = {},
+            .p2 = {},
+            .p3 = {},
+            .p4 = {},
+            .p5 = {},
+            .p6 = {},
+            .p7 = {},
+            .p8 = {},
+            .p9 = {},
+            .p10 = {},
+            .p11 = {},
+            .p12 = {},
+            .p13 = {},
+            .p14 = {},
+            .p15 = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    bool p1{};
-    bool p2{};
-    bool p3{};
-    bool p4{};
-    bool p5{};
-    bool p6{};
-    bool p7{};
-    bool p8{};
-    bool p9{};
-    bool p10{};
-    bool p11{};
-    bool p12{};
-    bool p13{};
-    bool p14{};
-    bool p15{};
+    bool p1 = {};
+    bool p2 = {};
+    bool p3 = {};
+    bool p4 = {};
+    bool p5 = {};
+    bool p6 = {};
+    bool p7 = {};
+    bool p8 = {};
+    bool p9 = {};
+    bool p10 = {};
+    bool p11 = {};
+    bool p12 = {};
+    bool p13 = {};
+    bool p14 = {};
+    bool p15 = {};
   };
 
   Storage_ storage_;
@@ -2461,8 +2830,13 @@ class HandleRightsProtocolResponseMethodTopResponse {
       : storage_(std::move(storage)) {}
   HandleRightsProtocolResponseMethodTopResponse(::zx::socket h) noexcept
       : storage_({.h = std::move(h)}) {}
-  HandleRightsProtocolResponseMethodTopResponse()
-      : HandleRightsProtocolResponseMethodTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |HandleRightsProtocolResponseMethodTopResponse| only
+  // if all of its members are default constructible.
+  HandleRightsProtocolResponseMethodTopResponse() = default;
+#pragma clang diagnostic pop
 
   HandleRightsProtocolResponseMethodTopResponse(
       HandleRightsProtocolResponseMethodTopResponse&&) noexcept = default;
@@ -2473,9 +2847,15 @@ class HandleRightsProtocolResponseMethodTopResponse {
 
   ::zx::socket& h() { return storage_.h; }
 
+  HandleRightsProtocolResponseMethodTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : HandleRightsProtocolResponseMethodTopResponse(Storage_{
+            .h = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::zx::socket h{};
+    ::zx::socket h;
   };
 
   Storage_ storage_;
@@ -2509,8 +2889,13 @@ class HandleRightsProtocolResponseMethodRequest {
       : storage_(std::move(storage)) {}
   HandleRightsProtocolResponseMethodRequest(::zx::socket h) noexcept
       : storage_({.h = std::move(h)}) {}
-  HandleRightsProtocolResponseMethodRequest()
-      : HandleRightsProtocolResponseMethodRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |HandleRightsProtocolResponseMethodRequest| only if
+  // all of its members are default constructible.
+  HandleRightsProtocolResponseMethodRequest() = default;
+#pragma clang diagnostic pop
 
   HandleRightsProtocolResponseMethodRequest(
       HandleRightsProtocolResponseMethodRequest&&) noexcept = default;
@@ -2521,9 +2906,15 @@ class HandleRightsProtocolResponseMethodRequest {
 
   ::zx::socket& h() { return storage_.h; }
 
+  HandleRightsProtocolResponseMethodRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : HandleRightsProtocolResponseMethodRequest(Storage_{
+            .h = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::zx::socket h{};
+    ::zx::socket h;
   };
 
   Storage_ storage_;
@@ -2557,8 +2948,13 @@ class HandleRightsProtocolNoResponseMethodRequest {
       : storage_(std::move(storage)) {}
   HandleRightsProtocolNoResponseMethodRequest(::zx::socket h) noexcept
       : storage_({.h = std::move(h)}) {}
-  HandleRightsProtocolNoResponseMethodRequest()
-      : HandleRightsProtocolNoResponseMethodRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |HandleRightsProtocolNoResponseMethodRequest| only if
+  // all of its members are default constructible.
+  HandleRightsProtocolNoResponseMethodRequest() = default;
+#pragma clang diagnostic pop
 
   HandleRightsProtocolNoResponseMethodRequest(
       HandleRightsProtocolNoResponseMethodRequest&&) noexcept = default;
@@ -2569,9 +2965,15 @@ class HandleRightsProtocolNoResponseMethodRequest {
 
   ::zx::socket& h() { return storage_.h; }
 
+  HandleRightsProtocolNoResponseMethodRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : HandleRightsProtocolNoResponseMethodRequest(Storage_{
+            .h = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::zx::socket h{};
+    ::zx::socket h;
   };
 
   Storage_ storage_;
@@ -2605,8 +3007,13 @@ class HandleRightsProtocolAnEventRequest {
       : storage_(std::move(storage)) {}
   HandleRightsProtocolAnEventRequest(::zx::socket h) noexcept
       : storage_({.h = std::move(h)}) {}
-  HandleRightsProtocolAnEventRequest()
-      : HandleRightsProtocolAnEventRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |HandleRightsProtocolAnEventRequest| only if all of
+  // its members are default constructible.
+  HandleRightsProtocolAnEventRequest() = default;
+#pragma clang diagnostic pop
 
   HandleRightsProtocolAnEventRequest(
       HandleRightsProtocolAnEventRequest&&) noexcept = default;
@@ -2617,9 +3024,15 @@ class HandleRightsProtocolAnEventRequest {
 
   ::zx::socket& h() { return storage_.h; }
 
+  HandleRightsProtocolAnEventRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : HandleRightsProtocolAnEventRequest(Storage_{
+            .h = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::zx::socket h{};
+    ::zx::socket h;
   };
 
   Storage_ storage_;
@@ -2656,20 +3069,27 @@ class WithErrorSyntax_ErrorAsEnum_Result {
     kErr = 2,       // 0x2
   };
 
-  // Create an unknown value of this union.
-  WithErrorSyntax_ErrorAsEnum_Result()
-      : storage_(std::make_shared<Storage_>()) {}
-
   WithErrorSyntax_ErrorAsEnum_Result(
-      WithErrorSyntax_ErrorAsEnum_Result&&) noexcept = default;
+      WithErrorSyntax_ErrorAsEnum_Result&& other) noexcept
+      : WithErrorSyntax_ErrorAsEnum_Result(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
   WithErrorSyntax_ErrorAsEnum_Result& operator=(
-      WithErrorSyntax_ErrorAsEnum_Result&&) noexcept = default;
+      WithErrorSyntax_ErrorAsEnum_Result&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   WithErrorSyntax_ErrorAsEnum_Result(
       const WithErrorSyntax_ErrorAsEnum_Result& other) noexcept
       : WithErrorSyntax_ErrorAsEnum_Result(other.CloneStorage_()) {}
   WithErrorSyntax_ErrorAsEnum_Result& operator=(
       const WithErrorSyntax_ErrorAsEnum_Result& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -2684,7 +3104,8 @@ class WithErrorSyntax_ErrorAsEnum_Result {
 
   constexpr ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag Which()
       const {
-    return WithErrorSyntax_ErrorAsEnum_Result::IndexToTag(storage_->index());
+    return WithErrorSyntax_ErrorAsEnum_Result::IndexToTag(storage_->index())
+        .value();
   }
   static WithErrorSyntax_ErrorAsEnum_Result WithResponse(
       ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response val) {
@@ -2710,6 +3131,10 @@ class WithErrorSyntax_ErrorAsEnum_Result {
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  WithErrorSyntax_ErrorAsEnum_Result(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -2742,7 +3167,8 @@ class WithErrorSyntax_ErrorAsEnum_Result {
     }
   }
 
-  static constexpr ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag
+  static constexpr cpp17::optional<
+      ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
@@ -2750,10 +3176,8 @@ class WithErrorSyntax_ErrorAsEnum_Result {
             kResponse;
       case 2:
         return ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::kErr;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
-            kResponse;
+        return cpp17::nullopt;
     }
   }
 };
@@ -2771,8 +3195,13 @@ class WithErrorSyntaxErrorAsEnumTopResponse {
   WithErrorSyntaxErrorAsEnumTopResponse(
       ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result result) noexcept
       : storage_({.result = std::move(result)}) {}
-  WithErrorSyntaxErrorAsEnumTopResponse()
-      : WithErrorSyntaxErrorAsEnumTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |WithErrorSyntaxErrorAsEnumTopResponse| only if all of
+  // its members are default constructible.
+  WithErrorSyntaxErrorAsEnumTopResponse() = default;
+#pragma clang diagnostic pop
 
   WithErrorSyntaxErrorAsEnumTopResponse(
       WithErrorSyntaxErrorAsEnumTopResponse&&) noexcept = default;
@@ -2808,9 +3237,16 @@ class WithErrorSyntaxErrorAsEnumTopResponse {
     return storage_.result;
   }
 
+  WithErrorSyntaxErrorAsEnumTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : WithErrorSyntaxErrorAsEnumTopResponse(Storage_{
+            .result =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result result{};
+    ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result result;
   };
 
   Storage_ storage_;
@@ -2843,8 +3279,13 @@ class ChannelProtocolTakeHandleRequest {
       : storage_(std::move(storage)) {}
   ChannelProtocolTakeHandleRequest(::zx::handle h) noexcept
       : storage_({.h = std::move(h)}) {}
-  ChannelProtocolTakeHandleRequest()
-      : ChannelProtocolTakeHandleRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ChannelProtocolTakeHandleRequest| only if all of its
+  // members are default constructible.
+  ChannelProtocolTakeHandleRequest() = default;
+#pragma clang diagnostic pop
 
   ChannelProtocolTakeHandleRequest(
       ChannelProtocolTakeHandleRequest&&) noexcept = default;
@@ -2855,9 +3296,15 @@ class ChannelProtocolTakeHandleRequest {
 
   ::zx::handle& h() { return storage_.h; }
 
+  ChannelProtocolTakeHandleRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ChannelProtocolTakeHandleRequest(Storage_{
+            .h = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::zx::handle h{};
+    ::zx::handle h;
   };
 
   Storage_ storage_;
@@ -2892,8 +3339,13 @@ class ChannelProtocolMutateSocketTopResponse {
       : storage_(std::move(storage)) {}
   ChannelProtocolMutateSocketTopResponse(::zx::socket b) noexcept
       : storage_({.b = std::move(b)}) {}
-  ChannelProtocolMutateSocketTopResponse()
-      : ChannelProtocolMutateSocketTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ChannelProtocolMutateSocketTopResponse| only if all
+  // of its members are default constructible.
+  ChannelProtocolMutateSocketTopResponse() = default;
+#pragma clang diagnostic pop
 
   ChannelProtocolMutateSocketTopResponse(
       ChannelProtocolMutateSocketTopResponse&&) noexcept = default;
@@ -2904,9 +3356,15 @@ class ChannelProtocolMutateSocketTopResponse {
 
   ::zx::socket& b() { return storage_.b; }
 
+  ChannelProtocolMutateSocketTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ChannelProtocolMutateSocketTopResponse(Storage_{
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::zx::socket b{};
+    ::zx::socket b;
   };
 
   Storage_ storage_;
@@ -2941,8 +3399,13 @@ class ChannelProtocolMutateSocketRequest {
       : storage_(std::move(storage)) {}
   ChannelProtocolMutateSocketRequest(::zx::socket a) noexcept
       : storage_({.a = std::move(a)}) {}
-  ChannelProtocolMutateSocketRequest()
-      : ChannelProtocolMutateSocketRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ChannelProtocolMutateSocketRequest| only if all of
+  // its members are default constructible.
+  ChannelProtocolMutateSocketRequest() = default;
+#pragma clang diagnostic pop
 
   ChannelProtocolMutateSocketRequest(
       ChannelProtocolMutateSocketRequest&&) noexcept = default;
@@ -2953,9 +3416,15 @@ class ChannelProtocolMutateSocketRequest {
 
   ::zx::socket& a() { return storage_.a; }
 
+  ChannelProtocolMutateSocketRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ChannelProtocolMutateSocketRequest(Storage_{
+            .a = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::zx::socket a{};
+    ::zx::socket a;
   };
 
   Storage_ storage_;
@@ -2988,8 +3457,13 @@ class ChannelProtocolMethodBTopResponse {
       : storage_(std::move(storage)) {}
   ChannelProtocolMethodBTopResponse(int64_t result) noexcept
       : storage_({.result = std::move(result)}) {}
-  ChannelProtocolMethodBTopResponse()
-      : ChannelProtocolMethodBTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ChannelProtocolMethodBTopResponse| only if all of its
+  // members are default constructible.
+  ChannelProtocolMethodBTopResponse() = default;
+#pragma clang diagnostic pop
 
   ChannelProtocolMethodBTopResponse(
       ChannelProtocolMethodBTopResponse&&) noexcept = default;
@@ -3021,9 +3495,15 @@ class ChannelProtocolMethodBTopResponse {
 
   int64_t& result() { return storage_.result; }
 
+  ChannelProtocolMethodBTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ChannelProtocolMethodBTopResponse(Storage_{
+            .result = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    int64_t result{};
+    int64_t result = {};
   };
 
   Storage_ storage_;
@@ -3052,7 +3532,13 @@ class ChannelProtocolMethodBRequest {
       : storage_(std::move(storage)) {}
   ChannelProtocolMethodBRequest(int64_t a, int64_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  ChannelProtocolMethodBRequest() : ChannelProtocolMethodBRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ChannelProtocolMethodBRequest| only if all of its
+  // members are default constructible.
+  ChannelProtocolMethodBRequest() = default;
+#pragma clang diagnostic pop
 
   ChannelProtocolMethodBRequest(ChannelProtocolMethodBRequest&&) noexcept =
       default;
@@ -3086,10 +3572,17 @@ class ChannelProtocolMethodBRequest {
 
   int64_t& b() { return storage_.b; }
 
+  ChannelProtocolMethodBRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ChannelProtocolMethodBRequest(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    int64_t a{};
-    int64_t b{};
+    int64_t a = {};
+    int64_t b = {};
   };
 
   Storage_ storage_;
@@ -3121,7 +3614,13 @@ class ChannelProtocolMethodARequest {
       : storage_(std::move(storage)) {}
   ChannelProtocolMethodARequest(int64_t a, int64_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  ChannelProtocolMethodARequest() : ChannelProtocolMethodARequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ChannelProtocolMethodARequest| only if all of its
+  // members are default constructible.
+  ChannelProtocolMethodARequest() = default;
+#pragma clang diagnostic pop
 
   ChannelProtocolMethodARequest(ChannelProtocolMethodARequest&&) noexcept =
       default;
@@ -3155,10 +3654,17 @@ class ChannelProtocolMethodARequest {
 
   int64_t& b() { return storage_.b; }
 
+  ChannelProtocolMethodARequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ChannelProtocolMethodARequest(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    int64_t a{};
-    int64_t b{};
+    int64_t a = {};
+    int64_t b = {};
   };
 
   Storage_ storage_;
@@ -3190,7 +3696,13 @@ class ChannelProtocolEventARequest {
       : storage_(std::move(storage)) {}
   ChannelProtocolEventARequest(int64_t a, int64_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  ChannelProtocolEventARequest() : ChannelProtocolEventARequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ChannelProtocolEventARequest| only if all of its
+  // members are default constructible.
+  ChannelProtocolEventARequest() = default;
+#pragma clang diagnostic pop
 
   ChannelProtocolEventARequest(ChannelProtocolEventARequest&&) noexcept =
       default;
@@ -3224,10 +3736,17 @@ class ChannelProtocolEventARequest {
 
   int64_t& b() { return storage_.b; }
 
+  ChannelProtocolEventARequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ChannelProtocolEventARequest(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    int64_t a{};
-    int64_t b{};
+    int64_t a = {};
+    int64_t b = {};
   };
 
   Storage_ storage_;

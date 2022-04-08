@@ -53,7 +53,13 @@ class ExampleOfUseOfAliases {
                   .field_of_client_end = std::move(field_of_client_end),
                   .field_of_nullable_client_end =
                       std::move(field_of_nullable_client_end)}) {}
-  ExampleOfUseOfAliases() : ExampleOfUseOfAliases(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ExampleOfUseOfAliases| only if all of its members are
+  // default constructible.
+  ExampleOfUseOfAliases() = default;
+#pragma clang diagnostic pop
 
   ExampleOfUseOfAliases(ExampleOfUseOfAliases&&) noexcept = default;
   ExampleOfUseOfAliases& operator=(ExampleOfUseOfAliases&&) noexcept = default;
@@ -118,17 +124,30 @@ class ExampleOfUseOfAliases {
     return storage_.field_of_nullable_client_end;
   }
 
+  ExampleOfUseOfAliases(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ExampleOfUseOfAliases(Storage_{
+            .field_of_u32 = {},
+            .field_of_vec_of_strings = {},
+            .field_of_vec_of_strings_at_most_nine = {},
+            .field_of_vec_of_strings_at_most_5 = {},
+            .field_of_vec_of_ref_me_at_most_5 = {},
+            .field_of_channel = {},
+            .field_of_client_end = {},
+            .field_of_nullable_client_end = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint32_t field_of_u32{};
-    ::std::vector<::std::string> field_of_vec_of_strings{};
-    ::std::vector<::std::string> field_of_vec_of_strings_at_most_nine{};
-    ::std::vector<::std::string> field_of_vec_of_strings_at_most_5{};
+    uint32_t field_of_u32 = {};
+    ::std::vector<::std::string> field_of_vec_of_strings;
+    ::std::vector<::std::string> field_of_vec_of_strings_at_most_nine;
+    ::std::vector<::std::string> field_of_vec_of_strings_at_most_5;
     ::std::vector<::test_someotherlibrary::ReferenceMe>
-        field_of_vec_of_ref_me_at_most_5{};
-    ::zx::channel field_of_channel{};
-    ::zx::channel field_of_client_end{};
-    ::zx::channel field_of_nullable_client_end{};
+        field_of_vec_of_ref_me_at_most_5;
+    ::zx::channel field_of_channel;
+    ::zx::channel field_of_client_end;
+    ::zx::channel field_of_nullable_client_end;
   };
 
   Storage_ storage_;

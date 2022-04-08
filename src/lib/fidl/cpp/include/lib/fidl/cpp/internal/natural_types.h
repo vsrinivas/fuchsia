@@ -10,6 +10,7 @@
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/wire_types.h>
 #include <lib/fitx/result.h>
+#include <lib/stdcompat/type_traits.h>
 #include <zircon/fidl.h>
 
 #include <algorithm>
@@ -185,7 +186,7 @@ void NaturalEnvelopeDecodeOptional(NaturalDecoder* decoder, std::optional<Field>
       fidl_envelope_t* envelope = decoder->GetPtr<fidl_envelope_t>(offset);
       switch (reinterpret_cast<uintptr_t>(envelope->data)) {
         case FIDL_ALLOC_PRESENT: {
-          value->emplace();
+          value->emplace(DefaultConstructPossiblyInvalidObject<Field>::Make());
           NaturalEnvelopeDecode<Constraint>(decoder, &value->value(), offset, recursion_depth);
           return;
         }
@@ -213,7 +214,7 @@ void NaturalEnvelopeDecodeOptional(NaturalDecoder* decoder, std::optional<Field>
         value->reset();
         return;
       }
-      value->emplace();
+      value->emplace(DefaultConstructPossiblyInvalidObject<Field>::Make());
       NaturalEnvelopeDecode<Constraint>(decoder, &value->value(), offset, recursion_depth);
       return;
     }
@@ -544,7 +545,7 @@ struct NaturalUnionCodingTraits {
     EncodeMember(encoder, value, envelope_offset, index, recursion_depth + 1);
     // Call GetPtr after Encode because the buffer may move.
     fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
-    xunion->tag = static_cast<fidl_union_tag_t>(T::IndexToTag(index));
+    xunion->tag = static_cast<fidl_union_tag_t>(T::IndexToTag(index).value());
   }
 
   template <size_t I = 1>
@@ -590,7 +591,9 @@ struct NaturalUnionCodingTraits {
     static_assert(I > 0);
     if constexpr (I < std::variant_size_v<typename T::Storage_>) {
       if (I == index) {
-        value->storage_->template emplace<I>();
+        using FieldType = cpp20::remove_cvref_t<decltype(std::get<I>(*value->storage_))>;
+        value->storage_->template emplace<I>(
+            DefaultConstructPossiblyInvalidObject<FieldType>::Make());
         auto& member_info = std::get<I>(T::kMembers);
         using Constraint = typename std::remove_reference_t<decltype(member_info)>::Constraint;
         NaturalEnvelopeDecode<Constraint>(decoder, &std::get<I>(*value->storage_), envelope_offset,

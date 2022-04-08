@@ -35,7 +35,13 @@ class Example_foo_Response {
   Example_foo_Response(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   Example_foo_Response(int64_t y) noexcept : storage_({.y = std::move(y)}) {}
-  Example_foo_Response() : Example_foo_Response(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Example_foo_Response| only if all of its members are
+  // default constructible.
+  Example_foo_Response() = default;
+#pragma clang diagnostic pop
 
   Example_foo_Response(Example_foo_Response&&) noexcept = default;
   Example_foo_Response& operator=(Example_foo_Response&&) noexcept = default;
@@ -59,9 +65,15 @@ class Example_foo_Response {
 
   int64_t& y() { return storage_.y; }
 
+  Example_foo_Response(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Example_foo_Response(Storage_{
+            .y = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    int64_t y{};
+    int64_t y = {};
   };
 
   Storage_ storage_;
@@ -93,15 +105,23 @@ class Example_foo_Result {
     kErr = 2,       // 0x2
   };
 
-  // Create an unknown value of this union.
-  Example_foo_Result() : storage_(std::make_shared<Storage_>()) {}
-
-  Example_foo_Result(Example_foo_Result&&) noexcept = default;
-  Example_foo_Result& operator=(Example_foo_Result&&) noexcept = default;
+  Example_foo_Result(Example_foo_Result&& other) noexcept
+      : Example_foo_Result(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  Example_foo_Result& operator=(Example_foo_Result&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   Example_foo_Result(const Example_foo_Result& other) noexcept
       : Example_foo_Result(other.CloneStorage_()) {}
   Example_foo_Result& operator=(const Example_foo_Result& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -113,7 +133,7 @@ class Example_foo_Result {
   }
 
   constexpr ::test_error::Example_foo_Result::Tag Which() const {
-    return Example_foo_Result::IndexToTag(storage_->index());
+    return Example_foo_Result::IndexToTag(storage_->index()).value();
   }
   static Example_foo_Result WithResponse(
       ::test_error::Example_foo_Response val) {
@@ -138,6 +158,9 @@ class Example_foo_Result {
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  Example_foo_Result(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -170,16 +193,15 @@ class Example_foo_Result {
     }
   }
 
-  static constexpr ::test_error::Example_foo_Result::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<::test_error::Example_foo_Result::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_error::Example_foo_Result::Tag::kResponse;
       case 2:
         return ::test_error::Example_foo_Result::Tag::kErr;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_error::Example_foo_Result::Tag::kResponse;
+        return cpp17::nullopt;
     }
   }
 };
@@ -195,7 +217,13 @@ class ExampleFooTopResponse {
       : storage_(std::move(storage)) {}
   ExampleFooTopResponse(::test_error::Example_foo_Result result) noexcept
       : storage_({.result = std::move(result)}) {}
-  ExampleFooTopResponse() : ExampleFooTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ExampleFooTopResponse| only if all of its members are
+  // default constructible.
+  ExampleFooTopResponse() = default;
+#pragma clang diagnostic pop
 
   ExampleFooTopResponse(ExampleFooTopResponse&&) noexcept = default;
   ExampleFooTopResponse& operator=(ExampleFooTopResponse&&) noexcept = default;
@@ -222,9 +250,16 @@ class ExampleFooTopResponse {
 
   ::test_error::Example_foo_Result& result() { return storage_.result; }
 
+  ExampleFooTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ExampleFooTopResponse(Storage_{
+            .result =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_error::Example_foo_Result result{};
+    ::test_error::Example_foo_Result result;
   };
 
   Storage_ storage_;
@@ -252,7 +287,13 @@ class ExampleFooRequest {
  public:
   ExampleFooRequest(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   ExampleFooRequest(::std::string s) noexcept : storage_({.s = std::move(s)}) {}
-  ExampleFooRequest() : ExampleFooRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ExampleFooRequest| only if all of its members are
+  // default constructible.
+  ExampleFooRequest() = default;
+#pragma clang diagnostic pop
 
   ExampleFooRequest(ExampleFooRequest&&) noexcept = default;
   ExampleFooRequest& operator=(ExampleFooRequest&&) noexcept = default;
@@ -276,9 +317,14 @@ class ExampleFooRequest {
 
   ::std::string& s() { return storage_.s; }
 
+  ExampleFooRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ExampleFooRequest(Storage_{
+            .s = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::std::string s{};
+    ::std::string s;
   };
 
   Storage_ storage_;

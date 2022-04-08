@@ -87,16 +87,26 @@ class UnionWithAttributes {
     kX = 1,  // 0x1
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-
   // Create an unknown value of this union.
   UnionWithAttributes() : storage_(std::make_shared<Storage_>()) {}
 
-  UnionWithAttributes(UnionWithAttributes&&) noexcept = default;
-  UnionWithAttributes& operator=(UnionWithAttributes&&) noexcept = default;
+  UnionWithAttributes(UnionWithAttributes&& other) noexcept
+      : UnionWithAttributes(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  UnionWithAttributes& operator=(UnionWithAttributes&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   UnionWithAttributes(const UnionWithAttributes& other) noexcept
       : UnionWithAttributes(other.CloneStorage_()) {}
   UnionWithAttributes& operator=(const UnionWithAttributes& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -108,7 +118,7 @@ class UnionWithAttributes {
   }
 
   constexpr ::test_union::UnionWithAttributes::Tag Which() const {
-    return UnionWithAttributes::IndexToTag(storage_->index());
+    return UnionWithAttributes::IndexToTag(storage_->index()).value();
   }
   static UnionWithAttributes WithX(int64_t val) {
     return UnionWithAttributes(
@@ -121,6 +131,10 @@ class UnionWithAttributes {
   ::fidl::internal::UnionMemberView<1, Storage_> x() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
+  UnionWithAttributes(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -151,8 +165,8 @@ class UnionWithAttributes {
     }
   }
 
-  static constexpr ::test_union::UnionWithAttributes::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<::test_union::UnionWithAttributes::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_union::UnionWithAttributes::Tag::kX;
@@ -177,14 +191,21 @@ class Union {
     kVectorStringAlsoNeedsConstructor = 3,  // 0x3
   };
 
-  // Create an unknown value of this union.
-  Union() : storage_(std::make_shared<Storage_>()) {}
-
-  Union(Union&&) noexcept = default;
-  Union& operator=(Union&&) noexcept = default;
+  Union(Union&& other) noexcept
+      : Union(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  Union& operator=(Union&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   Union(const Union& other) noexcept : Union(other.CloneStorage_()) {}
   Union& operator=(const Union& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -196,7 +217,7 @@ class Union {
   }
 
   constexpr ::test_union::Union::Tag Which() const {
-    return Union::IndexToTag(storage_->index());
+    return Union::IndexToTag(storage_->index()).value();
   }
   static Union WithPrimitive(int32_t val) {
     return Union(
@@ -236,6 +257,9 @@ class Union {
     return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
   }
 
+  Union(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
+
  private:
   std::shared_ptr<Storage_> storage_;
   std::shared_ptr<Storage_> CloneStorage_() const;
@@ -270,7 +294,8 @@ class Union {
     }
   }
 
-  static constexpr ::test_union::Union::Tag IndexToTag(size_t index) {
+  static constexpr cpp17::optional<::test_union::Union::Tag> IndexToTag(
+      size_t index) {
     switch (index) {
       case 1:
         return ::test_union::Union::Tag::kPrimitive;
@@ -278,9 +303,8 @@ class Union {
         return ::test_union::Union::Tag::kStringNeedsConstructor;
       case 3:
         return ::test_union::Union::Tag::kVectorStringAlsoNeedsConstructor;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_union::Union::Tag::kPrimitive;
+        return cpp17::nullopt;
     }
   }
 };
@@ -297,7 +321,13 @@ class StructWithNullableXUnion {
   StructWithNullableXUnion(
       ::std::unique_ptr<::test_union::OlderSimpleUnion> x1) noexcept
       : storage_({.x1 = std::move(x1)}) {}
-  StructWithNullableXUnion() : StructWithNullableXUnion(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |StructWithNullableXUnion| only if all of its members
+  // are default constructible.
+  StructWithNullableXUnion() = default;
+#pragma clang diagnostic pop
 
   StructWithNullableXUnion(StructWithNullableXUnion&&) noexcept = default;
   StructWithNullableXUnion& operator=(StructWithNullableXUnion&&) noexcept =
@@ -327,9 +357,15 @@ class StructWithNullableXUnion {
     return storage_.x1;
   }
 
+  StructWithNullableXUnion(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : StructWithNullableXUnion(Storage_{
+            .x1 = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::std::unique_ptr<::test_union::OlderSimpleUnion> x1{};
+    ::std::unique_ptr<::test_union::OlderSimpleUnion> x1;
   };
 
   Storage_ storage_;
@@ -362,15 +398,23 @@ class StrictUnion {
     kVectorStringAlsoNeedsConstructor = 3,  // 0x3
   };
 
-  // Create an unknown value of this union.
-  StrictUnion() : storage_(std::make_shared<Storage_>()) {}
-
-  StrictUnion(StrictUnion&&) noexcept = default;
-  StrictUnion& operator=(StrictUnion&&) noexcept = default;
+  StrictUnion(StrictUnion&& other) noexcept
+      : StrictUnion(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  StrictUnion& operator=(StrictUnion&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   StrictUnion(const StrictUnion& other) noexcept
       : StrictUnion(other.CloneStorage_()) {}
   StrictUnion& operator=(const StrictUnion& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -382,7 +426,7 @@ class StrictUnion {
   }
 
   constexpr ::test_union::StrictUnion::Tag Which() const {
-    return StrictUnion::IndexToTag(storage_->index());
+    return StrictUnion::IndexToTag(storage_->index()).value();
   }
   static StrictUnion WithPrimitive(int32_t val) {
     return StrictUnion(
@@ -422,6 +466,9 @@ class StrictUnion {
     return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
   }
 
+  StrictUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
+
  private:
   std::shared_ptr<Storage_> storage_;
   std::shared_ptr<Storage_> CloneStorage_() const;
@@ -457,7 +504,8 @@ class StrictUnion {
     }
   }
 
-  static constexpr ::test_union::StrictUnion::Tag IndexToTag(size_t index) {
+  static constexpr cpp17::optional<::test_union::StrictUnion::Tag> IndexToTag(
+      size_t index) {
     switch (index) {
       case 1:
         return ::test_union::StrictUnion::Tag::kPrimitive;
@@ -466,9 +514,8 @@ class StrictUnion {
       case 3:
         return ::test_union::StrictUnion::Tag::
             kVectorStringAlsoNeedsConstructor;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_union::StrictUnion::Tag::kPrimitive;
+        return cpp17::nullopt;
     }
   }
 };
@@ -488,15 +535,23 @@ class StrictSimpleXUnion {
     kS = 3,  // 0x3
   };
 
-  // Create an unknown value of this union.
-  StrictSimpleXUnion() : storage_(std::make_shared<Storage_>()) {}
-
-  StrictSimpleXUnion(StrictSimpleXUnion&&) noexcept = default;
-  StrictSimpleXUnion& operator=(StrictSimpleXUnion&&) noexcept = default;
+  StrictSimpleXUnion(StrictSimpleXUnion&& other) noexcept
+      : StrictSimpleXUnion(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  StrictSimpleXUnion& operator=(StrictSimpleXUnion&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   StrictSimpleXUnion(const StrictSimpleXUnion& other) noexcept
       : StrictSimpleXUnion(other.CloneStorage_()) {}
   StrictSimpleXUnion& operator=(const StrictSimpleXUnion& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -508,7 +563,7 @@ class StrictSimpleXUnion {
   }
 
   constexpr ::test_union::StrictSimpleXUnion::Tag Which() const {
-    return StrictSimpleXUnion::IndexToTag(storage_->index());
+    return StrictSimpleXUnion::IndexToTag(storage_->index()).value();
   }
   static StrictSimpleXUnion WithI(int32_t val) {
     return StrictSimpleXUnion(
@@ -543,6 +598,9 @@ class StrictSimpleXUnion {
   ::fidl::internal::UnionMemberView<3, Storage_> s() {
     return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
   }
+
+  StrictSimpleXUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -579,8 +637,8 @@ class StrictSimpleXUnion {
     }
   }
 
-  static constexpr ::test_union::StrictSimpleXUnion::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<::test_union::StrictSimpleXUnion::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_union::StrictSimpleXUnion::Tag::kI;
@@ -588,9 +646,8 @@ class StrictSimpleXUnion {
         return ::test_union::StrictSimpleXUnion::Tag::kF;
       case 3:
         return ::test_union::StrictSimpleXUnion::Tag::kS;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_union::StrictSimpleXUnion::Tag::kI;
+        return cpp17::nullopt;
     }
   }
 };
@@ -608,15 +665,23 @@ class StrictFoo {
     kI = 2,  // 0x2
   };
 
-  // Create an unknown value of this union.
-  StrictFoo() : storage_(std::make_shared<Storage_>()) {}
-
-  StrictFoo(StrictFoo&&) noexcept = default;
-  StrictFoo& operator=(StrictFoo&&) noexcept = default;
+  StrictFoo(StrictFoo&& other) noexcept
+      : StrictFoo(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  StrictFoo& operator=(StrictFoo&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   StrictFoo(const StrictFoo& other) noexcept
       : StrictFoo(other.CloneStorage_()) {}
   StrictFoo& operator=(const StrictFoo& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -628,7 +693,7 @@ class StrictFoo {
   }
 
   constexpr ::test_union::StrictFoo::Tag Which() const {
-    return StrictFoo::IndexToTag(storage_->index());
+    return StrictFoo::IndexToTag(storage_->index()).value();
   }
   static StrictFoo WithS(::std::string val) {
     return StrictFoo(
@@ -652,6 +717,9 @@ class StrictFoo {
   ::fidl::internal::UnionMemberView<2, Storage_> i() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  StrictFoo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -683,15 +751,15 @@ class StrictFoo {
     }
   }
 
-  static constexpr ::test_union::StrictFoo::Tag IndexToTag(size_t index) {
+  static constexpr cpp17::optional<::test_union::StrictFoo::Tag> IndexToTag(
+      size_t index) {
     switch (index) {
       case 1:
         return ::test_union::StrictFoo::Tag::kS;
       case 2:
         return ::test_union::StrictFoo::Tag::kI;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_union::StrictFoo::Tag::kS;
+        return cpp17::nullopt;
     }
   }
 };
@@ -708,15 +776,23 @@ class StrictBoundedXUnion {
     kV = 1,  // 0x1
   };
 
-  // Create an unknown value of this union.
-  StrictBoundedXUnion() : storage_(std::make_shared<Storage_>()) {}
-
-  StrictBoundedXUnion(StrictBoundedXUnion&&) noexcept = default;
-  StrictBoundedXUnion& operator=(StrictBoundedXUnion&&) noexcept = default;
+  StrictBoundedXUnion(StrictBoundedXUnion&& other) noexcept
+      : StrictBoundedXUnion(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  StrictBoundedXUnion& operator=(StrictBoundedXUnion&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   StrictBoundedXUnion(const StrictBoundedXUnion& other) noexcept
       : StrictBoundedXUnion(other.CloneStorage_()) {}
   StrictBoundedXUnion& operator=(const StrictBoundedXUnion& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -728,7 +804,7 @@ class StrictBoundedXUnion {
   }
 
   constexpr ::test_union::StrictBoundedXUnion::Tag Which() const {
-    return StrictBoundedXUnion::IndexToTag(storage_->index());
+    return StrictBoundedXUnion::IndexToTag(storage_->index()).value();
   }
   static StrictBoundedXUnion WithV(::std::vector<uint8_t> val) {
     return StrictBoundedXUnion(
@@ -741,6 +817,10 @@ class StrictBoundedXUnion {
   ::fidl::internal::UnionMemberView<1, Storage_> v() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
+  StrictBoundedXUnion(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -770,14 +850,13 @@ class StrictBoundedXUnion {
     }
   }
 
-  static constexpr ::test_union::StrictBoundedXUnion::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<::test_union::StrictBoundedXUnion::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_union::StrictBoundedXUnion::Tag::kV;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_union::StrictBoundedXUnion::Tag::kV;
+        return cpp17::nullopt;
     }
   }
 };
@@ -796,9 +875,15 @@ class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse {
   TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(
       ::test_union::StrictBoundedXUnion xu) noexcept
       : storage_({.xu = std::move(xu)}) {}
-  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse()
-      : TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(
-            Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a
+  // |TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse| only
+  // if all of its members are default constructible.
+  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse() =
+      default;
+#pragma clang diagnostic pop
 
   TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(
       TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&&) noexcept =
@@ -841,9 +926,17 @@ class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse {
 
   ::test_union::StrictBoundedXUnion& xu() { return storage_.xu; }
 
+  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(
+            Storage_{
+                .xu = ::fidl::internal::
+                    DefaultConstructPossiblyInvalidObjectTag{},
+            }) {}
+
  private:
   struct Storage_ final {
-    ::test_union::StrictBoundedXUnion xu{};
+    ::test_union::StrictBoundedXUnion xu;
   };
 
   Storage_ storage_;
@@ -877,15 +970,23 @@ class ReverseOrdinalUnion {
     kFirst = 1,   // 0x1
   };
 
-  // Create an unknown value of this union.
-  ReverseOrdinalUnion() : storage_(std::make_shared<Storage_>()) {}
-
-  ReverseOrdinalUnion(ReverseOrdinalUnion&&) noexcept = default;
-  ReverseOrdinalUnion& operator=(ReverseOrdinalUnion&&) noexcept = default;
+  ReverseOrdinalUnion(ReverseOrdinalUnion&& other) noexcept
+      : ReverseOrdinalUnion(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  ReverseOrdinalUnion& operator=(ReverseOrdinalUnion&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   ReverseOrdinalUnion(const ReverseOrdinalUnion& other) noexcept
       : ReverseOrdinalUnion(other.CloneStorage_()) {}
   ReverseOrdinalUnion& operator=(const ReverseOrdinalUnion& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -897,7 +998,7 @@ class ReverseOrdinalUnion {
   }
 
   constexpr ::test_union::ReverseOrdinalUnion::Tag Which() const {
-    return ReverseOrdinalUnion::IndexToTag(storage_->index());
+    return ReverseOrdinalUnion::IndexToTag(storage_->index()).value();
   }
   static ReverseOrdinalUnion WithSecond(uint32_t val) {
     return ReverseOrdinalUnion(
@@ -921,6 +1022,10 @@ class ReverseOrdinalUnion {
   ::fidl::internal::UnionMemberView<2, Storage_> first() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  ReverseOrdinalUnion(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -953,16 +1058,15 @@ class ReverseOrdinalUnion {
     }
   }
 
-  static constexpr ::test_union::ReverseOrdinalUnion::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<::test_union::ReverseOrdinalUnion::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_union::ReverseOrdinalUnion::Tag::kSecond;
       case 2:
         return ::test_union::ReverseOrdinalUnion::Tag::kFirst;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_union::ReverseOrdinalUnion::Tag::kSecond;
+        return cpp17::nullopt;
     }
   }
 };
@@ -977,7 +1081,13 @@ class Pizza {
   Pizza(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Pizza(::std::vector<::std::string> toppings) noexcept
       : storage_({.toppings = std::move(toppings)}) {}
-  Pizza() : Pizza(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Pizza| only if all of its members are default
+  // constructible.
+  Pizza() = default;
+#pragma clang diagnostic pop
 
   Pizza(Pizza&&) noexcept = default;
   Pizza& operator=(Pizza&&) noexcept = default;
@@ -1003,9 +1113,14 @@ class Pizza {
 
   ::std::vector<::std::string>& toppings() { return storage_.toppings; }
 
+  Pizza(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Pizza(Storage_{
+            .toppings = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::std::vector<::std::string> toppings{};
+    ::std::vector<::std::string> toppings;
   };
 
   Storage_ storage_;
@@ -1033,7 +1148,13 @@ class Pasta {
  public:
   Pasta(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Pasta(::std::string sauce) noexcept : storage_({.sauce = std::move(sauce)}) {}
-  Pasta() : Pasta(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Pasta| only if all of its members are default
+  // constructible.
+  Pasta() = default;
+#pragma clang diagnostic pop
 
   Pasta(Pasta&&) noexcept = default;
   Pasta& operator=(Pasta&&) noexcept = default;
@@ -1057,9 +1178,14 @@ class Pasta {
 
   ::std::string& sauce() { return storage_.sauce; }
 
+  Pasta(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Pasta(Storage_{
+            .sauce = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::std::string sauce{};
+    ::std::string sauce;
   };
 
   Storage_ storage_;
@@ -1091,15 +1217,23 @@ class StrictPizzaOrPasta {
     kPasta = 2,  // 0x2
   };
 
-  // Create an unknown value of this union.
-  StrictPizzaOrPasta() : storage_(std::make_shared<Storage_>()) {}
-
-  StrictPizzaOrPasta(StrictPizzaOrPasta&&) noexcept = default;
-  StrictPizzaOrPasta& operator=(StrictPizzaOrPasta&&) noexcept = default;
+  StrictPizzaOrPasta(StrictPizzaOrPasta&& other) noexcept
+      : StrictPizzaOrPasta(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  StrictPizzaOrPasta& operator=(StrictPizzaOrPasta&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   StrictPizzaOrPasta(const StrictPizzaOrPasta& other) noexcept
       : StrictPizzaOrPasta(other.CloneStorage_()) {}
   StrictPizzaOrPasta& operator=(const StrictPizzaOrPasta& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -1111,7 +1245,7 @@ class StrictPizzaOrPasta {
   }
 
   constexpr ::test_union::StrictPizzaOrPasta::Tag Which() const {
-    return StrictPizzaOrPasta::IndexToTag(storage_->index());
+    return StrictPizzaOrPasta::IndexToTag(storage_->index()).value();
   }
   static StrictPizzaOrPasta WithPizza(::test_union::Pizza val) {
     return StrictPizzaOrPasta(
@@ -1135,6 +1269,9 @@ class StrictPizzaOrPasta {
   ::fidl::internal::UnionMemberView<2, Storage_> pasta() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  StrictPizzaOrPasta(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -1167,16 +1304,15 @@ class StrictPizzaOrPasta {
     }
   }
 
-  static constexpr ::test_union::StrictPizzaOrPasta::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<::test_union::StrictPizzaOrPasta::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_union::StrictPizzaOrPasta::Tag::kPizza;
       case 2:
         return ::test_union::StrictPizzaOrPasta::Tag::kPasta;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_union::StrictPizzaOrPasta::Tag::kPizza;
+        return cpp17::nullopt;
     }
   }
 };
@@ -1195,15 +1331,23 @@ class PizzaOrPasta {
     kPasta = 2,  // 0x2
   };
 
-  // Create an unknown value of this union.
-  PizzaOrPasta() : storage_(std::make_shared<Storage_>()) {}
-
-  PizzaOrPasta(PizzaOrPasta&&) noexcept = default;
-  PizzaOrPasta& operator=(PizzaOrPasta&&) noexcept = default;
+  PizzaOrPasta(PizzaOrPasta&& other) noexcept
+      : PizzaOrPasta(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  PizzaOrPasta& operator=(PizzaOrPasta&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   PizzaOrPasta(const PizzaOrPasta& other) noexcept
       : PizzaOrPasta(other.CloneStorage_()) {}
   PizzaOrPasta& operator=(const PizzaOrPasta& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -1215,7 +1359,7 @@ class PizzaOrPasta {
   }
 
   constexpr ::test_union::PizzaOrPasta::Tag Which() const {
-    return PizzaOrPasta::IndexToTag(storage_->index());
+    return PizzaOrPasta::IndexToTag(storage_->index()).value();
   }
   static PizzaOrPasta WithPizza(::test_union::Pizza val) {
     return PizzaOrPasta(
@@ -1239,6 +1383,9 @@ class PizzaOrPasta {
   ::fidl::internal::UnionMemberView<2, Storage_> pasta() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  PizzaOrPasta(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -1270,15 +1417,15 @@ class PizzaOrPasta {
     }
   }
 
-  static constexpr ::test_union::PizzaOrPasta::Tag IndexToTag(size_t index) {
+  static constexpr cpp17::optional<::test_union::PizzaOrPasta::Tag> IndexToTag(
+      size_t index) {
     switch (index) {
       case 1:
         return ::test_union::PizzaOrPasta::Tag::kPizza;
       case 2:
         return ::test_union::PizzaOrPasta::Tag::kPasta;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_union::PizzaOrPasta::Tag::kPizza;
+        return cpp17::nullopt;
     }
   }
 };
@@ -1297,16 +1444,26 @@ class FlexiblePizzaOrPasta {
     kPasta = 2,  // 0x2
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-
   // Create an unknown value of this union.
   FlexiblePizzaOrPasta() : storage_(std::make_shared<Storage_>()) {}
 
-  FlexiblePizzaOrPasta(FlexiblePizzaOrPasta&&) noexcept = default;
-  FlexiblePizzaOrPasta& operator=(FlexiblePizzaOrPasta&&) noexcept = default;
+  FlexiblePizzaOrPasta(FlexiblePizzaOrPasta&& other) noexcept
+      : FlexiblePizzaOrPasta(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  FlexiblePizzaOrPasta& operator=(FlexiblePizzaOrPasta&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   FlexiblePizzaOrPasta(const FlexiblePizzaOrPasta& other) noexcept
       : FlexiblePizzaOrPasta(other.CloneStorage_()) {}
   FlexiblePizzaOrPasta& operator=(const FlexiblePizzaOrPasta& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -1318,7 +1475,7 @@ class FlexiblePizzaOrPasta {
   }
 
   constexpr ::test_union::FlexiblePizzaOrPasta::Tag Which() const {
-    return FlexiblePizzaOrPasta::IndexToTag(storage_->index());
+    return FlexiblePizzaOrPasta::IndexToTag(storage_->index()).value();
   }
   static FlexiblePizzaOrPasta WithPizza(::test_union::Pizza val) {
     return FlexiblePizzaOrPasta(
@@ -1342,6 +1499,10 @@ class FlexiblePizzaOrPasta {
   ::fidl::internal::UnionMemberView<2, Storage_> pasta() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  FlexiblePizzaOrPasta(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -1376,8 +1537,8 @@ class FlexiblePizzaOrPasta {
     }
   }
 
-  static constexpr ::test_union::FlexiblePizzaOrPasta::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<::test_union::FlexiblePizzaOrPasta::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_union::FlexiblePizzaOrPasta::Tag::kPizza;
@@ -1403,15 +1564,23 @@ class ExplicitPizzaOrPasta {
     kPasta = 4,  // 0x4
   };
 
-  // Create an unknown value of this union.
-  ExplicitPizzaOrPasta() : storage_(std::make_shared<Storage_>()) {}
-
-  ExplicitPizzaOrPasta(ExplicitPizzaOrPasta&&) noexcept = default;
-  ExplicitPizzaOrPasta& operator=(ExplicitPizzaOrPasta&&) noexcept = default;
+  ExplicitPizzaOrPasta(ExplicitPizzaOrPasta&& other) noexcept
+      : ExplicitPizzaOrPasta(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  ExplicitPizzaOrPasta& operator=(ExplicitPizzaOrPasta&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   ExplicitPizzaOrPasta(const ExplicitPizzaOrPasta& other) noexcept
       : ExplicitPizzaOrPasta(other.CloneStorage_()) {}
   ExplicitPizzaOrPasta& operator=(const ExplicitPizzaOrPasta& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -1423,7 +1592,7 @@ class ExplicitPizzaOrPasta {
   }
 
   constexpr ::test_union::ExplicitPizzaOrPasta::Tag Which() const {
-    return ExplicitPizzaOrPasta::IndexToTag(storage_->index());
+    return ExplicitPizzaOrPasta::IndexToTag(storage_->index()).value();
   }
   static ExplicitPizzaOrPasta WithPizza(::test_union::Pizza val) {
     return ExplicitPizzaOrPasta(
@@ -1447,6 +1616,10 @@ class ExplicitPizzaOrPasta {
   ::fidl::internal::UnionMemberView<2, Storage_> pasta() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  ExplicitPizzaOrPasta(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -1479,16 +1652,15 @@ class ExplicitPizzaOrPasta {
     }
   }
 
-  static constexpr ::test_union::ExplicitPizzaOrPasta::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<::test_union::ExplicitPizzaOrPasta::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_union::ExplicitPizzaOrPasta::Tag::kPizza;
       case 2:
         return ::test_union::ExplicitPizzaOrPasta::Tag::kPasta;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_union::ExplicitPizzaOrPasta::Tag::kPizza;
+        return cpp17::nullopt;
     }
   }
 };
@@ -1506,16 +1678,26 @@ class OlderSimpleUnion {
     kF = 2,  // 0x2
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-
   // Create an unknown value of this union.
   OlderSimpleUnion() : storage_(std::make_shared<Storage_>()) {}
 
-  OlderSimpleUnion(OlderSimpleUnion&&) noexcept = default;
-  OlderSimpleUnion& operator=(OlderSimpleUnion&&) noexcept = default;
+  OlderSimpleUnion(OlderSimpleUnion&& other) noexcept
+      : OlderSimpleUnion(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  OlderSimpleUnion& operator=(OlderSimpleUnion&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   OlderSimpleUnion(const OlderSimpleUnion& other) noexcept
       : OlderSimpleUnion(other.CloneStorage_()) {}
   OlderSimpleUnion& operator=(const OlderSimpleUnion& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -1527,7 +1709,7 @@ class OlderSimpleUnion {
   }
 
   constexpr ::test_union::OlderSimpleUnion::Tag Which() const {
-    return OlderSimpleUnion::IndexToTag(storage_->index());
+    return OlderSimpleUnion::IndexToTag(storage_->index()).value();
   }
   static OlderSimpleUnion WithI(int64_t val) {
     return OlderSimpleUnion(
@@ -1551,6 +1733,9 @@ class OlderSimpleUnion {
   ::fidl::internal::UnionMemberView<2, Storage_> f() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  OlderSimpleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -1584,8 +1769,8 @@ class OlderSimpleUnion {
     }
   }
 
-  static constexpr ::test_union::OlderSimpleUnion::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<::test_union::OlderSimpleUnion::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_union::OlderSimpleUnion::Tag::kI;
@@ -1611,9 +1796,15 @@ class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse {
   TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(
       ::test_union::OlderSimpleUnion xu) noexcept
       : storage_({.xu = std::move(xu)}) {}
-  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse()
-      : TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(
-            Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a
+  // |TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse|
+  // only if all of its members are default constructible.
+  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse() =
+      default;
+#pragma clang diagnostic pop
 
   TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(
       TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&&) noexcept =
@@ -1656,9 +1847,17 @@ class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse {
 
   ::test_union::OlderSimpleUnion& xu() { return storage_.xu; }
 
+  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(
+            Storage_{
+                .xu = ::fidl::internal::
+                    DefaultConstructPossiblyInvalidObjectTag{},
+            }) {}
+
  private:
   struct Storage_ final {
-    ::test_union::OlderSimpleUnion xu{};
+    ::test_union::OlderSimpleUnion xu;
   };
 
   Storage_ storage_;
@@ -1690,7 +1889,13 @@ class NullableUnionStruct {
       : storage_(std::move(storage)) {}
   NullableUnionStruct(::std::unique_ptr<::test_union::Union> the_union) noexcept
       : storage_({.the_union = std::move(the_union)}) {}
-  NullableUnionStruct() : NullableUnionStruct(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |NullableUnionStruct| only if all of its members are
+  // default constructible.
+  NullableUnionStruct() = default;
+#pragma clang diagnostic pop
 
   NullableUnionStruct(NullableUnionStruct&&) noexcept = default;
   NullableUnionStruct& operator=(NullableUnionStruct&&) noexcept = default;
@@ -1718,9 +1923,15 @@ class NullableUnionStruct {
     return storage_.the_union;
   }
 
+  NullableUnionStruct(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : NullableUnionStruct(Storage_{
+            .the_union = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::std::unique_ptr<::test_union::Union> the_union{};
+    ::std::unique_ptr<::test_union::Union> the_union;
   };
 
   Storage_ storage_;
@@ -1754,16 +1965,26 @@ class NewerSimpleUnion {
     kV = 3,  // 0x3
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-
   // Create an unknown value of this union.
   NewerSimpleUnion() : storage_(std::make_shared<Storage_>()) {}
 
-  NewerSimpleUnion(NewerSimpleUnion&&) noexcept = default;
-  NewerSimpleUnion& operator=(NewerSimpleUnion&&) noexcept = default;
+  NewerSimpleUnion(NewerSimpleUnion&& other) noexcept
+      : NewerSimpleUnion(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  NewerSimpleUnion& operator=(NewerSimpleUnion&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   NewerSimpleUnion(const NewerSimpleUnion& other) noexcept
       : NewerSimpleUnion(other.CloneStorage_()) {}
   NewerSimpleUnion& operator=(const NewerSimpleUnion& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -1775,7 +1996,7 @@ class NewerSimpleUnion {
   }
 
   constexpr ::test_union::NewerSimpleUnion::Tag Which() const {
-    return NewerSimpleUnion::IndexToTag(storage_->index());
+    return NewerSimpleUnion::IndexToTag(storage_->index()).value();
   }
   static NewerSimpleUnion WithI(int64_t val) {
     return NewerSimpleUnion(
@@ -1810,6 +2031,9 @@ class NewerSimpleUnion {
   ::fidl::internal::UnionMemberView<3, Storage_> v() {
     return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
   }
+
+  NewerSimpleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -1848,8 +2072,8 @@ class NewerSimpleUnion {
     }
   }
 
-  static constexpr ::test_union::NewerSimpleUnion::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<::test_union::NewerSimpleUnion::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_union::NewerSimpleUnion::Tag::kI;
@@ -1878,16 +2102,26 @@ class FlexibleUnion {
     kVectorStringAlsoNeedsConstructor = 3,  // 0x3
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-
   // Create an unknown value of this union.
   FlexibleUnion() : storage_(std::make_shared<Storage_>()) {}
 
-  FlexibleUnion(FlexibleUnion&&) noexcept = default;
-  FlexibleUnion& operator=(FlexibleUnion&&) noexcept = default;
+  FlexibleUnion(FlexibleUnion&& other) noexcept
+      : FlexibleUnion(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  FlexibleUnion& operator=(FlexibleUnion&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   FlexibleUnion(const FlexibleUnion& other) noexcept
       : FlexibleUnion(other.CloneStorage_()) {}
   FlexibleUnion& operator=(const FlexibleUnion& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -1899,7 +2133,7 @@ class FlexibleUnion {
   }
 
   constexpr ::test_union::FlexibleUnion::Tag Which() const {
-    return FlexibleUnion::IndexToTag(storage_->index());
+    return FlexibleUnion::IndexToTag(storage_->index()).value();
   }
   static FlexibleUnion WithPrimitive(int32_t val) {
     return FlexibleUnion(
@@ -1939,6 +2173,9 @@ class FlexibleUnion {
     return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
   }
 
+  FlexibleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
+
  private:
   std::shared_ptr<Storage_> storage_;
   std::shared_ptr<Storage_> CloneStorage_() const;
@@ -1976,7 +2213,8 @@ class FlexibleUnion {
     }
   }
 
-  static constexpr ::test_union::FlexibleUnion::Tag IndexToTag(size_t index) {
+  static constexpr cpp17::optional<::test_union::FlexibleUnion::Tag> IndexToTag(
+      size_t index) {
     switch (index) {
       case 1:
         return ::test_union::FlexibleUnion::Tag::kPrimitive;
@@ -2004,16 +2242,26 @@ class FlexibleFoo {
     kI = 2,  // 0x2
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-
   // Create an unknown value of this union.
   FlexibleFoo() : storage_(std::make_shared<Storage_>()) {}
 
-  FlexibleFoo(FlexibleFoo&&) noexcept = default;
-  FlexibleFoo& operator=(FlexibleFoo&&) noexcept = default;
+  FlexibleFoo(FlexibleFoo&& other) noexcept
+      : FlexibleFoo(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  FlexibleFoo& operator=(FlexibleFoo&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   FlexibleFoo(const FlexibleFoo& other) noexcept
       : FlexibleFoo(other.CloneStorage_()) {}
   FlexibleFoo& operator=(const FlexibleFoo& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -2025,7 +2273,7 @@ class FlexibleFoo {
   }
 
   constexpr ::test_union::FlexibleFoo::Tag Which() const {
-    return FlexibleFoo::IndexToTag(storage_->index());
+    return FlexibleFoo::IndexToTag(storage_->index()).value();
   }
   static FlexibleFoo WithS(::std::string val) {
     return FlexibleFoo(
@@ -2049,6 +2297,9 @@ class FlexibleFoo {
   ::fidl::internal::UnionMemberView<2, Storage_> i() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  FlexibleFoo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -2082,7 +2333,8 @@ class FlexibleFoo {
     }
   }
 
-  static constexpr ::test_union::FlexibleFoo::Tag IndexToTag(size_t index) {
+  static constexpr cpp17::optional<::test_union::FlexibleFoo::Tag> IndexToTag(
+      size_t index) {
     switch (index) {
       case 1:
         return ::test_union::FlexibleFoo::Tag::kS;
@@ -2106,15 +2358,23 @@ class FieldCollision {
     kFieldCollisionTag = 1,  // 0x1
   };
 
-  // Create an unknown value of this union.
-  FieldCollision() : storage_(std::make_shared<Storage_>()) {}
-
-  FieldCollision(FieldCollision&&) noexcept = default;
-  FieldCollision& operator=(FieldCollision&&) noexcept = default;
+  FieldCollision(FieldCollision&& other) noexcept
+      : FieldCollision(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  FieldCollision& operator=(FieldCollision&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   FieldCollision(const FieldCollision& other) noexcept
       : FieldCollision(other.CloneStorage_()) {}
   FieldCollision& operator=(const FieldCollision& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -2126,7 +2386,7 @@ class FieldCollision {
   }
 
   constexpr ::test_union::FieldCollision::Tag Which() const {
-    return FieldCollision::IndexToTag(storage_->index());
+    return FieldCollision::IndexToTag(storage_->index()).value();
   }
   static FieldCollision WithFieldCollisionTag(int32_t val) {
     return FieldCollision(
@@ -2140,6 +2400,9 @@ class FieldCollision {
   ::fidl::internal::UnionMemberView<1, Storage_> field_collision_tag() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
+  FieldCollision(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -2167,13 +2430,13 @@ class FieldCollision {
     }
   }
 
-  static constexpr ::test_union::FieldCollision::Tag IndexToTag(size_t index) {
+  static constexpr cpp17::optional<::test_union::FieldCollision::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_union::FieldCollision::Tag::kFieldCollisionTag;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_union::FieldCollision::Tag::kFieldCollisionTag;
+        return cpp17::nullopt;
     }
   }
 };
@@ -2191,16 +2454,26 @@ class ExplicitXUnion {
     kF = 4,  // 0x4
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-
   // Create an unknown value of this union.
   ExplicitXUnion() : storage_(std::make_shared<Storage_>()) {}
 
-  ExplicitXUnion(ExplicitXUnion&&) noexcept = default;
-  ExplicitXUnion& operator=(ExplicitXUnion&&) noexcept = default;
+  ExplicitXUnion(ExplicitXUnion&& other) noexcept
+      : ExplicitXUnion(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  ExplicitXUnion& operator=(ExplicitXUnion&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   ExplicitXUnion(const ExplicitXUnion& other) noexcept
       : ExplicitXUnion(other.CloneStorage_()) {}
   ExplicitXUnion& operator=(const ExplicitXUnion& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -2212,7 +2485,7 @@ class ExplicitXUnion {
   }
 
   constexpr ::test_union::ExplicitXUnion::Tag Which() const {
-    return ExplicitXUnion::IndexToTag(storage_->index());
+    return ExplicitXUnion::IndexToTag(storage_->index()).value();
   }
   static ExplicitXUnion WithI(int64_t val) {
     return ExplicitXUnion(
@@ -2236,6 +2509,9 @@ class ExplicitXUnion {
   ::fidl::internal::UnionMemberView<2, Storage_> f() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  ExplicitXUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -2269,7 +2545,8 @@ class ExplicitXUnion {
     }
   }
 
-  static constexpr ::test_union::ExplicitXUnion::Tag IndexToTag(size_t index) {
+  static constexpr cpp17::optional<::test_union::ExplicitXUnion::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_union::ExplicitXUnion::Tag::kI;
@@ -2291,7 +2568,13 @@ class UnionSandwich {
   UnionSandwich(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   UnionSandwich(uint32_t a, ::test_union::ExplicitXUnion u, uint32_t b) noexcept
       : storage_({.a = std::move(a), .u = std::move(u), .b = std::move(b)}) {}
-  UnionSandwich() : UnionSandwich(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |UnionSandwich| only if all of its members are default
+  // constructible.
+  UnionSandwich() = default;
+#pragma clang diagnostic pop
 
   UnionSandwich(UnionSandwich&&) noexcept = default;
   UnionSandwich& operator=(UnionSandwich&&) noexcept = default;
@@ -2323,11 +2606,18 @@ class UnionSandwich {
 
   uint32_t& b() { return storage_.b; }
 
+  UnionSandwich(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : UnionSandwich(Storage_{
+            .a = {},
+            .u = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint32_t a{};
-    ::test_union::ExplicitXUnion u{};
-    uint32_t b{};
+    uint32_t a = {};
+    ::test_union::ExplicitXUnion u;
+    uint32_t b = {};
   };
 
   Storage_ storage_;
@@ -2379,15 +2669,23 @@ class ExplicitUnion {
     kStringNeedsConstructor = 3,  // 0x3
   };
 
-  // Create an unknown value of this union.
-  ExplicitUnion() : storage_(std::make_shared<Storage_>()) {}
-
-  ExplicitUnion(ExplicitUnion&&) noexcept = default;
-  ExplicitUnion& operator=(ExplicitUnion&&) noexcept = default;
+  ExplicitUnion(ExplicitUnion&& other) noexcept
+      : ExplicitUnion(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  ExplicitUnion& operator=(ExplicitUnion&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   ExplicitUnion(const ExplicitUnion& other) noexcept
       : ExplicitUnion(other.CloneStorage_()) {}
   ExplicitUnion& operator=(const ExplicitUnion& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -2399,7 +2697,7 @@ class ExplicitUnion {
   }
 
   constexpr ::test_union::ExplicitUnion::Tag Which() const {
-    return ExplicitUnion::IndexToTag(storage_->index());
+    return ExplicitUnion::IndexToTag(storage_->index()).value();
   }
   static ExplicitUnion WithPrimitive(int32_t val) {
     return ExplicitUnion(
@@ -2424,6 +2722,9 @@ class ExplicitUnion {
   ::fidl::internal::UnionMemberView<2, Storage_> string_needs_constructor() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  ExplicitUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -2455,15 +2756,15 @@ class ExplicitUnion {
     }
   }
 
-  static constexpr ::test_union::ExplicitUnion::Tag IndexToTag(size_t index) {
+  static constexpr cpp17::optional<::test_union::ExplicitUnion::Tag> IndexToTag(
+      size_t index) {
     switch (index) {
       case 1:
         return ::test_union::ExplicitUnion::Tag::kPrimitive;
       case 2:
         return ::test_union::ExplicitUnion::Tag::kStringNeedsConstructor;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_union::ExplicitUnion::Tag::kPrimitive;
+        return cpp17::nullopt;
     }
   }
 };
@@ -2481,15 +2782,23 @@ class ExplicitStrictFoo {
     kI = 2,  // 0x2
   };
 
-  // Create an unknown value of this union.
-  ExplicitStrictFoo() : storage_(std::make_shared<Storage_>()) {}
-
-  ExplicitStrictFoo(ExplicitStrictFoo&&) noexcept = default;
-  ExplicitStrictFoo& operator=(ExplicitStrictFoo&&) noexcept = default;
+  ExplicitStrictFoo(ExplicitStrictFoo&& other) noexcept
+      : ExplicitStrictFoo(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  ExplicitStrictFoo& operator=(ExplicitStrictFoo&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   ExplicitStrictFoo(const ExplicitStrictFoo& other) noexcept
       : ExplicitStrictFoo(other.CloneStorage_()) {}
   ExplicitStrictFoo& operator=(const ExplicitStrictFoo& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -2501,7 +2810,7 @@ class ExplicitStrictFoo {
   }
 
   constexpr ::test_union::ExplicitStrictFoo::Tag Which() const {
-    return ExplicitStrictFoo::IndexToTag(storage_->index());
+    return ExplicitStrictFoo::IndexToTag(storage_->index()).value();
   }
   static ExplicitStrictFoo WithS(::std::string val) {
     return ExplicitStrictFoo(
@@ -2525,6 +2834,9 @@ class ExplicitStrictFoo {
   ::fidl::internal::UnionMemberView<2, Storage_> i() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  ExplicitStrictFoo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -2556,16 +2868,15 @@ class ExplicitStrictFoo {
     }
   }
 
-  static constexpr ::test_union::ExplicitStrictFoo::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<::test_union::ExplicitStrictFoo::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_union::ExplicitStrictFoo::Tag::kS;
       case 2:
         return ::test_union::ExplicitStrictFoo::Tag::kI;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_union::ExplicitStrictFoo::Tag::kS;
+        return cpp17::nullopt;
     }
   }
 };
@@ -2583,16 +2894,26 @@ class ExplicitFoo {
     kI = 1,  // 0x1
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-
   // Create an unknown value of this union.
   ExplicitFoo() : storage_(std::make_shared<Storage_>()) {}
 
-  ExplicitFoo(ExplicitFoo&&) noexcept = default;
-  ExplicitFoo& operator=(ExplicitFoo&&) noexcept = default;
+  ExplicitFoo(ExplicitFoo&& other) noexcept
+      : ExplicitFoo(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  ExplicitFoo& operator=(ExplicitFoo&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   ExplicitFoo(const ExplicitFoo& other) noexcept
       : ExplicitFoo(other.CloneStorage_()) {}
   ExplicitFoo& operator=(const ExplicitFoo& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -2604,7 +2925,7 @@ class ExplicitFoo {
   }
 
   constexpr ::test_union::ExplicitFoo::Tag Which() const {
-    return ExplicitFoo::IndexToTag(storage_->index());
+    return ExplicitFoo::IndexToTag(storage_->index()).value();
   }
   static ExplicitFoo WithS(::std::string val) {
     return ExplicitFoo(
@@ -2628,6 +2949,9 @@ class ExplicitFoo {
   ::fidl::internal::UnionMemberView<2, Storage_> i() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  ExplicitFoo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -2661,7 +2985,8 @@ class ExplicitFoo {
     }
   }
 
-  static constexpr ::test_union::ExplicitFoo::Tag IndexToTag(size_t index) {
+  static constexpr cpp17::optional<::test_union::ExplicitFoo::Tag> IndexToTag(
+      size_t index) {
     switch (index) {
       case 1:
         return ::test_union::ExplicitFoo::Tag::kS;
@@ -2683,7 +3008,13 @@ class Empty {
   Empty(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Empty(uint8_t __reserved) noexcept
       : storage_({.__reserved = std::move(__reserved)}) {}
-  Empty() : Empty(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Empty| only if all of its members are default
+  // constructible.
+  Empty() = default;
+#pragma clang diagnostic pop
 
   Empty(Empty&&) noexcept = default;
   Empty& operator=(Empty&&) noexcept = default;
@@ -2705,6 +3036,11 @@ class Empty {
   uint8_t __reserved() const { return storage_.__reserved; }
 
   uint8_t& __reserved() { return storage_.__reserved; }
+
+  Empty(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Empty(Storage_{
+            .__reserved = 0u,
+        }) {}
 
  private:
   struct Storage_ final {
@@ -2737,18 +3073,28 @@ class XUnionContainingEmptyStruct {
     kEmpty = 1,  // 0x1
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-
   // Create an unknown value of this union.
   XUnionContainingEmptyStruct() : storage_(std::make_shared<Storage_>()) {}
 
-  XUnionContainingEmptyStruct(XUnionContainingEmptyStruct&&) noexcept = default;
+  XUnionContainingEmptyStruct(XUnionContainingEmptyStruct&& other) noexcept
+      : XUnionContainingEmptyStruct(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
   XUnionContainingEmptyStruct& operator=(
-      XUnionContainingEmptyStruct&&) noexcept = default;
+      XUnionContainingEmptyStruct&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   XUnionContainingEmptyStruct(const XUnionContainingEmptyStruct& other) noexcept
       : XUnionContainingEmptyStruct(other.CloneStorage_()) {}
   XUnionContainingEmptyStruct& operator=(
       const XUnionContainingEmptyStruct& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -2760,7 +3106,7 @@ class XUnionContainingEmptyStruct {
   }
 
   constexpr ::test_union::XUnionContainingEmptyStruct::Tag Which() const {
-    return XUnionContainingEmptyStruct::IndexToTag(storage_->index());
+    return XUnionContainingEmptyStruct::IndexToTag(storage_->index()).value();
   }
   static XUnionContainingEmptyStruct WithEmpty(::test_union::Empty val) {
     return XUnionContainingEmptyStruct(
@@ -2773,6 +3119,10 @@ class XUnionContainingEmptyStruct {
   ::fidl::internal::UnionMemberView<1, Storage_> empty() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
+  XUnionContainingEmptyStruct(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -2803,8 +3153,9 @@ class XUnionContainingEmptyStruct {
     }
   }
 
-  static constexpr ::test_union::XUnionContainingEmptyStruct::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<
+      ::test_union::XUnionContainingEmptyStruct::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_union::XUnionContainingEmptyStruct::Tag::kEmpty;

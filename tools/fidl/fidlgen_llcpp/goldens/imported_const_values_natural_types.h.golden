@@ -29,7 +29,13 @@ class MyStruct {
   MyStruct(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   MyStruct(uint8_t __reserved) noexcept
       : storage_({.__reserved = std::move(__reserved)}) {}
-  MyStruct() : MyStruct(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |MyStruct| only if all of its members are default
+  // constructible.
+  MyStruct() = default;
+#pragma clang diagnostic pop
 
   MyStruct(MyStruct&&) noexcept = default;
   MyStruct& operator=(MyStruct&&) noexcept = default;
@@ -51,6 +57,11 @@ class MyStruct {
   uint8_t __reserved() const { return storage_.__reserved; }
 
   uint8_t& __reserved() { return storage_.__reserved; }
+
+  MyStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : MyStruct(Storage_{
+            .__reserved = 0u,
+        }) {}
 
  private:
   struct Storage_ final {

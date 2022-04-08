@@ -90,14 +90,16 @@ type StructMember struct {
 	Constraint        string
 }
 
-func (m StructMember) AsParameter() Parameter {
+var _ Member = (*StructMember)(nil)
+
+func (sm StructMember) AsParameter() Parameter {
 	return Parameter{
-		nameVariants:      m.nameVariants,
-		Type:              m.Type,
-		OffsetV1:          m.OffsetV1,
-		OffsetV2:          m.OffsetV2,
-		HandleInformation: m.HandleInformation,
-		Constraint:        m.Constraint,
+		nameVariants:      sm.nameVariants,
+		Type:              sm.Type,
+		OffsetV1:          sm.OffsetV1,
+		OffsetV2:          sm.OffsetV2,
+		HandleInformation: sm.HandleInformation,
+		Constraint:        sm.Constraint,
 	}
 }
 
@@ -109,7 +111,43 @@ func (sm StructMember) StorageName() string {
 	return sm.Name() + "_"
 }
 
-var _ Member = (*StructMember)(nil)
+// NaturalInitializer is an expression in natural types for initializing the
+// struct member within its struct field definition. May be empty if we choose
+// to delegate to the default constructor of the member type.
+func (sm StructMember) NaturalInitializer() string {
+	var unwrapArray func(ty *Type) string
+	unwrapArray = func(ty *Type) string {
+		if ty.IsPrimitiveType() {
+			// Zero initialize them.
+			return "{}"
+		}
+		if ty.Kind == TypeKinds.Array {
+			return unwrapArray(ty.ElementType)
+		}
+		return ""
+	}
+
+	if !sm.Type.Nullable {
+		return unwrapArray(&sm.Type)
+	}
+	return ""
+}
+
+// NaturalPossiblyInvalidDefaultInitializer is an expression in natural types
+// for how to default initialize the struct member within its struct field
+// definition. May result in an invalid object if it has a strict union
+// somewhere.
+func (sm StructMember) NaturalPossiblyInvalidDefaultInitializer() string {
+	if !sm.Type.Nullable {
+		switch sm.Type.Kind {
+		case TypeKinds.Array:
+			return fmt.Sprintf("::fidl::internal::DefaultConstructPossiblyInvalidObject<%s>::Make()", sm.Type.Unified)
+		case TypeKinds.Struct, TypeKinds.Table, TypeKinds.Union:
+			return "::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}"
+		}
+	}
+	return "{}"
+}
 
 func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 	t := c.compileType(val.Type)

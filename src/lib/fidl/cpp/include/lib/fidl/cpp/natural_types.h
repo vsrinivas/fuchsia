@@ -64,8 +64,15 @@ class UnionMemberView final {
     const V& variant = *storage;
     return std::get<I>(variant);
   }
+  T& value() & {
+    V& variant = *storage;
+    return std::get<I>(variant);
+  }
+  T& value() && { return value(); }
+
   const T* operator->() const& { return std::get_if<I>(storage.get()); }
   T* operator->() & { return std::get_if<I>(storage.get()); }
+  T* operator->() && { return operator->(); }
 
   template <class U>
   constexpr T value_or(U&& default_value) const& {
@@ -78,17 +85,17 @@ class UnionMemberView final {
 
   // TODO: comparison operators? emplace & swap?
 
-  // Move into a std::optional, invalidating the union.
+  // Move into a std::optional.
+  // The union holds the same field with a moved-from state.
   std::optional<T> take() && noexcept {
-    V v{};
-    storage->swap(v);
-    if (v.index() == I) {
-      return std::make_optional(std::move(std::get<I>(v)));
+    if (storage->index() == I) {
+      return std::make_optional(std::move(std::get<I>(*storage)));
     }
     return std::nullopt;
   }
 
   // Copy into an std::optional.
+  // The union holds the same field whose content is unchanged.
   template <typename U = T, typename = std::enable_if_t<std::is_copy_constructible<U>::value>>
   operator std::optional<T>() const& noexcept {
     if (storage->index() == I) {
@@ -118,6 +125,8 @@ class EncodeResult {
 //
 // |message| is always consumed.
 // |metadata| informs the wire format of the encoded message.
+//
+// TODO(fxbug.dev/82681): Make this API comply with the requirements in FIDL-at-rest.
 template <typename FidlType>
 ::fitx::result<::fidl::Error, FidlType> DecodeFrom(::fidl::IncomingMessage&& message,
                                                    ::fidl::internal::WireFormatMetadata metadata) {
@@ -135,7 +144,7 @@ template <typename FidlType>
     return ::fitx::error(::fidl::Error::DecodeError(decoder.status(), decoder.error()));
   }
 
-  FidlType value{};
+  FidlType value{DefaultConstructPossiblyInvalidObjectTag{}};
   ::fidl::internal::NaturalCodingTraits<FidlType, NaturalCodingConstraintEmpty>::Decode(
       &decoder, &value, offset, kRecursionDepthInitial);
   if (decoder.status() != ZX_OK) {

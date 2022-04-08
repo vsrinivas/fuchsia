@@ -32,7 +32,13 @@ class TwoWayAddTopResponse {
       : storage_(std::move(storage)) {}
   TwoWayAddTopResponse(uint16_t sum) noexcept
       : storage_({.sum = std::move(sum)}) {}
-  TwoWayAddTopResponse() : TwoWayAddTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |TwoWayAddTopResponse| only if all of its members are
+  // default constructible.
+  TwoWayAddTopResponse() = default;
+#pragma clang diagnostic pop
 
   TwoWayAddTopResponse(TwoWayAddTopResponse&&) noexcept = default;
   TwoWayAddTopResponse& operator=(TwoWayAddTopResponse&&) noexcept = default;
@@ -56,9 +62,15 @@ class TwoWayAddTopResponse {
 
   uint16_t& sum() { return storage_.sum; }
 
+  TwoWayAddTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : TwoWayAddTopResponse(Storage_{
+            .sum = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint16_t sum{};
+    uint16_t sum = {};
   };
 
   Storage_ storage_;
@@ -87,7 +99,13 @@ class TwoWayAddRequest {
   TwoWayAddRequest(uint16_t addend1, uint16_t addend2) noexcept
       : storage_(
             {.addend1 = std::move(addend1), .addend2 = std::move(addend2)}) {}
-  TwoWayAddRequest() : TwoWayAddRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |TwoWayAddRequest| only if all of its members are
+  // default constructible.
+  TwoWayAddRequest() = default;
+#pragma clang diagnostic pop
 
   TwoWayAddRequest(TwoWayAddRequest&&) noexcept = default;
   TwoWayAddRequest& operator=(TwoWayAddRequest&&) noexcept = default;
@@ -115,10 +133,16 @@ class TwoWayAddRequest {
 
   uint16_t& addend2() { return storage_.addend2; }
 
+  TwoWayAddRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : TwoWayAddRequest(Storage_{
+            .addend1 = {},
+            .addend2 = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint16_t addend1{};
-    uint16_t addend2{};
+    uint16_t addend1 = {};
+    uint16_t addend2 = {};
   };
 
   Storage_ storage_;

@@ -1975,10 +1975,10 @@ class ::fidl::internal::NaturalMessageConverter<
   static ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>
   FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(*o.result().err().take()));
+      return ::fitx::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(*o.result().response().take()));
+      return ::fitx::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -2036,7 +2036,7 @@ class ::fidl::internal::NaturalMessageConverter<
   static ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
   FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(*o.result().err().take()));
+      return ::fitx::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
       return ::fitx::ok();
@@ -2093,7 +2093,7 @@ class ::fidl::internal::NaturalMessageConverter<
   static ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum>
   FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(*o.result().err().take()));
+      return ::fitx::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
       return ::fitx::ok();
@@ -2156,10 +2156,10 @@ class ::fidl::internal::NaturalMessageConverter<
   static ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult>
   FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(*o.result().err().take()));
+      return ::fitx::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(*o.result().response().take()));
+      return ::fitx::ok(std::move(o.result().response().value()));
     }
   }
 

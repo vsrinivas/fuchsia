@@ -64,6 +64,9 @@ class Table {
   /// table field comment #3
   ::cpp17::optional<int32_t>& field() { return storage_.field; }
 
+  Table(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Table(Storage_{}) {}
+
  private:
   struct Storage_ final {
     /// table field comment #1
@@ -96,7 +99,13 @@ class Struct {
  public:
   Struct(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Struct(int32_t field) noexcept : storage_({.field = std::move(field)}) {}
-  Struct() : Struct(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Struct| only if all of its members are default
+  // constructible.
+  Struct() = default;
+#pragma clang diagnostic pop
 
   Struct(Struct&&) noexcept = default;
   Struct& operator=(Struct&&) noexcept = default;
@@ -125,12 +134,17 @@ class Struct {
   /// struct member comment #3
   int32_t& field() { return storage_.field; }
 
+  Struct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Struct(Storage_{
+            .field = {},
+        }) {}
+
  private:
   struct Storage_ final {
     /// struct member comment #1
     ///
     /// struct member comment #3
-    int32_t field{};
+    int32_t field = {};
   };
 
   Storage_ storage_;
@@ -162,15 +176,23 @@ class StrictUnion {
     kField = 1,  // 0x1
   };
 
-  // Create an unknown value of this union.
-  StrictUnion() : storage_(std::make_shared<Storage_>()) {}
-
-  StrictUnion(StrictUnion&&) noexcept = default;
-  StrictUnion& operator=(StrictUnion&&) noexcept = default;
+  StrictUnion(StrictUnion&& other) noexcept
+      : StrictUnion(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  StrictUnion& operator=(StrictUnion&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   StrictUnion(const StrictUnion& other) noexcept
       : StrictUnion(other.CloneStorage_()) {}
   StrictUnion& operator=(const StrictUnion& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -182,7 +204,7 @@ class StrictUnion {
   }
 
   constexpr ::test_doccomments::StrictUnion::Tag Which() const {
-    return StrictUnion::IndexToTag(storage_->index());
+    return StrictUnion::IndexToTag(storage_->index()).value();
   }
   static StrictUnion WithField(int32_t val) {
     return StrictUnion(
@@ -195,6 +217,9 @@ class StrictUnion {
   ::fidl::internal::UnionMemberView<1, Storage_> field() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
+  StrictUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -222,14 +247,13 @@ class StrictUnion {
     }
   }
 
-  static constexpr ::test_doccomments::StrictUnion::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<::test_doccomments::StrictUnion::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_doccomments::StrictUnion::Tag::kField;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_doccomments::StrictUnion::Tag::kField;
+        return cpp17::nullopt;
     }
   }
 };
@@ -249,16 +273,26 @@ class FlexibleUnion {
     kField = 1,  // 0x1
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-
   // Create an unknown value of this union.
   FlexibleUnion() : storage_(std::make_shared<Storage_>()) {}
 
-  FlexibleUnion(FlexibleUnion&&) noexcept = default;
-  FlexibleUnion& operator=(FlexibleUnion&&) noexcept = default;
+  FlexibleUnion(FlexibleUnion&& other) noexcept
+      : FlexibleUnion(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  FlexibleUnion& operator=(FlexibleUnion&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   FlexibleUnion(const FlexibleUnion& other) noexcept
       : FlexibleUnion(other.CloneStorage_()) {}
   FlexibleUnion& operator=(const FlexibleUnion& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -270,7 +304,7 @@ class FlexibleUnion {
   }
 
   constexpr ::test_doccomments::FlexibleUnion::Tag Which() const {
-    return FlexibleUnion::IndexToTag(storage_->index());
+    return FlexibleUnion::IndexToTag(storage_->index()).value();
   }
   static FlexibleUnion WithField(int32_t val) {
     return FlexibleUnion(
@@ -283,6 +317,9 @@ class FlexibleUnion {
   ::fidl::internal::UnionMemberView<1, Storage_> field() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
+  FlexibleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -313,8 +350,8 @@ class FlexibleUnion {
     }
   }
 
-  static constexpr ::test_doccomments::FlexibleUnion::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<::test_doccomments::FlexibleUnion::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_doccomments::FlexibleUnion::Tag::kField;

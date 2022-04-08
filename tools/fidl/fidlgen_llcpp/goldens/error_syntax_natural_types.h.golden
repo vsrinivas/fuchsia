@@ -39,8 +39,13 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Response {
       : storage_(std::move(storage)) {}
   ExampleUseOfErrorSyntax_CallWhichMayFail_Response(int64_t value) noexcept
       : storage_({.value = std::move(value)}) {}
-  ExampleUseOfErrorSyntax_CallWhichMayFail_Response()
-      : ExampleUseOfErrorSyntax_CallWhichMayFail_Response(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ExampleUseOfErrorSyntax_CallWhichMayFail_Response|
+  // only if all of its members are default constructible.
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Response() = default;
+#pragma clang diagnostic pop
 
   ExampleUseOfErrorSyntax_CallWhichMayFail_Response(
       ExampleUseOfErrorSyntax_CallWhichMayFail_Response&&) noexcept = default;
@@ -73,9 +78,15 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Response {
 
   int64_t& value() { return storage_.value; }
 
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Response(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ExampleUseOfErrorSyntax_CallWhichMayFail_Response(Storage_{
+            .value = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    int64_t value{};
+    int64_t value = {};
   };
 
   Storage_ storage_;
@@ -111,21 +122,28 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Result {
     kErr = 2,       // 0x2
   };
 
-  // Create an unknown value of this union.
-  ExampleUseOfErrorSyntax_CallWhichMayFail_Result()
-      : storage_(std::make_shared<Storage_>()) {}
-
   ExampleUseOfErrorSyntax_CallWhichMayFail_Result(
-      ExampleUseOfErrorSyntax_CallWhichMayFail_Result&&) noexcept = default;
+      ExampleUseOfErrorSyntax_CallWhichMayFail_Result&& other) noexcept
+      : ExampleUseOfErrorSyntax_CallWhichMayFail_Result(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
   ExampleUseOfErrorSyntax_CallWhichMayFail_Result& operator=(
-      ExampleUseOfErrorSyntax_CallWhichMayFail_Result&&) noexcept = default;
+      ExampleUseOfErrorSyntax_CallWhichMayFail_Result&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   ExampleUseOfErrorSyntax_CallWhichMayFail_Result(
       const ExampleUseOfErrorSyntax_CallWhichMayFail_Result& other) noexcept
       : ExampleUseOfErrorSyntax_CallWhichMayFail_Result(other.CloneStorage_()) {
   }
   ExampleUseOfErrorSyntax_CallWhichMayFail_Result& operator=(
       const ExampleUseOfErrorSyntax_CallWhichMayFail_Result& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -142,7 +160,8 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Result {
       ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Tag
       Which() const {
     return ExampleUseOfErrorSyntax_CallWhichMayFail_Result::IndexToTag(
-        storage_->index());
+               storage_->index())
+        .value();
   }
   static ExampleUseOfErrorSyntax_CallWhichMayFail_Result WithResponse(
       ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response
@@ -168,6 +187,10 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Result {
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Result(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -204,9 +227,9 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Result {
     }
   }
 
-  static constexpr ::test_errorsyntax::
-      ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Tag
-      IndexToTag(size_t index) {
+  static constexpr cpp17::optional<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_errorsyntax::
@@ -214,10 +237,8 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Result {
       case 2:
         return ::test_errorsyntax::
             ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Tag::kErr;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_errorsyntax::
-            ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Tag::kResponse;
+        return cpp17::nullopt;
     }
   }
 };
@@ -236,8 +257,13 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse {
       ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result
           result) noexcept
       : storage_({.result = std::move(result)}) {}
-  ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse()
-      : ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse|
+  // only if all of its members are default constructible.
+  ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse() = default;
+#pragma clang diagnostic pop
 
   ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(
       ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse&&) noexcept = default;
@@ -277,10 +303,16 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse {
     return storage_.result;
   }
 
+  ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(Storage_{
+            .result =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result
-        result{};
+    ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result result;
   };
 
   Storage_ storage_;
@@ -313,8 +345,13 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailRequest {
       : storage_(std::move(storage)) {}
   ExampleUseOfErrorSyntaxCallWhichMayFailRequest(::std::string s) noexcept
       : storage_({.s = std::move(s)}) {}
-  ExampleUseOfErrorSyntaxCallWhichMayFailRequest()
-      : ExampleUseOfErrorSyntaxCallWhichMayFailRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ExampleUseOfErrorSyntaxCallWhichMayFailRequest| only
+  // if all of its members are default constructible.
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest() = default;
+#pragma clang diagnostic pop
 
   ExampleUseOfErrorSyntaxCallWhichMayFailRequest(
       ExampleUseOfErrorSyntaxCallWhichMayFailRequest&&) noexcept = default;
@@ -346,9 +383,15 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailRequest {
 
   ::std::string& s() { return storage_.s; }
 
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ExampleUseOfErrorSyntaxCallWhichMayFailRequest(Storage_{
+            .s = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::std::string s{};
+    ::std::string s;
   };
 
   Storage_ storage_;

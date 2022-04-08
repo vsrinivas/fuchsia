@@ -52,7 +52,13 @@ class StructWithNullableVector {
   StructWithNullableVector(
       ::cpp17::optional<::std::vector<int32_t>> val) noexcept
       : storage_({.val = std::move(val)}) {}
-  StructWithNullableVector() : StructWithNullableVector(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |StructWithNullableVector| only if all of its members
+  // are default constructible.
+  StructWithNullableVector() = default;
+#pragma clang diagnostic pop
 
   StructWithNullableVector(StructWithNullableVector&&) noexcept = default;
   StructWithNullableVector& operator=(StructWithNullableVector&&) noexcept =
@@ -80,9 +86,15 @@ class StructWithNullableVector {
 
   ::cpp17::optional<::std::vector<int32_t>>& val() { return storage_.val; }
 
+  StructWithNullableVector(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : StructWithNullableVector(Storage_{
+            .val = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::cpp17::optional<::std::vector<int32_t>> val{};
+    ::cpp17::optional<::std::vector<int32_t>> val;
   };
 
   Storage_ storage_;
@@ -114,7 +126,13 @@ class StructWithNullableUnion {
   StructWithNullableUnion(
       ::std::unique_ptr<::test_nullable::SimpleUnion> val) noexcept
       : storage_({.val = std::move(val)}) {}
-  StructWithNullableUnion() : StructWithNullableUnion(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |StructWithNullableUnion| only if all of its members
+  // are default constructible.
+  StructWithNullableUnion() = default;
+#pragma clang diagnostic pop
 
   StructWithNullableUnion(StructWithNullableUnion&&) noexcept = default;
   StructWithNullableUnion& operator=(StructWithNullableUnion&&) noexcept =
@@ -144,9 +162,15 @@ class StructWithNullableUnion {
     return storage_.val;
   }
 
+  StructWithNullableUnion(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : StructWithNullableUnion(Storage_{
+            .val = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::std::unique_ptr<::test_nullable::SimpleUnion> val{};
+    ::std::unique_ptr<::test_nullable::SimpleUnion> val;
   };
 
   Storage_ storage_;
@@ -176,7 +200,13 @@ class StructWithNullableStruct {
   StructWithNullableStruct(
       ::std::unique_ptr<::test_nullable::Int32Wrapper> val) noexcept
       : storage_({.val = std::move(val)}) {}
-  StructWithNullableStruct() : StructWithNullableStruct(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |StructWithNullableStruct| only if all of its members
+  // are default constructible.
+  StructWithNullableStruct() = default;
+#pragma clang diagnostic pop
 
   StructWithNullableStruct(StructWithNullableStruct&&) noexcept = default;
   StructWithNullableStruct& operator=(StructWithNullableStruct&&) noexcept =
@@ -206,9 +236,15 @@ class StructWithNullableStruct {
     return storage_.val;
   }
 
+  StructWithNullableStruct(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : StructWithNullableStruct(Storage_{
+            .val = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::std::unique_ptr<::test_nullable::Int32Wrapper> val{};
+    ::std::unique_ptr<::test_nullable::Int32Wrapper> val;
   };
 
   Storage_ storage_;
@@ -237,7 +273,13 @@ class StructWithNullableString {
       : storage_(std::move(storage)) {}
   StructWithNullableString(::cpp17::optional<::std::string> val) noexcept
       : storage_({.val = std::move(val)}) {}
-  StructWithNullableString() : StructWithNullableString(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |StructWithNullableString| only if all of its members
+  // are default constructible.
+  StructWithNullableString() = default;
+#pragma clang diagnostic pop
 
   StructWithNullableString(StructWithNullableString&&) noexcept = default;
   StructWithNullableString& operator=(StructWithNullableString&&) noexcept =
@@ -263,9 +305,15 @@ class StructWithNullableString {
 
   ::cpp17::optional<::std::string>& val() { return storage_.val; }
 
+  StructWithNullableString(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : StructWithNullableString(Storage_{
+            .val = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::cpp17::optional<::std::string> val{};
+    ::cpp17::optional<::std::string> val;
   };
 
   Storage_ storage_;
@@ -298,7 +346,13 @@ class StructWithNullableRequest {
   StructWithNullableRequest(
       ::fidl::ServerEnd<::test_nullable::SimpleProtocol> val) noexcept
       : storage_({.val = std::move(val)}) {}
-  StructWithNullableRequest() : StructWithNullableRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |StructWithNullableRequest| only if all of its members
+  // are default constructible.
+  StructWithNullableRequest() = default;
+#pragma clang diagnostic pop
 
   StructWithNullableRequest(StructWithNullableRequest&&) noexcept = default;
   StructWithNullableRequest& operator=(StructWithNullableRequest&&) noexcept =
@@ -312,9 +366,15 @@ class StructWithNullableRequest {
     return storage_.val;
   }
 
+  StructWithNullableRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : StructWithNullableRequest(Storage_{
+            .val = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::fidl::ServerEnd<::test_nullable::SimpleProtocol> val{};
+    ::fidl::ServerEnd<::test_nullable::SimpleProtocol> val;
   };
 
   Storage_ storage_;
@@ -349,7 +409,13 @@ class StructWithNullableProtocol {
   StructWithNullableProtocol(
       ::fidl::ClientEnd<::test_nullable::SimpleProtocol> val) noexcept
       : storage_({.val = std::move(val)}) {}
-  StructWithNullableProtocol() : StructWithNullableProtocol(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |StructWithNullableProtocol| only if all of its
+  // members are default constructible.
+  StructWithNullableProtocol() = default;
+#pragma clang diagnostic pop
 
   StructWithNullableProtocol(StructWithNullableProtocol&&) noexcept = default;
   StructWithNullableProtocol& operator=(StructWithNullableProtocol&&) noexcept =
@@ -363,9 +429,15 @@ class StructWithNullableProtocol {
     return storage_.val;
   }
 
+  StructWithNullableProtocol(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : StructWithNullableProtocol(Storage_{
+            .val = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::fidl::ClientEnd<::test_nullable::SimpleProtocol> val{};
+    ::fidl::ClientEnd<::test_nullable::SimpleProtocol> val;
   };
 
   Storage_ storage_;
@@ -399,7 +471,13 @@ class StructWithNullableHandle {
       : storage_(std::move(storage)) {}
   StructWithNullableHandle(::zx::vmo val) noexcept
       : storage_({.val = std::move(val)}) {}
-  StructWithNullableHandle() : StructWithNullableHandle(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |StructWithNullableHandle| only if all of its members
+  // are default constructible.
+  StructWithNullableHandle() = default;
+#pragma clang diagnostic pop
 
   StructWithNullableHandle(StructWithNullableHandle&&) noexcept = default;
   StructWithNullableHandle& operator=(StructWithNullableHandle&&) noexcept =
@@ -409,9 +487,15 @@ class StructWithNullableHandle {
 
   ::zx::vmo& val() { return storage_.val; }
 
+  StructWithNullableHandle(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : StructWithNullableHandle(Storage_{
+            .val = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::zx::vmo val{};
+    ::zx::vmo val;
   };
 
   Storage_ storage_;
@@ -445,15 +529,23 @@ class SimpleUnion {
     kB = 2,  // 0x2
   };
 
-  // Create an unknown value of this union.
-  SimpleUnion() : storage_(std::make_shared<Storage_>()) {}
-
-  SimpleUnion(SimpleUnion&&) noexcept = default;
-  SimpleUnion& operator=(SimpleUnion&&) noexcept = default;
+  SimpleUnion(SimpleUnion&& other) noexcept
+      : SimpleUnion(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  SimpleUnion& operator=(SimpleUnion&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   SimpleUnion(const SimpleUnion& other) noexcept
       : SimpleUnion(other.CloneStorage_()) {}
   SimpleUnion& operator=(const SimpleUnion& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -465,7 +557,7 @@ class SimpleUnion {
   }
 
   constexpr ::test_nullable::SimpleUnion::Tag Which() const {
-    return SimpleUnion::IndexToTag(storage_->index());
+    return SimpleUnion::IndexToTag(storage_->index()).value();
   }
   static SimpleUnion WithA(int32_t val) {
     return SimpleUnion(
@@ -489,6 +581,9 @@ class SimpleUnion {
   ::fidl::internal::UnionMemberView<2, Storage_> b() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  SimpleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -520,15 +615,15 @@ class SimpleUnion {
     }
   }
 
-  static constexpr ::test_nullable::SimpleUnion::Tag IndexToTag(size_t index) {
+  static constexpr cpp17::optional<::test_nullable::SimpleUnion::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_nullable::SimpleUnion::Tag::kA;
       case 2:
         return ::test_nullable::SimpleUnion::Tag::kB;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_nullable::SimpleUnion::Tag::kA;
+        return cpp17::nullopt;
     }
   }
 };
@@ -544,7 +639,13 @@ class SimpleProtocolAddTopResponse {
       : storage_(std::move(storage)) {}
   SimpleProtocolAddTopResponse(int32_t sum) noexcept
       : storage_({.sum = std::move(sum)}) {}
-  SimpleProtocolAddTopResponse() : SimpleProtocolAddTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |SimpleProtocolAddTopResponse| only if all of its
+  // members are default constructible.
+  SimpleProtocolAddTopResponse() = default;
+#pragma clang diagnostic pop
 
   SimpleProtocolAddTopResponse(SimpleProtocolAddTopResponse&&) noexcept =
       default;
@@ -574,9 +675,15 @@ class SimpleProtocolAddTopResponse {
 
   int32_t& sum() { return storage_.sum; }
 
+  SimpleProtocolAddTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : SimpleProtocolAddTopResponse(Storage_{
+            .sum = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    int32_t sum{};
+    int32_t sum = {};
   };
 
   Storage_ storage_;
@@ -605,7 +712,13 @@ class SimpleProtocolAddRequest {
       : storage_(std::move(storage)) {}
   SimpleProtocolAddRequest(int32_t a, int32_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  SimpleProtocolAddRequest() : SimpleProtocolAddRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |SimpleProtocolAddRequest| only if all of its members
+  // are default constructible.
+  SimpleProtocolAddRequest() = default;
+#pragma clang diagnostic pop
 
   SimpleProtocolAddRequest(SimpleProtocolAddRequest&&) noexcept = default;
   SimpleProtocolAddRequest& operator=(SimpleProtocolAddRequest&&) noexcept =
@@ -635,10 +748,17 @@ class SimpleProtocolAddRequest {
 
   int32_t& b() { return storage_.b; }
 
+  SimpleProtocolAddRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : SimpleProtocolAddRequest(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    int32_t a{};
-    int32_t b{};
+    int32_t a = {};
+    int32_t b = {};
   };
 
   Storage_ storage_;
@@ -668,7 +788,13 @@ class Int32Wrapper {
  public:
   Int32Wrapper(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Int32Wrapper(int32_t val) noexcept : storage_({.val = std::move(val)}) {}
-  Int32Wrapper() : Int32Wrapper(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Int32Wrapper| only if all of its members are default
+  // constructible.
+  Int32Wrapper() = default;
+#pragma clang diagnostic pop
 
   Int32Wrapper(Int32Wrapper&&) noexcept = default;
   Int32Wrapper& operator=(Int32Wrapper&&) noexcept = default;
@@ -692,9 +818,14 @@ class Int32Wrapper {
 
   int32_t& val() { return storage_.val; }
 
+  Int32Wrapper(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Int32Wrapper(Storage_{
+            .val = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    int32_t val{};
+    int32_t val = {};
   };
 
   Storage_ storage_;

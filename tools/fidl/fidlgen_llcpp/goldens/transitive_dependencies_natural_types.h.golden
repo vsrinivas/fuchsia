@@ -28,7 +28,13 @@ class Baz {
  public:
   Baz(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Baz(::test_middle::Bar g) noexcept : storage_({.g = std::move(g)}) {}
-  Baz() : Baz(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Baz| only if all of its members are default
+  // constructible.
+  Baz() = default;
+#pragma clang diagnostic pop
 
   Baz(Baz&&) noexcept = default;
   Baz& operator=(Baz&&) noexcept = default;
@@ -51,9 +57,14 @@ class Baz {
 
   ::test_middle::Bar& g() { return storage_.g; }
 
+  Baz(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Baz(Storage_{
+            .g = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_middle::Bar g{};
+    ::test_middle::Bar g;
   };
 
   Storage_ storage_;

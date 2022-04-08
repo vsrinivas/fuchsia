@@ -300,10 +300,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<
       ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>
   FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(*o.result().err().take()));
+      return ::fitx::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(*o.result().response().take()));
+      return ::fitx::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -379,10 +379,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<
       ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>
   FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(*o.result().err().take()));
+      return ::fitx::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(*o.result().response().take()));
+      return ::fitx::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -455,10 +455,10 @@ class ::fidl::internal::NaturalMessageConverter<
   static ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError>
   FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(*o.result().err().take()));
+      return ::fitx::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(*o.result().response().take()));
+      return ::fitx::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -528,10 +528,10 @@ class ::fidl::internal::NaturalMessageConverter<
   static ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError>
   FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(*o.result().err().take()));
+      return ::fitx::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(*o.result().response().take()));
+      return ::fitx::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -606,10 +606,10 @@ class ::fidl::internal::NaturalMessageConverter<
   static ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError>
   FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(*o.result().err().take()));
+      return ::fitx::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(*o.result().response().take()));
+      return ::fitx::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -705,10 +705,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<
       ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
   FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(*o.result().err().take()));
+      return ::fitx::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(*o.result().response().take()));
+      return ::fitx::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -809,10 +809,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<
       ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
   FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(*o.result().err().take()));
+      return ::fitx::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(*o.result().response().take()));
+      return ::fitx::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -909,10 +909,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<
       ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
   FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(*o.result().err().take()));
+      return ::fitx::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(*o.result().response().take()));
+      return ::fitx::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -1007,10 +1007,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<
       ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
   FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(*o.result().err().take()));
+      return ::fitx::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(*o.result().response().take()));
+      return ::fitx::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -1111,10 +1111,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<
       ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
   FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(*o.result().err().take()));
+      return ::fitx::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(*o.result().response().take()));
+      return ::fitx::ok(std::move(o.result().response().value()));
     }
   }
 

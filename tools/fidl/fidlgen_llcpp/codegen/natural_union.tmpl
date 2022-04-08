@@ -24,9 +24,10 @@ class {{ .Name }} {
     cpp17::variant<
       cpp17::monostate
       {{- range .Members }}
-        , {{- .Type }}
+        , {{ .Type }}
       {{- end -}}
     >;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class {{ .TagEnum.Self }} : fidl_union_tag_t {
@@ -38,15 +39,27 @@ class {{ .Name }} {
   {{- end }}
   };
 
+  {{- if .IsFlexible }}
   // Create an unknown value of this union.
   {{ .Name }}() : storage_(std::make_shared<Storage_>()) {}
+  {{- end }}
 
-  {{ .Name }}({{ .Name }}&&) noexcept = default;
-  {{ .Name }}& operator=({{ .Name }}&&) noexcept = default;
+  {{ .Name }}({{ .Name }}&& other) noexcept
+      : {{ .Name }}(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  {{ .Name }}& operator=({{ .Name }}&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   {{- if not .IsResourceType }}
     {{ .Name }}(const {{ .Name }}& other) noexcept : {{ .Name }}(other.CloneStorage_()){}
     {{ .Name }}& operator=(const {{ .Name }}& other) noexcept {
-      storage_ = other.CloneStorage_();
+      if (this != &other) {
+        storage_ = other.CloneStorage_();
+      }
       return *this;
     }
 
@@ -59,7 +72,7 @@ class {{ .Name }} {
   {{- end }}
 
   constexpr {{ .TagEnum }} Which() const {
-    return {{ .Name }}::IndexToTag(storage_->index());
+    return {{ .Name }}::IndexToTag(storage_->index()).value();
   }
 
   {{- range .Members }}
@@ -69,14 +82,15 @@ class {{ .Name }} {
         std::move(val)));
     }
 
-    const ::fidl::internal::UnionMemberView<{{ .NaturalIndex }}, Storage_>
-        {{ .Name }}() const {
+    const ::fidl::internal::UnionMemberView<{{ .NaturalIndex }}, Storage_> {{ .Name }}() const {
       return ::fidl::internal::UnionMemberView<{{ .NaturalIndex }}, Storage_>(storage_);
     }
     ::fidl::internal::UnionMemberView<{{ .NaturalIndex }}, Storage_> {{ .Name }}() {
       return ::fidl::internal::UnionMemberView<{{ .NaturalIndex }}, Storage_>(storage_);
     }
   {{- end }}
+
+  {{ .Name }}(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -87,8 +101,7 @@ class {{ .Name }} {
   static constexpr auto kMembers = std::make_tuple(
     ::fidl::internal::NaturalUnionMember<::fidl::internal::NaturalCodingConstraintEmpty>()
     {{- range $i, $m := .Members }}
-      ,
-        ::fidl::internal::NaturalUnionMember<{{ $m.Constraint }}>()
+      , ::fidl::internal::NaturalUnionMember<{{ $m.Constraint }}>()
     {{- end -}}
   );
 
@@ -109,7 +122,7 @@ class {{ .Name }} {
     }
   }
 
-  static constexpr {{ .TagEnum }} IndexToTag(size_t index) {
+  static constexpr cpp17::optional<{{ .TagEnum }}> IndexToTag(size_t index) {
     switch (index) {
       {{- range  .Members }}
         case {{ .NaturalIndex }}: return {{ .TagName }};
@@ -117,8 +130,7 @@ class {{ .Name }} {
       {{- if .IsFlexible }}
         default: return {{ .TagUnknown }};
       {{- else }}
-        // TODO: what's the right thing to do here?
-        default: return {{ (index .Members 0).TagName }};
+        default: return cpp17::nullopt;
       {{- end }}
     }
   }

@@ -131,7 +131,7 @@ func (a *builder) visit(value gidlir.Value, decl gidlmixer.Declaration) string {
 
 func (b *builder) visitStructOrTable(value gidlir.Record, decl gidlmixer.RecordDeclaration, isPointer bool) string {
 	s := b.newVar()
-	structRaw := fmt.Sprintf("%s{}", typeNameIgnoreNullable(decl))
+	structRaw := fmt.Sprintf("%s{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}}", typeNameIgnoreNullable(decl))
 	var op string
 	if isPointer {
 		op = "->"
@@ -173,7 +173,7 @@ func (a *builder) visitUnion(value gidlir.Record, decl *gidlmixer.UnionDecl, isP
 }
 
 func (a *builder) visitArray(value []gidlir.Value, decl *gidlmixer.ArrayDecl, isPointer bool) string {
-	array := a.assignNew(typeNameIgnoreNullable(decl), isPointer, "")
+	array := a.assignNew(typeNameIgnoreNullable(decl), isPointer, "::fidl::internal::DefaultConstructPossiblyInvalidObject<%s>::Make()", typeNameIgnoreNullable(decl))
 	op := ""
 	if isPointer {
 		op = ".get()"
@@ -186,19 +186,28 @@ func (a *builder) visitArray(value []gidlir.Value, decl *gidlmixer.ArrayDecl, is
 }
 
 func (a *builder) visitVector(value []gidlir.Value, decl *gidlmixer.VectorDecl, isPointer bool) string {
-	vector := a.assignNew(typeName(decl), isPointer, "%d", len(value))
+	vector := a.assignNew(typeName(decl), isPointer, "")
+	if decl.IsNullable() {
+		a.write("%s.emplace();\n", vector)
+	}
 	if len(value) == 0 {
 		return fmt.Sprintf("std::move(%s)", vector)
 	}
 	// Special case unsigned integer vectors, because clang otherwise has issues with large vectors on arm.
 	// This uses pattern matching so only a subset of byte vectors that fit the pattern (repeating sequence) will be optimized.
 	if elemDecl, ok := decl.Elem().(gidlmixer.PrimitiveDeclaration); ok && elemDecl.Subtype() == fidlgen.Uint8 {
+
 		var uintValues []uint64
 		for _, v := range value {
 			uintValues = append(uintValues, v.(uint64))
 		}
 		// For simplicity, only support sizes that are multiples of the period.
 		if period, ok := gidlutil.FindRepeatingPeriod(uintValues); ok && len(value)%period == 0 {
+			if decl.IsNullable() {
+				a.write("%s.value().resize(%d);\n", vector, len(value))
+			} else {
+				a.write("%s.resize(%d);\n", vector, len(value))
+			}
 			for i := 0; i < period; i++ {
 				elem := a.visit(value[i], decl.Elem())
 				a.write("%s[%d] = %s;\n", vector, i, elem)
@@ -215,12 +224,12 @@ memcpy(%[1]s.data() + offset, %[1]s.data(), %[2]d);
 		}
 	}
 
-	for i, item := range value {
+	for _, item := range value {
 		elem := a.visit(item, decl.Elem())
 		if decl.IsNullable() {
-			a.write("%s.value()[%d] = %s;\n", vector, i, elem)
+			a.write("%s.value().emplace_back(%s);\n", vector, elem)
 		} else {
-			a.write("%s[%d] = %s;\n", vector, i, elem)
+			a.write("%s.emplace_back(%s);\n", vector, elem)
 		}
 	}
 	return fmt.Sprintf("std::move(%s)", vector)

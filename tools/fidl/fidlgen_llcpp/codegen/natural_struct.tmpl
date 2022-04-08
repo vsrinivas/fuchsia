@@ -36,7 +36,12 @@ class {{ .Name }} {
     {{- end }}
     }) {}
   {{- end }}
-  {{ .Name }}() : {{ .Name }}(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |{{ .Name }}| only if all of its members are default constructible.
+  {{ .Name }}() = default;
+#pragma clang diagnostic pop
 
   {{ .Name }}({{ .Name }}&&) noexcept = default;
   {{ .Name }}& operator=({{ .Name }}&&) noexcept = default;
@@ -73,16 +78,30 @@ class {{ .Name }} {
       return storage_.{{ .Name }};
     }
   {{- end }}
+
+  {{ .Name }}(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : {{ .Name }}(Storage_{
+    {{- range .Members }}
+      .{{ .Name }} =
+      {{- if .DefaultValue.IsSet }}
+        {{- .DefaultValue }}
+      {{- else }}
+        {{- .NaturalPossiblyInvalidDefaultInitializer }}
+      {{- end }},
+    {{- end }}
+  }) {}
+
  private:
   struct Storage_ final {
     {{- range .Members }}
       {{- .Docs }}
       {{ .Type }} {{ .Name }}
       {{- if .DefaultValue.IsSet }}
-        = {{ .DefaultValue }};
+        = {{- .DefaultValue }}
       {{- else }}
-        {};
-      {{- end }}
+        {{- if .NaturalInitializer }}
+        = {{ .NaturalInitializer }}
+        {{- end }}
+      {{- end }};
     {{- end }}
   };
 

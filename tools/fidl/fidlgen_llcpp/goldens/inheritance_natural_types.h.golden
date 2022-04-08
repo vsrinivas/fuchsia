@@ -31,7 +31,13 @@ class SuperFooTopResponse {
   SuperFooTopResponse(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   SuperFooTopResponse(int64_t y) noexcept : storage_({.y = std::move(y)}) {}
-  SuperFooTopResponse() : SuperFooTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |SuperFooTopResponse| only if all of its members are
+  // default constructible.
+  SuperFooTopResponse() = default;
+#pragma clang diagnostic pop
 
   SuperFooTopResponse(SuperFooTopResponse&&) noexcept = default;
   SuperFooTopResponse& operator=(SuperFooTopResponse&&) noexcept = default;
@@ -55,9 +61,15 @@ class SuperFooTopResponse {
 
   int64_t& y() { return storage_.y; }
 
+  SuperFooTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : SuperFooTopResponse(Storage_{
+            .y = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    int64_t y{};
+    int64_t y = {};
   };
 
   Storage_ storage_;
@@ -84,7 +96,13 @@ class SuperFooRequest {
  public:
   SuperFooRequest(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   SuperFooRequest(::std::string s) noexcept : storage_({.s = std::move(s)}) {}
-  SuperFooRequest() : SuperFooRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |SuperFooRequest| only if all of its members are
+  // default constructible.
+  SuperFooRequest() = default;
+#pragma clang diagnostic pop
 
   SuperFooRequest(SuperFooRequest&&) noexcept = default;
   SuperFooRequest& operator=(SuperFooRequest&&) noexcept = default;
@@ -108,9 +126,14 @@ class SuperFooRequest {
 
   ::std::string& s() { return storage_.s; }
 
+  SuperFooRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : SuperFooRequest(Storage_{
+            .s = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::std::string s{};
+    ::std::string s;
   };
 
   Storage_ storage_;

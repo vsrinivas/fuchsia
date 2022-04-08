@@ -58,7 +58,13 @@ class Padding7ByteMiddle {
       : storage_(std::move(storage)) {}
   Padding7ByteMiddle(uint8_t a, uint64_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding7ByteMiddle() : Padding7ByteMiddle(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding7ByteMiddle| only if all of its members are
+  // default constructible.
+  Padding7ByteMiddle() = default;
+#pragma clang diagnostic pop
 
   Padding7ByteMiddle(Padding7ByteMiddle&&) noexcept = default;
   Padding7ByteMiddle& operator=(Padding7ByteMiddle&&) noexcept = default;
@@ -86,10 +92,16 @@ class Padding7ByteMiddle {
 
   uint64_t& b() { return storage_.b; }
 
+  Padding7ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Padding7ByteMiddle(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint8_t a{};
-    uint64_t b{};
+    uint8_t a = {};
+    uint64_t b = {};
   };
 
   Storage_ storage_;
@@ -128,7 +140,13 @@ class Padding7ByteEnd {
   Padding7ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Padding7ByteEnd(uint64_t a, uint8_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding7ByteEnd() : Padding7ByteEnd(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding7ByteEnd| only if all of its members are
+  // default constructible.
+  Padding7ByteEnd() = default;
+#pragma clang diagnostic pop
 
   Padding7ByteEnd(Padding7ByteEnd&&) noexcept = default;
   Padding7ByteEnd& operator=(Padding7ByteEnd&&) noexcept = default;
@@ -156,10 +174,16 @@ class Padding7ByteEnd {
 
   uint8_t& b() { return storage_.b; }
 
+  Padding7ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Padding7ByteEnd(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint64_t a{};
-    uint8_t b{};
+    uint64_t a = {};
+    uint8_t b = {};
   };
 
   Storage_ storage_;
@@ -199,7 +223,13 @@ class Padding6ByteMiddle {
       : storage_(std::move(storage)) {}
   Padding6ByteMiddle(uint16_t a, uint64_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding6ByteMiddle() : Padding6ByteMiddle(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding6ByteMiddle| only if all of its members are
+  // default constructible.
+  Padding6ByteMiddle() = default;
+#pragma clang diagnostic pop
 
   Padding6ByteMiddle(Padding6ByteMiddle&&) noexcept = default;
   Padding6ByteMiddle& operator=(Padding6ByteMiddle&&) noexcept = default;
@@ -227,10 +257,16 @@ class Padding6ByteMiddle {
 
   uint64_t& b() { return storage_.b; }
 
+  Padding6ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Padding6ByteMiddle(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint16_t a{};
-    uint64_t b{};
+    uint16_t a = {};
+    uint64_t b = {};
   };
 
   Storage_ storage_;
@@ -269,7 +305,13 @@ class Padding6ByteEnd {
   Padding6ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Padding6ByteEnd(uint64_t a, uint16_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding6ByteEnd() : Padding6ByteEnd(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding6ByteEnd| only if all of its members are
+  // default constructible.
+  Padding6ByteEnd() = default;
+#pragma clang diagnostic pop
 
   Padding6ByteEnd(Padding6ByteEnd&&) noexcept = default;
   Padding6ByteEnd& operator=(Padding6ByteEnd&&) noexcept = default;
@@ -297,10 +339,16 @@ class Padding6ByteEnd {
 
   uint16_t& b() { return storage_.b; }
 
+  Padding6ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Padding6ByteEnd(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint64_t a{};
-    uint16_t b{};
+    uint64_t a = {};
+    uint16_t b = {};
   };
 
   Storage_ storage_;
@@ -340,7 +388,13 @@ class Padding5ByteMiddle {
       : storage_(std::move(storage)) {}
   Padding5ByteMiddle(uint16_t a, uint8_t b, uint64_t c) noexcept
       : storage_({.a = std::move(a), .b = std::move(b), .c = std::move(c)}) {}
-  Padding5ByteMiddle() : Padding5ByteMiddle(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding5ByteMiddle| only if all of its members are
+  // default constructible.
+  Padding5ByteMiddle() = default;
+#pragma clang diagnostic pop
 
   Padding5ByteMiddle(Padding5ByteMiddle&&) noexcept = default;
   Padding5ByteMiddle& operator=(Padding5ByteMiddle&&) noexcept = default;
@@ -372,11 +426,18 @@ class Padding5ByteMiddle {
 
   uint64_t& c() { return storage_.c; }
 
+  Padding5ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Padding5ByteMiddle(Storage_{
+            .a = {},
+            .b = {},
+            .c = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint16_t a{};
-    uint8_t b{};
-    uint64_t c{};
+    uint16_t a = {};
+    uint8_t b = {};
+    uint64_t c = {};
   };
 
   Storage_ storage_;
@@ -418,7 +479,13 @@ class Padding5ByteEnd {
   Padding5ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Padding5ByteEnd(uint64_t a, uint16_t b, uint8_t c) noexcept
       : storage_({.a = std::move(a), .b = std::move(b), .c = std::move(c)}) {}
-  Padding5ByteEnd() : Padding5ByteEnd(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding5ByteEnd| only if all of its members are
+  // default constructible.
+  Padding5ByteEnd() = default;
+#pragma clang diagnostic pop
 
   Padding5ByteEnd(Padding5ByteEnd&&) noexcept = default;
   Padding5ByteEnd& operator=(Padding5ByteEnd&&) noexcept = default;
@@ -450,11 +517,18 @@ class Padding5ByteEnd {
 
   uint8_t& c() { return storage_.c; }
 
+  Padding5ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Padding5ByteEnd(Storage_{
+            .a = {},
+            .b = {},
+            .c = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint64_t a{};
-    uint16_t b{};
-    uint8_t c{};
+    uint64_t a = {};
+    uint16_t b = {};
+    uint8_t c = {};
   };
 
   Storage_ storage_;
@@ -497,7 +571,13 @@ class Padding4ByteMiddle {
       : storage_(std::move(storage)) {}
   Padding4ByteMiddle(uint32_t a, uint64_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding4ByteMiddle() : Padding4ByteMiddle(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding4ByteMiddle| only if all of its members are
+  // default constructible.
+  Padding4ByteMiddle() = default;
+#pragma clang diagnostic pop
 
   Padding4ByteMiddle(Padding4ByteMiddle&&) noexcept = default;
   Padding4ByteMiddle& operator=(Padding4ByteMiddle&&) noexcept = default;
@@ -525,10 +605,16 @@ class Padding4ByteMiddle {
 
   uint64_t& b() { return storage_.b; }
 
+  Padding4ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Padding4ByteMiddle(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint32_t a{};
-    uint64_t b{};
+    uint32_t a = {};
+    uint64_t b = {};
   };
 
   Storage_ storage_;
@@ -567,7 +653,13 @@ class Padding4ByteEnd {
   Padding4ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Padding4ByteEnd(uint64_t a, uint32_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding4ByteEnd() : Padding4ByteEnd(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding4ByteEnd| only if all of its members are
+  // default constructible.
+  Padding4ByteEnd() = default;
+#pragma clang diagnostic pop
 
   Padding4ByteEnd(Padding4ByteEnd&&) noexcept = default;
   Padding4ByteEnd& operator=(Padding4ByteEnd&&) noexcept = default;
@@ -595,10 +687,16 @@ class Padding4ByteEnd {
 
   uint32_t& b() { return storage_.b; }
 
+  Padding4ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Padding4ByteEnd(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint64_t a{};
-    uint32_t b{};
+    uint64_t a = {};
+    uint32_t b = {};
   };
 
   Storage_ storage_;
@@ -642,7 +740,13 @@ class Padding4ByteAlignmentLength12 {
                   .b = std::move(b),
                   .c = std::move(c),
                   .d = std::move(d)}) {}
-  Padding4ByteAlignmentLength12() : Padding4ByteAlignmentLength12(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding4ByteAlignmentLength12| only if all of its
+  // members are default constructible.
+  Padding4ByteAlignmentLength12() = default;
+#pragma clang diagnostic pop
 
   Padding4ByteAlignmentLength12(Padding4ByteAlignmentLength12&&) noexcept =
       default;
@@ -684,12 +788,21 @@ class Padding4ByteAlignmentLength12 {
 
   uint16_t& d() { return storage_.d; }
 
+  Padding4ByteAlignmentLength12(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Padding4ByteAlignmentLength12(Storage_{
+            .a = {},
+            .b = {},
+            .c = {},
+            .d = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint32_t a{};
-    uint8_t b{};
-    uint16_t c{};
-    uint16_t d{};
+    uint32_t a = {};
+    uint8_t b = {};
+    uint16_t c = {};
+    uint16_t d = {};
   };
 
   Storage_ storage_;
@@ -743,7 +856,13 @@ class Padding3ByteMiddle {
       : storage_(std::move(storage)) {}
   Padding3ByteMiddle(uint8_t a, uint32_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding3ByteMiddle() : Padding3ByteMiddle(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding3ByteMiddle| only if all of its members are
+  // default constructible.
+  Padding3ByteMiddle() = default;
+#pragma clang diagnostic pop
 
   Padding3ByteMiddle(Padding3ByteMiddle&&) noexcept = default;
   Padding3ByteMiddle& operator=(Padding3ByteMiddle&&) noexcept = default;
@@ -771,10 +890,16 @@ class Padding3ByteMiddle {
 
   uint32_t& b() { return storage_.b; }
 
+  Padding3ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Padding3ByteMiddle(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint8_t a{};
-    uint32_t b{};
+    uint8_t a = {};
+    uint32_t b = {};
   };
 
   Storage_ storage_;
@@ -813,7 +938,13 @@ class Padding3ByteEnd {
   Padding3ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Padding3ByteEnd(uint32_t a, uint8_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding3ByteEnd() : Padding3ByteEnd(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding3ByteEnd| only if all of its members are
+  // default constructible.
+  Padding3ByteEnd() = default;
+#pragma clang diagnostic pop
 
   Padding3ByteEnd(Padding3ByteEnd&&) noexcept = default;
   Padding3ByteEnd& operator=(Padding3ByteEnd&&) noexcept = default;
@@ -841,10 +972,16 @@ class Padding3ByteEnd {
 
   uint8_t& b() { return storage_.b; }
 
+  Padding3ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Padding3ByteEnd(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint32_t a{};
-    uint8_t b{};
+    uint32_t a = {};
+    uint8_t b = {};
   };
 
   Storage_ storage_;
@@ -884,7 +1021,13 @@ class Padding2ByteMiddle {
       : storage_(std::move(storage)) {}
   Padding2ByteMiddle(uint16_t a, uint32_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding2ByteMiddle() : Padding2ByteMiddle(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding2ByteMiddle| only if all of its members are
+  // default constructible.
+  Padding2ByteMiddle() = default;
+#pragma clang diagnostic pop
 
   Padding2ByteMiddle(Padding2ByteMiddle&&) noexcept = default;
   Padding2ByteMiddle& operator=(Padding2ByteMiddle&&) noexcept = default;
@@ -912,10 +1055,16 @@ class Padding2ByteMiddle {
 
   uint32_t& b() { return storage_.b; }
 
+  Padding2ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Padding2ByteMiddle(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint16_t a{};
-    uint32_t b{};
+    uint16_t a = {};
+    uint32_t b = {};
   };
 
   Storage_ storage_;
@@ -954,7 +1103,13 @@ class Padding2ByteEnd {
   Padding2ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Padding2ByteEnd(uint32_t a, uint16_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding2ByteEnd() : Padding2ByteEnd(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding2ByteEnd| only if all of its members are
+  // default constructible.
+  Padding2ByteEnd() = default;
+#pragma clang diagnostic pop
 
   Padding2ByteEnd(Padding2ByteEnd&&) noexcept = default;
   Padding2ByteEnd& operator=(Padding2ByteEnd&&) noexcept = default;
@@ -982,10 +1137,16 @@ class Padding2ByteEnd {
 
   uint16_t& b() { return storage_.b; }
 
+  Padding2ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Padding2ByteEnd(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint32_t a{};
-    uint16_t b{};
+    uint32_t a = {};
+    uint16_t b = {};
   };
 
   Storage_ storage_;
@@ -1025,7 +1186,13 @@ class Padding2ByteAlignmentLength6 {
       : storage_(std::move(storage)) {}
   Padding2ByteAlignmentLength6(uint8_t a, uint16_t b, uint8_t c) noexcept
       : storage_({.a = std::move(a), .b = std::move(b), .c = std::move(c)}) {}
-  Padding2ByteAlignmentLength6() : Padding2ByteAlignmentLength6(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding2ByteAlignmentLength6| only if all of its
+  // members are default constructible.
+  Padding2ByteAlignmentLength6() = default;
+#pragma clang diagnostic pop
 
   Padding2ByteAlignmentLength6(Padding2ByteAlignmentLength6&&) noexcept =
       default;
@@ -1063,11 +1230,19 @@ class Padding2ByteAlignmentLength6 {
 
   uint8_t& c() { return storage_.c; }
 
+  Padding2ByteAlignmentLength6(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Padding2ByteAlignmentLength6(Storage_{
+            .a = {},
+            .b = {},
+            .c = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint8_t a{};
-    uint16_t b{};
-    uint8_t c{};
+    uint8_t a = {};
+    uint16_t b = {};
+    uint8_t c = {};
   };
 
   Storage_ storage_;
@@ -1118,7 +1293,13 @@ class Padding1ByteMiddle {
       : storage_(std::move(storage)) {}
   Padding1ByteMiddle(uint8_t a, uint16_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding1ByteMiddle() : Padding1ByteMiddle(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding1ByteMiddle| only if all of its members are
+  // default constructible.
+  Padding1ByteMiddle() = default;
+#pragma clang diagnostic pop
 
   Padding1ByteMiddle(Padding1ByteMiddle&&) noexcept = default;
   Padding1ByteMiddle& operator=(Padding1ByteMiddle&&) noexcept = default;
@@ -1146,10 +1327,16 @@ class Padding1ByteMiddle {
 
   uint16_t& b() { return storage_.b; }
 
+  Padding1ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Padding1ByteMiddle(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint8_t a{};
-    uint16_t b{};
+    uint8_t a = {};
+    uint16_t b = {};
   };
 
   Storage_ storage_;
@@ -1188,7 +1375,13 @@ class Padding1ByteEnd {
   Padding1ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Padding1ByteEnd(uint16_t a, uint8_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding1ByteEnd() : Padding1ByteEnd(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding1ByteEnd| only if all of its members are
+  // default constructible.
+  Padding1ByteEnd() = default;
+#pragma clang diagnostic pop
 
   Padding1ByteEnd(Padding1ByteEnd&&) noexcept = default;
   Padding1ByteEnd& operator=(Padding1ByteEnd&&) noexcept = default;
@@ -1216,10 +1409,16 @@ class Padding1ByteEnd {
 
   uint8_t& b() { return storage_.b; }
 
+  Padding1ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Padding1ByteEnd(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint16_t a{};
-    uint8_t b{};
+    uint16_t a = {};
+    uint8_t b = {};
   };
 
   Storage_ storage_;

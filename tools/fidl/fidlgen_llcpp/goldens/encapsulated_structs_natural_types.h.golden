@@ -45,7 +45,13 @@ class NonInlineStructTestStruct {
       ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8> element,
       ::zx::handle h) noexcept
       : storage_({.element = std::move(element), .h = std::move(h)}) {}
-  NonInlineStructTestStruct() : NonInlineStructTestStruct(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |NonInlineStructTestStruct| only if all of its members
+  // are default constructible.
+  NonInlineStructTestStruct() = default;
+#pragma clang diagnostic pop
 
   NonInlineStructTestStruct(NonInlineStructTestStruct&&) noexcept = default;
   NonInlineStructTestStruct& operator=(NonInlineStructTestStruct&&) noexcept =
@@ -64,10 +70,17 @@ class NonInlineStructTestStruct {
 
   ::zx::handle& h() { return storage_.h; }
 
+  NonInlineStructTestStruct(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : NonInlineStructTestStruct(Storage_{
+            .element = {},
+            .h = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8> element{};
-    ::zx::handle h{};
+    ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8> element;
+    ::zx::handle h;
   };
 
   Storage_ storage_;
@@ -110,7 +123,13 @@ class Int8Int32 {
   Int8Int32(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Int8Int32(int8_t a, int32_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Int8Int32() : Int8Int32(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Int8Int32| only if all of its members are default
+  // constructible.
+  Int8Int32() = default;
+#pragma clang diagnostic pop
 
   Int8Int32(Int8Int32&&) noexcept = default;
   Int8Int32& operator=(Int8Int32&&) noexcept = default;
@@ -138,10 +157,16 @@ class Int8Int32 {
 
   int32_t& b() { return storage_.b; }
 
+  Int8Int32(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Int8Int32(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    int8_t a{};
-    int32_t b{};
+    int8_t a = {};
+    int32_t b = {};
   };
 
   Storage_ storage_;
@@ -180,7 +205,13 @@ class Int16Int8 {
   Int16Int8(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Int16Int8(int16_t a, int8_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Int16Int8() : Int16Int8(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Int16Int8| only if all of its members are default
+  // constructible.
+  Int16Int8() = default;
+#pragma clang diagnostic pop
 
   Int16Int8(Int16Int8&&) noexcept = default;
   Int16Int8& operator=(Int16Int8&&) noexcept = default;
@@ -208,10 +239,16 @@ class Int16Int8 {
 
   int8_t& b() { return storage_.b; }
 
+  Int16Int8(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Int16Int8(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    int16_t a{};
-    int8_t b{};
+    int16_t a = {};
+    int8_t b = {};
   };
 
   Storage_ storage_;
@@ -251,7 +288,13 @@ class ArrayInt16Int8 {
   ArrayInt16Int8(
       ::std::array<::test_encapsulatedstructs::Int16Int8, 3> arr) noexcept
       : storage_({.arr = std::move(arr)}) {}
-  ArrayInt16Int8() : ArrayInt16Int8(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ArrayInt16Int8| only if all of its members are
+  // default constructible.
+  ArrayInt16Int8() = default;
+#pragma clang diagnostic pop
 
   ArrayInt16Int8(ArrayInt16Int8&&) noexcept = default;
   ArrayInt16Int8& operator=(ArrayInt16Int8&&) noexcept = default;
@@ -281,9 +324,15 @@ class ArrayInt16Int8 {
     return storage_.arr;
   }
 
+  ArrayInt16Int8(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ArrayInt16Int8(Storage_{
+            .arr = ::fidl::internal::DefaultConstructPossiblyInvalidObject<
+                ::std::array<::test_encapsulatedstructs::Int16Int8, 3>>::Make(),
+        }) {}
+
  private:
   struct Storage_ final {
-    ::std::array<::test_encapsulatedstructs::Int16Int8, 3> arr{};
+    ::std::array<::test_encapsulatedstructs::Int16Int8, 3> arr;
   };
 
   Storage_ storage_;
@@ -318,7 +367,13 @@ class StructPaddingTestStruct {
       : storage_({.trailing = std::move(trailing),
                   .inner = std::move(inner),
                   .array = std::move(array)}) {}
-  StructPaddingTestStruct() : StructPaddingTestStruct(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |StructPaddingTestStruct| only if all of its members
+  // are default constructible.
+  StructPaddingTestStruct() = default;
+#pragma clang diagnostic pop
 
   StructPaddingTestStruct(StructPaddingTestStruct&&) noexcept = default;
   StructPaddingTestStruct& operator=(StructPaddingTestStruct&&) noexcept =
@@ -362,11 +417,22 @@ class StructPaddingTestStruct {
 
   ::test_encapsulatedstructs::ArrayInt16Int8& array() { return storage_.array; }
 
+  StructPaddingTestStruct(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : StructPaddingTestStruct(Storage_{
+            .trailing =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+            .inner =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+            .array =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_encapsulatedstructs::Int16Int8 trailing{};
-    ::test_encapsulatedstructs::Int8Int32 inner{};
-    ::test_encapsulatedstructs::ArrayInt16Int8 array{};
+    ::test_encapsulatedstructs::Int16Int8 trailing;
+    ::test_encapsulatedstructs::Int8Int32 inner;
+    ::test_encapsulatedstructs::ArrayInt16Int8 array;
   };
 
   Storage_ storage_;
@@ -406,7 +472,13 @@ class TopLevelStruct {
       ::test_encapsulatedstructs::StructPaddingTestStruct a,
       ::test_encapsulatedstructs::NonInlineStructTestStruct b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  TopLevelStruct() : TopLevelStruct(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |TopLevelStruct| only if all of its members are
+  // default constructible.
+  TopLevelStruct() = default;
+#pragma clang diagnostic pop
 
   TopLevelStruct(TopLevelStruct&&) noexcept = default;
   TopLevelStruct& operator=(TopLevelStruct&&) noexcept = default;
@@ -427,10 +499,16 @@ class TopLevelStruct {
     return storage_.b;
   }
 
+  TopLevelStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : TopLevelStruct(Storage_{
+            .a = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+            .b = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_encapsulatedstructs::StructPaddingTestStruct a{};
-    ::test_encapsulatedstructs::NonInlineStructTestStruct b{};
+    ::test_encapsulatedstructs::StructPaddingTestStruct a;
+    ::test_encapsulatedstructs::NonInlineStructTestStruct b;
   };
 
   Storage_ storage_;

@@ -51,6 +51,10 @@ type TestStrictXUnionInStruct = struct {
     xu TestStrictXUnion;
 };
 
+type TestStrictXUnionInArrayInStruct = struct {
+    arr array<TestStrictXUnion, 10>;
+};
+
 type TestNonResourceXUnion = flexible union {
     1: primitive int32;
 };

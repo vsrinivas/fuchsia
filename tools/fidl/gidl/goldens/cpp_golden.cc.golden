@@ -7,7 +7,7 @@
 
 
 TEST(Conformance, GoldenBoolStruct_V2_Encode) {
-	auto var1 = test_conformance::GoldenBoolStruct{};
+	auto var1 = test_conformance::GoldenBoolStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 var1.v() = bool(true);
 
 	auto obj = std::move(var1);
@@ -20,7 +20,7 @@ var1.v() = bool(true);
 }
 
 TEST(Conformance, GoldenIntStruct_V2_Encode) {
-	auto var1 = test_conformance::GoldenIntStruct{};
+	auto var1 = test_conformance::GoldenIntStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 var1.v() = int16_t(1ull);
 
 	auto obj = std::move(var1);
@@ -33,7 +33,7 @@ var1.v() = int16_t(1ull);
 }
 
 TEST(Conformance, GoldenUintStruct_V2_Encode) {
-	auto var1 = test_conformance::GoldenUintStruct{};
+	auto var1 = test_conformance::GoldenUintStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 var1.v() = uint16_t(1ull);
 
 	auto obj = std::move(var1);
@@ -46,7 +46,7 @@ var1.v() = uint16_t(1ull);
 }
 
 TEST(Conformance, GoldenFloatStruct_V2_Encode) {
-	auto var1 = test_conformance::GoldenFloatStruct{};
+	auto var1 = test_conformance::GoldenFloatStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 var1.v() = float(0);
 
 	auto obj = std::move(var1);
@@ -59,7 +59,7 @@ var1.v() = float(0);
 }
 
 TEST(Conformance, GoldenDoubleStruct_V2_Encode) {
-	auto var1 = test_conformance::GoldenDoubleStruct{};
+	auto var1 = test_conformance::GoldenDoubleStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 var1.v() = double(0);
 
 	auto obj = std::move(var1);
@@ -72,7 +72,7 @@ var1.v() = double(0);
 }
 
 TEST(Conformance, GoldenStringStruct_V2_Encode) {
-	auto var1 = test_conformance::GoldenStringStruct{};
+	auto var1 = test_conformance::GoldenStringStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 var1.v() = std::string("abcd", 4);
 
 	auto obj = std::move(var1);
@@ -87,7 +87,7 @@ var1.v() = std::string("abcd", 4);
 }
 
 TEST(Conformance, GoldenNullableStringStructNonNull_V2_Encode) {
-	auto var1 = test_conformance::GoldenNullableStringStruct{};
+	auto var1 = test_conformance::GoldenNullableStringStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 var1.v() = std::string("abcd", 4);
 
 	auto obj = std::move(var1);
@@ -102,7 +102,7 @@ var1.v() = std::string("abcd", 4);
 }
 
 TEST(Conformance, GoldenNullableStringStructNull_V2_Encode) {
-	auto var1 = test_conformance::GoldenNullableStringStruct{};
+	auto var1 = test_conformance::GoldenNullableStringStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 var1.v() = std::optional<std::string>();
 
 	auto obj = std::move(var1);
@@ -116,7 +116,7 @@ var1.v() = std::optional<std::string>();
 }
 
 TEST(Conformance, GoldenEnumStruct_V2_Encode) {
-	auto var1 = test_conformance::GoldenEnumStruct{};
+	auto var1 = test_conformance::GoldenEnumStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 var1.v() = test_conformance::GoldenEnum(1ull);
 
 	auto obj = std::move(var1);
@@ -129,7 +129,7 @@ var1.v() = test_conformance::GoldenEnum(1ull);
 }
 
 TEST(Conformance, GoldenBitsStruct_V2_Encode) {
-	auto var1 = test_conformance::GoldenBitsStruct{};
+	auto var1 = test_conformance::GoldenBitsStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 var1.v() = static_cast<test_conformance::GoldenBits>(1ull);
 
 	auto obj = std::move(var1);
@@ -142,8 +142,8 @@ var1.v() = static_cast<test_conformance::GoldenBits>(1ull);
 }
 
 TEST(Conformance, GoldenTableStruct_V2_Encode) {
-	auto var1 = test_conformance::GoldenTableStruct{};
-auto var2 = test_conformance::GoldenTable{};
+	auto var1 = test_conformance::GoldenTableStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
+auto var2 = test_conformance::GoldenTable{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 var2.v() = int16_t(1ull);
 var1.v() = std::move(var2);
 
@@ -159,7 +159,7 @@ var1.v() = std::move(var2);
 }
 
 TEST(Conformance, GoldenUnionStruct_V2_Encode) {
-	auto var1 = test_conformance::GoldenUnionStruct{};
+	auto var1 = test_conformance::GoldenUnionStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 auto var2 = test_conformance::GoldenUnion(test_conformance::GoldenUnion::WithV(int16_t(1ull)));
 var1.v() = std::move(var2);
 
@@ -174,7 +174,7 @@ var1.v() = std::move(var2);
 }
 
 TEST(Conformance, GoldenNullableUnionStructNonNull_V2_Encode) {
-	auto var1 = test_conformance::GoldenNullableUnionStruct{};
+	auto var1 = test_conformance::GoldenNullableUnionStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 auto var2 = std::make_unique<test_conformance::GoldenUnion>(test_conformance::GoldenUnion::WithV(int16_t(1ull)));
 var1.v() = std::move(var2);
 
@@ -189,7 +189,7 @@ var1.v() = std::move(var2);
 }
 
 TEST(Conformance, GoldenNullableUnionStructNull_V2_Encode) {
-	auto var1 = test_conformance::GoldenNullableUnionStruct{};
+	auto var1 = test_conformance::GoldenNullableUnionStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 var1.v() = std::unique_ptr<test_conformance::GoldenUnion>();
 
 	auto obj = std::move(var1);
@@ -203,8 +203,8 @@ var1.v() = std::unique_ptr<test_conformance::GoldenUnion>();
 }
 
 TEST(Conformance, GoldenByteArrayStruct_V2_Encode) {
-	auto var1 = test_conformance::GoldenByteArrayStruct{};
-auto var2 = std::array<uint8_t, 4>();
+	auto var1 = test_conformance::GoldenByteArrayStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
+auto var2 = std::array<uint8_t, 4>(::fidl::internal::DefaultConstructPossiblyInvalidObject<std::array<uint8_t, 4>>::Make());
 var2[0] = uint8_t(1ull);
 var2[1] = uint8_t(2ull);
 var2[2] = uint8_t(3ull);
@@ -221,12 +221,12 @@ var1.v() = std::move(var2);
 }
 
 TEST(Conformance, GoldenStructArrayStruct_V2_Encode) {
-	auto var1 = test_conformance::GoldenStructArrayStruct{};
-auto var2 = std::array<test_conformance::GoldenIntStruct, 2>();
-auto var3 = test_conformance::GoldenIntStruct{};
+	auto var1 = test_conformance::GoldenStructArrayStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
+auto var2 = std::array<test_conformance::GoldenIntStruct, 2>(::fidl::internal::DefaultConstructPossiblyInvalidObject<std::array<test_conformance::GoldenIntStruct, 2>>::Make());
+auto var3 = test_conformance::GoldenIntStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 var3.v() = int16_t(1ull);
 var2[0] = std::move(var3);
-auto var4 = test_conformance::GoldenIntStruct{};
+auto var4 = test_conformance::GoldenIntStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 var4.v() = int16_t(2ull);
 var2[1] = std::move(var4);
 var1.v() = std::move(var2);
@@ -241,8 +241,9 @@ var1.v() = std::move(var2);
 }
 
 TEST(Conformance, GoldenByteVectorStruct_V2_Encode) {
-	auto var1 = test_conformance::GoldenByteVectorStruct{};
-auto var2 = std::vector<uint8_t>(12);
+	auto var1 = test_conformance::GoldenByteVectorStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
+auto var2 = std::vector<uint8_t>();
+var2.resize(12);
 var2[0] = uint8_t(1ull);
 var2[1] = uint8_t(2ull);
 var2[2] = uint8_t(3ull);
@@ -265,12 +266,13 @@ var1.v() = std::move(var2);
 }
 
 TEST(Conformance, GoldenByteNullableVectorStructNonNull_V2_Encode) {
-	auto var1 = test_conformance::GoldenNullableByteVectorStruct{};
-auto var2 = std::optional<std::vector<uint8_t>>(4);
-var2.value()[0] = uint8_t(1ull);
-var2.value()[1] = uint8_t(2ull);
-var2.value()[2] = uint8_t(3ull);
-var2.value()[3] = uint8_t(4ull);
+	auto var1 = test_conformance::GoldenNullableByteVectorStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
+auto var2 = std::optional<std::vector<uint8_t>>();
+var2.emplace();
+var2.value().emplace_back(uint8_t(1ull));
+var2.value().emplace_back(uint8_t(2ull));
+var2.value().emplace_back(uint8_t(3ull));
+var2.value().emplace_back(uint8_t(4ull));
 var1.v() = std::move(var2);
 
 	auto obj = std::move(var1);
@@ -285,7 +287,7 @@ var1.v() = std::move(var2);
 }
 
 TEST(Conformance, GoldenNullableByteVectorStructNull_V2_Encode) {
-	auto var1 = test_conformance::GoldenNullableByteVectorStruct{};
+	auto var1 = test_conformance::GoldenNullableByteVectorStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 var1.v() = std::optional<std::vector<uint8_t>>();
 
 	auto obj = std::move(var1);
@@ -299,14 +301,14 @@ var1.v() = std::optional<std::vector<uint8_t>>();
 }
 
 TEST(Conformance, GoldenStructVectorStruct_V2_Encode) {
-	auto var1 = test_conformance::GoldenStructVectorStruct{};
-auto var2 = std::vector<test_conformance::GoldenIntStruct>(2);
-auto var3 = test_conformance::GoldenIntStruct{};
+	auto var1 = test_conformance::GoldenStructVectorStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
+auto var2 = std::vector<test_conformance::GoldenIntStruct>();
+auto var3 = test_conformance::GoldenIntStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 var3.v() = int16_t(1ull);
-var2[0] = std::move(var3);
-auto var4 = test_conformance::GoldenIntStruct{};
+var2.emplace_back(std::move(var3));
+auto var4 = test_conformance::GoldenIntStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 var4.v() = int16_t(2ull);
-var2[1] = std::move(var4);
+var2.emplace_back(std::move(var4));
 var1.v() = std::move(var2);
 
 	auto obj = std::move(var1);
@@ -321,8 +323,8 @@ var1.v() = std::move(var2);
 }
 
 TEST(Conformance, GoldenNullableStructNonNull_V2_Encode) {
-	auto var1 = test_conformance::GoldenNullableStruct{};
-auto var2 = std::make_unique<test_conformance::GoldenBoolStruct>(test_conformance::GoldenBoolStruct{});
+	auto var1 = test_conformance::GoldenNullableStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
+auto var2 = std::make_unique<test_conformance::GoldenBoolStruct>(test_conformance::GoldenBoolStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}});
 var2->v() = bool(true);
 var1.v() = std::move(var2);
 
@@ -337,7 +339,7 @@ var1.v() = std::move(var2);
 }
 
 TEST(Conformance, GoldenNullableStructNull_V2_Encode) {
-	auto var1 = test_conformance::GoldenNullableStruct{};
+	auto var1 = test_conformance::GoldenNullableStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 var1.v() = std::unique_ptr<test_conformance::GoldenBoolStruct>();
 
 	auto obj = std::move(var1);
@@ -354,7 +356,7 @@ TEST(Conformance, GoldenHandleBasicRightsStruct_V2_Encode) {
 	const auto handle_defs = std::vector<zx_handle_t>{
 conformance_utils::CreateChannel(61454), // #0
 };
-	auto var1 = test_conformance::GoldenHandleBasicRightsStruct{};
+	auto var1 = test_conformance::GoldenHandleBasicRightsStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 var1.v() = zx::event(handle_defs[0]);
 
 	auto obj = std::move(var1);
@@ -379,7 +381,7 @@ TEST(Conformance, GoldenNullableHandleStructNonNull_V2_Encode) {
 	const auto handle_defs = std::vector<zx_handle_t>{
 conformance_utils::CreateEvent(2147483648), // #0
 };
-	auto var1 = test_conformance::GoldenNullableHandleStruct{};
+	auto var1 = test_conformance::GoldenNullableHandleStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 var1.v() = zx::handle(handle_defs[0]);
 
 	auto obj = std::move(var1);
@@ -401,7 +403,7 @@ var1.v() = zx::handle(handle_defs[0]);
 
 #ifdef __Fuchsia__
 TEST(Conformance, GoldenNullableHandleStructNull_V2_Encode) {
-	auto var1 = test_conformance::GoldenNullableHandleStruct{};
+	auto var1 = test_conformance::GoldenNullableHandleStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 var1.v() = zx::handle();
 
 	auto obj = std::move(var1);
@@ -858,7 +860,7 @@ ASSERT_FALSE(f1.v().is_valid());
 
 
 TEST(Conformance, GoldenStringWithMaxSize2_V2_EncodeFailure) {
-	auto var1 = test_conformance::GoldenStringWithMaxSize2{};
+	auto var1 = test_conformance::GoldenStringWithMaxSize2{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
 var1.s() = std::string("abc", 3);
 
 	auto obj = std::move(var1);

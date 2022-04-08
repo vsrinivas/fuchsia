@@ -29,7 +29,13 @@ class Simple {
   Simple(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Simple(uint8_t f1, bool f2) noexcept
       : storage_({.f1 = std::move(f1), .f2 = std::move(f2)}) {}
-  Simple() : Simple(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Simple| only if all of its members are default
+  // constructible.
+  Simple() = default;
+#pragma clang diagnostic pop
 
   Simple(Simple&&) noexcept = default;
   Simple& operator=(Simple&&) noexcept = default;
@@ -57,10 +63,16 @@ class Simple {
 
   bool& f2() { return storage_.f2; }
 
+  Simple(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Simple(Storage_{
+            .f1 = {},
+            .f2 = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint8_t f1{};
-    bool f2{};
+    uint8_t f1 = {};
+    bool f2 = {};
   };
 
   Storage_ storage_;
@@ -90,7 +102,13 @@ class BasicStruct {
   BasicStruct(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   BasicStruct(uint32_t x, ::std::string y) noexcept
       : storage_({.x = std::move(x), .y = std::move(y)}) {}
-  BasicStruct() : BasicStruct(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |BasicStruct| only if all of its members are default
+  // constructible.
+  BasicStruct() = default;
+#pragma clang diagnostic pop
 
   BasicStruct(BasicStruct&&) noexcept = default;
   BasicStruct& operator=(BasicStruct&&) noexcept = default;
@@ -118,10 +136,16 @@ class BasicStruct {
 
   ::std::string& y() { return storage_.y; }
 
+  BasicStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : BasicStruct(Storage_{
+            .x = {},
+            .y = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint32_t x{};
-    ::std::string y{};
+    uint32_t x = {};
+    ::std::string y;
   };
 
   Storage_ storage_;

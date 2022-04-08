@@ -42,15 +42,23 @@ class StrictFoo {
     kI = 2,  // 0x2
   };
 
-  // Create an unknown value of this union.
-  StrictFoo() : storage_(std::make_shared<Storage_>()) {}
-
-  StrictFoo(StrictFoo&&) noexcept = default;
-  StrictFoo& operator=(StrictFoo&&) noexcept = default;
+  StrictFoo(StrictFoo&& other) noexcept
+      : StrictFoo(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  StrictFoo& operator=(StrictFoo&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   StrictFoo(const StrictFoo& other) noexcept
       : StrictFoo(other.CloneStorage_()) {}
   StrictFoo& operator=(const StrictFoo& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -62,7 +70,7 @@ class StrictFoo {
   }
 
   constexpr ::test_requestflexibleenvelope::StrictFoo::Tag Which() const {
-    return StrictFoo::IndexToTag(storage_->index());
+    return StrictFoo::IndexToTag(storage_->index()).value();
   }
   static StrictFoo WithS(::std::string val) {
     return StrictFoo(
@@ -86,6 +94,9 @@ class StrictFoo {
   ::fidl::internal::UnionMemberView<2, Storage_> i() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  StrictFoo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -118,16 +129,16 @@ class StrictFoo {
     }
   }
 
-  static constexpr ::test_requestflexibleenvelope::StrictFoo::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<
+      ::test_requestflexibleenvelope::StrictFoo::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_requestflexibleenvelope::StrictFoo::Tag::kS;
       case 2:
         return ::test_requestflexibleenvelope::StrictFoo::Tag::kI;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_requestflexibleenvelope::StrictFoo::Tag::kS;
+        return cpp17::nullopt;
     }
   }
 };
@@ -145,8 +156,13 @@ class ProtocolRequestStrictResponseFlexibleRequest {
   ProtocolRequestStrictResponseFlexibleRequest(
       ::test_requestflexibleenvelope::StrictFoo s) noexcept
       : storage_({.s = std::move(s)}) {}
-  ProtocolRequestStrictResponseFlexibleRequest()
-      : ProtocolRequestStrictResponseFlexibleRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ProtocolRequestStrictResponseFlexibleRequest| only if
+  // all of its members are default constructible.
+  ProtocolRequestStrictResponseFlexibleRequest() = default;
+#pragma clang diagnostic pop
 
   ProtocolRequestStrictResponseFlexibleRequest(
       ProtocolRequestStrictResponseFlexibleRequest&&) noexcept = default;
@@ -182,9 +198,15 @@ class ProtocolRequestStrictResponseFlexibleRequest {
 
   ::test_requestflexibleenvelope::StrictFoo& s() { return storage_.s; }
 
+  ProtocolRequestStrictResponseFlexibleRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ProtocolRequestStrictResponseFlexibleRequest(Storage_{
+            .s = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_requestflexibleenvelope::StrictFoo s{};
+    ::test_requestflexibleenvelope::StrictFoo s;
   };
 
   Storage_ storage_;
@@ -218,8 +240,13 @@ class ProtocolRequestFlexibleResponseStrictTopResponse {
   ProtocolRequestFlexibleResponseStrictTopResponse(
       ::test_requestflexibleenvelope::StrictFoo f) noexcept
       : storage_({.f = std::move(f)}) {}
-  ProtocolRequestFlexibleResponseStrictTopResponse()
-      : ProtocolRequestFlexibleResponseStrictTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ProtocolRequestFlexibleResponseStrictTopResponse|
+  // only if all of its members are default constructible.
+  ProtocolRequestFlexibleResponseStrictTopResponse() = default;
+#pragma clang diagnostic pop
 
   ProtocolRequestFlexibleResponseStrictTopResponse(
       ProtocolRequestFlexibleResponseStrictTopResponse&&) noexcept = default;
@@ -256,9 +283,15 @@ class ProtocolRequestFlexibleResponseStrictTopResponse {
 
   ::test_requestflexibleenvelope::StrictFoo& f() { return storage_.f; }
 
+  ProtocolRequestFlexibleResponseStrictTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ProtocolRequestFlexibleResponseStrictTopResponse(Storage_{
+            .f = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_requestflexibleenvelope::StrictFoo f{};
+    ::test_requestflexibleenvelope::StrictFoo f;
   };
 
   Storage_ storage_;
@@ -292,16 +325,26 @@ class FlexibleFoo {
     kI = 2,  // 0x2
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-
   // Create an unknown value of this union.
   FlexibleFoo() : storage_(std::make_shared<Storage_>()) {}
 
-  FlexibleFoo(FlexibleFoo&&) noexcept = default;
-  FlexibleFoo& operator=(FlexibleFoo&&) noexcept = default;
+  FlexibleFoo(FlexibleFoo&& other) noexcept
+      : FlexibleFoo(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  FlexibleFoo& operator=(FlexibleFoo&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   FlexibleFoo(const FlexibleFoo& other) noexcept
       : FlexibleFoo(other.CloneStorage_()) {}
   FlexibleFoo& operator=(const FlexibleFoo& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -313,7 +356,7 @@ class FlexibleFoo {
   }
 
   constexpr ::test_requestflexibleenvelope::FlexibleFoo::Tag Which() const {
-    return FlexibleFoo::IndexToTag(storage_->index());
+    return FlexibleFoo::IndexToTag(storage_->index()).value();
   }
   static FlexibleFoo WithS(::std::string val) {
     return FlexibleFoo(
@@ -337,6 +380,9 @@ class FlexibleFoo {
   ::fidl::internal::UnionMemberView<2, Storage_> i() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  FlexibleFoo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -371,8 +417,9 @@ class FlexibleFoo {
     }
   }
 
-  static constexpr ::test_requestflexibleenvelope::FlexibleFoo::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<
+      ::test_requestflexibleenvelope::FlexibleFoo::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_requestflexibleenvelope::FlexibleFoo::Tag::kS;
@@ -397,8 +444,13 @@ class ProtocolRequestStrictResponseFlexibleTopResponse {
   ProtocolRequestStrictResponseFlexibleTopResponse(
       ::test_requestflexibleenvelope::FlexibleFoo f) noexcept
       : storage_({.f = std::move(f)}) {}
-  ProtocolRequestStrictResponseFlexibleTopResponse()
-      : ProtocolRequestStrictResponseFlexibleTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ProtocolRequestStrictResponseFlexibleTopResponse|
+  // only if all of its members are default constructible.
+  ProtocolRequestStrictResponseFlexibleTopResponse() = default;
+#pragma clang diagnostic pop
 
   ProtocolRequestStrictResponseFlexibleTopResponse(
       ProtocolRequestStrictResponseFlexibleTopResponse&&) noexcept = default;
@@ -435,9 +487,15 @@ class ProtocolRequestStrictResponseFlexibleTopResponse {
 
   ::test_requestflexibleenvelope::FlexibleFoo& f() { return storage_.f; }
 
+  ProtocolRequestStrictResponseFlexibleTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ProtocolRequestStrictResponseFlexibleTopResponse(Storage_{
+            .f = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_requestflexibleenvelope::FlexibleFoo f{};
+    ::test_requestflexibleenvelope::FlexibleFoo f;
   };
 
   Storage_ storage_;
@@ -471,8 +529,13 @@ class ProtocolRequestFlexibleResponseStrictRequest {
   ProtocolRequestFlexibleResponseStrictRequest(
       ::test_requestflexibleenvelope::FlexibleFoo s) noexcept
       : storage_({.s = std::move(s)}) {}
-  ProtocolRequestFlexibleResponseStrictRequest()
-      : ProtocolRequestFlexibleResponseStrictRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ProtocolRequestFlexibleResponseStrictRequest| only if
+  // all of its members are default constructible.
+  ProtocolRequestFlexibleResponseStrictRequest() = default;
+#pragma clang diagnostic pop
 
   ProtocolRequestFlexibleResponseStrictRequest(
       ProtocolRequestFlexibleResponseStrictRequest&&) noexcept = default;
@@ -508,9 +571,15 @@ class ProtocolRequestFlexibleResponseStrictRequest {
 
   ::test_requestflexibleenvelope::FlexibleFoo& s() { return storage_.s; }
 
+  ProtocolRequestFlexibleResponseStrictRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ProtocolRequestFlexibleResponseStrictRequest(Storage_{
+            .s = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_requestflexibleenvelope::FlexibleFoo s{};
+    ::test_requestflexibleenvelope::FlexibleFoo s;
   };
 
   Storage_ storage_;

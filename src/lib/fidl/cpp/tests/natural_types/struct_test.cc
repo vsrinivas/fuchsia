@@ -15,6 +15,14 @@ zx::event MakeEvent() {
 }
 }  // namespace
 
+TEST(Struct, DefaultConstruction) {
+  test_types::CopyableStruct s;
+  EXPECT_EQ(s.x(), 0);
+
+  test_types::MoveOnlyStruct m;
+  EXPECT_FALSE(m.h().is_valid());
+}
+
 TEST(Struct, InitializationCopyable) {
   test_types::CopyableStruct cs{42};
   EXPECT_EQ(cs.x(), 42);

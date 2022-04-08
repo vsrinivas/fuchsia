@@ -76,10 +76,9 @@ TEST(FidlExamples, Unions) {
   ASSERT_EQ(str_val.Which(), fuchsia_examples::JsonValue::Tag::kStringValue);
   ASSERT_TRUE(str_val.string_value().has_value());
 
-  fuchsia_examples::JsonValue value;
-  ASSERT_FALSE(value.int_value());
-  ASSERT_FALSE(value.string_value());
-  value.string_value() = "hello";
+  static_assert(!std::is_default_constructible_v<fuchsia_examples::JsonValue>,
+                "Strict unions cannot be default constructed");
+  fuchsia_examples::JsonValue value = fuchsia_examples::JsonValue::WithStringValue("hello");
   ASSERT_FALSE(value.int_value());
   ASSERT_TRUE(value.string_value());
   ASSERT_EQ(value.int_value().value_or(42), 42);

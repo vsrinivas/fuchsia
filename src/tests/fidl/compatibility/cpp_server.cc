@@ -756,13 +756,11 @@ class EchoConnection final : public fidl::Server<Echo> {
                                                ? request.signed_()->forward_to_server()
                                                : request.unsigned_()->forward_to_server();
     if (forward_to_server.empty()) {
-      ResponseUnion resp;
       if (request.Which() == RequestUnion::Tag::kSigned) {
-        resp = ResponseUnion::WithSigned_(request.signed_()->value());
+        completer.Reply(ResponseUnion::WithSigned_(request.signed_()->value()));
       } else {
-        resp = ResponseUnion::WithUnsigned_(request.unsigned_()->value());
+        completer.Reply(ResponseUnion::WithUnsigned_(request.unsigned_()->value()));
       }
-      completer.Reply(std::move(resp));
     } else {
       std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>(forward_to_server);
       RequestUnion req;
@@ -796,13 +794,11 @@ class EchoConnection final : public fidl::Server<Echo> {
             request.signed_() ? request.signed_()->result_err() : request.unsigned_()->result_err();
         completer.Reply(fitx::error(err));
       } else {
-        ResponseUnion resp;
         if (request.Which() == EchoEchoUnionPayloadWithErrorRequest::Tag::kSigned) {
-          resp = ResponseUnion::WithSigned_(request.signed_()->value());
+          completer.Reply(fitx::ok(ResponseUnion::WithSigned_(request.signed_()->value())));
         } else {
-          resp = ResponseUnion::WithUnsigned_(request.unsigned_()->value());
+          completer.Reply(fitx::ok(ResponseUnion::WithUnsigned_(request.unsigned_()->value())));
         }
-        completer.Reply(fitx::ok(std::move(resp)));
       }
     } else {
       std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>(forward_to_server);
@@ -840,12 +836,9 @@ class EchoConnection final : public fidl::Server<Echo> {
                                                ? request.signed_()->forward_to_server()
                                                : request.unsigned_()->forward_to_server();
     if (forward_to_server.empty()) {
-      ResponseUnion resp;
-      if (request.Which() == RequestUnion::Tag::kSigned) {
-        resp = ResponseUnion::WithSigned_(request.signed_()->value());
-      } else {
-        resp = ResponseUnion::WithUnsigned_(request.unsigned_()->value());
-      }
+      ResponseUnion resp = request.Which() == RequestUnion::Tag::kSigned
+                               ? ResponseUnion::WithSigned_(request.signed_()->value())
+                               : ResponseUnion::WithUnsigned_(request.unsigned_()->value());
       fitx::result<fidl::Error> result =
           fidl::SendEvent(server_binding_.value())->OnEchoUnionPayloadEvent(std::move(resp));
       ZX_ASSERT_MSG(result.is_ok(), "Replying with event failed: %s",
@@ -880,16 +873,15 @@ class EchoConnection final : public fidl::Server<Echo> {
         return;
       }
 
-      ::fidl_test_imported::Composed_EchoUnionResponseWithErrorComposed_Response resp;
       if (request.want_absolute_value()) {
-        resp = ::fidl_test_imported::Composed_EchoUnionResponseWithErrorComposed_Response::
-            WithUnsigned_(static_cast<uint64_t>(std::abs(request.value())));
+        completer.Reply(
+            fitx::ok(::fidl_test_imported::Composed_EchoUnionResponseWithErrorComposed_Response::
+                         WithUnsigned_(static_cast<uint64_t>(std::abs(request.value())))));
       } else {
-        resp =
+        completer.Reply(fitx::ok(
             ::fidl_test_imported::Composed_EchoUnionResponseWithErrorComposed_Response::WithSigned_(
-                request.value());
+                request.value())));
       }
-      completer.Reply(fitx::ok(std::move(resp)));
     } else {
       std::shared_ptr<EchoClientApp> app =
           std::make_shared<EchoClientApp>(request.forward_to_server());

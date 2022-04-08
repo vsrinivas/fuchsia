@@ -76,20 +76,27 @@ class MainProtocol_TwoWayImportWithError_Result {
     kErr = 2,       // 0x2
   };
 
-  // Create an unknown value of this union.
-  MainProtocol_TwoWayImportWithError_Result()
-      : storage_(std::make_shared<Storage_>()) {}
-
   MainProtocol_TwoWayImportWithError_Result(
-      MainProtocol_TwoWayImportWithError_Result&&) noexcept = default;
+      MainProtocol_TwoWayImportWithError_Result&& other) noexcept
+      : MainProtocol_TwoWayImportWithError_Result(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
   MainProtocol_TwoWayImportWithError_Result& operator=(
-      MainProtocol_TwoWayImportWithError_Result&&) noexcept = default;
+      MainProtocol_TwoWayImportWithError_Result&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   MainProtocol_TwoWayImportWithError_Result(
       const MainProtocol_TwoWayImportWithError_Result& other) noexcept
       : MainProtocol_TwoWayImportWithError_Result(other.CloneStorage_()) {}
   MainProtocol_TwoWayImportWithError_Result& operator=(
       const MainProtocol_TwoWayImportWithError_Result& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -106,7 +113,8 @@ class MainProtocol_TwoWayImportWithError_Result {
       Tag
       Which() const {
     return MainProtocol_TwoWayImportWithError_Result::IndexToTag(
-        storage_->index());
+               storage_->index())
+        .value();
   }
   static MainProtocol_TwoWayImportWithError_Result WithResponse(
       ::test_protocolpayloads_imported::ImportStructPayload val) {
@@ -131,6 +139,10 @@ class MainProtocol_TwoWayImportWithError_Result {
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  MainProtocol_TwoWayImportWithError_Result(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -167,9 +179,9 @@ class MainProtocol_TwoWayImportWithError_Result {
     }
   }
 
-  static constexpr ::test_protocolpayloads::
-      MainProtocol_TwoWayImportWithError_Result::Tag
-      IndexToTag(size_t index) {
+  static constexpr cpp17::optional<
+      ::test_protocolpayloads::MainProtocol_TwoWayImportWithError_Result::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_protocolpayloads::
@@ -177,10 +189,8 @@ class MainProtocol_TwoWayImportWithError_Result {
       case 2:
         return ::test_protocolpayloads::
             MainProtocol_TwoWayImportWithError_Result::Tag::kErr;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_protocolpayloads::
-            MainProtocol_TwoWayImportWithError_Result::Tag::kResponse;
+        return cpp17::nullopt;
     }
   }
 };
@@ -199,8 +209,13 @@ class MainProtocolTwoWayImportWithErrorTopResponse {
       ::test_protocolpayloads::MainProtocol_TwoWayImportWithError_Result
           result) noexcept
       : storage_({.result = std::move(result)}) {}
-  MainProtocolTwoWayImportWithErrorTopResponse()
-      : MainProtocolTwoWayImportWithErrorTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |MainProtocolTwoWayImportWithErrorTopResponse| only if
+  // all of its members are default constructible.
+  MainProtocolTwoWayImportWithErrorTopResponse() = default;
+#pragma clang diagnostic pop
 
   MainProtocolTwoWayImportWithErrorTopResponse(
       MainProtocolTwoWayImportWithErrorTopResponse&&) noexcept = default;
@@ -237,9 +252,16 @@ class MainProtocolTwoWayImportWithErrorTopResponse {
     return storage_.result;
   }
 
+  MainProtocolTwoWayImportWithErrorTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : MainProtocolTwoWayImportWithErrorTopResponse(Storage_{
+            .result =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_protocolpayloads::MainProtocol_TwoWayImportWithError_Result result{};
+    ::test_protocolpayloads::MainProtocol_TwoWayImportWithError_Result result;
   };
 
   Storage_ storage_;
@@ -272,8 +294,13 @@ class MainProtocol_TwoWayAnonWithError_Response {
       : storage_(std::move(storage)) {}
   MainProtocol_TwoWayAnonWithError_Response(uint32_t a, uint32_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  MainProtocol_TwoWayAnonWithError_Response()
-      : MainProtocol_TwoWayAnonWithError_Response(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |MainProtocol_TwoWayAnonWithError_Response| only if
+  // all of its members are default constructible.
+  MainProtocol_TwoWayAnonWithError_Response() = default;
+#pragma clang diagnostic pop
 
   MainProtocol_TwoWayAnonWithError_Response(
       MainProtocol_TwoWayAnonWithError_Response&&) noexcept = default;
@@ -309,10 +336,17 @@ class MainProtocol_TwoWayAnonWithError_Response {
 
   uint32_t& b() { return storage_.b; }
 
+  MainProtocol_TwoWayAnonWithError_Response(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : MainProtocol_TwoWayAnonWithError_Response(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint32_t a{};
-    uint32_t b{};
+    uint32_t a = {};
+    uint32_t b = {};
   };
 
   Storage_ storage_;
@@ -350,20 +384,27 @@ class MainProtocol_TwoWayAnonWithError_Result {
     kErr = 2,       // 0x2
   };
 
-  // Create an unknown value of this union.
-  MainProtocol_TwoWayAnonWithError_Result()
-      : storage_(std::make_shared<Storage_>()) {}
-
   MainProtocol_TwoWayAnonWithError_Result(
-      MainProtocol_TwoWayAnonWithError_Result&&) noexcept = default;
+      MainProtocol_TwoWayAnonWithError_Result&& other) noexcept
+      : MainProtocol_TwoWayAnonWithError_Result(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
   MainProtocol_TwoWayAnonWithError_Result& operator=(
-      MainProtocol_TwoWayAnonWithError_Result&&) noexcept = default;
+      MainProtocol_TwoWayAnonWithError_Result&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   MainProtocol_TwoWayAnonWithError_Result(
       const MainProtocol_TwoWayAnonWithError_Result& other) noexcept
       : MainProtocol_TwoWayAnonWithError_Result(other.CloneStorage_()) {}
   MainProtocol_TwoWayAnonWithError_Result& operator=(
       const MainProtocol_TwoWayAnonWithError_Result& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -380,7 +421,8 @@ class MainProtocol_TwoWayAnonWithError_Result {
       Tag
       Which() const {
     return MainProtocol_TwoWayAnonWithError_Result::IndexToTag(
-        storage_->index());
+               storage_->index())
+        .value();
   }
   static MainProtocol_TwoWayAnonWithError_Result WithResponse(
       ::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Response val) {
@@ -405,6 +447,10 @@ class MainProtocol_TwoWayAnonWithError_Result {
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  MainProtocol_TwoWayAnonWithError_Result(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -441,9 +487,9 @@ class MainProtocol_TwoWayAnonWithError_Result {
     }
   }
 
-  static constexpr ::test_protocolpayloads::
-      MainProtocol_TwoWayAnonWithError_Result::Tag
-      IndexToTag(size_t index) {
+  static constexpr cpp17::optional<
+      ::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Result::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_protocolpayloads::
@@ -451,10 +497,8 @@ class MainProtocol_TwoWayAnonWithError_Result {
       case 2:
         return ::test_protocolpayloads::
             MainProtocol_TwoWayAnonWithError_Result::Tag::kErr;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_protocolpayloads::
-            MainProtocol_TwoWayAnonWithError_Result::Tag::kResponse;
+        return cpp17::nullopt;
     }
   }
 };
@@ -473,8 +517,13 @@ class MainProtocolTwoWayAnonWithErrorTopResponse {
       ::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Result
           result) noexcept
       : storage_({.result = std::move(result)}) {}
-  MainProtocolTwoWayAnonWithErrorTopResponse()
-      : MainProtocolTwoWayAnonWithErrorTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |MainProtocolTwoWayAnonWithErrorTopResponse| only if
+  // all of its members are default constructible.
+  MainProtocolTwoWayAnonWithErrorTopResponse() = default;
+#pragma clang diagnostic pop
 
   MainProtocolTwoWayAnonWithErrorTopResponse(
       MainProtocolTwoWayAnonWithErrorTopResponse&&) noexcept = default;
@@ -511,9 +560,16 @@ class MainProtocolTwoWayAnonWithErrorTopResponse {
     return storage_.result;
   }
 
+  MainProtocolTwoWayAnonWithErrorTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : MainProtocolTwoWayAnonWithErrorTopResponse(Storage_{
+            .result =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Result result{};
+    ::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Result result;
   };
 
   Storage_ storage_;
@@ -551,20 +607,27 @@ class MainProtocol_OnImportWithError_Result {
     kErr = 2,       // 0x2
   };
 
-  // Create an unknown value of this union.
-  MainProtocol_OnImportWithError_Result()
-      : storage_(std::make_shared<Storage_>()) {}
-
   MainProtocol_OnImportWithError_Result(
-      MainProtocol_OnImportWithError_Result&&) noexcept = default;
+      MainProtocol_OnImportWithError_Result&& other) noexcept
+      : MainProtocol_OnImportWithError_Result(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
   MainProtocol_OnImportWithError_Result& operator=(
-      MainProtocol_OnImportWithError_Result&&) noexcept = default;
+      MainProtocol_OnImportWithError_Result&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   MainProtocol_OnImportWithError_Result(
       const MainProtocol_OnImportWithError_Result& other) noexcept
       : MainProtocol_OnImportWithError_Result(other.CloneStorage_()) {}
   MainProtocol_OnImportWithError_Result& operator=(
       const MainProtocol_OnImportWithError_Result& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -579,7 +642,8 @@ class MainProtocol_OnImportWithError_Result {
 
   constexpr ::test_protocolpayloads::MainProtocol_OnImportWithError_Result::Tag
   Which() const {
-    return MainProtocol_OnImportWithError_Result::IndexToTag(storage_->index());
+    return MainProtocol_OnImportWithError_Result::IndexToTag(storage_->index())
+        .value();
   }
   static MainProtocol_OnImportWithError_Result WithResponse(
       ::test_protocolpayloads_imported::ImportStructPayload val) {
@@ -604,6 +668,10 @@ class MainProtocol_OnImportWithError_Result {
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  MainProtocol_OnImportWithError_Result(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -639,9 +707,9 @@ class MainProtocol_OnImportWithError_Result {
     }
   }
 
-  static constexpr ::test_protocolpayloads::
-      MainProtocol_OnImportWithError_Result::Tag
-      IndexToTag(size_t index) {
+  static constexpr cpp17::optional<
+      ::test_protocolpayloads::MainProtocol_OnImportWithError_Result::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_protocolpayloads::MainProtocol_OnImportWithError_Result::
@@ -649,10 +717,8 @@ class MainProtocol_OnImportWithError_Result {
       case 2:
         return ::test_protocolpayloads::MainProtocol_OnImportWithError_Result::
             Tag::kErr;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_protocolpayloads::MainProtocol_OnImportWithError_Result::
-            Tag::kResponse;
+        return cpp17::nullopt;
     }
   }
 };
@@ -671,8 +737,13 @@ class MainProtocolOnImportWithErrorRequest {
       ::test_protocolpayloads::MainProtocol_OnImportWithError_Result
           result) noexcept
       : storage_({.result = std::move(result)}) {}
-  MainProtocolOnImportWithErrorRequest()
-      : MainProtocolOnImportWithErrorRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |MainProtocolOnImportWithErrorRequest| only if all of
+  // its members are default constructible.
+  MainProtocolOnImportWithErrorRequest() = default;
+#pragma clang diagnostic pop
 
   MainProtocolOnImportWithErrorRequest(
       MainProtocolOnImportWithErrorRequest&&) noexcept = default;
@@ -709,9 +780,16 @@ class MainProtocolOnImportWithErrorRequest {
     return storage_.result;
   }
 
+  MainProtocolOnImportWithErrorRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : MainProtocolOnImportWithErrorRequest(Storage_{
+            .result =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_protocolpayloads::MainProtocol_OnImportWithError_Result result{};
+    ::test_protocolpayloads::MainProtocol_OnImportWithError_Result result;
   };
 
   Storage_ storage_;
@@ -743,8 +821,13 @@ class MainProtocol_OnAnonWithError_Response {
       : storage_(std::move(storage)) {}
   MainProtocol_OnAnonWithError_Response(uint32_t a, uint32_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  MainProtocol_OnAnonWithError_Response()
-      : MainProtocol_OnAnonWithError_Response(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |MainProtocol_OnAnonWithError_Response| only if all of
+  // its members are default constructible.
+  MainProtocol_OnAnonWithError_Response() = default;
+#pragma clang diagnostic pop
 
   MainProtocol_OnAnonWithError_Response(
       MainProtocol_OnAnonWithError_Response&&) noexcept = default;
@@ -780,10 +863,17 @@ class MainProtocol_OnAnonWithError_Response {
 
   uint32_t& b() { return storage_.b; }
 
+  MainProtocol_OnAnonWithError_Response(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : MainProtocol_OnAnonWithError_Response(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint32_t a{};
-    uint32_t b{};
+    uint32_t a = {};
+    uint32_t b = {};
   };
 
   Storage_ storage_;
@@ -820,20 +910,27 @@ class MainProtocol_OnAnonWithError_Result {
     kErr = 2,       // 0x2
   };
 
-  // Create an unknown value of this union.
-  MainProtocol_OnAnonWithError_Result()
-      : storage_(std::make_shared<Storage_>()) {}
-
   MainProtocol_OnAnonWithError_Result(
-      MainProtocol_OnAnonWithError_Result&&) noexcept = default;
+      MainProtocol_OnAnonWithError_Result&& other) noexcept
+      : MainProtocol_OnAnonWithError_Result(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
   MainProtocol_OnAnonWithError_Result& operator=(
-      MainProtocol_OnAnonWithError_Result&&) noexcept = default;
+      MainProtocol_OnAnonWithError_Result&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   MainProtocol_OnAnonWithError_Result(
       const MainProtocol_OnAnonWithError_Result& other) noexcept
       : MainProtocol_OnAnonWithError_Result(other.CloneStorage_()) {}
   MainProtocol_OnAnonWithError_Result& operator=(
       const MainProtocol_OnAnonWithError_Result& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -848,7 +945,8 @@ class MainProtocol_OnAnonWithError_Result {
 
   constexpr ::test_protocolpayloads::MainProtocol_OnAnonWithError_Result::Tag
   Which() const {
-    return MainProtocol_OnAnonWithError_Result::IndexToTag(storage_->index());
+    return MainProtocol_OnAnonWithError_Result::IndexToTag(storage_->index())
+        .value();
   }
   static MainProtocol_OnAnonWithError_Result WithResponse(
       ::test_protocolpayloads::MainProtocol_OnAnonWithError_Response val) {
@@ -873,6 +971,10 @@ class MainProtocol_OnAnonWithError_Result {
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  MainProtocol_OnAnonWithError_Result(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -908,9 +1010,9 @@ class MainProtocol_OnAnonWithError_Result {
     }
   }
 
-  static constexpr ::test_protocolpayloads::
-      MainProtocol_OnAnonWithError_Result::Tag
-      IndexToTag(size_t index) {
+  static constexpr cpp17::optional<
+      ::test_protocolpayloads::MainProtocol_OnAnonWithError_Result::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_protocolpayloads::MainProtocol_OnAnonWithError_Result::
@@ -918,10 +1020,8 @@ class MainProtocol_OnAnonWithError_Result {
       case 2:
         return ::test_protocolpayloads::MainProtocol_OnAnonWithError_Result::
             Tag::kErr;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_protocolpayloads::MainProtocol_OnAnonWithError_Result::
-            Tag::kResponse;
+        return cpp17::nullopt;
     }
   }
 };
@@ -940,8 +1040,13 @@ class MainProtocolOnAnonWithErrorRequest {
       ::test_protocolpayloads::MainProtocol_OnAnonWithError_Result
           result) noexcept
       : storage_({.result = std::move(result)}) {}
-  MainProtocolOnAnonWithErrorRequest()
-      : MainProtocolOnAnonWithErrorRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |MainProtocolOnAnonWithErrorRequest| only if all of
+  // its members are default constructible.
+  MainProtocolOnAnonWithErrorRequest() = default;
+#pragma clang diagnostic pop
 
   MainProtocolOnAnonWithErrorRequest(
       MainProtocolOnAnonWithErrorRequest&&) noexcept = default;
@@ -978,9 +1083,16 @@ class MainProtocolOnAnonWithErrorRequest {
     return storage_.result;
   }
 
+  MainProtocolOnAnonWithErrorRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : MainProtocolOnAnonWithErrorRequest(Storage_{
+            .result =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_protocolpayloads::MainProtocol_OnAnonWithError_Result result{};
+    ::test_protocolpayloads::MainProtocol_OnAnonWithError_Result result;
   };
 
   Storage_ storage_;
@@ -1012,8 +1124,13 @@ class MainProtocolTwoWayAnonWithErrorRequest {
       : storage_(std::move(storage)) {}
   MainProtocolTwoWayAnonWithErrorRequest(uint32_t a, uint32_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  MainProtocolTwoWayAnonWithErrorRequest()
-      : MainProtocolTwoWayAnonWithErrorRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |MainProtocolTwoWayAnonWithErrorRequest| only if all
+  // of its members are default constructible.
+  MainProtocolTwoWayAnonWithErrorRequest() = default;
+#pragma clang diagnostic pop
 
   MainProtocolTwoWayAnonWithErrorRequest(
       MainProtocolTwoWayAnonWithErrorRequest&&) noexcept = default;
@@ -1049,10 +1166,17 @@ class MainProtocolTwoWayAnonWithErrorRequest {
 
   uint32_t& b() { return storage_.b; }
 
+  MainProtocolTwoWayAnonWithErrorRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : MainProtocolTwoWayAnonWithErrorRequest(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint32_t a{};
-    uint32_t b{};
+    uint32_t a = {};
+    uint32_t b = {};
   };
 
   Storage_ storage_;
@@ -1085,8 +1209,13 @@ class MainProtocolTwoWayAnonTopResponse {
       : storage_(std::move(storage)) {}
   MainProtocolTwoWayAnonTopResponse(uint32_t a, uint32_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  MainProtocolTwoWayAnonTopResponse()
-      : MainProtocolTwoWayAnonTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |MainProtocolTwoWayAnonTopResponse| only if all of its
+  // members are default constructible.
+  MainProtocolTwoWayAnonTopResponse() = default;
+#pragma clang diagnostic pop
 
   MainProtocolTwoWayAnonTopResponse(
       MainProtocolTwoWayAnonTopResponse&&) noexcept = default;
@@ -1122,10 +1251,17 @@ class MainProtocolTwoWayAnonTopResponse {
 
   uint32_t& b() { return storage_.b; }
 
+  MainProtocolTwoWayAnonTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : MainProtocolTwoWayAnonTopResponse(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint32_t a{};
-    uint32_t b{};
+    uint32_t a = {};
+    uint32_t b = {};
   };
 
   Storage_ storage_;
@@ -1158,7 +1294,13 @@ class MainProtocolTwoWayAnonRequest {
       : storage_(std::move(storage)) {}
   MainProtocolTwoWayAnonRequest(uint32_t a, uint32_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  MainProtocolTwoWayAnonRequest() : MainProtocolTwoWayAnonRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |MainProtocolTwoWayAnonRequest| only if all of its
+  // members are default constructible.
+  MainProtocolTwoWayAnonRequest() = default;
+#pragma clang diagnostic pop
 
   MainProtocolTwoWayAnonRequest(MainProtocolTwoWayAnonRequest&&) noexcept =
       default;
@@ -1192,10 +1334,17 @@ class MainProtocolTwoWayAnonRequest {
 
   uint32_t& b() { return storage_.b; }
 
+  MainProtocolTwoWayAnonRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : MainProtocolTwoWayAnonRequest(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint32_t a{};
-    uint32_t b{};
+    uint32_t a = {};
+    uint32_t b = {};
   };
 
   Storage_ storage_;
@@ -1228,7 +1377,13 @@ class MainProtocolOneWayAnonRequest {
       : storage_(std::move(storage)) {}
   MainProtocolOneWayAnonRequest(uint32_t a, uint32_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  MainProtocolOneWayAnonRequest() : MainProtocolOneWayAnonRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |MainProtocolOneWayAnonRequest| only if all of its
+  // members are default constructible.
+  MainProtocolOneWayAnonRequest() = default;
+#pragma clang diagnostic pop
 
   MainProtocolOneWayAnonRequest(MainProtocolOneWayAnonRequest&&) noexcept =
       default;
@@ -1262,10 +1417,17 @@ class MainProtocolOneWayAnonRequest {
 
   uint32_t& b() { return storage_.b; }
 
+  MainProtocolOneWayAnonRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : MainProtocolOneWayAnonRequest(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint32_t a{};
-    uint32_t b{};
+    uint32_t a = {};
+    uint32_t b = {};
   };
 
   Storage_ storage_;
@@ -1298,7 +1460,13 @@ class MainProtocolOnAnonRequest {
       : storage_(std::move(storage)) {}
   MainProtocolOnAnonRequest(uint32_t a, uint32_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  MainProtocolOnAnonRequest() : MainProtocolOnAnonRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |MainProtocolOnAnonRequest| only if all of its members
+  // are default constructible.
+  MainProtocolOnAnonRequest() = default;
+#pragma clang diagnostic pop
 
   MainProtocolOnAnonRequest(MainProtocolOnAnonRequest&&) noexcept = default;
   MainProtocolOnAnonRequest& operator=(MainProtocolOnAnonRequest&&) noexcept =
@@ -1330,10 +1498,17 @@ class MainProtocolOnAnonRequest {
 
   uint32_t& b() { return storage_.b; }
 
+  MainProtocolOnAnonRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : MainProtocolOnAnonRequest(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint32_t a{};
-    uint32_t b{};
+    uint32_t a = {};
+    uint32_t b = {};
   };
 
   Storage_ storage_;
@@ -1365,7 +1540,13 @@ class LocalStructPayload {
       : storage_(std::move(storage)) {}
   LocalStructPayload(uint32_t a, uint32_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  LocalStructPayload() : LocalStructPayload(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |LocalStructPayload| only if all of its members are
+  // default constructible.
+  LocalStructPayload() = default;
+#pragma clang diagnostic pop
 
   LocalStructPayload(LocalStructPayload&&) noexcept = default;
   LocalStructPayload& operator=(LocalStructPayload&&) noexcept = default;
@@ -1393,10 +1574,16 @@ class LocalStructPayload {
 
   uint32_t& b() { return storage_.b; }
 
+  LocalStructPayload(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : LocalStructPayload(Storage_{
+            .a = {},
+            .b = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint32_t a{};
-    uint32_t b{};
+    uint32_t a = {};
+    uint32_t b = {};
   };
 
   Storage_ storage_;
@@ -1433,20 +1620,27 @@ class MainProtocol_TwoWayLocalWithError_Result {
     kErr = 2,       // 0x2
   };
 
-  // Create an unknown value of this union.
-  MainProtocol_TwoWayLocalWithError_Result()
-      : storage_(std::make_shared<Storage_>()) {}
-
   MainProtocol_TwoWayLocalWithError_Result(
-      MainProtocol_TwoWayLocalWithError_Result&&) noexcept = default;
+      MainProtocol_TwoWayLocalWithError_Result&& other) noexcept
+      : MainProtocol_TwoWayLocalWithError_Result(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
   MainProtocol_TwoWayLocalWithError_Result& operator=(
-      MainProtocol_TwoWayLocalWithError_Result&&) noexcept = default;
+      MainProtocol_TwoWayLocalWithError_Result&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   MainProtocol_TwoWayLocalWithError_Result(
       const MainProtocol_TwoWayLocalWithError_Result& other) noexcept
       : MainProtocol_TwoWayLocalWithError_Result(other.CloneStorage_()) {}
   MainProtocol_TwoWayLocalWithError_Result& operator=(
       const MainProtocol_TwoWayLocalWithError_Result& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -1463,7 +1657,8 @@ class MainProtocol_TwoWayLocalWithError_Result {
       Tag
       Which() const {
     return MainProtocol_TwoWayLocalWithError_Result::IndexToTag(
-        storage_->index());
+               storage_->index())
+        .value();
   }
   static MainProtocol_TwoWayLocalWithError_Result WithResponse(
       ::test_protocolpayloads::LocalStructPayload val) {
@@ -1488,6 +1683,10 @@ class MainProtocol_TwoWayLocalWithError_Result {
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  MainProtocol_TwoWayLocalWithError_Result(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -1524,9 +1723,9 @@ class MainProtocol_TwoWayLocalWithError_Result {
     }
   }
 
-  static constexpr ::test_protocolpayloads::
-      MainProtocol_TwoWayLocalWithError_Result::Tag
-      IndexToTag(size_t index) {
+  static constexpr cpp17::optional<
+      ::test_protocolpayloads::MainProtocol_TwoWayLocalWithError_Result::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_protocolpayloads::
@@ -1534,10 +1733,8 @@ class MainProtocol_TwoWayLocalWithError_Result {
       case 2:
         return ::test_protocolpayloads::
             MainProtocol_TwoWayLocalWithError_Result::Tag::kErr;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_protocolpayloads::
-            MainProtocol_TwoWayLocalWithError_Result::Tag::kResponse;
+        return cpp17::nullopt;
     }
   }
 };
@@ -1556,8 +1753,13 @@ class MainProtocolTwoWayLocalWithErrorTopResponse {
       ::test_protocolpayloads::MainProtocol_TwoWayLocalWithError_Result
           result) noexcept
       : storage_({.result = std::move(result)}) {}
-  MainProtocolTwoWayLocalWithErrorTopResponse()
-      : MainProtocolTwoWayLocalWithErrorTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |MainProtocolTwoWayLocalWithErrorTopResponse| only if
+  // all of its members are default constructible.
+  MainProtocolTwoWayLocalWithErrorTopResponse() = default;
+#pragma clang diagnostic pop
 
   MainProtocolTwoWayLocalWithErrorTopResponse(
       MainProtocolTwoWayLocalWithErrorTopResponse&&) noexcept = default;
@@ -1594,9 +1796,16 @@ class MainProtocolTwoWayLocalWithErrorTopResponse {
     return storage_.result;
   }
 
+  MainProtocolTwoWayLocalWithErrorTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : MainProtocolTwoWayLocalWithErrorTopResponse(Storage_{
+            .result =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_protocolpayloads::MainProtocol_TwoWayLocalWithError_Result result{};
+    ::test_protocolpayloads::MainProtocol_TwoWayLocalWithError_Result result;
   };
 
   Storage_ storage_;
@@ -1633,20 +1842,27 @@ class MainProtocol_OnLocalWithError_Result {
     kErr = 2,       // 0x2
   };
 
-  // Create an unknown value of this union.
-  MainProtocol_OnLocalWithError_Result()
-      : storage_(std::make_shared<Storage_>()) {}
-
   MainProtocol_OnLocalWithError_Result(
-      MainProtocol_OnLocalWithError_Result&&) noexcept = default;
+      MainProtocol_OnLocalWithError_Result&& other) noexcept
+      : MainProtocol_OnLocalWithError_Result(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
   MainProtocol_OnLocalWithError_Result& operator=(
-      MainProtocol_OnLocalWithError_Result&&) noexcept = default;
+      MainProtocol_OnLocalWithError_Result&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   MainProtocol_OnLocalWithError_Result(
       const MainProtocol_OnLocalWithError_Result& other) noexcept
       : MainProtocol_OnLocalWithError_Result(other.CloneStorage_()) {}
   MainProtocol_OnLocalWithError_Result& operator=(
       const MainProtocol_OnLocalWithError_Result& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -1661,7 +1877,8 @@ class MainProtocol_OnLocalWithError_Result {
 
   constexpr ::test_protocolpayloads::MainProtocol_OnLocalWithError_Result::Tag
   Which() const {
-    return MainProtocol_OnLocalWithError_Result::IndexToTag(storage_->index());
+    return MainProtocol_OnLocalWithError_Result::IndexToTag(storage_->index())
+        .value();
   }
   static MainProtocol_OnLocalWithError_Result WithResponse(
       ::test_protocolpayloads::LocalStructPayload val) {
@@ -1686,6 +1903,10 @@ class MainProtocol_OnLocalWithError_Result {
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  MainProtocol_OnLocalWithError_Result(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -1721,9 +1942,9 @@ class MainProtocol_OnLocalWithError_Result {
     }
   }
 
-  static constexpr ::test_protocolpayloads::
-      MainProtocol_OnLocalWithError_Result::Tag
-      IndexToTag(size_t index) {
+  static constexpr cpp17::optional<
+      ::test_protocolpayloads::MainProtocol_OnLocalWithError_Result::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_protocolpayloads::MainProtocol_OnLocalWithError_Result::
@@ -1731,10 +1952,8 @@ class MainProtocol_OnLocalWithError_Result {
       case 2:
         return ::test_protocolpayloads::MainProtocol_OnLocalWithError_Result::
             Tag::kErr;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_protocolpayloads::MainProtocol_OnLocalWithError_Result::
-            Tag::kResponse;
+        return cpp17::nullopt;
     }
   }
 };
@@ -1753,8 +1972,13 @@ class MainProtocolOnLocalWithErrorRequest {
       ::test_protocolpayloads::MainProtocol_OnLocalWithError_Result
           result) noexcept
       : storage_({.result = std::move(result)}) {}
-  MainProtocolOnLocalWithErrorRequest()
-      : MainProtocolOnLocalWithErrorRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |MainProtocolOnLocalWithErrorRequest| only if all of
+  // its members are default constructible.
+  MainProtocolOnLocalWithErrorRequest() = default;
+#pragma clang diagnostic pop
 
   MainProtocolOnLocalWithErrorRequest(
       MainProtocolOnLocalWithErrorRequest&&) noexcept = default;
@@ -1791,9 +2015,16 @@ class MainProtocolOnLocalWithErrorRequest {
     return storage_.result;
   }
 
+  MainProtocolOnLocalWithErrorRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : MainProtocolOnLocalWithErrorRequest(Storage_{
+            .result =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_protocolpayloads::MainProtocol_OnLocalWithError_Result result{};
+    ::test_protocolpayloads::MainProtocol_OnLocalWithError_Result result;
   };
 
   Storage_ storage_;

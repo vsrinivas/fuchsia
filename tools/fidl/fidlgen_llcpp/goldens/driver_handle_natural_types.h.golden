@@ -35,7 +35,13 @@ class ServerEndWrapper {
   ServerEndWrapper(
       ::fdf::ServerEnd<::test_driverhandle::DriverProtocol> value) noexcept
       : storage_({.value = std::move(value)}) {}
-  ServerEndWrapper() : ServerEndWrapper(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ServerEndWrapper| only if all of its members are
+  // default constructible.
+  ServerEndWrapper() = default;
+#pragma clang diagnostic pop
 
   ServerEndWrapper(ServerEndWrapper&&) noexcept = default;
   ServerEndWrapper& operator=(ServerEndWrapper&&) noexcept = default;
@@ -48,9 +54,14 @@ class ServerEndWrapper {
     return storage_.value;
   }
 
+  ServerEndWrapper(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ServerEndWrapper(Storage_{
+            .value = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::fdf::ServerEnd<::test_driverhandle::DriverProtocol> value{};
+    ::fdf::ServerEnd<::test_driverhandle::DriverProtocol> value;
   };
 
   Storage_ storage_;
@@ -84,7 +95,13 @@ class ClientEndWrapper {
   ClientEndWrapper(
       ::fdf::ClientEnd<::test_driverhandle::DriverProtocol> value) noexcept
       : storage_({.value = std::move(value)}) {}
-  ClientEndWrapper() : ClientEndWrapper(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ClientEndWrapper| only if all of its members are
+  // default constructible.
+  ClientEndWrapper() = default;
+#pragma clang diagnostic pop
 
   ClientEndWrapper(ClientEndWrapper&&) noexcept = default;
   ClientEndWrapper& operator=(ClientEndWrapper&&) noexcept = default;
@@ -97,9 +114,14 @@ class ClientEndWrapper {
     return storage_.value;
   }
 
+  ClientEndWrapper(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ClientEndWrapper(Storage_{
+            .value = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::fdf::ClientEnd<::test_driverhandle::DriverProtocol> value{};
+    ::fdf::ClientEnd<::test_driverhandle::DriverProtocol> value;
   };
 
   Storage_ storage_;

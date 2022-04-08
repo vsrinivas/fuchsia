@@ -45,15 +45,23 @@ class UnionSize8Alignment4 {
     kVariant = 1,  // 0x1
   };
 
-  // Create an unknown value of this union.
-  UnionSize8Alignment4() : storage_(std::make_shared<Storage_>()) {}
-
-  UnionSize8Alignment4(UnionSize8Alignment4&&) noexcept = default;
-  UnionSize8Alignment4& operator=(UnionSize8Alignment4&&) noexcept = default;
+  UnionSize8Alignment4(UnionSize8Alignment4&& other) noexcept
+      : UnionSize8Alignment4(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  UnionSize8Alignment4& operator=(UnionSize8Alignment4&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   UnionSize8Alignment4(const UnionSize8Alignment4& other) noexcept
       : UnionSize8Alignment4(other.CloneStorage_()) {}
   UnionSize8Alignment4& operator=(const UnionSize8Alignment4& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -65,7 +73,7 @@ class UnionSize8Alignment4 {
   }
 
   constexpr ::test_unionsandwich::UnionSize8Alignment4::Tag Which() const {
-    return UnionSize8Alignment4::IndexToTag(storage_->index());
+    return UnionSize8Alignment4::IndexToTag(storage_->index()).value();
   }
   static UnionSize8Alignment4 WithVariant(uint32_t val) {
     return UnionSize8Alignment4(
@@ -78,6 +86,10 @@ class UnionSize8Alignment4 {
   ::fidl::internal::UnionMemberView<1, Storage_> variant() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
+  UnionSize8Alignment4(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -106,14 +118,14 @@ class UnionSize8Alignment4 {
     }
   }
 
-  static constexpr ::test_unionsandwich::UnionSize8Alignment4::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<
+      ::test_unionsandwich::UnionSize8Alignment4::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_unionsandwich::UnionSize8Alignment4::Tag::kVariant;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_unionsandwich::UnionSize8Alignment4::Tag::kVariant;
+        return cpp17::nullopt;
     }
   }
 };
@@ -134,7 +146,13 @@ class SandwichUnionSize8Alignment4 {
       : storage_({.before = std::move(before),
                   .union_ = std::move(union_),
                   .after = std::move(after)}) {}
-  SandwichUnionSize8Alignment4() : SandwichUnionSize8Alignment4(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |SandwichUnionSize8Alignment4| only if all of its
+  // members are default constructible.
+  SandwichUnionSize8Alignment4() = default;
+#pragma clang diagnostic pop
 
   SandwichUnionSize8Alignment4(SandwichUnionSize8Alignment4&&) noexcept =
       default;
@@ -176,11 +194,20 @@ class SandwichUnionSize8Alignment4 {
 
   uint32_t& after() { return storage_.after; }
 
+  SandwichUnionSize8Alignment4(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : SandwichUnionSize8Alignment4(Storage_{
+            .before = {},
+            .union_ =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+            .after = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint32_t before{};
-    ::test_unionsandwich::UnionSize8Alignment4 union_{};
-    uint32_t after{};
+    uint32_t before = {};
+    ::test_unionsandwich::UnionSize8Alignment4 union_;
+    uint32_t after = {};
   };
 
   Storage_ storage_;
@@ -233,16 +260,24 @@ class UnionSize36Alignment4 {
     kVariant = 1,  // 0x1
   };
 
-  // Create an unknown value of this union.
-  UnionSize36Alignment4() : storage_(std::make_shared<Storage_>()) {}
-
-  UnionSize36Alignment4(UnionSize36Alignment4&&) noexcept = default;
-  UnionSize36Alignment4& operator=(UnionSize36Alignment4&&) noexcept = default;
+  UnionSize36Alignment4(UnionSize36Alignment4&& other) noexcept
+      : UnionSize36Alignment4(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  UnionSize36Alignment4& operator=(UnionSize36Alignment4&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   UnionSize36Alignment4(const UnionSize36Alignment4& other) noexcept
       : UnionSize36Alignment4(other.CloneStorage_()) {}
   UnionSize36Alignment4& operator=(
       const UnionSize36Alignment4& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -254,7 +289,7 @@ class UnionSize36Alignment4 {
   }
 
   constexpr ::test_unionsandwich::UnionSize36Alignment4::Tag Which() const {
-    return UnionSize36Alignment4::IndexToTag(storage_->index());
+    return UnionSize36Alignment4::IndexToTag(storage_->index()).value();
   }
   static UnionSize36Alignment4 WithVariant(::std::array<uint8_t, 32> val) {
     return UnionSize36Alignment4(
@@ -267,6 +302,10 @@ class UnionSize36Alignment4 {
   ::fidl::internal::UnionMemberView<1, Storage_> variant() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
+  UnionSize36Alignment4(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -295,14 +334,14 @@ class UnionSize36Alignment4 {
     }
   }
 
-  static constexpr ::test_unionsandwich::UnionSize36Alignment4::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<
+      ::test_unionsandwich::UnionSize36Alignment4::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_unionsandwich::UnionSize36Alignment4::Tag::kVariant;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_unionsandwich::UnionSize36Alignment4::Tag::kVariant;
+        return cpp17::nullopt;
     }
   }
 };
@@ -323,7 +362,13 @@ class SandwichUnionSize36Alignment4 {
       : storage_({.before = std::move(before),
                   .union_ = std::move(union_),
                   .after = std::move(after)}) {}
-  SandwichUnionSize36Alignment4() : SandwichUnionSize36Alignment4(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |SandwichUnionSize36Alignment4| only if all of its
+  // members are default constructible.
+  SandwichUnionSize36Alignment4() = default;
+#pragma clang diagnostic pop
 
   SandwichUnionSize36Alignment4(SandwichUnionSize36Alignment4&&) noexcept =
       default;
@@ -365,11 +410,20 @@ class SandwichUnionSize36Alignment4 {
 
   uint32_t& after() { return storage_.after; }
 
+  SandwichUnionSize36Alignment4(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : SandwichUnionSize36Alignment4(Storage_{
+            .before = {},
+            .union_ =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+            .after = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint32_t before{};
-    ::test_unionsandwich::UnionSize36Alignment4 union_{};
-    uint32_t after{};
+    uint32_t before = {};
+    ::test_unionsandwich::UnionSize36Alignment4 union_;
+    uint32_t after = {};
   };
 
   Storage_ storage_;
@@ -422,16 +476,24 @@ class UnionSize12Alignment4 {
     kVariant = 1,  // 0x1
   };
 
-  // Create an unknown value of this union.
-  UnionSize12Alignment4() : storage_(std::make_shared<Storage_>()) {}
-
-  UnionSize12Alignment4(UnionSize12Alignment4&&) noexcept = default;
-  UnionSize12Alignment4& operator=(UnionSize12Alignment4&&) noexcept = default;
+  UnionSize12Alignment4(UnionSize12Alignment4&& other) noexcept
+      : UnionSize12Alignment4(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  UnionSize12Alignment4& operator=(UnionSize12Alignment4&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   UnionSize12Alignment4(const UnionSize12Alignment4& other) noexcept
       : UnionSize12Alignment4(other.CloneStorage_()) {}
   UnionSize12Alignment4& operator=(
       const UnionSize12Alignment4& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -443,7 +505,7 @@ class UnionSize12Alignment4 {
   }
 
   constexpr ::test_unionsandwich::UnionSize12Alignment4::Tag Which() const {
-    return UnionSize12Alignment4::IndexToTag(storage_->index());
+    return UnionSize12Alignment4::IndexToTag(storage_->index()).value();
   }
   static UnionSize12Alignment4 WithVariant(::std::array<uint8_t, 6> val) {
     return UnionSize12Alignment4(
@@ -456,6 +518,10 @@ class UnionSize12Alignment4 {
   ::fidl::internal::UnionMemberView<1, Storage_> variant() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
+  UnionSize12Alignment4(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -484,14 +550,14 @@ class UnionSize12Alignment4 {
     }
   }
 
-  static constexpr ::test_unionsandwich::UnionSize12Alignment4::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<
+      ::test_unionsandwich::UnionSize12Alignment4::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_unionsandwich::UnionSize12Alignment4::Tag::kVariant;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_unionsandwich::UnionSize12Alignment4::Tag::kVariant;
+        return cpp17::nullopt;
     }
   }
 };
@@ -512,7 +578,13 @@ class SandwichUnionSize12Alignment4 {
       : storage_({.before = std::move(before),
                   .union_ = std::move(union_),
                   .after = std::move(after)}) {}
-  SandwichUnionSize12Alignment4() : SandwichUnionSize12Alignment4(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |SandwichUnionSize12Alignment4| only if all of its
+  // members are default constructible.
+  SandwichUnionSize12Alignment4() = default;
+#pragma clang diagnostic pop
 
   SandwichUnionSize12Alignment4(SandwichUnionSize12Alignment4&&) noexcept =
       default;
@@ -554,11 +626,20 @@ class SandwichUnionSize12Alignment4 {
 
   int32_t& after() { return storage_.after; }
 
+  SandwichUnionSize12Alignment4(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : SandwichUnionSize12Alignment4(Storage_{
+            .before = {},
+            .union_ =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+            .after = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint32_t before{};
-    ::test_unionsandwich::UnionSize12Alignment4 union_{};
-    int32_t after{};
+    uint32_t before = {};
+    ::test_unionsandwich::UnionSize12Alignment4 union_;
+    int32_t after = {};
   };
 
   Storage_ storage_;
@@ -610,7 +691,13 @@ class StructSize16Alignment8 {
       : storage_(std::move(storage)) {}
   StructSize16Alignment8(uint64_t f1, uint64_t f2) noexcept
       : storage_({.f1 = std::move(f1), .f2 = std::move(f2)}) {}
-  StructSize16Alignment8() : StructSize16Alignment8(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |StructSize16Alignment8| only if all of its members
+  // are default constructible.
+  StructSize16Alignment8() = default;
+#pragma clang diagnostic pop
 
   StructSize16Alignment8(StructSize16Alignment8&&) noexcept = default;
   StructSize16Alignment8& operator=(StructSize16Alignment8&&) noexcept =
@@ -642,10 +729,17 @@ class StructSize16Alignment8 {
 
   uint64_t& f2() { return storage_.f2; }
 
+  StructSize16Alignment8(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : StructSize16Alignment8(Storage_{
+            .f1 = {},
+            .f2 = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint64_t f1{};
-    uint64_t f2{};
+    uint64_t f1 = {};
+    uint64_t f2 = {};
   };
 
   Storage_ storage_;
@@ -679,16 +773,24 @@ class UnionSize24Alignment8 {
     kVariant = 1,  // 0x1
   };
 
-  // Create an unknown value of this union.
-  UnionSize24Alignment8() : storage_(std::make_shared<Storage_>()) {}
-
-  UnionSize24Alignment8(UnionSize24Alignment8&&) noexcept = default;
-  UnionSize24Alignment8& operator=(UnionSize24Alignment8&&) noexcept = default;
+  UnionSize24Alignment8(UnionSize24Alignment8&& other) noexcept
+      : UnionSize24Alignment8(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  UnionSize24Alignment8& operator=(UnionSize24Alignment8&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   UnionSize24Alignment8(const UnionSize24Alignment8& other) noexcept
       : UnionSize24Alignment8(other.CloneStorage_()) {}
   UnionSize24Alignment8& operator=(
       const UnionSize24Alignment8& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -700,7 +802,7 @@ class UnionSize24Alignment8 {
   }
 
   constexpr ::test_unionsandwich::UnionSize24Alignment8::Tag Which() const {
-    return UnionSize24Alignment8::IndexToTag(storage_->index());
+    return UnionSize24Alignment8::IndexToTag(storage_->index()).value();
   }
   static UnionSize24Alignment8 WithVariant(
       ::test_unionsandwich::StructSize16Alignment8 val) {
@@ -714,6 +816,10 @@ class UnionSize24Alignment8 {
   ::fidl::internal::UnionMemberView<1, Storage_> variant() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
+  UnionSize24Alignment8(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -742,14 +848,14 @@ class UnionSize24Alignment8 {
     }
   }
 
-  static constexpr ::test_unionsandwich::UnionSize24Alignment8::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<
+      ::test_unionsandwich::UnionSize24Alignment8::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_unionsandwich::UnionSize24Alignment8::Tag::kVariant;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_unionsandwich::UnionSize24Alignment8::Tag::kVariant;
+        return cpp17::nullopt;
     }
   }
 };
@@ -770,7 +876,13 @@ class SandwichUnionSize24Alignment8 {
       : storage_({.before = std::move(before),
                   .union_ = std::move(union_),
                   .after = std::move(after)}) {}
-  SandwichUnionSize24Alignment8() : SandwichUnionSize24Alignment8(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |SandwichUnionSize24Alignment8| only if all of its
+  // members are default constructible.
+  SandwichUnionSize24Alignment8() = default;
+#pragma clang diagnostic pop
 
   SandwichUnionSize24Alignment8(SandwichUnionSize24Alignment8&&) noexcept =
       default;
@@ -812,11 +924,20 @@ class SandwichUnionSize24Alignment8 {
 
   uint32_t& after() { return storage_.after; }
 
+  SandwichUnionSize24Alignment8(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : SandwichUnionSize24Alignment8(Storage_{
+            .before = {},
+            .union_ =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+            .after = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint32_t before{};
-    ::test_unionsandwich::UnionSize24Alignment8 union_{};
-    uint32_t after{};
+    uint32_t before = {};
+    ::test_unionsandwich::UnionSize24Alignment8 union_;
+    uint32_t after = {};
   };
 
   Storage_ storage_;

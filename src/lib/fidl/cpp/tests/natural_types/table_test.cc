@@ -15,6 +15,13 @@ test_types::HandleStruct MakeHandleStruct() {
 }
 }  // namespace
 
+TEST(Table, DefaultConstruction) {
+  test_types::SampleTable table;
+  EXPECT_TRUE(table.IsEmpty());
+  EXPECT_FALSE(table.x().has_value());
+  EXPECT_FALSE(table.y().has_value());
+}
+
 TEST(Table, AggregateInitializationCopyable) {
   test_types::SampleTable table{{.x = 3, .y = 100}};
 

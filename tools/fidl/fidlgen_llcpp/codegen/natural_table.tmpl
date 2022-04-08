@@ -59,6 +59,9 @@ class {{ .Name }} {
     {{- .Docs }}
     ::cpp17::optional<{{ .Type }}>& {{ .Name }}() { return storage_.{{ .Name }}; }
   {{- end }}
+
+  {{ .Name }}(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : {{ .Name }}(Storage_{}) {}
+
  private:
   struct Storage_ final {
     {{- range .Members -}}

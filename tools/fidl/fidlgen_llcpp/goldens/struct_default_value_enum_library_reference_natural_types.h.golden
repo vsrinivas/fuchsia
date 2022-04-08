@@ -30,7 +30,13 @@ class Foo {
   Foo(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Foo(::test_dependent::MyEnum field) noexcept
       : storage_({.field = std::move(field)}) {}
-  Foo() : Foo(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Foo| only if all of its members are default
+  // constructible.
+  Foo() = default;
+#pragma clang diagnostic pop
 
   Foo(Foo&&) noexcept = default;
   Foo& operator=(Foo&&) noexcept = default;
@@ -54,6 +60,11 @@ class Foo {
   ::test_dependent::MyEnum field() const { return storage_.field; }
 
   ::test_dependent::MyEnum& field() { return storage_.field; }
+
+  Foo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Foo(Storage_{
+            .field = ::test_dependent::MyEnum::kA,
+        }) {}
 
  private:
   struct Storage_ final {

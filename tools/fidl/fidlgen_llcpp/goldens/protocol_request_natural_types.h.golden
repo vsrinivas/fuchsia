@@ -40,7 +40,13 @@ class ParentTakeChildRequestRequest {
   ParentTakeChildRequestRequest(
       ::fidl::ServerEnd<::test_protocolrequest::Child> r) noexcept
       : storage_({.r = std::move(r)}) {}
-  ParentTakeChildRequestRequest() : ParentTakeChildRequestRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ParentTakeChildRequestRequest| only if all of its
+  // members are default constructible.
+  ParentTakeChildRequestRequest() = default;
+#pragma clang diagnostic pop
 
   ParentTakeChildRequestRequest(ParentTakeChildRequestRequest&&) noexcept =
       default;
@@ -53,9 +59,15 @@ class ParentTakeChildRequestRequest {
 
   ::fidl::ServerEnd<::test_protocolrequest::Child>& r() { return storage_.r; }
 
+  ParentTakeChildRequestRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ParentTakeChildRequestRequest(Storage_{
+            .r = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::fidl::ServerEnd<::test_protocolrequest::Child> r{};
+    ::fidl::ServerEnd<::test_protocolrequest::Child> r;
   };
 
   Storage_ storage_;
@@ -90,7 +102,13 @@ class ParentTakeChildRequest {
   ParentTakeChildRequest(
       ::fidl::ClientEnd<::test_protocolrequest::Child> c) noexcept
       : storage_({.c = std::move(c)}) {}
-  ParentTakeChildRequest() : ParentTakeChildRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ParentTakeChildRequest| only if all of its members
+  // are default constructible.
+  ParentTakeChildRequest() = default;
+#pragma clang diagnostic pop
 
   ParentTakeChildRequest(ParentTakeChildRequest&&) noexcept = default;
   ParentTakeChildRequest& operator=(ParentTakeChildRequest&&) noexcept =
@@ -102,9 +120,15 @@ class ParentTakeChildRequest {
 
   ::fidl::ClientEnd<::test_protocolrequest::Child>& c() { return storage_.c; }
 
+  ParentTakeChildRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ParentTakeChildRequest(Storage_{
+            .c = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::fidl::ClientEnd<::test_protocolrequest::Child> c{};
+    ::fidl::ClientEnd<::test_protocolrequest::Child> c;
   };
 
   Storage_ storage_;
@@ -140,7 +164,13 @@ class ParentGetChildTopResponse {
   ParentGetChildTopResponse(
       ::fidl::ClientEnd<::test_protocolrequest::Child> c) noexcept
       : storage_({.c = std::move(c)}) {}
-  ParentGetChildTopResponse() : ParentGetChildTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ParentGetChildTopResponse| only if all of its members
+  // are default constructible.
+  ParentGetChildTopResponse() = default;
+#pragma clang diagnostic pop
 
   ParentGetChildTopResponse(ParentGetChildTopResponse&&) noexcept = default;
   ParentGetChildTopResponse& operator=(ParentGetChildTopResponse&&) noexcept =
@@ -152,9 +182,15 @@ class ParentGetChildTopResponse {
 
   ::fidl::ClientEnd<::test_protocolrequest::Child>& c() { return storage_.c; }
 
+  ParentGetChildTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ParentGetChildTopResponse(Storage_{
+            .c = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::fidl::ClientEnd<::test_protocolrequest::Child> c{};
+    ::fidl::ClientEnd<::test_protocolrequest::Child> c;
   };
 
   Storage_ storage_;
@@ -190,8 +226,13 @@ class ParentGetChildRequestTopResponse {
   ParentGetChildRequestTopResponse(
       ::fidl::ServerEnd<::test_protocolrequest::Child> r) noexcept
       : storage_({.r = std::move(r)}) {}
-  ParentGetChildRequestTopResponse()
-      : ParentGetChildRequestTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ParentGetChildRequestTopResponse| only if all of its
+  // members are default constructible.
+  ParentGetChildRequestTopResponse() = default;
+#pragma clang diagnostic pop
 
   ParentGetChildRequestTopResponse(
       ParentGetChildRequestTopResponse&&) noexcept = default;
@@ -204,9 +245,15 @@ class ParentGetChildRequestTopResponse {
 
   ::fidl::ServerEnd<::test_protocolrequest::Child>& r() { return storage_.r; }
 
+  ParentGetChildRequestTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ParentGetChildRequestTopResponse(Storage_{
+            .r = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::fidl::ServerEnd<::test_protocolrequest::Child> r{};
+    ::fidl::ServerEnd<::test_protocolrequest::Child> r;
   };
 
   Storage_ storage_;

@@ -19,6 +19,70 @@
 
 namespace fidl::internal {
 
+//
+// Default construction helpers
+//
+// All natural domain objects are default constructible with sensible default
+// states, with the exception of strict unions. There is no good default for a
+// strict union. During decoding, we use this collection of traits and markers
+// to help the FIDL runtime construct temporarily an invalid strict union (or
+// aggregates thereof), and never give the object to the user if decoding errors
+// prevent us from properly initializing it with a member.
+//
+
+// |DefaultConstructPossiblyInvalidObjectTag| selects a constructor that is only
+// usable by the FIDL runtime, and may construct the object in an invalid state.
+// This is useful in decoding where we must first construct the object and then
+// populate it with valid contents.
+struct DefaultConstructPossiblyInvalidObjectTag {};
+
+// |DefaultConstructPossiblyInvalidObject| has a |Make| that makes an instance
+// of |T| without any external inputs. For objects containing strict unions, the
+// strict unions will be constructed in an invalid state.
+//
+// It is a way to expose the dangerous powers of invalid default construction
+// only to the FIDL runtime, and forcing end users to start their objects with
+// valid state.
+template <typename T>
+struct DefaultConstructPossiblyInvalidObject {
+  static constexpr T Make() {
+    if constexpr (std::is_default_constructible_v<T>) {
+      return T{};
+    } else {
+      return T{DefaultConstructPossiblyInvalidObjectTag{}};
+    }
+  }
+};
+
+template <typename E, size_t N>
+struct DefaultConstructPossiblyInvalidObject<std::array<E, N>> {
+  static constexpr std::array<E, N> Make() {
+    return ArrayMaker<N>::MakeArray(
+        [] { return E{DefaultConstructPossiblyInvalidObject<E>::Make()}; });
+  }
+
+ private:
+  template <std::size_t Idx = N>
+  struct ArrayMaker {
+    template <typename ElementMaker, typename... Ts>
+    static std::array<E, N> MakeArray(ElementMaker maker, Ts... tail) {
+      return ArrayMaker<Idx - 1>::MakeArray(maker, maker(), std::move(tail)...);
+    }
+  };
+
+  template <>
+  struct ArrayMaker<0> {
+    template <typename ElementMaker, typename... Ts>
+    static std::array<E, N> MakeArray(ElementMaker maker, Ts... tail) {
+      return std::array<E, N>{std::move(tail)...};
+    }
+  };
+};
+
+//
+// Constraints
+//
+
 struct NaturalCodingConstraintEmpty {};
 
 template <zx_obj_type_t ObjType, zx_rights_t Rights, bool IsOptional>
@@ -161,12 +225,21 @@ template <typename T, typename Constraint>
 void NaturalDecodeVectorBody(NaturalUseStdCopy<false>, NaturalDecoder* decoder,
                              size_t in_begin_offset, size_t in_end_offset, std::vector<T>* out,
                              size_t count, size_t recursion_depth) {
-  out->resize(count);
+  out->reserve(count);
   size_t stride = NaturalDecodingInlineSize<T, Constraint>(decoder);
   size_t in_offset = in_begin_offset;
-  typename std::vector<T>::iterator out_it = out->begin();
-  for (; in_offset < in_end_offset; in_offset += stride, out_it++) {
-    NaturalCodingTraits<T, Constraint>::Decode(decoder, &*out_it, in_offset, recursion_depth);
+  size_t index = 0;
+  for (; in_offset < in_end_offset; in_offset += stride, index++) {
+    // Avoid materializing a |T| if it's already default constructible.
+    // Large aggregates (e.g. arrays of primitives) can be constructed with little stack usage,
+    // in debug builds or ASAN builds.
+    // Note that in practice the two code paths should be equivalent under optimization.
+    if constexpr (std::is_default_constructible_v<T>) {
+      out->emplace_back();
+    } else {
+      out->emplace_back(DefaultConstructPossiblyInvalidObject<T>::Make());
+    }
+    NaturalCodingTraits<T, Constraint>::Decode(decoder, &(*out)[index], in_offset, recursion_depth);
   }
 }
 
@@ -378,7 +451,7 @@ struct NaturalCodingTraits<std::unique_ptr<T>, Constraint,
       decoder->SetError(kCodingErrorRecursionDepthExceeded);
       return;
     }
-    *value = std::make_unique<T>();
+    *value = std::make_unique<T>(DefaultConstructPossiblyInvalidObjectTag{});
     size_t alloc_size = NaturalDecodingInlineSize<T, Constraint>(decoder);
     size_t body_offset;
     if (!decoder->Alloc(alloc_size, &body_offset)) {
@@ -413,7 +486,7 @@ struct NaturalCodingTraits<std::unique_ptr<T>, Constraint,
       *value = nullptr;
       return;
     }
-    *value = std::make_unique<T>();
+    *value = std::make_unique<T>(DefaultConstructPossiblyInvalidObject<T>::Make());
     NaturalCodingTraits<T, Constraint>::Decode(decoder, value->get(), offset, recursion_depth);
   }
 };

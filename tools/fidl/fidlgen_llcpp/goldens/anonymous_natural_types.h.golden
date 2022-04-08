@@ -49,16 +49,26 @@ class UnionMember {
     kUnionData = 2,  // 0x2
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-
   // Create an unknown value of this union.
   UnionMember() : storage_(std::make_shared<Storage_>()) {}
 
-  UnionMember(UnionMember&&) noexcept = default;
-  UnionMember& operator=(UnionMember&&) noexcept = default;
+  UnionMember(UnionMember&& other) noexcept
+      : UnionMember(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  UnionMember& operator=(UnionMember&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   UnionMember(const UnionMember& other) noexcept
       : UnionMember(other.CloneStorage_()) {}
   UnionMember& operator=(const UnionMember& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -70,7 +80,7 @@ class UnionMember {
   }
 
   constexpr ::test_anonymous::UnionMember::Tag Which() const {
-    return UnionMember::IndexToTag(storage_->index());
+    return UnionMember::IndexToTag(storage_->index()).value();
   }
   static UnionMember WithUnionData(uint8_t val) {
     return UnionMember(
@@ -83,6 +93,9 @@ class UnionMember {
   ::fidl::internal::UnionMemberView<1, Storage_> union_data() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
+  UnionMember(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -112,7 +125,8 @@ class UnionMember {
     }
   }
 
-  static constexpr ::test_anonymous::UnionMember::Tag IndexToTag(size_t index) {
+  static constexpr cpp17::optional<::test_anonymous::UnionMember::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_anonymous::UnionMember::Tag::kUnionData;
@@ -131,7 +145,13 @@ class TableData {
  public:
   TableData(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   TableData(uint8_t data) noexcept : storage_({.data = std::move(data)}) {}
-  TableData() : TableData(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |TableData| only if all of its members are default
+  // constructible.
+  TableData() = default;
+#pragma clang diagnostic pop
 
   TableData(TableData&&) noexcept = default;
   TableData& operator=(TableData&&) noexcept = default;
@@ -155,9 +175,14 @@ class TableData {
 
   uint8_t& data() { return storage_.data; }
 
+  TableData(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : TableData(Storage_{
+            .data = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint8_t data{};
+    uint8_t data = {};
   };
 
   Storage_ storage_;
@@ -210,6 +235,9 @@ class TableMember {
     return storage_.table_data;
   }
 
+  TableMember(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : TableMember(Storage_{}) {}
+
  private:
   struct Storage_ final {
     ::cpp17::optional<::std::vector<::test_anonymous::TableData>> table_data{};
@@ -243,7 +271,13 @@ class SomeProtocolSomeMethodRequest {
       ::test_anonymous::TableMember table_member) noexcept
       : storage_({.union_member = std::move(union_member),
                   .table_member = std::move(table_member)}) {}
-  SomeProtocolSomeMethodRequest() : SomeProtocolSomeMethodRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |SomeProtocolSomeMethodRequest| only if all of its
+  // members are default constructible.
+  SomeProtocolSomeMethodRequest() = default;
+#pragma clang diagnostic pop
 
   SomeProtocolSomeMethodRequest(SomeProtocolSomeMethodRequest&&) noexcept =
       default;
@@ -285,10 +319,19 @@ class SomeProtocolSomeMethodRequest {
     return storage_.table_member;
   }
 
+  SomeProtocolSomeMethodRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : SomeProtocolSomeMethodRequest(Storage_{
+            .union_member =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+            .table_member =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_anonymous::UnionMember union_member{};
-    ::test_anonymous::TableMember table_member{};
+    ::test_anonymous::UnionMember union_member;
+    ::test_anonymous::TableMember table_member;
   };
 
   Storage_ storage_;
@@ -325,7 +368,13 @@ class OverrideTest {
       : storage_({.op = std::move(op),
                   .left = std::move(left),
                   .right = std::move(right)}) {}
-  OverrideTest() : OverrideTest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |OverrideTest| only if all of its members are default
+  // constructible.
+  OverrideTest() = default;
+#pragma clang diagnostic pop
 
   OverrideTest(OverrideTest&&) noexcept = default;
   OverrideTest& operator=(OverrideTest&&) noexcept = default;
@@ -365,11 +414,18 @@ class OverrideTest {
     return storage_.right;
   }
 
+  OverrideTest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : OverrideTest(Storage_{
+            .op = {},
+            .left = {},
+            .right = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_anonymous::Op op{};
-    ::std::unique_ptr<::test_anonymous::Expression> left{};
-    ::std::unique_ptr<::test_anonymous::Expression> right{};
+    ::test_anonymous::Op op = {};
+    ::std::unique_ptr<::test_anonymous::Expression> left;
+    ::std::unique_ptr<::test_anonymous::Expression> right;
   };
 
   Storage_ storage_;
@@ -452,6 +508,10 @@ class FunctionApplication {
   }
   ::cpp17::optional<::test_anonymous::Flags>& flags() { return storage_.flags; }
 
+  FunctionApplication(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : FunctionApplication(Storage_{}) {}
+
  private:
   struct Storage_ final {
     ::cpp17::optional<::std::string> func{};
@@ -500,16 +560,26 @@ class Expression {
     kFunctionApplication = 3,  // 0x3
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-
   // Create an unknown value of this union.
   Expression() : storage_(std::make_shared<Storage_>()) {}
 
-  Expression(Expression&&) noexcept = default;
-  Expression& operator=(Expression&&) noexcept = default;
+  Expression(Expression&& other) noexcept
+      : Expression(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  Expression& operator=(Expression&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   Expression(const Expression& other) noexcept
       : Expression(other.CloneStorage_()) {}
   Expression& operator=(const Expression& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -521,7 +591,7 @@ class Expression {
   }
 
   constexpr ::test_anonymous::Expression::Tag Which() const {
-    return Expression::IndexToTag(storage_->index());
+    return Expression::IndexToTag(storage_->index()).value();
   }
   static Expression WithValue(uint64_t val) {
     return Expression(
@@ -559,6 +629,9 @@ class Expression {
     return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
   }
 
+  Expression(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
+
  private:
   std::shared_ptr<Storage_> storage_;
   std::shared_ptr<Storage_> CloneStorage_() const;
@@ -595,7 +668,8 @@ class Expression {
     }
   }
 
-  static constexpr ::test_anonymous::Expression::Tag IndexToTag(size_t index) {
+  static constexpr cpp17::optional<::test_anonymous::Expression::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_anonymous::Expression::Tag::kValue;
@@ -622,8 +696,13 @@ class SomeProtocol_SomeMethod_Response {
   SomeProtocol_SomeMethod_Response(
       ::test_anonymous::BitsMember bits_member) noexcept
       : storage_({.bits_member = std::move(bits_member)}) {}
-  SomeProtocol_SomeMethod_Response()
-      : SomeProtocol_SomeMethod_Response(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |SomeProtocol_SomeMethod_Response| only if all of its
+  // members are default constructible.
+  SomeProtocol_SomeMethod_Response() = default;
+#pragma clang diagnostic pop
 
   SomeProtocol_SomeMethod_Response(
       SomeProtocol_SomeMethod_Response&&) noexcept = default;
@@ -657,9 +736,15 @@ class SomeProtocol_SomeMethod_Response {
 
   ::test_anonymous::BitsMember& bits_member() { return storage_.bits_member; }
 
+  SomeProtocol_SomeMethod_Response(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : SomeProtocol_SomeMethod_Response(Storage_{
+            .bits_member = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_anonymous::BitsMember bits_member{};
+    ::test_anonymous::BitsMember bits_member = {};
   };
 
   Storage_ storage_;
@@ -694,19 +779,27 @@ class SomeProtocol_SomeMethod_Result {
     kErr = 2,       // 0x2
   };
 
-  // Create an unknown value of this union.
-  SomeProtocol_SomeMethod_Result() : storage_(std::make_shared<Storage_>()) {}
-
-  SomeProtocol_SomeMethod_Result(SomeProtocol_SomeMethod_Result&&) noexcept =
-      default;
+  SomeProtocol_SomeMethod_Result(
+      SomeProtocol_SomeMethod_Result&& other) noexcept
+      : SomeProtocol_SomeMethod_Result(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
   SomeProtocol_SomeMethod_Result& operator=(
-      SomeProtocol_SomeMethod_Result&&) noexcept = default;
+      SomeProtocol_SomeMethod_Result&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   SomeProtocol_SomeMethod_Result(
       const SomeProtocol_SomeMethod_Result& other) noexcept
       : SomeProtocol_SomeMethod_Result(other.CloneStorage_()) {}
   SomeProtocol_SomeMethod_Result& operator=(
       const SomeProtocol_SomeMethod_Result& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -719,7 +812,8 @@ class SomeProtocol_SomeMethod_Result {
 
   constexpr ::test_anonymous::SomeProtocol_SomeMethod_Result::Tag Which()
       const {
-    return SomeProtocol_SomeMethod_Result::IndexToTag(storage_->index());
+    return SomeProtocol_SomeMethod_Result::IndexToTag(storage_->index())
+        .value();
   }
   static SomeProtocol_SomeMethod_Result WithResponse(
       ::test_anonymous::SomeProtocol_SomeMethod_Response val) {
@@ -745,6 +839,10 @@ class SomeProtocol_SomeMethod_Result {
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
+  SomeProtocol_SomeMethod_Result(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -777,16 +875,16 @@ class SomeProtocol_SomeMethod_Result {
     }
   }
 
-  static constexpr ::test_anonymous::SomeProtocol_SomeMethod_Result::Tag
+  static constexpr cpp17::optional<
+      ::test_anonymous::SomeProtocol_SomeMethod_Result::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_anonymous::SomeProtocol_SomeMethod_Result::Tag::kResponse;
       case 2:
         return ::test_anonymous::SomeProtocol_SomeMethod_Result::Tag::kErr;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_anonymous::SomeProtocol_SomeMethod_Result::Tag::kResponse;
+        return cpp17::nullopt;
     }
   }
 };
@@ -804,8 +902,13 @@ class SomeProtocolSomeMethodTopResponse {
   SomeProtocolSomeMethodTopResponse(
       ::test_anonymous::SomeProtocol_SomeMethod_Result result) noexcept
       : storage_({.result = std::move(result)}) {}
-  SomeProtocolSomeMethodTopResponse()
-      : SomeProtocolSomeMethodTopResponse(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |SomeProtocolSomeMethodTopResponse| only if all of its
+  // members are default constructible.
+  SomeProtocolSomeMethodTopResponse() = default;
+#pragma clang diagnostic pop
 
   SomeProtocolSomeMethodTopResponse(
       SomeProtocolSomeMethodTopResponse&&) noexcept = default;
@@ -841,9 +944,16 @@ class SomeProtocolSomeMethodTopResponse {
     return storage_.result;
   }
 
+  SomeProtocolSomeMethodTopResponse(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : SomeProtocolSomeMethodTopResponse(Storage_{
+            .result =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_anonymous::SomeProtocol_SomeMethod_Result result{};
+    ::test_anonymous::SomeProtocol_SomeMethod_Result result;
   };
 
   Storage_ storage_;

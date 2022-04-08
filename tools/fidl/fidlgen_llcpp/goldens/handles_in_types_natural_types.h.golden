@@ -37,15 +37,23 @@ class UnionWithHandle {
     kH = 1,  // 0x1
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-
   // Create an unknown value of this union.
   UnionWithHandle() : storage_(std::make_shared<Storage_>()) {}
 
-  UnionWithHandle(UnionWithHandle&&) noexcept = default;
-  UnionWithHandle& operator=(UnionWithHandle&&) noexcept = default;
+  UnionWithHandle(UnionWithHandle&& other) noexcept
+      : UnionWithHandle(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  UnionWithHandle& operator=(UnionWithHandle&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
 
   constexpr ::test_handlesintypes::UnionWithHandle::Tag Which() const {
-    return UnionWithHandle::IndexToTag(storage_->index());
+    return UnionWithHandle::IndexToTag(storage_->index()).value();
   }
   static UnionWithHandle WithH(::zx::vmo val) {
     return UnionWithHandle(
@@ -58,6 +66,9 @@ class UnionWithHandle {
   ::fidl::internal::UnionMemberView<1, Storage_> h() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
+  UnionWithHandle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -88,8 +99,8 @@ class UnionWithHandle {
     }
   }
 
-  static constexpr ::test_handlesintypes::UnionWithHandle::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<::test_handlesintypes::UnionWithHandle::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_handlesintypes::UnionWithHandle::Tag::kH;
@@ -119,6 +130,9 @@ class TableWithHandle {
 
   const cpp17::optional<::zx::vmo>& h() const { return storage_.h; }
   ::cpp17::optional<::zx::vmo>& h() { return storage_.h; }
+
+  TableWithHandle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : TableWithHandle(Storage_{}) {}
 
  private:
   struct Storage_ final {
@@ -164,7 +178,13 @@ class HandlesInTypes {
              .handle_in_mixed_vec_array = std::move(handle_in_mixed_vec_array),
              .table_with_handle = std::move(table_with_handle),
              .union_with_handle = std::move(union_with_handle)}) {}
-  HandlesInTypes() : HandlesInTypes(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |HandlesInTypes| only if all of its members are
+  // default constructible.
+  HandlesInTypes() = default;
+#pragma clang diagnostic pop
 
   HandlesInTypes(HandlesInTypes&&) noexcept = default;
   HandlesInTypes& operator=(HandlesInTypes&&) noexcept = default;
@@ -212,14 +232,28 @@ class HandlesInTypes {
     return storage_.union_with_handle;
   }
 
+  HandlesInTypes(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : HandlesInTypes(Storage_{
+            .normal_handle = {},
+            .handle_in_vec = {},
+            .handle_in_array =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObject<
+                    ::std::array<::zx::vmo, 5>>::Make(),
+            .handle_in_mixed_vec_array = {},
+            .table_with_handle =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+            .union_with_handle =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::zx::vmo normal_handle{};
-    ::std::vector<::zx::vmo> handle_in_vec{};
-    ::std::array<::zx::vmo, 5> handle_in_array{};
-    ::std::vector<::std::array<::zx::vmo, 5>> handle_in_mixed_vec_array{};
-    ::test_handlesintypes::TableWithHandle table_with_handle{};
-    ::test_handlesintypes::UnionWithHandle union_with_handle{};
+    ::zx::vmo normal_handle;
+    ::std::vector<::zx::vmo> handle_in_vec;
+    ::std::array<::zx::vmo, 5> handle_in_array;
+    ::std::vector<::std::array<::zx::vmo, 5>> handle_in_mixed_vec_array;
+    ::test_handlesintypes::TableWithHandle table_with_handle;
+    ::test_handlesintypes::UnionWithHandle union_with_handle;
   };
 
   Storage_ storage_;

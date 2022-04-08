@@ -41,16 +41,26 @@ class ExampleXUnion {
     kVariant = 1,  // 0x1
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-
   // Create an unknown value of this union.
   ExampleXUnion() : storage_(std::make_shared<Storage_>()) {}
 
-  ExampleXUnion(ExampleXUnion&&) noexcept = default;
-  ExampleXUnion& operator=(ExampleXUnion&&) noexcept = default;
+  ExampleXUnion(ExampleXUnion&& other) noexcept
+      : ExampleXUnion(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  ExampleXUnion& operator=(ExampleXUnion&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   ExampleXUnion(const ExampleXUnion& other) noexcept
       : ExampleXUnion(other.CloneStorage_()) {}
   ExampleXUnion& operator=(const ExampleXUnion& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -62,7 +72,7 @@ class ExampleXUnion {
   }
 
   constexpr ::test_placementofattributes::ExampleXUnion::Tag Which() const {
-    return ExampleXUnion::IndexToTag(storage_->index());
+    return ExampleXUnion::IndexToTag(storage_->index()).value();
   }
   static ExampleXUnion WithVariant(uint32_t val) {
     return ExampleXUnion(
@@ -75,6 +85,9 @@ class ExampleXUnion {
   ::fidl::internal::UnionMemberView<1, Storage_> variant() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
+  ExampleXUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -105,8 +118,9 @@ class ExampleXUnion {
     }
   }
 
-  static constexpr ::test_placementofattributes::ExampleXUnion::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<
+      ::test_placementofattributes::ExampleXUnion::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_placementofattributes::ExampleXUnion::Tag::kVariant;
@@ -128,15 +142,23 @@ class ExampleUnion {
     kVariant = 1,  // 0x1
   };
 
-  // Create an unknown value of this union.
-  ExampleUnion() : storage_(std::make_shared<Storage_>()) {}
-
-  ExampleUnion(ExampleUnion&&) noexcept = default;
-  ExampleUnion& operator=(ExampleUnion&&) noexcept = default;
+  ExampleUnion(ExampleUnion&& other) noexcept
+      : ExampleUnion(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  ExampleUnion& operator=(ExampleUnion&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   ExampleUnion(const ExampleUnion& other) noexcept
       : ExampleUnion(other.CloneStorage_()) {}
   ExampleUnion& operator=(const ExampleUnion& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -148,7 +170,7 @@ class ExampleUnion {
   }
 
   constexpr ::test_placementofattributes::ExampleUnion::Tag Which() const {
-    return ExampleUnion::IndexToTag(storage_->index());
+    return ExampleUnion::IndexToTag(storage_->index()).value();
   }
   static ExampleUnion WithVariant(uint32_t val) {
     return ExampleUnion(
@@ -161,6 +183,9 @@ class ExampleUnion {
   ::fidl::internal::UnionMemberView<1, Storage_> variant() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
+  ExampleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -189,14 +214,14 @@ class ExampleUnion {
     }
   }
 
-  static constexpr ::test_placementofattributes::ExampleUnion::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<
+      ::test_placementofattributes::ExampleUnion::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_placementofattributes::ExampleUnion::Tag::kVariant;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_placementofattributes::ExampleUnion::Tag::kVariant;
+        return cpp17::nullopt;
     }
   }
 };
@@ -232,6 +257,9 @@ class ExampleTable {
   const cpp17::optional<uint32_t>& member() const { return storage_.member; }
   ::cpp17::optional<uint32_t>& member() { return storage_.member; }
 
+  ExampleTable(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ExampleTable(Storage_{}) {}
+
  private:
   struct Storage_ final {
     ::cpp17::optional<uint32_t> member{};
@@ -260,7 +288,13 @@ class ExampleStruct {
   ExampleStruct(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   ExampleStruct(uint32_t member) noexcept
       : storage_({.member = std::move(member)}) {}
-  ExampleStruct() : ExampleStruct(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ExampleStruct| only if all of its members are default
+  // constructible.
+  ExampleStruct() = default;
+#pragma clang diagnostic pop
 
   ExampleStruct(ExampleStruct&&) noexcept = default;
   ExampleStruct& operator=(ExampleStruct&&) noexcept = default;
@@ -284,9 +318,14 @@ class ExampleStruct {
 
   uint32_t& member() { return storage_.member; }
 
+  ExampleStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ExampleStruct(Storage_{
+            .member = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint32_t member{};
+    uint32_t member = {};
   };
 
   Storage_ storage_;
@@ -316,7 +355,13 @@ class ExampleProtocolMethodRequest {
       : storage_(std::move(storage)) {}
   ExampleProtocolMethodRequest(::test_exampleusing::Empty arg) noexcept
       : storage_({.arg = std::move(arg)}) {}
-  ExampleProtocolMethodRequest() : ExampleProtocolMethodRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ExampleProtocolMethodRequest| only if all of its
+  // members are default constructible.
+  ExampleProtocolMethodRequest() = default;
+#pragma clang diagnostic pop
 
   ExampleProtocolMethodRequest(ExampleProtocolMethodRequest&&) noexcept =
       default;
@@ -346,9 +391,15 @@ class ExampleProtocolMethodRequest {
 
   ::test_exampleusing::Empty& arg() { return storage_.arg; }
 
+  ExampleProtocolMethodRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ExampleProtocolMethodRequest(Storage_{
+            .arg = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_exampleusing::Empty arg{};
+    ::test_exampleusing::Empty arg;
   };
 
   Storage_ storage_;

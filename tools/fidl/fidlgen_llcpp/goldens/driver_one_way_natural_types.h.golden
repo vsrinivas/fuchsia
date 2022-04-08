@@ -30,7 +30,13 @@ class Payload {
  public:
   Payload(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Payload(uint32_t value) noexcept : storage_({.value = std::move(value)}) {}
-  Payload() : Payload(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Payload| only if all of its members are default
+  // constructible.
+  Payload() = default;
+#pragma clang diagnostic pop
 
   Payload(Payload&&) noexcept = default;
   Payload& operator=(Payload&&) noexcept = default;
@@ -53,9 +59,14 @@ class Payload {
 
   uint32_t& value() { return storage_.value; }
 
+  Payload(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : Payload(Storage_{
+            .value = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint32_t value{};
+    uint32_t value = {};
   };
 
   Storage_ storage_;
@@ -82,7 +93,13 @@ class OneWaySendRequest {
   OneWaySendRequest(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   OneWaySendRequest(::test_driveroneway::Payload payload) noexcept
       : storage_({.payload = std::move(payload)}) {}
-  OneWaySendRequest() : OneWaySendRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |OneWaySendRequest| only if all of its members are
+  // default constructible.
+  OneWaySendRequest() = default;
+#pragma clang diagnostic pop
 
   OneWaySendRequest(OneWaySendRequest&&) noexcept = default;
   OneWaySendRequest& operator=(OneWaySendRequest&&) noexcept = default;
@@ -108,9 +125,15 @@ class OneWaySendRequest {
 
   ::test_driveroneway::Payload& payload() { return storage_.payload; }
 
+  OneWaySendRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : OneWaySendRequest(Storage_{
+            .payload =
+                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::test_driveroneway::Payload payload{};
+    ::test_driveroneway::Payload payload;
   };
 
   Storage_ storage_;

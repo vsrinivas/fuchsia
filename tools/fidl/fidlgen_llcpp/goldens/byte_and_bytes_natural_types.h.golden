@@ -33,7 +33,13 @@ class ByteAndBytes {
                   .many_bytes = std::move(many_bytes),
                   .only_one_k_bytes = std::move(only_one_k_bytes),
                   .opt_only_one_k_bytes = std::move(opt_only_one_k_bytes)}) {}
-  ByteAndBytes() : ByteAndBytes(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ByteAndBytes| only if all of its members are default
+  // constructible.
+  ByteAndBytes() = default;
+#pragma clang diagnostic pop
 
   ByteAndBytes(ByteAndBytes&&) noexcept = default;
   ByteAndBytes& operator=(ByteAndBytes&&) noexcept = default;
@@ -80,12 +86,20 @@ class ByteAndBytes {
     return storage_.opt_only_one_k_bytes;
   }
 
+  ByteAndBytes(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ByteAndBytes(Storage_{
+            .single_byte = {},
+            .many_bytes = {},
+            .only_one_k_bytes = {},
+            .opt_only_one_k_bytes = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    uint8_t single_byte{};
-    ::std::vector<uint8_t> many_bytes{};
-    ::std::vector<uint8_t> only_one_k_bytes{};
-    ::cpp17::optional<::std::vector<uint8_t>> opt_only_one_k_bytes{};
+    uint8_t single_byte = {};
+    ::std::vector<uint8_t> many_bytes;
+    ::std::vector<uint8_t> only_one_k_bytes;
+    ::cpp17::optional<::std::vector<uint8_t>> opt_only_one_k_bytes;
   };
 
   Storage_ storage_;

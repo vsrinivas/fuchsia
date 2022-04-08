@@ -37,7 +37,13 @@ class ParentFirstRequest {
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>
           request) noexcept
       : storage_({.request = std::move(request)}) {}
-  ParentFirstRequest() : ParentFirstRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ParentFirstRequest| only if all of its members are
+  // default constructible.
+  ParentFirstRequest() = default;
+#pragma clang diagnostic pop
 
   ParentFirstRequest(ParentFirstRequest&&) noexcept = default;
   ParentFirstRequest& operator=(ParentFirstRequest&&) noexcept = default;
@@ -51,9 +57,14 @@ class ParentFirstRequest {
     return storage_.request;
   }
 
+  ParentFirstRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ParentFirstRequest(Storage_{
+            .request = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent> request{};
+    ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent> request;
   };
 
   Storage_ storage_;
@@ -91,7 +102,13 @@ class ChildSecondRequest {
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>
           request) noexcept
       : storage_({.request = std::move(request)}) {}
-  ChildSecondRequest() : ChildSecondRequest(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ChildSecondRequest| only if all of its members are
+  // default constructible.
+  ChildSecondRequest() = default;
+#pragma clang diagnostic pop
 
   ChildSecondRequest(ChildSecondRequest&&) noexcept = default;
   ChildSecondRequest& operator=(ChildSecondRequest&&) noexcept = default;
@@ -105,9 +122,14 @@ class ChildSecondRequest {
     return storage_.request;
   }
 
+  ChildSecondRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : ChildSecondRequest(Storage_{
+            .request = {},
+        }) {}
+
  private:
   struct Storage_ final {
-    ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent> request{};
+    ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent> request;
   };
 
   Storage_ storage_;

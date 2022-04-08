@@ -39,15 +39,23 @@ class UnionSmallArray {
     kA = 1,  // 0x1
   };
 
-  // Create an unknown value of this union.
-  UnionSmallArray() : storage_(std::make_shared<Storage_>()) {}
-
-  UnionSmallArray(UnionSmallArray&&) noexcept = default;
-  UnionSmallArray& operator=(UnionSmallArray&&) noexcept = default;
+  UnionSmallArray(UnionSmallArray&& other) noexcept
+      : UnionSmallArray(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  UnionSmallArray& operator=(UnionSmallArray&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   UnionSmallArray(const UnionSmallArray& other) noexcept
       : UnionSmallArray(other.CloneStorage_()) {}
   UnionSmallArray& operator=(const UnionSmallArray& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -59,7 +67,7 @@ class UnionSmallArray {
   }
 
   constexpr ::test_arrays::UnionSmallArray::Tag Which() const {
-    return UnionSmallArray::IndexToTag(storage_->index());
+    return UnionSmallArray::IndexToTag(storage_->index()).value();
   }
   static UnionSmallArray WithA(::std::array<uint32_t, 2> val) {
     return UnionSmallArray(
@@ -72,6 +80,9 @@ class UnionSmallArray {
   ::fidl::internal::UnionMemberView<1, Storage_> a() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
+  UnionSmallArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -99,14 +110,13 @@ class UnionSmallArray {
     }
   }
 
-  static constexpr ::test_arrays::UnionSmallArray::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<::test_arrays::UnionSmallArray::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_arrays::UnionSmallArray::Tag::kA;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_arrays::UnionSmallArray::Tag::kA;
+        return cpp17::nullopt;
     }
   }
 };
@@ -124,15 +134,23 @@ class UnionLargeArray {
     kA = 1,  // 0x1
   };
 
-  // Create an unknown value of this union.
-  UnionLargeArray() : storage_(std::make_shared<Storage_>()) {}
-
-  UnionLargeArray(UnionLargeArray&&) noexcept = default;
-  UnionLargeArray& operator=(UnionLargeArray&&) noexcept = default;
+  UnionLargeArray(UnionLargeArray&& other) noexcept
+      : UnionLargeArray(
+            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  UnionLargeArray& operator=(UnionLargeArray&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
   UnionLargeArray(const UnionLargeArray& other) noexcept
       : UnionLargeArray(other.CloneStorage_()) {}
   UnionLargeArray& operator=(const UnionLargeArray& other) noexcept {
-    storage_ = other.CloneStorage_();
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
     return *this;
   }
 
@@ -144,7 +162,7 @@ class UnionLargeArray {
   }
 
   constexpr ::test_arrays::UnionLargeArray::Tag Which() const {
-    return UnionLargeArray::IndexToTag(storage_->index());
+    return UnionLargeArray::IndexToTag(storage_->index()).value();
   }
   static UnionLargeArray WithA(::std::array<uint32_t, 100> val) {
     return UnionLargeArray(
@@ -157,6 +175,9 @@ class UnionLargeArray {
   ::fidl::internal::UnionMemberView<1, Storage_> a() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
+  UnionLargeArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -184,14 +205,13 @@ class UnionLargeArray {
     }
   }
 
-  static constexpr ::test_arrays::UnionLargeArray::Tag IndexToTag(
-      size_t index) {
+  static constexpr cpp17::optional<::test_arrays::UnionLargeArray::Tag>
+  IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_arrays::UnionLargeArray::Tag::kA;
-      // TODO: what's the right thing to do here?
       default:
-        return ::test_arrays::UnionLargeArray::Tag::kA;
+        return cpp17::nullopt;
     }
   }
 };
@@ -228,6 +248,9 @@ class TableSmallArray {
     return storage_.a;
   }
   ::cpp17::optional<::std::array<uint32_t, 2>>& a() { return storage_.a; }
+
+  TableSmallArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : TableSmallArray(Storage_{}) {}
 
  private:
   struct Storage_ final {
@@ -279,6 +302,9 @@ class TableLargeArray {
   }
   ::cpp17::optional<::std::array<uint32_t, 100>>& a() { return storage_.a; }
 
+  TableLargeArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : TableLargeArray(Storage_{}) {}
+
  private:
   struct Storage_ final {
     ::cpp17::optional<::std::array<uint32_t, 100>> a{};
@@ -306,7 +332,13 @@ class StructSmallArray {
   StructSmallArray(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   StructSmallArray(::std::array<uint32_t, 2> a) noexcept
       : storage_({.a = std::move(a)}) {}
-  StructSmallArray() : StructSmallArray(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |StructSmallArray| only if all of its members are
+  // default constructible.
+  StructSmallArray() = default;
+#pragma clang diagnostic pop
 
   StructSmallArray(StructSmallArray&&) noexcept = default;
   StructSmallArray& operator=(StructSmallArray&&) noexcept = default;
@@ -330,9 +362,15 @@ class StructSmallArray {
 
   ::std::array<uint32_t, 2>& a() { return storage_.a; }
 
+  StructSmallArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : StructSmallArray(Storage_{
+            .a = ::fidl::internal::DefaultConstructPossiblyInvalidObject<
+                ::std::array<uint32_t, 2>>::Make(),
+        }) {}
+
  private:
   struct Storage_ final {
-    ::std::array<uint32_t, 2> a{};
+    ::std::array<uint32_t, 2> a = {};
   };
 
   Storage_ storage_;
@@ -360,7 +398,13 @@ class StructLargeArray {
   StructLargeArray(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   StructLargeArray(::std::array<uint32_t, 100> a) noexcept
       : storage_({.a = std::move(a)}) {}
-  StructLargeArray() : StructLargeArray(Storage_{}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |StructLargeArray| only if all of its members are
+  // default constructible.
+  StructLargeArray() = default;
+#pragma clang diagnostic pop
 
   StructLargeArray(StructLargeArray&&) noexcept = default;
   StructLargeArray& operator=(StructLargeArray&&) noexcept = default;
@@ -384,9 +428,15 @@ class StructLargeArray {
 
   ::std::array<uint32_t, 100>& a() { return storage_.a; }
 
+  StructLargeArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : StructLargeArray(Storage_{
+            .a = ::fidl::internal::DefaultConstructPossiblyInvalidObject<
+                ::std::array<uint32_t, 100>>::Make(),
+        }) {}
+
  private:
   struct Storage_ final {
-    ::std::array<uint32_t, 100> a{};
+    ::std::array<uint32_t, 100> a = {};
   };
 
   Storage_ storage_;
