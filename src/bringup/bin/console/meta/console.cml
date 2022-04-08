@@ -2,39 +2,6 @@
     program: {
         runner: "elf",
         binary: "bin/console",
-        args: [
-            "--allow-log-tag",
-            "driver_manager.cm",
-            "--allow-log-tag",
-            "driver",
-            "--allow-log-tag",
-            "device",
-            "--allow-log-tag",
-            "mdns",
-            "--allow-log-tag",
-            "netcfg",
-            "--allow-log-tag",
-            "netstack",
-            "--deny-log-tag",
-            "NUD",
-            "--deny-log-tag",
-            "klog",
-            "--allow-log-tag",
-            "fshost",
-            "--allow-log-tag",
-            "blobfs",
-            "--allow-log-tag",
-            "minfs",
-            "--allow-log-tag",
-            "wlan",
-            "--allow-log-tag",
-            "fxfs",
-            "--allow-log-tag",
-            "sshd-host",
-
-            // LogListener has a maxmimum number of tags that can be filtered, so adding
-            // more here may not work.
-        ],
     },
     capabilities: [
         { protocol: "fuchsia.hardware.pty.Device" },
@@ -51,4 +18,22 @@
             from: "self",
         },
     ],
+    config: {
+        allowed_log_tags: {
+            type: "vector",
+            max_count: 512,
+            element: {
+                type: "string",
+                max_size: 50,
+            },
+        },
+        denied_log_tags: {
+            type: "vector",
+            max_count: 512,
+            element: {
+                type: "string",
+                max_size: 50,
+            },
+        },
+    },
 }

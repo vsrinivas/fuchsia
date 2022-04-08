@@ -1,0 +1,23 @@
+{
+    allowed_log_tags: [
+        "driver_manager.cm",
+        "driver",
+        "device",
+        "mdns",
+        "netcfg",
+        "netstack",
+        "fshost",
+        "blobfs",
+        "minfs",
+        "wlan",
+        "fxfs",
+        "sshd-host",
+
+        // LogListener has a maxmimum number of tags that can be filtered, so adding
+        // more here may not work.
+    ],
+    denied_log_tags: [
+        "NUD",
+        "klog",
+    ],
+}

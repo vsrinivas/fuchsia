@@ -3,20 +3,16 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/dist/component_manifest_resources.gni")
 import("//build/test.gni")
 
-executable("console") {
-  sources = [ "main.cc" ]
-  deps = [
-    ":common",
-    "//sdk/lib/fdio",
-    "//src/sys/lib/stdout-to-debuglog/cpp",
-    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/fs-pty",
-    "//zircon/system/ulib/service:service-llcpp",
-    "//zircon/system/ulib/svc",
-  ]
+fuchsia_component_manifest("manifest") {
+  component_name = "console"
+  manifest = "meta/console.cml"
+  restricted_features = [ "structured_config" ]
+}
+
+fuchsia_structured_config_cpp_elf_lib("console_config") {
+  cm_label = ":manifest"
 }
 
 source_set("common") {
@@ -30,6 +26,7 @@ source_set("common") {
     "fifo.h",
   ]
   public_deps = [
+    ":console_config",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
@@ -54,6 +51,32 @@ source_set("common") {
   ]
 }
 
+executable("console") {
+  sources = [ "main.cc" ]
+  deps = [
+    ":common",
+    "//sdk/lib/fdio",
+    "//src/sys/lib/stdout-to-debuglog/cpp",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/fs-pty",
+    "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/svc",
+  ]
+}
+
+fuchsia_structured_config_values("default_config") {
+  cm_label = ":manifest"
+  values_source = "configs/default_console_config.json5"
+}
+
+group("bootfs") {
+  deps = [
+    ":console",
+    ":default_config",
+    ":manifest",
+  ]
+}
+
 test("console-test") {
   sources = [
     "args-test.cc",
@@ -67,10 +90,6 @@ test("console-test") {
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zxtest",
   ]
-}
-
-component_manifest_resources("bootfs") {
-  sources = [ "meta/console.cml" ]
 }
 
 fuchsia_unittest_package("console-test-pkg") {

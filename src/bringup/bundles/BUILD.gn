@@ -24,7 +24,6 @@ group("bootstrap") {
 group("zedboot") {
   deps = [
     "//src/bringup/bin/bootsvc:bin",
-    "//src/bringup/bin/console",
     "//src/bringup/bin/console:bootfs",
     "//src/bringup/bin/console-launcher:bootfs",
     "//src/bringup/bin/debuglog",

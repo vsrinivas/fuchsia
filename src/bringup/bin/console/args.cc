@@ -52,23 +52,10 @@ void RemoveIntersection(std::vector<T>& first, const std::vector<T>& second) {
 
 }  // namespace
 
-zx_status_t ParseArgs(int argc, const char** argv,
+zx_status_t ParseArgs(console_config::Config&& config,
                       const fidl::WireSyncClient<fuchsia_boot::Arguments>& client, Options* opts) {
-  cmdline::ArgsParser<Options> parser;
-  parser.AddSwitch("allow-log-tag", 'a',
-                   "Add a tag to the allow list. Log entries with matching tags will be output to "
-                   "the console. If no tags are specified, all log entries will be printed.",
-                   &Options::allowed_log_tags);
-  parser.AddSwitch("deny-log-tag", 'd',
-                   "Add a tag to the deny list. Log entries with matching tags will be prevented "
-                   "from being output to the console. This takes precedence over the allow list.",
-                   &Options::denied_log_tags);
-  std::vector<std::string> params;
-  auto status = parser.Parse(argc, argv, opts, &params);
-  if (status.has_error()) {
-    printf("console: ArgsParser::Parse() = %s\n", status.error_message().data());
-    return ZX_ERR_INVALID_ARGS;
-  }
+  opts->allowed_log_tags = std::move(config.allowed_log_tags);
+  opts->denied_log_tags = std::move(config.denied_log_tags);
 
   zx::status<Options> boot_args = GetBootArguments(client);
   if (boot_args.is_error()) {

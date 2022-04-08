@@ -13,8 +13,10 @@
 namespace {
 
 TEST(ConsoleArgsTestCase, BootArgsPrecedence) {
-  const char* args[] = {"console.cm", "--deny-log-tag",  "foo", "--deny-log-tag",
-                        "baz",        "--allow-log-tag", "qux"};
+  console_config::Config config{
+      .allowed_log_tags = {"qux"},
+      .denied_log_tags = {"foo", "baz"},
+  };
   mock_boot_arguments::Server mock_args(
       {{"console.allowed_log_tags", "foo,bar"}, {"console.denied_log_tags", "qux"}});
 
@@ -25,7 +27,7 @@ TEST(ConsoleArgsTestCase, BootArgsPrecedence) {
   mock_args.CreateClient(loop.dispatcher(), &args_client);
 
   Options opts;
-  ASSERT_OK(ParseArgs(std::size(args), args, args_client, &opts));
+  ASSERT_OK(ParseArgs(std::move(config), args_client, &opts));
 
   const std::vector<std::string> kAllowedExpected{"qux", "foo", "bar"};
   ASSERT_EQ(opts.allowed_log_tags, kAllowedExpected);

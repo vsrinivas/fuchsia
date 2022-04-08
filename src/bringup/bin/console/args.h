@@ -11,12 +11,14 @@
 #include <string>
 #include <vector>
 
+#include <console_config/config.h>
+
 struct Options {
   std::vector<std::string> allowed_log_tags;
   std::vector<std::string> denied_log_tags;
 };
 
-zx_status_t ParseArgs(int argc, const char** argv,
+zx_status_t ParseArgs(console_config::Config&& config,
                       const fidl::WireSyncClient<fuchsia_boot::Arguments>& client, Options* opts);
 
 #endif  // SRC_BRINGUP_BIN_CONSOLE_ARGS_H_
