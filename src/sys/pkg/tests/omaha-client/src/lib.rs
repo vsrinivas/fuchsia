@@ -87,11 +87,6 @@ impl Mounts {
         fs::write(appid_path, appid).expect("write omaha_app_id");
     }
 
-    fn write_policy_config(&self, config: impl AsRef<[u8]>) {
-        let config_path = self.config_data.join("policy_config.json");
-        fs::write(config_path, config).expect("write policy_config.json");
-    }
-
     fn write_version(&self, version: impl AsRef<[u8]>) {
         let version_path = self.build_info.join("version");
         fs::write(version_path, version).expect("write version");
@@ -198,12 +193,6 @@ impl TestEnvBuilder {
         mounts.write_url(url);
         mounts.write_appid("integration-test-appid");
         mounts.write_version(self.version);
-        mounts.write_policy_config(
-            json!({
-                "startup_delay_seconds": 9999,
-            })
-            .to_string(),
-        );
         if let Some(json) = self.eager_package_config {
             mounts.write_eager_package_config(json.to_string());
         }
@@ -1423,12 +1412,17 @@ async fn test_omaha_client_policy_config_inspect() {
     // Wait for omaha client to start.
     let _ = env.proxies.channel_control.get_current().await;
 
+    // These are the default values from the default.json5.
+    //
+    // TODO(jbuckland): Use RealmBuilder to provide config values and test the
+    // path from config to inspect, rather than tie this test to the production
+    // default.json5 values.
     assert_data_tree!(
         env.inspect_hierarchy().await,
         "root": contains {
             "policy_config": {
                 "periodic_interval": 60 * 60u64,
-                "startup_delay": 9999u64,
+                "startup_delay": 60u64,
                 "retry_delay": 5 * 60u64,
                 "allow_reboot_when_idle": true,
             }

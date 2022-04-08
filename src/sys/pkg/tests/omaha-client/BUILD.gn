@@ -70,6 +70,7 @@ fuchsia_test_package("omaha-client-integration-tests") {
     "//src/connectivity/network/dns:component",
     "//src/connectivity/network/netstack:component",
     "//src/sys/pkg/bin/omaha-client:component",
+    "//src/sys/pkg/bin/omaha-client:omaha-client-structured-config",
     "//src/sys/pkg/bin/system-update-committer:component",
     "//src/sys/pkg/bin/system-updater:component",
     "//src/sys/stash:stash2_v2",

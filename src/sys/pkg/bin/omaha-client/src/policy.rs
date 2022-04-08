@@ -25,22 +25,18 @@ use omaha_client::{
     time::{ComplexTime, PartialComplexTime, TimeSource, Timer},
     unless::Unless,
 };
-use serde::Deserialize;
-use std::{path::Path, sync::Arc, time::Duration};
+use std::{
+    convert::{TryFrom, TryInto},
+    sync::Arc,
+    time::Duration,
+};
 
 mod rate_limiter;
 use rate_limiter::UpdateCheckRateLimiter;
 
-/// We do periodic update check roughly every hour.
-const PERIODIC_INTERVAL: Duration = Duration::from_secs(1 * 60 * 60);
-/// Wait at least one minute before checking for updates after startup.
-const STARTUP_DELAY: Duration = Duration::from_secs(60);
-/// Wait 5 minutes before retrying after failed update checks.
-const RETRY_DELAY: Duration = Duration::from_secs(5 * 60);
 /// Allow reboot if it's been more than 48 hours since waiting to reboot.
 const VALID_REBOOT_DURATION: Duration = Duration::from_secs(48 * 60 * 60);
-/// Default value for `fuzz_percentage_range`, see `fuzz_interval` for details.
-const DEFAULT_FUZZ_PERCENTAGE_RANGE: u32 = 25;
+const MAX_FUZZ_PERCENTAGE_RANGE: u32 = 200;
 
 /// The policy implementation for Fuchsia.
 struct FuchsiaPolicy;
@@ -250,7 +246,7 @@ fn fuzz_interval(
 ) -> Duration {
     // Percentage range must be clamped as the subtraction in the numerator can result
     // in integer overflow.
-    if fuzz_percentage_range > 200 {
+    if fuzz_percentage_range > MAX_FUZZ_PERCENTAGE_RANGE {
         log::warn!("Supplied fuzz range too wide: {:?}", interval);
         return interval;
     }
@@ -259,9 +255,9 @@ fn fuzz_interval(
     let (d, s, p) =
         (interval.as_nanos(), interval_fuzz_seed as u128, fuzz_percentage_range as u128);
 
-    let numerator = 200 * M + 2 * p * s - p * M;
+    let numerator = (MAX_FUZZ_PERCENTAGE_RANGE as u128) * M + 2 * p * s - p * M;
     if let Some(nanos) = d.checked_mul(numerator) {
-        let nanos = nanos / 200 / M;
+        let nanos = nanos / (MAX_FUZZ_PERCENTAGE_RANGE as u128) / M;
         return Duration::new((nanos / 1_000_000_000) as u64, (nanos % 1_000_000_000) as u32);
     }
 
@@ -282,21 +278,34 @@ pub struct FuchsiaPolicyEngine<T> {
     commit_status: Arc<Mutex<Option<CommitStatus>>>,
 }
 
-pub struct FuchsiaPolicyEngineBuilder;
+pub struct FuchsiaPolicyEngineBuilder {
+    config: PolicyConfig,
+}
 pub struct FuchsiaPolicyEngineBuilderWithTime<T> {
+    config: PolicyConfig,
     time_source: T,
 }
 pub struct FuchsiaPolicyEngineBuilderWithTimeAndMetrics<T> {
+    config: PolicyConfig,
     time_source: T,
     metrics: CobaltMetricsReporter,
-    config: PolicyConfig,
 }
+
 impl FuchsiaPolicyEngineBuilder {
+    pub fn new(config: impl Into<PolicyConfig>) -> FuchsiaPolicyEngineBuilder {
+        FuchsiaPolicyEngineBuilder { config: config.into() }
+    }
+    pub fn new_from_args() -> FuchsiaPolicyEngineBuilder {
+        let policy_config: PolicyConfig = omaha_client_structured_config::Config::from_args()
+            .try_into()
+            .expect("Invalid config arguments.");
+        FuchsiaPolicyEngineBuilder::new(policy_config)
+    }
     pub fn time_source<T>(self, time_source: T) -> FuchsiaPolicyEngineBuilderWithTime<T>
     where
         T: TimeSource + Clone,
     {
-        FuchsiaPolicyEngineBuilderWithTime { time_source }
+        FuchsiaPolicyEngineBuilderWithTime { config: self.config, time_source }
     }
 }
 impl<T> FuchsiaPolicyEngineBuilderWithTime<T> {
@@ -305,9 +314,9 @@ impl<T> FuchsiaPolicyEngineBuilderWithTime<T> {
         metrics: CobaltMetricsReporter,
     ) -> FuchsiaPolicyEngineBuilderWithTimeAndMetrics<T> {
         FuchsiaPolicyEngineBuilderWithTimeAndMetrics {
+            config: self.config,
             time_source: self.time_source,
             metrics,
-            config: PolicyConfig::default(),
         }
     }
     #[cfg(test)]
@@ -322,10 +331,6 @@ impl<T> FuchsiaPolicyEngineBuilderWithTime<T> {
     }
 }
 impl<T> FuchsiaPolicyEngineBuilderWithTimeAndMetrics<T> {
-    pub fn load_config_from(self, path: impl AsRef<Path>) -> Self {
-        Self { config: PolicyConfigJson::load_from(path).into(), ..self }
-    }
-
     /// Override the PolicyConfig periodic interval with a different value.
     pub fn periodic_interval(mut self, periodic_interval: Duration) -> Self {
         self.config.periodic_interval = periodic_interval;
@@ -642,57 +647,20 @@ pub struct PolicyConfig {
     pub fuzz_percentage_range: u32,
 }
 
-impl From<Option<PolicyConfigJson>> for PolicyConfig {
-    fn from(config: Option<PolicyConfigJson>) -> Self {
-        Self {
-            periodic_interval: config
-                .as_ref()
-                .and_then(|c| c.periodic_interval_minutes)
-                .map(|m| Duration::from_secs(m * 60))
-                .unwrap_or(PERIODIC_INTERVAL),
-            startup_delay: config
-                .as_ref()
-                .and_then(|c| c.startup_delay_seconds)
-                .map(Duration::from_secs)
-                .unwrap_or(STARTUP_DELAY),
-            retry_delay: config
-                .as_ref()
-                .and_then(|c| c.retry_delay_seconds)
-                .map(Duration::from_secs)
-                .unwrap_or(RETRY_DELAY),
-            allow_reboot_when_idle: config
-                .as_ref()
-                .and_then(|c| c.allow_reboot_when_idle)
-                .unwrap_or(true),
-            fuzz_percentage_range: config
-                .as_ref()
-                .and_then(|c| c.fuzz_percentage_range)
-                .unwrap_or(DEFAULT_FUZZ_PERCENTAGE_RANGE),
+impl TryFrom<omaha_client_structured_config::Config> for PolicyConfig {
+    type Error = &'static str;
+    fn try_from(c: omaha_client_structured_config::Config) -> Result<Self, Self::Error> {
+        let policy_config = Self {
+            periodic_interval: Duration::from_secs((c.periodic_interval_minutes * 60).into()),
+            startup_delay: Duration::from_secs(c.startup_delay_seconds.into()),
+            retry_delay: Duration::from_secs(c.retry_delay_seconds.into()),
+            allow_reboot_when_idle: c.allow_reboot_when_idle,
+            fuzz_percentage_range: c.fuzz_percentage_range.into(),
+        };
+        if policy_config.fuzz_percentage_range >= MAX_FUZZ_PERCENTAGE_RANGE {
+            return Err("fuzz_percentage_range must be < 200%");
         }
-    }
-}
-
-impl Default for PolicyConfig {
-    fn default() -> Self {
-        PolicyConfig::from(None)
-    }
-}
-
-#[derive(Clone, Debug, Default, Deserialize)]
-struct PolicyConfigJson {
-    periodic_interval_minutes: Option<u64>,
-    startup_delay_seconds: Option<u64>,
-    retry_delay_seconds: Option<u64>,
-    allow_reboot_when_idle: Option<bool>,
-    fuzz_percentage_range: Option<u32>,
-}
-
-impl PolicyConfigJson {
-    fn load_from(path: impl AsRef<Path>) -> Option<Self> {
-        let config = std::fs::read_to_string(path.as_ref().join("policy_config.json")).ok()?;
-        serde_json::from_str(&config)
-            .map_err(|e| warn!("Failed to parse policy config: {:?}", e))
-            .ok()
+        Ok(policy_config)
     }
 }
 
@@ -713,6 +681,28 @@ mod tests {
     use std::{collections::VecDeque, time::Instant};
     use zx::HandleBased;
 
+    // We do periodic update check roughly every hour.
+    const PERIODIC_INTERVAL_FOR_TEST: Duration = Duration::from_secs(1 * 60 * 60);
+    // Wait at least one minute before checking for updates after startup.
+    const STARTUP_DELAY_FOR_TEST: Duration = Duration::from_secs(60);
+    // Wait 5 minutes before retrying after failed update checks.
+    const RETRY_DELAY_FOR_TEST: Duration = Duration::from_secs(5 * 60);
+    // Default value for `fuzz_percentage_range`, see `fuzz_interval` for details.
+    const DEFAULT_FUZZ_PERCENTAGE_RANGE_FOR_TEST: u32 = 25;
+
+    // test-only default.
+    impl Default for PolicyConfig {
+        fn default() -> Self {
+            Self {
+                periodic_interval: PERIODIC_INTERVAL_FOR_TEST,
+                startup_delay: STARTUP_DELAY_FOR_TEST,
+                retry_delay: RETRY_DELAY_FOR_TEST,
+                allow_reboot_when_idle: true,
+                fuzz_percentage_range: DEFAULT_FUZZ_PERCENTAGE_RANGE_FOR_TEST,
+            }
+        }
+    }
+
     #[derive(Debug)]
     struct UpdatePolicyDataBuilder {
         current_time: ComplexTime,
@@ -723,10 +713,10 @@ mod tests {
     }
 
     impl UpdatePolicyDataBuilder {
-        fn new(current_time: ComplexTime) -> Self {
+        fn new(current_time: ComplexTime, config: PolicyConfig) -> Self {
             Self {
                 current_time,
-                config: PolicyConfig::default(),
+                config,
                 interval_fuzz_seed: None,
                 recent_update_check_times: VecDeque::new(),
                 opt_out_preference: OptOutPreference::AllowAllUpdates,
@@ -779,8 +769,11 @@ mod tests {
         fn test_fuchsia_update_policy_data_builder_doesnt_panic(interval_fuzz_seed: u64) {
             let mock_time = MockTimeSource::new_from_now();
             let now = mock_time.now();
-            UpdatePolicyDataBuilder::new(now).interval_fuzz_seed(Some(interval_fuzz_seed)).build();
+            UpdatePolicyDataBuilder::new(now, PolicyConfig::default())
+                .interval_fuzz_seed(Some(interval_fuzz_seed))
+                .build();
         }
+
 
         #[test]
         fn test_compute_next_update_time(interval_fuzz_seed: u64) {
@@ -793,7 +786,7 @@ mod tests {
             let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
             // Set up the state for this check:
             //  - the time is "now"
-            let policy_data = UpdatePolicyDataBuilder::new(now).interval_fuzz_seed(Some(interval_fuzz_seed)).build();
+            let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default()).interval_fuzz_seed(Some(interval_fuzz_seed)).build();
             // Execute the policy check.
             FuchsiaPolicy::compute_next_update_time(
                 &policy_data,
@@ -810,7 +803,7 @@ mod tests {
             let fuzzed_interval = fuzz_interval(interval, interval_fuzz_seed, fuzz_percentage_range).as_nanos();
 
             let nanos = interval.as_nanos();
-            let lower_bound = nanos - (nanos * fuzz_percentage_range as u128 / 200);
+            let lower_bound = nanos - (nanos * fuzz_percentage_range as u128 / (MAX_FUZZ_PERCENTAGE_RANGE as u128) );
             assert!(
                 fuzzed_interval >= lower_bound,
                 "bound exceeded: {} <= {} for interval {:?}, seed {}, and range {}",
@@ -829,7 +822,7 @@ mod tests {
             let fuzzed_interval = fuzz_interval(interval, interval_fuzz_seed, fuzz_percentage_range).as_nanos();
 
             let nanos = interval.as_nanos();
-            let upper_bound = nanos + (nanos * fuzz_percentage_range as u128 / 200);
+            let upper_bound = nanos + (nanos * fuzz_percentage_range as u128 / (MAX_FUZZ_PERCENTAGE_RANGE as u128) );
 
             // The upper bound may overflow u64, but this doesn't mean that the interval itself
             // would fuzz above u64. To avoid issues with duplicating the fuzz_interval function
@@ -905,7 +898,7 @@ mod tests {
         let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
         // Set up the state for this check:
         //  - the time is "now"
-        let policy_data = UpdatePolicyDataBuilder::new(now).build();
+        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default()).build();
         // Execute the policy check.
         let result = FuchsiaPolicy::compute_next_update_time(
             &policy_data,
@@ -916,8 +909,8 @@ mod tests {
         // Confirm that:
         //  - the policy-computed next update time is a standard poll interval from the last.
         let expected = CheckTiming::builder()
-            .time(schedule.last_update_time.unwrap() + PERIODIC_INTERVAL)
-            .minimum_wait(RETRY_DELAY)
+            .time(schedule.last_update_time.unwrap() + PERIODIC_INTERVAL_FOR_TEST)
+            .minimum_wait(RETRY_DELAY_FOR_TEST)
             .build();
         debug_print_check_timing_test_data(
             "normal operation",
@@ -942,7 +935,7 @@ mod tests {
         let schedule = UpdateCheckSchedule::builder().build();
         // Set up the state for this check:
         //  - the time is "now"
-        let policy_data = UpdatePolicyDataBuilder::new(now).build();
+        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default()).build();
         // Execute the policy check.
         let result = FuchsiaPolicy::compute_next_update_time(
             &policy_data,
@@ -952,8 +945,10 @@ mod tests {
         );
         // Confirm that:
         //  - the policy-computed next update time is a startup delay poll interval from now.
-        let expected =
-            CheckTiming::builder().time(now + STARTUP_DELAY).minimum_wait(STARTUP_DELAY).build();
+        let expected = CheckTiming::builder()
+            .time(now + STARTUP_DELAY_FOR_TEST)
+            .minimum_wait(STARTUP_DELAY_FOR_TEST)
+            .build();
         debug_print_check_timing_test_data("first startup", expected, result, None, now);
         assert_eq!(result, expected);
     }
@@ -974,7 +969,7 @@ mod tests {
         let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
         // Set up the state for this check:
         //  - the time is "now"
-        let policy_data = UpdatePolicyDataBuilder::new(now).build();
+        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default()).build();
         // Execute the policy check.
         let result = FuchsiaPolicy::compute_next_update_time(
             &policy_data,
@@ -994,8 +989,8 @@ mod tests {
             //     last_update_time.checked_to_system_time().unwrap() + PERIODIC_INTERVAL,
             //     Instant::from(now) + PERIODIC_INTERVAL,
             // ))
-            .time(now + STARTUP_DELAY)
-            .minimum_wait(STARTUP_DELAY)
+            .time(now + STARTUP_DELAY_FOR_TEST)
+            .minimum_wait(STARTUP_DELAY_FOR_TEST)
             .build();
         debug_print_check_timing_test_data(
             "startup with past last_update_time",
@@ -1025,7 +1020,7 @@ mod tests {
         let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
         // Set up the state for this check:
         //  - the time is "now"
-        let policy_data = UpdatePolicyDataBuilder::new(now).build();
+        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default()).build();
         // Execute the policy check.
         let result = FuchsiaPolicy::compute_next_update_time(
             &policy_data,
@@ -1045,8 +1040,8 @@ mod tests {
             //     last_update_time.checked_to_system_time().unwrap() + PERIODIC_INTERVAL,
             //     Instant::from(now) + PERIODIC_INTERVAL,
             // ))
-            .time(now + STARTUP_DELAY)
-            .minimum_wait(STARTUP_DELAY)
+            .time(now + STARTUP_DELAY_FOR_TEST)
+            .minimum_wait(STARTUP_DELAY_FOR_TEST)
             .build();
         debug_print_check_timing_test_data(
             "startup with future last_update_time",
@@ -1073,14 +1068,14 @@ mod tests {
             ProtocolState { consecutive_failed_update_checks: 1, ..Default::default() };
         // Set up the state for this check:
         //  - the time is "now"
-        let policy_data = UpdatePolicyDataBuilder::new(now).build();
+        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default()).build();
         // Execute the policy check
         let result =
             FuchsiaPolicy::compute_next_update_time(&policy_data, &[], &schedule, &protocol_state);
         // Confirm that:
         //  - the computed next update time is a retry poll interval from now, on the monotonic
         //    timeline only.
-        let expected = CheckTiming::builder().time(now.mono + RETRY_DELAY).build();
+        let expected = CheckTiming::builder().time(now.mono + RETRY_DELAY_FOR_TEST).build();
         debug_print_check_timing_test_data(
             "single failure",
             expected,
@@ -1109,13 +1104,13 @@ mod tests {
             ProtocolState { consecutive_failed_update_checks: 4, ..Default::default() };
         // Set up the state for this check:
         //  - the time is "now"
-        let policy_data = UpdatePolicyDataBuilder::new(now).build();
+        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default()).build();
         // Execute the policy check
         let result =
             FuchsiaPolicy::compute_next_update_time(&policy_data, &[], &schedule, &protocol_state);
         // Confirm that:
         //  - the computed next update time is a standard poll interval from now (only monotonic).
-        let expected = CheckTiming::builder().time(now.mono + PERIODIC_INTERVAL).build();
+        let expected = CheckTiming::builder().time(now.mono + PERIODIC_INTERVAL_FOR_TEST).build();
         debug_print_check_timing_test_data(
             "many failures",
             expected,
@@ -1147,7 +1142,7 @@ mod tests {
         };
         // Set up the state for this check:
         //  - the time is "now"
-        let policy_data = UpdatePolicyDataBuilder::new(now).build();
+        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default()).build();
         // Execute the policy check
         let result =
             FuchsiaPolicy::compute_next_update_time(&policy_data, &[], &schedule, &protocol_state);
@@ -1156,7 +1151,7 @@ mod tests {
         //  - the computed next update time is a server-dictated poll interval from now.
         let expected = CheckTiming::builder()
             .time(schedule.last_update_time.unwrap() + server_dictated_poll_interval)
-            .minimum_wait(RETRY_DELAY)
+            .minimum_wait(RETRY_DELAY_FOR_TEST)
             .build();
         debug_print_check_timing_test_data("server dictated", expected, result, None, now);
         assert_eq!(result, expected);
@@ -1178,7 +1173,9 @@ mod tests {
         let policy_config =
             PolicyConfig { periodic_interval, retry_delay, ..PolicyConfig::default() };
         //  - the time is "now"
-        let policy_data = UpdatePolicyDataBuilder::new(now).config(policy_config).build();
+        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default())
+            .config(policy_config)
+            .build();
         // Execute the policy check.
         let result = FuchsiaPolicy::compute_next_update_time(
             &policy_data,
@@ -1210,8 +1207,8 @@ mod tests {
         // The current context:
         //   - the last update was far in the past
         //   - the next update time is just in the past
-        let last_update_time = now - PERIODIC_INTERVAL - Duration::from_secs(1);
-        let next_update_time = last_update_time + PERIODIC_INTERVAL;
+        let last_update_time = now - PERIODIC_INTERVAL_FOR_TEST - Duration::from_secs(1);
+        let next_update_time = last_update_time + PERIODIC_INTERVAL_FOR_TEST;
         let schedule = UpdateCheckSchedule::builder()
             .last_time(last_update_time)
             .next_timing(CheckTiming::builder().time(next_update_time).build())
@@ -1219,7 +1216,7 @@ mod tests {
         // Set up the state for this check:
         //  - the time is "now"
         //  - the check options are at normal defaults (scheduled background check)
-        let policy_data = UpdatePolicyDataBuilder::new(now).build();
+        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default()).build();
         let check_options = CheckOptions::default();
         // Execute the policy check
         let result = FuchsiaPolicy::update_check_allowed(
@@ -1250,8 +1247,8 @@ mod tests {
         // The current context:
         //   - the last update was far in the past
         //   - the next update time is in the future
-        let last_update_time = now - PERIODIC_INTERVAL + Duration::from_secs(1);
-        let next_update_time = last_update_time + PERIODIC_INTERVAL;
+        let last_update_time = now - PERIODIC_INTERVAL_FOR_TEST + Duration::from_secs(1);
+        let next_update_time = last_update_time + PERIODIC_INTERVAL_FOR_TEST;
         let schedule = UpdateCheckSchedule::builder()
             .last_time(last_update_time)
             .next_timing(CheckTiming::builder().time(next_update_time).build())
@@ -1259,7 +1256,7 @@ mod tests {
         // Set up the state for this check:
         //  - the time is "now"
         //  - the check options are at normal defaults (scheduled background check)
-        let policy_data = UpdatePolicyDataBuilder::new(now).build();
+        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default()).build();
         // Execute the policy check
         let result = FuchsiaPolicy::update_check_allowed(
             &policy_data,
@@ -1281,8 +1278,8 @@ mod tests {
         // The current context:
         //   - the last update was far in the past
         //   - the next update time is just in the past
-        let last_update_time = now - PERIODIC_INTERVAL - Duration::from_secs(1);
-        let next_update_time = last_update_time + PERIODIC_INTERVAL;
+        let last_update_time = now - PERIODIC_INTERVAL_FOR_TEST - Duration::from_secs(1);
+        let next_update_time = last_update_time + PERIODIC_INTERVAL_FOR_TEST;
         let schedule = UpdateCheckSchedule::builder()
             .last_time(last_update_time)
             .next_timing(CheckTiming::builder().time(next_update_time).build())
@@ -1295,7 +1292,7 @@ mod tests {
             .iter()
             .map(|&i| now.mono - Duration::from_secs(i))
             .collect();
-        let policy_data = UpdatePolicyDataBuilder::new(now)
+        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default())
             .recent_update_check_times(recent_update_check_times)
             .build();
         let check_options = CheckOptions::default();
@@ -1317,13 +1314,13 @@ mod tests {
         // The current context:
         //   - the last update was far in the past
         //   - the next update time is just in the past
-        let last_update_time = now - PERIODIC_INTERVAL - Duration::from_secs(1);
-        let next_update_time = last_update_time + PERIODIC_INTERVAL;
+        let last_update_time = now - PERIODIC_INTERVAL_FOR_TEST - Duration::from_secs(1);
+        let next_update_time = last_update_time + PERIODIC_INTERVAL_FOR_TEST;
         let schedule = UpdateCheckSchedule::builder()
             .last_time(last_update_time)
             .next_timing(CheckTiming::builder().time(next_update_time).build())
             .build();
-        let mut policy_engine = FuchsiaPolicyEngineBuilder
+        let mut policy_engine = FuchsiaPolicyEngineBuilder::new(PolicyConfig::default())
             .time_source(mock_time.clone())
             .nop_metrics_reporter()
             .build();
@@ -1367,13 +1364,15 @@ mod tests {
         //   - the last update was recently in the past
         //   - the next update time is in the future
         let last_update_time = now - Duration::from_secs(1);
-        let next_update_time = last_update_time + PERIODIC_INTERVAL;
+        let next_update_time = last_update_time + PERIODIC_INTERVAL_FOR_TEST;
         let schedule = UpdateCheckSchedule::builder()
             .last_time(last_update_time)
             .next_timing(CheckTiming::builder().time(next_update_time).build())
             .build();
-        let mut policy_engine =
-            FuchsiaPolicyEngineBuilder.time_source(mock_time).nop_metrics_reporter().build();
+        let mut policy_engine = FuchsiaPolicyEngineBuilder::new(PolicyConfig::default())
+            .time_source(mock_time)
+            .nop_metrics_reporter()
+            .build();
         let check_options = CheckOptions::default();
         let decision = policy_engine
             .update_check_allowed(&[], &schedule, &ProtocolState::default(), &check_options)
@@ -1394,8 +1393,8 @@ mod tests {
         // The current context:
         //   - the last update was far in the past
         //   - the next update time is just in the past
-        let last_update_time = now - PERIODIC_INTERVAL - Duration::from_secs(1);
-        let next_update_time = last_update_time + PERIODIC_INTERVAL;
+        let last_update_time = now - PERIODIC_INTERVAL_FOR_TEST - Duration::from_secs(1);
+        let next_update_time = last_update_time + PERIODIC_INTERVAL_FOR_TEST;
         let schedule = UpdateCheckSchedule::builder()
             .last_time(last_update_time)
             .next_timing(CheckTiming::builder().time(next_update_time).build())
@@ -1403,7 +1402,7 @@ mod tests {
         // Set up the state for this check:
         //  - the time is "now"
         //  - the check options are at normal defaults (scheduled background check)
-        let policy_data = UpdatePolicyDataBuilder::new(now)
+        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default())
             .opt_out_preference(OptOutPreference::AllowOnlySecurityUpdates)
             .build();
         let check_options = CheckOptions::default();
@@ -1435,7 +1434,7 @@ mod tests {
         let (metrics_reporter, mut metrics) = CobaltMetricsReporter::new_mock();
         let mock_time = MockTimeSource::new_from_now();
 
-        let mut policy_engine = FuchsiaPolicyEngineBuilder
+        let mut policy_engine = FuchsiaPolicyEngineBuilder::new(PolicyConfig::default())
             .time_source(mock_time.clone())
             .metrics_reporter(metrics_reporter)
             .build();
@@ -1446,8 +1445,8 @@ mod tests {
         //  - the next update time is just in the past
         //  - the check options are at normal defaults (scheduled background check)
         let now = mock_time.now();
-        let last_update_time = now - PERIODIC_INTERVAL - Duration::from_secs(1);
-        let next_update_time = last_update_time + PERIODIC_INTERVAL;
+        let last_update_time = now - PERIODIC_INTERVAL_FOR_TEST - Duration::from_secs(1);
+        let next_update_time = last_update_time + PERIODIC_INTERVAL_FOR_TEST;
         let schedule = UpdateCheckSchedule::builder()
             .last_time(last_update_time)
             .next_timing(CheckTiming::builder().time(next_update_time).build())
@@ -1487,7 +1486,7 @@ mod tests {
     async fn test_update_check_allowed_does_not_emit_opt_out_preference_metric_when_not_time() {
         let (metrics_reporter, mut metrics) = CobaltMetricsReporter::new_mock();
 
-        let mut policy_engine = FuchsiaPolicyEngineBuilder
+        let mut policy_engine = FuchsiaPolicyEngineBuilder::new(PolicyConfig::default())
             .time_source(MockTimeSource::new_from_now())
             .metrics_reporter(metrics_reporter)
             .build();
@@ -1644,7 +1643,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_ui_activity_state_default_unknown() {
-        let policy_engine = FuchsiaPolicyEngineBuilder
+        let policy_engine = FuchsiaPolicyEngineBuilder::new(PolicyConfig::default())
             .time_source(StandardTimeSource)
             .nop_metrics_reporter()
             .build();
@@ -1654,7 +1653,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_ui_activity_watch_state() {
-        let policy_engine = FuchsiaPolicyEngineBuilder
+        let policy_engine = FuchsiaPolicyEngineBuilder::new(PolicyConfig::default())
             .time_source(StandardTimeSource)
             .nop_metrics_reporter()
             .build();
@@ -1826,57 +1825,27 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_omaha_client_policy_config_load_from_config_data() {
-        let policy_engine = FuchsiaPolicyEngineBuilder
-            .time_source(StandardTimeSource)
-            .nop_metrics_reporter()
-            .load_config_from("/config/data")
-            .build();
-        assert_eq!(
-            policy_engine.config,
-            PolicyConfig {
-                periodic_interval: Duration::from_secs(42 * 60),
-                startup_delay: Duration::from_secs(43),
-                retry_delay: Duration::from_secs(301),
-                fuzz_percentage_range: 55,
-                ..PolicyConfig::default()
-            }
-        );
-    }
-
-    #[test]
-    fn test_policy_config_default() {
-        let default_policy_config = PolicyConfig {
-            periodic_interval: PERIODIC_INTERVAL,
-            startup_delay: STARTUP_DELAY,
-            retry_delay: RETRY_DELAY,
-            allow_reboot_when_idle: true,
-            fuzz_percentage_range: DEFAULT_FUZZ_PERCENTAGE_RANGE,
-        };
-        assert_eq!(PolicyConfig::default(), default_policy_config);
-        assert_eq!(PolicyConfig::from(None), default_policy_config);
-        assert_eq!(PolicyConfig::from(Some(PolicyConfigJson::default())), default_policy_config);
-    }
-
-    #[test]
-    fn test_policy_config_partial_default() {
-        assert_eq!(
-            PolicyConfig::from(Some(PolicyConfigJson {
-                startup_delay_seconds: Some(123),
-                ..PolicyConfigJson::default()
-            })),
-            PolicyConfig { startup_delay: Duration::from_secs(123), ..PolicyConfig::default() }
-        );
-    }
-
-    #[fasync::run_singlethreaded(test)]
     async fn test_policy_engine_builder_interval_override() {
-        let policy_config = FuchsiaPolicyEngineBuilder
+        let policy_config = FuchsiaPolicyEngineBuilder::new(PolicyConfig::default())
             .time_source(MockTimeSource::new_from_now())
             .nop_metrics_reporter()
             .periodic_interval(Duration::from_secs(345678))
             .build()
             .config;
         assert_eq!(Duration::from_secs(345678), policy_config.periodic_interval);
+    }
+
+    #[test]
+    fn policy_config_try_from_failure() {
+        use std::convert::TryInto;
+        let manifest_config = omaha_client_structured_config::Config {
+            allow_reboot_when_idle: true,
+            fuzz_percentage_range: 201,
+            periodic_interval_minutes: 1,
+            retry_delay_seconds: 1,
+            startup_delay_seconds: 1,
+        };
+        let maybe_policy_config: Result<PolicyConfig, _> = manifest_config.try_into();
+        assert!(maybe_policy_config.is_err());
     }
 }

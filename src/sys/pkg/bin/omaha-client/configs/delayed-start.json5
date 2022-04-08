@@ -1,0 +1,7 @@
+{
+    allow_reboot_when_idle: true,
+    fuzz_percentage_range: 25,
+    periodic_interval_minutes: 60,
+    retry_delay_seconds: 300,
+    startup_delay_seconds: 300,
+}

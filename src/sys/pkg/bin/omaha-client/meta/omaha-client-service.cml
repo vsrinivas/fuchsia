@@ -67,4 +67,34 @@
             from: "self",
         },
     ],
+    config: {
+        //   periodic_interval_minutes
+        //     The number of minutes between update checks.
+        periodic_interval_minutes: { type: "uint16" },
+
+        //   startup_delay_seconds
+        //     How many seconds to wait after system start before starting
+        //     the OMCL state machine and checking for an update.
+        startup_delay_seconds: { type: "uint16" },
+
+        //   retry_delay_seconds
+        //     The number of seconds to wait after a failed update check
+        //     before retrying.
+        retry_delay_seconds: { type: "uint16" },
+
+        //   allow_reboot_when_idle
+        //     Whether or not to reboot when idle.
+        allow_reboot_when_idle: { type: "bool" },
+
+        //   fuzz_percentage_range
+        //     The percent that periodic intervals are to be fuzzed to
+        //     provide for the spreading out of units over time, if a global-
+        //     synchronization event (e.g. major power/net outage) were to occur.
+        //     e.g. 25 is for 25%.
+        //
+        //     NB: This value must be <200%.
+        //
+        //     see `fuzz_interval()` in `src/policy.rs` for details.
+        fuzz_percentage_range: { type: "uint8" },
+    },
 }

@@ -99,10 +99,9 @@ async fn main_inner() -> Result<(), Error> {
     let stash_ref = Rc::new(Mutex::new(stash));
 
     // Policy
-    let mut policy_engine_builder = policy::FuchsiaPolicyEngineBuilder
+    let mut policy_engine_builder = policy::FuchsiaPolicyEngineBuilder::new_from_args()
         .time_source(StandardTimeSource)
-        .metrics_reporter(metrics_reporter.clone())
-        .load_config_from("/config/data");
+        .metrics_reporter(metrics_reporter.clone());
 
     if let Some(channel_config) = channel_data.config {
         if let Some(interval_secs) = channel_config.check_interval_secs {
