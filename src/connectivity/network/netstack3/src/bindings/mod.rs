@@ -449,6 +449,13 @@ impl EventContext<netstack3_core::DadEvent<DeviceId>> for BindingsDispatcher {
     }
 }
 
+impl EventContext<netstack3_core::Ipv6RouteDiscoveryEvent<DeviceId>> for BindingsDispatcher {
+    fn on_event(&mut self, _event: netstack3_core::Ipv6RouteDiscoveryEvent<DeviceId>) {
+        // TODO(https://fxbug.dev/97203): Update forwarding table in response to
+        // the event.
+    }
+}
+
 impl BindingsDispatcher {
     fn notify_interface_update(&self, device: DeviceId, event: InterfaceUpdate) {
         self.devices

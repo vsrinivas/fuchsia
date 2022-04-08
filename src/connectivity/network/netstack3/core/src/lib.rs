@@ -64,6 +64,7 @@ pub use crate::{
     ip::{
         device::{
             dad::DadEvent,
+            route_discovery::Ipv6RouteDiscoveryEvent,
             state::{IpDeviceConfiguration, Ipv4DeviceConfiguration, Ipv6DeviceConfiguration},
             IpDeviceEvent,
         },
@@ -456,6 +457,7 @@ pub trait EventDispatcher:
     + EventContext<IpLayerEvent<DeviceId, Ipv4>>
     + EventContext<IpLayerEvent<DeviceId, Ipv6>>
     + EventContext<DadEvent<DeviceId>>
+    + EventContext<Ipv6RouteDiscoveryEvent<DeviceId>>
 {
 }
 
@@ -478,7 +480,8 @@ impl<
             + EventContext<IpDeviceEvent<DeviceId, Ipv6>>
             + EventContext<IpLayerEvent<DeviceId, Ipv4>>
             + EventContext<IpLayerEvent<DeviceId, Ipv6>>
-            + EventContext<DadEvent<DeviceId>>,
+            + EventContext<DadEvent<DeviceId>>
+            + EventContext<Ipv6RouteDiscoveryEvent<DeviceId>>,
     > EventDispatcher for D
 {
 }

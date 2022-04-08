@@ -9,12 +9,15 @@ use core::{convert::TryInto as _, fmt::Debug};
 
 use log::{debug, error, trace};
 use net_types::{
-    ip::{Ip, IpAddress, IpVersionMarker, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr},
-    MulticastAddress, SpecifiedAddr, UnicastAddr, Witness,
+    ip::{
+        Ip, IpAddress, IpVersionMarker, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr, SubnetError,
+    },
+    LinkLocalAddress, LinkLocalUnicastAddr, MulticastAddress, SpecifiedAddr, UnicastAddr, Witness,
 };
 use packet::{BufferMut, ParseBuffer, Serializer, TruncateDirection, TruncatingSerializer};
 use packet_formats::{
     icmp::{
+        ndp::{options::NdpOption, NdpPacket},
         peek_message_type, IcmpDestUnreachable, IcmpEchoRequest, IcmpMessage, IcmpMessageType,
         IcmpPacket, IcmpPacketBuilder, IcmpPacketRaw, IcmpParseArgs, IcmpTimeExceeded,
         IcmpUnusedCode, Icmpv4DestUnreachableCode, Icmpv4Packet, Icmpv4ParameterProblem,
@@ -35,6 +38,7 @@ use crate::{
     device::ndp::NdpPacketHandler,
     device::FrameDestination,
     ip::{
+        device::route_discovery::{Ipv6DiscoveredRoute, RouteDiscoveryHandler},
         forwarding::ForwardingTable,
         gmp::mld::MldPacketHandler,
         path_mtu::PmtuHandler,
@@ -43,7 +47,7 @@ use crate::{
             IpSocket, IpSocketHandler, UnroutableBehavior,
         },
         BufferIpTransportContext, IpDeviceIdContext, IpExt, IpTransportContext,
-        TransportReceiveError,
+        TransportReceiveError, IPV6_DEFAULT_SUBNET,
     },
     socket::{ConnSocketEntry, ConnSocketMap, Socket},
     BlanketCoreContext, BufferDispatcher, Ctx, EventDispatcher,
@@ -1172,13 +1176,118 @@ impl<B: BufferMut, C: InnerBufferIcmpv4Context<B> + PmtuHandler<Ipv4>>
     }
 }
 
+fn receive_ndp_packet<
+    B: ByteSlice,
+    C: InnerIcmpv6Context
+        + NdpPacketHandler<<C as IpDeviceIdContext<Ipv6>>::DeviceId>
+        + RouteDiscoveryHandler,
+>(
+    sync_ctx: &mut C,
+    device_id: C::DeviceId,
+    src_ip: Ipv6SourceAddr,
+    dst_ip: SpecifiedAddr<Ipv6Addr>,
+    packet: NdpPacket<B>,
+) {
+    // TODO(https://fxbug.dev/97319): Make sure IP's hop limit is set to 255 as
+    // per RFC 4861 section 6.1.2.
+
+    match packet {
+        NdpPacket::NeighborSolicitation(_)
+        | NdpPacket::RouterSolicitation(_)
+        | NdpPacket::Redirect(_) => {}
+        NdpPacket::NeighborAdvertisement(_) => {
+            // TODO(https://fxbug.dev/97311): Invalidate discovered routers when
+            // neighbor entry's IsRouter field transitions to false.
+        }
+        NdpPacket::RouterAdvertisement(ref p) => {
+            // As per RFC 4861 section 6.1.2,
+            //
+            //   A node MUST silently discard any received Router Advertisement
+            //   messages that do not satisfy all of the following validity
+            //   checks:
+            //
+            //      - IP Source Address is a link-local address.  Routers must
+            //        use their link-local address as the source for Router
+            //        Advertisement and Redirect messages so that hosts can
+            //        uniquely identify routers.
+            //
+            //        ...
+            let src_ip = match src_ip {
+                Ipv6SourceAddr::Unicast(ip) => match LinkLocalUnicastAddr::new(ip) {
+                    Some(ip) => ip,
+                    None => return,
+                },
+                Ipv6SourceAddr::Unspecified => return,
+            };
+
+            sync_ctx.increment_counter("ndp::rx_router_advertisement");
+
+            RouteDiscoveryHandler::update_route(
+                sync_ctx,
+                device_id,
+                Ipv6DiscoveredRoute { subnet: IPV6_DEFAULT_SUBNET, gateway: Some(src_ip) },
+                p.message().router_lifetime(),
+            );
+
+            for option in p.body().iter() {
+                match option {
+                    NdpOption::SourceLinkLayerAddress(_)
+                    | NdpOption::TargetLinkLayerAddress(_)
+                    | NdpOption::RedirectedHeader { .. }
+                    | NdpOption::RecursiveDnsServer(_)
+                    | NdpOption::RouteInformation(_)
+                    | NdpOption::Mtu(_) => {}
+                    NdpOption::PrefixInformation(prefix_info) => {
+                        if !prefix_info.on_link_flag() {
+                            continue;
+                        }
+
+                        // As per RFC 4861 section 6.3.4,
+                        //
+                        //   For each Prefix Information option with the on-link
+                        //   flag set, a host does the following:
+                        //
+                        //      - If the prefix is the link-local prefix,
+                        //        silently ignore the Prefix Information option.
+                        if prefix_info.prefix().is_link_local() {
+                            continue;
+                        }
+
+                        let subnet = match prefix_info.subnet() {
+                            Ok(subnet) => subnet,
+                            Err(err) => match err {
+                                SubnetError::PrefixTooLong | SubnetError::HostBitsSet => continue,
+                            },
+                        };
+
+                        match UnicastAddr::new(subnet.network()) {
+                            Some(UnicastAddr { .. }) => {}
+                            None => continue,
+                        }
+
+                        RouteDiscoveryHandler::update_route(
+                            sync_ctx,
+                            device_id,
+                            Ipv6DiscoveredRoute { subnet, gateway: None },
+                            prefix_info.valid_lifetime(),
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    sync_ctx.receive_ndp_packet(device_id, src_ip, dst_ip, packet)
+}
+
 impl<
         B: BufferMut,
         C: InnerIcmpv6Context
             + InnerBufferIcmpContext<Ipv6, B>
             + PmtuHandler<Ipv6>
             + MldPacketHandler<<C as IpDeviceIdContext<Ipv6>>::DeviceId>
-            + NdpPacketHandler<<C as IpDeviceIdContext<Ipv6>>::DeviceId>,
+            + NdpPacketHandler<<C as IpDeviceIdContext<Ipv6>>::DeviceId>
+            + RouteDiscoveryHandler,
     > BufferIpTransportContext<Ipv6, B, C> for IcmpIpTransportContext
 {
     fn receive_ip_packet(
@@ -1242,7 +1351,7 @@ impl<
                 }
             }
             Icmpv6Packet::Ndp(packet) => {
-                sync_ctx.receive_ndp_packet(device, src_ip, dst_ip, packet)
+                receive_ndp_packet(sync_ctx, device, src_ip, dst_ip, packet)
             }
             Icmpv6Packet::PacketTooBig(packet_too_big) => {
                 sync_ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet::packet_too_big");
@@ -2418,6 +2527,7 @@ mod tests {
         ip::{IpPacketBuilder, IpProto},
         testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame,
         udp::UdpPacketBuilder,
+        utils::NonZeroDuration,
     };
     use specialize_ip_macro::ip_test;
 
@@ -2426,7 +2536,10 @@ mod tests {
         context::testutil::{DummyCtx, DummyInstant},
         device::{DeviceId, FrameDestination},
         ip::{
-            device::{set_routing_enabled, state::IpDeviceStateIpExt},
+            device::{
+                route_discovery::Ipv6DiscoveredRoute, set_routing_enabled,
+                state::IpDeviceStateIpExt,
+            },
             gmp::mld::MldPacketHandler,
             path_mtu::testutil::DummyPmtuState,
             receive_ipv4_packet, receive_ipv6_packet,
@@ -3485,6 +3598,21 @@ mod tests {
             _dst_ip: SpecifiedAddr<Ipv6Addr>,
             _packet: MldPacket<B>,
         ) {
+            unimplemented!()
+        }
+    }
+
+    impl RouteDiscoveryHandler for Dummyv6Ctx {
+        fn update_route(
+            &mut self,
+            _device_id: Self::DeviceId,
+            _route: Ipv6DiscoveredRoute,
+            _lifetime: Option<NonZeroDuration>,
+        ) {
+            unimplemented!()
+        }
+
+        fn invalidate_routes(&mut self, _device_id: Self::DeviceId) {
             unimplemented!()
         }
     }

@@ -25,14 +25,17 @@ use rand_xorshift::XorShiftRng;
 
 use crate::{
     context::{
-        testutil::{DummyFrameCtx, DummyNetworkContext, DummyTimerCtx, InstantAndData},
+        testutil::{
+            DummyEventCtx, DummyFrameCtx, DummyNetworkContext, DummyTimerCtx, InstantAndData,
+        },
         EventContext, FrameContext as _, InstantContext, TimerContext,
     },
     device::{DeviceId, DeviceLayerEventDispatcher},
     ip::{
+        device::{dad::DadEvent, route_discovery::Ipv6RouteDiscoveryEvent, IpDeviceEvent},
         icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
         socket::IpSockCreationError,
-        AddableEntryEither, SendIpPacketMeta,
+        AddableEntryEither, IpLayerEvent, SendIpPacketMeta,
     },
     transport::udp::{BufferUdpContext, UdpContext},
     BlanketCoreContext, Ctx, EventDispatcher, StackStateBuilder, TimerId,
@@ -578,9 +581,16 @@ pub(crate) fn add_arp_or_ndp_table_entry<A: IpAddress>(
 /// events have been emitted to the system.
 #[derive(Default)]
 pub(crate) struct DummyEventDispatcher {
+    events: DummyEventCtx<DispatchedEvent>,
     frames: DummyFrameCtx<DeviceId>,
     icmpv4_replies: HashMap<IcmpConnId<Ipv4>, Vec<(u16, Vec<u8>)>>,
     icmpv6_replies: HashMap<IcmpConnId<Ipv6>, Vec<(u16, Vec<u8>)>>,
+}
+
+impl AsMut<DummyEventCtx<DispatchedEvent>> for DummyCtx {
+    fn as_mut(&mut self) -> &mut DummyEventCtx<DispatchedEvent> {
+        &mut self.dispatcher.events
+    }
 }
 
 impl AsRef<DummyTimerCtx<TimerId>> for DummyCtx {
@@ -696,8 +706,33 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for DummyEventDispatcher {
     }
 }
 
-impl<T> EventContext<T> for DummyEventDispatcher {
-    fn on_event(&mut self, _event: T) {}
+#[derive(Debug, Eq, PartialEq, Hash)]
+pub(crate) enum DispatchedEvent {
+    Ipv6RouteDiscovery(Ipv6RouteDiscoveryEvent<DeviceId>),
+}
+
+impl From<Ipv6RouteDiscoveryEvent<DeviceId>> for DispatchedEvent {
+    fn from(e: Ipv6RouteDiscoveryEvent<DeviceId>) -> DispatchedEvent {
+        DispatchedEvent::Ipv6RouteDiscovery(e)
+    }
+}
+
+impl<I: Ip> EventContext<IpLayerEvent<DeviceId, I>> for DummyEventDispatcher {
+    fn on_event(&mut self, _event: IpLayerEvent<DeviceId, I>) {}
+}
+
+impl<I: Ip> EventContext<IpDeviceEvent<DeviceId, I>> for DummyEventDispatcher {
+    fn on_event(&mut self, _event: IpDeviceEvent<DeviceId, I>) {}
+}
+
+impl EventContext<DadEvent<DeviceId>> for DummyEventDispatcher {
+    fn on_event(&mut self, _event: DadEvent<DeviceId>) {}
+}
+
+impl EventContext<Ipv6RouteDiscoveryEvent<DeviceId>> for DummyEventDispatcher {
+    fn on_event(&mut self, event: Ipv6RouteDiscoveryEvent<DeviceId>) {
+        self.events.on_event(DispatchedEvent::from(event))
+    }
 }
 
 #[cfg(test)]

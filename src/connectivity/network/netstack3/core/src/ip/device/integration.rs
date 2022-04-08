@@ -28,6 +28,7 @@ use crate::{
             dad::{Ipv6DeviceDadContext, Ipv6LayerDadContext},
             get_ipv4_addr_subnet, get_ipv4_device_state, get_ipv6_device_state, get_ipv6_hop_limit,
             is_ipv4_routing_enabled, is_ipv6_routing_enabled, iter_ipv4_devices, iter_ipv6_devices,
+            route_discovery::{Ipv6RouteDiscoveryState, Ipv6RouteDiscoveryStateContext},
             router_solicitation::{Ipv6DeviceRsContext, Ipv6LayerRsContext},
             send_ip_frame,
             state::{AddressState, IpDeviceState, Ipv6AddressEntry},
@@ -54,7 +55,16 @@ use crate::{
 /// [RFC 4861 section 4.3]: https://tools.ietf.org/html/rfc4861#section-4.3
 /// [RFC 4861 section 4.4]: https://tools.ietf.org/html/rfc4861#section-4.4
 /// [RFC 4861 section 4.5]: https://tools.ietf.org/html/rfc4861#section-4.5
-const REQUIRED_NDP_IP_PACKET_HOP_LIMIT: u8 = 255;
+pub(super) const REQUIRED_NDP_IP_PACKET_HOP_LIMIT: u8 = 255;
+
+impl<C: device::IpDeviceContext<Ipv6>> Ipv6RouteDiscoveryStateContext for C {
+    fn get_discovered_routes_mut(
+        &mut self,
+        device_id: C::DeviceId,
+    ) -> &mut Ipv6RouteDiscoveryState {
+        &mut C::get_ip_device_state_mut(self, device_id).route_discovery
+    }
+}
 
 impl<C: device::BufferIpDeviceContext<Ipv4, EmptyBuf>> IgmpContext for C {
     fn get_ip_addr_subnet(&self, device: C::DeviceId) -> Option<AddrSubnet<Ipv4Addr>> {

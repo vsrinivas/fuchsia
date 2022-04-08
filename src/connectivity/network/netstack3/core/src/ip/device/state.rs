@@ -15,7 +15,10 @@ use nonzero_ext::nonzero;
 
 use crate::{
     ip::{
-        device::{dad::DUP_ADDR_DETECT_TRANSMITS, router_solicitation::MAX_RTR_SOLICITATIONS},
+        device::{
+            dad::DUP_ADDR_DETECT_TRANSMITS, route_discovery::Ipv6RouteDiscoveryState,
+            router_solicitation::MAX_RTR_SOLICITATIONS,
+        },
         gmp::{igmp::IgmpGroupState, mld::MldGroupState, MulticastGroupSet},
     },
     Instant,
@@ -279,6 +282,7 @@ impl Default for Ipv6DeviceConfiguration {
 
 /// The state common to all IPv6 devices.
 pub(crate) struct Ipv6DeviceState<I: Instant> {
+    pub(super) route_discovery: Ipv6RouteDiscoveryState,
     pub(super) router_soliciations_remaining: Option<NonZeroU8>,
     pub(crate) ip_state: IpDeviceState<I, Ipv6>,
     pub(crate) config: Ipv6DeviceConfiguration,
@@ -287,6 +291,7 @@ pub(crate) struct Ipv6DeviceState<I: Instant> {
 impl<I: Instant> Default for Ipv6DeviceState<I> {
     fn default() -> Ipv6DeviceState<I> {
         Ipv6DeviceState {
+            route_discovery: Default::default(),
             router_soliciations_remaining: None,
             ip_state: Default::default(),
             config: Default::default(),

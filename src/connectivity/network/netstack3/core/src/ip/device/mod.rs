@@ -6,6 +6,7 @@
 
 pub(crate) mod dad;
 mod integration;
+pub(crate) mod route_discovery;
 pub(crate) mod router_solicitation;
 pub(crate) mod state;
 
@@ -26,6 +27,7 @@ use crate::{
     ip::{
         device::{
             dad::{DadHandler, DadTimerId},
+            route_discovery::{Ipv6DiscoveredRouteTimerId, RouteDiscoveryHandler},
             router_solicitation::{RsHandler, RsTimerId},
             state::{
                 AddrConfig, AddressState, IpDeviceConfiguration, IpDeviceState, IpDeviceStateIpExt,
@@ -77,6 +79,7 @@ pub(crate) enum Ipv6DeviceTimerId<DeviceId> {
     Mld(MldReportDelay<DeviceId>),
     Dad(DadTimerId<DeviceId>),
     Rs(RsTimerId<DeviceId>),
+    RouteDiscovery(Ipv6DiscoveredRouteTimerId<DeviceId>),
 }
 
 impl<DeviceId> From<MldReportDelay<DeviceId>> for Ipv6DeviceTimerId<DeviceId> {
@@ -94,6 +97,12 @@ impl<DeviceId> From<DadTimerId<DeviceId>> for Ipv6DeviceTimerId<DeviceId> {
 impl<DeviceId> From<RsTimerId<DeviceId>> for Ipv6DeviceTimerId<DeviceId> {
     fn from(id: RsTimerId<DeviceId>) -> Ipv6DeviceTimerId<DeviceId> {
         Ipv6DeviceTimerId::Rs(id)
+    }
+}
+
+impl<DeviceId> From<Ipv6DiscoveredRouteTimerId<DeviceId>> for Ipv6DeviceTimerId<DeviceId> {
+    fn from(id: Ipv6DiscoveredRouteTimerId<DeviceId>) -> Ipv6DeviceTimerId<DeviceId> {
+        Ipv6DeviceTimerId::RouteDiscovery(id)
     }
 }
 
@@ -120,10 +129,21 @@ impl_timer_context!(
     Ipv6DeviceTimerId::Rs(id),
     id
 );
+impl_timer_context!(
+    IpDeviceIdContext<Ipv6>,
+    Ipv6DeviceTimerId<C::DeviceId>,
+    Ipv6DiscoveredRouteTimerId<C::DeviceId>,
+    Ipv6DeviceTimerId::RouteDiscovery(id),
+    id
+);
 
 /// Handle an IPv6 device timer firing.
 pub(crate) fn handle_ipv6_timer<
-    C: BufferIpDeviceContext<Ipv6, EmptyBuf> + DadHandler + RsHandler,
+    C: BufferIpDeviceContext<Ipv6, EmptyBuf>
+        + DadHandler
+        + RsHandler
+        + TimerHandler<Ipv6DiscoveredRouteTimerId<C::DeviceId>>
+        + TimerHandler<MldReportDelay<C::DeviceId>>,
 >(
     sync_ctx: &mut C,
     id: Ipv6DeviceTimerId<C::DeviceId>,
@@ -132,6 +152,7 @@ pub(crate) fn handle_ipv6_timer<
         Ipv6DeviceTimerId::Mld(id) => TimerHandler::handle_timer(sync_ctx, id),
         Ipv6DeviceTimerId::Dad(id) => DadHandler::handle_timer(sync_ctx, id),
         Ipv6DeviceTimerId::Rs(id) => RsHandler::handle_timer(sync_ctx, id),
+        Ipv6DeviceTimerId::RouteDiscovery(id) => TimerHandler::handle_timer(sync_ctx, id),
     }
 }
 
@@ -265,6 +286,7 @@ fn enable_ipv6_device<C: Ipv6DeviceContext + GmpHandler<Ipv6> + RsHandler + DadH
                 ip_config: IpDeviceConfiguration { ip_enabled: _, gmp_enabled: _ },
             },
         router_soliciations_remaining: _,
+        route_discovery: _,
     } = sync_ctx.get_ip_device_state_mut(device_id);
     let dad_transmits = *dad_transmits;
 
@@ -331,10 +353,14 @@ fn enable_ipv6_device<C: Ipv6DeviceContext + GmpHandler<Ipv6> + RsHandler + DadH
     }
 }
 
-fn disable_ipv6_device<C: Ipv6DeviceContext + GmpHandler<Ipv6> + RsHandler + DadHandler>(
+fn disable_ipv6_device<
+    C: Ipv6DeviceContext + GmpHandler<Ipv6> + RsHandler + DadHandler + RouteDiscoveryHandler,
+>(
     sync_ctx: &mut C,
     device_id: C::DeviceId,
 ) {
+    RouteDiscoveryHandler::invalidate_routes(sync_ctx, device_id);
+
     RsHandler::stop_router_solicitation(sync_ctx, device_id);
 
     // Delete the link-local address generated when enabling the device and stop
@@ -628,6 +654,7 @@ pub(crate) fn add_ipv6_addr_subnet<C: Ipv6DeviceContext + GmpHandler<Ipv6> + Dad
                 ip_config: IpDeviceConfiguration { ip_enabled, gmp_enabled: _ },
             },
         router_soliciations_remaining: _,
+        route_discovery: _,
     } = sync_ctx.get_ip_device_state_mut(device_id);
     let ip_enabled = *ip_enabled;
 
@@ -741,7 +768,7 @@ pub(super) fn is_ip_device_enabled<
 
 /// Updates the IPv6 Configuration for the device.
 pub(crate) fn set_ipv6_configuration<
-    C: Ipv6DeviceContext + GmpHandler<Ipv6> + RsHandler + DadHandler,
+    C: Ipv6DeviceContext + GmpHandler<Ipv6> + RsHandler + DadHandler + RouteDiscoveryHandler,
 >(
     sync_ctx: &mut C,
     device_id: C::DeviceId,

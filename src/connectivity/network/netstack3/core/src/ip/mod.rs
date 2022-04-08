@@ -25,6 +25,7 @@ pub use self::types::*;
 use alloc::vec::Vec;
 use core::{
     fmt::{self, Debug, Display, Formatter},
+    hash::Hash,
     num::NonZeroU8,
     slice::Iter,
 };
@@ -76,6 +77,11 @@ use crate::{
 
 /// Default IPv4 TTL.
 const DEFAULT_TTL: NonZeroU8 = nonzero!(64u8);
+
+/// The IPv6 subnet that contains all addresses; `::/0`.
+// Safe because 0 is less than the number of IPv6 address bits.
+const IPV6_DEFAULT_SUBNET: Subnet<Ipv6Addr> =
+    unsafe { Subnet::new_unchecked(Ipv6::UNSPECIFIED_ADDRESS, 0) };
 
 /// An error encountered when receiving a transport-layer packet.
 #[derive(Debug)]
@@ -288,7 +294,7 @@ where
 }
 
 /// An IP device ID.
-pub trait IpDeviceId: Copy + Display + Debug + PartialEq + Send + Sync {
+pub trait IpDeviceId: Copy + Display + Debug + Eq + Hash + PartialEq + Send + Sync {
     /// Returns true if the device is a loopback device.
     fn is_loopback(&self) -> bool;
 }
