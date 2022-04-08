@@ -24,7 +24,8 @@ namespace {
 zx_status_t LookupNode(fbl::RefPtr<Vnode> vn, std::string_view name, fbl::RefPtr<Vnode>* out) {
   if (name == "..") {
     return ZX_ERR_INVALID_ARGS;
-  } else if (name == ".") {
+  }
+  if (name == ".") {
     *out = std::move(vn);
     return ZX_OK;
   }
@@ -52,7 +53,7 @@ Vfs::~Vfs() {
     std::lock_guard lock(vfs_lock_);
     nodes_to_notify.reserve(live_nodes_.size());
     for (auto& node_ptr : live_nodes_)
-      nodes_to_notify.push_back(fbl::RefPtr<Vnode>(node_ptr));
+      nodes_to_notify.emplace_back(node_ptr);
   }
 
   // Notify all nodes that we're getting deleted.
@@ -70,12 +71,11 @@ Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, std::string_view path,
                                 VnodeConnectionOptions options, Rights parent_rights,
                                 uint32_t mode) {
   FS_PRETTY_TRACE_DEBUG("VfsOpen: path='", path, "' options=", options);
-  zx_status_t r;
-  if ((r = PrevalidateOptions(options)) != ZX_OK) {
-    return r;
+  if (zx_status_t status = PrevalidateOptions(options); status != ZX_OK) {
+    return status;
   }
-  if ((r = Vfs::Walk(vndir, path, &vndir, &path)) < 0) {
-    return r;
+  if (zx_status_t status = Vfs::Walk(vndir, path, &vndir, &path); status != ZX_OK) {
+    return status;
   }
 
   if (vndir->IsRemote()) {
@@ -99,13 +99,14 @@ Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, std::string_view path,
   fbl::RefPtr<Vnode> vn;
   bool just_created = false;
   if (options.flags.create) {
-    if ((r = EnsureExists(std::move(vndir), path, &vn, options, mode, parent_rights,
-                          &just_created)) != ZX_OK) {
-      return r;
+    if (zx_status_t status =
+            EnsureExists(std::move(vndir), path, &vn, options, mode, parent_rights, &just_created);
+        status != ZX_OK) {
+      return status;
     }
   } else {
-    if ((r = LookupNode(std::move(vndir), path, &vn)) != ZX_OK) {
-      return r;
+    if (zx_status_t status = LookupNode(std::move(vndir), path, &vn); status != ZX_OK) {
+      return status;
     }
   }
 
@@ -138,8 +139,8 @@ Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, std::string_view path,
   // |node_reference| requests that we don't actually open the underlying Vnode, but use the
   // connection as a reference to the Vnode.
   if (!options.flags.node_reference && !just_created) {
-    if ((r = OpenVnode(validated_options.value(), &vn)) != ZX_OK) {
-      return r;
+    if (zx_status_t status = OpenVnode(validated_options.value(), &vn); status != ZX_OK) {
+      return status;
     }
 
     if (!options.flags.no_remote && vn->IsRemote()) {
@@ -147,9 +148,11 @@ Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, std::string_view path,
       return OpenResult::RemoteRoot{.vnode = std::move(vn)};
     }
 
-    if (options.flags.truncate && ((r = vn->Truncate(0)) < 0)) {
-      vn->Close();
-      return r;
+    if (options.flags.truncate) {
+      if (zx_status_t status = vn->Truncate(0); status != ZX_OK) {
+        vn->Close();
+        return status;
+      }
     }
   }
 
@@ -202,10 +205,9 @@ zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, std::string_view name, bool mu
     std::lock_guard lock(vfs_lock_);
     if (ReadonlyLocked()) {
       return ZX_ERR_ACCESS_DENIED;
-    } else {
-      if (zx_status_t status = vndir->Unlink(name, must_be_dir); status != ZX_OK) {
-        return status;
-      }
+    }
+    if (zx_status_t status = vndir->Unlink(name, must_be_dir); status != ZX_OK) {
+      return status;
     }
   }
   return ZX_OK;
@@ -236,13 +238,17 @@ zx_status_t Vfs::EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,
   zx_status_t status;
   if (options.flags.directory && !S_ISDIR(mode)) {
     return ZX_ERR_INVALID_ARGS;
-  } else if (options.flags.not_directory && S_ISDIR(mode)) {
+  }
+  if (options.flags.not_directory && S_ISDIR(mode)) {
     return ZX_ERR_INVALID_ARGS;
-  } else if (path == ".") {
+  }
+  if (path == ".") {
     return ZX_ERR_INVALID_ARGS;
-  } else if (ReadonlyLocked()) {
+  }
+  if (ReadonlyLocked()) {
     return ZX_ERR_ACCESS_DENIED;
-  } else if (!parent_rights.write) {
+  }
+  if (!parent_rights.write) {
     return ZX_ERR_ACCESS_DENIED;
   }
   if ((status = vndir->Create(path, mode, out_vn)) != ZX_OK) {
@@ -298,8 +304,6 @@ void Vfs::SetReadonly(bool value) {
 
 zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, std::string_view path, fbl::RefPtr<Vnode>* out_vn,
                       std::string_view* out_path) {
-  zx_status_t r;
-
   if (path.empty()) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -346,8 +350,8 @@ zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, std::string_view path, fbl::RefPtr<
       return ZX_OK;
     }
 
-    if ((r = LookupNode(std::move(vn), component, &vn)) != ZX_OK) {
-      return r;
+    if (zx_status_t status = LookupNode(std::move(vn), component, &vn); status != ZX_OK) {
+      return status;
     }
 
     // Traverse to the next segment.

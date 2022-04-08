@@ -91,7 +91,7 @@ FuchsiaVfs::MountNode::~MountNode() { ZX_DEBUG_ASSERT(vn_ == nullptr); }
 
 void FuchsiaVfs::MountNode::SetNode(fbl::RefPtr<Vnode> vn) {
   ZX_DEBUG_ASSERT(vn_ == nullptr);
-  vn_ = vn;
+  vn_ = std::move(vn);
 }
 
 fidl::ClientEnd<fio::Directory> FuchsiaVfs::MountNode::ReleaseRemote() {
@@ -141,23 +141,22 @@ void FuchsiaVfs::TokenDiscard(zx::event ios_token) {
 }
 
 zx_status_t FuchsiaVfs::VnodeToToken(fbl::RefPtr<Vnode> vn, zx::event* ios_token, zx::event* out) {
-  zx_status_t r;
-
   std::lock_guard lock(vfs_lock_);
   if (ios_token->is_valid()) {
     // Token has already been set for this iostate
-    if ((r = ios_token->duplicate(ZX_RIGHTS_BASIC, out) != ZX_OK)) {
-      return r;
+    if (zx_status_t status = ios_token->duplicate(ZX_RIGHTS_BASIC, out); status != ZX_OK) {
+      return status;
     }
     return ZX_OK;
   }
 
   zx::event new_token;
   zx::event new_ios_token;
-  if ((r = zx::event::create(0, &new_ios_token)) != ZX_OK) {
-    return r;
-  } else if ((r = new_ios_token.duplicate(ZX_RIGHTS_BASIC, &new_token) != ZX_OK)) {
-    return r;
+  if (zx_status_t status = zx::event::create(0, &new_ios_token); status != ZX_OK) {
+    return status;
+  }
+  if (zx_status_t status = new_ios_token.duplicate(ZX_RIGHTS_BASIC, &new_token); status != ZX_OK) {
+    return status;
   }
   auto koid = GetTokenKoid(new_ios_token);
   vnode_tokens_.insert(std::make_unique<VnodeToken>(koid, std::move(vn)));
@@ -174,10 +173,11 @@ bool FuchsiaVfs::IsTokenAssociatedWithVnode(zx::event token) {
 zx_status_t FuchsiaVfs::EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,
                                      fbl::RefPtr<Vnode>* out_vn, fs::VnodeConnectionOptions options,
                                      uint32_t mode, Rights parent_rights, bool* did_create) {
-  if (zx_status_t s =
+  if (zx_status_t status =
           Vfs::EnsureExists(vndir, path, out_vn, options, mode, parent_rights, did_create);
-      s != ZX_OK)
-    return s;
+      status != ZX_OK) {
+    return status;
+  }
 
   vndir->Notify(path, fio::wire::WatchEvent::kAdded);
   return ZX_OK;
@@ -301,13 +301,13 @@ zx_status_t FuchsiaVfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent, std:
   return ZX_OK;
 }
 
-zx_status_t FuchsiaVfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
+zx_status_t FuchsiaVfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel server_end,
                               VnodeConnectionOptions options) {
   zx::status result = vnode->ValidateOptions(options);
   if (result.is_error()) {
     return result.status_value();
   }
-  return Serve(std::move(vnode), std::move(channel), result.value());
+  return Serve(std::move(vnode), std::move(server_end), result.value());
 }
 
 zx_status_t FuchsiaVfs::AddInotifyFilterToVnode(fbl::RefPtr<Vnode> vnode,
@@ -485,15 +485,13 @@ zx_status_t FuchsiaVfs::ForwardOpenRemote(fbl::RefPtr<Vnode> vn, fidl::ServerEnd
     return ZX_ERR_NOT_FOUND;
   }
 
-  auto r = fidl::WireCall(h)
-               ->Open(options.ToIoV1Flags(), mode, fidl::StringView::FromExternal(path),
-                      std::move(channel))
-               .status();
-  if (r == ZX_ERR_PEER_CLOSED) {
+  const fidl::WireResult result = fidl::WireCall(h)->Open(
+      options.ToIoV1Flags(), mode, fidl::StringView::FromExternal(path), std::move(channel));
+  if (result.is_peer_closed()) {
     fidl::ClientEnd<fio::Directory> c;
     UninstallRemoteLocked(std::move(vn), &c);
   }
-  return r;
+  return result.status();
 }
 
 // Uninstall all remote filesystems. Acts like 'UninstallRemote' for all known remotes.

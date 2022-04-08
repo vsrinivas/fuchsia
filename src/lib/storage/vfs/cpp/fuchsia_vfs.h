@@ -155,7 +155,7 @@ class FuchsiaVfs : public Vfs {
 
  protected:
   // Vfs protected overrides.
-  zx_status_t EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view name,
+  zx_status_t EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,
                            fbl::RefPtr<Vnode>* out_vn, fs::VnodeConnectionOptions options,
                            uint32_t mode, Rights parent_rights, bool* did_create) override
       __TA_REQUIRES(vfs_lock_);

@@ -115,7 +115,7 @@ class Vfs {
   //
   // In the above two cases, |did_create| will be updated to indicate if an entry was created.
   // Otherwise, a corresponding error code is returned.
-  virtual zx_status_t EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view name,
+  virtual zx_status_t EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,
                                    fbl::RefPtr<Vnode>* out_vn, fs::VnodeConnectionOptions options,
                                    uint32_t mode, Rights parent_rights, bool* did_create)
       __TA_REQUIRES(vfs_lock_);
@@ -137,8 +137,8 @@ class Vfs {
   // On success,
   // |out| is the vnode at which we stopped searching.
   // |pathout| is the remainder of the path to search.
-  zx_status_t Walk(fbl::RefPtr<Vnode> vn, std::string_view path, fbl::RefPtr<Vnode>* out,
-                   std::string_view* pathout) __TA_REQUIRES(vfs_lock_);
+  zx_status_t Walk(fbl::RefPtr<Vnode> vn, std::string_view path, fbl::RefPtr<Vnode>* out_vn,
+                   std::string_view* out_path) __TA_REQUIRES(vfs_lock_);
 
   TraversePathResult TraversePathFetchVnodeLocked(fbl::RefPtr<Vnode> vndir, std::string_view path)
       __TA_REQUIRES(vfs_lock_);
