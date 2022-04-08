@@ -9,6 +9,7 @@
 #include <string.h>
 #include <xefi.h>
 #include <zircon/boot/driver-config.h>
+#include <zircon/boot/image.h>
 
 const efi_guid kAcpiTableGuid = ACPI_TABLE_GUID;
 const efi_guid kAcpi20TableGuid = ACPI_20_TABLE_GUID;
@@ -17,6 +18,8 @@ const uint8_t kRsdtSignature[ACPI_TABLE_SIGNATURE_SIZE] = "RSDT";
 const uint8_t kXsdtSignature[ACPI_TABLE_SIGNATURE_SIZE] = "XSDT";
 const uint8_t kSpcrSignature[ACPI_TABLE_SIGNATURE_SIZE] = "SPCR";
 const uint8_t kMadtSignature[ACPI_TABLE_SIGNATURE_SIZE] = "APIC";
+const uint8_t kInterruptControllerTypeGicc = 0xb;
+const uint8_t kInterruptControllerTypeGicd = 0xc;
 
 // Computes the checksum of an ACPI table, which is just the sum of the bytes
 // in the table. The table is valid if the checksum is zero.
@@ -153,4 +156,63 @@ void uart_driver_from_spcr(acpi_spcr_t* spcr, dcfg_simple_t* uart_driver) {
   }
   uart_driver->mmio_phys = spcr->base_address.address;
   uart_driver->irq = interrupt;
+}
+
+uint8_t topology_from_madt(acpi_madt_t* madt, zbi_topology_node_t* nodes, uint8_t max_nodes) {
+  uint8_t* madt_end = (uint8_t*)madt + madt->hdr.length;
+  // The list of interrupt controller structures is located at the end of MADT,
+  // and each one starts with a type and a length.
+  typedef struct __attribute__((packed)) {
+    uint8_t type;
+    uint8_t length;
+  } interrupt_controller_hdr_t;
+  interrupt_controller_hdr_t* current_entry = (interrupt_controller_hdr_t*)(madt + 1);
+  uint8_t num_nodes = 0;
+  while ((uint8_t*)current_entry < madt_end) {
+    if (current_entry->type == kInterruptControllerTypeGicc) {
+      // The given buffer of ZBI topology nodes was not long enough to contain
+      // the topology, so return early.
+      if (num_nodes >= max_nodes) {
+        return 0;
+      }
+
+      // The GICC table contains the multiprocesser affinity register (MPIDR)
+      // for each core. We can use the contents of this register to construct
+      // the CPU topology (on ARM).
+      acpi_madt_gicc_t* gicc = (acpi_madt_gicc_t*)current_entry;
+      nodes[num_nodes] = (zbi_topology_node_t){
+          .entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR,
+          .parent_index = ZBI_TOPOLOGY_NO_PARENT,
+          .entity =
+              {
+                  .processor =
+                      {
+                          .logical_ids = {num_nodes},
+                          .logical_id_count = 1,
+                          .flags = (num_nodes == 0) ? ZBI_TOPOLOGY_PROCESSOR_PRIMARY : 0,
+                          .architecture = ZBI_TOPOLOGY_ARCH_ARM,
+                          .architecture_info =
+                              {
+                                  .arm =
+                                      {
+                                          // aff1
+                                          .cluster_1_id = (gicc->mpidr >> 8) & 0xFF,
+                                          // aff2
+                                          .cluster_2_id = (gicc->mpidr >> 16) & 0xFF,
+                                          // aff3
+                                          .cluster_3_id = (gicc->mpidr >> 32) & 0xFF,
+                                          // aff0
+                                          .cpu_id = gicc->mpidr & 0xFF,
+                                          .gic_id = (uint8_t)gicc->cpu_interface_number,
+                                      },
+                              },
+                      },
+              },
+      };
+      num_nodes++;
+    }
+    current_entry =
+        (interrupt_controller_hdr_t*)(((uint8_t*)current_entry) + current_entry->length);
+  }
+  return num_nodes;
 }

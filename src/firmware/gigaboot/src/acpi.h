@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <xefi.h>
 #include <zircon/boot/driver-config.h>
+#include <zircon/boot/image.h>
 #include <zircon/compiler.h>
 
 #define ACPI_TABLE_SIGNATURE_SIZE 4
@@ -19,6 +20,8 @@ extern const uint8_t kRsdtSignature[ACPI_TABLE_SIGNATURE_SIZE];
 extern const uint8_t kXsdtSignature[ACPI_TABLE_SIGNATURE_SIZE];
 extern const uint8_t kSpcrSignature[ACPI_TABLE_SIGNATURE_SIZE];
 extern const uint8_t kMadtSignature[ACPI_TABLE_SIGNATURE_SIZE];
+extern const uint8_t kInterruptControllerTypeGicc;
+extern const uint8_t kInterruptControllerTypeGicd;
 
 __BEGIN_CDECLS
 
@@ -86,6 +89,47 @@ typedef struct __attribute__((packed)) {
 } acpi_spcr_t;
 _Static_assert(sizeof(acpi_spcr_t) == 80, "SPCR is the wrong size");
 
+typedef struct __attribute__((packed)) {
+  acpi_sdt_hdr_t hdr;
+  uint32_t local_ic_address;
+  uint32_t flags;
+} acpi_madt_t;
+_Static_assert(sizeof(acpi_madt_t) == 44, "MADT is the wrong size");
+
+typedef struct __attribute__((packed)) {
+  uint8_t type;
+  uint8_t length;
+  uint16_t reserved;
+  uint32_t cpu_interface_number;
+  uint32_t acpi_processor_uid;
+  uint32_t flags;
+  uint32_t parking_protocol_version;
+  uint32_t performance_interrupt_gsiv;
+  uint64_t parked_address;
+  uint64_t physical_base_address;
+  uint64_t gicv;
+  uint64_t gich;
+  uint32_t vgic_maintenance_interrupt;
+  uint64_t gicr_base_address;
+  uint64_t mpidr;
+  uint8_t processor_power_class;
+  uint8_t reserved2;
+  uint16_t spe_overflow_interrupt;
+} acpi_madt_gicc_t;
+_Static_assert(sizeof(acpi_madt_gicc_t) == 80, "MADT GICC is the wrong size");
+
+typedef struct __attribute__((packed)) {
+  uint8_t type;
+  uint8_t length;
+  uint16_t reserved;
+  uint32_t gic_id;
+  uint64_t physical_base_address;
+  uint32_t system_vector_base;
+  uint8_t gic_version;
+  uint8_t reserved2[3];
+} acpi_madt_gicd_t;
+_Static_assert(sizeof(acpi_madt_gicd_t) == 24, "MADT GICD is the wrong size");
+
 // Loads the Root System Description Pointer from UEFI.
 // Returns NULL if UEFI contains no such entry in its configuration table.
 acpi_rsdp_t* load_acpi_rsdp(efi_configuration_table* entries, size_t num_entries);
@@ -99,6 +143,10 @@ uint32_t spcr_type_to_kdrv(acpi_spcr_t* spcr);
 
 // Convert data in an SPCR table into a UART kernel driver configuration.
 void uart_driver_from_spcr(acpi_spcr_t* spcr, dcfg_simple_t* uart_driver);
+
+// Use the data in the MADT table to construct a CPU topology.
+// Returns the number of cores found, 0 if there are no supported cores.
+uint8_t topology_from_madt(acpi_madt_t* madt, zbi_topology_node_t* nodes, uint8_t max_nodes);
 
 __END_CDECLS
 

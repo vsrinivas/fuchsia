@@ -19,6 +19,8 @@
 #include "acpi.h"
 #include "osboot.h"
 
+#define MAX_CPU_COUNT 128
+
 static efi_guid zircon_guid = ZIRCON_VENDOR_GUID;
 static char16_t crashlog_name[] = ZIRCON_CRASHLOG_EFIVAR;
 
@@ -293,6 +295,21 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
                                            0, &uart_driver, sizeof(uart_driver));
     if (result != ZBI_RESULT_OK) {
       return -1;
+    }
+  }
+
+  // Assemble the CPU topology.
+  acpi_madt_t* madt = (acpi_madt_t*)load_table_with_signature(rsdp, (uint8_t*)kMadtSignature);
+  if (madt != 0) {
+    zbi_topology_node_t nodes[MAX_CPU_COUNT];
+    uint8_t num_nodes = topology_from_madt(madt, nodes, MAX_CPU_COUNT);
+    if (num_nodes != 0) {
+      result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_CPU_TOPOLOGY,
+                                             sizeof(zbi_topology_node_t), 0, &nodes,
+                                             sizeof(zbi_topology_node_t) * num_nodes);
+      if (result != ZBI_RESULT_OK) {
+        return -1;
+      }
     }
   }
 
