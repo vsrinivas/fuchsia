@@ -28,22 +28,22 @@ zx_status_t pci_pio_write32(pci_bdf_t bdf, uint8_t offset, uint32_t val);
 zx_status_t pci_pio_write16(pci_bdf_t bdf, uint8_t offset, uint16_t val);
 zx_status_t pci_pio_write8(pci_bdf_t bdf, uint8_t offset, uint8_t val);
 #else
-zx_status_t pci_pio_read32(pci_bdf_t bdf, uint8_t offset, uint32_t* val) {
+inline zx_status_t pci_pio_read32(pci_bdf_t bdf, uint8_t offset, uint32_t* val) {
   return ZX_ERR_NOT_SUPPORTED;
 }
-zx_status_t pci_pio_read16(pci_bdf_t bdf, uint8_t offset, uint16_t* val) {
+inline zx_status_t pci_pio_read16(pci_bdf_t bdf, uint8_t offset, uint16_t* val) {
   return ZX_ERR_NOT_SUPPORTED;
 }
-zx_status_t pci_pio_read8(pci_bdf_t bdf, uint8_t offset, uint8_t* val) {
+inline zx_status_t pci_pio_read8(pci_bdf_t bdf, uint8_t offset, uint8_t* val) {
   return ZX_ERR_NOT_SUPPORTED;
 }
-zx_status_t pci_pio_write32(pci_bdf_t bdf, uint8_t offset, uint32_t val) {
+inline zx_status_t pci_pio_write32(pci_bdf_t bdf, uint8_t offset, uint32_t val) {
   return ZX_ERR_NOT_SUPPORTED;
 }
-zx_status_t pci_pio_write16(pci_bdf_t bdf, uint8_t offset, uint16_t val) {
+inline zx_status_t pci_pio_write16(pci_bdf_t bdf, uint8_t offset, uint16_t val) {
   return ZX_ERR_NOT_SUPPORTED;
 }
-zx_status_t pci_pio_write8(pci_bdf_t bdf, uint8_t offset, uint8_t val) {
+inline zx_status_t pci_pio_write8(pci_bdf_t bdf, uint8_t offset, uint8_t val) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
