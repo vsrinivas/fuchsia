@@ -25,7 +25,7 @@ executable("unittests") {
 
 fuchsia_unittest_component("cobalt_lib_unittests") {
   deps = [ ":unittests" ]
-  manifest = "meta/cobalt_lib_unittests.cmx"
+  manifest = "meta/cobalt_lib_unittests.cml"
 }
 
 fuchsia_unittest_component("fuchsia_cobalt_lib_test") {
