@@ -14,7 +14,7 @@ group("tests") {
 
 zx_library("dev-operation") {
   sdk = "source"
-  sdk_publishable = true
+  sdk_publishable = "experimental"
   sdk_name = "dev-operation-experimental-driver-only"
   sdk_headers = [
     "lib/operation/operation.h",

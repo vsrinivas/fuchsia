@@ -19,7 +19,7 @@ config("include") {
 # Unix linking rules to apply. This is so that only the object files
 # corresponding to the used functions will be linked to the final binary.
 sdk_static_library("ddk") {
-  category = "partner"
+  category = "experimental"
   sdk_name = "ddk"
   public = [
     "include/lib/ddk/binding_priv.h",

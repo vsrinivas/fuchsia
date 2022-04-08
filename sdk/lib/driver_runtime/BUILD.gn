@@ -11,7 +11,7 @@ config("include") {
 }
 
 sdk_source_set("driver_runtime") {
-  category = "partner"
+  category = "experimental"
   sdk_name = "driver_runtime"
   sources = [
     "include/lib/fdf/arena.h",
@@ -32,7 +32,7 @@ sdk_source_set("driver_runtime") {
 }
 
 sdk_source_set("driver_runtime_cpp") {
-  category = "partner"
+  category = "experimental"
   sdk_name = "driver_runtime_cpp"
   public = [
     "include/lib/fdf/cpp/arena.h",
@@ -53,7 +53,7 @@ sdk_source_set("driver_runtime_cpp") {
 
 # Includes the minimal required headers for src/lib/ddktl.
 sdk_source_set("driver_runtime_ddktl_cpp") {
-  category = "partner"
+  category = "experimental"
   sdk_name = "driver_runtime_ddktl_cpp"
   public = [
     "include/lib/fdf/cpp/arena.h",
@@ -68,7 +68,7 @@ sdk_source_set("driver_runtime_ddktl_cpp") {
 }
 
 sdk_source_set("driver_runtime_internal") {
-  category = "partner"
+  category = "experimental"
   sdk_name = "driver_runtime_internal"
   sources = [ "include/lib/fdf/internal.h" ]
   visibility = [
