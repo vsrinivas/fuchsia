@@ -305,9 +305,9 @@ bool is_pte_valid(pte_t pte) {
 void update_pte(volatile pte_t* pte, pte_t newval) { *pte = newval; }
 
 int first_used_page_table_entry(const volatile pte_t* page_table, uint page_size_shift) {
-  const int count = 1U << (page_size_shift - 3);
+  const unsigned int count = 1U << (page_size_shift - 3);
 
-  for (int i = 0; i < count; i++) {
+  for (unsigned int i = 0; i < count; i++) {
     pte_t pte = page_table[i];
     if (pte != MMU_PTE_DESCRIPTOR_INVALID) {
       return i;
@@ -1658,8 +1658,10 @@ zx_status_t ArmArchVmAspace::Destroy() {
   // Check to see if the top level page table is empty. If not the user didn't
   // properly unmap everything before destroying the aspace
   if (const int index = first_used_page_table_entry(tt_virt_, page_size_shift_); index != -1) {
-    panic("top level page table still in use! aspace %p tt_virt %p index %d entry %" PRIx64 "\n",
-          this, tt_virt_, index, tt_virt_[index]);
+    panic(
+        "top level page table still in use! aspace %p pt_pages_ %zu tt_virt %p index %d entry "
+        "%" PRIx64 "\n",
+        this, pt_pages_, tt_virt_, index, tt_virt_[index]);
   }
 
   if (pt_pages_ != 1) {
