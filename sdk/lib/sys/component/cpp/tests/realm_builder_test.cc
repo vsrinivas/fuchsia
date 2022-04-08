@@ -537,7 +537,9 @@ TEST(RealmBuilderUnittest, PanicsIfChildNameIsEmpty) {
       },
       "");
 
-  class BasicLocalImpl : public LocalComponent {};
+  class BasicLocalImpl : public LocalComponent {
+    void Start(std::unique_ptr<LocalComponentHandles> /* mock_handles */) {}
+  };
   ASSERT_DEATH(
       {
         auto realm_builder = RealmBuilder::Create();

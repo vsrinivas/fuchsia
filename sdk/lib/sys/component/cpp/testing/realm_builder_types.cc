@@ -53,8 +53,6 @@ bool IsValidPath(std::string_view path) {
 
 LocalComponent::~LocalComponent() = default;
 
-void LocalComponent::Start(std::unique_ptr<LocalComponentHandles> mock_handles) {}
-
 LocalComponentHandles::LocalComponentHandles(fdio_ns_t* ns, sys::OutgoingDirectory outgoing_dir)
     : namespace_(ns), outgoing_dir_(std::move(outgoing_dir)) {}
 

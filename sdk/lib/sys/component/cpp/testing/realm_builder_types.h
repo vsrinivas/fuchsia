@@ -114,7 +114,7 @@ class LocalComponent {
   // Invoked when the Component Manager issues a Start request to the component.
   // |mock_handles| contains the outgoing directory and namespace of
   // the component.
-  virtual void Start(std::unique_ptr<LocalComponentHandles> mock_handles);
+  virtual void Start(std::unique_ptr<LocalComponentHandles> mock_handles) = 0;
 };
 // [END mock_interface_cpp]
 
