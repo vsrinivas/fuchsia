@@ -17,12 +17,14 @@ executable("unittests") {
     "display_manager2_unittest.cc",
     "display_manager_unittest.cc",
     "display_power_manager_unittest.cc",
+    "singleton_display_service_unittest.cc",
   ]
   deps = [
     ":mocks",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture:gtest",
     "//src/ui/scenic/lib/display",
+    "//src/ui/scenic/lib/display:singleton_display_service",
   ]
 }
 

@@ -72,9 +72,9 @@ void DisplayManager::OnDisplaysChanged(std::vector<fuchsia::hardware::display::I
       }
 
       auto& mode = display.modes[mode_idx];
-      default_display_ =
-          std::make_unique<Display>(display.id, mode.horizontal_resolution,
-                                    mode.vertical_resolution, std::move(display.pixel_format));
+      default_display_ = std::make_unique<Display>(
+          display.id, mode.horizontal_resolution, mode.vertical_resolution,
+          display.horizontal_size_mm, display.vertical_size_mm, std::move(display.pixel_format));
       OnClientOwnershipChange(owns_display_controller_);
 
       if (display_available_cb_) {

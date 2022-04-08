@@ -25,6 +25,7 @@ executable("bin") {
     "//src/ui/lib/display:hdcp_service",
     "//src/ui/scenic/lib/annotation:annotation_registry",
     "//src/ui/scenic/lib/display",
+    "//src/ui/scenic/lib/display:singleton_display_service",
     "//src/ui/scenic/lib/flatland/engine",
     "//src/ui/scenic/lib/flatland/renderer",
     "//src/ui/scenic/lib/focus",

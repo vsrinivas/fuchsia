@@ -1,0 +1,32 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.ui.display.singleton;
+
+using fuchsia.math;
+
+/// Describes the physical display, and how to map between physical and logical pixels.
+type Metrics = table {
+    /// Same meaning as `horizontal_resolution` and `vertical_resolution`
+    /// in `fuchsia.hardware.display.Mode`.
+    1: extent_in_px fuchsia.math.SizeU;
+    /// Same meaning as `horizontal_size_mm` and `vertical_size_mm`
+    /// in `fuchsia.hardware.display.Info`.
+    2: extent_in_mm fuchsia.math.SizeU;
+    /// The number of physical pixels per "logical" pixel, for example as in
+    /// `fuchsia.ui.composition.LayoutInfo.logical_size`.  It provides an indication
+    /// of the size of image buffers that should be allocated.  This value would typically
+    /// be used by a component near the root of the scene graph to set a scale for the rest
+    /// of the scene beneath.
+    3: recommended_device_pixel_ratio fuchsia.math.VecF;
+};
+
+/// Get information about Scenic's primary display.
+// TODO(fxbug.dev/23687): in the future there will probably be a DisplayManager, and
+// info about which displays to use will be explicitly specified to Scenic.
+@discoverable
+protocol Info {
+    GetMetrics() -> (struct {
+        info Metrics;
+    });
+};

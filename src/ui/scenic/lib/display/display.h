@@ -26,8 +26,8 @@ namespace display {
 // resolution, vsync interval, last vsync time, etc.
 class Display {
  public:
-  Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px,
-          std::vector<zx_pixel_format_t> pixel_formats);
+  Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px, uint32_t width_in_mm,
+          uint32_t height_in_mm, std::vector<zx_pixel_format_t> pixel_formats);
   Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px);
   virtual ~Display() = default;
 
@@ -46,6 +46,8 @@ class Display {
   uint64_t display_id() const { return display_id_; }
   uint32_t width_in_px() const { return width_in_px_; }
   uint32_t height_in_px() const { return height_in_px_; }
+  uint32_t width_in_mm() const { return width_in_mm_; }
+  uint32_t height_in_mm() const { return height_in_mm_; }
 
   // TODO(fxbug.dev/71410): Remove all references to zx_pixel_format_t.
   const std::vector<zx_pixel_format_t>& pixel_formats() const { return pixel_formats_; }
@@ -69,6 +71,8 @@ class Display {
   const uint64_t display_id_;
   const uint32_t width_in_px_;
   const uint32_t height_in_px_;
+  const uint32_t width_in_mm_;
+  const uint32_t height_in_mm_;
   zx::event ownership_event_;
   std::vector<zx_pixel_format_t> pixel_formats_;
 

@@ -59,10 +59,10 @@ class DisplayMetrics {
   // GRID METRICS
 
   // The width of the visible content area in pips.
-  float width_in_pp() const { return width_in_px_ / x_scale_in_px_per_pp_; }
+  float width_in_pp() const { return static_cast<float>(width_in_px_) / x_scale_in_px_per_pp_; }
 
   // The height of the visible content area in pips.
-  float height_in_pp() const { return height_in_px_ / y_scale_in_px_per_pp_; }
+  float height_in_pp() const { return static_cast<float>(height_in_px_) / y_scale_in_px_per_pp_; }
 
   // The pip scale factor in pixels per pip in X dimension.
   float x_scale_in_px_per_pp() const { return x_scale_in_px_per_pp_; }

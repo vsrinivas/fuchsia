@@ -20,6 +20,7 @@
 #include "src/ui/scenic/lib/annotation/annotation_registry.h"
 #include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/display/display_power_manager.h"
+#include "src/ui/scenic/lib/display/singleton_display_service.h"
 #include "src/ui/scenic/lib/flatland/default_flatland_presenter.h"
 #include "src/ui/scenic/lib/flatland/engine/display_compositor.h"
 #include "src/ui/scenic/lib/flatland/engine/engine.h"
@@ -44,7 +45,7 @@ namespace scenic_impl {
 
 class DisplayInfoDelegate : public Scenic::GetDisplayInfoDelegateDeprecated {
  public:
-  DisplayInfoDelegate(std::shared_ptr<display::Display> display);
+  explicit DisplayInfoDelegate(std::shared_ptr<display::Display> display);
 
   // TODO(fxbug.dev/23686): Remove this when we externalize Displays.
   // |Scenic::GetDisplayInfoDelegateDeprecated|
@@ -103,6 +104,7 @@ class App {
 
   gfx::Sysmem sysmem_;
   std::unique_ptr<display::DisplayManager> display_manager_;
+  std::unique_ptr<display::SingletonDisplayService> singleton_display_service_;
   std::unique_ptr<DisplayInfoDelegate> display_info_delegate_;
   // DisplayPowerManager has a raw pointer to |display_manager_|, so it should
   // be destroyed before |display_manager_|.

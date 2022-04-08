@@ -47,3 +47,21 @@ source_set("display") {
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
+
+# Temporary: put into its own source_set so that it is easy to remove all
+# dependencies at the same time.
+source_set("singleton_display_service") {
+  sources = [
+    "singleton_display_service.cc",
+    "singleton_display_service.h",
+  ]
+
+  public_deps = [
+    ":display",
+    "//sdk/fidl/fuchsia.ui.display.singleton",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/lib/sys/cpp",
+  ]
+
+  deps = [ "//src/ui/bin/root_presenter:displays" ]
+}

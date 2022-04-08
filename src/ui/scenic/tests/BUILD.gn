@@ -8,6 +8,7 @@ import("//src/graphics/lib/magma/gnbuild/magma.gni")
 group("tests") {
   testonly = true
   public_deps = [
+    ":display_integration_tests",
     ":flatland_integration_tests",
     ":gfx_integration_tests",
     ":observer_integration_tests",
@@ -353,6 +354,24 @@ fuchsia_test_component("screen_capture_integration_test") {
   deps = [ ":screen_capture_integration_test_bin" ]
 }
 
+executable("singleton_display_integration_test_bin") {
+  testonly = true
+  sources = [ "singleton_display_integration_test.cc" ]
+  deps = [
+    ":common_deps_cts",
+    ":scenic_realm_builder",
+    "//sdk//fidl/fuchsia.ui.display.singleton",
+    "//src/ui/scenic/lib/utils:utils",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
+fuchsia_test_component("singleton_display_integration_test") {
+  component_name = "singleton_display_integration_test"
+  manifest = "meta/singleton_display_integration_test.cml"
+  deps = [ ":singleton_display_integration_test_bin" ]
+}
+
 executable("flatland_mouse_integration_test_bin") {
   testonly = true
   sources = [ "flatland_integration_tests/flatland_mouse_integration_test.cc" ]
@@ -409,6 +428,13 @@ fuchsia_test_package("flatland_integration_tests") {
 
 fuchsia_test_package("observer_integration_tests") {
   test_components = [ ":observer_registry_integration_test" ]
+  test_specs = {
+    environments = [ aemu_env ] + magma_libvulkan_hardware_envs
+  }
+}
+
+fuchsia_test_package("display_integration_tests") {
+  test_components = [ ":singleton_display_integration_test" ]
   test_specs = {
     environments = [ aemu_env ] + magma_libvulkan_hardware_envs
   }

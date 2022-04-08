@@ -11,17 +11,19 @@
 namespace scenic_impl {
 namespace display {
 
-Display::Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px,
-                 std::vector<zx_pixel_format_t> pixel_formats)
+Display::Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px, uint32_t width_in_mm,
+                 uint32_t height_in_mm, std::vector<zx_pixel_format_t> pixel_formats)
     : vsync_timing_(std::make_shared<scheduling::VsyncTiming>()),
       display_id_(id),
       width_in_px_(width_in_px),
       height_in_px_(height_in_px),
+      width_in_mm_(width_in_mm),
+      height_in_mm_(height_in_mm),
       pixel_formats_(pixel_formats) {
   zx::event::create(0, &ownership_event_);
 }
 Display::Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px)
-    : Display(id, width_in_px, height_in_px, {ZX_PIXEL_FORMAT_ARGB_8888}) {}
+    : Display(id, width_in_px, height_in_px, 0, 0, {ZX_PIXEL_FORMAT_ARGB_8888}) {}
 
 void Display::Claim() {
   FX_DCHECK(!claimed_);

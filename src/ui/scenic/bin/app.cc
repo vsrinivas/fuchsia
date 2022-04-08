@@ -372,6 +372,10 @@ void App::CreateFrameScheduler(std::shared_ptr<const scheduling::VsyncTiming> vs
 
 void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
   TRACE_DURATION("gfx", "App::InitializeGraphics");
+  FX_LOGS(INFO) << "App::InitializeGraphics() " << display->width_in_px() << "x"
+                << display->height_in_px() << "px  " << display->width_in_mm() << "x"
+                << display->height_in_mm() << "mm";
+
   // Replace Escher's default pipeline builder with one which will log to Cobalt upon each
   // unexpected lazy pipeline creation.  This allows us to detect when this slips through our
   // testing and occurs in the wild.  In order to detect problems ASAP during development, debug
@@ -418,6 +422,8 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
   FX_DCHECK(gfx);
 
   scenic_->SetScreenshotDelegate(gfx.get());
+  singleton_display_service_ = std::make_unique<display::SingletonDisplayService>(display);
+  singleton_display_service_->AddPublicService(scenic_->app_context()->outgoing().get());
   display_info_delegate_ = std::make_unique<DisplayInfoDelegate>(display);
   scenic_->SetDisplayInfoDelegate(display_info_delegate_.get());
 
