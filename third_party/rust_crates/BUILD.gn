@@ -262,7 +262,7 @@ group("flate2") {
 
 if (!(current_os == "fuchsia")) {
   group("fs_extra") {
-    deps = [ ":fs_extra-v1_2_0" ]
+    public_deps = [ ":fs_extra-v1_2_0" ]
   }
 }
 
