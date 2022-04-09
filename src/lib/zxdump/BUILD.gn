@@ -35,16 +35,88 @@ zx_library("zxdump") {
   }
 }
 
+source_set("piped-command") {
+  visibility = [ ":*" ]
+
+  public = [ "piped-command.h" ]
+  public_deps = [
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxc",
+  ]
+
+  sources = [ "piped-command.cc" ]
+  if (is_fuchsia) {
+    sources += [ "piped-command-fuchsia.cc" ]
+    deps = [
+      "//sdk/lib/fdio",
+      "//zircon/system/ulib/zx",
+    ]
+  } else {
+    sources += [ "piped-command-posix.cc" ]
+  }
+}
+
+source_set("test-tool-process") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  public = [ "test-tool-process.h" ]
+  public_deps = [ "//zircon/system/ulib/fbl" ]
+  if (is_fuchsia) {
+    public_deps += [ "//zircon/system/ulib/zx" ]
+  }
+
+  sources = [ "test-tool-process.cc" ]
+  deps = [
+    ":piped-command",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 test("zxdump-unittests") {
   sources = [
     "error-tests.cc",
     "fd-writer-tests.cc",
+    "piped-command-tests.cc",
   ]
   deps = [
-    ".",
+    ":piped-command",
+    ":test-tool-process",
+    ":zxdump",
     "//sdk/lib/fit",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/ulib/fbl",
   ]
+
+  # Depend on the base toolchain in case both the child and this target use
+  # the same variant, so that the copy under the expected name can be found
+  # at runtime.
+  data_deps = [ ":zxdump-test-child(${toolchain_variant.base})" ]
+}
+
+executable("zxdump-test-child") {
+  testonly = true
+
+  sources = [ "test-child.cc" ]
+  deps = [
+    "//sdk/lib/stdcompat",
+    "//zircon/system/ulib/fbl",
+  ]
+  if (is_fuchsia) {
+    deps += [
+      "//sdk/lib/fdio",
+      "//src/zircon/lib/zircon",
+      "//zircon/system/ulib/zx",
+    ]
+  }
+
+  if (is_host) {
+    base_out_dir = get_label_info(":$target_name(${toolchain_variant.base})",
+                                  "root_out_dir")
+    metadata = {
+      test_runtime_deps = [ "$base_out_dir/$target_name" ]
+    }
+  }
 }
 
 fuchsia_unittest_package("zxdump-tests") {
