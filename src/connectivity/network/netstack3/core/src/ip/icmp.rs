@@ -2408,6 +2408,46 @@ fn create_icmpv6_unbound_inner<C: InnerIcmpv6Context>(ctx: &mut C) -> IcmpUnboun
     IcmpUnboundId::new(state.unbound.push(()))
 }
 
+/// Removes an unbound ICMPv4 socket.
+///
+/// # Panics
+///
+/// Panics if `id` is not a valid [`IcmpUnboundId`].
+pub fn remove_icmpv4_unbound<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
+    id: IcmpUnboundId<Ipv4>,
+) {
+    remove_icmpv4_unbound_inner(ctx, id)
+}
+
+// TODO(https://fxbug.dev/48578): Make this the external function (replacing the
+// existing `create_icmpv6_unbound`) once the ICMP context traits are part of
+// the public API.
+fn remove_icmpv4_unbound_inner<C: InnerIcmpv4Context>(ctx: &mut C, id: IcmpUnboundId<Ipv4>) {
+    let state: &mut IcmpState<_, _, _> = ctx.get_state_mut();
+    assert_eq!(state.unbound.remove(id.into()), Some(()), "unbound ID is invalid: {:?}", id);
+}
+
+/// Removes an unbound ICMPv6 socket.
+///
+/// # Panics
+///
+/// Panics if `id` is not a valid [`IcmpUnboundId`].
+pub fn remove_icmpv6_unbound<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
+    id: IcmpUnboundId<Ipv6>,
+) {
+    remove_icmpv6_unbound_inner(ctx, id)
+}
+
+// TODO(https://fxbug.dev/48578): Make this the external function (replacing the
+// existing `create_icmpv6_unbound`) once the ICMP context traits are part of
+// the public API.
+fn remove_icmpv6_unbound_inner<C: InnerIcmpv6Context>(ctx: &mut C, id: IcmpUnboundId<Ipv6>) {
+    let state: &mut IcmpState<_, _, _> = ctx.get_state_mut();
+    assert_eq!(state.unbound.remove(id.into()), Some(()), "unbound ID is invalid: {:?}", id);
+}
+
 /// Connects an unbound ICMPv4 socket.
 ///
 /// Replaces `id` with a new ICMPv4 connection with the provided parameters

@@ -972,7 +972,6 @@ pub fn create_udp_unbound<I: IpExt, C: UdpStateContext<I>>(sync_ctx: &mut C) -> 
 /// but not bound.
 ///
 /// # Panics if `id` is not a valid [`UdpUnboundId`].
-#[todo_unused::todo_unused("https://fxbug.dev/96573")]
 pub fn remove_udp_unbound<I: IpExt, C: UdpStateContext<I>>(sync_ctx: &mut C, id: UdpUnboundId<I>) {
     let state = sync_ctx.get_first_state_mut();
     state.unbound.remove(id.into()).expect("invalid UDP unbound ID")
