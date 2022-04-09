@@ -161,6 +161,7 @@ group("deprecated_zx_wrapper_allowlist") {
     "//src/lib/storage/fs_management/*",
     "//src/lib/storage/ramdevice_client/*",
     "//src/lib/trivial-allocator/*",
+    "//src/lib/zxdump/*",
     "//src/media/audio/drivers/lib/audio-driver-proto/*",
     "//src/media/audio/drivers/lib/audio-proto-utils/*",
     "//src/media/audio/drivers/lib/audio-utils-legacy/*",
