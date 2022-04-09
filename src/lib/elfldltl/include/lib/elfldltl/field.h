@@ -34,7 +34,10 @@ class UnsignedField {
 
   constexpr UnsignedField(value_type x) : value_(Convert(x)) {}
 
-  explicit constexpr UnsignedField(std::array<uint8_t, sizeof(value_type)> bytes)
+  explicit constexpr UnsignedField(std::array<std::byte, sizeof(value_type)> bytes)
+      : value_(Convert(bytes)) {}
+
+  explicit constexpr UnsignedField(std::array<char, sizeof(value_type)> bytes)
       : value_(Convert(bytes)) {}
 
   constexpr UnsignedField& operator=(const UnsignedField&) = default;
@@ -51,7 +54,8 @@ class UnsignedField {
   constexpr operator value_type() const { return get(); }
 
  private:
-  static constexpr value_type Convert(std::array<uint8_t, sizeof(value_type)> bytes) {
+  template <typename Byte, typename = std::enable_if_t<sizeof(Byte) == 1>>
+  static constexpr value_type Convert(std::array<Byte, sizeof(value_type)> bytes) {
     auto [first, last] = [&bytes]() {
       if constexpr (cpp20::endian::native == cpp20::endian::little) {
         return std::make_pair(bytes.crbegin(), bytes.crend());

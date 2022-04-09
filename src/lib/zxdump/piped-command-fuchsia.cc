@@ -17,8 +17,8 @@ namespace zxdump {
 fitx::result<std::string> PipedCommand::StartArgv(cpp20::span<const char*> argv) {
   ZX_DEBUG_ASSERT(!process_);
 
-  std::vector<fdio_spawn_action_t> actions{
-      {.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {argv[0]}}};
+  std::vector<fdio_spawn_action_t> actions = spawn_actions_;
+  actions.push_back({.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {argv[0]}});
 
   for (auto& [number, fd] : redirect_) {
     actions.push_back({.action = FDIO_SPAWN_ACTION_TRANSFER_FD,

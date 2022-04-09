@@ -320,7 +320,8 @@ zx_status_t walk_root_job_tree(task_callback_t job_callback, task_callback_t pro
       fuchsia_kernel_RootJobGet(local.get(), root_job.reset_and_get_address());
 
   if (fidl_status != ZX_OK) {
-    fprintf(stderr, "task-utils/walker: cannot obtain root job\n");
+    fprintf(stderr, "task-utils/walker: cannot obtain root job: %s\n",
+            zx_status_get_string(fidl_status));
     return ZX_ERR_NOT_FOUND;
   }
 

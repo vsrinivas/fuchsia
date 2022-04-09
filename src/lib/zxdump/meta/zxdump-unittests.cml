@@ -12,7 +12,10 @@
     },
     use: [
         {
-            protocol: [ "fuchsia.process.Launcher" ],
+            protocol: [
+                "fuchsia.kernel.RootJob",
+                "fuchsia.process.Launcher",
+            ],
         },
     ],
 }

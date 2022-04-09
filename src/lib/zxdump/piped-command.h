@@ -14,7 +14,9 @@
 #include <vector>
 
 #include <fbl/unique_fd.h>
+
 #ifdef __Fuchsia__
+#include <lib/fdio/spawn.h>
 #include <lib/zx/process.h>
 #endif
 
@@ -33,6 +35,14 @@ class PipedCommand {
   // Set up redirections for when the command is launched.
   void Redirect(int number, fbl::unique_fd fd) { redirect_.emplace(number, std::move(fd)); }
 
+#ifdef __Fuchsia__
+  // Call this before Start to change the fdio_spawn details.
+  void SetSpawnActions(uint32_t flags, std::vector<fdio_spawn_action_t> actions) {
+    spawn_flags_ = flags;
+    spawn_actions_ = std::move(actions);
+  }
+#endif
+
   // Start the command running with argv {command, args...}.
   fitx::result<std::string> Start(const std::string& command, const std::vector<std::string>& args);
 
@@ -49,11 +59,19 @@ class PipedCommand {
 #endif
 
  private:
+  static std::vector<const char*> MakeArgv(const std::string& command,
+                                           const std::vector<std::string>& args);
   fitx::result<std::string> StartArgv(cpp20::span<const char*> argv);
+#ifdef __Fuchsia__
+  fitx::result<std::string> StartArgv(cpp20::span<const char*> argv, uint32_t flags,
+                                      std::vector<fdio_spawn_action_t> actions);
+#endif
 
   std::map<int, fbl::unique_fd> redirect_;
 #ifdef __Fuchsia__
   zx::process process_;
+  uint32_t spawn_flags_ = FDIO_SPAWN_CLONE_ALL;
+  std::vector<fdio_spawn_action_t> spawn_actions_;
 #else
   int pid_ = -1;
 #endif

@@ -9,6 +9,7 @@ import("//build/zircon/migrated_targets.gni")
 zx_library("zxdump") {
   sdk = "source"
   sdk_headers = [
+    "lib/zxdump/dump.h",
     "lib/zxdump/fd-writer.h",
     "lib/zxdump/types.h",
   ]
@@ -20,18 +21,34 @@ zx_library("zxdump") {
     # <lib/zxdump/fd-writer.h> has #include <lib/fitx/result.h>.
     "//zircon/system/ulib/zxc",
 
+    # <lib/zxdump/dump.h> has #include <lib/fit/function.h>.
+    "//sdk/lib/fit",
+
     # <lib/zxdump/fd-writer.h> has #include <fbl/unique_fd.h>.
     "//zircon/system/ulib/fbl",
   ]
 
+  if (is_fuchsia) {
+    public_deps += [
+      # <lib/zxdump/dump.h> has #include <lib/zx/process.h>.
+      "//zircon/system/ulib/zx",
+    ]
+  }
+
   sources = [
+    "core.h",
     "error.cc",
     "fd-writer.cc",
   ]
 
-  deps = []
+  deps = [ "//src/lib/elfldltl" ]
+
   if (is_fuchsia) {
-    deps += [ "//src/zircon/lib/zircon" ]
+    sources += [ "dump.cc" ]
+    deps += [
+      "//src/zircon/lib/zircon",
+      "//zircon/system/ulib/zx",
+    ]
   }
 }
 
@@ -47,6 +64,7 @@ source_set("piped-command") {
   sources = [ "piped-command.cc" ]
   if (is_fuchsia) {
     sources += [ "piped-command-fuchsia.cc" ]
+    public_deps += [ "//sdk/lib/fdio" ]
     deps = [
       "//sdk/lib/fdio",
       "//zircon/system/ulib/zx",
@@ -62,15 +80,22 @@ source_set("test-tool-process") {
 
   public = [ "test-tool-process.h" ]
   public_deps = [ "//zircon/system/ulib/fbl" ]
-  if (is_fuchsia) {
-    public_deps += [ "//zircon/system/ulib/zx" ]
-  }
 
   sources = [ "test-tool-process.cc" ]
   deps = [
     ":piped-command",
     "//third_party/googletest:gtest",
   ]
+
+  if (is_fuchsia) {
+    public_deps += [ "//zircon/system/ulib/zx" ]
+    deps += [
+      "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
+      "//zircon/system/ulib/async-loop:async-loop-cpp",
+      "//zircon/system/ulib/async-loop:async-loop-default",
+      "//zircon/system/ulib/service:service-llcpp",
+    ]
+  }
 }
 
 test("zxdump-unittests") {
@@ -84,6 +109,7 @@ test("zxdump-unittests") {
     ":test-tool-process",
     ":zxdump",
     "//sdk/lib/fit",
+    "//src/lib/elfldltl",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
@@ -92,6 +118,14 @@ test("zxdump-unittests") {
   # the same variant, so that the copy under the expected name can be found
   # at runtime.
   data_deps = [ ":zxdump-test-child(${toolchain_variant.base})" ]
+
+  if (is_fuchsia) {
+    sources += [
+      "dump-tests.h",
+      "gcore-tests.cc",
+    ]
+    data_deps += [ ":gcore(${toolchain_variant.base})" ]
+  }
 }
 
 executable("zxdump-test-child") {
@@ -130,5 +164,25 @@ group("tests") {
   deps = [
     ":zxdump-tests",
     ":zxdump-unittests($host_toolchain)",
+
+    # TODO(mcgrathr): just to get them built for now
+    ":zxdump-tools",
   ]
+}
+
+executable("gcore") {
+  sources = [ "gcore.cc" ]
+  deps = [
+    ":zxdump",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/task-utils",
+  ]
+}
+
+group("tools") {
+  deps = [ ":gcore" ]
+}
+
+fuchsia_shell_package("zxdump-tools") {
+  deps = [ ":tools" ]
 }

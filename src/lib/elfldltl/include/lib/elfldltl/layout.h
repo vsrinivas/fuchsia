@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_ELFLDLTL_INCLUDE_LIB_ELFLDLTL_LAYOUT_H_
 #define SRC_LIB_ELFLDLTL_INCLUDE_LIB_ELFLDLTL_LAYOUT_H_
 
+#include <array>
 #include <limits>
 
 #include "constants.h"
@@ -224,7 +225,7 @@ struct Elf : private Layout<Class, Data> {
       return Valid() && type == ElfType::kDyn && machine == target;
     }
 
-    static constexpr Word kMagic{{'\x7f', 'E', 'L', 'F'}};
+    static constexpr Word kMagic{std::array{'\x7f', 'E', 'L', 'F'}};
 
     // phnum has this value to indicate the real number of phdrs is too large
     // to fit and is instead stored in shdr[0].info.

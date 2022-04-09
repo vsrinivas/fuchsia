@@ -15,7 +15,12 @@
 
 #include <fbl/unique_fd.h>
 
-namespace zxdump::testing {
+namespace zxdump {
+
+// Forward declaration.
+class PipedCommand;
+
+namespace testing {
 
 // This manages a command-line tool process to be run in a sandbox (on Fuchsia)
 // or from the build directory (on other hosts) with specified input and output
@@ -32,7 +37,7 @@ class TestToolProcess {
 
     // Return the name of the file as seen by the tool run by Start.
     // This is used in composing the arguments to pass to Start.
-    std::string name() const;
+    std::string name() const { return owner_->FilePathForTool(*this); }
 
     // Create the file so it can be written and used as input to the tool.
     // This is used before Start, with name() used to compose the arguments.
@@ -46,14 +51,13 @@ class TestToolProcess {
     std::string OutputContents();
 
    private:
+    TestToolProcess* owner_ = nullptr;
     friend TestToolProcess;
-    friend std::string FilePathForRunner(const File&);
-    friend std::string FilePathForTool(const File&);
 
     std::string name_;
   };
 
-  TestToolProcess() = default;
+  TestToolProcess();
   TestToolProcess(const TestToolProcess&) = delete;
   TestToolProcess(TestToolProcess&&) = default;
 
@@ -62,10 +66,17 @@ class TestToolProcess {
   // Return a file name that can be passed to the tool via its Start arguments.
   // The file name will include the given name string for debugging purposes,
   // but will be unique among all MakeFileName calls on this TestToolProcess.
-  // Whether these are input files the test code writes for the tool to read,
-  // or output files the tool writes and the test code checks afterwards, they
-  // will be cleaned up when the TestToolProcess object is destroyed.
-  File& MakeFile(std::string_view name);
+  // It will always end with the precise suffix given, if any.  Whether these
+  // are input files the test code writes for the tool to read, or output files
+  // the tool writes and the test code checks afterwards, they will be cleaned
+  // up when the TestToolProcess object is destroyed.
+  File& MakeFile(std::string_view name, std::string_view suffix = "");
+
+  // Return the name to access the file in this test program.
+  std::string FilePathForRunner(const File& file) const;
+
+  // Return the name to access the file in the child tool program.
+  std::string FilePathForTool(const File& file) const;
 
   // Start the tool running.  This throws gtest assertions for problems.  The
   // tool name is "gcore" or the like, and is found in the appropriate place.
@@ -98,12 +109,20 @@ class TestToolProcess {
   std::string collected_stderr();
 
  private:
+  class SandboxRootJobLoop;
+
+  std::string FilePathForRunner(const std::string& name) const;
+
+  void SandboxCommand(PipedCommand& command);
+
+  std::string tmp_path_;
   std::vector<File> files_;
   std::string collected_stdout_, collected_stderr_;
   std::thread stdin_thread_, stdout_thread_, stderr_thread_;
   fbl::unique_fd tool_stdin_, tool_stdout_, tool_stderr_;
 #ifdef __Fuchsia__
   zx::process process_;
+  std::unique_ptr<SandboxRootJobLoop> sandbox_root_job_loop_;
 #else
   int process_ = -1;
 #endif
@@ -111,6 +130,7 @@ class TestToolProcess {
 
 std::string ToolPath(std::string tool);
 
-}  // namespace zxdump::testing
+}  // namespace testing
+}  // namespace zxdump
 
 #endif  // SRC_LIB_ZXDUMP_TEST_TOOL_PROCESS_H_

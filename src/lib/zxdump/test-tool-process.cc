@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <cstdlib>
 #include <filesystem>
 
 #include <gtest/gtest.h>
@@ -14,7 +15,16 @@
 #include "piped-command.h"
 
 #ifdef __Fuchsia__
+#include <fidl/fuchsia.kernel/cpp/wire.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fidl/llcpp/server.h>
 #include <zircon/syscalls/object.h>
+
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #else
 #include <libgen.h>
 #include <sys/wait.h>
@@ -28,7 +38,18 @@
 namespace zxdump::testing {
 
 std::string GetTmpDir() {
-  return "/tmp/";  // TODO(mcgrathr): not always right for non-Fuchsia
+#ifndef __Fuchsia__
+  if (const char* tmpdir = getenv("TMPDIR")) {
+    std::string dir(tmpdir);
+    if (!dir.empty() && dir.back() != '/') {
+      dir += '/';
+    }
+    if (!dir.empty()) {
+      return dir;
+    }
+  }
+#endif
+  return "/tmp/";
 }
 
 std::string ToolPath(std::string tool) {
@@ -52,15 +73,109 @@ std::string ToolPath(std::string tool) {
 #endif
 }
 
-std::string FilePathForTool(const TestToolProcess::File& file) { return GetTmpDir() + file.name_; }
+std::string TestToolProcess::FilePathForTool(const TestToolProcess::File& file) const {
+#ifdef __Fuchsia__
+  // The tool process runs in a sandbox where /tmp/ is actually our tmp_path_.
+  return "/tmp/" + file.name_;
+#else
+  // The tool runs in the same filesystem namespace as this test code.
+  return tmp_path_ + file.name_;
+#endif
+}
 
-// TODO(mcgrathr): Run the child in a different sandbox that only sees the
-// controlled files in its tmp.
-std::string FilePathForRunner(const std::string& name) { return GetTmpDir() + name; }
+std::string TestToolProcess::FilePathForRunner(const std::string& name) const {
+  return tmp_path_ + name;
+}
 
-std::string FilePathForRunner(const TestToolProcess::File& file) {
+std::string TestToolProcess::FilePathForRunner(const TestToolProcess::File& file) const {
   return FilePathForRunner(file.name_);
 }
+
+#ifdef __Fuchsia__
+
+// The tool process runs with a sandbox namespace that has only its own special
+// /tmp and /svc.  Its /tmp is mapped to the tmp_path_ subdirectory.  Its /svc
+// contains only fuchsia.kernel.RootJob pointing at this fake service that just
+// gives the test program's own job instead of the real root job.
+
+class SandboxRootJobServer final : public fidl::WireServer<fuchsia_kernel::RootJob> {
+ public:
+  void Get(GetRequestView request, GetCompleter::Sync& completer) override {
+    zx::job job;
+    zx_status_t status = zx::job::default_job()->duplicate(ZX_RIGHT_SAME_RIGHTS, &job);
+    EXPECT_EQ(status, ZX_OK) << zx_status_get_string(status);
+    completer.Reply(std::move(job));
+  }
+};
+
+class TestToolProcess::SandboxRootJobLoop {
+ public:
+  void Init(fidl::ClientEnd<fuchsia_io::Directory>& out_svc) {
+    loop_.emplace(&kAsyncLoopConfigNoAttachToCurrentThread);
+    zx_status_t status = loop_->StartThread("SandboxRootJob");
+    ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+
+    vfs_.emplace(loop_->dispatcher());
+    svc_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
+
+    status = svc_dir_->AddEntry(
+        fidl::DiscoverableProtocolName<fuchsia_kernel::RootJob>,
+        fbl::MakeRefCounted<fs::Service>(
+            [this](fidl::ServerEnd<fuchsia_kernel::RootJob> request) -> zx_status_t {
+              fidl::BindServer(loop_->dispatcher(), std::move(request), &server_);
+              return ZX_OK;
+            }));
+    ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+
+    auto [svc_client, svc_server] = *fidl::CreateEndpoints<fuchsia_io::Directory>();
+    status = vfs_->ServeDirectory(svc_dir_, std::move(svc_server));
+    ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+    out_svc = std::move(svc_client);
+  }
+
+  ~SandboxRootJobLoop() {
+    if (loop_) {
+      loop_->Shutdown();
+    }
+  }
+
+ private:
+  std::optional<async::Loop> loop_;
+  std::optional<fs::SynchronousVfs> vfs_;
+  fbl::RefPtr<fs::PseudoDir> svc_dir_;
+  SandboxRootJobServer server_;
+  std::optional<fidl::ServerBindingRef<fuchsia_kernel::RootJob>> binding_;
+};
+
+// Set the spawn actions to populate the namespace for the tool with only its
+// own private /tmp and /svc endpoints.
+void TestToolProcess::SandboxCommand(PipedCommand& command) {
+  std::vector<fdio_spawn_action_t> actions;
+
+  fbl::unique_fd tmp_fd{open(tmp_path_.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC)};
+  ASSERT_TRUE(tmp_fd) << tmp_path_ << ": " << strerror(errno);
+  zx::channel tmp_handle;
+  zx_status_t status =
+      fdio_get_service_handle(tmp_fd.release(), tmp_handle.reset_and_get_address());
+  ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+  actions.push_back({.action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+                     .ns = {
+                         .prefix = "/tmp",
+                         .handle = tmp_handle.release(),
+                     }});
+
+  fidl::ClientEnd<fuchsia_io::Directory> svc;
+  sandbox_root_job_loop_ = std::make_unique<TestToolProcess::SandboxRootJobLoop>();
+  ASSERT_NO_FATAL_FAILURE(sandbox_root_job_loop_->Init(svc));
+  actions.push_back({.action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+                     .ns = {
+                         .prefix = "/svc",
+                         .handle = svc.TakeChannel().release(),
+                     }});
+
+  command.SetSpawnActions(FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_NAMESPACE, std::move(actions));
+}
+#endif  // __Fuchsia__
 
 std::thread SendPipeWorker(fbl::unique_fd fd, std::string contents) {
   return std::thread([fd = std::move(fd), contents = std::move(contents)]() mutable {
@@ -87,12 +202,10 @@ std::thread CollectPipeWorker(fbl::unique_fd fd, std::string& result) {
   });
 }
 
-std::string TestToolProcess::File::name() const { return FilePathForTool(*this); }
-
 fbl::unique_fd TestToolProcess::File::CreateInput() {
   fbl::unique_fd fd{
-      open(FilePathForRunner(*this).c_str(), O_RDWR | O_CREAT | O_TRUNC | O_EXCL, 0666)};
-  EXPECT_TRUE(fd) << FilePathForRunner(*this).c_str() << ": " << strerror(errno);
+      open(owner_->FilePathForRunner(*this).c_str(), O_RDWR | O_CREAT | O_TRUNC | O_EXCL, 0666)};
+  EXPECT_TRUE(fd) << owner_->FilePathForRunner(*this).c_str() << ": " << strerror(errno);
   if (fd) {
     EXPECT_EQ(fcntl(fd.get(), F_SETFD, FD_CLOEXEC), 0);
   }
@@ -100,7 +213,7 @@ fbl::unique_fd TestToolProcess::File::CreateInput() {
 }
 
 fbl::unique_fd TestToolProcess::File::OpenOutput() {
-  fbl::unique_fd fd{open(FilePathForRunner(*this).c_str(), O_RDONLY)};
+  fbl::unique_fd fd{open(owner_->FilePathForRunner(*this).c_str(), O_RDONLY)};
   if (fd) {
     EXPECT_EQ(fcntl(fd.get(), F_SETFD, FD_CLOEXEC), 0);
   }
@@ -139,6 +252,10 @@ void TestToolProcess::Start(const std::string& tool, const std::vector<std::stri
   redirect(STDOUT_FILENO, tool_stdout_, true);
   redirect(STDERR_FILENO, tool_stderr_, true);
 
+#ifdef __Fuchsia__
+  ASSERT_NO_FATAL_FAILURE(SandboxCommand(command));
+#endif
+
   auto result = command.Start(ToolPath(tool), args);
   ASSERT_TRUE(result.is_ok()) << result.error_value();
 
@@ -161,6 +278,16 @@ void TestToolProcess::Finish(int& status) {
   status = WIFEXITED(status) ? WEXITSTATUS(status) : -WTERMSIG(status);
   process_ = -1;
 #endif
+}
+
+TestToolProcess::TestToolProcess() {
+  tmp_path_ = GetTmpDir() + "tool-tmp.";
+  int n = 1;
+  while (mkdir((tmp_path_ + std::to_string(n)).c_str(), 0777) < 0) {
+    EXPECT_EQ(errno, EEXIST) << strerror(errno);
+    ++n;
+  }
+  tmp_path_ += std::to_string(n) + '/';
 }
 
 TestToolProcess::~TestToolProcess() {
@@ -188,7 +315,14 @@ TestToolProcess::~TestToolProcess() {
   }
 
   for (const File& file : files_) {
-    remove(FilePathForRunner(file).c_str());
+    std::string path = FilePathForRunner(file);
+    EXPECT_EQ(remove(path.c_str()), 0) << file.name() << " as " << path << ": " << strerror(errno);
+  }
+
+  if (!tmp_path_.empty()) {
+    EXPECT_EQ(tmp_path_.back(), '/');
+    tmp_path_.resize(tmp_path_.size() - 1);  // Remove trailing slash.
+    EXPECT_EQ(rmdir(tmp_path_.c_str()), 0) << tmp_path_ << ": " << strerror(errno);
   }
 }
 
@@ -233,16 +367,19 @@ std::string TestToolProcess::collected_stderr() {
   return std::move(collected_stderr_);
 }
 
-TestToolProcess::File& TestToolProcess::MakeFile(std::string_view name) {
+TestToolProcess::File& TestToolProcess::MakeFile(std::string_view name, std::string_view suffix) {
   File file;
+  file.owner_ = this;
   file.name_ = "test.";
   file.name_ += name;
   file.name_ += '.';
   int n = 1;
-  while (std::filesystem::exists(FilePathForRunner(file.name_ + std::to_string(n)))) {
+  while (std::filesystem::exists(FilePathForRunner(file.name_ + std::to_string(n)) +
+                                 std::string(suffix))) {
     ++n;
   }
   file.name_ += std::to_string(n);
+  file.name_ += suffix;
   files_.push_back(std::move(file));
   return files_.back();
 }
