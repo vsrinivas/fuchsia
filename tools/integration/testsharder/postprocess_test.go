@@ -1019,43 +1019,54 @@ func TestApplyRealmLabel(t *testing.T) {
 func TestComputeShardTimeout(t *testing.T) {
 	tests := []struct {
 		name string
-		// The predicted total duration of the shard.
-		duration time.Duration
+		// The predicted total expectedShardDuration of the shard.
+		expectedShardDuration time.Duration
+		// The timeout to set on each test.
+		perTestTimeout time.Duration
 		// The number of tests in the shard.
 		testCount int
 		// The expected timeout, as a duration string.
 		want string
 	}{
 		{
-			name:      "average duration, average tests",
-			duration:  10 * time.Minute,
-			testCount: 250,
-			want:      "38m20s",
+			name:                  "average duration, average tests",
+			expectedShardDuration: 10 * time.Minute,
+			testCount:             250,
+			want:                  "38m20s",
 		},
 		{
-			name:      "short duration, many tests",
-			duration:  time.Minute,
-			testCount: 1000,
-			want:      "45m20s",
+			name:                  "short duration, many tests",
+			expectedShardDuration: time.Minute,
+			testCount:             1000,
+			want:                  "45m20s",
 		},
 		{
-			name:      "short duration, few tests",
-			duration:  10 * time.Second,
-			testCount: 3,
-			want:      "10m26s",
+			name:                  "short duration, few tests",
+			expectedShardDuration: 10 * time.Second,
+			testCount:             3,
+			want:                  "10m26s",
 		},
 		{
-			name:      "long duration, few tests",
-			duration:  time.Hour,
-			testCount: 2,
-			want:      "2h10m4s",
+			name:                  "long duration, few tests",
+			expectedShardDuration: time.Hour,
+			testCount:             2,
+			want:                  "2h10m4s",
+		},
+		{
+			// Even if the expected shard duration is fairly short, we should
+			// allocate enough time for tests to reach their timeouts.
+			name:                  "tests with timeouts",
+			expectedShardDuration: 15 * time.Minute,
+			perTestTimeout:        30 * time.Minute,
+			testCount:             10,
+			want:                  "1h37m20s",
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			s := subshard{duration: tc.duration}
+			s := subshard{duration: tc.expectedShardDuration}
 			for i := 0; i < tc.testCount; i++ {
-				s.tests = append(s.tests, Test{})
+				s.tests = append(s.tests, Test{Timeout: tc.perTestTimeout})
 			}
 			if got := computeShardTimeout(s); got.String() != tc.want {
 				t.Errorf("computeShardTimeout() = %s, want %s", got, tc.want)

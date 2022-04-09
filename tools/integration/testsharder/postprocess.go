@@ -550,7 +550,33 @@ func computeShardTimeout(s subshard) time.Duration {
 
 	testCount := time.Duration(len(s.tests))
 
+	// Take into account the expected overhead if a test times out to make sure
+	// that the shard timeout leaves time for individual tests to time out. This
+	// is determined by taking the maximum test timeout minus the average
+	// expected test runtime, and doubling it if the test is allowed to run
+	// multiple times or if there are multiple tests.
+	longestTimeoutTest := s.tests[0]
+	for _, test := range s.tests {
+		if test.Timeout > longestTimeoutTest.Timeout {
+			longestTimeoutTest = test
+		}
+	}
+	avgDuration := s.duration / testCount
+	testTimeoutOverhead := longestTimeoutTest.Timeout - avgDuration
+	if longestTimeoutTest.Runs > 1 || len(s.tests) > 1 {
+		// Only add enough overhead to guarantee two test runs enough
+		// time to time out. If we allowed enough overhead for *all*
+		// tests to time out then the task timeout would be way too
+		// high. If all tests are timing out we should cancel the shard
+		// early rather than waiting for all the tests to finish, which
+		// would be wasteful.
+		testTimeoutOverhead *= 2
+	}
+
 	timeout := perTestMultiplier * (s.duration + testCount*perTestOverhead)
+	if testTimeoutOverhead > 0 {
+		timeout += testTimeoutOverhead
+	}
 	timeout += shardOverhead
 	return timeout
 }
