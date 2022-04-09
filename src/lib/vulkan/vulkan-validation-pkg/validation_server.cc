@@ -6,7 +6,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
-#include <lib/fidl/llcpp/connect_service.h>
 #include <lib/svc/outgoing.h>
 #include <lib/syslog/cpp/macros.h>
 

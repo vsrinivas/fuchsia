@@ -6,7 +6,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
-#include <lib/fidl/llcpp/connect_service.h>
 #include <lib/svc/outgoing.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -22,10 +21,10 @@ int main(int argc, const char* const* argv) {
     return -1;
   }
   zx_status_t status;
-  status = fdio_open(
-      "/pkg",
-      fuchsia_io::wire::OpenFlags::kRightReadable | fuchsia_io::wire::OpenFlags::kRightExecutable,
-      endpoints->server.TakeChannel().release());
+  status = fdio_open("/pkg",
+                     static_cast<uint32_t>(fuchsia_io::wire::OpenFlags::kRightReadable |
+                                           fuchsia_io::wire::OpenFlags::kRightExecutable),
+                     endpoints->server.TakeChannel().release());
   if (status != ZX_OK) {
     fprintf(stderr, "Failed to open package");
     return -1;
