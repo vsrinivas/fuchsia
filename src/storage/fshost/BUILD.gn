@@ -65,6 +65,7 @@ source_set("fshost-registry") {
   deps = [
     "//sdk/lib/fdio",
     "//src/lib/files",
+    "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]

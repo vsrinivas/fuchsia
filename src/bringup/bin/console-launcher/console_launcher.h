@@ -20,7 +20,6 @@ namespace console_launcher {
 struct Arguments {
   bool run_shell = true;
   bool is_virtio = false;
-  bool log_to_debuglog = false;
   std::string term = "TERM=";
   std::string device = "/svc/console";
   std::string autorun_boot;

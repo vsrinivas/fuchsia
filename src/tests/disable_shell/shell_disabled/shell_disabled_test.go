@@ -21,10 +21,10 @@ func TestShellDisabled(t *testing.T) {
 	distro := emulatortest.UnpackFrom(t, filepath.Join(exPath, "test_data"), emulator.DistributionParams{Emulator: emulator.Qemu})
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
-	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog=true", "console.shell=false")
+	device.KernelArgs = append(device.KernelArgs, "console.shell=false")
 	i := distro.Create(device)
 	i.Start()
-	i.WaitForLogMessage("console-launcher: running")
+	i.WaitForLogMessage("console.shell: disabled")
 	tokenFromSerial := randomTokenAsString(t)
 	i.RunCommand("echo '" + tokenFromSerial + "'")
 	i.AssertLogMessageNotSeenWithinTimeout(tokenFromSerial, 3*time.Second)
@@ -35,10 +35,10 @@ func TestAutorunDisabled(t *testing.T) {
 	distro := emulatortest.UnpackFrom(t, filepath.Join(exPath, "test_data"), emulator.DistributionParams{Emulator: emulator.Qemu})
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
-	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog=true", "console.shell=false", "zircon.autorun.boot=foobar")
+	device.KernelArgs = append(device.KernelArgs, "console.shell=false", "zircon.autorun.boot=foobar")
 	i := distro.Create(device)
 	i.Start()
-	i.WaitForLogMessage("Couldn't launch autorun command 'foobar'")
+	i.WaitForLogMessage("cannot launch autorun command 'foobar'")
 }
 
 func execDir(t *testing.T) string {

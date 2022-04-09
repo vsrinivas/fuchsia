@@ -62,7 +62,6 @@ func RebootWithCommand(t *testing.T, cmd string, eKind ExpectedRebootType, eActi
 	})
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
-	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog=true")
 	device.Drive = nil
 	i := distro.Create(device)
 	i.Start()

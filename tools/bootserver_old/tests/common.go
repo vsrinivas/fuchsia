@@ -181,7 +181,7 @@ func StartQemu(t *testing.T, appendCmdline []string, modeString string) *emulato
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, appendCmdline...)
-	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog=true", "zircon.nodename="+DefaultNodename)
+	device.KernelArgs = append(device.KernelArgs, "zircon.nodename="+DefaultNodename)
 
 	// To run locally on linux, you need to configure a tuntap interface:
 	// $ sudo ip add mode tap qemu user `whoami`

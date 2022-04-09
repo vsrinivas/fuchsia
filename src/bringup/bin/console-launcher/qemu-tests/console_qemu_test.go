@@ -51,7 +51,7 @@ func TestConsoleIsLaunched(t *testing.T) {
 	i.RunCommand("exit")
 
 	// Check the exit print
-	i.WaitForLogMessage("console-launcher: console shell exited (started=1 exited=1, return_code=0)")
+	i.WaitForLogMessage("console shell exited (started=1 exited=1, return_code=0)")
 
 	// Print another string to make sure the shell came back up.
 	i.RunCommand("echo MY_TEST_STRING3")

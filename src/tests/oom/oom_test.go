@@ -13,7 +13,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/emulator/emulatortest"
 )
 
-var cmdlineCommon = []string{"devmgr.log-to-debuglog=true", "kernel.oom.behavior=reboot"}
+var cmdlineCommon = []string{"kernel.oom.behavior=reboot"}
 
 // Triggers the OOM signal without leaking memory. Verifies that fileystems are shut down and the
 // system reboots in a somewhat orderly fashion.
@@ -25,21 +25,27 @@ func TestOOMSignal(t *testing.T) {
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, cmdlineCommon...)
+
+	// TODO(https://fxbug.dev/97444): do not set this kernel argument when it is no longer used.
+	const driverManagerLogLine = "Successfully waited for VFS exit completion"
+	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog=true")
+
 	i := distro.Create(device)
 	i.Start()
 
-	// Ensure the kernel OOM system was properly initialized.
-	i.WaitForLogMessage("memory-pressure: memory availability state - Normal")
-
-	// Make sure the shell is ready to accept commands over serial.
-	i.WaitForLogMessage("console.shell: enabled")
+	i.WaitForLogMessages([]string{
+		// Ensure the kernel OOM system was properly initialized.
+		"memory-pressure: memory availability state - Normal",
+		// Make sure the shell is ready to accept commands over serial.
+		"console.shell: enabled",
+	})
 
 	// Trigger a simulated OOM, without leaking any memory.
 	i.RunCommand("k pmm oom signal")
 	i.WaitForLogMessage("memory-pressure: memory availability state - OutOfMemory")
 
 	// Make sure the file system is notified and unmounts.
-	i.WaitForLogMessage("Successfully waited for VFS exit completion")
+	i.WaitForLogMessage(driverManagerLogLine)
 
 	// Ensure the OOM thread reboots the target.
 	i.WaitForLogMessage("memory-pressure: rebooting due to OOM")
@@ -65,11 +71,12 @@ func TestOOMSignalBeforeCriticalProcess(t *testing.T) {
 	i := distro.Create(device)
 	i.Start()
 
-	// Ensure the kernel OOM system was properly initialized.
-	i.WaitForLogMessage("memory-pressure: memory availability state - Normal")
-
-	// Make sure the shell is ready to accept commands over serial.
-	i.WaitForLogMessage("console.shell: enabled")
+	i.WaitForLogMessages([]string{
+		// Ensure the kernel OOM system was properly initialized.
+		"memory-pressure: memory availability state - Normal",
+		// Make sure the shell is ready to accept commands over serial.
+		"console.shell: enabled",
+	})
 
 	// Trigger a simulated OOM, without leaking any memory.
 	i.RunCommand("k pmm oom signal")
@@ -102,11 +109,12 @@ func testOOMCommon(t *testing.T, cmdline []string, cmd string, msgs ...string) {
 	i := distro.Create(device)
 	i.Start()
 
-	// Ensure the kernel OOM system was properly initialized.
-	i.WaitForLogMessage("memory-pressure: memory availability state - Normal")
-
-	// Make sure the shell is ready to accept commands over serial.
-	i.WaitForLogMessage("console.shell: enabled")
+	i.WaitForLogMessages([]string{
+		// Ensure the kernel OOM system was properly initialized.
+		"memory-pressure: memory availability state - Normal",
+		// Make sure the shell is ready to accept commands over serial.
+		"console.shell: enabled",
+	})
 
 	// Trigger an OOM.
 	i.RunCommand(cmd)

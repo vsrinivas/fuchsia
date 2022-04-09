@@ -8,6 +8,7 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
 #include <lib/service/llcpp/service.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zircon-internal/paths.h>
 #include <zircon/processargs.h>
 
@@ -48,14 +49,13 @@ zx::status<fidl::ServerEnd<fuchsia_hardware_pty::Device>> StartShell(const char*
       },
   };
 
-  uint32_t flags = FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO;
+  constexpr uint32_t flags = FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO;
 
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, argv[0], argv, nullptr,
-                                      std::size(actions), actions, nullptr, err_msg);
-  if (status != ZX_OK) {
-    printf("console-launcher: cannot spawn shell: %s: %d (%s)\n", err_msg, status,
-           zx_status_get_string(status));
+  if (zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, argv[0], argv, nullptr,
+                                          std::size(actions), actions, nullptr, err_msg);
+      status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "failed to launch console shell: " << err_msg;
     return zx::error(status);
   }
 
@@ -66,22 +66,22 @@ zx::status<fidl::ServerEnd<fuchsia_hardware_pty::Device>> StartShell(const char*
 // If `cmd` is null, then the shell is launched interactively.
 zx_status_t StartVirtconShell(
     const fidl::ClientEnd<fuchsia_virtualconsole::SessionManager>& virtcon, const char* cmd) {
-  auto result = StartShell(cmd);
-  if (!result.is_ok()) {
-    fprintf(stderr, "console-launcher: unable start virtcon shell: %s\n", result.status_string());
+  zx::status result = StartShell(cmd);
+  if (result.is_error()) {
+    FX_PLOGS(ERROR, result.status_value()) << "failed to start virtcon shell";
     return result.status_value();
   }
 
-  auto virtcon_result = fidl::WireCall(virtcon)->CreateSession(std::move(result.value()));
+  const fidl::WireResult virtcon_result =
+      fidl::WireCall(virtcon)->CreateSession(std::move(result.value()));
   if (!virtcon_result.ok()) {
-    fprintf(stderr, "console-launcher: unable to create virtcon session: %d\n",
-            virtcon_result.status());
+    FX_PLOGS(ERROR, virtcon_result.status()) << "failed to create virtcon session";
     return virtcon_result.status();
   }
-  if (virtcon_result->status != ZX_OK) {
-    fprintf(stderr, "console-launcher: unable to create virtcon session: %d\n",
-            virtcon_result->status);
-    return virtcon_result->status;
+  const fidl::WireResponse virtcon_response = virtcon_result.value();
+  if (virtcon_response.status != ZX_OK) {
+    FX_PLOGS(ERROR, virtcon_response.status) << "failed to create virtcon session";
+    return virtcon_response.status;
   }
   return ZX_OK;
 }
@@ -94,7 +94,7 @@ zx::status<VirtconArgs> GetVirtconArgs(const fidl::ClientEnd<fuchsia_boot::Argum
       {"netsvc.netboot", false},
       {"devmgr.require-system", false},
   };
-  auto bool_resp = fidl::WireCall(boot_args)->GetBools(
+  const fidl::WireResult bool_resp = fidl::WireCall(boot_args)->GetBools(
       fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(bool_keys));
   if (!bool_resp.ok()) {
     return zx::error(bool_resp.status());
@@ -136,8 +136,8 @@ zx_status_t SetupVirtconEtc(const fidl::ClientEnd<fuchsia_virtualconsole::Sessio
 }
 
 zx_status_t SetupVirtcon(const fidl::ClientEnd<fuchsia_boot::Arguments>& boot_args) {
-  auto result = GetVirtconArgs(boot_args);
-  if (!result.is_ok()) {
+  const zx::status result = GetVirtconArgs(boot_args);
+  if (result.is_error()) {
     return result.status_value();
   }
   VirtconArgs args = result.value();
@@ -148,9 +148,9 @@ zx_status_t SetupVirtcon(const fidl::ClientEnd<fuchsia_boot::Arguments>& boot_ar
 
   zx::status virtcon = service::Connect<fuchsia_virtualconsole::SessionManager>();
   if (virtcon.is_error()) {
-    fprintf(stderr, "console-launcher: unable to connect to %s: %s\n",
-            fidl::DiscoverableProtocolName<fuchsia_virtualconsole::SessionManager>,
-            virtcon.status_string());
+    FX_PLOGS(ERROR, virtcon.status_value())
+        << "failed to connect to "
+        << fidl::DiscoverableProtocolName<fuchsia_virtualconsole::SessionManager>;
     return virtcon.status_value();
   }
 

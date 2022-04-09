@@ -1,5 +1,6 @@
 {
     allowed_log_tags: [
+        "console-launcher",
         "driver_manager.cm",
         "driver",
         "device",

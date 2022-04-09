@@ -16,7 +16,6 @@
 #include <lib/fit/defer.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/syslog/global.h>
 #include <lib/zircon-internal/paths.h>
 #include <zircon/compiler.h>
 #include <zircon/status.h>
@@ -73,22 +72,24 @@ zx::status<ConsoleLauncher> ConsoleLauncher::Create() {
   // TODO(fxbug.dev/33957): Remove all uses of the root job.
   zx::status client_end = service::Connect<fuchsia_kernel::RootJob>();
   if (client_end.is_error()) {
-    FX_LOGF(ERROR, nullptr, "Failed to get root job: %s", client_end.status_string());
+    FX_PLOGS(ERROR, client_end.status_value())
+        << "failed to connect to " << fidl::DiscoverableProtocolName<fuchsia_kernel::RootJob>;
     return client_end.take_error();
   }
-  fidl::WireResult result = fidl::WireCall(client_end.value())->Get();
+  const fidl::WireResult result = fidl::WireCall(client_end.value())->Get();
   if (!result.ok()) {
-    FX_LOGF(ERROR, nullptr, "Failed to get root job: %s", result.FormatDescription().c_str());
+    FX_PLOGS(ERROR, result.status()) << "failed to get root job";
     return zx::error(result.status());
   }
-  zx_status_t status = zx::job::create(result.value().job, 0u, &launcher.shell_job_);
-  if (status != ZX_OK) {
-    FX_LOGF(ERROR, nullptr, "Failed to create shell_job: %s", zx_status_get_string(status));
+  if (zx_status_t status = zx::job::create(result.value().job, 0u, &launcher.shell_job_);
+      status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "failed to create shell job";
     return zx::error(status);
   }
-  status = launcher.shell_job_.set_property(ZX_PROP_NAME, "zircon-shell", 16);
-  if (status != ZX_OK) {
-    FX_LOGF(ERROR, nullptr, "Failed to set shell_job job name: %s", zx_status_get_string(status));
+  constexpr char name[] = "zircon-shell";
+  if (zx_status_t status = launcher.shell_job_.set_property(ZX_PROP_NAME, name, sizeof(name));
+      status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "failed to set shell job name";
     return zx::error(status);
   }
 
@@ -98,25 +99,23 @@ zx::status<ConsoleLauncher> ConsoleLauncher::Create() {
 zx::status<Arguments> GetArguments(const fidl::ClientEnd<fuchsia_boot::Arguments>& client) {
   Arguments ret;
 
-  fuchsia_boot::wire::BoolPair bool_keys[]{
-      {"console.shell", false},
-      {"kernel.shell", false},
-      {"console.is_virtio", false},
-      {"devmgr.log-to-debuglog", false},
-  };
-  const fidl::WireResult bool_resp = fidl::WireCall(client)->GetBools(
-      fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(bool_keys));
-  if (!bool_resp.ok()) {
-    printf("console-launcher: failed to get boot bools: %s\n",
-           bool_resp.FormatDescription().c_str());
-    return zx::error(bool_resp.status());
+  {
+    fuchsia_boot::wire::BoolPair bool_keys[]{
+        {"console.shell", false},
+        {"kernel.shell", false},
+        {"console.is_virtio", false},
+    };
+    const fidl::WireResult bool_resp = fidl::WireCall(client)->GetBools(
+        fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(bool_keys));
+    if (!bool_resp.ok()) {
+      FX_PLOGS(ERROR, bool_resp.status()) << "failed to get boot bools";
+      return zx::error(bool_resp.status());
+    }
+    ret.run_shell = bool_resp->values[0];
+    // If the kernel console is running a shell we can't launch our own shell.
+    ret.run_shell = ret.run_shell && !bool_resp->values[1];
+    ret.is_virtio = bool_resp->values[2];
   }
-
-  ret.run_shell = bool_resp->values[0];
-  // If the kernel console is running a shell we can't launch our own shell.
-  ret.run_shell = ret.run_shell & !bool_resp->values[1];
-  ret.is_virtio = bool_resp->values[2];
-  ret.log_to_debuglog = bool_resp->values[3];
 
   fidl::StringView vars[]{
       "TERM",
@@ -127,7 +126,7 @@ zx::status<Arguments> GetArguments(const fidl::ClientEnd<fuchsia_boot::Arguments
   const fidl::WireResult resp =
       fidl::WireCall(client)->GetStrings(fidl::VectorView<fidl::StringView>::FromExternal(vars));
   if (!resp.ok()) {
-    printf("console-launcher: failed to get console path: %s\n", resp.FormatDescription().c_str());
+    FX_PLOGS(ERROR, resp.status()) << "failed to get boot strings";
     return zx::error(resp.status());
   }
 
@@ -150,23 +149,15 @@ zx::status<Arguments> GetArguments(const fidl::ClientEnd<fuchsia_boot::Arguments
 }
 
 zx_status_t ConsoleLauncher::LaunchShell(const Arguments& args) {
-  if (!args.run_shell) {
-    FX_LOGS(INFO) << "console-launcher: disabled";
-    return ZX_OK;
-  }
-
-  zx_status_t status = WaitForFile(args.device.c_str(), zx::time::infinite());
-  if (status != ZX_OK) {
-    FX_LOGS(INFO) << "console-launcher: failed to wait for console";
-    printf("console-launcher: failed to wait for console '%s' (%s)\n", args.device.c_str(),
-           zx_status_get_string(status));
+  if (zx_status_t status = WaitForFile(args.device.c_str(), zx::time::infinite());
+      status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "failed to wait for console '" << args.device << "'";
     return status;
   }
 
   fbl::unique_fd fd(open(args.device.c_str(), O_RDWR));
   if (!fd.is_valid()) {
-    printf("console-launcher: failed to open console '%s': %s\n", args.device.c_str(),
-           strerror(errno));
+    FX_LOGS(ERROR) << "failed to open console '" << args.device << "': " << strerror(errno);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -179,8 +170,7 @@ zx_status_t ConsoleLauncher::LaunchShell(const Arguments& args) {
   if (args.is_virtio) {
     zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
     if (endpoints.is_error()) {
-      printf("console-launcher: failed to create channel for console '%s': %s\n",
-             args.device.c_str(), endpoints.status_string());
+      FX_PLOGS(ERROR, endpoints.status_value()) << "failed to create pty endpoints";
       return endpoints.status_value();
     }
     fdio_cpp::FdioCaller caller(std::move(fd));
@@ -188,13 +178,13 @@ zx_status_t ConsoleLauncher::LaunchShell(const Arguments& args) {
         fidl::WireCall(caller.borrow_as<fuchsia_hardware_virtioconsole::Device>())
             ->GetChannel(std::move(endpoints->server));
     if (!result.ok()) {
+      FX_PLOGS(ERROR, result.status()) << "failed to get virtio console channel";
       return result.status();
     }
-    zx_status_t status =
-        fdio_fd_create(endpoints->client.TakeChannel().release(), fd.reset_and_get_address());
-    if (status != ZX_OK) {
-      printf("console-launcher: failed to setup fdio for console '%s': %s\n", args.device.c_str(),
-             zx_status_get_string(status));
+    if (zx_status_t status =
+            fdio_fd_create(endpoints->client.TakeChannel().release(), fd.reset_and_get_address());
+        status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "failed to create virtio console fd";
       return status;
     }
   }
@@ -214,8 +204,8 @@ zx_status_t ConsoleLauncher::LaunchShell(const Arguments& args) {
 
   // Get our current namespace so we can pass it to the shell process.
   fdio_flat_namespace_t* flat = nullptr;
-  status = fdio_ns_export_root(&flat);
-  if (status != ZX_OK) {
+  if (zx_status_t status = fdio_ns_export_root(&flat); status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "failed to get namespace root";
     return status;
   }
   auto free_flat = fit::defer([&flat]() { fdio_ns_free_flat_ns(flat); });
@@ -245,39 +235,39 @@ zx_status_t ConsoleLauncher::LaunchShell(const Arguments& args) {
           },
   });
 
-  uint32_t flags = FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO & ~FDIO_SPAWN_CLONE_NAMESPACE;
+  constexpr uint32_t flags =
+      FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO & ~FDIO_SPAWN_CLONE_NAMESPACE;
 
-  FX_LOGF(INFO, nullptr, "Launching %s (%s)\n", argv[0], actions[0].name.data);
+  FX_LOGS(INFO) << "launching " << argv[0] << " (" << actions[0].name.data << ")";
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  status = fdio_spawn_etc(shell_job_.get(), flags, argv[0], argv, environ, actions.size(),
-                          actions.data(), shell_process_.reset_and_get_address(), err_msg);
-  if (status != ZX_OK) {
-    printf("console-launcher: failed to launch console shell: %s: %d (%s)\n", err_msg, status,
-           zx_status_get_string(status));
+  if (zx_status_t status =
+          fdio_spawn_etc(shell_job_.get(), flags, argv[0], argv, environ, actions.size(),
+                         actions.data(), shell_process_.reset_and_get_address(), err_msg);
+      status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "failed to launch console shell: " << err_msg;
     return status;
   }
   return ZX_OK;
 }
 
 zx_status_t ConsoleLauncher::WaitForShellExit() {
-  zx_status_t status =
-      shell_process_.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
-  if (status != ZX_OK) {
-    printf("console-launcher: failed to wait for console shell termination (%s)\n",
-           zx_status_get_string(status));
+  if (zx_status_t status =
+          shell_process_.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
+      status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "failed to wait for console shell termination";
     return status;
   }
   zx_info_process_t proc_info;
-  status =
-      shell_process_.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr);
-  if (status != ZX_OK) {
-    printf("console-launcher: failed to determine console shell termination cause (%s)\n",
-           zx_status_get_string(status));
+  if (zx_status_t status =
+          shell_process_.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr);
+      status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "failed to get console shell termination cause";
     return status;
   }
-  printf("console-launcher: console shell exited (started=%d exited=%d, return_code=%ld)\n",
-         (proc_info.flags & ZX_INFO_PROCESS_FLAG_STARTED) != 0,
-         (proc_info.flags & ZX_INFO_PROCESS_FLAG_EXITED) != 0, proc_info.return_code);
+  const bool started = (proc_info.flags & ZX_INFO_PROCESS_FLAG_STARTED) != 0;
+  const bool exited = (proc_info.flags & ZX_INFO_PROCESS_FLAG_EXITED) != 0;
+  FX_LOGS(INFO) << "console shell exited (started=" << started << " exited=" << exited
+                << ", return_code=" << proc_info.return_code << ")";
   return ZX_OK;
 }
 

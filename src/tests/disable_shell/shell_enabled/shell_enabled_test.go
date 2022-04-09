@@ -20,7 +20,7 @@ func TestShellEnabled(t *testing.T) {
 	distro := emulatortest.UnpackFrom(t, filepath.Join(exPath, "test_data"), emulator.DistributionParams{Emulator: emulator.Qemu})
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
-	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog=true", "console.shell=true")
+	device.KernelArgs = append(device.KernelArgs, "console.shell=true")
 	i := distro.Create(device)
 	i.Start()
 	i.WaitForLogMessage("console.shell: enabled")
@@ -36,14 +36,13 @@ func TestAutorunEnabled(t *testing.T) {
 	tokenFromSerial := randomTokenAsString(t)
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs,
-		"devmgr.log-to-debuglog=true",
 		"console.shell=true",
 		"zircon.autorun.boot=/boot/bin/sh+-c+echo+"+tokenFromSerial)
 	i := distro.Create(device)
 	i.Start()
 
 	// Wait for console-launcher to come up before waiting for the autorun output.
-	i.WaitForLogMessage("console-launcher: running")
+	i.WaitForLogMessage("console.shell: enabled")
 	i.WaitForLogMessage(tokenFromSerial)
 }
 
