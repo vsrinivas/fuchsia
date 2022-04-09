@@ -52,7 +52,31 @@ static constexpr char pt_list_output_path_suffix[] = "ptlist";
 
 static constexpr uint32_t kKtraceGroupMask = KTRACE_GRP_ARCH | KTRACE_GRP_TASKS;
 
-static ControllerSyncPtr OpenDevice() {
+// Wrapper that ensures device is closed on the server side.
+// insntrace only allows a single client at a time, so without it's possible for the device to
+// observe a future open call before observing the close call from this connection.
+class ControllerClient {
+ public:
+  ControllerClient(ControllerSyncPtr client) : client_(std::move(client)) {}
+
+  ~ControllerClient() {
+    int fd;
+    zx_status_t status = fdio_fd_create(client_.Unbind().TakeChannel().release(), &fd);
+    if (status == ZX_OK) {
+      close(fd);
+    }
+  }
+
+  ControllerSyncPtr& operator->() { return client_; }
+  const ControllerSyncPtr& operator*() const { return client_; }
+
+  operator bool() { return client_ ? true : false; }
+
+ private:
+  ControllerSyncPtr client_;
+};
+
+static ControllerClient OpenDevice() {
   ControllerSyncPtr controller_ptr;
   zx_status_t status =
       fdio_service_connect(ipt_device_path, controller_ptr.NewRequest().TakeChannel().release());
@@ -66,7 +90,7 @@ static ControllerSyncPtr OpenDevice() {
 bool AllocTrace(const IptConfig& config) {
   FX_LOGS(INFO) << "AllocTrace called";
 
-  ControllerSyncPtr ipt{OpenDevice()};
+  ControllerClient ipt{OpenDevice()};
   if (!ipt) {
     return false;
   }
@@ -109,7 +133,7 @@ bool InitTrace(const IptConfig& config) {
   FX_LOGS(INFO) << "InitTrace called";
   FX_DCHECK(config.mode == Mode::CPU);
 
-  ControllerSyncPtr ipt{OpenDevice()};
+  ControllerClient ipt{OpenDevice()};
   if (!ipt) {
     return false;
   }
@@ -180,7 +204,7 @@ bool StartTrace(const IptConfig& config) {
   FX_LOGS(INFO) << "StartTrace called";
   FX_DCHECK(config.mode == Mode::CPU);
 
-  ControllerSyncPtr ipt{OpenDevice()};
+  ControllerClient ipt{OpenDevice()};
   if (!ipt) {
     return false;
   }
@@ -198,7 +222,7 @@ void StopTrace(const IptConfig& config) {
   FX_LOGS(INFO) << "StopTrace called";
   FX_DCHECK(config.mode == Mode::CPU);
 
-  ControllerSyncPtr ipt{OpenDevice()};
+  ControllerClient ipt{OpenDevice()};
   if (!ipt) {
     return;
   }
@@ -347,14 +371,14 @@ void DumpTrace(const IptConfig& config) {
   FX_LOGS(INFO) << "DumpTrace called";
   FX_DCHECK(config.mode == Mode::CPU);
 
-  ControllerSyncPtr ipt{OpenDevice()};
+  ControllerClient ipt{OpenDevice()};
   if (!ipt) {
     return;
   }
 
   for (uint32_t cpu = 0; cpu < config.num_cpus; ++cpu) {
     // Buffer descriptors for cpus is the cpu number.
-    auto status = WriteBufferData(config, ipt, cpu, cpu);
+    auto status = WriteBufferData(config, *ipt, cpu, cpu);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << fxl::StringPrintf("Dump perf of cpu %u: ", cpu)
                      << debugger_utils::ZxErrorString(status);
@@ -426,7 +450,7 @@ void ResetTrace(const IptConfig& config) {
 void FreeTrace(const IptConfig& config) {
   FX_LOGS(INFO) << "FreeTrace called";
 
-  ControllerSyncPtr ipt{OpenDevice()};
+  ControllerClient ipt{OpenDevice()};
   if (!ipt) {
     return;
   }
