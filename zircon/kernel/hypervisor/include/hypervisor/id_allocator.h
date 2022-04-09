@@ -17,22 +17,25 @@ namespace hypervisor {
 // Allocates architecture-specific resource IDs.
 //
 // `T` is the type of the ID, and is an integral type.
-// `Max` is the maximum value of an ID.
-template <typename T, T Max>
+// `MaxId` is the maximum value of an ID.
+// `MinId` is the minimum value of an ID. This defaults to 1.
+template <typename T, T MaxId, T MinId = 1>
 class IdAllocator {
  public:
+  static_assert(MaxId > MinId, "MaxId must be greater than MinId");
   IdAllocator() { Reset(); }
 
-  // Resets the allocator, and sets a new `max_size`, where `max_size` <= `Max`.
-  void Reset(T max_size = Max) {
-    zx_status_t status = bitmap_.Reset(max_size);
+  // Resets the allocator, and sets a new `max_id`, where `max_id` <= `MaxId`.
+  void Reset(T max_id = MaxId) {
+    ZX_ASSERT(max_id > MinId);
+    zx_status_t status = bitmap_.Reset(max_id);
     // We use bitmap::FixedStorage, so allocation cannot fail.
     ZX_DEBUG_ASSERT(status == ZX_OK);
   }
 
   zx::status<T> Alloc() {
     size_t first_unset;
-    bool all_set = bitmap_.Get(0, bitmap_.size(), &first_unset);
+    bool all_set = bitmap_.Get(MinId, bitmap_.size(), &first_unset);
     if (all_set) {
       return zx::error(ZX_ERR_NO_RESOURCES);
     }
@@ -40,19 +43,19 @@ class IdAllocator {
     if (status != ZX_OK) {
       return zx::error(status);
     }
-    return zx::ok(static_cast<T>(first_unset + 1));
+    return zx::ok(static_cast<T>(first_unset));
   }
 
   zx::status<> Free(T id) {
-    if (id == 0 || !bitmap_.GetOne(id - 1)) {
+    if (id < MinId || !bitmap_.GetOne(id)) {
       return zx::error(ZX_ERR_INVALID_ARGS);
     }
-    zx_status_t status = bitmap_.ClearOne(id - 1);
+    zx_status_t status = bitmap_.ClearOne(id);
     return zx::make_status(status);
   }
 
  private:
-  bitmap::RawBitmapGeneric<bitmap::FixedStorage<Max>> bitmap_;
+  bitmap::RawBitmapGeneric<bitmap::FixedStorage<MaxId>> bitmap_;
 };
 
 }  // namespace hypervisor

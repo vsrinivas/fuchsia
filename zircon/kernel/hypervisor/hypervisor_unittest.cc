@@ -397,7 +397,7 @@ static bool id_allocator_reset_to_size() {
   allocator.Reset(kSize);
 
   // Allocate until all IDs are used.
-  for (uint8_t i = 1; i <= kSize; i++) {
+  for (uint8_t i = 1; i < kSize; i++) {
     auto id = allocator.Alloc();
     EXPECT_EQ(ZX_OK, id.status_value());
     EXPECT_EQ(i, *id);
