@@ -1240,14 +1240,14 @@ From //src/storage/fshost/generated_fshost_config.gni:34
 
 **Current value (from the default):** `false`
 
-From //src/virtualization/packages/debian_guest/BUILD.gn:10
+From //src/virtualization/packages/debian_guest/BUILD.gn:12
 
 ### debian_guest_qcow
 Package the rootfs as a QCOW image (as opposed to a flat file).
 
 **Current value (from the default):** `true`
 
-From //src/virtualization/packages/debian_guest/BUILD.gn:9
+From //src/virtualization/packages/debian_guest/BUILD.gn:11
 
 ### debuginfo
 * `none` means no debugging information
@@ -2951,7 +2951,7 @@ Default app id will always return no update.
 
 **Current value (from the default):** `"fuchsia-test:no-update"`
 
-From //src/sys/pkg/bin/omaha-client/BUILD.gn:14
+From //src/sys/pkg/bin/omaha-client/BUILD.gn:16
 
 ### openthread_config_anycast_locator_enable
 Enable anycast locator functionality
