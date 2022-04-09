@@ -25,25 +25,10 @@ rustc_binary("actor-bin") {
   sources = [ "actor/main.rs" ]
 }
 
-resource("archivist-config-file") {
-  testonly = true
-  sources = [ "//src/diagnostics/archivist/configs/archivist_config.json" ]
-  outputs = "data/{{source_file_part}}"
-}
-
 fuchsia_component("actor") {
   testonly = true
   manifest = "meta/actor.cml"
   deps = [ ":actor-bin" ]
-}
-
-fuchsia_component("archivist") {
-  testonly = true
-  manifest = "meta/archivist.cml"
-  deps = [
-    ":archivist-config-file",
-    "//src/diagnostics/archivist:bin",
-  ]
 }
 
 fuchsia_component("test") {
@@ -54,7 +39,7 @@ fuchsia_component("test") {
 fuchsia_test_package("archivist-stress-test") {
   deps = [
     ":actor",
-    ":archivist",
+    "//src/diagnostics/archivist:archivist-for-embedding-v2",
   ]
   test_components = [ ":test" ]
   test_specs = {

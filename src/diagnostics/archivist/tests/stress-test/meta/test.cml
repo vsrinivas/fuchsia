@@ -23,7 +23,7 @@
     children: [
         {
             name: "archivist",
-            url: "fuchsia-pkg://fuchsia.com/archivist-stress-test#meta/archivist.cm",
+            url: "fuchsia-pkg://fuchsia.com/archivist-stress-test#meta/archivist-for-embedding.cm",
         },
     ],
     offer: [
