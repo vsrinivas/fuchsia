@@ -595,10 +595,14 @@ sdk("ddk") {
   api = "manifests/ddk.manifest"
 
   deps = [
-    ":banjo",
     ":bind",
     ":ddk_fidl",
     ":ddk_host_tools",
+    "//sdk/lib/driver_runtime:driver_runtime_cpp_sdk",
+    "//sdk/lib/driver_runtime:driver_runtime_sdk",
+
+    # V1 APIs, to be removed before updating category to partner:
+    ":banjo",
     "//src/devices/usb/lib/usb:usb_sdk",
     "//src/lib/ddk:ddk_sdk",
     "//src/lib/ddktl:ddktl_sdk",
