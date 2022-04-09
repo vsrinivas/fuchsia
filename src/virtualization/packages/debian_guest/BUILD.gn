@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/virtualization/buildtools/linux_paths.gni")
+import("//src/virtualization/buildtools/romfs_image.gni")
 import("//src/virtualization/packages/guest_package.gni")
 
 declare_args() {
@@ -12,7 +14,7 @@ declare_args() {
 
 initrd_image = "initrd.img"
 rootfs_image = "rootfs.qcow2"
-tests_image = "tests.img"
+tests_image = "tests.romfs"
 linux_image = "vmlinuz"
 
 guest_prebuilt("initrd") {
@@ -25,14 +27,29 @@ guest_prebuilt("rootfs") {
   output = "${target_out_dir}/debian/${rootfs_image}"
 }
 
-guest_prebuilt("tests") {
-  source = "//prebuilt/virtualization/packages/debian_guest/images/${target_cpu}/${tests_image}"
-  output = "${target_out_dir}/debian/${tests_image}"
-}
-
 guest_prebuilt("kernel") {
   source = "//prebuilt/virtualization/packages/debian_guest/images/${target_cpu}/${linux_image}"
   output = "${target_out_dir}/debian/${linux_image}"
+}
+
+romfs_image("tests") {
+  deps = [
+    "//src/virtualization/tests/virtio_block_test_util(${linux_exe_toolchain})",
+    "//src/virtualization/tests/virtio_input_test_util(${linux_exe_toolchain})",
+    "//src/virtualization/tests/virtio_net_test_util(${linux_exe_toolchain})",
+    "//src/virtualization/tests/virtio_rng_test_util(${linux_exe_toolchain})",
+    "//src/virtualization/tests/virtio_vsock_test_util(${linux_exe_toolchain})",
+  ]
+
+  inputs = [
+    "${linux_exe_path}/virtio_block_test_util",
+    "${linux_exe_path}/virtio_input_test_util",
+    "${linux_exe_path}/virtio_net_test_util",
+    "${linux_exe_path}/virtio_rng_test_util",
+    "${linux_exe_path}/virtio_vsock_test_util",
+  ]
+
+  output = "$target_out_dir/debian/${tests_image}"
 }
 
 guest_package("debian_guest") {
@@ -73,11 +90,11 @@ guest_package("debian_guest") {
   ]
   block_devices = [ "data/${disk_name},${disk_options}" ]
 
-  tests_filename = "tests.img"
+  tests_filename = "tests.romfs"
   resources += [
     {
-      path = rebase_path("${target_out_dir}/debian/${tests_image}")
-      dest = "${tests_filename}"
+      path = rebase_path("$target_out_dir/debian/${tests_image}")
+      dest = tests_filename
     },
   ]
   block_devices += [ "data/${tests_filename},ro" ]

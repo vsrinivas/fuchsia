@@ -789,7 +789,7 @@ zx_status_t TerminaEnclosedGuest::WaitForSystemReady(zx::time deadline) {
   if (status != ZX_OK) {
     return status;
   }
-  status = MountDeviceInGuest(*maitred_, "/dev/vdd", "/tmp/test_utils", "ext2", MS_RDONLY);
+  status = MountDeviceInGuest(*maitred_, "/dev/vdd", "/tmp/test_utils", "romfs", MS_RDONLY);
   if (status != ZX_OK) {
     return status;
   }
@@ -809,10 +809,11 @@ zx_status_t TerminaEnclosedGuest::ShutdownAndWait(zx::time deadline) {
   return ZX_OK;
 }
 
-zx_status_t TerminaEnclosedGuest::Execute(const std::vector<std::string>& argv,
+zx_status_t TerminaEnclosedGuest::Execute(const std::vector<std::string>& command,
                                           const std::unordered_map<std::string, std::string>& env,
                                           zx::time deadline, std::string* result,
                                           int32_t* return_code) {
+  std::vector<std::string> argv = {"sh", "-c", JoinArgVector(command)};
   auto command_result = command_runner_->Execute({argv, env});
   if (command_result.is_error()) {
     return command_result.error();

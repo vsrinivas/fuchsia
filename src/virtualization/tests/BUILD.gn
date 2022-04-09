@@ -6,6 +6,20 @@ import("//build/components.gni")
 import("//src/virtualization/buildtools/linux_paths.gni")
 import("//src/virtualization/buildtools/romfs_image.gni")
 
+config("guest_test_util") {
+  visibility = [ "./*" ]
+  if (is_linux && current_cpu == "arm64") {
+    # On arm, termina_guest is a 64-bit kernel with a 32-bit userspace. If we don't use static
+    # linking those binaries will fail to run there.
+    rustflags = [
+      "-C",
+      "target-feature=+crt-static",
+      "-C",
+      "link-arg=-lgcc",
+    ]
+  }
+}
+
 # Packages required to run the guest integration tests.
 guest_packages = [
   "//src/virtualization/bin/vmm",
@@ -20,7 +34,7 @@ guest_packages = [
 linux_tests_label = "//src/virtualization/packages/debian_guest:tests"
 resource("debian_tests_img") {
   sources = [ get_label_info(linux_tests_label, "target_out_dir") +
-              "/debian/tests.img" ]
+              "/debian/tests.romfs" ]
   outputs = [ "data/linux_tests.img" ]
   deps = [ linux_tests_label ]
 }
