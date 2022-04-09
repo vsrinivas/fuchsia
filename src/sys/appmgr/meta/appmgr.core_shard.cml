@@ -45,8 +45,6 @@
                 "fuchsia.media.sessions2.Discovery",
                 "fuchsia.media.sessions2.Publisher",
                 "fuchsia.media.UsageReporter",
-                "fuchsia.overnet.Overnet",
-                "fuchsia.overnet.ServicePublisher",
                 "fuchsia.power.manager.DriverManagerRegistration",
                 "fuchsia.process.Resolver",
                 "fuchsia.recovery.policy.Device",
@@ -197,6 +195,17 @@
         {
             protocol: "fuchsia.developer.remotecontrol.RemoteControl",
             from: "#remote-control",
+        },
+
+        // TODO(https://fxbug.dev/97617): If there's no v1 dependencies these should not be routed here.
+        {
+            protocol: [
+                "fuchsia.overnet.MeshController",
+                "fuchsia.overnet.Overnet",
+                "fuchsia.overnet.ServiceConsumer",
+                "fuchsia.overnet.ServicePublisher",
+            ],
+            from: "#overnetstack",
         },
         {
             protocol: "fuchsia.starnix.developer.Manager",
