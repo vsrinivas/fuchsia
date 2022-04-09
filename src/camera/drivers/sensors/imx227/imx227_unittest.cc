@@ -89,6 +89,27 @@ class FakeImx227Device : public Imx227Device {
         .ExpectReadStop({kSensorModelIdDefaultByteVec[1]});
   }
 
+  void ExpectRead16(const uint16_t addr, const uint16_t data) {
+    const auto kSensorRegHiByteAddrVec = SplitBytes(htobe16(addr));
+    const auto kSensorRegLoByteAddrVec = SplitBytes(htobe16(addr + 1));
+    const auto kSensorDataByteVec = SplitBytes(htobe16(data));
+    mock_i2c_.ExpectWrite({kSensorRegHiByteAddrVec[1], kSensorRegHiByteAddrVec[0]})
+        .ExpectReadStop({kSensorDataByteVec[0]})
+        .ExpectWrite({kSensorRegLoByteAddrVec[1], kSensorRegLoByteAddrVec[0]})
+        .ExpectReadStop({kSensorDataByteVec[0]});
+  }
+
+  // Expect hardware default values to be read during CameraSensor2Init().
+  void ExpectCameraSensor2Init() {
+    uint16_t analog_gain_global_value = 0x0000;
+    uint16_t digital_gain_global_value = 0x0100;
+    uint16_t coarse_integration_time_value = 0x03e8;
+
+    ExpectRead16(kAnalogGainCodeGlobalReg, analog_gain_global_value);
+    ExpectRead16(kDigitalGainGlobalReg, digital_gain_global_value);
+    ExpectRead16(kCoarseIntegrationTimeReg, coarse_integration_time_value);
+  }
+
   void ExpectGetTestPatternMode(const uint16_t mode) {
     const auto kSensorTestPatternRegByteVec = SplitBytes(htobe16(kTestPatternReg));
     const auto kSensorTestPatternModeByteVec = SplitBytes(htobe16(mode));
@@ -209,11 +230,15 @@ static uint32_t GetCoarseMaxIntegrationTime(const frame_rate_info_t* lut, uint32
   return 0;
 }
 
-TEST_F(Imx227DeviceTest, Sanity) { ASSERT_OK(dut().CameraSensor2Init()); }
+TEST_F(Imx227DeviceTest, Sanity) {
+  dut().ExpectCameraSensor2Init();
+  ASSERT_OK(dut().CameraSensor2Init());
+}
 
 // TODO(fxbug.dev/50737): The expected I2C operations don't match up with those made by
 // CameraSensor2GetSensorId.
 TEST_F(Imx227DeviceTest, DISABLED_GetSensorId) {
+  dut().ExpectCameraSensor2Init();
   dut().ExpectGetSensorId();
   uint32_t out_id;
   ASSERT_OK(dut().CameraSensor2Init());
@@ -222,6 +247,7 @@ TEST_F(Imx227DeviceTest, DISABLED_GetSensorId) {
 }
 
 TEST_F(Imx227DeviceTest, DISABLED_GetSetTestPatternMode) {
+  dut().ExpectCameraSensor2Init();
   dut().ExpectGetTestPatternMode(kTestMode0);
   dut().ExpectSetTestPatternMode(kTestMode1);
   dut().ExpectGetTestPatternMode(kTestMode1);
@@ -236,6 +262,7 @@ TEST_F(Imx227DeviceTest, DISABLED_GetSetTestPatternMode) {
 
 TEST_F(Imx227DeviceTest, GetFrameRateCoarseIntLut) {
   extension_value_data_type_t ext_val;
+  dut().ExpectCameraSensor2Init();
   ASSERT_OK(dut().CameraSensor2Init());
   ASSERT_OK(dut().CameraSensor2GetExtensionValue(FRAME_RATE_COARSE_INT_LUT, &ext_val));
   EXPECT_EQ(
@@ -247,6 +274,7 @@ TEST_F(Imx227DeviceTest, GetFrameRateCoarseIntLut) {
 }
 
 TEST_F(Imx227DeviceTest, UpdateAnalogGain) {
+  dut().ExpectCameraSensor2Init();
   ASSERT_OK(dut().CameraSensor2Init());
 
   dut().ExpectReadAnalogGainConstants();
@@ -281,6 +309,7 @@ TEST_F(Imx227DeviceTest, UpdateAnalogGain) {
 }
 
 TEST_F(Imx227DeviceTest, GetRegisterValueFromSequence) {
+  dut().ExpectCameraSensor2Init();
   ASSERT_OK(dut().CameraSensor2Init());
 
   auto result_good = dut().GetRegValFromSeq(0, kFrameLengthLinesReg);
@@ -297,6 +326,7 @@ TEST_F(Imx227DeviceTest, GetRegisterValueFromSequence) {
 }
 
 TEST_F(Imx227DeviceTest, GetRegisterValueFromSequence16) {
+  dut().ExpectCameraSensor2Init();
   ASSERT_OK(dut().CameraSensor2Init());
 
   auto result_good = dut().GetRegValFromSeq16(0, kFrameLengthLinesReg);
