@@ -14,8 +14,6 @@
 
 #include "test-main.h"
 
-const char Symbolize::kProgramName_[] = "backtrace-test";
-
 namespace {
 
 // BackTrace() omits its immediate caller, so Collect* itself won't appear.
@@ -34,20 +32,19 @@ namespace {
   };
 
   printf("Collecting backtraces...\n");
-  Symbolize& symbolize = *Symbolize::GetInstance();
-  symbolize.Context();
+  gSymbolize->Context();
 
   const auto fp_bt = CollectFp();
   const int fp_depth = bt_depth(fp_bt);
 
   printf("Printing frame pointer backtrace, %d frames:\n", fp_depth);
-  symbolize.BackTrace(fp_bt);
+  gSymbolize->BackTrace(fp_bt);
 
   const auto scs_bt = CollectScs();
   const int scs_depth = bt_depth(scs_bt);
   if (BootShadowCallStack::kEnabled) {
     printf("Printing shadow call stack backtrace, %d frames:\n", scs_depth);
-    symbolize.BackTrace(scs_bt);
+    gSymbolize->BackTrace(scs_bt);
 
     ZX_ASSERT(fp_depth == scs_depth);
 
@@ -85,6 +82,8 @@ namespace {
 }  // namespace
 
 int TestMain(void* zbi, arch::EarlyTicks) {
+  MainSymbolize symbolize("backtrace-test");
+
   if (zbi && static_cast<zbi_header_t*>(zbi)->type == ZBI_TYPE_CONTAINER) {
     ZX_ASSERT(Foo() == 4);  // _start -> PhysMain -> ZbiMain -> TestMain -> Foo
   } else {

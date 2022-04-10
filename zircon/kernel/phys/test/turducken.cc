@@ -202,7 +202,8 @@ void TurduckenTestBase::Boot() {
 }
 
 int TestMain(void* zbi, arch::EarlyTicks entry_ticks) {
-  Symbolize::GetInstance()->ContextAlways();
+  MainSymbolize symbolize(kTestName);
+  symbolize.ContextAlways();
 
   InitMemory(zbi);
 

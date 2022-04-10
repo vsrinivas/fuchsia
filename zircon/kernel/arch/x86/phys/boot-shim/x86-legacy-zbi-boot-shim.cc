@@ -107,15 +107,15 @@ zbitl::ByteView GetInputZbi(void* zbi) {
 
 }  // namespace
 
-const char Symbolize::kProgramName_[] = "x86-legacy-zbi-boot-shim";
-
 void ZbiMain(void* zbi, arch::EarlyTicks boot_ticks) {
+  MainSymbolize symbolize("x86-legacy-zbi-boot-shim");
+
   BootZbi::InputZbi input_zbi(GetInputZbi(zbi));
 
   ZbiInitMemory(zbi, GetZbiMemoryRanges(input_zbi));
 
-  Shim shim(ProgramName());
-  shim.set_build_id(Symbolize::GetInstance()->BuildIdString());
+  Shim shim(symbolize.name());
+  shim.set_build_id(symbolize.BuildIdString());
 
   // The pool knows all the memory details, so populate the new ZBI item that
   // way.  The incoming ZBI items in whatever format have been discarded.

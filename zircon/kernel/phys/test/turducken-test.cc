@@ -15,7 +15,8 @@
 
 #include <ktl/enforce.h>
 
-const char Symbolize::kProgramName_[] = "turducken-test";
+// Declared in turducken.h.
+const char* kTestName = "turducken-test";
 
 // These are embedded in the original image (with "flavor=turkey").
 constexpr ktl::string_view kSmokeSignal = "turducken-test.smoke";

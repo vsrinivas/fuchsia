@@ -24,7 +24,8 @@
 
 #include <ktl/enforce.h>
 
-const char Symbolize::kProgramName_[] = "trampoline-boot-test";
+// Declared in turducken.h.
+const char* kTestName = "trampoline-boot-test";
 
 namespace {
 

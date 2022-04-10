@@ -20,14 +20,14 @@
 // machines.  That means the original combined boot image contains two kernel
 // items: this boot shim and then the actual kernel.
 
-const char Symbolize::kProgramName_[] = "zbi-boot-shim";
-
 // On x86, this can be linked at the old fixed 1MB address to make it into a
 // compatibility shim that is itself loaded using by the legacy 1MB loading
 // protocol with an old-style fixed entry point address.  The kernel it loads
 // must be in the new uniform format.
 
 void ZbiMain(void* zbi, arch::EarlyTicks boot_ticks) {
+  MainSymbolize symbolize("zbi-boot-shim");
+
   InitMemory(zbi);
 
   BootZbi::InputZbi input_zbi_view(

@@ -21,8 +21,6 @@
 
 #include <ktl/enforce.h>
 
-const char Symbolize::kProgramName_[] = "phys-memory-test";
-
 namespace {
 
 constexpr uint64_t kMiB = 1024 * 1024;
@@ -60,6 +58,8 @@ size_t AllocateAndOverwriteFreeMemory() {
 }  // namespace
 
 int TestMain(void* zbi_ptr, arch::EarlyTicks ticks) {
+  MainSymbolize symbolize("phys-memory-test");
+
   printf("Initializing memory...\n");
 
   // Initialize memory for allocation/free.

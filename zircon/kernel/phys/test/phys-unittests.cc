@@ -32,4 +32,4 @@ TEST_SUITES(                   //
     zbitl_tests,               //
     ArchRandomTests,           //
     crypto_entropy_pool_tests  //
-);
+)

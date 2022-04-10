@@ -22,8 +22,6 @@
 
 #include <ktl/enforce.h>
 
-const char Symbolize::kProgramName_[] = "decompress-test";
-
 namespace {
 
 constexpr char kTestPayload[] =
@@ -34,6 +32,8 @@ constexpr uint32_t kTestPayloadSize = sizeof(kTestPayload) - 1;
 }  // namespace
 
 int TestMain(void* zbi_ptr, arch::EarlyTicks) {
+  MainSymbolize symbolize("decompress-test");
+
   // Initialize memory for allocation/free.
   InitMemory(zbi_ptr);
 

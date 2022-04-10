@@ -24,7 +24,8 @@
 #include "legacy-boot-shim.h"
 #include "stdout.h"
 
-const char Symbolize::kProgramName_[] = "depthcharge-multiboot-shim";
+// Declared in legacy-boot-shim.h
+const char* kLegacyShimName = "depthcharge-multiboot-shim";
 
 namespace {
 

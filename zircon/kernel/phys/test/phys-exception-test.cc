@@ -16,8 +16,6 @@
 
 #include "test-main.h"
 
-const char Symbolize::kProgramName_[] = "phys-exception-test";
-
 namespace {
 
 // These are actually defined with internal linkage in the __asm__ in TestMain.
@@ -50,7 +48,8 @@ PHYS_SINGLETHREAD uint64_t HandleExpectedException(uint64_t vector, const char* 
 }  // namespace
 
 int TestMain(void* zbi, arch::EarlyTicks ticks) {
-  Symbolize::GetInstance()->ContextAlways();
+  MainSymbolize symbolize("phys-exception-test");
+  symbolize.ContextAlways();
 
   printf("Hello, world.\n");
 

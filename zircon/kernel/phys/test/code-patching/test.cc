@@ -18,13 +18,12 @@
 #include <ktl/move.h>
 #include <ktl/span.h>
 #include <ktl/string_view.h>
+#include <phys/symbolize.h>
 #include <phys/zbitl-allocation.h>
 
 #include "../test-main.h"
 
 #include <ktl/enforce.h>
-
-const char Symbolize::kProgramName_[] = "code-patching-test";
 
 // The BOOTFS namespace under which code patching blobs live.
 constexpr ktl::string_view kNamespace = "code-patches-test";
@@ -118,6 +117,8 @@ int TestMultiplyByFactorPatching(code_patching::Patcher& patcher,
 }  // namespace
 
 int TestMain(void* zbi_ptr, arch::EarlyTicks) {
+  MainSymbolize symbolize("code-patching-test");
+
   // Initialize memory for allocation/free.
   InitMemory(zbi_ptr);
 

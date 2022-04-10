@@ -14,9 +14,9 @@
 #include <phys/symbolize.h>
 #include <phys/trampoline-boot.h>
 
-const char Symbolize::kProgramName_[] = "pic-1mb-boot-shim";
-
 void ZbiMain(void* ptr, arch::EarlyTicks boot_ticks) {
+  MainSymbolize symbolize("pic-1mb-shim");
+
   InitMemory(ptr);
 
   auto zbi_ptr = static_cast<const zbi_header_t*>(ptr);

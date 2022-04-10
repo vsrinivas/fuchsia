@@ -17,9 +17,9 @@
 #include <hwreg/x86msr.h>
 #endif
 
-const char Symbolize::kProgramName_[] = "hello-world-test";
-
 int TestMain(void*, arch::EarlyTicks) {
+  MainSymbolize symbolize("hello-world-test");
+
   printf("Hello, world!\n\n");
 
 #if defined(__x86_64__) || defined(__i386__)

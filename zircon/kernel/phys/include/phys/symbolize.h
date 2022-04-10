@@ -19,27 +19,25 @@
 class FramePointer;
 class ShadowCallStackBacktrace;
 struct PhysExceptionState;
+class Symbolize;
 
-// Returns the name of the current program.
+// The Symbolize instance registered by MainSymbolize.
+extern Symbolize* gSymbolize;
+
+// Returns the name of the current program, according to the currently
+// registered Symbolize object. If no Symbolize has yet been registered, then
+// it is assumed that we were in an early set-up context before we have had a
+// chance to construct one; in that case, "early-init" is returned.
 const char* ProgramName();
 
 class Symbolize {
  public:
-  // Each program contains `const char Symbolize::kProgramName_[] = "myname";`.
-  //
-  // Note this can't be a ktl::string_view because that would be a
-  // static initializer containing a pointer.
-  static const char kProgramName_[];
-
-  Symbolize() = default;
+  Symbolize() = delete;
   Symbolize(const Symbolize&) = delete;
 
-  explicit Symbolize(FILE* f) : output_(f) {}
+  explicit Symbolize(const char* name, FILE* f = stdout) : name_(name), output_(f) {}
 
-  static Symbolize* GetInstance() {
-    instance_.EnsureOutput();
-    return &instance_;
-  }
+  const char* name() const { return name_; }
 
   void set_output(FILE* f) { output_ = f; }
 
@@ -90,8 +88,8 @@ class Symbolize {
                                         const PhysExceptionState& regs);
 
  private:
-  static Symbolize instance_;
-  FILE* output_ = nullptr;
+  const char* name_;
+  FILE* output_;
   bool context_done_ = false;
 
   void Printf(const char* fmt, ...);
@@ -99,15 +97,14 @@ class Symbolize {
   // Implementation details of ContextAlways().
   void PrintModule();
   void PrintMmap();
+};
 
-  // This is only needed rather than just `instance_{stdout}` because neither
-  // static constructors nor link-time initializers with non-nullptr pointers
-  // are available in phys executables.
-  void EnsureOutput() {
-    if (!output_) {
-      output_ = stdout;
-    }
-  }
+// MainSymbolize represents the singleton Symbolize instance to be used by the
+// current program. On construction, it regsters itself as `gSymbolize` and
+// emits symbolization markup context.
+class MainSymbolize : public Symbolize {
+ public:
+  explicit MainSymbolize(const char* name);
 };
 
 #endif  // ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_SYMBOLIZE_H_

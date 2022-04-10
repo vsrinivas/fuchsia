@@ -33,8 +33,6 @@
 
 #include <ktl/enforce.h>
 
-const char Symbolize::kProgramName_[] = "basic-elf-loading-test";
-
 namespace {
 
 using BootfsView = zbitl::BootfsView<ktl::span<const ktl::byte>>;
@@ -53,6 +51,8 @@ constexpr ktl::string_view kNamespace = "loadables";
 }  // namespace
 
 int TestMain(void* zbi_ptr, arch::EarlyTicks) {
+  MainSymbolize symbolize("basic-elf-loading-test");
+
   // Initialize memory for allocation/free.
   InitMemory(zbi_ptr);
 

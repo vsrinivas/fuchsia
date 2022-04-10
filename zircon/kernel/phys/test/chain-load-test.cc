@@ -11,7 +11,8 @@
 
 #include <ktl/enforce.h>
 
-const char Symbolize::kProgramName_[] = "chain-load-test";
+// Declared in turducken.h.
+const char* kTestName = "chain-load-test";
 
 int TurduckenTest::Main(Zbi::iterator kernel_item) {
   Load(kernel_item, ktl::next(kernel_item), boot_zbi().end());

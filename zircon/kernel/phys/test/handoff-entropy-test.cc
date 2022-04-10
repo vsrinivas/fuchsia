@@ -122,4 +122,4 @@ UNITTEST("AddEntropyFromCmdLine", ValidCmdlineItem)
 UNITTEST("AddEntropyFromSmallCmdLine", SmallCmdlineItem)
 UNITTEST_END_TESTCASE(handoff_entropy_tests, "handoff_entropy", "handoff entropy tests")
 
-TEST_SUITES("handoff-entropy-tests", handoff_entropy_tests);
+TEST_SUITES("handoff-entropy-tests", handoff_entropy_tests)

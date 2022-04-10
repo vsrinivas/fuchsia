@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <phys/symbolize.h>
+#include "legacy-boot-shim.h"
 
-const char Symbolize::kProgramName_[] = "linux-x86-boot-shim";
+// Declared in legacy-boot-shim.h
+const char* kLegacyShimName = "linux-x86-boot-shim";

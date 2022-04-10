@@ -26,13 +26,15 @@ void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
 
   ApplyRelocations();
 
+  MainSymbolize symbolize(kLegacyShimName);
+
   // This also fills in gLegacyBoot.
   InitMemory(ptr);
 
   StdoutFromCmdline(gLegacyBoot.cmdline);
 
-  LegacyBootShim shim(ProgramName(), gLegacyBoot);
-  shim.set_build_id(Symbolize::GetInstance()->BuildIdString());
+  LegacyBootShim shim(symbolize.name(), gLegacyBoot);
+  shim.set_build_id(symbolize.BuildIdString());
 
   // The pool knows all the memory details, so populate the ZBI item that way.
   memalloc::Pool& memory = Allocation::GetPool();
@@ -43,7 +45,7 @@ void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
   TrampolineBoot boot;
   if (shim.Load(boot)) {
     ArchSetUpAddressSpaceLate();
-    memory.PrintMemoryRanges(ProgramName());
+    memory.PrintMemoryRanges(symbolize.name());
     boot.Boot();
   }
 

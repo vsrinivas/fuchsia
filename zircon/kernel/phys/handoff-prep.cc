@@ -84,9 +84,11 @@ void HandoffPrep::Init(ktl::span<ktl::byte> buffer) {
 }
 
 void HandoffPrep::SetInstrumentation() {
+  ZX_DEBUG_ASSERT(gSymbolize);
+
   // Publish llvm-profdata if present.
   LlvmProfdata profdata;
-  profdata.Init(Symbolize::GetInstance()->BuildId());
+  profdata.Init(gSymbolize->BuildId());
   if (profdata.size_bytes() != 0) {
     fbl::AllocChecker ac;
     ktl::span buffer = New(handoff()->instrumentation.llvm_profdata, ac, profdata.size_bytes());
@@ -113,7 +115,7 @@ void HandoffPrep::SetInstrumentation() {
 
 void HandoffPrep::SetSymbolizerLog(ktl::initializer_list<Debugdata> dumps) {
   auto log_to = [dumps](FILE& file) {
-    Symbolize symbolize(&file);
+    Symbolize symbolize(ProgramName(), &file);
     symbolize.Context();
     for (const Debugdata& dump : dumps) {
       if (dump.size_bytes != 0) {

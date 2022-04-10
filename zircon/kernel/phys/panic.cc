@@ -30,11 +30,12 @@ PHYS_SINGLETHREAD void __zx_panic(const char* format, ...) {
     shadow_call_stack_backtrace = phys_exception_shadow_call_stack.BackTrace(scsp);
   }
 
-  Symbolize& symbolize = *Symbolize::GetInstance();
-  symbolize.PrintBacktraces(frame_pointer_backtrace, shadow_call_stack_backtrace);
+  if (gSymbolize) {
+    gSymbolize->PrintBacktraces(frame_pointer_backtrace, shadow_call_stack_backtrace);
 
-  uintptr_t sp = reinterpret_cast<uintptr_t>(__builtin_frame_address(0));
-  symbolize.PrintStack(sp);
+    uintptr_t sp = reinterpret_cast<uintptr_t>(__builtin_frame_address(0));
+    gSymbolize->PrintStack(sp);
+  }
 
   // Now crash.
   ArchPanicReset();

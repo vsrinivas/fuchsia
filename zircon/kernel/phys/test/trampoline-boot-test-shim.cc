@@ -36,6 +36,9 @@
 
 #define span_arg(s) static_cast<int>(s.size()), reinterpret_cast<const char*>(s.data())
 
+// Declared in turducken.h.
+const char* kTestName = "trampoline-boot-shim-test";
+
 namespace {
 
 // When set, dictates random decisions done by the trampoline boot test.
@@ -157,8 +160,6 @@ uint64_t GetRandomAlignedMemoryRange(memalloc::Pool& pool, BootZbi::Size size, u
 }
 
 }  // namespace
-
-const char Symbolize::kProgramName_[] = "trampoline-boot-shim-test";
 
 int TurduckenTest::Main(Zbi::iterator kernel_item) {
   auto seed_opt = OptionWithPrefix(kSeedOpt);

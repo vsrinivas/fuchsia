@@ -16,6 +16,9 @@
 
 #include "../legacy-boot.h"
 
+// Must be defined by each legacy shim.
+extern const char* kLegacyShimName;
+
 class TrampolineBoot;
 
 using LegacyBootShimBase = boot_shim::BootShim<  //

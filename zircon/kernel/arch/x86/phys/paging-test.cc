@@ -14,9 +14,9 @@
 #include "legacy-boot.h"
 #include "test-main.h"
 
-const char Symbolize::kProgramName_[] = "paging-test";
-
 int TestMain(void* ptr, arch::EarlyTicks) {
+  MainSymbolize symbolize("paging-test");
+
   InitMemory(ptr);
 
   ArchSetUpAddressSpaceLate();

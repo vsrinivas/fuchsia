@@ -28,10 +28,10 @@
 
 #define TEST_SUITES(program_name, ...)                           \
   int TestMain(void*, arch::EarlyTicks) {                        \
+    MainSymbolize symbolize(program_name);                       \
     printf("\nRunning unit tests in physical memory...\n");      \
     return Run(TEST_NAME_GEN(__VA_ARGS__), __VA_ARGS__) ? 0 : 1; \
-  }                                                              \
-  const char Symbolize::kProgramName_[] = program_name
+  }
 
 // For simplification |test_names| is the joining of all __VA_ARGS__ with a special token that
 // cannot appear in a function name. Then we look for the i-th entry of the test to figure out the

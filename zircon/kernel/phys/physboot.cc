@@ -41,8 +41,6 @@ using ChainBoot = BootZbi;
 
 #include <ktl/enforce.h>
 
-const char Symbolize::kProgramName_[] = "physboot";
-
 namespace {
 
 PhysBootTimes gBootTimes;
@@ -181,9 +179,7 @@ ChainBoot LoadZirconZbi(KernelStorage::Bootfs kernelfs) {
 }  // namespace
 
 void ZbiMain(void* zbi_ptr, arch::EarlyTicks ticks) {
-  if (gBootOptions->phys_verbose) {
-    Symbolize::GetInstance()->Context();
-  }
+  MainSymbolize symbolize("physboot");
 
   InitMemory(zbi_ptr);
 
