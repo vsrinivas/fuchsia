@@ -298,6 +298,15 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
     return -1;
   }
 
+  // TODO(rudymathu): Get this from ACPI tables.
+  dcfg_arm_generic_timer_driver_t timer_driver = {
+      .irq_phys = 30,
+      .irq_virt = 27,
+  };
+  result =
+      zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GENERIC_TIMER, 0,
+                                    &timer_driver, sizeof(timer_driver));
+
   // Assemble a UART config from the ACPI SPCR table if possible.
   // This is best effort. If the SPCR table isn't found or the listed
   // serial interface type doesn't map to a supported zircon kernel
