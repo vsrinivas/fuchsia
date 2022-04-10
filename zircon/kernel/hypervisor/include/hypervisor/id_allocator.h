@@ -16,6 +16,8 @@ namespace hypervisor {
 
 // Allocates architecture-specific resource IDs.
 //
+// IDs of type `T` will be allocated in the range [`MinId`, `MaxId`).
+//
 // `T` is the type of the ID, and is an integral type.
 // `MaxId` is the maximum value of an ID.
 // `MinId` is the minimum value of an ID. This defaults to 1.
@@ -35,13 +37,18 @@ class IdAllocator {
 
   zx::status<T> Alloc() {
     size_t first_unset;
-    bool all_set = bitmap_.Get(MinId, bitmap_.size(), &first_unset);
-    if (all_set) {
-      return zx::error(ZX_ERR_NO_RESOURCES);
+    if (bitmap_.Get(next_, MaxId, &first_unset)) {
+      if (bitmap_.Get(MinId, next_, &first_unset)) {
+        return zx::error(ZX_ERR_NO_RESOURCES);
+      }
     }
     zx_status_t status = bitmap_.SetOne(first_unset);
     if (status != ZX_OK) {
       return zx::error(status);
+    }
+    next_ = static_cast<T>(first_unset + 1);
+    if (next_ == MaxId) {
+      next_ = MinId;
     }
     return zx::ok(static_cast<T>(first_unset));
   }
@@ -55,6 +62,7 @@ class IdAllocator {
   }
 
  private:
+  T next_ = MinId;
   bitmap::RawBitmapGeneric<bitmap::FixedStorage<MaxId>> bitmap_;
 };
 

@@ -392,12 +392,13 @@ static bool guest_physical_address_space_write_combining() {
 static bool id_allocator_reset_to_size() {
   BEGIN_TEST;
 
-  constexpr uint8_t kSize = sizeof(size_t);
-  hypervisor::IdAllocator<uint8_t, UINT8_MAX> allocator;
-  allocator.Reset(kSize);
+  constexpr uint8_t kMaxId = sizeof(size_t);
+  constexpr uint8_t kMinId = 1;
+  hypervisor::IdAllocator<uint8_t, UINT8_MAX, kMinId> allocator;
+  allocator.Reset(kMaxId);
 
   // Allocate until all IDs are used.
-  for (uint8_t i = 1; i < kSize; i++) {
+  for (uint8_t i = kMinId; i < kMaxId; i++) {
     auto id = allocator.Alloc();
     EXPECT_EQ(ZX_OK, id.status_value());
     EXPECT_EQ(i, *id);
@@ -408,11 +409,11 @@ static bool id_allocator_reset_to_size() {
   EXPECT_EQ(ZX_ERR_NO_RESOURCES, id.status_value());
 
   // Free an ID that was never allocated.
-  auto result = allocator.Free(kSize + 1);
+  auto result = allocator.Free(kMaxId + 1);
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.status_value());
 
   // Free a random ID, and then check that it gets reallocated.
-  constexpr uint8_t kIdx = kSize / 2;
+  constexpr uint8_t kIdx = kMaxId / 2;
   result = allocator.Free(kIdx);
   EXPECT_EQ(ZX_OK, result.status_value());
   id = allocator.Alloc();
