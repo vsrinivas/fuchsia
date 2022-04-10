@@ -10,6 +10,7 @@
 #include <fbl/mutex.h>
 
 #include "composite_device.h"
+#include "devfs_vnode.h"
 #include "driver_host.h"
 #include "log.h"
 #include "proxy_device.h"

@@ -34,7 +34,6 @@
 #include <fbl/string_buffer.h>
 #include <fbl/vector.h>
 
-#include "devfs_vnode.h"
 #include "driver.h"
 #include "driver_stack_manager.h"
 #include "inspect.h"
