@@ -1,0 +1,24 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.overnet.MeshController": "fuchsia-pkg://fuchsia.com/overnetstack#meta/overnetstack.cmx",
+                "fuchsia.overnet.ServiceConsumer": "fuchsia-pkg://fuchsia.com/overnetstack#meta/overnetstack.cmx",
+                "fuchsia.overnet.ServicePublisher": "fuchsia-pkg://fuchsia.com/overnetstack#meta/overnetstack.cmx"
+            }
+        }
+    },
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/hoist_lib_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.overnet.MeshController",
+            "fuchsia.overnet.ServiceConsumer",
+            "fuchsia.overnet.ServicePublisher"
+        ]
+    }
+}

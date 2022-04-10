@@ -118,10 +118,6 @@
             url: "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cm",
         },
         {
-            name: "overnetstack",
-            url: "fuchsia-pkg://fuchsia.com/overnetstack#meta/overnetstack.cm",
-        },
-        {
             name: "remote-control",
             url: "fuchsia-pkg://fuchsia.com/remote-control#meta/remote-control.cm",
         },
@@ -447,7 +443,6 @@
                 "#log-stats",
                 "#mdns",
                 "#network",
-                "#overnetstack",
                 "#pkg-cache",
                 "#pkg-resolver",
                 "#regulatory_region",
@@ -516,19 +511,13 @@
         {
             protocol: [
                 "fuchsia.hwinfo.Device",
+                "fuchsia.overnet.Overnet",
+                "fuchsia.overnet.ServicePublisher",
                 "fuchsia.sys.Launcher",
             ],
             from: "self",
             to: "#remote-control",
             dependency: "weak_for_migration",
-        },
-        {
-            protocol: [
-                "fuchsia.overnet.Overnet",
-                "fuchsia.overnet.ServicePublisher",
-            ],
-            from: "#overnetstack",
-            to: "#remote-control",
         },
         {
             protocol: [ "fuchsia.posix.socket.Provider" ],

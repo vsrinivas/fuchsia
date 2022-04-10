@@ -57,11 +57,8 @@ rustc_library("hoist") {
 }
 
 fuchsia_unittest_package("overnet-hoist-tests") {
-  manifest = "meta/hoist_lib_test.cml"
-  deps = [
-    ":hoist_test",
-    "//src/connectivity/overnet/overnetstack:component",
-  ]
+  manifest = "meta/hoist_lib_test.cmx"
+  deps = [ ":hoist_test" ]
 }
 
 group("tests") {

@@ -6,6 +6,12 @@ import("//build/components.gni")
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 
+config_data("overnetstack_config") {
+  for_pkg = "sysmgr"
+  outputs = [ "overnetstack.config" ]
+  sources = [ rebase_path("config/service.config") ]
+}
+
 rustc_binary("bin") {
   name = "overnetstack"
   with_unit_tests = true
@@ -60,7 +66,7 @@ fuchsia_component("component") {
     ":bin",
     ":certificates",
   ]
-  manifest = "meta/overnetstack.cml"
+  manifest = "meta/overnetstack.cmx"
 }
 
 fuchsia_package("overnetstack") {
@@ -82,6 +88,7 @@ fuchsia_unittest_package("overnetstack-tests") {
     ":bin_test",
     ":certificates",
   ]
+  manifest = "meta/overnetstack_bin_test.cmx"
 }
 
 group("tests") {

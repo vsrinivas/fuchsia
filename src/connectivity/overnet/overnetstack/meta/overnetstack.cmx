@@ -1,0 +1,15 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/overnetstack"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.net.mdns.Publisher",
+            "fuchsia.net.mdns.Subscriber",
+            "fuchsia.posix.socket.Provider"
+        ]
+    }
+}
