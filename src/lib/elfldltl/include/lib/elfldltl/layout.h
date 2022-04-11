@@ -209,6 +209,8 @@ struct Elf : private Layout<Class, Data> {
 
   static constexpr auto kAddressBits = kAddrBits<Addr>;
 
+  using typename Layout<Class, Data>::Nhdr;
+
   using Note = ElfNote;
   using NoteSegment = ElfNoteSegment<kData>;
 

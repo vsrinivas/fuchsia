@@ -52,16 +52,19 @@ class ProcessDumpBase {
   // it stays that way.
   void clear();
 
+  // This must be called first.
+  //
   // This collects information about memory and other process-wide state.  The
   // return value gives the total size of the ET_CORE file to be written.
   // Collection is cut short without error if the ET_CORE file would already
-  // exceed the size limit without even including the memory.
+  // exceed the size limit without even including the memory.  See above for
+  // how the callback is used.
   //
   // When this is complete, all data has been collected and all ET_CORE layout
   // has been done and the live data from the process won't be consulted again.
-  fitx::result<Error, size_t> CollectProcess(size_t limit = DefaultLimit()) {
-    return Collect(limit);
-  }
+  // The only state still left to be collected from the process is the contents
+  // of its memory.
+  fitx::result<Error, size_t> CollectProcess(size_t limit = DefaultLimit());
 
   // This must be called after CollectProcess.
   //
@@ -80,19 +83,8 @@ class ProcessDumpBase {
   // storage helds inside the DumpProcess object.  They can be used freely
   // until the object is destroyed or clear()'d.
   template <typename Dump>
-  auto DumpHeaders(Dump&& dump, size_t limit = DefaultLimit())
-      -> fitx::result<std::decay_t<decltype(dump(size_t{}, ByteView{}).error_value())>, size_t> {
-    using Result = std::decay_t<std::invoke_result_t<Dump, size_t, ByteView>>;
-    Result result = fitx::ok();
-    auto dump_callback = [&](size_t offset, ByteView data) {
-      result = dump(offset, data);
-      return result.is_error();
-    };
-    size_t offset = DumpHeadersImpl(dump_callback, limit);
-    if (result.is_error()) {
-      return std::move(result).take_error();
-    }
-    return fitx::ok(offset);
+  auto DumpHeaders(Dump&& dump, size_t limit) {
+    return CallImpl(&ProcessDumpBase::DumpHeadersImpl, std::forward<Dump>(dump), limit);
   }
 
  protected:
@@ -105,9 +97,37 @@ class ProcessDumpBase {
   void Emplace(zx::unowned_process process);
 
  private:
-  fitx::result<Error, size_t> Collect(size_t limit);
+  template <typename Dump>
+  using DumpResult = std::decay_t<decltype(std::declval<Dump>()(size_t{}, ByteView{}))>;
+
+  template <typename Dump>
+  using DumpError = std::decay_t<decltype(std::declval<DumpResult<Dump>>().error_value())>;
+
+  template <typename Dump>
+  using DumpMemoryResult = fitx::result<Error, fitx::result<DumpError<Dump>, size_t>>;
+
+  template <typename Impl>
+  using ImplResult = std::invoke_result_t<Impl, ProcessDumpBase*, DumpCallback, size_t>;
+
+  template <typename Impl, typename Dump>
+  auto CallImpl(Impl&& impl, Dump&& dump, size_t limit)
+      -> fitx::result<DumpError<Dump>, ImplResult<Impl>> {
+    using Result = std::decay_t<std::invoke_result_t<Dump, size_t, ByteView>>;
+    Result result = fitx::ok();
+    auto dump_callback = [&](size_t offset, ByteView data) {
+      result = dump(offset, data);
+      return result.is_error();
+    };
+    auto value = std::invoke(impl, this, dump_callback, limit);
+    if (result.is_error()) {
+      return std::move(result).take_error();
+    }
+    return fitx::ok(std::move(value));
+  }
 
   size_t DumpHeadersImpl(DumpCallback dump, size_t limit);
+
+  fitx::result<Error, size_t> DumpMemoryImpl(DumpCallback callback, size_t limit);
 
   std::unique_ptr<Collector> collector_;
 };
@@ -120,7 +140,7 @@ class ProcessDump : public ProcessDumpBase {
   ProcessDump() = default;
 
   // This takes ownership of the handle in the zx::process instantiation.
-  explicit ProcessDump(Handle process);
+  explicit ProcessDump(Handle process) noexcept;
 
  private:
   Handle process_;

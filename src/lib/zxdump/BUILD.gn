@@ -46,6 +46,7 @@ zx_library("zxdump") {
   if (is_fuchsia) {
     sources += [ "dump.cc" ]
     deps += [
+      "//sdk/lib/stdcompat",
       "//src/zircon/lib/zircon",
       "//zircon/system/ulib/zx",
     ]
