@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    scrutiny_utils::env::fuchsia_build_dir,
     serde::{Deserialize, Serialize},
     std::path::{Path, PathBuf},
 };
@@ -237,11 +236,9 @@ pub struct ModelConfig {
 }
 
 impl ModelConfig {
-    /// By default the ModelConfig will attempt to retrieve the build dir
-    /// from the environment. If this fails it simply sets the environment
-    /// to an empty environment.
+    /// By default the ModelConfig will assume the current directory as the build path.
     pub fn default() -> ModelConfig {
-        let build_path = fuchsia_build_dir().unwrap_or_else(|_| Path::new("").to_path_buf());
+        let build_path = Path::new("").to_path_buf();
         Self::at_path(build_path)
     }
     /// Configure the model to be access at the supplied path.

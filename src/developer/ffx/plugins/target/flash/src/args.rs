@@ -18,13 +18,13 @@ use {
     description = "Flash an image to a target device",
     example = "To flash a specific image:
 
-    $ ffx target flash ~/fuchsia/out/flash.json fuchsia
+    $ ffx target flash $(fx get-build-dir)/flash.json --product fuchsia
 
 To include SSH keys as well:
 
     $ ffx target flash
     --authorized-keys ~/fuchsia/.ssh/authorized_keys
-    ~/fuchsia/out/default/flash.json
+    $(fx get-build-dir)/flash.json
     --product fuchsia",
     note = "Flashes an image to a target device using the fastboot protocol.
 Requires a specific <manifest> file and <product> name as an input.

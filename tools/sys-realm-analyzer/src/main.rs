@@ -11,6 +11,7 @@ use {
     std::{
         collections::HashMap,
         io::{self, Write},
+        path::PathBuf,
         process::Command,
     },
 };
@@ -44,6 +45,10 @@ struct Options {
     fx_path: String,
 
     #[argh(option)]
+    /// the build dir to use
+    dir: PathBuf,
+
+    #[argh(option)]
     /// the architectures to compose products from, if specified, '--boards' must also be provided
     arches: Option<String>,
 
@@ -54,10 +59,6 @@ struct Options {
     #[argh(option)]
     /// the products to inspect,
     products: Option<String>,
-
-    #[argh(option)]
-    /// the build dir to use
-    dir: Option<String>,
 }
 
 fn main() -> Result<(), u8> {
@@ -82,9 +83,7 @@ fn main() -> Result<(), u8> {
     for t in targets {
         println!("{}.{}", t.board, t.arch);
         let mut cmd = Command::new(fx_path);
-        if let Some(dir) = &args.dir {
-            cmd.arg("--dir").arg(dir);
-        }
+        cmd.arg("--dir").arg(args.dir.as_os_str());
         let cmd_out = cmd
             .arg("set")
             .arg(format!("{}.{}", t.board, t.arch))
@@ -114,14 +113,9 @@ fn main() -> Result<(), u8> {
         }
 
         let mut scrutiny_config = scrutiny_config::Config::default();
+        scrutiny_config.runtime.model = scrutiny_config::ModelConfig::at_path(args.dir.clone());
         scrutiny_config.runtime.plugin.plugins.push("SysRealmPlugin".to_string());
         scrutiny_config.launch.command = Some("sys.realm".to_string());
-        // If a build dir was supplied, use this.
-        if let Some(dir) = &args.dir {
-            let mut out_path = std::env::current_dir().expect("couldn't get working dir");
-            out_path.push(dir);
-            scrutiny_config.runtime.model = scrutiny_config::ModelConfig::at_path(out_path);
-        }
 
         let out_str =
             scrutiny_frontend::launcher::launch_from_config(scrutiny_config).map_err(|e| {

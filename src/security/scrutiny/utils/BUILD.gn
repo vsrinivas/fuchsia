@@ -42,7 +42,6 @@ if (is_host) {
       "src/artifact.rs",
       "src/blobfs.rs",
       "src/bootfs.rs",
-      "src/env.rs",
       "src/fvm.rs",
       "src/golden.rs",
       "src/key_value.rs",
