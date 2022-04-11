@@ -37,6 +37,7 @@ triage_files = [
 ]
 
 detect_unconditional_files = [
+  "detect/session-detect.triage",
   "detect/sysmem-detect.triage",
   "detect/wlan-detect.triage",
 ]
