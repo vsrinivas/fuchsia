@@ -6,17 +6,11 @@ use crate::scenic::types::ScreenshotDataDef;
 use anyhow::{Context as _, Error};
 use fidl::endpoints::{ClientEnd, Proxy};
 use fidl_fuchsia_sysmem::{AllocatorMarker as SysmemAllocatorMarker, *};
-use fidl_fuchsia_ui_app::{ViewConfig, ViewMarker, ViewProviderMarker};
 use fidl_fuchsia_ui_composition::{
     self as ui_comp, AllocatorMarker as ScenicAllocatorMarker, ScreenCaptureMarker,
 };
-use fidl_fuchsia_ui_policy::PresenterMarker;
 use fidl_fuchsia_ui_scenic::{ScenicMarker, ScreenshotData};
-use fuchsia_component::{
-    self as app,
-    client::{launch, launcher},
-};
-use fuchsia_scenic::{self as scenic};
+use fuchsia_component::{self as app};
 use fuchsia_zircon::{self as zx, AsHandleRef, DurationNum, HandleBased};
 use serde_json::{to_value, Value};
 
@@ -332,35 +326,5 @@ impl ScenicFacade {
 
             return Ok(to_value(ScreenshotDataDef::new(screenshot))?);
         }
-    }
-
-    pub async fn present_view(&self, url: String, config: Option<ViewConfig>) -> Result<(), Error> {
-        let presenter = app::client::connect_to_protocol::<PresenterMarker>()
-            .expect("Failed to connect to root presenter");
-
-        let launcher = launcher().context("Failed to open launcher service")?;
-        let app = launch(&launcher, url, None)?;
-
-        let mut token_pair = scenic::ViewTokenPair::new()?;
-
-        // (for now) gate v1/v2 on the presence of a view config
-        match config {
-            Some(mut config) => {
-                // v2
-                let view = app.connect_to_protocol::<ViewMarker>()?;
-                view.set_config(&mut config)?;
-                view.attach(token_pair.view_token.value)?;
-            }
-            None => {
-                // v1
-                let view_provider = app.connect_to_protocol::<ViewProviderMarker>()?;
-                view_provider.create_view(token_pair.view_token.value, None, None)?;
-            }
-        }
-
-        presenter.present_view(&mut token_pair.view_holder_token, None)?;
-
-        app.controller().detach()?;
-        Ok(())
     }
 }

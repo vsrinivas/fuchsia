@@ -5,17 +5,13 @@
 use anyhow::format_err;
 use base64;
 use fidl_fuchsia_images::{AlphaFormat, ColorSpace, ImageInfo, PixelFormat, Tiling, Transform};
-use fidl_fuchsia_intl::{CalendarId, LocaleId, Profile, TemperatureUnit, TimeZoneId};
 use fidl_fuchsia_mem::Buffer;
-use fidl_fuchsia_ui_app::ViewConfig;
 use fidl_fuchsia_ui_scenic::ScreenshotData;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::collections::BTreeMap;
+use serde::{Deserialize, Serialize, Serializer};
 
 /// Enum for supported FIDL commands.
 pub enum ScenicMethod {
     TakeScreenshot,
-    PresentView,
 }
 
 impl std::str::FromStr for ScenicMethod {
@@ -24,7 +20,6 @@ impl std::str::FromStr for ScenicMethod {
     fn from_str(method: &str) -> Result<Self, Self::Err> {
         match method {
             "TakeScreenshot" => Ok(ScenicMethod::TakeScreenshot),
-            "PresentView" => Ok(ScenicMethod::PresentView),
             _ => return Err(format_err!("invalid Scenic FIDL method: {}", method)),
         }
     }
@@ -110,114 +105,4 @@ impl ScreenshotDataDef {
     pub fn new(screenshot_data: ScreenshotData) -> ScreenshotDataDef {
         ScreenshotDataDef { info: screenshot_data.info, data: screenshot_data.data }
     }
-}
-
-// https://github.com/serde-rs/serde/issues/723
-macro_rules! remote_vec {
-    ($remote:ident with=$def:ident) => {
-        impl $def {
-            fn opt_vec<'de, D>(deserializer: D) -> Result<Option<Vec<$remote>>, D::Error>
-            where
-                D: Deserializer<'de>,
-            {
-                #[derive(Deserialize)]
-                struct Wrapper(#[serde(deserialize_with = "deserialize_element")] $remote);
-
-                fn deserialize_element<'de, D>(deserializer: D) -> Result<$remote, D::Error>
-                where
-                    D: Deserializer<'de>,
-                {
-                    $def::deserialize(deserializer)
-                }
-
-                let o: Option<Vec<Wrapper>> = Deserialize::deserialize(deserializer)?;
-                Ok(o.map(|v| v.into_iter().map(|Wrapper(a)| a).collect()))
-            }
-        }
-    };
-}
-
-// https://github.com/serde-rs/serde/issues/723
-macro_rules! remote_optional {
-    ($remote:ident with=$def:ident) => {
-        impl $def {
-            fn deserialize_option<'de, D>(deserializer: D) -> Result<Option<$remote>, D::Error>
-            where
-                D: Deserializer<'de>,
-            {
-                use $def as Def;
-                #[derive(Deserialize)]
-                struct Wrapper(#[serde(with = "Def")] $remote);
-
-                let v: Option<Wrapper> = Option::deserialize(deserializer)?;
-                Ok(v.map(|Wrapper(a)| a))
-            }
-        }
-    };
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(remote = "LocaleId")]
-pub struct LocaleIdDef {
-    pub id: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(remote = "CalendarId")]
-pub struct CalendarIdDef {
-    pub id: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(remote = "TimeZoneId")]
-pub struct TimeZoneIdDef {
-    pub id: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(remote = "TemperatureUnit")]
-pub enum TemperatureUnitDef {
-    Celsius = 0,
-    Fahrenheit = 1,
-}
-
-remote_vec!(LocaleId with=LocaleIdDef);
-remote_vec!(CalendarId with=CalendarIdDef);
-remote_vec!(TimeZoneId with=TimeZoneIdDef);
-
-remote_optional!(TemperatureUnit with=TemperatureUnitDef);
-remote_optional!(ViewConfig with=ViewConfigDef);
-
-// TODO(fxbug.dev/59274): Do not use Serde remote for FIDL tables.
-#[derive(Deserialize, Debug)]
-#[serde(remote = "Profile")]
-pub struct ProfileDef {
-    #[serde(default, deserialize_with = "LocaleIdDef::opt_vec")]
-    pub locales: Option<Vec<LocaleId>>,
-    #[serde(default, deserialize_with = "CalendarIdDef::opt_vec")]
-    pub calendars: Option<Vec<CalendarId>>,
-    #[serde(default, deserialize_with = "TimeZoneIdDef::opt_vec")]
-    pub time_zones: Option<Vec<TimeZoneId>>,
-    #[serde(default, deserialize_with = "TemperatureUnitDef::deserialize_option")]
-    pub temperature_unit: Option<TemperatureUnit>,
-    // These fields are needed to match the FIDL-generated struct exactly. They
-    // should be removed once we are no longer using Serde remote.
-    #[serde(skip)]
-    unknown_data: Option<BTreeMap<u64, Vec<u8>>>,
-    #[serde(skip)]
-    __non_exhaustive: (),
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(remote = "ViewConfig")]
-pub struct ViewConfigDef {
-    #[serde(with = "ProfileDef")]
-    pub intl_profile: Profile,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct PresentViewRequest {
-    pub url: String,
-    #[serde(default, deserialize_with = "ViewConfigDef::deserialize_option")]
-    pub config: Option<ViewConfig>,
 }
