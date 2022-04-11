@@ -146,23 +146,32 @@ fpromise::promise<void, zx_status_t> Interop::ExportChild(Child* child) {
   if (status.is_error()) {
     return fpromise::make_error_promise(status.error_value());
   }
-  auto instance = OwnedInstance::Create("fuchsia.driver.compat.Service", compat_service_,
-                                        child->name(), handler.TakeDirectory());
-  if (instance.is_error()) {
-    return fpromise::make_error_promise(instance.error_value());
-  }
-  child->AddInstance(std::make_unique<OwnedInstance>(std::move(*instance)));
+  compat_service_->AddEntry(child->name(), handler.TakeDirectory());
+  ServiceInstanceOffer instance_offer;
+  instance_offer.service_name = "fuchsia.driver.compat.Service";
+  instance_offer.instance_name = child->name();
+  instance_offer.renamed_instance_name = "default";
+  instance_offer.remove_service_callback = std::make_shared<fit::deferred_callback>(
+      [service = this->compat_service_, name = std::string(child->name())]() {
+        service->RemoveEntry(name);
+      });
+  child->offers().AddServiceInstance(std::move(instance_offer));
 
   // Expose the child in /dev/.
   if (!child->dev_vnode()) {
     return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
   }
-  auto protocol = OwnedProtocol::Create(&outgoing_->vfs(), outgoing_->svc_dir(), child->name(),
-                                        child->dev_vnode());
-  if (protocol.is_error()) {
-    return fpromise::make_error_promise(protocol.error_value());
+  zx_status_t add_status = outgoing_->svc_dir()->AddEntry(child->name(), child->dev_vnode());
+  if (add_status != ZX_OK) {
+    return fpromise::make_error_promise<zx_status_t>(add_status);
   }
-  child->AddProtocol(std::make_unique<OwnedProtocol>(std::move(*protocol)));
+  // If the child goes out of scope, we should close the devfs connection.
+  child->AddCallback(std::make_shared<fit::deferred_callback>(
+      [this, name = std::string(child->name()), vnode = child->dev_vnode()]() {
+        outgoing_->vfs().CloseAllConnectionsForVnode(*vnode, {});
+        outgoing_->svc_dir()->RemoveEntry(name);
+      }));
+
   return child->ExportToDevfs(exporter_);
 }
 
@@ -171,17 +180,24 @@ fpromise::promise<void, zx_status_t> Child::ExportToDevfs(driver::DevfsExporter&
 }
 
 std::vector<fuchsia_component_decl::wire::Offer> Child::CreateOffers(fidl::ArenaBase& arena) {
+  return offers_.CreateOffers(arena);
+}
+
+std::vector<fuchsia_component_decl::wire::Offer> ChildOffers::CreateOffers(fidl::ArenaBase& arena) {
   std::vector<fuchsia_component_decl::wire::Offer> offers;
-  for (auto& instance : instances_) {
+  for (auto& instance : instance_offers_) {
     auto dir_offer = fcd::wire::OfferDirectory::Builder(arena);
-    dir_offer.source_name(arena, instance->service_name());
-    dir_offer.target_name(arena, std::string(instance->service_name()) + "-default");
+    dir_offer.source_name(arena, instance.service_name);
+    if (instance.renamed_instance_name) {
+      dir_offer.target_name(arena, instance.service_name + "-" + *instance.renamed_instance_name);
+    }
     dir_offer.rights(fuchsia_io::wire::kRwStarDir);
-    dir_offer.subdir(arena, instance->instance_name());
+    dir_offer.subdir(arena, instance.instance_name);
     dir_offer.dependency_type(fcd::wire::DependencyType::kStrong);
 
     offers.push_back(fcd::wire::Offer::WithDirectory(arena, dir_offer.Build()));
   }
+  // XXX: Do protocols.
   return offers;
 }
 

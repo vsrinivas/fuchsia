@@ -6,7 +6,6 @@ source_set("compat") {
   sources = [
     "compat.cc",
     "compat.h",
-    "service.h",
     "symbols.h",
   ]
   public_deps = [

@@ -22,7 +22,6 @@
 #include <fbl/intrusive_double_list.h>
 
 #include "src/devices/lib/compat/compat.h"
-#include "src/devices/lib/compat/service.h"
 #include "src/devices/lib/compat/symbols.h"
 #include "src/devices/lib/driver2/logger.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"

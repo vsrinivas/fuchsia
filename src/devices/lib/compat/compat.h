@@ -7,19 +7,62 @@
 
 #include <fidl/fuchsia.driver.compat/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
+#include <lib/fit/defer.h>
 #include <lib/fpromise/promise.h>
 #include <lib/service/llcpp/outgoing_directory.h>
 
 #include <unordered_map>
 #include <unordered_set>
 
-#include "src/devices/lib/compat/service.h"
 #include "src/devices/lib/compat/symbols.h"
 #include "src/devices/lib/driver2/devfs_exporter.h"
 #include "src/devices/lib/driver2/namespace.h"
 #include "src/devices/lib/driver2/start_args.h"
 
 namespace compat {
+
+// This represents a protocol that a driver is offering to a child driver.
+struct ProtocolOffer {
+  // The name of the protocol being offered. The driver is responsible for
+  // making sure this protocol has been exported in it's outgoing directory.
+  std::string protocol_name;
+  // A callback that will be called when this protocol is going out of scope.
+  // This is useful if a driver is exposing a protocol to multiple children,
+  // and would like to perform cleanup if all children are removed.
+  std::shared_ptr<fit::deferred_callback> remove_protocol_callback;
+};
+
+// This represents a service instance that a driver is offering to a child driver.
+struct ServiceInstanceOffer {
+  // The name of the service being offered. The driver is responsible for
+  // making sure this service has been exported in its outgoing directory.
+  std::string service_name;
+  // The name of the instance being offered. The driver is responsible
+  // for making sure this instance exists in the service it has exported.
+  std::string instance_name;
+  // Optional: If this exists, then this is the instance name the child
+  // driver will see.
+  std::optional<std::string> renamed_instance_name;
+  // A callback that will be called when this offer is going out of scope.
+  // This is useful if a driver is exposing an instance to multiple children,
+  // and would like to perform cleanup if all children are removed.
+  std::shared_ptr<fit::deferred_callback> remove_service_callback;
+};
+
+class ChildOffers {
+ public:
+  void AddProtocol(ProtocolOffer offer) { protocol_offers_.push_back(std::move(offer)); }
+
+  void AddServiceInstance(ServiceInstanceOffer offer) {
+    instance_offers_.push_back(std::move(offer));
+  }
+
+  std::vector<fuchsia_component_decl::wire::Offer> CreateOffers(fidl::ArenaBase& arena);
+
+ private:
+  std::vector<ProtocolOffer> protocol_offers_;
+  std::vector<ServiceInstanceOffer> instance_offers_;
+};
 
 using Metadata = std::vector<uint8_t>;
 using MetadataMap = std::unordered_map<uint32_t, const Metadata>;
@@ -100,15 +143,16 @@ class Child {
   std::string_view name() { return name_; }
   fbl::RefPtr<fs::Vnode>& dev_vnode() { return dev_vnode_; }
 
-  void AddInstance(std::unique_ptr<OwnedInstance> instance) {
-    instances_.push_back(std::move(instance));
-  }
-  void AddProtocol(std::unique_ptr<OwnedProtocol> protocol) {
-    protocols_.push_back(std::move(protocol));
+  // This is a way to give the child shared ownership over something.
+  // When child is removed, there will be one less reference to callback,
+  // and callback will be called when all references are removed.
+  void AddCallback(std::shared_ptr<fit::deferred_callback> callback) {
+    callbacks_.push_back(std::move(callback));
   }
 
   // Create a vector of offers based on the service instances that have been added to the child.
   std::vector<fuchsia_component_decl::wire::Offer> CreateOffers(fidl::ArenaBase& arena);
+  ChildOffers& offers() { return offers_; }
 
  private:
   std::string topological_path_;
@@ -117,9 +161,10 @@ class Child {
 
   DeviceServer compat_device_;
   fbl::RefPtr<fs::Vnode> dev_vnode_;
+  ChildOffers offers_;
 
-  std::vector<std::unique_ptr<OwnedInstance>> instances_;
-  std::vector<std::unique_ptr<OwnedProtocol>> protocols_;
+  // A list of callbacks to potentially call when this class is destructed.
+  std::vector<std::shared_ptr<fit::deferred_callback>> callbacks_;
 };
 
 }  // namespace compat
