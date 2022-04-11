@@ -504,10 +504,15 @@ impl<I: Ip> IpPacketFragmentCache<I> {
         //   `found_gap`'s end value must be MAX because we should only ever not
         //   create a new gap where the end is MAX when we are processing a
         //   packet with the last fragment block.
-        if (found_gap.end > fragment_blocks_range.end) && m_flag {
+        if found_gap.end > fragment_blocks_range.end && m_flag {
             assert!(fragment_data
                 .missing_blocks
                 .insert(BlockRange { start: fragment_blocks_range.end + 1, end: found_gap.end }));
+        } else if found_gap.end > fragment_blocks_range.end && !m_flag && found_gap.end < u16::MAX {
+            // There is another fragment after this one that is already present
+            // in the cache. That means that this fragment can't be the last
+            // one (must have `m_flag` set).
+            return FragmentProcessingState::InvalidFragment;
         } else {
             // Make sure that if we are not adding a fragment after the packet,
             // it is because `packet` goes up to the `found_gap`'s end boundary,
@@ -515,7 +520,13 @@ impl<I: Ip> IpPacketFragmentCache<I> {
             // packet, we make sure that `found_gap`'s end value is
             // `core::u16::MAX`.
             assert!(
-                found_gap.end == fragment_blocks_range.end || !m_flag && found_gap.end == u16::MAX
+                found_gap.end == fragment_blocks_range.end
+                    || (!m_flag && found_gap.end == u16::MAX),
+                "found_gap: {:?}, fragment_blocks_range: {:?} offset: {:?}, m_flag: {:?}",
+                found_gap,
+                fragment_blocks_range,
+                offset,
+                m_flag
             );
         }
 
@@ -1543,19 +1554,12 @@ mod tests {
         process_ip_fragment(&mut cache, &mut ctx, fragment_id_1, 2, true, ExpectedResult::NeedMore);
     }
 
-    // TODO(https://fxbug.dev/92831): Fix this crash and remove the
-    // `should_panic` annotation.
     #[test]
-    #[should_panic]
-    fn test_fuzz_corpus() {
-        // This test runs test cases which were discovered via fuzzing to crash
-        // the implementation.
-
-        let frag_offs = [8191, 7936, 7936, 771, 7936, 7936, 7952, 771, 7946, 7936, 1327];
+    fn test_no_more_fragments_in_middle_of_block() {
         let mut ctx = DummyCtx::<Ipv4>::default();
         let mut cache = IpPacketFragmentCache::<Ipv4>::default();
-        for offset in frag_offs {
-            process_ipv4_fragment(&mut cache, &mut ctx, 0, offset, false, ExpectedResult::NeedMore);
-        }
+        process_ipv4_fragment(&mut cache, &mut ctx, 0, 100, false, ExpectedResult::NeedMore);
+
+        process_ipv4_fragment(&mut cache, &mut ctx, 0, 50, false, ExpectedResult::Invalid);
     }
 }
