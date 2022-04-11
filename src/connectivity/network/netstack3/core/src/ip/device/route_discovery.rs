@@ -529,7 +529,7 @@ mod tests {
                 action: Ipv6RouteDiscoverAction::Discovered,
             }),
         );
-        ctx.ctx.timer_ctx().assert_some_timers_installed([(
+        ctx.ctx.timer_ctx().assert_timers_installed([(
             timer_id(gateway_route),
             DummyInstant::from(ONE_SECOND.get()),
         )]);
@@ -551,7 +551,7 @@ mod tests {
                 action: Ipv6RouteDiscoverAction::Discovered,
             }),
         );
-        ctx.ctx.timer_ctx().assert_some_timers_installed([
+        ctx.ctx.timer_ctx().assert_timers_installed([
             (timer_id(gateway_route), DummyInstant::from(TWO_SECONDS.get())),
             (timer_id(on_link_route), DummyInstant::from(ONE_SECOND.get())),
         ]);
@@ -572,7 +572,7 @@ mod tests {
                 action: Ipv6RouteDiscoverAction::Invalidated,
             }),
         );
-        ctx.ctx.timer_ctx().assert_some_timers_installed([(
+        ctx.ctx.timer_ctx().assert_timers_installed([(
             timer_id(on_link_route),
             DummyInstant::from(TWO_SECONDS.get()),
         )]);
@@ -581,7 +581,7 @@ mod tests {
         // with valid lifetime is not discovered.
         receive_ipv6_packet(ctx, device_id, FrameDestination::Unicast, buf(0, false, 0));
         check_event(ctx, None);
-        ctx.ctx.timer_ctx().assert_some_timers_installed([(
+        ctx.ctx.timer_ctx().assert_timers_installed([(
             timer_id(on_link_route),
             DummyInstant::from(TWO_SECONDS.get()),
         )]);
@@ -651,7 +651,7 @@ mod tests {
                 .into(),
             ]),
         );
-        ctx.ctx.timer_ctx().assert_some_timers_installed([
+        ctx.ctx.timer_ctx().assert_timers_installed([
             (timer_id(gateway_route), DummyInstant::from(TWO_SECONDS.get())),
             (timer_id(on_link_route), DummyInstant::from(ONE_SECOND.get())),
         ]);
@@ -679,8 +679,6 @@ mod tests {
                 .into(),
             ]),
         );
-        // TODO(https://fxbug.dev/93818): Test for no timers once
-        // `device::ndp`'s implementation of router/prefix discovery is deleted.
-        // ctx.ctx.timer_ctx().assert_no_timers_installed();
+        ctx.ctx.timer_ctx().assert_no_timers_installed();
     }
 }
