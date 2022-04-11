@@ -202,7 +202,10 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
 
   // If |output_dir| is provided, set up the loader and debugdata services that will be
   // used to capture any data published.
+  uint32_t fdio_flags = FDIO_SPAWN_CLONE_ALL;
   if (output_dir != nullptr) {
+    fdio_flags &= ~FDIO_SPAWN_CLONE_NAMESPACE;
+
     fbl::unique_fd root_dir_fd{open("/", O_RDONLY | O_DIRECTORY)};
     if (!root_dir_fd) {
       fprintf(stderr, "FAILURE: Could not open root directory /\n");
@@ -266,10 +269,6 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
     // Setup VFS.
     vfs = std::make_unique<fs::SynchronousVfs>(loop.dispatcher());
     vfs->ServeDirectory(std::move(proxy_dir), std::move(svc_proxy), fs::Rights::ReadWrite());
-  } else {
-    for (size_t i = 0; i < flat->count; ++i) {
-      fdio_actions.push_back(action_ns_entry(flat->path[i], flat->handle[i]));
-    }
   }
 
   zx::job test_job;
@@ -313,9 +312,9 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   const zx::time start_time = zx::clock::get_monotonic();
 
-  status = fdio_spawn_etc(test_job.get(), FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_NAMESPACE,
-                          args[0], args, env_vars_p, fdio_actions.size(), fdio_actions.data(),
-                          process.reset_and_get_address(), err_msg);
+  status =
+      fdio_spawn_etc(test_job.get(), fdio_flags, args[0], args, env_vars_p, fdio_actions.size(),
+                     fdio_actions.data(), process.reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
     fprintf(stderr, "FAILURE: Failed to launch %s: %d (%s): %s\n", test_name, status,
             zx_status_get_string(status), err_msg);
