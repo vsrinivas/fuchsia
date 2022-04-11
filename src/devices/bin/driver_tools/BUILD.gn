@@ -1,0 +1,88 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+
+rustc_library("lib") {
+  name = "driver_tools"
+  with_unit_tests = true
+  deps = [
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
+    "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",
+    "//sdk/fidl/fuchsia.driver.registrar:fuchsia.driver.registrar-rustc",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block-rustc",
+    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition-rustc",
+    "//sdk/fidl/fuchsia.hardware.pci:fuchsia.hardware.pci-rustc",
+    "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//src/devices/lib/bind",
+    "//src/devices/pci/bin/lspci:lib",
+    "//src/devices/usb/bin/lsusb:lib",
+    "//src/lib/component_hub",
+    "//src/lib/diagnostics/selectors",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/storage/fuchsia-vfs-watcher",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:uuid",
+    "//third_party/rust_crates:zstd",
+    "//third_party/rust_crates/compat/rustyline",
+    "//third_party/zstd",
+  ]
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+    "src/subcommands/common.rs",
+    "src/subcommands/debug_bind/args.rs",
+    "src/subcommands/debug_bind/mod.rs",
+    "src/subcommands/device/args.rs",
+    "src/subcommands/device/mod.rs",
+    "src/subcommands/dump/args.rs",
+    "src/subcommands/dump/mod.rs",
+    "src/subcommands/list/args.rs",
+    "src/subcommands/list/mod.rs",
+    "src/subcommands/list_devices/args.rs",
+    "src/subcommands/list_devices/mod.rs",
+    "src/subcommands/list_hosts/args.rs",
+    "src/subcommands/list_hosts/mod.rs",
+    "src/subcommands/lsblk/args.rs",
+    "src/subcommands/lsblk/guids.rs",
+    "src/subcommands/lsblk/mod.rs",
+    "src/subcommands/lspci/args.rs",
+    "src/subcommands/lspci/mod.rs",
+    "src/subcommands/lsusb/args.rs",
+    "src/subcommands/lsusb/mod.rs",
+    "src/subcommands/mod.rs",
+    "src/subcommands/register/args.rs",
+    "src/subcommands/register/mod.rs",
+    "src/subcommands/restart/args.rs",
+    "src/subcommands/restart/mod.rs",
+  ]
+  inputs = [ "//third_party/pciids/pci.ids.zst" ]
+}
+
+rustc_binary("driver_tools") {
+  name = "driver"
+  with_unit_tests = false
+  deps = [
+    ":lib",
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+  ]
+  sources = [ "src/main.rs" ]
+}
