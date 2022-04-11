@@ -113,13 +113,13 @@ The compatibility guarantee is as follows:
 2. Automated tests are executed for the ICU library version in use by the docs.rs
    system (so the documentation could be built).
 
-`rust_icu` version     | ICU 63.x | ICU 67.1 | ICU 68.1 | ICU 69.1 | ICU 70.1
--------------------- | -------- | -------- | -------- | -------- | -------
-0.5                  |    ✅    |    ✅    |    ✅    |    ✅    |
----                  |    ---   |    ---   |    ---   |    ---   |
-1.0                  |    ✅    |    ✅    |    ✅    |    ✅    |
----                  |    ---   |    ---   |    ---   |    ---   |
-2.0                  |    ✅    |          |    ✅    |    ✅    |    ✅
+`rust_icu` version     | ICU 63.x | ICU 67.1 | ICU 68.1 | ICU 69.1 | ICU 70.1 | ICU 71.1
+-------------------- | -------- | -------- | -------- | -------- | ------- |
+0.5                  |    ✅    |    ✅    |    ✅    |    ✅    |         |
+---                  |    ---   |    ---   |    ---   |    ---   |         |
+1.0                  |    ✅    |    ✅    |    ✅    |    ✅    |         |
+---                  |    ---   |    ---   |    ---   |    ---   |         |
+2.0                  |    ✅    |          |    ✅    |    ✅    |    ✅   |    ✅
 
 > If you must use a 0.x relase, please use the release 0.5.  Else, upgrade to
 > 1.0 since 1.0 supports the same ICU versions as 0.5.  If you have an option

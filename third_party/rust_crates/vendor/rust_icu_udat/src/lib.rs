@@ -427,26 +427,6 @@ mod tests {
                     "среда, 31. децембар 1969. 16:01:40 Северноамеричко пацифичко стандардно време",
                 calendar: None,
             },
-            #[cfg(not(feature = "icu_version_69_max"))]
-            Test {
-                name: "Serbian default, with empty timezone defaults to system.",
-                locale: "sr-RS",
-                timezone: "",
-                date: 100000.0,
-                expected:
-                    "четвртак, 1. јануар 1970. 00:01:40 Координисано универзално време",
-                calendar: None,
-            },
-            #[cfg(feature = "icu_version_69_max")]
-            Test {
-                name: "Serbian default, with empty timezone defaults to system.",
-                locale: "sr-RS",
-                timezone: "",
-                date: 100000.0,
-                expected:
-                    "четвртак, 01. јануар 1970. 00:01:40 Координисано универзално време",
-                calendar: None,
-            },
             Test {
                 name: "Dutch default",
                 locale: "nl-NL",
@@ -486,26 +466,8 @@ mod tests {
                 expected: "woensdag 22 Sjawal 1389 AH om 16:03:20 Pacific-standaardtijd",
                 calendar: None,
             },
-            // In ICU64 the "at" word has been added to Arabic output.
-            #[cfg(feature = "icu_version_68_plus")]
-            Test {
-                name: "Arabic >=v68",
-                locale: "ar-SA-u-ca-islamic",
-                timezone: "America/Los_Angeles",
-                date: 200000.0,
-                expected: "الأربعاء، ٢٢ شوال ١٣٨٩ هـ في ٤:٠٣:٢٠ م توقيت المحيط الهادي الرسمي",
-                calendar: None,
-            },
-            #[cfg(not(feature = "icu_version_68_plus"))]
-            Test {
-                name: "Arabic <v68",
-                locale: "ar-SA-u-ca-islamic",
-                timezone: "America/Los_Angeles",
-                date: 200000.0,
-                expected: "الأربعاء، ٢٢ شوال ١٣٨٩ هـ ٤:٠٣:٢٠ م توقيت المحيط الهادي الرسمي",
-                calendar: None,
-            },
         ];
+
         let _restore_timezone = RestoreTimezone::new("UTC");
         for t in tests {
             let loc = uloc::ULoc::try_from(t.locale)?;
@@ -623,16 +585,6 @@ mod tests {
                 locale: "sr-RS",
                 skeleton: "MMMMj",
                 expected: "LLLL HH",
-            },
-            Test {
-                locale: "en-US",
-                skeleton: "MMMMj",
-                expected: "LLLL, h a",
-            },
-            Test {
-                locale: "en-US",
-                skeleton: "jMMMM",
-                expected: "LLLL, h a",
             },
             Test {
                 locale: "en-US",
