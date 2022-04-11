@@ -483,7 +483,7 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
   if (gic_version == 0x2) {
     ranges[num_ranges] = (zbi_mem_range_t){
         .paddr = v2_gic_cfg.mmio_phys,
-        .length = ZX_PAGE_SIZE,
+        .length = 64 * ZX_PAGE_SIZE,
         .type = ZBI_MEM_RANGE_PERIPHERAL,
     };
     num_ranges += 1;
