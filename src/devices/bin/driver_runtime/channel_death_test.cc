@@ -18,7 +18,7 @@ TEST(ChannelDeathTest, CloseCrashesIfPendingWaitNotCancelled) {
     auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
 
     auto dispatcher = fdf::Dispatcher::Create(
-        0, []() {}, "");
+        0, [](fdf_dispatcher_t* dispatcher) {}, "");
     ASSERT_OK(dispatcher.status_value());
 
     auto channels = fdf::ChannelPair::Create(0);

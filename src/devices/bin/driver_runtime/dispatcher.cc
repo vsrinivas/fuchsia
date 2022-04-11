@@ -86,20 +86,20 @@ DispatcherCoordinator& GetDispatcherCoordinator() {
 
 Dispatcher::Dispatcher(uint32_t options, bool unsynchronized, bool allow_sync_calls,
                        const void* owner, async_dispatcher_t* process_shared_dispatcher,
-                       fdf_dispatcher_destructed_observer_t* observer)
+                       fdf_dispatcher_shutdown_observer_t* observer)
     : async_dispatcher_t{&g_dispatcher_ops},
       options_(options),
       unsynchronized_(unsynchronized),
       allow_sync_calls_(allow_sync_calls),
       owner_(owner),
       process_shared_dispatcher_(process_shared_dispatcher),
-      destructed_observer_(observer) {}
+      shutdown_observer_(observer) {}
 
 // static
 fdf_status_t Dispatcher::CreateWithLoop(uint32_t options, const char* scheduler_role,
                                         size_t scheduler_role_len, const void* owner,
                                         async::Loop* loop,
-                                        fdf_dispatcher_destructed_observer_t* observer,
+                                        fdf_dispatcher_shutdown_observer_t* observer,
                                         Dispatcher** out_dispatcher) {
   ZX_DEBUG_ASSERT(out_dispatcher);
 
@@ -153,7 +153,7 @@ fdf_status_t Dispatcher::CreateWithLoop(uint32_t options, const char* scheduler_
 // static
 fdf_status_t Dispatcher::Create(uint32_t options, const char* scheduler_role,
                                 size_t scheduler_role_len,
-                                fdf_dispatcher_destructed_observer_t* observer,
+                                fdf_dispatcher_shutdown_observer_t* observer,
                                 Dispatcher** out_dispatcher) {
   return CreateWithLoop(options, scheduler_role, scheduler_role_len,
                         driver_context::GetCurrentDriver(), GetDispatcherCoordinator().loop(),
@@ -171,6 +171,8 @@ async_dispatcher_t* Dispatcher::GetAsyncDispatcher() {
   // Note: We inherit from async_t so we can upcast to it.
   return (async_dispatcher_t*)this;
 }
+
+void Dispatcher::ShutdownAsync() { ZX_ASSERT_MSG(false, "ShutdownAsync not yet supported"); }
 
 void Dispatcher::Destroy() {
   {
@@ -239,8 +241,8 @@ void Dispatcher::CompleteDestroy() {
     ZX_ASSERT(callback_request);
     callback_request->Call(std::move(callback_request), ZX_ERR_CANCELED);
   }
-  if (destructed_observer_) {
-    destructed_observer_->handler(destructed_observer_);
+  if (shutdown_observer_) {
+    shutdown_observer_->handler(static_cast<fdf_dispatcher_t*>(this), shutdown_observer_);
   }
   GetDispatcherCoordinator().RemoveDispatcher(*this);
 }

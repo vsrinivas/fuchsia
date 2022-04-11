@@ -18,22 +18,28 @@ __BEGIN_CDECLS
 //
 // Example:
 //
-//  struct dispatcher_destructed_observer {
-//    fdf_dispatcher_destructed_observer_t fdf_observer;
+//  void shutdown_handler(fdf_dispatcher_t* dispatcher,
+//                        fdf_dispatcher_shutdown_observer_t* fdf_observer) {
+//    // Handle dispatcher shutdown.
+//    // It is now safe to destroy |dispatcher|.
+//  }
+//
+//  struct dispatcher_shutdown_observer {
+//    fdf_dispatcher_shutdown_observer_t fdf_observer;
 //    my_ctx* ctx;
 //  };
 //
 //  void driver_start() {
 //    TODO(fxb/85946): update this once scheduler_role is supported.
 //    const char* scheduler_role = "";
-//    struct dispatcher_destructed_observer observer = {
-//      ...
-//    };
+//    struct dispatcher_shutdown_observer my_observer;
+//    my_observer.fdf_observer.handler = shutdown_handler;
+//    ...
 //
 //    fdf_dispatcher_t* dispatcher;
 //    fdf_status_t status =
 //        fdf_dispatcher_create(0, scheduler_role, strlen(scheduler_role),
-//                              &observer->fdf_observer, &dispatcher);
+//                              &my_observer.fdf_observer, &dispatcher);
 //
 //    fdf_channel_read_t channel_read;
 //    ...
@@ -41,24 +47,25 @@ __BEGIN_CDECLS
 //
 //    // The dispatcher will call the channel_read handler when ready.
 //
-//    // This begins the dispatcher destruction process.
-//    fdf_dispatcher_destroy_async(dispatcher);
+//    // This begins the dispatcher shutdown process.
+//    fdf_dispatcher_shutdown_async(dispatcher);
 // }
 //
 typedef struct fdf_dispatcher fdf_dispatcher_t;
 
-typedef struct fdf_dispatcher_destructed_observer fdf_dispatcher_destructed_observer_t;
+typedef struct fdf_dispatcher_shutdown_observer fdf_dispatcher_shutdown_observer_t;
 
-// Called when the dispatcher's asynchronous destruction has completed.
-typedef void(fdf_dispatcher_destructed_handler_t)(fdf_dispatcher_destructed_observer_t* observer);
+// Called when the asynchronous shutdown for |dispatcher| has completed.
+typedef void(fdf_dispatcher_shutdown_handler_t)(fdf_dispatcher_t* dispatcher,
+                                                fdf_dispatcher_shutdown_observer_t* observer);
 
 // Holds context for the observer which will be called when the dispatcher's
-// asynchronous destruction has completed.
+// asynchronous shutdown has completed.
 //
 // After creating the dispatcher, the client is responsible for retaining
 // this structure in memory (and unmodified) until the handler runs.
-struct fdf_dispatcher_destructed_observer {
-  fdf_dispatcher_destructed_handler_t* handler;
+struct fdf_dispatcher_shutdown_observer {
+  fdf_dispatcher_shutdown_handler_t* handler;
 };
 
 // This flag allows parallel calls into callbacks set in the dispatcher.
@@ -74,13 +81,13 @@ struct fdf_dispatcher_destructed_observer {
 // |scheduler_role_len | is the length of the string, without including the terminating
 // NULL character.
 // TODO(fxb/85946): currently |scheduler_role| is not implemented.
-// |observer| will be called after |fdf_dispatcher_destroy_async| has been called,
-// and the dispatcher has completed its asynchronous destruction.
+// |observer| will be called after |fdf_dispatcher_shutdown_async| has been called,
+// and the dispatcher has completed its asynchronous shutdown.
 //
 // This must be called from a thread managed by the driver runtime.
 fdf_status_t fdf_dispatcher_create(uint32_t options, const char* scheduler_role,
                                    size_t scheduler_role_len,
-                                   fdf_dispatcher_destructed_observer_t* observer,
+                                   fdf_dispatcher_shutdown_observer_t* observer,
                                    fdf_dispatcher_t** dispatcher);
 
 // Returns the asynchronous dispatch interface.
@@ -97,18 +104,22 @@ fdf_dispatcher_t* fdf_dispatcher_get_current_dispatcher();
 // Returns the options set for this dispatcher.
 uint32_t fdf_dispatcher_get_options(fdf_dispatcher_t* dispatcher);
 
-// Destroying a dispatcher is an asynchronous operation.
+// Shutting down a dispatcher is an asynchronous operation.
 //
-// Once |fdf_dispatcher_destroy_async| is called, the dispatcher will no longer
+// Once |fdf_dispatcher_shutdown_async| is called, the dispatcher will no longer
 // accept queueing new async_dispatcher_t operations or ChannelRead callbacks.
 //
 // The dispatcher will asynchronously wait for all pending async_dispatcher_t
 // and ChannelRead callbacks to complete. Then it will serially cancel all
-// remaining callbacks with ZX_ERR_CANCELED and call the destroy handler set
+// remaining callbacks with ZX_ERR_CANCELED and call the shutdown handler set
 // in |fdf_dispatcher_create|.
 //
-// It is safe to call this from a callback started by this dispatcher.
-void fdf_dispatcher_destroy_async(fdf_dispatcher_t* dispatcher);
+// If the dispatcher is already shutdown, this will do nothing.
+void fdf_dispatcher_shutdown_async(fdf_dispatcher_t* dispatcher);
+
+// The dispatcher must be completely shutdown before this is called.
+// It is safe to call this from the shutdown handler set in |fdf_dispatcher_create|.
+void fdf_dispatcher_destroy(fdf_dispatcher_t* dispatcher);
 
 __END_CDECLS
 

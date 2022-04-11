@@ -60,7 +60,7 @@ class DispatcherTest : public RuntimeTestCase {
 
   async::Loop loop_;
   std::vector<fdf_dispatcher_t*> dispatchers_;
-  std::vector<std::unique_ptr<DispatcherDestructedObserver>> observers_;
+  std::vector<std::unique_ptr<DispatcherShutdownObserver>> observers_;
 };
 
 void DispatcherTest::SetUp() {
@@ -87,10 +87,10 @@ void DispatcherTest::TearDown() {
   loop_.StartThread();  // Make sure an async loop thread is running for dispatcher destruction.
 
   for (auto* dispatcher : dispatchers_) {
-    fdf_dispatcher_destroy_async(dispatcher);
+    fdf_dispatcher_destroy(dispatcher);
   }
   for (auto& observer : observers_) {
-    ASSERT_OK(observer->WaitUntilDestructed());
+    ASSERT_OK(observer->WaitUntilShutdown());
   }
 
   loop_.Quit();
@@ -99,7 +99,7 @@ void DispatcherTest::TearDown() {
 
 void DispatcherTest::CreateDispatcher(uint32_t options, const char* scheduler_role,
                                       const void* owner, fdf_dispatcher_t** out_dispatcher) {
-  auto observer = std::make_unique<DispatcherDestructedObserver>();
+  auto observer = std::make_unique<DispatcherShutdownObserver>();
   driver_runtime::Dispatcher* dispatcher;
   ASSERT_EQ(ZX_OK, driver_runtime::Dispatcher::CreateWithLoop(
                        options, scheduler_role, strlen(scheduler_role), owner, &loop_,
@@ -764,7 +764,7 @@ TEST_F(DispatcherTest, EmptyCallStack) {
 // that does not have a corresponding channel write.
 TEST_F(DispatcherTest, SyncDispatcherDestroyBeforeWrite) {
   libsync::Completion read_complete;
-  DispatcherDestructedObserver observer;
+  DispatcherShutdownObserver observer;
 
   {
     const void* driver = CreateFakeDriver();
@@ -790,7 +790,7 @@ TEST_F(DispatcherTest, SyncDispatcherDestroyBeforeWrite) {
   }  // fdf_dispatcher_destroy() should run and schedule cancellation of the channel read.
 
   ASSERT_OK(read_complete.Wait(zx::time::infinite()));
-  ASSERT_OK(observer.WaitUntilDestructed());
+  ASSERT_OK(observer.WaitUntilShutdown());
 }
 
 // Tests destroying an unsynchronized dispatcher.
@@ -798,7 +798,7 @@ TEST_F(DispatcherTest, UnsyncDispatcherDestroy) {
   libsync::Completion complete_task;
   libsync::Completion read_complete;
 
-  DispatcherDestructedObserver observer;
+  DispatcherShutdownObserver observer;
 
   {
     const void* driver = CreateFakeDriver();
@@ -844,14 +844,14 @@ TEST_F(DispatcherTest, UnsyncDispatcherDestroy) {
   complete_task.Signal();
   ASSERT_OK(read_complete.Wait(zx::time::infinite()));
 
-  ASSERT_OK(observer.WaitUntilDestructed());
+  ASSERT_OK(observer.WaitUntilShutdown());
 }
 
 // Tests destroying an unsynchronized dispatcher that has a pending channel read
 // that does not have a corresponding channel write.
 TEST_F(DispatcherTest, UnsyncDispatcherDestroyBeforeWrite) {
   libsync::Completion read_complete;
-  DispatcherDestructedObserver observer;
+  DispatcherShutdownObserver observer;
 
   {
     const void* driver = CreateFakeDriver();
@@ -878,7 +878,7 @@ TEST_F(DispatcherTest, UnsyncDispatcherDestroyBeforeWrite) {
   }  // fdf_dispatcher_destroy() should run and schedule cancellation of the channel read.
 
   ASSERT_OK(read_complete.Wait(zx::time::infinite()));
-  ASSERT_OK(observer.WaitUntilDestructed());
+  ASSERT_OK(observer.WaitUntilShutdown());
 }
 
 // Tests destroying an unsynchronized dispatcher from a channel read callback running
@@ -887,7 +887,7 @@ TEST_F(DispatcherTest, DestroyDispatcherInAsyncLoopCallback) {
   const void* driver = CreateFakeDriver();
   auto scheduler_role = "scheduler_role";
 
-  DispatcherDestructedObserver dispatcher_observer;
+  DispatcherShutdownObserver dispatcher_observer;
 
   driver_runtime::Dispatcher* dispatcher;
   ASSERT_EQ(ZX_OK, driver_runtime::Dispatcher::CreateWithLoop(
@@ -899,7 +899,7 @@ TEST_F(DispatcherTest, DestroyDispatcherInAsyncLoopCallback) {
       remote_ch_, 0 /* options */,
       [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
         ASSERT_OK(status);
-        fdf_dispatcher_destroy_async(dispatcher);
+        fdf_dispatcher_destroy(dispatcher);
         completion.Signal();
         delete channel_read;
       });
@@ -916,7 +916,7 @@ TEST_F(DispatcherTest, DestroyDispatcherInAsyncLoopCallback) {
 
   ASSERT_OK(completion.Wait(zx::time::infinite()));
 
-  ASSERT_OK(dispatcher_observer.WaitUntilDestructed());
+  ASSERT_OK(dispatcher_observer.WaitUntilShutdown());
 }
 
 // Tests that attempting to destroying a dispatcher twice from callbacks does not crash.
@@ -927,7 +927,7 @@ TEST_F(DispatcherTest, DestroyDispatcherFromTwoCallbacks) {
   loop_.JoinThreads();
   loop_.ResetQuit();
 
-  DispatcherDestructedObserver observer;
+  DispatcherShutdownObserver observer;
   const void* driver = CreateFakeDriver();
   auto scheduler_role = "scheduler_role";
 
@@ -941,7 +941,7 @@ TEST_F(DispatcherTest, DestroyDispatcherFromTwoCallbacks) {
       remote_ch_, 0 /* options */,
       [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
         ASSERT_OK(status);
-        fdf_dispatcher_destroy_async(dispatcher);
+        fdf_dispatcher_destroy(dispatcher);
         completion.Signal();
       });
   ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(dispatcher)));
@@ -951,7 +951,7 @@ TEST_F(DispatcherTest, DestroyDispatcherFromTwoCallbacks) {
       remote_ch2_, 0 /* options */,
       [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
         ASSERT_OK(status);
-        fdf_dispatcher_destroy_async(dispatcher);
+        fdf_dispatcher_destroy(dispatcher);
         completion2.Signal();
       });
   ASSERT_OK(channel_read2->Begin(static_cast<fdf_dispatcher_t*>(dispatcher)));
@@ -969,7 +969,7 @@ TEST_F(DispatcherTest, DestroyDispatcherFromTwoCallbacks) {
 
   ASSERT_OK(completion.Wait(zx::time::infinite()));
   ASSERT_OK(completion2.Wait(zx::time::infinite()));
-  ASSERT_OK(observer.WaitUntilDestructed());
+  ASSERT_OK(observer.WaitUntilShutdown());
 }
 
 // Tests that queueing a ChannelRead while the dispatcher is shutting down fails.
@@ -981,7 +981,7 @@ TEST_F(DispatcherTest, DestroyDispatcherQueueChannelReadCallback) {
   loop_.ResetQuit();
 
   libsync::Completion read_complete;
-  DispatcherDestructedObserver observer;
+  DispatcherShutdownObserver observer;
 
   {
     const void* driver = CreateFakeDriver();
@@ -1018,14 +1018,14 @@ TEST_F(DispatcherTest, DestroyDispatcherQueueChannelReadCallback) {
   loop_.StartThread();
 
   ASSERT_OK(read_complete.Wait(zx::time::infinite()));
-  ASSERT_OK(observer.WaitUntilDestructed());
+  ASSERT_OK(observer.WaitUntilShutdown());
 }
 
 TEST_F(DispatcherTest, DestructedCallbackIsNotReentrant) {
   fbl::Mutex driver_lock;
 
   libsync::Completion completion;
-  auto destructed_handler = [&]() {
+  auto destructed_handler = [&](fdf_dispatcher_t* dispatcher) {
     { fbl::AutoLock lock(&driver_lock); }
     completion.Signal();
   };
@@ -1325,7 +1325,7 @@ TEST_F(DispatcherTest, WaitUntilIdleMultipleDispatchers) {
 
 // Tests shutting down the process async loop while requests are still pending.
 TEST_F(DispatcherTest, ShutdownProcessAsyncLoop) {
-  DispatcherDestructedObserver observer;
+  DispatcherShutdownObserver observer;
 
   const void* driver = CreateFakeDriver();
   auto scheduler_role = "scheduler_role";
@@ -1349,17 +1349,17 @@ TEST_F(DispatcherTest, ShutdownProcessAsyncLoop) {
   // Call is reentrant, so the read will be queued on the async loop.
   ASSERT_EQ(ZX_OK, fdf_channel_write(remote_ch_, 0, nullptr, nullptr, 0, nullptr, 0));
   // This will queue the wait to run |Dispatcher::CompleteDestroy|.
-  fdf_dispatcher_destroy_async(static_cast<fdf_dispatcher_t*>(dispatcher));
+  fdf_dispatcher_destroy(static_cast<fdf_dispatcher_t*>(dispatcher));
 
   ASSERT_OK(entered_read.Wait(zx::time::infinite()));
 
   loop_.Shutdown();
 
-  ASSERT_OK(observer.WaitUntilDestructed());
+  ASSERT_OK(observer.WaitUntilShutdown());
 }
 
 TEST_F(DispatcherTest, SyncDispatcherCancelRequestDuringDestroy) {
-  DispatcherDestructedObserver observer;
+  DispatcherShutdownObserver observer;
 
   const void* driver = CreateFakeDriver();
   auto scheduler_role = "scheduler_role";
@@ -1389,10 +1389,10 @@ TEST_F(DispatcherTest, SyncDispatcherCancelRequestDuringDestroy) {
   ASSERT_OK(task_started.Wait(zx::time::infinite()));
 
   // |Dispatcher::Destroy| will move the registered channel read into |shutdown_queue_|.
-  fdf_dispatcher_destroy_async(static_cast<fdf_dispatcher_t*>(dispatcher));
+  fdf_dispatcher_destroy(static_cast<fdf_dispatcher_t*>(dispatcher));
   dispatcher_destroy_started.Signal();
 
-  ASSERT_OK(observer.WaitUntilDestructed());
+  ASSERT_OK(observer.WaitUntilShutdown());
 }
 
 //
@@ -1453,7 +1453,7 @@ TEST_F(DispatcherTest, CreateUnsynchronizedAllowSyncCallsFails) {
   driver_context::PushDriver(CreateFakeDriver());
   auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
 
-  DispatcherDestructedObserver observer(false /* require_callback */);
+  DispatcherShutdownObserver observer(false /* require_callback */);
   driver_runtime::Dispatcher* dispatcher;
   uint32_t options = FDF_DISPATCHER_OPTION_UNSYNCHRONIZED | FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS;
   ASSERT_NE(ZX_OK, fdf_dispatcher::Create(options, "scheduler_role", 0, observer.fdf_observer(),
@@ -1462,7 +1462,7 @@ TEST_F(DispatcherTest, CreateUnsynchronizedAllowSyncCallsFails) {
 
 // Tests that you cannot create a dispatcher on a thread not managed by the driver runtime.
 TEST_F(DispatcherTest, CreateDispatcherOnNonRuntimeThreadFails) {
-  DispatcherDestructedObserver observer(false /* require_callback */);
+  DispatcherShutdownObserver observer(false /* require_callback */);
   driver_runtime::Dispatcher* dispatcher;
   ASSERT_NE(ZX_OK,
             fdf_dispatcher::Create(0, "scheduler_role", 0, observer.fdf_observer(), &dispatcher));

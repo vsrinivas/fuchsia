@@ -41,52 +41,58 @@ class RuntimeTestCase : public zxtest::Test {
   }
 
   // Example usage:
-  //   DispatcherDestructedObserver observer;
+  //   DispatcherShutdownObserver observer;
   //   driver_runtime::Dispatcher* dispatcher;
   //   fdf_status_t status =
   //       driver_runtime::Dispatcher::Create(..., observer.fdf_observer(), &dispatcher);
   //   ...
   //   dispatcher->Destroy();
-  //   ASSERT_OK(observer.WaitUntilDestructed());
-  class DispatcherDestructedObserver {
+  //   ASSERT_OK(observer.WaitUntilShutdown());
+  class DispatcherShutdownObserver {
    public:
     // |require_callback| specifies whether the destructor will check that the callback was called.
     // This can be set to false for tests that expect construction of the dispatcher to fail,
     // but want to pass in a valid observer.
-    DispatcherDestructedObserver(bool require_callback = true)
-        : require_callback_(require_callback) {
+    explicit DispatcherShutdownObserver(bool require_callback = true) : require_callback_(require_callback) {
       observer_.fdf_observer.handler = DispatcherDestructedHandler;
     }
 
-    ~DispatcherDestructedObserver() {
+    ~DispatcherShutdownObserver() {
       if (require_callback_) {
         ASSERT_TRUE(observer_.signal.signaled());
       }
     }
 
-    DispatcherDestructedObserver(const DispatcherDestructedObserver&) = delete;
-    DispatcherDestructedObserver& operator=(const DispatcherDestructedObserver&) = delete;
-    DispatcherDestructedObserver& operator=(DispatcherDestructedObserver&&) = delete;
-    DispatcherDestructedObserver(DispatcherDestructedObserver&&) = delete;
+    DispatcherShutdownObserver(const DispatcherShutdownObserver&) = delete;
+    DispatcherShutdownObserver& operator=(const DispatcherShutdownObserver&) = delete;
+    DispatcherShutdownObserver& operator=(DispatcherShutdownObserver&&) = delete;
+    DispatcherShutdownObserver(DispatcherShutdownObserver&&) = delete;
 
-    zx_status_t WaitUntilDestructed() { return observer_.signal.Wait(zx::time::infinite()); }
+    zx_status_t WaitUntilShutdown() { return observer_.signal.Wait(zx::time::infinite()); }
 
     // Returns the observer that can be passed to |driver_runtime::Dispatcher::Create|.
-    fdf_dispatcher_destructed_observer_t* fdf_observer() { return &observer_.fdf_observer; }
+    fdf_dispatcher_shutdown_observer_t* fdf_observer() { return &observer_.fdf_observer; }
+
+    // Returns the dispatcher that was shutdown, nullptr if no shutdown event has occurred.
+    fdf_dispatcher_t* shutdown_dispatcher() { return shutdown_dispatcher_; }
 
    private:
-    struct DestructedObserver {
-      fdf_dispatcher_destructed_observer_t fdf_observer;
+    struct ShutdownObserver {
+      fdf_dispatcher_shutdown_observer_t fdf_observer;
       libsync::Completion signal;
     };
 
-    static void DispatcherDestructedHandler(fdf_dispatcher_destructed_observer_t* fdf_observer) {
-      DestructedObserver* observer = reinterpret_cast<DestructedObserver*>(fdf_observer);
-      observer->signal.Signal();
+    static void DispatcherDestructedHandler(fdf_dispatcher_t* dispatcher,
+                                            fdf_dispatcher_shutdown_observer_t* fdf_observer) {
+      DispatcherShutdownObserver* observer =
+          reinterpret_cast<DispatcherShutdownObserver*>(fdf_observer);
+      observer->shutdown_dispatcher_ = dispatcher;
+      observer->observer_.signal.Signal();
     }
 
-    DestructedObserver observer_;
+    ShutdownObserver observer_;
     bool require_callback_;
+    fdf_dispatcher_t* shutdown_dispatcher_ = nullptr;
   };
 
  private:

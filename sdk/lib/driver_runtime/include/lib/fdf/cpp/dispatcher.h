@@ -24,18 +24,19 @@ class UnownedDispatcher;
 //
 // Example:
 //
-//  void Driver::OnDispatcherDestructed() {
-//    // Handle dispatcher destructed.
+//  void Driver::OnDispatcherShutdown(fdf_dispatcher_t* dispatcher) {
+//    // Handle dispatcher shutdown.
+//    // It is now safe to destroy |dispatcher|.
 //  }
 //
 //  void Driver::Start() {
 //    // TODO(fxb/85946): update this once scheduler_role is supported.
 //    const char* scheduler_role = "";
 //
-//    auto destructed_handler = [&]() {
-//      OnDispatcherDestructed();
+//    auto shutdown_handler = [&]() {
+//      OnDispatcherShutdown();
 //    };
-//    auto dispatcher = fdf::Dispatcher::Create(0, destructed_handler, scheduler_role);
+//    auto dispatcher = fdf::Dispatcher::Create(0, shutdown_handler, scheduler_role);
 //
 //    fdf::ChannelRead channel_read;
 //    ...
@@ -46,8 +47,8 @@ class UnownedDispatcher;
 //
 class Dispatcher {
  public:
-  // Called when the dispatcher's asynchronous destruction has completed.
-  using DestructedHandler = fit::callback<void()>;
+  // Called when the asynchronous shutdown for |dispatcher| has completed.
+  using ShutdownHandler = fit::callback<void(fdf_dispatcher_t* dispatcher)>;
 
   // Creates a dispatcher.
   //
@@ -58,32 +59,32 @@ class Dispatcher {
   // dispatcher is handled at. It may or may not impact the ability for other drivers to share
   // zircon threads with the dispatcher.
   //
-  // |destructed_handler| will be called when the dispatcher's asynchronous destruction
+  // |shutdown_handler| will be called when the dispatcher's asynchronous shutdown
   // has completed. The client is responsible for retaining this structure in memory
   // (and unmodified) until the handler runs.
   //
   // This must be called from a thread managed by the driver runtime.
   //
-  // TODO(fxbug.dev/87840): make |destructed_handler| non-optional.
-  static zx::status<Dispatcher> Create(uint32_t options,
-                                       DestructedHandler destructed_handler = nullptr,
+  // TODO(fxbug.dev/87840): make |shutdown_handler| non-optional.
+  static zx::status<Dispatcher> Create(uint32_t options, ShutdownHandler shutdown_handler = nullptr,
                                        cpp17::string_view scheduler_role = {}) {
-    // We need to create an additional destruction context in addition to the fdf::Dispatcher
-    // object, as |fdf_dispatcher_destroy_async| is called in the fdf::Dispatcher destructor.
-    std::unique_ptr<DispatcherDestructedContext> dispatcher_destructed_context;
-    if (destructed_handler) {
-      dispatcher_destructed_context =
-          std::make_unique<DispatcherDestructedContext>(std::move(destructed_handler));
+    // We need to create an additional shutdown context in addition to the fdf::Dispatcher
+    // object, as the fdf::Dispatcher may be destructed before the shutdown handler
+    // is called. This can happen if the raw pointer is released from the fdf::Dispatcher.
+    std::unique_ptr<DispatcherShutdownContext> dispatcher_shutdown_context;
+    if (shutdown_handler) {
+      dispatcher_shutdown_context =
+          std::make_unique<DispatcherShutdownContext>(std::move(shutdown_handler));
     }
     fdf_dispatcher_t* dispatcher;
     zx_status_t status = fdf_dispatcher_create(
         options, scheduler_role.data(), scheduler_role.size(),
-        dispatcher_destructed_context ? dispatcher_destructed_context->observer() : nullptr,
+        dispatcher_shutdown_context ? dispatcher_shutdown_context->observer() : nullptr,
         &dispatcher);
     if (status != ZX_OK) {
       return zx::error(status);
     }
-    dispatcher_destructed_context.release();
+    dispatcher_shutdown_context.release();
     return zx::ok(Dispatcher(dispatcher));
   }
 
@@ -98,8 +99,25 @@ class Dispatcher {
     return *this;
   }
 
-  // Destruction of this dispatcher is asynchronous.
-  // The |DestructedHandler| set in |Create| will be called once destruction completes.
+  // Shutting down a dispatcher is an asynchronous operation.
+  //
+  // Once |Dispatcher::ShutdownAsync| is called, the dispatcher will no longer
+  // accept queueing new async_dispatcher_t operations or ChannelRead callbacks.
+  //
+  // The dispatcher will asynchronously wait for all pending async_dispatcher_t
+  // and ChannelRead callbacks to complete. Then it will serially cancel all
+  // remaining callbacks with ZX_ERR_CANCELED and call the shutdown handler set
+  // in |Dispatcher::Create|.
+  //
+  // If the dispatcher is already shutdown, this will do nothing.
+  void ShutdownAsync() {
+    if (dispatcher_) {
+      fdf_dispatcher_shutdown_async(dispatcher_);
+    }
+  }
+
+  // The dispatcher must be completely shutdown before the dispatcher can be closed.
+  // It is safe to call this from the shutdown handler set in |Dispatcher::Create|.
   ~Dispatcher() { close(); }
 
   fdf_dispatcher_t* get() const { return dispatcher_; }
@@ -111,7 +129,7 @@ class Dispatcher {
 
   void close() {
     if (dispatcher_) {
-      fdf_dispatcher_destroy_async(dispatcher_);
+      fdf_dispatcher_destroy(dispatcher_);
       dispatcher_ = nullptr;
     }
   }
@@ -138,24 +156,25 @@ class Dispatcher {
   fdf_dispatcher_t* dispatcher_;
 
  private:
-  class DispatcherDestructedContext {
+  class DispatcherShutdownContext {
    public:
-    DispatcherDestructedContext(DestructedHandler handler)
+    explicit DispatcherShutdownContext(ShutdownHandler handler)
         : observer_{CallHandler}, handler_(std::move(handler)) {}
 
-    fdf_dispatcher_destructed_observer_t* observer() { return &observer_; }
+    fdf_dispatcher_shutdown_observer_t* observer() { return &observer_; }
 
    private:
-    static void CallHandler(fdf_dispatcher_destructed_observer_t* observer) {
-      static_assert(offsetof(DispatcherDestructedContext, observer_) == 0);
-      auto self = reinterpret_cast<DispatcherDestructedContext*>(observer);
-      self->handler_();
+    static void CallHandler(fdf_dispatcher_t* dispatcher,
+                            fdf_dispatcher_shutdown_observer_t* observer) {
+      static_assert(offsetof(DispatcherShutdownContext, observer_) == 0);
+      auto self = reinterpret_cast<DispatcherShutdownContext*>(observer);
+      self->handler_(dispatcher);
       // Delete the pointer allocated in |Dispatcher::Create|.
       delete self;
     }
 
-    fdf_dispatcher_destructed_observer_t observer_;
-    DestructedHandler handler_;
+    fdf_dispatcher_shutdown_observer_t observer_;
+    ShutdownHandler handler_;
   };
 };
 

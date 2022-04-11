@@ -33,7 +33,7 @@ class Dispatcher : public async_dispatcher_t,
   // Use |Create| or |CreateWithLoop| instead of calling directly.
   Dispatcher(uint32_t options, bool unsynchronized, bool allow_sync_calls, const void* owner,
              async_dispatcher_t* process_shared_dispatcher,
-             fdf_dispatcher_destructed_observer_t* observer);
+             fdf_dispatcher_shutdown_observer_t* observer);
 
   // Creates a dispatcher which is backed by |loop|.
   // |loop| can be the |ProcessSharedLoop|, or a private async loop created by a test.
@@ -43,7 +43,7 @@ class Dispatcher : public async_dispatcher_t,
   // the dispatcher will be deleted once all callbacks canclled or completed by the dispatcher.
   static fdf_status_t CreateWithLoop(uint32_t options, const char* scheduler_role,
                                      size_t scheduler_role_len, const void* owner,
-                                     async::Loop* loop, fdf_dispatcher_destructed_observer_t*,
+                                     async::Loop* loop, fdf_dispatcher_shutdown_observer_t*,
                                      Dispatcher** out_dispatcher);
 
   // fdf_dispatcher_t implementation
@@ -51,12 +51,13 @@ class Dispatcher : public async_dispatcher_t,
   // |Destroy| once they are done using the dispatcher. Once |Destroy| is called,
   // the dispatcher will be deleted once all callbacks cancelled or completed by the dispatcher.
   static fdf_status_t Create(uint32_t options, const char* scheduler_role,
-                             size_t scheduler_role_len, fdf_dispatcher_destructed_observer_t*,
+                             size_t scheduler_role_len, fdf_dispatcher_shutdown_observer_t*,
                              Dispatcher** out_dispatcher);
 
   // |dispatcher| must have been retrieved via `GetAsyncDispatcher`.
   static Dispatcher* FromAsyncDispatcher(async_dispatcher_t* dispatcher);
   async_dispatcher_t* GetAsyncDispatcher();
+  void ShutdownAsync();
   void Destroy();
 
   // async_dispatcher_t implementation
@@ -260,8 +261,8 @@ class Dispatcher : public async_dispatcher_t,
 
   IdleEventManager idle_event_manager_ __TA_GUARDED(&callback_lock_);
 
-  // The observer that should be called when destruction of the dispatcher completes.
-  fdf_dispatcher_destructed_observer_t* destructed_observer_ = nullptr;
+  // The observer that should be called when shutting down the dispatcher completes.
+  fdf_dispatcher_shutdown_observer_t* shutdown_observer_ = nullptr;
 
   fbl::Canary<fbl::magic("FDFD")> canary_;
 };

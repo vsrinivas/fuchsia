@@ -121,7 +121,7 @@ __EXPORT void fdf_handle_close(fdf_handle_t channel_handle) {
 // fdf_dispatcher_t interface
 __EXPORT fdf_status_t fdf_dispatcher_create(uint32_t options, const char* scheduler_role,
                                             size_t scheduler_role_len,
-                                            fdf_dispatcher_destructed_observer_t* observer,
+                                            fdf_dispatcher_shutdown_observer_t* observer,
                                             fdf_dispatcher_t** out_dispatcher) {
   driver_runtime::Dispatcher* dispatcher;
   auto status = driver_runtime::Dispatcher::Create(options, scheduler_role, scheduler_role_len,
@@ -145,9 +145,11 @@ __EXPORT uint32_t fdf_dispatcher_get_options(fdf_dispatcher_t* dispatcher) {
   return dispatcher->options();
 }
 
-__EXPORT void fdf_dispatcher_destroy_async(fdf_dispatcher_t* dispatcher) {
-  return dispatcher->Destroy();
+__EXPORT void fdf_dispatcher_shutdown_async(fdf_dispatcher_t* dispatcher) {
+  return dispatcher->ShutdownAsync();
 }
+
+__EXPORT void fdf_dispatcher_destroy(fdf_dispatcher_t* dispatcher) { return dispatcher->Destroy(); }
 
 __EXPORT fdf_dispatcher_t* fdf_dispatcher_get_current_dispatcher() {
   return static_cast<fdf_dispatcher_t*>(driver_context::GetCurrentDispatcher());
