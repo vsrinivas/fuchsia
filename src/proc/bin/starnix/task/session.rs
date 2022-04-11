@@ -9,6 +9,7 @@ use std::sync::Arc;
 use crate::device::terminal::*;
 use crate::types::*;
 
+#[derive(Debug)]
 pub struct Session {
     /// The leader of the session
     pub leader: pid_t,
@@ -47,6 +48,7 @@ impl Session {
 }
 
 /// The controlling terminal of a session.
+#[derive(Debug)]
 pub struct ControllingTerminal {
     /// The controlling terminal.
     pub terminal: Arc<Terminal>,

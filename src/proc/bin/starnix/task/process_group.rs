@@ -4,12 +4,12 @@
 
 use parking_lot::RwLock;
 use std::collections::HashSet;
-use std::fmt;
 use std::sync::Arc;
 
 use crate::task::*;
 use crate::types::*;
 
+#[derive(Debug)]
 pub struct ProcessGroup {
     /// The session of the process group.
     pub session: Arc<Session>,
@@ -24,12 +24,6 @@ pub struct ProcessGroup {
 impl PartialEq for ProcessGroup {
     fn eq(&self, other: &Self) -> bool {
         self.leader == other.leader
-    }
-}
-
-impl fmt::Debug for ProcessGroup {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[pgid: {}, sid: {}]", self.leader, self.session.leader)
     }
 }
 

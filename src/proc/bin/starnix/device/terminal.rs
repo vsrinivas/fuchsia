@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use derivative::Derivative;
 use parking_lot::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::collections::{BTreeSet, HashMap};
 use std::sync::{Arc, Weak};
@@ -50,8 +51,11 @@ impl TTYState {
 }
 
 /// State of a given terminal. This object handles both the main and the replica terminal.
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct Terminal {
     /// The global devpts state.
+    #[derivative(Debug = "ignore")]
     state: Arc<TTYState>,
 
     /// The identifier of the terminal.
@@ -113,6 +117,7 @@ impl Drop for Terminal {
 
 /// The controlling session of a terminal. Is is associated to a single side of the terminal,
 /// either main or replica.
+#[derive(Debug)]
 pub struct ControllingSession {
     /// The controlling session.
     pub session: Weak<Session>,
@@ -130,6 +135,7 @@ impl ControllingSession {
     }
 }
 
+#[derive(Debug)]
 struct PtsIdsSet {
     pts_count: u32,
     next_id: u32,
