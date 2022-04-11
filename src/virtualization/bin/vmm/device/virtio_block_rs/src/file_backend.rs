@@ -129,7 +129,6 @@ mod tests {
         anyhow::Error,
         fuchsia_async as fasync,
         futures::future::try_join_all,
-        std::fs::File,
         std::io::{Read, Seek, SeekFrom, Write},
         std::slice,
         tempfile::tempfile,
@@ -137,11 +136,97 @@ mod tests {
         virtio_device::mem::DeviceRange,
     };
 
+    /// A `BackendController` allows tests to interface directly with the underlying storage of a
+    /// `BlockBackend` to read or write bytes directly, bypassing the `BlockBackend`.
+    ///
+    /// For example, with a `FileBackend`, the `BackendController` could use another
+    /// [File](std::fs::File) to access the contents of the underlying file that the `FileBackend`
+    /// is servicing requests from.
+    trait BackendController {
+        /// Reads a full sector from the underlying storage for a `BlockBackend`.
+        ///
+        /// `data` must be exactly
+        /// [VIRTIO_BLOCK_SECTOR_SIZE](crate::wire::VIRTIO_BLOCK_SECTOR_SIZE) in length. `sector`
+        /// must be valid such that entirerty of the read sector must be within the capacity of the
+        /// `BlockBackend`.
+        fn read_sector(&mut self, sector: Sector, data: &mut [u8]) -> Result<(), Error>;
+
+        /// Writes a full sector to the underlying storage for a `BlockBackend`.
+        ///
+        /// See [read_sector](Self::read_sector) for more details.
+        fn write_sector(&mut self, sector: Sector, data: &[u8]) -> Result<(), Error>;
+
+        /// Writes a full sector of `color` bytes at `sector`.
+        fn color_sector(&mut self, sector: Sector, color: u8) -> Result<(), Error> {
+            let data = [color; wire::VIRTIO_BLOCK_SECTOR_SIZE as usize];
+            self.write_sector(sector, &data)
+        }
+
+        /// Validates that the contents of `sector` is an entire sector of `color` bytes.
+        fn check_sector(&mut self, sector: Sector, color: u8) -> Result<(), Error> {
+            let mut data = [0u8; wire::VIRTIO_BLOCK_SECTOR_SIZE as usize];
+            self.read_sector(sector, &mut data)?;
+            data.iter().for_each(|c| assert_eq!(*c, color));
+            Ok(())
+        }
+    }
+
+    /// A `BackendTest` allows for multiple backends to share test suites by implementing this
+    /// trait.
+    trait BackendTest {
+        /// The `BlockBackend` to be tested.
+        type Backend: BlockBackend;
+
+        /// The `BackendController` type that can be used validate the operation of the backend.
+        type Controller: BackendController;
+
+        /// Create a new instance of the backend under test with the capacity of `size` bytes.
+        fn create_with_size(size: u64) -> Result<(Self::Backend, Self::Controller), Error>;
+
+        /// Create a new instance of the backend under test with the capacity of `size` sectors.
+        fn create_with_sectors(size: Sector) -> Result<(Self::Backend, Self::Controller), Error> {
+            Self::create_with_size(
+                size.to_bytes()
+                    .ok_or(anyhow!("Requested sector capacity {:?} is too large", size))?,
+            )
+        }
+    }
+
+    struct FileBackendController(std::fs::File);
+
+    impl BackendController for FileBackendController {
+        fn write_sector(&mut self, sector: Sector, data: &[u8]) -> Result<(), Error> {
+            self.0.seek(SeekFrom::Start(sector.to_bytes().unwrap()))?;
+            self.0.write_all(data)?;
+            // Sync because we'll read this from the remote file so we want to make sure there's no
+            // buffering in the way.
+            self.0.sync_all()?;
+            Ok(())
+        }
+
+        fn read_sector(&mut self, sector: Sector, data: &mut [u8]) -> Result<(), Error> {
+            self.0.seek(SeekFrom::Start(sector.to_bytes().unwrap()))?;
+            self.0.read_exact(data)?;
+            Ok(())
+        }
+    }
+
+    struct FileBackendTest;
+
+    impl BackendTest for FileBackendTest {
+        type Backend = FileBackend;
+        type Controller = FileBackendController;
+
+        fn create_with_size(size: u64) -> Result<(FileBackend, FileBackendController), Error> {
+            let file = tempfile()?;
+            file.set_len(size)?;
+            Ok((FileBackend::new(fdio::clone_channel(&file)?.into())?, FileBackendController(file)))
+        }
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_get_attrs() -> Result<(), Error> {
-        let file = tempfile()?;
-
-        let backend = FileBackend::new(fdio::clone_channel(&file)?.into())?;
+        let (backend, _) = FileBackendTest::create_with_size(0)?;
         assert_eq!(
             backend.get_attrs().await?,
             DeviceAttrs { capacity: Sector::from_raw_sector(0), block_size: None }
@@ -156,24 +241,13 @@ mod tests {
             (400 * 1024 * 1024, Sector::from_raw_sector(819200)),
         ];
         for (file_size, sectors) in expected_byte_sector_sizes {
-            file.set_len(file_size)?;
-            let backend = FileBackend::new(fdio::clone_channel(&file)?.into())?;
+            let (backend, _) = FileBackendTest::create_with_size(file_size)?;
             assert_eq!(
                 backend.get_attrs().await?,
                 DeviceAttrs { capacity: sectors, block_size: None }
             );
         }
 
-        Ok(())
-    }
-
-    fn color_sector(file: &mut File, sector: Sector, color: u8) -> Result<(), Error> {
-        let data = [color; wire::VIRTIO_BLOCK_SECTOR_SIZE as usize];
-        file.seek(SeekFrom::Start(sector.to_bytes().unwrap()))?;
-        file.write_all(&data)?;
-        // Sync because we'll read this from the remote file so we want to make sure there's no
-        // buffering in the way.
-        file.sync_all()?;
         Ok(())
     }
 
@@ -186,10 +260,11 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_read_per_sector_ranges() -> Result<(), Error> {
         // Create a file and color 3 different sectors.
-        let mut file = tempfile()?;
-        color_sector(&mut file, Sector::from_raw_sector(0), 0xaa)?;
-        color_sector(&mut file, Sector::from_raw_sector(1), 0xbb)?;
-        color_sector(&mut file, Sector::from_raw_sector(2), 0xcc)?;
+        let (backend, mut controller) =
+            FileBackendTest::create_with_sectors(Sector::from_raw_sector(3))?;
+        controller.color_sector(Sector::from_raw_sector(0), 0xaa)?;
+        controller.color_sector(Sector::from_raw_sector(1), 0xbb)?;
+        controller.color_sector(Sector::from_raw_sector(2), 0xcc)?;
 
         // Create a request to read all 3 sectors with a DeviceRange for each.
         let mem = IdentityDriverMem::new();
@@ -201,7 +276,6 @@ mod tests {
         let request = Request { ranges: ranges.as_slice(), sector: Sector::from_raw_sector(0) };
 
         // Create the backend and process the request.
-        let backend = FileBackend::new(fdio::clone_channel(&file)?.into())?;
         backend.read(request).await?;
 
         // Verify the file data was read into the device ranges.
@@ -214,10 +288,11 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_read_multiple_sectors_per_range() -> Result<(), Error> {
         // Create a file and color 3 different sectors.
-        let mut file = tempfile()?;
-        color_sector(&mut file, Sector::from_raw_sector(0), 0xaa)?;
-        color_sector(&mut file, Sector::from_raw_sector(1), 0xbb)?;
-        color_sector(&mut file, Sector::from_raw_sector(2), 0xcc)?;
+        let (backend, mut controller) =
+            FileBackendTest::create_with_sectors(Sector::from_raw_sector(3))?;
+        controller.color_sector(Sector::from_raw_sector(0), 0xaa)?;
+        controller.color_sector(Sector::from_raw_sector(1), 0xbb)?;
+        controller.color_sector(Sector::from_raw_sector(2), 0xcc)?;
 
         // Create a request to read all 3 sectors into a single descriptor.
         let mem = IdentityDriverMem::new();
@@ -225,8 +300,7 @@ mod tests {
         let request =
             Request { ranges: slice::from_ref(&range), sector: Sector::from_raw_sector(0) };
 
-        // Create the backend and process the request.
-        let backend = FileBackend::new(fdio::clone_channel(&file)?.into())?;
+        // Process the request.
         backend.read(request).await?;
 
         // Verify the file data was read into the device ranges.
@@ -241,9 +315,10 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_read_subsector_range() -> Result<(), Error> {
         // Create a file and color 2 sectors.
-        let mut file = tempfile()?;
-        color_sector(&mut file, Sector::from_raw_sector(0), 0xaa)?;
-        color_sector(&mut file, Sector::from_raw_sector(1), 0xbb)?;
+        let (backend, mut controller) =
+            FileBackendTest::create_with_sectors(Sector::from_raw_sector(2))?;
+        controller.color_sector(Sector::from_raw_sector(0), 0xaa)?;
+        controller.color_sector(Sector::from_raw_sector(1), 0xbb)?;
 
         // Create a request to read only one sector using 4 different descriptors.
         let mem = IdentityDriverMem::new();
@@ -255,8 +330,7 @@ mod tests {
         ];
         let request = Request { ranges: ranges.as_slice(), sector: Sector::from_raw_sector(0) };
 
-        // Create the backend and process the request.
-        let backend = FileBackend::new(fdio::clone_channel(&file)?.into())?;
+        // Process the request.
         backend.read(request).await?;
 
         // Verify the correct data is read.
@@ -277,9 +351,10 @@ mod tests {
         assert!(BYTE_SIZE > MAX_BUF);
 
         // Create a file and color enough sectors to cover the entire `BYTE_SIZE` range.
-        let mut file = tempfile()?;
+        let (backend, mut controller) =
+            FileBackendTest::create_with_sectors(Sector::from_raw_sector(SECTOR_SIZE))?;
         (0..SECTOR_SIZE).try_for_each(|sector| {
-            color_sector(&mut file, Sector::from_raw_sector(sector), 0xaa)
+            controller.color_sector(Sector::from_raw_sector(sector), 0xaa)
         })?;
 
         // Create a request to read all the sectors colored above.
@@ -288,8 +363,7 @@ mod tests {
         let request =
             Request { ranges: slice::from_ref(&range), sector: Sector::from_raw_sector(0) };
 
-        // Create the backend and process the request.
-        let backend = FileBackend::new(fdio::clone_channel(&file)?.into())?;
+        // Process the request.
         backend.read(request).await?;
 
         // Verify the file data was read into the descriptor.
@@ -302,14 +376,12 @@ mod tests {
         const CONCURRENCY_COUNT: u64 = 1024;
 
         // Create a file and color a sector for each request we will run concurrently
-        let mut file = tempfile()?;
+        let (backend, mut controller) =
+            FileBackendTest::create_with_sectors(Sector::from_raw_sector(CONCURRENCY_COUNT))?;
         for sector in 0..CONCURRENCY_COUNT {
-            color_sector(&mut file, Sector::from_raw_sector(sector), sector as u8)?;
+            controller.color_sector(Sector::from_raw_sector(sector), sector as u8)?;
         }
-
-        // Create the backend and process the request.
         let mem = IdentityDriverMem::new();
-        let backend = FileBackend::new(fdio::clone_channel(&file)?.into())?;
 
         // Create a range for each request and then dispatch all the read operations.
         let ranges: Vec<DeviceRange<'_>> = (0..CONCURRENCY_COUNT)
@@ -339,14 +411,6 @@ mod tests {
         }
     }
 
-    fn check_sector(file: &mut File, sector: Sector, color: u8) -> Result<(), Error> {
-        let mut data = [0; wire::VIRTIO_BLOCK_SECTOR_SIZE as usize];
-        file.seek(SeekFrom::Start(sector.to_bytes().unwrap()))?;
-        file.read_exact(&mut data)?;
-        data.iter().for_each(|c| assert_eq!(*c, color));
-        Ok(())
-    }
-
     #[fasync::run_singlethreaded(test)]
     async fn test_write_per_sector_ranges() -> Result<(), Error> {
         // Create a request with 3 device ranges.
@@ -364,15 +428,14 @@ mod tests {
         color_range(&ranges[2], 0xcc);
 
         // Create the backend and write the ranges.
-        let mut file = tempfile()?;
-        file.set_len(wire::VIRTIO_BLOCK_SECTOR_SIZE * 3)?;
-        let backend = FileBackend::new(fdio::clone_channel(&file)?.into())?;
+        let (backend, mut controller) =
+            FileBackendTest::create_with_sectors(Sector::from_raw_sector(3))?;
         backend.write(request).await?;
 
         // Verify the data was written into the file.
-        check_sector(&mut file, Sector::from_raw_sector(0), 0xaa)?;
-        check_sector(&mut file, Sector::from_raw_sector(1), 0xbb)?;
-        check_sector(&mut file, Sector::from_raw_sector(2), 0xcc)?;
+        controller.check_sector(Sector::from_raw_sector(0), 0xaa)?;
+        controller.check_sector(Sector::from_raw_sector(1), 0xbb)?;
+        controller.check_sector(Sector::from_raw_sector(2), 0xcc)?;
         Ok(())
     }
 
@@ -395,15 +458,14 @@ mod tests {
         let request = Request { ranges: ranges.as_slice(), sector: Sector::from_raw_sector(0) };
 
         // Execute the write.
-        let mut file = tempfile()?;
-        file.set_len(3 * wire::VIRTIO_BLOCK_SECTOR_SIZE)?;
-        let backend = FileBackend::new(fdio::clone_channel(&file)?.into())?;
+        let (backend, mut controller) =
+            FileBackendTest::create_with_sectors(Sector::from_raw_sector(3))?;
         backend.write(request).await?;
 
         // Verify the data was written to the file.
-        check_sector(&mut file, Sector::from_raw_sector(0), 0xaa)?;
-        check_sector(&mut file, Sector::from_raw_sector(1), 0xbb)?;
-        check_sector(&mut file, Sector::from_raw_sector(2), 0xcc)?;
+        controller.check_sector(Sector::from_raw_sector(0), 0xaa)?;
+        controller.check_sector(Sector::from_raw_sector(1), 0xbb)?;
+        controller.check_sector(Sector::from_raw_sector(2), 0xcc)?;
         Ok(())
     }
 
@@ -426,13 +488,12 @@ mod tests {
         color_range(&ranges[3], 0xaa);
 
         // Execute the write.
-        let mut file = tempfile()?;
-        file.set_len(wire::VIRTIO_BLOCK_SECTOR_SIZE)?;
-        let backend = FileBackend::new(fdio::clone_channel(&file)?.into())?;
+        let (backend, mut controller) =
+            FileBackendTest::create_with_sectors(Sector::from_raw_sector(1))?;
         backend.write(request).await?;
 
         // Verify the full sector was written correctly.
-        check_sector(&mut file, Sector::from_raw_sector(0), 0xaa)?;
+        controller.check_sector(Sector::from_raw_sector(0), 0xaa)?;
         Ok(())
     }
 
@@ -455,14 +516,13 @@ mod tests {
         color_range(&range, 0xcd);
 
         // Create the backend and process the request.
-        let mut file = tempfile()?;
-        file.set_len(BYTE_SIZE)?;
-        let backend = FileBackend::new(fdio::clone_channel(&file)?.into())?;
+        let (backend, mut controller) =
+            FileBackendTest::create_with_sectors(Sector::from_raw_sector(SECTOR_SIZE))?;
         backend.write(request).await?;
 
         // Verify the data was written to the file.
         (0..SECTOR_SIZE).try_for_each(|sector| {
-            check_sector(&mut file, Sector::from_raw_sector(sector), 0xcd)
+            controller.check_sector(Sector::from_raw_sector(sector), 0xcd)
         })?;
         Ok(())
     }
@@ -484,9 +544,8 @@ mod tests {
             .collect();
 
         // Execute the requests concurrently.
-        let mut file = tempfile()?;
-        file.set_len(CONCURRENCY_COUNT * wire::VIRTIO_BLOCK_SECTOR_SIZE)?;
-        let backend = FileBackend::new(fdio::clone_channel(&file)?.into())?;
+        let (backend, mut controller) =
+            FileBackendTest::create_with_sectors(Sector::from_raw_sector(CONCURRENCY_COUNT))?;
         let futures: Vec<_> = (0..CONCURRENCY_COUNT)
             .map(|sector| {
                 backend.write(Request {
@@ -499,7 +558,7 @@ mod tests {
         // Join all the writes and then verify the data was written to the file as expected.
         try_join_all(futures).await?;
         for sector in 0..CONCURRENCY_COUNT {
-            check_sector(&mut file, Sector::from_raw_sector(sector), sector as u8)?;
+            controller.check_sector(Sector::from_raw_sector(sector), sector as u8)?;
         }
         Ok(())
     }
@@ -508,9 +567,7 @@ mod tests {
     async fn test_read_write_loop() -> Result<(), Error> {
         const ITERATIONS: u64 = 100;
 
-        let file = tempfile()?;
-        file.set_len(wire::VIRTIO_BLOCK_SECTOR_SIZE)?;
-        let backend = FileBackend::new(fdio::clone_channel(&file)?.into())?;
+        let (backend, _) = FileBackendTest::create_with_sectors(Sector::from_raw_sector(1))?;
 
         // Iteratively write a value to a sector and read it back.
         let mem = IdentityDriverMem::new();
