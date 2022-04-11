@@ -75,11 +75,14 @@ class Incoming {
   ///
   /// If this object is not bound via the [request] method before
   /// this method is called an [IncomingStateException] will be thrown.
-  void connectToService<T>(AsyncProxy<T>? serviceProxy) {
+  ///
+  /// If [name] is specified, it is used as the service name to connect to,
+  /// instead of the default name provided by the proxy.
+  void connectToService<T>(AsyncProxy<T>? serviceProxy, {String? name}) {
     if (serviceProxy == null) {
       throw ArgumentError.notNull('serviceProxy');
     }
-    final String? serviceName = serviceProxy.ctrl.$serviceName;
+    final String? serviceName = name ?? serviceProxy.ctrl.$serviceName;
     if (serviceName == null) {
       throw Exception(
           "${serviceProxy.ctrl.$interfaceName}'s controller.\$serviceName must "
