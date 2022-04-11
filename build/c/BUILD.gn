@@ -357,7 +357,6 @@ config("fidl-deprecated-c-bindings") {
     "//zircon/system/ulib/kernel-debug:kernel-debug",
     "//zircon/system/ulib/profile:profile",
     "//zircon/system/ulib/runtests-utils:runtests-utils",
-    "//zircon/system/ulib/runtests-utils/test:service-proxy-dir",
     "//zircon/system/ulib/storage-metrics:storage-metrics",
     "//zircon/system/ulib/storage-metrics/test:storage-metrics",
     "//zircon/system/ulib/sysconfig-client/test:sysconfig-sync-client-test",
