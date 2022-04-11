@@ -15,6 +15,7 @@ use {
     anyhow::{anyhow, Context, Result},
     errors::{ffx_bail, ffx_error},
     fidl_fuchsia_developer_ffx_ext::RepositorySpec,
+    fuchsia_merkle::Hash,
     fuchsia_pkg::{BlobInfo, MetaContents, MetaPackage, PackageManifestBuilder},
     futures::TryStreamExt,
     futures_lite::io::{copy, AsyncWriteExt},
@@ -24,6 +25,7 @@ use {
         Body, StatusCode, Uri,
     },
     serde_json::Value,
+    std::str::FromStr,
     std::{
         fmt::Debug,
         fs::{metadata, File},
@@ -229,6 +231,16 @@ where
     // Build the PackageManifest of this package.
     let mut builder = PackageManifestBuilder::new(meta_package);
 
+    builder = builder.add_blob(BlobInfo {
+        source_path: meta_far_path
+            .to_str()
+            .with_context(|| format!("Path is not valid UTF-8: {}", meta_far_path.display()))?
+            .to_string(),
+        path: "meta/".to_owned(),
+        merkle: Hash::from_str(&merkle)?,
+        size: metadata(&meta_far_path)?.len(),
+    });
+
     for (blob_path, hash) in meta_contents.iter() {
         let source_path = blob_output_path.join(&hash.to_string()).canonicalize()?;
 
@@ -319,6 +331,7 @@ mod test {
             std::fs::read_to_string(result_dir.join("package_manifest.json")).unwrap();
         assert!(result_package_manifest
             .contains("15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b"));
+        assert!(result_package_manifest.contains("meta/"));
 
         // Signal the server to shutdown.
         server.stop();

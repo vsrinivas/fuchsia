@@ -36,6 +36,7 @@ rustc_library("pkg") {
     "//src/lib/fuchsia-hyper",
     "//src/lib/http-sse:http_sse",
     "//src/sys/pkg/lib/far/rust:fuchsia-archive",
+    "//src/sys/pkg/lib/fuchsia-merkle",
     "//src/sys/pkg/lib/fuchsia-pkg",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-fs",
