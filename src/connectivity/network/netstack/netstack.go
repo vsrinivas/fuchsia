@@ -798,7 +798,7 @@ func (ifs *ifState) onDownLocked(name string, closed bool) {
 		switch err := ifs.ns.stack.RemoveNIC(ifs.nicid); err.(type) {
 		case nil, *tcpip.ErrUnknownNICID:
 		default:
-			_ = syslog.Errorf("error removing NIC %s in stack.Stack: %s", name, err)
+			_ = syslog.Warnf("error removing NIC %s in stack.Stack: %s", name, err)
 		}
 
 		for _, h := range ifs.ns.nicRemovedHandlers {

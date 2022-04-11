@@ -215,7 +215,7 @@ go_test("netstack_test") {
 
 fuchsia_unittest_package("netstack-gotests") {
   deps = [ ":netstack_test" ]
-  manifest = "meta/netstack_test.cmx"
+  manifest = "meta/netstack_test.cml"
 }
 
 group("tests") {
