@@ -112,8 +112,8 @@ class InputReportDriver {
                 return ZX_OK;
               });
               child_ = compat::Child("InputReport", ZX_PROTOCOL_INPUTREPORT,
-                                     parent_topo_path_ + "/InputReport", input_protocol, {});
-              return interop_.ExportChild(&child_.value());
+                                     parent_topo_path_ + "/InputReport", {});
+              return interop_.ExportChild(&child_.value(), input_protocol);
             })
             // Error handling.
             .or_else([this](zx_status_t& result) {

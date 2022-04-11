@@ -14,7 +14,6 @@
 #include <zircon/errors.h>
 
 #include "src/devices/lib/compat/symbols.h"
-#include "src/devices/misc/drivers/compat/devfs_vnode.h"
 
 namespace fdf {
 using namespace fuchsia_driver_framework;
@@ -52,7 +51,7 @@ namespace compat {
 Device::Device(device_t device, const zx_protocol_device_t* ops, Driver* driver,
                std::optional<Device*> parent, driver::Logger& logger,
                async_dispatcher_t* dispatcher)
-    : compat_child_(std::string(device.name), device.proto_ops.id, "", nullptr, MetadataMap()),
+    : compat_child_(std::string(device.name), device.proto_ops.id, "", MetadataMap()),
       name_(device.name),
       logger_(logger),
       dispatcher_(dispatcher),
@@ -131,9 +130,9 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
   }
   device->topological_path_ += device->name_;
 
-  auto vnode = fbl::MakeRefCounted<DevfsVnode>(device->ZxDevice());
+  device->dev_vnode_ = fbl::MakeRefCounted<DevfsVnode>(device->ZxDevice());
   device->compat_child_ = Child(std::string(zx_args->name), zx_args->proto_id,
-                                std::string(device->topological_path()), vnode, MetadataMap());
+                                std::string(device->topological_path()), MetadataMap());
 
   auto device_ptr = device.get();
 

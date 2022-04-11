@@ -106,7 +106,7 @@ class Interop {
   fpromise::promise<void, zx_status_t> ConnectToParentCompatService();
 
   // Take a Child, and export its fuchsia.driver.compat service, and it export it to devfs.
-  fpromise::promise<void, zx_status_t> ExportChild(Child* child);
+  fpromise::promise<void, zx_status_t> ExportChild(Child* child, fbl::RefPtr<fs::Vnode> dev_node);
 
   fidl::WireSharedClient<fuchsia_driver_compat::Device>& device_client() { return device_client_; }
 
@@ -127,21 +127,17 @@ class Interop {
 // outgoing directory.
 class Child {
  public:
-  Child(std::string name, uint32_t proto_id, std::string topological_path,
-        fbl::RefPtr<fs::Vnode> dev_vnode, MetadataMap metadata)
+  Child(std::string name, uint32_t proto_id, std::string topological_path, MetadataMap metadata)
       : topological_path_(std::move(topological_path)),
         name_(std::move(name)),
         proto_id_(proto_id),
-        compat_device_(topological_path_, std::move(metadata)),
-        dev_vnode_(std::move(dev_vnode)) {}
-
-  // Export this Child to /dev/. When this promise returns successfully, this
-  // child is exported to /dev/.
-  fpromise::promise<void, zx_status_t> ExportToDevfs(driver::DevfsExporter& exporter);
+        compat_device_(topological_path_, std::move(metadata)) {}
 
   DeviceServer& compat_device() { return compat_device_; }
   std::string_view name() { return name_; }
-  fbl::RefPtr<fs::Vnode>& dev_vnode() { return dev_vnode_; }
+  std::string_view topological_path() { return topological_path_; }
+  uint32_t proto_id() { return proto_id_; }
+  ChildOffers& offers() { return offers_; }
 
   // This is a way to give the child shared ownership over something.
   // When child is removed, there will be one less reference to callback,
@@ -152,7 +148,6 @@ class Child {
 
   // Create a vector of offers based on the service instances that have been added to the child.
   std::vector<fuchsia_component_decl::wire::Offer> CreateOffers(fidl::ArenaBase& arena);
-  ChildOffers& offers() { return offers_; }
 
  private:
   std::string topological_path_;
@@ -160,7 +155,6 @@ class Child {
   uint32_t proto_id_;
 
   DeviceServer compat_device_;
-  fbl::RefPtr<fs::Vnode> dev_vnode_;
   ChildOffers offers_;
 
   // A list of callbacks to potentially call when this class is destructed.

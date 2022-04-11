@@ -525,7 +525,7 @@ zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device
                     // TODO(fxdebug.dev/90735): When DriverDevelopment works in DFv2, don't print
                     // this.
                     FDF_LOG(INFO, "Created /dev/%s", child->topological_path().data());
-                    return interop_.ExportChild(&child->compat_child());
+                    return interop_.ExportChild(&child->compat_child(), child->dev_vnode());
                   })
                   .and_then([this, child]() {
                     // We have to create the node for the device after we've exported the

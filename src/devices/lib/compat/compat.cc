@@ -133,7 +133,8 @@ fpromise::promise<void, zx_status_t> Interop::ConnectToParentCompatService() {
   return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
 }
 
-fpromise::promise<void, zx_status_t> Interop::ExportChild(Child* child) {
+fpromise::promise<void, zx_status_t> Interop::ExportChild(Child* child,
+                                                          fbl::RefPtr<fs::Vnode> dev_node) {
   // Expose the fuchsia.driver.compat.Service instance.
   service::ServiceHandler handler;
   fuchsia_driver_compat::Service::Handler compat_service(&handler);
@@ -158,25 +159,21 @@ fpromise::promise<void, zx_status_t> Interop::ExportChild(Child* child) {
   child->offers().AddServiceInstance(std::move(instance_offer));
 
   // Expose the child in /dev/.
-  if (!child->dev_vnode()) {
+  if (!dev_node) {
     return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
   }
-  zx_status_t add_status = outgoing_->svc_dir()->AddEntry(child->name(), child->dev_vnode());
+  zx_status_t add_status = outgoing_->svc_dir()->AddEntry(child->name(), dev_node);
   if (add_status != ZX_OK) {
     return fpromise::make_error_promise<zx_status_t>(add_status);
   }
   // If the child goes out of scope, we should close the devfs connection.
   child->AddCallback(std::make_shared<fit::deferred_callback>(
-      [this, name = std::string(child->name()), vnode = child->dev_vnode()]() {
-        outgoing_->vfs().CloseAllConnectionsForVnode(*vnode, {});
+      [this, name = std::string(child->name()), dev_node]() {
+        outgoing_->vfs().CloseAllConnectionsForVnode(*dev_node, {});
         outgoing_->svc_dir()->RemoveEntry(name);
       }));
 
-  return child->ExportToDevfs(exporter_);
-}
-
-fpromise::promise<void, zx_status_t> Child::ExportToDevfs(driver::DevfsExporter& exporter) {
-  return exporter.Export(name_, topological_path_, proto_id_);
+  return exporter_.Export(child->name(), child->topological_path(), child->proto_id());
 }
 
 std::vector<fuchsia_component_decl::wire::Offer> Child::CreateOffers(fidl::ArenaBase& arena) {

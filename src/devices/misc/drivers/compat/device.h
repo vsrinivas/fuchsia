@@ -24,6 +24,7 @@
 #include "src/devices/lib/compat/compat.h"
 #include "src/devices/lib/compat/symbols.h"
 #include "src/devices/lib/driver2/logger.h"
+#include "src/devices/misc/drivers/compat/devfs_vnode.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 namespace compat {
@@ -75,6 +76,7 @@ class Device : public std::enable_shared_from_this<Device> {
   driver::Logger& logger() { return logger_; }
   async::Executor& executor() { return executor_; }
   Child& compat_child() { return compat_child_; }
+  fbl::RefPtr<DevfsVnode>& dev_vnode() { return dev_vnode_; }
 
  private:
   Device(Device&&) = delete;
@@ -89,6 +91,7 @@ class Device : public std::enable_shared_from_this<Device> {
   fidl::Arena<512> arena_;
   std::vector<fuchsia_driver_framework::wire::NodeProperty> properties_;
 
+  fbl::RefPtr<DevfsVnode> dev_vnode_;
   Child compat_child_;
 
   std::string topological_path_;
