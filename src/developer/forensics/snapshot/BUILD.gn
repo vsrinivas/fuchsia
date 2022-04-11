@@ -19,8 +19,6 @@ group("snapshot") {
 fuchsia_shell_package("pkg") {
   package_name = "snapshot"
 
-  manifest = "meta/snapshot.cmx"
-
   deps = [
     ":main",
     "//build/validate:non_production_tag",
