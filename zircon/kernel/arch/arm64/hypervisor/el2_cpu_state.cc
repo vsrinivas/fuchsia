@@ -178,8 +178,8 @@ zx::status<ktl::unique_ptr<El2CpuState>> El2CpuState::Create() {
   cpu_state->vtcr_.set_ps(address_size);
   if (arch::ArmIdAa64Mmfr1El1::Read().vmid_bits() == arch::ArmAsidSize::k16bits) {
     cpu_state->vtcr_.set_vs(true);
-  } else {
-    cpu_state->vmid_allocator_.Reset(UINT8_MAX);
+  } else if (auto result = cpu_state->vmid_allocator_.Reset(UINT8_MAX); result.is_error()) {
+    return result.take_error();
   }
 
   // Setup EL2 for all online CPUs.

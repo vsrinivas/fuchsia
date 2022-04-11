@@ -395,7 +395,12 @@ static bool id_allocator_reset_to_size() {
   constexpr uint8_t kMaxId = sizeof(size_t);
   constexpr uint8_t kMinId = 1;
   hypervisor::IdAllocator<uint8_t, UINT8_MAX, kMinId> allocator;
-  allocator.Reset(kMaxId);
+
+  // Reset to invalid value, before using a valid value.
+  auto result = allocator.Reset(kMinId);
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, result.status_value());
+  result = allocator.Reset(kMaxId);
+  EXPECT_EQ(ZX_OK, result.status_value());
 
   // Allocate until all IDs are used.
   for (uint8_t i = kMinId; i < kMaxId; i++) {
@@ -409,7 +414,7 @@ static bool id_allocator_reset_to_size() {
   EXPECT_EQ(ZX_ERR_NO_RESOURCES, id.status_value());
 
   // Free an ID that was never allocated.
-  auto result = allocator.Free(kMaxId + 1);
+  result = allocator.Free(kMaxId + 1);
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.status_value());
 
   // Free a random ID, and then check that it gets reallocated.

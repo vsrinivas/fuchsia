@@ -25,14 +25,20 @@ template <typename T, T MaxId, T MinId = 1>
 class IdAllocator {
  public:
   static_assert(MaxId > MinId, "MaxId must be greater than MinId");
-  IdAllocator() { Reset(); }
+  IdAllocator() {
+    auto result = Reset();
+    // We use `FixedStorage` and we statically assert `MaxId` > `MinId`,
+    // therefore this should not fail.
+    ZX_DEBUG_ASSERT(result.is_ok());
+  }
 
   // Resets the allocator, and sets a new `max_id`, where `max_id` <= `MaxId`.
-  void Reset(T max_id = MaxId) {
-    ZX_ASSERT(max_id > MinId);
+  zx::status<> Reset(T max_id = MaxId) {
+    if (max_id <= MinId) {
+      return zx::error(ZX_ERR_OUT_OF_RANGE);
+    }
     zx_status_t status = bitmap_.Reset(max_id);
-    // We use bitmap::FixedStorage, so allocation cannot fail.
-    ZX_DEBUG_ASSERT(status == ZX_OK);
+    return zx::make_status(status);
   }
 
   zx::status<T> Alloc() {
