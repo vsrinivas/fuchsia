@@ -22,7 +22,7 @@ const DISCOVERY_PROXY_BUFFER_LEN: usize = 50;
 
 // This value was chosen arbitrarily to hopefully be large enough to
 // allow all addresses to be gathered when resolving a hostname over mDNS.
-const DEFAULT_RESOLVE_DURATION: i64 = 3;
+const DEFAULT_RESOLVE_DURATION_NS: i64 = std::time::Duration::from_secs(3).as_nanos() as i64;
 
 #[derive(Debug)]
 enum DnssdUpdate {
@@ -50,6 +50,7 @@ impl DiscoveryProxy {
 
         instance.dnssd_query_set_callbacks(Some(
             move |subscribed: bool, name_srp_domain: &CStr| {
+                info!("DNS-SD query: {:?}", name_srp_domain);
                 let name_srp_domain: CString = name_srp_domain.into();
 
                 let name_local_domain =
@@ -93,10 +94,16 @@ impl DiscoveryProxy {
         update_sender: &mpsc::Sender<DnssdUpdate>,
         resolver: &ResolverProxy,
     ) {
-        info!("DNS-SD subscription to {:?} as host name", name_srp_domain);
-
         let mut update_sender_clone = update_sender.clone();
         let name_srp_domain_copy = name_srp_domain.clone();
+
+        // Trim the `local.` part, trim the trailing dot.
+        let name = name_local_domain.trim_end_matches(LOCAL_DOMAIN).trim_end_matches('.');
+
+        info!(
+            "DNS-SD subscription to {:?} as host name, will proxy to {:?}",
+            name_srp_domain, name
+        );
 
         // TODO(fxbug.dev/94368): This isn't really a subscription to a host, this is just
         //                        resolving the hostname once and hoping it doesn't change for
@@ -104,10 +111,10 @@ impl DiscoveryProxy {
         //                        be addressed at some point.
 
         let future = resolver
-            .resolve_host_name(&name_local_domain, DEFAULT_RESOLVE_DURATION)
+            .resolve_host_name(name, DEFAULT_RESOLVE_DURATION_NS)
             .map_err(anyhow::Error::from)
             .and_then(move |x| async move {
-                if let Some(ipv6_addr_box) = x.1 {
+                if let Some(ipv6_addr_box) = x.1.as_ref() {
                     let ipv6_addr = ot::Ip6Address::from(ipv6_addr_box.addr);
                     update_sender_clone
                         .send(DnssdUpdate::Host {
@@ -142,7 +149,13 @@ impl DiscoveryProxy {
         update_sender: &mpsc::Sender<DnssdUpdate>,
         subscriber: &SubscriberProxy,
     ) {
-        info!("DNS-SD subscription to {:?} as service", name_srp_domain);
+        // Trim the `local.` part, keep the trailing dot.
+        let service_name = name_local_domain.trim_end_matches(LOCAL_DOMAIN);
+
+        info!(
+            "DNS-SD subscription to {:?} as service, will proxy to {:?}",
+            name_srp_domain, service_name
+        );
 
         let (client, server) = match create_endpoints::<ServiceSubscriberMarker>() {
             Ok(x) => x,
@@ -152,8 +165,8 @@ impl DiscoveryProxy {
             }
         };
 
-        if let Err(err) = subscriber.subscribe_to_service(&name_local_domain, client) {
-            error!("Unable to subscribe to {:?}: {:?}", name_local_domain, err);
+        if let Err(err) = subscriber.subscribe_to_service(service_name, client) {
+            error!("Unable to subscribe to {:?}({:?}): {:?}", service_name, name_local_domain, err);
             return;
         }
 
@@ -233,9 +246,8 @@ impl DiscoveryProxy {
             let srp_domain = instance.srp_server_get_domain().to_str()?;
 
             let instance_name_srp =
-                CString::new(replace_domain(&instance_name, LOCAL_DOMAIN, srp_domain)?)?;
-            let service_name_srp =
-                CString::new(replace_domain(&service_name, LOCAL_DOMAIN, srp_domain)?)?;
+                CString::new(format!("{}.{}{}", instance_name, service_name, srp_domain))?;
+            let service_name_srp = CString::new(format!("{}{}", service_name, srp_domain))?;
             let host_name_srp =
                 CString::new(replace_domain(&host_name, LOCAL_DOMAIN, srp_domain)?)?;
 
