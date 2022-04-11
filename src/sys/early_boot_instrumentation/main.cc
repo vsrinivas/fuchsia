@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
   }
 
   fbl::unique_fd phys_data_dir(open("/boot/kernel/data/phys", O_RDONLY));
-  if (!kernel_data_dir) {
+  if (!phys_data_dir) {
     const char* err = strerror(errno);
     FX_LOGS(ERROR) << "Could not obtain handle to '/boot/kernel/data/phys'. " << err;
   }
