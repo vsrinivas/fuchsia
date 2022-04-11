@@ -44,7 +44,7 @@ pub trait TryMerge: Eq + Sized {
     /// possible.
     ///
     /// Implementations should return `Ok(())` if other was fully merged into `self`, or return
-    /// `Ok(other)`, leaving `self` unchanged if the instances could not be merged.
+    /// `Err(other)`, leaving `self` unchanged if the instances could not be merged.
     fn try_merge(&mut self, other: Self) -> Result<(), Self>;
 }
 
@@ -345,7 +345,7 @@ where
     /// processing the keys.
     ///
     /// This method is similar to, but more efficient than, mapping an iterator to
-    /// `QueueSender::push`.
+    /// `WorkSender::push`.
     pub fn push_all(
         &self,
         entries: impl Iterator<Item = (K, C)>,
