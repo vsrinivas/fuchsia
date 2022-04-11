@@ -204,6 +204,10 @@ class Writer {
 
   constexpr Writer& Newline() { return Literal('\n'); }
 
+  // Emits "$prefix: ", a conventional way of establishing the context of a
+  // line of emitted markup.
+  constexpr Writer& Prefix(std::string_view prefix) { return Literal(prefix).Literal(": "); }
+
   // Emits the decimal digits for a given unsigned integer. Leading zeroes are
   // not emitted.
   template <typename Uint, typename = std::enable_if_t<std::is_unsigned_v<Uint>>>

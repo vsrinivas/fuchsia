@@ -7,10 +7,12 @@
 #ifndef ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_SYMBOLIZE_H_
 #define ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_SYMBOLIZE_H_
 
+#include <lib/symbolizer-markup/writer.h>
 #include <stdint.h>
 #include <stdio.h>
 
 #include <ktl/byte.h>
+#include <ktl/declval.h>
 #include <ktl/optional.h>
 #include <ktl/span.h>
 #include <ktl/string_view.h>
@@ -35,11 +37,10 @@ class Symbolize {
   Symbolize() = delete;
   Symbolize(const Symbolize&) = delete;
 
-  explicit Symbolize(const char* name, FILE* f = stdout) : name_(name), output_(f) {}
+  explicit Symbolize(const char* name, FILE* f = stdout)
+      : name_(name), output_(f), writer_(Sink{output_}) {}
 
   const char* name() const { return name_; }
-
-  void set_output(FILE* f) { output_ = f; }
 
   // Return the hex string for the program's own build ID.
   ktl::string_view BuildIdString();
@@ -88,15 +89,18 @@ class Symbolize {
                                         const PhysExceptionState& regs);
 
  private:
-  const char* name_;
-  FILE* output_;
-  bool context_done_ = false;
+  struct Sink {
+    FILE* f;
+
+    int operator()(std::string_view str) const { return f->Write(str); }
+  };
 
   void Printf(const char* fmt, ...);
 
-  // Implementation details of ContextAlways().
-  void PrintModule();
-  void PrintMmap();
+  const char* name_;
+  FILE* output_;
+  symbolizer_markup::Writer<Sink> writer_;
+  bool context_done_ = false;
 };
 
 // MainSymbolize represents the singleton Symbolize instance to be used by the

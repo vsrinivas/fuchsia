@@ -131,21 +131,20 @@ ktl::span<const ktl::byte> Symbolize::BuildId() const {
           reinterpret_cast<const ktl::byte*>(id.end())};
 }
 
-void Symbolize::PrintModule() {
-  Printf("%s: {{{module:0:%s:elf:%V}}}\n", name_, name_, BuildId::GetInstance().Print());
-}
-
-void Symbolize::PrintMmap() {
+void Symbolize::ContextAlways() {
+  constexpr symbolizer_markup::MemoryPermissions kRWX{
+      .read = true,
+      .write = true,
+      .execute = true,
+  };
   auto start = reinterpret_cast<uintptr_t>(__code_start);
   auto end = reinterpret_cast<uintptr_t>(_end);
-  Printf("%s: {{{mmap:%p:%#zx:load:0:rwx:%p}}}\n", name_, __code_start, end - start,
-         kLinkTimeAddress);
-}
-
-void Symbolize::ContextAlways() {
-  Printf("%s: {{{reset}}}\n", name_);
-  PrintModule();
-  PrintMmap();
+  writer_.Prefix(name_).Reset().Newline();
+  writer_.Prefix(name_).ElfModule(0, name_, BuildId()).Newline();
+  writer_.Prefix(name_)
+      .LoadImageMmap(start, static_cast<size_t>(end - start), 0, kRWX,
+                     reinterpret_cast<uint64_t>(kLinkTimeAddress))
+      .Newline();
 }
 
 void Symbolize::Context() {
@@ -157,14 +156,16 @@ void Symbolize::Context() {
 
 void Symbolize::BackTraceFrame(unsigned int n, uintptr_t pc, bool interrupt) {
   // Just print the line in markup format.  Context() was called earlier.
-  const char* kind = interrupt ? "pc" : "ra";
-  Printf("%s: {{{bt:%u:%#zx:%s}}}\n", name_, n, pc, kind);
+  writer_.Prefix(name_);
+  interrupt ? writer_.ExactPcFrame(n, pc) : writer_.ReturnAddressFrame(n, pc);
+  writer_.Newline();
 }
 
 void Symbolize::DumpFile(ktl::string_view type, ktl::string_view name, ktl::string_view desc,
                          size_t size_bytes) {
   Context();
-  Printf("%s: %V: {{{dumpfile:%V:%V}}} %zu bytes\n", name_, desc, type, name, size_bytes);
+  writer_.Prefix(name_).Dumpfile(type, name);
+  Printf(" %zu bytes\n", size_bytes);
 }
 
 void Symbolize::PrintBacktraces(const FramePointer& frame_pointers,
@@ -213,6 +214,8 @@ void Symbolize::PrintStack(uintptr_t sp, ktl::optional<size_t> max_size_bytes) {
 void Symbolize::PrintRegisters(const PhysExceptionState& exc) {
   Printf("%s: Registers stored at %p: {{{hexdump:", name_, &exc);
 
+// TODO(fxbug.dev/91214): Replace with a hexdict abstraction from
+// libsymbolizer-markup.
 #if defined(__aarch64__)
 
   for (size_t i = 0; i < ktl::size(exc.regs.r); ++i) {

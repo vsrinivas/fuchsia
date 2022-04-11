@@ -129,6 +129,7 @@ if (toolchain_environment == "kernel.phys" ||
     ]
 
     deps = [
+      "//src/lib/symbolizer-markup",
       "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
@@ -138,6 +139,9 @@ if (toolchain_environment == "kernel.phys" ||
     public_deps = [
       # "symbolize.h" has #include <phys/main.h>.
       ":main",
+
+      # "symbolize.h" has #include <lib/symbolizer-markup/writer.h>.
+      "//src/lib/symbolizer-markup",
     ]
 
     public_configs = [ ":includes" ]
