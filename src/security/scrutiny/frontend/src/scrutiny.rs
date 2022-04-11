@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{logo, shell::Shell},
+    crate::shell::Shell,
     anyhow::Result,
     scrutiny::{
         engine::{
@@ -42,12 +42,6 @@ impl Scrutiny {
             LoggingVerbosity::Trace => LevelFilter::Trace,
             LoggingVerbosity::Off => LevelFilter::Off,
         };
-        if log_level != LevelFilter::Off
-            && config.launch.command.is_none()
-            && config.launch.script_path.is_none()
-        {
-            logo::print_logo();
-        }
 
         if let Ok(log_file) = File::create(config.runtime.logging.path.clone()) {
             let _ = WriteLogger::init(log_level, SimpleLogConfig::default(), log_file);

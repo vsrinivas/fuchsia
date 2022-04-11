@@ -40,7 +40,6 @@ if (is_host) {
       "src/command_builder.rs",
       "src/launcher.rs",
       "src/lib.rs",
-      "src/logo.rs",
       "src/scrutiny.rs",
       "src/shell/args.rs",
       "src/shell/builtin.rs",

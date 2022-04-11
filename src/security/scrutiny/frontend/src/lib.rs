@@ -4,6 +4,5 @@
 
 pub mod command_builder;
 pub mod launcher;
-mod logo;
 pub mod scrutiny;
 mod shell;
