@@ -11,6 +11,7 @@ type UsbSpeed = strict enum : uint32 {
     LOW = 2;
     HIGH = 3;
     SUPER = 4;
+    ENHANCED_SUPER = 5;
 };
 
 @packed

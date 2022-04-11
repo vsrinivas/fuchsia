@@ -36,6 +36,7 @@ struct/member fuchsia.hardware.usb.descriptor/UsbSetup.w_index uint16
 struct/member fuchsia.hardware.usb.descriptor/UsbSetup.w_length uint16
 struct/member fuchsia.hardware.usb.descriptor/UsbSetup.w_value uint16
 struct fuchsia.hardware.usb.descriptor/UsbSetup
+enum/member fuchsia.hardware.usb.descriptor/UsbSpeed.ENHANCED_SUPER 5
 enum/member fuchsia.hardware.usb.descriptor/UsbSpeed.FULL 1
 enum/member fuchsia.hardware.usb.descriptor/UsbSpeed.HIGH 3
 enum/member fuchsia.hardware.usb.descriptor/UsbSpeed.LOW 2
