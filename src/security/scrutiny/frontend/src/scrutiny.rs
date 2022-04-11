@@ -5,7 +5,6 @@
 use {
     crate::{logo, shell::Shell},
     anyhow::Result,
-    clap::{App, Arg, ArgMatches},
     scrutiny::{
         engine::{
             dispatcher::ControllerDispatcher, manager::PluginManager, plugin::Plugin,
@@ -18,7 +17,6 @@ use {
     std::{
         fs::File,
         io::{BufRead, BufReader},
-        path::Path,
         sync::{Arc, Mutex, RwLock},
     },
 };
@@ -70,100 +68,6 @@ impl Scrutiny {
         Ok(Self { manager, dispatcher, scheduler, shell, config })
     }
 
-    /// Declares the Scrutiny command line interface.
-    fn cmdline() -> App<'static, 'static> {
-        App::new("scrutiny")
-            .version("1.0")
-            .author("Fuchsia Authors")
-            .about("An extendable security auditing framework")
-            .arg(
-                Arg::with_name("command")
-                    .short("c")
-                    .help("Run a single command")
-                    .value_name("command")
-                    .takes_value(true),
-            )
-            .arg(
-                Arg::with_name("build")
-                    .short("b")
-                    .help("Optionally set a custom path to the Fuchsia build directory.")
-                    .value_name("build")
-                    .takes_value(true),
-            )
-            .arg(
-                Arg::with_name("model")
-                    .short("m")
-                    .help("The uri of the data model.")
-                    .default_value("{memory}"),
-            )
-            .arg(
-                Arg::with_name("log")
-                    .short("l")
-                    .help("Path to output scrutiny.log")
-                    .default_value("/tmp/scrutiny.log"),
-            )
-            .arg(
-                Arg::with_name("port")
-                    .short("p")
-                    .help("The port to run the scrutiny service on.")
-                    .default_value("8080"),
-            )
-            .arg(
-                Arg::with_name("script")
-                    .short("s")
-                    .help("Run a file as a scrutiny script")
-                    .value_name("script")
-                    .takes_value(true),
-            )
-            .arg(
-                Arg::with_name("verbosity")
-                    .short("v")
-                    .help("The verbosity level of logging")
-                    .possible_values(&["off", "error", "warn", "info", "debug", "trace"])
-                    .default_value("info"),
-            )
-    }
-
-    /// Parses all the command line arguments passed in and returns a
-    /// ScrutinyConfig.
-    fn cmdline_to_config(args: ArgMatches<'static>) -> Result<Config> {
-        let mut config = Config::default();
-        if let Some(command) = args.value_of("command") {
-            config.launch.command = Some(command.to_string());
-        }
-        if let Some(script_path) = args.value_of("script") {
-            config.launch.script_path = Some(script_path.to_string());
-        }
-        config.runtime.logging.path = args.value_of("log").unwrap().to_string();
-        config.runtime.logging.verbosity = match args.value_of("verbosity").unwrap() {
-            "error" => LoggingVerbosity::Error,
-            "warn" => LoggingVerbosity::Warn,
-            "info" => LoggingVerbosity::Info,
-            "debug" => LoggingVerbosity::Debug,
-            "trace" => LoggingVerbosity::Trace,
-            _ => LoggingVerbosity::Off,
-        };
-        config.runtime.model.uri = args.value_of("model").unwrap().to_string();
-        if let Some(build_path) = args.value_of("build") {
-            config.runtime.model.build_path = Path::new(build_path).to_path_buf();
-        }
-        Ok(config)
-    }
-
-    /// Parses all the command line arguments passed in from the environment
-    /// and returns a ScrutinyConfig.
-    pub fn args_from_env() -> Result<Config> {
-        let app = Scrutiny::cmdline();
-        Scrutiny::cmdline_to_config(app.get_matches())
-    }
-
-    /// Parses arguments directly from the vector instead of the environmetn
-    /// and returns a ScrutinyConfig.
-    pub fn args_inline(inline_arguments: Vec<String>) -> Result<Config> {
-        let app = Scrutiny::cmdline();
-        Scrutiny::cmdline_to_config(app.get_matches_from(inline_arguments))
-    }
-
     /// Utility function to register a plugin.
     pub fn plugin(&mut self, plugin: impl Plugin + 'static) -> Result<()> {
         let desc = plugin.descriptor().clone();
@@ -210,65 +114,5 @@ impl Scrutiny {
             self.shell.run();
         }
         Ok(String::new())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn scrutiny_script_args() {
-        let result = Scrutiny::args_inline(
-            vec!["scrutiny", "-s", "foo"].into_iter().map(String::from).collect(),
-        )
-        .unwrap();
-        assert_eq!(result.launch.script_path.unwrap(), "foo".to_string());
-    }
-
-    #[test]
-    fn scrutiny_command_args() {
-        let result = Scrutiny::args_inline(
-            vec!["scrutiny", "-c", "bar"].into_iter().map(String::from).collect(),
-        )
-        .unwrap();
-        assert_eq!(result.launch.command.unwrap(), "bar".to_string());
-    }
-
-    #[test]
-    fn scrutiny_model_path_args() {
-        let result = Scrutiny::args_inline(
-            vec!["scrutiny", "-m", "baz"].into_iter().map(String::from).collect(),
-        )
-        .unwrap();
-        assert_eq!(result.runtime.model.uri, "baz".to_string());
-    }
-
-    #[test]
-    fn scrutiny_logging_path_args() {
-        let result = Scrutiny::args_inline(
-            vec!["scrutiny", "-l", "test_log"].into_iter().map(String::from).collect(),
-        )
-        .unwrap();
-        assert_eq!(result.runtime.logging.path, "test_log".to_string());
-    }
-
-    #[test]
-    fn scrutiny_logging_verbosity_args() {
-        let result = Scrutiny::args_inline(
-            vec!["scrutiny", "-v", "warn"].into_iter().map(String::from).collect(),
-        )
-        .unwrap();
-        assert_eq!(result.runtime.logging.verbosity, LoggingVerbosity::Warn);
-    }
-
-    #[test]
-    fn scrutiny_build_arg() {
-        let result = Scrutiny::args_inline(
-            vec!["scrutiny", "-b", "/foo/bar"].into_iter().map(String::from).collect(),
-        )
-        .unwrap();
-        let path = Path::new("/foo/bar");
-        assert_eq!(result.runtime.model.build_path, path.to_path_buf());
     }
 }

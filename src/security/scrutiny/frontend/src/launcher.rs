@@ -33,13 +33,6 @@ pub fn launch_from_config(config: Config) -> Result<String> {
     scrutiny.run()
 }
 
-/// Provides a default launcher for the Scrutiny frontend. This is intended to
-/// be used by binaries that wish to launch a full copy of the Scrutiny
-/// framework with default settings.
-pub fn launch() -> Result<String> {
-    launch_from_config(Scrutiny::args_from_env()?)
-}
-
 /// Provides a utility launcher for the Scruity frontend. This is intended to
 /// be used by consumer libraries that simply want to launch the framework to
 /// run a single command.
