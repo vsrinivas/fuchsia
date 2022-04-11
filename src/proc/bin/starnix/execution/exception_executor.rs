@@ -119,6 +119,7 @@ fn run_exception_loop(
             ZX_EXCP_POLICY_ERROR
                 if report.context.synth_code == ZX_EXCP_POLICY_CODE_BAD_SYSCALL =>
             {
+                let start_time = zx::Time::get_monotonic();
                 let args = (regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
                 strace!(
                     current_task,
@@ -133,11 +134,21 @@ fn run_exception_loop(
                 );
                 match dispatch_syscall(current_task, syscall_number, args) {
                     Ok(return_value) => {
-                        strace!(current_task, "-> {:#x}", return_value.value());
+                        strace!(
+                            current_task,
+                            "-> {:#x} ({}ms)",
+                            return_value.value(),
+                            (zx::Time::get_monotonic() - start_time).into_millis()
+                        );
                         current_task.registers.rax = return_value.value();
                     }
                     Err(errno) => {
-                        strace!(current_task, "!-> {}", errno);
+                        strace!(
+                            current_task,
+                            "!-> {} ({}ms)",
+                            errno,
+                            (zx::Time::get_monotonic() - start_time).into_millis()
+                        );
                         current_task.registers.rax = (-errno.value()) as u64;
                     }
                 }
