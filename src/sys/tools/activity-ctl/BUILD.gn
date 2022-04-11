@@ -23,9 +23,6 @@ executable("bin") {
     "//zircon/system/ulib/cmdline",
     "//zircon/system/ulib/zx",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_component("activity-ctl-component") {

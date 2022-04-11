@@ -123,7 +123,7 @@ class ActivityCtl {
       : context_(std::move(startup_context)),
         quit_callback_(std::move(quit_callback)),
         dispatcher_(dispatcher),
-        random_(zx::clock::get_monotonic().get()) {}
+        random_(static_cast<uint32_t>(zx::clock::get_monotonic().get())) {}
 
   zx_status_t RunCommand(Command cmd, std::vector<std::string> args) {
     switch (cmd) {
@@ -184,7 +184,8 @@ class ActivityCtl {
     activity.set_generic(std::move(generic));
     uint64_t id = static_cast<uint64_t>(random_());
     (*tracker_conn_)
-        ->StartOngoingActivity(id, std::move(activity), async::Now(dispatcher_).get(), []() {});
+        ->StartOngoingActivity(static_cast<uint32_t>(id), std::move(activity),
+                               async::Now(dispatcher_).get(), []() {});
   }
 
  private:
