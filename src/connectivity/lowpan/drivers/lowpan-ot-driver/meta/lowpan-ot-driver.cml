@@ -16,6 +16,8 @@
                 "fuchsia.factory.lowpan.FactoryRegister",
                 "fuchsia.location.namedplace.RegulatoryRegionWatcher",
                 "fuchsia.lowpan.driver.Register",
+                "fuchsia.lowpan.experimental.DeviceRouteConnector",
+                "fuchsia.lowpan.experimental.DeviceRouteExtraConnector",
                 "fuchsia.net.interfaces.admin.Installer",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.net.mdns.ProxyHostPublisher",
