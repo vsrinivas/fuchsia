@@ -74,6 +74,7 @@ func TestEmulatorWorksWithFfx(t *testing.T) {
 	)
 
 	tempDir := t.TempDir()
+
 	privKeyFilepath := filepath.Join(tempDir, "pkey")
 	if err := os.WriteFile(privKeyFilepath, pemdata, PRIVATE_KEY_PERMISSIONS); err != nil {
 		t.Fatal(err)
@@ -127,6 +128,11 @@ func TestEmulatorWorksWithFfx(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer func() {
+		if err := ffx.Stop(); err != nil {
+			t.Error(err)
+		}
+	}()
 
 	if err := ffx.SetLogLevel(ffxutil.Warn); err != nil {
 		t.Fatal(err)
