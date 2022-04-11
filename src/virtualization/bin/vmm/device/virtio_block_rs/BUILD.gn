@@ -17,6 +17,7 @@ rustc_binary("virtio_block_bin") {
 
   sources = [
     "src/backend.rs",
+    "src/backend_test.rs",
     "src/block_device.rs",
     "src/file_backend.rs",
     "src/main.rs",

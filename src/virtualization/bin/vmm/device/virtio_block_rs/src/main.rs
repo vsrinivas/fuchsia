@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 mod backend;
+#[cfg(test)]
+mod backend_test;
 mod block_device;
 mod file_backend;
 #[cfg(test)]
