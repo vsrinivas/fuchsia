@@ -4,6 +4,7 @@
 
 use {
     crate::backend::{BlockBackend, DeviceAttrs, Request, Sector},
+    crate::backend_test::BackendController,
     crate::wire,
     anyhow::{anyhow, Error},
     async_trait::async_trait,
@@ -30,25 +31,15 @@ impl AsByteRange for Sector {
 /// without retaining a reference to the backend.
 pub struct Controller(Rc<RefCell<Vec<u8>>>);
 
-impl Controller {
-    /// Writes a full sector of `color` to the requested sector in the backing buffer.
-    pub fn color_sector(&self, sector: Sector, color: u8) {
-        self.0.borrow_mut()[sector.as_byte_range()].fill(color);
+impl BackendController for Controller {
+    fn write_sector(&mut self, sector: Sector, data: &[u8]) -> Result<(), Error> {
+        self.0.borrow_mut()[sector.as_byte_range()].copy_from_slice(data);
+        Ok(())
     }
 
-    /// Asserts that `sector` contains a full sector of bytes that equal `color`.
-    pub fn check_sector(&self, sector: Sector, color: u8) {
-        for byte in sector.as_byte_range() {
-            if self.0.borrow()[byte] != color {
-                panic!(
-                    "Mismatch in sector {} at byte {}, expected {} got {}",
-                    sector.to_raw(),
-                    byte,
-                    color,
-                    self.0.borrow()[byte]
-                );
-            }
-        }
+    fn read_sector(&mut self, sector: Sector, data: &mut [u8]) -> Result<(), Error> {
+        data.copy_from_slice(&self.0.borrow()[sector.as_byte_range()]);
+        Ok(())
     }
 }
 
@@ -68,7 +59,7 @@ impl MemoryBackend {
     ///
     /// `size` must be aligned to `wire::VIRTIO_BLOCK_SECTOR_SIZE`.
     pub fn with_size(size: usize) -> (Self, Controller) {
-        assert!(size % wire::VIRTIO_BLOCK_SECTOR_SIZE as usize == 0);
+        let size = Sector::from_bytes_round_down(size as u64).to_bytes().unwrap() as usize;
         let buffer = Rc::new(RefCell::new(vec![0; size]));
         (Self(buffer.clone()), Controller(buffer))
     }
@@ -87,7 +78,7 @@ impl BlockBackend for MemoryBackend {
         let mut offset = request.sector.to_bytes().unwrap() as usize;
         for range in request.ranges {
             let top = offset.checked_add(range.len()).unwrap();
-            if top >= self.0.borrow().len() {
+            if top > self.0.borrow().len() {
                 return Err(anyhow!(
                     "read is out of range for this backend; size: {} but requested: {}",
                     self.0.borrow().len(),
@@ -111,7 +102,7 @@ impl BlockBackend for MemoryBackend {
         let mut offset = request.sector.to_bytes().unwrap() as usize;
         for range in request.ranges {
             let top = offset.checked_add(range.len()).unwrap();
-            if top >= self.0.borrow().len() {
+            if top > self.0.borrow().len() {
                 return Err(anyhow!(
                     "write is out of range for this backend; size: {} but requested: {}",
                     self.0.borrow().len(),
@@ -129,4 +120,22 @@ impl BlockBackend for MemoryBackend {
     async fn flush(&self) -> Result<(), Error> {
         Ok(())
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use {super::*, crate::backend_test::BackendTest, anyhow::Error, fuchsia_async as fasync};
+
+    struct MemoryBackendTest;
+
+    impl BackendTest for MemoryBackendTest {
+        type Backend = MemoryBackend;
+        type Controller = super::Controller;
+
+        fn create_with_size(size: u64) -> Result<(MemoryBackend, Controller), Error> {
+            Ok(MemoryBackend::with_size(size as usize))
+        }
+    }
+
+    crate::backend_test::instantiate_backend_test_suite!(MemoryBackendTest);
 }

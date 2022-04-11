@@ -374,6 +374,7 @@ impl BlockDevice {
 mod tests {
     use {
         super::*,
+        crate::backend_test::BackendController,
         crate::memory_backend::MemoryBackend,
         crate::wire,
         fuchsia_async as fasync,
@@ -519,14 +520,14 @@ mod tests {
             .unwrap();
 
         // Process the chain.
-        let (backend, controller) = MemoryBackend::new();
+        let (backend, mut controller) = MemoryBackend::new();
         let device =
             BlockDevice::new("device-id".to_string(), AccessMode::ReadWrite, Box::new(backend))
                 .await?;
 
         // Fill some sectors in the backend.
-        controller.color_sector(Sector::from_raw_sector(0), 0xaa);
-        controller.color_sector(Sector::from_raw_sector(1), 0xbb);
+        controller.color_sector(Sector::from_raw_sector(0), 0xaa)?;
+        controller.color_sector(Sector::from_raw_sector(1), 0xbb)?;
 
         // Process the request.
         device.process_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem)).await?;
@@ -568,14 +569,14 @@ mod tests {
             .unwrap();
 
         // Process the chain.
-        let (backend, controller) = MemoryBackend::new();
+        let (backend, mut controller) = MemoryBackend::new();
         let device =
             BlockDevice::new("device-id".to_string(), AccessMode::ReadWrite, Box::new(backend))
                 .await?;
 
         // Fill some sectors in the backend.
-        controller.color_sector(Sector::from_raw_sector(0), 0xaa);
-        controller.color_sector(Sector::from_raw_sector(1), 0xbb);
+        controller.color_sector(Sector::from_raw_sector(0), 0xaa)?;
+        controller.color_sector(Sector::from_raw_sector(1), 0xbb)?;
 
         // Process the request.
         device.process_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem)).await?;
@@ -668,7 +669,7 @@ mod tests {
             .unwrap();
 
         // Process the request.
-        let (backend, controller) = MemoryBackend::new();
+        let (backend, mut controller) = MemoryBackend::new();
         let device =
             BlockDevice::new("device-id".to_string(), AccessMode::ReadWrite, Box::new(backend))
                 .await?;
@@ -681,11 +682,11 @@ mod tests {
         check_returned_status(iter.next().unwrap(), wire::VirtioBlockStatus::Ok);
 
         // Verify the data was written to the backend.
-        controller.check_sector(Sector::from_raw_sector(10), 0xaa);
-        controller.check_sector(Sector::from_raw_sector(11), 0xbb);
+        controller.check_sector(Sector::from_raw_sector(10), 0xaa)?;
+        controller.check_sector(Sector::from_raw_sector(11), 0xbb)?;
         // Sectors immediately before and immediately after should not be touched.
-        controller.check_sector(Sector::from_raw_sector(9), 0x00);
-        controller.check_sector(Sector::from_raw_sector(12), 0x00);
+        controller.check_sector(Sector::from_raw_sector(9), 0x00)?;
+        controller.check_sector(Sector::from_raw_sector(12), 0x00)?;
         Ok(())
     }
 
