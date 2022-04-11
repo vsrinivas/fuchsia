@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fdio/io.h>
-#include <fbl/unique_fd.h>
-#include <lib/zx/vmo.h>
-#include <zircon/sanitizer.h>
-#include <zxtest/zxtest.h>
-
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
+#include <lib/fdio/io.h>
+#include <lib/zx/vmo.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
+#include <zircon/sanitizer.h>
 
 #include <string>
+
+#include <fbl/unique_fd.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -26,7 +26,7 @@ TEST(RunTestHelper, PublishData) {
   std::string test_data_dir{test_root_dir + "/" + "test/sys/runtests-utils-testdata/profile"};
 
   fbl::unique_fd fd{open((test_data_dir + "/" + kTestName).c_str(), O_RDONLY)};
-	ASSERT_TRUE(fd.is_valid());
+  ASSERT_TRUE(fd.is_valid());
 
   zx::vmo vmo;
   ASSERT_OK(fdio_get_vmo_copy(fd.get(), vmo.reset_and_get_address()));

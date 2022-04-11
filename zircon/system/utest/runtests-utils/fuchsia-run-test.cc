@@ -182,25 +182,24 @@ TEST(RunTests, RunProfileMergeData) {
   ASSERT_EQ(0, MkDirAll(output_dir));
 
   // Run the test for the first time.
-  EXPECT_TRUE(RunTests({test_name, test_name}, {}, 1, 0, output_dir.c_str(), nullptr, &num_failed,
+  ASSERT_TRUE(RunTests({test_name, test_name}, {}, 1, 0, output_dir.c_str(), nullptr, &num_failed,
                        &results));
   EXPECT_EQ(0, num_failed);
-  EXPECT_EQ(2, results.size());
-  EXPECT_LE(1, results[0]->data_sinks.size());
-  EXPECT_TRUE(results[0]->data_sinks.find("llvm-profile") != results[0]->data_sinks.end());
-  EXPECT_EQ(1, results[0]->data_sinks["llvm-profile"].size());
+  ASSERT_EQ(2, results.size());
+  auto llvm_profile0 = results[0]->data_sinks.find("llvm-profile");
+  ASSERT_NE(llvm_profile0, results[0]->data_sinks.end());
+  ASSERT_EQ(1, llvm_profile0->second.size());
 
   // Run the test for the second time.
-  EXPECT_TRUE(RunTests({test_name}, {}, 1, 0, output_dir.c_str(), nullptr, &num_failed, &results));
+  ASSERT_TRUE(RunTests({test_name}, {}, 1, 0, output_dir.c_str(), nullptr, &num_failed, &results));
   EXPECT_EQ(0, num_failed);
-  EXPECT_EQ(3, results.size());
-  EXPECT_LE(1, results[1]->data_sinks.size());
-  EXPECT_TRUE(results[1]->data_sinks.find("llvm-profile") != results[1]->data_sinks.end());
-  EXPECT_EQ(1, results[1]->data_sinks["llvm-profile"].size());
+  ASSERT_EQ(3, results.size());
+  auto llvm_profile1 = results[1]->data_sinks.find("llvm-profile");
+  ASSERT_NE(llvm_profile1, results[1]->data_sinks.end());
+  ASSERT_EQ(1, llvm_profile1->second.size());
 
   // Check that the data was merged (i.e. they're the same).
-  EXPECT_TRUE(results[0]->data_sinks["llvm-profile"][0].file ==
-              results[1]->data_sinks["llvm-profile"][0].file);
+  EXPECT_EQ(llvm_profile0->second[0].file, llvm_profile1->second[0].file);
 }
 
 TEST(RunTests, RunTestRootDir) {
