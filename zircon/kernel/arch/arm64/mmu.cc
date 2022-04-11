@@ -422,6 +422,13 @@ class ArmArchVmAspace::ConsistencyManager {
 
     // DSB to ensure TLB flushes happen prior to returning to user.
     __dsb(ARM_MB_ISH);
+
+    // Local flushes that the kernel may observe prior to Context Synchronization Event
+    // should go ahead and get an ISB to force it.
+    if (aspace_.type_ == ArmAspaceType::kKernel) {
+      __isb(ARM_MB_SY);
+    }
+
     num_pending_tlbs_ = 0;
   }
 
