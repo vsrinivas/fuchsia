@@ -93,23 +93,24 @@ class ScopedTestDir {
 
   // Recursively removes the directory at |dir_path| and its contents.
   static void CleanUpDir(const char* dir_path) {
-    struct dirent* entry;
-    DIR* dp;
-
-    dp = opendir(dir_path);
+    DIR* dp = opendir(dir_path);
     if (dp == nullptr) {
-      // File found; remove it.
-      remove(dir_path);
-      return;
+      printf("FAILURE: opendir failed to open %s: %s\n", dir_path, strerror(errno));
+      exit(1);
     }
 
+    struct dirent* entry;
     while ((entry = readdir(dp))) {
       // Skip "." and "..".
       if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) {
         continue;
       }
-      fbl::String sub_dir_name = JoinPath(dir_path, entry->d_name);
-      CleanUpDir(sub_dir_name.c_str());
+      fbl::String entry_path = JoinPath(dir_path, entry->d_name);
+      if (entry->d_type == DT_DIR) {
+        CleanUpDir(entry_path.c_str());
+      } else {
+        remove(entry_path.c_str());
+      }
     }
     closedir(dp);
 

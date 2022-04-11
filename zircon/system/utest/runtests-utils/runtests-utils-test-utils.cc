@@ -119,7 +119,8 @@ bool GetOutputFileRelPath(std::string_view output_dir, std::string_view test_pat
   fbl::String dir_of_test_output = JoinPath(output_dir, test_path);
   DIR* dp = opendir(dir_of_test_output.c_str());
   if (dp == nullptr) {
-    printf("FAILURE: could not open directory: %s\n", dir_of_test_output.c_str());
+    printf("FAILURE: could not open directory %s: %s\n", dir_of_test_output.c_str(),
+           strerror(errno));
     return false;
   }
   struct dirent* entry;
