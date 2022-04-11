@@ -52,13 +52,10 @@ use {
     tempfile::TempDir,
 };
 
-const OMAHA_CLIENT_CML: &str =
-    "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/omaha-client-service.cm";
-const SYSTEM_UPDATER_CML: &str =
-    "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/system-updater.cm";
-const SYSTEM_UPDATE_COMMITTER_CML: &str =
-    "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/system-update-committer.cm";
-const STASH_CML: &str = "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/stash2.cm";
+const OMAHA_CLIENT_CML: &str = "#meta/omaha-client-service.cm";
+const SYSTEM_UPDATER_CML: &str = "#meta/system-updater.cm";
+const SYSTEM_UPDATE_COMMITTER_CML: &str = "#meta/system-update-committer.cm";
+const STASH_CML: &str = "#meta/stash2.cm";
 
 struct Mounts {
     _test_dir: TempDir,
@@ -115,6 +112,8 @@ struct TestEnvBuilder {
     paver: Option<MockPaverService>,
     crash_reporter: Option<MockCrashReporterService>,
     eager_package_config: Option<serde_json::Value>,
+    omaha_client_config_bool_overrides: Vec<(String, bool)>,
+    omaha_client_config_uint16_overrides: Vec<(String, u16)>,
 }
 
 impl TestEnvBuilder {
@@ -129,6 +128,8 @@ impl TestEnvBuilder {
             paver: None,
             crash_reporter: None,
             eager_package_config: None,
+            omaha_client_config_bool_overrides: vec![],
+            omaha_client_config_uint16_overrides: vec![],
         }
     }
 
@@ -167,6 +168,16 @@ impl TestEnvBuilder {
 
     fn eager_package_config(self, eager_package_config: serde_json::Value) -> Self {
         Self { eager_package_config: Some(eager_package_config), ..self }
+    }
+
+    fn omaha_client_override_config_bool(mut self, key: String, value: bool) -> Self {
+        self.omaha_client_config_bool_overrides.push((key.into(), value));
+        self
+    }
+
+    fn omaha_client_override_config_uint16(mut self, key: String, value: u16) -> Self {
+        self.omaha_client_config_uint16_overrides.push((key.into(), value));
+        self
     }
 
     async fn build(self) -> TestEnv {
@@ -283,6 +294,13 @@ impl TestEnvBuilder {
             .add_child("omaha_client_service", OMAHA_CLIENT_CML, ChildOptions::new().eager())
             .await
             .unwrap();
+        for (k, v) in self.omaha_client_config_bool_overrides {
+            builder.replace_config_value_bool(&omaha_client_service, &k, v).await.unwrap();
+        }
+        for (k, v) in self.omaha_client_config_uint16_overrides {
+            builder.replace_config_value_uint16(&omaha_client_service, &k, v).await.unwrap();
+        }
+
         let system_update_committer = builder
             .add_child(
                 "system_update_committer",
@@ -1407,24 +1425,23 @@ async fn test_omaha_client_invalid_app_set() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_policy_config_inspect() {
-    let env = TestEnvBuilder::new().build().await;
+    let env = TestEnvBuilder::new()
+        .omaha_client_override_config_bool("allow_reboot_when_idle".into(), false)
+        .omaha_client_override_config_uint16("startup_delay_seconds".into(), 61u16)
+        .build()
+        .await;
 
     // Wait for omaha client to start.
     let _ = env.proxies.channel_control.get_current().await;
 
-    // These are the default values from the default.json5.
-    //
-    // TODO(jbuckland): Use RealmBuilder to provide config values and test the
-    // path from config to inspect, rather than tie this test to the production
-    // default.json5 values.
     assert_data_tree!(
         env.inspect_hierarchy().await,
         "root": contains {
             "policy_config": {
                 "periodic_interval": 60 * 60u64,
-                "startup_delay": 60u64,
+                "startup_delay": 61u64,
                 "retry_delay": 5 * 60u64,
-                "allow_reboot_when_idle": true,
+                "allow_reboot_when_idle": false,
             }
         }
     );
