@@ -4,5 +4,5 @@
 
 group("broadcom") {
   testonly = true
-  deps = [ "brcmfmac" ]
+  deps = []
 }

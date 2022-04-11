@@ -135,7 +135,6 @@ group("bluetooth_profiles") {
 
 group("broadcom") {
   public_deps = [
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac",
     "//src/connectivity/wlan/drivers/wlanif",
     "//src/connectivity/wlan/drivers/wlanphy",
   ]

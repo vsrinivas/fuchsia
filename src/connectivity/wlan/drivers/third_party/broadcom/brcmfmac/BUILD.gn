@@ -408,12 +408,3 @@ group("brcmfmac_host_tests") {
   testonly = true
   visibility += [ "*" ]
 }
-
-# Driver packages.  Depend on one or the other, depending on whether the board definition would like
-# runtime tests in the driver or not.
-
-fuchsia_system_package("brcmfmac") {
-  # Allow upper level targets to depend on this one.
-  visibility = []
-  visibility = [ "*" ]
-}
