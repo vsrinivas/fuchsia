@@ -10,6 +10,7 @@
 #include <gtest/gtest.h>
 
 #include "guest_test.h"
+#include "src/virtualization/tests/enclosed_guest.h"
 
 template <class T>
 class VsockGuestTest : public GuestTest<T>, public fuchsia::virtualization::HostVsockAcceptor {
@@ -125,7 +126,7 @@ class VsockGuestTest : public GuestTest<T>, public fuchsia::virtualization::Host
 // driver has known bugs that need fixing.
 using GuestTypes = ::testing::Types<DebianEnclosedGuest, TerminaEnclosedGuest>;
 
-TYPED_TEST_SUITE(VsockGuestTest, GuestTypes);
+TYPED_TEST_SUITE(VsockGuestTest, GuestTypes, GuestTestNameGenerator);
 
 TYPED_TEST(VsockGuestTest, ConnectDisconnect) {
   auto handle = std::async(std::launch::async, [this] { this->TestThread(); });

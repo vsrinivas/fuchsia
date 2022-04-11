@@ -236,4 +236,19 @@ class TerminaEnclosedGuest : public EnclosedGuest, public vm_tools::StartupListe
 using AllGuestTypes =
     ::testing::Types<ZirconEnclosedGuest, DebianEnclosedGuest, TerminaEnclosedGuest>;
 
+class GuestTestNameGenerator {
+ public:
+  template <typename T>
+  static std::string GetName(int idx) {
+    // Use is_base_of because some tests will use sub-classes. By default gtest will just use
+    // idx to string, so we just suffix the actual enclosed guest type.
+    if (std::is_base_of<ZirconEnclosedGuest, T>())
+      return std::to_string(idx) + "_ZirconGuest";
+    if (std::is_base_of<DebianEnclosedGuest, T>())
+      return std::to_string(idx) + "_DebianGuest";
+    if (std::is_base_of<TerminaEnclosedGuest, T>())
+      return std::to_string(idx) + "_TerminaGuest";
+  }
+};
+
 #endif  // SRC_VIRTUALIZATION_TESTS_ENCLOSED_GUEST_H_

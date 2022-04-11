@@ -39,7 +39,7 @@ using CoreGuestTest = GuestTest<T>;
 // They are grouped together so that they share guests and reduce the number of times guests are
 // started, which is time consuming. Note that this means that some tests need to dynamically check
 // the guest type in order to skip under certain conditions.
-TYPED_TEST_SUITE(CoreGuestTest, AllGuestTypes);
+TYPED_TEST_SUITE(CoreGuestTest, AllGuestTypes, GuestTestNameGenerator);
 
 TYPED_TEST(CoreGuestTest, VirtioBalloon) {
   // Zircon does not yet have a virtio balloon driver.
@@ -164,7 +164,8 @@ using LinuxCustomizableMemoryGuestTypes =
 
 template <class T>
 using CustomizableMemoryLinuxGuestTest = GuestTest<T>;
-TYPED_TEST_SUITE(CustomizableMemoryLinuxGuestTest, LinuxCustomizableMemoryGuestTypes);
+TYPED_TEST_SUITE(CustomizableMemoryLinuxGuestTest, LinuxCustomizableMemoryGuestTypes,
+                 GuestTestNameGenerator);
 
 TYPED_TEST(CustomizableMemoryLinuxGuestTest, LinuxSystemMemoryConfigurable) {
   std::string result;

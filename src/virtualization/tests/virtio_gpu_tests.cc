@@ -36,7 +36,7 @@ using VirtioGpuTest = GuestTest<T>;
 
 // TODO(fxdebug.dev/64348): Re-enable ZirconEnclosedGuest.
 using GuestTypes = ::testing::Types<DebianEnclosedGuest>;
-TYPED_TEST_SUITE(VirtioGpuTest, GuestTypes);
+TYPED_TEST_SUITE(VirtioGpuTest, GuestTypes, GuestTestNameGenerator);
 
 // Poll |condition| using exponential backoff until it returns true, or
 // a timeout has passed.

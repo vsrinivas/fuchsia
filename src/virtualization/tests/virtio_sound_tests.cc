@@ -126,7 +126,8 @@ class TerminaEnclosedGuestV1 : public TerminaEnclosedGuest {
 };
 
 // We only support `TerminaEnclosedGuest` since the tests require `virtio-sound` and `alsa-lib`.
-TYPED_TEST_SUITE(VirtioSoundGuestTest, ::testing::Types<TerminaEnclosedGuestV1>);
+TYPED_TEST_SUITE(VirtioSoundGuestTest, ::testing::Types<TerminaEnclosedGuestV1>,
+                 GuestTestNameGenerator);
 
 TYPED_TEST(VirtioSoundGuestTest, OutputFidelity) {
   // The input audio file consists of a stereo linear ramp that covers the entire 16-bit range of

@@ -275,7 +275,7 @@ class VirtioBlockGuestTest : public GuestTest<T> {
 
 using GuestTypes = ::testing::Types<VirtioBlockZirconGuest, VirtioBlockDebianGuest>;
 
-TYPED_TEST_SUITE(VirtioBlockGuestTest, GuestTypes);
+TYPED_TEST_SUITE(VirtioBlockGuestTest, GuestTypes, GuestTestNameGenerator);
 
 TYPED_TEST(VirtioBlockGuestTest, CheckSize) {
   for (const auto& device : this->TestDevices()) {
