@@ -100,7 +100,7 @@ TEST_P(DotDotTest, RawOpenDotDirectoryCreate) {
 
   fdio_cpp::FdioCaller caller(std::move(fd));
 
-  // Opening with kOpenFlagCreate should fail.
+  // Opening with kOpenFlagCreate should succeed.
   zx::channel local, remote;
   ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
   auto result = fidl::WireCall<fio::Directory>(caller.channel())
@@ -109,9 +109,10 @@ TEST_P(DotDotTest, RawOpenDotDirectoryCreate) {
                            0755, fidl::StringView("."), std::move(remote));
   ASSERT_EQ(result.status(), ZX_OK);
 
-  auto close_result = fidl::WireCall<fio::Directory>(local.borrow())->Close();
-  // Can't get an epitaph with LLCPP bindings, so this will do for now.
-  ASSERT_EQ(close_result.status(), ZX_ERR_PEER_CLOSED);
+  const fidl::WireResult close_result = fidl::WireCall<fio::Directory>(local.borrow())->Close();
+  ASSERT_EQ(close_result.status(), ZX_OK);
+  const fidl::WireResponse close_response = close_result.value();
+  ASSERT_TRUE(close_response.result.is_response()) << close_response.result.err();
 }
 
 TEST_P(DotDotTest, RawOpenDotDirectoryCreateIfAbsent) {
@@ -130,9 +131,9 @@ TEST_P(DotDotTest, RawOpenDotDirectoryCreateIfAbsent) {
                  0755, fidl::StringView("."), std::move(remote));
   ASSERT_EQ(result.status(), ZX_OK);
 
-  auto close_result2 = fidl::WireCall<fio::Directory>(local.borrow())->Close();
+  const fidl::WireResult close_result = fidl::WireCall<fio::Directory>(local.borrow())->Close();
   // Can't get an epitaph with LLCPP bindings, so this will do for now.
-  ASSERT_EQ(close_result2.status(), ZX_ERR_PEER_CLOSED);
+  ASSERT_EQ(close_result.status(), ZX_ERR_PEER_CLOSED);
 }
 
 // Test cases of '..' which operate on multiple paths.

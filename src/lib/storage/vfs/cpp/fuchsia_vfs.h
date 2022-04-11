@@ -155,9 +155,9 @@ class FuchsiaVfs : public Vfs {
 
  protected:
   // Vfs protected overrides.
-  zx_status_t EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,
-                           fbl::RefPtr<Vnode>* out_vn, fs::VnodeConnectionOptions options,
-                           uint32_t mode, Rights parent_rights, bool* did_create) override
+  zx::status<bool> EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,
+                                fbl::RefPtr<Vnode>* out_vn, fs::VnodeConnectionOptions options,
+                                uint32_t mode, Rights parent_rights) override
       __TA_REQUIRES(vfs_lock_);
 
   // Starts FIDL message dispatching on |channel|, at the same time starts to manage the lifetime of

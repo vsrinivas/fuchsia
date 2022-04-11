@@ -113,12 +113,11 @@ class Vfs {
   // - Upon recoverable error (e.g. target already exists but |options| did not specify this to be
   //   fatal), attempt to lookup the vnode.
   //
-  // In the above two cases, |did_create| will be updated to indicate if an entry was created.
-  // Otherwise, a corresponding error code is returned.
-  virtual zx_status_t EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,
-                                   fbl::RefPtr<Vnode>* out_vn, fs::VnodeConnectionOptions options,
-                                   uint32_t mode, Rights parent_rights, bool* did_create)
-      __TA_REQUIRES(vfs_lock_);
+  // In the success case, returns a boolean indicating whether an entry was created.
+  virtual zx::status<bool> EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,
+                                        fbl::RefPtr<Vnode>* out_vn,
+                                        fs::VnodeConnectionOptions options, uint32_t mode,
+                                        Rights parent_rights) __TA_REQUIRES(vfs_lock_);
 
   // A lock which should be used to protect lookup and walk operations
   mutable std::mutex vfs_lock_;

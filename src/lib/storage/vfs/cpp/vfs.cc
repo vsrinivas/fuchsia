@@ -97,17 +97,18 @@ Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, std::string_view path,
   }
 
   fbl::RefPtr<Vnode> vn;
-  bool just_created = false;
+  bool just_created;
   if (options.flags.create) {
-    if (zx_status_t status =
-            EnsureExists(std::move(vndir), path, &vn, options, mode, parent_rights, &just_created);
-        status != ZX_OK) {
-      return status;
+    zx::status result = EnsureExists(std::move(vndir), path, &vn, options, mode, parent_rights);
+    if (result.is_error()) {
+      return result.status_value();
     }
+    just_created = result.value();
   } else {
     if (zx_status_t status = LookupNode(std::move(vndir), path, &vn); status != ZX_OK) {
       return status;
     }
+    just_created = false;
   }
 
   if (!options.flags.no_remote && vn->IsRemote()) {
@@ -232,40 +233,37 @@ void Vfs::UnregisterVnodeLocked(Vnode* vnode) {
   live_nodes_.erase(found);
 }
 
-zx_status_t Vfs::EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,
-                              fbl::RefPtr<Vnode>* out_vn, fs::VnodeConnectionOptions options,
-                              uint32_t mode, Rights parent_rights, bool* did_create) {
-  zx_status_t status;
+zx::status<bool> Vfs::EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,
+                                   fbl::RefPtr<Vnode>* out_vn, fs::VnodeConnectionOptions options,
+                                   uint32_t mode, Rights parent_rights) {
   if (options.flags.directory && !S_ISDIR(mode)) {
-    return ZX_ERR_INVALID_ARGS;
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
   if (options.flags.not_directory && S_ISDIR(mode)) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (path == ".") {
-    return ZX_ERR_INVALID_ARGS;
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
   if (ReadonlyLocked()) {
-    return ZX_ERR_ACCESS_DENIED;
+    return zx::error(ZX_ERR_ACCESS_DENIED);
   }
   if (!parent_rights.write) {
-    return ZX_ERR_ACCESS_DENIED;
+    return zx::error(ZX_ERR_ACCESS_DENIED);
   }
-  if ((status = vndir->Create(path, mode, out_vn)) != ZX_OK) {
-    *did_create = false;
-    if ((status == ZX_ERR_ALREADY_EXISTS) && !options.flags.fail_if_exists) {
-      return LookupNode(std::move(vndir), path, out_vn);
-    }
-    if (status == ZX_ERR_NOT_SUPPORTED) {
+  zx_status_t status = path == "." ? ZX_ERR_ALREADY_EXISTS : vndir->Create(path, mode, out_vn);
+  switch (status) {
+    case ZX_OK:
+      return zx::ok(true);
+    case ZX_ERR_ALREADY_EXISTS:
+      if (options.flags.fail_if_exists) {
+        return zx::error(status);
+      }
+      __FALLTHROUGH;
+    case ZX_ERR_NOT_SUPPORTED:
       // Filesystem may not support create (like devfs) in which case we should still try to open()
       // the file,
-      return LookupNode(std::move(vndir), path, out_vn);
-    }
-    return status;
+      return zx::make_status(LookupNode(std::move(vndir), path, out_vn), false);
+    default:
+      return zx::error(status);
   }
-
-  *did_create = true;
-  return ZX_OK;
 }
 
 zx::status<bool> Vfs::TrimName(std::string_view& name) {

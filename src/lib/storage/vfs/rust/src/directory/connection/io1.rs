@@ -396,19 +396,15 @@ where
                 return;
             }
         };
-
-        // Note that we reject both OPEN_FLAG_CREATE and OPEN_FLAG_CREATE_IF_ABSENT, rather
-        // than just OPEN_FLAG_CREATE_IF_ABSENT. This matches the behaviour of the C++
-        // filesystems.
-        if path.is_dot()
-            && flags.intersects(
-                fio::OpenFlags::CREATE
-                    | fio::OpenFlags::CREATE_IF_ABSENT
-                    | fio::OpenFlags::NOT_DIRECTORY,
-            )
-        {
-            send_on_open_with_error(flags, server_end, Status::INVALID_ARGS);
-            return;
+        if path.is_dot() {
+            if flags.intersects(fio::OpenFlags::NOT_DIRECTORY) {
+                send_on_open_with_error(flags, server_end, Status::INVALID_ARGS);
+                return;
+            }
+            if flags.intersects(fio::OpenFlags::CREATE_IF_ABSENT) {
+                send_on_open_with_error(flags, server_end, Status::ALREADY_EXISTS);
+                return;
+            }
         }
 
         // It is up to the open method to handle OPEN_FLAG_DESCRIBE from this point on.
