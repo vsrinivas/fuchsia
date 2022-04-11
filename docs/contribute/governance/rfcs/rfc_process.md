@@ -208,6 +208,10 @@ ambiguity, they should consult FEC for assistance identifying stakeholders.
 > *Suggestion.* Consider marking the CL containing your RFC as a
 > "work-in-progress" until you are ready for feedback.
 
+The act of uploading the CL is sufficient to get a facilitator assigned to
+your RFC. FEC monitors new RFC CLs as the
+signal to identify the right facilitator for the new RFC.
+
 *Exit criteria*: CL containing your RFC is created.
 
 #### Step 3: Iterate {#iterate}
