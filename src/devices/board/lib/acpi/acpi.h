@@ -86,6 +86,23 @@ class Acpi {
                                                     AddressSpaceSetup setup, void* context) = 0;
   virtual acpi::status<> RemoveAddressSpaceHandler(ACPI_HANDLE object, ACPI_ADR_SPACE_TYPE space_id,
                                                    AddressSpaceHandler handler) = 0;
+
+  // Initialise the ACPI subsystem.
+  virtual acpi::status<> InitializeAcpi() = 0;
+
+  // Set up the given GPE for wake.
+  virtual acpi::status<> SetupGpeForWake(ACPI_HANDLE wake_dev, ACPI_HANDLE gpe_dev,
+                                         uint32_t gpe_num) = 0;
+
+  // These methods are called from InitialiseAcpi.
+  // We define them in the common "acpi" base class so that we can
+  // unit-test them against our mock ACPI implementation.
+
+  // Switch interrupts to APIC mode, see ACPI v6.4 section 5.8.1.
+  acpi::status<> SetApicIrqMode();
+
+  // Walk _PRW methods, ensuring that ACPICA is aware of GPEs that can wake the system.
+  acpi::status<> DiscoverWakeGpes();
 };
 
 }  // namespace acpi

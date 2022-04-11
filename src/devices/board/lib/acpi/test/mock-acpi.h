@@ -78,6 +78,15 @@ class MockAcpi : public Acpi {
     return ToDevice(object)->RemoveAddressSpaceHandler(space_id, handler);
   }
 
+  acpi::status<> InitializeAcpi() override { return acpi::ok(); }
+
+  const std::vector<std::pair<Device*, uint32_t>>& GetWakeGpes() { return wake_gpes_; }
+  acpi::status<> SetupGpeForWake(ACPI_HANDLE wake_dev, ACPI_HANDLE gpe_dev,
+                                 uint32_t gpe_num) override {
+    wake_gpes_.emplace_back(std::make_pair(ToDevice(gpe_dev), gpe_num));
+    return acpi::ok();
+  }
+
  private:
   Device* ToDevice(ACPI_HANDLE hnd) {
     // NOLINTNEXTLINE - ACPI_ROOT_OBJECT makes clang-tidy complain.
@@ -93,6 +102,8 @@ class MockAcpi : public Acpi {
   std::unique_ptr<Device> root_;
   acpi::UniquePtr<ACPI_RESOURCE> resource_;
   std::mutex global_lock_;
+
+  std::vector<std::pair<Device*, uint32_t>> wake_gpes_;
 };
 
 }  // namespace acpi::test

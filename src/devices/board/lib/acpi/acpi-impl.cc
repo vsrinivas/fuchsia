@@ -4,12 +4,17 @@
 
 #include "src/devices/board/lib/acpi/acpi-impl.h"
 
+#include <lib/ddk/debug.h>
+
 #include <string>
 #include <vector>
 
 #include "src/devices/board/lib/acpi/status.h"
 
 namespace acpi {
+namespace {
+constexpr uint32_t kAcpiMaxInitTables = 32;
+}
 
 acpi::status<> AcpiImpl::WalkNamespace(ACPI_OBJECT_TYPE type, ACPI_HANDLE start_object,
                                        uint32_t max_depth, NamespaceCallable cbk) {
@@ -163,4 +168,75 @@ acpi::status<> AcpiImpl::RemoveAddressSpaceHandler(ACPI_HANDLE object, ACPI_ADR_
   ACPI_STATUS status = AcpiRemoveAddressSpaceHandler(object, space_id, handler);
   return acpi::make_status(status);
 }
+
+acpi::status<> AcpiImpl::InitializeAcpi() {
+  // This sequence is described in section 10.1.2.1 (Full ACPICA Initialization)
+  // of the ACPICA developer's reference.
+  ACPI_STATUS status = AcpiInitializeSubsystem();
+  if (status != AE_OK) {
+    zxlogf(WARNING, "Could not initialize ACPI: %d", status);
+    return acpi::make_status(status);
+  }
+
+  status = AcpiInitializeTables(NULL, kAcpiMaxInitTables, FALSE);
+  if (status == AE_NOT_FOUND) {
+    zxlogf(WARNING, "Could not find ACPI tables");
+    return acpi::make_status(status);
+  } else if (status == AE_NO_MEMORY) {
+    zxlogf(WARNING, "Could not initialize ACPI tables");
+    return acpi::make_status(status);
+  } else if (status != AE_OK) {
+    zxlogf(WARNING, "Could not initialize ACPI tables for unknown reason");
+    return acpi::make_status(status);
+  }
+
+  status = AcpiLoadTables();
+  if (status != AE_OK) {
+    zxlogf(WARNING, "Could not load ACPI tables: %d", status);
+    return acpi::make_status(status);
+  }
+
+  status = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
+  if (status != AE_OK) {
+    zxlogf(WARNING, "Could not enable ACPI: %d", status);
+    return acpi::make_status(status);
+  }
+
+  status = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
+  if (status != AE_OK) {
+    zxlogf(WARNING, "Could not initialize ACPI objects: %d", status);
+    return acpi::make_status(status);
+  }
+
+  auto apic_status = SetApicIrqMode();
+  if (apic_status.status_value() == AE_NOT_FOUND) {
+#ifdef __x86_64__
+    // Only warn on x86, since this is unlikely to be an issue on ARM.
+    zxlogf(WARNING, "Could not find ACPI IRQ mode switch");
+#endif
+  } else if (apic_status.is_error()) {
+    zxlogf(WARNING, "Failed to set APIC IRQ mode: %d", apic_status.status_value());
+    return apic_status.take_error();
+  }
+
+  // We need to tell ACPICA about all the wake GPEs, but
+  // if it fails for some reason we don't want to block booting the system.
+  auto wake_status = DiscoverWakeGpes();
+  if (wake_status.is_error()) {
+    zxlogf(WARNING, "Failed to discover wake GPEs: %d", wake_status.status_value());
+  }
+  status = AcpiUpdateAllGpes();
+  if (status != AE_OK) {
+    zxlogf(WARNING, "Could not initialize ACPI GPEs: %d", status);
+    return acpi::make_status(status);
+  }
+
+  return acpi::ok();
+}
+
+acpi::status<> AcpiImpl::SetupGpeForWake(ACPI_HANDLE wake_dev, ACPI_HANDLE gpe_dev,
+                                         uint32_t gpe_num) {
+  return acpi::make_status(AcpiSetupGpeForWake(wake_dev, gpe_dev, gpe_num));
+}
+
 }  // namespace acpi
