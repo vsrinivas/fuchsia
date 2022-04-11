@@ -1551,13 +1551,6 @@ where
     .try_flatten()
 }
 
-fn get_global_non_hermetic_pkg_allowlist() -> HashSet<String> {
-    hashset! {
-        "driver_test_realm".to_string(),
-        "test_manager".to_string(),
-    }
-}
-
 async fn get_realm(
     test_url: &str,
     test_package: &str,
@@ -1583,8 +1576,9 @@ async fn get_realm(
     let mut test_root_child_opts = ChildOptions::new().eager();
     let mut allowed_package_names = None;
     if collection.eq(HERMETIC_TESTS_COLLECTION) {
-        let mut allowed_list = get_global_non_hermetic_pkg_allowlist();
-        allowed_list.insert(test_package.into());
+        let allowed_list = hashset! {
+            test_package.into(),
+        };
         allowed_package_names = Some(Arc::new(allowed_list));
         let allowed_package_names = allowed_package_names.clone();
         wrapper_realm
