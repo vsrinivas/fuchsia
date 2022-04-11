@@ -335,6 +335,7 @@ libm = { path = "forks/libm" }
 rustls = { path = "forks/rustls" }
 security-framework = { path = "forks/security-framework" }
 tracing-core = { path = "forks/tracing-core" }
+zeroize = { path = "forks/zeroize" }
 zstd-sys = { path = "forks/zstd-sys" }
 
 ### Mirrors: forked crates managed as separate git repos

@@ -1,5 +1,3 @@
-//! [`Zeroize`] impls for x86 SIMD registers
-
 use crate::{atomic_fence, volatile_write, Zeroize};
 
 #[cfg(target_arch = "x86")]
@@ -13,10 +11,7 @@ macro_rules! impl_zeroize_for_simd_register {
         #[cfg_attr(docsrs, doc(cfg(target_arch = "x86")))] // also `x86_64`
         #[cfg_attr(docsrs, doc(cfg(target_feature = $feature)))]
         impl Zeroize for $type {
-            fn zeroize(&mut self) {
-                volatile_write(self, unsafe { $zero_value() });
-                atomic_fence();
-            }
+            fn zeroize(&mut self) {}
         }
     };
 }

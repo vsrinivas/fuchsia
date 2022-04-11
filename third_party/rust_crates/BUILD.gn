@@ -13254,7 +13254,7 @@ rust_library("yaml-rust-v0_4_5") {
 
 rust_library("zeroize-v1_3_0") {
   crate_name = "zeroize"
-  crate_root = "//third_party/rust_crates/vendor/zeroize/src/lib.rs"
+  crate_root = "//third_party/rust_crates/forks/zeroize/src/lib.rs"
   output_name = "zeroize-2201a258b0081f1f"
   configs -= [
     "//build/config/rust:edition_2018",

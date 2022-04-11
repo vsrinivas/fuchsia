@@ -1,0 +1,22 @@
+# zeroize fork
+
+## What is this crate used for?
+
+zeroize is a transitive (sometimes optional) dependency of crates in the RustCrypto ecosystem.
+
+* Are there any use restrictions? i.e. only for development hosts
+
+This crate should not be used, this implementation is a no-op that is kept for compatibility with
+existing dependents.
+
+* What differs from upstream? Include a changelog if feasible.
+
+Only function signatures and trait definitions are left, no implementation bodies remain.
+
+* Are there any restrictions to how it should be rolled?
+
+Consult with //third_party/rust_crates/OWNERS.
+
+* Is there anything else which makes this dependency "special"?
+
+No.
