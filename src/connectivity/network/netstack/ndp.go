@@ -456,7 +456,7 @@ func (n *ndpDispatcher) handleEvent(event ndpEvent) {
 					n.ns.onAddressAddLocked(event.nicID, tcpip.AddressWithPrefix{
 						Address:   event.addr,
 						PrefixLen: 8 * header.IPv6AddressSize,
-					})
+					}, false /* strict */)
 					ifs.mu.Unlock()
 				}
 				return true, true

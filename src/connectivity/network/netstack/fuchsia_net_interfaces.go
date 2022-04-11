@@ -200,6 +200,12 @@ func (defaultRouteChanged) isInterfaceEvent() {}
 type addressAdded struct {
 	nicid  tcpip.NICID
 	subnet net.Subnet
+	// TODO(https://fxbug.dev/97731): Remove this once address assignment
+	// state is tracked.
+	//
+	// If true, receiver should panic if this event contains an address that
+	// already exists.
+	strict bool
 }
 
 var _ interfaceEvent = (*addressAdded)(nil)
@@ -209,6 +215,11 @@ func (addressAdded) isInterfaceEvent() {}
 type addressRemoved struct {
 	nicid  tcpip.NICID
 	subnet net.Subnet
+	// TODO(https://fxbug.dev/97731): Remove this once address assignment
+	// state is tracked.
+	//
+	// If true, receiver should panic if this event contains an address that
+	// doesn't exist.
 	strict bool
 }
 
@@ -340,7 +351,13 @@ func interfaceWatcherEventLoop(eventChan <-chan interfaceEvent, watcherChan <-ch
 				i := sort.Search(len(addresses), func(i int) bool {
 					diff := cmpInterfaceAddress(ifAddr, addresses[i].GetValue())
 					if diff == 0 {
-						panic(fmt.Sprintf("duplicate address added event: %#v", event))
+						// TODO(https://fxbug.dev/97731): Panic if we receive duplicate DAD success
+						// within the same link once address assignment state is tracked.
+						if event.strict {
+							panic(fmt.Sprintf("duplicate address added event: %#v", event))
+						} else {
+							_ = syslog.WarnTf(watcherProtocolName, "address added event for already-assigned address: %#v", event)
+						}
 					}
 					return diff < 0
 				})
@@ -373,7 +390,7 @@ func interfaceWatcherEventLoop(eventChan <-chan interfaceEvent, watcherChan <-ch
 					return cmpInterfaceAddress(ifAddr, addresses[i].GetValue()) <= 0
 				})
 				if i == len(addresses) || cmpInterfaceAddress(ifAddr, addresses[i].GetValue()) != 0 {
-					// TODO(https://fxbug.dev/93825): Panic when the address being removed
+					// TODO(https://fxbug.dev/97731): Panic when the address being removed
 					// isn't assigned or tentative when `event.strict` is true.
 					_ = syslog.WarnTf(watcherProtocolName, "address removed event for non-existent address: %#v", event)
 					break

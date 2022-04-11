@@ -459,7 +459,7 @@ func (ifs *ifState) addAddressLocked(protocolAddr tcpip.ProtocolAddress, propert
 	case nil:
 		switch protocolAddr.Protocol {
 		case header.IPv4ProtocolNumber:
-			ifs.ns.onAddressAddLocked(ifs.nicid, protocolAddr.AddressWithPrefix)
+			ifs.ns.onAddressAddLocked(ifs.nicid, protocolAddr.AddressWithPrefix, true /* strict */)
 		// TODO(https://fxbug.dev/82045): This assumes that DAD is
 		// always enabled, and relies on the DAD completion callback to
 		// unblock hanging gets waiting for interface address changes.
@@ -555,10 +555,11 @@ func toNetInterfaceAddress(protocolAddr tcpip.ProtocolAddress) fidlnet.Interface
 	return ifAddr
 }
 
-func (ns *Netstack) onAddressAddLocked(nicid tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix) {
+func (ns *Netstack) onAddressAddLocked(nicid tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix, strict bool) {
 	ns.interfaceEventChan <- addressAdded{
 		nicid:  nicid,
 		subnet: fidlconv.ToNetSubnet(addrWithPrefix),
+		strict: strict,
 	}
 }
 

@@ -668,6 +668,11 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
             Some(Ok(fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Unavailable))
         );
 
+        // Re-enable the interface, expect DAD to repeat and have it succeed.
+        assert!(iface.control().enable().await.expect("send enable").expect("enable"));
+        expect_dad_neighbor_solicitation(&fake_ep).await;
+        assert_dad_success(&mut state_stream).await;
+
         let removed = control
             .remove_address(&mut net::InterfaceAddress::Ipv6(net::Ipv6Address {
                 addr: ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
@@ -678,7 +683,9 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
         assert!(removed);
     }
 
-    // Add the address while the interface is down.
+    // Disable the interface, this time add the address while it's down.
+    let did_disable = iface.control().disable().await.expect("send disable").expect("disable");
+    assert!(did_disable);
     let mut state_stream =
         add_address_for_dad(&iface, &fake_ep, &control, false, |_| futures::future::ready(()))
             .await;
