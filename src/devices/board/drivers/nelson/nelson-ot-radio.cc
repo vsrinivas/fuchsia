@@ -6,6 +6,7 @@
 #include <lib/ddk/platform-defs.h>
 #include <lib/ot-radio/ot-radio.h>
 
+#include "nelson-gpios.h"
 #include "nelson.h"
 #include "src/devices/board/drivers/nelson/nelson_ot_radio_bind.h"
 
@@ -32,6 +33,13 @@ zx_status_t Nelson::OtRadioInit() {
   dev.did = PDEV_DID_OT_RADIO;
   dev.metadata_list = nrf52811_radio_metadata;
   dev.metadata_count = std::size(nrf52811_radio_metadata);
+
+  gpio_impl_.SetAltFunction(S905D3_GPIOC(5), 0);
+  gpio_impl_.ConfigIn(S905D3_GPIOC(5), GPIO_NO_PULL);
+  gpio_impl_.SetAltFunction(S905D3_GPIOA(13), 0);  // Reset
+  gpio_impl_.ConfigOut(S905D3_GPIOA(13), 1);
+  gpio_impl_.SetAltFunction(S905D3_GPIOZ(1), 0);  // Boot mode
+  gpio_impl_.ConfigOut(S905D3_GPIOZ(1), 1);
 
   zx_status_t status =
       pbus_.AddComposite(&dev, reinterpret_cast<uint64_t>(nrf52811_radio_fragments),

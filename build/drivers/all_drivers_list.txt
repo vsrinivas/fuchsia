@@ -31,6 +31,7 @@
 //src/connectivity/network/drivers/network-device:network-device-driver
 //src/connectivity/openthread/drivers/ot-radio:ot-radio-luis-mfg_driver
 //src/connectivity/openthread/drivers/ot-radio:ot-radio-luis_driver
+//src/connectivity/openthread/drivers/ot-radio:ot-radio-nelson_driver
 //src/connectivity/openthread/drivers/ot-radio:ot-radio-sherlock-mfg_driver
 //src/connectivity/openthread/drivers/ot-radio:ot-radio-sherlock_driver
 //src/connectivity/openthread/tests/fake-drivers/fake-ot-radio:fake-ot-radio-driver-driver
