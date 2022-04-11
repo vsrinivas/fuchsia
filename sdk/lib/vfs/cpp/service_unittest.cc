@@ -36,12 +36,10 @@ class ServiceTest : public gtest::RealLoopFixture, public test::placeholders::Ec
 
   const std::string& service_name() const { return service_name_; }
 
-  void AssertInvalidOpen(fuchsia::io::OpenFlags flag, uint32_t mode, zx_status_t expected_status) {
+  void ExpectOnOpen(fuchsia::io::OpenFlags flag, uint32_t mode, zx_status_t expected_status) {
     SCOPED_TRACE("flag: " + std::to_string(static_cast<uint32_t>(flag)) +
                  ", mode: " + std::to_string(mode));
     fuchsia::io::NodePtr node_ptr;
-    dir_ptr()->Open(flag | fuchsia::io::OpenFlags::DESCRIBE, mode, service_name(),
-                    node_ptr.NewRequest());
 
     bool on_open_called = false;
 
@@ -52,6 +50,8 @@ class ServiceTest : public gtest::RealLoopFixture, public test::placeholders::Ec
       EXPECT_EQ(expected_status, status);
     };
 
+    dir_ptr()->Open(flag | fuchsia::io::OpenFlags::DESCRIBE, mode, service_name(),
+                    node_ptr.NewRequest());
     RunLoopUntil([&]() { return on_open_called; }, zx::msec(1));
   }
 
@@ -136,6 +136,12 @@ TEST_F(ServiceTest, CanOpenAsAService) {
   }
 }
 
+TEST_F(ServiceTest, OnOpenEvent) {
+  // Ensure we get an OnOpen event when we open both the service or the node itself.
+  ExpectOnOpen(fuchsia::io::OpenFlags::RIGHT_READABLE, 0, ZX_OK);
+  ExpectOnOpen(fuchsia::io::OpenFlags::NODE_REFERENCE, 0, ZX_OK);
+}
+
 TEST_F(ServiceTest, CannotOpenServiceWithInvalidFlags) {
   fuchsia::io::OpenFlags flags[] = {
       fuchsia::io::OpenFlags::CREATE, fuchsia::io::OpenFlags::CREATE_IF_ABSENT,
@@ -143,10 +149,10 @@ TEST_F(ServiceTest, CannotOpenServiceWithInvalidFlags) {
       fuchsia::io::OpenFlags::NO_REMOTE};
 
   for (fuchsia::io::OpenFlags flag : flags) {
-    AssertInvalidOpen(
+    ExpectOnOpen(
         flag | fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE, 0,
         ZX_ERR_NOT_SUPPORTED);
   }
-  AssertInvalidOpen(fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::DIRECTORY, 0,
-                    ZX_ERR_NOT_DIR);
+  ExpectOnOpen(fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::DIRECTORY, 0,
+               ZX_ERR_NOT_DIR);
 }

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/vfs.h>
+#include <lib/fidl/cpp/event_sender.h>
 #include <lib/vfs/cpp/flags.h>
 #include <lib/vfs/cpp/service.h>
 
@@ -29,7 +30,16 @@ zx_status_t Service::CreateConnection(fuchsia::io::OpenFlags flags,
 zx_status_t Service::Connect(fuchsia::io::OpenFlags flags, zx::channel request,
                              async_dispatcher_t* dispatcher) {
   if (Flags::IsNodeReference(flags)) {
+    // Node::Connect will send an OnOpen event if OPEN_FLAG_DESCRIBE is set.
     return Node::Connect(flags, std::move(request), dispatcher);
+  }
+  // Send OnOpen event if required before switching from the |Node| protocol back to the service.
+  if (Flags::ShouldDescribe(flags)) {
+    fidl::EventSender<fuchsia::io::Node> sender(std::move(request));
+    std::unique_ptr<fuchsia::io::NodeInfo> node_info = std::make_unique<fuchsia::io::NodeInfo>();
+    Describe(node_info.get());
+    sender.events().OnOpen(ZX_OK, std::move(node_info));
+    request = sender.TakeChannel();
   }
   if (connector_ == nullptr) {
     SendOnOpenEventOnError(flags, std::move(request), ZX_ERR_NOT_SUPPORTED);
