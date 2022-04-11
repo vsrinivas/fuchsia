@@ -45,6 +45,8 @@ source_set("lib") {
     "bind_driver_manager.h",
     "binding.cc",
     "binding_internal.h",
+    "builtin_devices.cc",
+    "builtin_devices.h",
     "component_lifecycle.cc",
     "component_lifecycle.h",
     "composite_device.cc",
@@ -185,6 +187,7 @@ test("driver_manager_test") {
   sources = [
     "autobind_tests.cc",
     "binding_v2_test.cc",
+    "builtin_devices_test.cc",
     "composite_device_tests.cc",
     "coordinator_test_utils.cc",
     "devfs_test.cc",
@@ -205,6 +208,7 @@ test("driver_manager_test") {
 
   deps = [
     ":lib",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/inspect/testing/cpp:zxtest",
     "//sdk/lib/sys/component/llcpp",

@@ -9,16 +9,22 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/ddk/driver.h>
 #include <lib/fdio/directory.h>
+#include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/message_part.h>
+#include <lib/fidl/txn_header.h>
+#include <lib/zx/channel.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/types.h>
 
 #include <memory>
 
+#include <fbl/ref_ptr.h>
 #include <fbl/string_buffer.h>
 
 #include "coordinator.h"
+#include "src/devices/bin/driver_manager/builtin_devices.h"
+#include "src/devices/lib/log/log.h"
 
 namespace {
 
@@ -33,6 +39,12 @@ std::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, std::string_view name);
 
 // Dummy node to represent dev/diagnostics directory.
 std::unique_ptr<Devnode> diagnostics_devnode;
+
+// Dummy node to represent dev/null directory.
+std::unique_ptr<Devnode> null_devnode;
+
+// Dummy node to represent dev/zero directory.
+std::unique_ptr<Devnode> zero_devnode;
 
 // Connection to diagnostics VFS server. Channel is owned by inspect manager.
 std::optional<fidl::UnownedClientEnd<fuchsia_io::Directory>> diagnostics_channel;
@@ -374,7 +386,7 @@ zx_status_t devfs_readdir(Devnode* dn, uint64_t* ino_inout, void* data, size_t l
       //
       // Another exception is when the devnode is for a remote service.
       if (child.children.is_empty() && child.ino != diagnostics_devnode->ino &&
-          !child.service_dir) {
+          child.ino != null_devnode->ino && child.ino != zero_devnode->ino && !child.service_dir) {
         continue;
       }
     } else {
@@ -427,6 +439,7 @@ again:
 
 void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<fio::Node> ipc,
                 char* path, fio::OpenFlags flags) {
+  std::string_view path_view(path);
   // Filter requests for diagnostics path and pass it on to diagnostics vfs server.
   if (!strncmp(path, kDiagnosticsDirName, kDiagnosticsDirLen) &&
       (path[kDiagnosticsDirLen] == '\0' || path[kDiagnosticsDirLen] == '/')) {
@@ -439,6 +452,8 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<
     }
     fidl::WireCall(*diagnostics_channel)
         ->Open(flags, 0, fidl::StringView::FromExternal(dir_path), std::move(ipc));
+  } else if (path_view == kNullDevName || path_view == kZeroDevName) {
+    BuiltinDevices::Get(dispatcher)->HandleOpen(flags, std::move(ipc), path_view);
   } else {
     if (!strcmp(path, ".")) {
       path = nullptr;
@@ -786,6 +801,10 @@ void devfs_init(const fbl::RefPtr<Device>& device, async_dispatcher_t* dispatche
 
   // Create dummy diagnostics devnode, so that the directory is listed.
   diagnostics_devnode = devfs_mkdir(root_devnode.get(), "diagnostics");
+  // Create dummy null devnode, so that the directory is listed.
+  null_devnode = devfs_mkdir(root_devnode.get(), "null");
+  // Create dummy zero devnode, so that the directory is listed.
+  zero_devnode = devfs_mkdir(root_devnode.get(), "zero");
 
   // TODO(teisenbe): Should this take a reference?
   root_devnode->device = device.get();
