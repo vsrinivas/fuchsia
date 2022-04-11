@@ -110,9 +110,8 @@ impl Injection {
         let daemon_proxy = self.daemon_factory().await?;
         let target = self.target().await?;
         let proxy_timeout = proxy_timeout().await?;
-        let timeout_error = self.daemon_timeout_error().await?;
         let (target_proxy, target_proxy_fut) = open_target_with_fut(
-            target,
+            target.clone(),
             is_default_target(),
             daemon_proxy.clone(),
             proxy_timeout.clone(),
@@ -120,19 +119,26 @@ impl Injection {
         let mut target_proxy_fut = target_proxy_fut.boxed_local().fuse();
         let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
         let mut open_remote_control_fut =
-            timeout(proxy_timeout, target_proxy.open_remote_control(remote_server_end))
-                .boxed_local()
-                .fuse();
-        loop {
+            target_proxy.open_remote_control(remote_server_end).boxed_local().fuse();
+        let res = loop {
             select! {
                 res = open_remote_control_fut => {
-                    res.map_err(|_| timeout_error)??;
-                    break;
+                    break(res?);
                 }
-                res = target_proxy_fut => res?
+                res = target_proxy_fut => {
+                    res?
+                }
             }
+        };
+        match res {
+            Ok(_) => Ok(remote_proxy),
+            Err(err) => Err(anyhow::Error::new(FfxError::TargetError {
+                err,
+                target,
+                is_default_target: is_default_target(),
+                logs: Some(target_proxy.get_ssh_logs().await?),
+            })),
         }
-        Ok(remote_proxy)
     }
 
     async fn fastboot_factory_inner(&self) -> Result<FastbootProxy> {

@@ -69,6 +69,7 @@ pub enum DaemonEvent {
 pub enum TargetEvent {
     RcsActivated,
     Rediscovered,
+    SshHostPipeErr,
 
     /// LHS is previous state, RHS is current state.
     ConnectionStateChanged(TargetConnectionState, TargetConnectionState),

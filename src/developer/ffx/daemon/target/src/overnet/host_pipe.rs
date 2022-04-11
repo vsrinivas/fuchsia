@@ -8,21 +8,56 @@ use {
     crate::RETRY_DELAY,
     anyhow::{anyhow, Context, Result},
     async_io::Async,
+    async_lock::Mutex,
+    ffx_daemon_events::TargetEvent,
     fuchsia_async::{unblock, Task, Timer},
     futures::io::{copy_buf, AsyncBufRead, BufReader},
     futures_lite::io::AsyncBufReadExt,
     futures_lite::stream::StreamExt,
     hoist::OvernetInstance,
+    std::collections::VecDeque,
     std::fmt,
     std::future::Future,
     std::io,
     std::net::SocketAddr,
     std::process::{Child, Stdio},
     std::rc::Weak,
+    std::sync::Arc,
     std::time::Duration,
 };
 
 const BUFFER_SIZE: usize = 65536;
+
+#[derive(Debug)]
+pub struct LogBuffer {
+    buf: Mutex<VecDeque<String>>,
+    capacity: usize,
+}
+
+impl LogBuffer {
+    pub fn new(capacity: usize) -> Self {
+        Self { buf: Mutex::new(VecDeque::with_capacity(capacity)), capacity }
+    }
+
+    pub async fn push_line(&self, line: String) {
+        let mut buf = self.buf.lock().await;
+        if buf.len() == self.capacity {
+            buf.pop_front();
+        }
+
+        buf.push_back(line)
+    }
+
+    pub async fn get_logs(&self) -> Vec<String> {
+        let buf = self.buf.lock().await;
+        buf.range(..).cloned().collect()
+    }
+
+    pub async fn clear(&self) {
+        let mut buf = self.buf.lock().await;
+        buf.truncate(0);
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct HostAddr(String);
@@ -51,7 +86,11 @@ struct HostPipeChild {
 }
 
 impl HostPipeChild {
-    async fn new(addr: SocketAddr, id: u64) -> Result<(Option<HostAddr>, HostPipeChild)> {
+    async fn new(
+        addr: SocketAddr,
+        id: u64,
+        stderr_buf: Arc<LogBuffer>,
+    ) -> Result<(Option<HostAddr>, HostPipeChild)> {
         // Before running remote_control_runner, we look up the environment
         // variable for $SSH_CONNECTION. This contains the IP address, including
         // scope_id, of the ssh client from the perspective of the ssh server.
@@ -123,7 +162,10 @@ impl HostPipeChild {
             let mut stderr_lines = futures_lite::io::BufReader::new(stderr).lines();
             while let Some(result) = stderr_lines.next().await {
                 match result {
-                    Ok(line) => log::info!("SSH stderr: {}", line),
+                    Ok(line) => {
+                        log::info!("SSH stderr: {}", line);
+                        stderr_buf.push_line(line).await;
+                    }
                     Err(e) => log::error!("SSH stderr read failure: {:?}", e),
                 }
             }
@@ -260,7 +302,7 @@ impl HostPipeConnection {
 
     async fn new_with_cmd<F>(
         target: Weak<Target>,
-        cmd_func: impl FnOnce(SocketAddr, u64) -> F + Copy + 'static,
+        cmd_func: impl FnOnce(SocketAddr, u64, Arc<LogBuffer>) -> F + Copy + 'static,
         relaunch_command_delay: Duration,
     ) -> Result<()>
     where
@@ -270,12 +312,14 @@ impl HostPipeConnection {
             let target = target.upgrade().ok_or(anyhow!("Target has gone"))?;
             let target_nodename = target.nodename();
             log::debug!("Spawning new host-pipe instance to target {:?}", target_nodename);
+            let log_buf = target.get_host_pipe_log_buffer();
+            log_buf.clear().await;
 
             let ssh_address = target.ssh_address().ok_or_else(|| {
                 anyhow!("target {:?} does not yet have an ssh address", target_nodename)
             })?;
             let (host_addr, mut cmd) =
-                cmd_func(ssh_address, target.id()).await.with_context(|| {
+                cmd_func(ssh_address, target.id(), log_buf.clone()).await.with_context(|| {
                     format!("creating host-pipe command to target {:?}", target_nodename)
                 })?;
 
@@ -294,6 +338,13 @@ impl HostPipeConnection {
             });
 
             target.ssh_host_address.borrow_mut().take();
+
+            let logs = log_buf.get_logs().await;
+            if !logs.is_empty() {
+                target.events.push(TargetEvent::SshHostPipeErr).unwrap_or_else(|err| {
+                    log::warn!("unable to enqueue RCS activation event: {:#}", err)
+                });
+            }
 
             match res {
                 Ok(_) => {
@@ -339,6 +390,7 @@ mod test {
     async fn start_child_normal_operation(
         _addr: SocketAddr,
         _id: u64,
+        _buf: Arc<LogBuffer>,
     ) -> Result<(Option<HostAddr>, HostPipeChild)> {
         Ok((
             Some(HostAddr("127.0.0.1".to_string())),
@@ -356,8 +408,28 @@ mod test {
     async fn start_child_internal_failure(
         _addr: SocketAddr,
         _id: u64,
+        _buf: Arc<LogBuffer>,
     ) -> Result<(Option<HostAddr>, HostPipeChild)> {
         Err(anyhow!(ERR_CTX))
+    }
+
+    async fn start_child_ssh_failure(
+        _addr: SocketAddr,
+        _id: u64,
+        buf: Arc<LogBuffer>,
+    ) -> Result<(Option<HostAddr>, HostPipeChild)> {
+        buf.push_line(String::from("1")).await;
+        Ok((
+            Some(HostAddr("127.0.0.1".to_string())),
+            HostPipeChild::fake_new(
+                std::process::Command::new("echo")
+                    .arg("127.0.0.1 44315 192.168.1.1 22")
+                    .stdout(Stdio::piped())
+                    .stdin(Stdio::piped())
+                    .spawn()
+                    .context(ERR_CTX)?,
+            ),
+        ))
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -390,6 +462,30 @@ mod test {
         )
         .await;
         assert!(res.is_err());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_host_pipe_start_and_stop_ssh_failure() {
+        let target = crate::target::Target::new_with_addrs(
+            Some("flooooooooberdoober"),
+            [TargetAddr::new("192.168.1.1:22").unwrap()].into(),
+        );
+        let res = HostPipeConnection::new_with_cmd(
+            Rc::downgrade(&target),
+            start_child_ssh_failure,
+            Duration::default(),
+        )
+        .await;
+        assert_matches!(res, Ok(_));
+
+        target
+            .events
+            .wait_for_async(None, |e| async move {
+                assert_eq!(e, TargetEvent::SshHostPipeErr);
+                true
+            })
+            .await
+            .unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -442,5 +538,34 @@ mod test {
                 res => panic!("unexpected result for {:?}: {:?}", line, res),
             }
         }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_log_buffer_empty() {
+        let buf = LogBuffer::new(2);
+        assert!(buf.get_logs().await.is_empty());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_log_buffer() {
+        let buf = LogBuffer::new(2);
+
+        buf.push_line(String::from("1")).await;
+        buf.push_line(String::from("2")).await;
+        buf.push_line(String::from("3")).await;
+
+        assert_eq!(buf.get_logs().await, vec![String::from("2"), String::from("3")]);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_clear_log_buffer() {
+        let buf = LogBuffer::new(2);
+
+        buf.push_line(String::from("1")).await;
+        buf.push_line(String::from("2")).await;
+
+        buf.clear().await;
+
+        assert!(buf.get_logs().await.is_empty());
     }
 }

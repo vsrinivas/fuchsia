@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_developer_ffx::{DaemonError, OpenTargetError, TunnelError};
+use fidl_fuchsia_developer_ffx::{DaemonError, OpenTargetError, TargetError, TunnelError};
 
 /// The ffx main function expects a anyhow::Result from ffx plugins. If the Result is an Err it be
 /// downcast to FfxError, and if successful this error is presented as a user-readable error. All
@@ -46,6 +46,17 @@ pub enum FfxError {
 
     #[error("{}", format!("No target with matcher {} was found.\n\n* Use `ffx target list` to verify the state of connected devices.\n* Use the SERIAL matcher with the --target (-t) parameter to explicity match a device.", target_string(.target, .is_default_target)))]
     FastbootError { target: Option<String>, is_default_target: bool },
+
+    #[error("{}", match .err {
+        TargetError::SshHostPipe => format!("Could not establish SSH connection to the target {}: {}.", target_string(.target, .is_default_target), logs.as_ref().unwrap_or(&"please check your SSH keys".to_string())),
+        TargetError::AddressNotFound => format!("Specified address does not exist"),
+    })]
+    TargetError {
+        err: TargetError,
+        target: Option<String>,
+        is_default_target: bool,
+        logs: Option<String>,
+    },
 }
 
 pub fn target_string(matcher: &Option<String>, is_default: &bool) -> String {

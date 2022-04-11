@@ -152,6 +152,8 @@ type OpenTargetError = strict enum {
 type TargetError = strict enum {
     /// The specified address does not exist within the target.
     ADDRESS_NOT_FOUND = 1;
+    /// SSH host pipe error encountered when trying to open an RCS connection.
+    SSH_HOST_PIPE = 2;
 };
 
 /// A protocol defining a collection of Fuchsia targets. This is used to inspect
@@ -208,6 +210,15 @@ protocol Target {
         target_info TargetInfo;
     });
 
+    /// Gets the target SSH host pipe error logs for this target.
+    ///
+    /// Returns:
+    /// * SSH host pipe error logs for the target. If there aren't any, will
+    /// return an empty string.
+    GetSshLogs() -> (struct {
+        entry string:MAX;
+    });
+
     /// Waits for an SSH address to become available on the target.
     ///
     /// Returns:
@@ -254,10 +265,13 @@ protocol Target {
     /// to handle potential timeouts here otherwise it will wait indefinitely.
     ///
     /// Returns:
-    /// * Nothing on success.
+    /// * Empty struct on success.
+    ///
+    /// Errors:
+    /// * See [TargetError] for failure states.
     OpenRemoteControl(resource struct {
         remote_control server_end:rc.RemoteControl;
-    }) -> ();
+    }) -> (struct {}) error TargetError;
 
     /// Opens a Fastboot controller for a given target.
     OpenFastboot(resource struct {

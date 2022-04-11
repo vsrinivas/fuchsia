@@ -5,7 +5,7 @@
 use {
     crate::fastboot::open_interface_with_serial,
     crate::logger::{streamer::DiagnosticsStreamer, Logger},
-    crate::overnet::host_pipe::{HostAddr, HostPipeConnection},
+    crate::overnet::host_pipe::{HostAddr, HostPipeConnection, LogBuffer},
     crate::{FASTBOOT_MAX_AGE, MDNS_MAX_AGE, ZEDBOOT_MAX_AGE},
     addr::TargetAddr,
     anyhow::{anyhow, bail, Error, Result},
@@ -141,6 +141,7 @@ pub struct Target {
     pub(crate) build_config: RefCell<Option<BuildConfig>>,
     boot_timestamp_nanos: RefCell<Option<u64>>,
     diagnostics_info: Arc<DiagnosticsStreamer<'static>>,
+    host_pipe_log_buffer: Arc<LogBuffer>,
 
     // The event synthesizer is retained on the target as a strong
     // reference, as the queue only retains a weak reference.
@@ -173,6 +174,7 @@ impl Target {
             diagnostics_info: Arc::new(DiagnosticsStreamer::default()),
             events,
             host_pipe: Default::default(),
+            host_pipe_log_buffer: Arc::new(LogBuffer::new(5)),
             logger: Default::default(),
             target_event_synthesizer,
             fastboot_interface: RefCell::new(None),
@@ -274,6 +276,10 @@ impl Target {
         target.serial.replace(Some(serial.to_string()));
         target.update_connection_state(|_| TargetConnectionState::Fastboot(Instant::now()));
         target
+    }
+
+    pub fn get_host_pipe_log_buffer(&self) -> Arc<LogBuffer> {
+        self.host_pipe_log_buffer.clone()
     }
 
     /// Dependency injection constructor so we can insert a fake time for

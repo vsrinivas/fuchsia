@@ -58,6 +58,10 @@ struct TargetHandleInner {
 impl TargetHandleInner {
     async fn handle(&self, _cx: &Context, req: bridge::TargetRequest) -> Result<()> {
         match req {
+            bridge::TargetRequest::GetSshLogs { responder } => {
+                let logs = self.target.get_host_pipe_log_buffer().get_logs().await;
+                responder.send(&logs.join("\n")).map_err(Into::into)
+            }
             bridge::TargetRequest::GetSshAddress { responder } => {
                 // Product state and manual state are the two states where an
                 // address is guaranteed. If the target is not in that state,
@@ -106,22 +110,34 @@ impl TargetHandleInner {
             }
             bridge::TargetRequest::OpenRemoteControl { remote_control, responder } => {
                 self.target.run_host_pipe();
-                let mut rcs = loop {
+                let rcs = loop {
                     self.target
                         .events
-                        .wait_for(None, |e| e == TargetEvent::RcsActivated)
+                        .wait_for(None, |e| {
+                            e == TargetEvent::RcsActivated || e == TargetEvent::SshHostPipeErr
+                        })
                         .await
                         .context("waiting for RCS")?;
                     if let Some(rcs) = self.target.rcs() {
-                        break rcs;
+                        break Some(rcs);
+                    } else if !self.target.get_host_pipe_log_buffer().get_logs().await.is_empty() {
+                        break None;
                     } else {
                         log::trace!("RCS dropped after event fired. Waiting again.");
                     }
                 };
-                // TODO(awdavies): Return this as a specific error to
-                // the client with map_err.
-                rcs.copy_to_channel(remote_control.into_channel())?;
-                responder.send().map_err(Into::into)
+                match rcs {
+                    Some(mut c) => {
+                        // TODO(awdavies): Return this as a specific error to
+                        // the client with map_err.
+                        c.copy_to_channel(remote_control.into_channel())?;
+                        responder.send(&mut Ok(())).map_err(Into::into)
+                    }
+                    None => responder
+                        .send(&mut Err(bridge::TargetError::SshHostPipe))
+                        .context("sending error response")
+                        .map_err(Into::into),
+                }
             }
             bridge::TargetRequest::OpenFastboot { fastboot, .. } => {
                 self.reboot_controller.spawn_fastboot(fastboot).await.map_err(Into::into)
@@ -348,7 +364,8 @@ mod tests {
         let _handle = Task::local(TargetHandle::new(target, cx, server).unwrap());
         let (rcs, rcs_server) =
             fidl::endpoints::create_proxy::<fidl_rcs::RemoteControlMarker>().unwrap();
-        target_proxy.open_remote_control(rcs_server).await.unwrap();
+        let res = target_proxy.open_remote_control(rcs_server).await.unwrap();
+        assert!(res.is_ok());
         assert_eq!(TEST_NODE_NAME, rcs.identify_host().await.unwrap().unwrap().nodename.unwrap());
     }
 }

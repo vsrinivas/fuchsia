@@ -1464,7 +1464,7 @@ mod test {
                                     responder,
                                     remote_control: _,
                                 } => {
-                                    responder.send().unwrap();
+                                    responder.send(&mut Ok(())).unwrap();
                                 }
                                 r => panic!("unexpected request: {:?}", r),
                             });
@@ -1539,7 +1539,7 @@ mod test {
                             spawn_target_handler(target_handle, |req| match req {
                                 TargetRequest::OpenRemoteControl { responder, remote_control } => {
                                     serve_responsive_rcs(remote_control);
-                                    responder.send().unwrap();
+                                    responder.send(&mut Ok(())).unwrap();
                                 }
                                 r => panic!("unexpected request: {:?}", r),
                             });
@@ -1629,7 +1629,7 @@ mod test {
                                         } else {
                                             panic!("got unexpected target string: '{}'", target);
                                         }
-                                        responder.send().unwrap();
+                                        responder.send(&mut Ok(())).unwrap();
                                     }
                                     r => panic!("unexpected request: {:?}", r),
                                 });

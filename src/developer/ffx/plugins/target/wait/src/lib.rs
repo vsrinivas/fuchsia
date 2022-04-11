@@ -71,7 +71,8 @@ async fn knock_target(
         .map_err(|e| anyhow!("open target err: {:?}", e))?;
     timeout(Duration::from_secs(RCS_TIMEOUT), target_proxy.open_remote_control(remote_server_end))
         .await?
-        .context("opening remote_control")?;
+        .context("opening remote_control")?
+        .map_err(|e| anyhow!("open remote control err: {:?}", e))?;
     let (knock_client, knock_remote) = fidl::handle::Channel::create()?;
     let knock_client = fuchsia_async::Channel::from_channel(knock_client)?;
     let knock_client = fidl::client::Client::new(knock_client, "knock_client");
@@ -142,7 +143,7 @@ mod tests {
                     TargetRequest::OpenRemoteControl { responder, remote_control, .. } => {
                         if responsive_rcs {
                             spawn_remote_control(remote_control.into_stream().unwrap());
-                            responder.send().expect("responding to open rcs")
+                            responder.send(&mut Ok(())).expect("responding to open rcs")
                         } else {
                             std::future::pending::<()>().await;
                         }
