@@ -140,6 +140,11 @@
             environment: "#full-resolver-env",
         },
         {
+            name: "metrics-logger",
+            url: "fuchsia-pkg://fuchsia.com/metrics-logger#meta/metrics-logger.cm",
+            environment: "#full-resolver-env",
+        },
+        {
             name: "pkg-cache",
             url: "fuchsia-pkg://fuchsia.com/pkg-cache#meta/pkg-cache.cm",
         },
@@ -442,6 +447,7 @@
                 "#last_reboot",
                 "#log-stats",
                 "#mdns",
+                "#metrics-logger",
                 "#network",
                 "#pkg-cache",
                 "#pkg-resolver",
@@ -660,6 +666,27 @@
             subdir: "class/thermal",
         },
         {
+            directory: "dev",
+            from: "parent",
+            as: "dev-temperature",
+            to: "#metrics-logger",
+            subdir: "class/temperature",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-thermal",
+            to: "#metrics-logger",
+            subdir: "class/thermal",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-power-sensor",
+            to: "#metrics-logger",
+            subdir: "class/power-sensor",
+        },
+        {
             directory: "root-ssl-certificates",
             from: "parent",
             to: [
@@ -674,6 +701,12 @@
             from: "parent",
             to: "#temperature-logger",
             subdir: "temperature-logger",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#metrics-logger",
+            subdir: "metrics-logger",
         },
         {
             directory: "config-data",
@@ -708,10 +741,20 @@
             to: "#temperature-logger",
         },
         {
+            protocol: [ "fuchsia.kernel.Stats" ],
+            from: "parent",
+            to: "#metrics-logger",
+        },
+        {
             protocol: "fuchsia.tracing.provider.Registry",
             from: "self",
             to: "#temperature-logger",
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "self",
+            to: "#metrics-logger",
         },
         {
             directory: "minfs",

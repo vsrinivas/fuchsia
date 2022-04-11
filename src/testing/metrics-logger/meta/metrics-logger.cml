@@ -33,8 +33,6 @@
         },
         {
             protocol: [
-                "fuchsia.device.Controller",
-                "fuchsia.hardware.temperature.Device",
                 "fuchsia.kernel.Stats",
                 "fuchsia.tracing.provider.Registry",
             ],
