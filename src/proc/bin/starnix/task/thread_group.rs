@@ -75,16 +75,6 @@ impl PartialEq for ThreadGroup {
     }
 }
 
-impl Drop for ThreadGroup {
-    fn drop(&mut self) {
-        if let Some(parent) = self.kernel.pids.read().get_thread_group(*self.parent.read()) {
-            parent.children.write().remove(&self.leader);
-        }
-        // TODO(qsr): Reparent children to the first parent that has the PR_SET_CHILD_SUBREAPER
-        // property.
-    }
-}
-
 /// A selector that can match a process. Works as a representation of the pid argument to syscalls
 /// like wait and kill.
 #[derive(Debug, Clone, Copy)]
@@ -302,21 +292,68 @@ impl ThreadGroup {
         tasks.is_empty()
     }
 
+    fn adopt_children(&self, other: &ThreadGroup) {
+        assert!(self != other);
+
+        // TODO(qsr): Implement PR_SET_CHILD_SUBREAPER
+
+        let parent_pid = *self.parent.read();
+        // If parent == self, act like init, otherwise, reparent.
+        if parent_pid == self.leader {
+            let mut children = self.children.write();
+            let mut zombies = self.zombie_children.lock();
+            let mut other_children = other.children.write();
+            let mut other_zombies = other.zombie_children.lock();
+
+            for pid in other_children.iter() {
+                if let Some(child) = self.kernel.pids.read().get_thread_group(*pid) {
+                    *child.parent.write() = self.leader;
+                    children.insert(*pid);
+                }
+            }
+
+            other_children.clear();
+            zombies.append(&mut other_zombies);
+        } else {
+            if let Some(parent) = self.kernel.pids.read().get_thread_group(parent_pid) {
+                parent.adopt_children(other);
+            }
+        }
+    }
+
     pub fn remove(&self, task: &Arc<Task>) {
         if self.remove_internal(task) {
             let mut terminating = self.terminating.lock();
             *terminating = true;
 
+            let parent_opt = {
+                let parent_id = *self.parent.read();
+                if parent_id == self.leader {
+                    None
+                } else {
+                    self.kernel.pids.read().get_thread_group(*self.parent.read())
+                }
+            };
+
             // Before unregistering this object from other places, register the zombie.
-            let parent_opt = self.kernel.pids.read().get_thread_group(*self.parent.read());
             if let Some(parent) = parent_opt.as_ref() {
+                // Reparent the children.
+                parent.adopt_children(self);
+
                 let zombie =
                     self.zombie_leader.lock().take().expect("Failed to capture zombie leader.");
-                parent.zombie_children.lock().push(zombie);
+                let mut pids = self.kernel.pids.write();
+                let mut parent_children = parent.children.write();
+                let mut parent_zombies = parent.zombie_children.lock();
+
+                parent_children.remove(&self.leader);
+                parent_zombies.push(zombie);
+                pids.remove_thread_group(self.leader);
+            } else {
+                self.kernel.pids.write().remove_thread_group(self.leader);
             }
 
             // Unregister this object.
-            self.kernel.pids.write().remove_thread_group(self.leader);
             self.leave_process_group(&self.process_group.read());
 
             // Send signals
@@ -681,5 +718,39 @@ mod test {
         assert_eq!(current_task.thread_group.setpgid(&child_task2, child_task1.id), Ok(()));
         assert_eq!(child_task2.thread_group.process_group.read().leader, child_task1.id);
         assert!(!old_process_group.thread_groups.read().contains(&child_task2.thread_group.leader));
+    }
+
+    #[::fuchsia::test]
+    fn test_adopt_children() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let task1 = current_task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+        let task2 = task1
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+        let task3 = task2
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+
+        assert_eq!(*task3.thread_group.parent.read(), task2.id);
+
+        task2.thread_group.exit(0);
+        std::mem::drop(task2);
+
+        // Task3 parent should be current_task.
+        assert_eq!(*task3.thread_group.parent.read(), current_task.id);
     }
 }
