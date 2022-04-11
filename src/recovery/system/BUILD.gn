@@ -40,7 +40,11 @@ group("tests") {
     ":system_installer_tests",
     ":system_recovery",
     ":system_recovery_installer",
-    ":system_recovery_tests",
+
+    # TODO(fxbug.dev/96719): This test is flaky because it is not hermetic.
+    # Re-enable after fixing the hermeticity issue.
+    # ":system_recovery_tests",
+
     "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
     "//src/sys/pkg/lib/isolated-swd:isolated-swd-components",
   ]
