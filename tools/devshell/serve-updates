@@ -293,6 +293,19 @@ else
   fi
 fi
 
+# Check if device is set via fx set-device before the discovery loop is started
+device_name="$(get-device-name 2>/dev/null)"
+if [[ -z "${device_name}" ]]; then
+  fx-warn ""
+  fx-warn "No default device set. fx serve-updates will get stuck on \"Discovery...\""
+  fx-warn "Run 'fx list-devices' and then 'fx set-device'"
+  fx-warn "\n"
+else
+  fx-info ""
+  fx-info "Default device set: ${device_name}"
+  fx-info "\n"
+fi
+
 log "Discovery..."
 
 # State is used to prevent too much output

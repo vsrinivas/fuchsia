@@ -22,7 +22,7 @@ pub async fn start(_cmd: StartCommand, repos: RepositoryRegistryProxy) -> Result
     {
         Ok(address) => {
             let address = SocketAddress::from(address);
-            println!("server is listening on {}", address);
+            println!("ffx repository server is listening on {}\n", address);
 
             Ok(())
         }
