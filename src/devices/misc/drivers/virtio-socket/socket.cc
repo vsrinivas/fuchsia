@@ -643,7 +643,7 @@ void SocketDevice::ReleaseLocked() {
 }
 
 void SocketDevice::TransportResetLocked() {
-  // shit this is complicated, just reload the cid for now
+  // Reload the CID when receiving a reset.
   zxlogf(INFO, "%s: Received transport reset!", tag());
   for (auto& it : connections_) {
     it.Close(dispatch_loop_.dispatcher());
