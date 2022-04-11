@@ -49,7 +49,7 @@ pub struct SnapshotData {
     /// Timestamp at which this snapshot resolved or failed.
     pub timestamp: zx::Time,
     /// Errors encountered when processing this snapshot.
-    pub errors: Vec<diagnostics_data::Error>,
+    pub errors: Vec<schema::InspectError>,
     /// Optional snapshot of the inspect hierarchy, in case reading fails
     /// and we have errors to share with client.
     pub snapshot: Option<ReadSnapshot>,
@@ -62,9 +62,10 @@ impl SnapshotData {
                 Ok(snapshot_tree) => {
                     SnapshotData::successful(ReadSnapshot::Tree(snapshot_tree), filename)
                 }
-                Err(e) => {
-                    SnapshotData::failed(schema::Error { message: format!("{:?}", e) }, filename)
-                }
+                Err(e) => SnapshotData::failed(
+                    schema::InspectError { message: format!("{:?}", e) },
+                    filename,
+                ),
             },
             InspectData::DeprecatedFidl(inspect_proxy) => {
                 match deprecated_inspect::load_hierarchy(inspect_proxy).await {
@@ -72,22 +73,24 @@ impl SnapshotData {
                         SnapshotData::successful(ReadSnapshot::Finished(hierarchy), filename)
                     }
                     Err(e) => SnapshotData::failed(
-                        schema::Error { message: format!("{:?}", e) },
+                        schema::InspectError { message: format!("{:?}", e) },
                         filename,
                     ),
                 }
             }
             InspectData::Vmo(vmo) => match Snapshot::try_from(&vmo) {
                 Ok(snapshot) => SnapshotData::successful(ReadSnapshot::Single(snapshot), filename),
-                Err(e) => {
-                    SnapshotData::failed(schema::Error { message: format!("{:?}", e) }, filename)
-                }
+                Err(e) => SnapshotData::failed(
+                    schema::InspectError { message: format!("{:?}", e) },
+                    filename,
+                ),
             },
             InspectData::File(contents) => match Snapshot::try_from(contents) {
                 Ok(snapshot) => SnapshotData::successful(ReadSnapshot::Single(snapshot), filename),
-                Err(e) => {
-                    SnapshotData::failed(schema::Error { message: format!("{:?}", e) }, filename)
-                }
+                Err(e) => SnapshotData::failed(
+                    schema::InspectError { message: format!("{:?}", e) },
+                    filename,
+                ),
             },
         }
     }
@@ -103,7 +106,7 @@ impl SnapshotData {
     }
 
     // Constructs packet that timestamps and packages inspect snapshot failure for exfiltration.
-    fn failed(error: diagnostics_data::Error, filename: ImmutableString) -> SnapshotData {
+    fn failed(error: schema::InspectError, filename: ImmutableString) -> SnapshotData {
         SnapshotData {
             filename,
             timestamp: fasync::Time::now().into_zx(),
@@ -246,7 +249,7 @@ impl<'a> UnpopulatedInspectDataContainer {
                             identity: unpopulated_for_timeout.identity.clone(),
                             inspect_matcher: unpopulated_for_timeout.inspect_matcher.clone(),
                             snapshot: SnapshotData::failed(
-                                schema::Error { message: TIMEOUT_MESSAGE.to_string() },
+                                schema::InspectError { message: TIMEOUT_MESSAGE.to_string() },
                                 NO_FILE_SUCCEEDED.to_string().into_boxed_str(),
                             ),
                         };
@@ -304,7 +307,7 @@ mod test {
         assert_eq!(res.snapshot.filename.as_ref(), *NO_FILE_SUCCEEDED);
         assert_eq!(
             res.snapshot.errors,
-            vec![schema::Error { message: TIMEOUT_MESSAGE.to_string() }]
+            vec![schema::InspectError { message: TIMEOUT_MESSAGE.to_string() }]
         );
     }
 

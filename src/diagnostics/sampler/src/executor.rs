@@ -1187,7 +1187,7 @@ fn compute_event_count_diff(
     }
 }
 
-fn process_schema_errors(errors: &Option<Vec<diagnostics_data::Error>>, moniker: &String) {
+fn process_schema_errors(errors: &Option<Vec<diagnostics_data::InspectError>>, moniker: &String) {
     match errors {
         Some(errors) => {
             for error in errors {

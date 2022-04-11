@@ -38,7 +38,7 @@ pub struct NodeHierarchyData {
     // Timestamp at which this snapshot resolved or failed.
     timestamp: zx::Time,
     // Errors encountered when processing this snapshot.
-    errors: Vec<schema::Error>,
+    errors: Vec<schema::InspectError>,
     // Optional DiagnosticsHierarchy of the inspect hierarchy, in case reading fails
     // and we have errors to share with client.
     hierarchy: Option<DiagnosticsHierarchy>,
@@ -57,7 +57,7 @@ impl From<SnapshotData> for NodeHierarchyData {
                 Err(e) => NodeHierarchyData {
                     filename: data.filename,
                     timestamp: data.timestamp,
-                    errors: vec![schema::Error { message: format!("{:?}", e) }],
+                    errors: vec![schema::InspectError { message: format!("{:?}", e) }],
                     hierarchy: None,
                 },
             },
@@ -154,7 +154,7 @@ impl ReaderServer {
                             Ok(None) => NodeHierarchyData {
                                 filename: node_hierarchy_data.filename,
                                 timestamp: node_hierarchy_data.timestamp,
-                                errors: vec![schema::Error {
+                                errors: vec![schema::InspectError {
                                     message: concat!(
                                         "Inspect hierarchy was fully filtered",
                                         " by static selectors. No data remaining."
@@ -168,7 +168,9 @@ impl ReaderServer {
                                 NodeHierarchyData {
                                     filename: node_hierarchy_data.filename,
                                     timestamp: node_hierarchy_data.timestamp,
-                                    errors: vec![schema::Error { message: format!("{:?}", e) }],
+                                    errors: vec![schema::InspectError {
+                                        message: format!("{:?}", e),
+                                    }],
                                     hierarchy: None,
                                 }
                             }
@@ -208,7 +210,7 @@ impl ReaderServer {
                         Ok(None) => NodeHierarchyData {
                             filename: node_hierarchy_data.filename,
                             timestamp: node_hierarchy_data.timestamp,
-                            errors: vec![schema::Error {
+                            errors: vec![schema::InspectError {
                                 message: concat!(
                                     "Inspect hierarchy was fully filtered",
                                     " by client provided selectors. No data remaining."
@@ -220,7 +222,7 @@ impl ReaderServer {
                         Err(e) => NodeHierarchyData {
                             filename: node_hierarchy_data.filename,
                             timestamp: node_hierarchy_data.timestamp,
-                            errors: vec![schema::Error { message: format!("{:?}", e) }],
+                            errors: vec![schema::InspectError { message: format!("{:?}", e) }],
                             hierarchy: None,
                         },
                     }

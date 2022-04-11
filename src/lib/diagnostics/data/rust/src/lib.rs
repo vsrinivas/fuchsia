@@ -7,6 +7,7 @@
 //! This library contians the Diagnostics data schema used for inspect, logs and lifecycle. This is
 //! the data that the Archive returns on `fuchsia.diagnostics.ArchiveAccessor` reads.
 
+use anyhow::format_err;
 use fidl_fuchsia_diagnostics::{DataType, Severity as FidlSeverity};
 use serde::{
     self,
@@ -115,7 +116,7 @@ pub struct Lifecycle;
 impl DiagnosticsData for Lifecycle {
     type Metadata = LifecycleEventMetadata;
     type Key = String;
-    type Error = Error;
+    type Error = LifecycleError;
     const DATA_TYPE: DataType = DataType::Lifecycle;
 
     fn component_url(metadata: &Self::Metadata) -> Option<&str> {
@@ -135,7 +136,7 @@ impl DiagnosticsData for Lifecycle {
             lifecycle_event_type: metadata.lifecycle_event_type,
             component_url: metadata.component_url,
             timestamp: metadata.timestamp,
-            errors: Some(vec![Error { message: error.into() }]),
+            errors: Some(vec![LifecycleError { message: error.into() }]),
         }
     }
 }
@@ -147,7 +148,7 @@ pub struct Inspect;
 impl DiagnosticsData for Inspect {
     type Metadata = InspectMetadata;
     type Key = String;
-    type Error = Error;
+    type Error = InspectError;
     const DATA_TYPE: DataType = DataType::Inspect;
 
     fn component_url(metadata: &Self::Metadata) -> Option<&str> {
@@ -167,7 +168,7 @@ impl DiagnosticsData for Inspect {
             filename: metadata.filename,
             component_url: metadata.component_url,
             timestamp: metadata.timestamp,
-            errors: Some(vec![Error { message: error.into() }]),
+            errors: Some(vec![InspectError { message: error.into() }]),
         }
     }
 }
@@ -199,7 +200,7 @@ impl DiagnosticsData for Logs {
             severity: metadata.severity,
             component_url: metadata.component_url,
             timestamp: metadata.timestamp,
-            errors: Some(vec![LogError::Other(Error { message: error })]),
+            errors: Some(vec![LogError::Other { message: error }]),
             file: metadata.file,
             line: metadata.line,
             pid: metadata.pid,
@@ -284,7 +285,7 @@ impl DerefMut for Timestamp {
 pub struct LifecycleEventMetadata {
     /// Optional vector of errors encountered by platform.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub errors: Option<Vec<Error>>,
+    pub errors: Option<Vec<LifecycleError>>,
 
     /// Type of lifecycle event being encoded in the payload.
     pub lifecycle_event_type: LifecycleType,
@@ -303,7 +304,7 @@ pub struct LifecycleEventMetadata {
 pub struct InspectMetadata {
     /// Optional vector of errors encountered by platform.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub errors: Option<Vec<Error>>,
+    pub errors: Option<Vec<InspectError>>,
     /// Name of diagnostics file producing data.
     pub filename: String,
     /// The url with which the component was launched.
@@ -409,7 +410,7 @@ impl fmt::Display for Severity {
 }
 
 impl FromStr for Severity {
-    type Err = Error;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = s.to_lowercase();
@@ -420,7 +421,7 @@ impl FromStr for Severity {
             "warn" => Ok(Severity::Warn),
             "error" => Ok(Severity::Error),
             "fatal" => Ok(Severity::Fatal),
-            other => Err(Error { message: format!("invalid severity: {}", other) }),
+            other => Err(format_err!("invalid severity: {}", other)),
         }
     }
 }
@@ -505,7 +506,7 @@ impl Data<Lifecycle> {
         payload: Option<DiagnosticsHierarchy>,
         component_url: impl Into<String>,
         timestamp: impl Into<Timestamp>,
-        errors: Vec<Error>,
+        errors: Vec<LifecycleError>,
     ) -> LifecycleData {
         let errors_opt = if errors.is_empty() { None } else { Some(errors) };
 
@@ -532,7 +533,7 @@ impl Data<Inspect> {
         timestamp_nanos: impl Into<Timestamp>,
         component_url: impl Into<String>,
         filename: impl Into<String>,
-        errors: Vec<Error>,
+        errors: Vec<InspectError>,
     ) -> InspectData {
         let errors_opt = if errors.is_empty() { None } else { Some(errors) };
 
@@ -1157,41 +1158,76 @@ pub enum LogError {
     #[serde(rename = "parse_record")]
     FailedToParseRecord(String),
     #[serde(rename = "other")]
-    Other(Error),
+    Other { message: String },
 }
 
 /// Possible error that can come in a `DiagnosticsData` object where the data source is
-/// `DataSource::LifecycleEvent` or `DataSource::Inspect`.
+/// `DataSource::Inspect`..
 #[derive(Debug, PartialEq, Clone, Eq)]
-pub struct Error {
+pub struct InspectError {
     pub message: String,
 }
 
-impl fmt::Display for Error {
+/// Possible error that can come in a `DiagnosticsData` object where the data source is
+/// `DataSource::LifecycleEvent`.
+#[derive(Debug, PartialEq, Clone, Eq)]
+pub struct LifecycleError {
+    pub message: String,
+}
+
+impl fmt::Display for LifecycleError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.message)
     }
 }
 
-impl Borrow<str> for Error {
+impl fmt::Display for InspectError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl Borrow<str> for InspectError {
     fn borrow(&self) -> &str {
         &self.message
     }
 }
 
-impl Serialize for Error {
+impl Serialize for LifecycleError {
     fn serialize<S: Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
         self.message.serialize(ser)
     }
 }
 
-impl<'de> Deserialize<'de> for Error {
+impl Borrow<str> for LifecycleError {
+    fn borrow(&self) -> &str {
+        &self.message
+    }
+}
+
+impl Serialize for InspectError {
+    fn serialize<S: Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
+        self.message.serialize(ser)
+    }
+}
+
+impl<'de> Deserialize<'de> for InspectError {
     fn deserialize<D>(de: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
         let message = String::deserialize(de)?;
-        Ok(Error { message })
+        Ok(Self { message })
+    }
+}
+
+impl<'de> Deserialize<'de> for LifecycleError {
+    fn deserialize<D>(de: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let message = String::deserialize(de)?;
+        Ok(Self { message })
     }
 }
 
@@ -1270,7 +1306,7 @@ mod tests {
             123456i64,
             TEST_URL,
             "test_file_plz_ignore.inspect",
-            vec![Error { message: "too much fun being had.".to_string() }],
+            vec![InspectError { message: "too much fun being had.".to_string() }],
         );
 
         let result_json =
@@ -1467,7 +1503,7 @@ mod tests {
             None,
             TEST_URL,
             123456i64,
-            vec![Error { message: "too much fun being had.".to_string() }],
+            vec![LifecycleError { message: "too much fun being had.".to_string() }],
         );
 
         let result_json =
