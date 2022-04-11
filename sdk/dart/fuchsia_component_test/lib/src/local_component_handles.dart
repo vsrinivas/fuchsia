@@ -6,30 +6,34 @@ import 'package:fidl/fidl.dart' as fidl;
 import 'package:fidl_fuchsia_component_runner/fidl_async.dart' as fcrunner;
 import 'package:fidl_fuchsia_io/fidl_async.dart' as fio;
 
-import 'internal/local_component.dart';
+// TODO(fxbug.dev/97734): Consider uncommenting/enabling the following, and the
+// `connectToService...` APIs below, if and when FIDL Unified Services gains
+// Dart language binding support.
 
-// The name of the default instance of a Fuchsia component `Service`.
-const _defaultServiceInstance = 'default';
+// import 'internal/local_component.dart';
 
-/// A ServiceProxy extends FIDL [DirectoryProxy] to open service connections to
-/// instances of the given member protocol. A [LocalComponent] can connect
-/// to services using its given [LocalComponentHandles].
-class ServiceProxy<P extends fidl.AsyncProxy> extends fio.DirectoryProxy {
-  ServiceProxy();
+// // The name of the default instance of a Fuchsia component `Service`.
+// const _defaultServiceInstance = 'default';
 
-  /// Opens a member protocol of a FIDL service, using the given protocol
-  /// proxy. The proxy is connected and then returned so it can be called.
-  P openMember(String member, P serviceMemberProxy) {
-    open(
-      fio.OpenFlags.rightReadable | fio.OpenFlags.rightWritable,
-      fio.modeTypeService,
-      member,
-      fidl.InterfaceRequest<fio.Node>(
-          serviceMemberProxy.ctrl.request().passChannel()!),
-    );
-    return serviceMemberProxy;
-  }
-}
+// /// A ServiceProxy extends FIDL [DirectoryProxy] to open service connections to
+// /// instances of the given member protocol. A [LocalComponent] can connect
+// /// to services using its given [LocalComponentHandles].
+// class ServiceProxy<P extends fidl.AsyncProxy> extends fio.DirectoryProxy {
+//   ServiceProxy();
+
+//   /// Opens a member protocol of a FIDL service, using the given protocol
+//   /// proxy. The proxy is connected and then returned so it can be called.
+//   P openMember(String member, P serviceMemberProxy) {
+//     open(
+//       fio.OpenFlags.rightReadable | fio.OpenFlags.rightWritable,
+//       fio.modeTypeService,
+//       member,
+//       fidl.InterfaceRequest<fio.Node>(
+//           serviceMemberProxy.ctrl.request().passChannel()!),
+//     );
+//     return serviceMemberProxy;
+//   }
+// }
 
 /// The handles from the framework over which the local component should
 /// interact with other components.
@@ -110,45 +114,49 @@ class LocalComponentHandles {
     return serviceDir;
   }
 
-  /// Connects the given [ServiceProxy] to the exposed service, using the
-  /// default [serviceName] and the instance name "default", and returns the
-  /// proxy.
-  S connectToService<S extends ServiceProxy>(S serviceProxy) {
-    return connectToServiceInstance(_defaultServiceInstance, serviceProxy);
-  }
+  // TODO(fxbug.dev/97734): Consider uncommenting/enabling the
+  // `connectToService...` APIs below, if and when FIDL Unified Services gains
+  // Dart language binding support.
 
-  /// Connects the given [ServiceProxy] to the exposed service, using the
-  /// default [serviceName] and given [instanceName], and returns the proxy.
-  /// Connects the given [ServiceProxy] to the exposed service, using the
-  /// default [serviceName] in the component's `/svc` directory, and given
-  /// [instanceName], and returns the proxy. [instanceName] is a path of one or
-  /// more components.
-  S connectToServiceInstance<S extends ServiceProxy>(
-      String instanceName, S serviceProxy) {
-    final ctrl = serviceProxy.ctrl;
-    final serviceName = ctrl.$serviceName ?? ctrl.$interfaceName!;
-    return connectToNamedServiceInstance(
-        serviceName, _defaultServiceInstance, serviceProxy);
-  }
+  // /// Connects the given [ServiceProxy] to the exposed service, using the
+  // /// default [serviceName] and the instance name "default", and returns the
+  // /// proxy.
+  // S connectToService<S extends ServiceProxy>(S serviceProxy) {
+  //   return connectToServiceInstance(_defaultServiceInstance, serviceProxy);
+  // }
 
-  /// Connects the given [ServiceProxy] to the exposed service, using the given
-  /// [serviceName] in the component's `/svc` directory, and given
-  /// [instanceName], and returns the proxy. [instanceName] is a path of one or
-  /// more components.
-  S connectToNamedServiceInstance<S extends ServiceProxy>(
-    String serviceName,
-    String instanceName,
-    S serviceProxy,
-  ) {
-    openNamedService(serviceName).open(
-      fio.OpenFlags.rightReadable | fio.OpenFlags.rightWritable,
-      fio.modeTypeService,
-      instanceName,
-      fidl.InterfaceRequest<fio.Node>(
-          serviceProxy.ctrl.request().passChannel()!),
-    );
-    return serviceProxy;
-  }
+  // /// Connects the given [ServiceProxy] to the exposed service, using the
+  // /// default [serviceName] and given [instanceName], and returns the proxy.
+  // /// Connects the given [ServiceProxy] to the exposed service, using the
+  // /// default [serviceName] in the component's `/svc` directory, and given
+  // /// [instanceName], and returns the proxy. [instanceName] is a path of one or
+  // /// more components.
+  // S connectToServiceInstance<S extends ServiceProxy>(
+  //     String instanceName, S serviceProxy) {
+  //   final ctrl = serviceProxy.ctrl;
+  //   final serviceName = ctrl.$serviceName ?? ctrl.$interfaceName!;
+  //   return connectToNamedServiceInstance(
+  //       serviceName, _defaultServiceInstance, serviceProxy);
+  // }
+
+  // /// Connects the given [ServiceProxy] to the exposed service, using the given
+  // /// [serviceName] in the component's `/svc` directory, and given
+  // /// [instanceName], and returns the proxy. [instanceName] is a path of one or
+  // /// more components.
+  // S connectToNamedServiceInstance<S extends ServiceProxy>(
+  //   String serviceName,
+  //   String instanceName,
+  //   S serviceProxy,
+  // ) {
+  //   openNamedService(serviceName).open(
+  //     fio.OpenFlags.rightReadable | fio.OpenFlags.rightWritable,
+  //     fio.modeTypeService,
+  //     instanceName,
+  //     fidl.InterfaceRequest<fio.Node>(
+  //         serviceProxy.ctrl.request().passChannel()!),
+  //   );
+  //   return serviceProxy;
+  // }
 
   /// Clones a directory from the local component's namespace.
   ///
