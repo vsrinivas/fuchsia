@@ -10,9 +10,7 @@ use core::fmt::Debug;
 use core::hash::Hash;
 
 use derivative::Derivative;
-use todo_unused::todo_unused;
 
-#[todo_unused("https://fxbug.dev/96320")]
 use crate::data_structures::socketmap::{Entry, SocketMap, Tagged};
 use crate::data_structures::{socketmap::IterShadows, IdMap};
 
@@ -62,61 +60,11 @@ pub trait Socket {
     ) -> Result<(), Self::UpdateError>;
 }
 
-/// A bidirectional map between listener sockets and addresses.
-///
-/// A `ListenerSocketMap` keeps addresses mapped by integer indexes, and allows
-/// for constant-time mapping in either direction (though address -> index
-/// mappings are via a hash map, and are thus slower).
-pub(crate) struct ListenerSocketMap<A> {
-    listener_to_addrs: IdMap<A>,
-    addr_to_listener: HashMap<A, usize>,
-}
-
-impl<A: Eq + Hash + Clone> ListenerSocketMap<A> {
-    pub(crate) fn insert(&mut self, addr: A) -> usize {
-        let listener = self.listener_to_addrs.push(addr.clone());
-        assert_eq!(self.addr_to_listener.insert(addr, listener), None);
-        listener
-    }
-}
-
-impl<A: Eq + Hash> ListenerSocketMap<A> {
-    pub(crate) fn get_by_addr(&self, addr: &A) -> Option<usize> {
-        self.addr_to_listener.get(addr).cloned()
-    }
-
-    pub(crate) fn get_by_listener(&self, listener: usize) -> Option<&A> {
-        self.listener_to_addrs.get(listener)
-    }
-
-    pub(crate) fn iter_addrs(&self) -> impl Iterator<Item = &'_ A> + ExactSizeIterator {
-        self.addr_to_listener.keys()
-    }
-
-    pub(crate) fn remove_by_listener(&mut self, listener: usize) -> Option<A> {
-        let addr = self.listener_to_addrs.remove(listener)?;
-        assert_eq!(self.addr_to_listener.remove(&addr), Some(listener));
-        Some(addr)
-    }
-}
-
-impl<A: Eq + Hash> Default for ListenerSocketMap<A> {
-    fn default() -> ListenerSocketMap<A> {
-        ListenerSocketMap {
-            listener_to_addrs: IdMap::default(),
-            addr_to_listener: HashMap::default(),
-        }
-    }
-}
-
 /// A bidirectional map between connection sockets and addresses.
 ///
 /// A `ConnSocketMap` keeps addresses mapped by integer indexes, and allows for
 /// constant-time mapping in either direction (though address -> index mappings
 /// are via a hash map, and thus slower).
-///
-/// It differs from a `ListenerSocketMap` in that only a single address per
-/// connection is supported.
 pub(crate) struct ConnSocketMap<A, S> {
     id_to_sock: IdMap<ConnSocketEntry<S, A>>,
     addr_to_id: HashMap<A, usize>,
@@ -144,16 +92,6 @@ impl<A: Eq + Hash, S> ConnSocketMap<A, S> {
 
     pub(crate) fn get_sock_by_id(&self, id: usize) -> Option<&ConnSocketEntry<S, A>> {
         self.id_to_sock.get(id)
-    }
-
-    pub(crate) fn iter_addrs(&self) -> impl Iterator<Item = &'_ A> + ExactSizeIterator {
-        self.addr_to_id.keys()
-    }
-
-    pub(crate) fn remove_by_id(&mut self, id: usize) -> Option<ConnSocketEntry<S, A>> {
-        let ConnSocketEntry { sock, addr } = self.id_to_sock.remove(id)?;
-        assert_eq!(self.addr_to_id.remove(&addr), Some(id));
-        Some(ConnSocketEntry { sock, addr })
     }
 
     /// Update the elements of the map in-place, retaining only the elements for
@@ -203,7 +141,6 @@ pub(crate) trait SocketMapSpec {
     type ConnState;
 }
 
-#[todo_unused("https://fxbug.dev/96320")]
 enum Bound<S: SocketMapSpec> {
     Listen(S::ListenerId),
     Conn(S::ConnId),
@@ -216,7 +153,6 @@ enum Bound<S: SocketMapSpec> {
 /// Each listener and connected socket stores additional state. Listener and
 /// connected sockets are keyed independently, but share the same address vector
 /// space. Conflicts are detected on attempted insertion of new sockets.
-#[todo_unused("https://fxbug.dev/96320")]
 #[derive(Derivative)]
 #[derivative(Default(bound = ""))]
 pub(crate) struct BoundSocketMap<S: SocketMapSpec> {
@@ -225,7 +161,6 @@ pub(crate) struct BoundSocketMap<S: SocketMapSpec> {
     addr_to_id: SocketMap<S::AddrVec, Bound<S>>,
 }
 
-#[todo_unused("https://fxbug.dev/96320")]
 impl<S: SocketMapSpec> Tagged for Bound<S> {
     // This is currently a unit struct since we don't allow sharing or
     // shadowing.  This will need to become more complicated to support
@@ -235,7 +170,6 @@ impl<S: SocketMapSpec> Tagged for Bound<S> {
     fn tag(&self) -> Self::Tag {}
 }
 
-#[todo_unused("https://fxbug.dev/96320")]
 impl<S: SocketMapSpec> BoundSocketMap<S> {
     pub(crate) fn get_conn_by_addr(&self, addr: &S::ConnAddr) -> Option<&S::ConnId> {
         let Self { listener_id_to_sock: _, conn_id_to_sock: _, addr_to_id } = self;
@@ -356,14 +290,12 @@ impl<S: SocketMapSpec> BoundSocketMap<S> {
     }
 }
 
-#[todo_unused("https://fxbug.dev/96320")]
 enum InsertError {
     ShadowAddrExists,
     Exists,
     ShadowerExists,
 }
 
-#[todo_unused("https://fxbug.dev/96320")]
 #[derive(Debug, Eq, PartialEq)]
 pub(crate) enum InsertListenerError {
     ShadowAddrExists,
@@ -371,7 +303,6 @@ pub(crate) enum InsertListenerError {
     ShadowerExists,
 }
 
-#[todo_unused("https://fxbug.dev/96320")]
 #[derive(Debug, Eq, PartialEq)]
 pub(crate) enum InsertConnError {
     ShadowAddrExists,
