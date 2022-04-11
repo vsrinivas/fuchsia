@@ -10,6 +10,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"io/fs"
 	"io/ioutil"
 	"os"
@@ -18,7 +19,9 @@ import (
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
+	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
 	fvdpb "go.fuchsia.dev/fuchsia/tools/virtual_device/proto"
+	"go.uber.org/multierr"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/net/context"
 )
@@ -33,14 +36,11 @@ func TestEmulatorWorksWithFfx(t *testing.T) {
 
 	executablePath, err := os.Executable()
 	if err != nil {
-		// Use Error-then-return instead of Fatal so that deferred cleanup gets run.
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 	hostOutDir, err := filepath.Abs(filepath.Dir(executablePath))
 	if err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 
 	initrd := "network-conformance-base"
@@ -63,8 +63,7 @@ func TestEmulatorWorksWithFfx(t *testing.T) {
 
 	privKey, err := rsa.GenerateKey(rand.Reader, RSA_KEY_NUM_BITS)
 	if err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 
 	pemdata := pem.EncodeToMemory(
@@ -77,21 +76,18 @@ func TestEmulatorWorksWithFfx(t *testing.T) {
 	tempDir := t.TempDir()
 	privKeyFilepath := filepath.Join(tempDir, "pkey")
 	if err := os.WriteFile(privKeyFilepath, pemdata, PRIVATE_KEY_PERMISSIONS); err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 
 	pubKey, err := ssh.NewPublicKey(privKey.Public())
 	if err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 
 	pubKeyData := ssh.MarshalAuthorizedKey(pubKey)
 	pubKeyFilepath := filepath.Join(tempDir, "authorized_keys")
 	if err := ioutil.WriteFile(pubKeyFilepath, pubKeyData, PUBLIC_KEY_PERMISSIONS); err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 
 	ctx, terminateEmulator := context.WithCancel(context.Background())
@@ -106,8 +102,7 @@ func TestEmulatorWorksWithFfx(t *testing.T) {
 	})
 
 	if err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 
 	sourceRootRelativeDir := filepath.Join(
@@ -130,13 +125,30 @@ func TestEmulatorWorksWithFfx(t *testing.T) {
 		tempDir,
 	)
 	if err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 
 	if err := ffx.SetLogLevel(ffxutil.Warn); err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
+	}
+
+	// It seems that this is necessary in order to get ffx to obey the config
+	// when running the daemon, and that the --config flag passed by ffxutil
+	// is not enough.
+	// TODO(https://fxbug.dev/94420): migrate to http://go/ffx-isolate when
+	// available.
+	ffxEnvPath := filepath.Join(tempDir, "env.json")
+	ffxConfigPath := ffx.ConfigPath
+	if err := jsonutil.WriteToFile(ffxEnvPath, map[string]interface{}{
+		"user":   ffxConfigPath,
+		"build":  nil,
+		"global": nil,
+	}); err != nil {
+		t.Fatal(multierr.Append(ffx.Stop(), fmt.Errorf(
+			"error while writing ffx env file %s: %w",
+			ffxEnvPath,
+			err,
+		)))
 	}
 
 	ctx, closeDaemon := context.WithCancel(ctx)
@@ -145,19 +157,18 @@ func TestEmulatorWorksWithFfx(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		if err := ffx.Run(ctx, "daemon", "start"); err != nil && !errors.Is(err, context.Canceled) {
+		if err := ffx.Run(ctx, "--env", ffxEnvPath, "daemon", "start"); err != nil &&
+			!errors.Is(err, context.Canceled) {
 			t.Error(err)
 		}
 	}()
 
 	if err := ffx.TargetWait(ctx); err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 
 	terminateEmulator()
 	if _, err := i.Wait(); err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 }
