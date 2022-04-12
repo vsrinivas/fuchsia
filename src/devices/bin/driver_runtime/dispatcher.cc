@@ -4,6 +4,7 @@
 
 #include "dispatcher.h"
 
+#include <lib/async/dispatcher.h>
 #include <lib/async/irq.h>
 #include <lib/async/receiver.h>
 #include <lib/async/task.h>
@@ -15,11 +16,17 @@
 #include <stdlib.h>
 #include <threads.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
 #include <string>
 
+#include <fbl/auto_lock.h>
+#include <fbl/ref_ptr.h>
+
+#include "src/devices/bin/driver_runtime/callback_request.h"
 #include "src/devices/bin/driver_runtime/driver_context.h"
 #include "src/devices/lib/log/log.h"
 
@@ -78,6 +85,90 @@ const async_ops_t g_dispatcher_ops = {
 };
 
 }  // namespace
+
+Dispatcher::AsyncWait::AsyncWait(async_wait_t* original_wait, Dispatcher& dispatcher)
+    : async_wait_t{{ASYNC_STATE_INIT},
+                   &Dispatcher::AsyncWait::Handler,
+                   original_wait->object,
+                   original_wait->trigger,
+                   0},
+      original_wait_(original_wait) {
+  original_wait_->state.reserved[0] = reinterpret_cast<uintptr_t>(this);
+
+  auto async_dispatcher = dispatcher.GetAsyncDispatcher();
+  driver_runtime::Callback callback =
+      [this, async_dispatcher](std::unique_ptr<driver_runtime::CallbackRequest> callback_request,
+                               fdf_status_t status) {
+        original_wait_->state.reserved[0] = 0;
+        original_wait_->handler(async_dispatcher, original_wait_, status, &signal_packet_);
+      };
+  SetCallback(static_cast<fdf_dispatcher_t*>(&dispatcher), std::move(callback), original_wait_);
+}
+
+Dispatcher::AsyncWait::~AsyncWait() {
+  // This shouldn't destruct until the wait was canceled or it has been completed.
+  ZX_ASSERT(dispatcher_ref_ == nullptr);
+}
+
+// static
+zx_status_t Dispatcher::AsyncWait::BeginWait(std::unique_ptr<AsyncWait> wait,
+                                             Dispatcher& dispatcher) {
+  // Purposefully create a cycle which is broken in Cancel or OnSignal.
+  // This needs to be done ahead of starting the async wait in case another thread on the dispatcher
+  // signals the dispatcher.
+  auto dispatcher_ref = fbl::RefPtr(&dispatcher);
+  wait->dispatcher_ref_ = fbl::ExportToRawPtr(&dispatcher_ref);
+  auto* wait_ref = wait.get();
+  dispatcher.AddWaitLocked(std::move(wait));
+
+  zx_status_t status = async_begin_wait(dispatcher.process_shared_dispatcher_, wait_ref);
+  if (status != ZX_OK) {
+    dispatcher.RemoveWaitLocked(wait_ref);
+    fbl::ImportFromRawPtr(wait_ref->dispatcher_ref_.exchange(nullptr));
+    return status;
+  }
+  return ZX_OK;
+}
+
+bool Dispatcher::AsyncWait::Cancel() {
+  // We do a load here rather than a exchange as OnSignal may still be triggered and we need to
+  // avoid preventing it from accessing the |dispatcher_ref_|.
+  auto* dispatcher_ref = dispatcher_ref_.load();
+  if (dispatcher_ref == nullptr) {
+    // OnSignal was triggered in another thread.
+    return false;
+  }
+  auto dispatcher = fbl::RefPtr(dispatcher_ref);
+  auto status = async_cancel_wait(dispatcher->process_shared_dispatcher_, this);
+  if (status != ZX_OK) {
+    // OnSignal was triggered in another thread, or is about to be.
+    ZX_DEBUG_ASSERT(status == ZX_ERR_NOT_FOUND);
+    return false;
+  }
+  // It is now safe to recover the dispatcher reference.
+  dispatcher_ref = dispatcher_ref_.exchange(nullptr);
+  ZX_DEBUG_ASSERT(dispatcher_ref != nullptr);
+  fbl::ImportFromRawPtr(dispatcher_ref);
+
+  return true;
+}
+
+// static
+void Dispatcher::AsyncWait::Handler(async_dispatcher_t* dispatcher, async_wait_t* wait,
+                                    zx_status_t status, const zx_packet_signal_t* signal) {
+  static_cast<AsyncWait*>(wait)->OnSignal(dispatcher, status, signal);
+}
+
+void Dispatcher::AsyncWait::OnSignal(async_dispatcher_t* async_dispatcher, zx_status_t status,
+                                     const zx_packet_signal_t* signal) {
+  auto* dispatcher_ref = dispatcher_ref_.exchange(nullptr);
+  ZX_DEBUG_ASSERT(dispatcher_ref != nullptr);
+  auto dispatcher = fbl::ImportFromRawPtr(dispatcher_ref);
+
+  signal_packet_ = *signal;
+
+  dispatcher->QueueWait(this, status);
+}
 
 DispatcherCoordinator& GetDispatcherCoordinator() {
   static DispatcherCoordinator shared_loop;
@@ -187,9 +278,24 @@ void Dispatcher::Destroy() {
     // This queue will be processed by |CompleteDestroy|.
     shutdown_queue_ = std::move(callback_queue_);
     shutdown_queue_.splice(shutdown_queue_.end(), registered_callbacks_);
-    // To avoid race conditions with attempting to cancel a wait that might be scheduled to run,
-    // we will cancel the event waiter in the |CompleteDestroy| callback.
-    // This is as |async::Wait::Cancel| is not thread safe.
+
+    // Try to cancel all outstanding waits. Successfully canceled waits should be have their
+    // callbacks triggered.
+    auto waits = std::move(waits_);
+    for (auto wait = waits.pop_front(); wait; wait = waits.pop_front()) {
+      if (wait->Cancel()) {
+        // We were successful. Lets queue this up to be processed by |CompleteDestroy|.
+        shutdown_queue_.push_back(std::move(wait));
+      } else {
+        // We weren't successful, |wait| is being run or queued to run and will want to remove this
+        // from the |waits_| list.
+        waits.push_back(std::move(wait));
+      }
+    }
+
+    // To avoid race conditions with attempting to cancel a wait that might be scheduled to
+    // run, we will cancel the event waiter in the |CompleteDestroy| callback. This is as
+    // |async::Wait::Cancel| is not thread safe.
   }
 
   // Recover the reference created in |CreateWithLoop|.
@@ -256,11 +362,31 @@ zx_status_t Dispatcher::BeginWait(async_wait_t* wait) {
   if (shutting_down_) {
     return ZX_ERR_BAD_STATE;
   }
-  return async_begin_wait(process_shared_dispatcher_, wait);
+  // TODO(92740): we should do something more efficient rather than creating a new
+  // AsyncWait each time.
+  auto async_wait = std::make_unique<AsyncWait>(wait, *this);
+  return AsyncWait::BeginWait(std::move(async_wait), *this);
 }
 
 zx_status_t Dispatcher::CancelWait(async_wait_t* wait) {
-  return async_cancel_wait(process_shared_dispatcher_, wait);
+  // TODO: This can currently fail when the async wait has been completed in another thread,
+  // but has not yet had an callback request posted. We should try to make it not fail in that
+  // scenario as it is not consistent with expected behavior. fidl::Client may assert that
+  // this doesn't fail for instance.
+
+  // First try to cancel the async wait from the shared dispatcher.
+  auto* async_wait = reinterpret_cast<AsyncWait*>(wait->state.reserved[0]);
+  if (async_wait != nullptr) {
+    if (async_wait->Cancel()) {
+      // We shouldn't have to worry about racing anyone if cancelation was successful.
+      ZX_ASSERT(RemoveWait(async_wait) != nullptr);
+      return ZX_OK;
+    }
+  }
+
+  // Second try to cancel it from the  callback queue.
+  auto callback_request = CancelAsyncOperation(wait);
+  return callback_request ? ZX_OK : ZX_ERR_NOT_FOUND;
 }
 
 zx_status_t Dispatcher::PostTask(async_task_t* task) {
@@ -354,7 +480,8 @@ void Dispatcher::QueueRegisteredCallback(driver_runtime::CallbackRequest* reques
     // Synchronous dispatchers do not allow parallel callbacks.
     // Blocking dispatchers are required to queue all callbacks onto the async loop.
     if (unsynchronized_ || (!dispatching_sync_ && !allow_sync_calls_)) {
-      // Check if the call would be reentrant, in which case we will queue it up to be run later.
+      // Check if the call would be reentrant, in which case we will queue it up to be run
+      // later.
       //
       // If it is unknown which driver is calling this function, it is considered
       // to be potentially reentrant.
@@ -380,6 +507,38 @@ void Dispatcher::QueueRegisteredCallback(driver_runtime::CallbackRequest* reques
   if (!callback_queue_.is_empty() && event_waiter_ && !event_waiter_->signaled() &&
       !shutting_down_) {
     event_waiter_->signal();
+  }
+}
+
+void Dispatcher::AddWaitLocked(std::unique_ptr<Dispatcher::AsyncWait> wait) {
+  ZX_DEBUG_ASSERT(!fbl::InContainer<AsyncWaitTag>(*wait));
+  waits_.push_back(std::move(wait));
+}
+
+std::unique_ptr<Dispatcher::AsyncWait> Dispatcher::RemoveWait(Dispatcher::AsyncWait* wait) {
+  fbl::AutoLock al(&callback_lock_);
+  return RemoveWaitLocked(wait);
+}
+
+std::unique_ptr<Dispatcher::AsyncWait> Dispatcher::RemoveWaitLocked(Dispatcher::AsyncWait* wait) {
+  ZX_DEBUG_ASSERT(fbl::InContainer<AsyncWaitTag>(*wait));
+  auto ret = waits_.erase(*wait);
+  IdleCheckLocked();
+  return ret;
+}
+
+void Dispatcher::QueueWait(Dispatcher::AsyncWait* wait, zx_status_t status) {
+  fbl::AutoLock al(&callback_lock_);
+  ZX_DEBUG_ASSERT(fbl::InContainer<AsyncWaitTag>(*wait));
+  if (shutting_down_) {
+    // We are waiting for all outstanding waits to be completed. They will be serviced in
+    // CompleteDestroy.
+    shutdown_queue_.push_back(waits_.erase(*wait));
+    IdleCheckLocked();
+  } else {
+    registered_callbacks_.push_back(waits_.erase(*wait));
+    al.release();
+    QueueRegisteredCallback(wait, status);
   }
 }
 
@@ -462,14 +621,16 @@ void Dispatcher::DispatchCallbacks(std::unique_ptr<EventWaiter> event_waiter,
     // Since cancellation may be called from the ChannelRead, or from another async operation
     // (like a task), we need to make sure that if we are calling an async operation
     // that is the only callback request pulled from the callback queue.
-    // This will guarantee that cancellation will always succeed without having to lock |to_call|.
+    // This will guarantee that cancellation will always succeed without having to lock
+    // |to_call|.
     bool has_async_op = false;
     uint32_t n = 0;
     while ((n < kBatchSize) && !callback_queue_.is_empty() && !has_async_op) {
       std::unique_ptr<CallbackRequest> callback_request = callback_queue_.pop_front();
       ZX_ASSERT(callback_request);
       has_async_op = !unsynchronized_ && callback_request->has_async_operation();
-      // For synchronized dispatchers, an async operation should be the only member in |to_call|.
+      // For synchronized dispatchers, an async operation should be the only member in
+      // |to_call|.
       if (has_async_op && n > 0) {
         callback_queue_.push_front(std::move(callback_request));
         break;
@@ -477,8 +638,8 @@ void Dispatcher::DispatchCallbacks(std::unique_ptr<EventWaiter> event_waiter,
       to_call.push_back(std::move(callback_request));
       n++;
     }
-    // Check if there are callbacks left to process and we should wake up an additional thread.
-    // For synchronized dispatchers, parallel callbacks are disallowed.
+    // Check if there are callbacks left to process and we should wake up an additional
+    // thread. For synchronized dispatchers, parallel callbacks are disallowed.
     if (unsynchronized_ && !callback_queue_.is_empty()) {
       zx_status_t status = event_waiter->BeginWaitWithRef(std::move(event_waiter), dispatcher_ref);
       if (status == ZX_ERR_BAD_STATE) {
@@ -535,7 +696,7 @@ fdf_status_t Dispatcher::WaitUntilIdle() {
 bool Dispatcher::IsIdleLocked() {
   // If the event waiter was signaled, the thread will be scheduled to run soon.
   return (num_active_threads_ == 0) && callback_queue_.is_empty() &&
-         (!event_waiter_ || !event_waiter_->signaled());
+         (!event_waiter_ || !event_waiter_->signaled()) && waits_.is_empty();
 }
 
 void Dispatcher::IdleCheckLocked() {

@@ -19,6 +19,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
 
+#include "fbl/intrusive_container_utils.h"
 #include "src/devices/bin/driver_runtime/async_loop_owned_event_handler.h"
 #include "src/devices/bin/driver_runtime/callback_request.h"
 #include "src/devices/bin/driver_runtime/driver_context.h"
@@ -28,6 +29,9 @@ namespace driver_runtime {
 class Dispatcher : public async_dispatcher_t,
                    public fbl::RefCounted<Dispatcher>,
                    public fbl::DoublyLinkedListable<fbl::RefPtr<Dispatcher>> {
+  // Forward Declaration
+  class AsyncWait;
+
  public:
   // Public for std::make_unique.
   // Use |Create| or |CreateWithLoop| instead of calling directly.
@@ -91,6 +95,14 @@ class Dispatcher : public async_dispatcher_t,
   void QueueRegisteredCallback(CallbackRequest* unowned_callback_request,
                                fdf_status_t callback_reason);
 
+  // Adds wait to |waits_|.
+  void AddWaitLocked(std::unique_ptr<AsyncWait> wait) __TA_REQUIRES(&callback_lock_);
+  // Removes wait from |waits_| and triggers idle check.
+  std::unique_ptr<AsyncWait> RemoveWait(AsyncWait* wait) __TA_EXCLUDES(&callback_lock_);
+  std::unique_ptr<AsyncWait> RemoveWaitLocked(AsyncWait* wait) __TA_REQUIRES(&callback_lock_);
+  // Moves wait from |waits_| queue onto |registered_callbacks_| and signals that it can be called.
+  void QueueWait(AsyncWait* wait, zx_status_t status);
+
   // Removes the callback matching |callback_request| from the queue and returns it.
   // May return nullptr if no such callback is found.
   std::unique_ptr<CallbackRequest> CancelCallback(CallbackRequest& callback_request);
@@ -102,7 +114,8 @@ class Dispatcher : public async_dispatcher_t,
 
   // Removes the callback that manages the async dispatcher |operation| and returns it.
   // May return nullptr if no such callback is found.
-  std::unique_ptr<CallbackRequest> CancelAsyncOperation(void* operation);
+  std::unique_ptr<CallbackRequest> CancelAsyncOperation(void* operation)
+      __TA_EXCLUDES(&callback_lock_);
 
   // Returns true if the dispatcher has no active threads or queued requests.
   // This unlocked version of |IsIdleLocked| is called by tests.
@@ -202,6 +215,47 @@ class Dispatcher : public async_dispatcher_t,
     zx::event event_;
   };
 
+  struct AsyncWaitTag {};
+
+  // Indirect wait object which is used to ensure waits are tracked and synchronize waits on
+  // SYNCHRONIZED dispatchers.
+  class AsyncWait
+      : public CallbackRequest,
+        public async_wait_t,
+        // This is owned by a Dispatcher, but in two different lists, however only one at a time. We
+        // could avoid this by storing |waits_| as a CallbackRequest, however that would require
+        // additional casts and pointer math when erasing the wait from the list.
+        public fbl::ContainableBaseClasses<fbl::TaggedDoublyLinkedListable<
+            std::unique_ptr<AsyncWait>, AsyncWaitTag, fbl::NodeOptions::AllowMultiContainerUptr>> {
+   public:
+    AsyncWait(async_wait_t* original_wait, Dispatcher& dispatcher);
+    ~AsyncWait();
+
+    static zx_status_t BeginWait(std::unique_ptr<AsyncWait> wait, Dispatcher& dispatcher)
+        __TA_REQUIRES(&dispatcher.callback_lock_);
+
+    bool Cancel();
+
+    static void Handler(async_dispatcher_t* dispatcher, async_wait_t* wait, zx_status_t status,
+                        const zx_packet_signal_t* signal);
+
+    void SetupCallback(Dispatcher& dispatcher, const zx_packet_signal_t* signal);
+
+    void OnSignal(async_dispatcher_t* async_dispatcher, zx_status_t status,
+                  const zx_packet_signal_t* signal);
+
+   private:
+    // Implementing a specialization of std::atomic<fbl::RefPtr<T>> is more challenging than just
+    // manipulating it as a raw pointer. It must be stored as an atomic because it is mutated from
+    // multiple threads after AsyncWait is constructed, and we wish to avoid a lock.
+    std::atomic<Dispatcher*> dispatcher_ref_;
+    async_wait_t* original_wait_;
+
+    // driver_runtime::Callback can store only 2 pointers, so we store other state in the async
+    // wait.
+    zx_packet_signal_t signal_packet_ = {};
+  };
+
   // Calls |callback_request|.
   void DispatchCallback(std::unique_ptr<driver_runtime::CallbackRequest> callback_request);
   // Calls the callbacks in |callback_queue_|.
@@ -247,6 +301,12 @@ class Dispatcher : public async_dispatcher_t,
   // These are removed from the active queues to ensure the dispatcher does not
   // attempt to continue processing them.
   fbl::DoublyLinkedList<std::unique_ptr<CallbackRequest>> shutdown_queue_
+      __TA_GUARDED(&callback_lock_);
+
+  // Waits which are queued up against |process_shared_dispatcher|. These are moved onto the
+  // |registered_callbacks_| queue once completed. They are tracked so that they may be canceled
+  // during |Destroy| prior to calling |CompleteDestroy|.
+  fbl::TaggedDoublyLinkedList<std::unique_ptr<AsyncWait>, AsyncWaitTag> waits_
       __TA_GUARDED(&callback_lock_);
 
   // True if currently dispatching a message.

@@ -79,7 +79,7 @@ class CallbackRequest
   }
 
  private:
-  struct fdf_dispatcher* dispatcher_;
+  struct fdf_dispatcher* dispatcher_ = nullptr;
   Callback callback_;
   // Reason for scheduling the callback.
   std::optional<fdf_status_t> reason_;

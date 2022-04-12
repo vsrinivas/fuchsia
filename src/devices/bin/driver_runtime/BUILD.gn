@@ -62,6 +62,7 @@ test("driver_runtime_test") {
     ":driver_runtime_impl",
     "//sdk/lib/driver_runtime",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/fidl:fidl-llcpp",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/sync:sync-cpp",
