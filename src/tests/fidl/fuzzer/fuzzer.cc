@@ -64,6 +64,26 @@ class DecoderEncoderInput {
   const size_t size_;
 };
 
+std::string_view DecoderEncoderProgressString(DecoderEncoderProgress progress) {
+  switch (progress) {
+    case DecoderEncoderProgress::NoProgress:
+      return "NoProgress";
+    case DecoderEncoderProgress::InitializedForDecoding:
+      return "InitializedForDecoding";
+    case DecoderEncoderProgress::FirstDecodeSuccess:
+      return "FirstDecodeSuccess";
+    case DecoderEncoderProgress::FirstEncodeSuccess:
+      return "FirstEncodeSuccess";
+    case DecoderEncoderProgress::FirstEncodeVerified:
+      return "FirstEncodeVerified";
+    case DecoderEncoderProgress::SecondDecodeSuccess:
+      return "SecondDecodeSuccess";
+    case DecoderEncoderProgress::SecondEncodeSuccess:
+      return "SecondEncodeSuccess";
+  }
+  __builtin_unreachable();
+}
+
 // Prints the contents of `first` to `stderr`, highlighting the bytes that differ from `second`.
 template <typename T1, typename T2>
 void ReportFirstByteArray(const T1& first, const char* const first_label, const T2& second,
@@ -73,7 +93,7 @@ void ReportFirstByteArray(const T1& first, const char* const first_label, const 
     std::cerr << "<empty byte array>";
   } else {
     for (size_t i = 0; i < first.size(); i++) {
-      if (i != 0 && i % 4 == 0)
+      if (i != 0 && i % 8 == 0)
         std::cerr << std::endl;
 
       const uint8_t* const first_data = first.data();
@@ -104,7 +124,9 @@ void ReportTestCase(const DecoderEncoderInput& input,
             << decoder_encoder_for_type.fidl_type_name << std::endl
             << "flexible envelope? " << std::boolalpha
             << decoder_encoder_for_type.has_flexible_envelope << std::endl;
-  std::cerr << std::endl << "Decode/encode progress:" << std::endl << status.progress << std::endl;
+  std::cerr << std::endl
+            << "Decode/encode progress:" << std::endl
+            << DecoderEncoderProgressString(status.progress) << std::endl;
   std::cerr << std::endl << "Decode/encode status:" << std::endl << status.status << std::endl;
 
   const std::vector<uint8_t>& first_encoded_bytes = status.first_encoded_bytes;

@@ -56,7 +56,7 @@ enum DecoderEncoderProgress {
 // particular a collection of bytes and handles as a particular FIDL type.
 struct DecoderEncoderStatus {
   DecoderEncoderProgress progress;
-  zx_status_t status;
+  fidl::Status status;
 
   // First encoding data, relevant for `progress >= DecoderEncoderProgress::FirstEncodeSuccess`.
   std::vector<uint8_t> first_encoded_bytes;
@@ -101,7 +101,7 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
                                         uint32_t num_handles) {
   DecoderEncoderStatus status = {
       .progress = DecoderEncoderProgress::NoProgress,
-      .status = ZX_OK,
+      .status = fidl::Status::Ok(),
   };
 
   std::optional<fidl::IncomingMessage> incoming_initialize_later;
@@ -117,7 +117,7 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   fidl::IncomingMessage& incoming = incoming_initialize_later.value();
 
   if (!incoming.ok()) {
-    status.status = incoming.status();
+    status.status = incoming;
     return status;
   }
   status.progress = DecoderEncoderProgress::InitializedForDecoding;
@@ -131,8 +131,8 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   }
   fidl::unstable::DecodedMessage<T>& decoded = decoded_initialize_later.value();
 
-  if (decoded.status() != ZX_OK) {
-    status.status = decoded.status();
+  if (!decoded.ok()) {
+    status.status = decoded;
     return status;
   }
   status.progress = DecoderEncoderProgress::FirstDecodeSuccess;
@@ -145,8 +145,8 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   fidl::unstable::OwnedEncodedMessage<T> encoded(::fidl::internal::AllowUnownedInputRef{},
                                                  fidl::internal::WireFormatVersion::kV2, value);
 
-  if (encoded.status() != ZX_OK) {
-    status.status = encoded.status();
+  if (!encoded.ok()) {
+    status.status = encoded.GetOutgoingMessage();
     return status;
   }
   status.progress = DecoderEncoderProgress::FirstEncodeSuccess;
@@ -159,8 +159,8 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
 
   auto conversion = ::fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage());
 
-  if (conversion.status() != ZX_OK) {
-    status.status = encoded.status();
+  if (!encoded.ok()) {
+    status.status = encoded.GetOutgoingMessage();
     return status;
   }
   status.progress = DecoderEncoderProgress::FirstEncodeVerified;
@@ -174,8 +174,8 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   }
   fidl::unstable::DecodedMessage<T>& decoded2 = decoded2_initialize_later.value();
 
-  if (decoded2.status() != ZX_OK) {
-    status.status = decoded2.status();
+  if (!decoded2.ok()) {
+    status.status = decoded2;
     return status;
   }
   status.progress = DecoderEncoderProgress::SecondDecodeSuccess;
@@ -187,8 +187,8 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   // TODO(fxbug.dev/45252): Use FIDL at rest.
   fidl::unstable::OwnedEncodedMessage<T> encoded2(fidl::internal::WireFormatVersion::kV2, value2);
 
-  if (encoded2.status() != ZX_OK) {
-    status.status = encoded2.status();
+  if (!encoded2.ok()) {
+    status.status = encoded2.GetOutgoingMessage();
     return status;
   }
   status.progress = DecoderEncoderProgress::SecondEncodeSuccess;
