@@ -236,7 +236,7 @@ static struct rs_name_target const rs_named_targets[] = {
 // No matching target name
 //
 static void
-rs_list_targets()
+rs_list_targets(void)
 {
   fprintf(stderr, "Supported target names:\n");
 

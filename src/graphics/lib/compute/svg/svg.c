@@ -449,7 +449,7 @@ svg_stack_alloc(uint32_t const entry_max, uint32_t const buf_max)
 }
 
 static struct svg_stack *
-svg_stack_create()
+svg_stack_create(void)
 {
   struct svg_stack * s = svg_stack_alloc(4096 / sizeof(struct svg_stack_entry), 4096);
 
@@ -769,7 +769,7 @@ struct svg_attribs
 //
 
 static struct svg_attribs *
-svg_attribs_create()
+svg_attribs_create(void)
 {
   struct svg_attribs * const a = malloc(sizeof(*a));
 

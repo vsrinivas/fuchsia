@@ -173,7 +173,7 @@ static hsg_op_type hsg_op_type_counts[HSG_OP_TYPE_COUNT];  // initialized to zer
 //
 
 static void
-hsg_op_debug()
+hsg_op_debug(void)
 {
   uint32_t total = 0;
 
@@ -194,7 +194,7 @@ hsg_op_debug()
 //
 
 static void
-hsg_config_init_shared()
+hsg_config_init_shared(void)
 {
   //
   // The assumption here is that a proper smem_bs value was provided

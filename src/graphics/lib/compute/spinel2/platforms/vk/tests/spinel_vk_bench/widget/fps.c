@@ -57,7 +57,7 @@ struct widget_fps
 //
 
 static uint64_t
-impl_timestamp()
+impl_timestamp(void)
 {
   struct timespec ts;
 
