@@ -114,6 +114,7 @@ template("component_id_index_config") {
                            [
                              "testonly",
                              "visibility",
+                             "metadata",
                            ])
     for_pkg = "appmgr"
     sources = [ component_id_index_merged_index_json_path ]
@@ -131,6 +132,7 @@ template("component_id_index_config") {
                            [
                              "testonly",
                              "visibility",
+                             "metadata",
                            ])
     sources = [ component_id_index_merged_index_fidl_path ]
     outputs = [ "config/component_id_index" ]

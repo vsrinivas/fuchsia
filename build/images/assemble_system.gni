@@ -410,6 +410,10 @@ template("assemble_system") {
 
     # collect and merge component ID indices from the base set.
     deps = _base_packages
+
+    metadata = {
+      package_barrier = []
+    }
   }
 
   component_id_index_dep = []

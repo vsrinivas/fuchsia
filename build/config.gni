@@ -40,7 +40,6 @@ template("config_data") {
                              "data_deps",
                              "deps",
                              "for_pkg",
-                             "metadata",
                              "outputs",
                              "public_deps",
                              "sources",
