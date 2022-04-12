@@ -29,12 +29,14 @@ use {
 };
 
 const ROOT_TRANSFORM_ID: flatland::TransformId = flatland::TransformId { value: u64::MAX };
+const BG_TRANSFORM_ID: flatland::TransformId = flatland::TransformId { value: u64::MAX - 1 };
+const BG_CONTENT_ID: flatland::ContentId = flatland::ContentId { value: u64::MAX - 2 };
 
 struct Tile {
     url: String,
     focusable: bool,
-    #[allow(dead_code)] // Keeps app alive until dropped.
     app: App,
+    status_watcher: fasync::Task<()>,
 }
 
 struct Service {
@@ -54,6 +56,13 @@ enum MessageInternal {
     FlatlandEvent(flatland::FlatlandEvent),
     ParentViewportWatcherGetLayout(flatland::LayoutInfo),
     ReceivedChildViewRef(ViewRef),
+    TileExited(u32),
+}
+
+const GRID_MARGIN_DIVIDER: Option<u32> = Some(100);
+
+fn default_gridspec(cell_count: u32, total_width: u32, total_height: u32) -> GridSpec {
+    GridSpec::new_with_margin(cell_count, total_width, total_height, GRID_MARGIN_DIVIDER)
 }
 
 // Represents a grid of uniformly-sized rectangular cells.
@@ -62,12 +71,25 @@ struct GridSpec {
     row_count: u32,
     column_width: u32,
     row_height: u32,
+    margin: u32, // space to maintain at the edges of the grid,
+                 // as well as padding between grid cells
 }
 
 impl GridSpec {
-    fn new(cell_count: u32, total_width: u32, total_height: u32) -> GridSpec {
+    fn new_with_margin(
+        cell_count: u32,
+        total_width: u32,
+        total_height: u32,
+        margin_divisor: Option<u32>,
+    ) -> GridSpec {
         let mut column_count: u32 = 1;
         let mut row_count: u32 = 1;
+
+        let margin = margin_divisor
+            .and_then(|margin_divisor| {
+                Some((total_width.min(total_height) / margin_divisor).max(1))
+            })
+            .unwrap_or(0);
 
         // Compute the number of rows and columns in the layout grid.  The resulting grid will
         // either be square, or have one less row than columns.
@@ -82,10 +104,19 @@ impl GridSpec {
             row_count += 1;
         }
 
-        let column_width = total_width / column_count;
-        let row_height = total_height / row_count;
+        let column_width =
+            ((total_width.saturating_sub(margin)) / column_count).saturating_sub(margin);
+        let row_height = ((total_height.saturating_sub(margin)) / row_count).saturating_sub(margin);
 
-        GridSpec { column_count, row_count, column_width, row_height }
+        assert!(column_width > 0, "Not enough width for column count and margin");
+        assert!(row_height > 0, "Not enough height for row count and margin");
+
+        GridSpec { column_count, row_count, column_width, row_height, margin }
+    }
+
+    #[cfg(test)]
+    fn new(cell_count: u32, total_width: u32, total_height: u32) -> GridSpec {
+        Self::new_with_margin(cell_count, total_width, total_height, None)
     }
 }
 
@@ -95,10 +126,6 @@ impl GridSpec {
 // Service takes an "optimistic" approach to error handling: it generally assumes that errors won't
 // happen, and panics if they do.  There are some exceptions to this rule.  For example, if bad data
 // is received from a FIDL client, this should not trigger a panic, just a log message.
-//
-// TODO(fxbug.dev/80814): currently we don't detect when a tile app dies.  Therefore, a dead app
-// will still appear in the list, and will take up space in the layout.  It would be better to
-// proactively remove dead tiles from the list.
 impl Service {
     fn new(
         display: &flatland::FlatlandDisplayProxy,
@@ -167,6 +194,22 @@ impl Service {
         session.create_transform(&mut ROOT_TRANSFORM_ID.clone()).expect("fidl error");
         session.set_root_transform(&mut ROOT_TRANSFORM_ID.clone()).expect("fidl error");
 
+        session.create_transform(&mut BG_TRANSFORM_ID.clone()).expect("fidl error");
+        session.create_filled_rect(&mut BG_CONTENT_ID.clone()).expect("fidl_error");
+        session
+            .set_solid_fill(
+                &mut BG_CONTENT_ID.clone(),
+                &mut ui_comp::ColorRgba { alpha: 1.0, red: 1.0, blue: 0.882, green: 0.894 },
+                &mut fmath::SizeU { width: 5000, height: 5000 },
+            )
+            .expect("fidl_error");
+        session
+            .set_content(&mut BG_TRANSFORM_ID.clone(), &mut BG_CONTENT_ID.clone())
+            .expect("fidl_error");
+        session
+            .add_child(&mut ROOT_TRANSFORM_ID.clone(), &mut BG_TRANSFORM_ID.clone())
+            .expect("fidl_error");
+
         Service {
             next_id: 1,
             tiles: BTreeMap::new(),
@@ -190,7 +233,8 @@ impl Service {
     ) -> Result<(), Error> {
         let id = self.next_id;
 
-        let app = launch(&self.launcher, url.clone(), args)?;
+        let mut app = launch(&self.launcher, url.clone(), args)?;
+
         let view_provider = app.connect_to_protocol::<ui_app::ViewProviderMarker>()?;
         let mut view_creation_tokens = flatland::ViewCreationTokenPair::new()?;
         view_provider
@@ -206,7 +250,7 @@ impl Service {
         // Compute initial size of tile.
         let tile_count: u32 = self.tiles.len().try_into().unwrap();
         let GridSpec { column_width, row_height, .. } =
-            GridSpec::new(tile_count + 1, self.logical_width, self.logical_height);
+            default_gridspec(tile_count + 1, self.logical_width, self.logical_height);
         let link_properties = flatland::ViewportProperties {
             logical_size: Some(fmath::SizeU { width: column_width, height: row_height }),
             ..flatland::ViewportProperties::EMPTY
@@ -227,12 +271,24 @@ impl Service {
             .expect("fidl error");
         self.session.set_content(&mut transform_id, &mut link_id).expect("fidl error");
 
+        let this_tile_id = self.next_id;
+
         self.session
             .add_child(&mut ROOT_TRANSFORM_ID.clone(), &mut transform_id)
             .expect("fidl error");
 
+        let app_status = app.wait();
+        let exit_sender = sender.clone();
+        let status_watcher = fasync::Task::local(async move {
+            let _exit_status = app_status.await;
+            exit_sender.unbounded_send(MessageInternal::TileExited(this_tile_id)).ok();
+        });
+
         self.next_id = self.next_id + 1;
-        self.tiles.insert(id, Tile { url: url, focusable: allow_focus, app: app });
+        self.tiles.insert(
+            id,
+            Tile { url: url, focusable: allow_focus, app: app, status_watcher: status_watcher },
+        );
         responder.send(id).context("AddTileFromUrl: failed to send ID to client")?;
 
         self.relayout();
@@ -264,8 +320,8 @@ impl Service {
         fx_log_err!("AddTileFromViewProvider is not implemented (and probably will not be).");
     }
 
-    fn remove_tile(&mut self, key: u32, _control_handle: ControllerControlHandle) {
-        if let Some(_tile) = self.tiles.remove_entry(&key) {
+    fn remove_tile(&mut self, key: u32) {
+        if let Some((_, mut tile)) = self.tiles.remove_entry(&key) {
             let mut transform_id = flatland::TransformId { value: key.into() };
             let mut link_id = flatland::ContentId { value: key.into() };
 
@@ -276,6 +332,15 @@ impl Service {
 
             // When removing a tile, we don't intend to reparent it, so we drop the returned future.
             let _ = self.session.release_viewport(&mut link_id);
+
+            // Cause the app to stop, should it still be running.
+            tile.app.kill().ok();
+
+            // Stop watching for exit status
+            fasync::Task::local(async move {
+                tile.status_watcher.cancel().await;
+            })
+            .detach();
 
             self.relayout();
         } else {
@@ -289,7 +354,7 @@ impl Service {
         let mut urls = iter.clone().map(|(_, tile)| tile.url.as_str());
         let tile_count: u32 = self.tiles.len().try_into().unwrap();
 
-        let spec = GridSpec::new(tile_count, self.logical_width, self.logical_height);
+        let spec = default_gridspec(tile_count, self.logical_width, self.logical_height);
         let mut sizes: Vec<_> = iter
             .clone()
             .map(|_| Vec3 { x: spec.column_width as f32, y: spec.row_height as f32, z: 1.0 })
@@ -313,15 +378,22 @@ impl Service {
     fn relayout(&mut self) {
         let tile_count: u32 = self.tiles.len().try_into().unwrap();
 
-        let GridSpec { column_count, row_count, column_width, row_height } =
-            GridSpec::new(tile_count, self.logical_width, self.logical_height);
+        let GridSpec { column_count, row_count, column_width, row_height, margin } =
+            default_gridspec(tile_count, self.logical_width, self.logical_height);
         assert!(tile_count <= column_count * row_count);
+
+        let row_height_i = row_height as i32;
+        let column_width_i = column_width as i32;
+        let margin_i = margin as i32;
 
         for (i, (id, _tile)) in self.tiles.iter().enumerate() {
             let mut transform_id = flatland::TransformId { value: id.clone().into() };
             let i: u32 = i.try_into().unwrap();
-            let y: i32 = ((i / column_count) * row_height).try_into().unwrap();
-            let x: i32 = ((i % column_count) * column_width).try_into().unwrap();
+            let col = (i / column_count) as i32;
+            let row = (i % column_count) as i32;
+
+            let y: i32 = col * (row_height_i + margin_i) + margin_i;
+            let x: i32 = row * (column_width_i + margin_i) + margin_i;
             self.session
                 .set_translation(&mut transform_id, &mut fmath::Vec_ { x, y })
                 .expect("fidl error");
@@ -435,8 +507,8 @@ async fn main() -> Result<(), Error> {
                 ControllerRequest::AddTileFromViewProvider { url, provider, responder } => {
                     service.add_tile_from_view_provider(url, provider, responder);
                 }
-                ControllerRequest::RemoveTile { key, control_handle } => {
-                    service.remove_tile(key, control_handle);
+                ControllerRequest::RemoveTile { key, .. } => {
+                    service.remove_tile(key);
                 }
                 ControllerRequest::ListTiles { responder } => {
                     service.list_tiles(responder);
@@ -478,6 +550,9 @@ async fn main() -> Result<(), Error> {
                 })
                 .detach();
             }
+            MessageInternal::TileExited(key) => {
+                service.remove_tile(key);
+            }
         }
     }
 
@@ -488,10 +563,10 @@ async fn main() -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
+    use crate::GridSpec;
+
     #[test]
     fn test_grid_spec() {
-        use crate::GridSpec;
-
         // 9 cells fit on a 3x3 grid.  Given a total width of 33, and a total height of 66, the
         // width/height of each grid cell is 11/22.
         let spec = GridSpec::new(9, 33, 66);
@@ -536,5 +611,11 @@ mod tests {
         assert_eq!(spec.row_count, 4);
         assert_eq!(spec.column_width, 10);
         assert_eq!(spec.row_height, 10);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_grid_spec_no_space() {
+        let _ = GridSpec::new_with_margin(1000, 100, 100, Some(10));
     }
 }
