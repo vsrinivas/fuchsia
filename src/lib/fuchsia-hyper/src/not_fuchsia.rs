@@ -28,7 +28,7 @@ pub(crate) fn configure_cert_store(tls: &mut ClientConfig) {
 
 /// A Async-std-compatible implementation of hyper's `Connect` trait which allows
 /// creating a TcpStream to a particular destination.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct HyperConnector {
     // TODO(fxbug.dev/84729)
     #[allow(unused)]
