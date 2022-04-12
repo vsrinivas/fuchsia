@@ -11,7 +11,7 @@
 
 #include "logo.h"
 
-static efi_graphics_output_protocol* fb_get_gop() {
+static efi_graphics_output_protocol* fb_get_gop(void) {
   static efi_graphics_output_protocol* gop = NULL;
   if (!gop) {
     gBS->LocateProtocol(&GraphicsOutputProtocol, NULL, (void**)&gop);
@@ -19,17 +19,17 @@ static efi_graphics_output_protocol* fb_get_gop() {
   return gop;
 }
 
-uint32_t get_gfx_mode() {
+uint32_t get_gfx_mode(void) {
   efi_graphics_output_protocol* gop = fb_get_gop();
   return gop->Mode->Mode;
 }
 
-uint32_t get_gfx_max_mode() {
+uint32_t get_gfx_max_mode(void) {
   efi_graphics_output_protocol* gop = fb_get_gop();
   return gop->Mode->MaxMode;
 }
 
-uint32_t get_gfx_hres() {
+uint32_t get_gfx_hres(void) {
   efi_graphics_output_protocol* gop = fb_get_gop();
   efi_graphics_output_mode_information* mode_info;
   size_t info_size = 0;
@@ -40,7 +40,7 @@ uint32_t get_gfx_hres() {
   return mode_info->HorizontalResolution;
 }
 
-uint32_t get_gfx_vres() {
+uint32_t get_gfx_vres(void) {
   efi_graphics_output_protocol* gop = fb_get_gop();
   efi_graphics_output_mode_information* mode_info;
   size_t info_size = 0;
@@ -108,7 +108,7 @@ void set_gfx_mode_from_cmdline(const char* fbres) {
   gBS->Stall(5000000);
 }
 
-void print_fb_modes() {
+void print_fb_modes(void) {
   efi_graphics_output_protocol* gop = fb_get_gop();
   uint32_t max_mode = gop->Mode->MaxMode;
   uint32_t cur_mode = gop->Mode->Mode;
@@ -141,7 +141,7 @@ static efi_graphics_output_blt_pixel font_fuchsia = {
     .Blue = 0x80,
 };
 
-void draw_logo() {
+void draw_logo(void) {
   efi_graphics_output_protocol* gop = fb_get_gop();
   if (!gop)
     return;

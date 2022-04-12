@@ -323,7 +323,7 @@ int netboot_init(const char* nodename, uint32_t namegen) {
   return 0;
 }
 
-const char* netboot_nodename() { return advertise_nodename; }
+const char* netboot_nodename(void) { return advertise_nodename; }
 
 static int nb_fastcount = 0;
 static int nb_online = 0;
