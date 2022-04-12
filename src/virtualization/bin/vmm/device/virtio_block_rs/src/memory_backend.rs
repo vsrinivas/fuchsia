@@ -124,7 +124,7 @@ impl BlockBackend for MemoryBackend {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::backend_test::BackendTest, anyhow::Error, fuchsia_async as fasync};
+    use {super::*, crate::backend_test::BackendTest, anyhow::Error};
 
     struct MemoryBackendTest;
 

@@ -420,62 +420,62 @@ pub async fn test_read_write_loop<T: BackendTest>() -> Result<(), Error> {
 
 macro_rules! instantiate_backend_test_suite {
     ($test_type:ty) => {
-        #[fasync::run_singlethreaded(test)]
+        #[fuchsia_async::run_singlethreaded(test)]
         async fn test_get_attrs() -> Result<(), Error> {
             crate::backend_test::test_get_attrs::<$test_type>().await
         }
 
-        #[fasync::run_singlethreaded(test)]
+        #[fuchsia_async::run_singlethreaded(test)]
         async fn test_read_per_sector_ranges() -> Result<(), Error> {
             crate::backend_test::test_read_per_sector_ranges::<$test_type>().await
         }
 
-        #[fasync::run_singlethreaded(test)]
+        #[fuchsia_async::run_singlethreaded(test)]
         async fn test_read_multiple_sectors_per_range() -> Result<(), Error> {
             crate::backend_test::test_read_multiple_sectors_per_range::<$test_type>().await
         }
 
-        #[fasync::run_singlethreaded(test)]
+        #[fuchsia_async::run_singlethreaded(test)]
         async fn test_read_subsector_range() -> Result<(), Error> {
             crate::backend_test::test_read_subsector_range::<$test_type>().await
         }
 
-        #[fasync::run_singlethreaded(test)]
+        #[fuchsia_async::run_singlethreaded(test)]
         async fn test_read_large() -> Result<(), Error> {
             crate::backend_test::test_read_large::<$test_type>().await
         }
 
-        #[fasync::run_singlethreaded(test)]
+        #[fuchsia_async::run_singlethreaded(test)]
         async fn test_read_concurrent() -> Result<(), Error> {
             crate::backend_test::test_read_concurrent::<$test_type>().await
         }
 
-        #[fasync::run_singlethreaded(test)]
+        #[fuchsia_async::run_singlethreaded(test)]
         async fn test_write_per_sector_ranges() -> Result<(), Error> {
             crate::backend_test::test_write_per_sector_ranges::<$test_type>().await
         }
 
-        #[fasync::run_singlethreaded(test)]
+        #[fuchsia_async::run_singlethreaded(test)]
         async fn test_write_multiple_sectors_per_range() -> Result<(), Error> {
             crate::backend_test::test_write_multiple_sectors_per_range::<$test_type>().await
         }
 
-        #[fasync::run_singlethreaded(test)]
+        #[fuchsia_async::run_singlethreaded(test)]
         async fn test_write_subsector_range() -> Result<(), Error> {
             crate::backend_test::test_write_subsector_range::<$test_type>().await
         }
 
-        #[fasync::run_singlethreaded(test)]
+        #[fuchsia_async::run_singlethreaded(test)]
         async fn test_write_large() -> Result<(), Error> {
             crate::backend_test::test_write_large::<$test_type>().await
         }
 
-        #[fasync::run_singlethreaded(test)]
+        #[fuchsia_async::run_singlethreaded(test)]
         async fn test_write_concurrent() -> Result<(), Error> {
             crate::backend_test::test_write_concurrent::<$test_type>().await
         }
 
-        #[fasync::run_singlethreaded(test)]
+        #[fuchsia_async::run_singlethreaded(test)]
         async fn test_read_write_loop() -> Result<(), Error> {
             crate::backend_test::test_read_write_loop::<$test_type>().await
         }

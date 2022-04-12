@@ -127,7 +127,6 @@ mod tests {
         super::*,
         crate::backend_test::{BackendController, BackendTest},
         anyhow::Error,
-        fuchsia_async as fasync,
         std::io::{Read, Seek, SeekFrom, Write},
         tempfile::tempfile,
     };
