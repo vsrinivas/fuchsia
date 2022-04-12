@@ -6,6 +6,7 @@
 #include <fidl/examples/routing/echo/cpp/fidl.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/global.h>
 
 #include <cstdlib>
 #include <iostream>
@@ -27,9 +28,9 @@ int main(int argc, const char* argv[], char* envp[]) {
   for (int i = 1; i < argc; i++) {
     ZX_ASSERT(echo_proxy->EchoString(argv[i], &response) == ZX_OK);
     if (!response.has_value()) {
-      std::cout << "echo_string got empty result" << std::endl;
+      FX_LOG(INFO, "echo_client", "echo_string got empty result");
     } else {
-      std::cout << "Server response: " << response->c_str() << std::endl;
+      FX_LOGF(INFO, "echo_client", "Server response: %s", response->c_str());
     }
   }
 

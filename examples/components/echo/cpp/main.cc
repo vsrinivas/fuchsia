@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // [START imports]
-#include <lib/syslog/cpp/macros.h>
+#include <lib/syslog/global.h>
 
 #include <cstdlib>
 #include <iostream>
@@ -24,7 +24,7 @@ int main(int argc, const char* argv[], char* envp[]) {
   arguments.push_back(favorite_animal);
 
   // Print a greeting to syslog
-  std::cout << "Hello, " << echo::greeting(arguments) << "!" << std::endl;
+  FX_LOGF(INFO, "echo", "Hello, %s!", echo::greeting(arguments).c_str());
 
   return 0;
 }

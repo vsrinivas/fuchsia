@@ -13,6 +13,7 @@ executable("bin") {
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/syslog",
   ]
 }
 
