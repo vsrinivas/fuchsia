@@ -1,7 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#![allow(dead_code)]
 
 use {
     crate::label_generator::Label,
@@ -86,6 +85,7 @@ impl PersistentLookupTable {
     /// before operating on the |label|.
     /// If the label does not have a directory, this proceeds optimistically.
     /// TODO(arkay): Determine the contract for cleaning up stale files.
+    #[allow(dead_code)]
     async fn cleanup_stale_files(&mut self, label: &Label) -> Result<(), Vec<LookupTableError>> {
         // Try to open the label's subdirectory, if it exists.
         match io_util::directory::open_directory(

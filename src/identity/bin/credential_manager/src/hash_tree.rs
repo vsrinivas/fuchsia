@@ -43,7 +43,6 @@ pub enum HashTreeError {
     UnknownLeafLabel,
     #[error("found label but is for a non-leaf node")]
     NonLeafLabel,
-    #[allow(dead_code)]
     #[error("invalid tree")]
     InvalidTree { leaf_label: Label, tree_height: u8, children_per_node: u8 },
     #[error(transparent)]
@@ -66,7 +65,7 @@ pub struct HashTree {
     height: u8,
     children_per_node: u8,
     root: Node,
-    #[allow(dead_code)]
+    #[allow(dead_code)] /* Will be needed to regenerate labels during a tree reset */
     label_gen: BitstringLabelGenerator,
 }
 
@@ -180,7 +179,6 @@ impl HashTree {
 
     /// Verifies the tree by ensuring that all inner nodes' hashes are
     /// equivalent to the hash of their child nodes.
-    #[allow(dead_code)]
     pub fn verify_tree(&self) -> Result<(), HashTreeError> {
         self.root.verify().map_err(|label| HashTreeError::InvalidTree {
             leaf_label: label,
@@ -219,11 +217,15 @@ impl HashTree {
     pub fn load(path: &str) -> Result<HashTree, HashTreeError> {
         let file = File::open(path).map_err(|_| HashTreeError::DataStoreNotFound)?;
         let format: StoreHashTree =
-            serde_cbor::from_reader(file).map_err(|_| HashTreeError::SerializationFailed)?;
+            serde_cbor::from_reader(file).map_err(|_| HashTreeError::DeserializationFailed)?;
         let mut hash_tree = HashTree::new(format.height, format.children_per_node)?;
         for (label, hash) in format.sparse_leaf_nodes {
             hash_tree.update_leaf_hash(&label, hash)?;
         }
+        // Note: there are no know errors that could cause a valid deserialization to produce an
+        // invalid tree, since we're only storing leaf hashes, but its still a reasonable point
+        // to verify consistency.
+        hash_tree.verify_tree()?;
         Ok(hash_tree)
     }
 
@@ -232,7 +234,7 @@ impl HashTree {
     pub fn store(&self, path: &str) -> Result<(), HashTreeError> {
         let file = File::create(path).map_err(|_| HashTreeError::DataStoreNotFound)?;
         let format = StoreHashTree::from(self);
-        serde_cbor::to_writer(file, &format).map_err(|_| HashTreeError::DeserializationFailed)
+        serde_cbor::to_writer(file, &format).map_err(|_| HashTreeError::SerializationFailed)
     }
 }
 
@@ -490,7 +492,6 @@ impl Node {
 
     /// Returns Ok(()) if the tree is valid, otherwise, returns Err(label)
     /// where label is the label of the first node with an mismatched hash.
-    #[allow(dead_code)]
     fn verify(&self) -> Result<(), Label> {
         // Leaf nodes store a hash supplied by the user and are always valid.
         if self.is_leaf() {

@@ -2,20 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{anyhow, Context, Error};
-use fidl_fuchsia_identity_credential::{
-    self as fcred, CredentialError, CredentialManagerRequest, CredentialManagerRequestStream,
+use {
+    crate::{
+        hash_tree::{
+            HashTree, HashTreeError, BITS_PER_LEVEL, CHILDREN_PER_NODE, LABEL_LENGTH, TREE_HEIGHT,
+        },
+        label_generator::Label,
+        lookup_table::LookupTable,
+        pinweaver::{CredentialMetadata, Hash, Mac, PinWeaverProtocol},
+    },
+    anyhow::{anyhow, Context, Error},
+    fidl_fuchsia_identity_credential::{
+        self as fcred, CredentialError, CredentialManagerRequest, CredentialManagerRequestStream,
+    },
+    fidl_fuchsia_tpm_cr50::TryAuthResponse,
+    futures::{lock::Mutex, prelude::*},
+    log::{error, info},
+    std::cell::{RefCell, RefMut},
 };
-use fidl_fuchsia_tpm_cr50::TryAuthResponse;
-use futures::lock::Mutex;
-use futures::prelude::*;
-use log::error;
-use std::cell::{RefCell, RefMut};
-
-use crate::hash_tree::{HashTree, BITS_PER_LEVEL, CHILDREN_PER_NODE, LABEL_LENGTH, TREE_HEIGHT};
-use crate::label_generator::Label;
-use crate::lookup_table::LookupTable;
-use crate::pinweaver::{CredentialMetadata, Hash, Mac, PinWeaverProtocol};
 
 /// The |CredentialManager| is responsible for adding, removing and checking
 /// credentials. It communicates over the |PinWeaverProxy| to the `cr50_agent`
@@ -230,10 +234,19 @@ where
         lookup_table: &mut LT,
         pinweaver: &PW,
     ) -> Result<HashTree, CredentialError> {
-        if let Ok(hash_tree) = HashTree::load(hash_tree_path) {
-            Ok(hash_tree)
-        } else {
-            Self::reset_hash_tree(hash_tree_path, lookup_table, pinweaver).await
+        match HashTree::load(hash_tree_path) {
+            Ok(hash_tree) => Ok(hash_tree),
+            Err(HashTreeError::DataStoreNotFound) => {
+                info!("Could not read hash tree file, resetting");
+                Self::reset_hash_tree(hash_tree_path, lookup_table, pinweaver).await
+            }
+            Err(err) => {
+                // If the existing hash tree fails to deserialize return a fatal error rather than
+                // resetting so we don't destroy data that would be helpful to isolate the problem.
+                // TODO(benwright,jsankey): Reconsider this decision once the system is more mature.
+                error!("Error loading hash tree: {:?}", err);
+                Err(CredentialError::InternalError)
+            }
         }
     }
 
@@ -290,10 +303,9 @@ mod test {
         }
     }
 
-    #[allow(dead_code)]
     struct TestHarness {
-        pub cm: CredentialManager<MockPinWeaverProtocol, MockLookupTable>,
-        pub dir: TempDir,
+        cm: CredentialManager<MockPinWeaverProtocol, MockLookupTable>,
+        _dir: TempDir,
     }
 
     impl TestHarness {
@@ -306,7 +318,7 @@ mod test {
             )
             .await
             .expect("failed to create credential manager");
-            Self { cm, dir: params.dir }
+            Self { cm, _dir: params.dir }
         }
     }
 
