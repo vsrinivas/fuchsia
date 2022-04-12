@@ -33,6 +33,7 @@ use {
     serde_json::Value,
     std::{
         collections::{HashMap, HashSet},
+        path::Path,
         str,
         sync::Arc,
     },
@@ -215,7 +216,7 @@ impl PackageDataCollector {
         info!("Extracting the ZBI from {}", package.url);
         for (path, merkle) in package.contents.iter() {
             if path == "zbi" || path == "zbi.signed" {
-                let zbi_data = reader.read_raw(&format!("blobs/{}", merkle))?;
+                let zbi_data = reader.read_raw(&Path::new(&format!("blobs/{}", merkle)))?;
                 let mut reader = ZbiReader::new(zbi_data);
                 let sections = reader.parse()?;
                 let mut bootfs = HashMap::new();

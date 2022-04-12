@@ -15,6 +15,7 @@ use {
     std::{
         collections::{HashMap, HashSet},
         io::Cursor,
+        path::Path,
         str,
     },
 };
@@ -56,13 +57,13 @@ impl PackageServerReader {
     }
 
     fn read_blob_raw(&mut self, merkle: &str) -> Result<Vec<u8>> {
-        Ok(self.pkg_reader.read_raw(&format!("blobs/{}", merkle)[..])?)
+        Ok(self.pkg_reader.read_raw(&Path::new(&format!("blobs/{}", merkle)[..]))?)
     }
 }
 
 impl PackageReader for PackageServerReader {
     fn read_targets(&mut self) -> Result<TargetsJson> {
-        let resp_b = self.pkg_reader.read_raw("targets.json")?;
+        let resp_b = self.pkg_reader.read_raw(&Path::new("targets.json"))?;
         let resp = str::from_utf8(&resp_b).context("Failed to decode targets.json as utf8")?;
 
         Ok(serde_json::from_str(&resp).context("Failed to parse targets.json")?)

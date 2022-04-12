@@ -5,6 +5,7 @@
 use {
     argh::{FromArgValue, FromArgs},
     ffx_core::ffx_command,
+    std::path::PathBuf,
 };
 
 #[derive(Debug, PartialEq)]
@@ -75,9 +76,11 @@ pub fn default_capability_types() -> Vec<CapabilityType> {
     description = "Verifies capability routes in the component tree",
     example = "To verify routes on your current build:
 
-        $ffx scrutiny verify routes --build-path $(fx get-build-dir) --repository-path $(fx get-build-dir)/amber-files/repository"
+        $ ffx scrutiny verify routes \
+            --build-path $(fx get-build-dir) \
+            --repository-path $(fx get-build-dir)/amber-files/repository"
 )]
-pub struct ScrutinyRoutesCommand {
+pub struct Command {
     /// capability types to verify.
     #[argh(option)]
     pub capability_type: Vec<CapabilityType>,
@@ -86,21 +89,15 @@ pub struct ScrutinyRoutesCommand {
     pub response_level: ResponseLevel,
     /// path to root output directory of build.
     #[argh(option)]
-    pub build_path: String,
+    pub build_path: PathBuf,
     /// path to TUF repository that serves fuchsia packages as targets.
     #[argh(option)]
-    pub repository_path: String,
+    pub repository_path: PathBuf,
     /// path(s) to allowlist(s) used to verify routes.
     #[argh(option)]
-    pub allowlist: Vec<String>,
+    pub allowlist: Vec<PathBuf>,
     /// path to component tree configuration file that affects how component
     /// tree data is gathered.
     #[argh(option)]
-    pub component_tree_config: Option<String>,
-    /// path to depfile that gathers dependencies during execution.
-    #[argh(option)]
-    pub depfile: Option<String>,
-    /// path to stamp file to write to if and only if verification succeeds.
-    #[argh(option)]
-    pub stamp: Option<String>,
+    pub component_tree_config: Option<PathBuf>,
 }

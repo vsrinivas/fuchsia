@@ -16,7 +16,7 @@ use {
 /// Interface for fetching raw bytes by file path.
 pub trait ArtifactReader: Send + Sync {
     /// Read the raw bytes stored in filesystem location `path`.
-    fn read_raw(&mut self, path: &str) -> Result<Vec<u8>>;
+    fn read_raw(&mut self, path: &Path) -> Result<Vec<u8>>;
 
     /// Get the accumulated set of filesystem locations that have been read by
     /// this reader.
@@ -37,7 +37,7 @@ impl FileArtifactReader {
             Ok(path) => path,
             Err(err) => {
                 warn!(
-                    "File artifact reader failed to canonicalize build path: {:#?}: {}",
+                    "File artifact reader failed to canonicalize build path: {:?}: {}",
                     build_path,
                     err.to_string()
                 );
@@ -48,7 +48,7 @@ impl FileArtifactReader {
             Ok(path) => path,
             Err(err) => {
                 warn!(
-                    "File artifact reader failed to canonicalize artifact path: {:#?}: {}",
+                    "File artifact reader failed to canonicalize artifact path: {:?}: {}",
                     artifact_path,
                     err.to_string()
                 );
@@ -58,76 +58,82 @@ impl FileArtifactReader {
         Self { build_path, artifact_path, deps: HashSet::new() }
     }
 
-    fn absolute_from_absolute_or_artifact_relative(&self, path_str: &str) -> Result<String> {
-        let path = Path::new(path_str);
-        let artifact_relative_path_buf = if path.is_absolute() {
-            diff_paths(path, &self.artifact_path)
-            .ok_or(
-                anyhow!("Absolute artifact path {:#?} (from {}) cannot be rebased to base artifact path {:#?}",
-                &path,
-                path_str,
-                &self.artifact_path,
-            ))?
+    fn absolute_from_absolute_or_artifact_relative<P: AsRef<Path>>(
+        &self,
+        path: P,
+    ) -> Result<String> {
+        let path_ref = path.as_ref();
+        let artifact_relative_path_buf = if path_ref.is_absolute() {
+            diff_paths(path_ref, &self.artifact_path).ok_or_else(|| {
+                anyhow!(
+                    "Absolute artifact path {:?} cannot be rebased to base artifact path {:?}",
+                    path_ref,
+                    &self.artifact_path,
+                )
+            })?
         } else {
-            path.to_path_buf()
+            path_ref.to_path_buf()
         };
         let absolute_path_buf = self.artifact_path.join(&artifact_relative_path_buf);
         let absolute_path_buf = absolute_path_buf.canonicalize().map_err(|err| {
             anyhow!(
-                "Failed to canonicalize computed path: {:#?}: {}",
+                "Failed to canonicalize computed path: {:?}: {}",
                 absolute_path_buf,
                 err.to_string()
             )
         })?;
 
         if absolute_path_buf.is_relative() {
-            return Err(anyhow!("Computed artifact path is relative: computed {:#?} from path {} and artifact base path {:#?}", &absolute_path_buf, path_str, &self.artifact_path));
+            return Err(anyhow!("Computed artifact path is relative: computed {:?} from path {:?} and artifact base path {:?}", &absolute_path_buf, path_ref, &self.artifact_path));
         }
         if absolute_path_buf.is_dir() {
-            return Err(anyhow!("Computed artifact path is directory: computed {:#?} from path {} and artifact base path {:#?}", &absolute_path_buf, path_str, &self.artifact_path));
+            return Err(anyhow!("Computed artifact path is directory: computed {:?} from path {:?} and artifact base path {:?}", &absolute_path_buf, path_ref, &self.artifact_path));
         }
 
         let absolute_path_str = absolute_path_buf.to_str();
         if absolute_path_str.is_none() {
             return Err(anyhow!(
-                "Computed absolute artifact path {:#?} could not be converted to string",
+                "Computed absolute artifact path {:?} could not be converted to string",
                 absolute_path_buf
             ));
         };
         Ok(absolute_path_str.unwrap().to_string())
     }
 
-    fn dep_from_absolute(&self, path_str: &str) -> Result<String> {
-        let path_buf = Path::new(path_str).canonicalize().map_err(|err| {
-            anyhow!("Failed to canonicalize absolute path: {}: {}", path_str, err.to_string())
+    fn dep_from_absolute<P: AsRef<Path>>(&self, path: P) -> Result<String> {
+        let path_ref = path.as_ref();
+        let path_buf = path_ref.canonicalize().map_err(|err| {
+            anyhow!("Failed to canonicalize absolute path: {:?}: {}", path_ref, err.to_string())
         })?;
-        Ok(if path_buf.is_absolute() {
-            diff_paths(&path_buf, &self.build_path)
-                .ok_or(anyhow!(
-                "Artifact path {:#?} (from {}) cannot be formatted relative to build path {:#?}",
+        if path_buf.is_absolute() {
+            Ok(diff_paths(&path_buf, &self.build_path)
+                .ok_or_else(|| {
+                    anyhow!(
+                "Artifact path {:?} (from {:?}) cannot be formatted relative to build path {:?}",
                 &path_buf,
-                path_str,
+                path_ref,
                 &self.build_path,
-            ))?
+            )
+                })?
                 .to_str()
                 .ok_or_else(|| {
                     anyhow!(
-                        "Artifact path {:#?} (from {}) cannot be converted to string",
+                        "Artifact path {:?} (from {:?}) cannot be converted to string",
                         path_buf,
-                        path_str,
+                        path_ref,
                     )
                 })?
-                .to_string()
+                .to_string())
         } else {
-            path_str.to_string()
-        })
+            Err(anyhow!("Artifact path {:?} (from {:?}) is not absolute", &path_buf, path_ref))
+        }
     }
 }
 
 impl ArtifactReader for FileArtifactReader {
-    fn read_raw(&mut self, path_str: &str) -> Result<Vec<u8>> {
+    fn read_raw(&mut self, path: &Path) -> Result<Vec<u8>> {
         let absolute_path_string = self
-            .absolute_from_absolute_or_artifact_relative(path_str)
+            .absolute_from_absolute_or_artifact_relative(path)
             .context("Absolute path conversion failure during read")?;
         let dep_path_string = self
             .dep_from_absolute(&absolute_path_string)
@@ -151,6 +157,7 @@ mod tests {
         std::{
             fs::{create_dir, File},
             io::Write,
+            path::Path,
         },
         tempfile::tempdir,
     };
@@ -162,7 +169,7 @@ mod tests {
         let mut file = File::create(dir.join("foo")).unwrap();
         file.write_all(b"test_data").unwrap();
         file.sync_all().unwrap();
-        let result = loader.read_raw("foo");
+        let result = loader.read_raw(&Path::new("foo"));
         assert_eq!(result.is_ok(), true);
         let data = result.unwrap();
         assert_eq!(data, b"test_data");
@@ -184,9 +191,9 @@ mod tests {
         file.write_all(b"test_data").unwrap();
         file.sync_all().unwrap();
 
-        assert_eq!(loader.read_raw("foo").is_ok(), true);
-        assert_eq!(loader.read_raw("bar").is_ok(), true);
-        assert_eq!(loader.read_raw("foo").is_ok(), true);
+        assert_eq!(loader.read_raw(&Path::new("foo")).is_ok(), true);
+        assert_eq!(loader.read_raw(&Path::new("bar")).is_ok(), true);
+        assert_eq!(loader.read_raw(&Path::new("foo")).is_ok(), true);
         let deps = loader.get_deps();
         assert_eq!(deps, hashset! {"artifacts/foo".to_string(), "artifacts/bar".to_string()});
     }

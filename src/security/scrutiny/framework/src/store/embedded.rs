@@ -4,7 +4,7 @@
 
 use {
     super::store::Store,
-    anyhow::Result,
+    anyhow::{Context, Result},
     log::info,
     serde_json::value::Value,
     std::fs::{self, File},
@@ -40,7 +40,7 @@ impl Store for EmbeddedStore {
         &self.uri
     }
 
-    /// Lists all the collectionsin the database.
+    /// Lists all the collections in the database.
     fn collections(&self) -> Result<Vec<Uuid>> {
         let mut uuids = vec![];
         for entry in fs::read_dir(&self.uri)? {
@@ -48,8 +48,14 @@ impl Store for EmbeddedStore {
             let path = entry.path();
             if let Some(ext) = path.extension() {
                 if ext == "bin" {
-                    let name = path.file_stem().unwrap().to_os_string().into_string().unwrap();
-                    uuids.push(Uuid::parse_str(&name)?);
+                    if let Some(file_stem) = path.file_stem() {
+                        if let Some(uuid_str) = file_stem.to_str() {
+                            uuids.push(
+                                Uuid::parse_str(uuid_str)
+                                    .context("Failed to parse binary file's file stem as UUID")?,
+                            );
+                        }
+                    }
                 }
             }
         }

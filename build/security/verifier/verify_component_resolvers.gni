@@ -36,13 +36,17 @@ template("verify_component_resolvers") {
     args = [
       "scrutiny",
       "verify",
-      "component-resolvers",
-      "--allowlist",
-      rebase_path(invoker.allowlist, root_build_dir),
-      "--stamp",
-      rebase_path(stamp_file, root_build_dir),
       "--depfile",
       rebase_path(depfile, root_build_dir),
+      "--stamp",
+      rebase_path(stamp_file, root_build_dir),
+      "component-resolvers",
+      "--build-path",
+      rebase_path(root_build_dir, root_build_dir),
+      "--repository-path",
+      rebase_path("$root_build_dir/amber-files/repository", root_build_dir),
+      "--allowlist",
+      rebase_path(invoker.allowlist, root_build_dir),
     ]
 
     if (!defined(invoker.deps)) {

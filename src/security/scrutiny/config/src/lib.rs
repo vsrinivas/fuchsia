@@ -226,10 +226,10 @@ pub struct ModelConfig {
     /// The URL of the Fuchsia config-data package.
     pub config_data_package_url: String,
     /// Path to ZBI (zircon boot image) file.
-    pub zbi_path: String,
+    pub zbi_path: PathBuf,
     /// The path to the device manager configuration inside bootfs inside the
     /// ZBI.
-    pub devmgr_config_path: String,
+    pub devmgr_config_path: PathBuf,
     /// Optional path to a component tree configuration used for customizing
     /// component tree data collection.
     pub component_tree_config_path: Option<PathBuf>,
@@ -253,8 +253,8 @@ impl ModelConfig {
             blob_manifest_path,
             update_package_url: "fuchsia-pkg://fuchsia.com/update".to_string(),
             config_data_package_url: "fuchsia-pkg://fuchsia.com/config-data".to_string(),
-            zbi_path: "fuchsia.zbi".to_string(),
-            devmgr_config_path: "config/devmgr".to_string(),
+            zbi_path: "fuchsia.zbi".into(),
+            devmgr_config_path: "config/devmgr".into(),
             component_tree_config_path: None,
         }
     }
@@ -286,11 +286,11 @@ impl ModelConfig {
         self.config_data_package_url.clone()
     }
     /// The path to the ZBI (zircon boot image).
-    pub fn zbi_path(&self) -> String {
+    pub fn zbi_path(&self) -> PathBuf {
         self.zbi_path.clone()
     }
     /// The path to the device manager configuration file in bootfs.
-    pub fn devmgr_config_path(&self) -> String {
+    pub fn devmgr_config_path(&self) -> PathBuf {
         self.devmgr_config_path.clone()
     }
 }

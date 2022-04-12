@@ -3,14 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, bail, Context, Error, Result},
-    ffx_core::ffx_plugin,
-    ffx_scrutiny_bootfs_args::ScrutinyBootfsCommand,
+    anyhow::{anyhow, bail, Context, Result},
+    ffx_scrutiny_verify_args::bootfs::Command,
     scrutiny_config::{Config, LoggingConfig, PluginConfig, RuntimeConfig},
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
     scrutiny_utils::golden::{CompareResult, GoldenFile},
     serde_json,
-    std::fs::write,
+    std::collections::HashSet,
 };
 
 const SOFT_TRANSITION_MSG : &str = "
@@ -22,14 +21,19 @@ If you are making a change in fuchsia.git that causes this, you need to perform 
 5: For each existing line you modified in 2, remove the line.
 ";
 
-#[ffx_plugin()]
-pub async fn scrutiny_bootfs(cmd: ScrutinyBootfsCommand) -> Result<(), Error> {
+pub async fn verify(cmd: Command) -> Result<HashSet<String>> {
     if cmd.golden.len() == 0 {
         bail!("Must specify at least one --golden");
     }
+    let mut deps = HashSet::new();
+    let zbi = cmd
+        .zbi
+        .to_str()
+        .ok_or_else(|| anyhow!("Failed to convert ZBI path to string: {:?}", cmd.zbi))?;
+    deps.insert(zbi.to_string());
 
     let config = Config::run_command_with_runtime(
-        CommandBuilder::new("tool.zbi.list.bootfs").param("input", cmd.zbi.clone()).build(),
+        CommandBuilder::new("tool.zbi.list.bootfs").param("input", zbi).build(),
         RuntimeConfig {
             logging: LoggingConfig { silent_mode: true, ..LoggingConfig::minimal() },
             plugin: PluginConfig { plugins: vec!["ToolkitPlugin".to_string()] },
@@ -42,7 +46,7 @@ pub async fn scrutiny_bootfs(cmd: ScrutinyBootfsCommand) -> Result<(), Error> {
         .context(format!("Failed to deserialize scrutiny output: {}", scrutiny_output))?;
     for golden_file_path in cmd.golden.into_iter() {
         let golden_file =
-            GoldenFile::open(golden_file_path.clone()).context("Failed to open the golden file")?;
+            GoldenFile::open(&golden_file_path).context("Failed to open the golden file")?;
         match golden_file.compare(bootfs_files.clone()) {
             CompareResult::Matches => Ok(()),
             CompareResult::Mismatch { errors } => {
@@ -52,16 +56,20 @@ pub async fn scrutiny_bootfs(cmd: ScrutinyBootfsCommand) -> Result<(), Error> {
                     println!("{}", error);
                 }
                 println!("");
-                println!("If you intended to change the bootfs contents, please acknowledge it by updating {} with the added or removed lines.", golden_file_path);
+                println!(
+                    "If you intended to change the bootfs contents, please acknowledge it by updating {:?} with the added or removed lines.",
+                    golden_file_path,
+                );
                 println!("{}", SOFT_TRANSITION_MSG);
                 Err(anyhow!("bootfs file mismatch"))
             }
         }?;
+
+        let golden_file_path_str = golden_file_path.to_str().ok_or_else(|| {
+            anyhow!("Failed to convert golden file path to string: {:?}", golden_file_path)
+        })?;
+        deps.insert(golden_file_path_str.to_string());
     }
 
-    if let Some(stamp_file_path) = cmd.stamp {
-        write(stamp_file_path, "Verified").context("Failed to write stamp file")?;
-    }
-
-    Ok(())
+    Ok(deps)
 }

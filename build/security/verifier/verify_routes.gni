@@ -43,15 +43,15 @@ template("verify_routes") {
     args = [
       "scrutiny",
       "verify",
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
+      "--stamp",
+      rebase_path(stamp_file, root_build_dir),
       "routes",
       "--build-path",
       rebase_path(root_build_dir, root_build_dir),
       "--repository-path",
       rebase_path("$root_build_dir/amber-files/repository", root_build_dir),
-      "--stamp",
-      rebase_path(stamp_file, root_build_dir),
-      "--depfile",
-      rebase_path(depfile, root_build_dir),
     ]
     if (defined(invoker.component_tree_config)) {
       inputs += [ invoker.component_tree_config ]

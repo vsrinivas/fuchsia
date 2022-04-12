@@ -5,7 +5,7 @@
 use {
     anyhow::{anyhow, Result},
     scrutiny_utils::artifact::ArtifactReader,
-    std::{collections::HashSet, sync::RwLock},
+    std::{collections::HashSet, path::Path, sync::RwLock},
 };
 
 pub struct MockArtifactReader {
@@ -24,7 +24,8 @@ impl MockArtifactReader {
 }
 
 impl ArtifactReader for MockArtifactReader {
-    fn read_raw(&mut self, path: &str) -> Result<Vec<u8>> {
+    fn read_raw(&mut self, path: &Path) -> Result<Vec<u8>> {
+        let path = path.to_str().ok_or_else(|| anyhow!("Path connot be converted to string"))?;
         let mut borrow = self.bytes.write().unwrap();
         {
             if borrow.len() == 0 {

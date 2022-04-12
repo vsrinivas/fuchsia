@@ -17,8 +17,8 @@ pub fn parse_key_value(contents: String) -> Result<HashMap<String, String>> {
             continue;
         }
         let mut pair = line.splitn(2, "=");
-        let key = pair.next().ok_or(anyhow!("Couldn't find key on line: {}", line))?;
-        let value = pair.next().ok_or(anyhow!("Couldn't find value on line: {}", line))?;
+        let key = pair.next().ok_or_else(|| anyhow!("Couldn't find key on line: {}", line))?;
+        let value = pair.next().ok_or_else(|| anyhow!("Couldn't find value on line: {}", line))?;
         kv_map.insert(String::from(key), String::from(value));
     }
     Ok(kv_map)

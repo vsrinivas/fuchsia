@@ -40,6 +40,7 @@ template("verify_bootfs_filelist") {
                              "visibility",
                            ])
     stamp_file = "$target_gen_dir/$target_name.verified"
+    depfile = "$target_gen_dir/$target_name.d"
 
     inputs = [ invoker.zbi ]
     inputs += invoker.goldens
@@ -49,11 +50,13 @@ template("verify_bootfs_filelist") {
     args = [
       "scrutiny",
       "verify",
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
+      "--stamp",
+      rebase_path(stamp_file, root_build_dir),
       "bootfs",
       "--zbi",
       rebase_path(invoker.zbi, root_build_dir),
-      "--stamp",
-      rebase_path(stamp_file, root_build_dir),
     ]
     foreach(golden, invoker.goldens) {
       args += [

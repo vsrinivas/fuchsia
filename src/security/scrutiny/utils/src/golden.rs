@@ -8,6 +8,7 @@ use {
         collections::HashSet,
         fs::File,
         io::{BufRead, BufReader, Cursor, Read},
+        path::{Path, PathBuf},
     },
 };
 
@@ -22,7 +23,7 @@ pub enum CompareResult {
 /// line may contain a '?' prefix which indicates an optional entry or a '#'
 /// prefix which indicates the entry is a comment and should be ignored.
 pub struct GoldenFile {
-    path: String,
+    path: PathBuf,
     required: HashSet<String>,
     optional: HashSet<String>,
     required_prefix: HashSet<String>,
@@ -45,12 +46,13 @@ fn matches_prefix(name: &String, prefixes: &HashSet<String>) -> Option<String> {
 }
 
 impl GoldenFile {
-    pub fn open(path: String) -> Result<Self> {
-        let golden_file = File::open(&path).context("failed to open golden file")?;
+    pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let path = path.as_ref();
+        let golden_file = File::open(path).context("failed to open golden file")?;
         Self::parse(path, BufReader::new(golden_file))
     }
 
-    pub fn from_contents(path: String, contents: Vec<u8>) -> Result<Self> {
+    pub fn from_contents<P: AsRef<Path>>(path: P, contents: Vec<u8>) -> Result<Self> {
         Self::parse(path, BufReader::new(Cursor::new(contents)))
     }
 
@@ -71,7 +73,7 @@ impl GoldenFile {
     /// indicates that the system image may or may not contain /bin/goat,
     /// /bin/goats, or /bin/goat_teleporter, but it says nothing about whether
     /// /bin/goats/Buttermilk is allowed.
-    fn parse<R: Read>(path: String, reader: BufReader<R>) -> Result<Self> {
+    fn parse<P: AsRef<Path>, R: Read>(path: P, reader: BufReader<R>) -> Result<Self> {
         let mut required: HashSet<String> = HashSet::new();
         let mut optional: HashSet<String> = HashSet::new();
         let mut required_prefix: HashSet<String> = HashSet::new();
@@ -107,7 +109,13 @@ impl GoldenFile {
             };
         }
 
-        Ok(Self { path, required, optional, required_prefix, optional_prefix })
+        Ok(Self {
+            path: path.as_ref().to_path_buf(),
+            required,
+            optional,
+            required_prefix,
+            optional_prefix,
+        })
     }
 
     /// Returns the set of differences between the golden file and the content
@@ -146,10 +154,18 @@ impl GoldenFile {
 
         let mut errors: Vec<String> = Vec::new();
         for entry in not_permitted.iter() {
-            errors.push(format!("{0} is not listed in {1} but was found in the build. If the addition to the build was intended, add a line '{0}' to {1}.", entry, self.path));
+            errors.push(format!(
+                "{0} is not listed in {1:?} but was found in the build. If the addition to the build was intended, add a line '{0}' to {1:?}.",
+                entry,
+                self.path,
+            ));
         }
         for entry in required.iter().chain(required_prefix.iter()) {
-            errors.push(format!("{0} was declared as required in {1} but was not found in the build. If the removal from the build was intended, update {1} to remove the line '{0}'.", entry, self.path));
+            errors.push(format!(
+                "{0} was declared as required in {1:?} but was not found in the build. If the removal from the build was intended, update {1:?} to remove the line '{0}'.",
+                entry,
+                self.path,
+            ));
         }
 
         if errors.is_empty() {
@@ -178,8 +194,7 @@ mod tests {
         writeln!(golden_file, "goat*").expect("failed to write");
         drop(golden_file);
 
-        let golden = GoldenFile::open(golden_path.to_string_lossy().to_string())
-            .expect("failed to open golden");
+        let golden = GoldenFile::open(golden_path).expect("failed to open golden");
         let result = golden.compare(vec![
             "foo".to_string(),
             "bar".to_string(),
@@ -217,8 +232,7 @@ mod tests {
         writeln!(golden_file, "?baz").expect("failed to write");
         drop(golden_file);
 
-        let golden = GoldenFile::open(golden_path.to_string_lossy().to_string())
-            .expect("failed to open golden");
+        let golden = GoldenFile::open(golden_path).expect("failed to open golden");
         let result = golden.compare(vec!["foo".to_string(), "bar".to_string(), "baz".to_string()]);
         assert_eq!(result, CompareResult::Matches);
 

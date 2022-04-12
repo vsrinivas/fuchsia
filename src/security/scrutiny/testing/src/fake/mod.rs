@@ -20,8 +20,8 @@ pub fn fake_model_config() -> ModelConfig {
         blob_manifest_path,
         update_package_url: "fuchsia-pkg://fuchsia.com/update".to_string(),
         config_data_package_url: "fuchsia-pkg://fuchsia.com/config-data".to_string(),
-        zbi_path: "fuchsia.zbi".to_string(),
-        devmgr_config_path: "config/devmgr".to_string(),
+        zbi_path: "fuchsia.zbi".into(),
+        devmgr_config_path: "config/devmgr".into(),
         component_tree_config_path: None,
     }
 }

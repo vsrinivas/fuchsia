@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, ffx_core::ffx_command};
+use {
+    std::path::PathBuf,
+    {argh::FromArgs, ffx_core::ffx_command},
+};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
@@ -14,14 +17,11 @@ use {argh::FromArgs, ffx_core::ffx_command};
 
         $ffx scrutiny verify kernel-cmdline --zbi path/to/image.zbi --golden path/to/golden"
 )]
-pub struct ScrutinyKernelCmdlineCommand {
+pub struct Command {
     /// path to ZBI image to be verified.
     #[argh(option)]
-    pub zbi: String,
+    pub zbi: PathBuf,
     /// path(s) to golden files to compare against during verification.
     #[argh(option)]
-    pub golden: Vec<String>,
-    /// path to stamp file to write to if and only if verification succeeds.
-    #[argh(option)]
-    pub stamp: Option<String>,
+    pub golden: Vec<PathBuf>,
 }

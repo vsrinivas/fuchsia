@@ -3,42 +3,38 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, bail, Context, Error, Result},
-    ffx_core::ffx_plugin,
-    ffx_scrutiny_component_resolvers_args::ScrutinyComponentResolversCommand,
+    anyhow::{anyhow, Context, Result},
+    ffx_scrutiny_verify_args::component_resolvers::Command,
     scrutiny_config::Config,
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
     serde::{Deserialize, Serialize},
-    std::{collections::HashSet, env, fs, io::Write, path::PathBuf},
+    std::{collections::HashSet, fs, path::PathBuf},
 };
 
 type NodePath = String;
 
-/// Location of TUF repo relative to build root dir.
-const REPOSITORY_PATH: &str = "amber-files/repository";
-
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
-pub struct ComponentResolversRequest {
+struct ComponentResolversRequest {
     scheme: String,
     moniker: NodePath,
     protocol: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
-pub struct ComponentResolversResponse {
+struct ComponentResolversResponse {
     deps: HashSet<String>,
     monikers: Vec<NodePath>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
-pub struct AllowListEntry {
+struct AllowListEntry {
     #[serde(flatten)]
     query: ComponentResolversRequest,
     components: Vec<NodePath>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
-pub struct AllowList(Vec<AllowListEntry>);
+struct AllowList(Vec<AllowListEntry>);
 
 impl AllowList {
     pub fn iter(&self) -> impl Iterator<Item = (ComponentResolversRequest, &[NodePath])> {
@@ -47,7 +43,7 @@ impl AllowList {
 }
 
 /// A trait to query scrutiny's verify/component_resolvers API.
-pub trait QueryComponentResolvers {
+trait QueryComponentResolvers {
     /// Walk the v2 component tree, finding all components with a component resolver for `scheme`
     /// in its environment that has the given `moniker` and has access to `protocol`.
     fn query(
@@ -61,16 +57,9 @@ pub trait QueryComponentResolvers {
 /// An impl of [`QueryComponentResolvers`] that launches and queries scrutiny relative to the
 /// current working directory.
 #[derive(Debug)]
-pub struct ScrutinyQueryComponentResolvers {
-    build_dir: PathBuf,
-}
-
-impl ScrutinyQueryComponentResolvers {
-    /// Create a new [`ScrutinyQueryComponentResolvers`], configured to query scrutiny relative to
-    /// the current working directory.
-    pub fn from_env() -> Result<Self> {
-        Ok(Self { build_dir: env::current_dir().context("Failed to get current directory")? })
-    }
+struct ScrutinyQueryComponentResolvers {
+    build_path: PathBuf,
+    repository_path: PathBuf,
 }
 
 impl QueryComponentResolvers for ScrutinyQueryComponentResolvers {
@@ -90,8 +79,8 @@ impl QueryComponentResolvers for ScrutinyQueryComponentResolvers {
                 .build(),
             vec!["DevmgrConfigPlugin", "StaticPkgsPlugin", "CorePlugin", "VerifyPlugin"],
         );
-        config.runtime.model.build_path = self.build_dir.clone();
-        config.runtime.model.repository_path = self.build_dir.join(REPOSITORY_PATH);
+        config.runtime.model.build_path = self.build_path.clone();
+        config.runtime.model.repository_path = self.repository_path.clone();
         config.runtime.logging.silent_mode = true;
 
         let results = launcher::launch_from_config(config).context("Failed to launch scrutiny")?;
@@ -106,30 +95,17 @@ impl QueryComponentResolvers for ScrutinyQueryComponentResolvers {
     }
 }
 
-/// A collection of build dependencies.
-#[derive(Debug, Default, PartialEq, Eq)]
-pub struct Deps(HashSet<String>);
-
-impl Deps {
-    /// Return a sorted vec of the build dependencies.
-    pub fn get(&self) -> Vec<String> {
-        let mut res: Vec<String> = self.0.iter().cloned().collect();
-        res.sort_unstable();
-        res
-    }
-}
-
 /// For each section of the provided `allowlist`, queries scrutiny for all components configured
 /// with a component resolver for `scheme` with the given `moniker` that itself has access
 /// to `protocol`.  If any components match but are not in the allowlist, returns an allowlist that
 /// would allow all found violations. On success, returns the set of files accessed to run the
 /// analysis, for depfile generation.
-pub fn verify_component_resolvers(
+fn verify_component_resolvers(
     scrutiny: impl QueryComponentResolvers,
     allowlist: AllowList,
-) -> Result<Result<Deps, AllowList>> {
+) -> Result<Result<HashSet<String>, AllowList>> {
     let mut violations = vec![];
-    let mut deps = Deps::default();
+    let mut deps = HashSet::new();
 
     for (query, allowed_monikers) in allowlist.iter() {
         let allowed_monikers: HashSet<&NodePath> = allowed_monikers.into_iter().collect();
@@ -139,7 +115,7 @@ pub fn verify_component_resolvers(
             .with_context(|| {
                 format!("Failed to query verify.capability_component_resolvers with {:?}", query)
             })?;
-        deps.0.extend(response.deps);
+        deps.extend(response.deps);
 
         let mut unexpected = vec![];
 
@@ -161,94 +137,34 @@ pub fn verify_component_resolvers(
     }
 }
 
-pub struct VerifyComponentResolvers {
-    stamp_path: Option<String>,
-    depfile_path: Option<String>,
-    allowlist_path: String,
-}
+pub async fn verify(cmd: Command) -> Result<HashSet<String>> {
+    let allowlist_path = cmd.allowlist.clone();
+    let scrutiny = ScrutinyQueryComponentResolvers {
+        build_path: cmd.build_path,
+        repository_path: cmd.repository_path,
+    };
 
-impl VerifyComponentResolvers {
-    /// Creates a new VerifyComponentResolvers instance with:
-    /// * a `stamp_path` that is written to if the verification succeeds,
-    /// * a `depfile_path` that lists all the files this executable touches, and
-    /// * a `allowlist_path` which lists the scheme/moniker/protocol tuples to check and the
-    /// allowed matching components.
-    fn new<S: Into<String>>(
-        stamp_path: Option<S>,
-        depfile_path: Option<S>,
-        allowlist_path: S,
-    ) -> Self {
-        Self {
-            stamp_path: stamp_path.map(|stamp_path| stamp_path.into()),
-            depfile_path: depfile_path.map(|depfile_path| depfile_path.into()),
-            allowlist_path: allowlist_path.into(),
-        }
-    }
+    let allowlist: AllowList = serde_json5::from_str(
+        &fs::read_to_string(&cmd.allowlist).context("Failed to read allowlist")?,
+    )
+    .context("Failed to deserialize allowlist")?;
 
-    /// Launches Scrutiny and performs the component resolver analysis. The
-    /// results are then filtered based on the provided allowlist and any
-    /// errors that are not allowlisted cause the verification to fail listing
-    /// all non-allowlisted errors.
-    fn verify(&self) -> Result<()> {
-        let scrutiny = ScrutinyQueryComponentResolvers::from_env()?;
-
-        let allowlist: AllowList = serde_json5::from_str(
-            &fs::read_to_string(&self.allowlist_path).context("Failed to read allowlist")?,
-        )
-        .context("Failed to deserialize allowlist")?;
-
-        let deps = match verify_component_resolvers(scrutiny, allowlist)? {
-            Ok(deps) => deps,
-            Err(violations) => {
-                bail!(
-                    "
+    verify_component_resolvers(scrutiny, allowlist)?.map_err(|violations| {
+        anyhow!(
+            "
 Static Component Resolver Capability Analysis Error:
 The component resolver verifier found some components configured to be resolved using
 a privileged component resolver.
 
 If it is intended for these components to be resolved using the given resolver, add an entry
-to the allowlist located at: {}
+to the allowlist located at: {:?}
 
 Verification Errors:
 {}",
-                    self.allowlist_path,
-                    serde_json::to_string_pretty(&violations).unwrap()
-                );
-            }
-        };
-
-        // Write out the depfile and stampfile.
-        if let Some(depfile_path) = self.depfile_path.as_ref() {
-            let stamp_path = self
-                .stamp_path
-                .as_ref()
-                .ok_or(anyhow!("Cannot specify depfile without specifying stamp"))?;
-            let mut depfile =
-                fs::File::create(depfile_path).context("failed to create dep file")?;
-
-            write!(depfile, "{}: {}", stamp_path, deps.get().join(" "))
-                .context("failed to write to dep file")?;
-        }
-
-        if let Some(stamp_path) = self.stamp_path.as_ref() {
-            fs::write(stamp_path, "Verified\n").context("failed to write stamp file")?;
-        }
-
-        Ok(())
-    }
-}
-
-#[ffx_plugin()]
-pub async fn scrutiny_component_resolvers(
-    cmd: ScrutinyComponentResolversCommand,
-) -> Result<(), Error> {
-    if cmd.depfile.is_some() && cmd.stamp.is_none() {
-        bail!("Cannot specify --depfile without --stamp");
-    }
-
-    let verify_component_resolvers =
-        VerifyComponentResolvers::new(cmd.stamp, cmd.depfile, cmd.allowlist);
-    verify_component_resolvers.verify()
+            allowlist_path,
+            serde_json::to_string_pretty(&violations).unwrap()
+        )
+    })
 }
 
 #[cfg(test)]
@@ -414,7 +330,7 @@ mod tests {
             vec!["path/to/dep.zbi".to_owned()],
         );
 
-        let expected_deps = Deps(vec!["path/to/dep.zbi".to_owned()].into_iter().collect());
+        let expected_deps = vec!["path/to/dep.zbi".to_owned()].into_iter().collect();
         assert_eq!(verify_component_resolvers(scrutiny, allowlist).unwrap(), Ok(expected_deps));
     }
 

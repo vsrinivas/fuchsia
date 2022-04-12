@@ -14,7 +14,7 @@ use {
     },
     serde::{Deserialize, Serialize},
     serde_json::{self, value::Value},
-    std::sync::Arc,
+    std::{path::Path, sync::Arc},
 };
 
 #[derive(Deserialize, Serialize)]
@@ -39,7 +39,7 @@ impl DataController for BlobController {
         let mut blob_loader = FileArtifactReader::new(&build_path, &repository_path);
 
         let req: BlobRequest = serde_json::from_value(query)?;
-        let data = blob_loader.read_raw(&format!("blobs/{}", req.merkle))?;
+        let data = blob_loader.read_raw(&Path::new(&format!("blobs/{}", req.merkle)))?;
         let resp = BlobResponse {
             merkle: req.merkle.clone(),
             encoding: "base64".to_string(),

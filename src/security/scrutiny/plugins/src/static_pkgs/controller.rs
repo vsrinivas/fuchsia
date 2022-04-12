@@ -82,8 +82,9 @@ mod tests {
             .set(StaticPkgsCollection {
                 deps: hashset! {},
                 static_pkgs: None,
-                errors: vec![StaticPkgsError::StaticPkgsPathInvalid {
-                    static_pkgs_path: "".to_string(),
+                errors: vec![StaticPkgsError::MalformedSystemImageHash {
+                    actual_hash: "0000000000000000000000000000000000000000000000000000000000000000"
+                        .to_string(),
                 }],
             })
             .context("Failed to put static pkgs data into data model")?;
@@ -94,9 +95,10 @@ mod tests {
             json!(StaticPkgsCollection {
                 deps: hashset! {},
                 static_pkgs: None,
-                errors: vec![StaticPkgsError::StaticPkgsPathInvalid {
-                    static_pkgs_path: "".to_string()
-                },],
+                errors: vec![StaticPkgsError::MalformedSystemImageHash {
+                    actual_hash: "0000000000000000000000000000000000000000000000000000000000000000"
+                        .to_string()
+                }],
             })
         );
         Ok(())

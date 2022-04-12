@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, ffx_core::ffx_command};
+use {argh::FromArgs, ffx_core::ffx_command, std::path::PathBuf};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
@@ -12,17 +12,14 @@ use {argh::FromArgs, ffx_core::ffx_command};
     description = "Verifies list of files in bootfs embedded in ZBI image against a golden file",
     example = "To verify bootfs on your current build:
 
-        $ffx scrutiny verify bootfs --zbi path/to/image.zbi --golden path/to/bootfs_golden",
+        $ ffx scrutiny verify bootfs --zbi path/to/image.zbi --golden path/to/bootfs_golden",
     note = "Verifies all file paths in bootfs."
 )]
-pub struct ScrutinyBootfsCommand {
+pub struct Command {
     /// path to ZBI image file that contains bootfs.
     #[argh(option)]
-    pub zbi: String,
+    pub zbi: PathBuf,
     /// path(s) to golden file(s) for verifying bootfs paths.
     #[argh(option)]
-    pub golden: Vec<String>,
-    /// path to stamp file to write to if and only if verification succeeds.
-    #[argh(option)]
-    pub stamp: Option<String>,
+    pub golden: Vec<PathBuf>,
 }

@@ -13,22 +13,30 @@ use {
         bootfs::BootfsReader,
         zbi::{ZbiReader, ZbiType},
     },
-    std::{collections::HashMap, str::from_utf8, sync::Arc},
+    std::{collections::HashMap, path::Path, str::from_utf8, sync::Arc},
 };
 
-fn load_devmgr_config<'a>(
+fn load_devmgr_config<'a, P1: AsRef<Path>, P2: AsRef<Path>>(
     artifact_reader: &'a mut dyn ArtifactReader,
-    zbi_path: &'a str,
-    devmgr_config_path: &'a str,
+    zbi_path: P1,
+    devmgr_config_path: P2,
 ) -> Result<DevmgrConfigContents, DevmgrConfigError> {
-    let zbi_buffer =
-        artifact_reader.read_raw(zbi_path).map_err(|err| DevmgrConfigError::FailedToReadZbi {
-            zbi_path: zbi_path.to_string(),
+    let zbi_path_ref = zbi_path.as_ref();
+    let devmgr_config_path_ref = devmgr_config_path.as_ref();
+    let devmgr_config_path_str = devmgr_config_path_ref.to_str().ok_or_else(|| {
+        DevmgrConfigError::FailedToParseDevmgrConfigPath {
+            devmgr_config_path: devmgr_config_path_ref.to_path_buf(),
+        }
+    })?;
+    let zbi_buffer = artifact_reader.read_raw(zbi_path_ref).map_err(|err| {
+        DevmgrConfigError::FailedToReadZbi {
+            zbi_path: zbi_path_ref.to_path_buf(),
             io_error: format!("{:?}", err),
-        })?;
+        }
+    })?;
     let mut reader = ZbiReader::new(zbi_buffer);
     let zbi_sections = reader.parse().map_err(|zbi_error| DevmgrConfigError::FailedToParseZbi {
-        zbi_path: zbi_path.to_string(),
+        zbi_path: zbi_path_ref.to_path_buf(),
         zbi_error: zbi_error.to_string(),
     })?;
 
@@ -37,23 +45,23 @@ fn load_devmgr_config<'a>(
             let mut bootfs_reader = BootfsReader::new(section.buffer.clone());
             let bootfs_data = bootfs_reader.parse().map_err(|bootfs_error| {
                 DevmgrConfigError::FailedToParseBootfs {
-                    zbi_path: zbi_path.to_string(),
+                    zbi_path: zbi_path_ref.to_path_buf(),
                     bootfs_error: bootfs_error.to_string(),
                 }
             })?;
             for (file, data) in bootfs_data.iter() {
-                if file == &devmgr_config_path {
+                if file == devmgr_config_path_str {
                     return Ok(parse_devmgr_config_contents(from_utf8(&data).map_err(
                         |utf8_error| DevmgrConfigError::FailedToParseUtf8DevmgrConfig {
-                            zbi_path: zbi_path.to_string(),
-                            devmgr_config_path: devmgr_config_path.to_string(),
+                            zbi_path: zbi_path_ref.to_path_buf(),
+                            devmgr_config_path: devmgr_config_path_ref.to_path_buf(),
                             utf8_error: utf8_error.to_string(),
                         },
                     )?)
                     .map_err(|parse_error| {
                         DevmgrConfigError::FailedToParseDevmgrConfigFormat {
-                            zbi_path: zbi_path.to_string(),
-                            devmgr_config_path: devmgr_config_path.to_string(),
+                            zbi_path: zbi_path_ref.to_path_buf(),
+                            devmgr_config_path: devmgr_config_path_ref.to_path_buf(),
                             parse_error,
                         }
                     })?);
@@ -62,8 +70,8 @@ fn load_devmgr_config<'a>(
         }
     }
     Err(DevmgrConfigError::FailedToLocateDevmgrConfig {
-        zbi_path: zbi_path.to_string(),
-        devmgr_config_path: devmgr_config_path.to_string(),
+        zbi_path: zbi_path_ref.to_path_buf(),
+        devmgr_config_path: devmgr_config_path_ref.to_path_buf(),
     })
 }
 
@@ -102,11 +110,10 @@ pub struct DevmgrConfigCollector;
 impl DataCollector for DevmgrConfigCollector {
     fn collect(&self, model: Arc<DataModel>) -> Result<()> {
         let build_path = model.config().build_path();
-        let zbi_path_string = model.config().zbi_path();
+        let zbi_path = model.config().zbi_path();
         let devmgr_config_path = model.config().devmgr_config_path();
         let mut artifact_loader = FileArtifactReader::new(&build_path, &build_path);
-        let result =
-            load_devmgr_config(&mut artifact_loader, &zbi_path_string, &devmgr_config_path);
+        let result = load_devmgr_config(&mut artifact_loader, &zbi_path, &devmgr_config_path);
 
         model
             .set(match result {
@@ -122,8 +129,8 @@ impl DataCollector for DevmgrConfigCollector {
                 },
             })
             .context(format!(
-                "Failed to collect data from devmgr config bootfs:{} in ZBI at {}",
-                devmgr_config_path, zbi_path_string
+                "Failed to collect data from devmgr config bootfs:{:?} in ZBI at {:?}",
+                devmgr_config_path, zbi_path
             ))?;
         Ok(())
     }
