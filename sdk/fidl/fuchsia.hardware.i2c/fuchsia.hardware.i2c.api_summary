@@ -5,20 +5,7 @@ struct fuchsia.hardware.i2c/Device2_Transfer_Response
 union/member fuchsia.hardware.i2c/Device2_Transfer_Result.err int32
 union/member fuchsia.hardware.i2c/Device2_Transfer_Result.response fuchsia.hardware.i2c/Device2_Transfer_Response
 strict union fuchsia.hardware.i2c/Device2_Transfer_Result
-table/member fuchsia.hardware.i2c/I2CBusMetadata.channels vector<fuchsia.hardware.i2c/I2CChannel>:128
-table fuchsia.hardware.i2c/I2CBusMetadata
-table/member fuchsia.hardware.i2c/I2CChannel.address uint16
-table/member fuchsia.hardware.i2c/I2CChannel.bus_id uint32
-table/member fuchsia.hardware.i2c/I2CChannel.bus_speed uint32
-table/member fuchsia.hardware.i2c/I2CChannel.did uint32
-table/member fuchsia.hardware.i2c/I2CChannel.i2c_class uint32
-table/member fuchsia.hardware.i2c/I2CChannel.is_bus_controller bool
-table/member fuchsia.hardware.i2c/I2CChannel.is_ten_bit bool
-table/member fuchsia.hardware.i2c/I2CChannel.pid uint32
-table/member fuchsia.hardware.i2c/I2CChannel.vid uint32
-table fuchsia.hardware.i2c/I2CChannel
 const fuchsia.hardware.i2c/MAX_COUNT_SEGMENTS uint32 8
-const fuchsia.hardware.i2c/MAX_I2C_CHANNEL uint32 128
 const fuchsia.hardware.i2c/MAX_TRANSFER_SIZE uint32 8196
 enum/member fuchsia.hardware.i2c/SegmentType.END 1
 enum/member fuchsia.hardware.i2c/SegmentType.READ 2
