@@ -36,6 +36,18 @@ const char* const kInspectLastDisconnectedListName = "last_disconnected";
 const char* const kInspectLastDisconnectedItemDurationPropertyName = "duration_s";
 const char* const kInspectLastDisconnectedItemPeerPropertyName = "peer_id";
 const char* const kInspectTimestampPropertyName = "@time";
+const char* const kInspectOutgoingNodeName = "outgoing";
+const char* const kInspectIncomingNodeName = "incoming";
+const char* const kInspectConnectionAttemptsNodeName = "connection_attempts";
+const char* const kInspectSuccessfulConnectionsNodeName = "successful_connections";
+const char* const kInspectFailedConnectionsNodeName = "failed_connections";
+const char* const kInspectInterrogationCompleteCountNodeName = "interrogation_complete_count";
+const char* const kInspectLocalApiRequestCountNodeName = "disconnect_local_api_request_count";
+const char* const kInspectInterrogationFailedCountNodeName =
+    "disconnect_interrogation_failed_count";
+const char* const kInspectPairingFailedCountNodeName = "disconnect_pairing_failed_count";
+const char* const kInspectAclLinkErrorCountNodeName = "disconnect_acl_link_error_count";
+const char* const kInspectPeerDisconnectionCountNodeName = "disconnect_peer_disconnection_count";
 
 std::string ReasonAsString(DisconnectReason reason) {
   switch (reason) {
@@ -47,6 +59,8 @@ std::string ReasonAsString(DisconnectReason reason) {
       return "PairingFailed";
     case DisconnectReason::kAclLinkError:
       return "AclLinkError";
+    case DisconnectReason::kPeerDisconnection:
+      return "PeerDisconnection";
     default:
       return "<Unknown Reason>";
   }
@@ -364,7 +378,7 @@ bool BrEdrConnectionManager::Disconnect(PeerId peer_id, DisconnectReason reason)
         peer_addr, async::Now(async_get_default_dispatcher()) + kLocalDisconnectCooldownDuration);
   }
 
-  CleanUpConnection(handle, std::move(connections_.extract(handle).mapped()));
+  CleanUpConnection(handle, std::move(connections_.extract(handle).mapped()), reason);
   return true;
 }
 
@@ -380,6 +394,36 @@ void BrEdrConnectionManager::AttachInspect(inspect::Node& parent, std::string na
     req.AttachInspect(inspect_properties_.requests_node_,
                       inspect_properties_.requests_node_.UniqueName(kInspectRequestNodeNamePrefix));
   }
+
+  inspect_properties_.outgoing_.node_ = inspect_node_.CreateChild(kInspectOutgoingNodeName);
+  inspect_properties_.outgoing_.connection_attempts_.AttachInspect(
+      inspect_properties_.outgoing_.node_, kInspectConnectionAttemptsNodeName);
+  inspect_properties_.outgoing_.successful_connections_.AttachInspect(
+      inspect_properties_.outgoing_.node_, kInspectSuccessfulConnectionsNodeName);
+  inspect_properties_.outgoing_.failed_connections_.AttachInspect(
+      inspect_properties_.outgoing_.node_, kInspectFailedConnectionsNodeName);
+
+  inspect_properties_.incoming_.node_ = inspect_node_.CreateChild(kInspectIncomingNodeName);
+  inspect_properties_.incoming_.connection_attempts_.AttachInspect(
+      inspect_properties_.incoming_.node_, kInspectConnectionAttemptsNodeName);
+  inspect_properties_.incoming_.successful_connections_.AttachInspect(
+      inspect_properties_.incoming_.node_, kInspectSuccessfulConnectionsNodeName);
+  inspect_properties_.incoming_.failed_connections_.AttachInspect(
+      inspect_properties_.incoming_.node_, kInspectFailedConnectionsNodeName);
+
+  inspect_properties_.interrogation_complete_count_.AttachInspect(
+      inspect_node_, kInspectInterrogationCompleteCountNodeName);
+
+  inspect_properties_.disconnect_local_api_request_count_.AttachInspect(
+      inspect_node_, kInspectLocalApiRequestCountNodeName);
+  inspect_properties_.disconnect_interrogation_failed_count_.AttachInspect(
+      inspect_node_, kInspectInterrogationFailedCountNodeName);
+  inspect_properties_.disconnect_pairing_failed_count_.AttachInspect(
+      inspect_node_, kInspectPairingFailedCountNodeName);
+  inspect_properties_.disconnect_acl_link_error_count_.AttachInspect(
+      inspect_node_, kInspectAclLinkErrorCountNodeName);
+  inspect_properties_.disconnect_peer_disconnection_count_.AttachInspect(
+      inspect_node_, kInspectPeerDisconnectionCountNodeName);
 }
 
 void BrEdrConnectionManager::WritePageTimeout(zx::duration page_timeout, hci::StatusCallback cb) {
@@ -593,6 +637,8 @@ void BrEdrConnectionManager::CompleteConnectionSetup(Peer* peer,
   // Remove from the denylist if we successfully connect.
   deny_incoming_.remove(peer->address());
 
+  inspect_properties_.interrogation_complete_count_.Add(1);
+
   if (discoverer_.search_count()) {
     l2cap_->OpenL2capChannel(handle, l2cap::kSDP, l2cap::ChannelParameters(),
                              [self, peer_id = peer->identifier()](auto channel) {
@@ -673,6 +719,9 @@ void BrEdrConnectionManager::OnConnectionRequest(ConnectionRequestEvent event) {
     // request if one doesn't already exist
     auto [request, _ignore] = connection_requests_.try_emplace(
         peer_id, event.addr, peer_id, peer->MutBrEdr().RegisterInitializingConnection());
+
+    inspect_properties_.incoming_.connection_attempts_.Add(1);
+
     request->second.BeginIncoming();
     request->second.AttachInspect(
         inspect_properties_.requests_node_,
@@ -788,9 +837,19 @@ void BrEdrConnectionManager::CompleteRequest(PeerId peer_id, DeviceAddress addre
       TryCreateNextConnection();
       return;
     }
+    if (completed_request_was_outgoing) {
+      inspect_properties_.outgoing_.failed_connections_.Add(1);
+    } else if (request.HasIncoming()) {
+      inspect_properties_.incoming_.failed_connections_.Add(1);
+    }
     request.NotifyCallbacks(status, [] { return nullptr; });
     connection_requests_.erase(req_iter);
   } else {
+    if (completed_request_was_outgoing) {
+      inspect_properties_.outgoing_.successful_connections_.Add(1);
+    } else if (request.HasIncoming()) {
+      inspect_properties_.incoming_.successful_connections_.Add(1);
+    }
     // Callbacks will be notified when interrogation completes
     InitializeConnection(address, handle, role);
   }
@@ -812,13 +871,13 @@ void BrEdrConnectionManager::OnPeerDisconnect(const hci::Connection* connection)
 
   bt_log(INFO, "gap-bredr", "peer disconnected (peer: %s, handle: %#.4x)", bt_str(conn.peer_id()),
          handle);
-  CleanUpConnection(handle, std::move(conn));
+  CleanUpConnection(handle, std::move(conn), DisconnectReason::kPeerDisconnection);
 }
 
 void BrEdrConnectionManager::CleanUpConnection(hci_spec::ConnectionHandle handle,
-                                               BrEdrConnection conn) {
+                                               BrEdrConnection conn, DisconnectReason reason) {
   l2cap_->RemoveConnection(handle);
-  RecordDisconnectInspect(conn);
+  RecordDisconnectInspect(conn, reason);
   // |conn| is destroyed when it goes out of scope.
 }
 
@@ -1207,6 +1266,8 @@ void BrEdrConnectionManager::InitiatePendingConnection(CreateConnectionParams pa
                                      params.page_scan_repetition_mode, request_timeout_,
                                      on_failure);
   pending_gap_req.RecordHciCreateConnectionAttempt();
+
+  inspect_properties_.outgoing_.connection_attempts_.Add(1);
 }
 
 void BrEdrConnectionManager::OnRequestTimeout() {
@@ -1406,7 +1467,8 @@ void BrEdrConnectionManager::SendRejectSynchronousRequest(DeviceAddress addr,
                                        hci_spec::kCommandStatusEventCode);
 }
 
-void BrEdrConnectionManager::RecordDisconnectInspect(const BrEdrConnection& conn) {
+void BrEdrConnectionManager::RecordDisconnectInspect(const BrEdrConnection& conn,
+                                                     DisconnectReason reason) {
   // Add item to recent disconnections list.
   auto& inspect_item = inspect_properties_.last_disconnected_list.CreateItem();
   inspect_item.node.CreateString(kInspectLastDisconnectedItemPeerPropertyName,
@@ -1415,6 +1477,26 @@ void BrEdrConnectionManager::RecordDisconnectInspect(const BrEdrConnection& conn
                                conn.duration().to_secs(), &inspect_item.values);
   inspect_item.node.CreateInt(kInspectTimestampPropertyName, async::Now(dispatcher_).get(),
                               &inspect_item.values);
+
+  switch (reason) {
+    case DisconnectReason::kApiRequest:
+      inspect_properties_.disconnect_local_api_request_count_.Add(1);
+      break;
+    case DisconnectReason::kInterrogationFailed:
+      inspect_properties_.disconnect_interrogation_failed_count_.Add(1);
+      break;
+    case DisconnectReason::kPairingFailed:
+      inspect_properties_.disconnect_pairing_failed_count_.Add(1);
+      break;
+    case DisconnectReason::kAclLinkError:
+      inspect_properties_.disconnect_acl_link_error_count_.Add(1);
+      break;
+    case DisconnectReason::kPeerDisconnection:
+      inspect_properties_.disconnect_peer_disconnection_count_.Add(1);
+      break;
+    default:
+      break;
+  }
 }
 
 }  // namespace bt::gap
