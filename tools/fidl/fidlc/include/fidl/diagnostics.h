@@ -392,6 +392,8 @@ constexpr ErrorDef<flat::Name> ErrCannotIndicateNullabilityTwice(
 constexpr ErrorDef<flat::Name> ErrMustHaveNonZeroSize("{} must have non-zero size");
 constexpr ErrorDef<flat::Name, size_t, size_t> ErrWrongNumberOfLayoutParameters(
     "{} expected {} layout parameter(s), but got {}");
+constexpr ErrorDef ErrMultipleConstraintDefinitions(
+    "cannot specify multiple constraint sets on a type");
 constexpr ErrorDef<flat::Name, size_t, size_t> ErrTooManyConstraints(
     "{} expected at most {} constraints, but got {}");
 constexpr ErrorDef ErrExpectedType("expected type but got a literal or constant");

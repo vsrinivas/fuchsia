@@ -85,7 +85,7 @@ protocol ActiveProducer {
     ///   the pipeline. See `fuchsia.media2.StreamSink/Clear`.
     Clear(resource struct {
         hold_last_frame bool;
-        completion_fence zx.handle:EVENTPAIR :optional;
+        completion_fence zx.handle:<EVENTPAIR, optional>;
     });
 };
 
@@ -139,7 +139,7 @@ protocol PassiveProducer {
     ///   the pipeline. See `fuchsia.media2.StreamSink/Clear`.
     Clear(resource struct {
         hold_last_frame bool;
-        completion_fence zx.handle:EVENTPAIR :optional;
+        completion_fence zx.handle:<EVENTPAIR, optional>;
     });
 };
 

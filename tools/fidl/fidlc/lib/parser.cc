@@ -1498,6 +1498,9 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
         raw::ConstraintOrSubtype after_colon = ParseTokenAfterColon();
         std::visit(fidl::utils::matchers{
                        [&](std::unique_ptr<raw::TypeConstraints>& constraint) -> void {
+                         if (constraints != nullptr) {
+                           Fail(ErrMultipleConstraintDefinitions, previous_token_.span());
+                         }
                          if (modifiers != nullptr)
                            ValidateModifiers</* none */>(modifiers, identifier->start_);
                          if (attributes != nullptr)
@@ -1556,6 +1559,9 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
 
   MaybeConsumeToken(OfKind(Token::Kind::kColon));
   if (previous_token_.kind() == Token::Kind::kColon) {
+    if (constraints != nullptr) {
+      return Fail(ErrMultipleConstraintDefinitions, previous_token_.span());
+    }
     constraints = ParseTypeConstraints();
     if (!Ok())
       return Fail();

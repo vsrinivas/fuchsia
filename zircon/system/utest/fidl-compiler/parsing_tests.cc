@@ -723,6 +723,22 @@ type Foo = struct {
                                       fidl::ErrUnexpectedTokenOfKind);
 }
 
+TEST(ParsingTests, BadMultipleConstraintDefinitions) {
+  TestLibrary library(R"FIDL(
+library example;
+
+const LENGTH uint32 = 123;
+
+type Foo = struct {
+  bad_double_colon string:LENGTH:optional;
+  bad_double_colon_bracketed string:LENGTH:<LENGTH,optional>;
+};
+)FIDL");
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMultipleConstraintDefinitions,
+                                      fidl::ErrMultipleConstraintDefinitions);
+  ;
+}
+
 TEST(ParsingTests, GoodSingleConstraint) {
   TestLibrary library(R"FIDL(
 library example;

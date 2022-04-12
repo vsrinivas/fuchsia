@@ -57,7 +57,7 @@ protocol StreamSink {
     ///   thereof should be used in the downstream `Clear` calls.
     Clear(resource struct {
         hold_last_frame bool;
-        completion_fence zx.handle:EVENTPAIR :optional;
+        completion_fence zx.handle:<EVENTPAIR, optional>;
     });
 };
 
