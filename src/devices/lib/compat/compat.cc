@@ -118,19 +118,18 @@ zx::status<Interop> Interop::Create(async_dispatcher_t* dispatcher, const driver
   return zx::ok(std::move(interop));
 }
 
-fpromise::promise<void, zx_status_t> Interop::ConnectToParentCompatService() {
-  auto result = ns_->OpenService<fuchsia_driver_compat::Service>("default");
+zx::status<fidl::WireSharedClient<fuchsia_driver_compat::Device>> ConnectToParentDevice(
+    async_dispatcher_t* dispatcher, const driver::Namespace* ns, std::string_view name) {
+  auto result = ns->OpenService<fuchsia_driver_compat::Service>("default");
   if (result.is_error()) {
-    return fpromise::make_error_promise(result.status_value());
+    return result.take_error();
   }
   auto connection = result.value().connect_device();
   if (connection.is_error()) {
-    return fpromise::make_error_promise(connection.status_value());
+    return connection.take_error();
   }
-  device_client_ = fidl::WireSharedClient<fuchsia_driver_compat::Device>(
-      std::move(connection.value()), dispatcher_);
-
-  return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
+  return zx::ok(fidl::WireSharedClient<fuchsia_driver_compat::Device>(std::move(connection.value()),
+                                                                      dispatcher));
 }
 
 fpromise::promise<void, zx_status_t> Interop::ExportChild(Child* child,

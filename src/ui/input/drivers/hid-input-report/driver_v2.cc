@@ -82,13 +82,20 @@ class InputReportDriver {
 
     input_report_->Start();
 
+    // Connect to our parent.
+    auto parent_client = compat::ConnectToParentDevice(dispatcher_, &ns_);
+    if (parent_client.is_error()) {
+      FDF_LOG(WARNING, "Connecting to compat service failed with %s",
+              zx_status_get_string(parent_client.error_value()));
+      return parent_client.take_error();
+    }
+    parent_client_ = std::move(parent_client.value());
+
     auto compat_connect =
-        interop_
-            .ConnectToParentCompatService()
-            // Get our parent's topological path.
+        fpromise::make_result_promise<void, zx_status_t>(fpromise::ok())
             .and_then([this]() {
               fpromise::bridge<void, zx_status_t> topo_bridge;
-              interop_.device_client()->GetTopologicalPath().Then(
+              parent_client_->GetTopologicalPath().Then(
                   [this, completer = std::move(topo_bridge.completer)](
                       fidl::WireUnownedResult<fuchsia_driver_compat::Device::GetTopologicalPath>&
                           result) mutable {
@@ -140,6 +147,7 @@ class InputReportDriver {
   compat::Interop interop_;
   std::optional<compat::Child> child_;
   std::string parent_topo_path_;
+  fidl::WireSharedClient<fuchsia_driver_compat::Device> parent_client_;
 
   // NOTE: Must be the last member.
   fpromise::scope scope_;

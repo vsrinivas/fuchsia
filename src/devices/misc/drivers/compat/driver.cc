@@ -132,16 +132,23 @@ zx::status<> Driver::Run(fidl::ServerEnd<fio::Directory> outgoing_dir,
   }
   interop_ = std::move(*interop);
 
-  auto compat_connect =
-      interop_.ConnectToParentCompatService()
-          .and_then(fit::bind_member<&Driver::GetDeviceInfo>(this))
-          .then([this](result<void, zx_status_t>& result) -> fpromise::result<void, zx_status_t> {
-            if (result.is_error()) {
-              FDF_LOG(WARNING, "Connecting to compat service failed with %s",
-                      zx_status_get_string(result.error()));
-            }
-            return ok();
-          });
+  // Connect to our parent. It is not an error if this fails.
+  auto parent_client = ConnectToParentDevice(dispatcher_, &ns_);
+  if (parent_client.is_error()) {
+    FDF_LOG(WARNING, "Connecting to compat service failed with %s",
+            zx_status_get_string(parent_client.error_value()));
+  } else {
+    parent_client_ = std::move(parent_client.value());
+  }
+
+  auto compat_connect = Driver::GetDeviceInfo().then(
+      [this](result<void, zx_status_t>& result) -> fpromise::result<void, zx_status_t> {
+        if (result.is_error()) {
+          FDF_LOG(WARNING, "Connecting to compat service failed with %s",
+                  zx_status_get_string(result.error()));
+        }
+        return ok();
+      });
 
   auto root_resource =
       fpromise::make_result_promise<zx::resource, zx_status_t>(error(ZX_ERR_ALREADY_BOUND)).box();
@@ -395,12 +402,12 @@ result<> Driver::StopDriver(const zx_status_t& status) {
 }
 
 promise<void, zx_status_t> Driver::GetDeviceInfo() {
-  if (!interop_.device_client()) {
+  if (!parent_client_) {
     return fpromise::make_result_promise<void, zx_status_t>(error(ZX_ERR_PEER_CLOSED));
   }
 
   bridge<void, zx_status_t> topo_bridge;
-  interop_.device_client()->GetTopologicalPath().Then(
+  parent_client_->GetTopologicalPath().Then(
       [this, completer = std::move(topo_bridge.completer)](
           fidl::WireUnownedResult<fuchsia_driver_compat::Device::GetTopologicalPath>&
               result) mutable {
@@ -413,7 +420,7 @@ promise<void, zx_status_t> Driver::GetDeviceInfo() {
       });
 
   bridge<void, zx_status_t> metadata_bridge;
-  interop_.device_client()->GetMetadata().Then(
+  parent_client_->GetMetadata().Then(
       [this, completer = std::move(metadata_bridge.completer)](
           fidl::WireUnownedResult<fuchsia_driver_compat::Device::GetMetadata>& result) mutable {
         if (!result.ok()) {

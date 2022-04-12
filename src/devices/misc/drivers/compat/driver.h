@@ -89,7 +89,6 @@ class Driver {
   // Stops the DFv1 driver if there was a failure.
   fpromise::result<> StopDriver(const zx_status_t& status);
 
-  fpromise::promise<void, zx_status_t> ConnectToParentCompatService();
   fpromise::promise<void, zx_status_t> GetDeviceInfo();
 
   fbl::RefPtr<fs::PseudoDir> compat_service_;
@@ -114,6 +113,7 @@ class Driver {
   zx::resource root_resource_;
 
   Interop interop_;
+  fidl::WireSharedClient<fuchsia_driver_compat::Device> parent_client_;
 
   // NOTE: Must be the last member.
   fpromise::scope scope_;

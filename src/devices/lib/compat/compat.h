@@ -101,14 +101,8 @@ class Interop {
   static zx::status<Interop> Create(async_dispatcher_t* dispatcher, const driver::Namespace* ns,
                                     service::OutgoingDirectory* outgoing);
 
-  // Start a promise to connect to the parent's compat service.
-  // When this returns successful, `device_client` will be correctly set.
-  fpromise::promise<void, zx_status_t> ConnectToParentCompatService();
-
   // Take a Child, and export its fuchsia.driver.compat service, and it export it to devfs.
   fpromise::promise<void, zx_status_t> ExportChild(Child* child, fbl::RefPtr<fs::Vnode> dev_node);
-
-  fidl::WireSharedClient<fuchsia_driver_compat::Device>& device_client() { return device_client_; }
 
  private:
   friend class Child;
@@ -118,9 +112,11 @@ class Interop {
   service::OutgoingDirectory* outgoing_;
 
   fbl::RefPtr<fs::PseudoDir> compat_service_;
-  fidl::WireSharedClient<fuchsia_driver_compat::Device> device_client_;
   driver::DevfsExporter exporter_;
 };
+
+zx::status<fidl::WireSharedClient<fuchsia_driver_compat::Device>> ConnectToParentDevice(
+    async_dispatcher_t* dispatcher, const driver::Namespace* ns, std::string_view name = "default");
 
 // The Child class represents a child device.
 // When a Child is removed, it will remove the services it added in the
