@@ -82,6 +82,11 @@
             to: "#omaha-client-service",
         },
         {
+            protocol: "fuchsia.pkg.Cup",
+            from: "#pkg-resolver",
+            to: "#omaha-client-service",
+        },
+        {
             directory: "build-info",
             from: "parent",
             to: "#omaha-client-service",

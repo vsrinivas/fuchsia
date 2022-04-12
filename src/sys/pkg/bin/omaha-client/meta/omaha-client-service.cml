@@ -26,6 +26,7 @@
                 "fuchsia.feedback.ComponentDataRegister",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.pkg.Cup",
                 "fuchsia.stash.Store2",
                 "fuchsia.ui.activity.Provider",
                 "fuchsia.update.CommitStatusProvider",

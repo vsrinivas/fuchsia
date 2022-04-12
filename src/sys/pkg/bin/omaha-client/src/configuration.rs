@@ -5,11 +5,12 @@
 use crate::{
     app_set::{EagerPackage, FuchsiaAppSet},
     channel::{ChannelConfig, ChannelConfigs},
-    eager_package_config::EagerPackageConfigs,
+    eager_package_config::{EagerPackageConfig, EagerPackageConfigs},
 };
 use anyhow::{anyhow, Error};
 use fidl_fuchsia_boot::{ArgumentsMarker, ArgumentsProxy};
-use log::{error, warn};
+use fidl_fuchsia_pkg::{CupMarker, CupProxy, GetInfoError, PackageUrl};
+use log::{error, info, warn};
 use omaha_client::{
     common::App,
     configuration::{Config, Updater},
@@ -18,6 +19,10 @@ use omaha_client::{
 use std::fs;
 use std::io;
 use version::Version;
+
+// TODO: This is not 0.0.0.0 because that would cause state machine to not start. We should find a
+// better way to achieve that when build version is invalid.
+const MINIMUM_VALID_VERSION: [u32; 4] = [0, 0, 0, 1];
 
 /// This struct is the overall "configuration" of the omaha client.  Minus the PolicyConfig.  That
 /// should probably be included in here as well, eventually.
@@ -121,7 +126,10 @@ impl ClientConfiguration {
 
         match EagerPackageConfigs::from_namespace() {
             Ok(eager_package_configs) => {
-                Self::add_eager_packages(&mut app_set, eager_package_configs)
+                let proxy = fuchsia_component::client::connect_to_protocol::<CupMarker>()
+                    .map_err(|e| error!("Failed to connect to Cup protocol {:#}", anyhow!(e)))
+                    .ok();
+                Self::add_eager_packages(&mut app_set, eager_package_configs, proxy).await
             }
             Err(e) => {
                 match e.downcast_ref::<std::io::Error>() {
@@ -149,11 +157,14 @@ impl ClientConfiguration {
     }
 
     /// Add all eager packages in eager package config to app set.
-    fn add_eager_packages(app_set: &mut FuchsiaAppSet, eager_package_configs: EagerPackageConfigs) {
+    async fn add_eager_packages(
+        app_set: &mut FuchsiaAppSet,
+        eager_package_configs: EagerPackageConfigs,
+        cup: Option<CupProxy>,
+    ) {
         for package in eager_package_configs.packages {
-            // TODO: ask pkg-resolver for current channel and version first.
-            let version = [0, 0, 0, 1];
-            let channel_config = package.channel_config.get_default_channel();
+            let (channel_config, version) =
+                Self::get_eager_package_channel_and_version(&package, &cup).await;
 
             let appid = match channel_config.as_ref().and_then(|c| c.appid.as_ref()) {
                 Some(appid) => &appid,
@@ -177,6 +188,49 @@ impl ClientConfiguration {
 
             app_set.add_eager_package(EagerPackage::new(app, Some(package.channel_config)));
         }
+    }
+
+    async fn get_eager_package_channel_and_version(
+        package: &EagerPackageConfig,
+        cup: &Option<CupProxy>,
+    ) -> (Option<ChannelConfig>, Version) {
+        let default_version = Version::from(MINIMUM_VALID_VERSION);
+        if let Some(ref cup) = cup {
+            match cup.get_info(&mut PackageUrl { url: package.url.to_string() }).await {
+                Ok(Ok((cup_channel, cup_version))) => {
+                    let channel_config =
+                        package.channel_config.get_channel(&cup_channel).or_else(|| {
+                            error!(
+                                "'{}' channel from CUP for package '{}' is not a known channel",
+                                cup_channel, package.url
+                            );
+                            package.channel_config.get_default_channel()
+                        });
+                    let version = cup_version.parse().unwrap_or_else(|e| {
+                        error!(
+                            "Unable to parse '{}' as Omaha version format: {:?}",
+                            cup_version, e
+                        );
+                        default_version
+                    });
+                    return (channel_config, version);
+                }
+                Ok(Err(GetInfoError::NotAvailable)) => {
+                    info!("Eager package '{}' not currently available on the device", package.url);
+                }
+                Ok(Err(e)) => {
+                    error!(
+                        "Failed to get info about eager package '{}' from CUP: {:?}",
+                        package.url, e
+                    );
+                }
+                Err(e) => {
+                    error!("Failed to send request to fuchsia.pkg.Cup: {:#}", anyhow!(e));
+                }
+            }
+        }
+
+        (package.channel_config.get_default_channel(), default_version)
     }
 
     /// Helper to wrap the parsing of a version string, logging any parse errors and making sure
@@ -264,6 +318,7 @@ mod tests {
     use crate::eager_package_config::EagerPackageConfig;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_boot::ArgumentsRequest;
+    use fidl_fuchsia_pkg::CupRequest;
     use fuchsia_async as fasync;
     use fuchsia_url::pkg_url::PkgUrl;
     use futures::prelude::*;
@@ -545,8 +600,8 @@ mod tests {
         future::join(fut, stream_fut).await;
     }
 
-    #[test]
-    fn test_add_eager_packages() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_add_eager_packages() {
         let system_app = App::builder("system_app_id", [1]).build();
         let mut app_set = FuchsiaAppSet::new(system_app.clone());
         let config = EagerPackageConfigs {
@@ -599,8 +654,9 @@ mod tests {
                 },
             ],
         };
-        ClientConfiguration::add_eager_packages(&mut app_set, config);
-        let package_app = App::builder("1a2b3c4d", [0, 0, 0, 1])
+        // without CUP
+        ClientConfiguration::add_eager_packages(&mut app_set, config.clone(), None).await;
+        let package_app = App::builder("1a2b3c4d", MINIMUM_VALID_VERSION)
             .with_cohort(Cohort {
                 hint: Some("stable".into()),
                 name: Some("stable".into()),
@@ -608,7 +664,108 @@ mod tests {
             })
             .with_extra("channel", "stable")
             .build();
-        let package2_app = App::builder("", [0, 0, 0, 1]).build();
+        let package2_app = App::builder("", MINIMUM_VALID_VERSION).build();
+        assert_eq!(app_set.get_apps(), vec![system_app.clone(), package_app, package2_app]);
+
+        // now with CUP
+        let mut app_set = FuchsiaAppSet::new(system_app.clone());
+        let (proxy, mut stream) = create_proxy_and_stream::<CupMarker>().unwrap();
+        let stream_fut = async move {
+            while let Some(request) = stream.next().await {
+                match request {
+                    Ok(CupRequest::GetInfo { url, responder }) => {
+                        let response = match url.url.as_str() {
+                            "fuchsia-pkg://example.com/package" => ("beta".into(), "1.2.3".into()),
+                            "fuchsia-pkg://example.com/package2" => {
+                                ("stable".into(), "4.5.6".into())
+                            }
+                            url => panic!("unexpected url {}", url),
+                        };
+                        responder.send(&mut Ok(response)).unwrap();
+                    }
+                    request => panic!("Unexpected request: {:?}", request),
+                }
+            }
+        };
+        let fut = ClientConfiguration::add_eager_packages(&mut app_set, config, Some(proxy));
+        future::join(fut, stream_fut).await;
+        let package_app = App::builder("1a2b3c4d", [1, 2, 3, 0])
+            .with_cohort(Cohort {
+                hint: Some("beta".into()),
+                name: Some("beta".into()),
+                ..Cohort::default()
+            })
+            .with_extra("channel", "beta")
+            .build();
+        let package2_app = App::builder("3c4d5e6f", [4, 5, 6, 0])
+            .with_cohort(Cohort {
+                hint: Some("stable".into()),
+                name: Some("stable".into()),
+                ..Cohort::default()
+            })
+            .with_extra("channel", "stable")
+            .build();
         assert_eq!(app_set.get_apps(), vec![system_app, package_app, package2_app]);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_eager_package_channel_and_version_fallback() {
+        let (proxy, mut stream) = create_proxy_and_stream::<CupMarker>().unwrap();
+        let stream_fut = async move {
+            match stream.next().await.unwrap() {
+                Ok(CupRequest::GetInfo { url, responder }) => {
+                    assert_eq!(url.url, "fuchsia-pkg://example.com/package");
+                    responder.send(&mut Ok(("beta".into(), "abc".into()))).unwrap();
+                }
+                request => panic!("Unexpected request: {:?}", request),
+            }
+        };
+        let stable_channel_config = ChannelConfig {
+            name: "stable".into(),
+            repo: "stable".into(),
+            appid: Some("1a2b3c4d".into()),
+            check_interval_secs: None,
+        };
+        let config = EagerPackageConfig {
+            url: PkgUrl::parse("fuchsia-pkg://example.com/package").unwrap(),
+            flavor: Some("debug".into()),
+            channel_config: ChannelConfigs {
+                default_channel: Some("stable".into()),
+                known_channels: vec![stable_channel_config.clone()],
+            },
+        };
+        // unknown channel or invalid version fallback to default
+        let ((channel_config, version), ()) = future::join(
+            ClientConfiguration::get_eager_package_channel_and_version(&config, &Some(proxy)),
+            stream_fut,
+        )
+        .await;
+        assert_eq!(channel_config.unwrap(), stable_channel_config);
+        assert_eq!(version, MINIMUM_VALID_VERSION.into());
+
+        // GetInfoError fallback to default
+        let (proxy, mut stream) = create_proxy_and_stream::<CupMarker>().unwrap();
+        let stream_fut = async move {
+            match stream.next().await.unwrap() {
+                Ok(CupRequest::GetInfo { url, responder }) => {
+                    assert_eq!(url.url, "fuchsia-pkg://example.com/package");
+                    responder.send(&mut Err(GetInfoError::NotAvailable)).unwrap();
+                }
+                request => panic!("Unexpected request: {:?}", request),
+            }
+        };
+        let ((channel_config, version), ()) = future::join(
+            ClientConfiguration::get_eager_package_channel_and_version(&config, &Some(proxy)),
+            stream_fut,
+        )
+        .await;
+        assert_eq!(channel_config.unwrap(), stable_channel_config);
+        assert_eq!(version, MINIMUM_VALID_VERSION.into());
+
+        // no proxy fallback to default
+        let (channel_config, version) =
+            ClientConfiguration::get_eager_package_channel_and_version(&config, &None).await;
+        assert_eq!(channel_config.unwrap(), stable_channel_config);
+        assert_eq!(version, MINIMUM_VALID_VERSION.into());
     }
 }
