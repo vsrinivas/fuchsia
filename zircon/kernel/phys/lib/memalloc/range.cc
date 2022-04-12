@@ -27,8 +27,6 @@ std::string_view ToString(Type type) {
       return "peripheral"sv;
     case Type::kPoolBookkeeping:
       return "bookkeeping"sv;
-    case Type::kNullPointerRegion:
-      return "null pointer region"sv;
     case Type::kPhysKernel:
       return "phys kernel image"sv;
     case Type::kKernel:

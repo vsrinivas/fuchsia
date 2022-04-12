@@ -50,35 +50,34 @@ constexpr int kSizeColWidth = 7;
 }  // namespace
 
 fitx::result<fitx::failed> Pool::Init(cpp20::span<internal::RangeIterationContext> state,
-                                      uint64_t max_addr) {
+                                      uint64_t min_addr, uint64_t max_addr) {
   RangeStream ranges(state);
 
   const size_t scratch_size = FindNormalizedRangesScratchSize(ranges.size()) * sizeof(void*);
-  Range bookkeeping = {
-      // To be set by `find_bookkeeping()`.
-      .addr = 0,
-      // We want enough bookkeeping to fit our initial pages as well as the
-      // scratch buffer we will need for FindNormalizedRanges().
-      .size = *Align(ranges.size() * sizeof(Node) + scratch_size, kBookkeepingChunkSize),
-      .type = Type::kPoolBookkeeping,
-  };
 
-  auto find_bookkeeping = [&](const Range& range) {
+  // We want enough bookkeeping to fit our initial pages as well as the
+  // scratch buffer we will need for FindNormalizedRanges().
+  const uint64_t bookkeeping_size =
+      *Align(ranges.size() * sizeof(Node) + scratch_size, kBookkeepingChunkSize);
+
+  std::optional<uint64_t> bookkeeping_addr;
+  auto find_bookkeeping = [min_addr, max_addr, bookkeeping_size,
+                           &bookkeeping_addr](const Range& range) {
     ZX_DEBUG_ASSERT(range.type == Type::kFreeRam);
 
-    const uint64_t start = std::max(range.addr, kNullPointerRegionEnd);
+    const uint64_t start = std::max(range.addr, min_addr);
     const uint64_t end = std::min(range.end(), max_addr);
 
     std::optional<uint64_t> aligned_start = Align(start, kBookkeepingChunkSize);
-    if (!aligned_start || *aligned_start >= end || end - *aligned_start < bookkeeping.size) {
+    if (!aligned_start || *aligned_start >= end || end - *aligned_start < bookkeeping_size) {
       return true;
     }
     // Found our bookkeeping space.
-    bookkeeping.addr = *aligned_start;
+    bookkeeping_addr = aligned_start;
     return false;
   };
   FindNormalizedRamRanges(ranges, find_bookkeeping);
-  if (bookkeeping.addr == 0) {
+  if (!bookkeeping_addr) {
     return fitx::failed();
   }
 
@@ -87,13 +86,13 @@ fitx::result<fitx::failed> Pool::Init(cpp20::span<internal::RangeIterationContex
   // node state. `[0, bookkeeping.size() - scratch_size)` of that space will
   // then be turned into unused nodes. The tail of FindNormalizedRanges()
   // scratch space will be reclaimed after we are done with it.
-  std::byte* bookkeeping_ptr = bookkeeping_pointer_(bookkeeping.addr, bookkeeping.size);
+  std::byte* bookkeeping_ptr = bookkeeping_pointer_(*bookkeeping_addr, bookkeeping_size);
   cpp20::span<void*> find_scratch = {
-      reinterpret_cast<void**>(bookkeeping_ptr + bookkeeping.size - scratch_size),
+      reinterpret_cast<void**>(bookkeeping_ptr + bookkeeping_size - scratch_size),
       scratch_size / sizeof(void*),
   };
-  const std::byte* bookkeeping_end = bookkeeping_ptr + bookkeeping.size;
-  bookkeeping_ptr = PopulateAsBookkeeping(bookkeeping_ptr, bookkeeping.size - scratch_size);
+  const std::byte* bookkeeping_end = bookkeeping_ptr + bookkeeping_size;
+  bookkeeping_ptr = PopulateAsBookkeeping(bookkeeping_ptr, bookkeeping_size - scratch_size);
   ZX_ASSERT(bookkeeping_ptr);
 
   ranges.reset();
@@ -124,14 +123,18 @@ fitx::result<fitx::failed> Pool::Init(cpp20::span<internal::RangeIterationContex
   PopulateAsBookkeeping(bookkeeping_ptr, bookkeeping_end - bookkeeping_ptr);
 
   // Track the bookkeeping range, so it is not later allocated.
+  const Range bookkeeping{
+      .addr = *bookkeeping_addr,
+      .size = bookkeeping_size,
+      .type = Type::kPoolBookkeeping,
+  };
   if (auto result = InsertSubrange(bookkeeping); result.is_error()) {
     return result.take_error();
   }
 
+  default_min_addr_ = min_addr;
   default_max_addr_ = max_addr;
-
-  // Per the documentation.
-  return UpdateFreeRamSubranges(Type::kNullPointerRegion, 0, kNullPointerRegionEnd);
+  return fitx::ok();
 }
 
 fitx::result<fitx::failed, Pool::Node*> Pool::NewNode(const Range& range) {
@@ -154,14 +157,17 @@ const Range* Pool::GetContainingRange(uint64_t addr) {
 }
 
 fitx::result<fitx::failed, uint64_t> Pool::Allocate(Type type, uint64_t size, uint64_t alignment,
+                                                    std::optional<uint64_t> min_addr,
                                                     std::optional<uint64_t> max_addr) {
   // Try to proactively ensure two bookkeeping nodes, which might be required
   // by InsertSubrange() below.
   TryToEnsureTwoBookkeepingNodes();
 
   uint64_t upper_bound = max_addr.value_or(default_max_addr_);
+  uint64_t lower_bound = min_addr.value_or(default_min_addr_);
   uint64_t addr = 0;
-  if (auto result = FindAllocatable(type, size, alignment, upper_bound); result.is_error()) {
+  if (auto result = FindAllocatable(type, size, alignment, lower_bound, upper_bound);
+      result.is_error()) {
     return result;
   } else {
     addr = std::move(result).value();
@@ -178,17 +184,19 @@ fitx::result<fitx::failed, uint64_t> Pool::Allocate(Type type, uint64_t size, ui
 }
 
 fitx::result<fitx::failed, uint64_t> Pool::FindAllocatable(Type type, uint64_t size,
-                                                           uint64_t alignment, uint64_t max_addr) {
+                                                           uint64_t alignment, uint64_t min_addr,
+                                                           uint64_t max_addr) {
   ZX_DEBUG_ASSERT(IsExtendedType(type));
   ZX_DEBUG_ASSERT(size > 0);
-  if (size > max_addr) {
+  ZX_DEBUG_ASSERT(min_addr < max_addr);
+  if (size >= max_addr - min_addr) {
     return fitx::failed();
   }
 
   // We use a simple first-fit approach, ultimately assuming that allocation
   // patterns will not create a lot of fragmentation.
   for (const Range& range : *this) {
-    if (range.type != Type::kFreeRam) {
+    if (range.type != Type::kFreeRam || range.end() <= min_addr) {
       continue;
     }
     if (range.addr >= max_addr) {
@@ -198,7 +206,7 @@ fitx::result<fitx::failed, uint64_t> Pool::FindAllocatable(Type type, uint64_t s
     // If we have already aligned past UINT64_MAX or the prescribed maximum
     // address, then the same will be true with any subsequent ranges, so we
     // can short-circuit now.
-    std::optional<uint64_t> aligned = Align(range.addr, alignment);
+    std::optional<uint64_t> aligned = Align(std::max(range.addr, min_addr), alignment);
     if (!aligned || *aligned > max_addr - size) {
       break;
     }
@@ -206,8 +214,6 @@ fitx::result<fitx::failed, uint64_t> Pool::FindAllocatable(Type type, uint64_t s
     if (*aligned >= range.end() || range.end() - *aligned < size) {
       continue;
     }
-
-    ZX_DEBUG_ASSERT(*aligned);
     return fitx::ok(*aligned);
   }
 
@@ -405,7 +411,7 @@ void Pool::TryToEnsureTwoBookkeepingNodes() {
 
   uint64_t addr = 0;
   if (auto result = FindAllocatable(Type::kPoolBookkeeping, kBookkeepingChunkSize,
-                                    kBookkeepingChunkSize, default_max_addr_);
+                                    kBookkeepingChunkSize, default_min_addr_, default_max_addr_);
       result.is_error()) {
     return;
   } else {

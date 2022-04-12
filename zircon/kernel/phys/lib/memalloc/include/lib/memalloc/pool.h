@@ -46,11 +46,6 @@ namespace memalloc {
 // fragmentation will increase and Pool will internally allocate more such
 // space to manage it. Bookkeeping memory will also avoid the zero(th) page.
 //
-// [0, kNullPointerRegionEnd) is reserved from use by Pool: any kFreeRam
-// subranges of this range passed to Init() are automatically converted to type
-// kNullPointerRegion. Nothing will be allocated out of this region, including
-// bookkeeping.
-//
 // Pool is neither copyable nor movable.
 //
 class Pool {
@@ -98,8 +93,13 @@ class Pool {
   // the pool.
   static constexpr uint64_t kBookkeepingChunkSize = 0x1000;
 
-  // The end of the kNullPointerRegion range specified above.
-  static constexpr uint64_t kNullPointerRegionEnd = 0x10000;
+  // The first 64KiB of the address space is a region of memory we generally
+  // wish to discard so that accidental, relative access off of a null pointer
+  // is unlikely to touch any memory that might be allocated.
+  static constexpr uint64_t kDefaultMinAddr = 0x10000;
+
+  // Captures the maximum possible 64-bit address in both 32- and 64-bit modes.
+  static constexpr uint64_t kDefaultMaxAddr = std::numeric_limits<uintptr_t>::max();
 
   // Default-construction uses the identity mapping for a
   // BookkeepingAddressToPointer.
@@ -121,25 +121,22 @@ class Pool {
 
   // Initializes a Pool from a variable number of memory ranges, performing an
   // internal allocation for its internal bookkeeping among the free RAM
-  // encoded in the provided ranges. `default_max_addr` prescribes a default
-  // upper bound on the addresses Pool is allowed to allocate; the placement of
-  // the internal bookkeeping must respect this bound.
+  // encoded in the provided ranges. `default_min_addr` and `default_max_addr`
+  // prescribe default bounds on the addresses Pool is allowed to allocate; the
+  // placement of the internal bookkeeping must respect these.
   //
   // The provided ranges cannot feature overlap among different extended
   // types, or between an extended type with one of kReserved or kPeripheral;
   // otherwise, arbitrary overlap is permitted.
   //
-  // `default_max_addr` defaults to the maximum `uintptr_t` value to capture
-  // the maximum possible 64-bit address in a 32-bit context.
-  //
   // fitx::failed is returned if there is insufficient free RAM to use for
   // Pool's initial bookkeeping.
   //
   template <size_t N>
-  fitx::result<fitx::failed> Init(
-      std::array<cpp20::span<Range>, N> ranges,
-      uint64_t default_max_addr = std::numeric_limits<uintptr_t>::max()) {
-    return Init(ranges, std::make_index_sequence<N>(), default_max_addr);
+  fitx::result<fitx::failed> Init(std::array<cpp20::span<Range>, N> ranges,
+                                  uint64_t default_min_addr = kDefaultMinAddr,
+                                  uint64_t default_max_addr = kDefaultMaxAddr) {
+    return Init(ranges, std::make_index_sequence<N>(), default_min_addr, default_max_addr);
   }
 
   using iterator = typename List::const_iterator;
@@ -179,7 +176,7 @@ class Pool {
   //
   fitx::result<fitx::failed, uint64_t> Allocate(
       Type type, uint64_t size, uint64_t alignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__,
-      std::optional<uint64_t> max_addr = {});
+      std::optional<uint64_t> min_addr = {}, std::optional<uint64_t> max_addr = {});
 
   // Attempts to perform a "weak allocation" of the given range, wherein all
   // kFreeRam subranges are updated to `type`. The given range must be
@@ -238,20 +235,21 @@ class Pool {
 
   // Ultimately deferred to as the actual initialization routine.
   fitx::result<fitx::failed> Init(cpp20::span<internal::RangeIterationContext> state,
-                                  uint64_t max_addr);
+                                  uint64_t min_addr, uint64_t max_addr);
 
   template <size_t... I>
   fitx::result<fitx::failed> Init(std::array<cpp20::span<Range>, sizeof...(I)> ranges,
-                                  std::index_sequence<I...> seq, uint64_t max_addr) {
+                                  std::index_sequence<I...> seq, uint64_t min_addr,
+                                  uint64_t max_addr) {
     std::array state{internal::RangeIterationContext(ranges[I])...};
-    return Init({state}, max_addr);
+    return Init({state}, min_addr, max_addr);
   }
 
   // Similar semantics to Allocate(), FindAllocatable() is its main allocation
   // subroutine: it only finds a suitable address to allocate (not actually
   // performing the allocation).
   fitx::result<fitx::failed, uint64_t> FindAllocatable(Type type, uint64_t size, uint64_t alignment,
-                                                       uint64_t max_addr);
+                                                       uint64_t min_addr, uint64_t max_addr);
 
   // On success, returns disconnected node with the given range information;
   // fails if there is insufficient bookkeeping space for the new node.
@@ -310,7 +308,7 @@ class Pool {
 
   // Default bounds on allocatable addresses, configured during Init() - and
   // overridable in Allocate().
-  // TODO(fxbug.dev/96965): uint64_t default_min_addr_ = 0;
+  uint64_t default_min_addr_ = 0;
   uint64_t default_max_addr_ = 0;
 
   // The number of tracked ranges.

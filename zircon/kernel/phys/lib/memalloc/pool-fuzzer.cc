@@ -56,9 +56,12 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     return 0;
   }
 
-  const uint64_t default_max_addr = provider.ConsumeIntegral<uint64_t>();
+  const uint64_t default_min_addr = provider.ConsumeIntegral<uint64_t>();
+  const uint64_t default_max_addr =
+      provider.ConsumeIntegralInRange<uint64_t>(default_min_addr, kMax);
   PoolContext ctx;
-  if (auto result = ctx.pool.Init(std::array{ranges}, default_max_addr); result.is_error()) {
+  if (auto result = ctx.pool.Init(std::array{ranges}, default_min_addr, default_max_addr);
+      result.is_error()) {
     return 0;
   }
 
@@ -77,10 +80,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             memalloc::kMinExtendedTypeValue, memalloc::kMaxExtendedTypeValue));
         uint64_t size = provider.ConsumeIntegralInRange<uint64_t>(1, kMax);
         uint64_t alignment = uint64_t{1} << provider.ConsumeIntegralInRange<size_t>(0, 63);
-        std::optional<uint64_t> local_max_addr =
+        std::optional<uint64_t> local_min_addr =
             provider.ConsumeBool() ? std::make_optional(provider.ConsumeIntegral<uint64_t>())
                                    : std::nullopt;
-        if (auto result = ctx.pool.Allocate(type, size, alignment, local_max_addr);
+        std::optional<uint64_t> local_max_addr =
+            provider.ConsumeBool() ? std::make_optional(provider.ConsumeIntegralInRange<uint64_t>(
+                                         local_min_addr.value_or(0), kMax))
+                                   : std::nullopt;
+        if (auto result = ctx.pool.Allocate(type, size, alignment, local_min_addr, local_max_addr);
             result.is_ok()) {
           // We cannot free Free() bookkeeping ranges.
           if (type != memalloc::Type::kPoolBookkeeping) {

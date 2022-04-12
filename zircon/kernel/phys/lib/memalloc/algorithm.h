@@ -20,7 +20,7 @@
 namespace memalloc {
 
 // Inlined for phys-compatibility, where there is no ambient heap.
-using RangeCallback = fit::inline_function<bool(const Range&)>;
+using RangeCallback = fit::inline_function<bool(const Range&), sizeof(void*) * 8>;
 
 // Serializes ranges in lexicographic order from a variable number of Range arrays.
 class RangeStream {
