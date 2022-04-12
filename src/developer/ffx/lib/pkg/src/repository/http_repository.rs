@@ -285,7 +285,9 @@ mod test {
     use {
         super::*,
         crate::{
-            manager::RepositoryManager, server::RepositoryServer, test_utils::make_repository,
+            manager::RepositoryManager,
+            server::RepositoryServer,
+            test_utils::{make_pm_repository, PKG1_BIN_HASH},
         },
         camino::Utf8Path,
         fuchsia_async as fasync,
@@ -298,7 +300,7 @@ mod test {
         let tmp = tempfile::tempdir().unwrap();
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
-        let repo = make_repository("tuf", dir.join("repo")).await;
+        let repo = make_pm_repository("tuf", dir.join("repo")).await;
 
         let manager = RepositoryManager::new();
         manager.add(Arc::new(repo));
@@ -320,7 +322,7 @@ mod test {
             client,
             tuf_url,
             blob_url,
-            String::from("test_package"),
+            String::from("package1"),
             result_dir.clone(),
         )
         .await;
@@ -329,8 +331,7 @@ mod test {
 
         let result_package_manifest =
             std::fs::read_to_string(result_dir.join("package_manifest.json")).unwrap();
-        assert!(result_package_manifest
-            .contains("15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b"));
+        assert!(result_package_manifest.contains(PKG1_BIN_HASH));
         assert!(result_package_manifest.contains("meta/"));
 
         // Signal the server to shutdown.

@@ -22,6 +22,22 @@ use {
 
 const EMPTY_REPO_PATH: &str = "host_x64/test_data/ffx_lib_pkg/empty-repo";
 
+#[cfg(test)]
+pub(crate) const PKG1_HASH: &str =
+    "2881455493b5870aaea36537d70a2adc635f516ac2092598f4b6056dabc6b25d";
+
+#[cfg(test)]
+pub(crate) const PKG2_HASH: &str =
+    "050907f009ff634f9aa57bff541fb9e9c2c62b587c23578e77637cda3bd69458";
+
+#[cfg(test)]
+pub(crate) const PKG1_BIN_HASH: &str =
+    "72e1e7a504f32edf4f23e7e8a3542c1d77d12541142261cfe272decfa75f542d";
+
+#[cfg(test)]
+pub(crate) const PKG1_LIB_HASH: &str =
+    "8a8a5f07f935a4e8e1fd1a1eda39da09bb2438ec0adfb149679ddd6e7e1fbb4f";
+
 pub fn repo_key() -> RepositoryKeyConfig {
     RepositoryKeyConfig::Ed25519Key(
         [
@@ -73,65 +89,103 @@ pub async fn make_writable_empty_repository(name: &str, root: Utf8PathBuf) -> Re
     Ok(Repository::new(name, Box::new(backend)).await?)
 }
 
-pub async fn make_repository(name: &str, dir: Utf8PathBuf) -> Repository {
-    create_dir_all(&dir).unwrap();
+pub async fn make_repository(metadata_dir: &Path, blobs_dir: &Path) {
+    create_dir_all(&metadata_dir).unwrap();
+    create_dir_all(&blobs_dir).unwrap();
 
-    let metadata_dir = dir.join("repository");
-    create_dir(&metadata_dir).unwrap();
+    // Construct some packages for the repository.
+    let build_tmp = tempfile::tempdir().unwrap();
+    let build_path = build_tmp.path();
 
-    let build_path = dir.join("build");
-    let mut builder = PackageBuilder::new("test_package");
-    builder.add_contents_as_blob("lib/mylib.so", b"", &build_path).unwrap();
-    builder
-        .add_contents_to_far("meta/my_component.cm", b"my_component.cm contents", &build_path)
-        .unwrap();
+    let packages = ["package1", "package2"].map(|name| {
+        let package_path = build_path.join(name);
 
-    let meta_far_path = dir.join("meta.far");
-    let manifest = builder.build(&build_path, &meta_far_path).unwrap();
+        let mut builder = PackageBuilder::new(name);
+        builder
+            .add_contents_as_blob(
+                format!("bin/{}", name),
+                format!("binary {}", name).as_bytes(),
+                &package_path,
+            )
+            .unwrap();
+        builder
+            .add_contents_as_blob(
+                format!("lib/{}", name),
+                format!("lib {}", name).as_bytes(),
+                &package_path,
+            )
+            .unwrap();
+        builder
+            .add_contents_to_far(
+                format!("meta/{}.cm", name),
+                format!("cm {}", name).as_bytes(),
+                &package_path,
+            )
+            .unwrap();
+        builder
+            .add_contents_to_far(
+                format!("meta/{}.cmx", name),
+                format!("cmx {}", name).as_bytes(),
+                &package_path,
+            )
+            .unwrap();
 
-    // Copy the package blobs into the blobs directory.
-    let blob_dir = metadata_dir.join("blobs");
-    create_dir(&blob_dir).unwrap();
+        let meta_far_path = package_path.join("meta.far");
+        let manifest = builder.build(&package_path, &meta_far_path).unwrap();
 
-    let mut meta_far_merkle = None;
-    for blob in manifest.blobs() {
-        let merkle = blob.merkle.to_string();
+        // Copy the package blobs into the blobs directory.
+        let mut meta_far_merkle = None;
+        for blob in manifest.blobs() {
+            let merkle = blob.merkle.to_string();
 
-        if blob.path == "meta/" {
-            meta_far_merkle = Some(merkle.clone());
+            if blob.path == "meta/" {
+                meta_far_merkle = Some(merkle.clone());
+            }
+
+            let mut src = std::fs::File::open(&blob.source_path).unwrap();
+            let mut dst = std::fs::File::create(blobs_dir.join(merkle)).unwrap();
+            std::io::copy(&mut src, &mut dst).unwrap();
         }
 
-        let mut src = std::fs::File::open(&blob.source_path).unwrap();
-        let mut dst = std::fs::File::create(blob_dir.join(merkle)).unwrap();
-        std::io::copy(&mut src, &mut dst).unwrap();
-    }
+        (name, meta_far_path, meta_far_merkle.unwrap())
+    });
 
     // Write TUF metadata
-    let repo = FileSystemRepositoryBuilder::<Json>::new(metadata_dir.clone())
+    let repo = FileSystemRepositoryBuilder::<Json>::new(metadata_dir)
         .targets_prefix("targets")
         .build()
         .unwrap();
 
     let key = repo_private_key();
-    RepoBuilder::create(repo)
+    let mut builder = RepoBuilder::create(repo)
         .trusted_root_keys(&[&key])
         .trusted_targets_keys(&[&key])
         .trusted_snapshot_keys(&[&key])
         .trusted_timestamp_keys(&[&key])
         .stage_root()
-        .unwrap()
-        .add_target_with_custom(
-            TargetPath::new("test_package").unwrap(),
-            AllowStdIo::new(File::open(meta_far_path).unwrap()),
-            hashmap! { "merkle".into() => meta_far_merkle.unwrap().into() },
-        )
-        .await
-        .unwrap()
-        .commit()
-        .await
         .unwrap();
 
-    // Create the repository.
+    // Add all the packages to the metadata.
+    for (name, meta_far_path, meta_far_merkle) in packages {
+        builder = builder
+            .add_target_with_custom(
+                TargetPath::new(name).unwrap(),
+                AllowStdIo::new(File::open(meta_far_path).unwrap()),
+                hashmap! { "merkle".into() => meta_far_merkle.into() },
+            )
+            .await
+            .unwrap();
+    }
+
+    builder.commit().await.unwrap();
+}
+
+pub async fn make_pm_repository(name: &str, dir: impl Into<Utf8PathBuf>) -> Repository {
+    let dir = dir.into();
+    let metadata_dir = dir.join("repository");
+    let blobs_dir = metadata_dir.join("blobs");
+    make_repository(metadata_dir.as_std_path(), blobs_dir.as_std_path()).await;
+
     let backend = PmRepository::new(dir);
     Repository::new(name, Box::new(backend)).await.unwrap()
 }

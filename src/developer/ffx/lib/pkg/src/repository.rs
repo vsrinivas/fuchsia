@@ -621,7 +621,8 @@ mod test {
     use {
         super::*,
         crate::test_utils::{
-            make_readonly_empty_repository, make_repository, repo_key, repo_private_key,
+            make_pm_repository, make_readonly_empty_repository, repo_key, repo_private_key,
+            PKG1_BIN_HASH, PKG1_HASH, PKG1_LIB_HASH, PKG2_HASH,
         },
         camino::Utf8Path,
         pretty_assertions::assert_eq,
@@ -630,6 +631,7 @@ mod test {
             database::Database, repo_builder::RepoBuilder, repository::FileSystemRepositoryBuilder,
         },
     };
+
     const ROOT_VERSION: u32 = 1;
     const REPO_NAME: &str = "fake-repo";
 
@@ -683,22 +685,37 @@ mod test {
         let tmp = tempfile::tempdir().unwrap();
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
-        let repo = make_repository(REPO_NAME, dir.to_path_buf()).await;
+        let repo = make_pm_repository(REPO_NAME, &dir).await;
 
         // Look up the timestamp for the meta.far for the modified setting.
-        let hash = "b7e707e133e43afd4676049da32c38229739cfb1191955e58e31f961428a963e";
-        let modified = get_modtime(dir.join("repository").join("blobs").join(hash));
+        let pkg1_modified = get_modtime(dir.join("repository").join("blobs").join(PKG1_HASH));
+        let pkg2_modified = get_modtime(dir.join("repository").join("blobs").join(PKG2_HASH));
+
+        let mut packages = repo.list_packages(ListFields::empty()).await.unwrap();
+
+        // list_packages returns the contents out of order. Sort the entries so they are consistent.
+        packages.sort_unstable_by(|lhs, rhs| lhs.name.cmp(&rhs.name));
 
         assert_eq!(
-            repo.list_packages(ListFields::empty()).await.unwrap(),
-            vec![RepositoryPackage {
-                name: Some("test_package".into()),
-                hash: Some(hash.into()),
-                size: Some(20480),
-                modified: Some(modified),
-                entries: None,
-                ..RepositoryPackage::EMPTY
-            },],
+            packages,
+            vec![
+                RepositoryPackage {
+                    name: Some("package1".into()),
+                    hash: Some(PKG1_HASH.into()),
+                    size: Some(24603),
+                    modified: Some(pkg1_modified),
+                    entries: None,
+                    ..RepositoryPackage::EMPTY
+                },
+                RepositoryPackage {
+                    name: Some("package2".into()),
+                    hash: Some(PKG2_HASH.into()),
+                    size: Some(24603),
+                    modified: Some(pkg2_modified),
+                    entries: None,
+                    ..RepositoryPackage::EMPTY
+                },
+            ],
         );
     }
 
@@ -707,28 +724,67 @@ mod test {
         let tmp = tempfile::tempdir().unwrap();
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
-        let repo = make_repository(REPO_NAME, dir.to_path_buf()).await;
+        let repo = make_pm_repository(REPO_NAME, &dir).await;
 
         // Look up the timestamp for the meta.far for the modified setting.
-        let hash = "b7e707e133e43afd4676049da32c38229739cfb1191955e58e31f961428a963e";
-        let modified = get_modtime(dir.join("repository").join("blobs").join(hash));
+        let pkg1_modified = get_modtime(dir.join("repository").join("blobs").join(PKG1_HASH));
+        let pkg2_modified = get_modtime(dir.join("repository").join("blobs").join(PKG2_HASH));
+
+        let mut packages = repo.list_packages(ListFields::COMPONENTS).await.unwrap();
+
+        // list_packages returns the contents out of order. Sort the entries so they are consistent.
+        packages.sort_unstable_by(|lhs, rhs| lhs.name.cmp(&rhs.name));
 
         assert_eq!(
-            repo.list_packages(ListFields::COMPONENTS).await.unwrap(),
-            vec![RepositoryPackage {
-                name: Some("test_package".into()),
-                hash: Some(hash.into()),
-                size: Some(20480),
-                modified: Some(modified),
-                entries: Some(vec![PackageEntry {
-                    path: Some("meta/my_component.cm".into()),
-                    hash: None,
-                    size: Some(24),
-                    modified: Some(modified),
-                    ..PackageEntry::EMPTY
-                },]),
-                ..RepositoryPackage::EMPTY
-            },],
+            packages,
+            vec![
+                RepositoryPackage {
+                    name: Some("package1".into()),
+                    hash: Some(PKG1_HASH.into()),
+                    size: Some(24603),
+                    modified: Some(pkg1_modified),
+                    entries: Some(vec![
+                        PackageEntry {
+                            path: Some("meta/package1.cm".into()),
+                            hash: None,
+                            size: Some(11),
+                            modified: Some(pkg1_modified),
+                            ..PackageEntry::EMPTY
+                        },
+                        PackageEntry {
+                            path: Some("meta/package1.cmx".into()),
+                            hash: None,
+                            size: Some(12),
+                            modified: Some(pkg1_modified),
+                            ..PackageEntry::EMPTY
+                        },
+                    ]),
+                    ..RepositoryPackage::EMPTY
+                },
+                RepositoryPackage {
+                    name: Some("package2".into()),
+                    hash: Some(PKG2_HASH.into()),
+                    size: Some(24603),
+                    modified: Some(pkg2_modified),
+                    entries: Some(vec![
+                        PackageEntry {
+                            path: Some("meta/package2.cm".into()),
+                            hash: None,
+                            size: Some(11),
+                            modified: Some(pkg2_modified),
+                            ..PackageEntry::EMPTY
+                        },
+                        PackageEntry {
+                            path: Some("meta/package2.cmx".into()),
+                            hash: None,
+                            size: Some(12),
+                            modified: Some(pkg2_modified),
+                            ..PackageEntry::EMPTY
+                        },
+                    ]),
+                    ..RepositoryPackage::EMPTY
+                },
+            ],
         );
     }
 
@@ -780,30 +836,48 @@ mod test {
         let tmp = tempfile::tempdir().unwrap();
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
-        let repo = make_repository(REPO_NAME, dir.to_path_buf()).await;
+        let repo = make_pm_repository(REPO_NAME, &dir).await;
 
         // Look up the timestamps for the blobs.
         let blob_dir = dir.join("repository").join("blobs");
-        let meta_far_hash = "b7e707e133e43afd4676049da32c38229739cfb1191955e58e31f961428a963e";
-        let meta_far_modified = get_modtime(blob_dir.join(meta_far_hash));
+        let meta_far_modified = get_modtime(blob_dir.join(PKG1_HASH));
 
-        let lib_hash = "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b";
-        let lib_modified = get_modtime(blob_dir.join(lib_hash));
+        let bin_modified = get_modtime(blob_dir.join(PKG1_BIN_HASH));
+        let lib_modified = get_modtime(blob_dir.join(PKG1_LIB_HASH));
+
+        let mut entries = repo.show_package("package1".into()).await.unwrap().unwrap();
+
+        // show_packages returns contents out of order. Sort the entries so they are consistent.
+        entries.sort_unstable_by(|lhs, rhs| lhs.path.cmp(&rhs.path));
 
         assert_eq!(
-            repo.show_package("test_package".into()).await.unwrap(),
-            Some(vec![
+            entries,
+            vec![
+                PackageEntry {
+                    path: Some("bin/package1".into()),
+                    hash: Some(PKG1_BIN_HASH.into()),
+                    size: Some(15),
+                    modified: Some(bin_modified),
+                    ..PackageEntry::EMPTY
+                },
+                PackageEntry {
+                    path: Some("lib/package1".into()),
+                    hash: Some(PKG1_LIB_HASH.into()),
+                    size: Some(12),
+                    modified: Some(lib_modified),
+                    ..PackageEntry::EMPTY
+                },
                 PackageEntry {
                     path: Some("meta.far".into()),
-                    hash: Some(meta_far_hash.into()),
-                    size: Some(20480),
+                    hash: Some(PKG1_HASH.into()),
+                    size: Some(24576),
                     modified: Some(meta_far_modified),
                     ..PackageEntry::EMPTY
                 },
                 PackageEntry {
                     path: Some("meta/contents".into()),
                     hash: None,
-                    size: Some(78),
+                    size: Some(156),
                     modified: Some(meta_far_modified),
                     ..PackageEntry::EMPTY
                 },
@@ -815,27 +889,27 @@ mod test {
                     ..PackageEntry::EMPTY
                 },
                 PackageEntry {
-                    path: Some("meta/my_component.cm".into()),
-                    hash: None,
-                    size: Some(24),
-                    modified: Some(meta_far_modified),
-                    ..PackageEntry::EMPTY
-                },
-                PackageEntry {
                     path: Some("meta/package".into()),
                     hash: None,
-                    size: Some(37),
+                    size: Some(33),
                     modified: Some(meta_far_modified),
                     ..PackageEntry::EMPTY
                 },
                 PackageEntry {
-                    path: Some("lib/mylib.so".into()),
-                    hash: Some(lib_hash.into()),
-                    size: Some(0),
-                    modified: Some(lib_modified),
+                    path: Some("meta/package1.cm".into()),
+                    hash: None,
+                    size: Some(11),
+                    modified: Some(meta_far_modified),
                     ..PackageEntry::EMPTY
-                }
-            ])
+                },
+                PackageEntry {
+                    path: Some("meta/package1.cmx".into()),
+                    hash: None,
+                    size: Some(12),
+                    modified: Some(meta_far_modified),
+                    ..PackageEntry::EMPTY
+                },
+            ]
         );
     }
 }
