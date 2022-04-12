@@ -64,10 +64,9 @@ symmetrical_enums!(LogDestination, component_internal::LogDestination, Syslog, K
 enum BuiltinBootResolver {
     None,
     Boot,
-    Pkg,
 }
 
-symmetrical_enums!(BuiltinBootResolver, component_internal::BuiltinBootResolver, None, Boot, Pkg);
+symmetrical_enums!(BuiltinBootResolver, component_internal::BuiltinBootResolver, None, Boot);
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]

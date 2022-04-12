@@ -106,18 +106,6 @@ impl EnvironmentForAnalyzer {
                     "found duplicate resolver for boot scheme"
                 );
             }
-            component_internal::BuiltinBootResolver::Pkg => {
-                assert!(
-                    resolver_registry
-                        .register(&ResolverRegistration {
-                            resolver: PKG_RESOLVER_NAME.into(),
-                            source: RegistrationSource::Self_,
-                            scheme: PKG_SCHEME.to_string(),
-                        })
-                        .is_none(),
-                    "found duplicate resolver for pkg scheme"
-                );
-            }
             component_internal::BuiltinBootResolver::None => {}
         };
 

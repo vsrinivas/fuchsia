@@ -1099,7 +1099,6 @@ fn register_boot_resolver(
 ) -> Result<Option<Arc<FuchsiaBootResolver>>, Error> {
     let path = match &runtime_config.builtin_boot_resolver {
         BuiltinBootResolver::Boot => "/boot",
-        BuiltinBootResolver::Pkg => "/pkg",
         BuiltinBootResolver::None => return Ok(None),
     };
     let boot_resolver = FuchsiaBootResolver::new(path).context("Failed to create boot resolver")?;

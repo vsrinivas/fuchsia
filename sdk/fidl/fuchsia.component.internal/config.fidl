@@ -110,10 +110,6 @@ type BuiltinBootResolver = strict enum : uint8 {
     /// Try to use the /boot directory from the namespace. Typically this is provided
     /// to component manager during initialization of the system.
     BOOT = 2;
-
-    /// Try to use the /pkg directory from the namespace. Typically this is provided
-    /// to a nested component manager that a part of a test package.
-    PKG = 3;
 };
 
 /// Where to log to.
