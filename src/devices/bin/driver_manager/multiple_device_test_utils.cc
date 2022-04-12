@@ -299,8 +299,9 @@ void MultipleDeviceTestCase::TearDown() {
 
 void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const char* name,
                                        uint32_t protocol_id, fbl::String driver, bool has_init,
-                                       bool reply_to_init, bool always_init, zx::vmo inspect,
-                                       size_t* index) {
+                                       bool reply_to_init, bool always_init,
+                                       fidl::ClientEnd<fio::Directory> outgoing_dir,
+                                       zx::vmo inspect, size_t* index) {
   DeviceState state;
 
   auto coordinator_server = fidl::CreateEndpoints(&state.coordinator_client);
@@ -315,8 +316,7 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const 
       /* props_count */ 0, /* str_props_data */ nullptr,
       /* str_props_count */ 0, name, /* driver_path */ protocol_id, driver.data(), /* args */ {},
       /* skip_autobind */ false, has_init, always_init, std::move(inspect),
-      /* client_remote */ zx::channel(), /* outgoing_dir */ fidl::ClientEnd<fio::Directory>(),
-      &state.device);
+      /* client_remote */ zx::channel(), /* outgoing_dir */ std::move(outgoing_dir), &state.device);
   state.device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;
   ASSERT_OK(status);
   coordinator_loop_.RunUntilIdle();
@@ -328,6 +328,14 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const 
     ASSERT_NO_FATAL_FAILURE(device(*index)->CheckInitReceivedAndReply());
     coordinator_loop()->RunUntilIdle();
   }
+}
+
+void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const char* name,
+                                       uint32_t protocol_id, fbl::String driver, bool has_init,
+                                       bool reply_to_init, bool always_init, zx::vmo inspect,
+                                       size_t* index) {
+  AddDevice(parent, name, protocol_id, driver, has_init, reply_to_init, always_init,
+            fidl::ClientEnd<fio::Directory>(), std::move(inspect), index);
 }
 
 void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const char* name,

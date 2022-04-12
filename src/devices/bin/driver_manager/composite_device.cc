@@ -442,8 +442,10 @@ void CompositeDevice::UnbindFragment(CompositeDeviceFragment* fragment) {
 }
 
 void CompositeDevice::Remove() {
-  device_->disassociate_from_composite();
-  device_ = nullptr;
+  if (device_ != nullptr) {
+    device_->disassociate_from_composite();
+    device_ = nullptr;
+  }
 }
 
 // CompositeDeviceFragment methods

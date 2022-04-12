@@ -203,6 +203,10 @@ class MultipleDeviceTestCase : public zxtest::Test {
 
   void AddDevice(const fbl::RefPtr<Device>& parent, const char* name, uint32_t protocol_id,
                  fbl::String driver, bool has_init, bool reply_to_init, bool always_init,
+                 fidl::ClientEnd<fio::Directory> outgoing_dir, zx::vmo inspect,
+                 size_t* device_index);
+  void AddDevice(const fbl::RefPtr<Device>& parent, const char* name, uint32_t protocol_id,
+                 fbl::String driver, bool has_init, bool reply_to_init, bool always_init,
                  zx::vmo inspect, size_t* device_index);
   void AddDeviceSkipAutobind(const fbl::RefPtr<Device>& parent, const char* name,
                              uint32_t protocol_id, size_t* device_index);
@@ -227,8 +231,8 @@ class MultipleDeviceTestCase : public zxtest::Test {
   void SetUp() override;
   void TearDown() override;
 
-  // These should be listed after driver_host/sys_proxy as it needs to be
-  // destroyed before them.
+  // These should be listed before driver_host/sys_proxy as it needs to be
+  // destroyed after them.
   async::Loop coordinator_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   bool coordinator_loop_thread_running_ = false;
 

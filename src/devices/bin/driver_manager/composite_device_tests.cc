@@ -52,11 +52,12 @@ class FidlTransaction : public fidl::Transaction {
   std::optional<fidl::UnbindInfo> detected_error_;
 };
 
-class FakeDevhost : public fidl::WireServer<fuchsia_device_manager::DriverHostController> {
+class FakeCompositeDevhost : public fidl::WireServer<fuchsia_device_manager::DriverHostController> {
  public:
-  FakeDevhost(const char* expected_name, size_t expected_fragments_count,
-              fidl::ClientEnd<fuchsia_device_manager::Coordinator>* device_coordinator_client,
-              fidl::ServerEnd<fuchsia_device_manager::DeviceController>* device_controller_server)
+  FakeCompositeDevhost(
+      const char* expected_name, size_t expected_fragments_count,
+      fidl::ClientEnd<fuchsia_device_manager::Coordinator>* device_coordinator_client,
+      fidl::ServerEnd<fuchsia_device_manager::DeviceController>* device_controller_server)
       : expected_name_(expected_name),
         expected_fragments_count_(expected_fragments_count),
         device_coordinator_client_(device_coordinator_client),
@@ -73,8 +74,8 @@ class FakeDevhost : public fidl::WireServer<fuchsia_device_manager::DriverHostCo
         completer.Reply(ZX_OK);
         return;
       }
-      completer.Reply(ZX_ERR_INTERNAL);
     }
+    completer.Reply(ZX_ERR_INTERNAL);
   }
 
   void Restart(RestartRequestView request, RestartCompleter::Sync& completer) override {}
@@ -86,13 +87,39 @@ class FakeDevhost : public fidl::WireServer<fuchsia_device_manager::DriverHostCo
   fidl::ServerEnd<fuchsia_device_manager::DeviceController>* device_controller_server_;
 };
 
+class FakeNewProxyDevhost : public fidl::WireServer<fuchsia_device_manager::DriverHostController> {
+ public:
+  FakeNewProxyDevhost(
+      fidl::ClientEnd<fuchsia_device_manager::Coordinator>* device_coordinator_client,
+      fidl::ServerEnd<fuchsia_device_manager::DeviceController>* device_controller_server)
+      : device_coordinator_client_(device_coordinator_client),
+        device_controller_server_(device_controller_server) {}
+
+  void CreateDevice(CreateDeviceRequestView request,
+                    CreateDeviceCompleter::Sync& completer) override {
+    if (request->type.is_new_proxy()) {
+      *device_coordinator_client_ = std::move(request->coordinator);
+      *device_controller_server_ = std::move(request->device_controller);
+      completer.Reply(ZX_OK);
+      return;
+    }
+    completer.Reply(ZX_ERR_INTERNAL);
+  }
+
+  void Restart(RestartRequestView request, RestartCompleter::Sync& completer) override {}
+
+ private:
+  fidl::ClientEnd<fuchsia_device_manager::Coordinator>* device_coordinator_client_;
+  fidl::ServerEnd<fuchsia_device_manager::DeviceController>* device_controller_server_;
+};
+
 }  // namespace
 
-// Reads a CreateCompositeDevice from remote, checks expectations, and sends
+// Reads a CreateDevice from remote, checks expectations, and sends
 // a ZX_OK response.
-void CheckCreateCompositeDeviceReceived(
-    const fidl::ServerEnd<fdm::DriverHostController>& controller, const char* expected_name,
-    size_t expected_fragments_count, DeviceState* composite) {
+void CheckCreateDeviceReceived(
+    fidl::WireServer<fuchsia_device_manager::DriverHostController>* fake_dev_host,
+    const fidl::ServerEnd<fdm::DriverHostController>& controller, DeviceState* composite) {
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl_channel_handle_metadata_t handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
@@ -104,14 +131,24 @@ void CheckCreateCompositeDeviceReceived(
   auto* header = msg.header();
   FidlTransaction txn(header->txid, zx::unowned(controller.channel()));
 
-  FakeDevhost fake(expected_name, expected_fragments_count, &composite->coordinator_client,
-                   &composite->controller_server);
-  fidl::WireDispatch(
-      static_cast<fidl::WireServer<fuchsia_device_manager::DriverHostController>*>(&fake),
-      std::move(msg), &txn);
+  fidl::WireDispatch(fake_dev_host, std::move(msg), &txn);
   ASSERT_FALSE(txn.detected_error());
   ASSERT_TRUE(composite->coordinator_client.is_valid());
   ASSERT_TRUE(composite->controller_server.is_valid());
+}
+
+void CheckCreateCompositeDeviceReceived(
+    const fidl::ServerEnd<fdm::DriverHostController>& controller, const char* expected_name,
+    size_t expected_fragments_count, DeviceState* composite) {
+  FakeCompositeDevhost fake(expected_name, expected_fragments_count, &composite->coordinator_client,
+                            &composite->controller_server);
+  CheckCreateDeviceReceived(&fake, controller, composite);
+}
+
+void CheckCreateNewProxyDeviceReceived(const fidl::ServerEnd<fdm::DriverHostController>& controller,
+                                       DeviceState* new_proxy) {
+  FakeNewProxyDevhost fake(&new_proxy->coordinator_client, &new_proxy->controller_server);
+  CheckCreateDeviceReceived(&fake, controller, new_proxy);
 }
 
 // Helper for BindComposite for issuing an AddComposite for a composite with the
@@ -1173,8 +1210,41 @@ TEST_F(CompositeTestCase, DeviceIteratorCompositeChild) {
   ASSERT_NO_FATAL_FAILURE(
       CheckCompositeCreation("composite", &parent_index, 1, &fragment_device_indexes, &composite));
 
+  ASSERT_FALSE(device(parent_index)->device->children().is_empty());
   for (auto& d : device(parent_index)->device->children()) {
     ASSERT_EQ(d.name(), "composite-comp-device-0");
+  }
+}
+
+TEST_F(CompositeTestCase, DeviceIteratorCompositeChildNoFragment) {
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  ASSERT_OK(endpoints.status_value());
+
+  size_t parent_index;
+  ASSERT_NO_FATAL_FAILURE(AddDevice(platform_bus()->device, "parent-device", 1 /* protocol id */,
+                                    "", true, true, true, std::move(endpoints->client), zx::vmo(),
+                                    &parent_index));
+
+  // If a parent device has these properties, any composite devices will be
+  // created without an intermediate fragment device.
+  ASSERT_TRUE(device(parent_index)->device->has_outgoing_directory());
+  ASSERT_TRUE(device(parent_index)->device->flags & DEV_CTX_MUST_ISOLATE);
+
+  uint32_t protocol_id = 1;
+  ASSERT_NO_FATAL_FAILURE(BindCompositeDefineComposite(platform_bus()->device, &protocol_id, 1,
+                                                       nullptr, 0, "composite"));
+
+  DeviceState new_proxy;
+  ASSERT_NO_FATAL_FAILURE(CheckCreateNewProxyDeviceReceived(driver_host_server(), &new_proxy));
+
+  // Make sure the composite comes up
+  DeviceState composite;
+  ASSERT_NO_FATAL_FAILURE(
+      CheckCreateCompositeDeviceReceived(driver_host_server(), "composite", 1, &composite));
+
+  ASSERT_FALSE(device(parent_index)->device->children().is_empty());
+  for (auto& d : device(parent_index)->device->children()) {
+    ASSERT_EQ(d.name(), "composite");
   }
 }
 

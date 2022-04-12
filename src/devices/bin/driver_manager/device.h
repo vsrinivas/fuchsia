@@ -119,7 +119,7 @@ class Device
   // access to a device in the list.  This is achieved by making the linked
   // list iterator opaque. It is not safe to modify the underlying list while
   // this iterator is in use.
-  template <typename IterType, typename DeviceType>
+  template <typename ChildIterType, typename FragmentIterType, typename DeviceType>
   class ChildListIterator {
    public:
     ChildListIterator() : state_(Done{}) {}
@@ -141,9 +141,7 @@ class Device
       std::visit(
           [this](auto&& arg) {
             using T = std::decay_t<decltype(arg)>;
-            if constexpr (std::is_same_v<T, IterType>) {
-              ++arg;
-            } else if constexpr (std::is_same_v<T, Composite>) {
+            if constexpr (std::is_same_v<T, ChildIterType> || std::is_same_v<T, FragmentIterType>) {
               ++arg;
             } else if constexpr (std::is_same_v<T, Done>) {
               state_ = Done{};
@@ -158,9 +156,9 @@ class Device
       return std::visit(
           [](auto&& arg) -> DeviceType& {
             using T = std::decay_t<decltype(arg)>;
-            if constexpr (std::is_same_v<T, IterType>) {
+            if constexpr (std::is_same_v<T, ChildIterType>) {
               return *arg;
-            } else if constexpr (std::is_same_v<T, Composite>) {
+            } else if constexpr (std::is_same_v<T, FragmentIterType>) {
               return *(arg->composite()->device());
             } else {
               __builtin_trap();
@@ -178,7 +176,7 @@ class Device
         more = std::visit(
             [this](auto&& arg) {
               using T = std::decay_t<decltype(arg)>;
-              if constexpr (std::is_same_v<T, IterType>) {
+              if constexpr (std::is_same_v<T, ChildIterType>) {
                 // Check if there are any more children in the list.  If
                 // there are, we're in a valid state and can stop.
                 // Otherwise, advance to the next variant and check if
@@ -186,35 +184,59 @@ class Device
                 if (arg != device_->children_.end()) {
                   return false;
                 }
+
                 // If there are no more children and this is a fragment device,
-                // run through the Composite state next.
+                // find children of the fragment device by looking at its parent's
+                // fragment list.
                 if (device_->parent_ &&
                     device_->libname() == device_->coordinator->GetFragmentDriverUrl()) {
-                  state_ = Composite{device_->parent_->fragments().begin()};
+                  state_ = FragmentIterType{device_->parent()->fragments_.begin()};
                   return true;
-                } else {
-                  state_ = Done{};
+                }
+
+                // Some composite devices are added directly as fragments without
+                // a proxy fragment device. These don't appear in the children list.
+                state_ = FragmentIterType{device_->fragments_.begin()};
+                return true;
+              } else if constexpr (std::is_same_v<T, FragmentIterType>) {
+                if (device_->libname() == device_->coordinator->GetFragmentDriverUrl()) {
+                  // This device is an internal fragment device.
+                  if (arg == device_->parent()->fragments_.end()) {
+                    state_ = Done{};
+                    return false;
+                  }
+
+                  // Skip composite devices that aren't yet bound.
+                  if (arg->composite()->device() == nullptr) {
+                    state_ = FragmentIterType{++arg};
+                    return true;
+                  }
+
+                  // Skip any fragments that aren't bound to this fragment device.
+                  if (arg->fragment_device().get() != device_) {
+                    state_ = FragmentIterType{++arg};
+                    return true;
+                  }
+
                   return false;
                 }
-              } else if constexpr (std::is_same_v<T, Composite>) {
-                // Check if this device is an internal fragment device
-                // that bound to a composite fragment.  If it is, and
-                // the composite has been constructed, the iterator
-                // should yield the composite.
-                if (arg == device_->parent_->fragments().end()) {
+
+                // Check for composite devices that don't have proxy fragment devices.
+
+                if (arg == device_->fragments_.end()) {
                   state_ = Done{};
                   return false;
                 }
 
                 // Skip composite devices that aren't yet bound.
                 if (arg->composite()->device() == nullptr) {
-                  state_ = Composite{++arg};
+                  state_ = FragmentIterType{++arg};
                   return true;
                 }
 
-                // Skip any fragments that aren't bound to our device.
-                if (arg->fragment_device().get() != device_) {
-                  state_ = Composite{++arg};
+                // Skip fragments that have a fragment device.
+                if (arg->fragment_device() != nullptr) {
+                  state_ = FragmentIterType{++arg};
                   return true;
                 }
 
@@ -226,13 +248,10 @@ class Device
             state_);
       }
     }
-
-    using Composite = fbl::TaggedDoublyLinkedList<CompositeDeviceFragment*,
-                                                  CompositeDeviceFragment::DeviceListTag>::iterator;
     struct Done {
       bool operator==(Done) const { return true; }
     };
-    std::variant<IterType, Composite, Done> state_;
+    std::variant<ChildIterType, FragmentIterType, Done> state_;
     DeviceType* device_;
   };
 
@@ -286,11 +305,21 @@ class Device
   // We do not want to expose the list itself for mutation, even if the
   // children are allowed to be mutated.  We manage this by making the
   // iterator opaque.
-  using NonConstChildListIterator =
-      ChildListIterator<fbl::TaggedDoublyLinkedList<Device*, ChildListTag>::iterator, Device>;
-  using ConstChildListIterator =
-      ChildListIterator<fbl::TaggedDoublyLinkedList<Device*, ChildListTag>::const_iterator,
-                        const Device>;
+  using NonConstChildListIterator = ChildListIterator<
+      fbl::TaggedDoublyLinkedList<Device*, ChildListTag>::iterator,
+      fbl::TaggedDoublyLinkedList<CompositeDeviceFragment*,
+                                  CompositeDeviceFragment::DeviceListTag>::iterator,
+      Device>;
+  using ConstChildListIterator = ChildListIterator<
+      fbl::TaggedDoublyLinkedList<Device*, ChildListTag>::const_iterator,
+      fbl::TaggedDoublyLinkedList<CompositeDeviceFragment*,
+                                  CompositeDeviceFragment::DeviceListTag>::const_iterator,
+      const Device>;
+
+  using NonConstFragmentListIterator =
+      fbl::TaggedDoublyLinkedList<CompositeDeviceFragment*,
+                                  CompositeDeviceFragment::DeviceListTag>::iterator;
+
   using NonConstChildListIteratorFactory =
       ChildListIteratorFactory<Device, NonConstChildListIterator>;
   using ConstChildListIteratorFactory =

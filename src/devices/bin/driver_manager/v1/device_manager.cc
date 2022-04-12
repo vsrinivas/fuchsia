@@ -254,7 +254,33 @@ zx_status_t DeviceManager::RemoveDevice(const fbl::RefPtr<Device>& dev, bool for
 
   // Check if this device is a composite device, and if so disconnects from it
   if (dev->composite()) {
-    dev->composite()->Remove();
+    CompositeDevice* composite = dev->composite();
+    for (auto itr = composite->bound_fragments().begin();
+         itr != composite->bound_fragments().end();) {
+      CompositeDeviceFragment& bound_fragment = *itr;
+      // Advance the iterator because we will erase the current element from the list in Unbind.
+      ++itr;
+
+      // Ignore any fragments that are associated with a fragment device.
+      if (bound_fragment.fragment_device() != nullptr) {
+        continue;
+      }
+
+      ZX_ASSERT_MSG(bound_fragment.bound_device() != nullptr,
+                    "Composite device has an unbound fragment in bound fragments list");
+
+      const fbl::RefPtr<Device>& parent = bound_fragment.bound_device();
+
+      // Erase from the parent the fragment that matches this composite device.
+      CompositeDeviceFragment* fragment =
+          parent->fragments().erase_if([&composite](const CompositeDeviceFragment& fragment) {
+            return fragment.composite() == composite;
+          });
+      ZX_ASSERT_MSG(fragment != nullptr, "Unable to find fragment in bound device's fragments");
+      fragment->Unbind();
+    }
+
+    composite->Remove();
   }
 
   // Check if this device is a composite fragment device
@@ -263,16 +289,14 @@ zx_status_t DeviceManager::RemoveDevice(const fbl::RefPtr<Device>& dev, bool for
     // is the actual device matched by the fragment description).
     const auto& parent = dev->parent();
 
-    for (auto itr = parent->fragments().begin(); itr != parent->fragments().end();) {
-      auto& cur_fragment = *itr;
-      // Advance the iterator because we will erase the current element from the list.
-      ++itr;
-      if (cur_fragment.fragment_device() == dev) {
-        cur_fragment.Unbind();
-        parent->fragments().erase(cur_fragment);
-        break;
-      }
-    }
+    // Erase from the parent the fragment that matches this fragment device.
+    CompositeDeviceFragment* fragment =
+        parent->fragments().erase_if([&dev](const CompositeDeviceFragment& fragment) {
+          return fragment.fragment_device() == dev;
+        });
+    ZX_ASSERT_MSG(fragment != nullptr,
+                  "Unable to find fragment matching fragment device in parent");
+    fragment->Unbind();
   }
 
   // Detach from driver_host
