@@ -55,13 +55,11 @@ struct Success : public BinaryAttribute {
   static std::string ToString(size_t index) { return index == 0 ? "fail" : "ok"; }
 };
 
-void CreateMicrosecHistogramId(const char* name, inspect::Node* root,
-                               std::vector<inspect::ExponentialUintHistogram>* hist_list) {
-  constexpr uint64_t kBase = 2;
-  constexpr uint64_t kInitialStep = 10000;
-  constexpr uint64_t kFloor = 0;
-  hist_list->push_back(
-      root->CreateExponentialUintHistogram(name, kFloor, kInitialStep, kBase, kHistogramBuckets));
+// TODO(fxbug.dev/80285): Remove this when replacing Cobalt flushing with Lapis.
+// This cannot be removed without breaking the existing collection pipeline.
+void CreateNoopHistogram(const char* name, inspect::Node* root,
+                         std::vector<inspect::ExponentialUintHistogram>* hist_list) {
+  hist_list->emplace_back();
 }
 
 // Provides a specialized type that keep track of created attributes. In order to add new
@@ -88,7 +86,7 @@ template <>
 struct EventInfo<Event::kRead> : public Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "read";
-  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart = 0;
 };
 
@@ -96,7 +94,7 @@ template <>
 struct EventInfo<Event::kWrite> : public Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "write";
-  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kRead>>();
 };
 
@@ -104,7 +102,7 @@ template <>
 struct EventInfo<Event::kAppend> : public Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "append";
-  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kWrite>>();
 };
 
@@ -112,7 +110,7 @@ template <>
 struct EventInfo<Event::kTruncate> : public Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "truncate";
-  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kAppend>>();
 };
 
@@ -120,7 +118,7 @@ template <>
 struct EventInfo<Event::kSetAttr> : public Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "setattr";
-  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kTruncate>>();
 };
 
@@ -128,7 +126,7 @@ template <>
 struct EventInfo<Event::kGetAttr> : public Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "getattr";
-  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kSetAttr>>();
 };
 
@@ -136,7 +134,7 @@ template <>
 struct EventInfo<Event::kReadDir> : public Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "readdir";
-  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kGetAttr>>();
 };
 
@@ -144,7 +142,7 @@ template <>
 struct EventInfo<Event::kSync> : public Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "sync";
-  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kReadDir>>();
 };
 
@@ -152,7 +150,7 @@ template <>
 struct EventInfo<Event::kLookUp> : public Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "lookup";
-  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kSync>>();
 };
 
@@ -160,7 +158,7 @@ template <>
 struct EventInfo<Event::kCreate> : public Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "create";
-  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kLookUp>>();
 };
 
@@ -168,7 +166,7 @@ template <>
 struct EventInfo<Event::kClose> : public Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "close";
-  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kCreate>>();
 };
 
@@ -176,7 +174,7 @@ template <>
 struct EventInfo<Event::kLink> : public Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "link";
-  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kClose>>();
 };
 
@@ -184,7 +182,7 @@ template <>
 struct EventInfo<Event::kUnlink> : public Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "unlink";
-  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kLink>>();
 };
 
@@ -192,7 +190,7 @@ template <>
 struct EventInfo<Event::kJournalWriteData> : public BlockCount, Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "journal_write_data";
-  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kUnlink>>();
 };
 
@@ -200,7 +198,7 @@ template <>
 struct EventInfo<Event::kJournalWriteMetadata> : public BlockCount, Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "journal_write_metadata";
-  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kJournalWriteData>>();
 };
 
@@ -208,7 +206,7 @@ template <>
 struct EventInfo<Event::kJournalTrimData> : public BlockCount, Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "journal_trim_data";
-  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart =
       HistogramOffsets::End<EventInfo<Event::kJournalWriteMetadata>>();
 };
@@ -217,7 +215,7 @@ template <>
 struct EventInfo<Event::kJournalSync> : public BlockCount, Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "journal_sync";
-  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kJournalTrimData>>();
 };
 
@@ -225,7 +223,7 @@ template <>
 struct EventInfo<Event::kJournalScheduleTask> : public BlockCount, Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "journal_schedule_task";
-  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kJournalSync>>();
 };
 
@@ -233,7 +231,7 @@ template <>
 struct EventInfo<Event::kJournalWriterWriteData> : public BlockCount, Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "journal_writer_write_data";
-  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart =
       HistogramOffsets::End<EventInfo<Event::kJournalScheduleTask>>();
 };
@@ -242,7 +240,7 @@ template <>
 struct EventInfo<Event::kJournalWriterWriteMetadata> : public BlockCount, Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "journal_writer_write_metadata";
-  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart =
       HistogramOffsets::End<EventInfo<Event::kJournalWriterWriteData>>();
 };
@@ -251,7 +249,7 @@ template <>
 struct EventInfo<Event::kJournalWriterTrimData> : public BlockCount, Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "journal_writer_trim_data";
-  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart =
       HistogramOffsets::End<EventInfo<Event::kJournalWriterWriteMetadata>>();
 };
@@ -260,7 +258,7 @@ template <>
 struct EventInfo<Event::kJournalWriterSync> : public BlockCount, Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "journal_writer_sync";
-  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart =
       HistogramOffsets::End<EventInfo<Event::kJournalWriterTrimData>>();
 };
@@ -269,7 +267,7 @@ template <>
 struct EventInfo<Event::kJournalWriterWriteInfoBlock> : public BlockCount, Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "journal_writer_write_info_block";
-  static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kJournalWriterSync>>();
 };
 
@@ -277,7 +275,7 @@ template <>
 struct EventInfo<Event::kInvalidEvent> : public BlockCount, Success {
   using AttributeData = EventOptions;
   [[maybe_unused]] static constexpr char kPrefix[] = "invalid event";
-  [[maybe_unused]] static constexpr auto CreateTracker = CreateMicrosecHistogramId;
+  [[maybe_unused]] static constexpr auto CreateTracker = CreateNoopHistogram;
   static constexpr uint64_t kStart =
       HistogramOffsets::End<EventInfo<Event::kJournalWriterWriteInfoBlock>>();
 };
@@ -291,7 +289,8 @@ void AddOpHistograms(inspect::Node* root,
 }  // namespace
 
 Histograms::Histograms(inspect::Node* root) {
-  nodes_.push_back(root->CreateChild(kHistComponent));
+  // TODO(fxbug.dev/80285): Remove this when replacing Cobalt flushing with Lapis.
+  nodes_.emplace_back();
   auto& hist_node = nodes_[nodes_.size() - 1];
 
   // Histogram names are defined based on event_name(_DimensionValue){0,5}, where dimension value is

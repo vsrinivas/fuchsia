@@ -11,6 +11,7 @@
 #include <mutex>
 
 #include "src/lib/storage/vfs/cpp/inspect/inspect_tree.h"
+#include "src/lib/storage/vfs/cpp/inspect/node_operations.h"
 #include "src/storage/blobfs/format.h"
 
 namespace blobfs {
@@ -35,6 +36,9 @@ class BlobfsInspectTree final {
 
   // Reference to the Inspector this object owns.
   const inspect::Inspector& Inspector() { return inspector_; }
+
+  // Obtain node-level operation trackers.
+  fs_inspect::NodeOperations* GetNodeOperations() { return &node_operations_; }
 
  private:
   // Helper function to create and return all required callbacks to create an fs_inspect tree.
@@ -61,6 +65,12 @@ class BlobfsInspectTree final {
   // filesystem inspect trees, and is not be required when filesystems are componentized (the tree
   // can be attached directly to the inspect root in that case).
   inspect::Node tree_root_;
+
+  // Node to which operational statistics (latency/error counters) are added.
+  inspect::Node opstats_node_;
+
+  // All common filesystem node operation trackers.
+  fs_inspect::NodeOperations node_operations_;
 
   // Filesystem inspect tree nodes.
   // **MUST be declared last**, as the callbacks passed to this object use the above properties.

@@ -943,65 +943,67 @@ zx_status_t Blob::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol prot
 zx_status_t Blob::Read(void* data, size_t len, size_t off, size_t* out_actual) {
   TRACE_DURATION("blobfs", "Blob::Read", "len", len, "off", off);
   auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kRead);
-  zx_status_t status = ReadInternal(data, len, off, out_actual);
-  event.mutable_latency_event()->mutable_options()->success = (status == ZX_OK);
-  return status;
+  return blobfs_->GetNodeOperations()->read.Track(
+      [&] { return ReadInternal(data, len, off, out_actual); });
 }
 
 zx_status_t Blob::Write(const void* data, size_t len, size_t offset, size_t* out_actual) {
   TRACE_DURATION("blobfs", "Blob::Write", "len", len, "off", offset);
   auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kWrite);
 
-  std::lock_guard lock(mutex_);
-  zx_status_t status = WriteInternal(data, len, {offset}, out_actual);
-  event.mutable_latency_event()->mutable_options()->success = (status == ZX_OK);
-  return status;
+  return blobfs_->GetNodeOperations()->write.Track([&] {
+    std::lock_guard lock(mutex_);
+    return WriteInternal(data, len, {offset}, out_actual);
+  });
 }
 
 zx_status_t Blob::Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) {
+  TRACE_DURATION("blobfs", "Blob::Append", "len", len);
   auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kAppend);
 
-  std::lock_guard lock(mutex_);
+  return blobfs_->GetNodeOperations()->append.Track([&] {
+    std::lock_guard lock(mutex_);
 
-  zx_status_t status = WriteInternal(data, len, std::nullopt, out_actual);
-  if (state() == BlobState::kDataWrite) {
-    ZX_DEBUG_ASSERT(write_info_ != nullptr);
-    *out_end = write_info_->bytes_written;
-  } else {
-    *out_end = blob_size_;
-  }
-
-  event.mutable_latency_event()->mutable_options()->success = (status == ZX_OK);
-  return status;
+    zx_status_t status = WriteInternal(data, len, std::nullopt, out_actual);
+    if (state() == BlobState::kDataWrite) {
+      ZX_DEBUG_ASSERT(write_info_ != nullptr);
+      *out_end = write_info_->bytes_written;
+    } else {
+      *out_end = blob_size_;
+    }
+    return status;
+  });
 }
 
 zx_status_t Blob::GetAttributes(fs::VnodeAttributes* a) {
+  TRACE_DURATION("blobfs", "Blob::GetAttributes");
   auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kGetAttr);
 
-  // SizeData() expects to be called outside the lock.
-  auto content_size = SizeData();
+  return blobfs_->GetNodeOperations()->get_attr.Track([&] {
+    // SizeData() expects to be called outside the lock.
+    auto content_size = SizeData();
 
-  std::lock_guard lock(mutex_);
+    std::lock_guard lock(mutex_);
 
-  *a = fs::VnodeAttributes();
-  a->mode = V_TYPE_FILE | V_IRUSR | V_IXUSR;
-  a->inode = map_index_;
-  a->content_size = content_size;
-  a->storage_size = block_count_ * kBlobfsBlockSize;
-  a->link_count = 1;
-  a->creation_time = 0;
-  a->modification_time = 0;
-  event.mutable_latency_event()->mutable_options()->success = true;
-  return ZX_OK;
+    *a = fs::VnodeAttributes();
+    a->mode = V_TYPE_FILE | V_IRUSR | V_IXUSR;
+    a->inode = map_index_;
+    a->content_size = content_size;
+    a->storage_size = block_count_ * kBlobfsBlockSize;
+    a->link_count = 1;
+    a->creation_time = 0;
+    a->modification_time = 0;
+    return ZX_OK;
+  });
 }
 
 zx_status_t Blob::Truncate(size_t len) {
   TRACE_DURATION("blobfs", "Blob::Truncate", "len", len);
   auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kTruncate);
-  zx_status_t status =
-      PrepareWrite(len, blobfs_->ShouldCompress() && len > kCompressionSizeThresholdBytes);
-  event.mutable_latency_event()->mutable_options()->success = (status == ZX_OK);
-  return status;
+
+  return blobfs_->GetNodeOperations()->truncate.Track([&] {
+    return PrepareWrite(len, blobfs_->ShouldCompress() && len > kCompressionSizeThresholdBytes);
+  });
 }
 
 void Blob::SetTargetCompressionSize(uint64_t size) {
@@ -1043,7 +1045,16 @@ void Blob::Sync(SyncCallback on_complete) {
   // This function will issue its callbacks on either the current thread or the journal thread. The
   // vnode interface says this is OK.
   TRACE_DURATION("blobfs", "Blob::Sync");
-  auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kSync);
+  auto event_deprecated = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kSync);
+
+  auto event = blobfs_->GetNodeOperations()->sync.NewEvent();
+  // Wraps `on_complete` to record the result into `event` as well.
+  SyncCallback completion_callback = [on_complete = std::move(on_complete),
+                                      event_deprecated = std::move(event_deprecated),
+                                      event = std::move(event)](zx_status_t status) mutable {
+    on_complete(status);
+    event.SetStatus(status);
+  };
 
   SyncingState state;
   {
@@ -1055,7 +1066,7 @@ void Blob::Sync(SyncCallback on_complete) {
     case SyncingState::kDataIncomplete: {
       // It doesn't make sense to sync a partial blob since it can't have its proper
       // content-addressed name without all the data.
-      on_complete(ZX_ERR_BAD_STATE);
+      completion_callback(ZX_ERR_BAD_STATE);
       break;
     }
     case SyncingState::kSyncing: {
@@ -1064,18 +1075,12 @@ void Blob::Sync(SyncCallback on_complete) {
       // happen "soon" and provides a way to get notified when it does.
       auto trace_id = TRACE_NONCE();
       TRACE_FLOW_BEGIN("blobfs", "Blob.sync", trace_id);
-      blobfs_->Sync([event = std::move(event),
-                     on_complete = std::move(on_complete)](zx_status_t status) mutable {
-        // Note: this may be executed on an arbitrary thread.
-        on_complete(status);
-        event.mutable_latency_event()->mutable_options()->success = (status == ZX_OK);
-      });
+      blobfs_->Sync(std::move(completion_callback));
       break;
     }
     case SyncingState::kDone: {
       // All metadata has already been synced. Calling Sync() is a no-op.
-      on_complete(ZX_OK);
-      event.mutable_latency_event()->mutable_options()->success = true;
+      completion_callback(ZX_OK);
       break;
     }
   }
@@ -1181,26 +1186,26 @@ zx_status_t Blob::OpenNode([[maybe_unused]] ValidatedOptions options,
 }
 
 zx_status_t Blob::CloseNode() {
-  std::lock_guard lock(mutex_);
-
+  TRACE_DURATION("blobfs", "Blob::CloseNode");
   auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kClose);
+  return blobfs_->GetNodeOperations()->close.Track([&] {
+    std::lock_guard lock(mutex_);
 
-  if (paged_vmo() && !HasReferences()) {
-    // Mark the name to help identify the VMO is unused.
-    SetPagedVmoName(false);
-    // Hint that the VMO's pages are no longer needed, and can be evicted under memory pressure. If
-    // a page is accessed again, it will lose the hint.
-    zx_status_t status = paged_vmo().op_range(ZX_VMO_OP_DONT_NEED, 0, blob_size_, nullptr, 0);
-    if (status != ZX_OK) {
-      FX_LOGS(WARNING) << "Hinting DONT_NEED on blob " << digest()
-                       << " failed: " << zx_status_get_string(status);
+    if (paged_vmo() && !HasReferences()) {
+      // Mark the name to help identify the VMO is unused.
+      SetPagedVmoName(false);
+      // Hint that the VMO's pages are no longer needed, and can be evicted under memory pressure.
+      // If a page is accessed again, it will lose the hint.
+      zx_status_t status = paged_vmo().op_range(ZX_VMO_OP_DONT_NEED, 0, blob_size_, nullptr, 0);
+      if (status != ZX_OK) {
+        FX_LOGS(WARNING) << "Hinting DONT_NEED on blob " << digest()
+                         << " failed: " << zx_status_get_string(status);
+      }
     }
-  }
 
-  // Attempt purge in case blob was unlinked prior to close.
-  zx_status_t status = TryPurge();
-  event.mutable_latency_event()->mutable_options()->success = (status == ZX_OK);
-  return status;
+    // Attempt purge in case blob was unlinked prior to close.
+    return TryPurge();
+  });
 }
 
 zx_status_t Blob::TryPurge() {

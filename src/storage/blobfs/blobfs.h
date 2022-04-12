@@ -111,6 +111,8 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // Returns filesystem specific information.
   zx::status<fs::FilesystemInfo> GetFilesystemInfo();
 
+  fs_inspect::NodeOperations* GetNodeOperations() { return inspect_tree_.GetNodeOperations(); }
+
   // TransactionManager interface.
   //
   // Allows attaching VMOs, controlling the underlying volume, and sending transactions to the

@@ -59,27 +59,30 @@ zx_status_t Directory::Append(const void* data, size_t len, size_t* out_end, siz
 zx_status_t Directory::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out) {
   TRACE_DURATION("blobfs", "Directory::Lookup", "name", name);
   auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kLookUp);
-  assert(memchr(name.data(), '/', name.length()) == nullptr);
-  if (name == ".") {
-    // Special case: Accessing root directory via '.'
-    *out = fbl::RefPtr<Directory>(this);
-    return ZX_OK;
-  }
 
-  zx_status_t status;
-  Digest digest;
-  if ((status = digest.Parse(name.data(), name.length())) != ZX_OK) {
-    return status;
-  }
-  fbl::RefPtr<CacheNode> cache_node;
-  if ((status = blobfs_->GetCache().Lookup(digest, &cache_node)) != ZX_OK) {
-    return status;
-  }
-  auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
-  blobfs_->GetMetrics()->UpdateLookup(vnode->SizeData());
-  *out = std::move(vnode);
-  event.mutable_latency_event()->mutable_options()->success = true;
-  return ZX_OK;
+  assert(memchr(name.data(), '/', name.length()) == nullptr);
+
+  return blobfs_->GetNodeOperations()->look_up.Track([&] {
+    if (name == ".") {
+      // Special case: Accessing root directory via '.'
+      *out = fbl::RefPtr<Directory>(this);
+      return ZX_OK;
+    }
+
+    zx_status_t status;
+    Digest digest;
+    if ((status = digest.Parse(name.data(), name.length())) != ZX_OK) {
+      return status;
+    }
+    fbl::RefPtr<CacheNode> cache_node;
+    if ((status = blobfs_->GetCache().Lookup(digest, &cache_node)) != ZX_OK) {
+      return status;
+    }
+    auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
+    blobfs_->GetMetrics()->UpdateLookup(vnode->SizeData());
+    *out = std::move(vnode);
+    return ZX_OK;
+  });
 }
 
 zx_status_t Directory::GetAttributes(fs::VnodeAttributes* a) {
@@ -99,22 +102,23 @@ zx_status_t Directory::Create(std::string_view name, uint32_t mode, fbl::RefPtr<
   auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kCreate);
   assert(memchr(name.data(), '/', name.length()) == nullptr);
 
-  Digest digest;
-  zx_status_t status;
-  if ((status = digest.Parse(name.data(), name.length())) != ZX_OK) {
-    return status;
-  }
+  return blobfs_->GetNodeOperations()->create.Track([&] {
+    Digest digest;
+    zx_status_t status;
+    if ((status = digest.Parse(name.data(), name.length())) != ZX_OK) {
+      return status;
+    }
 
-  fbl::RefPtr<Blob> vn = fbl::AdoptRef(new Blob(blobfs_, std::move(digest)));
-  if ((status = blobfs_->GetCache().Add(vn)) != ZX_OK) {
-    return status;
-  }
-  if ((status = vn->OpenValidating(fs::VnodeConnectionOptions(), nullptr)) != ZX_OK) {
-    return status;
-  }
-  *out = std::move(vn);
-  event.mutable_latency_event()->mutable_options()->success = true;
-  return ZX_OK;
+    fbl::RefPtr<Blob> vn = fbl::AdoptRef(new Blob(blobfs_, std::move(digest)));
+    if ((status = blobfs_->GetCache().Add(vn)) != ZX_OK) {
+      return status;
+    }
+    if ((status = vn->OpenValidating(fs::VnodeConnectionOptions(), nullptr)) != ZX_OK) {
+      return status;
+    }
+    *out = std::move(vn);
+    return ZX_OK;
+  });
 }
 
 zx::status<std::string> Directory::GetDevicePath() const {
@@ -126,20 +130,21 @@ zx_status_t Directory::Unlink(std::string_view name, bool must_be_dir) {
   auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kUnlink);
   assert(memchr(name.data(), '/', name.length()) == nullptr);
 
-  zx_status_t status;
-  Digest digest;
-  if ((status = digest.Parse(name.data(), name.length())) != ZX_OK) {
+  return blobfs_->GetNodeOperations()->unlink.Track([&] {
+    zx_status_t status;
+    Digest digest;
+    if ((status = digest.Parse(name.data(), name.length())) != ZX_OK) {
+      return status;
+    }
+    fbl::RefPtr<CacheNode> cache_node;
+    if ((status = blobfs_->GetCache().Lookup(digest, &cache_node)) != ZX_OK) {
+      return status;
+    }
+    auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
+    blobfs_->GetMetrics()->UpdateLookup(vnode->SizeData());
+    status = vnode->QueueUnlink();
     return status;
-  }
-  fbl::RefPtr<CacheNode> cache_node;
-  if ((status = blobfs_->GetCache().Lookup(digest, &cache_node)) != ZX_OK) {
-    return status;
-  }
-  auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
-  blobfs_->GetMetrics()->UpdateLookup(vnode->SizeData());
-  status = vnode->QueueUnlink();
-  event.mutable_latency_event()->mutable_options()->success = (status == ZX_OK);
-  return status;
+  });
 }
 
 void Directory::Sync(SyncCallback closure) {

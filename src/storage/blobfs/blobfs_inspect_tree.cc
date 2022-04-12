@@ -27,6 +27,8 @@ namespace blobfs {
 BlobfsInspectTree::BlobfsInspectTree()
     : inspector_(CreateInspector()),
       tree_root_(inspector_.GetRoot().CreateChild("blobfs")),
+      opstats_node_(tree_root_.CreateChild("fs.opstats")),
+      node_operations_(opstats_node_),
       fs_inspect_nodes_(fs_inspect::CreateTree(tree_root_, CreateCallbacks())) {}
 
 // Set general filesystem information.
