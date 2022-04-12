@@ -6,21 +6,6 @@
 
 use crate::{ip::device::state::DualStackIpDeviceState, Instant};
 
-/// Device state.
-///
-/// `D` is the device-specific state.
-pub(crate) struct DeviceState<D> {
-    /// Device-specific state.
-    pub(crate) device: D,
-}
-
-impl<D> DeviceState<D> {
-    /// Creates a new `DeviceState` with a device-specific state `device`.
-    pub(crate) fn new(device: D) -> Self {
-        Self { device }
-    }
-}
-
 /// State for a link-device that is also an IP device.
 ///
 /// `D` is the link-specific state.

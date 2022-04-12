@@ -44,7 +44,7 @@ use crate::{
         link::LinkDevice,
         loopback::LoopbackDeviceState,
         ndp::{NdpHandler, NdpPacketHandler},
-        state::{DeviceState, IpLinkDeviceState},
+        state::IpLinkDeviceState,
     },
     error::{ExistsError, NotFoundError, NotSupportedError},
     ip::{
@@ -162,7 +162,7 @@ impl<D: EventDispatcher, C: BlanketCoreContext>
         id0: EthernetDeviceId,
         _id1: (),
     ) -> (&IpLinkDeviceState<C::Instant, EthernetDeviceState>, &C::Rng) {
-        (&self.state.device.ethernet.get(id0.0).unwrap().device, self.ctx.rng())
+        (&self.state.device.ethernet.get(id0.0).unwrap(), self.ctx.rng())
     }
 
     fn get_states_mut_with(
@@ -171,7 +171,7 @@ impl<D: EventDispatcher, C: BlanketCoreContext>
         _id1: (),
     ) -> (&mut IpLinkDeviceState<C::Instant, EthernetDeviceState>, &mut C::Rng) {
         let Ctx { state, dispatcher: _, ctx } = self;
-        (&mut state.device.ethernet.get_mut(id0.0).unwrap().device, ctx.rng_mut())
+        (state.device.ethernet.get_mut(id0.0).unwrap(), ctx.rng_mut())
     }
 }
 
@@ -181,9 +181,9 @@ fn get_ip_device_state<D: EventDispatcher, C: BlanketCoreContext>(
 ) -> &DualStackIpDeviceState<C::Instant> {
     match device.inner() {
         DeviceIdInner::Ethernet(EthernetDeviceId(id)) => {
-            &ctx.state.device.ethernet.get(id).unwrap().device.ip
+            &ctx.state.device.ethernet.get(id).unwrap().ip
         }
-        DeviceIdInner::Loopback => &ctx.state.device.loopback.as_ref().unwrap().device.ip,
+        DeviceIdInner::Loopback => &ctx.state.device.loopback.as_ref().unwrap().ip,
     }
 }
 
@@ -193,9 +193,9 @@ fn get_ip_device_state_mut_and_rng<D: EventDispatcher, C: BlanketCoreContext>(
 ) -> (&mut DualStackIpDeviceState<C::Instant>, &mut C::Rng) {
     let state = match device.inner() {
         DeviceIdInner::Ethernet(EthernetDeviceId(id)) => {
-            &mut ctx.state.device.ethernet.get_mut(id).unwrap().device.ip
+            &mut ctx.state.device.ethernet.get_mut(id).unwrap().ip
         }
-        DeviceIdInner::Loopback => &mut ctx.state.device.loopback.as_mut().unwrap().device.ip,
+        DeviceIdInner::Loopback => &mut ctx.state.device.loopback.as_mut().unwrap().ip,
     };
 
     (state, ctx.ctx.rng_mut())
@@ -623,8 +623,8 @@ impl DeviceStateBuilder {
 
 /// The state associated with the device layer.
 pub(crate) struct DeviceLayerState<I: Instant> {
-    ethernet: IdMap<DeviceState<IpLinkDeviceState<I, EthernetDeviceState>>>,
-    loopback: Option<DeviceState<IpLinkDeviceState<I, LoopbackDeviceState>>>,
+    ethernet: IdMap<IpLinkDeviceState<I, EthernetDeviceState>>,
+    loopback: Option<IpLinkDeviceState<I, LoopbackDeviceState>>,
     default_ndp_config: ndp::NdpConfiguration,
     default_ipv6_config: Ipv6DeviceConfiguration,
 }
@@ -642,7 +642,6 @@ impl<I: Instant> DeviceLayerState<I> {
         builder.set_ndp_config(default_ndp_config.clone());
         let mut ethernet_state = IpLinkDeviceState::new(builder.build());
         ethernet_state.ip.ipv6.config = default_ipv6_config.clone();
-        let ethernet_state = DeviceState::new(ethernet_state);
         let id = ethernet.push(ethernet_state);
         debug!("adding Ethernet device with ID {} and MTU {}", id, mtu);
         DeviceId::new_ethernet(id)
@@ -652,13 +651,12 @@ impl<I: Instant> DeviceLayerState<I> {
     pub(crate) fn add_loopback_device(&mut self, mtu: u32) -> Result<DeviceId, ExistsError> {
         let Self { ethernet: _, loopback, default_ndp_config: _, default_ipv6_config } = self;
 
-        if let Some(DeviceState { .. }) = loopback {
+        if let Some(IpLinkDeviceState { .. }) = loopback {
             return Err(ExistsError);
         }
 
         let mut loopback_state = IpLinkDeviceState::new(LoopbackDeviceState::new(mtu));
         loopback_state.ip.ipv6.config = default_ipv6_config.clone();
-        let loopback_state = DeviceState::new(loopback_state);
         *loopback = Some(loopback_state);
 
         debug!("added loopback device");
@@ -701,7 +699,7 @@ pub fn remove_device<D: EventDispatcher, C: BlanketCoreContext>(
             // TODO(rheacock): Generate any final frames to send here.
             crate::device::ethernet::deinitialize(ctx, id);
             let EthernetDeviceId(id) = id;
-            let _: DeviceState<_> = ctx
+            let _: IpLinkDeviceState<_, _> = ctx
                 .state
                 .device
                 .ethernet
@@ -711,7 +709,7 @@ pub fn remove_device<D: EventDispatcher, C: BlanketCoreContext>(
             None
         }
         DeviceIdInner::Loopback => {
-            let _: DeviceState<_> =
+            let _: IpLinkDeviceState<_, _> =
                 ctx.state.device.loopback.take().expect("loopback device does not exist");
             debug!("removing Loopback device");
             None

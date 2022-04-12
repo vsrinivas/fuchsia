@@ -1804,7 +1804,6 @@ mod tests {
                 .ethernet
                 .get(0)
                 .unwrap()
-                .device
                 .ip
                 .ipv6
                 .ip_state
@@ -1826,7 +1825,6 @@ mod tests {
             .ethernet
             .get(0)
             .unwrap()
-            .device
             .ip
             .ipv6
             .ip_state
