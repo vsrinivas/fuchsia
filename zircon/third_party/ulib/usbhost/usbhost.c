@@ -131,7 +131,7 @@ static void watch_existing_subdirs(struct usb_host_context *context,
             wds[i] = ret;
     }
 }
-struct usb_host_context *usb_host_init()
+struct usb_host_context *usb_host_init(void)
 {
     struct usb_host_context *context = calloc(1, sizeof(struct usb_host_context));
     if (!context) {

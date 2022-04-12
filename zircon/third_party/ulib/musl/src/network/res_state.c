@@ -2,7 +2,7 @@
 
 /* This is completely unused, and exists purely to satisfy broken apps. */
 
-struct __res_state* __res_state() {
+struct __res_state* __res_state(void) {
   static struct __res_state res;
   return &res;
 }

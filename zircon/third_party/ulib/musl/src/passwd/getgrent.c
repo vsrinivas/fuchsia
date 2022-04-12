@@ -4,7 +4,7 @@ static FILE* f;
 static char *line, **mem;
 static struct group gr;
 
-void setgrent() {
+void setgrent(void) {
   if (f)
     fclose(f);
   f = 0;
@@ -12,7 +12,7 @@ void setgrent() {
 
 weak_alias(setgrent, endgrent);
 
-struct group* getgrent() {
+struct group* getgrent(void) {
   struct group* res;
   size_t size = 0, nmem = 0;
   if (!f)

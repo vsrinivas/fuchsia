@@ -1,3 +1,3 @@
 #include <pthread.h>
 
-int pthread_getconcurrency() { return 0; }
+int pthread_getconcurrency(void) { return 0; }
