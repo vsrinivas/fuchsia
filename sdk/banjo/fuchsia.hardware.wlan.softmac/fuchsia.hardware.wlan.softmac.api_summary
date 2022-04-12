@@ -23,7 +23,7 @@ struct/member fuchsia.hardware.wlan.softmac/WlanRxInfo.data_rate uint32
 struct/member fuchsia.hardware.wlan.softmac/WlanRxInfo.mcs uint8
 struct/member fuchsia.hardware.wlan.softmac/WlanRxInfo.phy fuchsia.wlan.common/WlanPhyType
 struct/member fuchsia.hardware.wlan.softmac/WlanRxInfo.rssi_dbm int8
-struct/member fuchsia.hardware.wlan.softmac/WlanRxInfo.rx_flags uint32
+struct/member fuchsia.hardware.wlan.softmac/WlanRxInfo.rx_flags fuchsia.hardware.wlan.softmac/WlanRxInfoFlags
 struct/member fuchsia.hardware.wlan.softmac/WlanRxInfo.snr_dbh int16
 struct/member fuchsia.hardware.wlan.softmac/WlanRxInfo.valid_fields uint32
 struct fuchsia.hardware.wlan.softmac/WlanRxInfo

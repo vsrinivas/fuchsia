@@ -443,7 +443,7 @@ mod test_utils {
 
     #[derive(Copy, Clone, Debug)]
     pub struct MockWlanRxInfo {
-        pub rx_flags: u32,
+        pub rx_flags: banjo_wlan_softmac::WlanRxInfoFlags,
         pub valid_fields: u32,
         pub phy: banjo_common::WlanPhyType,
         pub data_rate: u32,
@@ -469,7 +469,7 @@ mod test_utils {
 
                 // Default to 0 for these fields since there are no
                 // other reasonable values to mock.
-                rx_flags: 0,
+                rx_flags: banjo_wlan_softmac::WlanRxInfoFlags(0),
                 phy: banjo_common::WlanPhyType::DSSS,
                 data_rate: 0,
                 mcs: 0,

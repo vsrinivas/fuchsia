@@ -78,9 +78,8 @@ type WlanRxInfoFlags = strict enum : uint32 {
 };
 
 type WlanRxInfo = struct {
-    /// Receive flags. These represent boolean flags as opposed to enums or value-based info which
-    /// are represented below. Values should be taken from the WLAN_RX_INFO_FLAGS_* enum.
-    rx_flags uint32;
+    /// Boolean receive flags. Enums and value-based info are represented below.
+    rx_flags WlanRxInfoFlags;
 
     /// Bitmask indicating which of the following fields are valid in this struct. Reserved flags
     /// must be zero.
