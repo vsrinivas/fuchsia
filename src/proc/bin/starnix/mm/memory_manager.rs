@@ -28,7 +28,6 @@ bitflags! {
     pub struct MappingOptions: u32 {
       const SHARED = 1;
       const ANONYMOUS = 2;
-      const LOWER_32BIT = 4;
     }
 }
 
@@ -994,21 +993,12 @@ impl MemoryManager {
         vmo: Arc<zx::Vmo>,
         vmo_offset: u64,
         length: usize,
-        mut flags: zx::VmarFlags,
+        flags: zx::VmarFlags,
         options: MappingOptions,
         filename: Option<NamespaceNode>,
     ) -> Result<UserAddress, Errno> {
         let vmar_offset = match addr.address() {
-            a if a.is_null() => {
-                // MAP_32BIT specifies that the memory allocated will
-                // be within the first 2 GB of the process address space.
-                if options.contains(MappingOptions::LOWER_32BIT) {
-                    flags |= zx::VmarFlags::OFFSET_IS_UPPER_LIMIT;
-                    0x80000000
-                } else {
-                    0
-                }
-            }
+            a if a.is_null() => 0,
             a => a - self.base_addr,
         };
 
