@@ -12,6 +12,7 @@ zx_library("boot-shim") {
   sdk = "source"
   sdk_headers = [
     "lib/boot-shim/acpi.h",
+    "lib/boot-shim/uart.h",
     "lib/boot-shim/boot-shim.h",
     "lib/boot-shim/item-base.h",
     "lib/boot-shim/pool-mem-config.h",
@@ -21,6 +22,9 @@ zx_library("boot-shim") {
   public_deps = [
     # <lib/boot-shim/item-base.h> has #include <lib/stdcompat/span.h>.
     "//sdk/lib/stdcompat",
+
+    # <lib/boot-shim/uart.h> has #include <lib/uart/all.h>.
+    "//zircon/system/ulib/uart",
 
     # <lib/boot-shim/item-base.h> has #include <lib/zbitl/image.h>.
     "//zircon/system/ulib/zbitl",
@@ -35,6 +39,7 @@ zx_library("boot-shim") {
     "cmdline.cc",
     "pool-mem-config.cc",
     "test-serial-number.cc",
+    "uart.cc",
   ]
 
   deps = [
@@ -74,6 +79,7 @@ test("boot-shim-unittests") {
     "acpi-tests.cc",
     "pool-mem-config-tests.cc",
     "test-serial-number-tests.cc",
+    "uart-tests.cc",
   ]
   deps = [
     ":boot-shim",
