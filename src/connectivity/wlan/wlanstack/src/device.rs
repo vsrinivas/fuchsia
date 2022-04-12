@@ -84,6 +84,7 @@ pub fn create_and_serve_sme(
     inspect_tree: Arc<inspect::WlanstackTree>,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     device_info: fidl_mlme::DeviceInfo,
+    mac_sublayer_support: fidl_common::MacSublayerSupport,
     dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
     persistence_req_sender: auto_persist::PersistenceReqSender,
 ) -> Result<impl Future<Output = Result<(), Error>>, Error> {
@@ -105,9 +106,13 @@ pub fn create_and_serve_sme(
     if let fidl_common::WlanMacRole::Client = device_info.role {
         inspect_tree.mark_active_client_iface(id);
     }
-    let is_softmac = device_info.driver_features.contains(&fidl_common::DriverFeature::TempSoftmac);
-    // For testing only: All synthetic devices are softmac devices.
-    if device_info.driver_features.contains(&fidl_common::DriverFeature::Synth) && !is_softmac {
+
+    // For testing only: currently, all synthetic devices are softmac devices.
+    // This may change in the future.
+    if mac_sublayer_support.device.is_synthetic
+        && mac_sublayer_support.device.mac_implementation_type
+            != fidl_common::MacImplementationType::Softmac
+    {
         return Err(format_err!("Synthetic devices must be SoftMAC"));
     }
     ifaces.insert(
@@ -156,6 +161,21 @@ mod tests {
         }
     }
 
+    // Matches fake_device_info() driver_features field.
+    fn fake_mac_sublayer_support() -> fidl_common::MacSublayerSupport {
+        fidl_common::MacSublayerSupport {
+            rate_selection_offload: fidl_common::RateSelectionOffloadExtension { supported: false },
+            data_plane: fidl_common::DataPlaneExtension {
+                data_plane_type: fidl_common::DataPlaneType::EthernetDevice,
+            },
+            device: fidl_common::DeviceExtension {
+                is_synthetic: false,
+                mac_implementation_type: fidl_common::MacImplementationType::Fullmac,
+                tx_status_report_supported: false,
+            },
+        }
+    }
+
     #[test]
     fn query_serve_with_sme_channel() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
@@ -183,6 +203,7 @@ mod tests {
             inspect_tree.clone(),
             iface_tree_holder,
             fake_device_info(),
+            fake_mac_sublayer_support(),
             dev_monitor_proxy,
             persistence_req_sender,
         )
@@ -269,6 +290,7 @@ mod tests {
             inspect_tree.clone(),
             iface_tree_holder,
             fake_device_info(),
+            fake_mac_sublayer_support(),
             dev_monitor_proxy,
             persistence_req_sender,
         )

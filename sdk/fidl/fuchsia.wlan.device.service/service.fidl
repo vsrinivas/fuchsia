@@ -128,6 +128,67 @@ protocol DeviceService {
         status int32;
         resp box<QueryIfaceResponse>;
     });
+
+    /// Return the given interface's support for features related to discovery
+    /// of potential BSSs.
+    /// + request `iface_id` an interface ID
+    /// - response `status` a zx_status value indicating success or failure.
+    /// - response `resp` the requested `fuchsia.wlan.common/DiscoverySupport`;
+    ///     or null if there was an error, or the given interface does not
+    ///     exist.
+    /// * see [`fuchsia.wlan.common/DiscoverySupport`]
+    QueryDiscoverySupport(struct {
+        iface_id uint16;
+    }) -> (struct {
+        status int32;
+        resp box<fuchsia.wlan.common.DiscoverySupport>;
+    });
+
+    /// Return the given interface's support for features related to the MAC
+    /// sublayer.
+    /// + request `iface_id` an interface ID
+    /// - response `status` a zx_status value indicating success or failure.
+    /// - response `resp` the requested `fuchsia.wlan.common/MacSublayerSupport`;
+    ///     or null if there was an error, or the given interface does not
+    ///     exist.
+    /// * see [`fuchsia.wlan.common/MacSublayerSupport`]
+    QueryMacSublayerSupport(struct {
+        iface_id uint16;
+    }) -> (struct {
+        status int32;
+        resp box<fuchsia.wlan.common.MacSublayerSupport>;
+    });
+
+    /// Return the given interface's support for features related to security /
+    /// access control and data confidentiality.
+    /// + request `iface_id` an interface ID
+    /// - response `status` a zx_status value indicating success or failure.
+    /// - response `resp` the requested `fuchsia.wlan.common/SecuritySupport`;
+    ///     or null if there was an error, or the given interface does not
+    ///     exist.
+    /// * see [`fuchsia.wlan.common/SecuritySupport`]
+    QuerySecuritySupport(struct {
+        iface_id uint16;
+    }) -> (struct {
+        status int32;
+        resp box<fuchsia.wlan.common.SecuritySupport>;
+    });
+
+    /// Return the given interface's support for features related to spectrum
+    /// management.
+    /// + request `iface_id` an interface ID
+    /// - response `status` a zx_status value indicating success or failure.
+    /// - response `resp` the requested `fuchsia.wlan.common/SpectrumManagementSupport`;
+    ///     or null if there was an error, or the given interface does not
+    ///     exist.
+    /// * see [`fuchsia.wlan.common/SpectrumManagementSupport`]
+    QuerySpectrumManagementSupport(struct {
+        iface_id uint16;
+    }) -> (struct {
+        status int32;
+        resp box<fuchsia.wlan.common.SpectrumManagementSupport>;
+    });
+
     GetClientSme(resource struct {
         iface_id uint16;
         sme server_end:fuchsia.wlan.sme.ClientSme;

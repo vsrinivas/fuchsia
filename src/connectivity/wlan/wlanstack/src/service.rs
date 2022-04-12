@@ -56,6 +56,26 @@ pub async fn serve_device_requests(
                 let (status, mut response) = into_status_and_opt(result);
                 responder.send(status.into_raw(), response.as_mut())
             }
+            DeviceServiceRequest::QueryDiscoverySupport { iface_id, responder } => {
+                let result = query_discovery_support(&ifaces, iface_id).await;
+                let (status, mut response) = into_status_and_opt(result);
+                responder.send(status.into_raw(), response.as_mut())
+            }
+            DeviceServiceRequest::QueryMacSublayerSupport { iface_id, responder } => {
+                let result = query_mac_sublayer_support(&ifaces, iface_id).await;
+                let (status, mut response) = into_status_and_opt(result);
+                responder.send(status.into_raw(), response.as_mut())
+            }
+            DeviceServiceRequest::QuerySecuritySupport { iface_id, responder } => {
+                let result = query_security_support(&ifaces, iface_id).await;
+                let (status, mut response) = into_status_and_opt(result);
+                responder.send(status.into_raw(), response.as_mut())
+            }
+            DeviceServiceRequest::QuerySpectrumManagementSupport { iface_id, responder } => {
+                let result = query_spectrum_management_support(&ifaces, iface_id).await;
+                let (status, mut response) = into_status_and_opt(result);
+                responder.send(status.into_raw(), response.as_mut())
+            }
             DeviceServiceRequest::AddIface { req, responder } => {
                 let mut add_iface_result = add_iface(
                     req,
@@ -171,6 +191,54 @@ fn query_iface(ifaces: &IfaceMap, id: u16) -> Result<fidl_svc::QueryIfaceRespons
         phy_id,
         phy_assigned_id,
         driver_features,
+    })
+}
+
+async fn query_discovery_support(
+    ifaces: &IfaceMap,
+    id: u16,
+) -> Result<fidl_common::DiscoverySupport, zx::Status> {
+    info!("query_discovery_support(id = {})", id);
+    let iface = ifaces.get(&id).ok_or(zx::Status::NOT_FOUND)?;
+    iface.mlme_proxy.query_discovery_support().await.map_err(|e| {
+        warn!("query_discovery_support failed: {}", e);
+        zx::Status::INTERNAL
+    })
+}
+
+async fn query_mac_sublayer_support(
+    ifaces: &IfaceMap,
+    id: u16,
+) -> Result<fidl_common::MacSublayerSupport, zx::Status> {
+    info!("query_mac_sublayer_support(id = {})", id);
+    let iface = ifaces.get(&id).ok_or(zx::Status::NOT_FOUND)?;
+    iface.mlme_proxy.query_mac_sublayer_support().await.map_err(|e| {
+        warn!("query_mac_sublayer_support failed: {}", e);
+        zx::Status::INTERNAL
+    })
+}
+
+async fn query_security_support(
+    ifaces: &IfaceMap,
+    id: u16,
+) -> Result<fidl_common::SecuritySupport, zx::Status> {
+    info!("query_security_support(id = {})", id);
+    let iface = ifaces.get(&id).ok_or(zx::Status::NOT_FOUND)?;
+    iface.mlme_proxy.query_security_support().await.map_err(|e| {
+        warn!("query_security_support failed: {}", e);
+        zx::Status::INTERNAL
+    })
+}
+
+async fn query_spectrum_management_support(
+    ifaces: &IfaceMap,
+    id: u16,
+) -> Result<fidl_common::SpectrumManagementSupport, zx::Status> {
+    info!("query_spectrum_management_support(id = {})", id);
+    let iface = ifaces.get(&id).ok_or(zx::Status::NOT_FOUND)?;
+    iface.mlme_proxy.query_spectrum_management_support().await.map_err(|e| {
+        warn!("query_spectrum_management_support failed: {}", e);
+        zx::Status::INTERNAL
     })
 }
 
@@ -342,6 +410,11 @@ async fn add_iface(
         Err(e) => return AddIfaceResult::from_error(e.into(), zx::sys::ZX_ERR_PEER_CLOSED),
     };
 
+    let mac_sublayer_support = match mlme_proxy.query_mac_sublayer_support().await {
+        Ok(support) => support,
+        Err(e) => return AddIfaceResult::from_error(e.into(), zx::sys::ZX_ERR_PEER_CLOSED),
+    };
+
     let serve_sme_fut = match device::create_and_serve_sme(
         cfg.clone(),
         id,
@@ -351,6 +424,7 @@ async fn add_iface(
         inspect_tree.clone(),
         iface_tree_holder,
         device_info,
+        mac_sublayer_support,
         dev_monitor_proxy,
         persistence_req_sender,
     ) {
@@ -384,7 +458,9 @@ async fn add_iface(
 mod tests {
     use super::*;
     use crate::test_helper;
-    use fidl::endpoints::{create_endpoints, create_proxy, create_proxy_and_stream};
+    use fidl::endpoints::{
+        create_endpoints, create_proxy, create_proxy_and_stream, ControlHandle, Responder,
+    };
     use fidl_fuchsia_wlan_device_service::IfaceListItem;
     use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeMarker};
     use fidl_fuchsia_wlan_sme as fidl_sme;
@@ -399,6 +475,7 @@ mod tests {
     use crate::device::IfaceDevice;
 
     const IFACE_ID: u16 = 10;
+    const INVALID_IFACE_ID: u16 = 11;
 
     #[test]
     fn iface_counter() {
@@ -450,6 +527,299 @@ mod tests {
 
         let status = super::query_iface(&iface_map, 10u16).expect_err("querying iface succeeded");
         assert_eq!(zx::Status::NOT_FOUND, status);
+    }
+
+    macro_rules! setup_query_support_test {
+        ($test_helper:expr, $test_fut:expr, $query_support_fut:expr) => {
+            assert_variant!(
+                $test_helper.exec.run_until_stalled(&mut $query_support_fut),
+                Poll::Pending
+            );
+            assert_variant!($test_helper.exec.run_until_stalled(&mut $test_fut), Poll::Pending);
+        };
+    }
+
+    macro_rules! setup_query_support_test_with_broken_mlme {
+        ($test_helper:expr, $test_fut:expr, $query_support_fut:expr, $query_type:path) => {
+            setup_query_support_test!($test_helper, $test_fut, $query_support_fut);
+
+            // Verify the feature support request is forwarded to MLME
+            let responder = assert_variant!(
+                $test_helper.exec.run_until_stalled(&mut $test_helper.mlme_req_stream.next()),
+                Poll::Ready(Some(Ok($query_type{ responder }))) => responder
+            );
+            // (mlme -> wlanstack) Cause an error.
+            responder.control_handle().shutdown_with_epitaph(zx::Status::INTERNAL);
+
+            assert_variant!($test_helper.exec.run_until_stalled(&mut $test_fut), Poll::Pending);
+        };
+    }
+
+    #[test]
+    fn test_query_discovery_support_success() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        let query_support_fut = test_helper.dev_svc_proxy.query_discovery_support(IFACE_ID);
+        pin_mut!(query_support_fut);
+        setup_query_support_test!(test_helper, test_fut, query_support_fut);
+        // Verify the feature support request is forwarded to MLME
+        let responder = assert_variant!(
+            test_helper.exec.run_until_stalled(&mut test_helper.mlme_req_stream.next()),
+            Poll::Ready(Some(Ok(fidl_mlme::MlmeRequest::QueryDiscoverySupport{ responder }))) => responder
+        );
+        // (mlme -> wlanstack) Respond with fake feature support structure.
+        let mut mlme_resp = fake_discovery_support();
+        responder.send(&mut mlme_resp).expect("failed to respond to MLME QueryDiscoverySupport");
+
+        assert_variant!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        let resp = assert_variant!(test_helper.exec.run_until_stalled(&mut query_support_fut), Poll::Ready(resp) => resp);
+        assert_variant!(resp, Ok(sme_resp) => {
+            assert_eq!(zx::Status::from_raw(sme_resp.0), zx::Status::OK);
+            let expected = fake_discovery_support();
+            assert_variant!(sme_resp.1, Some(support) => {
+                assert_eq!(support.scan_offload.supported, expected.scan_offload.supported);
+                assert_eq!(support.probe_response_offload.supported, expected.probe_response_offload.supported);
+            });
+        });
+    }
+
+    #[test]
+    fn test_query_discovery_support_failure_for_invalid_iface() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        let query_support_fut = test_helper.dev_svc_proxy.query_discovery_support(INVALID_IFACE_ID);
+        pin_mut!(query_support_fut);
+        setup_query_support_test!(test_helper, test_fut, query_support_fut);
+
+        // The future should have returned bad status here.
+        assert_variant!(test_helper.exec.run_until_stalled(&mut query_support_fut), Poll::Ready(result) => {
+            assert_variant!(result, Ok(resp) => {
+                assert_eq!(zx::Status::from_raw(resp.0), zx::Status::NOT_FOUND);
+                assert!(resp.1.is_none());
+            })
+        });
+    }
+
+    #[test]
+    fn test_query_discovery_support_failure_for_mlme_error() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        let query_support_fut = test_helper.dev_svc_proxy.query_discovery_support(IFACE_ID);
+        pin_mut!(query_support_fut);
+        setup_query_support_test_with_broken_mlme!(
+            test_helper,
+            test_fut,
+            query_support_fut,
+            fidl_mlme::MlmeRequest::QueryDiscoverySupport
+        );
+
+        // The future should have returned bad status here.
+        assert_variant!(test_helper.exec.run_until_stalled(&mut query_support_fut), Poll::Ready(result) => {
+            assert_variant!(result, Ok(resp) => {
+                assert_eq!(zx::Status::from_raw(resp.0), zx::Status::INTERNAL);
+                assert!(resp.1.is_none());
+            });
+        });
+    }
+
+    #[test]
+    fn test_query_mac_sublayer_support_success() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        let query_support_fut = test_helper.dev_svc_proxy.query_mac_sublayer_support(IFACE_ID);
+        pin_mut!(query_support_fut);
+        setup_query_support_test!(test_helper, test_fut, query_support_fut);
+
+        // Verify the feature support request is forwarded to MLME
+        let responder = assert_variant!(
+            test_helper.exec.run_until_stalled(&mut test_helper.mlme_req_stream.next()),
+            Poll::Ready(Some(Ok(fidl_mlme::MlmeRequest::QueryMacSublayerSupport{ responder }))) => responder
+        );
+        // (mlme -> wlanstack) Respond with fake feature support structure.
+        let mut mlme_resp = fake_mac_sublayer_support();
+        responder.send(&mut mlme_resp).expect("failed to respond to MLME QueryMacSublayerSupport");
+
+        assert_variant!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        let resp = assert_variant!(test_helper.exec.run_until_stalled(&mut query_support_fut), Poll::Ready(resp) => resp);
+        assert_variant!(resp, Ok(sme_resp) => {
+            assert_eq!(zx::Status::from_raw(sme_resp.0), zx::Status::OK);
+            let expected = fake_mac_sublayer_support();
+            assert_variant!(sme_resp.1, Some(support) => {
+                assert_eq!(support.rate_selection_offload.supported, expected.rate_selection_offload.supported);
+                assert_eq!(support.data_plane.data_plane_type, expected.data_plane.data_plane_type);
+                assert_eq!(support.device.is_synthetic, expected.device.is_synthetic);
+                assert_eq!(support.device.mac_implementation_type, expected.device.mac_implementation_type);
+                assert_eq!(support.device.tx_status_report_supported, expected.device.tx_status_report_supported);
+            });
+        });
+    }
+
+    #[test]
+    fn test_query_mac_sublayer_support_failure_for_invalid_iface() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        let query_support_fut =
+            test_helper.dev_svc_proxy.query_mac_sublayer_support(INVALID_IFACE_ID);
+        pin_mut!(query_support_fut);
+        setup_query_support_test!(test_helper, test_fut, query_support_fut);
+
+        // The future should have returned bad status here.
+        assert_variant!(test_helper.exec.run_until_stalled(&mut query_support_fut), Poll::Ready(result) => {
+            assert_variant!(result, Ok(resp) => {
+                assert_eq!(zx::Status::from_raw(resp.0), zx::Status::NOT_FOUND);
+                assert!(resp.1.is_none());
+            })
+        });
+    }
+
+    #[test]
+    fn test_query_mac_sublayer_support_failure_for_mlme_error() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        let query_support_fut = test_helper.dev_svc_proxy.query_mac_sublayer_support(IFACE_ID);
+        pin_mut!(query_support_fut);
+        setup_query_support_test_with_broken_mlme!(
+            test_helper,
+            test_fut,
+            query_support_fut,
+            fidl_mlme::MlmeRequest::QueryMacSublayerSupport
+        );
+
+        assert_variant!(test_helper.exec.run_until_stalled(&mut query_support_fut), Poll::Ready(result) => {
+            assert_variant!(result, Ok(resp) => {
+                assert_eq!(zx::Status::from_raw(resp.0), zx::Status::INTERNAL);
+                assert!(resp.1.is_none());
+            });
+        });
+    }
+
+    #[test]
+    fn test_query_security_support_success() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        let query_support_fut = test_helper.dev_svc_proxy.query_security_support(IFACE_ID);
+        pin_mut!(query_support_fut);
+        setup_query_support_test!(test_helper, test_fut, query_support_fut);
+
+        // Verify the feature support request is forwarded to MLME
+        let responder = assert_variant!(
+            test_helper.exec.run_until_stalled(&mut test_helper.mlme_req_stream.next()),
+            Poll::Ready(Some(Ok(fidl_mlme::MlmeRequest::QuerySecuritySupport{ responder }))) => responder
+        );
+        // (mlme -> wlanstack) Respond with fake feature support structure.
+        let mut mlme_resp = fake_security_support();
+        responder.send(&mut mlme_resp).expect("failed to respond to MLME QuerySecuritySupport");
+
+        assert_variant!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        let resp = assert_variant!(test_helper.exec.run_until_stalled(&mut query_support_fut), Poll::Ready(resp) => resp);
+        assert_variant!(resp, Ok(sme_resp) => {
+            assert_eq!(zx::Status::from_raw(sme_resp.0), zx::Status::OK);
+            let expected = fake_security_support();
+            assert_variant!(sme_resp.1, Some(support) => {
+                assert_eq!(support.sae.driver_handler_supported, expected.sae.driver_handler_supported);
+                assert_eq!(support.sae.sme_handler_supported, expected.sae.sme_handler_supported);
+                assert_eq!(support.mfp.supported, expected.mfp.supported);
+            });
+        });
+    }
+
+    #[test]
+    fn test_query_security_support_failure_for_invalid_iface() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        let query_support_fut = test_helper.dev_svc_proxy.query_security_support(INVALID_IFACE_ID);
+        pin_mut!(query_support_fut);
+        setup_query_support_test!(test_helper, test_fut, query_support_fut);
+
+        // The future should have returned bad status here.
+        assert_variant!(test_helper.exec.run_until_stalled(&mut query_support_fut), Poll::Ready(result) => {
+            assert_variant!(result, Ok(resp) => {
+                assert_eq!(zx::Status::from_raw(resp.0), zx::Status::NOT_FOUND);
+                assert!(resp.1.is_none());
+            })
+        });
+    }
+
+    #[test]
+    fn test_query_security_support_failure_for_mlme_error() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        let query_support_fut = test_helper.dev_svc_proxy.query_security_support(IFACE_ID);
+        pin_mut!(query_support_fut);
+        setup_query_support_test_with_broken_mlme!(
+            test_helper,
+            test_fut,
+            query_support_fut,
+            fidl_mlme::MlmeRequest::QuerySecuritySupport
+        );
+
+        // The future should have returned bad status here.
+        assert_variant!(test_helper.exec.run_until_stalled(&mut query_support_fut), Poll::Ready(result) => {
+            assert_variant!(result, Ok(resp) => {
+                assert_eq!(zx::Status::from_raw(resp.0), zx::Status::INTERNAL);
+                assert!(resp.1.is_none());
+            });
+        });
+    }
+
+    #[test]
+    fn test_query_spectrum_management_support_success() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        let query_support_fut =
+            test_helper.dev_svc_proxy.query_spectrum_management_support(IFACE_ID);
+        pin_mut!(query_support_fut);
+        setup_query_support_test!(test_helper, test_fut, query_support_fut);
+
+        // Verify the feature support request is forwarded to MLME
+        let responder = assert_variant!(
+            test_helper.exec.run_until_stalled(&mut test_helper.mlme_req_stream.next()),
+            Poll::Ready(Some(Ok(fidl_mlme::MlmeRequest::QuerySpectrumManagementSupport{ responder }))) => responder
+        );
+        // (mlme -> wlanstack) Respond with fake feature support structure.
+        let mut mlme_resp = fake_spectrum_management_support();
+        responder
+            .send(&mut mlme_resp)
+            .expect("failed to respond to MLME QuerySpectrumManagementSupport");
+
+        assert_variant!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        let resp = assert_variant!(test_helper.exec.run_until_stalled(&mut query_support_fut), Poll::Ready(resp) => resp);
+        assert_variant!(resp, Ok(sme_resp) => {
+            assert_eq!(zx::Status::from_raw(sme_resp.0), zx::Status::OK);
+            let expected = fake_spectrum_management_support();
+            assert_variant!(sme_resp.1, Some(support) => {
+                assert_eq!(support.dfs.supported, expected.dfs.supported);
+            });
+        });
+    }
+
+    #[test]
+    fn test_query_spectrum_management_support_failure_for_invalid_iface() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        let query_support_fut =
+            test_helper.dev_svc_proxy.query_spectrum_management_support(INVALID_IFACE_ID);
+        pin_mut!(query_support_fut);
+        setup_query_support_test!(test_helper, test_fut, query_support_fut);
+
+        // The future should have returned bad status here.
+        assert_variant!(test_helper.exec.run_until_stalled(&mut query_support_fut), Poll::Ready(result) => {
+            assert_variant!(result, Ok(resp) => {
+                assert_eq!(zx::Status::from_raw(resp.0), zx::Status::NOT_FOUND);
+                assert!(resp.1.is_none());
+            })
+        });
+    }
+
+    #[test]
+    fn test_query_spectrum_management_support_failure_for_mlme_error() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        let query_support_fut =
+            test_helper.dev_svc_proxy.query_spectrum_management_support(IFACE_ID);
+        pin_mut!(query_support_fut);
+        setup_query_support_test_with_broken_mlme!(
+            test_helper,
+            test_fut,
+            query_support_fut,
+            fidl_mlme::MlmeRequest::QuerySpectrumManagementSupport
+        );
+
+        // The future should have returned bad status here.
+        assert_variant!(test_helper.exec.run_until_stalled(&mut query_support_fut), Poll::Ready(result) => {
+            assert_variant!(result, Ok(resp) => {
+                assert_eq!(zx::Status::from_raw(resp.0), zx::Status::INTERNAL);
+                assert!(resp.1.is_none());
+            });
+        });
     }
 
     #[test]
@@ -619,6 +989,15 @@ mod tests {
             responder.send(&mut device_info).expect("failed to send MLME response");
         });
 
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // The future should have requested the MAC sublayer features.
+        assert_variant!(
+            exec.run_until_stalled(&mut mlme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_mlme::MlmeRequest::QueryMacSublayerSupport { responder }))) => {
+            responder.send(&mut fake_mac_sublayer_support()).expect("failed to send MLME response");
+        });
+
         // The future should complete successfully.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(result) => {
             assert!(result.result.is_ok());
@@ -706,13 +1085,23 @@ mod tests {
 
         // The future should have requested the PHY's information.
         assert_variant!(
+        exec.run_until_stalled(&mut mlme_stream.next()),
+        Poll::Ready(Some(Ok(fidl_mlme::MlmeRequest::QueryDeviceInfo { responder }))) => {
+            responder.send(&mut fake_device_info()).expect("failed to send MLME response");
+        });
+
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // The future should have requested the MAC sublayer features.
+        assert_variant!(
             exec.run_until_stalled(&mut mlme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_mlme::MlmeRequest::QueryDeviceInfo { responder }))) => {
-            // Add the Synth feature without the TempSoftmac feature since this represents an
-            // invalid configuration.
-            let mut device_info = fake_device_info();
-            device_info.driver_features.push(fidl_common::DriverFeature::Synth);
-            responder.send(&mut device_info).expect("failed to send MLME response");
+            Poll::Ready(Some(Ok(fidl_mlme::MlmeRequest::QueryMacSublayerSupport { responder }))) => {
+            let mut support = fake_mac_sublayer_support();
+            // Intentionally provide a set of features that is invalid, to cause a failure.
+            // A device that is synthetic but not softmac is currently invalid (but this may change in the future.)
+            support.device.is_synthetic = true;
+            support.device.mac_implementation_type = fidl_common::MacImplementationType::Fullmac;
+            responder.send(&mut support).expect("failed to send MLME response");
         });
 
         // The device information should be invalid and the future should report the failure here.
@@ -990,6 +1379,45 @@ mod tests {
             softmac_hardware_capability: 0,
             qos_capable: false,
         }
+    }
+
+    // Features match relevant driver_features in fake_device_info above.
+    fn fake_discovery_support() -> fidl_common::DiscoverySupport {
+        fidl_common::DiscoverySupport {
+            scan_offload: fidl_common::ScanOffloadExtension { supported: true },
+            probe_response_offload: fidl_common::ProbeResponseOffloadExtension { supported: false },
+        }
+    }
+
+    // Features match relevant driver_features in fake_device_info above.
+    fn fake_mac_sublayer_support() -> fidl_common::MacSublayerSupport {
+        fidl_common::MacSublayerSupport {
+            rate_selection_offload: fidl_common::RateSelectionOffloadExtension { supported: false },
+            data_plane: fidl_common::DataPlaneExtension {
+                data_plane_type: fidl_common::DataPlaneType::EthernetDevice,
+            },
+            device: fidl_common::DeviceExtension {
+                is_synthetic: false,
+                mac_implementation_type: fidl_common::MacImplementationType::Fullmac,
+                tx_status_report_supported: false,
+            },
+        }
+    }
+
+    // Features match relevant driver_features in fake_device_info above.
+    fn fake_security_support() -> fidl_common::SecuritySupport {
+        fidl_common::SecuritySupport {
+            sae: fidl_common::SaeFeature {
+                driver_handler_supported: false,
+                sme_handler_supported: true,
+            },
+            mfp: fidl_common::MfpFeature { supported: false },
+        }
+    }
+
+    // Features match relevant driver_features in fake_device_info above.
+    fn fake_spectrum_management_support() -> fidl_common::SpectrumManagementSupport {
+        fidl_common::SpectrumManagementSupport { dfs: fidl_common::DfsFeature { supported: false } }
     }
 
     fn fake_scan_request() -> fidl_sme::ScanRequest {
