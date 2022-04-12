@@ -1,2 +1,4 @@
+include /src/storage/OWNERS
 abarth@google.com
-anmittal@google.com
+
+# Component: Storage
