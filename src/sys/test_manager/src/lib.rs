@@ -117,88 +117,116 @@ struct TestRunBuilder {
 }
 
 impl TestRunBuilder {
+    /// Serve a RunControllerRequestStream. Returns Err if the client stops the test
+    /// prematurely or there is an error serving he stream.
     async fn run_controller(
-        controller: &mut RunControllerRequestStream,
+        controller: RunControllerRequestStream,
         run_task: futures::future::RemoteHandle<()>,
         stop_sender: oneshot::Sender<()>,
         event_recv: mpsc::Receiver<RunEvent>,
         inspect_node: &self_diagnostics::RunInspectNode,
-    ) {
+    ) -> Result<(), ()> {
         let mut task = Some(run_task);
         let mut stop_sender = Some(stop_sender);
         let mut event_recv = event_recv.fuse();
+
+        let (serve_inner, terminated) = controller.into_inner();
+        let serve_inner_clone = serve_inner.clone();
+        let channel_closed_fut =
+            fasync::OnSignals::new(serve_inner_clone.channel(), zx::Signals::CHANNEL_PEER_CLOSED)
+                .shared();
+        let mut controller = RunControllerRequestStream::from_inner(serve_inner, terminated);
 
         let mut stop_or_kill_called = false;
         let mut events_drained = false;
         let mut events_sent_successfully = true;
 
         // no need to check controller error.
-        loop {
-            inspect_node
-                .set_controller_state(self_diagnostics::RunControllerState::AwaitingRequest);
-            let request = match controller.try_next().await {
-                Ok(Some(request)) => request,
-                _ => break,
-            };
-            match request {
-                RunControllerRequest::Stop { .. } => {
-                    stop_or_kill_called = true;
-                    if let Some(stop_sender) = stop_sender.take() {
-                        // no need to check error.
-                        let _ = stop_sender.send(());
+        let serve_controller_fut = async {
+            loop {
+                inspect_node
+                    .set_controller_state(self_diagnostics::RunControllerState::AwaitingRequest);
+                let request = match controller.try_next().await {
+                    Ok(Some(request)) => request,
+                    _ => break,
+                };
+                match request {
+                    RunControllerRequest::Stop { .. } => {
+                        stop_or_kill_called = true;
+                        if let Some(stop_sender) = stop_sender.take() {
+                            // no need to check error.
+                            let _ = stop_sender.send(());
+                            // after this all `senders` go away and subsequent GetEvent call will
+                            // return rest of events and eventually a empty array and will close the
+                            // connection after that.
+                        }
+                    }
+                    RunControllerRequest::Kill { .. } => {
+                        stop_or_kill_called = true;
+                        // dropping the remote handle cancels it.
+                        drop(task.take());
                         // after this all `senders` go away and subsequent GetEvent call will
                         // return rest of events and eventually a empty array and will close the
                         // connection after that.
                     }
-                }
-                RunControllerRequest::Kill { .. } => {
-                    stop_or_kill_called = true;
-                    // dropping the remote handle cancels it.
-                    drop(task.take());
-                    // after this all `senders` go away and subsequent GetEvent call will
-                    // return rest of events and eventually a empty array and will close the
-                    // connection after that.
-                }
-                RunControllerRequest::GetEvents { responder } => {
-                    let mut events = vec![];
-                    // TODO(fxbug.dev/91553): This can block handling Stop and Kill requests if no
-                    // events are available.
-                    inspect_node
-                        .set_controller_state(self_diagnostics::RunControllerState::AwaitingEvents);
-                    if let Some(event) = event_recv.next().await {
-                        events.push(event);
-                        while events.len() < EVENTS_THRESHOLD {
-                            if let Some(Some(event)) = event_recv.next().now_or_never() {
-                                events.push(event);
-                            } else {
-                                break;
+                    RunControllerRequest::GetEvents { responder } => {
+                        let mut events = vec![];
+                        // TODO(fxbug.dev/91553): This can block handling Stop and Kill requests if no
+                        // events are available.
+                        inspect_node.set_controller_state(
+                            self_diagnostics::RunControllerState::AwaitingEvents,
+                        );
+                        if let Some(event) = event_recv.next().await {
+                            events.push(event);
+                            while events.len() < EVENTS_THRESHOLD {
+                                if let Some(Some(event)) = event_recv.next().now_or_never() {
+                                    events.push(event);
+                                } else {
+                                    break;
+                                }
                             }
                         }
-                    }
-                    let no_events_left = events.is_empty();
-                    let response_err =
-                        responder.send(&mut events.into_iter().map(RunEvent::into)).is_err();
+                        let no_events_left = events.is_empty();
+                        let response_err =
+                            responder.send(&mut events.into_iter().map(RunEvent::into)).is_err();
 
-                    // Order setting these variables matters. Expected is for the client to receive at
-                    // least one event response. Client might send more, which is okay but we suppress
-                    // response errors after the first empty vec.
-                    if !events_drained && response_err {
-                        events_sent_successfully = false;
+                        // Order setting these variables matters. Expected is for the client to receive at
+                        // least one event response. Client might send more, which is okay but we suppress
+                        // response errors after the first empty vec.
+                        if !events_drained && response_err {
+                            events_sent_successfully = false;
+                        }
+                        events_drained = no_events_left;
                     }
-                    events_drained = no_events_left;
                 }
             }
         }
+        .boxed();
+
+        let _ = futures::future::select(channel_closed_fut.clone(), serve_controller_fut).await;
+
         inspect_node.set_controller_state(self_diagnostics::RunControllerState::Done {
             stopped_or_killed: stop_or_kill_called,
             events_drained,
             events_sent_successfully,
         });
+
+        // Workaround to prevent zx_peer_closed error
+        // TODO(fxbug.dev/87976) once fxbug.dev/87890 is fixed, the controller should be dropped
+        // as soon as all events are drained.
+        if let Err(e) = channel_closed_fut.await {
+            warn!("Error waiting for the RunController channel to close: {:?}", e);
+        }
+
+        match stop_or_kill_called || !events_drained || !events_sent_successfully {
+            true => Err(()),
+            false => Ok(()),
+        }
     }
 
     async fn run(
         self,
-        mut controller: RunControllerRequestStream,
+        controller: RunControllerRequestStream,
         debug_controller: ftest_internal::DebugDataSetControllerProxy,
         debug_iterator: ClientEnd<ftest_manager::DebugDataIteratorMarker>,
         inspect_node: self_diagnostics::RunInspectNode,
@@ -244,10 +272,10 @@ impl TestRunBuilder {
             .map(|((), ())| ())
             .remote_handle();
 
-        let ((), ()) = futures::future::join(
+        let ((), controller_res) = futures::future::join(
             remote,
             Self::run_controller(
-                &mut controller,
+                controller,
                 remote_handle,
                 stop_sender,
                 event_recv,
@@ -256,14 +284,8 @@ impl TestRunBuilder {
         )
         .await;
 
-        // Workaround to prevent zx_peer_closed error
-        // TODO(fxbug.dev/87976) once fxbug.dev/87890 is fixed, the controller should be dropped
-        // as soon as all events are drained.
-        let (inner, _) = controller.into_inner();
-        if let Err(e) =
-            fasync::OnSignals::new(inner.channel(), zx::Signals::CHANNEL_PEER_CLOSED).await
-        {
-            warn!("Error waiting for the RunController channel to close: {:?}", e);
+        if let Err(()) = controller_res {
+            inspect_node.persist();
         }
     }
 }
@@ -2264,6 +2286,66 @@ mod tests {
                 }
             }
         }
+    }
+
+    fn new_run_inspect_node() -> self_diagnostics::RunInspectNode {
+        RootInspectNode::new(&fuchsia_inspect::types::Node::default()).new_run("test-run")
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn run_controller_stop_test() {
+        let (sender, recv) = mpsc::channel(1024);
+        let (stop_sender, stop_recv) = oneshot::channel::<()>();
+        let (task, remote_handle) = async move {
+            stop_recv.await.unwrap();
+            // drop event sender so that fake test can end.
+            drop(sender);
+        }
+        .remote_handle();
+        let _task = fasync::Task::spawn(task);
+        let (proxy, controller) =
+            create_proxy_and_stream::<ftest_manager::RunControllerMarker>().unwrap();
+        let run_controller = fasync::Task::spawn(async move {
+            TestRunBuilder::run_controller(
+                controller,
+                remote_handle,
+                stop_sender,
+                recv,
+                &new_run_inspect_node(),
+            )
+            .await
+        });
+        proxy.stop().unwrap();
+
+        assert_eq!(proxy.get_events().await.unwrap(), vec![]);
+        drop(proxy);
+        run_controller.await.unwrap_err();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn run_controller_abort_when_channel_closed() {
+        let (_sender, recv) = mpsc::channel(1024);
+        let (stop_sender, _stop_recv) = oneshot::channel::<()>();
+        // Create a future that normally never resolves.
+        let (task, remote_handle) = futures::future::pending().remote_handle();
+        let pending_task = fasync::Task::spawn(task);
+        let (proxy, controller) =
+            create_proxy_and_stream::<ftest_manager::RunControllerMarker>().unwrap();
+        let run_controller = fasync::Task::spawn(async move {
+            TestRunBuilder::run_controller(
+                controller,
+                remote_handle,
+                stop_sender,
+                recv,
+                &new_run_inspect_node(),
+            )
+            .await
+        });
+        drop(proxy);
+        // After controller is dropped, both the controller future and the task it was
+        // controlling should terminate.
+        pending_task.await;
+        run_controller.await.unwrap_err();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
