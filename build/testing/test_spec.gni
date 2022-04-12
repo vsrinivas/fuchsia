@@ -73,19 +73,20 @@ _max_severity_allowed_val = [
 #         [scope] Images to use instead of the defaults in images.json. This should
 #         only be used by zbi_host_test() defined in //build/testing/zbi_test.gni
 #         which requires different images to boot the target with. The keys
-#         should be one of the following with the value being the name of the image
-#         to use as it appears in images.json.
+#         should be one of the following with the value being a scope containing either
+#         the `name` or `label` of the image to use as it appears in images.json.
 #
-#         zbi_image (optional)
-#           [string] The name of the zbi image to boot the target with.
+#         zbi_image/vbmeta_image/qemu_kernel (optional)
+#           [scope] The zbi image/vbmeta image/qemu kernel to boot the target with
+#           in a zbi_host_test. vbmeta_image only applies to hardware environments
+#           and qemu_kernel only applies to emulator environments. Either `name`
+#           or `label` must be provided.
 #
-#         vbmeta_image (optional)
-#           [string] The name of the vbmeta image to boot the target with. This
-#           only applies to hardware environments for zbi_host_tests.
+#           name (optional)
+#             [string] The name of the image.
 #
-#         qemu_kernel (optional)
-#           [string] The name of the qemu kernel to launch the emulator with. This
-#           only applies to emulator environments for zbi_host_tests.
+#           label (optional)
+#             [label_with_toolchain] The GN label of the image.
 #
 #   log_settings (optional, default: see below properties)
 #     [json] Properties of logs produced by this test run.

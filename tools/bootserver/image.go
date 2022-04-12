@@ -31,6 +31,8 @@ type Image struct {
 	// Name is an identifier for this image that usually derives from its target partition.
 	// TODO(fxbug.dev/38517): Remove when BootZedbootShim is deprecated.
 	Name string
+	// Label is the GN label of the image.
+	Label string
 	// Path is the relative location of the image with respect to the image manifest
 	// or the absolute location of the image on disk.
 	Path string
@@ -83,6 +85,7 @@ func ConvertFromBuildImages(buildImages []build.Image, bootMode Mode, imageDir s
 		}
 		imgs = append(imgs, Image{
 			Name:         buildImg.Type + "_" + buildImg.Name,
+			Label:        buildImg.Label,
 			Path:         buildImg.Path,
 			Reader:       reader,
 			Size:         fi.Size(),
@@ -216,6 +219,7 @@ func ImagesFromGCS(ctx context.Context, manifest *url.URL, bootMode Mode) ([]Ima
 
 		imgs = append(imgs, Image{
 			Name:         buildImg.Type + "_" + buildImg.Name,
+			Label:        buildImg.Label,
 			Path:         buildImg.Path,
 			Reader:       &gcsReader{obj: obj},
 			Size:         objAttrs.Size,

@@ -22,8 +22,11 @@ func AddImageDeps(s *Shard, images []build.Image, pave bool) {
 
 func isUsedForTesting(s *Shard, image build.Image, pave bool) bool {
 	if s.Env.ImageOverrides != nil {
-		for _, name := range s.Env.ImageOverrides {
-			if image.Name == name {
+		for _, metadata := range s.Env.ImageOverrides {
+			if metadata.Name != "" && image.Name == metadata.Name {
+				return true
+			}
+			if metadata.Label != "" && image.Label == metadata.Label {
 				return true
 			}
 		}

@@ -53,9 +53,10 @@ func mockImages(t *testing.T) []build.Image {
 			Type: "vbmeta",
 		},
 		{
-			Name: "other-qemu-kernel",
-			Path: "other-qemu-kernel",
-			Type: "kernel",
+			Name:  "other-qemu-kernel",
+			Label: "//:other-qemu-kernel",
+			Path:  "other-qemu-kernel",
+			Type:  "kernel",
 		},
 	}
 }
@@ -91,14 +92,14 @@ func TestAddImageDeps(t *testing.T) {
 			name:           "emulator env with image overrides",
 			pave:           false,
 			isEmu:          true,
-			imageOverrides: build.ImageOverrides{build.ZbiImage: "zbi-image", build.QemuKernel: "other-qemu-kernel"},
+			imageOverrides: build.ImageOverrides{build.ZbiImage: {Name: "zbi-image"}, build.QemuKernel: {Label: "//:other-qemu-kernel"}},
 			want:           []string{"images.json", "other-qemu-kernel", "zbi-image.zbi"},
 		},
 		{
 			name:           "hardware env with image overrides",
 			pave:           false,
 			isEmu:          false,
-			imageOverrides: build.ImageOverrides{build.ZbiImage: "zbi-image", build.VbmetaImage: "vbmeta-image"},
+			imageOverrides: build.ImageOverrides{build.ZbiImage: {Name: "zbi-image"}, build.VbmetaImage: {Name: "vbmeta-image"}},
 			want:           []string{"images.json", "vbmeta-image.vbmeta", "zbi-image.zbi", "zedboot.zbi"},
 		},
 	}

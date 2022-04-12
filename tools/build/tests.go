@@ -109,8 +109,8 @@ type Environment struct {
 	ImageOverrides ImageOverrides `json:"image_overrides,omitempty"`
 }
 
-// ImageOverrides is a map of image type to image name as defined in images.json.
-type ImageOverrides map[ImageOverrideType]string
+// ImageOverrides is a map of image type to image metadata as defined in images.json.
+type ImageOverrides map[ImageOverrideType]ImageOverrideMetadata
 
 // ImageOverrideType represents image types supported for overriding.
 type ImageOverrideType string
@@ -120,6 +120,12 @@ const (
 	VbmetaImage ImageOverrideType = "vbmeta_image"
 	QemuKernel  ImageOverrideType = "qemu_kernel"
 )
+
+// ImageOverrideMetadata contains metadata to identify an Image to override with.
+type ImageOverrideMetadata struct {
+	Name  string `json:"name,omitempty"`
+	Label string `json:"label,omitempty"`
+}
 
 // DimensionSet encapsulates the Swarming dimensions a test wishes to target.
 type DimensionSet struct {

@@ -228,9 +228,16 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	var qemuKernel, zirconA, storageFull bootserver.Image
 	zbiImageName := "zbi_zircon-a"
 	qemuKernelName := "kernel_qemu-kernel"
+	qemuKernelLabel := ""
 	if t.imageOverrides != nil {
-		zbiImageName = fmt.Sprintf("zbi_%s", t.imageOverrides[build.ZbiImage])
-		qemuKernelName = fmt.Sprintf("kernel_%s", t.imageOverrides[build.QemuKernel])
+		zbiImageName = fmt.Sprintf("zbi_%s", t.imageOverrides[build.ZbiImage].Name)
+		qemuKernelOverride := t.imageOverrides[build.QemuKernel]
+		if qemuKernelOverride.Name != "" {
+			qemuKernelName = fmt.Sprintf("kernel_%s", qemuKernelOverride.Name)
+		} else {
+			qemuKernelName = ""
+			qemuKernelLabel = qemuKernelOverride.Label
+		}
 	}
 	for _, img := range images {
 		switch img.Name {
@@ -240,6 +247,9 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 			zirconA = img
 		case "blk_storage-full":
 			storageFull = img
+		}
+		if qemuKernelLabel != "" && img.Label == qemuKernelLabel {
+			qemuKernel = img
 		}
 	}
 	if qemuKernel.Reader == nil {

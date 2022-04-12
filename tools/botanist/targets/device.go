@@ -291,7 +291,7 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 		var imgs []bootserver.Image
 		for _, img := range images {
 			if t.imageOverrides != nil {
-				if img.Name == fmt.Sprintf("zbi_%s", t.imageOverrides[build.ZbiImage]) {
+				if img.Name == fmt.Sprintf("zbi_%s", t.imageOverrides[build.ZbiImage].Name) {
 					img.Args = append(img.Args, "--boot")
 					imgs = append(imgs, img)
 					break
@@ -328,8 +328,8 @@ func (t *DeviceTarget) ramBoot(ctx context.Context, images []*bootserver.Image) 
 		zbiImageName := "zbi_zircon-a"
 		vbmetaImageName := "vbmeta_zircon-a"
 		if t.imageOverrides != nil {
-			zbiImageName = fmt.Sprintf("zbi_%s", t.imageOverrides[build.ZbiImage])
-			vbmetaImageName = fmt.Sprintf("vbmeta_%s", t.imageOverrides[build.VbmetaImage])
+			zbiImageName = fmt.Sprintf("zbi_%s", t.imageOverrides[build.ZbiImage].Name)
+			vbmetaImageName = fmt.Sprintf("vbmeta_%s", t.imageOverrides[build.VbmetaImage].Name)
 		}
 		zbi := getImgByName(images, zbiImageName)
 		vbmeta := getImgByName(images, vbmetaImageName)
