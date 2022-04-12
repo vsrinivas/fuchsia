@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 #include "src/devices/lib/fidl-metadata/i2c.h"
 
-#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
+#include <fidl/fuchsia.hardware.i2c.businfo/cpp/wire.h>
 
 namespace fidl_metadata::i2c {
 zx::status<std::vector<uint8_t>> I2CChannelsToFidl(const cpp20::span<const Channel> channels) {
   fidl::Arena allocator;
-  fidl::VectorView<fuchsia_hardware_i2c::wire::I2CChannel> i2c_channels(allocator, channels.size());
+  fidl::VectorView<fuchsia_hardware_i2c_businfo::wire::I2CChannel> i2c_channels(allocator,
+                                                                                channels.size());
 
   for (size_t i = 0; i < channels.size(); i++) {
     auto& chan = i2c_channels[i];
@@ -24,10 +25,10 @@ zx::status<std::vector<uint8_t>> I2CChannelsToFidl(const cpp20::span<const Chann
     }
   }
 
-  fuchsia_hardware_i2c::wire::I2CBusMetadata metadata(allocator);
+  fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata metadata(allocator);
   metadata.set_channels(allocator, i2c_channels);
 
-  fidl::unstable::OwnedEncodedMessage<fuchsia_hardware_i2c::wire::I2CBusMetadata> encoded(
+  fidl::unstable::OwnedEncodedMessage<fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata> encoded(
       fidl::internal::WireFormatVersion::kV2, &metadata);
   if (!encoded.ok()) {
     return zx::error(encoded.status());

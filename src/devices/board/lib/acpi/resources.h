@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BOARD_LIB_ACPI_RESOURCES_H_
 #define SRC_DEVICES_BOARD_LIB_ACPI_RESOURCES_H_
 
-#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
+#include <fidl/fuchsia.hardware.i2c.businfo/cpp/wire.h>
 #include <fidl/fuchsia.hardware.spi/cpp/wire.h>
 #include <zircon/types.h>
 
@@ -95,7 +95,7 @@ acpi::status<fuchsia_hardware_spi::wire::SpiChannel> resource_parse_spi(
 // |res| - Resource to parse.
 // |allocator| - FIDL arena to allocate returned I2CChannel with.
 // |resource_source| - Pointer which will have the ResourceSource's handle put into it.
-acpi::status<fuchsia_hardware_i2c::wire::I2CChannel> resource_parse_i2c(
+acpi::status<fuchsia_hardware_i2c_businfo::wire::I2CChannel> resource_parse_i2c(
     acpi::Acpi* acpi, ACPI_HANDLE device, ACPI_RESOURCE* res, fidl::AnyArena& allocator,
     ACPI_HANDLE* resource_source);
 #endif  // SRC_DEVICES_BOARD_LIB_ACPI_RESOURCES_H_

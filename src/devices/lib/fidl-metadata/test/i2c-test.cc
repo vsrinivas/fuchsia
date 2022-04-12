@@ -4,7 +4,7 @@
 
 #include "src/devices/lib/fidl-metadata/i2c.h"
 
-#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
+#include <fidl/fuchsia.hardware.i2c.businfo/cpp/wire.h>
 
 #include <zxtest/zxtest.h>
 
@@ -15,7 +15,7 @@ static void check_encodes(const cpp20::span<const fidl_metadata::i2c::Channel> i
   std::vector<uint8_t>& data = result.value();
 
   // Decode.
-  fidl::unstable::DecodedMessage<fuchsia_hardware_i2c::wire::I2CBusMetadata> decoded(
+  fidl::unstable::DecodedMessage<fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata> decoded(
       fidl::internal::WireFormatVersion::kV2, data.data(), data.size());
   ASSERT_OK(decoded.status());
 

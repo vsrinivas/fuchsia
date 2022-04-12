@@ -4,7 +4,7 @@
 
 #include "i2c.h"
 
-#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
+#include <fidl/fuchsia.hardware.i2c.businfo/cpp/wire.h>
 #include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -17,7 +17,7 @@
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace {
-namespace fi2c = fuchsia_hardware_i2c::wire;
+namespace fi2c = fuchsia_hardware_i2c_businfo::wire;
 
 class FakeI2cImpl;
 using DeviceType = ddk::Device<FakeI2cImpl>;

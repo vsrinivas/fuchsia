@@ -5,7 +5,7 @@
 #include "ftdi-i2c.h"
 
 #include <fidl/fuchsia.hardware.ftdi/cpp/wire.h>
-#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
+#include <fidl/fuchsia.hardware.i2c.businfo/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -71,8 +71,8 @@ zx_status_t FtdiI2c::Bind() { return DdkAdd("ftdi-i2c"); }
 
 void FtdiI2c::DdkInit(ddk::InitTxn txn) {
   fidl::Arena allocator;
-  fidl::VectorView<fuchsia_hardware_i2c::wire::I2CChannel> i2c_channels(allocator,
-                                                                        i2c_devices_.size());
+  fidl::VectorView<fuchsia_hardware_i2c_businfo::wire::I2CChannel> i2c_channels(
+      allocator, i2c_devices_.size());
   for (size_t i = 0; i < i2c_devices_.size(); i++) {
     auto& chan = i2c_channels[i];
     I2cDevice& dev = i2c_devices_[i];
@@ -83,9 +83,9 @@ void FtdiI2c::DdkInit(ddk::InitTxn txn) {
     chan.set_pid(dev.pid);
     chan.set_did(dev.did);
   }
-  fuchsia_hardware_i2c::wire::I2CBusMetadata metadata(allocator);
+  fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata metadata(allocator);
   metadata.set_channels(allocator, i2c_channels);
-  fidl::unstable::OwnedEncodedMessage<fuchsia_hardware_i2c::wire::I2CBusMetadata> encoded(
+  fidl::unstable::OwnedEncodedMessage<fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata> encoded(
       fidl::internal::WireFormatVersion::kV2, &metadata);
   if (!encoded.ok()) {
     zxlogf(ERROR, "encoding device metadata failed: %s\n", encoded.status_string());

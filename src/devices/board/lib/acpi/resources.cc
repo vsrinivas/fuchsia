@@ -4,7 +4,7 @@
 
 #include "src/devices/board/lib/acpi/resources.h"
 
-#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
+#include <fidl/fuchsia.hardware.i2c.businfo/cpp/wire.h>
 #include <fidl/fuchsia.hardware.spi/cpp/wire.h>
 
 #include "src/devices/board/lib/acpi/acpi.h"
@@ -226,11 +226,11 @@ acpi::status<fuchsia_hardware_spi::wire::SpiChannel> resource_parse_spi(
   return zx::ok(result);
 }
 
-acpi::status<fuchsia_hardware_i2c::wire::I2CChannel> resource_parse_i2c(
+acpi::status<fuchsia_hardware_i2c_businfo::wire::I2CChannel> resource_parse_i2c(
     acpi::Acpi* acpi, ACPI_HANDLE device, ACPI_RESOURCE* res, fidl::AnyArena& allocator,
     ACPI_HANDLE* resource_source) {
   auto& i2c_bus = res->Data.I2cSerialBus;
-  fuchsia_hardware_i2c::wire::I2CChannel result(allocator);
+  fuchsia_hardware_i2c_businfo::wire::I2CChannel result(allocator);
 
   // Figure out which bus the I2C device belongs to.
   auto found_result = acpi->GetHandle(device, i2c_bus.ResourceSource.StringPtr);

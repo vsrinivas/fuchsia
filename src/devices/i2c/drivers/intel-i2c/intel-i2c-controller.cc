@@ -8,7 +8,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
-#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
+#include <fidl/fuchsia.hardware.i2c.businfo/cpp/wire.h>
 #include <fuchsia/hardware/i2c/c/banjo.h>
 #include <fuchsia/hardware/i2c/c/fidl.h>
 #include <fuchsia/hardware/i2cimpl/c/banjo.h>
@@ -786,14 +786,14 @@ zx_status_t IntelI2cController::AddSubordinates() {
     return (status == ZX_OK) ? ZX_ERR_INTERNAL : status;
   }
 
-  fidl::unstable::DecodedMessage<fuchsia_hardware_i2c::wire::I2CBusMetadata> decoded(
+  fidl::unstable::DecodedMessage<fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata> decoded(
       fidl::internal::WireFormatVersion::kV2, buffer, metadata_size);
   if (!decoded.ok()) {
     zxlogf(ERROR, "%s: Failed to deserialize metadata.", __func__);
     return decoded.status();
   }
 
-  fuchsia_hardware_i2c::wire::I2CBusMetadata* metadata = decoded.PrimaryObject();
+  fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata* metadata = decoded.PrimaryObject();
   if (!metadata->has_channels()) {
     // One day we might put the bus in a lower power state.
     zxlogf(INFO, "%s: no channels supplied.", __func__);

@@ -4,7 +4,7 @@
 
 #include "i2c.h"
 
-#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
+#include <fidl/fuchsia.hardware.i2c.businfo/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>
@@ -98,13 +98,13 @@ zx_status_t I2cDevice::Init(ddk::I2cImplProtocolClient i2c) {
 }
 
 void I2cDevice::AddChildren() {
-  auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_i2c::wire::I2CBusMetadata>(
+  auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata>(
       zxdev(), DEVICE_METADATA_I2C_CHANNELS);
   if (!decoded.is_ok()) {
     return;
   }
 
-  fuchsia_hardware_i2c::wire::I2CBusMetadata* metadata = decoded->PrimaryObject();
+  fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata* metadata = decoded->PrimaryObject();
   if (!metadata->has_channels()) {
     zxlogf(INFO, "%s: no channels supplied.", __func__);
     return;

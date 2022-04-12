@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BOARD_LIB_ACPI_DEVICE_BUILDER_H_
 #define SRC_DEVICES_BOARD_LIB_ACPI_DEVICE_BUILDER_H_
 
-#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
+#include <fidl/fuchsia.hardware.i2c.businfo/cpp/wire.h>
 #include <fidl/fuchsia.hardware.spi/cpp/wire.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/device.h>
@@ -73,9 +73,9 @@ using PciTopo = uint64_t;
 // TODO(fxbug.dev/78198): support more child bus types.
 using DeviceChildData = std::variant<std::monostate, std::vector<PciTopo>,
                                      std::vector<fuchsia_hardware_spi::wire::SpiChannel>,
-                                     std::vector<fuchsia_hardware_i2c::wire::I2CChannel>>;
+                                     std::vector<fuchsia_hardware_i2c_businfo::wire::I2CChannel>>;
 using DeviceChildEntry = std::variant<PciTopo, fuchsia_hardware_spi::wire::SpiChannel,
-                                      fuchsia_hardware_i2c::wire::I2CChannel>;
+                                      fuchsia_hardware_i2c_businfo::wire::I2CChannel>;
 
 // Represents a device that's been discovered inside the ACPI tree.
 class DeviceBuilder {

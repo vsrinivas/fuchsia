@@ -18,10 +18,9 @@
 
 namespace i2c {
 
-zx_status_t I2cChild::CreateAndAddDevice(zx_device_t* parent,
-                                         const fidl_i2c::wire::I2CChannel& channel,
-                                         const fbl::RefPtr<I2cBus>& bus,
-                                         async_dispatcher_t* dispatcher) {
+zx_status_t I2cChild::CreateAndAddDevice(
+    zx_device_t* parent, const fuchsia_hardware_i2c_businfo::wire::I2CChannel& channel,
+    const fbl::RefPtr<I2cBus>& bus, async_dispatcher_t* dispatcher) {
   const uint32_t bus_id = channel.has_bus_id() ? channel.bus_id() : 0;
   const uint16_t address = channel.has_address() ? channel.address() : 0;
   const uint32_t i2c_class = channel.has_i2c_class() ? channel.i2c_class() : 0;
@@ -29,8 +28,8 @@ zx_status_t I2cChild::CreateAndAddDevice(zx_device_t* parent,
   const uint32_t pid = channel.has_pid() ? channel.pid() : 0;
   const uint32_t did = channel.has_did() ? channel.did() : 0;
 
-  fidl_i2c::wire::I2CChannel local_channel(channel);
-  fidl::unstable::OwnedEncodedMessage<fidl_i2c::wire::I2CChannel> metadata(
+  fuchsia_hardware_i2c_businfo::wire::I2CChannel local_channel(channel);
+  fidl::unstable::OwnedEncodedMessage<fuchsia_hardware_i2c_businfo::wire::I2CChannel> metadata(
       fidl::internal::WireFormatVersion::kV2, &local_channel);
   if (!metadata.ok()) {
     zxlogf(ERROR, "Failed to fidl-encode channel: %s", metadata.FormatDescription().data());

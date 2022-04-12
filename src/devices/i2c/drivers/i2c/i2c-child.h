@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_I2C_DRIVERS_I2C_I2C_CHILD_H_
 #define SRC_DEVICES_I2C_DRIVERS_I2C_I2C_CHILD_H_
 
+#include <fidl/fuchsia.hardware.i2c.businfo/cpp/wire.h>
 #include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
@@ -30,10 +31,9 @@ class I2cChild {
  public:
   I2cChild(fbl::RefPtr<I2cBus> bus, uint16_t address) : bus_(std::move(bus)), address_(address) {}
 
-  static zx_status_t CreateAndAddDevice(zx_device_t* parent,
-                                        const fidl_i2c::wire::I2CChannel& channel,
-                                        const fbl::RefPtr<I2cBus>& bus,
-                                        async_dispatcher_t* dispatcher);
+  static zx_status_t CreateAndAddDevice(
+      zx_device_t* parent, const fuchsia_hardware_i2c_businfo::wire::I2CChannel& channel,
+      const fbl::RefPtr<I2cBus>& bus, async_dispatcher_t* dispatcher);
 
  protected:
   // To be called by I2cFidlChild and I2cBanjoChild.

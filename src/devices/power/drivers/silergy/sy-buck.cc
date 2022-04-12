@@ -4,7 +4,7 @@
 
 #include "sy-buck.h"
 
-#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
+#include <fidl/fuchsia.hardware.i2c.businfo/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
@@ -90,19 +90,19 @@ zx_status_t SyBuck::Create(void* ctx, zx_device_t* parent) {
   zxlogf(DEBUG, "%s: Binding SyBuck", __func__);
 
   // Determine which i2c Bus/Address this device is attached to.
-  auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_i2c::wire::I2CBusMetadata>(
+  auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata>(
       parent, DEVICE_METADATA_I2C_CHANNELS);
   if (!decoded.is_ok()) {
     return decoded.error_value();
   }
 
-  fuchsia_hardware_i2c::wire::I2CBusMetadata* metadata = decoded->PrimaryObject();
+  fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata* metadata = decoded->PrimaryObject();
   if (!metadata->has_channels() || metadata->channels().count() != 1) {
     zxlogf(ERROR, "%s: sybuck expects exactly one i2c channel passed as metadata. ", __func__);
     return ZX_ERR_INTERNAL;
   }
 
-  fuchsia_hardware_i2c::wire::I2CChannel& channel = metadata->channels()[0];
+  fuchsia_hardware_i2c_businfo::wire::I2CChannel& channel = metadata->channels()[0];
 
   ddk::I2cProtocolClient i2c(parent, "i2c");
   if (!i2c.is_valid()) {
