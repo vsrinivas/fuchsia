@@ -81,9 +81,22 @@ sdk_source_set("driver_runtime_internal") {
     "//src/devices/securemem/drivers/aml-securemem:aml-securemem-test-bin",
     "//src/tests/benchmarks/fidl/driver_llcpp/*",
   ]
-  public_configs = [ ":include" ]
-  deps = [
+  public_deps = [
     ":driver_runtime",
     "//zircon/system/ulib/zx",
   ]
+  public_configs = [ ":include" ]
+}
+
+sdk_source_set("driver_runtime_internal_cpp") {
+  category = "partner"
+  sdk_name = "driver_runtime_internal_cpp"
+  public = [ "include/lib/fdf/cpp/internal.h" ]
+  public_configs = [ ":include" ]
+  public_deps = [
+    ":driver_runtime_internal",
+    "//sdk/lib/fit",
+    "//zircon/system/ulib/zx",
+  ]
+  sources = [ "internal.cc" ]
 }

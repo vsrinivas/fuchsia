@@ -10,6 +10,7 @@
 #include <lib/fdf/channel.h>
 #include <lib/fdf/cpp/channel_read.h>
 #include <lib/fdf/cpp/dispatcher.h>
+#include <lib/fdf/cpp/internal.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/cpp/completion.h>
 #include <lib/zx/event.h>
@@ -1709,6 +1710,172 @@ TEST_F(DispatcherTest, HasQueuedTasks) {
 
   ASSERT_OK(fdf_internal_wait_until_dispatcher_idle(dispatcher));
   ASSERT_FALSE(dispatcher->HasQueuedTasks());
+}
+
+// Tests shutting down all the dispatchers owned by a driver.
+TEST_F(DispatcherTest, ShutdownAllDriverDispatchers) {
+  const void* fake_driver = CreateFakeDriver();
+  const void* fake_driver2 = CreateFakeDriver();
+  auto scheduler_role = "scheduler_role";
+
+  constexpr uint32_t kNumDispatchers = 3;
+  DispatcherShutdownObserver observers[kNumDispatchers];
+  driver_runtime::Dispatcher* dispatchers[kNumDispatchers];
+
+  for (uint32_t i = 0; i < kNumDispatchers; i++) {
+    const void* driver = i == 0 ? fake_driver : fake_driver2;
+    ASSERT_EQ(ZX_OK, driver_runtime::Dispatcher::CreateWithLoop(
+                         0, scheduler_role, strlen(scheduler_role), driver, &loop_,
+                         observers[i].fdf_observer(), &dispatchers[i]));
+  }
+
+  // Shutdown the second driver, dispatchers[1] and dispatchers[2] should be shutdown.
+  fdf_internal::DriverShutdown driver2_shutdown;
+  libsync::Completion driver2_shutdown_completion;
+  ASSERT_OK(driver2_shutdown.Begin(fake_driver2, [&](const void* driver) {
+    ASSERT_EQ(fake_driver2, driver);
+    driver2_shutdown_completion.Signal();
+  }));
+
+  ASSERT_OK(observers[1].WaitUntilShutdown());
+  ASSERT_OK(observers[2].WaitUntilShutdown());
+  ASSERT_OK(driver2_shutdown_completion.Wait());
+
+  // Shutdown the first driver, dispatchers[0] should be shutdown.
+  fdf_internal::DriverShutdown driver_shutdown;
+  libsync::Completion driver_shutdown_completion;
+  ASSERT_OK(driver2_shutdown.Begin(fake_driver, [&](const void* driver) {
+    ASSERT_EQ(fake_driver, driver);
+    driver_shutdown_completion.Signal();
+  }));
+
+  ASSERT_OK(observers[0].WaitUntilShutdown());
+  ASSERT_OK(driver_shutdown_completion.Wait());
+
+  for (uint32_t i = 0; i < kNumDispatchers; i++) {
+    dispatchers[i]->Destroy();
+  }
+}
+
+TEST_F(DispatcherTest, DriverDestroysDispatcherShutdownByDriverHost) {
+  zx::status<fdf::Dispatcher> dispatcher;
+
+  libsync::Completion completion;
+  auto shutdown_handler = [&](fdf_dispatcher_t* shutdown_dispatcher) mutable {
+    ASSERT_EQ(shutdown_dispatcher, dispatcher->get());
+    dispatcher->reset();
+    completion.Signal();
+  };
+
+  auto fake_driver = CreateFakeDriver();
+  driver_context::PushDriver(fake_driver);
+  auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
+  dispatcher = fdf::Dispatcher::Create(0, shutdown_handler);
+  ASSERT_FALSE(dispatcher.is_error());
+
+  fdf_internal::DriverShutdown driver_shutdown;
+  libsync::Completion driver_shutdown_completion;
+  ASSERT_OK(driver_shutdown.Begin(fake_driver, [&](const void* driver) {
+    ASSERT_EQ(fake_driver, driver);
+    driver_shutdown_completion.Signal();
+  }));
+
+  ASSERT_OK(completion.Wait());
+  ASSERT_OK(driver_shutdown_completion.Wait());
+}
+
+TEST_F(DispatcherTest, CannotCreateNewDispatcherDuringDriverShutdown) {
+  libsync::Completion completion;
+  auto shutdown_handler = [&](fdf_dispatcher_t* shutdown_dispatcher) { completion.Signal(); };
+
+  auto fake_driver = CreateFakeDriver();
+  driver_context::PushDriver(fake_driver);
+  auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
+  auto dispatcher = fdf::Dispatcher::Create(0, shutdown_handler);
+  ASSERT_FALSE(dispatcher.is_error());
+
+  libsync::Completion task_started;
+  libsync::Completion driver_shutting_down;
+  ASSERT_OK(async::PostTask(dispatcher->async_dispatcher(), [&] {
+    task_started.Signal();
+    ASSERT_OK(driver_shutting_down.Wait(zx::time::infinite()));
+    auto dispatcher = fdf::Dispatcher::Create(0, [](fdf_dispatcher_t* dispatcher) {});
+    // Creating a new dispatcher should fail, as the driver is currently shutting down.
+    ASSERT_TRUE(dispatcher.is_error());
+  }));
+  ASSERT_OK(task_started.Wait(zx::time::infinite()));
+
+  fdf_internal::DriverShutdown driver_shutdown;
+  libsync::Completion driver_shutdown_completion;
+  ASSERT_OK(driver_shutdown.Begin(fake_driver, [&](const void* driver) {
+    ASSERT_EQ(fake_driver, driver);
+    driver_shutdown_completion.Signal();
+  }));
+
+  driver_shutting_down.Signal();
+
+  ASSERT_OK(completion.Wait(zx::time::infinite()));
+  ASSERT_OK(driver_shutdown_completion.Wait());
+}
+
+// Tests shutting down all dispatchers for a driver, but the dispatchers are already in a shutdown
+// state.
+TEST_F(DispatcherTest, ShutdownAllDispatchersAlreadyShutdown) {
+  libsync::Completion completion;
+  auto shutdown_handler = [&](fdf_dispatcher_t* shutdown_dispatcher) { completion.Signal(); };
+
+  auto fake_driver = CreateFakeDriver();
+  driver_context::PushDriver(fake_driver);
+  auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
+  auto dispatcher = fdf::Dispatcher::Create(0, shutdown_handler);
+  ASSERT_FALSE(dispatcher.is_error());
+
+  dispatcher->ShutdownAsync();
+  ASSERT_OK(completion.Wait(zx::time::infinite()));
+
+  fdf_internal::DriverShutdown driver_shutdown;
+  libsync::Completion driver_shutdown_completion;
+  ASSERT_OK(driver_shutdown.Begin(fake_driver, [&](const void* driver) {
+    ASSERT_EQ(fake_driver, driver);
+    driver_shutdown_completion.Signal();
+  }));
+  ASSERT_OK(driver_shutdown_completion.Wait());
+}
+
+// Tests shutting down all dispatchers for a driver, but the dispatcher is in the shutdown observer
+// callback.
+TEST_F(DispatcherTest, ShutdownAllDispatchersCurrentlyInShutdownCallback) {
+  libsync::Completion entered_shutdown_handler;
+  libsync::Completion complete_shutdown_handler;
+  auto shutdown_handler = [&](fdf_dispatcher_t* shutdown_dispatcher) {
+    entered_shutdown_handler.Signal();
+    ASSERT_OK(complete_shutdown_handler.Wait());
+  };
+
+  auto fake_driver = CreateFakeDriver();
+  driver_context::PushDriver(fake_driver);
+  auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
+  auto dispatcher = fdf::Dispatcher::Create(0, shutdown_handler);
+  ASSERT_FALSE(dispatcher.is_error());
+
+  dispatcher->ShutdownAsync();
+  ASSERT_OK(entered_shutdown_handler.Wait());
+
+  fdf_internal::DriverShutdown driver_shutdown;
+  libsync::Completion driver_shutdown_completion;
+  ASSERT_OK(driver_shutdown.Begin(fake_driver, [&](const void* driver) {
+    ASSERT_EQ(fake_driver, driver);
+    driver_shutdown_completion.Signal();
+  }));
+
+  // The dispatcher is still in the dispatcher shutdown handler.
+  ASSERT_FALSE(driver_shutdown_completion.signaled());
+  complete_shutdown_handler.Signal();
+  ASSERT_OK(driver_shutdown_completion.Wait());
 }
 
 //

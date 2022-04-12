@@ -28,6 +28,21 @@ __BEGIN_CDECLS
 // }
 //
 
+typedef struct fdf_internal_driver_shutdown_observer fdf_internal_driver_shutdown_observer_t;
+
+// Called when the asynchronous shutdown for all dispatchers owned by |driver| has completed.
+typedef void(fdf_internal_driver_shutdown_handler_t)(
+    const void* driver, fdf_internal_driver_shutdown_observer_t* observer);
+
+// Holds context for the observer which will be called when the asynchronous shutdown
+// for all dispatchers owned by a driver has completed.
+//
+// The client is responsible for retaining this structure in memory (and unmodified) until the
+// handler runs.
+struct fdf_internal_driver_shutdown_observer {
+  fdf_internal_driver_shutdown_handler_t* handler;
+};
+
 // Adds |driver| to the thread's current call stack.
 void fdf_internal_push_driver(const void* driver);
 
@@ -57,6 +72,23 @@ bool fdf_internal_dispatcher_has_queued_tasks(fdf_dispatcher_t* dispatcher);
 // This should not be called from a thread managed by the driver runtime,
 // such as from tasks or ChannelRead callbacks.
 fdf_status_t fdf_internal_wait_until_all_dispatchers_idle();
+
+// Asynchronously shuts down all dispatchers owned by |driver|.
+// |observer| will be notified once shutdown completes. This is guaranteed to be
+// after all the dispatcher's shutdown observers have been called, and will be running
+// on the thread of the final dispatcher which has been shutdown.
+//
+// after all dispatcher's shutdown observers have had their handlers called.
+// While a driver is shutting down, no new dispatchers can be created by the driver.
+//
+// If this succeeds, you must keep the |observer| object alive until the
+// |observer| is notified.
+//
+// Returns ZX_OK if successful and |observer| will be notified.
+// Returns ZX_ERR_INVALID_ARGS if no driver matching |driver| was found.
+// Returns ZX_ERR_BAD_STATE if a driver shutdown observer was already registered.
+fdf_status_t fdf_internal_shutdown_dispatchers_async(
+    const void* driver, fdf_internal_driver_shutdown_observer_t* observer);
 
 __END_CDECLS
 

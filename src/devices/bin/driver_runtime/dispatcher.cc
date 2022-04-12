@@ -232,7 +232,12 @@ fdf_status_t Dispatcher::CreateWithLoop(uint32_t options, const char* scheduler_
     return status;
   }
 
-  GetDispatcherCoordinator().AddDispatcher(dispatcher);
+  // This may fail if the entire driver is being shut down by the driver host.
+  status = GetDispatcherCoordinator().AddDispatcher(dispatcher);
+  if (status != ZX_OK) {
+    dispatcher->event_waiter_ = nullptr;
+    return status;
+  }
 
   // This reference will be recovered in |Destroy|.
   *out_dispatcher = fbl::ExportToRawPtr(&dispatcher);
@@ -357,10 +362,13 @@ void Dispatcher::CompleteShutdown() {
     state_ = DispatcherState::kShutdown;
     shutdown_observer = shutdown_observer_;
   }
-
+  GetDispatcherCoordinator().SetShutdown(*this);
+  // We need to call the dispatcher shutdown handler before notifying the dispatcher coordinator.
   if (shutdown_observer) {
     shutdown_observer->handler(static_cast<fdf_dispatcher_t*>(this), shutdown_observer);
   }
+
+  GetDispatcherCoordinator().NotifyShutdown(*this);
 }
 
 void Dispatcher::Destroy() {
@@ -798,15 +806,14 @@ zx_status_t Dispatcher::IdleEventManager::Signal() {
 
 // static
 fdf_status_t DispatcherCoordinator::WaitUntilDispatchersIdle() {
-  std::vector<fbl::RefPtr<Dispatcher>> copy;
+  std::vector<fbl::RefPtr<Dispatcher>> dispatchers;
   {
     fbl::AutoLock lock(&(GetDispatcherCoordinator().lock_));
-    auto& dispatchers = GetDispatcherCoordinator().dispatchers_;
-    for (auto& dispatcher : dispatchers) {
-      copy.push_back(fbl::RefPtr<Dispatcher>(&dispatcher));
+    for (auto& driver : GetDispatcherCoordinator().drivers_) {
+      driver.GetDispatchers(dispatchers);
     }
   }
-  for (auto& d : copy) {
+  for (auto& d : dispatchers) {
     fdf_status_t status = d->WaitUntilIdle();
     if (status != ZX_OK) {
       return status;
@@ -815,13 +822,97 @@ fdf_status_t DispatcherCoordinator::WaitUntilDispatchersIdle() {
   return ZX_OK;
 }
 
-void DispatcherCoordinator::AddDispatcher(fbl::RefPtr<Dispatcher> dispatcher) {
-  fbl::AutoLock lock(&lock_);
-  dispatchers_.push_back(dispatcher);
+// static
+fdf_status_t DispatcherCoordinator::ShutdownDispatchersAsync(
+    const void* driver, fdf_internal_driver_shutdown_observer_t* observer) {
+  std::vector<fbl::RefPtr<Dispatcher>> dispatchers;
+
+  {
+    fbl::AutoLock lock(&(GetDispatcherCoordinator().lock_));
+    auto driver_state = GetDispatcherCoordinator().drivers_.find(driver);
+    if (!driver_state.IsValid()) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    driver_state->GetDispatchers(dispatchers);
+    if (!dispatchers.empty()) {
+      auto status = driver_state->SetShutdownObserver(observer);
+      if (status != ZX_OK) {
+        return status;
+      }
+    }
+  }
+  for (auto& dispatcher : dispatchers) {
+    dispatcher->ShutdownAsync();
+  }
+  if (dispatchers.empty()) {
+    // The dispatchers have already been shutdown and no calls to |NotifyDispatcherShutdown|
+    // will occur, so we need to schedule the handler to be called.
+    async::PostTask(GetDispatcherCoordinator().loop()->dispatcher(),
+                    [driver, observer]() { observer->handler(driver, observer); });
+  }
+  return ZX_OK;
 }
+
+fdf_status_t DispatcherCoordinator::AddDispatcher(fbl::RefPtr<Dispatcher> dispatcher) {
+  fbl::AutoLock lock(&lock_);
+
+  // Check if we already have a driver state object.
+  auto driver_state = drivers_.find(dispatcher->owner());
+  if (driver_state == drivers_.end()) {
+    auto new_driver_state = std::make_unique<DriverState>(dispatcher->owner());
+    drivers_.insert(std::move(new_driver_state));
+    driver_state = drivers_.find(dispatcher->owner());
+  } else {
+    // If the driver is shutting down, we should not allow creating new dispatchers.
+    if (driver_state->IsShuttingDown()) {
+      return ZX_ERR_BAD_STATE;
+    }
+  }
+  driver_state->AddDispatcher(dispatcher);
+  return ZX_OK;
+}
+
+void DispatcherCoordinator::SetShutdown(Dispatcher& dispatcher) {
+  fbl::AutoLock lock(&lock_);
+
+  auto driver_state = drivers_.find(dispatcher.owner());
+  ZX_ASSERT(driver_state != drivers_.end());
+  driver_state->SetDispatcherShutdown(dispatcher);
+}
+
+void DispatcherCoordinator::NotifyShutdown(Dispatcher& dispatcher) {
+  fdf_internal_driver_shutdown_observer_t* observer = nullptr;
+  {
+    fbl::AutoLock lock(&lock_);
+
+    auto driver_state = drivers_.find(dispatcher.owner());
+    if ((driver_state == drivers_.end()) || !driver_state->CompletedShutdown()) {
+      return;
+    }
+    observer = driver_state->TakeShutdownObserver();
+    // If the driver has completely shutdown, and all dispatchers have been destroyed,
+    // the driver state can also be destroyed.
+    if (!driver_state->HasDispatchers() && !driver_state->IsShuttingDown()) {
+      drivers_.erase(driver_state);
+    }
+  }
+  if (observer) {
+    observer->handler(dispatcher.owner(), observer);
+  }
+}
+
 void DispatcherCoordinator::RemoveDispatcher(Dispatcher& dispatcher) {
   fbl::AutoLock lock(&lock_);
-  dispatchers_.erase(dispatcher);
+
+  auto driver_state = drivers_.find(dispatcher.owner());
+  ZX_ASSERT(driver_state != drivers_.end());
+
+  driver_state->RemoveDispatcher(dispatcher);
+  // If the driver has completely shutdown, and all dispatchers have been destroyed,
+  // the driver state can also be destroyed.
+  if (!driver_state->HasDispatchers() && !driver_state->IsShuttingDown()) {
+    drivers_.erase(driver_state);
+  }
 }
 
 }  // namespace driver_runtime
