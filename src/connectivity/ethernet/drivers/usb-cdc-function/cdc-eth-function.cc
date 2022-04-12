@@ -629,14 +629,13 @@ static zx_status_t cdc_set_configured(void* ctx, bool configured, usb_speed_t sp
       return status;
     }
     cdc->speed = speed;
+    cdc_send_notifications(cdc);
   } else {
     usb_function_disable_ep(&cdc->function, cdc->bulk_out_addr);
     usb_function_disable_ep(&cdc->function, cdc->bulk_in_addr);
     usb_function_disable_ep(&cdc->function, cdc->intr_addr);
     cdc->speed = USB_SPEED_UNDEFINED;
   }
-
-  cdc_send_notifications(cdc);
 
   zxlogf(DEBUG, "%s: return ZX_OK", __func__);
   return ZX_OK;
