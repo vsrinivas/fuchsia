@@ -85,8 +85,10 @@ void ChannelTest::TearDown() {
 
   loop_.StartThread();  // Make sure an async loop thread is running for dispatcher destruction.
 
-  fdf_dispatcher_destroy(fdf_dispatcher_);
+  fdf_dispatcher_shutdown_async(fdf_dispatcher_);
   ASSERT_OK(dispatcher_observer_.WaitUntilShutdown());
+
+  fdf_dispatcher_destroy(fdf_dispatcher_);
 
   loop_.Quit();
   loop_.JoinThreads();
@@ -337,8 +339,10 @@ TEST_F(ChannelTest, SyncDispatcherCancelUnqueuedRead) {
 
   ASSERT_OK(channel_read->Cancel());  // Cancellation should always succeed for sync dispatchers.
 
-  sync_dispatcher->Destroy();
+  sync_dispatcher->ShutdownAsync();
   ASSERT_OK(dispatcher_observer.WaitUntilShutdown());
+
+  sync_dispatcher->Destroy();
 }
 
 // Tests cancelling a channel read that has been queued with the synchronized dispatcher.
@@ -385,8 +389,10 @@ TEST_F(ChannelTest, SyncDispatcherCancelQueuedRead) {
 
   ASSERT_OK(sync_completion_wait(&read_completion, ZX_TIME_INFINITE));
 
-  sync_dispatcher->Destroy();
+  sync_dispatcher->ShutdownAsync();
   ASSERT_OK(dispatcher_observer.WaitUntilShutdown());
+
+  sync_dispatcher->Destroy();
 }
 
 // Tests cancelling a channel read that has been queued with the synchronized dispatcher.
@@ -440,8 +446,10 @@ TEST_F(ChannelTest, SyncDispatcherCancelQueuedReadFromTask) {
 
   ASSERT_OK(sync_completion_wait(&read_completion, ZX_TIME_INFINITE));
 
-  sync_dispatcher->Destroy();
+  sync_dispatcher->ShutdownAsync();
   ASSERT_OK(dispatcher_observer.WaitUntilShutdown());
+
+  sync_dispatcher->Destroy();
 }
 
 TEST_F(ChannelTest, SyncDispatcherCancelTaskFromChannelRead) {
@@ -484,8 +492,11 @@ TEST_F(ChannelTest, SyncDispatcherCancelTaskFromChannelRead) {
   loop_.StartThread();
 
   ASSERT_OK(sync_completion_wait(&completion, ZX_TIME_INFINITE));
-  sync_dispatcher->Destroy();
+
+  sync_dispatcher->ShutdownAsync();
   ASSERT_OK(dispatcher_observer.WaitUntilShutdown());
+
+  sync_dispatcher->Destroy();
 }
 
 // Tests cancelling a channel read that has not yet been queued with the unsynchronized dispatcher.
@@ -513,8 +524,10 @@ TEST_F(ChannelTest, UnsyncDispatcherCancelUnqueuedRead) {
   ASSERT_OK(channel_read->Cancel());
   ASSERT_OK(sync_completion_wait(&completion, ZX_TIME_INFINITE));
 
-  unsync_dispatcher->Destroy();
+  unsync_dispatcher->ShutdownAsync();
   ASSERT_OK(dispatcher_observer.WaitUntilShutdown());
+
+  unsync_dispatcher->Destroy();
 }
 
 // Tests cancelling a channel read that has been queued with the unsynchronized dispatcher.
@@ -562,8 +575,10 @@ TEST_F(ChannelTest, UnsyncDispatcherCancelQueuedRead) {
 
   ASSERT_OK(sync_completion_wait(&read_completion, ZX_TIME_INFINITE));
 
-  unsync_dispatcher->Destroy();
+  unsync_dispatcher->ShutdownAsync();
   ASSERT_OK(dispatcher_observer.WaitUntilShutdown());
+
+  unsync_dispatcher->Destroy();
 }
 
 // Tests cancelling a channel read that has been queued with the unsynchronized dispatcher,
@@ -625,8 +640,10 @@ TEST_F(ChannelTest, UnsyncDispatcherCancelQueuedReadFails) {
 
   ASSERT_OK(read_complete.Wait(zx::time::infinite()));
 
-  unsync_dispatcher->Destroy();
+  unsync_dispatcher->ShutdownAsync();
   ASSERT_OK(dispatcher_observer.WaitUntilShutdown());
+
+  unsync_dispatcher->Destroy();
 }
 
 // Tests that you can wait on and read pending messages from a channel even if the peer is closed.
@@ -998,8 +1015,10 @@ void ReplyAndWait(const Message& request, uint32_t message_count, fdf::Channel s
   auto fdf_dispatcher = static_cast<fdf_dispatcher_t*>(dispatcher);
 
   auto shutdown = fit::defer([&, observer = std::move(observer)]() {
-    dispatcher->Destroy();
+    dispatcher->ShutdownAsync();
     ASSERT_OK(observer->WaitUntilShutdown());
+
+    dispatcher->Destroy();
   });
 
   std::set<fdf_txid_t> live_ids;
@@ -1136,8 +1155,10 @@ TEST_F(ChannelTest, CallManagedThreadAllowsSyncCalls) {
                        dispatcher_observer.fdf_observer(), &allow_sync_calls_dispatcher));
 
   auto shutdown = fit::defer([&]() {
-    allow_sync_calls_dispatcher->Destroy();
+    allow_sync_calls_dispatcher->ShutdownAsync();
     ASSERT_OK(dispatcher_observer.WaitUntilShutdown());
+
+    allow_sync_calls_dispatcher->Destroy();
   });
 
   // Signaled once the Channel::Call completes.

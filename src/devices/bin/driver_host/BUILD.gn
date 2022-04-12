@@ -55,6 +55,7 @@ source_set("common") {
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_llcpp",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//sdk/lib/driver_runtime:driver_runtime_internal",
     "//sdk/lib/fdio",
     "//sdk/lib/fit-promise",
     "//src/devices/lib/log",

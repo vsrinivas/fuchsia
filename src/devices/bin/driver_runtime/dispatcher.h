@@ -74,6 +74,8 @@ class Dispatcher : public async_dispatcher_t,
   zx_status_t BindIrq(async_irq_t* irq);
   zx_status_t UnbindIrq(async_irq_t* irq);
 
+  bool HasQueuedTasks();
+
   // Registers a callback with a dispatcher that should not yet be run.
   // This should be called by the channel if a client has started waiting with a
   // ChannelRead, but the channel has not yet received a write from its peer.
@@ -145,6 +147,17 @@ class Dispatcher : public async_dispatcher_t,
   }
 
  private:
+  enum class DispatcherState {
+    // The dispatcher is running and accepting new requests.
+    kRunning,
+    // The dispatcher is in the process of shutting down.
+    kShuttingDown,
+    // The dispatcher has been shutdown and can be destroyed.
+    kShutdown,
+    // The dispatcher is about to be destroyed.
+    kDestroyed,
+  };
+
   // TODO(fxbug.dev/87834): determine an appropriate size.
   static constexpr uint32_t kBatchSize = 10;
 
@@ -262,8 +275,8 @@ class Dispatcher : public async_dispatcher_t,
   void DispatchCallbacks(std::unique_ptr<EventWaiter> event_waiter,
                          fbl::RefPtr<Dispatcher> dispatcher_ref);
 
-  // Cancels the callbacks in |shutdown_queue_|, and drops the initial reference to the dispatcher.
-  void CompleteDestroy();
+  // Cancels the callbacks in |shutdown_queue_|.
+  void CompleteShutdown();
 
   // Returns true if the dispatcher has no active threads or queued requests.
   bool IsIdleLocked() __TA_REQUIRES(&callback_lock_);
@@ -274,6 +287,11 @@ class Dispatcher : public async_dispatcher_t,
 
   // Returns true if the current thread is managed by the driver runtime.
   bool IsRuntimeManagedThread() { return !driver_context::IsCallStackEmpty(); }
+
+  // Returns whether the dispatcher is in the running state.
+  bool IsRunningLocked() __TA_REQUIRES(&callback_lock_) {
+    return state_ == DispatcherState::kRunning;
+  }
 
   // Dispatcher options set by the user.
   uint32_t options_;
@@ -297,7 +315,7 @@ class Dispatcher : public async_dispatcher_t,
   // be run on the next available thread.
   fbl::DoublyLinkedList<std::unique_ptr<CallbackRequest>> callback_queue_
       __TA_GUARDED(&callback_lock_);
-  // Callback requests that have been removed to be completed by |CompleteDestroy|.
+  // Callback requests that have been removed to be completed by |CompleteShutdown|.
   // These are removed from the active queues to ensure the dispatcher does not
   // attempt to continue processing them.
   fbl::DoublyLinkedList<std::unique_ptr<CallbackRequest>> shutdown_queue_
@@ -313,8 +331,8 @@ class Dispatcher : public async_dispatcher_t,
   // This is only relevant in the synchronized mode.
   bool dispatching_sync_ __TA_GUARDED(&callback_lock_) = false;
 
-  // True if |Destroy| has been called.
-  bool shutting_down_ __TA_GUARDED(&callback_lock_) = false;
+  // TODO(fxbug.dev/97753): consider using std::atomic.
+  DispatcherState state_ __TA_GUARDED(&callback_lock_) = DispatcherState::kRunning;
 
   // Number of threads currently servicing callbacks.
   size_t num_active_threads_ __TA_GUARDED(&callback_lock_) = 0;
@@ -322,7 +340,7 @@ class Dispatcher : public async_dispatcher_t,
   IdleEventManager idle_event_manager_ __TA_GUARDED(&callback_lock_);
 
   // The observer that should be called when shutting down the dispatcher completes.
-  fdf_dispatcher_shutdown_observer_t* shutdown_observer_ = nullptr;
+  fdf_dispatcher_shutdown_observer_t* shutdown_observer_ __TA_GUARDED(&callback_lock_) = nullptr;
 
   fbl::Canary<fbl::magic("FDFD")> canary_;
 };

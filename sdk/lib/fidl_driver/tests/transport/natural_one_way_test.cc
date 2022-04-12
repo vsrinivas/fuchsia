@@ -6,6 +6,7 @@
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fdf/internal.h>
 #include <lib/fit/defer.h>
+#include <lib/sync/cpp/completion.h>
 #include <zircon/errors.h>
 
 #include <memory>
@@ -32,7 +33,10 @@ struct TestServer : public fdf::Server<test_transport::OneWayTest> {
 TEST(DriverTransport, NaturalOneWayVector) {
   fidl_driver_testing::ScopedFakeDriver driver;
 
-  auto dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED);
+  libsync::Completion dispatcher_shutdown;
+  auto dispatcher =
+      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED,
+                              [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
   ASSERT_OK(dispatcher.status_value());
 
   auto channels = fdf::ChannelPair::Create(0);
@@ -51,6 +55,9 @@ TEST(DriverTransport, NaturalOneWayVector) {
   ZX_ASSERT(result.is_ok());
 
   ASSERT_OK(sync_completion_wait(&server->done, ZX_TIME_INFINITE));
+
+  dispatcher->ShutdownAsync();
+  ASSERT_OK(dispatcher_shutdown.Wait());
 }
 
 }  // namespace

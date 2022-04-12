@@ -263,19 +263,24 @@ async_dispatcher_t* Dispatcher::GetAsyncDispatcher() {
   return (async_dispatcher_t*)this;
 }
 
-void Dispatcher::ShutdownAsync() { ZX_ASSERT_MSG(false, "ShutdownAsync not yet supported"); }
-
-void Dispatcher::Destroy() {
+void Dispatcher::ShutdownAsync() {
   {
     fbl::AutoLock lock(&callback_lock_);
 
-    if (shutting_down_) {
-      return;
+    switch (state_) {
+      case DispatcherState::kRunning:
+        state_ = DispatcherState::kShuttingDown;
+        break;
+      case DispatcherState::kShuttingDown:
+      case DispatcherState::kShutdown:
+      case DispatcherState::kDestroyed:
+        return;
+      default:
+        ZX_ASSERT_MSG(false, "Dispatcher::ShutdownAsync got unknown dispatcher state %d", state_);
     }
-    shutting_down_ = true;
 
     // Move the requests into a separate queue so we will be able to enter an idle state.
-    // This queue will be processed by |CompleteDestroy|.
+    // This queue will be processed by |CompleteShutdown|.
     shutdown_queue_ = std::move(callback_queue_);
     shutdown_queue_.splice(shutdown_queue_.end(), registered_callbacks_);
 
@@ -294,14 +299,13 @@ void Dispatcher::Destroy() {
     }
 
     // To avoid race conditions with attempting to cancel a wait that might be scheduled to
-    // run, we will cancel the event waiter in the |CompleteDestroy| callback. This is as
+    // run, we will cancel the event waiter in the |CompleteShutdown| callback. This is as
     // |async::Wait::Cancel| is not thread safe.
   }
 
-  // Recover the reference created in |CreateWithLoop|.
-  auto dispatcher_ref = fbl::ImportFromRawPtr(this);
+  auto dispatcher_ref = fbl::RefPtr<Dispatcher>(this);
 
-  // The dispatcher destroy API specifies that on shutdown, tasks and cancellation
+  // The dispatcher shutdown API specifies that on shutdown, tasks and cancellation
   // callbacks should run serialized. Wait for all active threads to
   // complete before calling the cancellation callbacks.
   auto event = RegisterForIdleEvent();
@@ -314,19 +318,19 @@ void Dispatcher::Destroy() {
           async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
           const zx_packet_signal_t* signal) mutable {
         ZX_ASSERT(status == ZX_OK || status == ZX_ERR_CANCELED);
-        dispatcher_ref->CompleteDestroy();
+        dispatcher_ref->CompleteShutdown();
         delete wait;
       });
   ZX_ASSERT(wait->Begin(process_shared_dispatcher_) == ZX_OK);
   wait.release();  // This will be deleted by the wait handler once it is called.
 }
 
-void Dispatcher::CompleteDestroy() {
+void Dispatcher::CompleteShutdown() {
   fbl::DoublyLinkedList<std::unique_ptr<CallbackRequest>> to_cancel;
   {
     fbl::AutoLock lock(&callback_lock_);
 
-    ZX_ASSERT(shutting_down_);
+    ZX_ASSERT(state_ == DispatcherState::kShuttingDown);
 
     if (event_waiter_) {
       ZX_ASSERT(IsIdleLocked());
@@ -347,9 +351,26 @@ void Dispatcher::CompleteDestroy() {
     ZX_ASSERT(callback_request);
     callback_request->Call(std::move(callback_request), ZX_ERR_CANCELED);
   }
-  if (shutdown_observer_) {
-    shutdown_observer_->handler(static_cast<fdf_dispatcher_t*>(this), shutdown_observer_);
+  fdf_dispatcher_shutdown_observer_t* shutdown_observer = nullptr;
+  {
+    fbl::AutoLock lock(&callback_lock_);
+    state_ = DispatcherState::kShutdown;
+    shutdown_observer = shutdown_observer_;
   }
+
+  if (shutdown_observer) {
+    shutdown_observer->handler(static_cast<fdf_dispatcher_t*>(this), shutdown_observer);
+  }
+}
+
+void Dispatcher::Destroy() {
+  {
+    fbl::AutoLock lock(&callback_lock_);
+    ZX_ASSERT(state_ == DispatcherState::kShutdown);
+    state_ = DispatcherState::kDestroyed;
+  }
+  // Recover the reference created in |CreateWithLoop|.
+  auto dispatcher_ref = fbl::ImportFromRawPtr(this);
   GetDispatcherCoordinator().RemoveDispatcher(*this);
 }
 
@@ -359,7 +380,7 @@ zx_time_t Dispatcher::GetTime() { return zx_clock_get_monotonic(); }
 
 zx_status_t Dispatcher::BeginWait(async_wait_t* wait) {
   fbl::AutoLock lock(&callback_lock_);
-  if (shutting_down_) {
+  if (!IsRunningLocked()) {
     return ZX_ERR_BAD_STATE;
   }
   // TODO(92740): we should do something more efficient rather than creating a new
@@ -392,7 +413,8 @@ zx_status_t Dispatcher::CancelWait(async_wait_t* wait) {
 zx_status_t Dispatcher::PostTask(async_task_t* task) {
   // TODO(92740): we should do something more efficient rather than creating a new
   // callback request each time.
-  auto callback_request = std::make_unique<driver_runtime::CallbackRequest>();
+  auto callback_request =
+      std::make_unique<driver_runtime::CallbackRequest>(CallbackRequest::RequestType::kTask);
   driver_runtime::Callback callback =
       [this, task](std::unique_ptr<driver_runtime::CallbackRequest> callback_request,
                    fdf_status_t status) { task->handler(this, task, status); };
@@ -415,7 +437,7 @@ zx_status_t Dispatcher::CancelTask(async_task_t* task) {
 
 zx_status_t Dispatcher::QueuePacket(async_receiver_t* receiver, const zx_packet_user_t* data) {
   fbl::AutoLock lock(&callback_lock_);
-  if (shutting_down_) {
+  if (!IsRunningLocked()) {
     return ZX_ERR_BAD_STATE;
   }
   return async_queue_packet(process_shared_dispatcher_, receiver, data);
@@ -423,7 +445,7 @@ zx_status_t Dispatcher::QueuePacket(async_receiver_t* receiver, const zx_packet_
 
 zx_status_t Dispatcher::BindIrq(async_irq_t* irq) {
   fbl::AutoLock lock(&callback_lock_);
-  if (shutting_down_) {
+  if (!IsRunningLocked()) {
     return ZX_ERR_BAD_STATE;
   }
   return async_bind_irq(process_shared_dispatcher_, irq);
@@ -436,7 +458,7 @@ zx_status_t Dispatcher::UnbindIrq(async_irq_t* irq) {
 std::unique_ptr<driver_runtime::CallbackRequest> Dispatcher::RegisterCallbackWithoutQueueing(
     std::unique_ptr<driver_runtime::CallbackRequest> callback_request) {
   fbl::AutoLock lock(&callback_lock_);
-  if (shutting_down_) {
+  if (!IsRunningLocked()) {
     return callback_request;
   }
   registered_callbacks_.push_back(std::move(callback_request));
@@ -460,7 +482,7 @@ void Dispatcher::QueueRegisteredCallback(driver_runtime::CallbackRequest* reques
   {
     fbl::AutoLock lock(&callback_lock_);
     num_active_threads_++;
-    if (shutting_down_) {
+    if (!IsRunningLocked()) {
       return;
     }
 
@@ -505,7 +527,7 @@ void Dispatcher::QueueRegisteredCallback(driver_runtime::CallbackRequest* reques
   fbl::AutoLock lock(&callback_lock_);
   dispatching_sync_ = false;
   if (!callback_queue_.is_empty() && event_waiter_ && !event_waiter_->signaled() &&
-      !shutting_down_) {
+      IsRunningLocked()) {
     event_waiter_->signal();
   }
 }
@@ -530,7 +552,7 @@ std::unique_ptr<Dispatcher::AsyncWait> Dispatcher::RemoveWaitLocked(Dispatcher::
 void Dispatcher::QueueWait(Dispatcher::AsyncWait* wait, zx_status_t status) {
   fbl::AutoLock al(&callback_lock_);
   ZX_DEBUG_ASSERT(fbl::InContainer<AsyncWaitTag>(*wait));
-  if (shutting_down_) {
+  if (!IsRunningLocked()) {
     // We are waiting for all outstanding waits to be completed. They will be serviced in
     // CompleteDestroy.
     shutdown_queue_.push_back(waits_.erase(*wait));
@@ -589,7 +611,7 @@ void Dispatcher::DispatchCallbacks(std::unique_ptr<EventWaiter> event_waiter,
     if (event_waiter) {
       // We call |BeginWaitWithRef| even when shutting down so that the |event_waiter|
       // stays alive until the dispatcher is destroyed. This allows |IsIdleLocked| to
-      // correctly check the state of the event waiter. |CompleteDestroy| will cancel
+      // correctly check the state of the event waiter. |CompleteShutdown| will cancel
       // and drop the event waiter.
       zx_status_t status = event_waiter->BeginWaitWithRef(std::move(event_waiter), dispatcher_ref);
       if (status == ZX_ERR_BAD_STATE) {
@@ -611,7 +633,7 @@ void Dispatcher::DispatchCallbacks(std::unique_ptr<EventWaiter> event_waiter,
     // but it's possible we could still get here if we are currently doing a
     // direct call into the driver. In this case, we should designal the event
     // waiter, and once the direct call completes it will signal it again.
-    if ((!unsynchronized_ && dispatching_sync_) || shutting_down_) {
+    if ((!unsynchronized_ && dispatching_sync_) || !IsRunningLocked()) {
       event_waiter->designal();
       return;
     }
@@ -703,6 +725,17 @@ void Dispatcher::IdleCheckLocked() {
   if (IsIdleLocked()) {
     idle_event_manager_.Signal();
   }
+}
+
+bool Dispatcher::HasQueuedTasks() {
+  fbl::AutoLock lock(&callback_lock_);
+
+  for (auto& callback_request : callback_queue_) {
+    if (callback_request.request_type() == CallbackRequest::RequestType::kTask) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void Dispatcher::EventWaiter::HandleEvent(std::unique_ptr<EventWaiter> event_waiter,

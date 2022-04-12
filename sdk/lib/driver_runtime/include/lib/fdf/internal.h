@@ -44,6 +44,9 @@ const void* fdf_internal_get_current_driver();
 // such as from tasks or ChannelRead callbacks.
 fdf_status_t fdf_internal_wait_until_dispatcher_idle(fdf_dispatcher_t* dispatcher);
 
+// Returns whether the dispatcher has any queued tasks.
+bool fdf_internal_dispatcher_has_queued_tasks(fdf_dispatcher_t* dispatcher);
+
 // Blocks the current thread until each runtime dispatcher in the process
 // is observed to enter an idle state. This does not guarantee that all the
 // dispatchers will be idle when this function returns. This will only wait

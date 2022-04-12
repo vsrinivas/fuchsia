@@ -6,6 +6,7 @@
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fdf/internal.h>
 #include <lib/fit/defer.h>
+#include <lib/sync/cpp/completion.h>
 #include <zircon/errors.h>
 
 #include <memory>
@@ -28,7 +29,10 @@ class TestServer : public fdf::WireServer<test_transport::SendDriverTransportEnd
 TEST(DriverTransport, WireSendDriverClientEnd) {
   fidl_driver_testing::ScopedFakeDriver driver;
 
-  auto dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED);
+  libsync::Completion dispatcher_shutdown;
+  auto dispatcher =
+      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED,
+                              [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
   ASSERT_OK(dispatcher.status_value());
 
   auto channels = fdf::ChannelPair::Create(0);
@@ -66,11 +70,17 @@ TEST(DriverTransport, WireSendDriverClientEnd) {
           });
 
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
+
+  dispatcher->ShutdownAsync();
+  ASSERT_OK(dispatcher_shutdown.Wait());
 }
 
 TEST(DriverTransport, WireSendDriverClientEndEncodeErrorShouldCloseHandle) {
   fidl_driver_testing::ScopedFakeDriver driver;
-  zx::status dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED);
+  libsync::Completion dispatcher_shutdown;
+  zx::status dispatcher =
+      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED,
+                              [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
   ASSERT_OK(dispatcher.status_value());
   zx::status endpoints = fdf::CreateEndpoints<test_transport::OnErrorCloseHandlesTest>();
   ASSERT_OK(endpoints.status_value());
@@ -87,6 +97,9 @@ TEST(DriverTransport, WireSendDriverClientEndEncodeErrorShouldCloseHandle) {
   ASSERT_FALSE(status.ok());
   ASSERT_EQ(fidl::Reason::kEncodeError, status.reason());
   ASSERT_NO_FAILURES(fidl_driver_testing::AssertPeerClosed(*send_endpoints->server.handle()));
+
+  dispatcher->ShutdownAsync();
+  ASSERT_OK(dispatcher_shutdown.Wait());
 }
 
 }  // namespace

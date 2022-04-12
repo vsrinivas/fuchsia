@@ -41,10 +41,16 @@ bool EchoCallSyncBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   fdf_internal_push_driver(driver);
   auto deferred = fit::defer([]() { fdf_internal_pop_driver(); });
 
-  auto client_dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS);
+  libsync::Completion client_dispatcher_shutdown;
+  auto client_dispatcher = fdf::Dispatcher::Create(
+      FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS,
+      [&](fdf_dispatcher_t* dispatcher) { client_dispatcher_shutdown.Signal(); });
   ZX_ASSERT(ZX_OK == client_dispatcher.status_value());
 
-  auto server_dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS);
+  libsync::Completion server_dispatcher_shutdown;
+  auto server_dispatcher = fdf::Dispatcher::Create(
+      FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS,
+      [&](fdf_dispatcher_t* dispatcher) { server_dispatcher_shutdown.Signal(); });
   ZX_ASSERT(ZX_OK == server_dispatcher.status_value());
 
   auto channels = fdf::ChannelPair::Create(0);
@@ -85,6 +91,11 @@ bool EchoCallSyncBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
 
   async::PostTask(client_dispatcher->async_dispatcher(), run_on_dispatcher_thread);
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
+
+  client_dispatcher->ShutdownAsync();
+  server_dispatcher->ShutdownAsync();
+  ZX_ASSERT(ZX_OK == client_dispatcher_shutdown.Wait());
+  ZX_ASSERT(ZX_OK == server_dispatcher_shutdown.Wait());
 
   return true;
 }

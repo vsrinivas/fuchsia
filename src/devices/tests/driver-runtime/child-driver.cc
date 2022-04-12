@@ -24,10 +24,8 @@ class Device : public DeviceType {
  public:
   static zx_status_t Bind(void* ctx, zx_device_t* device);
 
-  Device(zx_device_t* parent, fdf::Channel ch_to_parent, fdf::Dispatcher dispatcher)
-      : DeviceType(parent),
-        ch_to_parent_(std::move(ch_to_parent)),
-        dispatcher_(std::move(dispatcher)) {}
+  Device(zx_device_t* parent, fdf::Channel ch_to_parent)
+      : DeviceType(parent), ch_to_parent_(std::move(ch_to_parent)), unbind_txn_(nullptr) {}
 
   // TestDeviceChild protocol implementation.
   void GetParentDataOverRuntimeChannel(
@@ -40,12 +38,20 @@ class Device : public DeviceType {
                         GetParentDataOverRuntimeChannelCompleter::Sync& completer);
 
   // Device protocol implementation.
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
+  void DdkUnbind(ddk::UnbindTxn txn) {
+    dispatcher_.ShutdownAsync();
+    unbind_txn_ = std::move(txn);
+  }
   void DdkRelease() { delete this; }
+
+  zx_status_t Init();
+  void ShutdownHandler(fdf_dispatcher_t* dispatcher);
 
  private:
   fdf::Channel ch_to_parent_;
   fdf::Dispatcher dispatcher_;
+
+  ddk::UnbindTxn unbind_txn_;
 };
 
 void Device::GetParentDataOverRuntimeChannel(
@@ -135,21 +141,31 @@ void Device::SendRequestAsync(fdf::Arena arena, void* req, uint32_t req_size,
   channel_read.release();  // Deleted on callback.
 }
 
+void Device::ShutdownHandler(fdf_dispatcher_t* dispatcher) { unbind_txn_.Reply(); }
+
+zx_status_t Device::Init() {
+  auto dispatcher = fdf::Dispatcher::Create(0, fit::bind_member(this, &Device::ShutdownHandler));
+  if (dispatcher.is_error()) {
+    return dispatcher.status_value();
+  }
+  dispatcher_ = *std::move(dispatcher);
+  return ZX_OK;
+}
+
 // static
 zx_status_t Device::Bind(void* ctx, zx_device_t* device) {
   auto channels = fdf::ChannelPair::Create(0);
   if (channels.is_error()) {
     return channels.status_value();
   }
-  // Create a dispatcher to wait on the runtime channel.
-  auto dispatcher = fdf::Dispatcher::Create(0);
-  if (dispatcher.is_error()) {
-    return dispatcher.status_value();
-  }
 
-  auto dev = std::make_unique<Device>(device, std::move(channels->end0), *std::move(dispatcher));
+  auto dev = std::make_unique<Device>(device, std::move(channels->end0));
+  zx_status_t status = dev->Init();
+  if (status != ZX_OK) {
+    return status;
+  }
   // Connect to our parent driver.
-  zx_status_t status = dev->DdkServiceConnect("test-service", std::move(channels->end1));
+  status = dev->DdkServiceConnect("test-service", std::move(channels->end1));
   if (status != ZX_OK) {
     return status;
   }

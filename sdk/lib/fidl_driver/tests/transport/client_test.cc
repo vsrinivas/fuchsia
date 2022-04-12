@@ -6,6 +6,7 @@
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fdf/internal.h>
 #include <lib/fit/defer.h>
+#include <lib/sync/cpp/completion.h>
 
 #include <zxtest/zxtest.h>
 
@@ -14,7 +15,10 @@
 TEST(Client, ServerReset) {
   fidl_driver_testing::ScopedFakeDriver driver;
 
-  auto dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED);
+  libsync::Completion dispatcher_shutdown;
+  auto dispatcher =
+      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED,
+                              [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
   ASSERT_OK(dispatcher.status_value());
 
   auto channels = fdf::ChannelPair::Create(0);
@@ -39,12 +43,18 @@ TEST(Client, ServerReset) {
   server_end.reset();
 
   sync_completion_wait(&event_handler.completion, ZX_TIME_INFINITE);
+
+  dispatcher->ShutdownAsync();
+  ASSERT_OK(dispatcher_shutdown.Wait());
 }
 
 TEST(Client, ServerResetMidCall) {
   fidl_driver_testing::ScopedFakeDriver driver;
 
-  auto dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED);
+  libsync::Completion dispatcher_shutdown;
+  auto dispatcher =
+      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED,
+                              [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
   ASSERT_OK(dispatcher.status_value());
 
   auto channels = fdf::ChannelPair::Create(0);
@@ -79,4 +89,7 @@ TEST(Client, ServerResetMidCall) {
 
   sync_completion_wait(&event_handler.completion, ZX_TIME_INFINITE);
   sync_completion_wait(&call_completion, ZX_TIME_INFINITE);
+
+  dispatcher->ShutdownAsync();
+  ASSERT_OK(dispatcher_shutdown.Wait());
 }

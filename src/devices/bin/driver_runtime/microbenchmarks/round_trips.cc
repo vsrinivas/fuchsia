@@ -9,6 +9,7 @@
 #include <lib/fdf/internal.h>
 #include <lib/fit/function.h>
 #include <lib/sync/completion.h>
+#include <lib/sync/cpp/completion.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <thread>
@@ -75,14 +76,16 @@ class ChannelDispatcherTest {
 
     {
       DriverStackManager dsm(&client_fake_driver_);
-      auto dispatcher = fdf::Dispatcher::Create(dispatcher_options);
+      auto dispatcher = fdf::Dispatcher::Create(
+          dispatcher_options, fit::bind_member(this, &ChannelDispatcherTest::ShutdownHandler));
       ASSERT_OK(dispatcher.status_value());
       client_dispatcher_ = *std::move(dispatcher);
     }
 
     {
       DriverStackManager dsm(&server_fake_driver_);
-      auto dispatcher = fdf::Dispatcher::Create(dispatcher_options);
+      auto dispatcher = fdf::Dispatcher::Create(
+          dispatcher_options, fit::bind_member(this, &ChannelDispatcherTest::ShutdownHandler));
       ASSERT_OK(dispatcher.status_value());
       server_dispatcher_ = *std::move(dispatcher);
     }
@@ -124,6 +127,22 @@ class ChannelDispatcherTest {
     ASSERT_OK(sync_completion_wait(&server_completion, ZX_TIME_INFINITE));
   }
 
+  void TearDown() {
+    client_dispatcher_.ShutdownAsync();
+    server_dispatcher_.ShutdownAsync();
+    ASSERT_OK(client_dispatcher_shutdown_.Wait());
+    ASSERT_OK(server_dispatcher_shutdown_.Wait());
+  }
+
+  void ShutdownHandler(fdf_dispatcher_t* dispatcher) {
+    FX_CHECK((dispatcher == client_dispatcher_.get()) || (dispatcher == server_dispatcher_.get()));
+    if (dispatcher == client_dispatcher_.get()) {
+      client_dispatcher_shutdown_.Signal();
+    } else {
+      server_dispatcher_shutdown_.Signal();
+    }
+  }
+
  private:
   uint32_t msg_count_;
   uint32_t msg_size_;
@@ -133,9 +152,11 @@ class ChannelDispatcherTest {
 
   fdf::Channel client_;
   fdf::Dispatcher client_dispatcher_;
+  libsync::Completion client_dispatcher_shutdown_;
 
   fdf::Channel server_;
   fdf::Dispatcher server_dispatcher_;
+  libsync::Completion server_dispatcher_shutdown_;
 
   fdf::Arena arena_;
 

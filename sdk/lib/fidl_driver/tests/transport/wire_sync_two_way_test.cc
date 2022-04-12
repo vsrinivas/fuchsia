@@ -49,10 +49,16 @@ struct TestServer : public fdf::WireServer<test_transport::TwoWayTest> {
 TEST(DriverTransport, WireTwoWaySync) {
   fidl_driver_testing::ScopedFakeDriver driver;
 
-  auto client_dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS);
+  libsync::Completion client_dispatcher_shutdown;
+  auto client_dispatcher = fdf::Dispatcher::Create(
+      FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS,
+      [&](fdf_dispatcher_t* dispatcher) { client_dispatcher_shutdown.Signal(); });
   ASSERT_OK(client_dispatcher.status_value());
 
-  auto server_dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS);
+  libsync::Completion server_dispatcher_shutdown;
+  auto server_dispatcher = fdf::Dispatcher::Create(
+      FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS,
+      [&](fdf_dispatcher_t* dispatcher) { server_dispatcher_shutdown.Signal(); });
   ASSERT_OK(server_dispatcher.status_value());
 
   auto channels = fdf::ChannelPair::Create(0);
@@ -85,6 +91,11 @@ TEST(DriverTransport, WireTwoWaySync) {
   };
   async::PostTask(client_dispatcher->async_dispatcher(), run_on_dispatcher_thread);
   ASSERT_OK(server_destruction.Wait());
+
+  client_dispatcher->ShutdownAsync();
+  server_dispatcher->ShutdownAsync();
+  ASSERT_OK(client_dispatcher_shutdown.Wait());
+  ASSERT_OK(server_dispatcher_shutdown.Wait());
 }
 
 }  // namespace

@@ -65,10 +65,14 @@ TEST(Endpoints, CreateFromProtocolOutParameterStyleServerRetained) {
 TEST(WireClient, CannotDestroyInDifferentDispatcherThanBound) {
   fidl_driver_testing::ScopedFakeDriver driver;
 
-  zx::status dispatcher1 = fdf::Dispatcher::Create(0);
+  libsync::Completion dispatcher1_shutdown;
+  zx::status dispatcher1 = fdf::Dispatcher::Create(
+      0, [&](fdf_dispatcher_t* dispatcher) { dispatcher1_shutdown.Signal(); });
   ASSERT_OK(dispatcher1.status_value());
 
-  zx::status dispatcher2 = fdf::Dispatcher::Create(0);
+  libsync::Completion dispatcher2_shutdown;
+  zx::status dispatcher2 = fdf::Dispatcher::Create(
+      0, [&](fdf_dispatcher_t* dispatcher) { dispatcher2_shutdown.Signal(); });
   ASSERT_OK(dispatcher2.status_value());
 
   zx::status endpoints = fdf::CreateEndpoints<test_transport::TwoWayTest>();
@@ -95,12 +99,20 @@ TEST(WireClient, CannotDestroyInDifferentDispatcherThanBound) {
 
   ASSERT_NO_FATAL_FAILURE(exception_handler.WaitForOneSwBreakpoint());
   ASSERT_OK(destroyed.Wait());
+
+  dispatcher1->ShutdownAsync();
+  dispatcher2->ShutdownAsync();
+
+  ASSERT_OK(dispatcher1_shutdown.Wait());
+  ASSERT_OK(dispatcher2_shutdown.Wait());
 }
 
 TEST(WireClient, CannotDestroyOnUnmanagedThread) {
   fidl_driver_testing::ScopedFakeDriver driver;
 
-  zx::status dispatcher1 = fdf::Dispatcher::Create(0);
+  libsync::Completion dispatcher1_shutdown;
+  zx::status dispatcher1 = fdf::Dispatcher::Create(
+      0, [&](fdf_dispatcher_t* dispatcher) { dispatcher1_shutdown.Signal(); });
   ASSERT_OK(dispatcher1.status_value());
 
   zx::status endpoints = fdf::CreateEndpoints<test_transport::TwoWayTest>();
@@ -128,15 +140,22 @@ TEST(WireClient, CannotDestroyOnUnmanagedThread) {
   ASSERT_NO_FATAL_FAILURE(exception_handler.WaitForOneSwBreakpoint());
   ASSERT_OK(destroyed.Wait());
   thread.join();
+
+  dispatcher1->ShutdownAsync();
+  ASSERT_OK(dispatcher1_shutdown.Wait());
 }
 
 TEST(WireSharedClient, CanSendAcrossDispatcher) {
   fidl_driver_testing::ScopedFakeDriver driver;
 
-  zx::status dispatcher1 = fdf::Dispatcher::Create(0);
+  libsync::Completion dispatcher1_shutdown;
+  zx::status dispatcher1 = fdf::Dispatcher::Create(
+      0, [&](fdf_dispatcher_t* dispatcher) { dispatcher1_shutdown.Signal(); });
   ASSERT_OK(dispatcher1.status_value());
 
-  zx::status dispatcher2 = fdf::Dispatcher::Create(0);
+  libsync::Completion dispatcher2_shutdown;
+  zx::status dispatcher2 = fdf::Dispatcher::Create(
+      0, [&](fdf_dispatcher_t* dispatcher) { dispatcher2_shutdown.Signal(); });
   ASSERT_OK(dispatcher2.status_value());
 
   zx::status endpoints = fdf::CreateEndpoints<test_transport::TwoWayTest>();
@@ -160,12 +179,20 @@ TEST(WireSharedClient, CanSendAcrossDispatcher) {
     destroyed.Signal();
   });
   ASSERT_OK(destroyed.Wait());
+
+  dispatcher1->ShutdownAsync();
+  dispatcher2->ShutdownAsync();
+  ASSERT_OK(dispatcher1_shutdown.Wait());
+  ASSERT_OK(dispatcher2_shutdown.Wait());
 }
 
 TEST(WireClient, CannotBindUnsynchronizedDispatcher) {
   fidl_driver_testing::ScopedFakeDriver driver;
 
-  zx::status dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED);
+  libsync::Completion dispatcher_shutdown;
+  zx::status dispatcher =
+      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED,
+                              [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
   ASSERT_OK(dispatcher.status_value());
 
   zx::status endpoints = fdf::CreateEndpoints<test_transport::TwoWayTest>();
@@ -181,12 +208,18 @@ TEST(WireClient, CannotBindUnsynchronizedDispatcher) {
   });
   ASSERT_NO_FATAL_FAILURE(exception_handler.WaitForOneSwBreakpoint());
   ASSERT_OK(created.Wait());
+
+  dispatcher->ShutdownAsync();
+  ASSERT_OK(dispatcher_shutdown.Wait());
 }
 
 TEST(WireSharedClient, CanBindUnsynchronizedDispatcher) {
   fidl_driver_testing::ScopedFakeDriver driver;
 
-  zx::status dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED);
+  libsync::Completion dispatcher_shutdown;
+  zx::status dispatcher =
+      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED,
+                              [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
   ASSERT_OK(dispatcher.status_value());
 
   zx::status endpoints = fdf::CreateEndpoints<test_transport::TwoWayTest>();
@@ -200,6 +233,9 @@ TEST(WireSharedClient, CanBindUnsynchronizedDispatcher) {
     created.Signal();
   });
   ASSERT_OK(created.Wait());
+
+  dispatcher->ShutdownAsync();
+  ASSERT_OK(dispatcher_shutdown.Wait());
 }
 
 #endif  // NDEBUG

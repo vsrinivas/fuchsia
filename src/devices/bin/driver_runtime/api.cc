@@ -169,3 +169,7 @@ __EXPORT fdf_status_t fdf_internal_wait_until_dispatcher_idle(fdf_dispatcher_t* 
 __EXPORT fdf_status_t fdf_internal_wait_until_all_dispatchers_idle() {
   return driver_runtime::DispatcherCoordinator::WaitUntilDispatchersIdle();
 }
+
+__EXPORT bool fdf_internal_dispatcher_has_queued_tasks(fdf_dispatcher_t* dispatcher) {
+  return dispatcher->HasQueuedTasks();
+}

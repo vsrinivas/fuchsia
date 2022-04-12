@@ -29,7 +29,7 @@ class Driver : public fbl::RefCounted<Driver> {
   Driver(Driver&&) = delete;
   Driver& operator=(Driver&&) = delete;
 
-  ~Driver() = default;
+  ~Driver();
 
   zx_driver_t* zx_driver() const { return zx_driver_; }
 

@@ -12,7 +12,7 @@ namespace driver_runtime_benchmark {
 // Register a benchmark that is specified by a class.
 //
 // Any class may be used as long as it provides a Run() method that runs an
-// iteration of the test.
+// iteration of the test, and a TearDown() method.
 template <class TestClass, typename... Args>
 void RegisterTest(const char* test_name, Args... args) {
   perftest::RegisterTest(test_name, [=](perftest::RepeatState* state) {
@@ -20,6 +20,7 @@ void RegisterTest(const char* test_name, Args... args) {
     while (state->KeepRunning()) {
       test.Run();
     }
+    test.TearDown();
     return true;
   });
 }

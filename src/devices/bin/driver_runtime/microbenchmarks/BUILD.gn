@@ -22,6 +22,7 @@ executable("bin") {
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/sync:sync-cpp",
     "//zircon/system/ulib/zx",
   ]
   public_deps = [ "//zircon/system/ulib/perftest" ]

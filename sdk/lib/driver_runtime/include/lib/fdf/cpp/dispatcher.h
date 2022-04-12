@@ -64,23 +64,17 @@ class Dispatcher {
   // (and unmodified) until the handler runs.
   //
   // This must be called from a thread managed by the driver runtime.
-  //
-  // TODO(fxbug.dev/87840): make |shutdown_handler| non-optional.
-  static zx::status<Dispatcher> Create(uint32_t options, ShutdownHandler shutdown_handler = nullptr,
+  static zx::status<Dispatcher> Create(uint32_t options, ShutdownHandler shutdown_handler,
                                        cpp17::string_view scheduler_role = {}) {
     // We need to create an additional shutdown context in addition to the fdf::Dispatcher
     // object, as the fdf::Dispatcher may be destructed before the shutdown handler
     // is called. This can happen if the raw pointer is released from the fdf::Dispatcher.
-    std::unique_ptr<DispatcherShutdownContext> dispatcher_shutdown_context;
-    if (shutdown_handler) {
-      dispatcher_shutdown_context =
-          std::make_unique<DispatcherShutdownContext>(std::move(shutdown_handler));
-    }
+    auto dispatcher_shutdown_context =
+        std::make_unique<DispatcherShutdownContext>(std::move(shutdown_handler));
     fdf_dispatcher_t* dispatcher;
-    zx_status_t status = fdf_dispatcher_create(
-        options, scheduler_role.data(), scheduler_role.size(),
-        dispatcher_shutdown_context ? dispatcher_shutdown_context->observer() : nullptr,
-        &dispatcher);
+    zx_status_t status =
+        fdf_dispatcher_create(options, scheduler_role.data(), scheduler_role.size(),
+                              dispatcher_shutdown_context->observer(), &dispatcher);
     if (status != ZX_OK) {
       return zx::error(status);
     }

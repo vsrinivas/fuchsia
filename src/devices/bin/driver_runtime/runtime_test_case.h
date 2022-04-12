@@ -53,7 +53,8 @@ class RuntimeTestCase : public zxtest::Test {
     // |require_callback| specifies whether the destructor will check that the callback was called.
     // This can be set to false for tests that expect construction of the dispatcher to fail,
     // but want to pass in a valid observer.
-    explicit DispatcherShutdownObserver(bool require_callback = true) : require_callback_(require_callback) {
+    explicit DispatcherShutdownObserver(bool require_callback = true)
+        : require_callback_(require_callback) {
       observer_.fdf_observer.handler = DispatcherDestructedHandler;
     }
 

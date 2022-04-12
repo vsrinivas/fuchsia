@@ -28,16 +28,21 @@ class Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TEST> {
  public:
   static zx_status_t Bind(void* ctx, zx_device_t* device);
 
-  Device(zx_device_t* parent, fdf::Dispatcher dispatcher)
-      : DeviceType(parent), dispatcher_(std::move(dispatcher)) {}
+  Device(zx_device_t* parent) : DeviceType(parent), unbind_txn_(nullptr) {}
 
   // TestDevice protocol implementation.
   void SetTestData(SetTestDataRequestView request, SetTestDataCompleter::Sync& completer) override;
 
   // Device protocol implementation.
   zx_status_t DdkServiceConnect(const char* service_name, fdf::Channel channel);
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
+  void DdkUnbind(ddk::UnbindTxn txn) {
+    dispatcher_.ShutdownAsync();
+    unbind_txn_ = std::move(txn);
+  }
   void DdkRelease() { delete this; }
+
+  zx_status_t Init();
+  void ShutdownHandler(fdf_dispatcher_t* dispatcher);
 
  private:
   // Replies to the request in |channel_read|.
@@ -49,6 +54,8 @@ class Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TEST> {
   fdf::Dispatcher dispatcher_;
 
   std::unique_ptr<fdf::ChannelRead> channel_read_;
+
+  ddk::UnbindTxn unbind_txn_;
 
   // Data set by the test using |SetTestData|.
   uint8_t data_[fuchsia_device_runtime_test::wire::kMaxTransferSize];
@@ -135,15 +142,25 @@ void Device::SetTestData(SetTestDataRequestView request, SetTestDataCompleter::S
   completer.ReplySuccess();
 }
 
-// static
-zx_status_t Device::Bind(void* ctx, zx_device_t* device) {
-  auto dispatcher = fdf::Dispatcher::Create(0);
+void Device::ShutdownHandler(fdf_dispatcher_t* dispatcher) { unbind_txn_.Reply(); }
+
+zx_status_t Device::Init() {
+  auto dispatcher = fdf::Dispatcher::Create(0, fit::bind_member(this, &Device::ShutdownHandler));
   if (dispatcher.is_error()) {
     return dispatcher.status_value();
   }
+  dispatcher_ = *std::move(dispatcher);
+  return ZX_OK;
+}
 
-  auto dev = std::make_unique<Device>(device, *std::move(dispatcher));
-  auto status = dev->DdkAdd("parent");
+// static
+zx_status_t Device::Bind(void* ctx, zx_device_t* device) {
+  auto dev = std::make_unique<Device>(device);
+  zx_status_t status = dev->Init();
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = dev->DdkAdd("parent");
   if (status == ZX_OK) {
     // devmgr is now in charge of the memory for dev
     __UNUSED auto ptr = dev.release();

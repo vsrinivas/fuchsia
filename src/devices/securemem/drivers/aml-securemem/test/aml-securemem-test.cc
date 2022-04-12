@@ -131,7 +131,8 @@ class AmlogicSecureMemTest : public zxtest::Test {
     // We initialize this in a dispatcher thread so that fdf_dispatcher_get_current_dispatcher
     // works. This dispatcher isn't actually used in the test.
     fdf_internal_push_driver(reinterpret_cast<void*>(0x12345678));
-    auto dispatcher = fdf::Dispatcher::Create(0);
+    auto dispatcher =
+        fdf::Dispatcher::Create(0, fit::bind_member(this, &AmlogicSecureMemTest::ShutdownHandler));
     fdf_internal_pop_driver();
     ASSERT_OK(dispatcher.status_value());
     dispatcher_ = *std::move(dispatcher);
@@ -157,6 +158,14 @@ class AmlogicSecureMemTest : public zxtest::Test {
       completion.Signal();
     });
     completion.Wait();
+
+    dispatcher_.ShutdownAsync();
+    ASSERT_OK(shutdown_completion_.Wait());
+  }
+
+  void ShutdownHandler(fdf_dispatcher_t* dispatcher) {
+    ASSERT_EQ(dispatcher, dispatcher_.get());
+    shutdown_completion_.Signal();
   }
 
   zx_device_t* parent() { return reinterpret_cast<zx_device_t*>(&ctx_); }
@@ -170,6 +179,8 @@ class AmlogicSecureMemTest : public zxtest::Test {
   FakeTee tee_;
   Context ctx_ = {};
   fdf::Dispatcher dispatcher_;
+
+  libsync::Completion shutdown_completion_;
 };
 
 TEST_F(AmlogicSecureMemTest, GetSecureMemoryPhysicalAddressBadVmo) {

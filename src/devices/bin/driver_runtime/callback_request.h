@@ -28,7 +28,13 @@ class CallbackRequest
     : public fbl::DoublyLinkedListable<std::unique_ptr<CallbackRequest>,
                                        fbl::NodeOptions::AllowRemoveFromContainer> {
  public:
-  CallbackRequest() = default;
+  enum class RequestType {
+    kTask,
+    kOther,
+  };
+
+  explicit CallbackRequest(RequestType request_type = RequestType::kOther)
+      : request_type_(request_type) {}
 
   // Initializes the callback to be queued.
   // Sets the dispatcher, and the callback that will be called by |Call|.
@@ -78,7 +84,11 @@ class CallbackRequest
     return async_operation_.has_value() && *async_operation_ == operation;
   }
 
+  RequestType request_type() { return request_type_; }
+
  private:
+  const RequestType request_type_;
+
   struct fdf_dispatcher* dispatcher_ = nullptr;
   Callback callback_;
   // Reason for scheduling the callback.

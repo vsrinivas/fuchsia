@@ -7,6 +7,7 @@
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fdf/internal.h>
 #include <lib/fit/defer.h>
+#include <lib/sync/cpp/completion.h>
 #include <zircon/errors.h>
 
 #include <memory>
@@ -31,7 +32,9 @@ struct TestServer : public fdf::Server<test_transport::TwoWayTest> {
 TEST(DriverTransport, NaturalTwoWayAsync) {
   fidl_driver_testing::ScopedFakeDriver driver;
 
-  auto dispatcher = fdf::Dispatcher::Create(0);
+  libsync::Completion dispatcher_shutdown;
+  auto dispatcher = fdf::Dispatcher::Create(
+      0, [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
   ASSERT_OK(dispatcher.status_value());
 
   auto channels = fdf::ChannelPair::Create(0);
@@ -65,12 +68,18 @@ TEST(DriverTransport, NaturalTwoWayAsync) {
   };
   async::PostTask(dispatcher->async_dispatcher(), std::move(destroy_on_dispatcher_thread));
   ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
+
+  dispatcher->ShutdownAsync();
+  ASSERT_OK(dispatcher_shutdown.Wait());
 }
 
 TEST(DriverTransport, NaturalTwoWayAsyncShared) {
   fidl_driver_testing::ScopedFakeDriver driver;
 
-  auto dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED);
+  libsync::Completion dispatcher_shutdown;
+  auto dispatcher =
+      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED,
+                              [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
   ASSERT_OK(dispatcher.status_value());
 
   auto channels = fdf::ChannelPair::Create(0);
@@ -95,6 +104,9 @@ TEST(DriverTransport, NaturalTwoWayAsyncShared) {
       });
 
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
+
+  dispatcher->ShutdownAsync();
+  ASSERT_OK(dispatcher_shutdown.Wait());
 }
 
 }  // namespace

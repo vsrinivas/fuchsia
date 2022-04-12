@@ -42,7 +42,10 @@ bool EchoCallBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   fdf_internal_push_driver(driver);
   auto deferred = fit::defer([]() { fdf_internal_pop_driver(); });
 
-  auto dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED);
+  libsync::Completion dispatcher_shutdown;
+  auto dispatcher =
+      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED,
+                              [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
   ZX_ASSERT(ZX_OK == dispatcher.status_value());
 
   auto channels = fdf::ChannelPair::Create(0);
@@ -89,6 +92,9 @@ bool EchoCallBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   async::PostTask(dispatcher->async_dispatcher(),
                   [client = std::move(client), &destroyed]() { destroyed.Signal(); });
   ZX_ASSERT(ZX_OK == destroyed.Wait());
+
+  dispatcher->ShutdownAsync();
+  ZX_ASSERT(ZX_OK == dispatcher_shutdown.Wait());
 
   return true;
 }

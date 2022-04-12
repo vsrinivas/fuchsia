@@ -28,7 +28,10 @@ class TestServer : public fdf::Server<test_transport::SendFdfChannelTest> {
 TEST(DriverTransport, NaturalSendFdfChannelAsync) {
   fidl_driver_testing::ScopedFakeDriver driver;
 
-  auto dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED);
+  libsync::Completion dispatcher_shutdown;
+  auto dispatcher =
+      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED,
+                              [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
   ASSERT_OK(dispatcher.status_value());
 
   auto channels = fdf::ChannelPair::Create(0);
@@ -59,6 +62,9 @@ TEST(DriverTransport, NaturalSendFdfChannelAsync) {
           });
 
   ASSERT_OK(completion.Wait());
+
+  dispatcher->ShutdownAsync();
+  ASSERT_OK(dispatcher_shutdown.Wait());
 }
 
 }  // namespace
