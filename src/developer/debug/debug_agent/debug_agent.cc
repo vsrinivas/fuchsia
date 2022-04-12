@@ -784,7 +784,7 @@ debug::Status DebugAgent::AttachToLimboProcess(zx_koid_t process_koid, uint32_t 
 debug::Status DebugAgent::AttachToExistingProcess(zx_koid_t process_koid, uint32_t transaction_id) {
   std::unique_ptr<ProcessHandle> process_handle = system_interface_->GetProcess(process_koid);
   if (!process_handle)
-    return debug::Status("Can not fild process " + std::to_string(process_koid) + " to attach to.");
+    return debug::Status("Can't find process " + std::to_string(process_koid) + " to attach to.");
 
   DebuggedProcess* process = nullptr;
   if (auto status =
