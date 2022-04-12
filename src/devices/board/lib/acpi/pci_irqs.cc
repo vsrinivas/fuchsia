@@ -13,8 +13,7 @@
 
 #include <acpica/acpi.h>
 
-#include "acpi-private.h"
-#include "pci.h"
+#include "src/devices/board/lib/acpi/pci-internal.h"
 #include "src/devices/board/lib/acpi/status.h"
 #include "src/devices/board/lib/acpi/util.h"
 
@@ -142,7 +141,7 @@ void AddIrqToAccounting(acpi_legacy_irq irq, x64Pciroot::Context* context,
   // directly point to the backing storage in the pciroot protocol implementation.
   if (auto found_entry = std::find_if(routing_vec.begin(), routing_vec.end(), find_fn);
       found_entry != std::end(routing_vec)) {
-    found_entry->pins[entry->Pin] = irq.vector;
+    found_entry->pins[entry->Pin] = static_cast<uint8_t>(irq.vector);
   } else {
     pci_irq_routing_entry_t new_entry = {
         .port_device_id = (port) ? port->dev_id : static_cast<uint8_t>(PCI_IRQ_ROUTING_NO_PARENT),
@@ -151,7 +150,7 @@ void AddIrqToAccounting(acpi_legacy_irq irq, x64Pciroot::Context* context,
         .device_id = local_dev_id,
         .pins = {0},
     };
-    new_entry.pins[entry->Pin] = irq.vector;
+    new_entry.pins[entry->Pin] = static_cast<uint8_t>(irq.vector);
     routing_vec.push_back(new_entry);
   }
 }
@@ -200,7 +199,8 @@ ACPI_STATUS ReadPciRoutingTable(ACPI_HANDLE object, x64Pciroot::Context* context
 
 namespace acpi {
 
-ACPI_STATUS GetPciRootIrqRouting(ACPI_HANDLE root_obj, x64Pciroot::Context* context) {
+ACPI_STATUS GetPciRootIrqRouting(acpi::Acpi* acpi, ACPI_HANDLE root_obj,
+                                 x64Pciroot::Context* context) {
   // Start with the Root's _PRT. The spec requires that one exists.
   ACPI_STATUS status = ReadPciRoutingTable(root_obj, context, std::nullopt);
   if (status != AE_OK) {
@@ -214,7 +214,7 @@ ACPI_STATUS GetPciRootIrqRouting(ACPI_HANDLE root_obj, x64Pciroot::Context* cont
   // configurations.
   ACPI_HANDLE child = nullptr;
   while ((status = AcpiGetNextObject(ACPI_TYPE_DEVICE, root_obj, child, &child)) == AE_OK) {
-    if (auto res = acpi::GetObjectInfo(child); res.is_ok()) {
+    if (auto res = acpi->GetObjectInfo(child); res.is_ok()) {
       // If the object we're examining has a PCI address then use that as the
       // basis for the routing table we're inspecting.
       // Format: Acpi 6.1 section 6.1.1 "_ADR (Address)"

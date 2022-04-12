@@ -30,11 +30,9 @@
 #include <fbl/vector.h>
 #include <region-alloc/region-alloc.h>
 
-#include "acpi-private.h"
-#include "errors.h"
-#include "methods.h"
 #include "src/devices/board/lib/acpi/acpi.h"
 #include "src/devices/board/lib/acpi/manager.h"
+#include "src/devices/board/lib/acpi/pci-internal.h"
 #include "src/devices/board/lib/acpi/resources.h"
 
 // This file contains the implementation for the code supporting the in-progress userland
@@ -83,7 +81,7 @@ static acpi::status<> resource_report_callback(ACPI_RESOURCE* res, ResourceConte
     }
 
     if (!addr.min_address_fixed || !addr.max_address_fixed || addr.maximum < addr.minimum) {
-      printf("WARNING: ACPI found bad _CRS address entry\n");
+      zxlogf(WARNING, "ACPI found bad _CRS address entry\n");
       return acpi::ok();
     }
 
@@ -143,7 +141,7 @@ static acpi::status<> resource_report_callback(ACPI_RESOURCE* res, ResourceConte
     alloc = &RootHost->Io();
   }
 
-  zxlogf(DEBUG, "ACPI range modification: %sing %s %016lx %016lx", add_range ? "add" : "subtract",
+  zxlogf(INFO, "ACPI range modification: %sing %s %016lx %016lx", add_range ? "add" : "subtract",
          is_mmio ? "MMIO" : "PIO", base, len);
   // Not all resources ACPI informs us are in use are provided to us as
   // resources in the first search, so we allow Incomplete ranges in both add
@@ -173,7 +171,7 @@ static acpi::status<> resource_report_callback(ACPI_RESOURCE* res, ResourceConte
 static acpi::status<> walk_devices_callback(ACPI_HANDLE object, ResourceContext* ctx,
                                             acpi::Acpi* acpi) {
   acpi::UniquePtr<ACPI_DEVICE_INFO> info;
-  auto res = acpi::GetObjectInfo(object);
+  auto res = acpi->GetObjectInfo(object);
   if (res.is_error()) {
     zxlogf(DEBUG, "acpi::GetObjectInfo failed %d", res.error_value());
     return res.take_error();
@@ -181,6 +179,7 @@ static acpi::status<> walk_devices_callback(ACPI_HANDLE object, ResourceContext*
   info = std::move(res.value());
 
   ctx->device_is_root_bridge = (info->Flags & ACPI_PCI_ROOT_BRIDGE) != 0;
+  zxlogf(INFO, "Is root bridge? %d HID=%s", ctx->device_is_root_bridge, info->HardwareId.String);
 
   acpi::status<> status = acpi->WalkResources(
       object, const_cast<char*>("_CRS"),
@@ -272,9 +271,10 @@ static zx_status_t read_mcfg_table(std::vector<McfgAllocation>* mcfg_table) {
   return ZX_OK;
 }
 
-zx_status_t pci_init_interrupts(ACPI_HANDLE object, x64Pciroot::Context* dev_ctx) {
+zx_status_t pci_init_interrupts(acpi::Acpi* acpi, ACPI_HANDLE object,
+                                x64Pciroot::Context* dev_ctx) {
   zx::vmo routing_vmo{};
-  if (acpi::GetPciRootIrqRouting(object, dev_ctx) != AE_OK) {
+  if (acpi::GetPciRootIrqRouting(acpi, object, dev_ctx) != AE_OK) {
     zxlogf(ERROR, "Failed to obtain PCI IRQ routing information, legacy IRQs will not function");
   }
 
@@ -383,16 +383,15 @@ zx_status_t pci_init_segment_and_ecam(acpi::Acpi* acpi, ACPI_HANDLE object,
     }
   }
 
-  if (zxlog_level_enabled(DEBUG)) {
-    fbl::StringBuffer<128> log;
-    log.AppendPrintf("%s { acpi_obj(%p), bus range: %u:%u, segment: %u", dev_ctx->name,
-                     dev_ctx->acpi_object, pinfo.start_bus_num, pinfo.end_bus_num,
-                     pinfo.segment_group);
+  if (zxlog_level_enabled(INFO)) {
+    fbl::StringBuffer<256> log;
+    log.AppendPrintf("PCI { acpi_obj(%p), bus range: %u:%u, segment: %u", dev_ctx->acpi_object,
+                     pinfo.start_bus_num, pinfo.end_bus_num, pinfo.segment_group);
     if (pinfo.ecam_vmo != ZX_HANDLE_INVALID) {
       log.AppendPrintf(", ecam base: %#" PRIxPTR, mcfg_alloc.address);
     }
     log.AppendPrintf(" }");
-    zxlogf(DEBUG, "%s", log.c_str());
+    zxlogf(INFO, "%s", log.c_str());
   }
 
   return ZX_OK;
@@ -453,7 +452,7 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object,
     return status;
   }
 
-  status = pci_init_interrupts(object, &dev_ctx);
+  status = pci_init_interrupts(manager->acpi(), object, &dev_ctx);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Initializing %.*s interrupt information failed: %s",
            static_cast<int>(sizeof(dev_ctx.name)), dev_ctx.name, zx_status_get_string(status));
