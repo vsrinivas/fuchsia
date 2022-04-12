@@ -815,6 +815,10 @@ def main():
         # and we don't enforce hemeticity on rustc, we also exempt clippy.
         "clippy_wrapper.sh",
         "copy_crimes.sh",
+        # When recursively copying a directory, shutil.copy_tree first recursively
+        # deletes the old files. It has to read directories to delete all the files
+        # in them, and those files arent listed in the generated depfile.
+        "copy_tree.py",
     }
     if os.path.basename(script) in ignored_scripts:
         return retval
