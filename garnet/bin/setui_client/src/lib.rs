@@ -418,6 +418,12 @@ impl Into<Vec<LightState>> for LightGroup {
 }
 
 pub async fn run_command(command: SettingClient) -> Result<(), Error> {
+    println!(
+        "setui_client is DEPRECATED, please use `ffx setui` instead. Opt in by running a command: \
+        {cmd}. More information can be found in {here}.",
+        cmd = "ffx config set setui true",
+        here = "https://fuchsia.dev/reference/tools/sdk/ffx#setui"
+    );
     match command.nested {
         SettingClientSubcommands::Display(Display {
             brightness,
