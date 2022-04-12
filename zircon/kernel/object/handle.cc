@@ -231,4 +231,6 @@ uint32_t HandleTableArena::HandleToIndex(Handle* handle) {
   return static_cast<uint32_t>(handle - reinterpret_cast<Handle*>(arena_.Base()));
 }
 
-int64_t HandleTableArena::get_alloc_failed_count() { return handle_count_alloc_failed.Value(); }
+int64_t HandleTableArena::get_alloc_failed_count() {
+  return handle_count_alloc_failed.SumAcrossAllCpus();
+}

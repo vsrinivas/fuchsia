@@ -55,7 +55,7 @@ bool IsKernelGeneratedTxid(zx_txid_t txid) { return txid >= kMinKernelGeneratedT
 }  // namespace
 
 // static
-int64_t ChannelDispatcher::get_channel_full_count() { return channel_full.Value(); }
+int64_t ChannelDispatcher::get_channel_full_count() { return channel_full.SumAcrossAllCpus(); }
 
 // static
 zx_status_t ChannelDispatcher::Create(KernelHandle<ChannelDispatcher>* handle0,

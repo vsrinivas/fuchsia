@@ -283,9 +283,9 @@ void OwnedWaitQueue::QueuePressureChanged(Thread* t, int old_prio, int new_prio)
   // the counter is effectively protected by the thread lock (although there
   // is no real good way to annotate that fact).
   auto on_exit = fit::defer([&traverse_len]() {
-    auto old = max_pi_chain_traverse.Value();
-    if (old < traverse_len) {
-      max_pi_chain_traverse.Add(traverse_len - old);
+    auto old = max_pi_chain_traverse.ValueCurrCpu();
+    if (traverse_len > old) {
+      max_pi_chain_traverse.Set(traverse_len);
     }
   });
 

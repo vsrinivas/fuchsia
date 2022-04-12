@@ -849,7 +849,7 @@ void PmmNode::DebugMemAvailStateCallback(uint8_t mem_state_idx) const {
   mem_avail_state_callback_(mem_avail_state_context_, mem_state_idx);
 }
 
-int64_t PmmNode::get_alloc_failed_count() { return pmm_alloc_failed.Value(); }
+int64_t PmmNode::get_alloc_failed_count() { return pmm_alloc_failed.SumAcrossAllCpus(); }
 
 bool PmmNode::has_alloc_failed_no_mem() {
   return alloc_failed_no_mem.load(ktl::memory_order_relaxed);

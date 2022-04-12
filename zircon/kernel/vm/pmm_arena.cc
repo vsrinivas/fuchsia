@@ -28,7 +28,8 @@
 
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
-// The maximum number of page runs examined while performing a contiguous allocation.
+// A possibly "lossy" estimate of the maximum number of page runs examined while performing a
+// contiguous allocation.  See the comment where this counter is updated.
 KCOUNTER_DECLARE(counter_max_runs_examined, "vm.pmm.max_runs_examined", Max)
 
 zx_status_t PmmArena::Init(const pmm_arena_info_t* info, PmmNode* node) {
@@ -195,7 +196,8 @@ vm_page_t* PmmArena::FindFreeContiguous(size_t count, uint8_t alignment_log2) {
     }
   }
 
-  int64_t max = counter_max_runs_examined.Value();
+  // If called with preemption enabled, then the counter may fail to observe the true max.
+  int64_t max = counter_max_runs_examined.ValueCurrCpu();
   if (num_runs_examined > max) {
     counter_max_runs_examined.Set(num_runs_examined);
   }

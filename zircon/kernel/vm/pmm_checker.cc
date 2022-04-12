@@ -131,5 +131,5 @@ void PmmChecker::PrintStatus(FILE* f) const {
 }
 
 int64_t PmmChecker::get_validation_failed_count() {
-  return counter_pattern_validation_failed.Value();
+  return counter_pattern_validation_failed.SumAcrossAllCpus();
 }

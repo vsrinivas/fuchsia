@@ -45,10 +45,11 @@
 //             "exceptions.fpu"
 //             "handles.live"
 //
-// Reading the counter values in code:
-// Don't. The counters are maintained in a per-cpu arena and atomic
-// operations are never used to set their value so they are both
-// imprecise and reflect only the operations on a particular core.
+// Reading the counter values in code: Don't. The counters are maintained in a
+// per-cpu arena and atomic operations are never used to set their value so they
+// are both imprecise and reflect only the operations on a particular core. That
+// said, if you really need to you can read a counter using either
+// |ValueCurrCpu| or |SumAcrossAllCpus|.
 
 class CounterDesc {
  public:
@@ -105,9 +106,26 @@ class Counter {
  public:
   explicit constexpr Counter(const counters::Descriptor* desc) : desc_(desc) {}
 
-  int64_t Value() const {
+  // Return the sum of the per-cpu slots for this counter.
+  int64_t SumAcrossAllCpus() const {
+    int64_t sum = 0;
+    percpu::ForEach([&](cpu_num_t cpu_num, percpu* p) {
+      ktl::atomic_ref<int64_t> slot(p->counters[Index()]);
+      sum += slot.load(ktl::memory_order_relaxed);
+    });
+    return sum;
+  }
+
+  // Return the value of the calling cpu's slot for this counter.
+  int64_t ValueCurrCpu() const {
     ktl::atomic_ref<int64_t> slot(*Slot());
     return slot.load(ktl::memory_order_relaxed);
+  }
+
+  // Set the value of calling cpu's slot to |value|. No memory order is implied.
+  void Set(uint64_t value) const {
+    ktl::atomic_ref<int64_t> slot(*Slot());
+    slot.store(value, ktl::memory_order_relaxed);
   }
 
   void Add(int64_t delta) const {
@@ -115,16 +133,9 @@ class Counter {
     slot.store(slot.load(ktl::memory_order_relaxed) + delta, ktl::memory_order_relaxed);
   }
 
-  // Set value of counter to |value|. No memory order is implied.
-  void Set(uint64_t value) const {
-    ktl::atomic_ref<int64_t> slot(*Slot());
-    slot.store(value, ktl::memory_order_relaxed);
-  }
-
- protected:
+ private:
   int64_t* Slot() const { return &percpu::GetCurrent().counters[Index()]; }
 
- private:
   // The order of the descriptors is the order of the slots in each per-CPU
   // array.
   constexpr size_t Index() const { return desc_ - CounterDesc().begin(); }

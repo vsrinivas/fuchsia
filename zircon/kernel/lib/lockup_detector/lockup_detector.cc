@@ -592,9 +592,13 @@ void lockup_timed_end() {
   });
 }
 
-int64_t lockup_get_critical_section_oops_count() { return counter_lockup_cs_count.Value(); }
+int64_t lockup_get_critical_section_oops_count() {
+  return counter_lockup_cs_count.SumAcrossAllCpus();
+}
 
-int64_t lockup_get_no_heartbeat_oops_count() { return counter_lockup_no_heartbeat_oops.Value(); }
+int64_t lockup_get_no_heartbeat_oops_count() {
+  return counter_lockup_no_heartbeat_oops.SumAcrossAllCpus();
+}
 
 namespace {
 
