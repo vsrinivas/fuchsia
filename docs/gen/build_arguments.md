@@ -1477,6 +1477,13 @@ Whether or not to launch screensaver.
 
 From //src/experiences/session_shells/ermine/shell/BUILD.gn:19
 
+### ermine_user_feedback_enabled
+Whether or not to allow user feedback report from the device.
+
+**Current value (from the default):** `false`
+
+From //src/experiences/session_shells/ermine/shell/BUILD.gn:22
+
 ### escher_test_for_glsl_spirv_mismatch
 If true, this enables the |SpirvNotChangedTest| to check if the precompiled
 shaders on disk are up to date and reflect the current shader source code
