@@ -5,7 +5,7 @@
         "sys/component/realm_builder.shard.cml",
     ],
     program: {
-        binary: "test/flutter-embedder-test",
+        binary: "test/flutter-embedder-test-ip",
     },
     offer: [
         {

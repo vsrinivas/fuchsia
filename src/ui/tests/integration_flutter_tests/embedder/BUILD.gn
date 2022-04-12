@@ -49,6 +49,7 @@ fuchsia_unittest_package("flutter-embedder-test") {
 
 test("flutter-embedder-test-bin") {
   sources = [
+    "embedder_view.h",
     "flutter-embedder-test.cc",
     "flutter-embedder-test.h",
   ]
@@ -79,15 +80,19 @@ test("flutter-embedder-test-bin") {
 }
 
 fuchsia_unittest_package("flutter-embedder-test-ip") {
-  manifest = "meta/flutter-embedder-test-ip.cmx"
+  manifest = "meta/flutter-embedder-test-ip.cml"
   deps = [
     ":flutter-embedder-test-ip-bin",
     "//src/connectivity/network/netstack:component-legacy",
+    "//src/lib/fuchsia-component-test/realm_builder_server:fuchsia-component-test",
     "//src/ui/bin/input-pipeline:component-for-test",
     "//src/ui/bin/root_presenter:component_v1_for_test",
     "//src/ui/scenic:component",
     "//src/ui/tests/integration_flutter_tests/embedder/child-view",
     "//src/ui/tests/integration_flutter_tests/embedder/parent-view",
+    "//src/ui/tests/integration_flutter_tests/embedder/parent-view:parent-view-disabled-hittest",
+    "//src/ui/tests/integration_flutter_tests/embedder/parent-view:parent-view-show-overlay",
+    "//src/ui/tests/integration_input_tests:input-pipeline-test-realm",
   ]
   test_specs = {
     log_settings = {
@@ -99,28 +104,32 @@ fuchsia_unittest_package("flutter-embedder-test-ip") {
 
 test("flutter-embedder-test-ip-bin") {
   sources = [
+    "embedder_view.h",
     "flutter-embedder-test-ip.cc",
     "flutter-embedder-test-ip.h",
   ]
   output_name = "flutter-embedder-test-ip"
   deps = [
+    "//sdk/fidl/fuchsia.hardware.display",
     "//sdk/fidl/fuchsia.input.injection",
+    "//sdk/fidl/fuchsia.logger",
+    "//sdk/fidl/fuchsia.scheduler",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.tracing.provider",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.pointerinjector.configuration",
-    "//src/lib/testing/loop_fixture",
-
-    # TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-    "//sdk/fidl/fuchsia.ui.lifecycle",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.vulkan.loader",
     "//sdk/lib/fit",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/ui/input/testing/fake_input_report_device",
     "//src/ui/testing/views",
     "//third_party/googletest:gtest",

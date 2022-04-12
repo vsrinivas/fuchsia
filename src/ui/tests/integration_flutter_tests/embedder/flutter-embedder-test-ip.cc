@@ -4,27 +4,49 @@
 
 #include "src/ui/tests/integration_flutter_tests/embedder/flutter-embedder-test-ip.h"
 
+#include <fuchsia/hardware/display/cpp/fidl.h>
+#include <fuchsia/logger/cpp/fidl.h>
+#include <fuchsia/scheduler/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/tracing/provider/cpp/fidl.h>
+#include <fuchsia/ui/app/cpp/fidl.h>
+#include <fuchsia/ui/pointerinjector/configuration/cpp/fidl.h>
+#include <fuchsia/ui/pointerinjector/cpp/fidl.h>
+#include <fuchsia/vulkan/loader/cpp/fidl.h>
+#include <lib/sys/component/cpp/testing/realm_builder_types.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
+
+namespace {
+
+// Types imported for the realm_builder library.
+using component_testing::ChildRef;
+using component_testing::ParentRef;
+using component_testing::Protocol;
+using component_testing::RealmRoot;
+using component_testing::Route;
+using RealmBuilder = component_testing::RealmBuilder;
+
+constexpr auto kParentFlutter = "parent_flutter";
+constexpr auto kParentFlutterRef = ChildRef{kParentFlutter};
+constexpr auto kInputPipelineTestRealm = "input_pipeline_test_realm";
+constexpr auto kInputPipelineTestRealmRef = ChildRef{kInputPipelineTestRealm};
+
+}  // namespace
+
 namespace flutter_embedder_test_ip {
 
 constexpr char kParentViewUrl[] = "fuchsia-pkg://fuchsia.com/parent-view#meta/parent-view.cmx";
+constexpr char kParentViewDisabledHittestUrl[] =
+    "fuchsia-pkg://fuchsia.com/parent-view-disabled-hittest#meta/parent-view-disabled-hittest.cmx";
+constexpr char kParentViewShowOverlayUrl[] =
+    "fuchsia-pkg://fuchsia.com/parent-view-show-overlay#meta/parent-view-show-overlay.cmx";
 
 constexpr scenic::Color kParentBackgroundColor = {0x00, 0x00, 0xFF, 0xFF};  // Blue
 constexpr scenic::Color kParentTappedColor = {0x00, 0x00, 0x00, 0xFF};      // Black
 constexpr scenic::Color kChildBackgroundColor = {0xFF, 0x00, 0xFF, 0xFF};   // Pink
 constexpr scenic::Color kChildTappedColor = {0xFF, 0xFF, 0x00, 0xFF};       // Yellow
 
-// TODO(fxb/64201): The new flutter renderer draws overlays as a single, large layer.  Some parts of
-// this layer are fully transparent, so we want the compositor to treat the layer as transparent and
-// blend it with the contents below.
-//
-// The gfx Scenic API only provides one way to mark this layer as transparent which is to set an
-// opacity < 1.0 for the entire layer.  In practice, we use 0.9961 (254 / 255) as an opacity value
-// to force transparency.  Unfortunately this causes the overlay to blend very slightly and it looks
-// wrong.
-//
-// Flatland allows marking a layer as transparent while still using a 1.0 opacity value when
-// blending, so migrating flutter to Flatland will fix this issue.  For now we just hard-code the
-// broken, blended values.
+// TODO(fxb/64201): Remove forced opacity colors when Flatland is enabled.
 constexpr scenic::Color kOverlayBackgroundColor1 = {0x00, 0xFF, 0x0E,
                                                     0xFF};  // Green, blended with blue (FEMU local)
 constexpr scenic::Color kOverlayBackgroundColor2 = {0x0E, 0xFF, 0x0E,
@@ -44,47 +66,85 @@ static size_t OverlayPixelCount(std::map<scenic::Color, size_t>& histogram) {
          histogram[kOverlayBackgroundColor5] + histogram[kOverlayBackgroundColor6];
 }
 
-/// Defines a list of services that are injected into the test environment. Unlike the
-/// injected-services in CMX which are injected per test package, these are injected per test and
-/// result in a more hermetic test environment.
-const std::vector<std::pair<const char*, const char*>> GetInjectedServices() {
-  std::vector<std::pair<const char*, const char*>> injected_services = {{
-      {"fuchsia.accessibility.semantics.SemanticsManager",
-       "fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cmx"},
-      {"fuchsia.fonts.Provider", "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx"},
-      {"fuchsia.hardware.display.Provider",
-       "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"},
-      {"fuchsia.intl.PropertyProvider",
-       "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cmx"},
-      {"fuchsia.netstack.Netstack",
-       "fuchsia-pkg://fuchsia.com/flutter-embedder-test-ip#meta/netstack.cmx"},
-      {"fuchsia.posix.socket.Provider",
-       "fuchsia-pkg://fuchsia.com/flutter-embedder-test-ip#meta/netstack.cmx"},
-      {"fuchsia.tracing.provider.Registry",
-       "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"},
-      {"fuchsia.ui.input.ImeService",
-       "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cmx"},
-      {"fuchsia.ui.input.ImeVisibilityService",
-       "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cmx"},
-      {"fuchsia.ui.scenic.Scenic",
-       "fuchsia-pkg://fuchsia.com/flutter-embedder-test-ip#meta/scenic.cmx"},
-      {"fuchsia.ui.pointerinjector.Registry",
-       "fuchsia-pkg://fuchsia.com/flutter-embedder-test-ip#meta/scenic.cmx"},  // For input-pipeline
-      // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-      {"fuchsia.ui.lifecycle.LifecycleController",
-       "fuchsia-pkg://fuchsia.com/flutter-embedder-test-ip#meta/scenic.cmx"},
-      {"fuchsia.ui.policy.Presenter",
-       "fuchsia-pkg://fuchsia.com/flutter-embedder-test-ip#meta/root_presenter.cmx"},
-      {"fuchsia.ui.pointerinjector.configuration.Setup",
-       "fuchsia-pkg://fuchsia.com/flutter-embedder-test-ip#meta/root_presenter.cmx"},
-      {"fuchsia.input.injection.InputDeviceRegistry",
-       "fuchsia-pkg://fuchsia.com/flutter-embedder-test-ip#meta/input-pipeline.cmx"},
-  }};
-  return injected_services;
+void FlutterEmbedderTestIp::SetUpRealmBase() {
+  FX_LOGS(INFO) << "Setting up realm base.";
+  // Add base components.
+  realm_builder_.AddChild(
+      kInputPipelineTestRealm,
+      "fuchsia-pkg://fuchsia.com/flutter-embedder-test-ip#meta/input-pipeline-test-realm.cm");
+
+  // Add base routes.
+  realm_builder_.AddRoute(Route{.capabilities =
+                                    {
+                                        Protocol{fuchsia::logger::LogSink::Name_},
+                                        Protocol{fuchsia::scheduler::ProfileProvider::Name_},
+                                        Protocol{fuchsia::sysmem::Allocator::Name_},
+                                        Protocol{fuchsia::tracing::provider::Registry::Name_},
+                                        Protocol{fuchsia::vulkan::loader::Loader::Name_},
+                                    },
+                                .source = ParentRef{},
+                                .targets = {kInputPipelineTestRealmRef}});
+
+  // Capabilities routed to test driver.
+  realm_builder_.AddRoute(
+      Route{.capabilities = {Protocol{fuchsia::input::injection::InputDeviceRegistry::Name_},
+                             Protocol{fuchsia::ui::pointerinjector::Registry::Name_},
+                             Protocol{fuchsia::ui::policy::Presenter::Name_},
+                             Protocol{fuchsia::ui::scenic::Scenic::Name_}},
+            .source = kInputPipelineTestRealmRef,
+            .targets = {ParentRef{}}});
+}
+
+void FlutterEmbedderTestIp::BuildRealmAndLaunchApp(const std::string& component_url) {
+  FX_LOGS(INFO) << "Building realm with component: " << component_url;
+  realm_builder_.AddLegacyChild(kParentFlutter, component_url);
+
+  // Capabilities routed to embedded flutter app.
+  realm_builder_.AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
+                                .source = ChildRef{kInputPipelineTestRealmRef},
+                                .targets = {kParentFlutterRef}});
+  realm_builder_.AddRoute(Route{.capabilities =
+                                    {
+                                        Protocol{fuchsia::sys::Environment::Name_},
+                                        Protocol{fuchsia::sysmem::Allocator::Name_},
+                                        Protocol{fuchsia::tracing::provider::Registry::Name_},
+                                        Protocol{fuchsia::vulkan::loader::Loader::Name_},
+                                    },
+                                .source = ParentRef{},
+                                .targets = {kParentFlutterRef}});
+
+  realm_builder_.AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
+                                .source = kParentFlutterRef,
+                                .targets = {ParentRef()}});
+  realm_ = std::make_unique<RealmRoot>(realm_builder_.Build());
+
+  scenic_ = realm_->Connect<fuchsia::ui::scenic::Scenic>();
+  scenic_.set_error_handler([](zx_status_t status) {
+    FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
+  });
+
+  FX_LOGS(INFO) << "Launching component: " << component_url;
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+  auto [view_ref_control, view_ref] = scenic::ViewRefPair::New();
+  auto view_provider = realm_->Connect<fuchsia::ui::app::ViewProvider>();
+  view_provider->CreateViewWithViewRef(std::move(view_token.value), std::move(view_ref_control),
+                                       std::move(view_ref));
+
+  // Present the view.
+  embedder_view_.emplace(CreatePresentationContext(), std::move(view_holder_token));
+
+  // Embed the view.
+  std::optional<bool> view_state_changed_observed;
+  embedder_view_->EmbedView(
+      [&view_state_changed_observed](auto) { view_state_changed_observed = true; });
+
+  RunLoopUntil([&view_state_changed_observed] { return view_state_changed_observed.has_value(); });
+  ASSERT_TRUE(view_state_changed_observed.value());
+  FX_LOGS(INFO) << "Launched component: " << component_url;
 }
 
 TEST_F(FlutterEmbedderTestIp, Embedding) {
-  RunAppWithArgs(kParentViewUrl);
+  BuildRealmAndLaunchApp(kParentViewUrl);
 
   // Take screenshot until we see the child-view's embedded color.
   ASSERT_TRUE(
@@ -97,7 +157,7 @@ TEST_F(FlutterEmbedderTestIp, Embedding) {
 }
 
 TEST_F(FlutterEmbedderTestIp, HittestEmbedding) {
-  RunAppWithArgs(kParentViewUrl);
+  BuildRealmAndLaunchApp(kParentViewUrl);
 
   // Take screenshot until we see the child-view's embedded color.
   ASSERT_TRUE(TakeScreenshotUntil(kChildBackgroundColor));
@@ -117,7 +177,7 @@ TEST_F(FlutterEmbedderTestIp, HittestEmbedding) {
 }
 
 TEST_F(FlutterEmbedderTestIp, HittestDisabledEmbedding) {
-  RunAppWithArgs(kParentViewUrl, {"--no-hitTestable"});
+  BuildRealmAndLaunchApp(kParentViewDisabledHittestUrl);
 
   // Take screenshots until we see the child-view's embedded color.
   ASSERT_TRUE(TakeScreenshotUntil(kChildBackgroundColor));
@@ -139,7 +199,7 @@ TEST_F(FlutterEmbedderTestIp, HittestDisabledEmbedding) {
 }
 
 TEST_F(FlutterEmbedderTestIp, EmbeddingWithOverlay) {
-  RunAppWithArgs(kParentViewUrl, {"--showOverlay"});
+  BuildRealmAndLaunchApp(kParentViewShowOverlayUrl);
 
   // Take screenshot until we see the child-view's embedded color.
   ASSERT_TRUE(
@@ -156,7 +216,7 @@ TEST_F(FlutterEmbedderTestIp, EmbeddingWithOverlay) {
 }
 
 TEST_F(FlutterEmbedderTestIp, HittestEmbeddingWithOverlay) {
-  RunAppWithArgs(kParentViewUrl, {"--showOverlay"});
+  BuildRealmAndLaunchApp(kParentViewShowOverlayUrl);
 
   // Take screenshot until we see the child-view's embedded color.
   ASSERT_TRUE(TakeScreenshotUntil(kChildBackgroundColor));

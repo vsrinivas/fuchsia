@@ -21,15 +21,19 @@ nor verify individual pixel colors. For more information, see
 Because the embedder tests use a fake display controller, they can be run on any
 *product*.
 
-```
+```console
 fx set <product>.<board> --with //src/ui/tests
 fx build
 ```
 
 ### Run
 
-```
+```console
+# Run Flutter Embedder Test
 ffx test run fuchsia-pkg://fuchsia.com/flutter-embedder-test#meta/flutter-embedder-test.cm
+
+# Run Flutter Embedder Input Pipeline Test
+ffx test run fuchsia-pkg://fuchsia.com/flutter-embedder-test-ip#meta/flutter-embedder-test-ip.cm
 ```
 
 ## Implementation Details
@@ -38,7 +42,23 @@ ffx test run fuchsia-pkg://fuchsia.com/flutter-embedder-test#meta/flutter-embedd
 
 The Flutter embedder tests use the
 [Realm Builder](/docs/development/testing/components/realm_builder.md) library
-to construct the hermetic test realm for each test.
+to construct the hermetic test realm for each test at runtime. The constructed
+realm has the following topology:
+
+```
+       test_manager
+            |
+     <test component>
+            |
+       <realm root>
+            |                <-Test realm
+ ----------------------------
+     /      |     \          <-Scenic realm
+  Scenic  Hdcp  InputPipeline*
+
+```
+
+<sup>\*</sup> *For `flutter-embedder-test-ip` only.*
 
 ### Test Pattern Overview
 
@@ -46,8 +66,9 @@ Each test consists of the following pattern:
 
 *   Construct the test realm.
 
-    *   Note that there are no variations of the services contained in the realm
-        between tests. We only reconstruct the realm to ensure hermetic tests.
+    *   `flutter-embedder-test` uses ScenicTestRealm whilst
+        `flutter-embedder-test-ip` uses InputPipelineTestRealm. All other
+        services remain the same.
 
 *   Launch and embed the parent-view component with any specified arguments.
 
@@ -58,7 +79,13 @@ Each test consists of the following pattern:
 
 *   The parent-view, in turn, launches and embeds the child-view component.
 
-*   Optionally use Scenic to inject and register input to the root view.
+*   Optionally register input:
+
+    *   For `flutter-embedder-test`, use Scenic to inject and register input to
+        the root view.
+
+    *   For `flutter-embedder-test-ip`, register a fake touch input device into
+        the input pipeline registry and create a fake input event.
 
 *   Use Scenic to take a screenshot until a specified color is found or a
     failure timeout is reached.
@@ -122,6 +149,8 @@ The parent-view can be launched with the following arguments:
     Graph API).
     *   **This flag is not currently used as it has not been enabled yet in
         Flutter.**
+
+The launch arguments are currently specified as part of the component manifest.
 
 ### Overlay Details
 
