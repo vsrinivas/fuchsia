@@ -28,7 +28,7 @@ use crate::error::*;
 ///
 ///                 3-15            reserved for future use
 /// ```
-#[derive(Debug, PartialEq, PartialOrd, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Copy, Clone, Hash)]
 #[allow(dead_code)]
 pub enum OpCode {
     /// Query request [RFC 1035](https://tools.ietf.org/html/rfc1035)
@@ -96,10 +96,10 @@ impl OpCode {
     /// Decodes the binary value of the OpCode
     pub fn from_u8(value: u8) -> ProtoResult<Self> {
         match value {
-            0 => Ok(OpCode::Query),
-            2 => Ok(OpCode::Status),
-            4 => Ok(OpCode::Notify),
-            5 => Ok(OpCode::Update),
+            0 => Ok(Self::Query),
+            2 => Ok(Self::Status),
+            4 => Ok(Self::Notify),
+            5 => Ok(Self::Update),
             _ => Err(format!("unknown OpCode: {}", value).into()),
         }
     }

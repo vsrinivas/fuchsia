@@ -166,7 +166,7 @@ impl<R: RuntimeProvider> AsyncResolver<GenericConnection, GenericConnectionProvi
         options: ResolverOpts,
         runtime: R::Handle,
     ) -> Result<Self, ResolveError> {
-        AsyncResolver::<GenericConnection, GenericConnectionProvider<R>>::new_with_conn(
+        Self::new_with_conn(
             config,
             options,
             GenericConnectionProvider::<R>::new(runtime),
@@ -187,6 +187,11 @@ impl<R: RuntimeProvider> AsyncResolver<GenericConnection, GenericConnectionProvi
     pub fn from_system_conf(runtime: R::Handle) -> Result<Self, ResolveError> {
         Self::from_system_conf_with_provider(GenericConnectionProvider::<R>::new(runtime))
     }
+
+    /// Flushes/Removes all entries from the cache
+    pub async fn clear_cache(&mut self) {
+        self.client_cache.clear_cache();
+    }
 }
 
 impl<C: DnsHandle<Error = ResolveError>, P: ConnectionProvider<Conn = C>> AsyncResolver<C, P> {
@@ -204,7 +209,7 @@ impl<C: DnsHandle<Error = ResolveError>, P: ConnectionProvider<Conn = C>> AsyncR
     /// documentation for `AsyncResolver` for more information on how to use
     /// the background future.
     #[allow(clippy::unnecessary_wraps)]
-    pub(crate) fn new_with_conn(
+    pub fn new_with_conn(
         config: ResolverConfig,
         options: ResolverOpts,
         conn_provider: P,
@@ -237,7 +242,7 @@ impl<C: DnsHandle<Error = ResolveError>, P: ConnectionProvider<Conn = C>> AsyncR
 
         trace!("handle passed back");
         let lru = DnsLru::new(options.cache_size, dns_lru::TtlConfig::from_opts(&options));
-        Ok(AsyncResolver {
+        Ok(Self {
             config,
             options,
             client_cache: CachingClient::with_cache(lru, either, options.preserve_intermediates),
@@ -254,7 +259,7 @@ impl<C: DnsHandle<Error = ResolveError>, P: ConnectionProvider<Conn = C>> AsyncR
         docsrs,
         doc(cfg(all(feature = "system-config", any(unix, target_os = "windows"))))
     )]
-    pub(crate) fn from_system_conf_with_provider(conn_provider: P) -> Result<Self, ResolveError> {
+    pub fn from_system_conf_with_provider(conn_provider: P) -> Result<Self, ResolveError> {
         let (config, options) = super::system_conf::read_system_conf()?;
         Self::new_with_conn(config, options, conn_provider)
     }
@@ -426,7 +431,7 @@ impl<C: DnsHandle<Error = ResolveError>, P: ConnectionProvider<Conn = C>> AsyncR
             self.client_cache.clone(),
             DnsRequestOptions::default(),
             hosts,
-            finally_ip_addr.map(Record::into_data),
+            finally_ip_addr.and_then(Record::into_data),
         )
         .await
     }

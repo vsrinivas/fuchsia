@@ -92,8 +92,8 @@ impl Clone for ResolveErrorKind {
                 trusted: *trusted,
             },
             // foreign
-            Io(io) => ResolveErrorKind::from(std::io::Error::from(io.kind())),
-            Proto(proto) => ResolveErrorKind::from(proto.clone()),
+            Io(io) => Self::from(std::io::Error::from(io.kind())),
+            Proto(proto) => Self::from(proto.clone()),
             Timeout => Timeout,
         }
     }
@@ -114,7 +114,7 @@ impl ResolveError {
         negative_ttl: Option<u32>,
         response_code: ResponseCode,
         trusted: bool,
-    ) -> ResolveError {
+    ) -> Self {
         ResolveErrorKind::NoRecordsFound {
             query: Box::new(query),
             soa: soa.map(Box::new),
@@ -144,6 +144,8 @@ impl ResolveError {
 
     /// A conversion to determine if the response is an error
     pub fn from_response(response: DnsResponse, trust_nx: bool) -> Result<DnsResponse, Self> {
+        debug!("Response:{}", response.header());
+
         match response.response_code() {
             response_code @ ResponseCode::ServFail
             | response_code @ ResponseCode::Refused
@@ -163,8 +165,6 @@ impl ResolveError {
             | response_code @ ResponseCode::BADALG
             | response_code @ ResponseCode::BADTRUNC
             | response_code @ ResponseCode::BADCOOKIE => {
-                debug!("Nameserver responded with {}", response_code);
-
                 let mut response = response;
                 let soa = response.soa();
                 let query = response.take_queries().drain(..).next().unwrap_or_default();
@@ -176,15 +176,13 @@ impl ResolveError {
                     trusted: false,
                 };
 
-                Err(ResolveError::from(error_kind))
+                Err(Self::from(error_kind))
             }
             // Some NXDOMAIN responses contain CNAME referrals, that will not be an error
             response_code @ ResponseCode::NXDomain |
             // No answers are available, CNAME referrals are not failures
             response_code @ ResponseCode::NoError
-            if !response.contains_answer() => {
-                debug!("Nameserver responded with {} and no records", response_code);
-
+            if !response.contains_answer() && !response.truncated() => {
                 // TODO: if authoritative, this is cacheable, store a TTL (currently that requires time, need a "now" here)
                 // let valid_until = if response.is_authoritative() { now + response.get_negative_ttl() };
 
@@ -201,7 +199,7 @@ impl ResolveError {
                     trusted,
                 };
 
-                Err(ResolveError::from(error_kind))
+                Err(Self::from(error_kind))
             }
             ResponseCode::NXDomain
             | ResponseCode::NoError
@@ -289,8 +287,8 @@ impl fmt::Display for ResolveError {
 }
 
 impl From<ResolveErrorKind> for ResolveError {
-    fn from(kind: ResolveErrorKind) -> ResolveError {
-        ResolveError {
+    fn from(kind: ResolveErrorKind) -> Self {
+        Self {
             kind,
             #[cfg(feature = "backtrace")]
             backtrack: trace!(),
@@ -299,7 +297,7 @@ impl From<ResolveErrorKind> for ResolveError {
 }
 
 impl From<&'static str> for ResolveError {
-    fn from(msg: &'static str) -> ResolveError {
+    fn from(msg: &'static str) -> Self {
         ResolveErrorKind::Message(msg).into()
     }
 }
@@ -314,13 +312,13 @@ impl From<ipconfig::error::Error> for ResolveError {
 }
 
 impl From<String> for ResolveError {
-    fn from(msg: String) -> ResolveError {
+    fn from(msg: String) -> Self {
         ResolveErrorKind::Msg(msg).into()
     }
 }
 
 impl From<io::Error> for ResolveError {
-    fn from(e: io::Error) -> ResolveError {
+    fn from(e: io::Error) -> Self {
         match e.kind() {
             io::ErrorKind::TimedOut => ResolveErrorKind::Timeout.into(),
             _ => ResolveErrorKind::from(e).into(),
@@ -329,7 +327,7 @@ impl From<io::Error> for ResolveError {
 }
 
 impl From<ProtoError> for ResolveError {
-    fn from(e: ProtoError) -> ResolveError {
+    fn from(e: ProtoError) -> Self {
         match *e.kind() {
             ProtoErrorKind::Timeout => ResolveErrorKind::Timeout.into(),
             _ => ResolveErrorKind::from(e).into(),
@@ -340,8 +338,8 @@ impl From<ProtoError> for ResolveError {
 impl From<ResolveError> for io::Error {
     fn from(e: ResolveError) -> Self {
         match e.kind() {
-            ResolveErrorKind::Timeout => io::Error::new(io::ErrorKind::TimedOut, e),
-            _ => io::Error::new(io::ErrorKind::Other, e),
+            ResolveErrorKind::Timeout => Self::new(io::ErrorKind::TimedOut, e),
+            _ => Self::new(io::ErrorKind::Other, e),
         }
     }
 }

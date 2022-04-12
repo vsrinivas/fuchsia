@@ -1,6 +1,6 @@
 # **heck** is a case conversion library
 
-!["I specifically requested the opposite of this."](https://github.com/withoutboats/heck/blob/master/no_step_on_snek.png)
+!["I specifically requested the opposite of this."](./no_step_on_snek.png)
 
 This library exists to provide case conversion between common cases like
 CamelCase and snake_case. It is intended to be unicode aware, internally
@@ -28,17 +28,17 @@ underscores) are folded into one. ("hello__world" in snake case is therefore
 "hello_world", not the exact same string). Leading or trailing word boundary
 indicators are dropped, except insofar as CamelCase capitalizes the first word.
 
-### Cases contained in this library:
+## Cases contained in this library:
 
-1. CamelCase
-2. snake_case
-3. kebab-case
-4. SHOUTY_SNAKE_CASE
-5. mixedCase
+1. UpperCamelCase
+2. lowerCamelCase
+3. snake_case
+4. kebab-case
+5. SHOUTY_SNAKE_CASE
 6. Title Case
+7. SHOUTY-KEBAB-CASE
 
-
-### Contributing
+## Contributing
 
 PRs of additional well-established cases welcome.
 
@@ -48,7 +48,14 @@ would prefer **not** to receive PRs to make this behavior more configurable.
 
 Bug reports & fixes always welcome. :-)
 
-### License
+## MSRV
+
+The minimum supported Rust version for this crate is 1.32.0. This may change in
+minor or patch releases, but we probably won't ever require a very recent
+version. If you would like to have a stronger guarantee than that, please open
+an issue.
+
+## License
 
 heck is distributed under the terms of both the MIT license and the
 Apache License (Version 2.0).

@@ -1,4 +1,4 @@
-use core::ptr::{read_volatile, write_volatile};
+use core::ptr::{read_volatile, write_volatile, addr_of, addr_of_mut};
 use core::mem::MaybeUninit;
 use core::ops::{BitAnd, BitOr, Not};
 
@@ -36,10 +36,10 @@ impl<T> Io for Mmio<T> where T: Copy + PartialEq + BitAnd<Output = T> + BitOr<Ou
     type Value = T;
 
     fn read(&self) -> T {
-        unsafe { read_volatile(self.value.as_ptr()) }
+        unsafe { read_volatile(addr_of!(self.value).cast::<T>()) }
     }
 
     fn write(&mut self, value: T) {
-        unsafe { write_volatile(self.value.as_mut_ptr(), value) };
+        unsafe { write_volatile(addr_of_mut!(self.value).cast::<T>(), value) };
     }
 }

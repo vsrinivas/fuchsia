@@ -14,8 +14,7 @@
 //! The basic case is meant for single item enums, like:
 //!
 //! ```rust
-//! # #[macro_use] extern crate enum_as_inner;
-//! # fn main() {
+//! use enum_as_inner::EnumAsInner;
 //!
 //! #[derive(Debug, EnumAsInner)]
 //! enum OneEnum {
@@ -26,18 +25,16 @@
 //!
 //! assert_eq!(*one.as_one().unwrap(), 1);
 //! assert_eq!(one.into_one().unwrap(), 1);
-//! # }
 //! ```
 //!
 //! where the result is either a reference for inner items or a tuple containing the inner items.
 //!
 //! ## Unit case
 //!
-//! This will return copy's of the value of the unit variant, as `isize`:
+//! This will return true if enum's variant matches the expected type
 //!
 //! ```rust
-//! # #[macro_use] extern crate enum_as_inner;
-//! # fn main() {
+//! use enum_as_inner::EnumAsInner;
 //!
 //! #[derive(EnumAsInner)]
 //! enum UnitVariants {
@@ -48,19 +45,15 @@
 //!
 //! let unit = UnitVariants::Two;
 //!
-//! assert_eq!(unit.as_two().unwrap(), ());
-//! # }
+//! assert!(unit.is_two());
 //! ```
-//!
-//! Note that for unit enums there is no `into_*()` function generated.
 //!
 //! ## Mutliple, unnamed field case
 //!
 //! This will return a tuple of the inner types:
 //!
 //! ```rust
-//! # #[macro_use] extern crate enum_as_inner;
-//! # fn main() {
+//! use enum_as_inner::EnumAsInner;
 //!
 //! #[derive(Debug, EnumAsInner)]
 //! enum ManyVariants {
@@ -73,7 +66,6 @@
 //!
 //! assert_eq!(many.as_three().unwrap(), (&true, &1_u32, &2_i64));
 //! assert_eq!(many.into_three().unwrap(), (true, 1_u32, 2_i64));
-//! # }
 //! ```
 //!
 //! ## Multiple, named field case
@@ -81,8 +73,7 @@
 //! This will return a tuple of the inner types, like the unnamed option:
 //!
 //! ```rust
-//! # #[macro_use] extern crate enum_as_inner;
-//! # fn main() {
+//! use enum_as_inner::EnumAsInner;
 //!
 //! #[derive(Debug, EnumAsInner)]
 //! enum ManyVariants {
@@ -95,7 +86,6 @@
 //!
 //! assert_eq!(many.as_three().unwrap(), (&true, &1_u32, &2_i64));
 //! assert_eq!(many.into_three().unwrap(), (true, 1_u32, 2_i64));
-//! # }
 //! ```
 
 extern crate proc_macro;
@@ -105,7 +95,7 @@ extern crate syn;
 #[macro_use]
 extern crate quote;
 
-use heck::SnakeCase;
+use heck::ToSnakeCase;
 use proc_macro2::{Ident, Span, TokenStream};
 use syn::DeriveInput;
 
@@ -117,14 +107,9 @@ fn unit_fields_return(
     doc: &str,
 ) -> TokenStream {
     quote!(
-        #[doc = #doc ]
-        pub fn #function_name(&self) -> Option<()> {
-            match self {
-                #name::#variant_name => {
-                    Some(())
-                }
-                _ => None
-            }
+        #[doc = #doc]
+        pub fn #function_name(&self) -> bool {
+            matches!(self, #name::#variant_name)
         }
     )
 }
@@ -133,64 +118,64 @@ fn unit_fields_return(
 fn unnamed_fields_return(
     name: &syn::Ident,
     variant_name: &syn::Ident,
+    (function_name_mut_ref, doc_mut_ref): (&Ident, &str),
     (function_name_ref, doc_ref): (&Ident, &str),
     (function_name_val, doc_val): (&Ident, &str),
     fields: &syn::FieldsUnnamed,
 ) -> TokenStream {
-    let (returns_ref, returns_val, matches, accesses_ref, accesses_val) = match fields.unnamed.len()
-    {
+    let (returns_mut_ref, returns_ref, returns_val, matches) = match fields.unnamed.len() {
         1 => {
             let field = fields.unnamed.first().expect("no fields on type");
 
             let returns = &field.ty;
+            let returns_mut_ref = quote!(&mut #returns);
             let returns_ref = quote!(&#returns);
             let returns_val = quote!(#returns);
             let matches = quote!(inner);
-            let accesses_ref = quote!(&inner);
-            let accesses_val = quote!(inner);
 
-            (
-                returns_ref,
-                returns_val,
-                matches,
-                accesses_ref,
-                accesses_val,
-            )
+            (returns_mut_ref, returns_ref, returns_val, matches)
         }
-        0 => (quote!(()), quote!(()), quote!(), quote!(()), quote!(())),
+        0 => (quote!(()), quote!(()), quote!(()), quote!()),
         _ => {
+            let mut returns_mut_ref = TokenStream::new();
             let mut returns_ref = TokenStream::new();
             let mut returns_val = TokenStream::new();
             let mut matches = TokenStream::new();
-            let mut accesses_ref = TokenStream::new();
-            let mut accesses_val = TokenStream::new();
 
             for (i, field) in fields.unnamed.iter().enumerate() {
                 let rt = &field.ty;
                 let match_name = Ident::new(&format!("match_{}", i), Span::call_site());
+                returns_mut_ref.extend(quote!(&mut #rt,));
                 returns_ref.extend(quote!(&#rt,));
                 returns_val.extend(quote!(#rt,));
                 matches.extend(quote!(#match_name,));
-                accesses_ref.extend(quote!(&#match_name,));
-                accesses_val.extend(quote!(#match_name,));
             }
 
             (
+                quote!((#returns_mut_ref)),
                 quote!((#returns_ref)),
                 quote!((#returns_val)),
                 quote!(#matches),
-                quote!((#accesses_ref)),
-                quote!((#accesses_val)),
             )
         }
     };
 
     quote!(
+        #[doc = #doc_mut_ref ]
+        pub fn #function_name_mut_ref(&mut self) -> Option<#returns_mut_ref> {
+            match self {
+                #name::#variant_name(#matches) => {
+                    Some((#matches))
+                }
+                _ => None
+            }
+        }
+
         #[doc = #doc_ref ]
         pub fn #function_name_ref(&self) -> Option<#returns_ref> {
             match self {
                 #name::#variant_name(#matches) => {
-                    Some(#accesses_ref)
+                    Some((#matches))
                 }
                 _ => None
             }
@@ -200,7 +185,7 @@ fn unnamed_fields_return(
         pub fn #function_name_val(self) -> ::core::result::Result<#returns_val, Self> {
             match self {
                 #name::#variant_name(#matches) => {
-                    Ok(#accesses_val)
+                    Ok((#matches))
                 },
                 _ => Err(self)
             }
@@ -212,65 +197,66 @@ fn unnamed_fields_return(
 fn named_fields_return(
     name: &syn::Ident,
     variant_name: &syn::Ident,
+    (function_name_mut_ref, doc_mut_ref): (&Ident, &str),
     (function_name_ref, doc_ref): (&Ident, &str),
     (function_name_val, doc_val): (&Ident, &str),
     fields: &syn::FieldsNamed,
 ) -> TokenStream {
-    let (returns_ref, returns_val, matches, accesses_ref, accesses_val) = match fields.named.len() {
+    let (returns_mut_ref, returns_ref, returns_val, matches) = match fields.named.len() {
         1 => {
             let field = fields.named.first().expect("no fields on type");
             let match_name = field.ident.as_ref().expect("expected a named field");
 
             let returns = &field.ty;
+            let returns_mut_ref = quote!(&mut #returns);
             let returns_ref = quote!(&#returns);
             let returns_val = quote!(#returns);
             let matches = quote!(#match_name);
-            let accesses_ref = quote!(&#match_name);
-            let accesses_val = quote!(#match_name);
 
-            (
-                returns_ref,
-                returns_val,
-                matches,
-                accesses_ref,
-                accesses_val,
-            )
+            (returns_mut_ref, returns_ref, returns_val, matches)
         }
-        0 => (quote!(()), quote!(()), quote!(), quote!(()), quote!(())),
+        0 => (quote!(()), quote!(()), quote!(()), quote!(())),
         _ => {
+            let mut returns_mut_ref = TokenStream::new();
             let mut returns_ref = TokenStream::new();
             let mut returns_val = TokenStream::new();
             let mut matches = TokenStream::new();
-            let mut accesses_ref = TokenStream::new();
-            let mut accesses_val = TokenStream::new();
 
             for field in fields.named.iter() {
                 let rt = &field.ty;
                 let match_name = field.ident.as_ref().expect("expected a named field");
 
+                returns_mut_ref.extend(quote!(&mut #rt,));
                 returns_ref.extend(quote!(&#rt,));
                 returns_val.extend(quote!(#rt,));
                 matches.extend(quote!(#match_name,));
-                accesses_ref.extend(quote!(&#match_name,));
-                accesses_val.extend(quote!(#match_name,));
             }
 
             (
+                quote!((#returns_mut_ref)),
                 quote!((#returns_ref)),
                 quote!((#returns_val)),
                 quote!(#matches),
-                quote!((#accesses_ref)),
-                quote!((#accesses_val)),
             )
         }
     };
 
     quote!(
+        #[doc = #doc_mut_ref ]
+        pub fn #function_name_mut_ref(&mut self) -> Option<#returns_mut_ref> {
+            match self {
+                #name::#variant_name{ #matches } => {
+                    Some((#matches))
+                }
+                _ => None
+            }
+        }
+
         #[doc = #doc_ref ]
         pub fn #function_name_ref(&self) -> Option<#returns_ref> {
             match self {
                 #name::#variant_name{ #matches } => {
-                    Some(#accesses_ref)
+                    Some((#matches))
                 }
                 _ => None
             }
@@ -280,7 +266,7 @@ fn named_fields_return(
         pub fn #function_name_val(self) -> ::core::result::Result<#returns_val, Self> {
             match self {
                 #name::#variant_name{ #matches } => {
-                    Ok(#accesses_val)
+                    Ok((#matches))
                 }
                 _ => Err(self)
             }
@@ -290,6 +276,7 @@ fn named_fields_return(
 
 fn impl_all_as_fns(ast: &DeriveInput) -> TokenStream {
     let name = &ast.ident;
+    let generics = &ast.generics;
 
     let enum_data = if let syn::Data::Enum(data) = &ast.data {
         data
@@ -310,6 +297,16 @@ fn impl_all_as_fns(ast: &DeriveInput) -> TokenStream {
             name,
             variant_name,
         );
+        let function_name_mut_ref = Ident::new(
+            &format!("as_{}_mut", variant_name).to_snake_case(),
+            Span::call_site(),
+        );
+        let doc_mut_ref = format!(
+            "Optionally returns mutable references to the inner fields if this is a `{}::{}`, otherwise `None`",
+            name,
+            variant_name,
+        );
+
         let function_name_val = Ident::new(
             &format!("into_{}", variant_name).to_snake_case(),
             Span::call_site(),
@@ -320,31 +317,42 @@ fn impl_all_as_fns(ast: &DeriveInput) -> TokenStream {
             variant_name,
         );
 
+        let function_name_is = Ident::new(
+            &format!("is_{}", variant_name).to_snake_case(),
+            Span::call_site(),
+        );
+        let doc_is = format!(
+            "Returns true if this is a `{}::{}`, otherwise false",
+            name, variant_name,
+        );
+
         let tokens = match &variant_data.fields {
-            syn::Fields::Unit => {
-                unit_fields_return(name, variant_name, &function_name_ref, &doc_ref)
-            }
+            syn::Fields::Unit => unit_fields_return(name, variant_name, &function_name_is, &doc_is),
             syn::Fields::Unnamed(unnamed) => unnamed_fields_return(
                 name,
                 variant_name,
+                (&function_name_mut_ref, &doc_mut_ref),
                 (&function_name_ref, &doc_ref),
                 (&function_name_val, &doc_val),
-                &unnamed,
+                unnamed,
             ),
             syn::Fields::Named(named) => named_fields_return(
                 name,
                 variant_name,
+                (&function_name_mut_ref, &doc_mut_ref),
                 (&function_name_ref, &doc_ref),
                 (&function_name_val, &doc_val),
-                &named,
+                named,
             ),
         };
 
         stream.extend(tokens);
     }
 
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
     quote!(
-        impl #name {
+        impl #impl_generics #name #ty_generics #where_clause {
             #stream
         }
     )

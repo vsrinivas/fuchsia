@@ -14,6 +14,7 @@ use proto::rr::domain::TryParseIp;
 use proto::rr::IntoName;
 use proto::rr::RecordType;
 use tokio::runtime::{self, Runtime};
+use trust_dns_proto::xfer::DnsRequestOptions;
 
 use crate::config::{ResolverConfig, ResolverOpts};
 use crate::error::*;
@@ -83,7 +84,7 @@ impl Resolver {
         let async_resolver =
             AsyncResolver::new(config, options, TokioHandle).expect("failed to create resolver");
 
-        Ok(Resolver {
+        Ok(Self {
             runtime: Mutex::new(runtime),
             async_resolver,
         })
@@ -114,6 +115,13 @@ impl Resolver {
         Self::new(config, options)
     }
 
+    /// Flushes/Removes all entries from the cache
+    pub fn clear_cache(&mut self) -> ResolveResult<()> {
+        let clearing = self.async_resolver.clear_cache();
+        self.runtime.lock()?.block_on(clearing);
+        Ok(())
+    }
+
     /// Generic lookup for any RecordType
     ///
     /// *WARNING* This interface may change in the future, please use [`Self::lookup_ip`] or another variant for more stable interfaces.
@@ -125,7 +133,7 @@ impl Resolver {
     pub fn lookup<N: IntoName>(&self, name: N, record_type: RecordType) -> ResolveResult<Lookup> {
         let lookup = self
             .async_resolver
-            .lookup(name, record_type, Default::default());
+            .lookup(name, record_type, DnsRequestOptions::default());
         self.runtime.lock()?.block_on(lookup)
     }
 

@@ -35,8 +35,8 @@ pub struct TlsClientStreamBuilder<S>(TlsStreamBuilder<S>);
 
 impl<S: Connect> TlsClientStreamBuilder<S> {
     /// Creates a builder fo the construction of a TlsClientStream
-    pub fn new() -> TlsClientStreamBuilder<S> {
-        TlsClientStreamBuilder(TlsStreamBuilder::new())
+    pub fn new() -> Self {
+        Self(TlsStreamBuilder::new())
     }
 
     /// Add a custom trusted peer certificate or certificate authority.
@@ -50,6 +50,11 @@ impl<S: Connect> TlsClientStreamBuilder<S> {
     #[cfg(feature = "mtls")]
     pub fn identity(&mut self, pkcs12: Pkcs12) {
         self.0.identity(pkcs12);
+    }
+
+    /// Sets the address to connect from.
+    pub fn bind_addr(&mut self, bind_addr: SocketAddr) {
+        self.0.bind_addr(bind_addr);
     }
 
     /// Creates a new TlsStream to the specified name_server

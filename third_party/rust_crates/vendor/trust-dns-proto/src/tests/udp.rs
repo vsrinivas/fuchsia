@@ -5,13 +5,15 @@ use log::debug;
 
 use crate::udp::{UdpClientStream, UdpSocket, UdpStream};
 use crate::xfer::dns_handle::DnsStreamHandle;
-use crate::xfer::FirstAnswer;
+use crate::xfer::{DnsRequestOptions, FirstAnswer};
 use crate::{Executor, Time};
 
 /// Test next random udpsocket.
 pub fn next_random_socket_test<S: UdpSocket + Send + 'static, E: Executor>(mut exec: E) {
-    let (stream, _) =
-        UdpStream::<S>::new(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 52));
+    let (stream, _) = UdpStream::<S>::new(
+        SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 52),
+        None,
+    );
     drop(
         exec.block_on(stream)
             .expect("failed to get next socket address"),
@@ -210,7 +212,7 @@ pub fn udp_client_stream_test<S: UdpSocket + Send + 'static, E: Executor, TE: Ti
     for i in 0..send_recv_times {
         // test once
         let response_stream =
-            stream.send_message(DnsRequest::new(query.clone(), Default::default()));
+            stream.send_message(DnsRequest::new(query.clone(), DnsRequestOptions::default()));
         println!("client sending request {}", i);
         let response = match exec.block_on(response_stream.first_answer()) {
             Ok(response) => response,
@@ -222,8 +224,8 @@ pub fn udp_client_stream_test<S: UdpSocket + Send + 'static, E: Executor, TE: Ti
         println!("client got response {}", i);
 
         let response = Message::from(response);
-        if let RData::NULL(null) = response.answers()[0].rdata() {
-            assert_eq!(null.anything().expect("no bytes in NULL"), test_bytes);
+        if let Some(RData::NULL(null)) = response.answers()[0].data() {
+            assert_eq!(null.anything(), test_bytes);
         } else {
             panic!("not a NULL response");
         }

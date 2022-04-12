@@ -113,7 +113,7 @@ pub struct HeaderCounts {
 impl Message {
     /// Returns a new "empty" Message
     pub fn new() -> Self {
-        Message {
+        Self {
             header: Header::new(),
             queries: Vec::new(),
             answers: Vec::new(),
@@ -131,8 +131,8 @@ impl Message {
     /// * `id` - message id should match the request message id
     /// * `op_code` - operation of the request
     /// * `response_code` - the error code for the response
-    pub fn error_msg(id: u16, op_code: OpCode, response_code: ResponseCode) -> Message {
-        let mut message = Message::new();
+    pub fn error_msg(id: u16, op_code: OpCode, response_code: ResponseCode) -> Self {
+        let mut message = Self::new();
         message
             .set_message_type(MessageType::Response)
             .set_id(id)
@@ -671,9 +671,9 @@ impl Message {
     }
 
     /// Decodes a message from the buffer.
-    pub fn from_vec(buffer: &[u8]) -> ProtoResult<Message> {
+    pub fn from_vec(buffer: &[u8]) -> ProtoResult<Self> {
         let mut decoder = BinDecoder::new(buffer);
-        Message::read(&mut decoder)
+        Self::read(&mut decoder)
     }
 
     /// Encodes the Message into a buffer
@@ -763,7 +763,7 @@ impl From<Message> for MessageParts {
             signature,
             edns,
         } = msg;
-        MessageParts {
+        Self {
             header,
             queries,
             answers,
@@ -985,7 +985,7 @@ impl<'r> BinDecodable<'r> for Message {
             header.merge_response_code(high_response_code);
         }
 
-        Ok(Message {
+        Ok(Self {
             header,
             queries,
             answers,
@@ -1105,4 +1105,13 @@ fn test_legit_message() {
     let message = Message::read(&mut decoder).unwrap();
 
     assert_eq!(message.id(), 4096);
+}
+
+#[test]
+fn rdata_zero_roundtrip() {
+    let buf = &[
+        160, 160, 0, 13, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0,
+    ];
+
+    assert!(Message::from_bytes(buf).is_err());
 }

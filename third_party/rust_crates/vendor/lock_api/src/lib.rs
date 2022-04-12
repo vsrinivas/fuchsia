@@ -79,19 +79,21 @@
 //!
 //! # Cargo features
 //!
-//! This crate supports two cargo features:
+//! This crate supports three cargo features:
 //!
 //! - `owning_ref`: Allows your lock types to be used with the `owning_ref` crate.
-//! - `nightly`: Enables nightly-only features. At the moment the only such
-//!   feature is `const fn` constructors for lock types.
+//! - `arc_lock`: Enables locking from an `Arc`. This enables types such as `ArcMutexGuard`. Note that this
+//!   requires the `alloc` crate to be present.
 
 #![no_std]
 #![warn(missing_docs)]
 #![warn(rust_2018_idioms)]
-#![cfg_attr(feature = "nightly", feature(const_fn))]
 
 #[macro_use]
 extern crate scopeguard;
+
+#[cfg(feature = "arc_lock")]
+extern crate alloc;
 
 /// Marker type which indicates that the Guard type for a lock is `Send`.
 pub struct GuardSend(());

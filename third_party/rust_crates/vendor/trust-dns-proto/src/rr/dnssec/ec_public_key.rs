@@ -9,7 +9,7 @@ use super::Algorithm;
 use crate::error::*;
 
 #[allow(unreachable_pub)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct ECPublicKey {
     buf: [u8; MAX_LEN],
     len: usize,
@@ -35,7 +35,7 @@ impl ECPublicKey {
         }
         let mut buf = [0x04u8; MAX_LEN];
         buf[1..len].copy_from_slice(without_prefix);
-        Ok(ECPublicKey { buf, len })
+        Ok(Self { buf, len })
     }
 
     pub fn prefixed_bytes(&self) -> &[u8] {

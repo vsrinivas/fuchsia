@@ -64,6 +64,7 @@ pub const F_SETFL: usize = 4;
 pub const FUTEX_WAIT: usize = 0;
 pub const FUTEX_WAKE: usize = 1;
 pub const FUTEX_REQUEUE: usize = 2;
+pub const FUTEX_WAIT64: usize = 3;
 
 bitflags! {
     pub struct MapFlags: usize {
@@ -294,6 +295,8 @@ bitflags! {
 // Auxiliery vector types
 pub const AT_NULL: usize = 0;
 pub const AT_PHDR: usize = 3;
+pub const AT_PHENT: usize = 4;
+pub const AT_PHNUM: usize = 5;
 pub const AT_ENTRY: usize = 9;
 
 bitflags! {

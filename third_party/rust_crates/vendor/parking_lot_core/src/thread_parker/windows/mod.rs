@@ -9,7 +9,7 @@ use core::{
     ptr,
     sync::atomic::{AtomicPtr, AtomicUsize, Ordering},
 };
-use instant::Instant;
+use std::time::Instant;
 
 mod keyed_event;
 mod waitaddress;
@@ -177,7 +177,7 @@ pub fn thread_yield() {
     // libraries, but that'll probably take a lot longer than patching this here
     // and avoiding the `synchapi` feature entirely.
     extern "system" {
-        fn Sleep(a: winapi::shared::minwindef::DWORD);
+        fn Sleep(a: u32);
     }
     unsafe {
         // We don't use SwitchToThread here because it doesn't consider all

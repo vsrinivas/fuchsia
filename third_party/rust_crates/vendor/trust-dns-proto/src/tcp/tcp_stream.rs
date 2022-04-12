@@ -35,7 +35,13 @@ pub trait DnsTcpStream: AsyncRead + AsyncWrite + Unpin + Send + Sync + Sized + '
 #[async_trait]
 pub trait Connect: DnsTcpStream {
     /// connect to tcp
-    async fn connect(addr: SocketAddr) -> io::Result<Self>;
+    async fn connect(addr: SocketAddr) -> io::Result<Self> {
+        Self::connect_with_bind(addr, None).await
+    }
+
+    /// connect to tcp with address to connect from
+    async fn connect_with_bind(addr: SocketAddr, bind_addr: Option<SocketAddr>)
+        -> io::Result<Self>;
 }
 
 /// Current state while writing to the remote of the TCP connection
@@ -100,7 +106,7 @@ impl<S: Connect> TcpStream<S> {
     pub fn new<E>(
         name_server: SocketAddr,
     ) -> (
-        impl Future<Output = Result<TcpStream<S>, io::Error>> + Send,
+        impl Future<Output = Result<Self, io::Error>> + Send,
         BufDnsStreamHandle,
     )
     where
@@ -120,31 +126,54 @@ impl<S: Connect> TcpStream<S> {
         name_server: SocketAddr,
         timeout: Duration,
     ) -> (
-        impl Future<Output = Result<TcpStream<S>, io::Error>> + Send,
+        impl Future<Output = Result<Self, io::Error>> + Send,
         BufDnsStreamHandle,
     ) {
         let (message_sender, outbound_messages) = BufDnsStreamHandle::new(name_server);
 
         // This set of futures collapses the next tcp socket into a stream which can be used for
         //  sending and receiving tcp packets.
-        let stream_fut = Self::connect(name_server, timeout, outbound_messages);
+        let stream_fut = Self::connect(name_server, None, timeout, outbound_messages);
+
+        (stream_fut, message_sender)
+    }
+
+    /// Creates a new future of the eventually establish a IO stream connection or fail trying
+    ///
+    /// # Arguments
+    ///
+    /// * `name_server` - the IP and Port of the DNS server to connect to
+    /// * `bind_addr` - the IP and port to connect from
+    /// * `timeout` - connection timeout
+    #[allow(clippy::type_complexity)]
+    pub fn with_bind_addr_and_timeout(
+        name_server: SocketAddr,
+        bind_addr: Option<SocketAddr>,
+        timeout: Duration,
+    ) -> (
+        impl Future<Output = Result<Self, io::Error>> + Send,
+        BufDnsStreamHandle,
+    ) {
+        let (message_sender, outbound_messages) = BufDnsStreamHandle::new(name_server);
+        let stream_fut = Self::connect(name_server, bind_addr, timeout, outbound_messages);
 
         (stream_fut, message_sender)
     }
 
     async fn connect(
         name_server: SocketAddr,
+        bind_addr: Option<SocketAddr>,
         timeout: Duration,
         outbound_messages: StreamReceiver,
-    ) -> Result<TcpStream<S>, io::Error> {
-        let tcp = S::connect(name_server);
+    ) -> Result<Self, io::Error> {
+        let tcp = S::connect_with_bind(name_server, bind_addr);
         S::Time::timeout(timeout, tcp)
             .map(move |tcp_stream: Result<Result<S, io::Error>, _>| {
                 tcp_stream
                     .and_then(|tcp_stream| tcp_stream)
                     .map(|tcp_stream| {
                         debug!("TCP connection established to: {}", name_server);
-                        TcpStream {
+                        Self {
                             socket: tcp_stream,
                             outbound_messages,
                             send_state: None,
@@ -202,7 +231,7 @@ impl<S: DnsTcpStream> TcpStream<S> {
         peer_addr: SocketAddr,
         outbound_messages: StreamReceiver,
     ) -> Self {
-        TcpStream {
+        Self {
             socket,
             outbound_messages,
             send_state: None,

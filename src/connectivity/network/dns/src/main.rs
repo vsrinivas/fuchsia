@@ -325,12 +325,14 @@ fn update_resolver<T: ResolverLookup>(resolver: &SharedResolver<T>, servers: Ser
             protocol: Protocol::Udp,
             tls_dns_name: None,
             trust_nx_responses: false,
+            bind_addr: None,
         })
         .chain(std::iter::once(NameServerConfig {
             socket_addr,
             protocol: Protocol::Tcp,
             tls_dns_name: None,
             trust_nx_responses: false,
+            bind_addr: None,
         }))
     }));
 
@@ -1574,12 +1576,14 @@ mod tests {
                     protocol: Protocol::Udp,
                     tls_dns_name: None,
                     trust_nx_responses: false,
+                    bind_addr: None,
                 },
                 NameServerConfig {
                     socket_addr,
                     protocol: Protocol::Tcp,
                     tls_dns_name: None,
                     trust_nx_responses: false,
+                    bind_addr: None,
                 },
             ]
         };

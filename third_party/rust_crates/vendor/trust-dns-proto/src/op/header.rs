@@ -47,7 +47,7 @@ use crate::{
 ///
 /// ```
 ///
-#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Hash)]
 pub struct Header {
     id: u16,
     message_type: MessageType,
@@ -65,8 +65,23 @@ pub struct Header {
     additional_count: u16,
 }
 
+impl fmt::Display for Header {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "{id}:{flags}:{code:?}:{answers}/{authorities}/{additionals}",
+            id = self.id,
+            flags = self.flags(),
+            code = self.response_code,
+            answers = self.answer_count,
+            authorities = self.name_server_count,
+            additionals = self.additional_count,
+        )
+    }
+}
+
 /// Message types are either Query (also Update) or Response
-#[derive(Debug, PartialEq, PartialOrd, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Copy, Clone, Hash)]
 pub enum MessageType {
     /// Queries are Client requests, these are either Queries or Updates
     Query,
@@ -86,7 +101,7 @@ impl fmt::Display for MessageType {
 }
 
 /// All the flags of the request/response header
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Flags {
     authoritative: bool,
     truncation: bool,
@@ -132,7 +147,15 @@ impl fmt::Display for Flags {
 
 impl Default for Header {
     fn default() -> Self {
-        Header {
+        Self::new()
+    }
+}
+
+impl Header {
+    // TODO: we should make id, message_type and op_code all required and non-editable
+    /// A default Header, not very useful.
+    pub const fn new() -> Self {
+        Self {
             id: 0,
             message_type: MessageType::Query,
             op_code: OpCode::Query,
@@ -142,20 +165,12 @@ impl Default for Header {
             recursion_available: false,
             authentic_data: false,
             checking_disabled: false,
-            response_code: ResponseCode::default(),
+            response_code: ResponseCode::NoError,
             query_count: 0,
             answer_count: 0,
             name_server_count: 0,
             additional_count: 0,
         }
-    }
-}
-
-impl Header {
-    // TODO: we should make id, message_type and op_code all required and non-editable
-    /// A default Header, not very useful.
-    pub fn new() -> Self {
-        Default::default()
     }
 
     /// Construct a new header based off the request header. This copies over the RD (recursion-desired)
@@ -176,8 +191,8 @@ impl Header {
     ///    dangerous, given the existing implementation.  Meanings for these
     ///    bits may only be assigned by a Standards Action.
     /// ```
-    pub fn response_from_request(header: &Header) -> Self {
-        Header {
+    pub fn response_from_request(header: &Self) -> Self {
+        Self {
             id: header.id,
             message_type: MessageType::Response,
             op_code: header.op_code,
@@ -566,7 +581,7 @@ impl<'r> BinDecodable<'r> for Header {
 
         // TODO: question, should this use the builder pattern instead? might be cleaner code, but
         //  this guarantees that the Header is fully instantiated with all values...
-        Ok(Header {
+        Ok(Self {
             id,
             message_type,
             op_code,

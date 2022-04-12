@@ -928,13 +928,13 @@ group("tracing-subscriber") {
 
 if (current_os == "fuchsia") {
   group("trust-dns-proto") {
-    public_deps = [ ":trust-dns-proto-v0_21_0-alpha_4" ]
+    public_deps = [ ":trust-dns-proto-v0_21_2" ]
   }
 }
 
 if (current_os == "fuchsia") {
   group("trust-dns-resolver") {
-    public_deps = [ ":trust-dns-resolver-v0_21_0-alpha_4" ]
+    public_deps = [ ":trust-dns-resolver-v0_21_2" ]
   }
 }
 
@@ -4038,17 +4038,17 @@ rust_library("encode_unicode-v0_3_5") {
   visibility = [ ":*" ]
 }
 
-rust_proc_macro("enum-as-inner-v0_3_0") {
+rust_proc_macro("enum-as-inner-v0_4_0") {
   crate_name = "enum_as_inner"
   crate_root = "//third_party/rust_crates/vendor/enum-as-inner/src/lib.rs"
-  output_name = "enum_as_inner-1ccf1af5f033dd92"
+  output_name = "enum_as_inner-8c562e91c2f22b20"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":heck-v0_3_1" ]
+  deps += [ ":heck-v0_4_0" ]
   deps += [ ":proc-macro2-v1_0_28" ]
   deps += [ ":quote-v1_0_7" ]
   deps += [ ":syn-v1_0_74" ]
@@ -4058,8 +4058,8 @@ rust_proc_macro("enum-as-inner-v0_3_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=1ccf1af5f033dd92",
-    "-Cextra-filename=-1ccf1af5f033dd92",
+    "-Cmetadata=8c562e91c2f22b20",
+    "-Cextra-filename=-8c562e91c2f22b20",
   ]
 
   visibility = [ ":*" ]
@@ -4267,7 +4267,7 @@ rust_library("filetime-v0_2_14") {
   deps = []
   deps += [ ":cfg-if-v1_0_0" ]
   if (false) {
-    deps += [ ":redox_syscall-v0_2_5" ]
+    deps += [ ":redox_syscall-v0_2_13" ]
   }
   if (true) {
     deps += [ ":libc-v0_2_116" ]
@@ -4286,7 +4286,7 @@ rust_library("filetime-v0_2_14") {
   ]
 
   aliased_deps = {
-    syscall = ":redox_syscall-v0_2_5"
+    syscall = ":redox_syscall-v0_2_13"
   }
   visibility = [ ":*" ]
 }
@@ -5138,7 +5138,7 @@ rust_library("hashbrown-v0_11_2") {
 
 rust_library("heck-v0_3_1") {
   crate_name = "heck"
-  crate_root = "//third_party/rust_crates/vendor/heck/src/lib.rs"
+  crate_root = "//third_party/rust_crates/vendor/heck-0.3.1/src/lib.rs"
   output_name = "heck-e3dad0497ab5b0fe"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -5155,6 +5155,30 @@ rust_library("heck-v0_3_1") {
     "--edition=2015",
     "-Cmetadata=e3dad0497ab5b0fe",
     "-Cextra-filename=-e3dad0497ab5b0fe",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("heck-v0_4_0") {
+  crate_name = "heck"
+  crate_root = "//third_party/rust_crates/vendor/heck/src/lib.rs"
+  output_name = "heck-d13199f44da95b73"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=d13199f44da95b73",
+    "-Cextra-filename=-d13199f44da95b73",
+    "--cfg=feature=\"default\"",
   ]
 
   visibility = [ ":*" ]
@@ -6059,10 +6083,10 @@ rust_library("lock_api-v0_3_4") {
   visibility = [ ":*" ]
 }
 
-rust_library("lock_api-v0_4_2") {
+rust_library("lock_api-v0_4_7") {
   crate_name = "lock_api"
   crate_root = "//third_party/rust_crates/vendor/lock_api/src/lib.rs"
-  output_name = "lock_api-926aab83183a93db"
+  output_name = "lock_api-ba65d2807a1700b4"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -6076,8 +6100,9 @@ rust_library("lock_api-v0_4_2") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=926aab83183a93db",
-    "-Cextra-filename=-926aab83183a93db",
+    "-Cmetadata=ba65d2807a1700b4",
+    "-Cextra-filename=-ba65d2807a1700b4",
+    "--cfg=has_const_fn_trait_bound",
   ]
 
   visibility = [ ":*" ]
@@ -7123,7 +7148,7 @@ rust_library("parking-v2_0_0") {
 
 rust_library("parking_lot-v0_11_1") {
   crate_name = "parking_lot"
-  crate_root = "//third_party/rust_crates/vendor/parking_lot/src/lib.rs"
+  crate_root = "//third_party/rust_crates/vendor/parking_lot-0.11.1/src/lib.rs"
   output_name = "parking_lot-a739a418d82fd597"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -7132,7 +7157,7 @@ rust_library("parking_lot-v0_11_1") {
 
   deps = []
   deps += [ ":instant-v0_1_9" ]
-  deps += [ ":lock_api-v0_4_2" ]
+  deps += [ ":lock_api-v0_4_7" ]
   deps += [ ":parking_lot_core-v0_8_3" ]
 
   rustenv = []
@@ -7142,6 +7167,32 @@ rust_library("parking_lot-v0_11_1") {
     "--edition=2018",
     "-Cmetadata=a739a418d82fd597",
     "-Cextra-filename=-a739a418d82fd597",
+    "--cfg=feature=\"default\"",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("parking_lot-v0_12_0") {
+  crate_name = "parking_lot"
+  crate_root = "//third_party/rust_crates/vendor/parking_lot/src/lib.rs"
+  output_name = "parking_lot-d9810ba0a454a15a"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":lock_api-v0_4_7" ]
+  deps += [ ":parking_lot_core-v0_9_2" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=d9810ba0a454a15a",
+    "-Cextra-filename=-d9810ba0a454a15a",
     "--cfg=feature=\"default\"",
   ]
 
@@ -7217,7 +7268,8 @@ rust_library("parking_lot_core-v0_6_2") {
 
 rust_library("parking_lot_core-v0_8_3") {
   crate_name = "parking_lot_core"
-  crate_root = "//third_party/rust_crates/vendor/parking_lot_core/src/lib.rs"
+  crate_root =
+      "//third_party/rust_crates/vendor/parking_lot_core-0.8.3/src/lib.rs"
   output_name = "parking_lot_core-21f257089bd39d94"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -7229,7 +7281,7 @@ rust_library("parking_lot_core-v0_8_3") {
   deps += [ ":instant-v0_1_9" ]
   deps += [ ":smallvec-v1_8_0" ]
   if (false) {
-    deps += [ ":redox_syscall-v0_2_5" ]
+    deps += [ ":redox_syscall-v0_2_13" ]
   }
   if (true) {
     deps += [ ":libc-v0_2_116" ]
@@ -7248,7 +7300,44 @@ rust_library("parking_lot_core-v0_8_3") {
   ]
 
   aliased_deps = {
-    syscall = ":redox_syscall-v0_2_5"
+    syscall = ":redox_syscall-v0_2_13"
+  }
+  visibility = [ ":*" ]
+}
+
+rust_library("parking_lot_core-v0_9_2") {
+  crate_name = "parking_lot_core"
+  crate_root = "//third_party/rust_crates/vendor/parking_lot_core/src/lib.rs"
+  output_name = "parking_lot_core-dfc6ae67c90c180f"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":cfg-if-v1_0_0" ]
+  deps += [ ":smallvec-v1_8_0" ]
+  if (false) {
+    deps += [ ":redox_syscall-v0_2_13" ]
+  }
+  if (true) {
+    deps += [ ":libc-v0_2_116" ]
+  }
+  if (false) {
+    deps += [ ":windows-sys-v0_34_0" ]
+  }
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=dfc6ae67c90c180f",
+    "-Cextra-filename=-dfc6ae67c90c180f",
+  ]
+
+  aliased_deps = {
+    syscall = ":redox_syscall-v0_2_13"
   }
   visibility = [ ":*" ]
 }
@@ -8955,10 +9044,10 @@ rust_library("redox_syscall-v0_1_51") {
   visibility = [ ":*" ]
 }
 
-rust_library("redox_syscall-v0_2_5") {
+rust_library("redox_syscall-v0_2_13") {
   crate_name = "syscall"
   crate_root = "//third_party/rust_crates/vendor/redox_syscall/src/lib.rs"
-  output_name = "syscall-23505b3cf82590b2"
+  output_name = "syscall-cd7322001801996f"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -8972,8 +9061,8 @@ rust_library("redox_syscall-v0_2_5") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=23505b3cf82590b2",
-    "-Cextra-filename=-23505b3cf82590b2",
+    "-Cmetadata=cd7322001801996f",
+    "-Cextra-filename=-cd7322001801996f",
   ]
 
   visibility = [ ":*" ]
@@ -11092,7 +11181,7 @@ rust_library("tempfile-v3_2_0") {
   deps += [ ":rand-v0_8_4" ]
   deps += [ ":remove_dir_all-v0_5_1" ]
   if (false) {
-    deps += [ ":redox_syscall-v0_2_5" ]
+    deps += [ ":redox_syscall-v0_2_13" ]
   }
   if (true) {
     deps += [ ":libc-v0_2_116" ]
@@ -11111,7 +11200,7 @@ rust_library("tempfile-v3_2_0") {
   ]
 
   aliased_deps = {
-    syscall = ":redox_syscall-v0_2_5"
+    syscall = ":redox_syscall-v0_2_13"
   }
   visibility = [ ":*" ]
 }
@@ -11805,10 +11894,10 @@ rust_library("treeline-v0_1_0") {
   visibility = [ ":*" ]
 }
 
-rust_library("trust-dns-proto-v0_21_0-alpha_4") {
+rust_library("trust-dns-proto-v0_21_2") {
   crate_name = "trust_dns_proto"
   crate_root = "//third_party/rust_crates/vendor/trust-dns-proto/src/lib.rs"
-  output_name = "trust_dns_proto-ac7f531d8a00954"
+  output_name = "trust_dns_proto-5ca9ed4250881d0e"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -11818,7 +11907,7 @@ rust_library("trust-dns-proto-v0_21_0-alpha_4") {
   deps += [ ":async-trait-v0_1_51($host_toolchain)" ]
   deps += [ ":cfg-if-v1_0_0" ]
   deps += [ ":data-encoding-v2_3_2" ]
-  deps += [ ":enum-as-inner-v0_3_0($host_toolchain)" ]
+  deps += [ ":enum-as-inner-v0_4_0($host_toolchain)" ]
   deps += [ ":futures-channel-v0_3_19" ]
   deps += [ ":futures-io-v0_3_19" ]
   deps += [ ":futures-util-v0_3_19" ]
@@ -11837,18 +11926,18 @@ rust_library("trust-dns-proto-v0_21_0-alpha_4") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=ac7f531d8a00954",
-    "-Cextra-filename=-ac7f531d8a00954",
+    "-Cmetadata=5ca9ed4250881d0e",
+    "-Cextra-filename=-5ca9ed4250881d0e",
     "--cfg=feature=\"testing\"",
   ]
 
   visibility = [ ":*" ]
 }
 
-rust_library("trust-dns-resolver-v0_21_0-alpha_4") {
+rust_library("trust-dns-resolver-v0_21_2") {
   crate_name = "trust_dns_resolver"
   crate_root = "//third_party/rust_crates/vendor/trust-dns-resolver/src/lib.rs"
-  output_name = "trust_dns_resolver-ffc6b5ee4993b09f"
+  output_name = "trust_dns_resolver-fda24c7930416b60"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -11860,18 +11949,18 @@ rust_library("trust-dns-resolver-v0_21_0-alpha_4") {
   deps += [ ":lazy_static-v1_4_0" ]
   deps += [ ":log-v0_4_11" ]
   deps += [ ":lru-cache-v0_1_2" ]
-  deps += [ ":parking_lot-v0_11_1" ]
+  deps += [ ":parking_lot-v0_12_0" ]
   deps += [ ":smallvec-v1_8_0" ]
   deps += [ ":thiserror-v1_0_23" ]
-  deps += [ ":trust-dns-proto-v0_21_0-alpha_4" ]
+  deps += [ ":trust-dns-proto-v0_21_2" ]
 
-  rustenv = [ "CARGO_PKG_VERSION=\"0.21.0-alpha.4\"" ]
+  rustenv = [ "CARGO_PKG_VERSION=\"0.21.2\"" ]
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=ffc6b5ee4993b09f",
-    "-Cextra-filename=-ffc6b5ee4993b09f",
+    "-Cmetadata=fda24c7930416b60",
+    "-Cextra-filename=-fda24c7930416b60",
     "--cfg=feature=\"testing\"",
   ]
 
@@ -13149,6 +13238,33 @@ rust_library("winapi-util-v0_1_5") {
     "--edition=2015",
     "-Cmetadata=d22658bf7990adbd",
     "-Cextra-filename=-d22658bf7990adbd",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("windows-sys-v0_34_0") {
+  crate_name = "windows_sys"
+  crate_root = "//third_party/rust_crates/empty/windows-sys/src/lib.rs"
+  output_name = "windows_sys-aa67305d6d9f8c95"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=aa67305d6d9f8c95",
+    "-Cextra-filename=-aa67305d6d9f8c95",
+    "--cfg=feature=\"Win32_Foundation\"",
+    "--cfg=feature=\"Win32_System_LibraryLoader\"",
+    "--cfg=feature=\"Win32_System_SystemServices\"",
+    "--cfg=feature=\"Win32_System_WindowsProgramming\"",
   ]
 
   visibility = [ ":*" ]

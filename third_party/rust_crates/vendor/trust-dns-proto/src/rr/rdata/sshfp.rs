@@ -76,7 +76,7 @@ impl SSHFP {
         fingerprint_type: FingerprintType,
         fingerprint: Vec<u8>,
     ) -> Self {
-        SSHFP {
+        Self {
             algorithm,
             fingerprint_type,
             fingerprint,
@@ -116,7 +116,8 @@ impl SSHFP {
 ///
 /// The algorithm values have been updated in
 /// [RFC 6594](https://tools.ietf.org/html/rfc6594) and
-/// [RFC 7479](https://tools.ietf.org/html/rfc7479).
+/// [RFC 7479](https://tools.ietf.org/html/rfc7479) and
+/// [RFC 8709](https://tools.ietf.org/html/rfc8709).
 #[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Algorithm {
@@ -135,6 +136,9 @@ pub enum Algorithm {
     /// Ed25519
     Ed25519,
 
+    /// Ed448
+    Ed448,
+
     /// Unassigned value
     Unassigned(u8),
 }
@@ -142,24 +146,26 @@ pub enum Algorithm {
 impl From<u8> for Algorithm {
     fn from(alg: u8) -> Self {
         match alg {
-            0 => Algorithm::Reserved,
-            1 => Algorithm::RSA,
-            2 => Algorithm::DSA,
-            3 => Algorithm::ECDSA,
-            4 => Algorithm::Ed25519, // TODO more (XMSS)
-            _ => Algorithm::Unassigned(alg),
+            0 => Self::Reserved,
+            1 => Self::RSA,
+            2 => Self::DSA,
+            3 => Self::ECDSA,
+            4 => Self::Ed25519, // TODO more (XMSS)
+            6 => Self::Ed448,
+            _ => Self::Unassigned(alg),
         }
     }
 }
 
 impl From<Algorithm> for u8 {
-    fn from(algorithm: Algorithm) -> u8 {
+    fn from(algorithm: Algorithm) -> Self {
         match algorithm {
             Algorithm::Reserved => 0,
             Algorithm::RSA => 1,
             Algorithm::DSA => 2,
             Algorithm::ECDSA => 3,
             Algorithm::Ed25519 => 4,
+            Algorithm::Ed448 => 6,
             Algorithm::Unassigned(alg) => alg,
         }
     }
@@ -205,16 +211,16 @@ pub enum FingerprintType {
 impl From<u8> for FingerprintType {
     fn from(ft: u8) -> Self {
         match ft {
-            0 => FingerprintType::Reserved,
-            1 => FingerprintType::SHA1,
-            2 => FingerprintType::SHA256,
-            _ => FingerprintType::Unassigned(ft),
+            0 => Self::Reserved,
+            1 => Self::SHA1,
+            2 => Self::SHA256,
+            _ => Self::Unassigned(ft),
         }
     }
 }
 
 impl From<FingerprintType> for u8 {
-    fn from(fingerprint_type: FingerprintType) -> u8 {
+    fn from(fingerprint_type: FingerprintType) -> Self {
         match fingerprint_type {
             FingerprintType::Reserved => 0,
             FingerprintType::SHA1 => 1,
@@ -280,6 +286,7 @@ mod tests {
         assert_eq!(Algorithm::DSA, 2.into());
         assert_eq!(Algorithm::ECDSA, 3.into());
         assert_eq!(Algorithm::Ed25519, 4.into());
+        assert_eq!(Algorithm::Ed448, 6.into());
         assert_eq!(Algorithm::Unassigned(17), 17.into());
         assert_eq!(Algorithm::Unassigned(42), 42.into());
 
@@ -288,6 +295,7 @@ mod tests {
         assert_eq!(2u8, Algorithm::DSA.into());
         assert_eq!(3u8, Algorithm::ECDSA.into());
         assert_eq!(4u8, Algorithm::Ed25519.into());
+        assert_eq!(6u8, Algorithm::Ed448.into());
         assert_eq!(17u8, Algorithm::Unassigned(17).into());
         assert_eq!(42u8, Algorithm::Unassigned(42).into());
     }

@@ -64,7 +64,7 @@ where
         config: &ResolverConfig,
         options: &ResolverOpts,
         conn_provider: P,
-    ) -> NameServerPool<C, P> {
+    ) -> Self {
         let datagram_conns: Vec<NameServer<C, P>> = config
             .name_servers()
             .iter()
@@ -101,7 +101,7 @@ where
             })
             .collect();
 
-        NameServerPool {
+        Self {
             datagram_conns: Arc::from(datagram_conns),
             stream_conns: Arc::from(stream_conns),
             #[cfg(feature = "mdns")]
@@ -117,7 +117,7 @@ where
         datagram_conns: Vec<NameServer<C, P>>,
         stream_conns: Vec<NameServer<C, P>>,
     ) -> Self {
-        NameServerPool {
+        Self {
             datagram_conns: Arc::from(datagram_conns),
             stream_conns: Arc::from(stream_conns),
             options: *options,
@@ -148,7 +148,7 @@ where
         datagram_conns: Arc<[NameServer<C, P>]>,
         stream_conns: Arc<[NameServer<C, P>]>,
     ) -> Self {
-        NameServerPool {
+        Self {
             datagram_conns,
             stream_conns,
             options: *options,
@@ -430,6 +430,7 @@ mod tests {
     use proto::op::Query;
     use proto::rr::{Name, RecordType};
     use proto::xfer::{DnsHandle, DnsRequestOptions};
+    use trust_dns_proto::rr::RData;
 
     use super::*;
     use crate::config::NameServerConfig;
@@ -446,6 +447,7 @@ mod tests {
             trust_nx_responses: false,
             #[cfg(feature = "dns-over-rustls")]
             tls_config: None,
+            bind_addr: None,
         };
 
         let config2 = NameServerConfig {
@@ -455,6 +457,7 @@ mod tests {
             trust_nx_responses: false,
             #[cfg(feature = "dns-over-rustls")]
             tls_config: None,
+            bind_addr: None,
         };
 
         let mut resolver_config = ResolverConfig::new();
@@ -518,11 +521,12 @@ mod tests {
             trust_nx_responses: false,
             #[cfg(feature = "dns-over-rustls")]
             tls_config: None,
+            bind_addr: None,
         };
 
         let opts = ResolverOpts {
             try_tcp_on_error: true,
-            ..Default::default()
+            ..ResolverOpts::default()
         };
         let ns_config = { tcp };
         let name_server = NameServer::new_with_provider(ns_config, opts, conn_provider);
@@ -551,8 +555,8 @@ mod tests {
 
         assert_eq!(
             *response.answers()[0]
-                .rdata()
-                .as_a()
+                .data()
+                .and_then(RData::as_a)
                 .expect("no a record available"),
             Ipv4Addr::new(93, 184, 216, 34)
         );
@@ -575,8 +579,8 @@ mod tests {
 
         assert_eq!(
             *response.answers()[0]
-                .rdata()
-                .as_aaaa()
+                .data()
+                .and_then(RData::as_aaaa)
                 .expect("no aaaa record available"),
             Ipv6Addr::new(0x2606, 0x2800, 0x0220, 0x0001, 0x0248, 0x1893, 0x25c8, 0x1946)
         );

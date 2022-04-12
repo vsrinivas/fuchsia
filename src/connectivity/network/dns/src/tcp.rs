@@ -24,8 +24,23 @@ impl trust_dns_proto::tcp::DnsTcpStream for DnsTcpStream {
 #[async_trait]
 impl Connect for DnsTcpStream {
     async fn connect(addr: SocketAddr) -> io::Result<Self> {
-        let connector = TcpStream::connect(addr)?;
-        connector.await.map(Self)
+        TcpStream::connect(addr)?.await.map(Self)
+    }
+
+    async fn connect_with_bind(
+        addr: SocketAddr,
+        bind_addr: Option<SocketAddr>,
+    ) -> io::Result<Self> {
+        match bind_addr {
+            Some(bind_addr) => {
+                unimplemented!(
+                    "https://fxbug.dev/97821: cannot bind to {:?}; `connect_with_bind` is \
+                    unimplemented",
+                    bind_addr,
+                )
+            }
+            None => Self::connect(addr).await,
+        }
     }
 }
 

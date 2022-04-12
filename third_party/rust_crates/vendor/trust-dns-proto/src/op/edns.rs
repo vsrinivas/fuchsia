@@ -42,7 +42,7 @@ pub struct Edns {
 
 impl Default for Edns {
     fn default() -> Self {
-        Edns {
+        Self {
             rcode_high: 0,
             version: 0,
             dnssec_ok: false,
@@ -55,7 +55,7 @@ impl Default for Edns {
 impl Edns {
     /// Creates a new extended DNS object.
     pub fn new() -> Self {
-        Default::default()
+        Self::default()
     }
 
     /// The high order bytes for the response code in the DNS Message
@@ -125,6 +125,7 @@ impl Edns {
     }
 }
 
+// FIXME: this should be a TryFrom
 impl<'a> From<&'a Record> for Edns {
     fn from(value: &'a Record) -> Self {
         assert!(value.rr_type() == RecordType::OPT);
@@ -134,21 +135,21 @@ impl<'a> From<&'a Record> for Edns {
         let dnssec_ok: bool = value.ttl() & 0x0000_8000 == 0x0000_8000;
         let max_payload: u16 = u16::from(value.dns_class());
 
-        let options: OPT = match *value.rdata() {
-            RData::NULL(..) => {
+        let options: OPT = match value.data() {
+            Some(RData::NULL(..)) | None => {
                 // NULL, there was no data in the OPT
                 OPT::default()
             }
-            RData::OPT(ref option_data) => {
+            Some(RData::OPT(ref option_data)) => {
                 option_data.clone() // TODO: Edns should just refer to this, have the same lifetime as the Record
             }
             _ => {
                 // this should be a coding error, as opposed to a parsing error.
-                panic!("rr_type doesn't match the RData: {:?}", value.rdata()) // valid panic, never should happen
+                panic!("rr_type doesn't match the RData: {:?}", value.data()) // valid panic, never should happen
             }
         };
 
-        Edns {
+        Self {
             rcode_high,
             version,
             dnssec_ok,
@@ -161,8 +162,8 @@ impl<'a> From<&'a Record> for Edns {
 impl<'a> From<&'a Edns> for Record {
     /// This returns a Resource Record that is formatted for Edns(0).
     /// Note: the rcode_high value is only part of the rcode, the rest is part of the base
-    fn from(value: &'a Edns) -> Record {
-        let mut record: Record = Record::new();
+    fn from(value: &'a Edns) -> Self {
+        let mut record = Self::new();
 
         record.set_name(Name::root());
         record.set_rr_type(RecordType::OPT);
@@ -181,7 +182,7 @@ impl<'a> From<&'a Edns> for Record {
         //  also, since this is a hash, there is no guarantee that ordering will be preserved from
         //  the original binary format.
         // maybe switch to: https://crates.io/crates/linked-hash-map/
-        record.set_rdata(RData::OPT(value.options().clone()));
+        record.set_data(Some(RData::OPT(value.options().clone())));
 
         record
     }

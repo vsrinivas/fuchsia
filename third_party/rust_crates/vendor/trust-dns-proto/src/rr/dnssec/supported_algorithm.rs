@@ -40,19 +40,19 @@ pub struct SupportedAlgorithms {
 impl SupportedAlgorithms {
     /// Return a new set of Supported algorithms
     pub fn new() -> Self {
-        SupportedAlgorithms { bit_map: 0 }
+        Self { bit_map: 0 }
     }
 
     /// Specify the entire set is supported
     pub fn all() -> Self {
-        SupportedAlgorithms {
+        Self {
             bit_map: 0b0111_1111,
         }
     }
 
     /// Based on the set of Algorithms, return the supported set
     pub fn from_vec(algorithms: &[Algorithm]) -> Self {
-        let mut supported = SupportedAlgorithms::new();
+        let mut supported = Self::new();
 
         for a in algorithms {
             supported.set(*a);
@@ -63,6 +63,7 @@ impl SupportedAlgorithms {
 
     fn pos(algorithm: Algorithm) -> Option<u8> {
         // not using the values from the RFC's to keep the bit_map space condensed
+        #[allow(deprecated)]
         let bit_pos: Option<u8> = match algorithm {
             Algorithm::RSASHA1 => Some(0),
             Algorithm::RSASHA256 => Some(1),
@@ -71,7 +72,7 @@ impl SupportedAlgorithms {
             Algorithm::ECDSAP256SHA256 => Some(4),
             Algorithm::ECDSAP384SHA384 => Some(5),
             Algorithm::ED25519 => Some(6),
-            Algorithm::Unknown(_) => None,
+            Algorithm::RSAMD5 | Algorithm::DSA | Algorithm::Unknown(_) => None,
         };
 
         bit_pos.map(|b| 1u8 << b)
@@ -79,6 +80,7 @@ impl SupportedAlgorithms {
 
     fn from_pos(pos: u8) -> Option<Algorithm> {
         // TODO: should build a code generator or possibly a macro for deriving these inversions
+        #[allow(deprecated)]
         match pos {
             0 => Some(Algorithm::RSASHA1),
             1 => Some(Algorithm::RSASHA256),
@@ -125,8 +127,8 @@ impl SupportedAlgorithms {
 }
 
 impl Default for SupportedAlgorithms {
-    fn default() -> SupportedAlgorithms {
-        SupportedAlgorithms::new()
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -143,7 +145,7 @@ impl Display for SupportedAlgorithms {
 
 impl<'a> From<&'a [u8]> for SupportedAlgorithms {
     fn from(values: &'a [u8]) -> Self {
-        let mut supported = SupportedAlgorithms::new();
+        let mut supported = Self::new();
 
         for a in values.iter().map(|i| Algorithm::from_u8(*i)) {
             match a {
@@ -157,8 +159,8 @@ impl<'a> From<&'a [u8]> for SupportedAlgorithms {
 }
 
 impl<'a> From<&'a SupportedAlgorithms> for Vec<u8> {
-    fn from(value: &'a SupportedAlgorithms) -> Vec<u8> {
-        let mut bytes: Vec<u8> = Vec::with_capacity(8); // today this is less than 8
+    fn from(value: &'a SupportedAlgorithms) -> Self {
+        let mut bytes = Self::with_capacity(8); // today this is less than 8
 
         for a in value.iter() {
             bytes.push(a.into());
@@ -171,7 +173,7 @@ impl<'a> From<&'a SupportedAlgorithms> for Vec<u8> {
 
 impl From<Algorithm> for SupportedAlgorithms {
     fn from(algorithm: Algorithm) -> Self {
-        SupportedAlgorithms::from_vec(&[algorithm])
+        Self::from_vec(&[algorithm])
     }
 }
 
@@ -218,6 +220,7 @@ impl BinEncodable for SupportedAlgorithms {
 }
 
 #[test]
+#[allow(deprecated)]
 fn test_has() {
     let mut supported = SupportedAlgorithms::new();
 
@@ -235,6 +238,8 @@ fn test_has() {
 }
 
 #[test]
+#[allow(deprecated)]
+
 fn test_iterator() {
     let supported = SupportedAlgorithms::all();
     assert_eq!(supported.iter().count(), 7);
@@ -260,6 +265,7 @@ fn test_iterator() {
 }
 
 #[test]
+#[allow(deprecated)]
 fn test_vec() {
     let supported = SupportedAlgorithms::all();
     let array: Vec<u8> = (&supported).into();

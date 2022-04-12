@@ -463,9 +463,11 @@ fn answer_for_hostname(
     let mut answer = Record::new();
     let fidl_fuchsia_net_ext::IpAddress(addr) = resolved_addr.into();
     let _: &mut Record = match addr {
-        std::net::IpAddr::V4(addr) => answer.set_rr_type(RecordType::A).set_rdata(RData::A(addr)),
+        std::net::IpAddr::V4(addr) => {
+            answer.set_rr_type(RecordType::A).set_data(Some(RData::A(addr)))
+        }
         std::net::IpAddr::V6(addr) => {
-            answer.set_rr_type(RecordType::AAAA).set_rdata(RData::AAAA(addr))
+            answer.set_rr_type(RecordType::AAAA).set_data(Some(RData::AAAA(addr)))
         }
     }
     .set_dns_class(DNSClass::IN)

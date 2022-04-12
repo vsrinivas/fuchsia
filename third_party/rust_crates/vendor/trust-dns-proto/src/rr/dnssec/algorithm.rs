@@ -1,9 +1,13 @@
-// Copyright 2015-2019 Benjamin Fry <benjaminfry@me.com>
+// Copyright 2015-2022 Benjamin Fry <benjaminfry@me.com>
 //
 // Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
 // http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
+
+// needed for the derive statements on algorithm
+//   this issue in rustc would help narrow the statement: https://github.com/rust-lang/rust/issues/62398
+#![allow(deprecated)]
 
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -99,9 +103,25 @@ use crate::serialize::binary::*;
 #[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
 #[non_exhaustive]
 pub enum Algorithm {
+    /// DO NOT USE, MD5 is a compromised hashing function, it is here for backward compatibility
+    #[deprecated(
+        note = "this is a compromised hashing function, it is here for backward compatibility"
+    )]
+    RSAMD5,
+    /// DO NOT USE, DSA is a compromised hashing function, it is here for backward compatibility
+    #[deprecated(
+        note = "this is a compromised hashing function, it is here for backward compatibility"
+    )]
+    DSA,
     /// DO NOT USE, SHA1 is a compromised hashing function, it is here for backward compatibility
+    #[deprecated(
+        note = "this is a compromised hashing function, it is here for backward compatibility"
+    )]
     RSASHA1,
     /// DO NOT USE, SHA1 is a compromised hashing function, it is here for backward compatibility
+    #[deprecated(
+        note = "this is a compromised hashing function, it is here for backward compatibility"
+    )]
     RSASHA1NSEC3SHA1,
     /// RSA public key with SHA256 hash
     RSASHA256,
@@ -120,26 +140,30 @@ pub enum Algorithm {
 impl Algorithm {
     /// <http://www.iana.org/assignments/dns-sec-alg-numbers/dns-sec-alg-numbers.xhtml>
     pub fn from_u8(value: u8) -> Self {
+        #[allow(deprecated)]
         match value {
-            5 => Algorithm::RSASHA1,
-            7 => Algorithm::RSASHA1NSEC3SHA1,
-            8 => Algorithm::RSASHA256,
-            10 => Algorithm::RSASHA512,
-            13 => Algorithm::ECDSAP256SHA256,
-            14 => Algorithm::ECDSAP384SHA384,
-            15 => Algorithm::ED25519,
-            _ => Algorithm::Unknown(value),
+            1 => Self::RSAMD5,
+            3 => Self::DSA,
+            5 => Self::RSASHA1,
+            7 => Self::RSASHA1NSEC3SHA1,
+            8 => Self::RSASHA256,
+            10 => Self::RSASHA512,
+            13 => Self::ECDSAP256SHA256,
+            14 => Self::ECDSAP384SHA384,
+            15 => Self::ED25519,
+            _ => Self::Unknown(value),
         }
     }
 
     /// length in bytes that the hash portion of this function will produce
     pub fn hash_len(self) -> Option<usize> {
         match self {
-            Algorithm::RSASHA1 | Algorithm::RSASHA1NSEC3SHA1 => Some(20), // 160 bits
-            Algorithm::RSASHA256 | Algorithm::ECDSAP256SHA256 | Algorithm::ED25519 => Some(32), // 256 bits
-            Algorithm::ECDSAP384SHA384 => Some(48),
-            Algorithm::RSASHA512 => Some(64), // 512 bites
-            Algorithm::Unknown(_) => None,
+            Self::RSAMD5 => Some(16),                                       // 128 bits
+            Self::DSA | Self::RSASHA1 | Self::RSASHA1NSEC3SHA1 => Some(20), // 160 bits
+            Self::RSASHA256 | Self::ECDSAP256SHA256 | Algorithm::ED25519 => Some(32), // 256 bits
+            Self::ECDSAP384SHA384 => Some(48),
+            Self::RSASHA512 => Some(64), // 512 bites
+            Self::Unknown(_) => None,
         }
     }
 
@@ -152,6 +176,8 @@ impl Algorithm {
     /// Convert to string form
     pub fn as_str(self) -> &'static str {
         match self {
+            Algorithm::RSAMD5 => "RSAMD5",
+            Algorithm::DSA => "DSA",
             Algorithm::RSASHA1 => "RSASHA1",
             Algorithm::RSASHA256 => "RSASHA256",
             Algorithm::RSASHA1NSEC3SHA1 => "RSASHA1-NSEC3-SHA1",
@@ -172,10 +198,10 @@ impl BinEncodable for Algorithm {
 
 impl<'r> BinDecodable<'r> for Algorithm {
     // http://www.iana.org/assignments/dns-sec-alg-numbers/dns-sec-alg-numbers.xhtml
-    fn read(decoder: &mut BinDecoder<'r>) -> ProtoResult<Algorithm> {
+    fn read(decoder: &mut BinDecoder<'r>) -> ProtoResult<Self> {
         let algorithm_id =
             decoder.read_u8()?.unverified(/*Algorithm is verified as safe in processing this*/);
-        Ok(Algorithm::from_u8(algorithm_id))
+        Ok(Self::from_u8(algorithm_id))
     }
 }
 
@@ -186,8 +212,10 @@ impl From<Algorithm> for &'static str {
 }
 
 impl From<Algorithm> for u8 {
-    fn from(a: Algorithm) -> u8 {
+    fn from(a: Algorithm) -> Self {
         match a {
+            Algorithm::RSAMD5 => 1,
+            Algorithm::DSA => 3,
             Algorithm::RSASHA1 => 5,
             Algorithm::RSASHA1NSEC3SHA1 => 7,
             Algorithm::RSASHA256 => 8,
@@ -209,6 +237,8 @@ impl Display for Algorithm {
 #[test]
 fn test_into() {
     for algorithm in &[
+        Algorithm::RSAMD5,
+        Algorithm::DSA,
         Algorithm::RSASHA1,
         Algorithm::RSASHA256,
         Algorithm::RSASHA1NSEC3SHA1,
@@ -224,6 +254,8 @@ fn test_into() {
 #[test]
 fn test_order() {
     let mut algorithms = [
+        Algorithm::RSAMD5,
+        Algorithm::DSA,
         Algorithm::RSASHA1,
         Algorithm::RSASHA256,
         Algorithm::RSASHA1NSEC3SHA1,
@@ -237,6 +269,8 @@ fn test_order() {
 
     for (got, expect) in algorithms.iter().zip(
         [
+            Algorithm::RSAMD5,
+            Algorithm::DSA,
             Algorithm::RSASHA1,
             Algorithm::RSASHA1NSEC3SHA1,
             Algorithm::RSASHA256,

@@ -1,4 +1,5 @@
 use core::{mem, slice};
+use core::arch::asm;
 use core::ops::{Deref, DerefMut};
 
 use super::error::{Error, Result};
@@ -109,7 +110,8 @@ pub struct FloatRegisters {
     pub mxcsr: u32,
     pub mxcsr_mask: u32,
     pub st_space: [u128; 8],
-    pub xmm_space: [u128; 16]
+    pub xmm_space: [u128; 16],
+    // TODO: YMM/ZMM
 }
 
 impl Deref for FloatRegisters {
@@ -125,6 +127,29 @@ impl DerefMut for FloatRegisters {
     fn deref_mut(&mut self) -> &mut [u8] {
         unsafe {
             slice::from_raw_parts_mut(self as *mut FloatRegisters as *mut u8, mem::size_of::<FloatRegisters>())
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, Default)]
+#[repr(packed)]
+pub struct EnvRegisters {
+    pub fsbase: u64,
+    pub gsbase: u64,
+    // TODO: PKRU?
+}
+impl Deref for EnvRegisters {
+    type Target = [u8];
+    fn deref(&self) -> &[u8] {
+        unsafe {
+            slice::from_raw_parts(self as *const EnvRegisters as *const u8, mem::size_of::<EnvRegisters>())
+        }
+    }
+}
+
+impl DerefMut for EnvRegisters {
+    fn deref_mut(&mut self) -> &mut [u8] {
+        unsafe {
+            slice::from_raw_parts_mut(self as *mut EnvRegisters as *mut u8, mem::size_of::<EnvRegisters>())
         }
     }
 }

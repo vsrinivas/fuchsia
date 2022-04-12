@@ -85,19 +85,20 @@ impl<S: UdpSocket + Send + 'static> UdpStream<S> {
     #[allow(clippy::type_complexity)]
     pub fn new(
         remote_addr: SocketAddr,
+        bind_addr: Option<SocketAddr>,
     ) -> (
-        Box<dyn Future<Output = Result<UdpStream<S>, io::Error>> + Send + Unpin>,
+        Box<dyn Future<Output = Result<Self, io::Error>> + Send + Unpin>,
         BufDnsStreamHandle,
     ) {
         let (message_sender, outbound_messages) = BufDnsStreamHandle::new(remote_addr);
 
         // TODO: allow the bind address to be specified...
         // constructs a future for getting the next randomly bound port to a UdpSocket
-        let next_socket = NextRandomUdpSocket::new(&remote_addr);
+        let next_socket = NextRandomUdpSocket::new(&remote_addr, &bind_addr);
 
         // This set of futures collapses the next udp socket into a stream which can be used for
         //  sending and receiving udp packets.
-        let stream = Box::new(next_socket.map_ok(move |socket| UdpStream {
+        let stream = Box::new(next_socket.map_ok(move |socket| Self {
             socket,
             outbound_messages,
         }));
@@ -121,7 +122,7 @@ impl<S: UdpSocket + Send + 'static> UdpStream<S> {
     ///  handle which can be used to send messages into the stream.
     pub fn with_bound(socket: S, remote_addr: SocketAddr) -> (Self, BufDnsStreamHandle) {
         let (message_sender, outbound_messages) = BufDnsStreamHandle::new(remote_addr);
-        let stream = UdpStream {
+        let stream = Self {
             socket,
             outbound_messages,
         };
@@ -131,7 +132,7 @@ impl<S: UdpSocket + Send + 'static> UdpStream<S> {
 
     #[allow(unused)]
     pub(crate) fn from_parts(socket: S, outbound_messages: StreamReceiver) -> Self {
-        UdpStream {
+        Self {
             socket,
             outbound_messages,
         }
@@ -183,68 +184,82 @@ impl<S: UdpSocket + Send + 'static> Stream for UdpStream<S> {
 
 #[must_use = "futures do nothing unless polled"]
 pub(crate) struct NextRandomUdpSocket<S> {
-    bind_address: IpAddr,
+    bind_address: SocketAddr,
     marker: PhantomData<S>,
 }
 
 impl<S: UdpSocket> NextRandomUdpSocket<S> {
-    /// Creates a future for randomly binding to a local socket address for client connections.
-    pub(crate) fn new(name_server: &SocketAddr) -> NextRandomUdpSocket<S> {
-        let zero_addr: IpAddr = match *name_server {
-            SocketAddr::V4(..) => IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
-            SocketAddr::V6(..) => IpAddr::V6(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0)),
+    /// Creates a future for randomly binding to a local socket address for client connections,
+    /// if no port is specified.
+    ///
+    /// If a port is specified in the bind address it is used.
+    pub(crate) fn new(name_server: &SocketAddr, bind_addr: &Option<SocketAddr>) -> Self {
+        let bind_address = match bind_addr {
+            Some(ba) => *ba,
+            None => match *name_server {
+                SocketAddr::V4(..) => SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0),
+                SocketAddr::V6(..) => {
+                    SocketAddr::new(IpAddr::V6(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0)), 0)
+                }
+            },
         };
 
-        NextRandomUdpSocket {
-            bind_address: zero_addr,
+        Self {
+            bind_address,
             marker: PhantomData,
         }
     }
 
-    async fn bind(zero_addr: SocketAddr) -> Result<S, io::Error> {
-        S::bind(zero_addr).await
+    async fn bind(addr: SocketAddr) -> Result<S, io::Error> {
+        S::bind(addr).await
     }
 }
 
 impl<S: UdpSocket> Future for NextRandomUdpSocket<S> {
     type Output = Result<S, io::Error>;
 
-    /// polls until there is an available next random UDP port.
+    /// polls until there is an available next random UDP port,
+    /// if no port has been specified in bind_addr.
     ///
     /// if there is no port available after 10 attempts, returns NotReady
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        // Per RFC 6056 Section 2.1:
-        //
-        //    The dynamic port range defined by IANA consists of the 49152-65535
-        //    range, and is meant for the selection of ephemeral ports.
-        let rand_port_range = Uniform::new_inclusive(49152_u16, u16::max_value());
-        let mut rand = rand::thread_rng();
+        if self.bind_address.port() == 0 {
+            // Per RFC 6056 Section 2.1:
+            //
+            //    The dynamic port range defined by IANA consists of the 49152-65535
+            //    range, and is meant for the selection of ephemeral ports.
+            let rand_port_range = Uniform::new_inclusive(49152_u16, u16::max_value());
+            let mut rand = rand::thread_rng();
 
-        for attempt in 0..10 {
-            let port = rand_port_range.sample(&mut rand);
-            let zero_addr = SocketAddr::new(self.bind_address, port);
+            for attempt in 0..10 {
+                let port = rand_port_range.sample(&mut rand);
+                let bind_addr = SocketAddr::new(self.bind_address.ip(), port);
 
-            // TODO: allow TTL to be adjusted...
-            // TODO: this immediate poll might be wrong in some cases...
-            match Box::pin(Self::bind(zero_addr)).as_mut().poll(cx) {
-                Poll::Ready(Ok(socket)) => {
-                    debug!("created socket successfully");
-                    return Poll::Ready(Ok(socket));
+                // TODO: allow TTL to be adjusted...
+                // TODO: this immediate poll might be wrong in some cases...
+                match Box::pin(Self::bind(bind_addr)).as_mut().poll(cx) {
+                    Poll::Ready(Ok(socket)) => {
+                        debug!("created socket successfully");
+                        return Poll::Ready(Ok(socket));
+                    }
+                    Poll::Ready(Err(err)) => {
+                        debug!("unable to bind port, attempt: {}: {}", attempt, err)
+                    }
+                    Poll::Pending => debug!("unable to bind port, attempt: {}", attempt),
                 }
-                Poll::Ready(Err(err)) => {
-                    debug!("unable to bind port, attempt: {}: {}", attempt, err)
-                }
-                Poll::Pending => debug!("unable to bind port, attempt: {}", attempt),
             }
+
+            debug!("could not get next random port, delaying");
+
+            // TODO: because no interest is registered anywhere, we must awake.
+            cx.waker().wake_by_ref();
+
+            // returning NotReady here, perhaps the next poll there will be some more socket available.
+            Poll::Pending
+        } else {
+            // Use port that was specified in bind address.
+            Box::pin(Self::bind(self.bind_address)).as_mut().poll(cx)
         }
-
-        debug!("could not get next random port, delaying");
-
-        // TODO: because no interest is registered anywhere, we must awake.
-        cx.waker().wake_by_ref();
-
-        // returning NotReady here, perhaps the next poll there will be some more socket available.
-        Poll::Pending
     }
 }
 
@@ -254,7 +269,7 @@ impl UdpSocket for tokio::net::UdpSocket {
     type Time = crate::TokioTime;
 
     async fn bind(addr: SocketAddr) -> io::Result<Self> {
-        tokio::net::UdpSocket::bind(addr).await
+        Self::bind(addr).await
     }
 
     fn poll_recv_from(
@@ -263,7 +278,7 @@ impl UdpSocket for tokio::net::UdpSocket {
         buf: &mut [u8],
     ) -> Poll<io::Result<(usize, SocketAddr)>> {
         let mut buf = tokio::io::ReadBuf::new(buf);
-        let addr = ready!(tokio::net::UdpSocket::poll_recv_from(self, cx, &mut buf))?;
+        let addr = ready!(Self::poll_recv_from(self, cx, &mut buf))?;
         let len = buf.filled().len();
 
         Poll::Ready(Ok((len, addr)))
@@ -275,7 +290,7 @@ impl UdpSocket for tokio::net::UdpSocket {
         buf: &[u8],
         target: SocketAddr,
     ) -> Poll<io::Result<usize>> {
-        tokio::net::UdpSocket::poll_send_to(self, cx, buf, target)
+        Self::poll_send_to(self, cx, buf, target)
     }
 }
 

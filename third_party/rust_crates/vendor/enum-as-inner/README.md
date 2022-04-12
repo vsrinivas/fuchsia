@@ -7,8 +7,7 @@ A deriving proc-macro for generating functions to automatically give access to t
 The basic case is meant for single item enums, like:
 
 ```rust
-#[macro_use]
-extern crate enum_as_inner;
+use enum_as_inner::EnumAsInner;
 
 #[derive(Debug, EnumAsInner)]
 enum OneEnum {
@@ -16,12 +15,18 @@ enum OneEnum {
 }
 ```
 
-where the inner item can be retrieved with the `as_*()` or with the `into_*()` functions:
+where the inner item can be retrieved with the `as_*()`/`as_*_mut()` or with the `into_*()` functions:
 
 ```rust
 let one = OneEnum::One(1);
 
 assert_eq!(*one.as_one().unwrap(), 1);
+assert_eq!(one.into_one().unwrap(), 1);
+
+let mut one = OneEnum::One(2);
+
+assert_eq!(*one.as_one().unwrap(), 1);
+assert_eq!(*one.as_one_mut().unwrap(), 1);
 assert_eq!(one.into_one().unwrap(), 1);
 ```
 
@@ -29,11 +34,10 @@ where the result is either a reference for inner items or a tuple containing the
 
 ## Unit case
 
-This will return copy's of the value of the unit variant, as `isize`:
+This will return true if enum's variant matches the expected type
 
 ```rust
-#[macro_use]
-extern crate enum_as_inner;
+use enum_as_inner::EnumAsInner;
 
 #[derive(EnumAsInner)]
 enum UnitVariants {
@@ -41,25 +45,18 @@ enum UnitVariants {
     One,
     Two,
 }
-```
 
-These are not references:
-
-```rust
 let unit = UnitVariants::Two;
 
-assert_eq!(unit.as_two().unwrap(), ());
+assert!(unit.is_two());
 ```
-
-Note that for unit enums there is no `into_*()` function generated.
 
 ## Mutliple, unnamed field case
 
 This will return a tuple of the inner types:
 
 ```rust
-#[macro_use]
-extern crate enum_as_inner;
+use enum_as_inner::EnumAsInner;
 
 #[derive(Debug, EnumAsInner)]
 enum ManyVariants {
@@ -72,9 +69,10 @@ enum ManyVariants {
 And can be accessed like:
 
 ```rust
-let many = ManyVariants::Three(true, 1, 2);
+let mut many = ManyVariants::Three(true, 1, 2);
 
 assert_eq!(many.as_three().unwrap(), (&true, &1_u32, &2_i64));
+assert_eq!(many.as_three_mut().unwrap(), (&mut true, &mut 1_u32, &mut 2_i64));
 assert_eq!(many.into_three().unwrap(), (true, 1_u32, 2_i64));
 ```
 
@@ -83,8 +81,7 @@ assert_eq!(many.into_three().unwrap(), (true, 1_u32, 2_i64));
 This will return a tuple of the inner types, like the unnamed option:
 
 ```rust
-#[macro_use]
-extern crate enum_as_inner;
+use enum_as_inner::EnumAsInner;
 
 #[derive(Debug, EnumAsInner)]
 enum ManyVariants {
@@ -97,8 +94,9 @@ enum ManyVariants {
 And can be accessed like:
 
 ```rust
-let many = ManyVariants::Three{ one: true, two: 1, three: 2 };
+let mut many = ManyVariants::Three{ one: true, two: 1, three: 2 };
 
 assert_eq!(many.as_three().unwrap(), (&true, &1_u32, &2_i64));
+assert_eq!(many.as_three_mut().unwrap(), (&mut true, &mut 1_u32, &mut 2_i64));
 assert_eq!(many.into_three().unwrap(), (true, 1_u32, 2_i64));
 ```

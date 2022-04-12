@@ -107,12 +107,15 @@ fn fmap() {
         )
     ).unwrap();
 
+    let size = 128;
+
     let map = unsafe {
         slice::from_raw_parts_mut(
             dbg!(
                 crate::fmap(fd, &crate::Map {
+                    address: 0,
                     offset: 0,
-                    size: 128,
+                    size,
                     flags: crate::PROT_READ | crate::PROT_WRITE
                 })
             ).unwrap() as *mut u8,
@@ -131,7 +134,7 @@ fn fmap() {
     //TODO: add msync
     unsafe {
         assert_eq!(dbg!(
-            crate::funmap(map.as_mut_ptr() as usize)
+            crate::funmap(map.as_mut_ptr() as usize, size)
         ), Ok(0));
     }
 }

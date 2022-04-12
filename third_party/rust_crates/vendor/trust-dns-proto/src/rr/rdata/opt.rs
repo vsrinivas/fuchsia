@@ -181,8 +181,8 @@ impl OPT {
     /// # Return value
     ///
     /// The newly created OPT data
-    pub fn new(options: HashMap<EdnsCode, EdnsOption>) -> OPT {
-        OPT { options }
+    pub fn new(options: HashMap<EdnsCode, EdnsOption>) -> Self {
+        Self { options }
     }
 
     #[deprecated(note = "Please use as_ref() or as_mut() for shared/mutable references")]
@@ -365,29 +365,29 @@ pub enum EdnsCode {
 
 // TODO: implement a macro to perform these inversions
 impl From<u16> for EdnsCode {
-    fn from(value: u16) -> EdnsCode {
+    fn from(value: u16) -> Self {
         match value {
-            0 => EdnsCode::Zero,
-            1 => EdnsCode::LLQ,
-            2 => EdnsCode::UL,
-            3 => EdnsCode::NSID,
+            0 => Self::Zero,
+            1 => Self::LLQ,
+            2 => Self::UL,
+            3 => Self::NSID,
             // 4 Reserved [draft-cheshire-edns0-owner-option] -EXPIRED-
-            5 => EdnsCode::DAU,
-            6 => EdnsCode::DHU,
-            7 => EdnsCode::N3U,
-            8 => EdnsCode::Subnet,
-            9 => EdnsCode::Expire,
-            10 => EdnsCode::Cookie,
-            11 => EdnsCode::Keepalive,
-            12 => EdnsCode::Padding,
-            13 => EdnsCode::Chain,
-            _ => EdnsCode::Unknown(value),
+            5 => Self::DAU,
+            6 => Self::DHU,
+            7 => Self::N3U,
+            8 => Self::Subnet,
+            9 => Self::Expire,
+            10 => Self::Cookie,
+            11 => Self::Keepalive,
+            12 => Self::Padding,
+            13 => Self::Chain,
+            _ => Self::Unknown(value),
         }
     }
 }
 
 impl From<EdnsCode> for u16 {
-    fn from(value: EdnsCode) -> u16 {
+    fn from(value: EdnsCode) -> Self {
         match value {
             EdnsCode::Zero => 0,
             EdnsCode::LLQ => 1,
@@ -475,21 +475,21 @@ impl BinEncodable for EdnsOption {
 /// only the supported extensions are listed right now.
 impl<'a> From<(EdnsCode, &'a [u8])> for EdnsOption {
     #[allow(clippy::match_single_binding)]
-    fn from(value: (EdnsCode, &'a [u8])) -> EdnsOption {
+    fn from(value: (EdnsCode, &'a [u8])) -> Self {
         match value.0 {
             #[cfg(feature = "dnssec")]
-            EdnsCode::DAU => EdnsOption::DAU(value.1.into()),
+            EdnsCode::DAU => Self::DAU(value.1.into()),
             #[cfg(feature = "dnssec")]
-            EdnsCode::DHU => EdnsOption::DHU(value.1.into()),
+            EdnsCode::DHU => Self::DHU(value.1.into()),
             #[cfg(feature = "dnssec")]
-            EdnsCode::N3U => EdnsOption::N3U(value.1.into()),
-            _ => EdnsOption::Unknown(value.0.into(), value.1.to_vec()),
+            EdnsCode::N3U => Self::N3U(value.1.into()),
+            _ => Self::Unknown(value.0.into(), value.1.to_vec()),
         }
     }
 }
 
 impl<'a> From<&'a EdnsOption> for Vec<u8> {
-    fn from(value: &'a EdnsOption) -> Vec<u8> {
+    fn from(value: &'a EdnsOption) -> Self {
         match *value {
             #[cfg(feature = "dnssec")]
             EdnsOption::DAU(ref algorithms)
@@ -501,14 +501,14 @@ impl<'a> From<&'a EdnsOption> for Vec<u8> {
 }
 
 impl<'a> From<&'a EdnsOption> for EdnsCode {
-    fn from(value: &'a EdnsOption) -> EdnsCode {
+    fn from(value: &'a EdnsOption) -> Self {
         match *value {
             #[cfg(feature = "dnssec")]
-            EdnsOption::DAU(..) => EdnsCode::DAU,
+            EdnsOption::DAU(..) => Self::DAU,
             #[cfg(feature = "dnssec")]
-            EdnsOption::DHU(..) => EdnsCode::DHU,
+            EdnsOption::DHU(..) => Self::DHU,
             #[cfg(feature = "dnssec")]
-            EdnsOption::N3U(..) => EdnsCode::N3U,
+            EdnsOption::N3U(..) => Self::N3U,
             EdnsOption::Unknown(code, _) => code.into(),
         }
     }
@@ -518,7 +518,6 @@ impl<'a> From<&'a EdnsOption> for EdnsCode {
 mod tests {
     #![allow(clippy::dbg_macro, clippy::print_stdout)]
 
-    #[cfg(feature = "dnssec")]
     use super::*;
 
     #[test]
@@ -539,31 +538,31 @@ mod tests {
         let read_rdata = read(&mut decoder, restrict).expect("Decoding error");
         assert_eq!(rdata, read_rdata);
     }
-}
 
-#[test]
-pub fn test_read_empty_option_at_end_of_opt() {
-    let bytes: Vec<u8> = vec![
-        0x00, 0x0a, 0x00, 0x08, 0x0b, 0x64, 0xb4, 0xdc, 0xd7, 0xb0, 0xcc, 0x8f, 0x00, 0x08, 0x00,
-        0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x0b, 0x00, 0x00,
-    ];
+    #[test]
+    fn test_read_empty_option_at_end_of_opt() {
+        let bytes: Vec<u8> = vec![
+            0x00, 0x0a, 0x00, 0x08, 0x0b, 0x64, 0xb4, 0xdc, 0xd7, 0xb0, 0xcc, 0x8f, 0x00, 0x08,
+            0x00, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x0b, 0x00, 0x00,
+        ];
 
-    let mut decoder: BinDecoder<'_> = BinDecoder::new(&*bytes);
-    let read_rdata = read(&mut decoder, Restrict::new(bytes.len() as u16));
-    assert!(
-        read_rdata.is_ok(),
-        "error decoding: {:?}",
-        read_rdata.unwrap_err()
-    );
+        let mut decoder: BinDecoder<'_> = BinDecoder::new(&*bytes);
+        let read_rdata = read(&mut decoder, Restrict::new(bytes.len() as u16));
+        assert!(
+            read_rdata.is_ok(),
+            "error decoding: {:?}",
+            read_rdata.unwrap_err()
+        );
 
-    let opt = read_rdata.unwrap();
-    let mut options = HashMap::default();
-    options.insert(EdnsCode::Subnet, EdnsOption::Unknown(8, vec![0, 1, 0, 0]));
-    options.insert(
-        EdnsCode::Cookie,
-        EdnsOption::Unknown(10, vec![0x0b, 0x64, 0xb4, 0xdc, 0xd7, 0xb0, 0xcc, 0x8f]),
-    );
-    options.insert(EdnsCode::Keepalive, EdnsOption::Unknown(11, vec![]));
-    let options = OPT::new(options);
-    assert_eq!(opt, options);
+        let opt = read_rdata.unwrap();
+        let mut options = HashMap::default();
+        options.insert(EdnsCode::Subnet, EdnsOption::Unknown(8, vec![0, 1, 0, 0]));
+        options.insert(
+            EdnsCode::Cookie,
+            EdnsOption::Unknown(10, vec![0x0b, 0x64, 0xb4, 0xdc, 0xd7, 0xb0, 0xcc, 0x8f]),
+        );
+        options.insert(EdnsCode::Keepalive, EdnsOption::Unknown(11, vec![]));
+        let options = OPT::new(options);
+        assert_eq!(opt, options);
+    }
 }

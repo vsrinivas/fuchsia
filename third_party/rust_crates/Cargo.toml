@@ -242,14 +242,8 @@ rust_icu_unorm2 = { version = "2.0.2", default-features = false, features = ["re
 rust_icu_ustring = { version = "2.0.2", default-features = false, features = ["renaming", "icu_version_in_env"] }
 serde_yaml = "0.8.23"
 tokio-rustls = "0.13.0"
-# TODO(https://fxbug.dev/90312): point to a crates.io version when there is a
-# new official release of Trust-DNS that includes
-# https://github.com/bluejekyll/trust-dns/commit/a8842545fc2e9d01c7b985812d85c6aceee9357f.
-#
-# In the meantime, when updating, keep these git revisions in sync with the
-# relevant `source` section in //third_party/rust_crates/.cargo/config.toml.
-trust-dns-proto = { git = "https://github.com/bluejekyll/trust-dns", rev = "e5fa03de354f8a97e59d44ec1f4afe5f923b1003", default-features = false, features = ["testing"] }
-trust-dns-resolver = { git = "https://github.com/bluejekyll/trust-dns", rev = "e5fa03de354f8a97e59d44ec1f4afe5f923b1003", default-features = false, features = ["testing"] }
+trust-dns-proto = { version = "0.21.2", default-features = false, features = ["testing"] }
+trust-dns-resolver = { version = "0.21.2", default-features = false, features = ["testing"] }
 ttf-parser = "0.10.1"
 unicode-normalization = "0.1"
 vk-sys = "0.4.0"
@@ -328,6 +322,12 @@ web-sys = { path = "empty/web-sys" }
 wepoll-sys = { path = "empty/wepoll-sys" }
 winapi = { path = "empty/winapi" }
 winapi-util = { path = "empty/winapi-util" }
+windows-sys = { path = "empty/windows-sys" }
+windows_aarch64_msvc = { path = "empty/windows_aarch64_msvc" }
+windows_i686_gnu = { path = "empty/windows_i686_gnu" }
+windows_i686_msvc = { path = "empty/windows_i686_msvc" }
+windows_x86_64_gnu = { path = "empty/windows_x86_64_gnu" }
+windows_x86_64_msvc = { path = "empty/windows_x86_64_msvc" }
 
 ### Forks: vendored crates whose code doesn't match the upstream version
 fatfs = { path = "forks/fatfs" }
@@ -456,6 +456,9 @@ rustflags = ["--cfg=has_std"]
 [gn.package.libc."0.2.116".platform."cfg(target_os = \"freebsd\")"]
 rustflags = ["--cfg=freebsd11"]
 
+[gn.package.lock_api."0.4.7"]
+rustflags = ["--cfg=has_const_fn_trait_bound"]
+
 [gn.package.log."0.4.11"]
 rustflags = ["--cfg=atomic_cas"]
 
@@ -492,6 +495,9 @@ rustflags = ["--cfg=tuple_ty", "--cfg=allow_clippy", "--cfg=maybe_uninit", "--cf
 
 [gn.package.num-iter."0.1.42"]
 rustflags = ["--cfg=has_i128"]
+
+[gn.package.parking_lot_core."0.9.2"]
+rustflags = []
 
 [gn.package.proc-macro2."0.4.27"]
 rustflags = ["--cfg=u128", "--cfg=use_proc_macro", "--cfg=wrap_proc_macro"]
@@ -602,8 +608,8 @@ configs = [ "//src/lib/icu:version" ]
 [gn.package.rust_icu_ustring."2.0.2"]
 configs = [ "//src/lib/icu:version" ]
 
-[gn.package.trust-dns-resolver."0.21.0-alpha.4"]
-env_vars = [ "CARGO_PKG_VERSION=\\\"0.21.0-alpha.4\\\"" ]
+[gn.package.trust-dns-resolver."0.21.2"]
+env_vars = [ "CARGO_PKG_VERSION=\\\"0.21.2\\\"" ]
 
 [gn.package.unic-common."0.9.0"]
 env_vars = [ "CARGO_PKG_VERSION=\\\"0.9.0\\\"", "CARGO_PKG_NAME=\\\"unic-common\\\"",  "CARGO_PKG_DESCRIPTION=\\\"\\\"", ]
