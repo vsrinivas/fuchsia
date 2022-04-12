@@ -5,6 +5,7 @@
 import 'package:ermine/src/services/settings/battery_watcher_service.dart';
 import 'package:ermine/src/services/settings/brightness_service.dart';
 import 'package:ermine/src/services/settings/channel_service.dart';
+import 'package:ermine/src/services/settings/data_sharing_consent_service.dart';
 import 'package:ermine/src/services/settings/datetime_service.dart';
 import 'package:ermine/src/services/settings/memory_watcher_service.dart';
 import 'package:ermine/src/services/settings/network_address_service.dart';
@@ -38,6 +39,7 @@ enum SettingsPage {
   wifi,
   bluetooth,
   channel,
+  dataSharingConsent,
   timezone,
   shortcuts,
   feedback,
@@ -46,6 +48,8 @@ enum SettingsPage {
   about
 }
 
+typedef LaunchPrivacyTermsCallback = void Function(String);
+
 /// Defines the state of the [QuickSettings] overlay.
 abstract class SettingsState implements TaskService {
   bool get allSettingsPageVisible;
@@ -53,6 +57,7 @@ abstract class SettingsState implements TaskService {
   bool get timezonesPageVisible;
   bool get aboutPageVisible;
   bool get channelPageVisible;
+  bool get dataSharingConsentPageVisible;
   bool get wifiPageVisible;
   WiFiStrength get wifiStrength;
   BatteryCharge get batteryCharge;
@@ -86,13 +91,18 @@ abstract class SettingsState implements TaskService {
   bool get clientConnectionsEnabled;
   bool get clientConnectionsMonitor;
   int get wifiToggleMillisecondsPassed;
+  bool get dataSharingConsentEnabled;
+  LaunchPrivacyTermsCallback get launchPrivacyTerms;
 
   factory SettingsState.from(
-      {required Map<String, Set<String>> shortcutBindings}) {
+      {required Map<String, Set<String>> shortcutBindings,
+      required LaunchPrivacyTermsCallback launchPrivacyTerms}) {
     // ignore: unnecessary_cast
     return SettingsStateImpl(
       shortcutBindings: shortcutBindings,
       timezoneService: TimezoneService(),
+      dataSharingConsentService: DataSharingConsentService(),
+      launchPrivacyTerms: launchPrivacyTerms,
       dateTimeService: DateTimeService(),
       networkService: NetworkAddressService(),
       memoryWatcherService: MemoryWatcherService(),
@@ -114,6 +124,7 @@ abstract class SettingsState implements TaskService {
   void decreaseBrightness();
   void showAboutSettings();
   void showChannelSettings();
+  void showDataSharingConsentSettings();
   void setTargetChannel(String channel);
   void checkForUpdates();
   void setVolumeLevel(double value);
@@ -126,4 +137,5 @@ abstract class SettingsState implements TaskService {
   void decreaseVolume();
   void toggleMute();
   void setClientConnectionsEnabled({bool enabled});
+  void setDataSharingConsent({bool enabled});
 }

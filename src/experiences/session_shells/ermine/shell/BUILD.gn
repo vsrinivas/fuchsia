@@ -17,6 +17,9 @@ declare_args() {
 
   # Whether or not to launch screensaver.
   ermine_start_screensaver = false
+
+  # Whether or not to allow user feedback report from the device.
+  ermine_user_feedback_enabled = false
 }
 
 dart_library("lib") {
@@ -39,6 +42,7 @@ dart_library("lib") {
     "src/services/settings/battery_watcher_service.dart",
     "src/services/settings/brightness_service.dart",
     "src/services/settings/channel_service.dart",
+    "src/services/settings/data_sharing_consent_service.dart",
     "src/services/settings/datetime_service.dart",
     "src/services/settings/memory_watcher_service.dart",
     "src/services/settings/network_address_service.dart",
@@ -70,6 +74,7 @@ dart_library("lib") {
     "src/widgets/scrim.dart",
     "src/widgets/settings/about_settings.dart",
     "src/widgets/settings/channel_settings.dart",
+    "src/widgets/settings/data_sharing_consent_settings.dart",
     "src/widgets/settings/setting_details.dart",
     "src/widgets/settings/shortcut_settings.dart",
     "src/widgets/settings/timezone_settings.dart",
@@ -145,6 +150,10 @@ flutter_component("component") {
     ":resources",
     ":time_zone_list",
   ]
+
+  if (ermine_user_feedback_enabled) {
+    deps += [ ":enable_user_feedback" ]
+  }
 }
 
 tz_ids_path = "${target_gen_dir}/tz_ids.txt"
@@ -191,6 +200,12 @@ resource("resources") {
   outputs = [ "data/{{source_file_part}}" ]
 
   deps = [ ":preferences" ]
+}
+
+# With this JSON, user feedback will be enabled in Ermine.
+resource("enable_user_feedback") {
+  sources = [ "config/enable_user_feedback" ]
+  outputs = [ "config/enable_user_feedback" ]
 }
 
 config_data("images") {

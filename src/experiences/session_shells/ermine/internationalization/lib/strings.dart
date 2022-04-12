@@ -1173,6 +1173,35 @@ class Strings {
             'Tooltip text for the wifi toggle warning icon when turning off wifi fails.',
       );
 
+  static String get usageDiagnostics => Intl.message('Usage & Diagnostics',
+      name: 'usage and diagnostics',
+      desc: 'The title for "Usage & Diagnostics" menu in Quick Settings');
+
+  static String get enabled => Intl.message(
+        'Enabled',
+        name: 'enabled',
+        desc: 'A text indicator for enabled feature',
+      );
+
+  static String get disabled => Intl.message(
+        'Disabled',
+        name: 'disabled',
+        desc: 'A text indicator for disabled feature',
+      );
+
+  static String get helpFuchsia => Intl.message(
+        'Help improve Fuchsia by automatically sending diagnostic '
+        'and usage data to Google.',
+        name: 'help improve fuchsia',
+        desc: 'The description for "Usage & Diagnostics"',
+      );
+
+  static String get privacyTerms => Intl.message(
+        'Google’s privacy & terms',
+        name: 'google privacy and terms',
+        desc: 'The text link to the Google\'s privacy and terms webpage.',
+      );
+
   /// Lookup message given it's name.
   static String? lookup(String name) {
     final _messages = <String, String>{

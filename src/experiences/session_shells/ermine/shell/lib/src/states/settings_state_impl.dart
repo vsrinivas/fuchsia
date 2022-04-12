@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:ermine/src/services/settings/battery_watcher_service.dart';
 import 'package:ermine/src/services/settings/brightness_service.dart';
 import 'package:ermine/src/services/settings/channel_service.dart';
+import 'package:ermine/src/services/settings/data_sharing_consent_service.dart';
 import 'package:ermine/src/services/settings/datetime_service.dart';
 import 'package:ermine/src/services/settings/memory_watcher_service.dart';
 import 'package:ermine/src/services/settings/network_address_service.dart';
@@ -50,6 +51,12 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   bool get channelPageVisible => _channelPageVisible.value;
   late final _channelPageVisible =
       (() => settingsPage.value == SettingsPage.channel).asComputed();
+
+  @override
+  bool get dataSharingConsentPageVisible =>
+      _dataSharingConsentPageVisible.value;
+  late final _dataSharingConsentPageVisible = (() =>
+      settingsPage.value == SettingsPage.dataSharingConsent).asComputed();
 
   @override
   bool get wifiPageVisible => _wifiPageVisible.value;
@@ -202,6 +209,13 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
       _wifiToggleMillisecondsPassed.value = value;
   final Observable<int> _wifiToggleMillisecondsPassed = Observable<int>(0);
 
+  // TODO(fxb/88445): Get the value from dataSharingConsentService.getCurrentConsent()
+  @override
+  bool get dataSharingConsentEnabled => _dataSharingConsentEnabled.value;
+  set dataSharingConsentEnabled(bool value) =>
+      _dataSharingConsentEnabled.value = value;
+  final _dataSharingConsentEnabled = false.asObservable();
+
   final List<String> _timezones;
 
   @override
@@ -217,6 +231,10 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
       // Ex: Mon, Jun 7 2:25 AM
       DateFormat.MMMEd().add_jm().format(dateTimeNow.value)).asComputed();
 
+  @override
+  LaunchPrivacyTermsCallback launchPrivacyTerms;
+
+  final DataSharingConsentService dataSharingConsentService;
   final DateTimeService dateTimeService;
   final TimezoneService timezoneService;
   final NetworkAddressService networkService;
@@ -230,6 +248,8 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   SettingsStateImpl({
     required this.shortcutBindings,
     required this.timezoneService,
+    required this.dataSharingConsentService,
+    required this.launchPrivacyTerms,
     required this.dateTimeService,
     required this.networkService,
     required this.memoryWatcherService,
@@ -238,8 +258,10 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     required this.channelService,
     required this.volumeService,
     required this.wifiService,
-  })  : _timezones = _loadTimezones(),
+  })   : _timezones = _loadTimezones(),
         _selectedTimezone = timezoneService.timezone.asObservable() {
+    dataSharingConsentService.onChanged =
+        (consent) => runInAction(() => dataSharingConsentEnabled = consent);
     dateTimeService.onChanged = updateDateTime;
     timezoneService.onChanged =
         (timezone) => runInAction(() => selectedTimezone = timezone);
@@ -249,8 +271,8 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
           final addresses = interfaces
               .expand((interface) => interface.addresses)
               .toList(growable: false)
-            ..sort((addr1, addr2) =>
-                addr1.type == InternetAddressType.IPv4 ? -1 : 0);
+                ..sort((addr1, addr2) =>
+                    addr1.type == InternetAddressType.IPv4 ? -1 : 0);
 
           runInAction(() => networkAddresses
             ..clear()
@@ -349,6 +371,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   @override
   Future<void> start() async {
     await Future.wait([
+      dataSharingConsentService.start(),
       dateTimeService.start(),
       timezoneService.start(),
       networkService.start(),
@@ -364,6 +387,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   @override
   Future<void> stop() async {
     showAllSettings();
+    await dataSharingConsentService.stop();
     await dateTimeService.stop();
     await timezoneService.stop();
     await networkService.stop();
@@ -377,6 +401,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   @override
   void dispose() {
     super.dispose();
+    dataSharingConsentService.dispose();
     dateTimeService.dispose();
     timezoneService.dispose();
     networkService.dispose();
@@ -414,6 +439,10 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   @override
   void showChannelSettings() =>
       runInAction(() => settingsPage.value = SettingsPage.channel);
+
+  @override
+  void showDataSharingConsentSettings() =>
+      runInAction(() => settingsPage.value = SettingsPage.dataSharingConsent);
 
   @override
   void setTargetChannel(String value) =>
@@ -485,4 +514,8 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   @override
   void setClientConnectionsEnabled({bool enabled = true}) =>
       runInAction(() => wifiService.clientConnectionsEnabled = enabled);
+
+  @override
+  void setDataSharingConsent({bool enabled = true}) =>
+      runInAction(() => dataSharingConsentService.setConsent(consent: enabled));
 }

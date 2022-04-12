@@ -5,6 +5,7 @@
 import 'package:ermine/src/states/app_state.dart';
 import 'package:ermine/src/widgets/settings/about_settings.dart';
 import 'package:ermine/src/widgets/settings/channel_settings.dart';
+import 'package:ermine/src/widgets/settings/data_sharing_consent_settings.dart';
 import 'package:ermine/src/widgets/settings/shortcut_settings.dart';
 import 'package:ermine/src/widgets/settings/timezone_settings.dart';
 import 'package:ermine/src/widgets/settings/wifi_settings.dart';
@@ -50,6 +51,8 @@ class QuickSettings extends StatelessWidget {
                     onChange: state.setTargetChannel,
                     updateAlert: appState.checkingForUpdatesAlert,
                   ),
+                if (state.dataSharingConsentPageVisible)
+                  DataSharingConsentSettings(appState, state),
                 if (state.wifiPageVisible) WiFiSettings(state: state)
               ],
             ),
@@ -285,6 +288,35 @@ class _ListSettings extends StatelessWidget {
                   trailing: Icon(Icons.arrow_right),
                   onTap: appState.settingsState.showChannelSettings,
                 ),
+                if (appState.isUserFeedbackEnabled)
+                  // Usage & Diagnostics
+                  ListTile(
+                    enabled: true,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                    leading: Icon(Icons.bar_chart),
+                    title: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(Strings.usageDiagnostics),
+                        SizedBox(width: 48),
+                        Expanded(
+                          child: Text(
+                            appState.settingsState.dataSharingConsentEnabled
+                                ? Strings.enabled
+                                : Strings.disabled,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.right,
+                            maxLines: 1,
+                            style: TextStyle(
+                                color: Theme.of(context).colorScheme.secondary),
+                          ),
+                        ),
+                      ],
+                    ),
+                    trailing: Icon(Icons.arrow_right),
+                    onTap:
+                        appState.settingsState.showDataSharingConsentSettings,
+                  ),
                 // Feedback
                 ListTile(
                   enabled: true,

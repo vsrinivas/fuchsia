@@ -33,6 +33,7 @@ abstract class AppState {
   bool get isIdle;
   bool get switcherVisible;
   bool get viewsVisible;
+  bool get isUserFeedbackEnabled;
   ViewState get topView;
   ViewState? get switchTarget;
   List<DialogInfo> get dialogs;

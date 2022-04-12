@@ -32,7 +32,7 @@ class SettingDetails extends StatelessWidget {
             ),
             title: Text(
               title,
-              style: Theme.of(context).appBarTheme.titleTextStyle,
+              style: Theme.of(context).textTheme.headline6,
             ),
             actions: trailing == null ? null : [trailing!],
           ),

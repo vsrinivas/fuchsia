@@ -4,6 +4,7 @@
 
 // ignore_for_file: unnecessary_lambdas
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:ermine/src/services/focus_service.dart';
 import 'package:ermine/src/services/launch_service.dart';
@@ -40,6 +41,8 @@ class AppStateImpl with Disposable implements AppState {
       'fuchsia-pkg://fuchsia.com/license_settings#meta/license_settings.cmx';
   static const kScreenSaverUrl =
       'fuchsia-pkg://fuchsia.com/screensaver#meta/screensaver.cmx';
+  static const kEnableUserFeedbackMarkerFile =
+      '/pkg/config/enable_user_feedback';
 
   AppStateImpl({
     required this.startupService,
@@ -61,8 +64,10 @@ class AppStateImpl with Disposable implements AppState {
 
     // Register keyboard shortcuts and then initialize SettingsState with it.
     shortcutsService.register(_actions);
-    settingsState =
-        SettingsState.from(shortcutBindings: shortcutsService.keyboardBindings);
+    settingsState = SettingsState.from(
+      shortcutBindings: shortcutsService.keyboardBindings,
+      launchPrivacyTerms: (String url) => launch(Strings.privacyTerms, url),
+    );
 
     pointerEventsService
       ..onPeekBegin = _onPeekBegin
@@ -217,6 +222,18 @@ class AppStateImpl with Disposable implements AppState {
   @override
   List<Map<String, String>> get appLaunchEntries =>
       startupService.appLaunchEntries;
+
+  @override
+  bool get isUserFeedbackEnabled => _isUserFeedbackEnabled.value;
+  late final _isUserFeedbackEnabled = Observable<bool>(() {
+    File config = File(kEnableUserFeedbackMarkerFile);
+    if (!config.existsSync()) {
+      log.info('User feedback disabled.');
+      return false;
+    }
+    log.info('User feedback enabled.');
+    return true;
+  }());
 
   void setFocusToShellView() {
     focusService.setFocusOnHostView();

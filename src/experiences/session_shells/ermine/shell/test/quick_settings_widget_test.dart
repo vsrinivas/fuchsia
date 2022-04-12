@@ -18,11 +18,13 @@ void main() async {
   late MockSettingsState settings;
 
   final hasDarkTheme = true.asObservable();
+  final isUserFeedbackEnabled = false.asObservable();
   final shortcutsPageVisible = false.asObservable();
   final timezonesPageVisible = false.asObservable();
   final aboutPageVisible = false.asObservable();
   final channelPageVisible = false.asObservable();
   final wifiPageVisible = false.asObservable();
+  final dataSharingConsentPageVisible = false.asObservable();
   final dateTime = '12:00 AM'.asObservable();
   final currentNetwork = 'WiFi'.asObservable();
   final brightnessLevel = 1.0.asObservable();
@@ -40,6 +42,8 @@ void main() async {
 
     when(app.settingsState).thenReturn(settings);
     when(app.hasDarkTheme).thenAnswer((_) => hasDarkTheme.value);
+    when(app.isUserFeedbackEnabled)
+        .thenAnswer((_) => isUserFeedbackEnabled.value);
     when(settings.dateTime).thenAnswer((_) => dateTime.value);
     when(settings.selectedTimezone).thenReturn('America/Los_Angeles');
     when(settings.currentChannel).thenReturn('testing');
@@ -56,6 +60,8 @@ void main() async {
     when(settings.channelPageVisible)
         .thenAnswer((_) => channelPageVisible.value);
     when(settings.wifiPageVisible).thenAnswer((_) => wifiPageVisible.value);
+    when(settings.dataSharingConsentPageVisible)
+        .thenAnswer((_) => dataSharingConsentPageVisible.value);
 
     WidgetFactory.mockFactory = (type) => Container(key: ValueKey(type));
   });
