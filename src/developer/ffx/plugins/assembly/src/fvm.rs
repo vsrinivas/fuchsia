@@ -354,6 +354,7 @@ mod tests {
             system: Vec::new(),
             base: Vec::new(),
             cache: Vec::new(),
+            bootfs_packages: Vec::new(),
             kernel: KernelConfig {
                 path: "path/to/kernel".into(),
                 args: Vec::new(),
@@ -395,6 +396,7 @@ mod tests {
             system: Vec::new(),
             base: Vec::new(),
             cache: Vec::new(),
+            bootfs_packages: Vec::new(),
             kernel: KernelConfig {
                 path: "path/to/kernel".into(),
                 args: Vec::new(),
@@ -454,6 +456,7 @@ mod tests {
             system: Vec::new(),
             base: Vec::new(),
             cache: Vec::new(),
+            bootfs_packages: Vec::new(),
             kernel: KernelConfig {
                 path: "path/to/kernel".into(),
                 args: Vec::new(),
@@ -570,6 +573,7 @@ mod tests {
             system: Vec::new(),
             base: Vec::new(),
             cache: Vec::new(),
+            bootfs_packages: Vec::new(),
             kernel: KernelConfig {
                 path: "path/to/kernel".into(),
                 args: Vec::new(),
@@ -688,6 +692,7 @@ mod tests {
             system: Vec::new(),
             base: Vec::new(),
             cache: Vec::new(),
+            bootfs_packages: Vec::new(),
             kernel: KernelConfig {
                 path: "path/to/kernel".into(),
                 args: Vec::new(),

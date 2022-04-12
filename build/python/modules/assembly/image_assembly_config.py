@@ -82,6 +82,7 @@ class ImageAssemblyConfig:
         self.kernel = KernelInfo()
         self.boot_args: Set[str] = set()
         self.bootfs_files: Set[FileEntry] = set()
+        self.bootfs_packages: Set[FilePath] = set()
 
     @classmethod
     def from_dict(
@@ -102,6 +103,8 @@ class ImageAssemblyConfig:
             dict,
             transform=lambda items: set(
                 [FileEntry.from_dict(item) for item in items]))
+        set_named_member_if_present(
+            result, "bootfs_packages", dict, transform=set)
         return result
 
     @classmethod
@@ -125,6 +128,8 @@ class ImageAssemblyConfig:
             "bootfs_files",
             sorted(self.bootfs_files),
             transform=FileEntry.to_dict)
+        set_if_not_empty(
+            result, "bootfs_packages", self.bootfs_packages, sort=True)
         return result
 
     def dump(self, fp) -> None:
@@ -148,6 +153,8 @@ class ImageAssemblyConfig:
         result.kernel = self.kernel.intersection(other.kernel)
         result.boot_args = self.boot_args.intersection(other.boot_args)
         result.bootfs_files = self.bootfs_files.intersection(other.bootfs_files)
+        result.bootfs_packages = self.bootfs_packages.intersection(
+            other.bootfs_packages)
         return result
 
     def difference(
@@ -162,4 +169,6 @@ class ImageAssemblyConfig:
         result.kernel = self.kernel.difference(other.kernel)
         result.boot_args = self.boot_args.difference(other.boot_args)
         result.bootfs_files = self.bootfs_files.difference(other.bootfs_files)
+        result.bootfs_packages = self.bootfs_packages.difference(
+            other.bootfs_packages)
         return result

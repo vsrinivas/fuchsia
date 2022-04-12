@@ -26,6 +26,7 @@ def main():
     parser.add_argument('--boot-args', type=argparse.FileType('r'))
     parser.add_argument(
         '--bootfs-entries', type=argparse.FileType('r'), required=True)
+    parser.add_argument('--bootfs-packages-list', type=argparse.FileType('r'))
     parser.add_argument('--output', type=argparse.FileType('w'), required=True)
     args = parser.parse_args()
 
@@ -85,6 +86,10 @@ def main():
             "destination": entry["destination"],
         } for entry in json.load(args.bootfs_entries)
     ]
+
+    if args.bootfs_packages_list is not None:
+        bootfs_packages_list = json.load(args.bootfs_packages_list)
+        config["bootfs_packages"] = bootfs_packages_list
 
     json.dump(config, args.output, indent=2)
 

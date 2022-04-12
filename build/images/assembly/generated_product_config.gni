@@ -75,6 +75,7 @@ template("generated_product_config") {
   labels = {
     base_package_list = "${target_name}_package_manifest_list.base"
     cache_package_list = "${target_name}_package_manifest_list.cache"
+    bootfs_package_list = "${target_name}_bootfs_package_list"
     extra_base_list = "${target_name}_package_manifest_list.extra_base"
     extra_base_deps_list =
         "${target_name}_package_manifest_list.extra_base_deps"
@@ -89,6 +90,7 @@ template("generated_product_config") {
     base_package_list = "$target_out_dir/package_lists/${target_name}_base"
     cache_package_list = "$target_out_dir/package_lists/${target_name}_cache"
     extra_base_list = "$target_out_dir/package_lists/${target_name}_extra_base"
+    bootfs_package_list = "$target_out_dir/package_lists/${target_name}_bootfs"
     extra_base_deps_list =
         "$target_out_dir/package_lists/${target_name}_extra_base_deps"
     kernel_image_metadata =
@@ -108,7 +110,7 @@ template("generated_product_config") {
     ]
 
     if (defined(invoker.additional_walk_keys)) {
-      walk_key_entries += invoker.additional_walk_keys
+      walk_keys_entries += invoker.additional_walk_keys
     }
 
     generated_file(target_name) {
@@ -244,6 +246,19 @@ template("generated_product_config") {
     deps = bootfs_labels
   }
 
+  # Construct a list of bootfs packages to add to the product config.
+  # Ignores any fuchsia_driver_packages and fuchsia_shell_packages
+  list_package_manifests(labels.bootfs_package_list) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    filename = files.bootfs_package_list
+    additional_walk_keys = [ "driver_package_manifest_barrier" ]
+    deps = bootfs_labels
+  }
+
   action(target_name) {
     forward_variables_from(invoker,
                            [
@@ -263,12 +278,14 @@ template("generated_product_config") {
       files.kernel_cmdline_args,
       files.boot_args,
       files.bootfs_entries_metadata,
+      files.bootfs_package_list,
     ]
 
     deps = [
       ":${labels.base_package_list}",
       ":${labels.boot_args}",
       ":${labels.bootfs_entries_metadata}",
+      ":${labels.bootfs_package_list}",
       ":${labels.cache_package_list}",
       ":${labels.extra_base_deps_list}",
       ":${labels.extra_base_list}",
@@ -296,6 +313,8 @@ template("generated_product_config") {
       rebase_path(files.boot_args, root_build_dir),
       "--bootfs-entries",
       rebase_path(files.bootfs_entries_metadata, root_build_dir),
+      "--bootfs-packages-list",
+      rebase_path(files.bootfs_package_list, root_build_dir),
       "--output",
       rebase_path(invoker.output_path, root_build_dir),
     ]

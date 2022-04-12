@@ -42,6 +42,11 @@ pub struct PartialImageAssemblyConfig {
     #[serde(default)]
     pub boot_args: Vec<String>,
 
+    /// The packages that are in the bootfs package list, which are
+    /// added to the BOOTFS in the ZBI.
+    #[serde(default)]
+    pub bootfs_packages: Vec<PathBuf>,
+
     /// The set of files to be placed in BOOTFS in the ZBI.
     #[serde(default)]
     pub bootfs_files: Vec<FileEntry>,
@@ -51,7 +56,7 @@ impl PartialImageAssemblyConfig {
     /// Create a new PartialImageAssemblyConfig by merging N PartialImageAssemblyConfigs.
     /// At most one can specify a kernel path, or a clock backstop.
     ///
-    /// Packages in the base and cache sets are deduplicated, as are any boot
+    /// Packages in the base, bootfs, and cache sets are deduplicated, as are any boot
     /// arguments, kernel args, or packages used to provide files for the system
     /// itself.
     ///
@@ -65,6 +70,7 @@ impl PartialImageAssemblyConfig {
         let mut cache = BTreeSet::new();
         let mut boot_args = BTreeSet::new();
         let mut bootfs_files = BTreeMap::new();
+        let mut bootfs_packages = BTreeSet::new();
 
         let mut kernel_path = None;
         let mut kernel_args = Vec::new();
@@ -74,6 +80,7 @@ impl PartialImageAssemblyConfig {
             system.extend(config.system);
             base.extend(config.base);
             cache.extend(config.cache);
+            bootfs_packages.extend(config.bootfs_packages);
             boot_args.extend(config.boot_args);
 
             for entry in config.bootfs_files {
@@ -107,6 +114,7 @@ impl PartialImageAssemblyConfig {
             }),
             boot_args: boot_args.into_iter().collect(),
             bootfs_files: bootfs_files.into_values().collect(),
+            bootfs_packages: bootfs_packages.into_iter().collect(),
         })
     }
 }
@@ -145,6 +153,11 @@ pub struct ImageAssemblyConfig {
     /// The set of files to be placed in BOOTFS in the ZBI.
     #[serde(default)]
     pub bootfs_files: Vec<FileEntry>,
+
+    /// The packages that are in the bootfs package list, which are
+    /// added to the BOOTFS in the ZBI.
+    #[serde(default)]
+    pub bootfs_packages: Vec<PathBuf>,
 }
 
 impl ImageAssemblyConfig {
@@ -157,6 +170,7 @@ impl ImageAssemblyConfig {
             cache: Vec::default(),
             boot_args: Vec::default(),
             bootfs_files: Vec::default(),
+            bootfs_packages: Vec::default(),
             kernel: KernelConfig {
                 path: kernel_path.as_ref().into(),
                 args: Vec::default(),
@@ -177,8 +191,15 @@ impl ImageAssemblyConfig {
     pub fn try_from_partials<I: IntoIterator<Item = PartialImageAssemblyConfig>>(
         configs: I,
     ) -> Result<Self> {
-        let PartialImageAssemblyConfig { system, base, cache, kernel, boot_args, bootfs_files } =
-            PartialImageAssemblyConfig::try_from_partials(configs.into_iter())?;
+        let PartialImageAssemblyConfig {
+            system,
+            base,
+            cache,
+            kernel,
+            boot_args,
+            bootfs_files,
+            bootfs_packages,
+        } = PartialImageAssemblyConfig::try_from_partials(configs.into_iter())?;
 
         let PartialKernelConfig { path: kernel_path, args: cmdline_args, clock_backstop } =
             kernel.ok_or(anyhow!("A kernel configuration must be specified"))?;
@@ -195,6 +216,7 @@ impl ImageAssemblyConfig {
             kernel: KernelConfig { path: kernel_path, args: cmdline_args, clock_backstop },
             boot_args,
             bootfs_files,
+            bootfs_packages,
         })
     }
 }
@@ -585,7 +607,8 @@ mod tests {
                     "source": "path/to/source",
                     "destination": "path/to/destination"
                 }
-              ]
+              ],
+              "bootfs_packages": ["package5", "package6"]
             }
         "#;
 
@@ -617,6 +640,7 @@ mod tests {
                     destination: "path/to/destination",
                 }
               ],
+              "bootfs_packages": ["package5", "package6"],
             }
         "#;
 
@@ -780,6 +804,7 @@ mod tests {
                     "destination": "path/to/destination/a"
                 }
             ],
+            "bootfs_packages": ["package5a", "package6a"],
             "boot_args": [ "arg1a", "arg2a" ]
         }))
         .unwrap();
@@ -794,6 +819,7 @@ mod tests {
                   "destination": "path/to/destination/b"
               }
           ],
+          "bootfs_packages": ["package5b", "package6b"],
           "boot_args": [ "arg1b", "arg2b" ]
         }))
         .unwrap();
@@ -808,6 +834,7 @@ mod tests {
                   "destination": "path/to/destination/c"
               }
           ],
+          "bootfs_packages": ["package5c", "package6c"],
           "boot_args": [ "arg1c", "arg2c" ]
         }))
         .unwrap();
@@ -838,6 +865,8 @@ mod tests {
                     "destination": "path/to/destination/c"
                 },
             ],
+            "bootfs_packages": [
+                "package5a", "package5b", "package5c", "package6a", "package6b", "package6c"],
             "boot_args": [ "arg1a", "arg1b", "arg1c", "arg2a", "arg2b", "arg2c" ]
         }))
         .unwrap();

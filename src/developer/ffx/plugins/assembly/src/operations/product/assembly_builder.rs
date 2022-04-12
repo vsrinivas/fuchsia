@@ -35,6 +35,9 @@ pub struct ImageAssemblyConfigBuilder {
     /// The system packages from the AssemblyInputBundles
     system: PackageSet,
 
+    /// The bootfs packages from the AssemblyInputBundles
+    bootfs_packages: PackageSet,
+
     /// The boot_args from the AssemblyInputBundles
     boot_args: BTreeSet<String>,
 
@@ -95,6 +98,7 @@ impl ImageAssemblyConfigBuilder {
         add_all_packages(&mut self.base, bundle.base, "base")?;
         add_all_packages(&mut self.cache, bundle.cache, "cache")?;
         add_all_packages(&mut self.system, bundle.system, "system")?;
+        add_all_packages(&mut self.bootfs_packages, bundle.bootfs_packages, "bootfs packages")?;
 
         self.boot_args
             .try_insert_all_unique(bundle.boot_args)
@@ -205,6 +209,7 @@ impl ImageAssemblyConfigBuilder {
             mut system,
             boot_args,
             bootfs_files,
+            bootfs_packages,
             config_data,
             kernel_path,
             kernel_args,
@@ -275,6 +280,7 @@ impl ImageAssemblyConfigBuilder {
                 .into_iter()
                 .map(|(destination, source)| FileEntry { destination, source })
                 .collect(),
+            bootfs_packages: bootfs_packages.into_iter().map(|(_, e)| e.path).collect(),
         };
 
         let image_assembly_config = image_assembly_config::ImageAssemblyConfig::try_from_partials(
@@ -344,6 +350,7 @@ mod tests {
                 base: vec![write_empty_pkg("base_package0")],
                 system: vec![write_empty_pkg("sys_package0")],
                 cache: vec![write_empty_pkg("cache_package0")],
+                bootfs_packages: vec![write_empty_pkg("bootfs_package0")],
                 kernel: Some(image_assembly_config::PartialKernelConfig {
                     path: Some("kernel/path".into()),
                     args: vec!["kernel_arg0".into()],
@@ -369,7 +376,7 @@ mod tests {
         assert_eq!(result.base, vec![outdir.path().join("base_package0")]);
         assert_eq!(result.cache, vec![outdir.path().join("cache_package0")]);
         assert_eq!(result.system, vec![outdir.path().join("sys_package0")]);
-
+        assert_eq!(result.bootfs_packages, vec![outdir.path().join("bootfs_package0")]);
         assert_eq!(result.boot_args, vec!("boot_arg0".to_string()));
         assert_eq!(
             result.bootfs_files,
@@ -480,6 +487,16 @@ mod tests {
         let temp = TempDir::new().unwrap();
         let mut aib = make_test_assembly_bundle(temp.path());
         duplicate_first(&mut aib.image_assembly.system);
+
+        let mut builder = ImageAssemblyConfigBuilder::default();
+        assert!(builder.add_parsed_bundle(temp.path(), aib).is_err());
+    }
+
+    #[test]
+    fn test_builder_catches_dupe_bootfs_pkgs_in_aib() {
+        let temp = TempDir::new().unwrap();
+        let mut aib = make_test_assembly_bundle(temp.path());
+        duplicate_first(&mut aib.image_assembly.bootfs_packages);
 
         let mut builder = ImageAssemblyConfigBuilder::default();
         assert!(builder.add_parsed_bundle(temp.path(), aib).is_err());
