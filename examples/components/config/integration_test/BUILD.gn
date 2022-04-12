@@ -5,10 +5,9 @@
 import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
-rustc_test("rust_bin") {
-  name = "config_integration_test_rust"
+rustc_test("bin") {
+  name = "config_integration_test"
   edition = "2018"
-  source_root = "rust/lib.rs"
 
   deps = [
     "//src/lib/diagnostics/inspect/rust",
@@ -18,42 +17,18 @@ rustc_test("rust_bin") {
     "//third_party/rust_crates:anyhow",
   ]
 
-  sources = [ "rust/lib.rs" ]
+  sources = [ "src/lib.rs" ]
 }
 
-executable("cpp_bin") {
+fuchsia_component("config_integration_test_component") {
   testonly = true
-  output_name = "config_integration_test_cpp"
-  sources = [ "cpp/test.cc" ]
-
-  public_deps = [
-    "//examples/diagnostics/inspect/codelab/cpp/testing:inspect-cpp-codelab-testing",
-    "//sdk/fidl/fuchsia.diagnostics",
-    "//sdk/lib/inspect/contrib/cpp:archive_reader",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-  ]
-}
-
-fuchsia_test_component("rust_test") {
-  component_name = "config_integration_test_rust"
-  manifest = "meta/config_integration_test_rust.cml"
-  deps = [ ":rust_bin" ]
-}
-
-fuchsia_test_component("cpp_test") {
-  component_name = "config_integration_test_cpp"
-  manifest = "meta/config_integration_test_cpp.cml"
-  deps = [ ":cpp_bin" ]
+  component_name = "config_integration_test"
+  manifest = "meta/config_integration_test.cml"
+  deps = [ ":bin" ]
 }
 
 fuchsia_test_package("config_integration_test") {
-  test_components = [
-    ":rust_test",
-    ":cpp_test",
-  ]
+  test_components = [ ":config_integration_test_component" ]
   deps = [
     "//examples/components/config/cpp",
     "//examples/components/config/rust",
@@ -61,10 +36,7 @@ fuchsia_test_package("config_integration_test") {
 }
 
 fuchsia_test_package("config_integration_test_with_json_values") {
-  test_components = [
-    ":rust_test",
-    ":cpp_test",
-  ]
+  test_components = [ ":config_integration_test_component" ]
   deps = [
     "//examples/components/config/cpp:cpp_with_json_values",
     "//examples/components/config/rust:rust_with_json_values",
