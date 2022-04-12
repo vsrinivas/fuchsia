@@ -487,6 +487,7 @@ impl BuiltinEnvironment {
                     .set_store_item(ZbiType::BootloaderFile)
                     .set_store_item(ZbiType::DeviceTree)
                     .set_store_item(ZbiType::DriverMetadata)
+                    .set_store_item(ZbiType::CpuTopology)
                     .parse()?,
             ),
             None => None,

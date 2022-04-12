@@ -122,6 +122,7 @@ impl ZbiParser {
             x if x == ZbiType::SerialNumber as u32 => ZbiType::SerialNumber,
             x if x == ZbiType::BootloaderFile as u32 => ZbiType::BootloaderFile,
             x if x == ZbiType::DeviceTree as u32 => ZbiType::DeviceTree,
+            x if x == ZbiType::CpuTopology as u32 => ZbiType::CpuTopology,
             x if is_zbi_type_driver_metadata(x) => ZbiType::DriverMetadata,
             _ => ZbiType::Unknown,
         }

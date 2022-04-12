@@ -46,6 +46,7 @@ pub enum ZbiType {
     SerialNumber = 0x4e4c_5253,
     BootloaderFile = 0x4C46_5442,
     DeviceTree = 0xd00d_feed,
+    CpuTopology = 0x544f_504f,
 
     // DriverMetadata is a special case, where only the LSB of the u32 needs to match this
     // value. See the IsZbiTypeDriverMetadata function for details.
