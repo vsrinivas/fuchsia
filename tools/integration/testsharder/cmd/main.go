@@ -91,6 +91,11 @@ func main() {
 	}
 }
 
+// TODO(olivernewman): Write tests for this function. The helper functions it
+// calls are individually unit-tested, but the ordering of the calls is
+// important and depending on the ordering the functions might step on each
+// other's toes, so it's important to validate that the end-to-end output is as
+// expected.
 func execute(ctx context.Context) error {
 	if buildDir == "" {
 		return fmt.Errorf("must specify a Fuchsia build output directory")
@@ -129,6 +134,10 @@ func execute(ctx context.Context) error {
 		Tags: tags,
 	}
 	shards := testsharder.MakeShards(m.TestSpecs(), opts)
+
+	if perTestTimeout > 0 {
+		testsharder.ApplyTestTimeouts(shards, perTestTimeout)
+	}
 
 	testDurations := testsharder.NewTestDurationsMap(m.TestDurations())
 
@@ -177,10 +186,6 @@ func execute(ctx context.Context) error {
 
 	if realmLabel != "" {
 		testsharder.ApplyRealmLabel(shards, realmLabel)
-	}
-
-	if perTestTimeout > 0 {
-		testsharder.ApplyTestTimeouts(shards, perTestTimeout)
 	}
 
 	f := os.Stdout
