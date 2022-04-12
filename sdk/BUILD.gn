@@ -569,6 +569,7 @@ sdk_molecule("banjo") {
 sdk_molecule("bind") {
   visibility = [ ":*" ]
   deps = [
+    "//src/devices/bind/fuchsia.acpi:fuchsia.acpi_sdk",
     "//src/devices/bind/fuchsia.pci:fuchsia.pci_sdk",
     "//src/devices/bind/fuchsia.test:fuchsia.test_sdk",
     "//src/devices/bind/fuchsia.usb:fuchsia.usb_sdk",

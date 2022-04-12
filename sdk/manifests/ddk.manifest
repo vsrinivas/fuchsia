@@ -1,3 +1,4 @@
+sdk://bind/fuchsia.acpi
 sdk://bind/fuchsia.pci
 sdk://bind/fuchsia.test
 sdk://bind/fuchsia.usb
