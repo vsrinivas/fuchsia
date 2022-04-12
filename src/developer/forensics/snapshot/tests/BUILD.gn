@@ -59,7 +59,7 @@ fuchsia_component("snapshotter_integration_test") {
 fuchsia_component("snapshotter_unittest") {
   testonly = true
 
-  manifest = "meta/snapshotter_unittest.cmx"
+  manifest = "meta/snapshotter_unittest.cml"
 
   deps = [ ":snapshotter_unittest_exe" ]
 }
