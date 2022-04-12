@@ -41,12 +41,9 @@ pub fn sys_mmap(
         not_implemented!("mmap: prot: 0x{:x}", prot);
         return error!(EINVAL);
     }
-    if flags & MAP_32BIT != 0 {
-        not_implemented!("mmap flag MAP_32BIT not implemented.");
-        return error!(ENOSYS);
-    }
     if flags
-        & !(MAP_PRIVATE
+        & !(MAP_32BIT
+            | MAP_PRIVATE
             | MAP_SHARED
             | MAP_ANONYMOUS
             | MAP_FIXED
@@ -102,6 +99,9 @@ pub fn sys_mmap(
         options |= MappingOptions::SHARED;
     }
     if flags & MAP_ANONYMOUS != 0 {
+        if flags & MAP_32BIT != 0 {
+            options |= MappingOptions::LOWER_32BIT;
+        }
         options |= MappingOptions::ANONYMOUS;
     }
 
@@ -688,5 +688,31 @@ mod tests {
 
         // The second page should be part of the original dst mapping.
         check_page_eq(&current_task, new_addr + *PAGE_SIZE, 'z');
+    }
+
+    #[::fuchsia::test]
+    fn test_map_32_bit() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let page_size = *PAGE_SIZE;
+
+        for _i in 0..256 {
+            match sys_mmap(
+                &current_task,
+                UserAddress::from(0),
+                page_size as usize,
+                PROT_READ | PROT_WRITE,
+                MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT,
+                FdNumber::from_raw(-1),
+                0,
+            ) {
+                Ok(address) => {
+                    let memory_end = address.ptr() + page_size as usize;
+                    assert!(memory_end <= 0x80000000);
+                }
+                error => {
+                    assert!(false, "mmap with MAP_32BIT failed: {:?}", error);
+                }
+            }
+        }
     }
 }
