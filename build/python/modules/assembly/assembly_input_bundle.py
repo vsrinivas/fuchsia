@@ -159,6 +159,7 @@ class AssemblyInputBundle(ImageAssemblyConfig):
         file_paths.extend(self.base)
         file_paths.extend(self.cache)
         file_paths.extend(self.system)
+        file_paths.extend(self.bootfs_packages)
         file_paths.extend([entry.source for entry in self.bootfs_files])
         if self.kernel.path is not None:
             file_paths.append(self.kernel.path)

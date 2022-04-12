@@ -79,11 +79,18 @@ def copy_to_assembly_input_bundle(
     deps.update(system_deps)
     result.system.update(system_pkgs)
 
+    # Copy the manifests for the bootfs package set into the assembly bundle
+    (bootfs_pkgs, bootfs_pkg_blobs,
+     bootfs_pkg_deps) = copy_packages(config, outdir, "bootfs_packages")
+    deps.update(bootfs_pkg_deps)
+    result.bootfs_packages.update(bootfs_pkgs)
+
     # Deduplicate all blobs by merkle, but don't validate unique sources for
     # each merkle, last one wins (we trust that in the in-tree build isn't going
-    # to make invalid merkles)
+    # to make invalid merkles).
     all_blobs = {}
-    for (merkle, source) in [*base_blobs, *cache_blobs, *system_blobs]:
+    for (merkle, source) in [*base_blobs, *cache_blobs, *system_blobs,
+                             *bootfs_pkg_blobs]:
         all_blobs[merkle] = source
 
     # Copy all the blobs to their dir in the out-of-tree layout
