@@ -106,12 +106,6 @@
   available_in_git: 'bd2e18ba3e1b10225749e81a43c3616f2acbd308'
   areas: ['Block']
   path: '/src/devices/block/drivers/as370-sdhci'
-- short_description: 'Cadence HPNFC driver'
-  deletion_reason: 'Hardware is not actively supported'
-  gerrit_change_id: '535421'
-  available_in_git: 'bd2e18ba3e1b10225749e81a43c3616f2acbd308'
-  areas: ['NAND']
-  path: '/src/devices/nand/drivers/cadence-hpnfc'
 - short_description: 'Synaptics AS370 clock driver'
   deletion_reason: 'Hardware is not actively supported'
   gerrit_change_id: '535421'

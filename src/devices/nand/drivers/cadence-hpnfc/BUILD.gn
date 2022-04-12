@@ -1,0 +1,98 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/test.gni")
+
+driver_bind_rules("cadence-hpnfc-bind") {
+  rules = "cadence-hpnfc.bind"
+  header_output = "cadence-hpnfc-bind.h"
+  bind_output = "cadence-hpnfc.bindbc"
+  tests = "cadence-hpnfc-bind-test.json"
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
+}
+
+fuchsia_driver("cadence-hpnfc-driver") {
+  output_name = "cadence-hpnfc"
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
+  sources = [ "cadence-hpnfc.cc" ]
+  deps = [
+    ":cadence-hpnfc-bind",
+    "//sdk/banjo/fuchsia.hardware.rawnand:fuchsia.hardware.rawnand_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/mmio",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zircon-internal",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+fuchsia_driver_component("cadence-hpnfc") {
+  info = "cadence-hpnfc-info.json"
+  component_name = "cadence-hpnfc"
+  deps = [ ":cadence-hpnfc-driver" ]
+  colocate = true
+}
+
+test("cadence-hpnfc-test-bin") {
+  if (is_fuchsia) {
+    configs += [ "//build/config:all_source" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  output_name = "cadence-hpnfc-test"
+  sources = [
+    "cadence-hpnfc-test.cc",
+    "cadence-hpnfc.cc",
+  ]
+  deps = [
+    ":cadence-hpnfc-bind",
+    "//sdk/banjo/fuchsia.hardware.rawnand:fuchsia.hardware.rawnand_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/lib/mmio",
+    "//src/devices/testing/mock-ddk",
+    "//src/devices/testing/mock-mmio-reg",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zircon-internal",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("cadence-hpnfc-test") {
+  deps = [ ":cadence-hpnfc-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":cadence-hpnfc-bind_test",
+    ":cadence-hpnfc-test",
+  ]
+}

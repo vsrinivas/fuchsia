@@ -1,0 +1,10 @@
+{
+  "short_description": "AS370 raw NAND device driver",
+  "manufacturer": "Synaptics",
+  "families": [],
+  "models": [],
+  "areas": [
+      "NAND",
+      "Storage"
+  ]
+}
