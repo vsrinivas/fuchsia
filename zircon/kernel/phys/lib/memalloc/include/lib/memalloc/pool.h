@@ -119,18 +119,27 @@ class Pool {
   Pool& operator=(const Pool&) = delete;
   Pool& operator=(Pool&&) = delete;
 
-  // Initializes a Pool from a variable number of memory ranges.
+  // Initializes a Pool from a variable number of memory ranges, performing an
+  // internal allocation for its internal bookkeeping among the free RAM
+  // encoded in the provided ranges. `default_max_addr` prescribes a default
+  // upper bound on the addresses Pool is allowed to allocate; the placement of
+  // the internal bookkeeping must respect this bound.
   //
   // The provided ranges cannot feature overlap among different extended
   // types, or between an extended type with one of kReserved or kPeripheral;
   // otherwise, arbitrary overlap is permitted.
   //
+  // `default_max_addr` defaults to the maximum `uintptr_t` value to capture
+  // the maximum possible 64-bit address in a 32-bit context.
+  //
   // fitx::failed is returned if there is insufficient free RAM to use for
   // Pool's initial bookkeeping.
   //
   template <size_t N>
-  fitx::result<fitx::failed> Init(std::array<cpp20::span<Range>, N> ranges) {
-    return Init(ranges, std::make_index_sequence<N>());
+  fitx::result<fitx::failed> Init(
+      std::array<cpp20::span<Range>, N> ranges,
+      uint64_t default_max_addr = std::numeric_limits<uintptr_t>::max()) {
+    return Init(ranges, std::make_index_sequence<N>(), default_max_addr);
   }
 
   using iterator = typename List::const_iterator;
@@ -159,8 +168,9 @@ class Pool {
   const Range* GetContainingRange(uint64_t addr);
 
   // Attempts to allocate memory out of free RAM of the prescribed type, size,
-  // and alignment, and with the given largest possible address. The provided
-  // type must be an extended type.
+  // and alignment. An optional upper address bound may be passed: if
+  // unspecified the default upper bound passed to Init() will be respected.
+  // `type` must be an extended type.
   //
   // Any returned address is guaranteed to be nonzero.
   //
@@ -169,7 +179,7 @@ class Pool {
   //
   fitx::result<fitx::failed, uint64_t> Allocate(
       Type type, uint64_t size, uint64_t alignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__,
-      uint64_t max_addr = std::numeric_limits<uintptr_t>::max());
+      std::optional<uint64_t> max_addr = {});
 
   // Attempts to perform a "weak allocation" of the given range, wherein all
   // kFreeRam subranges are updated to `type`. The given range must be
@@ -227,21 +237,21 @@ class Pool {
   };
 
   // Ultimately deferred to as the actual initialization routine.
-  fitx::result<fitx::failed> Init(cpp20::span<internal::RangeIterationContext> state);
+  fitx::result<fitx::failed> Init(cpp20::span<internal::RangeIterationContext> state,
+                                  uint64_t max_addr);
 
   template <size_t... I>
   fitx::result<fitx::failed> Init(std::array<cpp20::span<Range>, sizeof...(I)> ranges,
-                                  std::index_sequence<I...> seq) {
+                                  std::index_sequence<I...> seq, uint64_t max_addr) {
     std::array state{internal::RangeIterationContext(ranges[I])...};
-    return Init({state});
+    return Init({state}, max_addr);
   }
 
   // Similar semantics to Allocate(), FindAllocatable() is its main allocation
   // subroutine: it only finds a suitable address to allocate (not actually
   // performing the allocation).
-  fitx::result<fitx::failed, uint64_t> FindAllocatable(
-      Type type, uint64_t size, uint64_t alignment,
-      uint64_t max_addr = std::numeric_limits<uintptr_t>::max());
+  fitx::result<fitx::failed, uint64_t> FindAllocatable(Type type, uint64_t size, uint64_t alignment,
+                                                       uint64_t max_addr);
 
   // On success, returns disconnected node with the given range information;
   // fails if there is insufficient bookkeeping space for the new node.
@@ -297,6 +307,11 @@ class Pool {
   // mutually disjoint, maximally contiguous, and where addr + size does not
   // overflow.
   List ranges_;
+
+  // Default bounds on allocatable addresses, configured during Init() - and
+  // overridable in Allocate().
+  // TODO(fxbug.dev/96965): uint64_t default_min_addr_ = 0;
+  uint64_t default_max_addr_ = 0;
 
   // The number of tracked ranges.
   size_t num_ranges_ = 0;

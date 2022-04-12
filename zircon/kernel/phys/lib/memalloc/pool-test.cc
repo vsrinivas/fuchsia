@@ -40,8 +40,9 @@ constexpr std::string_view kEmptyPrintOut =
     R"""(PREFIX: | Physical memory range                    | Size    | Type
 )""";
 
-void TestPoolInit(Pool& pool, cpp20::span<Range> input, bool init_error = false) {
-  auto status = pool.Init(std::array{input});
+void TestPoolInit(Pool& pool, cpp20::span<Range> input, std::optional<uint64_t> max_addr = {},
+                  bool init_error = false) {
+  auto status = pool.Init(std::array{input}, max_addr.value_or(kDefaultMaxAddr));
   if (init_error) {
     ASSERT_TRUE(status.is_error());
     return;
@@ -72,8 +73,8 @@ void TestPoolPrintOut(const Pool& pool, const char* prefix, std::string_view exp
   EXPECT_EQ(expected, actual);
 }
 
-void TestPoolAllocation(Pool& pool, Type type, uint64_t size, uint64_t alignment, uint64_t max_addr,
-                        bool alloc_error = false) {
+void TestPoolAllocation(Pool& pool, Type type, uint64_t size, uint64_t alignment,
+                        std::optional<uint64_t> max_addr = {}, bool alloc_error = false) {
   auto result = pool.Allocate(type, size, alignment, max_addr);
   if (alloc_error) {
     ASSERT_TRUE(result.is_error());
@@ -159,7 +160,7 @@ void Oom(Pool& pool) {
 TEST(MemallocPoolTests, NoInputMemory) {
   PoolContext ctx;
 
-  ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {}, /*init_error=*/true));
+  ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {}, {}, /*init_error=*/true));
   ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {}));
   ASSERT_NO_FATAL_FAILURE(TestPoolPrintOut(ctx.pool, kPrintOutPrefix, kEmptyPrintOut));
 }
@@ -181,7 +182,7 @@ TEST(MemallocPoolTests, NoRam) {
       },
   };
 
-  ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}, /*init_error=*/true));
+  ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}, {}, /*init_error=*/true));
   ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {}));
   ASSERT_NO_FATAL_FAILURE(TestPoolPrintOut(ctx.pool, kPrintOutPrefix, kEmptyPrintOut));
 }
@@ -198,7 +199,7 @@ TEST(MemallocPoolTests, TooLittleRam) {
         },
     };
 
-    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}, /*init_error=*/true));
+    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}, {}, /*init_error=*/true));
     ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {}));
     ASSERT_NO_FATAL_FAILURE(TestPoolPrintOut(ctx.pool, kPrintOutPrefix, kEmptyPrintOut));
   }
@@ -232,7 +233,7 @@ TEST(MemallocPoolTests, TooLittleRam) {
         },
     };
 
-    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}, /*init_error=*/true));
+    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}, {}, /*init_error=*/true));
     ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {}));
     ASSERT_NO_FATAL_FAILURE(TestPoolPrintOut(ctx.pool, kPrintOutPrefix, kEmptyPrintOut));
   }
@@ -250,7 +251,7 @@ TEST(MemallocPoolTests, NullPointerRegionIsAvoided) {
         },
     };
 
-    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}, /*init_error=*/true));
+    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}, {}, /*init_error=*/true));
     ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {}));
     ASSERT_NO_FATAL_FAILURE(TestPoolPrintOut(ctx.pool, kPrintOutPrefix, kEmptyPrintOut));
   }
@@ -266,7 +267,7 @@ TEST(MemallocPoolTests, NullPointerRegionIsAvoided) {
         },
     };
 
-    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}, /*init_error=*/true));
+    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}, {}, /*init_error=*/true));
     ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {}));
     ASSERT_NO_FATAL_FAILURE(TestPoolPrintOut(ctx.pool, kPrintOutPrefix, kEmptyPrintOut));
   }
@@ -282,7 +283,7 @@ TEST(MemallocPoolTests, NullPointerRegionIsAvoided) {
         },
     };
 
-    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}, /*init_error=*/true));
+    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}, {}, /*init_error=*/true));
     ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {}));
     ASSERT_NO_FATAL_FAILURE(TestPoolPrintOut(ctx.pool, kPrintOutPrefix, kEmptyPrintOut));
   }
@@ -796,6 +797,56 @@ TEST(MemallocPoolTests, GetContainingRange) {
   EXPECT_FALSE(ctx.pool.GetContainingRange(kUsableMemoryStart + 3 * kChunkSize));
 }
 
+TEST(MemallocPoolTests, DefaultAllocationBounds) {
+  constexpr uint64_t kMaxAddr = kUsableMemoryStart + 50 * kChunkSize;
+
+  Range ranges[] = {
+      // free RAM: [kChunkSize, 100*kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart + kChunkSize,
+          .size = 99 * kChunkSize,
+          .type = Type::kFreeRam,
+      },
+  };
+
+  {
+    // A sufficiently small maximum address leaves no room for bookkeeping.
+    PoolContext ctx;
+    ASSERT_NO_FATAL_FAILURE(
+        TestPoolInit(ctx.pool, {ranges}, kUsableMemoryStart + kChunkSize, /*init_error=*/true));
+  }
+
+  {
+    const Range after_init[] = {
+        // bookkeeping: [kChunkSize, 2*kChunkSize) relative to kUsableMemoryStart
+        {
+            .addr = kUsableMemoryStart + kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kPoolBookkeeping,
+        },
+        // free RAM: [2*kChunkSize, 100*kChunkSize) relative to kUsableMemoryStart
+        {
+            .addr = kUsableMemoryStart + 2 * kChunkSize,
+            .size = 98 * kChunkSize,
+            .type = Type::kFreeRam,
+        },
+    };
+
+    PoolContext ctx;
+    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}, kMaxAddr));
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {after_init}));
+
+    // Despite there being 98 chunks left of free RAM, the pool's default upper
+    // address bound means that only 48 of them are accessible.
+    ASSERT_NO_FATAL_FAILURE(TestPoolAllocation(ctx.pool, Type::kPoolTestPayload, 49 * kChunkSize,
+                                               kDefaultAlignment, {}, /*alloc_error=*/true));
+
+    // Though we could override that default now to allocate the remaining chunks.
+    ASSERT_NO_FATAL_FAILURE(TestPoolAllocation(ctx.pool, Type::kPoolTestPayload, 49 * kChunkSize,
+                                               kDefaultAlignment, 100 * kChunkSize));
+  }
+}
+
 TEST(MemallocPoolTests, NoResourcesAllocation) {
   PoolContext ctx;
   Range ranges[] = {
@@ -826,11 +877,11 @@ TEST(MemallocPoolTests, NoResourcesAllocation) {
 
   // Requested size is too big:
   ASSERT_NO_FATAL_FAILURE(TestPoolAllocation(ctx.pool, Type::kPoolTestPayload, 2 * kChunkSize,
-                                             kDefaultAlignment, kDefaultMaxAddr,
+                                             kDefaultAlignment, {},
                                              /*alloc_error=*/true));
   // Requested alignment is too big:
   ASSERT_NO_FATAL_FAILURE(TestPoolAllocation(ctx.pool, Type::kPoolTestPayload, kChunkSize,
-                                             kChunkSize << 2, kDefaultMaxAddr,
+                                             kChunkSize << 2, {},
                                              /*alloc_error=*/true));
 
   // Requested max address is too small:
@@ -889,8 +940,8 @@ TEST(MemallocPoolTests, ExhaustiveAllocation) {
     ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
     ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected_before}));
 
-    ASSERT_NO_FATAL_FAILURE(TestPoolAllocation(ctx.pool, Type::kPoolTestPayload, kChunkSize,
-                                               kDefaultAlignment, kDefaultMaxAddr));
+    ASSERT_NO_FATAL_FAILURE(
+        TestPoolAllocation(ctx.pool, Type::kPoolTestPayload, kChunkSize, kDefaultAlignment));
 
     ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected_after}));
   }
@@ -902,8 +953,8 @@ TEST(MemallocPoolTests, ExhaustiveAllocation) {
     ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected_before}));
 
     for (size_t i = 0; i < 2; ++i) {
-      ASSERT_NO_FATAL_FAILURE(TestPoolAllocation(ctx.pool, Type::kPoolTestPayload, kChunkSize / 2,
-                                                 kDefaultAlignment, kDefaultMaxAddr));
+      ASSERT_NO_FATAL_FAILURE(
+          TestPoolAllocation(ctx.pool, Type::kPoolTestPayload, kChunkSize / 2, kDefaultAlignment));
     }
 
     ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected_after}));
@@ -916,8 +967,8 @@ TEST(MemallocPoolTests, ExhaustiveAllocation) {
     ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected_before}));
 
     for (size_t i = 0; i < 4; ++i) {
-      ASSERT_NO_FATAL_FAILURE(TestPoolAllocation(ctx.pool, Type::kPoolTestPayload, kChunkSize / 4,
-                                                 kDefaultAlignment, kDefaultMaxAddr));
+      ASSERT_NO_FATAL_FAILURE(
+          TestPoolAllocation(ctx.pool, Type::kPoolTestPayload, kChunkSize / 4, kDefaultAlignment));
     }
 
     ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected_after}));
@@ -930,8 +981,7 @@ TEST(MemallocPoolTests, ExhaustiveAllocation) {
     ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected_before}));
 
     for (size_t i = 0; i < kChunkSize; ++i) {
-      ASSERT_NO_FATAL_FAILURE(
-          TestPoolAllocation(ctx.pool, Type::kPoolTestPayload, 1, 1, kDefaultMaxAddr));
+      ASSERT_NO_FATAL_FAILURE(TestPoolAllocation(ctx.pool, Type::kPoolTestPayload, 1, 1));
     }
 
     ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected_after}));
