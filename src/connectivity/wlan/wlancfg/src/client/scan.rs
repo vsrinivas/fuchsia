@@ -2649,25 +2649,6 @@ mod tests {
         });
     }
 
-    // TODO(fxbug.dev/52700) Ignore this test until the location sensor module exists.
-    #[ignore]
-    #[fuchsia::test]
-    fn scan_observer_sends_to_location_sensor() {
-        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut location_sensor_updater = LocationSensorUpdater { wpa3_supported: true };
-        let MockScanData {
-            passive_input_aps: _,
-            passive_internal_aps: internal_aps,
-            passive_fidl_aps: _,
-            active_input_aps: _,
-            combined_internal_aps: _,
-            combined_fidl_aps: _,
-        } = create_scan_ap_data();
-        let fut = location_sensor_updater.update_scan_results(&internal_aps);
-        exec.run_singlethreaded(fut);
-        panic!("Need to reach into location sensor and check it got data")
-    }
-
     #[fuchsia::test]
     fn sme_protection_converts_to_policy_security() {
         use {super::fidl_policy::SecurityType, super::fidl_sme::Protection};
