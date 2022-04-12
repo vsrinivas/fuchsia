@@ -35,7 +35,7 @@ executable("directory_migrator_impl_unittest_exe") {
 fuchsia_component("directory_migrator_impl_unittest") {
   testonly = true
 
-  manifest = "meta/directory_migrator_impl_unittest.cmx"
+  manifest = "meta/directory_migrator_impl_unittest.cml"
 
   deps = [ ":directory_migrator_impl_unittest_exe" ]
 }
