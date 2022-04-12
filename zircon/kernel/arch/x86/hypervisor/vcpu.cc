@@ -101,16 +101,6 @@ bool has_error_code(uint32_t vector) {
   }
 }
 
-uint64_t ept_pointer(paddr_t pml4_address) {
-  return
-      // Physical address of the PML4 page, page aligned.
-      pml4_address |
-      // Use write-back memory type for paging structures.
-      VMX_MEMORY_TYPE_WRITE_BACK << 0 |
-      // Page walk length of 4 (defined as N minus 1).
-      3u << 3;
-}
-
 struct MsrListEntry {
   uint32_t msr;
   uint32_t reserved;
@@ -340,7 +330,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
   // treated as guest-physical addresses. Guest-physical addresses are
   // translated by traversing a set of EPT paging structures to produce
   // physical addresses that are used to access memory.
-  const auto eptp = ept_pointer(pml4_address);
+  const auto eptp = ept_pointer_from_pml4(pml4_address);
   vmcs.Write(VmcsField64::EPT_POINTER, eptp);
 
   // From Volume 3, Section 28.3.3.4: Software can use an INVEPT with type all
@@ -599,6 +589,16 @@ zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* local_api
 }
 
 }  // namespace
+
+uint64_t ept_pointer_from_pml4(paddr_t pml4_address) {
+  return
+      // Physical address of the PML4 page, page aligned.
+      pml4_address |
+      // Use write-back memory type for paging structures.
+      VMX_MEMORY_TYPE_WRITE_BACK << 0 |
+      // Page walk length of 4 (defined as N minus 1).
+      3u << 3;
+}
 
 AutoVmcs::AutoVmcs(paddr_t vmcs_address) : vmcs_address_(vmcs_address) {
   DEBUG_ASSERT(!arch_ints_disabled());
@@ -925,7 +925,7 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
 
       // Invalidate TLB mappings for the EPT.
       zx_paddr_t pml4_address = guest_->AddressSpace()->arch_table_phys();
-      invept(InvEpt::SINGLE_CONTEXT, ept_pointer(pml4_address));
+      invept(InvEpt::SINGLE_CONTEXT, ept_pointer_from_pml4(pml4_address));
       break;
     }
     case Thread::MigrateStage::Exiting: {

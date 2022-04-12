@@ -13,6 +13,7 @@
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
 
+#include "vcpu_priv.h"
 #include "vmx_cpu_state_priv.h"
 
 namespace {
@@ -149,6 +150,21 @@ zx_status_t invept(InvEpt invalidation, uint64_t eptp) {
                        : "cc");
 
   return err ? ZX_ERR_INTERNAL : ZX_OK;
+}
+
+zx_status_t invept_from_pml4(paddr_t ept_pml4) {
+  // If there are no guests then do not perform the invept, since vmx will not be on and we will
+  // fault. When vmx is turned back on we will perform a global context invalidation anyway, so this
+  // is safe. The reason ept invalidations might occur after vmx has been turned off is that the
+  // EPT itself can outlive the guests due to user space having their own handles to the EPT aspace.
+  Guard<Mutex> guard(GuestMutex::Get());
+  if (num_guests != 0) {
+    mp_sync_exec(
+        MP_IPI_TARGET_ALL, 0,
+        [](void* eptp) { invept(InvEpt::SINGLE_CONTEXT, reinterpret_cast<uint64_t>(eptp)); },
+        reinterpret_cast<void*>(ept_pointer_from_pml4(ept_pml4)));
+  }
+  return ZX_OK;
 }
 
 VmxInfo::VmxInfo() {

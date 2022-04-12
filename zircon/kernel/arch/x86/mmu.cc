@@ -24,6 +24,7 @@
 #include <arch/x86.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
+#include <arch/x86/hypervisor/vmx_state.h>
 #include <arch/x86/mmu_mem_types.h>
 #include <kernel/mp.h>
 #include <vm/arch_vm_aspace.h>
@@ -42,6 +43,8 @@ KCOUNTER(tlb_invalidations_received, "mmu.tlb_invalidation_batches_received")
 KCOUNTER(tlb_invalidations_full_global_received, "mmu.tlb_invalidation_full_global_received")
 // Count of the number of TLB invalidation requests for all non-global entries on each CPU
 KCOUNTER(tlb_invalidations_full_nonglobal_received, "mmu.tlb_invalidation_full_nonglobal_received")
+// Count of the number of times an EPT TLB invalidation got performed.
+KCOUNTER(ept_tlb_invalidations, "mmu.ept_tlb_invalidations")
 
 /* Default address width including virtual/physical address.
  * newer versions fetched below */
@@ -460,7 +463,21 @@ PtFlags X86PageTableEpt::split_flags(PageTableLevel level, PtFlags flags) {
 }
 
 void X86PageTableEpt::TlbInvalidate(PendingTlbInvalidation* pending) {
-  // TODO(fxbug.dev/12479): Implement this.
+  if (pending->count == 0 && !pending->full_shootdown) {
+    return;
+  }
+
+  kcounter_add(ept_tlb_invalidations, 1);
+
+  // Target all CPUs with a context invalidation since we do not know what CPUs have this EPT
+  // active. We cannot use active_cpus() is only updated by ContextSwitch, which does not get called
+  // for guests, and also EPT mappings persist even if a guest is not presently executing. In
+  // general unmap operations on EPTs should be extremely rare and not in any common path, so this
+  // inefficiency is not disastrous in the short term. Similarly, since this is an infrequent
+  // operation, we do not attempt to invalidate any individual entries, but just blow away the whole
+  // context.
+  // TODO: Track what CPUs the VCPUs using this EPT are migrated to and only IPI that subset.
+  invept_from_pml4(static_cast<X86ArchVmAspace*>(ctx())->pt_phys());
   pending->clear();
 }
 

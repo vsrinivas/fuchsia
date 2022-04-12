@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_VMX_STATE_H_
-#define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_VMX_STATE_H_
+#ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_HYPERVISOR_VMX_STATE_H_
+#define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_HYPERVISOR_VMX_STATE_H_
 
 #include <zircon/compiler.h>
 
@@ -117,6 +117,10 @@ static_assert(__offsetof(VmxState, guest_state.r14) == GS_R14);
 static_assert(__offsetof(VmxState, guest_state.r15) == GS_R15);
 static_assert(__offsetof(VmxState, guest_state.cr2) == GS_CR2);
 
+// Performs CPU invalidations of the EPT TLB state using the given EPT PML4 physical address. This
+// invalidates on all necessary CPUs and will perform IPIs.
+zx_status_t invept_from_pml4(paddr_t ept_pml4);
+
 // Launch/resume the guest, and return when the guest next exits.
 //
 // If we return ZX_OK, the guest was successfully launched and has now
@@ -138,4 +142,4 @@ void vmx_guest_exit();
 
 #endif  // __ASSEMBLER__
 
-#endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_VMX_STATE_H_
+#endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_HYPERVISOR_VMX_STATE_H_
