@@ -233,14 +233,15 @@ CommandChannel::TransactionId CommandChannel::SendExclusiveCommandInternal(
     }
   }
 
-  if (next_transaction_id_ == 0u) {
-    next_transaction_id_++;
+  if (next_transaction_id_.value() == 0u) {
+    next_transaction_id_.Set(1);
   }
 
-  TransactionId id = next_transaction_id_++;
-  auto data =
-      std::make_unique<TransactionData>(id, command_packet->opcode(), complete_event_code,
-                                        subevent_code, std::move(exclusions), std::move(callback));
+  TransactionId transaction_id = next_transaction_id_.value();
+  next_transaction_id_.Set(transaction_id + 1);
+  auto data = std::make_unique<TransactionData>(transaction_id, command_packet->opcode(),
+                                                complete_event_code, subevent_code,
+                                                std::move(exclusions), std::move(callback));
 
   QueuedCommand command(std::move(command_packet), std::move(data));
 
@@ -253,7 +254,7 @@ CommandChannel::TransactionId CommandChannel::SendExclusiveCommandInternal(
   async::PostTask(async_get_default_dispatcher(),
                   std::bind(&CommandChannel::TrySendQueuedCommands, this));
 
-  return id;
+  return transaction_id;
 }
 
 bool CommandChannel::RemoveQueuedCommand(TransactionId id) {
@@ -369,13 +370,14 @@ void CommandChannel::TrySendQueuedCommands() {
   if (!is_initialized_)
     return;
 
-  if (allowed_command_packets_ == 0) {
+  if (allowed_command_packets_.value() == 0) {
     bt_log(TRACE, "hci", "controller queue full, waiting");
     return;
   }
 
   // Walk the waiting and see if any are sendable.
-  for (auto it = send_queue_.begin(); allowed_command_packets_ > 0 && it != send_queue_.end();) {
+  for (auto it = send_queue_.begin();
+       allowed_command_packets_.value() > 0 && it != send_queue_.end();) {
     // Care must be taken not to dangle this reference if its owner QueuedCommand is destroyed.
     const TransactionData& data = *it->data;
 
@@ -424,7 +426,7 @@ void CommandChannel::SendQueuedCommand(QueuedCommand&& cmd) {
     bt_log(ERROR, "hci", "failed to send command: %s", zx_status_get_string(status));
     return;
   }
-  allowed_command_packets_--;
+  allowed_command_packets_.Set(allowed_command_packets_.value() - 1);
 
   auto& transaction = cmd.data;
 
@@ -475,20 +477,21 @@ CommandChannel::EventHandlerId CommandChannel::NewEventHandler(hci_spec::EventCo
   ZX_DEBUG_ASSERT(event_code);
   ZX_DEBUG_ASSERT(event_callback);
 
-  auto id = next_event_handler_id_++;
+  auto handler_id = next_event_handler_id_.value();
+  next_event_handler_id_.Set(handler_id + 1);
   EventHandlerData data;
-  data.id = id;
+  data.id = handler_id;
   data.event_code = event_code;
   data.pending_opcode = pending_opcode;
   data.event_callback = std::move(event_callback);
   data.is_le_meta_subevent = is_le_meta;
 
-  bt_log(TRACE, "hci", "adding event handler %zu for %sevent code %#.2x", id,
+  bt_log(TRACE, "hci", "adding event handler %zu for %sevent code %#.2x", handler_id,
          (is_le_meta ? "LE sub" : ""), event_code);
-  ZX_DEBUG_ASSERT(event_handler_id_map_.find(id) == event_handler_id_map_.end());
-  event_handler_id_map_[id] = std::move(data);
+  ZX_DEBUG_ASSERT(event_handler_id_map_.find(handler_id) == event_handler_id_map_.end());
+  event_handler_id_map_[handler_id] = std::move(data);
 
-  return id;
+  return handler_id;
 }
 
 void CommandChannel::UpdateTransaction(std::unique_ptr<EventPacket> event) {
@@ -507,14 +510,14 @@ void CommandChannel::UpdateTransaction(std::unique_ptr<EventPacket> event) {
   if (event->event_code() == hci_spec::kCommandCompleteEventCode) {
     const auto& params = event->params<hci_spec::CommandCompleteEventParams>();
     matching_opcode = le16toh(params.command_opcode);
-    allowed_command_packets_ = params.num_hci_command_packets;
+    allowed_command_packets_.Set(params.num_hci_command_packets);
   } else {  //  hci_spec::kCommandStatusEventCode
     const auto& params = event->params<hci_spec::CommandStatusEventParams>();
     matching_opcode = le16toh(params.command_opcode);
-    allowed_command_packets_ = params.num_hci_command_packets;
+    allowed_command_packets_.Set(params.num_hci_command_packets);
     unregister_async_handler = params.status != hci_spec::StatusCode::kSuccess;
   }
-  bt_log(TRACE, "hci", "allowed packets update: %zu", allowed_command_packets_);
+  bt_log(TRACE, "hci", "allowed packets update: %zu", allowed_command_packets_.value());
 
   if (matching_opcode == hci_spec::kNoOp) {
     return;
@@ -708,6 +711,13 @@ zx_status_t CommandChannel::ReadEventPacketFromChannel(const zx::channel& channe
 
   packet->InitializeFromBuffer();
   return ZX_OK;
+}
+
+void CommandChannel::AttachInspect(inspect::Node& parent, const std::string& name) {
+  command_channel_node_ = parent.CreateChild(name);
+  next_transaction_id_.AttachInspect(command_channel_node_, "next_transaction_id");
+  next_event_handler_id_.AttachInspect(command_channel_node_, "next_event_handler_id");
+  allowed_command_packets_.AttachInspect(command_channel_node_, "allowed_command_packets");
 }
 
 }  // namespace bt::hci

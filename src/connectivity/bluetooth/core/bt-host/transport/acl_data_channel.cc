@@ -81,7 +81,7 @@ class AclDataChannelImpl final : public AclDataChannel {
   // AclDataChannel overrides
   void Initialize(const DataBufferInfo& bredr_buffer_info,
                   const DataBufferInfo& le_buffer_info) override;
-  void AttachInspect(inspect::Node& parent, std::string name) override;
+  void AttachInspect(inspect::Node& parent, const std::string& name) override;
   void ShutDown() override;
   void SetDataRxHandler(ACLPacketHandler rx_callback) override;
   bool SendPacket(ACLDataPacketPtr data_packet, UniqueChannelId channel_id,
@@ -380,7 +380,7 @@ void AclDataChannelImpl::Initialize(const DataBufferInfo& bredr_buffer_info,
   bt_log(INFO, "hci", "initialized");
 }
 
-void AclDataChannelImpl::AttachInspect(inspect::Node& parent, std::string name) {
+void AclDataChannelImpl::AttachInspect(inspect::Node& parent, const std::string& name) {
   ZX_ASSERT_MSG(is_initialized_, "Must be initialized before attaching to inspect tree");
   node_ = parent.CreateChild(std::move(name));
   send_queue_.SetProperty(node_.CreateUint("num_queued_packets", 0));

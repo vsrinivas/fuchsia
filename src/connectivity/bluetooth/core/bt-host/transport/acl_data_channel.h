@@ -103,7 +103,7 @@ class AclDataChannel {
 
   // Attach inspect node as a child node of |parent|.
   static constexpr const char* const kInspectNodeName = "acl_data_channel";
-  virtual void AttachInspect(inspect::Node& parent, std::string name) = 0;
+  virtual void AttachInspect(inspect::Node& parent, const std::string& name) = 0;
 
   // Unregisters event handlers and cleans up.
   // NOTE: Initialize() and ShutDown() MUST be called on the same thread. These

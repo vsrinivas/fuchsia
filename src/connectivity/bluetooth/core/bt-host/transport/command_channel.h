@@ -11,6 +11,7 @@
 #include <lib/fit/function.h>
 #include <lib/fit/thread_checker.h>
 #include <lib/fpromise/result.h>
+#include <lib/sys/inspect/cpp/component.h>
 #include <lib/trace/event.h>
 #include <lib/zx/channel.h>
 #include <zircon/compiler.h>
@@ -24,6 +25,7 @@
 #include <fbl/macros.h>
 
 #include "src/connectivity/bluetooth/core/bt-host/common/byte_buffer.h"
+#include "src/connectivity/bluetooth/core/bt-host/common/inspectable.h"
 #include "src/connectivity/bluetooth/core/bt-host/hci-spec/constants.h"
 #include "src/connectivity/bluetooth/core/bt-host/hci-spec/protocol.h"
 #include "src/connectivity/bluetooth/core/bt-host/transport/control_packets.h"
@@ -211,6 +213,10 @@ class CommandChannel final {
   static zx_status_t ReadEventPacketFromChannel(const zx::channel& channel,
                                                 const EventPacketPtr& packet);
 
+  // Attach command_channel inspect node as a child node of |parent|.
+  static constexpr const char* kInspectNodeName = "command_channel";
+  void AttachInspect(inspect::Node& parent, const std::string& name = kInspectNodeName);
+
   fxl::WeakPtr<CommandChannel> AsWeakPtr() { return weak_ptr_factory_.GetWeakPtr(); }
 
  private:
@@ -363,10 +369,10 @@ class CommandChannel final {
   std::unordered_map<hci_spec::OpCode, std::unique_ptr<TransactionData>> pending_transactions_;
 
   // TransactionId counter.
-  size_t next_transaction_id_;
+  UintInspectable<size_t> next_transaction_id_;
 
   // EventHandlerId counter.
-  size_t next_event_handler_id_;
+  UintInspectable<size_t> next_event_handler_id_;
 
   // Used to assert that certain public functions are only called on the
   // creation thread.
@@ -399,7 +405,7 @@ class CommandChannel final {
   // HCI Command Packets parameter.
   //
   // Accessed only from the I/O thread and thus not guarded.
-  size_t allowed_command_packets_;
+  UintInspectable<size_t> allowed_command_packets_;
 
   // Mapping from event handler IDs to handler data.
   std::unordered_map<EventHandlerId, EventHandlerData> event_handler_id_map_;
@@ -411,6 +417,9 @@ class CommandChannel final {
   // Mapping from LE Meta Event Subevent code to the event handlers that were
   // registered to handle that event code.
   std::unordered_multimap<hci_spec::EventCode, EventHandlerId> subevent_code_handlers_;
+
+  // Command channel inspect node.
+  inspect::Node command_channel_node_;
 
   fxl::WeakPtrFactory<CommandChannel> weak_ptr_factory_;
 
