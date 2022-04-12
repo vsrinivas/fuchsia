@@ -97,6 +97,16 @@ class InputReportDriver {
   }
 
   zx::status<> Run(fidl::ServerEnd<fio::Directory> outgoing_dir) {
+    // Expose the driver's inspect data.
+    auto exposed_inspector =
+        driver::ExposedInspector::Create(dispatcher_, input_report_->Inspector(), outgoing_);
+    if (exposed_inspector.is_error()) {
+      FDF_SLOG(ERROR, "Failed to expose inspector",
+               KV("error_string", exposed_inspector.status_string()));
+      return exposed_inspector.take_error();
+    }
+    exposed_inspector_ = std::move(exposed_inspector.value());
+
     input_report_->Start();
 
     // Connect to DevfsExporter.
@@ -163,9 +173,6 @@ class InputReportDriver {
             });
     executor_.schedule_task(std::move(compat_connect));
 
-    // TODO(fxbug.dev/96231): Move compat library to the correct OutgoingDir, and then add inspect
-    // data here.
-
     return outgoing_.Serve(std::move(outgoing_dir));
   }
 
@@ -178,6 +185,8 @@ class InputReportDriver {
   inspect::Inspector inspector_;
   zx::vmo inspect_vmo_;
   async::Executor executor_;
+
+  std::optional<driver::ExposedInspector> exposed_inspector_;
 
   std::optional<compat::Child> child_;
   std::string parent_topo_path_;
