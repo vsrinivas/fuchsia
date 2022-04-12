@@ -11,19 +11,35 @@ config("config") {
   include_dirs = [ "include" ]
 }
 
-config("config_debug_utils") {
+config("config_debug_utils") {  # Enables VK object labelling
   defines = [ "RADIX_SORT_VK_ENABLE_DEBUG_UTILS" ]
 }
 
-config("config_timestamps") {
+config("config_extensions") {  # Enables per pipeline timestamping
   defines = [ "RADIX_SORT_VK_ENABLE_EXTENSIONS" ]
 }
 
-source_set("vk") {
+#
+# Headers
+#
+source_set("vk_headers") {
   public_configs = [ ":config" ]
-  public = [ "include/radix_sort/platforms/vk/radix_sort_vk.h" ]
+  public = [
+    "include/radix_sort/platforms/vk/radix_sort_vk.h",
+    "include/radix_sort/platforms/vk/radix_sort_vk_devaddr.h",
+  ]
   sources = [
     "include/radix_sort/platforms/vk/radix_sort_vk.h",
+    "include/radix_sort/platforms/vk/radix_sort_vk_devaddr.h",
+  ]
+}
+
+#
+# Default set of sources without debugging and profiling extensions
+#
+source_set("vk") {
+  public_configs = [ ":config_debug_utils" ]
+  sources = [
     "radix_sort_vk.c",
     "radix_sort_vk_ext.h",
     "shaders/push.h",
@@ -31,6 +47,7 @@ source_set("vk") {
     "target_requirements.c",
     "target_requirements.h",
   ]
+  public_deps = [ ":vk_headers" ]
   deps = [
     "${graphics_compute_dir}/common",
     "${graphics_compute_dir}/common/vk",
@@ -47,13 +64,10 @@ source_set("vk") {
 #
 source_set("vk_tests") {
   public_configs = [
-    ":config",
     ":config_debug_utils",
-    ":config_timestamps",
+    ":config_extensions",
   ]
-  public = [ "include/radix_sort/platforms/vk/radix_sort_vk.h" ]
   sources = [
-    "include/radix_sort/platforms/vk/radix_sort_vk.h",
     "radix_sort_vk.c",
     "radix_sort_vk_ext.h",
     "shaders/push.h",
@@ -61,6 +75,7 @@ source_set("vk_tests") {
     "target_requirements.c",
     "target_requirements.h",
   ]
+  public_deps = [ ":vk_headers" ]
   deps = [
     "${graphics_compute_dir}/common",
     "${graphics_compute_dir}/common/vk",

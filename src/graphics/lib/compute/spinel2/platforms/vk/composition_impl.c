@@ -473,28 +473,25 @@ spinel_ci_unsealed_to_sealed_record(VkCommandBuffer cb, void * data0, void * dat
   // Sort the TTCK keyvals
   //
   VkDescriptorBufferInfo const ttck_count_dbi = {
-
     .buffer = impl->vk.ttcks.dbi_dm.dbi.buffer,
     .offset = impl->vk.ttcks.dbi_dm.dbi.offset + SPN_BUFFER_OFFSETOF(ttcks, segment_dispatch.w),
-    .range  = sizeof(uint32_t)
+    .range  = sizeof(uint32_t),
   };
 
   VkDescriptorBufferInfo const ttck_keyvals_even_dbi = {
-
     .buffer = impl->vk.ttcks.dbi_dm.dbi.buffer,
     .offset = impl->vk.ttcks.dbi_dm.dbi.offset + SPN_BUFFER_OFFSETOF(ttcks, ttck_keyvals),
-    .range  = impl->vk.ttcks.dbi_dm.dbi.range - SPN_BUFFER_OFFSETOF(ttcks, ttck_keyvals)
+    .range  = impl->vk.ttcks.dbi_dm.dbi.range - SPN_BUFFER_OFFSETOF(ttcks, ttck_keyvals),
   };
 
   struct radix_sort_vk_sort_indirect_info const info = {
-
     .ext          = NULL,
     .key_bits     = SPN_TTCK_HI_BITS_LXY,
-    .count        = &ttck_count_dbi,
-    .keyvals_even = &ttck_keyvals_even_dbi,
-    .keyvals_odd  = &impl->vk.ttck_keyvals_odd.dbi,
-    .internal     = &impl->vk.rs.internal.dbi,
-    .indirect     = &impl->vk.rs.indirect.dbi
+    .count        = ttck_count_dbi,
+    .keyvals_even = ttck_keyvals_even_dbi,
+    .keyvals_odd  = impl->vk.ttck_keyvals_odd.dbi,
+    .internal     = impl->vk.rs.internal.dbi,
+    .indirect     = impl->vk.rs.indirect.dbi,
   };
 
   radix_sort_vk_sort_indirect(device->ti.rs,

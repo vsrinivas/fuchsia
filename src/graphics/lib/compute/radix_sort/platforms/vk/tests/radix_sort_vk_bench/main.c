@@ -1365,9 +1365,9 @@ main(int argc, char const * argv[])
 #endif
             .key_bits     = keyval_bytes * 8,
             .count        = count,
-            .keyvals_even = &dbis.keyvals_even,
-            .keyvals_odd  = &dbis.keyvals_odd,
-            .internal     = &dbis.internal
+            .keyvals_even = dbis.keyvals_even,
+            .keyvals_odd  = dbis.keyvals_odd,
+            .internal     = dbis.internal
           };
 
           radix_sort_vk_sort(rs, &info, device, cb, &dbi_keyvals_sorted);
@@ -1384,11 +1384,11 @@ main(int argc, char const * argv[])
             .ext = NULL,
 #endif
             .key_bits     = keyval_bytes * 8,
-            .count        = &dbis.count,
-            .keyvals_even = &dbis.keyvals_even,
-            .keyvals_odd  = &dbis.keyvals_odd,
-            .internal     = &dbis.internal,
-            .indirect     = &dbis.indirect
+            .count        = dbis.count,
+            .keyvals_even = dbis.keyvals_even,
+            .keyvals_odd  = dbis.keyvals_odd,
+            .internal     = dbis.internal,
+            .indirect     = dbis.indirect
           };
 
           radix_sort_vk_sort_indirect(rs, &info, device, cb, &dbi_keyvals_sorted);

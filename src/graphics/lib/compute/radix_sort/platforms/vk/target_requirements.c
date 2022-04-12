@@ -25,8 +25,8 @@ struct radix_sort_vk_target
 //
 
 bool
-radix_sort_vk_target_get_requirements(struct radix_sort_vk_target const *        target,
-                                      struct radix_sort_vk_target_requirements * requirements)
+radix_sort_vk_target_get_requirements(radix_sort_vk_target_t const *        target,
+                                      radix_sort_vk_target_requirements_t * requirements)
 {
   //
   // Must not be NULL

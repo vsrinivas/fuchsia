@@ -29,21 +29,6 @@ extern "C" {
 #endif
 
 //
-// RADIX SORT TYPES
-//
-
-struct radix_sort_vk_target;
-
-struct radix_sort_vk_target_requirements
-{
-  uint32_t                           ext_name_count;
-  char const **                      ext_names;
-  VkPhysicalDeviceFeatures *         pdf;
-  VkPhysicalDeviceVulkan11Features * pdf11;
-  VkPhysicalDeviceVulkan12Features * pdf12;
-};
-
-//
 // Get a Radix Sort target's Vulkan requirements.
 //
 // A Radix Sort target is a binary image containing configuration parameters and
@@ -61,23 +46,40 @@ struct radix_sort_vk_target_requirements
 // These requirements can be merged with other Vulkan library requirements
 // before VkDevice creation.
 //
-// If the `.ext_names` member is NULL, the `.ext_name_count` member will be
-// initialized.
+// If `.ext_names` is NULL, the `.ext_name_count` member will be initialized
+// with the number of extension names required by the target.
 //
 // Returns `false` if:
 //
-//   * The .ext_names field is NULL and the number of required extensions is
+//   * `.ext_names` is NULL and the number of required extensions is
 //     greater than zero.
-//   * The .ext_name_count is less than the number of required extensions is
-//     greater than zero.
+//   * `.ext_name_count` is less than the number of required extensions.
 //   * Any of the .pdf, .pdf11 or .pdf12 members are NULL.
 //
 // Otherwise, returns true.
 //
+// Acquiring a target's requirements typically requires calling
+// `radix_sort_vk_target_get_requirements()` twice:
+//
+//   1. Discover `.ext_name_count` by invoking with `.ext_names` set to NULL.
+//   2. Allocate and/or set the `.ext_names` array member.
+//   3. Acquire all requirements by invoking again with `.ext_name_count set to
+//      the length of the `.ext_names` array.
+//
+typedef struct radix_sort_vk_target radix_sort_vk_target_t;
+
+typedef struct radix_sort_vk_target_requirements
+{
+  uint32_t                           ext_name_count;
+  char const **                      ext_names;
+  VkPhysicalDeviceFeatures *         pdf;
+  VkPhysicalDeviceVulkan11Features * pdf11;
+  VkPhysicalDeviceVulkan12Features * pdf12;
+} radix_sort_vk_target_requirements_t;
 
 bool
-radix_sort_vk_target_get_requirements(struct radix_sort_vk_target const *        target,
-                                      struct radix_sort_vk_target_requirements * requirements);
+radix_sort_vk_target_get_requirements(radix_sort_vk_target_t const *        target,
+                                      radix_sort_vk_target_requirements_t * requirements);
 
 //
 // Create a Radix Sort instance for a target.
@@ -86,35 +88,35 @@ radix_sort_vk_target_get_requirements(struct radix_sort_vk_target const *       
 //
 // Returns NULL on failure.
 //
+typedef struct radix_sort_vk radix_sort_vk_t;
 
-struct radix_sort_vk *
-radix_sort_vk_create(VkDevice                            device,
-                     VkAllocationCallbacks const *       ac,
-                     VkPipelineCache                     pc,
-                     struct radix_sort_vk_target const * target);
+radix_sort_vk_t *
+radix_sort_vk_create(VkDevice                       device,
+                     VkAllocationCallbacks const *  ac,
+                     VkPipelineCache                pc,
+                     radix_sort_vk_target_t const * target);
 
 //
 // Destroy the Radix Sort instance using the same device and allocator used at
 // creation.
 //
-
 void
-radix_sort_vk_destroy(struct radix_sort_vk *        rs,  //
+radix_sort_vk_destroy(radix_sort_vk_t *             rs,  //
                       VkDevice                      d,
                       VkAllocationCallbacks const * ac);
 
 //
-// Returns the buffer size and alignment requirements for a maximum number of
-// keyvals.
+// Returns the buffer size and alignment requirements when `.count` is the
+// maximum expected number of keyvals.
 //
 // The radix sort implementation is not an in-place sorting algorithm so two
 // non-overlapping keyval buffers are required that are at least
 // `.keyvals_size`.
 //
-// The radix sort instance also requires an `internal` buffer during sorting.
+// The radix sort instance also requires an internal buffer during sorting.
 //
-// If the indirect dispatch sorting function is used, then an `indirect` buffer
-// is also required.
+// If the indirect dispatch sorting function is used, then an indirect buffer is
+// also required.
 //
 // The alignment requirements for the keyval, internal, and indirect buffers
 // must be honored.  All alignments are power of 2.
@@ -151,8 +153,7 @@ radix_sort_vk_destroy(struct radix_sort_vk *        rs,  //
 //   VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
 //   VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT
 //
-
-struct radix_sort_vk_memory_requirements
+typedef struct radix_sort_vk_memory_requirements
 {
   VkDeviceSize keyval_size;
 
@@ -164,24 +165,28 @@ struct radix_sort_vk_memory_requirements
 
   VkDeviceSize indirect_size;
   VkDeviceSize indirect_alignment;
-};
+} radix_sort_vk_memory_requirements_t;
 
 void
-radix_sort_vk_get_memory_requirements(struct radix_sort_vk const *               rs,
-                                      uint32_t                                   count,
-                                      struct radix_sort_vk_memory_requirements * mr);
+radix_sort_vk_get_memory_requirements(radix_sort_vk_t const *               rs,
+                                      uint32_t                              count,
+                                      radix_sort_vk_memory_requirements_t * mr);
 
 //
 // Direct dispatch sorting
 // -----------------------
 //
-// Using a key size of `key_bits`, sort `count` keyvals found in the
-// `.devaddr_keyvals_even` buffer.
+// Using a key size of `.key_bits`, sort `.count` keyvals found in the
+// `.keyvals_even` buffer.
 //
 // Each internal sorting pass copies the keyvals from one keyvals buffer to the
 // other.
 //
-// The number of internal sorting passes is determined by `.key_bits`.
+// If `.count` is <= 1 or `.key_bits` is zero then `radix_sort_vk_sort()`
+// immediately returns.
+//
+// Otherwise, the number of internal sorting passes is determined by
+// `.key_bits`.
 //
 // If an even number of internal sorting passes is required, the sorted keyvals
 // will be found in the "even" keyvals buffer.  Otherwise, the sorted keyvals
@@ -189,7 +194,7 @@ radix_sort_vk_get_memory_requirements(struct radix_sort_vk const *              
 //
 // Which buffer has the sorted keyvals is returned in `keyvals_sorted`.
 //
-// A keyval's `key_bits` are the most significant bits of a keyval.
+// A keyval's `.key_bits` are the most significant bits of a keyval.
 //
 // The maximum number of key bits is determined by the keyval size.
 //
@@ -204,40 +209,47 @@ radix_sort_vk_get_memory_requirements(struct radix_sort_vk const *              
 // invoking this function.
 //
 // The sort begins with either a TRANSFER/WRITE or a COMPUTE/READ to the
-// `internal` and `keyvals_even` buffers.
+// `.internal` and `.keyvals_even` buffers.
 //
-// The sort ends with a COMPUTE/WRITE to the `internal` and `keyvals_sorted`
+// The sort ends with a COMPUTE/WRITE to the `.internal` and `.keyvals_sorted`
 // buffers.
 //
 
-struct radix_sort_vk_sort_info
+//
+// Direct dispatch sorting using VkDescriptorBufferInfo structures
+// ---------------------------------------------------------------
+//
+typedef struct radix_sort_vk_sort_info
 {
-  void *                         ext;
-  uint32_t                       key_bits;
-  uint32_t                       count;
-  VkDescriptorBufferInfo const * keyvals_even;
-  VkDescriptorBufferInfo const * keyvals_odd;
-  VkDescriptorBufferInfo const * internal;
-};
+  void *                 ext;
+  uint32_t               key_bits;
+  uint32_t               count;
+  VkDescriptorBufferInfo keyvals_even;
+  VkDescriptorBufferInfo keyvals_odd;
+  VkDescriptorBufferInfo internal;
+} radix_sort_vk_sort_info_t;
 
 void
-radix_sort_vk_sort(struct radix_sort_vk const *           rs,
-                   struct radix_sort_vk_sort_info const * info,
-                   VkDevice                               device,
-                   VkCommandBuffer                        cb,
-                   VkDescriptorBufferInfo *               keyvals_sorted);
+radix_sort_vk_sort(radix_sort_vk_t const *           rs,
+                   radix_sort_vk_sort_info_t const * info,
+                   VkDevice                          device,
+                   VkCommandBuffer                   cb,
+                   VkDescriptorBufferInfo *          keyvals_sorted);
 
 //
 // Indirect dispatch sorting
 // -------------------------
 //
-// Using a key size of `key_bits`, at pipeline execution time, load keyvals
-// count from `devaddr_count` and sorts the keyvals in `.devaddr_keyvals_even`.
+// Using a key size of `.key_bits`, at pipeline execution time, load the keyval
+// count from `count` buffer and sorts the keyvals in `.keyvals_even` buffer.
 //
 // Each internal sorting pass copies the keyvals from one keyvals buffer to the
 // other.
 //
-// The number of internal sorting passes is determined by `.key_bits`.
+// If `.key_bits` is zero then `radix_sort_vk_sort()` immediately returns.
+//
+// Otherwise, the number of internal sorting passes is determined by
+// `.key_bits`.
 //
 // If an even number of internal sorting passes is required, the sorted keyvals
 // will be found in the "even" keyvals buffer.  Otherwise, the sorted keyvals
@@ -245,7 +257,7 @@ radix_sort_vk_sort(struct radix_sort_vk const *           rs,
 //
 // Which buffer has the sorted keyvals is returned in `keyvals_sorted`.
 //
-// A keyval's `key_bits` are the most significant bits of a keyval.
+// A keyval's `.key_bits` are the most significant bits of a keyval.
 //
 // The keyval count must be less than (1 << 30) as well as be less than or equal
 // to the count used to obtain the the memory requirements.
@@ -258,31 +270,35 @@ radix_sort_vk_sort(struct radix_sort_vk const *           rs,
 // invoking this function.
 //
 // The indirect radix sort begins with a COMPUTE/READ from the `count` buffer
-// and ends with a COMPUTE/WRITE to the `internal` and the `keyvals_sorted`
+// and ends with a COMPUTE/WRITE to the `.internal` and the `.keyvals_sorted`
 // buffers.
 //
-// The `indirect` buffer must support USAGE_INDIRECT.
+// The `.indirect` buffer must support USAGE_INDIRECT.
 //
-// The `count` buffer must be at least 4 bytes and 4-byte aligned.
+// The `.count` buffer must be at least 4 bytes and 4-byte aligned.
 //
 
-struct radix_sort_vk_sort_indirect_info
+//
+// Indirect dispatch sorting using VkDescriptorBufferInfo structures
+// -----------------------------------------------------------------
+//
+typedef struct radix_sort_vk_sort_indirect_info
 {
-  void *                         ext;
-  uint32_t                       key_bits;
-  VkDescriptorBufferInfo const * count;
-  VkDescriptorBufferInfo const * keyvals_even;
-  VkDescriptorBufferInfo const * keyvals_odd;
-  VkDescriptorBufferInfo const * internal;
-  VkDescriptorBufferInfo const * indirect;
-};
+  void *                 ext;
+  uint32_t               key_bits;
+  VkDescriptorBufferInfo count;
+  VkDescriptorBufferInfo keyvals_even;
+  VkDescriptorBufferInfo keyvals_odd;
+  VkDescriptorBufferInfo internal;
+  VkDescriptorBufferInfo indirect;
+} radix_sort_vk_sort_indirect_info_t;
 
 void
-radix_sort_vk_sort_indirect(struct radix_sort_vk const *                    rs,
-                            struct radix_sort_vk_sort_indirect_info const * info,
-                            VkDevice                                        device,
-                            VkCommandBuffer                                 cb,
-                            VkDescriptorBufferInfo *                        keyvals_sorted);
+radix_sort_vk_sort_indirect(radix_sort_vk_t const *                    rs,
+                            radix_sort_vk_sort_indirect_info_t const * info,
+                            VkDevice                                   device,
+                            VkCommandBuffer                            cb,
+                            VkDescriptorBufferInfo *                   keyvals_sorted);
 
 //
 //

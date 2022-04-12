@@ -934,28 +934,25 @@ spinel_rbi_flush_record(VkCommandBuffer cb, void * data0, void * data1)
   ////////////////////////////////////////////////////////////////
 
   VkDescriptorBufferInfo const dbi_ttrks_count = {
-
     .buffer = dispatch->vk.ttrks.dbi.buffer,
     .offset = dispatch->vk.ttrks.dbi.offset + SPN_BUFFER_OFFSETOF(ttrks, count_dispatch.w),
-    .range  = sizeof(uint32_t)
+    .range  = sizeof(uint32_t),
   };
 
   VkDescriptorBufferInfo const dbi_ttrk_keyvals_even = {
-
     .buffer = dispatch->vk.ttrks.dbi.buffer,
     .offset = dispatch->vk.ttrks.dbi.offset + SPN_BUFFER_OFFSETOF(ttrks, keyvals),
-    .range  = dispatch->vk.ttrks.dbi.range - SPN_BUFFER_OFFSETOF(ttrks, keyvals)
+    .range  = dispatch->vk.ttrks.dbi.range - SPN_BUFFER_OFFSETOF(ttrks, keyvals),
   };
 
   struct radix_sort_vk_sort_indirect_info const info = {
-
     .ext          = NULL,
     .key_bits     = SPN_TTRK_BITS_XY_COHORT,
-    .count        = &dbi_ttrks_count,
-    .keyvals_even = &dbi_ttrk_keyvals_even,
-    .keyvals_odd  = &dispatch->vk.ttrk_keyvals_odd.dbi,
-    .internal     = &dispatch->vk.rs.internal.dbi,
-    .indirect     = &dispatch->vk.rs.indirect.dbi
+    .count        = dbi_ttrks_count,
+    .keyvals_even = dbi_ttrk_keyvals_even,
+    .keyvals_odd  = dispatch->vk.ttrk_keyvals_odd.dbi,
+    .internal     = dispatch->vk.rs.internal.dbi,
+    .indirect     = dispatch->vk.rs.indirect.dbi,
   };
 
   VkDescriptorBufferInfo dbi_ttrk_keyvals_out;
