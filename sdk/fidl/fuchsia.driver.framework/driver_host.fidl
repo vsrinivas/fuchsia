@@ -79,4 +79,9 @@ protocol DriverHost {
         start_args DriverStartArgs;
         driver server_end:Driver;
     });
+
+    /// Returns the process KOID of the driver host.
+    GetProcessKoid() -> (struct {
+        koid uint64;
+    }) error zx.status;
 };

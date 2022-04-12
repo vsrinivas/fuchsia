@@ -57,6 +57,9 @@ class DriverHost : public fidl::WireServer<fuchsia_driver_framework::DriverHost>
   // fidl::WireServer<fuchsia_driver_framework::DriverHost>
   void Start(StartRequestView request, StartCompleter::Sync& completer) override;
 
+  void GetProcessKoid(GetProcessKoidRequestView request,
+                      GetProcessKoidCompleter::Sync& completer) override;
+
   async::Loop& loop_;
   async_dispatcher_t* driver_dispatcher_;
   std::mutex mutex_;

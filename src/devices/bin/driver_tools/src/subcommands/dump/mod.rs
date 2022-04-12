@@ -79,11 +79,11 @@ impl DFv2Node {
 
 impl DeviceInfoPrinter for DFv2Node {
     fn print(&self, tabs: usize) -> Result<()> {
-        // TODO(fxbug.dev/90735): Print driver host's KOID
         println!(
-            "{:indent$}[{}] {}",
+            "{:indent$}[{}] pid={} {}",
             "",
             Self::extract_name(self.0.moniker.as_ref().ok_or(format_err!("Missing moniker"))?),
+            self.0.driver_host_koid.as_ref().ok_or(format_err!("Missing driver host KOID"))?,
             self.0.bound_driver_url.as_deref().unwrap_or(""),
             indent = tabs * 3,
         );

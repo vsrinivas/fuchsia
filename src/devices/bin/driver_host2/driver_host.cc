@@ -282,3 +282,15 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
                          fio::wire::VmoFlags::kPrivateClone)
       .ThenExactlyOnce(std::move(callback));
 }
+
+void DriverHost::GetProcessKoid(GetProcessKoidRequestView request,
+                                GetProcessKoidCompleter::Sync& completer) {
+  zx_info_handle_basic_t info;
+  zx_status_t status =
+      zx::process::self()->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to get info about process handle: %s", zx_status_get_string(status));
+    completer.ReplyError(status);
+  }
+  completer.ReplySuccess(info.koid);
+}

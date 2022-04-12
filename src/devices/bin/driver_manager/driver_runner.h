@@ -103,6 +103,8 @@ class DriverHostComponent : public fbl::DoublyLinkedListable<std::unique_ptr<Dri
       fidl::ClientEnd<fuchsia_driver_framework::Node> client_end, const Node& node,
       fuchsia_component_runner::wire::ComponentStartInfo start_info);
 
+  zx::status<uint64_t> GetProcessKoid();
+
  private:
   fidl::WireSharedClient<fuchsia_driver_framework::DriverHost> driver_host_;
 };
@@ -242,7 +244,7 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   size_t NumOrphanedNodes() const;
   zx::status<> PublishComponentRunner(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
   zx::status<> StartRootDriver(std::string_view url);
-  const Node* root_node() const;
+  std::shared_ptr<const Node> root_node() const;
   // This function schedules a callback to attempt to bind all orphaned nodes against
   // the base drivers.
   void ScheduleBaseDriversBinding();

@@ -62,7 +62,7 @@ class DeviceInfoIterator : public fidl::WireServer<fdd::DeviceInfoIterator> {
 };
 }  // namespace
 
-fdd::wire::DeviceInfo CreateDeviceInfo(fidl::AnyArena& allocator, const Node* node) {
+zx::status<fdd::wire::DeviceInfo> CreateDeviceInfo(fidl::AnyArena& allocator, const Node* node) {
   fdd::wire::DeviceInfo device_info(allocator);
 
   device_info.set_id(allocator, reinterpret_cast<uint64_t>(node));
@@ -98,8 +98,6 @@ fdd::wire::DeviceInfo CreateDeviceInfo(fidl::AnyArena& allocator, const Node* no
     }
   }
 
-  // TODO(fxbug.dev/90735): Get KOID of driver host
-
   auto properties = node->properties();
   if (!properties.empty()) {
     fidl::VectorView<fdf::wire::NodeProperty> node_properties(allocator, properties.size());
@@ -119,7 +117,18 @@ fdd::wire::DeviceInfo CreateDeviceInfo(fidl::AnyArena& allocator, const Node* no
 
   // TODO(fxbug.dev/90735): Get topological path
 
-  return device_info;
+  auto driver_host = node->driver_host();
+  if (driver_host) {
+    auto result = driver_host->GetProcessKoid();
+    if (result.is_error()) {
+      LOGF(ERROR, "Failed to get the process KOID of a driver host: %s",
+           zx_status_get_string(result.status_value()));
+      return zx::error(result.status_value());
+    }
+    device_info.set_driver_host_koid(allocator, result.value());
+  }
+
+  return zx::ok(device_info);
 }
 
 void DriverDevelopmentService::GetDeviceInfo(GetDeviceInfoRequestView request,
@@ -129,7 +138,7 @@ void DriverDevelopmentService::GetDeviceInfo(GetDeviceInfoRequestView request,
 
   std::unordered_set<const Node*> unique_nodes;
   std::queue<const Node*> remaining_nodes;
-  remaining_nodes.push(driver_runner_.root_node());
+  remaining_nodes.push(driver_runner_.root_node().get());
   while (!remaining_nodes.empty()) {
     auto node = remaining_nodes.front();
     remaining_nodes.pop();
@@ -157,8 +166,11 @@ void DriverDevelopmentService::GetDeviceInfo(GetDeviceInfoRequestView request,
       }
     }
 
-    auto device_info = CreateDeviceInfo(*arena, node);
-    device_infos.push_back(std::move(device_info));
+    auto result = CreateDeviceInfo(*arena, node);
+    if (result.is_error()) {
+      return;
+    }
+    device_infos.push_back(std::move(result.value()));
   }
   auto iterator = std::make_unique<DeviceInfoIterator>(std::move(arena), std::move(device_infos));
   fidl::BindServer(this->dispatcher_, std::move(request->iterator), std::move(iterator));

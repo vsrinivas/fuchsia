@@ -273,6 +273,17 @@ zx::status<fidl::ClientEnd<fdf::Driver>> DriverHostComponent::Start(
   return zx::ok(std::move(endpoints->client));
 }
 
+zx::status<uint64_t> DriverHostComponent::GetProcessKoid() {
+  auto result = driver_host_.sync()->GetProcessKoid();
+  if (!result.ok()) {
+    return zx::error(result.status());
+  }
+  if (result->result.is_err()) {
+    return zx::error(result->result.err());
+  }
+  return zx::ok(result->result.response().koid);
+}
+
 Node::Node(std::string_view name, std::vector<Node*> parents, DriverBinder* driver_binder,
            async_dispatcher_t* dispatcher)
     : name_(name),
@@ -659,7 +670,7 @@ zx::status<> DriverRunner::StartRootDriver(std::string_view url) {
   return StartDriver(*root_node_, url);
 }
 
-const Node* DriverRunner::root_node() const { return root_node_.get(); }
+std::shared_ptr<const Node> DriverRunner::root_node() const { return root_node_; }
 
 void DriverRunner::ScheduleBaseDriversBinding() {
   driver_index_->WaitForBaseDrivers().Then(

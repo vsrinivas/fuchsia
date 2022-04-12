@@ -10,8 +10,14 @@ struct/member fuchsia.driver.framework/DeviceGroupProperty.values vector<fuchsia
 struct fuchsia.driver.framework/DeviceGroupProperty
 protocol/member fuchsia.driver.framework/Driver.Stop()
 protocol fuchsia.driver.framework/Driver
+protocol/member fuchsia.driver.framework/DriverHost.GetProcessKoid() -> (fuchsia.driver.framework/DriverHost_GetProcessKoid_Result result)
 protocol/member fuchsia.driver.framework/DriverHost.Start(fuchsia.driver.framework/DriverStartArgs start_args,server_end:fuchsia.driver.framework/Driver driver)
 protocol fuchsia.driver.framework/DriverHost
+struct/member fuchsia.driver.framework/DriverHost_GetProcessKoid_Response.koid uint64
+struct fuchsia.driver.framework/DriverHost_GetProcessKoid_Response
+union/member fuchsia.driver.framework/DriverHost_GetProcessKoid_Result.err int32
+union/member fuchsia.driver.framework/DriverHost_GetProcessKoid_Result.response fuchsia.driver.framework/DriverHost_GetProcessKoid_Response
+strict union fuchsia.driver.framework/DriverHost_GetProcessKoid_Result
 protocol/member fuchsia.driver.framework/DriverIndex.AddDeviceGroup(string topological_path,vector<fuchsia.driver.framework/DeviceGroupNode> nodes) -> (fuchsia.driver.framework/DriverIndex_AddDeviceGroup_Result result)
 protocol/member fuchsia.driver.framework/DriverIndex.MatchDriver(fuchsia.driver.framework/NodeAddArgs args) -> (fuchsia.driver.framework/DriverIndex_MatchDriver_Result result)
 protocol/member fuchsia.driver.framework/DriverIndex.MatchDriversV1(fuchsia.driver.framework/NodeAddArgs args) -> (fuchsia.driver.framework/DriverIndex_MatchDriversV1_Result result)

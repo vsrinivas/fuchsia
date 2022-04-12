@@ -80,8 +80,8 @@ type DeviceInfo = table {
     /// (DFv1/DFv2) List of ids representing children.
     3: child_ids vector<uint64>:MAX;
 
-    // TODO(fxbug.dev/90735): Make process KOID available in DFv2
-    /// (DFv1) The process KOID of the driver host the driver resides within.
+    /// (DFv1/DFv2) The process KOID of the driver host the driver resides
+    /// within.
     4: driver_host_koid zx.koid;
 
     /// (DFv1) The topological path of the driver.
