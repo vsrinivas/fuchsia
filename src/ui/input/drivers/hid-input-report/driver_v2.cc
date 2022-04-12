@@ -28,9 +28,10 @@ namespace {
 class InputReportDriver {
  public:
   InputReportDriver(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf2::Node> node,
-                    driver::Namespace ns, driver::Logger logger)
+                    driver::Namespace ns, component::OutgoingDirectory outgoing,
+                    driver::Logger logger)
       : dispatcher_(dispatcher),
-        outgoing_(dispatcher),
+        outgoing_(std::move(outgoing)),
         node_(std::move(node)),
         ns_(std::move(ns)),
         logger_(std::move(logger)),
@@ -41,8 +42,9 @@ class InputReportDriver {
   static zx::status<std::unique_ptr<InputReportDriver>> Start(
       fdf2::wire::DriverStartArgs& start_args, async_dispatcher_t* dispatcher,
       fidl::WireSharedClient<fdf2::Node> node, driver::Namespace ns, driver::Logger logger) {
+    auto outgoing = component::OutgoingDirectory::Create(dispatcher);
     auto driver = std::make_unique<InputReportDriver>(dispatcher, std::move(node), std::move(ns),
-                                                      std::move(logger));
+                                                      std::move(outgoing), std::move(logger));
     fidl::VectorView<fdf2::wire::NodeSymbol> symbols;
     if (start_args.has_symbols()) {
       symbols = start_args.symbols();
@@ -73,14 +75,35 @@ class InputReportDriver {
   }
 
  private:
-  zx::status<> Run(fidl::ServerEnd<fio::Directory> outgoing_dir) {
-    auto interop = compat::Interop::Create(dispatcher_, &ns_, &outgoing_);
-    if (interop.is_error()) {
-      return interop.take_error();
+  zx::status<> ConnectToDevfsExporter() {
+    // Connect to DevfsExporter.
+    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    if (endpoints.is_error()) {
+      return endpoints.take_error();
     }
-    interop_ = std::move(*interop);
+    // Serve a connection to outgoing.
+    auto status = outgoing_.Serve(std::move(endpoints->server));
+    if (status.is_error()) {
+      return status.take_error();
+    }
 
+    auto exporter = driver::DevfsExporter::Create(
+        ns_, dispatcher_, fidl::WireSharedClient(std::move(endpoints->client), dispatcher_));
+    if (exporter.is_error()) {
+      return zx::error(exporter.error_value());
+    }
+    exporter_ = std::move(*exporter);
+    return zx::ok();
+  }
+
+  zx::status<> Run(fidl::ServerEnd<fio::Directory> outgoing_dir) {
     input_report_->Start();
+
+    // Connect to DevfsExporter.
+    auto status = ConnectToDevfsExporter();
+    if (status.is_error()) {
+      return status.take_error();
+    }
 
     // Connect to our parent.
     auto parent_client = compat::ConnectToParentDevice(dispatcher_, &ns_);
@@ -110,17 +133,29 @@ class InputReportDriver {
               return topo_bridge.consumer.promise_or(fpromise::error(ZX_ERR_CANCELED));
             })
             // Create our child device and FIDL server.
-            .and_then([this]() {
-              auto input_protocol = fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
-                fidl::BindServer<fidl::WireServer<fuchsia_input_report::InputDevice>>(
-                    dispatcher_,
-                    fidl::ServerEnd<fuchsia_input_report::InputDevice>(std::move(channel)),
-                    &input_report_.value());
-                return ZX_OK;
-              });
+            .and_then([this]() -> fpromise::promise<void, zx_status_t> {
               child_ = compat::Child("InputReport", ZX_PROTOCOL_INPUTREPORT,
                                      parent_topo_path_ + "/InputReport", {});
-              return interop_.ExportChild(&child_.value(), input_protocol);
+              auto status = outgoing_.AddNamedProtocol(
+                  [this](zx::channel channel) {
+                    fidl::BindServer<fidl::WireServer<fuchsia_input_report::InputDevice>>(
+                        dispatcher_,
+                        fidl::ServerEnd<fuchsia_input_report::InputDevice>(std::move(channel)),
+                        &input_report_.value());
+                  },
+                  "InputReport");
+              if (status.is_error()) {
+                return fpromise::make_result_promise<void, zx_status_t>(
+                    fpromise::error(status.error_value()));
+              }
+              child_->AddCallback(std::make_shared<fit::deferred_callback>([this]() {
+                auto status = outgoing_.RemoveNamedProtocol("InputReport");
+                if (status.is_error()) {
+                  FDF_LOG(WARNING, "Removing protocol failed with: %s", status.status_string());
+                }
+              }));
+              return exporter_.Export(std::string("svc/").append(child_->name()),
+                                      child_->topological_path(), ZX_PROTOCOL_INPUTREPORT);
             })
             // Error handling.
             .or_else([this](zx_status_t& result) {
@@ -136,7 +171,7 @@ class InputReportDriver {
 
   async_dispatcher_t* dispatcher_;
   std::optional<hid_input_report_dev::InputReport> input_report_;
-  service::OutgoingDirectory outgoing_;
+  component::OutgoingDirectory outgoing_;
   fidl::WireSharedClient<fdf2::Node> node_;
   driver::Namespace ns_;
   driver::Logger logger_;
@@ -144,10 +179,10 @@ class InputReportDriver {
   zx::vmo inspect_vmo_;
   async::Executor executor_;
 
-  compat::Interop interop_;
   std::optional<compat::Child> child_;
   std::string parent_topo_path_;
   fidl::WireSharedClient<fuchsia_driver_compat::Device> parent_client_;
+  driver::DevfsExporter exporter_;
 
   // NOTE: Must be the last member.
   fpromise::scope scope_;
