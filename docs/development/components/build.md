@@ -251,7 +251,7 @@ manifest. If you're not sure why you're required to include the shard, you can
 use this GN tool to find a dependency path:
 
 ```posix-terminal
-fx gn path $(fx get-build-dir) {{ '<var>your component target</var>' }} {{ '<var>expect_includes target</var>' }}
+fx gn path $(fx get-build-dir) {{ '<var>your component target</var>' }} {{ '<var>expect_includes target</var>' }} --with-data
 ```
 
 You can find the `expect_includes()` target for instance by searching for
