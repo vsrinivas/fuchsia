@@ -19,10 +19,11 @@ namespace fio = fuchsia_io;
 
 namespace runtests {
 
-ServiceProxyDir::ServiceProxyDir(zx::channel proxy_dir) : proxy_dir_(std::move(proxy_dir)) {}
+ServiceProxyDir::ServiceProxyDir(fidl::ClientEnd<fio::Directory> proxy_dir)
+    : proxy_dir_(std::move(proxy_dir)) {}
 
 void ServiceProxyDir::AddEntry(std::string name, fbl::RefPtr<fs::Vnode> node) {
-  entries_[name] = node;
+  entries_[std::move(name)] = std::move(node);
 }
 
 zx_status_t ServiceProxyDir::GetAttributes(fs::VnodeAttributes* attr) {
@@ -53,12 +54,14 @@ zx_status_t ServiceProxyDir::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode
   }
 
   entries_.emplace(
-      entry_name, *out = fbl::MakeRefCounted<fs::Service>([this, entry_name](zx::channel request) {
-        return fidl::WireCall<fio::Directory>(zx::unowned_channel(proxy_dir_))
-            ->Open(fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable,
-                   0755, fidl::StringView::FromExternal(entry_name), std::move(request))
-            .status();
-      }));
+      entry_name,
+      *out =
+          fbl::MakeRefCounted<fs::Service>([this, entry_name](fidl::ServerEnd<fio::Node> request) {
+            return fidl::WireCall(proxy_dir_)
+                ->Open(fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable,
+                       0755, fidl::StringView::FromExternal(entry_name), std::move(request))
+                .status();
+          }));
 
   return ZX_OK;
 }

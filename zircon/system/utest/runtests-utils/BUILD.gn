@@ -16,6 +16,7 @@ test("runtests-utils") {
     "runtests-utils-test.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_c",
     "//src/storage/memfs",
     "//third_party/re2",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

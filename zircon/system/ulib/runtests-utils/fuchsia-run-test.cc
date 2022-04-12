@@ -240,7 +240,7 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
       return std::make_unique<Result>(path, FAILED_UNKNOWN, 0, 0);
     }
 
-    zx::channel svc_handle;
+    fidl::ClientEnd<fuchsia_io::Directory> svc_handle;
     for (size_t i = 0; i < flat->count; ++i) {
       if (!strcmp(flat->path[i], "/svc")) {
         // Save the current /svc handle...
@@ -256,14 +256,16 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
     // Setup proxy dir.
     fbl::RefPtr proxy_dir = fbl::MakeRefCounted<ServiceProxyDir>(std::move(svc_handle));
     auto node = fbl::MakeRefCounted<fs::Service>(
-        [dispatcher = loop.dispatcher(), &debug_data_publisher](zx::channel channel) {
+        [dispatcher = loop.dispatcher(),
+         &debug_data_publisher](fidl::ServerEnd<fuchsia_debugdata::Publisher> channel) {
           debug_data_publisher->Bind(std::move(channel), dispatcher);
           return ZX_OK;
         });
     proxy_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_debugdata::Publisher>, node);
 
     auto deprecated_node = fbl::MakeRefCounted<fs::Service>(
-        [dispatcher = loop.dispatcher(), &debug_data_publisher](zx::channel channel) {
+        [dispatcher = loop.dispatcher(),
+         &debug_data_publisher](fidl::ServerEnd<fuchsia_debugdata::DebugData> channel) {
           debug_data_publisher->BindDeprecatedDebugData(std::move(channel), dispatcher);
           return ZX_OK;
         });

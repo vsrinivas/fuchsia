@@ -8,6 +8,7 @@
 #ifndef RUNTESTS_UTILS_LOG_EXPORTER_H_
 #define RUNTESTS_UTILS_LOG_EXPORTER_H_
 
+#include <fidl/fuchsia.logger/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
@@ -18,15 +19,10 @@
 
 #include <memory>
 #include <string_view>
+#include <utility>
 
 #include <fbl/string.h>
 #include <fbl/vector.h>
-
-// TODO(fxbug.dev/7519): Remove this once fixed.
-typedef zx_handle_t fuchsia_logger_LogListener;
-#include <fuchsia/logger/c/fidl.h>
-
-#include <utility>
 
 namespace runtests {
 
@@ -64,7 +60,7 @@ class LogExporter {
   LogExporter(zx::channel channel, FILE* output_file);
   ~LogExporter();
 
-  // Starts LogListener service on a seperate thread.
+  // Starts LogListener service on a separate thread.
   //
   // Returns result of loop_.StartThread().
   zx_status_t StartThread();
@@ -106,7 +102,7 @@ class LogExporter {
   zx_status_t LogMany(fidl::HLCPPIncomingMessage message);
 
   // Helper method to log |message| to file.
-  int LogMessage(fuchsia_logger_LogMessage* message);
+  ssize_t LogMessage(fuchsia_logger::wire::LogMessage message);
 
   // Helper method to call |error_handler_|.
   void NotifyError(zx_status_t error);
@@ -131,7 +127,7 @@ class LogExporter {
 
 // Launches Log Exporter.
 //
-// Starts message loop on a seperate thread.
+// Starts message loop on a separate thread.
 //
 // |syslog_path| file path where to write logs.
 // |error| error to set in case of failure.

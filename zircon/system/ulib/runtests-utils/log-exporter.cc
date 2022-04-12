@@ -22,7 +22,21 @@
 namespace runtests {
 namespace {
 
-fbl::String ToFblString(fidl_string_t string) { return fbl::String(string.data, string.size); }
+fuchsia_logger::wire::LogMessage ToLLCPP(fuchsia_logger_LogMessage* log_message) {
+  const fidl_vector_t& tags = log_message->tags;
+  const fidl_string_t& msg = log_message->msg;
+  return {
+      .pid = log_message->pid,
+      .tid = log_message->tid,
+      .time = log_message->time,
+      .severity = log_message->severity,
+      .dropped_logs = log_message->dropped_logs,
+      // 🤞 fidl::StringView has the same layout as fidl_string_t.
+      .tags = fidl::VectorView<fidl::StringView>::FromExternal(
+          static_cast<fidl::StringView*>(tags.data), tags.count),
+      .msg = fidl::StringView::FromExternal(msg.data, msg.size),
+  };
+}
 
 }  // namespace
 
@@ -69,7 +83,8 @@ void LogExporter::OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase*
       status = ReadAndDispatchMessage(&buffer);
       if (status == ZX_ERR_SHOULD_WAIT) {
         break;
-      } else if (status != ZX_OK) {
+      }
+      if (status != ZX_OK) {
         NotifyError(status);
         return;
       }
@@ -119,7 +134,7 @@ uint64_t GetNanoSeconds(uint64_t nanoseconds) { return (nanoseconds / 1000UL) % 
 
 #define RETURN_IF_ERROR(expr) \
   do {                        \
-    int n = (expr);           \
+    ssize_t n = (expr);       \
     if (n < 0) {              \
       return n;               \
     }                         \
@@ -142,31 +157,33 @@ int LogExporter::WriteSeverity(int32_t severity) {
   }
 }
 
-int LogExporter::LogMessage(fuchsia_logger_LogMessage* log_message) {
-  RETURN_IF_ERROR(fprintf(output_file_, "[%05ld.%06ld][%lu][%lu]", GetSeconds(log_message->time),
-                          GetNanoSeconds(log_message->time), log_message->pid, log_message->tid));
+ssize_t LogExporter::LogMessage(fuchsia_logger::wire::LogMessage message) {
+  RETURN_IF_ERROR(fprintf(output_file_, "[%05ld.%06ld][%lu][%lu]", GetSeconds(message.time),
+                          GetNanoSeconds(message.time), message.pid, message.tid));
   RETURN_IF_ERROR(fputs("[", output_file_));
-  fidl_string_t* tags = static_cast<fidl_string_t*>(log_message->tags.data);
-  for (size_t i = 0; i < log_message->tags.count; ++i) {
-    RETURN_IF_ERROR(fprintf(output_file_, "%s", ToFblString(tags[i]).c_str()));
-    if (i < log_message->tags.count - 1) {
+  for (size_t i = 0; i < message.tags.count(); ++i) {
+    if (i != 0) {
       RETURN_IF_ERROR(fputs(", ", output_file_));
     }
+    const fidl::StringView& tag = message.tags[i];
+    RETURN_IF_ERROR(fwrite(tag.data(), 1, tag.size(), output_file_));
   }
   RETURN_IF_ERROR(fputs("]", output_file_));
 
-  RETURN_IF_ERROR(WriteSeverity(log_message->severity));
+  RETURN_IF_ERROR(WriteSeverity(message.severity));
 
-  RETURN_IF_ERROR(fprintf(output_file_, ": %s\n", ToFblString(log_message->msg).c_str()));
-  if (log_message->dropped_logs > 0) {
+  RETURN_IF_ERROR(fputs(": ", output_file_));
+  RETURN_IF_ERROR(fwrite(message.msg.data(), 1, message.msg.size(), output_file_));
+  RETURN_IF_ERROR(fputs("\n", output_file_));
+  if (message.dropped_logs > 0) {
     bool log = true;
     bool found = false;
     for (DroppedLogs& dl : dropped_logs_) {
-      if (dl.pid == log_message->pid) {
+      if (dl.pid == message.pid) {
         found = true;
         // only update our vector when we get new dropped_logs value.
-        if (dl.dropped_logs < log_message->dropped_logs) {
-          dl.dropped_logs = log_message->dropped_logs;
+        if (dl.dropped_logs < message.dropped_logs) {
+          dl.dropped_logs = message.dropped_logs;
         } else {
           log = false;
         }
@@ -174,23 +191,22 @@ int LogExporter::LogMessage(fuchsia_logger_LogMessage* log_message) {
       }
     }
     if (!found) {
-      dropped_logs_.push_back(DroppedLogs{log_message->pid, log_message->dropped_logs});
+      dropped_logs_.push_back(DroppedLogs{message.pid, message.dropped_logs});
     }
     if (log) {
-      RETURN_IF_ERROR(fprintf(output_file_, "[%05ld.%06ld][%lu][%lu]",
-                              GetSeconds(log_message->time), GetNanoSeconds(log_message->time),
-                              log_message->pid, log_message->tid));
+      RETURN_IF_ERROR(fprintf(output_file_, "[%05ld.%06ld][%lu][%lu]", GetSeconds(message.time),
+                              GetNanoSeconds(message.time), message.pid, message.tid));
       RETURN_IF_ERROR(fputs("[", output_file_));
-      fidl_string_t* tags = static_cast<fidl_string_t*>(log_message->tags.data);
-      for (size_t i = 0; i < log_message->tags.count; ++i) {
-        RETURN_IF_ERROR(fprintf(output_file_, "%s", ToFblString(tags[i]).c_str()));
-        if (i < log_message->tags.count - 1) {
+      for (size_t i = 0; i < message.tags.count(); ++i) {
+        if (i != 0) {
           RETURN_IF_ERROR(fputs(", ", output_file_));
         }
+        const fidl::StringView& tag = message.tags[i];
+        RETURN_IF_ERROR(fwrite(tag.data(), 1, tag.size(), output_file_));
       }
       RETURN_IF_ERROR(fputs("]", output_file_));
       RETURN_IF_ERROR(
-          fprintf(output_file_, " WARNING: Dropped logs count:%d\n", log_message->dropped_logs));
+          fprintf(output_file_, " WARNING: Dropped logs count:%d\n", message.dropped_logs));
     }
   }
   return 0;
@@ -206,7 +222,7 @@ zx_status_t LogExporter::Log(fidl::HLCPPIncomingMessage message) {
   }
 
   fuchsia_logger_LogMessage* log_message = message.GetBodyViewAs<fuchsia_logger_LogMessage>();
-  if (LogMessage(log_message) < 0) {
+  if (LogMessage(ToLLCPP(log_message)) < 0) {
     NotifyFileError(strerror(errno));
     return ZX_OK;
   }
@@ -229,7 +245,7 @@ zx_status_t LogExporter::LogMany(fidl::HLCPPIncomingMessage message) {
   fidl_vector_t* log_messages = message.GetBodyViewAs<fidl_vector_t>();
   fuchsia_logger_LogMessage* msgs = static_cast<fuchsia_logger_LogMessage*>(log_messages->data);
   for (size_t i = 0; i < log_messages->count; ++i) {
-    if (LogMessage(&msgs[i]) < 0) {
+    if (LogMessage(ToLLCPP(&msgs[i])) < 0) {
       NotifyFileError(strerror(errno));
       return ZX_OK;
     }

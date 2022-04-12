@@ -24,9 +24,9 @@ namespace {
 
 class Echo : public fidl::WireServer<fidl_test_echo::Echo> {
  public:
-  Echo(std::string response) : response_(std::move(response)) {}
+  explicit Echo(std::string response) : response_(std::move(response)) {}
 
-  virtual void EchoString(EchoStringRequestView request, EchoStringCompleter::Sync& completer) {
+  void EchoString(EchoStringRequestView request, EchoStringCompleter::Sync& completer) override {
     completer.Reply(fidl::StringView::FromExternal(response_));
   }
 
@@ -62,8 +62,7 @@ TEST(ServiceProxyDirTest, Simple) {
   ASSERT_OK(loop.StartThread());
 
   Echo proxy_echo(kProxyEchoString);
-  auto proxy_dir =
-      fbl::MakeRefCounted<runtests::ServiceProxyDir>(std::move(endpoints->client).TakeChannel());
+  auto proxy_dir = fbl::MakeRefCounted<runtests::ServiceProxyDir>(std::move(endpoints->client));
   proxy_dir->AddEntry(
       kProxyEchoString,
       fbl::MakeRefCounted<fs::Service>([&proxy_echo, dispatcher = loop.dispatcher()](

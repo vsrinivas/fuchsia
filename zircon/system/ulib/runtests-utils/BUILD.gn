@@ -26,8 +26,8 @@ zx_library("runtests-utils") {
     "//sdk/lib/fidl/cpp:cpp_base",
     "//zircon/system/ulib/zircon-internal",
 
-    # <runtests-utils/log-exporter.h> has #include <fuchsia/logger/c/fidl.h>.
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger_c",
+    # <runtests-utils/log-exporter.h> has #include <fidl/fuchsia.logger/cpp/wire.h>.
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
 
     # <runtests-utils/log-exporter.h> has #include <lib/async-loop/cpp/loop.h>.
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -53,11 +53,6 @@ zx_library("runtests-utils") {
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 
   # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
   # Consider switching to the C++ bindings. See linked bug for details.

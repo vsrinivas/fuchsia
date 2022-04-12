@@ -21,7 +21,7 @@ namespace runtests {
 // directory but allows replacing some entries.
 class ServiceProxyDir : public fs::Vnode {
  public:
-  explicit ServiceProxyDir(zx::channel proxy_dir);
+  explicit ServiceProxyDir(fidl::ClientEnd<fuchsia_io::Directory> proxy_dir);
 
   void AddEntry(std::string name, fbl::RefPtr<fs::Vnode> node);
 
@@ -34,7 +34,7 @@ class ServiceProxyDir : public fs::Vnode {
                                      fs::VnodeRepresentation* info) final;
 
  private:
-  zx::channel proxy_dir_;
+  const fidl::ClientEnd<fuchsia_io::Directory> proxy_dir_;
   std::unordered_map<std::string, fbl::RefPtr<fs::Vnode>> entries_;
   std::mutex lock_;
 };
