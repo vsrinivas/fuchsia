@@ -1,0 +1,37 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.hardware.i2c.businfo;
+
+const MAX_I2C_CHANNEL uint32 = 128; // Enough for every address to be used in 7-bit mode.
+
+/// Used to inform the i2c driver about an attached i2c device.
+type I2CChannel = table {
+    /// ID of the bus that this device is on.
+    1: bus_id uint32;
+    /// Address of the device.
+    2: address uint16;
+    /// Class of the device.
+    /// TODO(fxbug.dev/78198): remove this once x86 uses ACPI properly.
+    3: i2c_class uint32;
+
+    /// Vendor ID. Used when binding via platform bus device IDs.
+    4: vid uint32;
+    /// Product ID. Used when binding via platform bus device IDs.
+    5: pid uint32;
+    /// Device ID. Used when binding via platform bus device IDs.
+    6: did uint32;
+
+    // Bus configuration.
+    /// Are we in charge of the bus?
+    7: is_bus_controller bool;
+    /// Is this device using 10-bit addressing mode (if false, use 7-bit).
+    8: is_ten_bit bool;
+    /// Speed of the bus.
+    9: bus_speed uint32;
+};
+
+/// Passed to the i2c driver in metadata as DEVICE_METADATA_I2C_CHANNELS.
+type I2CBusMetadata = table {
+    1: channels vector<I2CChannel>:MAX_I2C_CHANNEL;
+};
