@@ -23,7 +23,7 @@ cts_executable("memfs-cts-test") {
 
 cts_fuchsia_component("memfs-component") {
   deps = [ ":memfs-cts-test" ]
-  manifest = "meta/memfs-cts-test.cmx"
+  manifest = "meta/memfs-cts-test.cml"
   testonly = true
 }
 
