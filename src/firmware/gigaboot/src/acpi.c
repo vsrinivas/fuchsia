@@ -8,13 +8,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <xefi.h>
+#include <zircon/boot/driver-config.h>
 
 const efi_guid kAcpiTableGuid = ACPI_TABLE_GUID;
 const efi_guid kAcpi20TableGuid = ACPI_20_TABLE_GUID;
 const uint8_t kAcpiRsdpSignature[8] = "RSD PTR ";
 const uint8_t kRsdtSignature[ACPI_TABLE_SIGNATURE_SIZE] = "RSDT";
 const uint8_t kXsdtSignature[ACPI_TABLE_SIGNATURE_SIZE] = "XSDT";
-const uint8_t kScprSignature[ACPI_TABLE_SIGNATURE_SIZE] = "SPCR";
+const uint8_t kSpcrSignature[ACPI_TABLE_SIGNATURE_SIZE] = "SPCR";
 const uint8_t kMadtSignature[ACPI_TABLE_SIGNATURE_SIZE] = "APIC";
 
 // Computes the checksum of an ACPI table, which is just the sum of the bytes
@@ -116,4 +117,40 @@ acpi_sdt_hdr_t* load_table_with_signature(acpi_rsdp_t* rsdp, uint8_t* signature)
     }
   }
   return NULL;
+}
+
+uint32_t spcr_type_to_kdrv(acpi_spcr_t* spcr) {
+  if (spcr == 0) {
+    return 0;
+  }
+  // The SPCR table does not contain the granular subtype of the register
+  // interface we need in revision 1, so return early in this case.
+  if (spcr->hdr.revision < 2) {
+    return 0;
+  }
+  // The SPCR types are documented in Table 3 on:
+  // https://docs.microsoft.com/en-us/windows-hardware/drivers/bringup/acpi-debug-port-table
+  // We currently only rely on PL011 devices to be initialized here.
+  switch (spcr->interface_type) {
+    case 0x0003:
+      return KDRV_PL011_UART;
+    default:
+      printf("unsupported serial interface type 0x%x", spcr->interface_type);
+      return 0;
+  }
+}
+
+void uart_driver_from_spcr(acpi_spcr_t* spcr, dcfg_simple_t* uart_driver) {
+  memset(uart_driver, 0x0, sizeof(dcfg_simple_t));
+  uint32_t interrupt = 0;
+  if (0x1 & spcr->interrupt_type) {
+    // IRQ is only valid if the lowest order bit of interrupt type is set.
+    interrupt = spcr->irq;
+  } else {
+    // Any other bit set to 1 in the interrupt type indicates that we should
+    // use the Global System Interrupt (GSIV).
+    interrupt = spcr->gsiv;
+  }
+  uart_driver->mmio_phys = spcr->base_address.address;
+  uart_driver->irq = interrupt;
 }

@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 #include <xefi.h>
+#include <zircon/boot/driver-config.h>
 #include <zircon/compiler.h>
 
 #define ACPI_TABLE_SIGNATURE_SIZE 4
@@ -16,7 +17,7 @@ extern const efi_guid kAcpi20TableGuid;
 extern const uint8_t kAcpiRsdpSignature[8];
 extern const uint8_t kRsdtSignature[ACPI_TABLE_SIGNATURE_SIZE];
 extern const uint8_t kXsdtSignature[ACPI_TABLE_SIGNATURE_SIZE];
-extern const uint8_t kScprSignature[ACPI_TABLE_SIGNATURE_SIZE];
+extern const uint8_t kSpcrSignature[ACPI_TABLE_SIGNATURE_SIZE];
 extern const uint8_t kMadtSignature[ACPI_TABLE_SIGNATURE_SIZE];
 
 __BEGIN_CDECLS
@@ -51,12 +52,53 @@ typedef struct __attribute__((packed)) {
 } acpi_sdt_hdr_t;
 _Static_assert(sizeof(acpi_sdt_hdr_t) == 36, "System Description Table Header is the wrong size");
 
+typedef struct __attribute__((packed)) {
+  uint8_t address_space_id;
+  uint8_t register_bit_width;
+  uint8_t register_bit_offset;
+  uint8_t access_size;
+  uint64_t address;
+} acpi_gas_t;
+_Static_assert(sizeof(acpi_gas_t) == 12, "GAS is the wrong size");
+
+typedef struct __attribute__((packed)) {
+  acpi_sdt_hdr_t hdr;
+  uint8_t interface_type;
+  uint8_t reserved[3];
+  acpi_gas_t base_address;
+  uint8_t interrupt_type;
+  uint8_t irq;
+  uint32_t gsiv;
+  uint8_t baud_rate;
+  uint8_t parity;
+  uint8_t stop_bits;
+  uint8_t flow_control;
+  uint8_t terminal_type;
+  uint8_t language;
+  uint16_t pci_device_id;
+  uint16_t pci_vendor_id;
+  uint8_t pci_bus_number;
+  uint8_t pci_device_number;
+  uint8_t pci_function_number;
+  uint32_t pci_flags;
+  uint8_t pci_segment;
+  uint32_t uart_clock_frequency;
+} acpi_spcr_t;
+_Static_assert(sizeof(acpi_spcr_t) == 80, "SPCR is the wrong size");
+
 // Loads the Root System Description Pointer from UEFI.
 // Returns NULL if UEFI contains no such entry in its configuration table.
 acpi_rsdp_t* load_acpi_rsdp(efi_configuration_table* entries, size_t num_entries);
 
 // Loads an ACPI table with the given signature if it exists.
 acpi_sdt_hdr_t* load_table_with_signature(acpi_rsdp_t* rsdp, uint8_t* signature);
+
+// Translate SPCR serial interface types to Zircon kernel driver types.
+// Returns 0 if a compatible Zircon UART driver is not found.
+uint32_t spcr_type_to_kdrv(acpi_spcr_t* spcr);
+
+// Convert data in an SPCR table into a UART kernel driver configuration.
+void uart_driver_from_spcr(acpi_spcr_t* spcr, dcfg_simple_t* uart_driver);
 
 __END_CDECLS
 

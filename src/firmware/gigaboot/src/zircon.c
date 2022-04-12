@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <xefi.h>
+#include <zircon/boot/driver-config.h>
 #include <zircon/boot/image.h>
 #include <zircon/limits.h>
 #include <zircon/pixelformat.h>
@@ -71,6 +72,15 @@ static void start_zircon(uint64_t entry, void* bootdata) {
       "mov x0, %[zbi]\n"  // Argument register.
       "mov x29, xzr\n"    // Clear FP.
       "mov x30, xzr\n"    // Clear LR.
+
+      // Disable caches and MMU (EL1 version)
+      "tmp  .req x16\n"  // Scratch register.
+      "mrs tmp, sctlr_el1\n"
+      "bic tmp, tmp, 1 << 2\n"   // Clear SCTLR_C.
+      "bic tmp, tmp, 1 << 0\n"   // Clear SCTLR_M.
+      "bic tmp, tmp, 1 << 12\n"  // Clear SCTLR_I.
+      "msr sctlr_el1, tmp\n"
+
       "br %[entry]\n" ::[entry] "r"(entry),
       [zbi] "r"(bootdata)
       : "x0", "x29", "x30");
@@ -270,6 +280,22 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
     }
   }
 
+  // Assemble a UART config from the ACPI SPCR table if possible.
+  // This is best effort. If the SPCR table isn't found or the listed
+  // serial interface type doesn't map to a supported zircon kernel
+  // driver, we don't fail out; we just move on.
+  dcfg_simple_t uart_driver;
+  acpi_spcr_t* spcr = (acpi_spcr_t*)load_table_with_signature(rsdp, (uint8_t*)kSpcrSignature);
+  uint32_t serial_driver_type = spcr_type_to_kdrv(spcr);
+  if (serial_driver_type) {
+    uart_driver_from_spcr(spcr, &uart_driver);
+    result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER, serial_driver_type,
+                                           0, &uart_driver, sizeof(uart_driver));
+    if (result != ZBI_RESULT_OK) {
+      return -1;
+    }
+  }
+
   // pass SMBIOS entry point pointer
   uint64_t smbios = find_smbios(img, sys);
   if (smbios != 0) {
@@ -355,7 +381,7 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
   // Convert the memory map in place to a range of zbi_mem_range_t, the
   // preferred ZBI memory format. In-place conversion can safely be done
   // one-by-one, given that zbi_mem_range_t is smaller than a descriptor.
-  const size_t num_ranges = msize / dsize;
+  size_t num_ranges = msize / dsize;
   zbi_mem_range_t* ranges = (zbi_mem_range_t*)scratch;
   for (size_t i = 0; i < num_ranges; ++i) {
     const efi_memory_descriptor* desc = (const efi_memory_descriptor*)&scratch[i * dsize];
@@ -365,6 +391,19 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
         .type = to_mem_range_type(desc->Type),
     };
     memcpy(&ranges[i], &range, sizeof(range));
+  }
+
+  // Physboot expects the UART MMIO base to be in the provided memory ranges,
+  // but UEFI does not report MMIO ranges in the memory map. Therefore, we must
+  // add the page containing the UART to the ranges manually.
+  if (serial_driver_type) {
+    const zbi_mem_range_t range = {
+        .paddr = uart_driver.mmio_phys,
+        .length = ZX_PAGE_SIZE,
+        .type = ZBI_MEM_RANGE_PERIPHERAL,
+    };
+    ranges[num_ranges] = range;
+    num_ranges += 1;
   }
 
   result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_MEM_CONFIG, 0, 0, ranges,

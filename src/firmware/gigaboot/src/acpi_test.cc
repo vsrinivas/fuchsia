@@ -5,6 +5,7 @@
 #include "acpi.h"
 
 #include <xefi.h>
+#include <zircon/boot/driver-config.h>
 
 #include <vector>
 
@@ -194,37 +195,103 @@ TEST(Acpi, RsdpAtEnd) {
 
 TEST(Acpi, LoadBySignatureInvalidXsdtSignature) {
   auto efi_config_table = EfiConfigTable(2, 0);
-  efi_config_table.AddAcpiTable((uint8_t *)kScprSignature);
+  efi_config_table.AddAcpiTable((uint8_t *)kSpcrSignature);
   efi_config_table.CorruptXsdtSignature();
-  EXPECT_EQ(load_table_with_signature(&efi_config_table.rsdp_, (uint8_t *)kScprSignature), nullptr);
+  EXPECT_EQ(load_table_with_signature(&efi_config_table.rsdp_, (uint8_t *)kSpcrSignature), nullptr);
 }
 
 TEST(Acpi, LoadBySignatureInvalidXsdtChecksum) {
   auto efi_config_table = EfiConfigTable(2, 0);
-  efi_config_table.AddAcpiTable((uint8_t *)kScprSignature);
+  efi_config_table.AddAcpiTable((uint8_t *)kSpcrSignature);
   efi_config_table.CorruptXsdtChecksum();
-  EXPECT_EQ(load_table_with_signature(&efi_config_table.rsdp_, (uint8_t *)kScprSignature), nullptr);
+  EXPECT_EQ(load_table_with_signature(&efi_config_table.rsdp_, (uint8_t *)kSpcrSignature), nullptr);
 }
 
 TEST(Acpi, LoadBySignatureTableNotFound) {
   auto efi_config_table = EfiConfigTable(2, 0);
   EXPECT_NE(efi_config_table.AddAcpiTable((uint8_t *)kMadtSignature), nullptr);
-  EXPECT_EQ(load_table_with_signature(&efi_config_table.rsdp_, (uint8_t *)kScprSignature), nullptr);
+  EXPECT_EQ(load_table_with_signature(&efi_config_table.rsdp_, (uint8_t *)kSpcrSignature), nullptr);
 }
 
 TEST(Acpi, LoadBySignatureInvalidTableChecksum) {
   auto efi_config_table = EfiConfigTable(2, 0);
-  auto scpr = efi_config_table.AddAcpiTable((uint8_t *)kScprSignature);
-  EXPECT_NE(scpr, nullptr);
-  scpr->checksum ^= 1;
-  EXPECT_EQ(load_table_with_signature(&efi_config_table.rsdp_, (uint8_t *)kScprSignature), nullptr);
+  auto spcr = efi_config_table.AddAcpiTable((uint8_t *)kSpcrSignature);
+  EXPECT_NE(spcr, nullptr);
+  spcr->checksum ^= 1;
+  EXPECT_EQ(load_table_with_signature(&efi_config_table.rsdp_, (uint8_t *)kSpcrSignature), nullptr);
 }
 
 TEST(Acpi, LoadBySignatureSuccess) {
   auto efi_config_table = EfiConfigTable(2, 0);
-  auto scpr = efi_config_table.AddAcpiTable((uint8_t *)kScprSignature);
-  EXPECT_NE(scpr, nullptr);
-  EXPECT_EQ(load_table_with_signature(&efi_config_table.rsdp_, (uint8_t *)kScprSignature), scpr);
+  auto spcr = efi_config_table.AddAcpiTable((uint8_t *)kSpcrSignature);
+  EXPECT_NE(spcr, nullptr);
+  EXPECT_EQ(load_table_with_signature(&efi_config_table.rsdp_, (uint8_t *)kSpcrSignature), spcr);
+}
+
+TEST(Acpi, SpcrTypeToKdrvNullInput) { EXPECT_EQ(spcr_type_to_kdrv(nullptr), (uint32_t)0); }
+
+TEST(Acpi, SpcrTypeToKdrvRevision1) {
+  acpi_spcr_t spcr = {
+      .hdr =
+          acpi_sdt_hdr_t{
+              .revision = 1,
+          },
+  };
+  EXPECT_EQ(spcr_type_to_kdrv(&spcr), (uint32_t)0);
+}
+
+TEST(Acpi, SpcrTypeToKdrvUnsupportedDevice) {
+  acpi_spcr_t spcr = {
+      .hdr =
+          acpi_sdt_hdr_t{
+              .revision = 3,
+          },
+      .interface_type = 0x0001,
+  };
+  EXPECT_EQ(spcr_type_to_kdrv(&spcr), (uint32_t)0);
+}
+
+TEST(Acpi, SpcrTypeToKdrvSuccess) {
+  acpi_spcr_t spcr = {
+      .hdr =
+          acpi_sdt_hdr_t{
+              .revision = 3,
+          },
+      .interface_type = 0x0003,
+  };
+  EXPECT_EQ(spcr_type_to_kdrv(&spcr), (uint32_t)KDRV_PL011_UART);
+}
+
+TEST(Acpi, UartDriverFromSpcrIrq) {
+  acpi_spcr_t spcr = {
+      .base_address =
+          acpi_gas_t{
+              .address = 0x80000,
+          },
+      .interrupt_type = 0x1,
+      .irq = 33,
+      .gsiv = 48,
+  };
+  dcfg_simple_t uart_driver;
+  uart_driver_from_spcr(&spcr, &uart_driver);
+  EXPECT_EQ(uart_driver.mmio_phys, (uint32_t)0x80000);
+  EXPECT_EQ(uart_driver.irq, (uint32_t)33);
+}
+
+TEST(Acpi, UartDriverFromSpcrGsiv) {
+  acpi_spcr_t spcr = {
+      .base_address =
+          acpi_gas_t{
+              .address = 0x80000,
+          },
+      .interrupt_type = 0x10,
+      .irq = 33,
+      .gsiv = 48,
+  };
+  dcfg_simple_t uart_driver;
+  uart_driver_from_spcr(&spcr, &uart_driver);
+  EXPECT_EQ(uart_driver.mmio_phys, (uint32_t)0x80000);
+  EXPECT_EQ(uart_driver.irq, (uint32_t)48);
 }
 
 }  // namespace
