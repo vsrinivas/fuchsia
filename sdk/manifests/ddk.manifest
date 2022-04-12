@@ -8,6 +8,7 @@ sdk://fidl/fuchsia.component
 sdk://fidl/fuchsia.component.decl
 sdk://fidl/fuchsia.component.runner
 sdk://fidl/fuchsia.data
+sdk://fidl/fuchsia.device.fs
 sdk://fidl/fuchsia.diagnostics.types
 sdk://fidl/fuchsia.driver.framework
 sdk://fidl/fuchsia.hardware.ftdi
