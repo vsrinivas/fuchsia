@@ -310,32 +310,63 @@ async fn send_debug_data_if_produced(
 
 const PROFILE_ARTIFACT_ENUMERATE_TIMEOUT_SECONDS: i64 = 15;
 const DYNAMIC_PROFILE_PREFIX: &'static str = "/prof-data/dynamic";
+const STATIC_PROFILE_PREFIX: &'static str = "/prof-data/static";
 
 async fn send_kernel_debug_data(mut event_sender: mpsc::Sender<RunEvent>) {
-    let profile_dir = match io_util::open_directory_in_namespace(
-        DYNAMIC_PROFILE_PREFIX,
-        io_util::OpenFlags::RIGHT_READABLE,
-    ) {
-        Ok(d) => d,
-        Err(e) => {
-            warn!("Failed to open dynamic profile directory: {:?}", e);
-            return;
-        }
-    };
+    let prefixes = vec![DYNAMIC_PROFILE_PREFIX, STATIC_PROFILE_PREFIX];
+    let directories = prefixes
+        .iter()
+        .filter_map(|path| {
+            match io_util::open_directory_in_namespace(path, io_util::OpenFlags::RIGHT_READABLE) {
+                Ok(d) => Some((*path, d)),
+                Err(e) => {
+                    warn!("Failed to open {} profile directory: {:?}", path, e);
+                    None
+                }
+            }
+        })
+        .collect::<Vec<(&str, fio::DirectoryProxy)>>();
 
-    let mut file_stream = files_async::readdir_recursive(
-        &profile_dir,
-        Some(fasync::Duration::from_seconds(PROFILE_ARTIFACT_ENUMERATE_TIMEOUT_SECONDS)),
-    );
+    // Iterate over files as tuples containing an entry and the prefix the entry was found at.
+    struct IteratedEntry {
+        prefix: &'static str,
+        entry: files_async::DirEntry,
+    }
+
+    // Create a single stream over the files in all directories
+    let mut file_stream = futures::stream::iter(
+        directories
+            .iter()
+            .map(move |val| {
+                let (prefix, directory) = val;
+                files_async::readdir_recursive(
+                    directory,
+                    Some(fasync::Duration::from_seconds(
+                        PROFILE_ARTIFACT_ENUMERATE_TIMEOUT_SECONDS,
+                    )),
+                )
+                .map_ok(move |file| IteratedEntry { prefix: prefix, entry: file })
+            })
+            .collect::<Vec<_>>(),
+    )
+    .flatten();
 
     let mut file_futs = vec![];
-    while let Some(Ok(file)) = file_stream.next().await {
+    while let Some(Ok(IteratedEntry { prefix, entry })) = file_stream.next().await {
         file_futs.push(async move {
-            let name = file.name;
-            let path =
-                PathBuf::from(DYNAMIC_PROFILE_PREFIX).join(&name).to_string_lossy().to_string();
+            let prefix = PathBuf::from(prefix);
+            let name = entry.name;
+            let path = prefix.join(&name).to_string_lossy().to_string();
             let file = io_util::open_file_in_namespace(&path, io_util::OpenFlags::RIGHT_READABLE)?;
             let content = io_util::read_file_bytes(&file).await;
+
+            // Store the file in a directory prefixed with the last part of the file path (i.e.
+            // "static" or "dynamic").
+            let name_prefix = prefix
+                .file_stem()
+                .map(|v| v.to_string_lossy().to_string())
+                .unwrap_or_else(|| "".to_string());
+            let name = format!("{}/{}", name_prefix, name);
 
             Ok::<_, Error>((name, content))
         });
