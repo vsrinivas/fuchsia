@@ -2,26 +2,104 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::convert::TryFrom;
+
+use fidl::prelude::*;
+use fidl_fuchsia_settings::{
+    AudioInput, AudioMarker, AudioRequest, AudioSetResponder, AudioSetResult, AudioSettings,
+    AudioStreamSettingSource, AudioStreamSettings, AudioWatchResponder, Volume,
+};
+use fuchsia_syslog::{fx_log_err, fx_log_warn};
+use fuchsia_zircon as zx;
+
+use fidl_fuchsia_media::AudioRenderUsage;
+use fuchsia_trace::AsyncScope;
+
 use crate::audio::types::{AudioSettingSource, AudioStream, AudioStreamType, SetAudioStream};
 use crate::base::{SettingInfo, SettingType};
-use crate::fidl_common::FidlResponseErrorLogger;
-use crate::fidl_hanging_get_responder;
-use crate::fidl_process;
-use crate::fidl_processor::settings::RequestContext;
 use crate::handler::base::Request;
-use crate::request_respond;
+use crate::ingress::{request, watch, Scoped};
+use crate::job::source::{Error as JobError, ErrorResponder};
+use crate::job::Job;
 use crate::trace::TracingNonce;
 use crate::{trace, trace_guard};
-use fidl::endpoints::ProtocolMarker;
-use fidl_fuchsia_media::AudioRenderUsage;
-use fidl_fuchsia_settings::{
-    AudioInput, AudioMarker, AudioRequest, AudioSettings, AudioStreamSettingSource,
-    AudioStreamSettings, AudioWatchResponder, Volume,
-};
-use fuchsia_async as fasync;
-use fuchsia_syslog::fx_log_err;
 
-fidl_hanging_get_responder!(AudioMarker, AudioSettings, AudioWatchResponder,);
+/// Custom responder that wraps the real FIDL responder plus a tracing guard. The guard is stored
+/// here so that it's active until a response is sent and this responder is dropped.
+struct AudioSetTraceResponder {
+    responder: AudioSetResponder,
+    _guard: AsyncScope,
+}
+
+impl request::Responder<Scoped<AudioSetResult>> for AudioSetTraceResponder {
+    fn respond(self, Scoped(mut response): Scoped<AudioSetResult>) {
+        let _ = self.responder.send(&mut response);
+    }
+}
+
+impl ErrorResponder for AudioSetTraceResponder {
+    fn id(&self) -> &'static str {
+        "Audio_Set"
+    }
+
+    fn respond(self: Box<Self>, error: fidl_fuchsia_settings::Error) -> Result<(), fidl::Error> {
+        self.responder.send(&mut Err(error))
+    }
+}
+
+impl request::Responder<Scoped<AudioSetResult>> for AudioSetResponder {
+    fn respond(self, Scoped(mut response): Scoped<AudioSetResult>) {
+        let _ = self.send(&mut response);
+    }
+}
+
+impl watch::Responder<AudioSettings, zx::Status> for AudioWatchResponder {
+    fn respond(self, response: Result<AudioSettings, zx::Status>) {
+        match response {
+            Ok(settings) => {
+                let _ = self.send(settings);
+            }
+            Err(error) => {
+                self.control_handle().shutdown_with_epitaph(error);
+            }
+        }
+    }
+}
+
+impl TryFrom<AudioRequest> for Job {
+    type Error = JobError;
+
+    fn try_from(item: AudioRequest) -> Result<Self, Self::Error> {
+        #[allow(unreachable_patterns)]
+        match item {
+            AudioRequest::Set { settings, responder } => {
+                let nonce = fuchsia_trace::generate_nonce();
+                let guard = trace_guard!(nonce, "audio fidl handler set");
+                let responder = AudioSetTraceResponder { responder, _guard: guard };
+                match to_request(settings, nonce) {
+                    Ok(request) => {
+                        Ok(request::Work::new(SettingType::Audio, request, responder).into())
+                    }
+                    Err(err) => {
+                        fx_log_err!(
+                            "{}: Failed to process request: {:?}",
+                            AudioMarker::DEBUG_NAME,
+                            err
+                        );
+                        Err(JobError::InvalidInput(Box::new(responder)))
+                    }
+                }
+            }
+            AudioRequest::Watch { responder } => {
+                Ok(watch::Work::new_job(SettingType::Audio, responder))
+            }
+            _ => {
+                fx_log_warn!("Received a call to an unsupported API: {:?}", item);
+                Err(JobError::Unsupported)
+            }
+        }
+    }
+}
 
 impl From<SettingInfo> for AudioSettings {
     fn from(response: SettingInfo) -> Self {
@@ -103,10 +181,12 @@ impl From<AudioSettingSource> for AudioStreamSettingSource {
     }
 }
 
-// Clippy warns about all variants starting with `No`.
+// Clippy warns about all variants starting with the same prefix `No`.
 #[allow(clippy::enum_variant_names)]
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, PartialEq)]
 enum Error {
+    #[error("request has no streams")]
+    NoStreams,
     #[error("missing user_volume at stream {0}")]
     NoUserVolume(usize),
     #[error("missing user_volume.level and user_volume.muted at stream {0}")]
@@ -117,86 +197,112 @@ enum Error {
     NoSource(usize),
 }
 
-fn to_request(settings: AudioSettings, nonce: TracingNonce) -> Option<Result<Request, Error>> {
+fn to_request(settings: AudioSettings, nonce: TracingNonce) -> Result<Request, Error> {
     trace!(nonce, "to_request");
-    settings.streams.map(|streams| {
-        streams
-            .into_iter()
-            .enumerate()
-            .map(|(i, stream)| {
-                let user_volume = stream.user_volume.ok_or(Error::NoUserVolume(i))?;
-                let user_volume_level = user_volume.level;
-                let user_volume_muted = user_volume.muted;
-                let stream_type = stream.stream.ok_or(Error::NoStreamType(i))?.into();
-                let source = stream.source.ok_or(Error::NoSource(i))?.into();
-                let request =
-                    SetAudioStream { stream_type, source, user_volume_level, user_volume_muted };
-                if request.is_valid_payload() {
-                    Ok(request)
-                } else {
-                    Err(Error::MissingVolumeAndMuted(i))
-                }
-            })
-            .collect::<Result<Vec<_>, _>>()
-            .map(|streams| Request::SetVolume(streams, nonce))
-    })
+    settings
+        .streams
+        .map(|streams| {
+            streams
+                .into_iter()
+                .enumerate()
+                .map(|(i, stream)| {
+                    let user_volume = stream.user_volume.ok_or(Error::NoUserVolume(i))?;
+                    let user_volume_level = user_volume.level;
+                    let user_volume_muted = user_volume.muted;
+                    let stream_type = stream.stream.ok_or(Error::NoStreamType(i))?.into();
+                    let source = stream.source.ok_or(Error::NoSource(i))?.into();
+                    let request = SetAudioStream {
+                        stream_type,
+                        source,
+                        user_volume_level,
+                        user_volume_muted,
+                    };
+                    if request.is_valid_payload() {
+                        Ok(request)
+                    } else {
+                        Err(Error::MissingVolumeAndMuted(i))
+                    }
+                })
+                .collect::<Result<Vec<_>, _>>()
+                .map(|streams| Request::SetVolume(streams, nonce))
+        })
+        .unwrap_or(Err(Error::NoStreams))
 }
 
-fidl_process!(Audio, SettingType::Audio, process_request,);
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-async fn process_request(
-    context: RequestContext<AudioSettings, AudioWatchResponder>,
-    req: AudioRequest,
-) -> Result<Option<AudioRequest>, anyhow::Error> {
-    // Support future expansion of FIDL.
-    #[allow(unreachable_patterns)]
-    match req {
-        AudioRequest::Set { settings, responder } => {
-            let nonce = fuchsia_trace::generate_nonce();
-            let guard = trace_guard!(nonce, "fidl handler set");
-            if let Some(request) = to_request(settings, nonce) {
-                match request {
-                    Ok(request) => fasync::Task::spawn(async move {
-                        request_respond!(
-                            context,
-                            responder,
-                            SettingType::Audio,
-                            request,
-                            Ok(()),
-                            Err(fidl_fuchsia_settings::Error::Failed),
-                            AudioMarker,
-                            {
-                                drop(guard);
-                            }
-                        );
-                    })
-                    .detach(),
-                    Err(err) => {
-                        fx_log_err!(
-                            "{}: Failed to process request: {:?}",
-                            AudioMarker::DEBUG_NAME,
-                            err
-                        );
-                        responder
-                            .send(&mut Err(fidl_fuchsia_settings::Error::Failed))
-                            .log_fidl_response_error(AudioMarker::DEBUG_NAME);
-                        drop(guard);
-                    }
-                }
-            } else {
-                responder
-                    .send(&mut Err(fidl_fuchsia_settings::Error::Unsupported))
-                    .log_fidl_response_error(AudioMarker::DEBUG_NAME);
-                drop(guard);
-            }
-        }
-        AudioRequest::Watch { responder } => {
-            context.watch(responder, true).await;
-        }
-        _ => {
-            return Ok(Some(req));
-        }
+    const TEST_STREAM: AudioStreamSettings = AudioStreamSettings {
+        stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
+        source: Some(AudioStreamSettingSource::User),
+        user_volume: Some(Volume { level: Some(0.6), muted: Some(false), ..Volume::EMPTY }),
+        ..AudioStreamSettings::EMPTY
+    };
+
+    // Verifies that an entirely empty settings request results in an appropriate error.
+    #[test]
+    fn test_request_from_settings_empty() {
+        let nonce = fuchsia_trace::generate_nonce();
+        let request = to_request(AudioSettings::EMPTY, nonce);
+
+        assert_eq!(request, Err(Error::NoStreams));
     }
 
-    Ok(None)
+    // Verifies that a settings request missing user volume info results in an appropriate error.
+    #[test]
+    fn test_request_missing_user_volume() {
+        let mut stream = TEST_STREAM.clone();
+        stream.user_volume = None;
+
+        let audio_settings = AudioSettings { streams: Some(vec![stream]), ..AudioSettings::EMPTY };
+
+        let nonce = fuchsia_trace::generate_nonce();
+        let request = to_request(audio_settings, nonce);
+
+        assert_eq!(request, Err(Error::NoUserVolume(0)));
+    }
+
+    // Verifies that a settings request missing the stream type results in an appropriate error.
+    #[test]
+    fn test_request_missing_stream_type() {
+        let mut stream = TEST_STREAM.clone();
+        stream.stream = None;
+
+        let audio_settings = AudioSettings { streams: Some(vec![stream]), ..AudioSettings::EMPTY };
+
+        let nonce = fuchsia_trace::generate_nonce();
+        let request = to_request(audio_settings, nonce);
+
+        assert_eq!(request, Err(Error::NoStreamType(0)));
+    }
+
+    // Verifies that a settings request missing the source results in an appropriate error.
+    #[test]
+    fn test_request_missing_source() {
+        let mut stream = TEST_STREAM.clone();
+        stream.source = None;
+
+        let audio_settings = AudioSettings { streams: Some(vec![stream]), ..AudioSettings::EMPTY };
+
+        let nonce = fuchsia_trace::generate_nonce();
+        let request = to_request(audio_settings, nonce);
+
+        assert_eq!(request, Err(Error::NoSource(0)));
+    }
+
+    // Verifies that a settings request missing both the user volume level and mute state results in
+    // an appropriate error.
+    #[test]
+    fn test_request_missing_user_volume_level_and_muted() {
+        let mut stream = TEST_STREAM.clone();
+        stream.user_volume = Some(Volume { level: None, muted: None, ..Volume::EMPTY });
+
+        let audio_settings = AudioSettings { streams: Some(vec![stream]), ..AudioSettings::EMPTY };
+
+        let nonce = fuchsia_trace::generate_nonce();
+        let request = to_request(audio_settings, nonce);
+
+        assert_eq!(request, Err(Error::MissingVolumeAndMuted(0)));
+    }
 }

@@ -187,8 +187,9 @@ impl Interface {
                 let delegate = delegate.clone();
                 match self {
                     Interface::Audio => {
+                        let seeder = seeder.clone();
                         let _ = service_dir.add_fidl_service(move |stream: AudioRequestStream| {
-                            crate::audio::fidl_io::spawn(delegate.clone(), stream);
+                            seeder.seed(stream);
                         });
                     }
                     Interface::Accessibility => {
