@@ -58,18 +58,6 @@ async fn run_test(url: &str, name: &str, replace_config_value: bool) {
 }
 
 #[fuchsia::test]
-async fn inspect_cpp() -> Result<(), Error> {
-    run_test("#meta/config_cpp.cm", "config_cpp", false).await;
-    Ok(())
-}
-
-#[fuchsia::test]
-async fn inspect_cpp_replace() -> Result<(), Error> {
-    run_test("#meta/config_cpp.cm", "config_cpp_replace", true).await;
-    Ok(())
-}
-
-#[fuchsia::test]
 async fn inspect_rust() -> Result<(), Error> {
     run_test("#meta/config_rust.cm", "config_rust", false).await;
     Ok(())
