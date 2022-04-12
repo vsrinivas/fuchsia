@@ -113,7 +113,7 @@ class AnyArena {
 // allocation.
 //
 // Allocations are put one after the other in the buffers. When a buffer can't
-// fit the next allocation, the remaining space is lost an another buffer is
+// fit the next allocation, the remaining space is lost and another buffer is
 // allocated on the heap. Each allocation respects |FIDL_ALIGNMENT|. For
 // allocations which don't need a destructor, we only allocate the requested
 // size within the buffer. For allocations with a non trivial destructor, we
