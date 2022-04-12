@@ -7,8 +7,8 @@
         }
     },
     "include": [
-        "syslog/client.shard.cmx",
-        "//src/lib/vulkan/application.shard.cmx"
+        "//src/lib/vulkan/application.shard.cmx",
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/carnelian_fb_integration_test"

@@ -20,7 +20,7 @@ use crate::{
     },
     Size,
 };
-use anyhow::{bail, Context, Error, Result};
+use anyhow::{bail, ensure, Context, Error, Result};
 use async_trait::async_trait;
 use async_utils::hanging_get::client::HangingGetStream;
 use euclid::size2;
@@ -99,6 +99,9 @@ impl Plumber {
         first_image_id: u64,
     ) -> Result<Plumber, Error> {
         let use_spinel = Config::get().use_spinel;
+
+        ensure!(use_spinel == false, "Spinel support is disabled");
+
         let usage = if use_spinel { FrameUsage::Gpu } else { FrameUsage::Cpu };
         let mut buffer_allocator = BufferCollectionAllocator::new(
             size.width,
@@ -112,19 +115,11 @@ impl Plumber {
 
         let context_token = buffer_allocator.duplicate_token().await?;
         let mut context = render::Context {
-            inner: if use_spinel {
-                ContextInner::Spinel(generic::Spinel::new_context(
-                    context_token,
-                    size,
-                    DisplayRotation::Deg0,
-                ))
-            } else {
-                ContextInner::Forma(generic::Forma::new_context(
-                    context_token,
-                    size,
-                    DisplayRotation::Deg0,
-                ))
-            },
+            inner: ContextInner::Forma(generic::Forma::new_context(
+                context_token,
+                size,
+                DisplayRotation::Deg0,
+            )),
         };
 
         let sysmem_buffer_collection_token = buffer_allocator.duplicate_token().await?;

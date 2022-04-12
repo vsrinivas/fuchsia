@@ -16,10 +16,8 @@ use fuchsia_framebuffer::PixelFormat;
 use crate::{color::Color, drawing::DisplayRotation, Point, ViewAssistantContext};
 
 pub mod forma;
-pub mod spinel;
 
 pub use self::forma::Forma;
-pub use spinel::Spinel;
 
 /// Either Spinel or Forma. Zero-sized.
 pub trait Backend: Copy + Debug + Default + Eq + Hash + Ord + Sized + 'static {
@@ -103,7 +101,7 @@ pub trait Context<B: Backend> {
     fn raster_builder(&self) -> Option<B::RasterBuilder>;
     /// Creates a new image with `size`.
     fn new_image(&mut self, size: Size2D<u32>) -> B::Image;
-    /// Creates a new image frmo PNG `reader`.
+    /// Creates a new image from PNG `reader`.
     fn new_image_from_png<R: Read>(
         &mut self,
         reader: &mut png::Reader<R>,
@@ -369,10 +367,7 @@ pub trait Composition<B: Backend> {
 pub(crate) mod tests {
     use super::*;
 
-    use std::ptr;
-
     use fuchsia_async as fasync;
-    use vk_sys as vk;
 
     use crate::drawing::DisplayRotation;
 
@@ -434,51 +429,7 @@ pub(crate) mod tests {
     // that these tests will be skipped on CI, but be able to run manually through the
     // `carnelian_tests` component.
     fn has_vk_instance() -> bool {
-        let entry_points = fuchsia_vulkan::entry_points();
-
-        macro_rules! cstr {
-            ( $bytes:expr ) => {
-                ::std::ffi::CStr::from_bytes_with_nul($bytes).expect("CStr must end with '\\0'")
-            };
-        }
-
-        macro_rules! vulkan_version {
-            ( $major:expr, $minor:expr, $patch:expr ) => {
-                ($major as u32) << 22 | ($minor as u32) << 12 | ($patch as u32)
-            };
-        }
-
-        let layers = vec![];
-
-        let mut result = false;
-        unsafe {
-            super::spinel::init(|ptr| {
-                result = entry_points.CreateInstance(
-                    &vk::InstanceCreateInfo {
-                        sType: vk::STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-                        pNext: ptr::null(),
-                        flags: 0,
-                        pApplicationInfo: &vk::ApplicationInfo {
-                            sType: vk::STRUCTURE_TYPE_APPLICATION_INFO,
-                            pNext: ptr::null(),
-                            pApplicationName: cstr!(b"Carnelian unit test\0").as_ptr(),
-                            applicationVersion: 0,
-                            pEngineName: ptr::null(),
-                            engineVersion: 0,
-                            apiVersion: vulkan_version!(1, 1, 0),
-                        },
-                        enabledLayerCount: layers.len() as u32,
-                        ppEnabledLayerNames: layers.as_ptr(),
-                        enabledExtensionCount: 0,
-                        ppEnabledExtensionNames: ptr::null(),
-                    },
-                    ptr::null(),
-                    ptr,
-                ) == vk::SUCCESS;
-            });
-        }
-
-        result
+        false
     }
 
     pub(crate) fn run(f: impl Fn()) {

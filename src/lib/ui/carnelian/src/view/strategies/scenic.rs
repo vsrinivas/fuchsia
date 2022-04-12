@@ -16,7 +16,7 @@ use crate::{
         UserInputMessage, View, ViewAssistantContext, ViewAssistantPtr, ViewDetails, ViewKey,
     },
 };
-use anyhow::{bail, Context, Error, Result};
+use anyhow::{bail, ensure, Context, Error, Result};
 use async_trait::async_trait;
 use fidl::endpoints::create_request_stream;
 use fidl_fuchsia_ui_gfx::{self as gfx};
@@ -55,6 +55,9 @@ impl Plumber {
         first_image_id: u64,
     ) -> Result<Plumber, Error> {
         let use_spinel = Config::get().use_spinel;
+
+        ensure!(use_spinel == false, "Spinel support is disabled");
+
         let usage = if use_spinel { FrameUsage::Gpu } else { FrameUsage::Cpu };
         let mut buffer_allocator = BufferCollectionAllocator::new(
             size.width,
@@ -71,19 +74,11 @@ impl Plumber {
 
         let context_token = buffer_allocator.duplicate_token().await?;
         let context = render::Context {
-            inner: if use_spinel {
-                ContextInner::Spinel(generic::Spinel::new_context(
-                    context_token,
-                    size,
-                    DisplayRotation::Deg0,
-                ))
-            } else {
-                ContextInner::Forma(generic::Forma::new_context(
-                    context_token,
-                    size,
-                    DisplayRotation::Deg0,
-                ))
-            },
+            inner: ContextInner::Forma(generic::Forma::new_context(
+                context_token,
+                size,
+                DisplayRotation::Deg0,
+            )),
         };
         let buffers = buffer_allocator.allocate_buffers(true).await.context("allocate_buffers")?;
 

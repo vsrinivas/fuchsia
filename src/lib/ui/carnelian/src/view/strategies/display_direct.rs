@@ -259,6 +259,9 @@ impl DisplayDirectViewStrategy {
     ) -> Result<DisplayResources, Error> {
         let app_config = Config::get();
         let use_spinel = app_config.use_spinel;
+
+        ensure!(use_spinel == false, "Spinel support is disabled");
+
         let display_rotation = app_config.display_rotation;
         let unsize = size.floor().to_u32();
 
@@ -275,19 +278,11 @@ impl DisplayDirectViewStrategy {
 
         let context_token = buffer_allocator.duplicate_token().await?;
         let context = RenderContext {
-            inner: if use_spinel {
-                ContextInner::Spinel(generic::Spinel::new_context(
-                    context_token,
-                    unsize,
-                    display_rotation,
-                ))
-            } else {
-                ContextInner::Forma(generic::Forma::new_context(
-                    context_token,
-                    unsize,
-                    display_rotation,
-                ))
-            },
+            inner: ContextInner::Forma(generic::Forma::new_context(
+                context_token,
+                unsize,
+                display_rotation,
+            )),
         };
 
         let direct_pixel_format = if use_spinel { context.pixel_format() } else { pixel_format };

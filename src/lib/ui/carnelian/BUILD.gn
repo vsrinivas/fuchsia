@@ -57,7 +57,6 @@ rustc_library("carnelian") {
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
     "//src/graphics/lib/compute/forma",
     "//src/graphics/lib/compute/rive-rs",
-    "//src/graphics/lib/compute/spinel-rs-sys",
     "//src/lib/async-utils",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
@@ -97,15 +96,6 @@ rustc_library("carnelian") {
     "//third_party/rust_crates:vk-sys",
   ]
 
-  non_rust_deps = [
-    "//src/graphics/lib/compute/common",
-    "//src/graphics/lib/compute/common/vk",
-    "//src/graphics/lib/compute/hotsort/platforms/vk",
-    "//src/graphics/lib/compute/spinel",
-    "//src/graphics/lib/compute/spinel/platforms/vk",
-    "//src/graphics/lib/compute/spinel/platforms/vk:vk_find_target",
-  ]
-
   sources = [
     "src/app.rs",
     "src/app/strategies.rs",
@@ -132,12 +122,6 @@ rustc_library("carnelian") {
     "src/render/generic/forma/path.rs",
     "src/render/generic/forma/raster.rs",
     "src/render/generic/mod.rs",
-    "src/render/generic/spinel/composition.rs",
-    "src/render/generic/spinel/context.rs",
-    "src/render/generic/spinel/image.rs",
-    "src/render/generic/spinel/mod.rs",
-    "src/render/generic/spinel/path.rs",
-    "src/render/generic/spinel/raster.rs",
     "src/render/mod.rs",
     "src/render/rive.rs",
     "src/render/shed.rs",
@@ -554,18 +538,8 @@ resource("static_txts") {
   outputs = [ "data/static/{{source_file_part}}" ]
 }
 
-resource("spinel_config") {
-  sources = [ "config/spinel_config.toml" ]
-  outputs = [ "data/config/carnelian.toml" ]
-}
-
 resource("direct_config") {
   sources = [ "config/direct_config.toml" ]
-  outputs = [ "data/config/carnelian.toml" ]
-}
-
-resource("spinel_direct_config") {
-  sources = [ "config/spinel_direct_config.toml" ]
   outputs = [ "data/config/carnelian.toml" ]
 }
 
@@ -584,11 +558,7 @@ template("carnelian_example") {
   if (carnelian_enable_vulkan_validation) {
     example_deps += [ "//src/lib/vulkan/validation_layers" ]
   }
-  if (use_spinel_for_carnelian_examples && use_direct_for_carnelian_examples) {
-    example_deps += [ ":spinel_direct_config" ]
-  } else if (use_spinel_for_carnelian_examples) {
-    example_deps += [ ":spinel_config" ]
-  } else if (use_direct_for_carnelian_examples) {
+  if (use_direct_for_carnelian_examples) {
     example_deps += [ ":direct_config" ]
   }
   fuchsia_package_with_single_component(target_name) {

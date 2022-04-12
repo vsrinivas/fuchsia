@@ -6,7 +6,7 @@ pub use crate::render::generic::{BlendMode, Fill, FillRule, Gradient, GradientTy
 use crate::{
     color::Color,
     render::generic::{
-        self, forma::*, spinel::*, Composition as _, Context as _, PathBuilder as _, Raster as _,
+        self, forma::*, Composition as _, Context as _, PathBuilder as _, Raster as _,
         RasterBuilder as _,
     },
     Point, ViewAssistantContext,
@@ -26,7 +26,6 @@ pub struct Image {
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 enum ImageInner {
     Forma(FormaImage),
-    Spinel(SpinelImage),
 }
 /// Rectangular copy region.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -78,14 +77,12 @@ pub struct Context {
 #[derive(Debug)]
 pub enum ContextInner {
     Forma(FormaContext),
-    Spinel(SpinelContext),
 }
 impl Context {
     /// Returns the context's pixel format.
     pub fn pixel_format(&self) -> PixelFormat {
         match &self.inner {
             ContextInner::Forma(context) => context.pixel_format(),
-            ContextInner::Spinel(context) => context.pixel_format(),
         }
     }
     /// Optionally returns a `PathBuilder`. May return `None` of old builder is still alive.
@@ -94,9 +91,6 @@ impl Context {
             ContextInner::Forma(context) => context
                 .path_builder()
                 .map(|path_builder| PathBuilder { inner: PathBuilderInner::Forma(path_builder) }),
-            ContextInner::Spinel(context) => context
-                .path_builder()
-                .map(|path_builder| PathBuilder { inner: PathBuilderInner::Spinel(path_builder) }),
         }
     }
     /// Optionally returns a `RasterBuilder`. May return `None` of old builder is still alive.
@@ -105,9 +99,6 @@ impl Context {
             ContextInner::Forma(context) => context.raster_builder().map(|raster_builder| {
                 RasterBuilder { inner: RasterBuilderInner::Forma(raster_builder) }
             }),
-            ContextInner::Spinel(context) => context.raster_builder().map(|raster_builder| {
-                RasterBuilder { inner: RasterBuilderInner::Spinel(raster_builder) }
-            }),
         }
     }
     /// Creates a new image with `size`.
@@ -115,9 +106,6 @@ impl Context {
         match &mut self.inner {
             ContextInner::Forma(ref mut context) => {
                 Image { inner: ImageInner::Forma(context.new_image(size)) }
-            }
-            ContextInner::Spinel(ref mut context) => {
-                Image { inner: ImageInner::Spinel(context.new_image(size)) }
             }
         }
     }
@@ -131,9 +119,6 @@ impl Context {
                 ContextInner::Forma(ref mut context) => {
                     ImageInner::Forma(context.new_image_from_png(reader)?)
                 }
-                ContextInner::Spinel(ref mut context) => {
-                    ImageInner::Spinel(context.new_image_from_png(reader)?)
-                }
             },
         })
     }
@@ -143,9 +128,6 @@ impl Context {
             ContextInner::Forma(ref mut render_context) => {
                 Image { inner: ImageInner::Forma(render_context.get_image(image_index)) }
             }
-            ContextInner::Spinel(ref mut render_context) => {
-                Image { inner: ImageInner::Spinel(render_context.get_image(image_index)) }
-            }
         }
     }
     /// Returns the `context`'s current image.
@@ -153,9 +135,6 @@ impl Context {
         match &mut self.inner {
             ContextInner::Forma(ref mut render_context) => {
                 Image { inner: ImageInner::Forma(render_context.get_current_image(context)) }
-            }
-            ContextInner::Spinel(ref mut render_context) => {
-                Image { inner: ImageInner::Spinel(render_context.get_current_image(context)) }
             }
         }
     }
@@ -189,98 +168,37 @@ impl Context {
 
         match &mut self.inner {
             ContextInner::Forma(ref mut context) => {
-                if let ImageInner::Forma(image) = image.inner {
-                    let ext = generic::RenderExt {
-                        pre_clear: ext
-                            .pre_clear
-                            .clone()
-                            .map(|pre_clear| generic::PreClear { color: pre_clear.color }),
-                        pre_copy: ext.pre_copy.clone().map(|pre_copy| generic::PreCopy {
-                            image: if let ImageInner::Forma(image) = pre_copy.image.inner {
-                                image
-                            } else {
-                                panic!("mismatched backends");
-                            },
-                            copy_region: generic::CopyRegion {
-                                src_offset: pre_copy.copy_region.src_offset,
-                                dst_offset: pre_copy.copy_region.dst_offset,
-                                extent: pre_copy.copy_region.extent,
-                            },
-                        }),
-                        post_copy: ext.post_copy.clone().map(|post_copy| generic::PostCopy {
-                            image: if let ImageInner::Forma(image) = post_copy.image.inner {
-                                image
-                            } else {
-                                panic!("mismatched backends");
-                            },
-                            copy_region: generic::CopyRegion {
-                                src_offset: post_copy.copy_region.src_offset,
-                                dst_offset: post_copy.copy_region.dst_offset,
-                                extent: post_copy.copy_region.extent,
-                            },
-                        }),
+                let ImageInner::Forma(image) = image.inner;
+                let ext = generic::RenderExt {
+                    pre_clear: ext
+                        .pre_clear
+                        .clone()
+                        .map(|pre_clear| generic::PreClear { color: pre_clear.color }),
+                    pre_copy: ext.pre_copy.clone().map(|pre_copy| generic::PreCopy {
+                        image: image,
+                        copy_region: generic::CopyRegion {
+                            src_offset: pre_copy.copy_region.src_offset,
+                            dst_offset: pre_copy.copy_region.dst_offset,
+                            extent: pre_copy.copy_region.extent,
+                        },
+                    }),
+                    post_copy: ext.post_copy.clone().map(|post_copy| generic::PostCopy {
+                        image: image,
+                        copy_region: generic::CopyRegion {
+                            src_offset: post_copy.copy_region.src_offset,
+                            dst_offset: post_copy.copy_region.dst_offset,
+                            extent: post_copy.copy_region.extent,
+                        },
+                    }),
+                };
+                composition.with_inner_composition(|inner| {
+                    let mut composition = match inner {
+                        CompositionInner::Forma(composition) => composition,
+                        CompositionInner::Empty => FormaComposition::new(background_color),
                     };
-                    composition.with_inner_composition(|inner| {
-                        let mut composition = match inner {
-                            CompositionInner::Forma(composition) => composition,
-                            CompositionInner::Empty => FormaComposition::new(background_color),
-                            _ => panic!("mismatched backends"),
-                        };
-                        context.render_with_clip(&mut composition, clip, image, &ext);
-                        CompositionInner::Forma(composition)
-                    });
-                } else {
-                    panic!("mismatched backends");
-                }
-            }
-            ContextInner::Spinel(ref mut context) => {
-                if let ImageInner::Spinel(image) = image.inner {
-                    let ext = generic::RenderExt {
-                        pre_clear: ext
-                            .pre_clear
-                            .clone()
-                            .map(|pre_clear| generic::PreClear { color: pre_clear.color }),
-                        pre_copy: ext.pre_copy.clone().map(|pre_copy| generic::PreCopy {
-                            image: if let ImageInner::Spinel(image) = pre_copy.image.inner {
-                                image
-                            } else {
-                                panic!("mismatched backends");
-                            },
-                            copy_region: generic::CopyRegion {
-                                src_offset: pre_copy.copy_region.src_offset,
-                                dst_offset: pre_copy.copy_region.dst_offset,
-                                extent: pre_copy.copy_region.extent,
-                            },
-                        }),
-                        post_copy: ext.post_copy.clone().map(|post_copy| generic::PostCopy {
-                            image: if let ImageInner::Spinel(image) = post_copy.image.inner {
-                                image
-                            } else {
-                                panic!("mismatched backends");
-                            },
-                            copy_region: generic::CopyRegion {
-                                src_offset: post_copy.copy_region.src_offset,
-                                dst_offset: post_copy.copy_region.dst_offset,
-                                extent: post_copy.copy_region.extent,
-                            },
-                        }),
-                    };
-                    composition.with_inner_composition(|inner| {
-                        let mut composition = match inner {
-                            CompositionInner::Spinel(composition) => composition,
-                            // All Spinel rendering is performed in a linear color space, and is
-                            // transformed to sRGB as it is written to the output image (possibly
-                            // via an additional styling opcode).  Therefore, we provide a linear
-                            // background color.
-                            CompositionInner::Empty => SpinelComposition::new(background_color),
-                            _ => panic!("mismatched backends"),
-                        };
-                        context.render_with_clip(&mut composition, clip, image, &ext);
-                        CompositionInner::Spinel(composition)
-                    });
-                } else {
-                    panic!("mismatched backends");
-                }
+                    context.render_with_clip(&mut composition, clip, image, &ext);
+                    CompositionInner::Forma(composition)
+                });
             }
         }
     }
@@ -293,7 +211,6 @@ pub struct Path {
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum PathInner {
     Forma(FormaPath),
-    Spinel(SpinelPath),
 }
 /// Builds one closed path.
 #[derive(Debug)]
@@ -303,16 +220,12 @@ pub struct PathBuilder {
 #[derive(Debug)]
 enum PathBuilderInner {
     Forma(FormaPathBuilder),
-    Spinel(SpinelPathBuilder),
 }
 impl PathBuilder {
     /// Move end-point to.
     pub fn move_to(&mut self, point: Point) -> &mut Self {
         match &mut self.inner {
             PathBuilderInner::Forma(ref mut path_builder) => {
-                path_builder.move_to(point);
-            }
-            PathBuilderInner::Spinel(ref mut path_builder) => {
                 path_builder.move_to(point);
             }
         }
@@ -324,9 +237,6 @@ impl PathBuilder {
             PathBuilderInner::Forma(ref mut path_builder) => {
                 path_builder.line_to(point);
             }
-            PathBuilderInner::Spinel(ref mut path_builder) => {
-                path_builder.line_to(point);
-            }
         }
         self
     }
@@ -336,9 +246,6 @@ impl PathBuilder {
             PathBuilderInner::Forma(ref mut path_builder) => {
                 path_builder.quad_to(p1, p2);
             }
-            PathBuilderInner::Spinel(ref mut path_builder) => {
-                path_builder.quad_to(p1, p2);
-            }
         }
         self
     }
@@ -346,9 +253,6 @@ impl PathBuilder {
     pub fn cubic_to(&mut self, p1: Point, p2: Point, p3: Point) -> &mut Self {
         match &mut self.inner {
             PathBuilderInner::Forma(ref mut path_builder) => {
-                path_builder.cubic_to(p1, p2, p3);
-            }
-            PathBuilderInner::Spinel(ref mut path_builder) => {
                 path_builder.cubic_to(p1, p2, p3);
             }
         }
@@ -361,9 +265,6 @@ impl PathBuilder {
             PathBuilderInner::Forma(ref mut path_builder) => {
                 path_builder.rat_quad_to(p1, p2, w);
             }
-            PathBuilderInner::Spinel(ref mut path_builder) => {
-                path_builder.rat_quad_to(p1, p2, w);
-            }
         }
         self
     }
@@ -372,9 +273,6 @@ impl PathBuilder {
     pub fn rat_cubic_to(&mut self, p1: Point, p2: Point, p3: Point, w1: f32, w2: f32) -> &mut Self {
         match &mut self.inner {
             PathBuilderInner::Forma(ref mut path_builder) => {
-                path_builder.rat_cubic_to(p1, p2, p3, w1, w2);
-            }
-            PathBuilderInner::Spinel(ref mut path_builder) => {
                 path_builder.rat_cubic_to(p1, p2, p3, w1, w2);
             }
         }
@@ -388,9 +286,6 @@ impl PathBuilder {
             PathBuilderInner::Forma(path_builder) => {
                 Path { inner: PathInner::Forma(path_builder.build()) }
             }
-            PathBuilderInner::Spinel(path_builder) => {
-                Path { inner: PathInner::Spinel(path_builder.build()) }
-            }
         }
     }
 }
@@ -402,7 +297,6 @@ pub struct Raster {
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum RasterInner {
     Forma(FormaRaster),
-    Spinel(SpinelRaster),
 }
 impl Raster {
     /// Translate raster.
@@ -411,30 +305,17 @@ impl Raster {
             RasterInner::Forma(raster) => {
                 Raster { inner: RasterInner::Forma(raster.translate(translation)) }
             }
-            RasterInner::Spinel(raster) => {
-                Raster { inner: RasterInner::Spinel(raster.translate(translation)) }
-            }
         }
     }
 }
 impl Add for Raster {
     type Output = Self;
     fn add(self, other: Self) -> Self::Output {
+        let RasterInner::Forma(other_raster) = other.inner;
         match self.inner {
-            RasterInner::Forma(raster) => Raster {
-                inner: if let RasterInner::Forma(other_raster) = other.inner {
-                    RasterInner::Forma(raster + other_raster)
-                } else {
-                    panic!("mismatched backends");
-                },
-            },
-            RasterInner::Spinel(raster) => Raster {
-                inner: if let RasterInner::Spinel(other_raster) = other.inner {
-                    RasterInner::Spinel(raster + other_raster)
-                } else {
-                    panic!("mismatched backends");
-                },
-            },
+            RasterInner::Forma(raster) => {
+                Raster { inner: RasterInner::Forma(raster + other_raster) }
+            }
         }
     }
 }
@@ -446,7 +327,6 @@ pub struct RasterBuilder {
 #[derive(Debug)]
 enum RasterBuilderInner {
     Forma(FormaRasterBuilder),
-    Spinel(SpinelRasterBuilder),
 }
 impl RasterBuilder {
     /// Add a path to the raster with optional transform.
@@ -457,18 +337,8 @@ impl RasterBuilder {
     pub fn add_with_transform(&mut self, path: &Path, transform: &Transform2D<f32>) -> &mut Self {
         match &mut self.inner {
             RasterBuilderInner::Forma(ref mut raster_builder) => {
-                if let PathInner::Forma(path) = &path.inner {
-                    raster_builder.add_with_transform(path, transform);
-                } else {
-                    panic!("mismatched backends");
-                }
-            }
-            RasterBuilderInner::Spinel(ref mut raster_builder) => {
-                if let PathInner::Spinel(path) = &path.inner {
-                    raster_builder.add_with_transform(path, transform);
-                } else {
-                    panic!("mismatched backends");
-                }
+                let PathInner::Forma(path) = &path.inner;
+                raster_builder.add_with_transform(path, transform);
             }
         }
         self
@@ -480,9 +350,6 @@ impl RasterBuilder {
         match self.inner {
             RasterBuilderInner::Forma(raster_builder) => {
                 Raster { inner: RasterInner::Forma(raster_builder.build()) }
-            }
-            RasterBuilderInner::Spinel(raster_builder) => {
-                Raster { inner: RasterInner::Spinel(raster_builder.build()) }
             }
         }
     }
@@ -506,7 +373,6 @@ pub struct Composition {
 #[derive(Debug)]
 enum CompositionInner {
     Forma(FormaComposition),
-    Spinel(SpinelComposition),
     Empty,
 }
 impl Composition {
@@ -522,7 +388,6 @@ impl Composition {
     pub fn clear(&mut self) {
         match &mut self.inner {
             CompositionInner::Forma(composition) => composition.clear(),
-            CompositionInner::Spinel(composition) => composition.clear(),
             CompositionInner::Empty => (),
         }
     }
@@ -534,45 +399,19 @@ impl Composition {
                     self.inner =
                         CompositionInner::Forma(FormaComposition::new(self.background_color));
                 }
-                Layer { raster: Raster { inner: RasterInner::Spinel(_) }, .. } => {
-                    self.inner =
-                        CompositionInner::Spinel(SpinelComposition::new(self.background_color));
-                }
             }
         }
         match &mut self.inner {
             CompositionInner::Forma(composition) => composition.insert(
                 order,
                 generic::Layer {
-                    raster: if let RasterInner::Forma(raster) = layer.raster.inner {
+                    raster: {
+                        let RasterInner::Forma(raster) = layer.raster.inner;
                         raster
-                    } else {
-                        panic!("mismatched backends");
                     },
                     clip: layer.clip.map(|clip| {
-                        if let RasterInner::Forma(clip) = clip.inner {
-                            clip
-                        } else {
-                            panic!("mismatched backends");
-                        }
-                    }),
-                    style: layer.style,
-                },
-            ),
-            CompositionInner::Spinel(composition) => composition.insert(
-                order,
-                generic::Layer {
-                    raster: if let RasterInner::Spinel(raster) = layer.raster.inner {
-                        raster
-                    } else {
-                        panic!("mismatched backends");
-                    },
-                    clip: layer.clip.map(|clip| {
-                        if let RasterInner::Spinel(clip) = clip.inner {
-                            clip
-                        } else {
-                            panic!("mismatched backends");
-                        }
+                        let RasterInner::Forma(clip) = clip.inner;
+                        clip
                     }),
                     style: layer.style,
                 },
@@ -584,7 +423,6 @@ impl Composition {
     pub fn remove(&mut self, order: Order) {
         match &mut self.inner {
             CompositionInner::Forma(composition) => composition.remove(order),
-            CompositionInner::Spinel(composition) => composition.remove(order),
             _ => (),
         }
     }
