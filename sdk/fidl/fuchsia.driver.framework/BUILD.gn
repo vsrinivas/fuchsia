@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.driver.framework") {
-  sdk_category = "partner"
+  sdk_category = "experimental"
   api = "fuchsia.driver.framework.api"
 
   sources = [

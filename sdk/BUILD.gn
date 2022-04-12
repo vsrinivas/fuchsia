@@ -578,10 +578,12 @@ sdk_molecule("bind") {
 sdk_molecule("ddk_fidl") {
   visibility = [ ":*" ]
   deps = [
+    "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_sdk($fidl_toolchain)",
   ]
 }

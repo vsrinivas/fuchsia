@@ -3,6 +3,12 @@ sdk://bind/fuchsia.test
 sdk://bind/fuchsia.usb
 sdk://docs/metadata_schemas
 sdk://fidl/ddk.hw.physiter
+sdk://fidl/fuchsia.component
+sdk://fidl/fuchsia.component.decl
+sdk://fidl/fuchsia.component.runner
+sdk://fidl/fuchsia.data
+sdk://fidl/fuchsia.diagnostics.types
+sdk://fidl/fuchsia.driver.framework
 sdk://fidl/fuchsia.hardware.ftdi
 sdk://fidl/fuchsia.hardware.i2c
 sdk://fidl/fuchsia.hardware.i2cimpl
@@ -17,6 +23,11 @@ sdk://fidl/fuchsia.hardware.wlan.associnfo
 sdk://fidl/fuchsia.hardware.wlan.phyinfo
 sdk://fidl/fuchsia.hardware.wlan.softmac
 sdk://fidl/fuchsia.hardware.wlanphyimpl
+sdk://fidl/fuchsia.io
+sdk://fidl/fuchsia.ldsvc
+sdk://fidl/fuchsia.mem
+sdk://fidl/fuchsia.process
+sdk://fidl/fuchsia.url
 sdk://fidl/fuchsia.wlan.common
 sdk://fidl/fuchsia.wlan.ieee80211
 sdk://fidl/fuchsia.wlan.internal
