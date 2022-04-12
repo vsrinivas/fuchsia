@@ -414,7 +414,7 @@ template("fidl_cpp_family") {
       public_deps = [ ":${target_name}_hlcpp" ]
     }
 
-    # Set up an SDK item for this library
+    # Set up an HLCPP SDK item for this library
     if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
       # Instead of depending on the generated bindings, set up a dependency on
       # the original library.
@@ -520,7 +520,8 @@ template("fidl_cpp_family") {
   if (llcpp_public_deps != []) {
     layer_target_prefix = target_name + "_"
     foreach(layer, llcpp_layers) {
-      fidl_cpp_library(layer_target_prefix + layer.layer) {
+      layer_target_name = layer_target_prefix + layer.layer
+      fidl_cpp_library(layer_target_name) {
         forward_variables_from(invoker,
                                [
                                  "public_configs",
@@ -542,6 +543,18 @@ template("fidl_cpp_family") {
         if (defined(layer.layer_deps)) {
           foreach(layer_dep, layer.layer_deps) {
             additional_public_deps += [ ":${layer_target_prefix}${layer_dep}" ]
+          }
+        }
+      }
+
+      if (current_toolchain != fidl_toolchain) {
+        # Set up an LLCPP SDK item for this library
+        if (defined(invoker.sdk_category) &&
+            invoker.sdk_category != "excluded") {
+          # Instead of depending on the generated bindings, set up a dependency on
+          # the original library.
+          sdk_atom_alias("${layer_target_name}_sdk") {
+            atom = ":$sdk_target_name($fidl_toolchain)"
           }
         }
       }
