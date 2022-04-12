@@ -72,6 +72,7 @@
                     "/bootstrap",
                     "/bootstrap/power_manager",
                     "/core",
+                    "/core/test_manager/system-tests:**",
                 ],
             },
             {
@@ -84,6 +85,7 @@
                     "/bootstrap/console",
                     "/core",
                     "/core/debug_serial",
+                    "/core/test_manager/system-tests:**",
                 ],
             },
             {
@@ -105,6 +107,7 @@
                 target_monikers: [
                     "/bootstrap",
                     "/core",
+                    "/core/test_manager/system-tests:**",
                 ],
             },
             {
@@ -115,6 +118,7 @@
                 target_monikers: [
                     "/bootstrap",
                     "/core",
+                    "/core/test_manager/system-tests:**",
                 ],
             },
             {
@@ -125,6 +129,7 @@
                 target_monikers: [
                     "/bootstrap",
                     "/core",
+                    "/core/test_manager/system-tests:**",
                 ],
             },
             {
@@ -139,6 +144,7 @@
                     "/bootstrap/netsvc",
                     "/bootstrap/svchost",
                     "/core",
+                    "/core/test_manager/system-tests:**",
                 ],
             },
             {
@@ -163,6 +169,7 @@
                 target_monikers: [
                     "/bootstrap",
                     "/core",
+                    "/core/test_manager/system-tests:**",
                 ],
             },
             {
@@ -174,6 +181,7 @@
                     "/bootstrap",
                     "/core",
                     "/core/thermd",
+                    "/core/test_manager/system-tests:**",
                 ],
             },
             {
@@ -184,6 +192,7 @@
                 target_monikers: [
                     "/bootstrap",
                     "/core",
+                    "/core/test_manager/system-tests:**",
                 ],
             },
             {

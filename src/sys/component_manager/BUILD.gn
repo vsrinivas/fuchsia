@@ -370,7 +370,7 @@ fuchsia_component("component-manager-boot-env-tests-cmp") {
     "//src/lib/process_builder:test_util",
   ]
   component_name = "component_manager_boot_env_tests"
-  manifest = "meta/component_manager_boot_env_tests.cmx"
+  manifest = "meta/component_manager_boot_env_tests.cml"
 }
 
 fuchsia_test_package("component-manager-tests") {
