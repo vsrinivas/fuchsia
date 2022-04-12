@@ -14,12 +14,6 @@
 
 zx_handle_t root_resource_handle;
 
-zx_status_t pci_init(zx_device_t *parent, ACPI_HANDLE object, ACPI_DEVICE_INFO *info,
-                     acpi::Manager *acpi, std::vector<pci_bdf_t> acpi_bdfs) {
-  zxlogf(ERROR, "Hey look pci_init");
-  return ZX_OK;
-}
-
 namespace acpi_arm64 {
 
 namespace {}  // namespace
