@@ -925,7 +925,6 @@ config("Wno-conversion") {
     "//zircon/system/ulib/ldmsg:*",
     "//zircon/system/ulib/log:*",
     "//zircon/system/ulib/profile:*",
-    "//zircon/system/ulib/runtests-utils:*",
     "//zircon/system/ulib/spi:*",
     "//zircon/system/ulib/sysconfig-client:*",
     "//zircon/system/ulib/syslog:*",
