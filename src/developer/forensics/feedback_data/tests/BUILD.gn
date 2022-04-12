@@ -428,35 +428,23 @@ resource("test_image") {
 ###############################################################################
 # COMPONENTS
 ###############################################################################
-fuchsia_component("archive_accessor_ptr_unittest") {
-  testonly = true
-
-  manifest = "meta/archive_accessor_ptr_unittest.cmx"
-
+fuchsia_unittest_component("archive_accessor_ptr_unittest") {
   deps = [ ":archive_accessor_ptr_unittest_exe" ]
 }
 
-fuchsia_component("board_info_provider_unittest") {
-  testonly = true
-
-  manifest = "meta/board_info_provider_unittest.cmx"
-
+fuchsia_unittest_component("board_info_provider_unittest") {
   deps = [ ":board_info_provider_unittest_exe" ]
 }
 
 fuchsia_component("channel_provider_unittest") {
   testonly = true
 
-  manifest = "meta/channel_provider_unittest.cmx"
+  manifest = "meta/channel_provider_unittest.cml"
 
   deps = [ ":channel_provider_unittest_exe" ]
 }
 
-fuchsia_component("config_unittest") {
-  testonly = true
-
-  manifest = "meta/config_unittest.cmx"
-
+fuchsia_unittest_component("config_unittest") {
   deps = [
     ":config_unittest_exe",
     ":test_configs",
@@ -466,7 +454,7 @@ fuchsia_component("config_unittest") {
 fuchsia_component("data_provider_unittest") {
   testonly = true
 
-  manifest = "meta/data_provider_unittest.cmx"
+  manifest = "meta/data_provider_unittest.cml"
 
   deps = [
     ":data_provider_unittest_exe",
@@ -477,7 +465,7 @@ fuchsia_component("data_provider_unittest") {
 fuchsia_component("data_provider_controller_unittest") {
   testonly = true
 
-  manifest = "meta/data_provider_controller_unittest.cmx"
+  manifest = "meta/data_provider_controller_unittest.cml"
 
   deps = [ ":data_provider_controller_unittest_exe" ]
 }
@@ -501,7 +489,7 @@ fuchsia_component("default_annotations_unittest") {
 fuchsia_component("inspect_data_budget_unittest") {
   testonly = true
 
-  manifest = "meta/inspect_data_budget_unittest.cmx"
+  manifest = "meta/inspect_data_budget_unittest.cml"
 
   deps = [ ":inspect_data_budget_unittest_exe" ]
 }
@@ -521,7 +509,7 @@ fuchsia_unittest_component("log_source_unittest") {
 fuchsia_component("metadata_unittest") {
   testonly = true
 
-  manifest = "meta/metadata_unittest.cmx"
+  manifest = "meta/metadata_unittest.cml"
 
   deps = [ ":metadata_unittest_exe" ]
 }
@@ -534,35 +522,23 @@ fuchsia_component("kernel_log_ptr_integration_test") {
   deps = [ ":kernel_log_ptr_integration_test_exe" ]
 }
 
-fuchsia_component("product_info_provider_unittest") {
-  testonly = true
-
-  manifest = "meta/product_info_provider_unittest.cmx"
-
+fuchsia_unittest_component("product_info_provider_unittest") {
   deps = [ ":product_info_provider_unittest_exe" ]
 }
 
 fuchsia_component("screenshot_ptr_unittest") {
   testonly = true
 
-  manifest = "meta/screenshot_ptr_unittest.cmx"
+  manifest = "meta/screenshot_ptr_unittest.cml"
 
   deps = [ ":screenshot_ptr_unittest_exe" ]
 }
 
-fuchsia_component("system_log_unittest") {
-  testonly = true
-
-  manifest = "meta/system_log_unittest.cmx"
-
+fuchsia_unittest_component("system_log_unittest") {
   deps = [ ":system_log_unittest_exe" ]
 }
 
-fuchsia_component("timezone_provider_unittest") {
-  testonly = true
-
-  manifest = "meta/timezone_provider_unittest.cml"
-
+fuchsia_unittest_component("timezone_provider_unittest") {
   deps = [ ":timezone_provider_unittest_exe" ]
 }
 

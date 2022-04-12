@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/components/fuchsia_unittest_component.gni")
 
 ###############################################################################
 # EXECUTABLES
@@ -109,26 +110,18 @@ executable("writer_unittest_exe") {
 ###############################################################################
 # COMPONENTS
 ###############################################################################
-fuchsia_component("log_message_store_unittest") {
-  testonly = true
-
-  manifest = "meta/log_message_store_unittest.cmx"
-
+fuchsia_unittest_component("log_message_store_unittest") {
   deps = [ ":log_message_store_unittest_exe" ]
 }
 
-fuchsia_component("lz4_encoding_unittest") {
-  testonly = true
-
-  manifest = "meta/lz4_encoding_unittest.cmx"
-
+fuchsia_unittest_component("lz4_encoding_unittest") {
   deps = [ ":lz4_encoding_unittest_exe" ]
 }
 
 fuchsia_component("reader_unittest") {
   testonly = true
 
-  manifest = "meta/reader_unittest.cmx"
+  manifest = "meta/reader_unittest.cml"
 
   deps = [ ":reader_unittest_exe" ]
 }
@@ -136,7 +129,7 @@ fuchsia_component("reader_unittest") {
 fuchsia_component("system_log_recorder_unittest") {
   testonly = true
 
-  manifest = "meta/system_log_recorder_unittest.cmx"
+  manifest = "meta/system_log_recorder_unittest.cml"
 
   deps = [ ":system_log_recorder_unittest_exe" ]
 }
@@ -144,7 +137,7 @@ fuchsia_component("system_log_recorder_unittest") {
 fuchsia_component("writer_unittest") {
   testonly = true
 
-  manifest = "meta/writer_unittest.cmx"
+  manifest = "meta/writer_unittest.cml"
 
   deps = [ ":writer_unittest_exe" ]
 }
