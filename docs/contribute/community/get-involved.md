@@ -173,12 +173,6 @@ Fuchsia:
    </td>
   </tr>
   <tr>
-   <td><a href="https://groups.google.com/a/fuchsia.dev/g/process-runtime-dev">process-runtime-dev</a>
-   </td>
-   <td>Working group for low-level runtime work shared between the {{ widgets.glossary_simple ('Zircon') }}, Core Platform, and Toolchain teams.
-   </td>
-  </tr>
-  <tr>
    <td><a href="https://groups.google.com/a/fuchsia.dev/g/sdk-dev">sdk-dev</a>
    </td>
    <td>For conversation about the {{ widgets.glossary_simple ('Fuchsia IDK') }}, formerly called the Fuchsia SDK.
