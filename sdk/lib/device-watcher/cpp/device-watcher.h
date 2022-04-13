@@ -7,7 +7,9 @@
 
 #include <lib/zx/channel.h>
 
-#include <fbl/string.h>
+#include <memory>
+#include <string_view>
+
 #include <fbl/unique_fd.h>
 
 namespace device_watcher {
@@ -54,7 +56,7 @@ class DirWatcher {
 
   // Returns ZX_OK if |filename| is removed from the directory before the given timeout elapses.
   // If no filename is specified, this will wait for any file in the directory to be removed.
-  zx_status_t WaitForRemoval(const fbl::String& filename, zx::duration timeout);
+  zx_status_t WaitForRemoval(std::string_view filename, zx::duration timeout);
 
  private:
   zx::channel client_;

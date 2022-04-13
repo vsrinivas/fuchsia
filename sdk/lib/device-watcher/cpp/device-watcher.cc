@@ -44,7 +44,7 @@ zx_status_t DirWatcher::Create(fbl::unique_fd dir_fd,
 }
 
 __EXPORT
-zx_status_t DirWatcher::WaitForRemoval(const fbl::String& filename, zx::duration timeout) {
+zx_status_t DirWatcher::WaitForRemoval(std::string_view filename, zx::duration timeout) {
   auto deadline = zx::deadline_after(timeout);
   // Loop until we see the removal event, or wait_one fails due to timeout.
   for (;;) {
@@ -75,7 +75,7 @@ zx_status_t DirWatcher::WaitForRemoval(const fbl::String& filename, zx::duration
       return ZX_OK;
     }
     if ((buf[1] == filename.length()) &&
-        (memcmp(buf + 2, filename.c_str(), filename.length()) == 0)) {
+        (memcmp(buf + 2, filename.data(), filename.length()) == 0)) {
       return ZX_OK;
     }
   }

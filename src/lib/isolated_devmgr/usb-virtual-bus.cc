@@ -21,6 +21,7 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
+#include <fbl/string.h>
 #include <gtest/gtest.h>
 #include <sdk/lib/device-watcher/cpp/device-watcher.h>
 

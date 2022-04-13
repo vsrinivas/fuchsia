@@ -75,7 +75,8 @@ class NandDevice {
 
       fidl::WireCall(controller())->ScheduleUnbind();
 
-      ASSERT_EQ(watcher->WaitForRemoval(filename_, zx::sec(5)), ZX_OK);
+      ASSERT_EQ(watcher->WaitForRemoval(static_cast<std::string_view>(filename_), zx::sec(5)),
+                ZX_OK);
     }
   }
 
