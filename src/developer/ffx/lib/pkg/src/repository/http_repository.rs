@@ -13,24 +13,22 @@ use {
         resource::{Resource, ResourceRange},
     },
     anyhow::{anyhow, Context, Result},
-    errors::{ffx_bail, ffx_error},
+    errors::ffx_bail,
     fidl_fuchsia_developer_ffx_ext::RepositorySpec,
-    fuchsia_merkle::Hash,
+    fuchsia_merkle::{Hash, MerkleTreeBuilder},
     fuchsia_pkg::{BlobInfo, MetaContents, MetaPackage, PackageManifestBuilder},
     futures::TryStreamExt,
-    futures_lite::io::{copy, AsyncWriteExt},
+    futures_lite::io::AsyncWriteExt,
     hyper::{
         body::HttpBody,
         client::{connect::Connect, Client},
         Body, StatusCode, Uri,
     },
     serde_json::Value,
-    std::str::FromStr,
     std::{
         fmt::Debug,
         fs::{metadata, File},
         path::{Path, PathBuf},
-        sync::Arc,
         time::SystemTime,
     },
     tuf::{
@@ -179,13 +177,12 @@ where
     let desc = repo
         .get_target_description(&target_path)
         .await?
-        .context("missing target description here")?
-        .custom()
-        .get("merkle")
-        .context("missing merkle")?
-        .clone();
-    let merkle = if let Value::String(hash) = desc {
-        hash.to_string()
+        .context("missing target description here")?;
+
+    let merkle = desc.custom().get("merkle").context("missing merkle")?;
+
+    let meta_far_hash = if let Value::String(hash) = merkle {
+        hash.parse()?
     } else {
         ffx_bail!("[Error] Merkle field is not a String. {:#?}", desc);
     };
@@ -195,11 +192,27 @@ where
     }
 
     if output_path.is_file() {
-        ffx_bail!("Download path point to a file: {}", output_path.display());
+        ffx_bail!("Download path is pointing to a file: {}", output_path.display());
     }
-    let meta_far_path = output_path.join("meta.far");
 
-    download_blob_to_destination(&merkle, &repo, meta_far_path.clone()).await?;
+    let output_blobs_dir = output_path.join("blobs");
+    if !output_blobs_dir.exists() {
+        async_fs::create_dir_all(&output_blobs_dir).await?;
+    }
+
+    if output_blobs_dir.is_file() {
+        ffx_bail!("Download path is pointing to a file: {}", output_blobs_dir.display());
+    }
+
+    // Download the meta.far and write it into the `blobs/` directory.
+    let meta_far_path =
+        download_blob_to_destination(&repo, &output_blobs_dir, &meta_far_hash).await?;
+
+    // FIXME(http://fxbug.dev/97061): When this function was written, we downloaded the meta.far
+    // blob to a toplevel file `meta.far`, rather than writing it into the `blobs/` directory. Lets
+    // preserve this behavior for now until we can change downstream users from relying on this
+    // functionality.
+    std::fs::copy(&meta_far_path, output_path.join("meta.far"))?;
 
     let mut archive = File::open(&meta_far_path)?;
     let mut meta_far = fuchsia_archive::Reader::new(&mut archive)?;
@@ -208,24 +221,12 @@ where
     let meta_package = meta_far.read_file("meta/package")?;
     let meta_package = MetaPackage::deserialize(meta_package.as_slice())?;
 
-    let blob_output_path = output_path.join("blobs");
-    if !blob_output_path.exists() {
-        async_fs::create_dir_all(&blob_output_path).await?;
-    }
-
-    if blob_output_path.is_file() {
-        ffx_bail!("Download path point to a file: {}", blob_output_path.display());
-    }
     // Download all the blobs.
     let mut tasks = Vec::new();
-    let repo = Arc::new(repo);
     for hash in meta_contents.values() {
-        let blob_path = blob_output_path.join(&hash.to_string());
-        let clone = repo.clone();
-        tasks.push(async move {
-            download_blob_to_destination(&hash.to_string(), &clone, blob_path).await
-        });
+        tasks.push(download_blob_to_destination(&repo, &output_blobs_dir, hash));
     }
+
     futures::future::join_all(tasks).await;
 
     // Build the PackageManifest of this package.
@@ -237,12 +238,12 @@ where
             .with_context(|| format!("Path is not valid UTF-8: {}", meta_far_path.display()))?
             .to_string(),
         path: "meta/".to_owned(),
-        merkle: Hash::from_str(&merkle)?,
+        merkle: meta_far_hash,
         size: metadata(&meta_far_path)?.len(),
     });
 
     for (blob_path, hash) in meta_contents.iter() {
-        let source_path = blob_output_path.join(&hash.to_string()).canonicalize()?;
+        let source_path = output_blobs_dir.join(&hash.to_string()).canonicalize()?;
 
         builder = builder.add_blob(BlobInfo {
             source_path: source_path
@@ -269,15 +270,57 @@ where
 /// `repo`: A [Repository] instance.
 /// `destination`: Local path to save the downloaded package.
 async fn download_blob_to_destination(
-    path: &str,
     repo: &Repository,
-    destination: PathBuf,
-) -> Result<()> {
-    let res = repo.fetch_blob(path).await.map_err(|e| {
-        ffx_error!("Cannot download file to {}. Error was {:#}", destination.display(), anyhow!(e))
-    })?;
-    copy(res.stream.into_async_read(), async_fs::File::create(destination).await?).await?;
-    Ok(())
+    dir: &Path,
+    blob: &Hash,
+) -> Result<PathBuf> {
+    let blob_str = blob.to_string();
+    let path = dir.join(&blob_str);
+
+    // If the local path already exists, check if has the correct merkle. If so, exit early.
+    match async_fs::File::open(&path).await {
+        Ok(mut file) => {
+            let hash = fuchsia_merkle::from_async_read(&mut file).await?.root();
+            if blob == &hash {
+                return Ok(path);
+            }
+        }
+        Err(err) => {
+            if err.kind() != std::io::ErrorKind::NotFound {
+                return Err(err.into());
+            }
+        }
+    };
+
+    // Otherwise download the blob into a temporary directory, and validate that it has the right
+    // hash.
+    let mut resource =
+        repo.fetch_blob(&blob_str).await.with_context(|| format!("fetching {}", blob))?;
+
+    let (file, temp_path) = tempfile::NamedTempFile::new_in(dir)?.into_parts();
+    let mut file = async_fs::File::from(file);
+
+    let mut merkle_builder = MerkleTreeBuilder::new();
+
+    while let Some(chunk) = resource.stream.try_next().await? {
+        merkle_builder.write(&chunk);
+        file.write_all(&chunk).await?;
+    }
+
+    let hash = merkle_builder.finish().root();
+
+    // Error out if the merkle doesn't match what we expected.
+    if blob == &hash {
+        // Flush the file to make sure all the bytes got written to disk.
+        file.flush().await?;
+        drop(file);
+
+        temp_path.persist(&path)?;
+
+        Ok(path)
+    } else {
+        Err(anyhow!("invalid merkle: expected {:?}, got {:?}", blob, hash))
+    }
 }
 
 #[cfg(test)]
@@ -292,7 +335,7 @@ mod test {
         camino::Utf8Path,
         fuchsia_async as fasync,
         fuchsia_hyper::new_https_client,
-        std::{fs::create_dir, net::Ipv4Addr},
+        std::{fs::create_dir, net::Ipv4Addr, sync::Arc},
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
