@@ -8,14 +8,6 @@ using zx;
 
 const MAX_TRANSFER_SIZE uint32 = 8196; // More than enough for I2C
 const MAX_COUNT_SEGMENTS uint32 = 8; // Enough for all known transfer configurations.
-type SegmentType = strict enum {
-    /// Flags the end of a serialized list of segments.
-    END = 1;
-    /// Segment to be read from the I2C device.
-    READ = 2;
-    /// Segment to be written to the I2C device.
-    WRITE = 3;
-};
 
 // A previous `Device` is now removed.
 @discoverable
