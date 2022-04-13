@@ -128,24 +128,6 @@
         },
         {
             "event_codes": [
-                1,
-                0
-            ],
-            "metric_id": 11,
-            "metric_type": "Occurrence",
-            "selector": "bootstrap/driver_manager:root/bt-host/adapter/peer_cache/metrics/bredr:connection_events"
-        },
-        {
-            "event_codes": [
-                1,
-                1
-            ],
-            "metric_id": 11,
-            "metric_type": "Occurrence",
-            "selector": "bootstrap/driver_manager:root/bt-host/adapter/peer_cache/metrics/bredr:disconnection_events"
-        },
-        {
-            "event_codes": [
                 0,
                 1
             ],
@@ -164,21 +146,83 @@
         },
         {
             "event_codes": [
-                0,
-                0
-            ],
-            "metric_id": 11,
-            "metric_type": "Occurrence",
-            "selector": "bootstrap/driver_manager:root/bt-host/adapter/peer_cache/metrics/le:connection_events"
-        },
-        {
-            "event_codes": [
+                1,
                 0,
                 1
             ],
             "metric_id": 11,
             "metric_type": "Occurrence",
-            "selector": "bootstrap/driver_manager:root/bt-host/adapter/peer_cache/metrics/le:disconnection_events"
+            "selector": "bootstrap/driver_manager:root/bt-host/adapter/bredr_connection_manager/incoming:successful_connections"
+        },
+        {
+            "event_codes": [
+                1,
+                1,
+                1
+            ],
+            "metric_id": 11,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/bt-host/adapter/bredr_connection_manager/incoming:failed_connections"
+        },
+        {
+            "event_codes": [
+                1,
+                0,
+                2
+            ],
+            "metric_id": 11,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/bt-host/adapter/bredr_connection_manager/outgoing:successful_connections"
+        },
+        {
+            "event_codes": [
+                1,
+                1,
+                2
+            ],
+            "metric_id": 11,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/bt-host/adapter/bredr_connection_manager/outgoing:failed_connections"
+        },
+        {
+            "event_codes": [
+                0,
+                0,
+                1
+            ],
+            "metric_id": 11,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/bt-host/adapter/low_energy_discovery_manager:incoming_connection_success_count"
+        },
+        {
+            "event_codes": [
+                0,
+                1,
+                1
+            ],
+            "metric_id": 11,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/bt-host/adapter/low_energy_discovery_manager:incoming_connection_failure_count"
+        },
+        {
+            "event_codes": [
+                0,
+                0,
+                2
+            ],
+            "metric_id": 11,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/bt-host/adapter/low_energy_discovery_manager:outgoing_connection_success_count"
+        },
+        {
+            "event_codes": [
+                0,
+                1,
+                2
+            ],
+            "metric_id": 11,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/bt-host/adapter/low_energy_discovery_manager:outgoing_connection_failure_count"
         }
     ],
     "poll_rate_sec": 1800,
