@@ -43,14 +43,15 @@ template("fidl_rust") {
     ]
 
     tool = "//tools/fidl/fidlgen_rust"
+    _version_dir =
+        get_label_info("//build/rust:rust_toolchain_version($host_toolchain)",
+                       "target_out_dir")
 
     inputs = [
       json_representation,
       "//rustfmt.toml",
       "$rustc_prefix/rustfmt",
-
-      # Ensure bindings are regenerated after Rust toolchain rolls.
-      "$rust_sysroot/.versions/rust.cipd_version",
+      "$_version_dir/rust_toolchain_version",
     ]
 
     outputs = [ filename ]
