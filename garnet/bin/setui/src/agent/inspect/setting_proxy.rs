@@ -17,6 +17,8 @@ use crate::base::SettingType;
 use crate::blueprint_definition;
 use crate::clock;
 use crate::handler::base::{Payload as HandlerPayload, Request};
+use crate::inspect::utils::inspect_map::InspectMap;
+use crate::inspect::utils::inspect_queue::InspectQueue;
 use crate::message::base::{filter, MessageEvent, MessengerType};
 use crate::service::TryFromWithClient;
 use crate::{service, trace};
@@ -26,7 +28,6 @@ use fuchsia_inspect::{self as inspect, component, Property};
 use fuchsia_inspect_derive::{Inspect, WithInspect};
 use futures::StreamExt;
 
-use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 
 blueprint_definition!(
@@ -37,12 +38,11 @@ blueprint_definition!(
 const INSPECT_REQUESTS_COUNT: usize = 25;
 
 /// Information about a setting to be written to inspect.
-#[derive(Inspect)]
+#[derive(Default, Inspect)]
 struct SettingTypeInspectInfo {
-    /// Map from the name of the Request variant to a RequestTypeInspectInfo that holds a list of
+    /// Map from the name of the Request variant to a RequestInspectInfo that holds a list of
     /// recent requests.
-    #[inspect(skip)]
-    requests_by_type: HashMap<String, RequestTypeInspectInfo>,
+    requests_by_type: InspectMap<InspectQueue<RequestInspectInfo>>,
 
     /// Incrementing count for all requests of this setting type.
     ///
@@ -55,33 +55,15 @@ struct SettingTypeInspectInfo {
 }
 
 impl SettingTypeInspectInfo {
-    fn new() -> Self {
-        Self { count: 0, requests_by_type: HashMap::new(), inspect_node: inspect::Node::default() }
-    }
-}
-
-/// Information for all requests of a particular SettingType variant for a given setting type.
-#[derive(Inspect)]
-struct RequestTypeInspectInfo {
-    /// Last requests for inspect to save. Number of requests is defined by INSPECT_REQUESTS_COUNT.
-    #[inspect(skip)]
-    last_requests: VecDeque<RequestInspectInfo>,
-
-    /// Node of this info.
-    inspect_node: inspect::Node,
-}
-
-impl RequestTypeInspectInfo {
-    fn new() -> Self {
-        Self {
-            last_requests: VecDeque::with_capacity(INSPECT_REQUESTS_COUNT),
-            inspect_node: inspect::Node::default(),
-        }
+    fn new(node: &inspect::Node, key: &str) -> Self {
+        Self::default()
+            .with_inspect(node, key)
+            .expect("Failed to create SettingTypeInspectInfo node")
     }
 }
 
 /// Information about a request to be written to inspect.
-#[derive(Inspect)]
+#[derive(Default, Inspect)]
 struct RequestInspectInfo {
     /// Debug string representation of this Request.
     request: inspect::StringProperty,
@@ -94,12 +76,16 @@ struct RequestInspectInfo {
 }
 
 impl RequestInspectInfo {
-    fn new() -> Self {
-        Self {
-            request: inspect::StringProperty::default(),
-            timestamp: inspect::StringProperty::default(),
-            inspect_node: inspect::Node::default(),
-        }
+    fn new(request: String, timestamp: String, node: &inspect::Node, key: &str) -> Self {
+        let info = Self::default()
+            .with_inspect(node, key)
+            // `with_inspect` will only return an error on types with
+            // interior mutability. Since none are used here, this should be
+            // fine.
+            .expect("failed to create RequestInspectInfo inspect node");
+        info.request.set(&request);
+        info.timestamp.set(&timestamp);
+        info
     }
 }
 
@@ -108,7 +94,7 @@ impl RequestInspectInfo {
 pub(crate) struct SettingProxyInspectAgent {
     inspect_node: inspect::Node,
     /// Last requests for inspect to save.
-    last_requests: HashMap<SettingType, SettingTypeInspectInfo>,
+    last_requests: InspectMap<SettingTypeInspectInfo>,
 }
 
 impl DeviceStorageAccess for SettingProxyInspectAgent {
@@ -137,8 +123,10 @@ impl SettingProxyInspectAgent {
             .await
             .expect("should receive client");
 
-        let mut agent =
-            SettingProxyInspectAgent { inspect_node: node, last_requests: HashMap::new() };
+        let mut agent = SettingProxyInspectAgent {
+            inspect_node: node,
+            last_requests: InspectMap::<SettingTypeInspectInfo>::new(),
+        };
 
         fasync::Task::spawn(async move {
             let nonce = fuchsia_trace::generate_nonce();
@@ -195,42 +183,33 @@ impl SettingProxyInspectAgent {
     /// Write a request to inspect.
     fn record_request(&mut self, setting_type: SettingType, request: &Request) {
         let inspect_node = &self.inspect_node;
-        let setting_type_info = self.last_requests.entry(setting_type).or_insert_with(|| {
-            SettingTypeInspectInfo::new()
-                .with_inspect(inspect_node, format!("{:?}", setting_type))
-                // `with_inspect` will only return an error on types with
-                // interior mutability. Since none are used here, this should be
-                // fine.
-                .expect("failed to create SettingTypeInspectInfo inspect node")
-        });
-
-        let key = request.for_inspect().to_string();
-        let setting_type_inspect_node = &setting_type_info.inspect_node;
-        let request_type_info =
-            setting_type_info.requests_by_type.entry(key.clone()).or_insert_with(|| {
-                // `with_inspect` will only return an error on types with
-                // interior mutability. Since none are used here, this
-                // should be fine.
-                RequestTypeInspectInfo::new()
-                    .with_inspect(setting_type_inspect_node, key)
-                    .expect("failed to create RequestTypeInspectInfo inspect node")
+        let setting_type_info =
+            self.last_requests.get_or_insert(format!("{:?}", setting_type), || {
+                SettingTypeInspectInfo::new(inspect_node, &format!("{:?}", setting_type))
             });
 
-        let last_requests = &mut request_type_info.last_requests;
-        if last_requests.len() >= INSPECT_REQUESTS_COUNT {
-            let _ = last_requests.pop_back();
-        }
+        let key = request.for_inspect();
+        let inspect_queue_node = &setting_type_info.inspect_node;
+        let inspect_queue =
+            setting_type_info.requests_by_type.get_or_insert(key.to_string(), || {
+                InspectQueue::<RequestInspectInfo>::new(INSPECT_REQUESTS_COUNT)
+                    .with_inspect(inspect_queue_node, key)
+                    // `with_inspect` will only return an error on types with
+                    // interior mutability. Since none are used here, this should be
+                    // fine.
+                    .expect("failed to create InspectQueue inspect node")
+            });
 
         let count = setting_type_info.count;
         setting_type_info.count += 1;
+
         let timestamp = clock::inspect_format_now();
-        // std::u64::MAX maxes out at 20 digits.
-        let request_info = RequestInspectInfo::new()
-            .with_inspect(&request_type_info.inspect_node, format!("{:020}", count))
-            .expect("failed to create RequestInspectInfo inspect node");
-        request_info.request.set(&format!("{:?}", request));
-        request_info.timestamp.set(&timestamp);
-        last_requests.push_front(request_info);
+        inspect_queue.push(RequestInspectInfo::new(
+            format!("{:?}", request),
+            timestamp,
+            &inspect_queue.inspect_node,
+            &format!("{:020}", count),
+        ));
     }
 }
 

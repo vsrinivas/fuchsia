@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect, component, Property};
+use fuchsia_inspect_derive::{Inspect, WithInspect};
 use fuchsia_syslog::fx_log_err;
 use futures::StreamExt;
 
@@ -17,6 +18,7 @@ use crate::blueprint_definition;
 use crate::clock;
 use crate::handler::base::{Payload as SettingPayload, Request};
 use crate::handler::setting_handler::{Event, Payload as HandlerPayload};
+use crate::inspect::utils::inspect_map::InspectMap;
 use crate::message::base::{filter, Audience, MessageEvent, MessengerType};
 use crate::service;
 use crate::service::message::Messenger;
@@ -35,28 +37,39 @@ blueprint_definition!(
 pub(crate) struct SettingValuesInspectAgent {
     messenger_client: Messenger,
     inspect_node: inspect::Node,
-    setting_values: HashMap<&'static str, SettingValuesInspectInfo>,
+    setting_values: InspectMap<SettingValuesInspectInfo>,
     setting_types: HashSet<SettingType>,
-    _setting_types_inspect_node: SettingTypesInspectInfo,
+    _setting_types_inspect_info: SettingTypesInspectInfo,
 }
 
 /// Information about the setting types available in the settings service.
 ///
 /// Inspect nodes are not used, but need to be held as they're deleted from inspect once they go
 /// out of scope.
-#[derive(Debug)]
+#[derive(Debug, Default, Inspect)]
 struct SettingTypesInspectInfo {
-    _node: inspect::Node,
-    _value: inspect::StringProperty,
+    inspect_node: inspect::Node,
+    value: inspect::StringProperty,
+}
+
+impl SettingTypesInspectInfo {
+    fn new(value: String, node: &inspect::Node, key: &str) -> Self {
+        let info = Self::default()
+            .with_inspect(node, key)
+            .expect("Failed to create SettingTypesInspectInfo node");
+        info.value.set(&value);
+        info
+    }
 }
 
 /// Information about a setting to be written to inspect.
 ///
 /// Inspect nodes are not used, but need to be held as they're deleted from inspect once they go
 /// out of scope.
+#[derive(Default, Inspect)]
 struct SettingValuesInspectInfo {
     /// Node of this info.
-    _node: inspect::Node,
+    inspect_node: inspect::Node,
 
     /// Debug string representation of the value of this setting.
     value: inspect::StringProperty,
@@ -112,7 +125,6 @@ impl SettingValuesInspectAgent {
         };
 
         // Add inspect node for the setting types.
-        let setting_type_node = inspector.root().create_child(SETTING_TYPE_INSPECT_NODE_NAME);
         let mut setting_types_list: Vec<String> = context
             .available_components
             .clone()
@@ -120,17 +132,19 @@ impl SettingValuesInspectAgent {
             .map(|component| format!("{:?}", component))
             .collect();
         setting_types_list.sort();
-        let setting_types_value =
-            setting_type_node.create_string("value", format!("{:?}", setting_types_list));
-        let setting_types_inspect_node =
-            SettingTypesInspectInfo { _node: setting_type_node, _value: setting_types_value };
+        let setting_types_value = format!("{:?}", setting_types_list);
+        let setting_types_inspect_info = SettingTypesInspectInfo::new(
+            setting_types_value,
+            inspector.root(),
+            SETTING_TYPE_INSPECT_NODE_NAME,
+        );
 
         let mut agent = Self {
             messenger_client,
             inspect_node,
-            setting_values: HashMap::new(),
+            setting_values: InspectMap::new(),
             setting_types: context.available_components.clone(),
-            _setting_types_inspect_node: setting_types_inspect_node,
+            _setting_types_inspect_info: setting_types_inspect_info,
         };
 
         fasync::Task::spawn(async move {
@@ -200,29 +214,24 @@ impl SettingValuesInspectAgent {
     /// Writes a setting value to inspect.
     async fn write_setting_to_inspect(&mut self, setting: SettingInfo) {
         let (key, value) = setting.for_inspect();
-
         let timestamp = clock::inspect_format_now();
 
-        match self.setting_values.get_mut(key) {
-            Some(setting) => {
-                // Value already known, just update its fields.
-                setting.timestamp.set(&timestamp);
-                setting.value.set(&value);
-            }
-            None => {
-                // Setting value not recorded yet, create a new inspect node.
-                let node = self.inspect_node.create_child(key);
-                let value_prop = node.create_string("value", value);
-                let timestamp_prop = node.create_string("timestamp", timestamp);
-                let _ = self.setting_values.insert(
-                    key,
-                    SettingValuesInspectInfo {
-                        _node: node,
-                        value: value_prop,
-                        timestamp: timestamp_prop,
-                    },
-                );
-            }
+        let setting_values_node = &self.inspect_node;
+        let key_str = key.to_string();
+        let setting_values = self.setting_values.get_mut(&key_str);
+
+        if let Some(setting_values_info) = setting_values {
+            // Value already known, just update its fields.
+            setting_values_info.timestamp.set(&timestamp);
+            setting_values_info.value.set(&value);
+        } else {
+            // Setting value not recorded yet, create a new inspect node.
+            let inspect_info = SettingValuesInspectInfo::default()
+                .with_inspect(setting_values_node, key)
+                .expect("Failed to create SettingValuesInspectInfo node");
+            inspect_info.timestamp.set(&timestamp);
+            inspect_info.value.set(&value);
+            let _ = self.setting_values.set(key_str, inspect_info);
         }
     }
 }

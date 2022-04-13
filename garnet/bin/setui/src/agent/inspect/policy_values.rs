@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::sync::Arc;
 
@@ -10,6 +9,7 @@ use crate::agent::storage::device_storage::DeviceStorageAccess;
 use crate::agent::{Context, Payload};
 use crate::blueprint_definition;
 use crate::clock;
+use crate::inspect::utils::inspect_map::InspectMap;
 use crate::message::base::{filter, role, MessageEvent, MessengerType};
 use crate::policy::{self as policy_base, Payload as PolicyPayload, Request, Role};
 use crate::service::message::{Audience, MessageClient, Messenger, Signature};
@@ -17,6 +17,7 @@ use crate::{service, trace};
 use anyhow::{format_err, Error};
 use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect, component, Property};
+use fuchsia_inspect_derive::{Inspect, WithInspect};
 use fuchsia_syslog::fx_log_err;
 use futures::StreamExt;
 
@@ -32,22 +33,34 @@ blueprint_definition!(
 pub(crate) struct PolicyValuesInspectAgent {
     messenger_client: Messenger,
     inspect_node: inspect::Node,
-    policy_values: HashMap<&'static str, PolicyValuesInspectInfo>,
+    policy_values: InspectMap<PolicyValuesInspectInfo>,
 }
 
 /// Information about a policy to be written to inspect.
 ///
 /// Inspect nodes and properties are not used, but need to be held as they're deleted from inspect
 /// once they go out of scope.
+#[derive(Default, Inspect)]
 struct PolicyValuesInspectInfo {
     /// Node of this info.
-    _node: inspect::Node,
+    inspect_node: inspect::Node,
 
     /// Debug string representation of the state of this policy.
     value: inspect::StringProperty,
 
     /// Milliseconds since Unix epoch that this policy was modified.
     timestamp: inspect::StringProperty,
+}
+
+impl PolicyValuesInspectInfo {
+    fn new(timestamp: String, value: String, node: &inspect::Node, key: &str) -> Self {
+        let info = Self::default()
+            .with_inspect(node, key)
+            .expect("Failed to create PolicyValuesInspectInfo node");
+        info.value.set(&value);
+        info.timestamp.set(&timestamp);
+        info
+    }
 }
 
 impl DeviceStorageAccess for PolicyValuesInspectAgent {
@@ -90,7 +103,7 @@ impl PolicyValuesInspectAgent {
             }
         };
 
-        let mut agent = Self { messenger_client, inspect_node, policy_values: HashMap::new() };
+        let mut agent = Self { messenger_client, inspect_node, policy_values: InspectMap::new() };
 
         fasync::Task::spawn(async move {
             let nonce = fuchsia_trace::generate_nonce();
@@ -231,34 +244,23 @@ impl PolicyValuesInspectAgent {
         };
 
         // Convert the response to a string for inspect.
-        let (policy_name, inspect_str) = policy_info.for_inspect();
-
+        let (policy_name, value) = policy_info.for_inspect();
         let timestamp = clock::inspect_format_now();
+        let policy_inspect_node = &self.inspect_node;
+        let policy = self.policy_values.get_mut(policy_name);
 
-        match self.policy_values.get_mut(policy_name) {
-            Some(policy_info) => {
-                if ignore_if_present {
-                    // Value already present in inspect, ignore this response.
-                    return Ok(());
-                }
-                // Value already known, just update its fields.
-                policy_info.timestamp.set(&timestamp);
-                policy_info.value.set(&inspect_str);
+        if let Some(policy_val) = policy {
+            if ignore_if_present {
+                // Value already present in inspect, ignore this response.
+                return Ok(());
             }
-            None => {
-                // Policy info not recorded yet, create a new inspect node.
-                let node = self.inspect_node.create_child(policy_name);
-                let value_prop = node.create_string("value", inspect_str);
-                let timestamp_prop = node.create_string("timestamp", timestamp);
-                let _ = self.policy_values.insert(
-                    policy_name,
-                    PolicyValuesInspectInfo {
-                        _node: node,
-                        value: value_prop,
-                        timestamp: timestamp_prop,
-                    },
-                );
-            }
+            policy_val.timestamp.set(&timestamp);
+            policy_val.value.set(&value);
+        } else {
+            self.policy_values.set(
+                policy_name.to_string(),
+                PolicyValuesInspectInfo::new(timestamp, value, policy_inspect_node, policy_name),
+            );
         }
 
         Ok(())

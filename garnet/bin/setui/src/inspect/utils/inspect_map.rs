@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![cfg_attr(not(test), allow(dead_code))]
-
 use fuchsia_inspect::Node;
 use fuchsia_inspect_derive::{AttachError, Inspect};
 use std::collections::HashMap;
@@ -16,22 +14,23 @@ pub(crate) struct InspectMap<T> {
 }
 
 impl<T> InspectMap<T> {
-    #[allow(dead_code)]
     pub(crate) fn new() -> Self {
         Self { map: HashMap::new() }
     }
 
     #[allow(dead_code)]
-    pub(crate) fn get(&mut self, key: String) -> Option<&T> {
-        self.map.get(&key)
+    pub(crate) fn get(&mut self, key: &str) -> Option<&T> {
+        self.map.get(key)
     }
 
-    #[allow(dead_code)]
+    pub(crate) fn get_mut(&mut self, key: &str) -> Option<&mut T> {
+        self.map.get_mut(key)
+    }
+
     pub(crate) fn set(&mut self, key: String, value: T) {
         let _ = self.map.insert(key, value);
     }
 
-    #[allow(dead_code)]
     /// Retrieves the existing value of key [key] if it exists, otherwise sets
     /// the value to [value] and returns it.
     pub(crate) fn get_or_insert(&mut self, key: String, value: impl FnOnce() -> T) -> &mut T {
@@ -139,7 +138,7 @@ mod tests {
         let test_val_1 = TestInspectItem::new(6);
         map.set(format!("{:?}", SettingType::Unknown), test_val_1);
         assert_eq!(
-            *map.get(format!("{:?}", SettingType::Unknown))
+            *map.get(&format!("{:?}", SettingType::Unknown))
                 .expect("Could not find first test value")
                 .id,
             6

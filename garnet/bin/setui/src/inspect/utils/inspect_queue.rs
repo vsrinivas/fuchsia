@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![cfg_attr(not(test), allow(dead_code))]
-
 use fuchsia_inspect::{self as inspect, Node};
 use fuchsia_inspect_derive::{AttachError, Inspect};
 use std::collections::VecDeque;
@@ -36,14 +34,9 @@ impl<T> InspectQueue<T> {
         self.items.push_back(item);
     }
 
+    #[cfg(test)]
     pub(crate) fn len(&self) -> usize {
         self.items.len()
-    }
-
-    // Required by clippy as a counterpart to len().
-    #[allow(dead_code)]
-    pub(crate) fn is_empty(&self) -> bool {
-        self.items.len() == 0
     }
 }
 
