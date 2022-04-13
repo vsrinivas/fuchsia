@@ -281,7 +281,7 @@ class TestBundle {
     if (!timingEvents.isCompleted) {
       timingEvents.complete();
     }
-    // ffx returns a ZX_ERR_UNAVILABLE code if it could not connect to test
+    // ffx returns a ZX_ERR_UNAVAILABLE code if it could not connect to test
     // manager. This indicates some issue with the setup and isn't retriable.
     if (result.exitCode == -ZX.ERR_UNAVAILABLE) {
       yield FatalError('Could not run ${testDefinition.name}');

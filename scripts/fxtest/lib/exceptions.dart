@@ -17,7 +17,7 @@ class FxRunException implements Exception {
 class TestFrameworkUnavailableError implements Exception {
   @override
   String toString() => 'Could not connect to Test Manager.\n'
-      'This could indicate the target device is unavilable or some bug in the test framework.';
+      'This could indicate the target device is unavailable or some bug in the test framework.';
 }
 
 class FailFastException implements Exception {
