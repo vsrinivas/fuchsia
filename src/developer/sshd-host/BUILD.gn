@@ -85,7 +85,7 @@ executable("test") {
 }
 
 fuchsia_unittest_package("sshd-host-tests") {
-  manifest = "meta/sshd-host-test.cmx"
+  manifest = "meta/sshd-host-test.cml"
   deps = [ ":test" ]
   test_specs = {
     log_settings = {
