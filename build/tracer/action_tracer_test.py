@@ -1132,7 +1132,7 @@ class MainArgParserTests(unittest.TestCase):
     def test_only_required_args(self):
         parser = action_tracer.main_arg_parser()
         args = parser.parse_args(self.required_args.split())
-        self.assertEqual(args.trace_output_prefix, "t.out")
+        self.assertEqual(args.trace_output, "t.out")
         self.assertEqual(args.label, "//pkg:tgt")
         # Make sure some checks are enabled by default
         self.assertTrue(args.check_access_permissions)

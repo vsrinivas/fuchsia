@@ -1038,7 +1038,7 @@ foreach(_target_type,
           rebase_path("//prebuilt/fsatrace/fsatrace", root_build_dir),
           "--label",
           get_label_info(":$target_name", "label_with_toolchain"),
-          "--trace-output-prefix",
+          "--trace-output",
         ]
         if (_target_type == "action") {
           gen_path = rebase_path("${target_gen_dir}/${target_name}_trace.txt",
