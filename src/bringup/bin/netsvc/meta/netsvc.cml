@@ -25,43 +25,7 @@
             path: "/boot",
         },
 
-        // Directories below this are for netruncmd access.
-        // netsvc adds all of its namespace entries to the netruncmd shell's namespace.
-        // The "not-delayed" versions of the pkgfs and minfs directories are used
-        // so that interacting with them before they start serving will not hang the shell (e.g.
-        // running `ls /data` if minfs is not serving will return empty instead of hanging).
-        // The pkgfs directories will not start serving if e.g. an FVM block device is not mounted
-        // (and therefore blobfs is not started).
-        {
-            directory: "bin-not-delayed",
-            rights: [ "rx*" ],
-            path: "/bin",
-        },
-        {
-            directory: "blob",
-            rights: [ "rw*" ],
-            path: "/blob",
-        },
-        {
-            directory: "minfs-not-delayed",
-            rights: [ "rw*" ],
-            path: "/data",
-        },
-        {
-            directory: "install",
-            rights: [ "rw*" ],
-            path: "/install",
-        },
-        {
-            directory: "pkgfs-not-delayed",
-            rights: [ "rx*" ],
-            path: "/pkgfs",
-        },
-        {
-            directory: "system-not-delayed",
-            rights: [ "rx*" ],
-            path: "/system",
-        },
+        // For netruncmd access. Exercised by limited_netsvc_test.
         {
             directory: "tmp",
             rights: [ "rw*" ],

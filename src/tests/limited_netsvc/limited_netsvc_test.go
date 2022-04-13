@@ -128,18 +128,17 @@ func attemptTftp(t *testing.T, shouldWork bool) {
 	}
 
 	reader := strings.NewReader("123456789")
-	writeErr := tftp.Write(ctx, "/tmp/test", reader, reader.Size())
-	if shouldWork {
-		if writeErr == nil {
+	if err := tftp.Write(ctx, "/tmp/test", reader, reader.Size()); shouldWork {
+		if err == nil {
 			t.Log("tftp write succeeded as expected")
 		} else {
 			t.Fatalf("tftp write failed, but expected to succeed: %s", err)
 		}
 	} else {
-		if writeErr == nil {
+		if err == nil {
 			t.Fatal("tftp write expected to fail, but succeeded")
 		} else {
-			t.Logf("tftp write failed as expected: %s", writeErr)
+			t.Logf("tftp write failed as expected: %s", err)
 		}
 	}
 }

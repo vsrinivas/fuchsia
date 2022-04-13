@@ -527,16 +527,7 @@
             subdir: "class/display-controller",
         },
         {
-            directory: [
-                "bin-not-delayed",
-                "blob",
-                "install",
-                "minfs-not-delayed",
-                "pkgfs-not-delayed",
-                "system",
-                "system-not-delayed",
-                "tmp",
-            ],
+            directory: [ "tmp" ],
             from: "#fshost",
             to: [
                 "#console-launcher",
@@ -545,7 +536,16 @@
             dependency: "weak_for_migration",
         },
         {
-            directory: [ "mnt" ],
+            directory: [
+                "bin-not-delayed",
+                "blob",
+                "install",
+                "minfs-not-delayed",
+                "mnt",
+                "pkgfs-not-delayed",
+                "system",
+                "system-not-delayed",
+            ],
             from: "#fshost",
             to: [ "#console-launcher" ],
             dependency: "weak_for_migration",

@@ -221,7 +221,6 @@
                 target_monikers: [
                     "/bootstrap/console-launcher",
                     "/bootstrap/fshost",
-                    "/bootstrap/netsvc",
                 ],
             },
             {
@@ -233,7 +232,6 @@
                     "/bootstrap",
                     "/bootstrap/console-launcher",
                     "/bootstrap/fshost",
-                    "/bootstrap/netsvc",
                     "/core",
                     "/core/appmgr",
                     "/core/pkg-cache",
@@ -261,7 +259,6 @@
                 target_monikers: [
                     "/bootstrap/console-launcher",
                     "/bootstrap/fshost",
-                    "/bootstrap/netsvc",
                 ],
             },
             {
@@ -286,7 +283,6 @@
                 target_monikers: [
                     "/bootstrap/console-launcher",
                     "/bootstrap/fshost",
-                    "/bootstrap/netsvc",
                 ],
             },
             {
@@ -313,7 +309,6 @@
                 target_monikers: [
                     "/bootstrap/console-launcher",
                     "/bootstrap/fshost",
-                    "/bootstrap/netsvc",
                 ],
             },
             {
