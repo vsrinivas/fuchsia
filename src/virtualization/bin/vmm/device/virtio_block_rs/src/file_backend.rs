@@ -152,11 +152,14 @@ mod tests {
 
     struct FileBackendTest;
 
+    #[async_trait(?Send)]
     impl BackendTest for FileBackendTest {
         type Backend = FileBackend;
         type Controller = FileBackendController;
 
-        fn create_with_size(size: u64) -> Result<(FileBackend, FileBackendController), Error> {
+        async fn create_with_size(
+            size: u64,
+        ) -> Result<(FileBackend, FileBackendController), Error> {
             let file = tempfile()?;
             file.set_len(size)?;
             Ok((FileBackend::new(fdio::clone_channel(&file)?.into())?, FileBackendController(file)))

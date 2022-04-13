@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    super::*, crate::wire, anyhow::Error, fidl_fuchsia_io::MAX_BUF, futures::future::try_join_all,
-    std::slice, virtio_device::fake_queue::IdentityDriverMem, virtio_device::mem::DeviceRange,
+    super::*, crate::wire, anyhow::Error, async_trait::async_trait, fidl_fuchsia_io::MAX_BUF,
+    futures::future::try_join_all, std::slice, virtio_device::fake_queue::IdentityDriverMem,
+    virtio_device::mem::DeviceRange,
 };
 
 /// A `BackendController` allows tests to interface directly with the underlying storage of a
@@ -44,6 +45,7 @@ pub trait BackendController {
 
 /// A `BackendTest` allows for multiple backends to share test suites by implementing this
 /// trait.
+#[async_trait(?Send)]
 pub trait BackendTest {
     /// The `BlockBackend` to be tested.
     type Backend: BlockBackend;
@@ -52,13 +54,14 @@ pub trait BackendTest {
     type Controller: BackendController;
 
     /// Create a new instance of the backend under test with the capacity of `size` bytes.
-    fn create_with_size(size: u64) -> Result<(Self::Backend, Self::Controller), Error>;
+    async fn create_with_size(size: u64) -> Result<(Self::Backend, Self::Controller), Error>;
 
     /// Create a new instance of the backend under test with the capacity of `size` sectors.
-    fn create_with_sectors(size: Sector) -> Result<(Self::Backend, Self::Controller), Error> {
+    async fn create_with_sectors(size: Sector) -> Result<(Self::Backend, Self::Controller), Error> {
         Self::create_with_size(
             size.to_bytes().ok_or(anyhow!("Requested sector capacity {:?} is too large", size))?,
         )
+        .await
     }
 }
 
@@ -76,7 +79,7 @@ fn color_range<'a>(range: &DeviceRange<'a>, color: u8) {
 
 /// Test that a backend properly reports capacity in different configurations.
 pub async fn test_get_attrs<T: BackendTest>() -> Result<(), Error> {
-    let (backend, _) = T::create_with_size(0)?;
+    let (backend, _) = T::create_with_size(0).await?;
     assert_eq!(
         backend.get_attrs().await?,
         DeviceAttrs { capacity: Sector::from_raw_sector(0), block_size: None }
@@ -91,7 +94,7 @@ pub async fn test_get_attrs<T: BackendTest>() -> Result<(), Error> {
         (400 * 1024 * 1024, Sector::from_raw_sector(819200)),
     ];
     for (file_size, sectors) in expected_byte_sector_sizes {
-        let (backend, _) = T::create_with_size(file_size)?;
+        let (backend, _) = T::create_with_size(file_size).await?;
         assert_eq!(backend.get_attrs().await?, DeviceAttrs { capacity: sectors, block_size: None });
     }
 
@@ -101,7 +104,7 @@ pub async fn test_get_attrs<T: BackendTest>() -> Result<(), Error> {
 /// Test that a backend can read into a set of sector-aligned DeviceRanges.
 pub async fn test_read_per_sector_ranges<T: BackendTest>() -> Result<(), Error> {
     // Create a file and color 3 different sectors.
-    let (backend, mut controller) = T::create_with_sectors(Sector::from_raw_sector(3))?;
+    let (backend, mut controller) = T::create_with_sectors(Sector::from_raw_sector(3)).await?;
     controller.color_sector(Sector::from_raw_sector(0), 0xaa)?;
     controller.color_sector(Sector::from_raw_sector(1), 0xbb)?;
     controller.color_sector(Sector::from_raw_sector(2), 0xcc)?;
@@ -128,7 +131,7 @@ pub async fn test_read_per_sector_ranges<T: BackendTest>() -> Result<(), Error> 
 /// Test that a backend can read multiple sectors into a single DeviceRange.
 pub async fn test_read_multiple_sectors_per_range<T: BackendTest>() -> Result<(), Error> {
     // Create a file and color 3 different sectors.
-    let (backend, mut controller) = T::create_with_sectors(Sector::from_raw_sector(3))?;
+    let (backend, mut controller) = T::create_with_sectors(Sector::from_raw_sector(3)).await?;
     controller.color_sector(Sector::from_raw_sector(0), 0xaa)?;
     controller.color_sector(Sector::from_raw_sector(1), 0xbb)?;
     controller.color_sector(Sector::from_raw_sector(2), 0xcc)?;
@@ -153,7 +156,7 @@ pub async fn test_read_multiple_sectors_per_range<T: BackendTest>() -> Result<()
 /// Test that a backend can read into a set of device ranges that are smaller than a sector.
 pub async fn test_read_subsector_range<T: BackendTest>() -> Result<(), Error> {
     // Create a file and color 2 sectors.
-    let (backend, mut controller) = T::create_with_sectors(Sector::from_raw_sector(2))?;
+    let (backend, mut controller) = T::create_with_sectors(Sector::from_raw_sector(2)).await?;
     controller.color_sector(Sector::from_raw_sector(0), 0xaa)?;
     controller.color_sector(Sector::from_raw_sector(1), 0xbb)?;
 
@@ -188,7 +191,8 @@ pub async fn test_read_large<T: BackendTest>() -> Result<(), Error> {
     assert!(BYTE_SIZE > MAX_BUF);
 
     // Create a file and color enough sectors to cover the entire `BYTE_SIZE` range.
-    let (backend, mut controller) = T::create_with_sectors(Sector::from_raw_sector(SECTOR_SIZE))?;
+    let (backend, mut controller) =
+        T::create_with_sectors(Sector::from_raw_sector(SECTOR_SIZE)).await?;
     (0..SECTOR_SIZE)
         .try_for_each(|sector| controller.color_sector(Sector::from_raw_sector(sector), 0xaa))?;
 
@@ -211,7 +215,7 @@ pub async fn test_read_concurrent<T: BackendTest>() -> Result<(), Error> {
 
     // Create a file and color a sector for each request we will run concurrently
     let (backend, mut controller) =
-        T::create_with_sectors(Sector::from_raw_sector(CONCURRENCY_COUNT))?;
+        T::create_with_sectors(Sector::from_raw_sector(CONCURRENCY_COUNT)).await?;
     for sector in 0..CONCURRENCY_COUNT {
         controller.color_sector(Sector::from_raw_sector(sector), sector as u8)?;
     }
@@ -256,7 +260,7 @@ pub async fn test_write_per_sector_ranges<T: BackendTest>() -> Result<(), Error>
     color_range(&ranges[2], 0xcc);
 
     // Create the backend and write the ranges.
-    let (backend, mut controller) = T::create_with_sectors(Sector::from_raw_sector(3))?;
+    let (backend, mut controller) = T::create_with_sectors(Sector::from_raw_sector(3)).await?;
     backend.write(request).await?;
 
     // Verify the data was written into the file.
@@ -284,7 +288,7 @@ pub async fn test_write_multiple_sectors_per_range<T: BackendTest>() -> Result<(
     let request = Request { ranges: ranges.as_slice(), sector: Sector::from_raw_sector(0) };
 
     // Execute the write.
-    let (backend, mut controller) = T::create_with_sectors(Sector::from_raw_sector(3))?;
+    let (backend, mut controller) = T::create_with_sectors(Sector::from_raw_sector(3)).await?;
     backend.write(request).await?;
 
     // Verify the data was written to the file.
@@ -313,7 +317,7 @@ pub async fn test_write_subsector_range<T: BackendTest>() -> Result<(), Error> {
     color_range(&ranges[3], 0xaa);
 
     // Execute the write.
-    let (backend, mut controller) = T::create_with_sectors(Sector::from_raw_sector(1))?;
+    let (backend, mut controller) = T::create_with_sectors(Sector::from_raw_sector(1)).await?;
     backend.write(request).await?;
 
     // Verify the full sector was written correctly.
@@ -339,7 +343,8 @@ pub async fn test_write_large<T: BackendTest>() -> Result<(), Error> {
     color_range(&range, 0xcd);
 
     // Create the backend and process the request.
-    let (backend, mut controller) = T::create_with_sectors(Sector::from_raw_sector(SECTOR_SIZE))?;
+    let (backend, mut controller) =
+        T::create_with_sectors(Sector::from_raw_sector(SECTOR_SIZE)).await?;
     backend.write(request).await?;
 
     // Verify the data was written to the file.
@@ -366,7 +371,7 @@ pub async fn test_write_concurrent<T: BackendTest>() -> Result<(), Error> {
 
     // Execute the requests concurrently.
     let (backend, mut controller) =
-        T::create_with_sectors(Sector::from_raw_sector(CONCURRENCY_COUNT))?;
+        T::create_with_sectors(Sector::from_raw_sector(CONCURRENCY_COUNT)).await?;
     let futures: Vec<_> = (0..CONCURRENCY_COUNT)
         .map(|sector| {
             backend.write(Request {
@@ -388,7 +393,7 @@ pub async fn test_write_concurrent<T: BackendTest>() -> Result<(), Error> {
 pub async fn test_read_write_loop<T: BackendTest>() -> Result<(), Error> {
     const ITERATIONS: u64 = 100;
 
-    let (backend, _) = T::create_with_sectors(Sector::from_raw_sector(1))?;
+    let (backend, _) = T::create_with_sectors(Sector::from_raw_sector(1)).await?;
 
     // Iteratively write a value to a sector and read it back.
     let mem = IdentityDriverMem::new();

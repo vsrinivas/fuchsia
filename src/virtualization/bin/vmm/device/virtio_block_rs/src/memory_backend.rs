@@ -128,11 +128,12 @@ mod tests {
 
     struct MemoryBackendTest;
 
+    #[async_trait(?Send)]
     impl BackendTest for MemoryBackendTest {
         type Backend = MemoryBackend;
         type Controller = super::Controller;
 
-        fn create_with_size(size: u64) -> Result<(MemoryBackend, Controller), Error> {
+        async fn create_with_size(size: u64) -> Result<(MemoryBackend, Controller), Error> {
             Ok(MemoryBackend::with_size(size as usize))
         }
     }
