@@ -22,7 +22,7 @@ use crate::{
     Instant,
 };
 
-/// Per RFC 793: https://tools.ietf.org/html/rfc793#page-22:
+/// Per RFC 793 (https://tools.ietf.org/html/rfc793#page-22):
 ///
 ///   CLOSED - represents no connection state at all.
 #[derive(Debug)]
@@ -89,7 +89,7 @@ impl<Error> Closed<Error> {
     }
 }
 
-/// Per RFC 793: https://tools.ietf.org/html/rfc793#page-21:
+/// Per RFC 793 (https://tools.ietf.org/html/rfc793#page-21):
 ///
 ///   SYN-SENT - represents waiting for a matching connection request
 ///   after having sent a connection request.
@@ -114,12 +114,14 @@ impl Listen {
         now: I,
     ) -> ListenOnSegmentDisposition<I> {
         let Listen { iss } = *self;
+        // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-65):
         //   first check for an RST
         //   An incoming RST should be ignored.  Return.
         if contents.control() == Some(Control::RST) {
             return ListenOnSegmentDisposition::Ignore;
         }
         if let Some(ack) = ack {
+            // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-65):
             //   second check for an ACK
             //   Any acknowledgment is bad if it arrives on a connection still in
             //   the LISTEN state.  An acceptable reset segment should be formed
@@ -130,6 +132,7 @@ impl Listen {
             return ListenOnSegmentDisposition::SendRst(Segment::rst(ack));
         }
         if contents.control() == Some(Control::SYN) {
+            // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-65):
             //   third check for a SYN
             //   Set RCV.NXT to SEG.SEQ+1, IRS is set to SEG.SEQ and any other
             //   control or text should be queued for processing later.  ISS
@@ -218,6 +221,7 @@ impl<I: Instant> SynSent<I> {
 
         match contents.control() {
             Some(Control::RST) => {
+                // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-67):
                 //   second check the RST bit
                 //   If the RST bit is set
                 //     If the ACK was acceptable then signal the user "error:
@@ -233,11 +237,13 @@ impl<I: Instant> SynSent<I> {
                 }
             }
             Some(Control::SYN) => {
+                // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-67):
                 //   fourth check the SYN bit
                 //   This step should be reached only if the ACK is ok, or there
                 //   is no ACK, and it [sic] the segment did not contain a RST.
                 match seg_ack {
                     Some(seg_ack) => {
+                        // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-67):
                         //   If the SYN bit is on and the security/compartment
                         //   and precedence are acceptable then, RCV.NXT is set
                         //   to SEG.SEQ+1, IRS is set to SEG.SEQ.  SND.UNA
@@ -292,6 +298,7 @@ impl<I: Instant> SynSent<I> {
                         }
                     }
                     None => {
+                        // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-68):
                         //   Otherwise enter SYN-RECEIVED, form a SYN,ACK
                         //   segment
                         //     <SEQ=ISS><ACK=RCV.NXT><CTL=SYN,ACK>
@@ -310,6 +317,7 @@ impl<I: Instant> SynSent<I> {
                     }
                 }
             }
+            // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-68):
             //   fifth, if neither of the SYN or RST bits is set then drop the
             //   segment and return.
             Some(Control::FIN) | None => SynSentOnSegmentDisposition::Ignore,
@@ -317,7 +325,7 @@ impl<I: Instant> SynSent<I> {
     }
 }
 
-/// Per RFC 793: https://tools.ietf.org/html/rfc793#page-21:
+/// Per RFC 793 (https://tools.ietf.org/html/rfc793#page-21):
 ///
 ///   SYN-RECEIVED - represents waiting for a confirming connection
 ///   request acknowledgment after having both received and sent a
@@ -332,139 +340,6 @@ struct SynRcvd<I: Instant> {
     // was retransmitted so that it can't be used to estimate RTT.
     timestamp: Option<I>,
     retrans_timer: RetransTimer<I>,
-}
-
-/// Dispositions of [`SynRcvd::on_segment`].
-#[cfg_attr(test, derive(Debug, PartialEq, Eq))]
-enum SynRcvdOnSegmentDisposition<I: Instant, R: ReceiveBuffer, S: SendBuffer> {
-    SendAck(Segment<()>),
-    SendRst(Segment<()>),
-    SendRstAndEnterClosed(Segment<()>, Closed<UserError>),
-    EnterClosed(Closed<UserError>),
-    EnterEstablished(Established<I, R, S>),
-    Ignore,
-}
-
-impl<I: Instant> SynRcvd<I> {
-    fn on_segment<R: ReceiveBuffer, S: SendBuffer>(
-        &self,
-        incoming: Segment<impl Payload>,
-        now: I,
-    ) -> SynRcvdOnSegmentDisposition<I, R, S> {
-        let SynRcvd { iss, irs, timestamp: syn_rcvd_ts, retrans_timer: _ } = *self;
-        let is_rst = incoming.contents.control() == Some(Control::RST);
-        let Segment { seq: seg_seq, ack: seg_ack, wnd: seg_wnd, contents } =
-            match incoming.overlap(irs + 1, WindowSize::DEFAULT) {
-                Some(incoming) => incoming,
-                None => {
-                    //   If an incoming segment is not acceptable, an acknowledgment
-                    //   should be sent in reply (unless the RST bit is set, if so drop
-                    //   the segment and return):
-                    //     <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
-                    //   After sending the acknowledgment, drop the unacceptable segment
-                    //   and return.
-                    return if is_rst {
-                        SynRcvdOnSegmentDisposition::Ignore
-                    } else {
-                        SynRcvdOnSegmentDisposition::SendAck(Segment::ack(
-                            iss + 1,
-                            irs + 1,
-                            WindowSize::DEFAULT,
-                        ))
-                    };
-                }
-            };
-        match contents.control() {
-            Some(Control::RST) => {
-                //  second check the RST bit,
-                //  SYN-RECEIVED STATE
-                //  If the RST bit is set
-                //  If this connection was initiated with a passive OPEN (i.e.,
-                //  came from the LISTEN state), then return this connection to
-                //  LISTEN state and return.  The user need not be informed.  If
-                //  this connection was initiated with an active OPEN (i.e., came
-                //  from SYN-SENT state) then the connection was refused, signal
-                //  the user "connection refused".  In either case, all segments
-                //  on the retransmission queue should be removed.  And in the
-                //  active OPEN case, enter the CLOSED state and delete the TCB,
-                //  and return.
-                // Note: When advancing LISTEN to SYN-RCVD, we will create a new
-                // socket, so closing the new socket would be effectively going
-                // back to LISTEN state since the socket with LISTEN state is
-                // still alive. Also because the connection is never established,
-                // the socket cannot be in the accept queue and the users won't
-                // be informed. Given the reasons above, we don't explicitly
-                // track if SYN-RCVD was from a passive OPEN or not.
-                SynRcvdOnSegmentDisposition::EnterClosed(Closed {
-                    reason: UserError::ConnectionReset,
-                })
-            }
-            Some(Control::SYN) => {
-                //   If the SYN is in the window it is an error, send a reset, any
-                //   outstanding RECEIVEs and SEND should receive "reset" responses,
-                //   all segment queues should be flushed, the user should also
-                //   receive an unsolicited general "connection reset" signal, enter
-                //   the CLOSED state, delete the TCB, and return.
-                SynRcvdOnSegmentDisposition::SendRstAndEnterClosed(
-                    Segment::rst_ack(iss, irs),
-                    Closed { reason: UserError::ConnectionReset },
-                )
-            }
-            None => {
-                //  if the ACK bit is on
-                //  SYN-RECEIVED STATE
-                //  If SND.UNA =< SEG.ACK =< SND.NXT then enter ESTABLISHED state
-                //  and continue processing.
-                //    If the segment acknowledgment is not acceptable, form a
-                //    reset segment,
-                //      <SEQ=SEG.ACK><CTL=RST>
-                //    and send it.
-                // Note: We don't support sending data with SYN, so we don't
-                // store the `SND` variables because they can be easily derived
-                // from ISS: SND.UNA=ISS and SND.NXT=ISS+1.
-                match seg_ack {
-                    Some(seg_ack) => {
-                        // NOTE: The RFC technically allows the state machine
-                        // to transition to established if our SYN is not acked
-                        // (SEG.ACK = SND.UNA). Linux doesn't follow the RFC
-                        // and has a more intuitive behavior: the only ACK #
-                        // that is accepatable is ISS+1 (SND.NXT).
-                        if seg_ack != iss + 1 {
-                            SynRcvdOnSegmentDisposition::SendRst(Segment::rst(seg_ack))
-                        } else {
-                            let mut rtt_estimator = Estimator::default();
-                            if let Some(syn_rcvd_ts) = syn_rcvd_ts {
-                                rtt_estimator.sample(now.duration_since(syn_rcvd_ts));
-                            }
-                            SynRcvdOnSegmentDisposition::EnterEstablished(Established {
-                                snd: Send {
-                                    nxt: iss + 1,
-                                    max: iss + 1,
-                                    una: seg_ack,
-                                    wnd: seg_wnd,
-                                    wl1: seg_seq,
-                                    wl2: seg_ack,
-                                    buffer: S::default(),
-                                    last_seq_ts: None,
-                                    rtt_estimator,
-                                    timer: None,
-                                },
-                                rcv: Recv {
-                                    buffer: R::default(),
-                                    assembler: Assembler::new(irs + 1),
-                                },
-                            })
-                        }
-                    }
-                    //   if the ACK bit is off drop the segment and return
-                    None => SynRcvdOnSegmentDisposition::Ignore,
-                }
-            }
-            Some(Control::FIN) => {
-                todo!("https://fxbug.dev/93522: should transition into CLOSE_WAIT")
-            }
-        }
-    }
 }
 
 /// TCP control block variables that are responsible for sending.
@@ -537,7 +412,7 @@ impl<R: ReceiveBuffer> Recv<R> {
     }
 }
 
-/// Per RFC 793: https://tools.ietf.org/html/rfc793#page-22:
+/// Per RFC 793 (https://tools.ietf.org/html/rfc793#page-22):
 ///
 ///   ESTABLISHED - represents an open connection, data received can be
 ///   delivered to the user.  The normal state for the data transfer phase
@@ -547,170 +422,6 @@ impl<R: ReceiveBuffer> Recv<R> {
 struct Established<I: Instant, R: ReceiveBuffer, S: SendBuffer> {
     snd: Send<I, S>,
     rcv: Recv<R>,
-}
-
-/// Dispositions of [`Established::on_segment`].
-#[cfg_attr(test, derive(Debug, PartialEq, Eq))]
-enum EstablishedOnSegmentDisposition {
-    SendAck(Segment<()>),
-    SendRstAndEnterClosed(Segment<()>, Closed<UserError>),
-    EnterClosed(Closed<UserError>),
-    Ignore,
-}
-
-impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> Established<I, R, S> {
-    fn on_segment(
-        &mut self,
-        incoming: Segment<impl Payload>,
-        now: I,
-    ) -> EstablishedOnSegmentDisposition {
-        let Self { snd, rcv } = self;
-        let Segment { seq: seg_seq, ack: seg_ack, wnd: seg_wnd, contents } =
-            match incoming.overlap(rcv.nxt(), rcv.wnd()) {
-                None => {
-                    return EstablishedOnSegmentDisposition::SendAck(Segment::ack(
-                        snd.nxt,
-                        rcv.nxt(),
-                        rcv.wnd(),
-                    ))
-                }
-                Some(seg) => seg,
-            };
-        //   If the RST bit is set then, any outstanding RECEIVEs and SEND
-        //   should receive "reset" responses.  All segment queues should be
-        //   flushed.  Users should also receive an unsolicited general
-        //   "connection reset" signal.  Enter the CLOSED state, delete the
-        //   TCB, and return.
-        if contents.control() == Some(Control::RST) {
-            return EstablishedOnSegmentDisposition::EnterClosed(Closed {
-                reason: UserError::ConnectionReset,
-            });
-        }
-        //   If the SYN is in the window it is an error, send a reset, any
-        //   outstanding RECEIVEs and SEND should receive "reset" responses,
-        //   all segment queues should be flushed, the user should also
-        //   receive an unsolicited general "connection reset" signal, enter
-        //   the CLOSED state, delete the TCB, and return.
-        //   If the SYN is not in the window this step would not be reached
-        //   and an ack would have been sent in the first step (sequence
-        //   number check).
-        if contents.control() == Some(Control::SYN) {
-            return EstablishedOnSegmentDisposition::SendRstAndEnterClosed(
-                Segment::rst(snd.nxt),
-                Closed { reason: UserError::ConnectionReset },
-            );
-        }
-        match seg_ack {
-            Some(seg_ack) => {
-                // Note: we rewind SND.NXT to SND.UNA on retransmission; if
-                // `seg_ack` is after `snd.max`, it means the segment acks
-                // something we never sent.
-                if seg_ack.after(snd.max) {
-                    //   If the ACK acks something not yet sent (SEG.ACK >
-                    //   SND.NXT) then send an ACK, drop the segment, and
-                    //   return.
-                    return EstablishedOnSegmentDisposition::SendAck(Segment::ack(
-                        snd.nxt,
-                        rcv.nxt(),
-                        rcv.wnd(),
-                    ));
-                } else if seg_ack.after(snd.una) {
-                    // The unwrap is safe because the result must be positive.
-                    let acked = usize::try_from(seg_ack - snd.una).unwrap_or_else(
-                        |TryFromIntError { .. }| {
-                            panic!(
-                                "seg.ack({:?}) - snd.una({:?}) must be positive",
-                                seg_ack, snd.una
-                            );
-                        },
-                    );
-                    // Remove the acked bytes from the send buffer. The following
-                    // operation should not panic because we are in this branch
-                    // means seg_ack is before snd.max, thus seg_ack - snd.una
-                    // cannot exceed the buffer length.
-                    snd.buffer.mark_read(acked);
-                    snd.una = seg_ack;
-                    // If the incoming segment acks something that has been sent
-                    // but not yet retransmitted (`snd.nxt < seg_ack <= snd.max`),
-                    // bump `snd.nxt` as well.
-                    if seg_ack.after(snd.nxt) {
-                        snd.nxt = seg_ack;
-                    }
-                    //   If SND.UNA < SEG.ACK =< SND.NXT, the send window should be
-                    //   updated.  If (SND.WL1 < SEG.SEQ or (SND.WL1 = SEG.SEQ and
-                    //   SND.WL2 =< SEG.ACK)), set SND.WND <- SEG.WND, set
-                    //   SND.WL1 <- SEG.SEQ, and set SND.WL2 <- SEG.ACK.
-                    if snd.wl1.before(seg_seq) || (seg_seq == snd.wl1 && !snd.wl2.after(seg_ack)) {
-                        snd.wnd = seg_wnd;
-                        snd.wl1 = seg_seq;
-                        snd.wl2 = seg_ack;
-                    }
-                    // If the incoming segment acks the sequence number that we used
-                    // for RTT estimate, feed the sample to the estimator.
-                    if let Some((seq_max, timestamp)) = snd.last_seq_ts {
-                        if !seg_ack.before(seq_max) {
-                            snd.rtt_estimator.sample(now.duration_since(timestamp));
-                        }
-                    }
-                    match &mut snd.timer {
-                        Some(SendTimer::Retrans(retrans_timer)) => {
-                            // Per https://tools.ietf.org/html/rfc6298#section-5:
-                            //   (5.2) When all outstanding data has been acknowledged,
-                            //         turn off the retransmission timer.
-                            //   (5.3) When an ACK is received that acknowledges new
-                            //         data, restart the retransmission timer so that
-                            //         it will expire after RTO seconds (for the current
-                            //         value of RTO).
-                            if seg_ack == snd.max {
-                                snd.timer = None;
-                            } else {
-                                retrans_timer.rearm(now);
-                            }
-                        }
-                        None => {}
-                    }
-                } else {
-                    //   If the ACK is a duplicate (SEG.ACK < SND.UNA), it can be
-                    //   ignored.
-                }
-            }
-            //   if the ACK bit is off drop the segment and return.
-            None => return EstablishedOnSegmentDisposition::Ignore,
-        };
-        //   Once in the ESTABLISHED state, it is possible to deliver segment
-        //   text to user RECEIVE buffers.  Text from segments can be moved
-        //   into buffers until either the buffer is full or the segment is
-        //   empty.  If the segment empties and carries an PUSH flag, then
-        //   the user is informed, when the buffer is returned, that a PUSH
-        //   has been received.
-        //
-        //   When the TCP takes responsibility for delivering the data to the
-        //   user it must also acknowledge the receipt of the data.
-        //   Once the TCP takes responsibility for the data it advances
-        //   RCV.NXT over the data accepted, and adjusts RCV.WND as
-        //   apporopriate to the current buffer availability.  The total of
-        //   RCV.NXT and RCV.WND should not be reduced.
-        //
-        //   Please note the window management suggestions in section 3.7.
-        //   Send an acknowledgment of the form:
-        //     <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
-        //   This acknowledgment should be piggybacked on a segment being
-        //   transmitted if possible without incurring undue delay.
-        if contents.data().len() > 0 {
-            let offset = usize::try_from(seg_seq - rcv.nxt()).unwrap_or_else(|TryFromIntError {..}| {
-                panic!("The segment was trimmed to fit the window, thus seg.seq({:?}) must not come before rcv.nxt({:?})", seg_seq, rcv.nxt());
-            });
-            // Write the segment data in the buffer and keep track if it fills
-            // any hole in the assembler.
-            let nwritten = rcv.buffer.write_at(offset, contents.data());
-            let readable = rcv.assembler.insert(seg_seq..seg_seq + nwritten);
-            rcv.buffer.make_readable(readable);
-            EstablishedOnSegmentDisposition::SendAck(Segment::ack(snd.nxt, rcv.nxt(), rcv.wnd()))
-        } else {
-            // TODO(https://fxbug.dev/93522): Handle FIN.
-            EstablishedOnSegmentDisposition::Ignore
-        }
-    }
 }
 
 impl<I: Instant, S: SendBuffer> Send<I, S> {
@@ -810,9 +521,101 @@ impl<I: Instant, S: SendBuffer> Send<I, S> {
         }
         Some(seg)
     }
+
+    fn process_ack(
+        &mut self,
+        seg_seq: SeqNum,
+        seg_ack: SeqNum,
+        seg_wnd: WindowSize,
+        rcv_nxt: SeqNum,
+        rcv_wnd: WindowSize,
+        now: I,
+    ) -> Option<Segment<()>> {
+        let Self {
+            nxt: snd_nxt,
+            max: snd_max,
+            una: snd_una,
+            wnd: snd_wnd,
+            wl1: snd_wl1,
+            wl2: snd_wl2,
+            buffer,
+            last_seq_ts,
+            rtt_estimator,
+            timer,
+        } = self;
+        // Note: we rewind SND.NXT to SND.UNA on retransmission; if
+        // `seg_ack` is after `snd.max`, it means the segment acks
+        // something we never sent.
+        if seg_ack.after(*snd_max) {
+            // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-72):
+            //   If the ACK acks something not yet sent (SEG.ACK >
+            //   SND.NXT) then send an ACK, drop the segment, and
+            //   return.
+            Some(Segment::ack(*snd_nxt, rcv_nxt, rcv_wnd))
+        } else if seg_ack.after(*snd_una) {
+            // The unwrap is safe because the result must be positive.
+            let acked =
+                usize::try_from(seg_ack - *snd_una).unwrap_or_else(|TryFromIntError { .. }| {
+                    panic!("seg_ack({:?}) - snd_una({:?}) must be positive", seg_ack, snd_una);
+                });
+            // Remove the acked bytes from the send buffer. The following
+            // operation should not panic because we are in this branch
+            // means seg_ack is before snd.max, thus seg_ack - snd.una
+            // cannot exceed the buffer length.
+            buffer.mark_read(acked);
+            *snd_una = seg_ack;
+            // If the incoming segment acks something that has been sent
+            // but not yet retransmitted (`snd.nxt < seg_ack <= snd.max`),
+            // bump `snd.nxt` as well.
+            if seg_ack.after(*snd_nxt) {
+                *snd_nxt = seg_ack;
+            }
+            // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-72):
+            //   If SND.UNA < SEG.ACK =< SND.NXT, the send window should be
+            //   updated.  If (SND.WL1 < SEG.SEQ or (SND.WL1 = SEG.SEQ and
+            //   SND.WL2 =< SEG.ACK)), set SND.WND <- SEG.WND, set
+            //   SND.WL1 <- SEG.SEQ, and set SND.WL2 <- SEG.ACK.
+            if snd_wl1.before(seg_seq) || (seg_seq == *snd_wl1 && !snd_wl2.after(seg_ack)) {
+                *snd_wnd = seg_wnd;
+                *snd_wl1 = seg_seq;
+                *snd_wl2 = seg_ack;
+            }
+            // If the incoming segment acks the sequence number that we used
+            // for RTT estimate, feed the sample to the estimator.
+            if let Some((seq_max, timestamp)) = *last_seq_ts {
+                if !seg_ack.before(seq_max) {
+                    rtt_estimator.sample(now.duration_since(timestamp));
+                }
+            }
+            match timer {
+                Some(SendTimer::Retrans(retrans_timer)) => {
+                    // Per https://tools.ietf.org/html/rfc6298#section-5:
+                    //   (5.2) When all outstanding data has been acknowledged,
+                    //         turn off the retransmission timer.
+                    //   (5.3) When an ACK is received that acknowledges new
+                    //         data, restart the retransmission timer so that
+                    //         it will expire after RTO seconds (for the current
+                    //         value of RTO).
+                    if seg_ack == *snd_max {
+                        *timer = None;
+                    } else {
+                        retrans_timer.rearm(now);
+                    }
+                }
+                None => {}
+            }
+            None
+        } else {
+            // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-72):
+            //   If the ACK is a duplicate (SEG.ACK < SND.UNA), it can be
+            //   ignored.
+            None
+        }
+    }
 }
 
 #[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq, Eq))]
 enum State<I: Instant, R: ReceiveBuffer, S: SendBuffer> {
     Closed(Closed<UserError>),
     Listen(Listen),
@@ -824,59 +627,192 @@ enum State<I: Instant, R: ReceiveBuffer, S: SendBuffer> {
 impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
     /// Processes an incoming segment and advances the state machine.
     fn on_segment<P: Payload>(&mut self, incoming: Segment<P>, now: I) -> Option<Segment<()>> {
-        let (maybe_new_state, seg) = match self {
-            State::Listen(listen) => match listen.on_segment(incoming, now) {
-                ListenOnSegmentDisposition::SendSynAckAndEnterSynRcvd(syn_ack, syn_rcvd) => {
-                    (Some(State::SynRcvd(syn_rcvd)), Some(syn_ack))
+        let (rcv_nxt, rcv_wnd, snd_nxt) = match self {
+            State::Closed(closed) => return closed.on_segment(incoming),
+            State::Listen(listen) => {
+                return match listen.on_segment(incoming, now) {
+                    ListenOnSegmentDisposition::SendSynAckAndEnterSynRcvd(syn_ack, syn_rcvd) => {
+                        *self = State::SynRcvd(syn_rcvd);
+                        Some(syn_ack)
+                    }
+                    ListenOnSegmentDisposition::SendRst(rst) => Some(rst),
+                    ListenOnSegmentDisposition::Ignore => None,
                 }
-                ListenOnSegmentDisposition::SendRst(rst) => (None, Some(rst)),
-                ListenOnSegmentDisposition::Ignore => (None, None),
-            },
-            State::SynRcvd(synrcvd) => match synrcvd.on_segment(incoming, now) {
-                SynRcvdOnSegmentDisposition::SendAck(ack) => (None, Some(ack)),
-                SynRcvdOnSegmentDisposition::SendRst(rst) => (None, Some(rst)),
-                SynRcvdOnSegmentDisposition::SendRstAndEnterClosed(rst, closed) => {
-                    (Some(State::Closed(closed)), Some(rst))
+            }
+            State::SynSent(synsent) => {
+                return match synsent.on_segment(incoming, now) {
+                    SynSentOnSegmentDisposition::SendAckAndEnterEstablished(ack, established) => {
+                        *self = State::Established(established);
+                        Some(ack)
+                    }
+                    SynSentOnSegmentDisposition::SendSynAckAndEnterSynRcvd(syn_ack, syn_rcvd) => {
+                        *self = State::SynRcvd(syn_rcvd);
+                        Some(syn_ack)
+                    }
+                    SynSentOnSegmentDisposition::SendRstAndEnterClosed(rst, closed) => {
+                        *self = State::Closed(closed);
+                        Some(rst)
+                    }
+                    SynSentOnSegmentDisposition::EnterClosed(closed) => {
+                        *self = State::Closed(closed);
+                        None
+                    }
+                    SynSentOnSegmentDisposition::Ignore => None,
                 }
-                SynRcvdOnSegmentDisposition::EnterClosed(closed) => {
-                    (Some(State::Closed(closed)), None)
-                }
-                SynRcvdOnSegmentDisposition::EnterEstablished(established) => {
-                    (Some(State::Established(established)), None)
-                }
-                SynRcvdOnSegmentDisposition::Ignore => (None, None),
-            },
-            State::SynSent(synsent) => match synsent.on_segment(incoming, now) {
-                SynSentOnSegmentDisposition::SendAckAndEnterEstablished(ack, established) => {
-                    (Some(State::Established(established)), Some(ack))
-                }
-                SynSentOnSegmentDisposition::SendSynAckAndEnterSynRcvd(syn_ack, syn_rcvd) => {
-                    (Some(State::SynRcvd(syn_rcvd)), Some(syn_ack))
-                }
-                SynSentOnSegmentDisposition::SendRstAndEnterClosed(rst, closed) => {
-                    (Some(State::Closed(closed)), Some(rst))
-                }
-                SynSentOnSegmentDisposition::EnterClosed(closed) => {
-                    (Some(State::Closed(closed)), None)
-                }
-                SynSentOnSegmentDisposition::Ignore => (None, None),
-            },
-            State::Established(established) => match established.on_segment(incoming, now) {
-                EstablishedOnSegmentDisposition::SendAck(ack) => (None, Some(ack)),
-                EstablishedOnSegmentDisposition::SendRstAndEnterClosed(rst, closed) => {
-                    (Some(State::Closed(closed)), Some(rst))
-                }
-                EstablishedOnSegmentDisposition::EnterClosed(closed) => {
-                    (Some(State::Closed(closed)), None)
-                }
-                EstablishedOnSegmentDisposition::Ignore => (None, None),
-            },
-            State::Closed(closed) => (None, closed.on_segment(incoming)),
+            }
+            State::SynRcvd(SynRcvd { iss, irs, timestamp: _, retrans_timer: _ }) => {
+                (*irs + 1, WindowSize::DEFAULT, *iss + 1)
+            }
+            State::Established(Established { rcv, snd }) => (rcv.nxt(), rcv.wnd(), snd.nxt),
         };
-        if let Some(new_state) = maybe_new_state {
-            *self = new_state;
+        // Unreachable note(1): The above match returns early for states CLOSED,
+        // SYN_SENT and LISTEN, so it is impossible to have the above states
+        // past this line.
+        // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-69):
+        //   first check sequence number
+        let is_rst = incoming.contents.control() == Some(Control::RST);
+        let Segment { seq: seg_seq, ack: seg_ack, wnd: seg_wnd, contents } = match incoming
+            .overlap(rcv_nxt, rcv_wnd)
+        {
+            Some(incoming) => incoming,
+            None => {
+                // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-69):
+                //   If an incoming segment is not acceptable, an acknowledgment
+                //   should be sent in reply (unless the RST bit is set, if so drop
+                //   the segment and return):
+                //     <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
+                //   After sending the acknowledgment, drop the unacceptable segment
+                //   and return.
+                return if is_rst { None } else { Some(Segment::ack(snd_nxt, rcv_nxt, rcv_wnd)) };
+            }
+        };
+        // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-70):
+        //   second check the RST bit
+        //   If the RST bit is set then, any outstanding RECEIVEs and SEND
+        //   should receive "reset" responses.  All segment queues should be
+        //   flushed.  Users should also receive an unsolicited general
+        //   "connection reset" signal.  Enter the CLOSED state, delete the
+        //   TCB, and return.
+        if contents.control() == Some(Control::RST) {
+            *self = State::Closed(Closed { reason: UserError::ConnectionReset });
+            return None;
         }
-        seg
+        // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-70):
+        //   fourth, check the SYN bit
+        //   If the SYN is in the window it is an error, send a reset, any
+        //   outstanding RECEIVEs and SEND should receive "reset" responses,
+        //   all segment queues should be flushed, the user should also
+        //   receive an unsolicited general "connection reset" signal, enter
+        //   the CLOSED state, delete the TCB, and return.
+        //   If the SYN is not in the window this step would not be reached
+        //   and an ack would have been sent in the first step (sequence
+        //   number check).
+        if contents.control() == Some(Control::SYN) {
+            *self = State::Closed(Closed { reason: UserError::ConnectionReset });
+            return Some(Segment::rst(snd_nxt));
+        }
+        // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-72):
+        //   fifth check the ACK field
+        match seg_ack {
+            Some(seg_ack) => match self {
+                State::Closed(_) | State::Listen(_) | State::SynSent(_) => {
+                    // This unreachable assert is justified by note (1).
+                    unreachable!("encountered an alread-handled state: {:?}", self)
+                }
+                State::SynRcvd(SynRcvd { iss, irs, timestamp: syn_rcvd_ts, retrans_timer: _ }) => {
+                    // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-72):
+                    //    if the ACK bit is on
+                    //    SYN-RECEIVED STATE
+                    //    If SND.UNA =< SEG.ACK =< SND.NXT then enter ESTABLISHED state
+                    //    and continue processing.
+                    //    If the segment acknowledgment is not acceptable, form a
+                    //    reset segment,
+                    //      <SEQ=SEG.ACK><CTL=RST>
+                    //    and send it.
+                    // Note: We don't support sending data with SYN, so we don't
+                    // store the `SND` variables because they can be easily derived
+                    // from ISS: SND.UNA=ISS and SND.NXT=ISS+1.
+                    if seg_ack != *iss + 1 {
+                        return Some(Segment::rst(seg_ack));
+                    } else {
+                        let mut rtt_estimator = Estimator::default();
+                        if let Some(syn_rcvd_ts) = syn_rcvd_ts {
+                            rtt_estimator.sample(now.duration_since(*syn_rcvd_ts));
+                        }
+                        *self = State::Established(Established {
+                            snd: Send {
+                                nxt: *iss + 1,
+                                max: *iss + 1,
+                                una: seg_ack,
+                                wnd: seg_wnd,
+                                wl1: seg_seq,
+                                wl2: seg_ack,
+                                buffer: S::default(),
+                                last_seq_ts: None,
+                                rtt_estimator,
+                                timer: None,
+                            },
+                            rcv: Recv { buffer: R::default(), assembler: Assembler::new(*irs + 1) },
+                        });
+                    }
+                    // Unreachable note(2): Because we either return early or
+                    // transition to Established for the ack processing, it is
+                    // impossible for SYN_RCVD to appear past this line.
+                }
+                State::Established(Established { snd, rcv: _ }) => {
+                    if let Some(ack) =
+                        snd.process_ack(seg_seq, seg_ack, seg_wnd, rcv_nxt, rcv_wnd, now)
+                    {
+                        return Some(ack);
+                    }
+                }
+            },
+            // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-72):
+            //   if the ACK bit is off drop the segment and return
+            None => return None,
+        }
+        // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-74):
+        //   seventh, process the segment text
+        //   Once in the ESTABLISHED state, it is possible to deliver segment
+        //   text to user RECEIVE buffers.  Text from segments can be moved
+        //   into buffers until either the buffer is full or the segment is
+        //   empty.  If the segment empties and carries an PUSH flag, then
+        //   the user is informed, when the buffer is returned, that a PUSH
+        //   has been received.
+        //
+        //   When the TCP takes responsibility for delivering the data to the
+        //   user it must also acknowledge the receipt of the data.
+        //   Once the TCP takes responsibility for the data it advances
+        //   RCV.NXT over the data accepted, and adjusts RCV.WND as
+        //   apporopriate to the current buffer availability.  The total of
+        //   RCV.NXT and RCV.WND should not be reduced.
+        //
+        //   Please note the window management suggestions in section 3.7.
+        //   Send an acknowledgment of the form:
+        //     <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
+        //   This acknowledgment should be piggybacked on a segment being
+        //   transmitted if possible without incurring undue delay.
+        if contents.data().len() > 0 {
+            match self {
+                State::Closed(_) | State::Listen(_) | State::SynRcvd(_) | State::SynSent(_) => {
+                    // This unreachable assert is justified by note (1) and (2).
+                    unreachable!("encountered an alread-handled state: {:?}", self)
+                }
+                State::Established(Established { snd, rcv }) => {
+                    let offset = usize::try_from(seg_seq - rcv.nxt()).unwrap_or_else(|TryFromIntError {..}| {
+                        panic!("The segment was trimmed to fit the window, thus seg.seq({:?}) must not come before rcv.nxt({:?})", seg_seq, rcv.nxt());
+                    });
+                    // Write the segment data in the buffer and keep track if it fills
+                    // any hole in the assembler.
+                    let nwritten = rcv.buffer.write_at(offset, contents.data());
+                    let readable = rcv.assembler.insert(seg_seq..seg_seq + nwritten);
+                    rcv.buffer.make_readable(readable);
+                    return Some(Segment::ack(snd.nxt, rcv.nxt(), rcv.wnd()));
+                }
+            }
+        }
+        // TODO(https://fxbug.dev/93522): should handle incoming FIN.
+        None
     }
 
     /// Polls if there are any bytes available to send in the buffer.
@@ -937,7 +873,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
 
 #[cfg(test)]
 mod test {
-    use core::{num::NonZeroUsize, time::Duration};
+    use core::{fmt::Debug, num::NonZeroUsize, time::Duration};
 
     use assert_matches::assert_matches;
     use test_case::test_case;
@@ -1011,6 +947,17 @@ mod test {
 
         fn enqueue_data(&mut self, _data: &[u8]) -> usize {
             0
+        }
+    }
+
+    impl<I: Instant, R: ReceiveBuffer + Debug, S: SendBuffer + Debug> State<I, R, S> {
+        fn read_with(&mut self, f: impl for<'b> FnOnce(&'b [&'_ [u8]]) -> usize) -> usize {
+            match self {
+                State::Closed(_) | State::Listen(_) | State::SynRcvd(_) | State::SynSent(_) => {
+                    panic!("No receive state in {:?}", self);
+                }
+                State::Established(e) => e.rcv.buffer.read_with(f),
+            }
         }
     }
 
@@ -1099,99 +1046,117 @@ mod test {
     }
 
     #[test_case(
-        Segment::ack(ISS_1, ISS_2, WindowSize::DEFAULT)
-    => SynRcvdOnSegmentDisposition::SendAck(
+        Segment::ack(ISS_1, ISS_2, WindowSize::DEFAULT),
+        None
+    => Some(
         Segment::ack(ISS_2 + 1, ISS_1 + 1, WindowSize::DEFAULT)
     ); "OTW segment")]
     #[test_case(
-        Segment::rst_ack(ISS_1, ISS_2)
-    => SynRcvdOnSegmentDisposition::Ignore; "OTW RST")]
+        Segment::rst_ack(ISS_1, ISS_2),
+        None
+    => None; "OTW RST")]
     #[test_case(
-        Segment::rst_ack(ISS_1 + 1, ISS_2)
-    => SynRcvdOnSegmentDisposition::EnterClosed(
-        Closed { reason: UserError::ConnectionReset }
-    ); "acceptable RST")]
+        Segment::rst_ack(ISS_1 + 1, ISS_2),
+        Some(State::Closed(Closed { reason: UserError::ConnectionReset }))
+    => None; "acceptable RST")]
     #[test_case(
-        Segment::syn(ISS_1 + 1, WindowSize::DEFAULT)
-    => SynRcvdOnSegmentDisposition::SendRstAndEnterClosed(
-        Segment::rst_ack(ISS_2, ISS_1),
-        Closed { reason: UserError::ConnectionReset },
+        Segment::syn(ISS_1 + 1, WindowSize::DEFAULT),
+        Some(State::Closed(Closed { reason: UserError::ConnectionReset }))
+    => Some(
+        Segment::rst(ISS_2 + 1)
     ); "duplicate syn")]
     #[test_case(
-        Segment::ack(ISS_1 + 1, ISS_2, WindowSize::DEFAULT)
-    => SynRcvdOnSegmentDisposition::SendRst(
+        Segment::ack(ISS_1 + 1, ISS_2, WindowSize::DEFAULT),
+        None
+    => Some(
         Segment::rst(ISS_2)
     ); "unacceptable ack (ISS)")]
     #[test_case(
-        Segment::ack(ISS_1 + 1, ISS_2 + 1, WindowSize::DEFAULT)
-    => SynRcvdOnSegmentDisposition::EnterEstablished(
-        Established {
-            snd: Send {
-                nxt: ISS_2 + 1,
-                max: ISS_2 + 1,
-                una: ISS_2 + 1,
-                wnd: WindowSize::DEFAULT,
-                buffer: NullBuffer,
-                wl1: ISS_1 + 1,
-                wl2: ISS_2 + 1,
-                rtt_estimator: Estimator::Measured {
-                    srtt: RTT,
-                    rtt_var: RTT / 2,
+        Segment::ack(ISS_1 + 1, ISS_2 + 1, WindowSize::DEFAULT),
+        Some(State::Established(
+            Established {
+                snd: Send {
+                    nxt: ISS_2 + 1,
+                    max: ISS_2 + 1,
+                    una: ISS_2 + 1,
+                    wnd: WindowSize::DEFAULT,
+                    buffer: NullBuffer,
+                    wl1: ISS_1 + 1,
+                    wl2: ISS_2 + 1,
+                    rtt_estimator: Estimator::Measured {
+                        srtt: RTT,
+                        rtt_var: RTT / 2,
+                    },
+                    last_seq_ts: None,
+                    timer: None,
                 },
-                last_seq_ts: None,
-                timer: None,
-            },
-            rcv: Recv { buffer: NullBuffer, assembler: Assembler::new(ISS_1 + 1) },
-        }
-    ); "acceptable ack (ISS + 1)")]
+                rcv: Recv { buffer: NullBuffer, assembler: Assembler::new(ISS_1 + 1) },
+            }
+        ))
+    => None; "acceptable ack (ISS + 1)")]
     #[test_case(
-        Segment::ack(ISS_1 + 1, ISS_2 + 2, WindowSize::DEFAULT)
-    => SynRcvdOnSegmentDisposition::SendRst(
+        Segment::ack(ISS_1 + 1, ISS_2 + 2, WindowSize::DEFAULT),
+        None
+    => Some(
         Segment::rst(ISS_2 + 2)
     ); "unacceptable ack (ISS + 2)")]
     #[test_case(
-        Segment::ack(ISS_1 + 1, ISS_2 - 1, WindowSize::DEFAULT)
-    => SynRcvdOnSegmentDisposition::SendRst(
+        Segment::ack(ISS_1 + 1, ISS_2 - 1, WindowSize::DEFAULT),
+        None
+    => Some(
         Segment::rst(ISS_2 - 1)
     ); "unacceptable ack (ISS - 1)")]
     #[test_case(
-        Segment::new(ISS_1 + 1, None, None, WindowSize::DEFAULT)
-    => SynRcvdOnSegmentDisposition::Ignore; "no ack")]
+        Segment::new(ISS_1 + 1, None, None, WindowSize::DEFAULT),
+        None
+    => None; "no ack")]
     fn segment_arrives_when_syn_rcvd(
         incoming: Segment<()>,
-    ) -> SynRcvdOnSegmentDisposition<DummyInstant, NullBuffer, NullBuffer> {
+        expected: Option<State<DummyInstant, NullBuffer, NullBuffer>>,
+    ) -> Option<Segment<()>> {
         let mut clock = DummyInstantCtx::default();
-        let syn_rcvd = SynRcvd {
+        let mut state = State::SynRcvd(SynRcvd {
             iss: ISS_2,
             irs: ISS_1,
             timestamp: Some(clock.now()),
             retrans_timer: RetransTimer::new(clock.now(), Estimator::RTO_INIT),
-        };
+        });
         clock.sleep(RTT);
-        syn_rcvd.on_segment(incoming, clock.now())
+        let seg = state.on_segment(incoming, clock.now());
+        match expected {
+            Some(new_state) => assert_eq!(new_state, state),
+            None => assert_matches!(state, State::SynRcvd(_)),
+        };
+        seg
     }
 
     #[test_case(
-        Segment::syn(ISS_2 + 1, WindowSize::DEFAULT)
-    => EstablishedOnSegmentDisposition::SendRstAndEnterClosed(
-        Segment::rst(ISS_1 + 1),
-        Closed { reason: UserError::ConnectionReset }
-    ); "duplicate syn")]
+        Segment::syn(ISS_2 + 1, WindowSize::DEFAULT),
+        Some(State::Closed (
+            Closed { reason: UserError::ConnectionReset },
+        ))
+    => Some(Segment::rst(ISS_1 + 1)); "duplicate syn")]
     #[test_case(
-        Segment::rst(ISS_2 + 1)
-    => EstablishedOnSegmentDisposition::EnterClosed(
-        Closed { reason: UserError::ConnectionReset }
-    ); "accepatable rst")]
+        Segment::rst(ISS_2 + 1),
+        Some(State::Closed (
+            Closed { reason: UserError::ConnectionReset },
+        ))
+    => None; "accepatable rst")]
     #[test_case(
-        Segment::ack(ISS_2 + 1, ISS_1 + 2, WindowSize::DEFAULT)
-    => EstablishedOnSegmentDisposition::SendAck(
+        Segment::ack(ISS_2 + 1, ISS_1 + 2, WindowSize::DEFAULT),
+        None
+    => Some(
         Segment::ack(ISS_1 + 1, ISS_2 + 1, WindowSize::new(1).unwrap())
     ); "unacceptable ack")]
     #[test_case(
-        Segment::ack(ISS_2 + 1, ISS_1 + 1, WindowSize::DEFAULT)
-    => EstablishedOnSegmentDisposition::Ignore; "pure ack")]
-    fn segment_arrives_when_established(incoming: Segment<()>) -> EstablishedOnSegmentDisposition {
-        let mut established = Established {
+        Segment::ack(ISS_2 + 1, ISS_1 + 1, WindowSize::DEFAULT),
+        None
+    => None; "pure ack")]
+    fn segment_arrives_when_established(
+        incoming: Segment<()>,
+        expected: Option<State<DummyInstant, RingBuffer, NullBuffer>>,
+    ) -> Option<Segment<()>> {
+        let mut state = State::Established(Established {
             snd: Send {
                 nxt: ISS_1 + 1,
                 max: ISS_1 + 1,
@@ -1208,8 +1173,13 @@ mod test {
                 buffer: RingBuffer::new(NonZeroUsize::new(1).unwrap()),
                 assembler: Assembler::new(ISS_2 + 1),
             },
+        });
+        let seg = state.on_segment(incoming, DummyInstant::default());
+        match expected {
+            Some(new_state) => assert_eq!(new_state, state),
+            None => assert_matches!(state, State::Established(_)),
         };
-        established.on_segment(incoming, DummyInstant::default())
+        seg
     }
 
     #[test]
@@ -1368,7 +1338,7 @@ mod test {
     #[test]
     fn established_receive() {
         let clock = DummyInstantCtx::default();
-        let mut established = Established {
+        let mut established = State::Established(Established {
             snd: Send {
                 nxt: ISS_1 + 1,
                 max: ISS_1 + 1,
@@ -1385,7 +1355,7 @@ mod test {
                 buffer: RingBuffer::new(NonZeroUsize::new(BUFFER_SIZE).unwrap()),
                 assembler: Assembler::new(ISS_2 + 1),
             },
-        };
+        });
 
         // Received an expected segment at rcv.nxt.
         assert_eq!(
@@ -1393,14 +1363,14 @@ mod test {
                 Segment::data(ISS_2 + 1, ISS_1 + 1, WindowSize::ZERO, TEST_BYTES,),
                 clock.now()
             ),
-            EstablishedOnSegmentDisposition::SendAck(Segment::ack(
+            Some(Segment::ack(
                 ISS_1 + 1,
                 ISS_2 + 1 + TEST_BYTES.len(),
                 WindowSize::new(BUFFER_SIZE - TEST_BYTES.len()).unwrap(),
-            ),)
+            )),
         );
         assert_eq!(
-            established.rcv.buffer.read_with(|available| {
+            established.read_with(|available| {
                 assert_eq!(available, &[TEST_BYTES]);
                 available[0].len()
             }),
@@ -1418,14 +1388,14 @@ mod test {
                 ),
                 clock.now()
             ),
-            EstablishedOnSegmentDisposition::SendAck(Segment::ack(
+            Some(Segment::ack(
                 ISS_1 + 1,
                 ISS_2 + 1 + TEST_BYTES.len(),
                 WindowSize::new(BUFFER_SIZE).unwrap(),
             )),
         );
         assert_eq!(
-            established.rcv.buffer.read_with(|available| {
+            established.read_with(|available| {
                 assert_eq!(available, &[&[][..]]);
                 0
             }),
@@ -1443,14 +1413,14 @@ mod test {
                 ),
                 clock.now()
             ),
-            EstablishedOnSegmentDisposition::SendAck(Segment::ack(
+            Some(Segment::ack(
                 ISS_1 + 1,
                 ISS_2 + 1 + 3 * TEST_BYTES.len(),
                 WindowSize::new(BUFFER_SIZE - 2 * TEST_BYTES.len()).unwrap(),
             ))
         );
         assert_eq!(
-            established.rcv.buffer.read_with(|available| {
+            established.read_with(|available| {
                 assert_eq!(available, &[[TEST_BYTES, TEST_BYTES].concat()]);
                 available[0].len()
             }),

@@ -10,6 +10,7 @@ use alloc::{vec, vec::Vec};
 use core::{
     cmp,
     convert::TryFrom,
+    fmt::Debug,
     num::{NonZeroUsize, TryFromIntError},
     ops::Range,
 };
@@ -20,7 +21,7 @@ use crate::transport::tcp::{
 };
 
 /// Common super trait for both sending and receiving buffer.
-pub trait Buffer: Default {
+pub trait Buffer: Default + Debug {
     /// Returns the number of bytes in the buffer that can be read.
     fn len(&self) -> usize;
 
@@ -158,6 +159,7 @@ impl Payload for SendPayload<'_> {
 
 /// A circular buffer implementation.
 #[derive(Debug, Clone)]
+#[cfg_attr(test, derive(PartialEq, Eq))]
 pub(super) struct RingBuffer {
     // It must not be empty because we can not divide a number by 0.
     storage: Vec<u8>,
