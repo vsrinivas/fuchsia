@@ -24,7 +24,7 @@ class CodecPacketForTest : public CodecPacket {
   CodecPacketForTest(uint32_t index) : CodecPacket(kBufferLifetimeOrdinal, index) {}
 };
 
-CodecVmoRange VmoRangeOfSize(size_t size) {
+static CodecVmoRange VmoRangeOfSize(size_t size) {
   zx::vmo vmo_handle;
   fzl::VmoMapper mapper;
   zx_status_t err =
@@ -54,7 +54,7 @@ struct TestPackets {
   CodecPacket* ptr(size_t i) { return packets[i].get(); }
 };
 
-TestPackets Packets(size_t count) {
+static TestPackets Packets(size_t count) {
   TestPackets packets;
   for (size_t i = 0; i < count; ++i) {
     packets.packets.push_back(std::make_unique<CodecPacketForTest>(i));
@@ -67,7 +67,7 @@ struct TestBuffers {
   const CodecBuffer* ptr(size_t i) { return buffers[i].get(); }
 };
 
-TestBuffers Buffers(std::vector<size_t> sizes) {
+static TestBuffers Buffers(std::vector<size_t> sizes) {
   TestBuffers buffers;
   for (size_t i = 0; i < sizes.size(); ++i) {
     constexpr bool kIsSecure = false;

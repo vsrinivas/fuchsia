@@ -10,6 +10,8 @@
 
 #include "h264_accelerator.h"
 #include "media/gpu/h264_decoder.h"
+#include "media/gpu/vp9_decoder.h"
+#include "vp9_accelerator.h"
 
 #define LOG(x, ...) fprintf(stderr, __VA_ARGS__)
 
@@ -32,6 +34,10 @@ void CodecAdapterVaApiDecoder::CoreCodecInit(
   if (mime_type == "video/h264-multi" || mime_type == "video/h264") {
     media_decoder_ = std::make_unique<media::H264Decoder>(std::make_unique<H264Accelerator>(this),
                                                           media::H264PROFILE_HIGH);
+    is_h264_ = true;
+  } else if (mime_type == "video/vp9") {
+    media_decoder_ = std::make_unique<media::VP9Decoder>(std::make_unique<VP9Accelerator>(this),
+                                                         media::VP9PROFILE_PROFILE0);
   } else {
     events_->onCoreCodecFailCodec("CodecCodecInit(): Unknown mime_type %s\n", mime_type.c_str());
     return;
@@ -103,23 +109,49 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
   while ((maybe_input_item = input_queue_.WaitForElement())) {
     CodecInputItem input_item = std::move(maybe_input_item.value());
     if (input_item.is_format_details()) {
+      const std::string& mime_type = input_item.format_details().mime_type();
       if (!config_) {
         VAConfigAttrib attribs[1];
         attribs[0].type = VAConfigAttribRTFormat;
         attribs[0].value = VA_RT_FORMAT_YUV420;
         VAConfigID config_id;
-        VAStatus va_status =
-            vaCreateConfig(VADisplayWrapper::GetSingleton()->display(), VAProfileH264High,
-                           VAEntrypointVLD, attribs, std::size(attribs), &config_id);
+        VAStatus va_status;
+
+        if ((!is_h264_ && (mime_type == "video/h264-multi" || mime_type == "video/h264")) ||
+            (is_h264_ && mime_type == "video/vp9")) {
+          events_->onCoreCodecFailCodec(
+              "CodecCodecInit(): Can not switch codec type after setting it in CoreCodecInit(). "
+              "Attempting to switch it to %s\n",
+              mime_type.c_str());
+          return;
+        }
+
+        if (mime_type == "video/h264-multi" || mime_type == "video/h264") {
+          va_status = vaCreateConfig(VADisplayWrapper::GetSingleton()->display(), VAProfileH264High,
+                                     VAEntrypointVLD, attribs, std::size(attribs), &config_id);
+        } else if (mime_type == "video/vp9") {
+          va_status =
+              vaCreateConfig(VADisplayWrapper::GetSingleton()->display(), VAProfileVP9Profile0,
+                             VAEntrypointVLD, attribs, std::size(attribs), &config_id);
+        } else {
+          events_->onCoreCodecFailCodec("CodecCodecInit(): Unknown mime_type %s\n",
+                                        mime_type.c_str());
+          return;
+        }
+
         if (va_status != VA_STATUS_SUCCESS) {
           events_->onCoreCodecFailCodec("Failed to create config.");
           return;
         }
         config_.emplace(config_id);
       }
-      avcc_processor_.ProcessOobBytes(input_item.format_details());
+
+      if (mime_type == "video/h264-multi" || mime_type == "video/h264") {
+        avcc_processor_.ProcessOobBytes(input_item.format_details());
+      }
     } else if (input_item.is_end_of_stream()) {
-      {
+      // TODO(stefanbossbaly): Encapsulate in abstraction
+      if (is_h264_) {
         constexpr uint8_t kEndOfStreamNalUnitType = 11;
         // Force frames to be processed.
         std::vector<uint8_t> end_of_stream_delimiter{0, 0, 1, kEndOfStreamNalUnitType};
@@ -153,13 +185,14 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
       }
       events_->onCoreCodecInputPacketDone(input_item.packet());
 
-      if (avcc_processor_.is_avcc()) {
+      if (is_h264_ && avcc_processor_.is_avcc()) {
         DecodeAnnexBBuffer(avcc_processor_.ParseVideoAvcc(std::move(data)));
       } else {
         DecodeAnnexBBuffer(std::move(data));
       }
 
-      {
+      // TODO(stefanbossbaly): Encapsulate in abstraction
+      if (is_h264_) {
         constexpr uint8_t kAccessUnitDelimiterNalUnitType = 9;
         constexpr uint8_t kPrimaryPicType = 1 << (7 - 3);
         // Force frames to be processed. TODO(jbauman): Key on known_end_access_unit.
@@ -181,16 +214,19 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
 
 void CodecAdapterVaApiDecoder::CleanUpAfterStream() {
   {
-    // Force frames to be processed.
-    std::vector<uint8_t> end_of_stream_delimiter{0, 0, 1, 11};
+    // TODO(stefanbossbaly): Encapsulate in abstraction
+    if (is_h264_) {
+      // Force frames to be processed.
+      std::vector<uint8_t> end_of_stream_delimiter{0, 0, 1, 11};
 
-    media::DecoderBuffer buffer(std::move(end_of_stream_delimiter), nullptr, 0, {});
-    media_decoder_->SetStream(next_stream_id_++, buffer);
-    auto result = media_decoder_->Decode();
-    if (result != media::AcceleratedVideoDecoder::kRanOutOfStreamData) {
-      events_->onCoreCodecFailCodec("Unexpected media_decoder::Decode result for end of stream: %d",
-                                    result);
-      return;
+      media::DecoderBuffer buffer(std::move(end_of_stream_delimiter), nullptr, 0, {});
+      media_decoder_->SetStream(next_stream_id_++, buffer);
+      auto result = media_decoder_->Decode();
+      if (result != media::AcceleratedVideoDecoder::kRanOutOfStreamData) {
+        events_->onCoreCodecFailCodec(
+            "Unexpected media_decoder::Decode result for end of stream: %d", result);
+        return;
+      }
     }
   }
 

@@ -6,6 +6,7 @@
 #define SRC_MEDIA_CODEC_CODECS_VAAPI_VAAPI_UTILS_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include <va/va.h>
 #include <va/va_magma.h>
@@ -186,5 +187,11 @@ class ScopedImageID {
 };
 
 std::vector<fuchsia::mediacodec::CodecDescription> GetCodecList();
+
+// Copy the memory between arrays with checking the array size.
+template <typename T, size_t N>
+inline void SafeArrayMemcpy(T (&to)[N], const T (&from)[N]) {
+  std::memcpy(to, from, sizeof(T[N]));
+}
 
 #endif  // SRC_MEDIA_CODEC_CODECS_VAAPI_VAAPI_UTILS_H_

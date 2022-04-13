@@ -18,8 +18,6 @@ source_set("avcc_processor") {
     "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
     "//src/media/lib/codec_impl",
-
-    #   "//src/media/third_party/chromium_media:lib"",
   ]
 }
 
@@ -30,6 +28,7 @@ source_set("codec_runner_vaapi") {
     "h264_accelerator.cc",
     "local_single_codec_factory.h",
     "vaapi_utils.cc",
+    "vp9_accelerator.cc",
   ]
 
   public = [
@@ -38,6 +37,7 @@ source_set("codec_runner_vaapi") {
     "codec_runner_app.h",
     "h264_accelerator.h",
     "vaapi_utils.h",
+    "vp9_accelerator.h",
   ]
 
   public_configs = [ ":codec_runner_vaapi_include_config" ]

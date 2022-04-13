@@ -59,11 +59,8 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
  public:
   CodecAdapterVaApiDecoder(std::mutex& lock, CodecAdapterEvents* codec_adapter_events)
       : CodecAdapter(lock, codec_adapter_events),
-        input_queue_(),
-        free_output_packets_(),
         avcc_processor_(fit::bind_member<&CodecAdapterVaApiDecoder::DecodeAnnexBBuffer>(this),
-                        codec_adapter_events),
-        input_processing_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+                        codec_adapter_events) {
     ZX_DEBUG_ASSERT(events_);
   }
 
@@ -443,8 +440,8 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
     return video_uncompressed;
   }
 
-  BlockingMpscQueue<CodecInputItem> input_queue_;
-  BlockingMpscQueue<CodecPacket*> free_output_packets_;
+  BlockingMpscQueue<CodecInputItem> input_queue_{};
+  BlockingMpscQueue<CodecPacket*> free_output_packets_{};
 
   std::optional<ScopedConfigID> config_;
 
@@ -476,11 +473,12 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   // Will be accessed from the input processing thread if that's active, or the main thread
   // otherwise.
   std::unique_ptr<media::AcceleratedVideoDecoder> media_decoder_;
+  bool is_h264_{false};  // TODO(stefanbossbaly): Remove in favor abstraction in VAAPI layer
 
   std::deque<std::pair<int32_t, uint64_t>> stream_to_pts_map_;
   int32_t next_stream_id_{};
 
-  async::Loop input_processing_loop_;
+  async::Loop input_processing_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   thrd_t input_processing_thread_;
 };
 

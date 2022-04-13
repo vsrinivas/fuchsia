@@ -12,7 +12,11 @@ group("test") {
 executable("vaapi_tests") {
   testonly = true
 
-  sources = [ "h264_vaapi_test.cc" ]
+  sources = [
+    "h264_vaapi_test.cc",
+    "vaapi_stubs.cc",
+    "vp9_vaapi_test.cc",
+  ]
 
   deps = [
     "..:codec_runner_vaapi",
@@ -22,6 +26,7 @@ executable("vaapi_tests") {
     "//third_party/googletest:gtest",
   ]
 }
+
 resource("bear_h264") {
   sources = [
     "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264",
@@ -29,11 +34,17 @@ resource("bear_h264") {
   outputs = [ "data/bear.h264" ]
 }
 
+resource("test_25fps") {
+  sources = [ "//garnet/test_data/media/third_party/chromium_media_test_data/test-25fps.vp9" ]
+  outputs = [ "data/test-25fps.vp9" ]
+}
+
 fuchsia_unittest_package("vaapi_tests_package") {
   package_name = "vaapi_tests"
 
   deps = [
     ":bear_h264",
+    ":test_25fps",
     ":vaapi_tests",
   ]
 }
