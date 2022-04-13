@@ -77,13 +77,13 @@ class NetworkServiceTest : public gtest::RealLoopFixture {
 
   void GetNetworkManager(fidl::InterfaceRequest<FNetworkManager> nm) {
     fidl::InterfacePtr<FNetworkContext> netc;
-    svc_->GetHandler()(netc.NewRequest());
+    GetNetworkContext(netc.NewRequest());
     netc->GetNetworkManager(std::move(nm));
   }
 
   void GetEndpointManager(fidl::InterfaceRequest<FEndpointManager> epm) {
     fidl::InterfacePtr<FNetworkContext> netc;
-    svc_->GetHandler()(netc.NewRequest());
+    GetNetworkContext(netc.NewRequest());
     netc->GetEndpointManager(std::move(epm));
   }
 
@@ -106,7 +106,9 @@ class NetworkServiceTest : public gtest::RealLoopFixture {
   void StartServices() { GetServices(net_manager_.NewRequest(), endp_manager_.NewRequest()); }
 
   void GetNetworkContext(fidl::InterfaceRequest<NetworkContext::FNetworkContext> req) {
-    svc_->GetHandler()(std::move(req));
+    // Always install bindings in the service dispatcher thread.
+    async::PostTask(svc_loop_->dispatcher(),
+                    [this, req = std::move(req)]() mutable { svc_->GetHandler()(std::move(req)); });
   }
 
   void CreateNetwork(const char* name, fidl::SynchronousInterfacePtr<FNetwork>* netout,
