@@ -1391,7 +1391,7 @@ zx_status_t VmCowPages::AddNewPageLocked(uint64_t offset, vm_page_t* page,
   if (has_pager_backlinks_locked()) {
     // Only zero pages can be added as new pages to pager backed VMOs.
     DEBUG_ASSERT(zero || IsZeroPage(page));
-    page->object.dirty_state = static_cast<uint8_t>(DirtyState::Clean);
+    UpdateDirtyStateLocked(page, offset, DirtyState::Clean, /*is_pending_add=*/true);
   }
 
   VmPageOrMarker p = VmPageOrMarker::Page(page);
@@ -1706,6 +1706,70 @@ VmPageOrMarker* VmCowPages::FindInitialPageContentLocked(uint64_t offset, VmCowP
   return page;
 }
 
+void VmCowPages::UpdateDirtyStateLocked(vm_page_t* page, uint64_t offset, DirtyState dirty_state,
+                                        bool is_pending_add) {
+  ASSERT(page);
+  ASSERT(has_pager_backlinks_locked());
+  ASSERT(is_source_preserving_page_content_locked());
+
+  // If the page is not pending being added to the page list, it should have valid object info.
+  DEBUG_ASSERT(is_pending_add || page->object.get_object() == this);
+  DEBUG_ASSERT(is_pending_add || page->object.get_page_offset() == offset);
+
+  // If the page is Dirty or AwaitingClean, it should not be loaned.
+  DEBUG_ASSERT(!(is_page_dirty(page) || is_page_awaiting_clean(page)) || !pmm_is_loaned(page));
+
+  // Perform state-specific checks and actions. We will finally update the state below.
+  switch (dirty_state) {
+    case DirtyState::Clean:
+      // If the page is not in the process of being added, we can only see a transition to Clean
+      // from AwaitingClean.
+      ASSERT(is_pending_add || is_page_awaiting_clean(page));
+
+      // If we are expecting a pending Add[New]PageLocked, we can defer updating the page queue.
+      if (!is_pending_add) {
+        // Move to evictable pager backed queue to start tracking age information.
+        pmm_page_queues()->MoveToPagerBacked(page, this, offset);
+      }
+      break;
+    case DirtyState::Dirty:
+      // If the page is not in the process of being added, we can only see a transition to Dirty
+      // from Clean or AwaitingClean.
+      ASSERT(is_pending_add || (is_page_clean(page) || is_page_awaiting_clean(page)));
+
+      // A loaned page cannot be marked Dirty as loaned pages are reclaimed by eviction; Dirty pages
+      // cannot be evicted.
+      DEBUG_ASSERT(!pmm_is_loaned(page));
+
+      // If we are expecting a pending Add[New]PageLocked, we can defer updating the page queue.
+      if (!is_pending_add) {
+        // Move the page to the Dirty queue, which does not track page age. While the page is in the
+        // Dirty queue, age information is not required (yet). It will be required when the page
+        // becomes Clean (and hence evictable) again, at which point it will get moved to the MRU
+        // pager backed queue and will age as normal.
+        // TODO(rashaeqbal): We might want age tracking for the Dirty queue in the future when the
+        // kernel generates writeback pager requests.
+        pmm_page_queues()->MoveToPagerBackedDirty(page, this, offset);
+      }
+      break;
+    case DirtyState::AwaitingClean:
+      // A newly added page cannot start off as AwaitingClean.
+      ASSERT(!is_pending_add);
+      // We can only transition to AwaitingClean from Dirty.
+      ASSERT(is_page_dirty(page));
+      // A loaned page cannot be marked AwaitingClean as loaned pages are reclaimed by eviction;
+      // AwaitingClean pages cannot be evicted.
+      DEBUG_ASSERT(!pmm_is_loaned(page));
+      // No page queue update. Leave the page in the Dirty queue for now as it is not clean yet;
+      // it will be moved out on WritebackEnd.
+      DEBUG_ASSERT(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
+      break;
+    default:
+      ASSERT(false);
+  }
+  page->object.dirty_state = static_cast<uint8_t>(dirty_state);
+}
+
 zx_status_t VmCowPages::PrepareForWriteLocked(LazyPageRequest* page_request, uint64_t offset,
                                               uint64_t len, uint64_t* dirty_len_out) {
   DEBUG_ASSERT(page_source_);
@@ -1747,9 +1811,8 @@ zx_status_t VmCowPages::PrepareForWriteLocked(LazyPageRequest* page_request, uin
 
           // Mark the page dirty.
           if (!is_page_dirty(page)) {
-            page->object.dirty_state = static_cast<uint8_t>(DirtyState::Dirty);
-            // Move the page to the Dirty queue.
-            pmm_page_queues()->MoveToPagerBackedDirty(page, this, off);
+            AssertHeld(lock_);
+            UpdateDirtyStateLocked(page, off, DirtyState::Dirty);
           }
           // The page was either already dirty, or we just marked it dirty. Proceed to the next one.
           DEBUG_ASSERT(start_offset + dirty_len == off);
@@ -1835,7 +1898,7 @@ zx_status_t VmCowPages::PrepareForWriteLocked(LazyPageRequest* page_request, uin
 
     // We don't expect an error from the traversal above. If an already dirty page or a gap is
     // encountered, we will simply terminate early.
-    ASSERT(status == ZX_OK);
+    DEBUG_ASSERT(status == ZX_OK);
   }
 
   // Now consider the portion of the range that starts at/after supply_zero_offset_, and see if we
@@ -1846,11 +1909,13 @@ zx_status_t VmCowPages::PrepareForWriteLocked(LazyPageRequest* page_request, uin
     const uint64_t start = ktl::max(start_offset, supply_zero_offset_);
     zx_status_t status = page_list_.ForEveryPageAndGapInRange(
         [&dirty_len, &pages_to_dirty_len, start_offset](const VmPageOrMarker* p, uint64_t off) {
-          // We can only find Dirty pages beyond supply_zero_offset_. There can be no markers as
-          // they represent Clean zero pages.
+          // We can only find un-Clean committed pages beyond supply_zero_offset_. There can be no
+          // markers as they represent Clean zero pages.
           ASSERT(p->IsPage());
-          ASSERT(is_page_dirty(p->Page()));
-          DEBUG_ASSERT(!pmm_is_loaned(p->Page()));
+          vm_page_t* page = p->Page();
+          ASSERT(is_page_dirty_tracked(page));
+          ASSERT(!is_page_clean(page));
+          DEBUG_ASSERT(!pmm_is_loaned(page));
 
           // Bail if we were tracking a non-zero run of pages to be dirtied as we cannot extend
           // pages_to_dirty_len anymore.
@@ -1883,7 +1948,7 @@ zx_status_t VmCowPages::PrepareForWriteLocked(LazyPageRequest* page_request, uin
 
     // We don't expect an error from the traversal above. If an already dirty page is
     // encountered, we will simply terminate early.
-    ASSERT(status == ZX_OK);
+    DEBUG_ASSERT(status == ZX_OK);
   }
 
   // If we found any pages that need to transition to Dirty they should fall immediately after the
@@ -2303,10 +2368,9 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
         }
         insert = VmPageOrMarker::Page(res_page);
       }
-      DEBUG_ASSERT(!pmm_is_loaned(res_page));
 
       // Mark the forked page dirty.
-      res_page->object.dirty_state = static_cast<uint8_t>(DirtyState::Dirty);
+      UpdateDirtyStateLocked(res_page, offset, DirtyState::Dirty, /*is_pending_add=*/true);
     }
 
     zx_status_t status = AddPageLocked(&insert, offset, CanOverwriteContent::Zero, nullptr);
@@ -3490,13 +3554,18 @@ zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
           const uint64_t end_offset = ktl::min(supply_zero_offset_, end);
           status = page_list_.ForEveryPageAndContiguousRunInRange(
               [](const VmPageOrMarker* p, uint64_t off) {
-                // A marker is a clean zero page and might have an outstanding DIRTY request. An
-                // actual page that is not Dirty already might have an outstanding DIRTY request.
-                if (p->IsMarker() || !is_page_dirty(p->Page())) {
+                // A marker is a clean zero page and might have an outstanding DIRTY request.
+                if (p->IsMarker()) {
+                  return true;
+                }
+                vm_page_t* page = p->Page();
+                DEBUG_ASSERT(is_page_dirty_tracked(page));
+                // A page that is not Dirty already might have an outstanding DIRTY request.
+                if (!is_page_dirty(page)) {
                   return true;
                 }
                 // Otherwise the page should already be Dirty.
-                DEBUG_ASSERT(is_page_dirty(p->Page()));
+                DEBUG_ASSERT(is_page_dirty(page));
                 return false;
               },
               [](const VmPageOrMarker* p, uint64_t off) {
@@ -3520,8 +3589,9 @@ zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
               [](const VmPageOrMarker* p, uint64_t off) {
                 // No markers exist beyond supply_zero_offset_.
                 DEBUG_ASSERT(p->IsPage());
-                // Any committed page beyond supply_zero_offset_ should already be Dirty.
-                DEBUG_ASSERT(is_page_dirty(p->Page()));
+                // Any committed page beyond supply_zero_offset_ should not be Clean.
+                DEBUG_ASSERT(is_page_dirty_tracked(p->Page()));
+                DEBUG_ASSERT(!is_page_clean(p->Page()));
                 return ZX_ERR_NEXT;
               },
               [this](uint64_t gap_start, uint64_t gap_end) {
@@ -3817,8 +3887,9 @@ zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageS
     }
 
     // A newly supplied page starts off as Clean.
-    if (src_page.IsPage()) {
-      src_page.Page()->object.dirty_state = uint8_t(DirtyState::Clean);
+    if (src_page.IsPage() && has_pager_backlinks_locked()) {
+      UpdateDirtyStateLocked(src_page.Page(), offset, DirtyState::Clean,
+                             /*is_pending_add=*/true);
     }
 
     if (can_borrow_locked() && src_page.IsPage() &&
@@ -3983,7 +4054,7 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
         },
         start_offset, end);
     // We don't expect an error from the traversal.
-    ASSERT(status == ZX_OK);
+    DEBUG_ASSERT(status == ZX_OK);
   }
 
   // Now consider the portion of the range that starts at/after supply_zero_offset_.
@@ -3995,7 +4066,8 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
         [](const VmPageOrMarker* p, uint64_t off) {
           // Nothing to do if a page is found except assert a few things we know.
           DEBUG_ASSERT(p->IsPage());
-          DEBUG_ASSERT(is_page_dirty(p->Page()));
+          DEBUG_ASSERT(is_page_dirty_tracked(p->Page()));
+          DEBUG_ASSERT(!is_page_clean(p->Page()));
           DEBUG_ASSERT(!pmm_is_loaned(p->Page()));
           return ZX_ERR_NEXT;
         },
@@ -4005,7 +4077,7 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
         },
         start, end_offset);
     // We don't expect an error from the traversal.
-    ASSERT(status == ZX_OK);
+    DEBUG_ASSERT(status == ZX_OK);
   }
 
   if (zero_pages_count > 0) {
@@ -4054,7 +4126,7 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
           start_offset, end);
 
       // We don't expect an error from the traversal.
-      ASSERT(status == ZX_OK);
+      DEBUG_ASSERT(status == ZX_OK);
     }
 
     // Install zero pages in gaps starting at supply_zero_offset_.
@@ -4062,9 +4134,10 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
          off += PAGE_SIZE) {
       auto slot = page_list_.Lookup(off);
       if (slot && !slot->IsEmpty()) {
-        // We can only find Dirty pages beyond supply_zero_offset_.
+        // We can only find un-Clean pages beyond supply_zero_offset_.
         DEBUG_ASSERT(slot->IsPage());
-        DEBUG_ASSERT(is_page_dirty(slot->Page()));
+        DEBUG_ASSERT(is_page_dirty_tracked(slot->Page()));
+        DEBUG_ASSERT(!is_page_clean(slot->Page()));
         DEBUG_ASSERT(!pmm_is_loaned(slot->Page()));
         continue;
       }
@@ -4097,23 +4170,12 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
         return false;
       },
       [this](const VmPageOrMarker* p, uint64_t off) {
-        ASSERT(p->IsPage());
+        DEBUG_ASSERT(p->IsPage());
         vm_page_t* page = p->Page();
         DEBUG_ASSERT(is_page_dirty_tracked(page));
         DEBUG_ASSERT(!is_page_dirty(page));
-        DEBUG_ASSERT(page->object.get_object() == this);
-        DEBUG_ASSERT(page->object.get_page_offset() == off);
-        // VMOs that trap dirty transitions should never have loaned pages.
-        DEBUG_ASSERT(!pmm_is_loaned(page));
-
-        page->object.dirty_state = static_cast<uint8_t>(DirtyState::Dirty);
-        // Move the page to the Dirty queue, which does not track page age. While the page is in the
-        // Dirty queue, age information is not required (yet). It will be required when the page
-        // becomes Clean (and hence evictable) again, at which point it will get moved to the MRU
-        // pager backed queue and will age as normal.
-        // TODO(rashaeqbal): We might want age tracking for the Dirty queue in the future when the
-        // kernel generates writeback pager requests.
-        pmm_page_queues()->MoveToPagerBackedDirty(page, this, off);
+        AssertHeld(lock_);
+        UpdateDirtyStateLocked(page, off, DirtyState::Dirty);
         return ZX_ERR_NEXT;
       },
       [this](uint64_t start, uint64_t end) {
@@ -4121,6 +4183,35 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
         return ZX_ERR_NEXT;
       },
       start_offset, end_offset);
+}
+
+void VmCowPages::TryAdvanceSupplyZeroOffsetLocked(uint64_t start_offset, uint64_t end_offset) {
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(start_offset));
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(end_offset));
+
+  if (supply_zero_offset_ >= start_offset && supply_zero_offset_ < end_offset) {
+    uint64_t new_zero_offset = supply_zero_offset_;
+    zx_status_t status = page_list_.ForEveryPageAndGapInRange(
+        [&new_zero_offset](const VmPageOrMarker* p, uint64_t off) {
+          ASSERT(p->IsPage());
+          vm_page_t* page = p->Page();
+          ASSERT(is_page_dirty_tracked(page));
+          ASSERT(!is_page_clean(page));
+          DEBUG_ASSERT(!pmm_is_loaned(page));
+          new_zero_offset += PAGE_SIZE;
+          return ZX_ERR_NEXT;
+        },
+        [](uint64_t start, uint64_t end) {
+          // Bail if we found a gap.
+          return ZX_ERR_STOP;
+        },
+        supply_zero_offset_, end_offset);
+    // We don't expect a failure from the traversal.
+    DEBUG_ASSERT(status == ZX_OK);
+
+    // Advance supply_zero_offset_.
+    supply_zero_offset_ = new_zero_offset;
+  }
 }
 
 zx_status_t VmCowPages::EnumerateDirtyRangesLocked(uint64_t offset, uint64_t len,
@@ -4147,27 +4238,7 @@ zx_status_t VmCowPages::EnumerateDirtyRangesLocked(uint64_t offset, uint64_t len
   // will be iterating over the range [start_offset, end_offset) to enumerate dirty ranges anyway,
   // so attempting to advance supply_zero_offset_ within this range still keeps the order of work
   // performed in this call the same.
-  if (supply_zero_offset_ >= start_offset && supply_zero_offset_ < end_offset) {
-    uint64_t new_zero_offset = supply_zero_offset_;
-    zx_status_t status = page_list_.ForEveryPageAndGapInRange(
-        [&new_zero_offset](const VmPageOrMarker* p, uint64_t off) {
-          ASSERT(p->IsPage());
-          ASSERT(is_page_dirty(p->Page()));
-          DEBUG_ASSERT(!pmm_is_loaned(p->Page()));
-          new_zero_offset += PAGE_SIZE;
-          return ZX_ERR_NEXT;
-        },
-        [](uint64_t start, uint64_t end) {
-          // Bail if we found a gap.
-          return ZX_ERR_STOP;
-        },
-        supply_zero_offset_, end_offset);
-    // We don't expect a failure from the traversal.
-    ASSERT(status == ZX_OK);
-
-    // Advance supply_zero_offset_.
-    supply_zero_offset_ = new_zero_offset;
-  }
+  TryAdvanceSupplyZeroOffsetLocked(start_offset, end_offset);
 
   // First consider the portion of the range that ends before supply_zero_offset_.
   // We don't have a range to consider here if offset was greater than supply_zero_offset_.
@@ -4219,11 +4290,13 @@ zx_status_t VmCowPages::EnumerateDirtyRangesLocked(uint64_t offset, uint64_t len
 
     zx_status_t status = page_list_.ForEveryPageAndGapInRange(
         [&committed_start, &committed_len](const VmPageOrMarker* p, uint64_t off) {
-          // We can only find Dirty pages beyond supply_zero_offset_. There can be no markers as
+          // We can only find un-Clean pages beyond supply_zero_offset_. There can be no markers as
           // they represent Clean zero pages.
           ASSERT(p->IsPage());
-          ASSERT(is_page_dirty(p->Page()));
-          DEBUG_ASSERT(!pmm_is_loaned(p->Page()));
+          vm_page_t* page = p->Page();
+          ASSERT(is_page_dirty_tracked(page));
+          ASSERT(!is_page_clean(page));
+          DEBUG_ASSERT(!pmm_is_loaned(page));
 
           // Start a run of committed pages if we are not tracking one yet.
           if (committed_len == 0) {
@@ -4296,15 +4369,11 @@ zx_status_t VmCowPages::WritebackBeginLocked(uint64_t offset, uint64_t len) {
   const uint64_t start = offset;
   const uint64_t end = ktl::min(offset + len, supply_zero_offset_);
   zx_status_t status = page_list_.ForEveryPageInRange(
-      [](auto* p, uint64_t off) {
+      [this](auto* p, uint64_t off) {
         // Transition pages from Dirty to AwaitingClean.
         if (p->IsPage() && is_page_dirty(p->Page())) {
-          vm_page_t* page = p->Page();
-          DEBUG_ASSERT(page->object.get_page_offset() == off);
-          DEBUG_ASSERT(!pmm_is_loaned(page));
-          page->object.dirty_state = static_cast<uint8_t>(DirtyState::AwaitingClean);
-          // Leave the page in the Dirty queue for now as it is not clean yet; move it out on
-          // WritebackEnd.
+          AssertHeld(lock_);
+          UpdateDirtyStateLocked(p->Page(), off, DirtyState::AwaitingClean);
         }
         return ZX_ERR_NEXT;
       },
@@ -4351,14 +4420,8 @@ zx_status_t VmCowPages::WritebackEndLocked(uint64_t offset, uint64_t len) {
       [this](auto* p, uint64_t off) {
         // Transition pages from AwaitingClean to Clean.
         if (p->IsPage() && is_page_awaiting_clean(p->Page())) {
-          vm_page_t* page = p->Page();
-          DEBUG_ASSERT(page->object.get_object() == this);
-          DEBUG_ASSERT(page->object.get_page_offset() == off);
-          DEBUG_ASSERT(!pmm_is_loaned(page));
-          page->object.dirty_state = static_cast<uint8_t>(DirtyState::Clean);
-          // Move the page back out to the evictable pager queues and start tracking age
-          // information.
-          pmm_page_queues()->MoveToPagerBacked(page, this, off);
+          AssertHeld(lock_);
+          UpdateDirtyStateLocked(p->Page(), off, DirtyState::Clean);
         }
         return ZX_ERR_NEXT;
       },

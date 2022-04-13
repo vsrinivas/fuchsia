@@ -805,6 +805,18 @@ class VmCowPages final
   // terms of functional correctness this never has to be called.
   void UpdateOnAccessLocked(vm_page_t* page, uint pf_flags) TA_REQ(lock_);
 
+  // Updates the page's dirty state to the one specified, and also moves the page between page
+  // queues if required by the dirty state. |dirty_state| should be a valid dirty tracking state,
+  // i.e. one of Clean, AwaitingClean, or Dirty.
+  //
+  // |is_pending_add| indicates whether this page is yet to be added to this object's page list,
+  // false by default. If the page is yet to be added, this function will skip updating the page
+  // queue as an optimization, since the page queue will be updated later when the page gets added
+  // to the page list. |is_pending_add| also helps determine certain validation checks that can be
+  // performed on the page.
+  void UpdateDirtyStateLocked(vm_page_t* page, uint64_t offset, DirtyState dirty_state,
+                              bool is_pending_add = false) TA_REQ(lock_);
+
   // Prepares the specified range for a write, forwarding a DIRTY page request to the page source if
   // pages are clean and need to transition to dirty, in which case ZX_ERR_SHOULD_WAIT will be
   // returned and the caller should wait on |page_request|. If no page requests need to be
@@ -819,6 +831,11 @@ class VmCowPages final
   // |dirty_len_out| <= |len|.
   zx_status_t PrepareForWriteLocked(LazyPageRequest* page_request, uint64_t offset, uint64_t len,
                                     uint64_t* dirty_len_out) TA_REQ(lock_);
+
+  // If supply_zero_offset_ falls within the specified range [start_offset, end_offset), try to
+  // advance supply_zero_offset_ over any pages in the range that might have been committed
+  // immediately following supply_zero_offset_.
+  void TryAdvanceSupplyZeroOffsetLocked(uint64_t start_offset, uint64_t end_offset) TA_REQ(lock_);
 
   // Initializes and adds as a child the given VmCowPages as a full clone of this one such that the
   // VmObjectPaged backlink can be moved from this to the child, keeping all page offsets, sizes and
