@@ -43,10 +43,12 @@ async fn run_test(url: &str, name: &str, replace_config_value: bool) {
         .unwrap();
 
     let expected_greeting = if replace_config_value {
+        // [START config_replace]
         builder
             .replace_config_value_string(&config_component, "greeting", "Fuchsia")
             .await
             .unwrap();
+        // [END config_replace]
         "Fuchsia"
     } else {
         "World"
@@ -59,12 +61,12 @@ async fn run_test(url: &str, name: &str, replace_config_value: bool) {
 
 #[fuchsia::test]
 async fn inspect_rust() -> Result<(), Error> {
-    run_test("#meta/config_rust.cm", "config_rust", false).await;
+    run_test("#meta/config_example.cm", "config_example", false).await;
     Ok(())
 }
 
 #[fuchsia::test]
 async fn inspect_rust_replace() -> Result<(), Error> {
-    run_test("#meta/config_rust.cm", "config_rust_replace", true).await;
+    run_test("#meta/config_example.cm", "config_example_replace", true).await;
     Ok(())
 }

@@ -49,32 +49,44 @@ fuchsia_test_component("cpp_test") {
   deps = [ ":cpp_bin" ]
 }
 
-fuchsia_test_package("config_integration_test") {
-  test_components = [
-    ":rust_test",
-    ":cpp_test",
-  ]
+fuchsia_test_package("rust_config_integration_test") {
+  test_components = [ ":rust_test" ]
   deps = [
-    "//examples/components/config/cpp",
-    "//examples/components/config/rust",
+    "//examples/components/config/rust:component",
+    "//examples/components/config/rust:values_from_gn",
   ]
 }
 
-fuchsia_test_package("config_integration_test_with_json_values") {
-  test_components = [
-    ":rust_test",
-    ":cpp_test",
-  ]
+fuchsia_test_package("cpp_config_integration_test") {
+  test_components = [ ":cpp_test" ]
   deps = [
-    "//examples/components/config/cpp:cpp_with_json_values",
-    "//examples/components/config/rust:rust_with_json_values",
+    "//examples/components/config/cpp:component",
+    "//examples/components/config/cpp:values_from_gn",
+  ]
+}
+
+fuchsia_test_package("cpp_config_integration_test_with_json_values") {
+  test_components = [ ":cpp_test" ]
+  deps = [
+    "//examples/components/config/cpp:component",
+    "//examples/components/config/cpp:values_from_json_file",
+  ]
+}
+
+fuchsia_test_package("rust_config_integration_test_with_json_values") {
+  test_components = [ ":rust_test" ]
+  deps = [
+    "//examples/components/config/rust:component",
+    "//examples/components/config/rust:values_from_json_file",
   ]
 }
 
 group("integration_test") {
   testonly = true
   deps = [
-    ":config_integration_test",
-    ":config_integration_test_with_json_values",
+    ":cpp_config_integration_test",
+    ":cpp_config_integration_test_with_json_values",
+    ":rust_config_integration_test",
+    ":rust_config_integration_test_with_json_values",
   ]
 }

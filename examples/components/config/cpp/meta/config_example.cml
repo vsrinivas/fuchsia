@@ -10,10 +10,14 @@
         runner: "elf",
         binary: "bin/config_example_cpp",
     },
+
+    // [START config]
     config: {
         greeting: {
             type: "string",
             max_size: 512,
         },
     },
+
+    // [END config]
 }

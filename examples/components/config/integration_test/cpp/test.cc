@@ -50,7 +50,9 @@ class IntegrationTest : public gtest::RealLoopFixture {
     realm_builder.AddChild(name, url, options);
 
     if (replace_config_value) {
+      // [START config_replace]
       realm_builder.ReplaceConfigValue(name, "greeting", "Fuchsia");
+      // [END config_replace]
     }
 
     realm_builder.AddRoute(component_testing::Route{
@@ -69,8 +71,8 @@ class IntegrationTest : public gtest::RealLoopFixture {
   }
 };
 
-TEST_F(IntegrationTest, ConfigCpp) { RunTest("#meta/config_cpp.cm", "config_cpp", false); }
+TEST_F(IntegrationTest, ConfigCpp) { RunTest("#meta/config_example.cm", "config_example", false); }
 
 TEST_F(IntegrationTest, ConfigCppReplace) {
-  RunTest("#meta/config_cpp.cm", "config_cpp_replace", true);
+  RunTest("#meta/config_example.cm", "config_example_replace", true);
 }

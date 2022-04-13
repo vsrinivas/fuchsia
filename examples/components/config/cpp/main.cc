@@ -8,20 +8,30 @@
 #include <lib/sys/inspect/cpp/component.h>
 #include <lib/syslog/cpp/macros.h>
 
+// [START imports]
 #include <example_config/config.h>
+// [END imports]
 
 int main(int argc, const char* argv[], char* envp[]) {
-  // Retrieve configuration from process args
+  // [START get_config]
+  // Retrieve configuration
   auto c = example_config::Config::from_args();
+  // [END get_config]
 
-  // Print configured greeting to syslog
+  // Print greeting to the log
   FX_LOGS(INFO) << "Hello, " << c.greeting << "!";
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  // [START inspect]
+  // Record configuration to inspect
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   sys::ComponentInspector inspector(context.get());
   c.record_to_inspect(inspector.inspector());
+  // [END inspect]
 
   loop.Run();
+
   return 0;
 }
+// [END code]

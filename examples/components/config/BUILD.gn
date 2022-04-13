@@ -6,26 +6,12 @@ import("//build/components.gni")
 
 group("config") {
   deps = [
-    ":config_example",
-    ":config_example_with_json_values",
+    "cpp",
+    "rust",
   ]
 }
 
 group("tests") {
   testonly = true
   deps = [ "integration_test" ]
-}
-
-fuchsia_package("config_example") {
-  deps = [
-    "cpp",
-    "rust",
-  ]
-}
-
-fuchsia_package("config_example_with_json_values") {
-  deps = [
-    "cpp:cpp_with_json_values",
-    "rust:rust_with_json_values",
-  ]
 }

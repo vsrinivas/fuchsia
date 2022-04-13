@@ -448,6 +448,7 @@ controller, see [offering test capabilities](#routing-from-test).
 | --------------------------- |:----:|:----:|
 | Legacy components           |    Y |    Y |
 | Mock components             |    Y |    Y |
+| Overriding config values    |    Y |    Y |
 | Manipulating component decl |    Y |    N |
 
 

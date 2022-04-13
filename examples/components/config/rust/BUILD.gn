@@ -5,28 +5,42 @@
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
+# [START args_declare]
 declare_args() {
   # Set this in args.gn to override the greeting emitted by this example.
   config_example_rust_greeting = "World"
 }
 
+# [END args_declare]
+
+# [START binary]
 rustc_binary("bin") {
+  # [START_EXCLUDE]
   output_name = "config_example_rust"
   sources = [ "src/main.rs" ]
+
+  # [END_EXCLUDE]
   deps = [
     ":example_config",
+
+    # [START_EXCLUDE]
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:tracing",
+
+    # [END_EXCLUDE]
   ]
 }
 
+# [END binary]
+
+# [START component]
 fuchsia_component_manifest("manifest") {
-  component_name = "config_rust"
-  manifest = "meta/config_rust.cml"
+  component_name = "config_example"
+  manifest = "meta/config_example.cml"
   restricted_features = [ "structured_config" ]
 }
 
@@ -35,32 +49,53 @@ fuchsia_component("component") {
   deps = [ ":bin" ]
 }
 
+# [END component]
+
+# [START library]
 fuchsia_structured_config_rust_lib("example_config") {
   cm_label = ":manifest"
 }
 
-fuchsia_structured_config_values("values") {
+# [END library]
+
+# [START config_values_gn]
+fuchsia_structured_config_values("values_from_gn") {
   cm_label = ":manifest"
   values = {
     greeting = config_example_rust_greeting
   }
 }
 
+# [END config_values_gn]
+
+# [START config_values_json]
 fuchsia_structured_config_values("values_from_json_file") {
   cm_label = ":manifest"
   values_source = "../config_example_default_values.json5"
 }
 
-group("rust") {
+# [END config_values_json]
+
+# [START package]
+fuchsia_package("rust_config_example") {
   deps = [
     ":component",
-    ":values",
+    ":values_from_gn",
   ]
 }
 
-group("rust_with_json_values") {
+# [END package]
+
+fuchsia_package("rust_config_example_with_json_values") {
   deps = [
     ":component",
     ":values_from_json_file",
+  ]
+}
+
+group("rust") {
+  deps = [
+    ":rust_config_example",
+    ":rust_config_example_with_json_values",
   ]
 }
