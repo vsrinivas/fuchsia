@@ -46,6 +46,13 @@ class EmptyTable extends $fidl.Table {
 
   EmptyTable._(Map<int, dynamic> argv, this.$unknownData);
 
+  EmptyTable $cloneWith({
+    $fidl.OptionalNullable<Map<int, $fidl.UnknownRawData>> $unknownData =
+        const $fidl.OptionalNullable.undefined(),
+  }) {
+    return EmptyTable();
+  }
+
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;
 
@@ -82,6 +89,13 @@ class ExtensionTable extends $fidl.Table {
   });
 
   ExtensionTable._(Map<int, dynamic> argv, this.$unknownData);
+
+  ExtensionTable $cloneWith({
+    $fidl.OptionalNullable<Map<int, $fidl.UnknownRawData>> $unknownData =
+        const $fidl.OptionalNullable.undefined(),
+  }) {
+    return ExtensionTable();
+  }
 
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;
@@ -125,6 +139,20 @@ class NewerSimpleTable extends $fidl.Table {
       : x = argv[1],
         y = argv[5],
         z = argv[6];
+
+  NewerSimpleTable $cloneWith({
+    $fidl.OptionalNullable<Map<int, $fidl.UnknownRawData>> $unknownData =
+        const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> x = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> y = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> z = const $fidl.OptionalNullable.undefined(),
+  }) {
+    return NewerSimpleTable(
+      x: x.or(this.x),
+      y: y.or(this.y),
+      z: z.or(this.z),
+    );
+  }
 
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;
@@ -184,6 +212,16 @@ class OlderSimpleTable extends $fidl.Table {
 
   OlderSimpleTable._(Map<int, dynamic> argv, this.$unknownData) : x = argv[1];
 
+  OlderSimpleTable $cloneWith({
+    $fidl.OptionalNullable<Map<int, $fidl.UnknownRawData>> $unknownData =
+        const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> x = const $fidl.OptionalNullable.undefined(),
+  }) {
+    return OlderSimpleTable(
+      x: x.or(this.x),
+    );
+  }
+
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;
   final int? x;
@@ -233,6 +271,20 @@ class ReverseOrdinalTable extends $fidl.Table {
       : z = argv[1],
         y = argv[2],
         x = argv[3];
+
+  ReverseOrdinalTable $cloneWith({
+    $fidl.OptionalNullable<Map<int, $fidl.UnknownRawData>> $unknownData =
+        const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> z = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> y = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> x = const $fidl.OptionalNullable.undefined(),
+  }) {
+    return ReverseOrdinalTable(
+      z: z.or(this.z),
+      y: y.or(this.y),
+      x: x.or(this.x),
+    );
+  }
 
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;
@@ -291,6 +343,18 @@ class SimpleTable extends $fidl.Table {
   SimpleTable._(Map<int, dynamic> argv, this.$unknownData)
       : x = argv[1],
         y = argv[5];
+
+  SimpleTable $cloneWith({
+    $fidl.OptionalNullable<Map<int, $fidl.UnknownRawData>> $unknownData =
+        const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> x = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> y = const $fidl.OptionalNullable.undefined(),
+  }) {
+    return SimpleTable(
+      x: x.or(this.x),
+      y: y.or(this.y),
+    );
+  }
 
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;
@@ -471,6 +535,143 @@ class SixtyFourOrdinalTable extends $fidl.Table {
         v62 = argv[62],
         v63 = argv[63],
         v64 = argv[64];
+
+  SixtyFourOrdinalTable $cloneWith({
+    $fidl.OptionalNullable<Map<int, $fidl.UnknownRawData>> $unknownData =
+        const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v1 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v2 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v3 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v4 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v5 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v6 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v7 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v8 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v9 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v10 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v11 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v12 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v13 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v14 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v15 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v16 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v17 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v18 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v19 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v20 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v21 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v22 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v23 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v24 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v25 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v26 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v27 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v28 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v29 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v30 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v31 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v32 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v33 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v34 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v35 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v36 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v37 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v38 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v39 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v40 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v41 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v42 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v43 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v44 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v45 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v46 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v47 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v48 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v49 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v50 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v51 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v52 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v53 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v54 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v55 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v56 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v57 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v58 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v59 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v60 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v61 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v62 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> v63 = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<ExtensionTable> v64 =
+        const $fidl.OptionalNullable.undefined(),
+  }) {
+    return SixtyFourOrdinalTable(
+      v1: v1.or(this.v1),
+      v2: v2.or(this.v2),
+      v3: v3.or(this.v3),
+      v4: v4.or(this.v4),
+      v5: v5.or(this.v5),
+      v6: v6.or(this.v6),
+      v7: v7.or(this.v7),
+      v8: v8.or(this.v8),
+      v9: v9.or(this.v9),
+      v10: v10.or(this.v10),
+      v11: v11.or(this.v11),
+      v12: v12.or(this.v12),
+      v13: v13.or(this.v13),
+      v14: v14.or(this.v14),
+      v15: v15.or(this.v15),
+      v16: v16.or(this.v16),
+      v17: v17.or(this.v17),
+      v18: v18.or(this.v18),
+      v19: v19.or(this.v19),
+      v20: v20.or(this.v20),
+      v21: v21.or(this.v21),
+      v22: v22.or(this.v22),
+      v23: v23.or(this.v23),
+      v24: v24.or(this.v24),
+      v25: v25.or(this.v25),
+      v26: v26.or(this.v26),
+      v27: v27.or(this.v27),
+      v28: v28.or(this.v28),
+      v29: v29.or(this.v29),
+      v30: v30.or(this.v30),
+      v31: v31.or(this.v31),
+      v32: v32.or(this.v32),
+      v33: v33.or(this.v33),
+      v34: v34.or(this.v34),
+      v35: v35.or(this.v35),
+      v36: v36.or(this.v36),
+      v37: v37.or(this.v37),
+      v38: v38.or(this.v38),
+      v39: v39.or(this.v39),
+      v40: v40.or(this.v40),
+      v41: v41.or(this.v41),
+      v42: v42.or(this.v42),
+      v43: v43.or(this.v43),
+      v44: v44.or(this.v44),
+      v45: v45.or(this.v45),
+      v46: v46.or(this.v46),
+      v47: v47.or(this.v47),
+      v48: v48.or(this.v48),
+      v49: v49.or(this.v49),
+      v50: v50.or(this.v50),
+      v51: v51.or(this.v51),
+      v52: v52.or(this.v52),
+      v53: v53.or(this.v53),
+      v54: v54.or(this.v54),
+      v55: v55.or(this.v55),
+      v56: v56.or(this.v56),
+      v57: v57.or(this.v57),
+      v58: v58.or(this.v58),
+      v59: v59.or(this.v59),
+      v60: v60.or(this.v60),
+      v61: v61.or(this.v61),
+      v62: v62.or(this.v62),
+      v63: v63.or(this.v63),
+      v64: v64.or(this.v64),
+    );
+  }
 
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;
@@ -832,6 +1033,16 @@ class TableWithAttributes extends $fidl.Table {
 
   TableWithAttributes._(Map<int, dynamic> argv, this.$unknownData)
       : x = argv[1];
+
+  TableWithAttributes $cloneWith({
+    $fidl.OptionalNullable<Map<int, $fidl.UnknownRawData>> $unknownData =
+        const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> x = const $fidl.OptionalNullable.undefined(),
+  }) {
+    return TableWithAttributes(
+      x: x.or(this.x),
+    );
+  }
 
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;

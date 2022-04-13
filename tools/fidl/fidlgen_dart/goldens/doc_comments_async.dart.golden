@@ -498,6 +498,17 @@ class Table extends $fidl.Table {
 
   Table._(Map<int, dynamic> argv, this.$unknownData) : field = argv[1];
 
+  Table $cloneWith({
+    $fidl.OptionalNullable<Map<int, $fidl.UnknownRawData>> $unknownData =
+        const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> field =
+        const $fidl.OptionalNullable.undefined(),
+  }) {
+    return Table(
+      field: field.or(this.field),
+    );
+  }
+
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;
 

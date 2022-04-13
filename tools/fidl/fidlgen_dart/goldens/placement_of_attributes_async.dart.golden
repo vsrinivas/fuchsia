@@ -344,6 +344,17 @@ class ExampleTable extends $fidl.Table {
 
   ExampleTable._(Map<int, dynamic> argv, this.$unknownData) : member = argv[1];
 
+  ExampleTable $cloneWith({
+    $fidl.OptionalNullable<Map<int, $fidl.UnknownRawData>> $unknownData =
+        const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> member =
+        const $fidl.OptionalNullable.undefined(),
+  }) {
+    return ExampleTable(
+      member: member.or(this.member),
+    );
+  }
+
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;
   final int? member;

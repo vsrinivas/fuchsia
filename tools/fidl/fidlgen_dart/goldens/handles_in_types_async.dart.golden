@@ -299,6 +299,17 @@ class TableWithHandle extends $fidl.Table {
 
   TableWithHandle._(Map<int, dynamic> argv, this.$unknownData) : h = argv[1];
 
+  TableWithHandle $cloneWith({
+    $fidl.OptionalNullable<Map<int, $fidl.UnknownRawData>> $unknownData =
+        const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<$zircon.Vmo> h =
+        const $fidl.OptionalNullable.undefined(),
+  }) {
+    return TableWithHandle(
+      h: h.or(this.h),
+    );
+  }
+
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;
   final $zircon.Vmo? h;

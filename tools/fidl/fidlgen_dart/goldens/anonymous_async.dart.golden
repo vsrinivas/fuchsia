@@ -727,6 +727,23 @@ class FunctionApplication extends $fidl.Table {
         args = argv[3],
         flags = argv[4];
 
+  FunctionApplication $cloneWith({
+    $fidl.OptionalNullable<Map<int, $fidl.UnknownRawData>> $unknownData =
+        const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<String> func =
+        const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<List<Expression?>> args =
+        const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<Flags> flags =
+        const $fidl.OptionalNullable.undefined(),
+  }) {
+    return FunctionApplication(
+      func: func.or(this.func),
+      args: args.or(this.args),
+      flags: flags.or(this.flags),
+    );
+  }
+
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;
   final String? func;
@@ -784,6 +801,17 @@ class TableMember extends $fidl.Table {
 
   TableMember._(Map<int, dynamic> argv, this.$unknownData)
       : tableData = argv[2];
+
+  TableMember $cloneWith({
+    $fidl.OptionalNullable<Map<int, $fidl.UnknownRawData>> $unknownData =
+        const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<List<TableData>> tableData =
+        const $fidl.OptionalNullable.undefined(),
+  }) {
+    return TableMember(
+      tableData: tableData.or(this.tableData),
+    );
+  }
 
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;

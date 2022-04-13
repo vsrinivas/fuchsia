@@ -418,8 +418,8 @@ func init() {
 	}
 
 	constantContext.ReserveNames([]string{"dynamic", "int", "num"})
-	declarationContext.ReserveNames([]string{"List", "Map", "Never", "Null",
-		"Object"})
+	declarationContext.ReserveNames([]string{"List", "Map", "Never", "None",
+		"Null", "Object", "Some"})
 	methodContext.ReserveNames([]string{"dynamic", "hashCode", "int",
 		"noSuchMethod", "num", "runtimeType", "toString"})
 	bitsMemberContext.ReserveNames([]string{"dynamic", "hashCode", "int",

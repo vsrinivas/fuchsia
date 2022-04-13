@@ -24,6 +24,7 @@ dart_library("fidl") {
     "src/interface.dart",
     "src/interface_async.dart",
     "src/message.dart",
+    "src/optional_nullable.dart",
     "src/struct.dart",
     "src/table.dart",
     "src/types.dart",

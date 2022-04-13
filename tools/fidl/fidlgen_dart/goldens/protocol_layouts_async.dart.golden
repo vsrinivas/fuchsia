@@ -929,6 +929,16 @@ class LocalTablePayload extends $fidl.Table {
 
   LocalTablePayload._(Map<int, dynamic> argv, this.$unknownData) : a = argv[1];
 
+  LocalTablePayload $cloneWith({
+    $fidl.OptionalNullable<Map<int, $fidl.UnknownRawData>> $unknownData =
+        const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> a = const $fidl.OptionalNullable.undefined(),
+  }) {
+    return LocalTablePayload(
+      a: a.or(this.a),
+    );
+  }
+
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;
   final int? a;
@@ -974,6 +984,16 @@ class MainProtocolOneWayAnonRequest extends $fidl.Table {
 
   MainProtocolOneWayAnonRequest._(Map<int, dynamic> argv, this.$unknownData)
       : a = argv[1];
+
+  MainProtocolOneWayAnonRequest $cloneWith({
+    $fidl.OptionalNullable<Map<int, $fidl.UnknownRawData>> $unknownData =
+        const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> a = const $fidl.OptionalNullable.undefined(),
+  }) {
+    return MainProtocolOneWayAnonRequest(
+      a: a.or(this.a),
+    );
+  }
 
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;
@@ -1021,6 +1041,16 @@ class MainProtocolTwoWayAnonResponse extends $fidl.Table {
 
   MainProtocolTwoWayAnonResponse._(Map<int, dynamic> argv, this.$unknownData)
       : a = argv[1];
+
+  MainProtocolTwoWayAnonResponse $cloneWith({
+    $fidl.OptionalNullable<Map<int, $fidl.UnknownRawData>> $unknownData =
+        const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> a = const $fidl.OptionalNullable.undefined(),
+  }) {
+    return MainProtocolTwoWayAnonResponse(
+      a: a.or(this.a),
+    );
+  }
 
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;
@@ -1070,6 +1100,16 @@ class MainProtocolTwoWayAnonWithErrorRequest extends $fidl.Table {
       Map<int, dynamic> argv, this.$unknownData)
       : a = argv[1];
 
+  MainProtocolTwoWayAnonWithErrorRequest $cloneWith({
+    $fidl.OptionalNullable<Map<int, $fidl.UnknownRawData>> $unknownData =
+        const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> a = const $fidl.OptionalNullable.undefined(),
+  }) {
+    return MainProtocolTwoWayAnonWithErrorRequest(
+      a: a.or(this.a),
+    );
+  }
+
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;
   final int? a;
@@ -1117,6 +1157,16 @@ class MainProtocolOnAnonWithErrorResponse extends $fidl.Table {
   MainProtocolOnAnonWithErrorResponse._(
       Map<int, dynamic> argv, this.$unknownData)
       : a = argv[1];
+
+  MainProtocolOnAnonWithErrorResponse $cloneWith({
+    $fidl.OptionalNullable<Map<int, $fidl.UnknownRawData>> $unknownData =
+        const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<int> a = const $fidl.OptionalNullable.undefined(),
+  }) {
+    return MainProtocolOnAnonWithErrorResponse(
+      a: a.or(this.a),
+    );
+  }
 
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;

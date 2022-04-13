@@ -1812,6 +1812,10 @@
           "name": "src/message.dart",
           "type": "ExportDirectiveImpl"
         },
+        "src/optional_nullable.dart": {
+          "name": "src/optional_nullable.dart",
+          "type": "ExportDirectiveImpl"
+        },
         "src/struct.dart": {
           "name": "src/struct.dart",
           "type": "ExportDirectiveImpl"
@@ -3870,6 +3874,160 @@
         }
       },
       "name": "message.dart",
+      "type": "file"
+    },
+    "optional_nullable.dart": {
+      "ClassDeclarationImpl": {
+        "None": {
+          "ConstructorDeclarationImpl": {
+            "None": {
+              "name": "None",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ExtendsClause": {
+            "name": "OptionalNullable",
+            "type": "extends"
+          },
+          "TypeParameterListImpl": {
+            "<T>": {
+              "TypeParameterImpl": {
+                "T": {
+                  "name": "T",
+                  "type": "TypeParameterImpl"
+                }
+              },
+              "name": "<T>",
+              "type": "TypeParameterListImpl"
+            }
+          },
+          "name": "None",
+          "type": "ClassDeclarationImpl"
+        },
+        "OptionalNullable": {
+          "ConstructorDeclarationImpl": {
+            "OptionalNullable._": {
+              "FieldFormalParameterImpl": {
+                "this._value": {
+                  "name": "this._value",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "OptionalNullable._",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "OptionalNullable.undefined": {
+              "name": "OptionalNullable.undefined",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "isDefined": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "isDefined",
+              "returnType": "bool",
+              "type": "MethodDeclarationImpl"
+            },
+            "isUndefined": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "isUndefined",
+              "returnType": "bool",
+              "type": "MethodDeclarationImpl"
+            },
+            "or": {
+              "SimpleFormalParameterImpl": {
+                "fallback": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "fallback",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "T?"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "or",
+              "returnType": "T?",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "TypeParameterListImpl": {
+            "<T>": {
+              "TypeParameterImpl": {
+                "T": {
+                  "name": "T",
+                  "type": "TypeParameterImpl"
+                }
+              },
+              "name": "<T>",
+              "type": "TypeParameterListImpl"
+            }
+          },
+          "name": "OptionalNullable",
+          "type": "ClassDeclarationImpl"
+        },
+        "Some": {
+          "ConstructorDeclarationImpl": {
+            "Some": {
+              "SimpleFormalParameterImpl": {
+                "value": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "value",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "T"
+                }
+              },
+              "name": "Some",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ExtendsClause": {
+            "name": "OptionalNullable",
+            "type": "extends"
+          },
+          "TypeParameterListImpl": {
+            "<T>": {
+              "TypeParameterImpl": {
+                "T": {
+                  "name": "T",
+                  "type": "TypeParameterImpl"
+                }
+              },
+              "name": "<T>",
+              "type": "TypeParameterListImpl"
+            }
+          },
+          "name": "Some",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "optional_nullable.dart",
       "type": "file"
     },
     "struct.dart": {

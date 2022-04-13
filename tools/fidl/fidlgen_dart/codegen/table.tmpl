@@ -24,6 +24,21 @@ class {{ .Name }} extends $fidl.Table {
     {{ .Name }} = argv[{{ .Ordinal }}]
 {{- end }}{{- end }};
 
+  {{ .Name }} $cloneWith({
+    $fidl.OptionalNullable<Map<int, $fidl.UnknownRawData>> $unknownData =
+      const $fidl.OptionalNullable.undefined(),
+  {{- range .Members }}
+    $fidl.OptionalNullable<{{ .Type.Decl }}> {{ .Name }} =
+      const $fidl.OptionalNullable.undefined(),
+  {{- end }}
+  }) {
+    return {{ .Name }}(
+  {{- range .Members }}
+      {{ .Name }}: {{ .Name }}.or(this.{{ .Name }}),
+  {{- end }}
+    );
+  }
+
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;
 {{- range .Members }}

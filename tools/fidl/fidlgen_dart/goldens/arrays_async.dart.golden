@@ -315,6 +315,17 @@ class TableLargeArray extends $fidl.Table {
 
   TableLargeArray._(Map<int, dynamic> argv, this.$unknownData) : a = argv[1];
 
+  TableLargeArray $cloneWith({
+    $fidl.OptionalNullable<Map<int, $fidl.UnknownRawData>> $unknownData =
+        const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<Uint32List> a =
+        const $fidl.OptionalNullable.undefined(),
+  }) {
+    return TableLargeArray(
+      a: a.or(this.a),
+    );
+  }
+
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;
   final Uint32List? a;
@@ -360,6 +371,17 @@ class TableSmallArray extends $fidl.Table {
   });
 
   TableSmallArray._(Map<int, dynamic> argv, this.$unknownData) : a = argv[1];
+
+  TableSmallArray $cloneWith({
+    $fidl.OptionalNullable<Map<int, $fidl.UnknownRawData>> $unknownData =
+        const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<Uint32List> a =
+        const $fidl.OptionalNullable.undefined(),
+  }) {
+    return TableSmallArray(
+      a: a.or(this.a),
+    );
+  }
 
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;

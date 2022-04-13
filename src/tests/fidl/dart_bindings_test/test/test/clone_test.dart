@@ -7,12 +7,13 @@
 
 import 'dart:typed_data';
 
+import 'package:fidl/fidl.dart';
 import 'package:fidl_fidl_test_dartbindingstest/fidl_async.dart';
 import 'package:test/test.dart';
 
 void main() {
   print('clone-test');
-  group('clone', () {
+  group('clone struct', () {
     test('exact', () {
       final s1 = ExampleStruct(foo: 'test', bar: 42);
       final s2 = ExampleStruct.clone(s1);
@@ -40,6 +41,41 @@ void main() {
       expect(s2.foo, equals('test'));
       expect(s2.bar, equals(42));
       expect(s2.baz, equals(null));
+    });
+  });
+
+  group('clone table', () {
+    test('exact', () {
+      final t1 = ExampleTable(foo: 'foo', bar: 3);
+      final t2 = t1.$cloneWith();
+      expect(t2.foo, equals('foo'));
+      expect(t2.bar, equals(3));
+      expect(t2.baz, isNull);
+      expect(t2.$unknownData, isNull);
+    });
+    test('modify field', () {
+      final t1 = ExampleTable(foo: 'foo', bar: 3);
+      final t2 = t1.$cloneWith(foo: Some('hello'));
+      expect(t2.foo, equals('hello'));
+      expect(t2.bar, equals(3));
+      expect(t2.baz, isNull);
+      expect(t2.$unknownData, isNull);
+    });
+    test('set field', () {
+      final t1 = ExampleTable(foo: 'foo', bar: 3);
+      final t2 = t1.$cloneWith(baz: Some(Uint8List(10)));
+      expect(t2.foo, equals('foo'));
+      expect(t2.bar, equals(3));
+      expect(t2.baz?.length, equals(10));
+      expect(t2.$unknownData, isNull);
+    });
+    test('unset field', () {
+      final t1 = ExampleTable(foo: 'foo', bar: 3, baz: Uint8List(10));
+      final t2 = t1.$cloneWith(baz: None());
+      expect(t2.foo, equals('foo'));
+      expect(t2.bar, equals(3));
+      expect(t2.baz, isNull);
+      expect(t2.$unknownData, isNull);
     });
   });
 }
