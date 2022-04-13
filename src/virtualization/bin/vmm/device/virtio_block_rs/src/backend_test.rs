@@ -423,67 +423,32 @@ pub async fn test_read_write_loop<T: BackendTest>() -> Result<(), Error> {
     Ok(())
 }
 
+/// Expand the list test cases into test cases in a module.
 macro_rules! instantiate_backend_test_suite {
+    ($test_type:ty, $name:ident, $($names:ident),+) => {
+        crate::backend_test::instantiate_backend_test_suite!($test_type, $name);
+        crate::backend_test::instantiate_backend_test_suite!($test_type, $($names),+);
+    };
+    ($test_type:ty, $name:ident) => {
+        #[fuchsia_async::run_singlethreaded(test)]
+        async fn $name() -> Result<(), Error> {
+            crate::backend_test::$name::<$test_type>().await
+        }
+    };
     ($test_type:ty) => {
-        #[fuchsia_async::run_singlethreaded(test)]
-        async fn test_get_attrs() -> Result<(), Error> {
-            crate::backend_test::test_get_attrs::<$test_type>().await
-        }
-
-        #[fuchsia_async::run_singlethreaded(test)]
-        async fn test_read_per_sector_ranges() -> Result<(), Error> {
-            crate::backend_test::test_read_per_sector_ranges::<$test_type>().await
-        }
-
-        #[fuchsia_async::run_singlethreaded(test)]
-        async fn test_read_multiple_sectors_per_range() -> Result<(), Error> {
-            crate::backend_test::test_read_multiple_sectors_per_range::<$test_type>().await
-        }
-
-        #[fuchsia_async::run_singlethreaded(test)]
-        async fn test_read_subsector_range() -> Result<(), Error> {
-            crate::backend_test::test_read_subsector_range::<$test_type>().await
-        }
-
-        #[fuchsia_async::run_singlethreaded(test)]
-        async fn test_read_large() -> Result<(), Error> {
-            crate::backend_test::test_read_large::<$test_type>().await
-        }
-
-        #[fuchsia_async::run_singlethreaded(test)]
-        async fn test_read_concurrent() -> Result<(), Error> {
-            crate::backend_test::test_read_concurrent::<$test_type>().await
-        }
-
-        #[fuchsia_async::run_singlethreaded(test)]
-        async fn test_write_per_sector_ranges() -> Result<(), Error> {
-            crate::backend_test::test_write_per_sector_ranges::<$test_type>().await
-        }
-
-        #[fuchsia_async::run_singlethreaded(test)]
-        async fn test_write_multiple_sectors_per_range() -> Result<(), Error> {
-            crate::backend_test::test_write_multiple_sectors_per_range::<$test_type>().await
-        }
-
-        #[fuchsia_async::run_singlethreaded(test)]
-        async fn test_write_subsector_range() -> Result<(), Error> {
-            crate::backend_test::test_write_subsector_range::<$test_type>().await
-        }
-
-        #[fuchsia_async::run_singlethreaded(test)]
-        async fn test_write_large() -> Result<(), Error> {
-            crate::backend_test::test_write_large::<$test_type>().await
-        }
-
-        #[fuchsia_async::run_singlethreaded(test)]
-        async fn test_write_concurrent() -> Result<(), Error> {
-            crate::backend_test::test_write_concurrent::<$test_type>().await
-        }
-
-        #[fuchsia_async::run_singlethreaded(test)]
-        async fn test_read_write_loop() -> Result<(), Error> {
-            crate::backend_test::test_read_write_loop::<$test_type>().await
-        }
+        crate::backend_test::instantiate_backend_test_suite!($test_type,
+                                         test_get_attrs,
+                                         test_read_per_sector_ranges,
+                                         test_read_multiple_sectors_per_range,
+                                         test_read_subsector_range,
+                                         test_read_large,
+                                         test_read_concurrent,
+                                         test_write_per_sector_ranges,
+                                         test_write_multiple_sectors_per_range,
+                                         test_write_subsector_range,
+                                         test_write_large,
+                                         test_write_concurrent,
+                                         test_read_write_loop);
     };
 }
 
