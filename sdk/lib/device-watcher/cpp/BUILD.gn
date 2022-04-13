@@ -26,7 +26,6 @@ sdk_shared_library("cpp") {
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/system/ulib/fdio-caller",
   ]
 }
 

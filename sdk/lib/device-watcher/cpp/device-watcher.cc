@@ -6,7 +6,7 @@
 
 #include <fcntl.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
 #include <lib/zx/clock.h>
 #include <string.h>
@@ -30,9 +30,12 @@ zx_status_t DirWatcher::Create(fbl::unique_fd dir_fd,
   if (endpoints.is_error()) {
     return endpoints.status_value();
   }
-  fdio_cpp::FdioCaller caller(std::move(dir_fd));
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(caller.borrow_channel()))
+  fdio_t* io = fdio_unsafe_fd_to_io(dir_fd.get());
+  zx::unowned_channel channel{fdio_unsafe_borrow_channel(io)};
+
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(channel))
                     ->Watch(fio::wire::WatchMask::kRemoved, 0, std::move(endpoints->server));
+  fdio_unsafe_release(io);
   if (!result.ok()) {
     return result.status();
   }
