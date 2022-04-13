@@ -36,7 +36,6 @@ fuchsia_driver("intel-i2c-driver") {
     "//sdk/banjo/fuchsia.hardware.i2cimpl:fuchsia.hardware.i2cimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
-    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_c",
     "//sdk/fidl/fuchsia.hardware.i2c.businfo:fuchsia.hardware.i2c.businfo_llcpp",
     "//sdk/lib/fit",
     "//src/devices/lib/driver",

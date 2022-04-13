@@ -10,7 +10,6 @@
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <fidl/fuchsia.hardware.i2c.businfo/cpp/wire.h>
 #include <fuchsia/hardware/i2c/c/banjo.h>
-#include <fuchsia/hardware/i2c/c/fidl.h>
 #include <fuchsia/hardware/i2cimpl/c/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/ddk/debug.h>
@@ -253,9 +252,9 @@ zx_status_t IntelI2cController::I2cImplTransact(const uint32_t bus_id, const i2c
     segs[i].buf = reinterpret_cast<uint8_t*>(op_list[i].data_buffer);
     segs[i].len = static_cast<int>(op_list[i].data_size);
     if (op_list[i].is_read) {
-      segs[i].type = fuchsia_hardware_i2c_SegmentType_READ;
+      segs[i].type = IntelI2cSubordinateSegment::kRead;
     } else {
-      segs[i].type = fuchsia_hardware_i2c_SegmentType_WRITE;
+      segs[i].type = IntelI2cSubordinateSegment::kWrite;
     }
   }
 

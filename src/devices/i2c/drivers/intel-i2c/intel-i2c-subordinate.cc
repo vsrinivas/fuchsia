@@ -4,7 +4,6 @@
 
 #include "intel-i2c-subordinate.h"
 
-#include <fuchsia/hardware/i2c/c/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/clock.h>
@@ -60,11 +59,11 @@ std::unique_ptr<IntelI2cSubordinate> IntelI2cSubordinate::Create(IntelI2cControl
 zx_status_t IntelI2cSubordinate::Transfer(const IntelI2cSubordinateSegment* segments,
                                           int segment_count) {
   zx_status_t status = ZX_OK;
-  int last_type = fuchsia_hardware_i2c_SegmentType_END;
+  int last_type = IntelI2cSubordinateSegment::kEnd;
 
   for (int i = 0; i < segment_count; i++) {
-    if (segments[i].type != fuchsia_hardware_i2c_SegmentType_READ &&
-        segments[i].type != fuchsia_hardware_i2c_SegmentType_WRITE) {
+    if (segments[i].type != IntelI2cSubordinateSegment::kRead &&
+        segments[i].type != IntelI2cSubordinateSegment::kWrite) {
       status = ZX_ERR_INVALID_ARGS;
       return status;
     }
@@ -103,7 +102,7 @@ zx_status_t IntelI2cSubordinate::Transfer(const IntelI2cSubordinateSegment* segm
       uint32_t cmd = (restart << kDataCmdRestart);
       restart = 0;
       switch (segments->type) {
-        case fuchsia_hardware_i2c_SegmentType_WRITE:
+        case IntelI2cSubordinateSegment::kWrite:
           // Wait if the TX FIFO is full
           if (controller_->IsTxFifoFull()) {
             status = controller_->WaitForTxEmpty(zx::deadline_after(kTimeout));
@@ -115,7 +114,7 @@ zx_status_t IntelI2cSubordinate::Transfer(const IntelI2cSubordinateSegment* segm
           cmd |= (kDataCmdCmdWrite << kDataCmdCmd);
           buf++;
           break;
-        case fuchsia_hardware_i2c_SegmentType_READ:
+        case IntelI2cSubordinateSegment::kRead:
           cmd |= (kDataCmdCmdRead << kDataCmdCmd);
           break;
         default:
@@ -129,10 +128,10 @@ zx_status_t IntelI2cSubordinate::Transfer(const IntelI2cSubordinateSegment* segm
         cmd |= (0x1 << kDataCmdStop);
       }
 
-      if (segments->type == fuchsia_hardware_i2c_SegmentType_READ) {
+      if (segments->type == IntelI2cSubordinateSegment::kRead) {
         status = controller_->IssueRx(cmd);
         outstanding_reads++;
-      } else if (segments->type == fuchsia_hardware_i2c_SegmentType_WRITE) {
+      } else if (segments->type == IntelI2cSubordinateSegment::kWrite) {
         status = controller_->IssueTx(cmd);
       } else {
         __builtin_trap();

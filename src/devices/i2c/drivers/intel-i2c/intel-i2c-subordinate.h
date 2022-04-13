@@ -18,7 +18,11 @@ inline constexpr uint8_t kI2c10BitAddress = 10;
 class IntelI2cController;
 
 struct IntelI2cSubordinateSegment {
-  int type;
+  enum : int {
+    kEnd = 1,
+    kRead = 2,
+    kWrite = 3,
+  } type;
   int len;
   uint8_t* buf;
 };
