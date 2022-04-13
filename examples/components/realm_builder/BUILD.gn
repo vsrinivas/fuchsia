@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//src/dart/testing/dart_test_wrapper_component.gni")
 
 group("tests") {
   testonly = true
@@ -14,6 +15,12 @@ fuchsia_component("cpp-component") {
   manifest = "cpp/meta/sample_realm.cml"
   component_name = "cpp"
   deps = [ "cpp:bin" ]
+}
+
+dart_test_wrapper_component("dart-test-wrapper-component") {
+  wrapper_binary = "sample_realm_dart_test_wrapper"
+  manifest = "dart/meta/sample_realm_dart_test_wrapper.cml"
+  dart_test_component_name = "sample-test"
 }
 
 fuchsia_component("rust-component") {
@@ -51,8 +58,9 @@ fuchsia_component("echo_server_legacy_component") {
 fuchsia_test_package("package") {
   package_name = "realm-builder-examples"
   test_components = [
-    ":rust-component",
     ":cpp-component",
+    ":dart-test-wrapper-component",
+    ":rust-component",
   ]
 
   deps = [
@@ -60,5 +68,6 @@ fuchsia_test_package("package") {
     ":echo_client_legacy_component",
     ":echo_server_component",
     ":echo_server_legacy_component",
+    "dart:sample-test",
   ]
 }

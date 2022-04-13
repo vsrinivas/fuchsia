@@ -1,0 +1,26 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    // [START include_shard_dart]
+    include: [
+        "sys/component/realm_builder.shard.cml",
+
+        // [START_EXCLUDE]
+        "syslog/client.shard.cml",
+
+        // [END_EXCLUDE]
+    ],
+
+    // [END include_shard_dart]
+    use: [
+        { protocol: "fuchsia.sys2.EventSource" },
+        {
+            event: [
+                "started",
+                "stopped",
+            ],
+            from: "framework",
+        },
+    ],
+}

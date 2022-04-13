@@ -4,14 +4,11 @@
 {
     include: [
         // The Dart runner depends on fuchsia.posix.socket.Provider,
-        // which is a system capability.
+        // which is a system-test capability.
         "//src/sys/test_manager/system-test.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "sys/component/realm_builder.shard.cml",
     ],
-    program: {
-        binary: "bin/dart_realm_builder_test_realm",
-    },
     use: [
         { protocol: "fuchsia.sys2.EventSource" },
         {

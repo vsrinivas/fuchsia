@@ -18,7 +18,7 @@ use {
 
 const DART_RUNNERS_ENVIRONMENT_NAME: &'static str = "dart_runners_env";
 
-const TEST_NAME: &str = "fuchsia-component-test-dart-tests";
+const TEST_NAME: &str = env!("DART_TEST_COMPONENT_NAME");
 
 /// Wraps the dart realm builder test component, to launch and run as a Fuchsia
 /// component test.

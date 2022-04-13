@@ -3,9 +3,6 @@
         "sys/component/realm_builder.shard.cml",
         "syslog/client.shard.cml",
     ],
-    program: {
-        data: "data/fuchsia-component-test-dart-tests",
-    },
     use: [
         { protocol: "fuchsia.sys2.EventSource" },
         {
