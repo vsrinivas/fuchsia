@@ -5,7 +5,7 @@
 // Slightly modified version of demo from https://github.com/dtolnay/cxx, adapted to demonstrate
 // usage of cxx in the Fuchsia tree and FFI usage from both directions
 
-// TODO(fxbug.rev/81940): This lint must currently be disabled if your bridge uses UniquePtr.
+// TODO(fxbug.dev/81940): This lint must currently be disabled if your bridge uses UniquePtr.
 #![allow(elided_lifetimes_in_paths)]
 
 use cxx::{CxxString, CxxVector};
@@ -39,7 +39,7 @@ pub mod ffi {
 
         type BlobstoreClient;
 
-        // TODO(fxbug.rev/81940): See above; UniquePtr usage in the bridge currently requires
+        // TODO(fxbug.dev/81940): See above; UniquePtr usage in the bridge currently requires
         // disabling the `allow_lifetimes_in_paths` lint at the crate level.
         pub fn new_blobstore_client() -> UniquePtr<BlobstoreClient>;
         pub fn put(&self, parts: &mut MultiBuf) -> u64;
