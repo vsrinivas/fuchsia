@@ -1,0 +1,41 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/snapshotter_integration_test_exe",
+    },
+    children: [
+        {
+            name: "data_provider",
+            url: "#meta/fake_data_provider.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.feedback.DataProvider" ],
+            from: "#data_provider",
+        },
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#data_provider" ],
+        },
+        {
+            storage: "tmp",
+            from: "parent",
+            to: "#data_provider",
+            rights: [ "rw*" ],
+        },
+    ],
+}

@@ -21,12 +21,6 @@ fuchsia_package("fake-crash-reporter") {
   visibility += [ "//src/developer/exception_broker/tests" ]
 }
 
-fuchsia_package("fake-data-provider") {
-  testonly = true
-
-  deps = [ ":fake_data_provider" ]
-}
-
 fuchsia_package("fake-device-id-provider") {
   testonly = true
 
@@ -61,7 +55,7 @@ fuchsia_component("fake_crash_reporter_v2") {
 }
 
 fuchsia_component("fake_data_provider") {
-  manifest = "meta/fake_data_provider.cmx"
+  manifest = "meta/fake_data_provider.cml"
 
   deps = [
     ":checkboard_100",

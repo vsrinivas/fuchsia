@@ -51,7 +51,7 @@ executable("snapshotter_unittest_exe") {
 fuchsia_component("snapshotter_integration_test") {
   testonly = true
 
-  manifest = "meta/snapshotter_integration_test.cmx"
+  manifest = "meta/snapshotter_integration_test.cml"
 
   deps = [ ":snapshotter_integration_test_exe" ]
 }
@@ -72,6 +72,11 @@ fuchsia_test_package("snapshot-tests") {
     ":snapshotter_integration_test",
     ":snapshotter_unittest",
   ]
+
+  deps = [
+    # Packages for the components that we are injecting in the integration tests.
+    "//src/developer/forensics/testing/fakes:fake_data_provider",
+  ]
 }
 
 ###############################################################################
@@ -80,10 +85,5 @@ fuchsia_test_package("snapshot-tests") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":snapshot-tests",
-
-    # Packages for the components that we are injecting in the integration tests.
-    "//src/developer/forensics/testing/fakes:fake-data-provider",
-  ]
+  deps = [ ":snapshot-tests" ]
 }

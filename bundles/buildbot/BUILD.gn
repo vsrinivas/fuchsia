@@ -137,7 +137,6 @@ group("core_base_packages") {
     "//src/developer/debug/debug_agent",
     "//src/developer/forensics:copy-pkg",
     "//src/developer/forensics/testing/fakes:fake-crash-reporter",
-    "//src/developer/forensics/testing/fakes:fake-data-provider",
     "//src/developer/shell/interpreter:shell_server",
     "//src/diagnostics/archivist:archivist-for-embedding",
     "//src/diagnostics/validator/logs/encoding/puppet/dart:log-validator-dart-puppet",
