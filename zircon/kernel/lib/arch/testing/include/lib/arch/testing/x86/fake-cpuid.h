@@ -56,7 +56,7 @@ enum class X86Microprocessor {
 // FakeCpuidIo's methods are expected to be instantiated by "CPUID value
 // types", defined in <lib/arch/x86/cpuid.h>.
 //
-// Using `Populate`, test authors can provide dummy data for specific
+// Using `Populate`, test authors can provide fake data for specific
 // (sub)leaves.
 //
 // FakeCpuidIo is immovable and non-copyable; it is expected to be passed
@@ -83,7 +83,7 @@ class FakeCpuidIo {
     return CpuidValue::Get().ReadFrom(Get<CpuidValue>());
   }
 
-  // Provides dummy data for a given leaf. Subsequent calls can overwrite
+  // Provides fake data for a given leaf. Subsequent calls can overwrite
   // previously populated data.
   FakeCpuidIo& Populate(uint32_t leaf, uint32_t subleaf, uint32_t eax, uint32_t ebx, uint32_t ecx,
                         uint32_t edx);
