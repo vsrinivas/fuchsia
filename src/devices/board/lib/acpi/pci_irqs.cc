@@ -109,7 +109,7 @@ acpi_legacy_irq PrtEntryToIrq(ACPI_HANDLE object, ACPI_PCI_ROUTING_TABLE* entry)
   return new_irq;
 }
 
-void AddIrqToAccounting(acpi_legacy_irq irq, x64Pciroot::Context* context,
+void AddIrqToAccounting(acpi_legacy_irq irq, AcpiPciroot::Context* context,
                         ACPI_PCI_ROUTING_TABLE* entry, std::optional<PortInfo> port,
                         uint8_t local_dev_id) {
   // The first time we find an irq in a PRT it should be stored in the root's
@@ -155,7 +155,7 @@ void AddIrqToAccounting(acpi_legacy_irq irq, x64Pciroot::Context* context,
   }
 }
 
-ACPI_STATUS ReadPciRoutingTable(ACPI_HANDLE object, x64Pciroot::Context* context,
+ACPI_STATUS ReadPciRoutingTable(ACPI_HANDLE object, AcpiPciroot::Context* context,
                                 std::optional<PortInfo> port) {
   acpi::AcpiBuffer<ACPI_PCI_ROUTING_TABLE> irt_buffer;
   ACPI_STATUS status = AcpiGetIrqRoutingTable(object, &irt_buffer);
@@ -200,7 +200,7 @@ ACPI_STATUS ReadPciRoutingTable(ACPI_HANDLE object, x64Pciroot::Context* context
 namespace acpi {
 
 ACPI_STATUS GetPciRootIrqRouting(acpi::Acpi* acpi, ACPI_HANDLE root_obj,
-                                 x64Pciroot::Context* context) {
+                                 AcpiPciroot::Context* context) {
   // Start with the Root's _PRT. The spec requires that one exists.
   ACPI_STATUS status = ReadPciRoutingTable(root_obj, context, std::nullopt);
   if (status != AE_OK) {
