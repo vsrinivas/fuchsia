@@ -24,7 +24,7 @@
 
 namespace test_handlesintypes {
 namespace wire {
-using ObjType = ::test_handlesintypes::obj_type;
+using ObjType = ::test_handlesintypes::ObjType;
 
 struct HandlesInTypes;
 

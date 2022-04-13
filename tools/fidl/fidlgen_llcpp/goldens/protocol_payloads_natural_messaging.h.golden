@@ -248,12 +248,12 @@ class ::fidl::internal::NaturalMessageConverter<
     if (m.is_error()) {
       return DomainObject{
           {.result = ::test_protocolpayloads_imported::
-               ComposedProtocol_OnComposedWithError_Result::WithErr(
+               ComposedProtocolOnComposedWithErrorResult::WithErr(
                    m.error_value())}};
     } else {
       return DomainObject{
           {.result = ::test_protocolpayloads_imported::
-               ComposedProtocol_OnComposedWithError_Result::WithResponse(
+               ComposedProtocolOnComposedWithErrorResult::WithResponse(
                    std::move(m.value()))}};
     }
   }
@@ -322,12 +322,11 @@ class ::fidl::internal::NaturalMessageConverter<
     if (m.is_error()) {
       return DomainObject{
           {.result = ::test_protocolpayloads::
-               MainProtocol_OnLocalWithError_Result::WithErr(m.error_value())}};
+               MainProtocolOnLocalWithErrorResult::WithErr(m.error_value())}};
     } else {
-      return DomainObject{
-          {.result =
-               ::test_protocolpayloads::MainProtocol_OnLocalWithError_Result::
-                   WithResponse(std::move(m.value()))}};
+      return DomainObject{{.result = ::test_protocolpayloads::
+                               MainProtocolOnLocalWithErrorResult::WithResponse(
+                                   std::move(m.value()))}};
     }
   }
 };
@@ -397,13 +396,13 @@ class ::fidl::internal::NaturalMessageConverter<
       ::fidl::Event<::test_protocolpayloads::MainProtocol::OnImportWithError>&&
           m) {
     if (m.is_error()) {
-      return DomainObject{{.result = ::test_protocolpayloads::
-                               MainProtocol_OnImportWithError_Result::WithErr(
-                                   m.error_value())}};
+      return DomainObject{
+          {.result = ::test_protocolpayloads::
+               MainProtocolOnImportWithErrorResult::WithErr(m.error_value())}};
     } else {
       return DomainObject{
           {.result =
-               ::test_protocolpayloads::MainProtocol_OnImportWithError_Result::
+               ::test_protocolpayloads::MainProtocolOnImportWithErrorResult::
                    WithResponse(std::move(m.value()))}};
     }
   }
@@ -432,17 +431,15 @@ namespace test_protocolpayloads {}  // namespace test_protocolpayloads
 
 template <>
 class ::fidl::Event<::test_protocolpayloads::MainProtocol::OnAnonWithError>
-    final
-    : public ::fitx::result<
-          uint32_t,
-          ::test_protocolpayloads::MainProtocol_OnAnonWithError_Response> {
+    final : public ::fitx::result<
+                uint32_t,
+                ::test_protocolpayloads::MainProtocolOnAnonWithErrorResponse> {
  public:
   using ::fitx::result<
       uint32_t,
-      ::test_protocolpayloads::MainProtocol_OnAnonWithError_Response>::result;
+      ::test_protocolpayloads::MainProtocolOnAnonWithErrorResponse>::result;
   Event(::fitx::result<
-        uint32_t,
-        ::test_protocolpayloads::MainProtocol_OnAnonWithError_Response>
+        uint32_t, ::test_protocolpayloads::MainProtocolOnAnonWithErrorResponse>
             v)
       : result(std::move(v)) {}
   Event() = delete;
@@ -479,12 +476,11 @@ class ::fidl::internal::NaturalMessageConverter<
     if (m.is_error()) {
       return DomainObject{
           {.result = ::test_protocolpayloads::
-               MainProtocol_OnAnonWithError_Result::WithErr(m.error_value())}};
+               MainProtocolOnAnonWithErrorResult::WithErr(m.error_value())}};
     } else {
-      return DomainObject{
-          {.result =
-               ::test_protocolpayloads::MainProtocol_OnAnonWithError_Result::
-                   WithResponse(std::move(m.value()))}};
+      return DomainObject{{.result = ::test_protocolpayloads::
+                               MainProtocolOnAnonWithErrorResult::WithResponse(
+                                   std::move(m.value()))}};
     }
   }
 };
@@ -569,12 +565,12 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<
     if (m.is_error()) {
       return DomainObject{
           {.result = ::test_protocolpayloads_imported::
-               ComposedProtocol_TwoWayComposedWithError_Result::WithErr(
+               ComposedProtocolTwoWayComposedWithErrorResult::WithErr(
                    m.error_value())}};
     } else {
       return DomainObject{
           {.result = ::test_protocolpayloads_imported::
-               ComposedProtocol_TwoWayComposedWithError_Result::WithResponse(
+               ComposedProtocolTwoWayComposedWithErrorResult::WithResponse(
                    std::move(m.value()))}};
     }
   }
@@ -665,15 +661,14 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<
       ::fidl::Response<
           ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>&& m) {
     if (m.is_error()) {
-      return DomainObject{
-          {.result = ::test_protocolpayloads::
-               MainProtocol_TwoWayLocalWithError_Result::WithErr(
-                   m.error_value())}};
+      return DomainObject{{.result = ::test_protocolpayloads::
+                               MainProtocolTwoWayLocalWithErrorResult::WithErr(
+                                   m.error_value())}};
     } else {
       return DomainObject{
-          {.result = ::test_protocolpayloads::
-               MainProtocol_TwoWayLocalWithError_Result::WithResponse(
-                   std::move(m.value()))}};
+          {.result =
+               ::test_protocolpayloads::MainProtocolTwoWayLocalWithErrorResult::
+                   WithResponse(std::move(m.value()))}};
     }
   }
 };
@@ -768,14 +763,13 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<
       ::fidl::Response<
           ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>&& m) {
     if (m.is_error()) {
-      return DomainObject{
-          {.result = ::test_protocolpayloads::
-               MainProtocol_TwoWayImportWithError_Result::WithErr(
-                   m.error_value())}};
+      return DomainObject{{.result = ::test_protocolpayloads::
+                               MainProtocolTwoWayImportWithErrorResult::WithErr(
+                                   m.error_value())}};
     } else {
       return DomainObject{
           {.result = ::test_protocolpayloads::
-               MainProtocol_TwoWayImportWithError_Result::WithResponse(
+               MainProtocolTwoWayImportWithErrorResult::WithResponse(
                    std::move(m.value()))}};
     }
   }
@@ -830,14 +824,14 @@ class ::fidl::Response<
     final
     : public ::fitx::result<
           uint32_t,
-          ::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Response> {
+          ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorResponse> {
  public:
-  using ::fitx::result<uint32_t,
-                       ::test_protocolpayloads::
-                           MainProtocol_TwoWayAnonWithError_Response>::result;
+  using ::fitx::result<
+      uint32_t,
+      ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorResponse>::result;
   Response(::fitx::result<
            uint32_t,
-           ::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Response>
+           ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorResponse>
                v)
       : result(std::move(v)) {}
   Response() = delete;
@@ -875,13 +869,13 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<
           ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>&& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_protocolpayloads::
-                               MainProtocol_TwoWayAnonWithError_Result::WithErr(
+                               MainProtocolTwoWayAnonWithErrorResult::WithErr(
                                    m.error_value())}};
     } else {
       return DomainObject{
-          {.result = ::test_protocolpayloads::
-               MainProtocol_TwoWayAnonWithError_Result::WithResponse(
-                   std::move(m.value()))}};
+          {.result =
+               ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorResult::
+                   WithResponse(std::move(m.value()))}};
     }
   }
 };
@@ -891,13 +885,12 @@ class ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
     : public ::fitx::result<
           ::fidl::AnyErrorIn<
               ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>,
-          ::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Response> {
+          ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorResponse> {
  public:
   using ::fitx::result<
       ::fidl::AnyErrorIn<
           ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>,
-      ::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Response>::
-      result;
+      ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorResponse>::result;
 };
 
 template <>

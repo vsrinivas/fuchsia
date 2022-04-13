@@ -2,9 +2,8 @@
 
 #include <fidl/test.unknowninteractions/cpp/natural_types.h>
 
-::test_unknowninteractions::Example_FlexibleTwoWay_Response::Storage_
-test_unknowninteractions::Example_FlexibleTwoWay_Response::CloneStorage_()
-    const {
+::test_unknowninteractions::ExampleFlexibleTwoWayResponse::Storage_
+test_unknowninteractions::ExampleFlexibleTwoWayResponse::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.__reserved)};
 }
 
@@ -15,8 +14,8 @@ test_unknowninteractions::ExampleFlexibleTwoWayTopResponse::CloneStorage_()
 }
 
 std::shared_ptr<
-    ::test_unknowninteractions::Example_FlexibleTwoWay_Result::Storage_>
-test_unknowninteractions::Example_FlexibleTwoWay_Result::CloneStorage_() const {
+    ::test_unknowninteractions::ExampleFlexibleTwoWayResult::Storage_>
+test_unknowninteractions::ExampleFlexibleTwoWayResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:

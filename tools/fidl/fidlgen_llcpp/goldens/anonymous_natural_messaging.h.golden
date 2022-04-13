@@ -38,15 +38,14 @@ __LOCAL extern "C" const fidl_type_t
 
 template <>
 class ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod> final
-    : public ::fitx::result<
-          ::test_anonymous::SomeProtocol_SomeMethod_Error,
-          ::test_anonymous::SomeProtocol_SomeMethod_Response> {
+    : public ::fitx::result<::test_anonymous::SomeProtocolSomeMethodError,
+                            ::test_anonymous::SomeProtocolSomeMethodResponse> {
  public:
   using ::fitx::result<
-      ::test_anonymous::SomeProtocol_SomeMethod_Error,
-      ::test_anonymous::SomeProtocol_SomeMethod_Response>::result;
-  Response(::fitx::result<::test_anonymous::SomeProtocol_SomeMethod_Error,
-                          ::test_anonymous::SomeProtocol_SomeMethod_Response>
+      ::test_anonymous::SomeProtocolSomeMethodError,
+      ::test_anonymous::SomeProtocolSomeMethodResponse>::result;
+  Response(::fitx::result<::test_anonymous::SomeProtocolSomeMethodError,
+                          ::test_anonymous::SomeProtocolSomeMethodResponse>
                v)
       : result(std::move(v)) {}
   Response() = delete;
@@ -80,12 +79,12 @@ class ::fidl::internal::NaturalMessageConverter<
       ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>&& m) {
     if (m.is_error()) {
       return DomainObject{
-          {.result = ::test_anonymous::SomeProtocol_SomeMethod_Result::WithErr(
+          {.result = ::test_anonymous::SomeProtocolSomeMethodResult::WithErr(
                m.error_value())}};
     } else {
       return DomainObject{
           {.result =
-               ::test_anonymous::SomeProtocol_SomeMethod_Result::WithResponse(
+               ::test_anonymous::SomeProtocolSomeMethodResult::WithResponse(
                    std::move(m.value()))}};
     }
   }
@@ -95,11 +94,11 @@ template <>
 class ::fidl::Result<::test_anonymous::SomeProtocol::SomeMethod> final
     : public ::fitx::result<
           ::fidl::AnyErrorIn<::test_anonymous::SomeProtocol::SomeMethod>,
-          ::test_anonymous::SomeProtocol_SomeMethod_Response> {
+          ::test_anonymous::SomeProtocolSomeMethodResponse> {
  public:
   using ::fitx::result<
       ::fidl::AnyErrorIn<::test_anonymous::SomeProtocol::SomeMethod>,
-      ::test_anonymous::SomeProtocol_SomeMethod_Response>::result;
+      ::test_anonymous::SomeProtocolSomeMethodResponse>::result;
 };
 
 template <>

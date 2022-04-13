@@ -23,7 +23,7 @@ class SomeProtocolSomeMethodRequest;
 
 class OverrideTest;
 
-class SomeProtocol_SomeMethod_Response;
+class SomeProtocolSomeMethodResponse;
 
 class SomeProtocolSomeMethodTopResponse;
 
@@ -35,7 +35,7 @@ class UnionMember;
 
 class Expression;
 
-class SomeProtocol_SomeMethod_Result;
+class SomeProtocolSomeMethodResult;
 
 extern "C" const fidl_type_t test_anonymous_UnionMemberTable;
 
@@ -686,48 +686,46 @@ class Expression {
 extern "C" const fidl_type_t
     test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
 
-class SomeProtocol_SomeMethod_Response {
+class SomeProtocolSomeMethodResponse {
  private:
   struct Storage_;
 
  public:
-  SomeProtocol_SomeMethod_Response(Storage_ storage) noexcept
+  SomeProtocolSomeMethodResponse(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
-  SomeProtocol_SomeMethod_Response(
+  SomeProtocolSomeMethodResponse(
       ::test_anonymous::BitsMember bits_member) noexcept
       : storage_({.bits_member = std::move(bits_member)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |SomeProtocol_SomeMethod_Response| only if all of its
+  // Default constructs a |SomeProtocolSomeMethodResponse| only if all of its
   // members are default constructible.
-  SomeProtocol_SomeMethod_Response() = default;
+  SomeProtocolSomeMethodResponse() = default;
 #pragma clang diagnostic pop
 
-  SomeProtocol_SomeMethod_Response(
-      SomeProtocol_SomeMethod_Response&&) noexcept = default;
-  SomeProtocol_SomeMethod_Response& operator=(
-      SomeProtocol_SomeMethod_Response&&) noexcept = default;
-  SomeProtocol_SomeMethod_Response(
-      const SomeProtocol_SomeMethod_Response& other) noexcept
-      : SomeProtocol_SomeMethod_Response(other.CloneStorage_()) {}
-  SomeProtocol_SomeMethod_Response& operator=(
-      const SomeProtocol_SomeMethod_Response& other) noexcept {
+  SomeProtocolSomeMethodResponse(SomeProtocolSomeMethodResponse&&) noexcept =
+      default;
+  SomeProtocolSomeMethodResponse& operator=(
+      SomeProtocolSomeMethodResponse&&) noexcept = default;
+  SomeProtocolSomeMethodResponse(
+      const SomeProtocolSomeMethodResponse& other) noexcept
+      : SomeProtocolSomeMethodResponse(other.CloneStorage_()) {}
+  SomeProtocolSomeMethodResponse& operator=(
+      const SomeProtocolSomeMethodResponse& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
-  bool operator==(
-      const SomeProtocol_SomeMethod_Response& other) const noexcept {
+  bool operator==(const SomeProtocolSomeMethodResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_anonymous::SomeProtocol_SomeMethod_Response, 4,
-        4>::Equal(this, &other);
+        ::test_anonymous::SomeProtocolSomeMethodResponse, 4, 4>::Equal(this,
+                                                                       &other);
   }
-  bool operator!=(
-      const SomeProtocol_SomeMethod_Response& other) const noexcept {
+  bool operator!=(const SomeProtocolSomeMethodResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_anonymous::SomeProtocol_SomeMethod_Response, 4,
-        4>::Equal(this, &other);
+        ::test_anonymous::SomeProtocolSomeMethodResponse, 4, 4>::Equal(this,
+                                                                       &other);
   }
 
   ::test_anonymous::BitsMember bits_member() const {
@@ -736,9 +734,9 @@ class SomeProtocol_SomeMethod_Response {
 
   ::test_anonymous::BitsMember& bits_member() { return storage_.bits_member; }
 
-  SomeProtocol_SomeMethod_Response(
+  SomeProtocolSomeMethodResponse(
       ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : SomeProtocol_SomeMethod_Response(Storage_{
+      : SomeProtocolSomeMethodResponse(Storage_{
             .bits_member = {},
         }) {}
 
@@ -751,9 +749,9 @@ class SomeProtocol_SomeMethod_Response {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_anonymous::SomeProtocol_SomeMethod_Response, 4, 4>;
+      ::test_anonymous::SomeProtocolSomeMethodResponse, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
-      ::test_anonymous::SomeProtocol_SomeMethod_Response>;
+      ::test_anonymous::SomeProtocolSomeMethodResponse>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<
                       Storage_, ::test_anonymous::BitsMember,
@@ -765,12 +763,12 @@ class SomeProtocol_SomeMethod_Response {
 
 extern "C" const fidl_type_t test_anonymous_SomeProtocol_SomeMethod_ResultTable;
 
-class SomeProtocol_SomeMethod_Result {
+class SomeProtocolSomeMethodResult {
  private:
   using Storage_ =
       cpp17::variant<cpp17::monostate,
-                     ::test_anonymous::SomeProtocol_SomeMethod_Response,
-                     ::test_anonymous::SomeProtocol_SomeMethod_Error>;
+                     ::test_anonymous::SomeProtocolSomeMethodResponse,
+                     ::test_anonymous::SomeProtocolSomeMethodError>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -779,45 +777,42 @@ class SomeProtocol_SomeMethod_Result {
     kErr = 2,       // 0x2
   };
 
-  SomeProtocol_SomeMethod_Result(
-      SomeProtocol_SomeMethod_Result&& other) noexcept
-      : SomeProtocol_SomeMethod_Result(
+  SomeProtocolSomeMethodResult(SomeProtocolSomeMethodResult&& other) noexcept
+      : SomeProtocolSomeMethodResult(
             ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
     *storage_ = std::move(*other.storage_);
   }
-  SomeProtocol_SomeMethod_Result& operator=(
-      SomeProtocol_SomeMethod_Result&& other) noexcept {
+  SomeProtocolSomeMethodResult& operator=(
+      SomeProtocolSomeMethodResult&& other) noexcept {
     if (this != &other) {
       *storage_ = std::move(*other.storage_);
     }
     return *this;
   }
-  SomeProtocol_SomeMethod_Result(
-      const SomeProtocol_SomeMethod_Result& other) noexcept
-      : SomeProtocol_SomeMethod_Result(other.CloneStorage_()) {}
-  SomeProtocol_SomeMethod_Result& operator=(
-      const SomeProtocol_SomeMethod_Result& other) noexcept {
+  SomeProtocolSomeMethodResult(
+      const SomeProtocolSomeMethodResult& other) noexcept
+      : SomeProtocolSomeMethodResult(other.CloneStorage_()) {}
+  SomeProtocolSomeMethodResult& operator=(
+      const SomeProtocolSomeMethodResult& other) noexcept {
     if (this != &other) {
       storage_ = other.CloneStorage_();
     }
     return *this;
   }
 
-  bool operator==(const SomeProtocol_SomeMethod_Result& other) const noexcept {
+  bool operator==(const SomeProtocolSomeMethodResult& other) const noexcept {
     return *storage_ == *other.storage_;
   }
-  bool operator!=(const SomeProtocol_SomeMethod_Result& other) const noexcept {
+  bool operator!=(const SomeProtocolSomeMethodResult& other) const noexcept {
     return *storage_ != *other.storage_;
   }
 
-  constexpr ::test_anonymous::SomeProtocol_SomeMethod_Result::Tag Which()
-      const {
-    return SomeProtocol_SomeMethod_Result::IndexToTag(storage_->index())
-        .value();
+  constexpr ::test_anonymous::SomeProtocolSomeMethodResult::Tag Which() const {
+    return SomeProtocolSomeMethodResult::IndexToTag(storage_->index()).value();
   }
-  static SomeProtocol_SomeMethod_Result WithResponse(
-      ::test_anonymous::SomeProtocol_SomeMethod_Response val) {
-    return SomeProtocol_SomeMethod_Result(
+  static SomeProtocolSomeMethodResult WithResponse(
+      ::test_anonymous::SomeProtocolSomeMethodResponse val) {
+    return SomeProtocolSomeMethodResult(
         std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
   }
 
@@ -827,9 +822,9 @@ class SomeProtocol_SomeMethod_Result {
   ::fidl::internal::UnionMemberView<1, Storage_> response() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
-  static SomeProtocol_SomeMethod_Result WithErr(
-      ::test_anonymous::SomeProtocol_SomeMethod_Error val) {
-    return SomeProtocol_SomeMethod_Result(
+  static SomeProtocolSomeMethodResult WithErr(
+      ::test_anonymous::SomeProtocolSomeMethodError val) {
+    return SomeProtocolSomeMethodResult(
         std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
   }
 
@@ -840,7 +835,7 @@ class SomeProtocol_SomeMethod_Result {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
 
-  SomeProtocol_SomeMethod_Result(
+  SomeProtocolSomeMethodResult(
       ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
       : storage_(std::make_shared<Storage_>()) {}
 
@@ -848,7 +843,7 @@ class SomeProtocol_SomeMethod_Result {
   std::shared_ptr<Storage_> storage_;
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
-      ::test_anonymous::SomeProtocol_SomeMethod_Result>;
+      ::test_anonymous::SomeProtocolSomeMethodResult>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalUnionMember<
                           ::fidl::internal::NaturalCodingConstraintEmpty>(),
@@ -857,16 +852,16 @@ class SomeProtocol_SomeMethod_Result {
                       ::fidl::internal::NaturalUnionMember<
                           fidl::internal::NaturalCodingConstraintEmpty>());
 
-  explicit SomeProtocol_SomeMethod_Result(std::shared_ptr<Storage_> storage)
+  explicit SomeProtocolSomeMethodResult(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
       ::fidl::internal::NaturalDecoder* decoder,
-      ::test_anonymous::SomeProtocol_SomeMethod_Result::Tag tag) {
+      ::test_anonymous::SomeProtocolSomeMethodResult::Tag tag) {
     switch (tag) {
-      case ::test_anonymous::SomeProtocol_SomeMethod_Result::Tag::kResponse:
+      case ::test_anonymous::SomeProtocolSomeMethodResult::Tag::kResponse:
         return 1;
-      case ::test_anonymous::SomeProtocol_SomeMethod_Result::Tag::kErr:
+      case ::test_anonymous::SomeProtocolSomeMethodResult::Tag::kErr:
         return 2;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
@@ -876,13 +871,13 @@ class SomeProtocol_SomeMethod_Result {
   }
 
   static constexpr cpp17::optional<
-      ::test_anonymous::SomeProtocol_SomeMethod_Result::Tag>
+      ::test_anonymous::SomeProtocolSomeMethodResult::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
-        return ::test_anonymous::SomeProtocol_SomeMethod_Result::Tag::kResponse;
+        return ::test_anonymous::SomeProtocolSomeMethodResult::Tag::kResponse;
       case 2:
-        return ::test_anonymous::SomeProtocol_SomeMethod_Result::Tag::kErr;
+        return ::test_anonymous::SomeProtocolSomeMethodResult::Tag::kErr;
       default:
         return cpp17::nullopt;
     }
@@ -900,7 +895,7 @@ class SomeProtocolSomeMethodTopResponse {
   SomeProtocolSomeMethodTopResponse(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   SomeProtocolSomeMethodTopResponse(
-      ::test_anonymous::SomeProtocol_SomeMethod_Result result) noexcept
+      ::test_anonymous::SomeProtocolSomeMethodResult result) noexcept
       : storage_({.result = std::move(result)}) {}
 
 #pragma clang diagnostic push
@@ -936,11 +931,11 @@ class SomeProtocolSomeMethodTopResponse {
         16>::Equal(this, &other);
   }
 
-  const ::test_anonymous::SomeProtocol_SomeMethod_Result& result() const {
+  const ::test_anonymous::SomeProtocolSomeMethodResult& result() const {
     return storage_.result;
   }
 
-  ::test_anonymous::SomeProtocol_SomeMethod_Result& result() {
+  ::test_anonymous::SomeProtocolSomeMethodResult& result() {
     return storage_.result;
   }
 
@@ -953,7 +948,7 @@ class SomeProtocolSomeMethodTopResponse {
 
  private:
   struct Storage_ final {
-    ::test_anonymous::SomeProtocol_SomeMethod_Result result;
+    ::test_anonymous::SomeProtocolSomeMethodResult result;
   };
 
   Storage_ storage_;
@@ -963,11 +958,11 @@ class SomeProtocolSomeMethodTopResponse {
       ::test_anonymous::SomeProtocolSomeMethodTopResponse, 24, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_anonymous::SomeProtocolSomeMethodTopResponse>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_anonymous::SomeProtocol_SomeMethod_Result,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
-                                                        0});
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::test_anonymous::SomeProtocolSomeMethodResult,
+                      fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::result, 0, 0});
   static constexpr auto kPaddingV1 = std::make_tuple();
   static constexpr auto kPaddingV2 = std::make_tuple();
 };
@@ -1038,12 +1033,12 @@ extern "C" const fidl_type_t
     test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
 
 template <>
-struct IsFidlType<::test_anonymous::SomeProtocol_SomeMethod_Response>
+struct IsFidlType<::test_anonymous::SomeProtocolSomeMethodResponse>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::test_anonymous::SomeProtocol_SomeMethod_Response>
+    ::test_anonymous::SomeProtocolSomeMethodResponse>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
@@ -1052,10 +1047,10 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_anonymous::SomeProtocol_SomeMethod_Response,
+    ::test_anonymous::SomeProtocolSomeMethodResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_anonymous::SomeProtocol_SomeMethod_Response, 4, 4> {};
+                ::test_anonymous::SomeProtocolSomeMethodResponse, 4, 4> {};
 
 extern "C" const fidl_type_t
     test_anonymous_SomeProtocolSomeMethodTopResponseTable;
@@ -1165,15 +1160,15 @@ struct internal::NaturalCodingTraits<
 extern "C" const fidl_type_t test_anonymous_SomeProtocol_SomeMethod_ResultTable;
 
 template <>
-struct IsFidlType<::test_anonymous::SomeProtocol_SomeMethod_Result>
+struct IsFidlType<::test_anonymous::SomeProtocolSomeMethodResult>
     : public std::true_type {};
 template <>
-struct IsUnion<::test_anonymous::SomeProtocol_SomeMethod_Result>
+struct IsUnion<::test_anonymous::SomeProtocolSomeMethodResult>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::test_anonymous::SomeProtocol_SomeMethod_Result>
+    ::test_anonymous::SomeProtocolSomeMethodResult>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
@@ -1182,10 +1177,10 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_anonymous::SomeProtocol_SomeMethod_Result,
+    ::test_anonymous::SomeProtocolSomeMethodResult,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
-                ::test_anonymous::SomeProtocol_SomeMethod_Result> {};
+                ::test_anonymous::SomeProtocolSomeMethodResult> {};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -1227,24 +1222,24 @@ struct internal::NaturalCodingTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_anonymous::SomeProtocol_SomeMethod_Error,
+    ::test_anonymous::SomeProtocolSomeMethodError,
     ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
   static constexpr bool is_memcpy_compatible = true;
 
   static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_anonymous::SomeProtocol_SomeMethod_Error* value,
+                     ::test_anonymous::SomeProtocolSomeMethodError* value,
                      size_t offset, size_t recursion_depth) {
-    *encoder->template GetPtr<::test_anonymous::SomeProtocol_SomeMethod_Error>(
+    *encoder->template GetPtr<::test_anonymous::SomeProtocolSomeMethodError>(
         offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_anonymous::SomeProtocol_SomeMethod_Error* value,
+                     ::test_anonymous::SomeProtocolSomeMethodError* value,
                      size_t offset, size_t recursion_depth) {
     *value =
         *decoder
-             ->template GetPtr<::test_anonymous::SomeProtocol_SomeMethod_Error>(
+             ->template GetPtr<::test_anonymous::SomeProtocolSomeMethodError>(
                  offset);
   }
 };

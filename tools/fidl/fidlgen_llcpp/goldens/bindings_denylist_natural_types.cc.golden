@@ -14,9 +14,9 @@ test_bindingsdenylist::OnlyAppearsInImportingLibrary::CloneStorage_() const {
       storage_.member_only_appears_in_importing_library)};
 }
 
-::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response::Storage_
-test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response::
-    CloneStorage_() const {
+::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse::Storage_
+test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse::CloneStorage_()
+    const {
   return Storage_{::fidl::internal::NaturalClone(storage_.b)};
 }
 
@@ -26,8 +26,8 @@ test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse::
   return Storage_{::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response::Storage_
-test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response::CloneStorage_()
+::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse::Storage_
+test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse::CloneStorage_()
     const {
   return Storage_{::fidl::internal::NaturalClone(storage_.b)};
 }
@@ -38,9 +38,9 @@ test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse::CloneStorage_()
   return Storage_{::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response::Storage_
-test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response::
-    CloneStorage_() const {
+::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse::Storage_
+test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse::CloneStorage_()
+    const {
   return Storage_{::fidl::internal::NaturalClone(storage_.b)};
 }
 
@@ -50,8 +50,8 @@ test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse::
   return Storage_{::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response::Storage_
-test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response::CloneStorage_()
+::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse::Storage_
+test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse::CloneStorage_()
     const {
   return Storage_{::fidl::internal::NaturalClone(storage_.b)};
 }
@@ -62,8 +62,8 @@ test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse::CloneStorage_()
   return Storage_{::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response::Storage_
-test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response::CloneStorage_()
+::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse::Storage_
+test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse::CloneStorage_()
     const {
   return Storage_{::fidl::internal::NaturalClone(storage_.b)};
 }
@@ -117,8 +117,8 @@ test_bindingsdenylist::OnlyLlcpp::CloneStorage_() const {
 }
 
 std::shared_ptr<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::Storage_>
-test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::CloneStorage_()
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult::Storage_>
+test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult::CloneStorage_()
     const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
@@ -136,8 +136,8 @@ test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::CloneStorage_()
 }
 
 std::shared_ptr<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Storage_>
-test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::CloneStorage_()
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult::Storage_>
+test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult::CloneStorage_()
     const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
@@ -155,8 +155,8 @@ test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::CloneStorage_()
 }
 
 std::shared_ptr<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::Storage_>
-test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::CloneStorage_()
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult::Storage_>
+test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult::CloneStorage_()
     const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
@@ -174,9 +174,8 @@ test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::CloneStorage_()
 }
 
 std::shared_ptr<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Storage_>
-test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::CloneStorage_()
-    const {
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult::Storage_>
+test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -193,8 +192,8 @@ test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::CloneStorage_()
 }
 
 std::shared_ptr<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Storage_>
-test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::CloneStorage_()
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult::Storage_>
+test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult::CloneStorage_()
     const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {

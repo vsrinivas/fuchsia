@@ -25,7 +25,7 @@
 
 namespace test_typealiases {
 namespace wire {
-using ObjType = ::test_typealiases::obj_type;
+using ObjType = ::test_typealiases::ObjType;
 
 struct ExampleOfUseOfAliases;
 

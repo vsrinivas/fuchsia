@@ -1940,17 +1940,16 @@ __LOCAL extern "C" const fidl_type_t
 
 template <>
 class ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>
-    final : public ::fitx::result<
-                uint32_t,
-                ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response> {
+    final
+    : public ::fitx::result<
+          uint32_t, ::test_protocols::WithErrorSyntaxResponseAsStructResponse> {
  public:
   using ::fitx::result<
       uint32_t,
-      ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response>::result;
-  Response(
-      ::fitx::result<
-          uint32_t, ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response>
-          v)
+      ::test_protocols::WithErrorSyntaxResponseAsStructResponse>::result;
+  Response(::fitx::result<
+           uint32_t, ::test_protocols::WithErrorSyntaxResponseAsStructResponse>
+               v)
       : result(std::move(v)) {}
   Response() = delete;
 };
@@ -1985,11 +1984,12 @@ class ::fidl::internal::NaturalMessageConverter<
           m) {
     if (m.is_error()) {
       return DomainObject{
-          {.result = ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result::
-               WithErr(m.error_value())}};
+          {.result =
+               ::test_protocols::WithErrorSyntaxResponseAsStructResult::WithErr(
+                   m.error_value())}};
     } else {
       return DomainObject{
-          {.result = ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result::
+          {.result = ::test_protocols::WithErrorSyntaxResponseAsStructResult::
                WithResponse(std::move(m.value()))}};
     }
   }
@@ -2000,11 +2000,11 @@ class ::fidl::Result<::test_protocols::WithErrorSyntax::ResponseAsStruct> final
     : public ::fitx::result<
           ::fidl::AnyErrorIn<
               ::test_protocols::WithErrorSyntax::ResponseAsStruct>,
-          ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response> {
+          ::test_protocols::WithErrorSyntaxResponseAsStructResponse> {
  public:
   using ::fitx::result<
       ::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::ResponseAsStruct>,
-      ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response>::result;
+      ::test_protocols::WithErrorSyntaxResponseAsStructResponse>::result;
 };
 
 template <>
@@ -2046,11 +2046,12 @@ class ::fidl::internal::NaturalMessageConverter<
           m) {
     if (m.is_error()) {
       return DomainObject{
-          {.result = ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
-               WithErr(m.error_value())}};
+          {.result =
+               ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult::WithErr(
+                   m.error_value())}};
     } else {
       return DomainObject{
-          {.result = ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
+          {.result = ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult::
                WithResponse({})}};
     }
   }
@@ -2103,12 +2104,13 @@ class ::fidl::internal::NaturalMessageConverter<
     if (m.is_error()) {
       return DomainObject{
           {.result =
-               ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result::WithErr(
+               ::test_protocols::WithErrorSyntaxErrorAsEnumResult::WithErr(
                    m.error_value())}};
     } else {
       return DomainObject{
-          {.result = ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result::
-               WithResponse({})}};
+          {.result =
+               ::test_protocols::WithErrorSyntaxErrorAsEnumResult::WithResponse(
+                   {})}};
     }
   }
 };
@@ -2124,13 +2126,13 @@ class ::fidl::Result<::test_protocols::WithErrorSyntax::ErrorAsEnum> final
 template <>
 class ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult> final
     : public ::fitx::result<
-          uint32_t, ::test_protocols::WithErrorSyntax_HandleInResult_Response> {
+          uint32_t, ::test_protocols::WithErrorSyntaxHandleInResultResponse> {
  public:
   using ::fitx::result<
       uint32_t,
-      ::test_protocols::WithErrorSyntax_HandleInResult_Response>::result;
+      ::test_protocols::WithErrorSyntaxHandleInResultResponse>::result;
   Response(::fitx::result<
-           uint32_t, ::test_protocols::WithErrorSyntax_HandleInResult_Response>
+           uint32_t, ::test_protocols::WithErrorSyntaxHandleInResultResponse>
                v)
       : result(std::move(v)) {}
   Response() = delete;
@@ -2166,11 +2168,11 @@ class ::fidl::internal::NaturalMessageConverter<
     if (m.is_error()) {
       return DomainObject{
           {.result =
-               ::test_protocols::WithErrorSyntax_HandleInResult_Result::WithErr(
+               ::test_protocols::WithErrorSyntaxHandleInResultResult::WithErr(
                    m.error_value())}};
     } else {
       return DomainObject{
-          {.result = ::test_protocols::WithErrorSyntax_HandleInResult_Result::
+          {.result = ::test_protocols::WithErrorSyntaxHandleInResultResult::
                WithResponse(std::move(m.value()))}};
     }
   }
@@ -2179,11 +2181,11 @@ template <>
 class ::fidl::Result<::test_protocols::WithErrorSyntax::HandleInResult> final
     : public ::fitx::result<
           ::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::HandleInResult>,
-          ::test_protocols::WithErrorSyntax_HandleInResult_Response> {
+          ::test_protocols::WithErrorSyntaxHandleInResultResponse> {
  public:
   using ::fitx::result<
       ::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::HandleInResult>,
-      ::test_protocols::WithErrorSyntax_HandleInResult_Response>::result;
+      ::test_protocols::WithErrorSyntaxHandleInResultResponse>::result;
 };
 
 template <>

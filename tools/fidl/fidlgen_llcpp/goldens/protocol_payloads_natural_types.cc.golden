@@ -8,9 +8,9 @@ test_protocolpayloads::MainProtocolTwoWayImportWithErrorTopResponse::
   return Storage_{::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Response::Storage_
-test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Response::
-    CloneStorage_() const {
+::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorResponse::Storage_
+test_protocolpayloads::MainProtocolTwoWayAnonWithErrorResponse::CloneStorage_()
+    const {
   return Storage_{::fidl::internal::NaturalClone(storage_.a),
                   ::fidl::internal::NaturalClone(storage_.b)};
 }
@@ -27,8 +27,8 @@ test_protocolpayloads::MainProtocolOnImportWithErrorRequest::CloneStorage_()
   return Storage_{::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_protocolpayloads::MainProtocol_OnAnonWithError_Response::Storage_
-test_protocolpayloads::MainProtocol_OnAnonWithError_Response::CloneStorage_()
+::test_protocolpayloads::MainProtocolOnAnonWithErrorResponse::Storage_
+test_protocolpayloads::MainProtocolOnAnonWithErrorResponse::CloneStorage_()
     const {
   return Storage_{::fidl::internal::NaturalClone(storage_.a),
                   ::fidl::internal::NaturalClone(storage_.b)};
@@ -90,28 +90,9 @@ test_protocolpayloads::MainProtocolOnLocalWithErrorRequest::CloneStorage_()
   return Storage_{::fidl::internal::NaturalClone(storage_.result)};
 }
 
-std::shared_ptr<::test_protocolpayloads::
-                    MainProtocol_TwoWayImportWithError_Result::Storage_>
-test_protocolpayloads::MainProtocol_TwoWayImportWithError_Result::
-    CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
 std::shared_ptr<
-    ::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Result::Storage_>
-test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Result::CloneStorage_()
+    ::test_protocolpayloads::MainProtocolTwoWayImportWithErrorResult::Storage_>
+test_protocolpayloads::MainProtocolTwoWayImportWithErrorResult::CloneStorage_()
     const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
@@ -129,8 +110,8 @@ test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Result::CloneStorage_()
 }
 
 std::shared_ptr<
-    ::test_protocolpayloads::MainProtocol_OnImportWithError_Result::Storage_>
-test_protocolpayloads::MainProtocol_OnImportWithError_Result::CloneStorage_()
+    ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorResult::Storage_>
+test_protocolpayloads::MainProtocolTwoWayAnonWithErrorResult::CloneStorage_()
     const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
@@ -148,8 +129,8 @@ test_protocolpayloads::MainProtocol_OnImportWithError_Result::CloneStorage_()
 }
 
 std::shared_ptr<
-    ::test_protocolpayloads::MainProtocol_OnAnonWithError_Result::Storage_>
-test_protocolpayloads::MainProtocol_OnAnonWithError_Result::CloneStorage_()
+    ::test_protocolpayloads::MainProtocolOnImportWithErrorResult::Storage_>
+test_protocolpayloads::MainProtocolOnImportWithErrorResult::CloneStorage_()
     const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
@@ -167,8 +148,8 @@ test_protocolpayloads::MainProtocol_OnAnonWithError_Result::CloneStorage_()
 }
 
 std::shared_ptr<
-    ::test_protocolpayloads::MainProtocol_TwoWayLocalWithError_Result::Storage_>
-test_protocolpayloads::MainProtocol_TwoWayLocalWithError_Result::CloneStorage_()
+    ::test_protocolpayloads::MainProtocolOnAnonWithErrorResult::Storage_>
+test_protocolpayloads::MainProtocolOnAnonWithErrorResult::CloneStorage_()
     const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
@@ -186,8 +167,27 @@ test_protocolpayloads::MainProtocol_TwoWayLocalWithError_Result::CloneStorage_()
 }
 
 std::shared_ptr<
-    ::test_protocolpayloads::MainProtocol_OnLocalWithError_Result::Storage_>
-test_protocolpayloads::MainProtocol_OnLocalWithError_Result::CloneStorage_()
+    ::test_protocolpayloads::MainProtocolTwoWayLocalWithErrorResult::Storage_>
+test_protocolpayloads::MainProtocolTwoWayLocalWithErrorResult::CloneStorage_()
+    const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<
+    ::test_protocolpayloads::MainProtocolOnLocalWithErrorResult::Storage_>
+test_protocolpayloads::MainProtocolOnLocalWithErrorResult::CloneStorage_()
     const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {

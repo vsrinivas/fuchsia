@@ -28,7 +28,7 @@ using Flags = ::test_anonymous::Flags;
 using BitsMember = ::test_anonymous::BitsMember;
 
 using SomeProtocolSomeMethodError =
-    ::test_anonymous::SomeProtocol_SomeMethod_Error;
+    ::test_anonymous::SomeProtocolSomeMethodError;
 using Op = ::test_anonymous::Op;
 
 struct TableData;

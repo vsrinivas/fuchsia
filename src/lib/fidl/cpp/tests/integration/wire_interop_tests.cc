@@ -258,7 +258,7 @@ TEST_F(UnifiedClientToWireServer, TryRoundTrip) {
         .ThenExactlyOnce(
             [&](fidl::Result<fidl_cpp_wire_interop_test::Interop::TryRoundTrip>& result) {
               ASSERT_TRUE(result.is_ok());
-              fidl_cpp_wire_interop_test::Interop_TryRoundTrip_Response payload =
+              fidl_cpp_wire_interop_test::InteropTryRoundTripResponse payload =
                   std::move(result.value());
               fidl_cpp_wire_interop_test::Node node = payload.node();
               CheckNaturalDir(node);

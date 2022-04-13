@@ -62,20 +62,19 @@ __LOCAL extern "C" const fidl_type_t
 template <>
 class ::fidl::Response<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
-    final : public ::fitx::result<
-                uint32_t,
-                ::test_errorsyntax_parent::
-                    ParentUsesErrorSyntax_ComposedCallWhichMayFail_Response> {
+    final
+    : public ::fitx::result<
+          uint32_t, ::test_errorsyntax_parent::
+                        ParentUsesErrorSyntaxComposedCallWhichMayFailResponse> {
  public:
   using ::fitx::result<
       uint32_t,
       ::test_errorsyntax_parent::
-          ParentUsesErrorSyntax_ComposedCallWhichMayFail_Response>::result;
-  Response(
-      ::fitx::result<
-          uint32_t, ::test_errorsyntax_parent::
-                        ParentUsesErrorSyntax_ComposedCallWhichMayFail_Response>
-          v)
+          ParentUsesErrorSyntaxComposedCallWhichMayFailResponse>::result;
+  Response(::fitx::result<
+           uint32_t, ::test_errorsyntax_parent::
+                         ParentUsesErrorSyntaxComposedCallWhichMayFailResponse>
+               v)
       : result(std::move(v)) {}
   Response() = delete;
 };
@@ -113,12 +112,12 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<
     if (m.is_error()) {
       return DomainObject{
           {.result = ::test_errorsyntax_parent::
-               ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result::WithErr(
+               ParentUsesErrorSyntaxComposedCallWhichMayFailResult::WithErr(
                    m.error_value())}};
     } else {
       return DomainObject{
           {.result = ::test_errorsyntax_parent::
-               ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result::
+               ParentUsesErrorSyntaxComposedCallWhichMayFailResult::
                    WithResponse(std::move(m.value()))}};
     }
   }
@@ -131,13 +130,13 @@ class ::fidl::Result<
                 ::fidl::AnyErrorIn<::test_errorsyntax::ExampleUseOfErrorSyntax::
                                        ComposedCallWhichMayFail>,
                 ::test_errorsyntax_parent::
-                    ParentUsesErrorSyntax_ComposedCallWhichMayFail_Response> {
+                    ParentUsesErrorSyntaxComposedCallWhichMayFailResponse> {
  public:
   using ::fitx::result<
       ::fidl::AnyErrorIn<::test_errorsyntax::ExampleUseOfErrorSyntax::
                              ComposedCallWhichMayFail>,
       ::test_errorsyntax_parent::
-          ParentUsesErrorSyntax_ComposedCallWhichMayFail_Response>::result;
+          ParentUsesErrorSyntaxComposedCallWhichMayFailResponse>::result;
 };
 
 template <>
@@ -145,17 +144,16 @@ class ::fidl::Response<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
     final
     : public ::fitx::result<
-          uint32_t, ::test_errorsyntax::
-                        ExampleUseOfErrorSyntax_CallWhichMayFail_Response> {
+          uint32_t,
+          ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse> {
  public:
   using ::fitx::result<
       uint32_t, ::test_errorsyntax::
-                    ExampleUseOfErrorSyntax_CallWhichMayFail_Response>::result;
-  Response(
-      ::fitx::result<
-          uint32_t,
-          ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
-          v)
+                    ExampleUseOfErrorSyntaxCallWhichMayFailResponse>::result;
+  Response(::fitx::result<
+           uint32_t,
+           ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>
+               v)
       : result(std::move(v)) {}
   Response() = delete;
 };
@@ -193,12 +191,12 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<
     if (m.is_error()) {
       return DomainObject{
           {.result = ::test_errorsyntax::
-               ExampleUseOfErrorSyntax_CallWhichMayFail_Result::WithErr(
+               ExampleUseOfErrorSyntaxCallWhichMayFailResult::WithErr(
                    m.error_value())}};
     } else {
       return DomainObject{
           {.result = ::test_errorsyntax::
-               ExampleUseOfErrorSyntax_CallWhichMayFail_Result::WithResponse(
+               ExampleUseOfErrorSyntaxCallWhichMayFailResult::WithResponse(
                    std::move(m.value()))}};
     }
   }
@@ -210,13 +208,12 @@ class ::fidl::Result<
     : public ::fitx::result<
           ::fidl::AnyErrorIn<
               ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
-          ::test_errorsyntax::
-              ExampleUseOfErrorSyntax_CallWhichMayFail_Response> {
+          ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse> {
  public:
   using ::fitx::result<
       ::fidl::AnyErrorIn<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
-      ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>::
+      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>::
       result;
 };
 

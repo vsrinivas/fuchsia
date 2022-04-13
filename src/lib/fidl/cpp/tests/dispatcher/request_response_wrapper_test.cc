@@ -37,7 +37,7 @@ TEST(Response, DefaultConstructionErrorSyntax) {
 TEST(Response, FromPayloadErrorSyntaxSuccess) {
   test_types::FooResponse res{{.bar = 42}};
   test_types::ErrorSyntaxFooPayloadTopResponse domain_object{
-      {.result = test_types::ErrorSyntax_FooPayload_Result::WithResponse(std::move(res))}};
+      {.result = test_types::ErrorSyntaxFooPayloadResult::WithResponse(std::move(res))}};
   fidl::Response response =
       fidl::internal::NaturalMessageConverter<fidl::Response<test_types::ErrorSyntax::FooPayload>>::
           FromDomainObject(std::move(domain_object));
@@ -47,7 +47,7 @@ TEST(Response, FromPayloadErrorSyntaxSuccess) {
 
 TEST(Response, FromPayloadErrorSyntaxError) {
   test_types::ErrorSyntaxFooPayloadTopResponse domain_object{
-      {.result = test_types::ErrorSyntax_FooPayload_Result::WithErr(42)}};
+      {.result = test_types::ErrorSyntaxFooPayloadResult::WithErr(42)}};
   fidl::Response response =
       fidl::internal::NaturalMessageConverter<fidl::Response<test_types::ErrorSyntax::FooPayload>>::
           FromDomainObject(std::move(domain_object));
@@ -57,7 +57,7 @@ TEST(Response, FromPayloadErrorSyntaxError) {
 
 TEST(Response, FromPayloadErrorSyntaxEmptyStructSuccess) {
   test_types::ErrorSyntaxEmptyPayloadTopResponse domain_object{
-      {.result = test_types::ErrorSyntax_EmptyPayload_Result::WithResponse({})}};
+      {.result = test_types::ErrorSyntaxEmptyPayloadResult::WithResponse({})}};
   fidl::Response event = fidl::internal::NaturalMessageConverter<fidl::Response<
       test_types::ErrorSyntax::EmptyPayload>>::FromDomainObject(std::move(domain_object));
   EXPECT_TRUE(event.is_ok());
@@ -65,7 +65,7 @@ TEST(Response, FromPayloadErrorSyntaxEmptyStructSuccess) {
 
 TEST(Response, FromPayloadErrorSyntaxEmptyStructError) {
   test_types::ErrorSyntaxEmptyPayloadTopResponse domain_object{
-      {.result = test_types::ErrorSyntax_EmptyPayload_Result::WithErr(42)}};
+      {.result = test_types::ErrorSyntaxEmptyPayloadResult::WithErr(42)}};
   fidl::Response event = fidl::internal::NaturalMessageConverter<fidl::Response<
       test_types::ErrorSyntax::EmptyPayload>>::FromDomainObject(std::move(domain_object));
   EXPECT_FALSE(event.is_ok());
@@ -132,7 +132,7 @@ TEST(Event, DefaultConstructionErrorSyntax) {
 TEST(Event, FromPayloadErrorSyntaxSuccess) {
   test_types::FooEvent body{{.bar = 42}};
   test_types::ErrorSyntaxEventFooPayloadRequest domain_object{
-      {.result = test_types::ErrorSyntax_EventFooPayload_Result::WithResponse(std::move(body))}};
+      {.result = test_types::ErrorSyntaxEventFooPayloadResult::WithResponse(std::move(body))}};
   fidl::Event event = fidl::internal::NaturalMessageConverter<fidl::Event<
       test_types::ErrorSyntax::EventFooPayload>>::FromDomainObject(std::move(domain_object));
   EXPECT_TRUE(event.is_ok());
@@ -141,7 +141,7 @@ TEST(Event, FromPayloadErrorSyntaxSuccess) {
 
 TEST(Event, FromPayloadErrorSyntaxError) {
   test_types::ErrorSyntaxEventFooPayloadRequest domain_object{
-      {.result = test_types::ErrorSyntax_EventFooPayload_Result::WithErr(42)}};
+      {.result = test_types::ErrorSyntaxEventFooPayloadResult::WithErr(42)}};
   fidl::Event event = fidl::internal::NaturalMessageConverter<fidl::Event<
       test_types::ErrorSyntax::EventFooPayload>>::FromDomainObject(std::move(domain_object));
   EXPECT_FALSE(event.is_ok());
@@ -150,7 +150,7 @@ TEST(Event, FromPayloadErrorSyntaxError) {
 
 TEST(Event, FromPayloadErrorSyntaxEmptyStructSuccess) {
   test_types::ErrorSyntaxEventEmptyPayloadRequest domain_object{
-      {.result = test_types::ErrorSyntax_EventEmptyPayload_Result::WithResponse({})}};
+      {.result = test_types::ErrorSyntaxEventEmptyPayloadResult::WithResponse({})}};
   fidl::Event event = fidl::internal::NaturalMessageConverter<fidl::Event<
       test_types::ErrorSyntax::EventEmptyPayload>>::FromDomainObject(std::move(domain_object));
   EXPECT_TRUE(event.is_ok());
@@ -158,7 +158,7 @@ TEST(Event, FromPayloadErrorSyntaxEmptyStructSuccess) {
 
 TEST(Event, FromPayloadErrorSyntaxEmptyStructError) {
   test_types::ErrorSyntaxEventEmptyPayloadRequest domain_object{
-      {.result = test_types::ErrorSyntax_EventEmptyPayload_Result::WithErr(42)}};
+      {.result = test_types::ErrorSyntaxEventEmptyPayloadResult::WithErr(42)}};
   fidl::Event event = fidl::internal::NaturalMessageConverter<fidl::Event<
       test_types::ErrorSyntax::EventEmptyPayload>>::FromDomainObject(std::move(domain_object));
   EXPECT_FALSE(event.is_ok());

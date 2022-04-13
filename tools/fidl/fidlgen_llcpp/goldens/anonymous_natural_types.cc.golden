@@ -20,8 +20,8 @@ test_anonymous::OverrideTest::CloneStorage_() const {
                   ::fidl::internal::NaturalClone(storage_.right)};
 }
 
-::test_anonymous::SomeProtocol_SomeMethod_Response::Storage_
-test_anonymous::SomeProtocol_SomeMethod_Response::CloneStorage_() const {
+::test_anonymous::SomeProtocolSomeMethodResponse::Storage_
+test_anonymous::SomeProtocolSomeMethodResponse::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.bits_member)};
 }
 
@@ -76,8 +76,8 @@ test_anonymous::Expression::CloneStorage_() const {
   }
 }
 
-std::shared_ptr<::test_anonymous::SomeProtocol_SomeMethod_Result::Storage_>
-test_anonymous::SomeProtocol_SomeMethod_Result::CloneStorage_() const {
+std::shared_ptr<::test_anonymous::SomeProtocolSomeMethodResult::Storage_>
+test_anonymous::SomeProtocolSomeMethodResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:

@@ -105,7 +105,7 @@ class EchoClientApp {
         .ThenExactlyOnce(std::move(callback));
   }
 
-  void EchoStructWithError(Struct value, default_enum err, ::std::string forward_to_server,
+  void EchoStructWithError(Struct value, DefaultEnum err, ::std::string forward_to_server,
                            RespondWith result_variant,
                            fidl::ClientCallback<Echo::EchoStructWithError> callback) {
     client_
@@ -157,7 +157,7 @@ class EchoClientApp {
         .ThenExactlyOnce(std::move(callback));
   }
 
-  void EchoArraysWithError(ArraysStruct value, default_enum err, ::std::string forward_to_server,
+  void EchoArraysWithError(ArraysStruct value, DefaultEnum err, ::std::string forward_to_server,
                            RespondWith result_variant,
                            fidl::ClientCallback<Echo::EchoArraysWithError> callback) {
     client_
@@ -172,7 +172,7 @@ class EchoClientApp {
         .ThenExactlyOnce(std::move(callback));
   }
 
-  void EchoVectorsWithError(VectorsStruct value, default_enum err, ::std::string forward_to_server,
+  void EchoVectorsWithError(VectorsStruct value, DefaultEnum err, ::std::string forward_to_server,
                             RespondWith result_variant,
                             fidl::ClientCallback<Echo::EchoVectorsWithError> callback) {
     client_
@@ -187,7 +187,7 @@ class EchoClientApp {
         .ThenExactlyOnce(std::move(callback));
   }
 
-  void EchoTableWithError(AllTypesTable value, default_enum err, ::std::string forward_to_server,
+  void EchoTableWithError(AllTypesTable value, DefaultEnum err, ::std::string forward_to_server,
                           RespondWith result_variant,
                           fidl::ClientCallback<Echo::EchoTableWithError> callback) {
     return client_
@@ -202,7 +202,7 @@ class EchoClientApp {
         .ThenExactlyOnce(std::move(callback));
   }
 
-  void EchoXunionsWithError(::std::vector<AllTypesXunion> value, default_enum err,
+  void EchoXunionsWithError(::std::vector<AllTypesXunion> value, DefaultEnum err,
                             ::std::string forward_to_server, RespondWith result_variant,
                             fidl::ClientCallback<Echo::EchoXunionsWithError> callback) {
     client_
@@ -790,7 +790,7 @@ class EchoConnection final : public fidl::Server<Echo> {
       RespondWith result_variant = request.signed_() ? request.signed_()->result_variant()
                                                      : request.unsigned_()->result_variant();
       if (result_variant == wire::RespondWith::kErr) {
-        default_enum err =
+        DefaultEnum err =
             request.signed_() ? request.signed_()->result_err() : request.unsigned_()->result_err();
         completer.Reply(fitx::error(err));
       } else {
@@ -874,12 +874,12 @@ class EchoConnection final : public fidl::Server<Echo> {
       }
 
       if (request.want_absolute_value()) {
-        completer.Reply(
-            fitx::ok(::fidl_test_imported::Composed_EchoUnionResponseWithErrorComposed_Response::
-                         WithUnsigned_(static_cast<uint64_t>(std::abs(request.value())))));
+        completer.Reply(fitx::ok(
+            ::fidl_test_imported::ComposedEchoUnionResponseWithErrorComposedResponse::WithUnsigned_(
+                static_cast<uint64_t>(std::abs(request.value())))));
       } else {
         completer.Reply(fitx::ok(
-            ::fidl_test_imported::Composed_EchoUnionResponseWithErrorComposed_Response::WithSigned_(
+            ::fidl_test_imported::ComposedEchoUnionResponseWithErrorComposedResponse::WithSigned_(
                 request.value())));
       }
     } else {

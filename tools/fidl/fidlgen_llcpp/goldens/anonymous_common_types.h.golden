@@ -205,10 +205,10 @@ constexpr inline void BitsMember::operator^=(
   this->value_ ^= other.value_;
 }
 
-class SomeProtocol_SomeMethod_Error final {
+class SomeProtocolSomeMethodError final {
  public:
-  constexpr SomeProtocol_SomeMethod_Error() : value_(0) {}
-  constexpr explicit SomeProtocol_SomeMethod_Error(uint32_t value)
+  constexpr SomeProtocolSomeMethodError() : value_(0) {}
+  constexpr explicit SomeProtocolSomeMethodError(uint32_t value)
       : value_(value) {}
   constexpr operator uint32_t() const { return value_; }
 
@@ -223,30 +223,30 @@ class SomeProtocol_SomeMethod_Error final {
     return true;
   }
 
-  constexpr static SomeProtocol_SomeMethod_Error Unknown() {
-    return SomeProtocol_SomeMethod_Error(0xffffffff);
+  constexpr static SomeProtocolSomeMethodError Unknown() {
+    return SomeProtocolSomeMethodError(0xffffffff);
   }
 
-  static const SomeProtocol_SomeMethod_Error kErrorOne;
+  static const SomeProtocolSomeMethodError kErrorOne;
 
-  static const SomeProtocol_SomeMethod_Error kErrorTwo;
+  static const SomeProtocolSomeMethodError kErrorTwo;
 
  private:
   uint32_t value_;
 };
-constexpr const ::test_anonymous::SomeProtocol_SomeMethod_Error
-    SomeProtocol_SomeMethod_Error::kErrorOne =
-        ::test_anonymous::SomeProtocol_SomeMethod_Error(1u);
-constexpr const ::test_anonymous::SomeProtocol_SomeMethod_Error
-    SomeProtocol_SomeMethod_Error::kErrorTwo =
-        ::test_anonymous::SomeProtocol_SomeMethod_Error(2u);
+constexpr const ::test_anonymous::SomeProtocolSomeMethodError
+    SomeProtocolSomeMethodError::kErrorOne =
+        ::test_anonymous::SomeProtocolSomeMethodError(1u);
+constexpr const ::test_anonymous::SomeProtocolSomeMethodError
+    SomeProtocolSomeMethodError::kErrorTwo =
+        ::test_anonymous::SomeProtocolSomeMethodError(2u);
 
 }  // namespace test_anonymous
 template <>
 struct fidl::internal::DisplayError<
-    ::test_anonymous::SomeProtocol_SomeMethod_Error> {
+    ::test_anonymous::SomeProtocolSomeMethodError> {
   static size_t Format(
-      const ::test_anonymous::SomeProtocol_SomeMethod_Error& value,
+      const ::test_anonymous::SomeProtocolSomeMethodError& value,
       char* destination, size_t capacity);
 };
 
@@ -310,10 +310,10 @@ static_assert(std::is_standard_layout_v<::test_anonymous::BitsMember>);
 static_assert(sizeof(::test_anonymous::BitsMember) == sizeof(uint32_t));
 
 template <>
-struct IsFidlType<::test_anonymous::SomeProtocol_SomeMethod_Error>
+struct IsFidlType<::test_anonymous::SomeProtocolSomeMethodError>
     : public std::true_type {};
 template <>
-struct ContainsHandle<::test_anonymous::SomeProtocol_SomeMethod_Error>
+struct ContainsHandle<::test_anonymous::SomeProtocolSomeMethodError>
     : public std::false_type {};
 
 template <>

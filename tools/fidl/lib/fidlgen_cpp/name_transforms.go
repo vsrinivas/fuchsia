@@ -153,7 +153,7 @@ var (
 		NameContext: fidlgen.NewNameContext(),
 		transforms: declarationTransforms{
 			hlcpp:   simpleDeclarationTransform(hlcppNamespace, nil),
-			unified: simpleDeclarationTransform(unifiedNamespace, nil),
+			unified: simpleDeclarationTransform(unifiedNamespace, fidlgen.ToUpperCamelCase),
 			wire:    simpleDeclarationTransform(wireNamespace, fidlgen.ToUpperCamelCase),
 		},
 	}
@@ -164,14 +164,8 @@ var (
 	serviceContext = declarationContext{
 		NameContext: fidlgen.NewNameContext(),
 		transforms: declarationTransforms{
-			hlcpp: simpleDeclarationTransform(hlcppNamespace, nil),
-			// Intentionally using the natural namespace, since we would like
-			// the unified bindings to transparently accept natural types, which
-			// may certainly contain protocol endpoints.
-			// TODO(fxbug.dev/72980): Switch to ClientEnd/ServerEnd and
-			// underscore namespace when corresponding endpoint types can easily
-			// convert into each other.
-			unified: simpleDeclarationTransform(hlcppNamespace, nil),
+			hlcpp:   simpleDeclarationTransform(hlcppNamespace, nil),
+			unified: simpleDeclarationTransform(unifiedNamespace, fidlgen.ToUpperCamelCase),
 			wire:    simpleDeclarationTransform(unifiedNamespace, fidlgen.ToUpperCamelCase),
 		},
 	}

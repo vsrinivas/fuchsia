@@ -6,8 +6,8 @@ namespace test_anonymous {
 extern "C" const fidl_type_t test_anonymous_SomeProtocol_SomeMethod_ErrorTable;
 }  // namespace test_anonymous
 size_t fidl::internal::
-    DisplayError<::test_anonymous::SomeProtocol_SomeMethod_Error>::Format(
-        const ::test_anonymous::SomeProtocol_SomeMethod_Error& value,
+    DisplayError<::test_anonymous::SomeProtocolSomeMethodError>::Format(
+        const ::test_anonymous::SomeProtocolSomeMethodError& value,
         char* destination, size_t capacity) {
   const char* name = [&]() -> const char* {
     switch (static_cast<uint32_t>(value)) {

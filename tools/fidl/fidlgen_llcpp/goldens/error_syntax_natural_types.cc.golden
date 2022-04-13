@@ -2,8 +2,8 @@
 
 #include <fidl/test.errorsyntax/cpp/natural_types.h>
 
-::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response::Storage_
-test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response::
+::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse::Storage_
+test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse::
     CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.value)};
 }
@@ -20,10 +20,10 @@ test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest::
   return Storage_{::fidl::internal::NaturalClone(storage_.s)};
 }
 
-std::shared_ptr<::test_errorsyntax::
-                    ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Storage_>
-test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result::
-    CloneStorage_() const {
+std::shared_ptr<
+    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Storage_>
+test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult::CloneStorage_()
+    const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:

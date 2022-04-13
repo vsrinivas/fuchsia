@@ -391,7 +391,7 @@ func TestTypeContext(t *testing.T) {
 		typeContext.transform(parseIdent("fidl.test/foo")),
 		nameVariants{
 			HLCPP:   makeName("fidl::test::foo"),
-			Unified: makeName("fidl_test::foo"),
+			Unified: makeName("fidl_test::Foo"),
 			Wire:    makeName("fidl_test::wire::Foo"),
 		})
 
@@ -415,7 +415,7 @@ func TestTypeContext(t *testing.T) {
 		typeContext.transform(parseIdent("fidl.test/FOO_BAR")),
 		nameVariants{
 			HLCPP:   makeName("fidl::test::FOO_BAR"),
-			Unified: makeName("fidl_test::FOO_BAR"),
+			Unified: makeName("fidl_test::FooBar"),
 			Wire:    makeName("fidl_test::wire::FooBar"),
 		})
 
@@ -423,7 +423,7 @@ func TestTypeContext(t *testing.T) {
 		typeContext.transform(parseIdent("fidl.test/switch")),
 		nameVariants{
 			HLCPP:   makeName("fidl::test::switch_"),
-			Unified: makeName("fidl_test::switch_"),
+			Unified: makeName("fidl_test::Switch"),
 			Wire:    makeName("fidl_test::wire::Switch"),
 		})
 }
@@ -436,7 +436,7 @@ func TestServiceContext(t *testing.T) {
 		serviceContext.transform(parseIdent("fidl.test/foo")),
 		nameVariants{
 			HLCPP:   makeName("fidl::test::foo"),
-			Unified: makeName("fidl::test::foo"),
+			Unified: makeName("fidl_test::Foo"),
 			Wire:    makeName("fidl_test::Foo"),
 		})
 
@@ -444,7 +444,7 @@ func TestServiceContext(t *testing.T) {
 		serviceContext.transform(parseIdent("fidl.test/Foo")),
 		nameVariants{
 			HLCPP:   makeName("fidl::test::Foo"),
-			Unified: makeName("fidl::test::Foo"),
+			Unified: makeName("fidl_test::Foo"),
 			Wire:    makeName("fidl_test::Foo"),
 		})
 
@@ -452,7 +452,7 @@ func TestServiceContext(t *testing.T) {
 		serviceContext.transform(parseIdent("fidl.test/FidlType")),
 		nameVariants{
 			HLCPP:   makeName("fidl::test::FidlType_"),
-			Unified: makeName("fidl::test::FidlType_"),
+			Unified: makeName("fidl_test::FidlType_"),
 			Wire:    makeName("fidl_test::FidlType_"),
 		})
 
@@ -460,7 +460,7 @@ func TestServiceContext(t *testing.T) {
 		serviceContext.transform(parseIdent("fidl.test/FOO_BAR")),
 		nameVariants{
 			HLCPP:   makeName("fidl::test::FOO_BAR"),
-			Unified: makeName("fidl::test::FOO_BAR"),
+			Unified: makeName("fidl_test::FooBar"),
 			Wire:    makeName("fidl_test::FooBar"),
 		})
 
@@ -468,7 +468,7 @@ func TestServiceContext(t *testing.T) {
 		serviceContext.transform(parseIdent("fidl.test/switch")),
 		nameVariants{
 			HLCPP:   makeName("fidl::test::switch_"),
-			Unified: makeName("fidl::test::switch_"),
+			Unified: makeName("fidl_test::Switch"),
 			Wire:    makeName("fidl_test::Switch"),
 		})
 }

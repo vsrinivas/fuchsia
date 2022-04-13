@@ -85,25 +85,6 @@ func (ns namespace) member(n string) name {
 type nameVariants struct {
 	HLCPP name
 
-	// Unified is like HLCPP, except it consists of type aliases, declared in
-	// the unified bindings, to natural types. For example, the HLCPP name
-	//
-	//     fuchsia::my::lib::FooStruct
-	//
-	// would be aliased to the Unified name
-	//
-	//     fuchsia_my_lib::FooStruct.
-	//
-	// Similarly, if HLCPP is
-	//
-	//     std::array<std::unique_ptr<fuchsia::my::lib::FooStruct>, 5>
-	//
-	// then Unified would use the alias in the template argument:
-	//
-	//     std::array<std::unique_ptr<fuchsia_my_lib::FooStruct>, 5>.
-	//
-	// In case of client and server protocol endpoints, there is no alias,
-	// and Unified is the same as HLCPP.
 	Unified name
 
 	Wire name

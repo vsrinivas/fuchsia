@@ -17,53 +17,53 @@
 #endif  // __Fuchsia__
 
 namespace test_unknowninteractions {
-class Example_FlexibleTwoWay_Response;
+class ExampleFlexibleTwoWayResponse;
 
 class ExampleFlexibleTwoWayTopResponse;
 
-class Example_FlexibleTwoWay_Result;
+class ExampleFlexibleTwoWayResult;
 
 extern "C" const fidl_type_t
     test_unknowninteractions_Example_FlexibleTwoWay_ResponseTable;
 
-class Example_FlexibleTwoWay_Response {
+class ExampleFlexibleTwoWayResponse {
  private:
   struct Storage_;
 
  public:
-  Example_FlexibleTwoWay_Response(Storage_ storage) noexcept
+  ExampleFlexibleTwoWayResponse(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
-  Example_FlexibleTwoWay_Response(uint8_t __reserved) noexcept
+  ExampleFlexibleTwoWayResponse(uint8_t __reserved) noexcept
       : storage_({.__reserved = std::move(__reserved)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |Example_FlexibleTwoWay_Response| only if all of its
+  // Default constructs a |ExampleFlexibleTwoWayResponse| only if all of its
   // members are default constructible.
-  Example_FlexibleTwoWay_Response() = default;
+  ExampleFlexibleTwoWayResponse() = default;
 #pragma clang diagnostic pop
 
-  Example_FlexibleTwoWay_Response(Example_FlexibleTwoWay_Response&&) noexcept =
+  ExampleFlexibleTwoWayResponse(ExampleFlexibleTwoWayResponse&&) noexcept =
       default;
-  Example_FlexibleTwoWay_Response& operator=(
-      Example_FlexibleTwoWay_Response&&) noexcept = default;
-  Example_FlexibleTwoWay_Response(
-      const Example_FlexibleTwoWay_Response& other) noexcept
-      : Example_FlexibleTwoWay_Response(other.CloneStorage_()) {}
-  Example_FlexibleTwoWay_Response& operator=(
-      const Example_FlexibleTwoWay_Response& other) noexcept {
+  ExampleFlexibleTwoWayResponse& operator=(
+      ExampleFlexibleTwoWayResponse&&) noexcept = default;
+  ExampleFlexibleTwoWayResponse(
+      const ExampleFlexibleTwoWayResponse& other) noexcept
+      : ExampleFlexibleTwoWayResponse(other.CloneStorage_()) {}
+  ExampleFlexibleTwoWayResponse& operator=(
+      const ExampleFlexibleTwoWayResponse& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
-  bool operator==(const Example_FlexibleTwoWay_Response& other) const noexcept {
+  bool operator==(const ExampleFlexibleTwoWayResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_unknowninteractions::Example_FlexibleTwoWay_Response, 1,
+        ::test_unknowninteractions::ExampleFlexibleTwoWayResponse, 1,
         1>::Equal(this, &other);
   }
-  bool operator!=(const Example_FlexibleTwoWay_Response& other) const noexcept {
+  bool operator!=(const ExampleFlexibleTwoWayResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_unknowninteractions::Example_FlexibleTwoWay_Response, 1,
+        ::test_unknowninteractions::ExampleFlexibleTwoWayResponse, 1,
         1>::Equal(this, &other);
   }
 
@@ -71,9 +71,9 @@ class Example_FlexibleTwoWay_Response {
 
   uint8_t& __reserved() { return storage_.__reserved; }
 
-  Example_FlexibleTwoWay_Response(
+  ExampleFlexibleTwoWayResponse(
       ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : Example_FlexibleTwoWay_Response(Storage_{
+      : ExampleFlexibleTwoWayResponse(Storage_{
             .__reserved = 0u,
         }) {}
 
@@ -86,9 +86,9 @@ class Example_FlexibleTwoWay_Response {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_unknowninteractions::Example_FlexibleTwoWay_Response, 1, 1>;
+      ::test_unknowninteractions::ExampleFlexibleTwoWayResponse, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
-      ::test_unknowninteractions::Example_FlexibleTwoWay_Response>;
+      ::test_unknowninteractions::ExampleFlexibleTwoWayResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
@@ -100,11 +100,12 @@ class Example_FlexibleTwoWay_Response {
 extern "C" const fidl_type_t
     test_unknowninteractions_Example_FlexibleTwoWay_ResultTable;
 
-class Example_FlexibleTwoWay_Result {
+class ExampleFlexibleTwoWayResult {
  private:
-  using Storage_ = cpp17::variant<
-      cpp17::monostate,
-      ::test_unknowninteractions::Example_FlexibleTwoWay_Response, int32_t>;
+  using Storage_ =
+      cpp17::variant<cpp17::monostate,
+                     ::test_unknowninteractions::ExampleFlexibleTwoWayResponse,
+                     int32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -113,43 +114,42 @@ class Example_FlexibleTwoWay_Result {
     kTransportErr = 3,  // 0x3
   };
 
-  Example_FlexibleTwoWay_Result(Example_FlexibleTwoWay_Result&& other) noexcept
-      : Example_FlexibleTwoWay_Result(
+  ExampleFlexibleTwoWayResult(ExampleFlexibleTwoWayResult&& other) noexcept
+      : ExampleFlexibleTwoWayResult(
             ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
     *storage_ = std::move(*other.storage_);
   }
-  Example_FlexibleTwoWay_Result& operator=(
-      Example_FlexibleTwoWay_Result&& other) noexcept {
+  ExampleFlexibleTwoWayResult& operator=(
+      ExampleFlexibleTwoWayResult&& other) noexcept {
     if (this != &other) {
       *storage_ = std::move(*other.storage_);
     }
     return *this;
   }
-  Example_FlexibleTwoWay_Result(
-      const Example_FlexibleTwoWay_Result& other) noexcept
-      : Example_FlexibleTwoWay_Result(other.CloneStorage_()) {}
-  Example_FlexibleTwoWay_Result& operator=(
-      const Example_FlexibleTwoWay_Result& other) noexcept {
+  ExampleFlexibleTwoWayResult(const ExampleFlexibleTwoWayResult& other) noexcept
+      : ExampleFlexibleTwoWayResult(other.CloneStorage_()) {}
+  ExampleFlexibleTwoWayResult& operator=(
+      const ExampleFlexibleTwoWayResult& other) noexcept {
     if (this != &other) {
       storage_ = other.CloneStorage_();
     }
     return *this;
   }
 
-  bool operator==(const Example_FlexibleTwoWay_Result& other) const noexcept {
+  bool operator==(const ExampleFlexibleTwoWayResult& other) const noexcept {
     return *storage_ == *other.storage_;
   }
-  bool operator!=(const Example_FlexibleTwoWay_Result& other) const noexcept {
+  bool operator!=(const ExampleFlexibleTwoWayResult& other) const noexcept {
     return *storage_ != *other.storage_;
   }
 
-  constexpr ::test_unknowninteractions::Example_FlexibleTwoWay_Result::Tag
-  Which() const {
-    return Example_FlexibleTwoWay_Result::IndexToTag(storage_->index()).value();
+  constexpr ::test_unknowninteractions::ExampleFlexibleTwoWayResult::Tag Which()
+      const {
+    return ExampleFlexibleTwoWayResult::IndexToTag(storage_->index()).value();
   }
-  static Example_FlexibleTwoWay_Result WithResponse(
-      ::test_unknowninteractions::Example_FlexibleTwoWay_Response val) {
-    return Example_FlexibleTwoWay_Result(
+  static ExampleFlexibleTwoWayResult WithResponse(
+      ::test_unknowninteractions::ExampleFlexibleTwoWayResponse val) {
+    return ExampleFlexibleTwoWayResult(
         std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
   }
 
@@ -159,8 +159,8 @@ class Example_FlexibleTwoWay_Result {
   ::fidl::internal::UnionMemberView<1, Storage_> response() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
-  static Example_FlexibleTwoWay_Result WithTransportErr(int32_t val) {
-    return Example_FlexibleTwoWay_Result(
+  static ExampleFlexibleTwoWayResult WithTransportErr(int32_t val) {
+    return ExampleFlexibleTwoWayResult(
         std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
   }
 
@@ -171,7 +171,7 @@ class Example_FlexibleTwoWay_Result {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
 
-  Example_FlexibleTwoWay_Result(
+  ExampleFlexibleTwoWayResult(
       ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
       : storage_(std::make_shared<Storage_>()) {}
 
@@ -179,7 +179,7 @@ class Example_FlexibleTwoWay_Result {
   std::shared_ptr<Storage_> storage_;
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
-      ::test_unknowninteractions::Example_FlexibleTwoWay_Result>;
+      ::test_unknowninteractions::ExampleFlexibleTwoWayResult>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalUnionMember<
                           ::fidl::internal::NaturalCodingConstraintEmpty>(),
@@ -188,17 +188,17 @@ class Example_FlexibleTwoWay_Result {
                       ::fidl::internal::NaturalUnionMember<
                           fidl::internal::NaturalCodingConstraintEmpty>());
 
-  explicit Example_FlexibleTwoWay_Result(std::shared_ptr<Storage_> storage)
+  explicit ExampleFlexibleTwoWayResult(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
       ::fidl::internal::NaturalDecoder* decoder,
-      ::test_unknowninteractions::Example_FlexibleTwoWay_Result::Tag tag) {
+      ::test_unknowninteractions::ExampleFlexibleTwoWayResult::Tag tag) {
     switch (tag) {
-      case ::test_unknowninteractions::Example_FlexibleTwoWay_Result::Tag::
+      case ::test_unknowninteractions::ExampleFlexibleTwoWayResult::Tag::
           kResponse:
         return 1;
-      case ::test_unknowninteractions::Example_FlexibleTwoWay_Result::Tag::
+      case ::test_unknowninteractions::ExampleFlexibleTwoWayResult::Tag::
           kTransportErr:
         return 2;
       default: {
@@ -209,14 +209,14 @@ class Example_FlexibleTwoWay_Result {
   }
 
   static constexpr cpp17::optional<
-      ::test_unknowninteractions::Example_FlexibleTwoWay_Result::Tag>
+      ::test_unknowninteractions::ExampleFlexibleTwoWayResult::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
-        return ::test_unknowninteractions::Example_FlexibleTwoWay_Result::Tag::
+        return ::test_unknowninteractions::ExampleFlexibleTwoWayResult::Tag::
             kResponse;
       case 2:
-        return ::test_unknowninteractions::Example_FlexibleTwoWay_Result::Tag::
+        return ::test_unknowninteractions::ExampleFlexibleTwoWayResult::Tag::
             kTransportErr;
       default:
         return cpp17::nullopt;
@@ -235,7 +235,7 @@ class ExampleFlexibleTwoWayTopResponse {
   ExampleFlexibleTwoWayTopResponse(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   ExampleFlexibleTwoWayTopResponse(
-      ::test_unknowninteractions::Example_FlexibleTwoWay_Result result) noexcept
+      ::test_unknowninteractions::ExampleFlexibleTwoWayResult result) noexcept
       : storage_({.result = std::move(result)}) {}
 
 #pragma clang diagnostic push
@@ -271,12 +271,12 @@ class ExampleFlexibleTwoWayTopResponse {
         16>::Equal(this, &other);
   }
 
-  const ::test_unknowninteractions::Example_FlexibleTwoWay_Result& result()
+  const ::test_unknowninteractions::ExampleFlexibleTwoWayResult& result()
       const {
     return storage_.result;
   }
 
-  ::test_unknowninteractions::Example_FlexibleTwoWay_Result& result() {
+  ::test_unknowninteractions::ExampleFlexibleTwoWayResult& result() {
     return storage_.result;
   }
 
@@ -289,7 +289,7 @@ class ExampleFlexibleTwoWayTopResponse {
 
  private:
   struct Storage_ final {
-    ::test_unknowninteractions::Example_FlexibleTwoWay_Result result;
+    ::test_unknowninteractions::ExampleFlexibleTwoWayResult result;
   };
 
   Storage_ storage_;
@@ -301,7 +301,7 @@ class ExampleFlexibleTwoWayTopResponse {
       ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_unknowninteractions::Example_FlexibleTwoWay_Result,
+          Storage_, ::test_unknowninteractions::ExampleFlexibleTwoWayResult,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
                                                         0});
   static constexpr auto kPaddingV1 = std::make_tuple();
@@ -315,12 +315,12 @@ extern "C" const fidl_type_t
     test_unknowninteractions_Example_FlexibleTwoWay_ResponseTable;
 
 template <>
-struct IsFidlType<::test_unknowninteractions::Example_FlexibleTwoWay_Response>
+struct IsFidlType<::test_unknowninteractions::ExampleFlexibleTwoWayResponse>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::test_unknowninteractions::Example_FlexibleTwoWay_Response>
+    ::test_unknowninteractions::ExampleFlexibleTwoWayResponse>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
@@ -329,10 +329,10 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_unknowninteractions::Example_FlexibleTwoWay_Response,
+    ::test_unknowninteractions::ExampleFlexibleTwoWayResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalEmptyStructCodingTraits<
-                ::test_unknowninteractions::Example_FlexibleTwoWay_Response> {};
+                ::test_unknowninteractions::ExampleFlexibleTwoWayResponse> {};
 
 extern "C" const fidl_type_t
     test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
@@ -362,15 +362,15 @@ extern "C" const fidl_type_t
     test_unknowninteractions_Example_FlexibleTwoWay_ResultTable;
 
 template <>
-struct IsFidlType<::test_unknowninteractions::Example_FlexibleTwoWay_Result>
+struct IsFidlType<::test_unknowninteractions::ExampleFlexibleTwoWayResult>
     : public std::true_type {};
 template <>
-struct IsUnion<::test_unknowninteractions::Example_FlexibleTwoWay_Result>
+struct IsUnion<::test_unknowninteractions::ExampleFlexibleTwoWayResult>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::test_unknowninteractions::Example_FlexibleTwoWay_Result>
+    ::test_unknowninteractions::ExampleFlexibleTwoWayResult>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
@@ -379,9 +379,9 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_unknowninteractions::Example_FlexibleTwoWay_Result,
+    ::test_unknowninteractions::ExampleFlexibleTwoWayResult,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
-                ::test_unknowninteractions::Example_FlexibleTwoWay_Result> {};
+                ::test_unknowninteractions::ExampleFlexibleTwoWayResult> {};
 
 }  // namespace fidl
