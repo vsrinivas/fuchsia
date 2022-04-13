@@ -18,30 +18,64 @@ zx_status_t LeafDriver::Bind(void* ctx, zx_device_t* device) {
   }
 
   // Add device group.
-  const zx_device_prop_t fragment_props_1[] = {
-      {50, 0, 10},
+  const zx_device_str_prop_val_t fragment_1_props_values_1[] = {
+      str_prop_int_val(10),
+      str_prop_int_val(3),
   };
 
-  const zx_device_str_prop fragment_str_props_1[] = {
-      {"sandpiper", str_prop_bool_val(false)},
+  const zx_device_str_prop_val_t fragment_1_props_values_2[] = {
+      str_prop_bool_val(true),
+  };
+
+  const device_group_prop_t fragment_1_props[] = {
+      device_group_prop_t{
+          .key = device_group_prop_int_key(50),
+          .condition = DEVICE_GROUP_PROPERTY_CONDITION_ACCEPT,
+          .values = fragment_1_props_values_1,
+          .values_count = std::size(fragment_1_props_values_1),
+      },
+      device_group_prop_t{
+          .key = device_group_prop_str_key("sandpiper"),
+          .condition = DEVICE_GROUP_PROPERTY_CONDITION_REJECT,
+          .values = fragment_1_props_values_2,
+          .values_count = std::size(fragment_1_props_values_2),
+      },
   };
 
   const device_group_fragment fragment_1{
       .name = "fragment-1",
-      .props = fragment_props_1,
-      .props_count = std::size(fragment_props_1),
-      .str_props = fragment_str_props_1,
-      .str_props_count = std::size(fragment_str_props_1),
+      .props = fragment_1_props,
+      .props_count = std::size(fragment_1_props),
   };
 
-  const zx_device_str_prop fragment_str_props_2[] = {
-      {"willet", str_prop_str_val("dunlin")},
+  const zx_device_str_prop_val_t fragment_2_props_values_1[] = {
+      str_prop_str_val("whimbrel"),
+      str_prop_str_val("dunlin"),
+  };
+
+  const zx_device_str_prop_val_t fragment_2_props_values_2[] = {
+      str_prop_int_val(10),
+  };
+
+  const device_group_prop_t fragment_2_props[] = {
+      device_group_prop_t{
+          .key = device_group_prop_str_key("willet"),
+          .condition = DEVICE_GROUP_PROPERTY_CONDITION_ACCEPT,
+          .values = fragment_2_props_values_1,
+          .values_count = std::size(fragment_2_props_values_1),
+      },
+      device_group_prop_t{
+          .key = device_group_prop_int_key(20),
+          .condition = DEVICE_GROUP_PROPERTY_CONDITION_REJECT,
+          .values = fragment_2_props_values_2,
+          .values_count = std::size(fragment_2_props_values_2),
+      },
   };
 
   const device_group_fragment fragment_2{
       .name = "fragment-2",
-      .str_props = fragment_str_props_2,
-      .str_props_count = std::size(fragment_str_props_2),
+      .props = fragment_2_props,
+      .props_count = std::size(fragment_2_props),
   };
 
   device_group_fragment_t fragments[]{fragment_1, fragment_2};

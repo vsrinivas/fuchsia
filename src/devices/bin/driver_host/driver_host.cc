@@ -134,69 +134,94 @@ fuchsia_device_manager::wire::DeviceStrProperty convert_device_str_prop(
   return str_property;
 }
 
-// TODO(fxb/96714): Support condition and values list in device_group_desc_t.
-fdf::wire::DeviceGroupNode convert_device_group_node(fidl::AnyArena& allocator,
-                                                     device_group_fragment_t fragment) {
-  fidl::VectorView<fdf::wire::DeviceGroupProperty> properties(
-      allocator, fragment.props_count + fragment.str_props_count);
+zx::status<fdf::wire::DeviceGroupProperty> convert_device_group_property(
+    fidl::AnyArena& allocator, device_group_prop_t group_prop) {
+  fdf::wire::NodePropertyKey property_key;
 
-  for (size_t i = 0; i < fragment.props_count; i++) {
-    auto prop_vals = fidl::VectorView<fdf::wire::NodePropertyValue>(allocator, 1);
-    prop_vals[0] = fdf::wire::NodePropertyValue::WithIntValue(fragment.props[i].value);
-
-    properties[i] = fdf::wire::DeviceGroupProperty{
-        .key = fdf::wire::NodePropertyKey::WithIntValue(fragment.props[i].id),
-        .condition = fdf::wire::Condition::kAccept,
-        .values = prop_vals,
-    };
+  switch (group_prop.key.key_type) {
+    case DEVICE_GROUP_PROPERTY_KEY_INT: {
+      property_key = fdf::wire::NodePropertyKey::WithIntValue(group_prop.key.key_value.int_key);
+      break;
+    }
+    case DEVICE_GROUP_PROPERTY_KEY_STRING: {
+      property_key = fdf::wire::NodePropertyKey::WithStringValue(allocator, allocator,
+                                                                 group_prop.key.key_value.str_key);
+      break;
+    }
+    default: {
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
   }
 
-  size_t index = fragment.props_count;
-  for (size_t i = 0; i < fragment.str_props_count; i++) {
-    auto str_property = fragment.str_props[i];
-    ZX_ASSERT(property_value_type_valid(str_property.property_value.value_type));
-
-    auto property_key =
-        fdf::wire::NodePropertyKey::WithStringValue(allocator, allocator, str_property.key);
-
-    auto prop_vals = fidl::VectorView<fdf::wire::NodePropertyValue>(allocator, 1);
-
-    switch (str_property.property_value.value_type) {
+  auto prop_vals =
+      fidl::VectorView<fdf::wire::NodePropertyValue>(allocator, group_prop.values_count);
+  for (size_t i = 0; i < group_prop.values_count; i++) {
+    auto prop_val = group_prop.values[i];
+    switch (prop_val.value_type) {
       case ZX_DEVICE_PROPERTY_VALUE_INT: {
-        prop_vals[0] =
-            fdf::wire::NodePropertyValue::WithIntValue(str_property.property_value.value.int_val);
+        prop_vals[i] = fdf::wire::NodePropertyValue::WithIntValue(prop_val.value.int_val);
         break;
       }
       case ZX_DEVICE_PROPERTY_VALUE_STRING: {
-        auto property_val = fidl::ObjectView<fidl::StringView>(
-            allocator, allocator, str_property.property_value.value.str_val);
-        prop_vals[0] = fdf::wire::NodePropertyValue::WithStringValue(property_val);
+        auto property_val =
+            fidl::ObjectView<fidl::StringView>(allocator, allocator, prop_val.value.str_val);
+        prop_vals[i] = fdf::wire::NodePropertyValue::WithStringValue(property_val);
         break;
       }
       case ZX_DEVICE_PROPERTY_VALUE_BOOL: {
-        prop_vals[0] =
-            fdf::wire::NodePropertyValue::WithBoolValue(str_property.property_value.value.bool_val);
+        prop_vals[i] = fdf::wire::NodePropertyValue::WithBoolValue(prop_val.value.bool_val);
         break;
       }
       case ZX_DEVICE_PROPERTY_VALUE_ENUM: {
-        auto property_val = fidl::ObjectView<fidl::StringView>(
-            allocator, allocator, str_property.property_value.value.enum_val);
-        prop_vals[0] = fdf::wire::NodePropertyValue::WithEnumValue(property_val);
+        auto property_val =
+            fidl::ObjectView<fidl::StringView>(allocator, allocator, prop_val.value.enum_val);
+        prop_vals[i] = fdf::wire::NodePropertyValue::WithEnumValue(property_val);
         break;
       }
+      default: {
+        return zx::error(ZX_ERR_INVALID_ARGS);
+      }
     }
-
-    properties[index + i] = fdf::wire::DeviceGroupProperty{
-        .key = property_key,
-        .condition = fdf::wire::Condition::kAccept,
-        .values = prop_vals,
-    };
   }
 
-  return fdf::wire::DeviceGroupNode{
+  fdf::wire::Condition condition;
+  switch (group_prop.condition) {
+    case DEVICE_GROUP_PROPERTY_CONDITION_ACCEPT: {
+      condition = fdf::wire::Condition::kAccept;
+      break;
+    }
+    case DEVICE_GROUP_PROPERTY_CONDITION_REJECT: {
+      condition = fdf::wire::Condition::kReject;
+      break;
+    }
+    default: {
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
+  }
+
+  return zx::ok(fdf::wire::DeviceGroupProperty{
+      .key = property_key,
+      .condition = condition,
+      .values = prop_vals,
+  });
+}
+
+zx::status<fdf::wire::DeviceGroupNode> convert_device_group_node(fidl::AnyArena& allocator,
+                                                                 device_group_fragment_t fragment) {
+  fidl::VectorView<fdf::wire::DeviceGroupProperty> properties(allocator, fragment.props_count);
+  for (size_t i = 0; i < fragment.props_count; i++) {
+    auto property_result = convert_device_group_property(allocator, fragment.props[i]);
+    if (!property_result.is_ok()) {
+      return property_result.take_error();
+    }
+
+    properties[i] = std::move(property_result.value());
+  }
+
+  return zx::ok(fdf::wire::DeviceGroupNode{
       .name = fidl::StringView(allocator, fragment.name),
       .properties = properties,
-  };
+  });
 }
 
 static fx_log_severity_t log_min_severity(const char* name, const char* flag) {
@@ -1322,7 +1347,11 @@ zx_status_t DriverHostContext::DeviceAddGroup(const fbl::RefPtr<zx_device_t>& de
   auto fragments =
       fidl::VectorView<fdf::wire::DeviceGroupNode>(allocator, group_desc->fragments_count);
   for (size_t i = 0; i < group_desc->fragments_count; i++) {
-    fragments[i] = convert_device_group_node(allocator, group_desc->fragments[i]);
+    auto fragment_result = convert_device_group_node(allocator, group_desc->fragments[i]);
+    if (!fragment_result.is_ok()) {
+      return fragment_result.error_value();
+    }
+    fragments[i] = std::move(fragment_result.value());
   }
 
   auto metadata =

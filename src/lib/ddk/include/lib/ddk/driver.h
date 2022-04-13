@@ -17,6 +17,7 @@ typedef struct zx_driver zx_driver_t;
 typedef struct zx_protocol_device zx_protocol_device_t;
 typedef struct zx_device_prop zx_device_prop_t;
 typedef struct zx_device_str_prop zx_device_str_prop_t;
+typedef struct zx_device_str_prop_val zx_device_str_prop_val_t;
 typedef struct zx_driver_rec zx_driver_rec_t;
 
 typedef struct zx_bind_inst zx_bind_inst_t;
@@ -419,14 +420,55 @@ zx_status_t device_connect_fragment_fidl_protocol(zx_device_t* device, const cha
 zx_status_t device_get_variable(zx_device_t* device, const char* name, char* out, size_t out_size,
                                 size_t* size_actual);
 
+typedef enum {
+  DEVICE_GROUP_PROPERTY_KEY_UNDEFINED = 0,
+  DEVICE_GROUP_PROPERTY_KEY_INT = 1,
+  DEVICE_GROUP_PROPERTY_KEY_STRING = 2,
+} device_group_prop_key_type;
+
+// The value type in device_group_prop_key_t must match what's in the union. To ensure that it is
+// set properly, the struct should only be constructed with the supporting macros.
+typedef struct device_group_prop_key {
+  uint8_t key_type;
+  union {
+    uint32_t int_key;
+    const char* str_key;
+  } key_value;
+} device_group_prop_key_t;
+
+// Supporting macros to construct device_group_prop_key_t.
+#define device_group_prop_int_key(val)                                          \
+  device_group_prop_key {                                                       \
+    .key_type = DEVICE_GROUP_PROPERTY_KEY_INT, .key_value = {.int_key = (val) } \
+  }
+
+#define device_group_prop_str_key(val)                                             \
+  device_group_prop_key {                                                          \
+    .key_type = DEVICE_GROUP_PROPERTY_KEY_STRING, .key_value = {.str_key = (val) } \
+  }
+
+// Represents the condition for evaluating the property values in a device group.
+// The values are accepted or rejected based on the condition.
+typedef enum {
+  DEVICE_GROUP_PROPERTY_CONDITION_UNDEFINED = 0,
+  DEVICE_GROUP_PROPERTY_CONDITION_ACCEPT = 1,
+  DEVICE_GROUP_PROPERTY_CONDITION_REJECT = 2,
+} device_group_prop_condition;
+
+// Represents the a property in a device group fragment.
+typedef struct device_group_prop {
+  device_group_prop_key_t key;
+  device_group_prop_condition condition;
+
+  const zx_device_str_prop_val_t* values;
+  size_t values_count;
+} device_group_prop_t;
+
 typedef struct device_group_fragment {
   const char* name;
 
-  const zx_device_prop_t* props;
+  const device_group_prop_t* props;
   size_t props_count;
-
-  const zx_device_str_prop_t* str_props;
-  size_t str_props_count;
 } device_group_fragment_t;
 
 typedef struct device_group_desc {
