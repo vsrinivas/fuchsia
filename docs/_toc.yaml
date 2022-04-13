@@ -19,6 +19,7 @@ toc:
 - name: "Development"
   contents:
   - include: /docs/development/_toc.yaml
+  - include: /docs/development/sdk/_toc.yaml
 - name: "Reference"
   contents:
   - include: /docs/reference/_toc.yaml
