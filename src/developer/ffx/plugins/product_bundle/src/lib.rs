@@ -21,7 +21,7 @@ mod create;
 
 /// Provide functionality to list product-bundle metadata, fetch metadata, and
 /// pull images and related data.
-#[ffx_plugin("product-bundle.experimental")]
+#[ffx_plugin()]
 pub async fn product_bundle(cmd: ProductBundleCommand) -> Result<()> {
     product_bundle_plugin_impl(cmd, &mut stdout()).await
 }
