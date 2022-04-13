@@ -48,8 +48,8 @@ fn format_version_info<O: Offset + Display>(
     return format!(
         "\
 {}:
-  abi-revision: {},
-  api-level: {},
+  abi-revision: {}
+  api-level: {}
   build-version: {}
   integration-commit-hash: {}
   integration-commit-time: {}",
