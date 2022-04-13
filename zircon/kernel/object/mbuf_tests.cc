@@ -205,7 +205,7 @@ static bool stream_write_zero() {
   MBufChain chain;
   // TODO(maniscalco): Is ZX_ERR_SHOULD_WAIT really the right error here in this case?
   EXPECT_EQ(ZX_ERR_SHOULD_WAIT, chain.WriteStream(mem_in, 0, &written));
-  EXPECT_EQ(7U, written);
+  EXPECT_EQ(0U, written);
   EXPECT_TRUE(chain.is_empty());
   EXPECT_FALSE(chain.is_full());
   EXPECT_EQ(0U, chain.size());
@@ -442,7 +442,7 @@ static bool datagram_write_zero() {
   size_t written = 7;
   MBufChain chain;
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, chain.WriteDatagram(mem_in, 0, &written));
-  EXPECT_EQ(7U, written);
+  EXPECT_EQ(0U, written);
   EXPECT_TRUE(chain.is_empty());
   EXPECT_FALSE(chain.is_full());
   EXPECT_EQ(0U, chain.size(true));

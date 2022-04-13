@@ -878,4 +878,77 @@ TEST(SocketTest, WriteFromBadBuffer) {
   ASSERT_STATUS(b.write(0, buffer, 1, &actual), ZX_ERR_INVALID_ARGS);
 }
 
+TEST(SocketTest, WriteFromPartialBadBuffer) {
+  zx::socket a, b;
+  ASSERT_OK(zx::socket::create(0, &a, &b));
+
+  constexpr size_t kVmoSize = 16 * 1024;
+  constexpr size_t kOpSize = kVmoSize * 2;
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+
+  zx_vaddr_t addr;
+
+  ASSERT_OK(
+      zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, kVmoSize, &addr));
+
+  void* buffer = reinterpret_cast<void*>(addr);
+  ASSERT_NE(nullptr, buffer);
+
+  // There's no data yet in the socket, so it should be writable, but not readable.
+  EXPECT_TRUE(!(GetSignals(a) & ZX_SOCKET_READABLE));
+  EXPECT_TRUE(GetSignals(b) & ZX_SOCKET_WRITABLE);
+
+  // Perform a large write that goes out of bounds of our memory mapping.
+  size_t actual;
+  ASSERT_STATUS(b.write(0, buffer, kOpSize, &actual), ZX_ERR_INVALID_ARGS);
+
+  // Check that the readable signal matches up with our ability to actually read.
+  bool has_read_signal = !!(GetSignals(a) & ZX_SOCKET_READABLE);
+  bool could_read = a.read(0, buffer, 1, &actual) == ZX_OK;
+  EXPECT_EQ(has_read_signal, could_read);
+}
+
+TEST(SocketTest, ReadToPartialBadBuffer) {
+  zx::socket a, b;
+  ASSERT_OK(zx::socket::create(0, &a, &b));
+
+  constexpr size_t kVmoSize = 16 * 1024;
+  constexpr size_t kOpSize = kVmoSize * 2;
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+
+  zx_vaddr_t addr;
+
+  ASSERT_OK(
+      zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, kVmoSize, &addr));
+
+  void* buffer = reinterpret_cast<void*>(addr);
+  ASSERT_NE(nullptr, buffer);
+
+  // First fill the socket with data.
+  size_t actual;
+  while (b.write(0, buffer, kVmoSize, &actual) == ZX_OK)
+    ;
+
+  // Validate that the socket is readable, but not writable.
+  EXPECT_TRUE(GetSignals(a) & ZX_SOCKET_READABLE);
+  EXPECT_TRUE(!(GetSignals(b) & ZX_SOCKET_WRITABLE));
+
+  // Perform a large read that goes out of bounds of our memory mapping.
+  ASSERT_STATUS(a.read(0, buffer, kOpSize, &actual), ZX_ERR_INVALID_ARGS);
+
+  // Check that the signal and our ability to write match up.
+  bool has_write_signal = !!(GetSignals(b) & ZX_SOCKET_WRITABLE);
+  bool could_write = b.write(0, buffer, 1, &actual) == ZX_OK;
+  EXPECT_EQ(has_write_signal, could_write);
+
+  // Read everything out of the socket.
+  while (a.read(0, buffer, kVmoSize, &actual) == ZX_OK)
+    ;
+
+  // The socket should now be writable.
+  EXPECT_TRUE(GetSignals(b) & ZX_SOCKET_WRITABLE);
+}
+
 }  // namespace

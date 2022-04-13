@@ -24,7 +24,8 @@ class MBufChain {
 
   // Writes |len| bytes of stream data from |src| and sets |written| to number of bytes written.
   //
-  // Returns an error on failure.
+  // Returns an error on failure, although some data may still have been written, in which case
+  // |written| is set with the amount.
   zx_status_t WriteStream(user_in_ptr<const char> src, size_t len, size_t* written);
 
   // Writes a datagram of |len| bytes from |src| and sets |written| to number of bytes written.
@@ -34,7 +35,8 @@ class MBufChain {
   //
   // Writing a zero-length datagram is an error.
   //
-  // Returns an error on failure.
+  // Returns an error on failure, although some data may still have been written, in which case
+  // |written| is set with the amount.
   zx_status_t WriteDatagram(user_in_ptr<const char> src, size_t len, size_t* written);
 
   // Reads up to |len| bytes from chain into |dst|.
@@ -45,7 +47,8 @@ class MBufChain {
   // call will read at most one datagram.  If |len| is too small to read a complete datagram, a
   // partial datagram is returned and its remaining bytes are discarded.
   //
-  // The actual number of bytes read is returned in |actual|.
+  // The actual number of bytes read is returned in |actual|, and this can be non-zero even if the
+  // read itself is an error.
   //
   // Returns an error on failure.
   zx_status_t Read(user_out_ptr<char> dst, size_t len, bool datagram, size_t* actual);

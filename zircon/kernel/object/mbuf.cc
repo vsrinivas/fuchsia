@@ -72,6 +72,9 @@ zx_status_t MBufChain::ReadHelper(T* chain, user_out_ptr<char> dst, size_t len, 
     size_t copy_len = ktl::min(static_cast<size_t>(iter->len_), len - pos);
     zx_status_t status = dst.byte_offset(pos).copy_array_to_user(src, copy_len);
     if (status != ZX_OK) {
+      // Record the fact that some data might have been read, even if the overall operation is
+      // considered a failure.
+      *actual = pos;
       return status;
     }
 
@@ -118,19 +121,26 @@ zx_status_t MBufChain::ReadHelper(T* chain, user_out_ptr<char> dst, size_t len, 
 
 zx_status_t MBufChain::WriteDatagram(user_in_ptr<const char> src, size_t len, size_t* written) {
   if (len == 0) {
+    *written = 0;
     return ZX_ERR_INVALID_ARGS;
   }
-  if (len > kSizeMax)
+  if (len > kSizeMax) {
+    *written = 0;
     return ZX_ERR_OUT_OF_RANGE;
-  if (len + size_ > kSizeMax)
+  }
+  if (len + size_ > kSizeMax) {
+    *written = 0;
     return ZX_ERR_SHOULD_WAIT;
+  }
 
   fbl::SinglyLinkedList<MBuf*> bufs;
   for (size_t need = 1 + ((len - 1) / MBuf::kPayloadSize); need != 0; need--) {
     auto buf = AllocMBuf();
     if (buf == nullptr) {
-      while (!bufs.is_empty())
+      while (!bufs.is_empty()) {
         FreeMBuf(bufs.pop_front());
+      }
+      *written = 0;
       return ZX_ERR_SHOULD_WAIT;
     }
     bufs.push_front(buf);
@@ -140,8 +150,10 @@ zx_status_t MBufChain::WriteDatagram(user_in_ptr<const char> src, size_t len, si
   for (auto& buf : bufs) {
     size_t copy_len = ktl::min(MBuf::kPayloadSize, len - pos);
     if (src.byte_offset(pos).copy_array_from_user(buf.data_, copy_len) != ZX_OK) {
-      while (!bufs.is_empty())
+      while (!bufs.is_empty()) {
         FreeMBuf(bufs.pop_front());
+      }
+      *written = 0;
       return ZX_ERR_INVALID_ARGS;  // Bad user buffer.
     }
     pos += copy_len;
@@ -169,8 +181,10 @@ zx_status_t MBufChain::WriteDatagram(user_in_ptr<const char> src, size_t len, si
 zx_status_t MBufChain::WriteStream(user_in_ptr<const char> src, size_t len, size_t* written) {
   if (head_ == nullptr) {
     head_ = AllocMBuf();
-    if (head_ == nullptr)
+    if (head_ == nullptr) {
       return ZX_ERR_SHOULD_WAIT;
+    }
+    *written = 0;
     tail_.push_front(head_);
   }
 
@@ -192,12 +206,14 @@ zx_status_t MBufChain::WriteStream(user_in_ptr<const char> src, size_t len, size
     }
     zx_status_t status = src.byte_offset(pos).copy_array_from_user(dst, copy_len);
     if (status != ZX_OK) {
-      // TODO(fxbug.dev/34143): Note, we're not indicating to the caller that data added so far in
-      // previous copies was written successfully.  This means the caller may try to re-send
-      // the same data again, leading to duplicate data.  Consider changing this function to
-      // report that some data was written so far, or consider not committing any of the new
-      // data until we can ensure success, or consider putting the socket in a state where it
-      // can't succeed a subsequent write.
+      // TODO(fxbug.dev/34143): Note that although we set |written| for the benefit of the
+      // socket dispatcher updating signals, ultimately we're not indicating to the caller
+      // that data added so far in previous copies was written successfully. This means the
+      // caller may try to re-send the same data again, leading to duplicate data. Consider
+      // changing the socket dispatcher to forward this partial write information to the caller,
+      // or consider not committing any of the new data until we can ensure success, or consider
+      // putting the socket in a state where it can't succeed a subsequent write.
+      *written = pos;
       return status;
     }
 
@@ -206,10 +222,11 @@ zx_status_t MBufChain::WriteStream(user_in_ptr<const char> src, size_t len, size
     size_ += copy_len;
   }
 
+  *written = pos;
+
   if (pos == 0)
     return ZX_ERR_SHOULD_WAIT;
 
-  *written = pos;
   return ZX_OK;
 }
 

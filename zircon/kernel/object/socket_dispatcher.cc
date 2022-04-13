@@ -221,8 +221,8 @@ zx_status_t SocketDispatcher::WriteSelfLocked(user_in_ptr<const char> src, size_
   } else {
     status = data_.WriteStream(src, len, &st);
   }
-  if (status)
-    return status;
+
+  // Regardless of the status, data may have been added, and so we need to update the signals.
 
   zx_signals_t clear = 0u;
   zx_signals_t set = 0u;
@@ -252,7 +252,9 @@ zx_status_t SocketDispatcher::WriteSelfLocked(user_in_ptr<const char> src, size_
     peer()->UpdateStateLocked(clear, 0u);
   }
 
-  *written = st;
+  if (status == ZX_OK) {
+    *written = st;
+  }
   return status;
 }
 
@@ -287,9 +289,7 @@ zx_status_t SocketDispatcher::Read(ReadType type, user_out_ptr<char> dst, size_t
     bool was_full = is_full();
 
     zx_status_t status = data_.Read(dst, len, flags_ & ZX_SOCKET_DATAGRAM, &actual);
-    if (status != ZX_OK) {
-      return status;
-    }
+    // Regardless of the status, data may have been consumed, and so we need to update the signals.
 
     zx_signals_t clear = 0u;
     zx_signals_t set = 0u;
@@ -317,6 +317,9 @@ zx_status_t SocketDispatcher::Read(ReadType type, user_out_ptr<char> dst, size_t
         AssertHeld(*peer()->get_lock());
         peer()->UpdateStateLocked(0u, set);
       }
+    }
+    if (status != ZX_OK) {
+      return status;
     }
   }
 
