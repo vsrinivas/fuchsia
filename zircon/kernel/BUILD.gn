@@ -276,7 +276,7 @@ if (is_kernel) {
       "include",
       "lib/libc/include",
     ]
-    configs = [ "lib/libc:limits-dummy" ]
+    configs = [ "lib/libc:limits-stub" ]
   }
 
   config("warnings") {

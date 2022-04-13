@@ -37,8 +37,8 @@ VirtualAlloc::VirtualAlloc(vm_page_state allocated_page_state)
   // Check that the system page size is what we assume the page size to be. This is necessary as
   // mprotect etc require page aligned ranges.
   ZX_ASSERT(sysconf(_SC_PAGE_SIZE) == PAGE_SIZE);
-  // allocated_page_state_ is only used in kernel builds so add a dummy reference to prevent
-  // compilation warnings in host builds.
+  // allocated_page_state_ is only used in kernel builds so add a synthetic
+  // reference to prevent compilation warnings in host builds.
   (void)allocated_page_state_;
 #endif
 }

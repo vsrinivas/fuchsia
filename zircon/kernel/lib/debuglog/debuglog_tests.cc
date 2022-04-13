@@ -75,13 +75,13 @@ struct DebuglogTests {
 
     // We need to trigger some writes, but we don't care what we write, so we just need a buffer
     // large enough to be copied from. Doesn't much matter what's in it.
-    char dummy[DLOG_MAX_DATA]{0};
+    char ignored_buffer[DLOG_MAX_DATA]{0};
 
     for (size_t to_write = pad; to_write;) {
       size_t write = to_write - sizeof(dlog_header);
       write = write > DLOG_MAX_DATA ? DLOG_MAX_DATA : write;
 
-      log->Write(DEBUGLOG_WARNING, 0, {dummy, write});
+      log->Write(DEBUGLOG_WARNING, 0, {ignored_buffer, write});
       to_write -= write + sizeof(dlog_header);
     }
 

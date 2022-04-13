@@ -9,7 +9,7 @@
 
 // libc++'s <atomic> includes this file via <__threading_support>.  It needs
 // these types and functions declared, but only for use in interfaces that
-// aren't supported in the kernel, so dummy declarations are all they need.
+// aren't supported in the kernel, so stub declarations are all they need.
 
 #include <chrono>
 #include <limits>

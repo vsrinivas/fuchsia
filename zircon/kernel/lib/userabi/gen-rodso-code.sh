@@ -123,7 +123,7 @@ grok_segments() {
       local addr=$(printf '%#x' 0x${words[0]})
       local size=$(printf '%#x' 0x${words[2]})
       local entsize=$(printf '%#x' 0x${words[3]})
-      # A dummy .dynsym has a single entry.  Don't count that case.
+      # A stub .dynsym has a single entry.  Don't count that case.
       if [ $size != $entsize ]; then
         status=$SEGMENTS_HAVE_DYNSYM
         echo "#define ${1}_DATA_START_dynsym $addr" >> $OUTFILE

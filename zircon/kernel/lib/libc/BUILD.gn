@@ -33,10 +33,10 @@ zx_library("libc") {
   if (toolchain_environment == "kernel") {
     deps += [ "//zircon/kernel/lib/heap" ]
   }
-  public_configs = [ ":limits-dummy" ]
+  public_configs = [ ":limits-stub" ]
 }
 
-config("limits-dummy") {
+config("limits-stub") {
   visibility = [
     ":*",
     "//zircon/kernel:headers",
@@ -51,7 +51,7 @@ config("limits-dummy") {
   # there is nothing to add to the toolchain's <limits.h> content.
   cflags = [
     "-idirafter",
-    rebase_path("limits-dummy", root_build_dir),
+    rebase_path("limits-stub", root_build_dir),
   ]
 }
 

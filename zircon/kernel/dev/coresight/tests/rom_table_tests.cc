@@ -45,11 +45,11 @@ class ROMTableTest : public zxtest::Test {
   hwreg::Mock::RegisterIo& io() { return *(mock_.io()); }
 
   // Points at garbage, and so should not be casted and dereferenced.
-  uintptr_t base_addr() { return reinterpret_cast<uintptr_t>(&dummy_base_); }
+  uintptr_t base_addr() { return reinterpret_cast<uintptr_t>(&fake_base_); }
 
  private:
   hwreg::Mock mock_;
-  uint8_t dummy_base_;
+  uint8_t fake_base_;
 };
 
 TEST_F(ROMTableTest, Empty0x1Table) {

@@ -15,7 +15,7 @@
 #include <map>
 #include <memory>
 
-// PageManager backs our dummy heap implementation, managing blocks of
+// PageManager backs our fake heap implementation, managing blocks of
 // pages allocated by the OS.
 //
 // Its implementation is complicated by |cmpct_trim()|, which allows for the
@@ -32,10 +32,8 @@ class PageManager {
   void FreePages(void* p, size_t num_pages);
 
  private:
- struct PageAlignedDeleter {
-    void operator()(char* ptr) const {
-          operator delete[](ptr, std::align_val_t{ZX_PAGE_SIZE});
-    }
+  struct PageAlignedDeleter {
+    void operator()(char* ptr) const { operator delete[](ptr, std::align_val_t{ZX_PAGE_SIZE}); }
   };
   // Represents an OS-allocated block of pages that tracks the contiguous
   // subset of pages of it still available for use.

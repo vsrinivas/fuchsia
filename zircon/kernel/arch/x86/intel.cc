@@ -103,7 +103,6 @@ void x86_intel_load_microcode_patch(cpu_id::CpuId* cpuid, MsrAccess* msr, zx_iov
 uint32_t x86_intel_get_patch_level(void) {
   uint32_t patch_level = 0;
   if (!x86_feature_test(X86_FEATURE_HYPERVISOR)) {
-    uint32_t dummy;
     // Invoking CPUID for leaf 1h fills in the microcode patch level into the high half of
     // X86_MSR_IA32_BIOS_SIGN_ID MSR. Operations between CPUID and RDMSR may clear the MSR;
     // write this sequence in assembly to ensure that there are none.
@@ -116,9 +115,9 @@ uint32_t x86_intel_get_patch_level(void) {
         "cpuid\n"
         "movl $0x8b, %%ecx\n"
         "rdmsr\n"
-        : "=a"(dummy), "=d"(patch_level)
+        : "=d"(patch_level)
         :
-        : "ebx", "ecx", "memory");
+        : "rax", "rbx", "rcx", "memory");
   }
   return patch_level;
 }

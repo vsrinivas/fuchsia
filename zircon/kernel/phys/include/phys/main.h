@@ -24,7 +24,7 @@
 // shared in multithreaded kernel or user environments then this should
 // probably be replaced by a lock/guard template wrapper regime that uses
 // specific static analysis annotations and in fancy environments is real
-// locks but in single-threaded environments is compiled away dummy lock
+// locks but in single-threaded environments is compiled away stub lock
 // types that only do the static analysis.  For now, we take pains to mark
 // specific reusable-looking code with PHYS_SINGLETHREAD any place that it
 // has single-threaded assumptions.

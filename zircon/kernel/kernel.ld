@@ -217,7 +217,7 @@ SECTIONS
      * there isn't a way to do that that guarantees all same-named
      * input sections collect together as a contiguous unit, which
      * is what we need them for.  Linkers differ in how they'll
-     * place another dummy section here relative to the orphans, so
+     * place another empty section here relative to the orphans, so
      * there's no good way to define __rodata_end to be exactly the
      * end of all the orphans sections.  But the only use we have
      * for __rodata_end is to round it up to page size anyway, so
