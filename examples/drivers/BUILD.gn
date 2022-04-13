@@ -3,16 +3,10 @@
 # found in the LICENSE file.
 
 group("drivers") {
-  deps = [
-    "driver_test_realm/sample-driver",
-    "v2/demo-number:component",
-  ]
+  deps = [ "driver_test_realm/sample-driver" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    "driver_test_realm:tests",
-    "v2/demo-number:tests",
-  ]
+  deps = [ "driver_test_realm:tests" ]
 }
