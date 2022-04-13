@@ -319,7 +319,7 @@ void Dispatcher::ShutdownAsync() {
   // The dispatcher shutdown API specifies that on shutdown, tasks and cancellation
   // callbacks should run serialized. Wait for all active threads to
   // complete before calling the cancellation callbacks.
-  auto event = RegisterForIdleEvent();
+  auto event = RegisterForCompleteShutdownEvent();
   ZX_ASSERT(event.status_value() == ZX_OK);
 
   // Don't use async::WaitOnce as it sets the handler in a thread unsafe way.
@@ -342,10 +342,9 @@ void Dispatcher::CompleteShutdown() {
     fbl::AutoLock lock(&callback_lock_);
 
     ZX_ASSERT(state_ == DispatcherState::kShuttingDown);
-    ZX_ASSERT(timer_.is_armed() == false);
+    ZX_ASSERT(IsIdleLocked() && !HasFutureOpsScheduledLocked());
 
     if (event_waiter_) {
-      ZX_ASSERT(IsIdleLocked());
       // Since the event waiter holds a reference to the dispatcher,
       // we need to cancel it to reclaim it.
       // This should always succeed, as there should be no other threads processing
@@ -808,14 +807,14 @@ void Dispatcher::DispatchCallbacks(std::unique_ptr<EventWaiter> event_waiter,
   }
 }
 
-zx::status<zx::event> Dispatcher::RegisterForIdleEvent() {
+zx::status<zx::event> Dispatcher::RegisterForCompleteShutdownEvent() {
   fbl::AutoLock lock_(&callback_lock_);
-  auto event = idle_event_manager_.GetIdleEvent();
+  auto event = complete_shutdown_event_manager_.GetEvent();
   if (event.is_error()) {
     return event;
   }
-  if (IsIdleLocked()) {
-    zx_status_t status = idle_event_manager_.Signal();
+  if (IsIdleLocked() && !HasFutureOpsScheduledLocked()) {
+    zx_status_t status = complete_shutdown_event_manager_.Signal();
     if (status != ZX_OK) {
       return zx::error(status);
     }
@@ -823,24 +822,31 @@ zx::status<zx::event> Dispatcher::RegisterForIdleEvent() {
   return event;
 }
 
-fdf_status_t Dispatcher::WaitUntilIdle() {
+void Dispatcher::WaitUntilIdle() {
   ZX_ASSERT(!IsRuntimeManagedThread());
-  auto event = RegisterForIdleEvent();
-  if (event.is_error()) {
-    return event.status_value();
+
+  fbl::AutoLock lock_(&callback_lock_);
+  if (IsIdleLocked()) {
+    return;
   }
-  return event->wait_one(ZX_EVENT_SIGNALED, zx::time::infinite(), nullptr);
+  idle_event_.Wait(&callback_lock_);
+  return;
 }
 
 bool Dispatcher::IsIdleLocked() {
   // If the event waiter was signaled, the thread will be scheduled to run soon.
   return (num_active_threads_ == 0) && callback_queue_.is_empty() &&
-         (!event_waiter_ || !event_waiter_->signaled()) && waits_.is_empty() && !timer_.is_armed();
+         (!event_waiter_ || !event_waiter_->signaled());
 }
+
+bool Dispatcher::HasFutureOpsScheduledLocked() { return !waits_.is_empty() || timer_.is_armed(); }
 
 void Dispatcher::IdleCheckLocked() {
   if (IsIdleLocked()) {
-    idle_event_manager_.Signal();
+    idle_event_.Broadcast();
+    if (!HasFutureOpsScheduledLocked()) {
+      complete_shutdown_event_manager_.Signal();
+    }
   }
 }
 
@@ -887,7 +893,7 @@ zx_status_t Dispatcher::EventWaiter::BeginWaitWithRef(std::unique_ptr<EventWaite
   return BeginWait(std::move(event), dispatcher->process_shared_dispatcher_);
 }
 
-zx::status<zx::event> Dispatcher::IdleEventManager::GetIdleEvent() {
+zx::status<zx::event> Dispatcher::CompleteShutdownEventManager::GetEvent() {
   if (!event_.is_valid()) {
     // If this is the first waiter to register, we need to create the
     // idle event manager's event.
@@ -904,7 +910,7 @@ zx::status<zx::event> Dispatcher::IdleEventManager::GetIdleEvent() {
   return zx::ok(std::move(dup));
 }
 
-zx_status_t Dispatcher::IdleEventManager::Signal() {
+zx_status_t Dispatcher::CompleteShutdownEventManager::Signal() {
   if (!event_.is_valid()) {
     return ZX_OK;  // No-one is waiting for idle events.
   }
@@ -914,7 +920,7 @@ zx_status_t Dispatcher::IdleEventManager::Signal() {
 }
 
 // static
-fdf_status_t DispatcherCoordinator::WaitUntilDispatchersIdle() {
+void DispatcherCoordinator::WaitUntilDispatchersIdle() {
   std::vector<fbl::RefPtr<Dispatcher>> dispatchers;
   {
     fbl::AutoLock lock(&(GetDispatcherCoordinator().lock_));
@@ -923,12 +929,8 @@ fdf_status_t DispatcherCoordinator::WaitUntilDispatchersIdle() {
     }
   }
   for (auto& d : dispatchers) {
-    fdf_status_t status = d->WaitUntilIdle();
-    if (status != ZX_OK) {
-      return status;
-    }
+    d->WaitUntilIdle();
   }
-  return ZX_OK;
 }
 
 // static

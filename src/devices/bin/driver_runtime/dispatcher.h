@@ -125,17 +125,20 @@ class Dispatcher : public async_dispatcher_t,
       __TA_EXCLUDES(&callback_lock_);
 
   // Returns true if the dispatcher has no active threads or queued requests.
+  // This does not include unsignaled waits, or tasks which have been scheduled
+  // for a future deadline.
   // This unlocked version of |IsIdleLocked| is called by tests.
   bool IsIdle() {
     fbl::AutoLock lock(&callback_lock_);
     return IsIdleLocked();
   }
 
-  // Returns ownership of an event that will be signaled once the dispatcher is idle.
-  zx::status<zx::event> RegisterForIdleEvent();
+  // Returns ownership of an event that will be signaled once the dispatcher is ready
+  // to complete shutdown.
+  zx::status<zx::event> RegisterForCompleteShutdownEvent();
 
   // Blocks the current thread until the dispatcher is idle.
-  fdf_status_t WaitUntilIdle();
+  void WaitUntilIdle();
 
   // Returns the dispatcher options specified by the user.
   uint32_t options() const { return options_; }
@@ -222,10 +225,11 @@ class Dispatcher : public async_dispatcher_t,
     fbl::RefPtr<Dispatcher> dispatcher_ref_;
   };
 
-  class IdleEventManager {
+  class CompleteShutdownEventManager {
    public:
-    // Returns a duplicate of the event that will be signaled when the dispatcher is next idle.
-    zx::status<zx::event> GetIdleEvent();
+    // Returns a duplicate of the event that will be signaled when the dispatcher
+    // is ready to complete shutdown.
+    zx::status<zx::event> GetEvent();
     // Signal and reset the idle event.
     zx_status_t Signal();
 
@@ -341,7 +345,12 @@ class Dispatcher : public async_dispatcher_t,
   void CompleteShutdown();
 
   // Returns true if the dispatcher has no active threads or queued requests.
+  // This does not include unsignaled waits.
   bool IsIdleLocked() __TA_REQUIRES(&callback_lock_);
+
+  // Returns true if the dispatcher has waits or tasks scheduled for a future deadline.
+  // This includes unsignaled waits and delayed tasks.
+  bool HasFutureOpsScheduledLocked() __TA_REQUIRES(&callback_lock_);
 
   // Checks whether the dispatcher has entered and idle state and if so notifies any registered
   // waiters.
@@ -406,7 +415,11 @@ class Dispatcher : public async_dispatcher_t,
   // Number of threads currently servicing callbacks.
   size_t num_active_threads_ __TA_GUARDED(&callback_lock_) = 0;
 
-  IdleEventManager idle_event_manager_ __TA_GUARDED(&callback_lock_);
+  CompleteShutdownEventManager complete_shutdown_event_manager_ __TA_GUARDED(&callback_lock_);
+
+  // Notified when the dispatcher enters an idle state, not including pending waits or delayed
+  // tasks.
+  fbl::ConditionVariable idle_event_ __TA_GUARDED(&callback_lock_);
 
   // The observer that should be called when shutting down the dispatcher completes.
   fdf_dispatcher_shutdown_observer_t* shutdown_observer_ __TA_GUARDED(&callback_lock_) = nullptr;
@@ -421,7 +434,7 @@ class DispatcherCoordinator {
   DispatcherCoordinator() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) { loop_.StartThread(); }
 
   static void DestroyAllDispatchers();
-  static fdf_status_t WaitUntilDispatchersIdle();
+  static void WaitUntilDispatchersIdle();
   static void WaitUntilDispatchersDestroyed();
   static fdf_status_t ShutdownDispatchersAsync(const void* driver,
                                                fdf_internal_driver_shutdown_observer_t* observer);
