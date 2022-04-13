@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        diagnostics::{Diagnostics, RpcMethod},
         hash_tree::{
             HashTree, HashTreeError, BITS_PER_LEVEL, CHILDREN_PER_NODE, LABEL_LENGTH, TREE_HEIGHT,
         },
@@ -19,6 +20,7 @@ use {
     futures::{lock::Mutex, prelude::*},
     log::{error, info},
     std::cell::{RefCell, RefMut},
+    std::sync::Arc,
 };
 
 /// The |CredentialManager| is responsible for adding, removing and checking
@@ -29,21 +31,24 @@ use {
 /// maintain a |hash_tree| which contains the merkle tree required for
 /// communicating over the PinWeaver protocol. The |hash_tree| is synced to
 /// disk after each operation.
-pub struct CredentialManager<PW, LT>
+pub struct CredentialManager<PW, LT, D>
 where
     PW: PinWeaverProtocol,
     LT: LookupTable,
+    D: Diagnostics,
 {
     pinweaver: Mutex<PW>,
     hash_tree: RefCell<HashTree>,
     lookup_table: RefCell<LT>,
     hash_tree_path: String,
+    diagnostics: Arc<D>,
 }
 
-impl<PW, LT> CredentialManager<PW, LT>
+impl<PW, LT, D> CredentialManager<PW, LT, D>
 where
     PW: PinWeaverProtocol,
     LT: LookupTable,
+    D: Diagnostics,
 {
     /// Constructs a new |CredentialManager| that communicates with the |PinWeaverProxy|
     /// to add, delete and check credentials storing the relevant data in the |hash_tree|
@@ -52,6 +57,7 @@ where
         hash_tree_path: &str,
         pinweaver: PW,
         mut lookup_table: LT,
+        diagnostics: Arc<D>,
     ) -> Result<Self, CredentialError> {
         let hash_tree = Self::provision(hash_tree_path, &mut lookup_table, &pinweaver).await?;
         Ok(Self {
@@ -59,6 +65,7 @@ where
             hash_tree: RefCell::new(hash_tree),
             lookup_table: RefCell::new(lookup_table),
             hash_tree_path: hash_tree_path.to_string(),
+            diagnostics,
         })
     }
 
@@ -85,14 +92,17 @@ where
             CredentialManagerRequest::AddCredential { params, responder } => {
                 let mut resp = self.add_credential(&params).await;
                 responder.send(&mut resp).context("sending AddCredential response")?;
+                self.diagnostics.rpc_outcome(RpcMethod::AddCredential, resp.map(|_| ()));
             }
             CredentialManagerRequest::RemoveCredential { label, responder } => {
                 let mut resp = self.remove_credential(label).await;
                 responder.send(&mut resp).context("sending RemoveLabel response")?;
+                self.diagnostics.rpc_outcome(RpcMethod::RemoveCredential, resp);
             }
             CredentialManagerRequest::CheckCredential { params, responder } => {
                 let mut resp = self.check_credential(&params).await;
                 responder.send(&mut resp).context("sending CheckCredential response")?;
+                self.diagnostics.rpc_outcome(RpcMethod::CheckCredential, resp.map(|_| ()));
             }
         }
         Ok(())
@@ -279,12 +289,20 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::lookup_table::{LookupTableError, MockLookupTable, ReadResult};
-    use crate::pinweaver::MockPinWeaverProtocol;
-    use assert_matches::assert_matches;
-    use fidl_fuchsia_tpm_cr50::{TryAuthFailed, TryAuthRateLimited, TryAuthSuccess};
-    use tempfile::TempDir;
+    use {
+        super::*,
+        crate::{
+            diagnostics::FakeDiagnostics,
+            lookup_table::{LookupTableError, MockLookupTable, ReadResult},
+            pinweaver::MockPinWeaverProtocol,
+        },
+        assert_matches::assert_matches,
+        fidl::endpoints::create_proxy_and_stream,
+        fidl_fuchsia_identity_credential::CredentialManagerMarker,
+        fidl_fuchsia_tpm_cr50::{TryAuthFailed, TryAuthRateLimited, TryAuthSuccess},
+        fuchsia_async as fasync,
+        tempfile::TempDir,
+    };
 
     struct TestParams {
         pub lookup_table: MockLookupTable,
@@ -304,21 +322,24 @@ mod test {
     }
 
     struct TestHarness {
-        cm: CredentialManager<MockPinWeaverProtocol, MockLookupTable>,
+        cm: CredentialManager<MockPinWeaverProtocol, MockLookupTable, FakeDiagnostics>,
+        diag: Arc<FakeDiagnostics>,
         _dir: TempDir,
     }
 
     impl TestHarness {
         async fn create(params: TestParams) -> Self {
             let path = params.dir.path().join("hash_tree");
+            let diag = Arc::new(FakeDiagnostics::new());
             let cm = CredentialManager::new(
                 path.to_str().unwrap(),
                 params.pinweaver,
                 params.lookup_table,
+                Arc::clone(&diag),
             )
             .await
             .expect("failed to create credential manager");
-            Self { cm, _dir: params.dir }
+            Self { cm, diag, _dir: params.dir }
         }
     }
 
@@ -616,5 +637,47 @@ mod test {
             .expect("added credential");
         let result = test.cm.remove_credential(label).await;
         assert_matches!(result, Err(CredentialError::InternalError));
+    }
+
+    #[fuchsia::test]
+    async fn test_request_stream_handling() {
+        let mut params = TestParams::default();
+        params
+            .pinweaver
+            .expect_insert_leaf()
+            .times(1)
+            .returning(|_, _, _| Ok((Mac::default(), CredentialMetadata::default())));
+        params.lookup_table.expect_write().times(1).returning(|_, _| Ok(()));
+        let test = TestHarness::create(params).await;
+
+        let (proxy, request_stream) = create_proxy_and_stream::<CredentialManagerMarker>().unwrap();
+        fasync::Task::spawn(async move {
+            proxy
+                .add_credential(fcred::AddCredentialParams {
+                    le_secret: Some(vec![1; 32]),
+                    he_secret: Some(vec![2; 32]),
+                    reset_secret: Some(vec![3; 32]),
+                    delay_schedule: Some(vec![fcred::DelayScheduleEntry {
+                        attempt_count: 20,
+                        time_delay: 64,
+                    }]),
+                    ..fcred::AddCredentialParams::EMPTY
+                })
+                .await
+                .expect("send add_credential should succeed")
+                .expect("add_credential should return Ok");
+            proxy
+                .remove_credential(777)
+                .await
+                .expect("send remove_credential should succeed")
+                .expect_err("remove_credential should return Err");
+        })
+        .detach();
+
+        test.cm.handle_requests_for_stream(request_stream).await;
+        test.diag.assert_rpc_outcomes(&[
+            (RpcMethod::AddCredential, Ok(())),
+            (RpcMethod::RemoveCredential, Err(CredentialError::InvalidLabel)),
+        ]);
     }
 }

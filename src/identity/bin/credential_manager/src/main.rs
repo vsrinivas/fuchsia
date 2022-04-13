@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 mod credential_manager;
+mod diagnostics;
 mod hash_tree;
 mod label_generator;
 mod lookup_table;
@@ -16,9 +17,11 @@ use fuchsia_component::{client::connect_to_protocol, server::ServiceFs};
 use futures::StreamExt;
 use io_util::directory::open_in_namespace;
 use log::info;
+use std::sync::Arc;
 
 use crate::{
     credential_manager::CredentialManager,
+    diagnostics::InspectDiagnostics,
     lookup_table::{PersistentLookupTable, LOOKUP_TABLE_PATH},
     pinweaver::PinWeaver,
 };
@@ -49,9 +52,11 @@ async fn main() -> Result<(), Error> {
     )?;
     let lookup_table = PersistentLookupTable::new(cred_data);
     let pinweaver = PinWeaver::new(pinweaver_proxy);
-    let credential_manager = CredentialManager::new(HASH_TREE_PATH, pinweaver, lookup_table)
-        .await
-        .expect("failed to provision credential manager");
+    let diagnostics = Arc::new(InspectDiagnostics::new_at_root());
+    let credential_manager =
+        CredentialManager::new(HASH_TREE_PATH, pinweaver, lookup_table, diagnostics)
+            .await
+            .expect("failed to provision credential manager");
 
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(Services::CredentialManager);
