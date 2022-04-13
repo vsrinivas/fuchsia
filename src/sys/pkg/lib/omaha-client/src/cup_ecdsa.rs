@@ -6,7 +6,7 @@ use http::Response;
 use hyper::header::ETAG;
 use p256::ecdsa::{signature::Verifier as _, DerSignature};
 use rand::{thread_rng, Rng};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use sha2::{Digest, Sha256};
 use signature::Signature;
 use std::{collections::HashMap, convert::TryInto, fmt::Debug};
@@ -47,8 +47,18 @@ pub enum CupVerificationError {
 pub type PublicKeyId = u64;
 pub type PublicKey = p256::ecdsa::VerifyingKey;
 
+fn from_pem<'de, D>(deserializer: D) -> Result<PublicKey, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use serde::de;
+    let s = String::deserialize(deserializer)?;
+    s.parse().map_err(de::Error::custom)
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PublicKeyAndId {
+    #[serde(deserialize_with = "from_pem")]
     pub key: PublicKey,
     pub id: PublicKeyId,
 }
@@ -654,5 +664,28 @@ mod tests {
             .is_err());
 
         Ok(())
+    }
+
+    #[test]
+    fn test_deserialize_public_keys() {
+        use std::str::FromStr;
+
+        let verifying_key = PublicKey::from_str(
+            r#"-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
+7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==
+-----END PUBLIC KEY-----"#,
+        )
+        .unwrap();
+
+        let public_key_and_id: PublicKeyAndId = serde_json::from_str(
+            r#"{
+                 "id": 123,
+                 "key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----"
+            }"#,
+        )
+        .unwrap();
+
+        assert_eq!(public_key_and_id.key, verifying_key);
     }
 }
