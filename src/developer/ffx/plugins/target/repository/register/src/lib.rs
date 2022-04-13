@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_developer_ffx_ext::RepositoryError,
 };
 
-#[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::protocol")]
+#[ffx_plugin(RepositoryRegistryProxy = "daemon::protocol")]
 pub async fn register_cmd(cmd: RegisterCommand, repos: RepositoryRegistryProxy) -> Result<()> {
     register(
         ffx_config::get("target.default").await.context("getting default target from config")?,

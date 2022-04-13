@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_net_ext::SocketAddress,
 };
 
-#[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::protocol")]
+#[ffx_plugin(RepositoryRegistryProxy = "daemon::protocol")]
 pub async fn start(_cmd: StartCommand, repos: RepositoryRegistryProxy) -> Result<()> {
     match repos
         .server_start()

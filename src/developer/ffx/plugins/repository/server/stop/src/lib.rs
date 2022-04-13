@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_developer_ffx_ext::RepositoryError, pkg::config as pkg_config,
 };
 
-#[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::protocol")]
+#[ffx_plugin(RepositoryRegistryProxy = "daemon::protocol")]
 pub async fn stop(_cmd: StopCommand, repos: RepositoryRegistryProxy) -> Result<()> {
     match repos.server_stop().await {
         Ok(Ok(())) => {

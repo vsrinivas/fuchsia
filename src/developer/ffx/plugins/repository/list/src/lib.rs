@@ -14,7 +14,7 @@ use {
     std::convert::TryInto,
 };
 
-#[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::protocol")]
+#[ffx_plugin(RepositoryRegistryProxy = "daemon::protocol")]
 pub async fn list(
     cmd: ListCommand,
     repos: RepositoryRegistryProxy,
