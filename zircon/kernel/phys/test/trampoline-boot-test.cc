@@ -16,6 +16,7 @@
 #include <ktl/optional.h>
 #include <ktl/string_view.h>
 #include <phys/main.h>
+#include <phys/stdio.h>
 #include <phys/symbolize.h>
 #include <pretty/cpp/sizes.h>
 
@@ -30,6 +31,7 @@ const char* kTestName = "trampoline-boot-test";
 namespace {
 
 constexpr ktl::string_view kKernelLoadAddressOpt = "trampoline.kernel_load_address=";
+constexpr ktl::string_view kDataLoadAddressOpt = "trampoline.data_load_address=";
 
 }  // namespace
 
@@ -43,6 +45,17 @@ int TurduckenTest::Main(Zbi::iterator kernel_item) {
   memcpy(hex_str.data(), load_addr_opt->data(), load_addr_opt->length());
   uint64_t expected_load_address = strtoul(hex_str.data(), nullptr, 16);
   auto actual_load_address = reinterpret_cast<uint64_t>(PHYS_LOAD_ADDRESS);
+  ZX_ASSERT_MSG(actual_load_address == expected_load_address,
+                "actual_load_address (0x%016" PRIx64 ") != expected_load_address (0x%016" PRIx64
+                ")",
+                actual_load_address, expected_load_address);
+
+  load_addr_opt = OptionWithPrefix(kDataLoadAddressOpt);
+  ZX_ASSERT(load_addr_opt);
+  ZX_ASSERT(load_addr_opt->length() <= 18);
+  memcpy(hex_str.data(), load_addr_opt->data(), load_addr_opt->length());
+  expected_load_address = strtoul(hex_str.data(), nullptr, 16);
+  actual_load_address = reinterpret_cast<uint64_t>(boot_zbi().storage().data());
   ZX_ASSERT_MSG(actual_load_address == expected_load_address,
                 "actual_load_address (0x%016" PRIx64 ") != expected_load_address (0x%016" PRIx64
                 ")",

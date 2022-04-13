@@ -13,6 +13,7 @@
 #include <zircon/assert.h>
 
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
 
 #include <ktl/byte.h>
@@ -35,6 +36,34 @@ bool IsLegacyEntryAddress(uint64_t address) {
 #endif
 }
 
+struct RelocateTarget {
+  RelocateTarget() = default;
+
+  RelocateTarget(uintptr_t destination, ktl::span<const ktl::byte> blob)
+      : src(reinterpret_cast<uintptr_t>(blob.data())),
+        dst(destination),
+        count(blob.size()),
+        backwards(dst > src && dst - src < count) {
+    if (backwards) {
+      dst += count - 1;
+      src += count - 1;
+    }
+  }
+
+  constexpr bool IsRedundantRelocation() const { return src == dst || count == 0; }
+
+  constexpr uint64_t destination() const { return backwards ? dst - count + 1 : dst; }
+
+  uint64_t src = 0;
+  uint64_t dst = 0;
+  uint64_t count = 0;
+
+  // When the addresses overlap, the copying can be done backwards and so the
+  // direction flag is set for REP MOVSB and the starting pointers are at the
+  // laste byte rather than the first.
+  bool backwards = false;
+};
+
 }  // namespace
 
 // This describes the "trampoline" area that is set up in some memory that's
@@ -54,16 +83,14 @@ class TrampolineBoot::Trampoline {
 
   static size_t size() { return offsetof(Trampoline, code_) + TrampolineCode().size(); }
 
-  [[noreturn]] void Boot(const zircon_kernel_t* kernel, uint32_t kernel_size, uint64_t load_address,
-                         uint64_t entry_address, void* zbi) {
-    TrampolineArgs args = {
-        .kernel_dst = load_address,
-        .kernel_src = reinterpret_cast<uintptr_t>(kernel),
-        .kernel_count = kernel_size,
-        .zbi_dst = reinterpret_cast<uintptr_t>(zbi),
+  [[noreturn]] void Boot(RelocateTarget kernel, RelocateTarget zbi, uint64_t entry_address) {
+    args = {
+        .kernel = kernel,
+        .zbi = zbi,
         .entry = entry_address,
+        .data_zbi = zbi.destination(),
+        .zbi_relocate = !zbi.IsRedundantRelocation(),
     };
-    args.SetDirection();
     ZX_ASSERT(args.entry == entry_address);
     arch::ZbiBootRaw(reinterpret_cast<uintptr_t>(code_), &args);
   }
@@ -72,26 +99,10 @@ class TrampolineBoot::Trampoline {
   // This packs up the arguments for the trampoline code, which are pretty much
   // the operands for REP MOVSB plus the entry point and data ZBI addresses.
   struct TrampolineArgs {
-    // When the addresses overlap, the copying can be done backwards and so the
-    // direction flag is set for REP MOVSB and the starting pointers are at the
-    // laste byte rather than the first.
-    void SetDirection() {
-      kernel_backwards = kernel_dst > kernel_src && kernel_dst - kernel_src < kernel_count;
-      if (kernel_backwards) {
-        kernel_dst += kernel_count - 1;
-        kernel_src += kernel_count - 1;
-      }
-    }
-
-    uint64_t kernel_dst;
-    uint64_t kernel_src;
-    uint64_t kernel_count;
-    uint64_t zbi_dst;
-    uint64_t zbi_src;
-    uint64_t zbi_count;
+    RelocateTarget kernel;
+    RelocateTarget zbi;
     uint64_t entry;
-    bool kernel_backwards;
-    bool zbi_backwards;
+    uint64_t data_zbi;
     bool zbi_relocate;
   };
 
@@ -117,53 +128,80 @@ class TrampolineBoot::Trampoline {
     // jumping to the entry point (%rbx).
     const ktl::byte* code;
     size_t size;
-    __asm__(R"""(
+    __asm__(
+        R"""(
 .code64
 .pushsection .rodata.trampoline, "a?", %%progbits
 0:
-  mov %c[kernel_backwards](%%rsi), %%al
-  mov %c[entry](%%rsi), %%rbx
-  mov %c[kernel_count](%%rsi), %%rcx
-  mov %c[zbi_dst](%%rsi), %%rdx
-  mov %c[kernel_dst](%%rsi), %%rdi
-  mov %c[kernel_src](%%rsi), %%rsi
+  # Save |rsi| in |rbx|, where |rbx| will always point to '&args'.
+  mov %%rsi, %%rbx
+  mov %c[zbi_relocate](%%rbx), %%al
   testb %%al, %%al
+  jz 2f
+  mov %c[zbi_backwards](%%rbx), %%al
+  mov %c[zbi_count](%%rbx), %%rcx
+  mov %c[zbi_dst](%%rbx), %%rdi
+  mov %c[zbi_src](%%rbx), %%rsi
+  testb %%al,%%al
   jz 1f
   std
 1:
   rep movsb
+  cld
+2:
+  mov %c[kernel_backwards](%%rbx), %%al
+  mov %c[kernel_count](%%rbx), %%rcx
+  mov %c[kernel_dst](%%rbx), %%rdi
+  mov %c[kernel_src](%%rbx), %%rsi
+  testb %%al, %%al
+  jz 3f
+  std
+3:
+  rep movsb
+  # Clean stack pointers before jumping into the kernel.
   xor %%esp, %%esp
   xor %%ebp, %%ebp
   cld
   cli
-  mov %%rdx, %%rsi
+  # The data ZBI must be in rsi before jumping into the kernel entry address.
+  mov %c[data_zbi](%%rbx), %%rsi
+  mov %c[entry](%%rbx), %%rbx
   jmp *%%rbx
-2:
+4:
 .popsection
 )"""
 #ifdef __i386__
-            R"""(
+        R"""(
 .code32
   mov $0b, %[code]
-  mov $(2b - 0b), %[size]
+  mov $(4b - 0b), %[size]
             )"""
 #else
-            R"""(
+        R"""(
   lea 0b(%%rip), %[code]
-  mov $(2b - 0b), %[size]
+  mov $(4b - 0b), %[size]
             )"""
 #endif
-            : [code] "=r"(code), [size] "=r"(size)
-            : [kernel_backwards] "i"(offsetof(TrampolineArgs, kernel_backwards)),  //
-              [kernel_dst] "i"(offsetof(TrampolineArgs, kernel_dst)),              //
-              [kernel_src] "i"(offsetof(TrampolineArgs, kernel_src)),              //
-              [kernel_count] "i"(offsetof(TrampolineArgs, kernel_count)),          //
-              [zbi_dst] "i"(offsetof(TrampolineArgs, zbi_dst)),                    //
-              [entry] "i"(offsetof(TrampolineArgs, entry)));
+        : [code] "=r"(code), [size] "=r"(size)
+        : [kernel_backwards] "i"(offsetof(TrampolineArgs, kernel) +
+                                 offsetof(RelocateTarget, backwards)),                         //
+          [kernel_dst] "i"(offsetof(TrampolineArgs, kernel) + offsetof(RelocateTarget, dst)),  //
+          [kernel_src] "i"(offsetof(TrampolineArgs, kernel) + offsetof(RelocateTarget, src)),  //
+          [kernel_count] "i"(offsetof(TrampolineArgs, kernel) +
+                             offsetof(RelocateTarget, count)),                               //
+          [zbi_dst] "i"(offsetof(TrampolineArgs, zbi) + offsetof(RelocateTarget, dst)),      //
+          [zbi_src] "i"(offsetof(TrampolineArgs, zbi) + offsetof(RelocateTarget, src)),      //
+          [zbi_count] "i"(offsetof(TrampolineArgs, zbi) + offsetof(RelocateTarget, count)),  //
+          [zbi_backwards] "i"(offsetof(TrampolineArgs, zbi) +
+                              offsetof(RelocateTarget, backwards)),    //
+          [zbi_relocate] "i"(offsetof(TrampolineArgs, zbi_relocate)),  //
+          [data_zbi] "i"(offsetof(TrampolineArgs, data_zbi)),          //
+          [entry] "i"(offsetof(TrampolineArgs, entry)));
     return {code, size};
   }
 
   arch::X86StandardSegments segments_;
+  TrampolineArgs args;
   ktl::byte code_[];
 };
 
@@ -258,7 +296,7 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity,
   if (kernel_load_address_) {
     uintptr_t fixed_first = static_cast<uintptr_t>(kernel_load_address_.value());
     uintptr_t fixed_last = static_cast<uintptr_t>(*kernel_load_address_ + KernelLoadSize() - 1);
-    ZX_ASSERT_MSG(fixed_first == *kernel_load_address_, "%" PRIu64 " != %" PRIu64 " ",
+    ZX_ASSERT_MSG(fixed_first == *kernel_load_address_, "0x%016" PRIx64 " != 0x%016" PRIx64 " ",
                   static_cast<uint64_t>(fixed_first), *kernel_load_address_);
     ZX_ASSERT(fixed_last == *kernel_load_address_ + KernelLoadSize() - 1);
   }
@@ -271,9 +309,16 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity,
   LogAddresses();
   LogFixedAddresses();
   LogBoot(KernelEntryAddress());
-
-  trampoline_->Boot(KernelImage(), KernelLoadSize(), *kernel_load_address_, KernelEntryAddress(),
-                    argument.value_or(DataZbi().storage().data()));
+  uintptr_t zbi_location =
+      reinterpret_cast<uintptr_t>(argument.value_or(DataZbi().storage().data()));
+  auto kernel_blob = ktl::span<const ktl::byte>(reinterpret_cast<const ktl::byte*>(KernelImage()),
+                                                KernelLoadSize());
+  auto zbi_blob = ktl::span<const ktl::byte>(reinterpret_cast<const ktl::byte*>(zbi_location),
+                                             DataZbi().size_bytes());
+  trampoline_->Boot(
+      RelocateTarget(static_cast<uintptr_t>(*kernel_load_address_), kernel_blob),
+      RelocateTarget(static_cast<uintptr_t>(data_load_address_.value_or(zbi_location)), zbi_blob),
+      KernelEntryAddress());
 }
 
 fitx::result<TrampolineBoot::Error> TrampolineBoot::Init(InputZbi zbi) {

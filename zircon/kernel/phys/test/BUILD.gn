@@ -419,6 +419,7 @@ if (current_toolchain != default_toolchain) {
     deps = [
       ":turducken",
       ":zbi-test-main",
+      "..:stdio",
       "//src/lib/elfldltl",
       "//zircon/kernel/lib/libc",
       "//zircon/system/ulib/pretty",
