@@ -217,6 +217,9 @@ zx_status_t Imx227Device::InitSensor(uint8_t idx) {
     }
     sequence++;
   }
+
+  RefreshCachedExposureParams();
+
   return ZX_OK;
 }
 
@@ -235,6 +238,8 @@ void Imx227Device::HwInit() {
 
   gpio_cam_rst_.Write(0);
   zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
+
+  RefreshCachedExposureParams();
 }
 
 void Imx227Device::HwDeInit() {
@@ -428,6 +433,27 @@ zx_status_t Imx227Device::ReadGainConstants() {
 zx_status_t Imx227Device::SetGroupedParameterHold(bool enable) {
   auto status = Write8(kGroupedParameterHoldReg, enable ? 1 : 0);
   return status;
+}
+
+// Update the cached exposure values if possible.
+// Any read failures here imply that the sensor is not
+// available and can be ignored, as the sensor registers will
+// need to be updated again before the sensor can be used.
+void Imx227Device::RefreshCachedExposureParams() {
+  auto result = Read16(kAnalogGainCodeGlobalReg);
+  if (result.is_ok()) {
+    analog_gain_.gain_code_global = result.value();
+  }
+
+  result = Read16(kDigitalGainGlobalReg);
+  if (result.is_ok()) {
+    digital_gain_.gain = result.value();
+  }
+
+  result = Read16(kCoarseIntegrationTimeReg);
+  if (result.is_ok()) {
+    integration_time_.coarse_integration_time = result.value();
+  }
 }
 
 zx_status_t Imx227Device::Create(zx_device_t* parent, std::unique_ptr<Imx227Device>* device_out) {

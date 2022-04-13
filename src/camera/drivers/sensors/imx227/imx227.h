@@ -210,6 +210,8 @@ class Imx227Device : public DeviceType,
 
   zx_status_t SetGroupedParameterHold(bool) __TA_REQUIRES(lock_);
 
+  void RefreshCachedExposureParams() __TA_REQUIRES(lock_);
+
   std::mutex lock_;
 };
 
