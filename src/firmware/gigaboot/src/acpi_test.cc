@@ -53,13 +53,17 @@ class EfiConfigTable {
   void CorruptRsdpSignature();
   void CorruptXsdtSignature();
   void CorruptXsdtChecksum();
-  acpi_sdt_hdr_t *AddAcpiTable(const uint8_t *signature);
+  acpi_spcr_t *AddSpcrTable();
+  acpi_madt_t *AddMadtTable();
+  void AddInterruptControllerToMadt(acpi_madt_t *madt, void *controller, size_t size);
 
   efi_configuration_table *RawTable();
 
  private:
   uint8_t rsdp_position_;
   std::vector<efi_configuration_table> table_;
+
+  int AddPointerToXsdt(uint64_t addr);
 };
 
 EfiConfigTable::EfiConfigTable(uint8_t revision, uint8_t position) {
@@ -100,7 +104,7 @@ EfiConfigTable::~EfiConfigTable() {
   // Free up all of the memory used by the ACPI tables.
   auto num_entries = (xsdt_.hdr.length - sizeof(acpi_sdt_hdr_t)) / sizeof(uint64_t);
   for (size_t i = 0; i < num_entries; i++) {
-    delete (uint8_t *)xsdt_.entries[i];
+    delete[] (uint8_t *)xsdt_.entries[i];
   }
 }
 
@@ -132,27 +136,72 @@ void EfiConfigTable::CorruptXsdtSignature() {
 
 void EfiConfigTable::CorruptXsdtChecksum() { xsdt_.hdr.checksum ^= 1; }
 
-acpi_sdt_hdr_t *EfiConfigTable::AddAcpiTable(const uint8_t *signature) {
-  // Create the table header. We don't need to initialize a full table.
-  auto hdr = new acpi_sdt_hdr_t{};
-  memcpy(&hdr->signature, signature, ACPI_TABLE_SIGNATURE_SIZE);
-  hdr->length = sizeof(acpi_sdt_hdr_t);
-  update_checksum(hdr, hdr->length, hdr->checksum);
+void EfiConfigTable::AddInterruptControllerToMadt(acpi_madt_t *madt, void *controller,
+                                                  size_t size) {
+  uint8_t *next_table_start = (uint8_t *)madt + madt->hdr.length;
+  madt->hdr.length += size;
+  memcpy(next_table_start, controller, size);
+  update_checksum(madt, madt->hdr.length, madt->hdr.checksum);
+}
 
-  // Add the header pointer to the XSDT.
-  auto num_entries = (xsdt_.hdr.length - sizeof(acpi_sdt_hdr_t)) / sizeof(uint64_t);
-  if (num_entries >= sizeof(xsdt_.entries) / sizeof(uint64_t)) {
-    delete hdr;
+acpi_madt_t *EfiConfigTable::AddMadtTable() {
+  // We allocate extra space for the interrupt controller structures.
+  auto buffer = new uint8_t[512];
+  auto madt = (acpi_madt_t *)buffer;
+  madt->hdr.length = sizeof(acpi_madt_t);
+  memcpy(&madt->hdr.signature, kMadtSignature, sizeof(kMadtSignature));
+  update_checksum(madt, madt->hdr.length, madt->hdr.checksum);
+  if (AddPointerToXsdt((uint64_t)madt)) {
     return nullptr;
   }
-  xsdt_.entries[num_entries] = (uint64_t)hdr;
+  return madt;
+}
+
+acpi_spcr_t *EfiConfigTable::AddSpcrTable() {
+  auto buffer = new uint8_t[sizeof(acpi_spcr_t)];
+  auto spcr = (acpi_spcr_t *)buffer;
+  spcr->hdr.length = sizeof(acpi_spcr_t);
+  memcpy(&spcr->hdr.signature, kSpcrSignature, sizeof(kSpcrSignature));
+  update_checksum(spcr, spcr->hdr.length, spcr->hdr.checksum);
+  if (AddPointerToXsdt((uint64_t)spcr)) {
+    return nullptr;
+  }
+  return spcr;
+}
+
+int EfiConfigTable::AddPointerToXsdt(uint64_t addr) {
+  auto num_entries = (xsdt_.hdr.length - sizeof(acpi_sdt_hdr_t)) / sizeof(uint64_t);
+  if (num_entries >= sizeof(xsdt_.entries) / sizeof(uint64_t)) {
+    return -1;
+  }
+  xsdt_.entries[num_entries] = addr;
   xsdt_.hdr.length += sizeof(uint64_t);
   update_checksum(&xsdt_.hdr, xsdt_.hdr.length, xsdt_.hdr.checksum);
 
-  return hdr;
+  return 0;
 }
 
 efi_configuration_table *EfiConfigTable::RawTable() { return &table_[0]; }
+
+// Checks if the given topologies are equal. Returns 0 if equal, 1 if not.
+// Currently only checks equality for ARM, as the x86 path isn't exercised.
+void check_topology_eq(zbi_topology_node_t *got, zbi_topology_node_t *want) {
+  ASSERT_EQ(got->entity_type, want->entity_type);
+  ASSERT_EQ(got->parent_index, want->parent_index);
+  ASSERT_EQ(got->entity.processor.logical_id_count, want->entity.processor.logical_id_count);
+  for (uint8_t i = 0; i < got->entity.processor.logical_id_count; i++) {
+    ASSERT_EQ(got->entity.processor.logical_ids[i], want->entity.processor.logical_ids[i]);
+  }
+  ASSERT_EQ(got->entity.processor.flags, want->entity.processor.flags);
+  ASSERT_EQ(got->entity.processor.architecture, want->entity.processor.architecture);
+  zbi_topology_arm_info_t got_arm_info = got->entity.processor.architecture_info.arm;
+  zbi_topology_arm_info_t want_arm_info = want->entity.processor.architecture_info.arm;
+  ASSERT_EQ(got_arm_info.cluster_1_id, want_arm_info.cluster_1_id);
+  ASSERT_EQ(got_arm_info.cluster_2_id, want_arm_info.cluster_2_id);
+  ASSERT_EQ(got_arm_info.cluster_3_id, want_arm_info.cluster_3_id);
+  ASSERT_EQ(got_arm_info.cpu_id, want_arm_info.cpu_id);
+  ASSERT_EQ(got_arm_info.gic_id, want_arm_info.gic_id);
+}
 
 TEST(Acpi, RsdpMissing) {
   auto efi_config_table = EfiConfigTable(1, 0);
@@ -195,37 +244,38 @@ TEST(Acpi, RsdpAtEnd) {
 
 TEST(Acpi, LoadBySignatureInvalidXsdtSignature) {
   auto efi_config_table = EfiConfigTable(2, 0);
-  efi_config_table.AddAcpiTable((uint8_t *)kSpcrSignature);
+  efi_config_table.AddSpcrTable();
   efi_config_table.CorruptXsdtSignature();
   EXPECT_EQ(load_table_with_signature(&efi_config_table.rsdp_, (uint8_t *)kSpcrSignature), nullptr);
 }
 
 TEST(Acpi, LoadBySignatureInvalidXsdtChecksum) {
   auto efi_config_table = EfiConfigTable(2, 0);
-  efi_config_table.AddAcpiTable((uint8_t *)kSpcrSignature);
+  efi_config_table.AddSpcrTable();
   efi_config_table.CorruptXsdtChecksum();
   EXPECT_EQ(load_table_with_signature(&efi_config_table.rsdp_, (uint8_t *)kSpcrSignature), nullptr);
 }
 
 TEST(Acpi, LoadBySignatureTableNotFound) {
   auto efi_config_table = EfiConfigTable(2, 0);
-  EXPECT_NE(efi_config_table.AddAcpiTable((uint8_t *)kMadtSignature), nullptr);
+  EXPECT_NE(efi_config_table.AddMadtTable(), nullptr);
   EXPECT_EQ(load_table_with_signature(&efi_config_table.rsdp_, (uint8_t *)kSpcrSignature), nullptr);
 }
 
 TEST(Acpi, LoadBySignatureInvalidTableChecksum) {
   auto efi_config_table = EfiConfigTable(2, 0);
-  auto spcr = efi_config_table.AddAcpiTable((uint8_t *)kSpcrSignature);
+  auto spcr = efi_config_table.AddSpcrTable();
   EXPECT_NE(spcr, nullptr);
-  spcr->checksum ^= 1;
+  spcr->hdr.checksum ^= 1;
   EXPECT_EQ(load_table_with_signature(&efi_config_table.rsdp_, (uint8_t *)kSpcrSignature), nullptr);
 }
 
 TEST(Acpi, LoadBySignatureSuccess) {
   auto efi_config_table = EfiConfigTable(2, 0);
-  auto spcr = efi_config_table.AddAcpiTable((uint8_t *)kSpcrSignature);
+  auto spcr = efi_config_table.AddSpcrTable();
   EXPECT_NE(spcr, nullptr);
-  EXPECT_EQ(load_table_with_signature(&efi_config_table.rsdp_, (uint8_t *)kSpcrSignature), spcr);
+  EXPECT_EQ(load_table_with_signature(&efi_config_table.rsdp_, (uint8_t *)kSpcrSignature),
+            &spcr->hdr);
 }
 
 TEST(Acpi, SpcrTypeToKdrvNullInput) { EXPECT_EQ(spcr_type_to_kdrv(nullptr), (uint32_t)0); }
@@ -292,6 +342,160 @@ TEST(Acpi, UartDriverFromSpcrGsiv) {
   uart_driver_from_spcr(&spcr, &uart_driver);
   EXPECT_EQ(uart_driver.mmio_phys, (uint32_t)0x80000);
   EXPECT_EQ(uart_driver.irq, (uint32_t)48);
+}
+
+TEST(Acpi, TopologyFromMadtTooManyCpus) {
+  auto efi_config_table = EfiConfigTable(2, 0);
+  auto madt = efi_config_table.AddMadtTable();
+  EXPECT_NE(madt, nullptr);
+
+  // Construct a dual core system.
+  auto gicd = acpi_madt_gicd_t{
+      .type = kInterruptControllerTypeGicd,
+      .length = sizeof(acpi_madt_gicd_t),
+  };
+  efi_config_table.AddInterruptControllerToMadt(madt, &gicd, sizeof(gicd));
+
+  auto gicc1 = acpi_madt_gicc_t{
+      .type = kInterruptControllerTypeGicc,
+      .length = sizeof(acpi_madt_gicc_t),
+      .cpu_interface_number = 0xf,
+      .mpidr = 0x4000030201,
+  };
+  efi_config_table.AddInterruptControllerToMadt(madt, &gicc1, sizeof(gicc1));
+
+  auto gicc2 = acpi_madt_gicc_t{
+      .type = kInterruptControllerTypeGicc,
+      .length = sizeof(acpi_madt_gicc_t),
+      .cpu_interface_number = 0x8,
+      .mpidr = 0x26001a0703,
+  };
+  efi_config_table.AddInterruptControllerToMadt(madt, &gicc2, sizeof(gicc2));
+
+  // Parse the CPU topology.
+  zbi_topology_node_t nodes[1];
+  auto num_nodes = topology_from_madt(madt, nodes, 1);
+  EXPECT_EQ(num_nodes, 1);
+
+  zbi_topology_node_t expected[1] = {
+      {
+          .entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR,
+          .parent_index = ZBI_TOPOLOGY_NO_PARENT,
+          .entity =
+              {
+                  .processor =
+                      {
+                          .logical_ids = {0},
+                          .logical_id_count = 1,
+                          .flags = ZBI_TOPOLOGY_PROCESSOR_PRIMARY,
+                          .architecture = ZBI_TOPOLOGY_ARCH_ARM,
+                          .architecture_info =
+                              {
+                                  .arm =
+                                      {
+                                          .cluster_1_id = 0x2,
+                                          .cluster_2_id = 0x3,
+                                          .cluster_3_id = 0x40,
+                                          .cpu_id = 0x1,
+                                          .gic_id = 0xf,
+                                      },
+                              },
+                      },
+              },
+      },
+  };
+  check_topology_eq(&expected[0], &nodes[0]);
+}
+
+TEST(Acpi, TopologyFromMadtSuccess) {
+  auto efi_config_table = EfiConfigTable(2, 0);
+  auto madt = (acpi_madt_t *)efi_config_table.AddMadtTable();
+  EXPECT_NE(madt, nullptr);
+
+  // Construct a dual core system.
+  auto gicd = acpi_madt_gicd_t{
+      .type = kInterruptControllerTypeGicd,
+      .length = sizeof(acpi_madt_gicd_t),
+  };
+  efi_config_table.AddInterruptControllerToMadt(madt, &gicd, sizeof(gicd));
+
+  auto gicc1 = acpi_madt_gicc_t{
+      .type = kInterruptControllerTypeGicc,
+      .length = sizeof(acpi_madt_gicc_t),
+      .cpu_interface_number = 0xf,
+      .mpidr = 0x4000030201,
+  };
+  efi_config_table.AddInterruptControllerToMadt(madt, &gicc1, sizeof(gicc1));
+
+  auto gicc2 = acpi_madt_gicc_t{
+      .type = kInterruptControllerTypeGicc,
+      .length = sizeof(acpi_madt_gicc_t),
+      .cpu_interface_number = 0x8,
+      .mpidr = 0x26001a0703,
+  };
+  efi_config_table.AddInterruptControllerToMadt(madt, &gicc2, sizeof(gicc2));
+
+  // Parse the CPU topology from that MADT.
+  const uint8_t expected_num_nodes = 2;
+  zbi_topology_node_t nodes[expected_num_nodes];
+  auto num_nodes = topology_from_madt(madt, nodes, expected_num_nodes);
+  EXPECT_EQ(num_nodes, expected_num_nodes);
+
+  zbi_topology_node_t expected[expected_num_nodes] = {
+      {
+          .entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR,
+          .parent_index = ZBI_TOPOLOGY_NO_PARENT,
+          .entity =
+              {
+                  .processor =
+                      {
+                          .logical_ids = {0},
+                          .logical_id_count = 1,
+                          .flags = ZBI_TOPOLOGY_PROCESSOR_PRIMARY,
+                          .architecture = ZBI_TOPOLOGY_ARCH_ARM,
+                          .architecture_info =
+                              {
+                                  .arm =
+                                      {
+                                          .cluster_1_id = 0x2,
+                                          .cluster_2_id = 0x3,
+                                          .cluster_3_id = 0x40,
+                                          .cpu_id = 0x1,
+                                          .gic_id = 0xf,
+                                      },
+                              },
+                      },
+              },
+      },
+      {
+          .entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR,
+          .parent_index = ZBI_TOPOLOGY_NO_PARENT,
+          .entity =
+              {
+                  .processor =
+                      {
+                          .logical_ids = {1},
+                          .logical_id_count = 1,
+                          .flags = 0,
+                          .architecture = ZBI_TOPOLOGY_ARCH_ARM,
+                          .architecture_info =
+                              {
+                                  .arm =
+                                      {
+                                          .cluster_1_id = 0x7,
+                                          .cluster_2_id = 0x1a,
+                                          .cluster_3_id = 0x26,
+                                          .cpu_id = 0x3,
+                                          .gic_id = 0x8,
+                                      },
+                              },
+                      },
+              },
+      },
+  };
+  for (int i = 0; i < expected_num_nodes; i++) {
+    check_topology_eq(&expected[i], &nodes[i]);
+  }
 }
 
 }  // namespace
