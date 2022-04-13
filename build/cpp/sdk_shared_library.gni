@@ -255,6 +255,8 @@ template("sdk_shared_library") {
                              ])
       file_base = file_base
     }
+  } else {
+    not_needed([ "all_deps" ])
   }
 
   metadata_file = "$target_gen_dir/$metadata_target_name.sdk_meta.json"
