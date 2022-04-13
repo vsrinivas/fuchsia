@@ -448,8 +448,8 @@ impl FileOps for RemoteFileObject {
         zxio_wait_async(&self.zxio, waiter, events, handler)
     }
 
-    fn cancel_wait(&self, _current_task: &CurrentTask, waiter: &Arc<Waiter>, key: WaitKey) -> bool {
-        zxio_cancel_wait(&self.zxio, waiter, key)
+    fn cancel_wait(&self, _current_task: &CurrentTask, waiter: &Arc<Waiter>, key: WaitKey) {
+        zxio_cancel_wait(&self.zxio, waiter, key);
     }
 
     fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {
@@ -503,8 +503,8 @@ impl FileOps for RemotePipeObject {
         zxio_wait_async(&self.zxio, waiter, events, handler)
     }
 
-    fn cancel_wait(&self, _current_task: &CurrentTask, waiter: &Arc<Waiter>, key: WaitKey) -> bool {
-        zxio_cancel_wait(&self.zxio, waiter, key)
+    fn cancel_wait(&self, _current_task: &CurrentTask, waiter: &Arc<Waiter>, key: WaitKey) {
+        zxio_cancel_wait(&self.zxio, waiter, key);
     }
 
     fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {

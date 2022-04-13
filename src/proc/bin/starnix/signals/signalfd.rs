@@ -101,9 +101,9 @@ impl FileOps for SignalFd {
         }
     }
 
-    fn cancel_wait(&self, current_task: &CurrentTask, _waiter: &Arc<Waiter>, key: WaitKey) -> bool {
+    fn cancel_wait(&self, current_task: &CurrentTask, _waiter: &Arc<Waiter>, key: WaitKey) {
         let mut signals = current_task.signals.write();
-        signals.signalfd_wait.cancel_wait(key)
+        signals.signalfd_wait.cancel_wait(key);
     }
 
     fn query_events(&self, current_task: &CurrentTask) -> FdEvents {

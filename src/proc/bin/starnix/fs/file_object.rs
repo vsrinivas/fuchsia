@@ -170,12 +170,7 @@ pub trait FileOps: Send + Sync + AsAny {
 
     /// Cancel a wait set up by wait_async.
     /// Returns true if the wait has not been activated and has been cancelled.
-    fn cancel_wait(
-        &self,
-        _current_task: &CurrentTask,
-        _waiter: &Arc<Waiter>,
-        _key: WaitKey,
-    ) -> bool;
+    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Arc<Waiter>, _key: WaitKey);
 
     fn query_events(&self, current_task: &CurrentTask) -> FdEvents;
 
@@ -399,8 +394,7 @@ macro_rules! fileops_impl_nonblocking {
             _current_task: &CurrentTask,
             _waiter: &std::sync::Arc<crate::task::Waiter>,
             _key: crate::task::WaitKey,
-        ) -> bool {
-            false
+        ) {
         }
 
         fn query_events(&self, _current_task: &crate::task::CurrentTask) -> crate::fs::FdEvents {

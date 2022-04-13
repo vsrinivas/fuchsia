@@ -287,12 +287,7 @@ impl FileOps for EpollFileObject {
         panic!("waiting on epoll unimplemnted")
     }
 
-    fn cancel_wait(
-        &self,
-        _current_task: &CurrentTask,
-        _waiter: &Arc<Waiter>,
-        _key: WaitKey,
-    ) -> bool {
+    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Arc<Waiter>, _key: WaitKey) {
         panic!("cancelling waiting on epoll unimplemnted")
     }
 

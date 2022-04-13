@@ -65,8 +65,8 @@ impl FileOps for BinderDev {
         self.0.wait_async(current_task, waiter, events, handler)
     }
 
-    fn cancel_wait(&self, current_task: &CurrentTask, waiter: &Arc<Waiter>, key: WaitKey) -> bool {
-        self.0.cancel_wait(current_task, waiter, key)
+    fn cancel_wait(&self, current_task: &CurrentTask, waiter: &Arc<Waiter>, key: WaitKey) {
+        self.0.cancel_wait(current_task, waiter, key);
     }
 
     fn ioctl(

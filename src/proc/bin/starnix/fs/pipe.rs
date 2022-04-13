@@ -334,14 +334,9 @@ impl FileOps for PipeFileObject {
         }
     }
 
-    fn cancel_wait(
-        &self,
-        _current_task: &CurrentTask,
-        _waiter: &Arc<Waiter>,
-        key: WaitKey,
-    ) -> bool {
+    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Arc<Waiter>, key: WaitKey) {
         let mut pipe = self.pipe.lock();
-        pipe.waiters.cancel_wait(key)
+        pipe.waiters.cancel_wait(key);
     }
 
     fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {

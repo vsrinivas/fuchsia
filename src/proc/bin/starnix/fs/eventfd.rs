@@ -143,14 +143,9 @@ impl FileOps for EventFdFileObject {
         }
     }
 
-    fn cancel_wait(
-        &self,
-        _current_task: &CurrentTask,
-        _waiter: &Arc<Waiter>,
-        key: WaitKey,
-    ) -> bool {
+    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Arc<Waiter>, key: WaitKey) {
         let mut inner = self.inner.lock();
-        inner.wait_queue.cancel_wait(key)
+        inner.wait_queue.cancel_wait(key);
     }
 
     fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {

@@ -161,14 +161,7 @@ impl FileOps for DevPtmxFile {
         WaitKey::empty()
     }
 
-    fn cancel_wait(
-        &self,
-        _current_task: &CurrentTask,
-        _waiter: &Arc<Waiter>,
-        _key: WaitKey,
-    ) -> bool {
-        false
-    }
+    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Arc<Waiter>, _key: WaitKey) {}
 
     fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {
         FdEvents::empty()
@@ -298,14 +291,7 @@ impl FileOps for DevPtsFile {
         WaitKey::empty()
     }
 
-    fn cancel_wait(
-        &self,
-        _current_task: &CurrentTask,
-        _waiter: &Arc<Waiter>,
-        _key: WaitKey,
-    ) -> bool {
-        false
-    }
+    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Arc<Waiter>, _key: WaitKey) {}
 
     fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {
         FdEvents::empty()

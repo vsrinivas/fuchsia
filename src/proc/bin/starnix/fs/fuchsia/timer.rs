@@ -206,8 +206,8 @@ impl FileOps for TimerFile {
             .unwrap() // TODO return error
     }
 
-    fn cancel_wait(&self, _current_task: &CurrentTask, waiter: &Arc<Waiter>, key: WaitKey) -> bool {
-        waiter.cancel_signal_wait(&self.timer, key)
+    fn cancel_wait(&self, _current_task: &CurrentTask, waiter: &Arc<Waiter>, key: WaitKey) {
+        waiter.cancel_signal_wait(&self.timer, key);
     }
 
     fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {
